@@ -61,13 +61,16 @@ export const AI_GROUPS = /** @type {Record<string, [string, string[]][]>} */ ({
   client: [["Improve", ["shorter", "executive", "polish"]]],     // #123: the client sheet; Shorten, executive, Polish, no Make into
   readonly: [],                                                 // only Find the source, the sheet's own item
 });
-/** THE PLACE TABLE (#117): every editor place the selection bar is built for, and whether it is switched on. `ai`: the sparkle and bar show
-    at all; `turnInto`: Turn into (instant, no AI; rich editors whose storage holds every block kind); `formatNotes`: Format notes for
-    several paragraphs (rich editors only); `improveOnly`: the place offers its Improve (and Tone) group and Ask… only. Every place v2.1.0
-    had the bar on is ON here: notes and current, the email draft, the plain fields and the one-line title, and the A4 sheets (report,
-    minutes, client, readonly: edit_ai.py SHEET_PLACES and CLIENT_PLACES). A place missing from this table has no bar at all (the client sheet's
-    row was once missing); dev/tests/test_ai_117.py lists every place and asserts it. Current state's Turn into is off for good: its storage (headings ###..#####, no checklist) and the Word
-    report can't take every kind. @type {Record<string, {ai: boolean, turnInto: boolean, formatNotes: boolean, improveOnly: boolean}>} */
+/** THE PLACE TABLE (#117; all places on from v2.2.0, #133): every editor place the selection bar is built for, and whether it is switched on.
+    `ai`: the sparkle and bar show at all; `turnInto`: Turn into (instant, no AI; rich editors whose storage holds every block kind);
+    `formatNotes`: Format notes for several paragraphs (rich editors only); `improveOnly`: the place offers its Improve (and Tone) group and
+    Ask… only. Notes and Current state are the rich places. The plain profile (#133) is `plain` (the item panel's longer fields, Prep's notes
+    and questions, the Prep popup's shaped notes), `line` (one-line text that is a sentence: the item's title, a Find updates title, decision
+    or memory line; a suggestion never breaks the line) and `email` (Draft email's preview, a shared-editor host; Improve and Tone only). Fields
+    that are keys or short labels are mounted with no `ai` option and so have no bar: the item panel's Revisit and Source, and Find updates'
+    Name, Role and Organisation. The A4 sheets (report, minutes, client, readonly: edit_ai.py SHEET_PLACES and CLIENT_PLACES) are on too. dev/tests/test_ai_117.py and test_editor_plain.py list every
+    place and assert it. Current state's Turn into is off for good: its storage (headings ###..#####, no checklist) and the Word report can't
+    take every kind. @type {Record<string, {ai: boolean, turnInto: boolean, formatNotes: boolean, improveOnly: boolean}>} */
 export const AI_PLACE_TABLE = {
   notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
   current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
@@ -165,8 +168,9 @@ function barFor(h, ai) {
   }
   aiHome(h);
   const was = aiBar.value, range = edSelection(h);
+  if (!range && h.features === "email") { if (was && was.h === h && !barBusy()) aiBar.value = null; return; }   // an email's bar is for text inside one paragraph or cell (#133)
   const shown = !!(was && was.h === h && was.shown && Date.now() < keepOpenUntil);
-  aiBar.value = { h, ai, from: s.from, to: s.to, shown, multi: !!range && !range.inline && h.features !== "plain" };
+  aiBar.value = { h, ai, from: s.from, to: s.to, shown, multi: !!range && !range.inline && h.features !== "plain" && h.features !== "email" };
 }
 /** Open or fold the bar from the sparkle. @param {boolean} [on] */
 export function aiToggle(on) {
