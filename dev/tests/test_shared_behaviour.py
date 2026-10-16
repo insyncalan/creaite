@@ -54,7 +54,7 @@ def _notes_open(b):
     b.wait("!!document.getElementById('notesNew')", 15)
 
 
-def _notes_ai(b):
+def _note_made(b):
     origin = b.eval("location.origin")
     if NOTE.get("origin") != origin:                 # each test class has a sample vault (and server) of its own
         NOTE.clear()
@@ -74,6 +74,10 @@ def _notes_ai(b):
     else:
         b.eval(f"go('notes','ABC'); location.hash='#notes=ABC&n='+encodeURIComponent({json.dumps(NOTE['path'].rsplit('/', 1)[1])})")
         b.wait(f"noteCur.value&&noteCur.value.path==={json.dumps(NOTE['path'])}&&!!document.querySelector('#v-notes .nbody [data-p]')", 15)
+
+
+def _notes_ai(b):
+    _note_made(b)
     b.click("#v-notes .nbody")
     b.key("a", 4)                                    # ⌘A: all of the text, which shows the AI bar
     b.pump(0.3)
@@ -491,10 +495,37 @@ class SharedBehaviour(Driver, us.UiSweepCase):
             bad.append("Esc doesn't return focus to the control")
         return bad
 
+    def ndel(self):
+        """#124: Delete note... in the note's ... menu opens #noteDelDlg (a menu item, not an aria-haspopup control): Enter on the
+        item opens it with focus in it (Cancel); Esc closes it and focus is back on the ... button. Nothing is deleted."""
+        b = self.b
+        self.goto("notes")
+        _note_made(b)
+        b.eval(PROBE + ";true")
+        b.click(".nmorewrap .nmore")
+        b.wait("!!document.querySelector('.nmorewrap [role=menu] .bad')", 5)
+        b.eval("document.querySelector('.nmorewrap [role=menu] .bad').focus()")
+        self.press("Enter", 0.5)
+        try:
+            b.wait("document.getElementById('noteDelDlg')?.open", 20)
+        except TimeoutError:
+            return ["Enter opens nothing"]
+        self.seen.append({"ids": ["noteDelDlg"], "labels": [], "classes": []})
+        bad = []
+        if not b.eval("document.getElementById('noteDelDlg').contains(document.activeElement)"):
+            bad.append("focus stays outside the dialog")
+        self.press("Escape", 0.4)
+        if b.eval("document.getElementById('noteDelDlg').open"):
+            bad.append("Esc leaves it open")
+        # Not yet checked: where focus lands after Esc. The dialog's opener is the menu item, which has gone with the closed menu,
+        # so focus falls to the page (Dialog.jsx only restores a connected opener). Reported to Jarvis (16-10-2026) for a decision.
+        return bad
+
     # The dialogs no aria-haspopup control opens, each driven by its own script: (the screen that must be in the run, the
     # script, its name in the report and the expected-failures list, its area, what it opens).
     KEYED = (("today", "cmdk", "cmdk dialog#cmdk", "Shell", "⌘K", "Search or jump to"),
-             ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"))
+             ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"),
+             ("notes", "ndel", "ndel dialog#noteDelDlg", "Core", "Delete note…", "Delete note?"))
 
     def keyed_dialogs(self, only, report, found):
         for screen, script, sig, area, how, label in self.KEYED:
@@ -517,7 +548,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
                 if bad:
                     found.add((screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
         self.keyed_dialogs(only, report, found)
-        msg = judge("keys", found, set(only) | {"cmdk", "parch"})
+        msg = judge("keys", found, set(only) | {"cmdk", "parch", "ndel"})
         if os.environ.get("SB_ONLY"):
             self.assertFalse(msg, "\n".join(msg))
             return                                   # only some screens: what they didn't reach isn't a finding

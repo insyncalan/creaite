@@ -64,6 +64,7 @@ PLAIN = {
     "people_register": ("The people register needs attention", "setup"),
     "workstreams_moved": ("Old workstream lists to retire", "setup"),
     "search_index": ("The search index needs repair", "migrate"),
+    "notes_folder_own": ("Notes share a folder with minutes, reports or other files; give notes a folder of their own in Settings › Folders and OneDrive", "manual"),   # #124
     "offsite_backup": ("The OneDrive backup copy is missing or out of date", "offsite"),
     "backup_check": ("The weekly backup restore check found a problem", "manual"),       # BL-323
     "tidy_up": ("Tidy up of old backups", "manual"),                                      # BL-323 (always fine: information)
