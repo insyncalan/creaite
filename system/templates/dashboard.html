@@ -42188,6 +42188,10 @@ ${s5}`;
       PK.wide = false;
       PK.key = null;
     }
+    {
+      const o5 = document.activeElement;
+      if (o5 && o5 !== document.body && !$("#panel").contains(o5) && o5.closest("[data-open],tr[data-row],.bcard[data-row]")) o5.blur();
+    }
     if (shared.PREPPEEK && shared.PREPPEEK !== "swap") prepPeekEnd();
   }
   async function saveAndClose() {
@@ -43535,6 +43539,7 @@ ${pre}**Current state title:** ${title}`);
     $("#alertCmd").textContent = START_CMD;
     document.addEventListener("mousedown", (e4) => {
       if (e4.target.closest(".snack,.cal,dialog")) return;
+      if (HL.size && (shared.VIEW === "work" || shared.VIEW === "person") && !e4.target.closest(OPENERS) && !e4.target.closest("#wbulk,#panel,#workTbl tr,#v-person tr,.bcard,button,a,input,select,textarea,label,[role=menu],[role=option],[role=dialog],.ddmenu,.ms-menu")) hlClear();
       if ($("#chat").classList.contains("on") && !e4.target.closest("#chat") && !e4.target.closest("#askBtn,[data-ask],#panel.peek,.pkpop,#pkStage,#errBanner,#mvPeek,#mvCal,#mvPop")) closeChat();
       if ($("#panel").classList.contains("on") && !e4.target.closest("#panel") && !e4.target.closest(OPENERS)) {
         if (shared.EDITING) {
@@ -43575,6 +43580,7 @@ ${pre}**Current state title:** ${title}`);
         }
         if (HL.size && (shared.VIEW === "work" || shared.VIEW === "person")) {
           hlClear();
+          if ($("#panel").classList.contains("on")) closePanel();
           return;
         }
         if (shared.VIEW === "review" && (RHL.size || CHK.size) && !$("#panel").classList.contains("on")) {
