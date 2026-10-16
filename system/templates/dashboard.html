@@ -3494,6 +3494,13 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 .rtebar .rtepop [aria-disabled=true]{opacity:.4;cursor:default}
 .nbar .rtelink{position:absolute;top:calc(100% + 4px);left:8px;margin:0;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:var(--z-menu)} .nbar .rtelink[hidden]{display:none}
 @media (forced-colors:active){.rtebar .rtepop{border:1px solid CanvasText} .rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar .rtepop [aria-disabled=true]{opacity:1;color:GrayText}}
+
+/* ===== #109 (ux) ===== the project health form sits over the page like the other peeks, so the cockpit behind it keeps its width.
+   Only the health form (class pover, set by drawPanel); the milestone, rebaseline and new-milestone forms keep their side panel. */
+#panel.pover.on{position:fixed;top:0;bottom:0;right:0;z-index:var(--z-panel);margin:0!important;width:min(max(420px,50vw),calc(100vw - var(--rail-w,72px)));box-shadow:var(--shadow-side)}
+#panel.pover.on .pin{width:100%}
+body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,calc((100vw - var(--chatw,420px))*.5)),calc(100vw - var(--rail-w,72px) - var(--chatw,420px)))}
+@media (max-width:600px){#panel.pover.on,body:has(#chat.on) #panel.pover.on{width:100vw;right:0}}
 </style>
 </head>
 <body>
@@ -42142,6 +42149,7 @@ ${s5}`;
     if (h5) runTool(h5, cmd);
   }
   shared.DRH = null;
+  shared.HBACK = null;
   shared.PKDRC = null;
   var PK = { wide: false, key: null };
   var pkOn = () => $("#panel").classList.contains("on") && $("#panel").classList.contains("peek");
@@ -42175,7 +42183,9 @@ ${s5}`;
     if (shared.EDITING && shared.PDKEY) pdDrop(shared.PDKEY);
     shared.PDKEY = shared.PDBASE = shared.PDOFFER = null;
     const wasItem = shared.CUR && shared.CUR.mode === "record";
-    $("#panel").classList.remove("on", "pwide");
+    $("#panel").classList.remove("on", "pwide", "pover");
+    const back2 = shared.CUR && shared.CUR.mode === "health" ? shared.HBACK : null;
+    shared.HBACK = null;
     shared.CUR = null;
     shared.EDITING = false;
     closeCal();
@@ -42194,6 +42204,7 @@ ${s5}`;
       const o5 = document.activeElement;
       if (o5 && o5 !== document.body && !$("#panel").contains(o5) && o5.closest("[data-open],tr[data-row],.bcard[data-row]")) o5.blur();
     }
+    if (back2 && back2.isConnected) back2.focus({ preventScroll: true });
     if (shared.PREPPEEK && shared.PREPPEEK !== "swap") prepPeekEnd();
   }
   async function saveAndClose() {
@@ -47391,6 +47402,7 @@ ${d5.text}`);
     const p6 = P3.find((x5) => x5.code === code);
     shared.CUR = { mode: what, k: "project", code, draft: { health: p6.health, reason: p6.reason, current: p6.current } };
     shared.EDITING = true;
+    shared.HBACK = what === "health" && document.activeElement && document.activeElement.closest("[data-edproj]") || null;
     drawPanel();
     $("#panel").classList.add("on");
   }
@@ -47415,7 +47427,7 @@ ${d5.text}`);
       pkNav();
       pkDraw();
     } else {
-      if (!shared.LOADING) $("#panel").classList.remove("peek", "pkwide");
+      if (!shared.LOADING) $("#panel").classList.remove("peek", "pkwide", "pover");
       const was = shared.PDKEY;
       if (shared.CUR && shared.CUR.pre && !shared.EDITING) shared.CUR.pre = null;
       PANELF = true;
@@ -47427,6 +47439,7 @@ ${d5.text}`);
         putHTML($("#pId"), shared.CUR.mode === "milestone" || shared.CUR.mode === "rebase" ? html`${shared.CUR.id} · ${raw(pl2(shared.CUR.code))}` : shared.CUR.mode === "msnew" ? html`Not yet saved · ${raw(pl2(shared.CUR.code))}` : shared.CUR.mode === "record" ? html`${shared.CUR.id} · ${raw(pl2(x5.p))}` : shared.CUR.mode === "proposal" ? html`Review #${shared.CUR.n} · ${x5.p ? raw(pl2(x5.p)) : "needs a project"}` : shared.CUR.mode === "new" ? html`Not yet saved` : raw(pl2(shared.CUR.code)));
         $("#pTitle").textContent = title || "";
         $("#panel").classList.toggle("pwide", !!shared.EDITING);
+        $("#panel").classList.toggle("pover", shared.CUR.mode === "health");
         $("#pBody").classList.toggle("editing", shared.EDITING);
         $("#editBanner").textContent = shared.CUR.mode === "proposal" ? "Editing a proposal — nothing reaches the tracker until it's approved" : "Editing — changes apply when you save";
         let h5 = "";
