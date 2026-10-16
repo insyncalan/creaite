@@ -347,7 +347,7 @@ document.addEventListener("input",e=>{ if(shared.CURED&&e.target.classList&&e.ta
 document.addEventListener("focusin",e=>{ const ed=e.target.closest&&e.target.closest(".curpanes .rted"); if(ed&&shared.CURED) shared.CURED.last=ed.id==="curEd2"?2:1; });
 document.addEventListener("keydown",e=>{
   if(!(e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes"))) return; const mod=e.metaKey||e.ctrlKey;   /* ⌘K stays the palette; ⌘⇧K and ⌘⇧X are the shared bar's (#122) */
-  if(slashOn(e.target)&&(e.key==="Escape"||e.key==="Tab")) return;   /* #122 B: the / menu is open: Esc closes it and Tab inserts the row (components/SlashMenu.jsx), not cancel or indent */
+  if(slashOn(e.target)&&(e.key==="Escape"||e.key==="Tab"||(mod&&e.key==="Enter"))) return;   /* #122 B: the / menu is open: Esc closes it, Tab inserts the row and ⌘↵ waits (components/SlashMenu.jsx), not cancel, indent or save */
   if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); cancelCurEdit(); }
   else if(mod&&e.key==="Enter"){ e.preventDefault(); saveCurEdit(); }
   else if(e.key==="Tab"&&getSelection().anchorNode&&(getSelection().anchorNode.parentElement||{}).closest&&getSelection().anchorNode.parentElement.closest("li")){ e.preventDefault(); rteCmd(e.shiftKey?"outdent":"indent"); } },true);

@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
+META = 4
 MENU = "document.querySelector('.slashmenu, #ntpick')"
 NOTES_ROWS = ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note"]
 CURRENT_ROWS = ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"]
@@ -474,6 +475,25 @@ class Slash(LiveBrowserCase):
         self.make_note("Shortcuts")
         b.type("## Twice")
         self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^## Twice$")
+
+    # ---- review fixes (editor-122b3) ------------------------------------------------------------------------------------
+
+    def test_m1_command_enter_waits_under_an_open_menu_in_current_state_and_saves_once_it_is_closed(self):
+        b = self.b
+        self.open_current()
+        b.key("Enter")
+        b.type("/he")
+        b.wait(f"!!{MENU}", 5)
+        b.key("Enter", META)                                       # held back: the document-level save handler stands back
+        b.pump(0.6)
+        self.assertTrue(b.eval("!!shared.CURED"), "still editing")
+        self.assertTrue(b.eval(f"!!{MENU}"), "the menu is still open")
+        self.assertNotIn("/he", self.memory().read_text(encoding="utf-8"), "nothing was saved")
+        b.key("Escape")
+        b.wait(f"!{MENU}", 5)
+        b.key("Enter", META)                                       # with the menu closed it saves
+        b.wait("!shared.CURED", 10)
+        self.assertIn("/he", self.memory().read_text(encoding="utf-8"))
 
     # ---- the Notes tab as it was ----------------------------------------------------------------------------------------
 
