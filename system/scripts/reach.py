@@ -1120,11 +1120,136 @@ def prep_decision(tool, inp):
         return False, why
     if tool == "Bash":
         command = str((inp or {}).get("command") or "")
-        why = (bash_refusal(command, "prep") or held_form_reason(command) or held_never_reason(command)
-               or held_kind_reason(command) or held_validate_reason(command))
+        # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
+        why = (bash_refusal(command, "prep") or held_form_reason(command) or held_never_reason(command, expand=False)
+               or held_kind_reason(command) or held_validate_reason(command) or held_glob_reason(command))
         if why:
             return False, why
     return True, ""
+
+
+# ===== #116 F1 (17-10-2026): the guard's own wildcard expansion, bounded =====
+# The guard expands a wildcard to check what the shell (ask) or a script (held) would find. Opening some folders blocks in the
+# kernel (macOS asks for consent before a program reads other apps' data under ~/Library/Group Containers), and a blocked open
+# can't be interrupted from inside the hook, so `'~/*/*/*/*/none.vtt'` held the hook past its 30 s timeout. Three locks:
+# - a wildcard is expanded only below the vault, the projects folder or the home folder (anything else is out of reach, so
+#   never), and never inside ~/Library unless that is the vault or the projects folder (OneDrive lives there): the walk checks
+#   each folder's real path before it opens it, so a symlink can't lead it there either;
+# - the walk runs in a daemon thread the hook waits on for GLOB_SECONDS at most; if it hasn't finished, the call is refused
+#   and the thread is left behind (it ends with the hook's process);
+# - the checks that need no expansion run before it (prep_decision, ask_bash_refusal), so nothing waits on it to refuse.
+GLOB_SECONDS = 2.0
+
+
+class GlobRefused(Exception):
+    """A wildcard the guard won't expand, or couldn't in time: refused, never let through. The message is the reason."""
+
+
+def _glob_root_reason(folder):
+    """Why the guard won't open this folder while expanding a wildcard, or None (see above)."""
+    rp = Path(os.path.realpath(folder))
+    inside = [r for name, r in roots() if name != "home"]
+    if any(parts_under(rp, r) is not None for r in inside):
+        return None
+    if parts_under(rp, home()) is None:
+        return "the wildcard reaches outside the vault, the projects folder and your home folder: name the file"
+    if parts_under(rp, home() / "Library") is not None:
+        return "the wildcard reaches inside ~/Library, which the guard never searches: name the file"
+    return None
+
+
+def _glob_walk(pattern):
+    """What the shell would expand a wildcard to with hidden files matched too (#116 A6 F3: zsh's GLOB_DOTS, bash's dotglob, so
+    `~/*/id_rsa` can reach ~/.ssh), one level per part, with fnmatch, which matches a leading dot. At most ASK_GLOB_LIMIT
+    entries are looked at; more raises AskGlobTooBig. The fixed part before the first wildcard, then each folder the walk reaches,
+    is checked (_glob_root_reason) before it is opened or looked in; GlobRefused if one is refused."""
+    import fnmatch
+    fixed, rest = _glob_fixed(pattern)
+    found, seen = [fixed], 0
+    for part in rest:
+        nxt = []
+        for base in found:
+            why = _glob_root_reason(base or ".")
+            if why:
+                raise GlobRefused(why)
+            if ASK_WILDCARDS & set(part):
+                try:
+                    names = os.listdir(base or ".")
+                except OSError:          # not a folder, or unreadable: the shell's glob finds nothing there either
+                    continue
+                seen += len(names)
+                if seen > ASK_GLOB_LIMIT:
+                    raise AskGlobTooBig()
+                nxt += [os.path.join(base, n) for n in names if fnmatch.fnmatchcase(n, part)]
+            elif os.path.lexists(os.path.join(base, part)):
+                nxt.append(os.path.join(base, part))
+        found = nxt
+    return found
+
+
+def _glob_fixed(pattern):
+    """(the fixed part of a wildcard before its first wildcard part, the parts from there on)."""
+    parts = [x for x in pattern.split("/") if x]
+    first = next((i for i, x in enumerate(parts) if ASK_WILDCARDS & set(x)), len(parts))
+    return ("/" if pattern.startswith("/") else "") + "/".join(parts[:first]), parts[first:]
+
+
+def _glob_patterns(found):
+    """Each path with a wildcard among `found`, as an absolute pattern (~ expanded, a relative one from the vault)."""
+    out = []
+    for p in found:
+        if ASK_WILDCARDS & set(p):
+            pattern = os.path.expanduser(p)
+            out.append(pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern))
+    return out
+
+
+def _bounded_expand(found, max_matches=None):
+    """What the wildcards among `found` expand to, new paths only, from a daemon thread the caller waits on for GLOB_SECONDS at
+    most. Raises GlobRefused on a timeout or a refused folder, AskGlobTooBig past the entry limit, HeldGlobTooBig past
+    max_matches; any other error is raised as it is (the callers fail closed)."""
+    import threading
+    patterns = _glob_patterns(found)
+    if not patterns:
+        return []
+    for pattern in patterns:          # out of reach or in ~/Library: refused at once, nothing walked and no thread started
+        why = _glob_root_reason(_glob_fixed(pattern)[0] or ".")
+        if why:
+            raise GlobRefused(why)
+    result = {}
+
+    def work():
+        """The walk itself, in the worker thread: its matches or its error, in `result`."""
+        try:
+            out = []
+            for pattern in patterns:
+                for m in _glob_walk(pattern):
+                    if m not in out and m not in found:
+                        out.append(m)
+                    if max_matches is not None and len(out) > max_matches:
+                        raise HeldGlobTooBig()
+            result["out"] = out
+        except BaseException as e:  # noqa: BLE001  handed to the caller, which refuses
+            result["error"] = e
+
+    t = threading.Thread(target=work, name="reach-glob", daemon=True)
+    t.start()
+    t.join(GLOB_SECONDS)
+    if t.is_alive():                 # blocked (a consent prompt, a slow disk): refuse now, leave the thread behind
+        _debug("warn", "wildcard expansion timed out")
+        raise GlobRefused("the guard couldn't check the wildcard in time: name the file")
+    if "error" in result:
+        raise result["error"]
+    return result["out"]
+
+
+def _then_expanded(found, expand, max_matches=None):
+    """The paths in `found`, then (with `expand`) what their wildcards expand to: a refusal on the paths as written never waits
+    on the walk."""
+    yield from found
+    if expand:
+        yield from _bounded_expand(found, max_matches=max_matches)
+# ===== end #116 F1 =====
 
 
 # ===== Held runs read only (security fix, 15-10-2026) =====
@@ -1140,10 +1265,10 @@ HELD_SPLIT = r"[=:,]"
 WILDCARDS = set("*?[")
 
 
-def held_arg_paths(command):
+def held_arg_paths(command, expand=True):
     """Every path a held run's Bash call could hand a script: prep_paths' (each path-like argument, `--x=path` too), every
     path-like piece of an argument after = : or , (`//…` too, unless it follows http: or https:), a piece
-    with $ as a script could expand it, and, for a piece with a wildcard, what a script globbing it would find."""
+    with $ as a script could expand it, and (with `expand`), for a piece with a wildcard, what a script globbing it would find."""
     import re
     out = list(prep_paths("Bash", {"command": command}))
     for piece, before in held_pieces(command):
@@ -1154,33 +1279,15 @@ def held_arg_paths(command):
     for p in list(out):
         if "$" in p and os.path.expandvars(p) not in out:   # quoted from the shell, but a script could still expand it
             out.append(os.path.expandvars(p))
-    return out + [m for m in _held_globbed(out) if m not in out]
+    return out + _bounded_expand(out, max_matches=HELD_GLOB_LIMIT) if expand else out
 
 
-HELD_GLOB_LIMIT, HELD_GLOB_SECONDS = 500, 5.0
+HELD_GLOB_LIMIT = 500
 
 
 class HeldGlobTooBig(Exception):
-    """A quoted wildcard matched more than the guard checks in time (#116 A5 F4): refused, never let through."""
-
-
-def _held_globbed(found):
-    """For each path with a wildcard (a quoted one: held_form_reason refuses the others), what a script globbing it would find.
-    #116 A5 F4: at most HELD_GLOB_LIMIT matches in HELD_GLOB_SECONDS, well inside the hook's own 30 s; more raises HeldGlobTooBig,
-    which held_never_reason refuses, so a slow disk can't run the hook past its timeout."""
-    import glob
-    import time
-    out, deadline = [], time.monotonic() + HELD_GLOB_SECONDS
-    for p in found:
-        if WILDCARDS & set(p):
-            pattern = os.path.expanduser(p)
-            pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
-            for m in glob.iglob(pattern, recursive=True):
-                if m not in out:
-                    out.append(m)
-                if len(out) > HELD_GLOB_LIMIT or time.monotonic() > deadline:
-                    raise HeldGlobTooBig()
-    return out
+    """A quoted wildcard matched more than HELD_GLOB_LIMIT files (#116 A5 F4): refused, never let through. #116 F1: the walk is
+    the bounded one (_bounded_expand: in reach only, never ~/Library, at most GLOB_SECONDS), hidden files matched as in ask mode."""
 
 
 def held_pieces(command):
@@ -1228,12 +1335,12 @@ def held_form_reason(command):
 
 
 def _held_unquoted(command):
-    """The characters of a held run's command outside quotes (bash_refusal has already refused a back-slash outside quotes and
-    an unclosed quote)."""
+    """The characters of a held run's command outside quotes (bash_refusal has already refused a back-slash outside single
+    quotes and an unclosed quote, so a quote character always opens or closes one: #116 F3, read as _shell_refused reads it)."""
     out, quote = set(), None
-    for i, ch in enumerate(command):
+    for ch in command:
         if quote:
-            if ch == quote and not (quote == '"' and command[i - 1] == "\\"):
+            if ch == quote:
                 quote = None
         elif ch in "'\"":
             quote = ch
@@ -1242,19 +1349,29 @@ def _held_unquoted(command):
     return out
 
 
-def held_never_reason(command):
+def held_never_reason(command, expand=True):
     """Why a held run's Bash call names a place on the never list (the check hook_decision makes, on every argument form), or
-    None. Anything it can't check is refused."""
+    None. Anything it can't check is refused. Without `expand`, only the arguments as written (#116 F1: prep_decision runs
+    this first and held_glob_reason last)."""
     try:
-        for p in held_arg_paths(command):
+        found = held_arg_paths(command, expand=False)          # #116 F1: the arguments as written first, then what they expand to
+        for p in _then_expanded(found, expand, max_matches=HELD_GLOB_LIMIT):
             kind, why = classify(p, "read")
             if kind == "never":
                 return f"{p}: {why}"
-    except HeldGlobTooBig:
+    except (HeldGlobTooBig, AskGlobTooBig):
         return "the wildcard matches too many files for the guard to check: name the file"
+    except GlobRefused as e:
+        return str(e)
     except Exception as e:  # noqa: BLE001  fail closed
         return f"the guard couldn't check this call's arguments ({type(e).__name__})"
     return None
+
+
+def held_glob_reason(command):
+    """Why what a held run's wildcard would match is refused, or None: the never list on each match (#116 F1: the bounded
+    expansion, after every other check)."""
+    return held_never_reason(command) if WILDCARDS & set(command) else None
 
 
 # Read commands a held run still may not run: reach.py wrap and hook hand over to another command; drafts.py result stages a bulk
@@ -1353,8 +1470,9 @@ def ask_bash_refusal(command, mode):
     """Why an ask creaite Bash call is refused, or None: its form and the record gate (bash_refusal, as before), then
     (ask-hook-fix, 15-10-2026) an unquoted comment, ~- ~+ ~N or ** (the shell's own words), a never-list path in any argument
     form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
-    return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command)
-            or handover_refusal(command) or read_write_refusal(command))
+    # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
+    return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)
+            or handover_refusal(command) or read_write_refusal(command) or ask_glob_reason(command))
 
 
 # ===== ask-hook-fix (15-10-2026): ask creaite's never list on every argument form =====
@@ -1369,10 +1487,10 @@ ASK_WILDCARDS = set("*?[")
 URL_BEFORE = r"(?:^|[^A-Za-z0-9+.-])[A-Za-z][A-Za-z0-9+.-]*:$"     # the text before a URL's //: its scheme and colon
 
 
-def ask_arg_paths(command):
+def ask_arg_paths(command, expand=True):
     """Every path an ask creaite Bash call could hand a script: tool_paths', every path-like piece of an argument after = : or ,
-    (a URL's //host left out), a piece with $ as a script could expand it, and, for a wildcard, what the shell would expand it to."""
-    import glob
+    (a URL's //host left out), a piece with $ as a script could expand it, and (with `expand`), for a wildcard, what the shell
+    would expand it to (#116 F1: the bounded walk only, _bounded_expand)."""
     import re
     out = list(tool_paths("Bash", {"command": command}))
     for a in bash_args(command):
@@ -1386,12 +1504,7 @@ def ask_arg_paths(command):
     for p in list(out):
         if "$" in p and os.path.expandvars(p) not in out:
             out.append(os.path.expandvars(p))
-    for p in list(out):
-        if ASK_WILDCARDS & set(p):
-            pattern = os.path.expanduser(p)
-            pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
-            out += [m for m in glob.glob(pattern, recursive=False) + _ask_glob_dots(pattern) if m not in out]
-    return out
+    return out + _bounded_expand(out) if expand else out
 
 
 ASK_GLOB_LIMIT = 2000
@@ -1401,43 +1514,27 @@ class AskGlobTooBig(Exception):
     """A wildcard reaches more entries than the guard checks: refused, never let through."""
 
 
-def _ask_glob_dots(pattern):
-    """What the shell would expand a wildcard to with hidden files matched too (#116 A6 F3: zsh's GLOB_DOTS, bash's dotglob, so
-    `~/*/id_rsa` can reach ~/.ssh), one level per part, as glob does but with fnmatch, which matches a leading dot. At most
-    ASK_GLOB_LIMIT entries are looked at; more raises AskGlobTooBig, which ask_never_reason refuses."""
-    import fnmatch
-    parts = pattern.split("/")
-    found, seen = ["/" if pattern.startswith("/") else ""], 0
-    for part in (x for x in parts if x):
-        nxt = []
-        for base in found:
-            if ASK_WILDCARDS & set(part):
-                try:
-                    names = os.listdir(base or ".")
-                except OSError:          # not a folder, or unreadable: the shell's glob finds nothing there either
-                    continue
-                seen += len(names)
-                if seen > ASK_GLOB_LIMIT:
-                    raise AskGlobTooBig()
-                nxt += [os.path.join(base, n) for n in names if fnmatch.fnmatchcase(n, part)]
-            elif os.path.lexists(os.path.join(base, part)):
-                nxt.append(os.path.join(base, part))
-        found = nxt
-    return found
-
-
-def ask_never_reason(command):
-    """Why an ask creaite Bash call names a place on the never list, in any argument form, or None. Fails closed."""
+def ask_never_reason(command, expand=True):
+    """Why an ask creaite Bash call names a place on the never list, in any argument form, or None. Fails closed. Without
+    `expand`, only the arguments as written (#116 F1: ask_bash_refusal runs this first and ask_glob_reason last)."""
     try:
-        for p in ask_arg_paths(command):
+        found = ask_arg_paths(command, expand=False)          # #116 F1: the arguments as written first, then what they expand to
+        for p in _then_expanded(found, expand):
             kind, why = classify(p, "read")
             if kind == "never":
                 return f"{p}: {why}"
-    except AskGlobTooBig:
+    except (AskGlobTooBig, HeldGlobTooBig):
         return "the wildcard reaches too many files for the guard to check: name the file"
+    except GlobRefused as e:
+        return str(e)
     except Exception as e:  # noqa: BLE001  fail closed
         return f"the guard couldn't check this call's arguments ({type(e).__name__})"
     return None
+
+
+def ask_glob_reason(command):
+    """Why what an ask creaite Bash call's wildcard would expand to is refused, or None (#116 F1: last, bounded)."""
+    return ask_never_reason(command) if ASK_WILDCARDS & set(command) else None
 # ===== end ask-hook-fix: argument forms =====
 
 
@@ -1458,7 +1555,7 @@ def ask_shell_refusal(command):
     quote, prev = None, " "
     for i, ch in enumerate(cmd):
         if quote:
-            if ch == quote and not (quote == '"' and cmd[i - 1] == "\\"):
+            if ch == quote:
                 quote = None
         elif ch in "'\"":
             quote = ch
