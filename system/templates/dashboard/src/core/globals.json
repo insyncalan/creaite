@@ -152,9 +152,14 @@
    "apply",
    "applyFilters",
    "applyMotion",
+   "applyNow",
    "applyTheme",
    "applyView",
+<<<<<<< HEAD
    "askDeleteNote",
+=======
+   "applyWords",
+>>>>>>> origin/fix-refused-apply
    "askLive",
    "askPerson",
    "askWorking",
