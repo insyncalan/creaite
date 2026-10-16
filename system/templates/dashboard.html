@@ -25515,8 +25515,10 @@ ${s5}`;
     if (!m5 || /\[\[[^\]]*$/.test(before)) return null;
     return { from: s5.from - m5[2].length - 1, to: s5.from, q: m5[2] };
   }
+  var armed = /* @__PURE__ */ new WeakSet();
   function insertHash(h5) {
     const e4 = h5.editor, s5 = e4.state.selection, before = s5.empty ? s5.$from.parent.textBetween(0, s5.$from.parentOffset, void 0, "￼") : "";
+    armed.add(e4);
     e4.chain().focus().insertContent(before && !/\s$/.test(before) ? " #" : "#").run();
   }
   function ItemList({ state, view, pick, hover }) {
@@ -25561,7 +25563,7 @@ ${s5}`;
     root.className = "itemrootpick";
     (el2.closest("dialog[open]") || document.body).appendChild(root);
     let st2 = null;
-    let dismissed = -1;
+    let dismissed = -1, opened = false, typed2 = false;
     const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u2(ItemList, { state: st2, view, pick: choose, hover: (i5) => {
         if (st2) {
@@ -25574,11 +25576,15 @@ ${s5}`;
         view.dom
       );
       if (st2) {
+        opened = true;
         dom.setAttribute("aria-haspopup", "listbox");
         dom.setAttribute("aria-expanded", "true");
         dom.setAttribute("aria-controls", "ntpick");
         dom.setAttribute("aria-activedescendant", `ntpick-${st2.i}`);
-      } else for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant"]) dom.removeAttribute(a5);
+      } else {
+        for (const a5 of ["aria-haspopup", "aria-controls", "aria-activedescendant"]) dom.removeAttribute(a5);
+        if (opened) dom.setAttribute("aria-expanded", "false");
+      }
     };
     const close = () => {
       if (!st2) return;
@@ -25586,12 +25592,16 @@ ${s5}`;
       draw2();
     };
     const look = () => {
+      const mayOpen = typed2 || armed.delete(editor);
+      typed2 = false;
       if (editor.isDestroyed || view.composing) return;
       const a5 = hashAt(editor);
       if (!a5 || a5.from === dismissed) {
         if (!a5) dismissed = -1;
         return close();
       }
+      if (!st2 && !mayOpen) return;
+      if (st2 && st2.from !== a5.from && !mayOpen) return close();
       const opts = itemOptions(code(), a5.q);
       if (!opts.length) return close();
       st2 = { ...a5, opts, i: st2 && st2.from === a5.from ? Math.min(st2.i, opts.length - 1) : 0 };
@@ -25628,9 +25638,16 @@ ${s5}`;
     const blur = () => setTimeout(() => {
       if (!el2.contains(document.activeElement)) close();
     }, 150);
-    const comp = () => look();
+    const comp = () => {
+      typed2 = true;
+      look();
+    };
+    const before = (e4) => {
+      typed2 = e4.inputType === "insertText" || e4.inputType.startsWith("deleteContent");
+    };
     editor.on("selectionUpdate", look);
     editor.on("update", look);
+    el2.addEventListener("beforeinput", before, true);
     el2.addEventListener("keydown", keys, true);
     el2.addEventListener("focusout", blur);
     el2.addEventListener("compositionend", comp);
@@ -25638,6 +25655,7 @@ ${s5}`;
       editor.off("destroy", off);
       editor.off("selectionUpdate", look);
       editor.off("update", look);
+      el2.removeEventListener("beforeinput", before, true);
       el2.removeEventListener("keydown", keys, true);
       el2.removeEventListener("focusout", blur);
       el2.removeEventListener("compositionend", comp);

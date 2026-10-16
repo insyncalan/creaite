@@ -27,10 +27,14 @@ export function hashAt(editor) {
   return { from: s.from - m[2].length - 1, to: s.from, q: m[2] };
 }
 
+/** Editors where a `#` was just put in by a command (the Insert menu, the `/` row): that counts as typed, so the list may open. */
+const armed = new WeakSet();
+
 /** The toolbar's and the `/` menu's "Work item": type a `#` at the caret (after a space if the text before it is a word), which opens the list.
     @param {{editor: any}} h */
 export function insertHash(h) {
   const e = h.editor, s = e.state.selection, before = s.empty ? s.$from.parent.textBetween(0, s.$from.parentOffset, undefined, "￼") : "";
+  armed.add(e);
   e.chain().focus().insertContent(before && !/\s$/.test(before) ? " #" : "#").run();
 }
 
@@ -63,19 +67,22 @@ export function attachItemPick(h, { code }) {
   (el.closest("dialog[open]") || document.body).appendChild(root);
   /** @type {ItemState|null} */
   let st = null;
-  let dismissed = -1;
+  let dismissed = -1, opened = false, typed = false;          /* typed: text was just typed or deleted (or a # inserted by a command): the only thing that opens the list, as under the / menu */
   const draw = () => {
     render(st ? <ItemList state={st} view={view} pick={choose} hover={i => { if (st) { st = { ...st, i }; draw(); } }} /> : null, root);
     const dom = /** @type {HTMLElement} */ (view.dom);
-    if (st) { dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-expanded", "true"); dom.setAttribute("aria-controls", "ntpick");
+    if (st) { opened = true; dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-expanded", "true"); dom.setAttribute("aria-controls", "ntpick");
       dom.setAttribute("aria-activedescendant", `ntpick-${st.i}`); }
-    else for (const a of ["aria-expanded", "aria-controls", "aria-activedescendant"]) dom.removeAttribute(a);
+    else { for (const a of ["aria-haspopup", "aria-controls", "aria-activedescendant"]) dom.removeAttribute(a); if (opened) dom.setAttribute("aria-expanded", "false"); }          /* as the / menu: "false" once it has been open */
   };
   const close = () => { if (!st) return; st = null; draw(); };
   const look = () => {
+    const mayOpen = typed || armed.delete(editor); typed = false;
     if (editor.isDestroyed || view.composing) return;
     const a = hashAt(editor);
     if (!a || a.from === dismissed) { if (!a) dismissed = -1; return close(); }
+    if (!st && !mayOpen) return;          /* a caret move, a paste or a saved note never opens it; only typing a "#" (or its query) does */
+    if (st && st.from !== a.from && !mayOpen) return close();
     const opts = itemOptions(code(), a.q);
     if (!opts.length) return close();
     st = { ...a, opts, i: st && st.from === a.from ? Math.min(st.i, opts.length - 1) : 0 };
@@ -98,13 +105,16 @@ export function attachItemPick(h, { code }) {
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); dismissed = st.from; close(); }
   };
   const blur = () => setTimeout(() => { if (!el.contains(document.activeElement)) close(); }, 150);
-  const comp = () => look();
+  const comp = () => { typed = true; look(); };
+  /** @param {InputEvent} e */
+  const before = e => { typed = e.inputType === "insertText" || e.inputType.startsWith("deleteContent"); };          /* beforeinput runs before the transaction: typing or deleting arms it (never a paste, a drop or a caret move) */
   editor.on("selectionUpdate", look); editor.on("update", look);
+  el.addEventListener("beforeinput", before, true);
   el.addEventListener("keydown", keys, true); el.addEventListener("focusout", blur); el.addEventListener("compositionend", comp);
   const off = () => {
     editor.off("destroy", off);
     editor.off("selectionUpdate", look); editor.off("update", look);
-    el.removeEventListener("keydown", keys, true); el.removeEventListener("focusout", blur); el.removeEventListener("compositionend", comp);
+    el.removeEventListener("beforeinput", before, true); el.removeEventListener("keydown", keys, true); el.removeEventListener("focusout", blur); el.removeEventListener("compositionend", comp);
     st = null; render(null, root); root.remove();
     if (!editor.isDestroyed) for (const a of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a);
   };

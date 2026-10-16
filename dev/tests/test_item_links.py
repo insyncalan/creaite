@@ -409,6 +409,77 @@ class ItemLinks(LiveBrowserCase):
         self.assertTrue(b.eval("!!shared.CURED"))
         self.assertNotEqual(b.eval("curEd.getAttribute('aria-expanded')"), "true")
 
+    # ---- step C on the new toolbar: the Insert menu, and `#` opens only after typed text ---------------------------------------
+
+    def suffix(self):
+        item = self.an_item()
+        return item["id"].rsplit("-", 1)[1].lstrip("0") or "0"
+
+    def test_the_insert_menu_work_item_entry_opens_the_shared_picker_in_notes(self):
+        b = self.b
+        self.make_note("Insert item")
+        b.type("Chase")
+        b.click(".nbar [data-nt=m-insert]")
+        b.wait("!!document.querySelector('.nbar [role=menu] [data-cmd=item]')", 5)
+        b.click(".nbar [role=menu] [data-cmd=item]")
+        b.wait("!!" + PICK, 5)                                                      # the same #ntpick list as typing a #
+        self.assertEqual(b.eval("document.querySelector('.nbody').getAttribute('aria-expanded')"), "true")
+        self.assertTrue(all(" · " in r and ": " in r for r in self.rows()), self.rows())
+        self.assertIn("Chase #", b.eval("document.querySelector('.nbody').textContent").replace("\u00a0", " "))
+        b.key("Enter")                                                              # picks the first row: one link, the words as the link text
+        b.wait(f"!{PICK}", 5)
+        self.assertIn("(creaite:item/", b.eval("document.querySelector('.nbody').cxed.value()"))
+
+    def test_current_states_own_work_item_button_opens_the_same_picker(self):
+        b = self.b
+        self.open_current()
+        self.assertEqual(b.eval("document.querySelectorAll('[data-rc=item], [data-nt=item]').length > 0"), True)
+        b.click("[data-rc=item], [data-nt=item]")
+        b.wait("!!" + PICK, 5)
+        self.assertEqual(b.eval("curEd.getAttribute('aria-expanded')"), "true")
+        b.key("Escape")
+        b.wait(f"!{PICK}", 5)
+        self.assertNotEqual(b.eval("curEd.getAttribute('aria-expanded')"), "true")
+
+    def paste(self, sel, text):
+        self.b.eval("(()=>{ const el=document.querySelector(%r), dt=new DataTransfer(); dt.setData('text/plain', %r); "
+                    "el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); })()" % (sel, text))
+        self.b.pump(0.3)
+
+    def test_a_paste_with_a_matching_hash_does_not_open_the_list_in_either_host(self):
+        b = self.b
+        n = self.suffix()
+        self.make_note("Paste item")
+        self.paste(".nbody", "see #" + n)
+        self.assertIn("see #" + n, b.eval("document.querySelector('.nbody').cxed.value()"), "the paste landed")
+        self.assertFalse(b.eval("!!" + PICK), "Notes: a paste opens nothing")
+        self.open_current()
+        self.paste("#curEd", "see #" + n)
+        self.assertIn("see #" + n, b.eval("edValue(curEd)"), "the paste landed")
+        self.assertFalse(b.eval("!!" + PICK), "Current state: a paste opens nothing")
+
+    def test_focus_and_caret_moves_in_saved_text_with_a_matching_hash_do_not_open_the_list(self):
+        b = self.b
+        n = self.suffix()
+        self.make_note("Saved item")
+        b.eval("(()=>{ const x=document.querySelector('.nbody').cxed; x.editor.commands.setContent('see #%s and more'); })()" % n)
+        b.eval("document.querySelector('.nbody').blur()")
+        b.pump(0.3)
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")
+        b.key("ArrowLeft")
+        for _ in range(len(" and more")):
+            b.key("ArrowLeft")                                                      # the caret walks to just after '#N'
+        b.pump(0.3)
+        self.assertFalse(b.eval("!!" + PICK), "Notes: moving the caret into saved text opens nothing")
+        self.open_current("see #%s and more" % n)
+        for _ in range(len(" and more")):
+            b.key("ArrowLeft")
+        b.pump(0.3)
+        self.assertFalse(b.eval("!!" + PICK), "Current state: a saved #N opens nothing on focus or a caret move")
+        b.type(" ")                                                                 # typing in it does not reopen it while the caret is out of a '#query'
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!" + PICK))
+
 
 if __name__ == "__main__":
     unittest.main()
