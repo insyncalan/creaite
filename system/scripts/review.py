@@ -648,6 +648,7 @@ def client_findings(block):
     draft = paths.resolve(block["draft"])
 
     def check(con):
+        """The client check on the draft, with the connection `con`."""
         if creaite_doc.is_doc(draft):
             return client_leak.findings(creaite_doc.read(draft), con)
         return client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
@@ -688,6 +689,7 @@ class _WithoutLabels:
         self._con = con
 
     def execute(self, sql, *args):
+        """The query's rows; none for a query on the labels."""
         if re.search(r"\b(?:item_)?labels\b", sql):
             return self._con.execute("SELECT NULL, NULL, NULL WHERE 0")
         return self._con.execute(sql, *args)
