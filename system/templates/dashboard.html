@@ -2851,6 +2851,39 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .pptl .sub{display:block} .pptll{display:block;font-size:var(--fs-xs)}
 .ppinv p{margin:6px 0} .ppppl{list-style:none;margin:4px 0 10px;padding:0} .ppppl li{display:flex;align-items:center;gap:8px;margin:4px 0}
 .ppppl .av{margin-left:0}
+/* #111 piece A: your aim (three stacked editors), the one Shape control, In play (Raise / Note / Skip), the rail's small lists */
+.ppfocus h2 .ppstamp{margin:0 0 0 auto;font-size:var(--fs-xs);font-weight:400}
+.ppfocustxt{margin:0 0 8px}
+.ppnote+.ppnote{margin-top:12px}
+.ppfld>label{display:block;font-size:var(--fs-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.ppfld>label em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400}
+.ppfocus .ppbox:focus,.ppfld:focus-within .ppbox{border-color:var(--accent);outline:2px solid var(--focus);outline-offset:0}
+.ppshape{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.ppshrow{display:flex;gap:8px;align-items:center}
+.ppshrow input{flex:1;min-width:0;height:34px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 12px;background:var(--surface);color:var(--ink);font:var(--fs-sm) var(--font)}
+.ppshrow input:focus{border-color:var(--accent);outline:2px solid var(--focus);outline-offset:0}
+.ppshrow .btn{flex:none;white-space:nowrap} .ppshrow .btn[aria-disabled="true"]{opacity:.5;cursor:default} .ppshrow .btn svg.i{width:14px;height:14px}
+.ppshape .sp{flex:1}
+.ppsug{margin-top:12px;border:1px solid var(--accent);border-radius:var(--r-md);padding:10px 14px;background:var(--surface)}
+.ppsug .btn.shsm{min-height:28px;padding:0 10px;font-size:var(--fs-sm)}
+.ppsugl{margin:4px 0 0;padding-left:18px;font-size:var(--fs-sm)} .ppsugl li{margin:3px 0;overflow-wrap:anywhere} .ppsugl .shcite{margin-left:6px}
+.ppplay h2 .sp{flex:1}
+.ppitems{list-style:none;margin:0;padding:0}
+.ppitem{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.ppitem:first-child{border-top:0}
+.ppitem .pptx{flex:1;min-width:200px;font-size:var(--fs-sm);overflow-wrap:anywhere}
+.ppitem .pptx b{font-weight:500} .ppitem .pptx small{display:block}
+.ppitem .ppid{font-size:var(--fs-xs);margin-right:4px}
+.ppitem.skip .pptx{opacity:.55;text-decoration:line-through}
+.ppwhys{display:flex;flex-direction:column;align-items:flex-end;max-width:210px}
+.ppwhy.late{color:var(--bad)}
+.ppsel{display:inline-flex;flex:none;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.ppsel button{border:0;background:var(--surface);color:var(--muted);height:28px;min-width:48px;padding:0 10px;font:500 var(--fs-xs) var(--font);cursor:pointer}
+.ppsel button+button{border-left:1px solid var(--line)}
+.ppsel button:hover{background:var(--sunk)} .ppsel button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.ppsel button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.ppmore,.ppskipped{margin:8px 0 0}
+.ppmini{margin:0;padding-left:16px;font-size:var(--fs-sm)} .ppmini li{margin:3px 0;overflow-wrap:anywhere}
 @media (max-width:1000px){ .ppb{grid-template-columns:minmax(0,1fr)} .ppoutline{display:none} }
 @media (max-width:640px){ .pph,.ppb,.ppone{padding-left:16px;padding-right:16px} .ppsp{display:none} .ppwi thead{display:none} .ppwi tr{display:block;padding:6px 0;border-bottom:1px solid var(--line)} .ppwi tr:last-child{border-bottom:0} .ppwi td{display:block;border:0;padding:2px 8px} }
 @media print{
@@ -4056,6 +4089,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     MenuPanel: () => MenuPanel,
     NEG: () => NEG,
     NODRAFT_MSG: () => NODRAFT_MSG,
+    NOTE_KEYS: () => NOTE_KEYS,
     NOTE_OPEN: () => NOTE_OPEN,
     NUMW: () => NUMW,
     OLDCATS: () => OLDCATS,
@@ -5679,6 +5713,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     pkWsPreSync: () => pkWsPreSync,
     pkX: () => pkX,
     placePicker: () => placePicker,
+    playOf: () => playOf,
     plur: () => plur,
     polishAsk: () => polishAsk,
     portfolioTable: () => portfolioTable,
@@ -5992,8 +6027,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     saveFocus: () => saveFocus,
     saveIgnore: () => saveIgnore,
     savePanel: () => savePanel,
+    saveQuestions: () => saveQuestions,
     saveQueue: () => saveQueue,
     saveS: () => saveS,
+    saveSection: () => saveSection,
     saveTab: () => saveTab,
     saveView: () => saveView,
     saveWs: () => saveWs,
@@ -6032,6 +6069,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     setOpen: () => setOpen,
     setPTab: () => setPTab,
     setPalette: () => setPalette,
+    setPlay: () => setPlay,
     setResolve: () => setResolve,
     setRewrite: () => setRewrite,
     setRhythm: () => setRhythm,
@@ -11576,7 +11614,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " "), typed2 = ql2.split(" ");
     if (!ql2) return 9;
     const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
-    const inOrder = (name2) => {
+    const inOrder2 = (name2) => {
       const w6 = name2.split(" ");
       let at2 = 0;
       return typed2.every((t47) => {
@@ -11586,7 +11624,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     };
     if (ids.includes(ql2)) return 0;
     if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
-    if (typed2.length > 1 && inOrder(name)) return 1;
+    if (typed2.length > 1 && inOrder2(name)) return 1;
     if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
     if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
     return 9;
@@ -41275,10 +41313,10 @@ ${s5}`;
     if (!d5) return;
     shapeText.value = { ...shapeText.value, [sec]: textOf(d5[sec]) };
   }
-  async function runShape() {
+  async function runShape(o5 = {}) {
     const key = shapeKey.value;
     if (!key || shapeBusy.value) return;
-    const instruction = shapeInstruction.value.trim();
+    const instruction = shapeInstruction.value.trim() || String(o5.fallback || "").trim();
     if (!instruction) {
       shapeMsg.value = "Write the focus and the aim first.";
       return;
@@ -41356,6 +41394,49 @@ ${s5}`;
     shapeReadingMine.value = false;
     shapeFilter.value = null;
     shapeAccepted.value = "";
+  }
+  var shapeProposal = y3(
+    /** @type {Proposal | null} */
+    null
+  );
+  var SHAPE_DEFAULT = "Draft the objective, talking points and ask from the open items, the series and the research.";
+  function syncShape(rec) {
+    const r4 = rec || {};
+    shapeReading.value = r4.reading || null;
+    shapeReadingMine.value = false;
+    const has = (o5) => !!o5 && Object.values(o5).some((l6) => (
+      /** @type {any[]} */
+      (l6 || []).length
+    ));
+    shapeDrafted.value = has(r4.drafted) ? r4.drafted : has(r4.notes) ? emptyNotes() : null;
+    shapeExcluded.value = r4.excluded || [];
+    shapeAccepted.value = r4.accepted_at || "";
+    if (!shapeInstruction.value && r4.instruction) shapeInstruction.value = r4.instruction;
+    fill(r4.notes);
+  }
+  async function shapeOnPage(rec) {
+    syncShape(rec);
+    const prior = shapeDrafted.value;
+    shapeProposal.value = null;
+    const raised = (rec && rec.reading && rec.reading.focus || []).filter((f5) => f5.id);
+    if (raised.length) {
+      shapeReading.value = { ...shapeReading.value || { aim: "", show: "focus-first" }, focus: raised };
+      shapeReadingMine.value = true;
+    }
+    await runShape({ fallback: SHAPE_DEFAULT });
+    const rd2 = shapeReading.value;
+    if (raised.length && rd2) shapeReading.value = { ...rd2, focus: [...rd2.focus, ...raised.filter((f5) => !rd2.focus.some((x5) => x5.id === f5.id))].slice(0, 12) };
+    if (shapeDrafted.value && shapeDrafted.value !== prior) shapeProposal.value = { notes: notesNow(), checks: shapeChecks.value };
+  }
+  async function useProposal() {
+    const ok2 = await acceptShape();
+    if (ok2) shapeProposal.value = null;
+    return ok2;
+  }
+  function discardProposal(rec) {
+    discardShape();
+    shapeProposal.value = null;
+    syncShape(rec);
   }
 
   // components/prep/PrepToolbar.jsx
@@ -41896,6 +41977,104 @@ ${s5}`;
       if (shapeKey.value === key) closeShape();
       else openShape(key);
     };
+  }
+  function PageShape({ rec, again, onUsed }) {
+    const busy2 = shapeBusy.value, why = draftWhyNot("shape"), prop = shapeProposal.value, conf = shapeConfidential.value;
+    const run = () => {
+      if (!why && !busy2) shapeOnPage(rec);
+    };
+    const saved = rec && rec.notes || {};
+    const flat2 = (L3) => (L3 || []).map((l6) => l6.text.replace(/\s+/g, " ").trim()).join("\n");
+    const changed = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
+    return /* @__PURE__ */ u2("div", { class: "ppshape", children: [
+      conf ? /* @__PURE__ */ u2("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents." }) : null,
+      /* @__PURE__ */ u2("div", { class: "ppshrow", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            id: "pp-shape-txt",
+            type: "text",
+            maxLength: 4e3,
+            value: shapeInstruction.value,
+            "aria-label": "What to focus on (optional)",
+            placeholder: "What to focus on? Optional: lead with the decision…",
+            onInput: (e4) => {
+              shapeInstruction.value = /** @type {HTMLInputElement} */
+              e4.currentTarget.value;
+            },
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                run();
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn ai",
+            id: "pp-shape-btn",
+            "data-ppshape": "1",
+            "aria-disabled": why || busy2 ? "true" : void 0,
+            "data-tip": why || (again ? "Draft again from the box and the open items; the sections you edited are kept" : "Draft the objective, talking points and ask from the open items, the series and the research"),
+            onClick: run,
+            children: [
+              /* @__PURE__ */ u2(Icon, { name: "spark" }),
+              again ? "Shape again" : "Shape"
+            ]
+          }
+        )
+      ] }),
+      busy2 === "shape" ? /* @__PURE__ */ u2("div", { class: "shrun", role: "status", children: [
+        /* @__PURE__ */ u2("span", { class: "spin", "aria-hidden": "true" }),
+        /* @__PURE__ */ u2("span", { children: [
+          "Shaping the meeting",
+          shapeSourcesN.value ? ` from ${shPlural(shapeSourcesN.value, "source")}` : "",
+          shapeSteps.value ? ` · ${shPlural(shapeSteps.value, "step")}` : ""
+        ] }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-drstop": true, children: "Stop" })
+      ] }) : null,
+      shapeMsg.value && !busy2 ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
+      !viaServer() ? /* @__PURE__ */ u2("p", { class: "wnote", children: "Shaping needs the live server." }) : null,
+      prop && !busy2 ? /* @__PURE__ */ u2("div", { class: "ppsug", role: "region", "aria-label": "Suggestion from creaite", children: [
+        /* @__PURE__ */ u2("div", { class: "shdh", children: [
+          /* @__PURE__ */ u2("span", { class: "tag shai", children: [
+            /* @__PURE__ */ u2(Icon, { name: "spark" }),
+            "Suggestion from creaite"
+          ] }),
+          /* @__PURE__ */ u2("span", { class: "sub", children: changed.length ? `${shPlural(changed.length, "section")} changed${changed.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed." }),
+          /* @__PURE__ */ u2("span", { class: "sp" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-ppdiscard": "1", onClick: () => discardProposal(rec), children: "Discard" }),
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "btn primary shsm",
+              "data-ppuse": "1",
+              disabled: !changed.length || !shapeReading.value,
+              onClick: async () => {
+                if (await useProposal()) onUsed();
+              },
+              children: "Use this"
+            }
+          )
+        ] }),
+        prop.checks.length ? /* @__PURE__ */ u2("ul", { class: "shchecks", "aria-label": "Checks on the draft", children: prop.checks.map((c5, i5) => /* @__PURE__ */ u2("li", { class: c5.level === "error" ? "bad" : "warn", children: [
+          c5.section ? `${c5.section}: ` : "",
+          c5.note
+        ] }, i5)) }) : null,
+        changed.map(([k5, label]) => /* @__PURE__ */ u2("div", { class: "shsec", children: [
+          /* @__PURE__ */ u2("div", { class: "shsech", children: /* @__PURE__ */ u2("b", { children: label }) }),
+          /* @__PURE__ */ u2("ul", { class: "ppsugl", children: (prop.notes[k5] || []).map((l6, i5) => /* @__PURE__ */ u2("li", { children: [
+            l6.text,
+            " ",
+            (l6.sources || []).length ? (l6.sources || []).map((src, j5) => /* @__PURE__ */ u2(ShapeSource, { s: src }, j5)) : /* @__PURE__ */ u2("span", { class: "drtag", role: "note", children: "no source" })
+          ] }, i5)) })
+        ] }, k5))
+      ] }) : null
+    ] });
   }
 
   // projects.js
@@ -51903,7 +52082,7 @@ ${d5.text}`);
     prepLoading.value = false;
     prepView.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't load the prep page" };
   }
-  async function saveFocus(part, what) {
+  async function saveFocus(part, what, o5 = {}) {
     const key = prepViewKey.value;
     if (!key) return false;
     if (!viaServer()) {
@@ -51919,11 +52098,56 @@ ${d5.text}`);
     }
     const v5 = prepView.value;
     if (v5 && v5.model && key === prepViewKey.value) {
-      if (part.reading || part.excluded || "questions" in part) await loadPrep(key, { keepTab: true });
+      if (part.reading || part.excluded || part.questions === null) await loadPrep(key, { keepTab: true });
+      else if (Array.isArray(part.questions)) prepView.value = { ...v5, model: { ...v5.model, focus: r4.focus, questions: r4.focus && r4.focus.questions || part.questions, questions_edited: true } };
       else prepView.value = { ...v5, model: { ...v5.model, focus: r4.focus } };
     }
-    snack(r4.page ? "Saved, and the Agendas page was updated" : "Saved");
+    if (!o5.quiet) snack(r4.page ? "Saved, and the Agendas page was updated" : "Saved");
     return true;
+  }
+  var queue = Promise.resolve();
+  var inOrder = (fn2) => {
+    const run = queue.then(fn2, fn2);
+    queue = run.then(() => {
+    }, () => {
+    });
+    return run;
+  };
+  var NOTE_KEYS = ["objective", "talking_points", "ask", "carried_over"];
+  function saveSection(sec, text) {
+    return inOrder(async () => {
+      const v5 = prepView.value, notes = v5 && v5.model && v5.model.focus && v5.model.focus.notes || {};
+      const all = {};
+      NOTE_KEYS.forEach((k5) => {
+        all[k5] = k5 === sec ? linesFrom(text, notes[k5]) : notes[k5] || [];
+      });
+      return saveFocus({ notes: all }, "notes", { quiet: true });
+    });
+  }
+  function saveQuestions(text) {
+    return inOrder(() => saveFocus({ questions: text.split("\n").map((x5) => x5.trim()).filter(Boolean) }, "questions", { quiet: true }));
+  }
+  function playOf(id2, focus) {
+    const f5 = focus || {};
+    if ((f5.excluded || []).includes(id2)) return "skip";
+    return ((f5.reading || {}).focus || []).some((x5) => x5.id === id2) ? "raise" : "note";
+  }
+  function setPlay(item, to2) {
+    return inOrder(async () => {
+      const v5 = prepView.value, f5 = v5 && v5.model && v5.model.focus || {};
+      if (playOf(item.id, f5) === to2) return true;
+      const r4 = f5.reading || { focus: [], aim: "", show: "focus-first" };
+      const focus = (r4.focus || []).filter((x5) => x5.id !== item.id);
+      if (to2 === "raise") {
+        if (focus.length >= 12) {
+          snack("Twelve items at most can be raised");
+          return false;
+        }
+        focus.push({ id: item.id, text: String(item.text || item.id).slice(0, 200) });
+      }
+      const excluded = (f5.excluded || []).filter((x5) => x5 !== item.id).concat(to2 === "skip" ? [item.id] : []);
+      return saveFocus({ reading: { ...r4, focus }, excluded }, "play", { quiet: true });
+    });
   }
   function linesFrom(text, before) {
     const old = before || [];
@@ -59938,17 +60162,76 @@ ${d5.text}`);
     actTabsDraw(false);
   }
 
+  // components/prep/PrepEditor.jsx
+  var SAVE_PAUSE = 700;
+  function PrepEditor({ id: id2, label, value, onSave, rows: rows2 = 3, placeholder, hint, ai: ai2, cls = "ppbox" }) {
+    const last = A2(value), timer2 = A2(
+      /** @type {any} */
+      0
+    ), typed2 = A2(
+      /** @type {string | null} */
+      null
+    );
+    last.current = value;
+    h2(() => () => {
+      if (timer2.current) clearTimeout(timer2.current);
+    }, []);
+    const flush = () => {
+      if (timer2.current) {
+        clearTimeout(timer2.current);
+        timer2.current = 0;
+      }
+      const t47 = typed2.current;
+      typed2.current = null;
+      if (t47 !== null && t47.trim() !== last.current.trim()) {
+        last.current = t47;
+        onSave(t47);
+      }
+    };
+    return /* @__PURE__ */ u2("div", { class: "ppfld", children: [
+      /* @__PURE__ */ u2("label", { id: `${id2}-l`, children: [
+        label,
+        hint ? /* @__PURE__ */ u2("em", { children: [
+          " ",
+          hint
+        ] }) : null
+      ] }),
+      /* @__PURE__ */ u2(
+        TextEditor,
+        {
+          id: id2,
+          cls,
+          rows: rows2,
+          value,
+          placeholder,
+          labelledBy: `${id2}-l`,
+          ai: ai2,
+          onInput: (t47) => {
+            typed2.current = t47;
+            if (timer2.current) clearTimeout(timer2.current);
+            timer2.current = setTimeout(flush, SAVE_PAUSE);
+          },
+          onCommit: (t47) => {
+            typed2.current = t47;
+            flush();
+          }
+        }
+      )
+    ] });
+  }
+
   // components/prep/PrepPage.jsx
   var SECTIONS = [["objective", "Objective"], ["talking_points", "Talking points"], ["ask", "Ask"], ["carried_over", "Carried over"]];
   var OUTLINE = [
-    ["focus", "Focus and notes"],
-    ["work", "Work items"],
-    ["notes", "Researched notes"],
-    ["questions", "Questions and asks"],
+    ["focus", "Your aim"],
+    ["work", "In play"],
+    ["notes", "What research found"],
+    ["questions", "Questions to ask"],
     ["reporting", "Latest reporting"],
     ["sources", "Sources"],
     ["series", "This series"]
   ];
+  var AIM = SECTIONS.slice(0, 3);
   var FILEKIND = {
     word: ["Word", "opens in Word"],
     excel: ["Excel", "opens in Excel"],
@@ -60047,6 +60330,7 @@ ${d5.text}`);
           mt2.start ? ` · ${mt2.start}${mt2.end ? ` – ${mt2.end}` : ""}` : ""
         ] }),
         mt2.project_name ? /* @__PURE__ */ u2(Chip, { name: "Project", children: mt2.project_name }) : null,
+        (mo2.reporting || []).length === 1 && mo2.reporting[0].health ? /* @__PURE__ */ u2(Chip, { name: "Health", children: /* @__PURE__ */ u2(StatusDot, { health: mo2.reporting[0].health }) }) : null,
         !mt2.confidential && series.text ? /* @__PURE__ */ u2(Chip, { icon: "history", name: "Series", children: series.text }) : null,
         !mt2.confidential && inv.length ? /* @__PURE__ */ u2(Chip, { name: "Invited", cls: "ppwho", children: [
           /* @__PURE__ */ u2("span", { class: "ppavs", "aria-hidden": "true", children: [
@@ -60060,10 +60344,6 @@ ${d5.text}`);
         ] }) : null
       ] }),
       /* @__PURE__ */ u2("div", { class: "ppacts", children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn ppai", onClick: () => popup(false), "data-tip": "Shape this meeting around a focus, in the Prep popup", children: [
-          /* @__PURE__ */ u2(Icon, { name: "spark" }),
-          "Change focus"
-        ] }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: refresh, disabled: !!researching, "data-tip": "Research the meeting again and save a new Agendas page", children: [
           /* @__PURE__ */ u2(Icon, { name: "refresh" }),
           "Refresh research"
@@ -60108,28 +60388,6 @@ ${d5.text}`);
       ] }) : null
     ] });
   }
-  function NoteBox({ sec, label, lines, onSave, ai: ai2 }) {
-    const start = lines.map((l6) => l6.text).join("\n");
-    const cites = lines.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
-    return /* @__PURE__ */ u2("div", { class: "ppnote", children: [
-      /* @__PURE__ */ u2("label", { id: `pp-n-${sec}-l`, children: label }),
-      /* @__PURE__ */ u2(
-        TextEditor,
-        {
-          id: `pp-n-${sec}`,
-          cls: "ppbox",
-          rows: Math.max(2, lines.length + 1),
-          value: start,
-          labelledBy: `pp-n-${sec}-l`,
-          ai: ai2,
-          onCommit: (now) => {
-            if (now.trim() !== start.trim()) onSave(sec, now);
-          }
-        }
-      ),
-      cites.length ? /* @__PURE__ */ u2("div", { class: "ppcites", children: cites.slice(0, 6).map((s5, i5) => /* @__PURE__ */ u2(SourceLink, { s: s5, cite: true }, i5)) }) : null
-    ] });
-  }
   var aiOf = (mo2) => {
     const mt2 = mo2 && mo2.meeting || {};
     return {
@@ -60139,83 +60397,115 @@ ${d5.text}`);
       key: () => `prep|${mt2.day || ""}|${mt2.start || ""}|${mt2.title || ""}`
     };
   };
-  function FocusBand({ mo: mo2, saving }) {
+  function AimCard({ mo: mo2, saving }) {
     const f5 = mo2.focus || {}, reading = f5.reading || {}, notes = f5.notes || {};
+    const again = !!f5.accepted_at || SECTIONS.some(([k5]) => ((f5.drafted || {})[k5] || []).length);
     const focusText = (reading.focus || []).map((x5) => x5.id ? `${x5.id}${x5.text && x5.text !== x5.id ? ` · ${x5.text}` : ""}` : x5.text).filter(Boolean).join("; ");
-    const shaped = SECTIONS.some(([k5]) => (notes[k5] || []).length);
-    const save2 = (sec, text) => {
-      const all = {};
-      SECTIONS.forEach(([k5]) => {
-        all[k5] = k5 === sec ? linesFrom(text, notes[k5]) : notes[k5] || [];
-      });
-      saveFocus({ notes: all }, "notes");
-    };
-    return /* @__PURE__ */ u2("section", { class: "ppfocus", id: "pp-focus", tabIndex: -1, "aria-labelledby": "pp-h-focus", children: [
+    return /* @__PURE__ */ u2("section", { class: "card pc ppfocus", id: "pp-focus", tabIndex: -1, "aria-labelledby": "pp-h-focus", children: [
       /* @__PURE__ */ u2("h2", { id: "pp-h-focus", children: [
         /* @__PURE__ */ u2(Icon, { name: "spark" }),
-        focusText ? `Focus: ${focusText}` : "Focus and notes"
+        "Your aim for this meeting",
+        /* @__PURE__ */ u2("span", { class: "sub ppstamp", role: "status", children: saving === "notes" ? "Saving…" : "Saved as you type" })
       ] }),
       reading.aim ? /* @__PURE__ */ u2("p", { class: "ppaim", children: [
         /* @__PURE__ */ u2("b", { children: "Aim:" }),
         " ",
         reading.aim
       ] }) : null,
-      shaped ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("div", { class: "ppnotes", children: SECTIONS.map(([k5, label]) => /* @__PURE__ */ u2(NoteBox, { sec: k5, label, lines: notes[k5] || [], onSave: save2, ai: aiOf(mo2) }, k5)) }),
-        /* @__PURE__ */ u2("p", { class: "sub ppstamp", role: "status", children: saving === "notes" ? "Saving…" : `Your notes${f5.accepted_at ? `, accepted ${fd(f5.accepted_at)}` : ""} · edit here; drag a box's corner to make it bigger` })
-      ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Nothing has been shaped for this meeting yet. Change focus to say what it should settle; the notes appear here." })
+      focusText ? /* @__PURE__ */ u2("p", { class: "sub ppfocustxt", children: [
+        "Focus: ",
+        focusText
+      ] }) : null,
+      AIM.map(([k5, label]) => {
+        const lines = notes[k5] || [];
+        const cites = lines.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
+        return /* @__PURE__ */ u2("div", { class: "ppnote", children: [
+          /* @__PURE__ */ u2(
+            PrepEditor,
+            {
+              id: `pp-n-${k5}`,
+              label,
+              value: lines.map((l6) => l6.text).join("\n"),
+              rows: Math.max(2, lines.length + 1),
+              placeholder: "One line each",
+              ai: aiOf(mo2),
+              onSave: (t47) => saveSection(k5, t47)
+            }
+          ),
+          cites.length ? /* @__PURE__ */ u2("div", { class: "ppcites", children: cites.slice(0, 6).map((s5, i5) => /* @__PURE__ */ u2(SourceLink, { s: s5, cite: true }, i5)) }) : null
+        ] }, k5);
+      }),
+      /* @__PURE__ */ u2(PageShape, { rec: f5, again, onUsed: () => loadPrep(prepViewKey.value || "", { keepTab: true }) })
     ] });
   }
-  function WorkCard({ mo: mo2 }) {
-    const w6 = mo2.work, rows2 = w6.rows || [], code = mo2.meeting.project, focus = w6.mode !== "all";
-    const show = (to2) => saveFocus({ reading: { ...(mo2.focus || {}).reading || {}, show: to2 } }, "show");
-    return /* @__PURE__ */ u2("section", { class: "card pc", id: "pp-work", tabIndex: -1, "aria-labelledby": "pp-h-work", children: [
+  function InPlay({ mo: mo2 }) {
+    const w6 = mo2.work, rows2 = w6.rows || [], code = mo2.meeting.project, f5 = mo2.focus || {}, focus = w6.mode !== "all";
+    const total = focus ? w6.N : rows2.length + (w6.not_listed || 0);
+    const skipped = (shapeFilter.value ? shapeFilter.value.items : []).filter((i5) => i5.excluded && !rows2.some((r4) => r4.id === i5.id));
+    const show = (to2) => saveFocus({ reading: { ...f5.reading || {}, show: to2 } }, "show", { quiet: true });
+    const restHidden = focus && w6.mode === "focus-only";
+    const n4 = rows2.filter((i5) => playOf(i5.id, f5) !== "skip").length;
+    return /* @__PURE__ */ u2("section", { class: "card pc ppplay", id: "pp-work", tabIndex: -1, "aria-labelledby": "pp-h-work", children: [
       /* @__PURE__ */ u2("h2", { id: "pp-h-work", children: [
-        focus ? "Work items in focus" : "Work items",
-        focus ? /* @__PURE__ */ u2("span", { class: "sub", children: [
-          " · ",
-          w6.n,
-          " of ",
-          w6.N,
-          " · ",
-          w6.mode === "focus-only" ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => show("focus-first"), children: "show all" }) : /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => show("focus-only"), children: "focus only" })
-        ] }) : null
+        "In play ",
+        /* @__PURE__ */ u2("span", { class: "sub", children: [
+          "· ",
+          focus ? `${w6.n} of ${w6.N}` : `${n4} of ${total}`,
+          " open items"
+        ] }),
+        /* @__PURE__ */ u2("span", { class: "sp" }),
+        /* @__PURE__ */ u2("span", { class: "sub ppraisehint", children: "Raise puts it in the agenda" })
       ] }),
-      rows2.length ? /* @__PURE__ */ u2("div", { class: "pptblwrap", children: /* @__PURE__ */ u2("table", { class: "ppwi", children: [
-        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
-          /* @__PURE__ */ u2("th", { scope: "col", children: "ID" }),
-          /* @__PURE__ */ u2("th", { scope: "col", children: "Item" }),
-          /* @__PURE__ */ u2("th", { scope: "col", children: "Owner" }),
-          /* @__PURE__ */ u2("th", { scope: "col", children: "Due" }),
-          /* @__PURE__ */ u2("th", { scope: "col", children: "Why it's here" })
-        ] }) }),
-        /* @__PURE__ */ u2("tbody", { children: rows2.map((i5) => {
-          const k5 = ["actions", "raid", "decisions"].includes(i5.table) ? i5.table : kOfId(i5.id);
-          const late = i5.due && i5.due < TODAY && !/^(Done|Closed|Cancelled|Made|Withdrawn)$/.test(i5.status || "");
-          const why = (Array.isArray(i5.why) ? i5.why : [i5.why]).filter(Boolean);
-          return /* @__PURE__ */ u2("tr", { class: `${k5 ? "click" : ""}${i5.in_focus ? " infocus" : ""}`, "data-open": k5 ? `${k5}:${i5.id}` : void 0, children: [
-            /* @__PURE__ */ u2("td", { class: "ppid", children: k5 ? /* @__PURE__ */ u2("a", { href: "#", "data-open": `${k5}:${i5.id}`, children: i5.id }) : i5.id }),
-            /* @__PURE__ */ u2("td", { children: [
-              i5.text,
-              /* @__PURE__ */ u2("div", { class: "sub", children: [i5.type, i5.p && i5.p !== code ? i5.p : ""].filter(Boolean).join(" · ") })
-            ] }),
-            /* @__PURE__ */ u2("td", { children: i5.owner || /* @__PURE__ */ u2("span", { class: "sub", children: "Not set" }) }),
-            /* @__PURE__ */ u2("td", { class: late ? "late" : "", children: [
-              i5.due ? fd(i5.due) : "—",
-              late ? /* @__PURE__ */ u2("div", { class: "sub late", children: "overdue" }) : null
-            ] }),
-            /* @__PURE__ */ u2("td", { children: why.map((x5, n4) => /* @__PURE__ */ u2("span", { class: "ppwhy", children: x5 }, n4)) })
-          ] }, i5.id);
-        }) })
-      ] }) }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Nothing is Urgent, overdue or due soon." }),
-      !focus && w6.not_listed ? /* @__PURE__ */ u2("p", { class: "sub", children: [
+      rows2.length ? /* @__PURE__ */ u2("ul", { class: "ppitems", children: rows2.map((i5) => {
+        const k5 = ["actions", "raid", "decisions"].includes(i5.table) ? i5.table : kOfId(i5.id);
+        const late = i5.due && i5.due < TODAY && !/^(Done|Closed|Cancelled|Made|Withdrawn)$/.test(i5.status || "");
+        const why = (Array.isArray(i5.why) ? i5.why : [i5.why]).filter(Boolean);
+        const cur = playOf(i5.id, f5);
+        return /* @__PURE__ */ u2("li", { class: `ppitem ${cur}${i5.in_focus ? " infocus" : ""}`, "data-id": i5.id, children: [
+          /* @__PURE__ */ u2("div", { class: "pptx", children: [
+            k5 ? /* @__PURE__ */ u2("a", { href: "#", class: "ppid", "data-open": `${k5}:${i5.id}`, children: i5.id }) : /* @__PURE__ */ u2("span", { class: "ppid", children: i5.id }),
+            " ",
+            /* @__PURE__ */ u2("b", { children: i5.text }),
+            /* @__PURE__ */ u2("small", { class: "sub", children: [i5.type, i5.owner || "Not set", i5.due ? `due ${fd(i5.due)}` : "", i5.p && i5.p !== code ? i5.p : ""].filter(Boolean).join(" · ") })
+          ] }),
+          /* @__PURE__ */ u2("span", { class: "ppwhys", children: [
+            late ? /* @__PURE__ */ u2("span", { class: "ppwhy late", children: "overdue" }) : null,
+            why.map((x5, j5) => /* @__PURE__ */ u2("span", { class: "ppwhy", children: x5 }, j5))
+          ] }),
+          /* @__PURE__ */ u2("span", { class: "ppsel", role: "group", "aria-label": `${i5.id}: raise, note or skip`, children: [["raise", "Raise"], ["note", "Note"], ["skip", "Skip"]].map(([id2, label]) => /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: cur === id2 ? "on" : "",
+              "aria-pressed": cur === id2 ? "true" : "false",
+              "data-play": id2,
+              onClick: () => setPlay(
+                i5,
+                /** @type {any} */
+                id2
+              ),
+              children: label
+            },
+            id2
+          )) })
+        ] }, i5.id);
+      }) }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Nothing is Urgent, overdue or due soon." }),
+      skipped.length ? /* @__PURE__ */ u2("p", { class: "sub ppskipped", children: [
+        "Skipped: ",
+        skipped.map((i5, j5) => /* @__PURE__ */ u2("span", { children: [
+          j5 ? ", " : "",
+          i5.id,
+          " ",
+          /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => setPlay(i5, "note"), children: "put back" })
+        ] }, i5.id))
+      ] }) : null,
+      focus ? /* @__PURE__ */ u2("p", { class: "sub ppmore", children: [
+        restHidden ? "The rest of the open items are hidden. " : "",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-ppmore": "1", onClick: () => show(restHidden ? "focus-first" : "focus-only"), children: restHidden ? "Show the rest" : "Hide the rest" })
+      ] }) : w6.not_listed ? /* @__PURE__ */ u2("p", { class: "sub ppmore", children: [
         plural(w6.not_listed, "other open item is", "other open items are"),
         " not listed. ",
-        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => openWork(code === "_portfolio" ? "" : code, "actions", "open"), children: [
-          "Show ",
-          w6.not_listed === 1 ? "it" : "them",
-          " in Work"
-        ] })
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-ppmore": "1", onClick: () => openWork(code === "_portfolio" ? "" : code, "actions", "open"), children: "Show the rest" })
       ] }) : null,
       (w6.documents || []).filter((d5) => !d5.excluded).length ? /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("h3", { children: [
@@ -60238,7 +60528,7 @@ ${d5.text}`);
   function NotesCard({ v: v5 }) {
     const mo2 = v5.model;
     return /* @__PURE__ */ u2("section", { class: "card pc", id: "pp-notes", tabIndex: -1, "aria-labelledby": "pp-h-notes", children: [
-      /* @__PURE__ */ u2("h2", { id: "pp-h-notes", children: "Researched notes" }),
+      /* @__PURE__ */ u2("h2", { id: "pp-h-notes", children: "What research found" }),
       mo2.about ? /* @__PURE__ */ u2("p", { children: mo2.about }) : null,
       mo2.notes.length ? /* @__PURE__ */ u2("ul", { class: "ppnl", children: mo2.notes.map((n4, i5) => /* @__PURE__ */ u2("li", { children: [
         n4.text,
@@ -60247,44 +60537,63 @@ ${d5.text}`);
           n4.source_text,
           n4.date_shown ? `, ${n4.date_shown}` : ""
         ] })
-      ] }, i5)) }) : /* @__PURE__ */ u2("p", { class: "sub", children: v5.stored ? "Nothing found." : "Not researched yet. Refresh research reads the minutes, documents, mail and Teams for this meeting." }),
-      (mo2.carried || []).length ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("h3", { children: "Not covered last time" }),
-        /* @__PURE__ */ u2("ul", { class: "ppnl", children: mo2.carried.map((c5, i5) => /* @__PURE__ */ u2("li", { children: [
+      ] }, i5)) }) : /* @__PURE__ */ u2("p", { class: "sub", children: v5.stored ? "Nothing found." : "Not researched yet. Refresh research reads the minutes, documents, mail and Teams for this meeting." })
+    ] });
+  }
+  function QuestionsCard({ mo: mo2, saving }) {
+    const start = (mo2.questions || []).join("\n");
+    return /* @__PURE__ */ u2("section", { class: "card pc", id: "pp-questions", tabIndex: -1, "aria-labelledby": "pp-h-questions", children: [
+      /* @__PURE__ */ u2("h2", { id: "pp-h-questions", children: "Questions to ask" }),
+      /* @__PURE__ */ u2(
+        PrepEditor,
+        {
+          id: "pp-q",
+          label: "Questions and asks, one a line",
+          value: start,
+          rows: Math.max(3, (mo2.questions || []).length + 1),
+          placeholder: "One question or ask a line",
+          ai: aiOf(mo2),
+          onSave: saveQuestions
+        }
+      ),
+      /* @__PURE__ */ u2("p", { class: "sub ppstamp", role: "status", children: saving === "questions" ? "Saving…" : mo2.questions_edited ? /* @__PURE__ */ u2(S2, { children: [
+        "Your questions · ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => saveFocus({ questions: null }, "questions"), children: "Use creaite's questions" })
+      ] }) : "One a line; saved as you type" })
+    ] });
+  }
+  function WhenWho({ mo: mo2 }) {
+    const mt2 = mo2.meeting, people = (mo2.brief || {}).people || {}, inv = people.invitees || [];
+    return /* @__PURE__ */ u2("section", { class: "card pc", id: "pp-when", tabIndex: -1, "aria-labelledby": "pp-h-when", children: [
+      /* @__PURE__ */ u2("h2", { id: "pp-h-when", children: "When and who" }),
+      /* @__PURE__ */ u2("ul", { class: "ppmini", children: [
+        /* @__PURE__ */ u2("li", { children: [
+          mt2.start ? `${mt2.start}${mt2.end ? ` to ${mt2.end}` : ""}` : mt2.day_shown,
+          mt2.where ? `, ${mt2.where}` : ""
+        ] }),
+        mt2.confidential ? /* @__PURE__ */ u2("li", { class: "sub", children: "Confidential: only the title and times are kept." }) : inv.length ? /* @__PURE__ */ u2("li", { children: inv.map((p6) => p6.name).join(", ") }) : /* @__PURE__ */ u2("li", { class: "sub", children: "No one else is invited." }),
+        !mt2.confidential && (mt2.body || inv.length) ? /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2("a", { href: "#", class: "linkbtn", onClick: (e4) => {
+          e4.preventDefault();
+          prepTab.value = "invite";
+        }, children: "See the invite" }) }) : null
+      ] })
+    ] });
+  }
+  function CarriedCard({ mo: mo2 }) {
+    const lines = ((mo2.focus || {}).notes || {}).carried_over || [], old = mo2.carried || [];
+    return /* @__PURE__ */ u2("section", { class: "card pc", id: "pp-carried", tabIndex: -1, "aria-labelledby": "pp-h-carried", children: [
+      /* @__PURE__ */ u2("h2", { id: "pp-h-carried", children: "Carried over" }),
+      lines.length || old.length ? /* @__PURE__ */ u2("ul", { class: "ppmini", children: [
+        lines.map((l6, i5) => /* @__PURE__ */ u2("li", { children: l6.text }, `n${i5}`)),
+        old.map((c5, i5) => /* @__PURE__ */ u2("li", { children: [
           c5.point,
           " ",
           /* @__PURE__ */ u2("span", { class: "sub", children: [
             c5.title,
             c5.day ? `, ${fd(c5.day)}` : ""
           ] })
-        ] }, i5)) })
-      ] }) : null
-    ] });
-  }
-  function QuestionsCard({ mo: mo2, saving }) {
-    const start = (mo2.questions || []).join("\n");
-    return /* @__PURE__ */ u2("section", { class: "card pc", id: "pp-questions", tabIndex: -1, "aria-labelledby": "pp-h-questions", children: [
-      /* @__PURE__ */ u2("h2", { id: "pp-h-questions", children: "Questions and asks" }),
-      /* @__PURE__ */ u2("span", { class: "vh", id: "pp-q-l", children: "Questions and asks, one a line" }),
-      /* @__PURE__ */ u2(
-        TextEditor,
-        {
-          id: "pp-q",
-          cls: "ppbox",
-          rows: Math.max(3, (mo2.questions || []).length + 1),
-          value: start,
-          placeholder: "One question or ask a line",
-          labelledBy: "pp-q-l",
-          ai: aiOf(mo2),
-          onCommit: (now) => {
-            if (now.trim() !== start.trim()) saveFocus({ questions: now.split("\n").map((x5) => x5.trim()).filter(Boolean) }, "questions");
-          }
-        }
-      ),
-      /* @__PURE__ */ u2("p", { class: "sub ppstamp", role: "status", children: saving === "questions" ? "Saving…" : mo2.questions_edited ? /* @__PURE__ */ u2(S2, { children: [
-        "Your questions · ",
-        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => saveFocus({ questions: null }, "questions"), children: "Use creaite's questions" })
-      ] }) : "One a line; edit here, and leaving the box saves them" })
+        ] }, `c${i5}`))
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Nothing was left over from the last meeting." })
     ] });
   }
   function ReportingCard({ mo: mo2 }) {
@@ -60433,7 +60742,14 @@ ${d5.text}`);
     ] });
   }
   function PrepPage() {
-    const v5 = prepView.value, tab = prepTab.value, saving = prepSaving.value;
+    const v5 = prepView.value, tab = prepTab.value, saving = prepSaving.value, key = prepViewKey.value;
+    h2(() => {
+      if (!key || !v5 || !v5.ok) return;
+      const bk2 = briefKey(key);
+      openShape(bk2).then(() => {
+        if (shapeKey.value === bk2) syncShape(v5.model.focus);
+      });
+    }, [key, !!(v5 && v5.ok)]);
     if (!v5) return /* @__PURE__ */ u2("div", { class: "pp", children: /* @__PURE__ */ u2("p", { class: "sub pploading", role: "status", children: prepLoading.value ? "Loading the prep page…" : "" }) });
     if (!v5.ok) return /* @__PURE__ */ u2("div", { class: "pp", children: [
       /* @__PURE__ */ u2("div", { class: "phead", children: /* @__PURE__ */ u2("h1", { children: "Prep" }) }),
@@ -60453,14 +60769,16 @@ ${d5.text}`);
             /* @__PURE__ */ u2("b", { children: "Refresh research" }),
             " drafts the notes and questions and saves the page in the project's Agendas folder."
           ] }) : null,
-          /* @__PURE__ */ u2(FocusBand, { mo: mo2, saving }),
-          /* @__PURE__ */ u2(WorkCard, { mo: mo2 }),
+          /* @__PURE__ */ u2(AimCard, { mo: mo2, saving }),
+          /* @__PURE__ */ u2(InPlay, { mo: mo2 }),
           /* @__PURE__ */ u2(NotesCard, { v: v5 }),
           /* @__PURE__ */ u2(QuestionsCard, { mo: mo2, saving })
         ] }),
         /* @__PURE__ */ u2("aside", { class: "pprail", "aria-label": "Context", children: [
+          /* @__PURE__ */ u2(WhenWho, { mo: mo2 }),
           /* @__PURE__ */ u2(ReportingCard, { mo: mo2 }),
           /* @__PURE__ */ u2(SeriesCard, { mo: mo2 }),
+          /* @__PURE__ */ u2(CarriedCard, { mo: mo2 }),
           /* @__PURE__ */ u2(SourcesCard, { mo: mo2 })
         ] })
       ] }) }),
@@ -60475,6 +60793,9 @@ ${d5.text}`);
     if (!pageMounted) {
       R(/* @__PURE__ */ u2(PrepPage, {}), el2);
       pageMounted = true;
+      window.addEventListener("hashchange", () => {
+        if (!/^#prep=/.test(location.hash)) closeShape();
+      });
     }
     if (key) loadPrep(key).then(() => tabTitle());
   }
@@ -67226,6 +67547,7 @@ ${d5.text}`);
         "PRIOS",
         "PROJF",
         "PULSE",
+        "PageShape",
         "Peek",
         "PrepPage",
         "PrepPopup",

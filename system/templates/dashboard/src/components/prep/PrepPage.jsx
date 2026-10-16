@@ -9,11 +9,12 @@
    research (the Prep page run, which stores the content and saves the Agendas file). Items open the peek (data-open), files
    open through /api/open (data-openfile), mail and Teams by the web link the sweep kept. Dates DD-MM-YYYY; projects by name. */
 import { render } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { Chip } from "../Chip.jsx";
 import { Icon } from "../Icon.jsx";
 import { StatusDot } from "../StatusDot.jsx";
-import { TextEditor } from "../TextEditor.jsx";
+import { PrepEditor } from "./PrepEditor.jsx";
+import { PageShape } from "./PrepShape.jsx";
 import { Tabs, panelId, tabId } from "../Tabs.jsx";
 import { $ } from "../../core/dom.js";
 import { openWork, tabTitle } from "../../core/nav.js";
@@ -22,12 +23,15 @@ import { snack, viaServer } from "../../core/server.js";
 import { draftAgenda, prepOpen, prepPage } from "../../meetings.js";
 import { openPrep } from "../../projects.js";
 import { kOfId } from "../../work.js";
-import { linesFrom, loadPrep, prepViewKey, prepLoading, prepSaving, prepTab, prepView, saveFocus } from "../../stores/prep.js";
+import { loadPrep, playOf, prepViewKey, prepLoading, prepSaving, prepTab, prepView, saveFocus, saveQuestions, saveSection, setPlay } from "../../stores/prep.js";
+import { closeShape, openShape, shapeFilter, shapeKey, syncShape } from "../../stores/prepShape.js";
 
 
 const SECTIONS = [["objective", "Objective"], ["talking_points", "Talking points"], ["ask", "Ask"], ["carried_over", "Carried over"]];
-const OUTLINE = [["focus", "Focus and notes"], ["work", "Work items"], ["notes", "Researched notes"], ["questions", "Questions and asks"],
+const OUTLINE = [["focus", "Your aim"], ["work", "In play"], ["notes", "What research found"], ["questions", "Questions to ask"],
   ["reporting", "Latest reporting"], ["sources", "Sources"], ["series", "This series"]];
+/** The three editors, one under the other (the fourth section, Carried over, is shown in the right rail). */
+const AIM = SECTIONS.slice(0, 3);
 const FILEKIND = { word: ["Word", "opens in Word"], excel: ["Excel", "opens in Excel"], pdf: ["PDF", "opens the PDF"],
   transcript: ["Transcript", "opens the transcript"], text: ["Notes", "opens the file"], page: ["Page", "opens the page"], file: ["File", "opens the file"] };
 const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + "s")}`;
@@ -99,6 +103,7 @@ function Header({ v, researching }) {
         <span class="tag ppint" data-tip="Your preparation: not for the client, never sent">Internal</span>
         <Chip icon="calendar" name="When">{mt.day_shown}{mt.start ? ` · ${mt.start}${mt.end ? ` – ${mt.end}` : ""}` : ""}</Chip>
         {mt.project_name ? <Chip name="Project">{mt.project_name}</Chip> : null}
+        {(mo.reporting || []).length === 1 && mo.reporting[0].health ? <Chip name="Health"><StatusDot health={mo.reporting[0].health} /></Chip> : null}
         {!mt.confidential && series.text ? <Chip icon="history" name="Series">{series.text}</Chip> : null}
         {!mt.confidential && inv.length ? (
           <Chip name="Invited" cls="ppwho">
@@ -107,7 +112,6 @@ function Header({ v, researching }) {
           </Chip>) : null}
       </div>
       <div class="ppacts">
-        <button type="button" class="btn ppai" onClick={() => popup(false)} data-tip="Shape this meeting around a focus, in the Prep popup"><Icon name="spark" />Change focus</button>
         <button type="button" class="btn" onClick={refresh} disabled={!!researching} data-tip="Research the meeting again and save a new Agendas page"><Icon name="refresh" />Refresh research</button>
         <button type="button" class="btn" onClick={() => popup(true)} data-tip="Draft the invite text and a timed agenda"><Icon name="filetext" />Draft agenda</button>
         {researching ? <span class="sub pprun" role="status"><span class="spin"></span> {researching} <button type="button" class="mini" data-prepstop>Stop</button></span> : null}
@@ -131,22 +135,6 @@ function Outline({ mo }) {
   );
 }
 
-/** One section's box: the lines as text, saved when the box is left with a change.
-    @param {{sec: string, label: string, lines: import("../../stores/prep.js").NoteLine[], onSave: (sec: string, text: string) => void,
-      ai?: import("../../core/editor.js").EdAi}} props */
-function NoteBox({ sec, label, lines, onSave, ai }) {
-  const start = lines.map(l => l.text).join("\n");
-  const cites = lines.flatMap(l => l.sources || []).filter((s, i, a) => a.findIndex(x => (x.path || x.url || x.id || x.label) === (s.path || s.url || s.id || s.label)) === i);
-  return (
-    <div class="ppnote">
-      <label id={`pp-n-${sec}-l`}>{label}</label>
-      <TextEditor id={`pp-n-${sec}`} cls="ppbox" rows={Math.max(2, lines.length + 1)} value={start} labelledBy={`pp-n-${sec}-l`} ai={ai}
-        onCommit={now => { if (now.trim() !== start.trim()) onSave(sec, now); }} />
-      {cites.length ? <div class="ppcites">{cites.slice(0, 6).map((s, i) => <SourceLink key={i} s={s} cite />)}</div> : null}
-    </div>
-  );
-}
-
 /** BL-301 D: AI on a selection in the Prep page's boxes (plain text), with the meeting's project; a confidential meeting asks
     once before its text goes to Claude. @param {any} mo @returns {import("../../core/editor.js").EdAi} */
 const aiOf = mo => {
@@ -155,57 +143,75 @@ const aiOf = mo => {
     key: () => `prep|${mt.day || ""}|${mt.start || ""}|${mt.title || ""}` };
 };
 
-function FocusBand({ mo, saving }) {
+/** Your aim: Objective, Talking points and Ask as three editors, one under the other, saved as you type (prep-focus.json); then
+    the one Shape control. The editor is PrepEditor, the seam for the shared editor (#122).
+    @param {{mo: any, saving: string}} props */
+function AimCard({ mo, saving }) {
   const f = mo.focus || {}, reading = f.reading || {}, notes = f.notes || {};
+  const again = !!f.accepted_at || SECTIONS.some(([k]) => ((f.drafted || {})[k] || []).length);
   const focusText = (reading.focus || []).map(x => x.id ? `${x.id}${x.text && x.text !== x.id ? ` · ${x.text}` : ""}` : x.text).filter(Boolean).join("; ");
-  const shaped = SECTIONS.some(([k]) => (notes[k] || []).length);
-  const save = (sec, text) => {
-    /** @type {Record<string, import("../../stores/prep.js").NoteLine[]>} */
-    const all = {};
-    SECTIONS.forEach(([k]) => { all[k] = k === sec ? linesFrom(text, notes[k]) : (notes[k] || []); });
-    saveFocus({ notes: all }, "notes");
-  };
   return (
-    <section class="ppfocus" id="pp-focus" tabIndex={-1} aria-labelledby="pp-h-focus">
-      <h2 id="pp-h-focus"><Icon name="spark" />{focusText ? `Focus: ${focusText}` : "Focus and notes"}</h2>
+    <section class="card pc ppfocus" id="pp-focus" tabIndex={-1} aria-labelledby="pp-h-focus">
+      <h2 id="pp-h-focus"><Icon name="spark" />Your aim for this meeting
+        <span class="sub ppstamp" role="status">{saving === "notes" ? "Saving…" : "Saved as you type"}</span></h2>
       {reading.aim ? <p class="ppaim"><b>Aim:</b> {reading.aim}</p> : null}
-      {shaped ? <>
-        <div class="ppnotes">{SECTIONS.map(([k, label]) => <NoteBox key={k} sec={k} label={label} lines={notes[k] || []} onSave={save} ai={aiOf(mo)} />)}</div>
-        <p class="sub ppstamp" role="status">{saving === "notes" ? "Saving…" : `Your notes${f.accepted_at ? `, accepted ${fd(f.accepted_at)}` : ""} · edit here; drag a box's corner to make it bigger`}</p>
-      </> : <p class="sub">Nothing has been shaped for this meeting yet. Change focus to say what it should settle; the notes appear here.</p>}
+      {focusText ? <p class="sub ppfocustxt">Focus: {focusText}</p> : null}
+      {AIM.map(([k, label]) => {
+        const lines = notes[k] || [];
+        const cites = lines.flatMap(l => l.sources || []).filter((s, i, a) => a.findIndex(x => (x.path || x.url || x.id || x.label) === (s.path || s.url || s.id || s.label)) === i);
+        return (
+          <div class="ppnote" key={k}>
+            <PrepEditor id={`pp-n-${k}`} label={label} value={lines.map(l => l.text).join("\n")} rows={Math.max(2, lines.length + 1)}
+              placeholder="One line each" ai={aiOf(mo)} onSave={t => saveSection(k, t)} />
+            {cites.length ? <div class="ppcites">{cites.slice(0, 6).map((s, i) => <SourceLink key={i} s={s} cite />)}</div> : null}
+          </div>);
+      })}
+      <PageShape rec={f} again={again} onUsed={() => loadPrep(prepViewKey.value || "", { keepTab: true })} />
     </section>
   );
 }
 
-function WorkCard({ mo }) {
-  const w = mo.work, rows = w.rows || [], code = mo.meeting.project, focus = w.mode !== "all";
-  const show = (/** @type {string} */ to) => saveFocus({ reading: { ...((mo.focus || {}).reading || {}), show: to } }, "show");
+/** In play: the open items for the meeting, each with Raise / Note / Skip (Raise feeds the agenda; none of it touches the
+    tracker), "n of N" and Show the rest. @param {{mo: any}} props */
+function InPlay({ mo }) {
+  const w = mo.work, rows = w.rows || [], code = mo.meeting.project, f = mo.focus || {}, focus = w.mode !== "all";
+  const total = focus ? w.N : rows.length + (w.not_listed || 0);
+  const skipped = (shapeFilter.value ? shapeFilter.value.items : []).filter(i => i.excluded && !rows.some(r => r.id === i.id));
+  const show = (/** @type {string} */ to) => saveFocus({ reading: { ...(f.reading || {}), show: to } }, "show", { quiet: true });
+  const restHidden = focus && w.mode === "focus-only";
+  const n = rows.filter(i => playOf(i.id, f) !== "skip").length;
   return (
-    <section class="card pc" id="pp-work" tabIndex={-1} aria-labelledby="pp-h-work">
-      <h2 id="pp-h-work">{focus ? "Work items in focus" : "Work items"}
-        {focus ? <span class="sub"> · {w.n} of {w.N} · {w.mode === "focus-only"
-          ? <button type="button" class="linkbtn" onClick={() => show("focus-first")}>show all</button>
-          : <button type="button" class="linkbtn" onClick={() => show("focus-only")}>focus only</button>}</span> : null}
-      </h2>
+    <section class="card pc ppplay" id="pp-work" tabIndex={-1} aria-labelledby="pp-h-work">
+      <h2 id="pp-h-work">In play <span class="sub">· {focus ? `${w.n} of ${w.N}` : `${n} of ${total}`} open items</span>
+        <span class="sp"></span><span class="sub ppraisehint">Raise puts it in the agenda</span></h2>
       {rows.length ? (
-        <div class="pptblwrap"><table class="ppwi">
-          <thead><tr><th scope="col">ID</th><th scope="col">Item</th><th scope="col">Owner</th><th scope="col">Due</th><th scope="col">Why it's here</th></tr></thead>
-          <tbody>{rows.map(i => {
-            const k = ["actions", "raid", "decisions"].includes(i.table) ? i.table : kOfId(i.id);
-            const late = i.due && i.due < TODAY && !/^(Done|Closed|Cancelled|Made|Withdrawn)$/.test(i.status || "");
-            const why = (Array.isArray(i.why) ? i.why : [i.why]).filter(Boolean);
-            return (
-              <tr key={i.id} class={`${k ? "click" : ""}${i.in_focus ? " infocus" : ""}`} data-open={k ? `${k}:${i.id}` : undefined}>
-                <td class="ppid">{k ? <a href="#" data-open={`${k}:${i.id}`}>{i.id}</a> : i.id}</td>
-                <td>{i.text}<div class="sub">{[i.type, i.p && i.p !== code ? i.p : ""].filter(Boolean).join(" · ")}</div></td>
-                <td>{i.owner || <span class="sub">Not set</span>}</td>
-                <td class={late ? "late" : ""}>{i.due ? fd(i.due) : "—"}{late ? <div class="sub late">overdue</div> : null}</td>
-                <td>{why.map((x, n) => <span class="ppwhy" key={n}>{x}</span>)}</td>
-              </tr>);
-          })}</tbody>
-        </table></div>
+        <ul class="ppitems">{rows.map(i => {
+          const k = ["actions", "raid", "decisions"].includes(i.table) ? i.table : kOfId(i.id);
+          const late = i.due && i.due < TODAY && !/^(Done|Closed|Cancelled|Made|Withdrawn)$/.test(i.status || "");
+          const why = (Array.isArray(i.why) ? i.why : [i.why]).filter(Boolean);
+          const cur = playOf(i.id, f);
+          return (
+            <li key={i.id} class={`ppitem ${cur}${i.in_focus ? " infocus" : ""}`} data-id={i.id}>
+              <div class="pptx">
+                {k ? <a href="#" class="ppid" data-open={`${k}:${i.id}`}>{i.id}</a> : <span class="ppid">{i.id}</span>} <b>{i.text}</b>
+                <small class="sub">{[i.type, i.owner || "Not set", i.due ? `due ${fd(i.due)}` : "", i.p && i.p !== code ? i.p : ""].filter(Boolean).join(" · ")}</small>
+              </div>
+              <span class="ppwhys">{late ? <span class="ppwhy late">overdue</span> : null}{why.map((x, j) => <span class="ppwhy" key={j}>{x}</span>)}</span>
+              <span class="ppsel" role="group" aria-label={`${i.id}: raise, note or skip`}>
+                {[["raise", "Raise"], ["note", "Note"], ["skip", "Skip"]].map(([id, label]) => (
+                  <button type="button" key={id} class={cur === id ? "on" : ""} aria-pressed={cur === id ? "true" : "false"} data-play={id}
+                    onClick={() => setPlay(i, /** @type {any} */ (id))}>{label}</button>))}
+              </span>
+            </li>);
+        })}</ul>
       ) : <p class="sub">Nothing is Urgent, overdue or due soon.</p>}
-      {!focus && w.not_listed ? <p class="sub">{plural(w.not_listed, "other open item is", "other open items are")} not listed. <button type="button" class="linkbtn" onClick={() => openWork(code === "_portfolio" ? "" : code, "actions", "open")}>Show {w.not_listed === 1 ? "it" : "them"} in Work</button></p> : null}
+      {skipped.length ? <p class="sub ppskipped">Skipped: {skipped.map((i, j) => <span key={i.id}>{j ? ", " : ""}{i.id} <button type="button" class="linkbtn" onClick={() => setPlay(i, "note")}>put back</button></span>)}</p> : null}
+      {focus ? (
+        <p class="sub ppmore">{restHidden ? "The rest of the open items are hidden. " : ""}
+          <button type="button" class="linkbtn" data-ppmore="1" onClick={() => show(restHidden ? "focus-first" : "focus-only")}>{restHidden ? "Show the rest" : "Hide the rest"}</button></p>
+      ) : w.not_listed ? (
+        <p class="sub ppmore">{plural(w.not_listed, "other open item is", "other open items are")} not listed. <button type="button" class="linkbtn" data-ppmore="1" onClick={() => openWork(code === "_portfolio" ? "" : code, "actions", "open")}>Show the rest</button></p>
+      ) : null}
       {(w.documents || []).filter(d => !d.excluded).length ? <>
         <h3>Documents in focus <span class="sub">· {w.docs_n} of {w.docs_N}</span></h3>
         <ul class="ppdocs">{w.documents.filter(d => !d.excluded).map(d => <li key={d.path}><SourceLink s={{ type: "file", path: d.path, label: d.name, kind: "file" }} /> <span class="sub">{(d.why || []).join("; ")}</span></li>)}</ul>
@@ -218,35 +224,62 @@ function NotesCard({ v }) {
   const mo = v.model;
   return (
     <section class="card pc" id="pp-notes" tabIndex={-1} aria-labelledby="pp-h-notes">
-      <h2 id="pp-h-notes">Researched notes</h2>
+      <h2 id="pp-h-notes">What research found</h2>
       {mo.about ? <p>{mo.about}</p> : null}
       {mo.notes.length ? <ul class="ppnl">{mo.notes.map((n, i) => (
         <li key={i}>{n.text} {n.source && (n.source.type === "file" || n.source.url || n.source.type === "item")
           ? <SourceLink s={n.source} label={`${n.source.label || n.source_text}${n.date_shown ? `, ${n.date_shown}` : ""}`} cite />
           : <span class="ppcite plain">{n.source_text}{n.date_shown ? `, ${n.date_shown}` : ""}</span>}</li>))}</ul>
         : <p class="sub">{v.stored ? "Nothing found." : "Not researched yet. Refresh research reads the minutes, documents, mail and Teams for this meeting."}</p>}
-      {(mo.carried || []).length ? <>
-        <h3>Not covered last time</h3>
-        <ul class="ppnl">{mo.carried.map((c, i) => <li key={i}>{c.point} <span class="sub">{c.title}{c.day ? `, ${fd(c.day)}` : ""}</span></li>)}</ul>
-      </> : null}
     </section>
   );
 }
 
-/** Questions and asks, editable: one a line, saved when the box is left with a change (prep-focus.json, beside the notes),
-    so Refresh research and Regenerate keep them. "Use creaite's questions" gives back the research's.
+/** Questions to ask, editable: one a line, saved as you type (prep-focus.json, beside the notes), so Refresh research and Shape
+    keep them. "Use creaite's questions" gives back the research's.
     @param {{mo: any, saving: string}} props */
 function QuestionsCard({ mo, saving }) {
   const start = (mo.questions || []).join("\n");
   return (
     <section class="card pc" id="pp-questions" tabIndex={-1} aria-labelledby="pp-h-questions">
-      <h2 id="pp-h-questions">Questions and asks</h2>
-      <span class="vh" id="pp-q-l">Questions and asks, one a line</span>
-      <TextEditor id="pp-q" cls="ppbox" rows={Math.max(3, (mo.questions || []).length + 1)} value={start} placeholder="One question or ask a line" labelledBy="pp-q-l" ai={aiOf(mo)}
-        onCommit={now => { if (now.trim() !== start.trim()) saveFocus({ questions: now.split("\n").map(x => x.trim()).filter(Boolean) }, "questions"); }} />
+      <h2 id="pp-h-questions">Questions to ask</h2>
+      <PrepEditor id="pp-q" label="Questions and asks, one a line" value={start} rows={Math.max(3, (mo.questions || []).length + 1)}
+        placeholder="One question or ask a line" ai={aiOf(mo)} onSave={saveQuestions} />
       <p class="sub ppstamp" role="status">{saving === "questions" ? "Saving…" : mo.questions_edited
         ? <>Your questions · <button type="button" class="linkbtn" onClick={() => saveFocus({ questions: null }, "questions")}>Use creaite's questions</button></>
-        : "One a line; edit here, and leaving the box saves them"}</p>
+        : "One a line; saved as you type"}</p>
+    </section>
+  );
+}
+
+/** When and who, in the right rail: the time, the place and who is invited; the invite itself is under the Invite tab.
+    @param {{mo: any}} props */
+function WhenWho({ mo }) {
+  const mt = mo.meeting, people = (mo.brief || {}).people || {}, inv = people.invitees || [];
+  return (
+    <section class="card pc" id="pp-when" tabIndex={-1} aria-labelledby="pp-h-when">
+      <h2 id="pp-h-when">When and who</h2>
+      <ul class="ppmini">
+        <li>{mt.start ? `${mt.start}${mt.end ? ` to ${mt.end}` : ""}` : mt.day_shown}{mt.where ? `, ${mt.where}` : ""}</li>
+        {mt.confidential ? <li class="sub">Confidential: only the title and times are kept.</li>
+          : inv.length ? <li>{inv.map(p => p.name).join(", ")}</li> : <li class="sub">No one else is invited.</li>}
+        {!mt.confidential && (mt.body || inv.length) ? <li><a href="#" class="linkbtn" onClick={e => { e.preventDefault(); prepTab.value = "invite"; }}>See the invite</a></li> : null}
+      </ul>
+    </section>
+  );
+}
+
+/** Carried over, in the right rail: what the last meeting did not cover, and the notes' Carried over lines.
+    @param {{mo: any}} props */
+function CarriedCard({ mo }) {
+  const lines = ((mo.focus || {}).notes || {}).carried_over || [], old = mo.carried || [];
+  return (
+    <section class="card pc" id="pp-carried" tabIndex={-1} aria-labelledby="pp-h-carried">
+      <h2 id="pp-h-carried">Carried over</h2>
+      {lines.length || old.length ? <ul class="ppmini">
+        {lines.map((l, i) => <li key={`n${i}`}>{l.text}</li>)}
+        {old.map((c, i) => <li key={`c${i}`}>{c.point} <span class="sub">{c.title}{c.day ? `, ${fd(c.day)}` : ""}</span></li>)}
+      </ul> : <p class="sub">Nothing was left over from the last meeting.</p>}
     </section>
   );
 }
@@ -335,7 +368,13 @@ function InvitePanel({ mo }) {
 
 /** The whole screen, drawn from the store. */
 export function PrepPage() {
-  const v = prepView.value, tab = prepTab.value, saving = prepSaving.value;
+  const v = prepView.value, tab = prepTab.value, saving = prepSaving.value, key = prepViewKey.value;
+  /* Shape on the page uses the shape store: open it for this meeting (chips, confidential) and load the saved record into it */
+  useEffect(() => {
+    if (!key || !v || !v.ok) return;
+    const bk = briefKey(key);
+    openShape(bk).then(() => { if (shapeKey.value === bk) syncShape(v.model.focus); });
+  }, [key, !!(v && v.ok)]);
   if (!v) return <div class="pp"><p class="sub pploading" role="status">{prepLoading.value ? "Loading the prep page…" : ""}</p></div>;
   if (!v.ok) return (
     <div class="pp"><div class="phead"><h1>Prep</h1></div>
@@ -349,14 +388,16 @@ export function PrepPage() {
           <Outline mo={mo} />
           <div class="ppc">
             {!v.stored ? <p class="ppnew" role="status">creaite hasn't researched this meeting yet. <b>Refresh research</b> drafts the notes and questions and saves the page in the project's Agendas folder.</p> : null}
-            <FocusBand mo={mo} saving={saving} />
-            <WorkCard mo={mo} />
+            <AimCard mo={mo} saving={saving} />
+            <InPlay mo={mo} />
             <NotesCard v={v} />
             <QuestionsCard mo={mo} saving={saving} />
           </div>
           <aside class="pprail" aria-label="Context">
+            <WhenWho mo={mo} />
             <ReportingCard mo={mo} />
             <SeriesCard mo={mo} />
+            <CarriedCard mo={mo} />
             <SourcesCard mo={mo} />
           </aside>
         </div>
@@ -377,6 +418,9 @@ let pageMounted = false;
 export function renderPrep(key) {
   const el = $("#v-prep");
   if (!el) return;
-  if (!pageMounted) { render(<PrepPage />, el); pageMounted = true; }
+  if (!pageMounted) {
+    render(<PrepPage />, el); pageMounted = true;
+    window.addEventListener("hashchange", () => { if (!/^#prep=/.test(location.hash)) closeShape(); });   /* the popup's Shape panel is not left open on this meeting */
+  }
   if (key) loadPrep(key).then(() => tabTitle());
 }
