@@ -3595,6 +3595,35 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .dypast .dypastbtn .i{width:14px;height:14px}
 .dypast .ddmenu{left:0;right:auto;top:30px;transform-origin:top left}
 .brief #todayDate:has(.dypast) .daytabs{margin-left:0}
+
+/* ===== #112 (Alan, 16-10-2026): the Week ahead as calm rows (mockup: dev/mockups/today-week-ahead-mockup.html) =====
+   A quiet day heading, one rounded list a day; a row has a priority dot and a kind icon, the title with who and the project
+   under it, one quiet word on the right, and its actions only on hover or focus. A meeting row is tinted with its time and a
+   quiet Prep chip. The quiet line above the days counts other people's overdue work. */
+#tBrief .wkpoint{margin:0 0 8px;font-size:var(--fs-sm);color:var(--day-muted,var(--muted))} #tBrief .wkpoint a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+#tBrief .wkdh{margin:10px 0 4px 4px;font:500 var(--fs-xs)/16px var(--font);letter-spacing:.1em;color:var(--faint,var(--day-muted))}
+#tBrief .wkl{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+#tBrief .wkl>li.wkrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;border-top:1px solid var(--line);position:relative;margin:0}
+#tBrief .wkl>li.wkrow:first-child{border-top:0;border-radius:var(--r-lg) var(--r-lg) 0 0} #tBrief .wkl>li.wkrow:last-child{border-radius:0 0 var(--r-lg) var(--r-lg)} #tBrief .wkl>li.wkrow:only-child{border-radius:var(--r-lg)}
+#tBrief .wkl>li.wkrow[hidden]{display:none}
+#tBrief .wkl>li.wk-meeting{background:var(--sunk)}
+#tBrief .wkrow .tb{flex:1;min-width:0;font-size:var(--fs-md);line-height:20px}
+#tBrief .wkrow .tb .t{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tBrief .wkrow .wkwho{display:block;font-size:var(--fs-xs);line-height:16px;color:var(--muted)}
+#tBrief .wkrow .wkwho a.s{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} .wkdot.u{background:var(--bad);opacity:1} .wkdot.h{background:var(--warn);opacity:1}
+.wkic{flex:none;width:20px;display:inline-grid;place-items:center;color:var(--muted)} .wkic .i{width:14px;height:14px}
+.wktm{flex:none;width:44px;font:500 var(--fs-xs)/16px var(--mono,var(--font));color:var(--muted)}
+.wkwhy{flex:none;font-size:var(--fs-xs);line-height:16px;color:var(--muted);white-space:nowrap;border:0;padding:0;margin:0;border-radius:0}
+.wkwhy.warn{color:var(--warn)}
+.wkchip{flex:none;display:inline-flex;align-items:center;height:22px;padding:0 9px;border:1px solid var(--accent);border-radius:var(--r-pill);background:none;color:var(--accent);font:500 var(--fs-xs)/1 var(--font);cursor:pointer}
+.wkchip:hover,.wkchip:focus-visible{background:var(--accent-soft)} .wkchip:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
+.wkchip.made{border-color:var(--line);color:var(--muted)} .wkchip[aria-disabled="true"]{opacity:.55;cursor:default}
+#tBrief .wkl .tacts{opacity:0;transition:opacity var(--d1)}
+#tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
+@media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
+@media (max-width:900px){ #tBrief .wkl>li.wkrow{flex-wrap:wrap} #tBrief .wkrow .tb{flex-basis:calc(100% - 140px)} }
+@media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
 </style>
 </head>
 <body>
@@ -5442,6 +5471,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     openedNote: () => openedNote,
     orderedCols: () => orderedCols,
     ordinal: () => ordinal,
+    othersOverdue: () => othersOverdue,
     ovAdd: () => ovAdd,
     ovBusy: () => ovBusy,
     ovDrop: () => ovDrop,
@@ -34906,7 +34936,7 @@ ${s5}`;
     ] });
     return /* @__PURE__ */ u2(Chip, { tone: "mute", tip: f5.why, children: "No transcript" });
   }
-  function PrepPopup({ m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc }) {
+  function TitlePopup({ m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc }) {
     const p6 = m5.prep;
     if (!p6) return null;
     const when2 = isToday ? "Today" : dow2, bits = [
@@ -35026,7 +35056,7 @@ ${s5}`;
               children: m5.title ?? ""
             }
           ),
-          open2 ? /* @__PURE__ */ u2(PrepPopup, { m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc: () => {
+          open2 ? /* @__PURE__ */ u2(TitlePopup, { m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc: () => {
             shut();
             const t47 = box.current && box.current.querySelector(".dmti");
             if (t47) t47.focus();
@@ -35296,35 +35326,43 @@ ${s5}`;
     for (const k5 of Object.keys(o5 || {})) d5[`data-${k5}`] = String((o5 || {})[k5]);
     return d5;
   }
+  var DOTS = (
+    /** @type {Record<string, string>} */
+    { u: "Urgent", h: "High" }
+  );
+  var Diamond = () => /* @__PURE__ */ u2("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M12 3l9 9-9 9-9-9z" }) });
+  function Kind({ kind }) {
+    return /* @__PURE__ */ u2("span", { class: "wkic", "aria-hidden": "true", children: kind === "milestone" ? /* @__PURE__ */ u2(Diamond, {}) : /* @__PURE__ */ u2(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
+  }
   function WkLine({ r: r4, hidden, p: p6 }) {
+    const meeting = r4.kind === "meeting";
     return /* @__PURE__ */ u2("li", { class: `wkrow wk-${r4.kind}`, "data-wk": r4.key, hidden, children: [
-      /* @__PURE__ */ u2("span", { class: `tag wktag${r4.tone ? " " + r4.tone : ""}`, children: r4.tag }),
+      meeting ? /* @__PURE__ */ u2("span", { class: "wktm", children: r4.time }) : /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("span", { class: `wkdot${r4.dot ? " " + r4.dot : ""}`, role: r4.dot ? "img" : void 0, "aria-label": r4.dot ? DOTS[r4.dot] : void 0, "aria-hidden": r4.dot ? void 0 : "true" }),
+        /* @__PURE__ */ u2(Kind, { kind: r4.kind })
+      ] }),
       /* @__PURE__ */ u2("div", { class: "tb", children: [
         r4.open ? /* @__PURE__ */ u2("a", { class: "t", href: "#", ...dataOf(r4.open), children: r4.t }) : /* @__PURE__ */ u2("span", { class: "t", children: r4.t }),
         r4.who || r4.p ? /* @__PURE__ */ u2("span", { class: "wkwho", children: [
-          " — ",
           r4.who || "",
-          r4.who && r4.p ? ", " : "",
+          r4.who && r4.p ? " · " : "",
           r4.p ? /* @__PURE__ */ u2("a", { class: "s", href: "#", "data-cock": r4.p, children: r4.pname || r4.p }) : null
-        ] }) : null,
-        r4.prepgo ? /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              class: "ib prepgo",
-              "data-prepgo": r4.prepgo.key,
-              "data-prepgoday": r4.prepgo.day,
-              "aria-label": `Open the prep page for ${r4.t}`,
-              "data-tip": r4.prepgo.live ? `Prep page saved ${r4.prepgo.when}` : "Needs the live server",
-              "aria-disabled": r4.prepgo.live ? void 0 : "true",
-              children: /* @__PURE__ */ u2(Icon, { name: "external" })
-            }
-          ),
-          /* @__PURE__ */ u2("span", { class: "tag ok prepmade", children: "Prep page made" })
         ] }) : null
       ] }),
-      /* @__PURE__ */ u2("span", { class: `wkwhy${r4.whyTone ? " " + r4.whyTone : ""}`, children: r4.why }),
+      r4.chip ? r4.chip.made ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "wkchip made",
+          "data-prepgo": r4.chip.key,
+          "data-prepgoday": r4.chip.day,
+          "aria-label": r4.chip.aria,
+          "aria-disabled": r4.chip.live ? void 0 : "true",
+          "data-tip": r4.chip.live ? void 0 : "Needs the live server",
+          children: r4.chip.label
+        }
+      ) : /* @__PURE__ */ u2("button", { type: "button", class: "wkchip", "aria-label": r4.chip.aria, ...dataOf(r4.chip.data), children: r4.chip.label }) : null,
+      r4.why ? /* @__PURE__ */ u2("span", { class: `wkwhy${r4.whyTone ? " " + r4.whyTone : ""}`, children: r4.why }) : null,
       /* @__PURE__ */ u2("span", { class: "tacts", children: r4.acts.map((a5) => /* @__PURE__ */ u2(
         IconButton,
         {
@@ -35346,19 +35384,25 @@ ${s5}`;
     ] });
   }
   function WeekAhead(props) {
-    const { groups, empty } = props;
-    if (!groups.length) return /* @__PURE__ */ u2("p", { class: "none", children: empty });
-    return /* @__PURE__ */ u2(S2, { children: groups.map((g5) => {
-      const more = g5.rows.length - g5.cap;
-      return /* @__PURE__ */ u2("div", { class: "wkday", "data-day": g5.key, children: [
-        /* @__PURE__ */ u2("h3", { class: "wkdh", id: `wkd-${g5.key}`, children: [
-          g5.title,
-          g5.note ? /* @__PURE__ */ u2("span", { class: "wkdn", children: g5.note }) : null
-        ] }),
-        /* @__PURE__ */ u2("ol", { class: "bl wklist", "aria-labelledby": `wkd-${g5.key}`, children: g5.rows.map((r4, i5) => /* @__PURE__ */ u2(WkLine, { r: r4, hidden: !g5.open && i5 >= g5.cap, p: props }, r4.key)) }),
-        more > 0 ? /* @__PURE__ */ u2("div", { class: "moreline", children: /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": g5.open ? "true" : "false", "data-more": g5.key, children: g5.open ? "Show fewer" : `+${more} more` }) }) : null
-      ] }, g5.key);
-    }) });
+    const { groups, empty, others } = props;
+    return /* @__PURE__ */ u2(S2, { children: [
+      others && others.n ? /* @__PURE__ */ u2("p", { class: "wkpoint", children: [
+        others.n === 1 ? "1 item owned by others is overdue." : `${others.n} items owned by others are overdue.`,
+        " ",
+        /* @__PURE__ */ u2("a", { href: "#", class: "cntl", "data-nav": others.nav, children: "See them in Work" })
+      ] }) : null,
+      !groups.length ? /* @__PURE__ */ u2("p", { class: "none", children: empty }) : groups.map((g5) => {
+        const more = g5.rows.length - g5.cap;
+        return /* @__PURE__ */ u2("div", { class: "wkday", "data-day": g5.key, children: [
+          /* @__PURE__ */ u2("h3", { class: "wkdh", id: `wkd-${g5.key}`, children: [
+            g5.title,
+            g5.note ? /* @__PURE__ */ u2("span", { class: "wkdn", children: g5.note }) : null
+          ] }),
+          /* @__PURE__ */ u2("ul", { class: "wkl", "aria-labelledby": `wkd-${g5.key}`, children: g5.rows.map((r4, i5) => /* @__PURE__ */ u2(WkLine, { r: r4, hidden: !g5.open && i5 >= g5.cap, p: props }, r4.key)) }),
+          more > 0 ? /* @__PURE__ */ u2("div", { class: "moreline", children: /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": g5.open ? "true" : "false", "data-more": g5.key, children: g5.open ? "Show fewer" : `+${more} more` }) }) : null
+        ] }, g5.key);
+      })
+    ] });
   }
   function drawWeekAhead(host2, props) {
     R(/* @__PURE__ */ u2(WeekAhead, { ...props }), host2);
@@ -36603,62 +36647,58 @@ ${s5}`;
     const live = viaServer(), out = (
       /** @type {any[]} */
       []
-    ), quiet = (i5, first) => first && i5.kind === "actions" && isMe(i5.o);
-    const tagOf = (i5) => {
-      const k5 = i5.kind === "milestone" ? "Milestone" : i5.kind === "decisions" ? "Decision" : i5.kind === "raid" ? i5.type || "Risk" : "Action";
-      return i5.pr === "Urgent" || i5.pr === "High" ? `${k5} · ${i5.pr}` : k5;
-    };
-    const toneOf = (i5) => i5.od || i5.pr === "Urgent" ? "bad" : i5.pr === "High" || i5.kind === "milestone" && i5.slip ? "warn" : "";
+    );
+    const mineIds = new Set(A4.filter((x5) => isMe(x5.o) && (overdue(x5) || soon(x5))).map((x5) => x5.id)), quiet = (i5) => i5.kind === "actions" && mineIds.has(i5.id);
+    const dotOf = (i5) => i5.pr === "Urgent" ? "u" : i5.pr === "High" ? "h" : "";
     const whyOf = (i5, further, undated) => {
       if (undated) return "no date set";
-      if (i5.od) return `${i5.od} day${i5.od === 1 ? "" : "s"} ${i5.kind === "decisions" ? "late" : "overdue"}`;
       const w6 = i5.kind === "decisions" ? "needed by" : i5.weekend ? "due over the weekend" : "due";
       const d5 = further && i5.date ? ` ${longDay(i5.date)}` : "";
-      return i5.kind === "milestone" ? `${w6}${d5} · ${i5.slip ? "at risk" : "on track"}` : `${w6}${d5}`;
+      return i5.kind === "milestone" ? (further && i5.date ? `${longDay(i5.date)} · ` : "") + (i5.slip ? "at risk" : "on track") : `${w6}${d5}`;
     };
     const whoOf = (i5) => i5.kind === "milestone" ? "" : i5.kind === "decisions" ? isMe(i5.o) ? "yours" : i5.o ? `asked of ${who(i5.o)}` : "no one asked" : isMe(i5.o) ? "yours" : who(i5.o) || "no owner";
     const item = (i5, key, further, undated = false) => ({
       key,
       kind: i5.kind,
-      tag: tagOf(i5),
-      tone: toneOf(i5),
+      dot: dotOf(i5),
       t: i5.t || i5.id,
       open: i5.kind === "milestone" ? { cock: i5.p } : { open: `${i5.kind}:${i5.id}` },
       who: whoOf(i5),
       p: i5.p || "",
       pname: i5.p ? pName(i5.p) : "",
       why: whyOf(i5, further, undated),
-      whyTone: i5.od ? "bad" : i5.kind === "milestone" && i5.slip ? "warn" : "",
+      whyTone: i5.kind === "milestone" && i5.slip ? "warn" : "",
       acts: workActs(i5.kind, i5).map((a5) => ({ ...a5, data: { k: i5.kind, id: i5.id, ...i5.kind === "milestone" ? { p: i5.p } : {} } }))
     });
     const meeting = (e4, day) => {
-      const can = day !== TODAY && !!prepOf(e4, day), pg2 = can ? prepPageOf(e4, day) : null;
+      const can = day !== TODAY && !!prepOf(e4, day), pg2 = can ? prepPageOf(e4, day) : null, t47 = e4.title ?? "";
       return {
         key: `m${day}${e4.start}${e4.title}`,
         kind: "meeting",
-        tag: "Meeting",
-        tone: e4.plan ? "acc" : "",
-        t: `${e4.start} ${e4.title ?? ""}`,
+        time: e4.start || "",
+        t: t47,
         open: can ? { prepday: day, start: e4.start || "", title: e4.title || "" } : void 0,
         who: e4.where || "",
         p: e4.p || "",
         pname: e4.p ? pName(e4.p) : "",
-        why: e4.plan ? `worth preparing: ${e4.plan}` : "in your calendar",
-        whyTone: "",
-        prepgo: pg2 ? { key: pg2.key, day, when: pg2.when, live } : void 0,
-        acts: can ? [{ id: "prep", icon: "filetext", label: "Make a prep page", name: `Prepare for ${e4.title ?? "the meeting"}`, primary: !!e4.plan, data: { prepday: day, start: e4.start || "", title: e4.title || "" } }] : []
+        why: "",
+        chip: can ? pg2 ? { made: true, label: "Prep page made", aria: `Open the prep page for ${t47}`, key: pg2.key, day, live } : { made: false, label: "Prep", aria: `Prepare for ${t47}`, day, live, data: { prepday: day, start: e4.start || "", title: e4.title || "" } } : void 0,
+        acts: []
       };
     };
     const group = (key, title, L3, note) => {
       if (L3.length) out.push({ key, title, note: note || "", rows: L3, cap: 6, open: EXPAND.has(key) });
     };
     group("wkund", "Urgent, with no date", (W3.undated || []).map((i5, n4) => item(i5, `u${n4}${i5.id}`, false, true)));
-    (W3.days || []).forEach((d5, n4) => {
-      const first = n4 === 0;
-      group("wk" + d5.date, d5.date === W3.from ? "Today" : longDay(d5.date), [...(d5.meetings || []).map((e4) => meeting(e4, d5.date)), ...(d5.items || []).filter((i5) => !quiet(i5, first)).map((i5) => item(i5, `${d5.date}${i5.kind}${i5.id}`, false))]);
+    (W3.days || []).forEach((d5) => {
+      group("wk" + d5.date, d5.date === W3.from ? "Today" : longDay(d5.date), [...(d5.meetings || []).map((e4) => meeting(e4, d5.date)), ...(d5.items || []).filter((i5) => !quiet(i5)).map((i5) => item(i5, `${d5.date}${i5.kind}${i5.id}`, false))]);
     });
     group("wkfur", "Further ahead", (W3.further || []).map((i5) => item(i5, `f${i5.date}${i5.kind}${i5.id}`, true)), W3.further_to ? ` to ${longDay(W3.further_to)}` : "");
     return out;
+  }
+  function othersOverdue() {
+    const n4 = A4.filter((x5) => overdue(x5) && !isMe(x5.o)).length;
+    return { n: n4, nav: navOf("actions:open:", { st: ["Open", "Delayed"], due: ["overdue"], "!o": ["@me"] }) };
   }
   var WEEKFOLD = "creaite-week-ahead-hidden";
   var weekFoldWired = false;
@@ -36673,9 +36713,11 @@ ${s5}`;
     const W3 = D.week, host2 = $("#weekList");
     if (!host2) return;
     wireWeekFold();
-    $("#weekTo").textContent = W3 ? `to ${longDay(W3.to)}` : "";
+    const groups = weekGroups(), n4 = groups.reduce((t47, g5) => t47 + g5.rows.length, 0);
+    $("#weekTo").textContent = W3 ? `${plur(n4, "item")} to ${longDay(W3.to)}` : "";
     drawWeekAhead(host2, {
-      groups: weekGroups(),
+      groups,
+      others: othersOverdue(),
       empty: `Nothing is due or booked until ${W3 ? longDay(W3.to) : "next Monday"}.`,
       onAct: (r4, a5, btn) => {
         if (a5.data && a5.data.id) workAct(a5.data.k, a5.data.id, a5.id, btn);
@@ -41435,14 +41477,14 @@ ${s5}`;
   }
 
   // components/prep/PrepPopup.jsx
-  function PrepPopup2() {
+  function PrepPopup() {
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2(PrepHead, {}),
       /* @__PURE__ */ u2(PrepToolbar, {})
     ] });
   }
   function mountPrepPopup(top, lead) {
-    R(/* @__PURE__ */ u2(PrepPopup2, {}), top);
+    R(/* @__PURE__ */ u2(PrepPopup, {}), top);
     R(/* @__PURE__ */ u2(PrepFacts, {}), lead);
   }
 

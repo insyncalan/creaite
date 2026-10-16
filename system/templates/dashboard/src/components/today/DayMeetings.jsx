@@ -62,7 +62,7 @@ function FollowUp({ m, live, acts }) {
     the prep page was made, and offers Open agenda (the page inside creaite), Prepare again and Open the file. Esc closes it; it
     is a dialog with no focus trap, Internal, and never sent. `data-prepgo` is meetings.js's handler, as BL-287's icon used.
     @param {{m: DayMeeting, day: string, dow: string, isToday: boolean, live: boolean, acts: DayActs, id: string, onEsc: () => void}} props */
-function PrepPopup({ m, day, dow, isToday, live, acts, id, onEsc }) {
+function TitlePopup({ m, day, dow, isToday, live, acts, id, onEsc }) {
   const p = m.prep;
   if (!p) return null;
   const when = isToday ? "Today" : dow, bits = [`${when} ${m.start}`, m.attendees ? `${m.attendees} attending` : "",
@@ -104,7 +104,7 @@ function Title({ m, day, dow, isToday, live, acts }) {
       onBlurCapture={e => { const to = /** @type {Node | null} */ (e.relatedTarget); if (!to || !box.current || !box.current.contains(to)) later(false, 0); }}>
       <span class="dmti" tabIndex={0} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} aria-controls={open ? id : undefined}
         onKeyDown={e => { if (e.key === "Escape" && open) { e.stopPropagation(); shut(); } }}>{m.title ?? ""}</span>
-      {open ? <PrepPopup m={m} day={day} dow={dow} isToday={isToday} live={live} acts={acts} id={id} onEsc={() => { shut(); const t = box.current && box.current.querySelector(".dmti"); if (t) /** @type {HTMLElement} */ (t).focus(); }} /> : null}
+      {open ? <TitlePopup m={m} day={day} dow={dow} isToday={isToday} live={live} acts={acts} id={id} onEsc={() => { shut(); const t = box.current && box.current.querySelector(".dmti"); if (t) /** @type {HTMLElement} */ (t).focus(); }} /> : null}
     </span>
   );
 }

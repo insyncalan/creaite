@@ -3585,3 +3585,32 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .dypast .dypastbtn .i{width:14px;height:14px}
 .dypast .ddmenu{left:0;right:auto;top:30px;transform-origin:top left}
 .brief #todayDate:has(.dypast) .daytabs{margin-left:0}
+
+/* ===== #112 (Alan, 16-10-2026): the Week ahead as calm rows (mockup: dev/mockups/today-week-ahead-mockup.html) =====
+   A quiet day heading, one rounded list a day; a row has a priority dot and a kind icon, the title with who and the project
+   under it, one quiet word on the right, and its actions only on hover or focus. A meeting row is tinted with its time and a
+   quiet Prep chip. The quiet line above the days counts other people's overdue work. */
+#tBrief .wkpoint{margin:0 0 8px;font-size:var(--fs-sm);color:var(--day-muted,var(--muted))} #tBrief .wkpoint a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+#tBrief .wkdh{margin:10px 0 4px 4px;font:500 var(--fs-xs)/16px var(--font);letter-spacing:.1em;color:var(--faint,var(--day-muted))}
+#tBrief .wkl{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+#tBrief .wkl>li.wkrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;border-top:1px solid var(--line);position:relative;margin:0}
+#tBrief .wkl>li.wkrow:first-child{border-top:0;border-radius:var(--r-lg) var(--r-lg) 0 0} #tBrief .wkl>li.wkrow:last-child{border-radius:0 0 var(--r-lg) var(--r-lg)} #tBrief .wkl>li.wkrow:only-child{border-radius:var(--r-lg)}
+#tBrief .wkl>li.wkrow[hidden]{display:none}
+#tBrief .wkl>li.wk-meeting{background:var(--sunk)}
+#tBrief .wkrow .tb{flex:1;min-width:0;font-size:var(--fs-md);line-height:20px}
+#tBrief .wkrow .tb .t{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tBrief .wkrow .wkwho{display:block;font-size:var(--fs-xs);line-height:16px;color:var(--muted)}
+#tBrief .wkrow .wkwho a.s{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} .wkdot.u{background:var(--bad);opacity:1} .wkdot.h{background:var(--warn);opacity:1}
+.wkic{flex:none;width:20px;display:inline-grid;place-items:center;color:var(--muted)} .wkic .i{width:14px;height:14px}
+.wktm{flex:none;width:44px;font:500 var(--fs-xs)/16px var(--mono,var(--font));color:var(--muted)}
+.wkwhy{flex:none;font-size:var(--fs-xs);line-height:16px;color:var(--muted);white-space:nowrap;border:0;padding:0;margin:0;border-radius:0}
+.wkwhy.warn{color:var(--warn)}
+.wkchip{flex:none;display:inline-flex;align-items:center;height:22px;padding:0 9px;border:1px solid var(--accent);border-radius:var(--r-pill);background:none;color:var(--accent);font:500 var(--fs-xs)/1 var(--font);cursor:pointer}
+.wkchip:hover,.wkchip:focus-visible{background:var(--accent-soft)} .wkchip:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
+.wkchip.made{border-color:var(--line);color:var(--muted)} .wkchip[aria-disabled="true"]{opacity:.55;cursor:default}
+#tBrief .wkl .tacts{opacity:0;transition:opacity var(--d1)}
+#tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
+@media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
+@media (max-width:900px){ #tBrief .wkl>li.wkrow{flex-wrap:wrap} #tBrief .wkrow .tb{flex-basis:calc(100% - 140px)} }
+@media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }

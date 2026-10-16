@@ -16,7 +16,7 @@ import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
 import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { mDots } from "./core/motion.js";
-import { countLink, go, jumpLink, navBlocked, openWork, pLink } from "./core/nav.js";
+import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -567,37 +567,43 @@ export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="
   if(what==="update"){ openRecord(k,id,k==="raid"?"resp":"upd"); return; }
   if(what==="decide"){ dnDecide(id); return; }
   if(what==="open"&&btn&&btn.dataset.p) go("cockpit",btn.dataset.p); }
-/** the Week ahead's groups: Urgent with no date, each day, Further ahead */
+/** the Week ahead's groups: Urgent with no date, each day, Further ahead.
+    #112 (Alan, 16-10-2026): calm rows. Overdue work is not here (it is in Your commitments when it is Alan's, and in the quiet
+    line above the days when it is someone else's); nothing already under Your commitments is repeated. */
 export function weekGroups(){ const W=D.week; if(!W) return [];
-  const live=viaServer(), out=/** @type {any[]} */([]), quiet=(i,first)=>first&&i.kind==="actions"&&isMe(i.o);   /* mine are already under Your commitments */
-  const tagOf=i=>{ const k=i.kind==="milestone"?"Milestone":i.kind==="decisions"?"Decision":i.kind==="raid"?(i.type||"Risk"):"Action"; return i.pr==="Urgent"||i.pr==="High"?`${k} · ${i.pr}`:k; };
-  const toneOf=i=>i.od||i.pr==="Urgent"?"bad":i.pr==="High"||(i.kind==="milestone"&&i.slip)?"warn":"";
-  const whyOf=(i,further,undated)=>{ if(undated) return "no date set"; if(i.od) return `${i.od} day${i.od===1?"":"s"} ${i.kind==="decisions"?"late":"overdue"}`;
+  const live=viaServer(), out=/** @type {any[]} */([]);
+  const mineIds=new Set(A.filter(x=>isMe(x.o)&&(overdue(x)||soon(x))).map(x=>x.id)), quiet=i=>i.kind==="actions"&&mineIds.has(i.id);   /* mine are already under Your commitments */
+  const dotOf=i=>i.pr==="Urgent"?"u":i.pr==="High"?"h":"";
+  const whyOf=(i,further,undated)=>{ if(undated) return "no date set";
     const w=i.kind==="decisions"?"needed by":i.weekend?"due over the weekend":"due";
     const d=further&&i.date?` ${longDay(i.date)}`:"";
-    return i.kind==="milestone"?`${w}${d} · ${i.slip?"at risk":"on track"}`:`${w}${d}`; };
+    return i.kind==="milestone"?(further&&i.date?`${longDay(i.date)} · `:"")+(i.slip?"at risk":"on track"):`${w}${d}`; };
   const whoOf=i=>i.kind==="milestone"?"":i.kind==="decisions"?(isMe(i.o)?"yours":i.o?`asked of ${who(i.o)}`:"no one asked"):(isMe(i.o)?"yours":who(i.o)||"no owner");
-  const item=(i,key,further,undated=false)=>({key,kind:i.kind,tag:tagOf(i),tone:toneOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
-    who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.od?"bad":i.kind==="milestone"&&i.slip?"warn":"",
+  const item=(i,key,further,undated=false)=>({key,kind:i.kind,dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
+    who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
-  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null;
-    return {key:`m${day}${e.start}${e.title}`,kind:"meeting",tag:"Meeting",tone:e.plan?"acc":"",t:`${e.start} ${e.title??""}`,
-      open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",
-      why:e.plan?`worth preparing: ${e.plan}`:"in your calendar",whyTone:"",prepgo:pg?{key:pg.key,day,when:pg.when,live}:undefined,
-      acts:can?[{id:"prep",icon:"filetext",label:"Make a prep page",name:`Prepare for ${e.title??"the meeting"}`,primary:!!e.plan,data:{prepday:day,start:e.start||"",title:e.title||""}}]:[]}; };
+  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"";
+    return {key:`m${day}${e.start}${e.title}`,kind:"meeting",time:e.start||"",t,
+      open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",why:"",
+      chip:can?(pg?{made:true,label:"Prep page made",aria:`Open the prep page for ${t}`,key:pg.key,day,live}:{made:false,label:"Prep",aria:`Prepare for ${t}`,day,live,data:{prepday:day,start:e.start||"",title:e.title||""}}):undefined,
+      acts:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
   group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
-  (W.days||[]).forEach((d,n)=>{ const first=n===0;
-    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i,first)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
+  (W.days||[]).forEach(d=>{
+    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
   group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
   return out; }
+/** The open actions that are overdue and owned by others: the quiet line above the days (#112) and its Work address. */
+export function othersOverdue(){ const n=A.filter(x=>overdue(x)&&!isMe(x.o)).length;
+  return {n,nav:navOf("actions:open:",{st:["Open","Delayed"],due:["overdue"],"!o":["@me"]})}; }
 const WEEKFOLD="creaite-week-ahead-hidden";   /* #105: per viewer, this browser only (localStorage) */
 let weekFoldWired=false;
 function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; weekFoldWired=true;
   f.open=store.get(WEEKFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(WEEKFOLD,!f.open)); }
 export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
-  $("#weekTo").textContent=W?`to ${longDay(W.to)}`:"";
-  drawWeekAhead(host,{groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
+  $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}`:"";   /* #105: the quiet count and the end date, as Resolved's */
+  drawWeekAhead(host,{groups,others:othersOverdue(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

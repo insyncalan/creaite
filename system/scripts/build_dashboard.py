@@ -1634,29 +1634,13 @@ def hot_projects(open_items, today):
             for p, n in hot.items()}
 
 
-def week_late(today, open_items, decisions, shown):
-    """BL-319: the Week ahead's late rows, for its first day: open work already past its date (only the priorities the
-    setting lists; `shown` None is every one) and pending decisions already past the date they were needed by, each with
-    `od`, the days late, so the row can say why it is there."""
-    iso, out = today.isoformat(), []
-    for k, x in open_items:
-        if x["due"] and x["due"] < iso and (shown is None or x.get("pr") in shown):
-            out.append({"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr"),
-                        **({"type": x.get("type")} if k == "raid" else {}), "od": (today - date.fromisoformat(x["due"])).days})
-    for d in decisions:
-        if d.get("st") == "Pending" and d.get("due") and d["due"] < iso:
-            out.append({"kind": "decisions", "id": d["id"], "p": d["p"], "t": d["t"], "o": d.get("by") or "",
-                        "od": (today - date.fromisoformat(d["due"])).days})
-    return out
-
-
 def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisions=()):
     """The Week ahead (BL-72): for each working day to next Monday (and a weekend day only when there is a meeting), the
     meetings and the open work, milestones and Urgent or High items due, Urgent first. Weekend deadlines wait until
     Monday, undated Urgent work leads, and the two weeks after list only key milestones and Urgent or High deadlines.
-    BL-319 (v1.9.2): pending decisions needed in the window land on their day (decisions have no priority, so every one);
-    the work the priority setting lists that is already overdue, and decisions already late, land on the first day shown
-    with `od` (days late), so each row can say why it is there; a milestone carries `slip` when it is at risk."""
+    BL-319 (v1.9.2): pending decisions needed in the window land on their day (decisions have no priority, so every one); a
+    milestone carries `slip` when it is at risk. #112 (v2.2.0): nothing already overdue is listed (BL-319's late rows and
+    their `od` are gone)."""
     days = week_window(today)
     shown = _dig(settings, ("dashboard", "week_ahead_priorities"), None)      # which priorities the Week ahead lists; empty or missing: all
     shown = set(shown) if shown else None
@@ -1697,11 +1681,9 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
             land(d["due"], {"kind": "decisions", "id": d["id"], "p": d["p"], "t": d["t"], "o": d.get("by") or ""})
     # BL-127: no weekly or client report lines; the reminders in Needs attention (build_dashboard.reminders) carry them
     keep = [d for d in days if not out[d.isoformat()]["weekend"] or out[d.isoformat()]["meetings"]]
-    if keep:                           # BL-319: what is already late lands on the first day shown, saying how late
-        out[keep[0].isoformat()]["items"] += week_late(today, open_items, decisions, shown)
-    rank = {"Urgent": 0, "High": 1}
-    for d in out.values():             # late first, then Urgent, then High, then the rest, in the order they were found
-        d["items"].sort(key=lambda i: (0 if i.get("od") else 1, rank.get(i.get("pr"), 2)))
+    rank = {"Urgent": 0, "High": 1}    # #112 (Alan, 16-10-2026): overdue work no longer leads the Week ahead (Your commitments
+    for d in out.values():             # holds Alan's; the page's quiet line counts other people's), so a day is Urgent, High, the rest
+        d["items"].sort(key=lambda i: rank.get(i.get("pr"), 2))
     # Urgent work with no date can't sit on a day: it leads the Week ahead instead
     undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent"}
                for k, x in open_items if x.get("pr") == "Urgent" and not x["due"] and (shown is None or "Urgent" in shown)]
