@@ -39,10 +39,11 @@ const PLAIN = { blockquote: false, bold: false, bulletList: false, code: false, 
   heading: false, horizontalRule: false, italic: false, listItem: false, listKeymap: false, orderedList: false,
   strike: false, link: false, underline: false, trailingNode: false };
 
-// Each place switches on what it needs (BL-301 A): Current state has no tables or checklists; Notes have everything.
+// Each place switches on what it needs (BL-301 A): Current state has no tables; it has checklists since #134 (v2.2.0);
+// Notes have everything.
 const FEATURES = {
   plain: () => [StarterKit.configure(PLAIN)],
-  current: () => [...base(), Markdown],
+  current: () => [...base(), TaskList, TaskItem.configure({ nested: true }), Markdown],
   notes: () => [...base(), TaskList, TaskItem.configure({ nested: true }), TableKit.configure({ table: false }), TableForm,
     Markdown],
 };
