@@ -4335,25 +4335,21 @@ def edit_stage(c, how):
 
 
 def settings_notes_clash(p, text):
-    """#128: why the page's settings.json `text` can't be saved (it changes locations.folders so that the notes folder is also a
-    meeting, report, Steerco, agendas or images folder, or holds one or sits in one; or it renames the notes folder while notes
-    are still under the old name), or None. An unchanged mapping is saved."""
-    def folders(raw):
-        """The text's locations.folders ({} when it has none), or None when it isn't settings JSON."""
-        try:
-            got = (json.loads(raw).get("locations") or {}).get("folders")
-        except (ValueError, AttributeError):
-            return None
-        return got if isinstance(got, dict) else {}
-    new = folders(text)
+    """#128: why the page's settings.json `text` can't be saved (paths.locations_change_problem: a notes folder shared with
+    another kind, a notes folder renamed while notes are under the old name, a skeleton that isn't a template folder; L3: text
+    that isn't a settings object, or a `locations` that isn't one, so the check can't run), or None."""
     try:
-        old = folders(p.read_text(encoding="utf-8"))
-    except OSError:
-        old = None
-    clash = paths.notes_folder_clash(new) if new is not None and new != old else []
-    if clash:
-        return f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of their own."
-    return paths.notes_rename_problem(old, new)              # #128 F1: never a rename that leaves notes behind unguarded
+        new = json.loads(text)
+    except ValueError:
+        new = None
+    if not isinstance(new, dict) or not isinstance(new.get("locations", {}), dict):
+        return "Not saved: settings must be a JSON object, with locations an object."
+    try:
+        old = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):                         # no readable file: compared with the defaults
+        old = {}
+    old = old.get("locations") if isinstance(old, dict) and isinstance(old.get("locations"), dict) else {}
+    return paths.locations_change_problem(old, new.get("locations") or {})
 
 
 def clear_card_marks(older=reach.CARD_MOVE_SECONDS):

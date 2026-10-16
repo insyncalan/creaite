@@ -230,9 +230,12 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
         (self.v.root / "system/staging" / name).write_text(json.dumps({"source_run": "dashboard", "items": [], "meeting": {
             "title": "x", "key": "x", "draft": f"{ABC}/notes/Stamped.docx", "minutes_decision": "approved", "file_ops": []}}))
         self.addCleanup(lambda: (self.v.root / "system/staging" / name).unlink(missing_ok=True))
+        backups = self.backups()
         r = self.run_at("tracker.py", "apply", name)
         self.assertNotEqual(r.returncode, 0, r.stdout)
-        self.assertIn(f"draft: {ABC}/notes/Stamped.docx is in a notes folder: a draft is never stamped there", r.stdout)
+        self.assertIn(f"{name} minutes_decision: draft: {ABC}/notes/Stamped.docx is in a notes folder: a draft is never stamped "
+                      "there", r.stdout)                                        # named by the dry run, before the backup
+        self.assertEqual(self.backups(), backups)
         self.assertEqual(doc.read_bytes(), before)
         got = self.py_json(                                                      # and the stamp itself refuses, past the dry run
             "import tracker\n"
@@ -304,6 +307,93 @@ class NotesMapping(OneDriveCase):
         got = self.py("import tracker\nprint(json.dumps([tracker.in_notes_folder('projects/_Skel/08 Notes/Read me.md'),"
                       "tracker.in_notes_folder('projects/Loose Work/08 Notes/Loose.md')]))")
         self.assertEqual(got, [False, True])
+        touch(self.root / "_Templates" / "08 Notes" / "T.md", "template\n")       # _Templates is never an engagement
+        self.assertFalse(self.py("import tracker\nprint(json.dumps(tracker.in_notes_folder('projects/_Templates/08 Notes/T.md', "
+                                 "archived=True)))"))
+
+    def renamed(self, name="09 Notes", **loc):
+        data = json.loads((self.v.root / "system/config/settings.json").read_text())
+        return {**data, "locations": {**data["locations"], **loc,
+                                      "folders": {**data["locations"]["folders"], "notes": name}}}
+
+    def test_h_the_rename_check_scans_every_place_notes_can_be(self):
+        """M1, M3, L2, L4 through the page's real save: an engagement not in the register, an engagement's _Archive and zz
+        Archive, an archived engagement and its own _Archive, a symlinked folder or file; Finder's own files are not notes."""
+        eng = self.eng("ABC").name
+        out = self.root / "elsewhere"
+        touch(out / "x.md", "x\n")
+        places = {"unregistered": "Side Engagement/08 Notes/S.md", "eng_archive": f"{eng}/_Archive/08 Notes/G.md",
+                  "eng_zz": f"{eng}/zz Archive/08 Notes/Z.md", "archived_eng": f"_Archive/{eng}/08 Notes/O.md",
+                  "archived_eng_archive": f"_Archive/{eng}/_Archive/08 Notes/Q.md", "portfolio": "_Portfolio/08 Notes/P.md"}
+        for k, rel in places.items():
+            f = touch(self.root / rel, "note\n")
+            code, body = self.page_save(self.renamed())
+            self.assertFalse(body["ok"], k)
+            self.assertIn("Not saved: notes are still in “08 Notes”", body["message"], k)
+            f.unlink()
+        d = self.eng("ABC", "08 Notes")
+        d.mkdir(parents=True, exist_ok=True)
+        os.symlink(out, d / "linked")                                            # L2: only a symlinked folder
+        self.assertFalse(self.page_save(self.renamed())[1]["ok"])
+        (d / "linked").unlink()
+        os.symlink(out / "x.md", d / "x.md")                                     # only a symlinked file
+        self.assertFalse(self.page_save(self.renamed())[1]["ok"])
+        (d / "x.md").unlink()
+        for f in (".DS_Store", "._Keep.md", "Icon\r"):                           # L3: Finder's own files
+            (d / f).write_text("")
+        self.assertTrue(self.page_save(self.renamed("08 NOTES"))[1]["ok"])       # a case-only change is the same folder
+        self.assertEqual(self.page_save(self.renamed())[1], {"ok": True})
+
+    def test_i_copy_out_of_an_archived_engagement_needs_the_card(self):
+        eng = self.eng("ABC").name
+        for rel in (f"_Archive/{eng}/08 Notes/O.md", f"_Archive/{eng}/_Archive/08 Notes/Q.md", f"{eng}/zz Archive/08 Notes/Z.md"):
+            touch(self.root / rel, "note\n")
+            p = self.v.root / "system/staging/proposed-2026-10-16-arch.json"
+            p.write_text(json.dumps({"source_run": "dashboard", "items": [], "file_changes": {
+                "title": "by hand", "file_changes_decision": "approved",
+                "file_ops": [{"op": "copy", "from": f"projects/{rel}", "to": "inbox/out.md"}]}}))
+            r = self.v.run("apply", p.name, ok=False)
+            self.assertNotEqual(r.returncode, 0, rel)
+            self.assertIn("is in a notes folder", r.stdout, rel)
+            self.assertFalse((self.v.root / "inbox/out.md").exists(), rel)
+            p.unlink()
+
+    def test_j_a_two_step_root_change_and_propose_setting(self):
+        """M2: the old name is scanned under the old root and the new one. A root change alone is saved (the notes keep their
+        name, so the by-name guard follows them). F1 through propose.py setting too."""
+        touch(self.eng("ABC", "08 Notes", "K.md"), "kept\n")
+        empty = self.home / "Empty root"
+        empty.mkdir()
+        cfg = self.v.root / "system/config/settings.json"
+        real = json.loads(cfg.read_text())["locations"]["projects_root"]
+        step1 = json.loads(cfg.read_text())
+        step1["locations"]["projects_root"] = str(empty)
+        self.assertEqual(self.page_save(step1)[1], {"ok": True})                # a root change alone: saved
+        code, body = self.page_save(self.renamed(projects_root=real))           # the rename with the real root back: refused
+        self.assertFalse(body["ok"], body)
+        self.assertIn("Not saved: notes are still in “08 Notes”", body["message"])
+        step1["locations"]["projects_root"] = real
+        self.assertEqual(self.page_save(step1)[1], {"ok": True})
+        folders = json.loads(cfg.read_text())["locations"]["folders"]
+        r = self.v.run("setting", "locations.folders", json.dumps({**folders, "notes": "09 Notes"}), script="propose.py", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Not saved: notes are still in “08 Notes”", r.stdout + r.stderr)
+        self.assertNotIn("notes", json.loads(cfg.read_text())["locations"]["folders"])
+
+    def test_k_the_skeleton_must_be_a_template_folder(self):
+        cfg = self.v.root / "system/config/settings.json"
+        for bad in (".", "", "_Archive", "_Archive/Skel", self.eng("ABC").name, "_Portfolio", "../x"):
+            data = json.loads(cfg.read_text())
+            data["locations"]["skeleton"] = bad
+            code, body = self.page_save(data)
+            self.assertFalse(body["ok"], bad)
+            self.assertIn("isn't a template folder of its own", body["message"], bad)
+        r = self.v.run("setting", "locations.skeleton", ".", script="propose.py", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        data = json.loads(cfg.read_text())
+        data["locations"]["skeleton"] = "_Skel"
+        self.assertEqual(self.page_save(data)[1], {"ok": True})
+        self.assertEqual(self.page_save({"locations": []})[1]["ok"], False)     # L3: the check can't run: refused
 
     def test_e_the_clash_check(self):
         got = self.py(

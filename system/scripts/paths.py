@@ -528,26 +528,128 @@ def notes_folder_clash(folders=None) -> list:
     return [f"{k} ({name(k)})" for k in NOT_NOTES if norm(k) == n or n in norm(k).parents or norm(k) in n.parents]
 
 
+# #128: where an engagement's notes can be, below the projects folder: <eng>/<notes>, and (archived) <eng>/_Archive/<notes>,
+# _Archive/<eng>/<notes>, _Archive/<eng>/_Archive/<notes> ("*" an engagement, "A" _Archive or zz Archive). tracker's copy guard
+# matches these shapes (notes_shape) and the rename check lists them (notes_places): one list, so the two never disagree.
+NOTES_SHAPES = (("*",), ("*", "A"), ("A", "*"), ("A", "*", "A"))
+NOT_A_NOTE = (".DS_Store", "Icon\r")             # Finder's own files (and ._* AppleDouble) are never notes
+
+
+def _fold(x) -> str:
+    import unicodedata
+    return unicodedata.normalize("NFC", str(x)).casefold()
+
+
+def _arch_names() -> set:
+    return {_fold(ARCHIVE), _fold(OLD_ARCHIVE)}
+
+
+def _not_engagement(name, loc=None) -> bool:
+    """A top folder that is never an engagement for the notes rules: _Templates, the skeleton's top folder."""
+    skel = str((loc if loc is not None else locations()).get("skeleton") or "_Templates/_Skeleton")
+    return _fold(name) in ("_templates", _fold(Path(skel).parts[0] if Path(skel).parts else ""))
+
+
+def notes_shape(parts, name, archived=True, loc=None) -> bool:
+    """#128: whether `parts` (folded, below the projects folder) are inside a notes folder named `name` (folded parts) in one
+    of NOTES_SHAPES (only the first unless `archived`)."""
+    arch = _arch_names()
+    for shape in NOTES_SHAPES if archived else NOTES_SHAPES[:1]:
+        head = parts[:len(shape)]
+        if len(head) == len(shape) and all((x in arch) if s == "A" else (x not in arch) for s, x in zip(shape, head)) \
+                and not _not_engagement(head[0], loc) and parts[len(shape):len(shape) + len(name)] == name:
+            return True
+    return False
+
+
+def notes_places(root, name, loc=None) -> list:
+    """#128: every folder below `root` that NOTES_SHAPES give for notes folder `name` (a path inside each engagement)."""
+    arch = _arch_names()
+    out = []
+    for shape in NOTES_SHAPES:
+        here = [Path(root)]
+        for i, s in enumerate(shape):
+            nxt = []
+            for d in here:
+                try:
+                    kids = [k for k in d.iterdir() if k.is_dir()]
+                except OSError:                   # gone or unreadable: nothing there to guard
+                    continue
+                nxt += [k for k in kids if ((_fold(k.name) in arch) if s == "A" else (_fold(k.name) not in arch))
+                        and not (i == 0 and _not_engagement(k.name, loc))]
+            here = nxt
+        out += [d / name for d in here]
+    return out
+
+
+def _holds_files(d) -> bool:
+    """A folder with a file or a symlink anywhere below it (never followed), Finder's own files apart; a symlink itself counts."""
+    if os.path.islink(d):
+        return True
+    for _, dirs, files in os.walk(d, followlinks=False):
+        if any(os.path.islink(os.path.join(_, x)) for x in dirs):
+            return True
+        if any(f not in NOT_A_NOTE and not f.startswith("._") for f in files):
+            return True
+    return False
+
+
+def _loc_root(loc) -> Path:
+    root = str((loc or {}).get("projects_root") or "").strip()
+    if not root:
+        return ROOT / "projects"
+    p = Path(os.path.expanduser(root))
+    return p if p.is_absolute() else ROOT / p
+
+
+def _loc_notes(loc) -> str:
+    folders = (loc or {}).get("folders")
+    return str({**LOCATION_DEFAULTS["folders"], **(folders if isinstance(folders, dict) else {})}.get("notes")
+               or DEFAULT_FOLDERS["notes"])
+
+
 def notes_rename_problem(old, new):
-    """#128 F1: why locations.folders `new` can't replace `old` (both mappings, None for none): the notes folder's name changes
-    while a folder under the old name still holds files (an engagement's, the portfolio's, their _Archive's or an archived
-    engagement's), so those notes would lose the apply's card-only guard. None when the name stays or nothing is there. The way
-    to rename: move the folders in Finder first, then change the setting."""
-    def name(folders):
-        """The notes folder's name in a mapping, filled as locations() fills a saved one."""
-        return str({**LOCATION_DEFAULTS["folders"], **(folders or {})}.get("notes") or DEFAULT_FOLDERS["notes"])
-    a, b = name(old), name(new)
-    if old is None or new is None or a.strip("/").casefold() == b.strip("/").casefold():
+    """#128 F1: why `locations` mapping `new` can't replace `old` (both whole `locations` values): the notes folder's name
+    changes while a folder under the old name holds files, under the old root or the new one (notes_places: every engagement,
+    registered or not, the portfolio, their _Archive and archived engagements), so those notes would lose the apply's guard.
+    A root change alone is allowed (the notes keep their name, so the guard follows them). The way to rename: move the
+    folders in Finder first, then change the setting."""
+    a, b = _loc_notes(old), _loc_notes(new)
+    if _fold(a.strip("/")) == _fold(b.strip("/")):
         return None
-    bases = [base for _, base in project_folders()]
-    if (projects_root() / ARCHIVE).is_dir():
-        bases += [d for d in (projects_root() / ARCHIVE).iterdir() if d.is_dir()]
-    for base in bases:
-        for d in (base / a, base / ARCHIVE / a):
-            if d.is_dir() and any(f.is_file() and f.name != ".DS_Store" for f in d.rglob("*")):
-                return (f"Not saved: notes are still in “{a}” ({base.name}): "
-                        f"move the notes folders to “{b}” first, then change the setting.")
+    for root in dict.fromkeys([_loc_root(old), _loc_root(new)]):
+        bases = notes_places(root, a, old) + notes_places(root, a, new)
+        pf = root / str((new or {}).get("portfolio") or "_Portfolio")
+        bases += [pf / a, pf / ARCHIVE / a, ROOT / "projects" / "_portfolio" / a]
+        for d in dict.fromkeys(bases):
+            if os.path.lexists(d) and _holds_files(d):
+                return (f"Not saved: notes are still in “{a}” ({d.parent.name}): move the notes folders to “{b}” first, then "
+                        "change the setting.")
     return None
+
+
+def skeleton_problem(old, new):
+    """#128 L1: why `new`'s locations.skeleton can't be saved (a changed one that is empty, ".", has "..", is in _Archive, or is
+    an engagement's or the portfolio's folder: its notes would lose the by-name guard), or None."""
+    if "skeleton" not in (new or {}) or (new or {}).get("skeleton") == (old or {}).get("skeleton"):
+        return None                               # left as it was (or the default)
+    s = str(new.get("skeleton") or "")
+    parts = [x for x in s.replace("\\", "/").split("/") if x not in ("", ".")]
+    engagements = {_fold(x) for x in register_folders().values()} | {_fold((new or {}).get("portfolio") or "_Portfolio")}
+    if not parts or ".." in parts or _fold(parts[0]) in _arch_names() | engagements:
+        return f"Not saved: locations.skeleton “{s}” isn't a template folder of its own (never “.”, _Archive, an engagement or the portfolio)."
+    return None
+def locations_change_problem(old, new):
+    """#128: why `locations` value `new` can't replace `old` (the page's settings save and propose.py setting), or None: the
+    notes folder would share a folder with another kind, a renamed notes folder would leave notes unguarded, or the skeleton
+    isn't a template folder of its own."""
+    nf, of = new.get("folders"), old.get("folders")
+    clash = notes_folder_clash(nf if isinstance(nf, dict) else {}) if nf != of else []
+    if clash:
+        return f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of their own."
+    return skeleton_problem(old, new) or notes_rename_problem(old, new)
+
+
 # ===== end BL-301 =====
 
 

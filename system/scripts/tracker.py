@@ -1955,26 +1955,17 @@ def in_notes_folder(rel, links=False, archived=False):
 
 
 def _named_notes(c, archived=False):
-    """#128: real or written path `c` is below the projects folder with the notes folder's name at its second level (archived:
-    or at its third, below <engagement>/_Archive or _Archive/<engagement>). The skeleton and _Templates are not engagements."""
+    """#128: real or written path `c` is below the projects folder in a notes folder by name, in one of paths.NOTES_SHAPES
+    (<engagement>/<notes folder>; archived: also below an engagement's _Archive, an archived engagement, or both). The
+    skeleton's top folder and _Templates are not engagements. paths.notes_places lists the same shapes for the rename check."""
     name = [_folded(x) for x in Path(paths.folder_name("notes")).parts if x not in ("", ".")]
-    arch = {_folded(paths.ARCHIVE), _folded(paths.OLD_ARCHIVE)}
-    skeleton = str(paths.locations().get("skeleton") or "_Templates/_Skeleton")
     for r in {os.path.normpath(os.path.abspath(paths.projects_root())), os.path.realpath(paths.projects_root())}:
-        if not _below(c, r) or _folded(c) == _folded(r) or _below(c, Path(r) / skeleton):
+        if not _below(c, r) or _folded(c) == _folded(r):
             continue
         parts = [_folded(x) for x in Path(c).parts[len(Path(r).parts):]]
-        if parts[0] != "_templates" and _notes_parts(parts, name, arch if archived else ()):
+        if not name or paths.notes_shape(parts, name, archived):
             return True
     return False
-
-
-def _notes_parts(parts, name, arch):
-    """#128: the parts below the projects folder are <engagement>/<notes folder>/…, or (arch given) the same below
-    <engagement>/_Archive or _Archive/<engagement>."""
-    if not name or parts[1:1 + len(name)] == name:
-        return True
-    return bool(arch) and (parts[0] in arch or parts[1:2] and parts[1] in arch) and parts[2:2 + len(name)] == name
 
 
 def _hard_linked_note(p, folders):

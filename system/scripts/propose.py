@@ -1425,16 +1425,12 @@ def cmd_setting(key, raw):
 
 
 def notes_setting_problem(key, was, data):
-    """#128: why a change to `key` can't be saved: the notes folder would share a folder with another kind (Delete note moves
-    the notes folder's files), or (F1) it is renamed while notes are under the old name (they would lose the apply's guard)."""
-    if not (key == "locations" or key.startswith("locations.folders")):
+    """#128: why a change to `key` can't be saved (paths.locations_change_problem: the notes folder shared with another kind,
+    renamed while notes are under the old name, or a skeleton that isn't a template folder of its own), or None."""
+    if not (key == "locations" or key.startswith("locations.")):
         return None
-    folders = (data.get("locations") or {}).get("folders")
-    folders = folders if isinstance(folders, dict) else {}
-    clash = paths.notes_folder_clash(folders)
-    if clash:
-        return f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of their own."
-    return paths.notes_rename_problem(was.get("folders") if isinstance(was.get("folders"), dict) else {}, folders)
+    loc = data.get("locations")
+    return paths.locations_change_problem(was if isinstance(was, dict) else {}, loc if isinstance(loc, dict) else {})
 
 
 # ===== Recode a project (BL-111) =====
