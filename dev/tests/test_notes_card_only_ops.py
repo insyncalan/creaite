@@ -13,7 +13,10 @@ of the card's own proposal (tracker.card_marks), bound to that proposal's bytes 
 - `..`, a symlink to a note or to the notes folder, a hard link, case variants, a subfolder and the portfolio's notes are all
   inside; a minutes file, an inbox file and the _Archive are not;
 - locations.folders.notes on, inside or around a minutes or reports folder: refused by propose.py setting and the page's
-  settings save, and with such a mapping a "reports" move of a file in it is refused by the mover.
+  settings save, and with such a mapping a "reports" move of a file in it is refused by the mover, naming the mapping;
+- review F1 to F5: a rename of the notes folder is refused while notes are under the old name (the page's real /api/fs
+  handler); a deleted or archived note's copy-out, a copy through a hard link and a draft stamped in a notes folder are refused;
+  run_file_ops refuses with the dry run bypassed; an engagement not in the register is guarded by name, the skeleton is not.
 Everything is fictional and temporary.
 """
 import json
@@ -167,12 +170,15 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
             f"c = {json.dumps(cases)}\n"
             "out = {k: tracker.in_notes_folder(v) for k, v in c.items()}\n"
             "out['hard_write'] = tracker.in_notes_folder('inbox/hard.md', links=True)\n"
+            "out['archive_copy'] = tracker.in_notes_folder(c['archive'], archived=True)\n"
+            "out['hard_copy'] = tracker.notes_op_target({'op': 'copy', 'from': 'inbox/hard.md', 'to': 'inbox/x.md'}, {})\n"
+            "out['hard_remove_op'] = tracker.notes_op_target({'op': 'remove', 'path': 'inbox/hard.md'}, {})\n"
             "print(json.dumps(out))")
         for k in ("dotdot", "upper", "mixed", "project_case", "symlink", "symlinked_folder", "sub", "images", "portfolio",
-                  "hard_write"):
+                  "hard_write", "archive_copy", "hard_copy"):
             self.assertTrue(got[k], k)
-        for k in ("plain", "minutes", "archive", "hard_remove"):
-            self.assertFalse(got[k], k)
+        for k in ("plain", "minutes", "archive", "hard_remove", "hard_remove_op"):   # archive: safe_path refuses a remove or write
+            self.assertFalse(got[k], k)                                                # there; a remove unlinks only its own name
         # end to end: removing a symlink to a note would remove the note itself (safe_path follows it); a write through a hard
         # link would change it
         self.refused_both_ways([{"op": "remove", "path": "inbox/link.md"}], f"remove: inbox/link.md {IN_NOTES}", "link")
@@ -180,12 +186,124 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
                                f"write: inbox/hard.md {IN_NOTES}", "hard")
         self.refused_both_ways([{"op": "remove", "path": f"{ABC}/NOTES/../notes/sub/Deep.md"}],
                                f"remove: {ABC}/NOTES/../notes/sub/Deep.md {IN_NOTES}", "deep")
+        self.refused_both_ways([{"op": "copy", "from": "inbox/hard.md", "to": "inbox/Hard copy.md"}],      # F4
+                               f"copy: inbox/hard.md {IN_NOTES}", "hardcopy")
         self.assertEqual(note.read_text(), text)
         self.assertTrue((self.folder() / "sub" / "Deep.md").is_file())
+        self.assertFalse((inbox / "Hard copy.md").exists())
+
+    def test_f_run_file_ops_refuses_without_the_dry_run(self):
+        """The apply's own check, with the dry run bypassed: run_file_ops refuses a note's remove, and removes another file."""
+        self.new("Direct")
+        rel = f"{ABC}/notes/Direct.md"
+        (self.v.root / "inbox/Other.md").write_text("other\n")
+        got = self.py_json(
+            "import tracker\n"
+            "def go(path):\n"
+            "    blk = {'file_changes_decision': 'approved', 'file_ops': [{'op': 'remove', 'path': path}]}\n"
+            "    try:\n"
+            "        tracker.run_file_ops(990, blk, 'file_changes_decision', blk['file_ops'], [], None); return None\n"
+            "    except tracker.Invalid as e:\n"
+            "        return str(e)\n"
+            f"print(json.dumps([go({rel!r}), go('inbox/Other.md')]))")
+        self.assertIn(f"remove: {rel} {IN_NOTES}", got[0] or "")
+        self.assertTrue((self.folder() / "Direct.md").is_file())
+        self.assertIsNone(got[1])                                                # control: removed
+        self.assertFalse((self.v.root / "inbox/Other.md").exists())
+
+    def test_g_deleted_notes_are_not_copied_out_and_no_draft_is_stamped_in_notes(self):
+        r = self.new("Gone")
+        self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])     # Delete note
+        gone = f"{ABC}/_Archive/notes/Gone.md"
+        self.refused_both_ways([{"op": "copy", "from": gone, "to": "inbox/Gone copy.md"}], f"copy: {gone} {IN_NOTES}", "gone")
+        self.assertFalse((self.v.root / "inbox/Gone copy.md").exists())
+        doc = self.folder() / "Stamped.docx"                                     # F3: a draft is never stamped in a notes folder
+        import io
+        import zipfile
+        b = io.BytesIO()
+        with zipfile.ZipFile(b, "w") as z:
+            z.writestr("word/document.xml", '<w:document xmlns:w="w"><w:body><w:p><w:r><w:t>Draft for review</w:t></w:r></w:p>'
+                                            "</w:body></w:document>")
+        doc.write_bytes(b.getvalue())
+        before = doc.read_bytes()
+        name = "proposed-2026-10-16-hand-stamp.json"
+        (self.v.root / "system/staging" / name).write_text(json.dumps({"source_run": "dashboard", "items": [], "meeting": {
+            "title": "x", "key": "x", "draft": f"{ABC}/notes/Stamped.docx", "minutes_decision": "approved", "file_ops": []}}))
+        self.addCleanup(lambda: (self.v.root / "system/staging" / name).unlink(missing_ok=True))
+        r = self.run_at("tracker.py", "apply", name)
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.assertIn(f"draft: {ABC}/notes/Stamped.docx is in a notes folder: a draft is never stamped there", r.stdout)
+        self.assertEqual(doc.read_bytes(), before)
+        got = self.py_json(                                                      # and the stamp itself refuses, past the dry run
+            "import tracker\n"
+            f"blk = {{'draft': {f'{ABC}/notes/Stamped.docx'!r}, 'minutes_decision': 'approved'}}\n"
+            "try:\n"
+            "    tracker._stamp_approved(991, blk, 'minutes_decision', []); out = None\n"
+            "except tracker.Invalid as e:\n"
+            "    out = str(e)\n"
+            "print(json.dumps(out))")
+        self.assertIn("a draft is never stamped there", got or "")
+        self.assertEqual(doc.read_bytes(), before)
 
 
 class NotesMapping(OneDriveCase):
     """locations.folders.notes must be a folder of its own (#124 doctor check, #128 refused where it is saved and used)."""
+
+    def page_save(self, data):
+        """The page's settings save, through the real /api/fs handler (live_server.Handler.fs), in a fresh process."""
+        return self.py(
+            "import types, live_server as ls\n"
+            "out = []\n"
+            "h = types.SimpleNamespace(send=lambda code, body, *a, **k: out.append([code, body]))\n"
+            f"ls.Handler.fs(h, {{'op': 'write', 'path': 'system/config/settings.json', 'text': {json.dumps(data)!r}}})\n"
+            "print(json.dumps(out[0]))")
+
+    def remove(self, rel, name):
+        p = self.v.root / "system/staging" / f"proposed-2026-10-16-{name}.json"
+        p.write_text(json.dumps({"source_run": "dashboard", "items": [], "file_changes": {
+            "title": "by hand", "file_changes_decision": "approved", "file_ops": [{"op": "remove", "path": rel}]}}))
+        return self.v.run("apply", p.name, ok=False)
+
+    def test_f_a_rename_of_the_notes_folder_is_refused_while_notes_are_there(self):
+        cfg = self.v.root / "system/config/settings.json"
+        keep = touch(self.eng("ABC", "08 Notes", "Keep.md"), "kept\n")
+        data = json.loads(cfg.read_text())
+        before = cfg.read_text()
+        renamed = {**data, "locations": {**data["locations"], "folders": {**data["locations"]["folders"], "notes": "09 Notes"}}}
+        code, body = self.page_save(renamed)
+        self.assertEqual(code, 200)
+        self.assertFalse(body["ok"], body)
+        self.assertIn("Not saved: notes are still in “08 Notes”", body["message"])
+        self.assertEqual(cfg.read_text(), before)
+        r = self.v.run("setting", "locations.folders.minutes", "02 Meetings/Minutes", script="propose.py", ok=False)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)                   # another folder key: saved
+        r = self.remove(f"projects/{self.eng('ABC').name}/08 Notes/Keep.md", "keep")
+        self.assertNotEqual(r.returncode, 0)                                     # still guarded
+        self.assertTrue(keep.is_file())
+        clash = {**data, "locations": {**data["locations"], "folders": {**data["locations"]["folders"], "notes": "04 Reporting"}}}
+        self.assertFalse(self.page_save(clash)[1]["ok"])                          # a clash, through the route
+        self.eng("ABC", "08 Notes").rename(self.eng("ABC", "09 Notes"))           # moved in Finder first: the rename saves
+        code, body = self.page_save(renamed)
+        self.assertEqual(body, {"ok": True})
+        self.assertEqual(json.loads(cfg.read_text())["locations"]["folders"]["notes"], "09 Notes")
+
+    def test_g_an_engagement_not_in_the_register_and_the_skeleton(self):
+        loose = touch(self.root / "Loose Work" / "08 Notes" / "Loose.md", "loose\n")
+        touch(self.root / "_Templates" / "_Skeleton" / "08 Notes" / "Read me.md", "how to\n")
+        cfg = self.v.root / "system/config/settings.json"
+        got = self.py("import tracker\nprint(json.dumps([tracker.in_notes_folder(p) for p in ("
+                      "'projects/Loose Work/08 Notes/Loose.md', 'projects/_Templates/_Skeleton/08 Notes/Read me.md')]))")
+        self.assertEqual(got, [True, False])
+        r = self.remove("projects/Loose Work/08 Notes/Loose.md", "loose")
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.assertTrue(loose.is_file())
+        data = json.loads(cfg.read_text())
+        data["locations"]["skeleton"] = "_Skel"                                  # F5: a skeleton of one level
+        cfg.write_text(json.dumps(data, indent=2))
+        touch(self.root / "_Skel" / "08 Notes" / "Read me.md", "how to\n")
+        got = self.py("import tracker\nprint(json.dumps([tracker.in_notes_folder('projects/_Skel/08 Notes/Read me.md'),"
+                      "tracker.in_notes_folder('projects/Loose Work/08 Notes/Loose.md')]))")
+        self.assertEqual(got, [False, True])
 
     def test_e_the_clash_check(self):
         got = self.py(
@@ -229,7 +347,7 @@ class NotesMapping(OneDriveCase):
         self.assertIsNone(self.py(code))                                         # control: notes in a folder of their own
         data["locations"]["folders"]["notes"] = weekly                           # saved by hand, past the refusals
         cfg.write_text(json.dumps(data, indent=2))
-        self.assertIn("is in a notes folder: a note is moved only by Delete note or Move back", self.py(code) or "")
+        self.assertIn("is refused: locations.folders.notes is also the weekly_reports", self.py(code) or "")   # the mapping named
 
 
 if __name__ == "__main__":

@@ -1531,6 +1531,9 @@ def run_file_ops(apply_id, blk, field, ops, done, prop=None):
 def _stamp_approved(apply_id, blk, field, done):
     """An approved draft (minutes or a report) says who approved it and when, before it is filed."""
     approved_by = (paths.load_settings().get("identity", {}).get("name") or "Alan").split()[0]
+    why = draft_problem(blk, field)                   # #128 F3
+    if why:
+        raise Invalid(why)
     if field in ("minutes_decision", "report_decision") and blk.get(field) == "approved" and blk.get("draft"):
         draft = paths.resolve(blk["draft"])
         if draft.exists():
@@ -1886,7 +1889,7 @@ def card_move_problem(fop, blk, prop):
     import reach
     kind = blk.get("archive")
     if kind not in ("notes", "notes_back") and any(in_notes_folder(fop.get(k)) for k in ("from", "to")):
-        return f"move: {fop.get('from')} is in a notes folder: a note is moved only by Delete note or Move back"   # #128
+        return f"move: {fop.get('from')} " + (_clash_why() or "is in a notes folder: a note is moved only by Delete note or Move back")
     if kind not in reach.CARD_ONLY_MOVES:
         return None
     if card_marker_ok(reach.card_move_marker(kind, fop.get("from"), fop.get("to")), prop):
@@ -1925,10 +1928,19 @@ def notes_folders():
     return out
 
 
-def in_notes_folder(rel, links=False):
+def _clash_why():
+    """#128: the refusal's reason when locations.folders.notes shares a folder with another kind (a hand-edited mapping), or ""."""
+    clash = paths.notes_folder_clash()
+    return (f"is refused: locations.folders.notes is also the {', '.join(clash)} folder or holds it: give notes a folder of "
+            "their own") if clash else ""
+
+
+def in_notes_folder(rel, links=False, archived=False):
     """#128: whether stored path `rel` is at or below a notes folder: as written (.. taken out), with every symlink followed, and
     with all but the last followed; and, below the projects folder, whether its second folder level is the notes folder's name
-    (an engagement not in the register too). links: also a file whose other hard link is in a notes folder (a write changes both)."""
+    (an engagement not in the register too; never the skeleton or _Templates). links: also a file whose other hard link is in a
+    notes folder (a write changes both; a copy reads it). archived: also an engagement's _Archive/<notes folder> (deleted notes)
+    and an archived engagement's notes folder (_Archive/<engagement>/<notes folder>), for a copy's source."""
     if not isinstance(rel, str) or not rel:
         return False
     try:
@@ -1937,20 +1949,32 @@ def in_notes_folder(rel, links=False):
         return False
     seen = {os.path.normpath(os.path.abspath(p)), os.path.realpath(p), os.path.join(os.path.realpath(p.parent), p.name)}
     folders = notes_folders()
-    if any(_below(c, f) for c in seen for f in folders) or any(_named_notes(c) for c in seen):
+    if any(_below(c, f) for c in seen for f in folders) or any(_named_notes(c, archived) for c in seen):
         return True
     return links and _hard_linked_note(p, folders)
 
 
-def _named_notes(c):
-    """#128: real or written path `c` is below the projects folder with the notes folder's name at its second level."""
+def _named_notes(c, archived=False):
+    """#128: real or written path `c` is below the projects folder with the notes folder's name at its second level (archived:
+    or at its third, below <engagement>/_Archive or _Archive/<engagement>). The skeleton and _Templates are not engagements."""
     name = [_folded(x) for x in Path(paths.folder_name("notes")).parts if x not in ("", ".")]
+    arch = {_folded(paths.ARCHIVE), _folded(paths.OLD_ARCHIVE)}
+    skeleton = str(paths.locations().get("skeleton") or "_Templates/_Skeleton")
     for r in {os.path.normpath(os.path.abspath(paths.projects_root())), os.path.realpath(paths.projects_root())}:
-        if _below(c, r) and _folded(c) != _folded(r):
-            parts = [_folded(x) for x in Path(c).parts[len(Path(r).parts):]]
-            if not name or parts[1:1 + len(name)] == name:
-                return True
+        if not _below(c, r) or _folded(c) == _folded(r) or _below(c, Path(r) / skeleton):
+            continue
+        parts = [_folded(x) for x in Path(c).parts[len(Path(r).parts):]]
+        if parts[0] != "_templates" and _notes_parts(parts, name, arch if archived else ()):
+            return True
     return False
+
+
+def _notes_parts(parts, name, arch):
+    """#128: the parts below the projects folder are <engagement>/<notes folder>/…, or (arch given) the same below
+    <engagement>/_Archive or _Archive/<engagement>."""
+    if not name or parts[1:1 + len(name)] == name:
+        return True
+    return bool(arch) and (parts[0] in arch or parts[1:2] and parts[1] in arch) and parts[2:2 + len(name)] == name
 
 
 def _hard_linked_note(p, folders):
@@ -1972,7 +1996,7 @@ def notes_op_target(fop, blk):
     """#128: the stored path a remove or write changes, or a copy reads, when it is in a notes folder; else None."""
     op = fop.get("op")
     rel = fop.get("path") if op in ("remove", "write") else op_source(fop, blk) if op == "copy" else None
-    return rel if op in NOTE_FILE_OPS and in_notes_folder(rel, links=op != "copy") else None
+    return rel if op in NOTE_FILE_OPS and in_notes_folder(rel, links=op != "remove", archived=op == "copy") else None
 
 
 def card_op_problem(fop, blk, prop):
@@ -1983,8 +2007,16 @@ def card_op_problem(fop, blk, prop):
     rel = notes_op_target(fop, blk)
     if rel is None or card_marker_ok(reach.card_move_marker(f"file-{fop['op']}", rel, ""), prop):
         return None
-    return (f"{fop['op']}: {rel} is in a notes folder: a note is changed through the Notes tab, or by Approve on the live "
-            "server's approval card")
+    return f"{fop['op']}: {rel} " + (_clash_why() or "is in a notes folder: a note is changed through the Notes tab, or by Approve "
+                                                     "on the live server's approval card")
+
+
+def draft_problem(blk, field):
+    """#128 F3: an approved minutes or report draft is stamped in place: never one in a notes folder."""
+    d = blk.get("draft")
+    if field in ("minutes_decision", "report_decision") and blk.get(field) == "approved" and d and in_notes_folder(d, links=True):
+        return f"draft: {d} " + (_clash_why() or "is in a notes folder: a draft is never stamped there")
+    return None
 
 
 def card_marks(data):
@@ -2367,6 +2399,7 @@ def card_move_problems(p, data):
         if blk.get(field) in ("approved", "rejected") and not blk.get("applied"):
             out += [f"{p.name} {field}: {why}" for fop in selected_ops(blk, field) if isinstance(fop, dict)
                     for why in [card_op_problem(fop, blk, p)] if why]          # #128: a note's file ops too
+            out += [f"{p.name} {field}: {why}" for why in [draft_problem(blk, field)] if why]
     return out
 
 

@@ -4336,7 +4336,8 @@ def edit_stage(c, how):
 
 def settings_notes_clash(p, text):
     """#128: why the page's settings.json `text` can't be saved (it changes locations.folders so that the notes folder is also a
-    meeting, report, Steerco, agendas or images folder, or holds one or sits in one), or None. An unchanged mapping is saved."""
+    meeting, report, Steerco, agendas or images folder, or holds one or sits in one; or it renames the notes folder while notes
+    are still under the old name), or None. An unchanged mapping is saved."""
     def folders(raw):
         """The text's locations.folders ({} when it has none), or None when it isn't settings JSON."""
         try:
@@ -4350,8 +4351,9 @@ def settings_notes_clash(p, text):
     except OSError:
         old = None
     clash = paths.notes_folder_clash(new) if new is not None and new != old else []
-    return (f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of their "
-            "own.") if clash else None
+    if clash:
+        return f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of their own."
+    return paths.notes_rename_problem(old, new)              # #128 F1: never a rename that leaves notes behind unguarded
 
 
 def clear_card_marks(older=reach.CARD_MOVE_SECONDS):

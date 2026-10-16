@@ -526,6 +526,28 @@ def notes_folder_clash(folders=None) -> list:
         return PurePosixPath(*[x for x in n.split("/") if x not in ("", ".")])
     n = norm("notes")
     return [f"{k} ({name(k)})" for k in NOT_NOTES if norm(k) == n or n in norm(k).parents or norm(k) in n.parents]
+
+
+def notes_rename_problem(old, new):
+    """#128 F1: why locations.folders `new` can't replace `old` (both mappings, None for none): the notes folder's name changes
+    while a folder under the old name still holds files (an engagement's, the portfolio's, their _Archive's or an archived
+    engagement's), so those notes would lose the apply's card-only guard. None when the name stays or nothing is there. The way
+    to rename: move the folders in Finder first, then change the setting."""
+    def name(folders):
+        """The notes folder's name in a mapping, filled as locations() fills a saved one."""
+        return str({**LOCATION_DEFAULTS["folders"], **(folders or {})}.get("notes") or DEFAULT_FOLDERS["notes"])
+    a, b = name(old), name(new)
+    if old is None or new is None or a.strip("/").casefold() == b.strip("/").casefold():
+        return None
+    bases = [base for _, base in project_folders()]
+    if (projects_root() / ARCHIVE).is_dir():
+        bases += [d for d in (projects_root() / ARCHIVE).iterdir() if d.is_dir()]
+    for base in bases:
+        for d in (base / a, base / ARCHIVE / a):
+            if d.is_dir() and any(f.is_file() and f.name != ".DS_Store" for f in d.rglob("*")):
+                return (f"Not saved: notes are still in “{a}” ({base.name}): "
+                        f"move the notes folders to “{b}” first, then change the setting.")
+    return None
 # ===== end BL-301 =====
 
 

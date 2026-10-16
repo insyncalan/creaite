@@ -1409,13 +1409,11 @@ def cmd_setting(key, raw):
         sys.exit(f"{key} expects a {type(old).__name__} (now {json.dumps(old)}).")
     if re.fullmatch(r"\d{2}:\d{2}", str(old)) and not re.fullmatch(r"\d{2}:\d{2}", str(value)):
         sys.exit("Times are 24-hour HH:MM.")
+    was = json.loads(text).get("locations") or {}
     node[parts[-1]] = value
-    folders = (data.get("locations") or {}).get("folders")
-    clash = paths.notes_folder_clash(folders if isinstance(folders, dict) else {}) \
-        if key == "locations" or key.startswith("locations.folders") else []
-    if clash:                                     # #128: Delete note moves the notes folder's files; nothing else may share it
-        sys.exit(f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of "
-                 "their own.")
+    why = notes_setting_problem(key, was, data)
+    if why:
+        sys.exit(why)
     paths.BACKUPS.mkdir(parents=True, exist_ok=True)
     shutil.copy2(paths.SETTINGS, paths.free_path(paths.BACKUPS, f"settings-{datetime.now():%Y-%m-%d-%H%M%S}", ".json"))   # BL-266
     paths.write_text_atomic(paths.SETTINGS, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
@@ -1424,6 +1422,19 @@ def cmd_setting(key, raw):
                 + "\n")
     print(f"{key}: {json.dumps(old)} → {json.dumps(value)} (saved, with a backup and a log line)")
     return 0
+
+
+def notes_setting_problem(key, was, data):
+    """#128: why a change to `key` can't be saved: the notes folder would share a folder with another kind (Delete note moves
+    the notes folder's files), or (F1) it is renamed while notes are under the old name (they would lose the apply's guard)."""
+    if not (key == "locations" or key.startswith("locations.folders")):
+        return None
+    folders = (data.get("locations") or {}).get("folders")
+    folders = folders if isinstance(folders, dict) else {}
+    clash = paths.notes_folder_clash(folders)
+    if clash:
+        return f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of their own."
+    return paths.notes_rename_problem(was.get("folders") if isinstance(was.get("folders"), dict) else {}, folders)
 
 
 # ===== Recode a project (BL-111) =====
