@@ -646,16 +646,54 @@ def client_findings(block):
     import creaite_doc
     import sqlite3
     draft = paths.resolve(block["draft"])
-    con = tracker.connect()
-    try:
+
+    def check(con):
         if creaite_doc.is_doc(draft):
             return client_leak.findings(creaite_doc.read(draft), con)
         return client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
+    con = tracker.connect()
+    try:
+        return check(con)
     except sqlite3.Error as e:                       # BL-228: a label check that cannot run is a finding (fails closed), not a crash
+        if labels_readable(con):                     # #127 review: not the labels (no such table: actions): fails closed as such
+            debuglog.warn("review", f"client check failed for {block['project']}: {type(e).__name__}")
+            return [f"Couldn't check the client report against the tracker: {type(e).__name__}: {e}; check before sending"]
         failure = label_check_failure(con, e, block["project"])
-        if failure:
+        if not failure:
+            raise
+        try:                                         # the other findings alongside it, read without the labels
+            return failure + [f for f in check(_WithoutLabels(con)) if f not in failure]
+        except sqlite3.Error:
             return failure
-        raise
+    finally:
+        con.close()
+
+
+def labels_readable(con):
+    """#127 review: whether the labels and item_labels tables can be read (so an error came from elsewhere)."""
+    import sqlite3
+    try:
+        for table in ("labels", "item_labels"):
+            con.execute(f"SELECT * FROM {table} LIMIT 1").fetchall()
+        return True
+    except sqlite3.Error:
+        return False
+
+
+class _WithoutLabels:
+    """A connection that answers every query on the labels with no rows (#127 review: the rest of the client check still runs
+    when the label check can't; its failure is reported on its own)."""
+
+    def __init__(self, con):
+        self._con = con
+
+    def execute(self, sql, *args):
+        if re.search(r"\b(?:item_)?labels\b", sql):
+            return self._con.execute("SELECT NULL, NULL, NULL WHERE 0")
+        return self._con.execute(sql, *args)
+
+    def __getattr__(self, name):
+        return getattr(self._con, name)
 
 
 def client_block(block):

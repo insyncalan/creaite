@@ -293,7 +293,7 @@ LINK_ADDRESS = r"[^()]{0,2000}(?:\([^()]{0,200}\)[^()]{0,2000})?"     # a link's
 
 def _plain(md):
     """Markdown as plain words."""
-    t = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", str(md or ""))
+    t = re.sub(r"!\[[^\]]{0,2000}\]\([^)]{0,2000}\)", "", str(md or ""))     # #127 review: bounded, so linear
     t = re.sub(r"\[([^\[\]]{1,2000})\]\(" + LINK_ADDRESS + r"\)", r"\1", t)   # #127 review: bounded, crossing no bracket: linear
     return re.sub(r"[*_`#>]+", "", t).strip()
 

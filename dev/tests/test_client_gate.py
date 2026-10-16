@@ -583,5 +583,136 @@ class TheRegisterFailsClosed(Base):
         self.assertEqual(self.findings(summary), [])                        # restored: passes again
 
 
+PAD = "a" * 2100                                              # longer than the gate reads of one address (LONG_TOKEN)
+TOO_LONG = "a link address too long to check"
+
+
+class TheReviewOf199ac40(Base):
+    """#127 review of 199ac40: an address longer than the gate reads, or holding a quote, is read to where Word's link ends or
+    fails closed; no quadratic pattern is left; names are found however they are spaced; a label check is reported only for the
+    labels; a creaite: link with a space after its colon, or encoded six times, is dropped."""
+
+    def plain(self, text):
+        return self.py(f"print(json.dumps(client_leak.plain_findings(client_leak.connect(), 'ABC', {text!r})))")
+
+    def both(self, text):
+        return self.findings(f"Progress. {text}"), self.plain(f"Progress. {text}")
+
+    def test_an_address_longer_than_the_gate_reads_fails_closed(self):
+        tails = ("/ZEBRAINTERNAL%20vendor%20is%20failing%20to%20deliver", "?who=Quentin%20Marlow", "/internal%2Donly",
+                 "?r=ABC%2DA%2D004")
+        for tail in tails:
+            address = f"https://x.example.com/{PAD}{tail}"
+            for text in (f"[s]({address})", address, f'<a href="{address}">s</a>'):
+                for got in self.both(text):
+                    self.assertTrue(any(f.startswith(TOO_LONG) for f in got), (tail, text[:30], got))
+        got = self.py("import docx_tools\nprint(json.dumps(docx_tools.plain(" + repr(f"[s](https://x.example.com/{PAD}{tails[1]})") + ")))")
+        self.assertTrue(got.endswith("Quentin%20Marlow)"), got[-40:])               # what Word shows: the whole address
+        for got in self.both(f"A long word {PAD} and a short [link](https://x.example.com/page)."):
+            self.assertEqual(got, [])                                                # control: a long word holding no link
+
+    def test_an_address_with_a_quote_or_an_angle_is_read_to_where_words_link_ends(self):
+        for text, why in (('[s](https://x.example.com/"Quentin%20Marlow)', f"{PERSON} is named"),
+                          ('[s](https://x.example.com/"ZEBRAINTERNAL%20vendor%20is%20failing%20to%20deliver)',
+                           "it holds the internal health reason"),
+                          ("[s](https://x.example.com/<Quentin%20Marlow>)", f"{PERSON} is named"),
+                          ('[s](https://x.example.com/"ABC%2DA%2D004")', f"{INTERNAL_ID} isn't client-visible"),
+                          ("[s](https://x.example.com/it's/ABC%2DA%2D004)", f"{INTERNAL_ID} isn't client-visible")):
+            for got in self.both(text):
+                self.assertTrue(any(f.startswith(why) for f in got), (text, got))
+        for got in self.both("[plan](https://client.example.com/it's/\"q\"/plan.pdf)"):
+            self.assertEqual(got, [])                                                # control: a quote in a client-safe address
+
+    def test_emphasis_and_images_are_linear(self):
+        """100 KB of "![", "*a " or "_a " took up to 15 s in md_runs and creaite_doc._plain (the old unbounded patterns)."""
+        code = ("import time, docx_tools\ncon = client_leak.connect()\nout = {}\n"
+                "for name, p in (('![', '!['), ('*a ', '*a '), ('_a ', '_a ')):\n"
+                "    s = (p * 50000)[:100000]\n"
+                "    d = report_doc.client_doc('ABC')\n    next(x for x in d['sections'] if x['id'] == 'summary')['text'] = s\n"
+                "    for f, run in (('findings', lambda: client_leak.findings(d)), ('plain', lambda: client_leak.plain_findings(con, 'ABC', s)),"
+                " ('client_problems', lambda: edit_ai.client_problems('ABC', s)), ('md_runs', lambda: docx_tools.md_runs(s))):\n"
+                "        t0 = time.time(); run(); out[name + ' ' + f] = time.time() - t0\n"
+                "t0 = time.time(); creaite_doc._plain('![' * 150000); out['_plain 300 KB'] = time.time() - t0\n"
+                "print(json.dumps(out))")
+        for name, took in self.py(code).items():
+            self.assertLess(took, 5.0, name)
+        got = self.py("import docx_tools\nprint(json.dumps([docx_tools.plain(t) for t in ('**Bold** and _italic_ and *it* and ~~gone~~',"
+                      " 'snake_case_word stays', '2 * 3 * 4')]))")
+        self.assertEqual(got, ["Bold and italic and it and gone", "snake_case_word stays", "2 * 3 * 4"])     # unchanged
+
+    def test_a_name_is_found_however_it_is_spaced(self):
+        found = f"{PERSON} is named but owns only items a client report can't show"
+        for text in ("Waiting on Quentin  Marlow.", "Waiting on Quentin\nMarlow for sign-off.", "Waiting on Quentin Marlow.",
+                     "Waiting on Quentin\tMarlow.", "Waiting on Quen​tin Marlow.", "Waiting on Quentin​ Marlow.",
+                     "See [the auditor](https://x.example.com/%28Quentin%20Marlow%29).",
+                     "See [the auditor](https://x.example.com/%28Quentin%C2%A0%20Marlow%29)."):
+            for got in self.both(text):
+                self.assertIn(found, got, repr(text))
+            self.assertIn(f"{PERSON} isn't named in the text",
+                          self.py(f"print(json.dumps(edit_ai.client_problems('ABC', {text!r})))"), repr(text))
+        for got in self.both("Waiting on Quentin Marlowe's team."):
+            self.assertEqual(got, [])                                                # control: a longer name isn't this one
+
+    def test_a_creaite_link_with_a_space_after_its_colon_is_dropped_whole(self):
+        for link in (f"creaite: item/{INTERNAL_ID}", f"[p](creaite: item/{INTERNAL_ID})", f"CREAITE :item/{INTERNAL_ID}",
+                     f"creaite: item/{INTERNAL_ID}", "creaite: note/7", "[the auditor](creaite: person/Quentin%20Marlow)"):
+            text = f"Before. {link} After."
+            self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {text!r})))").split(),
+                             ["Before.", "After."], repr(link))
+        prose = "Text creaite: notes/ are kept"
+        self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {prose!r})))"), prose)
+
+    def test_an_address_encoded_past_what_the_gate_decodes_fails_closed(self):
+        six, seven = "creaite%25252525253a", "creaite%2525252525253a"     # "creaite:" %-encoded six and seven times
+        for link in (f"[p]({seven}item/{INTERNAL_ID})", f"<{seven}item/{INTERNAL_ID}>", f"{seven}item/{INTERNAL_ID}",
+                     f'<a href="{seven}item/{INTERNAL_ID}">p</a>', f"[p]({seven}note/7)", f"[p]({six}item/{INTERNAL_ID})"):
+            for got in self.both(link):
+                self.assertTrue(any(f.startswith("a link address encoded more than") for f in got), (link, got))
+            text = f"Before. {link} After."
+            got = self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {text!r})))")
+            self.assertNotIn("004", got, link)
+            self.assertNotIn("note", got, link)
+        five = "creaite%252525253a"                              # five times: read, and a client-visible item's link stays
+        text = f"See [p]({five}item/ABC-A-002)."
+        self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {text!r})))"), text)
+        self.assertEqual(self.findings(text), [])
+
+    def client_findings(self, setup=""):
+        if not (self.v.root / "system/staging/drafts/probe-client.html").exists():     # the draft, made while the labels work
+            self.py("from pathlib import Path\nd = report_doc.client_doc('ABC')\n"
+                    f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = 'See {INTERNAL_ID}.'\n"
+                    "p = Path('system/staging/drafts/probe-client.html'); p.parent.mkdir(parents=True, exist_ok=True)\n"
+                    "p.write_text(creaite_doc.dumps(d))\nprint(1)")
+        return self.py("import review, tracker\np = 'system/staging/drafts/probe-client.html'\nclosed = []\nreal = tracker.connect\n"
+                       "class Con:\n    def __init__(s): s.c = real()\n    def execute(s, *a): return s.c.execute(*a)\n"
+                       "    def close(s): closed.append(1); s.c.close()\n    def __getattr__(s, n): return getattr(s.c, n)\n"
+                       "tracker.connect = Con\n" + setup +
+                       "out = {}\nfor name, blk in (('doc', {'draft': p, 'project': 'ABC'}), ('word', {'draft': 'x.docx', 'project': 'ABC'})):\n"
+                       f"    review.draft_lines = lambda _p: ['See {INTERNAL_ID}.']\n"
+                       "    out[name] = review.client_findings(blk)\nout['closed'] = len(closed)\nprint(json.dumps(out))")
+
+    def test_a_label_check_failure_is_reported_only_for_the_labels_and_keeps_the_other_findings(self):
+        ok = self.client_findings()
+        self.assertEqual(ok["closed"], 2)                                             # the connection is closed each time
+        for k in ("doc", "word"):
+            self.assertEqual(ok[k], [f"{INTERNAL_ID} isn't client-visible but its ID appears"], k)
+        got = self.client_findings("import sqlite3\nfor f in ('findings', 'plain_findings'):\n"
+                                   "    setattr(client_leak, f, lambda *a: (_ for _ in ()).throw(sqlite3.OperationalError('no such table: actions')))\n")
+        for k in ("doc", "word"):
+            self.assertEqual(len(got[k]), 1, got[k])
+            self.assertTrue(got[k][0].startswith("Couldn't check the client report against the tracker"), got[k])
+            self.assertIn("no such table: actions", got[k][0])
+        self.assertEqual(got["closed"], 2)
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:     # a test vault: break the labels directly
+            con.execute("DROP TABLE labels")
+            con.execute("CREATE VIEW labels AS SELECT name FROM item_labels")
+            con.commit()
+        got = self.client_findings()
+        for k in ("doc", "word"):
+            self.assertTrue(got[k][0].startswith("Couldn't check the label exclusions"), got[k])
+            self.assertIn(f"{INTERNAL_ID} isn't client-visible but its ID appears", got[k][1:])
+        self.assertEqual(got["closed"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()

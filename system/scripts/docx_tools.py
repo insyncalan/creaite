@@ -119,8 +119,9 @@ LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
 LABEL = r"((?:[^\[\]\n]|\[[^\[\]\n]{0,300}\]){1,500})"   # a link's words, one level of [brackets] in them; never crosses a "["
 CREAITE_SCHEME = r"(?i:creaite\s{0,5}(?::|%(?:25){0,4}3a|&#0{0,5}58;|&#x0{0,5}3a;|&colon;))"     # as the gate reads it, decoded
-INLINE = re.compile(r"\[" + LABEL + r"\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
-                    r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)"
+EMPHASIS = r"(.{1,1000}?)"      # #127 review: bold, italic or struck words, at most 1000 characters: linear, never quadratic
+INLINE = re.compile(r"\[" + LABEL + r"\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*" + EMPHASIS + r"\*\*|~~" + EMPHASIS + r"~~"
+                    r"|(?<![\w*])\*(?!\s)" + EMPHASIS + r"(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)" + EMPHASIS + r"(?<!\s)_(?!\w)"
                     r"|\[" + LABEL + r"\]\(\s{0,20}<?" + CREAITE_SCHEME + r"[^)\n]{0,500}\)")
 # #127: a creaite: link is its words in Word, never Markdown (any case, %- or entity-encoded scheme, client_leak.SCHEME's reading)
 MAX_LEVEL = 3

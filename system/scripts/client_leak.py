@@ -204,7 +204,7 @@ def text_findings(con, code, text, skip=()):
     for word in INTERNAL_WORDS:
         if word in low:
             found.append(f"contains “{word}”")
-    return found
+    return found + unreadable_findings(text)
 
 
 OWNER_TABLES = ("actions", "raid", "decisions", "milestones")
@@ -215,10 +215,18 @@ def person(owner):
     return re.sub(r"\s*\([^)]*\)\s*$", "", owner or "").strip()
 
 
+def _name_form(text):
+    """Text as a name is matched: as the ID check reads it (edit_ai.normal: NFKC, so a no-break space is a space; invisible
+    characters gone), every run of whitespace (two spaces, a tab, a line break) one space, in lower case (#127 review)."""
+    import edit_ai
+    return re.sub(r"\s+", " ", edit_ai.normal(text or "")).lower()
+
+
 def named(text, people):
-    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once."""
-    low = (text or "").lower()
-    found = {p for p in people if p and len(p) > 2 and re.search(rf"\b{re.escape(p.lower())}\b", low)}
+    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once; whitespace and
+    invisible characters in the text or a name don't hide it (_name_form)."""
+    low = _name_form(text)
+    found = {p for p in people if p and len(p) > 2 and re.search(rf"\b{re.escape(_name_form(p).strip())}\b", low)}
     return {p for p in found if not any(p != q and p.lower() in q.lower() for q in found)}   # "Sara" inside "Sara Khan"
 
 
@@ -327,9 +335,14 @@ def doc_text(doc):
     Markdown doesn't read as one, a title, an image's words) is checked too."""
     import creaite_doc
     clean = creaite_doc.clean(doc)
-    raw = "\n".join(_strings(clean.get("sections") or []) + _strings(clean.get("items") or {}))
+    raw = raw_strings(clean)
     return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) \
         + "\n" + raw_text(raw) + _addresses(raw)
+
+
+def raw_strings(clean):
+    """A cleaned document's sections' and items' strings as stored, one text."""
+    return "\n".join(_strings(clean.get("sections") or []) + _strings(clean.get("items") or {}))
 
 
 def _addresses(raw):
@@ -369,7 +382,8 @@ def raw_text(raw):
 # person (creaite:item, creaite:person; a note or anything else in creaite is Alan's own). An ordinary https or mailto address to
 # anything else passes: there is no list of internal hosts.
 ADDRESS = re.compile(
-    r"\]\(\s{0,20}<?([^()<>\"\s]{0,2000}(?:\([^()<>\"\s]{0,200}\)[^()<>\"\s]{0,2000})?)"     # an inline link or image
+    r"\]\(\s{0,20}<?((?:https?|mailto):[^)\s]{0,2000}"                    # an inline link or image: a web address to where
+    r"|[^()\s]{0,2000}(?:\([^()\s]{0,200}\)[^()\s]{0,2000})?)"                # Word's link ends (docx_tools.INLINE), quotes included
     r"|^[ \t]{0,3}\[[^\[\]\n]{1,300}\]:[ \t]{0,20}<?([^\s<>]{1,2000})"                       # a reference definition
     r"|href[ \t]{0,5}=[ \t]{0,5}[\"']([^\"'<>]{0,2000})"                                     # an HTML link
     r"|<([a-z][a-z0-9+.-]{1,30}:[^<>\s]{1,2000})>"                                            # an <auto> link
@@ -382,6 +396,9 @@ ITEM_LINK = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}items?\s
                        r"([^\s)>\]\"'<]{0,200}(?:[ \t]+[A-Za-z0-9][^\s)>\]\"'<]{0,200}){0,2})", re.I)
 
 
+LONG_TOKEN = 2000                                     # the longest address the gate reads; a longer one fails closed
+
+
 def _decoded(text):
     """Text with %-encoding undone until it stops changing (at most five times) and HTML entities undone, then normalised as the
     ID check reads it (edit_ai.normal)."""
@@ -389,7 +406,7 @@ def _decoded(text):
     import html
     from urllib.parse import unquote
     t = text or ""
-    for _ in range(5):
+    for _ in range(DECODE_LEVELS):
         u = unquote(t)
         if u == t:
             break
@@ -397,7 +414,34 @@ def _decoded(text):
     return edit_ai.normal(html.unescape(t))
 
 
-SCHEME_GAP = re.compile(r"creaite[ \t\r\n]{0,5}:[ \t\r\n]{0,5}(?=/{0,2}[ \t\r\n]{0,5}[a-z]{1,20}[ \t\r\n]{0,5}[/\\?]\S)", re.I)
+DECODE_LEVELS = 5
+LINKISH = re.compile(r"[:%&]|\]\(|href", re.I)        # a run of text that may hold a link address, or an encoded one
+LONG_ADDRESS = (f"a link address too long to check (more than {LONG_TOKEN} characters with no space): shorten it, then try "
+                "again")
+OVER_ENCODED = f"a link address encoded more than {DECODE_LEVELS} times, too many to check: write it plainly, then try again"
+
+
+def overencoded(text):
+    """Whether the text still changes when %-decoded after DECODE_LEVELS rounds (_decoded stops there)."""
+    from urllib.parse import unquote
+    t = text or ""
+    for _ in range(DECODE_LEVELS + 1):
+        u = unquote(t)
+        if u == t:
+            return False
+        t = u
+    return True
+
+
+def unreadable_findings(text):
+    """#127 review: what the gate can't read is a finding of its own (fails closed, like drop_item_links' LONG_TOKEN): a run of
+    more than LONG_TOKEN characters with no space that may hold a link (Word shows its whole address; the gate decodes at most
+    LONG_TOKEN of it), and an address still %-encoded after DECODE_LEVELS rounds."""
+    long = any(len(m.group(0)) > LONG_TOKEN and LINKISH.search(m.group(0)) for m in re.finditer(r"\S+", text or ""))
+    return ([LONG_ADDRESS] if long else []) + ([OVER_ENCODED] if overencoded(text) else [])
+
+
+SCHEME_GAP = re.compile(r"creaite\s{0,5}:\s{0,5}(?=/{0,2}\s{0,5}[a-z]{1,20}\s{0,5}[/\\?]\S)", re.I)   # any space, a no-break one too
 
 
 def link_addresses(text):
@@ -453,6 +497,8 @@ def _link_ok(con, code, span, blocking):
     link that names no item (unreadable, or a person or a note) goes."""
     import edit_ai
     t = _decoded(span)
+    if overencoded(span) and "creaite" in t.lower():      # #127 review: encoded past what the gate decodes: fails closed
+        return False
     if not SCHEME.search(t):
         return True
     ids = edit_ai.loose_ids(con, t)
@@ -468,7 +514,6 @@ LINK_SPAN = re.compile(
     r"|<[a-z][a-z0-9+.-]{1,30}:[^<>\s]{1,2000}>",                                                          # an <auto> link
     re.I | re.M)
 REF_DEF = re.compile(r"^[ \t]{0,3}\[([^\[\]\n]{1,300})\]:[ \t]{0,20}([^\n]{0,2000})$", re.M)
-LONG_TOKEN = 2000
 LINKED = re.compile(r"creaite\s{0,5}:.", re.I | re.S)    # a word holding a creaite: scheme with something after it
 
 
@@ -501,7 +546,7 @@ def drop_item_links(code, text, con=None):
         "creaite:" with nothing after it is prose (#127 review), not a link."""
         s = m.group(0)
         low = _decoded(s[:LONG_TOKEN + 1]).lower()
-        if "creaite" not in low or (len(s) <= LONG_TOKEN and not LINKED.search(low)):
+        if "creaite" not in low or (len(s) <= LONG_TOKEN and not LINKED.search(low) and not overencoded(s)):
             return s
         return "" if len(s) > LONG_TOKEN or not _link_ok(con, code, s, blocking) else s
     return re.sub(r"\S+", token, t)
@@ -518,6 +563,8 @@ def findings(doc, con=None):
     bad = {r: why for r, why in ((r, item_problem(con, r, blocking)) for r in sorted(refs(doc))) if why}
     found = list(bad.values()) + text_findings(con, code, text, skip=bad)
     found += [f"it holds {why}" for why in internal_findings(con, code, doc)]             # #123: the gate at the end, any route
+    import creaite_doc                                     # #127 review: an address too long or too encoded, as stored
+    found += [f for f in unreadable_findings(raw_strings(creaite_doc.clean(doc))) if f not in found]
     return found + name_findings(con, code, text, blocking)
 
 
