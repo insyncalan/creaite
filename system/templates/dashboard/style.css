@@ -3236,7 +3236,8 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-a4 .page .sheet-h:hover{background:var(--paper-sunk)} .sheet-a4 .page .sheet-h:focus{background:var(--paper);box-shadow:0 0 0 2px var(--accent);outline:none}
 .sheet-reset,.sheet-untag{border:0;background:none;color:var(--paper-link);font-size:var(--fs-xs);font-weight:400;cursor:pointer;padding:0;text-decoration:underline}
 .sheet-untag{margin-left:auto}
-.sheet-spark{border:0;background:none;color:var(--paper-link);cursor:pointer;width:24px;height:24px;display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
+.sheet-spark{--spk:max(24px,calc(24.5px / var(--sc,1)));border:0;background:none;color:var(--paper-link);cursor:pointer;width:var(--spk);height:var(--spk);margin:calc((24px - var(--spk)) / 2);   /* 24 px on screen whatever the page's zoom; its footprint stays 24 */
+  display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
 .sheet-spark:hover{background:var(--paper-sunk)}
 .sheet-diff{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);border:1px solid var(--paper-rule);border-radius:var(--r-pill);padding:0 6px}
 .sheet-match{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);margin-left:auto}

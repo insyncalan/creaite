@@ -181,7 +181,7 @@ function Pane({ pk, zoom, pages, regRestore, onPinch, children }) {
 /** One page drawn at a scale: the A4 page transformed, in a box of the scaled size. @param {{scale: number, breaks: number[], children: any}} props */
 function SheetFrame({ scale, breaks, children }) {
   return <div class="sheet-fit" data-scale={scale} style={{ width: `${A4_W * MM * scale}px` }}>
-    <div class="sheet-a4" style={{ transform: `scale(${scale})` }}>
+    <div class="sheet-a4" style={{ transform: `scale(${scale})`, "--sc": scale }}>
       {children}
       {breaks.map((y, k) => <div key={y} class="sheet-break" aria-hidden="true" style={{ top: `${PAD_MM * MM + y}px` }}><span>Page {k + 2}</span></div>)}
     </div>

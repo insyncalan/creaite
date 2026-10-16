@@ -3246,7 +3246,8 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-a4 .page .sheet-h:hover{background:var(--paper-sunk)} .sheet-a4 .page .sheet-h:focus{background:var(--paper);box-shadow:0 0 0 2px var(--accent);outline:none}
 .sheet-reset,.sheet-untag{border:0;background:none;color:var(--paper-link);font-size:var(--fs-xs);font-weight:400;cursor:pointer;padding:0;text-decoration:underline}
 .sheet-untag{margin-left:auto}
-.sheet-spark{border:0;background:none;color:var(--paper-link);cursor:pointer;width:24px;height:24px;display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
+.sheet-spark{--spk:max(24px,calc(24.5px / var(--sc,1)));border:0;background:none;color:var(--paper-link);cursor:pointer;width:var(--spk);height:var(--spk);margin:calc((24px - var(--spk)) / 2);   /* 24 px on screen whatever the page's zoom; its footprint stays 24 */
+  display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
 .sheet-spark:hover{background:var(--paper-sunk)}
 .sheet-diff{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);border:1px solid var(--paper-rule);border-radius:var(--r-pill);padding:0 6px}
 .sheet-match{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);margin-left:auto}
@@ -61403,7 +61404,7 @@ ${d5.text}`);
     return /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: sc2, onScroll: capture, "data-pk": pk2, children: /* @__PURE__ */ u2("div", { class: pages > 1 ? "sheet-pair" : "sheet-one", style: { visibility: scale ? "visible" : "hidden" }, children: children(scale) }) });
   }
   function SheetFrame({ scale, breaks, children }) {
-    return /* @__PURE__ */ u2("div", { class: "sheet-fit", "data-scale": scale, style: { width: `${A4_W * MM * scale}px` }, children: /* @__PURE__ */ u2("div", { class: "sheet-a4", style: { transform: `scale(${scale})` }, children: [
+    return /* @__PURE__ */ u2("div", { class: "sheet-fit", "data-scale": scale, style: { width: `${A4_W * MM * scale}px` }, children: /* @__PURE__ */ u2("div", { class: "sheet-a4", style: { transform: `scale(${scale})`, "--sc": scale }, children: [
       children,
       breaks.map((y5, k5) => /* @__PURE__ */ u2("div", { class: "sheet-break", "aria-hidden": "true", style: { top: `${PAD_MM * MM + y5}px` }, children: /* @__PURE__ */ u2("span", { children: [
         "Page ",
