@@ -79,14 +79,17 @@ class CloseDayCard(LiveBrowserCase):
         self.assertIn("1 new item for Review", self.text())
         self.assertEqual(b.eval(SAID), "Step 1 of 4, Catch up")                  # the live region names the step
         b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')")   # focus is back on Next after the card redraws
-        for _ in range(3):                                                       # ← → move between the steps
+        # ← → move between the steps. One key press, then wait on the step itself: a second press while a slow render is still
+        # settling moved on past Today (the CI flake), so a press is repeated only when the step is still Catch up after a long wait.
+        for _ in range(3):
+            b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')", 30)
             b.key("ArrowRight")
             try:
-                b.wait(f"{STEP}==='Today'", 8)
+                b.wait(f"{STEP}!=='Catch up'", 30)
                 break
             except TimeoutError:                                                 # the key went to a card still redrawing: focus Next and again
                 b.eval("document.querySelector('#closeDlg [data-cdnext]').focus()")
-        b.wait(f"{STEP}==='Today'")
+        b.wait(f"{STEP}==='Today'", 30)
         self.assertIn("Moved today", self.text())
         b.click("#closeDlg [data-cdnext]")
         b.wait(f"{STEP}==='Loose ends'")
