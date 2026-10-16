@@ -28,6 +28,7 @@ except ImportError:
         rule = staticmethod(lambda text, *a: "")
         main = staticmethod(lambda script, fn, *a: fn(*a))
 
+import linktext  # noqa: E402  (#121: links in plain text)
 import review  # noqa: E402  (shared review details, BL-25)
 import tracker  # noqa: E402
 from openpyxl import Workbook, load_workbook  # noqa: E402
@@ -97,6 +98,10 @@ DATES = {"milestone_date", "due_date", "raised", "closed", "date", "week_ending"
 READ_ONLY = {"links"}       # sheets Excel only shows; edits to them are ignored on import (the sheet says so)
 LABELLED = tracker.LABELLED # tables whose rows carry a Labels column (a comma-separated list; never a drop-down)
 YES_NO = {"client_visible", "active", "state_set"}
+# #121: the longer text fields can hold `[words](address)`. A cell holds the words (never the brackets): with exactly one link the cell is
+# also a hyperlink to its address; with several, one cell cannot carry them all, so it reads "words (address)". The import never reads a
+# hyperlink, and a cell that still says what the export put there is not a change.
+LINK_FIELDS = {"client_message", "latest_update", "response_action", "reasoning", "options"}
 WIDE = {"description", "decision", "client_message", "latest_update", "response_action", "health_reason",
         "summary", "key_changes", "source", "reasoning", "options", "revisit", "state_reason", "internal_note"}
 CHOICES = {
@@ -167,10 +172,27 @@ def choices(table, field):
     return CHOICES.get((table, field)) or CHOICES.get(field)
 
 
+def cell_text(field, value):
+    """The text a cell holds for a stored value: a link field's links as their words (one link) or "words (address)" (several)."""
+    if field in LINK_FIELDS and isinstance(value, str) and linktext.has_link(value):
+        return linktext.words(value) if len(linktext.addresses(value)) == 1 else linktext.with_address(value)
+    return value
+
+
+def cell_link(field, value):
+    """The one address a cell is a hyperlink to, or None (no link, or several)."""
+    if field in LINK_FIELDS and isinstance(value, str):
+        found = linktext.addresses(value)
+        return found[0] if len(found) == 1 else None
+    return None
+
+
 def to_cell(field, value):
-    """A stored value as it goes in a cell: dates as real dates, flags as Yes or No."""
+    """A stored value as it goes in a cell: dates as real dates, flags as Yes or No, links as their words."""
     if value is None:
         return None
+    if field in LINK_FIELDS:
+        return cell_text(field, value)
     if field in DATES:
         try:
             return date.fromisoformat(value)
@@ -217,6 +239,14 @@ def same(a, b, field=None):
         return None if x is None or str(x).strip() == "" else "\n".join(
             line.rstrip() for line in str(x).rstrip().splitlines())
     return norm(a) == norm(b)
+
+
+def cell_changed(field, cell, stored):
+    """Whether a cell differs from the stored value it was exported from. A link field's cell that still says what the export wrote is not
+    a change (#121)."""
+    if same(cell, stored, field):
+        return False
+    return not (field in LINK_FIELDS and same(cell, cell_text(field, stored), field))
 
 
 def blank_default(table, field):
@@ -305,6 +335,17 @@ def rows_of(con, table, keys):
     return rows
 
 
+def link_cells(ws, rows, cols):
+    """A cell holding exactly one link is a hyperlink to its address (#121)."""
+    for n, r in enumerate(rows, start=2):
+        for i, (_, f) in enumerate(cols, start=1):
+            href = cell_link(f, r.get(f))
+            if href:
+                c = ws.cell(row=n, column=i)
+                c.hyperlink = href
+                c.font = Font(color="0563C1", underline="single")
+
+
 def cmd_export():
     """Write tracker-view.xlsx from tracker.db, one sheet per table plus a Review sheet, and record the export.
 
@@ -332,6 +373,7 @@ def cmd_export():
         ws.append([label for label, _ in cols])
         for r in rows:
             ws.append([to_cell(f, r.get(f)) for _, f in cols])
+        link_cells(ws, rows, cols)
         n_rows = len(rows) + 1 + EXTRA_ROWS
         for i, (label, field) in enumerate(cols, start=1):
             col = get_column_letter(i)
@@ -460,7 +502,7 @@ def cmd_import():
                 seen.add(key)
                 old = exported[key]
                 changes = {f: rec.get(f) if rec.get(f) is not None else blank_default(table, f) for _, f in cols
-                           if f not in locked and f not in keys and not same(rec.get(f), old.get(f), f)}
+                           if f not in locked and f not in keys and cell_changed(f, rec.get(f), old.get(f))}
                 if table == "milestones" and "baseline_date" in changes and old.get("baseline_date"):   # BL-186
                     changes.pop("baseline_date")
                     notes.append(f"{name}: {key}'s Baseline change was ignored: changing an agreed date is a rebaseline, which "

@@ -531,7 +531,7 @@ footer{color:var(--muted);font-size:12px;margin-top:24px}
 .health{display:inline-block;font:600 12px/1 var(--font);border:1px solid currentColor;border-radius:999px;padding:4px 8px;vertical-align:middle;margin-left:4px}
 .health.ok{color:var(--ok)} .health.warnh{color:var(--warn)} .health.bad{color:var(--bad)}
 ul.reps{list-style:none;padding:0;margin:6px 0 12px} ul.reps li{margin:6px 0} .rn{margin:10px 0 0}
-@media print{body{background:#fff;color:#000;font-size:12px} main{max-width:none;padding:0} details{border:0;padding:0;margin:10px 0;page-break-inside:avoid} summary h2::before{content:""} a{color:#000;text-decoration:none} .internal{border-color:#000;color:#000;background:none}}
+@media print{body{background:#fff;color:#000;font-size:12px} main{max-width:none;padding:0} details{border:0;padding:0;margin:10px 0;page-break-inside:avoid} summary h2::before{content:""} a{color:#000;text-decoration:none} a.tlink::after{content:" (" attr(href) ")";font-size:.9em} .internal{border-color:#000;color:#000;background:none}}
 """
 
 
