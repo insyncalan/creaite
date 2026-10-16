@@ -1,6 +1,6 @@
 """#122 step C: work-item links in Current state on the client path (report_doc, report, docx_tools; with v2.1.0 P3's leak check).
 
-Run: python3 dev/tests/test_client_item_links.py   (skipped where client_leak.py is not in the tree: it lands with #123 / v2.1.0)
+Run: python3 dev/tests/test_client_item_links.py   (skipped where client_leak.py or report_doc.client_item_links is not in the tree: they land with #123 / v2.1.0)
 A Current state may link `[ABC-A-001 · Action: title](creaite:item/ABC-A-001)`. Taken into a client report, a link to an item that is
 not client-visible must not get through, whatever its words: the leak check reads a section's words with the address cut off
 (creaite_doc._plain), so a link whose words were edited ('the vendor thing') would pass it, and its address stay in the stored
@@ -21,6 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 try:
     import client_leak  # noqa: F401
+    import report_doc
+    if not hasattr(report_doc, "client_item_links"):          # the gate is here but the link wiring (Cap's #123 follow-up) is not
+        raise ImportError("report_doc.client_item_links")
     import test_client_leak as T
     import test_reports as R
     BASE = T.Base
