@@ -1,7 +1,7 @@
 // @ts-check
 /* DayTabs (BL-293): the day line at the top of Today's day band, in place of the date (#todayDate). A quiet row of small
    capitals, one tab per working day the saved calendar holds (a weekend day only when it has a meeting), with a faint
-   "Next week" divider. The chosen day is written out in full; the others stay short; today is in the accent colour, with a
+   "Next week" divider. The chosen day is written out in full; the others stay short; today is always short with its month ("Fri 16 October", 10px, #140) in the accent colour, with a
    small dot when another day is chosen. #147 (Alan, 16-10-2026): the line starts at today; the days before it are one quiet
    history icon at its left, which drops them down (newest first) on hover or Enter; a past day that is chosen is shown in the
    line, in its place, so Alan sees where he is. The edge arrows still step through every day. A Tabs block (← → Home End). Two faint chevrons at the band's sides, shown on hover
@@ -30,7 +30,7 @@ export function DayTabs({ days, selected, onSelect, onStep }) {
     const before = !prev ? null : (d.week || 0) > (prev.week || 0)
       ? <span class="daywk" aria-hidden="true">{d.week === 1 ? "Next week" : "Later"}</span>
       : <span class="daysep" aria-hidden="true">·</span>;
-    return { id: d.date, label: on ? d.long : d.today ? "Today" : d.short, name: `${d.long}${d.today ? ", today" : ""}`,
+    return { id: d.date, label: d.today ? `${d.short} ${d.long.replace(/^\S+ \d+\S* /, "")}` : on ? d.long : d.short, name: `${d.long}${d.today ? ", today" : ""}`,
              className: d.today ? "today" : "", current: !!d.today, before };
   });
   return (

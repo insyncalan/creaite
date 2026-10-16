@@ -66,7 +66,7 @@ class DayLine(TodayFixture):
         tabs = b.eval(f"{TABS}.map(t=>[t.dataset.tab,t.textContent,t.getAttribute('aria-selected'),t.getAttribute('aria-current'),t.tabIndex])")
         self.assertEqual([t[0] for t in tabs], ["2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-18",
                                                 "2026-10-19", "2026-10-20"])      # #147: today on; Monday waits behind the icon. Saturday (all day only) out, Sunday in
-        self.assertEqual(tabs[0][1:], ["Tuesday 13th October", "true", "date", 0])
+        self.assertEqual(tabs[0][1:], ["Tue 13 October", "true", "date", 0])
         self.assertEqual(tabs[1][1:], ["Wed 14", "false", None, -1])
         self.assertEqual(b.eval("document.querySelector('#todayDate [role=tablist]').getAttribute('aria-label')"), "Days in the calendar")
         self.assertEqual(b.eval("[...document.querySelectorAll('#todayDate .daywk')].map(e=>e.textContent+'|'+e.nextElementSibling.dataset.tab)"),
@@ -78,13 +78,23 @@ class DayLine(TodayFixture):
         self.assertEqual(b.eval("document.querySelectorAll('#v-today [aria-keyshortcuts]').length"), 0)
         self.assertIsNone(b.eval("document.querySelector('#dayMeets .dayaway')"))   # today: no "as of today" line
 
+    def test_today_is_written_short_with_its_month_at_10px_in_the_accent_colour(self):
+        b = self.b
+        self.assertEqual(b.eval(f"{TABS}[0].textContent"), "Tue 13 October")
+        self.assertEqual(b.eval(f"getComputedStyle({TABS}[0]).fontSize"), "10px")
+        self.assertEqual(b.eval(f"getComputedStyle({TABS}[0]).fontSize"), b.eval(f"getComputedStyle({TABS}[1]).fontSize"))     # like the other dates
+        b.click('#todayDate [data-tab="2026-10-16"]')
+        self.assertEqual(b.eval(f"{TABS}[0].textContent"), "Tue 13 October")
+        self.assertEqual(b.eval(f"getComputedStyle({TABS}[0]).fontSize"), "10px")                  # still 10px when another day is chosen
+        self.assertEqual(b.eval(f"getComputedStyle({SEL}).fontSize"), "10.5px")
+
     def test_click_another_day_then_today_s_tab_is_short_with_its_dot_and_only_the_band_changes(self):
         b = self.b
         below = "['#attnList','#mineList','#chgList','#weekList','#pfTbl','#briefText'].map(q=>document.querySelector(q).innerHTML).join('|')"
         before, head = b.eval(below), b.eval("document.getElementById('dayHead').textContent")
         b.click('#todayDate [data-tab="2026-10-16"]')
         self.assertEqual(self.chosen(), "2026-10-16")
-        self.assertEqual(b.eval(f"{TABS}.map(t=>t.textContent)")[0], "Today")
+        self.assertEqual(b.eval(f"{TABS}.map(t=>t.textContent)")[0], "Tue 13 October")
         self.assertEqual(b.eval(f"{SEL}.textContent"), "Friday 16th October")
         self.assertNotEqual(b.eval("document.getElementById('dayHead').textContent"), head)
         self.assertEqual(b.eval("document.getElementById('dayHead').textContent"), "One meeting, Alan, with the afternoon wide open.")
@@ -269,7 +279,7 @@ class DayLine(TodayFixture):
         self.pick_past("2026-10-12")
         self.assertEqual(self.chosen(), "2026-10-12")
         self.assertEqual(b.eval(f"{TABS}.map(t=>t.dataset.tab)")[:2], ["2026-10-12", "2026-10-13"])      # shown in the line, today still reachable
-        self.assertEqual(b.eval(f"{TABS}.map(t=>t.textContent)")[1], "Today")
+        self.assertEqual(b.eval(f"{TABS}.map(t=>t.textContent)")[1], "Tue 13 October")
         b.click('#todayDate [data-tab="2026-10-13"]')
         self.assertEqual(b.eval(f"{TABS}.map(t=>t.dataset.tab)")[0], "2026-10-13")                     # a day not chosen leaves the line again
 
