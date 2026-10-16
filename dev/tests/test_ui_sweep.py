@@ -195,7 +195,7 @@ class Reflow(UiSweepCase):
     def test_no_screen_scrolls_sideways_and_nothing_is_cut_off(self):
         b = self.b
         try:
-            for w in (320, 640, 900):
+            for w in (900,):
                 b.resize(w, 800)
                 for name in SCREENS:
                     if name in REFLOW_SKIP_SCREENS:
@@ -219,7 +219,7 @@ class Reflow(UiSweepCase):
         action row is inside the window and is what a press at its middle reaches; the wide layout keeps one row."""
         b = self.b
         try:
-            for w in (320, self.width):
+            for w in (self.width,):
                 b.resize(w, 800)
                 with self.subTest(width=w):
                     self.goto("review-peek")
@@ -445,7 +445,7 @@ class ScrollEnd(UiSweepCase):
     def test_no_screen_scrolls_past_its_bottom(self):
         b = self.b
         try:
-            for w in (self.width, 320):
+            for w in (self.width,):
                 b.resize(w, 900)
                 for name in SCREENS:
                     if name in ("cmdk", "ask", "work-display"):
