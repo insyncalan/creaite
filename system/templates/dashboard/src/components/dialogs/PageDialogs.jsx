@@ -63,23 +63,46 @@ export function PageDialogs() {
             <button class="btn primary" type="button" id="bdOk">Move</button></div>
         </div>
       </Dialog>
+      {/* Generate current state (#110 part A): 736px wide; four quiet settings in one strip (each opens the Picker block's list), Steer it as
+          the body, Draw on folded to a line, ordinary 32px buttons. After a draft the setup folds to #genSum. All filled by projects.js and
+          drafts.js, by id and data attribute; the triggers and fields here are never redrawn, so nothing is lost when a menu is. */}
       <Dialog id="genDlg" labelledBy="genTitle">
         <form method="dialog" id="genForm">
-          <h2 id="genTitle" style="margin:0 0 10px">Generate current state</h2>
-          <div class="sub" id="genWho"></div>
-          <fieldset><legend>Period</legend><div class="views" id="genDays"></div>
-            <div class="drange" id="genCustom" hidden><input type="text" id="genFrom" placeholder="DD-MM-YYYY" aria-label="From" /><span>to</span>
-              <input type="text" id="genTo" placeholder="DD-MM-YYYY" aria-label="To" /></div></fieldset>
-          <fieldset><legend>Form</legend><div class="views" id="genFormKind"></div><div class="sub" id="genFormNote"></div></fieldset>
-          <fieldset><legend>Audience</legend><div class="views" id="genAud"></div><div class="sub" id="genAudNote"></div></fieldset>
-          <fieldset><legend>Length</legend><div class="views" id="genLen"></div></fieldset>
-          <fieldset><legend>Draw on</legend><div id="genSrc"></div></fieldset>
-          <label class="sub" for="genNote">Steer it (optional)</label>
-          <textarea id="genNote" rows={2} placeholder="For example: focus on the pilot results"></textarea>
-          <div class="sub" id="genSweep"></div>
-          <div class="curacts"><span class="sp"></span><button class="btn" value="cancel" formnovalidate>Cancel</button>
-            <button class="btn primary" id="genGo" value="go">Generate</button></div>
-          <div id="genOut" class="fmout"></div>
+          <div class="genbody">
+            <h2 id="genTitle" style="margin:0">Generate current state</h2>
+            <div class="sub" id="genWho"></div>
+            <div id="genSetup">
+              <div class="genstrip" role="group" aria-label="Settings">
+                {[["days", "genDays", "Period"], ["form", "genFormKind", "Form"], ["aud", "genAud", "Audience"], ["len", "genLen", "Length"]].map(([k, id, word]) => (
+                  <div class="genf" data-gfield={k} key={k}>
+                    <label id={`${id}L`} for={id}>{word}</label>
+                    <button type="button" class="genq" id={id} data-gpick={k} aria-haspopup="listbox" aria-expanded="false" aria-labelledby={`${id}L ${id}`}>
+                      <span class="gv"></span><Icon name="chevdown" /></button>
+                  </div>
+                ))}
+              </div>
+              <div class="drange" id="genCustom" hidden><input type="text" id="genFrom" placeholder="DD-MM-YYYY" aria-label="From" /><span>to</span>
+                <input type="text" id="genTo" placeholder="DD-MM-YYYY" aria-label="To" /></div>
+              <div class="sub genhint" id="genHint" aria-live="polite"></div>
+              <div class="gensteer">
+                <label for="genNote">Steer it <span class="sub">Optional. Say what to lead with, what to leave out, or the tone.</span></label>
+                <textarea id="genNote" rows={6} placeholder="For example: focus on the pilot results and the data-sharing delay"></textarea>
+                <div class="genstart"><span class="sub">Try:</span><span id="genStart"></span></div>
+              </div>
+              <div class="gendraw">
+                <button type="button" class="gendrawb" id="genSrcBtn" aria-expanded="false" aria-controls="genSrc"><Icon name="chevdown" /><span id="genSrcSum"></span></button>
+                <span class="sub" id="genSrcNames"></span>
+                <div id="genSrc" hidden></div>
+                <div class="genoff" id="genOff" hidden>Client-safe uses only client-visible items, in their client wording. The sources are switched off.</div>
+              </div>
+            </div>
+            <div class="gensum" id="genSum" hidden><span id="genSumTxt"></span><span class="sp"></span>
+              <button type="button" class="genlink" id="genChange">Change settings</button></div>
+            <div id="genOut" class="fmout"></div>
+          </div>
+          <div class="genfoot"><span class="sub" id="genSweep"></span>
+            <button class="btn" id="genCancel" value="cancel" formnovalidate>Cancel</button>
+            <button class="btn primary" id="genGo" value="go" data-cmdenter=""><span id="genGoT">Generate</span><span class="kbd" id="genKbd" aria-hidden="true"></span></button></div>
         </form>
       </Dialog>
       {/* People (BL-55, BL-56); the VIP field shows when editing (BL-99) */}

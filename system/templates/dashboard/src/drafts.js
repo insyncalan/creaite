@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
+import { closePicker } from "./components/Picker.jsx";
 import { makeDraftEmailDialog } from "./components/dialogs/PageDialogs.jsx";
 import { drawCk, rbEnd, rbStart } from "./ask.js";
 import { drawChips } from "./components/Chip.jsx";
@@ -14,7 +15,7 @@ import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from
 import { shared } from "./core/state.js";
 import { putHtml } from "./meetings.js";
 import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, REC } from "./panel.js";
-import { DRAFTKIND, GEN_AUD, GEN_FORMS } from "./projects.js";
+import { DRAFTKIND, GEN_AUD, GEN_AUDNOTE, GEN_FORMS, genSummary } from "./projects.js";
 import { draftOn, SPARKI } from "./review.js";
 import { PERS, personPool, renderPerson, row, SA, SETSECTIONS } from "./settings.js";
 import { plur } from "./today.js";
@@ -365,12 +366,27 @@ export let GENFM=null;                                         /* the form draft
 export const GEN_FIXEDLEN={three:"Three lines, at most 60 words",email:"One paragraph, at most 120 words",teams:"At most 50 words"};
 /* BL-290: with Forms off the other forms are greyed (aria-disabled, saying why) and a remembered one falls back to Current state */
 export function genFormOptions(){ const off=!draftOn("forms"); if(off&&shared.GEN.form!=="current") shared.GEN.form="current";
-  const cur=shared.GEN.form==="current", why=off?draftWhyNot("status-form"):"";
-  putHtml($("#genFormKind"),GEN_FORMS.map(([k,l])=>`<button type="button" class="vchip" data-gf="${k}" aria-pressed="${shared.GEN.form===k}"${why&&k!=="current"?` aria-disabled="true" data-tip="${esc(why)}"`:""}>${l}</button>`).join(""));
-  $("#genFormNote").textContent=cur?`Into the editor, for you to edit and save.${why?` The other forms: ${why[0].toLowerCase()+why.slice(1)}.`:""}`:"Shown here to copy; never saved.";
-  $$("#genLen [data-gl]").forEach(b=>{ b.disabled=!!GEN_FIXEDLEN[shared.GEN.form]; }); $("#genLen").title=GEN_FIXEDLEN[shared.GEN.form]||"";
-  const h=$("#genDlg h2"); if(h) h.textContent=cur?"Generate current state":`Write a ${GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1].toLowerCase()}`;
-  $("#genGo").textContent=cur?"Generate":"Write it"; if(!GENFM||GENFM.form!==shared.GEN.form) putHtml($("#genOut"),""); }
+  const cur=shared.GEN.form==="current", why=off?draftWhyNot("status-form"):"", fx=GEN_FIXEDLEN[shared.GEN.form]||"", len=$("#genLen");
+  /* #110: one hint line under the strip follows the Form and the Audience (was a note under each) */
+  $("#genHint").textContent=`${cur?`Into the editor, for you to edit and save.${why?` The other forms: ${why[0].toLowerCase()+why.slice(1)}.`:""}`:"Shown here to copy; never saved."} ${GEN_AUDNOTE[shared.GEN.aud]||""}`.trim();
+  if(fx) len.setAttribute("aria-disabled","true"); else len.removeAttribute("aria-disabled"); len.title=fx;   /* Length dims for a form that fixes it, with the reason on hover */
+  const h=$("#genDlg h2"); if(h) h.textContent=cur?"Generate current state":`Write ${/^[aeiou]/i.test(GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1])?"an":"a"} ${GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1].toLowerCase().replace(/^teams/,"Teams")}`;
+  genFooter(); if(!GENFM||GENFM.form!==shared.GEN.form) putHtml($("#genOut"),""); }
+/* #110: after a draft starts the setup folds to one summary line with Change settings; the footer is then Close and a plain Generate again
+   (Copy on the card is the one primary). The DOM is the state: the summary line shows while it is folded. */
+export const genFolded=()=>!$("#genSum").hidden;
+function genFooter(){ const fold=genFolded(), cur=shared.GEN.form==="current";
+  $("#genGoT").textContent=fold?"Generate again":cur?"Generate":"Write it"; $("#genGo").classList.toggle("primary",!fold); $("#genCancel").textContent=fold?"Close":"Cancel"; }
+export function genFold(){ const [form,...rest]=genSummary(), el=$("#genSumTxt"), b=document.createElement("b"); b.textContent=form;
+  el.replaceChildren(b,document.createTextNode(` · ${rest.join(" · ")}`)); $("#genSum").hidden=false;
+  if($("#genSetup").contains(document.activeElement)) $("#genChange").focus();      /* focus never drops to the page behind the dialog when the setup folds */
+  $("#genSetup").hidden=true; genFooter(); }
+/* back to a new dialog: setup showing, no draft (an unused one counts as rejected), Draw on folded, not busy. Change settings, Discard, closing and opening do this */
+export function genReset(){ GENSEQ++;                      /* a draft still being written belongs to the dialog as it was: it is stopped and its result is never shown */
+  if(GENCALL&&DRRUN){ const r=DRRUN; api("/api/ask/stop",{run:r.id}).then(x=>{ if(!x.ok) r.ctl.abort(); }); }
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),"");
+  $("#genSetup").hidden=false; $("#genSum").hidden=true; genBusy(false); genFooter(); }
+function genBusy(on){ if(on) $("#genGo").setAttribute("aria-disabled","true"); else $("#genGo").removeAttribute("aria-disabled"); }
 export function genFormCard(d){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[])[1]||"Status", aud=(GEN_AUD.find(x=>x[0]===d.audience)||[])[1]||"", loose=d.unsourced||0;
   return `<div class="drcard" role="region" aria-label="${esc(name)}" tabindex="-1"><div class="drhead">${ic("spark")}<b>${esc(name)}</b><span class="sub">${esc(aud)} · not saved: copy it where you need it</span></div>
     ${genFormText(d)}${loose?`<div class="drnote">${loose} sentence${loose===1?" has":"s have"} no source: check ${loose===1?"it":"them"} before you use it.</div>`:""}
@@ -381,11 +397,15 @@ export function genFormCard(d){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[]
 export function genFormText(d){ const src=d.sources||[], lines=d.form==="steering"||d.form==="three", fmt=t=>esc(t.replace(/^[-*]\s+/,"• ")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
   const one=x=>x.unsourced?`<mark class="drloose">${fmt(x.text)}</mark><span class="drtag" role="note">no source</span>`:`<span>${fmt(x.text)}</span>${x.refs.map(r=>`<sup class="drref" data-tip="${esc((src.find(y=>y.ref===r)||{}).text||r)}">${esc(r)}</sup>`).join("")}`;
   return `<div class="drtext">${(d.sentences||[]).map(one).join(lines?"<br>":" ")}</div>`; }
+let GENSEQ=0, GENCALL=false;                                   /* which dialog session a draft belongs to; a form draft is being written */
 export async function genFormDraft(body){ const out=$("#genOut"), why=draftWhyNot("status-form"); if(why){ snack(why); return; }
-  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form;
-  const res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:"")});
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form, mine=++GENSEQ;
+  genFold(); genBusy(true);                                  /* #110: the setup folds to its summary while it is written; Generate again waits */
+  let res; GENCALL=true; try{ res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>{ if(mine===GENSEQ) putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:""); }}); }
+  finally{ GENCALL=false; if(mine===GENSEQ) genBusy(false); }
+  if(mine!==GENSEQ){ if(res.ok&&!res.nothing) draftStat("forms","rejected"); return; }   /* the dialog was closed, reset or opened again meanwhile: this draft is not its own, and was never used */
   if(res.nothing){ putHtml(out,`<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`); return; }
-  if(!res.ok){ putHtml(out,""); snack(res.message||"No draft came back"); return; }
+  if(!res.ok){ putHtml(out,""); genReset(); snack(res.message||"No draft came back"); return; }   /* a failure gives the setup back */
   GENFM={d:res,form,used:false}; putHtml(out,genFormCard(res)); out.querySelector(".drcard")?.focus?.(); }
 export async function genFormCopy(rich,btn){ const d=GENFM.d, html=d.form==="steering"?mdHtml(d.text):d.text.split(/\n+/).map(x=>`<p>${esc(x)}</p>`).join("");
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
@@ -400,9 +420,9 @@ export function bootDrafts0202(){
 DRAFTFEATURES.push(["forms","Write the status in other forms","Generate's Form: a steering note, a three-line update, an email paragraph or a Teams message"]);
 Object.assign(DRAFTKIND,{"status-form":"forms"});
 $("#genDlg").addEventListener("click",e=>{ const b=e.target.closest("[data-gfdo]"); if(!b||!GENFM) return; e.preventDefault();
-  if(b.dataset.gfdo==="discard"){ if(!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),""); return; }
+  if(b.dataset.gfdo==="discard"){ genReset(); $("#genDays").focus(); return; }
   genFormCopy(b.dataset.gfdo==="rich",b); });
-$("#genDlg").addEventListener("close",()=>{ if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),""); });
+$("#genDlg").addEventListener("close",()=>{ closePicker("owner",false); genReset(); });
 }
 /* ===== BL-224 (sprint-drafts-writing) ===== Polish the wording's switch and kind (the email modes are in the Draft email block, above) */
 /* ===== end BL-224 ===== */
