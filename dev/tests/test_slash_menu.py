@@ -495,6 +495,27 @@ class Slash(LiveBrowserCase):
         b.wait("!shared.CURED", 10)
         self.assertIn("/he", self.memory().read_text(encoding="utf-8"))
 
+    def test_l5_current_state_headings_inside_a_quote_are_shifted_and_stray_ones_stay_byte_identical(self):
+        b = self.b
+        self.open_current(f"{STATE}\n\n> ### Quoted\n\n> # Stray in a quote\n\n> > ##### Deep")
+        value = b.eval("edValue(curEd)")
+        lines = value.split("\n")
+        for line in ("> ### Quoted", "> # Stray in a quote", "> > ##### Deep"):
+            self.assertIn(line, lines, f"{line!r} saved as it was")
+        self.assertEqual(b.eval("curEd.querySelectorAll('blockquote h1').length"), 1, "the shifted one is a heading in the editor")
+        self.assertEqual(b.eval("curEd.querySelectorAll('blockquote blockquote h3').length"), 1)
+        self.assertEqual(b.eval("edValue(curEd).includes('\\u200b')"), False)
+        b.key("Enter"); b.key("Enter")
+        b.type("/quo")
+        b.key("Enter")
+        b.type("/h2")
+        b.wait(f"!!{MENU}", 5)
+        b.key("Enter")
+        b.type("In the quote")
+        lines = b.eval("edValue(curEd)").split("\n")
+        self.assertIn("> #### In the quote", lines, "stored shifted, never a line that would end the section")
+        self.assertIn("> # Stray in a quote", lines)
+
     # ---- the Notes tab as it was ----------------------------------------------------------------------------------------
 
     def test_the_old_slash_behaviours_still_work_on_an_empty_line(self):
