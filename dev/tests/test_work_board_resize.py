@@ -61,6 +61,25 @@ class BoardResize(BoardCase):
             b.eval(f"document.documentElement.dataset.theme={mode!r}")
             self.assertEqual(b.eval(f"getComputedStyle(document.querySelector({COL + ' .bcrz'!r})).cursor"), "col-resize")
 
+    def test_corrupt_remembered_widths_never_break_the_board(self):
+        b = self.b
+        bad = ['null', '"oops"', '[1,2]', '7', '{"actions|due":null}', '{"actions|due":"oops"}', '{"actions|due":[300]}',
+               '{"actions|due":{"later":-50,"week":"abc","overdue":99999,"x":1e9,"y":0.5,"z":null,"s":"300px\\" onmouseover=\\"x"}}']
+        for raw in bad:
+            b.eval(f"localStorage.setItem('creaite-boardw', {raw!r})")
+            b.reload("typeof go==='function' && LIVE")
+            self.open_board("actions", "due", view="open")
+            self.assertEqual(self.width(), 270, raw)
+            self.assertEqual(b.eval("[...document.querySelectorAll('#workBoard .bcol:not(.collapsed)')].filter(c=>Math.round(c.getBoundingClientRect().width)!==270).length"), 0, raw)
+            self.assertEqual(b.eval("document.querySelectorAll('#workBoard [onmouseover]').length"), 0, raw)
+            self.drag(100)                                                     # and it still resizes
+            self.assertEqual(self.width(), 370, raw)
+        b.eval("localStorage.setItem('creaite-boardw', '{\"actions|due\":{\"later\":400,\"week\":9999}}')")
+        b.reload("typeof go==='function' && LIVE")
+        self.open_board("actions", "due", view="open")
+        self.assertEqual(self.width(), 400)                                    # a good value survives, a bad one is dropped
+        self.assertEqual(self.width('#workBoard .bcol[data-col="week"]'), 270)
+
     def group_change(self, name):
         self.group(name)
 

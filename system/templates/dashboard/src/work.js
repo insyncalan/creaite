@@ -264,7 +264,7 @@ export function colResizer(th,k,after){ if(shared.RZ[k]){ th.style.width=shared.
   h.addEventListener("click",e=>e.stopPropagation());
   h.addEventListener("pointerdown",e=>{ e.preventDefault(); const x0=e.clientX,w0=th.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
     const mv=ev=>put(w0+ev.clientX-x0);
-    const up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); document.body.classList.remove("resizing"); store.set("creaite-colwidths",shared.RZ); if(after) after(); };
+    const up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); h.removeEventListener("pointercancel",up); document.body.classList.remove("resizing"); store.set("creaite-colwidths",shared.RZ); if(after) after(); };
     h.addEventListener("pointermove",mv); h.addEventListener("pointerup",up); });
   h.addEventListener("dblclick",e=>{ e.stopPropagation(); delete shared.RZ[k]; th.style.width=""; th.style.minWidth=""; store.set("creaite-colwidths",shared.RZ); snack("Column width reset"); });
   h.addEventListener("keydown",e=>{ if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight") return; e.preventDefault(); put(th.getBoundingClientRect().width+(e.key==="ArrowRight"?16:-16)); store.set("creaite-colwidths",shared.RZ); });
@@ -372,13 +372,19 @@ export function cardHtml(t,x,g){ if(t==="decisions"){
 export const bcKey=(t,g,key)=>`${t}|${g}|${key}`;
 /* #144: each board column's width, per board (tab and grouping), remembered in the browser. 260 to 640 px, 270 by default;
    the handle on a column's right edge drags, ←/→ move it 16 px, a double-click puts it back. */
-export const BW=store.get("creaite-boardw",{}), BW_MIN=260, BW_MAX=640, BW_DEF=270;
+export const BW_MIN=260, BW_MAX=640, BW_DEF=270;
+/* A remembered width is only trusted as a finite number inside the limits; anything else (null, arrays, strings, NaN, huge or negative values) is dropped on load. */
+const bwOk=w=>typeof w==="number"&&Number.isFinite(w)&&w>=BW_MIN&&w<=BW_MAX;
+const bwClean=raw=>{ const out={}; if(!raw||typeof raw!=="object"||Array.isArray(raw)) return out;
+  Object.keys(raw).forEach(b=>{ const o=raw[b]; if(!o||typeof o!=="object"||Array.isArray(o)) return; const k={};
+    Object.keys(o).forEach(c=>{ if(bwOk(o[c])) k[c]=Math.round(o[c]); }); if(Object.keys(k).length) out[b]=k; }); return out; };
+export const BW=bwClean(store.get("creaite-boardw",{}));
 const bwBoard=()=>BCUR?`${BCUR.t}|${BCUR.g}`:`${shared.WT}|${groupOf(shared.WT)}`;
-export const bwGet=(b,key)=>(BW[b]||{})[key];
+export const bwGet=(b,key)=>{ const o=BW[b]; if(!o||typeof o!=="object") return undefined; const w=o[key]; return bwOk(w)?w:undefined; };
 const bwStyle=(b,key)=>{ const w=bwGet(b,key); return w?` style="flex-basis:${w}px;width:${w}px"`:""; };
 const bwHandle=(b,key,label,w)=>`<span class="bcrz" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize ${esc(label)} column" aria-valuemin="${BW_MIN}" aria-valuemax="${BW_MAX}" aria-valuenow="${w||BW_DEF}"></span>`;
-export function bwPut(b,key,w,save){ w=Math.round(Math.max(BW_MIN,Math.min(BW_MAX,w)));
-  if(w===BW_DEF){ if(BW[b]){ delete BW[b][key]; if(!Object.keys(BW[b]).length) delete BW[b]; } } else { BW[b]=BW[b]||{}; BW[b][key]=w; }
+export function bwPut(b,key,w,save){ w=Number(w); if(!Number.isFinite(w)) w=BW_DEF; w=Math.round(Math.max(BW_MIN,Math.min(BW_MAX,w)));
+  if(w===BW_DEF){ if(BW[b]){ delete BW[b][key]; if(!Object.keys(BW[b]).length) delete BW[b]; } } else { if(!BW[b]||typeof BW[b]!=="object") BW[b]={}; BW[b][key]=w; }
   $$("#workBoard .bcol").forEach(c=>{ if(c.dataset.col!==key) return; c.style.flexBasis=w+"px"; c.style.width=w+"px"; const h=c.querySelector(".bcrz"); if(h) h.setAttribute("aria-valuenow",String(w)); });
   if(save) store.set("creaite-boardw",BW); return w; }
 export function bwReset(b,key){ bwPut(b,key,BW_DEF,true); }
@@ -475,8 +481,8 @@ $("#workBoard").addEventListener("click",e=>{ if(performance.now()-BNOCLICK<30) 
   const c=e.target.closest(".bcard"); if(c) hlRowClick(e,shared.WT,c); });
 $("#workBoard").addEventListener("pointerdown",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h||e.button!==0) return; e.preventDefault(); e.stopPropagation();
   const col=h.closest(".bcol"), key=col.dataset.col, b=bwBoard(), x0=e.clientX, w0=col.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
-  const mv=ev=>bwPut(b,key,w0+ev.clientX-x0,false), up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); document.body.classList.remove("resizing"); store.set("creaite-boardw",BW); BNOCLICK=performance.now(); };
-  h.addEventListener("pointermove",mv); h.addEventListener("pointerup",up); },true);
+  const mv=ev=>bwPut(b,key,w0+ev.clientX-x0,false), up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); h.removeEventListener("pointercancel",up); document.body.classList.remove("resizing"); store.set("creaite-boardw",BW); BNOCLICK=performance.now(); };
+  h.addEventListener("pointermove",mv); h.addEventListener("pointerup",up); h.addEventListener("pointercancel",up); },true);
 $("#workBoard").addEventListener("dblclick",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h) return; e.stopPropagation(); bwReset(bwBoard(),h.closest(".bcol").dataset.col); snack("Column width reset"); },true);
 $("#workBoard").addEventListener("keydown",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h||(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")) return; e.preventDefault(); e.stopPropagation();
   const col=h.closest(".bcol"); bwPut(bwBoard(),col.dataset.col,col.getBoundingClientRect().width+(e.key==="ArrowRight"?16:-16),true); },true);
