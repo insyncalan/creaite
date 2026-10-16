@@ -25040,6 +25040,12 @@ ${s5}`;
       return placeAtCaret(view, state.from, el2);
     }, [state.rows.length, state.from, state.q]);
     const none = !state.rows.length;
+    const say2 = none ? "No match" : `${state.rows.length} ${state.rows.length === 1 ? "option" : "options"}`;
+    const [spoken, setSpoken] = d2("");
+    h2(() => {
+      const t47 = requestAnimationFrame(() => setSpoken(say2));
+      return () => cancelAnimationFrame(t47);
+    }, [say2]);
     const flat2 = !!state.q.trim();
     h2(() => {
       const on2 = box.current && box.current.querySelector(".r.on");
@@ -25106,7 +25112,7 @@ ${s5}`;
         ] }, `${gi2}-${g5.g}`)) : /* @__PURE__ */ u2("div", { class: "r none", role: "option", "aria-disabled": "true", "aria-selected": "false", children: "No match" }),
         /* @__PURE__ */ u2("div", { class: "foot", "aria-hidden": "true", children: "↑↓ to move · Enter to insert · Esc to close" })
       ] }),
-      /* @__PURE__ */ u2("div", { class: "slashsr", role: "status", "aria-live": "polite", "aria-atomic": "true", children: none ? "No match" : `${state.rows.length} ${state.rows.length === 1 ? "option" : "options"}` })
+      /* @__PURE__ */ u2("div", { class: "slashsr", role: "status", "aria-live": "polite", "aria-atomic": "true", children: spoken })
     ] });
   }
   function attachSlash(h5, { profile, host: host2 }) {

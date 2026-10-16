@@ -47,6 +47,9 @@ function SlashList({ state, id, view, pick, hover }) {
     return placeAtCaret(view, state.from, el);
   }, [state.rows.length, state.from, state.q]);
   const none = !state.rows.length;
+  const say = none ? "No match" : `${state.rows.length} ${state.rows.length === 1 ? "option" : "options"}`;
+  const [spoken, setSpoken] = useState("");          /* the live region goes in empty and is filled a frame later, so a screen reader reads the first text */
+  useEffect(() => { const t = requestAnimationFrame(() => setSpoken(say)); return () => cancelAnimationFrame(t); }, [say]);
   const flat = !!state.q.trim();                       /* ranked by a query: no group headers (ranking splits a group into repeated ones); they come back when the query is empty */
   useEffect(() => { const on = box.current && box.current.querySelector(".r.on"); if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest" }); }, [state.i]);
   /** @type {{g: string, rows: {r: SlashDef, i: number}[]}[]} */
@@ -74,7 +77,7 @@ function SlashList({ state, id, view, pick, hover }) {
         </div>)) : <div class="r none" role="option" aria-disabled="true" aria-selected="false">No match</div>}
       <div class="foot" aria-hidden="true">↑↓ to move · Enter to insert · Esc to close</div>
     </div>
-    <div class="slashsr" role="status" aria-live="polite" aria-atomic="true">{none ? "No match" : `${state.rows.length} ${state.rows.length === 1 ? "option" : "options"}`}</div>
+    <div class="slashsr" role="status" aria-live="polite" aria-atomic="true">{spoken}</div>
     </>
   );
 }

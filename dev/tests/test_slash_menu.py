@@ -842,6 +842,18 @@ class Slash(LiveBrowserCase):
         b.type("Two")
         self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^## Two$")
 
+    def test_a11y_the_live_region_goes_in_empty_and_then_says_how_many_options(self):
+        b = self.b
+        self.make_note("Live")
+        b.eval("""(()=>{ window.__sr=[]; new MutationObserver(ms=>{ for(const m of ms) for(const n of m.addedNodes){ const e=n.nodeType===1&&(n.matches('.slashsr')?n:n.querySelector('.slashsr')); if(e) window.__sr.push(e.textContent); } }).observe(document.body,{childList:true,subtree:true}); })()""")
+        b.type("/")
+        b.wait(f"!!{MENU}", 5)
+        b.wait("/^\\d+ options$/.test(document.querySelector('.slashsr').textContent)", 3)
+        self.assertEqual(b.eval("window.__sr[0]"), "", "inserted empty")
+        b.type("zzz")
+        b.wait("document.querySelector('.slashsr').textContent==='No match'", 3)
+        b.key("Escape")
+
     # ---- dark and forced colours -----------------------------------------------------------------------------------------
 
     def test_dark_and_forced_colours(self):
