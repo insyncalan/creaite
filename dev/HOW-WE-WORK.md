@@ -56,6 +56,18 @@ The target is half the cost per shipped item. Most of the cost is long contexts 
 - **Flaky-test fixes get a stress gate:** the brief says to run the test at least five times under load (`run_tests.py --stress`, or five runs at `-j 6`) and report every failure. A fix that passes once isn't proved: on #87 Phase B two replays of the same timing fix left a second race that a five-run stress caught.
 - **Docs briefs list the decisions to record and ban run meta-text:** the brief lists each decision the text must record (Alan's rulings on the issues) and tells the agent to write nothing about the run itself: no "this replay", "this base" or status notes on how the doc was made. The review round checks file names and routes against the code: on #87 Phase B Haiku docs missed a decision, leaked run wording and got one file name wrong.
 
+### Spend limits (Alan, 16-10-2026)
+
+The account hit its monthly limit overnight (Team Cap lost 2h40; Team Stark's agents died mid-run) after a night of Opus reviews and long browser suites. To stay inside it:
+
+- **Opus is for guard and client-safe work only,** built and independently reviewed: the files listed above, plus anything that decides what reaches a client (`client_leak.py`, the client place in `edit_ai.py`, the client gate). Everything else, including reviews of editor, page and test code, runs on Sonnet; Haiku runs suites and checks.
+- **At most three Opus agents run at once across both teams** (two for one team). A lead that wants a fourth waits.
+- **One independent review per item, and only a delta re-review after fixes,** and a delta re-review only for guard or client-safe items. Other items get one review round (Alan's earlier limit) and their fixes are checked by their own tests.
+- **Long suites run once.** `test_shared_behaviour` (about 11 minutes) and the browser suites run once per branch, on the final tip, never after every small commit; an agent runs the tests for the files it changed plus the guard pins (`test_guard_pinned`, `test_reach`, the tool-pin tests), and the sharded CI run on the exact commit is the full suite.
+- **Every agent brief states its stopping point:** the files, the tests to run, and "do not re-run what already passed". An agent that has not finished in its budget stops and reports.
+- **A 429 means stop.** Leads and agents do not retry in a loop; they save the work, post that they stopped, and wait. Jarvis tells Alan.
+- **Each lead posts the day's agent count by model** (Opus, Sonnet, Haiku) in its last update, so the spend is visible.
+
 ## Rules
 
 - **Pull requests close plan items:** put `closes insyncalan/creaite-plan#N` in the description.
