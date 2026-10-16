@@ -519,8 +519,9 @@ shared.ASKSESSION=store.get(SESSK,store.get("creaite-ask-session",null)); shared
 export function setChat(chat,session){ const was=shared.ASKCHAT; if(chat!==was&&$("#chIn").value&&was!==null) draftSave();
   shared.ASKCHAT=chat; shared.ASKSESSION=session; store.set(CHATK,chat); store.set(SESSK,session);
   if(chat!==was){ if(was===null&&$("#chIn").value) draftSave(); else draftRestore(); } }
-export function newChat(){ if(shared.BUSY) return; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
-export async function loadChat(chat,quiet,skipRun){ const rec=await api("/api/chat",{chat}); if(rec.ok&&typeof skipRun==="function") skipRun=skipRun(rec); if(rec.ok&&skipRun) rec.messages=rec.messages.filter(m=>m.run!==skipRun);
+export function newChat(){ if(shared.BUSY) return; CHSAVED=null; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
+export async function loadChat(chat,quiet,skipRun){ if(chat!==shared.ASKCHAT) CHSAVED=null;   /* #148: another chat has no saved place */
+  const rec=await api("/api/chat",{chat}); if(rec.ok&&typeof skipRun==="function") skipRun=skipRun(rec); if(rec.ok&&skipRun) rec.messages=rec.messages.filter(m=>m.run!==skipRun);
   $("#chLog").textContent=""; shared.SHOWN=null;   /* BL-262: the whole history is drawn below in one step; it returns the record */
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
     if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }

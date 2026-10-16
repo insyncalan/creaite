@@ -55765,6 +55765,7 @@ ${d5.text}`);
   }
   function newChat() {
     if (shared.BUSY) return;
+    CHSAVED = null;
     setChat(null, null);
     $("#chLog").textContent = "";
     shared.SHOWN = null;
@@ -55772,6 +55773,7 @@ ${d5.text}`);
     $("#chIn").focus();
   }
   async function loadChat(chat, quiet, skipRun) {
+    if (chat !== shared.ASKCHAT) CHSAVED = null;
     const rec = await api("/api/chat", { chat });
     if (rec.ok && typeof skipRun === "function") skipRun = skipRun(rec);
     if (rec.ok && skipRun) rec.messages = rec.messages.filter((m5) => m5.run !== skipRun);

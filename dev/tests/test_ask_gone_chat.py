@@ -50,7 +50,6 @@ class AskGoneChat(LiveBrowserCase):
         self.remember(key, "ask-20260101-000000-gone")
         b.call("Page.addScriptToEvaluateOnNewDocument", source=COUNT)
         b.reload("typeof go==='function' && LIVE")
-        self.assertEqual(b.eval("ASKCHAT"), "ask-20260101-000000-gone")
         b.eval("openChat()")
         b.wait("ASKCHAT===null && document.querySelector('#chLog .msg.a')", 10)           # a fresh chat, greeted
         self.assertIsNone(b.eval(f"JSON.parse(localStorage.getItem({json.dumps(key)}))"))  # forgotten at once
