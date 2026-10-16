@@ -495,7 +495,7 @@ class Slash(LiveBrowserCase):
         b.wait("!shared.CURED", 10)
         self.assertIn("/he", self.memory().read_text(encoding="utf-8"))
 
-    def block(self, row, md_before, setup, typed):
+    def block(self, row, md_before, setup, typed, lead=""):
         """Open a Notes editor on md_before, caret at the end, run `setup` keys, choose `row`, type `typed`; the stored Markdown."""
         b = self.b
         self.make_note("Blocks")
@@ -503,7 +503,7 @@ class Slash(LiveBrowserCase):
         b.eval("""(()=>{ const e=document.querySelector('.nbody').cxed.editor; let at=1; e.state.doc.descendants((n,pos)=>{ if(n.isTextblock&&n.content.size) at=pos+n.nodeSize-1; }); e.commands.focus(); e.commands.setTextSelection(at); })()""")
         for k in setup:
             b.key(k)
-        b.type(f"/{row}")
+        b.type(f"{lead}/{row}")
         b.wait(f"!!{MENU}", 5)
         b.key("Enter")
         b.wait(f"!{MENU}", 5)
@@ -513,6 +513,8 @@ class Slash(LiveBrowserCase):
     def test_m2_a_list_row_inside_that_list_only_removes_the_query(self):
         md = self.block("bull", "- one\n- two", ["Enter"], "three")
         self.assertEqual(md, "- one\n- two\n- three", "one list, not split")
+        md = self.block("bull", "- one\n- two", [], "x", lead=" ")          # in an item that has text: a toggle would lift "two" out of the list
+        self.assertEqual(md, "- one\n- two x")
 
     def test_m2_a_quote_row_inside_a_quote_only_removes_the_query(self):
         md = self.block("quo", "> one", ["Enter"], "two")
@@ -523,6 +525,8 @@ class Slash(LiveBrowserCase):
     def test_m2_a_checklist_row_inside_a_checklist_only_removes_the_query(self):
         md = self.block("tick", "- [ ] one", ["Enter"], "two")
         self.assertEqual(md, "- [ ] one\n- [ ] two")
+        md = self.block("tick", "- [ ] one\n- [ ] two", [], "x", lead=" ")
+        self.assertEqual(md, "- [ ] one\n- [ ] two x")
 
     def test_m2_a_numbered_row_inside_a_bulleted_list_converts_the_list(self):
         md = self.block("num", "- one", ["Enter"], "two")
