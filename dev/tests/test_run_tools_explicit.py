@@ -198,6 +198,7 @@ class Table(unittest.TestCase):
                 self.assertEqual(flag(a, "--setting-sources"), "", kind)
                 self.assertEqual(before.count("--no-session-persistence"), 1, kind)   # never resumed: nothing saved
                 self.assertEqual(before.count("--strict-mcp-config"), 1, kind)        # no MCP server at all
+                self.assertEqual(flag(a, "--model"), "sonnet", kind)                  # no settings files: the model named
                 self.assertEqual(c["no_memory"], "1", kind)
                 self.assertNotEqual(c["cwd"], self.vault, kind)
                 self.assertFalse(c["cwd"].startswith(self.vault + os.sep), kind)
@@ -208,6 +209,7 @@ class Table(unittest.TestCase):
                 self.assertEqual(c["cwd"], self.vault, kind)
                 self.assertNotIn("--setting-sources", before, kind)
                 self.assertNotIn("--no-session-persistence", before, kind)
+                self.assertNotIn("--model", before, kind)                             # the user's settings choose it
                 self.assertIsNone(c["no_memory"], kind)
 
     def test_prompt_still_last(self):
