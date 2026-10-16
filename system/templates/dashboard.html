@@ -4297,6 +4297,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     applySoon: () => applySoon,
     applyTheme: () => applyTheme,
     applyView: () => applyView,
+    applyWords: () => applyWords,
     approveGroup: () => approveGroup,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
@@ -5337,6 +5338,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     nowStamp: () => nowStamp,
     onCmdEnter: () => onCmdEnter,
     onDayWheel: () => onDayWheel,
+    onceFor: () => onceFor,
     oneLine: () => oneLine,
     open: () => open,
     openCal: () => openCal,
@@ -10475,6 +10477,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   var healthResult = y3(null);
   var healthBusy = y3(false);
   var healthError = y3("");
+  var healthCardWaiting = y3(
+    /** @type {string[]} */
+    []
+  );
+  var markCardWaiting = (id2) => {
+    if (id2 && !healthCardWaiting.value.includes(id2)) healthCardWaiting.value = [...healthCardWaiting.value, id2];
+  };
   var COUNT_KEY = "creaite-health-count";
   var healthCount = y3(0);
   var healthCheckedAt = g3(() => healthResult.value ? healthResult.value.checked : "");
@@ -10529,6 +10538,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         healthResult.value = /** @type {HealthResult} */
         r4;
         healthCount.value = (r4.problems || []).length;
+        const still = (r4.problems || []).map((p6) => p6.fix && p6.fix.id);
+        healthCardWaiting.value = healthCardWaiting.value.filter((id2) => still.includes(id2));
         store.set(COUNT_KEY, { n: healthCount.value, at: Date.now() });
       } else healthError.value = r4.message || "The health check didn't run";
     } finally {
@@ -10900,9 +10911,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     const m5 = CMD.exec(how || "");
     return m5 ? m5[0].trim() : "";
   };
+  var CARD_WAITING = "On the approval card, waiting for you";
   async function runHealthFix(f5) {
     const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
-    snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
+    if (r4.ok && r4.card) {
+      markCardWaiting(f5.id || "");
+      snack(CARD_WAITING + ": nothing moves until you approve it.");
+    } else snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
     if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
     if (r4.ok && r4.card) await pendingEdit();
     if (r4.ok && !r4.url) checkHealth();
@@ -11027,6 +11042,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         ] }),
         p6.detail && /* @__PURE__ */ u2("div", { class: "d", children: p6.detail }),
         p6.fix.built && /* @__PURE__ */ u2("div", { class: "hdoes", children: p6.fix.does }),
+        p6.fix.id && healthCardWaiting.value.includes(p6.fix.id) && /* @__PURE__ */ u2("div", { class: "hdoes hwait", role: "status", children: [
+          CARD_WAITING,
+          "."
+        ] }),
         !p6.fix.built && open2 && /* @__PURE__ */ u2("div", { class: "hhow", id: hid, children: [
           p6.fix.how ? /* @__PURE__ */ u2("span", { children: p6.fix.how }) : /* @__PURE__ */ u2("span", { children: "Only you can take this step: the line above says what is wrong." }),
           cmd && /* @__PURE__ */ u2("button", { type: "button", class: "mini", "aria-label": `Copy the command: ${cmd}`, onClick: copy, children: "Copy" })
@@ -35795,14 +35814,17 @@ ${s5}`;
     if (shared.VIEW === "today") renderSetup();
   }
   var SU = { status: null, health: null, confirm: false, busy: "" };
-  async function suStatus() {
-    if (!viaServer()) return null;
+  var suRead = onceFor(2e3, async () => {
     const r4 = await api("/api/setup/status", {});
     if (r4 && r4.ok) {
       SU.status = r4;
       if (r4.swept && (!D.last_sweep || D.last_sweep === "never")) D.last_sweep = r4.swept;
     }
     return SU.status;
+  });
+  async function suStatus(force) {
+    if (!viaServer()) return null;
+    return suRead(force);
   }
   async function suCopy(text, btn) {
     try {
@@ -35846,7 +35868,7 @@ ${s5}`;
   }
   async function suCheck(what, btn) {
     if (btn) btn.disabled = true;
-    const r4 = await suStatus();
+    const r4 = await suStatus(true);
     if (btn && btn.isConnected) btn.disabled = false;
     if (!r4) {
       snack("Checking needs the live server");
@@ -44158,9 +44180,10 @@ ${pre}**Current state title:** ${title}`);
     },
     { id: "diag", cat: "system", title: "Diagnostics", raw: true, kw: "diagnostics log level errors debug copy report folder", render: () => diagCardHtml(), after: () => {
       if (SERVED) diagLoad().then(() => {
-        if (shared.VIEW === "settings" && shared.SCAT === "system") diagRedraw();
+        if (shared.VIEW === "settings") diagRedraw();
       });
     } },
+    /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
     { id: "version", cat: "system", title: "creaite version", raw: true, kw: "version update install release zip undo", render: () => '<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>', after: () => drawUpdates() },
     {
       id: "danger",
@@ -44430,14 +44453,15 @@ ${pre}**Current state title:** ${title}`);
   }
   var vnum = (v5) => String(v5 || "0.0.0").split(".").reduce((a5, x5) => a5 * 1e3 + Number(x5 || 0), 0);
   var fdt = (at2) => at2 ? `${fd(at2.slice(0, 10))} ${at2.slice(11, 16)}` : "";
-  async function drawUpdates() {
+  var updStatus = onceFor(2e3, () => api("/api/update/status"));
+  async function drawUpdates(force) {
     const c5 = document.getElementById("updCard");
     if (!c5) return;
     if (!viaServer()) {
       putHTML(c5, html`<h2>creaite version</h2><p class="sub">Needs the live server.</p>`);
       return;
     }
-    const r4 = await api("/api/update/status");
+    const r4 = await updStatus(force);
     if (!document.getElementById("updCard")) return;
     if (!r4.ok) {
       putHTML(c5, html`<h2>creaite version</h2><p class="sub">${r4.message || "Couldn't read the version."}</p>`);
@@ -44477,7 +44501,7 @@ ${pre}**Current state title:** ${title}`);
       updOut(updMsg(r4.message, true));
       return;
     }
-    await drawUpdates();
+    await drawUpdates(true);
     updReview("releases", false);
   }
   async function updReview(source, reinstall) {
@@ -44506,7 +44530,7 @@ ${pre}**Current state title:** ${title}`);
       e4.currentTarget.disabled = true;
       e4.currentTarget.textContent = "Installing…";
       const res = await api("/api/update/install", { source, reinstall });
-      await drawUpdates();
+      await drawUpdates(true);
       updOut(updMsg(res.message, !res.ok));
       snack(res.ok ? `creaite ${p6.to} installed; restart the live server` : "The update didn't install");
     };
@@ -44529,7 +44553,7 @@ ${pre}**Current state title:** ${title}`);
       btn.disabled = false;
       return;
     }
-    await drawUpdates();
+    await drawUpdates(true);
     updOut(updMsg(r4.message, !r4.ok));
     if (r4.ok) snack("Update undone; restart the live server");
   }
@@ -46357,7 +46381,7 @@ ${pre}**Current state title:** ${title}`);
         return;
       }
       if (e4.target.closest("#diagRefresh")) {
-        await diagLoad();
+        await diagLoad(true);
         diagRedraw();
         return;
       }
@@ -65621,6 +65645,10 @@ ${d5.text}`);
     upload: (...a5) => (viaServer() ? SVW : FVW).upload(...a5)
   };
   var oneLine = (m5) => String(m5 || "").split("\n").map((x5) => x5.trim()).filter(Boolean).join(" · ").slice(0, 240);
+  var applyWords = (m5) => {
+    const t47 = String(m5 || ""), f5 = t47.match(/write: (.+?) changed since this proposal was made/);
+    return f5 ? `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.` : t47;
+  };
   function rvHold() {
     const keys = [...RHL].map((n4) => REV.find((x5) => x5.n === n4)).filter(Boolean).map(rvKey), t47 = $$("#reviewBody tr[data-n]")[shared.RSEL], cr2 = t47 && REV.find((x5) => x5.n === +t47.dataset.n);
     return { keys, ck: cr2 && rvKey(cr2) };
@@ -65690,6 +65718,7 @@ ${d5.text}`);
   async function applyNow(o5) {
     const r4 = await api("/api/apply", o5 && o5.peek ? {} : { hold_peek: true });
     await reloadData();
+    if (!r4.ok) r4.message = applyWords(r4.message);
     return r4;
   }
   var undoApply = async function(id2, ids) {
@@ -65941,7 +65970,7 @@ ${d5.text}`);
       const res = await api("/api/apply", { hold_peek: true });
       if (!res.ok) {
         await opDropFile(op2.name);
-        return await opFail(op2, "Not saved: " + oneLine(res.message));
+        return await opFail(op2, "Not saved: " + oneLine(applyWords(res.message)));
       }
       let held = false;
       try {
@@ -66486,17 +66515,35 @@ ${d5.text}`);
       keepalive: true,
       body: JSON.stringify({ message: String(message || "").slice(0, 300), view: typeof shared.VIEW === "string" ? shared.VIEW : "", source: String(source || "").slice(0, 300), line: line || 0 })
     }).then(() => {
-      diagLoad().then(() => {
+      diagLoad(true).then(() => {
         status();
       });
     }).catch(() => {
     });
   };
-  async function diagLoad() {
+  function onceFor(ttl, fn2) {
+    let pend = null, at2 = -Infinity, last;
+    const run = () => {
+      const p6 = Promise.resolve().then(fn2).then((v5) => {
+        last = v5;
+        at2 = Date.now();
+        return v5;
+      }).finally(() => {
+        if (pend === p6) pend = null;
+      });
+      pend = p6;
+      return p6;
+    };
+    return (force) => {
+      if (pend) return force ? pend.then(run, run) : pend;
+      return !force && Date.now() - at2 < ttl ? Promise.resolve(last) : run();
+    };
+  }
+  var diagLoad = onceFor(2e3, async () => {
     if (!SERVED) return;
     const r4 = await api("/api/diagnostics", {});
     if (r4 && r4.ok) Object.assign(DIAG, { level: r4.level, days: r4.days, errors: r4.errors, last24: r4.last24, groups: r4.groups || [], newest: r4.newest || null, refusals: r4.refusals || [], repeats: r4.repeats || [], loaded: true });
-  }
+  });
   var diagErr = (e4) => `<details class="diagerr"><summary><span class="x">${esc(fd(e4.at.slice(0, 10)))} ${esc(e4.at.slice(11, 16))}</span> · ${esc(e4.area)} · ${esc(e4.message)}</summary>${e4.detail.length ? `<pre class="diagtb">${esc(e4.detail.join("\n"))}</pre>` : '<div class="sub">No traceback.</div>'}</details>`;
   function bootDebugLog() {
     window.addEventListener("error", (e4) => diagHook(e4.message, e4.filename, e4.lineno));
@@ -66722,8 +66769,10 @@ ${d5.text}`);
         "apply",
         "applyFilters",
         "applyMotion",
+        "applyNow",
         "applyTheme",
         "applyView",
+        "applyWords",
         "askDeleteNote",
         "askLive",
         "askPerson",

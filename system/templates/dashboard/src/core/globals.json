@@ -155,11 +155,8 @@
    "applyNow",
    "applyTheme",
    "applyView",
-<<<<<<< HEAD
-   "askDeleteNote",
-=======
    "applyWords",
->>>>>>> origin/fix-refused-apply
+   "askDeleteNote",
    "askLive",
    "askPerson",
    "askWorking",
