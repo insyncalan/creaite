@@ -8,7 +8,7 @@
    - current: Current state's two panes. The same, minus what its storage can't hold yet: no checklist (v2.2.0), no code (Word can't
               show it), no table, and no [[ @ # (item links come with the shared chips, #122 step C).
    - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
-              selection bar (#117) and links (v2.2.0), never headings or checklists.
+              selection bar (#117) and links (#121, v2.2.0), never headings or checklists.
    - none:    a host that sets its own frame (the report sheets) and draws nothing.
 
    The tools a host does itself (it owns the pickers and the file input) are `host: true`: the bar shows one only when the host
@@ -57,7 +57,7 @@ export const ED_TOOLS = {
   undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: c => c.undo() },
   redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: c => c.redo() },
 };
-/** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, node?: string, is?: string, alias?: string[],
+/** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, hook?: string, node?: string, is?: string, alias?: string[],
     run?: (c: any, e: any) => any}} SlashDef */
 /** The rows of the `/` menu. `run` gets a focused chain that has already removed the typed "/query". `host` rows are done by the host
     (it owns the pickers, the table's template and the file input) and show only when it can; `node` names a schema node the row needs.
@@ -74,6 +74,7 @@ export const ED_SLASH = {
   codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: c => c.toggleCodeBlock() },
   table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
   image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
+  link: { id: "link", group: "Link", name: "Link", desc: "A web page or an email address (⌘⇧K)", icon: "↗", alias: ["url", "web", "href", "address"], hook: "link" },
   item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", host: true },
   person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
   note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
@@ -83,9 +84,9 @@ export const ED_SLASH = {
 };
 /** The `/` menu's rows per profile, in order; a profile with none has no menu (plain: its fields store plain text). @type {Record<string, string[]>} */
 export const ED_SLASH_ROWS = {
-  notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note",
+  notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "link", "item", "person", "note",
     "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
-  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
+  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link"],
   plain: [], none: [],
 };
 /** The rows of a profile's `/` menu for a host that can do `hostRows` and an editor whose schema is `schema`, filtered and ranked by what is
