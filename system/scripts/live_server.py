@@ -2013,6 +2013,7 @@ for _k in ("shape-closed", "notes-find"):
 # auto-memory; CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 removed that. The kinds with tools keep the vault as their working folder.
 # Review: --no-session-persistence (the run is never resumed, so its prompt isn't saved) and --strict-mcp-config for all three.
 NO_CONTEXT_ARGS = ["--setting-sources", "", "--no-session-persistence"]      # #126 review: never resumed, so nothing is saved
+NO_CONTEXT_ARGS += ["--model", "sonnet"]     # #126 (Jarvis, Alan): with no settings files, the model is named here, not the default
 NO_CONTEXT_ENV = {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
 NEUTRAL_CWD = None
 
