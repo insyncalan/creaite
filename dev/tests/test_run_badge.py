@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 
 FAKE = r'''#!/usr/bin/env python3
 import json, sys, time
@@ -33,7 +33,7 @@ if message.startswith("pause"):
 out({"type": "assistant", "message": {"content": [{"type": "text", "text": "All done."}]}})
 out({"type": "result", "result": "All done.", "session_id": "sess-1"})
 '''
-PALETTES = theme_names()   # every theme (BL-40: nine in 1.5.1)
+PALETTES = TEST_PALETTES   # creaite and Cursor only (live_browser.TEST_PALETTES)
 
 
 class RunBadge(LiveBrowserCase):

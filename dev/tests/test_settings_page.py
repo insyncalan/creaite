@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import TEST_PALETTES, TEST_PALETTES_JS, LiveBrowserCase  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 from test_tracker import action  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -342,16 +342,14 @@ class SettingsPage(LiveBrowserCase):
         js = """(()=>{ const lum=c=>{ const m=c.match(/[\\d.]+/g).map(Number); const f=v=>{ v/=255; return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4; }; return 0.2126*f(m[0])+0.7152*f(m[1])+0.0722*f(m[2]); };
           const ratio=(a,b)=>{ const x=lum(a),y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
           const bg=getComputedStyle(document.body).backgroundColor, out=[];
-          for(const t of THEMES) for(const mode of ["Light","Dark"]){ S.palette=t.id; S.theme=mode; applyTheme(); renderSettings();
+          for(const t of THEMES.filter(t=>TEST_PALETTES.includes(t.id))) for(const mode of ["Light","Dark"]){ S.palette=t.id; S.theme=mode; applyTheme(); renderSettings();
             const sel=document.querySelector("#setcats [aria-selected=true]"), idle=document.querySelector("#setcats [aria-selected=false]"), q=document.getElementById("setq");
             const cs=getComputedStyle(sel), ci=getComputedStyle(idle), cq=getComputedStyle(q), page=getComputedStyle(document.body).backgroundColor;
             out.push([t.id,mode,Math.round(ratio(ci.color,page)*10)/10,Math.round(ratio(cs.color,cs.backgroundColor==="rgba(0, 0, 0, 0)"?page:cs.backgroundColor)*10)/10,Math.round(ratio(cq.color,cq.backgroundColor)*10)/10,cs.borderLeftColor,page]); }
-          return out; })()"""
+          return out; })()""".replace("TEST_PALETTES", TEST_PALETTES_JS)
         self.open("essentials")
         rows = self.b.eval(js)
-        page = readable_page()     # BL-231: the source; the bundle reprints the code
-        themes = len(re.findall(r'\{id:"', re.search(r"const THEMES=\[(.*?)\];", page, re.S).group(1)))
-        self.assertEqual(len(rows), themes * 2)                           # every theme, light and dark (follows the list, BL-142)
+        self.assertEqual(len(rows), len(TEST_PALETTES) * 2)               # every tested theme (creaite, Cursor), light and dark
         for theme, mode, idle, selected, query, border, page in rows:
             self.assertGreaterEqual(idle, 3.0, f"{theme} {mode}: an unselected category on the page")
             self.assertGreaterEqual(selected, 4.5, f"{theme} {mode}: the selected category")

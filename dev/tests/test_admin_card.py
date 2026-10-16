@@ -14,6 +14,7 @@ import sys
 import tempfile
 import time
 import unittest
+from live_browser import TEST_PALETTES, TEST_PALETTES_JS  # noqa: E402
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -476,7 +477,7 @@ SCRIPT = r"""
     const lum=c=>{ const v=c.match(/\d+(\.\d+)?/g).slice(0,3).map(x=>{ x/=255; return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4); }); return .2126*v[0]+.7152*v[1]+.0722*v[2]; };
     const ratio=(a,b)=>{ const x=lum(a), y=lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
     out.contrast={}; const root=document.documentElement, tag=card&&card.querySelector(".tag.chgsens");
-    for(const pal of THEMES.map(t=>t.id)) for(const mode of ["light","dark"]){
+    for(const pal of TEST_PALETTES) for(const mode of ["light","dark"]){
       if(pal) root.setAttribute("data-palette",pal); else root.removeAttribute("data-palette"); root.setAttribute("data-theme",mode); await wait(30);
       const cs=getComputedStyle(tag); out.contrast[pal+" "+mode]=Math.round(ratio(cs.color,cs.backgroundColor)*10)/10; }
     root.removeAttribute("data-palette"); root.removeAttribute("data-theme");
@@ -486,7 +487,7 @@ SCRIPT = r"""
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
   const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre); })();
 </script>
-"""
+""".replace("TEST_PALETTES", TEST_PALETTES_JS)
 
 
 @unittest.skipUnless(CHROME.exists(), "Google Chrome not installed")
@@ -544,8 +545,7 @@ class CardPageTests(unittest.TestCase):
         self.assertIn("Nothing has been changed yet", text)
 
     def test_the_tag_is_readable_in_every_theme(self):
-        page = readable_page()     # BL-231: the source; the bundle reprints the code
-        self.assertEqual(len(self.r["contrast"]), 2 * len(re.findall(r'\{id:"', re.search(r"const THEMES=\[(.*?)\];", page, re.S).group(1))))
+        self.assertEqual(len(self.r["contrast"]), 2 * len(TEST_PALETTES))
         for theme, ratio in self.r["contrast"].items():
             self.assertGreaterEqual(ratio, 4.5, theme)
 

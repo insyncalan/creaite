@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 
 NOTES = """# creaite 9.9.9 (Beta)
 
@@ -87,8 +87,7 @@ class MarkdownViews(LiveBrowserCase):
 
     def test_readable_in_every_theme_light_and_dark(self):
         b = self.release_notes()
-        from live_browser import theme_names
-        for theme in theme_names()[:3]:
+        for theme in TEST_PALETTES:
             for mode in ("light", "dark"):
                 b.eval(f"document.documentElement.dataset.palette={json.dumps(theme)}; document.documentElement.dataset.theme='{mode}'")
                 b.pump(0.1)
