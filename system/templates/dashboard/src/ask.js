@@ -723,7 +723,7 @@ export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, ou
       if(plain&&!PLAINEV.includes(ev.type)){ if(ev.type==="stopped") outcome="stopped"; else if(ev.type==="error") outcome="failed"; continue; }   /* BL-326: a run creaite started shows its steps and its closure, never its prompt, reply or raw output */
       if(ev.type==="closure"){ spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
       else if(ev.type==="step"){ spin.remove(); grp=stepGroup(grp,ev.label); spin=work(); }
-      else if(ev.type==="text"){ spin.remove(); grp=null; replies.push(mWords(await sayMd(fdText(ev.text))));   /* BL-136: a live reply's words fade in */ claimsNote(ev.checked); spin=work(); }
+      else if(ev.type==="text"){ spin.remove(); grp=null; { const d=await sayMd(fdText(ev.text)); replies.push(live?mWords(d):d); }   /* BL-136: a live reply's words fade in; #148: a finished run replayed (ended) appears as it is */ claimsNote(ev.checked); spin=work(); }
       else if(ev.type==="cant"){ spin.remove(); grp=null; cantCard(ev); spin=work(); }   /* BL-314: the plain "I can't", with where it can be done */
       else if(ev.type==="confirm") conf=ev;
       else if(ev.type==="permission") perm=ev;      /* BL-140: a rule that isn't added, and why */
