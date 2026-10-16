@@ -134,11 +134,11 @@ The common jobs, step by step. Each card says where to go on the dashboard, and 
 
 ## Start the day
 
-Where: the creaite app · Claude Code · Today
+Where: the creaite app · Today
 
-1. Open creaite: double-click the **creaite** launcher (it starts the live server). Without it: `system/scripts/run live_server.py` in the vault folder in Terminal, then open the address it prints in Chrome or Edge.
-2. Open the vault in Claude Code. The first session after 07:00 backs up the tracker, runs the mail and Teams sweep, and lists reminders and what's waiting.
-3. Read **Today** from the top: **To decide** (what waits for your say-so), **Decisions needed** (when any wait on someone), **Needs attention**, **Your commitments** (with **You owe** and **Waiting on** when there are any), **Week ahead** and **Resolved**.
+1. Open creaite: double-click the **creaite** app. It starts the live server and opens the page.
+2. Open the vault in Claude Code. The first session after 07:00 backs up the tracker, runs the mail and Teams sweep if it's due, and lists what's waiting.
+3. Read **Today** from the top: **First thing**, **Decisions needed**, **Needs attention**, **Your commitments**, **Intake and Review**, **Week ahead** and **Resolved**.
 
 Or say: `sweep` to run the sweep again at any time.
 
@@ -146,14 +146,11 @@ Or say: `sweep` to run the sweep again at any time.
 
 Where: Today · ⌘K
 
-1. At the end of the day, press the door icon at the bottom right of Today's header (its tooltip says **Close the day**), or type "close the day" in [[⌘K]]. A short card opens with four steps, the same every evening, and takes about three minutes. Move with **Back** and **Next** or the ← and → keys; Esc is **Not yet** and keeps your place for later.
-2. **Catch up.** If the last sweep is more than 30 minutes old, a catch-up sweep of your Inbox, Sent Items and Teams starts as the card opens. It shows what it is reading, with **Stop** and **Skip**, and runs on while you read the next steps. When it ends it lists what it found. It only proposes items for Review: nothing is applied and nothing changes in Microsoft 365. Swept recently, it says "Caught up at 17:41" with a quiet **Sweep again**. Settings › Essentials › Your day can make it ask first or turn it off, and sets the 30 minutes.
-3. **Today.** What moved today and what you promised. A promise still waiting in Review has **Add it to your commitments**, which approves it there.
-4. **Loose ends.** Everything still open: the sweep's new items first, then other proposals in Review, files and transcripts waiting in Intake, and your actions and RAID items due today or overdue. Give each a place: **Review now** (after you close, Review opens with them highlighted, or Work, or Intake), **First thing tomorrow** (the default) or **Leave**. A long list shows the first eight and "and n more", and one row sets them all at once. Nothing is approved or rejected here.
-5. **Tomorrow.** The next working day's meetings with their prep pages. **Make prep page** queues one to be made after you close, one at a time. On a Friday it adds the weekly report.
-6. Press **Close the day**. It ends on "Day closed at 18:04. Everything has a place." with the counts. Closing while the catch-up sweep is still running closes the day when it finishes, and anything it found that you didn't place goes to First thing tomorrow. Only the time and references to your choices are noted (`system/staging/day-closed.json`); nothing is written to the tracker and nothing is sent. Steps with nothing in them are passed over on a quiet day.
-7. The next morning, **First thing** heads Today's brief with what you put there that is still open, and the session-start line in Claude Code lists it too. It is cleared when you close that day.
-8. To be reminded, set **Evening, offer Close the day from** in Settings › Essentials › Your day (17:30 by default; empty means no reminder). After that time a small dot appears on the door icon (never a pop-up), and its tooltip says so. Once the day is closed the icon is in the accent colour.
+1. At the end of the day, press the door icon in Today's header, or type "close the day" in [[⌘K]]. A card opens with four short steps. [[Esc]] is **Not yet** and keeps your place.
+2. **Catch up.** If the last sweep is more than 30 minutes old, a sweep of your Inbox, Sent Items and Teams starts. It only proposes items for Review; nothing in Microsoft 365 changes.
+3. **Today and loose ends.** See what moved and what you promised, then give each open item a place: **Review now**, **First thing tomorrow** (the default) or **Leave**. Nothing is approved or rejected here.
+4. **Tomorrow.** See tomorrow's meetings; **Make prep page** queues a prep page for each. On a Friday it adds the weekly report. Press **Close the day**.
+5. Next morning, **First thing** on Today lists what you put there. To be reminded, set **Evening, offer Close the day from** in Settings › Essentials › Your day: a dot appears on the door icon after that time.
 
 Or say: `what did I promise today?` `what needs prep for tomorrow's meetings?`
 
@@ -161,22 +158,61 @@ Or say: `what did I promise today?` `what needs prep for tomorrow's meetings?`
 
 Where: Review
 
-1. Open **Review**. Proposals are grouped by project, with items from minutes nested under them. **Display** (the sliders icon) groups them by source (each meeting or sweep) or kind instead, and orders them by age, kind or due date.
-2. Narrow the queue with the search, **Kind**, **Needs** (a project, an owner, a due date, individual approval, a conflict, stale) and **Source**, or the funnel icon (**Add a filter**) for project and age; a number on the funnel says how many filters are on. Each has **is** and **is not**.
-3. Open an item to check or edit it: it opens over the page like a work item, and your edits stay in it until you choose **Save**, **Save and approve**, **Reject** or **Cancel** at its foot ([[⌘↵]] saves). Or **Approve** or **Reject** from the list, or use [[J]]/[[K]], [[A]], [[R]]. The cursor moves to the next undecided item (Settings › Health and warnings turns that off). [[R]], a row's ✕ or ▾, or **Reject with a reason** on the bar opens the reasons menu (below).
-4. **Select several** (click, ⌘-click, Shift-click, the tick on a group, or **Select all**): a bar says how many can be approved together and why the rest can't, with **Approve**, **Reject with a reason** ([[R]]) and **Set** project, owner, due date, workstream or milestone. Setting a project on items that need one makes them routine. The result names what was left out, with **Show them** and **Undo**.
-5. **Approve routine** (the double tick) shows a preview of what the filters show first. Minutes, new decisions, new risks and items that close something are approved one by one.
-6. Draft minutes are approved with **Approve** on their row, which checks and cleans the Word file first (it needs the live server). **Open draft** opens it in Word to edit first.
-7. **Wrong project?** Press **Project** on the item's row (it shows on the highlighted row, beside Edit), or its Project value at the top of the open item, and choose another. Its old project's milestone and workstream are cleared, and it waits for your decision. On the minutes' row, **Project** moves every item from those minutes, and the minutes themselves, to another project: if they cover several projects it asks whose items first, then says what will happen ("Move 9 items from Example Programme to Delta Rollout") before you press **Move**. Items you already moved on their own are offered (move all, or leave those); updates to items already in the tracker stay where they are. The files go to the new project's Minutes and Transcripts folders only when the minutes are approved. **Undo** moves them back, with the milestone and workstream the move cleared; so does moving an item back to its first project by hand.
-8. **Right-click** a proposal (or [[Shift]]+[[F10]]) for **Approve**, **Reject with a reason…**, **Open**, **Project**, **Owner**, **Due**, **Priority**, **Workstream**, **Milestone** and **Status**. With several highlighted it acts on them all; Approve still takes only what may be approved together.
-9. **One at a time:** press **One at a time** in Review's toolbar to decide proposals one by one, with the source beside each. The fields creaite guessed are underlined with a dashed line and say why ("Guessed: …"); they come first. [[A]] approves, [[R]] rejects (with a reason), [[E]] edits, [[J]] skips, [[K]] goes back and [[Esc]] returns to the list. About one routine item in ten is shown as a spot-check; the rest are approved together at the end, by the same rule as **Approve routine**. creaite remembers where you stopped.
-10. **Looks like an item you already have:** a proposal that repeats an action, risk or decision in the tracker says **Looks like ABC-A-009 (same project, open) · Very likely** (or **Possible**, never a percentage; another project's name, or **closed**, when that's where it is). Open it for **Compare** (the two side by side, with the new source), **Merge as an update to ABC-A-009** (any new due date, latest update or response goes to the existing item, as an update you approve; with nothing new it is rejected as its duplicate), **Keep as new** (the mark goes) or **Reject as duplicate**. Merge is offered only for an open item in the same project.
-11. **Update an existing item instead:** when a new action, risk, issue or decision is really news about something you already track (and nothing marked it, or it marked the wrong one), open it and press **Update an existing item instead**, or right-click its row. A list of that project's open items of the same kind opens, the best matches first (the one it looks like, then the same thread, people and words, in its time window), each with how likely it is in words, its owner and due date. Choose one ([[↑]]/[[↓]] and [[Enter]], [[Esc]] to close): the proposal becomes an update to that item, carrying its date and latest update (or response), and waits for your approval as usual; with nothing new to carry it is rejected as a duplicate of it. **Undo** in the message puts it back as it was proposed. It needs the live server.
-12. **Reject with a reason:** one menu for one row or many: **Reject n because**, then **Not an action**, **Duplicate**, **Chatter**, **Already done**, **Wrong project**, **Doesn't need tracking** and **For another team** on [[1]] to [[7]], **Use each guess** ([[G]]) and **No reason** ([[0]]); [[Esc]] closes it. creaite's guess shows on each row in grey ("guess: Chatter"; for a repeat, the item it looks like), and **Use each guess** rejects every highlighted row with its own. **Duplicate** records the item it repeats, or asks which (the look-alikes, an ID typed, or none).
-13. **Every reject can be changed:** one message for the batch, with **Undo** (every row back in Review). A rejected row stays, greyed, with its reason as a chip (**Rejected · Chatter**) until you leave Review: the chip, or its ▾, changes the reason (with Undo); **Approve instead** undoes the reject and approves it in one step. Minutes, new decisions, new risks and anything else approved on its own go back to Review and open for their own approval. **Activity › Quality › What you rejected** lists recent rejects with the same chip, **Approve instead** and **Undo**. The reasons are counted in **Why proposals were rejected**.
-14. **Looks done:** when a mail you sent, a reply, a Teams message or a meeting shows an open item is finished, the sweep or the minutes propose closing it. The row leads with **Looks done** (or **Maybe done**, with the reason) and the evidence ("Mail 09-10-2026 15:02 by Alan Carter: “attached the SOW”"); **Open source** opens the message. **Approve** closes it; **Reject** with a reason says why, and the extraction reads it next time. Closing is always approved on its own, never by **Approve routine**. **Not done** re-dates an item that has moved.
+Nothing reaches the tracker until you approve it. About two minutes on a normal day.
 
-Or say: `review` `approve minutes for the ABC steering` `9 is DEF` `minutes 3 is DEF` `reject 4 as a duplicate of ABC-A-009` `reject 3, 5 as chatter` `reject 2-6 with their guesses` `approve that reject instead` `merge 4` `keep-new 4` `4 is an update to ABC-A-009` `apply`
+1. Open **Review**. Proposals are grouped by project, with items from minutes under their minutes.
+2. Narrow the list with the search, **Kind**, **Needs** and **Source**, or the funnel icon (**Add a filter**).
+3. Press **Approve routine** (the double tick). It shows what it will approve first. Minutes, new decisions, new risks and anything that closes an item are never included: approve those one at a time.
+4. Open anything you want to check. Change what's wrong, then **Save and approve** ([[⌘↵]] saves). On the list, [[J]]/[[K]] move, [[A]] approves and [[R]] rejects. Right-click a proposal ([[Shift]]+[[F10]]) for the same choices and more.
+5. Select several (click, ⌘-click, Shift-click or the tick on a group) for a bar that approves them together or sets their project, owner or due date. It says what it left out, with **Undo**.
+6. Not sure about one? Press **One at a time**: one proposal with its source beside it, guesses first. [[A]] approves, [[R]] rejects, [[E]] edits, [[J]] skips, [[K]] goes back and [[Esc]] returns to the list.
+7. Draft minutes are approved with **Approve** on their row, which checks the Word file first (it needs the live server). **Open draft** edits it in Word first.
+
+Then: [Reject, with a reason](#reject-with-a-reason) · [Fix the wrong project](#fix-the-wrong-project) · [When it looks like something you have](#when-it-looks-like-something-you-have) · [When creaite says Looks done](#when-creaite-says-looks-done).
+
+Or say: `review` `approve minutes for the ABC steering` `apply`
+
+## Reject, with a reason
+
+Where: Review
+
+1. Press [[R]], a row's ✕, or **Reject with a reason** on the bar. One menu opens for one row or many.
+2. Pick why: **Not an action**, **Duplicate**, **Chatter**, **Already done**, **Wrong project**, **Doesn't need tracking** or **For another team** ([[1]] to [[7]]). **Use each guess** ([[G]]) rejects every highlighted row with creaite's own guess, shown in grey on each row. **No reason** is [[0]]. **Duplicate** records the item it repeats, or asks which.
+3. Changed your mind? A message with **Undo** puts the batch back. A rejected row stays, greyed, with its reason (**Rejected · Chatter**) until you leave Review: the chip changes the reason, and **Approve instead** undoes the reject and approves in one step.
+4. **Activity › Quality › What you rejected** lists recent rejects with the same buttons. The reasons are counted in **Why proposals were rejected**.
+
+Or say: `reject 4 as a duplicate of ABC-A-009` `reject 3, 5 as chatter` `reject 2-6 with their guesses` `approve that reject instead`
+
+## Fix the wrong project
+
+Where: Review
+
+1. Press **Project** on the item's row, or its Project value at the top of the open item, and choose another. The old project's milestone and workstream are cleared, and the item waits for your decision.
+2. For draft minutes, **Project** on the minutes' row moves every item from them. If they cover several projects it asks whose items first, then says what will happen ("Move 9 items from Example Programme to Delta Rollout") before you press **Move**.
+3. The files go to the new project's folders only when the minutes are approved. **Undo** moves everything back.
+
+Or say: `9 is DEF` `minutes 3 is DEF`
+
+## When it looks like something you have
+
+Where: Review
+
+1. A proposal that repeats something in the tracker says **Looks like ABC-A-009 (same project, open) · Very likely**, or **Possible**. Another project's name, or **closed**, shows where it is.
+2. Open it and press **Compare** to see the two side by side, with the new source.
+3. Choose **Merge as an update to ABC-A-009** (new dates or updates go to the existing item, and you approve them; with nothing new it is rejected as its duplicate), **Keep as new**, or **Reject as duplicate**. Merge is offered only for an open item in the same project.
+4. Nothing flagged, but it is news about something you track? Open the proposal and press **Update an existing item instead** (or right-click its row). Choose the item from that project's open items, best matches first. The proposal becomes an update that waits for your approval; **Undo** in the message puts it back. It needs the live server.
+
+Or say: `merge 4` `keep-new 4` `4 is an update to ABC-A-009`
+
+## When creaite says Looks done
+
+Where: Review
+
+1. When a mail you sent, a reply, a Teams message or a meeting shows an open item is finished, the row leads with **Looks done** (or **Maybe done**, with the reason) and the evidence. **Open source** opens the message.
+2. **Approve** closes it. **Reject** with a reason says why, and the extraction reads it next time. **Not done** re-dates an item that has moved.
+3. Closing is always approved on its own, never by **Approve routine**.
+
+Or say: `approve 4` `reject 4 as already done`
 
 ## Find anything
 
