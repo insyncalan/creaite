@@ -97,7 +97,7 @@ The dashboard follows **Google Material 3** (m3.material.io). The reference desi
 
 ## Assistant ("ask creaite")
 
-- **Opening it:** ⌘J / Ctrl+J, the app-bar button, the floating button (bottom right; it hides while the panel is open, and shows a dot when a task finished while the panel was closed), or the command palette. **Esc closes it**, unless an inline edit, the calendar, a dialog, the palette or the nav overlay takes Esc first.
+- **Opening it:** ⌘J / Ctrl+J, the app-bar button, the floating button (bottom right; it hides while the panel is open, and shows a dot when a task finished while the panel was closed), or the command palette. **Esc closes it** (also while a request runs: the run carries on and the top-bar button keeps its pulsing dot; #130), unless an inline edit, the calendar, a dialog, the palette or the nav overlay takes Esc first.
 - **The panel:**
   - a side panel with quick actions (Sweep, Process minutes, Weekly report, Review, Apply, What's overdue?);
   - streaming replies with step-by-step progress;
@@ -272,7 +272,7 @@ Reports are **Word documents** drafted by skills from templates in `system/templ
 
 - **Current state (BL-31):** the editor spans the panel, starts 360px tall and stretches by its bottom edge; the panel is 640px wide while Current state is edited.
 - **History (BL-32):** a dropdown under the clock icon, over the current chat: the 10 most recent chats (title, DD-MM-YYYY HH:MM, message count; the current one marked). The live server keeps 10 and deletes the oldest when an 11th starts.
-- **Stop (BL-33):** each request carries a run ID; Send becomes Stop (square in a circle), and Esc in the input stops too. `/api/ask/stop` ends a read-only run at once; a confirmed write ends after the running step's result. If the page goes away, the server stops the run itself. The partial reply stays, with "Stopped" (or "Stopped after the current step finished"); the chat history marks it; the next question resumes the session.
+- **Stop (BL-33):** each request carries a run ID; Send becomes Stop (square in a circle, no key shown), and the Stop button (click, Enter or Space on it) is the only thing that stops a run: **Esc never does** (#130; in the input it closes the panel, the autocomplete's first Esc still closes its list, and the run carries on and is reattached on reopening or reload). `/api/ask/stop` ends a read-only run at once; a confirmed write ends after the running step's result. If the page goes away, the server stops the run itself. The partial reply stays, with "Stopped" (or "Stopped after the current step finished"); the chat history marks it; the next question resumes the session.
 - **Fixed on the way:** the live server read Claude Code's output in blocks, so steps reached the page only at the end; it now reads line by line.
 - **Run report now (BL-34):** first in a report reminder's menu; it opens ask creaite and sends the reminder's command ("weekly report ABC for week ending DD-MM-YYYY", one reminder per project still owed; "client report ABC"); the reminder shows "Running…" meanwhile and stays until the report is filed. Greyed out ("Needs the live server") in the file version.
 - **Allow list fixed:** ask creaite can now run `report.py` (data read-only; drafting after confirmation), `propose.py` (preview and learn checks read-only; staging after confirmation) and `sweep.py` (due and window read-only; the rest after confirmation). Before, reports, cx-edit and sweeps couldn't run from the panel.
