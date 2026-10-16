@@ -760,7 +760,7 @@ class AutosavePage(LiveBrowserCase):
 
         b.key("Enter")                                                                # the / menu
         b.type("/")
-        one_esc_closes("!!document.querySelector('#ntpick [role=option]')", "!document.querySelector('#ntpick')")
+        one_esc_closes("!!document.querySelector('.slashmenu [role=option]')", "!document.querySelector('.slashmenu')")
         second_esc_leaves()
         b.type("[[Lay")                                                               # the [[ picker
         one_esc_closes("!!document.querySelector('#ntpick')", "!document.querySelector('#ntpick')")
