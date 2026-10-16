@@ -190,6 +190,8 @@ class Shape(ShapeCase):
         self.shape()
         b.click("#shN-objective")
         b.key("a", 4)                                                                                   # ⌘A
+        b.wait("document.querySelector('#aiLayer .aispark')", 30)
+        b.click("#aiLayer .aispark")                                                                    # #117: the bar opens from the margin sparkle
         b.wait("document.querySelector('#aiLayer .aibar')", 30)
         self.assertEqual(b.eval("[aiBar.value.ai.place, aiBar.value.ai.project(), aiBar.value.ai.confidential()]"), ["plain", "ABC", False])
         b.click("#aiLayer .aibar button[aria-haspopup]")
@@ -223,6 +225,8 @@ class Confidential(ShapeCase):
         self.assertNotIn("Board secret", call["prompt"])
         b.click("#shN-objective")                                                                       # BL-301 D: AI asks first
         b.key("a", 4)
+        b.wait("document.querySelector('#aiLayer .aispark')", 30)
+        b.click("#aiLayer .aispark")                                                                    # #117: the bar opens from the margin sparkle
         b.wait("document.querySelector('#aiLayer .aibar')", 30)
         self.assertTrue(b.eval("aiBar.value.ai.confidential()"))
         self.assertEqual(b.errors, [])
