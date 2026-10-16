@@ -30,7 +30,7 @@ class Source(unittest.TestCase):
 
     def test_wordmark_has_no_dashed_copy(self):
         shell = (DASH / "shell.html").read_text(encoding="utf-8")
-        logo = re.search(r'<div class="logo">.*?</div>', shell, re.S).group(0)
+        logo = re.search(r'<button[^>]*class="logo[^"]*".*?</button>', shell, re.S).group(0)   # #156: the wordmark is the rail's toggle button
         self.assertNotIn("wmd", logo)
         self.assertNotIn("stroke-dasharray", logo)
         self.assertEqual(logo.count("<use "), 1, "the word once")

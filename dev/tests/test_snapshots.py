@@ -143,6 +143,9 @@ def normalise(html, root):
     for pat, rep in MASKS:
         html = pat.sub(rep, html)
     html = renumber_ids(html)
+    # whether a table overflows sideways depends on the machine's fonts (Linux CI is wider than a Mac): mask the "more columns" cue
+    html = re.sub(r'<div class="xcue[^"]*"[^>]*>.*?</button>\s*</div>', "", html, flags=re.S)
+    html = re.sub(r' xscroll(?: xstick)?"( data-xc="1")?( style="--xstick:[^"]*")?', '"', html)
     html = STYLE.sub(lambda m: 'style="' + re.sub(r"-?\d+(?:\.\d+)?(px|%|em|rem)", r"#\1", m.group(1)) + '"', html)
     html = re.sub(r'aria-valuenow="\d+"', 'aria-valuenow="#"', html)   # v1.9.5: a resize handle's value is the column's measured width
     html = re.sub(r">\s*<", ">\n<", re.sub(r"[ \t]+", " ", html))
