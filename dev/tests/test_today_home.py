@@ -275,7 +275,7 @@ class WeekCalm(Header):
         self.assertIn("!o=%40me", o["nav"])                                                                    # overdue, and not mine
         b.eval("document.querySelector('#weekList .wkpoint a').click()")
         b.wait("VIEW==='work'")
-        self.assertEqual(b.eval("shared.WT"), "actions")                                                      # the count and the list are the same set
+        self.assertEqual(b.eval("WT"), "actions")                                                      # the count and the list are the same set
         self.assertEqual(b.eval("[...document.querySelectorAll('#v-work .chip, #v-work .fchip, #v-work [data-filter]')].length>=0"), True)
         self.draw("""; A.splice(0,A.length,...A.filter(a=>isMe(a.o)||a.id.startsWith('ZZZ-A-00'))); R.splice(0,R.length,...R.filter(a=>isMe(a.o)||a.id.startsWith('ZZZ-R-00'))); renderToday()""")
         self.assertEqual(b.eval("document.querySelectorAll('#weekList .wkpoint').length"), 0)                # hidden at zero
