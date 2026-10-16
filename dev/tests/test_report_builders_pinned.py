@@ -139,5 +139,31 @@ class ClientPinned(unittest.TestCase):
                 pin(self, name, vault_free(f"exit {r.returncode}\n{r.stdout}{r.stderr}", self.v.root))
 
 
+class DocPinned(unittest.TestCase):
+    """v2.1.0 P3: report_doc's weekly_doc and client_doc (the creaite-data model) on test_reports' fixture, its clock fixed."""
+    maxDiff = None
+
+    def setUp(self):
+        R.WeeklyTests.setUp(self)
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def doc(self, call):
+        import subprocess
+        r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import report_doc; "
+                            f"print(json.dumps({call}, indent=1, sort_keys=True, ensure_ascii=False))"],
+                           cwd=self.v.root, env={**os.environ, "CREAITE_NOW": R.NOW}, capture_output=True, text=True)
+        text = vault_free(f"exit {r.returncode}\n{r.stdout}{r.stderr}", self.v.root)
+        return re.sub(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(\.\d+)?", "<TS>", text)    # rows' updated_at: the real clock
+
+    def test_weekly_doc(self):
+        pin(self, "weekly_doc", self.doc("report_doc.weekly_doc('ABC')"))
+        pin(self, "weekly_doc_earlier_week", self.doc("report_doc.weekly_doc('ABC', '2026-10-02')"))
+
+    def test_client_doc(self):
+        pin(self, "client_doc", self.doc("report_doc.client_doc('ABC')"))
+
+
 if __name__ == "__main__":
     unittest.main()

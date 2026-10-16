@@ -87,7 +87,7 @@ export function msChoices(code,cur){ const L=(P.find(p=>p.code===code)||{ms:[]})
   const dup=n=>L.filter(m=>m[1].toLowerCase()===n.toLowerCase()).length>1;
   return [["","None"],...L.map(([id,n,d])=>[id,dup(n)&&d?`${n} · ${fd(d)}`:n])]; }
 /* BL-22: Current state is Markdown in CLAUDE.md (paragraphs, **bold**, *italic*, "- " and "1. " lists) */
-/* Current state is Markdown in CLAUDE.md (BL-22, BL-47): paragraphs, "### " sub-headings, "> " quotes, "- " and "1. "
+/* Current state is Markdown in CLAUDE.md (BL-22, BL-47): paragraphs, "### ", "#### " and "##### " headings (#122), "> " quotes, "- " and "1. "
    lists nested two spaces per level, **bold**, *italic*, ~~strikethrough~~ and [links](web or mail address). The same subset is
    rendered here, in the Word reports (docx_tools.py) and read back from Word. */
 export const MD_LIST=/^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$/, MD_MAX=3, MD_IMG=/^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$/;
@@ -108,7 +108,9 @@ export function splitPanes(t){ t=String(t||""); const ms=paneMarkers(t); if(!ms.
   const cuts=ms.concat([t.length]); let right=""; for(let k=0;k<ms.length;k++) right+=t.slice(cuts[k]+PANE.length,cuts[k+1]);
   return [t.slice(0,ms[0]).trim(),right.replace(/\n{3,}/g,"\n\n").trim()]; }
 export function joinPanes(l,r){ l=String(l||"").trim(); r=String(r||"").trim(); return r?(l?l+"\n\n":"")+PANE+"\n\n"+r:l; }
-export function mdInline(t){ return esc(t).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g,(m,a,u)=>`<a href="${u}" target="_blank" rel="noopener">${a}</a>`)
+/* #122 C: a work-item link, `[ABC-A-012 · Action: title](creaite:item/ABC-A-012)`, reads as its words and opens the item; a click is handled by the delegate below */
+export function mdInline(t){ return esc(t).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g,(m,a,id)=>`<a href="#" class="itemref" data-oi="${id}">${a}</a>`)
+  .replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g,(m,a,u)=>`<a href="${u}" target="_blank" rel="noopener">${a}</a>`)
   .replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/~~(.+?)~~/g,"<s>$1</s>")
   .replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g,"$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g,"$1<i>$2</i>"); }
 export function mdBlocks(text){ const /** @type {any[]} */ B=[]; let para=[], quote=[];
@@ -120,6 +122,8 @@ export function mdBlocks(text){ const /** @type {any[]} */ B=[]; let para=[], qu
       if(tops.length&&!(item[0]===0&&tops[tops.length-1][1]!==item[1])) last[1].push(item); else B.push(["list",[item]]); }
     else if(!line.trim()) flush();
     else if(line.startsWith("### ")){ flush(); B.push(["h",line.slice(4).trim()]); }
+    else if(line.startsWith("#### ")){ flush(); B.push(["h2",line.slice(5).trim()]); }       /* #122: the two deeper levels (Heading 2, Heading 3) */
+    else if(line.startsWith("##### ")){ flush(); B.push(["h3",line.slice(6).trim()]); }
     else if(line.trimStart().startsWith(">")){ if(para.length) flush(); quote.push(line.trimStart().slice(1).trim()); }
     else { if(quote.length) flush(); para.push(line.trim()); } }
   return B; }
@@ -134,7 +138,7 @@ export function listHtml(items){ let h=""; const stack=[];
 /* BL-63: images sit in Current state where Alan placed them; imgs is the project's embedded images ({ref, src}) */
 export const imgSrc=(imgs,ref)=>String(ref).startsWith("new:")?((shared.CURED&&shared.CURED.uploads||{})[ref.slice(4)]||{}).src:((imgs||[]).find(i=>i.ref===ref)||{}).src;
 export const figHtml=(cap,ref,src)=>`<figure class="cimg" data-ref="${esc(ref)}">${src?`<img src="${src}" alt="${esc(cap)}">`:`<div class="sub">Image not found: ${esc(ref)}</div>`}<figcaption>${esc(cap)}</figcaption></figure>`;
-export function mdHtml(text,imgs){ return mdBlocks(text).map(([k,b])=>k==="img"?figHtml(b[0],b[1],imgSrc(imgs,b[1])):k==="p"?`<p>${mdInline(b)}</p>`:k==="h"?`<h3>${mdInline(b)}</h3>`:k==="q"?`<blockquote>${mdInline(b)}</blockquote>`:listHtml(b)).join(""); }
+export function mdHtml(text,imgs){ return mdBlocks(text).map(([k,b])=>k==="img"?figHtml(b[0],b[1],imgSrc(imgs,b[1])):k==="p"?`<p>${mdInline(b)}</p>`:k==="h"?`<h3>${mdInline(b)}</h3>`:k==="h2"?`<h4>${mdInline(b)}</h4>`:k==="h3"?`<h5>${mdInline(b)}</h5>`:k==="q"?`<blockquote>${mdInline(b)}</blockquote>`:listHtml(b)).join(""); }
 export function htmlToMd(root){ const blocks=[]; let cur="";
   const inl=n=>{ if(n.nodeType===3) return n.nodeValue.replace(/ /g," ").replace(/\s+/g," "); if(n.nodeType!==1) return ""; const tag=n.tagName;
     if(tag==="UL"||tag==="OL") return ""; const inner=[...n.childNodes].map(inl).join("");
@@ -153,7 +157,7 @@ export function htmlToMd(root){ const blocks=[]; let cur="";
   const flush=()=>{ const t=flat(cur); if(t) blocks.push(t); cur=""; };
   const walk=el=>{ for(const n of el.childNodes){ const tag=n.nodeType===1?n.tagName:"";
     if(tag==="UL"||tag==="OL"){ flush(); const lines=listMd(n,0,[]); if(lines.length) blocks.push(lines.join("\n")); }
-    else if(/^H[1-6]$/.test(tag)){ flush(); const t=flat(inl(n)); if(t) blocks.push("### "+t); }
+    else if(/^H[1-6]$/.test(tag)){ flush(); const t=flat(inl(n)); if(t) blocks.push(("#".repeat(Math.min(+tag[1],3)+2))+" "+t); }   /* #122: H1 is ###, H2 ####, H3 and deeper #####, Current state's three levels */
     else if(tag==="BLOCKQUOTE"){ flush(); const t=flat(inl(n)); if(t) blocks.push("> "+t); }
     else if(tag==="FIGURE"&&n.dataset.ref){ flush(); const c=flat((n.querySelector("figcaption")||{}).textContent||"").replace(/[\[\]]/g,""); blocks.push(`![${c}](${n.dataset.ref})`); }
     else if(/^(P|DIV|LI|SECTION|ARTICLE)$/.test(tag)){ flush(); walk(n); flush(); }
@@ -192,10 +196,11 @@ export function openNew(k,how){ (()=>{ if(!PKK.includes(k)) return; if(curGuard(
 export const NODRAFT_MSG="No Word draft was made for these minutes: Reject them and process the meeting again";
 /* ===== end BL-260 ===== */
 export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if(r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 */
+  if(r.kind==="draft"&&/\.html$/i.test(r.src||"")){ if(viaServer()){ go("minutes",{file:r.file}); return; } openPath(r.src); snack("Check the minutes, then approve them in Claude Code (the live server isn't running)"); return; }   /* v2.1.0 P4: a minutes record isn't edited in Word; P7: it opens in the minutes view */
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
   shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
-export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
+export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
 export function curObj(){ return shared.CUR.mode==="record"?REC(shared.CUR.k,shared.CUR.id):shared.CUR.draft; }
 export const PKK=["actions","raid","decisions"];   /* declared before drawPanel, which runs at load */
 export const pkNew=()=>!!(shared.CUR&&(shared.CUR.mode==="new"||shared.CUR.mode==="msnew"));   /* declared before drawPanel, which runs at load */
@@ -205,7 +210,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   if(!shared.LOADING&&pkIs()&&$("#pkScroll")){
     const pn=$("#panel"); shared.EDITING=false; pn.classList.remove("pwide"); pn.classList.add("peek"); $("#pFields").textContent=""; $("#pFoot").textContent=""; $("#pKeys").textContent="";
     pkWide(PK.wide); pkNav(); pkDraw(); }   /* BL-176: an action, RAID item, decision or proposal is the peek (once the peek is built: an address can open an item earlier in the load) */
-  else { if(!shared.LOADING) $("#panel").classList.remove("peek","pkwide");   /* BL-166 */
+  else { if(!shared.LOADING) $("#panel").classList.remove("peek","pkwide","pover");   /* BL-166 */
   const was=shared.PDKEY;   /* BL-169 */
   if(shared.CUR&&shared.CUR.pre&&!shared.EDITING) shared.CUR.pre=null;   /* BL-53 */
   PANELF=true; try{ const x=curObj(), k=shared.CUR.k, F=fieldsFor(k,x); $("#pErr").textContent="";
@@ -214,6 +219,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   putHTML($("#pId"),shared.CUR.mode==="milestone"||shared.CUR.mode==="rebase"?html`${shared.CUR.id} · ${raw(pl(shared.CUR.code))}`:shared.CUR.mode==="msnew"?html`Not yet saved · ${raw(pl(shared.CUR.code))}`:shared.CUR.mode==="record"?html`${shared.CUR.id} · ${raw(pl(x.p))}`:shared.CUR.mode==="proposal"?html`Review #${shared.CUR.n} · ${x.p?raw(pl(x.p)):"needs a project"}`:shared.CUR.mode==="new"?html`Not yet saved`:raw(pl(shared.CUR.code)));
   $("#pTitle").textContent=title||"";
   $("#panel").classList.toggle("pwide",!!shared.EDITING);   /* BL-80 */
+  $("#panel").classList.toggle("pover",shared.CUR.mode==="health");   /* #109: the health form is over the page, not beside it */
   $("#pBody").classList.toggle("editing",shared.EDITING); $("#editBanner").textContent=shared.CUR.mode==="proposal"?"Editing a proposal — nothing reaches the tracker until it's approved":"Editing — changes apply when you save";
   let h=""; for(const [n,l,t,opts] of F){ if(n==="#"){ h+=`<div class="fsec">${l}</div>`; continue; } const v=shared.CUR.pre&&n in shared.CUR.pre?shared.CUR.pre[n]:x[n];   /* CUR.pre: "Record the decision" fills the form first (BL-53) */
     h+=`<dt>${l}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
@@ -1040,6 +1046,7 @@ export function bl185Row(){ const row=$("#v-cockpit .evrow"); if(!row) return;
 /* ===== end BL-185 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0181(){
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("a.itemref[data-oi]"); if(!b||b.closest(".ProseMirror")) return; e.preventDefault(); openRecord("all",b.dataset.oi); });   /* #122 C: a work-item link in a read view opens the item */
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-msjump]"); if(!b) return; e.preventDefault(); const h=[...document.querySelectorAll("#v-cockpit .card h2")].find(x=>x.textContent.trim().startsWith("Milestones")); if(h) mScroll(h.closest(".card"),{block:"start"}); });
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("[data-msjump]")) e.target.click(); });
 }

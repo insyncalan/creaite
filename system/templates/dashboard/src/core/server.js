@@ -2,6 +2,9 @@
 /* core/server.js (BL-231 step 2b): vault access, the live server (`api`, `reloadData`, `applyNow`), proposals (`writeProposal`, `save`), the snackbar and undo, status, the pulse, the event stream and the debug log's error hook.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0011-vault-access-step-4b-file-system-access.js, 0012-live-server-step-4c.js, 0013-bl-253-sprint-live-updates.js, 0014-after-bl-253.js, 0015-bl-266-fix-backup-names.js, 0016-after-bl-266.js, 0017-bl-232-fix-as-proposed-capture-edits-eve.js, 0018-after-bl-232.js, 0019-live-apply-undo-snackbar.js, 0020-bl-215-sprint-ui-audit.js, 0021-after-bl-215.js, 0141-chat-and-sweep-the-open-page-refreshes-i.js, 0142-bl-253-sprint-live-updates.js, 0152-debug-log-bl-102-part-2.js */
+import { renderReports } from "../components/reporting/ReportsPage.jsx";
+import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
+import { reportsBadge, spaceCode } from "../stores/reporting.js";
 import { renderActivity } from "../activity.js";
 import { drawStatusDot } from "../components/StatusDot.jsx";
 import { drawToast } from "../components/Toast.jsx";
@@ -16,7 +19,6 @@ import { shared } from "./state.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
 import { inboxBadge, renderInbox } from "../intake.js";
-import { renderMeeting } from "../meetings.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
 import { drawPanel, errBanner, MD_IMG, markStagedRows, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
@@ -77,6 +79,10 @@ export const viaServer=()=>SERVED&&shared.LIVE;
 shared.VW={ read:(...a)=>(viaServer()?SVW:FVW).read(...a), write:(...a)=>(viaServer()?SVW:FVW).write(...a), remove:(...a)=>(viaServer()?SVW:FVW).remove(...a),
   exists:(...a)=>(viaServer()?SVW:FVW).exists(...a), append:(...a)=>(viaServer()?SVW:FVW).append(...a), upload:(...a)=>(viaServer()?SVW:FVW).upload(...a) };
 export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolean).join(" · ").slice(0,240);
+/* #92: tracker.py refuses an apply when a file changed after the item was staged ("write: <path> changed since this proposal was
+   made"); said in plain words, with what to do. Only the page's wording: tracker.py's refusal is unchanged. */
+export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
+  return f?`${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`:t; };
 /* fresh data after an apply or undo */
 /* BL-216: Review keeps its selection and highlight across a reload (rvHold before, rvRestore after) */
 export function rvHold(){ const keys=[...RHL].map(n=>REV.find(x=>x.n===n)).filter(Boolean).map(rvKey), t=$$("#reviewBody tr[data-n]")[shared.RSEL], cr=t&&REV.find(x=>x.n===+t.dataset.n); return {keys,ck:cr&&rvKey(cr)}; }
@@ -100,7 +106,7 @@ export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads i
    that data is over a minute old the page fetches the rest straight after its first paint, through the usual reload */
 export function bootPageRefresh(){ if(SERVED&&D.page_refresh) reloadData(); }
 /* BL-189 (sprint-milestones): every apply but the peek's own leaves the peek's staged changes in staging (hold_peek); pkApply passes peek */
-export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); return r; }
+export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=applyWords(r.message); return r; }
 export let undoApply = async function(id,ids){ const u=await api("/api/undo",{apply_id:id}); if(!(ids&&await refreshRecords(ids))) await reloadData(); snack(u.ok?"Undone":oneLine(u.message)); };   /* BL-304: ids, just those items again */
 /* BL-304: just these items again (Review keeps its selection; the peek's staging is reconciled), or false */
 export async function refreshRecords(ids){ if(!SERVED) return false; return await recordsRefresh(ids,{hold:rvHold,restore:rvRestore,after:async()=>{ await pkReconcile(); }}); }
@@ -199,7 +205,7 @@ async function saveApply(op){ PULSE.reloads++;   /* its own change event waits f
     op.state="writing"; try{ op.name=await writeProposal(op.items,op.extra); }catch(e){ return await opFail(op,"Not saved: "+e.message); }
     if(op.cancel){ await opDropFile(op.name); op.state="cancelled"; return false; }
     op.state="applying"; const res=await api("/api/apply",{hold_peek:true});
-    if(!res.ok){ await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(res.message)); }
+    if(!res.ok){ await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(applyWords(res.message))); }
     let held=false; try{ held=await shared.VW.exists("system/staging/"+op.name); }catch(e){ held=false; }
     if(held){ await opDropFile(op.name); const ids=opIds(op); return await opFail(op,`Not saved: ${ids.join(", ")||"it"} changed elsewhere; reloaded ${ids.length>1?"them":"it"}`); }   /* held as a conflict: not applied */
     op.state="done"; op.apply_id=res.apply_id; ovDrop(op.recs);
@@ -290,6 +296,7 @@ shared.PENDING=[];
 export async function applyPending(){ if(viaServer()){ const r=await applyNow(); shared.PENDING=[]; refreshAll(); snack(r.ok?oneLine(r.message):"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); return; }
   snack("Say “apply” in Claude Code, or start the live server"); }
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
+  if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */
   status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
   if(!reduced()&&v===shared.VIEW){
     const hit=[]; if(cells&&wt===shared.WT){ const cols=$$("#workTbl thead th").map(th=>th.dataset.col||""); $$("#workTbl tr[data-row]").slice(0,300).forEach(tr=>[...tr.children].forEach((td,i)=>{ const k=tr.dataset.row+"|"+cols[i]; if(cols[i]&&cells.has(k)&&cells.get(k)!==td.textContent.trim()) hit.push(td); })); }
@@ -300,9 +307,8 @@ export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P
   if(shared.MVREADY){ const sig=mvSig(); if(sig!==shared.MV.sig){ shared.MV.sig=sig;
       if(shared.VIEW==="milestones"&&!(document.activeElement&&["mvNote","mvRbWhy","mvAdjWhy"].includes(document.activeElement.id))) renderMilestones();
       if(shared.MV.peek&&!shared.MV.add&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#mvPeek input[type=text],#mvPeek textarea"))) mvEdDraw(); } }   /* BL-245: once the Milestones block has run (a reload with staged peek changes refreshes before it) */
-  if(shared.VIEW==="meeting") renderMeeting(shared.MEETING);
   if(shared.PREPEV&&$("#prepDlg")&&$("#prepDlg").open) drawPrep(); }   /* BL-286 E: an applied edit shows in the Prep popup */
-export function renderBadge(){ const n=REV.filter(r=>!r.done).length; setRailCount("review",n); tabTitle(); }
+export function renderBadge(){ const n=REV.filter(r=>!r.done).length; setRailCount("review",n); reportsBadge(); tabTitle(); }   /* BL-337: Reports' count */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0021's place) */
 export function bootLive(){
 if(SERVED){ if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
@@ -405,8 +411,15 @@ shared.DIAGSENT=0;
 export const diagHook=(message,source,line)=>{ if(!SERVED||shared.DIAGSENT>=50||/^(Uncaught )?ResizeObserver loop/.test(String(message||""))) return; shared.DIAGSENT++;   /* BL-283: a browser notice, not a fault */
   fetch("/api/log/error",{method:"POST",headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},keepalive:true,
     body:JSON.stringify({message:String(message||"").slice(0,300),view:typeof shared.VIEW==="string"?shared.VIEW:"",source:String(source||"").slice(0,300),line:line||0})
-  }).then(()=>{ diagLoad().then(()=>{ status(); }); }).catch(()=>{}); };
-export async function diagLoad(){ if(!SERVED) return; const r=await api("/api/diagnostics",{}); if(r&&r.ok) Object.assign(DIAG,{level:r.level,days:r.days,errors:r.errors,last24:r.last24,groups:r.groups||[],newest:r.newest||null,refusals:r.refusals||[],repeats:r.repeats||[],loaded:true}); }   /* BL-180: groups and newest feed the errors banner; BL-252: refusals */
+  }).then(()=>{ diagLoad(true).then(()=>{ status(); }); }).catch(()=>{}); };
+/* #96: one read for the callers that arrive together. A page that opens on Settings asked for the same thing three times in
+   50 ms (the card, the start-up read and the redraw it caused). While a read is in flight everyone gets that read; a finished
+   one is reused for `ttl` ms; `force` is for a person pressing Refresh, an install or a new error (it waits for the one in
+   flight, then reads again). */
+export function onceFor(ttl,fn){ let pend=null, at=-Infinity, last;
+  const run=()=>{ const p=Promise.resolve().then(fn).then(v=>{ last=v; at=Date.now(); return v; }).finally(()=>{ if(pend===p) pend=null; }); pend=p; return p; };
+  return force=>{ if(pend) return force?pend.then(run,run):pend; return !force&&Date.now()-at<ttl?Promise.resolve(last):run(); }; }
+export const diagLoad=onceFor(2000,async()=>{ if(!SERVED) return; const r=await api("/api/diagnostics",{}); if(r&&r.ok) Object.assign(DIAG,{level:r.level,days:r.days,errors:r.errors,last24:r.last24,groups:r.groups||[],newest:r.newest||null,refusals:r.refusals||[],repeats:r.repeats||[],loaded:true}); });   /* BL-180: groups and newest feed the errors banner; BL-252: refusals */
 export const diagErr=e=>`<details class="diagerr"><summary><span class="x">${esc(fd(e.at.slice(0,10)))} ${esc(e.at.slice(11,16))}</span> · ${esc(e.area)} · ${esc(e.message)}</summary>${e.detail.length?`<pre class="diagtb">${esc(e.detail.join("\n"))}</pre>`:'<div class="sub">No traceback.</div>'}</details>`;
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0152's place) */
 export function bootDebugLog(){

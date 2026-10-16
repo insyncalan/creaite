@@ -78,6 +78,9 @@ export const ICONS={
   arrowup:'<path d="M12 19V5M5 12l7-7 7 7"/>',
   external:'<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
   chevdown:'<path d="m6 9 6 6 6-6"/>',
+  /* Notes header (#115): the list's quiet double chevrons  */
+  chevsright:'<path d="M13 6l6 6-6 6M5 6l6 6-6 6"/>',
+  chevsleft:'<path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/>',
   calendar:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   filetext:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
   mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-9.1 5.7a2 2 0 0 1-2 0L2 7"/>',

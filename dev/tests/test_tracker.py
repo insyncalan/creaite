@@ -72,6 +72,10 @@ def make_vault():
               "edit_ai.py",                                        # BL-301 D: AI on selected text
               "sneak_peek.py",                                     # BL-322
               "notes_find.py",                                     # BL-301 E: Find updates
+              "client_leak.py", "report_doc.py", "report_server.py",   # v2.1.0 P3
+              "client_check.py",   # v2.1.0 P8
+              "creaite_doc.py",                                    # v2.1.0 P1: creaite's document format
+              "minutes_record.py", "date_words.py",                # v2.1.0 P4: the minutes record, dates in words
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
     shutil.copytree(REPO / "system" / "scripts" / "vendor", scripts / "vendor", ignore=NO_CACHE)

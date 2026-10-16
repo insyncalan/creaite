@@ -93,10 +93,11 @@ def doc_stem(name):
     return re.sub(r"\s+", " ", re.sub(r'[\\/:*?"<>|\x00-\x1f]', " ", name or "")).strip(" .") or "Project"
 
 
-def report_file(day, kind, name):
+def report_file(day, kind, name, ext=".docx"):
     """YYYY-MM-DD Weekly report - <Project name>.docx (or Client report): the project's full name, never its code (BL-101).
-    Files named the earlier way (YYYY-MM-DD Weekly report.docx) are still recognised and never renamed."""
-    return f"{day} {kind} - {doc_stem(name)}.docx"
+    Files named the earlier way (YYYY-MM-DD Weekly report.docx) are still recognised and never renamed. v2.1.0 P1: ext=".html"
+    names a creaite report (creaite_doc.target); the Word drafts keep .docx until P3 retires them."""
+    return f"{day} {kind} - {doc_stem(name)}{ext}"
 
 
 def project(con, code):
@@ -484,7 +485,7 @@ def weekly_data(code, week_ending=None):
     last = rows(con, "SELECT * FROM updates WHERE project = ? AND week_ending < ? ORDER BY week_ending DESC LIMIT 1",
                 code, wk.fri.isoformat())
     wdir = paths.folder(code, "weekly_reports")
-    filed = wdir.is_dir() and any(wdir.glob(f"{wk.fri.isoformat()} Weekly report*.docx"))
+    filed = week_filed(wdir, wk.fri.isoformat())
 
     # Health criteria (dev/dashboard-spec.md): proposed, never set silently
     suggested, reasons_off, reasons_risk = criteria(overdue, raid, nxt, wk.cut, h)
@@ -513,6 +514,11 @@ def weekly_data(code, week_ending=None):
         "vip": weekly_vip(code, [a["owner"] for a in overdue] + [r["owner"] for r in risks[:5]]),   # BL-99
         "promises": _week_promises(con, code, wk),     # BL-125 A: what Alan owes, and the overdue promises he is waiting on
     }
+
+
+def week_filed(wdir, fri):
+    """Whether the week's weekly report is filed: a Word report, or (v2.1.0 P3) a creaite report."""
+    return wdir.is_dir() and any(f.suffix in (".docx", ".html") for f in wdir.glob(f"{fri} Weekly report*"))
 
 
 def _week_signals(code, wk):
@@ -808,7 +814,8 @@ def client_data(code, since=None):
 def _client_period(code, since):
     """(the last client report's date, the period's start): `since`, else the day after the last report, else None."""
     cdir = paths.folder(code, "client_reports")
-    last = max((f.name[:10] for f in cdir.glob("* Client report*.docx")), default=None) if cdir.exists() else None
+    last = max((f.name[:10] for f in cdir.glob("* Client report*") if f.suffix in (".docx", ".html")), default=None) \
+        if cdir.exists() else None                                                     # v2.1.0 P3: a creaite client report too
     start = since or ((date.fromisoformat(last) + timedelta(days=1)).isoformat() if last else None)
     return last, start
 

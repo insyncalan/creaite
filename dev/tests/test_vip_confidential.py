@@ -184,6 +184,102 @@ class ConfidentialClientOutputTests(unittest.TestCase):
                 self.assertIn(f"{ACT} [Sensitive]", text)                                  # internal: there, marked
 
 
+ASK = "Tell the board chair the hiring pause is agreed"
+WHY = "Budget holder wants the hiring pause logged against the statement of work"
+CONF4 = {**CONF, "conversation": "19:chat-conf4@thread.v2", "type": "action", "ask": ASK, "due": "2026-10-20",
+         "owners": ["Mia Hale", "you"], "match": {"id": "", "relation": "update", "why": WHY}}
+
+
+def py(v, code):
+    r = subprocess.run([sys.executable, "-c", "import json, sys; sys.path.insert(0, 'system/scripts'); import sweep\n" + code],
+                       cwd=v.root, capture_output=True, text=True, env={**os.environ, "CREAITE_NOW": NOW})
+    if r.returncode:
+        raise AssertionError(r.stdout + r.stderr)
+    return r.stdout.strip()
+
+
+class ConfidentialThreadFieldsTests(unittest.TestCase):
+    """Part 4 of BL-342: a confidential card keeps its type, ask, due date, owners and matched item (words only, internal) and
+    the match's reason is neutralised; a private card keeps none; a Log click stages only the neutral line, and the wording of
+    the ask and the reason is in no staged proposal, client report, one-pager or database row, even for a client-visible item."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.v = v = ReportVault()
+        populate(v)
+        (v.root / "projects/_portfolio/people-register.md").write_text(REGISTER)
+        (v.root / "system/staging/drafts").mkdir(parents=True, exist_ok=True)
+        with closing(sqlite3.connect(v.root / "system/tracker.db")) as con:
+            cls.item, = con.execute("SELECT id FROM actions WHERE description = 'Sign the statement of work'").fetchone()
+            cls.visible = con.execute("SELECT client_visible FROM actions WHERE id = ?", (cls.item,)).fetchone()[0]
+        record(v, [{**CONF4, "match": {**CONF4["match"], "id": cls.item}},
+                   {**CONF, "conversation": "19:chat-priv@thread.v2", "sensitivity": "private", "ask": ASK, "due": "2026-10-20",
+                    "owners": ["Mia Hale"], "match": {"id": cls.item, "relation": "update", "why": WHY}}], NOW)
+        alerts = vip_file(v)["alerts"]
+        cls.conf = next(a for a in alerts if a.get("confidential"))
+        cls.priv = next(a for a in alerts if a.get("marker") == "private")
+        cls.logged = json.loads(py(v, f"print(json.dumps(sweep.vip_log({cls.conf['id']!r})))"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.v.cleanup()
+
+    def test_the_item_is_client_visible(self):
+        self.assertEqual(self.visible, 1)                                                    # the worst case for a leak
+
+    def test_a_confidential_card_keeps_type_ask_due_owners_and_the_match(self):
+        a = self.conf
+        self.assertEqual((a["type"], a["ask"], a["due"], a["owners"]), ("action", ASK, "2026-10-20", ["Mia Hale", "you"]))
+        self.assertEqual((a["match"]["id"], a["match"]["relation"]), (self.item, "update"))
+        self.assertEqual(a["summary"], GIST)
+
+    def test_the_matchs_reason_is_neutralised_for_a_confidential_card_only(self):
+        self.assertEqual(self.conf["match"]["why"], "The thread moves it forward.")
+        self.assertNotIn(WHY, json.dumps(self.conf))
+        self.assertTrue(self.conf["match"]["t"])                                             # the item's title is the tracker's
+
+    def test_a_private_card_keeps_none_of_the_new_fields(self):
+        a = self.priv
+        self.assertEqual((a["type"], a["ask"], a["due"], a["owners"]), (None, "", None, []))
+        self.assertNotIn("match", a)
+        self.assertNotIn(ASK, json.dumps(a))
+
+    def test_log_stages_only_the_neutral_line(self):
+        self.assertRegex(self.logged["line"], r"^Discussed in a confidential thread, \d\d-10-2026$")
+        specs = [f.read_text() for f in (self.v.root / "system/staging").glob("proposed-*.json")]
+        self.assertTrue(any(self.item in t for t in specs))
+        for text in specs:
+            for secret in (ASK, WHY, GIST, "Budget holder", "hiring", "Board pack", SECRET, "Budget talk", "Falcon"):
+                self.assertNotIn(secret, text)
+
+    def test_nothing_reaches_a_client_report_a_one_pager_or_the_database(self):
+        for f in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json"):       # Alan approves the Log in Review
+            spec = json.loads(f.read_text())
+            for it in spec["items"]:
+                it["decision"] = "approved"
+            f.write_text(json.dumps(spec))
+        self.v.run("apply")
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            row = con.execute("SELECT latest_update, client_visible FROM actions WHERE id = ?", (self.item,)).fetchone()
+            dump = "\n".join(con.iterdump())
+        self.assertIn("Discussed in a confidential thread", row[0])
+        self.assertEqual(row[1], 1)
+        data = self.v.at("client-data", "ABC", "--since", "2026-10-01", script="report.py").stdout
+        said = [dump, data]
+        f = self.v.root / "system/staging/drafts/steerco4.json"
+        for version in ("client", "internal"):
+            f.write_text(json.dumps({"code": "ABC", "version": version, "force": True}))
+            r = subprocess.run([sys.executable, str(self.v.root / "system/scripts/report.py"), "steerco-stage", str(f)],
+                               cwd=self.v.root, env={**os.environ, "CREAITE_NOW": NOW}, capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            spec = json.loads(sorted((self.v.root / "system/staging").glob("proposed-2*-steerco*.json"))[-1].read_text())
+            with zipfile.ZipFile(self.v.root / spec["report"]["draft"]) as z:
+                said.append(re.sub(r"<[^>]+>", " ", z.read("word/document.xml").decode("utf-8")) + r.stdout)
+        for text in said:
+            for secret in (ASK, WHY, GIST, "Budget holder", "hiring pause", "Board pack"):
+                self.assertNotIn(secret, text)
+
+
 class ConfidentialPageTests(unittest.TestCase):
     """Today: the confidential card shows its summary and a "Confidential" mark; an ordinary card has none; no VIP."""
 
@@ -192,12 +288,14 @@ class ConfidentialPageTests(unittest.TestCase):
         from test_insight import chrome
         cls.v = v = vault()
         today = date.today().isoformat()
-        record(v, [{**CONF, "last": f"{today} 08:40"}, {**CHAT, "last": f"{today} 08:30"}], f"{today} 09:30")
+        record(v, [{**CONF, "last": f"{today} 08:40", "type": "action", "ask": ASK, "due": "2026-10-20",
+                    "owners": ["Mia Hale", "you"]}, {**CHAT, "last": f"{today} 08:30"}], f"{today} 09:30")
         run(v, "build_dashboard.py")
         probe = """const out={}; go("today"); renderToday();
           const cards=[...document.querySelectorAll('#tdList>li.td-message')];
           out.cards=cards.map(li=>({t:li.querySelector('.t').textContent, mark:(li.querySelector('.tdmark')||{}).textContent||"",
-            sum:(li.querySelector('.tdsum')||{}).textContent||"", cands:li.querySelectorAll('.tdcand').length,
+            sum:(li.querySelector('.tdsum')||{}).textContent||"", ask:(li.querySelector('.tdask')||{}).textContent||"",
+            who:(li.querySelector('.tdwho')||{}).textContent||"", tag:(li.querySelector('.tdtag')||{}).textContent||"", cands:li.querySelectorAll('.tdcand').length,
             cls:(li.querySelector('.tdmark')||{className:""}).className}));
           out.page=document.getElementById('tdList').textContent; window.OUT=out;"""
         cls.out, cls.errors = chrome(v, probe, "vip-conf")
@@ -216,6 +314,10 @@ class ConfidentialPageTests(unittest.TestCase):
         self.assertEqual(conf["mark"], "Confidential")
         self.assertIn("tag tdctag", conf["cls"])                                             # the existing quiet tag style
         self.assertEqual(conf["cands"], 2)
+        self.assertEqual(conf["tag"], "Action")                                              # the new chips sit beside the mark
+        self.assertIn(ASK, conf["ask"])
+        self.assertIn("Mia Hale, you", conf["who"])
+        self.assertIn("20th October", conf["who"])
         plain = next(c for c in cards if c["sum"] != GIST)
         self.assertEqual(plain["mark"], "")
         self.assertNotIn("confidential conversation", self.out["page"])

@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_live_server import free_port  # noqa: E402
-from test_sweep_alerts import record, run, vip_file, vip_vault  # noqa: E402
+from test_sweep_alerts import TZ, check_since, fast_checks, record, run, vip_file, vip_vault, zoned  # noqa: E402
 
 TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
          "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
@@ -78,7 +78,9 @@ class ConversationServerTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d.setdefault("vip", {})["check_minutes"] = 0.02                                   # every ~1 s
         cfg.write_text(json.dumps(d, indent=2))
-        (v.root / "vip-replies.json").write_text(json.dumps([[CHAT, HELLO], [CHAT, HELLO], [LATER, HELLO]]))
+        fast_checks(v)
+        (v.root / "vip-replies.json").write_text(json.dumps([zoned([CHAT, HELLO]), zoned([CHAT, HELLO]), zoned([LATER, HELLO])]))
+        check_since(v)
         fake = v.root / "fake_claude.py"
         fake.write_text(FAKE)
         fake.chmod(0o755)
@@ -86,7 +88,7 @@ class ConversationServerTests(unittest.TestCase):
         cls.base = f"http://127.0.0.1:{cls.port}"
         cls.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], cwd=v.root,
                                     env={**os.environ, "CREAITE_PORT": str(cls.port), "CREAITE_CLAUDE": str(fake),
-                                         "CREAITE_NOW": "2026-10-08 09:30"},
+                                         "CREAITE_NOW": "2026-10-08 09:30", "CREAITE_TZ_OFFSET": TZ},
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:
@@ -324,7 +326,7 @@ class ConversationPageTests(unittest.TestCase):
         self.assertIn("Example Programme", o["card"])                                        # the matched project, by name
         self.assertIn("Mia's team will take the solution from production to live", o["card"])
         self.assertEqual(o["cands"], [["Action", [["make", "1"], ["dismiss", "1"]]], ["Decision", [["make", "2"], ["dismiss", "2"]]]])
-        self.assertEqual(o["cardButtons"], 0)                                                # the buttons are per item
+        self.assertEqual(o["cardButtons"], 1)                                                # BL-342: Handled on the card; the work-item buttons are per item
         self.assertIn("Mia Hale with Omar Ali: nothing for you", o["quiet"])
         self.assertIn("updated 08:20", o["quiet"])                                           # its own last message
         self.assertEqual(o["quietButtons"], 0)

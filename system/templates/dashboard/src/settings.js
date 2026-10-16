@@ -20,9 +20,9 @@ import { typing } from "./core/keys.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
 import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
-import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
+import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { catalogue, changedOnly, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
+import { catalogue, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
 import { chaseNote, draftAsk, openDraftEmail } from "./drafts.js";
 import { refreshFiles } from "./files.js";
 import { decLate, decLateWords, decRank } from "./meetings.js";
@@ -55,7 +55,6 @@ export const SETOLD={prefs:"essentials",admin:"people",general:"advanced",work:"
 export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
   const sec=SETSECTIONS.find(x=>x.id===(SETALIAS[t]||t)); return sec?{cat:catOf(sec),sec:sec.id}:null; }
 export let SECT=null; shared.SCAT="essentials"; shared.SQ="";                 /* the category, the section to scroll to, the search text */
-export let CHANGED=false;                                                     /* BL-320: Show changed only */
 export const sw=(k)=>`<input type="checkbox" class="switch" data-k="${k}" ${S[k]?"checked":""}>`;   /* BL-279: named by its row's label (row, srName), never its key */
 export const tx=(k,ph)=>`<input type="text" data-k="${k}" value="${esc(S[k])}" placeholder="${ph||""}">`;
 export const nm=(k)=>`<input type="number" data-k="${k}" value="${S[k]}" min="0" style="width:80px">`;
@@ -102,9 +101,9 @@ export const row=(l,c,h)=>{ const id="sr"+(++SRN); return `<div class="srow"><di
 /* ===== end BL-214 ===== */
 export const SETSECTIONS=[
  /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
-    whether a search (or Show changed only) finds anything in it. */
+    whether a search finds anything in it. */
  {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day",
-  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>(!CHANGED||r.changed)&&sqHas(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`,w)); }},
+  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`,w)); }},
  {id:"you",cat:"general",title:"You",kw:"short forms email domains identity owner mine company",
   render:()=>row("Short forms",tx("short","Alan, AC"),"Comma-separated; also matched as you (your name is in Essentials)")
    +row("Own email domains",`<input type="text" data-k="ownDomains" value="${esc((S.ownDomains||[]).join(", "))}" placeholder="example.com">`,"Comma-separated; addresses at these domains count as inside your company, so Draft email warns about anyone outside")},
@@ -149,21 +148,19 @@ export const SETSECTIONS=[
    +row("Mail, Teams and data",esc(`${SWEPT==="never"?"Mail and Teams never swept":`Mail and Teams last swept ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0,16)}`))
    +row("Port",nm("port"),"The creaite app belongs to this port: if you change it, install the app again and reconnect the vault")
    +`<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh","Check now",'id="liveCheck"',"bd")}</div>`},
- {id:"diag",cat:"system",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings"&&shared.SCAT==="system") diagRedraw(); }); }},
+ {id:"diag",cat:"system",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
  {id:"version",cat:"system",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
  {id:"danger",cat:"system",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
   render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")},
  {id:"more",cat:"advanced",title:"Everything else",kw:"everything else advanced",mount:el=>render(h(MoreSettings,{covered}),el),
-  match:w=>{ const c=catalogue.value; return !!c&&c.settings.some(s=>s.tier!=="essentials"&&!covered(s.key)&&(!CHANGED||s.changed)&&sqHas(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`,w)); }}];
+  match:w=>{ const c=catalogue.value; return !!c&&c.settings.some(s=>s.tier!=="essentials"&&!covered(s.key)&&sqHas(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`,w)); }}];
 /* ===== BL-320 (v1.9.2): Settings, calmer, with Health inside =====
    The catalogue (/api/settings/catalogue, stores/settings.js) says, for every setting, whether it differs from its default.
    - Essentials, Health and Advanced's "Everything else" are components (`mount`); they read the catalogue and the page's
-     search and Show changed only themselves.
+     search themselves.
    - Advanced's older cards are drawn as before, then each row that holds a setting gets the "changed" dot and Reset
      (setMark). A row's settings are found from its control's data attribute (ROWKEY); `covered` lists every setting these
      cards show, so "Everything else" lists only the rest.
-   - Show changed only works like a search: the sections with a changed setting, across Essentials and Advanced, each
-     showing only its changed rows.
    - A save on an older card rereads the catalogue (a moment later, once it is written); a save or a Reset anywhere brings
      the page's own copies up to date (setSynced). */
 export const ROWKEY={k:v=>SKEY[v],vipk:v=>"vip."+v,drsw:v=>"drafting."+v,wk:v=>"warnings."+v};
@@ -207,11 +204,10 @@ $("#settingsBody").addEventListener("click",async e=>{ const b=e.target.closest(
   const keys=b.dataset.reset.split(" ").filter(Boolean), name=(b.getAttribute("aria-label")||"").replace(/^Reset | to its default$/g,""); b.disabled=true;
   const r=await resetSettings(keys); if(!r.ok){ b.disabled=false; snack(r.message); return; }
   renderSettings(); snack(`${name}: back to its default`); });
-const chg=/** @type {HTMLInputElement} */($("#setChanged")); if(chg) chg.onchange=()=>{ CHANGED=chg.checked; changedOnly.value=CHANGED; if(CHANGED&&!catalogue.value&&SERVED) loadCatalogue(); renderSettings(); $("#v-settings").scrollTop=0; };
-/* when the catalogue arrives or changes: the older cards' dots follow; Show changed only and a search redraw, as their sections
+/* when the catalogue arrives or changes: the older cards' dots follow; a search redraws, as its sections
    may change (a search typed before the catalogue arrived found nothing in Essentials or Everything else) */
 effect(()=>{ const c=catalogue.value; if(!c||shared.VIEW!=="settings") return;
-  if((CHANGED||shared.SQ.trim())&&!$("#settingsBody").contains(document.activeElement)) renderSettings(); else setMark($("#settingsBody")); });
+  if(shared.SQ.trim()&&!$("#settingsBody").contains(document.activeElement)) renderSettings(); else setMark($("#settingsBody")); });
 /* the rail's count needs a recent check: one a minute after start-up when this browser hasn't checked for a day */
 if(SERVED&&Date.now()-lastCheckAt()>24*3600*1000) window.setTimeout(()=>{ if(viaServer()) checkHealth(); },60*1000);
 }
@@ -219,36 +215,33 @@ export const setCard=s=>s.mount?`<div class="setmount" id="set-${s.id}" data-sec
 export const catName=id=>(SETCATS.find(c=>c[0]===id)||[])[1]||"";
 /* Search: sections and rows whose label, help text or keywords hold every word typed, across all categories. A section
    whose title or category matches shows all its rows; otherwise it shows just the rows that match, or all of them when
-   only its keywords matched (for example "ignore rules" or "diagnostics"). A mounted section answers for itself (`match`).
-   Show changed only (BL-320) narrows the same way to the rows with the dot, in Essentials and Advanced. */
+   only its keywords matched (for example "ignore rules" or "diagnostics"). A mounted section answers for itself (`match`). */
 export const sqWords=()=>shared.SQ.toLowerCase().split(/\s+/).filter(Boolean), sqHas=(txt,w)=>w.every(x=>txt.toLowerCase().includes(x));
 export const rowText=r=>(r.classList.contains("srow")&&r.firstElementChild&&r.firstElementChild!==r.lastElementChild?r.firstElementChild:r).textContent;
 export let SMATCH=new Set();
-export const rowOK=(r,w)=>sqHas(rowText(r),w)&&(!CHANGED||r.classList.contains("chg"));
+export const rowOK=(r,w)=>sqHas(rowText(r),w);
 export function setSearchSections(){ const w=sqWords(); SMATCH=new Set(); const t=document.createElement("div");
-  return SETSECTIONS.filter(s=>{ if(CHANGED&&!["essentials","advanced"].includes(catOf(s))) return false;
-    if(s.mount) return s.match(w);
-    if(!CHANGED&&sqHas(`${s.title} ${catName(catOf(s))} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
+  return SETSECTIONS.filter(s=>{ if(s.mount) return s.match(w);
+    if(sqHas(`${s.title} ${catName(catOf(s))} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
     putHTML(t,raw(setCard(s))); setMark(t); const rows=[...t.querySelectorAll(".srow,.igrow")];
-    return (!CHANGED&&sqHas(s.kw,w))||rows.some(r=>rowOK(r,w)); }); }
-export function setApplySearch(){ if(!shared.SQ.trim()&&!CHANGED) return; const w=sqWords();
+    return sqHas(s.kw,w)||rows.some(r=>rowOK(r,w)); }); }
+export function setApplySearch(){ if(!shared.SQ.trim()) return; const w=sqWords();
   $$("#settingsBody [data-sec]").forEach(c=>{ if(c.hasAttribute("data-mount")||SMATCH.has(c.dataset.sec)) return; const rows=[...c.querySelectorAll(".srow,.igrow")], hit=rows.filter(r=>rowOK(r,w));
-    rows.forEach(r=>{ r.hidden=hit.length||CHANGED?!hit.some(h=>h===r||h.contains(r)):false; }); }); }      /* a row inside a matching row (the ignore rules) stays */
+    rows.forEach(r=>{ r.hidden=hit.length?!hit.some(h=>h===r||h.contains(r)):false; }); }); }      /* a row inside a matching row (the ignore rules) stays */
 export let MOUNTS=[];
 export function setUnmount(){ MOUNTS.forEach(el=>render(null,el)); MOUNTS=[]; }
 export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)) shared.SCAT="essentials";
-  const searching=!!shared.SQ.trim()||CHANGED;
-  query.value=shared.SQ.trim(); changedOnly.value=CHANGED;
-  const chg=/** @type {HTMLInputElement} */($("#setChanged")); if(chg) chg.checked=CHANGED;
+  const searching=!!shared.SQ.trim();
+  query.value=shared.SQ.trim();
   if(SERVED&&!catalogue.value) loadCatalogue();
   drawTabs($("#setcatsHost"),{id:"setcats",className:"setcats",label:"Settings categories",vertical:true,controls:"settingsBody",
     items:SETCATS.map(([id,t])=>({id,label:t,data:{scat:id}})),selected:searching?"":shared.SCAT,onSelect:setOpen});   /* BL-316: the Tabs block */
-  putHTML($("#setcatsel"),raw((searching?`<option value="">${CHANGED&&!shared.SQ.trim()?"Changed settings":"Search results"}</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
+  putHTML($("#setcatsel"),raw((searching?`<option value="">Search results</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
   const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT);
   const head=s=>searching?(s.mount&&s.id!=="more"?"":`<div class="setcrumb">${esc(catName(catOf(s)))} › ${esc(s.id==="more"?OLDCATS.advanced:s.title)}</div>`)
     :shared.SCAT==="advanced"&&OLDCATS[s.cat==="advanced"?"advanced":s.cat]&&(s===secs.find(x=>x.cat===s.cat))?`<h2 class="setgroup">${esc(OLDCATS[s.cat])}</h2>`:"";
   setUnmount();
-  const none=CHANGED&&!shared.SQ.trim()?(catalogue.value?"Nothing is changed from its default.":"Reading your settings…"):`No settings match “${shared.SQ.trim()}”${CHANGED?" among the changed ones":""}.`;
+  const none=`No settings match “${shared.SQ.trim()}”.`;
   putHTML($("#settingsBody"),!secs.length?html`<p class="sub setnone" role="status">${none}</p>`:html`<div class="setstack">${raw(secs.map(s=>head(s)+setCard(s)).join(""))}</div>`);
   secs.forEach(s=>{ if(s.mount){ const el=document.getElementById("set-"+s.id); if(el){ MOUNTS.push(el); s.mount(el); } } else if(s.after) s.after(); });
   setMark($("#settingsBody"));
@@ -276,9 +269,10 @@ export function showSaved(){ if(!SETFLASH) return; const left=2500-(Date.now()-S
    ("releases" or "downloads"), never a path. Nothing installs without the second, confirming click. */
 export const vnum=v=>String(v||"0.0.0").split(".").reduce((a,x)=>a*1000+Number(x||0),0);
 export const fdt=at=>at?`${fd(at.slice(0,10))} ${at.slice(11,16)}`:"";
-export async function drawUpdates(){ const c=document.getElementById("updCard"); if(!c) return;
+const updStatus=onceFor(2000,()=>api("/api/update/status"));   /* #96 */
+export async function drawUpdates(force){ const c=document.getElementById("updCard"); if(!c) return;
   if(!viaServer()){ putHTML(c,html`<h2>creaite version</h2><p class="sub">Needs the live server.</p>`); return; }
-  const r=await api("/api/update/status"); if(!document.getElementById("updCard")) return;
+  const r=await updStatus(force); if(!document.getElementById("updCard")) return;
   if(!r.ok){ putHTML(c,html`<h2>creaite version</h2><p class="sub">${(r.message||"Couldn't read the version.")}</p>`); return; }
   const src=r.releases&&(!r.downloads||vnum(r.releases.version)>=vnum(r.downloads.version))?"releases":(r.downloads?"downloads":null);
   const z=src&&r[src], newer=!!z&&vnum(z.version)>vnum(r.installed);
@@ -297,7 +291,7 @@ export async function updUpload(f){ if(!f) return;
   updOut('<p class="sub">Copying to system/releases…</p>');
   const data=await new Promise((ok,no)=>{ const rd=new FileReader(); rd.onload=()=>ok(String(rd.result).split(",")[1]||""); rd.onerror=no; rd.readAsDataURL(f); });
   const r=await api("/api/update/upload",{name:f.name,data}); if(!r.ok){ updOut(updMsg(r.message,true)); return; }
-  await drawUpdates(); updReview("releases",false); }
+  await drawUpdates(true); updReview("releases",false); }
 export async function updReview(source,reinstall){ updOut('<p class="sub">Checking the release…</p>');
   const r=await api("/api/update/inspect",{source,reinstall}); if(!r.ok){ updOut(updMsg(r.message,true)); return; }
   const p=r.plan, n=(a,w)=>`${a.length} ${w}${a.length===1?"":"s"}`, adds=Object.entries(p.settings||{});
@@ -313,12 +307,12 @@ export async function updReview(source,reinstall){ updOut('<p class="sub">Checki
   const nc=document.getElementById("updNotesCopy"); if(nc) nc.onclick=()=>(navigator.clipboard?navigator.clipboard.writeText(p.notes):Promise.reject()).then(()=>{ copied(nc); snack("Copied"); },()=>snack("Couldn't copy"));   /* BL-196: the original text */
   document.getElementById("updGo").onclick=async e=>{ e.currentTarget.disabled=true; e.currentTarget.textContent="Installing…";
     const res=await api("/api/update/install",{source,reinstall});
-    await drawUpdates(); updOut(updMsg(res.message,!res.ok)); snack(res.ok?`creaite ${p.to} installed; restart the live server`:"The update didn't install"); }; }
+    await drawUpdates(true); updOut(updMsg(res.message,!res.ok)); snack(res.ok?`creaite ${p.to} installed; restart the live server`:"The update didn't install"); }; }
 export async function updUndo(btn,keep){ if(!btn.dataset.armed){ btn.dataset.armed="1"; btn.textContent="Confirm undo"; btn.classList.add("danger"); return; }
   btn.disabled=true; const r=await api("/api/update/undo",{keep_database:keep});
   if(!r.ok&&/--keep-database/.test(r.message||"")){ updOut(updMsg("The database has changed since the update; undoing it would lose those changes.",true)+'<div style="margin-top:8px"><button class="btn" id="updKeep">Undo engine and settings only</button></div>');
     document.getElementById("updKeep").onclick=e=>{ e.currentTarget.dataset.armed="1"; updUndo(e.currentTarget,true); }; btn.disabled=false; return; }
-  await drawUpdates(); updOut(updMsg(r.message,!r.ok)); if(r.ok) snack("Update undone; restart the live server"); }
+  await drawUpdates(true); updOut(updMsg(r.message,!r.ok)); if(r.ok) snack("Update undone; restart the live server"); }
 export function renderMgr(kind){ if(kind==="ws"&&D.ws_table&&(wsTable()||![...A,...R].some(x=>x.ws))){ drawWsMgr(); return; }   /* not yet migrated: BL-57's lists */
   const isP=kind==="people", L=isP?PEOPLE:WSL; const names=isP?[...new Set([...A.map(a=>a.o),...R.map(r=>r.o),...L.added,...L.hidden])].filter(n=>n&&n!=="TBC"):[...new Set([...wsUsed(),...L.added.filter(k=>k.includes("|")),...L.hidden.filter(k=>k.includes("|"))])];
   const on=(x,k)=>{ const [pc,nm]=wsParts(k); return x.p===pc&&x.ws===nm; };
@@ -810,11 +804,17 @@ export async function saveIgnore(list,msg){ if(!await writeSettings({"sweep.igno
    each unseen alert opens Today's Needs attention, above everything else, until Alan presses Seen. A count shows on
    Today in the rail and in the window title; a browser notification (asked for once) when one arrives while the page
    is open. VIP-sourced proposals sort first in Review. Nothing leaves the laptop. */
-export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet);
+/* BL-342 Part 5: a card with a promise of Alan's to add (or one staged) or a promise that looks kept stays a full card, even
+   when he replied last (his promise is usually in that reply) or the thread is otherwise quiet, until he acts on it */
+const vipOffers=/** @param {any} a */a=>a.marker!=="private"&&((a.promises||[]).some(/** @param {any} p */p=>p&&(p.state==="offered"||p.state==="staged"))||!!(a.kept&&a.kept.id&&a.kept.open!==false));
+export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&(vipOffers(a)||(!a.quiet&&a.state!=="replied")));
 /* BL-334: a conversation with nothing for Alan is one quiet line on Today (no buttons, no count), shown the day it was updated */
-export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&String(a.updated||"").slice(0,10)===TODAY);
+export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&a.state!=="replied"&&!vipOffers(a)&&String(a.updated||"").slice(0,10)===TODAY);
+/* BL-342: a thread Alan has answered (his own message after the last one) is one quiet "Replied" line the day he answered; a later message from someone else opens it again */
+export const VIPR=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.state==="replied"&&!vipOffers(a)&&String(a.replied_at||"").slice(0,10)===TODAY);
 /** what changed in the alerts, for a redraw: an updated conversation keeps its ID */
-const vipSig=()=>(VIPD().alerts||[]).filter(a=>!a.seen).map(a=>`${a.id}@${a.updated||""}`).join();
+const vipSig=()=>(VIPD().alerts||[]).map(a=>`${a.id}@${a.updated||""}@${a.seen?1:0}@${a.state||""}@${(a.match&&a.match.count)||0}`
+  +`@${(a.promises||[]).map(/** @param {any} p */p=>`${p.key}:${p.state}`).join("+")}@${a.kept?`${a.kept.id}:${a.kept.staged?1:0}:${a.kept.open===false?0:1}`:""}`).join();   /* BL-342 Part 5 */
 export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[personOf(n)]||""; };
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
@@ -832,9 +832,43 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"), it=cand&&a?(a.candidates||[]).find(/** @param {any} x */x=>x.n===cand):null;
   if(it){ it.dismissed=r.at||nowStamp(); if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=r.at||nowStamp(); }   /* BL-334: that item only; nothing is staged */
   else if(a) a.seen=r.at||nowStamp();
-  vipBadge(); renderToday(); back();
+  await vipPoll(); vipBadge(); renderToday(); back();   /* BL-342 N1: the server's counts for the other cards on the same item */
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+/* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
+export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
+  const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"handled");
+  if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } await vipPoll(); vipBadge(); renderToday(); back();
+  snack("Marked handled",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
+    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+/* BL-342 Part 2: Chase on a thread matched to an item that is waiting on someone else: BL-224's Draft email in Chase mode for that
+   item's owner, the item ticked. Nothing is sent or written; the builder falls back to an update request when the item isn't past its date. */
+export function alertChase(id){ const a=(VIPD().alerts||[]).find(x=>x.id===id), m=a&&a.match, it=m&&m.id&&REC("actions",m.id);
+  if(!it){ snack("That item isn't open any more"); return; }
+  const owner=String(it.o||"");
+  if(!owner||!PERS().some(y=>y.name===owner)){ snack(`${owner||"The owner"} isn't on the People page, so there's no one to draft to`); return; }
+  openDraftEmail(owner,"chase",m.id); }
+export async function alertLog(id){ if(!viaServer()){ snack("Log needs the live server"); return; }
+  const r=await api("/api/alerts/log",{id}); if(!r.ok){ snack(r.message||"Not logged"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a&&a.match) a.match.logged=r.logged;
+  await reloadData(); renderToday(); snack(r.message||"Staged for Review"); }
+/* BL-342 Part 3 B, step 9: "Looks done: close <ID>" stages one pending close of the matched action for Review (nothing is
+   applied); Undo takes it back while it is still pending. The page's data is reloaded so the Review count follows. */
+export async function alertClose(id,undo){ if(!viaServer()){ snack("Closing needs the live server"); return; }
+  const r=await api("/api/alerts/close",{id,...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not staged"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a) a.closes=r.closes;
+  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Staged for Review"),undo?undefined:()=>alertClose(id,true)); }
+/* BL-342 Part 5: Add a promise, Dismiss a promise and Looks kept: mark kept, each by the card's ID and the promise's key (never
+   its position or words). Add and mark kept stage one pending proposal for Review (nothing is applied) and Undo takes it back
+   while it is still pending; Dismiss stages nothing, and its Undo puts the promise back. The page's data is reloaded, so the
+   Review count follows. */
+/** data-alertdo → [what, undo] for /api/alerts/promise */
+const PROMISEDO=/** @type {Record<string,[string,boolean]>} */({promise:["add",false],promiseundo:["add",true],promisedismiss:["dismiss",false],kept:["kept",false],keptundo:["kept",true]});
+export async function alertPromise(id,what,key,undo){ if(!viaServer()){ snack("Promises need the live server"); return; }
+  const r=await api("/api/alerts/promise",{id,what,key:key||"",...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not staged"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a){ a.promises=r.promises; a.kept=r.kept; }
+  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Staged for Review"),undo?undefined:()=>alertPromise(id,what,key,true)); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
    leaves the message as it was. */
@@ -938,7 +972,10 @@ export function vipSectionHtml(){ const v=VIPD();
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
-  if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
+  if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id); else if(b.dataset.alertdo==="chase") alertChase(b.dataset.id);
+  else if(b.dataset.alertdo==="close") alertClose(b.dataset.id,false); else if(b.dataset.alertdo==="closeundo") alertClose(b.dataset.id,true);
+  else if(PROMISEDO[b.dataset.alertdo||""]){ const [w,u]=PROMISEDO[b.dataset.alertdo||""]; alertPromise(b.dataset.id,w,b.dataset.pkey||"",u); }   /* BL-342 Part 5 */
+  else if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
   else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */
 PKDRAW.push(alertPeekDraw);
@@ -979,14 +1016,14 @@ export function bootSettings0155(){
 /* BL-180 (sprint-peek-new): the header's "n errors in the last day" link is gone; the errors banner below the header replaces it */
 document.addEventListener("click",async e=>{
   if(e.target.closest("[data-diag]")){ e.preventDefault(); go("settings","diag"); return; }
-  if(e.target.closest("#diagRefresh")){ await diagLoad(); diagRedraw(); return; }
+  if(e.target.closest("#diagRefresh")){ await diagLoad(true); diagRedraw(); return; }
   if(e.target.closest("#diagOpen")){ openPath("system/logs"); return; }
   if(e.target.closest("#diagCopy")){ const r=await api("/api/diagnostics",{report:true}); if(!r||!r.ok){ snack("Couldn't build the report"); return; }
     try{ await navigator.clipboard.writeText(r.report); copied(e.target.closest("#diagCopy")); snack("Diagnostics copied: paste them into the chat"); }
     catch(err){ putHTML($("#diagOut"),html`<textarea id="diagReport" readonly aria-label="Diagnostics report"></textarea><div class="sub">Select all and copy: the browser wouldn't copy it for you.</div>`); $("#diagReport").value=r.report; $("#diagReport").select(); } } });
 document.addEventListener("change",async e=>{ const el=e.target; if(el.id!=="diagLevel") return; const was=DIAG.level;
   if(await writeSettings({"logging.level":el.value})){ DIAG.level=el.value; snack(`Log level saved: ${el.value}`); } else el.value=was; });
-if(SERVED) diagLoad().then(()=>{ status(); if(shared.VIEW==="settings") renderSettings(); });
+if(SERVED) diagLoad().then(()=>{ status(); if(shared.VIEW==="settings") renderSettings(); });   /* #96: this redraw is needed (a page restored onto Settings drew before the Set-up card was registered); its reads are now shared */
 }
 /* ===== BL-165 (sprint-polish-2) ===== wide tables show that they scroll. Every table frame (.tbl) in the page whose table is wider
    than the frame gets the cue: a fade at the right edge and a "more columns →" button (it scrolls right by most of the frame),

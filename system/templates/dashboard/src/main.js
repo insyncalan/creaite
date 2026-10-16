@@ -53,6 +53,8 @@ export * from "./components/Dialog.jsx";
 export * from "./components/dialogs/PageDialogs.jsx";   /* BL-316: the page's dialogs, each a Dialog */
 export * from "./components/Chip.jsx";
 export * from "./components/TextEditor.jsx";   /* BL-301 A: the one editor as a block */
+export * from "./components/report/Sheet.jsx";   /* v2.1.0 P5: the A4 sheet */
+export * from "./components/report/sheetLib.js";
 
 export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft chase in the peek */
 export * from "./components/Tabs.jsx";
@@ -93,6 +95,10 @@ export * from "./stores/notes.js";
 export * from "./components/notes/FindUpdates.jsx";   /* BL-301 E: Find updates, the panel beside a note */
 export * from "./components/notes/DeleteNote.jsx";   /* #124: Delete note, its confirm box and the card */
 export * from "./stores/findUpdates.js";
+export * from "./stores/reporting.js";   /* BL-337: Reports and the reporting space */
+export * from "./components/reporting/ReportingSpace.jsx";
+export * from "./components/reporting/ReportsPage.jsx";
+export * from "./components/reporting/ReportingCard.jsx";
 
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
 import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAsk0096, bootAsk0098, bootAsk0101, bootAsk0102, bootAsk0105, bootAsk0107, bootAsk0109, bootAsk0113, bootAsk0117, bootAsk0118, bootAsk0119, bootAsk0120, bootAsk0207, bootAsk0208, reattach } from "./ask.js";
@@ -113,7 +119,7 @@ import { bootNotes } from "./notes.js";
 import { bootHelp0091, bootHelp0158, bootHelp0161, bootHelp0162, firstHelp } from "./help.js";
 import { bootIntake0053, bootIntake0134, bootIntake0135, bootIntake0136, bootIntake0137, inboxBadge } from "./intake.js";
 import { bootPrepShape } from "./stores/prepShape.js";
-import { bootMeetings0125, bootMeetings0126, bootMeetings0143, bootMeetings0144, bootMeetings0145, bootMeetings0201, bootMeetings0206, openFromAddress } from "./meetings.js";
+import { bootMeetings0125, bootMeetings0126, bootMeetings0143, bootMeetings0144, bootMeetings0145, bootMeetings0201, openFromAddress } from "./meetings.js";
 import { bootMilestones0051, bootMilestones0172, bootMilestones0184, bootMilestones0185, bootMilestones0186, bootMilestones0188, bootMilestones0189, bootMilestones0190, bootMilestones0191, bootMilestones0192 } from "./milestones.js";
 import { bootPanel0050, bootPanel0165, bootPanel0166, bootPanelChase, bootPanel0167, bootPanel0168, bootPanel0169, bootPanel0171, bootPanel0173, bootPanel0174, bootPanel0175, bootPanel0176, bootPanel0177, bootPanel0178, bootPanel0179, bootPanel0181, bootPanel0182, bootPanel0197, bootPanel0198, bootPanel0199, bootPanel0200 } from "./panel.js";
 import { bootProjects0029, bootProjects0054, bootProjects0055, bootProjects0056, bootProjects0058, bootProjects0059, bootProjects0081, bootProjects0083, bootProjects0124 } from "./projects.js";
@@ -234,7 +240,7 @@ status(); renderBadge(); inboxBadge(); vaultInit(); checkLive(); setInterval(che
 shared.HADHASH=!!location.hash&&!/^#openfile=/.test(location.hash);
 openFromAddress();                                                       /* BL-126: clears the address, so what follows is a plain start */
 shared.HASH0=location.hash;   /* BL-186: the address as opened (the Milestones page is restored once its block has run) */
-restoreNav(/^#?(milestones|meeting)=/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
+restoreNav(/^#?milestones=/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
 firstHelp();
 shared.LOADING=false;
 bootDebugLog();
@@ -288,7 +294,6 @@ bootDrafts0202();
 bootDrafts0203();
 bootDrafts0204();
 bootActivity0205();
-bootMeetings0206();
 bootAsk0207();
 bootAsk0208();
 bootReview0209();

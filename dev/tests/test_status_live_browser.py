@@ -38,6 +38,13 @@ class ExecBrowser(LiveBrowserCase):
         b.click("#v-cockpit .curcard [data-gen]")
         b.wait("document.getElementById('genDlg').open")
 
+    def pick(self, trigger, label):
+        """#110: choose from one of the dialog's menus (the Picker block's list), by the option's words."""
+        b = self.b
+        b.click(trigger)
+        b.wait("document.querySelector('.pkpop [role=option]')")
+        b.eval(f"[...document.querySelectorAll('.pkpop [role=option]')].find(o=>o.textContent.trim().startsWith({label!r})).click()")
+
     def open_editor(self, html):
         b = self.b
         b.eval("go('cockpit','ABC')")
@@ -53,24 +60,30 @@ class ExecBrowser(LiveBrowserCase):
     def test_the_dialog_offers_audience_and_length_with_internal_and_standard_chosen(self):
         self.open_dialog()
         b = self.b
-        self.assertEqual(b.eval("[...document.querySelectorAll('#genAud [aria-pressed=true]')].map(x=>x.dataset.ga)"), ["internal"])
-        self.assertEqual(b.eval("[...document.querySelectorAll('#genLen [aria-pressed=true]')].map(x=>x.dataset.gl)"), ["standard"])
-        self.assertEqual(b.eval("[...document.querySelectorAll('#genLen [data-gl]')].map(x=>x.textContent)"), ["Short", "Standard", "Fuller"])
+        self.assertEqual(b.eval("document.getElementById('genAud').dataset.v"), "internal")
+        self.assertEqual(b.eval("document.getElementById('genLen').dataset.v"), "standard")
+        self.assertEqual(b.eval("document.querySelector('#genAud .gv').textContent"), "Internal")
+        self.assertEqual(b.eval("document.querySelector('#genLen .gv').textContent"), "Standard")
+        b.click("#genLen")
+        b.wait("document.querySelector('.pkpop [role=option]')")
+        self.assertEqual(b.eval("[...document.querySelectorAll('.pkpop [role=option]')].map(x=>[x.textContent.trim(),x.getAttribute('aria-selected')])"),
+                         [["Short", "false"], ["Standard", "true"], ["Fuller", "false"]])
+        b.key("Escape")
 
     def test_client_safe_says_what_it_uses_and_leaves_the_sources_out(self):
         self.open_dialog()
         b = self.b
-        b.click("#genAud [data-ga=client]")
-        self.assertIn("client-visible", b.eval("document.getElementById('genAudNote').textContent"))
+        self.pick("#genAud", "Client-safe")
+        self.assertIn("client-visible", b.eval("document.getElementById('genHint').textContent"))
         self.assertTrue(b.eval("[...document.querySelectorAll('#genSrc input')].every(i=>i.disabled)"))
-        b.click("#genAud [data-ga=internal]")
+        self.pick("#genAud", "Internal")
         self.assertFalse(b.eval("[...document.querySelectorAll('#genSrc input')].some(i=>i.disabled)"))
 
     def test_the_choice_is_sent_and_remembered(self):
         self.open_dialog()
         b = self.b
-        b.click("#genAud [data-ga=client]")
-        b.click("#genLen [data-gl=short]")
+        self.pick("#genAud", "Client-safe")
+        self.pick("#genLen", "Short")
         b.click("#genGo")
         b.wait("document.getElementById('curEd') && document.getElementById('genNotes') && !document.querySelector('#genNotes button[data-chk]:only-child')", 30)
         p = self.prompt()

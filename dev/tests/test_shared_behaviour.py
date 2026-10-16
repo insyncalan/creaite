@@ -83,14 +83,51 @@ def _notes_ai(b):
     b.pump(0.3)
 
 
+def _notes_session(b):
+    """A Working session note open (its header has the Date box and its calendar pop-up, #115). Made once through the real controls."""
+    origin = b.eval("location.origin")
+    if NOTE.get("origin") != origin:
+        NOTE.clear()
+        NOTE["origin"] = origin
+    if "session" not in NOTE:
+        _notes_open(b)
+        b.click("#notesNew")
+        b.wait("document.getElementById('newNoteDlg').open")
+        b.eval("(()=>{ const i=document.getElementById('nnTitle'); i.value='Session check'; i.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.eval("document.querySelector('#newNoteDlg input[value=\"working-session\"]').click()")
+        b.click("#nnMake")
+        b.wait("noteCur.value&&noteCur.value.note.title==='Session check'&&!!document.getElementById('noteDateBtn')", 15)
+        NOTE["session"] = b.eval("noteCur.value.path")
+    else:
+        b.eval(f"go('notes','ABC'); location.hash='#notes=ABC&n='+encodeURIComponent({json.dumps(NOTE['session'].rsplit('/', 1)[1])})")
+        b.wait(f"noteCur.value&&noteCur.value.path==={json.dumps(NOTE['session'])}&&!!document.getElementById('noteDateBtn')", 15)
+
+
 SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
 SCREENS["notes"] = (_notes_open, "!!document.getElementById('notesNew')", "#v-notes")
 SCREENS["notes-ai"] = (_notes_ai, "!!document.querySelector('#aiLayer .aibar')", "#aiLayer")
-us.SCREENS["notes"], us.SCREENS["notes-ai"] = SCREENS["notes"], SCREENS["notes-ai"]
-ONLY = {"shell": ".rail,header.bar"}   # the shell's own controls, not the page inside it
+SCREENS["notes-session"] = (_notes_session, "!!document.getElementById('noteDateBtn')", "#v-notes")
+us.SCREENS["notes"], us.SCREENS["notes-ai"], us.SCREENS["notes-session"] = SCREENS["notes"], SCREENS["notes-ai"], SCREENS["notes-session"]
+# The sample vault has no logo files: the weekly draft is answered with a firm and a client logo here, so the report's Logos menu
+# (drawn only when there is more than one) shows. Nothing is written.
+SCREENS["weekly-logos"] = ("(()=>{ if(!window.__wrLogos){ window.__wrLogos=1; const f=window.fetch.bind(window); window.fetch=(u,o)=>{ const r=f(u,o); "
+                           "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"weekly\"')) return r; "
+                           "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,logos:[{kind:'firm',path:'logos/firm.png'},{kind:'client',path:'logos/client.png'}]}),"
+                           "{headers:{'Content-Type':'application/json'}})); }; } go('weekly',{code:'ABC'}); })()",
+                           "document.querySelector('#v-weekly [data-wrlogos]')", "#v-weekly")
+# The sample has no approved internal week, which keeps Check and export disabled: the client draft is answered as ready here
+# (nothing is written; the check and the export still go to the server, and Esc is all the script presses).
+SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; const f=window.fetch.bind(window); window.fetch=(u,o)=>{ const r=f(u,o); "
+                           "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
+                           "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
+                           "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-clientreport [data-crcheck]:not([disabled])')", "#v-clientreport")
+EXTRA = ("clientreport", "weekly-logos")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
+# The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
+# is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
+ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
 # Still on the screen (settle goes back when not): its ready test, except where that test is a popup being open.
 ON_SCREEN = {"work-display": "VIEW==='work'"}
 # Controls whose choices are what the list shows, never a saved change: the filter bars and Work's views. The Undo check
@@ -104,7 +141,7 @@ SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-di
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
                 "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones",
-                "archive-ask": "Settings", "notes": "Core", "notes-ai": "Core"}
+                "archive-ask": "Settings", "notes": "Core", "notes-ai": "Core", "notes-session": "Core"}
 
 
 def screen_area(name):
@@ -352,6 +389,15 @@ class Driver:
     def state(self, i):
         return self.b.eval(f"SB.state({i})")
 
+    def goto(self, name):
+        if name in EXTRA:
+            us.SCREENS[name] = SCREENS[name]
+        try:
+            super().goto(name)
+        finally:
+            if name in EXTRA:
+                us.SCREENS.pop(name, None)
+
     def settle(self, name):
         """Close whatever the last control left open; go back to the screen when something is still open."""
         b = self.b
@@ -521,11 +567,61 @@ class SharedBehaviour(Driver, us.UiSweepCase):
             bad.append("Esc doesn't return focus to the control")
         return bad
 
+    def mnapp(self):
+        """v2.1.0 P7: Approve minutes (a plain button, no aria-haspopup) opens #mnApprove: Enter on it opens it with focus in it;
+        Esc closes it and focus is back on the button. Nothing is approved."""
+        b = self.b
+        self.goto("minutes")
+        b.eval(PROBE + ";true")
+        b.wait("document.querySelector('#mnApproveBtn:not([disabled])')", 15)
+        b.eval("document.getElementById('mnApproveBtn').focus()")
+        self.press("Enter", 0.5)
+        try:
+            b.wait("document.getElementById('mnApprove')?.open", 20)
+        except TimeoutError:
+            return ["Enter opens nothing"]
+        self.seen.append({"ids": ["mnApprove"], "labels": [], "classes": []})
+        bad = []
+        if not b.eval("document.getElementById('mnApprove').contains(document.activeElement)"):
+            bad.append("focus stays outside the dialog")
+        self.press("Escape", 0.4)
+        if b.eval("document.getElementById('mnApprove').open"):
+            bad.append("Esc leaves it open")
+        elif not b.eval("document.activeElement === document.getElementById('mnApproveBtn')"):
+            bad.append("Esc doesn't return focus to the control")
+        return bad
+
+    def crleft(self):
+        """v2.1.0 P8: the client report's Check and export (a plain button) opens #crLeftDlg after the left-out check: Enter on
+        it opens it with focus in it (Cancel); Esc closes it and focus is back on the button. Nothing is exported."""
+        b = self.b
+        self.goto("clientreport")
+        b.eval(PROBE + ";true")
+        b.eval("document.querySelector('#v-clientreport [data-crcheck]').focus()")
+        self.press("Enter", 0.5)
+        try:
+            b.wait("document.getElementById('crLeftDlg')?.open", 20)
+        except TimeoutError:
+            return ["Enter opens nothing"]
+        self.seen.append({"ids": ["crLeftDlg"], "labels": [], "classes": []})
+        b.pump(1.0)
+        bad = []
+        if not b.eval("document.getElementById('crLeftDlg').contains(document.activeElement)"):
+            bad.append("focus stays outside the dialog")
+        self.press("Escape", 0.4)
+        if b.eval("document.getElementById('crLeftDlg').open"):
+            bad.append("Esc leaves it open")
+        elif not b.eval("document.activeElement === document.querySelector('#v-clientreport [data-crcheck]')"):
+            bad.append("Esc doesn't return focus to the control")
+        return bad
+
     # The dialogs no aria-haspopup control opens, each driven by its own script: (the screen that must be in the run, the
     # script, its name in the report and the expected-failures list, its area, what it opens).
     KEYED = (("today", "cmdk", "cmdk dialog#cmdk", "Shell", "⌘K", "Search or jump to"),
              ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"),
-             ("notes", "ndel", "ndel dialog#noteDelDlg", "Core", "Delete note…", "Delete note?"))
+             ("notes", "ndel", "ndel dialog#noteDelDlg", "Core", "Delete note…", "Delete note?"),
+             ("minutes-approve", "mnapp", "mnapp dialog#mnApprove", "minutes", "Approve minutes", "Approve the minutes"),
+             ("clientreport", "crleft", "crleft dialog#crLeftDlg", "clientreport", "Check and export", "Left out of the client's report"))
 
     def keyed_dialogs(self, only, report, found):
         for screen, script, sig, area, how, label in self.KEYED:
@@ -548,7 +644,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
                 if bad:
                     found.add((screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
         self.keyed_dialogs(only, report, found)
-        msg = judge("keys", found, set(only) | {"cmdk", "parch", "ndel"})
+        msg = judge("keys", found, set(only) | {"cmdk", "parch", "ndel", "mnapp", "crleft"})
         if os.environ.get("SB_ONLY"):
             self.assertFalse(msg, "\n".join(msg))
             return                                   # only some screens: what they didn't reach isn't a finding

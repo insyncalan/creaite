@@ -71,7 +71,7 @@ class TheScript(unittest.TestCase):
         self.assertNotIn("checklist", ids["current"])                     # Current state takes no checklists
         self.assertFalse({"format", "checklist", "summary"} & set(ids["plain"]))   # plain text stays plain
         self.assertTrue({"formal", "warmer"} <= set(ids["email"]))         # the Draft email adds More formal and Warmer
-        self.assertTrue(all(L[-1] == "custom" for L in ids.values()))      # "Or say what you want…" last everywhere
+        self.assertTrue(all(L[-1] == "custom" for L in ids.values() if L))      # "Or say what you want…" last everywhere
         page = (REPO / "system/templates/dashboard/src/stores/aiEdit.js").read_text()
         block = re.search(r"AI_PLACES = /\*\* .*? \*/ \(\{(.*?)\}\);", page, re.S).group(1)
         page_ids = {m.group(1): re.findall(r'"(\w+)"', m.group(2)) for m in re.finditer(r"(\w+): \[(.*?)\]", block)}

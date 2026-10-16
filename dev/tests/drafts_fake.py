@@ -56,6 +56,9 @@ elif p.startswith("Write the project's status as"):
              "teams": "Quick update: UAT is at risk because data access is late. [S1]",
              "email": "UAT is at risk because data access is late. [S1] We are escalating it this week. [S2]",
              "steering": "**UAT is at risk.** [S1]\n- **Why.** Data access is late. [S2]"}.get(form, "Unknown form.")
+# ===== v2.1.0 #90: the sheet's ✦ =====
+elif p.startswith("Redraft one section"):
+    reply = "A fresh draft of the section, in the house voice. [S1]"
 # ===== end sprint-drafts-writing =====
 else:
     reply = "I don't know this draft."

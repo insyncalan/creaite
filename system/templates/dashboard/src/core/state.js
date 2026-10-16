@@ -52,7 +52,7 @@ export const shared = {
   CKI: undefined, CKPICK: undefined, IMGURL: undefined, PIMG: undefined, QDECK: undefined, QNOW: undefined,
   RBMARKED: undefined, RBOUT: undefined, RUN: undefined, RUNLABEL: undefined, SHOWN: undefined,
   // meetings: set where its `let` was
-  MEETING: undefined, PREPRUN: undefined, QCT: undefined,
+  PREPRUN: undefined, QCT: undefined,
   // help: set where its `let` was
   HELPARG: undefined,
   // drafts: set where its `let` was

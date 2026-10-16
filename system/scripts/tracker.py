@@ -1513,10 +1513,10 @@ def stash(apply_id, src):
     return paths.rel(dest)
 
 
-def run_file_ops(apply_id, blk, field, ops, done, prop=None):
+def run_file_ops(apply_id, blk, field, ops, done, data=None, prop=None):
     """Run ops in order, appending an undo record for each to `done`. BL-229: each operation is its own function. prop: the
     proposal file being applied (a move checks the live server's marker against it, #124 F3)."""
-    _stamp_approved(apply_id, blk, field, done)
+    _stamp_approved(apply_id, blk, field, done, data)
     for fop in ops:
         check_file_op(fop, blk)
         if fop["op"] == "move":
@@ -1528,7 +1528,7 @@ def run_file_ops(apply_id, blk, field, ops, done, prop=None):
             FILE_OPS[fop["op"]](apply_id, fop, blk, done)
 
 
-def _stamp_approved(apply_id, blk, field, done):
+def _stamp_approved(apply_id, blk, field, done, data=None):
     """An approved draft (minutes or a report) says who approved it and when, before it is filed."""
     approved_by = (paths.load_settings().get("identity", {}).get("name") or "Alan").split()[0]
     why = draft_problem(blk, field)                   # #128 F3
@@ -1539,8 +1539,61 @@ def _stamp_approved(apply_id, blk, field, done):
         if draft.exists():
             kept = stash(apply_id, draft)
             on = (os.environ.get("CREAITE_NOW") or today())[:10]          # creaite's clock: CREAITE_NOW fixes it in tests
-            if set_status_line(draft, f"Approved by {approved_by} on {long_date(on)}"):
+            if _is_minutes_record(draft):                                 # v2.1.0 P4: a minutes record (creaite_doc)
+                _stamp_record(draft, f"Approved by {approved_by} on {long_date(on)}", on, apply_id, data, blk)
                 done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
+            elif stamp_draft(draft, f"Approved by {approved_by} on {long_date(on)}", on):   # a Word draft, or (P3) a report
+                done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
+
+
+def _is_minutes_record(draft):
+    """v2.1.0 P4: whether an approved draft is a minutes record (a creaite document of kind "minutes")."""
+    if draft.suffix.lower() != ".html":
+        return False
+    import creaite_doc
+    return creaite_doc.is_doc(draft) and creaite_doc.read(draft).get("kind") == "minutes"
+
+def _stamp_record(draft, status, on, apply_id, data, blk=None):
+    """v2.1.0 P4 (BL-338): an approved minutes record is marked approved (state, approved_at, the status line) and each row of an
+    item this apply wrote names the ID it was given (a row ref "@<n>" becomes it), then rendered again (creaite_doc). Its
+    transcript is the filed copy."""
+    import creaite_doc
+    doc = creaite_doc.read(draft)
+    ids = {f"@{i['n']}": i["result_id"] for i in (data or {}).get("items", [])
+           if i.get("applied") == apply_id and i.get("decision") == "approved" and i.get("result_id")}
+    doc.update(state="approved", approved_at=f"{on} {now()[11:19]}")
+    for s in doc.get("sections") or []:
+        _stamp_section(s, (doc.get("meta") or {}).get("status_line"), status, ids)
+    doc["items"] = {ids.get(k, k): ({**v, "id": ids[k]} if k in ids else v) for k, v in (doc.get("items") or {}).items()}
+    doc.setdefault("meta", {}).update(status_line=status, removed={})     # removed rows are kept for Undo while a draft only
+    filed = [op["to"] for op in (blk or {}).get("file_ops", []) if op.get("op") == "copy" and op.get("from") == "transcript"]
+    if filed:
+        doc["meta"].update(transcript=filed[0], transcripts=filed)
+    draft.write_text(creaite_doc.dumps(doc), encoding="utf-8")
+
+
+def _stamp_section(s, was, status, ids):
+    """One section of an approved record: the header's status line, and each written item's row ref as its ID."""
+    if s.get("id") == "header" and was:
+        s["text"] = s.get("text", "").replace(was, status, 1)
+        s.setdefault("data", {})["status"] = status
+    for r in s.get("rows") or []:
+        if r.get("ref") in ids:
+            r["ref"] = ids[r["ref"]]
+
+
+def stamp_draft(draft, text, on):
+    """Mark an approved draft before it is filed: a Word draft's status line, or (v2.1.0 P3) a creaite document's state, approved
+    on `on`, its page rendered again from the data (creaite_doc.py). Returns whether it changed."""
+    if draft.suffix.lower() != ".html":
+        return set_status_line(draft, text)
+    import creaite_doc
+    if not creaite_doc.is_doc(draft):
+        return False
+    doc = creaite_doc.read(draft)
+    doc.update(state="approved", approved_at=on)
+    draft.write_text(creaite_doc.dumps(doc), encoding="utf-8")
+    return True
 
 
 def _op_copy(apply_id, fop, blk, done):
@@ -2615,7 +2668,7 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
         if blk.get("applied") or blk.get(field) not in ("approved", "rejected"):
             continue
         ops = selected_ops(blk, field)
-        run_file_ops(apply_id, blk, field, ops, file_records, prop)
+        run_file_ops(apply_id, blk, field, ops, file_records, data, prop)
         if ops:
             summary["filed"] += 1
         if field == "minutes_decision" and blk.get("key"):
@@ -3599,7 +3652,7 @@ def pdf_text_stdlib(p, limit=400_000):
 
 
 # ===== BL-276: saved-email text for the search index =====
-INDEX_READERS = 3   # BL-276 (2), BL-275 (3): raise when text_of reads more, so the next build reads every file again
+INDEX_READERS = 4   # BL-276 (2), BL-275 (3), v2.1.0 P1 (4): raise when text_of reads more, so the next build reads every file again
 
 
 def log_path(p):
@@ -3651,6 +3704,15 @@ def eml_text(p, limit=400_000):
 # ===== end BL-276 =====
 
 
+def cue_text(p):
+    """A .vtt or .srt transcript's words, without cue numbers, times or tags; a <v Speaker> tag becomes "Speaker: "."""
+    lines = p.read_text(encoding="utf-8", errors="ignore").splitlines()
+    keep = [ln for ln in lines if ln.strip() and "-->" not in ln and ln.strip() != "WEBVTT"
+            and not ln.strip().isdigit()]
+    return "\n".join(re.sub(r"<v ([^>]+)>", r"\1: ", re.sub(r"</?[a-z][^>]*>", "", k))
+                     if k.startswith("<v ") else re.sub(r"<[^>]+>", "", k) for k in keep)
+
+
 def text_of(p):
     """Plain text of a vault file for the search index (standard library, and the bundled pypdf for PDFs)."""
     suffix = p.suffix.lower()
@@ -3663,17 +3725,16 @@ def text_of(p):
             xml = re.sub(r"</w:p>|</a:p>|</si>", "\n", xml)
             return re.sub(r"[ \t]+", " ", re.sub(r"<[^>]+>", "", xml)).strip()
         if suffix in (".vtt", ".srt"):
-            lines = p.read_text(encoding="utf-8", errors="ignore").splitlines()
-            keep = [ln for ln in lines if ln.strip() and "-->" not in ln and ln.strip() != "WEBVTT"
-                    and not ln.strip().isdigit()]
-            return "\n".join(re.sub(r"<v ([^>]+)>", r"\1: ", re.sub(r"</?[a-z][^>]*>", "", k))
-                             if k.startswith("<v ") else re.sub(r"<[^>]+>", "", k) for k in keep)
+            return cue_text(p)
         if suffix in (".txt", ".md", ".csv"):
             return p.read_text(encoding="utf-8", errors="ignore")
         if suffix == ".pdf":
             return pdf_text(p)
         if suffix == ".eml":
             return eml_text(p)
+        if suffix == ".html":          # v2.1.0 P1: a creaite document's shown sections; any other page by name only, as before
+            import creaite_doc
+            return creaite_doc.search_text(p)
     except (OSError, zipfile.BadZipFile):
         return ""
     return ""  # other types are indexed by name only
@@ -3873,12 +3934,15 @@ def _index_write(con, everything, gone, entries):
     con.execute("COMMIT")
 
 
-def build_index(full=False):
+def build_index(full=False, wait=True):
     """Bring vault_search up to date and return how many entries it holds. Only the files whose stamp changed since the last
     build are read again (BL-327); `full`, a change of readers or layout, or a recreated table rebuild it all. A meeting's
     or report's summary and tags (its sidecar) are part of its content, so keyword search matches them. The time, the files
-    read and removed are in the debug log."""
-    with INDEX_LOCK:
+    read and removed are in the debug log. #95: `wait` False returns None at once when a build is already running in this
+    process (the caller searches the index as it stands)."""
+    if not INDEX_LOCK.acquire(blocking=wait):
+        return None
+    try:
         t0, started = time.monotonic(), datetime.now().timestamp()
         con = connect()
         try:
@@ -3902,6 +3966,8 @@ def build_index(full=False):
                                  f"{time.monotonic() - t0:.2f}s: {len(entries)} entr{'y' if len(entries) == 1 else 'ies'} "
                                  f"read again, {removed} file(s) removed, {total} indexed")
         return total
+    finally:
+        INDEX_LOCK.release()
 # ===== end BL-327 (index) =====
 
 

@@ -12,7 +12,6 @@ import { pLink } from "./core/nav.js";
 import { anim, D, days, fd, fdText, TODAY } from "./core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { hubFor, hubLink } from "./meetings.js";
 import { setRailCount } from "./stores/rail.js";
 import { cell } from "./work.js";
 /* ======================= Inbox (BL-42 phase 1): add meeting files, then process them ======================= */
@@ -123,8 +122,7 @@ export function renderMeetings(){ const mt=D.meetings||{}, L=MTG(); [...MSEL].fo
   const projSel=(m,i)=>html`<select class="mtgp" data-mi="${i}" aria-label="Project for ${m.title}"><option value="" ${sel(!m.p)}>Not sure</option>${P.map(p=>html`<option value="${p.code}" ${sel(m.p===p.code)}>${p.name}</option>`)}<option value="_portfolio" ${sel(m.p==="_portfolio")}>Portfolio</option></select>`;
   const noIds=L.some(m=>!m.id);
   putHTML($("#mtgBody"),html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days.map(d=>html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d).toLocaleDateString("en-GB",{weekday:"long"})} ${fd(d)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d}" ${off(clrOff())} title="${clrOff()?"Needs the live server":"Set this day's meetings aside"}">Clear day · ${L.filter(m=>m.day===d&&shown(m)).length}</button></div></td></tr>${L.map((m,i)=>[m,i]).filter(([m])=>m.day===d&&shown(m)).map(([m,i])=>html`<tr data-mid="${m.id||""}" class="${m.private?"mtgpriv":""}${mtgLater(m)?" mtglater":""}${mtgHasTx(m)?" mtgtx":""}${m.transcript&&m.transcript!=="available"&&!m.processed?" mtgmute":""}${m.processed?" mtgdone":""}" ${mtgLater(m)&&html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i}" aria-label="Select ${m.title}" ${raw(MSEL.has(m.id)?"checked":"")} ${off(!mtgCanPick(m))} ${!m.id&&html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m.start}–${m.end}</td><td class="title">${mtgHasTx(m)&&html`<span class="txbadge">Transcript</span> `}${m.title}${m.private?html` <span class="sub">private</span>`:""}</td><td>${m.teams?html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>`:html`<span class="sub">In person</span>`}</td><td>${org(m)}</td><td>${projSel(m,i)}</td><td>${mtgState(m)}</td><td>${mtgTx(m,i)}</td><td><button class="mtgx" data-clr="one" data-mi="${i}" ${off(clrOff())} aria-label="Clear ${m.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds&&html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
-  if(!shared.LOADING){ const L=MTG();
-    $$("#mtgBody tr[data-mid]").forEach(tr=>{ const m=L.find(x=>x.id&&x.id===tr.dataset.mid), t=m&&hubFor({eid:m.id,day:m.day,start:m.start,title:m.title}); const cell=tr.children[1]; if(t&&cell&&!cell.querySelector(".mhlink")) addHTML(cell,"beforeend",hubLink(t,"Meeting")); }); } }
+}
 export const MTGI=ic("video",{size:14,w:2});   /* BL-158 */
 export const mtgBusy=()=>!!shared.RUN||(typeof shared.BUSY!=="undefined"&&shared.BUSY);
 /* BL-231: what this block did at load, run in today's order by src/main.js */

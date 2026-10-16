@@ -329,6 +329,41 @@ class FixRoutes(unittest.TestCase):
         self.assertIn("LOCK.release()", body)
 
 
+class FixLogWording(unittest.TestCase):
+    """#94: the debug-log line says "done" only for a fix that changed something; a fix that only raises the approval card
+    (`card: True`) says it is on the card, waiting for Alan."""
+
+    def log_line(self, fix_id, ok=True, code=0):
+        lines = []
+        fake = mock.Mock(info=lambda area, msg: lines.append((area, msg)))
+        tmp = Path(tempfile.mkdtemp(prefix="creaite-fixlog-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        with mock.patch.object(health_fixes, "FIX_LOG", tmp / "health-fixes.jsonl"), mock.patch.dict(sys.modules, {"log": fake}):
+            health_fixes.log(fix_id, ok, code)
+        return lines[-1][1], json.loads((tmp / "health-fixes.jsonl").read_text().splitlines()[-1])
+
+    def test_every_card_fix_says_it_is_waiting_on_the_card(self):
+        card_fixes = [k for k, v in health_fixes.FIXES.items() if v.get("card")]
+        self.assertEqual(sorted(card_fixes), ["archive_reports", "old_archive"])
+        for fix_id in card_fixes:
+            msg, rec = self.log_line(fix_id)
+            self.assertEqual(msg, f"fix {fix_id}: on the approval card, waiting for you (exit 0)")
+            self.assertNotIn("done", msg)
+            self.assertTrue(rec["card"] and rec["ok"], rec)
+
+    def test_a_card_fix_that_failed_still_says_failed(self):
+        msg, _ = self.log_line("old_archive", ok=False, code=1)
+        self.assertEqual(msg, "fix old_archive: failed (exit 1)")
+
+    def test_a_direct_fix_still_says_done(self):
+        direct = [k for k, v in health_fixes.FIXES.items() if not v.get("card")]
+        self.assertTrue(direct)
+        for fix_id in direct:
+            msg, rec = self.log_line(fix_id)
+            self.assertEqual(msg, f"fix {fix_id}: done (exit 0)")
+            self.assertNotIn("card", rec)
+
+
 class OffsiteBackup(unittest.TestCase):
     """session.py backup (the offsite fix's command) in a vault whose projects live in a fake OneDrive under a fake HOME."""
 

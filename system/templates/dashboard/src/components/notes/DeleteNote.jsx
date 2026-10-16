@@ -50,7 +50,7 @@ export async function deleteNote(n) {
 
 const KEY = "creaite.noteDelete";
 /** @param {any} v */
-function remember(v) { try { if (v) sessionStorage.setItem(KEY, JSON.stringify(v)); else sessionStorage.removeItem(KEY); } catch (e) { /* no storage: a reload then shows the plain card */ } }
+function remember(v) { try { if (v) sessionStorage.setItem(KEY, JSON.stringify(v)); else sessionStorage.removeItem(KEY); } catch (e) { return; /* no storage: a reload then shows the plain card */ } }
 
 /** Hold the note read only while its card waits, then close it on Approve (or let it be edited again on Reject or expiry).
     Used by the first answer and by a card the page finds again after a reload.

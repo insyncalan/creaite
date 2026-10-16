@@ -17,7 +17,7 @@ import { api, apply, applyNow, applySoon, conflictChoice, editProposal, hideSnac
 import { shared } from "./core/state.js";
 import { deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./intake.js";
-import { HUB, hubLink, withdrawDecision } from "./meetings.js";
+import { withdrawDecision } from "./meetings.js";
 import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkDow, pkFollowRev, PKK, pkStatuses, pkWho, REC } from "./panel.js";
 import { closePanel, pkOn } from "./projects.js";
 import { nm, PERS, personLink, row, unknownOwner } from "./settings.js";
@@ -41,6 +41,7 @@ export function setDecision(data,r,v){ const bf={meeting:"minutes_decision",repo
     if(v==="rejected"&&w){ it.reject_reason=w.reason; if(w.dup) it.duplicate_of=w.dup; else delete it.duplicate_of; RVREASON.delete(r.n); } else if(v!=="rejected"){ delete it.reject_reason; delete it.duplicate_of; }
     if(it&&it.drafted&&(v==="approved"||v==="rejected")){ const f=Object.keys(it.changes||{})[0]; draftStat(it.drafted,v==="rejected"?"rejected":drSame((it.changes||{})[f],it.drafted_text)?"used":"edited"); }
     if(it&&it.suggested&&it.suggested.feature==="done"&&(v==="approved"||v==="rejected")) draftStat("done",v==="rejected"?"rejected":it.as_proposed?"edited":"used");   /* BL-218 */
+    if(it&&it.suggested&&it.suggested.feature==="promise"&&(v==="approved"||v==="rejected")) draftStat("promise",v==="rejected"?"rejected":it.as_proposed?"edited":"used");   /* BL-342 Part 5 */
     if(it&&it.looks_like&&v==="rejected"&&it.duplicate_of===it.looks_like.id) draftStat("repeat","used");   /* BL-221: rejected as its duplicate */ }
 export let decide = async function(n,v,written){ const tr=$(`#reviewBody tr[data-n="${n}"]`), was=REV.find(x=>x.n===n);
     const snap=tr&&shared.VIEW==="review"&&!reduced()?{g:{r:tr.getBoundingClientRect(),t:(tr.querySelector("td.title")||tr).textContent.trim()},rows:mSnapRows("#reviewBody tr[data-n]",e=>e.dataset.n)}:null;
@@ -118,7 +119,7 @@ export function renderReview(){ { const v=r=>(r.flags||[]).includes("vip")?0:1; 
   mDots("review");
     REV.filter(x=>x.kind==="draft"&&x.ref==="meeting"&&!x.done&&(x.mt||(x.cov||[]).length)).forEach(x=>{ const el=document.querySelector(`#v-review [data-n="${x.n}"]`); if(!el||el.nextElementSibling&&el.nextElementSibling.classList.contains("mhcovrow")) return;
       const cov=(x.cov||[]), miss=cov.filter(c=>c.verdict!=="Covered").length;
-      const body=html`${cov.length?html`<details class="mhcovrev"><summary>Coverage: ${miss?`${miss} of ${cov.length} agenda points not fully discussed`:`all ${cov.length} agenda points discussed`}</summary><ul class="mhcov">${cov.map(c=>html`<li><span class="tag ${c.verdict==="Covered"?"ok":c.verdict==="Not discussed"?"warn":""}">${c.verdict}</span> ${c.point}</li>`)}</ul></details>`:""}${HUB()[x.mt]?hubLink(x.mt):""}`;
+      const body=html`${cov.length?html`<details class="mhcovrev"><summary>Coverage: ${miss?`${miss} of ${cov.length} agenda points not fully discussed`:`all ${cov.length} agenda points discussed`}</summary><ul class="mhcov">${cov.map(c=>html`<li><span class="tag ${c.verdict==="Covered"?"ok":c.verdict==="Not discussed"?"warn":""}">${c.verdict}</span> ${c.point}</li>`)}</ul></details>`:""}`;
       if(!String(body)) return; addHTML(el,"afterend",el.tagName==="TR"?html`<tr class="mhcovrow"><td></td><td colspan="20">${body}</td></tr>`:html`<div class="mhcovrow">${body}</div>`); });   /* BL-233 */
   const bar=$("#rvfilters"); if(bar&&!$("#rvFocusBtn")) addHTML(bar,"afterend",html`<button type="button" class="btn rvfocusbtn" id="rvFocusBtn" data-rvfocus="1" title="Decide one proposal at a time, with its source beside it">One at a time</button>`);
     if(shared.RF) rfDraw(); } }   /* BL-206 */   /* BL-133 (sprint-work-views): filters, grouping and order are in rvRender; grouped by project it draws as before */
@@ -248,7 +249,21 @@ export function rvSetFields(L){ const items=L.filter(r=>["actions","raid","decis
   return RVSETF.map(([f,l])=>{ const w=why(f); let opts=[];
     if(!w){ if(f==="p") opts=P.map(p=>[p.code,p.name]); else if(f==="o") opts=["TBC",...peopleAll()].map(x=>[x,x]); else if(f==="ws") opts=[["","None"],...wsFor(one).map(x=>[x,x])]; else if(f==="ms") opts=msChoices(one,""); }
     return [f,l,opts,w]; }); }
-export function rvBar(){ const bar=$("#rvbar"); if(!bar) return; const L=rvSel(); if(!L.length){ bar.hidden=true; $("#bulkApprove").disabled=$("#bulkReject").disabled=true; if(rjMenu.value&&rjMenu.value.anchor===$("#bulkReject")) rjCloseMenu(false); return; }
+/* #114: the bar floats at the bottom edge of the window, centred in Review's column, while rows are selected. It is fixed, so it takes no
+   room in the list (nothing moves when it appears); the page gets the bar's height as bottom padding so the last row scrolls clear of it. */
+export function rvDock(){ const bar=$("#rvbar"), view=$("#v-review"); if(!bar||!view) return;
+  if(bar.hidden){ view.classList.remove("rvfloat"); document.documentElement.style.removeProperty("--rvh"); rvWatch(false); return; }
+  rvWatch(true); if(view.hidden) return;
+  const r=view.getBoundingClientRect(), w=Math.min(view.clientWidth-48,1500);
+  bar.style.setProperty("--rvw",`${w}px`); bar.style.setProperty("--rvl",`${Math.round(r.left+(view.clientWidth-w)/2)}px`);
+  const h=`${bar.offsetHeight}px`; view.style.setProperty("--rvh",h); document.documentElement.style.setProperty("--rvh",h); view.classList.add("rvfloat"); }
+/* Re-dock when Review's column changes size (the sidebar collapsing, the ask creaite panel opening) or the bar re-wraps; watched only while the bar is showing. */
+let rvRO=null;
+function rvWatch(on){ if(!on){ if(rvRO){ rvRO.disconnect(); rvRO=null; } return; }
+  if(rvRO||typeof ResizeObserver==="undefined") return;
+  rvRO=new ResizeObserver(()=>rvDock()); const bar=$("#rvbar"), view=$("#v-review"), shell=view&&view.parentElement; [view,shell,bar].forEach(el=>el&&rvRO.observe(el)); }
+window.addEventListener("resize",rvDock);
+export function rvBar(){ const bar=$("#rvbar"); if(!bar) return; const L=rvSel(); if(!L.length){ bar.hidden=true; rvDock(); $("#bulkApprove").disabled=$("#bulkReject").disabled=true; if(rjMenu.value&&rjMenu.value.anchor===$("#bulkReject")) rjCloseMenu(false); return; }
   const ok=L.filter(rvBulkOK), rej=L.filter(rvRejectOK), left=L.filter(r=>!rvBulkOK(r)), M=rvMatching();
   const groups={project:[],indiv:[],conflict:[]}; left.forEach(r=>groups[rvWhyNot(r)[0]].push(r));
   const part=(k,one,many)=>{ const g=groups[k]; return g.length?html`<span class="rvwhy" tabindex="0" title="${g.map(r=>`${r.rec.t}: ${rvWhyNot(r)[1]}`).join("\n")}">${g.length} ${g.length===1?one:many}</span>`:""; };
@@ -258,7 +273,7 @@ export function rvBar(){ const bar=$("#rvbar"); if(!bar) return; const L=rvSel()
   putHTML($("#bulkApprove"),html`${raw(ic("check"))}Approve (${ok.length})`); $("#bulkApprove").disabled=!ok.length; putHTML($("#bulkReject"),html`${raw(ic("x"))}Reject with a reason <span class="kbd" aria-hidden="true">R</span>`); $("#bulkReject").disabled=!rej.length;   /* BL-315: one menu, for one row or many */
   $("#bulkReject").setAttribute("aria-label",`Reject ${rej.length===1?"1 proposal":rej.length+" proposals"} with a reason`); $("#bulkReject").title=rej.length<L.length?"Minutes, reports and file changes are rejected one at a time":"";
   putHTML($("#rvSet"),html`${rvSetFields(L).map(([f,label,opts,why])=>f==="due"?html`<span class="bkf"><label class="bklab" for="rvDate">${label}</label><span class="dwrap"><input type="text" id="rvDate" data-pick="1" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off" ${raw(why?"disabled":"")} aria-label="Set the due date of ${L.length} proposals" title="${why}"><button type="button" class="dbtn" data-cal="rvDate" ${raw(why?"disabled":"")} aria-label="Choose date">${raw(CALI)}</button></span></span>`
-    :html`<span class="bkf"><label class="bklab">${label}<select data-rvset="${f}" ${why?html`disabled aria-disabled="true"`:""} title="${why}"><option value="">Set…</option>${ceOpts(opts).map(o=>html`<option value="${o[0]}">${o[1]}</option>`)}</select></label></span>`)}`); }
+    :html`<span class="bkf"><label class="bklab">${label}<select data-rvset="${f}" ${why?html`disabled aria-disabled="true"`:""} title="${why}"><option value="">Set…</option>${ceOpts(opts).map(o=>html`<option value="${o[0]}">${o[1]}</option>`)}</select></label></span>`)}`);  rvDock(); }
 /* ── deciding several: one write per proposal file, one apply, one Undo ── */
 export async function rvDecideMany(list,v){ list=list.filter(r=>r&&!r.done); if(!list.length) return {n:0}; if(!await needVault()) return {n:0};
   const byFile=new Map(); list.forEach(r=>{ if(!byFile.has(r.file)) byFile.set(r.file,[]); byFile.get(r.file).push(r); }); const done=[], failed=[];

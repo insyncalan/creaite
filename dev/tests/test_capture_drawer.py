@@ -266,6 +266,8 @@ class Drawer(LiveBrowserCase):
         for d in (self.v.root / ABC / "notes", self.v.root / PORTFOLIO_NOTES):
             for f in d.glob("*.md") if d.is_dir() else []:
                 f.unlink()
+        for f in (self.v.root / "system/staging/drafts/notes").glob("capture-*.json"):      # the / menu tests leave a draft behind when they end on Esc
+            f.unlink()
         super().tearDown()
 
     def test_shortcut_opens_from_any_page_guesses_and_done_saves(self):
@@ -445,6 +447,121 @@ class Drawer(LiveBrowserCase):
         self.assertIn("confidential: true\n", text)
         self.open()
         self.assertFalse(b.eval("document.getElementById('capConf').checked"))          # the next note starts off again
+
+    # ---- #122 step B: the shared / menu in the drawer -----------------------------------------------------------------
+
+    CAP_MENU = "document.querySelector('.slashmenu')"
+
+    def cap_menu(self):
+        b = self.b
+        b.type("/")
+        b.wait(f"!!{self.CAP_MENU}", 5)
+        b.pump(0.15)
+        return b.eval(f"""(()=>{{ const v=document.getElementById('capBody').cxed.editor.view, c=v.coordsAtPos(v.state.selection.from),
+          m={self.CAP_MENU}, r=m.getBoundingClientRect(), d=document.getElementById('capDrawer');
+          return {{ caretBottom:c.bottom, top:r.top, left:r.left, right:r.right, bottom:r.bottom, vw:document.documentElement.clientWidth, vh:innerHeight,
+            pos:getComputedStyle(m).position, z:+getComputedStyle(m.closest('.slashroot')||m).zIndex||+getComputedStyle(m).zIndex,
+            drawerZ:+getComputedStyle(d).zIndex, inDrawer:d.contains(m), flipped:m.dataset.side }}; }})()""")
+
+    def test_the_slash_menu_opens_at_the_caret_in_the_drawer_at_1400_and_900(self):
+        b = self.b
+        for width in (1400, 900):
+            b.resize(width, 900)
+            self.open()
+            b.type("Line one")
+            b.key("Enter")
+            g = self.cap_menu()
+            self.assertEqual(g["pos"], "fixed", g)
+            self.assertLessEqual(abs(g["top"] - (g["caretBottom"] + 4)), 4, f"{width}: at the caret {g}")
+            self.assertGreaterEqual(g["left"], 0)
+            self.assertLessEqual(g["right"], g["vw"], "inside the window")
+            self.assertGreater(g["z"], g["drawerZ"], "above the drawer")
+            self.assertEqual(b.eval("document.querySelectorAll('.slashmenu').length"), 1)
+            b.key("Escape")
+            b.key("Escape")
+            b.wait("document.getElementById('capDrawer').hidden", 5)
+        b.resize(1400, 900)
+
+    def test_the_drawers_rows_are_the_notes_rows_it_can_do(self):
+        b = self.b
+        self.open()
+        self.cap_menu()
+        rows = b.eval("[...document.querySelectorAll('.slashmenu [role=option][data-slash]')].map(o=>o.dataset.slash)")
+        self.assertEqual(rows, ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock"],
+                         "no [[ @ # lists, table, image or templates yet (step C): a row the drawer cannot do is not offered")
+        b.type("head")
+        b.pump(0.1)
+        self.assertEqual(b.eval("[...document.querySelectorAll('.slashmenu [role=option][data-slash]')].map(o=>o.dataset.slash)"), ["h1", "h2", "h3"])
+
+    def test_enter_inserts_and_done_saves_the_note_with_the_right_markdown(self):
+        b = self.b
+        self.open()
+        b.type("Weekly thoughts")
+        b.key("Enter")
+        b.type("/head")
+        b.wait(f"!!{self.CAP_MENU}", 5)
+        b.key("ArrowDown")                                      # Heading 2
+        b.key("Enter")
+        b.wait(f"!{self.CAP_MENU}", 5)
+        b.type("Risks")
+        b.key("Enter")
+        b.type("/check")
+        b.wait(f"!!{self.CAP_MENU}", 5)
+        b.key("Enter")
+        b.type("call Omar")
+        self.assertEqual(b.eval("edValue(document.getElementById('capBody'))").strip(), "Weekly thoughts\n\n## Risks\n\n- [ ] call Omar")
+        self.assertEqual(b.eval("document.getElementById('capDrawer').hidden"), False)
+        b.click("#capDone")
+        b.wait("document.getElementById('capDrawer').hidden", 10)
+        name = self.notes(PORTFOLIO_NOTES) + self.notes()
+        self.assertEqual(len(name), 1, name)
+        folder = PORTFOLIO_NOTES if self.notes(PORTFOLIO_NOTES) else f"{ABC}/notes"
+        text = (self.v.root / folder / name[0]).read_text(encoding="utf-8")
+        self.assertIn("## Risks\n", text)
+        self.assertIn("- [ ] call Omar", text)
+        self.assertNotIn("/head", text)
+        self.assertNotIn("/check", text)
+
+    def test_escape_closes_the_menu_first_and_a_second_escape_closes_the_drawer(self):
+        b = self.b
+        self.open()
+        b.type("Keep this")
+        b.key("Enter")
+        self.cap_menu()
+        b.key("Escape")
+        b.wait(f"!{self.CAP_MENU}", 5)
+        self.assertEqual(b.eval("document.getElementById('capDrawer').hidden"), False, "the first Esc only closes the menu")
+        self.assertIn("/", b.eval("edValue(document.getElementById('capBody'))"), "and leaves the typed text")
+        self.assertEqual(b.eval("document.activeElement===document.getElementById('capBody')"), True)
+        b.key("Escape")
+        b.wait("document.getElementById('capDrawer').hidden", 5)
+
+    def test_cmd_enter_does_not_save_while_the_menu_is_open_and_does_after(self):
+        b = self.b
+        self.open()
+        b.type("Save me")
+        b.key("Enter")
+        self.cap_menu()
+        b.key("Enter", META)
+        b.pump(0.5)
+        self.assertEqual(b.eval("document.getElementById('capDrawer').hidden"), False, "⌘↵ waits while the menu is open")
+        self.assertEqual(self.notes(PORTFOLIO_NOTES), [])
+        b.key("Escape")
+        b.wait(f"!{self.CAP_MENU}", 5)
+        b.key("Enter", META)
+        b.wait("document.getElementById('capDrawer').hidden", 10)
+        self.assertEqual(len(self.notes(PORTFOLIO_NOTES)), 1)
+
+    def test_the_drawer_menu_in_dark_keeps_its_colours(self):
+        b = self.b
+        self.open()
+        b.eval("document.documentElement.dataset.theme='dark'")
+        self.cap_menu()
+        got = b.eval("""(()=>{ const m=document.querySelector('.slashmenu'), on=m.querySelector('.r.on'), off=m.querySelector('.r:not(.on)'), c=e=>getComputedStyle(e);
+          return { bg:c(m).backgroundColor, on:c(on).backgroundColor, off:c(off).backgroundColor }; })()""")
+        self.assertNotEqual(got["on"], got["off"])
+        self.assertNotEqual(got["bg"], "rgb(255, 255, 255)")
+        b.eval("delete document.documentElement.dataset.theme")
 
     def test_fits_320_and_dark(self):
         b = self.b

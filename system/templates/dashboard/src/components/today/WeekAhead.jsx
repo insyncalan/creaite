@@ -13,9 +13,9 @@ import { IconButton } from "../IconButton.jsx";
 /** @typedef {{id: string, icon: string, label: string, name?: string, primary?: boolean, why?: string, data?: Record<string, string>}} WkAct */
 /** @typedef {{key: string, kind: string, tag: string, tone?: string, t: string, open?: Record<string, string>, who?: string,
     p?: string, pname?: string, why: string, whyTone?: string, acts: WkAct[], prepgo?: {key: string, day: string, when: string, live: boolean},
-    hub?: string}} WkRow */
+}} WkRow */
 /** @typedef {{key: string, title: string, note?: string, rows: WkRow[], cap: number, open: boolean}} WkGroup */
-/** @typedef {{note?: string, groups: WkGroup[], empty: string, onAct: (row: WkRow, act: WkAct, btn: HTMLElement) => void,
+/** @typedef {{groups: WkGroup[], empty: string, onAct: (row: WkRow, act: WkAct, btn: HTMLElement) => void,
     blocked: (why: string) => void}} WeekAheadProps */
 
 /** @param {Record<string, string> | undefined} o @returns {Record<string, string>} */
@@ -37,7 +37,6 @@ function WkLine({ r, hidden, p }) {
         {r.prepgo ? <><button type="button" class="ib prepgo" data-prepgo={r.prepgo.key} data-prepgoday={r.prepgo.day}
             aria-label={`Open the prep page for ${r.t}`} data-tip={r.prepgo.live ? `Prep page saved ${r.prepgo.when}` : "Needs the live server"}
             aria-disabled={r.prepgo.live ? undefined : "true"}><Icon name="external" /></button><span class="tag ok prepmade">Prep page made</span></> : null}
-        {r.hub ? <>{" "}<a href={`#meeting=${r.hub}`} class="linkbtn mhlink" data-meeting={r.hub} title="Everything about this meeting, from invite to follow-up">Meeting</a></> : null}
       </div>
       <span class={`wkwhy${r.whyTone ? " " + r.whyTone : ""}`}>{r.why}</span>
       <span class="tacts">
@@ -53,11 +52,10 @@ function WkLine({ r, hidden, p }) {
 
 /** The days. @param {WeekAheadProps} props */
 export function WeekAhead(props) {
-  const { note, groups, empty } = props;
+  const { groups, empty } = props;
   if (!groups.length) return <p class="none">{empty}</p>;
   return (
     <>
-      {note ? <p class="wknote">{note}</p> : null}
       {groups.map(g => {
         const more = g.rows.length - g.cap;
         return (
