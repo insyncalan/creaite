@@ -15,7 +15,12 @@ brackets balance one level deep (`a_(b)`); one that does not is percent-encoded 
 """
 import ipaddress
 import re
+import sys
+from pathlib import Path
 from urllib.parse import unquote
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402,F401  (the one place locations are defined; every script imports it)
 
 LINK_MAX = 2048
 LINK = re.compile(r"\[((?:[^\[\]\\\n]|\\[\[\]\\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)")
