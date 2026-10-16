@@ -316,7 +316,7 @@ function sparkShow(el,i){ const p=P.find(x=>x.code===el.dataset.sp); if(!p) retu
   const r=el.children[i].getBoundingClientRect(), h=tip.offsetHeight, w=tip.offsetWidth; let y=r.top-h-10; if(y<8) y=r.bottom+14;
   tip.style.left=Math.round(Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8))+"px"; tip.style.top=Math.round(y)+"px"; }
 function sparkHide(){ clearTimeout(sparkT); const tip=$("#sparkTip"); if(tip) tip.hidden=true; const el=sparkEl(); if(el){ el.removeAttribute("aria-describedby"); [...el.children].forEach(b=>b.classList.remove("cur")); } sparkAt=null; }
-function sparkKeyClose(back){ const k=$("#sparkLeg"); if(!k) return; const btn=$(".legbtn"); k.remove(); document.querySelectorAll(".legbtn").forEach(b=>b.setAttribute("aria-expanded","false")); if(back&&btn) btn.focus(); }
+function sparkKeyClose(back){ const k=$("#sparkLeg"); if(!k) return; const btn=document.querySelector('.legbtn[aria-expanded="true"]')||$(".legbtn"); k.remove(); document.querySelectorAll(".legbtn").forEach(b=>b.setAttribute("aria-expanded","false")); if(back&&btn) btn.focus(); }
 export function wireSpark(){
   const idx=e=>{ const b=e.target.closest&&e.target.closest(".spark:not(.mini) > i"); return b?+b.dataset.i:null; };
   document.addEventListener("mouseover",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el) return; const i=idx(e);

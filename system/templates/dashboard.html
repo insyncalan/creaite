@@ -36031,7 +36031,7 @@ ${s5}`;
   function sparkKeyClose(back2) {
     const k5 = $("#sparkLeg");
     if (!k5) return;
-    const btn = $(".legbtn");
+    const btn = document.querySelector('.legbtn[aria-expanded="true"]') || $(".legbtn");
     k5.remove();
     document.querySelectorAll(".legbtn").forEach((b5) => b5.setAttribute("aria-expanded", "false"));
     if (back2 && btn) btn.focus();
