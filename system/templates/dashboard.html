@@ -5950,38 +5950,78 @@ button.nchip{font:inherit;font-size:12px}
       b5.removeAttribute("title");
     });
   }
-  var PRESS = { key: null, el: null, at: "", sent: false };
+  var PRESS = { key: null, el: null, node: null, at: "", sent: false, lost: false, mo: (
+    /** @type {MutationObserver|null} */
+    null
+  ) };
   var rowPlace = (top, from) => {
     const out = [];
     for (let at2 = from; at2 && at2 !== top; at2 = at2.parentNode) out.push([...at2.parentNode.children].indexOf(at2));
     return out.join(".");
   };
+  var placeNode = (top, place2) => {
+    let n4 = top;
+    if (place2 === "") return n4;
+    for (const i5 of place2.split(".").reverse()) {
+      const c5 = n4.children[+i5];
+      if (!c5) return top;
+      n4 = c5;
+    }
+    return n4;
+  };
+  var pressRemoved = (ms2) => {
+    for (const m5 of ms2) for (const n4 of m5.removedNodes) if (PRESS.node && n4.contains(PRESS.node)) PRESS.lost = true;
+  };
+  var pressEnd = () => {
+    if (PRESS.mo) {
+      pressRemoved(PRESS.mo.takeRecords());
+      PRESS.mo.disconnect();
+    }
+  };
   function bootLostClick() {
-    document.addEventListener("mousedown", (e4) => {
+    PRESS.mo = new MutationObserver(pressRemoved);
+    const pressClear = () => {
+      pressEnd();
       PRESS.key = null;
       PRESS.el = null;
+      PRESS.node = null;
       PRESS.sent = false;
+      PRESS.lost = false;
+    };
+    document.addEventListener("mousedown", (e4) => {
+      pressClear();
       if (e4.button !== 0 || !e4.target.closest) return;
       const r4 = e4.target.closest("[data-row]");
       if (r4) {
         PRESS.key = r4.dataset.row;
         PRESS.el = r4;
+        PRESS.node = e4.target;
         PRESS.at = rowPlace(r4, e4.target);
+        PRESS.mo.observe(document, { childList: true, subtree: true });
       }
     }, true);
+    document.addEventListener("contextmenu", pressClear, true);
     document.addEventListener("mouseup", (e4) => {
-      const el2 = PRESS.el, key = PRESS.key;
-      if (!e4.isTrusted || e4.button !== 0 || el2 == null || key == null || el2.isConnected || !e4.target.closest) return;
+      pressEnd();
+      const el2 = PRESS.el, node = PRESS.node, key = PRESS.key;
+      if (!e4.isTrusted || e4.button !== 0 || el2 == null || node == null || key == null || !e4.target.closest) return;
+      if (!PRESS.lost && el2.isConnected && node.isConnected) return;
       const landed = e4.target.closest("[data-row]");
       if (!landed || landed.dataset.row !== key) return;
       PRESS.sent = true;
+      const place2 = rowPlace(landed, e4.target) === PRESS.at ? rowPlace(landed, e4.target) : "";
       const tgt = (
         /** @type {Element} */
-        rowPlace(landed, e4.target) === PRESS.at ? e4.target : landed
+        place2 === "" ? landed : e4.target
       );
       setTimeout(() => {
         PRESS.sent = false;
-        if (tgt.isConnected) tgt.dispatchEvent(new MouseEvent("click", {
+        let t47 = tgt;
+        if (!t47.isConnected) {
+          const r4 = document.querySelector(`[data-row="${CSS.escape(key)}"]`);
+          t47 = r4 ? placeNode(r4, place2) : t47;
+        }
+        if (t47.isConnected) t47.dispatchEvent(new MouseEvent("click", {
           bubbles: true,
           cancelable: true,
           view: window,

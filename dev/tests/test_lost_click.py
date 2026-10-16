@@ -22,6 +22,12 @@ COUNT = """window.__clicks=[]; document.addEventListener("click",e=>{ if(e.targe
   window.__clicks.push((e.isTrusted?"trusted":"made")+":"+(e.target.id||(e.target.matches("tr")?"row":"cell"))); },true)"""
 PROBE = """(()=>{ const b=document.createElement("button"); b.id="probeBtn"; b.textContent="probe"; b.style.cssText="position:fixed;left:4px;bottom:4px;z-index:99999";
   document.body.appendChild(b); b.focus(); return document.activeElement===b; })()"""
+# the page's own click handlers run after this one (a capture listener on window runs first), so it sees every click the browser sends, swallowed or not
+TRUSTED = "window.__trusted=[]; window.addEventListener('click',e=>{ if(e.isTrusted) window.__trusted.push(e.target.id||e.target.tagName) },true)"
+MODS = """window.__mods=[]; document.addEventListener("click",e=>{ if(!e.isTrusted&&e.target.closest&&e.target.closest('[data-row="ABC-A-002"]'))
+  window.__mods.push([e.ctrlKey,e.shiftKey,e.altKey,e.metaKey].map(Number).join("")); },true)"""
+REPLACE_CELL = "(()=>{ const t=document.querySelector(%r); t.replaceWith(t.cloneNode(true)); })()" % ROW   # the row stays, the pressed cell is replaced
+REINSERT_ROW = "(()=>{ const r=document.querySelector(%r).closest('tr'), p=r.parentNode, n=r.nextSibling; r.remove(); p.insertBefore(r,n); })()" % ROW   # a keyed reorder
 HOLD = "window.__held=[]; window.__st=window.setTimeout; window.setTimeout=(f,t)=>{ window.__held.push(f); return 0 }"
 RELEASE_HELD = "window.setTimeout=window.__st; const h=window.__held; window.__held=[]; h.forEach(f=>f())"
 
@@ -50,6 +56,14 @@ class LostClick(LiveBrowserCase):
         b.call("Input.dispatchMouseEvent", type="mouseReleased", x=pos["x"], y=pos["y"], button="left", buttons=0, clickCount=1)
         b.pump(0.1)
         return gone
+
+    def press(self, pos, modifiers=0):
+        for kind in ("mouseMoved", "mousePressed"):
+            self.b.call("Input.dispatchMouseEvent", type=kind, x=pos["x"], y=pos["y"], button="left", buttons=1, clickCount=1, modifiers=modifiers)
+
+    def release(self, pos, modifiers=0):
+        self.b.call("Input.dispatchMouseEvent", type="mouseReleased", x=pos["x"], y=pos["y"], button="left", buttons=0, clickCount=1, modifiers=modifiers)
+        self.b.pump(0.1)
 
     def test_click_during_redraw_lands_on_the_row(self):
         b = self.open_list()
@@ -139,6 +153,90 @@ class LostClick(LiveBrowserCase):
         b.call("Input.dispatchMouseEvent", type="mouseReleased", x=o["x"], y=o["y"], button="left", buttons=0, clickCount=1)
         b.pump(0.1)
         self.assertEqual(b.eval("window.__clicks"), ["made:row"], "the click should land on the row, where the browser would put it, not on the release cell")
+
+    def test_the_pressed_cell_replaced_inside_a_row_that_stays_is_still_a_click(self):
+        b = self.open_list()
+        pos = b.box(ROW)
+        b.eval(TRUSTED)
+        b.eval(COUNT)
+        self.press(pos)
+        b.eval(REPLACE_CELL)
+        self.assertTrue(b.eval("document.querySelector(%r).closest('tr').isConnected" % ROW), "the row should stay")
+        self.release(pos)
+        self.assertEqual(b.eval("window.__trusted"), [], "the browser sends no click here; if it does, this case needs no help")
+        self.assertEqual(b.eval("window.__clicks"), ["made:cell"])
+        self.assertEqual(b.eval("[...HL.keys()]"), ["ABC-A-002"])
+
+    def test_the_row_taken_out_and_put_back_is_still_a_click(self):
+        b = self.open_list()
+        pos = b.box(ROW)
+        b.eval(TRUSTED)
+        b.eval(COUNT)
+        self.press(pos)
+        b.eval(REINSERT_ROW)
+        self.assertTrue(b.eval("document.querySelector(%r).isConnected" % ROW))
+        self.release(pos)
+        self.assertEqual(b.eval("window.__trusted"), [], "the browser sends no click here; if it does, this case needs no help")
+        self.assertEqual(b.eval("window.__clicks"), ["made:cell"])
+        self.assertEqual(b.eval("[...HL.keys()]"), ["ABC-A-002"])
+
+    def test_a_context_menu_press_is_no_click(self):
+        """Ctrl+click on a Mac is a context menu, and the browser sends no click for it."""
+        b = self.open_list()
+        pos = b.box(ROW)
+        b.eval(COUNT)
+        self.press(pos)
+        b.eval("document.querySelector(%r).dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}))" % ROW)
+        b.eval("HL.clear(); hlPaint()")   # the row's own context menu handler selects the row; only a click after it would count here
+        b.eval(REDRAW)
+        self.release(pos)
+        self.assertEqual(b.eval("window.__clicks"), [])
+        self.assertEqual(b.eval("[...HL.keys()]"), [])
+
+    def test_a_second_redraw_before_the_made_click_is_sent_still_lands_once(self):
+        b = self.open_list()
+        pos = b.box(ROW)
+        self.press(pos)
+        b.eval(REDRAW)
+        b.eval(COUNT)
+        b.eval(HOLD)                 # the made click waits ...
+        b.call("Input.dispatchMouseEvent", type="mouseReleased", x=pos["x"], y=pos["y"], button="left", buttons=0, clickCount=1)
+        b.eval("window.__old=document.querySelector(%r)" % ROW)
+        b.eval(REDRAW)               # ... and the page redraws again before it goes out
+        self.assertTrue(b.eval("!document.contains(window.__old)"))
+        b.eval(RELEASE_HELD)
+        b.pump(0.1)
+        self.assertEqual(b.eval("window.__clicks"), ["made:cell"])
+        self.assertEqual(b.eval("[...HL.keys()]"), ["ABC-A-002"])
+
+    def test_a_new_press_clears_a_made_click_still_waiting(self):
+        """If the flag of an earlier made click were left set, the next plain click would be swallowed."""
+        b = self.open_list()
+        pos = b.box(ROW)
+        self.press(pos)
+        b.eval(REDRAW)
+        b.eval(HOLD)
+        b.call("Input.dispatchMouseEvent", type="mouseReleased", x=pos["x"], y=pos["y"], button="left", buttons=0, clickCount=1)
+        b.eval("window.setTimeout=window.__st; window.__held=[]")   # the made click never goes out, so only a new press can clear the flag
+        b.eval("HL.clear(); hlPaint()")
+        b.eval(COUNT)
+        b.click(ROW)
+        b.pump(0.1)
+        self.assertEqual(b.eval("window.__clicks"), ["trusted:cell"], "the click after a new press was swallowed")
+        self.assertEqual(b.eval("[...HL.keys()]"), ["ABC-A-002"])
+
+    def test_the_made_click_keeps_the_modifier_keys(self):
+        b = self.open_list()
+        b.eval(MODS)
+        for mods, want in ((8, "0100"), (4, "0001"), (1, "0010"), (2, "1000")):    # shift, meta, alt, ctrl (CDP: Alt 1, Ctrl 2, Meta 4, Shift 8)
+            with self.subTest(modifiers=mods):
+                b.eval("HL.clear(); hlPaint()")
+                b.eval("window.__mods=[]")
+                pos = b.box(ROW)
+                self.press(pos)
+                b.eval(REDRAW)
+                self.release(pos, modifiers=mods)
+                self.assertEqual(b.eval("window.__mods"), [want])
 
 
 class LostClick900(LostClick):
