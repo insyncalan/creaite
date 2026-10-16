@@ -35567,7 +35567,7 @@ ${s5}`;
       tLink(html`data-open="actions:${x5.id}"`, html`${x5.t ?? ""}`),
       html`${raw(dueWords(x5.due))} on ${x5.p ? raw(projLink(x5.p)) : "no project"}${x5.pr === "Urgent" ? ", marked Urgent" : ""}${x5.upd ? `. Latest: ${x5.upd.length > 140 ? x5.upd.slice(0, 139) + "…" : x5.upd}` : ""}.`,
       itemActs("actions", x5)
-    )), S.listCap || 10, "mine");
+    )), 5, "mine");
     putHTML($("#nMine"), raw(mine.length ? countLink(`${plur(mine.length, "action")} of yours due or overdue`, mine.length, "actions:open:", { st: ["Open", "Delayed"], due: ["overdue", "soon"], o: ["@me"] }) : ""));
     putHTML($("#mineList"), mc2.html ? raw(mc2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing due from you this week.</span></div></li>`);
     putHTML($("#mineMore"), raw(mc2.more));

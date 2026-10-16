@@ -320,6 +320,43 @@ class WeekCalm(Header):
         b.call("Emulation.setEmulatedMedia", features=[{"name": "forced-colors", "value": "active"}])
         self.assertTrue(b.eval("!!document.querySelector('#weekList .wkdot.u') && getComputedStyle(document.querySelector('#weekList .wkdot.u')).backgroundColor!==''"))
 
+    # ---- #150: Your commitments shows five, then +n more ----
+    def commitments(self, n):
+        b = self.b
+        b.eval("""(()=>{ A.filter(a=>a.id.startsWith('ZZZ-C')).forEach(a=>A.splice(A.indexOf(a),1)); })()""")
+        b.eval(f"for(let i=1;i<={n};i++) A.push({{id:'ZZZ-C'+i,p:'ABC',t:'Commitment '+i,o:S.me,st:'Open',due:pkAdd(TODAY,-i)}})")
+        b.eval("EXPAND.delete('mine'); go('today'); renderToday()")
+
+    def test_150_five_rows_then_more_expands_and_folds(self):
+        b = self.b
+        self.commitments(8)
+        base = b.eval("A.filter(a=>!a.id.startsWith('ZZZ-C')&&isMe(a.o)&&(overdue(a)||soon(a))).length")
+        total = base + 8
+        shown = "[...document.querySelectorAll('#mineList>li')].filter(l=>!l.hidden).length"
+        self.assertEqual(b.eval(shown), 5)
+        self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), f"+{total - 5} more")
+        self.assertIn(str(total), b.eval("document.getElementById('nMine').textContent"))                      # the count is the total
+        b.eval("document.querySelector('#mineMore [data-more=mine]').focus()")
+        b.click("#mineMore [data-more=mine]")
+        self.assertEqual(b.eval(shown), total)
+        self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), "Show fewer")
+        self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').getAttribute('aria-expanded')"), "true")
+        b.click("#mineMore [data-more=mine]")
+        self.assertEqual(b.eval(shown), 5)
+        # the order and the row actions after expanding
+        b.eval("EXPAND.add('mine'); renderToday()")
+        self.assertTrue(b.eval("document.querySelectorAll('#mineList>li:nth-child(8) [data-tdo=done]').length")==1)
+        b.eval("EXPAND.delete('mine'); renderToday()")
+
+    def test_150_no_control_at_five_or_fewer_and_you_owe_is_unchanged(self):
+        b = self.b
+        b.eval("A.filter(a=>!a.id.startsWith('ZZZ-C')&&isMe(a.o)).forEach(a=>a.st='Closed')")
+        self.commitments(5)
+        self.assertEqual(b.eval("document.querySelectorAll('#mineMore [data-more=mine]').length"), 0)
+        self.commitments(6)
+        self.assertEqual(b.eval("document.querySelectorAll('#mineMore [data-more=mine]').length"), 1)
+        self.assertTrue(b.eval("document.getElementById('mineSec').contains(document.getElementById('tOwe'))"))   # You owe stays inside
+
 
 class NoFileNames(Home):
     shared_server = True
