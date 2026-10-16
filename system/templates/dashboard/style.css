@@ -731,8 +731,20 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .rted{min-height:320px;height:360px;max-height:none;resize:vertical;overflow:auto;padding:10px 12px;outline:none;line-height:1.5} .rted p,.rted div{margin:0 0 8px}
 .cockfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .ev{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
-.spark{display:inline-flex;gap:2px;align-items:flex-end;height:16px;vertical-align:middle}
-.spark i{display:block;width:6px;border-radius:var(--r-sm)} .spark .s-ok{height:6px;background:var(--faint);opacity:.55} .spark .s-warn{height:11px;background:var(--warn)} .spark .s-bad{height:16px;background:var(--bad)}.s-{height:2px;background:var(--line)}
+/* #162: health trend, option B "height is health": tall green On track, medium amber At risk, short red stub Off track, a thin line when no update; the dot under the last bar is this week */
+.spark{display:inline-flex;gap:3px;align-items:flex-end;height:18px;padding:2px 4px 7px;margin:-2px -4px;vertical-align:middle;border-radius:var(--r-sm)} .spark:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.spark i{display:block;width:6px;border-radius:2px;position:relative} .spark .s-ok{height:18px;background:var(--ok)} .spark .s-warn{height:11px;background:var(--warn)} .spark .s-bad{height:5px;background:var(--bad)} .spark .s-{height:2px;background:var(--line-strong,var(--line))}
+.spark:not(.mini) i:last-child::after,.spk-kdot{content:"";position:absolute;left:50%;bottom:-6px;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--muted)}
+.spark i.cur{outline:1.5px solid var(--ink);outline-offset:1.5px}
+.spark.mini{height:18px;padding:0;margin:0;gap:0}
+.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 11px/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#sparkTip,.spk-key{position:fixed;z-index:var(--z-tip,200);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:10px 12px;font-size:var(--fs-sm,13px);line-height:1.4;pointer-events:none}
+#sparkTip{width:260px} #sparkTip[hidden]{display:none} .spk-key{width:250px;pointer-events:auto} .spk-key:focus{outline:none}
+.spk-wk{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em} .spk-h{display:flex;align-items:center;gap:7px;font-weight:700;margin:2px 0} .spk-dot{width:9px;height:9px;border-radius:50%}
+.spk-dot.s-ok{background:var(--ok)} .spk-dot.s-warn{background:var(--warn)} .spk-dot.s-bad{background:var(--bad)} .spk-ch{color:var(--muted)} .spk-why{margin-top:4px;color:var(--ink)}
+.spk-list{list-style:none;margin:8px 0 0;padding:6px 0 0;border-top:1px solid var(--line)} .spk-list li{display:flex;align-items:center;gap:8px;padding:1px 4px;border-radius:var(--r-sm)} .spk-list li.cur{outline:1.5px solid var(--ink);outline-offset:-1px}
+.spk-list .spark.mini{width:6px} .spk-d{font-variant-numeric:tabular-nums;color:var(--muted)} .spk-w{margin-left:auto}
+.spk-kt{font-weight:700} .spk-ks{color:var(--muted);margin:2px 0 8px} .spk-kr{display:flex;align-items:center;gap:10px;margin-top:5px} .spk-kdot{position:static;margin:0 1.5px;flex:none;width:6px;height:6px}
 .pcode{color:var(--muted);font-size:var(--fs-xs);margin-right:6px}
 .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 12px} .toolbar .sp{flex:1}
 #workQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;min-width:220px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}

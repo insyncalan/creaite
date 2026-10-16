@@ -32,7 +32,7 @@ HELP_FONTS = [("Schibsted Grotesk", 500, "schibsted-grotesk-500.woff2"), ("Schib
 IMAGE_LIMIT = 2 * 1024 * 1024        # per image embedded from a project's current state (BL-12)
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
                ".webp": "image/webp", ".svg": "image/svg+xml"}
-WEEK = 8
+WEEK = 6                  # #162: the health trend shows six weeks, as the weekly report does
 FIELD_LABELS = {"due_date": "due date", "client_visible": "client-visible", "client_message": "client messaging",
                 "latest_update": "latest update", "response_action": "response", "health_reason": "health reason",
                 "next_milestone": "next milestone", "milestone_date": "milestone date", "made_by": "made by",
@@ -107,11 +107,28 @@ def embed_image(folder, alt, ref):
 # ── Sections of the data ──────────────────────────────────────────────────────
 
 def trail(con, code, today):
-    """Health for the last 8 week-ending Fridays, oldest first ('' where no update was approved)."""
+    """Health for the last 6 week-ending Fridays, oldest first ('' where no update was approved)."""
+    return [h for h, _ in trail_weeks(con, code, today)]
+
+
+def trail_dates(today):
+    """The week-ending Fridays the trend covers, oldest first (YYYY-MM-DD)."""
     friday = today - timedelta(days=(today.weekday() - 4) % 7)
-    weeks = [(friday - timedelta(weeks=i)).isoformat() for i in range(WEEK - 1, -1, -1)]
-    found = {r["week_ending"]: r["health"] for r in rows(con, "SELECT week_ending, health FROM updates WHERE project = ?", code)}
-    return [{"On track": "ok", "At risk": "warn", "Off track": "bad"}.get(found.get(w), "") for w in weeks]
+    return [(friday - timedelta(weeks=i)).isoformat() for i in range(WEEK - 1, -1, -1)]
+
+
+def trail_weeks(con, code, today):
+    """#162: (health, reason) for the last 6 week-ending Fridays, oldest first; ('', '') where no update was approved. The reason is
+    the week's stored update summary, cut to one line for the tooltip."""
+    weeks = trail_dates(today)
+    found = {r["week_ending"]: r for r in rows(con, "SELECT week_ending, health, summary FROM updates WHERE project = ?", code)}
+    short = {"On track": "ok", "At risk": "warn", "Off track": "bad"}
+    out = []
+    for w in weeks:
+        r = found.get(w)
+        why = " ".join((r["summary"] or "").split()) if r else ""
+        out.append((short.get(r["health"], "") if r else "", why if len(why) <= 160 else why[:159].rstrip() + "…"))
+    return out
 
 
 def milestones(con, project, actions):
@@ -1479,8 +1496,10 @@ def collect(now=None, timings=None):
         mem = memory(folders[p["code"]]) if p["code"] in folders else {"client": "", "rhythm": "Weekly", "current": "",
                                                                        "images": [], "cstitle": CS_TITLE_DEFAULT}
         ms, slip = milestones(con, p, actions)
+        tw = trail_weeks(con, p["code"], today)
         projects.append({"code": p["code"], "name": p["name"], "client": mem["client"], "health": p["health"] or "",
-                         "reason": p["health_reason"] or "", "trail": trail(con, p["code"], today), "slip": slip,
+                         "reason": p["health_reason"] or "", "trail": [h for h, _ in tw], "trailwhy": [w for _, w in tw],
+                         "trailend": trail_dates(today), "slip": slip,
                          "rhythm": mem["rhythm"], "cstitle": mem["cstitle"], "ms": ms, "current": mem["current"], "images": mem["images"],
                          "sponsor": p["sponsor"] or "", "phase": p["phase"] or "",
                          "undated": undated_counts(actions, raid, p["code"]),       # BL-95

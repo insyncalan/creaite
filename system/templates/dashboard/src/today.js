@@ -15,6 +15,7 @@ import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
 import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
+import { CARD_CLOSE, CARD_OPEN } from "./core/hovertime.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
@@ -289,13 +290,58 @@ export function evidence(p){ const nw=WARNS().filter(w=>w.p===p.code).length, ov
   /* BL-190 (sprint-links): each figure is its own link (a zero stays plain); a click on one doesn't also open the row's project page */
   const nd=undatedWork(p.code).length, c=p.code, nm=pName(c);
   return `<span class="ev">${countLink(`${plur(ov,"overdue action")} in ${nm}`,ov,`actions:overdue:${c}`,null,`Overdue <b class="${ov?"bad":""}">${ov}</b>`)} · ${jumpLink(`${plur(nd,"open item")} with no due date in ${nm}`,nd,c,"undated",`No date <b>${nd}</b>`)} · ${countLink(`${plur(urg,"urgent open RAID item")} in ${nm}`,urg,`raid:urgentonly:${c}`,null,`Urgent risks <b class="${urg?"bad":""}">${urg}</b>`)} · ${jumpLink(`Milestone slip of ${p.slip} day${p.slip===1?"":"s"} in ${nm}`,p.slip,c,"ms",`Slip <b class="${p.slip?"bad":""}">${p.slip?p.slip+" days":"none"}</b>`)} · Warnings <b class="${nw?"bad":""}">${nw}</b></span>`; }
-export const spark=p=>`<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">${p.trail.map(t=>`<i class="s-${t}"></i>`).join("")}</span>`;
+/* #162 (Alan, 16-10-2026): the health trend is six weeks (as the weekly report), oldest first, one bar per week ending Friday. Height is
+   health (option B): tall green On track, medium amber At risk, a short red stub Off track, a thin line when no update was
+   approved; the colour repeats the height. The strip is one tab stop (Left/Right/Home/End move between weeks, Esc closes the tip);
+   a dot under the last bar is this week. Hover or focus shows the week, its health in words, whether it changed, that week's
+   reason when one is stored, and the six weeks again. The ? on the column header opens the key. */
+const SPN={ok:"On track",warn:"At risk",bad:"Off track","":"No update"};
+export const spark=p=>{ const t=p.trail, last=t[t.length-1];
+  return `<span class="spark" tabindex="0" role="group" data-sp="${esc(p.code)}" aria-label="Health, last ${t.length} weeks, oldest first. ${last?SPN[last]:"No update"} this week. Arrow keys move between weeks.">${t.map((x,i)=>`<i class="s-${x}" data-i="${i}"></i>`).join("")}</span>`; };
+const sparkWeek=(p,i)=>{ const t=p.trail[i], pv=i?p.trail[i-1]:null, why=(p.trailwhy||[])[i]||"", end=(p.trailend||[])[i]||"";
+  const ch=!t?"No update approved this week":pv===null?"First week shown":pv===""?"No update the week before":pv===t?`Unchanged from ${SPN[pv]}`:`Changed from ${SPN[pv]}`;
+  return {t,end,ch,why,word:SPN[t]}; };
+export function sparkTipHtml(p,i){ const w=sparkWeek(p,i), n=p.trail.length;
+  return `<div class="spk-wk">Week ending ${fd(w.end)}${i===n-1?" · this week":""}</div><div class="spk-h">${w.t?`<span class="spk-dot s-${w.t}"></span>`:""}${w.word}</div><div class="spk-ch">${w.ch}</div>${w.why?`<div class="spk-why">${esc(w.why)}</div>`:""}`
+   +`<ol class="spk-list" aria-label="The last ${n} weeks">${p.trail.map((x,j)=>`<li${j===i?' class="cur" aria-current="true"':""}><span class="spark mini" aria-hidden="true"><i class="s-${x}"></i></span><span class="spk-d">${fd((p.trailend||[])[j]||"")}</span><span class="spk-w">${SPN[x]}</span></li>`).join("")}</ol>`; }
+/** The key (the ? popover): the four bars, drawn as they are in the table. */
+export const sparkKeyHtml=()=>`<div class="spk-key" id="sparkLeg" role="dialog" aria-label="What the health bars mean" tabindex="-1"><div class="spk-kt">Health, last 6 weeks</div><div class="spk-ks">One bar a week, oldest to newest, each a week ending Friday. Taller is healthier.</div>${["ok","warn","bad",""].map(x=>`<div class="spk-kr"><span class="spark mini" aria-hidden="true"><i class="s-${x}"></i></span>${SPN[x]}${x===""?" that week":""}</div>`).join("")}<div class="spk-kr"><span class="spk-kdot" aria-hidden="true"></span>This week</div></div>`;
+/* The tip and the key are one element each, appended to the body when first needed (delegated, so every table and the project page share them). */
+let sparkAt=null, sparkI=0, sparkT=0;
+const sparkEl=()=>document.querySelector(`.spark[data-sp="${CSS.escape(sparkAt||"")}"]:not(.mini)`);
+function sparkShow(el,i){ const p=P.find(x=>x.code===el.dataset.sp); if(!p) return; sparkAt=p.code; sparkI=i; clearTimeout(sparkT);
+  let tip=$("#sparkTip"); if(!tip){ tip=document.createElement("div"); tip.id="sparkTip"; tip.setAttribute("role","tooltip"); tip.setAttribute("aria-live","polite"); document.body.appendChild(tip); }
+  putHTML(tip,raw(sparkTipHtml(p,i))); tip.hidden=false; el.setAttribute("aria-describedby","sparkTip");
+  [...el.children].forEach((b,j)=>b.classList.toggle("cur",j===i));
+  const r=el.children[i].getBoundingClientRect(), h=tip.offsetHeight, w=tip.offsetWidth; let y=r.top-h-10; if(y<8) y=r.bottom+14;
+  tip.style.left=Math.round(Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8))+"px"; tip.style.top=Math.round(y)+"px"; }
+function sparkHide(){ clearTimeout(sparkT); const tip=$("#sparkTip"); if(tip) tip.hidden=true; const el=sparkEl(); if(el){ el.removeAttribute("aria-describedby"); [...el.children].forEach(b=>b.classList.remove("cur")); } sparkAt=null; }
+function sparkKeyClose(back){ const k=$("#sparkLeg"); if(!k) return; const btn=$(".legbtn"); k.remove(); document.querySelectorAll(".legbtn").forEach(b=>b.setAttribute("aria-expanded","false")); if(back&&btn) btn.focus(); }
+export function wireSpark(){
+  const idx=e=>{ const b=e.target.closest&&e.target.closest(".spark:not(.mini) > i"); return b?+b.dataset.i:null; };
+  document.addEventListener("mouseover",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el) return; const i=idx(e);
+    if(sparkAt===el.dataset.sp&&!$("#sparkTip").hidden){ if(i!==null&&i!==sparkI) sparkShow(el,i); else clearTimeout(sparkT); return; }
+    clearTimeout(sparkT); sparkT=setTimeout(()=>sparkShow(el,i===null?el.children.length-1:i),CARD_OPEN); });
+  document.addEventListener("mouseout",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el||el.contains(e.relatedTarget)) return; clearTimeout(sparkT); sparkT=setTimeout(sparkHide,CARD_CLOSE); });
+  document.addEventListener("focusin",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(el&&e.target===el) sparkShow(el,el.children.length-1); });
+  document.addEventListener("focusout",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(el&&e.target===el) sparkHide(); });
+  document.addEventListener("keydown",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]");
+    if(el&&e.target===el){ const n=el.children.length; let i=sparkAt===el.dataset.sp?sparkI:n-1;
+      if(e.key==="ArrowLeft") i=Math.max(0,i-1); else if(e.key==="ArrowRight") i=Math.min(n-1,i+1); else if(e.key==="Home") i=0; else if(e.key==="End") i=n-1;
+      else if(e.key==="Escape"){ if(sparkAt){ e.stopPropagation(); sparkHide(); } return; } else return;
+      e.preventDefault(); e.stopPropagation(); sparkShow(el,i); return; }
+    if(e.key==="Escape"&&$("#sparkLeg")){ e.stopPropagation(); sparkKeyClose(true); } },true);
+  document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest(".legbtn");
+    if(b){ e.stopPropagation(); if($("#sparkLeg")){ sparkKeyClose(false); return; } addHTML(document.body,"beforeend",raw(sparkKeyHtml()));
+      const k=$("#sparkLeg"), r=b.getBoundingClientRect(); k.style.top=Math.round(r.bottom+6)+"px"; k.style.left=Math.round(Math.min(Math.max(8,r.left-20),innerWidth-k.offsetWidth-8))+"px"; b.setAttribute("aria-expanded","true"); k.focus(); return; }
+    if($("#sparkLeg")&&!e.target.closest("#sparkLeg")) sparkKeyClose(false); },true);
+}
 /* BL-285: the Portfolio table. The description is no longer a line under the name: it is the name's tooltip (data-tip), shown on
    hover and on keyboard focus (the name is a button that opens the project), and read by screen readers from a hidden span
    (aria-describedby). The columns resize like Work's (pfResize), remembered under portfolio|<column>. */
-export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","8 weeks"],["next","Next milestone"]];
+export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","6 weeks"],["next","Next milestone"]];
 /** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots). BL-325: the next milestone's relative date is mid-sentence in brackets, so lower case ("(in 24 days)") */
-export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
+export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}${k==="trend"?`<button type="button" class="legbtn" aria-label="What the health bars mean" aria-haspopup="dialog" aria-expanded="false"></button>`:""}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
   return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
 export function pfResize(box){ if(box) $$("thead th[data-col]",box).forEach(th=>colResizer(th,"portfolio|"+th.dataset.col)); }
 /* BL-316: a reminder's "…" menu is the Menu block's (openMenu): Run report now, Dismiss for this session, Dismiss forever */
@@ -307,6 +353,7 @@ export function remPick(id,d){ if(d==="run"){ runReminder(REMINDERS.find(r=>r.id
   renderToday(); snack(d==="s"?"Hidden for this session":"Hidden for good (this one)",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==id)); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(dismissedS().filter(x=>x!==id))); renderToday(); }); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0028(){
+wireSpark();
 $("#attnList").addEventListener("click",e=>{ const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
   if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
   if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
