@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 16-10-2026 | Alan | "What does a slip knock onto" is built in two stages: #164 stage 1 is the risk radar from today's data; stage 2 (knock-on and what-if) waits for #28 stage B (still on hold) and reads its links; propose-only, no critical path. At the 13-11-2026 review #28 is un-held only if stage 1 shows missing links limit the radar. #166 gains cross-project dependencies as a signal. | Alan chose the staged option (confirmed directly); #164, #28 and #166 updated. |
 | 16-10-2026 | Alan | Portfolio health bars (#162): marks are option B "height is health" (tall green On track, medium amber At risk, short red stub Off track, thin line no update); window 6 weeks, not 8; legend is a ? button on the column header; the tooltip shows the week's reason when stored. | Alan answered directly; #162 moves to Ready. |
 | 16-10-2026 | Jarvis | Rail (#156/#139): first-state rule uses a 1200px threshold (no chat overlap); under 900px the rail is always collapsed; Enter on a flyout item goes to the page, an arrow opens the flyout. | Team Stark's four rail questions; within the charter, desktop-only. |
 | 16-10-2026 | Alan | Today's Intake and Review (#168, renamed from To decide) sits just above Week ahead, after First thing, Decisions needed, Needs attention and Your commitments; it folds like Week ahead. | Alan answered directly; #168 moves to Ready. |
