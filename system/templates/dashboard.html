@@ -3307,6 +3307,7 @@ button.nchip{font:inherit;font-size:12px}
     CHK: () => CHK,
     CHNEAR: () => CHNEAR,
     CHREC: () => CHREC,
+    CHSAVED: () => CHSAVED,
     CHSTARTED: () => CHSTARTED,
     CHTOP: () => CHTOP,
     CKFN: () => CKFN,
@@ -5748,6 +5749,7 @@ button.nchip{font:inherit;font-size:12px}
     QNOW: void 0,
     RBMARKED: void 0,
     RBOUT: void 0,
+    REATT: void 0,
     RUN: void 0,
     RUNLABEL: void 0,
     SHOWN: void 0,
@@ -55338,8 +55340,9 @@ ${d5.text}`);
     }
     $("#chat").classList.add("on");
     rbDismiss();
-    chatScroll();
-    if (!$("#chLog").children.length && !ATTACHED) {
+    if (CHFOLLOW || CHSAVED == null) chatScroll();
+    else $("#chLog").scrollTop = CHTOP = CHSAVED;
+    if (!$("#chLog").children.length && !ATTACHED && !shared.REATT) {
       if (shared.ASKCHAT && viaServer()) loadChat(shared.ASKCHAT, true);
       else greet();
     }
@@ -55355,6 +55358,7 @@ ${d5.text}`);
   }
   function closeChat() {
     const wasOn = $("#chat").classList.contains("on"), inside = $("#chat").contains(document.activeElement);
+    if (wasOn) CHSAVED = $("#chLog").scrollTop;
     $("#chat").classList.remove("on");
     if ($("#chat").contains(document.activeElement)) document.activeElement.blur();
     if (wasOn && inside && (!document.activeElement || document.activeElement === document.body)) {
@@ -55623,7 +55627,7 @@ ${d5.text}`);
     $("#chLog").addEventListener("click", (e4) => mdClick(e4));
   }
   var mdView = (text, o5) => `<div class="mdv">${mdChat(text, o5)}</div>`;
-  var CHFOLLOW = true, CHTOP = 0;
+  var CHFOLLOW = true, CHTOP = 0, CHSAVED = null;
   var CHNEAR = 12;
   function chatPin() {
     if (!CHFOLLOW) return;
@@ -56049,9 +56053,16 @@ ${d5.text}`);
   async function reattach() {
     if (!viaServer()) return;
     queueLoad();
-    const r4 = await api("/api/ask/running");
+    shared.REATT = true;
+    let r4;
+    try {
+      r4 = await api("/api/ask/running");
+    } finally {
+      shared.REATT = false;
+    }
     if (r4.ok && r4.run) attachRun(r4.run);
     else {
+      if (shared.ASKCHAT && !$("#chLog").children.length && !ATTACHED) await loadChat(shared.ASKCHAT, true);
       pendingCard();
       pendingEdit();
     }
@@ -56416,7 +56427,7 @@ ${d5.text}`);
     }
     const work = () => live ? working() : document.createElement("div");
     let next = null;
-    const rd2 = res.body.getReader(), dec = new TextDecoder();
+    const rd2 = res.body.getReader(), dec = new TextDecoder(), replayAll = !!ended, t02 = performance.now();
     let buf = "", conf = null, perm = null, chg = null, ecard = null, fcard = null, prep = null, runId = body2.run, replies = [], grp = null, spin = work();
     for (; ; ) {
       let chunk;
@@ -56434,6 +56445,7 @@ ${d5.text}`);
       if (done) break;
       buf += dec.decode(value, { stream: true });
       let i5;
+      const replayed = replayAll || url === "/api/ask/attach" && performance.now() - t02 < 150;
       while ((i5 = buf.indexOf("\n\n")) >= 0) {
         const chunk2 = buf.slice(0, i5);
         buf = buf.slice(i5 + 2);
@@ -56463,7 +56475,10 @@ ${d5.text}`);
         } else if (ev.type === "text") {
           spin.remove();
           grp = null;
-          replies.push(mWords(await sayMd(fdText(ev.text))));
+          {
+            const d5 = await sayMd(fdText(ev.text));
+            replies.push(replayed ? d5 : mWords(d5));
+          }
           claimsNote(ev.checked);
           spin = work();
         } else if (ev.type === "cant") {

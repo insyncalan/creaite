@@ -334,13 +334,15 @@ shared.SHOWN=null;
 export function greet(){ addEl("msg a",html`${GREET}`); }
 export function openChat(){ if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
       CHATFROM=ok?{el:f,key:chatFromKey(f)}:null; }
-  $("#chat").classList.add("on"); rbDismiss(); chatScroll(); if(!$("#chLog").children.length&&!ATTACHED){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
+  $("#chat").classList.add("on"); rbDismiss(); if(CHFOLLOW||CHSAVED==null) chatScroll(); else $("#chLog").scrollTop=CHTOP=CHSAVED;   /* #148: where it was left */
+  if(!$("#chLog").children.length&&!ATTACHED&&!shared.REATT){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
 /* ===== end BL-262 ===== */
 /* BL-35: the panel's width is dragged from its left edge (← → by keyboard; double-click resets) and remembered in
    this browser — a screen preference, not a setting */
 export const CHATW0=420, chatClamp=w=>Math.round(Math.max(360,Math.min(window.innerWidth*0.7,w)));
 export function setChatWidth(w,save){ w=chatClamp(w); document.documentElement.style.setProperty("--chatw",w+"px"); $("#chGrip").setAttribute("aria-valuenow",w); if(save) store.set("creaite-chat-width",w); return w; }
 export function closeChat(){ const wasOn=$("#chat").classList.contains("on"), inside=$("#chat").contains(document.activeElement);   /* BL-211 */
+  if(wasOn) CHSAVED=$("#chLog").scrollTop;   /* #148: a hidden panel forgets its scroll position */
   $("#chat").classList.remove("on"); if($("#chat").contains(document.activeElement)) document.activeElement.blur();
     if(wasOn&&inside&&(!document.activeElement||document.activeElement===document.body)){ const t=chatReturnTarget(); if(t){ if(t.tabIndex<0&&!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1"); t.focus(); } }
     if(wasOn) CHATFROM=null; }
@@ -476,7 +478,7 @@ export const mdView=(text,o)=>`<div class="mdv">${mdChat(text,o)}</div>`;
    message, a step added to the fold, the working line, the panel resizing) used to leave the view a few pixels short and the
    browser's own scroll event then read that as Alan scrolling away, so the button showed while he was at the bottom. Now any
    change in the log or its size keeps the view at the bottom while following, and a scroll that didn't go up never stops it. */
-export let CHFOLLOW=true, CHTOP=0; export const CHNEAR=12;
+export let CHFOLLOW=true, CHTOP=0, CHSAVED=null; export const CHNEAR=12;
 export function chatPin(){ if(!CHFOLLOW) return; const l=$("#chLog"); l.scrollTop=l.scrollHeight; CHTOP=l.scrollTop; }
 export const chatNear=()=>{ const l=$("#chLog"); return l.scrollHeight-l.scrollTop-l.clientHeight<=CHNEAR; };
 export function chatScroll(force){ const l=$("#chLog"), b=$("#chJump");
@@ -602,7 +604,8 @@ export async function attachDraw(run){ if(shared.SHOWN&&shared.SHOWN.run===run.i
   if(!has){ const d=addEl("msg u",html`${run.message}`,run.started||undefined); if(run.plain) runAsk(d); }
   shared.SHOWN={run:run.id,seq:after}; return after; }
 /* ===== end BL-262 ===== */
-export async function reattach(){ if(!viaServer()) return; queueLoad(); const r=await api("/api/ask/running"); if(r.ok&&r.run) attachRun(r.run); else { pendingCard(); pendingEdit(); } }   /* BL-257: the queue comes back too; BL-258: a change card too */   /* BL-141: a card still waiting comes back */
+export async function reattach(){ if(!viaServer()) return; queueLoad(); shared.REATT=true; let r; try{ r=await api("/api/ask/running"); } finally{ shared.REATT=false; }   /* #148: openChat leaves the first draw of the log to this */
+  if(r.ok&&r.run) attachRun(r.run); else { if(shared.ASKCHAT&&!$("#chLog").children.length&&!ATTACHED) await loadChat(shared.ASKCHAT,true);   /* #148: the saved chat is drawn before the panel is opened, so opening it shows it whole at once */ pendingCard(); pendingEdit(); } }   /* BL-257: the queue comes back too; BL-258: a change card too */   /* BL-141: a card still waiting comes back */
 /* ===== BL-139 (sprint-final) =====
    A small badge fixed at the bottom right shows that ask creaite is working and, afterwards, that it has finished. It follows
    every run the run engine makes: a chat message, Process selected, a transcript check or load, a sweep or calendar refresh, a
@@ -716,14 +719,14 @@ export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, ou
   if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
   if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check the live server window."); retryOffer("failed",body); return; }
   const work=()=>live?working():document.createElement("div");   /* BL-262 */ let next=null;
-  const rd=res.body.getReader(), dec=new TextDecoder(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
-  for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i;
+  const rd=res.body.getReader(), dec=new TextDecoder(), replayAll=!!ended, t0=performance.now(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
+  for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i; const replayed=replayAll||(url==="/api/ask/attach"&&performance.now()-t0<150);   /* #148: a finished run, or the backlog an attach opens with (the server sends it as soon as the stream opens), is drawn as it was: no words fading in */
     while((i=buf.indexOf("\n\n"))>=0){ const chunk=buf.slice(0,i); buf=buf.slice(i+2); if(!chunk.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(chunk.slice(6)); }catch(e){ continue; }
       if(ev.seq&&runId) shared.SHOWN={run:runId,seq:ev.seq};   /* BL-262: the last event drawn */
       if(plain&&!PLAINEV.includes(ev.type)){ if(ev.type==="stopped") outcome="stopped"; else if(ev.type==="error") outcome="failed"; continue; }   /* BL-326: a run creaite started shows its steps and its closure, never its prompt, reply or raw output */
       if(ev.type==="closure"){ spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
       else if(ev.type==="step"){ spin.remove(); grp=stepGroup(grp,ev.label); spin=work(); }
-      else if(ev.type==="text"){ spin.remove(); grp=null; replies.push(mWords(await sayMd(fdText(ev.text))));   /* BL-136: a live reply's words fade in */ claimsNote(ev.checked); spin=work(); }
+      else if(ev.type==="text"){ spin.remove(); grp=null; { const d=await sayMd(fdText(ev.text)); replies.push(replayed?d:mWords(d)); }   /* BL-136: a live reply's words fade in */ claimsNote(ev.checked); spin=work(); }
       else if(ev.type==="cant"){ spin.remove(); grp=null; cantCard(ev); spin=work(); }   /* BL-314: the plain "I can't", with where it can be done */
       else if(ev.type==="confirm") conf=ev;
       else if(ev.type==="permission") perm=ev;      /* BL-140: a rule that isn't added, and why */
