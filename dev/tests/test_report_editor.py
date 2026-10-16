@@ -346,6 +346,23 @@ class TextTests(SheetCase):
         b.wait("SH.changes.includes('Text edited')")
         self.assertIn("Edited. ", self.sh("doc.sections.find(s=>s.id==='this_week').text"))
 
+    def test_an_active_rich_field_shows_the_one_line_grouped_toolbar_outside_the_field(self):
+        b = self.b          # #134: Heading, List and Insert menus inside the sheet; no room taken; # and picture need a host, so not drawn
+        sel = "#shFix section[data-id='this_week']"; q = lambda x: json.dumps(x)
+        self.assertEqual(b.eval(f"document.querySelectorAll({q(sel + ' .sheet-rtebar')}).length"), 0)
+        before = b.eval(f"document.querySelector({q(sel + ' .sheet-rich')}).getBoundingClientRect().height")
+        b.click(f"{sel} .sheet-rich p")
+        b.wait(f"document.querySelector({q(sel + ' .sheet-rtebar')})")
+        names = b.eval(f"[...document.querySelectorAll({q(sel + ' .sheet-rtebar [data-nt]')})].map(x => x.dataset.nt)")
+        self.assertIn("m-heading", names)
+        self.assertIn("m-list", names)
+        self.assertNotIn("item", names)
+        self.assertNotIn("image", names)
+        self.assertEqual(b.eval(f"document.querySelector({q(sel + ' .sheet-rich')}).getBoundingClientRect().height"), before, "it takes no room")
+        b.click(f"{sel} .sheet-rtebar [data-nt=b]")
+        b.type("bold")
+        self.assertIn("**bold", self.sh("doc.sections.find(s=>s.id==='this_week').text"))
+
     def test_tags_open_the_item_or_tell_the_view_and_can_be_removed(self):
         b = self.b
         b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-tag')].find(x=>x.textContent==='00:14').click()")

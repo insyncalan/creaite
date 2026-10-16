@@ -341,7 +341,7 @@ def md_from_lines(lines):
     out = []
     for line in lines:
         text = re.sub(r"^\s*•\s+", "- ", line.strip())
-        text = re.sub(r"^[☐☑]\s+", lambda m: "- [x] " if "☑" in m.group() else "- [ ] ", text)       # #134: a checklist item comes back as one
+        text = re.sub(r"^[☐☑]\s+", lambda m: "- [x] " if "☑" in m.group() else "- [ ] ", text)       # #134: back to a checklist item
         kind = "ul" if text.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", text) else None
         last = out[-1].splitlines()[-1] if out else ""
         if kind and kind == ("ul" if last.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", last) else None):
@@ -423,7 +423,8 @@ def md_paras(para, name, text):
         elif kind == "img":                 # images are filled as image entries (current_entries); a stray one shows its caption
             out += one("", body[0]) if body[0] else ""
         else:
-            out += "".join(one(pre, task_split(t)[1] if pre in BOX.values() else t, "list", level) for pre, (level, _, t) in zip(list_prefixes(body), body))
+            out += "".join(one(pre, task_split(t)[1] if pre in BOX.values() else t, "list", level)
+                           for pre, (level, _, t) in zip(list_prefixes(body), body))
     return out or replace_in(para, {name: NONE})
 
 

@@ -799,6 +799,7 @@ Where: Review › Open draft on minutes · address `#minutes=`
 ## The report sheet
 - Reports and minutes are edited on an A4 **sheet**. **Zoom** with the buttons, a pinch or [[⌘+]], [[⌘-]] and [[⌘0]] (40 to 80%); page breaks are marked.
 - **Sections:** drag one (or [[Alt+↑]] and [[Alt+↓]]) to move it, **Hide** or show it, rename a heading and **Reset the heading**. A row or a figure has an eye to leave it out of the export, and figures can be reordered. A hidden section or row is never exported.
+- **Formatting:** click into a section's text and a one-line bar appears just above it: **Heading** and **List** menus, bold, italic, strikethrough, quote, link, undo and redo. It floats over the sheet, so nothing moves when it shows. A table cell has no bar.
 - **✦ on a section** finds the source of a line, runs its check, or suggests a fresh draft. Source tags and checks show as you write. Select text and press **AI** for the usual suggestions, plus **Polish** (spelling, grammar and light smoothing; facts and length kept).
 - **Side by side** shows two versions, scrolling together and levelled. **≠** marks a difference, and **Match internal** copies the internal wording across for that section or all of them. **Show as exported** shows the page as it will be filed.
 - It saves as you write (and [[⌘S]]). If the report changed somewhere else, the sheet says **This changed somewhere else** and offers **Reload**; it never overwrites.
