@@ -681,9 +681,11 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .msrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.msrow .msn{flex:1;min-width:12ch}
 .prog{display:inline-block;width:80px;height:6px;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;vertical-align:middle}.prog i{display:block;height:100%;background:var(--accent)}
 .curcard p{margin:0 0 8px}.curcard ul,.curcard ol,.rted ul,.rted ol{margin:0 0 8px;padding-left:24px}
-.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
+.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px}
+/* #122: Current state's three heading levels are stored ### #### ##### (the editor's Heading 1 to 3); read view h3 h4 h5 */
+.curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
-.rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
+.curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px} .rtegrp{display:inline-flex;gap:2px;flex:none}   /* a group (and the divider before it) wraps as one: no divider ends a line */
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
@@ -699,6 +701,10 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
 .rte{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)} .rte:focus-within{border-color:var(--accent,var(--ink))}
 .rtebar{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--line)} .rtebar button{border:0;background:none;color:var(--muted);padding:4px 8px;border-radius:var(--r-md);cursor:pointer;font:inherit;font-size:var(--fs-sm)} .rtebar button:hover{background:var(--sunk);color:var(--ink)}
+/* #122: the shared formatting bar's states and targets (components/EditorBar.jsx): 24px at least, pressed = in force at the cursor */
+.rtebar button{min-width:28px;min-height:26px} .rtebar button[aria-pressed=true]{background:var(--accent-soft);color:var(--ink)} .rtebar button[aria-disabled=true]{opacity:.4;cursor:default}
+.rtebar button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+@media (forced-colors:active){.rtebar button[aria-pressed=true]{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar button[aria-disabled=true]{opacity:1;color:GrayText} .rtesep{background:CanvasText}}
 .rted{min-height:320px;height:360px;max-height:none;resize:vertical;overflow:auto;padding:10px 12px;outline:none;line-height:1.5} .rted p,.rted div{margin:0 0 8px}
 .cockfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .ev{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
@@ -2874,7 +2880,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .captitle{min-height:32px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface);color:var(--ink);font:600 14px/22px var(--font);width:100%;box-sizing:border-box}
 .capbody{flex:1 0 180px;min-height:180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:20px;overflow:auto;cursor:text;background:var(--surface)}
 .capbody:focus-within,.capbody:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
-.capbody p{margin:0 0 6px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
+.capbody p{margin:0 0 6px} .capbody h1{font-size:16px;margin:12px 0 4px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
 .capbody.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
 .capfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px} .capfoot .btn{min-height:28px} .capfoot .btn.ai{color:var(--accent);border-color:var(--accent)}
 .capfoot .btn[aria-disabled="true"]{opacity:.55}
@@ -2923,29 +2929,66 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nnone{margin:8px 4px}
 .ndoc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 24px;min-width:0;position:relative}
 .ndoc.empty h2{font-size:16px;margin:0 0 6px}
-.nhead .ntitle{width:100%;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0 0 4px}
+.nhead .ntitle{flex:1;min-width:0;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0}
 .nhead .ntitle:hover{border-bottom-color:var(--line)} .nhead .ntitle:focus{outline:none;border-bottom-color:var(--accent)}
-.nhead .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px}
-.nhead .meta .sp{flex:1}
-.nhead .tag{border:1px solid var(--line);border-radius:999px;padding:0 8px;min-height:20px;display:inline-flex;align-items:center;font-size:11px}
+/* #115: the title row (focus, title, Saved, Find updates, more), one line of properties, one line of tags */
+.nhead .trow{display:flex;align-items:center;gap:8px;min-width:0}
+.nhead .meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:6px 0 0}
+.nhead .meta .nk{font:500 var(--fs-xs) var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-right:6px}
+.nhead .nprop{display:inline-flex;align-items:center;position:relative}
+.nhead .ndwrap{display:inline-flex;gap:6px}
+.nhead .nin{height:28px;border:1px dashed var(--line);border-radius:var(--r-pill);padding:0 10px;background:none;color:var(--ink);font-size:var(--fs-sm)}
+.nhead .nin:focus{outline:none;border-style:solid;border-color:var(--accent)} .nhead .nin[aria-invalid="true"]{border-color:var(--bad)}
+.nhead .nin.date{width:140px} .nhead .nin.who{width:min(280px,100%)}
+.nhead .ndbtn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);width:28px;height:28px;display:grid;place-items:center;color:var(--muted);cursor:pointer;padding:0}
+.nhead .ndbtn:hover{background:var(--sunk);color:var(--ink)} .nhead .ndbtn svg.i{width:16px;height:16px}
+.nhead .dpop{position:absolute;top:34px;left:0;z-index:var(--z-pop);width:292px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px 12px 12px;text-align:left}
+.nhead .dpop .typed{margin:0 0 8px;font-size:var(--fs-xs);color:var(--muted);min-height:20px} .nhead .dpop .typed b{color:var(--ink);font-weight:600} .nhead .dpop .typed.bad{color:var(--bad)}
+.nhead .dpop .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.nhead .dpop .mh button{border:0;background:none;width:28px;height:28px;border-radius:var(--r-sm);cursor:pointer;color:var(--muted);font-size:var(--fs-lg)} .nhead .dpop .mh button:hover{background:var(--sunk)}
+.nhead .dpop .g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.nhead .dpop .dn{font:500 var(--fs-2xs) var(--mono);color:var(--faint);padding:4px 0;text-transform:uppercase}
+.nhead .dpop .g button{height:32px;border:0;border-radius:var(--r-md);background:none;cursor:pointer;font-size:var(--fs-sm);color:var(--ink)} .nhead .dpop .g button:hover{background:var(--sunk)}
+.nhead .dpop .g button.o{color:var(--faint)} .nhead .dpop .g button.t{box-shadow:inset 0 0 0 1px var(--accent)} .nhead .dpop .g button.s{background:var(--accent);color:var(--accent-ink)}
+.nhead .dpop .foot{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.nhead .dpop .foot button{border:0;background:none;color:var(--accent);font-size:var(--fs-xs);cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:2px 4px;min-height:24px}
+.nhead .dpop button:focus-visible,.nhead .ndbtn:focus-visible,.nhead .chip .x:focus-visible,.nhead .addl:focus-visible,.nhead .sugg button:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:1px}
+.nlabels{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.nhead .tag{border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;min-height:24px;display:inline-flex;align-items:center;font-size:var(--fs-xs);color:var(--muted)}
 .nhead .tag.int{border-color:var(--warn);color:var(--warn)}
-.ntags input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:90px;max-width:220px}
-.nsave{font-size:12px;color:var(--muted)} .nsave.saved{color:var(--ok)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
+.nlabels .chip{display:inline-flex;align-items:center;gap:2px;height:24px;border:1px solid var(--line);border-radius:var(--r-pill);padding:0 4px 0 10px;font-size:var(--fs-xs);background:var(--sunk);color:var(--ink)}
+.nlabels .chip .t{border:0;background:none;color:inherit;font:inherit;padding:0;min-width:2ch;max-width:24ch;border-radius:var(--r-sm);cursor:text}
+.nlabels .chip .t:focus{outline:none;box-shadow:0 0 0 2px var(--accent-soft);background:var(--surface)}
+.nlabels .chip .x{border:0;background:none;color:var(--faint);width:24px;height:24px;border-radius:50%;cursor:pointer;line-height:1;padding:0;font-size:var(--fs-md)} .nlabels .chip .x:hover{background:var(--line);color:var(--ink)}
+.nhead .addl{height:24px;border:1px dashed var(--line);border-radius:var(--r-pill);background:none;color:var(--muted);padding:0 10px;font-size:var(--fs-xs);cursor:pointer} .nhead .addl:hover{border-color:var(--accent);color:var(--accent)}
+.nhead .addin{height:24px;width:140px;border:1px solid var(--accent);border-radius:var(--r-pill);padding:0 10px;font-size:var(--fs-xs);background:var(--surface);color:var(--ink)} .nhead .addin:focus{outline:none}
+.nlabels .sugg{color:var(--faint);font-size:var(--fs-xs)} .nlabels .sugg button{border:0;background:none;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);padding:0 4px;min-height:24px}
+/* the list's quiet collapse control, at the right edge of the NOTES header */
+.nlist .lhead .sp{flex:1}
+.nlist .lhead .col{border:0;background:none;color:var(--faint);opacity:.75;width:var(--ctl-h-sm);height:var(--ctl-h-sm)} .nlist .lhead .col:hover,.nlist .lhead .col:focus-visible{background:var(--sunk);color:var(--ink);opacity:1}
+.nsave{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap} .nsave.saved{color:var(--muted)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
 .nslot:empty{display:none}
 .nmore .nch{display:none} .nmore>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .nmore::before{content:"⋯";font-size:16px;line-height:1}
 .nmorewrap .ddmenu{right:0;left:auto}
 .nstale{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--warn-soft);color:var(--ink);font-size:13px}
 .ned{position:relative}
-.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:1}
+.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:nowrap;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1}
 .ndoc:focus-within .ned .nbar{visibility:visible}
-.ned .nbar button{min-width:28px;min-height:26px}
+.ned .nbar button,.capbar button{min-width:26px;min-height:26px;padding:4px 5px} .capbar{flex-wrap:wrap;margin-bottom:6px}
 .ned .nbody{min-height:280px;height:auto;resize:none;overflow:visible;padding:4px 0;max-width:72ch;position:relative}
-.ned .nbody h2{font-size:15px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;margin:14px 0 4px}
-.ned .nbody ul[data-type=taskList]{list-style:none;padding-left:2px}
-.ned .nbody ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
-.ned .nbody ul[data-type=taskList] li>label{flex:none;margin-top:2px}
-.ned .nbody ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+.ned .nbody h1{font-size:19px;margin:18px 0 6px} .ned .nbody h2{font-size:16px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;font-weight:600;margin:14px 0 4px}
+/* #122: the aligned checklist, for every rich editor that takes one. The 18px box is centred on the first line of text: the label is
+   one line tall (1lh) and centres the box, whose 26px element (a 4px invisible border round the 18px box) is the click target. */
+.ProseMirror ul[data-type=taskList]{list-style:none;padding-left:2px}
+.ProseMirror ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
+.ProseMirror ul[data-type=taskList] li>label{flex:none;display:flex;align-items:center;height:1lh;min-height:1lh;margin:0}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:26px;height:26px;margin:0 -4px}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]:checked::after{left:6px;top:2px}
+.ProseMirror ul[data-type=taskList] li>div{flex:1;min-width:0}
+.ProseMirror ul[data-type=taskList] li>div>p{margin:0}
+.ProseMirror ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+@media (forced-colors:active){.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:24px;height:24px;margin:0}}   /* the native box scales to the 24px target (BL-325) */
 .ned .nbody table{border-collapse:collapse;margin:8px 0;max-width:100%} .ned .nbody td,.ned .nbody th{border:1px solid var(--line);padding:4px 8px;min-width:60px;vertical-align:top}
 .ned .nbody a{color:var(--accent)}
 .wl{color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
@@ -2956,12 +2999,33 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .nchip.bad::before{background:var(--bad)} .nchip.warn::before{background:var(--warn)} .nchip.ok::before{background:var(--ok)}
 button.nchip{font:inherit;font-size:12px}
-.ntpick{position:absolute;z-index:5;width:300px;max-width:calc(100% - 8px);background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px;overflow:hidden}
+/* #122 C: a chip in an editor carries the whole 'ID · Designation: title', so it flows and wraps with the text (Notes and Current state) */
+.rted .nchip{display:inline;white-space:normal;padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone;line-height:1.5}
+.rted .nchip::before{display:inline-block;vertical-align:middle;margin:-2px 5px 0 0}
+.rted a .nchip,.rted .nchip a{color:var(--ink);text-decoration:none}
+.itemref{white-space:normal}
+.ntpick.items{width:440px} .ntpick.items .r .l{flex:1;min-width:0}
+.ntpick{position:fixed;z-index:220;width:300px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px}
 .ntpick .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
 .ntpick .r{display:flex;gap:8px;align-items:center;padding:6px 10px;min-height:28px;cursor:pointer}
 .ntpick .r.on{background:var(--accent-soft)} .ntpick .r .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ntpick .r small{color:var(--faint);margin-left:auto;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}
 .ntpick .r.none{color:var(--muted);cursor:default}
+/* #122 B: the / menu, drawn by components/SlashMenu.jsx at the caret (position and flip set in core/caretPlace.js); rows 32px, tiles 24px */
+.slashmenu{position:fixed;z-index:220;width:340px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px;font-size:13px;color:var(--ink)}
+.slashsr{position:fixed;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px}
+.slashmenu .g{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px}
+.slashmenu .r{display:flex;gap:10px;align-items:center;min-height:32px;padding:3px 8px;border-radius:7px;cursor:pointer}
+.slashmenu .r.on{background:var(--accent-soft)}
+.slashmenu .ic{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:var(--surface);display:grid;place-items:center;flex:none;font:600 11px var(--font);color:var(--ink)}
+.slashmenu .r.on .ic{border-color:var(--accent)}
+.slashmenu .tx{display:flex;flex-direction:column;min-width:0}
+.slashmenu .t{font-weight:500;line-height:1.25}
+.slashmenu .d{color:var(--muted);font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slashmenu .k{margin-left:auto;font:500 11px var(--mono);color:var(--faint)}
+.slashmenu .r.none{color:var(--muted);cursor:default;padding:8px}
+.slashmenu .foot{position:sticky;bottom:-4px;background:var(--surface);border-top:1px solid var(--line);margin:4px -4px -4px;padding:6px 12px;font-size:11px;color:var(--faint)}
+@media (forced-colors:active){.slashmenu{border-color:CanvasText}.slashmenu .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}.slashmenu .r.on .d,.slashmenu .r.on .k{color:HighlightText}.slashmenu .ic{border-color:CanvasText}.ntpick .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}}
 .nctx{display:flex;flex-direction:column;gap:12px;min-width:0}
 .nctx .box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
 .nctx .box h2{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
@@ -3028,13 +3092,6 @@ button.nchip{font:inherit;font-size:12px}
 @media (max-width:420px){.fu-fields{grid-template-columns:1fr}}
 /* ===== end BL-301 E ===== */
 /* ===== BL-301 B gaps (v20-notes-gaps): a Working session's date and attendees in the header; pictures ===== */
-.nws{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
-.nwsf{display:inline-flex;gap:4px;align-items:center;min-width:0}
-.nws input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:0}
-.nws .nwsdate{width:96px} .nws .nwswith{width:200px;max-width:100%}
-.nws input:focus{outline:none;border-style:solid;border-color:var(--accent)}
-.nws input[aria-invalid="true"]{border-color:var(--bad)}
-.nwsbad{color:var(--bad);font-size:11px}
 .nbody figure.cimg img{max-width:100%;height:auto}
 /* ===== end BL-301 B gaps ===== */
 /* ===== BL-301 D (v20-ai-select): AI on selected text: the bar over a selection and the suggestion (components/AiSelect.jsx) ===== */
@@ -3412,3 +3469,16 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 .rp-cockcard{display:grid;gap:8px} .rp-cockcard h2{margin:0;display:flex;gap:8px;align-items:center}
 .rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)} .rp-row .g{flex:1;min-width:180px}
 /* ===== end BL-337 ===== */
+
+/* ===== #122 (final layout, Alan 16-10-2026) ===== the Notes bar is one line: Heading, List and Insert are hover menus (components/EditorBar.jsx) */
+.rtemenu{display:inline-flex;flex:none} .rtebar .rtemb{display:inline-flex;align-items:center;gap:2px} .rtebar .rtemb .nch{width:12px;height:12px;display:inline-block}
+.rtebar .rtemb[aria-expanded=true]{background:var(--sunk);color:var(--ink)}
+.rtebar .rtepop{top:100%;margin-top:2px;width:auto;min-width:190px;padding:4px;text-align:left}
+.rtebar .rtepop button{white-space:nowrap;min-width:0;min-height:28px;padding:6px 10px;color:var(--ink);gap:6px;align-items:center;text-align:left}
+.rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:var(--sunk);outline-offset:-2px}
+.rtebar .rtepop [role=menuitemradio]::before{content:"";display:inline-block;width:1em;flex:none;text-align:center}
+.rtebar .rtepop [role=menuitemradio][aria-checked=true]::before{content:"\2713"}
+.rtebar .rtepop .last{margin-left:auto;padding-left:16px;color:var(--faint)}
+.rtebar .rtepop [aria-disabled=true]{opacity:.4;cursor:default}
+.nbar .rtelink{position:absolute;top:calc(100% + 4px);left:8px;margin:0;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:var(--z-menu)} .nbar .rtelink[hidden]{display:none}
+@media (forced-colors:active){.rtebar .rtepop{border:1px solid CanvasText} .rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar .rtepop [aria-disabled=true]{opacity:1;color:GrayText}}

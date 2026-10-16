@@ -11,6 +11,27 @@ export const TODAY=(()=>{ const d=new Date(), z=n=>String(n).padStart(2,"0"); re
 /* storage and file names: YYYY-MM-DD. Everything shown or typed: DD-MM-YYYY */
 export const fd=iso=>iso&&DATE.test(iso.slice(0,10))?`${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}${iso.length>10?iso.slice(10):""}`:(iso||"");
 export const toIso=dd=>DDATE.test(dd)?`${dd.slice(6,10)}-${dd.slice(3,5)}-${dd.slice(0,2)}`:dd;
+/* The typed-date reader the Notes header uses (and any date field may later): DD-MM-YYYY (also / or .), YYYY-MM-DD, today, yesterday,
+   tomorrow, in N days, N days ago, and a weekday: "last monday" (the latest one before today), "next friday" (the first one after
+   today), "this friday" (this Monday-to-Sunday week's), or a bare "friday" (as next). Weekdays also by their short names. Returns
+   YYYY-MM-DD, or null when it cannot read the text. `today` (YYYY-MM-DD) is the laptop's own date unless a test gives one. */
+export function readDate(text,today=TODAY){
+  const s=String(text??"").trim().toLowerCase().replace(/\s+/g," "); if(!s) return null;
+  const z=n=>String(n).padStart(2,"0"), iso=d=>`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`, t0=new Date(today+"T12:00:00");
+  const add=n=>{ const d=new Date(t0); d.setDate(d.getDate()+n); return iso(d); };
+  const real=(y,m,d)=>{ const x=new Date(y,m-1,d,12); return x.getFullYear()===y&&x.getMonth()===m-1&&x.getDate()===d?iso(x):null; };
+  let m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); if(m) return real(+m[3],+m[2],+m[1]);
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m) return real(+m[1],+m[2],+m[3]);
+  if(s==="today") return today; if(s==="yesterday") return add(-1); if(s==="tomorrow") return add(1);
+  m=s.match(/^in (\d{1,4}) days?$/); if(m) return add(+m[1]);
+  m=s.match(/^(\d{1,4}) days? ago$/); if(m) return add(-m[1]);
+  m=s.match(/^(last|next|this )?\s*([a-z]{3,9})$/);
+  if(m){ const names=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"], w=names.findIndex(n=>n===m[2]||(m[2].length>=3&&n.startsWith(m[2])));
+    if(w<0) return null; const cur=t0.getDay(), how=(m[1]||"").trim();
+    if(how==="last") return add(-(((cur-w+7)%7)||7));
+    if(how==="this"){ const mon=(cur+6)%7, at=(w+6)%7; return add(at-mon); }
+    return add(((w-cur+7)%7)||7); }
+  return null; }
 export const fdText=s=>String(s??"").replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,"$3-$2-$1");
 /* BL-76: Current state is Markdown. A date inside a link or an image path (images/2026-10-08-plan.png, a web address) is part of
    a name, not a date to show: converting it renamed the image and broke the link, and saving wrote the wrong name back. */

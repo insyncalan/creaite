@@ -110,7 +110,7 @@ class NotesTab(LiveBrowserCase):
         b.wait("noteSave.value.state==='saved'", 15)
         text = (self.notes_dir() / "Linking note.md").read_text()
         self.assertIn("[[Target note]]", text)
-        self.assertIn(f"[{item}](creaite:item/{item})", text)
+        self.assertRegex(text, rf"\[{item} · (Action|Risk|Issue|Assumption|Dependency|Decision): [^\]]*\]\(creaite:item/{item}\)")      # #122 C: 'ID · Designation: title'; the address is unchanged
         self.assertIn(item, b.eval("document.querySelector('.nctx').textContent"))           # Linked work
         b.click(".nlist .ni:not(.on)")                                                       # open Target note
         b.wait("noteCur.value&&noteCur.value.note.title==='Target note'")

@@ -691,9 +691,11 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .msrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.msrow .msn{flex:1;min-width:12ch}
 .prog{display:inline-block;width:80px;height:6px;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;vertical-align:middle}.prog i{display:block;height:100%;background:var(--accent)}
 .curcard p{margin:0 0 8px}.curcard ul,.curcard ol,.rted ul,.rted ol{margin:0 0 8px;padding-left:24px}
-.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
+.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px}
+/* #122: Current state's three heading levels are stored ### #### ##### (the editor's Heading 1 to 3); read view h3 h4 h5 */
+.curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
-.rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
+.curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px} .rtegrp{display:inline-flex;gap:2px;flex:none}   /* a group (and the divider before it) wraps as one: no divider ends a line */
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
@@ -709,6 +711,10 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
 .rte{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)} .rte:focus-within{border-color:var(--accent,var(--ink))}
 .rtebar{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--line)} .rtebar button{border:0;background:none;color:var(--muted);padding:4px 8px;border-radius:var(--r-md);cursor:pointer;font:inherit;font-size:var(--fs-sm)} .rtebar button:hover{background:var(--sunk);color:var(--ink)}
+/* #122: the shared formatting bar's states and targets (components/EditorBar.jsx): 24px at least, pressed = in force at the cursor */
+.rtebar button{min-width:28px;min-height:26px} .rtebar button[aria-pressed=true]{background:var(--accent-soft);color:var(--ink)} .rtebar button[aria-disabled=true]{opacity:.4;cursor:default}
+.rtebar button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+@media (forced-colors:active){.rtebar button[aria-pressed=true]{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar button[aria-disabled=true]{opacity:1;color:GrayText} .rtesep{background:CanvasText}}
 .rted{min-height:320px;height:360px;max-height:none;resize:vertical;overflow:auto;padding:10px 12px;outline:none;line-height:1.5} .rted p,.rted div{margin:0 0 8px}
 .cockfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .ev{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
@@ -2884,7 +2890,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .captitle{min-height:32px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface);color:var(--ink);font:600 14px/22px var(--font);width:100%;box-sizing:border-box}
 .capbody{flex:1 0 180px;min-height:180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:20px;overflow:auto;cursor:text;background:var(--surface)}
 .capbody:focus-within,.capbody:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
-.capbody p{margin:0 0 6px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
+.capbody p{margin:0 0 6px} .capbody h1{font-size:16px;margin:12px 0 4px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
 .capbody.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
 .capfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px} .capfoot .btn{min-height:28px} .capfoot .btn.ai{color:var(--accent);border-color:var(--accent)}
 .capfoot .btn[aria-disabled="true"]{opacity:.55}
@@ -2933,29 +2939,66 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nnone{margin:8px 4px}
 .ndoc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 24px;min-width:0;position:relative}
 .ndoc.empty h2{font-size:16px;margin:0 0 6px}
-.nhead .ntitle{width:100%;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0 0 4px}
+.nhead .ntitle{flex:1;min-width:0;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0}
 .nhead .ntitle:hover{border-bottom-color:var(--line)} .nhead .ntitle:focus{outline:none;border-bottom-color:var(--accent)}
-.nhead .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px}
-.nhead .meta .sp{flex:1}
-.nhead .tag{border:1px solid var(--line);border-radius:999px;padding:0 8px;min-height:20px;display:inline-flex;align-items:center;font-size:11px}
+/* #115: the title row (focus, title, Saved, Find updates, more), one line of properties, one line of tags */
+.nhead .trow{display:flex;align-items:center;gap:8px;min-width:0}
+.nhead .meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:6px 0 0}
+.nhead .meta .nk{font:500 var(--fs-xs) var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-right:6px}
+.nhead .nprop{display:inline-flex;align-items:center;position:relative}
+.nhead .ndwrap{display:inline-flex;gap:6px}
+.nhead .nin{height:28px;border:1px dashed var(--line);border-radius:var(--r-pill);padding:0 10px;background:none;color:var(--ink);font-size:var(--fs-sm)}
+.nhead .nin:focus{outline:none;border-style:solid;border-color:var(--accent)} .nhead .nin[aria-invalid="true"]{border-color:var(--bad)}
+.nhead .nin.date{width:140px} .nhead .nin.who{width:min(280px,100%)}
+.nhead .ndbtn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);width:28px;height:28px;display:grid;place-items:center;color:var(--muted);cursor:pointer;padding:0}
+.nhead .ndbtn:hover{background:var(--sunk);color:var(--ink)} .nhead .ndbtn svg.i{width:16px;height:16px}
+.nhead .dpop{position:absolute;top:34px;left:0;z-index:var(--z-pop);width:292px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px 12px 12px;text-align:left}
+.nhead .dpop .typed{margin:0 0 8px;font-size:var(--fs-xs);color:var(--muted);min-height:20px} .nhead .dpop .typed b{color:var(--ink);font-weight:600} .nhead .dpop .typed.bad{color:var(--bad)}
+.nhead .dpop .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.nhead .dpop .mh button{border:0;background:none;width:28px;height:28px;border-radius:var(--r-sm);cursor:pointer;color:var(--muted);font-size:var(--fs-lg)} .nhead .dpop .mh button:hover{background:var(--sunk)}
+.nhead .dpop .g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.nhead .dpop .dn{font:500 var(--fs-2xs) var(--mono);color:var(--faint);padding:4px 0;text-transform:uppercase}
+.nhead .dpop .g button{height:32px;border:0;border-radius:var(--r-md);background:none;cursor:pointer;font-size:var(--fs-sm);color:var(--ink)} .nhead .dpop .g button:hover{background:var(--sunk)}
+.nhead .dpop .g button.o{color:var(--faint)} .nhead .dpop .g button.t{box-shadow:inset 0 0 0 1px var(--accent)} .nhead .dpop .g button.s{background:var(--accent);color:var(--accent-ink)}
+.nhead .dpop .foot{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.nhead .dpop .foot button{border:0;background:none;color:var(--accent);font-size:var(--fs-xs);cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:2px 4px;min-height:24px}
+.nhead .dpop button:focus-visible,.nhead .ndbtn:focus-visible,.nhead .chip .x:focus-visible,.nhead .addl:focus-visible,.nhead .sugg button:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:1px}
+.nlabels{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.nhead .tag{border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;min-height:24px;display:inline-flex;align-items:center;font-size:var(--fs-xs);color:var(--muted)}
 .nhead .tag.int{border-color:var(--warn);color:var(--warn)}
-.ntags input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:90px;max-width:220px}
-.nsave{font-size:12px;color:var(--muted)} .nsave.saved{color:var(--ok)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
+.nlabels .chip{display:inline-flex;align-items:center;gap:2px;height:24px;border:1px solid var(--line);border-radius:var(--r-pill);padding:0 4px 0 10px;font-size:var(--fs-xs);background:var(--sunk);color:var(--ink)}
+.nlabels .chip .t{border:0;background:none;color:inherit;font:inherit;padding:0;min-width:2ch;max-width:24ch;border-radius:var(--r-sm);cursor:text}
+.nlabels .chip .t:focus{outline:none;box-shadow:0 0 0 2px var(--accent-soft);background:var(--surface)}
+.nlabels .chip .x{border:0;background:none;color:var(--faint);width:24px;height:24px;border-radius:50%;cursor:pointer;line-height:1;padding:0;font-size:var(--fs-md)} .nlabels .chip .x:hover{background:var(--line);color:var(--ink)}
+.nhead .addl{height:24px;border:1px dashed var(--line);border-radius:var(--r-pill);background:none;color:var(--muted);padding:0 10px;font-size:var(--fs-xs);cursor:pointer} .nhead .addl:hover{border-color:var(--accent);color:var(--accent)}
+.nhead .addin{height:24px;width:140px;border:1px solid var(--accent);border-radius:var(--r-pill);padding:0 10px;font-size:var(--fs-xs);background:var(--surface);color:var(--ink)} .nhead .addin:focus{outline:none}
+.nlabels .sugg{color:var(--faint);font-size:var(--fs-xs)} .nlabels .sugg button{border:0;background:none;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);padding:0 4px;min-height:24px}
+/* the list's quiet collapse control, at the right edge of the NOTES header */
+.nlist .lhead .sp{flex:1}
+.nlist .lhead .col{border:0;background:none;color:var(--faint);opacity:.75;width:var(--ctl-h-sm);height:var(--ctl-h-sm)} .nlist .lhead .col:hover,.nlist .lhead .col:focus-visible{background:var(--sunk);color:var(--ink);opacity:1}
+.nsave{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap} .nsave.saved{color:var(--muted)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
 .nslot:empty{display:none}
 .nmore .nch{display:none} .nmore>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .nmore::before{content:"⋯";font-size:16px;line-height:1}
 .nmorewrap .ddmenu{right:0;left:auto}
 .nstale{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--warn-soft);color:var(--ink);font-size:13px}
 .ned{position:relative}
-.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:1}
+.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:nowrap;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1}
 .ndoc:focus-within .ned .nbar{visibility:visible}
-.ned .nbar button{min-width:28px;min-height:26px}
+.ned .nbar button,.capbar button{min-width:26px;min-height:26px;padding:4px 5px} .capbar{flex-wrap:wrap;margin-bottom:6px}
 .ned .nbody{min-height:280px;height:auto;resize:none;overflow:visible;padding:4px 0;max-width:72ch;position:relative}
-.ned .nbody h2{font-size:15px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;margin:14px 0 4px}
-.ned .nbody ul[data-type=taskList]{list-style:none;padding-left:2px}
-.ned .nbody ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
-.ned .nbody ul[data-type=taskList] li>label{flex:none;margin-top:2px}
-.ned .nbody ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+.ned .nbody h1{font-size:19px;margin:18px 0 6px} .ned .nbody h2{font-size:16px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;font-weight:600;margin:14px 0 4px}
+/* #122: the aligned checklist, for every rich editor that takes one. The 18px box is centred on the first line of text: the label is
+   one line tall (1lh) and centres the box, whose 26px element (a 4px invisible border round the 18px box) is the click target. */
+.ProseMirror ul[data-type=taskList]{list-style:none;padding-left:2px}
+.ProseMirror ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
+.ProseMirror ul[data-type=taskList] li>label{flex:none;display:flex;align-items:center;height:1lh;min-height:1lh;margin:0}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:26px;height:26px;margin:0 -4px}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]:checked::after{left:6px;top:2px}
+.ProseMirror ul[data-type=taskList] li>div{flex:1;min-width:0}
+.ProseMirror ul[data-type=taskList] li>div>p{margin:0}
+.ProseMirror ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+@media (forced-colors:active){.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:24px;height:24px;margin:0}}   /* the native box scales to the 24px target (BL-325) */
 .ned .nbody table{border-collapse:collapse;margin:8px 0;max-width:100%} .ned .nbody td,.ned .nbody th{border:1px solid var(--line);padding:4px 8px;min-width:60px;vertical-align:top}
 .ned .nbody a{color:var(--accent)}
 .wl{color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
@@ -2966,12 +3009,33 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .nchip.bad::before{background:var(--bad)} .nchip.warn::before{background:var(--warn)} .nchip.ok::before{background:var(--ok)}
 button.nchip{font:inherit;font-size:12px}
-.ntpick{position:absolute;z-index:5;width:300px;max-width:calc(100% - 8px);background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px;overflow:hidden}
+/* #122 C: a chip in an editor carries the whole 'ID · Designation: title', so it flows and wraps with the text (Notes and Current state) */
+.rted .nchip{display:inline;white-space:normal;padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone;line-height:1.5}
+.rted .nchip::before{display:inline-block;vertical-align:middle;margin:-2px 5px 0 0}
+.rted a .nchip,.rted .nchip a{color:var(--ink);text-decoration:none}
+.itemref{white-space:normal}
+.ntpick.items{width:440px} .ntpick.items .r .l{flex:1;min-width:0}
+.ntpick{position:fixed;z-index:220;width:300px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px}
 .ntpick .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
 .ntpick .r{display:flex;gap:8px;align-items:center;padding:6px 10px;min-height:28px;cursor:pointer}
 .ntpick .r.on{background:var(--accent-soft)} .ntpick .r .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ntpick .r small{color:var(--faint);margin-left:auto;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}
 .ntpick .r.none{color:var(--muted);cursor:default}
+/* #122 B: the / menu, drawn by components/SlashMenu.jsx at the caret (position and flip set in core/caretPlace.js); rows 32px, tiles 24px */
+.slashmenu{position:fixed;z-index:220;width:340px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px;font-size:13px;color:var(--ink)}
+.slashsr{position:fixed;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px}
+.slashmenu .g{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px}
+.slashmenu .r{display:flex;gap:10px;align-items:center;min-height:32px;padding:3px 8px;border-radius:7px;cursor:pointer}
+.slashmenu .r.on{background:var(--accent-soft)}
+.slashmenu .ic{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:var(--surface);display:grid;place-items:center;flex:none;font:600 11px var(--font);color:var(--ink)}
+.slashmenu .r.on .ic{border-color:var(--accent)}
+.slashmenu .tx{display:flex;flex-direction:column;min-width:0}
+.slashmenu .t{font-weight:500;line-height:1.25}
+.slashmenu .d{color:var(--muted);font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slashmenu .k{margin-left:auto;font:500 11px var(--mono);color:var(--faint)}
+.slashmenu .r.none{color:var(--muted);cursor:default;padding:8px}
+.slashmenu .foot{position:sticky;bottom:-4px;background:var(--surface);border-top:1px solid var(--line);margin:4px -4px -4px;padding:6px 12px;font-size:11px;color:var(--faint)}
+@media (forced-colors:active){.slashmenu{border-color:CanvasText}.slashmenu .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}.slashmenu .r.on .d,.slashmenu .r.on .k{color:HighlightText}.slashmenu .ic{border-color:CanvasText}.ntpick .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}}
 .nctx{display:flex;flex-direction:column;gap:12px;min-width:0}
 .nctx .box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
 .nctx .box h2{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
@@ -3038,13 +3102,6 @@ button.nchip{font:inherit;font-size:12px}
 @media (max-width:420px){.fu-fields{grid-template-columns:1fr}}
 /* ===== end BL-301 E ===== */
 /* ===== BL-301 B gaps (v20-notes-gaps): a Working session's date and attendees in the header; pictures ===== */
-.nws{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
-.nwsf{display:inline-flex;gap:4px;align-items:center;min-width:0}
-.nws input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:0}
-.nws .nwsdate{width:96px} .nws .nwswith{width:200px;max-width:100%}
-.nws input:focus{outline:none;border-style:solid;border-color:var(--accent)}
-.nws input[aria-invalid="true"]{border-color:var(--bad)}
-.nwsbad{color:var(--bad);font-size:11px}
 .nbody figure.cimg img{max-width:100%;height:auto}
 /* ===== end BL-301 B gaps ===== */
 /* ===== BL-301 D (v20-ai-select): AI on selected text: the bar over a selection and the suggestion (components/AiSelect.jsx) ===== */
@@ -3422,6 +3479,19 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 .rp-cockcard{display:grid;gap:8px} .rp-cockcard h2{margin:0;display:flex;gap:8px;align-items:center}
 .rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)} .rp-row .g{flex:1;min-width:180px}
 /* ===== end BL-337 ===== */
+
+/* ===== #122 (final layout, Alan 16-10-2026) ===== the Notes bar is one line: Heading, List and Insert are hover menus (components/EditorBar.jsx) */
+.rtemenu{display:inline-flex;flex:none} .rtebar .rtemb{display:inline-flex;align-items:center;gap:2px} .rtebar .rtemb .nch{width:12px;height:12px;display:inline-block}
+.rtebar .rtemb[aria-expanded=true]{background:var(--sunk);color:var(--ink)}
+.rtebar .rtepop{top:100%;margin-top:2px;width:auto;min-width:190px;padding:4px;text-align:left}
+.rtebar .rtepop button{white-space:nowrap;min-width:0;min-height:28px;padding:6px 10px;color:var(--ink);gap:6px;align-items:center;text-align:left}
+.rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:var(--sunk);outline-offset:-2px}
+.rtebar .rtepop [role=menuitemradio]::before{content:"";display:inline-block;width:1em;flex:none;text-align:center}
+.rtebar .rtepop [role=menuitemradio][aria-checked=true]::before{content:"\2713"}
+.rtebar .rtepop .last{margin-left:auto;padding-left:16px;color:var(--faint)}
+.rtebar .rtepop [aria-disabled=true]{opacity:.4;cursor:default}
+.nbar .rtelink{position:absolute;top:calc(100% + 4px);left:8px;margin:0;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:var(--z-menu)} .nbar .rtelink[hidden]{display:none}
+@media (forced-colors:active){.rtebar .rtepop{border:1px solid CanvasText} .rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar .rtepop [aria-disabled=true]{opacity:1;color:GrayText}}
 </style>
 </head>
 <body>
@@ -3730,7 +3800,12 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     EBAREA: () => EBAREA,
     EBKEY: () => EBKEY,
     ED_HOOKS: () => ED_HOOKS,
+    ED_MENUS: () => ED_MENUS,
+    ED_PROFILES: () => ED_PROFILES,
     ED_QUIET: () => ED_QUIET,
+    ED_SLASH: () => ED_SLASH,
+    ED_SLASH_ROWS: () => ED_SLASH_ROWS,
+    ED_TOOLS: () => ED_TOOLS,
     EVS: () => EVS,
     EVWHAT: () => EVWHAT,
     EV_FULL: () => EV_FULL,
@@ -3766,6 +3841,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     GREET: () => GREET,
     GROUPS: () => GROUPS,
     HD: () => HD,
+    HEAD_SHIFT: () => HEAD_SHIFT,
     HEALTH_SHAPES: () => HEALTH_SHAPES,
     HI: () => HI,
     HINTS: () => HINTS,
@@ -3943,9 +4019,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     RHL: () => RHL,
     ROWKEY: () => ROWKEY,
     RR: () => RR,
-    RTESEL: () => RTESEL,
-    RTE_RUN: () => RTE_RUN,
-    RTE_TOOLS: () => RTE_TOOLS,
     RTKINDS: () => RTKINDS,
     RUNNING: () => RUNNING,
     RVF: () => RVF,
@@ -4522,11 +4595,14 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     csWrite: () => csWrite,
     curAiMenu: () => curAiMenu,
     curAttach: () => curAttach,
+    curBar: () => curBar,
+    curBarOff: () => curBarOff,
     curCheck: () => curCheck,
     curDrop: () => curDrop,
     curGuard: () => curGuard,
     curLoad: () => curLoad,
     curObj: () => curObj,
+    curOpenItem: () => curOpenItem,
     curPane: () => curPane,
     curPanes: () => curPanes,
     curReadHtml: () => curReadHtml,
@@ -4846,6 +4922,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     handOver: () => handOver,
     handle: () => handle,
     hashOf: () => hashOf,
+    headsIn: () => headsIn,
+    headsOut: () => headsOut,
     health: () => health,
     healthEvidence: () => healthEvidence,
     healthFacts: () => healthFacts,
@@ -5484,6 +5562,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     prio: () => prio,
     processInbox: () => processInbox,
     processMeetings: () => processMeetings,
+    profileTools: () => profileTools,
     projArchive: () => projArchive,
     projArchiveBind: () => projArchiveBind,
     projArchiveHtml: () => projArchiveHtml,
@@ -5538,6 +5617,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     rbTick: () => rbTick,
     rbUnmark: () => rbUnmark,
     readClaims: () => readClaims,
+    readDate: () => readDate,
     readForm: () => readForm,
     reattach: () => reattach,
     reattachSearch: () => reattachSearch,
@@ -5686,13 +5766,13 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     rtOK: () => rtOK,
     rtOpen: () => rtOpen,
     rteCmd: () => rteCmd,
-    rteLink: () => rteLink,
     runAsk: () => runAsk,
     runCk: () => runCk,
     runClosure: () => runClosure,
     runGen: () => runGen,
     runReminder: () => runReminder,
     runSearch: () => runSearch,
+    runTool: () => runTool,
     rvActive: () => rvActive,
     rvAdvance: () => rvAdvance,
     rvApplied: () => rvApplied,
@@ -5824,6 +5904,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     shrinkImage: () => shrinkImage,
     sizeList: () => sizeList,
     sl: () => sl2,
+    slashRank: () => slashRank,
+    slashRows: () => slashRows,
     sleep: () => sleep,
     slideDown: () => slideDown,
     snack: () => snack,
@@ -6246,6 +6328,9 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     arrowup: '<path d="M12 19V5M5 12l7-7 7 7"/>',
     external: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     chevdown: '<path d="m6 9 6 6 6-6"/>',
+    /* Notes header (#115): the list's quiet double chevrons  */
+    chevsright: '<path d="M13 6l6 6-6 6M5 6l6 6-6 6"/>',
+    chevsleft: '<path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     filetext: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
     mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-9.1 5.7a2 2 0 0 1-2 0L2 7"/>',
@@ -6407,6 +6492,44 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
   })(), DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
   var fd = (iso2) => iso2 && DATE.test(iso2.slice(0, 10)) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}${iso2.length > 10 ? iso2.slice(10) : ""}` : iso2 || "";
   var toIso = (dd2) => DDATE.test(dd2) ? `${dd2.slice(6, 10)}-${dd2.slice(3, 5)}-${dd2.slice(0, 2)}` : dd2;
+  function readDate(text, today = TODAY) {
+    const s5 = String(text ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!s5) return null;
+    const z4 = (n4) => String(n4).padStart(2, "0"), iso2 = (d5) => `${d5.getFullYear()}-${z4(d5.getMonth() + 1)}-${z4(d5.getDate())}`, t02 = /* @__PURE__ */ new Date(today + "T12:00:00");
+    const add = (n4) => {
+      const d5 = new Date(t02);
+      d5.setDate(d5.getDate() + n4);
+      return iso2(d5);
+    };
+    const real2 = (y5, m6, d5) => {
+      const x5 = new Date(y5, m6 - 1, d5, 12);
+      return x5.getFullYear() === y5 && x5.getMonth() === m6 - 1 && x5.getDate() === d5 ? iso2(x5) : null;
+    };
+    let m5 = s5.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);
+    if (m5) return real2(+m5[3], +m5[2], +m5[1]);
+    m5 = s5.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m5) return real2(+m5[1], +m5[2], +m5[3]);
+    if (s5 === "today") return today;
+    if (s5 === "yesterday") return add(-1);
+    if (s5 === "tomorrow") return add(1);
+    m5 = s5.match(/^in (\d{1,4}) days?$/);
+    if (m5) return add(+m5[1]);
+    m5 = s5.match(/^(\d{1,4}) days? ago$/);
+    if (m5) return add(-m5[1]);
+    m5 = s5.match(/^(last|next|this )?\s*([a-z]{3,9})$/);
+    if (m5) {
+      const names = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"], w6 = names.findIndex((n4) => n4 === m5[2] || m5[2].length >= 3 && n4.startsWith(m5[2]));
+      if (w6 < 0) return null;
+      const cur = t02.getDay(), how = (m5[1] || "").trim();
+      if (how === "last") return add(-((cur - w6 + 7) % 7 || 7));
+      if (how === "this") {
+        const mon = (cur + 6) % 7, at2 = (w6 + 6) % 7;
+        return add(at2 - mon);
+      }
+      return add((w6 - cur + 7) % 7 || 7);
+    }
+    return null;
+  }
   var fdText = (s5) => String(s5 ?? "").replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$3-$2-$1");
   var fdMd = (s5) => String(s5 ?? "").replace(/(\]\([^)\s]*\))|(\bhttps?:\/\/[^\s)<>]+)|\b(\d{4})-(\d{2})-(\d{2})\b/g, (m5, t47, u5, y5, mo2, d5) => y5 ? `${d5}-${mo2}-${y5}` : m5);
   var MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent), MOD = MAC ? "⌘" : "Ctrl";
@@ -9007,7 +9130,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
       "button",
       {
         type: "button",
-        role: it2.checked === void 0 ? "menuitem" : "menuitemcheckbox",
+        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
         tabIndex: -1,
         class: it2.cls,
         "data-tip": it2.tip,
@@ -9038,6 +9161,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
       it2.id
     )) });
   }
+  var HOVER_OPEN = null;
+  var HOVER_GRACE = 220;
   function Menu({
     label,
     items: items2,
@@ -9057,18 +9182,53 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     labelCls,
     menuId,
     menuCls,
-    hidden
+    hidden,
+    hover
   }) {
-    const [open2, setOpen2] = d2(false);
+    const [open2, setOpen2] = d2(false), [, bump] = d2(0);
     const btn = A2(
       /** @type {HTMLButtonElement | null} */
       null
     );
     const back2 = A2(false);
+    const byMouse = A2(false), openedAt = A2(0), noFocus = A2(false), timer2 = A2(0);
     const close = (how) => {
       back2.current = how === "esc";
+      if (back2.current) btn.current?.focus({ preventScroll: true });
+      clearTimeout(timer2.current);
+      if (HOVER_OPEN === fold) HOVER_OPEN = null;
       setOpen2(false);
     };
+    const closeRef = A2(close);
+    closeRef.current = close;
+    const fold = A2(() => closeRef.current("away")).current;
+    const pointIn = () => {
+      if (!hover || why) return;
+      clearTimeout(timer2.current);
+      if (open2) return;
+      if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
+      HOVER_OPEN = fold;
+      byMouse.current = true;
+      noFocus.current = true;
+      openedAt.current = Date.now();
+      setOpen2(true);
+    };
+    const pointOut = () => {
+      if (hover && byMouse.current) {
+        clearTimeout(timer2.current);
+        timer2.current = window.setTimeout(fold, HOVER_GRACE);
+      }
+    };
+    h2(() => () => {
+      clearTimeout(timer2.current);
+      if (HOVER_OPEN === fold) HOVER_OPEN = null;
+    }, []);
+    h2(() => {
+      if (open2 && hover) {
+        if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
+        HOVER_OPEN = fold;
+      }
+    }, [open2]);
     h2(() => {
       if (!open2 && back2.current) {
         back2.current = false;
@@ -9077,16 +9237,18 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     }, [open2]);
     const pick = (it2) => {
       if (it2.disabled) return;
-      if (it2.checked === void 0) close("pick");
+      if (it2.checked === void 0 || it2.radio) close("pick");
       onPick(it2.id);
     };
     const onBtnKey = (e4) => {
       if (e4.key === "ArrowDown" && !why && !open2) {
         e4.preventDefault();
+        byMouse.current = false;
+        noFocus.current = false;
         setOpen2(true);
       }
     };
-    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
+    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, onMouseEnter: pointIn, onMouseLeave: pointOut, children: [
       /* @__PURE__ */ u2(
         "button",
         {
@@ -9108,7 +9270,15 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
               onBlocked && onBlocked();
               return;
             }
-            setOpen2(!open2);
+            if (open2 && byMouse.current && e4.detail > 0 && Date.now() - openedAt.current < 400) {
+              noFocus.current = false;
+              bump((n4) => n4 + 1);
+              return;
+            }
+            byMouse.current = hover && e4.detail > 0;
+            noFocus.current = false;
+            if (open2) close("pick");
+            else setOpen2(true);
           },
           children: [
             icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
@@ -9125,6 +9295,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
           cls: `${left ? "left " : ""}${menuCls || ""}`,
           anchor: btn.current,
           onClose: close,
+          autoFocus: !noFocus.current,
+          focusKey: noFocus.current,
           children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
         }
       ) : null
@@ -10647,6 +10819,514 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
   }
   function drawTabs(host2, props) {
     R(/* @__PURE__ */ u2(Tabs, { ...props }), host2);
+  }
+
+  // core/editorProfiles.js
+  var HEAD_SHIFT = 2;
+  var ED_TOOLS = {
+    text: { id: "text", label: "T", name: "Text", tip: "Plain text (also clears a heading)", run: (c5) => c5.setParagraph(), on: (e4) => !e4.isActive("heading") },
+    h1: { id: "h1", label: "H1", name: "Heading 1", run: (c5) => c5.toggleHeading({ level: 1 }), on: (e4) => e4.isActive("heading", { level: 1 }) },
+    h2: { id: "h2", label: "H2", name: "Heading 2", run: (c5) => c5.toggleHeading({ level: 2 }), on: (e4) => e4.isActive("heading", { level: 2 }) },
+    h3: { id: "h3", label: "H3", name: "Heading 3", run: (c5) => c5.toggleHeading({ level: 3 }), on: (e4) => e4.isActive("heading", { level: 3 }) },
+    b: { id: "b", keys: "Meta+B Control+B", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: (c5) => c5.toggleBold(), on: (e4) => e4.isActive("bold") },
+    i: { id: "i", keys: "Meta+I Control+I", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: (c5) => c5.toggleItalic(), on: (e4) => e4.isActive("italic") },
+    s: { id: "s", keys: "Meta+Shift+X Control+Shift+X", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: (c5) => c5.toggleStrike(), on: (e4) => e4.isActive("strike") },
+    code: { id: "code", label: "</>", name: "Code", run: (c5) => c5.toggleCode(), on: (e4) => e4.isActive("code") },
+    ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: (c5) => c5.toggleBulletList(), on: (e4) => e4.isActive("bulletList") },
+    ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: (c5) => c5.toggleOrderedList(), on: (e4) => e4.isActive("orderedList") },
+    task: { id: "task", label: "☑", name: "Checklist", run: (c5) => c5.toggleTaskList(), on: (e4) => e4.isActive("taskList") },
+    outdent: {
+      id: "outdent",
+      keys: "Shift+Tab",
+      hint: "⇧Tab",
+      label: "⇤",
+      name: "Outdent",
+      tip: "Outdent (⇧Tab)",
+      rc: "outdent",
+      run: (c5, e4) => c5.liftListItem(itemType(e4)),
+      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
+    },
+    indent: {
+      id: "indent",
+      keys: "Tab",
+      hint: "Tab",
+      label: "⇥",
+      name: "Indent",
+      tip: "Indent: a nested list (Tab)",
+      rc: "indent",
+      run: (c5, e4) => c5.sinkListItem(itemType(e4)),
+      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
+    },
+    quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: (c5) => c5.toggleBlockquote(), on: (e4) => e4.isActive("blockquote") },
+    link: { id: "link", keys: "Meta+Shift+K Control+Shift+K", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: (e4) => e4.isActive("link") },
+    unlink: { id: "unlink", label: "Unlink", name: "Remove the link", rc: "unlink", run: (c5) => c5.extendMarkRange("link").unsetLink(), can: (e4) => e4.isActive("link") },
+    clear: { id: "clear", label: "Clear", name: "Clear formatting", rc: "removeFormat", run: (c5) => c5.unsetAllMarks().clearNodes() },
+    note: { id: "note", label: "[[ ]]", name: "Link to a note", tip: "Link to a note ([[)", host: true },
+    person: { id: "person", label: "@", name: "Mention a person", tip: "Mention a person (@)", host: true },
+    item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
+    table: { id: "table", label: "▦", name: "Table", host: true },
+    image: { id: "image", label: "Image", name: "Add a picture", hint: "PNG or JPEG, 2 MB", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
+    undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
+    redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
+  };
+  var ED_MENUS = {
+    heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map((x5) => ED_TOOLS[x5]) }
+  };
+  var ED_SLASH = {
+    text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", alias: ["paragraph", "plain"], run: (c5) => c5.setParagraph() },
+    h1: { id: "h1", group: "Text", name: "Heading 1", desc: "Big section heading", icon: "H1", alias: ["h1", "heading1"], run: (c5) => c5.setHeading({ level: 1 }) },
+    h2: { id: "h2", group: "Text", name: "Heading 2", desc: "Medium section heading", icon: "H2", alias: ["h2", "heading2"], run: (c5) => c5.setHeading({ level: 2 }) },
+    h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", alias: ["h3", "heading3"], run: (c5) => c5.setHeading({ level: 3 }) },
+    ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", alias: ["ul", "bullet", "bullets"], is: "bulletList", run: (c5) => c5.toggleBulletList() },
+    ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", alias: ["ol", "num", "number", "numbered"], is: "orderedList", run: (c5) => c5.toggleOrderedList() },
+    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "tick", "check", "checkbox"], is: "taskList", node: "taskList", run: (c5) => c5.toggleTaskList() },
+    quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", alias: ["quote", "bq", "blockquote"], is: "blockquote", run: (c5) => c5.toggleBlockquote() },
+    codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
+    table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
+    image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
+    item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", alias: ["item", "work", "workitem", "issue", "action", "risk", "decision"], host: true },
+    person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
+    note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
+    "tpl:stakeholder": { id: "tpl:stakeholder", group: "Templates", name: "Stakeholder", desc: "Role, what matters to them, how they work", icon: "◇", host: true },
+    "tpl:lessons-learned": { id: "tpl:lessons-learned", group: "Templates", name: "Lessons learned", desc: "What happened, what to change", icon: "◇", host: true },
+    "tpl:working-session": { id: "tpl:working-session", group: "Templates", name: "Working session", desc: "A conversation: its date and who it was with", icon: "◇", host: true }
+  };
+  var ED_SLASH_ROWS = {
+    notes: [
+      "text",
+      "h1",
+      "h2",
+      "h3",
+      "ul",
+      "ol",
+      "task",
+      "quote",
+      "codeblock",
+      "table",
+      "image",
+      "item",
+      "person",
+      "note",
+      "tpl:stakeholder",
+      "tpl:lessons-learned",
+      "tpl:working-session"
+    ],
+    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "item"],
+    plain: [],
+    none: []
+  };
+  function slashRank(r4, q5) {
+    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " "), typed2 = ql2.split(" ");
+    if (!ql2) return 9;
+    const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
+    const inOrder = (name2) => {
+      const w6 = name2.split(" ");
+      let at2 = 0;
+      return typed2.every((t47) => {
+        while (at2 < w6.length && !w6[at2].startsWith(t47)) at2++;
+        return at2++ < w6.length;
+      });
+    };
+    if (ids.includes(ql2)) return 0;
+    if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
+    if (typed2.length > 1 && inOrder(name)) return 1;
+    if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
+    if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
+    return 9;
+  }
+  function slashRows(profile, hostRows, schema, q5 = "") {
+    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
+    const avail = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
+    if (!ql2) return avail;
+    const rank = (r4) => slashRank(r4, ql2);
+    return avail.map((r4, i5) => ({ r: r4, i: i5, k: rank(r4) })).filter((x5) => x5.k < 9).sort((a5, b5) => a5.k - b5.k || a5.i - b5.i).map((x5) => x5.r);
+  }
+  function itemType(e4) {
+    return e4.isActive("taskItem") ? "taskItem" : "listItem";
+  }
+  var ED_PROFILES = {
+    notes: {
+      tip: "Notes: one line, grouped into hover menus (Heading, List, Insert)",
+      tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"]
+    },
+    capture: {
+      tip: "The capture drawer: the shared buttons, flat (no pickers yet)",
+      tools: [
+        "h1",
+        "h2",
+        "h3",
+        "|",
+        "b",
+        "i",
+        "s",
+        "code",
+        "|",
+        "ul",
+        "ol",
+        "task",
+        "outdent",
+        "indent",
+        "quote",
+        "|",
+        "link",
+        "unlink",
+        "clear",
+        "|",
+        "undo",
+        "redo"
+      ]
+    },
+    current: {
+      tip: "Current state",
+      tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"]
+    },
+    plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
+    none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
+  };
+  function menuFor(m5, hostTools) {
+    if (!m5) return null;
+    const list = (
+      /** @type {(ToolDef|"|")[]} */
+      (m5.items || []).filter((x5) => x5 === "|" || !x5.host || hostTools.includes(x5.id))
+    );
+    while (list.length && list[0] === "|") list.shift();
+    while (list.length && list[list.length - 1] === "|") list.pop();
+    return list.some((x5) => x5 !== "|") ? { ...m5, items: list } : null;
+  }
+  function profileTools(profile, hostTools = []) {
+    const out = [];
+    for (const id2 of (ED_PROFILES[profile] || ED_PROFILES.none).tools) {
+      if (id2 === "|") {
+        if (out.length && out[out.length - 1] !== "|") out.push("|");
+        continue;
+      }
+      if (id2.startsWith("m:")) {
+        const m5 = menuFor(ED_MENUS[id2.slice(2)], hostTools);
+        if (m5) out.push(m5);
+        continue;
+      }
+      const t47 = ED_TOOLS[id2];
+      if (t47 && (!t47.host || hostTools.includes(id2))) out.push(t47);
+    }
+    while (out.length && out[out.length - 1] === "|") out.pop();
+    return out;
+  }
+  function runTool(h5, id2) {
+    const t47 = ED_TOOLS[id2];
+    if (!h5 || !t47 || !t47.run) return false;
+    const e4 = h5.editor;
+    t47.run(e4.chain().focus(), e4).run();
+    return true;
+  }
+
+  // components/EditorBar.jsx
+  var BARS = /* @__PURE__ */ new Set();
+  function editorBarFor(t47) {
+    const el2 = (
+      /** @type {Element|null} */
+      t47 && /** @type {Element} */
+      t47.closest ? t47 : null
+    );
+    if (!el2) return null;
+    for (const b5 of BARS) {
+      const h5 = b5.handle();
+      if (h5 && h5.el && (h5.el === el2 || h5.el.contains(el2) || el2.closest(".ProseMirror") === h5.editor.view.dom)) return b5;
+    }
+    return null;
+  }
+  var keysOn = false;
+  function keysInit() {
+    if (keysOn) return;
+    keysOn = true;
+    document.addEventListener("keydown", (e4) => {
+      if (e4.isComposing || !(e4.metaKey || e4.ctrlKey) || !e4.shiftKey || e4.altKey) return;
+      const k5 = e4.key.toLowerCase();
+      if (k5 !== "k" && k5 !== "x") return;
+      const b5 = editorBarFor(e4.target);
+      if (!b5) return;
+      e4.preventDefault();
+      e4.stopPropagation();
+      if (k5 === "k") b5.link();
+      else {
+        const h5 = b5.handle();
+        if (h5) runTool(h5, "s");
+      }
+    }, true);
+  }
+  var okUrl = (u5) => /^(https?:\/\/|mailto:)\S+$/i.test(u5);
+  function EditorBar({ profile, handle: handle2, host: host2, cls, label, legacyRc, extra }) {
+    const bar = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const form = A2(
+      /** @type {HTMLSpanElement|null} */
+      null
+    );
+    const [link, setLink] = d2(
+      /** @type {{from: number, to: number, url: string, has?: boolean}|null} */
+      null
+    );
+    const [cur, setCur] = d2(0);
+    const [, tick] = d2(0);
+    const tools = profileTools(profile, Object.keys(host2 || {}));
+    const buttons = (
+      /** @type {import("../core/editorProfiles.js").ToolDef[]} */
+      tools.filter((t47) => t47 !== "|")
+    );
+    const refresh = () => {
+      const root = bar.current, h5 = handle2();
+      if (!root || !h5 || h5.editor.isDestroyed) return;
+      tick((n4) => n4 + 1);
+      for (
+        const b5 of
+        /** @type {NodeListOf<HTMLElement>} */
+        root.querySelectorAll("button[data-nt]")
+      ) {
+        const t47 = ED_TOOLS[b5.dataset.nt || ""];
+        if (!t47) continue;
+        if (t47.on) b5.setAttribute("aria-pressed", t47.on(h5.editor) ? "true" : "false");
+        if (t47.can) {
+          if (t47.can(h5.editor)) b5.removeAttribute("aria-disabled");
+          else b5.setAttribute("aria-disabled", "true");
+        }
+      }
+    };
+    const openLink = () => {
+      const h5 = handle2();
+      if (!h5) return;
+      const s5 = h5.editor.state.selection;
+      setLink({ from: s5.from, to: s5.to, url: h5.editor.getAttributes("link").href || "", has: h5.editor.isActive("link") });
+    };
+    h2(() => {
+      const me2 = { handle: handle2, link: openLink };
+      BARS.add(me2);
+      keysInit();
+      document.addEventListener("selectionchange", refresh);
+      document.addEventListener("focusin", refresh);
+      refresh();
+      return () => {
+        BARS.delete(me2);
+        document.removeEventListener("selectionchange", refresh);
+        document.removeEventListener("focusin", refresh);
+      };
+    }, [profile]);
+    h2(() => {
+      if (link && form.current) {
+        const i5 = form.current.querySelector("input");
+        if (i5) {
+          i5.focus();
+          i5.select();
+        }
+      }
+    }, [link !== null]);
+    const run = (id2) => {
+      const h5 = handle2(), t47 = ED_TOOLS[id2];
+      if (!h5 || !t47) return;
+      if (id2 === "link") {
+        openLink();
+        return;
+      }
+      if (t47.host) {
+        const f5 = host2 && host2[id2];
+        if (f5) f5();
+        return;
+      }
+      runTool(h5, id2);
+      refresh();
+    };
+    const removeLink = () => {
+      const h5 = handle2(), l6 = link;
+      setLink(null);
+      if (h5 && l6) h5.editor.chain().focus().setTextSelection({ from: l6.from, to: l6.to }).extendMarkRange("link").unsetLink().run();
+    };
+    const finish = (add) => {
+      const h5 = handle2(), l6 = link;
+      setLink(null);
+      if (!h5 || !l6) return;
+      const c5 = h5.editor.chain().focus().setTextSelection({ from: l6.from, to: l6.to }), url = (form.current?.querySelector("input")?.value || "").trim();
+      if (add && okUrl(url)) {
+        if (l6.from === l6.to && !h5.editor.isActive("link")) c5.insertContent({ type: "text", text: url, marks: [{ type: "link", attrs: { href: url } }] }).run();
+        else c5.extendMarkRange("link").setLink({ href: url }).run();
+      } else {
+        c5.run();
+        if (add && url) snack("Use a web (https) or mail (mailto) link");
+      }
+    };
+    const keys = (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      if (t47.closest && t47.closest(".rtelink")) {
+        if (e4.key === "Enter" && t47.tagName === "INPUT") {
+          e4.preventDefault();
+          finish(true);
+        } else if (e4.key === "Escape") {
+          e4.preventDefault();
+          e4.stopPropagation();
+          finish(false);
+        }
+        return;
+      }
+      const b5 = (
+        /** @type {HTMLElement|null} */
+        t47.closest ? t47.closest("button[data-nt]") : null
+      );
+      if (!b5) return;
+      if (e4.key === "ArrowDown") tick((n4) => n4 + 1);
+      const i5 = buttons.findIndex((x5) => x5.id === b5.dataset.nt);
+      let to2 = -1;
+      if (e4.key === "ArrowRight") to2 = (i5 + 1) % buttons.length;
+      else if (e4.key === "ArrowLeft") to2 = (i5 + buttons.length - 1) % buttons.length;
+      else if (e4.key === "Home") to2 = 0;
+      else if (e4.key === "End") to2 = buttons.length - 1;
+      else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        const h5 = handle2();
+        if (h5) h5.focus();
+        return;
+      }
+      if (to2 < 0) return;
+      e4.preventDefault();
+      e4.stopPropagation();
+      setCur(to2);
+      requestAnimationFrame(() => {
+        const n4 = bar.current && bar.current.querySelector(`button[data-nt="${buttons[to2].id}"]`);
+        if (n4) n4.focus();
+      });
+    };
+    h2(() => {
+      const root = bar.current;
+      if (!root) return;
+      for (
+        const n4 of
+        /** @type {NodeListOf<HTMLElement>} */
+        root.querySelectorAll("button[data-nt]")
+      ) n4.tabIndex = buttons[cur] && buttons[cur].id === n4.dataset.nt ? 0 : -1;
+    });
+    if (!buttons.length) return null;
+    const menuItems = (m5) => {
+      const e4 = handle2()?.editor, live = e4 && !e4.isDestroyed;
+      return (
+        /** @type {any[]} */
+        (m5.items || []).map((x5, i5) => x5 === "|" ? { id: `sep${i5}`, sep: true } : {
+          id: x5.id,
+          name: x5.name,
+          ...x5.hint ? { mark: x5.hint } : {},
+          data: { cmd: x5.id },
+          ...x5.on ? { radio: true, checked: !!(live && x5.on(e4)) } : {},
+          ...x5.can && !(live && x5.can(e4)) ? { disabled: true } : {}
+        })
+      );
+    };
+    const groups = tools.reduce(
+      (out, t47) => {
+        if (t47 === "|") out.push([]);
+        else out[out.length - 1].push(t47);
+        return out;
+      },
+      /** @type {any[][]} */
+      [[]]
+    ).filter((g5) => g5.length);
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        ref: bar,
+        class: `rtebar ${cls || ""}`.trim(),
+        role: "toolbar",
+        "aria-label": label || "Formatting",
+        "data-profile": profile,
+        onKeyDown: keys,
+        onMouseDown: (e4) => {
+          const el2 = (
+            /** @type {Element} */
+            e4.target
+          );
+          if (el2.closest("[role^=menuitem]")) {
+            e4.preventDefault();
+            return;
+          }
+          const b5 = (
+            /** @type {HTMLElement|null} */
+            el2.closest("button[data-nt]")
+          );
+          if (!b5) return;
+          e4.preventDefault();
+          if (e4.button === 0) setCur(Math.max(0, buttons.findIndex((x5) => x5.id === b5.dataset.nt)));
+          if (e4.button === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+        },
+        onMouseOver: (e4) => {
+          if (
+            /** @type {Element} */
+            e4.target.closest(".rtemenu")
+          ) tick((n4) => n4 + 1);
+        },
+        onClick: (e4) => {
+          const b5 = (
+            /** @type {HTMLElement|null} */
+            /** @type {Element} */
+            e4.target.closest("button[data-nt]")
+          );
+          if (b5 && e4.detail === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+        },
+        children: [
+          groups.map((g5, gi2) => /* @__PURE__ */ u2("span", { class: "rtegrp", children: [
+            gi2 > 0 && /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }),
+            g5.map((t47) => t47.menu ? /* @__PURE__ */ u2(
+              Menu,
+              {
+                hover: true,
+                left: true,
+                cls: "rtemenu",
+                btnCls: "rtemb",
+                label: t47.label,
+                ariaLabel: t47.name,
+                menuLabel: t47.name,
+                menuCls: "rtepop",
+                data: { nt: t47.id },
+                items: menuItems(t47),
+                onPick: (id2) => run(id2)
+              },
+              t47.id
+            ) : /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                "data-nt": t47.id,
+                ...legacyRc && t47.rc ? { "data-rc": t47.rc } : {},
+                "aria-label": t47.tip || t47.name,
+                "data-tip": t47.tip || t47.name,
+                ...t47.keys ? { "aria-keyshortcuts": t47.keys } : {},
+                tabIndex: buttons[cur] && buttons[cur].id === t47.id ? 0 : -1,
+                ...t47.on ? { "aria-pressed": "false" } : {},
+                children: t47.label
+              },
+              t47.id
+            ))
+          ] }, `g${gi2}`)),
+          /* @__PURE__ */ u2("span", { class: "rtelink", ref: form, hidden: !link, children: [
+            /* @__PURE__ */ u2("input", { type: "url", placeholder: "Paste a web or mail link", "aria-label": "Link address", value: link ? link.url : "", onInput: (e4) => link && setLink({ ...link, url: (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            ) }) }),
+            /* @__PURE__ */ u2("button", { type: "button", "data-rl": "add", onClick: () => finish(true), children: "Add" }),
+            link && link.has ? /* @__PURE__ */ u2("button", { type: "button", "data-rl": "remove", onClick: removeLink, children: "Remove link" }) : null,
+            /* @__PURE__ */ u2("button", { type: "button", "data-rl": "cancel", onClick: () => finish(false), children: "Cancel" })
+          ] }),
+          extra
+        ]
+      }
+    );
+  }
+  function mountEditorBar(el2, props) {
+    R(/* @__PURE__ */ u2(EditorBar, { ...props }), el2);
+  }
+  function unmountEditorBar(el2) {
+    R(null, el2);
   }
 
   // ../../vendor/tiptap/tiptap.module.js
@@ -25780,6 +26460,28 @@ ${s5}`;
     if (out.content) out.content = out.content.map(dropClaims);
     return out;
   }
+  function mapHeads(md2, to2) {
+    let fence = false, comment = false;
+    return String(md2).split("\n").map((line) => {
+      if (comment) {
+        if (line.includes("-->")) comment = false;
+        return line;
+      }
+      if (/^\s*(```|~~~)/.test(line)) {
+        fence = !fence;
+        return line;
+      }
+      if (fence) return line;
+      if (line.includes("<!--") && !line.slice(line.indexOf("<!--") + 4).includes("-->")) {
+        comment = true;
+        return line;
+      }
+      const m5 = /^((?:> {0,4}|>\t)*)(\u200B*)(#{1,6})([ \t].*|)$/.exec(line);
+      return m5 ? m5[1] + to2(m5[2], m5[3].length, m5[4]) : line;
+    }).join("\n");
+  }
+  var headsIn = (md2, shift2) => shift2 ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 > shift2 && n4 <= shift2 + 3 ? "#".repeat(n4 - shift2) + rest : "​" + z4 + "#".repeat(n4) + rest) : md2;
+  var headsOut = (md2, shift2) => shift2 ? mapHeads(md2, (z4, n4, rest) => z4 !== "" ? z4.slice(1) + "#".repeat(n4) + rest : "#".repeat(Math.min(n4, 3) + shift2) + rest) : md2;
   var plainDoc = (t47) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => l6 ? { type: "paragraph", content: [{ type: "text", text: l6 }] } : { type: "paragraph" }) });
   var plainText = (doc) => {
     const L3 = [];
@@ -25789,7 +26491,7 @@ ${s5}`;
     return L3.join("\n");
   };
   function creaiteEditor(el2, o5 = {}) {
-    const features = o5.features || "current", plain = features === "plain", multiline = o5.multiline !== false;
+    const features = o5.features || "current", plain = features === "plain", multiline = o5.multiline !== false, headShift = plain ? 0 : o5.headShift | 0;
     if (
       /** @type {any} */
       el2.cxed
@@ -25807,7 +26509,7 @@ ${s5}`;
       }
       orig = String(v5 ?? "");
       env = B1(orig);
-      return { markdown: env.inner };
+      return { markdown: headsIn(env.inner, headShift) };
     };
     const content = load2(plain ? o5.text : o5.markdown);
     const props = {
@@ -25828,7 +26530,7 @@ ${s5}`;
       injectCSS: false,
       editorProps: props,
       extensions: (list) => {
-        const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5);
+        const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5 && x5.name === "starterKit" && headShift ? x5.configure({ heading: { levels: [1, 2, 3] } }) : x5);
         return [...out, ...plain ? [] : [ClaimMark], ...o5.extensions || []];
       }
     });
@@ -25848,10 +26550,11 @@ ${s5}`;
       editor,
       features,
       multiline,
+      headShift,
       value: () => {
         if (!touched && orig !== null) return orig;
         if (plain) return plainText(editor.state.doc);
-        const md2 = _1(editor, dropClaims(editor.getJSON())).markdown;
+        const md2 = headsOut(_1(editor, dropClaims(editor.getJSON())).markdown, headShift);
         return env ? H1(env, md2) : md2;
       },
       setValue: (v5) => {
@@ -25948,11 +26651,11 @@ ${s5}`;
     if ($f2.sameParent($t2) && $f2.parent.isTextblock) {
       const cut = $f2.parent.cut($f2.parentOffset, $t2.parentOffset);
       const json = { type: "doc", content: [{ type: "paragraph", ...cut.content.size ? { content: cut.content.toJSON() } : {} }] };
-      const text2 = _1(ed3, dropClaims(json)).markdown;
+      const text2 = headsOut(_1(ed3, dropClaims(json)).markdown, h5.headShift);
       return text2.trim() ? { from, to: to2, text: text2, inline: true } : null;
     }
     const a5 = $f2.depth ? $f2.before(1) : from, b5 = $t2.depth ? $t2.after(1) : to2;
-    const text = _1(ed3, dropClaims({ type: "doc", content: doc.slice(a5, b5).content.toJSON() })).markdown;
+    const text = headsOut(_1(ed3, dropClaims({ type: "doc", content: doc.slice(a5, b5).content.toJSON() })).markdown, h5.headShift);
     return text.trim() ? { from: a5, to: b5, text, inline: false } : null;
   }
   var edSelection = (h5) => {
@@ -25970,7 +26673,7 @@ ${s5}`;
       const L3 = String(text).replace(/\r\n?/g, "\n").split("\n");
       content = L3.length === 1 ? L3[0] ? [{ type: "text", text: L3[0] }] : [] : plainDoc(L3.join("\n")).content;
     } else {
-      const blocks2 = ed3.schema.nodeFromJSON(ed3.markdown.parse(String(text))).toJSON().content || [];
+      const blocks2 = ed3.schema.nodeFromJSON(ed3.markdown.parse(headsIn(String(text), h5.headShift))).toJSON().content || [];
       content = r4.inline && blocks2.length === 1 && blocks2[0].type === "paragraph" ? blocks2[0].content || [] : blocks2;
     }
     const chain = ed3.chain().focus();
@@ -26016,6 +26719,302 @@ ${s5}`;
   }
   function drawIconButton(host2, props) {
     R(/* @__PURE__ */ u2(IconButton, { ...props }), host2);
+  }
+
+  // core/caretPlace.js
+  function placeAtCaret(view, pos, el2, o5 = {}) {
+    const gap = o5.gap ?? 4, edge = o5.edge ?? 8, max = o5.max ?? 360;
+    const put2 = () => {
+      if (!el2.isConnected || view.isDestroyed) return;
+      let c5;
+      try {
+        c5 = view.coordsAtPos(Math.min(pos, view.state.doc.content.size));
+      } catch (e4) {
+        return;
+      }
+      const vw2 = document.documentElement.clientWidth, vh2 = window.innerHeight;
+      el2.style.position = "fixed";
+      el2.style.maxHeight = "";
+      el2.style.overflowY = "auto";
+      const w6 = el2.offsetWidth, natural = Math.min(el2.scrollHeight, max);
+      const below = vh2 - c5.bottom - gap - edge, above = c5.top - gap - edge;
+      const up2 = natural > below && above > below;
+      const room = Math.max(60, up2 ? above : below), h5 = Math.min(natural, room);
+      el2.style.maxHeight = `${Math.min(max, room)}px`;
+      el2.style.left = `${Math.max(edge, Math.min(c5.left, vw2 - w6 - edge))}px`;
+      el2.style.top = `${up2 ? Math.max(edge, c5.top - gap - h5) : c5.bottom + gap}px`;
+      el2.dataset.side = up2 ? "above" : "below";
+    };
+    put2();
+    let raf = 0, tm2 = 0;
+    const on2 = () => {
+      put2();
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
+      raf = requestAnimationFrame(put2);
+      tm2 = window.setTimeout(put2, 120);
+    };
+    window.addEventListener("scroll", on2, true);
+    window.addEventListener("resize", on2);
+    const vv = window.visualViewport;
+    if (vv) vv.addEventListener("resize", on2);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
+      window.removeEventListener("scroll", on2, true);
+      window.removeEventListener("resize", on2);
+      if (vv) vv.removeEventListener("resize", on2);
+    };
+  }
+
+  // components/SlashMenu.jsx
+  var slashSeq = 0;
+  function nearestList(editor) {
+    const $f2 = editor.state.selection.$from;
+    for (let d5 = $f2.depth; d5 > 0; d5--) {
+      const n4 = $f2.node(d5).type.name;
+      if (n4 === "bulletList" || n4 === "orderedList" || n4 === "taskList") return n4;
+    }
+    return "";
+  }
+  function slashAt(editor) {
+    const s5 = editor.state.selection;
+    if (!s5.empty) return null;
+    const $f2 = s5.$from;
+    if ($f2.parent.type.name !== "paragraph") return null;
+    if ($f2.marks().some(
+      /** @param {any} m */
+      (m6) => m6.type.name === "code" || m6.type.name === "link"
+    )) return null;
+    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)\/((?:[\w-]{1,20}(?: [\w-]{0,20})?)?)$/.exec(before);
+    if (!m5) return null;
+    return { from: s5.from - m5[2].length - 1, to: s5.from, q: m5[2] };
+  }
+  function SlashList({ state, id: id2, view, pick, hover }) {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    _2(() => {
+      const el2 = box.current;
+      if (!el2) return void 0;
+      return placeAtCaret(view, state.from, el2);
+    }, [state.rows.length, state.from, state.q]);
+    const none = !state.rows.length;
+    const say2 = none ? "No match" : `${state.rows.length} ${state.rows.length === 1 ? "option" : "options"}`;
+    const [spoken, setSpoken] = d2("");
+    h2(() => {
+      const t47 = requestAnimationFrame(() => setSpoken(say2));
+      return () => cancelAnimationFrame(t47);
+    }, [say2]);
+    const flat2 = !!state.q.trim();
+    h2(() => {
+      const on2 = box.current && box.current.querySelector(".r.on");
+      if (on2 && on2.scrollIntoView) on2.scrollIntoView({ block: "nearest" });
+    }, [state.i]);
+    const groups = [];
+    state.rows.forEach((r4, i5) => {
+      let g5 = groups[groups.length - 1];
+      if (!g5 || g5.g !== r4.group) {
+        g5 = { g: r4.group, rows: [] };
+        groups.push(g5);
+      }
+      g5.rows.push({ r: r4, i: i5 });
+    });
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { ref: box, class: "slashmenu", id: id2, role: "listbox", "aria-label": "Insert", onMouseDown: (e4) => e4.preventDefault(), children: [
+        state.rows.length && flat2 ? state.rows.map((r4, i5) => /* @__PURE__ */ u2(
+          "div",
+          {
+            id: `${id2}-${i5}`,
+            role: "option",
+            "data-slash": r4.id,
+            "aria-selected": i5 === state.i ? "true" : "false",
+            class: `r${i5 === state.i ? " on" : ""}`,
+            onMouseMove: () => {
+              if (i5 !== state.i) hover(i5);
+            },
+            onClick: () => pick(r4),
+            children: [
+              /* @__PURE__ */ u2("span", { class: "ic", "aria-hidden": "true", children: r4.icon }),
+              /* @__PURE__ */ u2("span", { class: "tx", children: [
+                /* @__PURE__ */ u2("span", { class: "t", children: r4.name }),
+                /* @__PURE__ */ u2("span", { class: "d", children: r4.desc })
+              ] }),
+              r4.key ? /* @__PURE__ */ u2("span", { class: "k", "aria-hidden": "true", children: r4.key }) : null
+            ]
+          },
+          r4.id
+        )) : state.rows.length ? groups.map((g5, gi2) => /* @__PURE__ */ u2("div", { role: "group", "aria-label": g5.g, children: [
+          /* @__PURE__ */ u2("div", { class: "g", "aria-hidden": "true", children: g5.g }),
+          g5.rows.map(({ r: r4, i: i5 }) => /* @__PURE__ */ u2(
+            "div",
+            {
+              id: `${id2}-${i5}`,
+              role: "option",
+              "data-slash": r4.id,
+              "aria-selected": i5 === state.i ? "true" : "false",
+              class: `r${i5 === state.i ? " on" : ""}`,
+              onMouseMove: () => {
+                if (i5 !== state.i) hover(i5);
+              },
+              onClick: () => pick(r4),
+              children: [
+                /* @__PURE__ */ u2("span", { class: "ic", "aria-hidden": "true", children: r4.icon }),
+                /* @__PURE__ */ u2("span", { class: "tx", children: [
+                  /* @__PURE__ */ u2("span", { class: "t", children: r4.name }),
+                  /* @__PURE__ */ u2("span", { class: "d", children: r4.desc })
+                ] }),
+                r4.key ? /* @__PURE__ */ u2("span", { class: "k", "aria-hidden": "true", children: r4.key }) : null
+              ]
+            },
+            r4.id
+          ))
+        ] }, `${gi2}-${g5.g}`)) : /* @__PURE__ */ u2("div", { class: "r none", role: "option", "aria-disabled": "true", "aria-selected": "false", children: "No match" }),
+        /* @__PURE__ */ u2("div", { class: "foot", "aria-hidden": "true", children: "↑↓ to move · Enter to insert · Esc to close" })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "slashsr", role: "status", "aria-live": "polite", "aria-atomic": "true", children: spoken })
+    ] });
+  }
+  function attachSlash(h5, { profile, host: host2 }) {
+    const id2 = `slash-${++slashSeq}`, editor = h5.editor, view = editor.view, el2 = h5.el;
+    const hostRows = Object.keys(host2 || {});
+    if (!slashRows(profile, hostRows, editor.schema).length) return () => {
+    };
+    const root = document.createElement("div");
+    root.className = "slashroot";
+    (el2.closest("dialog[open]") || document.body).appendChild(root);
+    let st2 = null;
+    let dismissed = -1, opened = false, typedSlash = false, moved = false;
+    const draw2 = () => {
+      R(st2 ? /* @__PURE__ */ u2(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
+        if (st2) {
+          st2 = { ...st2, i: i5 };
+          draw2();
+        }
+      } }) : null, root);
+      const dom = (
+        /** @type {HTMLElement} */
+        view.dom
+      );
+      if (st2) {
+        opened = true;
+        dom.setAttribute("aria-haspopup", "listbox");
+        dom.setAttribute("aria-expanded", "true");
+        dom.setAttribute("aria-controls", id2);
+        if (st2.rows[st2.i]) dom.setAttribute("aria-activedescendant", `${id2}-${st2.i}`);
+        else dom.removeAttribute("aria-activedescendant");
+      } else {
+        dom.removeAttribute("aria-haspopup");
+        dom.removeAttribute("aria-controls");
+        dom.removeAttribute("aria-activedescendant");
+        if (opened) dom.setAttribute("aria-expanded", "false");
+      }
+    };
+    const close = () => {
+      if (!st2) return;
+      st2 = null;
+      draw2();
+    };
+    const look = () => {
+      const mayOpen = typedSlash;
+      typedSlash = false;
+      if (editor.isDestroyed || view.composing) return;
+      const a5 = slashAt(editor);
+      if (!a5 || a5.from === dismissed) {
+        if (!a5) dismissed = -1;
+        return close();
+      }
+      if (!st2 && !mayOpen) return;
+      if (st2 && st2.from !== a5.from && !mayOpen) return close();
+      if (a5.q.endsWith(" ")) {
+        const base = a5.q.trim().toLowerCase();
+        if (!slashRows(profile, hostRows, editor.schema).some((r4) => r4.name.toLowerCase().startsWith(base + " "))) return close();
+      }
+      const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
+      if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
+      const fresh = !st2 || st2.from !== a5.from;
+      st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
+      if (fresh) moved = false;
+      draw2();
+    };
+    const choose = (r4) => {
+      const s5 = st2;
+      if (!s5) return;
+      close();
+      const c5 = editor.chain().focus().deleteRange({ from: s5.from, to: s5.to });
+      if (r4.host) {
+        c5.run();
+        const f5 = host2 && host2[r4.id];
+        if (f5) f5();
+        return;
+      }
+      if (r4.is && (r4.is === "blockquote" ? editor.isActive(r4.is) : nearestList(editor) === r4.is)) {
+        c5.run();
+        return;
+      }
+      if (r4.run) r4.run(c5, editor).run();
+    };
+    const keys = (e4) => {
+      if (!st2 || e4.isComposing || view.composing) return;
+      const n4 = st2.rows.length;
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        if (n4) {
+          moved = true;
+          st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
+          draw2();
+        }
+      } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
+        const row2 = n4 ? st2.rows[st2.i] : null;
+        const rank = row2 ? slashRank(row2, st2.q) : 9, lead = editor.state.doc.resolve(st2.from).parentOffset === 0;
+        if (row2 && (moved || rank === 0 || rank === 1 && (lead || st2.q.trim().length >= 3))) {
+          e4.preventDefault();
+          e4.stopPropagation();
+          choose(row2);
+        } else close();
+      } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
+        e4.preventDefault();
+        e4.stopPropagation();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        dismissed = st2.from;
+        close();
+      }
+    };
+    const blur = () => setTimeout(() => {
+      if (!el2.contains(document.activeElement)) close();
+    }, 120);
+    const comp = () => {
+      typedSlash = true;
+      look();
+    };
+    const before = (e4) => {
+      typedSlash = e4.inputType === "insertText" || e4.inputType.startsWith("deleteContent");
+    };
+    editor.on("selectionUpdate", look);
+    editor.on("update", look);
+    el2.addEventListener("beforeinput", before, true);
+    el2.addEventListener("keydown", keys, true);
+    el2.addEventListener("focusout", blur);
+    el2.addEventListener("compositionend", comp);
+    const off = () => {
+      editor.off("destroy", off);
+      editor.off("selectionUpdate", look);
+      editor.off("update", look);
+      el2.removeEventListener("beforeinput", before, true);
+      el2.removeEventListener("keydown", keys, true);
+      el2.removeEventListener("focusout", blur);
+      el2.removeEventListener("compositionend", comp);
+      st2 = null;
+      R(null, root);
+      root.remove();
+      if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
+    };
+    editor.on("destroy", off);
+    return off;
   }
 
   // components/notes/CaptureDrawer.jsx
@@ -26218,6 +27217,7 @@ ${s5}`;
         { features: "notes", markdown: capNote.value.body }
       );
       if (capOpen.value) ed2.focus("end");
+      const slashOff = attachSlash(ed2, { profile: "notes", host: {} });
       const input = () => {
         if (!ed2) return;
         patchNote({ body: ed2.value() });
@@ -26226,6 +27226,7 @@ ${s5}`;
       el2.addEventListener("input", input);
       return () => {
         el2.removeEventListener("input", input);
+        slashOff();
         if (ed2) ed2.destroy();
         ed2 = null;
       };
@@ -26235,6 +27236,7 @@ ${s5}`;
       return () => clearInterval(t47);
     }, []);
     const keys = (e4) => {
+      if (box.current && box.current.getAttribute("aria-expanded") === "true") return;
       if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
@@ -26327,6 +27329,7 @@ ${s5}`;
         /* @__PURE__ */ u2("span", { children: "Confidential" }),
         n4.confidential ? /* @__PURE__ */ u2("span", { class: "sub", children: "Kept out of prep pages and client reports; Claude reads it only if you say yes" }) : null
       ] }),
+      /* @__PURE__ */ u2(EditorBar, { profile: "capture", cls: "capbar", handle: () => ed2 }),
       /* @__PURE__ */ u2(
         "div",
         {
@@ -26895,6 +27898,293 @@ ${s5}`;
     R(/* @__PURE__ */ u2(AiLayer, {}), box);
   }
 
+  // core/itemLink.js
+  var ITEM_HREF = /^creaite:item\/(.+)$/;
+  function itemOf(id2) {
+    const a5 = A4.find((x5) => x5.id === id2);
+    if (a5) return { k: "actions", x: a5 };
+    const r4 = R3.find((x5) => x5.id === id2);
+    if (r4) return { k: "raid", x: r4 };
+    const d5 = DEC.find((x5) => x5.id === id2);
+    if (d5) return { k: "decisions", x: d5 };
+    return null;
+  }
+  function designation(id2) {
+    const found = itemOf(id2);
+    if (!found) return "";
+    const x5 = (
+      /** @type {any} */
+      found.x
+    );
+    return found.k === "actions" ? "Action" : found.k === "raid" ? String(x5.type || "Risk") : "Decision";
+  }
+  var NEUTRAL = (
+    /** @type {Record<string, string>} */
+    { "*": "∗", "`": "ˋ", "~": "∼", "<": "‹", ">": "›" }
+  );
+  function itemWords(id2) {
+    const found = itemOf(id2), t47 = found ? String(
+      /** @type {any} */
+      found.x.t || ""
+    ).replace(/\s+/g, " ").replace(/[[\]]/g, (m5) => m5 === "[" ? "(" : ")").replace(/[*`~<>]/g, (m5) => NEUTRAL[m5]).trim() : "";
+    const d5 = designation(id2);
+    return d5 ? `${id2} · ${d5}${t47 ? `: ${t47}` : ""}` : id2;
+  }
+  function itemContent(id2) {
+    return [{ type: "text", text: itemWords(id2), marks: [{ type: "link", attrs: { href: `creaite:item/${id2}` } }] }, { type: "text", text: " " }];
+  }
+  function itemState(id2) {
+    const found = itemOf(id2);
+    if (!found) return { tone: "off", words: "not in the tracker", title: `${id2}: not in the tracker` };
+    const x5 = (
+      /** @type {any} */
+      found.x
+    ), st2 = String(x5.st || ""), isOpen = /^(Open|Delayed|Pending|Proposed)$/i.test(st2);
+    let tone = isOpen ? "warn" : "ok", words = st2;
+    if (found.k === "actions") {
+      if (isOpen && x5.due && x5.due < TODAY) {
+        tone = "bad";
+        words = `${st2}, overdue ${fd(x5.due)}`;
+      } else if (isOpen && x5.due) words = `${st2}, due ${fd(x5.due)}`;
+      if (x5.o) words += ` · ${x5.o}`;
+    } else if (found.k === "raid") {
+      if (isOpen && x5.pr === "Urgent") tone = "bad";
+      words = `${x5.type || "Risk"} · ${st2}${x5.pr ? ` · ${x5.pr}` : ""}`;
+    } else words = `Decision · ${st2}`;
+    return { tone, words, title: `${id2} · ${x5.t || ""} · ${words}` };
+  }
+  function itemOptions(code, q5) {
+    const ql2 = q5.toLowerCase(), L3 = [];
+    for (
+      const [table, icon] of
+      /** @type {[any[], string][]} */
+      [[A4, "check"], [R3, "alert"], [DEC, "flag"]]
+    )
+      for (const x5 of table) {
+        if (code !== "_portfolio" && x5.p !== code) continue;
+        if (ql2 && !(x5.id.toLowerCase().includes(ql2) || String(x5.t || "").toLowerCase().includes(ql2) || designation(x5.id).toLowerCase().includes(ql2))) continue;
+        L3.push({ id: x5.id, label: itemWords(x5.id), icon, live: /^(Open|Delayed|Pending)$/i.test(x5.st || "") });
+      }
+    return L3.sort((a5, b5) => Number(!!b5.live) - Number(!!a5.live)).slice(0, 8);
+  }
+  function itemChip(node, pos) {
+    const link = node.marks.find((m5) => m5.type.name === "link"), im2 = link ? ITEM_HREF.exec(String(link.attrs.href || "")) : null;
+    if (!im2) return null;
+    const s5 = itemState(im2[1]);
+    return Z.inline(pos, pos + node.nodeSize, { class: `nchip ${s5.tone}`, "data-item": im2[1], title: `${s5.title} (click to open)` });
+  }
+  function itemChips() {
+    return j4.create({ name: "cxItemChips", addProseMirrorPlugins: () => [new L2({
+      key: new _5("cxItemChips"),
+      props: { decorations: (state) => {
+        const out = [];
+        state.doc.descendants((node, pos) => {
+          if (node.isText) {
+            const d5 = itemChip(node, pos);
+            if (d5) out.push(d5);
+          }
+        });
+        return B3.create(state.doc, out);
+      } }
+    })] });
+  }
+  function chipClicked(e4) {
+    if (e4.altKey) return "";
+    const t47 = (
+      /** @type {Element} */
+      e4.target
+    ), c5 = t47 && t47.closest ? t47.closest("[data-item]") : null;
+    return c5 ? c5.getAttribute("data-item") || "" : "";
+  }
+  function itemByQuery(code, q5) {
+    const ql2 = q5.toLowerCase(), ids = [];
+    for (
+      const table of
+      /** @type {any[][]} */
+      [A4, R3, DEC]
+    ) for (const x5 of table) if (code === "_portfolio" || x5.p === code) ids.push(String(x5.id));
+    const exact = ids.filter((i5) => i5.toLowerCase() === ql2);
+    if (exact.length === 1) return exact[0];
+    if (ql2.length < 3) return null;
+    const pre = ids.filter((i5) => i5.toLowerCase().startsWith(ql2));
+    return pre.length === 1 ? pre[0] : null;
+  }
+
+  // components/ItemPicker.jsx
+  function hashAt(editor) {
+    const s5 = editor.state.selection;
+    if (!s5.empty) return null;
+    const $f2 = s5.$from;
+    if ($f2.parent.type.name === "codeBlock") return null;
+    if ($f2.marks().some(
+      /** @param {any} m */
+      (m6) => m6.type.name === "code" || m6.type.name === "link"
+    )) return null;
+    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before);
+    if (!m5 || /\[\[[^\]]*$/.test(before)) return null;
+    return { from: s5.from - m5[2].length - 1, to: s5.from, q: m5[2] };
+  }
+  var armed = /* @__PURE__ */ new WeakSet();
+  function insertHash(h5) {
+    const e4 = h5.editor, s5 = e4.state.selection, before = s5.empty ? s5.$from.parent.textBetween(0, s5.$from.parentOffset, void 0, "￼") : "";
+    armed.add(e4);
+    e4.chain().focus().insertContent(before && !/\s$/.test(before) ? " #" : "#").run();
+  }
+  function ItemList({ state, view, pick, hover }) {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    _2(() => {
+      const el2 = box.current;
+      return el2 ? placeAtCaret(view, state.from, el2) : void 0;
+    }, [state.opts.length, state.from, state.q]);
+    h2(() => {
+      const on2 = box.current && box.current.querySelector(".r.on");
+      if (on2 && on2.scrollIntoView) on2.scrollIntoView({ block: "nearest" });
+    }, [state.i]);
+    return /* @__PURE__ */ u2("div", { ref: box, class: "ntpick items", id: "ntpick", role: "listbox", "aria-label": "Link a work item", onMouseDown: (e4) => e4.preventDefault(), children: [
+      /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: "Work items" }),
+      state.opts.map((o5, i5) => /* @__PURE__ */ u2(
+        "div",
+        {
+          id: `ntpick-${i5}`,
+          role: "option",
+          "data-item-opt": o5.id,
+          "aria-selected": i5 === state.i ? "true" : "false",
+          class: `r${i5 === state.i ? " on" : ""}`,
+          onMouseMove: () => {
+            if (i5 !== state.i) hover(i5);
+          },
+          onClick: () => pick(o5),
+          children: [
+            o5.icon ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
+            /* @__PURE__ */ u2("span", { class: "l", children: o5.label })
+          ]
+        },
+        o5.id
+      ))
+    ] });
+  }
+  function attachItemPick(h5, { code }) {
+    const editor = h5.editor, view = editor.view, el2 = h5.el;
+    const root = document.createElement("div");
+    root.className = "itemrootpick";
+    (el2.closest("dialog[open]") || document.body).appendChild(root);
+    let st2 = null;
+    let dismissed = -1, opened = false, typed2 = false, chosen = false;
+    const draw2 = () => {
+      R(st2 ? /* @__PURE__ */ u2(ItemList, { state: st2, view, pick: choose, hover: (i5) => {
+        if (st2) {
+          st2 = { ...st2, i: i5 };
+          draw2();
+        }
+      } }) : null, root);
+      const dom = (
+        /** @type {HTMLElement} */
+        view.dom
+      );
+      if (st2) {
+        opened = true;
+        dom.setAttribute("aria-haspopup", "listbox");
+        dom.setAttribute("aria-expanded", "true");
+        dom.setAttribute("aria-controls", "ntpick");
+        dom.setAttribute("aria-activedescendant", `ntpick-${st2.i}`);
+      } else {
+        for (const a5 of ["aria-haspopup", "aria-controls", "aria-activedescendant"]) dom.removeAttribute(a5);
+        if (opened) dom.setAttribute("aria-expanded", "false");
+      }
+    };
+    const close = () => {
+      chosen = false;
+      if (!st2) return;
+      st2 = null;
+      draw2();
+    };
+    const look = () => {
+      const cmd = armed.delete(editor), mayOpen = typed2 || cmd;
+      typed2 = false;
+      if (editor.isDestroyed || view.composing) return;
+      const a5 = hashAt(editor);
+      if (!a5 || a5.from === dismissed) {
+        if (!a5) dismissed = -1;
+        return close();
+      }
+      if (!st2 && !mayOpen) return;
+      if (st2 && st2.from !== a5.from && !mayOpen) return close();
+      const opts = itemOptions(code(), a5.q);
+      if (!opts.length) return close();
+      if (cmd) chosen = true;
+      st2 = { ...a5, opts, i: st2 && st2.from === a5.from ? Math.min(st2.i, opts.length - 1) : 0 };
+      draw2();
+    };
+    const choose = (o5) => {
+      const s5 = st2;
+      if (!s5) return;
+      close();
+      editor.chain().focus().deleteRange({ from: s5.from, to: s5.to }).insertContent(itemContent(o5.id)).run();
+    };
+    const keys = (e4) => {
+      if (!st2 || e4.defaultPrevented || e4.isComposing || view.composing) return;
+      const n4 = st2.opts.length;
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        chosen = true;
+        st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
+        draw2();
+      } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
+        const id2 = chosen ? st2.opts[st2.i].id : itemByQuery(code(), st2.q), o5 = id2 && st2.opts.find((x5) => x5.id === id2);
+        if (!o5) {
+          close();
+          return;
+        }
+        e4.preventDefault();
+        e4.stopPropagation();
+        choose(o5);
+      } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
+        e4.preventDefault();
+        e4.stopPropagation();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        dismissed = st2.from;
+        close();
+      }
+    };
+    const blur = () => setTimeout(() => {
+      if (!el2.contains(document.activeElement)) close();
+    }, 150);
+    const comp = () => {
+      typed2 = true;
+      look();
+    };
+    const before = (e4) => {
+      typed2 = e4.inputType === "insertText" || e4.inputType.startsWith("deleteContent");
+    };
+    editor.on("selectionUpdate", look);
+    editor.on("update", look);
+    el2.addEventListener("beforeinput", before, true);
+    el2.addEventListener("keydown", keys, true);
+    el2.addEventListener("focusout", blur);
+    el2.addEventListener("compositionend", comp);
+    const off = () => {
+      editor.off("destroy", off);
+      editor.off("selectionUpdate", look);
+      editor.off("update", look);
+      el2.removeEventListener("beforeinput", before, true);
+      el2.removeEventListener("keydown", keys, true);
+      el2.removeEventListener("focusout", blur);
+      el2.removeEventListener("compositionend", comp);
+      st2 = null;
+      R(null, root);
+      root.remove();
+      if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
+    };
+    editor.on("destroy", off);
+    return off;
+  }
+
   // components/Combobox.jsx
   var OPEN = null;
   function Combobox({ id: id2, name, value = "", label, placeholder, empty = "Type a name to add it.", options, onPick, onInput }) {
@@ -27439,7 +28729,7 @@ ${s5}`;
   }
 
   // components/work/NewTile.jsx
-  function NewTile({ word, decisions, hidden, onNew, onDecision }) {
+  function NewTile({ word, decisions, hidden, onNew, onDecision, id: id2 = "newBtn", popup }) {
     if (decisions) {
       return /* @__PURE__ */ u2(
         Menu,
@@ -27454,7 +28744,7 @@ ${s5}`;
           hidden,
           menuId: "newDecMenu",
           menuLabel: "New decision",
-          onPick: (id2) => onDecision(id2 === "needed" ? "needed" : "made"),
+          onPick: (id3) => onDecision(id3 === "needed" ? "needed" : "made"),
           items: [
             { id: "made", icon: "check", name: "Record a decision", line: "Already taken. Opens as Made, dated today.", data: { newd: "made" } },
             { id: "needed", icon: "flag", name: "Ask for a decision", line: "Waiting on someone. Opens as Pending, with a needed-by date.", data: { newd: "needed" } }
@@ -27462,7 +28752,7 @@ ${s5}`;
         }
       );
     }
-    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: "newBtn", "aria-label": word, "data-tip": word, hidden, onClick: onNew, children: [
+    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: id2, "aria-label": word, "data-tip": word, hidden, "aria-haspopup": popup, onClick: onNew, children: [
       /* @__PURE__ */ u2(Icon, { name: "plus" }),
       /* @__PURE__ */ u2("span", { class: "w", children: word }),
       /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
@@ -40162,6 +41452,8 @@ ${s5}`;
       if (card && DRAFTKIND["client-bulk"] && !card.querySelector("[data-drcmall]") && draftOn("client")) addHTML(card, "beforeend", html`<div class="drstale">${raw(draftBtn("client-bulk", "Draft all", "Draft client wording for each of them, as proposals in Review (each approved on its own)", `data-drcmall="${esc(code)}"`))}<span class="drbst" role="status"></span></div>`);
     }
   }
+  var slashOn = (t47) => !!t47 && /** @type {Element} */
+  t47.getAttribute?.("aria-expanded") === "true";
   function bootProjects0029() {
     document.addEventListener("keydown", (e4) => {
       if (e4.key === "Enter" && e4.target.matches && e4.target.matches(".rkrow[data-open]")) e4.target.click();
@@ -40552,7 +41844,8 @@ ${s5}`;
   }
   shared.CURED = null;
   var CUR_PROPS = {
-    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)),
+    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)).replace(/<(\/?)h([345])>/g, (m5, close, n4) => "<" + close + "h" + (n4 - HEAD_SHIFT) + ">"),
+    /* #122: stored ### #### ##### are the editor's Heading 1 to 3 */
     handlePaste: (view, e4) => {
       const pics = [...e4.clipboardData && e4.clipboardData.files || []].filter((f5) => /^image\//.test(f5.type));
       if (!pics.length) return false;
@@ -40561,6 +41854,13 @@ ${s5}`;
       })();
       return true;
     },
+    handleClick: (view, pos, e4) => {
+      const id2 = chipClicked(e4), hit2 = id2 && itemOf(id2);
+      if (!hit2) return false;
+      curOpenItem(hit2.k, id2);
+      return true;
+    },
+    /* #122 C: an item link is a chip; a click opens it, Alt-click edits inside it */
     handleDrop: (view, e4) => {
       const files = [...e4.dataTransfer && e4.dataTransfer.files || []];
       if (!files.length) return false;
@@ -40572,6 +41872,15 @@ ${s5}`;
       return true;
     }
   };
+  function curOpenItem(k5, id2) {
+    const c5 = shared.CURED;
+    shared.CURED = null;
+    try {
+      openRecord(k5, id2);
+    } finally {
+      shared.CURED = c5;
+    }
+  }
   function curAttach(n4) {
     const c5 = shared.CURED, slot = $(n4 === 2 ? "#curEd2" : "#curEd"), k5 = n4 === 2 ? "ed2" : "ed1";
     if (!c5 || !slot) return;
@@ -40583,11 +41892,15 @@ ${s5}`;
     const imgs = (P3.find((x5) => x5.code === c5.code) || {}).images;
     c5[k5] = creaiteEditor(slot, {
       features: "current",
+      headShift: HEAD_SHIFT,
+      extensions: [itemChips()],
       markdown: (n4 === 2 ? c5.src2 : c5.src1) || "",
       imageSrc: (ref) => imgSrc(imgs, ref),
       editorProps: CUR_PROPS,
       ai: { place: "current", project: () => shared.CURED && shared.CURED.code || "" }
     });
+    attachSlash(c5[k5], { profile: "current", host: { image: pickImage, item: () => insertHash(c5[k5]) } });
+    attachItemPick(c5[k5], { code: () => shared.CURED && shared.CURED.code || "" });
   }
   function curLoad(n4, md2) {
     const c5 = shared.CURED;
@@ -40600,26 +41913,6 @@ ${s5}`;
     if (n4 === 2) c5.src2 = md2;
     else c5.src1 = md2;
   }
-  var RTE_TOOLS = [
-    ["bold", "B", "Bold (⌘B)"],
-    ["italic", "I", "Italic (⌘I)"],
-    ["strikeThrough", "S", "Strikethrough (⌘⇧X)"],
-    ["formatBlock:h3", "H", "Sub-heading"],
-    ["|"],
-    ["insertUnorderedList", "• List", "Bulleted list"],
-    ["insertOrderedList", "1. List", "Numbered list"],
-    ["outdent", "⇤", "Outdent"],
-    ["indent", "⇥", "Indent (nested list)"],
-    ["formatBlock:blockquote", "❝", "Quote"],
-    ["image", "Image", "Add an image here (PNG or JPEG, up to 2 MB); or paste or drop one"],
-    ["|"],
-    ["link", "Link", "Add or edit a link (⌘K)"],
-    ["unlink", "Unlink", "Remove the link"],
-    ["removeFormat", "Clear", "Clear formatting"],
-    ["|"],
-    ["undo", "↶", "Undo (⌘Z)"],
-    ["redo", "↷", "Redo (⌘⇧Z)"]
-  ];
   function startCurEdit(code, pane) {
     if (shared.CURED || navBlocked()) return;
     const p6 = P3.find((x5) => x5.code === code);
@@ -40647,7 +41940,8 @@ ${s5}`;
       if (!shared.CURED || !box || shared.COCK !== shared.CURED.code) return;
       card.classList.add("editing");
       card.querySelectorAll(".pencil").forEach((b5) => b5.hidden = true);
-      putHTML(box, html`<div class="rte inplace"><div class="rtebar" role="toolbar" aria-label="Formatting">${RTE_TOOLS.map((t47) => t47[0] === "|" ? html`<span class="rtesep"></span>` : html`<button type="button" data-rc="${t47[0]}" title="${t47[2]}" aria-label="${t47[2]}">${t47[1]}</button>`)}<span class="rtelink" hidden><input type="url" placeholder="Paste a web or mail link" aria-label="Link address"><button type="button" data-rl="add">Add</button><button type="button" data-rl="cancel">Cancel</button></span></div>
+      curBarOff();
+      putHTML(box, html`<div class="rte inplace"><div id="curBar" class="curbar"></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`, `<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`, "edit", !!splitPanes(shared.CURED.orig)[1] || !!String(shared.CURED.ed2 ? edValue(shared.CURED.ed2.el) : shared.CURED.src2 || "").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
     ${shared.CURED.sources ? html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>` : ""}
@@ -40655,6 +41949,7 @@ ${s5}`;
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
       curAttach(1);
       curAttach(2);
+      curBar();
       curAiMenu();
       $$(".curpanes .rted").forEach((e4) => {
         paneBlank(e4);
@@ -40675,6 +41970,7 @@ ${s5}`;
     }
   }
   function endCurEdit() {
+    curBarOff();
     evPanelClose();
     curDrop();
     DISCARD = null;
@@ -40824,54 +42120,21 @@ ${s5}`;
     if (shared.CURED) curDrop();
     return false;
   }
-  var RTESEL = null;
-  var RTE_RUN = {
-    bold: (c5) => c5.toggleBold(),
-    italic: (c5) => c5.toggleItalic(),
-    strikeThrough: (c5) => c5.toggleStrike(),
-    "formatBlock:h3": (c5) => c5.toggleHeading({ level: 3 }),
-    insertUnorderedList: (c5) => c5.toggleBulletList(),
-    insertOrderedList: (c5) => c5.toggleOrderedList(),
-    outdent: (c5) => c5.liftListItem("listItem"),
-    indent: (c5) => c5.sinkListItem("listItem"),
-    "formatBlock:blockquote": (c5) => c5.toggleBlockquote(),
-    unlink: (c5) => c5.extendMarkRange("link").unsetLink(),
-    removeFormat: (c5) => c5.unsetAllMarks().clearNodes(),
-    undo: (c5) => c5.undo(),
-    redo: (c5) => c5.redo()
-  };
-  function rteCmd(cmd) {
-    const ed3 = curPane(), h5 = edOf(ed3);
-    if (!ed3 || !h5) return;
-    if (cmd === "image") {
-      pickImage();
-      return;
-    }
-    if (cmd === "link") {
-      const sel = h5.editor.state.selection;
-      RTESEL = { el: ed3, from: sel.from, to: sel.to };
-      const box = $(".curcard .rtelink");
-      box.hidden = false;
-      box.querySelector("input").value = h5.editor.getAttributes("link").href || "";
-      box.querySelector("input").focus();
-      return;
-    }
-    const run = RTE_RUN[cmd];
-    if (run) run(h5.editor.chain().focus()).run();
+  function curBar() {
+    const el2 = $("#curBar");
+    if (!el2) return;
+    mountEditorBar(el2, { profile: "current", legacyRc: true, handle: () => edOf(curPane()), host: { image: pickImage, item: () => {
+      const h5 = edOf(curPane());
+      if (h5) insertHash(h5);
+    } } });
   }
-  function rteLink(add) {
-    const ed3 = RTESEL && RTESEL.el || curPane(), h5 = edOf(ed3), box = $(".curcard .rtelink"), url = box.querySelector("input").value.trim();
-    box.hidden = true;
-    if (!h5) return;
-    const c5 = h5.editor.chain().focus();
-    if (RTESEL) c5.setTextSelection({ from: RTESEL.from, to: RTESEL.to });
-    if (add && /^(https?:\/\/|mailto:)\S+$/i.test(url)) {
-      if (RTESEL && RTESEL.from === RTESEL.to && !h5.editor.isActive("link")) c5.insertContent({ type: "text", text: url, marks: [{ type: "link", attrs: { href: url } }] }).run();
-      else c5.extendMarkRange("link").setLink({ href: url }).run();
-    } else {
-      c5.run();
-      if (add && url) snack("Use a web (https) or mail (mailto) link");
-    }
+  function curBarOff() {
+    const el2 = $("#curBar");
+    if (el2) unmountEditorBar(el2);
+  }
+  function rteCmd(cmd) {
+    const h5 = edOf(curPane());
+    if (h5) runTool(h5, cmd);
   }
   shared.DRH = null;
   shared.PKDRC = null;
@@ -41008,34 +42271,10 @@ ${s5}`;
       const ed3 = e4.target.closest && e4.target.closest(".curpanes .rted");
       if (ed3 && shared.CURED) shared.CURED.last = ed3.id === "curEd2" ? 2 : 1;
     });
-    document.addEventListener("mousedown", (e4) => {
-      const b5 = e4.target.closest(".inplace [data-rc]");
-      if (!b5) return;
-      e4.preventDefault();
-      rteCmd(b5.dataset.rc);
-    });
-    document.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest(".inplace [data-rl]");
-      if (b5) {
-        e4.preventDefault();
-        rteLink(b5.dataset.rl === "add");
-      }
-    });
     document.addEventListener("keydown", (e4) => {
-      if (e4.target.closest && e4.target.closest(".rtelink")) {
-        if (e4.key === "Enter") {
-          e4.preventDefault();
-          rteLink(true);
-        }
-        if (e4.key === "Escape") {
-          e4.preventDefault();
-          e4.stopPropagation();
-          rteLink(false);
-        }
-        return;
-      }
       if (!(e4.target.classList && e4.target.classList.contains("rted") && e4.target.closest(".curpanes"))) return;
       const mod = e4.metaKey || e4.ctrlKey;
+      if (slashOn(e4.target) && (e4.key === "Escape" || e4.key === "Tab" || mod && e4.key === "Enter")) return;
       if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
@@ -41043,13 +42282,6 @@ ${s5}`;
       } else if (mod && e4.key === "Enter") {
         e4.preventDefault();
         saveCurEdit();
-      } else if (mod && e4.key.toLowerCase() === "k") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        rteCmd("link");
-      } else if (mod && e4.shiftKey && e4.key.toLowerCase() === "x") {
-        e4.preventDefault();
-        rteCmd("strikeThrough");
       } else if (e4.key === "Tab" && getSelection().anchorNode && (getSelection().anchorNode.parentElement || {}).closest && getSelection().anchorNode.parentElement.closest("li")) {
         e4.preventDefault();
         rteCmd(e4.shiftKey ? "outdent" : "indent");
@@ -41713,6 +42945,7 @@ ${pre}**Current state title:** ${title}`);
       if (!shared.EV || e4.isComposing) return;
       const p6 = $("#evPanel"), root = evRoot(shared.EV.which);
       const inside = p6 && p6.contains(e4.target) || root && root.contains(e4.target) || shared.EV.which === "ed" && e4.target.id === "curEd";
+      if (slashOn(e4.target) && (e4.key === "Escape" || e4.key === "Tab")) return;
       if (e4.key === "Escape" && (inside || !document.querySelector("dialog[open]"))) {
         e4.preventDefault();
         e4.stopImmediatePropagation();
@@ -45890,7 +47123,7 @@ ${d5.text}`);
     return r4 ? (l6 ? l6 + "\n\n" : "") + PANE + "\n\n" + r4 : l6;
   }
   function mdInline(t47) {
-    return esc(t47).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g, (m5, a5, u5) => `<a href="${u5}" target="_blank" rel="noopener">${a5}</a>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
+    return esc(t47).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g, (m5, a5, id2) => `<a href="#" class="itemref" data-oi="${id2}">${a5}</a>`).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g, (m5, a5, u5) => `<a href="${u5}" target="_blank" rel="noopener">${a5}</a>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
   }
   function mdBlocks(text) {
     const B4 = [];
@@ -45929,6 +47162,12 @@ ${d5.text}`);
       else if (line.startsWith("### ")) {
         flush();
         B4.push(["h", line.slice(4).trim()]);
+      } else if (line.startsWith("#### ")) {
+        flush();
+        B4.push(["h2", line.slice(5).trim()]);
+      } else if (line.startsWith("##### ")) {
+        flush();
+        B4.push(["h3", line.slice(6).trim()]);
       } else if (line.trimStart().startsWith(">")) {
         if (para.length) flush();
         quote.push(line.trimStart().slice(1).trim());
@@ -45959,7 +47198,7 @@ ${d5.text}`);
   var imgSrc = (imgs, ref) => String(ref).startsWith("new:") ? ((shared.CURED && shared.CURED.uploads || {})[ref.slice(4)] || {}).src : ((imgs || []).find((i5) => i5.ref === ref) || {}).src;
   var figHtml = (cap, ref, src) => `<figure class="cimg" data-ref="${esc(ref)}">${src ? `<img src="${src}" alt="${esc(cap)}">` : `<div class="sub">Image not found: ${esc(ref)}</div>`}<figcaption>${esc(cap)}</figcaption></figure>`;
   function mdHtml(text, imgs) {
-    return mdBlocks(text).map(([k5, b5]) => k5 === "img" ? figHtml(b5[0], b5[1], imgSrc(imgs, b5[1])) : k5 === "p" ? `<p>${mdInline(b5)}</p>` : k5 === "h" ? `<h3>${mdInline(b5)}</h3>` : k5 === "q" ? `<blockquote>${mdInline(b5)}</blockquote>` : listHtml(b5)).join("");
+    return mdBlocks(text).map(([k5, b5]) => k5 === "img" ? figHtml(b5[0], b5[1], imgSrc(imgs, b5[1])) : k5 === "p" ? `<p>${mdInline(b5)}</p>` : k5 === "h" ? `<h3>${mdInline(b5)}</h3>` : k5 === "h2" ? `<h4>${mdInline(b5)}</h4>` : k5 === "h3" ? `<h5>${mdInline(b5)}</h5>` : k5 === "q" ? `<blockquote>${mdInline(b5)}</blockquote>` : listHtml(b5)).join("");
   }
   function htmlToMd(root) {
     const blocks2 = [];
@@ -46018,7 +47257,7 @@ ${d5.text}`);
         } else if (/^H[1-6]$/.test(tag)) {
           flush();
           const t47 = flat2(inl(n4));
-          if (t47) blocks2.push("### " + t47);
+          if (t47) blocks2.push("#".repeat(Math.min(+tag[1], 3) + 2) + " " + t47);
         } else if (tag === "BLOCKQUOTE") {
           flush();
           const t47 = flat2(inl(n4));
@@ -48173,6 +49412,12 @@ ${d5.text}`);
     });
   }
   function bootPanel0181() {
+    document.addEventListener("click", (e4) => {
+      const b5 = e4.target.closest && e4.target.closest("a.itemref[data-oi]");
+      if (!b5 || b5.closest(".ProseMirror")) return;
+      e4.preventDefault();
+      openRecord("all", b5.dataset.oi);
+    });
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-msjump]");
       if (!b5) return;
@@ -51629,6 +52874,404 @@ ${d5.text}`);
     return { close: done };
   }
 
+  // components/notes/NoteHeader.jsx
+  var NH_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var NH_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var nhPad = (
+    /** @param {number} n */
+    (n4) => String(n4).padStart(2, "0")
+  );
+  var nhIso = (d5) => `${d5.getFullYear()}-${nhPad(d5.getMonth() + 1)}-${nhPad(d5.getDate())}`;
+  var sayDate = (iso2) => `${(/* @__PURE__ */ new Date(`${iso2}T12:00:00`)).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso2)}`;
+  function NoteDate({ date }) {
+    const [text, setText] = d2(date ? fd(date) : ""), [open2, setOpen2] = d2(false);
+    const [view, setView] = d2(() => (date || TODAY).slice(0, 7));
+    const box = A2(
+      /** @type {HTMLSpanElement | null} */
+      null
+    ), inp = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    ), grid = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), via = A2(
+      /** @type {"box" | "btn"} */
+      "box"
+    );
+    const t47 = text.trim(), read = t47 ? readDate(t47) : null, bad = !!t47 && !read;
+    const chosen = read || date;
+    h2(() => {
+      if (read) setView(read.slice(0, 7));
+    }, [read]);
+    const back2 = (toBox) => {
+      const el2 = !toBox && via.current === "btn" ? btn.current : inp.current;
+      if (!el2 || document.activeElement === el2) return;
+      el2.focus();
+    };
+    const commit = (iso2, refocus) => {
+      setText(iso2 ? fd(iso2) : "");
+      setOpen2(false);
+      if (refocus) back2(true);
+      if (iso2 !== date) noteMeta({ date: iso2 });
+    };
+    const settle = () => {
+      const v5 = text.trim();
+      if (!v5) {
+        commit("");
+        return;
+      }
+      const r4 = readDate(v5);
+      if (r4) commit(r4);
+      else {
+        setText(date ? fd(date) : "");
+        setOpen2(false);
+      }
+    };
+    const y5 = +view.slice(0, 4), m5 = +view.slice(5, 7) - 1;
+    const first = (new Date(y5, m5, 1).getDay() + 6) % 7, start = new Date(y5, m5, 1 - first);
+    const cells = Array.from({ length: 42 }, (_6, i5) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i5));
+    const step2 = (
+      /** @param {number} n */
+      (n4) => {
+        const d5 = new Date(y5, m5 + n4, 1);
+        setView(`${d5.getFullYear()}-${nhPad(d5.getMonth() + 1)}`);
+      }
+    );
+    const focusDay = (
+      /** @param {string} iso */
+      (iso2) => {
+        setView(iso2.slice(0, 7));
+        let tries = 0;
+        const go3 = () => {
+          const b5 = grid.current && grid.current.querySelector(`[data-d="${iso2}"]`);
+          if (b5) b5.focus();
+          else if (++tries < 8) setTimeout(go3, 15);
+        };
+        setTimeout(go3, 0);
+      }
+    );
+    const arrow = (
+      /** @param {KeyboardEvent} e @param {string} iso */
+      (e4, iso2) => {
+        const d5 = /* @__PURE__ */ new Date(`${iso2}T12:00:00`), s5 = (
+          /** @type {Record<string, number>} */
+          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
+        );
+        if (s5 === void 0) return;
+        e4.preventDefault();
+        d5.setDate(d5.getDate() + s5);
+        focusDay(nhIso(d5));
+      }
+    );
+    return /* @__PURE__ */ u2("span", { class: "nprop", ref: box, onFocusOut: (e4) => {
+      const to2 = (
+        /** @type {Node|null} */
+        e4.relatedTarget
+      );
+      if (open2 && (!to2 || !(box.current && box.current.contains(to2)))) settle();
+    }, children: [
+      /* @__PURE__ */ u2("span", { class: "ndwrap", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            ref: inp,
+            type: "text",
+            id: "noteWsDate",
+            class: "nin date",
+            value: text,
+            placeholder: "Date, or e.g. last monday",
+            autoComplete: "off",
+            maxLength: 40,
+            "aria-label": "Date of the session, a date or words like last monday",
+            "aria-invalid": bad ? "true" : void 0,
+            "aria-describedby": open2 ? "noteDateRead" : void 0,
+            onClick: () => {
+              via.current = "box";
+              setOpen2(true);
+            },
+            onInput: (e4) => {
+              setText(
+                /** @type {HTMLInputElement} */
+                e4.target.value
+              );
+              via.current = "box";
+              setOpen2(true);
+            },
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                e4.stopPropagation();
+                if (!t47) commit("");
+                else if (read) commit(read);
+                else setOpen2(true);
+              } else if (e4.key === "Escape" && open2) {
+                e4.preventDefault();
+                e4.stopPropagation();
+                setText(date ? fd(date) : "");
+                setOpen2(false);
+              } else if (e4.key === "ArrowDown") {
+                e4.preventDefault();
+                via.current = "box";
+                setOpen2(true);
+                focusDay(chosen || TODAY);
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "ndbtn",
+            id: "noteDateBtn",
+            ref: btn,
+            "aria-label": "Choose date",
+            "data-tip": "Choose a date",
+            "aria-expanded": open2 ? "true" : "false",
+            "aria-haspopup": "dialog",
+            onClick: (e4) => {
+              if (open2) {
+                setOpen2(false);
+                return;
+              }
+              setOpen2(true);
+              if (e4.detail === 0) {
+                via.current = "btn";
+                focusDay(chosen || TODAY);
+              } else {
+                via.current = "box";
+                if (inp.current) inp.current.focus();
+              }
+            },
+            children: /* @__PURE__ */ u2(Icon, { name: "calendar" })
+          }
+        )
+      ] }),
+      open2 ? /* @__PURE__ */ u2(
+        "div",
+        {
+          class: "dpop",
+          id: "noteDatePop",
+          role: "dialog",
+          "aria-label": "Choose a date",
+          onMouseDown: (e4) => {
+            if (!/** @type {Element} */
+            e4.target.closest("input")) e4.preventDefault();
+          },
+          onKeyDown: (e4) => {
+            if (e4.key === "Escape") {
+              e4.preventDefault();
+              e4.stopPropagation();
+              setText(date ? fd(date) : "");
+              setOpen2(false);
+              back2();
+            }
+          },
+          children: [
+            /* @__PURE__ */ u2("div", { class: `typed${bad ? " bad" : ""}`, id: "noteDateRead", role: "status", "aria-live": "polite", children: !t47 ? "Type a date or words like last monday." : read ? /* @__PURE__ */ u2(S2, { children: [
+              "Reads as ",
+              /* @__PURE__ */ u2("b", { children: sayDate(read) }),
+              " · Enter to use"
+            ] }) : "Not a date I can read. Try 12-10-2026 or last monday." }),
+            /* @__PURE__ */ u2("div", { class: "mh", children: [
+              /* @__PURE__ */ u2("button", { type: "button", id: "noteDatePrev", "aria-label": "Previous month", onClick: () => step2(-1), children: "‹" }),
+              /* @__PURE__ */ u2("b", { children: [
+                NH_MONTHS[m5],
+                " ",
+                y5
+              ] }),
+              /* @__PURE__ */ u2("button", { type: "button", id: "noteDateNext", "aria-label": "Next month", onClick: () => step2(1), children: "›" })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "g", ref: grid, children: [
+              NH_DAYS.map((d5) => /* @__PURE__ */ u2("div", { class: "dn", "aria-hidden": "true", children: d5 }, d5)),
+              cells.map((d5) => {
+                const iso2 = nhIso(d5), on2 = iso2 === chosen;
+                return /* @__PURE__ */ u2(
+                  "button",
+                  {
+                    type: "button",
+                    "data-d": iso2,
+                    class: `${d5.getMonth() !== m5 ? "o " : ""}${iso2 === TODAY ? "t " : ""}${on2 ? "s" : ""}`,
+                    "aria-label": sayDate(iso2),
+                    "aria-pressed": on2 ? "true" : "false",
+                    tabIndex: iso2 === (chosen && chosen.slice(0, 7) === view ? chosen : `${view}-01`) ? 0 : -1,
+                    onKeyDown: (e4) => arrow(e4, iso2),
+                    onClick: () => commit(iso2, true),
+                    children: d5.getDate()
+                  },
+                  iso2
+                );
+              })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "foot", children: [["Today", "today"], ["Last Monday", "last monday"], ["Yesterday", "yesterday"]].map(([name, q5]) => /* @__PURE__ */ u2("button", { type: "button", "data-q": q5, onClick: () => {
+              const r4 = readDate(q5);
+              if (r4) commit(r4, true);
+            }, children: name }, q5)) })
+          ]
+        }
+      ) : null
+    ] });
+  }
+  var TAG_MAX = 60, TAG_N = 20;
+  var cleanTag = (v5) => v5.replace(/[\s,]+/g, " ").trim().slice(0, TAG_MAX).trim();
+  var tagsNow = () => (
+    /** @type {string[]} */
+    (noteCur.value && noteCur.value.meta || {}).tags || []
+  );
+  var SUGGEST = ["stakeholder", "decision", "follow-up"];
+  function NoteTags({ tags }) {
+    const [adding, setAdding] = d2(false);
+    const addBtn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    ), newIn = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    h2(() => {
+      if (adding && newIn.current) newIn.current.focus();
+    }, [adding]);
+    const add = (raw2) => {
+      const next = tagsNow().slice();
+      for (const part of raw2.split(",")) {
+        const v5 = cleanTag(part);
+        if (!v5 || next.some((x5) => x5.toLowerCase() === v5.toLowerCase())) continue;
+        if (next.length >= TAG_N) {
+          snack(`Notes keep up to ${TAG_N} tags`);
+          break;
+        }
+        next.push(v5);
+      }
+      if (next.length !== tagsNow().length) noteMeta({ tags: next });
+    };
+    const remove = (i5) => {
+      const L3 = tagsNow();
+      if (i5 >= 0 && i5 < L3.length) noteMeta({ tags: L3.filter((_6, j5) => j5 !== i5) });
+    };
+    const rename = (i5, el2) => {
+      const L3 = tagsNow();
+      if (i5 < 0 || i5 >= L3.length) return;
+      const v5 = cleanTag(el2.value);
+      if (!v5) {
+        remove(i5);
+        return;
+      }
+      if (v5 === L3[i5]) {
+        el2.value = L3[i5];
+        return;
+      }
+      if (L3.some((x5, j5) => j5 !== i5 && x5.toLowerCase() === v5.toLowerCase())) {
+        el2.value = L3[i5];
+        snack(`There is already a tag "${v5}"`);
+        return;
+      }
+      noteMeta({ tags: L3.map((x5, j5) => j5 === i5 ? v5 : x5) });
+    };
+    const doneAdding = (
+      /** @param {boolean} focusBack */
+      (focusBack) => {
+        setAdding(false);
+        if (focusBack) setTimeout(() => {
+          if (addBtn.current) addBtn.current.focus();
+        }, 0);
+      }
+    );
+    return /* @__PURE__ */ u2("div", { class: "nlabels", id: "noteTags", role: "group", "aria-label": "Tags", children: [
+      /* @__PURE__ */ u2(TagFlag, {}),
+      tags.map((t47, i5) => /* @__PURE__ */ u2("span", { class: "chip", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "text",
+            class: "t",
+            defaultValue: t47,
+            maxLength: TAG_MAX,
+            "aria-label": `Tag ${t47}, edit to rename`,
+            style: { width: `${Math.max(2, t47.length + 1)}ch` },
+            onInput: (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.target
+              );
+              el2.style.width = `${Math.max(2, el2.value.length + 1)}ch`;
+            },
+            onKeyDown: (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.target
+              );
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                el2.blur();
+              } else if (e4.key === "Escape") {
+                e4.preventDefault();
+                e4.stopPropagation();
+                el2.value = t47;
+                el2.blur();
+              }
+            },
+            onBlur: (e4) => rename(
+              i5,
+              /** @type {HTMLInputElement} */
+              e4.target
+            )
+          }
+        ),
+        /* @__PURE__ */ u2("button", { type: "button", class: "x", "aria-label": `Remove tag ${t47}`, "data-tip": `Remove ${t47}`, onClick: () => remove(i5), children: "×" })
+      ] }, `${i5}|${t47}`)),
+      adding ? /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          class: "addin",
+          id: "noteTagNew",
+          placeholder: "Tag",
+          "aria-label": "New tag",
+          maxLength: 80,
+          ref: newIn,
+          onKeyDown: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.target
+            );
+            if (e4.key === "Enter") {
+              e4.preventDefault();
+              e4.stopPropagation();
+              add(el2.value);
+              el2.value = "";
+              doneAdding(true);
+            } else if (e4.key === "Escape") {
+              e4.preventDefault();
+              e4.stopPropagation();
+              el2.value = "";
+              doneAdding(true);
+            }
+          },
+          onBlur: (e4) => {
+            add(
+              /** @type {HTMLInputElement} */
+              e4.target.value
+            );
+            doneAdding(false);
+          }
+        }
+      ) : /* @__PURE__ */ u2("button", { type: "button", class: "addl", id: "noteTagAdd", ref: addBtn, onClick: () => setAdding(true), children: "+ Tags" }),
+      !tags.length ? /* @__PURE__ */ u2("span", { class: "sugg", id: "noteTagSugg", children: [
+        "Suggested: ",
+        SUGGEST.map((s5) => /* @__PURE__ */ u2("button", { type: "button", onMouseDown: (e4) => e4.preventDefault(), onClick: () => add(s5), children: s5 }, s5))
+      ] }) : null
+    ] });
+  }
+  function TagFlag() {
+    const conf = !!(noteCur.value && noteCur.value.meta || {}).confidential;
+    return /* @__PURE__ */ u2("span", { class: `tag${conf ? " int" : ""}`, children: conf ? "Confidential" : "Internal" });
+  }
+
   // components/project/ProjectTabs.jsx
   function ProjectTabs({ code, selected, count, onGo }) {
     const items2 = [
@@ -51653,48 +53296,8 @@ ${d5.text}`);
   }
 
   // components/notes/NoteEditor.jsx
-  var ITEM_HREF = /^creaite:item\/(.+)$/, PERSON_HREF = /^creaite:person\//;
+  var PERSON_HREF = /^creaite:person\//;
   var WIKI = /\[\[([^[\]\n|]{1,160})(?:\|[^[\]\n]*)?\]\]/g;
-  function itemOf(id2) {
-    const a5 = A4.find((x5) => x5.id === id2);
-    if (a5) return { k: "actions", x: a5 };
-    const r4 = R3.find((x5) => x5.id === id2);
-    if (r4) return { k: "raid", x: r4 };
-    const d5 = DEC.find((x5) => x5.id === id2);
-    if (d5) return { k: "decisions", x: d5 };
-    return null;
-  }
-  function itemState(id2) {
-    const hit2 = itemOf(id2);
-    if (!hit2) return { tone: "off", words: "not in the tracker", title: `${id2}: not in the tracker` };
-    const x5 = (
-      /** @type {any} */
-      hit2.x
-    ), st2 = String(x5.st || ""), open2 = /^(Open|Delayed|Pending|Proposed)$/i.test(st2);
-    let tone = open2 ? "warn" : "ok", words = st2;
-    if (hit2.k === "actions") {
-      if (open2 && x5.due && x5.due < TODAY) {
-        tone = "bad";
-        words = `${st2}, overdue ${fd(x5.due)}`;
-      } else if (open2 && x5.due) words = `${st2}, due ${fd(x5.due)}`;
-      if (x5.o) words += ` · ${x5.o}`;
-    } else if (hit2.k === "raid") {
-      if (open2 && x5.pr === "Urgent") tone = "bad";
-      words = `${x5.type || "Risk"} · ${st2}${x5.pr ? ` · ${x5.pr}` : ""}`;
-    } else words = `Decision · ${st2}`;
-    return { tone, words, title: `${id2} · ${x5.t || ""} · ${words}` };
-  }
-  function itemOptions(code, q5) {
-    const ql2 = q5.toLowerCase(), L3 = [];
-    for (
-      const [rows2, icon] of
-      /** @type {[any[], string][]} */
-      [[A4, "check"], [R3, "alert"], [DEC, "flag"]]
-    )
-      for (const x5 of rows2) if ((code === "_portfolio" || x5.p === code) && (!ql2 || x5.id.toLowerCase().includes(ql2) || String(x5.t || "").toLowerCase().includes(ql2)))
-        L3.push({ id: x5.id, label: x5.id, sub: x5.t || "", icon, open: /^(Open|Delayed|Pending)$/i.test(x5.st || "") });
-    return L3.sort((a5, b5) => Number(b5.open) - Number(a5.open)).slice(0, 8);
-  }
   function personOptions(q5) {
     const ql2 = q5.toLowerCase(), seen = /* @__PURE__ */ new Set(), L3 = [];
     for (
@@ -51712,26 +53315,14 @@ ${d5.text}`);
     }
     return L3.slice(0, 8);
   }
-  var INSERTS = [
-    ["heading", "Sub-heading", "H"],
-    ["checklist", "Checklist", "☑"],
-    ["item", "Work item", "#"],
-    ["person", "Person", "@"],
-    ["note", "Link to a note", "[["],
-    ["table", "Table", "▦"],
-    ["tpl:stakeholder", "Template: Stakeholder", "◇"],
-    ["tpl:lessons-learned", "Template: Lessons learned", "◇"],
-    ["tpl:working-session", "Template: Working session", "◇"]
-  ];
   function decorate(doc, titles) {
     const known2 = new Set(titles().map((t47) => t47.toLowerCase())), out = [];
     doc.descendants((node, pos) => {
       if (!node.isText) return;
       const link = node.marks.find((m5) => m5.type.name === "link"), href = link ? String(link.attrs.href || "") : "";
-      const im2 = ITEM_HREF.exec(href);
-      if (im2) {
-        const s5 = itemState(im2[1]);
-        out.push(Z.inline(pos, pos + node.nodeSize, { class: `nchip ${s5.tone}`, "data-item": im2[1], title: `${s5.title} (click to open)` }));
+      const chip = ITEM_HREF.test(href) ? itemChip(node, pos) : null;
+      if (chip) {
+        out.push(chip);
         return;
       }
       if (PERSON_HREF.test(href)) {
@@ -51789,27 +53380,6 @@ ${d5.text}`);
       return Z.node(pos, pos + size, a5);
     });
   }
-  var TOOLS = [
-    ["h", "H", "Sub-heading"],
-    ["b", "B", "Bold (⌘B)"],
-    ["i", "I", "Italic (⌘I)"],
-    ["s", "S", "Strikethrough"],
-    ["code", "</>", "Code"],
-    ["|", "", ""],
-    ["ul", "•", "Bulleted list"],
-    ["ol", "1.", "Numbered list"],
-    ["task", "☑", "Checklist"],
-    ["quote", "❝", "Quote"],
-    ["|", "", ""],
-    ["note", "[[ ]]", "Link to a note ([[)"],
-    ["person", "@", "Mention a person (@)"],
-    ["item", "#ID", "Link a work item (#)"],
-    ["table", "▦", "Table"],
-    ["image", "Image", "Add a picture here (PNG or JPEG, up to 2 MB)"],
-    ["|", "", ""],
-    ["undo", "↶", "Undo (⌘Z)"],
-    ["redo", "↷", "Redo (⌘⇧Z)"]
-  ];
   function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
@@ -51875,7 +53445,7 @@ ${d5.text}`);
         /** @type {PickState["kind"]|null} */
         null
       ), q5 = "", at2 = 0;
-      const mn2 = /\[\[([^[\]\n]{0,60})$/.exec(before), mp2 = /(^|\s)@([\w .'’-]{0,40})$/.exec(before), mi2 = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before), ms2 = /^\/(\w{0,20})$/.exec(before);
+      const mn2 = /\[\[([^[\]\n]{0,60})$/.exec(before), mp2 = /(^|\s)@([\w .'’-]{0,40})$/.exec(before);
       if (mn2) {
         kind = "note";
         q5 = mn2[1];
@@ -51884,30 +53454,12 @@ ${d5.text}`);
         kind = "person";
         q5 = mp2[2];
         at2 = mp2.index + mp2[1].length;
-      } else if (mi2) {
-        kind = "item";
-        q5 = mi2[2];
-        at2 = mi2.index + mi2[1].length;
-      } else if (ms2 && $f2.parent.type.name === "paragraph") {
-        kind = "insert";
-        q5 = ms2[1];
-        at2 = 0;
       }
       if (!kind) return setPick(null);
       const opts = optionsFor(kind, q5);
       if (!opts.length && kind !== "note") return setPick(null);
-      const c5 = editor.view.coordsAtPos(s5.from), host2 = box.current ? box.current.closest(".ndoc") : null, hb2 = host2 ? host2.getBoundingClientRect() : { left: 0, top: 0 };
       const prev = pickRef.current;
-      setPick({
-        kind,
-        from: start + at2,
-        to: s5.from,
-        q: q5,
-        opts,
-        i: prev && prev.kind === kind ? Math.min(prev.i, Math.max(0, opts.length - 1)) : 0,
-        x: Math.max(0, c5.left - hb2.left),
-        y: c5.bottom - hb2.top + 4
-      });
+      setPick({ kind, from: start + at2, to: s5.from, q: q5, opts, i: prev && prev.kind === kind ? Math.min(prev.i, Math.max(0, opts.length - 1)) : 0 });
     };
     const optionsFor = (kind, q5) => {
       const ql2 = q5.toLowerCase();
@@ -51916,9 +53468,16 @@ ${d5.text}`);
         if (q5.trim() && !L3.some((o5) => o5.label.toLowerCase() === ql2.trim())) L3.push({ id: "\0" + q5.trim(), label: `Link to “${q5.trim()}”`, sub: "a new note, made when you click it", icon: "plus" });
         return L3;
       }
-      if (kind === "person") return personOptions(q5);
-      if (kind === "item") return itemOptions(props.current.code, q5);
-      return INSERTS.filter(([, l6]) => !ql2 || l6.toLowerCase().includes(ql2)).map(([id2, l6, k5]) => ({ id: id2, label: l6, sub: k5 }));
+      return personOptions(q5);
+    };
+    const hostRows = () => {
+      const m5 = { note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() };
+      const tpl = (
+        /** @type {any} */
+        D.note_templates || {}
+      );
+      for (const t47 of ["stakeholder", "lessons-learned", "working-session"]) if (tpl[t47]) m5[`tpl:${t47}`] = () => insert(`tpl:${t47}`);
+      return m5;
     };
     const choose = (o5) => {
       const h5 = ed3.current, p6 = pickRef.current;
@@ -51934,21 +53493,14 @@ ${d5.text}`);
         c5.insertContent([{ type: "text", text: "@" }, { type: "text", text: o5.id, marks: [{ type: "link", attrs: { href: `creaite:person/${encodeURIComponent(o5.id)}` } }] }, { type: "text", text: " " }]).run();
         return;
       }
-      if (p6.kind === "item") {
-        c5.insertContent([{ type: "text", text: o5.id, marks: [{ type: "link", attrs: { href: `creaite:item/${o5.id}` } }] }, { type: "text", text: " " }]).run();
-        return;
-      }
-      c5.run();
-      insert(o5.id);
     };
     const insert = (what) => {
       const h5 = ed3.current;
       if (!h5) return;
       const c5 = h5.editor.chain().focus();
-      if (what === "heading") c5.toggleHeading({ level: 2 }).run();
-      else if (what === "checklist") c5.toggleTaskList().run();
-      else if (what === "table") c5.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-      else if (what === "item" || what === "person" || what === "note") c5.insertContent(what === "item" ? "#" : what === "person" ? "@" : "[[").run();
+      if (what === "table") c5.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+      else if (what === "item") insertHash(h5);
+      else if (what === "person" || what === "note") c5.insertContent(what === "person" ? "@" : "[[").run();
       else if (what.startsWith("tpl:")) {
         const t47 = (
           /** @type {any} */
@@ -51956,26 +53508,6 @@ ${d5.text}`);
         );
         if (t47) c5.insertContent(t47, { contentType: "markdown" }).run();
       }
-    };
-    const tool = (cmd) => {
-      const h5 = ed3.current;
-      if (!h5) return;
-      const c5 = h5.editor.chain().focus();
-      ({
-        h: () => c5.toggleHeading({ level: 2 }),
-        b: () => c5.toggleBold(),
-        i: () => c5.toggleItalic(),
-        s: () => c5.toggleStrike(),
-        code: () => c5.toggleCode(),
-        ul: () => c5.toggleBulletList(),
-        ol: () => c5.toggleOrderedList(),
-        task: () => c5.toggleTaskList(),
-        quote: () => c5.toggleBlockquote(),
-        undo: () => c5.undo(),
-        redo: () => c5.redo()
-      })[cmd]?.().run();
-      if (["note", "person", "item", "table"].includes(cmd)) insert(cmd);
-      if (cmd === "image" && fileIn.current) fileIn.current.click();
     };
     const addImages2 = async (files) => {
       for (const f5 of [...files || []]) {
@@ -52042,9 +53574,9 @@ ${d5.text}`);
           const t47 = (
             /** @type {Element} */
             e4.target
-          ), item = t47.closest && t47.closest("[data-item]"), wl2 = t47.closest && t47.closest("[data-wl]");
+          ), item = chipClicked(e4), wl2 = t47.closest && t47.closest("[data-wl]");
           if (item) {
-            props.current.onOpenItem(item.getAttribute("data-item") || "");
+            props.current.onOpenItem(item);
             return true;
           }
           if (wl2) {
@@ -52055,6 +53587,8 @@ ${d5.text}`);
         }
       } });
       ed3.current = h5;
+      const slashOff = attachSlash(h5, { profile: "notes", host: hostRows() });
+      const itemOff = attachItemPick(h5, { code: () => props.current.code });
       const input = () => {
         props.current.onInput();
       };
@@ -52087,6 +53621,8 @@ ${d5.text}`);
         el2.removeEventListener("mouseover", over);
         el2.removeEventListener("mouseleave", out);
         onBody(null);
+        slashOff();
+        itemOff();
         h5.destroy();
         ed3.current = null;
         lineState.current.doc = null;
@@ -52119,41 +53655,53 @@ ${d5.text}`);
       const h5 = ed3.current;
       if (h5) h5.editor.view.dispatch(h5.editor.state.tr.setMeta("cxNoteDecoRedraw", true).setMeta("addToHistory", false));
     });
+    const list = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    _2(() => {
+      const h5 = ed3.current, el2 = list.current;
+      if (!pick || !h5 || !el2) return void 0;
+      return placeAtCaret(h5.editor.view, pick.from, el2);
+    }, [pick ? pick.from : -1, pick ? pick.opts.length : 0, pick ? pick.kind : ""]);
     const optId = (
       /** @param {number} i */
       (i5) => `ntp-${loadKey.replace(/[^\w-]/g, "")}-${i5}`
     );
     return /* @__PURE__ */ u2("div", { class: "ned", children: [
-      /* @__PURE__ */ u2("div", { class: "rtebar nbar", role: "toolbar", "aria-label": "Formatting", onMouseDown: (e4) => {
-        if (
-          /** @type {Element} */
-          e4.target.closest("button")
-        ) e4.preventDefault();
-      }, children: [
-        TOOLS.map(([id2, txt, name], i5) => id2 === "|" ? /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }, `s${i5}`) : /* @__PURE__ */ u2("button", { type: "button", "data-nt": id2, "aria-label": name, "data-tip": name, onClick: () => tool(id2), children: txt }, id2)),
-        toolbarExtra,
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            ref: fileIn,
-            type: "file",
-            class: "nimgfile",
-            accept: "image/png,image/jpeg",
-            multiple: true,
-            hidden: true,
-            "aria-hidden": "true",
-            tabIndex: -1,
-            onChange: async (e4) => {
-              const i5 = (
-                /** @type {HTMLInputElement} */
-                e4.target
-              );
-              await addImages2(i5.files);
-              i5.value = "";
-            }
-          }
-        )
-      ] }),
+      /* @__PURE__ */ u2(
+        EditorBar,
+        {
+          profile: "notes",
+          cls: "nbar",
+          handle: () => ed3.current,
+          host: hostRows(),
+          extra: /* @__PURE__ */ u2(S2, { children: [
+            toolbarExtra,
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                ref: fileIn,
+                type: "file",
+                class: "nimgfile",
+                accept: "image/png,image/jpeg",
+                multiple: true,
+                hidden: true,
+                "aria-hidden": "true",
+                tabIndex: -1,
+                onChange: async (e4) => {
+                  const i5 = (
+                    /** @type {HTMLInputElement} */
+                    e4.target
+                  );
+                  await addImages2(i5.files);
+                  i5.value = "";
+                }
+              }
+            )
+          ] })
+        }
+      ),
       /* @__PURE__ */ u2(
         "div",
         {
@@ -52171,14 +53719,14 @@ ${d5.text}`);
       pick ? /* @__PURE__ */ u2(
         "div",
         {
+          ref: list,
           class: "ntpick",
           id: "ntpick",
           role: "listbox",
-          "aria-label": { note: "Link to a note", person: "Mention a person", item: "Link a work item", insert: "Insert" }[pick.kind],
-          style: { left: `${pick.x}px`, top: `${pick.y}px` },
+          "aria-label": { note: "Link to a note", person: "Mention a person" }[pick.kind],
           onMouseDown: (e4) => e4.preventDefault(),
           children: [
-            /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: { note: "Link to a note", person: "People", item: "Work items", insert: "Insert" }[pick.kind] }),
+            /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: { note: "Link to a note", person: "People" }[pick.kind] }),
             pick.opts.length ? pick.opts.map((o5, i5) => /* @__PURE__ */ u2("div", { id: optId(i5), role: "option", "aria-selected": i5 === pick.i ? "true" : "false", class: `r${i5 === pick.i ? " on" : ""}`, onClick: () => choose(o5), children: [
               o5.icon ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
               /* @__PURE__ */ u2("span", { class: "l", children: o5.label }),
@@ -52240,14 +53788,14 @@ ${d5.text}`);
           "button",
           {
             type: "button",
-            class: "ib sm bd",
+            class: "ib sm col",
             id: "notesCollapse",
             "aria-expanded": open2 ? "true" : "false",
             "aria-controls": "notesListBody",
             "aria-label": label,
             "data-tip": `${label} (⌘\\)`,
             onClick: () => toggleNotesList(),
-            children: open2 ? "«" : "»"
+            children: /* @__PURE__ */ u2(Icon, { name: open2 ? "chevsleft" : "chevsright" })
           }
         ),
         /* @__PURE__ */ u2("span", { class: "vlabel", "aria-hidden": "true", children: [
@@ -52438,48 +53986,21 @@ ${d5.text}`);
     const created = String(m5.created || n4.created || "");
     return /* @__PURE__ */ u2("article", { class: "ndoc", "aria-labelledby": "noteTitle", children: [
       /* @__PURE__ */ u2("div", { class: "nhead", children: [
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            class: "ntitle",
-            id: "noteTitle",
-            "aria-label": "Title",
-            value: String(m5.title ?? n4.title),
-            maxLength: 160,
-            onInput: (e4) => noteMeta({ title: (
-              /** @type {HTMLInputElement} */
-              e4.target.value
-            ) })
-          }
-        ),
-        /* @__PURE__ */ u2("div", { class: "meta", children: [
-          created ? /* @__PURE__ */ u2("span", { children: [
-            "Created ",
-            fd(created)
-          ] }) : null,
-          m5.date || n4.kind === "Working session" ? /* @__PURE__ */ u2(WorkingSession, { date: String(m5.date || ""), people: (
-            /** @type {string[]} */
-            m5.with || []
-          ) }, `ws|${cur.path}|${cur.load}`) : null,
-          /* @__PURE__ */ u2("span", { class: `tag${conf ? " int" : ""}`, children: conf ? "Confidential" : "Internal" }),
-          /* @__PURE__ */ u2("label", { class: "ntags", children: [
-            /* @__PURE__ */ u2("span", { class: "vh", children: "Tags" }),
-            /* @__PURE__ */ u2(
-              "input",
-              {
-                type: "text",
-                placeholder: "Add tags",
-                "aria-label": "Tags, separated by commas",
-                defaultValue: tags.join(", "),
-                onChange: (e4) => noteMeta({ tags: (
-                  /** @type {HTMLInputElement} */
-                  e4.target.value.split(",").map((x5) => x5.trim()).filter(Boolean)
-                ) })
-              },
-              `${cur.path}|${cur.load}`
-            )
-          ] }),
-          /* @__PURE__ */ u2("span", { class: "sp" }),
+        /* @__PURE__ */ u2("div", { class: "trow", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              class: "ntitle",
+              id: "noteTitle",
+              "aria-label": "Title",
+              value: String(m5.title ?? n4.title),
+              maxLength: 160,
+              onInput: (e4) => noteMeta({ title: (
+                /** @type {HTMLInputElement} */
+                e4.target.value
+              ) })
+            }
+          ),
           /* @__PURE__ */ u2(SaveLine, {}),
           /* @__PURE__ */ u2("span", { class: "nslot", id: "noteFindSlot", "data-slot": "find-updates", children: /* @__PURE__ */ u2(FindButton, {}) }),
           /* @__PURE__ */ u2(
@@ -52505,7 +54026,18 @@ ${d5.text}`);
               }
             }
           )
-        ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "meta props", children: [
+          created ? /* @__PURE__ */ u2("span", { children: [
+            "Created ",
+            fd(created)
+          ] }) : null,
+          m5.date || n4.kind === "Working session" ? /* @__PURE__ */ u2(WorkingSession, { date: String(m5.date || ""), people: (
+            /** @type {string[]} */
+            m5.with || []
+          ) }, `ws|${cur.path}|${cur.load}`) : null
+        ] }),
+        /* @__PURE__ */ u2(NoteTags, { tags })
       ] }),
       cur.stale ? /* @__PURE__ */ u2("div", { class: "nstale", role: "alert", children: [
         /* @__PURE__ */ u2("span", { children: [
@@ -52551,55 +54083,19 @@ ${d5.text}`);
     ] });
   }
   function WorkingSession({ date, people }) {
-    const [day, setDay] = d2(date ? fd(date) : ""), [bad, setBad] = d2(false);
-    const setDate = (
-      /** @param {string} v */
-      (v5) => {
-        const t47 = v5.trim();
-        if (t47 && !DDATE.test(t47)) {
-          setBad(true);
-          return;
-        }
-        setBad(false);
-        if ((t47 ? toIso(t47) : "") !== date) noteMeta({ date: t47 ? toIso(t47) : "" });
-      }
-    );
-    return /* @__PURE__ */ u2("span", { class: "nws", role: "group", "aria-label": "Working session", children: [
-      /* @__PURE__ */ u2("span", { children: "Working session" }),
-      /* @__PURE__ */ u2("label", { class: "nwsf", children: [
-        /* @__PURE__ */ u2("span", { class: "vh", children: "Date (DD-MM-YYYY)" }),
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            type: "text",
-            id: "noteWsDate",
-            class: "nwsdate",
-            value: day,
-            placeholder: "DD-MM-YYYY",
-            inputMode: "numeric",
-            maxLength: 10,
-            "aria-invalid": bad ? "true" : void 0,
-            "aria-describedby": bad ? "noteWsBad" : void 0,
-            onInput: (e4) => setDay(
-              /** @type {HTMLInputElement} */
-              e4.target.value
-            ),
-            onChange: (e4) => setDate(
-              /** @type {HTMLInputElement} */
-              e4.target.value
-            )
-          }
-        )
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("span", { class: "nprop", children: [
+        /* @__PURE__ */ u2("span", { class: "nk", children: "Date" }),
+        /* @__PURE__ */ u2(NoteDate, { date })
       ] }),
-      bad ? /* @__PURE__ */ u2("span", { class: "nwsbad", id: "noteWsBad", role: "alert", children: "Use DD-MM-YYYY" }) : null,
-      /* @__PURE__ */ u2("label", { class: "nwsf", children: [
-        /* @__PURE__ */ u2("span", { children: "with" }),
+      /* @__PURE__ */ u2("span", { class: "nprop", children: [
+        /* @__PURE__ */ u2("span", { class: "nk", children: "With" }),
         /* @__PURE__ */ u2(
           "input",
           {
             type: "text",
             id: "noteWsWith",
-            class: "nwswith",
+            class: "nin who",
             defaultValue: people.join(", "),
             placeholder: "Names, separated by commas",
             "aria-label": "With, names separated by commas",
@@ -52622,11 +54118,11 @@ ${d5.text}`);
         setBusy(false);
       }
     }, [open2, title]);
-    const bad = tpl === "working-session" && day && !DDATE.test(day);
+    const bad = tpl === "working-session" && day.trim() && !readDate(day);
     const make = async () => {
       if (busy2 || bad) return;
       setBusy(true);
-      const made = await createNote(code, { template: tpl, title: t47.trim(), ...tpl === "working-session" ? { date: toIso(day), with: who2.split(",").map((x5) => x5.trim()).filter(Boolean) } : {} });
+      const made = await createNote(code, { template: tpl, title: t47.trim(), ...tpl === "working-session" ? { date: readDate(day) || TODAY, with: who2.split(",").map((x5) => x5.trim()).filter(Boolean) } : {} });
       setBusy(false);
       if (made) onMade();
     };
@@ -52658,7 +54154,7 @@ ${d5.text}`);
       tpl === "working-session" ? /* @__PURE__ */ u2("div", { class: "nnws", children: [
         /* @__PURE__ */ u2("label", { class: "fl", children: [
           "Date",
-          /* @__PURE__ */ u2("input", { type: "text", value: day, placeholder: "DD-MM-YYYY", "aria-invalid": bad ? "true" : void 0, onInput: (e4) => setDay(
+          /* @__PURE__ */ u2("input", { type: "text", value: day, placeholder: "DD-MM-YYYY, or e.g. last monday", "aria-invalid": bad ? "true" : void 0, onInput: (e4) => setDay(
             /** @type {HTMLInputElement} */
             e4.target.value
           ) })
@@ -52713,10 +54209,8 @@ ${d5.text}`);
           /* @__PURE__ */ u2("h1", { children: code === "_portfolio" ? "Portfolio notes" : name }),
           code === "_portfolio" ? /* @__PURE__ */ u2("div", { class: "sub", children: "Notes that cover several projects, and anything not yet filed under one." }) : proj && proj.client ? /* @__PURE__ */ u2("div", { class: "sub", children: proj.client }) : null
         ] }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "notesNew", onClick: () => setDlg(""), "aria-haspopup": "dialog", children: [
-          /* @__PURE__ */ u2(Icon, { name: "plus" }),
-          "New note"
-        ] })
+        /* @__PURE__ */ u2(NewTile, { id: "notesNew", popup: "dialog", word: "New note", decisions: false, hidden: false, onNew: () => setDlg(""), onDecision: () => {
+        } })
       ] }),
       code !== "_portfolio" ? /* @__PURE__ */ u2(ProjectTabs, { code, selected: "notes", count: notesList.value.length, onGo: (id2) => {
         if (id2 === "overview") onGo("cockpit", code);
@@ -64812,8 +66306,11 @@ ${d5.text}`);
         "DRAFTKIND",
         "Decisions",
         "Dialog",
+        "ED_PROFILES",
+        "ED_SLASH",
         "EVS",
         "EXPAND",
+        "EditorBar",
         "Essentials",
         "FDEFS",
         "FILES",
@@ -64824,6 +66321,7 @@ ${d5.text}`);
         "GREET",
         "GROUPS",
         "HD",
+        "HEAD_SHIFT",
         "HL",
         "Health",
         "ICONS",
@@ -64957,6 +66455,7 @@ ${d5.text}`);
         "claimState",
         "claimsNote",
         "clearAllFilters",
+        "closeCapture",
         "closeChat",
         "closeCombobox",
         "closeDialog",
@@ -64974,6 +66473,7 @@ ${d5.text}`);
         "csHead",
         "csSave",
         "csTitle",
+        "curBar",
         "curDrop",
         "curObj",
         "cxPeople",
@@ -64988,6 +66488,7 @@ ${d5.text}`);
         "decPending",
         "decide",
         "defs",
+        "designation",
         "diagHook",
         "dispOpen",
         "dispReset",
@@ -65025,6 +66526,7 @@ ${d5.text}`);
         "fd",
         "firstHelp",
         "fitFilterBar",
+        "flip",
         "flowCard",
         "fuApply",
         "fuFind",
@@ -65039,6 +66541,8 @@ ${d5.text}`);
         "grpToggle",
         "handle",
         "hashOf",
+        "headsIn",
+        "headsOut",
         "health",
         "healthEvidence",
         "healthFacts",
@@ -65132,6 +66636,7 @@ ${d5.text}`);
         "nowHM",
         "nowIso",
         "open",
+        "openCapture",
         "openChat",
         "openCk",
         "openContextMenu",
@@ -65205,6 +66710,7 @@ ${d5.text}`);
         "prepTimed",
         "previewInbox",
         "prio",
+        "profileTools",
         "projPeople",
         "publish",
         "pulseCheck",
@@ -65220,6 +66726,7 @@ ${d5.text}`);
         "rbStop",
         "rbTick",
         "rbUnmark",
+        "readDate",
         "readForm",
         "reattach",
         "reduced",
@@ -65294,6 +66801,7 @@ ${d5.text}`);
         "setSearch",
         "shared",
         "sl",
+        "slashRows",
         "sleep",
         "snack",
         "snapshot",

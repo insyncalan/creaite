@@ -39,7 +39,7 @@ export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TE
 export function bootKeyboard(){
 document.addEventListener("keydown",e=>{
   if((e.metaKey||e.ctrlKey)&&e.shiftKey&&!e.altKey&&e.key.toLowerCase()==="n"){ e.preventDefault(); openCapture(); return; }   /* BL-301 C: a note, from any page */
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }   /* #122: ⌘K is the palette, Shift or not; inside a rich editor ⌘⇧K is the link form, caught first (components/EditorBar.jsx) */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="j"){ e.preventDefault(); $("#chat").classList.contains("on")?closeChat():openChat(); return; }
   if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ hlClear(); return; } if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&!$("#panel").classList.contains("on")){ RHL.clear(); CHK.clear(); renderReview(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
   if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
