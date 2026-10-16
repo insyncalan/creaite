@@ -15,7 +15,7 @@ import { IconButton } from "../IconButton.jsx";
     p?: string, pname?: string, why: string, whyTone?: string, acts: WkAct[], prepgo?: {key: string, day: string, when: string, live: boolean},
 }} WkRow */
 /** @typedef {{key: string, title: string, note?: string, rows: WkRow[], cap: number, open: boolean}} WkGroup */
-/** @typedef {{note?: string, groups: WkGroup[], empty: string, onAct: (row: WkRow, act: WkAct, btn: HTMLElement) => void,
+/** @typedef {{groups: WkGroup[], empty: string, onAct: (row: WkRow, act: WkAct, btn: HTMLElement) => void,
     blocked: (why: string) => void}} WeekAheadProps */
 
 /** @param {Record<string, string> | undefined} o @returns {Record<string, string>} */
@@ -52,11 +52,10 @@ function WkLine({ r, hidden, p }) {
 
 /** The days. @param {WeekAheadProps} props */
 export function WeekAhead(props) {
-  const { note, groups, empty } = props;
+  const { groups, empty } = props;
   if (!groups.length) return <p class="none">{empty}</p>;
   return (
     <>
-      {note ? <p class="wknote">{note}</p> : null}
       {groups.map(g => {
         const more = g.rows.length - g.cap;
         return (
