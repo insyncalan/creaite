@@ -259,6 +259,114 @@ class WordDraftsGetTheWholeGate(Base):
         self.assertIn("Wrote system/staging/drafts/", self.v.at("adhoc", str(f), script="report.py").stdout)
 
 
+LINK_VARIANTS = (                                   # #127: step C's link shape, with its words edited; ABC-A-001 isn't client-visible
+    ("inline", "[the vendor thing](creaite:item/ABC-A-001)"),
+    ("title", '[the vendor thing](creaite:item/ABC-A-001 "Internal vendor thing")'),
+    ("angle brackets", "[the vendor thing](<creaite:item/ABC-A-001>)"),
+    ("case and spacing", "[the vendor thing](creaite:item/abc a 001)"),
+    ("encoded ID", "[the vendor thing](creaite:item/ABC%2DA%2D001)"),
+    ("encoded address", "[the vendor thing](creaite%3Aitem%2FABC-A-001)"),
+    ("reference", "See [the vendor thing][1].\n\n[1]: creaite:item/ABC-A-001"),
+    ("image", "![the vendor thing](creaite:item/ABC-A-001)"),
+    ("auto link", "<creaite:item/ABC-A-001>"))
+ITEM = "ABC-A-001"
+SAFE_LINK = "[the signed paperwork](creaite:item/ABC-A-002)"        # client-visible: kept, words and all
+
+
+class WorkItemLinks(Base):
+    """#127 (Team Stark, Jarvis): the gate reads a work-item link's ADDRESS, not only its words, on every client path; and the
+    client Current state given to a draft holds no link to an item a client may not see. Fixtures are raw Markdown of step C's
+    shape: [words](creaite:item/<ID>)."""
+
+    def with_summary(self, text, then):
+        return self.py(f"d = report_doc.client_doc('ABC')\nnext(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                       + then)
+
+    def test_every_variant_is_found_by_the_gate_and_a_client_visible_link_is_not(self):
+        for name, link in LINK_VARIANTS:
+            got = self.findings(f"Progress continues. {link}")
+            self.assertTrue(any(ITEM in f for f in got), (name, got))
+        for link, why in (("[the other ledger](creaite:item/DEF-A-001)", "DEF-A-001 belongs to another project"),
+                          ("[a date](creaite:item/ABC-M-001)", "ABC-M-001 isn't client-visible"),
+                          ("[a promise](creaite:item/abc-p-001)", "ABC-P-001 isn't an item"),
+                          ("[odd](creaite:item/nothing-here)", "a link to a work item creaite can't read")):
+            self.assertTrue(any(f.startswith(why) for f in self.findings(f"Progress. {link}")), link)
+        for ok in (SAFE_LINK, "[Example](https://example.com/item/123)", "See creaite:note/7, creaite:items and creaite: item list.",
+                   "[the plan](https://example.com/creaite/item/7)"):
+            self.assertEqual(self.findings(f"Progress continues. {ok}"), [], ok)
+
+    def test_a_link_in_a_table_cell_or_a_heading_is_found(self):
+        got = self.py("d = report_doc.client_doc('ABC')\n"
+                      "s = next(s for s in d['sections'] if s['id'] == 'summary')\n"
+                      "s['heading'] = 'Update on [the vendor thing](creaite:item/ABC%2DA%2D001)'\n"
+                      "print(json.dumps(client_leak.findings(d)))")
+        self.assertTrue(any(ITEM in f for f in got), got)
+        got = self.py("d = report_doc.client_doc('ABC')\n"
+                      "t = next(s for s in d['sections'] if s.get('rows'))\n"
+                      "k = next(iter(t['rows'][0]['cells']))\n"
+                      "t['rows'][0]['cells'][k] = 'Done: [the vendor thing](creaite%3Aitem%2FABC-A-001)'\n"
+                      "print(json.dumps(client_leak.findings(d)))")
+        self.assertTrue(any(ITEM in f for f in got), got)
+
+    def approve_week(self):
+        import test_client_leak as L
+        self.py(L.APPROVE_WEEK + "print(json.dumps(p.name))")
+        self.v.at("apply", script="tracker.py")
+
+    def test_approve_and_export_refuse_an_edited_words_link_and_take_a_client_visible_one(self):
+        self.approve_week()
+        stage = "r = report_doc.save_draft(d)\ntry:\n    report_doc.stage_client(r['path'])\n    print(json.dumps('staged'))\n" \
+                "except BaseException as e:\n    print(json.dumps(str(e)))"
+        got = self.with_summary("Progress continues. [the vendor thing](creaite:item/ABC-A-001)", stage)
+        self.assertNotEqual(got, "staged")
+        self.assertIn(ITEM, got)
+        exp = self.with_summary("Progress continues. [the vendor thing](creaite:item/ABC-A-001)",
+                                "import client_check\nprint(json.dumps(client_check.left_out(d)['findings']))")
+        self.assertTrue(any(ITEM in f for f in exp), exp)
+        self.assertEqual(self.with_summary(f"Progress continues. {SAFE_LINK}",
+                                           "import client_check\nprint(json.dumps(client_check.left_out(d)['findings']))"), [])
+        self.assertEqual(self.with_summary(f"Progress continues. {SAFE_LINK}", stage), "staged")   # control: it files
+
+    def test_a_word_draft_and_a_steerco_one_pager_with_a_link_are_stopped(self):
+        prop, draft = WordDraftsGetTheWholeGate.stage(self)
+        block = json.loads(prop.read_text())["report"]
+        R.edit_docx(draft, "Phase two is being prepared.",
+                    "Phase two is being prepared. [the vendor thing](creaite%3Aitem%2FABC%2DA%2D001)")
+        for b in (block, {**block, "kind": "steerco", "version": "client"}):
+            got = self.py(f"import review\nprint(json.dumps(review.client_findings({b!r})))")
+            self.assertTrue(any(ITEM in f for f in got), (b["kind"], got))
+
+    def test_a_section_draft_with_a_link_is_refused_for_the_client(self):
+        link = "[the vendor thing](creaite%3Aitem%2FABC-A-001)"
+        self.assertIn("isn't client-safe", self.ctx({**SECTION, "document": DOC, "text": f"Progress. {link}"}).get("refused", ""))
+        self.assertNotIn("refused", self.ctx({**SECTION, "document": DOC, "text": f"Progress. {SAFE_LINK}"}))
+
+    def test_the_client_current_state_given_to_a_draft_holds_no_internal_link(self):
+        memory = self.v.root / R.ABC / "CLAUDE.md"
+        text = memory.read_text(encoding="utf-8")
+        panes = "\n\n".join(link for _n, link in LINK_VARIANTS) + "\n\nPaperwork: " + SAFE_LINK + ".\n\n"
+        memory.write_text(text.replace("Build is two weeks behind.", "Build is two weeks behind. " + panes), encoding="utf-8")
+        ctx = lambda aud: self.py(f"import report\nprint(json.dumps(report.current_context('ABC', audience={aud!r})))")
+        client, internal = ctx("client"), ctx("internal")
+        self.assertIn("the vendor thing", internal)                         # control: the marker is in the internal context
+        current = client[client.index("## Current state now"):]
+        for gone in ("the vendor thing", "Internal vendor thing", "ABC-A-001", "ABC%2DA%2D001", "abc a 001", "[1]:"):
+            self.assertNotIn(gone, current, gone)
+        self.assertIn(SAFE_LINK, current)                                  # a client-visible link stays, with its words
+        self.assertIn("Build is two weeks behind.", current)
+
+    def test_the_filter_takes_each_link_out_whole(self):
+        for name, link in LINK_VARIANTS + (("other project", "[the other ledger](creaite:item/DEF-A-001)"),):
+            got = self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {'Before. ' + link + chr(10) + 'After.'!r})))")
+            self.assertNotIn("vendor", got, name)
+            self.assertNotIn("ledger", got, name)
+            self.assertNotIn("[1]", got, name)                              # a reference link's definition goes too
+            self.assertNotIn("creaite", got.lower().replace("creaite:item/abc-a-002", ""), name)
+            self.assertTrue(got.startswith("Before.") and "After." in got, (name, got))
+        for ok in (SAFE_LINK, "[Example](https://example.com/item/123)", "creaite is the tool; creaite:note/7"):
+            self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {ok!r})))"), ok)
+
+
 class TheRegisterFailsClosed(Base):
     """Part 4: a people register that is missing, can't be decoded or has no People table makes every names check refuse, with a
     plain message; a readable one checks the names (the control)."""

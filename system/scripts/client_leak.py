@@ -170,8 +170,9 @@ def text_findings(con, code, text, skip=()):
     milestone or promise, or an item of another project); `skip`: items already found by the caller, not listed twice."""
     import edit_ai
     low = text.lower()
-    ids = edit_ai.loose_ids(con, text)
-    found, seen = [], set(skip)
+    ids, unread = link_refs(con, text)                         # #127: a work-item link's address counts as its ID
+    ids |= edit_ai.loose_ids(con, text)
+    found, seen = [f"a link to a work item creaite can't read: “{a[:40]}”" for a in unread], set(skip)
     for table, col in (("raid", "description"), ("decisions", "decision"), ("actions", "description")):
         for row in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (code,)):
             if row[0] in ids:
@@ -312,10 +313,81 @@ def name_findings(con, code, text, blocking=None):
 
 
 def doc_text(doc):
-    """Everything of a document that reaches its file or an export, as text: every shown section's words and the items' values."""
+    """Everything of a document that reaches its file or an export, as text: every shown section's words and the items' values,
+    and (#127) the address of every work-item link its shown text holds, which the words alone (creaite_doc._plain) leave out."""
     import creaite_doc
     clean = creaite_doc.clean(doc)
-    return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False)
+    links = [f"creaite:item/{a}" for t in _strings(clean.get("sections") or []) for a in item_links(t)]
+    return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) \
+        + ("\n" + "\n".join(links) if links else "")
+
+
+def _strings(x):
+    """Every string in a document's data (its sections: text, headings, cells, panes), as stored."""
+    if isinstance(x, str):
+        return [x]
+    if isinstance(x, dict):
+        return [t for v in x.values() for t in _strings(v)]
+    return [t for v in x for t in _strings(v)] if isinstance(x, list) else []
+
+
+# #127: a work-item link, [words](creaite:item/ABC-A-001), in any of its Markdown forms (a title, <angle brackets>, a reference
+# definition, an image, a bare or <auto> link), with its address URL-decoded and normalised (edit_ai.normal): the address is what
+# names the item, whatever its words say. The ID part may hold up to two spaces ("abc a 001"); a title in quotes is never part of it.
+ITEM_LINK = re.compile(r"(?<![\w.%-])creaite\s*:\s*item\s*/\s*([^\s)>\]\"'<]*(?:[ \t]+[A-Za-z0-9][^\s)>\]\"'<]*){0,2})", re.I)
+
+
+def _decoded(text):
+    """Text with %-encoding undone (twice, for a doubly encoded address) and normalised as the ID check reads it."""
+    import edit_ai
+    from urllib.parse import unquote
+    return edit_ai.normal(unquote(unquote(text or "")))
+
+
+def item_links(text):
+    """The address after creaite:item/ of every work-item link in a text, decoded and normalised."""
+    return [m.group(1) for m in ITEM_LINK.finditer(_decoded(text))]
+
+
+def link_refs(con, text):
+    """({item IDs the text's work-item links name}, [addresses with no ID creaite can read]): each address read as edit_ai.loose_ids
+    reads a bare ID."""
+    import edit_ai
+    ids, unread = set(), []
+    for a in item_links(text):
+        got = edit_ai.loose_ids(con, a)
+        ids |= got
+        if not got:
+            unread.append(a)
+    return ids, unread
+
+
+def _link_ok(con, code, target, blocking):
+    """Whether a link's target may stay in a client text: not a work-item link, or one whose every item a client report may show."""
+    if not item_links(target):
+        return True
+    ids, unread = link_refs(con, target)
+    return not unread and all(i.split("-")[0] == code and not item_problem(con, i, blocking) for i in ids)
+
+
+INLINE_LINK = re.compile(r"!?\[[^\]\n]*\]\(\s*(<[^>\n]*>|[^)\n]*?)(?:\s+\"[^\"\n]*\")?\s*\)")
+REF_DEF = re.compile(r"^[ \t]*\[([^\]\n]+)\]:[ \t]*(\S.*?)[ \t]*$", re.M)
+BARE = re.compile(r"<?\S*creaite\S*>?", re.I)
+
+
+def drop_item_links(code, text, con=None):
+    """#127: a client text with every work-item link to an item a client report may not show (not client-visible, Sensitive,
+    partner-only or excluded by a label, another project's, or an address creaite can't read) taken out WHOLE, its words and its
+    address: inline links and images, reference links and their definitions, <auto> and bare addresses. A link to an item a
+    client may see is kept as it is, words included. report.current_context uses it on the Current state for the client audience
+    (one helper, so a later filter can replace it)."""
+    con = con or connect()
+    blocking = blocking_labels(con)
+    t = INLINE_LINK.sub(lambda m: m.group(0) if _link_ok(con, code, m.group(1), blocking) else "", text or "")
+    bad = {m.group(1).strip().lower() for m in REF_DEF.finditer(t) if not _link_ok(con, code, m.group(2), blocking)}
+    t = REF_DEF.sub(lambda m: "" if m.group(1).strip().lower() in bad else m.group(0), t)
+    t = re.sub(r"!?\[[^\]\n]*\]\[([^\]\n]*)\]", lambda m: "" if m.group(1).strip().lower() in bad else m.group(0), t)
+    return BARE.sub(lambda m: m.group(0) if _link_ok(con, code, m.group(0), blocking) else "", t)
 
 
 def findings(doc, con=None):

@@ -1015,6 +1015,9 @@ def _context_opening(code, p, mem, period, audience, length, words, status_facts
             "## Facts (ranked; write the status from these)", facts["text"], "",
             "## Reference material (the facts above come first; use these only to explain a fact, never to report item by item)", ""]
     left, right = docx_tools.split_panes(mem["current"])       # BL-89: two panes, one message; only the left is drafted
+    if audience == "client":                                    # #127: no link to an item a client may not see, words or address
+        import client_leak
+        left, right = (client_leak.drop_item_links(code, x) if x else x for x in (left, right))
     out += ["## Current state now: the left pane (the part you draft)", left or "(none yet)"]
     if right:
         out += ["", "## Current state now: the right pane (Alan's own writing; read it as part of what is already said)", right]
