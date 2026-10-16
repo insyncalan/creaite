@@ -142,9 +142,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          a reject instead (review.py; BL-315)
 - POST /api/draft {kind, …}: an AI draft (drafts.py context, then Claude, streamed; nothing reaches the tracker); /api/draft/stat
                          {feature, event, n} counts what was done with one; /api/drafts each feature and its counts (BL-219 on)
-- POST /api/edit/ai {option, text, code, place, instruction}: AI on selected text (BL-301 D): edit_ai.py's prompt (the text, the
-                         option, the project's name, people and open item IDs only), Claude with no tools at all (kind "edit-ai"),
-                         streamed; the "draft" event is the suggestion and its check. Nothing is written
+- POST /api/edit/ai {option, text, code, place, instruction, document?}: AI on selected text (BL-301 D): edit_ai.py's prompt
+                         (the text, the option, the project's name, people and open item IDs only), Claude with no tools at all
+                         (kind "edit-ai"), streamed; the "draft" event is the suggestion and its check. Nothing is written. The
+                         place is edit_ai.py's: a client report `document` binds the client place (#123); other keys are a 400
 - POST /api/agenda/save {key, parts, agenda, attendees}: write a drafted agenda into the Agendas folder, never overwriting (BL-223)
 - POST /api/email/followup {key, eid, day, start, title, files}: a follow-up email's attendees and summary, nothing sent;
                          /api/chases {ids, mode} records a chase Alan says he sent (system/staging/chases.json, IDs only;
@@ -5555,7 +5556,8 @@ def drafts_state_route(handler, req):
 DRAFT_ROUTES = {"/api/draft": draft_route, "/api/draft/stat": draft_stat_route, "/api/drafts": drafts_state_route}
 # ===== end AI drafts =====
 
-# ===== BL-301 D (v20-ai-select) ===== POST /api/edit/ai {option, text, code, place, instruction?, run?}: a suggestion for selected text.
+# ===== BL-301 D (v20-ai-select) ===== POST /api/edit/ai {option, text, code, place, instruction?, run?, document?}: a suggestion
+# for selected text.
 # edit_ai.py builds the prompt (the text, the option, the project's name, people and open item IDs; nothing else), Claude runs
 # through the run engine as the toolless kind "edit-ai" (one run at a time, progress, Stop), and the reply is parsed and checked by
 # edit_ai.py (BL-106's plain-code check). The last event before "done" is "draft" {text, notes}. Nothing is written; the debug log
@@ -5568,17 +5570,31 @@ class EditJob(DraftJob):
     quiet = True                                            # the page shows the suggestion, not the reply as it streams
 
 
+EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document"}
+EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
+
+
 def edit_ai_request(req):
-    """The request as edit_ai.py takes it: known keys, sizes capped (edit_ai.py checks them again)."""
+    """The request as edit_ai.py takes it: known keys only (None for any other key, or a document that isn't a small object of
+    strings), sizes capped (edit_ai.py checks them again). The place is edit_ai.py's to decide from the document (#123)."""
+    if not isinstance(req, dict) or set(req) - EDIT_AI_KEYS:
+        return None
     body = {k: str(req.get(k) or "")[:40] for k in ("option", "code", "place")}
     body["text"] = str(req.get("text") or "")[:12001]
     body["instruction"] = str(req.get("instruction") or "")[:401]
+    d = req.get("document")
+    if d is not None:
+        if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
+            return None
+        body["document"] = {k: x[:120] for k, x in d.items()}
     return body
 
 
 def edit_ai_route(handler, req):
     """POST /api/edit/ai: one suggestion on the selected text, from a run with no tools (BL-301 D)."""
-    body = edit_ai_request(req if isinstance(req, dict) else {})
+    body = edit_ai_request(req)
+    if body is None:
+        return handler.send(400, {"ok": False, "message": "That request isn't one creaite knows."})
     busy = current_run()
     if busy and not busy.done:
         return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})

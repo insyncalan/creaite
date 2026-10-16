@@ -9,7 +9,7 @@
      offset into it, and puts that back after a zoom, a move, Show as exported, a doc replaced by a save or reload, and on switching
      views. Nothing else sets scrollTop.
    - Sections move (drag, Alt+↑ ↓) and hide; headings are renamed in place with Reset; the layout keeps in step (sheetLib.syncLayout).
-   - ✦ per section (`onRedraft`), the one editor's AI bar (`ai`, places "report" and "minutes"), inline checks, source tags, Find the
+   - ✦ per section (`onRedraft`), the one editor's AI bar (`ai`, places "report", "minutes" and "client"), inline checks, source tags, Find the
      source (`onSelectAction`), the standard peek with Sneak peek on every item ID, Side by side (levelled, ≠ markers, Match internal).
    - Saves 1.5 s after the last change, on ⌘S and on unmount, one at a time; a conflict stops saving and offers Reload.
    Text only through JSX. */
@@ -52,7 +52,8 @@ export { openSheetRef as openRef };
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
     exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, leftReadOnly?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
-    checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string},
+    checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
+      document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
     onOpenItem?: (ref: string) => boolean, partner?: SheetPartner|null, onChange: (doc: SheetDoc, why: string) => void,
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
@@ -68,7 +69,7 @@ const SHEET_SOURCES = new Map();
 let SHEET_SEQ = 0;
 
 /* The "Find the source" item of the AI bar in the report and minutes places (and in the read-only one, where it is the only item). */
-aiAction({ id: "source", name: "Find the source", line: "Where this comes from", places: ["report", "minutes", "readonly"],
+aiAction({ id: "source", name: "Find the source", line: "Where this comes from", places: ["report", "minutes", "client", "readonly"],
   run: (range, h, ai) => { const run = SHEET_SOURCES.get(/** @type {any} */ (ai).sheetId); if (run) run(range, h); else snack("Finding the source isn't available here"); } });
 
 const SAVE_WAIT = 1500;
@@ -275,7 +276,8 @@ export function Sheet(props) {
     const a = P.current.ai;
     if (!a) return undefined;
     return { place: ro || eref.current ? "readonly" : a.place, sheetId: sid, project: () => (P.current.ai && P.current.ai.project ? P.current.ai.project() : ""),
-      confidential: () => !!(P.current.ai && P.current.ai.confidential && P.current.ai.confidential()), key: () => `sheet:${sid}:${s.id}` };
+      confidential: () => !!(P.current.ai && P.current.ai.confidential && P.current.ai.confidential()), key: () => `sheet:${sid}:${s.id}`,
+      document: () => (P.current.ai && P.current.ai.document ? P.current.ai.document() : null) };
   };
   useEffect(() => {
     SHEET_SOURCES.set(sid, async (range, h) => {
