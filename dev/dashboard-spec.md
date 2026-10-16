@@ -1243,3 +1243,18 @@ The sections above describe each part where it was built: the one editor (A), th
 - **Margin ticks:** a line already sent shows a ✓ in the note's left margin, and editing the line takes it away.
 - **The real-data gate:** no release until every one of Alan's real Current state panes round-trips byte for byte through the one editor. <!-- moving: plan step 6, Alan with Team Cap on laptop 1, read only (`tiptap_roundtrip.py --private --exact`); on 13-10-2026 3 of 4 panes passed, the fourth holding only an HTML comment, which the comment node is to close. -->
 - **Still open from A:** the Draft email preview stays a plain `contenteditable` (option (a)). From the integration note: once a note with a mixed list (bullets with one checklist item) is edited, the exact writer saves the checklist item as its own list; markers and sent lines still work, but the file's layout changes on the first edit.
+
+## One hover standard (#143; v2.2.0, 16-10-2026, Alan: "no hover popup is instantaneous")
+
+`core/hover.js` holds every hover delay as a named constant; no feature has a number of its own (the sources: PatternFly 300 ms, GitLab Pajamas 500 ms, Radix HoverCard 700 ms open and 300 ms close, Windows ToolTip 500 ms; the menu timings are judgement).
+
+| Kind | Opens | Closes | Next one while one is open |
+|------|-------|--------|----------------------------|
+| Tooltip (`#tip`, `data-tip`) | `TIP_OPEN` 400 ms | `TIP_CLOSE` 150 ms after leaving | `TIP_NEXT` 100 ms (was 250 first, 0 between icons, hide after 120) |
+| Hover card or peek (item card, meeting title popup, Prep peek) | `CARD_OPEN` 600 ms | `CARD_CLOSE` 300 ms after leaving the trigger and the card | `CARD_OPEN` |
+| Hover menu (rail flyouts and More, toolbar groups, AI bar groups) | `MENU_OPEN` 200 ms | `MENU_CLOSE` 300 ms after leaving | `MENU_NEXT` 80 ms to a neighbouring menu |
+
+- **Rules for every kind (WCAG 1.4.13):** the pointer can move onto the popup and it stays (hoverable, persistent); Esc dismisses it at once and it stays shut until the pointer has left the trigger (dismissible); keyboard focus opens a tooltip or card with no delay; a menu opens from its keys (↓, Enter, Space) with no delay and never from focus alone; only one menu and one card at a time (`menuGroup`, `cardGroup`). A diagonal move toward a menu's box is kept open by a safe triangle (from where the pointer left the trigger to the near side of the box). No hover popup opens in under 200 ms except by the keyboard and by switching to a neighbouring menu.
+- **Reduced motion:** the fade goes (CSS), the delays stay. **Touch:** nothing in `hoverAttach` reacts to a touch pointer or a screen that cannot hover; a tap does what it did.
+- **Code:** `hoverGroup(kind, clock?)` is the state machine (`enter`, `leave`, `move`, `panelEnter`, `panelLeave`, `focus`, `blur`, `dismiss`, `close`; timers injectable, so tests use a fake clock); `hoverAttach(trigger, {group, open, close, panel, focusOpens})` wires one trigger and its popup. `Menu` has a `hover` prop (components/Menu.jsx): opens by the pointer without taking focus, a click moves focus in, Esc closes. The tooltip (`core/dom.js`) uses the `TIP_` constants directly. Later hover popups (the rail flyouts #139, the day-band title popup #140, the Prep peek #111, the editor toolbar menus #122, the AI bar groups #117) import the constants or the groups and add no numbers.
+- **Test:** `dev/tests/test_hover_standard.py` (the state machine on a fake clock in Node; the tooltip, a hover Menu and a card in a real browser at 1400 px and 900 px, the tooltip with and without reduced motion).
