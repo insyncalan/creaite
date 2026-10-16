@@ -268,7 +268,7 @@ Where: Intake › Calendar import or Upload files
 3. Wait for **Draft ready in Review**. You get draft minutes (a page in creaite's own format, filed as `YYYY-MM-DD <Meeting title>.html` when you approve them), new items, and updates to open items the meeting discussed.
 4. Approve in [Review](#review-and-approve-proposals). Nothing is filed until you do.
 
-5. **Was the agenda discussed?** If the meeting had an agenda in the project's Agendas folder, or a prep page, the minutes record each point as **Covered**, **Touched on** or **Not discussed**. Review shows it on the minutes' row, and the [meeting's page](#follow-a-meeting-from-invite-to-follow-up) has **Carry to the next agenda**, which puts a missed point on the next prep page of the same meeting, under "Not covered last time".
+5. **Was the agenda discussed?** If the meeting had an agenda in the project's Agendas folder, or a prep page, the minutes record each point as **Covered**, **Touched on** or **Not discussed**. Review shows it on the minutes' row, and **Carry to the next agenda** in the minutes puts a missed point on the next prep page of the same meeting, under "Not covered last time" ([Follow a meeting](#follow-a-meeting-from-invite-to-follow-up)).
 
 Or say: `process new minutes` `process Tuesday's ABC steering`
 
@@ -357,13 +357,13 @@ Or say: `prep for the ABC steering`
 
 ## Follow a meeting from invite to follow-up
 
-Where: Today · Intake · Files · Review · an item's source
+Where: Today · Intake · Review · Files
 
-1. Press **Meeting** beside a meeting on Today (or in the Week ahead), in Intake's meeting list, in the prep brief, beside its minutes in Files or Review, or in an item's source. Its page opens.
-2. The strip shows where it is: **Invite**, **Prep page**, **Transcript**, **Draft minutes**, **Coverage**, **Review**, **Follow-up**, each done (✓), now (●), to do (○) or not needed (–).
-3. **Next step** is one button: make the prep page, load or process the transcript, review the minutes and their items, or see the actions due.
-4. Below: what the meeting produced (yours first), whether the agenda was covered, what was promised to you, and its files. Before the meeting, **Draft agenda** sits beside Make the prep page.
-5. **Draft the follow-up email** (under What it produced) opens the follow-up: the attendees as **To** (from the invite, or the people register), a short thanks, the minutes' own summary paragraph, the decisions, and the actions grouped by owner. **Lead with** puts one person's actions first. Copy it into Outlook; nothing is sent.
+1. **Before it:** press **Prep** under the meeting on Today (or in the Week ahead) for its brief, and **Draft agenda** in the same popup ([Prepare for a meeting](#prepare-for-a-meeting)).
+2. **After it:** in **Intake › Calendar import**, tick the meeting and press **Process n selected** ([Turn a meeting into minutes](#turn-a-meeting-into-minutes)). Past days on Today's day line show where each meeting is: **Transcript ready**, **Draft in Review** or **Minutes made**.
+3. In Review, **Open draft** opens the minutes beside the transcript. Whether the agenda was covered, carrying a missed point to the next agenda and the follow-up email all live in the minutes.
+4. **The follow-up email** has the attendees as **To** (from the invite, or the people register), a short thanks, the minutes' own summary, the decisions and the actions grouped by owner. **Lead with** puts one person's actions first. Copy it into Outlook: nothing is sent.
+5. An old meeting link opens the meeting's Prep before it starts, Review while its minutes wait, and the filed minutes afterwards.
 
 Or say: `prep for the ABC steering` `process Tuesday's ABC steering`
 
