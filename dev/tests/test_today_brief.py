@@ -473,7 +473,7 @@ class TodayBriefTests(PageTests):
         self.assertIn("Friday action", o["days"][3][2][0])
         self.assertEqual(o["to"], "to Friday 16th October")
         self.assertEqual(o["note"], 0)   # #104: no note under the Week ahead heading
-        self.assertEqual(o["acts"][0], ["Draft a chase", "Move the date"])          # someone else's action: chase it, or move it
+        self.assertEqual(o["acts"][0], ["Draft email", "Move the date"])          # someone else's action: chase it, or move it
         self.assertEqual(o["acts"][3], ["Open the project"])                          # a milestone
         self.assertEqual(o["empty"], "Nothing is due or booked until Friday 9th October.")
 

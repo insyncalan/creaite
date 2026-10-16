@@ -60,7 +60,7 @@ export function SneakIcon({ shapes, size }) {
 }
 
 /** Where a refusal points, as the button's words (null: said in words only). @type {Record<string, string|null>} */
-const POINT = { draft_chase: "Open Draft chase", ask: "Open ask creaite", project_page: "Open the project page", settings: "Open Settings",
+const POINT = { draft_chase: "Open Draft email", ask: "Open ask creaite", project_page: "Open the project page", settings: "Open Settings",
   people: "Open Settings › People", milestone_form: null, cx_edit: null };
 /** A refusal's second sentence, where it points. @type {Record<string, string>} */
 const POINT_SAY = { cx_edit: "Say it in Claude Code (cx-edit) instead.", milestone_form: "Use Rebaseline… in the milestone's Dates: a rebaseline also records a decision." };
@@ -360,8 +360,8 @@ function Card({ r, id, text, shown, busy, flash, closing, setClosing, onMake, on
   if (t && t.kind === "chase") {
     const tone = t.pane && t.pane.tone != null ? ["First", "Second", "Firmer"][t.pane.tone] : null;
     return (
-      <div class="sp-card"><div class="sp-msg">Opens Draft chase for {id}{t.pane && t.pane.to ? `, to ${t.pane.to}` : ""}, {tone ? `in the ${tone} tone` : "in the tone from how often it was chased"}, ready to copy. Nothing is sent.
-        <div class="sp-acts"><button type="button" class="btn sm primary" id="spChase" onClick={() => acts.chase(t.pane || {})}>Open Draft chase <kbd>⏎</kbd></button></div></div></div>
+      <div class="sp-card"><div class="sp-msg">Opens Draft email for {id}{t.pane && t.pane.to ? `, to ${t.pane.to}` : ""}, {tone ? `in the ${tone} tone` : "in the tone from how often it was chased"}, ready to copy. Nothing is sent.
+        <div class="sp-acts"><button type="button" class="btn sm primary" id="spChase" onClick={() => acts.chase(t.pane || {})}>Open Draft email <kbd>⏎</kbd></button></div></div></div>
     );
   }
   const rows = (r.changes || []);

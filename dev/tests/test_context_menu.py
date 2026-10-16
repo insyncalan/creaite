@@ -104,7 +104,7 @@ class ContextMenuTests(LiveBrowserCase):
         b.wait('!!document.querySelector("#v-person table.ptbl tr[data-row]")')
         b.click("#v-person table.ptbl tr[data-row] td.title", button="right")
         b.wait(f'!!document.querySelector("{MENU}")')
-        self.assertIn("Draft email to Alan Carter", self.labels())
+        self.assertIn("Draft email", self.labels())
         b.key("Escape")
         b.eval('go("activity")')
         b.wait('!!document.querySelector(\'#v-activity [data-open^="actions:"]\')')

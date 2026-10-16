@@ -1973,7 +1973,7 @@ body.pkstaged .snack{bottom:68px}
 .pk-bar .ib[hidden]{display:none}
 body:has(#panel.pkprop.on) .snack,body:has(#panel.pkprop.on) .pkstage{bottom:76px} body.pkstaged:has(#panel.pkprop.on) .snack{bottom:128px}   /* clear of the footer */
 /* ===== end BL-177 (CSS) ===== */
-/* ===== BL-298 (v19-draft-chase) ===== Draft chase in the peek (dev/mockups/draft-chase-mockup.html): the theme's tokens for the pane;
+/* ===== BL-298 (v19-draft-chase) ===== Draft email in the peek (dev/mockups/draft-chase-mockup.html): the theme's tokens for the pane;
    the email itself keeps its own fixed colours, inline from DE_COLOURS, as Outlook will show it (like #dePrev) */
 #panel.peek .pk-scroll[hidden]{display:none}
 .chase{display:grid;gap:12px;padding-top:4px}
