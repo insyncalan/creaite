@@ -5805,6 +5805,7 @@ button.nchip{font:inherit;font-size:12px}
     let cur = null;
     let openT = 0, closeT = 0, wantKey = null;
     let dismissed = null;
+    let released = null;
     let tri = null;
     const stopOpen = () => {
       clear(openT);
@@ -5823,6 +5824,7 @@ button.nchip{font:inherit;font-size:12px}
       if (c5) c5.h.close();
     };
     const show = (key, h5) => {
+      released = null;
       stopOpen();
       stopClose();
       if (cur && cur.key !== key) shut();
@@ -5849,6 +5851,10 @@ button.nchip{font:inherit;font-size:12px}
           @param {any} key @param {HoverHandlers} h */
       enter(key, h5) {
         if (dismissed === key) return;
+        if (released && released.key === key) {
+          if (released.h.isOpen && released.h.isOpen()) return;
+          released = null;
+        }
         if (cur && cur.key === key) {
           stopClose();
           return;
@@ -5923,6 +5929,7 @@ button.nchip{font:inherit;font-size:12px}
         if (wantKey === key) stopOpen();
         if (cur && cur.key === key) {
           stopClose();
+          released = { key, h: cur.h };
           cur = null;
         }
       },
@@ -5938,7 +5945,7 @@ button.nchip{font:inherit;font-size:12px}
   var canHover = () => typeof matchMedia !== "function" || matchMedia("(hover: hover)").matches;
   function hoverAttach(trigger, o5) {
     const { group, panel } = o5, focusOpens = o5.focusOpens !== false;
-    const h5 = { open: o5.open, close: () => {
+    const h5 = { isOpen: o5.isOpen, open: o5.open, close: () => {
       document.removeEventListener("pointermove", track, true);
       o5.close();
     }, rect: () => {
@@ -8804,6 +8811,7 @@ button.nchip{font:inherit;font-size:12px}
         group: menuGroup,
         focusOpens: false,
         panel: () => box.current,
+        isOpen: () => isOpen.current,
         open: () => {
           if (why || isOpen.current) return;
           byPointer.current = true;

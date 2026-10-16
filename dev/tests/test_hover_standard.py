@@ -244,6 +244,18 @@ class HoverMenu(LiveBrowserCase):
         self.assertTrue(self.is_open("m1"))
         self.assertTrue(b.eval("document.querySelector('#m1 [role=menu]').contains(document.activeElement)"))
 
+    def test_after_a_click_in_the_pointer_leaving_and_coming_back_does_not_claim_the_menu_again(self):
+        b = self.b
+        x, y = self.hover_open_m1()
+        b.click("#m1 button[aria-haspopup]")
+        b.wait("document.querySelector('#m1 [role=menu]').contains(document.activeElement)", 3)
+        self.mouse(900, 600); b.pump(0.15)                         # off the trigger...
+        self.mouse(x, y); b.pump(0.5)                              # ...and back on it, long enough for a hover claim to take hold (200 ms)
+        self.mouse(900, 600)                                       # off again: a claimed menu would now close
+        b.pump(0.9)                                                # past the 300 ms a hover close would take
+        self.assertTrue(self.is_open("m1"))
+        self.assertTrue(b.eval("document.querySelector('#m1 [role=menu]').contains(document.activeElement)"))
+
     def test_down_on_a_hover_opened_menu_moves_in_and_the_menu_stays_when_the_pointer_leaves(self):
         b = self.b
         self.hover_open_m1()

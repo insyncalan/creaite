@@ -131,7 +131,7 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
 
   useEffect(() => {
     const b = btn.current; if (!hover || !b) return;
-    return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current,
+    return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current, isOpen: () => isOpen.current,
       open: () => { if (why || isOpen.current) return; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
   }, [hover, why]);
 

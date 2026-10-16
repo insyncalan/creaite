@@ -22,7 +22,7 @@ function clock() {
 /** A trigger's handlers that note what happened. */
 function spy(rect) {
   const s = { isOpen: false, opened: 0, closed: 0 };
-  s.h = { open: () => { s.isOpen = true; s.opened++; }, close: () => { s.isOpen = false; s.closed++; }, rect };
+  s.h = { open: () => { s.isOpen = true; s.opened++; }, close: () => { s.isOpen = false; s.closed++; }, rect, isOpen: () => s.isOpen };
   return s;
 }
 const eq = (a, b, why) => { if (a !== b) throw new Error(`${why}: expected ${b}, got ${a}`); };
@@ -122,6 +122,15 @@ const cases = {
     const c = clock(), g = H.hoverGroup("menu", c), a = spy();
     g.enter("a", a.h); c.tick(200); g.release("a"); g.leave("a"); c.tick(5000);
     eq(a.isOpen, true, "still open"); eq(a.closed, 0, "never closed"); eq(g.current, null, "the group let go");
+  },
+  "release: the pointer leaving and coming back does not claim the menu again"() {
+    const c = clock(), g = H.hoverGroup("menu", c), a = spy();
+    g.enter("a", a.h); c.tick(200); g.release("a"); g.leave("a"); c.tick(100); g.enter("a", a.h); c.tick(200); g.leave("a"); g.enter("a", a.h); c.tick(5000);
+    eq(a.isOpen, true, "still open"); eq(a.closed, 0, "never closed"); eq(g.current, null, "still the keyboard's");
+  },
+  "release: once the menu has closed, the pointer opens it again as usual"() {
+    const c = clock(), g = H.hoverGroup("menu", c), a = spy();
+    g.enter("a", a.h); c.tick(200); g.release("a"); a.h.close(); g.leave("a"); g.enter("a", a.h); c.tick(200); eq(a.isOpen, true, "open again after 200 ms");
   },
   "release: Esc is no longer the group's once released"() {
     const c = clock(), g = H.hoverGroup("menu", c), a = spy();

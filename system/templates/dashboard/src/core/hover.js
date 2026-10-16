@@ -27,8 +27,9 @@ export const MENU_OPEN = 200, MENU_CLOSE = 300, MENU_NEXT = 80;
 /** @typedef {"card" | "menu"} HoverKind */
 /** @typedef {{x: number, y: number}} Point */
 /** @typedef {{left: number, top: number, right: number, bottom: number}} Rect */
-/** What a trigger gives the group: how to open and close its popup, and (for the safe triangle) where the popup is.
-    @typedef {{open: () => void, close: () => void, rect?: () => Rect | null}} HoverHandlers */
+/** What a trigger gives the group: how to open and close its popup, and (for the safe triangle) where the popup is; `isOpen` says
+    whether the popup is showing, so a popup the keyboard has taken is not claimed back by the pointer.
+    @typedef {{open: () => void, close: () => void, rect?: () => Rect | null, isOpen?: () => boolean}} HoverHandlers */
 /** @typedef {{set: (fn: () => void, ms: number) => any, clear: (id: any) => void}} HoverClock */
 
 const DELAYS = { card: { open: CARD_OPEN, close: CARD_CLOSE, next: CARD_OPEN }, menu: { open: MENU_OPEN, close: MENU_CLOSE, next: MENU_NEXT } };
@@ -59,13 +60,14 @@ export function hoverGroup(kind, clock = {}) {
   /** @type {{key: any, h: HoverHandlers} | null} */ let cur = null;          // the popup showing
   /** @type {any} */ let openT = 0, closeT = 0, wantKey = null;                // timers; who is waiting to open
   /** @type {any} */ let dismissed = null;                                      // Esc: shut until the pointer has left this trigger
+  /** @type {{key: any, h: HoverHandlers} | null} */ let released = null;       // the keyboard has this popup: the pointer does not claim it back
   /** @type {{from: Point, h: HoverHandlers} | null} */ let tri = null;         // the pointer left a trigger heading for its popup
 
   const stopOpen = () => { clear(openT); openT = 0; wantKey = null; };
   const stopClose = () => { clear(closeT); closeT = 0; tri = null; };
   const shut = () => { stopClose(); const c = cur; cur = null; if (c) c.h.close(); };
   /** @param {any} key @param {HoverHandlers} h */
-  const show = (key, h) => { stopOpen(); stopClose(); if (cur && cur.key !== key) shut(); if (!cur) { cur = { key, h }; h.open(); } };
+  const show = (key, h) => { released = null; stopOpen(); stopClose(); if (cur && cur.key !== key) shut(); if (!cur) { cur = { key, h }; h.open(); } };
   const later = () => { stopClose(); closeT = set(() => { closeT = 0; tri = null; shut(); }, T.close); };
 
   return {
@@ -76,6 +78,10 @@ export function hoverGroup(kind, clock = {}) {
         @param {any} key @param {HoverHandlers} h */
     enter(key, h) {
       if (dismissed === key) return;                                            // Esc closed it: not again until the pointer has left
+      if (released && released.key === key) {                                   // the keyboard has it: leave it alone while it shows
+        if (released.h.isOpen && released.h.isOpen()) return;
+        released = null;
+      }
       if (cur && cur.key === key) { stopClose(); return; }
       if (wantKey === key) return;
       stopOpen(); stopClose();
@@ -120,7 +126,7 @@ export function hoverGroup(kind, clock = {}) {
         @param {any} key */
     release(key) {
       if (wantKey === key) stopOpen();
-      if (cur && cur.key === key) { stopClose(); cur = null; }
+      if (cur && cur.key === key) { stopClose(); released = { key, h: cur.h }; cur = null; }
     },
     /** Close at once without the Esc rule (the trigger was removed, or the page changed). */
     close() { stopOpen(); shut(); },
@@ -139,12 +145,12 @@ export const canHover = () => typeof matchMedia !== "function" || matchMedia("(h
     it opens). `focusOpens` (default true) opens it from keyboard focus; a menu leaves it off and opens from its keys. Returns the
     function that takes everything off again.
     @param {HTMLElement} trigger
-    @param {{group: ReturnType<typeof hoverGroup>, open: () => void, close: () => void, panel: () => Element | null, focusOpens?: boolean}} o
+    @param {{group: ReturnType<typeof hoverGroup>, open: () => void, close: () => void, panel: () => Element | null, focusOpens?: boolean, isOpen?: () => boolean}} o
     @returns {() => void} */
 export function hoverAttach(trigger, o) {
   const { group, panel } = o, focusOpens = o.focusOpens !== false;
   /** @type {HoverHandlers} */
-  const h = { open: o.open, close: () => { document.removeEventListener("pointermove", track, true); o.close(); }, rect: () => { const p = panel(); return p ? p.getBoundingClientRect() : null; } };
+  const h = { isOpen: o.isOpen, open: o.open, close: () => { document.removeEventListener("pointermove", track, true); o.close(); }, rect: () => { const p = panel(); return p ? p.getBoundingClientRect() : null; } };
   /** @type {"" | "trigger" | "panel"} */ let at = "";
   /** @param {PointerEvent} e */
   const touch = e => e.pointerType === "touch" || !canHover();
