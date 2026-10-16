@@ -411,8 +411,15 @@ shared.DIAGSENT=0;
 export const diagHook=(message,source,line)=>{ if(!SERVED||shared.DIAGSENT>=50||/^(Uncaught )?ResizeObserver loop/.test(String(message||""))) return; shared.DIAGSENT++;   /* BL-283: a browser notice, not a fault */
   fetch("/api/log/error",{method:"POST",headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},keepalive:true,
     body:JSON.stringify({message:String(message||"").slice(0,300),view:typeof shared.VIEW==="string"?shared.VIEW:"",source:String(source||"").slice(0,300),line:line||0})
-  }).then(()=>{ diagLoad().then(()=>{ status(); }); }).catch(()=>{}); };
-export async function diagLoad(){ if(!SERVED) return; const r=await api("/api/diagnostics",{}); if(r&&r.ok) Object.assign(DIAG,{level:r.level,days:r.days,errors:r.errors,last24:r.last24,groups:r.groups||[],newest:r.newest||null,refusals:r.refusals||[],repeats:r.repeats||[],loaded:true}); }   /* BL-180: groups and newest feed the errors banner; BL-252: refusals */
+  }).then(()=>{ diagLoad(true).then(()=>{ status(); }); }).catch(()=>{}); };
+/* #96: one read for the callers that arrive together. A page that opens on Settings asked for the same thing three times in
+   50 ms (the card, the start-up read and the redraw it caused). While a read is in flight everyone gets that read; a finished
+   one is reused for `ttl` ms; `force` is for a person pressing Refresh, an install or a new error (it waits for the one in
+   flight, then reads again). */
+export function onceFor(ttl,fn){ let pend=null, at=-Infinity, last;
+  const run=()=>{ const p=Promise.resolve().then(fn).then(v=>{ last=v; at=Date.now(); return v; }).finally(()=>{ if(pend===p) pend=null; }); pend=p; return p; };
+  return force=>{ if(pend) return force?pend.then(run,run):pend; return !force&&Date.now()-at<ttl?Promise.resolve(last):run(); }; }
+export const diagLoad=onceFor(2000,async()=>{ if(!SERVED) return; const r=await api("/api/diagnostics",{}); if(r&&r.ok) Object.assign(DIAG,{level:r.level,days:r.days,errors:r.errors,last24:r.last24,groups:r.groups||[],newest:r.newest||null,refusals:r.refusals||[],repeats:r.repeats||[],loaded:true}); });   /* BL-180: groups and newest feed the errors banner; BL-252: refusals */
 export const diagErr=e=>`<details class="diagerr"><summary><span class="x">${esc(fd(e.at.slice(0,10)))} ${esc(e.at.slice(11,16))}</span> · ${esc(e.area)} · ${esc(e.message)}</summary>${e.detail.length?`<pre class="diagtb">${esc(e.detail.join("\n"))}</pre>`:'<div class="sub">No traceback.</div>'}</details>`;
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0152's place) */
 export function bootDebugLog(){
