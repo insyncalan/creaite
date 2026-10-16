@@ -19,9 +19,12 @@ Commands:
                            sent, text, attachments}]}), as JSON with a hint (Looks done, Maybe done, Not done) and reasons:
                            plain code, for cx-sweep to judge. Read-only; the input file is removed once read
   calendar <calendar.json> save Alan's meetings for the dashboard's Today day view and the Inbox's Meetings
-                           (system/staging/calendar.json); days before the window start are dropped
-  calendar-window          the days the calendar should cover, as JSON: from the start of settings.json
-                           inbox.meetings_from ("monday" = Monday of this week, or a number of days back) to 7 days ahead
+                           (system/staging/calendar.json); days before the window start are dropped; past days already saved are kept as
+                           they are (#146: a sweep re-reads today and later days only)
+  calendar-window          the days a sweep fetches, as JSON {"from", "to", "keep_from"}: today (a past meeting does not change,
+                           #146) to 7 days ahead; earlier only to fill a gap (no calendar saved yet, or last fetched over a week
+                           ago). keep_from is the start of the saved calendar, settings.json inbox.meetings_from ("monday" =
+                           Monday of this week, or a number of days back)
   transcripts todo|record <facts.json>|show
                            BL-42 phase 3: which meetings in the Calendar import window to look up for a transcript, and keep what
                            was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py
@@ -579,6 +582,23 @@ def calendar_window(today=None):
     return start, today + timedelta(days=7)
 
 
+def calendar_fetch_from(today=None):
+    """First day a sweep asks Outlook for (#146): today, because a past meeting does not change. Earlier only when the saved
+    calendar has a gap: none saved yet (the whole window), or it was last fetched more than a week before today (its
+    seven days ahead no longer reach today). Never before the window start. Past days already saved are kept as they are."""
+    today = today or now().date()
+    start = calendar_window(today)[0]
+    try:
+        data = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return start
+    try:
+        held_to = datetime.strptime(str((data or {}).get("fetched") or "")[:10], "%Y-%m-%d").date() + timedelta(days=7)
+    except (ValueError, AttributeError):
+        return today                       # a calendar with no fetch date: nothing to say about a gap
+    return min(today, max(start, held_to + timedelta(days=1)))
+
+
 def calendar_span(today=None):
     """(first day, last day) the saved calendar holds now, as dates, or None without one (BL-293): calendar_window(), its last
     day cut to the fetch's own seven days ahead when the calendar was saved on an earlier day."""
@@ -665,6 +685,40 @@ def localise(spec_days, bad):
     return out
 
 
+def organiser_of(ev):
+    """True when Alan organised the event, else the organiser's name (or False)."""
+    org = ev.get("organiser")
+    return (str(org).strip()[:80] or False) if isinstance(org, str) else bool(org)
+
+
+def event_times(ev):
+    """(start, end) of an event as saved ("" for an all-day one), or None when they can't be read."""
+    if ev.get("all_day"):
+        return "", ""
+    start, end = str(ev.get("start") or ""), str(ev.get("end") or "")
+    return (start, end) if HHMM.match(start) and HHMM.match(end) and end > start else None
+
+
+def calendar_row(ev, day, bad):
+    """One saved calendar row from one fetched event (times already local), or None when its times can't be read (noted in
+    `bad`). A private meeting becomes "Busy" (ID and Teams kept, nothing else)."""
+    times = event_times(ev)
+    if times is None:
+        bad.append(f"{day} {ev.get('start') or ''}-{ev.get('end') or ''} {ev.get('title', '')}".strip())
+        return None
+    sens = str(ev.get("sensitivity") or "").lower()
+    private = bool(ev.get("private")) or sens in ("private", "personal")
+    row = {"start": times[0], "end": times[1], "all_day": bool(ev.get("all_day")), "teams": bool(ev.get("teams")),
+           "private": private}
+    if private:
+        row.update(title="Busy", where="", organiser=False)
+    else:
+        row.update(title=str(ev.get("title") or "Meeting")[:140], where=str(ev.get("where") or "")[:80],
+                   organiser=organiser_of(ev))
+        row.update(invite_details(ev, confidential=sens == "confidential"))     # BL-98
+    return {"id": str(ev["id"]).strip()[:512], **row} if str(ev.get("id") or "").strip() else row   # BL-42
+
+
 def calendar(spec_file):
     """Keep the day view's, the Inbox's and meeting prep's meetings: event ID, times, title, place, Teams or not, the
     organiser, and the invite's details for prep (BL-98, see invite_details). Ignored events (BL-97: private ones,
@@ -679,8 +733,19 @@ def calendar(spec_file):
     days, bad, ignored = {}, [], {}
     rules, vips = ignore_rules(), vip_addresses()                  # BL-97: ignored events are never saved
     start_day = calendar_window()[0].isoformat()
+    today_day = now().date().isoformat()
+    fetch_from = calendar_fetch_from().isoformat()       # before the save: the save moves the "fetched" stamp
+    try:
+        held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+    except (OSError, ValueError, AttributeError):
+        held = {}
+    # #146: a past meeting does not change, so the days before today that are already saved are kept exactly as they are
+    # (they still feed Intake and the transcript check); only today and later days are replaced by this fetch.
+    past = {d: v for d, v in held.items() if start_day <= d < today_day and isinstance(v, list)}
     for day, events in sorted(localise(spec.get("days"), bad).items()):     # BL-107: local times, local dates
         if day < start_day:              # before the window (BL-42): not kept
+            continue
+        if day < today_day and day in past:     # #146: already saved; not replaced
             continue
         kept = []
         for ev in events:
@@ -688,26 +753,11 @@ def calendar(spec_file):
             if rule:
                 ignored[rule] = ignored.get(rule, 0) + 1
                 continue
-            all_day = bool(ev.get("all_day"))
-            start, end = str(ev.get("start") or ""), str(ev.get("end") or "")
-            if not all_day and not (HHMM.match(start) and HHMM.match(end) and end > start):
-                bad.append(f"{day} {start}-{end} {ev.get('title', '')}".strip())
-                continue
-            sens = str(ev.get("sensitivity") or "").lower()
-            private = bool(ev.get("private")) or sens in ("private", "personal")
-            org = ev.get("organiser")
-            org = (str(org).strip()[:80] or False) if isinstance(org, str) else bool(org)   # True: Alan; else a name
-            row = {"start": "" if all_day else start, "end": "" if all_day else end, "all_day": all_day,
-                   "title": "Busy" if private else str(ev.get("title") or "Meeting")[:140],
-                   "where": "" if private else str(ev.get("where") or "")[:80],
-                   "teams": bool(ev.get("teams")), "private": private,
-                   "organiser": False if private else org}
-            if not private:
-                row.update(invite_details(ev, confidential=sens == "confidential"))     # BL-98
-            if str(ev.get("id") or "").strip():              # the calendar event ID (BL-42): processed state, picking
-                row = {"id": str(ev["id"]).strip()[:512], **row}
-            kept.append(row)
+            row = calendar_row(ev, day, bad)
+            if row:
+                kept.append(row)
         days[day] = sorted(kept, key=lambda e: (not e["all_day"], e["start"]))
+    days = dict(sorted({**past, **days}.items()))
     paths.CALENDAR.write_text(json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days}, indent=1,
                                          ensure_ascii=False), encoding="utf-8")
     n = sum(len(v) for v in days.values())
@@ -715,7 +765,9 @@ def calendar(spec_file):
                   f"{len(bad)} with times that could not be read, {sum(ignored.values())} ignored")
     print(f"Calendar saved: {n} meeting{'s' if n != 1 else ''} over {len(days)} day{'s' if len(days) != 1 else ''}."
           + (f" Skipped (bad times): {'; '.join(bad)}." if bad else "")
-          + (f" {ignored_text(ignored)}." if ignored else ""))
+          + (f" {ignored_text(ignored)}." if ignored else "")
+          + (" Calendar from today (past days kept as saved)." if fetch_from >= today_day
+             else f" Calendar from {tracker.shown(fetch_from)} (filling a gap; past days kept as saved)."))
     tally_ignored(ignored)
     paths.consume_draft(spec_file)                                      # BL-118: the calendar is saved
     return 0
@@ -1690,8 +1742,8 @@ def main(argv):
     if a.cmd == "calendar":
         return calendar(a.spec)
     if a.cmd == "calendar-window":
-        first, last = calendar_window()
-        print(json.dumps({"from": first.isoformat(), "to": last.isoformat()}))
+        keep_from, last = calendar_window()
+        print(json.dumps({"from": calendar_fetch_from().isoformat(), "to": last.isoformat(), "keep_from": keep_from.isoformat()}))
         return 0
     if a.cmd == "ignore":
         return ignore_cmd(a.spec)

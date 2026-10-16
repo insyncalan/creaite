@@ -55,7 +55,7 @@ class CalendarTests(unittest.TestCase):
         return sweep(self.v, "calendar", str(self.spec))
 
     def test_window_ids_teams_and_nothing_else(self):
-        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-05", "to": "2026-10-15"})
+        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-05", "to": "2026-10-15", "keep_from": "2026-10-05"})
         out = self.calendar().stdout
         self.assertIn("Calendar saved: 4 meetings over 3 days", out)
         self.assertIn("Ignored 1: Anything marked private 1", out)                             # BL-97: the private 1:1
@@ -79,6 +79,7 @@ class CalendarTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d["sweep"]["ignore"][0]["on"] = False                                                 # the private rule off
         cfg.write_text(json.dumps(d))
+        (self.v.root / "system/staging/calendar.json").unlink()                              # a first fetch: no past days held (#146)
         self.calendar()
         private = self.saved()["days"]["2026-10-05"][1]
         self.assertEqual(private, {"id": "ev-2", "start": "14:00", "end": "14:30", "all_day": False, "title": "Busy",
@@ -92,6 +93,66 @@ class CalendarTests(unittest.TestCase):
         self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout)["from"], "2026-10-01")
         self.calendar()
         self.assertIn("2026-10-02", self.saved()["days"])
+
+
+class SweepFromTodayTests(unittest.TestCase):
+    """#146: a sweep re-reads today and later days only. Past days already saved are kept as they are, and a recent past
+    meeting that gains a transcript afterwards still reaches the transcript check (and so Intake)."""
+
+    def setUp(self):
+        self.v = v = Vault()
+        v.run("init")
+        self.cal = v.root / "system/staging/calendar.json"
+        self.spec = v.root / "system/staging/drafts/calendar.json"
+        self.cal.write_text(json.dumps({"fetched": "2026-10-07 08:00", "days": {
+            "2026-10-05": [{"id": "ev-1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Kept as saved",
+                            "where": "", "teams": True, "private": False, "organiser": True}],
+            "2026-10-08": [{"id": "ev-old", "start": "16:00", "end": "17:00", "all_day": False, "title": "Cancelled since",
+                            "where": "", "teams": True, "private": False, "organiser": True}]}}))
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def window(self, now=NOW):
+        return json.loads(sweep(self.v, "calendar-window", now=now).stdout)
+
+    def save(self, days, now=NOW):
+        self.spec.write_text(json.dumps({"days": days}))
+        return sweep(self.v, "calendar", str(self.spec), now=now)
+
+    def test_window_starts_today_not_monday(self):
+        self.assertEqual(self.window(), {"from": "2026-10-08", "to": "2026-10-15", "keep_from": "2026-10-05"})
+
+    def test_a_gap_is_filled_from_the_window_start(self):
+        # nothing saved yet: the whole window; last fetched more than a week ago: from the day after what it reached
+        self.assertEqual(self.window(now="2026-10-16 09:00")["from"], "2026-10-15")
+        self.cal.unlink()
+        self.assertEqual(self.window()["from"], "2026-10-05")
+
+    def test_past_days_are_kept_unchanged_and_today_is_replaced(self):
+        out = self.save({"2026-10-05": [{"id": "ev-1", "start": "09:00", "end": "10:00", "title": "Changed title"}],
+                         "2026-10-04": [{"id": "ev-x", "start": "09:00", "end": "10:00", "title": "Before the window"}],
+                         "2026-10-08": [{"id": "ev-new", "start": "11:00", "end": "12:00", "title": "Today's meeting"}],
+                         "2026-10-09": [{"id": "ev-n2", "start": "11:00", "end": "12:00", "title": "Tomorrow"}]}).stdout
+        self.assertIn("Calendar from today (past days kept as saved).", out)
+        days = json.loads(self.cal.read_text())["days"]
+        self.assertEqual(sorted(days), ["2026-10-05", "2026-10-08", "2026-10-09"])
+        self.assertEqual(days["2026-10-05"][0]["title"], "Kept as saved")                      # the past day is not re-read
+        self.assertEqual([e["title"] for e in days["2026-10-08"]], ["Today's meeting"])      # today is refreshed
+
+    def test_a_recent_past_meeting_with_a_new_transcript_still_reaches_the_check(self):
+        self.save({"2026-10-08": [{"id": "ev-new", "start": "11:00", "end": "12:00", "title": "Today", "teams": True}]})
+        todo = json.loads(sweep(self.v, "transcripts", "todo", now="2026-10-08 18:00").stdout)
+        ids = json.dumps(todo)
+        self.assertIn("ev-1", ids)                       # the Monday meeting, saved earlier, is still looked up
+        recorded = self.v.root / "system/staging/drafts/transcripts.json"
+        recorded.write_text(json.dumps({"results": [{"id": "ev-1", "online": True, "uri": "https://example.test/t/1",
+                                                     "count": 1, "error": None,
+                                                     "start": "2026-10-05T09:00:00Z", "end": "2026-10-05T10:00:00Z"}]}))
+        r = sweep(self.v, "transcripts", "record", str(recorded), now="2026-10-08 18:00")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        state = json.loads((self.v.root / "system/staging/transcripts.json").read_text())
+        self.assertIn("ev-1", json.dumps(state))
 
 
 def page_data(v):
