@@ -130,7 +130,10 @@ class DashboardTests(unittest.TestCase):
                                                                          # BL-301 A: text inside the vendored Tiptap module (an error message
                                                                          # and a comment), never fetched
                                                                          "https://prosemirror.net/docs/guide/#generatable",
-                                                                         "https://github.com/markedjs/marked.`,"}
+                                                                         "https://github.com/markedjs/marked.`,",
+                                                                         # #120: the Link popover's address placeholder, shown as hint text,
+                                                                         # never fetched
+                                                                         "https://example.com"}
         self.assertEqual({u for u in links if "office365.com" not in u and not u.startswith("http://127.0.0.1:")},
                          set())   # only stored message links, and this Mac's own live server
         self.assertNotIn(str(self.v.root), self.html)
