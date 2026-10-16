@@ -1763,8 +1763,8 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail #railMoreMenu button[aria-current="page"]::before{left:-6px}
 .rail #railMoreMenu .fsec2{padding:6px 8px 2px;font:500 var(--fs-xs)/16px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .rail #railMoreMenu .rsw .sw{margin-left:auto;width:34px;height:20px;border-radius:999px;background:var(--line);position:relative;flex:none;border:1px solid var(--muted)}
-.rail #railMoreMenu .rsw .sw::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:left .12s}
-.rail #railMoreMenu .rsw .sw.on{background:var(--accent);border-color:var(--accent)} .rail #railMoreMenu .rsw .sw.on::after{left:16px;background:var(--accent-ink)}
+.rail #railMoreMenu .rsw .sw::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:transform .12s}
+.rail #railMoreMenu .rsw .sw.on{background:var(--accent);border-color:var(--accent)} .rail #railMoreMenu .rsw .sw.on::after{transform:translateX(14px);background:var(--accent-ink)}
 .railsep{height:1px;background:var(--line);margin:4px 2px}
 /* #139: the hover flyouts of Projects and Work, beside the rail (collapsed or not), above the page and below dialogs and the peek (--z-menu) */
 .rail .railfly{position:fixed;z-index:var(--z-menu);width:max-content;min-width:220px;max-width:320px;max-height:360px;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px;display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-content:start}
