@@ -346,5 +346,23 @@ class AskReopen(LiveBrowserCase):
         self.assertEqual((self.count("ENDm"), self.count("Part two of m")), (1, 1))
 
 
+    def test_a_finished_run_replayed_slowly_is_still_drawn_plain(self):
+        """Finished is known from the run (done), not from how fast its events arrive: a replay held up for 400 ms is not animated."""
+        t, _ = self.ask_in_background("gated n", "r-test-nnnnnn")
+        self.until_history_has("Part one of n")
+        self.release("n")
+        t.join(30)
+        b = self.b
+        b.eval("window.SEEN={mw:0}; new MutationObserver(l=>l.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1&&(n.matches('.mw')||n.querySelector('.mw'))) SEEN.mw++; }))).observe(document.getElementById('chLog'),{childList:true,subtree:true})")
+        b.eval("""window.__f=fetch; window.fetch=async(u,o)=>{ const r=await __f(u,o); if(!String(u).includes('/api/ask/attach')) return r; const rd=r.body.getReader();
+          return new Response(new ReadableStream({async start(c){ await new Promise(x=>setTimeout(x,400)); for(;;){ const {value,done}=await rd.read(); if(done){ c.close(); return; } c.enqueue(value); } }}),{status:r.status,headers:r.headers}); }""")
+        b.eval("$('#chLog').textContent=''; SHOWN=null")
+        b.eval("attachRun({id:'r-test-nnnnnn',kind:'ask',chat:null,done:true,message:'gated n',confirmed:false})")
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of n'))", 20)
+        b.pump(0.8)
+        b.eval("window.fetch=__f")
+        self.assertEqual(b.eval("SEEN.mw"), 0, "a finished run replayed slowly faded its words in")
+
+
 if __name__ == "__main__":
     unittest.main()
