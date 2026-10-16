@@ -2385,7 +2385,23 @@ def day_lookups(d, now):
             "projects": projects, "remembered": (d.get("prep") or {}).get("series") or {},
             "names": {p["code"]: p["name"] for p in projects}, "hot": hot_projects([(None, x) for x in items], today),
             "by_id": {m["id"]: m for m in rows_ if m.get("id")}, "by_time": {(m["day"], m["start"], m["title"]): m for m in rows_},
-            "minutes": filed_minutes(d.get("files") or []), "pages": prep_pages_by_meeting()}
+            "minutes": filed_minutes(d.get("files") or []), "pages": prep_pages_by_meeting(),
+            "weekend": weekend_set(d), "due": dated_work(d)}
+
+
+def weekend_set(d):
+    """{weekday number (Monday 0)} of the days off (work.weekend_days, BL-181), as the page holds them: Saturday and Sunday by default."""
+    given = ((d.get("settings") or {}).get("weekendDays"))
+    return {n for n in given if isinstance(n, int) and 0 <= n <= 6} if isinstance(given, list) else {5, 6}
+
+
+def dated_work(d):
+    """#138: {YYYY-MM-DD} of the days an open action, an open RAID item or a milestone not yet done is due on, as it is dated (no
+    move to Monday: that is the Week ahead's own rule). A weekend day holding one is planned for, so the day line shows it."""
+    out = {x["due"] for x in d.get("actions") or [] if x["st"] in ("Open", "Delayed") and x.get("due")}
+    out |= {x["due"] for x in d.get("raid") or [] if x["st"] == "Open" and x.get("due")}
+    out |= {m[1] for p in d.get("projects") or [] for m in p.get("ms") or [] if m[1] and m[2] != "done" and (m[6] if len(m) > 6 else "") not in ("Done", "Cancelled")}
+    return out
 
 
 def import_rows(d):
@@ -2421,16 +2437,18 @@ def prep_pages_by_meeting():
 
 
 def day_record(day, events, look):
-    """One day of the day line, or None for a weekend day without a timed meeting."""
+    """One day of the day line, or None for a weekend day (work.weekend_days) with nothing planned: a timed meeting, or an open
+    action, RAID item or milestone dated that day (#138). Today is always there."""
     events = [e for e in events if isinstance(e, dict)] if isinstance(events, list) else []
     timed = sorted((e for e in events if not e.get("all_day")), key=lambda e: (e.get("start") or "", e.get("title") or ""))
-    if day.weekday() >= 5 and not timed:
-        return None
     iso = day.isoformat()
+    off = day.weekday() in look["weekend"]
+    if off and not timed and iso not in look["due"] and iso != look["today"]:
+        return None
     year = "" if str(day.year) == look["today"][:4] else f" {day.year}"
     long_ = f"{DAYS[day.weekday()]} {ordinal(day.day)} {day.strftime('%B')}{year}"
     return {"date": iso, "date_shown": shown(iso), "dow": DAYS[day.weekday()], "short": f"{DAYS[day.weekday()][:3]} {day.day}",
-            "long": long_, "today": iso == look["today"], "past": iso < look["today"], "weekend": day.weekday() >= 5,
+            "long": long_, "today": iso == look["today"], "past": iso < look["today"], "weekend": off,
             "week": (day - look["monday"]).days // 7,
             "meetings": [day_meeting(e, iso, look) for e in timed],
             "all_day": ["Busy" if e.get("private") else str(e.get("title") or "")[:140] for e in events if e.get("all_day")]}

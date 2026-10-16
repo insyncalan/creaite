@@ -1,6 +1,6 @@
 // @ts-check
 /* DayTabs (BL-293): the day line at the top of Today's day band, in place of the date (#todayDate). A quiet row of small
-   capitals, one tab per working day the saved calendar holds (a weekend day only when it has a meeting), with a faint
+   capitals, one tab per working day the saved calendar holds (a weekend day only when something is planned on it, #138), with a faint
    "Next week" divider. The chosen day is written out in full; the others stay short; today is in the accent colour, with a
    small dot when another day is chosen. A Tabs block (← → Home End). Two faint chevrons at the band's sides, shown on hover
    and hidden at the ends, step a day for a mouse. The swipe and the keys are never hinted here (Alan, 13-10-2026): Help

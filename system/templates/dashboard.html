@@ -27369,7 +27369,7 @@ ${s5}`;
   var WDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   function synthDay(iso) {
     const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00"), dow2 = WDAYS[d5.getDay()];
-    return { date: iso, dow: dow2, short: `${dow2.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso), today: iso === TODAY, past: iso < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
+    return { date: iso, dow: dow2, short: `${dow2.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso), today: iso === TODAY, past: iso < TODAY, weekend: wkDays().has(wkDow(iso)), week: 0, meetings: [], all_day: [] };
   }
   function dayList() {
     if (!D.calendar) return [];

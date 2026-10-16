@@ -5,7 +5,7 @@
 import { dcIcon, openChat, say, send } from "./ask.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { openDatePicker } from "./components/Picker.jsx";
-import { parseWhen, weekendNote, WK, wkAsk } from "./core/fields.js";
+import { parseWhen, weekendNote, WK, wkAsk, wkDays, wkDow } from "./core/fields.js";
 import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
@@ -167,7 +167,7 @@ export function renderDay(){ const cal=D.calendar, first=(S.me||"").split(" ")[0
    chosen day lives in memory only (stores/today.js), so a reload opens on today. Today's meetings still come from the
    calendar as the page holds it (D.calendar), with what the server worked out for each (its follow-up, Prep and plan). */
 const WDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:d.getDay()%6===0,week:0,meetings:[],all_day:[]}; }
+export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:wkDays().has(wkDow(iso)),week:0,meetings:[],all_day:[]}; }
 /** The days the line offers: the server's, with today added when the calendar holds nothing for it. */
 export function dayList(){ if(!D.calendar) return []; const L=[...(((D.days||{}).days)||[])];
   if(!L.some(d=>d.date===TODAY)){ L.push(synthDay(TODAY)); L.sort((a,b)=>a.date.localeCompare(b.date)); } return L; }
