@@ -370,6 +370,18 @@ export function cardHtml(t,x,g){ if(t==="decisions"){
     <div class="bcm"><span class="bid">${esc(x.id)}</span>${ptCode(x)}${x.client?'<span class="bcv" title="Client-visible" aria-label="Client-visible">◐</span>':""}<span class="sp"></span>${P4.includes("o")?`<span class="bown" title="${esc(x.o&&x.o!=="TBC"?x.o:"No owner yet")}">${esc(initials(x.o))}</span>`:""}</div>
     <div class="bcm">${P4.includes("due")?`<span class="bdue ${od?"late":""}">${esc(due)}</span>`:""}<span class="sp"></span>${extra}${P4.includes("pr")?`<span class="bpri ${x.pr==="Urgent"?"prio-urgent":""}">${esc(x.pr||"")}</span>`:""}<button class="bmv" type="button" aria-haspopup="menu" aria-label="Move ${esc(x.id)} to…" title="Move to…">⋯</button></div></div>`; }
 export const bcKey=(t,g,key)=>`${t}|${g}|${key}`;
+/* #144: each board column's width, per board (tab and grouping), remembered in the browser. 260 to 640 px, 270 by default;
+   the handle on a column's right edge drags, ←/→ move it 16 px, a double-click puts it back. */
+export const BW=store.get("creaite-boardw",{}), BW_MIN=260, BW_MAX=640, BW_DEF=270;
+const bwBoard=()=>BCUR?`${BCUR.t}|${BCUR.g}`:`${shared.WT}|${groupOf(shared.WT)}`;
+export const bwGet=(b,key)=>(BW[b]||{})[key];
+const bwStyle=(b,key)=>{ const w=bwGet(b,key); return w?` style="flex-basis:${w}px;width:${w}px"`:""; };
+const bwHandle=(b,key,label,w)=>`<span class="bcrz" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize ${esc(label)} column" aria-valuemin="${BW_MIN}" aria-valuemax="${BW_MAX}" aria-valuenow="${w||BW_DEF}"></span>`;
+export function bwPut(b,key,w,save){ w=Math.round(Math.max(BW_MIN,Math.min(BW_MAX,w)));
+  if(w===BW_DEF){ if(BW[b]){ delete BW[b][key]; if(!Object.keys(BW[b]).length) delete BW[b]; } } else { BW[b]=BW[b]||{}; BW[b][key]=w; }
+  $$("#workBoard .bcol").forEach(c=>{ if(c.dataset.col!==key) return; c.style.flexBasis=w+"px"; c.style.width=w+"px"; const h=c.querySelector(".bcrz"); if(h) h.setAttribute("aria-valuenow",String(w)); });
+  if(save) store.set("creaite-boardw",BW); return w; }
+export function bwReset(b,key){ bwPut(b,key,BW_DEF,true); }
 export function renderBoard(L){ const t=shared.WT, sg=subOf(t,"board"), g=groupOf(t), el=$("#workBoard");
   if(sg!=="none"&&L.length){ const B=boardCols(t,L,g); if(!B.pick){   /* swimlanes: one row per sub-group value, each with the board's columns */
     const lanes=wgGroups(t,sg,L,!BHIDE[t]); BCUR={t,g,cols:B.cols,sub:sg,lanes};
@@ -378,19 +390,19 @@ export function renderBoard(L){ const t=shared.WT, sg=subOf(t,"board"), g=groupO
       return `<section class="blane${coll?" collapsed":""}" data-lane="${esc(ln.key)}" aria-label="${esc(ln.label)}, ${n} item${n===1?"":"s"}">
         <header class="blh"><button class="bcoll" type="button" data-bcoll="${esc(k)}" aria-expanded="${!coll}" aria-label="${coll?"Expand":"Collapse"} ${esc(ln.label)}">${ic("chevdown","chev")}</button><h3>${esc(ln.label)} · ${n}</h3></header>
         ${coll?"":`<div class="blcols">${cols.map(c=>{ const it=c.items.filter(x=>inl.has(x.id)), m=it.length;
-          return `<section class="bcol${c.drop?"":" nodrop"}" data-col="${esc(c.key)}" data-lane="${esc(ln.key)}" aria-label="${esc(c.label)} in ${esc(ln.label)}, ${m} item${m===1?"":"s"}"><header class="bch"><h3>${esc(c.label)} · ${m}</h3></header>
-            <div class="bcards" role="list">${it.map(x=>cardHtml(t,x,g)).join("")||'<div class="bnone">Nothing here</div>'}</div><div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div></section>`; }).join("")}</div>`}</section>`; }).join(""))}</div>`);
+          return `<section class="bcol${c.drop?"":" nodrop"}" data-col="${esc(c.key)}" data-lane="${esc(ln.key)}"${bwStyle(`${t}|${g}`,c.key)} aria-label="${esc(c.label)} in ${esc(ln.label)}, ${m} item${m===1?"":"s"}"><header class="bch"><h3>${esc(c.label)} · ${m}</h3></header>
+            <div class="bcards" role="list">${it.map(x=>cardHtml(t,x,g)).join("")||'<div class="bnone">Nothing here</div>'}</div><div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div>${bwHandle(`${t}|${g}`,c.key,c.label,bwGet(`${t}|${g}`,c.key))}</section>`; }).join("")}</div>`}</section>`; }).join(""))}</div>`);
     markSel(); return; } }
   const B=boardCols(t,L,g);
   if(B.pick){ BCUR={t,g,cols:[]}; putHTML(el,html`<div class="bpick"><b>Group by milestone needs one project.</b> Milestones belong to a project, so choose one: <select id="bpickP" aria-label="Project for the milestone board"><option value="">Choose a project</option>${P.map(p=>html`<option value="${p.code}">${p.name}</option>`)}</select></div>`); return; }
   BCUR={t,g,cols:B.cols}; let cols=B.cols; if(BHIDE[t]) cols=cols.filter(c=>c.items.length||c.hidden);
   if(!L.length){ putHTML(el,html`<div class="empty">${shared.WQ.trim()?html`Nothing in this view matches “${shared.WQ.trim()}”.`:"Nothing in this view."}</div>`); return; }
   putHTML(el,raw(cols.map(c=>{ const k=bcKey(t,g,c.key), coll=!!BCOLL[k], n=c.items.length;
-    return `<section class="bcol${coll?" collapsed":""}${c.drop?"":" nodrop"}" data-col="${esc(c.key)}" aria-label="${esc(c.label)}, ${n} item${n===1?"":"s"}">
+    return `<section class="bcol${coll?" collapsed":""}${c.drop?"":" nodrop"}" data-col="${esc(c.key)}"${coll?"":bwStyle(`${t}|${g}`,c.key)} aria-label="${esc(c.label)}, ${n} item${n===1?"":"s"}">
       <header class="bch"><button class="bcoll" type="button" data-bcoll="${esc(k)}" aria-expanded="${!coll}" aria-label="${coll?"Expand":"Collapse"} ${esc(c.label)}">${ic("chevdown","chev")}</button><h3>${esc(c.label)} · ${n}</h3></header>
       ${coll?"":`<div class="bcards" role="list">${c.items.map(x=>cardHtml(t,x,g)).join("")||'<div class="bnone">Nothing here</div>'}</div>
       ${c.limited&&(c.hidden||BSHOWALL.has(k))?`<button class="linkbtn bshow" type="button" data-bshow="${esc(k)}">${BSHOWALL.has(k)?`Last ${+S.boardClosedDays||14} days only`:`Show all (${c.hidden} older)`}</button>`:""}
-      <div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div>`}</section>`; }).join("")||`<div class="empty">Nothing in this view.</div>`));
+      <div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div>${bwHandle(`${t}|${g}`,c.key,c.label,bwGet(`${t}|${g}`,c.key))}`}</section>`; }).join("")||`<div class="empty">Nothing in this view.</div>`));
   markSel(); }
 export function renderLayoutBar(){ const t=shared.WT, bd=layoutOf(t)==="board";
   $$("#wlay button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.lay===(bd?"board":"list"))));
@@ -461,6 +473,13 @@ $("#workBoard").addEventListener("click",e=>{ if(performance.now()-BNOCLICK<30) 
   const sh=e.target.closest("[data-bshow]"); if(sh){ const k=sh.dataset.bshow; BSHOWALL.has(k)?BSHOWALL.delete(k):BSHOWALL.add(k); renderWork(); return; }
   const col=e.target.closest(".bcol.collapsed"); if(col){ const k=bcKey(shared.WT,groupOf(shared.WT),col.dataset.col); BCOLL[k]=false; store.set("creaite-boardcoll",BCOLL); renderWork(); return; }
   const c=e.target.closest(".bcard"); if(c) hlRowClick(e,shared.WT,c); });
+$("#workBoard").addEventListener("pointerdown",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h||e.button!==0) return; e.preventDefault(); e.stopPropagation();
+  const col=h.closest(".bcol"), key=col.dataset.col, b=bwBoard(), x0=e.clientX, w0=col.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
+  const mv=ev=>bwPut(b,key,w0+ev.clientX-x0,false), up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); document.body.classList.remove("resizing"); store.set("creaite-boardw",BW); BNOCLICK=performance.now(); };
+  h.addEventListener("pointermove",mv); h.addEventListener("pointerup",up); },true);
+$("#workBoard").addEventListener("dblclick",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h) return; e.stopPropagation(); bwReset(bwBoard(),h.closest(".bcol").dataset.col); snack("Column width reset"); },true);
+$("#workBoard").addEventListener("keydown",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h||(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")) return; e.preventDefault(); e.stopPropagation();
+  const col=h.closest(".bcol"); bwPut(bwBoard(),col.dataset.col,col.getBoundingClientRect().width+(e.key==="ArrowRight"?16:-16),true); },true);
 $("#workBoard").addEventListener("dblclick",e=>{ const c=e.target.closest(".bcard"); if(c&&!e.target.closest(".bmv")) hlRowOpen(e,shared.WT,c); });
 $("#workBoard").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.closest(".bcard")) e.preventDefault(); });
 $("#workBoard").addEventListener("change",e=>{ if(e.target.id==="bpickP"&&e.target.value){ PROJF.clear(); PROJF.add(e.target.value); workChanged(); } });
