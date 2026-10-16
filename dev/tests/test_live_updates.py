@@ -163,8 +163,8 @@ class EventsRoute(ServerCase):
         s = self.open()
         s.wait_for(lambda e: e["type"] == "hello")
         time.sleep(1.2)
-        body = json.dumps({"op": "write", "path": "system/config/settings.json",
-                           "text": (self.v.root / "system/config/settings.json").read_text()[:-1] + "\n "}).encode()
+        body = json.dumps({"op": "write", "path": "system/config/settings.json",       # #128: still a settings object (the
+                           "text": (self.v.root / "system/config/settings.json").read_text() + "\n"}).encode()   # page's own)
         req = urllib.request.Request(self.base + "/api/fs", data=body, method="POST",
                                      headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
         sent = time.monotonic()
@@ -172,6 +172,31 @@ class EventsRoute(ServerCase):
         at, ev = s.wait_for(lambda e: e["type"] == "changed" and "settings" in e["parts"])
         self.assertIsNotNone(ev)
         self.assertLess(at - sent, 0.9)                                     # poked, not the next tick
+
+    def test_a_refused_settings_save_writes_nothing_and_sends_no_event(self):
+        """#128: a settings save the server refuses (here: not a settings object) leaves settings.json as it was and sends no
+        'settings' event; the same save made valid is written and sent at once."""
+        s = self.open()
+        s.wait_for(lambda e: e["type"] == "hello")
+        time.sleep(1.2)
+        f = self.v.root / "system/config/settings.json"
+        before = f.read_text()
+
+        def save(text):
+            body = json.dumps({"op": "write", "path": "system/config/settings.json", "text": text}).encode()
+            req = urllib.request.Request(self.base + "/api/fs", data=body, method="POST",
+                                         headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
+            return json.loads(urllib.request.urlopen(req, timeout=10).read())
+        got = save(before[:-1])                                             # the closing brace cut off
+        self.assertFalse(got["ok"], got)
+        self.assertIn("settings must be a JSON object", got["message"])
+        self.assertEqual(f.read_text(), before)
+        at, ev = s.wait_for(lambda e: e["type"] == "changed" and "settings" in e["parts"], timeout=2.5)
+        self.assertIsNone(ev, "a refused save sent a settings event")
+        self.assertEqual(save(before + "\n"), {"ok": True})
+        at, ev = s.wait_for(lambda e: e["type"] == "changed" and "settings" in e["parts"])
+        self.assertIsNotNone(ev)
+        self.assertEqual(f.read_text(), before + "\n")
 
     def test_inbox_and_vip_name_their_own_parts(self):
         s = self.open()

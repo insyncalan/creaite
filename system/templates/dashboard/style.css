@@ -3233,7 +3233,8 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-a4 .page .sheet-h:hover{background:var(--paper-sunk)} .sheet-a4 .page .sheet-h:focus{background:var(--paper);box-shadow:0 0 0 2px var(--accent);outline:none}
 .sheet-reset,.sheet-untag{border:0;background:none;color:var(--paper-link);font-size:var(--fs-xs);font-weight:400;cursor:pointer;padding:0;text-decoration:underline}
 .sheet-untag{margin-left:auto}
-.sheet-spark{border:0;background:none;color:var(--paper-link);cursor:pointer;width:24px;height:24px;display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
+.sheet-spark{--spk:max(24px,calc(24.5px / var(--sc,1)));border:0;background:none;color:var(--paper-link);cursor:pointer;width:var(--spk);height:var(--spk);margin:calc((24px - var(--spk)) / 2);   /* 24 px on screen whatever the page's zoom; its footprint stays 24 */
+  display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
 .sheet-spark:hover{background:var(--paper-sunk)}
 .sheet-diff{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);border:1px solid var(--paper-rule);border-radius:var(--r-pill);padding:0 6px}
 .sheet-match{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);margin-left:auto}
@@ -3430,7 +3431,7 @@ table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;p
 table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .wr-st{font-weight:700;font-size:10px;letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
 .wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
-.late{color:var(--rp-red);font-weight:600}
+.sheet-a4 .late{color:var(--rp-red);font-weight:600}   /* on the fixed light sheet only: unscoped it overrode Today's .late (var(--bad)) and failed contrast in dark themes */
 .wr-src{font-size:11px;color:var(--rp-grey);margin-top:2px}
 .wr-decs{list-style:none;padding:0!important;display:grid;gap:8px} .wr-decs li{margin:0;padding-left:12px;border-left:2px solid var(--rp-rule)}
 .wr-meta{color:var(--rp-grey);font-size:12.5px}

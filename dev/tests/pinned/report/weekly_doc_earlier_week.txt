@@ -8,6 +8,7 @@ exit 0
  "format": "creaite-doc",
  "items": {
   "ABC-005": {
+   "archived": 0,
    "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
    "client_visible": 0,
    "closed": null,
@@ -31,6 +32,7 @@ exit 0
    "workstream": null
   },
   "ABC-006": {
+   "archived": 0,
    "client_message": "What it is: Test licences are not yet ordered.\nWhat it means for you: Testing could start late.\nWhat is being done: Purchase order raised this week.",
    "client_visible": 1,
    "closed": null,
@@ -54,6 +56,7 @@ exit 0
    "workstream": null
   },
   "ABC-A-001": {
+   "archived": 0,
    "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
    "client_visible": 0,
    "closed": null,
@@ -75,6 +78,7 @@ exit 0
   },
   "ABC-M-001": {
    "actual_date": null,
+   "archived": 0,
    "baseline_date": "2026-10-20",
    "client_message": null,
    "client_visible": 0,

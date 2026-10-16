@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 import milestone_data  # noqa: E402
 
 # Every visible element with its own words inside the parts of the card and page BL-213 names: the plan line (month labels,
@@ -51,7 +51,7 @@ class StripContrast(LiveBrowserCase):
 
     def check(self, where):
         failures, counted = [], 0
-        for palette in theme_names():
+        for palette in TEST_PALETTES:
             for mode in ("light", "dark"):
                 self.b.eval(f"document.documentElement.dataset.palette='{palette}'; document.documentElement.dataset.theme='{mode}'")
                 self.b.wait(f"getComputedStyle(document.documentElement).colorScheme.includes('{mode}')||true")

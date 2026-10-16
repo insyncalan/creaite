@@ -1014,7 +1014,10 @@ TIMER = """import sys, json, time
 sys.path.insert(0, 'system/scripts')
 import live_server
 sleeps = []
+real_sleep = time.sleep
 def nap(s):
+    if s < 1:                          # a short poll inside the check (a thread, a subprocess wait) is not the timer's wait
+        return real_sleep(s)
     sleeps.append(s)
     if len(sleeps) >= 2:
         raise KeyboardInterrupt        # not an Exception: it ends the loop after its second wait

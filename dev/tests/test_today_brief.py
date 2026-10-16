@@ -11,10 +11,10 @@ import re
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from live_browser import TEST_PALETTES, TEST_PALETTES_JS  # noqa: E402
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 import build_dashboard as bd  # noqa: E402
@@ -24,8 +24,7 @@ import build_dashboard as bd  # noqa: E402
 
 def theme_count():
     """How many named themes the dashboard has (its THEMES list), so theme checks follow new themes by themselves."""
-    page = readable_page()     # BL-231: the source; the bundle reprints the code
-    return len(re.findall(r'\{id:"', re.search(r"const THEMES=\[(.*?)\];", page, re.S).group(1)))
+    return len(TEST_PALETTES)
 
 class PageTests(unittest.TestCase):
     @classmethod
@@ -110,10 +109,10 @@ class IntakeSectionsTests(PageTests):
     def test_the_sections_use_the_themes_own_card_frame(self):
         o = self.probe("""
           go("inbox"); const out={};
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["light","dark"]){ S.palette=pal; S.theme=mode==="dark"?"Dark":"Light"; applyTheme();
+          for(const pal of TEST_PALETTES) for(const mode of ["light","dark"]){ S.palette=pal; S.theme=mode==="dark"?"Dark":"Light"; applyTheme();
             const cs=getComputedStyle(document.getElementById("isecUp")), card=getComputedStyle(document.querySelector("#v-inbox .tbl")); 
             out[pal+"|"+mode]=[cs.borderTopWidth!=="0px", cs.backgroundColor!=="rgba(0, 0, 0, 0)", cs.borderTopLeftRadius===card.borderTopLeftRadius]; }
-          window.OUT={out};""")
+          window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         for key, (bordered, filled, same_radius) in o["out"].items():
             self.assertTrue(bordered and filled, key)
 
@@ -329,7 +328,6 @@ class WeekAheadDataTests(unittest.TestCase):
         finally:
             v.cleanup()
         import json
-        import re
         data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', html, re.S).group(1))
         w = data["week"]
         self.assertEqual(w["from"], date.today().isoformat())
@@ -486,13 +484,13 @@ class TodayBriefTests(PageTests):
           D.week={from:TODAY,to:TODAY,days:[{date:TODAY,dow:"Today",weekend:false,meetings:[],items:[{kind:"actions",id:"ABC-A-002",p:"ABC",t:"Task",o:"Omar Ali",weekend:true}]}]};
           const bg=el=>{ for(let e=el;e;e=e.parentElement){ const c=getComputedStyle(e).backgroundColor; if(!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c; } return "rgb(255,255,255)"; };
           const out={}; go("today");
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); renderToday();
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); renderToday();
             const probes={title:"#attnList a.t", number:"#attnList .n", body:"#attnList p", inlineLink:"#attnList p a.s", quiet:"#attnList button.qa", dots:"#attnList .dots",
               heading:"#tBrief h2.th", count:"#tBrief .th .cnt", late:"#mineList .late, #weekList .wkwhy", weekLine:"#weekList .wkrow .tb", dayLabel:"#weekList .wkdh", weekWho:"#weekList .wkrow .wkwho",
               none:"#chgList .none", headline:"#dayHead", date:"#todayDate", lead:"#briefText"};
             for(const [k,sel] of Object.entries(probes)){ const el=document.querySelector(sel); if(!el) continue; out[`${pal}|${mode}|${k}`]=ratio(getComputedStyle(el).color,bg(el)); }
             const dot=document.querySelector("#dayLine .dot"); if(dot) out[`${pal}|${mode}|dot`]=ratio(getComputedStyle(dot).fill,bg(dot)); }
-          window.OUT={out,kinds:[...new Set(Object.keys(out).map(k=>k.split("|")[2]))]};""")
+          window.OUT={out,kinds:[...new Set(Object.keys(out).map(k=>k.split("|")[2]))]};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertGreaterEqual(len(o["kinds"]), 14)
         for key, r in o["out"].items():
             self.assertGreaterEqual(r, 4.5, key)
@@ -528,11 +526,11 @@ class TodayHeadingTests(PageTests):
         o = self.probe("""
           const out={}; go("today"); const ref=document.createElement("h2"); ref.textContent="Reference"; document.body.append(ref);
           const sig=c=>[c.fontWeight, c.fontSize, c.fontFamily, c.letterSpacing, c.textTransform];
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
             out[pal+"|"+mode]={ref:sig(getComputedStyle(ref)),rows:[...document.querySelectorAll("#tBrief .tsec:not(.setupsec) h2.th")].map(h=>{
               const n=h.querySelector(".cnt"), cc=n?getComputedStyle(n):null;
               return [sig(getComputedStyle(h)), cc&&cc.fontWeight, h.getBoundingClientRect().height, h.firstChild.textContent.trim()]; })}; }
-          ref.remove(); window.OUT={out};""")
+          ref.remove(); window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertEqual(len(o["out"]), theme_count() * 2)                       # every theme × 2 modes
         for key, v in o["out"].items():
             self.assertEqual(len(v["rows"]), 8, key)                                   # BL-319's To decide and BL-295's First thing too; BL-125 A's You owe and Waiting on are h3 sub-headings
@@ -554,12 +552,12 @@ class EditGroundTests(PageTests):
           const ratio=(a,b)=>{ const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
           const ground=el=>{ for(let e=el;e;e=e.parentElement){ const c=getComputedStyle(e).backgroundColor; if(!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c; } return "none"; };
           const out={}; go("work"); const id=A[0].id;
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
             openRecord("actions",id); const read=ground(document.getElementById("pkScroll")); closePanel();   /* BL-176: the peek's ground */
             openProject("ABC","health"); const edit=ground(document.getElementById("pBody")), b=document.getElementById("editBanner");   /* a form (BL-179: New is the peek; BL-186: a milestone is its editor; project health keeps its form) */
             out[pal+"|"+mode]={read,edit,banner:ratio(getComputedStyle(b).color,edit),shown:getComputedStyle(b).display,edit_token:getComputedStyle(document.documentElement).getPropertyValue("--edit").trim()};
             closePanel(); }
-          window.OUT={out};""")
+          window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertEqual(len(o["out"]), theme_count() * 2)                       # every theme × 2 modes
         for key, r in o["out"].items():
             self.assertEqual(r["read"], r["edit"], key)                        # no tint while editing

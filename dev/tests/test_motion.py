@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 import work_data as W  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 from test_review_triage import load_queue  # noqa: E402
@@ -25,7 +25,7 @@ from split_dashboard import readable_page  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "system" / "templates" / "dashboard.html"
-PALETTES = theme_names()   # every theme (BL-40: nine in 1.5.1)
+PALETTES = TEST_PALETTES   # creaite and Cursor only (live_browser.TEST_PALETTES)
 PAGES = ("today", "work", "review", "projects", "people", "inbox", "files", "activity", "settings", "help")
 
 # every element's longest transition and animation, ::before and ::after included, and any animation still running

@@ -12,7 +12,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, pin_page_clock, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase, pin_page_clock  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 from test_meetings import week_calendar  # noqa: E402
 from test_transcripts import DAY, NOW, STUB, route_steps, event, read, transcript_result  # noqa: E402
@@ -135,7 +135,7 @@ class Highlight(Case):
         def lum(c):
             f = lambda v: (v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4  # noqa: E731
             return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2])
-        for palette in theme_names():
+        for palette in TEST_PALETTES:
             for mode in ("Light", "Dark"):
                 b.eval(f"S.palette={palette!r}; S.theme={mode!r}; applyTheme()")
                 b.pump(0.3)

@@ -28,6 +28,7 @@ from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from live_browser import TEST_PALETTES  # noqa: E402
 import test_snapshots as ts  # noqa: E402
 import test_minutes_editor as me  # noqa: E402
 
@@ -314,7 +315,7 @@ class Wordmark(UiSweepCase):
     def test_every_palette_light_and_dark(self):
         b = self.b
         self.goto("today")
-        for p in b.eval("THEMES.map(t=>t.id)"):
+        for p in TEST_PALETTES:
             for t in ("light", "dark"):
                 with self.subTest(palette=p, mode=t):
                     r = b.eval(f"""(()=>{{ {LUM} const R=document.documentElement; R.dataset.palette={json.dumps(p)}; R.dataset.theme={json.dumps(t)};

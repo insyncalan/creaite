@@ -101,7 +101,7 @@ class NotesTab(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelector('.nbody').getAttribute('aria-activedescendant')"),
                          b.eval("document.querySelector('#ntpick [aria-selected=true]').id"))
         b.key("Enter")
-        b.type(" and #" + item[:5])
+        b.type(" and #" + item)                                                             # the whole ID: Enter picks an exact ID without an arrow (a prefix shared by several items does not)
         b.wait(f"!!document.querySelector('#ntpick [role=option]')&&document.querySelector('#ntpick').textContent.includes({json.dumps(item)})")
         b.key("Enter")
         b.wait(f"!!document.querySelector('.nbody .nchip[data-item={json.dumps(item)}]')")
