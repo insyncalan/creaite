@@ -767,10 +767,10 @@ class RefineRules(unittest.TestCase):
         self.assertEqual(got["length_notes"], ["1 sentence has no source, so it was left out of this version."])
 
     def test_a_previous_version_of_exactly_1500_characters_is_taken_and_1501_is_refused_not_cut(self):
-        got, _ = self.build(text="x" * drafts.REFINE_TEXT_MAX, note="Shorter")
-        self.assertIn("x" * drafts.REFINE_TEXT_MAX, got.values["note"])
+        got, _ = self.build(text="x" * 1500, note="Shorter")
+        self.assertIn("x" * 1500, got.values["note"])
         with self.assertRaises(drafts.Refused) as why:
-            self.build(text="x" * (drafts.REFINE_TEXT_MAX + 1), note="Shorter")
+            self.build(text="x" * 1501, note="Shorter")
         self.assertIn("1500", str(why.exception))
 
     def test_a_client_safe_refine_is_refused_before_any_facts_are_built(self):
