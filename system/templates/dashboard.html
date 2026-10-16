@@ -24628,8 +24628,8 @@ ${s5}`;
   };
   function slashRows(profile, hostRows, schema, q5 = "") {
     const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
-    const rows2 = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
-    if (!ql2) return rows2;
+    const avail = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
+    if (!ql2) return avail;
     const rank = (r4) => {
       const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
       if (ids.includes(ql2)) return 0;
@@ -24638,7 +24638,7 @@ ${s5}`;
       if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
       return 9;
     };
-    return rows2.map((r4, i5) => ({ r: r4, i: i5, k: rank(r4) })).filter((x5) => x5.k < 9).sort((a5, b5) => a5.k - b5.k || a5.i - b5.i).map((x5) => x5.r);
+    return avail.map((r4, i5) => ({ r: r4, i: i5, k: rank(r4) })).filter((x5) => x5.k < 9).sort((a5, b5) => a5.k - b5.k || a5.i - b5.i).map((x5) => x5.r);
   }
   function itemType(e4) {
     return e4.isActive("taskItem") ? "taskItem" : "listItem";

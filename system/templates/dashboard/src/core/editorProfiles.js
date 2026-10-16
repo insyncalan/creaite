@@ -95,8 +95,8 @@ export const ED_SLASH_ROWS = {
     @param {string} profile @param {string[]} hostRows @param {any} schema @param {string} [q] @returns {SlashDef[]} */
 export function slashRows(profile, hostRows, schema, q = "") {
   const ql = q.trim().toLowerCase().replace(/\s+/g, " ");
-  const rows = (ED_SLASH_ROWS[profile] || []).map(id => ED_SLASH[id]).filter(r => r && (!r.host || hostRows.includes(r.id)) && (!r.node || !schema || schema.nodes[r.node]));
-  if (!ql) return rows;
+  const avail = (ED_SLASH_ROWS[profile] || []).map(id => ED_SLASH[id]).filter(r => r && (!r.host || hostRows.includes(r.id)) && (!r.node || !schema || schema.nodes[r.node]));
+  if (!ql) return avail;
   /** @param {SlashDef} r @returns {number} 0 best, 9 no match */
   const rank = r => {
     const name = r.name.toLowerCase(), ids = [r.id, ...(r.alias || [])];
@@ -106,7 +106,7 @@ export function slashRows(profile, hostRows, schema, q = "") {
     if (name.includes(ql) || r.desc.toLowerCase().includes(ql)) return 3;
     return 9;
   };
-  return rows.map((r, i) => ({ r, i, k: rank(r) })).filter(x => x.k < 9).sort((a, b) => a.k - b.k || a.i - b.i).map(x => x.r);
+  return avail.map((r, i) => ({ r, i, k: rank(r) })).filter(x => x.k < 9).sort((a, b) => a.k - b.k || a.i - b.i).map(x => x.r);
 }
 
 /** The list-item node a sink or lift acts on at the cursor: a checklist's item in a checklist, else a list's. @param {any} e */
