@@ -27,7 +27,7 @@ export function slashAt(editor) {
   const $f = s.$from;
   if ($f.parent.type.name !== "paragraph") return null;
   if ($f.marks().some(/** @param {any} m */ m => m.type.name === "code" || m.type.name === "link")) return null;
-  const before = $f.parent.textBetween(0, $f.parentOffset, undefined, "￼"), m = /(^|\s)\/([\w-]{0,20})$/.exec(before);
+  const before = $f.parent.textBetween(0, $f.parentOffset, undefined, "￼"), m = /(^|\s)\/([\w-]{0,20}(?: [\w-]{0,20})?)$/.exec(before);   /* one space is allowed: "/heading 2", "/bulleted list" */
   if (!m) return null;
   return { from: s.from - m[2].length - 1, to: s.from, q: m[2] };
 }
@@ -40,14 +40,16 @@ function SlashList({ state, id, view, pick, hover }) {
     if (!el) return undefined;
     return placeAtCaret(view, state.from, el);
   }, [state.rows.length, state.from, state.q]);
+  const none = !state.rows.length;
   useEffect(() => { const on = box.current && box.current.querySelector(".r.on"); if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest" }); }, [state.i]);
   /** @type {{g: string, rows: {r: SlashDef, i: number}[]}[]} */
   const groups = [];
   state.rows.forEach((r, i) => { let g = groups[groups.length - 1]; if (!g || g.g !== r.group) { g = { g: r.group, rows: [] }; groups.push(g); } g.rows.push({ r, i }); });
   return (
+    <>
     <div ref={box} class="slashmenu" id={id} role="listbox" aria-label="Insert" onMouseDown={e => e.preventDefault()}>
-      {state.rows.length ? groups.map(g => (
-        <div key={g.g} role="group" aria-label={g.g}>
+      {state.rows.length ? groups.map((g, gi) => (
+        <div key={`${gi}-${g.g}`} role="group" aria-label={g.g}>
           <div class="g" aria-hidden="true">{g.g}</div>
           {g.rows.map(({ r, i }) => (
             <div key={r.id} id={`${id}-${i}`} role="option" data-slash={r.id} aria-selected={i === state.i ? "true" : "false"} class={`r${i === state.i ? " on" : ""}`}
@@ -59,6 +61,8 @@ function SlashList({ state, id, view, pick, hover }) {
         </div>)) : <div class="r none" role="option" aria-disabled="true" aria-selected="false">No match</div>}
       <div class="foot" aria-hidden="true">↑↓ to move · Enter to insert · Esc to close</div>
     </div>
+    <div class="slashsr" role="status" aria-live="polite" aria-atomic="true">{none ? "No match" : `${state.rows.length} ${state.rows.length === 1 ? "option" : "options"}`}</div>
+    </>
   );
 }
 
@@ -73,13 +77,13 @@ export function attachSlash(h, { profile, host }) {
   (el.closest("dialog[open]") || document.body).appendChild(root);
   /** @type {SlashState|null} */
   let st = null;
-  let dismissed = -1;
+  let dismissed = -1, opened = false;
   const draw = () => {
     render(st ? <SlashList state={st} id={id} view={view} pick={choose} hover={i => { if (st) { st = { ...st, i }; draw(); } }} /> : null, root);
     const dom = /** @type {HTMLElement} */ (view.dom);
-    if (st) { dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-expanded", "true"); dom.setAttribute("aria-controls", id);
+    if (st) { opened = true; dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-expanded", "true"); dom.setAttribute("aria-controls", id);
       if (st.rows[st.i]) dom.setAttribute("aria-activedescendant", `${id}-${st.i}`); else dom.removeAttribute("aria-activedescendant"); }
-    else { dom.removeAttribute("aria-expanded"); dom.removeAttribute("aria-controls"); dom.removeAttribute("aria-activedescendant"); }
+    else { dom.removeAttribute("aria-haspopup"); dom.removeAttribute("aria-controls"); dom.removeAttribute("aria-activedescendant"); if (opened) dom.setAttribute("aria-expanded", "false"); }
   };
   const close = () => { if (!st) return; st = null; draw(); };
   /** Open, narrow or close the menu from what is at the caret. */
@@ -88,7 +92,7 @@ export function attachSlash(h, { profile, host }) {
     const a = slashAt(editor);
     if (!a || a.from === dismissed) { if (!a) dismissed = -1; return close(); }
     const rows = slashRows(profile, hostRows, editor.schema, a.q);
-    if (!rows.length && !a.q) return close();
+    if (!rows.length && (!a.q || a.q.includes(" "))) return close();         /* a phrase that names no row is just text: no "No match" nag */
     st = { ...a, rows, i: st && st.from === a.from ? Math.min(st.i, Math.max(0, rows.length - 1)) : 0 };
     draw();
   };
@@ -99,6 +103,7 @@ export function attachSlash(h, { profile, host }) {
     close();
     const c = editor.chain().focus().deleteRange({ from: s.from, to: s.to });
     if (r.host) { c.run(); const f = host && host[r.id]; if (f) f(); return; }
+    if (r.is && editor.isActive(r.is)) { c.run(); return; }          /* already in that block: only the "/query" goes (a toggle would take the line OUT of the list or quote) */
     if (r.run) r.run(c, editor).run();
   };
   /** @param {KeyboardEvent} e */

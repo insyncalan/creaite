@@ -3017,6 +3017,7 @@ button.nchip{font:inherit;font-size:12px}
 .ntpick .r.none{color:var(--muted);cursor:default}
 /* #122 B: the / menu, drawn by components/SlashMenu.jsx at the caret (position and flip set in core/caretPlace.js); rows 32px, tiles 24px */
 .slashmenu{position:fixed;z-index:220;width:340px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px;font-size:13px;color:var(--ink)}
+.slashsr{position:fixed;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px}
 .slashmenu .g{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px}
 .slashmenu .r{display:flex;gap:10px;align-items:center;min-height:32px;padding:3px 8px;border-radius:7px;cursor:pointer}
 .slashmenu .r.on{background:var(--accent-soft)}

@@ -495,6 +495,110 @@ class Slash(LiveBrowserCase):
         b.wait("!shared.CURED", 10)
         self.assertIn("/he", self.memory().read_text(encoding="utf-8"))
 
+    def block(self, row, md_before, setup, typed):
+        """Open a Notes editor on md_before, caret at the end, run `setup` keys, choose `row`, type `typed`; the stored Markdown."""
+        b = self.b
+        self.make_note("Blocks")
+        b.eval(f"document.querySelector('.nbody').cxed.editor.commands.setContent({md_before!r}, {{contentType:'markdown'}})")
+        b.eval("""(()=>{ const e=document.querySelector('.nbody').cxed.editor; let at=1; e.state.doc.descendants((n,pos)=>{ if(n.isTextblock&&n.content.size) at=pos+n.nodeSize-1; }); e.commands.focus(); e.commands.setTextSelection(at); })()""")
+        for k in setup:
+            b.key(k)
+        b.type(f"/{row}")
+        b.wait(f"!!{MENU}", 5)
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        b.type(typed)
+        return b.eval("document.querySelector('.nbody').cxed.value()").strip()
+
+    def test_m2_a_list_row_inside_that_list_only_removes_the_query(self):
+        md = self.block("bull", "- one\n- two", ["Enter"], "three")
+        self.assertEqual(md, "- one\n- two\n- three", "one list, not split")
+
+    def test_m2_a_quote_row_inside_a_quote_only_removes_the_query(self):
+        md = self.block("quo", "> one", ["Enter"], "two")
+        self.assertNotIn("\n\n\n", md)
+        self.assertEqual(md.count("> one"), 1)
+        self.assertRegex(md, r"(?s)^> one\n>\s*\n> two$", "still one quote")
+
+    def test_m2_a_checklist_row_inside_a_checklist_only_removes_the_query(self):
+        md = self.block("tick", "- [ ] one", ["Enter"], "two")
+        self.assertEqual(md, "- [ ] one\n- [ ] two")
+
+    def test_m2_a_numbered_row_inside_a_bulleted_list_converts_the_list(self):
+        md = self.block("num", "- one", ["Enter"], "two")
+        self.assertRegex(md, r"(?m)^1\. ")
+        self.assertNotRegex(md, r"(?m)^- ")
+        self.assertIn("two", md)
+
+    def test_m2_current_state_a_bulleted_row_in_a_nested_item_keeps_the_nesting(self):
+        b = self.b
+        self.open_current("- one\n  - two")
+        before = b.eval("edValue(curEd)")
+        self.assertEqual(before, "- one\n  - two")
+        b.eval("""(()=>{ const e=curEd.cxed.editor; let at=1; e.state.doc.descendants((n,pos)=>{ if(n.isTextblock&&n.content.size) at=pos+n.nodeSize-1; }); e.commands.focus(); e.commands.setTextSelection(at); })()""")
+        b.key("Enter")
+        b.type("/bull")
+        b.wait(f"!!{MENU}", 5)
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        b.type("three")
+        self.assertEqual(b.eval("edValue(curEd)"), "- one\n  - two\n  - three", "unchanged apart from the item typed")
+
+    def test_l3_short_names_and_aliases_find_the_row_and_one_space_is_allowed(self):
+        b = self.b
+        self.make_note("Aliases")
+        self.open_menu()
+        want = {"h1": ["h1"], "h2": ["h2"], "h3": ["h3"], "ul": ["ul"], "bullet": ["ul"], "todo": ["task"], "check": ["task"], "bq": ["quote"],
+                "code": ["codeblock"], "table": ["table"], "img": ["image"], "heading 2": ["h2"], "bulleted list": ["ul"], "numbered list": ["ol"]}
+        for q, rows in want.items():
+            b.type(q)
+            b.pump(0.1)
+            self.assertEqual(self.rows()[:len(rows)], rows, q)
+            if " " in q or q in ("h1", "h2", "h3"):
+                self.assertEqual(self.rows(), rows, q)
+            for _ in q:
+                b.key("Backspace")
+        b.type("ol")
+        b.pump(0.1)
+        self.assertEqual(self.rows()[0], "ol", "an alias ranks above a mere mention (Table, Stakeholder)")
+        for _ in "ol":
+            b.key("Backspace")
+        b.type("num")
+        self.assertEqual(self.rows()[0], "ol")
+        for _ in "num":
+            b.key("Backspace")
+        b.type("h")
+        r = self.rows()
+        self.assertEqual(r[:3], ["h1", "h2", "h3"], "the headings first")
+        self.assertGreater(len(r), 3, "then the other rows with an h in them (the mockup's rule)")
+        for _ in "h":
+            b.key("Backspace")
+        b.type("heading 2")
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        b.type("Two")
+        self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^## Two$")
+
+    def test_l3_a_phrase_that_names_no_row_closes_the_menu_and_stays_text(self):
+        b = self.b
+        self.make_note("Phrase")
+        self.open_menu()
+        b.type("zzz yyy")
+        b.pump(0.2)
+        self.assertEqual(b.eval(f"!!{MENU}"), False)
+        self.assertIn("/zzz yyy", b.eval("document.querySelector('.nbody').textContent"))
+
+    def test_l3_current_state_short_names_work_too(self):
+        b = self.b
+        self.open_current()
+        b.key("Enter")
+        b.type("/h2")
+        b.wait(f"!!{MENU}", 5)
+        self.assertEqual(self.rows(), ["h2"])
+        b.key("Enter")
+        b.type("Short")
+        self.assertIn("#### Short", b.eval("edValue(curEd)").split("\n"))
+
     def test_l5_current_state_headings_inside_a_quote_are_shifted_and_stray_ones_stay_byte_identical(self):
         b = self.b
         self.open_current(f"{STATE}\n\n> ### Quoted\n\n> # Stray in a quote\n\n> > ##### Deep")
@@ -537,6 +641,24 @@ class Slash(LiveBrowserCase):
         b.pump(0.8)
         g = self.geometry()
         self.assertLessEqual(abs(g["menu"]["top"] - (g["caret"]["bottom"] + 4)), 4, g)
+
+    def test_l7_no_match_is_announced_and_the_aria_state_is_reset_on_close(self):
+        b = self.b
+        self.make_note("Aria")
+        self.assertIsNone(b.eval("document.querySelector('.nbody').getAttribute('aria-expanded')"))
+        self.open_menu()
+        attrs = "(()=>{ const d=document.querySelector('.nbody'); return { exp:d.getAttribute('aria-expanded'), pop:d.getAttribute('aria-haspopup'), act:d.getAttribute('aria-activedescendant'), has:!!document.getElementById(d.getAttribute('aria-activedescendant')||'-') }; })()"
+        got = b.eval(attrs)
+        self.assertEqual((got["exp"], got["pop"], got["has"]), ("true", "listbox", True))
+        b.type("zzz")
+        b.pump(0.1)
+        st = b.eval("(()=>{ const s=document.querySelector('.slashroot [role=status]'); return s&&{t:s.textContent,live:s.getAttribute('aria-live')}; })()")
+        self.assertEqual(st, {"t": "No match", "live": "polite"})
+        self.assertIsNone(b.eval("document.querySelector('.nbody').getAttribute('aria-activedescendant')"))
+        b.key("Escape")
+        b.wait(f"!{MENU}", 5)
+        got = b.eval(attrs)
+        self.assertEqual((got["exp"], got["pop"], got["act"]), ("false", None, None))
 
     # ---- the Notes tab as it was ----------------------------------------------------------------------------------------
 
