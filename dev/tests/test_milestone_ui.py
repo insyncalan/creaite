@@ -10,12 +10,13 @@ Run: python3 dev/tests/test_milestone_ui.py   (needs Google Chrome; skipped othe
 import sys
 import time
 import unittest
+from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase, theme_names  # noqa: E402
 import milestone_data  # noqa: E402
-from milestone_data import d  # noqa: E402
+from milestone_data import TODAY, d  # noqa: E402
 
 KEY = "creaite.cockpit.milestones.view"
 
@@ -307,7 +308,8 @@ class HistoryFeed(Case):
         self.assertEqual(f["tabs"], ["All", "Activity", "Updates", "Source"])
         self.assertTrue(any("health: — → Off track" in r["text"] for r in f["rows"]))
         u = self.tab("proj", "upd")                                         # the weekly updates rows, by their week
-        self.assertTrue(any("weekly update, week ending 02-10-2026: Data access late" in r["text"] for r in u["rows"]))
+        we = (TODAY - timedelta(days=(TODAY.weekday() - 4) % 7 + 7)).strftime("%d-%m-%Y")   # the fixture's week, from the real today
+        self.assertTrue(any(f"weekly update, week ending {we}: Data access late" in r["text"] for r in u["rows"]))
         self.assertTrue(all("health" not in r["text"] for r in u["rows"]))
         self.tab("proj", "all")
         b.eval("document.getElementById('f_health').value='At risk'; document.getElementById('f_reason').value='Data access late, recovery agreed'")
