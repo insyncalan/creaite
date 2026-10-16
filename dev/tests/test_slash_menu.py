@@ -654,7 +654,7 @@ class Slash(LiveBrowserCase):
         self.open_menu()
         attrs = "(()=>{ const d=document.querySelector('.nbody'); return { exp:d.getAttribute('aria-expanded'), pop:d.getAttribute('aria-haspopup'), act:d.getAttribute('aria-activedescendant'), has:!!document.getElementById(d.getAttribute('aria-activedescendant')||'-') }; })()"
         got = b.eval(attrs)
-        self.assertEqual((got["exp"], got["pop"], got["has"]), (None, "listbox", True), "no aria-expanded on a textbox (ARIA 1.2)")
+        self.assertEqual((got["exp"], got["pop"], got["has"]), ("true", "listbox", True))
         b.type("zzz")
         b.pump(0.1)
         st = b.eval("(()=>{ const s=document.querySelector('.slashroot [role=status]'); return s&&{t:s.textContent,live:s.getAttribute('aria-live')}; })()")
@@ -663,7 +663,7 @@ class Slash(LiveBrowserCase):
         b.key("Escape")
         b.wait(f"!{MENU}", 5)
         got = b.eval(attrs)
-        self.assertEqual((got["exp"], got["pop"], got["act"]), (None, None, None))
+        self.assertEqual((got["exp"], got["pop"], got["act"]), ("false", None, None))
 
     # ---- the Notes tab as it was ----------------------------------------------------------------------------------------
 
