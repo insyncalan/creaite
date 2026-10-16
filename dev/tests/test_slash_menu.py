@@ -37,7 +37,7 @@ class Slash(LiveBrowserCase):
     def memory(self):
         return next((self.v.root / "projects").glob("ABC */CLAUDE.md"))
 
-    def make_note(self, title="Slash test", body=None):
+    def make_note(self, title="Slash test", body=None, focus=True):
         b = self.b
         b.eval("go('notes','ABC')")
         b.wait("!!document.getElementById('notesNew')")
@@ -49,8 +49,9 @@ class Slash(LiveBrowserCase):
         b.wait("!!document.querySelector('.nbody.ProseMirror')", 15)
         if body:
             b.eval(f"document.querySelector('.nbody').cxed.editor.commands.setContent({body!r}, {{contentType:'markdown'}})")
-        b.eval("document.querySelector('.nbody').cxed.focus('end')")
-        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        if focus:
+            b.eval("document.querySelector('.nbody').cxed.focus('end')")
+            b.wait("document.activeElement===document.querySelector('.nbody')", 5)
 
     def open_current(self, state=STATE):
         b = self.b
@@ -498,9 +499,10 @@ class Slash(LiveBrowserCase):
     def block(self, row, md_before, setup, typed, lead=""):
         """Open a Notes editor on md_before, caret at the end, run `setup` keys, choose `row`, type `typed`; the stored Markdown."""
         b = self.b
-        self.make_note("Blocks")
+        self.make_note("Blocks", focus=False)           # focus is taken here, not waited for in make_note (under load focus can fall back to the New button)
         b.eval(f"document.querySelector('.nbody').cxed.editor.commands.setContent({md_before!r}, {{contentType:'markdown'}})")
         b.eval("""(()=>{ const e=document.querySelector('.nbody').cxed.editor; let at=1; e.state.doc.descendants((n,pos)=>{ if(n.isTextblock&&n.content.size) at=pos+n.nodeSize-1; }); e.commands.focus(); e.commands.setTextSelection(at); })()""")
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         for k in setup:
             b.key(k)
         b.type(f"{lead}/{row}")
