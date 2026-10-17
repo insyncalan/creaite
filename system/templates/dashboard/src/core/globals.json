@@ -560,6 +560,7 @@
    "runGen",
    "runSearch",
    "rvAdvance",
+   "rvAgeBanner",
    "rvBulkOK",
    "rvChanged",
    "rvDate",
