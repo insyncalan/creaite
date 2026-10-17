@@ -122,6 +122,39 @@ class CloseNextWorkingDay(unittest.TestCase):
         self.assertEqual((t["day"], [m["title"] for m in t["meetings"]]), ("2026-10-18", ["Sunday thing"]))
         self.assertFalse(t["friday"])
 
+    def weekend(self, today, weekend, days, extra=None):
+        import close_day
+        from datetime import date
+        d = {"projects": [{"code": "ABC", "name": "Alpha", "ms": [["Go live", "2026-10-18", "open", 1, None, 0, "Open"],
+                                                                  ["Old", "2026-10-17", "done", 2, None, 0, "Done"]]}],
+             "actions": [{"id": "ABC-A-1", "t": "Send plan", "p": "ABC", "due": "2026-10-17", "st": "Open"},
+                         {"id": "ABC-A-2", "t": "Closed one", "p": "ABC", "due": "2026-10-17", "st": "Closed"}],
+             "raid": [], "days": {"days": days}}
+        d.update(extra or {})
+        return close_day.tomorrow(d, {"work": {"weekend_days": weekend}}, date.fromisoformat(today))["weekend"]
+
+    def test_a_friday_close_lists_planned_weekend_work(self):
+        w = self.weekend("2026-10-16", [5, 6], [{"date": "2026-10-17", "long": "Saturday", "meetings": [
+            {"start": "10:00", "end": "11:00", "title": "Sat call"}, {"start": "12:00", "end": "13:00", "title": "Hush", "private": True},
+            {"start": "14:00", "end": "15:00", "title": "Secret", "confidential": True, "p": "ABC"}]}])
+        self.assertEqual([x["day"] for x in w], ["2026-10-17", "2026-10-18"])
+        sat, sun = w
+        self.assertEqual([m["title"] for m in sat["meetings"]], ["Sat call", "Busy", "Secret"])
+        self.assertNotIn("project", sat["meetings"][2])
+        self.assertEqual([x["t"] for x in sat["due"]], ["Send plan"])          # a closed action and a done milestone don't count
+        self.assertEqual((sun["meetings"], [x["type"] + x["t"] for x in sun["due"]]), ([], ["MilestoneGo live"]))
+
+    def test_an_unplanned_weekend_and_a_midweek_close_have_none(self):
+        none = {"actions": [], "projects": []}
+        self.assertEqual(self.weekend("2026-10-16", [5, 6], [], none), [])
+        self.assertEqual(self.weekend("2026-10-14", [5, 6], []), [])           # Wednesday: tomorrow is a working day
+        self.assertEqual(self.weekend("2026-10-16", [5, 6], [{"date": "2026-10-17", "meetings": []}], none), [])
+
+    def test_the_weekend_setting_decides_the_days(self):
+        w = self.weekend("2026-10-15", [4, 5], [], {"actions": [{"id": "x", "t": "Fri job", "p": "ABC", "due": "2026-10-16", "st": "Delayed"}],
+                                                    "projects": []})
+        self.assertEqual([(x["day"], x["due"][0]["t"]) for x in w], [("2026-10-16", "Fri job")])
+
 
 class CloseBrowser(LiveBrowserCase):
     shared_server = False
