@@ -56,6 +56,8 @@ ESSENTIAL_ROWS = (
     ("Look and help", "Motion", "Follows your Mac's Reduce motion unless you choose.", ("dashboard.motion",)),
     ("Look and help", "Labels when collapsed", "A name under each icon when the left rail is collapsed. Off: icons only.",
      ("dashboard.rail_labels",)),
+    ("Look and help", "Show the Press ? line on each screen",
+     "A quiet line under a page's title the first time you visit it. The line at the foot of the page stays.", ("help.first_line",)),
     ("Look and help", "AI drafts", "Suggestions you can use, edit or ignore. Never applied by themselves.",
      ("drafting.update", "drafting.client", "drafting.thinking", "drafting.reason", "drafting.agenda", "drafting.email",
       "drafting.forms", "drafting.repeat", "drafting.done", "drafting.sharpen", "drafting.shape", "drafting.report-section",
@@ -370,6 +372,9 @@ CATALOGUE = {
     # ── Help, AI drafts, logging, close the day
     "help.start_seen": ("Help", "Start here seen", "Whether Help › Start here has been shown once.",
                         "Not yet: a new user sees it on the first visit; Reset shows it again."),
+    "help.first_line": ("Look and help", "Show the Press ? line on each screen",
+                        "A quiet line under a page's title the first time you visit it.",
+                        "On: a new user learns the Help key once per page, then never sees it again."),
     "drafting.update": ("Look and help", "AI drafts: updates", "Draft an action's latest update.", "On: drafts only suggest."),
     "drafting.client": ("Look and help", "AI drafts: client messages", "Draft a client-facing message for an item.",
                         "On: drafts only suggest."),

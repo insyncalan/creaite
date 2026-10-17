@@ -1,0 +1,225 @@
+# What's new
+
+What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
+
+## creaite 2.1.0
+
+Reports, minutes and notes now live inside creaite, and the editor, Today and a handful of annoyances got better.
+
+- **The weekly report, in creaite.** A proper A4 page you edit in place, with twelve sections you can move, hide and rename. You export it to HTML, Word or PDF. Nothing is ever sent.
+- **The client report.** The same week as the client sees it: only client-visible items, in the client's words, never anything marked Sensitive. A check before every export lists what is left out, and why.
+- **Meeting minutes, in creaite.** A processed transcript becomes draft minutes on a page, with the transcript beside them and a time tag on every line. Type a deadline in words ("next Friday") and it works out the date. Approving is one step, with Undo.
+- **A Reports page and a reporting space on each project,** with a card on the project page and a Friday reminder.
+- **The meeting page is gone.** Its jobs moved to the meeting's Prep, its minutes and Review. Old meeting links still land somewhere sensible.
+- **Notes.** A tidier header, a "+ New note" button, dates you can type in words, Delete note (restorable from Files › Archived), checklist boxes that line up, a "/" menu that opens where you typed, and three heading levels.
+- **Today, Review and the small things.** Today keeps its content at 80% width; Week ahead can be hidden; Generate current state is wider; Review's multi-select bar follows you as you scroll; ⌘↵ saves any dialog.
+- **Safer.** Anything creaite reads from outside, such as mail or a document, can no longer make it write files, and tools that need no tools start in a neutral folder instead of reading your own notes as background.
+
+## creaite 2.0.2
+
+A security patch. Nothing for you to do.
+
+- **A hidden second command can no longer slip past the safety check** that decides which commands ask creaite and the background runs may use.
+
+## creaite 2.0.1
+
+A security patch that narrows what creaite's background runs can do, so a message or document they read cannot make them run commands or change files.
+
+- **The check for messages from people you follow can only read Microsoft 365.** It has no file, command or web tools.
+- **Search answers read your vault's text only.** They cannot reach Microsoft 365 or change anything.
+- **Drafting runs cannot edit or write files.** That covers Prep pages, Current state, the AI drafts, Shape this meeting and the transcript checks.
+
+## creaite 2.0.0
+
+Notes arrive, with one editor everywhere, and AI on text you select.
+
+- **One editor.** Current state, an item's text fields and Prep's notes and questions share one editor, with Undo and the same keys.
+- **Notes on every project.** Each project has Overview and Notes tabs, and the portfolio has notes of its own.
+- **A note from any page.** Press ⌘⇧N, or N when you aren't typing, to jot a note without leaving what you're doing.
+- **Find updates in a note.** ✦ Find updates reads a note's new lines and proposes the tracker changes they state, for you to approve.
+- **Pictures in notes,** and changing a note's title renames its file and keeps the links to it in your other notes working.
+- **AI on selected text.** Select words in Current state, an item's title or longer fields, or Prep's notes, and press AI: rewrite clearly, shorter, longer, make it executive, fix spelling, or say what you want. It is a suggestion; nothing changes until you press Accept, and ⌘Z undoes it.
+
+## creaite 1.9.5
+
+One look, and less to wade through.
+
+- **One design scale.** Every screen draws its buttons, fields, headings and spacing from the same set, and the worst findings from a full screen-by-screen check were fixed: faint text, missing borders and screen-reader labels.
+- **No screen scrolls past its own bottom.** On Today, Intake and the Prep popup the window could scroll into empty space; it no longer does.
+- **Menus, pickers and dialogs behave the same everywhere.** They take the same keys (arrows, Enter, Esc, Tab), hand focus back to what opened them, and offer Undo after a change.
+- **One card per conversation.** Messages from people you follow arrive as one card per chat or thread, saying what it came to.
+- **Items closed long ago archive themselves.** Closed actions and risks, and done or dropped promises, are archived once a day after the backup.
+- **Old reports and minutes move into _Archive on your yes.** Settings › Health offers it once a month, and Files › Archived lets you move one back.
+
+## creaite 1.9.4
+
+Archive, and no waiting.
+
+- **Archive a whole project.** A finished project, with its folder, its register row and its items, can be archived and brought back exactly. Settings › People and projects lists each project with Archive.
+- **Changes appear at once.** An edit in Work, on the board, from the right-click menu, the bulk bar, the peek or ⌘K shows on screen immediately and saves in the background.
+- **Saves and the first page no longer wait** for the search index or the OneDrive copy.
+- **ask creaite shows what creaite started.** A Prep page or a Generate run appears in ask creaite as one plain request, its steps and its outcome.
+- **Smaller fixes.** A sweep's lock no longer outlives the sweep, opening creaite twice quickly starts one server not two, and a remembered chat that has gone is handled cleanly.
+
+## creaite 1.9.3
+
+Sneak peek and safe backups.
+
+- **Change an item in words.** With an action, risk, decision or milestone open, type // and say what should change ("Sara owns this, due Friday"). You see the change as you type; Enter makes it, Undo takes it back.
+- **A daily backup you can restore from.** One closed daily zip of everything needed to rebuild the vault goes to your OneDrive backup folder. Old copies are tidied on an agreed schedule, and a weekly check proves a restore would work.
+- **Restore from a backup.** Settings › Health lists the backups by date and restores from the one you choose.
+- **Search reads PDFs.** PDFs exported from Word or PowerPoint are now searched by their text, not only their name.
+- **Worth knowing:** a copy of your backup now leaves the laptop, into your company OneDrive folder only. Old backups are now removed automatically.
+
+## creaite 1.9.2
+
+Calmer.
+
+- **Settings opens on sixteen things you actually set,** in plain words. Everything else is under Advanced, searchable. A dot marks anything you've changed, and Reset puts it back.
+- **Health lives inside Settings.** It lists only what needs you, each with what to do, and five problems mend themselves with Fix it.
+- **Rejecting asks for a reason.** One menu of seven reasons, with creaite's own guess, works from Review and from Today.
+- **Today becomes one home,** with To decide first: what waits in Review, transcripts ready in Intake and messages from people you follow.
+- **A sidebar that collapses to icons,** with Today, Work, Review, Projects and People at the top and the rarer pages under More.
+- **Updates finish themselves.** From the next update, creaite remakes the launcher, refreshes the app's icon and restarts the live server for you.
+
+## creaite 1.9.1
+
+A small update for ask creaite and Today.
+
+- **ask creaite checks what it says.** Every work item it names is checked against the tracker before you see the reply.
+- **A plain "I can't".** When something is outside what it can ever do, such as sending mail, it says so first.
+- **Field changes use the dashboard's own save.** Changing an owner, due date or status shows a card with the change, the same rules and Undo.
+- **Today's day arrows stay put.** The ‹ › controls sit in the same place on every day.
+
+## creaite 1.9.0
+
+Meeting prep, reimagined.
+
+- **A better Prep popup.** Wider, with a tidy header, a facts line and Draft agenda as one menu. Every item opens the full peek.
+- **Shape this meeting.** Say the focus and the aim in your own words and the prep follows.
+- **The prep page opens inside creaite,** in a Briefing layout, with dated reporting, the meeting's series and every source a link. Prep works for any day the calendar holds.
+- **Today moves between days.** Go back to follow up on Monday's meetings, or forward to prepare for next week's.
+- **Close the day is a guided shutdown** that catches up on mail and Teams first and gives every loose end a place.
+- **You owe, and Waiting on.** What you have promised, and what others have promised you, show on Today.
+- **Followed people are private to you.** Nothing on screen or in anything creaite writes says who you follow closely.
+- **Smarter updates.** A message that moves an open item forward now updates it instead of raising a new one. Draft chase works from any item.
+- **Settings › People has filters,** and search reads emails saved in a project folder.
+
+## creaite 1.8.0
+
+The first full release, out of Beta.
+
+- **Nothing to relearn.** The dashboard was rebuilt underneath, but every screen, key and button is where it was.
+- **On-track milestones are always green,** in every theme, and read "On track" for clients too.
+- **Top risks and issues show at most five lines each.**
+- **Every AI drafts switch is honoured.** A switch you turned off greys its control and says why.
+- **"update creaite" finds the newest release again.**
+- **Fifteen smaller fixes** from hand checks and live diagnostics, including undo after approving a change, screen-reader names for Settings switches and the wordmark in high contrast.
+
+## creaite 1.7.0
+
+creaite's drafts reach your meetings and your Review.
+
+- **Draft the agenda and the invite text,** and follow-up and chase emails, from a meeting or an item.
+- **Decisions needed.** A band on Today lists each pending decision that has a decision maker and a needed-by date.
+- **One set of facts, many forms.** Generate can write the project's status as a Current state, a steering note, a three-line update, an email paragraph or a Teams message, each sentence with its sources.
+- **Looks like an item you already have.** When the minutes or the sweep propose something you already track, Review says so.
+- **Probably done.** When a mail or meeting shows an open item is finished, creaite proposes closing it.
+- **Sharpen on capture.** As you type a new action, chips suggest the owner, due date and wording.
+- **Activity › Quality** shows what you approve as proposed, approve after an edit and reject, by source.
+- **ask creaite reopens at once,** queues what you send while it works, and applies a change from one card.
+- **Changes show within a second** on an open dashboard, and a new wordmark sits at the top of the rail.
+- **Two security fixes.** ask creaite now asks before it changes the record, and Word files written from the command line go to drafts only.
+
+## creaite 1.6.1
+
+The largest update so far. creaite drafts the wording and you decide.
+
+- **Drafts that show their sources.** A Draft or Suggest button sits beside slow-to-write fields. A Current state drafted by creaite arrives with every sentence underlined; click one to see the facts behind it.
+- **A page for each meeting,** from invite to follow-up, with a strip showing where it is. The minutes record whether each agenda point was covered, touched on or not discussed.
+- **Close the day.** A one-minute card: what moved today, what you promised, what is still waiting, and the next working day.
+- **⌘K makes changes.** Type "move ABC-A-002 to fri" or "Omar owns the SOW action" and it does it.
+- **Right-click a work item** for a menu of the common actions, wherever the item appears.
+- **Review one at a time,** with the source beside each proposal, and a way to move a proposal, or a whole set of minutes, to another project.
+- **The live server can start when you log in,** and "update creaite" can fetch the release itself.
+- **Smaller things.** Undo waits for you, the open item follows your click, and ask creaite sends exactly what you typed.
+
+## creaite 1.5.2
+
+A one-line fix.
+
+- **ask creaite no longer trips its safety check just by looking inside a file.**
+
+## creaite 1.5.1
+
+Themes, and a clearer approval card.
+
+- **Four new themes,** bringing the total to nine: a warm cream one, a pale grey one, a 1980s arcade one and a thermal-camera one.
+- **Customise the left rail with a right-click.** Settings is now a gear.
+- **ask creaite's approval card shows how risky each change is,** yellow for settings and red for permission rules, with the way back.
+
+## creaite 1.5.0
+
+Milestones get a page of their own.
+
+- **Plan and Movement.** The pencil on a project's Milestones card opens a page with the plan and the history of every move.
+- **Five clear states:** Achieved, On track, At risk, Slipped and Overdue, each with its own shape.
+- **Internal view and Client view.** A switch shows what the client sees: only the milestones you have made visible to them, in their words.
+- **A likely date range,** once there is enough history, based on how your own milestones have slipped.
+- **Client reports list only client-visible milestones.** Mark the ones a client should see.
+- **Smaller things.** A page left open across a restart tells you to reload, and one Esc leaves a table cell.
+
+## creaite 1.4.0
+
+Items open for editing, and every count is a link.
+
+- **Open an item and just change it.** An action, risk or decision opens over the page, already editable. Each change is staged with Undo; ⌘↵ applies and closes. New items open the same way.
+- **Every count opens its list.** A number of actions, risks or decisions anywhere opens Work showing exactly those.
+- **ask creaite opens over the page** instead of squeezing it.
+- **Rename a project's Current state card,** arrange the left rail, and search Activity and undo several older changes.
+- **A weekend date is pointed out,** and errors show as a banner you can dismiss.
+
+## creaite 1.3.0
+
+Work is far quicker, Review triages in bulk, and ask creaite can administer.
+
+- **Work, faster.** Click to select, edit a value in the table, change several items at once, group the list or use swimlanes on the board, better filters and saved views you can keep up to date, and an All items tab.
+- **Review as a triage queue.** Select several, approve or change them together, give a reason when you reject, and possible duplicates are flagged.
+- **ask creaite as the administrator.** It reads and writes widely, but every sensitive change waits on one card you approve.
+- **Settings is one page** with categories and search.
+- **The meeting prep page shows only what needs attention.**
+- **A little motion,** with a Motion setting that follows your Mac's Reduce motion.
+- **Fixes.** An item number is never used twice in a project, an item ID in Activity opens the item, and two edits made in the same second no longer overwrite each other.
+
+## creaite 1.2.0
+
+Transcripts load themselves, Work has a board.
+
+- **Transcripts, from the calendar.** Intake shows which meetings have a transcript and brings the transcript and the meeting chat in for you.
+- **A Work board.** A List | Board switch for Actions and RAID, with cards in columns you can drag.
+- **Projects are called by their name** everywhere, with the short code only inside item IDs like ABC-A-003.
+- **Clear day** sets a day's meetings aside, with Undo and a list you can restore from.
+- **ask creaite can read all of Microsoft 365** (calendar, mail, Teams, SharePoint, OneDrive), while writing is still confirmed and sending or changing anything there stays off.
+- **Followed people, an ignore list and Prep pages.** Alerts come first in Today and Review, the sweep skips what you tell it to, and a Prep page for a meeting is saved in the project's Agendas folder.
+
+## creaite 1.1.0
+
+Project files can live in your company OneDrive.
+
+- **Project folders in OneDrive (optional).** creaite reads from them and files into them; the engine and the record stay on your laptop.
+- **Today as a brief:** short numbered sentences for what needs attention, your commitments, what resolved, the week ahead and the portfolio.
+- **Draft email.** On a person's page, a ready-to-copy message asking where their items stand. creaite never sends mail.
+- **Roomier editing.** The side panel is wider while you edit, and ⌘+Enter saves and closes it.
+- **Inbox is now Intake,** Help has three tabs, and there is a new teal theme.
+- **One-off Word documents** from the tracker, such as an actions register or a decision log.
+
+## creaite 1.0.0
+
+The first release for real use (Beta).
+
+- **Meetings to minutes.** A Teams transcript becomes draft Word minutes and proposed actions, decisions, risks and issues. Nothing is filed until you approve.
+- **A daily sweep** of Outlook and Teams proposes items from your mail and chats.
+- **Review and apply.** Proposals are grouped by project, bulk approval covers routine items only, and every apply can be undone.
+- **A dashboard:** Today, project pages, Work, People, Intake, Review, Files and Activity, with search that cites its sources and ask creaite, the assistant.
+- **Weekly and client-safe reports in Word,** and an Excel export you can browse and edit.
+- **Safe by design.** One writer for the record, approval before every write, a daily backup and updates that roll back if a step fails. Everything stays on your laptop.

@@ -56,6 +56,35 @@ About an hour, most of it telling creaite about your projects and the people on 
 3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.command` in the vault). It starts the live server and opens creaite in its own Chrome window. If you have no launcher yet: in Terminal, `system/scripts/run live_server.py`, then open the address it prints in Chrome or Edge, not Safari.
 4. **First sweep**: Let setup run the first sweep over the last 14 days, or press **Run the first sweep** on Today. Then open Review and approve what's right. Until set-up is done, Today shows a short checklist of these steps, each with its button. **Settings › Health › Set-up** runs the health check and rebuilds the views from the page, and says how to do the two things it can't (connect Microsoft 365, make the launcher), with **Copy** and **Check again**.
 
+## The twelve jobs
+
+*The jobs you will do most*
+
+Pick a job. Each link opens its steps.
+
+Jobs:
+- [Start the day](#start-the-day): See what needs you today.
+- [Review and approve proposals](#review-and-approve-proposals): Decide what creaite found.
+- [Turn a meeting into minutes](#turn-a-meeting-into-minutes): From a transcript to draft minutes.
+- [Prepare for a meeting](#prepare-for-a-meeting): A one-page brief for the next meeting.
+- [Capture a note](#capture-a-note): Write it down from any page.
+- [Add or change an item](#add-or-change-an-item): An action, risk, issue or decision.
+- [Ask someone for an update](#ask-someone-for-an-update): A draft email, never sent.
+- [Close the day](#close-the-day): Tidy up and plan tomorrow.
+- [Write the weekly report](#write-the-weekly-report): Health with reasons, ready to approve.
+- [Write a client report](#write-a-client-report): Only what is marked client-visible.
+- [Find anything](#find-anything): Search the vault, with sources.
+- [Undo a mistake](#undo-a-mistake): Every change has a way back.
+
+Screen: Today -> start-the-day, close-the-day, prepare-for-a-meeting | Reference: today
+Screen: Work -> add-or-change-an-item, move-work-on-the-board, change-an-item-from-k, hand-over-someones-work | Reference: working-with-lists
+Screen: Review -> review-and-approve-proposals, undo-a-mistake | Reference: review
+Screen: Projects -> update-a-projects-state-and-health, manage-milestones, write-the-weekly-report, keep-notes-on-a-project | Reference: project-page
+Screen: People -> ask-someone-for-an-update, hand-over-someones-work | Reference: people
+Screen: Notes -> capture-a-note, keep-notes-on-a-project, turn-a-note-into-tracker-changes | Reference: notes
+Screen: Intake -> turn-a-meeting-into-minutes, follow-a-meeting-from-invite-to-follow-up | Reference: intake
+Screen: Files -> find-anything | Reference: files
+
 ## Every day
 
 *Every day*
