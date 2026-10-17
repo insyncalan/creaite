@@ -9,7 +9,10 @@ Run: python3 dev/tests/test_notes_autosave_backups.py
     it; Undo of a save that isn't the latest still refuses, as before;
   - never joined: a change Alan approved on the card, a settings file, and a save while an ask creaite run is in progress
     (marked by outside content, where the note's change needs approval, or not marked): each has its own backup and no session;
-  - the log keeps a hash of the token, never the token.
+  - the log keeps a hash of the token, never the token;
+  - #175 (M2): a session ends 30 minutes after its first save (SESSION_MAX_AGE), and a session whose first save isn't in the log is
+    never joined; Undo then goes back one session at a time; (L3) a session's backup changed since is never reused, and _backup
+    never joins a settings file even when called as joinable.
 """
 import json
 import subprocess
@@ -83,6 +86,13 @@ class SessionBackups(unittest.TestCase):
         p = self.v.root / "system/config/files-log.jsonl"
         rows = self.log()
         rows[-1]["at"] = (datetime.now() - timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")
+        p.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+
+    def age(self, index, minutes):
+        """Make the log's line `index` `minutes` old."""
+        p = self.v.root / "system/config/files-log.jsonl"
+        rows = self.log()
+        rows[index]["at"] = (datetime.now() - timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")
         p.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
 
     # ── one session, one backup ──
@@ -225,6 +235,75 @@ class SessionBackups(unittest.TestCase):
         self.save("c\n")
         self.assertEqual(len(self.folders()), 3)
         self.assertTrue(all("session" not in e for e in self.edits()[1:]))
+
+
+class SessionCap(SessionBackups):
+    """#175: one Undo puts back at most about 30 minutes of typing (M2 of Team Cap's #119 review); L3's two gaps."""
+    def test_a_session_ends_thirty_minutes_after_its_first_save(self):
+        self.save("a\n")
+        self.save("b\n")
+        self.age(0, 29)                                             # first save 29 minutes ago, the last one just now
+        self.age(1, 1)
+        self.save("c\n")
+        self.assertEqual(len(self.folders()), 1, "under 30 minutes: still one session")
+        self.age(0, 31)                                             # first save over 30 minutes ago, saves never 5 minutes apart
+        self.age(1, 2)
+        self.age(2, 1)
+        self.save("d\n")
+        self.assertEqual(len(self.folders()), 2, "over 30 minutes from the first save: a new session")
+        es = self.edits()
+        self.assertEqual((self.v.root / es[-1]["backup"]).read_text(encoding="utf-8"), "c\n", "the new session's backup")
+        self.save("e\n")
+        self.assertEqual(len(self.folders()), 2, "the new session goes on as one")
+        self.assertEqual(self.edits()[-1]["backup"], es[-1]["backup"])
+
+    def test_undo_goes_back_one_capped_session_at_a_time(self):
+        original = self.text()
+        self.save("a\n")
+        self.save("b\n")
+        self.age(0, 31)
+        self.age(1, 1)
+        self.save("c\n")
+        self.save("d\n")
+        self.assertEqual(len(self.folders()), 2)
+        r = self.undo()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.text(), "b\n", "one Undo puts back only the newer session")
+        r = self.undo()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.text(), original, "the next Undo puts back the older session")
+        self.assertIn("Nothing to undo", self.undo().stdout)
+
+    def test_a_session_whose_first_save_is_not_in_the_log_is_never_joined(self):
+        self.save("a\n")
+        self.save("b\n")
+        p = self.v.root / "system/config/files-log.jsonl"
+        p.write_text("".join(json.dumps(r) + "\n" for r in self.log()[1:]), encoding="utf-8")
+        self.save("c\n")
+        self.assertEqual(len(self.folders()), 2)
+
+    def test_a_session_backup_changed_since_is_never_reused(self):
+        self.save("a\n")
+        (self.v.root / self.edits()[0]["backup"]).write_text("tampered\n", encoding="utf-8")
+        self.save("b\n")
+        self.assertEqual(len(self.folders()), 2)
+        self.assertNotEqual(self.edits()[-1]["backup"], self.edits()[0]["backup"])
+
+    def test_backup_never_joins_a_settings_file_even_when_called_as_joinable(self):
+        rel = "system/config/settings.json"
+        out = self.py(f"t = filechange.resolve({rel!r})\nb1 = {{'via': 'dashboard'}}\nb2 = {{'via': 'dashboard'}}\n"
+                      f"ch = {{'op': 'edit', 'path': {rel!r}, 'session': {rel + ':s-0001-abcd'!r}}}\n"
+                      "k1 = filechange._backup(ch, t, b1, 901, joinable=True)\nk2 = filechange._backup(ch, t, b2, 902, joinable=True)\n"
+                      "print(json.dumps([str(k1) != str(k2), 'session' in b1, 'session' in b2]))")
+        self.assertEqual(out, [True, False, False])
+
+
+def load_tests(loader, tests, pattern):
+    """Each class's own tests once: SessionCap inherits SessionBackups' helpers, not its tests."""
+    suite = unittest.TestSuite()
+    suite.addTests(loader.loadTestsFromTestCase(SessionBackups))
+    suite.addTests(SessionCap(n) for n in loader.getTestCaseNames(SessionCap) if n in SessionCap.__dict__)
+    return suite
 
 
 if __name__ == "__main__":
