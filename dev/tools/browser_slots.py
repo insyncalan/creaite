@@ -57,6 +57,7 @@ class Slot:
         self.path, self.fh = path, fh
 
     def release(self):
+        """Let the slot go (safe to call twice)."""
         if self.fh:
             try:
                 fcntl.flock(self.fh, fcntl.LOCK_UN)
