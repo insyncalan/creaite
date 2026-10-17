@@ -36,8 +36,7 @@ class PanelCase(LiveBrowserCase):
         b.eval("go('work')")
         b.wait("document.querySelector('#workTbl tbody tr[data-row]')")
         id_ = id_ or self.first_action_id()
-        b.click(f'#workTbl tr[data-row="{id_}"] a.rowid')
-        b.wait("document.getElementById('panel').classList.contains('on')")
+        b.click_until(f'#workTbl tr[data-row="{id_}"] a.rowid', "document.getElementById('panel').classList.contains('on')")   # #152: pressed again if a redraw took the click
         import time
         last = -1
         for _ in range(40):                                                                         # wait for the slide to finish

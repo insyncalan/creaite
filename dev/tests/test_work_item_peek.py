@@ -50,7 +50,8 @@ class PeekCase(LiveBrowserCase):
         id_ = id_ or b.eval({"actions": "A", "raid": "R", "decisions": "DEC"}[k] + ".find(x=>x.p==='ABC').id")
         if click:
             b.wait(f"document.querySelector('#workTbl tr[data-row=\"{id_}\"] a.rowid')")
-            b.click(f'#workTbl tr[data-row="{id_}"] a.rowid')
+            b.click_until(f'#workTbl tr[data-row="{id_}"] a.rowid',                 # #152: a click lost to a redraw is pressed again
+                          f"CUR&&CUR.id==={id_!r}&&document.getElementById('panel').classList.contains('peek')")
         else:
             b.eval(f"openRecord({k!r},{id_!r})")
         b.wait(f"CUR&&CUR.id==={id_!r}&&document.getElementById('panel').classList.contains('peek')")

@@ -192,12 +192,15 @@ class ScrollTests(SheetCase):
         self.assertAlmostEqual(b.eval("document.querySelector('#shFix .sheet-scroll').scrollTop"), top, delta=3)
         b.click("#shFix .sheet-bar .btn[aria-pressed]")              # Show as exported
         b.wait("document.querySelectorAll('#shFix .sheet-handle').length===0")
+        b.wait(f"({TOP})[0]==='this_week'", 5)                      # the place is put back on the frame after the redraw (#152)
         self.assertEqual(b.eval(TOP)[0], "this_week")
         b.click("#shFix .sheet-bar .btn[aria-pressed]")
         b.wait("document.querySelectorAll('#shFix .sheet-handle').length>0")
+        b.wait(f"({TOP})[0]==='this_week'", 5)
         self.assertEqual(b.eval(TOP)[0], "this_week")
         # a save or a reload gives the view a new document and version: drawn again, the view stays where it was
         b.eval("SH.doc = JSON.parse(JSON.stringify(SH.doc)); SH.doc.version = 4; SH.base = 4; SH.draw();")
+        b.wait(f"({TOP})[0]==='this_week'", 5)
         self.assertEqual(b.eval(TOP)[0], "this_week")
         self.assertAlmostEqual(b.eval(TOP)[1], 20, delta=12)           # the section is where it was (the exported page is a few pixels different)
 

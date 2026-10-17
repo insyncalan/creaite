@@ -61,14 +61,14 @@ class Bars(LiveBrowserCase):
         b = self.b
         b.eval("go('notes','ABC')")
         b.wait("!!document.getElementById('notesNew')")
-        b.click("#notesNew")
-        b.wait("document.getElementById('newNoteDlg').open")
+        b.click_until("#notesNew", "document.getElementById('newNoteDlg').open")          # #152: a click lost to a redraw is pressed again
         b.eval(f"(()=>{{ const i=document.getElementById('nnTitle'); i.value={title!r}; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         b.eval("document.querySelector('#newNoteDlg input[value=\"blank\"]').click()")
         b.click("#nnMake")
         b.wait("!!document.querySelector('.nbody.ProseMirror')", 15)
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.frames(3)                                                  # the editor gives itself focus a frame later: let that land first (#152)
 
     def open_current(self, state=STATE):
         b = self.b
@@ -194,7 +194,9 @@ class Bars(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-keyshortcuts')"), None)
         b.type("word")
         b.click(".nbar [data-nt=i]")
-        self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"), ["i"])
+        stops = "[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"
+        b.wait(f"{stops}.length===1", 5)                                 # the stop moves on the next render (#152: two stops for a moment on macOS CI)
+        self.assertEqual(b.eval(stops), ["i"])
         # a key pressed while an input method is composing is not ⌘⇧K / ⌘⇧X
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)

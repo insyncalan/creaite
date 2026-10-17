@@ -418,7 +418,9 @@ class Bar117(LiveBrowserCase):
             self.assertFalse(b.eval("!!window.aiSug.value"))                                     # no Claude run, no suggestion
             self.assertTrue(b.eval(f"!!document.querySelector('{LAYER} .aibar')"))                # the bar stays open for the next turn
             self.turn_menu()
-            self.assertEqual(b.eval(f"document.querySelector('{LAYER} [role=menu] [data-turn={kind}]').getAttribute('aria-checked')"), "true", kind)
+            tick = f"document.querySelector('{LAYER} [role=menu] [data-turn={kind}]')?.getAttribute('aria-checked')"
+            b.wait(f"{tick}==='true'", 5)                       # the tick follows the editor's selection a render later (#152: macOS CI)
+            self.assertEqual(b.eval(tick), "true", kind)
             b.key("Escape")
             b.pump(0.6)                                                                          # the editor's history groups edits made within half a second
         # the toast's Undo and ⌘Z: both use the editor's own history
