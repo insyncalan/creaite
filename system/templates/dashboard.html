@@ -49914,6 +49914,9 @@ ${d5.text}`);
     const d5 = hsNorm(res);
     return d5 ? { ok: true, d: d5 } : { ok: false, message: "The suggestion couldn't be read; nothing changed" };
   }
+  function hsAgainst(d5, shown2) {
+    return shown2 ? { ...d5, differs: shown2 !== d5.health, current: { ...d5.current, health: shown2 } } : d5;
+  }
   var hsDiffLine = (d5) => d5.differs ? `The facts suggest ${d5.health}, you have ${d5.current.health || "no health set"}.` : "";
   var hsTone = (h5) => h5 === "On track" ? "ok" : h5 === "At risk" ? "warn" : "bad";
   var hsUse = (a5, b5) => String(a5 || "").replace(/\s+/g, " ").trim() === String(b5 || "").replace(/\s+/g, " ").trim() ? "used" : "edited";
@@ -50339,6 +50342,7 @@ ${d5.text}`);
     if (curGuard(() => openProject(code, what))) return;
     const p6 = P3.find((x5) => x5.code === code);
     HSG = null;
+    HSUSED = null;
     shared.CUR = { mode: what, k: "project", code, draft: { health: p6.health, reason: p6.reason, current: p6.current } };
     shared.EDITING = true;
     shared.HBACK = what === "health" && document.activeElement && document.activeElement.closest("[data-edproj]") || null;
@@ -52807,6 +52811,7 @@ ${d5.text}`);
     const b5 = $("#pFields [data-hsuggest]");
     if (b5) b5.focus();
   }
+  var HSUSED = null;
   function hsFill() {
     const c5 = HSG;
     if (!c5 || !c5.d) return false;
@@ -52814,9 +52819,12 @@ ${d5.text}`);
     if (!hs2 || !rs2) return false;
     hs2.value = c5.d.health;
     hs2.dispatchEvent(new Event("change", { bubbles: true }));
-    rs2.value = c5.reason;
-    rs2.dispatchEvent(new Event("input", { bubbles: true }));
-    hsStat(hsUse(c5.reason, c5.d.reason));
+    if (rs2.value !== c5.base) snack("Your reason was kept: you changed it while the suggestion was being written");
+    else {
+      rs2.value = c5.reason;
+      rs2.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    HSUSED = { suggested: c5.d.reason };
     HSG = null;
     hSugDraw();
     return true;
@@ -52833,7 +52841,7 @@ ${d5.text}`);
       snack(why);
       return;
     }
-    const code = shared.CUR.code, mine = { code, html: "", d: null, reason: "" };
+    const code = shared.CUR.code, mine = { code, html: "", d: null, reason: "", base: $("#f_reason")?.value ?? "" };
     HSG = mine;
     const res = await hsAsk(code, "internal", { status: (h5) => {
       if (HSG === mine) {
@@ -52959,6 +52967,11 @@ ${d5.text}`);
         hsClose(true);
       }
     });
+    $("#pFoot").addEventListener("click", (e4) => {
+      if (!HSUSED || !e4.target.closest("#pSave")) return;
+      hsStat(hsUse($("#f_reason")?.value, HSUSED.suggested));
+      HSUSED = null;
+    }, true);
     $("#pFoot").addEventListener("click", (e4) => {
       if (!shared.DRH || !shared.DRH.used || !e4.target.closest("#pSave")) return;
       draftStat("reason", drSame($("#f_reason")?.value, shared.DRH.used) ? "used" : "edited");
@@ -65257,12 +65270,15 @@ ${d5.text}`);
     };
   }
   function redrafter(base, place2, audience = "internal", applyFor) {
-    return async (s5) => s5.type === "health" ? healthAnswer(await hsAsk(String(base().code || ""), audience), applyFor) : redraftAnswer(await draftAsk(redraftRequest(s5, base(), REDRAFT_KIND[place2]), { label: `Redrafting ${s5.heading}` }), s5);
+    return async (s5) => s5.type === "health" ? healthAnswer(await hsAsk(String(base().code || ""), audience), applyFor, String(
+      /** @type {any} */
+      (s5.data || {}).flag || ""
+    )) : redraftAnswer(await draftAsk(redraftRequest(s5, base(), REDRAFT_KIND[place2]), { label: `Redrafting ${s5.heading}` }), s5);
   }
-  function healthAnswer(r4, applyFor) {
+  function healthAnswer(r4, applyFor, shown2 = "") {
     if (r4.nothing) throw new Error(r4.nothing);
     if (!r4.ok || !r4.d) throw new Error(r4.message || "No draft came back");
-    const d5 = r4.d;
+    const d5 = hsAgainst(r4.d, shown2);
     return {
       text: d5.reason,
       health: d5.health,
@@ -66819,7 +66835,7 @@ ${d5.text}`);
     meta: healthDiff(doc, crInternal.value ? flagOf(
       /** @type {SheetDoc} */
       crInternal.value
-    ) : d5.health, d5.health, "Suggested from the client-visible items")
+    ) : d5.health, d5.health, "")
   });
   var crMounted = false;
   function renderClientReport(arg) {

@@ -115,10 +115,10 @@ export function ClientView() {
 }
 
 /** #203: Use on the client sheet's health suggestion: the client's flag and headline, and why the flag differs from the internal one when
-    it does (kept internally, never on the client's page; Alan can change it in the flag's popover). @param {{health: string, reason: string}} d */
+    it does. The reason is left empty: Alan writes why in the flag's popover (kept internally, never on the client's page). @param {{health: string, reason: string}} d */
 const clientHealthApply = d => (/** @type {SheetDoc} */ doc, /** @type {{id: string}} */ s) => ({
   ...doc, sections: doc.sections.map(x => x.id === s.id ? { ...x, text: d.reason, data: { ...((/** @type {any} */ (x)).data || {}), flag: d.health } } : x),
-  meta: healthDiff(doc, crInternal.value ? flagOf(/** @type {SheetDoc} */ (crInternal.value)) : d.health, d.health, "Suggested from the client-visible items") });
+  meta: healthDiff(doc, crInternal.value ? flagOf(/** @type {SheetDoc} */ (crInternal.value)) : d.health, d.health, "") });
 
 let crMounted = false;
 /** Draw the client view into #v-clientreport and open the report: {code, week?, client?} or its address text "CODE/week/client".

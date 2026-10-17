@@ -9,7 +9,7 @@
    - Counts (offered is the server's; used, edited and rejected are here): counts only, never text. "Edited" is a used suggestion
      Alan then changed (#90 review K5), so it is counted on top of "used". */
 import { draftAsk, draftStat } from "../../drafts.js";
-import { HS_FEATURE, hsAsk, hsDiffLine, hsTone } from "../../healthSuggest.js";
+import { HS_FEATURE, hsAgainst, hsAsk, hsDiffLine, hsTone } from "../../healthSuggest.js";
 
 /** @typedef {{id: string, heading: string, type: string, text?: string, panes?: {title: string, text: string}[]}} Sec */
 
@@ -42,18 +42,18 @@ export function redraftAnswer(r, s) {
     @param {(d: any) => (doc: any, s: any) => any} [applyFor] how Use changes the document for a health suggestion (the client sheet)
     @returns {(s: Sec) => Promise<import("./Sheet.jsx").Redraft>} */
 export function redrafter(base, place, audience = "internal", applyFor) {
-  return async s => s.type === "health" ? healthAnswer(await hsAsk(String(base().code || ""), audience), applyFor)
+  return async s => s.type === "health" ? healthAnswer(await hsAsk(String(base().code || ""), audience), applyFor, String(((/** @type {any} */ (s)).data || {}).flag || ""))
     : redraftAnswer(await draftAsk(redraftRequest(s, base(), REDRAFT_KIND[place]), { label: `Redrafting ${s.heading}` }), s);
 }
 
 /** #203: the Redraft for a health row from hsAsk's answer: the suggested flag and reason, the difference flagged in plain words, the
     evidence with item IDs. `applyFor(d)` (the client sheet) gives how Use changes the whole document, as it also records why its flag
     differs from the internal one. Throws the words to show.
-    @param {any} r @param {((d: any) => (doc: any, s: any) => any)} [applyFor] @returns {import("./Sheet.jsx").Redraft} */
-export function healthAnswer(r, applyFor) {
+    @param {any} r @param {((d: any) => (doc: any, s: any) => any)} [applyFor] @param {string} [shown] the flag the sheet shows, which the difference is measured against @returns {import("./Sheet.jsx").Redraft} */
+export function healthAnswer(r, applyFor, shown = "") {
   if (r.nothing) throw new Error(r.nothing);
   if (!r.ok || !r.d) throw new Error(r.message || "No draft came back");
-  const d = r.d;
+  const d = hsAgainst(r.d, shown);
   return { text: d.reason, health: d.health, tone: hsTone(d.health), diff: hsDiffLine(d), evidence: d.evidence, sources: [],
     ...(applyFor ? { apply: applyFor(d) } : {}) };
 }
