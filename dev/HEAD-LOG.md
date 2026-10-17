@@ -4,6 +4,12 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | #194: the note-row menu opens WITHOUT opening the note | Alan's answer to the radar |
+| 17-10-2026 | Alan | Help (#158 Phase B) and the plain release notes (#201) go into v2.2.0 (they were v2.2.1); Jarvis to say whether it works | Alan: 'include help into 2.2' |
+| 17-10-2026 | Alan | #132 G8: API keys are an available option for ALL providers, Claude included (reverses the recommendation to hide Claude's key option) | Alan's answer on G8 |
+| 17-10-2026 | Alan | IT has approved the OpenAI egress (#132 G2/G4); #132 stays in v2.3.0 | Alan |
+| 17-10-2026 | Alan | #193: run all of it, findings 7 and 8 included (h1/h2 sizes; one button, input and chip style) | Alan: 'run all of 193' |
+| 17-10-2026 | Alan | #153: the Review menu label is plain 'Draft email', despite the perceived clash with the other menu item | Alan |
 | 17-10-2026 | Alan | Theme names (Notion, Linear, Cursor palettes): leave them | Alan's answer to the radar's Needs Alan list |
 | 17-10-2026 | Alan | Parked items (#183, #181 to #185, #112, and similar) are on hold: Jarvis does not discuss or list them until Alan raises them again | Alan: 'do not discuss until I raise them again' |
 | 17-10-2026 | Alan | #175 guarded proposal (notes-175-guarded-proposal caeaea94): YES to all six yes/no answers | Alan's answer to the radar |
