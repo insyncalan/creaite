@@ -152,6 +152,19 @@ class LiveBrowserCase(unittest.TestCase):
                 if attempt == 2:
                     raise
 
+    def _callTestMethod(self, method):
+        """A failing test says where the page was, as a failing wait does (nothing about what passes changes)."""
+        try:
+            return super()._callTestMethod(method)
+        except (AssertionError, TimeoutError) as e:
+            b = getattr(self, "b", None)
+            if b is not None and "page state" not in str(e):
+                try:
+                    e.args = (f"{e}\n{b._where()}",) + e.args[1:]
+                except Exception:
+                    pass
+            raise
+
     def _close_browser(self):
         b, self.b = getattr(self, "b", None), None
         if b:
