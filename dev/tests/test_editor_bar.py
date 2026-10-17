@@ -201,12 +201,12 @@ class Bars(LiveBrowserCase):
         mac = "true" if b.is_mac() else "false"
         b.eval("""document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:%s,ctrlKey:%s,shiftKey:true,isComposing:true,bubbles:true,cancelable:true}))""" % (mac, "false" if b.is_mac() else "true"))
         b.pump(0.2)
-        self.assertTrue(b.eval("document.querySelector('.nbar .rtelink').hidden"))
+        self.assertFalse(b.eval("!!document.querySelector('.linkpop')"))
         b.eval("(()=>{ const d=document.getElementById('cmdk'); if(d.open) d.close(); })()")        # (the palette's own key handler is not ours)
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         b.eval("""document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:%s,ctrlKey:%s,shiftKey:true,bubbles:true,cancelable:true}))""" % (mac, "false" if b.is_mac() else "true"))
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)       # and the same key not composing does open it
+        b.wait("!!document.querySelector('.linkpop')", 5)       # and the same key not composing does open it
 
     def test_targets_are_24px_and_the_bar_names_every_button(self):
         b = self.b
@@ -255,11 +255,11 @@ class Bars(LiveBrowserCase):
         b.type("see the plan")
         b.eval("(()=>{ const e=document.querySelector('.nbody').cxed.editor; const to=e.state.selection.from; e.commands.setTextSelection({from:to-8,to}); })()")
         b.key("k", mod | SHIFT)
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!!document.querySelector('.linkpop')", 5)
         self.assertFalse(b.eval(palette))
         b.type("https://example.com/plan")
         b.key("Enter")
-        b.wait("document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!document.querySelector('.linkpop')", 5)
         md = b.eval("document.querySelector('.nbody').cxed.value()")
         self.assertIn("see [the plan](https://example.com/plan)", md)
         b.key("k", mod)                                                  # ⌘K in an editor is still the palette
@@ -273,7 +273,7 @@ class Bars(LiveBrowserCase):
         b.type("bad link")
         b.key("a", mod)
         b.click(".nbar [data-nt=link]")
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!!document.querySelector('.linkpop')", 5)
         b.type("javascript:alert(1)")
         b.key("Enter")
         self.assertNotIn("javascript", b.eval("document.querySelector('.nbody').cxed.value()"))

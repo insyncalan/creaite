@@ -698,7 +698,6 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
 .curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px} .rtegrp{display:inline-flex;gap:2px;flex:none}   /* a group (and the divider before it) wraps as one: no divider ends a line */
-.rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
 /* #110 (part A): Generate is 736px wide (460 x 1.6), 92vw at most; the body scrolls and the footer stays in view. Four quiet settings in one strip
@@ -3750,6 +3749,22 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
 .sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
 .sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
+/* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
+.linkpop{position:fixed;z-index:221;width:320px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop,0 8px 24px rgba(0,0,0,.18));padding:10px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);color:var(--ink)}
+.linkpop label{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.linkpop input{height:30px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink);font:inherit;width:100%;box-sizing:border-box}
+.linkpop input:focus-visible,.linkpop button:focus-visible,.linkpop a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.linkpop input[aria-invalid=true]{border-color:var(--bad,#b3261e)}
+.linkpop input:disabled{color:var(--muted);background:var(--sunk)}
+.linkerr{min-height:0;color:var(--bad,#b3261e);font-size:12px} .linkerr:empty{display:none}
+.linkrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.linkpop button,.linkpop a.linkopen{height:28px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font:inherit;cursor:pointer;text-decoration:none}
+.linkpop button:hover,.linkpop a.linkopen:hover{background:var(--accent-soft)}
+.linkpop .linkgo{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.linkpop .linkgo:hover{filter:brightness(.95);background:var(--accent)}
+.linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
+.linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+@media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}
 </style>
 </head>
 <body>
@@ -4140,6 +4155,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     KL: () => KL,
     LASTVISIT: () => LASTVISIT,
     LCOLL: () => LCOLL,
+    LINK_MAX: () => LINK_MAX,
+    LINK_REFUSED: () => LINK_REFUSED,
     LLF: () => LLF,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
@@ -4524,6 +4541,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     appTint: () => appTint,
     apply: () => apply,
     applyFilters: () => applyFilters,
+    applyLink: () => applyLink,
     applyMotion: () => applyMotion,
     applyNow: () => applyNow,
     applyPending: () => applyPending,
@@ -4546,6 +4564,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     atMatches: () => atMatches,
     atQuery: () => atQuery,
     attachDraw: () => attachDraw,
+    attachLink: () => attachLink,
     attachRun: () => attachRun,
     attentionItems: () => attentionItems,
     autoGrow: () => autoGrow,
@@ -4621,6 +4640,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     bootIntake0136: () => bootIntake0136,
     bootIntake0137: () => bootIntake0137,
     bootKeyboard: () => bootKeyboard,
+    bootLinkPopover: () => bootLinkPopover,
     bootLive: () => bootLive,
     bootMeetings0125: () => bootMeetings0125,
     bootMeetings0126: () => bootMeetings0126,
@@ -5290,10 +5310,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     initials: () => initials,
     insertImage: () => insertImage,
     intakeSeams: () => intakeSeams,
+    internalIn: () => internalIn,
     isConflict: () => isConflict,
     isDark: () => isDark,
     isDateField: () => isDateField,
     isHiddenPerson: () => isHiddenPerson,
+    isInternalHref: () => isInternalHref,
+    isLinkUrl: () => isLinkUrl,
     isMe: () => isMe,
     isMin: () => isMin,
     isNewUndated: () => isNewUndated,
@@ -5317,6 +5340,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     jumpLink: () => jumpLink,
     kOfId: () => kOfId,
     kb: () => kb2,
+    keepHref: () => keepHref,
     keysSeen: () => keysSeen,
     kidsOf: () => kidsOf,
     kindLabel: () => kindLabel,
@@ -5332,6 +5356,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     legBtn: () => legBtn,
     lev: () => lev,
     linesFrom: () => linesFrom,
+    linkAt: () => linkAt,
+    linkGuard: () => linkGuard,
+    linkUrl: () => linkUrl,
     listBody: () => listBody,
     listGroupOf: () => listGroupOf,
     listHtml: () => listHtml,
@@ -5629,6 +5656,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     openFromAddress: () => openFromAddress,
     openGen: () => openGen,
     openItemsAsk: () => openItemsAsk,
+    openLinkForm: () => openLinkForm,
     openMenu: () => openMenu,
     openMilestone: () => openMilestone,
     openMinutesFollowup: () => openMinutesFollowup,
@@ -5689,6 +5717,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     parseReporting: () => parseReporting,
     parseWhen: () => parseWhen,
     passes: () => passes,
+    pasteLink: () => pasteLink,
     pdAll: () => pdAll,
     pdBar: () => pdBar,
     pdDrop: () => pdDrop,
@@ -5998,6 +6027,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     remMenu: () => remMenu,
     remPick: () => remPick,
     removeInbox: () => removeInbox,
+    removeLink: () => removeLink,
     removeLoaded: () => removeLoaded,
     renameAll: () => renameAll,
     renameHeading: () => renameHeading,
@@ -6210,6 +6240,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     savingIds: () => savingIds,
     say: () => say,
     sayMd: () => sayMd,
+    scrubNow: () => scrubNow,
     searchCkItems: () => searchCkItems,
     searchFetch: () => searchFetch,
     searchIco: () => searchIco,
@@ -6358,6 +6389,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     toggleGroup: () => toggleGroup,
     toggleNotesList: () => toggleNotesList,
     tx: () => tx2,
+    typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
     undCommit: () => undCommit,
     undatedCard: () => undatedCard,
@@ -6858,8 +6890,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   }
 
   // core/dom.js
-  var $ = (s5, root = document) => root.querySelector(s5);
-  var $$ = (s5, root = document) => [...root.querySelectorAll(s5)];
+  var $ = (s5, root2 = document) => root2.querySelector(s5);
+  var $$ = (s5, root2 = document) => [...root2.querySelectorAll(s5)];
   var esc = (s5) => String(s5 ?? "").replace(/[&<>"]/g, (c5) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c5]);
   var SafeHTML = class {
     constructor(s5) {
@@ -6964,8 +6996,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     const sz = o5.size ? ` width="${o5.size}" height="${o5.size}" style="width:${o5.size}px;height:${o5.size}px"` : "";
     return `<svg class="${o5.bare ? "" : "i"}${o5.cls ? " " + o5.cls : ""}" viewBox="0 0 24 24"${sz} fill="none" stroke="currentColor" stroke-width="${o5.w || 1.8}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="${name}">${ICONS[name] || ""}</svg>`;
   }
-  function paintIcons(root) {
-    (root || document).querySelectorAll("svg[data-ic]").forEach((s5) => {
+  function paintIcons(root2) {
+    (root2 || document).querySelectorAll("svg[data-ic]").forEach((s5) => {
       if (!s5.dataset.icn) {
         putHTML(s5, raw(ICONS[s5.dataset.ic] || ""));
         s5.dataset.icn = s5.dataset.ic;
@@ -7032,8 +7064,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       if (tip) b5.dataset.tip = tip;
     }, 1100);
   }
-  function tipUp(root) {
-    const L3 = root.matches && root.matches("button") ? [root] : [...root.querySelectorAll ? root.querySelectorAll("button:not([data-tip])") : []];
+  function tipUp(root2) {
+    const L3 = root2.matches && root2.matches("button") ? [root2] : [...root2.querySelectorAll ? root2.querySelectorAll("button:not([data-tip])") : []];
     L3.forEach((b5) => {
       if (b5.dataset.tip || b5.closest(".rail")) return;
       const lab = b5.getAttribute("aria-label");
@@ -7744,9 +7776,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   function drawStatusDot(host2, props) {
     R(/* @__PURE__ */ u2(StatusDot, { ...props }), host2);
   }
-  function mountStatusDots(root) {
-    if (!root) return;
-    for (const ph2 of root.querySelectorAll("span[data-statusdot]")) ph2.replaceWith(...statusDotNodes({ health: ph2.getAttribute("data-statusdot") || "" }));
+  function mountStatusDots(root2) {
+    if (!root2) return;
+    for (const ph2 of root2.querySelectorAll("span[data-statusdot]")) ph2.replaceWith(...statusDotNodes({ health: ph2.getAttribute("data-statusdot") || "" }));
   }
 
   // components/Icon.jsx
@@ -12253,6 +12285,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
     table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
     image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
+    link: { id: "link", group: "Link", name: "Link", desc: "A web page or an email address (⌘⇧K)", icon: "↗", alias: ["url", "web", "href", "address"], hook: "link" },
     item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", alias: ["item", "work", "workitem", "issue", "action", "risk", "decision"], host: true },
     person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
     note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
@@ -12273,6 +12306,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       "codeblock",
       "table",
       "image",
+      "link",
       "item",
       "person",
       "note",
@@ -12280,7 +12314,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       "tpl:lessons-learned",
       "tpl:working-session"
     ],
-    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "item"],
+    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
     plain: [],
     none: []
   };
@@ -12390,314 +12424,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     const e4 = h5.editor;
     t47.run(e4.chain().focus(), e4).run();
     return true;
-  }
-
-  // components/EditorBar.jsx
-  var BARS = /* @__PURE__ */ new Set();
-  function editorBarFor(t47) {
-    const el2 = (
-      /** @type {Element|null} */
-      t47 && /** @type {Element} */
-      t47.closest ? t47 : null
-    );
-    if (!el2) return null;
-    for (const b5 of BARS) {
-      const h5 = b5.handle();
-      if (h5 && h5.el && (h5.el === el2 || h5.el.contains(el2) || el2.closest(".ProseMirror") === h5.editor.view.dom)) return b5;
-    }
-    return null;
-  }
-  var keysOn = false;
-  function keysInit() {
-    if (keysOn) return;
-    keysOn = true;
-    document.addEventListener("keydown", (e4) => {
-      if (e4.isComposing || !(e4.metaKey || e4.ctrlKey) || !e4.shiftKey || e4.altKey) return;
-      const k5 = e4.key.toLowerCase();
-      if (k5 !== "k" && k5 !== "x") return;
-      const b5 = editorBarFor(e4.target);
-      if (!b5) return;
-      e4.preventDefault();
-      e4.stopPropagation();
-      if (k5 === "k") b5.link();
-      else {
-        const h5 = b5.handle();
-        if (h5) runTool(h5, "s");
-      }
-    }, true);
-  }
-  var okUrl = (u5) => /^(https?:\/\/|mailto:)\S+$/i.test(u5);
-  function EditorBar({ profile, handle: handle2, host: host2, cls, label, legacyRc, extra }) {
-    const bar = A2(
-      /** @type {HTMLDivElement|null} */
-      null
-    );
-    const form = A2(
-      /** @type {HTMLSpanElement|null} */
-      null
-    );
-    const [link, setLink] = d2(
-      /** @type {{from: number, to: number, url: string, has?: boolean}|null} */
-      null
-    );
-    const [cur, setCur] = d2(0);
-    const [, tick] = d2(0);
-    const tools = profileTools(profile, Object.keys(host2 || {}));
-    const buttons = (
-      /** @type {import("../core/editorProfiles.js").ToolDef[]} */
-      tools.filter((t47) => t47 !== "|")
-    );
-    const refresh = () => {
-      const root = bar.current, h5 = handle2();
-      if (!root || !h5 || h5.editor.isDestroyed) return;
-      tick((n4) => n4 + 1);
-      for (
-        const b5 of
-        /** @type {NodeListOf<HTMLElement>} */
-        root.querySelectorAll("button[data-nt]")
-      ) {
-        const t47 = ED_TOOLS[b5.dataset.nt || ""];
-        if (!t47) continue;
-        if (t47.on) b5.setAttribute("aria-pressed", t47.on(h5.editor) ? "true" : "false");
-        if (t47.can) {
-          if (t47.can(h5.editor)) b5.removeAttribute("aria-disabled");
-          else b5.setAttribute("aria-disabled", "true");
-        }
-      }
-    };
-    const openLink = () => {
-      const h5 = handle2();
-      if (!h5) return;
-      const s5 = h5.editor.state.selection;
-      setLink({ from: s5.from, to: s5.to, url: h5.editor.getAttributes("link").href || "", has: h5.editor.isActive("link") });
-    };
-    h2(() => {
-      const me2 = { handle: handle2, link: openLink };
-      BARS.add(me2);
-      keysInit();
-      document.addEventListener("selectionchange", refresh);
-      document.addEventListener("focusin", refresh);
-      refresh();
-      return () => {
-        BARS.delete(me2);
-        document.removeEventListener("selectionchange", refresh);
-        document.removeEventListener("focusin", refresh);
-      };
-    }, [profile]);
-    h2(() => {
-      if (link && form.current) {
-        const i5 = form.current.querySelector("input");
-        if (i5) {
-          i5.focus();
-          i5.select();
-        }
-      }
-    }, [link !== null]);
-    const run = (id2) => {
-      const h5 = handle2(), t47 = ED_TOOLS[id2];
-      if (!h5 || !t47) return;
-      if (id2 === "link") {
-        openLink();
-        return;
-      }
-      if (t47.host) {
-        const f5 = host2 && host2[id2];
-        if (f5) f5();
-        return;
-      }
-      runTool(h5, id2);
-      refresh();
-    };
-    const removeLink = () => {
-      const h5 = handle2(), l6 = link;
-      setLink(null);
-      if (h5 && l6) h5.editor.chain().focus().setTextSelection({ from: l6.from, to: l6.to }).extendMarkRange("link").unsetLink().run();
-    };
-    const finish = (add) => {
-      const h5 = handle2(), l6 = link;
-      setLink(null);
-      if (!h5 || !l6) return;
-      const c5 = h5.editor.chain().focus().setTextSelection({ from: l6.from, to: l6.to }), url = (form.current?.querySelector("input")?.value || "").trim();
-      if (add && okUrl(url)) {
-        if (l6.from === l6.to && !h5.editor.isActive("link")) c5.insertContent({ type: "text", text: url, marks: [{ type: "link", attrs: { href: url } }] }).run();
-        else c5.extendMarkRange("link").setLink({ href: url }).run();
-      } else {
-        c5.run();
-        if (add && url) snack("Use a web (https) or mail (mailto) link");
-      }
-    };
-    const keys = (e4) => {
-      const t47 = (
-        /** @type {Element} */
-        e4.target
-      );
-      if (t47.closest && t47.closest(".rtelink")) {
-        if (e4.key === "Enter" && t47.tagName === "INPUT") {
-          e4.preventDefault();
-          finish(true);
-        } else if (e4.key === "Escape") {
-          e4.preventDefault();
-          e4.stopPropagation();
-          finish(false);
-        }
-        return;
-      }
-      const b5 = (
-        /** @type {HTMLElement|null} */
-        t47.closest ? t47.closest("button[data-nt]") : null
-      );
-      if (!b5) return;
-      if (e4.key === "ArrowDown") tick((n4) => n4 + 1);
-      const i5 = buttons.findIndex((x5) => x5.id === b5.dataset.nt);
-      let to2 = -1;
-      if (e4.key === "ArrowRight") to2 = (i5 + 1) % buttons.length;
-      else if (e4.key === "ArrowLeft") to2 = (i5 + buttons.length - 1) % buttons.length;
-      else if (e4.key === "Home") to2 = 0;
-      else if (e4.key === "End") to2 = buttons.length - 1;
-      else if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        const h5 = handle2();
-        if (h5) h5.focus();
-        return;
-      }
-      if (to2 < 0) return;
-      e4.preventDefault();
-      e4.stopPropagation();
-      setCur(to2);
-      requestAnimationFrame(() => {
-        const n4 = bar.current && bar.current.querySelector(`button[data-nt="${buttons[to2].id}"]`);
-        if (n4) n4.focus();
-      });
-    };
-    h2(() => {
-      const root = bar.current;
-      if (!root) return;
-      for (
-        const n4 of
-        /** @type {NodeListOf<HTMLElement>} */
-        root.querySelectorAll("button[data-nt]")
-      ) n4.tabIndex = buttons[cur] && buttons[cur].id === n4.dataset.nt ? 0 : -1;
-    });
-    if (!buttons.length) return null;
-    const menuItems = (m5) => {
-      const e4 = handle2()?.editor, live = e4 && !e4.isDestroyed;
-      return (
-        /** @type {any[]} */
-        (m5.items || []).map((x5, i5) => x5 === "|" ? { id: `sep${i5}`, sep: true } : {
-          id: x5.id,
-          name: x5.name,
-          ...x5.hint ? { mark: x5.hint } : {},
-          data: { cmd: x5.id },
-          ...x5.on ? { radio: true, checked: !!(live && x5.on(e4)) } : {},
-          ...x5.can && !(live && x5.can(e4)) ? { disabled: true } : {}
-        })
-      );
-    };
-    const groups = tools.reduce(
-      (out, t47) => {
-        if (t47 === "|") out.push([]);
-        else out[out.length - 1].push(t47);
-        return out;
-      },
-      /** @type {any[][]} */
-      [[]]
-    ).filter((g5) => g5.length);
-    return /* @__PURE__ */ u2(
-      "div",
-      {
-        ref: bar,
-        class: `rtebar ${cls || ""}`.trim(),
-        role: "toolbar",
-        "aria-label": label || "Formatting",
-        "data-profile": profile,
-        onKeyDown: keys,
-        onMouseDown: (e4) => {
-          const el2 = (
-            /** @type {Element} */
-            e4.target
-          );
-          if (el2.closest("[role^=menuitem]")) {
-            e4.preventDefault();
-            return;
-          }
-          const b5 = (
-            /** @type {HTMLElement|null} */
-            el2.closest("button[data-nt]")
-          );
-          if (!b5) return;
-          e4.preventDefault();
-          if (e4.button === 0) setCur(Math.max(0, buttons.findIndex((x5) => x5.id === b5.dataset.nt)));
-          if (e4.button === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
-        },
-        onMouseOver: (e4) => {
-          if (
-            /** @type {Element} */
-            e4.target.closest(".rtemenu")
-          ) tick((n4) => n4 + 1);
-        },
-        onClick: (e4) => {
-          const b5 = (
-            /** @type {HTMLElement|null} */
-            /** @type {Element} */
-            e4.target.closest("button[data-nt]")
-          );
-          if (b5 && e4.detail === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
-        },
-        children: [
-          groups.map((g5, gi2) => /* @__PURE__ */ u2("span", { class: "rtegrp", children: [
-            gi2 > 0 && /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }),
-            g5.map((t47) => t47.menu ? /* @__PURE__ */ u2(
-              Menu,
-              {
-                hover: true,
-                left: true,
-                cls: "rtemenu",
-                btnCls: "rtemb",
-                label: t47.label,
-                ariaLabel: t47.name,
-                menuLabel: t47.name,
-                menuCls: "rtepop",
-                data: { nt: t47.id },
-                items: menuItems(t47),
-                onPick: (id2) => run(id2)
-              },
-              t47.id
-            ) : /* @__PURE__ */ u2(
-              "button",
-              {
-                type: "button",
-                "data-nt": t47.id,
-                ...legacyRc && t47.rc ? { "data-rc": t47.rc } : {},
-                "aria-label": t47.tip || t47.name,
-                "data-tip": t47.tip || t47.name,
-                ...t47.keys ? { "aria-keyshortcuts": t47.keys } : {},
-                tabIndex: buttons[cur] && buttons[cur].id === t47.id ? 0 : -1,
-                ...t47.on ? { "aria-pressed": "false" } : {},
-                children: t47.label
-              },
-              t47.id
-            ))
-          ] }, `g${gi2}`)),
-          /* @__PURE__ */ u2("span", { class: "rtelink", ref: form, hidden: !link, children: [
-            /* @__PURE__ */ u2("input", { type: "url", placeholder: "Paste a web or mail link", "aria-label": "Link address", value: link ? link.url : "", onInput: (e4) => link && setLink({ ...link, url: (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value
-            ) }) }),
-            /* @__PURE__ */ u2("button", { type: "button", "data-rl": "add", onClick: () => finish(true), children: "Add" }),
-            link && link.has ? /* @__PURE__ */ u2("button", { type: "button", "data-rl": "remove", onClick: removeLink, children: "Remove link" }) : null,
-            /* @__PURE__ */ u2("button", { type: "button", "data-rl": "cancel", onClick: () => finish(false), children: "Cancel" })
-          ] }),
-          extra
-        ]
-      }
-    );
-  }
-  function mountEditorBar(el2, props) {
-    R(/* @__PURE__ */ u2(EditorBar, { ...props }), el2);
-  }
-  function unmountEditorBar(el2) {
-    R(null, el2);
   }
 
   // ../../vendor/tiptap/tiptap.module.js
@@ -27733,6 +27459,188 @@ ${s5}`;
     });
   }
 
+  // core/linkUrl.js
+  var LINK_MAX = 2048;
+  var INVISIBLE = /[\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
+  function hasBad(s5) {
+    for (let i5 = 0; i5 < s5.length; i5++) {
+      const c5 = s5.charCodeAt(i5);
+      if (c5 <= 32 || c5 >= 127 && c5 <= 160) return true;
+    }
+    return INVISIBLE.test(s5);
+  }
+  var ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
+  function linkUrl(s5) {
+    if (typeof s5 !== "string" || !s5 || s5.length > LINK_MAX) return null;
+    if (hasBad(s5) || ENTITY.test(s5) || /[\\<>"`]/.test(s5)) return null;
+    const m5 = /^([a-z][a-z\d+.-]*):/i.exec(s5);
+    if (!m5) return null;
+    const scheme = m5[1].toLowerCase(), rest = s5.slice(m5[0].length);
+    if (scheme === "http" || scheme === "https") {
+      const a5 = /^\/\/([^/?#]*)/.exec(rest);
+      if (!a5 || !a5[1]) return null;
+      const host2 = a5[1];
+      if (host2.includes("@")) return null;
+      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2)) return null;
+      try {
+        const u5 = new URL(scheme + ":" + rest);
+        if (u5.protocol !== scheme + ":" || !u5.hostname || u5.username || u5.password) return null;
+      } catch (e4) {
+        return null;
+      }
+      return scheme + ":" + rest;
+    }
+    if (scheme === "mailto") return mailtoOk(rest) ? "mailto:" + rest : null;
+    return null;
+  }
+  var MAIL_PARTS = ["subject", "body"];
+  function strictDecode(s5) {
+    if (/%(?![\da-f]{2})/i.test(s5)) return null;
+    try {
+      return decodeURIComponent(s5);
+    } catch (e4) {
+      return null;
+    }
+  }
+  function mailtoOk(rest) {
+    if (rest.includes("#")) return false;
+    const q5 = rest.indexOf("?"), mailbox = strictDecode(q5 < 0 ? rest : rest.slice(0, q5));
+    if (mailbox === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(mailbox)) return false;
+    if (q5 < 0) return true;
+    for (const part of rest.slice(q5 + 1).split("&")) {
+      if (!part) continue;
+      const eq = part.indexOf("="), key = strictDecode(eq < 0 ? part : part.slice(0, eq)), val2 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
+      if (key === null || val2 === null || !MAIL_PARTS.includes(key.toLowerCase())) return false;
+    }
+    return true;
+  }
+  var isLinkUrl = (s5) => linkUrl(s5) !== null;
+  function typedLinkUrl(s5) {
+    if (typeof s5 !== "string") return null;
+    const t47 = s5.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
+    if (!t47) return null;
+    if (/^[a-z][a-z\d+.-]*:/i.test(t47) && !/^[^/?#@\s]+\.[^/?#@\s]+:\d/.test(t47)) return linkUrl(t47);
+    if (t47.startsWith("//") || t47.startsWith("\\")) return null;
+    if (/^[^\s@/?#:]+@[^\s@/?#:]+\.[^\s@/?#:]+$/.test(t47)) return linkUrl("mailto:" + t47);
+    if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
+    return null;
+  }
+  var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
+  var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
+
+  // core/editorLink.js
+  function scrubTr(tr2, doc) {
+    let n4 = 0;
+    doc.descendants((node, pos) => {
+      if (!node.isText) return;
+      for (const m5 of node.marks) if (m5.type.name === "link" && !keepHref(m5.attrs.href)) {
+        tr2.removeMark(pos, pos + node.nodeSize, m5);
+        n4++;
+      }
+    });
+    return n4 ? tr2 : null;
+  }
+  function linkGuard(quiet) {
+    return new L2({
+      key: new _5("cxLinkGuard"),
+      appendTransaction(trs, _old, state) {
+        if (!trs.some((t47) => t47.docChanged)) return null;
+        const tr2 = scrubTr(state.tr, state.doc);
+        if (!tr2) return null;
+        if (trs.some((t47) => t47.getMeta(quiet))) tr2.setMeta(quiet, true).setMeta("addToHistory", false);
+        return tr2;
+      }
+    });
+  }
+  function scrubNow(editor, quiet) {
+    if (!editor || editor.isDestroyed) return false;
+    const tr2 = scrubTr(editor.state.tr, editor.state.doc);
+    if (!tr2) return false;
+    editor.view.dispatch(tr2.setMeta(quiet, true).setMeta("addToHistory", false));
+    return true;
+  }
+  function internalIn(doc, from, to2) {
+    let found = false;
+    doc.nodesBetween(from, to2, (n4) => {
+      if (n4.isText && n4.marks.some((m5) => m5.type.name === "link" && isInternalHref(m5.attrs.href))) found = true;
+      return !found;
+    });
+    return found;
+  }
+  function linkAt(editor) {
+    const { state } = editor, type = state.schema.marks.link, { selection: sel } = state;
+    if (!type || !sel.$from) return null;
+    const $f2 = sel.$from;
+    const mk2 = (marks) => marks.find((m6) => m6.type === type);
+    let m5 = sel.empty ? mk2($f2.marks()) : mk2(state.doc.resolve(Math.min(sel.from + 1, sel.to)).marks());
+    if (!m5 && sel.empty) {
+      const after = $f2.nodeAfter;
+      if (after && after.isText) m5 = mk2(after.marks);
+    }
+    if (!m5 || isInternalHref(m5.attrs.href)) return null;
+    const parent = $f2.parent, base = $f2.start();
+    const runs = [];
+    let cur = (
+      /** @type {{from: number, to: number}|null} */
+      null
+    );
+    parent.forEach((child, off) => {
+      const a5 = base + off, b5 = a5 + child.nodeSize;
+      if (child.isText && child.marks.some((x5) => x5.eq(m5))) {
+        if (cur && cur.to === a5) cur.to = b5;
+        else {
+          cur = { from: a5, to: b5 };
+          runs.push(cur);
+        }
+      } else cur = null;
+    });
+    const run = runs.find((r4) => sel.from >= r4.from && sel.to <= r4.to);
+    if (!run) return null;
+    const { from, to: to2 } = run;
+    return { from, to: to2, href: String(m5.attrs.href || ""), text: state.doc.textBetween(from, to2) };
+  }
+  function applyLink(editor, { from, to: to2, text, address }) {
+    const href = typedLinkUrl(address);
+    if (!href || editor.isDestroyed) return false;
+    const doc = editor.state.doc;
+    if (to2 > from && internalIn(doc, from, to2)) return false;
+    const words = text === "" ? href : text, same2 = to2 > from && doc.textBetween(from, to2) === words;
+    const mark = { type: "link", attrs: { href } };
+    const c5 = editor.chain().focus();
+    if (same2) c5.setTextSelection({ from, to: to2 }).setMark("link", { href });
+    else c5.insertContentAt({ from, to: to2 }, { type: "text", text: words, marks: [mark] });
+    const ok2 = c5.run();
+    if (ok2) editor.commands.setTextSelection(Math.min(from + words.length, editor.state.doc.content.size));
+    return ok2;
+  }
+  function removeLink(editor, from, to2) {
+    if (editor.isDestroyed) return false;
+    return editor.chain().focus().setTextSelection({ from, to: to2 }).unsetMark("link").setTextSelection(to2).run();
+  }
+  function pasteLink(editor, event, notify) {
+    const cd2 = event.clipboardData;
+    if (!cd2 || editor.isDestroyed) return false;
+    const text = (cd2.getData("text/plain") || "").trim();
+    if (!text || /\s/.test(text) || !/^(?:https?:\/\/|mailto:|www\.)/i.test(text)) return false;
+    const href = typedLinkUrl(text);
+    if (!href) return false;
+    const { state } = editor, sel = state.selection, type = state.schema.marks.link;
+    if (!type || !sel.$from || sel.node) return false;
+    if (!sel.$from.sameParent(sel.$to) || !sel.$from.parent.isTextblock || sel.$from.parent.type.spec.code) return false;
+    const inCode = (ms2) => ms2.some((m5) => m5.type.name === "code");
+    if (sel.empty ? inCode(sel.$from.marks()) || linkAt(editor) : internalIn(state.doc, sel.from, sel.to)) return false;
+    const tr2 = sel.empty ? state.tr.replaceSelectionWith(state.schema.text(href, [type.create({ href })]), false) : state.tr.addMark(sel.from, sel.to, type.create({ href }));
+    editor.view.dispatch(tr2.scrollIntoView());
+    event.preventDefault();
+    notify(sel.empty ? "Pasted as a link" : "Linked", () => {
+      if (!editor.isDestroyed) {
+        editor.commands.undo();
+        editor.commands.focus();
+      }
+    });
+    return true;
+  }
+
   // core/editor.js
   var ED_QUIET = "cxQuiet";
   var ClaimMark = de.create({
@@ -27894,6 +27802,21 @@ ${s5}`;
         );
         return f5 ? f5(view, e4) : false;
       },
+      ...plain ? {} : { handlePaste: (view, e4) => {
+        if (pasteLink(
+          editor,
+          /** @type {ClipboardEvent} */
+          e4,
+          (m5, u5) => {
+            if (ED_HOOKS.link) ED_HOOKS.link.toast(m5, u5);
+          }
+        )) return true;
+        const f5 = (
+          /** @type {any} */
+          (o5.editorProps || {}).handlePaste
+        );
+        return f5 ? f5(view, e4) : false;
+      } },
       ...plain ? { transformPastedText: (t47) => multiline ? t47.replace(/\r\n?/g, "\n") : t47.replace(/\s*[\r\n]+\s*/g, " ") } : {}
     };
     const editor = Np({ mount: el2 }, {
@@ -27902,10 +27825,11 @@ ${s5}`;
       injectCSS: false,
       editorProps: props,
       extensions: (list) => {
-        const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5 && x5.name === "starterKit" && headShift ? x5.configure({ heading: { levels: [1, 2, 3] } }) : x5);
-        return [...out, ...plain ? [] : [ClaimMark], ...o5.extensions || []];
+        const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5 && x5.name === "link" ? x5.extend({ inclusive: false }) : x5 && x5.name === "starterKit" && headShift ? x5.configure({ heading: { levels: [1, 2, 3] } }) : x5);
+        return [...out, ...plain ? [] : [ClaimMark, j4.create({ name: "cxLinkGuard", addProseMirrorPlugins: () => [linkGuard(ED_QUIET)] })], ...o5.extensions || []];
       }
     });
+    if (!plain) scrubNow(editor, ED_QUIET);
     const blank2 = () => {
       el2.classList.toggle("blank", editor.isEmpty);
     };
@@ -27954,6 +27878,7 @@ ${s5}`;
       }
     };
     el2.cxed = h5;
+    if (!plain && ED_HOOKS.link) ED_HOOKS.link.attach(h5);
     if (o5.ai && ED_HOOKS.ai) ED_HOOKS.ai(h5, o5.ai);
     if (o5.prop && plain) {
       const proto = o5.prop === "textContent" ? Object.getOwnPropertyDescriptor(Node.prototype, "textContent") : null;
@@ -28011,7 +27936,7 @@ ${s5}`;
     }
     shared.CURED = null;
   }
-  var ED_HOOKS = { ai: null };
+  var ED_HOOKS = { ai: null, link: null };
   function edRange(h5, from, to2) {
     const ed3 = h5.editor, doc = ed3.state.doc;
     if (to2 <= from) return null;
@@ -28118,9 +28043,6 @@ ${s5}`;
     return c5.run();
   }
 
-  // stores/capture.js
-  var capOpen = y3(false);
-
   // core/caretPlace.js
   function placeAtCaret(view, pos, el2, o5 = {}) {
     const gap = o5.gap ?? 4, edge = o5.edge ?? 8, max = o5.max ?? 360;
@@ -28188,6 +28110,942 @@ ${s5}`;
       if (vv) vv.removeEventListener("resize", on2);
     };
   }
+
+  // stores/aiEdit.js
+  var AI_FEATURE = "edit";
+  var AI_OPTIONS = (
+    /** @type {Record<string, [string, string]>} */
+    {
+      rewrite: ["Rewrite clearly", "The same points, in plainer words"],
+      shorter: ["Shorter", "About half the length; the facts kept"],
+      longer: ["Longer", "Fuller sentences; adds no facts"],
+      executive: ["Make it executive", "The executive voice: the position and what matters first"],
+      format: ["Add headings and bold", "Sub-headings, lists and bold where they help"],
+      checklist: ["Pull out the tasks", "Finds the tasks and writes one a line to tick off"],
+      summary: ["Summarise at the top", "A short summary first; the text kept below it"],
+      polish: ["Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept"],
+      notes: ["Format notes", "Rough notes sorted under headings, with bullets; every point kept"],
+      formal: ["More formal", "A more formal tone for the email"],
+      warmer: ["Warmer", "A warmer, friendlier tone for the email"],
+      custom: ["Or say what you want…", "Your own instruction"]
+    }
+  );
+  var AI_PLACES = (
+    /** @type {Record<string, string[]>} */
+    {
+      notes: ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"],
+      current: ["notes", "rewrite", "shorter", "longer", "executive", "format", "summary", "custom"],
+      plain: ["rewrite", "shorter", "executive", "custom"],
+      email: ["rewrite", "shorter", "longer", "formal", "warmer", "custom"],
+      line: ["rewrite", "shorter", "executive", "custom"],
+      report: ["shorter", "executive", "polish", "custom"],
+      // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
+      minutes: ["shorter", "executive", "polish", "custom"],
+      client: ["shorter", "executive", "polish", "custom"],
+      // #123: the client sheet (client-visible facts only; the reply checked)
+      readonly: []
+      // a sheet that can't be edited: only Find the source
+    }
+  );
+  var AI_GROUPS = (
+    /** @type {Record<string, [string, string[]][]>} */
+    {
+      notes: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "checklist", "summary"]]],
+      current: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "summary"]]],
+      plain: [["Improve", ["rewrite", "shorter", "executive"]]],
+      email: [["Improve", ["rewrite", "shorter", "longer"]], ["Tone", ["formal", "warmer"]]],
+      line: [["Improve", ["rewrite", "shorter", "executive"]]],
+      report: [["Improve", ["shorter", "executive", "polish"]]],
+      // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
+      minutes: [["Improve", ["shorter", "executive", "polish"]]],
+      client: [["Improve", ["shorter", "executive", "polish"]]],
+      // #123: the client sheet; Shorten, executive, Polish, no Make into
+      readonly: []
+      // only Find the source, the sheet's own item
+    }
+  );
+  var AI_PLACE_TABLE = {
+    notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
+    current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
+    email: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    plain: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    line: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+    // v2.1.0 P5: the sheets keep their AI bar and Find the source
+    minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+    client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+    // #123: the client sheet (edit_ai.py's client place)
+    readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false }
+  };
+  var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
+  var AI_NAMES = (
+    /** @type {Record<string, Record<string, string>>} */
+    {
+      report: { shorter: "Shorten" },
+      minutes: { shorter: "Shorten" },
+      client: { shorter: "Shorten" }
+    }
+  );
+  var aiName = (place2, id2) => (AI_NAMES[place2] || {})[id2] || AI_OPTIONS[id2][0];
+  var aiBar = y3(null);
+  var aiSug = y3(null);
+  var marked = null;
+  j3(() => {
+    const b5 = aiBar.value, dom = b5 && !b5.h.editor.isDestroyed ? (
+      /** @type {HTMLElement} */
+      b5.h.editor.view.dom
+    ) : null;
+    if (marked && marked !== dom) marked.removeAttribute("data-aibar");
+    if (dom) dom.setAttribute("data-aibar", b5 && b5.shown ? "open" : "spark");
+    marked = dom;
+  });
+  var AI_ASKED = /* @__PURE__ */ new Set();
+  var AI_ACTIONS = [];
+  function aiAction(a5) {
+    if (!a5 || !a5.id || AI_OPTIONS[a5.id]) return;
+    const i5 = AI_ACTIONS.findIndex((x5) => x5.id === a5.id);
+    if (i5 >= 0) AI_ACTIONS[i5] = a5;
+    else AI_ACTIONS.push(a5);
+  }
+  var aiActionsFor = (place2) => AI_ACTIONS.filter((a5) => !a5.places || a5.places.includes(place2));
+  function aiRunAction(id2) {
+    const a5 = AI_ACTIONS.find((x5) => x5.id === id2), b5 = aiBar.value;
+    if (!a5 || !b5) return false;
+    const range = edSelection(b5.h);
+    if (!range) {
+      snack("Select some text first (⌘A selects all of it)");
+      return true;
+    }
+    aiBar.value = null;
+    a5.run(range, b5.h, b5.ai);
+    return true;
+  }
+  var aiItems = (place2) => {
+    const own = (AI_PLACES[place2] || AI_PLACES.plain).map((id2) => ({ id: id2, name: aiName(place2, id2), line: AI_OPTIONS[id2][1] }));
+    const extra = aiActionsFor(place2).map((a5) => ({ id: a5.id, name: a5.name, line: a5.line, icon: a5.icon }));
+    const at2 = own.findIndex((o5) => o5.id === "custom");
+    return at2 < 0 ? own.concat(extra) : [...own.slice(0, at2), ...extra, ...own.slice(at2)];
+  };
+  var keepOpenUntil = 0;
+  function barFor(h5, ai2) {
+    if (!aiPlaceOn(ai2.place)) return;
+    const s5 = h5.editor.state.selection;
+    if (s5.empty || h5.editor.isDestroyed || !h5.editor.state.doc.textBetween(s5.from, s5.to, " ").trim()) {
+      if (aiBar.value && aiBar.value.h === h5 && !barBusy()) aiBar.value = null;
+      return;
+    }
+    aiHome(h5);
+    const was = aiBar.value, range = edSelection(h5);
+    const shown2 = !!(was && was.h === h5 && was.shown && Date.now() < keepOpenUntil);
+    aiBar.value = { h: h5, ai: ai2, from: s5.from, to: s5.to, shown: shown2, multi: !!range && !range.inline && h5.features !== "plain" };
+  }
+  function aiToggle(on2) {
+    const b5 = aiBar.value;
+    if (b5) aiBar.value = { ...b5, shown: on2 === void 0 ? !b5.shown : on2, open: void 0 };
+  }
+  function aiTurn(kind) {
+    const b5 = aiBar.value;
+    if (!b5 || !AI_PLACE_TABLE[b5.ai.place]?.turnInto) return;
+    keepOpenUntil = Date.now() + 400;
+    if (!edTurnInto(b5.h, kind)) {
+      snack("Select some text first (⌘A selects all of it)");
+      return;
+    }
+    snack(`Turned into ${TURN_NAMES[kind]}`, () => {
+      if (!b5.h.editor.isDestroyed) {
+        b5.h.editor.commands.undo();
+        b5.h.focus();
+      }
+    });
+  }
+  function aiHome(h5) {
+    const l6 = document.getElementById("aiLayer");
+    if (!l6) return;
+    const host2 = (
+      /** @type {HTMLElement} */
+      h5.el.closest("dialog[open]") || document.body
+    );
+    if (l6.parentElement !== host2) host2.appendChild(l6);
+  }
+  var barBusy = () => {
+    const l6 = document.getElementById("aiLayer");
+    return !!(l6 && l6.contains(document.activeElement));
+  };
+  function aiAttach(h5, ai2) {
+    const ed3 = h5.editor;
+    const update = () => {
+      setTimeout(() => {
+        if (!h5.editor.isDestroyed && (h5.editor.view.hasFocus() || h5.el.contains(document.activeElement))) barFor(h5, ai2);
+      }, 0);
+    };
+    ed3.on("selectionUpdate", update);
+    ed3.on("update", update);
+    ed3.on("focus", update);
+    h5.el.addEventListener("focus", update);
+    ed3.on("blur", () => {
+      setTimeout(() => {
+        if (aiBar.value && aiBar.value.h === h5 && !barBusy() && document.activeElement !== h5.el) aiBar.value = null;
+      }, 0);
+    });
+    h5.el.addEventListener("keydown", (e4) => {
+      if (e4.isComposing || h5.editor.view.composing) return;
+      if (e4.key === "Escape" && aiBar.value && aiBar.value.h === h5 && aiBar.value.shown) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        aiBar.value = null;
+        return;
+      }
+      if (e4.altKey && !e4.metaKey && !e4.ctrlKey && (e4.code === "Slash" || e4.key === "/")) {
+        if (!aiPlaceOn(ai2.place)) return;
+        e4.preventDefault();
+        e4.stopPropagation();
+        if (!edSelection(h5)) {
+          snack("Select some text first (⌘A selects all of it), then Alt+/");
+          return;
+        }
+        barFor(h5, ai2);
+        if (aiBar.value) aiBar.value = { ...aiBar.value, shown: true, open: Date.now() };
+      }
+    }, true);
+    const destroy = h5.destroy;
+    h5.destroy = () => {
+      if (aiBar.value && aiBar.value.h === h5) aiBar.value = null;
+      if (aiSug.value && aiSug.value.h === h5) aiSug.value = null;
+      destroy();
+    };
+  }
+  function aiRun(option, instruction = "", on2) {
+    const b5 = on2 || aiBar.value;
+    if (!b5) return;
+    const range = on2 && on2.range || edSelection(b5.h);
+    if (!range) {
+      snack("Select some text first (⌘A selects all of it)");
+      return;
+    }
+    if (!AI_OPTIONS[option]) return;
+    if (option === "notes" && range.inline) {
+      snack("Format notes needs two or more paragraphs selected");
+      return;
+    }
+    aiHome(b5.h);
+    aiBar.value = null;
+    const s5 = {
+      h: b5.h,
+      ai: b5.ai,
+      range,
+      option,
+      instruction,
+      label: option === "custom" ? instruction : AI_OPTIONS[option][0],
+      status: "running"
+    };
+    const key = b5.ai.key ? b5.ai.key() : b5.ai.place;
+    if (b5.ai.confidential && b5.ai.confidential() && !AI_ASKED.has(key)) {
+      aiSug.value = { ...s5, status: "ask" };
+      return;
+    }
+    ask(s5);
+  }
+  function aiSend() {
+    const s5 = aiSug.value;
+    if (!s5 || s5.status !== "ask") return;
+    AI_ASKED.add(s5.ai.key ? s5.ai.key() : s5.ai.place);
+    ask(s5);
+  }
+  async function ask(s5) {
+    if (!viaServer()) {
+      aiSug.value = { ...s5, status: "failed", message: "AI on selected text needs the live server" };
+      return;
+    }
+    if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) {
+      aiSug.value = { ...s5, status: "failed", message: "ask creaite is busy; try again when it's finished" };
+      return;
+    }
+    const cur = { ...s5, status: (
+      /** @type {"running"} */
+      "running"
+    ), steps: 0 };
+    aiSug.value = cur;
+    const doc = s5.ai.document ? s5.ai.document() : null;
+    const r4 = await draftAsk({
+      option: s5.option,
+      instruction: s5.instruction,
+      text: s5.range.text,
+      place: s5.ai.place,
+      code: s5.ai.project && s5.ai.project() || "",
+      ...doc ? { document: doc } : {}
+    }, { url: "/api/edit/ai", label: `${s5.label}, with Claude`, status: () => {
+    } });
+    if (aiSug.value !== cur) return;
+    if (r4.ok && r4.text) {
+      draftStat(AI_FEATURE, "offered");
+      aiSug.value = { ...cur, status: "ready", text: String(r4.text), notes: r4.notes || [] };
+    } else aiSug.value = { ...cur, status: "failed", message: r4.message || "No suggestion came back" };
+  }
+  function aiAccept() {
+    const s5 = aiSug.value;
+    if (!s5 || s5.status !== "ready") return;
+    if (!edReplace(s5.h, s5.range, s5.text || "")) {
+      snack("The text has changed since you asked; nothing was changed. Try again.");
+      return;
+    }
+    aiSug.value = null;
+    draftStat(AI_FEATURE, "used");
+    snack("Suggestion used. ⌘Z undoes it.");
+  }
+  function aiBarClose() {
+    const b5 = aiBar.value;
+    if (!b5) return false;
+    aiBar.value = null;
+    const ed3 = b5.h.editor;
+    if (!ed3.isDestroyed) ed3.chain().setTextSelection(ed3.state.selection.to).focus().run();
+    return true;
+  }
+  function aiDiscard() {
+    const s5 = aiSug.value;
+    if (!s5) return;
+    if (s5.status === "ready") draftStat(AI_FEATURE, "rejected");
+    aiSug.value = null;
+    if (!s5.h.editor.isDestroyed) s5.h.focus();
+  }
+  function aiRetry() {
+    const s5 = aiSug.value;
+    if (!s5 || s5.status === "running") return;
+    if (s5.status === "ready") draftStat(AI_FEATURE, "rejected");
+    const range = edRange(s5.h, s5.range.from, s5.range.to);
+    if (!range || range.text !== s5.range.text) {
+      aiSug.value = null;
+      snack("The text has changed since you asked; select it again.");
+      return;
+    }
+    ask({ ...s5, text: void 0, notes: void 0, message: void 0, changes: false });
+  }
+  function aiChanges() {
+    const s5 = aiSug.value;
+    if (s5 && s5.status === "ready") aiSug.value = { ...s5, changes: !s5.changes };
+  }
+  function aiDiff(a5, b5) {
+    const wa2 = String(a5).match(/\s+|[^\s]+/g) || [], wb2 = String(b5).match(/\s+|[^\s]+/g) || [];
+    if (wa2.length * wb2.length > 4e4) return (
+      /** @type {["-"|"+", string][]} */
+      [["-", String(a5)], ["+", String(b5)]].filter((x5) => x5[1])
+    );
+    const n4 = wa2.length, m5 = wb2.length, L3 = Array.from({ length: n4 + 1 }, () => new Uint16Array(m5 + 1));
+    for (let i6 = n4 - 1; i6 >= 0; i6--) for (let j6 = m5 - 1; j6 >= 0; j6--) L3[i6][j6] = wa2[i6] === wb2[j6] ? L3[i6 + 1][j6 + 1] + 1 : Math.max(L3[i6 + 1][j6], L3[i6][j6 + 1]);
+    const out = [];
+    const push = (k5, t47) => {
+      const last = out[out.length - 1];
+      if (last && last[0] === k5) last[1] += t47;
+      else out.push([k5, t47]);
+    };
+    let i5 = 0, j5 = 0;
+    while (i5 < n4 && j5 < m5) {
+      if (wa2[i5] === wb2[j5]) {
+        push("=", wa2[i5]);
+        i5++;
+        j5++;
+      } else if (L3[i5 + 1][j5] >= L3[i5][j5 + 1]) push("-", wa2[i5++]);
+      else push("+", wb2[j5++]);
+    }
+    while (i5 < n4) push("-", wa2[i5++]);
+    while (j5 < m5) push("+", wb2[j5++]);
+    return out;
+  }
+
+  // components/LinkPopover.jsx
+  var LINK_REFUSED = "Only http, https and mailto addresses can be linked.";
+  var pop = null;
+  var root = (
+    /** @type {HTMLDivElement|null} */
+    null
+  ), unplace = (
+    /** @type {(() => void)|null} */
+    null
+  ), linkSeq = 0, formKey = 0;
+  function home(h5) {
+    if (!root) {
+      root = document.createElement("div");
+      root.className = "linkroot";
+    }
+    const host2 = (
+      /** @type {HTMLElement} */
+      h5.el.closest("dialog[open]") || document.body
+    );
+    if (root.parentElement !== host2) host2.appendChild(root);
+    return root;
+  }
+  var leftAt = (view, from) => {
+    try {
+      return view.coordsAtPos(from).left;
+    } catch (e4) {
+      return 16;
+    }
+  };
+  function closePop(back2) {
+    const p6 = pop;
+    pop = null;
+    if (unplace) {
+      unplace();
+      unplace = null;
+    }
+    if (root) R(null, root);
+    if (p6 && p6.h.editor.isDestroyed) return;
+    if (back2 && p6) {
+      const ed3 = p6.h.editor;
+      ed3.chain().focus().setTextSelection(Math.min(p6.to, ed3.state.doc.content.size)).run();
+    }
+  }
+  function drawLink() {
+    const p6 = pop;
+    if (!p6 || p6.h.editor.isDestroyed) {
+      closePop();
+      return;
+    }
+    const r4 = home(p6.h);
+    R(p6.mode === "form" ? /* @__PURE__ */ u2(LinkForm, { p: p6 }, p6.key) : /* @__PURE__ */ u2(LinkView, { p: p6 }), r4);
+    const box = (
+      /** @type {HTMLElement|null} */
+      r4.firstElementChild
+    );
+    if (unplace) {
+      unplace();
+      unplace = null;
+    }
+    if (box) unplace = placeAtCaret(p6.h.editor.view, p6.to, box, { from: p6.from, x: () => leftAt(p6.h.editor.view, p6.from), max: 320, scroll: false });
+  }
+  function openLinkForm(h5) {
+    const ed3 = h5.editor;
+    if (!h5 || ed3.isDestroyed) return false;
+    const sel = ed3.state.selection;
+    let $f2 = sel.$from, a5 = sel.from, z4 = sel.to;
+    if (!sel.empty && !sel.node && !$f2.parent.isTextblock) {
+      let x5 = -1, y5 = -1;
+      ed3.state.doc.nodesBetween(sel.from, sel.to, (n4, pos) => {
+        if (n4.isTextblock && n4.content.size) {
+          if (x5 < 0) x5 = pos + 1;
+          y5 = pos + n4.nodeSize - 1;
+        }
+        return !n4.isTextblock;
+      });
+      if (x5 >= 0) {
+        a5 = x5;
+        z4 = y5;
+        $f2 = ed3.state.doc.resolve(x5);
+      }
+    }
+    if (sel.node || !$f2 || !$f2.parent.isTextblock || $f2.parent.type.spec.code) {
+      snack("Put the cursor in some text to add a link");
+      return false;
+    }
+    if (!ed3.state.schema.marks.link) return false;
+    if (internalIn(ed3.state.doc, a5, z4) || sel.empty && $f2.marks().some((m5) => m5.type.name === "link") && !linkAt(ed3)) {
+      snack("A work item or person link can't also be a web link");
+      return false;
+    }
+    const have = linkAt(ed3), from = have ? have.from : a5, to2 = have ? have.to : z4;
+    const whole = !$f2.sameParent(ed3.state.doc.resolve(z4));
+    const text = have ? have.text : ed3.state.doc.textBetween(from, to2);
+    if (aiBar.value && aiBar.value.h === /** @type {any} */
+    h5) aiBar.value = null;
+    pop = { mode: "form", h: h5, from, to: to2, href: have ? have.href : "", text, existing: !!have, whole, key: ++formKey };
+    drawLink();
+    return true;
+  }
+  function LinkForm({ p: p6 }) {
+    const id2 = A2(`linkpop-${++linkSeq}`).current;
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const addrIn = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const [text, setText] = d2(p6.text);
+    const [addr, setAddr] = d2(p6.href);
+    const [err, setErr] = d2("");
+    h2(() => {
+      const f5 = addrIn.current;
+      if (f5) {
+        f5.focus();
+        f5.select();
+      }
+    }, []);
+    const submit = () => {
+      const a5 = addr.trim();
+      if (!a5) {
+        setErr("Enter an address.");
+        addrIn.current?.focus();
+        return;
+      }
+      if (!typedLinkUrl(a5)) {
+        setErr(LINK_REFUSED);
+        addrIn.current?.focus();
+        return;
+      }
+      const ed3 = p6.h.editor;
+      if (ed3.isDestroyed) {
+        closePop();
+        return;
+      }
+      const ok2 = applyLink(ed3, { from: p6.from, to: p6.to, text: p6.whole ? ed3.state.doc.textBetween(p6.from, p6.to) : text, address: a5 });
+      if (!ok2) {
+        setErr(LINK_REFUSED);
+        return;
+      }
+      pop = null;
+      closePop();
+      ed3.commands.focus();
+    };
+    const key = (e4) => {
+      if (e4.isComposing) return;
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePop(true);
+        return;
+      }
+      if (e4.key === "Enter" && !/** @type {Element} */
+      e4.target.closest("button")) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        submit();
+        return;
+      }
+      if (e4.key === "Tab") {
+        const f5 = (
+          /** @type {HTMLElement[]} */
+          [...box.current?.querySelectorAll("input,button,a[href]") || []].filter((x5) => !x5.hasAttribute("disabled"))
+        );
+        if (!f5.length) return;
+        const i5 = f5.indexOf(
+          /** @type {HTMLElement} */
+          document.activeElement
+        );
+        if (e4.shiftKey && i5 <= 0) {
+          e4.preventDefault();
+          f5[f5.length - 1].focus();
+        } else if (!e4.shiftKey && i5 === f5.length - 1) {
+          e4.preventDefault();
+          f5[0].focus();
+        }
+      }
+    };
+    const open2 = linkUrl(p6.href);
+    return /* @__PURE__ */ u2("div", { class: "linkpop form", ref: box, role: "dialog", "aria-label": "Link", "aria-describedby": `${id2}-err`, onKeyDown: key, onMouseDown: (e4) => {
+      if (!/** @type {Element} */
+      e4.target.closest("input")) e4.stopPropagation();
+    }, children: [
+      /* @__PURE__ */ u2("label", { for: `${id2}-t`, children: "Text" }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          id: `${id2}-t`,
+          type: "text",
+          value: p6.whole ? "Several paragraphs selected" : text,
+          disabled: p6.whole,
+          autocomplete: "off",
+          spellcheck: false,
+          placeholder: "The words to link (the address if empty)",
+          onInput: (e4) => setText(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          )
+        }
+      ),
+      /* @__PURE__ */ u2("label", { for: `${id2}-a`, children: "Address" }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          id: `${id2}-a`,
+          ref: addrIn,
+          type: "text",
+          inputmode: "url",
+          value: addr,
+          autocomplete: "off",
+          spellcheck: false,
+          placeholder: "https://example.com or name@example.com",
+          "aria-invalid": err ? "true" : "false",
+          "aria-describedby": `${id2}-err`,
+          onInput: (e4) => {
+            setAddr(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            );
+            if (err) setErr("");
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "linkerr", id: `${id2}-err`, role: "alert", children: err }),
+      /* @__PURE__ */ u2("div", { class: "linkrow", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkgo", "data-lk": "apply", onClick: submit, children: p6.existing ? "Apply" : "Add" }),
+        p6.existing ? /* @__PURE__ */ u2("button", { type: "button", "data-lk": "remove", onClick: () => {
+          removeLink(p6.h.editor, p6.from, p6.to);
+          closePop(true);
+        }, children: "Remove link" }) : null,
+        p6.existing && open2 ? /* @__PURE__ */ u2("a", { class: "linkopen", "data-lk": "open", href: open2, target: "_blank", rel: "noopener noreferrer", children: "Open ↗" }) : null,
+        /* @__PURE__ */ u2("button", { type: "button", "data-lk": "cancel", onClick: () => closePop(true), children: "Cancel" })
+      ] })
+    ] });
+  }
+  function LinkView({ p: p6 }) {
+    const open2 = linkUrl(p6.href);
+    const key = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePop(true);
+      }
+    };
+    return /* @__PURE__ */ u2("div", { class: "linkpop view", role: "dialog", "aria-label": "Link", onKeyDown: key, onMouseDown: (e4) => e4.stopPropagation(), children: [
+      /* @__PURE__ */ u2("span", { class: "linkaddr", title: p6.href, children: p6.href.replace(/^mailto:/i, "") }),
+      open2 ? /* @__PURE__ */ u2("a", { class: "linkopen", "data-lk": "open", href: open2, target: "_blank", rel: "noopener noreferrer", children: "Open ↗" }) : null,
+      /* @__PURE__ */ u2("button", { type: "button", "data-lk": "edit", onClick: () => {
+        const h5 = p6.h;
+        closePop();
+        h5.editor.chain().focus().setTextSelection({ from: p6.from, to: p6.to }).run();
+        openLinkForm(h5);
+      }, children: "Edit" }),
+      /* @__PURE__ */ u2("button", { type: "button", "data-lk": "remove", onClick: () => {
+        removeLink(p6.h.editor, p6.from, p6.to);
+        closePop(true);
+      }, children: "Remove" })
+    ] });
+  }
+  function look(h5) {
+    const ed3 = h5.editor;
+    if (ed3.isDestroyed) return;
+    const l6 = ed3.state.selection.empty ? linkAt(ed3) : null;
+    if (!l6) {
+      if (pop && pop.mode === "view" && pop.h === h5) closePop();
+      return;
+    }
+    if (pop && pop.mode === "form") return;
+    if (pop && pop.mode === "view" && pop.h === h5 && pop.from === l6.from && pop.to === l6.to && pop.href === l6.href) return;
+    pop = { mode: "view", h: h5, from: l6.from, to: l6.to, href: l6.href };
+    drawLink();
+  }
+  function attachLink(h5) {
+    const el2 = h5.el, ed3 = h5.editor;
+    const click = (e4) => {
+      const a5 = (
+        /** @type {Element} */
+        e4.target.closest ? (
+          /** @type {Element} */
+          e4.target.closest("a")
+        ) : null
+      );
+      if (!a5 || !el2.contains(a5)) return;
+      e4.preventDefault();
+      if (e4.altKey || e4.metaKey || e4.ctrlKey || e4.shiftKey) return;
+      setTimeout(() => look(h5), 0);
+    };
+    const aux = (e4) => {
+      if (
+        /** @type {Element} */
+        e4.target.closest && /** @type {Element} */
+        e4.target.closest("a")
+      ) e4.preventDefault();
+    };
+    const keydown = (e4) => {
+      if (e4.isComposing || ed3.view.composing) return;
+      const k5 = e4.key.toLowerCase();
+      if (k5 === "k" && e4.shiftKey && (e4.metaKey || e4.ctrlKey) && !e4.altKey) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        openLinkForm(h5);
+        return;
+      }
+      if (!pop || pop.h !== h5 || pop.mode !== "view") return;
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePop();
+        return;
+      }
+      if (e4.key === "Tab" && !e4.shiftKey && !ed3.isActive("listItem") && !ed3.isActive("taskItem")) {
+        const first = (
+          /** @type {HTMLElement|null} */
+          root && root.querySelector("a,button")
+        );
+        if (first) {
+          e4.preventDefault();
+          e4.stopPropagation();
+          first.focus();
+        }
+      }
+    };
+    const keyup = (e4) => {
+      if (/^(Arrow|Home$|End$|Page)/.test(e4.key)) look(h5);
+    };
+    const sel = () => {
+      if (pop && pop.mode === "view" && pop.h === h5) look(h5);
+    };
+    const blur = () => setTimeout(() => {
+      if (pop && pop.mode === "view" && pop.h === h5 && !(root && root.contains(document.activeElement)) && !el2.contains(document.activeElement)) closePop();
+    }, 150);
+    el2.addEventListener("click", click);
+    el2.addEventListener("auxclick", aux);
+    el2.addEventListener("keydown", keydown, true);
+    el2.addEventListener("keyup", keyup);
+    el2.addEventListener("focusout", blur);
+    ed3.on("selectionUpdate", sel);
+    const destroy = h5.destroy;
+    h5.destroy = () => {
+      if (pop && pop.h === h5) closePop();
+      destroy();
+    };
+  }
+  function bootLinkPopover() {
+    ED_HOOKS.link = { attach: attachLink, toast: (m5, undo) => snack(m5, undo), open: (h5) => {
+      openLinkForm(h5);
+    } };
+  }
+
+  // components/EditorBar.jsx
+  var BARS = /* @__PURE__ */ new Set();
+  function editorBarFor(t47) {
+    const el2 = (
+      /** @type {Element|null} */
+      t47 && /** @type {Element} */
+      t47.closest ? t47 : null
+    );
+    if (!el2) return null;
+    for (const b5 of BARS) {
+      const h5 = b5.handle();
+      if (h5 && h5.el && (h5.el === el2 || h5.el.contains(el2) || el2.closest(".ProseMirror") === h5.editor.view.dom)) return b5;
+    }
+    return null;
+  }
+  var keysOn = false;
+  function keysInit() {
+    if (keysOn) return;
+    keysOn = true;
+    document.addEventListener("keydown", (e4) => {
+      if (e4.isComposing || !(e4.metaKey || e4.ctrlKey) || !e4.shiftKey || e4.altKey) return;
+      const k5 = e4.key.toLowerCase();
+      if (k5 !== "x") return;
+      const b5 = editorBarFor(e4.target);
+      if (!b5) return;
+      e4.preventDefault();
+      e4.stopPropagation();
+      const h5 = b5.handle();
+      if (h5) runTool(h5, "s");
+    }, true);
+  }
+  function EditorBar({ profile, handle: handle2, host: host2, cls, label, legacyRc, extra }) {
+    const bar = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const [cur, setCur] = d2(0);
+    const [, tick] = d2(0);
+    const tools = profileTools(profile, Object.keys(host2 || {}));
+    const buttons = (
+      /** @type {import("../core/editorProfiles.js").ToolDef[]} */
+      tools.filter((t47) => t47 !== "|")
+    );
+    const refresh = () => {
+      const root2 = bar.current, h5 = handle2();
+      if (!root2 || !h5 || h5.editor.isDestroyed) return;
+      tick((n4) => n4 + 1);
+      for (
+        const b5 of
+        /** @type {NodeListOf<HTMLElement>} */
+        root2.querySelectorAll("button[data-nt]")
+      ) {
+        const t47 = ED_TOOLS[b5.dataset.nt || ""];
+        if (!t47) continue;
+        if (t47.on) b5.setAttribute("aria-pressed", t47.on(h5.editor) ? "true" : "false");
+        if (t47.can) {
+          if (t47.can(h5.editor)) b5.removeAttribute("aria-disabled");
+          else b5.setAttribute("aria-disabled", "true");
+        }
+      }
+    };
+    h2(() => {
+      const me2 = { handle: handle2 };
+      BARS.add(me2);
+      keysInit();
+      document.addEventListener("selectionchange", refresh);
+      document.addEventListener("focusin", refresh);
+      refresh();
+      return () => {
+        BARS.delete(me2);
+        document.removeEventListener("selectionchange", refresh);
+        document.removeEventListener("focusin", refresh);
+      };
+    }, [profile]);
+    const run = (id2) => {
+      const h5 = handle2(), t47 = ED_TOOLS[id2];
+      if (!h5 || !t47) return;
+      if (id2 === "link") {
+        openLinkForm(h5);
+        return;
+      }
+      if (t47.host) {
+        const f5 = host2 && host2[id2];
+        if (f5) f5();
+        return;
+      }
+      runTool(h5, id2);
+      refresh();
+    };
+    const keys = (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      const b5 = (
+        /** @type {HTMLElement|null} */
+        t47.closest ? t47.closest("button[data-nt]") : null
+      );
+      if (!b5) return;
+      if (e4.key === "ArrowDown") tick((n4) => n4 + 1);
+      const i5 = buttons.findIndex((x5) => x5.id === b5.dataset.nt);
+      let to2 = -1;
+      if (e4.key === "ArrowRight") to2 = (i5 + 1) % buttons.length;
+      else if (e4.key === "ArrowLeft") to2 = (i5 + buttons.length - 1) % buttons.length;
+      else if (e4.key === "Home") to2 = 0;
+      else if (e4.key === "End") to2 = buttons.length - 1;
+      else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        const h5 = handle2();
+        if (h5) h5.focus();
+        return;
+      }
+      if (to2 < 0) return;
+      e4.preventDefault();
+      e4.stopPropagation();
+      setCur(to2);
+      requestAnimationFrame(() => {
+        const n4 = bar.current && bar.current.querySelector(`button[data-nt="${buttons[to2].id}"]`);
+        if (n4) n4.focus();
+      });
+    };
+    h2(() => {
+      const root2 = bar.current;
+      if (!root2) return;
+      for (
+        const n4 of
+        /** @type {NodeListOf<HTMLElement>} */
+        root2.querySelectorAll("button[data-nt]")
+      ) n4.tabIndex = buttons[cur] && buttons[cur].id === n4.dataset.nt ? 0 : -1;
+    });
+    if (!buttons.length) return null;
+    const menuItems = (m5) => {
+      const e4 = handle2()?.editor, live = e4 && !e4.isDestroyed;
+      return (
+        /** @type {any[]} */
+        (m5.items || []).map((x5, i5) => x5 === "|" ? { id: `sep${i5}`, sep: true } : {
+          id: x5.id,
+          name: x5.name,
+          ...x5.hint ? { mark: x5.hint } : {},
+          data: { cmd: x5.id },
+          ...x5.on ? { radio: true, checked: !!(live && x5.on(e4)) } : {},
+          ...x5.can && !(live && x5.can(e4)) ? { disabled: true } : {}
+        })
+      );
+    };
+    const groups = tools.reduce(
+      (out, t47) => {
+        if (t47 === "|") out.push([]);
+        else out[out.length - 1].push(t47);
+        return out;
+      },
+      /** @type {any[][]} */
+      [[]]
+    ).filter((g5) => g5.length);
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        ref: bar,
+        class: `rtebar ${cls || ""}`.trim(),
+        role: "toolbar",
+        "aria-label": label || "Formatting",
+        "data-profile": profile,
+        onKeyDown: keys,
+        onMouseDown: (e4) => {
+          const el2 = (
+            /** @type {Element} */
+            e4.target
+          );
+          if (el2.closest("[role^=menuitem]")) {
+            e4.preventDefault();
+            return;
+          }
+          const b5 = (
+            /** @type {HTMLElement|null} */
+            el2.closest("button[data-nt]")
+          );
+          if (!b5) return;
+          e4.preventDefault();
+          if (e4.button === 0) setCur(Math.max(0, buttons.findIndex((x5) => x5.id === b5.dataset.nt)));
+          if (e4.button === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+        },
+        onMouseOver: (e4) => {
+          if (
+            /** @type {Element} */
+            e4.target.closest(".rtemenu")
+          ) tick((n4) => n4 + 1);
+        },
+        onClick: (e4) => {
+          const b5 = (
+            /** @type {HTMLElement|null} */
+            /** @type {Element} */
+            e4.target.closest("button[data-nt]")
+          );
+          if (b5 && e4.detail === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+        },
+        children: [
+          groups.map((g5, gi2) => /* @__PURE__ */ u2("span", { class: "rtegrp", children: [
+            gi2 > 0 && /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }),
+            g5.map((t47) => t47.menu ? /* @__PURE__ */ u2(
+              Menu,
+              {
+                hover: true,
+                left: true,
+                cls: "rtemenu",
+                btnCls: "rtemb",
+                label: t47.label,
+                ariaLabel: t47.name,
+                menuLabel: t47.name,
+                menuCls: "rtepop",
+                data: { nt: t47.id },
+                items: menuItems(t47),
+                onPick: (id2) => run(id2)
+              },
+              t47.id
+            ) : /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                "data-nt": t47.id,
+                ...legacyRc && t47.rc ? { "data-rc": t47.rc } : {},
+                "aria-label": t47.tip || t47.name,
+                "data-tip": t47.tip || t47.name,
+                ...t47.keys ? { "aria-keyshortcuts": t47.keys } : {},
+                tabIndex: buttons[cur] && buttons[cur].id === t47.id ? 0 : -1,
+                ...t47.on ? { "aria-pressed": "false" } : {},
+                children: t47.label
+              },
+              t47.id
+            ))
+          ] }, `g${gi2}`)),
+          extra
+        ]
+      }
+    );
+  }
+  function mountEditorBar(el2, props) {
+    R(/* @__PURE__ */ u2(EditorBar, { ...props }), el2);
+  }
+  function unmountEditorBar(el2) {
+    R(null, el2);
+  }
+
+  // stores/capture.js
+  var capOpen = y3(false);
 
   // components/SlashMenu.jsx
   var slashSeq = 0;
@@ -28303,9 +29161,9 @@ ${s5}`;
     const hostRows = Object.keys(host2 || {});
     if (!slashRows(profile, hostRows, editor.schema).length) return () => {
     };
-    const root = document.createElement("div");
-    root.className = "slashroot";
-    (el2.closest("dialog[open]") || document.body).appendChild(root);
+    const root2 = document.createElement("div");
+    root2.className = "slashroot";
+    (el2.closest("dialog[open]") || document.body).appendChild(root2);
     let st2 = null;
     let dismissed = -1, opened = false, typedSlash = false, moved = false;
     const draw2 = () => {
@@ -28314,7 +29172,7 @@ ${s5}`;
           st2 = { ...st2, i: i5 };
           draw2();
         }
-      } }) : null, root);
+      } }) : null, root2);
       const dom = (
         /** @type {HTMLElement} */
         view.dom
@@ -28338,7 +29196,7 @@ ${s5}`;
       st2 = null;
       draw2();
     };
-    const look = () => {
+    const look2 = () => {
       const mayOpen = typedSlash;
       typedSlash = false;
       if (editor.isDestroyed || view.composing) return;
@@ -28369,6 +29227,15 @@ ${s5}`;
         c5.run();
         const f5 = host2 && host2[r4.id];
         if (f5) f5();
+        return;
+      }
+      if (r4.hook) {
+        c5.run();
+        const k5 = (
+          /** @type {any} */
+          ED_HOOKS[r4.hook]
+        );
+        if (k5 && k5.open) k5.open(h5);
         return;
       }
       if (r4.is && (r4.is === "blockquote" ? editor.isActive(r4.is) : nearestList(editor) === r4.is)) {
@@ -28411,28 +29278,28 @@ ${s5}`;
     }, 120);
     const comp = () => {
       typedSlash = true;
-      look();
+      look2();
     };
     const before = (e4) => {
       typedSlash = e4.inputType === "insertText" || e4.inputType.startsWith("deleteContent");
     };
-    editor.on("selectionUpdate", look);
-    editor.on("update", look);
+    editor.on("selectionUpdate", look2);
+    editor.on("update", look2);
     el2.addEventListener("beforeinput", before, true);
     el2.addEventListener("keydown", keys, true);
     el2.addEventListener("focusout", blur);
     el2.addEventListener("compositionend", comp);
     const off = () => {
       editor.off("destroy", off);
-      editor.off("selectionUpdate", look);
-      editor.off("update", look);
+      editor.off("selectionUpdate", look2);
+      editor.off("update", look2);
       el2.removeEventListener("beforeinput", before, true);
       el2.removeEventListener("keydown", keys, true);
       el2.removeEventListener("focusout", blur);
       el2.removeEventListener("compositionend", comp);
       st2 = null;
-      R(null, root);
-      root.remove();
+      R(null, root2);
+      root2.remove();
       if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
     };
     editor.on("destroy", off);
@@ -28880,346 +29747,6 @@ ${s5}`;
   }
   function mountReportingCard(host2, code) {
     R(/* @__PURE__ */ u2(ReportingCardView, { code }), host2);
-  }
-
-  // stores/aiEdit.js
-  var AI_FEATURE = "edit";
-  var AI_OPTIONS = (
-    /** @type {Record<string, [string, string]>} */
-    {
-      rewrite: ["Rewrite clearly", "The same points, in plainer words"],
-      shorter: ["Shorter", "About half the length; the facts kept"],
-      longer: ["Longer", "Fuller sentences; adds no facts"],
-      executive: ["Make it executive", "The executive voice: the position and what matters first"],
-      format: ["Add headings and bold", "Sub-headings, lists and bold where they help"],
-      checklist: ["Pull out the tasks", "Finds the tasks and writes one a line to tick off"],
-      summary: ["Summarise at the top", "A short summary first; the text kept below it"],
-      polish: ["Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept"],
-      notes: ["Format notes", "Rough notes sorted under headings, with bullets; every point kept"],
-      formal: ["More formal", "A more formal tone for the email"],
-      warmer: ["Warmer", "A warmer, friendlier tone for the email"],
-      custom: ["Or say what you want…", "Your own instruction"]
-    }
-  );
-  var AI_PLACES = (
-    /** @type {Record<string, string[]>} */
-    {
-      notes: ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"],
-      current: ["notes", "rewrite", "shorter", "longer", "executive", "format", "summary", "custom"],
-      plain: ["rewrite", "shorter", "executive", "custom"],
-      email: ["rewrite", "shorter", "longer", "formal", "warmer", "custom"],
-      line: ["rewrite", "shorter", "executive", "custom"],
-      report: ["shorter", "executive", "polish", "custom"],
-      // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
-      minutes: ["shorter", "executive", "polish", "custom"],
-      client: ["shorter", "executive", "polish", "custom"],
-      // #123: the client sheet (client-visible facts only; the reply checked)
-      readonly: []
-      // a sheet that can't be edited: only Find the source
-    }
-  );
-  var AI_GROUPS = (
-    /** @type {Record<string, [string, string[]][]>} */
-    {
-      notes: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "checklist", "summary"]]],
-      current: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "summary"]]],
-      plain: [["Improve", ["rewrite", "shorter", "executive"]]],
-      email: [["Improve", ["rewrite", "shorter", "longer"]], ["Tone", ["formal", "warmer"]]],
-      line: [["Improve", ["rewrite", "shorter", "executive"]]],
-      report: [["Improve", ["shorter", "executive", "polish"]]],
-      // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
-      minutes: [["Improve", ["shorter", "executive", "polish"]]],
-      client: [["Improve", ["shorter", "executive", "polish"]]],
-      // #123: the client sheet; Shorten, executive, Polish, no Make into
-      readonly: []
-      // only Find the source, the sheet's own item
-    }
-  );
-  var AI_PLACE_TABLE = {
-    notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
-    current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
-    email: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
-    plain: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
-    line: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
-    report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
-    // v2.1.0 P5: the sheets keep their AI bar and Find the source
-    minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
-    client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
-    // #123: the client sheet (edit_ai.py's client place)
-    readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false }
-  };
-  var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
-  var AI_NAMES = (
-    /** @type {Record<string, Record<string, string>>} */
-    {
-      report: { shorter: "Shorten" },
-      minutes: { shorter: "Shorten" },
-      client: { shorter: "Shorten" }
-    }
-  );
-  var aiName = (place2, id2) => (AI_NAMES[place2] || {})[id2] || AI_OPTIONS[id2][0];
-  var aiBar = y3(null);
-  var aiSug = y3(null);
-  var marked = null;
-  j3(() => {
-    const b5 = aiBar.value, dom = b5 && !b5.h.editor.isDestroyed ? (
-      /** @type {HTMLElement} */
-      b5.h.editor.view.dom
-    ) : null;
-    if (marked && marked !== dom) marked.removeAttribute("data-aibar");
-    if (dom) dom.setAttribute("data-aibar", b5 && b5.shown ? "open" : "spark");
-    marked = dom;
-  });
-  var AI_ASKED = /* @__PURE__ */ new Set();
-  var AI_ACTIONS = [];
-  function aiAction(a5) {
-    if (!a5 || !a5.id || AI_OPTIONS[a5.id]) return;
-    const i5 = AI_ACTIONS.findIndex((x5) => x5.id === a5.id);
-    if (i5 >= 0) AI_ACTIONS[i5] = a5;
-    else AI_ACTIONS.push(a5);
-  }
-  var aiActionsFor = (place2) => AI_ACTIONS.filter((a5) => !a5.places || a5.places.includes(place2));
-  function aiRunAction(id2) {
-    const a5 = AI_ACTIONS.find((x5) => x5.id === id2), b5 = aiBar.value;
-    if (!a5 || !b5) return false;
-    const range = edSelection(b5.h);
-    if (!range) {
-      snack("Select some text first (⌘A selects all of it)");
-      return true;
-    }
-    aiBar.value = null;
-    a5.run(range, b5.h, b5.ai);
-    return true;
-  }
-  var aiItems = (place2) => {
-    const own = (AI_PLACES[place2] || AI_PLACES.plain).map((id2) => ({ id: id2, name: aiName(place2, id2), line: AI_OPTIONS[id2][1] }));
-    const extra = aiActionsFor(place2).map((a5) => ({ id: a5.id, name: a5.name, line: a5.line, icon: a5.icon }));
-    const at2 = own.findIndex((o5) => o5.id === "custom");
-    return at2 < 0 ? own.concat(extra) : [...own.slice(0, at2), ...extra, ...own.slice(at2)];
-  };
-  var keepOpenUntil = 0;
-  function barFor(h5, ai2) {
-    if (!aiPlaceOn(ai2.place)) return;
-    const s5 = h5.editor.state.selection;
-    if (s5.empty || h5.editor.isDestroyed || !h5.editor.state.doc.textBetween(s5.from, s5.to, " ").trim()) {
-      if (aiBar.value && aiBar.value.h === h5 && !barBusy()) aiBar.value = null;
-      return;
-    }
-    aiHome(h5);
-    const was = aiBar.value, range = edSelection(h5);
-    const shown2 = !!(was && was.h === h5 && was.shown && Date.now() < keepOpenUntil);
-    aiBar.value = { h: h5, ai: ai2, from: s5.from, to: s5.to, shown: shown2, multi: !!range && !range.inline && h5.features !== "plain" };
-  }
-  function aiToggle(on2) {
-    const b5 = aiBar.value;
-    if (b5) aiBar.value = { ...b5, shown: on2 === void 0 ? !b5.shown : on2, open: void 0 };
-  }
-  function aiTurn(kind) {
-    const b5 = aiBar.value;
-    if (!b5 || !AI_PLACE_TABLE[b5.ai.place]?.turnInto) return;
-    keepOpenUntil = Date.now() + 400;
-    if (!edTurnInto(b5.h, kind)) {
-      snack("Select some text first (⌘A selects all of it)");
-      return;
-    }
-    snack(`Turned into ${TURN_NAMES[kind]}`, () => {
-      if (!b5.h.editor.isDestroyed) {
-        b5.h.editor.commands.undo();
-        b5.h.focus();
-      }
-    });
-  }
-  function aiHome(h5) {
-    const l6 = document.getElementById("aiLayer");
-    if (!l6) return;
-    const host2 = (
-      /** @type {HTMLElement} */
-      h5.el.closest("dialog[open]") || document.body
-    );
-    if (l6.parentElement !== host2) host2.appendChild(l6);
-  }
-  var barBusy = () => {
-    const l6 = document.getElementById("aiLayer");
-    return !!(l6 && l6.contains(document.activeElement));
-  };
-  function aiAttach(h5, ai2) {
-    const ed3 = h5.editor;
-    const update = () => {
-      setTimeout(() => {
-        if (!h5.editor.isDestroyed && (h5.editor.view.hasFocus() || h5.el.contains(document.activeElement))) barFor(h5, ai2);
-      }, 0);
-    };
-    ed3.on("selectionUpdate", update);
-    ed3.on("update", update);
-    ed3.on("focus", update);
-    h5.el.addEventListener("focus", update);
-    ed3.on("blur", () => {
-      setTimeout(() => {
-        if (aiBar.value && aiBar.value.h === h5 && !barBusy() && document.activeElement !== h5.el) aiBar.value = null;
-      }, 0);
-    });
-    h5.el.addEventListener("keydown", (e4) => {
-      if (e4.isComposing || h5.editor.view.composing) return;
-      if (e4.key === "Escape" && aiBar.value && aiBar.value.h === h5 && aiBar.value.shown) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        aiBar.value = null;
-        return;
-      }
-      if (e4.altKey && !e4.metaKey && !e4.ctrlKey && (e4.code === "Slash" || e4.key === "/")) {
-        if (!aiPlaceOn(ai2.place)) return;
-        e4.preventDefault();
-        e4.stopPropagation();
-        if (!edSelection(h5)) {
-          snack("Select some text first (⌘A selects all of it), then Alt+/");
-          return;
-        }
-        barFor(h5, ai2);
-        if (aiBar.value) aiBar.value = { ...aiBar.value, shown: true, open: Date.now() };
-      }
-    }, true);
-    const destroy = h5.destroy;
-    h5.destroy = () => {
-      if (aiBar.value && aiBar.value.h === h5) aiBar.value = null;
-      if (aiSug.value && aiSug.value.h === h5) aiSug.value = null;
-      destroy();
-    };
-  }
-  function aiRun(option, instruction = "", on2) {
-    const b5 = on2 || aiBar.value;
-    if (!b5) return;
-    const range = on2 && on2.range || edSelection(b5.h);
-    if (!range) {
-      snack("Select some text first (⌘A selects all of it)");
-      return;
-    }
-    if (!AI_OPTIONS[option]) return;
-    if (option === "notes" && range.inline) {
-      snack("Format notes needs two or more paragraphs selected");
-      return;
-    }
-    aiHome(b5.h);
-    aiBar.value = null;
-    const s5 = {
-      h: b5.h,
-      ai: b5.ai,
-      range,
-      option,
-      instruction,
-      label: option === "custom" ? instruction : AI_OPTIONS[option][0],
-      status: "running"
-    };
-    const key = b5.ai.key ? b5.ai.key() : b5.ai.place;
-    if (b5.ai.confidential && b5.ai.confidential() && !AI_ASKED.has(key)) {
-      aiSug.value = { ...s5, status: "ask" };
-      return;
-    }
-    ask(s5);
-  }
-  function aiSend() {
-    const s5 = aiSug.value;
-    if (!s5 || s5.status !== "ask") return;
-    AI_ASKED.add(s5.ai.key ? s5.ai.key() : s5.ai.place);
-    ask(s5);
-  }
-  async function ask(s5) {
-    if (!viaServer()) {
-      aiSug.value = { ...s5, status: "failed", message: "AI on selected text needs the live server" };
-      return;
-    }
-    if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) {
-      aiSug.value = { ...s5, status: "failed", message: "ask creaite is busy; try again when it's finished" };
-      return;
-    }
-    const cur = { ...s5, status: (
-      /** @type {"running"} */
-      "running"
-    ), steps: 0 };
-    aiSug.value = cur;
-    const doc = s5.ai.document ? s5.ai.document() : null;
-    const r4 = await draftAsk({
-      option: s5.option,
-      instruction: s5.instruction,
-      text: s5.range.text,
-      place: s5.ai.place,
-      code: s5.ai.project && s5.ai.project() || "",
-      ...doc ? { document: doc } : {}
-    }, { url: "/api/edit/ai", label: `${s5.label}, with Claude`, status: () => {
-    } });
-    if (aiSug.value !== cur) return;
-    if (r4.ok && r4.text) {
-      draftStat(AI_FEATURE, "offered");
-      aiSug.value = { ...cur, status: "ready", text: String(r4.text), notes: r4.notes || [] };
-    } else aiSug.value = { ...cur, status: "failed", message: r4.message || "No suggestion came back" };
-  }
-  function aiAccept() {
-    const s5 = aiSug.value;
-    if (!s5 || s5.status !== "ready") return;
-    if (!edReplace(s5.h, s5.range, s5.text || "")) {
-      snack("The text has changed since you asked; nothing was changed. Try again.");
-      return;
-    }
-    aiSug.value = null;
-    draftStat(AI_FEATURE, "used");
-    snack("Suggestion used. ⌘Z undoes it.");
-  }
-  function aiBarClose() {
-    const b5 = aiBar.value;
-    if (!b5) return false;
-    aiBar.value = null;
-    const ed3 = b5.h.editor;
-    if (!ed3.isDestroyed) ed3.chain().setTextSelection(ed3.state.selection.to).focus().run();
-    return true;
-  }
-  function aiDiscard() {
-    const s5 = aiSug.value;
-    if (!s5) return;
-    if (s5.status === "ready") draftStat(AI_FEATURE, "rejected");
-    aiSug.value = null;
-    if (!s5.h.editor.isDestroyed) s5.h.focus();
-  }
-  function aiRetry() {
-    const s5 = aiSug.value;
-    if (!s5 || s5.status === "running") return;
-    if (s5.status === "ready") draftStat(AI_FEATURE, "rejected");
-    const range = edRange(s5.h, s5.range.from, s5.range.to);
-    if (!range || range.text !== s5.range.text) {
-      aiSug.value = null;
-      snack("The text has changed since you asked; select it again.");
-      return;
-    }
-    ask({ ...s5, text: void 0, notes: void 0, message: void 0, changes: false });
-  }
-  function aiChanges() {
-    const s5 = aiSug.value;
-    if (s5 && s5.status === "ready") aiSug.value = { ...s5, changes: !s5.changes };
-  }
-  function aiDiff(a5, b5) {
-    const wa2 = String(a5).match(/\s+|[^\s]+/g) || [], wb2 = String(b5).match(/\s+|[^\s]+/g) || [];
-    if (wa2.length * wb2.length > 4e4) return (
-      /** @type {["-"|"+", string][]} */
-      [["-", String(a5)], ["+", String(b5)]].filter((x5) => x5[1])
-    );
-    const n4 = wa2.length, m5 = wb2.length, L3 = Array.from({ length: n4 + 1 }, () => new Uint16Array(m5 + 1));
-    for (let i6 = n4 - 1; i6 >= 0; i6--) for (let j6 = m5 - 1; j6 >= 0; j6--) L3[i6][j6] = wa2[i6] === wb2[j6] ? L3[i6 + 1][j6 + 1] + 1 : Math.max(L3[i6 + 1][j6], L3[i6][j6 + 1]);
-    const out = [];
-    const push = (k5, t47) => {
-      const last = out[out.length - 1];
-      if (last && last[0] === k5) last[1] += t47;
-      else out.push([k5, t47]);
-    };
-    let i5 = 0, j5 = 0;
-    while (i5 < n4 && j5 < m5) {
-      if (wa2[i5] === wb2[j5]) {
-        push("=", wa2[i5]);
-        i5++;
-        j5++;
-      } else if (L3[i5 + 1][j5] >= L3[i5][j5 + 1]) push("-", wa2[i5++]);
-      else push("+", wb2[j5++]);
-    }
-    while (i5 < n4) push("-", wa2[i5++]);
-    while (j5 < m5) push("+", wb2[j5++]);
-    return out;
   }
 
   // components/AiSelect.jsx
@@ -29723,9 +30250,9 @@ ${s5}`;
   }
   function attachItemPick(h5, { code }) {
     const editor = h5.editor, view = editor.view, el2 = h5.el;
-    const root = document.createElement("div");
-    root.className = "itemrootpick";
-    (el2.closest("dialog[open]") || document.body).appendChild(root);
+    const root2 = document.createElement("div");
+    root2.className = "itemrootpick";
+    (el2.closest("dialog[open]") || document.body).appendChild(root2);
     let st2 = null;
     let dismissed = -1, opened = false, typed2 = false, chosen = false;
     const draw2 = () => {
@@ -29734,7 +30261,7 @@ ${s5}`;
           st2 = { ...st2, i: i5 };
           draw2();
         }
-      } }) : null, root);
+      } }) : null, root2);
       const dom = (
         /** @type {HTMLElement} */
         view.dom
@@ -29756,7 +30283,7 @@ ${s5}`;
       st2 = null;
       draw2();
     };
-    const look = () => {
+    const look2 = () => {
       const cmd = armed.delete(editor), mayOpen = typed2 || cmd;
       typed2 = false;
       if (editor.isDestroyed || view.composing) return;
@@ -29812,28 +30339,28 @@ ${s5}`;
     }, 150);
     const comp = () => {
       typed2 = true;
-      look();
+      look2();
     };
     const before = (e4) => {
       typed2 = e4.inputType === "insertText" || e4.inputType.startsWith("deleteContent");
     };
-    editor.on("selectionUpdate", look);
-    editor.on("update", look);
+    editor.on("selectionUpdate", look2);
+    editor.on("update", look2);
     el2.addEventListener("beforeinput", before, true);
     el2.addEventListener("keydown", keys, true);
     el2.addEventListener("focusout", blur);
     el2.addEventListener("compositionend", comp);
     const off = () => {
       editor.off("destroy", off);
-      editor.off("selectionUpdate", look);
-      editor.off("update", look);
+      editor.off("selectionUpdate", look2);
+      editor.off("update", look2);
       el2.removeEventListener("beforeinput", before, true);
       el2.removeEventListener("keydown", keys, true);
       el2.removeEventListener("focusout", blur);
       el2.removeEventListener("compositionend", comp);
       st2 = null;
-      R(null, root);
-      root.remove();
+      R(null, root2);
+      root2.remove();
       if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
     };
     editor.on("destroy", off);
@@ -31377,8 +31904,8 @@ ${s5}`;
     if (!box) return;
     drawTabs(box, { items: feedTabItems(tab, "fdtab", "fdTabSel-" + host2), selected: tab, onSelect: (v5) => feedTab(s5, v5), label: "History", className: "pk-tabs", tabClass: "pk-tab", wrap: true });
   }
-  function mountFeedTabs(root) {
-    if (root) root.querySelectorAll("section.fd-hist[data-fdhost]").forEach(feedTabsDraw);
+  function mountFeedTabs(root2) {
+    if (root2) root2.querySelectorAll("section.fd-hist[data-fdhost]").forEach(feedTabsDraw);
   }
   function feedTab(s5, v5) {
     FDTAB[s5.dataset.fdhost] = v5;
@@ -31675,8 +32202,8 @@ ${s5}`;
     });
     return h5 + "</div>";
   }
-  function mvBindScroll(root) {
-    (root || document).querySelectorAll("[data-mvscroll]").forEach((sw3) => {
+  function mvBindScroll(root2) {
+    (root2 || document).querySelectorAll("[data-mvscroll]").forEach((sw3) => {
       const k5 = sw3.dataset.mvscroll;
       if (shared.MV.scroll[k5] === void 0) shared.MV.scroll[k5] = Math.max(0, (+sw3.dataset.today || 0) - sw3.clientWidth / 3);
       sw3.scrollLeft = shared.MV.scroll[k5];
@@ -32535,7 +33062,7 @@ ${s5}`;
       }
       const a5 = t47.closest("[data-mvact]");
       if (a5) {
-        const k5 = a5.dataset.mvact, root = a5.closest(".mv-card") || document, sw3 = root.querySelector("[data-mvscroll]");
+        const k5 = a5.dataset.mvact, root2 = a5.closest(".mv-card") || document, sw3 = root2.querySelector("[data-mvscroll]");
         if (k5 === "aud") {
           shared.MVAUD = shared.MVAUD === "cli" ? "int" : "cli";
           mvPrefSet(MVVIEWKEY, shared.MVAUD);
@@ -43702,14 +44229,14 @@ ${s5}`;
     return md2;
   }
   function curSnap(c5) {
-    const root = $("#curEd");
-    if (!root) return null;
+    const root2 = $("#curEd");
+    if (!root2) return null;
     const set = c5.claims || {};
-    let md2 = stripMarks(edValue(root)), pos = 0;
-    for (const n4 of claimOrder(root)) {
+    let md2 = stripMarks(edValue(root2)), pos = 0;
+    for (const n4 of claimOrder(root2)) {
       const cl2 = set[n4];
       if (!cl2) continue;
-      const t47 = claimText(root, n4), i5 = md2.indexOf(t47, pos);
+      const t47 = claimText(root2, n4), i5 = md2.indexOf(t47, pos);
       if (i5 < 0) continue;
       pos = i5 + t47.length;
       const mark = (cl2.ids || []).length ? ` {${cl2.ids.join(", ")}}` : " {}";
@@ -44130,12 +44657,12 @@ ${s5}`;
     shared.CURED = { code, orig: p6.current || "", src1: l6, src2: r4, ed1: null, ed2: null, dirty: false, uploads: {}, removed: /* @__PURE__ */ new Set(), last: pane || 1 };
     mountCurEdit();
     if (!shared.CURED) return;
-    const ev = evSaved(code), root = $("#curEd");
-    if (!ev || !root) return;
+    const ev = evSaved(code), root2 = $("#curEd");
+    if (!ev || !root2) return;
     const set = {};
-    claimsMatch(root, ev).forEach(({ n: n4, h: h5 }) => {
+    claimsMatch(root2, ev).forEach(({ n: n4, h: h5 }) => {
       const e4 = ev[h5];
-      set[n4] = { text: claimText(root, n4), ids: [], how: e4.how === "none" || e4.how === "kept" ? "none" : "saved", saved: e4, touched: true, ...e4.kept != null ? { kept: e4.kept } : {} };
+      set[n4] = { text: claimText(root2, n4), ids: [], how: e4.how === "none" || e4.how === "kept" ? "none" : "saved", saved: e4, touched: true, ...e4.kept != null ? { kept: e4.kept } : {} };
     });
     if (Object.keys(set).length) {
       shared.CURED.claims = set;
@@ -44201,8 +44728,8 @@ ${s5}`;
     const cur = shared.CURED, code = cur && cur.code, payload = cur ? evidencePayload() : null, had = !!evSaved(code);
     await (async () => {
       if (shared.CURED && shared.CURED.claims && !shared.CURED.saving) {
-        const root = $("#curEd");
-        const wait = claimOrder(root).filter((n4) => {
+        const root2 = $("#curEd");
+        const wait = claimOrder(root2).filter((n4) => {
           const c5 = shared.CURED.claims[n4];
           return c5 && claimState(c5) === "none" && !c5.touched;
         });
@@ -44651,11 +45178,11 @@ ${pre}**Current state title:** ${title}`);
   var CLAIM_RE = /\s*\{\s*((?:F\d+\s*,?\s*)*)\}/;
   var stripMarks = (md2) => String(md2 || "").replace(new RegExp(CLAIM_RE.source, "g"), "").replace(/[ \t]+$/gm, "");
   shared.EV = null;
-  function claimsWrap(root) {
+  function claimsWrap(root2) {
     const out = [];
-    if (!root) return out;
+    if (!root2) return out;
     let n4 = 0;
-    for (const bl2 of root.querySelectorAll("p,li,blockquote")) {
+    for (const bl2 of root2.querySelectorAll("p,li,blockquote")) {
       if (bl2.closest("figure")) continue;
       const tw2 = document.createTreeWalker(bl2, NodeFilter.SHOW_TEXT, { acceptNode: (t47) => t47.parentElement.closest("p,li,blockquote,figure") === bl2 ? 1 : 2 });
       const nodes = [];
@@ -44701,9 +45228,9 @@ ${pre}**Current state title:** ${title}`);
   }
   var evRoot = (which) => which === "rd" ? $('#curText .curpane[data-pane="1"] .curin') || $("#curText") : which === "rw" ? $("#genRewrite .rwbody") : $("#curEd");
   var claimSet = (which) => which === "rd" ? shared.CURRD && shared.CURRD.set : !shared.CURED ? null : which === "rw" ? shared.CURED.rewrite && shared.CURED.rewrite.claims : shared.CURED.claims;
-  var claimSpans = (root, n4) => root ? [...root.querySelectorAll(`.claim[data-c="${n4}"]`)] : [];
-  var claimText = (root, n4) => claimSpans(root, n4).map((s5) => s5.textContent).join("").replace(/\s+/g, " ").trim();
-  var claimOrder = (root) => root ? [...new Set([...root.querySelectorAll(".claim[data-c]")].map((s5) => +s5.dataset.c))] : [];
+  var claimSpans = (root2, n4) => root2 ? [...root2.querySelectorAll(`.claim[data-c="${n4}"]`)] : [];
+  var claimText = (root2, n4) => claimSpans(root2, n4).map((s5) => s5.textContent).join("").replace(/\s+/g, " ").trim();
+  var claimOrder = (root2) => root2 ? [...new Set([...root2.querySelectorAll(".claim[data-c]")].map((s5) => +s5.dataset.c))] : [];
   function claimState(c5) {
     return c5.how === "saved" && !c5.edited ? "ok" : c5.edited ? "edited" : c5.how === "none" || !c5.how && !c5.ids.length ? c5.kept != null ? "kept" : "none" : "ok";
   }
@@ -44721,10 +45248,10 @@ ${pre}**Current state title:** ${title}`);
     return `Source: ${plur(rows2, "row")}`;
   }
   function claimPaint(which) {
-    const root = evRoot(which), set = claimSet(which);
-    if (!root || !set) return;
-    const edit = root.isContentEditable, seen = /* @__PURE__ */ new Set();
-    root.querySelectorAll(".claim[data-c]").forEach((s5) => {
+    const root2 = evRoot(which), set = claimSet(which);
+    if (!root2 || !set) return;
+    const edit = root2.isContentEditable, seen = /* @__PURE__ */ new Set();
+    root2.querySelectorAll(".claim[data-c]").forEach((s5) => {
       const c5 = set[s5.dataset.c];
       if (!c5) return;
       const st2 = claimState(c5), first = !seen.has(s5.dataset.c);
@@ -44744,12 +45271,12 @@ ${pre}**Current state title:** ${title}`);
     });
   }
   function claimsInit(which) {
-    const root = evRoot(which);
-    if (!root || !shared.CURED) return;
-    const set = {}, h5 = edOf(root);
+    const root2 = evRoot(which);
+    if (!root2 || !shared.CURED) return;
+    const set = {}, h5 = edOf(root2);
     const tpl = h5 ? document.createElement("template") : null;
     if (tpl) putHTML(tpl, raw(h5.editor.getHTML()));
-    claimsWrap(tpl ? tpl.content : root).forEach((c5) => {
+    claimsWrap(tpl ? tpl.content : root2).forEach((c5) => {
       set[c5.n] = { text: c5.text, ids: c5.ids, how: c5.ids.length ? "" : "none" };
     });
     if (tpl) h5.editor.chain().setMeta(ED_QUIET, true).setMeta("addToHistory", false).setContent(tpl.innerHTML, { emitUpdate: false }).run();
@@ -44759,36 +45286,36 @@ ${pre}**Current state title:** ${title}`);
     claimPaint(which);
   }
   function claimsPayload(which) {
-    const root = evRoot(which), set = claimSet(which);
-    if (!root || !set) return void 0;
-    return claimOrder(root).filter((n4) => set[n4]).map((n4) => ({ n: n4, text: claimText(root, n4), ids: set[n4].ids || [], edited: !!set[n4].edited })).filter((c5) => !(set[c5.n] && set[c5.n].how === "saved" && !set[c5.n].edited));
+    const root2 = evRoot(which), set = claimSet(which);
+    if (!root2 || !set) return void 0;
+    return claimOrder(root2).filter((n4) => set[n4]).map((n4) => ({ n: n4, text: claimText(root2, n4), ids: set[n4].ids || [], edited: !!set[n4].edited })).filter((c5) => !(set[c5.n] && set[c5.n].how === "saved" && !set[c5.n].edited));
   }
   function claimsApply(which, ev, sent) {
-    const set = claimSet(which), root = evRoot(which);
+    const set = claimSet(which), root2 = evRoot(which);
     if (!set || !ev || !shared.CURED) return;
     shared.CURED.ev = { ...shared.CURED.ev || {}, ...ev.facts || {} };
     for (const c5 of ev.claims || []) {
       const x5 = set[c5.n];
       if (!x5) continue;
       const was = (sent || []).find((s5) => s5.n === c5.n);
-      if (x5.edited && was && was.text !== claimText(root, c5.n)) continue;
+      if (x5.edited && was && was.text !== claimText(root2, c5.n)) continue;
       x5.ids = c5.ids;
       x5.how = c5.how;
       if (x5.edited) {
         x5.edited = false;
-        x5.text = claimText(root, c5.n);
+        x5.text = claimText(root2, c5.n);
       }
     }
     claimPaint(which);
     evRefresh();
   }
   function claimTrack() {
-    const root = $("#curEd");
-    if (root && shared.CURED && shared.CURED.claims) {
+    const root2 = $("#curEd");
+    if (root2 && shared.CURED && shared.CURED.claims) {
       let changed = false;
       for (const [n4, c5] of Object.entries(shared.CURED.claims)) {
         if (c5.edited) continue;
-        if (claimText(root, n4) !== c5.text) {
+        if (claimText(root2, n4) !== c5.text) {
           c5.edited = true;
           c5.touched = true;
           c5.ids = [];
@@ -44817,11 +45344,11 @@ ${pre}**Current state title:** ${title}`);
     return p6;
   }
   function evPanelOpen(which, n4) {
-    const root = evRoot(which), set = claimSet(which);
-    if (!root || !set || !set[n4]) return;
+    const root2 = evRoot(which), set = claimSet(which);
+    if (!root2 || !set || !set[n4]) return;
     shared.EV = { which, n: +n4 };
     $$(".claim.cur").forEach((s5) => s5.classList.remove("cur"));
-    claimSpans(root, n4).forEach((s5) => s5.classList.add("cur"));
+    claimSpans(root2, n4).forEach((s5) => s5.classList.add("cur"));
     evDraw();
   }
   function evPanelClose() {
@@ -44844,13 +45371,13 @@ ${pre}**Current state title:** ${title}`);
     return `<div class="evrow">${link} ${esc(r4.title)}<div class="sub">${esc(bits)}</div>${r4.quote && r4.quote.text ? evQuote(r4.quote) : r4.source ? `<div class="evqsrc">Source: ${esc(r4.source)}</div>` : ""}</div>`;
   }
   function evDraw() {
-    const p6 = evEl(), root = evRoot(shared.EV.which), set = claimSet(shared.EV.which), c5 = set && set[shared.EV.n];
-    if (!c5 || !claimSpans(root, shared.EV.n).length) {
+    const p6 = evEl(), root2 = evRoot(shared.EV.which), set = claimSet(shared.EV.which), c5 = set && set[shared.EV.n];
+    if (!c5 || !claimSpans(root2, shared.EV.n).length) {
       evPanelClose();
       return;
     }
-    const st2 = claimState(c5), ev = shared.CURED && shared.CURED.ev || {}, order = claimOrder(root), i5 = order.indexOf(shared.EV.n);
-    const block = claimSpans(root, shared.EV.n)[0].closest("p,li,blockquote"), inBlock = [...new Set([...block.querySelectorAll(".claim[data-c]")].filter((s5) => s5.closest("p,li,blockquote") === block).map((s5) => s5.dataset.c))];
+    const st2 = claimState(c5), ev = shared.CURED && shared.CURED.ev || {}, order = claimOrder(root2), i5 = order.indexOf(shared.EV.n);
+    const block = claimSpans(root2, shared.EV.n)[0].closest("p,li,blockquote"), inBlock = [...new Set([...block.querySelectorAll(".claim[data-c]")].filter((s5) => s5.closest("p,li,blockquote") === block).map((s5) => s5.dataset.c))];
     const good = inBlock.filter((k5) => set[k5] && claimState(set[k5]) === "ok").length;
     const foot = good === inBlock.length ? "Every claim in this paragraph has a source." : `${good} of ${plur(inBlock.length, "claim")} in this paragraph ${good === 1 ? "has" : "have"} a source.`;
     const waiting = order.filter((k5) => set[k5] && claimState(set[k5]) === "none").length;
@@ -44862,7 +45389,7 @@ ${pre}**Current state title:** ${title}`);
     const state = st2 === "none" ? `<div class="evstate none" role="alert"><strong>No source found for this sentence.</strong> creaite couldn't tie it to the facts the draft was written from. Edit it, or keep it with a note.</div>
       <div class="evkeep"><input type="text" id="evNote" placeholder="Why it stays (optional)" aria-label="A note on why this sentence stays"><button type="button" class="btn" data-evkeep="one">Keep it</button>${waiting > 1 ? `<button type="button" class="btn" data-evkeep="all">Keep all ${waiting}</button>` : ""}</div>` : st2 === "kept" ? `<div class="evstate">Kept without a source${c5.kept ? `: “${esc(c5.kept)}”` : ""}. <button type="button" class="mini" data-evkeep="undo">Undo</button></div>` : st2 === "edited" ? `<div class="evstate">You edited this sentence, so its source mark is off until it is checked again. ${shared.EV.which === "ed" ? '<button type="button" class="mini" data-chk="1">Check again</button>' : ""}</div>` : !c5.how ? `<div class="evstate sub">Checking the source…</div>` : c5.how === "rechecked" ? `<div class="evstate">Checked again after your edit: it matches ${plur(c5.ids.length, "fact")} in the sheet.</div>` : `<div class="evstate">Rests on ${plur(c5.ids.length, "fact")} from the facts sheet.</div>`;
     putHTML(p6, html`<div class="evbar"><strong>Source</strong><span class="evint" title="Shown only here: never in a report, the saved text or a copy">Internal</span><span class="sp"></span><span class="sub" aria-live="polite">${raw(i5 + 1)} of ${order.length}</span>${raw(ibtn("chevup", "Previous claim", 'data-evnav="-1"', "", "⇧Tab"))}${raw(ibtn("chevdown", "Next claim", 'data-evnav="1"', "", "Tab"))}${raw(ibtn("arrowright", "Close", 'data-evclose="1"', "", "Esc"))}</div>
-    <div class="evbody"><blockquote class="evsent">${claimText(root, shared.EV.n)}</blockquote>${raw(state)}${st2 === "edited" ? "" : raw(facts)}</div><div class="evfoot">${raw(foot)}</div>`);
+    <div class="evbody"><blockquote class="evsent">${claimText(root2, shared.EV.n)}</blockquote>${raw(state)}${st2 === "edited" ? "" : raw(facts)}</div><div class="evfoot">${raw(foot)}</div>`);
     p6.hidden = false;
     if (!shared.EV) return;
     {
@@ -44878,13 +45405,13 @@ ${pre}**Current state title:** ${title}`);
   }
   function evMove(d5) {
     if (!shared.EV) return;
-    const root = evRoot(shared.EV.which), order = claimOrder(root);
+    const root2 = evRoot(shared.EV.which), order = claimOrder(root2);
     if (!order.length) return;
     let i5 = order.indexOf(shared.EV.n) + d5;
     i5 = (i5 + order.length) % order.length;
     const n4 = order[i5];
     evPanelOpen(shared.EV.which, n4);
-    const sp2 = claimSpans(root, n4)[0];
+    const sp2 = claimSpans(root2, n4)[0];
     if (!sp2) return;
     sp2.scrollIntoView({ block: "nearest" });
     if (shared.EV.which !== "ed") sp2.focus({ preventScroll: true });
@@ -44912,13 +45439,13 @@ ${pre}**Current state title:** ${title}`);
   }
   var evWhich = (el2) => el2.closest("#genRewrite .rwbody") ? "rw" : el2.closest("#curEd") ? "ed" : el2.closest("#curText") ? "rd" : null;
   function rwWrap() {
-    const root = evRoot("rw");
-    if (!root || !shared.CURED || !shared.CURED.rewrite) return;
+    const root2 = evRoot("rw");
+    if (!root2 || !shared.CURED || !shared.CURED.rewrite) return;
     if (!shared.CURED.rewrite.claims) {
       claimsInit("rw");
       return;
     }
-    claimsWrap(root);
+    claimsWrap(root2);
     claimPaint("rw");
   }
   shared.CURRD = null;
@@ -44933,12 +45460,12 @@ ${pre}**Current state title:** ${title}`);
     }
     return (a5 >>> 0).toString(16).padStart(8, "0") + (b5 >>> 0).toString(16).padStart(8, "0");
   }
-  function claimsMatch(root, ev, n02) {
+  function claimsMatch(root2, ev, n02) {
     const found = [];
-    if (!root || !ev) return found;
+    if (!root2 || !ev) return found;
     let n4 = n02 || 0;
-    const ed3 = edOf(root), runs = [];
-    for (const bl2 of root.querySelectorAll("p,li,blockquote")) {
+    const ed3 = edOf(root2), runs = [];
+    for (const bl2 of root2.querySelectorAll("p,li,blockquote")) {
       if (bl2.closest("figure")) continue;
       const tw2 = document.createTreeWalker(bl2, NodeFilter.SHOW_TEXT, { acceptNode: (t47) => t47.parentElement.closest("p,li,blockquote,figure") === bl2 && !t47.parentElement.closest(".claim") ? 1 : 2 });
       const nodes = [];
@@ -44995,19 +45522,19 @@ ${pre}**Current state title:** ${title}`);
         found.push({ n: n4, h: h5 });
       }
     }
-    if (ed3) edClaim(root, runs);
+    if (ed3) edClaim(root2, runs);
     return found;
   }
   var evSaved = (code) => (P3.find((x5) => x5.code === code) || {}).ev || null;
   function readClaims(code) {
     shared.CURRD = null;
-    const ev = evSaved(code), root = evRoot("rd");
-    if (!ev || !root) return;
+    const ev = evSaved(code), root2 = evRoot("rd");
+    if (!ev || !root2) return;
     const set = {}, hit2 = /* @__PURE__ */ new Set();
-    claimsMatch(root, ev).forEach(({ n: n4, h: h5 }) => {
+    claimsMatch(root2, ev).forEach(({ n: n4, h: h5 }) => {
       const e4 = ev[h5];
       hit2.add(h5);
-      set[n4] = { text: claimText(root, n4), ids: [], how: e4.how === "none" || e4.how === "kept" ? "none" : "saved", saved: e4, ...e4.kept != null ? { kept: e4.kept } : {} };
+      set[n4] = { text: claimText(root2, n4), ids: [], how: e4.how === "none" || e4.how === "kept" ? "none" : "saved", saved: e4, ...e4.kept != null ? { kept: e4.kept } : {} };
     });
     const lost = Object.keys(ev).filter((h5) => !hit2.has(h5) && (ev[h5].facts || []).length).length;
     shared.CURRD = { code, set, lost };
@@ -45036,12 +45563,12 @@ ${pre}**Current state title:** ${title}`);
     }).join("");
   }
   function claimsAdopt() {
-    const root = $("#curEd");
-    if (!root || !shared.CURED) return 0;
+    const root2 = $("#curEd");
+    if (!root2 || !shared.CURED) return 0;
     const set = shared.CURED.claims || (shared.CURED.claims = {});
     let n4 = Math.max(0, ...Object.keys(set).map(Number)), added = 0;
-    const ed3 = edOf(root), runs = [], made = [];
-    for (const bl2 of root.querySelectorAll("p,li,blockquote")) {
+    const ed3 = edOf(root2), runs = [], made = [];
+    for (const bl2 of root2.querySelectorAll("p,li,blockquote")) {
       if (bl2.closest("figure")) continue;
       const tw2 = document.createTreeWalker(bl2, NodeFilter.SHOW_TEXT, { acceptNode: (t47) => t47.parentElement.closest("p,li,blockquote,figure") === bl2 && !t47.parentElement.closest(".claim") ? 1 : 2 });
       const nodes = [];
@@ -45067,9 +45594,9 @@ ${pre}**Current state title:** ${title}`);
         sp2.appendChild(node);
       }
     }
-    if (ed3) edClaim(root, runs);
+    if (ed3) edClaim(root2, runs);
     made.forEach((k5) => {
-      set[k5] = { text: claimText(root, k5), ids: [], how: "", edited: true, touched: true };
+      set[k5] = { text: claimText(root2, k5), ids: [], how: "", edited: true, touched: true };
     });
     claimPaint("ed");
     return added;
@@ -45096,13 +45623,13 @@ ${pre}**Current state title:** ${title}`);
     snack("Sources checked. A sentence creaite couldn't place is marked.");
   }
   function evidencePayload() {
-    const root = $("#curEd"), set = shared.CURED && shared.CURED.claims;
-    if (!root || !set) return null;
+    const root2 = $("#curEd"), set = shared.CURED && shared.CURED.claims;
+    if (!root2 || !set) return null;
     const ev = shared.CURED.ev || {}, out = {};
-    for (const n4 of claimOrder(root)) {
+    for (const n4 of claimOrder(root2)) {
       const c5 = set[n4];
       if (!c5 || c5.edited) continue;
-      const text = claimText(root, n4);
+      const text = claimText(root2, n4);
       if (!text) continue;
       const st2 = claimState(c5);
       if (c5.saved) {
@@ -45153,16 +45680,16 @@ ${pre}**Current state title:** ${title}`);
       if (sp2 && +sp2.dataset.c !== shared.EV.n) evPanelOpen("ed", sp2.dataset.c);
     });
     document.addEventListener("mouseover", (e4) => {
-      const sp2 = e4.target.closest && e4.target.closest(".claim[data-c]"), root = sp2 && sp2.closest("#curEd,.rwbody,#curText");
+      const sp2 = e4.target.closest && e4.target.closest(".claim[data-c]"), root2 = sp2 && sp2.closest("#curEd,.rwbody,#curText");
       $$(".claim.hov").forEach((s5) => {
-        if (!sp2 || s5.dataset.c !== sp2.dataset.c || !root.contains(s5)) s5.classList.remove("hov");
+        if (!sp2 || s5.dataset.c !== sp2.dataset.c || !root2.contains(s5)) s5.classList.remove("hov");
       });
-      if (sp2 && root) claimSpans(root, sp2.dataset.c).forEach((s5) => s5.classList.add("hov"));
+      if (sp2 && root2) claimSpans(root2, sp2.dataset.c).forEach((s5) => s5.classList.add("hov"));
     });
     document.addEventListener("keydown", (e4) => {
       if (!shared.EV || e4.isComposing) return;
-      const p6 = $("#evPanel"), root = evRoot(shared.EV.which);
-      const inside = p6 && p6.contains(e4.target) || root && root.contains(e4.target) || shared.EV.which === "ed" && e4.target.id === "curEd";
+      const p6 = $("#evPanel"), root2 = evRoot(shared.EV.which);
+      const inside = p6 && p6.contains(e4.target) || root2 && root2.contains(e4.target) || shared.EV.which === "ed" && e4.target.id === "curEd";
       if (slashOn(e4.target) && (e4.key === "Escape" || e4.key === "Tab")) return;
       if (e4.key === "Escape" && (inside || !document.querySelector("dialog[open]"))) {
         e4.preventDefault();
@@ -45521,15 +46048,15 @@ ${pre}**Current state title:** ${title}`);
     const x5 = w6.k === "actions" ? A4.find((a5) => a5.id === w6.id) : w6.k === "raid" ? R3.find((r4) => r4.id === w6.id) : w6.k === "decisions" ? DEC.find((d5) => d5.id === w6.id) : null;
     return x5 ? x5.t : ((D.milestone_names || {})[w6.id] || [w6.id])[0];
   };
-  function decorateWarnings(root) {
-    if (!root) return;
-    root.querySelectorAll("[data-open]").forEach((el2) => {
+  function decorateWarnings(root2) {
+    if (!root2) return;
+    root2.querySelectorAll("[data-open]").forEach((el2) => {
       if (el2.closest(".wlist") || el2.querySelector(".wflag")) return;
       const [k5, id2] = el2.dataset.open.split(":");
       const f5 = wflag(k5, id2);
       if (f5) addHTML(el2.querySelector(".t") || el2, "afterbegin", raw(f5));
     });
-    root.querySelectorAll(".msrow[data-ms] .msn").forEach((el2) => {
+    root2.querySelectorAll(".msrow[data-ms] .msn").forEach((el2) => {
       if (!el2.querySelector(".wflag")) addHTML(el2, "afterbegin", raw(wflag("milestones", el2.closest("[data-ms]").dataset.ms)));
     });
   }
@@ -46152,10 +46679,10 @@ ${pre}**Current state title:** ${title}`);
     return out;
   }
   var mounted = (el2) => !!(el2 && el2.closest && el2.closest("[data-mount]"));
-  function setMark(root) {
+  function setMark(root2) {
     const c5 = catalogue.value;
-    if (!c5 || !root) return;
-    root.querySelectorAll(".srow").forEach((r4) => {
+    if (!c5 || !root2) return;
+    root2.querySelectorAll(".srow").forEach((r4) => {
       if (mounted(r4)) return;
       r4.querySelectorAll(":scope .setdot,:scope .setreset").forEach((x5) => x5.remove());
       r4.classList.remove("chg");
@@ -46184,11 +46711,11 @@ ${pre}**Current state title:** ${title}`);
     });
   }
   function setSynced(ch2) {
-    let reload = false, look = false;
+    let reload = false, look2 = false;
     for (const [k5, v5] of Object.entries(ch2)) {
       const sk2 = Object.keys(SKEY).find((x5) => SKEY[x5] === k5);
       if (sk2) S[sk2] = sk2 === "short" && Array.isArray(v5) ? v5.join(", ") : v5;
-      if (k5 === "dashboard.theme" || k5 === "dashboard.palette" || k5 === "dashboard.motion") look = true;
+      if (k5 === "dashboard.theme" || k5 === "dashboard.palette" || k5 === "dashboard.motion") look2 = true;
       else if (k5 === "dashboard.week_ahead_priorities") {
         S.weekPrios = v5;
         reload = true;
@@ -46203,7 +46730,7 @@ ${pre}**Current state title:** ${title}`);
       else if (k5 === "logging.level") DIAG.level = v5;
       else if (k5.startsWith("day.") || k5 === "work.weekend_days" || k5 === "dashboard.flow_weeks") reload = true;
     }
-    if (look) {
+    if (look2) {
       themeFade();
       applyTheme();
       applyMotion();
@@ -49529,7 +50056,7 @@ ${d5.text}`);
   function mdHtml(text, imgs) {
     return mdBlocks(text).map(([k5, b5]) => k5 === "img" ? figHtml(b5[0], b5[1], imgSrc(imgs, b5[1])) : k5 === "p" ? `<p>${mdInline(b5)}</p>` : k5 === "h" ? `<h3>${mdInline(b5)}</h3>` : k5 === "h2" ? `<h4>${mdInline(b5)}</h4>` : k5 === "h3" ? `<h5>${mdInline(b5)}</h5>` : k5 === "q" ? `<blockquote>${mdInline(b5)}</blockquote>` : listHtml(b5)).join("");
   }
-  function htmlToMd(root) {
+  function htmlToMd(root2) {
     const blocks2 = [];
     let cur = "";
     const inl = (n4) => {
@@ -49602,7 +50129,7 @@ ${d5.text}`);
         } else cur += inl(n4);
       }
     };
-    walk(root);
+    walk(root2);
     flush();
     return blocks2.join("\n\n");
   }
@@ -51019,9 +51546,9 @@ ${d5.text}`);
     }, () => pkSaveAndClose());
     PK.det = {};
   }
-  function pkEdMount(root) {
-    if (!root) return;
-    root.querySelectorAll(".pked").forEach((el2) => {
+  function pkEdMount(root2) {
+    if (!root2) return;
+    root2.querySelectorAll(".pked").forEach((el2) => {
       if (el2.cxed) return;
       creaiteEditor(el2, {
         features: "plain",
@@ -54602,8 +55129,8 @@ ${d5.text}`);
     const nMine = L3.filter((n4) => split2.has(n4)).length, head = (i5) => !code || !nMine || nMine === L3.length ? "" : i5 === 0 ? code : i5 === nMine ? "Everyone else" : "";
     return items2.map((it2, i5) => it2.t === "new" ? { v: it2.n, t: "new", label: `＋ New person “${it2.n}”…`, cls: "new", head: head(i5) } : it2.t === "alias" ? { v: it2.n, t: "alias", typed: it2.typed, label: `Is “${it2.typed}” ${it2.n}?`, sub: "Yes, and remember it", head: head(i5) } : { v: it2.n, t: "pick", label: `${it2.n}${isMe(it2.n) ? " (you)" : ""}`, fill: it2.n, sub: String(useCount(it2.n)), head: head(i5), removeLabel: `Remove ${it2.n} from the list`, remove: () => regSetHidden(it2.n, true) });
   }
-  function mountOwnerFields(root) {
-    root.querySelectorAll(".combohost[data-combo]").forEach((host2) => {
+  function mountOwnerFields(root2) {
+    root2.querySelectorAll(".combohost[data-combo]").forEach((host2) => {
       const h5 = (
         /** @type {HTMLElement} */
         host2
@@ -54837,9 +55364,9 @@ ${d5.text}`);
     if (o5.focus !== false) box.querySelector("[data-wkd]").focus();
     return true;
   }
-  function wkMark(root) {
-    if (!root) return;
-    root.querySelectorAll(".cg button[data-v],.pkday[data-d]").forEach((b5) => {
+  function wkMark(root2) {
+    if (!root2) return;
+    root2.querySelectorAll(".cg button[data-v],.pkday[data-d]").forEach((b5) => {
       const v5 = b5.dataset.d || (b5.dataset.v ? toIso(b5.dataset.v) : "");
       if (!v5 || !DATE.test(v5) || b5.classList.contains("wkend")) return;
       if (wkDays().has(wkDow(v5))) {
@@ -56011,7 +56538,7 @@ ${d5.text}`);
     );
     const props = A2({ onInput, onOpenNote, onOpenItem, noteTitles, code, onHoverLine, path });
     props.current = { onInput, onOpenNote, onOpenItem, noteTitles, code, onHoverLine, path };
-    const look = (editor) => {
+    const look2 = (editor) => {
       const s5 = editor.state.selection;
       if (!s5.empty) return setPick(null);
       const $f2 = s5.$from, before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), start = s5.from - $f2.parentOffset;
@@ -56167,8 +56694,8 @@ ${d5.text}`);
         props.current.onInput();
       };
       el2.addEventListener("input", input);
-      h5.editor.on("selectionUpdate", () => look(h5.editor));
-      h5.editor.on("update", () => look(h5.editor));
+      h5.editor.on("selectionUpdate", () => look2(h5.editor));
+      h5.editor.on("update", () => look2(h5.editor));
       const blur = () => setTimeout(() => {
         if (!el2.contains(document.activeElement)) setPick(null);
       }, 150);
@@ -56568,17 +57095,17 @@ ${d5.text}`);
     return null;
   }
   var NOTE_TABBABLE = 'button:not([disabled]),[href],input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable=true]';
-  function trapTab(e4, root) {
+  function trapTab(e4, root2) {
     const all = (
       /** @type {HTMLElement[]} */
-      [...root.querySelectorAll(NOTE_TABBABLE)].filter((x5) => x5.offsetParent !== null || x5.getClientRects().length > 0)
+      [...root2.querySelectorAll(NOTE_TABBABLE)].filter((x5) => x5.offsetParent !== null || x5.getClientRects().length > 0)
     );
     if (!all.length) return;
     const first = all[0], last = all[all.length - 1], at2 = document.activeElement;
-    if (e4.shiftKey && (at2 === first || !root.contains(at2))) {
+    if (e4.shiftKey && (at2 === first || !root2.contains(at2))) {
       e4.preventDefault();
       last.focus();
-    } else if (!e4.shiftKey && (at2 === last || !root.contains(at2))) {
+    } else if (!e4.shiftKey && (at2 === last || !root2.contains(at2))) {
       e4.preventDefault();
       first.focus();
     }
@@ -60599,8 +61126,8 @@ ${d5.text}`);
   function imgThumbsHtml(ids) {
     return ids && ids.length ? `<div class="mthumbs">${ids.map((i5) => `<div class="chthumb" data-img="${esc(i5)}" style="${shared.IMGURL[i5] ? `background-image:url('${shared.IMGURL[i5]}')` : ""}" title="Click to enlarge"></div>`).join("")}</div>` : "";
   }
-  async function fillThumbs(root) {
-    for (const t47 of root.querySelectorAll("[data-img]")) {
+  async function fillThumbs(root2) {
+    for (const t47 of root2.querySelectorAll("[data-img]")) {
       const i5 = t47.dataset.img;
       if (!shared.IMGURL[i5]) {
         const r4 = await api("/api/ask/image/get", { id: i5 });
@@ -63961,10 +64488,10 @@ ${d5.text}`);
       ] }) }, y5))
     ] }) });
   }
-  function relayout(root) {
+  function relayout(root2) {
     const pages = (
       /** @type {HTMLElement[]} */
-      [...root.querySelectorAll(".sheet-a4 > .page")]
+      [...root2.querySelectorAll(".sheet-a4 > .page")]
     );
     for (const pg2 of pages) for (
       const el2 of
@@ -64056,7 +64583,7 @@ ${d5.text}`);
     const P5 = A2(props);
     P5.current = props;
     const sid = A2(++SHEET_SEQ).current;
-    const root = A2(
+    const root2 = A2(
       /** @type {HTMLDivElement|null} */
       null
     );
@@ -64075,7 +64602,7 @@ ${d5.text}`);
       /** @type {number[][]} */
       []
     );
-    const [pop, setPop] = d2(
+    const [pop2, setPop] = d2(
       /** @type {null | {check: SheetCheck, x: number, y: number}} */
       null
     );
@@ -64168,7 +64695,7 @@ ${d5.text}`);
       }
     } : null;
     _2(() => {
-      const el2 = root.current;
+      const el2 = root2.current;
       if (!el2) return;
       const marks = relayout(el2);
       if (JSON.stringify(marks) !== JSON.stringify(breaks)) setBreaks(marks);
@@ -64177,7 +64704,7 @@ ${d5.text}`);
     h2(() => {
       const el2 = (
         /** @type {HTMLElement} */
-        root.current
+        root2.current
       );
       let raf = 0;
       const ro2 = new ResizeObserver(() => {
@@ -64230,7 +64757,7 @@ ${d5.text}`);
           return;
         }
       }
-      if (!t47.closest || !t47.closest(".sheet-pop") && pop) setPop(null);
+      if (!t47.closest || !t47.closest(".sheet-pop") && pop2) setPop(null);
       if (!t47.closest || !t47.closest(".sheet-found") && found) setFound(null);
     };
     const pinch = (dy2) => setZoom(pinchZoom(zref.current, dy2));
@@ -64261,7 +64788,7 @@ ${d5.text}`);
     };
     const openChecks = checks.length;
     const note = main.conflict;
-    return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root, onKeyDown: onKey, onClick, children: [
+    return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, children: [
       /* @__PURE__ */ u2("div", { class: "sheet-bar", role: "toolbar", "aria-label": "Report", children: [
         /* @__PURE__ */ u2("span", { class: "sheet-zoom", role: "group", "aria-label": "Zoom", children: [
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Zoom out", onClick: () => setZoom(stepZoom(zoom, -1)), disabled: zoom <= 0.4, children: "−" }),
@@ -64322,12 +64849,12 @@ ${d5.text}`);
         frame(doc, null, scale, 0),
         partner ? frame(partner.doc, partner, scale, 1) : null
       ] }) }) }),
-      pop ? /* @__PURE__ */ u2("div", { class: "sheet-pop", role: "dialog", "aria-label": "Check", style: { left: `${pop.x}px`, top: `${pop.y}px` }, children: [
-        /* @__PURE__ */ u2("p", { children: pop.check.note }),
-        pop.check.last ? /* @__PURE__ */ u2("p", { class: "sub", children: pop.check.last }) : null,
+      pop2 ? /* @__PURE__ */ u2("div", { class: "sheet-pop", role: "dialog", "aria-label": "Check", style: { left: `${pop2.x}px`, top: `${pop2.y}px` }, children: [
+        /* @__PURE__ */ u2("p", { children: pop2.check.note }),
+        pop2.check.last ? /* @__PURE__ */ u2("p", { class: "sub", children: pop2.check.last }) : null,
         /* @__PURE__ */ u2("div", { class: "sheet-pops", children: [
-          (pop.check.actions || []).map((a5) => /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => {
-            onEvent({ type: "check", id: pop.check.id, action: a5.id });
+          (pop2.check.actions || []).map((a5) => /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => {
+            onEvent({ type: "check", id: pop2.check.id, action: a5.id });
             setPop(null);
           }, children: a5.label }, a5.id)),
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => setPop(null), children: "Close" })
@@ -68331,13 +68858,13 @@ ${d5.text}`);
       /** @type {Node} */
       host2.parentNode
     ), next: host2.nextSibling });
-    const top = topModal(), home = (
+    const top = topModal(), home2 = (
       /** @type {{parent: Node, next: Node | null}} */
       HOMES.get(host2)
     );
     if (top) {
       if (host2.parentNode !== top) top.appendChild(host2);
-    } else if (host2.parentNode !== home.parent) home.parent.insertBefore(host2, home.next && home.next.parentNode === home.parent ? home.next : null);
+    } else if (host2.parentNode !== home2.parent) home2.parent.insertBefore(host2, home2.next && home2.next.parentNode === home2.parent ? home2.next : null);
     if (!WATCHING) {
       WATCHING = true;
       document.addEventListener("close", () => HOMES.forEach((_6, h5) => toastLayer(h5)), true);
@@ -69895,10 +70422,12 @@ ${d5.text}`);
         "items",
         "jobLive",
         "joinPanes",
+        "keepHref",
         "kidsOf",
         "kindLabel",
         "laneDrop",
         "layoutOf",
+        "linkUrl",
         "loadChat",
         "loadPrep",
         "loadTab",
@@ -70174,6 +70703,7 @@ ${d5.text}`);
         "tl",
         "toIso",
         "tx",
+        "typedLinkUrl",
         "typing",
         "undatedCard",
         "undoApply",
@@ -70368,6 +70898,7 @@ ${d5.text}`);
   bootDialogs();
   bootTooltips();
   bootAiSelect();
+  bootLinkPopover();
   bootDevTag();
   bootRail0007();
   bootTheme();

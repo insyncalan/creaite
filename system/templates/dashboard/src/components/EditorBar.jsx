@@ -9,26 +9,26 @@
    does not apply here (Unlink away from a link, Indent outside a list) is aria-disabled; one in force at the cursor is
    aria-pressed.
 
-   The link form (address, Add, Cancel; https, http and mailto only, as Current state's always was) opens from the Link button or
-   ⌘⇧K inside a rich editor. ⌘K is the command palette everywhere, Shift or not outside an editor (Alan, 15-10-2026). ⌘⇧X is
-   strikethrough. The richer link control is #120. Nothing here dispatches on mount, so opening an editor is never an edit.
+   The link popover (components/LinkPopover.jsx, #120) opens from the Link button; ⌘⇧K inside a rich editor is the editor's own
+   (LinkPopover's attachLink). ⌘K is the command palette everywhere, Shift or not outside an editor (Alan, 15-10-2026). ⌘⇧X is
+   strikethrough. Nothing here dispatches on mount, so opening an editor is never an edit.
 
    #122, Alan's final layout (16-10-2026): the Notes bar is ONE line. Related tools sit in hover menus (Heading, List, Insert: a profile
    entry "m:<key>", core/editorProfiles.js ED_MENUS), drawn with the shared Menu (`hover`): the pointer opens one, it folds about 220 ms
    after the pointer leaves, a click, Enter, Space or ↓ opens it with focus inside, ↑ ↓ move, Esc closes and gives focus back. The menu
    buttons are in the one Tab stop with the other buttons (← → between them); each carries aria-haspopup="menu" and aria-expanded. Items
-   that show a state are menuitemradio (ticked when in force). Unlink is not a button there: the link form has a Remove link button when
+   that show a state are menuitemradio (ticked when in force). Unlink is not a button there: the link popover has a Remove link button when
    the cursor is in a link. A menu item carries data-cmd=<tool id>, a bar control data-nt. */
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { profileTools, runTool, ED_TOOLS } from "../core/editorProfiles.js";
 import { Menu } from "./Menu.jsx";
-import { snack } from "../core/server.js";
+import { openLinkForm } from "./LinkPopover.jsx";
 
 /** @typedef {{profile: string, handle: () => (import("../core/editor.js").EdHandle|null|undefined), host?: Record<string, () => void>,
     cls?: string, label?: string, legacyRc?: boolean, extra?: import("preact").ComponentChildren}} BarProps */
 
-/** The bars on the page, so one key handler can find the one a key belongs to. @type {Set<{handle: BarProps["handle"], link: () => void}>} */
+/** The bars on the page, so one key handler can find the one a key belongs to. @type {Set<{handle: BarProps["handle"]}>} */
 const BARS = new Set();
 /** The bar whose editor holds the focused element, if any. @param {EventTarget|null} t */
 function editorBarFor(t) {
@@ -38,30 +38,24 @@ function editorBarFor(t) {
   return null;
 }
 let keysOn = false;
-/** ⌘⇧K opens the link form and ⌘⇧X strikes, in an editor that has a bar. At capture, so the palette (core/keys.js) never sees ⌘⇧K there. */
+/** ⌘⇧X strikes, in an editor that has a bar. (⌘⇧K, the link form, is the editor's own: LinkPopover's attachLink catches it before the palette.) */
 function keysInit() {
   if (keysOn) return;
   keysOn = true;
   document.addEventListener("keydown", e => {
     if (e.isComposing || !(e.metaKey || e.ctrlKey) || !e.shiftKey || e.altKey) return;      // not while an input method is composing
     const k = e.key.toLowerCase();
-    if (k !== "k" && k !== "x") return;
+    if (k !== "x") return;
     const b = editorBarFor(e.target);
     if (!b) return;
     e.preventDefault(); e.stopPropagation();
-    if (k === "k") b.link();
-    else { const h = b.handle(); if (h) runTool(h, "s"); }
+    const h = b.handle(); if (h) runTool(h, "s");
   }, true);
 }
-
-/** https, http and mailto only. @param {string} u */
-const okUrl = u => /^(https?:\/\/|mailto:)\S+$/i.test(u);
 
 /** @param {BarProps} props */
 export function EditorBar({ profile, handle, host, cls, label, legacyRc, extra }) {
   const bar = useRef(/** @type {HTMLDivElement|null} */ (null));
-  const form = useRef(/** @type {HTMLSpanElement|null} */ (null));
-  const [link, setLink] = useState(/** @type {{from: number, to: number, url: string, has?: boolean}|null} */ (null));
   const [cur, setCur] = useState(0);
   const [, tick] = useState(0);
   const tools = profileTools(profile, Object.keys(host || {}));
@@ -79,56 +73,27 @@ export function EditorBar({ profile, handle, host, cls, label, legacyRc, extra }
       if (t.can) { if (t.can(h.editor)) b.removeAttribute("aria-disabled"); else b.setAttribute("aria-disabled", "true"); }
     }
   };
-  const openLink = () => {
-    const h = handle();
-    if (!h) return;
-    const s = h.editor.state.selection;
-    setLink({ from: s.from, to: s.to, url: h.editor.getAttributes("link").href || "", has: h.editor.isActive("link") });
-  };
   useEffect(() => {
-    const me = { handle, link: openLink };
+    const me = { handle };
     BARS.add(me); keysInit();
     document.addEventListener("selectionchange", refresh);
     document.addEventListener("focusin", refresh);
     refresh();
     return () => { BARS.delete(me); document.removeEventListener("selectionchange", refresh); document.removeEventListener("focusin", refresh); };
   }, [profile]);
-  useEffect(() => { if (link && form.current) { const i = form.current.querySelector("input"); if (i) { i.focus(); i.select(); } } }, [link !== null]);
 
   /** @param {string} id */
   const run = id => {
     const h = handle(), t = ED_TOOLS[id];
     if (!h || !t) return;
-    if (id === "link") { openLink(); return; }
+    if (id === "link") { openLinkForm(h); return; }
     if (t.host) { const f = host && host[id]; if (f) f(); return; }
     runTool(h, id);
     refresh();
   };
-  /** Take the link off the text it is on (the link form's Remove link). */
-  const removeLink = () => {
-    const h = handle(), l = link;
-    setLink(null);
-    if (h && l) h.editor.chain().focus().setTextSelection({ from: l.from, to: l.to }).extendMarkRange("link").unsetLink().run();
-  };
-  /** @param {boolean} add */
-  const finish = add => {
-    const h = handle(), l = link;
-    setLink(null);
-    if (!h || !l) return;
-    const c = h.editor.chain().focus().setTextSelection({ from: l.from, to: l.to }), url = (form.current?.querySelector("input")?.value || "").trim();
-    if (add && okUrl(url)) {
-      if (l.from === l.to && !h.editor.isActive("link")) c.insertContent({ type: "text", text: url, marks: [{ type: "link", attrs: { href: url } }] }).run();
-      else c.extendMarkRange("link").setLink({ href: url }).run();
-    } else { c.run(); if (add && url) snack("Use a web (https) or mail (mailto) link"); }
-  };
   /** @param {KeyboardEvent} e */
   const keys = e => {
     const t = /** @type {Element} */ (e.target);
-    if (t.closest && t.closest(".rtelink")) {
-      if (e.key === "Enter" && t.tagName === "INPUT") { e.preventDefault(); finish(true); }
-      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
-      return;
-    }
     const b = /** @type {HTMLElement|null} */ (t.closest ? t.closest("button[data-nt]") : null);
     if (!b) return;
     if (e.key === "ArrowDown") tick(n => n + 1);
@@ -182,12 +147,6 @@ export function EditorBar({ profile, handle, host, cls, label, legacyRc, extra }
           data={{ nt: t.id }} items={menuItems(t)} onPick={id => run(id)} /> : <button key={t.id} type="button" data-nt={t.id} {...(legacyRc && t.rc ? { "data-rc": t.rc } : {})} aria-label={t.tip || t.name} data-tip={t.tip || t.name} {...(t.keys ? { "aria-keyshortcuts": t.keys } : {})}
           tabIndex={buttons[cur] && buttons[cur].id === t.id ? 0 : -1} {...(t.on ? { "aria-pressed": "false" } : {})}>{t.label}</button>)}
       </span>)}
-      <span class="rtelink" ref={form} hidden={!link}>
-        <input type="url" placeholder="Paste a web or mail link" aria-label="Link address" value={link ? link.url : ""} onInput={e => link && setLink({ ...link, url: /** @type {HTMLInputElement} */ (e.currentTarget).value })} />
-        <button type="button" data-rl="add" onClick={() => finish(true)}>Add</button>
-        {link && link.has ? <button type="button" data-rl="remove" onClick={removeLink}>Remove link</button> : null}
-        <button type="button" data-rl="cancel" onClick={() => finish(false)}>Cancel</button>
-      </span>
       {extra}
     </div>
   );

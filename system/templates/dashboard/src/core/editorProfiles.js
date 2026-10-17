@@ -9,7 +9,7 @@
    - current: Current state's two panes. The same, minus what its storage can't hold yet: no checklist (v2.2.0), no code (Word can't
               show it), no table, and no [[ @ (notes and people are Notes'); `#` work-item links are there (#122 step C: stored as plain Markdown, drawn as a chip).
    - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
-              selection bar (#117) and links (v2.2.0), never headings or checklists.
+              selection bar (#117) and links (#121, v2.2.0), never headings or checklists.
    - sheet:   the report sheets' rich text (weekly and client, #134): Current state's editor with the one-line grouped bar (Heading and List
               menus, B I S, quote, link, undo, redo) shown above the active field. No Insert menu: a sheet has no # or picture host, and a client
               sheet never offers an internal item. No checklist until the editor has one (v2.2.0).
@@ -73,7 +73,7 @@ export const ED_MENUS = {
   listsheet: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "|", "indent", "outdent"].map(x => x === "|" ? x : ED_TOOLS[x]) },
   insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map(x => ED_TOOLS[x]) },
 };
-/** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, node?: string, is?: string, alias?: string[],
+/** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, hook?: string, node?: string, is?: string, alias?: string[],
     run?: (c: any, e: any) => any}} SlashDef */
 /** The rows of the `/` menu. `run` gets a focused chain that has already removed the typed "/query". `host` rows are done by the host
     (it owns the pickers, the table's template and the file input) and show only when it can; `node` names a schema node the row needs.
@@ -90,6 +90,7 @@ export const ED_SLASH = {
   codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: c => c.toggleCodeBlock() },
   table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
   image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
+  link: { id: "link", group: "Link", name: "Link", desc: "A web page or an email address (⌘⇧K)", icon: "↗", alias: ["url", "web", "href", "address"], hook: "link" },
   item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", alias: ["item", "work", "workitem", "issue", "action", "risk", "decision"], host: true },
   person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
   note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
@@ -99,9 +100,9 @@ export const ED_SLASH = {
 };
 /** The `/` menu's rows per profile, in order; a profile with none has no menu (plain: its fields store plain text). @type {Record<string, string[]>} */
 export const ED_SLASH_ROWS = {
-  notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note",
+  notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "link", "item", "person", "note",
     "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
-  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "item"],
+  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
   plain: [], none: [],
 };
 /** How well a row matches a typed query: 0 an exact id or alias, 1 an id, alias or name that starts with it, 2 a word of the name, 3 anywhere in the name or description, 9 no match.

@@ -188,7 +188,7 @@ class Shape(ShapeCase):
         self.assertTrue(b.eval(f"(()=>{{ const s=document.getElementById('prepScroll'); return s.scrollWidth<=s.clientWidth+1 && {DLG}.scrollWidth<={DLG}.clientWidth+1; }})()"))
 
     def test_7_the_notes_have_ai_on_a_selection_with_the_meetings_project(self):
-        """BL-301 D: the shaped notes are on the one editor with AI on a selection (plain text, the meeting's project)."""
+        """BL-301 D: the shaped notes are on the one editor; AI on a selection is off for the plain place in v2.1.0 (#117)."""
         b = self.open_shape()
         self.shape()
         b.click("#shN-objective")
