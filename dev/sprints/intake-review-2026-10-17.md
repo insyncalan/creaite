@@ -92,3 +92,5 @@ Next, if you agree the direction: a mockup of the queue (Ready, Waiting, Done re
 
 Mockup of all five changes: `dev/mockups/intake-queue-mockup.html`. Alan liked options 2 and 3 of change C.
 Alan liked change D (the result on the row, ending in Review them) as mocked up (17-10-2026).
+
+**Alan, final review (17-10-2026):** Upload files stays on the Intake page (files dropped there become rows in the same list, with the same three actions). Auto-load and draft by series must be captured in the backlog. Checked on the board just now: no Intake items exist yet, so Jarvis is asked to create step 1, step 2 and the later item.
