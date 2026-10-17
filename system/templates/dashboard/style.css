@@ -3755,3 +3755,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
 .linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 @media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}
+
+/* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
+#peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
+#peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}

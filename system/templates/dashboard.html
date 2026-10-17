@@ -3765,6 +3765,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
 .linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 @media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}
+
+/* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
+#peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
+#peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -36318,7 +36322,7 @@ ${s5}`;
     const nameCell = (x5) => `<td class="title"><a href="#" class="plink2" data-person="${esc(x5.name)}">${esc(isMe(x5.name) ? `You (${x5.name})` : x5.name)}</a>${x5.p || isMe(x5.name) ? "" : ` <span class="tag warn" title="${none ? "Seen on items but isn’t in the people register" : "Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x5.p && x5.p.org ? esc(x5.p.org) : '<span class="sub">—</span>'}</td><td>${x5.p && x5.p.role ? esc(x5.p.role) : '<span class="sub">—</span>'}</td><td>${x5.codes.map(pLink).join(" ") || '<span class="sub">—</span>'}</td>`;
     $("#peopleTbl").setAttribute("role", "tabpanel");
-    putHTML($("#peopleTbl"), !L3.length ? html`<div class="empty">${none ? "Everyone creaite knows has something assigned." : "No one has open work or a decision waiting on them."}</div>` : none ? html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("cl", "Closed items", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}<td class="num">${raw(countLink(`${plur(x5.cl, "closed item")} of ${x5.name}`, x5.cl, "all:closed:", { st: ["Closed", "Cancelled"], o: ownersOf([...x5.A, ...x5.R, ...x5.D]) }, x5.cl || "—"))}</td></tr>`)}</tbody></table>` : html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("oa", "Open actions", 1))}${raw(th2("or", "Open RAID", 1))}${raw(th2("dw", "Decisions waiting", 1))}${raw(th2("late", "Overdue", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}
+    putHTML($("#peopleTbl"), !L3.length ? html`<div class="empty">${none ? "Everyone creaite knows has something assigned." : "No one has open work or a decision waiting on them."}</div>` : none ? html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("cl", "Closed items", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}<td class="num">${raw(countLink(`${plur(x5.cl, "closed item")} of ${x5.name}`, x5.cl, "all:closed:", { st: ["Closed", "Cancelled"], o: ownersOf([...x5.A, ...x5.R, ...x5.D]) }, x5.cl))}</td></tr>`)}</tbody></table>` : html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("oa", "Open actions", 1))}${raw(th2("or", "Open RAID", 1))}${raw(th2("dw", "Decisions waiting", 1))}${raw(th2("late", "Overdue", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}
     ${raw(personCounts(x5))}</tr>`)}</tbody></table>`);
   }
   function bootWork0148() {
@@ -36329,7 +36333,7 @@ ${s5}`;
   var latesOf = (x5) => [...x5.oa, ...x5.or].filter((i5) => i5.due && i5.due < TODAY);
   function personCounts(x5) {
     const nm3 = isMe(x5.name) ? "you" : x5.name, late = latesOf(x5);
-    return `<td class="num">${countLink(`${plur(x5.oo.length, "open action")} owned by ${nm3}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) })}</td><td class="num">${countLink(`${plur(x5.or.length, "open RAID item")} owned by ${nm3}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) })}</td><td class="num">${countLink(`${plur(x5.dw.length, "decision")} waiting on ${nm3}`, x5.dw.length, "decisions:pending:", { o: ownersOf(x5.dw) }, x5.dw.length || "—")}</td><td class="num ${x5.late ? "late" : ""}">${countLink(`${plur(late.length, "overdue item")} owned by ${nm3}`, late.length, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(late) }, late.length || "—")}</td>`;
+    return `<td class="num">${countLink(`${plur(x5.oo.length, "open action")} owned by ${nm3}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) })}</td><td class="num">${countLink(`${plur(x5.or.length, "open RAID item")} owned by ${nm3}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) })}</td><td class="num">${countLink(`${plur(x5.dw.length, "decision")} waiting on ${nm3}`, x5.dw.length, "decisions:pending:", { o: ownersOf(x5.dw) })}</td><td class="num ${x5.late ? "late" : ""}">${countLink(`${plur(late.length, "overdue item")} owned by ${nm3}`, late.length, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(late) })}</td>`;
   }
   function bootWork0150() {
   }
