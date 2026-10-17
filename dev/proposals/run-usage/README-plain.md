@@ -1,5 +1,7 @@
 # Run usage monitor (#197): the guarded part, for your yes or no
 
+**Read this first: one item is outside what Alan asked for.** The brief asked for two hooks in `live_server.py`. The proposal also contains a one-line change to `reach.py` (`reach-197.diff`), a guarded file, which was not in the brief. It is only there so the existing test `test_record_commands` passes once `usage_report.py` exists. It is its own yes or no (item 3 below); say no and everything else still works, but that test will fail until the line or an equivalent is added.
+
 Proposal only. Nothing here is applied. The plain code (`usage_log.py`, `usage_report.py`, `paths.RUN_USAGE`) is on branch `run-usage-plain`; these diffs go on top of it.
 
 ## What is measured
