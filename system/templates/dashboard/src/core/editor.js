@@ -100,7 +100,9 @@ const plainText=doc=>{ const L=[]; doc.forEach(p=>{ L.push(p.textContent); }); r
  * BL-301 D: AI on selected text. `place` chooses the options (edit_ai.py PLACES: "current", "plain", "notes", "email");
  * `project()` the project's code (its name, people and open item IDs go with the text); `confidential()` true makes the page ask
  * once (per `key()`) before the text goes to Claude.
+ * #134: `actions: false` leaves out the bar's registered items (Make into: they act on a saved note's lines; the capture drawer's draft has none).
  * @typedef {{place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
+ *   actions?: boolean,
  *   document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)}} EdAi
  * @typedef {{features?: "current"|"plain"|"notes", markdown?: string, html?: string, text?: string, multiline?: boolean,
  *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value",

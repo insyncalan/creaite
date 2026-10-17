@@ -90,7 +90,7 @@ export function AiBar({ bar }) {
   /** @type {[string, {id: string, name: string, line?: string, icon?: string}[]][]} */
   const groups = (AI_GROUPS[place] || AI_GROUPS.plain).map(([name, ids]) =>
     [name, ids.map(id => ({ id, name: aiName(place, id), line: AI_OPTIONS[id][1] }))]);
-  const into = aiActionsFor(place).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
+  const into = (bar.ai.actions === false ? [] : aiActionsFor(place)).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
   // "Make into" is the Notes editors' (their registered item makes a tracker item). The sheets' own item (Find the source) is not a
   // "make into": it sits in the AI zone as its own button, where v2.1.0 listed it.
   const asks = (AI_PLACES[place] || []).includes("custom");
