@@ -273,7 +273,9 @@ class AutosavePage(LiveBrowserCase):
         b = self.b
         self.make("Old title")
         old, new = self.notes_dir() / "Old title.md", self.notes_dir() / "New title.md"
+        b.frames(3)                                                 # the editor's deferred focus must not land after the title's (#152)
         b.eval("(()=>{ const i=document.getElementById('noteTitle'); i.focus(); i.value='New title'; i.dispatchEvent(new Event('input',{bubbles:true})); return true; })()")
+        b.wait("document.activeElement.id==='noteTitle'", 5)
         self.wait_text(old, "title: New title", 8)
         b.wait("noteSave.value.state==='saved'", 8)
         b.pump(0.5)
@@ -381,6 +383,7 @@ class AutosavePage(LiveBrowserCase):
         b.wait("!noteFocus.value", 8)
         self.assertIn("my unsaved words", b.eval("window.__clip"))
         self.assertFalse(self.dialog_open())
+        b.wait("document.activeElement.id==='noteExpand'", 5)               # focus goes back to the button a frame after the dialog closes (#152)
         self.assertEqual(b.eval("document.activeElement.id"), "noteExpand")
         self.assertIn("my unsaved words", b.eval("document.querySelector('.nbody').textContent"), "closing drops nothing: the note still holds it")
 

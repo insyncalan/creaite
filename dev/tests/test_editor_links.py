@@ -75,14 +75,14 @@ class Links(LiveBrowserCase):
         b = self.b
         b.eval("go('notes','ABC')")
         b.wait("!!document.getElementById('notesNew')")
-        b.click("#notesNew")
-        b.wait("document.getElementById('newNoteDlg').open")
+        b.click_until("#notesNew", "document.getElementById('newNoteDlg').open")          # #152: a click lost to a redraw is pressed again
         b.eval(f"(()=>{{ const i=document.getElementById('nnTitle'); i.value={title!r}; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         b.eval("document.querySelector('#newNoteDlg input[value=\"blank\"]').click()")
         b.click("#nnMake")
         b.wait("!!document.querySelector('.nbody.ProseMirror')", 15)
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.frames(3)                                                  # the editor gives itself focus a frame later: let that land first (#152)
 
     def value(self):
         return self.b.eval("document.querySelector('.nbody').cxed.value()")
@@ -256,7 +256,7 @@ class Links(LiveBrowserCase):
             b.eval("document.querySelector('.linkpop input[id$=\"-a\"]').select()")
             b.type(hostile)
             b.key("Enter")
-            b.pump(0.2)
+            b.wait("!!(document.querySelector('.linkpop .linkerr')||{}).textContent", 5)                 # #152: the reason shows a frame later
             p = self.popup()
             self.assertIsNotNone(p, f"{hostile}: the popover stays open")
             self.assertEqual(p["err"], REFUSED, hostile)
@@ -269,6 +269,7 @@ class Links(LiveBrowserCase):
         b.key("k", self.mod() | SHIFT)
         b.wait("!!document.querySelector('.linkpop')", 5)
         b.key("Enter")
+        b.wait("(document.querySelector('.linkpop .linkerr')||{}).textContent==='Enter an address.'", 5)        # #152: said a frame later
         self.assertEqual(self.popup()["err"], "Enter an address.")
 
     # ---- the keyboard -------------------------------------------------------------------------------------------------------------
@@ -350,6 +351,7 @@ class Links(LiveBrowserCase):
         b.wait("!!document.querySelector('.linkpop.form')", 5)
         self.assertEqual(b.eval("[...document.querySelectorAll('.linkpop input')].map(i=>i.value)"), ["the plan", "https://example.com/plan"])
         self.assertEqual(b.eval("[...document.querySelectorAll('.linkpop button, .linkpop a')].map(x=>x.textContent)"), ["Apply", "Remove link", "Open ↗", "Cancel"])
+        b.wait("document.querySelector('.linkpop').contains(document.activeElement)", 5)       # the form takes focus a frame after it is drawn
         b.eval("document.querySelector('.linkpop input[id$=\"-t\"]').select()")
         b.type("the new plan")
         b.key("Tab")

@@ -54,7 +54,7 @@ class Toolbar(LiveBrowserCase):
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         b.eval("""(()=>{ const e=document.querySelector('.nbody').cxed.editor; let p=1; e.state.doc.descendants((n,pos)=>{ if(n.isTextblock&&n.content.size) p=pos+n.nodeSize-1; });
           e.commands.setTextSelection(p); })()""")                    # the caret in the last line's text (focus('end') can land after a list)
-        b.pump(0.1)
+        b.frames(3)       # the editor's deferred focus (a frame after focus()) has landed; before it, a button focused next loses it (#152)
 
     def select_all(self):
         self.b.eval("document.querySelector('.nbody').cxed.editor.commands.selectAll()")

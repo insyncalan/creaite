@@ -155,6 +155,9 @@ class Browser:
         # Reduce motion setting; where that is on (a Mac, apparently GitHub's macOS runner) every animation reads 'none'.
         pref = "reduce" if reduced_motion else "no-preference"
         self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": pref}])
+        # #152e: CDP_CPU_THROTTLE=4 runs the page 4 times slower, to reproduce on a fast machine what a slow CI runner shows
+        if os.environ.get("CDP_CPU_THROTTLE"):
+            self.call("Emulation.setCPUThrottlingRate", rate=float(os.environ["CDP_CPU_THROTTLE"]))
 
     @staticmethod
     def _port_text(path):
@@ -323,6 +326,18 @@ class Browser:
             self.call("Input.dispatchMouseEvent", type=kind, x=pos["x"], y=pos["y"], button=button, clickCount=count, modifiers=modifiers)
         self.pump(0.05)
 
+    def click_until(self, selector, js, timeout=9, tries=3, **kw):
+        """Click, and press again if `js` has not come true: a redraw between the press and the release (the page re-reading its data
+        after the first paint, a resize handler) replaces the element and the click is lost (#152; BL-327). Only for a click that opens
+        or selects something, so a second press is harmless. The last miss raises the wait's TimeoutError, with the page state."""
+        for i in range(tries):
+            self.click(selector, **kw)
+            try:
+                return self.wait(js, timeout=timeout / tries)
+            except TimeoutError:
+                if i == tries - 1:
+                    raise
+
     def drag(self, from_selector, to_selector, steps=8, release=True, offset=(0, 0)):
         """A real press, move and release with the mouse button held (pointer events, not a synthesised drop): from the centre of one
         element to the centre of another (plus `offset`). With release=False it stops over the target, button still down, so a
@@ -392,8 +407,14 @@ class Browser:
         self.pump(0.2)
 
     def resize(self, width, height=900):
-        """Make the page this size (a small window)."""
+        """Make the page this size (a small window). Returns once the page has seen it: the `resize` event runs on the next
+        frame and the page's handlers redraw then, so a click or a measurement straight after could land on the old layout or on
+        a node that is replaced between the press and the release (#152: a dropped click on a slow macOS runner)."""
         self.call("Emulation.setDeviceMetricsOverride", width=width, height=height, deviceScaleFactor=1, mobile=False)
+        try:
+            self.frames(2, timeout=3)
+        except TimeoutError:                           # no frames (page not loaded yet): the old behaviour, nothing to wait for
+            pass
 
     def screenshot(self, path):
         with open(path, "wb") as f:
