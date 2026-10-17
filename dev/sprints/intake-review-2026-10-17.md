@@ -94,3 +94,5 @@ Mockup of all five changes: `dev/mockups/intake-queue-mockup.html`. Alan liked o
 Alan liked change D (the result on the row, ending in Review them) as mocked up (17-10-2026).
 
 **Alan, final review (17-10-2026):** Upload files stays on the Intake page (files dropped there become rows in the same list, with the same three actions). Auto-load and draft by series must be captured in the backlog. Checked on the board just now: no Intake items exist yet, so Jarvis is asked to create step 1, step 2 and the later item.
+
+**Approved (Alan, 17-10-2026):** the final mockup `dev/mockups/intake-final-mockup.html` is approved for step 1 (#179) and step 2 (#180). #181 stays a later idea for the 13-11-2026 review.
