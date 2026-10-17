@@ -1,0 +1,356 @@
+#132 G6: Claude's limit, seen in a run's stream; the Ask me card; what each ai.on_limit choice does next.
+PROPOSAL, not applied. Applies on round 1 (G1, G2, G3, G5; with or without G1c) and G4.
+2 files, 15 hunks, +189 -16. Guarded: live_server.py's run engine (Run.read's ending moved into Run._end, unchanged in order;
+the limit's card) and the VIP check's launch (it skips while the limit holds). No retry anywhere: nothing runs again by itself.
+
+live_server.py
+ 1 @@ model_choice: the limit's routing reason and stepped_note; stepped_note
+ 2 @@ run_model: at the limit with no model, no step (the run's card says it); a step down says so in a step
+ 3 @@ Run.read: each stream event to _limit
+ 4 @@ Run.read: the ending through _end; a run that hit the limit never finishes its job (its words are never a draft)
+ 5 @@ Run._end (stopped, limit, failed, answered: today's order with the limit added), _limit, _end_limited (one "cant" card
+      with the reset time, what happens next and Open AI models; an error with the same words; a debug line with ids only)
+ 6 @@ vip_check: skipped while the limit holds
+ 7 @@ vip_check: its reply's limit kept
+ 8 @@ vip_limited
+ 9 @@ EditJob's request keys: limit_choice
+10 @@ edit_ai_request: limit_choice "other" only
+11 @@ edit_ai_route: limit_choice taken out before edit_ai.py sees the request
+12 @@ edit_ai_route: passed to direct_plan
+13 @@ direct_plan: Ask me's "another model" for this one request, only while the limit holds; "another connected model" too
+providers.py
+14 @@ route_for: limited from the last limit seen when not given
+15 @@ LIMIT_TEXT, limit_signal (the rate_limit_event, the assistant's "rate_limit" error, a result's limit words; "clear"),
+      limit_seen, limited_now, reset_words, with_choice, limit_card (the words and Ask me's offer), LIMIT_GO, _label
+
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index c433f54..26a44a5 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2140,7 +2140,15 @@ def model_choice(job, settings=None, declared=None, text=""):
+             f"{providers.PROVIDERS.get(wanted.partition(':')[0], ('That provider',))[0]} isn't used for this yet."
+     return {"pick": pick, "default": providers.setting({}, f"ai.jobs.{job}"), "asked": providers.setting(settings, f"ai.jobs.{job}"),
+             "found": providers.model(pick, settings) if pick else None, "tools": providers.JOBS[job]["tools"],
+-            "name": providers.PROVIDERS.get(str(pick).partition(":")[0], (str(pick),))[0], "held": held}
++            "name": providers.PROVIDERS.get(str(pick).partition(":")[0], (str(pick),))[0], "held": held,
++            "limit": routed["why"] if routed["why"].startswith("limit") else "", "stepped": stepped_note(routed, settings)}
++
++
++def stepped_note(routed, settings):
++    """#132 G6: what a run that Claude's limit stepped down to the quick-edit model says, or ""."""
++    import providers
++    found = providers.model(routed["model"], settings) if routed["why"] == "limit: stepped down" else None
++    return f"Claude's limit is reached, so this ran as a quick edit on {found['label']} (Step down one kind)." if found else ""
+ 
+ 
+ def run_model(kind, settings=None, text="", declared=None):
+@@ -2159,14 +2167,14 @@ def run_model(kind, settings=None, text="", declared=None):
+     if c["held"]:                                                                                  # #132 G5
+         return None, f"{c['held']} So Claude ran it."
+     pick, found = c["pick"], c["found"]
+-    if not pick or pick == c["default"]:
+-        return None, "" if c["asked"] == pick else UNAVAILABLE
++    if not pick or pick == c["default"]:              # #132 G6: at Claude's limit with no model, the run's own card says so
++        return None, "" if c["asked"] == pick or c["limit"] else UNAVAILABLE
+     provider, _, alias = str(pick).partition(":")
+     if provider != "claude":
+         return None, f"{c['name']} isn't used for this yet, so Claude ran it."
+     if alias not in CLAUDE_ALIASES or not found or (c["tools"] and not found.get("tools")):
+         return None, "That model can't run this job, so this ran on Claude's usual model."
+-    return alias, ""
++    return alias, c["stepped"]                        # #132 G6: a step down is never silent
+ 
+ 
+ def model_step(events, run_id, kind, note):
+@@ -2408,6 +2416,7 @@ class Run:
+             except ValueError:
+                 continue
+             self.session = ev.get("session_id") or self.session
++            self._limit(ev)                             # #132 G6: Claude's limit, from the stream
+             kind = ev.get("type")
+             if kind == "assistant":
+                 self._on_assistant(ev)
+@@ -2419,13 +2428,9 @@ class Run:
+         proc.wait()
+         if self.guarded:
+             self._end_guarded(proc, final)
+-        if self.stop:
+-            self._end_stopped()
+-        elif proc.returncode and not final:
+-            self._end_failed(proc)
+-        else:
+-            self._end_answered(final)
+-        if self.job and not self.stop:                     # the status and the files are written here, from the tool results
++        self._end(proc, final)                             # #132 G6: stopped, Claude's limit, failed or answered
++        if self.job and not self.stop and not getattr(self, "limited", None):   # #132 G6: a limit's words are never a draft
++            # the status and the files are written here, from the tool results
+             self._finish_job()
+         self._done()
+ 
+@@ -2531,6 +2536,52 @@ class Run:
+         self.emit("stopped", after_step=self.deferred, timed_out=getattr(self, "timed_out", False))
+         self.record(stopped=True)
+ 
++    # ===== #132 G6 (proposal): Claude's limit =====
++    def _end(self, proc, final):
++        """How the run ended, as read() always said it: stopped, failed or answered; and now Claude's limit, whose card is shown
++        instead of an answer and which is never retried."""
++        if self.stop:
++            self._end_stopped()
++        elif getattr(self, "limited", None):
++            self._end_limited()
++        elif proc.returncode and not final:
++            self._end_failed(proc)
++        else:
++            self._end_answered(final)
++
++    def _limit(self, ev):
++        """Keep what a stream event says about Claude's limit (providers.limit_seen); a direct call's stream is never Claude's."""
++        if isinstance(self.proc, DirectProcess):
++            return
++        try:
++            import providers
++            sig = providers.limit_seen(ev)
++        except Exception as e:  # noqa: BLE001  never stops the reader
++            swallowed("limit", e)
++            return
++        if isinstance(sig, dict):
++            self.limited = sig
++
++    def _end_limited(self):
++        """The run hit Claude's limit: one card in plain words (the reset time; what ai.on_limit does next; Ask me's other model
++        when there is one for this job), through the chat's existing "cant" card. Nothing is retried by itself."""
++        import providers
++        try:
++            card = providers.limit_card(KIND_JOB.get(self.kind, "tools"), paths.load_settings(),
++                                        "edit-ai" if self.kind == "edit-ai" else "")
++        except Exception as e:  # noqa: BLE001  the plain words without the choices
++            swallowed("limit", e)
++            card = {"line": "Claude's limit is reached. Nothing was changed: try again later.", "offer": None}
++        self.failed = True
++        self.emit("cant", what="limit", line=card["line"], go=providers.LIMIT_GO, offer=card.get("offer"))
++        self.emit("error", message=card["line"])
++        if globals().get("debuglog") is not None:
++            at = card.get("resets")
++            debuglog.info("ai-models", f"{self.id} {self.kind}: Claude's limit ({providers.LIMIT.get('kind') or 'unknown'}), "
++                                       f"resets {datetime.fromtimestamp(at).isoformat(timespec='minutes') if at else 'unknown'}")
++        self.record()
++    # ===== end #132 G6 =====
++
+     def _end_failed(self, proc):
+         err = proc.stderr.read().strip().splitlines()
+         self.failed = True                                   # BL-326: a run creaite started closes with a plain failure
+@@ -3663,6 +3714,8 @@ def vip_check(how="check"):
+         return "skipped: no VIPs"
+     if sweep_running():                                   # BL-328: a lock left by an ended sweep doesn't hold the check
+         return "skipped: a sweep is running"
++    if vip_limited():                                     # #132 G6: no call while Claude's limit holds
++        return "skipped: Claude's limit is reached"
+     if not VIP_LOCK.acquire(blocking=False):
+         return "skipped: a check is running"
+     VIP_STATUS["running"] = True
+@@ -3678,6 +3731,7 @@ def vip_check(how="check"):
+         found, why, cost, began = None, "", None, time.monotonic()
+         try:
+             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
++            vip_limited(r.stdout)                                                                # #132 G6
+             found, why, cost = vip_reply(r)
+         except subprocess.TimeoutExpired:
+             why = VIP_TIMED_OUT
+@@ -3707,6 +3761,19 @@ def vip_check(how="check"):
+         VIP_LOCK.release()
+ 
+ 
++def vip_limited(out=None):
++    """#132 G6: with `out` (a VIP check's JSON reply), keep what it says about Claude's limit; then whether the limit holds."""
++    import providers
++    if out is not None:
++        try:
++            reply = json.loads(out or "{}")
++        except (ValueError, RecursionError):           # a reply that can't be read says nothing about the limit
++            reply = None
++        if isinstance(reply, dict):
++            providers.limit_seen(dict(reply, type="result"))
++    return providers.limited_now()
++
++
+ VIP_TIMED_OUT, VIP_NOT_STARTED = "it timed out", "claude couldn't be started"
+ 
+ 
+@@ -6087,7 +6154,7 @@ class EditJob(DraftJob):
+     quiet = True                                            # the page shows the suggestion, not the reply as it streams
+ 
+ 
+-EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document"}
++EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document", "limit_choice"}   # #132 G6: Ask me
+ EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
+ 
+ 
+@@ -6099,6 +6166,8 @@ def edit_ai_request(req):
+     body = {k: str(req.get(k) or "")[:40] for k in ("option", "code", "place")}
+     body["text"] = str(req.get("text") or "")[:12001]
+     body["instruction"] = str(req.get("instruction") or "")[:401]
++    if req.get("limit_choice") == "other":                     # #132 G6: the Ask me card's "Run this one on …"
++        body["limit_choice"] = "other"
+     d = req.get("document")
+     if d is not None:
+         if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
+@@ -6115,6 +6184,7 @@ def edit_ai_route(handler, req):
+     busy = current_run()
+     if busy and not busy.done:
+         return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
++    choice = body.pop("limit_choice", "")                      # #132 G6
+     rc, out = run_stdin("edit_ai.py", body, "context")
+     try:
+         ctx = json.loads(out) if rc == 0 else {"refused": "The suggestion couldn't be prepared."}
+@@ -6124,7 +6194,7 @@ def edit_ai_route(handler, req):
+         return handler.send(200, {"ok": False, "message": ctx["refused"]})
+     run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
+         else f"e-{secrets.token_hex(6)}"
+-    plan = direct_plan(ctx)                                     # #132 G4: None at the defaults (today's run)
++    plan = direct_plan(ctx, choice=choice)                      # #132 G4: None at the defaults (today's run)
+     if plan and plan.get("made_by"):
+         ctx = dict(ctx, made_by=plan["made_by"])
+     job = EditJob(body, ctx)
+@@ -6151,13 +6221,16 @@ DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route
+ # and send_allowed is checked again just before the call. What is sent is edit_ai.outside_prompt: the option's instruction, the
+ # format rule and the selection, nothing else. The reply comes back through the run engine as the same stream a `claude -p`
+ # run gives (DirectProcess), so EditJob checks it exactly as before (client_problems in the client place, BL-106's fact check).
+-def direct_plan(ctx, settings=None):
++def direct_plan(ctx, settings=None, choice=""):
+     """The run's plan for a suggestion: None when Alan hasn't chosen another provider for quick edits (today's run); {"note"} when
+     this one stays on Claude, with why; {"direct", "note", "made_by"} when it goes to the chosen model. Fails closed to Claude."""
+     import providers
+     try:
+         settings = paths.load_settings() if settings is None else settings
+-        if providers.chosen("quick", settings).startswith("claude:"):
++        if choice == "other" and providers.limited_now():      # #132 G6: Ask me's "another model", for this request only
++            settings = providers.with_choice(settings, "other")
++        at_limit = providers.limited_now() and providers.setting(settings, "ai.on_limit") == "other"     # #132 G6
++        if providers.chosen("quick", settings).startswith("claude:") and not at_limit:
+             return None
+         problems, routed = outside_route(ctx, "quick", settings)
+         pick = str(routed["model"] or "")
+diff --git a/system/scripts/providers.py b/system/scripts/providers.py
+index 6ee0daa..162d9a6 100644
+--- a/system/scripts/providers.py
++++ b/system/scripts/providers.py
+@@ -890,10 +890,11 @@ def send_allowed(model_id, confidential):
+         raise Refused(CONFIDENTIAL_WORDS)
+ 
+ 
+-def route_for(job, settings, text="", declared=None, store=None, limited=False):
++def route_for(job, settings, text="", declared=None, store=None, limited=None):
+     """route(), with the job's confidentiality decided here from what the server knows (confidential_job), and the gate checked
+     on the answer: the server's only way to pick a model. Adds "confidential" and "confidential_why" to route's answer."""
+     conf, why = confidential_job(job, text, declared)
++    limited = limited_now() if limited is None else limited                  # #132 G6: Claude's limit, as last seen
+     out = route(job, settings, store, confidential=conf, limited=limited)
+     if out["model"]:
+         send_allowed(out["model"], conf)
+@@ -1015,6 +1016,105 @@ _DIRECT = {}
+ # ── end #132 G4 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 
+ 
++# ── #132 G6 (proposal): Claude's limit, seen in a run's stream, and what happens next ────────────────────────────────────
++# Claude Code (2.1.288, read from its own message formats; no real limited run was made) says a limit was hit three ways in
++# `--output-format stream-json`: a "rate_limit_event" whose rate_limit_info.status is "rejected" (with resetsAt, epoch seconds,
++# and rateLimitType: five_hour, seven_day, seven_day_opus…), an assistant message whose "error" is "rate_limit", and a result
++# with is_error whose text says so ("You've hit your limit · resets 3pm", "usage limit reached"). The first is the one relied
++# on; the others are the fallback. The server keeps the reset time in memory only (LIMIT): a later run of a text-only job
++# routes with limited=True (route_for: never confidential material to another provider), and nothing is ever retried by itself.
++LIMIT_TEXT = re.compile(r"(?i)you'?ve hit your (?:\w+ )?limit|usage limit reached|rate limit reached|session limit reached")
++LIMIT_UNKNOWN = 15 * 60                   # seconds a limit is assumed to last when Claude doesn't say when it resets
++LIMIT = {}
++LIMIT_GO = {"page": "settings", "arg": "aiModels", "label": "Open AI models"}
++
++
++def limit_signal(ev):
++    """{"resets": epoch seconds or None, "kind": the limit's type} when one stream event says Claude's limit was hit; "clear"
++    when it says Claude answers again (an allowed rate_limit_event, or a result that isn't an error); else None."""
++    if not isinstance(ev, dict):
++        return None
++    kind = ev.get("type")
++    if kind == "rate_limit_event":
++        info = ev.get("rate_limit_info") if isinstance(ev.get("rate_limit_info"), dict) else {}
++        if info.get("status") != "rejected":
++            return "clear"
++        at = info.get("resetsAt")
++        return {"resets": int(at) if isinstance(at, (int, float)) and at > 0 else None,
++                "kind": re.sub(r"[^a-z_]", "", str(info.get("rateLimitType") or ""))[:40]}
++    if kind == "assistant" and ev.get("error") == "rate_limit":
++        return {"resets": None, "kind": ""}
++    if kind == "result":
++        if ev.get("is_error") and LIMIT_TEXT.search(str(ev.get("result") or "")[:2000]):
++            return {"resets": None, "kind": ""}
++        return None if ev.get("is_error") else "clear"
++    return None
++
++
++def limit_seen(ev, now=None):
++    """Keep what one stream event says about Claude's limit (LIMIT); the signal, as limit_signal."""
++    import time
++    now = time.time() if now is None else now
++    sig = limit_signal(ev)
++    if sig == "clear":
++        LIMIT.clear()
++    elif sig:
++        resets = sig["resets"] or LIMIT.get("resets") or 0
++        LIMIT.update(resets=resets if resets > now else None, until=resets if resets > now else now + LIMIT_UNKNOWN,
++                     kind=sig["kind"] or LIMIT.get("kind", ""))
++    return sig
++
++
++def limited_now(now=None):
++    """True while Claude's limit, as last seen, hasn't reset."""
++    import time
++    return bool(LIMIT) and (time.time() if now is None else now) < LIMIT.get("until", 0)
++
++
++def reset_words(resets, now=None):
++    """When the limit resets, as Alan reads it: "at 15:00", or "on 18-10-2026 at 09:00"; "" when unknown."""
++    from datetime import datetime
++    if not resets:
++        return ""
++    at, today = datetime.fromtimestamp(resets), datetime.fromtimestamp(now) if now else datetime.now()
++    return f"at {at:%H:%M}" if at.date() == today.date() else f"on {at:%d-%m-%Y} at {at:%H:%M}"
++
++
++def with_choice(settings, choice):
++    """The settings with ai.on_limit set for one request (the Ask me card's "another model"), the file unchanged."""
++    import copy
++    out = copy.deepcopy(settings)
++    out.setdefault("ai", {})["on_limit"] = choice
++    return out
++
++
++def limit_card(job, settings, feature="", now=None):
++    """What a run that hit Claude's limit says: {line, resets, mode, offer}. `offer` (Ask me only) is "another connected model"
++    for a text-only job a direct call exists for (feature in CLEAN_FEATURES), else None. Nothing is retried by itself."""
++    resets = LIMIT.get("resets")
++    when = reset_words(resets, now)
++    head = f"Claude's limit is reached; it resets {when}." if when else "Claude's limit is reached, and it didn't say when it resets."
++    mode = setting(settings, "ai.on_limit")
++    j = JOBS.get(job) or JOBS["tools"]
++    alt = sorted((m for m in options(job, settings) if m["provider"] != "claude"), key=lambda m: -m["grade"]) \
++        if not j["tools"] and feature in CLEAN_FEATURES else []
++    tail = " Nothing was changed."
++    if mode == "step_down" and job in STEP_DOWN:
++        tail += f" Writing runs as a quick edit until then: try again to run it on {_label(chosen(STEP_DOWN[job], settings), settings)}."
++    elif mode == "other" and alt:
++        tail += f" Try again to run it on {alt[0]['label']}, unless it holds confidential material."
++    elif not (mode == "ask" and alt):
++        tail += " Jobs that use tools wait: try again then." if j["tools"] else " Try again then."
++    offer = {"choice": "other", "label": f"Run this one on {alt[0]['label']}"} if mode == "ask" and alt else None
++    return {"line": head + tail, "resets": resets, "mode": mode, "offer": offer}
++
++
++def _label(model_id, settings):
++    m = model(model_id, settings)
++    return m["label"] if m else str(model_id)
++# ── end #132 G6 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
++
++
+ # ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
+ # Test and connect asks the provider for its models; the key is kept here, in the live server's memory only, until Alan
+ # presses Done (it then goes to the key store) or Cancel (it is dropped), and for PENDING_SECONDS at most. Only a built key
