@@ -7,7 +7,7 @@
      3 Loose ends everything still open (the sweep's new items first, overdue items too) gets a place: Review now (opens Review,
                   Work or Intake after closing; nothing is staged), First thing tomorrow (heads tomorrow's Today and the
                   session-start line) or Leave;
-     4 Tomorrow   the next working day's meetings; Make prep page queues one to run after closing.
+     4 Tomorrow   the next working day's meetings (and any planned weekend work before it); Make prep page queues one to run after closing.
    Back and Next by button or ← →; Esc is "Not yet" and keeps the step. Steps with nothing in them are passed over. Nothing here
    approves, rejects or applies anything; the server keeps references only (dev/sprints/BL-295-server.md). Text only through JSX.
    The Close the day door (BL-270) and ⌘K open it through openCloseDay(); its state lives here while the page is open. */
@@ -29,7 +29,8 @@ import { dcIcon } from "../../ask.js";
 /** @typedef {{start: string, end: string, title: string, confidential: boolean, key?: string|null, page?: string|null,
     plan?: boolean, make: boolean, p?: string|null, project?: string|null}} TomorrowMeeting */
 /** @typedef {{day: string, day_shown: string, long?: string|null, in_calendar: boolean, friday: boolean,
-    meetings: TomorrowMeeting[]}} Tomorrow */
+    meetings: TomorrowMeeting[], weekend?: {day: string, day_shown: string, long?: string|null, meetings: TomorrowMeeting[],
+    due: {type: string, t: string, project?: string|null}[]}[]}} Tomorrow */
 /** @typedef {{state: string|null, run?: {id: string}|null, started?: string|null, ended?: string|null}} CatchupPublic */
 /** @typedef {{key: string, state: string, run?: string|null, path?: string|null, message?: string|null}} PrepItem */
 /** @typedef {{ok: boolean, message?: string, now: string, last_sweep?: string, day: any, catchup: CatchupPublic,
@@ -215,6 +216,10 @@ function TomorrowStep({ tm, prep, made, onPrep, first, weekly, friday }) {
         })}</ul> : <p class="sub">{tm.in_calendar === false ? "That day isn't in the saved calendar yet." : "No meetings."}</p>}
         {prep.size ? <p class="sub">{plur(prep.size, "prep page")} will be made after you close, one at a time.</p> : null}
       </section>
+      {(tm.weekend || []).map(w => <section data-cdweekend={w.day}><h4>{w.long || longDay(w.day)} (planned for the weekend)</h4>
+        <ul class="dclist">{w.meetings.map(m => <li><span class="grow">{m.start} {m.title}{m.project ? <span class="sub"> · {m.project}</span> : null}</span></li>)}
+          {w.due.map(x => <li><span class="grow">{x.type} due: {x.t}{x.project ? <span class="sub"> · {x.project}</span> : null}</span></li>)}</ul>
+      </section>)}
       {friday ? <section><h4>Friday</h4><p>{weekly.length ? weekly.join(" · ") : <span class="sub">No weekly report is due.</span>}</p></section> : null}
       <section><h4>First thing tomorrow</h4>
         {first.length ? <p>{first.slice(0, 5).map(x => x.t || x.type).join(" · ")}{first.length > 5 ? ` · and ${first.length - 5} more` : ""}</p>

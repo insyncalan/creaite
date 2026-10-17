@@ -59193,6 +59193,32 @@ ${d5.text}`);
           " will be made after you close, one at a time."
         ] }) : null
       ] }),
+      (tm2.weekend || []).map((w6) => /* @__PURE__ */ u2("section", { "data-cdweekend": w6.day, children: [
+        /* @__PURE__ */ u2("h4", { children: [
+          w6.long || longDay(w6.day),
+          " (planned for the weekend)"
+        ] }),
+        /* @__PURE__ */ u2("ul", { class: "dclist", children: [
+          w6.meetings.map((m5) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2("span", { class: "grow", children: [
+            m5.start,
+            " ",
+            m5.title,
+            m5.project ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+              " · ",
+              m5.project
+            ] }) : null
+          ] }) })),
+          w6.due.map((x5) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2("span", { class: "grow", children: [
+            x5.type,
+            " due: ",
+            x5.t,
+            x5.project ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+              " · ",
+              x5.project
+            ] }) : null
+          ] }) }))
+        ] })
+      ] })),
       friday ? /* @__PURE__ */ u2("section", { children: [
         /* @__PURE__ */ u2("h4", { children: "Friday" }),
         /* @__PURE__ */ u2("p", { children: weekly.length ? weekly.join(" · ") : /* @__PURE__ */ u2("span", { class: "sub", children: "No weekly report is due." }) })
