@@ -197,7 +197,11 @@ export function CaptureDrawer() {
   useEffect(() => {
     const el = box.current;
     if (!el) return undefined;
-    ed = creaiteEditor(el, /** @type {any} */ ({ features: "notes", markdown: capNote.value.body }));
+    /* #134: the selection bar (Improve, Structure, Ask) on the drawer's text, the notes' options. Make into (Find updates on one line) has no home
+       here: a draft is not a saved note and has no lines to look at; Done and find updates does it once saved. The project is the one chosen or guessed, as the Project box shows it;
+       a confidential draft asks once before its text goes to Claude. */
+    const ai = { place: "notes", project: () => capNote.value.code || "", confidential: () => !!capNote.value.confidential, key: () => `cap:${capNote.value.id}`, actions: false };
+    ed = creaiteEditor(el, /** @type {any} */ ({ features: "notes", markdown: capNote.value.body, ai }));
     if (capOpen.value) ed.focus("end");
     /* #122 B: the same / menu as Notes, from the notes profile. The drawer does none of the host rows (no [[ @ # lists, table, image
        or templates yet: step C), so the menu shows Text, Headings 1 to 3, the lists, Checklist, Quote and Code. */
