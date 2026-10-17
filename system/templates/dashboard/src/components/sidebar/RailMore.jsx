@@ -12,7 +12,7 @@ import { effect } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { tipHide } from "../../core/dom.js";
 import { hoverAttach, menuGroup } from "../../core/hover.js";
-import { railCfg, railLabelsOn, railMode, railMoreOpen } from "../../stores/rail.js";
+import { railCfg, railLabelsOn, railMode, railMoreOpen, railView } from "../../stores/rail.js";
 import { healthCount } from "../../stores/settings.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
 import { capCount, RailButton } from "./RailButton.jsx";
@@ -45,6 +45,8 @@ export function RailMore({ onGo, onCustomise, onLabels, onHealth, onHelp }) {
       open: () => { if (isOpen.current) return; tipHide(); setPtr(true); railMoreOpen.value = true; }, close: () => { railMoreOpen.value = false; } });
   }, [more.length > 0]);
 
+  /* any navigation (go, ⌘K) folds an open More, as it does Projects and Work */
+  useEffect(() => effect(() => { void railView.value; if (isOpen.current) close(false); }), []);
   /** @param {boolean} focusBack */
   const close = focusBack => { if (menuGroup.current === btn.current) menuGroup.close(); railMoreOpen.value = false; if (focusBack) btn.current?.focus(); };
   /* placed beside the button, kept in the window: above it (expanded) or to the right of the rail (collapsed) */

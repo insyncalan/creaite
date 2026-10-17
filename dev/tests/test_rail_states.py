@@ -423,5 +423,18 @@ class RailStates(LiveBrowserCase):
                          ["Help", "Customise sidebar…", "Labels when collapsed"])
 
 
+    def test_any_navigation_folds_an_open_flyout_go_or_the_palette(self):
+        b = self.b
+        self.seed()
+        for v, how in (("projects", "go('review')"), ("work", "go('people')"), ("more", "go('review')"),
+                       ("projects", "ckItems('people').find(i=>i.fn).fn()"), ("more", "ckItems('review').find(i=>i.fn).fn()")):
+            self.open_by_hover(v)                                          # the pointer stays on the button
+            b.eval(how)
+            b.wait(f"document.querySelector('{self.btn(v)}').getAttribute('aria-expanded')==='false'", 5)
+            self.assertEqual(b.eval(f"(e=>!e||e.hidden||e.getClientRects().length===0)(document.querySelector('{self.fly(v)}'))"), True, (v, how))
+            self.away()
+            b.wait(f"!document.querySelector('{self.fly(v)}') || document.querySelector('{self.fly(v)}').hidden", 5)
+
+
 if __name__ == "__main__":
     unittest.main()
