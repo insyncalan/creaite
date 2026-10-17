@@ -99,6 +99,7 @@ export function PageDialogs() {
             <div class="gensum" id="genSum" hidden><span id="genSumTxt"></span><span class="sp"></span>
               <button type="button" class="genlink" id="genChange">Change settings</button></div>
             <div id="genOut" class="fmout"></div>
+            <div id="genRefineHost" hidden></div>
           </div>
           <div class="genfoot"><span class="sub" id="genSweep"></span>
             <button class="btn" id="genCancel" value="cancel" formnovalidate>Cancel</button>

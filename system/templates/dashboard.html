@@ -723,6 +723,11 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .genoff{margin-top:8px;background:var(--warn-soft);color:var(--warn);border-radius:var(--r-md);padding:8px 12px} .genoff[hidden]{display:none}
 .gensum{display:flex;align-items:center;gap:12px;margin-top:16px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)} .gensum[hidden]{display:none} .gensum b{color:var(--ink);font-weight:500}
 .genlink:focus-visible,.gendrawb:focus-visible{border-radius:var(--r-sm)}
+/* #110 B: Steer it further, under a form's result and under the editor's draft; the version bar in the card's head */
+.genref{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)} .genref label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600;margin-bottom:4px} .genref label .sub{font-weight:400}
+.genref textarea,#genDlg #genRefineNote{display:block;width:100%;min-height:60px;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;background:var(--surface);color:var(--ink);margin:0;resize:vertical;font:inherit;line-height:1.5}
+.genrow{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:6px} .genrow .btn{align-self:center} .genstarts{display:flex;gap:12px;flex-wrap:wrap} .genrow .btn .kbd{margin-left:4px} .genref [aria-disabled="true"]{opacity:.55;cursor:default}
+.vers{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)} #curVers{align-self:center;font-size:var(--fs-xs);color:var(--muted)} #curVers .vers{margin-left:0}
 .genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
 .gensrc{margin-top:10px;font-size:var(--fs-sm);color:var(--muted)} .gensrc summary{cursor:pointer}
 /* ===== Executive Current state (BL-106) ===== */
@@ -4175,6 +4180,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     RECORD_KINDS: () => RECORD_KINDS,
     RECSTAT: () => RECSTAT,
     REDRAFT_KIND: () => REDRAFT_KIND,
+    REFINE_INS_MAX: () => REFINE_INS_MAX,
+    REFINE_NOTE_MAX: () => REFINE_NOTE_MAX,
+    REFINE_STARTERS: () => REFINE_STARTERS,
+    REFINE_TEXT_MAX: () => REFINE_TEXT_MAX,
     REGD: () => REGD,
     REGPEND: () => REGPEND,
     REGTEXT: () => REGTEXT,
@@ -4795,6 +4804,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     curPane: () => curPane,
     curPanes: () => curPanes,
     curReadHtml: () => curReadHtml,
+    curRefine: () => curRefine,
+    curSnap: () => curSnap,
+    curVersSync: () => curVersSync,
+    curVersion: () => curVersion,
     cxCopy: () => cxCopy,
     cxCursor: () => cxCursor,
     cxDates: () => cxDates,
@@ -5101,12 +5114,14 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     genFormText: () => genFormText,
     genOptions: () => genOptions,
     genPick: () => genPick,
+    genRefine: () => genRefine,
     genReset: () => genReset,
     genSrcLine: () => genSrcLine,
     genSrcOpen: () => genSrcOpen,
     genStatus: () => genStatus,
     genStrip: () => genStrip,
     genSummary: () => genSummary,
+    genVersion: () => genVersion,
     go: () => go2,
     goDay: () => goDay,
     greet: () => greet,
@@ -5837,6 +5852,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     redraftRequest: () => redraftRequest,
     redrafter: () => redrafter,
     reduced: () => reduced,
+    refineAsk: () => refineAsk,
+    refineHtml: () => refineHtml,
+    refineMount: () => refineMount,
+    refineNote: () => refineNote,
+    refineStatusHtml: () => refineStatusHtml,
+    refineUnmount: () => refineUnmount,
+    refinedMd: () => refinedMd,
     refreshAll: () => refreshAll,
     refreshCalendar: () => refreshCalendar,
     refreshFiles: () => refreshFiles,
@@ -6239,6 +6261,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     vaultConnect: () => vaultConnect,
     vaultInit: () => vaultInit,
     vdir: () => vdir,
+    versBarHtml: () => versBarHtml,
     vget: () => vget,
     viaServer: () => viaServer,
     viewEl: () => viewEl,
@@ -8102,7 +8125,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
             /* @__PURE__ */ u2("span", { class: "sp" }),
             /* @__PURE__ */ u2("button", { type: "button", class: "genlink", id: "genChange", children: "Change settings" })
           ] }),
-          /* @__PURE__ */ u2("div", { id: "genOut", class: "fmout" })
+          /* @__PURE__ */ u2("div", { id: "genOut", class: "fmout" }),
+          /* @__PURE__ */ u2("div", { id: "genRefineHost", hidden: true })
         ] }),
         /* @__PURE__ */ u2("div", { class: "genfoot", children: [
           /* @__PURE__ */ u2("span", { class: "sub", id: "genSweep" }),
@@ -43024,7 +43048,7 @@ ${s5}`;
         execResult(body2.code, body2.text, fdMd(draft.trim()));
         return;
       }
-      genDraft(body2.code, fdMd(draft.trim()), src.trim(), { audience: body2.audience, length: body2.length, from: body2.from, to: body2.to });
+      genDraft(body2.code, fdMd(draft.trim()), src.trim(), { audience: body2.audience, length: body2.length, from: body2.from, to: body2.to, note: body2.note });
     } finally {
       rbEnd(shared.RBOUT || "done");
       shared.RBOUT = "";
@@ -43043,10 +43067,118 @@ ${s5}`;
     shared.CURED.rewrite = null;
     shared.CURED.claims = null;
     shared.CURED.ev = {};
+    shared.CURED.vers = [{ md: md2 }];
+    shared.CURED.at = 0;
+    shared.CURED.refineNote = "";
     mountCurEdit();
     claimsInit("ed");
     curCheck();
     snack("Draft ready — edit it, then Save. Nothing is written until you do.");
+  }
+  function curVersSync() {
+    const c5 = shared.CURED;
+    if (!c5) return;
+    const n4 = (c5.vers || []).length, v5 = (c5.vers || [])[c5.at || 0] || {};
+    const el2 = $("#curVers");
+    if (el2) putHtml(el2, n4 > 1 ? versBarHtml(c5.at || 0, n4, "cver") : "");
+    const m5 = $("#curRefineMsg");
+    if (m5) putHtml(m5, v5.msg ? `<div class="drnote" role="note">${esc(v5.msg)}</div>` : "");
+  }
+  function refinedMd(res) {
+    let md2 = String(res.text || ""), pos = 0;
+    const ids = (r4) => ((res.sources || []).find((x5) => x5.ref === r4) || {}).id;
+    for (const s5 of res.sentences || []) {
+      const i5 = md2.indexOf(s5.text, pos);
+      if (i5 < 0) continue;
+      pos = i5 + s5.text.length;
+      const f5 = [...new Set((s5.refs || []).map(ids).filter((x5) => /^F\d+$/.test(String(x5 || ""))))];
+      if (!f5.length) continue;
+      const mark = ` {${f5.join(", ")}}`;
+      md2 = md2.slice(0, pos) + mark + md2.slice(pos);
+      pos += mark.length;
+    }
+    return md2;
+  }
+  function curSnap(c5) {
+    const root = $("#curEd");
+    if (!root) return null;
+    const set = c5.claims || {};
+    let md2 = stripMarks(edValue(root)), pos = 0;
+    for (const n4 of claimOrder(root)) {
+      const cl2 = set[n4];
+      if (!cl2) continue;
+      const t47 = claimText(root, n4), i5 = md2.indexOf(t47, pos);
+      if (i5 < 0) continue;
+      pos = i5 + t47.length;
+      const mark = (cl2.ids || []).length ? ` {${cl2.ids.join(", ")}}` : " {}";
+      md2 = md2.slice(0, pos) + mark + md2.slice(pos);
+      pos += mark.length;
+    }
+    return { md: md2 };
+  }
+  function curShow(c5, v5) {
+    curLoad(1, v5.md);
+    c5.dirty = true;
+    c5.notes = null;
+    c5.claims = null;
+    c5.rewrite = null;
+    mountCurEdit();
+    claimsInit("ed");
+    curCheck();
+    curVersSync();
+  }
+  function curStatus(c5, h5) {
+    c5.refineStatus = h5;
+    const el2 = $("#curRefineWork");
+    if (el2) putHtml(el2, refineStatusHtml(h5));
+  }
+  async function curRefine() {
+    const c5 = shared.CURED;
+    if (!c5 || !c5.opts || c5.refining) return;
+    const box = $("#curRefineNote"), ins = box ? box.value.trim() : "";
+    if (!ins) {
+      snack("Say what to change first, or pick one of the quick ones.");
+      if (box) box.focus();
+      return;
+    }
+    const fromAt = c5.at || 0, snap = curSnap(c5);
+    if (!snap) return;
+    c5.vers = c5.vers || [{}];
+    Object.assign(c5.vers[fromAt], snap);
+    c5.refining = true;
+    c5.refineStatus = "";
+    $("#curRefineGo")?.setAttribute("aria-disabled", "true");
+    let res = null;
+    try {
+      res = await refineAsk({ body: { code: c5.code, ...c5.opts }, form: "current", text: stripMarks(snap.md).trim(), ins, fromV: fromAt + 1, toV: c5.vers.length + 1, status: (h5) => curStatus(c5, h5) });
+    } finally {
+      c5.refining = false;
+      c5.refineStatus = "";
+      $("#curRefineGo")?.removeAttribute("aria-disabled");
+    }
+    if (shared.CURED !== c5) return;
+    const late = curSnap(c5);
+    if (late) Object.assign(c5.vers[fromAt], late);
+    if (!res) return;
+    const v5 = { md: fdMd(refinedMd(res)), msg: (res.length_notes || []).join(" ") };
+    c5.vers.push(v5);
+    c5.at = c5.vers.length - 1;
+    c5.refineNote = "";
+    if (!c5.edited) {
+      c5.edited = true;
+      draftStat("forms", "edited");
+    }
+    curShow(c5, v5);
+  }
+  function curVersion(way) {
+    const c5 = shared.CURED;
+    if (!c5 || c5.refining || !c5.vers) return;
+    const at2 = (c5.at || 0) + (way === "next" ? 1 : -1);
+    if (at2 < 0 || at2 >= c5.vers.length) return;
+    const snap = curSnap(c5);
+    if (snap) Object.assign(c5.vers[c5.at || 0], snap);
+    c5.at = at2;
+    curShow(c5, c5.vers[at2]);
   }
   function bootProjects0054() {
     if (!GEN_AUD.some((a5) => a5[0] === shared.GEN.aud)) shared.GEN.aud = "internal";
@@ -43081,10 +43213,17 @@ ${s5}`;
       }
     });
     $("#genSrc").addEventListener("change", () => genSrcLine());
+    document.addEventListener("input", (e4) => {
+      if (e4.target.id === "curRefineNote" && shared.CURED) shared.CURED.refineNote = e4.target.value;
+    });
     onCmdEnter("generate", (t47) => {
       const d5 = $("#genDlg");
-      return !!d5 && d5.open && (t47 === d5 || d5.contains(t47));
+      return !!d5 && d5.open && (t47 === d5 || d5.contains(t47)) && !(t47.closest && t47.closest("[data-refine]"));
     }, () => {
+      if (GENFM && GENFM.vers && GENFM.vers.length > 1) {
+        snack(`${MOD}↵ refines from here. Press Generate again to start over; it drops the versions.`);
+        return;
+      }
       if (pickerOpenFor()) {
         closePicker("owner");
         return;
@@ -43411,6 +43550,7 @@ ${s5}`;
       putHTML(box, html`<div class="rte inplace"><div id="curBar" class="curbar"></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`, `<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`, "edit", !!splitPanes(shared.CURED.orig)[1] || !!String(shared.CURED.ed2 ? edValue(shared.CURED.ed2.el) : shared.CURED.src2 || "").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
+    ${shared.CURED.opts && viaServer() ? raw(refineHtml("cur", { client: shared.CURED.opts.audience === "client", note: shared.CURED.refineNote || "", busy: shared.CURED.refining, status: shared.CURED.refineStatus, msg: ((shared.CURED.vers || [])[shared.CURED.at || 0] || {}).msg })) : ""}
     ${shared.CURED.sources ? html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>` : ""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts ? "" : "hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
@@ -43434,6 +43574,7 @@ ${s5}`;
       claimPaint("ed");
       rwWrap();
       evRefresh();
+      curVersSync();
     }
   }
   function endCurEdit() {
@@ -52274,7 +52415,7 @@ ${d5.text}`);
       }
       if (!out.got || !out.text && !out.items && !out.prefill) {
         shared.RBOUT = "failed";
-        return { ok: false, message: out.message || "No draft came back" };
+        return { ok: false, message: out.message || "No draft came back", length_notes: out.length_notes || [] };
       }
       out.ok = true;
       return out;
@@ -52394,6 +52535,7 @@ ${d5.text}`);
     if (GENFM && !GENFM.used) draftStat("forms", "rejected");
     GENFM = null;
     putHtml($("#genOut"), "");
+    refineUnmount();
     $("#genSetup").hidden = false;
     $("#genSum").hidden = true;
     genBusy(false);
@@ -52403,9 +52545,9 @@ ${d5.text}`);
     if (on2) $("#genGo").setAttribute("aria-disabled", "true");
     else $("#genGo").removeAttribute("aria-disabled");
   }
-  function genFormCard(d5) {
+  function genFormCard(d5, v5) {
     const name = (GEN_FORMS.find((x5) => x5[0] === d5.form) || [])[1] || "Status", aud = (GEN_AUD.find((x5) => x5[0] === d5.audience) || [])[1] || "", loose = d5.unsourced || 0;
-    return `<div class="drcard" role="region" aria-label="${esc(name)}" tabindex="-1"><div class="drhead">${ic("spark")}<b>${esc(name)}</b><span class="sub">${esc(aud)} · not saved: copy it where you need it</span></div>
+    return `<div class="drcard" role="region" aria-label="${esc(name)}" tabindex="-1"><div class="drhead">${ic("spark")}<b>${esc(name)}</b><span class="sub">${esc(aud)} · not saved: copy it where you need it</span>${v5 && v5.n > 1 ? versBarHtml(v5.at, v5.n, "gver") : ""}</div>
     ${genFormText(d5)}${loose ? `<div class="drnote">${loose} sentence${loose === 1 ? " has" : "s have"} no source: check ${loose === 1 ? "it" : "them"} before you use it.</div>` : ""}
     ${(d5.length_notes || []).length ? `<div class="drnote" role="note">${d5.length_notes.map(esc).join(" ")}</div>` : `<div class="drnote">${d5.words} words.</div>`}${draftSrcHtml(d5, false, "Written from")}
     <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-gfdo="discard">Discard</button><button type="button" class="btn" data-gfdo="plain">Copy as plain text</button>${d5.form === "teams" ? "" : '<button type="button" class="btn primary" data-gfdo="rich">Copy</button>'}</div><div class="sub" id="gfMsg" role="status"></div></div>`;
@@ -52424,6 +52566,7 @@ ${d5.text}`);
     }
     if (GENFM && !GENFM.used) draftStat("forms", "rejected");
     GENFM = null;
+    refineUnmount();
     const form = shared.GEN.form, mine = ++GENSEQ;
     genFold();
     genBusy(true);
@@ -52451,8 +52594,9 @@ ${d5.text}`);
       snack(res.message || "No draft came back");
       return;
     }
-    GENFM = { d: res, form, used: false };
-    putHtml(out, genFormCard(res));
+    GENFM = { d: res, form, used: false, edited: false, body: { ...body2 }, vers: [res], at: 0 };
+    putHtml(out, genFormCard(res, { at: 0, n: 1 }));
+    refineMount(body2.audience === "client");
     out.querySelector(".drcard")?.focus?.();
   }
   async function genFormCopy(rich, btn) {
@@ -52474,6 +52618,116 @@ ${d5.text}`);
       draftStat("forms", "used");
     }
   }
+  var REFINE_TEXT_MAX = 1500, REFINE_NOTE_MAX = 500, REFINE_INS_MAX = 300;
+  var REFINE_STARTERS = [["shorter", "Shorter", "Make it shorter."], ["plainer", "Plainer words", "Use plainer words."], ["decision", "Lead with the decision", "Lead with the decision."], ["risks", "Add the risks", "Add the risks."]];
+  function refineNote(ins, steer) {
+    ins = String(ins || "").replace(/\s+/g, " ").trim().slice(0, 300);
+    const first = String(steer || "").replace(/\s+/g, " ").trim(), room = REFINE_NOTE_MAX - ins.length - 27;
+    return first && room > 20 ? `${ins} (The first steer was: ${first.slice(0, room)})` : ins;
+  }
+  function versBarHtml(at2, n4, attr2) {
+    return `<span class="vers" role="group" aria-label="Versions">Version ${at2 + 1} of ${n4}${at2 > 0 ? ` · <button type="button" class="genlink" data-${attr2}="back">Back to version ${at2}</button>` : ""}${at2 < n4 - 1 ? ` · <button type="button" class="genlink" data-${attr2}="next">On to version ${at2 + 2}</button>` : ""}</span>`;
+  }
+  var refineStatusHtml = (h5) => h5 ? `<div class="drstatus" role="status">${h5}</div>` : "";
+  var REFINE_NOT_CLIENT = "Steer it further is not available for a Client-safe draft yet.";
+  function refineHtml(scope, o5 = {}) {
+    const cur = scope === "cur";
+    if (o5.client) return `<div class="genref" id="${scope}Refine" data-refine-off="${scope}"><div class="drnote" role="note">${esc(REFINE_NOT_CLIENT)}</div></div>`;
+    return `<div class="genref" id="${scope}Refine" data-refine="${scope}"><label for="${scope}RefineNote">Steer it further <span class="sub">Each change makes a new version. ${cur ? "Nothing is saved until you press Save." : "Nothing is saved or sent."}</span></label>
+    <textarea id="${scope}RefineNote" rows="2" placeholder="For example: shorter, lead with the decision, leave out the overdue actions">${esc(o5.note || "")}</textarea>
+    <div class="genrow"><span class="sub">Try:</span><span class="genstarts">${REFINE_STARTERS.map(([k5, l6]) => `<button type="button" class="genlink" data-rstart="${k5}">${esc(l6)}</button>`).join(" ")}</span><span class="sp"></span>${cur ? '<span id="curVers"></span>' : ""}<button type="button" class="btn" id="${scope}RefineGo" data-refinego="${scope}"${o5.busy ? ' aria-disabled="true"' : ""}>Refine<span class="kbd" aria-hidden="true">${MOD}↵</span></button></div>
+    <div id="${scope}RefineWork" aria-live="polite">${refineStatusHtml(o5.status)}</div><div id="${scope}RefineMsg">${o5.msg ? `<div class="drnote" role="note">${esc(o5.msg)}</div>` : ""}</div></div>`;
+  }
+  async function refineAsk(o5) {
+    const why = draftWhyNot("status-form");
+    if (why) {
+      snack(why);
+      return null;
+    }
+    const ins = String(o5.ins || "").replace(/\s+/g, " ").trim();
+    if (ins.length > REFINE_INS_MAX) {
+      snack(`A change can be ${REFINE_INS_MAX} characters at most; yours is ${ins.length}. Shorten it.`);
+      return null;
+    }
+    if (o5.text.length > REFINE_TEXT_MAX) {
+      snack(`This draft is over ${REFINE_TEXT_MAX} characters, more than a refine can take. Shorten it first.`);
+      return null;
+    }
+    const b5 = o5.body, res = await draftAsk(
+      { kind: "status-form", code: b5.code, from: b5.from, to: b5.to, audience: b5.audience, length: b5.length, form: o5.form, text: o5.text, note: refineNote(ins, b5.note) },
+      { label: `Refining version ${o5.fromV} into version ${o5.toV}…`, status: o5.status }
+    );
+    if (res.nothing) {
+      snack(res.nothing);
+      return null;
+    }
+    if (!res.ok) {
+      const n4 = (res.length_notes || []).join(" ");
+      snack(n4 ? `${n4} No new version was made.` : res.message || "No new version came back");
+      return null;
+    }
+    return res;
+  }
+  function refineMount(client) {
+    const h5 = $("#genRefineHost");
+    if (!h5) return;
+    putHTML(h5, raw(refineHtml("gen", { client: !!client })));
+    h5.hidden = false;
+  }
+  function refineUnmount() {
+    const h5 = $("#genRefineHost");
+    if (!h5) return;
+    putHTML(h5, raw(""));
+    h5.hidden = true;
+  }
+  var GENREF = false;
+  async function genRefine() {
+    const g5 = GENFM;
+    if (!g5 || GENREF || !$("#genDlg").open) return;
+    const box = $("#genRefineNote"), ins = box.value.trim();
+    if (!ins) {
+      snack("Say what to change first, or pick one of the quick ones.");
+      box.focus();
+      return;
+    }
+    GENREF = true;
+    GENCALL = true;
+    $("#genRefineGo").setAttribute("aria-disabled", "true");
+    genBusy(true);
+    let res = null;
+    try {
+      res = await refineAsk({ body: g5.body, form: g5.form, text: g5.vers[g5.at].text, ins, fromV: g5.at + 1, toV: g5.vers.length + 1, status: (h5) => {
+        const el2 = $("#genRefineWork");
+        if (el2 && GENFM === g5) putHtml(el2, refineStatusHtml(h5));
+      } });
+    } finally {
+      GENREF = false;
+      GENCALL = false;
+      if (GENFM === g5) genBusy(false);
+      $("#genRefineGo")?.removeAttribute("aria-disabled");
+    }
+    if (GENFM !== g5 || !$("#genDlg").open || !res) return;
+    g5.vers.push(res);
+    g5.at = g5.vers.length - 1;
+    g5.d = res;
+    if (!g5.edited) {
+      g5.edited = true;
+      draftStat("forms", "edited");
+    }
+    box.value = "";
+    putHtml($("#genOut"), genFormCard(res, { at: g5.at, n: g5.vers.length }));
+    box.focus();
+  }
+  function genVersion(way) {
+    const g5 = GENFM;
+    if (!g5 || GENREF) return;
+    const at2 = g5.at + (way === "next" ? 1 : -1);
+    if (at2 < 0 || at2 >= g5.vers.length) return;
+    g5.at = at2;
+    g5.d = g5.vers[at2];
+    putHtml($("#genOut"), genFormCard(g5.d, { at: at2, n: g5.vers.length }));
+    $("#genOut .drcard")?.focus?.();
+  }
   function bootDrafts0202() {
     DRAFTFEATURES.push(["forms", "Write the status in other forms", "Generate's Form: a steering note, a three-line update, an email paragraph or a Teams message"]);
     Object.assign(DRAFTKIND, { "status-form": "forms" });
@@ -52492,6 +52746,44 @@ ${d5.text}`);
       closePicker("owner", false);
       genReset();
     });
+    document.addEventListener("click", (e4) => {
+      const st2 = e4.target.closest("[data-rstart]");
+      if (st2) {
+        const box = st2.closest("[data-refine]")?.querySelector("textarea"), x5 = REFINE_STARTERS.find((a5) => a5[0] === st2.dataset.rstart);
+        if (!box || !x5) return;
+        const v5 = box.value.replace(/\s+$/, "");
+        box.value = (v5 ? v5 + " " : "") + x5[2];
+        box.dispatchEvent(new Event("input", { bubbles: true }));
+        box.focus();
+        return;
+      }
+      const rg2 = e4.target.closest("[data-refinego]");
+      if (rg2) {
+        e4.preventDefault();
+        if (rg2.getAttribute("aria-disabled") === "true") return;
+        if (rg2.dataset.refinego === "cur") curRefine();
+        else genRefine();
+        return;
+      }
+      const gv = e4.target.closest("[data-gver]");
+      if (gv) {
+        e4.preventDefault();
+        genVersion(gv.dataset.gver);
+        return;
+      }
+      const cv = e4.target.closest("[data-cver]");
+      if (cv) {
+        e4.preventDefault();
+        curVersion(cv.dataset.cver);
+      }
+    });
+    onCmdEnter("refine", (t47) => !!(t47 && t47.closest && t47.closest("[data-refine]")), () => {
+      const sc2 = document.activeElement && document.activeElement.closest && document.activeElement.closest("[data-refine]");
+      if (!sc2) return;
+      if (sc2.dataset.refine === "cur") curRefine();
+      else genRefine();
+    });
+    CMDENTER.unshift(CMDENTER.pop());
   }
   function bootDrafts0203() {
     Object.assign(DRAFTKIND, { "report-section": "report-section", "minutes-section": "minutes-section" });
@@ -53713,6 +54005,7 @@ ${d5.text}`);
       const ed3 = CMDENTER.find((x5) => x5.when(e4.target));
       if (!ed3) return;
       if (cmdEnterPicker()) {
+        if (isDateField(e4.target)) dateSettle(e4.target);
         e4.preventDefault();
         e4.stopImmediatePropagation();
         if (!e4.repeat) setTimeout(() => ed3.save(), 0);
@@ -68236,6 +68529,7 @@ ${d5.text}`);
         "curBar",
         "curDrop",
         "curObj",
+        "curRefine",
         "cxPeople",
         "cxReview",
         "dateHint",
@@ -68296,6 +68590,7 @@ ${d5.text}`);
         "fuRows",
         "fuState",
         "genDraft",
+        "genRefine",
         "go",
         "goDay",
         "greet",
@@ -68359,6 +68654,7 @@ ${d5.text}`);
         "mins",
         "mount",
         "mountCombobox",
+        "mountCurEdit",
         "mountFindUpdates",
         "mountMenu",
         "mountMenuPanel",
