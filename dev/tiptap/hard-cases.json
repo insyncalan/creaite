@@ -426,5 +426,23 @@
   "html": "<p>Line one<br>Line two</p>",
   "expect": "Line one  \nLine two",
   "why": "typed in the editor, no written form: creaite's style"
+ },
+ {
+  "name": "current state checklist",
+  "features": "current",
+  "text": "Where we are.\n\n- [ ] Send the SOW\n- [x] Book UAT\n\nNext.",
+  "why": "#134 (v2.2.0): Current state has TaskList and TaskItem; `- [ ]` and `- [x]` stay as written"
+ },
+ {
+  "name": "current state checklist nested",
+  "features": "current",
+  "text": "### Next steps\n\n- [ ] Close the contract\n  - [x] Legal review\n  - [ ] Sponsor sign-off\n- [x] Confirm the plan\n\n#### Later",
+  "why": "#134: a nested checklist and the ### heading level in Current state keep their written form"
+ },
+ {
+  "name": "current state checklist with marks",
+  "features": "current",
+  "text": "- [ ] **Chase** the _vendor_ (see [the plan](https://example.com/plan)) ABC-A-003\n- [x] `Run` the check",
+  "why": "#134: marks, a link and an item ID inside checklist items in Current state"
  }
 ]
