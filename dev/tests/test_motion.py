@@ -674,7 +674,7 @@ class MotionPages(LiveBrowserCase):
         n = b.eval("(()=>{ const d=document.createElement('div'); d.textContent=Array(450).fill('word').join(' '); mWords(d); return d.querySelectorAll('.mw').length; })()")
         self.assertEqual(n, 0)
         self.assertTrue(b.eval("!!document.querySelector('#chLog .msg') || true"))
-        self.assertIn("mWords(await sayMd(", script())                                             # live replies only (history uses addEl)
+        self.assertIn("live&&!replayed?mWords(d):d", script())                                   # #148: live replies only, not a finished run replayed (history uses addEl)
 
     def test_the_typing_dots_and_the_input_border_only_while_working_or_focused(self):
         b = self.b

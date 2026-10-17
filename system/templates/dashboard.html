@@ -3899,6 +3899,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     CHK: () => CHK,
     CHNEAR: () => CHNEAR,
     CHREC: () => CHREC,
+    CHSAVED: () => CHSAVED,
     CHSTARTED: () => CHSTARTED,
     CHTOP: () => CHTOP,
     CKFN: () => CKFN,
@@ -6476,6 +6477,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     QNOW: void 0,
     RBMARKED: void 0,
     RBOUT: void 0,
+    REATT: void 0,
     RUN: void 0,
     RUNLABEL: void 0,
     SHOWN: void 0,
@@ -58227,8 +58229,9 @@ ${d5.text}`);
     }
     $("#chat").classList.add("on");
     rbDismiss();
-    chatScroll();
-    if (!$("#chLog").children.length && !ATTACHED) {
+    if (CHFOLLOW || CHSAVED == null) chatScroll();
+    else $("#chLog").scrollTop = CHTOP = CHSAVED;
+    if (!$("#chLog").children.length && !ATTACHED && !shared.REATT) {
       if (shared.ASKCHAT && viaServer()) loadChat(shared.ASKCHAT, true);
       else greet();
     }
@@ -58244,6 +58247,7 @@ ${d5.text}`);
   }
   function closeChat() {
     const wasOn = $("#chat").classList.contains("on"), inside = $("#chat").contains(document.activeElement);
+    if (wasOn) CHSAVED = $("#chLog").scrollTop;
     $("#chat").classList.remove("on");
     if ($("#chat").contains(document.activeElement)) document.activeElement.blur();
     if (wasOn && inside && (!document.activeElement || document.activeElement === document.body)) {
@@ -58512,7 +58516,7 @@ ${d5.text}`);
     $("#chLog").addEventListener("click", (e4) => mdClick(e4));
   }
   var mdView = (text, o5) => `<div class="mdv">${mdChat(text, o5)}</div>`;
-  var CHFOLLOW = true, CHTOP = 0;
+  var CHFOLLOW = true, CHTOP = 0, CHSAVED = null;
   var CHNEAR = 12;
   function chatPin() {
     if (!CHFOLLOW) return;
@@ -58650,6 +58654,7 @@ ${d5.text}`);
   }
   function newChat() {
     if (shared.BUSY) return;
+    CHSAVED = null;
     setChat(null, null);
     $("#chLog").textContent = "";
     shared.SHOWN = null;
@@ -58657,6 +58662,7 @@ ${d5.text}`);
     $("#chIn").focus();
   }
   async function loadChat(chat, quiet, skipRun) {
+    if (chat !== shared.ASKCHAT) CHSAVED = null;
     const rec = await api("/api/chat", { chat });
     if (rec.ok && typeof skipRun === "function") skipRun = skipRun(rec);
     if (rec.ok && skipRun) rec.messages = rec.messages.filter((m5) => m5.run !== skipRun);
@@ -58939,8 +58945,16 @@ ${d5.text}`);
   async function reattach() {
     if (!viaServer()) return;
     queueLoad();
-    const r4 = await api("/api/ask/running");
-    if (r4.ok && r4.run) attachRun(r4.run);
+    shared.REATT = true;
+    let run = null;
+    try {
+      const r4 = await api("/api/ask/running");
+      if (r4.ok && r4.run) run = r4.run;
+      else if (shared.ASKCHAT && !$("#chLog").children.length && !ATTACHED) await loadChat(shared.ASKCHAT, true);
+    } finally {
+      shared.REATT = false;
+    }
+    if (run) attachRun(run);
     else {
       pendingCard();
       pendingEdit();
@@ -59314,7 +59328,7 @@ ${d5.text}`);
     }
     const work = () => live ? working() : document.createElement("div");
     let next = null;
-    const rd2 = res.body.getReader(), dec = new TextDecoder();
+    const rd2 = res.body.getReader(), dec = new TextDecoder(), t02 = performance.now();
     let buf = "", conf = null, perm = null, chg = null, ecard = null, fcard = null, prep = null, runId = body2.run, replies = [], grp = null, spin = work();
     for (; ; ) {
       let chunk;
@@ -59332,6 +59346,7 @@ ${d5.text}`);
       if (done) break;
       buf += dec.decode(value, { stream: true });
       let i5;
+      const replayed = url === "/api/ask/attach" && performance.now() - t02 < 150;
       while ((i5 = buf.indexOf("\n\n")) >= 0) {
         const chunk2 = buf.slice(0, i5);
         buf = buf.slice(i5 + 2);
@@ -59361,7 +59376,10 @@ ${d5.text}`);
         } else if (ev.type === "text") {
           spin.remove();
           grp = null;
-          replies.push(mWords(await sayMd(fdText(ev.text))));
+          {
+            const d5 = await sayMd(fdText(ev.text));
+            replies.push(live && !replayed ? mWords(d5) : d5);
+          }
           claimsNote(ev.checked);
           spin = work();
         } else if (ev.type === "cant") {
