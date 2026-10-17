@@ -12,11 +12,12 @@ Product Manager, 17-10-2026. Sonnet, size S, plain code plus one guarded hook (J
 
 One line per finished run, appended to `system/staging/run-usage.jsonl` (counts only, like the debug log's rule: no message, subject, name, path or text):
 
-`{"at": ISO time, "kind": "ask|sweep|generate|prep|check|load|draft|vip", "label": the kind's own short label if it has one, "model": from the init event, "seconds": wall time, "turns": num_turns, "input": n, "output": n, "cache_read": n, "cache_create": n, "cost_usd": n, "start_tokens": n, "stopped": bool}`
+`{"at": ISO time, "kind": "ask|sweep|generate|prep|check|load|draft|vip", "label": the kind's own short label if it has one, "model": from the init event, "seconds": wall time, "turns": num_turns, "input": n, "output": n, "cache_read": n, "cache_create": n, "cost_usd": n, "start_tokens": n, "stopped": bool, "skills": ["cx-minutes", ...]}`
 
 - `start_tokens` is the first assistant event's input plus cache tokens: what the run **loaded before doing anything**, which is the number #195 needs (CLAUDE.md, the 53 KB rules file, memory, skill descriptions).
 - Take the figures from the result event's `usage` and `total_cost_usd`; the VIP call reads them from its JSON reply. **Confirm the exact field names on a real run first** (this brief names them from Claude Code's output; the first test must print one result event).
 - A run that is stopped or fails still records what it used.
+- `skills` (Alan, 17-10-2026): the names of the skills the run invoked, taken from the stream's Skill tool calls (each is an assistant `tool_use` named `Skill` with the skill's name in its input; **confirm on a real run**, as with the usage fields). An empty list is recorded as empty. The report adds a table of skill by day: runs, tokens, cost, and **days since last used**, so unused skills show up. Alan does not use a terminal session at all, so every skill run goes through the live server and is seen here; a run in a plain Claude Code terminal would not be, and none is expected.
 
 ## The report
 
@@ -31,7 +32,7 @@ One line per finished run, appended to `system/staging/run-usage.jsonl` (counts 
 
 ## Tests
 
-`test_run_usage_line_has_counts_only`, `test_run_usage_appended_for_each_kind`, `test_stopped_run_still_recorded`, `test_vip_cost_and_tokens_recorded`, `test_no_text_in_the_file`, `test_report_sums_by_day_and_kind`, `test_not_written_in_the_dev_repo`.
+`test_run_usage_line_has_counts_only`, `test_run_usage_appended_for_each_kind`, `test_stopped_run_still_recorded`, `test_vip_cost_and_tokens_recorded`, `test_no_text_in_the_file`, `test_report_sums_by_day_and_kind`, `test_skills_recorded_from_skill_tool_calls`, `test_report_lists_days_since_a_skill_last_ran`, `test_not_written_in_the_dev_repo`.
 
 ## Done when
 
