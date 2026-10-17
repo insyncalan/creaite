@@ -46728,15 +46728,18 @@ ${pre}**Current state title:** ${title}`);
           closeCal();
           return;
         }
+        const pk2 = $("#panel").classList.contains("on");
         if (HL.size && (shared.VIEW === "work" || shared.VIEW === "person")) {
+          const one = HL.size === 1 && (!shared.CUR || shared.CUR.mode !== "record" || HL.has(shared.CUR.id));
           hlClear();
-          if ($("#panel").classList.contains("on")) closePanel();
+          if (pk2 && one) closePanel();
           return;
         }
-        if (shared.VIEW === "review" && (RHL.size || CHK.size) && !$("#panel").classList.contains("on")) {
+        if (shared.VIEW === "review" && (RHL.size || CHK.size) && (!pk2 || RHL.size <= 1 && CHK.size <= 1)) {
           RHL.clear();
           CHK.clear();
           renderReview();
+          if (pk2) closePanel();
           return;
         }
         if ($("#panel").classList.contains("on")) {
@@ -71066,6 +71069,7 @@ ${d5.text}`);
         "nowHM",
         "nowIso",
         "open",
+        "openCal",
         "openCapture",
         "openChat",
         "openCk",
