@@ -193,6 +193,15 @@ class ExcelTests(unittest.TestCase):
         wb.save(self.xlsx)
         self.assertIn("0 new, 1 changed, 0 deleted", self.excel("import").stdout)
 
+    def test_a_pending_proposal_a_workbook_cannot_hold_still_exports(self):
+        """#127 round 8: the Review sheet's rows are cleaned too (review_rows): a pending proposal holding a control character no
+        longer stops the export."""
+        self.v.propose("pend", [dict(action(5, description="Pending\x07 item￾ now", owner="P\x07Q"), decision="pending")])
+        out = self.excel("export")
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        rows = [[c.value for c in r] for r in load_workbook(self.xlsx)["Review"].iter_rows(min_row=2)]
+        self.assertTrue(any("Pending item now" in str(v) for r in rows for v in r), rows)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

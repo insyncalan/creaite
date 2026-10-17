@@ -1086,6 +1086,8 @@ class TheReviewOfc39f6c4(Base):
         self.assert_found([("Note: inter*nal*-only.", MARKER), ("Note: inter****nal-only.", MARKER),
                            ("Note: ~~**__*_internal_*__**~~-only.", MARKER), ("Blocked by ABC-A-0*0*4 now.", HIDDEN),
                            ("Waiting on Quen*tin* Marlow.", NAMED)])
+        self.assert_found([(t, MARKER) for t in ("Note: inter~~nal~~-only.", "Note: inter~~nal-only.", "Note: in~~ter~~nal~~-only.",
+                                                 "Note: inter~~nal~~~~-only.", "Note: inter~~nal~~-o~~nly")])   # round 8: ~~ too
         for text, got in self.gate(["Note: Line up the q*uie*t audit."]).items():
             for k in range(3):
                 self.assertTrue(any("wording appears" in f for f in got[k]), (text, k, got[k]))
