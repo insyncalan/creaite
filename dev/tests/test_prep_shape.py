@@ -193,12 +193,14 @@ class Shape(ShapeCase):
         self.shape()
         b.click("#shN-objective")
         b.key("a", 4)                                                                                   # ⌘A
+        b.wait("document.querySelector('#aiLayer .aispark')", 30)                                      # #117: the sparkle shows; its click opens the bar
+        b.click("#aiLayer .aispark")
         b.wait("document.querySelector('#aiLayer .aibar')", 30)
         self.assertEqual(b.eval("[aiBar.value.ai.place, aiBar.value.ai.project(), aiBar.value.ai.confidential()]"), ["plain", "ABC", False])
         b.click("#aiLayer .aibar button[aria-haspopup]")
         b.wait("document.querySelector('#aiLayer [role=menu]')")
         self.assertEqual(b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)"),
-                         ["rewrite", "shorter", "longer", "executive", "spelling", "custom"])
+                         ["rewrite", "shorter", "executive"])     # the plain place's Improve group (no separate spelling option, #117)
         b.key("Escape")
 
     def test_6_the_switch_in_settings_turns_it_off(self):
@@ -226,6 +228,8 @@ class Confidential(ShapeCase):
         self.assertNotIn("Board secret", call["prompt"])
         b.click("#shN-objective")                                                                       # BL-301 D: AI asks first
         b.key("a", 4)
+        b.wait("document.querySelector('#aiLayer .aispark')", 30)
+        b.click("#aiLayer .aispark")
         b.wait("document.querySelector('#aiLayer .aibar')", 30)
         self.assertTrue(b.eval("aiBar.value.ai.confidential()"))
         self.assertEqual(b.errors, [])
