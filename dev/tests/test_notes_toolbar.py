@@ -148,16 +148,17 @@ class Toolbar(LiveBrowserCase):
         self.reset("see plan")
         self.select_all()
         b.click(".nbar [data-nt=link]")
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
-        self.assertEqual(b.eval("!!document.querySelector('.nbar [data-rl=remove]')"), False)       # nothing to remove yet
+        b.wait("!!document.querySelector('.linkpop.form')", 5)
+        self.assertEqual(b.eval("!!document.querySelector('.linkpop [data-lk=remove]')"), False)       # nothing to remove yet
         b.type("https://example.com/plan")
         b.key("Enter")
-        b.wait("document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!document.querySelector('.linkpop')", 5)
         self.assertIn("[see plan](https://example.com/plan)", self.value())
+        b.eval("document.querySelector('.nbody').cxed.editor.commands.setTextSelection(3)")   # inside the link
         b.click(".nbar [data-nt=link]")                          # the cursor is in the link: the same button edits it, and removes it
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
-        b.wait("!!document.querySelector('.nbar [data-rl=remove]')", 5)
-        b.click(".nbar [data-rl=remove]")
+        b.wait("!!document.querySelector('.linkpop.form')", 5)
+        b.wait("!!document.querySelector('.linkpop [data-lk=remove]')", 5)
+        b.click(".linkpop [data-lk=remove]")
         b.wait("!document.querySelector('.nbody').cxed.value().includes('](')", 5)
         self.assertIn("see plan", self.value())
         self.assertEqual(b.eval("document.querySelectorAll('.nbar [data-nt=unlink]').length"), 0)
