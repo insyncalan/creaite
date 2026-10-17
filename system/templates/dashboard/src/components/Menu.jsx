@@ -34,8 +34,9 @@ import { Icon } from "./Icon.jsx";
 /** @typedef {{label: string, items: MenuItem[], onPick: (id: string) => void, id?: string, cls?: string,
     align?: "left" | "right", at?: {x: number, y: number}, loading?: boolean, onClose?: (how: MenuClose) => void}} PopMenuProps */
 
-/** The hover Menu the keyboard opened (its fold): the pointer opening another folds it, so one is open at a time (the group has let go of it). */
-/** @type {(() => void) | null} */
+/** The hover Menu the keyboard is in (its fold): the pointer opening another folds it, so one is open at a time (the group has let go of it).
+    Set when a key, Enter, Space or a click opens it (or moves into it), and cleared the moment it closes by any route.
+    @type {(() => void) | null} */
 let KB_OPEN = null;
 
 /** The items a key can move between: every item that isn't disabled.
@@ -131,12 +132,15 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
   const isOpen = useRef(false); isOpen.current = open;   // #143: a late hover timer must not act on a menu already open
 
   /** @param {MenuClose} how */
-  const close = how => { back.current = how === "esc"; if (back.current) btn.current?.focus({ preventScroll: true }); setOpen(false);   /* Esc: focus is back before the list goes, so a bar shown only while focus is inside it (the Notes bar) stays */
+  const close = how => { back.current = how === "esc"; if (KB_OPEN === fold) KB_OPEN = null; if (back.current) btn.current?.focus({ preventScroll: true }); setOpen(false);   /* Esc: focus is back before the list goes, so a bar shown only while focus is inside it (the Notes bar) stays */
     if (hover && menuGroup.current === btn.current) menuGroup.close(); };
 
   const closeRef = useRef(close); closeRef.current = close;
-  const fold = useRef(() => closeRef.current("esc")).current;   /* folded by another menu: focus goes back to its button, so the Notes bar (shown while focus is in it) stays */
+  const fold = useRef(() => { if (isOpen.current) closeRef.current("esc"); }).current;   /* folded by another menu: focus goes back to its button, so the Notes bar (shown while focus is in it) stays; a menu already shut is left alone (it must not take focus back) */
+  useEffect(() => { if (!open && KB_OPEN === fold) KB_OPEN = null; }, [open]);   /* any close, the hover timer's too, lets go of the fold */
   useEffect(() => () => { if (KB_OPEN === fold) KB_OPEN = null; }, []);
+  /** The keyboard (or a click) is taking this hover menu: the pointer's neighbour folds, and this one is folded in its turn when the pointer opens another. */
+  const claimKb = () => { if (!hover) return; if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close(); if (KB_OPEN && KB_OPEN !== fold) KB_OPEN(); KB_OPEN = fold; menuGroup.release(btn.current); };
   useEffect(() => {
     const b = btn.current; if (!hover || !b) return;
     return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current, isOpen: () => isOpen.current,
@@ -155,8 +159,8 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
   /** @param {KeyboardEvent} e */
   const onBtnKey = e => {
     if (e.key !== "ArrowDown" || why) return;
-    if (!open) { e.preventDefault(); byPointer.current = false; if (hover) { if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close(); if (KB_OPEN && KB_OPEN !== fold) KB_OPEN(); KB_OPEN = fold; menuGroup.release(btn.current); } setOpen(true); }   /* one menu at a time: a neighbour the pointer opened folds */
-    else if (byPointer.current) { e.preventDefault(); byPointer.current = false; menuGroup.release(btn.current); menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); }   /* ↓ on a hover-opened menu moves in */
+    if (!open) { e.preventDefault(); byPointer.current = false; claimKb(); setOpen(true); }   /* one menu at a time: a neighbour the pointer opened folds */
+    else if (byPointer.current) { e.preventDefault(); byPointer.current = false; claimKb(); menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); }   /* ↓ on a hover-opened menu moves in */
   };
 
   return (
@@ -166,8 +170,8 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
         data-tip={why || tip} {...dataAttrs(data)} onKeyDown={onBtnKey}
         onClick={e => { e.preventDefault(); if (why) { onBlocked && onBlocked(); return; }
           if (hover) menuGroup.release(btn.current);          /* a click is the keyboard's and the mouse's own: no pending hover open, no hover close */
-          if (open && byPointer.current) { byPointer.current = false; menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); return; }   /* a click on a hover-opened menu keeps it and moves in */
-          byPointer.current = false; if (open) close("pick"); else setOpen(true); }}>
+          if (open && byPointer.current) { byPointer.current = false; claimKb(); menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); return; }   /* a click on a hover-opened menu keeps it and moves in */
+          byPointer.current = false; if (open) close("pick"); else { claimKb(); setOpen(true); } }}>
         {icon ? <Icon name={icon} /> : null}<span class={labelCls}>{label}</span>{chevron ? <Icon name="chevdown" cls="nch" /> : null}
       </button>
       {open ? (

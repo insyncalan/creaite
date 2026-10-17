@@ -10092,16 +10092,29 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     isOpen.current = open2;
     const close = (how) => {
       back2.current = how === "esc";
+      if (KB_OPEN === fold) KB_OPEN = null;
       if (back2.current) btn.current?.focus({ preventScroll: true });
       setOpen2(false);
       if (hover && menuGroup.current === btn.current) menuGroup.close();
     };
     const closeRef = A2(close);
     closeRef.current = close;
-    const fold = A2(() => closeRef.current("esc")).current;
+    const fold = A2(() => {
+      if (isOpen.current) closeRef.current("esc");
+    }).current;
+    h2(() => {
+      if (!open2 && KB_OPEN === fold) KB_OPEN = null;
+    }, [open2]);
     h2(() => () => {
       if (KB_OPEN === fold) KB_OPEN = null;
     }, []);
+    const claimKb = () => {
+      if (!hover) return;
+      if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
+      if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+      KB_OPEN = fold;
+      menuGroup.release(btn.current);
+    };
     h2(() => {
       const b5 = btn.current;
       if (!hover || !b5) return;
@@ -10137,17 +10150,12 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       if (!open2) {
         e4.preventDefault();
         byPointer.current = false;
-        if (hover) {
-          if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
-          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
-          KB_OPEN = fold;
-          menuGroup.release(btn.current);
-        }
+        claimKb();
         setOpen2(true);
       } else if (byPointer.current) {
         e4.preventDefault();
         byPointer.current = false;
-        menuGroup.release(btn.current);
+        claimKb();
         menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
       }
     };
@@ -10176,12 +10184,16 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
             if (hover) menuGroup.release(btn.current);
             if (open2 && byPointer.current) {
               byPointer.current = false;
+              claimKb();
               menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
               return;
             }
             byPointer.current = false;
             if (open2) close("pick");
-            else setOpen2(true);
+            else {
+              claimKb();
+              setOpen2(true);
+            }
           },
           children: [
             icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
