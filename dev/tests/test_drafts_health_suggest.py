@@ -107,6 +107,15 @@ class Suggest(unittest.TestCase):
         self.assertTrue(all(e["text"] for e in out["evidence"]))
         self.assertEqual(out["unsourced"], 0)
 
+    def test_a_made_up_health_or_evidence_ref_in_the_reply_is_ignored(self):
+        c = self.ctx()
+        base = self.result(c)
+        out = self.result(c, "HEALTH: Off track\nEVIDENCE: ZZZ-A-999\nThe health is Off track because of ZZZ-A-999. [S99, ZZZ-A-999]")
+        self.assertEqual(out["health"], base["health"])
+        self.assertEqual(out["evidence"], base["evidence"])
+        self.assertNotIn("ZZZ-A-999", json.dumps(out["evidence"]))
+        self.assertTrue(out["unsourced"] >= 1)                            # the unknown tag counts for nothing
+
     def test_an_unsourced_sentence_is_counted(self):
         out = self.result(self.ctx(), "UAT start has slipped. [S1] Nobody is worried.")
         self.assertEqual(out["unsourced"], 1)
