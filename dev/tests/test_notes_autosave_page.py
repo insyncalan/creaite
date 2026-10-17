@@ -774,6 +774,43 @@ class AutosavePage(LiveBrowserCase):
         b.wait("!noteFocus.value", 10)
         self.assertEqual(b.eval("document.querySelectorAll('[inert]').length"), 0, "nothing is left inert")
 
+    def test_a_successful_save_closes_the_page_without_a_prompt(self):
+        """#136 done-when: a save that worked is never questioned: Esc leaves focus mode with no dialog and no further write, and a real
+        reload of the page is not stopped by the leave guard (no NO_GUARD here: a beforeunload prompt would hang it)."""
+        b = self.b
+        self.make("Clean close")
+        f = self.notes_dir() / "Clean close.md"
+        b.eval(SPY)
+        self.focus_on()
+        self.type_end("all saved")
+        b.wait("noteSave.value.state==='saved'", 15)                                  # the autosave wrote it
+        self.assertIn("all saved", f.read_text())
+        b.eval("window.__saves.length=0")
+        b.key("Escape")
+        b.wait("!noteFocus.value", 8)
+        self.assertFalse(self.dialog_open(), "saved: no prompt")
+        self.assertEqual(b.eval("window.__saves.length"), 0, "nothing left to write: closing sent no save")
+        e = "(()=>{ const e=new Event('beforeunload',{cancelable:true}); window.dispatchEvent(e); return e.defaultPrevented; })()"
+        self.assertFalse(b.eval(e), "the leave guard stays quiet")
+        b.reload("typeof go==='function' && LIVE")                                    # a real reload: a prompt would block this
+        self.assertIn("all saved", f.read_text())
+
+    def test_esc_closes_the_real_link_popover_first_then_leaves_focus_mode(self):
+        b = self.b
+        self.make("Link layer")
+        self.focus_on()
+        self.type_end("some words")
+        b.eval("document.querySelector('.nbody').cxed.editor.commands.selectAll()")
+        b.key("k", (4 if b.is_mac() else 2) | 8)                                      # the link form (Cmd/Ctrl+Shift+K)
+        b.wait("!!document.querySelector('.linkpop')", 5)
+        b.key("Escape")
+        b.wait("!document.querySelector('.linkpop')", 5)
+        self.assertEqual(b.eval("noteFocus.value"), True, "the first Esc closed the link form only")
+        self.assertFalse(self.dialog_open())
+        b.key("Escape")
+        b.wait("!noteFocus.value", 8)
+        self.assertFalse(self.dialog_open())
+
     def test_cmd_shift_f_enters_and_leaves_focus_mode_and_focus_returns_to_the_opener(self):
         b = self.b
         self.make("Shortcut")
