@@ -322,6 +322,7 @@
    "healthFacts",
    "helpFind",
    "helpGo",
+   "helpLineReset",
    "helpMark",
    "helpNorm",
    "helpScreenSync",
