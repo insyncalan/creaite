@@ -996,7 +996,8 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
     FILES.filter(f=>f.p!=="inbox").forEach(f=>add("Files",f.n,[fpName(f.p),f.f,f.sub].filter(Boolean).join(" › "),()=>openPath(f.path),f.p)); }   /* BL-101: the name shown, the code still finds it */
   if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ shared.WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ shared.WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ shared.WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
   const hk=helpCk(q), hfirst=/^(help|how)/.test(q.trim());   /* BL-84: "help" and "how do I…" list the tasks first */
-  return [...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...searchCkItems()]; })(q);
+  const sc=searchCkItems(), askRow=sc.filter(x=>String(x.l).startsWith("ask creaite:")), restSc=sc.filter(x=>!askRow.includes(x));   /* a question's ask row stays first, ahead of the Help rows */
+  return [...askRow,...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...restSc]; })(q);
   if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
   MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
     if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("inbox"); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
