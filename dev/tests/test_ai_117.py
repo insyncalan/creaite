@@ -632,10 +632,9 @@ class Bar117(LiveBrowserCase):
         self.assertEqual(b.eval("AIE.editor.view.dom.getAttribute('data-aibar')"), "open")
         self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aispark').getAttribute('aria-expanded')"), "true")
         self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aispark').getAttribute('aria-controls')"), "aiBarBox")
-        b.key("Escape")                                                                           # Esc closes the bar; #119: the selection collapses, so the sparkle goes too
+        b.key("Escape")                                                                           # Esc folds the bar (the sparkle stays on a selection)
         b.wait(f"!document.querySelector('{LAYER} .aibar')")
-        self.assertTrue(b.eval("AIE.editor.state.selection.empty"))
-        self.assertIsNone(b.eval("AIE.editor.view.dom.getAttribute('data-aibar')"))
+        self.assertEqual(b.eval("AIE.editor.view.dom.getAttribute('data-aibar')"), "spark")
         self.assertTrue(b.eval("document.activeElement===AIE.editor.view.dom||AIE.el.contains(document.activeElement)"))
 
     def test_the_slash_menu_and_the_bar_never_show_together(self):
@@ -676,8 +675,7 @@ class Bar117(LiveBrowserCase):
         b.key("Escape")                                                                           # closes the bar; focus back in the text
         b.wait(f"!document.querySelector('{LAYER} .aibar')")
         self.assertTrue(b.eval("AIE.el.contains(document.activeElement)"))
-        self.assertTrue(b.eval("AIE.editor.state.selection.empty"))                               # #119: the selection collapsed to its end, so no sparkle
-        self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aispark')"))
+        self.assertTrue(b.eval(f"!!document.querySelector('{LAYER} .aispark')"))
 
     def test_alt_slash_with_a_composition_is_ignored_and_without_a_selection_says_so(self):
         b = self.b
