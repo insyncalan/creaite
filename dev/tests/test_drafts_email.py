@@ -9,17 +9,17 @@ import subprocess
 import sys
 import time
 import unittest
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import drafts_fake  # noqa: E402
 from test_dashboard import d  # noqa: E402
+from test_dashboard import today as _cx_today  # noqa: E402
 from test_drafts_update import DraftCase  # noqa: E402
 from test_tracker import ABC, Vault, action  # noqa: E402
 
-TODAY = date.today().isoformat()
+TODAY = _cx_today().isoformat()
 
 
 def shown(iso):

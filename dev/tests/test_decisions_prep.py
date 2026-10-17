@@ -11,15 +11,16 @@ import json
 import subprocess
 import sys
 import unittest
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 from test_dashboard import populate  # noqa: E402
+from test_dashboard import today as _cx_today  # noqa: E402
 from test_tracker import ABC, Vault  # noqa: E402
 
-TODAY = date.today()
+TODAY = _cx_today()
 
 
 def d(n):

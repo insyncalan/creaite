@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -24,10 +24,30 @@ from test_tracker import ABC, Vault, action  # noqa: E402
 CHROME = Path(chrome_path() or "/nonexistent/chrome")      # CREAITE_CHROME, the PATH, then the macOS app (dev/tools/cdp.py)
 
 
-def _today():
-    """Today for the sample data: CREAITE_NOW's day when it is set (as the scripts read it), else the real one."""
+def now():
+    """The test clock, the one every test reads: CREAITE_NOW when it is set (as the scripts read it: "YYYY-MM-DD HH:MM[:SS]"), else the real time (#178)."""
+    from datetime import datetime
     fixed = os.environ.get("CREAITE_NOW")
-    return date.fromisoformat(fixed[:10]) if fixed else date.today()
+    return datetime.fromisoformat(fixed) if fixed else datetime.now()
+
+
+def today():
+    """Today for the sample data and fixtures: CREAITE_NOW's day when it is set, else the real one (#178). Use this, never date.today()."""
+    return now().date()
+
+
+_today = today
+
+
+def page_clock_js(stamp):
+    """JavaScript that pins a page's clock to `stamp` ("YYYY-MM-DD HH:MM[:SS]", as CREAITE_NOW pins the server's), running on from there:
+    Date() and Date.now() read the pinned time; Date with arguments is unchanged. One body for live_browser.pin_page_clock and the
+    headless probes (test_insight.chrome), so the page and the data agree (#178)."""
+    from datetime import datetime
+    t = datetime.fromisoformat(stamp)
+    return """(()=>{ const R=Date, off=new R(%d,%d,%d,%d,%d,%d).getTime()-R.now();
+  class D extends R{ constructor(...a){ if(a.length) super(...a); else super(R.now()+off); } static now(){ return R.now()+off; } }
+  window.Date=D; })();""" % (t.year, t.month - 1, t.day, t.hour, t.minute, t.second)
 
 
 TODAY = _today()
@@ -264,7 +284,7 @@ class DashboardTests(unittest.TestCase):
         """The saved calendar holds true (Alan organised it) or the organiser's name (BL-42): only true is "You"."""
         from test_insight import chrome
         cal = self.v.root / "system/staging/calendar.json"
-        day = date.today().isoformat()      # the headless page reads the real clock, so the calendar's day is the real one even when CREAITE_NOW pins the scripts' day
+        day = today().isoformat()           # the headless page is pinned to CREAITE_NOW too (test_insight.chrome), so page and calendar agree (#178)
         cal.write_text(json.dumps({"fetched": day + " 07:00", "days": {day: [
             {"start": "09:00", "end": "10:00", "title": "Mine", "where": "Teams", "organiser": True},
             {"start": "11:00", "end": "12:00", "title": "Theirs", "where": "Room 4", "organiser": "Jane Doe"}]}}))

@@ -155,7 +155,7 @@ class Server(unittest.TestCase):
         runs = [("prep", "ok"), ("prep", "fail"), ("prep", "slow"), ("current", "ok"), ("rewrite", "ok"), ("draft", "ok"),
                 ("draft", "fail"), ("agenda", "ok"), ("check", "ok"), ("load", "ok"), ("sweep", "ok"), ("sweep", "slow")]
         r = subprocess.run([sys.executable, "-c", HARNESS, json.dumps(runs)], cwd=cls.v.root, capture_output=True, text=True,
-                           timeout=600, env={**__import__("os").environ, "CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")})
+                           timeout=600, env={**__import__("os").environ, "CREAITE_NOW": "", "CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")})
         if r.returncode:
             raise AssertionError(r.stderr[-3000:])
         cls.got = json.loads(r.stdout.strip().splitlines()[-1])
@@ -291,6 +291,7 @@ class PlainParts(unittest.TestCase):
 class Panel(LiveBrowserCase):
     """The panel draws a run creaite started with exactly the ask, the steps and the closure."""
     width, height = 1400, 900
+    pin_clock = False          # #178: live_server.py names the runs chat by the real day, so this file's server and page run on the real clock
 
     @classmethod
     def load(cls, v):
@@ -298,7 +299,7 @@ class Panel(LiveBrowserCase):
 
     @classmethod
     def server_env(cls):
-        return {"CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")}
+        return {"CREAITE_NOW": "", "CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")}
 
     def token(self):
         # read once, on the test's own thread: a background post that evals in Chrome at the same moment as the test

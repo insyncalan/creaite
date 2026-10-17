@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_dashboard import today as _cx_today  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 NOW = "2026-10-08 09:30"
@@ -354,8 +355,7 @@ class VipPageTests(unittest.TestCase):
     def setUpClass(cls):
         from test_insight import chrome
         cls.v = v = vip_vault()
-        from datetime import date
-        record(v, [{"kind": "mail", "from": MIA2, "subject": "Quick word", "sent": f"{date.today().isoformat()} 07:12",
+        record(v, [{"kind": "mail", "from": MIA2, "subject": "Quick word", "sent": f"{_cx_today().isoformat()} 07:12",
                     "link": "https://outlook.office365.com/owa/?ItemID=m1", "gist": "Asks to confirm the go-live date."}], "start-up")
         f = v.root / "system/staging/drafts/sweep.json"
         f.write_text(json.dumps({"items": [
@@ -481,12 +481,12 @@ class PrepTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from datetime import date, timedelta
+        from datetime import timedelta
         from test_dashboard import populate
         from test_insight import chrome
         cls.v = v = Vault()
         populate(v)
-        today, tomorrow = date.today(), date.today() + timedelta(days=1)
+        today, tomorrow = _cx_today(), _cx_today() + timedelta(days=1)
         cls.today, cls.tomorrow = today.isoformat(), tomorrow
         f = v.root / "system/staging/drafts/calendar.json"
         f.parent.mkdir(parents=True, exist_ok=True)
@@ -618,12 +618,11 @@ class PrepPageTests(unittest.TestCase):
     def setUpClass(cls):
         import time
         import urllib.request
-        from datetime import date
         from test_dashboard import populate
         from test_live_server import free_port
         cls.v = v = Vault()
         populate(v)
-        cls.day = date.today().isoformat()
+        cls.day = _cx_today().isoformat()
         (v.root / "system/staging/calendar.json").write_text(json.dumps({"fetched": f"{cls.day} 07:00", "days": {cls.day: [
             {"id": "t1", "start": "09:00", "end": "10:00", "title": "ABC weekly", "where": "Teams", "teams": True,
              "organiser": "Jane Doe", "all_day": False, "private": False, "sensitivity": "normal",
@@ -754,13 +753,12 @@ class PrepPageStaticTests(unittest.TestCase):
     """BL-98 part 2: without the live server the Prep page button is refused, and nothing opens."""
 
     def test_refused_without_the_live_server(self):
-        from datetime import date
         from test_dashboard import populate
         from test_insight import chrome
         v = Vault()
         try:
             populate(v)
-            day = date.today().isoformat()
+            day = _cx_today().isoformat()
             (v.root / "system/staging/calendar.json").write_text(json.dumps({"fetched": f"{day} 07:00", "days": {day: [
                 {"id": "t1", "start": "09:00", "end": "10:00", "title": "ABC weekly", "all_day": False, "private": False}]}}))
             run(v, "build_dashboard.py", now=f"{day} 08:00")
@@ -788,7 +786,7 @@ class VipEverywhereTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import re
-        from test_dashboard import d, populate
+        from test_dashboard import populate
         from test_insight import chrome
         from test_tracker import action
         cls.v = v = Vault()

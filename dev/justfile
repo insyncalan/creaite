@@ -25,6 +25,10 @@ test:
 test-quick:
     python3 dev/tools/run_tests.py -j {{jobs}} --quick
 
+# Pre-release gate (#178): the date-sensitive files pinned to a Friday, a Monday and unpinned; fails if they differ
+prerelease-dates:
+    python3 dev/tools/prerelease_dates.py --jobs {{jobs}}
+
 # Only the test files whose name contains NAME (e.g. just test-only people)
 test-only +names:
     python3 dev/tools/run_tests.py -j {{jobs}} {{names}}

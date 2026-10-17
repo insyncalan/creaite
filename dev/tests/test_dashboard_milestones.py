@@ -11,17 +11,17 @@ import json
 import re
 import sys
 import unittest
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from page_result import page_result  # noqa: E402
-from test_dashboard import CHROME, new, populate  # noqa: E402
+from test_dashboard import CHROME, new, populate, today  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 
 def d(n):
-    return (date.today() + timedelta(days=n)).isoformat()
+    return (today() + timedelta(days=n)).isoformat()
 
 
 def ddmm(iso):
@@ -144,7 +144,7 @@ class MilestoneEditingTests(unittest.TestCase):
         self.assertEqual((added["baseline_date"], added["forecast_date"], added["status"]), (self.newdate, self.newdate, "Planned"))
         self.assertEqual((ms["ABC-M-004"]["name"], ms["ABC-M-004"]["percent_complete"]), ("Training delivered", 40))   # BL-29
         self.assertEqual((ms["ABC-M-003"]["status"], ms["ABC-M-003"]["actual_date"], ms["ABC-M-003"]["percent_complete"]),
-                         ("Done", date.today().isoformat(), 100))                              # Achieved: today and 100% (BL-186)
+                         ("Done", today().isoformat(), 100))                              # Achieved: today and 100% (BL-186)
         self.assertIsNone(added["percent_complete"])                                          # not set
         self.assertEqual(added["description"], "First line\nSecond line")                     # multiline, kept as typed
         self.assertEqual(ms["ABC-M-004"]["description"], "All trainers signed off\n\nAnd the sandbox is ready")   # trimmed
@@ -162,7 +162,7 @@ class MilestoneEditingTests(unittest.TestCase):
         self.assertIn("only PNG or JPEG", r["badType"])
         self.assertEqual(r["imgs"], 2)                                    # shown in place at once
         self.assertEqual(r["order"][:2], ["P", "img:Target architecture"])
-        name = f"{date.today().isoformat()}-target-architecture.png"
+        name = f"{today().isoformat()}-target-architecture.png"
         folder = self.v.root / "projects/ABC Example Programme"
         self.assertTrue((folder / "images" / name).read_bytes().startswith(b"\x89PNG"))
         memory = (folder / "CLAUDE.md").read_text(encoding="utf-8")
