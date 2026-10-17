@@ -181,7 +181,7 @@ def text_findings(con, code, text, skip=()):
     look-alike characters, spaces or dots), and so is any other item the tracker holds that a client report can't show (a
     milestone or promise, or an item of another project); `skip`: items already found by the caller, not listed twice."""
     import edit_ai
-    raw, text = text, with_decoded(text)                       # #127 round 4: %- or entity-encoded words are read too
+    raw, text = text, with_decoded(as_shown(text))             # #127 round 4: %- or entity-encoded words are read too
     low = edit_ai.normal(text).lower()                         # (and invisible characters don't hide a word)
     ids, found = _link_findings(con, text)                     # #127: a work-item link's address counts as its ID
     ids |= edit_ai.loose_ids(con, text)
@@ -282,6 +282,29 @@ def _words_shown(text):
         return "\n".join("".join(r[0] for r in docx_tools.md_runs(ln)) for ln in (text or "").splitlines())
     except Exception:  # noqa: BLE001  the text as written is still read
         return ""
+
+
+EMPHASIS_MARKS = re.compile(r"[*_~`]")
+
+
+def as_shown(text):
+    """The text, and when it holds an emphasis mark (* _ ~ `) also as the exports show it (#127 round 6): Markdown's emphasis,
+    strike-through and link markers taken off as docx_tools.plain does, again until nothing changes (nested "**_x_**" too), and
+    code backticks dropped, so "_ABC-A-004_", "internal _only_" or "the ~~quiet~~ audit" read as their words."""
+    t = text or ""
+    if not EMPHASIS_MARKS.search(t):
+        return t
+    try:
+        import docx_tools
+        shown = t
+        for _ in range(4):
+            nxt = "\n".join(docx_tools.plain(ln) for ln in shown.split("\n")).replace("`", "")
+            if nxt == shown:
+                break
+            shown = nxt
+    except Exception:  # noqa: BLE001  the text as written is still read
+        return t
+    return t if shown == t else f"{t}\n{shown}"
 
 
 def named(text, people, every=False):
@@ -702,7 +725,7 @@ def marked(text):
     invisible character or a look-alike dash hides none; #127 round 4)."""
     import drafts
     import edit_ai
-    return bool(drafts.INTERNAL_MARK.search(edit_ai.normal(text)))
+    return bool(drafts.INTERNAL_MARK.search(edit_ai.normal(as_shown(text))))       # round 6: as the exports show it too
 
 
 HEALTH_FLAG = re.compile(r"\s*(?:ON TRACK|AT RISK|OFF TRACK)\b")      # a Word report's health line starts with its flag, in capitals
@@ -749,7 +772,7 @@ def internal_findings(con, code, doc):
     rest = "\n\n".join([clean.get("title") or ""] + [f"{h}\n\n{t}" if i not in health_ids else h for i, h, t in shown]) \
         + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) + "\n" + raw_text(raw) + _addresses(raw)
     health += "\n" + raw_text(health_raw) + _addresses(health_raw)   # #127 review: the stored words and addresses too
-    found = drafts.internal_findings(con, code, with_decoded(rest))           # #127 round 4: encoded words read too
+    found = drafts.internal_findings(con, code, with_decoded(as_shown(rest)))   # round 4: encoded words; round 6: as shown
     health = with_decoded(health)
     if marked(health) and "an internal-only marker" not in found:
         found.append("an internal-only marker")

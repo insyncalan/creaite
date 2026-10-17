@@ -974,5 +974,25 @@ class TheReviewOfce5d66b(Base):
         self.assertEqual(got, [["Ada O'Neill"]] * 4)
 
 
+    def test_emphasis_marks_hide_no_marker_wording_or_id(self):
+        """The coordinator's finding: the exports take Markdown's marks off ("internal _only_" shows "internal only"), so the gate
+        reads the text as they show it too (client_leak.as_shown), nested marks, strike-through and backticks included."""
+        wraps = ["_{}_", "*{}*", "**{}**", "~~{}~~", "`{}`", "**_{}_**", "**~~{}~~**", "_**{}**_"]
+        cases = [(f"Note: internal {w.format('only')} now.", MARKER) for w in wraps]
+        cases += [(f"Note: {w.format('internal')}-only now.", MARKER) for w in wraps]
+        cases += [(f"Blocked by {w.format(INTERNAL_ID)} now.", HIDDEN) for w in ("~~{}~~", "**_{}_**", "`{}`")]
+        self.assert_found(cases)
+        wording = [f"Note: Line up the {w.format('quiet')} audit." for w in wraps]
+        for text, got in self.gate(wording).items():
+            for k in range(3):
+                self.assertTrue(any("wording appears" in f for f in got[k]), (text, k, got[k]))
+        got = self.py("d = report_doc.client_doc('ABC')\n"                 # a marker where the reason may stand
+                      "next(s for s in d['sections'] if s.get('type') == 'health')['text'] = 'Behind plan. internal ~~only~~.'\n"
+                      "print(json.dumps(client_leak.findings(d)))")
+        self.assertIn(MARKER, got)
+        for got in self.gate(["The *quick* review and the _snake_case_ field are **done**."]).values():
+            self.assertEqual(got, [[], [], []])                          # control: emphasis on client-safe words
+
+
 if __name__ == "__main__":
     unittest.main()
