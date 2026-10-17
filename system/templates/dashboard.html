@@ -3630,6 +3630,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
 @media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
+/* #111 piece B: the Prep peek (the title popup's content, and the Week ahead chip's) */
+.prpeek .pkb{margin-top:8px} .prpeek .pkl{font:600 var(--fs-xs)/1.2 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.prpeek .pkt{color:var(--ink)} .prpeek .pkul{margin:0;padding-left:18px} .prpeek .pkul li{margin:1px 0}
+.prpeek .agrow{margin-top:10px}
+.wkpk{position:relative;display:inline-flex;flex:none} .wkpk .dmpop{left:auto;right:0}
+.wkpk .dmpop,.wkpk .dmpop *{color:var(--ink)} .wkpk .dmpop .sub,.wkpk .dmpop .pm,.wkpk .dmpop small,.wkpk .dmpop .pkl{color:var(--muted)}
+.wkpk .dmpop .btn.primary{color:var(--accent-ink,#fff)} .wkpk .dmpop .linkbtn{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -4799,7 +4806,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     dayDividers: () => dayDividers,
     dayKey: () => dayKey,
     dayList: () => dayList,
-    dayPrep: () => dayPrep,
     dayProcess: () => dayProcess,
     dayShape: () => dayShape,
     dayShown: () => dayShown,
@@ -35472,6 +35478,743 @@ ${s5}`;
     R(props ? /* @__PURE__ */ u2(DayCurve, { ...props }, props.day) : null, host2);
   }
 
+  // stores/prepPopup.js
+  var popupRev = y3(0);
+  var popupBrief = y3(
+    /** @type {{key: string, data: Brief} | null} */
+    null
+  );
+  var asked = 0;
+  async function loadBrief(key) {
+    const mine = ++asked;
+    if (popupBrief.value && popupBrief.value.key !== key) popupBrief.value = null;
+    if (!viaServer() || !key) return;
+    let r4 = null;
+    try {
+      r4 = await api("/api/prep/brief", { key });
+    } catch (e4) {
+      r4 = null;
+    }
+    if (mine === asked && r4 && r4.ok) popupBrief.value = { key, data: r4 };
+  }
+  var prepShape = y3(
+    /** @type {null | ((key: string) => void)} */
+    null
+  );
+  function prepNow() {
+    const e4 = shared.PREPEV, day = shared.PREPDAY || TODAY;
+    const key = e4 ? prepKey(e4, day) : "", b5 = popupBrief.value;
+    return { e: e4, day, key, m: e4 && prepOf(e4, day) || {}, brief: b5 && b5.key === key ? b5.data : null };
+  }
+  function prepViewHref(key, day) {
+    const k5 = String(key || ""), dated = /^\d{4}-\d{2}-\d{2}\|/.test(k5) ? k5 : `${day || TODAY}|${k5}`;
+    return `#prep=${encodeURIComponent(dated)}`;
+  }
+  var PEEK_FRESH = 3e4;
+  var peeks = y3(
+    /** @type {Record<string, PeekEntry>} */
+    {}
+  );
+  var inflight = {};
+  function peekLines(view, brief) {
+    const model = view && view.ok ? view.model : null;
+    if (!model) return null;
+    if (model.meeting && model.meeting.confidential) return { aim: "", raise: [], ask: "", since: "", shaped: false, confidential: true };
+    const notes = model.focus && model.focus.notes || {};
+    const text = (ls2) => (ls2 || []).map((l6) => String(l6.text || "").trim()).filter(Boolean);
+    const aim = text(notes.objective).join(" "), ask2 = text(notes.ask).join(" ");
+    let raise = text(notes.talking_points);
+    const shaped = !!(aim || raise.length || ask2);
+    if (!raise.length) raise = (model.work && model.work.rows || []).slice(0, 3).map((r4) => `${r4.id}: ${r4.text}`);
+    let since = "";
+    if (brief && brief.ok && brief.facts) since = `${brief.facts.text || ""}`;
+    return { aim, raise: raise.slice(0, 3), ask: ask2, since, shaped, confidential: false };
+  }
+  function loadPeek(key) {
+    const have = peeks.value[key];
+    if (have && Date.now() - have.at < PEEK_FRESH) return Promise.resolve();
+    if (inflight[key]) return inflight[key];
+    const run = async () => {
+      if (!viaServer()) {
+        peeks.value = { ...peeks.value, [key]: { key, at: Date.now(), lines: null, failed: true } };
+        return;
+      }
+      const [v5, b5] = await Promise.all([api("/api/prep/view", { key }).catch(() => null), api("/api/prep/brief", { key }).catch(() => null)]);
+      const lines = peekLines(v5, b5);
+      peeks.value = { ...peeks.value, [key]: { key, at: Date.now(), lines, failed: !lines } };
+    };
+    inflight[key] = run().finally(() => {
+      delete inflight[key];
+    });
+    return inflight[key];
+  }
+  function dropPeek(key) {
+    peeks.value = key ? Object.fromEntries(Object.entries(peeks.value).filter(([k5]) => k5 !== key)) : {};
+  }
+
+  // components/prep/PrepHead.jsx
+  function prepDayLabel(day) {
+    const lead = day === TODAY ? "Today" : day === pkAdd(TODAY, 1) ? "Tomorrow" : "";
+    return lead ? `${lead} · ${longDay(day)}` : longDay(day);
+  }
+  var initialsOf = (name) => String(name || "").split(/[\s.@_-]+/).filter((w6) => /^[A-Za-z]/.test(w6)).slice(0, 2).map((w6) => w6[0].toUpperCase()).join("") || "?";
+  var cadence = (r4) => {
+    const s5 = String(r4 || "").toLowerCase();
+    return /daily/.test(s5) ? "Every day" : /fortnight|biweekly|every 2 weeks/.test(s5) ? "Every 2 weeks" : /weekly/.test(s5) ? "Every week" : /monthly/.test(s5) ? "Every month" : "";
+  };
+  function invitees(m5, brief) {
+    if (brief && brief.people) return brief.people.invitees || [];
+    const v5 = m5 && m5.invite || {};
+    return (v5.attendees || []).filter((a5) => a5 && a5.name).map((a5) => ({ name: String(a5.name), initials: initialsOf(a5.name), registered: true }));
+  }
+  function PrepHead() {
+    popupRev.value;
+    const { e: e4, day, m: m5, brief } = prepNow();
+    if (!e4) return null;
+    const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential);
+    const series = brief && brief.series ? brief.series.text : [cadence(m5.invite && m5.invite.recurrence), m5.last ? `last ${fd(m5.last)}` : ""].filter(Boolean).join(" · ");
+    const inv = conf ? [] : invitees(m5, brief);
+    const name = code === "_portfolio" ? "Portfolio (all projects)" : code ? pName(code) : "";
+    const pickProject = (ev) => {
+      const btn = (
+        /** @type {HTMLElement} */
+        ev.currentTarget
+      );
+      openPicker(btn, {
+        label: "Project",
+        value: code,
+        options: [
+          ...P3.filter((p6) => p6.active !== false || p6.code === code).map((p6) => ({ v: p6.code, label: p6.name, icon: "projects" })),
+          { v: "_portfolio", label: "Portfolio (all projects)", icon: "projects" }
+        ],
+        onPick: async (v5) => {
+          if (v5 === code) return;
+          await choosePrep(v5);
+          if (code) snack(`Remembered for this series: ${v5 === "_portfolio" ? "Portfolio (all projects)" : pName(v5)}`, () => {
+            choosePrep(code);
+          });
+        }
+      });
+    };
+    return /* @__PURE__ */ u2("div", { class: "prephead", children: [
+      /* @__PURE__ */ u2("div", { class: "prephd", children: [
+        /* @__PURE__ */ u2("div", { class: "sub", id: "prepWhen", children: `${prepDayLabel(day)} · ${e4.start} – ${e4.end}${e4.where ? " · " + e4.where : ""}` }),
+        /* @__PURE__ */ u2("h2", { id: "prepTitle", children: e4.title }),
+        /* @__PURE__ */ u2("div", { class: "prepmeta", children: [
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: `chip prepchip${code ? "" : " need"}`,
+              id: "prepProjBtn",
+              "data-code": code,
+              "aria-haspopup": "listbox",
+              "aria-expanded": "false",
+              "aria-label": code ? `Project: ${name}. Change it (remembered for this series)` : "Choose the project for this meeting",
+              "data-tip": code ? "Change the project (remembered for this series)" : "Choose the project; creaite remembers it for this series",
+              onClick: pickProject,
+              children: [
+                /* @__PURE__ */ u2("span", { class: "pdot", "aria-hidden": "true" }),
+                code ? name : "Choose a project…",
+                /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
+              ]
+            }
+          ),
+          m5.how === "remembered" ? /* @__PURE__ */ u2("span", { class: "sub", children: "remembered for this series" }) : null,
+          series ? /* @__PURE__ */ u2("span", { class: "chip", id: "prepSeries", children: [
+            /* @__PURE__ */ u2(Icon, { name: "refresh" }),
+            series
+          ] }) : null,
+          inv.length ? /* @__PURE__ */ u2("span", { class: "chip", id: "prepInvited", "data-tip": inv.map((p6) => p6.name).join(", "), "aria-label": `${inv.length} invited: ${inv.map((p6) => p6.name).join(", ")}`, children: [
+            /* @__PURE__ */ u2("span", { class: "avs", "aria-hidden": "true", children: [
+              inv.slice(0, 3).map((p6, i5) => /* @__PURE__ */ u2("span", { class: "av", children: p6.initials }, i5)),
+              inv.length > 3 ? /* @__PURE__ */ u2("span", { class: "av", children: `+${inv.length - 3}` }) : null
+            ] }),
+            /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: `${inv.length} invited` })
+          ] }) : null
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "iconbtn", id: "prepClose", "aria-label": "Close", children: /* @__PURE__ */ u2(Icon, { name: "x" }) })
+    ] });
+  }
+
+  // components/prep/PrepFacts.jsx
+  function localFacts(m5, day) {
+    const code = m5.p, all = code === "_portfolio", inP = (x5) => all || x5.p === code;
+    const since = m5.last || m5.since || day;
+    return {
+      decisions: DEC.filter((x5) => inP(x5) && x5.st === "Made" && x5.date >= since && x5.date <= day).length,
+      risks: R3.filter((x5) => inP(x5) && x5.type === "Risk" && (x5.raised || "") >= since).length,
+      issues: R3.filter((x5) => inP(x5) && x5.type === "Issue" && (x5.raised || "") >= since).length,
+      overdue: A4.filter((x5) => inP(x5) && (x5.st === "Open" || x5.st === "Delayed") && x5.due && x5.due >= since && x5.due < day).length,
+      since,
+      has_last: !!m5.last,
+      invite_first: m5.invite && m5.invite.confidential ? 0 : Object.values(m5.rank || {}).reduce((n4, o5) => n4 + Object.keys(o5 || {}).length, 0)
+    };
+  }
+  function factsWords(f5) {
+    const parts = [
+      f5.decisions ? plur(f5.decisions, "decision") : "",
+      f5.risks ? `${f5.risks} new risk${f5.risks === 1 ? "" : "s"}` : "",
+      f5.issues ? `${f5.issues} new issue${f5.issues === 1 ? "" : "s"}` : "",
+      f5.overdue ? `${plur(f5.overdue, "action")} now overdue` : ""
+    ].filter(Boolean);
+    return {
+      head: f5.has_last ? `Since the last meeting (${fd(f5.since)})` : `No earlier meeting on record; since ${fd(f5.since)}`,
+      what: `${parts.length ? parts.join(", ") : "nothing new"}.`,
+      first: f5.invite_first ? `${plur(f5.invite_first, "item")} the invite points to ${f5.invite_first === 1 ? "is" : "are"} shown first.` : ""
+    };
+  }
+  function PrepFacts() {
+    popupRev.value;
+    const { e: e4, day, m: m5, brief } = prepNow();
+    if (!e4 || !m5.p) return null;
+    const f5 = brief && brief.facts ? brief.facts : localFacts(m5, day || TODAY), w6 = factsWords(f5);
+    const v5 = m5.invite || {}, conf = !!v5.confidential, inv = conf ? [] : invitees(m5, brief);
+    const org = brief && brief.people && brief.people.organiser ? brief.people.organiser.name : v5.organiser === true ? "you" : v5.organiser ? String(v5.organiser) : "";
+    const hasInvite = conf || v5.body || inv.length || (v5.attachments || []).length;
+    return /* @__PURE__ */ u2("div", { class: "preplead", children: [
+      /* @__PURE__ */ u2("p", { class: "prepfacts", id: "prepFacts", children: [
+        m5.p === "_portfolio" ? "Across every project. " : "",
+        /* @__PURE__ */ u2("b", { children: [
+          w6.head,
+          ":"
+        ] }),
+        " ",
+        w6.what,
+        w6.first ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " ",
+          w6.first
+        ] }) : null
+      ] }),
+      hasInvite ? /* @__PURE__ */ u2("details", { class: "prepinv", children: [
+        /* @__PURE__ */ u2("summary", { children: [
+          conf ? "Invite: confidential, only the title and times are kept" : ["Invite", org ? `organised by ${org}` : "", inv.length ? `${inv.length} invited` : ""].filter(Boolean).join(" · ").replace(/^Invite · /, "Invite: "),
+          inv.length ? /* @__PURE__ */ u2("span", { class: "prepnames", children: [
+            " (",
+            inv.map((p6, i5) => /* @__PURE__ */ u2("span", { children: [
+              i5 ? ", " : "",
+              p6.registered ? p6.name : /* @__PURE__ */ u2("span", { class: "unreg", "data-tip": "Not in the people register", children: [
+                p6.name,
+                /* @__PURE__ */ u2("span", { class: "vh", children: " (not in the people register)" })
+              ] })
+            ] }, i5)),
+            ")"
+          ] }) : null,
+          v5.body ? /* @__PURE__ */ u2("span", { class: "sub", children: " · invite text" }) : null
+        ] }),
+        conf ? /* @__PURE__ */ u2("p", { class: "sub", children: "Confidential: only the title and times are kept." }) : null,
+        v5.recurrence ? /* @__PURE__ */ u2("p", { class: "sub", children: String(v5.recurrence) }) : null,
+        (v5.attendees || []).length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
+          "Invited: ",
+          (v5.attendees || []).map((a5, i5) => /* @__PURE__ */ u2("span", { children: [
+            i5 ? ", " : "",
+            a5.name,
+            a5.type === "optional" ? " (optional)" : "",
+            a5.response && a5.response !== "none" ? ` · ${a5.response}` : ""
+          ] }, i5))
+        ] }) : null,
+        (v5.attachments || []).length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
+          "Attached: ",
+          (v5.attachments || []).join(", ")
+        ] }) : null,
+        v5.body ? /* @__PURE__ */ u2("div", { class: "prepbodytxt", children: String(v5.body) }) : null
+      ] }) : null
+    ] });
+  }
+
+  // stores/prepShape.js
+  function bootPrepShape() {
+    DRAFTFEATURES.push(["shape", "Shape the meeting", "Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's carried over, each line cited"]);
+    Object.assign(DRAFTKIND, { shape: "shape" });
+  }
+  var SHAPE_SECTIONS = (
+    /** @type {[string, string][]} */
+    [
+      ["objective", "Objective"],
+      ["talking_points", "Talking points"],
+      ["ask", "Ask"],
+      ["carried_over", "Carried over"]
+    ]
+  );
+  var shapeKey = y3(
+    /** @type {string | null} */
+    null
+  );
+  var shapeInstruction = y3("");
+  var shapeChips = y3(
+    /** @type {ShapeChip[]} */
+    []
+  );
+  var shapeUsed = y3(
+    /** @type {string[]} */
+    []
+  );
+  var shapeConfidential = y3(false);
+  var shapeReading = y3(
+    /** @type {Reading | null} */
+    null
+  );
+  var shapeReadingMine = y3(false);
+  var shapeText = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var shapeNotes = y3(
+    /** @type {Notes | null} */
+    null
+  );
+  var shapeDrafted = y3(
+    /** @type {Notes | null} */
+    null
+  );
+  var shapeChecks = y3(
+    /** @type {Check[]} */
+    []
+  );
+  var shapeFilter = y3(
+    /** @type {Filter | null} */
+    null
+  );
+  var shapeExcluded = y3(
+    /** @type {string[]} */
+    []
+  );
+  var shapeBusy = y3("");
+  var shapeSteps = y3(0);
+  var shapeSourcesN = y3(0);
+  var shapeMsg = y3("");
+  var shapeAccepted = y3("");
+  var emptyNotes = () => (
+    /** @type {Notes} */
+    Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, []]))
+  );
+  var textOf = (lines) => (lines || []).map((l6) => l6.text).join("\n");
+  function shapeLinesFrom(text, before) {
+    const old = before || [];
+    return String(text || "").split("\n").map((s5) => s5.trim()).filter(Boolean).slice(0, 12).map((t47, i5) => {
+      const same2 = old.find((x5) => x5.text === t47) || old[i5];
+      return { text: t47.slice(0, 600), sources: same2 && same2.sources || [] };
+    });
+  }
+  function notesNow() {
+    const n4 = shapeNotes.value || emptyNotes(), t47 = shapeText.value;
+    return (
+      /** @type {Notes} */
+      Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, k5 in t47 ? shapeLinesFrom(t47[k5], n4[k5]) : n4[k5] || []]))
+    );
+  }
+  function editedSections() {
+    const d5 = shapeDrafted.value;
+    if (!d5) return [];
+    const now = notesNow(), flat2 = (L3) => L3.map((l6) => l6.text.replace(/\s+/g, " ").trim()).join("\n");
+    return SHAPE_SECTIONS.map(([k5]) => k5).filter((k5) => flat2(now[k5] || []) !== flat2(d5[k5] || []));
+  }
+  var focusIds = () => ((shapeReading.value || { focus: [] }).focus || []).map((f5) => f5.id || "").filter(Boolean);
+  function fill(notes) {
+    const n4 = { ...emptyNotes(), ...notes || {} };
+    shapeNotes.value = n4;
+    shapeText.value = Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, textOf(n4[k5])]));
+  }
+  var shapeAsked = 0;
+  async function openShape(key) {
+    const mine = ++shapeAsked;
+    if (shapeKey.value !== key) {
+      shapeKey.value = key;
+      shapeInstruction.value = "";
+      shapeChips.value = [];
+      shapeUsed.value = [];
+      shapeConfidential.value = false;
+      shapeReading.value = null;
+      shapeReadingMine.value = false;
+      shapeText.value = {};
+      shapeNotes.value = null;
+      shapeDrafted.value = null;
+      shapeChecks.value = [];
+      shapeFilter.value = null;
+      shapeExcluded.value = [];
+      shapeMsg.value = "";
+      shapeAccepted.value = "";
+      shapeSteps.value = 0;
+      shapeSourcesN.value = 0;
+    } else shapeKey.value = key;
+    if (!viaServer()) return;
+    const [c5, f5] = await Promise.all([api("/api/prep/chips", { key }).catch(() => null), api("/api/prep/focus", { key }).catch(() => null)]);
+    if (mine !== shapeAsked || shapeKey.value !== key) return;
+    if (c5 && c5.ok) {
+      shapeChips.value = c5.chips || [];
+      shapeConfidential.value = !!c5.confidential;
+    }
+    const rec = f5 && f5.ok && f5.focus;
+    if (rec && !shapeNotes.value) {
+      shapeInstruction.value = rec.instruction || "";
+      shapeReading.value = rec.reading || null;
+      shapeDrafted.value = rec.drafted || null;
+      shapeExcluded.value = rec.excluded || [];
+      shapeAccepted.value = rec.accepted_at || "";
+      fill(rec.notes);
+      previewFilter();
+    }
+  }
+  function closeShape() {
+    shapeKey.value = null;
+  }
+  function addChip(c5) {
+    const t47 = shapeInstruction.value.replace(/\s+$/, "");
+    shapeInstruction.value = `${t47}${t47 ? "\n" : ""}Also cover ${c5.insert}.`;
+    shapeUsed.value = [...shapeUsed.value, c5.label];
+  }
+  var filtering = 0;
+  async function previewFilter() {
+    const key = shapeKey.value;
+    if (!key || !viaServer()) return;
+    const mine = ++filtering, ids = focusIds();
+    const r4 = await api("/api/prep/filter", { key, focus: ids, excluded: shapeExcluded.value }).catch(() => null);
+    if (mine === filtering && key === shapeKey.value && r4 && r4.ok) shapeFilter.value = r4.filter;
+  }
+  function toggleExcluded(id2) {
+    const s5 = new Set(shapeExcluded.value);
+    if (s5.has(id2)) s5.delete(id2);
+    else s5.add(id2);
+    shapeExcluded.value = [...s5];
+    const f5 = shapeFilter.value;
+    if (f5) {
+      const its = f5.items.map((i5) => i5.id === id2 ? { ...i5, excluded: s5.has(id2) } : i5);
+      const documents = f5.documents.map((d5) => d5.path === id2 ? { ...d5, excluded: s5.has(id2) } : d5);
+      shapeFilter.value = { ...f5, items: its, documents, n: its.filter((i5) => !i5.excluded).length, docs_n: documents.filter((d5) => !d5.excluded).length };
+    }
+  }
+  function setReading(r4) {
+    shapeReading.value = r4;
+    shapeReadingMine.value = true;
+    previewFilter();
+  }
+  function giveBack(sec) {
+    const d5 = shapeDrafted.value;
+    if (!d5) return;
+    shapeText.value = { ...shapeText.value, [sec]: textOf(d5[sec]) };
+  }
+  async function runShape() {
+    const key = shapeKey.value;
+    if (!key || shapeBusy.value) return;
+    const instruction = shapeInstruction.value.trim();
+    if (!instruction) {
+      shapeMsg.value = "Write the focus and the aim first.";
+      return;
+    }
+    const body2 = { key, instruction };
+    if (shapeReadingMine.value && shapeReading.value) body2.reading = shapeReading.value;
+    if (shapeDrafted.value) body2.current = { notes: notesNow(), drafted: shapeDrafted.value };
+    shapeBusy.value = "shape";
+    shapeSteps.value = 0;
+    shapeMsg.value = "";
+    let r4;
+    try {
+      r4 = await draftAsk(body2, {
+        url: "/api/prep/shape",
+        label: "Shaping the meeting",
+        status: () => {
+        },
+        onStep: (n4) => {
+          shapeSteps.value = n4;
+        },
+        onSources: (ev) => {
+          shapeSourcesN.value = (ev.sources || []).length;
+          shapeConfidential.value = !!ev.confidential;
+        }
+      });
+    } finally {
+      shapeBusy.value = "";
+    }
+    if (key !== shapeKey.value) return;
+    if (!r4 || !r4.ok || !r4.reading) {
+      shapeMsg.value = oneLine(r4 && (r4.nothing || r4.message) || "") || "No draft came back";
+      return;
+    }
+    shapeReading.value = r4.reading;
+    shapeReadingMine.value = false;
+    shapeDrafted.value = r4.drafted || emptyNotes();
+    shapeChecks.value = r4.checks || [];
+    shapeConfidential.value = !!r4.confidential;
+    fill(r4.notes);
+    previewFilter();
+  }
+  async function acceptShape() {
+    const key = shapeKey.value;
+    if (!key || shapeBusy.value || !shapeReading.value) return false;
+    if (!viaServer()) {
+      snack("Saving needs the live server");
+      return false;
+    }
+    shapeBusy.value = "save";
+    const r4 = await api("/api/prep/focus/save", {
+      key,
+      accept: true,
+      instruction: shapeInstruction.value,
+      reading: shapeReading.value,
+      notes: notesNow(),
+      drafted: shapeDrafted.value || emptyNotes(),
+      excluded: shapeExcluded.value
+    }).catch(() => null);
+    shapeBusy.value = "";
+    if (!r4 || !r4.ok) {
+      snack(oneLine(r4 && r4.message || "") || "Not saved");
+      return false;
+    }
+    shapeAccepted.value = r4.focus && r4.focus.accepted_at || "";
+    snack(r4.page ? "Accepted: on the prep page, and the Agendas page was updated" : "Accepted: the notes are on the prep page");
+    return true;
+  }
+  function discardShape() {
+    if (shapeDrafted.value) draftStat("shape", "rejected");
+    shapeNotes.value = null;
+    shapeDrafted.value = null;
+    shapeText.value = {};
+    shapeChecks.value = [];
+    shapeReading.value = null;
+    shapeReadingMine.value = false;
+    shapeFilter.value = null;
+    shapeAccepted.value = "";
+  }
+
+  // components/prep/PrepToolbar.jsx
+  function openPrepView(key, day) {
+    const d5 = (
+      /** @type {HTMLDialogElement | null} */
+      document.getElementById("prepDlg")
+    );
+    if (d5 && d5.open) d5.close();
+    location.hash = prepViewHref(key, day);
+  }
+  function PrepToolbar() {
+    popupRev.value;
+    const { e: e4, day, key, m: m5 } = prepNow();
+    if (!e4) return null;
+    const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential), page = prepPageOf(e4, day);
+    const live = viaServer(), shape = prepShape.value;
+    const openWhy = !code ? "Choose the project first" : !live ? "Needs the live server" : "";
+    const openTip = openWhy || (page ? `Open the prep page (saved ${page.when})` : "Research the meeting and open its prep page in creaite");
+    const why = draftWhyNot("agenda"), style = agendaStyle(), withInv = agendaInvited();
+    return /* @__PURE__ */ u2("div", { class: "preptb", role: "toolbar", "aria-label": "Meeting prep", children: [
+      shape && code ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn ai",
+          "data-prepshape": "1",
+          "aria-pressed": shapeKey.value === key ? "true" : "false",
+          "data-tip": "Tell creaite how you want to run this meeting",
+          onClick: () => shape(key),
+          children: [
+            /* @__PURE__ */ u2(Icon, { name: "spark" }),
+            "Shape this meeting"
+          ]
+        }
+      ) : null,
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn primary",
+          "data-prepview": "1",
+          "aria-disabled": openWhy ? "true" : void 0,
+          "data-tip": openTip,
+          onClick: () => {
+            if (!code) {
+              snack("Choose the project first");
+              return;
+            }
+            if (!live) {
+              snack("The Prep page needs the live server");
+              return;
+            }
+            openPrepView(key, day);
+          },
+          children: "Open prep page"
+        }
+      ),
+      /* @__PURE__ */ u2("span", { class: "sp" }),
+      code ? /* @__PURE__ */ u2(
+        Menu,
+        {
+          label: "Draft agenda",
+          icon: "spark",
+          btnCls: "btn agbtn",
+          data: { agenda: "1" },
+          why,
+          onBlocked: () => snack(why),
+          tip: "Draft the invite text and a timed agenda from this meeting's items, to copy into the invite",
+          menuLabel: "Draft agenda",
+          items: [
+            {
+              id: "poad",
+              icon: "list",
+              name: "POAD",
+              mark: style === "poad" ? "last used" : "",
+              data: { agstyle: "poad" },
+              line: "Purpose, objectives, approach, deliverables. The full structure, for a decision meeting or a workshop."
+            },
+            {
+              id: "lite",
+              icon: "filetext",
+              name: "POAD lite",
+              mark: style === "lite" ? "last used" : "",
+              data: { agstyle: "lite" },
+              line: "A short, friendly paragraph, with a bulleted agenda only when the meeting has distinct steps."
+            },
+            { id: "sep", sep: true },
+            {
+              id: "invited",
+              icon: "people",
+              name: "Include who's invited",
+              checked: withInv && !conf,
+              disabled: conf,
+              data: { aginvited: "1" },
+              line: conf ? "A confidential meeting keeps no attendee list." : "Adds the attendee list to the invite text."
+            }
+          ],
+          onPick: (id2) => {
+            if (id2 === "invited") {
+              setAgendaInvited(!withInv);
+              popupRev.value++;
+              return;
+            }
+            closeShape();
+            setAgendaStyle(id2);
+            popupRev.value++;
+            draftAgenda().finally(() => {
+              popupRev.value++;
+            });
+          }
+        }
+      ) : null
+    ] });
+  }
+
+  // components/prep/PrepPopup.jsx
+  function PrepPopup() {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(PrepHead, {}),
+      /* @__PURE__ */ u2(PrepToolbar, {})
+    ] });
+  }
+  function mountPrepPopup(top, lead) {
+    R(/* @__PURE__ */ u2(PrepPopup, {}), top);
+    R(/* @__PURE__ */ u2(PrepFacts, {}), lead);
+  }
+  function usePeek(on2 = true) {
+    const [open2, setOpen2] = d2(false), trigger = A2(
+      /** @type {HTMLElement | null} */
+      null
+    ), panel = A2(
+      /** @type {HTMLElement | null} */
+      null
+    );
+    const shown2 = A2(false);
+    shown2.current = open2;
+    h2(() => {
+      const t47 = trigger.current;
+      if (!on2 || !t47) return void 0;
+      return hoverAttach(t47, { group: cardGroup, open: () => setOpen2(true), close: () => setOpen2(false), panel: () => panel.current, isOpen: () => shown2.current });
+    }, [on2]);
+    const shut = (refocus) => {
+      cardGroup.close();
+      setOpen2(false);
+      if (refocus && trigger.current) trigger.current.focus();
+    };
+    const onFocusOut = (e4) => {
+      const to2 = (
+        /** @type {Node | null} */
+        e4.relatedTarget
+      );
+      if (to2 && (trigger.current && trigger.current.contains(to2) || panel.current && panel.current.contains(to2))) return;
+      if (to2) setOpen2(false);
+    };
+    return { open: open2, trigger, panel, shut, onFocusOut };
+  }
+  var Block = ({ label, children }) => /* @__PURE__ */ u2("div", { class: "pkb", children: [
+    /* @__PURE__ */ u2("div", { class: "pkl", children: label }),
+    children
+  ] });
+  function PrepPeek(p6) {
+    const { mkey: key, day, title, bits, plan, page, pageWhen, live, id: id2 } = p6;
+    const dated = /^\d{4}-\d{2}-\d{2}\|/.test(key) ? key : `${day}|${key}`;
+    h2(() => {
+      loadPeek(dated);
+    }, [dated]);
+    const pk2 = peeks.value[dated], L3 = pk2 && pk2.lines, off = live ? void 0 : "Needs the live server";
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: "dmpop prpeek",
+        role: "dialog",
+        id: id2,
+        ref: (
+          /** @type {any} */
+          p6.panel
+        ),
+        "aria-label": `Prep peek for ${title}`,
+        onKeyDown: (e4) => {
+          if (e4.key === "Escape") {
+            e4.stopPropagation();
+            p6.onEsc();
+          }
+        },
+        children: [
+          /* @__PURE__ */ u2("h4", { children: title }),
+          /* @__PURE__ */ u2("div", { class: "pm", children: bits.join(" · ") }),
+          !pk2 ? /* @__PURE__ */ u2("p", { class: "sub", role: "status", children: "Reading the prep…" }) : null,
+          L3 && L3.aim ? /* @__PURE__ */ u2(Block, { label: "Your aim", children: /* @__PURE__ */ u2("div", { class: "pkt", children: L3.aim }) }) : null,
+          L3 && L3.raise.length ? /* @__PURE__ */ u2(Block, { label: L3.shaped ? "Raise" : "In play", children: /* @__PURE__ */ u2("ul", { class: "pkul", children: L3.raise.map((r4) => /* @__PURE__ */ u2("li", { children: r4 })) }) }) : null,
+          L3 && L3.ask ? /* @__PURE__ */ u2(Block, { label: "Ask", children: /* @__PURE__ */ u2("div", { class: "pkt", children: L3.ask }) }) : null,
+          L3 && L3.since ? /* @__PURE__ */ u2(Block, { label: "Since last time", children: /* @__PURE__ */ u2("div", { class: "sub", children: L3.since }) }) : null,
+          L3 && !L3.shaped && !L3.confidential ? /* @__PURE__ */ u2("p", { class: "sub agnone", children: "Not shaped yet. Open the prep page to set your aim." }) : null,
+          plan ? /* @__PURE__ */ u2("p", { class: "sub agnone", children: [
+            "Worth preparing: ",
+            plan
+          ] }) : null,
+          pk2 && !L3 ? /* @__PURE__ */ u2("p", { class: "sub agnone", children: live ? "The peek couldn't be read. The prep page may still open." : "The peek needs the live server." }) : null,
+          page ? /* @__PURE__ */ u2("div", { class: "agsaved", children: [
+            /* @__PURE__ */ u2("span", { class: "agok", "aria-hidden": "true", children: "✓" }),
+            /* @__PURE__ */ u2("span", { class: "agw", children: [
+              /* @__PURE__ */ u2("b", { children: "Agenda saved" }),
+              /* @__PURE__ */ u2("small", { children: [
+                "Prep page made ",
+                pageWhen || ""
+              ] })
+            ] })
+          ] }) : null,
+          /* @__PURE__ */ u2("div", { class: "agrow", children: [
+            /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "btn primary",
+                "data-prepgo": key,
+                "data-prepgoday": day,
+                "aria-label": `Open the prep page for ${title}`,
+                "aria-disabled": live ? void 0 : "true",
+                "data-tip": off,
+                children: "Open the prep page"
+              }
+            ),
+            page ? /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "linkbtn",
+                "aria-disabled": live ? void 0 : "true",
+                "data-tip": off || "Open the saved agenda in a new tab",
+                onClick: () => p6.open(page),
+                children: "Open the file"
+              }
+            ) : null
+          ] })
+        ]
+      }
+    );
+  }
+
   // components/today/DayMeetings.jsx
   function Proj({ code, name }) {
     if (code === "_portfolio") return /* @__PURE__ */ u2("span", { class: "pcode", children: "Portfolio" });
@@ -35518,134 +36261,36 @@ ${s5}`;
     ] });
     return /* @__PURE__ */ u2(Chip, { tone: "mute", tip: f5.why, children: "No transcript" });
   }
-  function TitlePopup({ m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc }) {
-    const p6 = m5.prep;
-    if (!p6) return null;
-    const when2 = isToday ? "Today" : dow2, bits = [
+  function Title({ m: m5, day, dow: dow2, isToday, live, acts: acts2 }) {
+    const p6 = m5.prep, pk2 = usePeek(!m5.private && !!p6);
+    if (m5.private || !p6) return /* @__PURE__ */ u2(S2, { children: m5.title ?? "" });
+    const id2 = `dmpop-${day}-${m5.start}`.replace(/[^\w-]/g, ""), when2 = isToday ? "Today" : dow2;
+    const bits = [
       `${when2} ${m5.start}`,
       m5.attendees ? `${m5.attendees} attending` : "",
       !m5.confidential && m5.p ? m5.p === "_portfolio" ? "Portfolio" : acts2.name(m5.p) : "",
       "Internal"
     ].filter(Boolean);
-    const off = live ? void 0 : "Needs the live server";
-    return /* @__PURE__ */ u2("div", { class: "dmpop", role: "dialog", id: id2, "aria-label": `Prepare for ${m5.title}`, onKeyDown: (e4) => {
-      if (e4.key === "Escape") {
-        e4.stopPropagation();
-        onEsc();
-      }
-    }, children: [
-      /* @__PURE__ */ u2("h4", { children: m5.title }),
-      /* @__PURE__ */ u2("div", { class: "pm", children: bits.join(" · ") }),
-      m5.page ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("div", { class: "agsaved", children: [
-          /* @__PURE__ */ u2("span", { class: "agok", "aria-hidden": "true", children: "✓" }),
-          /* @__PURE__ */ u2("span", { class: "agw", children: [
-            /* @__PURE__ */ u2("b", { children: "Agenda saved" }),
-            /* @__PURE__ */ u2("small", { children: [
-              "Prep page made ",
-              m5.pageWhen || ""
-            ] })
-          ] }),
-          /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              class: "btn primary",
-              "data-prepgo": p6.key,
-              "data-prepgoday": day,
-              "aria-label": `Open the agenda for ${m5.title}`,
-              "aria-disabled": live ? void 0 : "true",
-              "data-tip": off,
-              children: "Open agenda"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "agrow", children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: () => acts2.prep(m5), children: "Prepare again" }),
-          /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              class: "linkbtn",
-              "aria-disabled": live ? void 0 : "true",
-              "data-tip": off || "Open the saved page in a new tab",
-              onClick: () => acts2.open(m5.page || ""),
-              children: "Open the file"
-            }
-          )
-        ] })
-      ] }) : /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("div", { class: "agrow", children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "aria-label": `Prepare for ${m5.title}`, onClick: () => acts2.prep(m5), children: "Prepare" }),
-          m5.plan ? /* @__PURE__ */ u2("span", { class: "sub", children: [
-            "Worth preparing: ",
-            m5.plan
-          ] }) : null
-        ] }),
-        /* @__PURE__ */ u2("p", { class: "sub agnone", children: "No agenda saved yet. Prepare builds the prep page and saves it to the Agendas folder." })
-      ] })
+    return /* @__PURE__ */ u2("span", { class: "dmtw", onFocusOut: pk2.onFocusOut, children: [
+      /* @__PURE__ */ u2("span", { class: "dmti", ref: pk2.trigger, tabIndex: 0, "aria-haspopup": "dialog", "aria-expanded": pk2.open ? "true" : "false", "aria-controls": pk2.open ? id2 : void 0, children: m5.title ?? "" }),
+      pk2.open ? /* @__PURE__ */ u2(
+        PrepPeek,
+        {
+          mkey: p6.key,
+          day,
+          title: m5.title,
+          bits,
+          plan: m5.plan,
+          page: m5.page,
+          pageWhen: m5.pageWhen,
+          live,
+          id: id2,
+          panel: pk2.panel,
+          onEsc: () => pk2.shut(true),
+          open: acts2.open
+        }
+      ) : null
     ] });
-  }
-  function Title({ m: m5, day, dow: dow2, isToday, live, acts: acts2 }) {
-    const [open2, setOpen2] = d2(false), timer2 = A2(0), box = A2(
-      /** @type {HTMLSpanElement | null} */
-      null
-    );
-    h2(() => () => clearTimeout(timer2.current), []);
-    if (m5.private || !m5.prep) return /* @__PURE__ */ u2(S2, { children: m5.title ?? "" });
-    const id2 = `dmpop-${day}-${m5.start}`.replace(/[^\w-]/g, "");
-    const later2 = (to2, ms2) => {
-      clearTimeout(timer2.current);
-      timer2.current = window.setTimeout(() => setOpen2(to2), ms2);
-    };
-    const shut = () => {
-      clearTimeout(timer2.current);
-      setOpen2(false);
-    };
-    return /* @__PURE__ */ u2(
-      "span",
-      {
-        class: "dmtw",
-        ref: box,
-        onMouseEnter: () => later2(true, CARD_OPEN),
-        onMouseLeave: () => later2(false, CARD_CLOSE),
-        onFocusCapture: () => {
-          clearTimeout(timer2.current);
-          setOpen2(true);
-        },
-        onBlurCapture: (e4) => {
-          const to2 = (
-            /** @type {Node | null} */
-            e4.relatedTarget
-          );
-          if (!to2 || !box.current || !box.current.contains(to2)) later2(false, 0);
-        },
-        children: [
-          /* @__PURE__ */ u2(
-            "span",
-            {
-              class: "dmti",
-              tabIndex: 0,
-              "aria-haspopup": "dialog",
-              "aria-expanded": open2 ? "true" : "false",
-              "aria-controls": open2 ? id2 : void 0,
-              onKeyDown: (e4) => {
-                if (e4.key === "Escape" && open2) {
-                  e4.stopPropagation();
-                  shut();
-                }
-              },
-              children: m5.title ?? ""
-            }
-          ),
-          open2 ? /* @__PURE__ */ u2(TitlePopup, { m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc: () => {
-            shut();
-            const t47 = box.current && box.current.querySelector(".dmti");
-            if (t47) t47.focus();
-          } }) : null
-        ]
-      }
-    );
   }
   function DayMeetings(props) {
     const { day, dow: dow2, isToday, past, now, mode, live, calendar, lastRead, meetings, allDay, acts: acts2, onWheel } = props;
@@ -35916,6 +36561,47 @@ ${s5}`;
   function Kind({ kind }) {
     return /* @__PURE__ */ u2("span", { class: "wkic", "aria-hidden": "true", children: kind === "milestone" ? /* @__PURE__ */ u2(Diamond, {}) : /* @__PURE__ */ u2(Icon, { name: kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check" }) });
   }
+  function PrepChip({ c: c5, openFile }) {
+    const pk2 = usePeek(), id2 = `wkpk-${c5.day}-${c5.start}`.replace(/[^\w-]/g, "");
+    const bits = [`${c5.day.slice(8)}-${c5.day.slice(5, 7)} ${c5.start}`, c5.pname || "", "Internal"].filter(Boolean);
+    return /* @__PURE__ */ u2("span", { class: "wkpk", onFocusOut: pk2.onFocusOut, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: (
+            /** @type {any} */
+            pk2.trigger
+          ),
+          class: `wkchip${c5.made ? " made" : ""}`,
+          "data-prepgo": c5.key,
+          "data-prepgoday": c5.day,
+          "aria-label": c5.aria,
+          "aria-haspopup": "dialog",
+          "aria-expanded": pk2.open ? "true" : "false",
+          "aria-controls": pk2.open ? id2 : void 0,
+          "aria-disabled": c5.live ? void 0 : "true",
+          children: c5.label
+        }
+      ),
+      pk2.open ? /* @__PURE__ */ u2(
+        PrepPeek,
+        {
+          mkey: c5.key,
+          day: c5.day,
+          title: c5.title,
+          bits,
+          page: c5.page,
+          pageWhen: c5.pageWhen,
+          live: c5.live,
+          id: id2,
+          panel: pk2.panel,
+          onEsc: () => pk2.shut(true),
+          open: openFile
+        }
+      ) : null
+    ] });
+  }
   function WkLine({ r: r4, hidden, p: p6 }) {
     const meeting = r4.kind === "meeting";
     return /* @__PURE__ */ u2("li", { class: `wkrow wk-${r4.kind}`, "data-wk": r4.key, hidden, children: [
@@ -35931,19 +36617,7 @@ ${s5}`;
           r4.p ? /* @__PURE__ */ u2("a", { class: "s", href: "#", "data-cock": r4.p, children: r4.pname || r4.p }) : null
         ] }) : null
       ] }),
-      r4.chip ? r4.chip.made ? /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: "wkchip made",
-          "data-prepgo": r4.chip.key,
-          "data-prepgoday": r4.chip.day,
-          "aria-label": r4.chip.aria,
-          "aria-disabled": r4.chip.live ? void 0 : "true",
-          "data-tip": r4.chip.live ? void 0 : "Needs the live server",
-          children: r4.chip.label
-        }
-      ) : /* @__PURE__ */ u2("button", { type: "button", class: "wkchip", "aria-label": r4.chip.aria, ...dataOf(r4.chip.data), children: r4.chip.label }) : null,
+      r4.chip ? /* @__PURE__ */ u2(PrepChip, { c: r4.chip, openFile: p6.openFile }) : null,
       r4.why ? /* @__PURE__ */ u2("span", { class: `wkwhy${r4.whyTone ? " " + r4.whyTone : ""}`, children: r4.why }) : null,
       /* @__PURE__ */ u2("span", { class: "tacts", children: r4.acts.map((a5) => /* @__PURE__ */ u2(
         IconButton,
@@ -35955,7 +36629,7 @@ ${s5}`;
           why: a5.why,
           data: { wkact: a5.id, ...a5.data || {} },
           onBlocked: () => p6.blocked(a5.why || ""),
-          onClick: a5.data && a5.data.prepday ? void 0 : (e4) => p6.onAct(
+          onClick: (e4) => p6.onAct(
             r4,
             a5,
             /** @type {HTMLElement} */
@@ -36384,17 +37058,6 @@ ${s5}`;
     }
   }
   var DAYRUN = /* @__PURE__ */ new Map();
-  var seriesOf = (t47) => String(t47 || "").toLowerCase().replace(/\[[^\]]*\]/g, " ").replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w6) => w6 && !/^\d+$/.test(w6)).join(" ");
-  function dayPrep(m5) {
-    const iso2 = dayShown(), raw2 = (((D.calendar || {}).days || {})[iso2] || []).find((x5) => !x5.all_day && x5.start === m5.start && x5.title === m5.title);
-    const e4 = raw2 || { start: m5.start, end: m5.end, title: m5.title, where: m5.confidential ? "" : m5.where || "", p: m5.p }, key = prepKey(e4, iso2);
-    if (!D.prep) D.prep = /** @type {any} */
-    {};
-    if (!D.prep.meetings) D.prep.meetings = {};
-    const pm2 = D.prep.meetings;
-    if (!pm2[key]) pm2[key] = { series: seriesOf(m5.title), p: m5.confidential ? null : m5.p || null, how: m5.p ? "matched" : "unsure", last: null, day: iso2, since: pkAdd(iso2, -7) };
-    openPrep(e4, iso2);
-  }
   async function dayProcess(m5) {
     const row2 = MTG().find((x5) => x5.id === m5.id);
     if (!row2) {
@@ -36423,7 +37086,7 @@ ${s5}`;
       if (shared.VIEW === "today") renderDay();
     }
   }
-  var DAYACTS = { prep: (m5) => dayPrep(m5), open: (p6) => {
+  var DAYACTS = { open: (p6) => {
     prepOpen(p6);
   }, process: (m5) => {
     dayProcess(m5);
@@ -37253,18 +37916,31 @@ ${s5}`;
       acts: workActs(i5.kind, i5).map((a5) => ({ ...a5, data: { k: i5.kind, id: i5.id, ...i5.kind === "milestone" ? { p: i5.p } : {} } }))
     });
     const meeting = (e4, day) => {
-      const can = day !== TODAY && !!prepOf(e4, day), pg2 = can ? prepPageOf(e4, day) : null, t47 = e4.title ?? "";
+      const can = day !== TODAY && !!prepOf(e4, day), pg2 = can ? prepPageOf(e4, day) : null, t47 = e4.title ?? "", key = prepKey(e4, day);
       return {
         key: `m${day}${e4.start}${e4.title}`,
         kind: "meeting",
         time: e4.start || "",
         t: t47,
-        open: can ? { prepday: day, start: e4.start || "", title: e4.title || "" } : void 0,
+        open: can ? { prepgo: key, prepgoday: day } : void 0,
         who: e4.where || "",
         p: e4.p || "",
         pname: e4.p ? pName(e4.p) : "",
         why: "",
-        chip: can ? pg2 ? { made: true, label: "Prep page made", aria: `Open the prep page for ${t47}`, key: pg2.key, day, live } : { made: false, label: "Prep", aria: `Prepare for ${t47}`, day, live, data: { prepday: day, start: e4.start || "", title: e4.title || "" } } : void 0,
+        chip: can ? {
+          made: !!pg2,
+          label: pg2 ? "Prep page made" : "Prep",
+          aria: `Open the prep page for ${t47}`,
+          key,
+          day,
+          live,
+          title: t47,
+          start: e4.start || "",
+          where: e4.where || "",
+          pname: e4.p ? pName(e4.p) : "",
+          pageWhen: pg2 ? pg2.when : "",
+          page: pg2 ? pg2.path : null
+        } : void 0,
         acts: []
       };
     };
@@ -37299,6 +37975,9 @@ ${s5}`;
     $("#weekTo").textContent = W3 ? `${plur(n4, "item")} to ${longDay(W3.to)}` : "";
     drawWeekAhead(host2, {
       groups,
+      openFile: (p6) => {
+        prepOpen(p6);
+      },
       others: othersOverdue(),
       empty: `Nothing is due or booked until ${W3 ? longDay(W3.to) : "next Monday"}.`,
       onAct: (r4, a5, btn) => {
@@ -41484,590 +42163,6 @@ ${s5}`;
     addEventListener("pagehide", () => {
       if (shared.PDT) pdWrite();
     });
-  }
-
-  // stores/prepPopup.js
-  var popupRev = y3(0);
-  var popupBrief = y3(
-    /** @type {{key: string, data: Brief} | null} */
-    null
-  );
-  var asked = 0;
-  async function loadBrief(key) {
-    const mine = ++asked;
-    if (popupBrief.value && popupBrief.value.key !== key) popupBrief.value = null;
-    if (!viaServer() || !key) return;
-    let r4 = null;
-    try {
-      r4 = await api("/api/prep/brief", { key });
-    } catch (e4) {
-      r4 = null;
-    }
-    if (mine === asked && r4 && r4.ok) popupBrief.value = { key, data: r4 };
-  }
-  var prepShape = y3(
-    /** @type {null | ((key: string) => void)} */
-    null
-  );
-  function prepNow() {
-    const e4 = shared.PREPEV, day = shared.PREPDAY || TODAY;
-    const key = e4 ? prepKey(e4, day) : "", b5 = popupBrief.value;
-    return { e: e4, day, key, m: e4 && prepOf(e4, day) || {}, brief: b5 && b5.key === key ? b5.data : null };
-  }
-  function prepViewHref(key, day) {
-    const k5 = String(key || ""), dated = /^\d{4}-\d{2}-\d{2}\|/.test(k5) ? k5 : `${day || TODAY}|${k5}`;
-    return `#prep=${encodeURIComponent(dated)}`;
-  }
-
-  // components/prep/PrepHead.jsx
-  function prepDayLabel(day) {
-    const lead = day === TODAY ? "Today" : day === pkAdd(TODAY, 1) ? "Tomorrow" : "";
-    return lead ? `${lead} · ${longDay(day)}` : longDay(day);
-  }
-  var initialsOf = (name) => String(name || "").split(/[\s.@_-]+/).filter((w6) => /^[A-Za-z]/.test(w6)).slice(0, 2).map((w6) => w6[0].toUpperCase()).join("") || "?";
-  var cadence = (r4) => {
-    const s5 = String(r4 || "").toLowerCase();
-    return /daily/.test(s5) ? "Every day" : /fortnight|biweekly|every 2 weeks/.test(s5) ? "Every 2 weeks" : /weekly/.test(s5) ? "Every week" : /monthly/.test(s5) ? "Every month" : "";
-  };
-  function invitees(m5, brief) {
-    if (brief && brief.people) return brief.people.invitees || [];
-    const v5 = m5 && m5.invite || {};
-    return (v5.attendees || []).filter((a5) => a5 && a5.name).map((a5) => ({ name: String(a5.name), initials: initialsOf(a5.name), registered: true }));
-  }
-  function PrepHead() {
-    popupRev.value;
-    const { e: e4, day, m: m5, brief } = prepNow();
-    if (!e4) return null;
-    const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential);
-    const series = brief && brief.series ? brief.series.text : [cadence(m5.invite && m5.invite.recurrence), m5.last ? `last ${fd(m5.last)}` : ""].filter(Boolean).join(" · ");
-    const inv = conf ? [] : invitees(m5, brief);
-    const name = code === "_portfolio" ? "Portfolio (all projects)" : code ? pName(code) : "";
-    const pickProject = (ev) => {
-      const btn = (
-        /** @type {HTMLElement} */
-        ev.currentTarget
-      );
-      openPicker(btn, {
-        label: "Project",
-        value: code,
-        options: [
-          ...P3.filter((p6) => p6.active !== false || p6.code === code).map((p6) => ({ v: p6.code, label: p6.name, icon: "projects" })),
-          { v: "_portfolio", label: "Portfolio (all projects)", icon: "projects" }
-        ],
-        onPick: async (v5) => {
-          if (v5 === code) return;
-          await choosePrep(v5);
-          if (code) snack(`Remembered for this series: ${v5 === "_portfolio" ? "Portfolio (all projects)" : pName(v5)}`, () => {
-            choosePrep(code);
-          });
-        }
-      });
-    };
-    return /* @__PURE__ */ u2("div", { class: "prephead", children: [
-      /* @__PURE__ */ u2("div", { class: "prephd", children: [
-        /* @__PURE__ */ u2("div", { class: "sub", id: "prepWhen", children: `${prepDayLabel(day)} · ${e4.start} – ${e4.end}${e4.where ? " · " + e4.where : ""}` }),
-        /* @__PURE__ */ u2("h2", { id: "prepTitle", children: e4.title }),
-        /* @__PURE__ */ u2("div", { class: "prepmeta", children: [
-          /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              class: `chip prepchip${code ? "" : " need"}`,
-              id: "prepProjBtn",
-              "data-code": code,
-              "aria-haspopup": "listbox",
-              "aria-expanded": "false",
-              "aria-label": code ? `Project: ${name}. Change it (remembered for this series)` : "Choose the project for this meeting",
-              "data-tip": code ? "Change the project (remembered for this series)" : "Choose the project; creaite remembers it for this series",
-              onClick: pickProject,
-              children: [
-                /* @__PURE__ */ u2("span", { class: "pdot", "aria-hidden": "true" }),
-                code ? name : "Choose a project…",
-                /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
-              ]
-            }
-          ),
-          m5.how === "remembered" ? /* @__PURE__ */ u2("span", { class: "sub", children: "remembered for this series" }) : null,
-          series ? /* @__PURE__ */ u2("span", { class: "chip", id: "prepSeries", children: [
-            /* @__PURE__ */ u2(Icon, { name: "refresh" }),
-            series
-          ] }) : null,
-          inv.length ? /* @__PURE__ */ u2("span", { class: "chip", id: "prepInvited", "data-tip": inv.map((p6) => p6.name).join(", "), "aria-label": `${inv.length} invited: ${inv.map((p6) => p6.name).join(", ")}`, children: [
-            /* @__PURE__ */ u2("span", { class: "avs", "aria-hidden": "true", children: [
-              inv.slice(0, 3).map((p6, i5) => /* @__PURE__ */ u2("span", { class: "av", children: p6.initials }, i5)),
-              inv.length > 3 ? /* @__PURE__ */ u2("span", { class: "av", children: `+${inv.length - 3}` }) : null
-            ] }),
-            /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: `${inv.length} invited` })
-          ] }) : null
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("button", { type: "button", class: "iconbtn", id: "prepClose", "aria-label": "Close", children: /* @__PURE__ */ u2(Icon, { name: "x" }) })
-    ] });
-  }
-
-  // components/prep/PrepFacts.jsx
-  function localFacts(m5, day) {
-    const code = m5.p, all = code === "_portfolio", inP = (x5) => all || x5.p === code;
-    const since = m5.last || m5.since || day;
-    return {
-      decisions: DEC.filter((x5) => inP(x5) && x5.st === "Made" && x5.date >= since && x5.date <= day).length,
-      risks: R3.filter((x5) => inP(x5) && x5.type === "Risk" && (x5.raised || "") >= since).length,
-      issues: R3.filter((x5) => inP(x5) && x5.type === "Issue" && (x5.raised || "") >= since).length,
-      overdue: A4.filter((x5) => inP(x5) && (x5.st === "Open" || x5.st === "Delayed") && x5.due && x5.due >= since && x5.due < day).length,
-      since,
-      has_last: !!m5.last,
-      invite_first: m5.invite && m5.invite.confidential ? 0 : Object.values(m5.rank || {}).reduce((n4, o5) => n4 + Object.keys(o5 || {}).length, 0)
-    };
-  }
-  function factsWords(f5) {
-    const parts = [
-      f5.decisions ? plur(f5.decisions, "decision") : "",
-      f5.risks ? `${f5.risks} new risk${f5.risks === 1 ? "" : "s"}` : "",
-      f5.issues ? `${f5.issues} new issue${f5.issues === 1 ? "" : "s"}` : "",
-      f5.overdue ? `${plur(f5.overdue, "action")} now overdue` : ""
-    ].filter(Boolean);
-    return {
-      head: f5.has_last ? `Since the last meeting (${fd(f5.since)})` : `No earlier meeting on record; since ${fd(f5.since)}`,
-      what: `${parts.length ? parts.join(", ") : "nothing new"}.`,
-      first: f5.invite_first ? `${plur(f5.invite_first, "item")} the invite points to ${f5.invite_first === 1 ? "is" : "are"} shown first.` : ""
-    };
-  }
-  function PrepFacts() {
-    popupRev.value;
-    const { e: e4, day, m: m5, brief } = prepNow();
-    if (!e4 || !m5.p) return null;
-    const f5 = brief && brief.facts ? brief.facts : localFacts(m5, day || TODAY), w6 = factsWords(f5);
-    const v5 = m5.invite || {}, conf = !!v5.confidential, inv = conf ? [] : invitees(m5, brief);
-    const org = brief && brief.people && brief.people.organiser ? brief.people.organiser.name : v5.organiser === true ? "you" : v5.organiser ? String(v5.organiser) : "";
-    const hasInvite = conf || v5.body || inv.length || (v5.attachments || []).length;
-    return /* @__PURE__ */ u2("div", { class: "preplead", children: [
-      /* @__PURE__ */ u2("p", { class: "prepfacts", id: "prepFacts", children: [
-        m5.p === "_portfolio" ? "Across every project. " : "",
-        /* @__PURE__ */ u2("b", { children: [
-          w6.head,
-          ":"
-        ] }),
-        " ",
-        w6.what,
-        w6.first ? /* @__PURE__ */ u2("span", { class: "sub", children: [
-          " ",
-          w6.first
-        ] }) : null
-      ] }),
-      hasInvite ? /* @__PURE__ */ u2("details", { class: "prepinv", children: [
-        /* @__PURE__ */ u2("summary", { children: [
-          conf ? "Invite: confidential, only the title and times are kept" : ["Invite", org ? `organised by ${org}` : "", inv.length ? `${inv.length} invited` : ""].filter(Boolean).join(" · ").replace(/^Invite · /, "Invite: "),
-          inv.length ? /* @__PURE__ */ u2("span", { class: "prepnames", children: [
-            " (",
-            inv.map((p6, i5) => /* @__PURE__ */ u2("span", { children: [
-              i5 ? ", " : "",
-              p6.registered ? p6.name : /* @__PURE__ */ u2("span", { class: "unreg", "data-tip": "Not in the people register", children: [
-                p6.name,
-                /* @__PURE__ */ u2("span", { class: "vh", children: " (not in the people register)" })
-              ] })
-            ] }, i5)),
-            ")"
-          ] }) : null,
-          v5.body ? /* @__PURE__ */ u2("span", { class: "sub", children: " · invite text" }) : null
-        ] }),
-        conf ? /* @__PURE__ */ u2("p", { class: "sub", children: "Confidential: only the title and times are kept." }) : null,
-        v5.recurrence ? /* @__PURE__ */ u2("p", { class: "sub", children: String(v5.recurrence) }) : null,
-        (v5.attendees || []).length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
-          "Invited: ",
-          (v5.attendees || []).map((a5, i5) => /* @__PURE__ */ u2("span", { children: [
-            i5 ? ", " : "",
-            a5.name,
-            a5.type === "optional" ? " (optional)" : "",
-            a5.response && a5.response !== "none" ? ` · ${a5.response}` : ""
-          ] }, i5))
-        ] }) : null,
-        (v5.attachments || []).length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
-          "Attached: ",
-          (v5.attachments || []).join(", ")
-        ] }) : null,
-        v5.body ? /* @__PURE__ */ u2("div", { class: "prepbodytxt", children: String(v5.body) }) : null
-      ] }) : null
-    ] });
-  }
-
-  // stores/prepShape.js
-  function bootPrepShape() {
-    DRAFTFEATURES.push(["shape", "Shape the meeting", "Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's carried over, each line cited"]);
-    Object.assign(DRAFTKIND, { shape: "shape" });
-  }
-  var SHAPE_SECTIONS = (
-    /** @type {[string, string][]} */
-    [
-      ["objective", "Objective"],
-      ["talking_points", "Talking points"],
-      ["ask", "Ask"],
-      ["carried_over", "Carried over"]
-    ]
-  );
-  var shapeKey = y3(
-    /** @type {string | null} */
-    null
-  );
-  var shapeInstruction = y3("");
-  var shapeChips = y3(
-    /** @type {ShapeChip[]} */
-    []
-  );
-  var shapeUsed = y3(
-    /** @type {string[]} */
-    []
-  );
-  var shapeConfidential = y3(false);
-  var shapeReading = y3(
-    /** @type {Reading | null} */
-    null
-  );
-  var shapeReadingMine = y3(false);
-  var shapeText = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var shapeNotes = y3(
-    /** @type {Notes | null} */
-    null
-  );
-  var shapeDrafted = y3(
-    /** @type {Notes | null} */
-    null
-  );
-  var shapeChecks = y3(
-    /** @type {Check[]} */
-    []
-  );
-  var shapeFilter = y3(
-    /** @type {Filter | null} */
-    null
-  );
-  var shapeExcluded = y3(
-    /** @type {string[]} */
-    []
-  );
-  var shapeBusy = y3("");
-  var shapeSteps = y3(0);
-  var shapeSourcesN = y3(0);
-  var shapeMsg = y3("");
-  var shapeAccepted = y3("");
-  var emptyNotes = () => (
-    /** @type {Notes} */
-    Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, []]))
-  );
-  var textOf = (lines) => (lines || []).map((l6) => l6.text).join("\n");
-  function shapeLinesFrom(text, before) {
-    const old = before || [];
-    return String(text || "").split("\n").map((s5) => s5.trim()).filter(Boolean).slice(0, 12).map((t47, i5) => {
-      const same2 = old.find((x5) => x5.text === t47) || old[i5];
-      return { text: t47.slice(0, 600), sources: same2 && same2.sources || [] };
-    });
-  }
-  function notesNow() {
-    const n4 = shapeNotes.value || emptyNotes(), t47 = shapeText.value;
-    return (
-      /** @type {Notes} */
-      Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, k5 in t47 ? shapeLinesFrom(t47[k5], n4[k5]) : n4[k5] || []]))
-    );
-  }
-  function editedSections() {
-    const d5 = shapeDrafted.value;
-    if (!d5) return [];
-    const now = notesNow(), flat2 = (L3) => L3.map((l6) => l6.text.replace(/\s+/g, " ").trim()).join("\n");
-    return SHAPE_SECTIONS.map(([k5]) => k5).filter((k5) => flat2(now[k5] || []) !== flat2(d5[k5] || []));
-  }
-  var focusIds = () => ((shapeReading.value || { focus: [] }).focus || []).map((f5) => f5.id || "").filter(Boolean);
-  function fill(notes) {
-    const n4 = { ...emptyNotes(), ...notes || {} };
-    shapeNotes.value = n4;
-    shapeText.value = Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, textOf(n4[k5])]));
-  }
-  var shapeAsked = 0;
-  async function openShape(key) {
-    const mine = ++shapeAsked;
-    if (shapeKey.value !== key) {
-      shapeKey.value = key;
-      shapeInstruction.value = "";
-      shapeChips.value = [];
-      shapeUsed.value = [];
-      shapeConfidential.value = false;
-      shapeReading.value = null;
-      shapeReadingMine.value = false;
-      shapeText.value = {};
-      shapeNotes.value = null;
-      shapeDrafted.value = null;
-      shapeChecks.value = [];
-      shapeFilter.value = null;
-      shapeExcluded.value = [];
-      shapeMsg.value = "";
-      shapeAccepted.value = "";
-      shapeSteps.value = 0;
-      shapeSourcesN.value = 0;
-    } else shapeKey.value = key;
-    if (!viaServer()) return;
-    const [c5, f5] = await Promise.all([api("/api/prep/chips", { key }).catch(() => null), api("/api/prep/focus", { key }).catch(() => null)]);
-    if (mine !== shapeAsked || shapeKey.value !== key) return;
-    if (c5 && c5.ok) {
-      shapeChips.value = c5.chips || [];
-      shapeConfidential.value = !!c5.confidential;
-    }
-    const rec = f5 && f5.ok && f5.focus;
-    if (rec && !shapeNotes.value) {
-      shapeInstruction.value = rec.instruction || "";
-      shapeReading.value = rec.reading || null;
-      shapeDrafted.value = rec.drafted || null;
-      shapeExcluded.value = rec.excluded || [];
-      shapeAccepted.value = rec.accepted_at || "";
-      fill(rec.notes);
-      previewFilter();
-    }
-  }
-  function closeShape() {
-    shapeKey.value = null;
-  }
-  function addChip(c5) {
-    const t47 = shapeInstruction.value.replace(/\s+$/, "");
-    shapeInstruction.value = `${t47}${t47 ? "\n" : ""}Also cover ${c5.insert}.`;
-    shapeUsed.value = [...shapeUsed.value, c5.label];
-  }
-  var filtering = 0;
-  async function previewFilter() {
-    const key = shapeKey.value;
-    if (!key || !viaServer()) return;
-    const mine = ++filtering, ids = focusIds();
-    const r4 = await api("/api/prep/filter", { key, focus: ids, excluded: shapeExcluded.value }).catch(() => null);
-    if (mine === filtering && key === shapeKey.value && r4 && r4.ok) shapeFilter.value = r4.filter;
-  }
-  function toggleExcluded(id2) {
-    const s5 = new Set(shapeExcluded.value);
-    if (s5.has(id2)) s5.delete(id2);
-    else s5.add(id2);
-    shapeExcluded.value = [...s5];
-    const f5 = shapeFilter.value;
-    if (f5) {
-      const its = f5.items.map((i5) => i5.id === id2 ? { ...i5, excluded: s5.has(id2) } : i5);
-      const documents = f5.documents.map((d5) => d5.path === id2 ? { ...d5, excluded: s5.has(id2) } : d5);
-      shapeFilter.value = { ...f5, items: its, documents, n: its.filter((i5) => !i5.excluded).length, docs_n: documents.filter((d5) => !d5.excluded).length };
-    }
-  }
-  function setReading(r4) {
-    shapeReading.value = r4;
-    shapeReadingMine.value = true;
-    previewFilter();
-  }
-  function giveBack(sec) {
-    const d5 = shapeDrafted.value;
-    if (!d5) return;
-    shapeText.value = { ...shapeText.value, [sec]: textOf(d5[sec]) };
-  }
-  async function runShape() {
-    const key = shapeKey.value;
-    if (!key || shapeBusy.value) return;
-    const instruction = shapeInstruction.value.trim();
-    if (!instruction) {
-      shapeMsg.value = "Write the focus and the aim first.";
-      return;
-    }
-    const body2 = { key, instruction };
-    if (shapeReadingMine.value && shapeReading.value) body2.reading = shapeReading.value;
-    if (shapeDrafted.value) body2.current = { notes: notesNow(), drafted: shapeDrafted.value };
-    shapeBusy.value = "shape";
-    shapeSteps.value = 0;
-    shapeMsg.value = "";
-    let r4;
-    try {
-      r4 = await draftAsk(body2, {
-        url: "/api/prep/shape",
-        label: "Shaping the meeting",
-        status: () => {
-        },
-        onStep: (n4) => {
-          shapeSteps.value = n4;
-        },
-        onSources: (ev) => {
-          shapeSourcesN.value = (ev.sources || []).length;
-          shapeConfidential.value = !!ev.confidential;
-        }
-      });
-    } finally {
-      shapeBusy.value = "";
-    }
-    if (key !== shapeKey.value) return;
-    if (!r4 || !r4.ok || !r4.reading) {
-      shapeMsg.value = oneLine(r4 && (r4.nothing || r4.message) || "") || "No draft came back";
-      return;
-    }
-    shapeReading.value = r4.reading;
-    shapeReadingMine.value = false;
-    shapeDrafted.value = r4.drafted || emptyNotes();
-    shapeChecks.value = r4.checks || [];
-    shapeConfidential.value = !!r4.confidential;
-    fill(r4.notes);
-    previewFilter();
-  }
-  async function acceptShape() {
-    const key = shapeKey.value;
-    if (!key || shapeBusy.value || !shapeReading.value) return false;
-    if (!viaServer()) {
-      snack("Saving needs the live server");
-      return false;
-    }
-    shapeBusy.value = "save";
-    const r4 = await api("/api/prep/focus/save", {
-      key,
-      accept: true,
-      instruction: shapeInstruction.value,
-      reading: shapeReading.value,
-      notes: notesNow(),
-      drafted: shapeDrafted.value || emptyNotes(),
-      excluded: shapeExcluded.value
-    }).catch(() => null);
-    shapeBusy.value = "";
-    if (!r4 || !r4.ok) {
-      snack(oneLine(r4 && r4.message || "") || "Not saved");
-      return false;
-    }
-    shapeAccepted.value = r4.focus && r4.focus.accepted_at || "";
-    snack(r4.page ? "Accepted: on the prep page, and the Agendas page was updated" : "Accepted: the notes are on the prep page");
-    return true;
-  }
-  function discardShape() {
-    if (shapeDrafted.value) draftStat("shape", "rejected");
-    shapeNotes.value = null;
-    shapeDrafted.value = null;
-    shapeText.value = {};
-    shapeChecks.value = [];
-    shapeReading.value = null;
-    shapeReadingMine.value = false;
-    shapeFilter.value = null;
-    shapeAccepted.value = "";
-  }
-
-  // components/prep/PrepToolbar.jsx
-  function openPrepView(key, day) {
-    const d5 = (
-      /** @type {HTMLDialogElement | null} */
-      document.getElementById("prepDlg")
-    );
-    if (d5 && d5.open) d5.close();
-    location.hash = prepViewHref(key, day);
-  }
-  function PrepToolbar() {
-    popupRev.value;
-    const { e: e4, day, key, m: m5 } = prepNow();
-    if (!e4) return null;
-    const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential), page = prepPageOf(e4, day);
-    const live = viaServer(), shape = prepShape.value;
-    const openWhy = !code ? "Choose the project first" : !live ? "Needs the live server" : "";
-    const openTip = openWhy || (page ? `Open the prep page (saved ${page.when})` : "Research the meeting and open its prep page in creaite");
-    const why = draftWhyNot("agenda"), style = agendaStyle(), withInv = agendaInvited();
-    return /* @__PURE__ */ u2("div", { class: "preptb", role: "toolbar", "aria-label": "Meeting prep", children: [
-      shape && code ? /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: "btn ai",
-          "data-prepshape": "1",
-          "aria-pressed": shapeKey.value === key ? "true" : "false",
-          "data-tip": "Tell creaite how you want to run this meeting",
-          onClick: () => shape(key),
-          children: [
-            /* @__PURE__ */ u2(Icon, { name: "spark" }),
-            "Shape this meeting"
-          ]
-        }
-      ) : null,
-      /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: "btn primary",
-          "data-prepview": "1",
-          "aria-disabled": openWhy ? "true" : void 0,
-          "data-tip": openTip,
-          onClick: () => {
-            if (!code) {
-              snack("Choose the project first");
-              return;
-            }
-            if (!live) {
-              snack("The Prep page needs the live server");
-              return;
-            }
-            openPrepView(key, day);
-          },
-          children: "Open prep page"
-        }
-      ),
-      /* @__PURE__ */ u2("span", { class: "sp" }),
-      code ? /* @__PURE__ */ u2(
-        Menu,
-        {
-          label: "Draft agenda",
-          icon: "spark",
-          btnCls: "btn agbtn",
-          data: { agenda: "1" },
-          why,
-          onBlocked: () => snack(why),
-          tip: "Draft the invite text and a timed agenda from this meeting's items, to copy into the invite",
-          menuLabel: "Draft agenda",
-          items: [
-            {
-              id: "poad",
-              icon: "list",
-              name: "POAD",
-              mark: style === "poad" ? "last used" : "",
-              data: { agstyle: "poad" },
-              line: "Purpose, objectives, approach, deliverables. The full structure, for a decision meeting or a workshop."
-            },
-            {
-              id: "lite",
-              icon: "filetext",
-              name: "POAD lite",
-              mark: style === "lite" ? "last used" : "",
-              data: { agstyle: "lite" },
-              line: "A short, friendly paragraph, with a bulleted agenda only when the meeting has distinct steps."
-            },
-            { id: "sep", sep: true },
-            {
-              id: "invited",
-              icon: "people",
-              name: "Include who's invited",
-              checked: withInv && !conf,
-              disabled: conf,
-              data: { aginvited: "1" },
-              line: conf ? "A confidential meeting keeps no attendee list." : "Adds the attendee list to the invite text."
-            }
-          ],
-          onPick: (id2) => {
-            if (id2 === "invited") {
-              setAgendaInvited(!withInv);
-              popupRev.value++;
-              return;
-            }
-            closeShape();
-            setAgendaStyle(id2);
-            popupRev.value++;
-            draftAgenda().finally(() => {
-              popupRev.value++;
-            });
-          }
-        }
-      ) : null
-    ] });
-  }
-
-  // components/prep/PrepPopup.jsx
-  function PrepPopup() {
-    return /* @__PURE__ */ u2(S2, { children: [
-      /* @__PURE__ */ u2(PrepHead, {}),
-      /* @__PURE__ */ u2(PrepToolbar, {})
-    ] });
-  }
-  function mountPrepPopup(top, lead) {
-    R(/* @__PURE__ */ u2(PrepPopup, {}), top);
-    R(/* @__PURE__ */ u2(PrepFacts, {}), lead);
   }
 
   // components/TextEditor.jsx
@@ -52739,14 +52834,6 @@ ${d5.text}`);
         return;
       }
       location.hash = prepViewHref(g5.dataset.prepgo, g5.dataset.prepgoday);
-    });
-    document.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest("[data-prepday]");
-      if (!b5) return;
-      e4.preventDefault();
-      const day = b5.dataset.prepday;
-      const ev = (((D.calendar || {}).days || {})[day] || []).find((x5) => !x5.all_day && x5.start === b5.dataset.start && x5.title === b5.dataset.title);
-      if (ev) openPrep(ev, day);
     });
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("#prepDlg [data-nav], #prepDlg [data-proj]")) $("#prepDlg").close();
@@ -67764,6 +67851,7 @@ ${d5.text}`);
         "DE_THANKS",
         "DIAG",
         "DRAFTKIND",
+        "DayMeetings",
         "Decisions",
         "Dialog",
         "ED_PROFILES",
@@ -67865,6 +67953,7 @@ ${d5.text}`);
         "WLGRP",
         "WSD",
         "WSIG",
+        "WeekAhead",
         "Words",
         "acClose",
         "acDraw",
@@ -68145,6 +68234,7 @@ ${d5.text}`);
         "passes",
         "peekFrame",
         "peekPropNodes",
+        "peeks",
         "pencil",
         "peopleAll",
         "peopleText",

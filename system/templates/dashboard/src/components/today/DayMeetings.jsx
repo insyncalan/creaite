@@ -3,14 +3,13 @@
    title and project (by name, BL-101), where and who organises it, and what to do about it:
    - a past day: the follow-up, as Calendar import works it out: Minutes made, Draft in Review (with Review), Transcript ready
      (with Process), or No transcript; a transcript not checked yet offers Check (Alan, 13-10-2026);
-   - today and later: nothing under the meeting; its title opens a popup with Prepare, or the saved agenda's actions (#140, Alan,
-     16-10-2026, which took away the Prepare / Prep pill, BL-287's Open icon and "Prep page made" and the Note link).
+   - today and later: nothing under the meeting; its title opens the Prep peek (#111; #140, Alan, 16-10-2026, took away the Prepare /
+     Prep pill, BL-287's Open icon, "Prep page made" and the Note link).
    A private meeting is "Busy" with its times only. A confidential one shows only its title and times: no project, no where,
-   no Prepare (Alan, 13-10-2026). Off today, one quiet line says that everything below is as of today. */
+   no peek (Alan, 13-10-2026). Off today, one quiet line says that everything below is as of today. */
 import { Fragment, render } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import { CARD_CLOSE, CARD_OPEN } from "../../core/hover.js";
 import { Chip } from "../Chip.jsx";
+import { PrepPeek, usePeek } from "../prep/PrepPopup.jsx";
 import { minsOf } from "./DayCurve.jsx";
 import { wheelRef } from "./wheel.js";
 
@@ -23,7 +22,7 @@ import { wheelRef } from "./wheel.js";
     `ix`: the meeting's place in today's calendar (the Prep link's data-prep, as before); `page`:
     its newest prep page; `running`: a check or a process under way ("Checking…"). */
 /** @typedef {{title: string, p?: string | null}} AllDay */
-/** @typedef {{prep: (m: DayMeeting) => void, open: (path: string) => void, process: (m: DayMeeting) => void,
+/** @typedef {{open: (path: string) => void, process: (m: DayMeeting) => void,
     check: (m: DayMeeting) => void, review: () => void, name: (code: string) => string}} DayActs */
 /** @typedef {{day: string, dow: string, isToday: boolean, past: boolean, now: number, mode: string, live: boolean,
     calendar: boolean, lastRead?: string, meetings: DayMeeting[], allDay: AllDay[], acts: DayActs,
@@ -57,54 +56,22 @@ function FollowUp({ m, live, acts }) {
   return <Chip tone="mute" tip={f.why}>No transcript</Chip>;
 }
 
-/** #140 (Alan, 16-10-2026): a meeting's title on today or a later day opens a small popup, on pointer rest or keyboard focus.
-    With no agenda saved it shows the title, when, who and where it is, and Prepare; with one it says the agenda is saved, when
-    the prep page was made, and offers Open agenda (the page inside creaite), Prepare again and Open the file. Esc closes it; it
-    is a dialog with no focus trap, Internal, and never sent. `data-prepgo` is meetings.js's handler, as BL-287's icon used.
-    @param {{m: DayMeeting, day: string, dow: string, isToday: boolean, live: boolean, acts: DayActs, id: string, onEsc: () => void}} props */
-function TitlePopup({ m, day, dow, isToday, live, acts, id, onEsc }) {
-  const p = m.prep;
-  if (!p) return null;
-  const when = isToday ? "Today" : dow, bits = [`${when} ${m.start}`, m.attendees ? `${m.attendees} attending` : "",
-    !m.confidential && m.p ? (m.p === "_portfolio" ? "Portfolio" : acts.name(m.p)) : "", "Internal"].filter(Boolean);
-  const off = live ? undefined : "Needs the live server";
-  return (
-    <div class="dmpop" role="dialog" id={id} aria-label={`Prepare for ${m.title}`} onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); onEsc(); } }}>
-      <h4>{m.title}</h4>
-      <div class="pm">{bits.join(" · ")}</div>
-      {m.page ? <>
-        <div class="agsaved"><span class="agok" aria-hidden="true">✓</span>
-          <span class="agw"><b>Agenda saved</b><small>Prep page made {m.pageWhen || ""}</small></span>
-          <button type="button" class="btn primary" data-prepgo={p.key} data-prepgoday={day} aria-label={`Open the agenda for ${m.title}`}
-            aria-disabled={live ? undefined : "true"} data-tip={off}>Open agenda</button></div>
-        <div class="agrow"><button type="button" class="btn" onClick={() => acts.prep(m)}>Prepare again</button>
-          <button type="button" class="linkbtn" aria-disabled={live ? undefined : "true"} data-tip={off || "Open the saved page in a new tab"}
-            onClick={() => acts.open(m.page || "")}>Open the file</button></div></>
-      : <>
-        <div class="agrow"><button type="button" class="btn primary" aria-label={`Prepare for ${m.title}`} onClick={() => acts.prep(m)}>Prepare</button>
-          {m.plan ? <span class="sub">Worth preparing: {m.plan}</span> : null}</div>
-        <p class="sub agnone">No agenda saved yet. Prepare builds the prep page and saves it to the Agendas folder.</p></>}
-    </div>
-  );
-}
-
-/** A meeting's title; with a Prep popup when it has one. The pointer must rest on it (CARD_OPEN) and the popup closes
-    CARD_CLOSE after the pointer leaves the title and the popup; keyboard focus opens it at once and Esc closes it.
+/** A meeting's title; on today or a later day it carries the Prep peek (#111, which grew #140's popup): pointer rest or keyboard focus
+    opens it, on the one hover standard (core/hover.js, CARD_OPEN and CARD_CLOSE, no timer of its own). It is the 30-second version of
+    the prep page (aim, what to raise, the ask, since last time) with Open the prep page; there is no Prepare button and no second
+    brief. A dialog with no focus trap, Esc closes it, Internal, never sent. `data-prepgo` is meetings.js's handler.
     @param {{m: DayMeeting, day: string, dow: string, isToday: boolean, live: boolean, acts: DayActs}} props */
 function Title({ m, day, dow, isToday, live, acts }) {
-  const [open, setOpen] = useState(false), timer = useRef(0), box = useRef(/** @type {HTMLSpanElement | null} */ (null));
-  useEffect(() => () => clearTimeout(timer.current), []);
-  if (m.private || !m.prep) return <>{m.title ?? ""}</>;
-  const id = `dmpop-${day}-${m.start}`.replace(/[^\w-]/g, "");
-  const later = (/** @type {boolean} */ to, /** @type {number} */ ms) => { clearTimeout(timer.current); timer.current = window.setTimeout(() => setOpen(to), ms); };
-  const shut = () => { clearTimeout(timer.current); setOpen(false); };
+  const p = m.prep, pk = usePeek(!m.private && !!p);
+  if (m.private || !p) return <>{m.title ?? ""}</>;
+  const id = `dmpop-${day}-${m.start}`.replace(/[^\w-]/g, ""), when = isToday ? "Today" : dow;
+  const bits = [`${when} ${m.start}`, m.attendees ? `${m.attendees} attending` : "",
+    !m.confidential && m.p ? (m.p === "_portfolio" ? "Portfolio" : acts.name(m.p)) : "", "Internal"].filter(Boolean);
   return (
-    <span class="dmtw" ref={box} onMouseEnter={() => later(true, CARD_OPEN)} onMouseLeave={() => later(false, CARD_CLOSE)}
-      onFocusCapture={() => { clearTimeout(timer.current); setOpen(true); }}
-      onBlurCapture={e => { const to = /** @type {Node | null} */ (e.relatedTarget); if (!to || !box.current || !box.current.contains(to)) later(false, 0); }}>
-      <span class="dmti" tabIndex={0} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} aria-controls={open ? id : undefined}
-        onKeyDown={e => { if (e.key === "Escape" && open) { e.stopPropagation(); shut(); } }}>{m.title ?? ""}</span>
-      {open ? <TitlePopup m={m} day={day} dow={dow} isToday={isToday} live={live} acts={acts} id={id} onEsc={() => { shut(); const t = box.current && box.current.querySelector(".dmti"); if (t) /** @type {HTMLElement} */ (t).focus(); }} /> : null}
+    <span class="dmtw" onFocusOut={pk.onFocusOut}>
+      <span class="dmti" ref={pk.trigger} tabIndex={0} aria-haspopup="dialog" aria-expanded={pk.open ? "true" : "false"} aria-controls={pk.open ? id : undefined}>{m.title ?? ""}</span>
+      {pk.open ? <PrepPeek mkey={p.key} day={day} title={m.title} bits={bits} plan={m.plan} page={m.page} pageWhen={m.pageWhen} live={live} id={id}
+        panel={pk.panel} onEsc={() => pk.shut(true)} open={acts.open} /> : null}
     </span>
   );
 }

@@ -25,7 +25,7 @@ import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
-import { decorateWarnings, openPrep, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
+import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
@@ -212,15 +212,6 @@ export function onDayWheel(e){ if(SWIPE.seen.has(e)) return; SWIPE.seen.add(e);
   if(Math.abs(SWIPE.acc)>40){ SWIPE.locked=true; SWIPE.min=ax; stepDay(SWIPE.acc>0?1:-1); SWIPE.acc=0; } }
 /* what the band's buttons do */
 export const DAYRUN=new Map();   /* a check or a process under way, by calendar ID: "Checking…" */
-const seriesOf=t=>String(t||"").toLowerCase().replace(/\[[^\]]*\]/g," ").replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w&&!/^\d+$/.test(w)).join(" ");
-/** The Prep popup for a meeting on any day the calendar holds. A day without a Prep brief in the page (after tomorrow) gets
-    a starting one from what the day line knows (its project, the series, the last seven days), as build_dashboard.prep_entry
-    begins it; the popup's own routes take the dated key for any day (BL-286). */
-export function dayPrep(m){ const iso=dayShown(), raw=(((D.calendar||{}).days||{})[iso]||[]).find(x=>!x.all_day&&x.start===m.start&&x.title===m.title);
-  const e=raw||{start:m.start,end:m.end,title:m.title,where:m.confidential?"":m.where||"",p:m.p}, key=prepKey(e,iso);
-  if(!D.prep) D.prep=/** @type {any} */({}); if(!D.prep.meetings) D.prep.meetings={}; const pm=D.prep.meetings;
-  if(!pm[key]) pm[key]={series:seriesOf(m.title),p:m.confidential?null:m.p||null,how:m.p?"matched":"unsure",last:null,day:iso,since:pkAdd(iso,-7)};
-  openPrep(e,iso); }
 /** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
 export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
   DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
@@ -229,7 +220,7 @@ export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!r
 export async function dayCheck(m){ const row=MTG().find(x=>x.id===m.id)||{id:m.id,title:m.title,day:dayShown(),start:m.start};
   DAYRUN.set(m.id,"Checking…"); renderDay();
   try{ await checkMeeting(row); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
-export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
+export const DAYACTS={open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
 /* ===== end BL-293 ===== */
 /* BL-270 (sprint-ui-sweep): the calendar's read time, when it is from an earlier day, is a footnote at the bottom right of Today */
 export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!(cal&&cal.fetched&&cal.fetched.slice(0,10)!==TODAY); f.hidden=!old;
@@ -582,10 +573,11 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
   const item=(i,key,further,undated=false)=>({key,kind:i.kind,dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
     who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
-  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"";
+  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"", key=prepKey(e,day);
     return {key:`m${day}${e.start}${e.title}`,kind:"meeting",time:e.start||"",t,
-      open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",why:"",
-      chip:can?(pg?{made:true,label:"Prep page made",aria:`Open the prep page for ${t}`,key:pg.key,day,live}:{made:false,label:"Prep",aria:`Prepare for ${t}`,day,live,data:{prepday:day,start:e.start||"",title:e.title||""}}):undefined,
+      open:can?{prepgo:key,prepgoday:day}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",why:"",
+      chip:can?{made:!!pg,label:pg?"Prep page made":"Prep",aria:`Open the prep page for ${t}`,key,day,live,title:t,start:e.start||"",where:e.where||"",
+        pname:e.p?pName(e.p):"",pageWhen:pg?pg.when:"",page:pg?pg.path:null}:undefined,
       acts:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
   group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
@@ -603,7 +595,7 @@ function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; w
 export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
   const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
   $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}`:"";   /* #105: the quiet count and the end date, as Resolved's */
-  drawWeekAhead(host,{groups,others:othersOverdue(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

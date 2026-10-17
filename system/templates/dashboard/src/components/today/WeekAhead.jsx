@@ -9,19 +9,23 @@
    overdue. See them in Work"); overdue work no longer leads the list. A group's "+n more" is a [data-more] button that
    today.js's handler opens. Urgent work with no date leads; "Further ahead" (the two weeks after) follows, as before. today.js
    builds the groups from D.week (weekGroups) and does the actions (weekAct); the links keep their data- attributes
-   (data-open, data-cock, data-prepday, data-prepgo), so the page-wide handlers open them as they always have. */
+   (data-open, data-cock, data-prepgo), so the page-wide handlers open them as they always have. */
 import { render } from "preact";
 import { Icon } from "../Icon.jsx";
 import { IconButton } from "../IconButton.jsx";
+import { PrepPeek, usePeek } from "../prep/PrepPopup.jsx";
 
 /** @typedef {{id: string, icon: string, label: string, name?: string, primary?: boolean, why?: string, data?: Record<string, string>}} WkAct */
+/** @typedef {{made: boolean, label: string, aria: string, key: string, day: string, live: boolean, title: string, start: string,
+    where?: string, pname?: string, pageWhen?: string, page?: string | null}} WkChip
+    The Prep chip: it opens the Prep peek on pointer rest or focus (#111) and goes to the prep page when pressed. */
 /** @typedef {{key: string, kind: string, dot?: string, t: string, time?: string, open?: Record<string, string>, who?: string,
-    p?: string, pname?: string, why: string, whyTone?: string, acts: WkAct[], chip?: {made: boolean, label: string, aria: string, key?: string, day: string, data?: Record<string, string>, live: boolean},
+    p?: string, pname?: string, why: string, whyTone?: string, acts: WkAct[], chip?: WkChip,
 }} WkRow
     `dot`: "u" (Urgent) or "h" (High); `time`: a meeting's start; `chip`: a meeting's Prep chip (`made`: the saved page's, which goes to it). */
 /** @typedef {{key: string, title: string, note?: string, rows: WkRow[], cap: number, open: boolean}} WkGroup */
 /** @typedef {{groups: WkGroup[], empty: string, others?: {n: number, nav: string}, onAct: (row: WkRow, act: WkAct, btn: HTMLElement) => void,
-    blocked: (why: string) => void}} WeekAheadProps
+    blocked: (why: string) => void, openFile: (path: string) => void}} WeekAheadProps
     `others`: the quiet line's count of overdue items owned by others and the Work address it opens. */
 
 /** @param {Record<string, string> | undefined} o @returns {Record<string, string>} */
@@ -40,6 +44,21 @@ function Kind({ kind }) {
   return <span class="wkic" aria-hidden="true">{kind === "milestone" ? <Diamond /> : <Icon name={kind === "raid" ? "alert" : kind === "decisions" ? "chat" : "check"} />}</span>;
 }
 
+/** The Prep chip with its peek. @param {{c: WkChip, openFile: (path: string) => void}} props */
+function PrepChip({ c, openFile }) {
+  const pk = usePeek(), id = `wkpk-${c.day}-${c.start}`.replace(/[^\w-]/g, "");
+  const bits = [`${c.day.slice(8)}-${c.day.slice(5, 7)} ${c.start}`, c.pname || "", "Internal"].filter(Boolean);
+  return (
+    <span class="wkpk" onFocusOut={pk.onFocusOut}>
+      <button type="button" ref={/** @type {any} */ (pk.trigger)} class={`wkchip${c.made ? " made" : ""}`} data-prepgo={c.key} data-prepgoday={c.day} aria-label={c.aria}
+        aria-haspopup="dialog" aria-expanded={pk.open ? "true" : "false"} aria-controls={pk.open ? id : undefined}
+        aria-disabled={c.live ? undefined : "true"}>{c.label}</button>
+      {pk.open ? <PrepPeek mkey={c.key} day={c.day} title={c.title} bits={bits} page={c.page} pageWhen={c.pageWhen} live={c.live} id={id}
+        panel={pk.panel} onEsc={() => pk.shut(true)} open={openFile} /> : null}
+    </span>
+  );
+}
+
 /** One row. @param {{r: WkRow, hidden: boolean, p: WeekAheadProps}} props */
 function WkLine({ r, hidden, p }) {
   const meeting = r.kind === "meeting";
@@ -51,16 +70,13 @@ function WkLine({ r, hidden, p }) {
         {r.open ? <a class="t" href="#" {...dataOf(r.open)}>{r.t}</a> : <span class="t">{r.t}</span>}
         {r.who || r.p ? <span class="wkwho">{r.who || ""}{r.who && r.p ? " · " : ""}{r.p ? <a class="s" href="#" data-cock={r.p}>{r.pname || r.p}</a> : null}</span> : null}
       </div>
-      {r.chip ? (r.chip.made
-        ? <button type="button" class="wkchip made" data-prepgo={r.chip.key} data-prepgoday={r.chip.day} aria-label={r.chip.aria}
-            aria-disabled={r.chip.live ? undefined : "true"} data-tip={r.chip.live ? undefined : "Needs the live server"}>{r.chip.label}</button>
-        : <button type="button" class="wkchip" aria-label={r.chip.aria} {...dataOf(r.chip.data)}>{r.chip.label}</button>) : null}
+      {r.chip ? <PrepChip c={r.chip} openFile={p.openFile} /> : null}
       {r.why ? <span class={`wkwhy${r.whyTone ? " " + r.whyTone : ""}`}>{r.why}</span> : null}
       <span class="tacts">
         {r.acts.map(a => (
           <IconButton icon={a.icon} label={a.label} name={a.name} primary={a.primary} why={a.why} data={{ wkact: a.id, ...(a.data || {}) }}
             onBlocked={() => p.blocked(a.why || "")}
-            onClick={a.data && a.data.prepday ? undefined : e => p.onAct(r, a, /** @type {HTMLElement} */ (e.currentTarget))} />
+            onClick={e => p.onAct(r, a, /** @type {HTMLElement} */ (e.currentTarget))} />
         ))}
       </span>
     </li>

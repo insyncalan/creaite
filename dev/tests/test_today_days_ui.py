@@ -211,7 +211,9 @@ class DayLine(TodayFixture):
     def popup(self, ix=0):
         """Tab-focus the title of meeting `ix` and read its popup."""
         b = self.b
+        b.call("Emulation.setFocusEmulationEnabled", enabled=True)      # #143: keyboard focus opens a peek only on a focused page (:focus-visible)
         b.eval("document.activeElement && document.activeElement.blur()")
+        b.key("Tab")                                                    # keyboard modality, so the script's focus() is :focus-visible after a mouse click
         b.eval(f"document.querySelectorAll('#dayMeets .dmti')[{ix}].focus()")
         b.wait("document.querySelector('#dayMeets .dmpop')")
         return b.eval("""(()=>{ const p=document.querySelector('#dayMeets .dmpop'); return {head:p.querySelector('h4').textContent, meta:p.querySelector('.pm').textContent,
@@ -224,26 +226,23 @@ class DayLine(TodayFixture):
         self.assertEqual(today["ABC risk review Example Programme"], [])
         self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .preplink, #dayMeets .mnote').length"), 0)
         got = self.popup(1)
-        self.assertEqual((got["head"], got["btns"]), ("ABC risk review", ["Prepare"]))
+        self.assertEqual((got["head"], got["btns"]), ("ABC risk review", ["Open the prep page"]))
         self.assertIn("Worth preparing", got["text"])                                             # a review meeting says why
-        self.assertEqual(self.popup(0)["btns"], ["Prepare"])
+        self.assertEqual(self.popup(0)["btns"], ["Open the prep page"])
         b.click('#todayDate [data-tab="2026-10-14"]')
         board = b.eval("""(()=>{ const d=document.querySelector('#dayMeets .dm'); return {text:d.innerText, proj:!!d.querySelector('[data-proj]'),
             wh:!!d.querySelector('.wh'), pill:!!d.querySelector('.preplink')}; })()""")
         self.assertEqual(board, {"text": board["text"], "proj": False, "wh": False, "pill": False})
         self.assertNotIn("Room 7", board["text"])                                                   # only its title and times
         conf = self.popup(0)
-        self.assertEqual((conf["btns"], "Room 7" in conf["text"], "Example Programme" in conf["text"]), (["Prepare"], False, False))
+        self.assertEqual((conf["btns"], "Room 7" in conf["text"], "Example Programme" in conf["text"]), (["Open the prep page"], False, False))
         b.click('#todayDate [data-tab="2026-10-16"]')
         got = self.popup(0)
-        self.assertEqual((got["head"], got["meta"].startswith("Friday 10:00"), got["btns"]), ("ABC steering", True, ["Prepare"]))
-        b.click("#dayMeets .dmpop .btn.primary")
-        b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open")
-        # the Prep popup's header (BL-286 A, joined on release-190): the day written out, the project as a chip
-        self.assertEqual(b.eval("document.getElementById('prepWhen').textContent"), "Friday 16th October · 10:00 – 11:00 · Teams")
-        self.assertEqual(b.eval("document.getElementById('prepTitle').textContent"), "ABC steering")
-        self.assertEqual(b.eval("document.getElementById('prepProjBtn').dataset.code"), "ABC")   # three days out, its project known
-        self.assertIsNone(b.eval("document.querySelector('#prepDlg [data-prepview]').getAttribute('aria-disabled')"))
+        self.assertEqual((got["head"], got["meta"].startswith("Friday 10:00"), got["btns"]), ("ABC steering", True, ["Open the prep page"]))
+        self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop [data-prepgo]').getAttribute('aria-disabled')"), None)
+        b.click("#dayMeets .dmpop .btn.primary")                                                    # #111: the peek goes to the page, never the old popup
+        b.wait("location.hash.startsWith('#prep=2026-10-16')||decodeURIComponent(location.hash).startsWith('#prep=2026-10-16|10:00|ABC steering')")
+        self.assertFalse(b.eval("!!document.getElementById('prepDlg') && document.getElementById('prepDlg').open"))
 
     def test_a_past_day_has_no_popup_and_a_private_meeting_none(self):
         b = self.b
@@ -252,16 +251,16 @@ class DayLine(TodayFixture):
         b.click('#todayDate [data-tab="2026-10-13"]')
         b.eval("document.querySelectorAll('#dayMeets .dmti')[0].focus()")
 
-    def test_a_saved_agenda_shows_open_agenda_prepare_again_and_open_the_file(self):
+    def test_a_saved_agenda_shows_agenda_saved_the_page_and_the_file(self):
         b = self.b
         b.click('#todayDate [data-tab="2026-10-16"]')
-        self.assertEqual(self.popup(0)["btns"], ["Prepare"])
+        self.assertEqual(self.popup(0)["btns"], ["Open the prep page"])
         b.eval(f"SA().prep_pages={{...(SA().prep_pages||{{}}),{json.dumps(fx.FRIDAY)}:'projects/ABC Example Programme/agendas/x.html'}}; renderDay(); document.activeElement.blur()")
         got = self.popup(0)
-        self.assertEqual(got["btns"], ["Open agenda", "Prepare again", "Open the file"])
+        self.assertEqual(got["btns"], ["Open the prep page", "Open the file"])
         self.assertIn("Agenda saved", got["text"])
         self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop [data-prepgo]').getAttribute('aria-disabled')"), None)   # enabled with the live server
-        self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop .btn.primary').textContent"), "Open agenda")
+        self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop .btn.primary').textContent"), "Open the prep page")
         b.key("Escape")
         b.wait("!document.querySelector('#dayMeets .dmpop')")
         self.assertTrue(b.eval("document.activeElement.classList.contains('dmti')"))
