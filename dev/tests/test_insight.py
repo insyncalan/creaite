@@ -186,6 +186,8 @@ def chrome(v, script, name="probe"):
     from test_dashboard import CHROME
     html = (v.root / "dashboard.html").read_text(encoding="utf-8")
     probe = v.root / f"{name}.html"
+    from test_dashboard import page_clock_js
+    html = html.replace("<head>", "<head>" + page_clock_js(), 1)       # #178: the page's clock follows CREAITE_NOW
     probe.write_text(html.replace("</body>", "<script>window.addEventListener('load',async()=>{try{" + script +
                                   "}catch(e){window.OUT={error:String(e&&e.stack||e)}} const p=document.createElement('pre');"
                                   "p.id='out';p.textContent=JSON.stringify(window.OUT);document.body.appendChild(p);});"

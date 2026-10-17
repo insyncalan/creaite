@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -28,6 +28,30 @@ def _today():
     """Today for the sample data: CREAITE_NOW's day when it is set (as the scripts read it), else the real one."""
     fixed = os.environ.get("CREAITE_NOW")
     return date.fromisoformat(fixed[:10]) if fixed else date.today()
+
+
+def today():
+    """The shared test clock (#178): today's date, following CREAITE_NOW at the call, else the real one. Use it, never date.today()."""
+    return _today()
+
+
+def now():
+    """The shared test clock as a datetime: CREAITE_NOW's moment when set ("YYYY-MM-DD HH:MM"), else the real time."""
+    fixed = os.environ.get("CREAITE_NOW")
+    return datetime.strptime(fixed[:16], "%Y-%m-%d %H:%M") if fixed else datetime.now()
+
+
+def pinned_now():
+    """CREAITE_NOW as "YYYY-MM-DD HH:MM" when set, else None: what a Chrome test hands pin_page_clock."""
+    fixed = os.environ.get("CREAITE_NOW")
+    return fixed[:16] if fixed else None
+
+
+def page_clock_js(stamp=None):
+    """The page clock's script as a <script> tag (for a page loaded without a browser driver), "" when nothing is pinned."""
+    from page_result import clock_script
+    js = clock_script(stamp)
+    return "<script>" + js + "</script>" if js else ""
 
 
 TODAY = _today()

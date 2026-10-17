@@ -146,6 +146,8 @@ class LiveBrowserCase(unittest.TestCase):
             try:
                 self.b.goto(self.base + "/")
                 self.b.wait("typeof go==='function' && LIVE")
+                if os.environ.get("CREAITE_NOW"):      # #178: the page's clock agrees with the pinned server and data
+                    pin_page_clock(self.b, os.environ["CREAITE_NOW"][:16])
                 break
             except ConnectionError:
                 self.b.close()

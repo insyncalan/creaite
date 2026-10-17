@@ -9,11 +9,25 @@ the script's own waits are real waits, which only gives such work more time, and
 (the real condition), with a limit long enough for a slow runner. What the page does and what the tests check are
 unchanged.
 """
+import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import cdp  # noqa: E402
+
+
+def clock_script(stamp=None):
+    """JS that pins a page's Date() and Date.now() to `stamp` ("YYYY-MM-DD HH:MM"; default CREAITE_NOW), running on from there; ""
+    when nothing is pinned (#178: a page and the server it reads agree on the day)."""
+    stamp = stamp or os.environ.get("CREAITE_NOW")
+    if not stamp:
+        return ""
+    t = datetime.strptime(stamp[:16], "%Y-%m-%d %H:%M")
+    return ("(()=>{ const R=Date, off=new R(%d,%d,%d,%d,%d).getTime()-R.now();\n"
+            "class D extends R{ constructor(...a){ if(a.length) super(...a); else super(R.now()+off); } static now(){ return R.now()+off; } }\n"
+            "window.Date=D; })();" % (t.year, t.month - 1, t.day, t.hour, t.minute))
 
 
 def page_result(url, timeout=120, width=800, height=600):
@@ -28,6 +42,8 @@ def page_result(url, timeout=120, width=800, height=600):
             if attempt == 2:
                 raise
     try:
+        if clock_script():
+            b.call("Page.addScriptToEvaluateOnNewDocument", source=clock_script())
         b.call("Page.navigate", url=url)   # the script runs as the page loads; nothing to wait for but its result
         try:
             b.wait("document.getElementById('result')", timeout)
