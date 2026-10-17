@@ -15,7 +15,7 @@ P="file://"+OUT+"pages/%s.html"
 SPEC=[("btn","files","#filesRefresh",["default","hover","focus","active","disabled"]),
 ("btn-primary","weekly",".btn.primary",["default","hover","focus","active","disabled"]),
 ("btn-quiet","files","#filesRefresh",["default","hover","focus","active"]),
-("mini","review",".mini",["default","hover","focus","active","disabled"]),
+("mini","today",".mini",["default","hover","focus","active","disabled"]),
 ("ib","activity",".ib.sm",["default","hover","focus","active"]),
 ("ib-bd","work","#moreBtn",["default","hover","focus","active"]),
 ("vchip","files","#fquick .vchip[aria-pressed=false]",["default","hover","focus","active"]),

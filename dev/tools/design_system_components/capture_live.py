@@ -57,6 +57,8 @@ try:
             dyn("command-palette","document.getElementById('cmdk').showModal()","#cmdk","document.getElementById('cmdk').close()",0)
             dyn("dialog-board","go('work');document.getElementById('boardDlg').showModal()","#boardDlg","document.getElementById('boardDlg').close()",0)
             dyn("dialog-generate","document.getElementById('genDlg').showModal()","#genDlg","document.getElementById('genDlg').close()",0)
+            dyn("ask-panel","document.getElementById('askBtn').click()","#chat","document.getElementById('chatClose').click()",0)
+            dyn("live-alert","go('today');document.getElementById('liveAlert').classList.add('on')","#liveAlert","document.getElementById('liveAlert').classList.remove('on')")
             dyn("dialog-person","document.getElementById('personDlg').showModal()","#personDlg","document.getElementById('personDlg').close()",0)
         tm(b,"light")
         json.dump(data,open(OUT+"live-data.json","w"))

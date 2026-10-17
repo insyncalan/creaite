@@ -85,6 +85,10 @@ def state_strip(key, order, label=""):
     return f'<div class="ds-states" aria-label="States of {esc(label or key)}">{"".join(cells)}</div>'
 
 
+def cell(label, html):
+    return f'<figure class="ds-cell">{html}<figcaption>{esc(label)}</figcaption></figure>'
+
+
 def comp(cid, title, cls, use, stage, measure="", extra="", dont="", strip=""):
     return f'''<article class="ds-comp" id="c-{cid}"><header><h3>{esc(title)}</h3><code>{esc(cls)}</code></header>
 <p class="ds-use">{use}</p><div class="ds-stage">{stage}</div>{strip}{('<p class="ds-meas">Measured: ' + esc(measure) + '</p>') if measure else ''}{extra}{('<p class="ds-dont"><b>Not for:</b> ' + dont + '</p>') if dont else ''}</article>'''
@@ -235,14 +239,14 @@ C.append(comp("type", "Headings and text", "h1 · h2 · h3 · .sub",
               dont="a heading made by hand from bold text."))
 C.append(comp("btn", "Button", ".btn  (.primary, .quiet)",
               "<b>.btn</b> is the standard action. <b>.btn.primary</b> is the one main action in a region (an accent fill; Approve, Add, Run). <b>.btn.quiet</b> is a text-style action with no border (accent text, soft fill on hover).",
-              '<div class="ds-row">' + S("btn") + S("btn-primary") + S("btn").replace('class="btn"', 'class="btn quiet"') + '</div>',
+              '<div class="ds-row">' + cell(".btn", S("btn")) + cell(".btn.primary", S("btn-primary")) + cell(".btn.quiet", S("btn").replace('class="btn"', 'class="btn quiet"')) + '</div>',
               "button " + M("btn") + " · primary " + M("btn-primary"),
               dont="two primaries side by side, or a primary for something that is not the main thing here.",
               strip=state_strip("btn", ["default", "hover", "focus", "active", "disabled"], "button") + state_strip("btn-primary", ["default", "hover", "focus", "active", "disabled"], "primary button") + state_strip("btn-quiet", ["default", "hover", "focus", "active"], "quiet button")))
 C.append(comp("mini", "Mini button", ".mini", "A compact action inside a dense row (Draft, Project, Details).",
               f'<div class="ds-row">{S("mini")}</div>', M("mini"), strip=state_strip("mini", ["default", "hover", "focus", "active", "disabled"], "mini")))
 C.append(comp("ib", "Icon button", ".ib  (.sm, .bd)", "A button that is only an icon. Always has an <code>aria-label</code> and a <code>data-tip</code> tooltip. <code>.sm</code> only makes the icon 16 px; <code>.bd</code> draws a border (use it in a control row, like the funnel).",
-              f'<div class="ds-row">{S("ib-sm")}{S("ib-bd")}{S("iconbtn")}</div>', M("ib-sm"),
+              f'<div class="ds-row">{cell(".ib.sm", S("ib-sm"))}{cell(".ib.bd (funnel)", S("ib-bd"))}{cell(".iconbtn", S("iconbtn"))}</div>', M("ib-sm"),
               dont="an unlabelled icon, or an icon whose meaning is not obvious without its tooltip in a place people use once.",
               strip=state_strip("ib", ["default", "hover", "focus", "active"], "icon button") + state_strip("ib-bd", ["default", "hover", "focus", "active"], "bordered icon button")))
 C.append(comp("seg", "Segmented control", ".seg", "Two to four mutually exclusive options that change how the same content is shown (List | Board).",
@@ -251,14 +255,14 @@ C.append(comp("vchip", "View pill", ".vchip", "A named view or a quick filter. O
               f'<div class="ds-row">{S("vchip")}</div>', "pill 28 px high · text 13 px · radius 12",
               strip=state_strip("vchip", ["default", "hover", "focus", "active"], "pill") + state_strip("vchip-on", ["default", "hover", "focus"], "selected pill")))
 C.append(comp("tags", "Tag, chip, count, file type, key hint", ".tag · .chip · .fchip · .badge · .ftype · kbd",
-              "Small labels. <code>.tag</code> is plain muted text by default (a status word); <code>.chip</code> is a small pill; <code>.fchip</code> is a removable filter; <code>.badge</code> is the rail's count only; <code>.ftype</code> marks a file kind; <code>kbd</code> shows a key.",
-              f'<div class="ds-row">{S("tag")}{S("chip")}{S("fchip")}{S("badge")}{S("ftype")}{S("kbd")}</div>',
+              "Small labels. <code>.tag</code> is plain muted text by default (a status word); <code>.chip</code> is a small pill; <code>.fchip</code> is a removable filter; <code>.badge</code> is the rail's count only (it only draws inside the side bar: see the side-bar item below); <code>.ftype</code> marks a file kind; <code>kbd</code> shows a key.",
+              f'<div class="ds-row">{cell(".tag", S("tag"))}{cell(".chip", S("chip"))}{cell(".fchip", S("fchip"))}{cell(".ftype", S("ftype"))}{cell("kbd", S("kbd"))}</div>',
               "tag " + M("tag") + " · chip " + M("chip") + " · fchip " + M("fchip"),
               dont="a count badge anywhere but the rail (use the count in text)."))
 C.append(comp("health", "Health", ".health", "The state of a project: icon, word and colour together (On track, At risk, Off track). Never colour alone.",
               f'<div class="ds-row">{S("health")}</div>', M("health")))
 C.append(comp("input", "Text input and select", "input · select", "Standard fields are 32 px high with an 8 px radius and 13 px text.",
-              f'<div class="ds-row">{S("input")}{S("select")}</div>', "input " + M("input") + " · select " + M("select"),
+              f'<div class="ds-row">{cell("input", S("input"))}{cell("select", S("select"))}</div>', "input " + M("input") + " · select " + M("select"),
               extra='<p class="ds-meas">Other field heights exist by context: the top-bar search is 36 px, the vault search 40 px, a date field inside a dense row 28 px.</p>',
               strip=state_strip("input", ["default", "hover", "focus", "disabled"], "input") + state_strip("select", ["default", "hover", "focus", "disabled"], "select")))
 C.append(comp("date", "Date field", ".dwrap  + the popup calendar", "Every date is a text field in DD-MM-YYYY with a calendar button; the button opens the popup calendar (below). Dates can also be typed in words in some fields.",
@@ -287,6 +291,8 @@ D.append(("toast", "Toast", "#snack  (.mtimer)", "Says what just happened, with 
 D.append(("peek-panel", "Peek", "#panel.peek", "An item opens over the right half of the page, editable in place. ⌘↵ saves and closes; Esc closes."))
 D.append(("dialog-customise-sidebar", "Dialog (Customise sidebar)", "dialog", "A centred card on a scrim for a short, self-contained job. Cancel and the one main action at the foot; Reset at the left when it applies."))
 D.append(("command-palette", "Command palette", "#cmdk", "⌘K: search, jump, and run commands."))
+D.append(("ask-panel", "ask creaite panel", "#chat", "The assistant opens over the page on the right and never squeezes it. Esc closes the panel but never stops a running request; only Stop stops it."))
+D.append(("live-alert", "Live-server alert", "#liveAlert.on", "Shown at the top of every page when the live server is not running: what is held, and how to restart it."))
 D.append(("dialog-board", "Dialog (small)", "dialog", "A short question with its answer buttons."))
 D.append(("dialog-generate", "Dialog (large)", "dialog", "A larger job with settings and a result (Generate current state)."))
 D.append(("dialog-person", "Dialog (form)", "dialog", "A form in a dialog: fields, then Cancel and the main action."))
@@ -376,7 +382,7 @@ table.ds-t{width:100%;border-collapse:collapse;background:var(--surface);border:
 .ds-icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}.ds-ic{display:grid;gap:6px;justify-items:center;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r-md);padding:12px 6px 8px;cursor:pointer;font:500 var(--fs-xs) var(--mono)}.ds-ic:hover{border-color:var(--accent);color:var(--accent)}.ds-ic svg{width:24px;height:24px}
 .ds-comp,.ds-pat{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;margin:0 0 16px}.ds-comp header,.ds-pat header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}.ds-pat header a{font-size:var(--fs-sm)}
 .ds-use{margin:6px 0 10px;max-width:80ch}.ds-stage{background:var(--bg);border:1px dashed var(--line);border-radius:var(--r-md);padding:18px}.ds-shotbox{display:flex;justify-content:center}.ds-shotbox img{max-width:100%;height:auto;max-height:560px}
-.ds-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.ds-col{display:grid;gap:12px}.ds-meas,.ds-dont{margin:10px 0 0;font-size:var(--fs-sm);color:var(--muted)}.ds-dont b{color:var(--bad)}
+.ds-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}.ds-cell{margin:0;display:grid;gap:6px;justify-items:start}.ds-cell figcaption{font:500 var(--fs-xs) var(--mono);color:var(--muted)}.ds-col{display:grid;gap:12px}.ds-meas,.ds-dont{margin:10px 0 0;font-size:var(--fs-sm);color:var(--muted)}.ds-dont b{color:var(--bad)}
 .ds-states{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}.ds-st{margin:0;display:grid;gap:4px;justify-items:center}.ds-st img{height:auto;max-width:260px;max-height:64px;border-radius:var(--r-sm)}.ds-st img.only-light{display:block}.ds-st img.only-dark{display:none}:root[data-theme=dark] .ds-st img.only-light{display:none}:root[data-theme=dark] .ds-st img.only-dark{display:block}.ds-st figcaption{font:500 var(--fs-2xs) var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .ds-pat-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;margin-top:10px}.ds-shot img{width:100%;height:auto;border:1px solid var(--line);border-radius:var(--r-md)}.ds-pat-text ol,.ds-pat-text ul{margin:0;padding-left:20px}.ds-pat-text li{margin:3px 0}.ds-pat-text details{margin-top:12px}.ds-pat-text pre{font:500 var(--fs-xs)/1.5 var(--mono);background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);padding:10px;overflow:auto;max-height:260px}
 .ds-main code{font:500 .92em var(--mono);background:var(--sunk);border-radius:var(--r-sm);padding:1px 5px}.ds-comp header code{background:none;padding:0}
@@ -426,6 +432,7 @@ html = f'''<!doctype html>
 <h3 style="margin:28px 0 8px">Floating and modal components (live screenshots)</h3>{dyn_html}<h3 style="margin:28px 0 8px">Composite pieces (live screenshots)</h3>{comp_html}</section>
 
 <section id="patterns"><h2 class="ds-h">Page patterns</h2><p class="ds-lead">Nine ways a creaite page is put together. Pick one; do not invent a tenth without saying why. Each links to the real screen and shows its skeleton from the running app.</p>{"".join(PAT)}
+<h3 style="margin:24px 0 8px">States every page has</h3><ul><li><b>Empty:</b> the <code>.empty</code> box (components) says what is missing and the next step.</li><li><b>Offline:</b> the live-server alert above, on every page.</li><li><b>Loading:</b> the stylesheet has no spinner or skeleton component (checked); a long job shows as steps in the ask creaite panel, or a <code>.prog</code> bar. Do not invent one.</li><li><b>Error:</b> an error banner (<code>.errbanner</code>) under the page banners, dismissible; a failed save says what to do.</li></ul>
 <p class="ds-meas">Not snapshotted because they need a meeting: the minutes view, the Prep page and the client report. They follow the Document pattern (a sheet on a tinted canvas with a bar above it).</p></section>
 
 <section id="interaction"><h2 class="ds-h">Interaction</h2><div class="ds-two"><div class="ds-box"><h3>Keys</h3><table class="ds-t"><tbody>{kbrows}</tbody></table></div><div class="ds-box"><h3>The one hover standard</h3><table class="ds-t"><tbody>{hrows}</tbody></table><p class="ds-meas">From <code>src/core/hover.js</code>. Keyboard focus opens a tooltip or card with no delay; Esc dismisses it and it stays shut until the pointer leaves.</p></div></div>
