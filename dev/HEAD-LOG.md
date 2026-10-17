@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | v2.2.0 SCOPE LOCKED at 22:40 (list on #135); Help Phase B is to go in as soon as possible (help-phase-b ae09002e pushed before its opus review so Team Cap can merge in parallel) | Alan: 'lock 2.2 now'; 'get the new help in asap' |
 | 17-10-2026 | Alan | v2.2.0 is trimmed to speed the release: items not yet started move to v2.3.0 (only #112 was unstarted, so only #112 moves); #179 and #180 (on hold) leave the release; all defects, the rail items and #186 stay in v2.2.0 (Jarvis read 'keep 186 in' as in v2.2.0) | Alan: 'review what has not started build in 2.2 and move it to 2.3 to accelerate the 2.2 release' |
 | 17-10-2026 | Alan | Intake (#179 step 1, #180 step 2, and #185 the combined page) is ON HOLD, low priority: no further work, not listed in digests until Alan raises it. intake-179 39e9d638 and intake-179-fix f04ef4bc stay local and unpushed | Alan: 'intake is on hold low priority' |
 | 17-10-2026 | Alan | #202 Weekly report banner: option A in the latest mockup (pm-intake-briefs cb72be85): hides at once on any down scroll, the slim bar stays, the full header returns only when the top of the report is at the top of the window and pushes the report down, no reveal on a slim-bar click; v2.2.0 | Alan confirmed the latest mockup |
