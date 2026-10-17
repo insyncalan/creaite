@@ -229,7 +229,8 @@ export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls =
      and takes no room (absolute), so heights and the saved text do not change when it appears. Where it floats is chosen so it hides as
      little as it can of what the person may need (the section's own heading, the last row of the table above, the next section's
      heading): above-left by default, then above-right, below-left, below-right, whichever covers the fewest controls (first on a tie),
-     checked on showing and whenever the bar changes size (the link form opening). The # and picture buttons need a host that has
+     checked on showing and whenever the bar changes size (a narrower window or a zoom change). The link form is #120's popover, outside the bar:
+     the focus goes into it, so the bar is put away while it is open and comes back with Esc. The # and picture buttons need a host that has
      pickers; a sheet has none, so they are not drawn (a client sheet never offers an internal item). */
   const [active, setActive] = useState(false);
   const [spot, setSpot] = useState(/** @type {BarSpot} */ ("al"));
