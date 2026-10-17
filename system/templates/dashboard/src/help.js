@@ -63,7 +63,7 @@ export function helpIndex(){ if(HIDX) return HIDX; const out=[], txt=el=>(el.tex
     else doc.querySelectorAll("section.hp-sec,section.hp-loop").forEach(e=>{ const h=e.querySelector("h2"); if(!h) return; add("start",h.id,txt(h),"start","[aria-labelledby="+h.id+"]","p,li,td,.hp-job span",[...e.querySelectorAll("p,li,td,.hp-job span")]); }); }
   HIDX=out; return out; }
 /** The best matches for q: [{e, score, li, line}], best first. Every word of q must be found, in the title or a line. */
-export function helpFind(q){ const qw=hWords(q); if(!qw.length) return []; const out=[];
+export function helpFind(q){ const qw=hWords(q).filter(w=>w.length>=2); if(!qw.length) return [];   /* a one-letter word ("a") is not searched for */ const out=[];
   for(const e of helpIndex()){ let tScore=0, ok=true;
     for(const w of qw){ const inT=e.tw.some(x=>hHit(w,x)); if(inT) tScore+=10; else if(!e.lw.some(l=>l.some(x=>hHit(w,x)))) { ok=false; break; } }
     if(!ok) continue;
@@ -71,7 +71,7 @@ export function helpFind(q){ const qw=hWords(q); if(!qw.length) return []; const
     out.push({e,score:tScore+best*3+(e.tab==="howto"?1:0),li,line:li<0?(e.lines[0]||""):e.lines[li]}); }
   return out.sort((a,b)=>b.score-a.score); }
 /** A line with the matching words marked (HTML), cut to about 170 characters around the first one. @param {string} line @param {string} q */
-export function helpMark(line,q){ const qw=hWords(q), re=/[\p{L}\p{N}]+/gu; let first=-1, o="", last=0;
+export function helpMark(line,q){ const qw=hWords(q).filter(w=>w.length>=2), re=/[\p{L}\p{N}]+/gu; let first=-1, o="", last=0;
   for(const m of line.matchAll(re)){ if(qw.some(w=>hHit(w,hNorm(m[0])))){ if(first<0) first=m.index; o+=esc(line.slice(last,m.index))+"<mark>"+esc(m[0])+"</mark>"; last=m.index+m[0].length; } }
   o+=esc(line.slice(last)); if(first<=60||line.length<=170) return line.length>170&&first<0?esc(line.slice(0,170))+"…":o;
   const cut=line.lastIndexOf(" ",first-40); if(cut<=0) return o; return "…"+helpMark(line.slice(cut+1),q); }

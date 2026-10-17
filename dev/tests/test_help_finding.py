@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_insight import chrome  # noqa: E402
+from live_browser import LiveBrowserCase  # noqa: E402
 from test_tracker import REPO, Vault  # noqa: E402
 
 sys.path.insert(0, str(REPO / "system" / "scripts"))
@@ -59,6 +60,23 @@ class DataTests(unittest.TestCase):
         self.assertEqual(bd.help_check([{"id": "nope"}], {"review": {"title": "Review", "ids": ["start-the-day", "gone"], "ref": "nope"}},
                                        self.tasks, {"review"}),
                          ["Jobs: nope", "Screen Review: gone", "Screen Review: Reference nope"])
+
+    def test_a_broken_screen_line_is_a_build_error_naming_the_line(self):
+        for bad in ("Screen: Review review-and-approve-proposals", "Screen: Review -> a, b | Reference: review extra"):
+            with self.assertRaises(ValueError) as cm:
+                bd.help_screens(bad + "\n")
+            self.assertIn(bad, str(cm.exception))
+        with self.assertRaises(ValueError) as cm:
+            bd.help_screens("Screen: Review -> a\nScreen: Review -> b\n")
+        self.assertIn("second Screen line for Review", str(cm.exception))
+        self.assertEqual(len(self.h["screens"]["files"]["ids"]), 1)                    # Files has one job, and the header says 1 to 5
+        self.assertIn("1 to 5 how-to ids", (REPO / "system" / "templates" / "help.md").read_text(encoding="utf-8")[:4000])
+
+    def test_an_outside_link_in_the_notes_is_a_link_that_cannot_reach_back(self):
+        ctx = bd._HelpCtx("dashboard", "whatsnew", "1.0.0", [])
+        h = bd._hp_inline('See [the site](https://example.com/a?b=1&c=2) and [x](https://e.com/"><script>)', ctx)
+        self.assertIn('<a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">the site</a>', h)
+        self.assertNotIn("<script>", h)
 
     def test_whats_new_is_a_fourth_tab_newest_first(self):
         self.assertEqual([t["id"] for t in self.h["tabs"]], ["start", "howto", "reference", "whatsnew"])
@@ -188,6 +206,28 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["ask"], [True, "zzqxv", ""])                                 # opens ask creaite with the words, no answer
         self.assertTrue(o["open"][0].startswith("#help-howto-"))
         self.assertEqual(o["open"][1:], [True, False, ""])
+
+    def test_a_one_letter_word_does_not_stop_a_search(self):
+        o = self.probe("""
+          const n=q=>helpFind(q).length;
+          out.n={undo:n("undo a mistake"),add:n("add a project"),plan:n("plan a meeting"),vip:n("what is a vip"),plain:n("undo mistake"),only:n("a"),mark:helpMark("Undo a mistake now","undo a mistake")};
+          out.top=helpFind("undo a mistake").slice(0,3).map(r=>r.e.target);
+          window.OUT=out;""")
+        for k in ("undo", "add", "plan", "vip", "plain"):
+            self.assertGreater(o["n"][k], 0, k)
+        self.assertEqual(o["n"]["only"], 0)
+        self.assertIn("howto-undo-a-mistake", o["top"])
+        self.assertIn("<mark>Undo</mark>", o["n"]["mark"])
+
+    def test_the_question_mark_does_nothing_while_a_dialog_is_open(self):
+        o = self.probe("""
+          go("review"); openCk(); const b=document.createElement("button"); $q("#cmdk").append(b); b.focus();
+          b.dispatchEvent(new KeyboardEvent("keydown",{key:"?",bubbles:true,cancelable:true}));
+          out.open=[$q("#cmdk").open,$q("#helpPanel").classList.contains("on"),VIEW];
+          $q("#cmdk").close(); document.activeElement.blur(); key("?"); out.after=$q("#helpPanel").classList.contains("on");
+          window.OUT=out;""")
+        self.assertEqual(o["open"], [True, False, "review"])
+        self.assertTrue(o["after"])
 
     def test_slash_focuses_the_search_in_help_and_is_ask_creaite_elsewhere(self):
         o = self.probe("""
@@ -359,6 +399,31 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["tab"][6], 0)
         self.assertEqual(o["deep"], ["whatsnew-2-1-0", "#help-whatsnew-2-1-0"])
         self.assertTrue(o["search"])
+
+
+class RealClickTests(LiveBrowserCase):
+    """The first-visit line with real clicks (CDP): going to another screen shows that screen's line, not a cleared one."""
+    shared_server = True
+    width, height = 900, 900
+
+    def line(self):
+        self.b.pump(0.4)
+        return self.b.eval("(()=>{ const l=document.getElementById('hFirst'); return [!l.hidden, l.dataset.k||'', "
+                           "localStorage.getItem('creaite-help-line-work'), localStorage.getItem('creaite-help-line-today')]; })()")
+
+    def test_a_rail_click_to_another_screen_shows_that_screens_line(self):
+        b = self.b
+        b.eval("S.helpLine=true; go('today')")
+        b.pump(0.4)
+        b.eval("localStorage.removeItem('creaite-help-line-today'); localStorage.removeItem('creaite-help-line-work'); helpScreenSync()")
+        self.assertEqual(self.line()[:2], [True, "today"])
+        b.click(".rail #railMain [data-v=work]")
+        shown, key, work, today = self.line()
+        self.assertEqual((shown, key), (True, "work"))                                  # Work's line is up and not yet marked seen
+        self.assertIsNone(work)
+        self.assertEqual(today, "1")                                                    # Today's was cleared by the click
+        b.click("#v-work h1")                                                            # a click on the page clears Work's
+        self.assertEqual(self.line()[:3], [False, "work", "1"])
 
 
 if __name__ == "__main__":

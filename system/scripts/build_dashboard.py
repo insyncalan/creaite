@@ -1046,6 +1046,8 @@ def _hp_inline(t, ctx, chips=False):
         else:
             s = _hp_esc(seg)
             s = re.sub(r"\[\[(.+?)\]\]", r"<kbd>\1</kbd>", s)
+            s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s\"'<>]+)\)",
+                       lambda m: f'<a href="{m.group(2)}" target="_blank" rel="noopener noreferrer">{m.group(1)}</a>', s)   # #158: an outside link
             s = re.sub(r"\[([^\]]+)\]\((#[^)]+)\)", lambda m: ctx.link(m.group(1), m.group(2)[1:]), s)
             out.append(re.sub(r"\*\*(.+?)\*\*", r'<b class="ui">\1</b>', s))
     return "".join(out)
@@ -1253,8 +1255,13 @@ def help_screens(text=None):
         f = paths.TEMPLATES / "help.md"
         text = f.read_text(encoding="utf-8") if f.exists() else ""
     out = {}
-    for m in re.finditer(r"^Screen:\s*(.+?)\s*(?:->|\u2192)\s*([^|\n]+?)\s*(?:\|\s*Reference:\s*(\S+))?\s*$", text, re.M):
+    for line in re.findall(r"^Screen:.*$", text, re.M):
+        m = re.fullmatch(r"Screen:\s*(.+?)\s*(?:->|\u2192)\s*([^|\n]+?)\s*(?:\|\s*Reference:\s*([a-z0-9-]+))?\s*", line)
+        if not m:
+            raise ValueError(f"help.md: a Screen line is not 'Screen: Name -> id, id | Reference: id': {line}")
         key = m.group(1).strip().lower()
+        if key in out:
+            raise ValueError(f"help.md: a second Screen line for {m.group(1).strip()}: {line}")
         out[key] = {"title": m.group(1).strip(), "ids": [i.strip() for i in m.group(2).split(",") if i.strip()],
                     "ref": m.group(3) or ""}
     return out

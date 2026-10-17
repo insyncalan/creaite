@@ -50,7 +50,7 @@ document.addEventListener("keydown",e=>{
   if((e.key==="n"||e.key==="N")&&!e.shiftKey&&!document.querySelector("dialog[open]")){ e.preventDefault(); openCapture(); return; }   /* BL-301 C (Alan, 14-10-2026): N, the second key for a note: ⌘⇧N is Chrome's incognito window in an ordinary tab */   /* / is always ask creaite, on every page (Alan, 2026-10-09) */
   if((e.key==="f"||e.key==="F")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: F opens the field picker */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
-  if(e.key==="?"){ e.preventDefault(); if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
+  if(e.key==="?"){ e.preventDefault(); if(document.querySelector("dialog[open]")) return; if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
   if((e.key==="["||e.key==="]")&&shared.VIEW==="cockpit"){ e.preventDefault(); switchProject(e.key==="]"?1:-1); return; }
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
   if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */

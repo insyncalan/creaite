@@ -1282,12 +1282,11 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 /* the Reference tab: a side index and the sections, in the same type */
 .hp-reflay{display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
 .hp-refidx{position:sticky;top:60px;max-height:calc(100vh - 100px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding-right:4px}
-.hp-refidx input{height:34px;border:1px solid var(--hp-hair);border-radius:var(--r-xl);padding:0 14px;background:var(--hp-paper);color:var(--hp-ink);font:inherit;font-size:var(--fs-md);width:100%}
 .hp-refidxg{display:flex;flex-direction:column;gap:2px} .hp-refidxg .hp-eyebrow{margin-bottom:4px}
 .hp-refidx a{display:block;padding:4px 10px;border-radius:var(--r-md);text-decoration:none;color:var(--hp-ink);font-size:var(--fs-md);line-height:1.4} .hp-refidx a:hover,.hp-refidx a[aria-current]{background:var(--hp-teal-soft)}
 .hp-refgroup{font:500 var(--fs-xs)/1 var(--hp-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--hp-teal);margin:32px 0 14px} .hp-refgroup:first-child{margin-top:0}
 .hp-reflead{color:var(--hp-soft);font-size:var(--fs-lg);max-width:66ch;margin:0 0 20px}
-.hp-ref{margin-bottom:24px;scroll-margin-top:64px} .hp-ref.hidden{display:none}
+.hp-ref{margin-bottom:24px;scroll-margin-top:64px}
 .hp-wrap.hp-wrap .hp-ref h2{font-size:var(--fs-xl);margin-bottom:8px}
 .hp-ref ul,.hp-ref ol{margin:0 0 4px;padding-left:1.25em;display:flex;flex-direction:column;gap:6px} .hp-ref li{max-width:80ch;font-size:var(--fs-lg)} .hp-ref p{max-width:80ch;font-size:var(--fs-lg);margin-bottom:6px}
 .hp-ref .tbl{background:var(--hp-paper);border-color:var(--hp-hair);border-radius:var(--r-lg);margin:6px 0} .hp-ref td{border-bottom-color:var(--hp-hair);font-size:var(--fs-lg)} .hp-ref td:first-child{width:36%}
@@ -41277,6 +41276,7 @@ ${s5}`;
       }
       if (e4.key === "?") {
         e4.preventDefault();
+        if (document.querySelector("dialog[open]")) return;
         if (helpPanelOpen()) {
           closeHelpPanel();
           return;
@@ -57576,7 +57576,7 @@ ${d5.text}`);
     return out;
   }
   function helpFind(q5) {
-    const qw2 = hWords(q5);
+    const qw2 = hWords(q5).filter((w6) => w6.length >= 2);
     if (!qw2.length) return [];
     const out = [];
     for (const e4 of helpIndex()) {
@@ -57603,7 +57603,7 @@ ${d5.text}`);
     return out.sort((a5, b5) => b5.score - a5.score);
   }
   function helpMark(line, q5) {
-    const qw2 = hWords(q5), re2 = /[\p{L}\p{N}]+/gu;
+    const qw2 = hWords(q5).filter((w6) => w6.length >= 2), re2 = /[\p{L}\p{N}]+/gu;
     let first = -1, o5 = "", last = 0;
     for (const m5 of line.matchAll(re2)) {
       if (qw2.some((w6) => hHit(w6, hNorm(m5[0])))) {
@@ -58008,21 +58008,33 @@ ${d5.text}`);
     }
     line.hidden = false;
   }
-  function firstLineClear() {
+  function firstLineClear(only) {
     const line = $("#hFirst");
+    if (only && (!line || line.hidden || line.dataset.k !== only)) {
+      lineMark(only);
+      return;
+    }
     if (!line || line.hidden) return;
     const k5 = line.dataset.k;
     line.hidden = true;
     if (k5) lineMark(k5);
   }
+  var showing = () => {
+    const l6 = $("#hFirst");
+    return l6 && !l6.hidden ? l6.dataset.k || "" : "";
+  };
   function bootHelpScreen() {
     node("hFirst", "hfirst");
     node("hFoot", "hfoot");
     document.addEventListener("keydown", (e4) => {
       if (["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(e4.key)) return;
-      setTimeout(firstLineClear, 0);
+      const k5 = showing();
+      if (k5) setTimeout(() => firstLineClear(k5), 0);
     }, true);
-    document.addEventListener("click", () => setTimeout(firstLineClear, 0), true);
+    document.addEventListener("click", () => {
+      const k5 = showing();
+      if (k5) setTimeout(() => firstLineClear(k5), 0);
+    }, true);
     document.addEventListener("click", (e4) => {
       const t47 = (
         /** @type {HTMLElement} */
@@ -70953,6 +70965,7 @@ ${d5.text}`);
         "healthFacts",
         "helpFind",
         "helpGo",
+        "helpMark",
         "helpNorm",
         "helpScreenSync",
         "hideSnack",
