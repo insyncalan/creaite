@@ -4,6 +4,12 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | Theme names (Notion, Linear, Cursor palettes): leave them | Alan's answer to the radar's Needs Alan list |
+| 17-10-2026 | Alan | Parked items (#183, #181 to #185, #112, and similar) are on hold: Jarvis does not discuss or list them until Alan raises them again | Alan: 'do not discuss until I raise them again' |
+| 17-10-2026 | Alan | #175 guarded proposal (notes-175-guarded-proposal caeaea94): YES to all six yes/no answers | Alan's answer to the radar |
+| 17-10-2026 | Alan | The narrower expanded rail (224 to 188 px, #198) ships in v2.2.0 (this reverses my earlier correction: the rail was meant after all) | Alan: 'Rail width (#156/#182) in v2.2.0' |
+| 17-10-2026 | Alan | #153 Draft email: the two leftover 'Chase' labels are renamed to Draft email; 'I sent it' updates every sent item with the fact that the chase has been sent | Alan's answer to the radar |
+| 17-10-2026 | Alan | #132 AI models: all approved, including G1c (round 1 item 3) | Alan: '132 - All approved' |
 | 17-10-2026 | Alan | Correction: 'put it in 2.2' meant the run usage monitor (#197), now v2.2.0 (was v2.1.1); the narrower rail (#198) is NOT placed in v2.2.0 and its release is open again | Jarvis misread Alan's message and corrected after Alan said so |
 | 17-10-2026 | Alan | The narrower expanded rail (224 to 188 px) ships in v2.2.0 as #198 (Jarvis read Alan's 'put it in 2.2' as the open rail-width question on #156; Alan to correct if he meant something else) | Alan: 'let's put it in 2.2' |
 | 17-10-2026 | Alan | Run usage monitor (#197) goes in v2.1.1; Team Stark prepares the guarded live_server.py diff (two hooks) with a plain-English README for Alan's review; nothing is applied until he approves the diff | Alan's decision, relayed by the Product Manager |
