@@ -687,7 +687,6 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
 .curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px} .rtegrp{display:inline-flex;gap:2px;flex:none}   /* a group (and the divider before it) wraps as one: no divider ends a line */
-.rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
 /* #110 (part A): Generate is 736px wide (460 x 1.6), 92vw at most; the body scrolls and the footer stays in view. Four quiet settings in one strip
@@ -3620,3 +3619,19 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
 @media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
+/* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
+.linkpop{position:fixed;z-index:221;width:320px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop,0 8px 24px rgba(0,0,0,.18));padding:10px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);color:var(--ink)}
+.linkpop label{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.linkpop input{height:30px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink);font:inherit;width:100%;box-sizing:border-box}
+.linkpop input:focus-visible,.linkpop button:focus-visible,.linkpop a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.linkpop input[aria-invalid=true]{border-color:var(--bad,#b3261e)}
+.linkpop input:disabled{color:var(--muted);background:var(--sunk)}
+.linkerr{min-height:0;color:var(--bad,#b3261e);font-size:12px} .linkerr:empty{display:none}
+.linkrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.linkpop button,.linkpop a.linkopen{height:28px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font:inherit;cursor:pointer;text-decoration:none}
+.linkpop button:hover,.linkpop a.linkopen:hover{background:var(--accent-soft)}
+.linkpop .linkgo{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.linkpop .linkgo:hover{filter:brightness(.95);background:var(--accent)}
+.linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
+.linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+@media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}

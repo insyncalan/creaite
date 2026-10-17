@@ -16,9 +16,10 @@
    code and tests that find it by them keep working. Each change to the document fires an "input" event on it, as typing in
    a contenteditable always did, so the places' own handlers (dirty flags, staging) are unchanged. Undo and redo are the
    editor's own (⌘Z, ⌘⇧Z); the places keep their own keys (⌘↵, Esc) and save paths. */
-import { createEditor, envelope, wrap, markdownOf, Mark, mergeAttributes, Plugin, PluginKey } from "tiptap";
+import { createEditor, envelope, wrap, markdownOf, Extension, Mark, mergeAttributes, Plugin, PluginKey } from "tiptap";
 import { addHTML, ic, raw } from "./dom.js";
 import { shared } from "./state.js";
+import { linkGuard, pasteLink, scrubNow } from "./editorLink.js";
 
 /** A transaction with this meta changes the document without counting as an edit (claim marks put on as it opens). */
 export const ED_QUIET="cxQuiet";
@@ -120,11 +121,15 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
   const content=load(plain?o.text:o.markdown);
   const props={ ...(o.editorProps||{}),
     handleKeyDown:(view,e)=>{ if(!multiline&&e.key==="Enter") return true; const f=/** @type {any} */ (o.editorProps||{}).handleKeyDown; return f?f(view,e):false; },
+    ...(plain?{}:{ handlePaste:(view,e)=>{ if(pasteLink(editor,/** @type {ClipboardEvent} */ (e),(m,u)=>{ if(ED_HOOKS.link) ED_HOOKS.link.toast(m,u); })) return true;
+        const f=/** @type {any} */ (o.editorProps||{}).handlePaste; return f?f(view,e):false; } }),
     ...(plain?{ transformPastedText:t=>multiline?t.replace(/\r\n?/g,"\n"):t.replace(/\s*[\r\n]+\s*/g," ") }:{}) };
   const editor=createEditor({ mount:el },{ features, ...content, injectCSS:false, editorProps:props,
     extensions:list=>{ const out=list.map(x=>x&&x.name==="image"?x.extend({ addNodeView:()=>figureView(o.imageSrc) })
+        :x&&x.name==="link"?x.extend({ inclusive:false })      // #120: typing after a link is outside it (a pasted or made link does not swallow the next word)
         :x&&x.name==="starterKit"&&headShift?x.configure({ heading:{ levels:[1,2,3] } }):x);      // a shifted host has the three levels it can store (typed #### is text)
-      return [...out,...(plain?[]:[ClaimMark]),...(o.extensions||[])]; } });
+      return [...out,...(plain?[]:[ClaimMark,Extension.create({ name:"cxLinkGuard", addProseMirrorPlugins:()=>[linkGuard(ED_QUIET)] })]),...(o.extensions||[])]; } });
+  if(!plain) scrubNow(editor,ED_QUIET);      /* #120: a refused address in the text it was opened with shows as plain text (quietly; an untouched text is still given back as it came) */
   const blank=()=>{ el.classList.toggle("blank",editor.isEmpty); };
   editor.on("transaction",({ transaction:tr })=>{ if(!tr.docChanged) return; blank(); if(tr.getMeta(ED_QUIET)) return; touched=true;
     el.dispatchEvent(new Event("input",{ bubbles:true })); });
@@ -141,6 +146,7 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
     destroy:()=>{ if(o.prop) delete /** @type {any} */ (el)[o.prop]; try{ editor.destroy(); }catch(e){ /* already gone with its page */ }
       if(/** @type {any} */ (el).cxed===h) delete /** @type {any} */ (el).cxed; } };
   /** @type {any} */ (el).cxed=h;
+  if(!plain&&ED_HOOKS.link) ED_HOOKS.link.attach(h);      /* #120: click a link for its popover; the link form (components/LinkPopover.jsx) */
   if(o.ai&&ED_HOOKS.ai) ED_HOOKS.ai(h,o.ai);      /* BL-301 D: the AI bar over a selection (components/AiSelect.jsx) */
   /* `prop` (a plain field that code reads and sets by a property, as the peek's do by textContent and Prep's by value, as
      its textarea had): that property of the element is the field's text, its lines joined by "\n", and setting it sets the
@@ -169,8 +175,8 @@ export function curDrop(){ const c=shared.CURED; if(c){ for(const k of ["ed1","e
 /* ===== BL-301 D (v20-ai-select) ===== AI on selected text: what an editor's selection holds, and putting a suggestion in its
    place as one transaction (one ⌘Z undoes it). The AI bar itself is components/AiSelect.jsx, which sets ED_HOOKS.ai at boot, so
    the core imports no component. */
-/** @type {{ai: null | ((h: EdHandle, ai: EdAi) => void)}} */
-export const ED_HOOKS={ ai:null };
+/** @type {{ai: null | ((h: EdHandle, ai: EdAi) => void), link: null | {attach: (h: EdHandle) => void, toast: (msg: string, undo: () => void) => void, open: (h: EdHandle) => void}}} */
+export const ED_HOOKS={ ai:null, link:null };
 /**
  * A range of an editor as the AI sees it. Inside one paragraph (or heading, or list line) it is that run of text (`inline`);
  * across paragraphs it widens to the whole blocks it touches, so a reply of whole blocks replaces whole blocks. A rich editor's

@@ -83,8 +83,12 @@ export * from "./components/notes/CaptureDrawer.jsx";   /* BL-301 C: the capture
 export * from "./stores/capture.js";
 export * from "./components/AiSelect.jsx";   /* BL-301 D: AI on selected text */
 export * from "./stores/aiEdit.js";
+export * from "./components/LinkPopover.jsx";   /* #120: links in the rich editors */
+export * from "./core/linkUrl.js";
+export * from "./core/editorLink.js";
 
 import { bootAiSelect } from "./components/AiSelect.jsx";
+import { bootLinkPopover } from "./components/LinkPopover.jsx";
 
 export * from "./components/peek/SneakPeek.jsx";   /* BL-322: Sneak peek */
 export * from "./components/peek/PeekProps.jsx";   /* BL-316: the peek's properties as Chips */
@@ -136,6 +140,7 @@ publish(page);
 bootDialogs();   /* BL-316: first, so every step after finds the dialogs' inner ids */
 bootTooltips();
 bootAiSelect();   /* BL-301 D: before any editor is made */
+bootLinkPopover();   /* #120: likewise */
 bootDevTag();
 bootRail0007();
 bootTheme();
