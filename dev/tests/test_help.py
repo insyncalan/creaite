@@ -53,8 +53,8 @@ class ParseTests(unittest.TestCase):
         cls.tab = {t["id"]: t["html"] for t in cls.h["tabs"]}
 
     def test_three_parts_in_order(self):
-        self.assertEqual([t["title"] for t in self.h["tabs"]], ["Start here", "How do I…", "Reference"])
-        self.assertEqual([t["id"] for t in self.h["tabs"]], ["start", "howto", "reference"])
+        self.assertEqual([t["title"] for t in self.h["tabs"]], ["Start here", "How do I…", "Reference", "What’s new"])   # #158: What's new is the fourth
+        self.assertEqual([t["id"] for t in self.h["tabs"]], ["start", "howto", "reference", "whatsnew"])
 
     def test_start_here_has_every_component(self):
         o = self.h["start"]
@@ -229,7 +229,7 @@ class PageTests(unittest.TestCase):
           out.parse=[parseHash("#help-start").arg,parseHash("#help-howto").arg,parseHash("#help-howto-undo-a-mistake").arg,parseHash("#help-howto-nope").arg,parseHash("#help-reference-search").arg,parseHash("#help").arg,parseHash("#help-howto").v];
           restoreNav(parseHash("#help-howto-undo-a-mistake")); await wait(30); out.deep=[VIEW,HELPARG,hashOf(navState())];
           window.OUT=out;""")
-        self.assertEqual(o["first"], ["help", "#help-start", "start", ["Start here", "How do I…", "Reference"]])
+        self.assertEqual(o["first"], ["help", "#help-start", "start", ["Start here", "How do I…", "Reference", "What’s new"]])
         self.assertEqual(o["howto"], ["#help-howto", "howto", True])
         self.assertEqual(o["reference"], ["#help-reference", "reference", True])
         self.assertEqual(o["back"], ["#help-howto", "howto"])
@@ -255,27 +255,23 @@ class PageTests(unittest.TestCase):
     def test_question_mark_opens_the_last_tab_used(self):
         o = self.probe("""
           const key=k=>document.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true}));
-          go("today"); key("?"); out.first=[VIEW,HELPARG];
-          helpGo("reference"); go("today"); key("?"); out.second=[VIEW,HELPARG,location.hash];
+          go("settings"); key("?"); out.first=[VIEW,HELPARG];      /* #158: Today and the other eight screens open the ? panel; a screen with no list opens Help */
+          helpGo("reference"); go("settings"); key("?"); out.second=[VIEW,HELPARG,location.hash];
           document.querySelector('[data-go=help]'); go("settings"); $q('#v-settings [data-go=help]').click(); out.settings=[VIEW,HELPARG];
           window.OUT=out;""")
         self.assertEqual(o["first"], ["help", "start"])
         self.assertEqual(o["second"], ["help", "reference", "#help-reference"])
         self.assertEqual(o["settings"], ["help", "reference"])
 
-    def test_the_vault_command_replaces_the_placeholder_and_reference_search_filters(self):
+    def test_the_vault_command_replaces_the_placeholder_and_a_section_address_jumps(self):
         o = self.probe("""
           go("help"); helpGo("reference"); const box=$q("#helpPane .cmdbox");
           out.cmd=[!!box, box&&box.textContent.includes("live_server.py"), $q("#helpPane").textContent.includes("[start command]")];
-          const n=$a("#helpPane .hp-ref").length; const q=$q("#helpQ"); q.value="hand over"; q.dispatchEvent(new Event("input",{bubbles:true}));
-          out.filtered=[n,$a("#helpPane .hp-ref:not(.hidden)").map(s=>s.dataset.ref)]; q.value=""; q.dispatchEvent(new Event("input",{bubbles:true})); out.cleared=$a("#helpPane .hp-ref.hidden").length;
+          out.noFilter=[!!$q("#helpPane #helpQ"), $a("#helpQ").length];      /* #158: the one search box is above the tabs, over all of Help */
           helpGo("reference-search"); await wait(200); const s=$q("#hr-search").getBoundingClientRect(); out.jump=[location.hash,s.top<innerHeight&&s.bottom>0,$q('.hp-refidx a[aria-current]')&&$q('.hp-refidx a[aria-current]').dataset.help];
           window.OUT=out;""")
         self.assertEqual(o["cmd"], [True, True, False])
-        self.assertEqual(o["filtered"][0], 36)                                 # 36 with Reports (BL-337) and the minutes view, report sheet and client view (v2.1.0 Stark docs); 28 with What the icons mean (BL-158); 29 with Milestones (BL-186); 30 with AI drafts; 31 with Notes (BL-301 B); 32 Find updates (BL-301 E)
-        self.assertIn("people", o["filtered"][1])
-        self.assertLess(len(o["filtered"][1]), 30)
-        self.assertEqual(o["cleared"], 0)
+        self.assertEqual(o["noFilter"], [False, 1])
         self.assertEqual(o["jump"], ["#help-reference-search", True, "reference-search"])
 
     def test_command_palette_finds_help(self):
@@ -283,14 +279,14 @@ class PageTests(unittest.TestCase):
           const key=(k)=>document.getElementById("cmdkIn").dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true}));
           const labels=q=>ckItems(q).filter(i=>i.g==="Help").map(i=>i.l);
           out.empty=[labels("").length, ckItems("").some(i=>i.g==="Help")];
-          out.task=ckItems("hand over someone").filter(i=>i.g==="Help").map(i=>[i.l,i.h]);
-          out.section=ckItems("early warn").filter(i=>i.g==="Help").map(i=>[i.l,i.h]);
+          out.task=ckItems("hand over someone").filter(i=>i.g==="Help"&&i.h==="How do I…").map(i=>[i.l,i.h]);   /* #158: the best three by line follow the title rows */
+          out.section=ckItems("early warn").filter(i=>i.g==="Help"&&i.h==="Reference").map(i=>[i.l,i.h]);
           const howdo=ckItems("how do i"), nt=HD.tasks.length; out.nt=nt; out.howdo=[howdo[0].l, howdo.slice(1,nt+1).every(i=>i.g==="Help"&&i.h==="How do I…"), howdo[1].l, howdo[nt].l];
-          const help=ckItems("help"); out.help=[help.slice(0,3).map(i=>i.l), help.filter(i=>i.g==="Help").length, help.findIndex(i=>i.l==="Help: Review"), help.findIndex(i=>i.l==="Help: Review and approve proposals")];
+          const help=ckItems("help"); out.help=[help.slice(0,3).map(i=>i.l), help.filter(i=>i.g==="Help"&&!i.h.includes("›")).length, help.findIndex(i=>i.l==="Help: Review"), help.findIndex(i=>i.l==="Help: Review and approve proposals")];
           out.hint=ckItems("how do i…").length>0;
           // choosing one, the way the palette does: type, arrow, Enter
           go("today"); openCk(); const box=document.getElementById("cmdkIn"); box.value="hand over someone"; box.dispatchEvent(new Event("input",{bubbles:true}));
-          out.shown=[...document.querySelectorAll("#cmdkList button")].map(b=>b.textContent.replace(/\\s+/g," ").trim()).filter(t=>t.startsWith("Help:"));
+          out.shown=[...document.querySelectorAll("#cmdkList button")].map(b=>b.textContent.replace(/\\s+/g," ").trim()).filter(t=>t.startsWith("Help:")&&t.endsWith("How do I…"));
           key("Enter"); await wait(60); out.picked=[VIEW,HELPARG,location.hash,[...document.querySelectorAll(".hp-hl")].map(e=>e.id),document.getElementById("cmdk").open];
           openCk(); box.value="early warnings"; box.dispatchEvent(new Event("input",{bubbles:true}));
           const at=CK.findIndex(i=>i.l==="Help: Early warnings"); CKI=at; key("Enter"); await wait(60);
@@ -302,7 +298,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["nt"], len(bd.help_sections()["tasks"]))
         self.assertEqual(o["howdo"], ["Help: How do I…", True, "Help: Start the day", "Help: Fix a stopped server and other problems"])   # the tab, then every task
         self.assertEqual(o["help"][0], ["Help: Start here", "Help: How do I…", "Help: Reference"])
-        self.assertEqual(o["help"][1], 3 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
+        self.assertEqual(o["help"][1], 4 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
         self.assertGreater(o["help"][3], 0)
         self.assertLess(o["help"][3], o["help"][2])                                    # tasks come before reference sections
         self.assertTrue(o["hint"])
@@ -434,7 +430,7 @@ class FirstVisitTests(unittest.TestCase):
 
 
 class GuideTests(unittest.TestCase):
-    """The standalone guides are generated from help.md: current, self-contained, linked, and drawn like the Help tabs."""
+    """The two printed cards (#158) are generated from help.md: current, self-contained, and drawn like the Help tabs."""
 
     @classmethod
     def setUpClass(cls):
@@ -454,15 +450,10 @@ class GuideTests(unittest.TestCase):
                 self.assertNotIn(bad, html, (name, bad))
             self.assertNotRegex(html, r"url\((?!data:)")                               # only embedded fonts, if any
 
-    def test_they_link_to_each_other(self):
-        self.assertIn('href="guide-how-to.html"', self.ondisk["guide-first-day.html"])
-        self.assertIn('href="guide-first-day.html"', self.ondisk["guide-how-to.html"])
-        self.assertNotIn("data-help", "".join(self.ondisk.values()))                    # file links, not dashboard tabs
-        how = self.ondisk["guide-how-to.html"]
-        ids = set(re.findall(r'<article class="hp-task" id="([^"]+)"', how))
-        self.assertGreaterEqual(len(ids), 16)
-        for target in re.findall(r'href="#([^"]+)"', how):
-            self.assertIn(target, ids)                                                  # every index link reaches a card
+    def test_the_cards_are_printed_pages_not_dashboard_links(self):      # #158: a first-day card and a top-12 card replace the two long guides
+        self.assertNotIn("data-help", "".join(self.ondisk.values()))
+        self.assertNotIn("href=", "".join(self.ondisk.values()))
+        self.assertIn("@page", self.ondisk["guide-how-to.html"])
 
     def test_they_draw_the_same_components_with_the_same_css(self):
         css = self.bg.components_css()
@@ -471,20 +462,15 @@ class GuideTests(unittest.TestCase):
         for html in self.ondisk.values():
             self.assertIn(css, html)                                                    # the very same rules as the Help tabs
         first, how = self.ondisk["guide-first-day.html"], self.ondisk["guide-how-to.html"]
-        h = bd.help_sections()
-        def norm(x):                                                                    # links are the only difference between modes
-            return re.sub(r'\s(data-help="[^"]*"|href="[^"]*"|id="(ht-)?[^"]*")', "", x)
-        self.assertIn(norm(h["tabs"][0]["html"]), norm(first))
-        self.assertIn(norm(h["tabs"][1]["html"]), norm(how))
         for html in (first, how):
             self.assertIn('fill="#F2B544"', html)                                       # the saffron record
             self.assertNotIn("M340.85 171.15", html)                                    # never the old teal c
-        for mark in ('class="hp-flow"', 'class="hp-steps"', 'class="hp-rhythm"', 'class="hp-views"', 'class="hp-phrases"', 'class="hp-rules"'):
+        for mark in ('class="hp-flow"', 'class="hp-steps"', 'class="hp-rules"'):
             self.assertIn(mark, first)
-        for mark in ('class="hp-index"', 'class="hp-tasks"', 'class="hp-where"', 'class="hp-or"'):
+        for mark in ('class="hp-top12"', 'class="hp-topjob"'):
             self.assertIn(mark, how)
-        self.assertIn("<title>creaite First Day</title>", first)
-        self.assertIn("<title>creaite How-To</title>", how)
+        self.assertIn("<title>creaite first-day card</title>", first)
+        self.assertIn("<title>creaite top-12 card</title>", how)
         self.assertIn("prefers-color-scheme:dark", first)                               # light and dark, as the artifacts have
         self.assertIn(':root[data-theme="dark"]', how)
 
@@ -498,7 +484,7 @@ class GuideTests(unittest.TestCase):
             self.addCleanup(shutil.rmtree, probe.parent, True)      # BL-172 (sprint-polish-2)
             probe.write_text(self.ondisk[name].replace("</body>", """<script>const lum=c=>{ const [r,g,b]=c.match(/[\\d.]+/g).slice(0,3).map(Number).map(v=>{ v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4); }); return 0.2126*r+0.7152*g+0.0722*b; };
               const ratio=(a,b)=>{ const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); }; const res={};
-              for(const mode of ["light","dark"]){ document.documentElement.dataset.theme=mode; for(const s of [".hp-eyebrow",".hp-lede",".hp-say",".hp-foot",".hp-where",".hp-or",".hp-stage p",".hp-rule span"]){ const el=document.querySelector(s); if(!el) continue;
+              for(const mode of ["light","dark"]){ document.documentElement.dataset.theme=mode; for(const s of [".hp-eyebrow",".hp-lede",".hp-say",".hp-foot",".hp-where",".hp-or",".hp-stage p",".hp-rule span",".hp-topjob span",".hp-topjob em",".hp-topjob b"]){ const el=document.querySelector(s); if(!el) continue;
                 let bg="rgb(255,255,255)"; for(let e=el;e;e=e.parentElement){ const c=getComputedStyle(e).backgroundColor; if(!/rgba\\(0, 0, 0, 0\\)/.test(c)){ bg=c; break; } } res[mode+"|"+s]=ratio(getComputedStyle(el).color,bg); } }
               const p=document.createElement("pre"); p.id="out"; p.textContent=JSON.stringify({res,scroll:document.documentElement.scrollWidth<=innerWidth+1}); document.body.appendChild(p);</script></body>"""))
             profile = tempfile.mkdtemp(prefix="creaite-chrome-")
@@ -511,7 +497,7 @@ class GuideTests(unittest.TestCase):
             import html as h
             data = json.loads(h.unescape(m.group(1)))
             self.assertTrue(data["scroll"], f"{name} scrolls sideways")
-            self.assertGreater(len(data["res"]), 10, name)
+            self.assertGreater(len(data["res"]), 6, name)
             self.assertEqual({k: round(v, 2) for k, v in data["res"].items() if v < 4.5}, {}, name)
 
 

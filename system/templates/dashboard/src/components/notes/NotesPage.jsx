@@ -246,6 +246,7 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
     <article class="ndoc empty">
       {noteLoading.value ? <p class="sub">Opening…</p> : <>
         <h2>{notesList.value.length ? "Pick a note on the left, or start a new one" : "No notes yet"}</h2>
+        <p class="sub"><a class="hhow" href="#help-reference-notes" data-hhow="notes">How Notes works</a></p>
         <p class="sub">Notes are your own working thinking: stakeholders, positions, lessons, a conversation. They stay internal and are never extracted on their own.</p>
       </>}
     </article>);

@@ -2,6 +2,7 @@
 /* work.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0030-work.js, 0031-bl-150-sprint-ux.js, 0032-bl-159-sprint-icons.js, 0033-bl-160-sprint-icons.js, 0034-after-bl-160-js.js, 0035-work-board-bl-103-sprint-4a.js, 0036-bl-128-sprint-work-views.js, 0037-decisions-board-bl-103-sprint-debug-log.js, 0038-bl-129-sprint-work-views.js, 0039-bl-130-sprint-work-views.js, 0040-bl-132-sprint-work-views.js, 0041-bl-131-sprint-work-views.js, 0130-person-rows-bl-68.js, 0131-bl-122-sprint-polish.js, 0132-bl-123-sprint-polish.js, 0133-bl-124-sprint-polish.js, 0147-bl-134-sprint-all-items.js, 0148-bl-138-sprint-all-items.js, 0149-bl-190-sprint-links.js, 0150-after-bl-190-people.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { linkHtml, linkWords } from "./core/linkText.js";
 import { drawFilterBar, fitFilterBar } from "./components/FilterBar.jsx";
@@ -205,7 +206,7 @@ export function renderWork(){ const fresh=!WINIT[shared.WT], dv=fresh?defaultVie
   renderApplied(items().length,L.length); renderLayoutBar();
   if(layoutOf(shared.WT)==="board"){ $("#workTbl").textContent=""; renderBoard(L); return; }
   $("#workBoard").textContent="";
-  putHTML($("#workTbl"),html`${raw(rowHead(shared.WT,C,s))}<tbody>${raw(listBody(shared.WT,C,L)||`<tr><td colspan="${C.length}"><div class="empty">${shared.WQ.trim()?`Nothing in this view matches “${esc(shared.WQ.trim())}”.`:"Nothing in this view."}</div></td></tr>`)}</tbody>`);
+  putHTML($("#workTbl"),html`${raw(rowHead(shared.WT,C,s))}<tbody>${raw(listBody(shared.WT,C,L)||`<tr><td colspan="${C.length}"><div class="empty">${shared.WQ.trim()?`Nothing in this view matches “${esc(shared.WQ.trim())}”.`:"Nothing in this view."} ${howLink("work")}</div></td></tr>`)}</tbody>`);
   rzApply(); sizeList(); })();
   { const total=items().length, shown=items().filter(x=>passes(x)).length, h=hiddenCount();
     const ht=h.n?` · ${h.n} ${h.closed?"closed ":""}hidden${h.closed?"":" by the status filter"}`:"", hs=$("#whidden"); if(hs) hs.textContent=ht;
@@ -403,7 +404,7 @@ export function renderBoard(L){ const t=shared.WT, sg=subOf(t,"board"), g=groupO
   const B=boardCols(t,L,g);
   if(B.pick){ BCUR={t,g,cols:[]}; putHTML(el,html`<div class="bpick"><b>Group by milestone needs one project.</b> Milestones belong to a project, so choose one: <select id="bpickP" aria-label="Project for the milestone board"><option value="">Choose a project</option>${P.map(p=>html`<option value="${p.code}">${p.name}</option>`)}</select></div>`); return; }
   BCUR={t,g,cols:B.cols}; let cols=B.cols; if(BHIDE[t]) cols=cols.filter(c=>c.items.length||c.hidden);
-  if(!L.length){ putHTML(el,html`<div class="empty">${shared.WQ.trim()?html`Nothing in this view matches “${shared.WQ.trim()}”.`:"Nothing in this view."}</div>`); return; }
+  if(!L.length){ putHTML(el,html`<div class="empty">${shared.WQ.trim()?html`Nothing in this view matches “${shared.WQ.trim()}”.`:"Nothing in this view."} ${raw(howLink("work"))}</div>`); return; }
   putHTML(el,raw(cols.map(c=>{ const k=bcKey(t,g,c.key), coll=!!BCOLL[k], n=c.items.length;
     return `<section class="bcol${coll?" collapsed":""}${c.drop?"":" nodrop"}" data-col="${esc(c.key)}"${coll?"":bwStyle(`${t}|${g}`,c.key)} aria-label="${esc(c.label)}, ${n} item${n===1?"":"s"}">
       <header class="bch"><button class="bcoll" type="button" data-bcoll="${esc(k)}" aria-expanded="${!coll}" aria-label="${coll?"Expand":"Collapse"} ${esc(c.label)}">${ic("chevdown","chev")}</button><h3>${esc(c.label)} · ${n}</h3></header>
@@ -734,7 +735,7 @@ export function hiddenCount(){ if(layoutOf(shared.WT)==="board") return {n:BCUR&
   if(!FX.st.size) return {n:0}; const out=items().filter(x=>passes(x,"st")&&!passes(x)); return {n:out.length,closed:out.every(x=>CLOSEDST[shared.WT].includes(x.st))}; }
 export const itemsWord=n=>`${n} item${n===1?"":"s"}`;
 export function emptyHtml(){ const F=activeFilters();
-  if(!F.length) return `<div class="wempty"><h2>Nothing here yet</h2></div>`;
+  if(!F.length) return `<div class="wempty"><h2>Nothing here yet</h2><div class="sub">${howLink("work")}</div></div>`;
   const rel=F.map(f=>({...f,n:items().filter(x=>passes(x,f.k)).length})), cl=withClosed();
   const head=F.length===1&&F[0].k==="q"?`Nothing in this view matches “${esc(shared.WQ.trim())}”`:`Nothing matches ${F.length===1?"this filter":`these ${F.length} filters`}`;
   return relaxHtml(head,rel,itemsWord,cl?`<div><span>Include closed items</span><span class="sub">${itemsWord(cl)}</span><button type="button" class="btn" data-relax="closed">Show</button></div>`:"","items"); }
@@ -1161,7 +1162,7 @@ export function renderPeople(){ const T=peopleTabs(), none=shared.PTAB==="none",
   const nameCell=x=>`<td class="title"><a href="#" class="plink2" data-person="${esc(x.name)}">${esc(isMe(x.name)?`You (${x.name})`:x.name)}</a>${x.p||isMe(x.name)?"":` <span class="tag warn" title="${none?"Seen on items but isn’t in the people register":"Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x.p&&x.p.org?esc(x.p.org):'<span class="sub">—</span>'}</td><td>${x.p&&x.p.role?esc(x.p.role):'<span class="sub">—</span>'}</td><td>${x.codes.map(pLink).join(" ")||'<span class="sub">—</span>'}</td>`;
   $("#peopleTbl").setAttribute("role","tabpanel");
-  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl||"—"))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
+  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl||"—"))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
     ${raw(personCounts(x))}</tr>`)}</tbody></table>`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0148(){

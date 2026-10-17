@@ -11,17 +11,18 @@ import { snack, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { drawPanel, PDAGE, pdAll, pdPut, pkNew, REC } from "./panel.js";
 import { hit } from "./work.js";
+import { openChat } from "./ask.js";
 /* ===== Help (BL-84) ===== */
 /* Three tabs from help.md (built by build_dashboard.help_sections): Start here, How do I… and Reference. Each has an
    address (#help-start, #help-howto, #help-howto-<task>, #help-reference, #help-reference-<section>), so Back and
    Forward work; "?" opens the tab used last. */
-export const HD=D.help&&D.help.tabs?D.help:{tabs:[],tasks:[],sections:[]}, HTABS=HD.tabs.map(t=>t.id);
+export const HD=D.help&&D.help.tabs?{jobs:[],screens:{},news:[],...D.help}:{tabs:[],tasks:[],sections:[],jobs:[],screens:{},news:[]}, HTABS=HD.tabs.map(t=>t.id);
 shared.HELPARG="start";
 export function helpNorm(a){ a=String(a||""); const i=a.indexOf("-"), tab=i<0?a:a.slice(0,i), rest=i<0?"":a.slice(i+1);
   if(!HTABS.includes(tab)) return null;
-  if(rest&&!(tab==="howto"?HD.tasks:tab==="reference"?HD.sections:[]).some(x=>x.id===rest)) return tab;
+  if(rest&&!(tab==="howto"?HD.tasks:tab==="reference"?HD.sections:tab==="whatsnew"?HD.news:[]).some(x=>x.id===rest)) return tab;
   return rest?`${tab}-${rest}`:tab; }
-export function renderHelp(arg){ if(!HD.tabs.length){ putHTML($("#helpPane"),html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`); return; }
+export function renderHelp(arg){ helpSearchClear(); if(!HD.tabs.length){ putHTML($("#helpPane"),html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`); return; }
   const a=helpNorm(arg)||helpNorm(store.get("creaite-help-tab","start"))||HTABS[0], i=a.indexOf("-"), tab=i<0?a:a.slice(0,i), rest=i<0?"":a.slice(i+1), changed=!$("#helpPane").dataset.tab||$("#helpPane").dataset.tab!==tab;
   shared.HELPARG=a; store.set("creaite-help-tab",tab);
   drawTabs($("#helpTabsHost"),{items:HD.tabs.map(t=>({id:t.id,label:t.title,tabId:"htab-"+t.id,data:{help:t.id}})),selected:tab,onSelect:helpGo,label:"Help",className:"tabs",id:"helpTabs",wrap:true});   /* BL-316: the Tabs block */
@@ -29,7 +30,7 @@ export function renderHelp(arg){ if(!HD.tabs.length){ putHTML($("#helpPane"),htm
     putHTML($("#helpPane"),raw(`<div class="hp-wrap hp-${tab}">${html}</div>`)); $("#helpPane").dataset.tab=tab; $("#helpPane").setAttribute("aria-labelledby","htab-"+tab); }
   $$("#helpPane .hp-task").forEach(t=>t.classList.toggle("hp-hl",!!rest&&tab==="howto"&&t.dataset.task===rest));
   $$("#helpPane .hp-refidx a").forEach(l=>l.toggleAttribute("aria-current",tab==="reference"&&l.dataset.help==="reference-"+rest));
-  const target=rest?(tab==="howto"?document.getElementById("ht-"+rest):document.getElementById("hr-"+rest)):null;
+  const target=rest?document.getElementById((tab==="howto"?"ht-":tab==="reference"?"hr-":"hn-")+rest):null;
   if(target){ target.scrollIntoView({block:"start"});   /* the embedded fonts can swap in after this and move it: go there again */
     if(document.fonts&&document.fonts.status!=="loaded") document.fonts.ready.then(()=>{ if(shared.HELPARG===a&&target.isConnected) target.scrollIntoView({block:"start"}); }); }
   else if(changed) $("#v-help").scrollTop=0; }
@@ -41,18 +42,75 @@ export let SEENBUSY=false;
 export async function markHelpSeen(){ if(S.helpSeen||SEENBUSY||!(viaServer()||shared.VSTATE==="ok")) return false; SEENBUSY=true;
   try{ if(await writeSettings({"help.start_seen":true})){ S.helpSeen=true; return true; } return false; } finally{ SEENBUSY=false; } }
 export function firstHelp(){ if(S.helpSeen||shared.HADHASH) return false; go("help","start"); markHelpSeen(); return true; }
-/* ⌘K: every task and reference section is an entry under "Help" ("Help: Hand over someone's work"); they appear once two
-   letters are typed, and choosing one opens its tab at that place */
+/* ===== #158 Phase B: one search over all of Help ===== */
+/* The index is built in the page from the text Help already holds (the tabs' HTML in D.help): no request, nothing sent. Each
+   entry is one page (a how-to, a Reference section, a release, a Start here section) with its lines. A search is whole words and
+   prefixes, case and accent blind; a plural finds the singular (and the other way round, by prefix). */
+const hNorm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const hWords=s=>hNorm(s).match(/[a-z0-9]+/g)||[];
+const hStems=w=>{ const c=[w]; if(w.length>3){ if(w.endsWith("ies")) c.push(w.slice(0,-3)+"y"); if(w.endsWith("es")) c.push(w.slice(0,-2)); if(w.endsWith("s")) c.push(w.slice(0,-1)); } return c; };
+const hHit=(qw,tw)=>hStems(qw).some(c=>c.length>=2&&tw.startsWith(c));
+export const HPARTS={start:"Start here",howto:"How do I…",reference:"Reference",whatsnew:"What’s new"};
+export const HGROUPS=["howto","reference","whatsnew","start"];
+let HIDX=null;
+/** @returns {{tab:string,part:string,id:string,title:string,target:string,box:string,sel:string,lines:string[],tw:string[],lw:string[][]}[]} */
+export function helpIndex(){ if(HIDX) return HIDX; const out=[], txt=el=>(el.textContent||"").replace(/\s+/g," ").trim();
+  const add=(tab,id,title,target,box,sel,els)=>{ const lines=els.map(txt).filter(Boolean); out.push({tab,part:HPARTS[tab],id,title,target,box,sel,lines,tw:hWords(title),lw:lines.map(hWords)}); };
+  for(const t of HD.tabs){ const doc=new DOMParser().parseFromString(t.html,"text/html");
+    if(t.id==="howto") doc.querySelectorAll(".hp-task").forEach(e=>{ const id=e.getAttribute("data-task"); add("howto",id,txt(e.querySelector("h3")),"howto-"+id,"#ht-"+id,".hp-where,li,.hp-or",[...e.querySelectorAll(".hp-where,li,.hp-or")]); });
+    else if(t.id==="reference") doc.querySelectorAll(".hp-ref").forEach(e=>{ const id=e.getAttribute("data-ref"); add("reference",id,txt(e.querySelector("h2")),"reference-"+id,"#hr-"+id,"p,li,td",[...e.querySelectorAll("p,li,td")]); });
+    else if(t.id==="whatsnew") doc.querySelectorAll(".hp-new").forEach(e=>{ const id=e.id.slice(3); add("whatsnew",id,txt(e.querySelector("h2")),"whatsnew-"+id,"#hn-"+id,"p,li",[...e.querySelectorAll("p,li")]); });
+    else doc.querySelectorAll("section.hp-sec,section.hp-loop").forEach(e=>{ const h=e.querySelector("h2"); if(!h) return; add("start",h.id,txt(h),"start","[aria-labelledby="+h.id+"]","p,li,td,.hp-job span",[...e.querySelectorAll("p,li,td,.hp-job span")]); }); }
+  HIDX=out; return out; }
+/** The best matches for q: [{e, score, li, line}], best first. Every word of q must be found, in the title or a line. */
+export function helpFind(q){ const qw=hWords(q); if(!qw.length) return []; const out=[];
+  for(const e of helpIndex()){ let tScore=0, ok=true;
+    for(const w of qw){ const inT=e.tw.some(x=>hHit(w,x)); if(inT) tScore+=10; else if(!e.lw.some(l=>l.some(x=>hHit(w,x)))) { ok=false; break; } }
+    if(!ok) continue;
+    let li=-1, best=0; e.lw.forEach((l,i)=>{ const n=qw.filter(w=>l.some(x=>hHit(w,x))).length; if(n>best){ best=n; li=i; } });
+    out.push({e,score:tScore+best*3+(e.tab==="howto"?1:0),li,line:li<0?(e.lines[0]||""):e.lines[li]}); }
+  return out.sort((a,b)=>b.score-a.score); }
+/** A line with the matching words marked (HTML), cut to about 170 characters around the first one. @param {string} line @param {string} q */
+export function helpMark(line,q){ const qw=hWords(q), re=/[\p{L}\p{N}]+/gu; let first=-1, o="", last=0;
+  for(const m of line.matchAll(re)){ if(qw.some(w=>hHit(w,hNorm(m[0])))){ if(first<0) first=m.index; o+=esc(line.slice(last,m.index))+"<mark>"+esc(m[0])+"</mark>"; last=m.index+m[0].length; } }
+  o+=esc(line.slice(last)); if(first<=60||line.length<=170) return line.length>170&&first<0?esc(line.slice(0,170))+"…":o;
+  const cut=line.lastIndexOf(" ",first-40); if(cut<=0) return o; return "…"+helpMark(line.slice(cut+1),q); }
+const hPlain=(line,n)=>line.length>n?line.slice(0,n-1)+"…":line;
+/** Open a result: its page, scrolled to the matching line (marked for a moment). */
+export function helpOpenHit(e,li){ helpSearchClear(); helpGo(e.target);
+  if(li>=0){ const box=document.querySelector("#helpPane "+e.box), el=box&&[...box.querySelectorAll(e.sel)].filter(x=>(x.textContent||"").trim())[li];
+    if(el){ el.classList.add("hp-found"); el.scrollIntoView({block:"center"}); setTimeout(()=>el.classList.remove("hp-found"),2600); } } }
+export function helpSearchClear(){ const q=$("#helpQ"); if(q&&q.value){ q.value=""; } const r=$("#helpResults"); if(r){ r.hidden=true; putHTML(r,raw("")); } const p=$("#helpPane"); if(p) p.hidden=false; }
+/** Draw the results for what is typed (or the page again when the box is empty). */
+export function helpSearchDraw(){ const q=$("#helpQ").value, r=$("#helpResults"), pane=$("#helpPane");
+  if(!q.trim()){ helpSearchClear(); return; }
+  const res=helpFind(q); pane.hidden=true; r.hidden=false; r.dataset.q=q;
+  if(!res.length){ putHTML(r,html`<div class="hp-none" role="status"><b>Nothing in Help for “${q.trim()}”</b><span>Try another word, or ask creaite.</span><button type="button" class="btn primary" id="helpAsk">ask creaite</button></div>`); return; }
+  let h=`<p class="hp-resn" role="status">${res.length} result${res.length===1?"":"s"}</p>`;
+  HGROUPS.forEach(g=>{ const grp=res.filter(x=>x.e.tab===g); if(!grp.length) return;
+    h+=`<section class="hp-resg" aria-label="${esc(HPARTS[g])}"><h3>${esc(HPARTS[g])}</h3>`+grp.map(x=>`<a class="hp-r" href="#help-${esc(x.e.target)}" data-hit="${HIDX.indexOf(x.e)}" data-li="${x.li}"><span class="hp-rt">${esc(x.e.title)}</span><span class="hp-rl">${helpMark(x.line,q)}</span></a>`).join("")+"</section>"; });
+  putHTML(r,raw(h)); }
+export function helpFocusSearch(){ const q=$("#helpQ"); if(q){ q.focus(); q.select(); } }
+/* ⌘K: the tabs, the how-tos and the Reference sections whose title matches, each under "Help" ("Help: Hand over someone's work"),
+   then the best three pages that match by a line ("Help: Reference › the matching line"); they appear once two letters are typed,
+   and choosing one opens its tab at that place */
 export function helpCk(q){ q=q.toLowerCase(); if(q.trim().length<2) return [];
-  const hit=(l,h)=>(l+" "+h).toLowerCase().includes(q), out=[];
+  const hit=(l,h)=>(l+" "+h).toLowerCase().includes(q), out=[], shown=new Set();
   HD.tabs.forEach(t=>{ if(hit("Help: "+t.title,"")) out.push({g:"Help",l:"Help: "+t.title,h:"",fn:()=>go("help",t.id)}); });
-  HD.tasks.forEach(t=>{ if(hit("Help: "+t.title,"How do I…")) out.push({g:"Help",l:"Help: "+t.title,h:"How do I…",fn:()=>go("help","howto-"+t.id)}); });
-  HD.sections.forEach(x=>{ if(hit("Help: "+x.title,"Reference")) out.push({g:"Help",l:"Help: "+x.title,h:"Reference",fn:()=>go("help","reference-"+x.id)}); });
+  HD.tasks.forEach(t=>{ if(hit("Help: "+t.title,"How do I…")){ shown.add("howto-"+t.id); out.push({g:"Help",l:"Help: "+t.title,h:"How do I…",fn:()=>go("help","howto-"+t.id)}); } });
+  HD.sections.forEach(x=>{ if(hit("Help: "+x.title,"Reference")){ shown.add("reference-"+x.id); out.push({g:"Help",l:"Help: "+x.title,h:"Reference",fn:()=>go("help","reference-"+x.id)}); } });
+  helpFind(q).filter(r=>!shown.has(r.e.target)&&r.li>=0).slice(0,3).forEach(r=>out.push({g:"Help",l:"Help: "+r.e.title,h:r.e.part+" › "+hPlain(r.line,90),
+    fn:()=>{ go("help",r.e.target); helpOpenHit(r.e,r.li); }}));
   return out; }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootHelp0091(){
 document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]:not([role=tab])"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help); });   /* the tabs are the Tabs block's (BL-316) */
-document.addEventListener("input",e=>{ if(e.target.id!=="helpQ") return; const q=e.target.value.toLowerCase().trim(); $$("#helpPane .hp-ref").forEach(s=>s.classList.toggle("hidden",!!q&&!s.textContent.toLowerCase().includes(q))); });
+document.addEventListener("input",e=>{ if(e.target.id==="helpQ") helpSearchDraw(); });   /* #158: one search over all of Help (replaces the Reference-only filter) */
+document.addEventListener("keydown",e=>{ if(e.target.id!=="helpQ") return;
+  if(e.key==="Escape"){ if(e.target.value){ e.stopPropagation(); helpSearchClear(); } }
+  else if(e.key==="Enter"){ const a=$("#helpResults a.hp-r"); if(a){ e.preventDefault(); a.click(); } } });
+document.addEventListener("click",e=>{ const a=e.target.closest("#helpResults a.hp-r"); if(a){ e.preventDefault(); const h=helpIndex()[+a.dataset.hit]; if(h) helpOpenHit(h,+a.dataset.li); return; }
+  if(e.target.closest("#helpAsk")){ const q=$("#helpQ").value.trim(); helpSearchClear(); openChat(); const i=$("#chIn"); if(i){ i.value=q; i.dispatchEvent(new Event("input",{bubbles:true})); i.focus(); } } });
 }
 /* ===== BL-155 (sprint-ux) ===== the key-hint line under Work's and Review's lists shows until the Keys chip was opened once in
    this browser (localStorage creaite-keys-seen). BL-175 (sprint-peek) removed the chip: Help lists the keys (the ? key), and a

@@ -1,5 +1,5 @@
 <!--
-creaite help. The one source for the dashboard's Help page (press ?, or Settings › Help), which has three tabs, and for
+creaite help. The one source for the dashboard's Help page (press ?, or Settings › Help), which has four tabs, and for
 the two printable guides, system/templates/guide-first-day.html and guide-how-to.html. Edit it here, then run
 python3 dev/tools/build_guides.py (a test fails while the guides are out of date). It reads as plain Markdown;
 `Cmd` on Mac, `Ctrl` on Windows. The few conventions the renderer understands:
@@ -15,6 +15,7 @@ python3 dev/tools/build_guides.py (a test fails while the guides are out of date
   with [text](#its-title-in-lower-case-with-hyphens), and to another part with [text](#how-do-i) or [text](#start-here).
 - Inline: **bold** is a button or label, `code` a command or path, ``double backticks`` a phrase to say. Single
   backticks are phrases too in "Or say:" lines and in the Say this table. [[K]] is a key.
+- Start here, The twelve jobs: a `Jobs:` line, then bullets `[Title](#page-id): one line`; every page id must exist. Lines `Screen: Review -> id, id | Reference: section-id` (2 to 5 how-to ids and the Reference section for a screen) feed the ? key panel and are not shown on the page. What's new is a fourth tab from `system/templates/help/whats-new.md`, copied in at release.
 - A line of --- at the end of a part, then lines of text, is its footer.
 - {version} becomes the installed version. A paragraph that is only [start command] becomes this vault's server command.
 
@@ -55,6 +56,35 @@ About an hour, most of it telling creaite about your projects and the people on 
 2. **Say "setup"**: Open the folder in Claude Code, connect Microsoft 365, and say ``setup``. It asks before each step: git, your name and role, projects, people, a memory file for each project, and the **creaite** launcher (say yes).
 3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.command` in the vault). It starts the live server and opens creaite in its own Chrome window. If you have no launcher yet: in Terminal, `system/scripts/run live_server.py`, then open the address it prints in Chrome or Edge, not Safari.
 4. **First sweep**: Let setup run the first sweep over the last 14 days, or press **Run the first sweep** on Today. Then open Review and approve what's right. Until set-up is done, Today shows a short checklist of these steps, each with its button. **Settings › Health › Set-up** runs the health check and rebuilds the views from the page, and says how to do the two things it can't (connect Microsoft 365, make the launcher), with **Copy** and **Check again**.
+
+## The twelve jobs
+
+*The jobs you will do most*
+
+Pick a job. Each link opens its steps.
+
+Jobs:
+- [Start the day](#start-the-day): See what needs you today.
+- [Review and approve proposals](#review-and-approve-proposals): Decide what creaite found.
+- [Turn a meeting into minutes](#turn-a-meeting-into-minutes): From a transcript to draft minutes.
+- [Prepare for a meeting](#prepare-for-a-meeting): A one-page brief for the next meeting.
+- [Capture a note](#capture-a-note): Write it down from any page.
+- [Add or change an item](#add-or-change-an-item): An action, risk, issue or decision.
+- [Ask someone for an update](#ask-someone-for-an-update): A draft email, never sent.
+- [Close the day](#close-the-day): Tidy up and plan tomorrow.
+- [Write the weekly report](#write-the-weekly-report): Health with reasons, ready to approve.
+- [Write a client report](#write-a-client-report): Only what is marked client-visible.
+- [Find anything](#find-anything): Search the vault, with sources.
+- [Undo a mistake](#undo-a-mistake): Every change has a way back.
+
+Screen: Today -> start-the-day, close-the-day, prepare-for-a-meeting | Reference: today
+Screen: Work -> add-or-change-an-item, move-work-on-the-board, change-an-item-from-k, hand-over-someones-work | Reference: working-with-lists
+Screen: Review -> review-and-approve-proposals, undo-a-mistake | Reference: review
+Screen: Projects -> update-a-projects-state-and-health, manage-milestones, write-the-weekly-report, keep-notes-on-a-project | Reference: project-page
+Screen: People -> ask-someone-for-an-update, hand-over-someones-work | Reference: people
+Screen: Notes -> capture-a-note, keep-notes-on-a-project, turn-a-note-into-tracker-changes | Reference: notes
+Screen: Intake -> turn-a-meeting-into-minutes, follow-a-meeting-from-invite-to-follow-up | Reference: intake
+Screen: Files -> find-anything | Reference: files
 
 ## Every day
 
@@ -571,11 +601,11 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 | Keys | Does |
 |---|---|
 | Cmd/Ctrl + K | Search or jump to anything: views (including Work views and your saved ones), projects, items, milestones, files, Intake and commands. On a project page it also offers that project's actions (generate or edit current state, add a milestone or image, edit health). Type a change in words ("move ABC-A-002 to fri") to see it before and after; Enter stages it, Cmd/Ctrl + Enter stages it and opens Review |
-| / or Cmd/Ctrl + J | ask creaite |
+| / or Cmd/Ctrl + J | ask creaite. In Help, / goes to Help's search box |
 | Cmd/Ctrl + Shift + N | A new note, from any page (the note drawer; Esc closes it and keeps the draft, Cmd/Ctrl + Enter is Done) |
 | N | A new note too, when you aren't typing in a box: the same drawer. Use it in an ordinary Chrome tab, where Cmd/Ctrl + Shift + N opens an incognito window |
 | / / | With an item open (outside a text field): **Sneak peek**, change it in words (Esc closes it; ↑ brings back the last instruction) |
-| ? | This help, on the tab you used last (Start here, How do I… or Reference) |
+| ? | A panel on the right with the jobs for this screen (Today, Work, Review, Projects, People, Notes, Intake, Files); Esc closes it. On any other screen, Help on the tab you used last |
 | Esc | Close the top thing: picker or calendar, an open item, ask creaite, palette. In a text field of an open item, puts the text back. In ask creaite's input, closes the chat (leaving the item as it was); a running request carries on, and only its Stop button stops it; focus goes back to where you were before you opened it. The message at the foot of the page: hides it when you are on it, or when nothing else is open |
 | J / K | Next or previous row in Work and Review; on a Work board, the next or previous card, column by column. With an item open, the next or previous item |
 | C | With an open action, risk, issue or pending decision: **Draft chase** (Esc goes back to the item) |
@@ -912,6 +942,7 @@ Where: Reports › a project › the client report · address `#client-report=`
 - They're in the Excel export too, on the Workstreams sheet, editable like the others.
 
 ## Search
+- **Search in Help** is the box at the top of Help (press [[/]] there). It looks through every page, shows the matching line with the word marked, and opens the page at that line. Whole words and the start of a word match; a plural finds the singular. **Cmd+K** lists the same pages under Help.
 - **Search the vault** at the top of Files finds anything: tracker items (actions, risks, issues, decisions, milestones), meetings (minutes and transcripts), notes, reports and documents, in groups of up to 20. Results appear as you type. It needs the live server.
 - It understands what you type. A project code (ABC), a person's name, alias or email, a type (risks, decisions, minutes, reports…) and a date (today, last week, last month, since 01-09-2026, in September) become **chips**; select × on a chip to drop it. The other words are what it looks for. “slip” finds “slipped”, and the last word matches as a prefix.
 - A result opens where it belongs: an item in its panel, a meeting in a preview scrolled to the match, a report or document in its own app. Documents are labelled “Document · internal”.

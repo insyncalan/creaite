@@ -2,6 +2,7 @@
 /* projects.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0029-projects-cockpit.js, 0054-generate-current-state-with-claude-bl-46.js, 0055-executive-current-state-bl-106.js, 0056-current-state-edited-in-place-bl-47.js, 0058-bl-162-sprint-rail.js, 0059-bl-207-sprint-insight.js, 0081-dashboard-pages-bl-87-to-bl-95.js, 0082-bl-190-sprint-links.js, 0083-after-bl-190-flow.js, 0124-insight-bl-51-bl-49-bl-54.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { howLink } from "./helpscreen.js";
 import { mountReportingCard } from "./components/reporting/ReportingCard.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { linkHtml } from "./core/linkText.js";
@@ -39,7 +40,7 @@ import { nm, renderSettings, row } from "./settings.js";
 import { legBtn, pfResize, plur, portfolioTable, spark, tl } from "./today.js";
 import { allBucket, boardMove, hit, isoAdd, PRIOS, rows } from "./work.js";
 /* ======================= Projects + cockpit ======================= */
-export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); }
+export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. ${raw(howLink("projects"))} <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); }
 export const DRAFTKIND={};                                   /* kind → feature; each kind's block adds its own */
 /* BL-300: Top risks and issues: the text under each item is its latest update, falling back to the response (Alan,
    13-10-2026), cut at two lines (.rk-txt; #107, Alan 15-10-2026, was five); a cut one gets a quiet "More" and its full text as a tooltip, and the row

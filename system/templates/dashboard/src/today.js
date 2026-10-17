@@ -2,6 +2,7 @@
 /* today.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0025-today.js, 0026-today-brief-bl-72.js, 0027-bl-149-sprint-ux.js, 0028-after-bl-149.js, 0159-bl-156-sprint-ux.js, 0164-bl-166-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { howLink } from "./helpscreen.js";
 import { dcIcon, openChat, say, send } from "./ask.js";
 import { linkWords as lw } from "./core/linkText.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
@@ -101,7 +102,7 @@ export function renderToday(){
   putHTML($("#briefText"),html`<b>${pend.length} proposal${pend.length===1?"":"s"}</b> need${pend.length===1?"s":""} your decision, ${raw(countLink(`${plur(mineOver.length,"overdue action")} of yours`,mineOver.length,"actions:overdue:",{o:["@me"]},`<b>${mineOver.length} of your actions</b>`))} ${mineOver.length===1?"is":"are"} overdue${off.length?html`, and <b>${andList(off.map(p=>p.name))}</b> ${off.length===1?"is":"are"} off track`:""}.`);
   renderDn();   /* BL-210: Decisions needed, ahead of Needs attention */
   const att=attentionItems(), ac=capped(att.map((x,i)=>x.html(i+1)),5,"attn");
-  $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
+  $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention. ${raw(howLink("today"))}</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
   const mine=[...mineOver,...mineSoon].sort((a,b)=>a.due.localeCompare(b.due)), mc=capped(mine.map((x,i)=>tl(i+1,tLink(html`data-open="actions:${x.id}"`,html`${x.t??""}`),
     html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${lw(x.upd).length>140?lw(x.upd).slice(0,139)+"…":lw(x.upd)}`:""}.`,itemActs("actions",x))),5,"mine");
   putHTML($("#nMine"),raw(mine.length?countLink(`${plur(mine.length,"action")} of yours due or overdue`,mine.length,"actions:open:",{st:["Open","Delayed"],due:["overdue","soon"],o:["@me"]}):""));   /* BL-190 */ putHTML($("#mineList"),mc.html?raw(mc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing due from you this week.</span></div></li>`); putHTML($("#mineMore"),raw(mc.more));

@@ -898,6 +898,10 @@ def reminders(settings, projects, file_list, today, now):
 # once, in the comment at the top of help.md.
 HELP_PARTS = {"start-here": "start", "how-do-i": "howto", "reference": "reference"}
 HELP_FILES = {"start": "guide-first-day.html", "howto": "guide-how-to.html"}
+HELP_SCREEN_RE = re.compile(r"^Screen:.*\n?", re.M)
+HELP_NEWS_FILE = "help/whats-new.md"      # #158: the plain release notes, copied in at release (never read from dev/)
+HELP_SCREENS = {"today": "Today", "work": "Work", "review": "Review", "projects": "Projects", "people": "People",
+                "notes": "Notes", "intake": "Intake", "files": "Files"}
 HELP_STAGE_ICONS = [
     '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13L21 13v6H3v-6z"/>',
     '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
@@ -928,6 +932,7 @@ def help_parse(text=None):
         f = paths.TEMPLATES / "help.md"
         text = f.read_text(encoding="utf-8") if f.exists() else ""
     text = re.sub(r"\A\s*<!--.*?-->", "", text, flags=re.S)
+    text = re.sub(HELP_SCREEN_RE, "", text)      # #158: the Screen: lines are data, not page text
     parts, part, group, section, in_footer = {}, None, None, None, False
     for line in text.splitlines():
         m = re.match(r"# (.+?)\s*$", line)
@@ -1074,7 +1079,7 @@ def _hp_head(sec, ctx, tag_id):
     blocks = _hp_blocks(sec["lines"])
     eye = next((b["t"] for b in blocks if b["k"] == "italic"), "")
     title = next((b["t"] for b in blocks if b["k"] == "bold"), sec["title"])
-    lead = [b["t"] for b in blocks if b["k"] == "p" and not re.match(r"(Where|Or say|Keys):", b["t"])]
+    lead = [b["t"] for b in blocks if b["k"] == "p" and not re.match(r"(Where|Or say|Keys|Jobs):", b["t"])]
     html = '<div class="hp-sechead">' + (f'<span class="hp-eyebrow">{_hp_inline(eye, ctx)}</span>' if eye else "") \
         + f'<h2 id="{tag_id}">{_hp_inline(title, ctx)}</h2>' + "".join(f"<p>{_hp_inline(p, ctx)}</p>" for p in lead) + "</div>"
     return html
@@ -1093,10 +1098,36 @@ def _hp_footer(lines, ctx):
     return ('<footer class="hp-foot">' + "".join(f"<span>{_hp_inline(ln, ctx)}</span>" for ln in lines) + "</footer>") if lines else ""
 
 
-def _hp_start(part, ctx):
+def _hp_say(blocks, ctx, outline):
+    """Start here, Say this: the phrasebook table."""
+    tb = next((b for b in blocks if b["k"] == "table"), {"rows": []})
+    rows = tb["rows"]
+    for r in rows[1:]:
+        outline["say"] += re.findall(r"`([^`]+)`", r[0])
+    if not rows:
+        return ""
+    head = "".join(f"<th>{_hp_inline(c, ctx)}</th>" for c in rows[0])
+    body = "".join("<tr>" + "".join(f"<td>{_hp_inline(c, ctx, True)}</td>" for c in r) + "</tr>" for r in rows[1:])
+    return f'<div class="hp-phrases"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+def _hp_rules(lists, ctx, outline):
+    """Start here, Four rules."""
+    cards = []
+    for it in lists[0]["items"] if lists else []:
+        m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
+        if m:
+            cards.append(f'<div class="hp-rule"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
+            outline["rules"].append(m.group(1))
+    return '<div class="hp-rules">' + "".join(cards) + "</div>"
+
+
+def _hp_start(part, ctx, only=None):
     secs = {s["title"]: s for g in part["groups"] for s in g["sections"]}
     html, outline = [_hp_hero(part["intro"], ctx, True)], {"stages": [], "steps": [], "rhythm": [], "views": [], "say": [], "rules": []}
     for title, s in secs.items():
+        if only and title not in only:      # #158: the first-day card draws three of Start here's sections
+            continue
         blocks = _hp_blocks(s["lines"])
         sid = "hp-" + s["slug"]
         if title == "The loop":
@@ -1152,24 +1183,19 @@ def _hp_start(part, ctx):
             body = '<div class="hp-views">' + "".join(cards) + "</div>" \
                 + (('<div class="hp-keys">' + "".join(f"<span>{_hp_inline(k.strip(), ctx)}</span>" for k in keys.split(" · ")) + "</div>") if keys else "")
         elif title == "Say this":
-            tb = next((b for b in blocks if b["k"] == "table"), {"rows": []})
-            rows = tb["rows"]
-            for r in rows[1:]:
-                outline["say"] += re.findall(r"`([^`]+)`", r[0])
-            body = ('<div class="hp-phrases"><table><thead><tr>' + "".join(f"<th>{_hp_inline(c, ctx)}</th>" for c in rows[0]) + "</tr></thead><tbody>"
-                    + "".join("<tr>" + "".join(f"<td>{_hp_inline(c, ctx, True)}</td>" for c in r) + "</tr>" for r in rows[1:]) + "</tbody></table></div>") if rows else ""
+            body = _hp_say(blocks, ctx, outline)
         elif title == "Four rules":
-            cards = []
-            for it in lists[0]["items"] if lists else []:
-                m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
-                if m:
-                    cards.append(f'<div class="hp-rule"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
-                    outline["rules"].append(m.group(1))
-            body = '<div class="hp-rules">' + "".join(cards) + "</div>"
+            body = _hp_rules(lists, ctx, outline)
+        elif title == "The twelve jobs":
+            jobs = help_jobs({"start": {"groups": [{"sections": [s]}]}})
+            body = '<div class="hp-jobgrid">' + "".join(
+                f'<a class="hp-job" href="#help-howto-{j["id"]}" data-help="howto-{j["id"]}"><b>{_hp_inline(j["title"], ctx)}</b>'
+                f'<span>{_hp_inline(j["line"], ctx)}</span></a>' for j in jobs) + "</div>"
         else:
             body = _hp_plain([b for b in blocks if b["k"] in ("ul", "ol", "table")], ctx)
         html.append(f'<section class="hp-sec" aria-labelledby="{sid}">{head}{body}</section>')
-    html.append(_hp_footer(part["footer"], ctx))
+    if not only:
+        html.append(_hp_footer(part["footer"], ctx))
     return "".join(html), outline
 
 
@@ -1217,9 +1243,77 @@ def _hp_reference(part, ctx):
         side.append(f'<div class="hp-refidxg"><span class="hp-eyebrow">{_hp_inline(g["name"], ctx)}</span>{"".join(links)}</div>')
     lead = "".join(f'<p class="hp-reflead">{_hp_inline(b["t"], ctx)}</p>' for b in _hp_blocks(part["intro"]) if b["k"] == "p")
     html = ('<div class="hp-reflay"><nav class="hp-refidx" aria-label="Reference sections">'
-            '<input id="helpQ" type="search" placeholder="Search reference" aria-label="Search the reference">' + "".join(side)
+            + "".join(side)
             + f'</nav><div class="hp-refbody">{lead}{"".join(body)}</div></div>')
     return html, outline
+
+
+def help_screens(text=None):
+    """#158: the `Screen: Review -> id, id | Reference: id` lines of help.md -> {screen key: {title, ids, ref}}."""
+    if text is None:
+        f = paths.TEMPLATES / "help.md"
+        text = f.read_text(encoding="utf-8") if f.exists() else ""
+    out = {}
+    for m in re.finditer(r"^Screen:\s*(.+?)\s*(?:->|\u2192)\s*([^|\n]+?)\s*(?:\|\s*Reference:\s*(\S+))?\s*$", text, re.M):
+        key = m.group(1).strip().lower()
+        out[key] = {"title": m.group(1).strip(), "ids": [i.strip() for i in m.group(2).split(",") if i.strip()],
+                    "ref": m.group(3) or ""}
+    return out
+
+
+def help_jobs(parts):
+    """#158: the `Jobs:` block under Start here -> [{id, title, line}] (a bullet `[Title](#page-id): one line`)."""
+    out = []
+    for g in parts.get("start", {"groups": []})["groups"]:
+        for s in g["sections"]:
+            for b in _hp_blocks(s["lines"]):
+                if b["k"] == "ul":
+                    for it in b["items"]:
+                        m = re.match(r"\[([^\]]+)\]\(#([^)]+)\)\s*:?\s*(.*)$", it["t"])
+                        if m:
+                            out.append({"id": m.group(2), "title": m.group(1), "line": m.group(3)})
+    return out
+
+
+def help_news(text=None):
+    """#158: system/templates/help/whats-new.md -> (lead-in lines, [{v, lines}] newest first), a `## creaite X.Y.Z` section each."""
+    if text is None:
+        f = paths.TEMPLATES / HELP_NEWS_FILE
+        text = f.read_text(encoding="utf-8") if f.exists() else ""
+    lead, items, cur = [], [], None
+    for line in text.splitlines():
+        m = re.match(r"## creaite (\d+\.\d+\.\d+)\s*$", line)
+        if m:
+            cur = {"v": m.group(1), "lines": []}
+            items.append(cur)
+        elif line.startswith("# "):
+            continue
+        else:
+            (cur["lines"] if cur else lead).append(line)
+    return lead, items
+
+
+def help_check(jobs, screens, tasks, sections):
+    """#158: every job and Screen id must be a page. Returns the problems (empty when all resolve)."""
+    bad = [f"Jobs: {j['id']}" for j in jobs if j["id"] not in tasks]
+    for s in screens.values():
+        bad += [f"Screen {s['title']}: {i}" for i in s["ids"] if i not in tasks]
+        if s["ref"] and s["ref"] not in sections:
+            bad.append(f"Screen {s['title']}: Reference {s['ref']}")
+    bad += [f"Screen {k}: not a screen" for k in screens if k not in HELP_SCREENS]
+    return bad
+
+
+def _hp_news(lead, items, ctx):
+    head = "".join(f'<p class="hp-lede">{_hp_inline(b["t"], ctx)}</p>' for b in _hp_blocks(lead) if b["k"] == "p")
+    html = ['<header class="hp-hero">' + HELP_LOGO % "hp-logo sm" + '<div><span class="hp-eyebrow">Release notes</span>'
+            f"<h1>What\u2019s new</h1>{head}</div></header>"]
+    for it in items:
+        vid = it["v"].replace(".", "-")
+        body = _hp_plain([b for b in _hp_blocks(it["lines"]) if b["k"] in ("p", "ul", "ol")], ctx)
+        html.append(f'<article class="hp-new" id="hn-{vid}" data-ver="{it["v"]}"><span class="hp-ver">{it["v"]}</span>'
+                    f'<div class="hp-newbody"><h2>creaite {it["v"]}</h2>{body}</div></article>')
+    return "".join(html), [{"id": it["v"].replace(".", "-"), "title": "creaite " + it["v"]} for it in items]
 
 
 def help_version():
@@ -1237,14 +1331,32 @@ def help_part(part_id, mode="guide", text=None):
     return {"start": _hp_start, "howto": _hp_howto, "reference": _hp_reference}[part_id](p, ctx)[0]
 
 
+def help_card(kind, text=None):
+    """#158: the two printed cards, drawn from help.md. "start": the first-day card (the loop, your first hour, the four rules;
+    one page). "howto": the top-12 card (the twelve jobs, one line and the page name each; two pages)."""
+    parts = help_parse(text)
+    tasks = {s["slug"]: s["title"] for g in parts.get("howto", {"groups": []})["groups"] for s in g["sections"]}
+    ctx = _HelpCtx("guide", kind, help_version(), list(tasks))
+    if kind == "start":
+        return _hp_start(parts["start"], ctx, only=("The loop", "Your first hour", "Four rules"))[0]
+    jobs = help_jobs(parts)
+    items = "".join(f'<li class="hp-topjob"><b>{_hp_inline(j["title"], ctx)}</b><span>{_hp_inline(j["line"], ctx)}</span>'
+                    f'<em>Help \u203a How do I\u2026 \u203a {_hp_esc(tasks.get(j["id"], j["id"]))}</em></li>' for j in jobs)
+    lede = "Press <kbd>?</kbd> in creaite, search for the page name, and the steps are there."
+    return ('<header class="hp-hero">' + HELP_LOGO % "hp-logo sm"
+            + f'<div><span class="hp-eyebrow">creaite {help_version()} \u00b7 top 12 jobs</span>'
+            f'<h1>The twelve jobs</h1><p class="hp-lede">{lede}</p></div></header>' + f'<ol class="hp-top12">{items}</ol>')
+
+
 def help_sections():
-    """system/templates/help.md → the Help page: three tabs (HTML each), the task and reference lists (for ⌘K and
-    the indexes) and an outline of Start here. The page puts the vault's server command where [start command] stands."""
+    """system/templates/help.md -> the Help page: four tabs (HTML each; What's new from help/whats-new.md), the task and
+    reference lists (for the search and the indexes), the jobs, the Screen lists and an outline of Start here. The page
+    puts the vault's server command where [start command] stands."""
     parts = help_parse()
     if not parts:
         return {}
     tasks = [s["slug"] for g in parts.get("howto", {"groups": []})["groups"] for s in g["sections"]]
-    out = {"tabs": [], "tasks": [], "sections": [], "start": {}}
+    out = {"tabs": [], "tasks": [], "sections": [], "start": {}, "jobs": [], "screens": {}, "news": []}
     for pid, builder in (("start", _hp_start), ("howto", _hp_howto), ("reference", _hp_reference)):
         if pid not in parts:
             continue
@@ -1257,6 +1369,15 @@ def help_sections():
             out["tasks"] = extra
         else:
             out["sections"] = extra
+    out["jobs"] = help_jobs(parts)
+    out["screens"] = help_screens()
+    lead, items = help_news()
+    if items:
+        html, out["news"] = _hp_news(lead, items, _HelpCtx("dashboard", "whatsnew", help_version(), tasks))
+        out["tabs"].append({"id": "whatsnew", "title": "What\u2019s new", "html": html})
+    bad = help_check(out["jobs"], out["screens"], set(tasks), {s["id"] for s in out["sections"]})
+    if bad:
+        raise ValueError("help.md has links that do not resolve: " + "; ".join(bad))
     return out
 
 
@@ -1289,6 +1410,7 @@ def ui_settings(s):
             "undatedGrace": g("dashboard", "undated_grace_days", d=3),      # BL-95
             "flowWeeks": flow_weeks(s),                                     # BL-91
             "weekPrios": list(g("dashboard", "week_ahead_priorities", d=None) or []),   # BL-235 (fix-small-17): empty means every priority
+            "helpLine": bool(g("help", "first_line", d=True)),   # #158: the first-visit "Press ? for help" line
             "helpSeen": g("help", "start_seen", d=False),   # BL-84: Help › Start here shows once, on the first visit
             "port": g("live_mode", "port", d=8765), "healthSecs": g("live_mode", "health_check_seconds", d=30),
             "defPriority": g("defaults", "new_action_priority", d="Medium"),

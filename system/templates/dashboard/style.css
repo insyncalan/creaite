@@ -1311,6 +1311,43 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 }
 /* ===== end BL-168 ===== */
 /* ===== end Help (BL-84) ===== */
+/* ===== Help finding it (#158 Phase B) ===== the search, the jobs grid, What's new, the ? panel, the first-visit and foot lines. No animation anywhere. */
+.hp-search{display:flex;align-items:center;gap:8px;height:42px;border:1px solid var(--hp-hair);background:var(--hp-paper);border-radius:var(--r-xl);padding:0 12px;max-width:640px;margin:20px 0 0;color:var(--hp-soft)}
+.hp-search:focus-within{border-color:var(--hp-teal);box-shadow:0 0 0 3px var(--hp-teal-soft)}
+.hp-search input{flex:1;min-width:0;height:100%;border:0;background:transparent;color:var(--hp-ink);font:inherit;font-size:var(--fs-lg);outline:none}
+.hp-search kbd{font:500 var(--fs-xs) var(--hp-mono);border:1px solid var(--hp-hair);border-radius:5px;padding:1px 6px;color:var(--hp-soft)}
+.hp-results{padding:12px 0 56px;max-width:880px}
+.hp-resn{margin:0 0 4px;color:var(--hp-soft);font-size:var(--fs-md)}
+.hp-resg h3{font:700 var(--fs-xs) var(--hp-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--hp-soft);margin:20px 0 4px}
+.hp-r{display:block;padding:10px 0;border-bottom:1px solid var(--hp-hair);text-decoration:none;color:var(--hp-ink)}
+.hp-r:hover,.hp-r:focus-visible{background:var(--hp-teal-soft)}
+.hp-rt{display:block;font:700 var(--fs-lg) var(--hp-display);color:var(--hp-teal)}
+.hp-rl{display:block;color:var(--hp-soft)}
+.hp-results mark,.hp-wrap mark{background:var(--hp-amber-soft);color:inherit;border-radius:3px;padding:0 1px}
+.hp-none{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:16px;padding:14px 16px;border:1px dashed var(--hp-teal);border-radius:var(--r-md);background:var(--hp-teal-soft);color:var(--hp-ink)}
+.hp-found{background:var(--hp-amber-soft);border-radius:4px}
+.hp-jobgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.hp-job{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border:1px solid var(--hp-hair);background:var(--hp-paper);border-radius:var(--r-md);text-decoration:none;color:var(--hp-ink)}
+.hp-job:hover,.hp-job:focus-visible{border-color:var(--hp-teal)}
+.hp-job b{font:700 var(--fs-lg) var(--hp-display)} .hp-job span{color:var(--hp-soft);font-size:var(--fs-md)}
+.hp-new{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--hp-hair);border-left:3px solid var(--hp-green);background:var(--hp-paper);border-radius:var(--r-md);padding:12px 16px}
+.hp-ver{font:700 var(--fs-sm) var(--hp-mono);color:var(--hp-green);background:var(--hp-green-soft);border-radius:6px;padding:2px 7px;white-space:nowrap}
+.hp-newbody h2{font:700 var(--fs-lg) var(--hp-display);margin:0 0 6px} .hp-newbody p{margin:0 0 6px} .hp-newbody ul{margin:0;padding-left:20px}
+.hp-whatsnew{gap:12px}
+#helpPanel{position:fixed;top:0;right:0;height:100vh;width:min(360px,100vw);background:var(--surface);border-left:1px solid var(--line);display:none;flex-direction:column;gap:8px;padding:16px 18px;overflow:auto;z-index:var(--z-chat);box-shadow:var(--shadow-side);outline:none}
+#helpPanel.on{display:flex}
+.hpn-h{display:flex;align-items:center;gap:8px} .hpn-h h2{flex:1;margin:0}
+.hpn-jobs{list-style:none;margin:0;padding:0}
+.hpn-jobs a{display:block;padding:8px 0;border-bottom:1px solid var(--line);color:var(--accent);text-decoration:none} .hpn-jobs a b{display:block}
+.hpn-jobs a span{display:block;color:var(--muted);font-size:var(--fs-sm)}
+.hpn-f{display:flex;flex-direction:column;gap:6px;margin-top:8px} .hpn-f a{color:var(--accent)}
+.hfirst{max-width:720px;margin:0 0 12px;padding:7px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--accent-soft);font-size:var(--fs-md);color:var(--ink)}
+.hfirst[hidden],.hfoot[hidden]{display:none}
+.hfoot{margin:28px 0 8px;font-size:var(--fs-sm);color:var(--faint)}
+.hfoot kbd,.hfirst kbd{font:500 var(--fs-xs) var(--mono,ui-monospace,monospace);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--muted)}
+.hhow{color:var(--accent)}
+@media (max-width:900px){ .hp-jobgrid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+/* ===== end Help finding it ===== */
 #helpTabs{position:sticky;top:0;z-index:var(--z-sticky);background:var(--hp-ground);margin-top:0;padding-top:14px} #helpTabs button{color:var(--hp-soft)} #helpTabs button[aria-selected="true"]{color:var(--hp-ink)}
 /* ===== Sweep and alerts (BL-97, BL-99, BL-98) ===== */
 .iglist{margin-top:6px} .igrow{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)} .igrow:first-child{border-top:0}
