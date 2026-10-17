@@ -63,14 +63,18 @@ export function helpScreenSync(){ const line=node("hFirst","hfirst"), foot=node(
   if(line.dataset.k!==key){ line.dataset.k=key; putHTML(line,raw(`Press ${kbd} for help with ${esc(sc.title)}`)); }
   line.hidden=false; }
 /** Any key or click clears the line and is not touched: it still does its normal job. */
-export function firstLineClear(){ const line=$("#hFirst"); if(!line||line.hidden) return; const k=line.dataset.k; line.hidden=true; if(k) lineMark(k); }
+export function firstLineClear(/** @type {string=} */ only){ const line=$("#hFirst");
+  if(only&&(!line||line.hidden||line.dataset.k!==only)){ lineMark(only); return; }   /* the line up at the key or click is seen; a newer screen's line stays */
+  if(!line||line.hidden) return; const k=line.dataset.k; line.hidden=true; if(k) lineMark(k); }
+/** The key of the line that is showing right now ("" when none). */
+const showing=()=>{ const l=$("#hFirst"); return l&&!l.hidden?l.dataset.k||"":""; };
 
 /** BL-231: run once by src/main.js. */
 export function bootHelpScreen(){
 node("hFirst","hfirst"); node("hFoot","hfoot");
 /* Any key or click clears the line after its own job is done (a timeout of 0): never swallowed, and never moving the page under a press */
-document.addEventListener("keydown",e=>{ if(["Shift","Control","Alt","Meta","CapsLock"].includes(e.key)) return; setTimeout(firstLineClear,0); },true);
-document.addEventListener("click",()=>setTimeout(firstLineClear,0),true);
+document.addEventListener("keydown",e=>{ if(["Shift","Control","Alt","Meta","CapsLock"].includes(e.key)) return; const k=showing(); if(k) setTimeout(()=>firstLineClear(k),0); },true);
+document.addEventListener("click",()=>{ const k=showing(); if(k) setTimeout(()=>firstLineClear(k),0); },true);
 document.addEventListener("click",e=>{ const t=/** @type {HTMLElement} */ (e.target);
   const a=t.closest("[data-hpn]"); if(a){ e.preventDefault(); closeHelpPanel(true); go("help",/** @type {HTMLElement} */ (a).dataset.hpn); return; }
   if(t.closest("#hpnX")){ closeHelpPanel(); return; }

@@ -111,7 +111,7 @@ class ParseTests(unittest.TestCase):
             self.assertIn(h, titles)
         self.assertEqual(len(titles), len(OLD_HEADINGS))
         self.assertNotIn("Guides", titles)                                             # now inside Help
-        self.assertIn("printable copy", text_of(self.tab["reference"]) .replace("A printable copy", "a printable copy"))
+        self.assertIn("a first-day card and a top-12 card", text_of(self.tab["reference"]))
         for s in self.h["sections"]:
             self.assertIn(f'id="hr-{s["id"]}"', self.tab["reference"])
 

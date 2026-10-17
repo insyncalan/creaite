@@ -1,6 +1,6 @@
 <!--
 creaite help. The one source for the dashboard's Help page (press ?, or Settings › Help), which has four tabs, and for
-the two printable guides, system/templates/guide-first-day.html and guide-how-to.html. Edit it here, then run
+the two printed cards (first day, top 12 jobs), system/templates/guide-first-day.html and guide-how-to.html. Edit it here, then run
 python3 dev/tools/build_guides.py (a test fails while the guides are out of date). It reads as plain Markdown;
 `Cmd` on Mac, `Ctrl` on Windows. The few conventions the renderer understands:
 
@@ -15,7 +15,7 @@ python3 dev/tools/build_guides.py (a test fails while the guides are out of date
   with [text](#its-title-in-lower-case-with-hyphens), and to another part with [text](#how-do-i) or [text](#start-here).
 - Inline: **bold** is a button or label, `code` a command or path, ``double backticks`` a phrase to say. Single
   backticks are phrases too in "Or say:" lines and in the Say this table. [[K]] is a key.
-- Start here, The twelve jobs: a `Jobs:` line, then bullets `[Title](#page-id): one line`; every page id must exist. Lines `Screen: Review -> id, id | Reference: section-id` (2 to 5 how-to ids and the Reference section for a screen) feed the ? key panel and are not shown on the page. What's new is a fourth tab from `system/templates/help/whats-new.md`, copied in at release.
+- Start here, The twelve jobs: a `Jobs:` line, then bullets `[Title](#page-id): one line`; every page id must exist. Lines `Screen: Review -> id, id | Reference: section-id` (1 to 5 how-to ids and the Reference section for a screen; Files has one, because find-anything is its only job) feed the ? key panel and are not shown on the page. What's new is a fourth tab from `system/templates/help/whats-new.md`, copied in at release.
 - A line of --- at the end of a part, then lines of text, is its footer.
 - {version} becomes the installed version. A paragraph that is only [start command] becomes this vault's server command.
 
@@ -593,7 +593,7 @@ Nothing reaches the tracker until you approve it, and all project data stays in 
 
 # Reference
 
-Everything in creaite, by feature. For the short version see [Start here](#start-here); for a job step by step, see [How do I…](#how-do-i). A printable copy of those two guides is in `system/templates/` (`guide-first-day.html` and `guide-how-to.html`); open them in your browser, they work offline.
+Everything in creaite, by feature. For the short version see [Start here](#start-here); for a job step by step, see [How do I…](#how-do-i). Two printed cards, a first-day card and a top-12 card, are in `system/templates/` (`guide-first-day.html` and `guide-how-to.html`); open them in your browser, they work offline.
 
 ### Using the dashboard
 

@@ -1279,12 +1279,11 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 /* the Reference tab: a side index and the sections, in the same type */
 .hp-reflay{display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
 .hp-refidx{position:sticky;top:60px;max-height:calc(100vh - 100px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding-right:4px}
-.hp-refidx input{height:34px;border:1px solid var(--hp-hair);border-radius:var(--r-xl);padding:0 14px;background:var(--hp-paper);color:var(--hp-ink);font:inherit;font-size:var(--fs-md);width:100%}
 .hp-refidxg{display:flex;flex-direction:column;gap:2px} .hp-refidxg .hp-eyebrow{margin-bottom:4px}
 .hp-refidx a{display:block;padding:4px 10px;border-radius:var(--r-md);text-decoration:none;color:var(--hp-ink);font-size:var(--fs-md);line-height:1.4} .hp-refidx a:hover,.hp-refidx a[aria-current]{background:var(--hp-teal-soft)}
 .hp-refgroup{font:500 var(--fs-xs)/1 var(--hp-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--hp-teal);margin:32px 0 14px} .hp-refgroup:first-child{margin-top:0}
 .hp-reflead{color:var(--hp-soft);font-size:var(--fs-lg);max-width:66ch;margin:0 0 20px}
-.hp-ref{margin-bottom:24px;scroll-margin-top:64px} .hp-ref.hidden{display:none}
+.hp-ref{margin-bottom:24px;scroll-margin-top:64px}
 .hp-wrap.hp-wrap .hp-ref h2{font-size:var(--fs-xl);margin-bottom:8px}
 .hp-ref ul,.hp-ref ol{margin:0 0 4px;padding-left:1.25em;display:flex;flex-direction:column;gap:6px} .hp-ref li{max-width:80ch;font-size:var(--fs-lg)} .hp-ref p{max-width:80ch;font-size:var(--fs-lg);margin-bottom:6px}
 .hp-ref .tbl{background:var(--hp-paper);border-color:var(--hp-hair);border-radius:var(--r-lg);margin:6px 0} .hp-ref td{border-bottom-color:var(--hp-hair);font-size:var(--fs-lg)} .hp-ref td:first-child{width:36%}
