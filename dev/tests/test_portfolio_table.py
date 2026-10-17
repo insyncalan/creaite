@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_snapshots as ts  # noqa: E402
+from live_browser import TEST_PALETTES  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 DASH = ROOT / "system" / "templates" / "dashboard"
@@ -107,7 +108,7 @@ class Portfolio(ts.Snapshots):
         r = self.b.eval(f"""[...document.querySelectorAll('{PF} thead th')].map(th=>{{ const h=th.querySelector('.colrz');
           return [th.dataset.col, !!h&&h.getAttribute('role'), !!h&&h.tabIndex, !!h&&h.getAttribute('aria-label')]; }})""")
         self.assertEqual(r, [["project", "separator", 0, "Resize Project column"], ["health", "separator", 0, "Resize Health column"],
-                             ["evidence", "separator", 0, "Resize Evidence column"], ["trend", "separator", 0, "Resize 8 weeks column"],
+                             ["evidence", "separator", 0, "Resize Evidence column"], ["trend", "separator", 0, "Resize 6 weeks column"],
                              ["next", "separator", 0, "Resize Next milestone column"]])
 
     def test_drag_resizes_is_remembered_and_double_click_resets(self):
@@ -168,6 +169,89 @@ class Portfolio(ts.Snapshots):
             self.assertEqual(r["frame"], "auto", "the table scrolls inside its frame")
         finally:
             b.resize(self.width, self.height)
+
+
+    # 4. #162: the six-week health trend (option B, height is health), its tooltip and its key
+    BARS = "(()=>{ const hs={}; document.querySelectorAll('#pfTbl .spark:not(.mini) > i').forEach(i=>{ hs[i.className]=Math.max(hs[i.className]||0, i.getBoundingClientRect().height); }); return hs; })()"
+
+    def test_the_bars_are_six_and_height_is_health(self):
+        b = self.b
+        b.eval("""(()=>{ const p=P.find(x=>x.code==='ABC'); p.trail=['ok','warn','bad','','ok','warn']; p.trailend=['2026-09-04','2026-09-11','2026-09-18','2026-09-25','2026-10-02','2026-10-09'];
+          p.trailwhy=['','Late build','Vendor gone','','','Recovering']; renderToday(); })()""")
+        b.pump(0.3)
+        self.assertEqual(b.eval(f"document.querySelectorAll({json.dumps(ABC)}+' .spark > i').length"), 6)
+        h = b.eval(f"""[...document.querySelectorAll({json.dumps(ABC)}+' .spark > i')].map(i=>[i.className, Math.round(i.getBoundingClientRect().height)])""")
+        by = {c: v for c, v in h}
+        self.assertGreater(by["s-ok"], by["s-warn"], "On track is the tallest bar")
+        self.assertGreater(by["s-warn"], by["s-bad"])
+        self.assertLess(by["s-bad"], by["s-warn"], "Off track is the shortest bar")
+        self.assertLess(by["s-"], by["s-bad"], "a week with no update is the thin line")
+        self.assertLessEqual(by["s-"], 3)
+        self.assertEqual(b.eval("document.querySelector('#pfTbl th[data-col=trend]').firstChild.textContent"), "6 weeks")
+
+    def test_the_tooltip_lists_six_weeks_with_the_reason_and_the_keyboard_moves_between_them(self):
+        b = self.b
+        b.eval("""(()=>{ const p=P.find(x=>x.code==='ABC'); p.trail=['ok','warn','bad','','ok','warn']; p.trailend=['2026-09-04','2026-09-11','2026-09-18','2026-09-25','2026-10-02','2026-10-09'];
+          p.trailwhy=['','Late build','Vendor gone','','','Recovering']; renderToday(); })()""")
+        b.eval("document.body.focus()")
+        for _ in range(120):
+            b.key("Tab")
+            if b.eval("document.activeElement.matches('#pfTbl tr[data-cock=\"ABC\"] .spark')"):
+                break
+        b.wait("document.getElementById('sparkTip')&&!document.getElementById('sparkTip').hidden", 5)
+        o = b.eval("(()=>{ const t=document.getElementById('sparkTip'); return {rows:t.querySelectorAll('.spk-list li').length, text:t.textContent}; })()")
+        self.assertEqual(o["rows"], 6, "the week list has six rows")
+        self.assertIn("Week ending 09-10-2026 · this week", o["text"])
+        self.assertIn("Recovering", o["text"])
+        self.assertIn("At risk", o["text"])
+        b.key("Home")
+        b.pump(0.2)
+        self.assertIn("Week ending 04-09-2026", b.eval("document.getElementById('sparkTip').textContent"))
+        b.key("ArrowRight")
+        b.pump(0.2)
+        t = b.eval("document.getElementById('sparkTip').textContent")
+        self.assertIn("Week ending 11-09-2026", t)
+        self.assertIn("Changed from On track", t)
+        self.assertIn("Late build", t)
+        b.key("Escape")
+        b.pump(0.2)
+        self.assertTrue(b.eval("document.getElementById('sparkTip').hidden"))
+
+    def test_the_question_mark_opens_the_key_and_escape_closes_it(self):
+        b = self.b
+        b.click(f"{PF} th[data-col=trend] .legbtn")
+        b.wait("document.getElementById('sparkLeg')", 5)
+        self.assertEqual(b.eval("document.querySelectorAll('#sparkLeg .spark.mini > i').length"), 4, "the four bars of the key")
+        self.assertEqual(b.eval("document.querySelector('.legbtn').getAttribute('aria-expanded')"), "true")
+        b.key("Escape")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('sparkLeg')"))
+        self.assertEqual(b.eval("document.activeElement.classList.contains('legbtn')"), True)
+
+    def test_the_project_page_strip_has_the_key_and_it_says_the_reason_is_shortened(self):
+        b = self.b
+        b.eval("go('cockpit','ABC')")
+        b.wait("VIEW==='cockpit' && COCK==='ABC'", 5)
+        b.click(".cock .legbtn")
+        b.wait("document.getElementById('sparkLeg')", 5)
+        self.assertIn("shortened to 160 characters", b.eval("document.getElementById('sparkLeg').textContent"))
+        b.key("Escape")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('sparkLeg')"))
+        self.assertEqual(b.eval("document.activeElement.classList.contains('legbtn') && !!document.activeElement.closest('.cock')"), True,
+                         "Esc returns focus to the button that was opened")
+
+    def test_the_bars_read_in_both_palettes_and_modes(self):
+        b = self.b
+        for palette in TEST_PALETTES:
+            for mode in ("light", "dark"):
+                b.eval(f"document.documentElement.dataset.palette='{palette}'; document.documentElement.dataset.theme='{mode}'")
+                b.pump(0.1)
+                r = b.eval("""(()=>{ const c=k=>getComputedStyle(document.querySelector('#pfTbl .spark:not(.mini) > i.s-'+k)).backgroundColor, bg=getComputedStyle(document.body).backgroundColor;
+                  return {ok:c('ok'), warn:c('warn'), bad:c('bad'), bg}; })()""") if b.eval("!!document.querySelector('#pfTbl .spark:not(.mini) > i.s-ok')") else None
+                if r:
+                    self.assertEqual(len({r["ok"], r["warn"], r["bad"]}), 3, f"{palette} {mode}: three colours")
+                    self.assertNotIn(r["bg"], (r["ok"], r["warn"], r["bad"]))
 
 
 if __name__ == "__main__":

@@ -175,7 +175,7 @@ class Sections(Home):
         self.assertTrue(o["inMine"])                                    # You owe and Waiting on inside Your commitments
         self.assertTrue(o["fold"])
         self.assertLess(o["sum"], 30)                                   # one line
-        self.assertEqual(o["pf"], ["Project", "Health", "Evidence", "8 weeks", "Next milestone"])   # the Portfolio as it was
+        self.assertEqual(o["pf"], ["Project", "Health", "Evidence", "6 weeks", "Next milestone"])   # the Portfolio as it was
         b.click("#resFold>summary")
         b.wait("document.getElementById('resFold').open")
 

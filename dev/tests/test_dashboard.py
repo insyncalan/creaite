@@ -180,7 +180,8 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual([(i["alt"], i["ref"]) for i in abc["images"]], [("Delivery plan", "images/plan.png")])  # missing skipped
         self.assertTrue(abc["images"][0]["src"].startswith("data:image/png;base64,"))
         self.assertIn("current-state image not found", self.out)
-        self.assertEqual(len(abc["trail"]), 8)
+        self.assertEqual(len(abc["trail"]), 6)
+        self.assertEqual((len(abc["trailwhy"]), len(abc["trailend"])), (6, 6))    # #162: a reason and a Friday per bar
         self.assertEqual(abc["trail"][-2], "warn")                      # last week's update: At risk
         defp = next(p for p in self.data["projects"] if p["code"] == "DEF")
         self.assertEqual(defp["health"], "")                            # not set yet: shown neutral

@@ -741,8 +741,20 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .rted{min-height:320px;height:360px;max-height:none;resize:vertical;overflow:auto;padding:10px 12px;outline:none;line-height:1.5} .rted p,.rted div{margin:0 0 8px}
 .cockfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .ev{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
-.spark{display:inline-flex;gap:2px;align-items:flex-end;height:16px;vertical-align:middle}
-.spark i{display:block;width:6px;border-radius:var(--r-sm)} .spark .s-ok{height:6px;background:var(--faint);opacity:.55} .spark .s-warn{height:11px;background:var(--warn)} .spark .s-bad{height:16px;background:var(--bad)}.s-{height:2px;background:var(--line)}
+/* #162: health trend, option B "height is health": tall green On track, medium amber At risk, short red stub Off track, a thin line when no update; the dot under the last bar is this week */
+.spark{display:inline-flex;gap:3px;align-items:flex-end;height:18px;padding:2px 4px 7px;margin:-2px -4px;vertical-align:middle;border-radius:var(--r-sm)} .spark:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.spark i{display:block;width:6px;border-radius:2px;position:relative} .spark .s-ok{height:18px;background:var(--ok)} .spark .s-warn{height:11px;background:var(--warn)} .spark .s-bad{height:5px;background:var(--bad)} .spark .s-{height:2px;background:var(--line-strong,var(--line))}
+.spark:not(.mini) i:last-child::after,.spk-kdot{content:"";position:absolute;left:50%;bottom:-6px;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--muted)}
+.spark i.cur{outline:1.5px solid var(--ink);outline-offset:1.5px}
+.spark.mini{height:18px;padding:0;margin:0;gap:0}
+.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 11px/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#sparkTip,.spk-key{position:fixed;z-index:var(--z-tip,200);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:10px 12px;font-size:var(--fs-sm,13px);line-height:1.4;pointer-events:none}
+#sparkTip{width:260px} #sparkTip[hidden]{display:none} .spk-key{width:250px;pointer-events:auto} .spk-key:focus{outline:none}
+.spk-wk{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em} .spk-h{display:flex;align-items:center;gap:7px;font-weight:700;margin:2px 0} .spk-dot{width:9px;height:9px;border-radius:50%}
+.spk-dot.s-ok{background:var(--ok)} .spk-dot.s-warn{background:var(--warn)} .spk-dot.s-bad{background:var(--bad)} .spk-ch{color:var(--muted)} .spk-why{margin-top:4px;color:var(--ink)}
+.spk-list{list-style:none;margin:8px 0 0;padding:6px 0 0;border-top:1px solid var(--line)} .spk-list li{display:flex;align-items:center;gap:8px;padding:1px 4px;border-radius:var(--r-sm)} .spk-list li.cur{outline:1.5px solid var(--ink);outline-offset:-1px}
+.spk-list .spark.mini{width:6px} .spk-d{font-variant-numeric:tabular-nums;color:var(--muted)} .spk-w{margin-left:auto}
+.spk-kt{font-weight:700} .spk-ks{color:var(--muted);margin:2px 0 8px} .spk-kr{display:flex;align-items:center;gap:10px;margin-top:5px} .spk-kdot{position:static;margin:0 1.5px;flex:none;width:6px;height:6px}
 .pcode{color:var(--muted);font-size:var(--fs-xs);margin-right:6px}
 .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 12px} .toolbar .sp{flex:1}
 #workQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;min-width:220px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
@@ -5197,6 +5209,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     learnLabel: () => learnLabel,
     learnSignal: () => learnSignal,
     learnable: () => learnable,
+    legBtn: () => legBtn,
     lev: () => lev,
     linesFrom: () => linesFrom,
     listBody: () => listBody,
@@ -6118,6 +6131,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     spaceWeek: () => spaceWeek,
     spaceWeeks: () => spaceWeeks,
     spark: () => spark,
+    sparkKeyHtml: () => sparkKeyHtml,
+    sparkTipHtml: () => sparkTipHtml,
     split: () => split,
     splitPanes: () => splitPanes,
     sqHas: () => sqHas,
@@ -6261,6 +6276,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     wgPatch: () => wgPatch,
     whenWords: () => whenWords,
     who: () => who,
+    wireSpark: () => wireSpark,
     withClosed: () => withClosed,
     withdrawDecision: () => withdrawDecision,
     within: () => within,
@@ -36562,10 +36578,146 @@ ${s5}`;
     const nd2 = undatedWork(p6.code).length, c5 = p6.code, nm3 = pName(c5);
     return `<span class="ev">${countLink(`${plur(ov, "overdue action")} in ${nm3}`, ov, `actions:overdue:${c5}`, null, `Overdue <b class="${ov ? "bad" : ""}">${ov}</b>`)} · ${jumpLink(`${plur(nd2, "open item")} with no due date in ${nm3}`, nd2, c5, "undated", `No date <b>${nd2}</b>`)} · ${countLink(`${plur(urg, "urgent open RAID item")} in ${nm3}`, urg, `raid:urgentonly:${c5}`, null, `Urgent risks <b class="${urg ? "bad" : ""}">${urg}</b>`)} · ${jumpLink(`Milestone slip of ${p6.slip} day${p6.slip === 1 ? "" : "s"} in ${nm3}`, p6.slip, c5, "ms", `Slip <b class="${p6.slip ? "bad" : ""}">${p6.slip ? p6.slip + " days" : "none"}</b>`)} · Warnings <b class="${nw2 ? "bad" : ""}">${nw2}</b></span>`;
   }
-  var spark = (p6) => `<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">${p6.trail.map((t47) => `<i class="s-${t47}"></i>`).join("")}</span>`;
-  var PFCOLS = [["project", "Project"], ["health", "Health"], ["evidence", "Evidence"], ["trend", "8 weeks"], ["next", "Next milestone"]];
+  var SPN = { ok: "On track", warn: "At risk", bad: "Off track", "": "No update" };
+  var legBtn = () => `<button type="button" class="legbtn" aria-label="What the health bars mean" aria-haspopup="dialog" aria-expanded="false"></button>`;
+  var spark = (p6) => {
+    const t47 = p6.trail, last = t47[t47.length - 1];
+    return `<span class="spark" tabindex="0" role="group" data-sp="${esc(p6.code)}" aria-label="Health, last ${t47.length} weeks, oldest first. ${last ? SPN[last] : "No update"} this week. Arrow keys move between weeks.">${t47.map((x5, i5) => `<i class="s-${x5}" data-i="${i5}"></i>`).join("")}</span>`;
+  };
+  var sparkWeek = (p6, i5) => {
+    const t47 = p6.trail[i5], pv = i5 ? p6.trail[i5 - 1] : null, why = (p6.trailwhy || [])[i5] || "", end = (p6.trailend || [])[i5] || "";
+    const ch2 = !t47 ? "No update approved this week" : pv === null ? "First week shown" : pv === "" ? "No update the week before" : pv === t47 ? `Unchanged from ${SPN[pv]}` : `Changed from ${SPN[pv]}`;
+    return { t: t47, end, ch: ch2, why, word: SPN[t47] };
+  };
+  function sparkTipHtml(p6, i5) {
+    const w6 = sparkWeek(p6, i5), n4 = p6.trail.length;
+    return `<div class="spk-wk">Week ending ${fd(w6.end)}${i5 === n4 - 1 ? " · this week" : ""}</div><div class="spk-h">${w6.t ? `<span class="spk-dot s-${w6.t}"></span>` : ""}${w6.word}</div><div class="spk-ch">${w6.ch}</div>${w6.why ? `<div class="spk-why">${esc(w6.why)}</div>` : ""}<ol class="spk-list" aria-label="The last ${n4} weeks">${p6.trail.map((x5, j5) => `<li${j5 === i5 ? ' class="cur" aria-current="true"' : ""}><span class="spark mini" aria-hidden="true"><i class="s-${x5}"></i></span><span class="spk-d">${fd((p6.trailend || [])[j5] || "")}</span><span class="spk-w">${SPN[x5]}</span></li>`).join("")}</ol>`;
+  }
+  var sparkKeyHtml = () => `<div class="spk-key" id="sparkLeg" role="dialog" aria-label="What the health bars mean" tabindex="-1"><div class="spk-kt">Health, last 6 weeks</div><div class="spk-ks">One bar a week, oldest to newest, each a week ending Friday. Taller is healthier. Rest on a bar for the week's reason: the week's update summary, shortened to 160 characters.</div>${["ok", "warn", "bad", ""].map((x5) => `<div class="spk-kr"><span class="spark mini" aria-hidden="true"><i class="s-${x5}"></i></span>${SPN[x5]}${x5 === "" ? " that week" : ""}</div>`).join("")}<div class="spk-kr"><span class="spk-kdot" aria-hidden="true"></span>This week</div></div>`;
+  var sparkAt = null, sparkI = 0, sparkT = 0;
+  var sparkEl = () => document.querySelector(`.spark[data-sp="${CSS.escape(sparkAt || "")}"]:not(.mini)`);
+  function sparkShow(el2, i5) {
+    const p6 = P3.find((x5) => x5.code === el2.dataset.sp);
+    if (!p6) return;
+    sparkAt = p6.code;
+    sparkI = i5;
+    clearTimeout(sparkT);
+    let tip = $("#sparkTip");
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.id = "sparkTip";
+      tip.setAttribute("role", "tooltip");
+      tip.setAttribute("aria-live", "polite");
+      document.body.appendChild(tip);
+    }
+    putHTML(tip, raw(sparkTipHtml(p6, i5)));
+    tip.hidden = false;
+    el2.setAttribute("aria-describedby", "sparkTip");
+    [...el2.children].forEach((b5, j5) => b5.classList.toggle("cur", j5 === i5));
+    const r4 = el2.children[i5].getBoundingClientRect(), h5 = tip.offsetHeight, w6 = tip.offsetWidth;
+    let y5 = r4.top - h5 - 10;
+    if (y5 < 8) y5 = r4.bottom + 14;
+    tip.style.left = Math.round(Math.min(Math.max(8, r4.left + r4.width / 2 - w6 / 2), innerWidth - w6 - 8)) + "px";
+    tip.style.top = Math.round(y5) + "px";
+  }
+  function sparkHide() {
+    clearTimeout(sparkT);
+    const tip = $("#sparkTip");
+    if (tip) tip.hidden = true;
+    const el2 = sparkEl();
+    if (el2) {
+      el2.removeAttribute("aria-describedby");
+      [...el2.children].forEach((b5) => b5.classList.remove("cur"));
+    }
+    sparkAt = null;
+  }
+  function sparkKeyClose(back2) {
+    const k5 = $("#sparkLeg");
+    if (!k5) return;
+    const btn = document.querySelector('.legbtn[aria-expanded="true"]') || $(".legbtn");
+    k5.remove();
+    document.querySelectorAll(".legbtn").forEach((b5) => b5.setAttribute("aria-expanded", "false"));
+    if (back2 && btn) btn.focus();
+  }
+  function wireSpark() {
+    const idx = (e4) => {
+      const b5 = e4.target.closest && e4.target.closest(".spark:not(.mini) > i");
+      return b5 ? +b5.dataset.i : null;
+    };
+    document.addEventListener("mouseover", (e4) => {
+      const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");
+      if (!el2) return;
+      const i5 = idx(e4);
+      if (sparkAt === el2.dataset.sp && !$("#sparkTip").hidden) {
+        if (i5 !== null && i5 !== sparkI) sparkShow(el2, i5);
+        else clearTimeout(sparkT);
+        return;
+      }
+      clearTimeout(sparkT);
+      sparkT = setTimeout(() => sparkShow(el2, i5 === null ? el2.children.length - 1 : i5), CARD_OPEN);
+    });
+    document.addEventListener("mouseout", (e4) => {
+      const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");
+      if (!el2 || el2.contains(e4.relatedTarget)) return;
+      clearTimeout(sparkT);
+      sparkT = setTimeout(sparkHide, CARD_CLOSE);
+    });
+    document.addEventListener("focusin", (e4) => {
+      const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");
+      if (el2 && e4.target === el2) sparkShow(el2, el2.children.length - 1);
+    });
+    document.addEventListener("focusout", (e4) => {
+      const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");
+      if (el2 && e4.target === el2) sparkHide();
+    });
+    document.addEventListener("keydown", (e4) => {
+      const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");
+      if (el2 && e4.target === el2) {
+        const n4 = el2.children.length;
+        let i5 = sparkAt === el2.dataset.sp ? sparkI : n4 - 1;
+        if (e4.key === "ArrowLeft") i5 = Math.max(0, i5 - 1);
+        else if (e4.key === "ArrowRight") i5 = Math.min(n4 - 1, i5 + 1);
+        else if (e4.key === "Home") i5 = 0;
+        else if (e4.key === "End") i5 = n4 - 1;
+        else if (e4.key === "Escape") {
+          if (sparkAt) {
+            e4.stopPropagation();
+            sparkHide();
+          }
+          return;
+        } else return;
+        e4.preventDefault();
+        e4.stopPropagation();
+        sparkShow(el2, i5);
+        return;
+      }
+      if (e4.key === "Escape" && $("#sparkLeg")) {
+        e4.stopPropagation();
+        sparkKeyClose(true);
+      }
+    }, true);
+    document.addEventListener("click", (e4) => {
+      const b5 = e4.target.closest && e4.target.closest(".legbtn");
+      if (b5) {
+        e4.stopPropagation();
+        if ($("#sparkLeg")) {
+          sparkKeyClose(false);
+          return;
+        }
+        addHTML(document.body, "beforeend", raw(sparkKeyHtml()));
+        const k5 = $("#sparkLeg"), r4 = b5.getBoundingClientRect();
+        k5.style.top = Math.round(r4.bottom + 6) + "px";
+        k5.style.left = Math.round(Math.min(Math.max(8, r4.left - 20), innerWidth - k5.offsetWidth - 8)) + "px";
+        b5.setAttribute("aria-expanded", "true");
+        k5.focus();
+        return;
+      }
+      if ($("#sparkLeg") && !e4.target.closest("#sparkLeg")) sparkKeyClose(false);
+    }, true);
+  }
+  var PFCOLS = [["project", "Project"], ["health", "Health"], ["evidence", "Evidence"], ["trend", "6 weeks"], ["next", "Next milestone"]];
   function portfolioTable(id2 = "pf", dots = false) {
-    return `<table><thead><tr>${PFCOLS.map(([k5, l6]) => `<th data-col="${k5}">${l6}</th>`).join("")}</tr></thead><tbody>${P3.map((p6) => {
+    return `<table><thead><tr>${PFCOLS.map(([k5, l6]) => `<th data-col="${k5}">${l6}${k5 === "trend" ? legBtn() : ""}</th>`).join("")}</tr></thead><tbody>${P3.map((p6) => {
       const nm3 = p6.ms.find((m5) => m5[2] !== "done") || p6.ms[p6.ms.length - 1] || ["No milestones yet", "", ""], ds2 = (p6.client || "").trim(), did = `${id2}d-${p6.code}`;
       return `<tr class="click" data-cock="${p6.code}"><td><button type="button" class="pfname"${ds2 ? ` data-tip="${esc(ds2)}" aria-describedby="${did}"` : ""}>${esc(p6.name)}</button>${ds2 ? `<span class="vh" id="${did}">${esc(ds2)}</span>` : ""}</td><td>${dots ? `<span data-statusdot="${esc(p6.health || "")}"></span>` : health(p6.health)}<div class="sub" style="max-width:36ch">${esc(p6.reason)}</div></td><td>${evidence(p6)}</td><td>${spark(p6)}</td><td>${esc(nm3[0])}${nm3[1] ? `<div class="sub ${nm3[2] === "slip" ? "late" : ""}">${longDay(nm3[1])} (${rel(nm3[1]).replace(/^./, (c5) => c5.toLowerCase())})</div>` : ""}</td></tr>`;
     }).join("")}</tbody></table>`;
@@ -36612,6 +36764,7 @@ ${s5}`;
     });
   }
   function bootToday0028() {
+    wireSpark();
     $("#attnList").addEventListener("click", (e4) => {
       const n4 = e4.target.closest(".rem");
       if (!n4) return;
@@ -42545,7 +42698,7 @@ ${s5}`;
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
-     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
+     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}${raw(legBtn())}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R3.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v5, b5, nav, ex2]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex2))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v5 && v5 !== "None" ? "bad" : ""}">${v5}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p6))}
      <div id="cockRep"></div><!-- BL-337: the Reporting card (components/reporting/ReportingCard.jsx) -->

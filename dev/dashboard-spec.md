@@ -112,7 +112,7 @@ The dashboard follows **Google Material 3** (m3.material.io). The reference desi
 `dev/reference/dashboard-reference.html` is the approved look and behaviour, built with fictional sample data. Open it in Edge or Chrome. Where this spec and the reference differ, follow the reference for visual design and this spec for content and rules.
 
 Key elements of the reference:
-- **The Portfolio tab is a health ledger:** one row per project, showing a health bar, the reason, a countdown to the milestone, an 8-week health strip (from `updates`), and open, overdue and high-risk counts.
+- **The Portfolio tab is a health ledger:** one row per project, showing a health bar, the reason, a countdown to the milestone, a 6-week health strip (from `updates`; #162: height is health, tall green On track, medium amber At risk, a short red stub Off track, a thin line for no update; a dot under this week's bar; a tooltip with the week, its health, the change, the stored reason (the week's `updates.summary`, shortened to 160 characters) and the six weeks; a ? key on the column header and beside the strip on the project page, one shared popover), and open, overdue and high-risk counts.
 - **Header:** the data-as-of time, a pending count, and reminders.
 - **Tags:** You (owner chip), TBC, client-visible, "client msg to do" (client-visible items only), due soon, stale.
 - **Light and dark themes, with system fonts.** No external resources.
@@ -228,7 +228,7 @@ Reports are **Word documents** drafted by skills from templates in `system/templ
 - **Deep links:** `dashboard.html#review`, `#work`, `#files`, `#cockpit=ABC` open on that view.
 - **Project page (BL-11, 12, 13, 14, 15):** Current state first, full width, with paragraphs and images (`projects/<CODE> <Name>/images/…`, referenced as `![caption](images/x.png)` in the project's `CLAUDE.md` Current state, embedded at build, up to 2 MB each); then health and evidence, milestones (timeline plus a list with forecast, baseline when moved, and progress from linked actions), actions due; on the right "Top risks and issues" (open risks and issues by priority, with their type) and recent decisions; Draft weekly report, Draft client report and Browse files in a bar at the bottom.
 - **Icons (BL-13):** neutral line icons for action, risk, issue, assumption, dependency, decision and milestone, always beside text, in Work lists, Review, Today and the project page. Dashboard only.
-- **Health not set** shows as neutral "Not set"; a week with no approved update shows as a flat bar in the 8-week trend.
+- **Health not set** shows as neutral "Not set"; a week with no approved update shows as a thin line in the 6-week trend.
 
 ## Step 4b build notes (2026-10-05)
 

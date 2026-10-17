@@ -35,7 +35,7 @@ import { mountPrepShape } from "./components/prep/PrepShape.jsx";
 import { loadBrief, popupRev } from "./stores/prepPopup.js";
 import { draftOn, pencil, SPARKI } from "./review.js";
 import { nm, renderSettings, row } from "./settings.js";
-import { pfResize, plur, portfolioTable, spark, tl } from "./today.js";
+import { legBtn, pfResize, plur, portfolioTable, spark, tl } from "./today.js";
 import { allBucket, boardMove, hit, isoAdd, PRIOS, rows } from "./work.js";
 /* ======================= Projects + cockpit ======================= */
 export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); }
@@ -70,7 +70,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run||DRRUN?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run||DRRUN?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
-     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
+     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}${raw(legBtn())}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions",A.filter(x=>x.p===code&&overdue(x)).length,1,"actions:overdue"],["No due date",undatedWork(code).length,0,""],["Urgent risks",R.filter(r=>r.p===code&&r.st==="Open"&&r.pr==="Urgent").length,1,"raid:urgentonly"],["Milestone slip",p.slip?p.slip+" days":"None",p.slip,""],["Due in "+S.dueSoon+" days",A.filter(x=>x.p===code&&soon(x)).length,0,"actions:soon",{st:["Open","Delayed"]}]].map(([l,v,b,nav,ex])=>`<div class="evbox${nav?" click":""}" ${nav?`data-nav="${esc(navOf(`${nav}:${code}`,ex))}" role="link" tabindex="0" title="Open in Work"`:""}><div class="v ${b&&v&&v!=="None"?"bad":""}">${v}</div><div class="l">${l}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p))}
      <div id="cockRep"></div><!-- BL-337: the Reporting card (components/reporting/ReportingCard.jsx) -->
