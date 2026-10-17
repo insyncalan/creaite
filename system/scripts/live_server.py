@@ -7208,7 +7208,7 @@ def notes_save_route(handler, req):
         if new is None:
             return handler.send(200, {"ok": True, "unchanged": True, "note": notes.summary(p, code), "base": notes.text_sha(text)})
         done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY, **session},
-                                       via="dashboard")
+                                       via="dashboard", own=True)
         if done != 0:
             return handler.send(200, {"ok": False, "wait": done == filechange.NEEDS, "message": msg})
     notes_reindex()
