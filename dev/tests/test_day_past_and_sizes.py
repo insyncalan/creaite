@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_today_days as fx  # noqa: E402  (fixes CREAITE_NOW and the fixture's TODAY on import)
-from live_browser import LiveBrowserCase, pin_page_clock, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase, pin_page_clock, theme_names  # noqa: E402
 
 # The paint of each visible match (its text colour, fill or stroke) against the first opaque background behind it, every
 # ancestor's opacity multiplied in. After dev/tests/handchecks/measure.py's paint_contrast (BL-341).
@@ -89,7 +89,7 @@ class PastTimeContrast(Base):
         """{kind: [(palette, mode, ratio, what)]} over every palette, light and dark."""
         out = {"past dot": [], "now-line": [], "past words": [], "next week": []}
         try:
-            for p in theme_names():
+            for p in TEST_PALETTES:
                 for m in ("light", "dark"):
                     self.b.eval(f"document.documentElement.dataset.palette={json.dumps(p)}; document.documentElement.dataset.theme={json.dumps(m)}")
                     self.b.pump(0.05)

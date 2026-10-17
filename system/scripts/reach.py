@@ -787,7 +787,7 @@ def wrap_main(argv):
 
 def bash_problem(command):
     """None if this is one creaite script run on its own, else why it is refused (BL-141: the panel has no open Bash). Parsing is
-    strict: outside quotes no ; & | < > ( ) { } or new line; outside single quotes no $ or back-quote. BL-265: the script, then
+    strict: outside quotes no ; & | < > ( ) { } or new line; outside single quotes no $, back-quote or backslash. BL-265: the script, then
     the scripts never run, then the shell characters, then the settings rule, as before."""
     cmd = (command or "").strip()
     m = __import__("re").match(r"python3? system/scripts/([a-z0-9_]+\.py)(?=\s|$)", cmd)
@@ -812,14 +812,19 @@ def _script_refused(script):
 
 
 def _shell_refused(cmd):
-    """Why the command has shell characters the shell would act on, or None."""
+    """Why the command has shell characters the shell would act on, or None. #116 H1 (16-10-2026): a backslash inside double
+    quotes is refused, so a quote is closed by the next double quote and nothing else (`"a\\\\" ; rm x` was read as one quoted
+    word, hiding the `;`); inside single quotes a backslash is literal to the shell and stays allowed; outside quotes it is refused."""
     quote = None
-    for i, ch in enumerate(cmd):
+    for ch in cmd:
         if quote:
-            if ch == quote and not (quote == '"' and cmd[i - 1] == "\\"):
+            if ch == quote:
                 quote = None
             elif quote == '"' and ch in "$`":
                 return "the command has $ or a back-quote, which the shell would expand: run the script on its own"
+            elif quote == '"' and ch == "\\":
+                return ("the command has a backslash inside double quotes, which the shell would read as an escape: "
+                        "use single quotes, or leave the backslash out")
             continue
         if ch in "'\"":
             quote = ch
@@ -1114,10 +1119,308 @@ def prep_decision(tool, inp):
     if why:
         return False, why
     if tool == "Bash":
-        why = bash_refusal(str((inp or {}).get("command") or ""), "prep")
+        command = str((inp or {}).get("command") or "")
+        # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
+        why = (bash_refusal(command, "prep") or held_form_reason(command) or held_never_reason(command, expand=False)
+               or held_kind_reason(command) or held_validate_reason(command) or held_glob_reason(command))
         if why:
             return False, why
     return True, ""
+
+
+# ===== #116 F1 (17-10-2026): the guard's own wildcard expansion, bounded =====
+# The guard expands a wildcard to check what the shell (ask) or a script (held) would find. Opening some folders blocks in the
+# kernel (macOS asks for consent before a program reads other apps' data under ~/Library/Group Containers), and a blocked open
+# can't be interrupted from inside the hook, so `'~/*/*/*/*/none.vtt'` held the hook past its 30 s timeout. Three locks:
+# - a wildcard is expanded only below the vault, the projects folder or the home folder (anything else is out of reach, so
+#   never), and never inside ~/Library unless that is the vault or the projects folder (OneDrive lives there): the walk checks
+#   each folder's real path before it opens it, so a symlink can't lead it there either;
+# - the walk runs in a daemon thread the hook waits on for GLOB_SECONDS at most; if it hasn't finished, the call is refused
+#   and the thread is left behind (it ends with the hook's process);
+# - the checks that need no expansion run before it (prep_decision, ask_bash_refusal), so nothing waits on it to refuse.
+GLOB_SECONDS = 2.0
+
+
+class GlobRefused(Exception):
+    """A wildcard the guard won't expand, or couldn't in time: refused, never let through. The message is the reason."""
+
+
+def _glob_root_reason(folder):
+    """Why the guard won't open this folder while expanding a wildcard, or None (see above)."""
+    rp = Path(os.path.realpath(folder))
+    inside = [r for name, r in roots() if name != "home"]
+    if any(parts_under(rp, r) is not None for r in inside):
+        return None
+    if parts_under(rp, home()) is None:
+        return "the wildcard reaches outside the vault, the projects folder and your home folder: name the file"
+    if parts_under(rp, home() / "Library") is not None:
+        return "the wildcard reaches inside ~/Library, which the guard never searches: name the file"
+    return None
+
+
+def _glob_walk(pattern):
+    """What the shell would expand a wildcard to with hidden files matched too (#116 A6 F3: zsh's GLOB_DOTS, bash's dotglob, so
+    `~/*/id_rsa` can reach ~/.ssh), one level per part, with fnmatch, which matches a leading dot. At most ASK_GLOB_LIMIT
+    entries are looked at; more raises AskGlobTooBig. The fixed part before the first wildcard, then each folder the walk reaches,
+    is checked (_glob_root_reason) before it is opened or looked in; GlobRefused if one is refused."""
+    import fnmatch
+    fixed, rest = _glob_fixed(pattern)
+    found, seen = [fixed], 0
+    for part in rest:
+        nxt = []
+        for base in found:
+            why = _glob_root_reason(base or ".")
+            if why:
+                raise GlobRefused(why)
+            if ASK_WILDCARDS & set(part):
+                try:
+                    names = os.listdir(base or ".")
+                except OSError:          # not a folder, or unreadable: the shell's glob finds nothing there either
+                    continue
+                seen += len(names)
+                if seen > ASK_GLOB_LIMIT:
+                    raise AskGlobTooBig()
+                nxt += [os.path.join(base, n) for n in names if fnmatch.fnmatchcase(n, part)]
+            elif os.path.lexists(os.path.join(base, part)):
+                nxt.append(os.path.join(base, part))
+        found = nxt
+    return found
+
+
+def _glob_fixed(pattern):
+    """(the fixed part of a wildcard before its first wildcard part, the parts from there on)."""
+    parts = [x for x in pattern.split("/") if x]
+    first = next((i for i, x in enumerate(parts) if ASK_WILDCARDS & set(x)), len(parts))
+    return ("/" if pattern.startswith("/") else "") + "/".join(parts[:first]), parts[first:]
+
+
+def _glob_patterns(found):
+    """Each path with a wildcard among `found`, as an absolute pattern (~ expanded, a relative one from the vault)."""
+    out = []
+    for p in found:
+        if ASK_WILDCARDS & set(p):
+            pattern = os.path.expanduser(p)
+            out.append(pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern))
+    return out
+
+
+def _bounded_expand(found, max_matches=None):
+    """What the wildcards among `found` expand to, new paths only, from a daemon thread the caller waits on for GLOB_SECONDS at
+    most. Raises GlobRefused on a timeout or a refused folder, AskGlobTooBig past the entry limit, HeldGlobTooBig past
+    max_matches; any other error is raised as it is (the callers fail closed)."""
+    import threading
+    patterns = _glob_patterns(found)
+    if not patterns:
+        return []
+    for pattern in patterns:          # out of reach or in ~/Library: refused at once, nothing walked and no thread started
+        why = _glob_root_reason(_glob_fixed(pattern)[0] or ".")
+        if why:
+            raise GlobRefused(why)
+    result = {}
+
+    def work():
+        """The walk itself, in the worker thread: its matches or its error, in `result`."""
+        try:
+            out = []
+            for pattern in patterns:
+                for m in _glob_walk(pattern):
+                    if m not in out and m not in found:
+                        out.append(m)
+                    if max_matches is not None and len(out) > max_matches:
+                        raise HeldGlobTooBig()
+            result["out"] = out
+        except BaseException as e:  # noqa: BLE001  handed to the caller, which refuses
+            result["error"] = e
+
+    t = threading.Thread(target=work, name="reach-glob", daemon=True)
+    t.start()
+    t.join(GLOB_SECONDS)
+    if t.is_alive():                 # blocked (a consent prompt, a slow disk): refuse now, leave the thread behind
+        _debug("warn", "wildcard expansion timed out")
+        raise GlobRefused("the guard couldn't check the wildcard in time: name the file")
+    if "error" in result:
+        raise result["error"]
+    return result["out"]
+
+
+def _then_expanded(found, expand, max_matches=None):
+    """The paths in `found`, then (with `expand`) what their wildcards expand to: a refusal on the paths as written never waits
+    on the walk."""
+    yield from found
+    if expand:
+        yield from _bounded_expand(found, max_matches=max_matches)
+# ===== end #116 F1 =====
+
+
+# ===== Held runs read only (security fix, 15-10-2026) =====
+# A run creaite starts itself (mode "prep" or "held") may have read hostile mail, and nothing marks it (no system/guard/run.json),
+# so its Bash may run only a creaite script's read commands, and no argument may name a place on the never list. bash_refusal has
+# already refused every shell form but one creaite script on its own (no ; & | $ back-quotes brackets or new lines, no env or cd),
+# so what is left is the script's own arguments as the shell would hand them over: `~` and `~user`, a relative path, a symlink
+# (classify takes the real path), `--opt=PATH`, a path after a separator inside a longer argument, and a wildcard the shell would
+# expand. ask creaite, the sweep and a confirmed request are unchanged: this is prep_decision's only. The second lock (marking a
+# held run so filechange applies its outside-content rule) is not here: it is A7 on #116 (run.json is one file for the whole
+# server and runs overlap, so it needs per-run keying); with this fix a held run reaches no stage or guarded command anyway.
+HELD_SPLIT = r"[=:,]"
+WILDCARDS = set("*?[")
+
+
+def held_arg_paths(command, expand=True):
+    """Every path a held run's Bash call could hand a script: prep_paths' (each path-like argument, `--x=path` too), every
+    path-like piece of an argument after = : or , (`//…` too, unless it follows http: or https:), a piece
+    with $ as a script could expand it, and (with `expand`), for a piece with a wildcard, what a script globbing it would find."""
+    import re
+    out = list(prep_paths("Bash", {"command": command}))
+    for piece, before in held_pieces(command):
+        if piece.startswith("//") and before is not None and re.search(r"(?i)\bhttps?:$", before):
+            continue                                       # a web address's host (https://…); `//Users/…` is a path (review N4)
+        if ("/" in piece or piece.startswith(("~", "."))) and piece not in out:
+            out.append(piece)
+    for p in list(out):
+        if "$" in p and os.path.expandvars(p) not in out:   # quoted from the shell, but a script could still expand it
+            out.append(os.path.expandvars(p))
+    return out + _bounded_expand(out, max_matches=HELD_GLOB_LIMIT) if expand else out
+
+
+HELD_GLOB_LIMIT = 500
+
+
+class HeldGlobTooBig(Exception):
+    """A quoted wildcard matched more than HELD_GLOB_LIMIT files (#116 A5 F4): refused, never let through. #116 F1: the walk is
+    the bounded one (_bounded_expand: in reach only, never ~/Library, at most GLOB_SECONDS), hidden files matched as in ask mode."""
+
+
+def held_pieces(command):
+    """(piece, the text just before it in the same argument with its separator, or None for the whole argument): each argument,
+    and each part of it after = : or ,."""
+    import re
+    out = []
+    for a in bash_args(command):
+        out.append((a, None))
+        parts = re.split(f"({HELD_SPLIT})", a)          # [text, separator, text, …]
+        out += [(parts[i], parts[i - 2] + parts[i - 1]) for i in range(2, len(parts), 2)]
+    return out
+
+
+def held_form_reason(command):
+    """Why a held run's Bash call has a form only the shell reads, or None (review N1, 15-10-2026). A `#` starts a shell comment
+    that bash_args' split doesn't drop, so `review.py assign … # --dry-run` would be classed by a flag the shell never passes.
+    No held prompt's command needs one (docx_tools.py text, minutes.py transcript), so any `#` at all is refused. Review N2:
+    ~- ~+ and ~ with a number at the start of any piece, and $PWD or $OLDPWD in any form, name folders the hook can't resolve.
+    Review N3: a wildcard outside quotes, and `**` anywhere, is refused (zsh's `**` reaches every folder below); one in quotes
+    reaches a script as it is, and held_arg_paths still checks what it would match, so a quoted file name such as
+    `SOW [signed].docx` (Prep reads Alan's documents by name) still reads. #116 A5 review: F1, any piece starting with ~ and
+    anything but / (zsh's ~NAME, ~user, ~+, ~-, ~1); F2, a word starting with = (zsh's =cmd); F5, a bare --; F3, --out."""
+    import re
+    if "#" in command:
+        return "the command has a #, which the shell reads as a comment: run the script on its own, without it"
+    if re.search(r"\$\{?(OLD)?PWD\b", command):    # review N2: these name a folder the hook can't see the run's value of
+        return "the command names $PWD or $OLDPWD: name the file by its path in the vault"
+    for piece, _ in held_pieces(command):
+        if piece.startswith("~") and piece[1:2] not in ("", "/"):
+            # review N2 and #116 A5 F1: ~- ~+ ~1 are the shell's folders (cd's last, this one, the stack), ~user a login's home and,
+            # in zsh, ~NAME any variable holding a folder (~HOME, ~TMPDIR, ~PWD): only ~ and ~/ are read as the hook reads them
+            return ("the command has ~ followed by a name, -, + or a number, which the shell turns into a folder: name the file by "
+                    "its path, or with ~/")
+    if any(a.startswith("=") for a in bash_args(command)):     # #116 A5 F2: zsh turns =name into the program's path (=ls is /bin/ls)
+        return "the command has a word starting with =, which the shell turns into a program's path: name the file by its path"
+    if "--" in bash_args(command):                 # #116 A5 F5: after a bare -- a flag such as --dry-run is a plain word
+        return "the command has a bare --, which makes the options after it plain words: run the script without it"
+    if any(a == "--out" or a.startswith("--out=") for a in bash_args(command)):
+        return ("the command has --out, which saves a file in system/staging/drafts/, and a run creaite starts itself only reads: "
+                "print the result instead")               # #116 A5 F3: propose.py and archive.py save a spec with --out
+    if WILDCARDS & _held_unquoted(command) or "**" in command:      # review N3: the shell expands these; zsh's ** goes every level
+        return "the command has a wildcard (* ? or [ outside quotes, or **), which the shell would expand: name the file, in quotes"
+    return None
+
+
+def _held_unquoted(command):
+    """The characters of a held run's command outside quotes (bash_refusal has already refused a back-slash outside single
+    quotes and an unclosed quote, so a quote character always opens or closes one: #116 F3, read as _shell_refused reads it)."""
+    out, quote = set(), None
+    for ch in command:
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        else:
+            out.add(ch)
+    return out
+
+
+def held_never_reason(command, expand=True):
+    """Why a held run's Bash call names a place on the never list (the check hook_decision makes, on every argument form), or
+    None. Anything it can't check is refused. Without `expand`, only the arguments as written (#116 F1: prep_decision runs
+    this first and held_glob_reason last)."""
+    try:
+        found = held_arg_paths(command, expand=False)          # #116 F1: the arguments as written first, then what they expand to
+        for p in _then_expanded(found, expand, max_matches=HELD_GLOB_LIMIT):
+            kind, why = classify(p, "read")
+            if kind == "never":
+                return f"{p}: {why}"
+    except (HeldGlobTooBig, AskGlobTooBig):
+        return "the wildcard matches too many files for the guard to check: name the file"
+    except GlobRefused as e:
+        return str(e)
+    except Exception as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
+
+
+def held_glob_reason(command):
+    """Why what a held run's wildcard would match is refused, or None: the never list on each match (#116 F1: the bounded
+    expansion, after every other check)."""
+    return held_never_reason(command) if WILDCARDS & set(command) else None
+
+
+# Read commands a held run still may not run: reach.py wrap and hook hand over to another command; drafts.py result stages a bulk
+# draft (system/staging/proposed-*-drafts.json and draft-stats.json for update-bulk and client-bulk). The server runs drafts.py
+# result itself when a draft run ends (live_server); no held prompt asks the model to. #116 A5 F3: sweep.py ignore and
+# done-candidates delete their input .json from system/staging/drafts/ (paths.consume_draft) and ignore writes sweep-ignored.json;
+# the sweep runs them, never a held run. SCRIPT_COMMANDS is unchanged (ask mode).
+HELD_NOT_READ = ("reach.py wrap", "reach.py hook", "drafts.py result", "sweep.py ignore", "sweep.py done-candidates")
+
+
+def held_kind_reason(command):
+    """Why a held run may not run this creaite script command, or None: only the read kind (SCRIPT_COMMANDS) runs, never
+    derived, stage, guarded, record or unknown, and never one in HELD_NOT_READ."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", vault_relative(command))
+    if not m:
+        return "a run creaite starts itself runs only creaite's read commands"
+    kind, name = command_kind(m.group(1), bash_args(command))
+    if kind == READ and name not in HELD_NOT_READ:
+        return None
+    _debug("warn", f"held run refused: {name} ({kind})")
+    return (f"{name} isn't a read command, and a run creaite starts itself runs only read commands: reply with what you found, "
+            f"and creaite saves it")
+
+
+def held_validate_reason(command):
+    """Why a held run may not run `tracker.py validate X`, or None: validate writes its findings back into the file it is given,
+    found as tracker.resolve_proposal finds it (the path as given, the vault root and the path, system/staging/ and the file
+    name; the first that exists), so it runs only when that file's real path is in system/staging/. Nothing found, or anything
+    that can't be checked, is refused (a path the shell would expand, such as an unquoted ~, isn't found here)."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )tracker\.py(?=\s|$)", vault_relative(command))
+    words = bash_args(command)
+    if not m or command_kind("tracker.py", words)[1] != "tracker.py validate":
+        return None
+    why = "tracker.py validate writes its findings back into the file, so a held run runs it only on a proposal in system/staging/"
+    try:
+        given = list(words)
+        given.remove("validate")                       # the command word only: a file named validate is still checked
+        if len(given) != 1 or given[0].startswith("~") or WILDCARDS & set(given[0]):
+            return why                                 # #116: a ~ or a wildcard is what the shell expands, not what is found here
+        found = next((c for c in (Path(given[0]), paths.ROOT / given[0], paths.STAGING / Path(given[0]).name) if c.exists()), None)
+        if found is None or parts_under(Path(os.path.realpath(found)), Path(os.path.realpath(paths.STAGING))) is None:
+            _debug("warn", "held run refused: tracker.py validate outside system/staging")
+            return f"{given[0]}: {why}"
+    except (OSError, ValueError, RuntimeError) as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
+# ===== end held runs read only =====
 
 
 def decide(tool, inp, mode, run, held=False):
@@ -1157,10 +1460,176 @@ def hook_decision(tool, inp, mode, run):
             return False, (f"{p}: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the "
                            f"new content in {paths.rel(area)}/ and run python3 system/scripts/filechange.py")
     if tool == "Bash":
-        why = bash_refusal(str((inp or {}).get("command") or ""), mode)
+        why = ask_bash_refusal(str((inp or {}).get("command") or ""), mode)    # ask-hook-fix: bash_refusal, then the rest
         if why:
             return False, why
     return True, ""
+
+
+def ask_bash_refusal(command, mode):
+    """Why an ask creaite Bash call is refused, or None: its form and the record gate (bash_refusal, as before), then
+    (ask-hook-fix, 15-10-2026) an unquoted comment, ~- ~+ ~N or ** (the shell's own words), a never-list path in any argument
+    form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
+    # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
+    return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)
+            or handover_refusal(command) or read_write_refusal(command) or ask_glob_reason(command))
+
+
+# ===== ask-hook-fix (15-10-2026): ask creaite's never list on every argument form =====
+# hook_decision's own check (tool_paths) sees each whole argument that looks like a path and doesn't start with "-", so
+# `minutes.py transcript ~/.ss?/id_rsa` (the shell expands the wildcard after the hook has looked) and `… --file=~/.ssh/id_rsa`
+# passed in a chat, a typed sweep and a confirmed request. ask_arg_paths adds what the held runs' check adds (A5,
+# held_arg_paths): a path after = : or , inside an argument, `--x=path`, a quoted $HOME as a script could expand it, and what a
+# wildcard would expand to. It is ask creaite's own copy, so a change to the held runs' rules never changes a chat's; and a `//`
+# after = : or , is skipped only when it is a URL's (`https://host`): on macOS `//Users/…` is the root folder's Users.
+ASK_SPLIT = r"([=:,])"
+ASK_WILDCARDS = set("*?[")
+URL_BEFORE = r"(?:^|[^A-Za-z0-9+.-])[A-Za-z][A-Za-z0-9+.-]*:$"     # the text before a URL's //: its scheme and colon
+
+
+def ask_arg_paths(command, expand=True):
+    """Every path an ask creaite Bash call could hand a script: tool_paths', every path-like piece of an argument after = : or ,
+    (a URL's //host left out), a piece with $ as a script could expand it, and (with `expand`), for a wildcard, what the shell
+    would expand it to (#116 F1: the bounded walk only, _bounded_expand)."""
+    import re
+    out = list(tool_paths("Bash", {"command": command}))
+    for a in bash_args(command):
+        parts = re.split(ASK_SPLIT, a)                  # [text, sep, text, sep, text, …]
+        for i in range(2, len(parts), 2):
+            piece = parts[i]
+            if piece.startswith("//") and re.search(URL_BEFORE, "".join(parts[:i])):
+                continue                                # https://host/…: a URL, not a path
+            if ("/" in piece or piece.startswith(("~", "."))) and piece not in out:
+                out.append(piece)
+    for p in list(out):
+        if "$" in p and os.path.expandvars(p) not in out:
+            out.append(os.path.expandvars(p))
+    return out + _bounded_expand(out) if expand else out
+
+
+ASK_GLOB_LIMIT = 2000
+
+
+class AskGlobTooBig(Exception):
+    """A wildcard reaches more entries than the guard checks: refused, never let through."""
+
+
+def ask_never_reason(command, expand=True):
+    """Why an ask creaite Bash call names a place on the never list, in any argument form, or None. Fails closed. Without
+    `expand`, only the arguments as written (#116 F1: ask_bash_refusal runs this first and ask_glob_reason last)."""
+    try:
+        found = ask_arg_paths(command, expand=False)          # #116 F1: the arguments as written first, then what they expand to
+        for p in _then_expanded(found, expand):
+            kind, why = classify(p, "read")
+            if kind == "never":
+                return f"{p}: {why}"
+    except (AskGlobTooBig, HeldGlobTooBig):
+        return "the wildcard reaches too many files for the guard to check: name the file"
+    except GlobRefused as e:
+        return str(e)
+    except Exception as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
+
+
+def ask_glob_reason(command):
+    """Why what an ask creaite Bash call's wildcard would expand to is refused, or None (#116 F1: last, bounded)."""
+    return ask_never_reason(command) if ASK_WILDCARDS & set(command) else None
+# ===== end ask-hook-fix: argument forms =====
+
+
+# ===== ask-hook-fix (15-10-2026): what the shell does to a word that the guard's own reading doesn't =====
+# bash_problem lets through one creaite script on its own; three things the shell still does to its words were invisible to the
+# checks above, each refused in every ask mode when it is unquoted (quoted, the shell leaves it as text, so a search for "#12",
+# "~-5 days" or "**bold**" still runs):
+# - a `#` starting a word starts a comment: the shell drops the rest, while the guard (shlex, no comments) still read it, so
+#   `review.py assign … # --dry-run` was classed read (command_kind) and ran for real;
+# - `~+`, `~-` and `~N` at the start of a word (or after = : or ,) are $PWD, $OLDPWD and the directory stack, which expanduser
+#   leaves alone, so the guard judged a folder named `~-` in the vault; #116 A6 F2: so are ~user and, in zsh, ~NAME for any
+#   variable holding a folder (~HOME, ~TMPDIR), so a ~ followed by anything but / is refused;
+# - `**` recurses in zsh (and bash's globstar), where the guard's own expansion goes one folder deep.
+def ask_shell_refusal(command):
+    """Why an ask creaite Bash call has an unquoted comment, a ~ followed by anything but / (~+ ~- ~N ~user ~NAME) or ** the
+    shell would act on, or None."""
+    cmd = vault_relative(command)
+    quote, prev = None, " "
+    for i, ch in enumerate(cmd):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch == "#" and prev in " \t":
+            return "the command has a # comment, which the shell would drop: run the script on its own, without one"
+        elif ch == "~" and prev in " \t=:," and cmd[i + 1:i + 2] not in ("", "/", " ", "\t"):
+            # #116 A6 F2: ~+ ~- ~N, ~user and zsh's ~NAME (any variable holding a folder: ~HOME, ~TMPDIR, ~PWD) are folders
+            # expanduser doesn't resolve as the shell does; only ~ and ~/ are read the same by both
+            return (f"the command has {cmd[i:i + 2]}…, which the shell turns into another folder: give the path itself, or "
+                    f"start it with ~/")
+        elif ch == "*" and cmd[i + 1:i + 2] == "*":
+            return "the command has **, which the shell would expand through every folder: give the path itself"
+        prev = ch
+    return None
+# ===== end ask-hook-fix: shell words =====
+
+
+# ===== ask-hook-fix (15-10-2026): reach.py wrap and hook are never a Bash call =====
+# `reach.py wrap X …` becomes `X …` and `reach.py hook` is the guard itself, both classed read in SCRIPT_COMMANDS, so a chat's
+# record gate judged the wrapper and not the command it runs (`reach.py wrap tracker.py apply` passed, and wrap would also skip
+# bash_problem's never-run scripts, permissions.py among them). Nothing legitimate runs either as a Bash call: system/scripts/run
+# execs `reach.py wrap` itself, and Claude Code runs `reach.py hook` from the run's --settings, never through the Bash tool. So
+# every ask creaite mode refuses them, confirmed included (a held run already does: held_kind_reason). classify and never stay.
+HANDOVER = ("reach.py wrap", "reach.py hook")
+
+
+def handover_refusal(command):
+    """Why this Bash call is refused as a hand-over command (HANDOVER), or None."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", vault_relative(command))
+    if not m or m.group(1) != "reach.py":
+        return None
+    name = command_kind("reach.py", bash_args(command))[1]
+    if name not in HANDOVER:
+        return None
+    _debug("warn", f"hand-over command refused: {name}")
+    return (f"{name} hands over to another command, and ask creaite never runs it: run the creaite script itself, "
+            f"`system/scripts/run <name>.py …`")
+# ===== end ask-hook-fix: hand-over commands =====
+
+
+# ===== ask-hook-fix (15-10-2026): the read commands that write =====
+# The read commands that write a file (ask-hook-fix audit, 15-10-2026): every one writes a fixed file in system/staging/, or a bare
+# --out name directly in system/staging/drafts/ (propose.emit_spec), but one: `tracker.py validate <proposal>` writes its
+# findings back into the file it is given, and finds it as tracker.resolve_proposal does (the path as given, then from the vault
+# root, then by its name in system/staging/), so any JSON file in reach (a settings or permission file) could be rewritten. It
+# runs only on a proposal in system/staging/, which is where cx-review, cx-minutes and the sweep validate (ask creaite's
+# modes; a held run's rule is A5's).
+def read_write_refusal(command):
+    """Why this read command would write outside system/staging/, or None."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", vault_relative(command))
+    if not m or m.group(1) != "tracker.py":
+        return None
+    words = bash_args(command)
+    if command_kind("tracker.py", words)[1] != "tracker.py validate":
+        return None
+    why = "tracker.py validate writes its findings back into the file, so it runs only on a proposal in system/staging/"
+    try:
+        given = list(words)
+        given.remove("validate")                              # the command word only: a file named validate is still checked
+        if len(given) != 1 or given[0].startswith("~") or ASK_WILDCARDS & set(given[0]):
+            return why     # one proposal only (resolve_proposal reads the first); #116 A6 F1: a ~ or a wildcard is what the shell
+                           # expands, so a namesake found in system/staging/ here is not the file tracker.py would rewrite
+        # The first that exists, in tracker.resolve_proposal's order; nothing found is refused.
+        found = next((c for c in (Path(given[0]), paths.ROOT / given[0], paths.STAGING / Path(given[0]).name)
+                      if c.exists()), None)
+        if found is None or parts_under(Path(os.path.realpath(found)), Path(os.path.realpath(paths.STAGING))) is None:
+            _debug("warn", "read command refused: tracker.py validate outside system/staging")
+            return f"{given[0]}: {why}"
+    except (OSError, ValueError, RuntimeError) as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
+# ===== end ask-hook-fix: read commands that write =====
 
 
 def bash_refusal(command, mode):

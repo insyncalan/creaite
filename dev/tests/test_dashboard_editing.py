@@ -63,7 +63,7 @@ SCRIPT = r"""
     ed.innerHTML="<div>Build is <b>late</b> and <i>risky</i>.</div><ul><li>Data access</li><li>UAT <b>prep</b></li></ul><ol><li>Escalate</li></ol>";
     ed.dispatchEvent(new Event("input",{bubbles:true})); out.md=htmlToMd(ed);
     out.inplace=[!!ed.closest(".curcard.editing"),document.getElementById("panel").classList.contains("on"),[...document.querySelectorAll(".inplace .rtebar [data-rc]")].length];
-    ed.innerHTML="<h3>Next steps</h3><blockquote>Hold the date</blockquote><p>Was <s>late</s>, see <a href=\"https://example.com/p\">the plan</a>.</p><ul><li>Data<ul><li>Masked extract</li></ul></li><li>UAT</li></ul>";
+    ed.innerHTML="<h1>Next steps</h1><h2>Detail</h2><h3>Fine print</h3><blockquote>Hold the date</blockquote><p>Was <s>late</s>, see <a href=\"https://example.com/p\">the plan</a>.</p><ul><li>Data<ul><li>Masked extract</li></ul></li><li>UAT</li></ul>";
     out.mdNew=htmlToMd(ed);
     // unsaved changes: leaving asks first; Keep editing stays, Discard goes
     ed.dispatchEvent(new Event("input",{bubbles:true})); go("work"); out.guard=[VIEW,document.getElementById("discardBar").classList.contains("on")];
@@ -92,9 +92,9 @@ SCRIPT = r"""
     go("cockpit","ABC"); const ck=q=>ckItems(q).map(i=>`${i.g}|${i.l}`);
     out.ck=[ck("").filter(x=>x.startsWith("Go to|")),ck("overdue").filter(x=>x.startsWith("Views|")),ck("current state").filter(x=>x.startsWith("Actions|")),
       ck("uat start").filter(x=>x.startsWith("Milestones|")),ck("steering").filter(x=>x.startsWith("Files|")),ck("recording").filter(x=>x.startsWith("Intake|"))];
-    // BL-44: the health panel opens on the right of the project page
+    // BL-44: the health panel opens on the right of the project page; #109: over the page (pover), against its right edge, not beside it
     go("cockpit","ABC"); openProject("ABC","health"); const pr=document.getElementById("panel").getBoundingClientRect(), vr=document.getElementById("v-cockpit").getBoundingClientRect();
-    out.panelRight=[pr.left>=vr.right-2, Math.abs(pr.top-vr.top)<40]; closePanel();
+    out.panelRight=[pr.right>=vr.right-2&&document.getElementById("panel").classList.contains("pover"), pr.top<=vr.top+2]; closePanel();
     // BL-52: health better than the evidence needs a new reason (checked here, not saved)
     openProject("ABC","health"); const hsel=document.getElementById("f_health"); hsel.value="On track"; hsel.dispatchEvent(new Event("change"));
     out.evidence=document.getElementById("hEvidence").textContent; set("f_reason",P.find(p=>p.code==="ABC").reason||"");
@@ -391,7 +391,7 @@ class DashboardEditingTests(unittest.TestCase):
         r = self.result
         self.assertEqual(r["inplace"][:2], [True, False])                 # BL-47: in the card, no side panel
         self.assertGreaterEqual(r["inplace"][2], 14)                      # the fuller toolbar
-        self.assertEqual(r["mdNew"], "### Next steps\n\n> Hold the date\n\nWas ~~late~~, see [the plan](https://example.com/p)."
+        self.assertEqual(r["mdNew"], "### Next steps\n\n#### Detail\n\n##### Fine print\n\n> Hold the date\n\nWas ~~late~~, see [the plan](https://example.com/p)."
                                      "\n\n- Data\n  - Masked extract\n- UAT")
         self.assertEqual(r["guard"], ["cockpit", True])                   # unsaved: Work waits
         self.assertEqual(r["kept"], ["cockpit", True])
@@ -648,90 +648,6 @@ class CreaiteTheme(unittest.TestCase):
             self.assertGreaterEqual(r(t["focus"], t["bg"]), 3, f"{name}: focus ring")
 
 
-class NotionTheme(unittest.TestCase):
-    """Notion (2026-10-09), after dev/reference/themes/DESIGN-Notion.md: the paper ground, one blue, contrast in both modes, Today's tokens set too."""
-    @classmethod
-    def setUpClass(cls):
-        import re
-        css = readable_page()      # BL-231: the source; the bundle reprints the code
-        blocks = re.findall(r':root\[data-palette="Notion"\](?::not\(\[data-theme="light"\]\)|\[data-theme="dark"\])?\{([^}]*)\}', css)
-        cls.light, cls.sysdark, cls.dark = ({k: v.strip() for k, v in re.findall(r"--([a-z-]+):([^;]+);", b)} for b in blocks[:3])
-        cls.css = css
-
-    def test_design_tokens(self):
-        self.assertEqual((self.light["bg"], self.light["surface"], self.light["ink"], self.light["line"], self.light["brand"]),
-                         ("#F6F5F4", "#FFFFFF", "#000000", "#E6E6E6", "#0075DE"))
-        self.assertTrue(self.light["font"].startswith('"NotionInter","Inter"'))
-        self.assertIn('{id:"Notion",swatch:["#F6F5F4","#FFFFFF","#0075DE","#E6F1FB"]}', self.css)
-        self.assertEqual(self.sysdark, self.dark)                                    # the two dark blocks agree
-
-    def test_today_follows_the_theme(self):
-        days = ("day-page", "day-band", "day-ink", "day-muted", "day-rule", "day-sun", "day-past")
-        for name, t in (("light", self.light), ("dark", self.dark)):
-            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"], "day-rule": t["line"]}   # BL-325: aliases of --ink, --muted and --line, set once in the base
-            self.assertTrue(all(k in t for k in days), f"{name}: Today's tokens not all set")
-            for fg in ("day-ink", "day-muted", "day-sun"):
-                for g in ("day-page", "day-band"):
-                    self.assertGreaterEqual(BrightwaterTheme.ratio(t[fg], t[g]), 4.5, f"{name}: --{fg} on --{g}")
-
-    def test_contrast_in_both_modes(self):
-        r = BrightwaterTheme.ratio
-        for name, t in (("light", self.light), ("dark", self.dark)):
-            for fg in ("ink", "muted", "accent", "bad", "warn", "ok"):
-                for g in ("bg", "surface", "sunk", "accent-soft"):
-                    self.assertGreaterEqual(r(t[fg], t[g]), 4.5, f"{name}: --{fg} on --{g}")
-            self.assertGreaterEqual(r(t["accent-ink"], t["accent"]), 4.5, f"{name}: accent fill")
-            self.assertGreaterEqual(r(t["inverse-ink"], t["inverse"]), 4.5, f"{name}: snackbar")
-            self.assertGreaterEqual(r(t["focus"], t["bg"]), 3, f"{name}: focus ring")
-        self.assertGreaterEqual(r("#FFFFFF", self.light["brand"]), 4.5)              # the pill button: white on Notion blue
-        self.assertLess(r(self.light["brand"], self.light["bg"]), 4.5)               # why text and links use --accent, not the brand blue
-
-
-class LinearTheme(unittest.TestCase):
-    """Linear (2026-10-09), after DESIGN-Linear.md: the near-black canvas and surface ladder exactly in dark, one lavender,
-    a derived light set, contrast in both modes, Today's tokens set too."""
-    @classmethod
-    def setUpClass(cls):
-        import re
-        css = readable_page()      # BL-231: the source; the bundle reprints the code
-        blocks = re.findall(r':root\[data-palette="Linear"\](?::not\(\[data-theme="light"\]\)|\[data-theme="dark"\])?\{([^}]*)\}', css)
-        cls.light, cls.sysdark, cls.dark = ({k: v.strip() for k, v in re.findall(r"--([a-z-]+):([^;]+);", b)} for b in blocks[:3])
-        cls.css = css
-
-    def test_design_tokens(self):
-        d = self.dark
-        self.assertEqual((d["bg"], d["surface"], d["sunk"], d["ink"], d["muted"], d["faint"], d["line"], d["line-strong"], d["brand"], d["ok"]),
-                         ("#010102", "#0F1011", "#18191A", "#F7F8F8", "#D0D6E0", "#8A8F98", "#23252A", "#34343A", "#5E6AD2", "#27A644"))
-        self.assertNotEqual(d["bg"].upper(), "#000000")                              # the design: never pure black
-        self.assertEqual(self.light["brand"], "#5E6AD2")                             # one lavender in both modes
-        self.assertTrue(self.light["font"].startswith('"Linear Text","Inter"'))
-        self.assertIn('{id:"Linear",swatch:["#010102","#0F1011","#5E6AD2","#171A3A"]}', self.css)
-        self.assertEqual(self.sysdark, self.dark)                                    # the two dark blocks agree
-
-    def test_today_follows_the_theme(self):
-        days = ("day-page", "day-band", "day-ink", "day-muted", "day-rule", "day-sun", "day-past")
-        for name, t in (("light", self.light), ("dark", self.dark)):
-            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"], "day-rule": t["line"]}   # BL-325: aliases of --ink, --muted and --line, set once in the base
-            self.assertTrue(all(k in t for k in days), f"{name}: Today's tokens not all set")
-            for fg in ("day-ink", "day-muted", "day-sun"):
-                for g in ("day-page", "day-band"):
-                    self.assertGreaterEqual(BrightwaterTheme.ratio(t[fg], t[g]), 4.5, f"{name}: --{fg} on --{g}")
-
-    def test_contrast_in_both_modes(self):
-        r = BrightwaterTheme.ratio
-        for name, t in (("light", self.light), ("dark", self.dark)):
-            for fg in ("ink", "muted", "accent", "bad", "warn", "ok"):
-                for g in ("bg", "surface", "sunk", "accent-soft"):
-                    self.assertGreaterEqual(r(t[fg], t[g]), 4.5, f"{name}: --{fg} on --{g}")
-            self.assertGreaterEqual(r(t["accent-ink"], t["accent"]), 4.5, f"{name}: accent fill")
-            self.assertGreaterEqual(r(t["inverse-ink"], t["inverse"]), 4.5, f"{name}: snackbar")
-            self.assertGreaterEqual(r(t["focus"], t["bg"]), 3, f"{name}: focus ring")
-            self.assertGreaterEqual(r("#FFFFFF", t["brand"]), 4.5, f"{name}: primary button text")
-        self.assertGreaterEqual(r(self.dark["accent-ink"], self.dark["btn-hover"]), 4.5)   # dark hover swaps to dark text
-        self.assertGreaterEqual(r("#FFFFFF", self.light["btn-hover"]), 4.5)                # light hover stays white text
-        self.assertLess(r(self.dark["brand"], self.dark["bg"]), 4.5)                       # why text and links use --accent, not the brand
-
-
 class CursorTheme(unittest.TestCase):
     """Cursor (2026-10-09), after dev/reference/themes/DESIGN-Cursor.md: the cream canvas and hairlines exactly in light, one orange, a derived dark set,
     contrast in both modes, Today's tokens set too."""
@@ -910,15 +826,8 @@ class ThermoScanTheme(NewTheme, unittest.TestCase):
 
 
 class BrightwaterTheme(unittest.TestCase):
-    """BL-67: the brand colours are used exactly, and every text and control pair the theme uses meets contrast."""
-    @classmethod
-    def setUpClass(cls):
-        import re
-        css = readable_page()      # BL-231: the source; the bundle reprints the code
-        blocks = re.findall(r':root\[data-palette="Brightwater"\](?:\[data-theme="dark"\])?\{([^}]*)\}', css)
-        cls.light, cls.dark = ({k: v.strip() for k, v in re.findall(r"--([a-z-]+):([^;]+);", b)} for b in blocks[:2])
-        cls.css = css
-
+    """The contrast helper the other theme tests share. Alan, 16-10-2026 (spend): Notion, Linear and Brightwater are no longer tested
+    (their token and contrast tests are gone; the themes themselves stay in the product); theme tests run on creaite and Cursor."""
     @staticmethod
     def ratio(a, b):
         def lum(h):
@@ -927,26 +836,6 @@ class BrightwaterTheme(unittest.TestCase):
             return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
         x, y = sorted((lum(a), lum(b)), reverse=True)
         return (x + 0.05) / (y + 0.05)
-
-    def test_brand_colours_exact(self):
-        self.assertEqual((self.light["bg"], self.light["ink"], self.dark["bg"], self.dark["ink"]),
-                         ("#F8F8FF", "#1E1F1E", "#1E1F1E", "#F8F8FF"))
-        self.assertEqual((self.light["brand"], self.dark["accent"], self.light["violet"], self.dark["muted"]),
-                         ("#91FF01", "#91FF01", "#AE74FF", "#C2C8D6"))
-        self.assertIn('{id:"Brightwater",swatch:["#F8F8FF","#1E1F1E","#91FF01","#AE74FF"]}', self.css)
-        self.assertNotIn("Aptos", self.light["font"])
-
-    def test_contrast_in_both_modes(self):
-        for name, t in (("light", self.light), ("dark", self.dark)):
-            grounds = [t[k] for k in ("bg", "surface", "sunk", "accent-soft")]       # no editing ground any more (BL-80)
-            for fg in ("ink", "muted", "accent", "bad", "warn", "ok"):
-                for g in grounds:
-                    self.assertGreaterEqual(self.ratio(t[fg], g), 4.5, f"{name}: --{fg} on {g}")
-            self.assertGreaterEqual(self.ratio(t["accent-ink"], t["accent"]), 4.5, f"{name}: primary button")
-            self.assertGreaterEqual(self.ratio(t["inverse-ink"], t["inverse"]), 4.5, f"{name}: snackbar")
-            self.assertGreaterEqual(self.ratio(t["focus"], t["bg"]), 3, f"{name}: focus ring")
-            self.assertGreaterEqual(self.ratio("#1E1F1E", t["brand"]), 4.5, f"{name}: Charcoal on Signal Green")
-        self.assertLess(self.ratio(self.light["brand"], self.light["bg"]), 3)   # why green is never text or a ring on light
 
 
 if __name__ == "__main__":

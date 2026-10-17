@@ -56,7 +56,8 @@ ESSENTIAL_ROWS = (
     ("Look and help", "Motion", "Follows your Mac's Reduce motion unless you choose.", ("dashboard.motion",)),
     ("Look and help", "AI drafts", "Suggestions you can use, edit or ignore. Never applied by themselves.",
      ("drafting.update", "drafting.client", "drafting.thinking", "drafting.reason", "drafting.agenda", "drafting.email",
-      "drafting.forms", "drafting.repeat", "drafting.done", "drafting.sharpen", "drafting.shape")),
+      "drafting.forms", "drafting.repeat", "drafting.done", "drafting.sharpen", "drafting.shape", "drafting.report-section",
+      "drafting.minutes-section")),
     ("Safety", "Daily backup, and a copy in OneDrive",
      "The database is backed up each day; with the projects in OneDrive a closed zip (database, settings, staging, history) "
      "goes to your _Portfolio folder. Chats, who you follow and the live database never leave the laptop.",
@@ -380,6 +381,11 @@ CATALOGUE = {
                          "On: drafts only suggest."),
     "drafting.shape": ("Look and help", "AI drafts: shape the meeting",                     # BL-286 C (joined on release-192)
                        "Read your focus and aim for a meeting and draft its notes, each line cited.", "On: drafts only suggest."),
+    "drafting.report-section": ("Look and help", "AI drafts: report sections",                # #90
+                                "The ✦ on a weekly or client report's section: a fresh draft beside your words.",
+                                "On: drafts only suggest."),
+    "drafting.minutes-section": ("Look and help", "AI drafts: minutes sections",
+                                 "The ✦ on a section of the minutes: a fresh draft beside your words.", "On: drafts only suggest."),
     "logging.level": ("Logging", "Log level", "Info, or debug for more detail.", "Info: enough to diagnose, small files."),
     "logging.max_mb": ("Logging", "Log file limit (MB)", "The largest a day's log may grow.",
                        "5 MB: a busy day fits; a loop can't fill the disk."),
@@ -394,11 +400,22 @@ CATALOGUE = {
     "day.catchup_after_minutes": ("Close the day", "Catch up if the last sweep is older than (minutes)",
                                   "Only sweep before closing when the last sweep is older than this.",
                                   "Half an hour: a recent sweep is enough."),
+    # ── Reports and minutes (v2.1.0)
+    "reports.file_exports_beside": ("Reports and minutes", "File report exports beside it",
+                                    "An HTML, Word or PDF export of a weekly or client report is also filed beside the report, "
+                                    "never overwriting.",
+                                    "Off: an export stays in drafts unless you tick it, so the reports folder holds only "
+                                    "what you chose to file (BL-335; Alan, 15-10-2026)."),
+    "reports.file_minutes_exports_beside": ("Reports and minutes", "File minutes exports beside them",
+                                            "An HTML, Word or PDF export of minutes is also filed beside the minutes, "
+                                            "never overwriting.",
+                                            "On: the copy you send sits with the minutes it came from (BL-338; Alan, "
+                                            "15-10-2026)."),
 }
 GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
                "Sweep", "Reminders", "Review", "Health thresholds", "Early warnings", "Current state", "Work and views",
-               "Look and layout", "AI drafts", "Close the day", "Meeting prep and Intake", "Search", "Archiving", "Folders and OneDrive",
-               "Live server and ask creaite", "Logging", "Help", "Legacy", "Developer")
+               "Look and layout", "AI drafts", "Close the day", "Reports and minutes", "Meeting prep and Intake", "Search", "Archiving",
+               "Folders and OneDrive", "Live server and ask creaite", "Logging", "Help", "Legacy", "Developer")
 DEVELOPER_KEYS = ()       # development-only settings (library fetches, hand checks, the second laptop) when they exist
 
 

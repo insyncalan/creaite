@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import work_data as W  # noqa: E402
-from live_browser import theme_names  # noqa: E402
+from live_browser import TEST_PALETTES  # noqa: E402
 from work_board_case import BoardCase, TODAY, W_initials, due_column, iso, wd, week_sunday  # noqa: E402
 
 class BoardLayout(BoardCase):
@@ -179,7 +179,7 @@ class BoardLayout(BoardCase):
 
     def test_works_in_every_palette_and_mode(self):
         b = self.open_board("actions", "due", view="open")
-        for palette in theme_names():
+        for palette in TEST_PALETTES:
             for mode in ("Light", "Dark"):
                 b.eval(f"S.palette={palette!r}; S.theme={mode!r}; applyTheme()")
                 colours = b.eval("""(()=>{ const c=getComputedStyle(document.querySelector('#workBoard .bcard')), col=getComputedStyle(document.querySelector('#workBoard .bcol')),

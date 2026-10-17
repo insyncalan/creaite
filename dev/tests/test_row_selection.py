@@ -67,10 +67,8 @@ class Selecting(LiveBrowserCase):
         self.opened()
         self.assertEqual(self.open_id(), a)
         self.assertEqual(self.hl(), [a])
-        b.key("Escape")                                                   # first Esc clears the highlight, the sidebar stays
+        b.key("Escape")                                                   # #108: one Esc clears the highlight and closes the sidebar
         self.assertEqual(self.hl(), [])
-        self.assertTrue(self.panel_on())
-        b.key("Escape")
         b.wait("!document.getElementById('panel').classList.contains('on')")
         b.click(self.cell(c))
         b.click(self.cell(c), count=2)                                    # a double-click on the source cell

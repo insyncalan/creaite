@@ -6,7 +6,7 @@
    a template (Blank, Stakeholder, Lessons learned, Working session). Text only through JSX. */
 import { useEffect, useState } from "preact/hooks";
 import { P, pName } from "../../core/data.js";
-import { DDATE, fd, TODAY, toIso } from "../../core/page.js";
+import { fd, readDate, TODAY } from "../../core/page.js";
 import { snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNotes, noteBodyFrom, noteCur, noteFind, noteFindP, noteFlush, noteImageSrc, noteLoading,
@@ -19,6 +19,8 @@ import { askDeleteNote, DeleteNoteDialog } from "./DeleteNote.jsx";
 import { Dialog } from "../Dialog.jsx";
 import { Icon } from "../Icon.jsx";
 import { Menu } from "../Menu.jsx";
+import { NewTile } from "../work/NewTile.jsx";
+import { NoteDate, NoteTags } from "./NoteHeader.jsx";
 import { ProjectTabs } from "../project/ProjectTabs.jsx";
 import { itemOf, itemState, NoteEditor } from "./NoteEditor.jsx";
 
@@ -63,8 +65,8 @@ function NotesList({ code, onOpen }) {
     <aside class="nlist" aria-label="Notes">
       <div class="lhead">
         <b id="notesListH">Notes</b><span class="sp" />
-        <button type="button" class="ib sm bd" id="notesCollapse" aria-expanded={open ? "true" : "false"} aria-controls="notesListBody"
-          aria-label={label} data-tip={`${label} (⌘\\)`} onClick={() => toggleNotesList()}>{open ? "«" : "»"}</button>
+        <button type="button" class="ib sm col" id="notesCollapse" aria-expanded={open ? "true" : "false"} aria-controls="notesListBody"
+          aria-label={label} data-tip={`${label} (⌘\\)`} onClick={() => toggleNotesList()}><Icon name={open ? "chevsleft" : "chevsright"} /></button>
         <span class="vlabel" aria-hidden="true">{notesList.value.length} notes</span>
       </div>
       <div id="notesListBody" hidden={!open}>
@@ -180,16 +182,9 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
   return (
     <article class="ndoc" aria-labelledby="noteTitle">
       <div class="nhead">
-        <input class="ntitle" id="noteTitle" aria-label="Title" value={String(m.title ?? n.title)} maxLength={160}
-          onInput={e => noteMeta({ title: /** @type {HTMLInputElement} */ (e.target).value })} />
-        <div class="meta">
-          {created ? <span>Created {fd(created)}</span> : null}
-          {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.path}|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
-          <span class={`tag${conf ? " int" : ""}`}>{conf ? "Confidential" : "Internal"}</span>
-          <label class="ntags"><span class="vh">Tags</span>
-            <input type="text" placeholder="Add tags" aria-label="Tags, separated by commas" defaultValue={tags.join(", ")} key={`${cur.path}|${cur.load}`}
-              onChange={e => noteMeta({ tags: /** @type {HTMLInputElement} */ (e.target).value.split(",").map(x => x.trim()).filter(Boolean) })} /></label>
-          <span class="sp" />
+        <div class="trow">
+          <input class="ntitle" id="noteTitle" aria-label="Title" value={String(m.title ?? n.title)} maxLength={160}
+            onInput={e => noteMeta({ title: /** @type {HTMLInputElement} */ (e.target).value })} />
           <SaveLine />
           <span class="nslot" id="noteFindSlot" data-slot="find-updates"><FindButton /></span>
           <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
@@ -199,6 +194,11 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
               { id: "sep", sep: true }, { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }]}
             onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else if (id === "del") askDeleteNote(); else onOpenFile(n.path); }} />
         </div>
+        <div class="meta props">
+          {created ? <span>Created {fd(created)}</span> : null}
+          {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.path}|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
+        </div>
+        <NoteTags tags={tags} />
       </div>
       {cur.stale ? (
         <div class="nstale" role="alert">
@@ -218,28 +218,17 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
     </article>);
 }
 
-/** BL-301 B gaps: a Working session's date and who it was with, editable in the note's header after it is made (saved like
-    the title: a change ends with Enter or leaving the field). @param {{date: string, people: string[]}} props */
+/** BL-301 B gaps: a Working session's date and who it was with, editable in the note's header after it is made. The date is typed or
+    picked (NoteDate); both are saved like the title: a change ends with Enter or leaving the field.
+    @param {{date: string, people: string[]}} props */
 function WorkingSession({ date, people }) {
-  const [day, setDay] = useState(date ? fd(date) : ""), [bad, setBad] = useState(false);
-  const setDate = /** @param {string} v */ v => {
-    const t = v.trim();
-    if (t && !DDATE.test(t)) { setBad(true); return; }
-    setBad(false);
-    if ((t ? toIso(t) : "") !== date) noteMeta({ date: t ? toIso(t) : "" });
-  };
   return (
-    <span class="nws" role="group" aria-label="Working session">
-      <span>Working session</span>
-      <label class="nwsf"><span class="vh">Date (DD-MM-YYYY)</span>
-        <input type="text" id="noteWsDate" class="nwsdate" value={day} placeholder="DD-MM-YYYY" inputMode="numeric" maxLength={10}
-          aria-invalid={bad ? "true" : undefined} aria-describedby={bad ? "noteWsBad" : undefined}
-          onInput={e => setDay(/** @type {HTMLInputElement} */ (e.target).value)} onChange={e => setDate(/** @type {HTMLInputElement} */ (e.target).value)} /></label>
-      {bad ? <span class="nwsbad" id="noteWsBad" role="alert">Use DD-MM-YYYY</span> : null}
-      <label class="nwsf"><span>with</span>
-        <input type="text" id="noteWsWith" class="nwswith" defaultValue={people.join(", ")} placeholder="Names, separated by commas" aria-label="With, names separated by commas"
-          onChange={e => noteMeta({ with: /** @type {HTMLInputElement} */ (e.target).value.split(",").map(x => x.trim()).filter(Boolean) })} /></label>
-    </span>);
+    <>
+      <span class="nprop"><span class="nk">Date</span><NoteDate date={date} /></span>
+      <span class="nprop"><span class="nk">With</span>
+        <input type="text" id="noteWsWith" class="nin who" defaultValue={people.join(", ")} placeholder="Names, separated by commas" aria-label="With, names separated by commas"
+          onChange={e => noteMeta({ with: /** @type {HTMLInputElement} */ (e.target).value.split(",").map(x => x.trim()).filter(Boolean) })} /></span>
+    </>);
 }
 
 /** "+ New note": a template, a title, and for a Working session its date and who it was with.
@@ -247,11 +236,11 @@ function WorkingSession({ date, people }) {
 function NewNote({ code, open, title, onClose, onMade }) {
   const [tpl, setTpl] = useState("blank"), [t, setT] = useState(title), [day, setDay] = useState(fd(TODAY)), [who, setWho] = useState(""), [busy, setBusy] = useState(false);
   useEffect(() => { if (open) { setT(title); setDay(fd(TODAY)); setWho(""); setBusy(false); } }, [open, title]);
-  const bad = tpl === "working-session" && day && !DDATE.test(day);
+  const bad = tpl === "working-session" && day.trim() && !readDate(day);
   const make = async () => {
     if (busy || bad) return;
     setBusy(true);
-    const made = await createNote(code, { template: tpl, title: t.trim(), ...(tpl === "working-session" ? { date: toIso(day), with: who.split(",").map(x => x.trim()).filter(Boolean) } : {}) });
+    const made = await createNote(code, { template: tpl, title: t.trim(), ...(tpl === "working-session" ? { date: readDate(day) || TODAY, with: who.split(",").map(x => x.trim()).filter(Boolean) } : {}) });
     setBusy(false);
     if (made) onMade();
   };
@@ -266,7 +255,7 @@ function NewNote({ code, open, title, onClose, onMade }) {
               <span><b>{name}</b><small>{line}</small></span></label>))}
         </fieldset>
         {tpl === "working-session" ? <div class="nnws">
-          <label class="fl">Date<input type="text" value={day} placeholder="DD-MM-YYYY" aria-invalid={bad ? "true" : undefined} onInput={e => setDay(/** @type {HTMLInputElement} */ (e.target).value)} /></label>
+          <label class="fl">Date<input type="text" value={day} placeholder="DD-MM-YYYY, or e.g. last monday" aria-invalid={bad ? "true" : undefined} onInput={e => setDay(/** @type {HTMLInputElement} */ (e.target).value)} /></label>
           <label class="fl">With<input type="text" value={who} placeholder="Names, separated by commas" onInput={e => setWho(/** @type {HTMLInputElement} */ (e.target).value)} /></label>
         </div> : null}
         <p class="sub">Saved in the project's notes folder, named by its title. Internal: never in a client report.</p>
@@ -293,7 +282,7 @@ export function NotesPage({ code, onGo, onOpenItem, onOpenFile, onAddressChange 
       <div class="hhead nhh">
         <div style={{ flex: 1 }}><h1>{code === "_portfolio" ? "Portfolio notes" : name}</h1>
           {code === "_portfolio" ? <div class="sub">Notes that cover several projects, and anything not yet filed under one.</div> : proj && proj.client ? <div class="sub">{proj.client}</div> : null}</div>
-        <button type="button" class="btn primary" id="notesNew" onClick={() => setDlg("")} aria-haspopup="dialog"><Icon name="plus" />New note</button>
+        <NewTile id="notesNew" popup="dialog" word="New note" decisions={false} hidden={false} onNew={() => setDlg("")} onDecision={() => {}} />
       </div>
       {code !== "_portfolio" ? <ProjectTabs code={code} selected="notes" count={notesList.value.length} onGo={id => { if (id === "overview") onGo("cockpit", code); }} /> : null}
       {notesMsg.value ? <div class="nmsg" role="status">{notesMsg.value}</div> : null}

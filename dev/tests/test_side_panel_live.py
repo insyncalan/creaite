@@ -290,10 +290,8 @@ class WidePanel(PanelCase):
             self.open_row()
             self.assertAlmostEqual(self.width(want), want, delta=1, msg=f"at {window}px")
             self.assertFalse(self.b.eval("EDITING"))
-            self.b.key("Escape")                                              # BL-122: Esc clears the highlight first...
+            self.b.key("Escape")                                              # #108: one Esc clears the highlight and closes the peek together
             self.b.wait("document.querySelectorAll('#workTbl tr.hl').length===0")
-            self.assertTrue(self.b.eval("document.getElementById('panel').classList.contains('on')"))
-            self.b.key("Escape")                                              # ...then closes it
             self.wait_closed()
             self.assertLessEqual(self.width(), 1)
 

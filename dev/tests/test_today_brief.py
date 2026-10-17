@@ -11,10 +11,10 @@ import re
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from live_browser import TEST_PALETTES, TEST_PALETTES_JS  # noqa: E402
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 import build_dashboard as bd  # noqa: E402
@@ -24,8 +24,7 @@ import build_dashboard as bd  # noqa: E402
 
 def theme_count():
     """How many named themes the dashboard has (its THEMES list), so theme checks follow new themes by themselves."""
-    page = readable_page()     # BL-231: the source; the bundle reprints the code
-    return len(re.findall(r'\{id:"', re.search(r"const THEMES=\[(.*?)\];", page, re.S).group(1)))
+    return len(TEST_PALETTES)
 
 class PageTests(unittest.TestCase):
     @classmethod
@@ -110,10 +109,10 @@ class IntakeSectionsTests(PageTests):
     def test_the_sections_use_the_themes_own_card_frame(self):
         o = self.probe("""
           go("inbox"); const out={};
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["light","dark"]){ S.palette=pal; S.theme=mode==="dark"?"Dark":"Light"; applyTheme();
+          for(const pal of TEST_PALETTES) for(const mode of ["light","dark"]){ S.palette=pal; S.theme=mode==="dark"?"Dark":"Light"; applyTheme();
             const cs=getComputedStyle(document.getElementById("isecUp")), card=getComputedStyle(document.querySelector("#v-inbox .tbl")); 
             out[pal+"|"+mode]=[cs.borderTopWidth!=="0px", cs.backgroundColor!=="rgba(0, 0, 0, 0)", cs.borderTopLeftRadius===card.borderTopLeftRadius]; }
-          window.OUT={out};""")
+          window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         for key, (bordered, filled, same_radius) in o["out"].items():
             self.assertTrue(bordered and filled, key)
 
@@ -329,7 +328,6 @@ class WeekAheadDataTests(unittest.TestCase):
         finally:
             v.cleanup()
         import json
-        import re
         data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', html, re.S).group(1))
         w = data["week"]
         self.assertEqual(w["from"], date.today().isoformat())
@@ -358,7 +356,7 @@ class TodayBriefTests(PageTests):
           const inner=view.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
           const sheetRules=[]; for(const sh of document.styleSheets) for(const r of sh.cssRules) if(r.media&&/max-width:\\s*640px/.test(r.conditionText||r.media.mediaText)) for(const c of r.cssRules) sheetRules.push(c.cssText);
           window.OUT={heads,bandFirst:!!(band.compareDocumentPosition(brief)&Node.DOCUMENT_POSITION_FOLLOWING),
-            ratios:cols.map(c=>+(c.getBoundingClientRect().width/inner).toFixed(4)), lefts:cols.map(c=>c.getBoundingClientRect().left), inner,
+            ratios:cols.map(c=>+(c.getBoundingClientRect().width/inner).toFixed(4)), lefts:cols.map(c=>c.getBoundingClientRect().left), centres:cols.map(c=>c.getBoundingClientRect().left+c.getBoundingClientRect().width/2), inner,
             narrow:sheetRules.some(t=>/\\.thome\\s*\\{[^}]*max-width:\\s*none/.test(t)), cards:document.querySelectorAll("#tBrief .card, #tBrief .col").length,
             portfolioLast:brief.lastElementChild.querySelector("h2").textContent, day:!!document.getElementById("dayLine"), mtgs:!!document.getElementById("dayMeets"),
             headline:document.getElementById("dayHead").tagName,
@@ -369,9 +367,9 @@ class TodayBriefTests(PageTests):
         self.assertEqual(o["heads"], ["To decide", "First thing", "Decisions needed", "Needs attention", "Your commitments", "You owe", "Waiting on",
                                       "Week ahead", "Resolved", "Portfolio"])
         self.assertTrue(o["bandFirst"])
-        self.assertAlmostEqual(o["ratios"][0], 1, delta=0.005)                     # the header at full width
+        self.assertAlmostEqual(o["ratios"][0], 0.8, delta=0.005)                   # #113: the header's content in the 80% column (the band itself is full width: test_today_home)
         self.assertLessEqual(o["ratios"][1]*o["inner"], 980.5)                     # the sections at a 980px reading width, centred
-        self.assertAlmostEqual(o["lefts"][1]-o["lefts"][0], (o["inner"]-o["ratios"][1]*o["inner"])/2, delta=1.5)
+        self.assertAlmostEqual(o["centres"][0], o["centres"][1], delta=1.5)           # both columns centred on the page
         self.assertTrue(o["narrow"])                                               # full width with gutters below 640px
         self.assertEqual(o["cards"], 0)
         self.assertEqual(o["overlap"], 0)                                          # the sections stack; none sits on another
@@ -404,7 +402,7 @@ class TodayBriefTests(PageTests):
         self.assertEqual([m[0] for m in o["menu"]][1:], ["Dismiss for this session", "Dismiss forever"])
         self.assertTrue(o["open"])
         self.assertFalse(o["old"])                                                  # the pill row is gone
-        self.assertEqual(o["links"], ["projects", "ABC"])
+        self.assertEqual(o["links"], ["reports", "ABC"])   # BL-337: the weekly reminder opens Reports
         self.assertTrue(o["label"].startswith("Options: Weekly report"))
 
     def test_needs_attention_lists_work_with_no_owner_or_due_date(self):
@@ -458,7 +456,7 @@ class TodayBriefTests(PageTests):
             {date:"2026-10-13",dow:"Tuesday",weekend:false,meetings:[],items:[]},
             {date:"2026-10-16",dow:"Friday",weekend:false,meetings:[],items:[{kind:"actions",id:"ABC-A-004",p:"ABC",t:"Friday action",o:"Sara Example"}]}]};
           go("today"); renderToday(); const days=[...document.querySelectorAll("#weekList .wkday")];
-          window.OUT={days:days.map(d=>[d.querySelector(".wkdh").textContent,false,[...d.querySelectorAll("li.wkrow")].map(x=>x.querySelector(".tb").textContent+" | "+x.querySelector(".wkwhy").textContent)]),to:document.getElementById("weekTo").textContent,note:document.querySelector("#weekList .wknote").textContent,
+          window.OUT={days:days.map(d=>[d.querySelector(".wkdh").textContent,false,[...d.querySelectorAll("li.wkrow")].map(x=>x.querySelector(".tb").textContent+" | "+x.querySelector(".wkwhy").textContent)]),to:document.getElementById("weekTo").textContent,note:document.querySelectorAll("#weekList .wknote").length,
             acts:[...document.querySelectorAll("#weekList li.wkrow")].map(x=>[...x.querySelectorAll(".tacts button")].map(b=>b.dataset.tip))};
           D.week={from:"2026-10-09",to:"2026-10-09",days:[]}; renderToday(); window.OUT.empty=document.querySelector("#weekList .none").textContent;""")
         names = [d[0] for d in o["days"]]
@@ -472,7 +470,7 @@ class TodayBriefTests(PageTests):
         self.assertEqual(o["days"][2][2][1], "UAT start — Example Programme | due · on track")
         self.assertIn("Friday action", o["days"][3][2][0])
         self.assertEqual(o["to"], "to Friday 16th October")
-        self.assertEqual(o["note"], "Work of every priority, every milestone and decision, and meetings")   # what the setting lists
+        self.assertEqual(o["note"], 0)   # #104: no note under the Week ahead heading
         self.assertEqual(o["acts"][0], ["Draft a chase", "Move the date"])          # someone else's action: chase it, or move it
         self.assertEqual(o["acts"][3], ["Open the project"])                          # a milestone
         self.assertEqual(o["empty"], "Nothing is due or booked until Friday 9th October.")
@@ -486,13 +484,13 @@ class TodayBriefTests(PageTests):
           D.week={from:TODAY,to:TODAY,days:[{date:TODAY,dow:"Today",weekend:false,meetings:[],items:[{kind:"actions",id:"ABC-A-002",p:"ABC",t:"Task",o:"Omar Ali",weekend:true}]}]};
           const bg=el=>{ for(let e=el;e;e=e.parentElement){ const c=getComputedStyle(e).backgroundColor; if(!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c; } return "rgb(255,255,255)"; };
           const out={}; go("today");
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); renderToday();
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); renderToday();
             const probes={title:"#attnList a.t", number:"#attnList .n", body:"#attnList p", inlineLink:"#attnList p a.s", quiet:"#attnList button.qa", dots:"#attnList .dots",
               heading:"#tBrief h2.th", count:"#tBrief .th .cnt", late:"#mineList .late, #weekList .wkwhy", weekLine:"#weekList .wkrow .tb", dayLabel:"#weekList .wkdh", weekTag:"#weekList .wktag",
               none:"#chgList .none", headline:"#dayHead", date:"#todayDate", lead:"#briefText"};
             for(const [k,sel] of Object.entries(probes)){ const el=document.querySelector(sel); if(!el) continue; out[`${pal}|${mode}|${k}`]=ratio(getComputedStyle(el).color,bg(el)); }
             const dot=document.querySelector("#dayLine .dot"); if(dot) out[`${pal}|${mode}|dot`]=ratio(getComputedStyle(dot).fill,bg(dot)); }
-          window.OUT={out,kinds:[...new Set(Object.keys(out).map(k=>k.split("|")[2]))]};""")
+          window.OUT={out,kinds:[...new Set(Object.keys(out).map(k=>k.split("|")[2]))]};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertGreaterEqual(len(o["kinds"]), 14)
         for key, r in o["out"].items():
             self.assertGreaterEqual(r, 4.5, key)
@@ -528,11 +526,11 @@ class TodayHeadingTests(PageTests):
         o = self.probe("""
           const out={}; go("today"); const ref=document.createElement("h2"); ref.textContent="Reference"; document.body.append(ref);
           const sig=c=>[c.fontWeight, c.fontSize, c.fontFamily, c.letterSpacing, c.textTransform];
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
             out[pal+"|"+mode]={ref:sig(getComputedStyle(ref)),rows:[...document.querySelectorAll("#tBrief .tsec:not(.setupsec) h2.th")].map(h=>{
               const n=h.querySelector(".cnt"), cc=n?getComputedStyle(n):null;
               return [sig(getComputedStyle(h)), cc&&cc.fontWeight, h.getBoundingClientRect().height, h.firstChild.textContent.trim()]; })}; }
-          ref.remove(); window.OUT={out};""")
+          ref.remove(); window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertEqual(len(o["out"]), theme_count() * 2)                       # every theme × 2 modes
         for key, v in o["out"].items():
             self.assertEqual(len(v["rows"]), 8, key)                                   # BL-319's To decide and BL-295's First thing too; BL-125 A's You owe and Waiting on are h3 sub-headings
@@ -554,12 +552,12 @@ class EditGroundTests(PageTests):
           const ratio=(a,b)=>{ const x=lum(a), y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
           const ground=el=>{ for(let e=el;e;e=e.parentElement){ const c=getComputedStyle(e).backgroundColor; if(!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c; } return "none"; };
           const out={}; go("work"); const id=A[0].id;
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
             openRecord("actions",id); const read=ground(document.getElementById("pkScroll")); closePanel();   /* BL-176: the peek's ground */
             openProject("ABC","health"); const edit=ground(document.getElementById("pBody")), b=document.getElementById("editBanner");   /* a form (BL-179: New is the peek; BL-186: a milestone is its editor; project health keeps its form) */
             out[pal+"|"+mode]={read,edit,banner:ratio(getComputedStyle(b).color,edit),shown:getComputedStyle(b).display,edit_token:getComputedStyle(document.documentElement).getPropertyValue("--edit").trim()};
             closePanel(); }
-          window.OUT={out};""")
+          window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertEqual(len(o["out"]), theme_count() * 2)                       # every theme × 2 modes
         for key, r in o["out"].items():
             self.assertEqual(r["read"], r["edit"], key)                        # no tint while editing

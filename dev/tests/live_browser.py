@@ -24,6 +24,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from split_dashboard import readable_page  # noqa: E402
 
 
+# Alan, 16-10-2026 (spend): theme checks run on the creaite and Cursor palettes only, light and dark. Every loop over the
+# palettes in the tests uses this one list; the product's themes (and test_help's counts) are untouched.
+TEST_PALETTES = ("creaite", "Cursor")
+TEST_PALETTES_JS = "[" + ",".join('"%s"' % p for p in TEST_PALETTES) + "]"
+
+
 def theme_names():
     """The dashboard's named themes, from its THEMES list, so theme checks follow new themes by themselves (BL-40, nine in 1.5.1)."""
     page = readable_page()     # BL-231: the source; the bundle reprints the code

@@ -52,9 +52,15 @@ def count(feature, event, n=1):
         return
 
 
+def section(name):
+    """settings.json's `name` block as a dict ({} when missing or hand-edited to something else, such as "off" or [])."""
+    got = paths.load_settings().get(name)
+    return got if isinstance(got, dict) else {}
+
+
 def switched_on(feature):
     """settings.json `drafting.<feature>` (on when missing): the switch in Settings › General › AI drafts."""
-    return (paths.load_settings().get("drafting") or {}).get(feature, True) is not False
+    return section("drafting").get(feature, True) is not False
 
 
 # ===== BL-221 (sprint-drafts-extraction) ===== "Looks like": a new proposal that repeats an existing item. At staging each new
@@ -256,7 +262,7 @@ def is_alan(sender, folder=""):
     """Whether Alan sent it: Sent Items, or his name or a short form from settings.json `identity`."""
     if str(folder).lower() in ("sent", "sent items"):
         return True
-    ident = paths.load_settings().get("identity") or {}
+    ident = section("identity")
     return any(is_person(sender, n) for n in [ident.get("name") or ""] + list(ident.get("short_forms") or []) if len(n) > 2)
 
 
@@ -357,6 +363,8 @@ def evidence_line(ev):
     when = f"{tracker.shown(at[:10])}{' ' + at[11:16] if len(at) >= 16 else ''}" if at else ""
     kind = {"mail": "Mail", "teams": "Teams message", "meeting": "Said in the meeting"}.get(ev.get("kind"), "Message")
     who = f" by {ev['who']}" if ev.get("who") else ""
+    if ev.get("said") and not ev.get("quote"):                  # BL-342: creaite's own words for a thread, so no quotation marks
+        return f"{kind}{' ' + when if when else ''}{who}: {str(ev['said']).strip()[:240]}"
     return f"{kind}{' ' + when if when else ''}{who}: “{str(ev.get('quote') or '').strip()[:240]}”"
 
 
@@ -519,8 +527,11 @@ def count_decision(item, decision):
     ll = item.get("looks_like") or {}
     if ll and decision == "rejected" and item.get("duplicate_of") == ll.get("id"):
         count("repeat", "used")
-    if (item.get("suggested") or {}).get("feature") == "done" and decision in ("approved", "rejected"):
+    sg = item.get("suggested") or {}
+    if (sg.get("feature") == "done" or sg.get("done")) and decision in ("approved", "rejected"):   # BL-342: a thread's close too
         count("done", "rejected" if decision == "rejected" else "edited" if item.get("as_proposed") else "used")
+    if sg.get("feature") == "promise" and decision in ("approved", "rejected"):           # BL-342 Part 5: a card's promise
+        count("promise", "rejected" if decision == "rejected" else "edited" if item.get("as_proposed") else "used")
 
 
 # ===== BL-297 (sprint-smart-updates) ===== Smarter updates: the signals that tie a message or meeting to an item already open, used by

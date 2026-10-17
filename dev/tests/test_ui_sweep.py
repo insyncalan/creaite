@@ -28,7 +28,9 @@ from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from live_browser import TEST_PALETTES  # noqa: E402
 import test_snapshots as ts  # noqa: E402
+import test_minutes_editor as me  # noqa: E402
 
 PROBE = (Path(__file__).resolve().parent / "ui_probe.js").read_text(encoding="utf-8")
 
@@ -57,8 +59,6 @@ SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
 # #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
 SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
                           "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')", "#panel")
-# BL-316: the meeting page (Meetings), the sample's one meeting
-SCREENS["meeting"] = ("go('meeting',Object.keys(D.hub||{})[0])", "!document.getElementById('v-meeting').hidden", "#v-meeting")
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
 # BL-316: the popups the sample's screens don't show (test_shared_behaviour's "unreached"): Work's New tile on Decisions (a
@@ -78,6 +78,24 @@ SCREENS["milestone-editor"] = ("MVAUD='int'; mvOpenPage('ABC','plan'); setTimeou
 SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='ABC-M-001'; "
                               "MV.rb={id:'ABC-M-001',date:TODAY,why:'',with:[]}; renderMilestones()",
                               "document.getElementById('mvRbAdd')", "#v-milestones")
+# v2.1.0 P7: the minutes view, its approve popup and the deadline popover, answered by test_minutes_editor's sample record (the
+# snapshot vault itself stays as it is).
+SCREENS["minutes"] = (me.open_sample, "document.querySelector('#v-minutes .mnrow')", "#v-minutes")
+SCREENS["minutes-approve"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#mnApproveBtn:not([disabled])')", 15),
+                                         b.eval("document.getElementById('mnApproveBtn').click()")),
+                              "document.getElementById('mnApprove') && document.getElementById('mnApprove').open", "#v-minutes")
+SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#v-minutes .mnrow .mndue')", 15),
+                                          b.eval("document.querySelector('#v-minutes .mnrow .mndue').click()")),
+                               "document.querySelector('#v-minutes .mnpop')", "#v-minutes")
+
+# v2.1.0 P6: the weekly report view (the snapshot vault's ABC project; the report is built by /api/report/draft, nothing is written).
+SCREENS["weekly"] = ("go('weekly',{code:'ABC'})", "document.querySelector('#v-weekly section[data-id=current_state]')", "#v-weekly")
+
+# BL-337 (v2.1.0 P9): Reports, a project's reporting space, and its editor view (Side by side), so the sweep reaches them
+SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.click()",
+                      "document.querySelector('#v-reports tbody tr')", "#v-reports")
+SCREENS["reporting"] = ("openSpace('ABC')", "document.querySelector('#v-reporting .rp-card')", "#v-reporting")
+
 # BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
 # ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").
 SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=document.querySelector('#projArch [data-parch=archive][data-pcode=ABC]'); "
@@ -87,7 +105,10 @@ SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=docu
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
 # (arrow keys on the grip); the project page's flow chart bars (the same counts are links in the card's table).
-EXEMPT = ("span.colrz", "div#chGrip", "g.flk")
+# The A4 sheet (components/report/Sheet.jsx) draws its page zoomed 40 to 80% by a transform, so its small controls measure under 24
+# on screen at any zoom: the section handle's grip and Hide (Alt+arrows and the heading's own keys do the same), the heading field,
+# Reset, and the minutes' time tags and their x (the transcript pane and the line's Edit do the same).
+EXEMPT = ("span.colrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
 
 
 class UiSweepCase(ts.Snapshots):
@@ -101,7 +122,7 @@ class UiSweepCase(ts.Snapshots):
                "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
                "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
                "document.getElementById('parchDlg')?.open && document.getElementById('parchDlg').close(); "
-               "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; go('today')")
+               "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; document.getElementById('mnApprove') && document.getElementById('mnApprove').open && document.getElementById('mnApprove').close(); go('today')")
         go(b) if callable(go) else b.eval(go)
         b.wait(ready, 15)
         last = None
@@ -294,7 +315,7 @@ class Wordmark(UiSweepCase):
     def test_every_palette_light_and_dark(self):
         b = self.b
         self.goto("today")
-        for p in b.eval("THEMES.map(t=>t.id)"):
+        for p in TEST_PALETTES:
             for t in ("light", "dark"):
                 with self.subTest(palette=p, mode=t):
                     r = b.eval(f"""(()=>{{ {LUM} const R=document.documentElement; R.dataset.palette={json.dumps(p)}; R.dataset.theme={json.dumps(t)};
@@ -432,14 +453,6 @@ class ScrollEnd(UiSweepCase):
                     with self.subTest(width=w, screen=name):
                         region = self.goto(name)
                         self.check(name, region if region.startswith("#v-") else ".view:not([hidden])")
-                with self.subTest(width=w, screen="meeting"):
-                    self.goto("today")
-                    t = b.eval("Object.entries(D.hub||{}).find(([t,m])=>m.key==='calendar:e1')?.[0]||''")
-                    self.assertTrue(t, "the fixture meeting has a page")
-                    b.eval(f"go('meeting',{json.dumps(t)})")
-                    b.wait("/ABC Steering/.test(document.querySelector('#v-meeting h1').textContent)")
-                    b.pump(0.5)
-                    self.check("meeting", "#v-meeting")
                 with self.subTest(width=w, screen="prep-popup"):
                     self.goto("today")
                     b.click("[data-prep]")

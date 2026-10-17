@@ -67,6 +67,31 @@ class StageTests(Base):
         meeting = json.loads(self.proposals()[0].read_text())["meeting"]
         self.assertEqual(meeting["draft"], draft)
 
+    def test_a_transcript_with_its_minutes_record_stages_without_a_word_draft(self):
+        """v2.1.0 P4 (BL-338): stage drafts the minutes record itself, so a transcript needs no Word draft."""
+        _, r = self.stage(transcript="inbox/catch-up.vtt", minutes={"summary": ["Omar will send the SOW."]})
+        record = "system/staging/drafts/2026-10-12 Catch up.html"
+        self.assertIn(f"Draft minutes: {record}", r.stdout)
+        meeting = json.loads(self.proposals()[0].read_text())["meeting"]
+        self.assertEqual(meeting["draft"], record)
+        self.assertTrue((self.v.root / record).is_file())
+        self.assertIn({"op": "copy", "from": "draft", "to": f"{ABC}/minutes/2026-10-12 Catch up.html"}, meeting["file_ops"])
+        self.assertIn("PASS  Staged minutes have their Word draft", self.v.run(script="doctor.py", ok=False).stdout)
+
+    def test_a_record_that_is_not_an_object_is_refused(self):
+        _, r = self.stage(ok=False, transcript="inbox/catch-up.vtt", minutes="Omar will send the SOW.")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("is an object", r.stdout)
+        self.assertEqual(self.proposals(), [])
+
+    def test_a_record_whose_file_has_gone_is_never_approved(self):
+        self.stage(transcript="inbox/catch-up.vtt", minutes={"summary": ["Omar will send the SOW."]})
+        (self.v.root / "system/staging/drafts/2026-10-12 Catch up.html").unlink()
+        listed = json.loads(self.v.run("list", "--json", script="review.py").stdout)
+        n = next(x["n"] for x in listed if x["ref"] == "meeting")
+        out = self.v.run("approve", str(n), script="review.py").stdout
+        self.assertIn("not approved — No draft minutes to file", out)
+
     def test_a_quick_note_still_stages_without_a_draft(self):
         note = f"{ABC}/minutes/2026-10-12 Quick note - Corridor chat.md"
         (self.v.root / note).parent.mkdir(parents=True, exist_ok=True)

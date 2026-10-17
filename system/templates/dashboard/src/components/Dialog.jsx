@@ -12,7 +12,15 @@
      method=dialog close it as the browser does (the owner's own "close" listener hears it); a scrim click closes it unless
      something was typed or chosen in it since it opened (or `dirty` says so); `onClose`, if given, is told after it closed.
    openDialog's `modal: false` opens it without the scrim (the Prep popup's swap while a peek sits over it, BL-286 E); a close
-   whose event arrives after the dialog was opened again (such a swap) is not a close. */
+   whose event arrives after the dialog was opened again (such a swap) is not a close.
+
+   ⌘↵ (Ctrl+↵ off a Mac) presses the dialog's primary button (#101), by default, in every dialog: the one marked data-cmdenter, else the
+   last visible, enabled .btn.primary. It is the button's own click, so the same checks and messages run, and a disabled button (an
+   invalid form) is never pressed. It does nothing during IME composition, when something else already took the key, from a Cancel or
+   other button, or while a picker is open (the picker takes the key first and the save follows). In a multi-line field it saves
+   instead of adding a line. `cmdEnter={false}` opts a dialog out (a preview whose button only closes it, or a choice that must be
+   clicked on purpose: bulk Approve, Undo, Merge, Cancel them all and archive). Dialogs the page's own handler covers (core/fields.js
+   CMDENTER: the peek, the panel, the milestone editor) are not <dialog>s and are unchanged. */
 import { useEffect, useRef } from "preact/hooks";
 
 const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -20,6 +28,29 @@ const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:no
 const OPENER = new WeakMap();
 /** Whether anything was typed or chosen in each dialog since it opened. @type {WeakMap<HTMLDialogElement, boolean>} */
 const TYPED = new WeakMap();
+
+const PICKER = ".combo.open,#mvCal:not([hidden]),#mvPop:not([hidden]),.cal:not([hidden]):not(:empty)";
+
+/** The button ⌘↵ presses in a dialog: data-cmdenter, else the last visible, enabled primary button; null when there is none.
+    @param {HTMLDialogElement} d @returns {HTMLButtonElement | null} */
+export function cmdEnterButton(d) {
+  const vis = /** @param {Element} b */ b => /** @type {HTMLButtonElement} */ (b).offsetParent !== null || b.getClientRects().length > 0;
+  const marked = [...d.querySelectorAll("button[data-cmdenter]")].filter(vis);
+  const all = marked.length ? marked : [...d.querySelectorAll("button.primary")].filter(vis);
+  return /** @type {HTMLButtonElement | null} */ (all.length ? all[all.length - 1] : null);
+}
+
+/** @param {KeyboardEvent} e @param {HTMLDialogElement} d */
+function cmdEnter(e, d) {
+  if (e.key !== "Enter" || !(e.metaKey || e.ctrlKey) || e.isComposing || e.keyCode === 229 || e.defaultPrevented) return;
+  const t = /** @type {HTMLElement} */ (e.target), b = cmdEnterButton(d);
+  if (!b) return;
+  if (t !== b && t.closest && t.closest("button,a[href]")) return;   // from Cancel or another button: not a save
+  e.preventDefault(); e.stopPropagation();                           // a multi-line field saves, it does not add a line
+  if (e.repeat) return;
+  const go = () => { if (b.isConnected && !b.disabled && d.open) b.click(); };
+  if (document.querySelector(PICKER)) setTimeout(go, 0); else go();
+}
 
 /** @param {string | Element | null} target @returns {HTMLDialogElement | null} */
 const dialogEl = target => /** @type {HTMLDialogElement | null} */ (typeof target === "string" ? document.getElementById(target) : target);
@@ -56,11 +87,11 @@ export function closeDialog(target, value) {
 }
 
 /** @typedef {{open?: boolean, onClose?: () => void, labelledBy?: string, ariaLabel?: string, describedBy?: string, id?: string,
-    class?: string, focus?: string, dirty?: boolean | (() => boolean), children?: import("preact").ComponentChildren}} DialogProps */
+    class?: string, focus?: string, cmdEnter?: boolean, dirty?: boolean | (() => boolean), children?: import("preact").ComponentChildren}} DialogProps */
 
 /** A modal dialog: open while `open` is true, or, with `open` left out, opened by openDialog().
     @param {DialogProps} props */
-export function Dialog({ open, onClose, labelledBy, ariaLabel, describedBy, id, class: cls, focus, dirty, children }) {
+export function Dialog({ open, onClose, labelledBy, ariaLabel, describedBy, id, class: cls, focus, cmdEnter: cmdKey = true, dirty, children }) {
   const ref = useRef(/** @type {HTMLDialogElement | null} */ (null));
   const owned = open !== undefined;
   useEffect(() => {
@@ -93,7 +124,7 @@ export function Dialog({ open, onClose, labelledBy, ariaLabel, describedBy, id, 
   };
   return (
     <dialog ref={ref} id={id} class={cls} aria-label={ariaLabel} aria-labelledby={labelledBy} aria-describedby={describedBy}
-      onCancel={cancel} onClose={closed} onClick={scrim} onInput={typed}>
+      onCancel={cancel} onClose={closed} onKeyDown={cmdKey ? (/** @type {KeyboardEvent} */ e) => { if (ref.current) cmdEnter(e, ref.current); } : undefined} onClick={scrim} onInput={typed}>
       {children}
     </dialog>
   );

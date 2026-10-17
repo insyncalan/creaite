@@ -19,7 +19,7 @@ import { $ } from "../../core/dom.js";
 import { openWork, tabTitle } from "../../core/nav.js";
 import { D, fd, mScroll, TODAY } from "../../core/page.js";
 import { snack, viaServer } from "../../core/server.js";
-import { draftAgenda, hubFor, prepOpen, prepPage } from "../../meetings.js";
+import { draftAgenda, prepOpen, prepPage } from "../../meetings.js";
 import { openPrep } from "../../projects.js";
 import { kOfId } from "../../work.js";
 import { linesFrom, loadPrep, prepViewKey, prepLoading, prepSaving, prepTab, prepView, saveFocus } from "../../stores/prep.js";
@@ -73,7 +73,6 @@ function ppSrcKind(s) {
 
 function Header({ v, researching }) {
   const mo = v.model, mt = mo.meeting, people = (mo.brief || {}).people || {}, series = (mo.brief || {}).series || {};
-  const hub = hubFor({ day: mt.day, start: mt.start, title: mt.title });
   const ev = eventOf(mt), past = mt.day < TODAY;
   const inv = people.invitees || [];
   const popup = (/** @type {boolean} */ agenda) => {
@@ -93,7 +92,7 @@ function Header({ v, researching }) {
   return (
     <header class="pph">
       <nav class="crumb" aria-label="Breadcrumb">
-        <a href="#" data-go="today">Today</a> › {hub ? <a href={`#meeting=${hub}`} data-meeting={hub}>Meetings</a> : <span>Meetings</span>} › <span aria-current="page">Prep</span>
+        <a href="#" data-go="today">Today</a> › <span>Meetings</span> › <span aria-current="page">Prep</span>
       </nav>
       <h1 id="ppTitle">{mt.title}</h1>
       <div class="ppmeta">

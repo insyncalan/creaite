@@ -23,6 +23,7 @@ export const RAIL_ITEMS = [
   { id: "work", title: "Work", icon: "work", group: "top" },
   { id: "review", title: "Review", icon: "review", badge: "revBadge", group: "top" },
   { id: "projects", title: "Projects", icon: "projects", group: "top" },
+  { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },   /* BL-337 */
   { id: "people", title: "People", icon: "people", group: "top" },
   { id: "inbox", title: "Intake", icon: "inbox", badge: "inboxBadge", group: "more" },
   { id: "files", title: "Files", icon: "folder", group: "more" },

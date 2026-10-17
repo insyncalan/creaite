@@ -121,7 +121,7 @@ class MilestoneEditor(Case):
 
     def test_one_handler_with_every_editor_registered(self):
         self.assertEqual(sorted(self.b.eval("CMDENTER.map(x=>x.name)")),
-                         ["decide", "milestone", "panel", "peek", "rebaseline", "sneak"])
+                         ["decide", "generate", "milestone", "panel", "peek", "rebaseline", "sneak"])   # #110: Generate registers its own
 
 
 class Rebaseline(Case):

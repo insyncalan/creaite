@@ -27,6 +27,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-copycmd]"
 $("#alertCmd").textContent=START_CMD;
 document.addEventListener("mousedown",e=>{
   if(e.target.closest(".snack,.cal,dialog")) return;
+  if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")&&!e.target.closest(OPENERS)&&!e.target.closest("#wbulk,#panel,#workTbl tr,#v-person tr,.bcard,button,a,input,select,textarea,label,[role=menu],[role=option],[role=dialog],.ddmenu,.ms-menu")) hlClear();   /* #108 (Alan, 15-10-2026): a click outside clears a bulk selection too; the rows, the bulk bar, its menus and any control stay as they were */
   if($("#chat").classList.contains("on")&&!e.target.closest("#chat")&&!e.target.closest("#askBtn,[data-ask],#panel.peek,.pkpop,#pkStage,#errBanner,#mvPeek,#mvCal,#mvPop")) closeChat();   /* BL-176: the peek stays usable beside the chat; fix-peek-140: so does the errors banner (closing the chat under the pointer moved its buttons) */
   if($("#panel").classList.contains("on")&&!e.target.closest("#panel")&&!e.target.closest(OPENERS)){
     if(shared.EDITING){ snack(shared.CUR&&shared.CUR.mode==="record"?"You're editing — save or cancel first":"Finish or cancel this first"); $("#pFoot").animate([{transform:"translateX(0)"},{transform:"translateX(-4px)"},{transform:"translateX(4px)"},{transform:"translateX(0)"}],{duration:220}); return; }
@@ -39,9 +40,9 @@ export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TE
 export function bootKeyboard(){
 document.addEventListener("keydown",e=>{
   if((e.metaKey||e.ctrlKey)&&e.shiftKey&&!e.altKey&&e.key.toLowerCase()==="n"){ e.preventDefault(); openCapture(); return; }   /* BL-301 C: a note, from any page */
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }   /* #122: ⌘K is the palette, Shift or not; inside a rich editor ⌘⇧K is the link form, caught first (components/EditorBar.jsx) */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="j"){ e.preventDefault(); $("#chat").classList.contains("on")?closeChat():openChat(); return; }
-  if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ hlClear(); return; } if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&!$("#panel").classList.contains("on")){ RHL.clear(); CHK.clear(); renderReview(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
+  if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ hlClear(); if($("#panel").classList.contains("on")) closePanel(); return; }   /* #108: Esc from a peek opened from a row clears the row and closes the peek together, so no row stays highlighted */ if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&!$("#panel").classList.contains("on")){ RHL.clear(); CHK.clear(); renderReview(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
   if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
   if(e.key==="/"){ e.preventDefault(); openChat(); return; }
   if((e.key==="n"||e.key==="N")&&!e.shiftKey&&!document.querySelector("dialog[open]")){ e.preventDefault(); openCapture(); return; }   /* BL-301 C (Alan, 14-10-2026): N, the second key for a note: ⌘⇧N is Chrome's incognito window in an ordinary tab */   /* / is always ask creaite, on every page (Alan, 2026-10-09) */

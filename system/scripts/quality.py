@@ -165,7 +165,7 @@ def drafts_rows():
         stats = {}
     try:
         import drafts
-        labels = {f: v[0] for f, v in drafts.FEATURES.items()}
+        labels = {**{f: v[0] for f, v in drafts.FEATURES.items()}, **getattr(drafts, "COUNTED", {})}   # BL-342 Part 5
     except ImportError:          # the drafts scaffold isn't installed: the features are named by their IDs
         labels = {}
     out = []

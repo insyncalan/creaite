@@ -14,7 +14,7 @@ from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 import milestone_data  # noqa: E402
 from milestone_data import TODAY, d  # noqa: E402
 
@@ -106,7 +106,7 @@ class Looks(Case):
         b.reload("typeof go==='function'&&LIVE")
         self.cockpit()
         bad = []
-        for palette in theme_names():
+        for palette in TEST_PALETTES:
             for mode in ("Light", "Dark"):
                 b.eval(f"S.palette={palette!r}; S.theme={mode!r}; applyTheme()")
                 r = b.eval("(()=>{ " + RATIO + """ const c=document.getElementById('mvCard'), s=getComputedStyle(c), p=getComputedStyle(c.querySelector('.mv-pill.int'));

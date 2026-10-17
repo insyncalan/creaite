@@ -639,47 +639,68 @@ def label_check_failure(con, err, code):
 
 
 def client_findings(block):
-    """Client report: internal-only content in the (possibly edited) draft."""
-    import tracker as t
-    text = "\n".join(draft_lines(paths.resolve(block["draft"])))
-    low = text.lower()
-    con = t.connect()
-    code = block["project"]
-    found = []
-    for table, col in (("raid", "description"), ("decisions", "decision"), ("actions", "description")):
-        for row in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (code,)):
-            if re.search(rf"\b{re.escape(row[0])}\b", text):
-                found.append(f"{row[0]} isn't client-visible but its ID appears")
-            elif len(row[1] or "") >= 15 and squash(row[1]).lower() in squash(low):
-                found.append(f"{row[0]} isn't client-visible but its wording appears: “{row[1][:80]}”")
-    memory = paths.project_dir(code) / "CLAUDE.md"
-    for line in (memory.read_text(encoding="utf-8").splitlines() if memory.exists() else []):
-        if "Client-safe: no" in line:
-            core = squash(re.sub(r"[-*]?\s*\(?Client-safe: no\)?\.?", "", line)).lower()[:40]
-            if len(core) >= 10 and core in squash(low):
-                found.append(f"memory line marked Client-safe: no appears: “{line.strip()[:80]}”")
-    try:                                                       # BL-94's floor: an item whose label excludes it from client output
-        for item_id, label in con.execute("SELECT il.item_id, il.label FROM item_labels il JOIN labels l ON l.name = il.label "
-                                          "WHERE (l.behaviour = 'exclude' OR l.default_choice = 'exclude') AND il.item_id LIKE ?", (f"{code}-%",)):
-            table = t.item_table(item_id)
-            col = {"actions": "description", "raid": "description", "decisions": "decision"}.get(table)
-            row = con.execute(f"SELECT {col}, client_message FROM {table} WHERE id = ?", (item_id,)).fetchone() if col else None
-            wordings = [row[0]] + [ln.split(":", 1)[1] for ln in (row[1] or "").splitlines() if ":" in ln and table != "decisions"] \
-                + ([row[1]] if row and table == "decisions" else []) if row else []      # its own words, and its client wording
-            if re.search(rf"\b{re.escape(item_id)}\b", text):
-                found.append(f"{item_id} is labelled {label} but its ID appears")
-            else:
-                hit = next((w for w in wordings if len((w or "").strip()) >= 15 and squash(w).lower() in squash(low)), None)
-                if hit:
-                    found.append(f"{item_id} is labelled {label} but its wording appears: “{hit.strip()[:80]}”")
-    # ===== BL-228 (sprint-debt-safety) =====  A: the label check fails closed: skipped only when the tables aren't there
-    except Exception as e:  # noqa: BLE001  any failure but a missing table is shown to Alan as a finding
-        found.extend(label_check_failure(con, e, code))
-    # ===== end BL-228 =====
-    for word in ("confidential", "restricted", "documents/"):
-        if word in low:
-            found.append(f"contains “{word}”")
-    return found
+    """Client report: internal-only content in the (possibly edited) draft. v2.1.0 P3: the check itself lives in client_leak.py, on
+    the data; a creaite document is checked there whole (its items too), a Word draft (a client report or the client-safe steerco
+    one-pager) by its text, with the same checks (#127: client_leak.plain_findings, not the wording check alone)."""
+    import client_leak
+    import creaite_doc
+    import sqlite3
+    draft = paths.resolve(block["draft"])
+
+    def check(con):
+        """The client check on the draft, with the connection `con`."""
+        if creaite_doc.is_doc(draft):
+            return client_leak.findings(creaite_doc.read(draft), con)
+        return client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
+    con = tracker.connect()
+    try:
+        return check(con)
+    except sqlite3.Error as e:                       # BL-228: a label check that cannot run is a finding (fails closed), not a crash
+        if labels_readable(con):                     # #127 review: not the labels (no such table: actions): fails closed as such
+            debuglog.warn("review", f"client check failed for {block['project']}: {type(e).__name__}")
+            return [f"Couldn't check the client report against the tracker: {type(e).__name__}: {e}; check before sending"]
+        failure = label_check_failure(con, e, block["project"])
+        if not failure:
+            raise
+        try:                                         # the other findings alongside it, read without the labels
+            return failure + [f for f in check(_WithoutLabels(con)) if f not in failure]
+        except sqlite3.Error:
+            return failure
+    finally:
+        con.close()
+
+
+def labels_readable(con):
+    """#127 review: whether the labels and item_labels tables can be read (so an error came from elsewhere)."""
+    import sqlite3
+    try:
+        for table in ("labels", "item_labels"):
+            con.execute(f"SELECT * FROM {table} LIMIT 1").fetchall()
+        return True
+    except sqlite3.Error:
+        return False
+
+
+class _WithoutLabels:
+    """A connection that answers every query on the labels with no rows (#127 review: the rest of the client check still runs
+    when the label check can't; its failure is reported on its own)."""
+
+    def __init__(self, con):
+        self._con = con
+
+    def execute(self, sql, *args):
+        """The query's rows; none for a query on the labels."""
+        if re.search(r"\b(?:item_)?labels\b", sql):
+            return self._con.execute("SELECT NULL, NULL, NULL WHERE 0")
+        return self._con.execute(sql, *args)
+
+    def __getattr__(self, name):
+        return getattr(self._con, name)
+
+
+def client_block(block):
+    """Whether a report block is checked as a client report: a client report, or the client-safe steerco one-pager (BL-92)."""
+    return block.get("kind") == "client" or (block.get("kind") == "steerco" and block.get("version") == "client")
 
 
 # ===== BL-260 point 4 (fix-minutes-approve) =====
@@ -691,9 +712,23 @@ def no_draft_refusal(n, ref, block, decision):
 
 
 def decide_entry(n, p, data, ref, block, decision, mode=None):
-    """decide_draft, after the no-draft check."""
+    """decide_draft, after the no-draft check; a minutes record has no Word to compare or clean (v2.1.0 P4)."""
+    if ref == "meeting" and str(block.get("draft") or "").lower().endswith(".html"):
+        return no_draft_refusal(n, ref, block, decision) or decide_record(n, p, data, block, decision)
     return no_draft_refusal(n, ref, block, decision) or decide_draft(n, p, data, ref, block, decision, mode)
+
+
+def decide_record(n, p, data, block, decision):
+    """Record a decision on a minutes record (v2.1.0 P4, BL-338): its items are its rows, so there is nothing to reconcile."""
+    block["minutes_decision"] = decision
+    save(p, data)
+    return f"{n}: Minutes {decision} — {block.get('title', '')}"
 # ===== end BL-260 point 4 =====
+
+
+def word_draft(draft):
+    """Whether a block's draft is a Word file (v2.1.0 P3: a creaite document has no Word to compare or clean)."""
+    return bool(draft) and not str(draft).lower().endswith(".html")
 
 
 def decide_draft(n, p, data, ref, block, decision, mode=None):
@@ -721,7 +756,7 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
                     f'"approve {n} --as-staged" to keep them') if any(d.get("item") for d in diffs) else \
                    f'say "re-extract" (minutes.py refresh) to rebuild the staged items from the draft, or "approve {n} --as-staged" to keep them'
             return f"{n}: not approved — the draft differs from the staged items:\n    {listed}\n  ({hint})"
-    if decision == "approved" and draft and ref == "report" and block.get("kind") == "weekly" and mode != "as-staged":
+    if decision == "approved" and word_draft(draft) and ref == "report" and block.get("kind") == "weekly" and mode != "as-staged":
         diffs = weekly_differences(block)
         if diffs and mode == "sync":
             sync_weekly(data, block, diffs)
@@ -732,14 +767,13 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
             listed = "\n    ".join(d["msg"] for d in diffs)
             return (f"{n}: not approved — the draft differs from the staged items:\n    {listed}\n  (say \"approve {n} "
                     f"--sync\" to update the staged items to match the draft, or \"approve {n} --as-staged\" to keep them)")
-    if decision == "approved" and draft and ref == "report" and mode != "as-staged" and \
-            (block.get("kind") == "client" or (block.get("kind") == "steerco" and block.get("version") == "client")):   # BL-92: the client-safe one-pager is checked like a client report
+    if decision == "approved" and draft and ref == "report" and mode != "as-staged" and client_block(block):   # BL-92: the client-safe one-pager is checked like a client report
         found = client_findings(block)
         if found:
             listed = "\n    ".join(found)
             return (f"{n}: not approved — possible internal content in the client report:\n    {listed}\n  (edit the "
                     f"draft, or say \"approve {n} --as-staged\" to file it anyway)")
-    if decision == "approved" and draft:
+    if decision == "approved" and word_draft(draft):
         r = subprocess.run([sys.executable, str(DOCX_TOOLS), "clean", str(paths.resolve(draft))],
                            capture_output=True, text=True)
         if r.returncode != 0:
@@ -1119,6 +1153,9 @@ def to_stored(field, value):
 def cmd_edit(n, pairs):
     """Change fields of a pending item ('field=value', dates DD-MM-YYYY), validate it and approve it if valid."""
     p, data, ref, item = lookup(int(n))
+    if ref == "meeting" and str(item.get("draft") or "").lower().endswith(".html"):     # v2.1.0 P4: a minutes record
+        sys.exit("creaite: these minutes are a creaite record, not a Word file: "
+                 "edit their items by their own numbers, then approve.")
     if ref in ("meeting", "report", "file_changes"):
         sys.exit("creaite: edit drafts in Word (or ask Claude to change a file change), then approve.")
     target = item.setdefault("values", {}) if item.get("op") == "new" else item.setdefault("changes", {})
@@ -1127,6 +1164,8 @@ def cmd_edit(n, pairs):
         target[field.strip()] = to_stored(field.strip(), value.strip())
     save(p, data)
     tracker.cmd_validate(str(p))
+    import minutes_record                                   # v2.1.0 P4: a minutes record's row follows its edited item
+    minutes_record.follow(p, via="cli")
     data = json.loads(p.read_text(encoding="utf-8"))
     item = next(i for i in data["items"] if i.get("n") == ref)
     fields = ", ".join(x.partition("=")[0].strip() for x in pairs)
@@ -1451,34 +1490,40 @@ def retarget_note(item, target):
 
 def cmd_retarget(n, target):
     """Turn a pending new item into an update to `target`, an open item of its project (BL-297 part D)."""
-    import extraction
     p, data, ref, item = lookup(int(n))
-    target = str(target or "").strip().upper()
+    code, msg = retarget_item(p, data, item, str(target or "").strip().upper(), ref)
+    print(f"{n}: {msg}")
+    if code or msg.startswith("nothing new"):
+        return code
+    return tracker.cmd_validate(str(p))
+
+
+def retarget_item(p, data, item, target, ref=None, decided_in="review"):
+    """retarget's work on one proposal item, saved: (0, what was done) or (1, why not). Also the minutes' Update that one
+    (v2.1.0 P4, BL-338: decided_in "minutes")."""
+    import extraction
     why = retarget_refusal(ref, item, target)
     con = tracker.connect()
     row = None if why else tracker.fetch(con, item["table"], target)
     con.close()
     why = why or target_refusal(item, dict(row) if row is not None else None, target)
     if why:
-        print(f"{n}: {why}.")
-        return 1
+        return 1, f"{why}."
     note, new = retarget_note(item, target), extraction.merged_item(item, dict(row))
     if note["marked"] == target:
         extraction.count("repeat", "used")
     if new is None:                                  # nothing to carry: it is the same item, so it is rejected as its duplicate
-        item.update(decision="rejected", reject_reason="Duplicate", duplicate_of=target, decided_in="review", was=snapshot(item),
+        item.update(decision="rejected", reject_reason="Duplicate", duplicate_of=target, decided_in=decided_in, was=snapshot(item),
                     retargeted=note)
         save(p, data)
-        print(f"{n}: nothing new to carry to {target}, so it was rejected as a duplicate of it.")
-        return 0
+        return 0, f"nothing new to carry to {target}, so it was rejected as a duplicate of it."
     v = item.get("values") or {}
     new.update(retargeted=note, why=f"Update instead: raised as “{v.get(extraction.TEXT[item['table']]) or ''}”")
     data["items"][data["items"].index(item)] = new
     save(p, data)
     debuglog.info("review", f"{p.name} item {new['n']} retargeted to {target} ({', '.join(new['changes'])}"
                   + (", unmarked" if not note["marked"] else "") + ")")
-    print(f"{n}: now an update to {target} ({', '.join(UPDATE_LABELS.get(f, f) for f in new['changes'])}); approve it as usual.")
-    return tracker.cmd_validate(str(p))
+    return 0, f"now an update to {target} ({', '.join(UPDATE_LABELS.get(f, f) for f in new['changes'])}); approve it as usual."
 
 
 def entry(spec):
@@ -1855,6 +1900,125 @@ def _main_with_rejects(argv):
 
 main = _main_with_rejects
 # ===== end BL-315 =====
+
+
+# ===== v2.1.0 P4 (BL-338) ===== Approve minutes: the minutes and the items Alan ticked in ONE apply (tracker.py apply, the one writer,
+# naming only this proposal), so nothing goes to Review again. Actions and updates are one group with one tick; whatever the bulk rule
+# approves only on its own (a new decision, a decision recorded or withdrawn, a new risk, a closure, and the rest of individual_only)
+# needs its own tick; unticked items wait in Review; a milestone change is never approved here (BL-186: proposed on its own); removed
+# items (rejected in the minutes) are recorded as rejections in the same apply. The open point (Alan): should a new decision, a new
+# risk and a closure join the group? That is MINUTES_GROUP_JOINS, the one switch here (and its mirror in P7's popup).
+MINUTES_GROUP_JOINS = frozenset()            # e.g. {"new decision", "new risk", "closing update"} if Alan changes the bulk rule
+
+
+def minutes_group(item):
+    """Where an item of the minutes goes in the approve popup: "group" (actions and updates, one tick), "own" (its own tick),
+    "milestone" (proposed on its own, never here), "waits" (needs a project, or invalid), "removed" or "applied"."""
+    if item.get("applied"):
+        return "applied"
+    if item.get("decision") == "rejected":
+        return "removed"
+    if item.get("table") == "milestones":
+        return "milestone"
+    if needs_project(item) or "invalid" in (item.get("flags") or []):
+        return "waits"
+    why = individual_only(item)
+    return "own" if why and why not in MINUTES_GROUP_JOINS else "group"
+
+
+def _plan_text(item):
+    """An item's words in the approve popup: its title, or the update in words."""
+    if item.get("op") == "update":
+        return update_text(item)
+    v = item.get("values") or {}
+    return v.get("description") or v.get("decision") or ""
+
+
+def minutes_plan(data):
+    """What the approve popup lists: where the minutes are filed, and each item by group with what it is ({n, group, why, label})."""
+    import minutes_record
+    meeting = data.get("meeting") or {}
+    rows = []
+    for it in data.get("items") or []:
+        g = minutes_group(it)
+        rows.append({"n": it.get("n"), "group": g, "why": individual_only(it) if g == "own" else None,
+                     "label": f"{minutes_record.does(it)}: {_plan_text(it)}"[:300]})
+    filed = [op["to"] for op in meeting.get("file_ops") or [] if op.get("op") == "copy" and op.get("from") == "draft"]
+    return {"files": filed, "transcripts": [op["to"] for op in meeting.get("file_ops") or []
+                                            if op.get("op") == "copy" and op.get("from") == "transcript"],
+            "items": rows, "group": sum(1 for r in rows if r["group"] == "group"), "joins": sorted(MINUTES_GROUP_JOINS)}
+
+
+def _minutes_refusal(p, data):
+    """Why these minutes can't be approved from the minutes view, or None."""
+    import minutes_record
+    meeting = data.get("meeting") or {}
+    if not meeting or meeting.get("applied") or meeting.get("note"):
+        return "These minutes have already been approved, or this proposal has no minutes."
+    if not minutes_record.is_record(meeting.get("draft")):
+        return "These minutes are a Word draft: approve them in Review."
+    return None
+
+
+def approve_minutes(name, group=True, own=(), via="dashboard"):
+    """Approve a meeting's minutes and the ticked items in one apply: {ok, message, apply_id, approved, waiting}. `group` ticks
+    actions and updates; `own` lists the numbers of the items ticked one by one. On a failed apply nothing changes: every decision
+    is put back as it was."""
+    p = paths.STAGING / Path(str(name)).name
+    if not re.fullmatch(r"proposed-[\w.-]+\.json", p.name) or not p.is_file():
+        return {"ok": False, "message": "That proposal is no longer pending."}
+    data = json.loads(p.read_text(encoding="utf-8"))
+    why = _minutes_refusal(p, data)
+    if why:
+        return {"ok": False, "message": why}
+    was = {"meeting": data["meeting"].get("minutes_decision"),
+           "items": {i.get("n"): (i.get("decision"), i.get("decided_in")) for i in data.get("items") or []}}
+    approved, waiting = _tick(data, group, {int(n) for n in own or () if str(n).isdigit()})
+    data["meeting"].update(minutes_decision="approved", decided_in="minutes")
+    save(p, data)
+    debuglog.info("review", f"{p.name} minutes approved with {approved} item(s) in one apply; {len(waiting)} wait in Review ({via})")
+    r = subprocess.run([sys.executable, str(Path(__file__).with_name("tracker.py")), "apply", p.name], cwd=paths.ROOT,
+                       capture_output=True, text=True)
+    out = (r.stdout + r.stderr).strip()
+    if r.returncode != 0:
+        _put_back(p, was)
+        return {"ok": False, "message": out or "The apply didn't run; nothing was changed."}
+    m = re.search(r"Apply (\d+):", out)
+    return {"ok": True, "message": out, "apply_id": int(m.group(1)) if m else None, "approved": approved, "waiting": waiting}
+
+
+def _tick(data, group, own):
+    """Approve the ticked items: the group when `group`, and each of `own`. (how many, [the numbers left waiting in Review])."""
+    approved, waiting = 0, []
+    for it in data.get("items") or []:
+        g = minutes_group(it)
+        if (g == "group" and group) or (g == "own" and it.get("n") in own):
+            it.update(decision="approved", decided_in="minutes")
+            approved += 1
+        elif g in ("group", "own", "milestone", "waits"):
+            waiting.append(it.get("n"))
+    return approved, waiting
+
+
+def _put_back(p, was):
+    """A failed apply: the proposal's decisions as they were before Approve minutes."""
+    target = p if p.is_file() else paths.APPLIED / p.name
+    if not target.is_file():
+        return
+    data = json.loads(target.read_text(encoding="utf-8"))
+    if data.get("meeting") and not data["meeting"].get("applied"):
+        data["meeting"]["minutes_decision"] = was["meeting"] or "pending"
+        data["meeting"].pop("decided_in", None)
+    for it in data.get("items") or []:
+        d, how = was["items"].get(it.get("n"), (None, None))
+        if not it.get("applied") and d is not None:
+            it["decision"] = d
+            if how:
+                it["decided_in"] = how
+            else:
+                it.pop("decided_in", None)
+    save(target, data)
+# ===== end v2.1.0 P4 =====
 
 if __name__ == "__main__":
     sys.exit(debuglog.main("review.py", main, sys.argv[1:]))
