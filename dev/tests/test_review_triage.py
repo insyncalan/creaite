@@ -6,6 +6,7 @@ The vault holds test_dashboard.populate's portfolio plus a mixed queue: three fi
 project, a new risk, a new decision, a closing update, a conflict, and items from mail, Teams and the dashboard, some of them stale.
 """
 import json
+import os
 import sys
 import unittest
 from datetime import datetime, timedelta
@@ -27,7 +28,9 @@ def pending(item):
 
 
 def created(days_ago):
-    return (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%dT09:00:00")
+    fixed = os.environ.get("CREAITE_NOW")                                  # #177: days come from creaite's clock, never the real date
+    now = datetime.strptime(fixed, "%Y-%m-%d %H:%M") if fixed else datetime.now()
+    return (now - timedelta(days=days_ago)).strftime("%Y-%m-%dT09:00:00")
 
 
 def load_queue(v):
@@ -215,11 +218,13 @@ class Triage(LiveBrowserCase):
         self.assertTrue(set(kids) <= set(b.eval("[...RHL]")))                           # Select all is the stated exception
         self.assertEqual(b.eval("RHL.size"), b.eval("rvMatching().length"))
 
-    def test_filters_group_and_the_stale_tag(self):
+    def test_filters_group_and_the_age_text(self):
         b = self.open_review()
-        stale = b.eval("[...document.querySelectorAll('#reviewBody .tag.stale')].filter(t=>/Stale · (19|20) days/.test(t.textContent)).length")
-        self.assertEqual(stale, 4)
-        self.assertIn("stale", b.eval("document.getElementById('rvSub').textContent"))
+        self.assertEqual(b.eval("document.querySelectorAll('#reviewBody .tag.stale:not(.dupt):not(.rvold)').length"), 0)   # #177: no Stale chip
+        self.assertNotIn("stale", b.eval("document.getElementById('rvSub').textContent"))
+        ages = b.eval("[...document.querySelectorAll('#reviewBody tr[data-n] .rvage')].map(e=>e.textContent)")
+        self.assertEqual(sum(1 for a in ages if a in ("19 days", "20 days")), 4)
+        self.assertIn("1 day", ages)
         b.click('#rvfilters [data-rvf="nd"]')
         b.click('#rvf-nd input[data-fk="nd"][value="stale"]')
         b.pump(0.2)
