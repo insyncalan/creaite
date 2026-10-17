@@ -2,6 +2,7 @@
 /* panel.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0046-detail-panel.js, 0047-bl-154-sprint-ux.js, 0048-after-bl-154.js, 0049-bl-260-fix-minutes-draft.js, 0050-after-bl-260.js, 0165-bl-176-sprint-peek.js, 0166-bl-176-sprint-peek.js, 0167-bl-176-sprint-peek.js, 0168-bl-176-sprint-peek.js, 0169-bl-176-sprint-peek.js, 0170-bl-250-fix-history-feed.js, 0171-after-bl-250.js, 0173-bl-177-sprint-peek.js, 0174-bl-175-sprint-peek.js, 0175-bl-179-sprint-peek-new.js, 0176-bl-179-sprint-peek-new.js, 0177-bl-179-sprint-peek-new.js, 0178-bl-179-sprint-peek-new.js, 0179-bl-180-sprint-peek-new.js, 0181-bl-185-sprint-peek-new.js, 0182-bl-187-fix-peek-140.js, 0183-bl-188-fix-peek-140.js, 0194-bl-198-sprint-review-work.js, 0197-bl-219-sprint-drafts-fields.js, 0198-bl-225-sprint-drafts-fields.js, 0199-bl-222-sprint-drafts-fields.js, 0200-bl-226-sprint-drafts-fields.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { helpPanelIsOpen } from "./helpPanel.js";
 import { drawPeekNotes } from "./notes.js";
 import { actHref, actId } from "./activity.js";
 import { closeChat, openChat, send } from "./ask.js";
@@ -385,7 +386,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(document.querySelector("dialog:modal")||shared.CAL||helpPanelIsOpen()||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only; #158: the ? panel is a layer over the peek, so its Esc (core/keys.js) closes it first */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft chase goes back to the item first */

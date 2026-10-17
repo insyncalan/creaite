@@ -1306,6 +1306,14 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hp-found{background:var(--hp-amber-soft);border-radius:var(--r-md);box-shadow:0 0 0 4px var(--hp-amber-soft)}
 body.wn-new #helpTabs [data-help="whatsnew"]::after,body.wn-new #v-settings [data-go="help"]::after{content:"";display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:var(--accent);vertical-align:middle}
 .hp-wn{background:var(--hp-paper);border:1px solid var(--hp-hair);border-radius:var(--r-lg);padding:20px 24px;margin:0 0 18px} .hp-wn h3{font:600 var(--fs-lg) var(--hp-display);margin:18px 0 6px} .hp-wn ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px} .hp-wn p,.hp-wn li{font-size:var(--fs-lg);line-height:1.5}
+#hpanel{position:fixed;top:0;right:0;height:100vh;width:min(360px,100vw);background:var(--surface);border-left:1px solid var(--line);display:none;flex-direction:column;z-index:var(--z-chat);box-shadow:var(--shadow-side);color:var(--ink)}
+#hpanel.on{display:flex}
+.hpn-h{display:flex;align-items:center;gap:8px;padding:16px 16px 8px 20px} .hpn-h h2{flex:1;margin:0;font-size:var(--fs-xl);outline:none}
+.hpn-b{padding:4px 20px 16px;overflow:auto;display:flex;flex-direction:column;gap:12px} .hpn-k{margin:0;color:var(--muted);font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:.05em}
+.hpn-jobs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px} .hpn-jobs a,.hpn-ref{display:block;padding:8px 10px;border-radius:var(--r-md);color:var(--ink);text-decoration:none;font-size:var(--fs-lg)} .hpn-jobs a:hover,.hpn-ref:hover,.hpn-jobs a:focus-visible,.hpn-ref:focus-visible{background:var(--accent-soft)}
+.hpn-ref{color:var(--accent)} .hpn-f{margin:auto 0 0;padding:12px 20px;color:var(--muted);font-size:var(--fs-sm)}
+.hfoot{margin:28px 0 0;color:var(--muted);font-size:var(--fs-sm)} .hfoot kbd{font:500 var(--fs-sm) var(--font);border:1px solid var(--line-strong);border-radius:var(--r-sm,4px);padding:0 5px;background:var(--surface)}
+.hp-how{margin-left:4px;color:var(--accent);white-space:nowrap}
 /* ===== end Help finding (#158) ===== */
 
 #helpTabs{position:sticky;top:0;z-index:var(--z-sticky);background:var(--hp-ground);margin-top:0;padding-top:14px} #helpTabs button{color:var(--hp-soft)} #helpTabs button[aria-selected="true"]{color:var(--hp-ink)}

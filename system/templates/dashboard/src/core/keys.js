@@ -4,6 +4,7 @@
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0122-after-bl-158-theme.js, 0123-keyboard.js */
 import { closeChat, openChat, openCk } from "../ask.js";
 import { helpSearchFocus } from "../help.js";
+import { helpKey, helpPanelClose, helpPanelIsOpen } from "../helpPanel.js";
 import { openCapture } from "../components/notes/CaptureDrawer.jsx";
 import { REV } from "./data.js";
 import { $, $$ } from "./dom.js";
@@ -43,13 +44,13 @@ document.addEventListener("keydown",e=>{
   if((e.metaKey||e.ctrlKey)&&e.shiftKey&&!e.altKey&&e.key.toLowerCase()==="n"){ e.preventDefault(); openCapture(); return; }   /* BL-301 C: a note, from any page */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }   /* #122: ⌘K is the palette, Shift or not; inside a rich editor ⌘⇧K is the link form, caught first (components/EditorBar.jsx) */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="j"){ e.preventDefault(); $("#chat").classList.contains("on")?closeChat():openChat(); return; }
-  if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ hlClear(); if($("#panel").classList.contains("on")) closePanel(); return; }   /* #108: Esc from a peek opened from a row clears the row and closes the peek together, so no row stays highlighted */ if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&!$("#panel").classList.contains("on")){ RHL.clear(); CHK.clear(); renderReview(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
+  if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(helpPanelIsOpen()){ e.stopPropagation(); helpPanelClose(true); return; }   /* #158: the ? panel is a layer: one Esc closes it, before a peek or a highlight, and focus goes back */ if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ hlClear(); if($("#panel").classList.contains("on")) closePanel(); return; }   /* #108: Esc from a peek opened from a row clears the row and closes the peek together, so no row stays highlighted */ if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&!$("#panel").classList.contains("on")){ RHL.clear(); CHK.clear(); renderReview(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
   if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
   if(e.key==="/"){ e.preventDefault(); if(shared.VIEW==="help"){ helpSearchFocus(); return; } openChat(); return; }   /* #158: on Help, / is Help's search */
   if((e.key==="n"||e.key==="N")&&!e.shiftKey&&!document.querySelector("dialog[open]")){ e.preventDefault(); openCapture(); return; }   /* BL-301 C (Alan, 14-10-2026): N, the second key for a note: ⌘⇧N is Chrome's incognito window in an ordinary tab */   /* / is always ask creaite, on every page (Alan, 2026-10-09) */
   if((e.key==="f"||e.key==="F")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: F opens the field picker */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
-  if(e.key==="?"){ e.preventDefault(); go("help"); return; }
+  if(e.key==="?"){ if(document.querySelector("dialog[open]")) return; e.preventDefault(); helpKey(); return; }   /* #158: the ? panel; never while typing (typing() above) or over a dialog */
   if((e.key==="["||e.key==="]")&&shared.VIEW==="cockpit"){ e.preventDefault(); switchProject(e.key==="]"?1:-1); return; }
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
   if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */

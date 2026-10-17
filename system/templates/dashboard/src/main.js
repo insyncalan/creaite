@@ -39,6 +39,8 @@ export * from "./ask.js";
 export * from "./meetings.js";
 
 export * from "./help.js";
+export * from "./helpPanel.js";
+export * from "./helpSearch.js";
 
 export * from "./drafts.js";
 
@@ -117,6 +119,7 @@ import { shared } from "./core/state.js";
 import { bootDrafts0129, bootDrafts0160, bootDrafts0196, bootDrafts0202, bootDrafts0203, bootDrafts0204 } from "./drafts.js";
 import { bootFiles0068, bootFiles0069 } from "./files.js";
 import { bootNotes } from "./notes.js";
+import { bootHelpPanel } from "./helpPanel.js";
 import { bootHelp0091, bootHelp0158, bootHelp0161, bootHelp0162, firstHelp } from "./help.js";
 import { bootIntake0053, bootIntake0134, bootIntake0135, bootIntake0136, bootIntake0137, inboxBadge } from "./intake.js";
 import { bootPrepShape } from "./stores/prepShape.js";
@@ -253,6 +256,7 @@ bootToday0159();
 bootDrafts0160();
 bootHelp0161();
 bootHelp0162();
+bootHelpPanel();   /* #158: the ? panel, the foot lines and the empty-state links */
 bootSettings0163();
 bootToday0164();
 bootPanel0165();

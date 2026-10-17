@@ -254,13 +254,15 @@ class PageTests(unittest.TestCase):
     def test_question_mark_opens_the_last_tab_used(self):
         o = self.probe("""
           const key=k=>document.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true}));
-          go("today"); key("?"); out.first=[VIEW,HELPARG];
-          helpGo("reference"); go("today"); key("?"); out.second=[VIEW,HELPARG,location.hash];
+          go("activity"); key("?"); out.first=[VIEW,HELPARG];   /* #158: Today has a list of jobs now (the panel); a screen with none still opens Help */
+          helpGo("reference"); go("activity"); key("?"); out.second=[VIEW,HELPARG,location.hash];
+          go("today"); key("?"); out.panel=[VIEW,document.querySelector("#hpanel").classList.contains("on")]; helpPanelClose(false);
           document.querySelector('[data-go=help]'); go("settings"); $q('#v-settings [data-go=help]').click(); out.settings=[VIEW,HELPARG];
           window.OUT=out;""")
         self.assertEqual(o["first"], ["help", "start"])
         self.assertEqual(o["second"], ["help", "reference", "#help-reference"])
         self.assertEqual(o["settings"], ["help", "reference"])
+        self.assertEqual(o["panel"], ["today", True])
 
     def test_the_vault_command_replaces_the_placeholder_and_reference_has_no_box_of_its_own(self):
         o = self.probe("""

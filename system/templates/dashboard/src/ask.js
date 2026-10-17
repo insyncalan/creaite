@@ -28,6 +28,7 @@ import { railPopOpen } from "./rail.js";
 import { decide } from "./review.js";
 import { ownerFinal, peopleCk, PERS, renderSettings, resolvePerson, row, VIPD } from "./settings.js";
 import { DC, longDay, pkAdd, plur, tl } from "./today.js";
+import { helpPanelClose } from "./helpPanel.js";
 import { allViews, applyView, items, itemsMove, loadTab, rows, saveTab } from "./work.js";
 import { openCloseDay } from "./components/closeday/CloseDay.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
@@ -334,7 +335,7 @@ export const GREET="Hi Alan. I run your requests through Claude Code in the vaul
    the last event drawn (its sequence number), so a reattach asks only for what is newer. */
 shared.SHOWN=null;
 export function greet(){ addEl("msg a",html`${GREET}`); }
-export function openChat(){ if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
+export function openChat(){ helpPanelClose(false); if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
       CHATFROM=ok?{el:f,key:chatFromKey(f)}:null; }
   $("#chat").classList.add("on"); rbDismiss(); chatScroll(); if(!$("#chLog").children.length&&!ATTACHED){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
 /* ===== end BL-262 ===== */
