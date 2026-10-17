@@ -146,7 +146,7 @@ function Notes() {
               <label id={`shN-${k}-l`}>{label}</label>
               {edited.has(k) ? <span class="sub shmine">Your edit, kept on Regenerate · <button type="button" class="linkbtn" onClick={() => giveBack(k)}>let creaite redraft it</button></span> : null}
             </div>
-            <TextEditor id={`shN-${k}`} cls="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} labelledBy={`shN-${k}-l`} ai={ai}
+            <TextEditor id={`shN-${k}`} cls="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} labelledBy={`shN-${k}-l`} ai={ai} links
               describedBy={lines.length ? `shC-${k}` : undefined} onInput={t => { shapeText.value = { ...shapeText.value, [k]: t }; }} />
             {lines.length ? (
               <ol class="shcites" id={`shC-${k}`} aria-label={`${label}: each line's source`}>

@@ -4,6 +4,7 @@
    boot…() functions that src/main.js calls in today's order. */
 import { mountReportingCard } from "./components/reporting/ReportingCard.jsx";
 import { openDialog } from "./components/Dialog.jsx";
+import { linkHtml } from "./core/linkText.js";
 import { makePrepDialog } from "./components/dialogs/PageDialogs.jsx";
 import { mountAiMenu } from "./components/AiSelect.jsx";
 import { mountEditorBar, unmountEditorBar } from "./components/EditorBar.jsx";
@@ -77,7 +78,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts.length?html` <span class="sub">· ${acts.length}</span>`:""}</h2><div class="mini-list">${raw(acts.slice(0,S.listCap||10).map(x=>`<div data-open="actions:${x.id}" style="cursor:pointer"><span class="${overdue(x)?"late":""}" style="display:inline-block;width:110px">${rel(x.due)}</span>${ico("action")}${esc(x.t)} <span class="sub">— ${esc(who(x.o))}</span></div>`).join("")||'<div class="sub">Nothing due in the next '+S.dueSoon+' days.</div>')}</div>${acts.length>(S.listCap||10)?html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts.length-(S.listCap||10))} more — see all ›</a> `:""}${raw(seeAll(nOpenA,`${pName(code)} open action`,"actions:open:"+code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map(r=>`<div class="rkrow" data-open="raid:${r.id}" tabindex="0" style="cursor:pointer">${ico(r.type)}<span class="${r.pr==="Urgent"?"prio-urgent":"tag"}">${r.pr}</span> <span class="sub">${r.type}</span> ${esc(r.t)}<div class="sub rk-txt">${esc(rkText(r))}</div></div>`).join("")||'<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR,`${pName(code)} open RAID item`,"raid:open:"+code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map(r=>`<div class="rkrow" data-open="raid:${r.id}" tabindex="0" style="cursor:pointer">${ico(r.type)}<span class="${r.pr==="Urgent"?"prio-urgent":"tag"}">${r.pr}</span> <span class="sub">${r.type}</span> ${esc(r.t)}<div class="sub rk-txt">${linkHtml(rkText(r))}</div></div>`).join("")||'<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR,`${pName(code)} open RAID item`,"raid:open:"+code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map(d=>`<div data-open="decisions:${d.id}" style="cursor:pointer">${ico("decision")}${esc(d.t)}<div class="sub">${fd(d.date)} — ${esc(d.by)}</div></div>`).join("")||'<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec,`${pName(code)} decision`,"decisions:all:"+code))}</div>
      ${raw(depsCard(code))}
      ${cv?html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv)} client-visible item${cv===1?"":"s"} still need client messaging before the next client report.</div></div>`:""}

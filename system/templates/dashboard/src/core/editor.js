@@ -20,6 +20,8 @@ import { createEditor, envelope, wrap, markdownOf, Extension, Mark, mergeAttribu
 import { addHTML, ic, raw } from "./dom.js";
 import { shared } from "./state.js";
 import { linkGuard, pasteLink, scrubNow } from "./editorLink.js";
+import { isLinkUrl } from "./linkUrl.js";
+import { linkSegments, linkWrite } from "./linkText.js";
 
 /** A transaction with this meta changes the document without counting as an edit (claim marks put on as it opens). */
 export const ED_QUIET="cxQuiet";
@@ -91,10 +93,20 @@ export const headsOut=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z!==""?z.slice(1
     fenced code are left alone. @param {string} md @param {number} shift */
 export const headsSafe=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z===""&&n<=shift?"#".repeat(n+shift)+rest:z+"#".repeat(n)+rest):md;
 
-/** Plain text as a document: one paragraph a line. */
-const plainDoc=t=>({ type:"doc", content:String(t??"").split("\n").map(l=>l?{ type:"paragraph", content:[{ type:"text", text:l }] }:{ type:"paragraph" }) });
-/** A document's plain text: its paragraphs, one a line. */
-const plainText=doc=>{ const L=[]; doc.forEach(p=>{ L.push(p.textContent); }); return L.join("\n"); };
+/** Plain text as a document: one paragraph a line. With `links` (#121) a `[words](address)` whose address core/linkUrl.js accepts is a link mark on the
+    words; the same text with any other address stays the literal characters it is. */
+const plainDoc=(t,links)=>({ type:"doc", content:String(t??"").split("\n").map(l=>{ if(!l) return { type:"paragraph" };
+  if(!links) return { type:"paragraph", content:[{ type:"text", text:l }] };
+  const segs=linkSegments(l).map(x=>x.href?{ type:"text", text:x.t, marks:[{ type:"link", attrs:{ href:x.href } }] }:{ type:"text", text:x.t });
+  return segs.length?{ type:"paragraph", content:segs }:{ type:"paragraph" }; }) });
+/** A document's plain text: its paragraphs, one a line; a link written `[words](address)` (#121). */
+const plainText=doc=>{ const L=[]; doc.forEach(p=>{ let line=""; p.forEach(c=>{ const m=c.isText&&c.marks.find(x=>x.type.name==="link"); const w=m?linkWrite(c.text,m.attrs.href):null; line+=w??c.textContent; }); L.push(line); }); return L.join("\n"); };
+/** #121: the link mark of a plain-text field. The address is shown only if core/linkUrl.js accepts it (an anchor with none is inert text). It is the
+    mark core/editorLink.js and components/LinkPopover.jsx act on, so a plain field has the very same link as a rich one, stored as `[words](address)`. */
+const PlainLink=Mark.create({ name:"link", inclusive:false, excludes:"link",
+  addAttributes(){ return { href:{ default:null } }; },
+  parseHTML(){ return [{ tag:"a[href]", getAttrs:el=>{ const h=/** @type {HTMLElement} */ (el).getAttribute("href"); return isLinkUrl(h)?{ href:h }:false; } }]; },
+  renderHTML({ HTMLAttributes }){ const h=HTMLAttributes.href; return ["a", isLinkUrl(h)?{ class:"tlink", href:h, target:"_blank", rel:"noopener noreferrer" }:{ class:"tlink" }, 0]; } });
 
 /**
  * BL-301 D: AI on selected text. `place` chooses the options (edit_ai.py PLACES: "current", "plain", "notes", "email");
@@ -104,39 +116,39 @@ const plainText=doc=>{ const L=[]; doc.forEach(p=>{ L.push(p.textContent); }); r
  *   document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)}} EdAi
  * @typedef {{features?: "current"|"plain"|"notes", markdown?: string, html?: string, text?: string, multiline?: boolean,
  *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value",
- *   ai?: EdAi, headShift?: number}} EdOptions
- * @typedef {{el: HTMLElement, editor: any, features: string, multiline?: boolean, headShift: number, value: () => string, setValue: (v: string) => void,
+ *   ai?: EdAi, headShift?: number, links?: boolean}} EdOptions
+ * @typedef {{el: HTMLElement, editor: any, features: string, links?: boolean, multiline?: boolean, headShift: number, value: () => string, setValue: (v: string) => void,
  *   touched: () => boolean, focus: (at?: any) => void, destroy: () => void}} EdHandle
  */
 /**
  * The one editor on `el` (BL-301 A). `el` itself becomes the editable root.
  * @param {HTMLElement} el @param {EdOptions} [o] @returns {EdHandle}
  */
-export function creaiteEditor(el,o={}){ const features=o.features||"current", plain=features==="plain", multiline=o.multiline!==false, headShift=plain?0:(o.headShift|0);
+export function creaiteEditor(el,o={}){ const features=o.features||"current", plain=features==="plain", links=!plain||!!o.links, multiline=o.multiline!==false, headShift=plain?0:(o.headShift|0);
   if(/** @type {any} */ (el).cxed) /** @type {any} */ (el).cxed.destroy();
   let orig="", env=null, touched=false;
   const load=v=>{ touched=false;
-    if(plain){ orig=String(v??""); return { json:plainDoc(orig) }; }
+    if(plain){ orig=String(v??""); return { json:plainDoc(orig,links) }; }
     if(o.html!==undefined&&v===undefined){ orig=null; return { html:o.html }; }
     orig=String(v??""); env=envelope(orig); return { markdown:headsIn(env.inner,headShift) }; };
   const content=load(plain?o.text:o.markdown);
   const props={ ...(o.editorProps||{}),
     handleKeyDown:(view,e)=>{ if(!multiline&&e.key==="Enter") return true; const f=/** @type {any} */ (o.editorProps||{}).handleKeyDown; return f?f(view,e):false; },
-    ...(plain?{}:{ handlePaste:(view,e)=>{ if(pasteLink(editor,/** @type {ClipboardEvent} */ (e),(m,u)=>{ if(ED_HOOKS.link) ED_HOOKS.link.toast(m,u); })) return true;
-        const f=/** @type {any} */ (o.editorProps||{}).handlePaste; return f?f(view,e):false; } }),
+    ...(links?{ handlePaste:(view,e)=>{ if(pasteLink(editor,/** @type {ClipboardEvent} */ (e),(m,u)=>{ if(ED_HOOKS.link) ED_HOOKS.link.toast(m,u); })) return true;
+        const f=/** @type {any} */ (o.editorProps||{}).handlePaste; return f?f(view,e):false; } }:{}),
     ...(plain?{ transformPastedText:t=>multiline?t.replace(/\r\n?/g,"\n"):t.replace(/\s*[\r\n]+\s*/g," ") }:{}) };
   const editor=createEditor({ mount:el },{ features, ...content, injectCSS:false, editorProps:props,
     extensions:list=>{ const out=list.map(x=>x&&x.name==="image"?x.extend({ addNodeView:()=>figureView(o.imageSrc) })
         :x&&x.name==="link"?x.extend({ inclusive:false })      // #120: typing after a link is outside it (a pasted or made link does not swallow the next word)
         :x&&x.name==="starterKit"&&headShift?x.configure({ heading:{ levels:[1,2,3] } }):x);      // a shifted host has the three levels it can store (typed #### is text)
-      return [...out,...(plain?[]:[ClaimMark,Extension.create({ name:"cxLinkGuard", addProseMirrorPlugins:()=>[linkGuard(ED_QUIET)] })]),...(o.extensions||[])]; } });
-  if(!plain) scrubNow(editor,ED_QUIET);      /* #120: a refused address in the text it was opened with shows as plain text (quietly; an untouched text is still given back as it came) */
+      return [...out,...(plain?(links?[PlainLink]:[]):[ClaimMark]),...(links?[Extension.create({ name:"cxLinkGuard", addProseMirrorPlugins:()=>[linkGuard(ED_QUIET)] })]:[]),...(o.extensions||[])]; } });
+  if(links) scrubNow(editor,ED_QUIET);      /* #120: a refused address in the text it was opened with shows as plain text (quietly; an untouched text is still given back as it came) */
   const blank=()=>{ el.classList.toggle("blank",editor.isEmpty); };
   editor.on("transaction",({ transaction:tr })=>{ if(!tr.docChanged) return; blank(); if(tr.getMeta(ED_QUIET)) return; touched=true;
     el.dispatchEvent(new Event("input",{ bubbles:true })); });
   blank();
   /** @type {EdHandle} */
-  const h={ el, editor, features, multiline, headShift,
+  const h={ el, editor, features, links, multiline, headShift,
     value:()=>{ if(!touched&&orig!==null) return orig;
       if(plain) return plainText(editor.state.doc);
       const md=headsOut(markdownOf(editor,dropClaims(editor.getJSON())).markdown,headShift); return env?wrap(env,md):md; },
@@ -147,7 +159,7 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
     destroy:()=>{ if(o.prop) delete /** @type {any} */ (el)[o.prop]; try{ editor.destroy(); }catch(e){ /* already gone with its page */ }
       if(/** @type {any} */ (el).cxed===h) delete /** @type {any} */ (el).cxed; } };
   /** @type {any} */ (el).cxed=h;
-  if(!plain&&ED_HOOKS.link) ED_HOOKS.link.attach(h);      /* #120: click a link for its popover; the link form (components/LinkPopover.jsx) */
+  if(links&&ED_HOOKS.link) ED_HOOKS.link.attach(h);      /* #120: click a link for its popover; the link form (components/LinkPopover.jsx) */
   if(o.ai&&ED_HOOKS.ai) ED_HOOKS.ai(h,o.ai);      /* BL-301 D: the AI bar over a selection (components/AiSelect.jsx) */
   /* `prop` (a plain field that code reads and sets by a property, as the peek's do by textContent and Prep's by value, as
      its textarea had): that property of the element is the field's text, its lines joined by "\n", and setting it sets the
