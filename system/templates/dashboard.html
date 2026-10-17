@@ -58625,6 +58625,10 @@ ${d5.text}`);
         }
       });
     }, [more.length > 0]);
+    h2(() => j3(() => {
+      void railView.value;
+      if (isOpen.current) close(false);
+    }), []);
     const close = (focusBack2) => {
       if (menuGroup.current === btn.current) menuGroup.close();
       railMoreOpen.value = false;
