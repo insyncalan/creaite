@@ -164,7 +164,48 @@ def tomorrow(d, settings, today):
     names = {p["code"]: p["name"] for p in d.get("projects") or []}
     meets = [tomorrow_meeting(m, names) for m in (rec or {}).get("meetings") or [] if not m.get("private")]
     return {"day": nxt, "day_shown": build_dashboard.shown(nxt), "long": (rec or {}).get("long"), "in_calendar": rec is not None,
-            "friday": today.weekday() == 4, "meetings": meets}
+            "friday": today.weekday() == 4, "meetings": meets, "weekend": weekend_days(d, settings, today, nxt, names)}
+
+
+def weekend_days(d, settings, today, nxt, names):
+    """#187: the weekend days between today and the next working day that have something planned (the day band's rule, #138: a
+    timed meeting, or an open or delayed action, an open RAID item or a milestone not done or cancelled due that day; an all-day
+    note doesn't count): [{day, day_shown, long, meetings, due: [{type, t, p, project}]}]. Empty on a normal weekday. A private
+    meeting shows as Busy with its times; a confidential one keeps only its title and times."""
+    import build_dashboard
+    import tracker
+    off, out = tracker.weekend_days(settings), []
+    day = today + timedelta(days=1)
+    while day.isoformat() < nxt and day.weekday() in off:
+        iso = day.isoformat()
+        rec = next((x for x in (d.get("days") or {}).get("days") or [] if x.get("date") == iso), None)
+        meets = [tomorrow_meeting(m, names) if not m.get("private") else
+                 {"start": m.get("start") or "", "end": m.get("end") or "", "title": "Busy", "confidential": False, "key": None,
+                  "page": None, "plan": False, "make": False} for m in (rec or {}).get("meetings") or []]
+        due = weekend_due(d, iso, names)
+        if meets or due:
+            out.append({"day": iso, "day_shown": build_dashboard.shown(iso), "long": (rec or {}).get("long"), "meetings": meets,
+                        "due": due})
+        day += timedelta(days=1)
+    return out
+
+
+def weekend_due(d, iso, names):
+    """Open work due on one day: [{type, t, p, project}] (actions and RAID items; milestones as Milestone)."""
+    out = []
+    for table, word, live in (("actions", "Action", ("Open", "Delayed")), ("raid", None, ("Open",))):
+        for it in d.get(table) or []:
+            if it.get("due") == iso and it.get("st") in live:
+                out.append({"type": word or it.get("type") or "RAID item", "t": it.get("t") or "", "p": it.get("p"),
+                            "project": names.get(it.get("p"))})
+    return out + [{"type": "Milestone", "t": m[0] or "", "p": code, "project": names.get(code)}
+                  for code, m in due_milestones(d, iso)]
+
+
+def due_milestones(d, iso):
+    """[(project code, milestone)] due on `iso` and not done or cancelled."""
+    return [(pr.get("code"), m) for pr in d.get("projects") or [] for m in pr.get("ms") or []
+            if m[1] == iso and m[2] != "done" and (len(m) < 7 or m[6] not in ("Done", "Cancelled"))]
 
 
 def tomorrow_meeting(m, names):
