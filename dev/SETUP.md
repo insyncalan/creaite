@@ -76,6 +76,7 @@ Claude doesn't create mail rules itself; standing rules on your mailbox are your
 **Making a release** (in this development repo):
 
 - [ ] Merge the finished work into `main`; the tests pass.
+- [ ] Add the What's new entry for the new version (`python3 dev/tools/whats_new.py add X.Y.Z`, from `dev/release-notes/X.Y.Z-plain.md`); the release check refuses a version without one.
 - [ ] Set the new version in `VERSION` (patch `1.0.1` for fixes, minor `1.1.0` for new features, major `2.0.0` when you have to do something by hand). Commit "Release X.Y.Z" and push.
 - [ ] On GitHub: **Releases › Draft a new release**, tag `vX.Y.Z` on `main`, title `creaite X.Y.Z`, notes in plain words (which BL items, anything to do by hand). **Publish release**.
 - [ ] Wait a minute or two. The **Release zip** workflow checks the tag matches `VERSION`, runs the tests, and attaches `creaite-X.Y.Z.zip`. If no zip appears, the **Actions** tab says why: fix, delete the release and its tag, and publish again.
