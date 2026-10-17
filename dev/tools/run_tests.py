@@ -321,6 +321,8 @@ class Runner:
         env = {**os.environ, "CREAITE_NO_LAUNCH": "1",           # BL-171: a test never starts Word or another app
                "CREAITE_TEST_TAG": tag(f),                         # BL-172: its vaults carry its name
                "TMPDIR": str(tmp), "TMP": str(tmp), "TEMP": str(tmp)}   # BL-246: everything it makes lands here
+        if slot is not None:
+            env["CREAITE_CHROME_SLOT"] = "1"                        # #89: it already holds a Chrome slot; browser_slots.hold() adds none
         t, p, out, timed_out = time.time(), None, [], False
         limit = self.timeout and max(self.timeout, SLOW_FILES.get(f.name, 0))      # None: no limit
         try:

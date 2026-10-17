@@ -291,7 +291,8 @@ test_settings_catalogue.py 28
 test_settings_page.py 130
 test_settings_poll.py 42
 test_setup_dashboard.py 55
-test_shared_behaviour.py 1055
+test_shared_behaviour.py 650
+test_shared_undo.py 400
 test_sharpen.py 24
 test_side_panel_live.py 155
 test_slash_menu.py 354
