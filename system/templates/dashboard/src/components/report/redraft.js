@@ -37,7 +37,10 @@ export function redraftAnswer(r, s) {
 
 /** What the Sheet's onRedraft calls: asks for the draft and answers the Redraft, or throws the words to show.
     @param {() => Record<string, any>} base the report or minutes the section is in (read when ✦ is pressed)
-    @param {"report"|"minutes"} place @returns {(s: Sec) => Promise<import("./Sheet.jsx").Redraft>} */
+    @param {"report"|"minutes"} place
+    @param {"internal"|"client"} [audience] the wording a health suggestion asks for (#203)
+    @param {(d: any) => (doc: any, s: any) => any} [applyFor] how Use changes the document for a health suggestion (the client sheet)
+    @returns {(s: Sec) => Promise<import("./Sheet.jsx").Redraft>} */
 export function redrafter(base, place, audience = "internal", applyFor) {
   return async s => s.type === "health" ? healthAnswer(await hsAsk(String(base().code || ""), audience), applyFor)
     : redraftAnswer(await draftAsk(redraftRequest(s, base(), REDRAFT_KIND[place]), { label: `Redrafting ${s.heading}` }), s);

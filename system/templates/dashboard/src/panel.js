@@ -1287,7 +1287,7 @@ function hsFill(){ const c=HSG; if(!c||!c.d) return false; const hs=$("#f_health
 async function hsRun(){ if(!shared.CUR||shared.CUR.mode!=="health") return; const b=$("#pFields [data-hsuggest]");
   if(b&&b.getAttribute("aria-disabled")==="true"){ snack(b.dataset.tip||"Drafting isn't available"); return; }
   const why=draftWhyNot("health"); if(why){ snack(why); return; }
-  const code=shared.CUR.code, /** @type {any} */ mine=HSG={code,html:""};
+  const code=shared.CUR.code, mine={code,html:"",d:null,reason:""}; HSG=mine;
   const res=await hsAsk(code,"internal",{status:h=>{ if(HSG===mine){ mine.html=h?`<div class="drstatus" role="status">${h}</div>`:""; hSugDraw(); } }});
   if(HSG!==mine) return;
   if(res.nothing){ mine.html=`<div class="drnone" role="status">${esc(res.nothing)}</div>`; hSugDraw(); return; }

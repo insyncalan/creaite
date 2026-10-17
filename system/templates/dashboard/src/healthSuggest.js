@@ -18,8 +18,8 @@ export const HEALTHS = ["On track", "At risk", "Off track"];
 /** The reply as the page uses it, or null when it holds no usable health. @param {any} r @returns {HealthSuggestion|null} */
 export function hsNorm(r) {
   if (!r || !HEALTHS.includes(String(r.health))) return null;
-  const cur = r.current || {}, health = String(r.health), now = String(cur.health || "");
-  return { health, reason: String(r.reason || r.text || ""), differs: typeof r.differs === "boolean" ? r.differs : !!now && now !== health,
+  const cur = r.current || {}, hv = String(r.health), now = String(cur.health || "");
+  return { health: hv, reason: String(r.reason || r.text || ""), differs: typeof r.differs === "boolean" ? r.differs : !!now && now !== hv,
     current: { health: now, reason: String(cur.reason || "") },
     evidence: (Array.isArray(r.evidence) ? r.evidence : []).map((/** @type {any} */ e) => ({ ref: String((e && e.ref) || ""), text: String((e && e.text) || "") })),
     audience: r.audience === "client" ? "client" : "internal" };
