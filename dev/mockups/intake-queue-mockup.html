@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Intake: five changes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+/* Intake review 17-10-2026, section 3 (changes A to E). Desktop only, fictional data. Nothing here is built. */
+:root{--bg:#F3F6F7;--surface:#fff;--sunk:#F6F9FA;--ink:#14212A;--muted:#4D5C66;--faint:#6F7D86;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#fff;--accent-soft:#DCEFF2;--bad:#B3261E;--warn:#8A5A00;--warn-soft:#FBF0D6;--ok:#1E6B3A;--ok-soft:#DDF1E3;
+--font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1518;--surface:#171E22;--sunk:#1B2428;--ink:#E4EAED;--muted:#A2AEB5;--faint:#86939A;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A;--accent-soft:#16363C;--bad:#FF8A80;--warn:#F0C66B;--warn-soft:#3A2F12;--ok:#7FD39A;--ok-soft:#173222}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--font);padding:14px 16px 60px}
+.top,.scr,.note{max-width:1100px;margin:0 auto}h1{font:800 22px var(--display);margin:0 0 4px}.lede{color:var(--muted);max-width:100ch;margin:0 0 8px}
+.jr{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;align-items:center}.st{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:28px;padding:0 10px;font:500 12px var(--font);cursor:pointer;color:var(--ink)}.st[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sep{width:1px;height:20px;background:var(--line);margin:0 6px}.lab{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cap{margin:0 0 10px;padding:8px 14px;border:1px solid var(--line);background:var(--surface);border-radius:10px;color:var(--muted);font-size:13px;min-height:40px}.cap b{color:var(--ink)}
+.frame{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:18px 24px 24px;min-height:440px}
+.frame h2{font:800 22px var(--display);margin:0}.sub{color:var(--muted);margin:2px 0 12px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+.btn{height:28px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:600 12.5px var(--font);color:var(--ink);cursor:pointer;white-space:nowrap}.btn:hover{border-color:var(--faint)}.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.btn.quiet{border-color:transparent;background:transparent;color:var(--muted)}.btn:disabled{opacity:.45;cursor:default}
+.grp{font:800 15px var(--display);margin:14px 0 6px;display:flex;gap:8px;align-items:baseline}.grp span{font:400 13px var(--font);color:var(--muted)}
+.row{border:1px solid var(--line);background:var(--surface);border-radius:10px;margin:0 0 8px;padding:10px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center}
+.row.sel{outline:2px solid var(--accent);outline-offset:1px}
+.row .t{font-weight:600;font-size:15px}.row .m{font-size:12.5px;color:var(--muted)}.row .act{display:flex;gap:6px;align-items:center}
+.age{font-size:12.5px;color:var(--muted);white-space:nowrap}.age.old{color:var(--warn);font-weight:600}
+.chip{display:inline-block;font:600 11.5px var(--font);padding:0 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);line-height:19px;margin-left:6px;vertical-align:1px}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.res{grid-column:1/-1;font-size:13px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:6px;margin-top:2px}.res b{color:var(--ink)}
+.prog{grid-column:1/-1;height:4px;border-radius:2px;background:var(--sunk);overflow:hidden}.prog i{display:block;height:100%;width:60%;background:var(--accent)}
+.sel2{font:500 12.5px var(--font);border:1px solid var(--line);border-radius:6px;background:var(--sunk);color:var(--ink);height:24px;padding:0 4px}
+.menu{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:6px;z-index:5;min-width:230px}.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:6px 10px;border-radius:6px;font:500 13px var(--font);color:var(--ink);cursor:pointer}.menu button:hover{background:var(--sunk)}
+.keys{font:500 11.5px var(--mono);color:var(--faint);margin:0 0 8px}.keys kbd{border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--surface);color:var(--muted)}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px;align-items:start}
+.pane{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:12px 14px}.pane h3{font:800 15px var(--display);margin:0 0 6px}.pane .tag{font:700 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.nav{display:flex;gap:6px;align-items:center;margin:0 0 10px}.nav .it{padding:4px 10px;border-radius:8px;font-size:13px;color:var(--muted)}.nav .it.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.badge{display:inline-block;min-width:18px;text-align:center;border-radius:9px;background:var(--accent);color:var(--accent-ink);font:700 11px var(--font);padding:0 5px;margin-left:4px}
+.series{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;margin:10px 0 0;font-size:13px}.series h4{font:800 14px var(--display);margin:0 0 4px}.series .stat{color:var(--muted)}
+.gate{border-left:4px solid var(--warn);background:var(--warn-soft);border-radius:0 10px 10px 0;padding:8px 12px;font-size:13px;margin:10px 0 0}
+.tog{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}.tog i{width:34px;height:18px;border-radius:9px;background:var(--line);position:relative;display:inline-block}.tog i::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:left .15s}.tog[aria-checked=true] i{background:var(--accent)}.tog[aria-checked=true] i::after{left:18px}
+.cardn{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px;max-width:1100px;margin:16px auto 0}.cardn h3{font:700 14px var(--display);margin:0 0 6px}.cardn ul{margin:0;padding-left:18px;color:var(--muted)}.cardn li{margin:3px 0}
+.rec{max-width:1100px;margin:16px auto 0;border:2px solid var(--accent);border-radius:12px;background:var(--accent-soft);padding:12px 16px}.rec b{font-family:var(--display)}
+</style></head><body>
+<div class="top">
+<h1>Intake: five changes to how it operates</h1>
+<p class="lede">One queue, one decision per row, prepared in advance, ending in Review. Pick a change (A to E) to see it. On C, switch between stage 2 (load the transcript when it appears) and stage 3 (draft by series). Fictional data, desktop only. Nothing here is built.</p>
+<div class="jr" id="tabs"></div>
+<div class="jr" id="opts"></div>
+<div class="cap" id="cap" role="status"></div>
+</div>
+<div class="scr"><div class="frame" id="frame"></div></div>
+<div class="cardn" id="notes"></div>
+<div class="rec" id="rec"></div>
+<script>
+const $=s=>document.querySelector(s);
+const TABS={A:"A · One queue, one decision",B:"B · Buttons that match the work",C:"C · Prepared before you arrive",D:"D · Say what came out",E:"E · Two places, two jobs"};
+let tab="A",stage=2,sample="mixed",sel=0,menu=null,E_view="both";
+const REASONS=["Informal chat","No decisions","Duplicate of another meeting","Other"];
+const SRC={
+ mixed:[
+  {id:1,t:"Example Programme steering",w:"Thu 15:00",g:"Example Programme",ts:"ready",d:4,series:"Weekly steering",loaded:"08:12",appr:14},
+  {id:2,t:"Vendor onboarding check-in",w:"Fri 10:30",g:"Example Programme",ts:"ready",d:0,series:null,loaded:null,appr:0},
+  {id:3,t:"Budget walk-through",w:"Fri 14:00",g:"Not sure",ts:"ready",d:1,series:null,loaded:"08:12",appr:0},
+  {id:4,t:"Supplier call",w:"Fri 16:00",g:"Example Programme",ts:"waiting",d:0},
+  {id:5,t:"Data owners workshop",w:"Wed 11:00",g:"Example Programme",ts:"waiting",d:3},
+  {id:6,t:"Risk review",w:"Tue 09:30",g:"Example Programme",ts:"done",res:"7 proposals: 4 actions, 2 risks, 1 decision",d:3}],
+ none:[{id:6,t:"Risk review",w:"Tue 09:30",g:"Example Programme",ts:"done",res:"7 proposals: 4 actions, 2 risks, 1 decision",d:3}],
+ empty:[]};
+let rows=JSON.parse(JSON.stringify(SRC.mixed)),later=new Set(),gone=[],processing=new Set();
+function reset(){rows=JSON.parse(JSON.stringify(SRC[sample]));later=new Set();gone=[];processing=new Set();sel=0;menu=null}
+const ready=()=>rows.filter(r=>r.ts==="ready"&&!later.has(r.id)&&!processing.has(r.id));
+const age=d=>d===0?"today":d===1?"1 day":d+" days";
+const ageEl=r=>`<span class="age ${r.d>=3&&r.ts!=="done"?"old":""}">${age(r.d)}</span>`;
+function statusChip(r){
+ if(tab==="C"&&r.ts==="ready"){
+  if(stage>=2&&r.loaded) return `<span class="chip ok">Loaded ${r.loaded}</span>`;
+  return `<span class="chip warn">Not loaded</span>`}
+ return r.ts==="ready"?`<span class="chip">Transcript ready</span>`:r.ts==="waiting"?`<span class="chip warn">Waiting for transcript</span>`:"";
+}
+function row(r,i,opt={}){
+ const isSel=tab==="B"&&i===sel&&r.ts==="ready";
+ const proj=`<select class="sel2" aria-label="Project">${["Example Programme","Not sure"].map(p=>`<option ${p===r.g?"selected":""}>${p}</option>`).join("")}</select>`;
+ let meta=`${r.w} · ${proj}${statusChip(r)}`;
+ let act="";
+ if(processing.has(r.id)){
+  return `<div class="row"><div><div class="t">${r.t}</div><div class="m">Running in the background. ask creaite stays free to use. <button class="btn quiet" data-a="openask">Open ask creaite</button></div></div><div class="act"><button class="btn" disabled>Processing</button></div><div class="prog"><i></i></div></div>`}
+ if(r.ts==="ready"){
+  act=`<button class="btn pri" data-a="process" data-id="${r.id}">Process</button><button class="btn" data-a="not" data-id="${r.id}">Not needed</button><button class="btn" data-a="later" data-id="${r.id}">Later</button>`}
+ if(r.ts==="waiting"){act=`<button class="btn" data-a="not" data-id="${r.id}">Not needed</button>`}
+ let extra="";
+ if(r.ts==="done"){
+  act=`<button class="btn" data-a="review">Review them</button>`;
+  extra=tab==="A"||tab==="B"?"":""}
+ if(tab==="C"&&stage===3&&r.series&&r.ts==="ready"){
+  extra=`<div class="res"><span class="chip ok">Auto-drafted 08:20</span><span><b>6 proposals</b> are waiting in Review. Nothing is filed.</span><button class="btn" data-a="review">Review them</button></div>`;
+  act=`<button class="btn" data-a="review">Open in Review</button>`}
+ const doneRes=(r.ts==="done"&&(tab==="D"||tab==="B"||tab==="A"||tab==="E"))?`<div class="res"><span class="chip ok">Processed</span><span><b>${r.res}</b></span></div>`:"";
+ return `<div class="row ${isSel?"sel":""}"><div><div class="t">${r.t}</div><div class="m">${meta}</div></div><div class="act">${ageEl(r)}${act}</div>${extra}${doneRes}</div>`;
+}
+function queue(){
+ const R=rows.filter(r=>!gone.includes(r.id));
+ const rd=R.filter(r=>r.ts==="ready"&&!later.has(r.id)),lt=R.filter(r=>later.has(r.id)),wt=R.filter(r=>r.ts==="waiting"),dn=R.filter(r=>r.ts==="done");
+ let h="";
+ const sec=(n,c,l)=>l.length?`<div class="grp">${n} <span>${c}</span></div>${l.map((r,i)=>row(r,i)).join("")}`:"";
+ if(!R.length)return `<div class="empty">Nothing waiting. Meetings appear here when they end. <a href="#" onclick="return false">How Intake works</a></div>`;
+ h+=rd.length?`<div class="grp">Ready <span>${rd.length} with a transcript</span></div>${rd.map((r,i)=>row(r,i)).join("")}`:`<div class="empty" style="margin-bottom:8px">Nothing ready. Meetings appear here when their transcript arrives. <a href="#" onclick="return false">How Intake works</a></div>`;
+ h+=sec("Waiting",wt.length+" no transcript yet",wt)+sec("Later",lt.length+" set aside",lt.map(r=>r))+sec("Done recently",dn.length,dn);
+ return h;
+}
+function head(){
+ const n=ready().length;
+ let right="";
+ if(tab==="A") right=`<button class="btn quiet" data-a="refresh">Refresh</button>`;
+ else right=`<button class="btn quiet" data-a="refresh">Refresh</button><button class="btn pri" data-a="all" ${n?"":"disabled"}>Process all ready (${n})</button>`;
+ return `<div class="hdr"><div><h2>Intake</h2><div class="sub">Meetings that have ended and files you dropped. ${n} ready${tab==="C"&&stage>=2?" · transcripts load as they appear":""}.</div></div><div class="act" style="display:flex;gap:6px">${right}</div></div>`;
+}
+function draw(){
+ $("#tabs").innerHTML=Object.entries(TABS).map(([k,v])=>`<button class="st" data-t="${k}" aria-pressed="${tab===k}">${v}</button>`).join("");
+ let o="";
+ if(tab==="C")o=`<span class="lab">Stage</span><button class="st" data-g="2" aria-pressed="${stage===2}">2 · Load when it appears</button><button class="st" data-g="3" aria-pressed="${stage===3}">3 · Draft by series</button>`;
+ if(tab!=="E")o+=`${o?'<span class="sep"></span>':''}<span class="lab">Sample</span>${[["mixed","Mixed"],["none","Nothing waiting"],["empty","Empty"]].map(([k,v])=>`<button class="st" data-s="${k}" aria-pressed="${sample===k}">${v}</button>`).join("")}`;
+ $("#opts").innerHTML=o;
+ let f="";
+ if(tab==="E")f=viewE();
+ else{
+  f=head();
+  if(tab==="B")f+=`<div class="keys"><kbd>↑</kbd> <kbd>↓</kbd> move · <kbd>Enter</kbd> process · <kbd>N</kbd> not needed · <kbd>H</kbd> later · same keys as Review</div>`;
+  f+=queue();
+  if(tab==="C"&&stage===3)f+=seriesCard();
+  if(tab==="C"&&stage===2)f+=`<div class="series"><h4>What stage 2 does</h4><div class="stat">When the sweep finds a transcript, creaite fetches it into Intake. A read only: no AI, nothing written to the tracker. Process then starts straight away. Setting: <span class="tog" role="switch" aria-checked="true" tabindex="0"><i></i> Load transcripts when they appear</span></div></div>`;
+ }
+ $("#frame").innerHTML=f;
+ $("#cap").innerHTML=CAP[tab]+(tab==="C"?" "+(stage===2?CAP.C2:CAP.C3):"");
+ const nt=NOTES[tab];$("#notes").innerHTML=`<h3>${nt[0]}</h3><ul>${nt[1].map(x=>`<li>${x}</li>`).join("")}</ul>`;
+ $("#rec").innerHTML=REC[tab];
+ if(menu)showMenu();
+}
+function seriesCard(){
+ return `<div class="series"><h4>Draft minutes for this series automatically</h4>
+ <div class="stat">Weekly steering · Example Programme · your history: <b>14</b> drafts approved, <b>2</b> edited, <b>0</b> rejected (last 12 weeks, from Activity › Quality).</div>
+ <p style="margin:8px 0 6px"><span class="tog" role="switch" aria-checked="true" tabindex="0"><i></i> Auto-draft when the transcript arrives</span> <span class="stat">· off by default · per series</span></p>
+ <div class="stat">The result is proposals in Review, marked "Drafted automatically". Nothing is filed or sent. Turn it off at any time. Other series stay manual: no history yet for Vendor onboarding check-in or Budget walk-through.</div>
+ <div class="gate"><b>Not for the next release.</b> This runs unattended, so it needs Jarvis's check on the guarded files and Alan's decision, and it waits for the 13-11-2026 review of the AI ideas (Triage and routing #163, Meeting to RAID log #165).</div></div>`;
+}
+function viewE(){
+ const n=rows.filter(r=>r.ts==="ready").length;
+ const r1=rows.find(r=>r.id===1),r2=rows.find(r=>r.id===2);
+ const mini=r=>`<div class="row" style="grid-template-columns:minmax(0,1fr) auto"><div><div class="t" style="font-size:14px">${r.t}</div><div class="m">${r.w} · ${r.g} <span class="chip">Transcript ready</span></div></div><div class="act"><span class="age ${r.d>=3?"old":""}">${age(r.d)}</span><button class="btn pri">Process</button></div></div>`;
+ return `<div class="two">
+ <div class="pane"><div class="tag">Today · the daily pass</div><div class="nav"><span class="it on">Today</span><span class="it">Intake <span class="badge">${n}</span></span><span class="it">Review <span class="badge">4</span></span></div>
+ <h3>Intake and Review</h3><div class="stat" style="color:var(--muted);font-size:13px;margin-bottom:8px">${n} ready · one line each</div>${mini(r1)}${mini(r2)}<div style="font-size:13px;color:var(--muted)"><a href="#" onclick="return false">${n-2} more in Intake</a> · <a href="#" onclick="return false">4 in Review</a></div></div>
+ <div class="pane"><div class="tag">Intake page · the workshop</div><div class="nav"><span class="it">Today</span><span class="it on">Intake <span class="badge">${n}</span></span><span class="it">Review <span class="badge">4</span></span></div>
+ <div class="hdr"><div><h3>Intake</h3></div><button class="btn pri">Process all ready (${n})</button></div>
+ <div style="display:flex;gap:6px;margin:0 0 8px"><span class="chip">Ready ${n}</span><span class="chip warn">Waiting 2</span><span class="chip">Later 0</span><span class="chip ok">Done recently 1</span><span class="chip">Cleared</span><span class="chip">Uploads</span></div>
+ ${rows.filter(r=>r.ts==="ready").map(r=>mini(r)).join("")}
+ <div class="series" style="margin-top:6px"><div class="stat">Drop files anywhere on this page. <a href="#" onclick="return false">Set-asides and Cleared</a> · <a href="#" onclick="return false">How Intake works</a></div></div></div></div>`;
+}
+let _menuFor=null;
+function showMenu(){
+ const el=document.querySelector(`[data-a="not"][data-id="${menu}"]`);if(!el)return;
+ const b=el.getBoundingClientRect(),fr=$("#frame").getBoundingClientRect();
+ const m=document.createElement("div");m.className="menu";m.id="menu";
+ m.style.left=Math.max(8,b.left-fr.left-130)+"px";m.style.top=(b.bottom-fr.top+4)+"px";
+ $("#frame").style.position="relative";
+ m.innerHTML=`<div style="font:700 11px var(--mono);color:var(--muted);padding:4px 10px">NOT NEEDED BECAUSE</div>`+REASONS.map(x=>`<button data-a="reason">${x}</button>`).join("");
+ $("#frame").appendChild(m)}
+const CAP={
+A:"<b>A · One queue, one decision per row.</b> Ended meetings and dropped files are one list in the same row shape as Review and Today: title, when, project guess (editable, once), transcript state, age. Three actions: <b>Process</b>, <b>Not needed</b> (with a reason), <b>Later</b>. Groups: Ready, Waiting, Later, Done recently. Try each action.",
+B:"<b>B · Buttons that match the work.</b> One <b>Process all ready (n)</b>, a per-row Process, a quiet Refresh. \"Select new\", \"Select with transcripts\" and \"Load into inbox\" are gone. Click the page, then use the keys: the first Ready row is outlined.",
+C:"<b>C · Prepared before you arrive.</b> Stage 1 (transcripts shown with age and project guess) is already in A. You liked stages 2 and 3, shown here.",
+C2:"<b>Stage 2:</b> the transcript is fetched when the sweep finds it, so the row says Loaded and Process starts at once. A read, no AI.",
+C3:"<b>Stage 3:</b> for a series you have approved many times, creaite drafts the minutes itself. The first row shows the result; the card below is the per-series switch.",
+D:"<b>D · Say what came out.</b> Press Process. The row shows progress in place in the background (the ask creaite panel does not open by itself, and stays free to use meanwhile), then a result line with the counts and <b>Review them</b>, which opens Review on just those proposals.",
+E:"<b>E · Two places, two jobs.</b> Today is the quick daily pass (one line each, Process or open). The Intake page is the workshop (full list, history, uploads, Cleared). Same rows, same data, same count in both badges."};
+const NOTES={
+A:["What changes",["Five verbs and a nine-column table become one list and three actions.","\"Not needed\" asks for a reason, as Review's Reject does; \"Later\" keeps the row without clearing it.","The project guess is chosen once, here, and travels to Review.","Age is quiet text; an outlier turns amber (the Review age pattern)."]],
+B:["What changes",["Select new, Select with transcripts and Load into inbox go. Loading becomes an automatic first step of Process.","Process all ready replaces ticking boxes. It is disabled and looks disabled when nothing is ready.","Keys match Review: arrows, Enter, N, H."]],
+C:["What stays true in both stages",["Nothing reaches the tracker without your approval in Review.","Both are off until you turn them on; stage 3 is per series and never on by default.","Stage 2 needs your yes and Jarvis's check (a read, but unattended). Stage 3 waits for the 13-11-2026 review."]],
+D:["What changes",["The result is on the row: \"7 proposals: 4 actions, 2 risks, 1 decision\".","Review them opens Review filtered to those proposals.","A normal Process runs in the background and ask creaite stays free to use meanwhile; it no longer opens by itself (Alan, 17-10-2026)."]],
+E:["What changes",["Today lists what is ready, one line each. Intake keeps the full queue, uploads, set-asides and Cleared.","Both read one queue, so a change in one shows in the other.","The badge counts ready meetings plus files in both places, so it no longer disagrees with Today."]]};
+const REC={
+A:"<b>Recommendation: do A and B together as step 1.</b> It removes most of today's friction without changing what creaite does, and sits after #168 and #177 so the row pattern is shared.",
+B:"<b>Recommendation: ship with A.</b> The buttons only make sense with the queue.",
+C:"<b>Recommendation: stage 2 first (small, a read), stage 3 after the 13-11-2026 review.</b> Stage 3 earns its place from your own approval numbers; the Weekly steering row above shows what it would see.",
+D:"<b>Recommendation: step 2, its own item.</b> Check the row pattern from A before it is shared with Today.",
+E:"<b>Recommendation: step 2 with D.</b> It needs the same queue data on both pages and Help Phase B for the empty-state links."};
+document.addEventListener("click",e=>{
+ const t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;menu=null;draw();return}
+ const g=e.target.closest("[data-g]");if(g){stage=+g.dataset.g;draw();return}
+ const s=e.target.closest("[data-s]");if(s){sample=s.dataset.s;reset();draw();return}
+ const a=e.target.closest("[data-a]");if(!a){if(menu){menu=null;draw()}return}
+ const id=+a.dataset.id,act=a.dataset.a;
+ if(act==="process")doProcess([id]);
+ else if(act==="all")doProcess(ready().map(r=>r.id));
+ else if(act==="later"){later.add(id);draw()}
+ else if(act==="not"){menu=id;draw();e.stopPropagation()}
+ else if(act==="reason"){gone.push(menu);menu=null;draw()}
+ else if(act==="refresh"){draw()}
+});
+function doProcess(ids){
+ ids.forEach(i=>processing.add(i));draw();
+ setTimeout(()=>{ids.forEach(i=>{const r=rows.find(x=>x.id===i);r.ts="done";r.res="6 proposals: 3 actions, 2 risks, 1 decision";r.d=0;processing.delete(i)});draw()},1600)}
+document.addEventListener("keydown",e=>{
+ if(tab!=="B"||e.target.closest("select,input"))return;
+ const rd=rows.filter(r=>r.ts==="ready"&&!later.has(r.id)&&!processing.has(r.id));if(!rd.length)return;
+ if(e.key==="ArrowDown"){sel=Math.min(sel+1,rd.length-1);draw();e.preventDefault()}
+ else if(e.key==="ArrowUp"){sel=Math.max(sel-1,0);draw();e.preventDefault()}
+ else if(e.key==="Enter"){doProcess([rd[Math.min(sel,rd.length-1)].id])}
+ else if(e.key==="h"||e.key==="H"){later.add(rd[Math.min(sel,rd.length-1)].id);draw()}
+ else if(e.key==="n"||e.key==="N"){menu=rd[Math.min(sel,rd.length-1)].id;draw()}
+});
+reset();draw();
+</script>
+</body></html>

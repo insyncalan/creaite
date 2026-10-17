@@ -209,12 +209,23 @@ table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
 .q ol{margin:4px 0 0;padding-left:18px} .q li{margin:4px 0}
 .q .rec{color:var(--accent);font-weight:500}
 @media (prefers-reduced-motion:no-preference){.new{transition:background-color .8s ease}}
+.topq{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:12px 18px;margin:0 0 14px;font-size:13.5px}.topq h2{font:800 16px var(--font);margin:0 0 4px}.topq ol{margin:0;padding-left:20px}.topq li{margin:6px 0}.topq .rec{color:var(--accent);font-weight:500}
 </style>
 
 <div class="page">
-  <h1 class="t">Reports you live in: the project page</h1>
-  <p class="lede">BL-317: one <b>Status</b> page per project, always current and edited in place. Every sentence keeps its evidence. Each Friday the page becomes that week's snapshot, and the Word weekly and client reports are made from it, so a report is never written from scratch. Built from option A of "creaite, calmer". Sample data from your portfolio.</p>
+  <h1 class="t">The project page as tabs: Status first</h1>
+  <p class="lede">#27 (BL-317), back off hold (16-10-2026): the project page becomes tabs, with one <b>Status</b> page per project, always current and edited in place. Every sentence keeps its evidence. Each Friday the page becomes that week's snapshot, and the Word weekly and client reports are made from it. The Notes tab that shipped in 2.0.0 is now part of it. Click every tab. Fictional data only.</p>
 
+
+  <div class="topq"><h2>Open questions for Alan</h2><p class="sub" style="margin:0 0 6px">Nothing is built until these are answered. My recommendation is first in each.</p><ol>
+    <li><b>Seven tabs, in this order:</b> Status, Overview, Milestones, Work, <b>Notes</b>, Files, Reports. Notes already ships beside Overview, so the six become seven. <span class="rec">Recommend yes. Notes sits after Work because people go from the work to their own thinking.</span></li>
+    <li><b>Which tab opens first?</b> <span class="rec">Recommend Status, always. A project you reopen shows its words, not its numbers.</span></li>
+    <li><b>Status's milestones:</b> the next 3 open as tiles (as drawn), or the full Plan line. A tile stays when its milestone is achieved. <span class="rec">Recommend tiles of the next 3 open, and an achieved tile stays until you close that week. The Milestones tab chooses, per project.</span></li>
+    <li><b>One writing page, not two panes:</b> Current state today has two side-by-side panes. On Status it is one page you write in, using the same editor as Notes (#133, #134). Text already in the right pane is kept, under a divider, the first time you open it. <span class="rec">Recommend one page.</span></li>
+    <li><b>Close the week or Close the day on a Friday?</b> <span class="rec">Recommend one button on Status, Close the week, which freezes the snapshot and drafts the weekly report for Review. Friday's Close the day links to it instead of repeating it.</span></li>
+    <li><b>The reports:</b> the weekly report is built only from this page (an empty page starts from last week's), and the client report from the Client view, from the client-visible flags you already keep. <span class="rec">Recommend yes to both.</span></li>
+    <li><b>In what order, and when?</b> Step 1 regroups what exists into the tabs, with no new behaviour (Overview, Milestones, Work, Notes, Files, Reports, and Status as today's health and Current state). Step 2 adds the weekly snapshots, Close the week, Client view and Export to Word. <span class="rec">Recommend two steps, after 2.2.0 is cut: step 1 in 2.3.0 (size L), step 2 in 2.4.0 (size L).</span></li>
+  </ol></div>
   <div class="grid">
     <div class="wrapwin">
     <div class="win" id="win">
@@ -229,6 +240,7 @@ table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
             <button type="button" role="tab" data-tab="overview" aria-selected="false">Overview</button>
             <button type="button" role="tab" data-tab="milestones" aria-selected="false">Milestones</button>
             <button type="button" role="tab" data-tab="work" aria-selected="false">Work <span class="tag">14</span></button>
+            <button type="button" role="tab" data-tab="notes" aria-selected="false">Notes <span class="tag">6</span></button>
             <button type="button" role="tab" data-tab="files" aria-selected="false">Files</button>
             <button type="button" role="tab" data-tab="reports" aria-selected="false">Reports</button>
           </div>
@@ -268,13 +280,8 @@ table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
       <h3>Reports</h3>
       <ul><li><b>Client view</b> shows exactly what a client report would: client-visible items only, nothing Sensitive, risks in their client wording.</li>
       <li><b>Export to Word</b> builds the branded weekly or client report from the page, as a draft for Review. Nothing is sent, and the Word templates stay in the Brightwater brand.</li>
-      <li>cx-weekly-report and cx-client-report take this page as their source, so Friday's report is a check, not a write.</li></ul>
-      <div class="q"><b>For you to decide</b><ol>
-        <li><b>Where it lives:</b> a Status tab on the project page, first (as drawn), or its own place in the rail. <span class="rec">Recommended: the tab.</span></li>
-        <li><b>Closing the week:</b> one button that freezes the snapshot and drafts the weekly report for Review (as drawn), or the snapshot taken by itself every Friday at 17:00. <span class="rec">Recommended: the button, with the Friday reminder pointing to it.</span></li>
-        <li><b>The weekly report skill:</b> builds only from this page (as drawn), or can still draft from scratch when the page is empty. <span class="rec">Recommended: from the page; an empty page starts from last week's.</span></li>
-        <li><b>Client report:</b> one Client view for all clients of the project, or its own client wording per report. <span class="rec">Recommended: one view, from the client-visible flags and client messages you already keep.</span></li>
-      </ol></div>
+      <li>The weekly and client reports take this page as their source, so Friday's report is a check, not a write.</li></ul>
+      <div class="q"><b>For you to decide</b><br>The open questions are at the top of the page.</div>
     </aside>
   </div>
 </div>
@@ -562,6 +569,13 @@ table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
       <section>${data.map(([ws,rows])=>{ const rr=rows.filter(keep); return rr.length?`<div class="wsh">${esc(ws)} <span class="sub">${rr.length}</span></div>`+rr.map(r=>`<div class="wrow" title="Opens in the peek; // to change it in words"><span class="sub">${r[0]}</span><span>${esc(r[1])}</span><span class="own sub">${esc(r[2])}</span><span class="num-c ${r[4]?"od":""}">${r[3]}${r[4]?"":""}</span><span class="pr"><span class="tag ${r[5]==="High"?"bad":r[5]==="Medium"?"warn":""}">${r[5]}</span></span></div>`).join(""):""; }).join("")||'<div class="sub">Nothing here with this filter.</div>'}</section>
       <section class="sub">Each row opens in the peek, where <kbd style="font:600 11px var(--font);border:1px solid var(--line);border-radius:4px;padding:1px 4px">//</kbd> changes it in words (BL-322). The full Work page has every project.</section>`; }
 
+  function notes(){ return `<section><h3>Notes <span class="n sub">your own thinking · internal · never in a client report</span></h3>
+    <div class="two"><div><div class="sub" style="margin-bottom:4px">Pinned</div><div class="list"><div class="li"><span class="g"><b>Stakeholder: Northgate sponsor</b></span><span class="sub">Stakeholder · 12-10</span></div></div>
+    <div class="sub" style="margin:10px 0 4px">Recent</div><div class="list"><div class="li"><span class="g"><b>UAT environment: what we need</b></span><span class="sub">Working session · 14-10</span></div><div class="li"><span class="g"><b>Lessons from the design reviews</b></span><span class="sub">Lessons learned · 09-10</span></div><div class="li"><span class="g"><b>Commercials: our position</b></span><span class="sub">Blank · 06-10</span></div></div>
+    <button class="btn sm" type="button" style="margin-top:10px">+ New note</button></div>
+    <div><div class="callout" style="margin:0"><b>UAT environment: what we need</b><div class="sub">Working session · 14-10-2026 · Saved</div><p style="margin:8px 0 0">Tom to confirm the Northgate test environment dates by Friday. If they slip past 06-11 we hold UAT and tell the sponsor. <span class="ev">FAL-A-009</span></p><p class="sub" style="margin:6px 0 0">The same editor as Status. Find updates turns lines into tracker changes.</p></div></div></div></section>
+    <section class="sub">The Notes tab is what ships now beside Overview, moved to its place in the row. Portfolio notes stay under Projects › Portfolio notes.</section>`; }
+
   let FOLD="minutes";
   const FILES={
     transcripts:[["14-10-2026","Alan x Tom Catch up on Northgate.vtt","Processed"],["13-10-2026","FAL weekly with Northgate.vtt","Waiting for you"],["06-10-2026","FAL weekly with Northgate.vtt","Processed"]],
@@ -607,6 +621,7 @@ table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
     overview:`<h3>Overview</h3><ul><li>The project's facts, its health over six weeks, the four numbers that matter, early warnings, dependencies, workstreams, people and the next meetings with Prep.</li><li>Gathers what today's project page spreads down one long column; the Current state moves to <b>Status</b>.</li><li>Read only: each line opens its item, person or meeting.</li></ul>`,
     milestones:`<h3>Milestones</h3><ul><li><b>Everything the Plan and Movement page does today</b>, now a tab: Plan (the line, the list, progress, Revised from), Movement (original, agreed and forecast; the weekly chart; What changed; the internal note; Decide what to do; the likely range), Client and Internal views, Add milestone, the editor with every field, rebaseline with its decision, cancel, reorder and the history.</li><li><b>New: On the Status tab.</b> Choose <b>Full picture</b> (the Plan line and every milestone) or <b>Tiles</b>, ticking 3 or 4 milestones. Status's Client view follows the same client filter, so an internal tile is left out there.</li><li>The Client view and the client report use one filter (visible with wording) and the client's words: On plan, At risk, Expected later, Late, Achieved.</li></ul>`,
     work:`<h3>Work</h3><ul><li>The Work page filtered to this project: Actions, RAID, Decisions and Promises, grouped by workstream, with Open, Overdue, Mine and Waiting on others.</li><li>Rows open in the peek, so Draft chase (C) and Sneak peek (//) work here too.</li></ul>`,
+    notes:`<h3>Notes</h3><ul><li><b>Exactly what ships today</b> (list, pinned, templates, / menu, Find updates), now one tab in the row instead of a second tab beside Overview.</li><li>Internal: never in a client report, and never read by the sweep.</li></ul>`,
     files:`<h3>Files</h3><ul><li>The engagement's folders as your template maps them: Meetings, Reporting and Documents, plus <b>_Archive</b> once BL-09 is in.</li><li>Each file says where it stands: processed, waiting for you, sent, filed, online only or not searched.</li><li>A transcript waiting gets its <b>Process</b> button here.</li></ul>`,
     reports:`<h3>Reports</h3><ul><li>Every weekly, client and Steerco report for the project, and what each was made from. Weekly reports are made from that week's Status snapshot.</li><li>Shows what's due (the client rhythm, the next steering) with its Draft button. Drafts go to Review; nothing is sent.</li></ul>`};
   const MAP=`<h3>Where today's cockpit goes</h3><div class="tblwrap"><table class="t" style="font-size:12px"><thead><tr><th>Today's cockpit</th><th>Now</th></tr></thead><tbody>
@@ -619,6 +634,7 @@ table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
     <tr><td>Actions due, No due date card</td><td>Work, filtered (No due date as a filter)</td></tr>
     <tr><td>Top 3 risks with responses</td><td>Status (top risks) and Work › RAID</td></tr>
     <tr><td>Recent decisions, Decisions needed</td><td>Status (this week) and Overview (needed)</td></tr>
+    <tr><td>The project's Notes tab (shipped in 2.0.0)</td><td>Notes tab, unchanged</td></tr>
     <tr><td>Client messaging card</td><td>Status › Client view</td></tr>
     <tr><td>Draft weekly, client report, one-pager</td><td>Reports, and Close the week</td></tr>
     <tr><td>The project's files (in Files)</td><td>Files tab</td></tr></tbody></table></div>`;
@@ -630,7 +646,7 @@ table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
     const q=document.querySelector(".notes .q").outerHTML;
     document.querySelector(".notes").innerHTML=t==="status"?statusNotes:NOTES[t]+`<h3>Status stays first</h3><ul><li>Every tab reads the same tracker; only Status holds your words.</li></ul>`+MAP+q;
     if(t==="status"){ draw(); return; }
-    $("pane").innerHTML={overview,milestones,work,files,reports}[t]();
+    $("pane").innerHTML={overview,milestones,work,notes,files,reports}[t]();
     $("pane").querySelectorAll("[data-wt]").forEach(b=>b.onclick=()=>{ WTAB=b.dataset.wt; tab("work"); });
     $("pane").querySelectorAll("[data-wf]").forEach(b=>b.onclick=()=>{ WF=b.dataset.wf; tab("work"); });
     $("pane").querySelectorAll("[data-fold]").forEach(b=>b.onclick=()=>{ FOLD=b.dataset.fold; tab("files"); });

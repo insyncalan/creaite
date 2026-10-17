@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Work: one place for filters</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+/* UX review finding 1 (17-10-2026): Work shows "Status: Open" three times. Now, and two ways to say it once. Desktop only, fictional data. */
+:root{--bg:#F3F6F7;--surface:#fff;--sunk:#F6F9FA;--ink:#14212A;--muted:#4D5C66;--faint:#6F7D86;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#fff;--accent-soft:#DCEFF2;--bad:#B3261E;--warn:#8A5A00;
+--font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;--shadow-pop:0 8px 24px rgba(0,0,0,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1518;--surface:#171E22;--sunk:#1B2428;--ink:#E4EAED;--muted:#A2AEB5;--faint:#86939A;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A;--accent-soft:#16363C;--bad:#FF8A80;--warn:#F0C66B}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--font);padding:14px 16px 60px}
+.top,.scr{max-width:1100px;margin:0 auto}.top{margin-bottom:8px}h1{font:800 22px var(--display);margin:0 0 4px}.lede{color:var(--muted);max-width:100ch;margin:0 0 8px}
+.jr{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}.st{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:28px;padding:0 10px;font:500 12px var(--font);cursor:pointer;color:var(--ink)}.st[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cap{margin:0 0 10px;padding:8px 14px;border:1px solid var(--line);background:var(--surface);border-radius:10px;color:var(--muted);font-size:13px;min-height:40px}.cap b{color:var(--ink)}
+.frame{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:18px 24px 24px;position:relative;min-height:440px}
+.frame h2{font:800 22px var(--display);margin:0 0 8px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:14px}.tabs span{padding:7px 12px;font:600 13px var(--font);color:var(--muted);border-bottom:2px solid transparent}.tabs span.on{color:var(--ink);border-color:var(--accent)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}.sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font:500 13px var(--font);color:var(--ink);cursor:pointer;white-space:nowrap}
+.pill:hover{border-color:var(--faint)}.pill.set{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.pill.view[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pill .x{color:var(--muted);font-weight:700;margin-left:2px}.pill.ghost{border-style:dashed;color:var(--muted)}
+.search{height:32px;width:200px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:var(--surface);color:var(--ink);font:400 13px var(--font)}
+.ib{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface);display:inline-grid;place-items:center;color:var(--muted);cursor:pointer;position:relative}
+.ib.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}.ib.plus{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.ib .b{position:absolute;top:-6px;right:-6px;background:var(--accent);color:var(--accent-ink);border-radius:999px;font:700 10px var(--font);padding:0 5px;line-height:15px}
+.link{color:var(--accent);font-size:13px;text-decoration:underline;cursor:pointer;background:none;border:0;padding:0}
+.count{color:var(--muted);font-size:13px;white-space:nowrap}
+.menu{position:absolute;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:6px;min-width:170px;display:none}.menu.on{display:block}
+.menu button{display:flex;justify-content:space-between;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;font:400 13px var(--font);color:var(--ink);cursor:pointer}.menu button:hover,.menu button.cur{background:var(--accent-soft)}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-top:6px}
+th{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 14px;border-bottom:1px solid var(--line)}
+td{padding:9px 14px;border-bottom:1px solid var(--line)}tr:last-child td{border-bottom:0}.id{color:var(--muted);font-size:12px}.late{color:var(--bad);font-weight:600}.none{color:var(--muted);padding:18px 14px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1100px;margin:16px auto 0}.cardn{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px}.cardn h3{font:700 14px var(--display);margin:0 0 6px}.cardn ul{margin:0;padding-left:18px;color:var(--muted)}.cardn li{margin:3px 0}
+.rec{max-width:1100px;margin:16px auto 0;border:2px solid var(--accent);border-radius:12px;background:var(--accent-soft);padding:12px 16px}.rec b{font-family:var(--display)}
+</style></head><body>
+<div class="top">
+<h1>Work: one place for filters</h1>
+<p class="lede">On Work, "Status: Open" appears three times: as a pill, as the view "All open" and as an applied chip, and four icon buttons carry the rest. Two ways to say each thing once. Click the views and pills; the table and the count follow. Fictional data, desktop only.</p>
+<div class="jr" role="group" aria-label="Version"><button class="st" data-v="now" aria-pressed="true">Now</button><button class="st" data-v="A" aria-pressed="false">A · Views row, then refine row</button><button class="st" data-v="B" aria-pressed="false">B · One row, views in a menu</button></div>
+<div class="cap" id="cap" role="status"></div>
+</div>
+<div class="scr"><div class="frame" id="frame"></div></div>
+<div class="cmp">
+<div class="cardn"><h3>What changes in both options</h3><ul><li>A <b>view</b> is the starting filter. Its filters are not repeated as pills or chips.</li><li>A <b>pill</b> shows only what you add on top; a set pill carries its value and an ✕.</li><li><b>Clear</b> appears only when you have refined, and returns to the view's own filters.</li><li>The count ("3 of 8") sits on the right, once.</li><li>Icon buttons keep their place but gain names on hover and focus, and the filter icon becomes "+ Filter".</li></ul></div>
+<div class="cardn"><h3>Keyboard</h3><ul><li>Views are a roving group: arrows move, Enter picks.</li><li>Pills open a menu: arrows, Enter, Esc closes and returns focus.</li><li>✕ on a set pill is a button with a label ("Remove owner: Sara").</li><li>Nothing animates under reduced motion.</li></ul></div>
+</div>
+<div class="rec"><b>Recommendation: A.</b> The views (Mine, Due soon, Chase) are how you switch the job you are doing, so they stay one click away. B is tidier, but it hides them behind a menu and costs you a click on every switch. A still removes the repeats: it drops from three rows to two and says "Status: Open" zero times.</div>
+
+<script>
+const D=[
+{id:"ABC-A-001",t:"Escalate data access to the client CIO",o:"You",p:"Example Programme",pr:"Urgent",due:"13-10-2026",d:-3,st:"Open"},
+{id:"ABC-A-002",t:"Book UAT environment",o:"Sara Example",p:"Example Programme",pr:"Medium",due:"19-10-2026",d:3,st:"Open"},
+{id:"DEF-A-001",t:"Agree pilot success criteria",o:"Omar Ali",p:"Digital Enablement",pr:"Medium",due:"21-10-2026",d:5,st:"Open"},
+{id:"ABC-A-003",t:"Confirm legal review of the SOW",o:"You",p:"Example Programme",pr:"High",due:"20-10-2026",d:4,st:"Open"},
+{id:"DEF-A-002",t:"Send the steering pack",o:"You",p:"Digital Enablement",pr:"Medium",due:"30-10-2026",d:14,st:"Delayed"},
+{id:"ABC-A-004",t:"Chase vendor for the test plan",o:"Omar Ali",p:"Example Programme",pr:"High",due:"09-10-2026",d:-7,st:"Open",chase:1},
+{id:"DEF-A-003",t:"Close out the kick-off actions",o:"Sara Example",p:"Digital Enablement",pr:"Low",due:"05-10-2026",d:-11,st:"Closed"}];
+const VIEWS=[["all","All open",x=>x.st==="Open"],["mine","Mine",x=>x.o==="You"&&x.st!=="Closed"],["soon","Due soon",x=>x.d>=0&&x.d<=7&&x.st!=="Closed"],["chase","Chase",x=>x.chase&&x.st!=="Closed"],["delayed","Delayed",x=>x.st==="Delayed"],["closed","Closed",x=>x.st==="Closed"]];
+const OPT={owner:["You","Sara Example","Omar Ali"],project:["Example Programme","Digital Enablement"],priority:["Urgent","High","Medium","Low"]};
+const KEY={owner:"o",project:"p",priority:"pr"};
+let V="all",F={},ver="now",menu=null;
+const $=s=>document.querySelector(s);
+const view=()=>VIEWS.find(v=>v[0]===V);
+function rows(extra){let r=D.filter(view()[2]);for(const k in F)r=r.filter(x=>x[KEY[k]]===F[k]);return r}
+const total=()=>D.filter(view()[2]).length;
+function table(){const r=rows();return `<table><thead><tr><th>Action</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>${r.length?r.map(x=>`<tr><td>${x.t}<br><span class="id">${x.id} · ${x.p}</span></td><td>${x.o}</td><td>${x.due}${x.d<0&&x.st!=="Closed"?`<br><span class="late">${-x.d} days late</span>`:""}</td><td>${x.pr}</td><td>${x.st}</td></tr>`).join(""):`<tr><td colspan="5" class="none">Nothing matches. Clear the filters to see all of "${view()[1]}".</td></tr>`}</tbody></table>`}
+const icons=`<span class="ib on" title="List" aria-label="List view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span><span class="ib" title="Board" aria-label="Board view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="16"/><rect x="14" y="4" width="6" height="10"/></svg></span><span class="ib" title="Display" aria-label="Display settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="ib plus" title="New action" aria-label="New action">+</span>`;
+const viewsRow=()=>VIEWS.map(v=>`<button class="pill view" data-view="${v[0]}" aria-pressed="${v[0]===V}">${v[1]}</button>`).join("");
+const pill=(k,label)=>F[k]?`<button class="pill set" data-pill="${k}" aria-label="${label}: ${F[k]}">${label}: ${F[k]} <span class="x" data-clear="${k}" role="button" aria-label="Remove ${label.toLowerCase()}: ${F[k]}">✕</span></button>`:`<button class="pill" data-pill="${k}">${label} ▾</button>`;
+const refined=()=>Object.keys(F).length>0;
+function draw(){const fr=$("#frame");const n=rows().length,t=total();let h=`<h2>Work</h2><div class="tabs"><span class="on">Actions</span><span>RAID</span><span>Decisions</span><span>All items</span></div>`;
+ if(ver==="now"){h+=`<div class="row"><input class="search" placeholder="Search this list" aria-label="Search this list"><button class="pill set">Status: Open</button><button class="pill">Due</button><button class="pill">All owners</button><button class="pill">All projects</button><button class="pill">All priorities</button><span class="sp"></span><span class="ib" title="Filters" aria-label="Filters"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg><span class="b">1</span></span>${icons}</div>
+ <div class="row">${VIEWS.map(v=>`<button class="pill ${v[0]==="all"?"view":""}" ${v[0]==="all"?'aria-pressed="true"':""}>${v[1]}</button>`).join("")}<button class="pill">More views (1) ▾</button></div>
+ <div class="row"><button class="pill set">Status: Open <span class="x">✕</span></button><button class="link">Clear all</button><span class="count">Showing ${D.filter(x=>x.st==="Open").length} of ${D.filter(x=>x.st==="Open").length}</span></div>`+`<table><thead><tr><th>Action</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>${D.filter(x=>x.st==="Open").map(x=>`<tr><td>${x.t}<br><span class="id">${x.id}</span></td><td>${x.o}</td><td>${x.due}</td><td>${x.pr}</td><td>${x.st}</td></tr>`).join("")}</tbody></table>`}
+ if(ver==="A"){h+=`<div class="row">${viewsRow()}<button class="pill ghost">More views ▾</button><span class="sp"></span><span class="count">${refined()?`${n} of ${t} actions`:`${t} actions`}</span>${icons}</div>
+ <div class="row"><input class="search" placeholder="Search this list" aria-label="Search this list">${pill("owner","Owner")}${pill("project","Project")}${pill("priority","Priority")}<button class="pill ghost">+ Filter</button>${refined()?`<button class="link" data-reset="1">Clear</button>`:""}</div>`+table()}
+ if(ver==="B"){h+=`<div class="row"><button class="pill set" data-pill="view" style="position:relative">View: ${view()[1]} ▾</button><input class="search" placeholder="Search this list" aria-label="Search this list">${pill("owner","Owner")}${pill("project","Project")}${pill("priority","Priority")}<button class="pill ghost">+ Filter</button>${refined()?`<button class="link" data-reset="1">Clear</button>`:""}<span class="sp"></span><span class="count">${refined()?`${n} of ${t} actions`:`${t} actions`}</span>${icons}</div>`+table()}
+ fr.innerHTML=h+`<div class="menu" id="menu"></div>`}
+function openMenu(btn,k){const m=$("#menu"),fr=$("#frame").getBoundingClientRect(),r=btn.getBoundingClientRect();const items=k==="view"?VIEWS.map(v=>[v[0],v[1]]):OPT[k].map(o=>[o,o]);const cur=k==="view"?V:F[k];
+ m.innerHTML=(k==="view"?"":`<button data-opt="" data-k="${k}">Any</button>`)+items.map(i=>`<button class="${i[0]===cur?"cur":""}" data-opt="${i[0]}" data-k="${k}">${i[1]}</button>`).join("");m.style.left=(r.left-fr.left)+"px";m.style.top=(r.bottom-fr.top+6)+"px";m.classList.add("on");menu=k}
+$("#frame").addEventListener("click",e=>{
+ const x=e.target.closest("[data-clear]");if(x){delete F[x.dataset.clear];draw();e.stopPropagation();return}
+ const rs=e.target.closest("[data-reset]");if(rs){F={};draw();return}
+ const v=e.target.closest("[data-view]");if(v){V=v.dataset.view;F={};draw();return}
+ const o=e.target.closest("[data-opt]");if(o){const k=o.dataset.k;if(k==="view"){V=o.dataset.opt;F={}}else if(o.dataset.opt)F[k]=o.dataset.opt;else delete F[k];draw();return}
+ const p=e.target.closest("[data-pill]");if(p){openMenu(p,p.dataset.pill);return}
+ const m=$("#menu");if(m)m.classList.remove("on")});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){const m=$("#menu");if(m)m.classList.remove("on")}});
+const CAP={now:"<b>Now.</b> Three rows. Status: Open is a pill, the view \"All open\" and an applied chip; a funnel icon with a badge, a list and board toggle, Display and + sit unlabelled on the right.",
+A:"<b>A · Views row, then refine row.</b> Row 1 is the job: views on the left, the count and the icons on the right. Row 2 is what you add: search, Owner, Project, Priority, + Filter. No status pill, no applied-chip row. Try Mine, then Owner.",
+B:"<b>B · One row, views in a menu.</b> The view is the first control (\"View: All open ▾\"), then search and the refinements, then the count and icons, all on one line. Smallest, but each view switch is two clicks."};
+document.querySelectorAll(".st").forEach(b=>b.addEventListener("click",()=>{ver=b.dataset.v;V="all";F={};document.querySelectorAll(".st").forEach(x=>x.setAttribute("aria-pressed",x===b));$("#cap").innerHTML=CAP[ver];draw()}));
+const h=location.hash.replace("#","");if(["now","A","B"].includes(h)){ver=h;document.querySelectorAll(".st").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===h))}
+$("#cap").innerHTML=CAP[ver];draw();
+</script></body></html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Intake: final design</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+/* Intake review 17-10-2026, section 3 (changes A to E). Desktop only, fictional data. Nothing here is built. */
+:root{--bg:#F3F6F7;--surface:#fff;--sunk:#F6F9FA;--ink:#14212A;--muted:#4D5C66;--faint:#6F7D86;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#fff;--accent-soft:#DCEFF2;--bad:#B3261E;--warn:#8A5A00;--warn-soft:#FBF0D6;--ok:#1E6B3A;--ok-soft:#DDF1E3;
+--font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1518;--surface:#171E22;--sunk:#1B2428;--ink:#E4EAED;--muted:#A2AEB5;--faint:#86939A;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A;--accent-soft:#16363C;--bad:#FF8A80;--warn:#F0C66B;--warn-soft:#3A2F12;--ok:#7FD39A;--ok-soft:#173222}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--font);padding:14px 16px 60px}
+.top,.scr,.note{max-width:1100px;margin:0 auto}h1{font:800 22px var(--display);margin:0 0 4px}.lede{color:var(--muted);max-width:100ch;margin:0 0 8px}
+.jr{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;align-items:center}.st{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:28px;padding:0 10px;font:500 12px var(--font);cursor:pointer;color:var(--ink)}.st[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sep{width:1px;height:20px;background:var(--line);margin:0 6px}.lab{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cap{margin:0 0 10px;padding:8px 14px;border:1px solid var(--line);background:var(--surface);border-radius:10px;color:var(--muted);font-size:13px;min-height:40px}.cap b{color:var(--ink)}
+.frame{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:18px 24px 24px;min-height:440px}
+.frame h2{font:800 22px var(--display);margin:0}.sub{color:var(--muted);margin:2px 0 12px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+.btn{height:28px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:600 12.5px var(--font);color:var(--ink);cursor:pointer;white-space:nowrap}.btn:hover{border-color:var(--faint)}.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.btn.quiet{border-color:transparent;background:transparent;color:var(--muted)}.btn:disabled{opacity:.45;cursor:default}
+.grp{font:800 15px var(--display);margin:14px 0 6px;display:flex;gap:8px;align-items:baseline}.grp span{font:400 13px var(--font);color:var(--muted)}
+.row{border:1px solid var(--line);background:var(--surface);border-radius:10px;margin:0 0 8px;padding:10px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center}
+.row.sel{outline:2px solid var(--accent);outline-offset:1px}
+.row .t{font-weight:600;font-size:15px}.row .m{font-size:12.5px;color:var(--muted)}.row .act{display:flex;gap:6px;align-items:center}
+.age{font-size:12.5px;color:var(--muted);white-space:nowrap}.age.old{color:var(--warn);font-weight:600}
+.chip{display:inline-block;font:600 11.5px var(--font);padding:0 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);line-height:19px;margin-left:6px;vertical-align:1px}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.res{grid-column:1/-1;font-size:13px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:6px;margin-top:2px}.res b{color:var(--ink)}
+.prog{grid-column:1/-1;height:4px;border-radius:2px;background:var(--sunk);overflow:hidden}.prog i{display:block;height:100%;width:60%;background:var(--accent)}
+.sel2{font:500 12.5px var(--font);border:1px solid var(--line);border-radius:6px;background:var(--sunk);color:var(--ink);height:24px;padding:0 4px}
+.menu{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:6px;z-index:5;min-width:230px}.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:6px 10px;border-radius:6px;font:500 13px var(--font);color:var(--ink);cursor:pointer}.menu button:hover{background:var(--sunk)}
+.keys{font:500 11.5px var(--mono);color:var(--faint);margin:0 0 8px}.keys kbd{border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--surface);color:var(--muted)}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px;align-items:start}
+.pane{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:12px 14px}.pane h3{font:800 15px var(--display);margin:0 0 6px}.pane .tag{font:700 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.nav{display:flex;gap:6px;align-items:center;margin:0 0 10px}.nav .it{padding:4px 10px;border-radius:8px;font-size:13px;color:var(--muted)}.nav .it.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.badge{display:inline-block;min-width:18px;text-align:center;border-radius:9px;background:var(--accent);color:var(--accent-ink);font:700 11px var(--font);padding:0 5px;margin-left:4px}
+.series{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;margin:10px 0 0;font-size:13px}.series h4{font:800 14px var(--display);margin:0 0 4px}.series .stat{color:var(--muted)}
+.gate{border-left:4px solid var(--warn);background:var(--warn-soft);border-radius:0 10px 10px 0;padding:8px 12px;font-size:13px;margin:10px 0 0}
+.tog{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}.tog i{width:34px;height:18px;border-radius:9px;background:var(--line);position:relative;display:inline-block}.tog i::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:left .15s}.tog[aria-checked=true] i{background:var(--accent)}.tog[aria-checked=true] i::after{left:18px}
+.cardn{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px;max-width:1100px;margin:16px auto 0}.cardn h3{font:700 14px var(--display);margin:0 0 6px}.cardn ul{margin:0;padding-left:18px;color:var(--muted)}.cardn li{margin:3px 0}
+.rec{max-width:1100px;margin:16px auto 0;border:2px solid var(--accent);border-radius:12px;background:var(--accent-soft);padding:12px 16px}.rec b{font-family:var(--display)}
+
+.panel{position:fixed;right:16px;bottom:16px;width:340px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 8px 28px rgba(0,0,0,.22);padding:12px 14px;z-index:9}.panel h4{font:800 14px var(--display);margin:0 0 6px;display:flex;justify-content:space-between}.panel .msg{background:var(--sunk);border-radius:8px;padding:6px 10px;margin:6px 0;font-size:13px}.panel input{width:100%;height:30px;border:1px solid var(--line);border-radius:8px;padding:0 8px;background:var(--surface);color:var(--ink)}
+.fab{position:fixed;right:16px;bottom:16px;z-index:8}
+.det{grid-column:1/-1;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.live{font-size:12.5px;color:var(--faint);margin:0 0 8px}
+.sel2{height:24px}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.peek{position:sticky;top:10px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;font-size:13px}.peek h3{font:800 16px var(--display);margin:0 0 4px}.peek .q{border-left:3px solid var(--accent);background:var(--sunk);padding:8px 12px;border-radius:0 8px 8px 0;margin:8px 0;color:var(--ink)}.peek .src{color:var(--muted);font-size:12.5px}.peek .why{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:6px 10px;margin:8px 0;font-size:12.5px}
+.row.pick{outline:2px solid var(--accent);outline-offset:1px}.row{cursor:default}.row .t{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.k{font:700 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:0 6px;line-height:18px;background:var(--sunk);color:var(--muted)}.k.dec{background:var(--accent-soft);color:var(--accent)}.k.risk{background:var(--warn-soft);color:var(--warn)}.k.cf{background:#FBE7E5;color:var(--bad)}
+.fold{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;gap:12px}.fold b{font:800 15px var(--display)}
+.card1{max-width:640px;margin:10px auto 0;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:20px 24px}.card1 h3{font:800 20px var(--display);margin:4px 0 6px}.card1 .q{border-left:3px solid var(--accent);background:var(--sunk);padding:8px 12px;border-radius:0 8px 8px 0;margin:10px 0}
+.pg{height:6px;border-radius:3px;background:var(--sunk);margin:0 0 12px;overflow:hidden}.pg i{display:block;height:100%;background:var(--accent)}
+.keyrow{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}.keyrow .btn{height:36px;padding:0 16px;font-size:14px}.keyrow kbd{font:600 11px var(--mono);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px;background:var(--sunk);color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 14px;font-size:13px;display:flex;gap:12px;align-items:center;z-index:9}.toast button{background:none;border:0;color:var(--bg);text-decoration:underline;cursor:pointer;font:600 13px var(--font)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}.seg button{border:0;background:none;padding:6px 14px;font:600 13px var(--font);color:var(--muted);cursor:pointer}.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.pipe{display:flex;gap:8px;margin:6px 0 12px;align-items:center}.pipe .st2{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left}.pipe .st2[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft)}.pipe .st2 b{font:800 20px var(--display);display:block}.pipe .ar{color:var(--faint)}
+.inl{grid-column:1/-1;border-top:1px solid var(--line);padding-top:10px;margin-top:6px}.inl .q{border-left:3px solid var(--accent);background:var(--sunk);padding:6px 10px;border-radius:0 8px 8px 0;margin:6px 0;font-size:13px}
+</style></head><body>
+<div class="top"><h1>Intake and Review combined</h1><p class="lede">For looking at, nothing decided. Three ways to put the two jobs in one place: C1 a pipeline, C2 one entry with two lanes, C3 where a meeting's row follows the work. Process a row, then check its proposals. Fictional data, desktop only. Nothing here is built.</p>
+<div class="jr"><span class="lab">Option</span><button class="st" data-o="C1" aria-pressed="false">C1 · One pipeline</button><button class="st" data-o="C2" aria-pressed="true">C2 · One entry, two lanes</button><button class="st" data-o="C3" aria-pressed="false">C3 · The meeting's row follows the work</button><span class="sep"></span><span class="lab">Sample</span><button class="st" data-s="mixed" aria-pressed="true">Mixed</button><button class="st" data-s="empty" aria-pressed="false">Empty</button></div>
+<div class="cap" id="cap" role="status"></div></div>
+<div class="scr"><div class="frame" id="frame"></div></div>
+<div class="cardn" id="notes"></div><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const MEET=[
+{id:1,t:"Example Programme steering",w:"Thu 15:00",g:"Example Programme",st:"ready",d:4},
+{id:2,t:"Vendor onboarding check-in",w:"Fri 10:30",g:"Example Programme",st:"ready",d:0},
+{id:3,t:"Supplier call",w:"Fri 16:00",g:"Example Programme",st:"waiting",d:0},
+{id:4,t:"Risk review",w:"Tue 09:30",g:"Example Programme",st:"drafted",d:3,props:[
+ {k:"Minutes",kc:"",t:"Draft minutes: risk review",q:"Draft minutes of the call: 1 decision, 4 actions, 2 risks."},
+ {k:"Risk",kc:"risk",t:"Vendor may exit the market",q:"\"If they pull out we lose the connector.\""},
+ {k:"Action",kc:"",t:"Confirm data owner (due 22-10)",q:"\"Omar, can you confirm who owns the data?\""}]},
+{id:5,t:"Budget walk-through",w:"Mon 14:00",g:"Example Programme",st:"drafted",d:1,props:[
+ {k:"Decision",kc:"dec",t:"Hold the contingency at 8%",q:"\"We agree to hold contingency at eight percent.\""},
+ {k:"Action",kc:"",t:"Send the revised budget",q:"\"I'll send the revised budget Friday.\""}]},
+{id:6,t:"Steering committee prep",w:"Mon 09:00",g:"Example Programme",st:"done",d:5,res:"5 approved, 1 rejected"}];
+const MAIL=[{k:"Action",kc:"",t:"Reply to the legal query on clause 9",o:"Sara Khan",src:"Mail from Lena Park, 16-10",d:1},{k:"Update",kc:"",t:"Mark done: Draft the comms plan",o:"Lena Park",src:"Mail, 14-10 (probably done)",d:3},{k:"Risk",kc:"risk",t:"Supplier lead times growing",o:"Sam Okoro",src:"Teams chat, 15-10",d:2}];
+let opt="C2",sample="mixed",lane="process",stage="all",rows,open=null,pi=0,toast=null;
+function reset(){rows=JSON.parse(JSON.stringify(sample==="empty"?[]:MEET));open=null;pi=0;toast=null}
+const age=d=>d===0?"today":d===1?"1 day":d+" days";
+const nProc=()=>rows.filter(r=>r.st==="ready").length,nApp=()=>rows.filter(r=>r.st==="drafted").reduce((a,r)=>a+r.props.length,0)+(sample==="empty"?0:MAIL.length);
+const proj=r=>`<span style="color:var(--muted);font-size:12.5px">${r.w} · ${r.g}</span>`;
+function mrow(r,mode){
+ let act="",extra="",chip="";
+ if(r.st==="ready"){chip=`<span class="chip">Transcript ready</span>`;act=`<button class="btn pri" data-a="proc" data-id="${r.id}">Process</button><button class="btn" data-a="x">Not needed</button><button class="btn" data-a="x">Later</button>`}
+ else if(r.st==="waiting"){chip=`<span class="chip warn">Waiting for transcript</span>`;act=`<button class="btn" data-a="x">Not needed</button>`}
+ else if(r.st==="running"){chip=`<span class="chip">Drafting in the background</span>`;extra=`<div class="prog"><i></i></div>`;act=`<button class="btn" disabled>Processing</button>`}
+ else if(r.st==="drafted"){chip=`<span class="chip warn">${r.props.length} proposals to check</span>`;act=mode==="inline"?`<button class="btn pri" data-a="open" data-id="${r.id}">${open===r.id?"Close":"Check them"}</button>`:`<button class="btn pri" data-a="toreview">Review them</button>`;
+  if(mode==="inline"&&open===r.id)extra=inline(r)}
+ else if(r.st==="done"){chip=`<span class="chip ok">Done</span>`;act=`<span style="font-size:13px;color:var(--muted)">${r.res}</span>`}
+ return `<div class="row"><div><div class="t">${r.t}</div><div class="m">${proj(r)} ${chip}</div></div><div class="act"><span class="age ${r.d>=3&&r.st!=="done"?"old":""}">${age(r.d)}</span>${act}</div>${extra}</div>`}
+function inline(r){const p=r.props[pi];if(!p)return `<div class="inl"><div class="m" style="color:var(--ok)">All ${r.props.length} checked. <button class="btn" data-a="close">Done</button></div></div>`;
+ return `<div class="inl"><div style="font-size:12px;color:var(--muted)">${pi+1} of ${r.props.length}</div><div class="t" style="font-weight:600;font-size:15px"><span class="k ${p.kc}">${p.k}</span> ${p.t}</div><div class="q">${p.q}</div><div style="display:flex;gap:6px"><button class="btn pri" data-a="ap">Approve</button><button class="btn" data-a="x">Edit</button><button class="btn" data-a="ap">Reject…</button><button class="btn" data-a="ap">Later</button></div></div>`}
+function mailRows(){return MAIL.map(m=>`<div class="row"><div><div class="t"><span class="k ${m.kc}">${m.k}</span>${m.t}</div><div class="m">${m.o} · ${m.src}</div></div><div class="act"><span class="age">${age(m.d)}</span><button class="btn pri" data-a="x">Approve</button><button class="btn" data-a="x">✕</button></div></div>`).join("")}
+function nav(active){return `<div class="nav"><span class="it">Today</span>${active}<span class="it">Work</span></div>`}
+function V1(){const f=s=>rows.filter(r=>r.st===s).length;const a=rows.filter(r=>r.st==="ready"||r.st==="waiting").length,d=f("drafted"),n=f("done");
+ const list=rows.filter(r=>stage==="all"||(stage==="arrived"&&(r.st==="ready"||r.st==="waiting"||r.st==="running"))||(stage==="drafted"&&r.st==="drafted")||(stage==="approved"&&r.st==="done"));
+ return `${nav('<span class="it on">Intake and Review <span class="badge">'+(nProc()+nApp())+'</span></span>')}<h2>Intake and Review</h2><div class="sub">One page, three stages. Click a stage to filter the list.</div>
+ <div class="pipe"><button class="st2" data-a="stage" data-g="arrived" aria-pressed="${stage==="arrived"}"><b>${a}</b>Arrived<br><span style="font-size:12px;color:var(--muted)">${nProc()} ready to process</span></button><span class="ar">→</span><button class="st2" data-a="stage" data-g="drafted" aria-pressed="${stage==="drafted"}"><b>${d}</b>Drafted<br><span style="font-size:12px;color:var(--muted)">${nApp()} proposals to check</span></button><span class="ar">→</span><button class="st2" data-a="stage" data-g="approved" aria-pressed="${stage==="approved"}"><b>${n}</b>Approved<br><span style="font-size:12px;color:var(--muted)">this week</span></button><button class="btn quiet" data-a="stage" data-g="all">Show all</button></div>
+ ${list.map(r=>mrow(r,"link")).join("")||'<div class="empty">Nothing here. Meetings appear when they end.</div>'}<div class="grp">From mail and Teams <span>${MAIL.length} proposals</span></div>${mailRows()}`}
+function V2(){const lanes=`<div class="seg" role="tablist"><button data-a="lane" data-g="process" aria-pressed="${lane==="process"}">To process (${nProc()})</button><button data-a="lane" data-g="approve" aria-pressed="${lane==="approve"}">To approve (${nApp()})</button></div>`;
+ let h=`${nav('<span class="it on">Intake and Review <span class="badge">'+(nProc()+nApp())+'</span></span>')}<div class="hdr"><div><h2>Intake and Review</h2><div class="sub">${lane==="process"?"Meetings and files that are ready to turn into proposals.":"Proposals waiting for you, from meetings, mail and Teams."}</div></div>${lanes}</div>`;
+ if(lane==="process"){const l=rows.filter(r=>["ready","waiting","running"].includes(r.st));h+=(l.map(r=>mrow(r,"link")).join("")||'<div class="empty">Nothing to process. Meetings appear when they end.</div>')+`<div class="grp">Upload files <span>drop anywhere on this page</span></div><div class="empty" style="padding:10px;text-align:left"><button class="btn">Choose files…</button> or drop them here.</div>`}
+ else{const l=rows.filter(r=>r.st==="drafted");h+=l.map(r=>`<div class="grp">${r.t} <span>${r.props.length} proposals · ${age(r.d)}</span></div>${r.props.map(p=>`<div class="row"><div><div class="t"><span class="k ${p.kc}">${p.k}</span>${p.t}</div><div class="m">${r.g}</div></div><div class="act"><button class="btn pri" data-a="x">Approve</button><button class="btn" data-a="x">✕</button></div></div>`).join("")}`).join("")+(sample==="empty"?"":`<div class="grp">From mail and Teams <span>${MAIL.length}</span></div>${mailRows()}`)||'<div class="empty">Nothing to approve.</div>'}
+ return h}
+function V3(){const l=rows;return `${nav('<span class="it on">Intake and Review <span class="badge">'+(nProc()+nApp())+'</span></span>')}<div class="hdr"><div><h2>Intake and Review</h2><div class="sub">Each meeting is one row from arriving to approved. Mail and Teams proposals sit below.</div></div><button class="btn pri" data-a="all" ${nProc()?"":"disabled"}>Process all ready (${nProc()})</button></div>
+ ${l.map(r=>mrow(r,"inline")).join("")||'<div class="empty">Nothing here. Meetings appear when they end.</div>'}<div class="grp">From mail and Teams <span>${sample==="empty"?0:MAIL.length} proposals</span></div>${sample==="empty"?"":mailRows()}`}
+const CAP={C1:"<b>C1 · One pipeline.</b> Arrived → Drafted → Approved as three counts you can click, one list under them. The clearest picture of the work, but it replaces two sidebar pages with one and a very different shape.",C2:"<b>C2 · One entry, two lanes.</b> One sidebar entry and one badge, with a switch at the top: To process and To approve. Each lane keeps its own job; the rows are shared. The lightest way to combine them.",C3:"<b>C3 · The meeting's row follows the work.</b> Press Process on a row: it runs in the background, becomes \"5 proposals to check\", and Check them opens the proposals in place, one at a time. Mail and Teams proposals stay below. Try it on the steering row."};
+const NOTES={C1:["Trade-offs",["Best picture of the whole flow; one place for everything.","Re-cuts the sidebar and the names just settled (#168, #156); Review's mail and Teams proposals do not fit a meeting pipeline neatly.","Biggest change; best decided after the 13-11-2026 AI ideas review."],],C2:["Trade-offs",["Smallest change; needs #179 and #180 first for the shared row.","Keeps the two jobs distinct, so nothing about approving changes.","Still two clicks between processing a meeting and checking its proposals."]],C3:["Trade-offs",["Follows how you think (a meeting), and removes the trip between pages.","Needs the one-at-a-time pass to work well first (R1).","Largest build of the three; Review still needs a place for proposals that are not from a meeting."]]};
+function draw(){document.querySelectorAll("[data-o]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.o===opt));document.querySelectorAll("[data-s]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===sample));
+ $("#frame").innerHTML=opt==="C1"?V1():opt==="C2"?V2():V3();$("#cap").innerHTML=CAP[opt];const n=NOTES[opt];$("#notes").innerHTML=`<h3>${n[0]}</h3><ul>${n[1].map(t=>`<li>${t}</li>`).join("")}</ul>`;$("#toast").innerHTML=toast?`<div class="toast">${toast}</div>`:""}
+function proc(ids){ids.forEach(i=>rows.find(r=>r.id===i).st="running");draw();setTimeout(()=>{ids.forEach(i=>{const r=rows.find(x=>x.id===i);r.st="drafted";r.d=0;r.props=[{k:"Minutes",kc:"",t:"Draft minutes: "+r.t,q:"Draft minutes of the call: 1 decision, 3 actions, 1 risk."},{k:"Action",kc:"",t:"Follow up on the open question",q:"\"I'll follow up this week.\""}]});draw()},1800)}
+document.addEventListener("click",e=>{const o=e.target.closest("[data-o]");if(o){opt=o.dataset.o;draw();return}const sm=e.target.closest("[data-s]");if(sm){sample=sm.dataset.s;reset();draw();return}
+ const a=e.target.closest("[data-a]");if(!a)return;const x=a.dataset.a,id=+a.dataset.id;
+ if(x==="proc")proc([id]);else if(x==="all")proc(rows.filter(r=>r.st==="ready").map(r=>r.id));
+ else if(x==="open"){open=open===id?null:id;pi=0;draw()}else if(x==="close"){open=null;draw()}
+ else if(x==="ap"){const r=rows.find(r=>r.id===open);pi++;if(r&&pi>=r.props.length){const rr=r;toast="All checked.";draw();setTimeout(()=>{toast=null;draw()},2000);return}draw()}
+ else if(x==="lane"){lane=a.dataset.g;draw()}else if(x==="stage"){stage=a.dataset.g;draw()}
+ else if(x==="toreview"){lane="approve";opt="C2";draw()}});
+reset();draw();
+</script></body></html>
