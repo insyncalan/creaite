@@ -105,6 +105,7 @@ class Shape(ShapeCase):
         chips = b.eval("[...document.querySelectorAll('#prepShape .readas .chip')].map(c=>c.textContent)")
         self.assertTrue(any("ABC-A-001" in c for c in chips), chips)
         self.assertIn("A date for data access", b.eval("document.querySelector('#prepShape .readas').textContent"))
+        b.wait("document.querySelector('#shN-objective') && document.querySelector('#shN-objective').value", 15)     # the editors fill a frame after they are drawn (#152)
         boxes = b.eval("[...document.querySelectorAll('#prepShape .shbox')].map(t=>[t.id,t.value])")
         self.assertEqual([x[0] for x in boxes], ["shN-objective", "shN-talking_points", "shN-ask", "shN-carried_over"])
         self.assertEqual(boxes[0][1], "Agree a date for data access.")

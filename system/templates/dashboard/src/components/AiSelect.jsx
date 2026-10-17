@@ -63,6 +63,14 @@ export function AiBar({ bar }) {
   const box = useRef(/** @type {HTMLDivElement | null} */ (null));
   const input = useRef(/** @type {HTMLInputElement | null} */ (null));
   useEffect(() => { if (asking) input.current?.focus(); }, [asking]);
+  const [, redraw] = useState(0);
+  useEffect(() => {                                                       // #152e: Turn into's tick follows the editor itself, not only the bar's own redraws (a slow machine's
+    const ed = bar.h.editor;                                               // selection update can come before the editor has the focus, and the bar then isn't redrawn)
+    if (ed.isDestroyed) return undefined;
+    const again = () => redraw(n => n + 1);
+    ed.on("transaction", again);
+    return () => { if (!ed.isDestroyed) ed.off("transaction", again); };
+  }, [bar.h]);
   useLayoutEffect(() => {          /* under the selection, or above it when the bar and its menu don't fit below; the menus hang off it, so it never scrolls */
     if (!box.current || bar.h.editor.isDestroyed) return undefined;
     const v = bar.h.editor.view;

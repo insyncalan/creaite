@@ -83,9 +83,10 @@ class IconSet(LiveBrowserCase):
         b.key("Tab")
         b.pump(0.05)
         self.assertEqual(b.eval("document.activeElement.id"), "themeBtn")
+        b.wait("(()=>{ const t=document.getElementById('tip'); return !!(t&&t.classList.contains('on')); })()", 5)    # #152: drawn a frame after the focus
         self.assertIn("theme", self.tip())
         b.key("Escape")
-        b.pump(0.05)
+        b.wait("(()=>{ const t=document.getElementById('tip'); return !(t&&t.classList.contains('on')); })()", 5)
         self.assertIsNone(self.tip())
 
     def test_the_theme_icon_shows_the_destination(self):

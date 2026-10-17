@@ -30148,6 +30148,16 @@ ${s5}`;
     h2(() => {
       if (asking) input.current?.focus();
     }, [asking]);
+    const [, redraw] = d2(0);
+    h2(() => {
+      const ed3 = bar.h.editor;
+      if (ed3.isDestroyed) return void 0;
+      const again = () => redraw((n4) => n4 + 1);
+      ed3.on("transaction", again);
+      return () => {
+        if (!ed3.isDestroyed) ed3.off("transaction", again);
+      };
+    }, [bar.h]);
     _2(() => {
       if (!box.current || bar.h.editor.isDestroyed) return void 0;
       const v5 = bar.h.editor.view;
