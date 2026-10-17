@@ -10142,6 +10142,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         close: () => setOpen2(false)
       });
     }, [hover, why]);
+    _2(() => {
+      if (!hover || !open2) return;
+      const b5 = btn.current, m5 = box.current;
+      if (!b5 || !m5) return;
+      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
+      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
+    }, [open2]);
     h2(() => {
       if (!open2 && back2.current) {
         back2.current = false;

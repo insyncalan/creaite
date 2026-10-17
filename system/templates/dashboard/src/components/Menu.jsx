@@ -144,6 +144,13 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
     return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current, isOpen: () => isOpen.current,
       open: () => { if (why || isOpen.current) return; if (KB_OPEN && KB_OPEN !== fold) KB_OPEN(); KB_OPEN = null; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
   }, [hover, why]);
+  useLayoutEffect(() => {          /* #117: a hover menu that would run off the bottom of the window opens upward when there is room above (the AI bar near the window's foot) */
+    if (!hover || !open) return;
+    const b = btn.current, m = box.current;
+    if (!b || !m) return;
+    const r = m.getBoundingClientRect(), t = b.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 4 && t.top - 8 > r.height) m.classList.add("up");
+  }, [open]);
 
   useEffect(() => { if (!open && back.current) { back.current = false; btn.current?.focus(); } }, [open]);
 
