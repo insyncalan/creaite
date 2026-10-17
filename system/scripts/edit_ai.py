@@ -226,8 +226,8 @@ def normal(text):
 
 def loose_ids(con, text):
     """Every item ID a text holds, however it is written: the strict form anywhere, and for each of the tracker's project codes,
-    any case, with spaces, dots, dashes, underscores, slashes, backslashes, colons or brackets for its hyphens ("ABC (A) 004"), or run on to a
-    word before it ("seeABC-A-004"); with a letter part, the number may also drop its zeros ("ABC-A-4") or write them as O
+    any case, with spaces, dots, dashes, underscores, slashes, backslashes, colons or brackets for its hyphens ("ABC (A) 004"),
+    or run on to a word before it ("seeABC-A-004"); with a letter part, the number may also drop its zeros ("ABC-A-4") or write them as O
     ("ABC-A-OO4"), always as a whole number ("ABC-A-40" is ABC-A-040, never ABC-A-004), and not one a slash, colon or dot continues
     ("ABC A 10/09"). A loose match counts only when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when
     there is no ABC-100); it fails closed, so an ID the tracker can't be asked about counts."""
