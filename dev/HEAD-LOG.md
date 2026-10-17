@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | Jarvis may push for 5 days, until 22-10-2026 12:15; force-push stays denied. Supersedes the 48-hour window of 15-10-2026 (lapsed 17-10-2026 02:45) | Pushes were waiting on Alan; the crash lost the earlier session |
 | 17-10-2026 | Alan | Approved directly: Cap's edit_ai.py client-place proposal for v2.2.0 (edit-ai-client-proposal 2347f4b): the approved #117 file plus v2.1.0's client place and gate (nine commits) and two adaptations, byte-checked, nothing else. Order on v220-int: v220-editor-ai, this proposal, then the client-gate rounds. | Alan: Approve, after the plain-English README on #117. |
 | 17-10-2026 | Alan | UX review (#172) stays one backlog item for the whole review; the Work filters fix (finding 1) is left alone for now; the Capture drawer keeps its own draft. The Review age mockup pick (A or B) is still open. | Alan's answers to the quick picks. |
 | 17-10-2026 | Alan | Help (#158): the word target is relaxed to about 22,000 for v2.2.0; trimming toward 14,791 follows in a new item (#176, v2.3.0). #117 (edit_ai.py combined), #119 (page, server half and own=True) and #146 (SAFE_SETTINGS line) are approved; #119's session cap, Activity-row change and old-draft clean-up are a follow-up item (#175, v2.2.0, guarded diff for Alan first). | Alan's answers to the morning list. |
