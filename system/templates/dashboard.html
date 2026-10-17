@@ -5298,6 +5298,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     hlToggle: () => hlToggle,
     hoverAttach: () => hoverAttach,
     hoverGroup: () => hoverGroup,
+    hsSaved: () => hsSaved,
     html: () => html,
     htmlPart: () => htmlPart,
     htmlToMd: () => htmlToMd,
@@ -50759,6 +50760,7 @@ ${d5.text}`);
     }
     if (shared.CUR.mode === "health") {
       const p6 = P3.find((x5) => x5.code === shared.CUR.code), before = { health: p6.health, reason: p6.reason };
+      hsSaved();
       closePanel();
       await save(`${p6.name} health: ${before.health || "not set"} → ${f5.health}`, [{ op: "update", table: "projects", id: p6.code, changes: { health: f5.health, health_reason: f5.reason } }], null, () => Object.assign(p6, f5), () => Object.assign(p6, before));
       return;
@@ -52812,6 +52814,11 @@ ${d5.text}`);
     if (b5) b5.focus();
   }
   var HSUSED = null;
+  function hsSaved() {
+    if (!HSUSED) return;
+    hsStat(HSUSED.kept ? "used" : hsUse($("#f_reason")?.value, HSUSED.suggested));
+    HSUSED = null;
+  }
   function hsFill() {
     const c5 = HSG;
     if (!c5 || !c5.d) return false;
@@ -52819,12 +52826,13 @@ ${d5.text}`);
     if (!hs2 || !rs2) return false;
     hs2.value = c5.d.health;
     hs2.dispatchEvent(new Event("change", { bubbles: true }));
-    if (rs2.value !== c5.base) snack("Your reason was kept: you changed it while the suggestion was being written");
+    const kept = rs2.value !== c5.base;
+    if (kept) snack("Your reason was kept: you changed it while the suggestion was being written");
     else {
       rs2.value = c5.reason;
       rs2.dispatchEvent(new Event("input", { bubbles: true }));
     }
-    HSUSED = { suggested: c5.d.reason };
+    HSUSED = { suggested: c5.d.reason, kept };
     HSG = null;
     hSugDraw();
     return true;
@@ -52967,11 +52975,6 @@ ${d5.text}`);
         hsClose(true);
       }
     });
-    $("#pFoot").addEventListener("click", (e4) => {
-      if (!HSUSED || !e4.target.closest("#pSave")) return;
-      hsStat(hsUse($("#f_reason")?.value, HSUSED.suggested));
-      HSUSED = null;
-    }, true);
     $("#pFoot").addEventListener("click", (e4) => {
       if (!shared.DRH || !shared.DRH.used || !e4.target.closest("#pSave")) return;
       draftStat("reason", drSame($("#f_reason")?.value, shared.DRH.used) ? "used" : "edited");
@@ -64498,7 +64501,7 @@ ${d5.text}`);
                 } else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a5.lines || []).map((l6) => `- ${l6}`).join("\n")}` }, "New lines added");
                 onEvent({ type: "redraft", id: s5.id, choice, ...s5.type === "health" ? { section: "health" } : {} });
                 setRd(null);
-                if (a5.health) setTimeout(() => (
+                if (a5.health && !(choice === "use" && a5.apply)) setTimeout(() => (
                   /** @type {HTMLElement|null} */
                   box.current?.querySelector(".sheet-spark")?.focus()
                 ), 0);
@@ -66290,6 +66293,7 @@ ${d5.text}`);
   }
 
   // components/report/ClientParts.jsx
+  var crAskWhy = y3(false);
   function setClientDoc(next) {
     crDoc.value = next;
     crDirty.value = true;
@@ -66379,6 +66383,24 @@ ${d5.text}`);
       setOpen2(false);
     };
     const needWhy = pick !== inFlag && !why.trim();
+    const ask2 = crAskWhy.value, focusWhy = A2(false);
+    h2(() => {
+      if (!ask2 || !d5 || !edit || !diff) return;
+      crAskWhy.value = false;
+      if (!String(diff.reason || "").trim()) {
+        focusWhy.current = true;
+        begin();
+      }
+    }, [ask2, diff]);
+    h2(() => {
+      if (open2 && focusWhy.current) {
+        focusWhy.current = false;
+        setTimeout(() => (
+          /** @type {HTMLElement|null} */
+          document.getElementById("crWhy")?.focus()
+        ), 0);
+      }
+    }, [open2]);
     return /* @__PURE__ */ u2("div", { class: "crhealth", "data-crhealth": true, children: [
       /* @__PURE__ */ u2("div", { class: "crhcol", children: [
         edit ? /* @__PURE__ */ u2("button", { type: "button", class: `crflag ${cls}`, ref: btn, "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", "data-crflag": true, onClick: () => open2 ? setOpen2(false) : begin(), children: flag.toUpperCase() }) : /* @__PURE__ */ u2("span", { class: `crflag ${cls}`, children: flag.toUpperCase() }),
@@ -66630,7 +66652,9 @@ ${d5.text}`);
         lo2.health.client,
         " (internal: ",
         lo2.health.internal,
-        "), with your reason kept internally."
+        "), ",
+        String(lo2.health.reason || "").trim() ? "with your reason kept internally" : "no reason written yet",
+        "."
       ] }, "health"));
     }
     const blocked = !lo2 || !lo2.ready || lo2.findings.length > 0;
@@ -66828,7 +66852,13 @@ ${d5.text}`);
       /* @__PURE__ */ u2(LeftOutDialog, { client: doc.client || "", onExport: doExport })
     ] });
   }
-  var clientHealthApply = (d5) => (doc, s5) => ({
+  var askWhy = (health2) => {
+    if (crInternal.value && flagOf(
+      /** @type {SheetDoc} */
+      crInternal.value
+    ) !== health2) crAskWhy.value = true;
+  };
+  var clientHealthApply = (d5) => (doc, s5) => (askWhy(d5.health), {
     ...doc,
     sections: doc.sections.map((x5) => x5.id === s5.id ? { ...x5, text: d5.reason, data: { .../** @type {any} */
     x5.data || {}, flag: d5.health } } : x5),

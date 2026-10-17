@@ -8,7 +8,7 @@
    again at save, approve and export. Nothing here sends anything. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import { CLIENT_RENDERERS, setClientDoc } from "./ClientParts.jsx";
+import { CLIENT_RENDERERS, crAskWhy, setClientDoc } from "./ClientParts.jsx";
 import { flagOf, healthDiff, matchClientAll, matchClientSection } from "./clientDoc.js";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
 import { countRedraft, redrafter } from "./redraft.js";
@@ -114,9 +114,11 @@ export function ClientView() {
   );
 }
 
+/** Ask for the reason (the flag's popover opens on it) when the new flag differs from the internal one. @param {string} health */
+const askWhy = health => { if (crInternal.value && flagOf(/** @type {SheetDoc} */ (crInternal.value)) !== health) crAskWhy.value = true; };
 /** #203: Use on the client sheet's health suggestion: the client's flag and headline, and why the flag differs from the internal one when
     it does. The reason is left empty: Alan writes why in the flag's popover (kept internally, never on the client's page). @param {{health: string, reason: string}} d */
-const clientHealthApply = d => (/** @type {SheetDoc} */ doc, /** @type {{id: string}} */ s) => ({
+const clientHealthApply = d => (/** @type {SheetDoc} */ doc, /** @type {{id: string}} */ s) => (askWhy(d.health), {
   ...doc, sections: doc.sections.map(x => x.id === s.id ? { ...x, text: d.reason, data: { ...((/** @type {any} */ (x)).data || {}), flag: d.health } } : x),
   meta: healthDiff(doc, crInternal.value ? flagOf(/** @type {SheetDoc} */ (crInternal.value)) : d.health, d.health, "") });
 
