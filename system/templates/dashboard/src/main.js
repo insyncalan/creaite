@@ -39,6 +39,7 @@ export * from "./ask.js";
 export * from "./meetings.js";
 
 export * from "./help.js";
+export * from "./helpscreen.js";
 
 export * from "./drafts.js";
 
@@ -123,6 +124,7 @@ import { bootDrafts0129, bootDrafts0160, bootDrafts0196, bootDrafts0202, bootDra
 import { bootFiles0068, bootFiles0069 } from "./files.js";
 import { bootNotes } from "./notes.js";
 import { bootHelp0091, bootHelp0158, bootHelp0161, bootHelp0162, firstHelp } from "./help.js";
+import { bootHelpScreen } from "./helpscreen.js";
 import { bootIntake0053, bootIntake0134, bootIntake0135, bootIntake0136, bootIntake0137, inboxBadge } from "./intake.js";
 import { bootPrepShape } from "./stores/prepShape.js";
 import { bootMeetings0125, bootMeetings0126, bootMeetings0143, bootMeetings0144, bootMeetings0145, bootMeetings0201, openFromAddress } from "./meetings.js";
@@ -259,6 +261,7 @@ bootToday0159();
 bootDrafts0160();
 bootHelp0161();
 bootHelp0162();
+bootHelpScreen();
 bootSettings0163();
 bootToday0164();
 bootPanel0165();

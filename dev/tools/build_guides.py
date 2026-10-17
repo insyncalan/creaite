@@ -18,7 +18,7 @@ sys.path.insert(0, str(REPO / "system" / "scripts"))
 import build_dashboard as bd  # noqa: E402
 import paths  # noqa: E402
 
-GUIDES = {"start": ("guide-first-day.html", "creaite First Day"), "howto": ("guide-how-to.html", "creaite How-To")}
+GUIDES = {"start": ("guide-first-day.html", "creaite first-day card"), "howto": ("guide-how-to.html", "creaite top-12 card")}   # #158: two cards, not two long guides
 BEGIN, END = "/* ===== Help (BL-84) ===== */", "/* ===== end Help (BL-84) ===== */"
 
 # creaite standard, as in the dashboard's Help tokens (light, then dark; data-theme="light" or "dark" overrides the system)
@@ -51,7 +51,7 @@ def scale_css():
 
 def page(part_id, text=None):
     file, title = GUIDES[part_id]
-    body = bd.help_part(part_id, "guide", text)
+    body = bd.help_card(part_id, text)
     faces = bd.help_font_faces()
     return f"""<!doctype html>
 <html lang="en-GB">
@@ -68,6 +68,13 @@ def page(part_id, text=None):
 @media (prefers-color-scheme:dark){{:root:not([data-theme="light"]){{{DARK}color-scheme:dark}}}}
 :root[data-theme="dark"]{{{DARK}color-scheme:dark}}
 *{{box-sizing:border-box}}
+@page{{size:A4;margin:12mm}}
+.hp-top12{{list-style:none;counter-reset:j;margin:0;padding:0;display:grid;gap:10px}}
+.hp-topjob{{counter-increment:j;display:grid;grid-template-columns:34px 1fr;gap:0 10px;padding:12px 14px;border:1px solid var(--hp-hair);border-radius:10px;background:var(--hp-paper);break-inside:avoid}}
+.hp-topjob::before{{content:counter(j);grid-row:1/4;font:800 20px var(--hp-display);color:var(--hp-teal)}}
+.hp-topjob b{{font:700 17px var(--hp-display)}} .hp-topjob span{{color:var(--hp-soft)}} .hp-topjob em{{font-style:normal;font:500 12px var(--hp-mono);color:var(--hp-teal)}}
+.hp-wrap kbd{{font:500 12px var(--hp-mono);border:1px solid var(--hp-hair);border-radius:5px;padding:1px 6px}}
+@media print{{ .hp-top12 .hp-topjob:nth-child(7){{break-before:page}} .hp-start{{zoom:.78}} body{{background:#fff}} }}
 body{{background:var(--hp-ground);color:var(--hp-ink);font:400 var(--fs-lg)/1.5 var(--hp-body);margin:0}}
 {components_css()}
 </style>

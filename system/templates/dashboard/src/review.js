@@ -2,6 +2,7 @@
 /* review.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0060-review.js, 0061-bl-133-sprint-work-views.js, 0063-after-bl-216.js, 0064-bl-133-stage-b-sprint-work-views.js, 0065-bl-221-sprint-drafts-extraction.js, 0066-bl-218-sprint-drafts-extraction.js, 0067-after-bl-218.js, 0193-bl-200-sprint-review-work.js, 0195-bl-197-sprint-review-work.js, 0209-bl-208-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { drawFilterBar } from "./components/FilterBar.jsx";
 
@@ -213,7 +214,7 @@ export function rvRender(){ const und=REV.filter(r=>!r.done), stale=und.filter(r
 export const rvSrcLink=r=>{ if(r.nodraft&&r.tsrc) return ` · <a href="#" class="srclink" data-openfile="${esc(r.tsrc)}">Open source</a>`; /* BL-260: the transcript */ const o=srcParse(r.src); if(!o) return ""; if(o.type==="File") return ` · <a href="#" class="srclink" data-openfile="${esc(o.path)}">Open source</a>`; return o.Link?` · <a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open source</a>`:""; };
 export function rvHintHtml(){ return raw([["J","K","move"],["Shift","J","extend"],["Space","select"],["A","approve"],["R","reject with a reason"],["E","edit"],[MAC?"⌘":"Ctrl","Z","undo"]].map(a=>a.slice(0,-1).map(k=>`<span class="kbd">${k}</span>`).join(" ")+" "+a[a.length-1]).join(" · ")); }
 export function rvEmptyHtml(){ const s=shared.RVSTATS, any=s.approved||s.rejected||s.edited;
-  return html`<div class="empty rvdone"><h2>Nothing left to review</h2>${any?html`<div class="sub">This session: approved ${s.approved} · rejected ${s.rejected} · edited ${s.edited}</div>`:""}
+  return html`<div class="empty rvdone"><h2>Nothing left to review</h2><div class="sub">${raw(howLink("review"))}</div>${any?html`<div class="sub">This session: approved ${s.approved} · rejected ${s.rejected} · edited ${s.edited}</div>`:""}
     <div class="rvdacts">${RVLASTUNDO?html`<button type="button" class="btn" id="rvUndoLast">Undo the last batch</button>`:""}<button type="button" class="btn" data-go="activity">Open Activity</button><button type="button" class="btn" data-ask="sweep">Sweep now</button></div>
     <div class="sub" style="margin-top:14px">${SWEPT==="never"?"Mail and Teams have not been swept yet.":`The last sweep was ${fdText(SWEPT)}.`}${(D.inbox||[]).filter(f=>f.state==="new").length?` Intake has ${(D.inbox||[]).filter(f=>f.state==="new").length} new file${(D.inbox||[]).filter(f=>f.state==="new").length===1?"":"s"}.`:""}</div></div>`; }
 /* ── filters: the FilterBar building block (BL-316), as Work's: Kind, Needs and Source each open their own list; the funnel's

@@ -1097,10 +1097,12 @@ def _hp_footer(lines, ctx):
     return ('<footer class="hp-foot">' + "".join(f"<span>{_hp_inline(ln, ctx)}</span>" for ln in lines) + "</footer>") if lines else ""
 
 
-def _hp_start(part, ctx):
+def _hp_start(part, ctx, only=None):
     secs = {s["title"]: s for g in part["groups"] for s in g["sections"]}
     html, outline = [_hp_hero(part["intro"], ctx, True)], {"stages": [], "steps": [], "rhythm": [], "views": [], "say": [], "rules": []}
     for title, s in secs.items():
+        if only and title not in only:      # #158: the first-day card draws three of Start here's sections
+            continue
         blocks = _hp_blocks(s["lines"])
         sid = "hp-" + s["slug"]
         if title == "The loop":
@@ -1178,7 +1180,8 @@ def _hp_start(part, ctx):
         else:
             body = _hp_plain([b for b in blocks if b["k"] in ("ul", "ol", "table")], ctx)
         html.append(f'<section class="hp-sec" aria-labelledby="{sid}">{head}{body}</section>')
-    html.append(_hp_footer(part["footer"], ctx))
+    if not only:
+        html.append(_hp_footer(part["footer"], ctx))
     return "".join(html), outline
 
 
@@ -1312,6 +1315,22 @@ def help_part(part_id, mode="guide", text=None):
     ctx = _HelpCtx(mode, part_id, help_version(), tasks)
     p = parts[part_id]
     return {"start": _hp_start, "howto": _hp_howto, "reference": _hp_reference}[part_id](p, ctx)[0]
+
+
+def help_card(kind, text=None):
+    """#158: the two printed cards, drawn from help.md. "start": the first-day card (the loop, your first hour, the four rules;
+    one page). "howto": the top-12 card (the twelve jobs, one line and the page name each; two pages)."""
+    parts = help_parse(text)
+    tasks = {s["slug"]: s["title"] for g in parts.get("howto", {"groups": []})["groups"] for s in g["sections"]}
+    ctx = _HelpCtx("guide", kind, help_version(), list(tasks))
+    if kind == "start":
+        return _hp_start(parts["start"], ctx, only=("The loop", "Your first hour", "Four rules"))[0]
+    jobs = help_jobs(parts)
+    items = "".join(f'<li class="hp-topjob"><b>{_hp_inline(j["title"], ctx)}</b><span>{_hp_inline(j["line"], ctx)}</span>'
+                    f'<em>Help \u203a How do I\u2026 \u203a {_hp_esc(tasks.get(j["id"], j["id"]))}</em></li>' for j in jobs)
+    return ('<header class="hp-hero">' + HELP_LOGO % "hp-logo sm" + f'<div><span class="hp-eyebrow">creaite {help_version()} \u00b7 top 12 jobs</span>'
+            '<h1>The twelve jobs</h1><p class="hp-lede">Press <kbd>?</kbd> in creaite, search for the page name, and the steps are there.</p></div></header>'
+            f'<ol class="hp-top12">{items}</ol>')
 
 
 def help_sections():
