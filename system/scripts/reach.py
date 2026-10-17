@@ -906,6 +906,7 @@ SCRIPT_COMMANDS = {
     # database, settings and staging, so both are record commands (a plain chat may only look: --dry-run)
     "backup.py": {"list": READ, "show": READ, "check": DERIVED, "tidy": (RECORD, "--dry-run"), "restore": (RECORD, "--dry-run")},
     "quality.py": {"": READ},
+    "usage_report.py": {"": READ},     # #197: the run usage report, read only
     "build_dashboard.py": {"": DERIVED},
     "permissions.py": {"": RECORD},      # also never run by the panel (_script_refused)
     "live_server.py": {"": RECORD},      # also never run by the panel
