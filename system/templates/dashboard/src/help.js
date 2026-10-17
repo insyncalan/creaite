@@ -35,8 +35,16 @@ export function renderHelp(arg){ if(!HD.tabs.length){ putHTML($("#helpPane"),htm
   if(target){ target.scrollIntoView({block:"start"});   /* the embedded fonts can swap in after this and move it: go there again */
     if(document.fonts&&document.fonts.status!=="loaded") document.fonts.ready.then(()=>{ if(shared.HELPARG===a&&target.isConnected) target.scrollIntoView({block:"start"}); }); }
   else if(changed) $("#v-help").scrollTop=0;
-  helpResHide(); helpApplyFind(); }
+  if(tab==="whatsnew"&&wnLatest()){ WNMEM=wnLatest(); store.set(WNK,WNMEM); }
+  wnPaint(); helpResHide(); helpApplyFind(); }
 export function helpGo(arg,find){ const a=helpNorm(arg); if(!a) return; shared.HELPFIND=find||null; renderHelp(a); navWrite(true); }
+/* #158 part 3: a dot on the What's new tab and on the Settings button that opens Help shows after an update, until What's new has
+   been opened once for that version (remembered in this browser; if storage fails, until the page is reloaded) */
+export const WNK="creaite-help-whatsnew-seen";
+let WNMEM="";
+export const wnLatest=()=>String(HD.latest||"");
+export const wnNew=()=>!!wnLatest()&&(WNMEM||store.get(WNK,""))!==wnLatest();
+export function wnPaint(){ document.body.classList.toggle("wn-new",wnNew()); }
 /* #158 part 1: one search over all of Help. The box sits above the tabs; "/" focuses it while Help is open; results replace the page
    until one is chosen (or the box is cleared). A chosen result opens its page scrolled to the matching line, which is marked. */
 export function helpResHide(){ const r=$("#helpRes"); if(r) r.hidden=true; const p=$("#helpPane"); if(p) p.hidden=false; }
@@ -75,6 +83,7 @@ export function helpCk(q){ q=q.toLowerCase(); if(q.trim().length<2) return [];
   return out; }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootHelp0091(){
+wnPaint();
 document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]:not([role=tab])"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help,l.dataset.line?{line:l.dataset.line}:null); });   /* the tabs are the Tabs block's (BL-316) */
 document.addEventListener("input",e=>{ if(e.target.id==="helpS") helpSearchDraw(); });
 document.addEventListener("keydown",e=>{ if(e.target.id!=="helpS"||e.key!=="Escape") return; e.stopPropagation(); if(e.target.value){ e.target.value=""; helpSearchDraw(); } else e.target.blur(); },true);

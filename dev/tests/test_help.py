@@ -52,8 +52,8 @@ class ParseTests(unittest.TestCase):
         cls.tab = {t["id"]: t["html"] for t in cls.h["tabs"]}
 
     def test_three_parts_in_order(self):
-        self.assertEqual([t["title"] for t in self.h["tabs"]], ["Start here", "How do I…", "Reference"])
-        self.assertEqual([t["id"] for t in self.h["tabs"]], ["start", "howto", "reference"])
+        self.assertEqual([t["title"] for t in self.h["tabs"]], ["Start here", "How do I…", "Reference", "What's new"])   # #158: a fourth tab
+        self.assertEqual([t["id"] for t in self.h["tabs"]], ["start", "howto", "reference", "whatsnew"])
 
     def test_start_here_has_every_component(self):
         o = self.h["start"]
@@ -228,7 +228,7 @@ class PageTests(unittest.TestCase):
           out.parse=[parseHash("#help-start").arg,parseHash("#help-howto").arg,parseHash("#help-howto-undo-a-mistake").arg,parseHash("#help-howto-nope").arg,parseHash("#help-reference-search").arg,parseHash("#help").arg,parseHash("#help-howto").v];
           restoreNav(parseHash("#help-howto-undo-a-mistake")); await wait(30); out.deep=[VIEW,HELPARG,hashOf(navState())];
           window.OUT=out;""")
-        self.assertEqual(o["first"], ["help", "#help-start", "start", ["Start here", "How do I…", "Reference"]])
+        self.assertEqual(o["first"], ["help", "#help-start", "start", ["Start here", "How do I…", "Reference", "What's new"]])
         self.assertEqual(o["howto"], ["#help-howto", "howto", True])
         self.assertEqual(o["reference"], ["#help-reference", "reference", True])
         self.assertEqual(o["back"], ["#help-howto", "howto"])
@@ -300,7 +300,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["nt"], len(bd.help_sections()["tasks"]))
         self.assertEqual(o["howdo"], ["Help: How do I…", True, "Help: Start the day", "Help: Fix a stopped server and other problems"])   # the tab, then every task
         self.assertEqual(o["help"][0], ["Help: Start here", "Help: How do I…", "Help: Reference"])
-        self.assertGreaterEqual(o["help"][1], 3 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
+        self.assertGreaterEqual(o["help"][1], 4 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
         self.assertGreater(o["help"][3], 0)
         self.assertLess(o["help"][3], o["help"][2])                                    # tasks come before reference sections
         self.assertTrue(o["hint"])

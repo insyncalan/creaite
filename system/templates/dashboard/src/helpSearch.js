@@ -10,7 +10,7 @@ export function hstem(w){ if(w.length<=3) return w; if(w.endsWith("ies")) return
   if(w.endsWith("s")&&!/(ss|us|is)$/.test(w)) return w.slice(0,-1); return w; }
 /* does a word of the text answer a typed word: equal, or (from two letters) starting with it, plurals folded */
 export function hmatch(word,q){ const a=hstem(word), b=hstem(q); return q.length<2?word===q:a.startsWith(b)||word.startsWith(q); }
-export const HPARTS={howto:"How do I…",reference:"Reference",start:"Start here",whatsnew:"What’s new"};
+export const HPARTS={howto:"How do I…",reference:"Reference",start:"Start here",whatsnew:"What's new"};
 const POOL=["p","li","td","th","h1","h2","h3"];
 /** @type {null|Array<{arg:string,part:string,title:string,lines:string[],words:string[]}>} */
 let INDEX=null, INDEXOF=null;
@@ -22,7 +22,7 @@ export function helpPages(tabs){ if(INDEX&&INDEXOF===tabs) return INDEX; const p
     const add=(arg,title,root,part=id)=>{ const lines=linesOf(root); pages.push({arg,part,title,lines,words:hwords(title+" "+lines.join(" "))}); };
     if(id==="howto") doc.querySelectorAll(".hp-task").forEach(a=>add("howto-"+a.getAttribute("data-task"),a.querySelector("h3")?.textContent||"",a));
     else if(id==="reference") doc.querySelectorAll(".hp-ref").forEach(a=>add("reference-"+a.getAttribute("data-ref"),a.querySelector("h2")?.textContent||"",a));
-    else if(id==="whatsnew") doc.querySelectorAll(".hp-wn").forEach(a=>add("whatsnew-"+a.getAttribute("data-ver"),"What’s new in "+a.getAttribute("data-ver"),a));
+    else if(id==="whatsnew") doc.querySelectorAll(".hp-wn").forEach(a=>add("whatsnew-"+a.getAttribute("data-ver"),"What's new in "+a.getAttribute("data-ver"),a));
     else { const hero=doc.querySelector(".hp-hero"); if(hero) add(id,tab.title,hero);
       doc.querySelectorAll("section").forEach(s=>add(id,s.querySelector("h2")?.textContent||tab.title,s)); } }
   INDEX=pages; INDEXOF=tabs; return pages; }

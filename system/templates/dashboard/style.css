@@ -1304,6 +1304,8 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hs-l mark,.hs-t mark{background:var(--hp-amber-soft);color:var(--hp-ink);border-radius:2px;padding:0 1px}
 .hs-more,.hs-none p{color:var(--hp-soft);font-size:var(--fs-md)} .hs-none{padding:24px 0;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .hp-found{background:var(--hp-amber-soft);border-radius:var(--r-md);box-shadow:0 0 0 4px var(--hp-amber-soft)}
+body.wn-new #helpTabs [data-help="whatsnew"]::after,body.wn-new #v-settings [data-go="help"]::after{content:"";display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:var(--accent);vertical-align:middle}
+.hp-wn{background:var(--hp-paper);border:1px solid var(--hp-hair);border-radius:var(--r-lg);padding:20px 24px;margin:0 0 18px} .hp-wn h3{font:600 var(--fs-lg) var(--hp-display);margin:18px 0 6px} .hp-wn ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px} .hp-wn p,.hp-wn li{font-size:var(--fs-lg);line-height:1.5}
 /* ===== end Help finding (#158) ===== */
 
 #helpTabs{position:sticky;top:0;z-index:var(--z-sticky);background:var(--hp-ground);margin-top:0;padding-top:14px} #helpTabs button{color:var(--hp-soft)} #helpTabs button[aria-selected="true"]{color:var(--hp-ink)}

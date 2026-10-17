@@ -1314,6 +1314,8 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hs-l mark,.hs-t mark{background:var(--hp-amber-soft);color:var(--hp-ink);border-radius:2px;padding:0 1px}
 .hs-more,.hs-none p{color:var(--hp-soft);font-size:var(--fs-md)} .hs-none{padding:24px 0;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .hp-found{background:var(--hp-amber-soft);border-radius:var(--r-md);box-shadow:0 0 0 4px var(--hp-amber-soft)}
+body.wn-new #helpTabs [data-help="whatsnew"]::after,body.wn-new #v-settings [data-go="help"]::after{content:"";display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:var(--accent);vertical-align:middle}
+.hp-wn{background:var(--hp-paper);border:1px solid var(--hp-hair);border-radius:var(--r-lg);padding:20px 24px;margin:0 0 18px} .hp-wn h3{font:600 var(--fs-lg) var(--hp-display);margin:18px 0 6px} .hp-wn ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px} .hp-wn p,.hp-wn li{font-size:var(--fs-lg);line-height:1.5}
 /* ===== end Help finding (#158) ===== */
 
 #helpTabs{position:sticky;top:0;z-index:var(--z-sticky);background:var(--hp-ground);margin-top:0;padding-top:14px} #helpTabs button{color:var(--hp-soft)} #helpTabs button[aria-selected="true"]{color:var(--hp-ink)}
@@ -4232,6 +4234,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     WLAY: () => WLAY,
     WLGRP: () => WLGRP,
     WLIVE: () => WLIVE,
+    WNK: () => WNK,
     WSD: () => WSD,
     WSIG: () => WSIG,
     WSIG_MORE: () => WSIG_MORE,
@@ -6202,6 +6205,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     wkField: () => wkField,
     wkLong: () => wkLong,
     wkMark: () => wkMark,
+    wnLatest: () => wnLatest,
+    wnNew: () => wnNew,
+    wnPaint: () => wnPaint,
     workAct: () => workAct,
     workActs: () => workActs,
     workAnnounce: () => workAnnounce,
@@ -11463,7 +11469,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     const a5 = hstem(word), b5 = hstem(q5);
     return q5.length < 2 ? word === q5 : a5.startsWith(b5) || word.startsWith(q5);
   }
-  var HPARTS = { howto: "How do I…", reference: "Reference", start: "Start here", whatsnew: "What’s new" };
+  var HPARTS = { howto: "How do I…", reference: "Reference", start: "Start here", whatsnew: "What's new" };
   var POOL = ["p", "li", "td", "th", "h1", "h2", "h3"];
   var INDEX = null, INDEXOF = null;
   function ownText(el2) {
@@ -11493,7 +11499,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       };
       if (id2 === "howto") doc.querySelectorAll(".hp-task").forEach((a5) => add("howto-" + a5.getAttribute("data-task"), a5.querySelector("h3")?.textContent || "", a5));
       else if (id2 === "reference") doc.querySelectorAll(".hp-ref").forEach((a5) => add("reference-" + a5.getAttribute("data-ref"), a5.querySelector("h2")?.textContent || "", a5));
-      else if (id2 === "whatsnew") doc.querySelectorAll(".hp-wn").forEach((a5) => add("whatsnew-" + a5.getAttribute("data-ver"), "What’s new in " + a5.getAttribute("data-ver"), a5));
+      else if (id2 === "whatsnew") doc.querySelectorAll(".hp-wn").forEach((a5) => add("whatsnew-" + a5.getAttribute("data-ver"), "What's new in " + a5.getAttribute("data-ver"), a5));
       else {
         const hero = doc.querySelector(".hp-hero");
         if (hero) add(id2, tab.title, hero);
@@ -43953,6 +43959,11 @@ ${pre}**Current state title:** ${title}`);
         if (shared.HELPARG === a5 && target.isConnected) target.scrollIntoView({ block: "start" });
       });
     } else if (changed) $("#v-help").scrollTop = 0;
+    if (tab === "whatsnew" && wnLatest()) {
+      WNMEM = wnLatest();
+      store.set(WNK, WNMEM);
+    }
+    wnPaint();
     helpResHide();
     helpApplyFind();
   }
@@ -43962,6 +43973,13 @@ ${pre}**Current state title:** ${title}`);
     shared.HELPFIND = find || null;
     renderHelp(a5);
     navWrite(true);
+  }
+  var WNK = "creaite-help-whatsnew-seen";
+  var WNMEM = "";
+  var wnLatest = () => String(HD.latest || "");
+  var wnNew = () => !!wnLatest() && (WNMEM || store.get(WNK, "")) !== wnLatest();
+  function wnPaint() {
+    document.body.classList.toggle("wn-new", wnNew());
   }
   function helpResHide() {
     const r4 = $("#helpRes");
@@ -44064,6 +44082,7 @@ ${pre}**Current state title:** ${title}`);
     return out;
   }
   function bootHelp0091() {
+    wnPaint();
     document.addEventListener("click", (e4) => {
       const l6 = e4.target.closest("#v-help [data-help]:not([role=tab])");
       if (!l6) return;

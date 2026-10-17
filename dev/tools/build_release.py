@@ -47,12 +47,24 @@ def refuse_stale_guides(version, guide=None):
                                  "check test_help, and commit the guides with VERSION.")
 
 
+def refuse_stale_whats_new(version, wn=None, notes_dir=None):
+    """#158: What's new carries the plain release notes copied in at release (build_guides.py). When this version has notes in
+    dev/release-notes, they must be in system/templates/help/whats-new.md; a version with no notes yet is not refused."""
+    notes_dir = Path(notes_dir or REPO / "dev" / "release-notes")
+    wn = Path(wn or paths.TEMPLATES / "help" / "whats-new.md")
+    if not ((notes_dir / f"{version}.md").exists() or (notes_dir / f"{version}-plain.md").exists()):
+        return
+    if not wn.exists() or f"## {version}\n" not in wn.read_text(encoding="utf-8"):
+        raise update.UpdateError(f"{wn.name} has no notes for {version}: run python3 dev/tools/build_guides.py and commit it with VERSION.")
+
+
 def build(tag=None, notes="", out=None, dirty=False):
     version = paths.VERSION_FILE.read_text(encoding="utf-8").strip()
     update.version_tuple(version)
     if tag and tag != f"v{version}":
         raise update.UpdateError(f"The tag {tag} doesn't match VERSION ({version}); expected v{version}.")
     refuse_stale_guides(version)
+    refuse_stale_whats_new(version)
     scope = list(paths.ENGINE) + list(paths.ENGINE_MERGED)
     listed = git("ls-files", "-z", *(["--cached", "--others", "--exclude-standard"] if dirty else []), "--", *scope)
     files = sorted({f for f in listed.split("\0") if f and not update.SKIP.search(f) and (REPO / f).is_file()})

@@ -1253,6 +1253,48 @@ def _hp_reference(part, ctx):
     return html, outline
 
 
+WHATS_NEW = "help/whats-new.md"
+WN_VER = re.compile(r"\d+\.\d+\.\d+$")
+
+
+def whats_new_parse(text=None):
+    """#158 Phase B: system/templates/help/whats-new.md (copied from dev/release-notes at release by build_guides.py) →
+    [{"ver", "lead": [paragraph], "sections": [{"title", "lines"}]}], newest first as written. Absent file: []."""
+    if text is None:
+        f = paths.TEMPLATES / WHATS_NEW
+        text = f.read_text(encoding="utf-8") if f.exists() else ""
+    text = re.sub(r"\A\s*<!--.*?-->", "", text, flags=re.S)
+    out, cur, sec = [], None, None
+    for line in text.splitlines():
+        m = re.match(r"## (\d+\.\d+\.\d+)\s*$", line)
+        if m:
+            cur, sec = {"ver": m.group(1), "lines": [], "sections": []}, None
+            out.append(cur)
+            continue
+        if cur is None:
+            continue
+        m = re.match(r"### (.+?)\s*$", line)
+        if m:
+            sec = {"title": m.group(1), "lines": []}
+            cur["sections"].append(sec)
+            continue
+        (sec["lines"] if sec else cur["lines"]).append(line)
+    return out
+
+
+def _hp_whatsnew(versions, ctx, installed):
+    """The What's new tab: one article per version, newest first, from the plain release notes."""
+    html = ['<header class="hp-hero">' + HELP_LOGO % "hp-logo sm" + '<div><span class="hp-eyebrow">Release notes</span>'
+            "<h1>What's new</h1><p class=\"hp-lede\">What changed in each version, in plain words, newest first.</p></div></header>"]
+    for v in versions:
+        lead = "".join(f"<p>{_hp_inline(b['t'], ctx)}</p>" for b in _hp_blocks(v["lines"]) if b["k"] == "p")
+        body = "".join(f"<h3>{_hp_inline(sec['title'], ctx)}</h3>" + _hp_plain(_hp_blocks(sec["lines"]), ctx) for sec in v["sections"])
+        eye = '<span class="hp-eyebrow">Installed</span>' if v["ver"] == installed else ""
+        html.append(f'<article class="hp-wn" id="wn-{v["ver"]}" data-ver="{v["ver"]}"><div class="hp-sechead">{eye}'
+                    f'<h2>creaite {v["ver"]}</h2>{lead}</div>{body}</article>')
+    return "".join(html)
+
+
 def help_version():
     """The installed version for Help, or X.Y.Z when the VERSION file is missing."""
     f = paths.VERSION_FILE
@@ -1288,6 +1330,13 @@ def help_sections():
             out["tasks"] = extra
         else:
             out["sections"] = extra
+    wn = whats_new_parse()
+    if wn:          # #158: a fourth tab, when the notes were copied in at release
+        ver = help_version()
+        ctx = _HelpCtx("dashboard", "whatsnew", ver, tasks)
+        out["tabs"].append({"id": "whatsnew", "title": "What's new", "html": _hp_whatsnew(wn, ctx, ver)})
+        out["versions"] = [v["ver"] for v in wn]
+        out["latest"] = ver if ver in out["versions"] else out["versions"][0]
     return out
 
 
