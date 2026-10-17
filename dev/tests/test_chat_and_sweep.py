@@ -516,11 +516,11 @@ class MarkdownChat(FakeClaudeCase):
             "Some text:\n- a\n- b": "<p>Some text:</p><ul><li>a</li><li>b</li></ul>",
             "> quoted *text*\n> more": "<blockquote><p>quoted <em>text</em><br>more</p></blockquote>",
             "above\n\n---\n\nbelow": "<p>above</p><hr><p>below</p>",
-            "[site](https://example.com/a?b=1&c=2)": '<p><a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener">site</a></p>',
-            "[mail](mailto:a@b.example)": '<p><a href="mailto:a@b.example" target="_blank" rel="noopener">mail</a></p>',
+            "[site](https://example.com/a?b=1&c=2)": '<p><a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">site</a></p>',
+            "[mail](mailto:a@b.example)": '<p><a href="mailto:a@b.example" target="_blank" rel="noopener noreferrer">mail</a></p>',
             "![chart](https://example.com/x.png)": "<p>chart</p>",
             "[![chart](https://example.com/x.png)](https://example.com/page)":
-                '<p><a href="https://example.com/page" target="_blank" rel="noopener">chart</a></p>',
+                '<p><a href="https://example.com/page" target="_blank" rel="noopener noreferrer">chart</a></p>',
             "snake_case_name and 2 * 3 * 4": "<p>snake_case_name and 2 * 3 * 4</p>",
         }
         for text, html in cases.items():
