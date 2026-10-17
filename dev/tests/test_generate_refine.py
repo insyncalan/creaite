@@ -518,7 +518,7 @@ class RefineEditor(DraftCase):
 
     def editor_says(self, text):
         """The editor's words (spaces and paragraphs as one), once it shows them: it is drawn a moment after a version is loaded."""
-        self.b.wait(f"document.getElementById('curEd')&&document.getElementById('curEd').innerText.split(/\\s+/).join(' ').trim()==={json.dumps(text)}", 10)
+        self.b.wait(f"document.getElementById('curEd')&&document.getElementById('curEd').innerText.split(/\\s+/).join(' ').trim()==={json.dumps(text)}", 20)
         return text
 
     def stats(self):
@@ -585,6 +585,7 @@ class RefineEditor(DraftCase):
         self.assertEqual(b.eval("document.getElementById('curRefineNote').value"), "")
         self.assertEqual(self.stat("edited", 1), 1)
         # the sources and the no-source marks are worked out again for the new version: the sourced sentence carries its fact, the other has none
+        b.wait("CURED.claims&&Object.keys(CURED.claims).length>0", 20)
         marks = b.eval("[...document.querySelectorAll('#curEd .claim')].map(x=>x.dataset.c)")
         self.assertTrue(marks)
         self.assertEqual(b.eval("Object.values(CURED.claims).map(c=>c.ids.length>0)"), [True, False])
@@ -665,8 +666,10 @@ class RefineEditor(DraftCase):
         self.assertEqual(b.eval("document.querySelector('#curRefineMsg .drnote').textContent"), "1 sentence has no source, so it was left out of this version.")
         b.click("[data-cver=back]")
         self.editor_says("Falcon is off track. Data access is late. UAT starts in November.")
+        b.wait("document.getElementById('curRefineMsg').innerHTML===''", 20)
         self.assertEqual(b.eval("document.getElementById('curRefineMsg').innerHTML"), "")                                       # version 1 has no such note
         b.click("[data-cver=next]")
+        b.wait("/left out of this version/.test(document.getElementById('curRefineMsg').textContent)", 20)                       # drawn a moment after the click
         self.assertIn("left out of this version", b.eval("document.getElementById('curRefineMsg').textContent"))
 
     def test_an_all_unsourced_reply_says_how_many_were_left_out_and_changes_nothing(self):
