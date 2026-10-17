@@ -18,6 +18,7 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { ED_HOOKS } from "../core/editor.js";
+import { undoHeadEnd } from "../core/undoSteps.js";
 import { applyLink, internalIn, linkAt, removeLink } from "../core/editorLink.js";
 import { linkUrl, typedLinkUrl } from "../core/linkUrl.js";
 import { placeAtCaret } from "../core/caretPlace.js";
@@ -51,6 +52,7 @@ function closePop(back) {
   if (unplace) { unplace(); unplace = null; }
   if (root) render(null, root);
   if (p && p.h.editor.isDestroyed) return;
+  if (p) undoHeadEnd(p.h.editor);          /* #175: a Link form from the slash menu that was cancelled leaves no pending join */
   if (back && p) {
     const ed = p.h.editor;
     ed.chain().focus().setTextSelection(Math.min(p.to, ed.state.doc.content.size)).run();

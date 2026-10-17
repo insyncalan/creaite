@@ -24285,6 +24285,8 @@ ${s5}`;
   var UNDO_DEPTH = 500;
   var OWN_STEP = "cxStep";
   var OWN_HEAD = "cxStepHead";
+  var OWN_JOIN = "cxStepJoin";
+  var HEAD_END = "cxHeadEnd";
   var STASH_MAX = 5;
   function changeKind(tr2) {
     let put2 = 0, cut = 0;
@@ -24297,7 +24299,7 @@ ${s5}`;
     }
     return put2 === 0 && cut > 0 ? "del" : "ins";
   }
-  var ownStep = (tr2) => !!tr2.getMeta(OWN_STEP) || !!tr2.getMeta(OWN_HEAD) || !!tr2.getMeta("paste") || ["paste", "cut", "drop"].includes(tr2.getMeta("uiEvent"));
+  var ownStep = (tr2) => !!tr2.getMeta(OWN_STEP) || !!tr2.getMeta(OWN_HEAD) || !!tr2.getMeta(OWN_JOIN) || !!tr2.getMeta("paste") || ["paste", "cut", "drop"].includes(tr2.getMeta("uiEvent"));
   var histPlugin = (state) => state.plugins.find((p6) => /^history\$/.test(p6.key));
   var isHistoryTr = (state, tr2) => {
     const p6 = histPlugin(state);
@@ -24321,11 +24323,12 @@ ${s5}`;
           null
         ), closeNext: false, head: false }),
         apply: (tr2, v5, _old, state) => {
+          if (tr2.getMeta(HEAD_END)) return { ...v5, head: false };
           if (!tr2.docChanged || tr2.getMeta("appendedTransaction")) return v5;
           if (isHistoryTr(state, tr2)) return { last: null, closeNext: false, head: false };
           if (tr2.getMeta("addToHistory") === false) return v5;
           const own = ownStep(tr2), head = !!tr2.getMeta(OWN_HEAD);
-          return { last: own ? null : changeKind(tr2), closeNext: own && !head, head };
+          return { last: own ? null : changeKind(tr2), closeNext: own, head };
         }
       },
       /* The history plugin reads a transaction's close-history mark when it applies it, after this filter: marking it here puts
@@ -24336,7 +24339,7 @@ ${s5}`;
         const v5 = key.getState(state);
         if (!v5) return true;
         const own = ownStep(tr2);
-        if (own && v5.head) {
+        if (tr2.getMeta(OWN_JOIN) && v5.head) {
           const p6 = histPlugin(state);
           if (p6) tr2.setMeta("composition", p6.getState(state).prevComposition);
           return true;
@@ -24389,6 +24392,9 @@ ${s5}`;
     } catch (e4) {
       return false;
     }
+  }
+  function undoHeadEnd(editor) {
+    if (editor && !editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta(HEAD_END, true).setMeta("addToHistory", false));
   }
   function undoDrop(path) {
     stash.delete(path);
@@ -27724,7 +27730,7 @@ ${s5}`;
     if (to2 > from && internalIn(doc, from, to2)) return false;
     const words = text === "" ? href : text, same2 = to2 > from && doc.textBetween(from, to2) === words;
     const mark = { type: "link", attrs: { href } };
-    const c5 = editor.chain().focus().setMeta(OWN_STEP, true);
+    const c5 = editor.chain().focus().setMeta(OWN_JOIN, true);
     if (same2) c5.setTextSelection({ from, to: to2 }).setMark("link", { href });
     else c5.insertContentAt({ from, to: to2 }, { type: "text", text: words, marks: [mark] });
     const ok2 = c5.run();
@@ -28607,6 +28613,7 @@ ${s5}`;
     }
     if (root) R(null, root);
     if (p6 && p6.h.editor.isDestroyed) return;
+    if (p6) undoHeadEnd(p6.h.editor);
     if (back2 && p6) {
       const ed3 = p6.h.editor;
       ed3.chain().focus().setTextSelection(Math.min(p6.to, ed3.state.doc.content.size)).run();
@@ -56741,7 +56748,7 @@ ${d5.text}`);
     const insert = (what) => {
       const h5 = ed3.current;
       if (!h5) return;
-      const c5 = h5.editor.chain().focus().setMeta(OWN_STEP, true);
+      const c5 = h5.editor.chain().focus().setMeta(OWN_JOIN, true);
       if (what === "table") c5.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
       else if (what === "item") insertHash(h5);
       else if (what === "person" || what === "note") c5.insertContent(what === "person" ? "@" : "[[").run();
@@ -56752,13 +56759,14 @@ ${d5.text}`);
         );
         if (t47) c5.insertContent(t47, { contentType: "markdown" }).run();
       }
+      undoHeadEnd(h5.editor);
     };
     const addImages2 = async (files) => {
       for (const f5 of [...files || []]) {
         const ref = onImage ? await onImage(f5) : null, h5 = ed3.current;
         if (!ref || !h5) continue;
         const st2 = h5.editor.state, end = st2.doc.content.size, $p2 = st2.doc.resolve(Math.min(st2.selection.from, end)), after = $p2.depth ? $p2.after(1) : end;
-        h5.editor.chain().setMeta(OWN_STEP, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []]).run();
+        h5.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []]).run();
         const cap = (
           /** @type {HTMLElement|null} */
           box.current ? box.current.querySelector(`figure[data-ref="${CSS.escape(ref)}"] figcaption`) : null
@@ -56936,12 +56944,19 @@ ${d5.text}`);
                 hidden: true,
                 "aria-hidden": "true",
                 tabIndex: -1,
+                onCancel: () => {
+                  if (ed3.current) undoHeadEnd(ed3.current.editor);
+                },
                 onChange: async (e4) => {
                   const i5 = (
                     /** @type {HTMLInputElement} */
                     e4.target
                   );
-                  await addImages2(i5.files);
+                  try {
+                    await addImages2(i5.files);
+                  } finally {
+                    if (ed3.current) undoHeadEnd(ed3.current.editor);
+                  }
                   i5.value = "";
                 }
               }
