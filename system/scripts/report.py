@@ -469,6 +469,11 @@ class _Week:
         return bool(d) and self.mon.isoformat() <= d[:10] <= self.fri.isoformat()
 
 
+def _plain(text):
+    """A link field's words without the addresses (#121), for what the model reads; None stays None."""
+    return linktext.words(text) if text else text
+
+
 def weekly_data(code, week_ending=None):
     """The facts a weekly report is drafted from (the weekly-data command): the week, health and the suggested health, overdue actions,
     risks, milestones, the week's changes and the rest. Read only."""
@@ -507,7 +512,8 @@ def weekly_data(code, week_ending=None):
         "actions_closed": [a["id"] + " " + a["description"] for a in actions if a["status"] == "Closed" and wk.holds(a["closed"])],
         "overdue": [{"id": a["id"], "text": a["description"], "owner": a["owner"], "due": a["due_date"]} for a in overdue],
         "top_risks": [{"id": r["id"], "type": r["type"], "text": r["description"], "priority": r["priority"],
-                       "owner": r["owner"], "response": r["response_action"]} for r in risks[:5]],
+                       "owner": r["owner"], "response": _plain(r["response_action"])}
+                      for r in risks[:5]],
         "decisions": _week_decisions(con, code, wk),
         "decisions_needed": decisions_needed(con, code, wk.cut),                       # BL-53
         "decisions_to_revisit": _week_revisits(con, code, wk),

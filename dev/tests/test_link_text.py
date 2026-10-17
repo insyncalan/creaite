@@ -136,6 +136,78 @@ class WordHyperlinks(unittest.TestCase):
         self.assertIn('Target="https://example.com/a?b=1&amp;c=2"', rels)
         self.assertIn("https://example.com/a?b=1&c=2", self.v.run("text", str(out), script="docx_tools.py").stdout)
 
+    def parse_ok(self, doc, label):
+        """The document.xml parses, and every hyperlink sits directly inside one paragraph."""
+        import xml.etree.ElementTree as ET
+        try:
+            root = ET.fromstring(doc.encode("utf-8"))
+        except ET.ParseError as e:
+            self.fail(f"{label}: document.xml is not well-formed: {e}")
+        W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+        for para in root.iter(W + "p"):
+            for child in para:
+                self.assertIn(child.tag, {W + t for t in ("r", "pPr", "hyperlink", "bookmarkStart", "bookmarkEnd", "proofErr", "ins", "del",
+                                                        "sdt", "smartTag", "fldSimple", "commentRangeStart", "commentRangeEnd")}, label)
+        self.assertEqual(len(list(root.iter(W + "hyperlink"))), len([h for p in root.iter(W + "p") for h in p.findall(W + "hyperlink")]),
+                         f"{label}: a hyperlink sits outside its paragraph")
+        return root
+
+    def test_a_link_leaves_the_document_well_formed_beside_a_styled_paragraph(self):
+        """The #121 run pattern must stop at its own run: a bold 'Title' paragraph before the placeholder used to be swallowed."""
+        drafts = self.v.root / "system/staging/drafts"
+        tpl = drafts / "tpl2.docx"
+        doc = ('<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
+               '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Title</w:t></w:r></w:p>'
+               '<w:p><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>{{X}}</w:t></w:r></w:p></w:body></w:document>')
+        with zipfile.ZipFile(tpl, "w") as z:
+            z.writestr("word/document.xml", doc)
+            z.writestr("word/_rels/document.xml.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>')
+            z.writestr("[Content_Types].xml", "<Types/>")
+        (drafts / "v2.json").write_text(json.dumps({"X": "see [plan](https://a.example/p) now"}), encoding="utf-8")
+        out = drafts / "out2.docx"
+        self.v.run("fill", str(tpl), str(drafts / "v2.json"), str(out), script="docx_tools.py", cwd=self.v.root)
+        with zipfile.ZipFile(out) as z:
+            d = z.read("word/document.xml").decode("utf-8")
+        self.parse_ok(d, "synthetic")
+        text = re.sub(r"<[^>]+>", "", d)
+        self.assertEqual((text.count("Title"), text.count("see "), text.count("plan"), text.count(" now")), (1, 1, 1, 1))
+
+    def test_every_real_template_stays_well_formed_with_a_link_in_each_placeholder(self):
+        tpls = Path(__file__).resolve().parents[2] / "system" / "templates"
+        drafts = self.v.root / "system/staging/drafts"
+        for t in sorted(tpls.glob("*-template.docx")):
+            if t.name.startswith("vault"):
+                continue
+            with zipfile.ZipFile(t) as z:
+                src = z.read("word/document.xml").decode("utf-8")
+            names = sorted(set(re.findall(r"\{\{([A-Z][A-Z0-9_]*)\}\}", re.sub(r"<[^>]+>", "", src))))
+            names = [n for n in names if not n.startswith("STYLE_")]
+            self.assertTrue(names, t.name)
+            for n in names:
+                # one placeholder at a time holds a link, the rest are plain: every placeholder is tried
+                values = {k: f"plain{j}" for j, k in enumerate(names)}
+                values[n] = "see [plan](https://a.example/p) now"
+                (drafts / "tv.json").write_text(json.dumps(values), encoding="utf-8")
+                out = drafts / "tout.docx"
+                r = self.v.run("fill", str(t), str(drafts / "tv.json"), str(out), script="docx_tools.py", cwd=self.v.root, ok=False)
+                if r.returncode != 0:
+                    continue                                   # a placeholder the filler refuses a plain string for is not this test's
+                with zipfile.ZipFile(out) as z:
+                    d = z.read("word/document.xml").decode("utf-8")
+                self.parse_ok(d, f"{t.name} {n}")
+                text = re.sub(r"<[^>]+>", "", d)
+                plain_src = re.sub(r"<[^>]+>", "", src)
+                self.assertEqual(text.count("plan"), len(re.findall(r"\{\{" + n + r"\}\}", plain_src)),
+                                 f"{t.name} {n}: the link text appears once per placeholder")
+
+    def test_a_one_off_document_paragraph_shows_the_words_and_address_never_raw(self):
+        import docx_tools
+        para = '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>x</w:t></w:r></w:p>'
+        out = docx_tools.put_text(para, "Read [the plan](https://example.com/plan) now")
+        self.assertIn("Read the plan (https://example.com/plan) now", out)
+        self.assertNotIn("](", out)
+        self.parse_ok('<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + out + '</w:body></w:document>', "put_text")
+
     def test_text_with_no_link_is_filled_as_it_always_was(self):
         out, doc, rels = self.fill("Plain & simple [not a link] (really)")
         self.assertNotIn("<w:hyperlink", doc)
@@ -203,6 +275,22 @@ class Excel(Seeded):
         self.assertEqual([(i["id"], sorted(i["changes"])) for i in items], [("ABC-A-001", ["owner"])],
                          "the link cells were not read as changes (the words are what the export wrote)")
 
+    def test_an_edited_link_cell_is_said_to_lose_its_address(self):
+        wb = load_workbook(self.xlsx)
+        ws = wb["Actions"]
+        h = [c.value for c in ws[1]]
+        ws.cell(row=2, column=h.index("Latest update") + 1, value="Read the new plan now.")
+        wb.save(self.xlsx)
+        out = self.v.run("import", script="excel_sync.py").stdout
+        self.assertIn("ABC-A-001", out)
+        self.assertIn("Latest update cell was edited", out)
+        self.assertIn("https://example.com/plan", out, "the address that goes is named")
+
+    def test_the_weekly_data_gives_the_model_the_words_of_a_response(self):
+        data = json.loads(self.v.run("weekly-data", "ABC", script="report.py").stdout)
+        resp = [r["response"] for r in data["top_risks"] if r["text"] == "Data access delayed"]
+        self.assertEqual(resp, ["Read the plan now."], "not the raw [words](address)")
+
     def test_an_edited_link_cell_is_staged_as_the_words_typed(self):
         wb = load_workbook(self.xlsx)
         ws = wb["Actions"]
@@ -228,6 +316,16 @@ class Search(Seeded):
         self.assertIn("ABC-A-003", self.hits("example"), "but a hostile address is literal text, and literal text is searched")
         self.assertIn("ABC-A-003", self.hits("plan"))
         self.assertIn("ABC-A-001", self.hits("read"), "the plain words of the same text still match")
+
+
+class SearchEdge(Seeded):
+    def test_a_phrase_spanning_a_links_edge_matches_on_the_words(self):
+        r = self.v.run("query", "\"plan now\"", script="search.py")
+        ids = sorted(i["id"] for i in json.loads(r.stdout)["groups"]["items"])
+        self.assertIn("ABC-A-001", ids, "'the plan' + ' now' is 'plan now' in the displayed words")
+        r = self.v.run("query", "plan example", "--no-parse", script="search.py")
+        ids = sorted(i["id"] for i in json.loads(r.stdout)["groups"]["items"])
+        self.assertNotIn("ABC-A-001", ids, "the address still never matches")
 
 
 class Places(Seeded):

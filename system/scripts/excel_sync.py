@@ -259,6 +259,16 @@ def same(a, b, field=None):
     return norm(a) == norm(b)
 
 
+def lost_link_notes(notes, sheet, key, cols, changes, old):
+    """#121: an edited link cell is staged as the words typed, so say which cell loses its address."""
+    heads = {f: h for h, f in cols}
+    for f in changes:
+        if f in LINK_FIELDS and linktext.addresses(old.get(f) or ""):
+            notes.append(f"{sheet}: {key}'s {heads.get(f, f)} cell was edited, so its link address "
+                         f"({', '.join(linktext.addresses(old[f]))}) is replaced by the words typed; "
+                         "add the link again in Review if it should stay")
+
+
 def cell_changed(field, cell, stored):
     """Whether a cell differs from the stored value it was exported from. A link field's cell that still says what the export wrote is not
     a change (#121)."""
@@ -530,10 +540,10 @@ def cmd_import():
                     changes.pop("baseline_date")
                     notes.append(f"{name}: {key}'s Baseline change was ignored: changing an agreed date is a rebaseline, which "
                                  "records a decision (the Milestones page's Rebaseline, or cx-edit)")
+                lost_link_notes(notes, name, key, cols, changes, old)
                 if changes:
-                    item = {"op": "update", "table": table, "id": key, "changes": changes}
-                    if old.get("updated_at"):
-                        item["based_on"] = old["updated_at"]
+                    item = {"op": "update", "table": table, "id": key, "changes": changes,
+                            **({"based_on": old["updated_at"]} if old.get("updated_at") else {})}
                     items.append(item)
             elif key and table != "updates":
                 notes.append(f"{name}: {key} isn't in the last export; row ignored (IDs are set by creaite)")

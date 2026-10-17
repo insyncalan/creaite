@@ -28950,6 +28950,19 @@ ${s5}`;
       el2.addEventListener("focusout", () => setTimeout(() => {
         if (!inField() && !(root && root.contains(document.activeElement))) hideCorner(h5);
       }, 0));
+      const away = (e4) => {
+        const t47 = (
+          /** @type {Node|null} */
+          e4.target
+        );
+        if (cornerOn && cornerOn.h === h5 && t47 && !el2.contains(t47) && !(root && root.contains(t47)) && !(cornerRoot && cornerRoot.contains(t47))) hideCorner(h5);
+      };
+      document.addEventListener("focusin", away);
+      const destroyed = h5.destroy;
+      h5.destroy = () => {
+        document.removeEventListener("focusin", away);
+        destroyed();
+      };
       if (inField()) showCorner(h5);
     }
     const destroy = h5.destroy;

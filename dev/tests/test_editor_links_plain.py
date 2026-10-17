@@ -222,6 +222,21 @@ class Editor(Base):
             b.key("Escape")
             b.wait("!document.querySelector('.linkpop')", 5)
 
+    def test_the_corner_button_goes_when_focus_leaves_the_link_form_for_elsewhere(self):
+        b = self.b
+        self.open()
+        self.setv("see the plan today")
+        b.click("#pkDesc")
+        b.wait("!!document.querySelector('.linkcorner')", 5)
+        self.select("the plan")
+        b.key("k", self.mod() | SHIFT)
+        b.wait("!!document.querySelector('.linkpop')", 5)
+        self.assertEqual(b.eval("document.querySelectorAll('.linkcorner').length"), 1, "the corner button stays while the form is open")
+        b.eval("(()=>{ const i=document.createElement('input'); i.id='elsewhere'; document.body.appendChild(i); i.focus(); })()")
+        b.pump(0.3)
+        self.assertEqual(b.eval("document.querySelectorAll('.linkcorner').length"), 0, "focus went elsewhere: the corner button is put away")
+        b.eval("document.getElementById('elsewhere').remove()")
+
     def test_the_link_is_staged_as_words_and_address(self):
         b = self.b
         self.open()

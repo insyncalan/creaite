@@ -274,7 +274,7 @@ def owner_forms(vocab, name):
 def words_match(row, cols, terms, any_term):
     """True unless the row only matched through a link's address (#121): when a searched column holds `[words](address)`, the terms are
     checked again against the words alone. A row with no link in it matched on the SQL already and is kept as it is."""
-    if not terms or not any(isinstance(row.get(c), str) and "](" in row[c] and linktext.has_link(row[c]) for c in cols):
+    if not terms or not any(isinstance(row.get(c), str) and "](" in row[c] for c in cols):
         return True
     hay = [linktext.words(str(row.get(c) or "")).lower() for c in cols]
     found = [any(t.lower() in h for h in hay) for t in terms]
@@ -301,7 +301,8 @@ def item_rows(con, vocab, terms, flt, any_term=False):
                                                                                       "Dependency"})):
             continue
         where, args = [], []
-        likes = ["(" + " OR ".join(f"{c} LIKE ? ESCAPE '\\'" for c in cols) + ")" for _ in terms]
+        # a row holding a link is always a candidate: a phrase may span the link's edge, so words_match decides on the words
+        likes = ["(" + " OR ".join(f"{c} LIKE ? ESCAPE '\\' OR {c} LIKE '%](%'" for c in cols) + ")" for _ in terms]
         if likes:
             where.append("(" + (" OR " if any_term else " AND ").join(likes) + ")")
             args += [like(t) for t in terms for _ in cols]

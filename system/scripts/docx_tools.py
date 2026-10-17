@@ -643,7 +643,7 @@ def esc(s):
 REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 LINKS = []                                          # the addresses of the marks of the fill in progress
 MARK = re.compile("\x01(\\d+)\x02([^\x01\x02\x03]*)\x03")
-RUN = re.compile(r"(<w:r(?: [^>]*)?>)(<w:rPr>.*?</w:rPr>)?(<w:t(?: [^>]*)?>)([^<]*\x01[^<]*)(</w:t>)(</w:r>)", re.S)
+RUN = re.compile(r"(<w:r(?: [^>]*)?>)(<w:rPr>(?:(?!</w:rPr>|</w:r>).)*</w:rPr>)?(<w:t(?: [^>]*)?>)([^<]*\x01[^<]*)(</w:t>)(</w:r>)", re.S)
 # the run properties that follow <w:u> in the schema, and those that follow <w:color>
 RPR_AFTER_U = "effect|bdr|shd|fitText|vertAlign|rtl|cs|em|lang|eastAsianLayout|specVanish|oMath"
 RPR_AFTER_COLOR = r"<w:(?:spacing|w|kern|position|sz|szCs|highlight|u|" + RPR_AFTER_U + r")\b"
@@ -1092,7 +1092,7 @@ def put_text(para, text):
     runs = re.findall(r"<w:r>(?:(?!</w:r>).)*?<w:t(?: [^>]*)?>[^<]*</w:t>(?:(?!</w:r>).)*?</w:r>", para, re.S)
     if not runs:
         raise ValueError("the template paragraph has no text run to fill")
-    body = esc(text).replace("\n", '</w:t><w:br/><w:t xml:space="preserve">')
+    body = esc(linktext.with_address(text) if "](" in str(text) else text).replace("\n", '</w:t><w:br/><w:t xml:space="preserve">')
     first = re.sub(r"<w:t(?: [^>]*)?>[^<]*</w:t>", lambda m: f'<w:t xml:space="preserve">{body}</w:t>', runs[0], count=1)
     para = para.replace(runs[0], first, 1)
     for r in runs[1:]:

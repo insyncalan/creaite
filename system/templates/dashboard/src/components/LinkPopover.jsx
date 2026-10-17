@@ -255,6 +255,14 @@ export function attachLink(h) {
     const inField = () => el.contains(document.activeElement);
     el.addEventListener("focusin", () => showCorner(h));
     el.addEventListener("focusout", () => setTimeout(() => { if (!inField() && !(root && root.contains(document.activeElement))) hideCorner(h); }, 0));
+    /* focus that moves from the link form to somewhere else (not back to the field) would leave the corner button behind */
+    const away = (/** @type {FocusEvent} */ e) => {
+      const t = /** @type {Node|null} */ (e.target);
+      if (cornerOn && cornerOn.h === h && t && !el.contains(t) && !(root && root.contains(t)) && !(cornerRoot && cornerRoot.contains(t))) hideCorner(h);
+    };
+    document.addEventListener("focusin", away);
+    const destroyed = h.destroy;
+    h.destroy = () => { document.removeEventListener("focusin", away); destroyed(); };
     if (inField()) showCorner(h);
   }
   const destroy = h.destroy;
