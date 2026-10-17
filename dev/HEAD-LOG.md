@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | Correction: 'put it in 2.2' meant the run usage monitor (#197), now v2.2.0 (was v2.1.1); the narrower rail (#198) is NOT placed in v2.2.0 and its release is open again | Jarvis misread Alan's message and corrected after Alan said so |
 | 17-10-2026 | Alan | The narrower expanded rail (224 to 188 px) ships in v2.2.0 as #198 (Jarvis read Alan's 'put it in 2.2' as the open rail-width question on #156; Alan to correct if he meant something else) | Alan: 'let's put it in 2.2' |
 | 17-10-2026 | Alan | Run usage monitor (#197) goes in v2.1.1; Team Stark prepares the guarded live_server.py diff (two hooks) with a plain-English README for Alan's review; nothing is applied until he approves the diff | Alan's decision, relayed by the Product Manager |
 | 17-10-2026 | Alan | #175 design r3 agreed: keep the 30-minute cap; leftover confidential drafts stay in place; wording 'Restore'; Activity on a notes row is a file-level restore to the session's start; the Cmd+Z history is kept when switching notes within the page | Alan's answers to the five open questions |
