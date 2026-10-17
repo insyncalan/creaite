@@ -12,6 +12,7 @@ Dates are real Excel dates shown DD-MM-YYYY; they are stored YYYY-MM-DD.
 """
 import hashlib
 import json
+import re
 import sqlite3
 import subprocess
 import sys
@@ -167,8 +168,23 @@ def choices(table, field):
     return CHOICES.get((table, field)) or CHOICES.get(field)
 
 
+# #127 round 7: the characters an .xlsx can't hold (XML 1.0 refuses them): the C0 controls but tab, line feed and carriage return,
+# lone surrogates, and U+FFFE and U+FFFF. openpyxl refuses a C0 one (IllegalCharacterError, so the export after an apply failed and
+# the workbook went stale) and writes the others as XML Excel must repair. As docx_tools.esc does for Word: a vertical tab, form
+# feed or separator becomes a space, the rest go.
+NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def cell_text(value):
+    """A value as a cell may hold it: text without NOT_XML's characters; anything else as it is."""
+    if not isinstance(value, str):
+        return value
+    return NOT_XML.sub(lambda m: " " if m.group() in "\x0b\x0c\x1c\x1d\x1e" else "", value)
+
+
 def to_cell(field, value):
-    """A stored value as it goes in a cell: dates as real dates, flags as Yes or No."""
+    """A stored value as it goes in a cell: dates as real dates, flags as Yes or No, text without the characters a workbook
+    can't hold (cell_text)."""
     if value is None:
         return None
     if field in DATES:
@@ -178,7 +194,7 @@ def to_cell(field, value):
             return value
     if field in YES_NO:
         return "Yes" if int(value) else "No"
-    return value
+    return cell_text(value)
 
 
 def from_cell(field, value):
@@ -213,7 +229,9 @@ def same(a, b, field=None):
         return {n.lower() for n in tracker.label_names(a)} == {n.lower() for n in tracker.label_names(b)}
 
     def norm(x):
-        """The value with trailing spaces dropped; blank is None."""
+        """The value with trailing spaces dropped and as a cell holds it (cell_text: a character the export left out is no
+        edit); blank is None."""
+        x = cell_text(x)
         return None if x is None or str(x).strip() == "" else "\n".join(
             line.rstrip() for line in str(x).rstrip().splitlines())
     return norm(a) == norm(b)
@@ -271,6 +289,11 @@ def pending_rows():
                             f"{b.get('title', '')} — {b.get('draft') or ''}", "", "", age, None,
                             "Edit in Word if needed, close it, then decide", ""])
     return out
+
+
+def review_rows():
+    """pending_rows as the Review sheet holds them: each value without the characters a workbook can't hold (cell_text)."""
+    return [[cell_text(v) for v in r] for r in pending_rows()]
 
 
 def add_list(ws, col, n_rows, values):
@@ -367,7 +390,7 @@ def cmd_export():
 
     ws = wb.create_sheet("Review", 0)
     ws.append([c for c, _ in REVIEW_COLS])
-    review = pending_rows()
+    review = review_rows()
     for r in review:
         ws.append(r)
     for i, (label, width) in enumerate(REVIEW_COLS, start=1):

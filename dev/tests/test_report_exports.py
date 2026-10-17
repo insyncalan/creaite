@@ -144,6 +144,16 @@ class Word(Base):
         text = self.word_text(r["path"])
         self.in_order(text, ["Steering", "Executive summary", "Action items", "Book the rehearsal"])
 
+    def test_a_pasted_control_character_still_gives_a_file_word_opens(self):
+        """#127 round 6: a bell (\\x07) or U+FFFE pasted into a section or a table cell made document.xml invalid XML."""
+        secs = json.loads(json.dumps(SECTIONS))
+        next(s for s in secs if s["id"] == "summary")["text"] = "Progress on the\x07 lighthouse￾ cutover."
+        next(s for s in secs if s["id"] == "risks")["rows"][0]["cells"]["title"] = "Vendor\x07 capacity"
+        r = self.export(self.saved(sections=secs), "docx")
+        self.assertTrue(r["ok"], r)
+        ET.fromstring(next(raw for i, raw in docx_tools.read_parts(self.v.root / r["path"]) if i.filename == "word/document.xml"))
+        self.assertIn("Progress on the lighthouse cutover.", self.word_text(r["path"]))
+
 
 class Filing(Base):
     def test_beside_never_overwrites_and_off_leaves_only_the_draft(self):

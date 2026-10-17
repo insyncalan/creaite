@@ -2422,7 +2422,32 @@ def split_panes(text, titles):
 # #90 review F1: the reply check's second line for a client section. The client facts never hold the tracker's health reason, so a
 # client draft that brings it in (whole, or a run of five of its words), or an internal-only marker, is dropped. Words already in
 # the section as Alan wrote it are his, not the draft's, and do not count.
-INTERNAL_MARK = re.compile(r"\binternal[\s-]+only\b|\bnot for (?:the )?client\b|\bfor internal use\b|\bhealth_diff\b", re.I)
+# #127 round 6: also "internal:only", "internal.only" and "internal ; only": punctuation with no space after "internal" or a space
+# before it, as prose never writes it ("internal. Only", "internal; only" and "internal, only" stay prose).
+# #127 round 7, one rule for the punctuated forms. Up to three of . : ; , between the words:
+#   - with no space ("internal.only", "internal,only", "internal::only", "internal..only", "internal;;only"): the marker, unless
+#     "Only" starts a sentence (a capital O then lower case: "internal.Only the totals go" is prose missing a space) or the word
+#     runs on into a file name, domain, address or path (".yaml", ".example.org", "@example.com", "/x");
+#   - with a space before ("internal ; only", "internal . only", French spacing): the marker only when nothing but punctuation or
+#     the line's end follows "only" ("Costs are internal : only licences go" is prose; "Note: internal ; only." is the marker),
+#     and again never "Only" starting a sentence.
+# Spaces or hyphens alone ("internal only", "internal-only", "internal - only") are always the marker.
+# #127 round 8, the two exceptions narrowed (the round-7 ones hid real markers):
+#   - "Only" starts a sentence only when a space and a lower-case word follow ("internal.Only the totals go"), never alone
+#     ("Internal.Only", "Note: internal.Only.", "**Internal.Only**");
+#   - a file name, domain or address runs on in lower case (".yaml", ".example.org", ".v2", "@example.com"), never ".Do",
+#     ".DRAFT", ".Final" or "@ACME"; a path ("/data", "\draft") too, but not after a marker standing alone as a status, at a
+#     line's start or right after a label ("Status: internal.only/v2"; "The path internal.only/config" is a path);
+#   - spaced, right after a label or at a line's start ("Status: internal ; only do not forward"), it is the marker whatever
+#     follows, unless "Only" starts a sentence ("Item: Internal . Only the board signs.").
+_ONLY_SENTENCE = r"(?-i:(?!Only[ \t]+[a-z]))"
+_RUNS_ON = r"(?-i:\.[a-z0-9][a-z0-9_-]*|@[a-z0-9])"
+INTERNAL_MARK = re.compile(r"\binternal[\s-]+only\b"
+                           r"|\binternal[.:;,]{1,3}" + _ONLY_SENTENCE + r"only\b(?!" + _RUNS_ON + r"|(?-i:[/\\][a-z0-9]))"
+                           r"|(?<![^\n:])[ \t]*internal[.:;,]{1,3}" + _ONLY_SENTENCE + r"only\b(?!" + _RUNS_ON + r")"
+                           r"|\binternal\s+[.:;,]{1,3}\s*" + _ONLY_SENTENCE + r"only\b(?![ \t]*\w)"
+                           r"|(?<![^\n:])[ \t]*internal\s+[.:;,]{1,3}\s*" + _ONLY_SENTENCE + r"only\b"
+                           r"|\bnot for (?:the )?client\b|\bfor internal use\b|\bhealth_diff\b", re.I)
 RUN = 5
 
 
@@ -2448,7 +2473,7 @@ def internal_findings(con, code, text, original=""):
     text, original = edit_ai.normal(text), edit_ai.normal(original)
     found = []
     row = con.execute("SELECT health_reason FROM projects WHERE code = ?", (code,)).fetchone()
-    reason = (row[0] if row else "") or ""
+    reason = edit_ai.normal((row[0] if row else "") or "")      # #127 round 5: folded as the text is (its accents too)
     if reason.strip() and carries(text, reason) and not carries(original, reason):
         found.append("the internal health reason")
     if INTERNAL_MARK.search(text or "") and not INTERNAL_MARK.search(original or ""):

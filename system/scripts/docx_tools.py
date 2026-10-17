@@ -393,7 +393,7 @@ STYLES = {}   # style samples taken from {{STYLE_<NAME>}} paragraphs in the temp
 def md_paras(para, name, text):
     """Paragraphs for one Markdown entry, from the template paragraph holding {{NAME}}. A sub-heading uses the
     template's STYLE_TOPIC sample (the minutes' topic heading) when it has one, else bold text."""
-    marker = "\x00MD\x00"
+    marker = "\ue000MD\ue000"          # private-use characters: esc keeps them (it strips the \x00 this was; #127 round 6)
 
     def shell(template, key):
         """(the template paragraph with its placeholder marked, the run holding the mark, that run's style) for one placeholder."""
@@ -456,9 +456,15 @@ def item_para(para, name, entry):
     return replace_in(para, {name: entry})
 
 
+# #127 round 6: the characters XML 1.0 doesn't allow (control characters other than tab, line feed and carriage return; U+FFFE,
+# U+FFFF; a lone surrogate): one of them in document.xml and Word won't open the file. Those a line could break at are a space.
+NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff\ud800-\udfff]")
+
+
 def esc(s):
-    """Text escaped for Word XML (&, < and >)."""
-    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    """Text escaped for Word XML (&, < and >), without the characters XML doesn't allow (NOT_XML; #127 round 6)."""
+    s = NOT_XML.sub(lambda m: " " if m.group() in "\x0b\x0c\x1c\x1d\x1e" else "", str(s))
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def unesc(s):

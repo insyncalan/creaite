@@ -165,6 +165,43 @@ class ExcelTests(unittest.TestCase):
         self.assertIn("ABC-A-099 isn't in the last export", out)
         self.assertIn("No table edits to stage", out)
 
+    def test_characters_a_workbook_cannot_hold_are_left_out(self):
+        """#127 round 7: a C0 control character or U+FFFE/U+FFFF in a tracker row no longer stops the export after an apply
+        (openpyxl's IllegalCharacterError left tracker-view.xlsx stale) or writes XML Excel must repair; tab and line breaks stay,
+        and the character left out is no edit when the workbook is imported."""
+        import re
+        import zipfile
+        self.v.propose("ctl", [action(5, description="Book\x07 the\x0bUAT\ufffe room\tnow\nplease"),
+                               {"n": 6, "op": "new", "table": "decisions", "match": "strong", "flags": [], "decision": "approved",
+                                "values": {"project": "ABC", "decision": "Go\x01 live\uffff in\x1f November", "date": "2026-10-02",
+                                           "source": f"{ABC}/minutes/x.docx — Decisions"}}])
+        out = self.v.run("apply")
+        self.assertNotIn("IllegalCharacter", out.stdout + out.stderr)
+        wb = load_workbook(self.xlsx)
+        actions = [r[2].value for r in wb["Actions"].iter_rows(min_row=2) if r[0].value]
+        decisions = [r[2].value for r in wb["Decisions"].iter_rows(min_row=2) if r[0].value]
+        self.assertIn("Book the UAT room\tnow\nplease", actions)
+        self.assertIn("Go live in November", decisions)
+        bad = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
+        with zipfile.ZipFile(self.xlsx) as z:
+            for name in z.namelist():
+                self.assertIsNone(bad.search(z.read(name).decode("utf-8", "surrogatepass")), name)
+        self.assertEqual(self.excel("changed").returncode, 0)
+        wb = load_workbook(self.xlsx)                  # one real edit: the rows the export cleaned are not edits
+        h = [c.value for c in wb["Actions"][1]]
+        wb["Actions"].cell(row=2, column=h.index("Owner") + 1, value="Sara Example")
+        wb.save(self.xlsx)
+        self.assertIn("0 new, 1 changed, 0 deleted", self.excel("import").stdout)
+
+    def test_a_pending_proposal_a_workbook_cannot_hold_still_exports(self):
+        """#127 round 8: the Review sheet's rows are cleaned too (review_rows): a pending proposal holding a control character no
+        longer stops the export."""
+        self.v.propose("pend", [dict(action(5, description="Pending\x07 item￾ now", owner="P\x07Q"), decision="pending")])
+        out = self.excel("export")
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        rows = [[c.value for c in r] for r in load_workbook(self.xlsx)["Review"].iter_rows(min_row=2)]
+        self.assertTrue(any("Pending item now" in str(v) for r in rows for v in r), rows)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
