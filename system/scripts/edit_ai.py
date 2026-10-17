@@ -190,14 +190,21 @@ DEFAULT_IGNORABLE = ((0x00AD, 0x00AD), (0x034F, 0x034F), (0x061C, 0x061C), (0x11
                      (0x1D173, 0x1D17A), (0xE0000, 0xE0FFF))
 SHOWN_AS_NOTHING = frozenset(cp for a, b in DEFAULT_IGNORABLE for cp in range(a, b + 1))
 SHOWN_AS_SPACE = {0x2800: " "}            # #127 round 5: the braille blank draws as a space
+# #127 round 6: control characters (Cc) other than tab, line feed and carriage return, and the noncharacters (U+FDD0 to U+FDEF and
+# the last two of every plane): Word draws them as nothing (or won't open the file: docx_tools.esc strips them). Those Python's
+# splitlines breaks a line at (so a Word export starts a new line there: VT, FF, the separators U+001C to U+001E, NEL) are a line break.
+LINE_LIKE = "\x0b\x0c\x1c\x1d\x1e\x85"
+CONTROLS = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ufdd0-\ufdef"
+                      + "".join(chr(p * 0x10000 + 0xFFFE) + chr(p * 0x10000 + 0xFFFF) for p in range(17)) + "]")
 
 
 def unseen(text):
     """Text without the characters Word shows as nothing: every format character (category Cf: zero-width, direction marks and
     isolates, tags, the soft hyphen, the interlinear annotation marks) and every default-ignorable one (SHOWN_AS_NOTHING, assigned
-    or not); the braille blank is a space (#127 rounds 4 and 5)."""
+    or not); the braille blank is a space (#127 rounds 4 and 5); control characters and noncharacters (CONTROLS) are gone, or a
+    line break where a Word export breaks the line (LINE_LIKE; round 6)."""
     import unicodedata
-    t = text or ""
+    t = CONTROLS.sub(lambda m: "\n" if m.group() in LINE_LIKE else "", text or "")     # round 6: controls and noncharacters
     if t.isascii():
         return t
     return "".join(c for c in t if ord(c) not in SHOWN_AS_NOTHING and unicodedata.category(c) != "Cf").translate(SHOWN_AS_SPACE)

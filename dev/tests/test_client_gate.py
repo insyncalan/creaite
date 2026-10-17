@@ -887,5 +887,30 @@ class TheReviewOf62593f6(Base):
         self.assertEqual(got, [["Ada O'Neill"], ["Ida O\u2019Hare"], [], ["Al Mortimer"], [], [], []])   # controls: short, longer
 
 
+
+class TheReviewOfce5d66b(Base):
+    """#127 round 6 (review of ce5d66b): control characters and noncharacters are read as Word draws them (gone, or a line break
+    where a Word export breaks the line), and docx_tools.esc never writes one XML doesn't allow."""
+    gate, assert_found = TheReviewOf55967e3.gate, TheReviewOf55967e3.assert_found
+
+    def test_control_characters_and_noncharacters_are_unseen(self):
+        gone = ["\x00", "\x07", "\x1b", "\x1f", "\x7f", "\x80", "\x9d", "\ufdd0", "\ufdef", "\ufffe", "\uffff", "\U0001fffe",
+                "\U0010ffff"]
+        breaks = ["\x0b", "\x0c", "\x1c", "\x1e", "\x85"]
+        got = self.py(f"print(json.dumps([edit_ai.unseen('a' + c + 'b') for c in {gone + breaks + ['\t', '\r']!r}]))")
+        self.assertEqual(got, ["ab"] * len(gone) + ["a\nb"] * len(breaks) + ["a\tb", "a\rb"])
+        self.assert_found([("Waiting on Quen\x9dtin Marlow.", NAMED), ("Waiting on Quen\x07tin Marlow.", NAMED),
+                           ("Note: internal\x9d-only.", MARKER), ("Note: internal\x07-only.", MARKER),
+                           ("Blocked by ABC-A-0\ufdd004.", HIDDEN), ("Blocked by ABC-A-0\x0004.", HIDDEN)])
+
+    def test_esc_writes_only_characters_xml_allows(self):
+        got = self.py("import docx_tools, xml.etree.ElementTree as ET\nout = []\n"
+                      "for c in ['\\x00', '\\x07', '\\x0b', '\\x0c', '\\x1f', '\\ufffe', '\\uffff', '\\ud800']:\n"
+                      "    x = '<t>' + docx_tools.esc('a' + c + 'b<&>') + '</t>'\n"
+                      "    out.append(ET.fromstring(x.encode('utf-8')).text)\n"
+                      "print(json.dumps(out))")
+        self.assertEqual(got, ["ab<&>", "ab<&>", "a b<&>", "a b<&>", "ab<&>", "ab<&>", "ab<&>", "ab<&>"])
+
+
 if __name__ == "__main__":
     unittest.main()
