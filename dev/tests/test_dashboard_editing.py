@@ -223,7 +223,7 @@ SCRIPT = r"""
     const root=document.documentElement;
     out.themeDefault={palette:S.palette,attr:root.dataset.palette||null,
       options:THEMES.map(t=>t.id),
-      ck:ckItems("theme:").map(i=>i.l)};
+      ck:ckItems("theme:").map(i=>i.l).filter(l=>l.startsWith("Theme:"))};
     THEMES.push({id:"Test theme",swatch:["#000","#111","#222","#333"]});
     await setPalette("Test theme"); await VQ;
     out.themePicked={palette:S.palette,attr:root.dataset.palette||null,

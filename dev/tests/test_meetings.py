@@ -325,7 +325,7 @@ PAGE_SCRIPT = r"""
     nowHM=()=>"23:59"; renderMeetings();
     document.getElementById("mtgNew").click(); await wait(10);
     out.picked=[...MSEL];
-    out.ck=ckItems("process meeting").map(i=>i.l);
+    out.ck=ckItems("process meeting").map(i=>i.l).filter(l=>l.startsWith("Intake:"));
     document.getElementById("mtgGo").click(); await wait(10); out.during=rows().map(r=>r[2]);
     /* dev-test-steadiness: the page now runs in real time, so wait for the run to end and both rows to show their outcome
        (the draft from the server, the skip), not for fixed times that assumed virtual time */
