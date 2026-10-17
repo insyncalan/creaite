@@ -14,7 +14,7 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { fd, TODAY } from "../../core/page.js";
 import { api, snack, viaServer } from "../../core/server.js";
-import { DE_COLOURS, DE_FONT, draftStat, draftWhyNot, POLISH_TONES, polishAsk, sentKindOf, sentLog } from "../../drafts.js";
+import { DE_COLOURS, DE_FONT, draftStat, draftWhyNot, POLISH_TONES, polishAsk, sentKindOf, sentLog, sendState } from "../../drafts.js";
 import { SA } from "../../settings.js";
 
 /** @typedef {[string, Record<string, string>][]} Shapes  an icon as element data (COMPONENTS.md Q2): [tag, attributes] */
@@ -118,6 +118,7 @@ export function ChasePane({ id, onBack, start }) {
   const [anyOpen, setAnyOpen] = useState(false);
   const [anyQ, setAnyQ] = useState("");
   const sending = useRef(false);
+  const sendId = useRef("pn" + Date.now() + Math.random().toString(36).slice(2, 6));   // one send: a retry never records or logs twice
   const viaRef = useRef(/** @type {"email"|"message"} */ ("email"));
   const seq = useRef(0), mail = useRef(/** @type {HTMLDivElement | null} */ (null)), back = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const first = useRef(true);
@@ -229,13 +230,17 @@ export function ChasePane({ id, onBack, start }) {
   async function sentIt() {
     if (sending.current) return;                 // a ref, not the state: a second click before the redraw is still caught
     sending.current = true; setBusy(true);
-    const r = await api("/api/chases", { ids: [id], mode });
-    if (!r || !r.ok) { sending.current = false; setBusy(false); say((r && r.message) || "Not recorded", false); return; }
-    SA().chases = r.chases || {};
+    const st = sendState(sendId.current);
+    let r = /** @type {any} */ ({ ok: true, chases: SA().chases || {}, record: null });
+    if (!st.rec.has(id)) {
+      r = await api("/api/chases", { ids: [id], mode });
+      if (!r || !r.ok) { sending.current = false; setBusy(false); say((r && r.message) || "Not recorded", false); return; }
+      st.rec.add(id); SA().chases = r.chases || {};
+    }
     const k = sentKindOf(id);
     const who = pane.to.name || pane.to.first || "them";
     let done = 0;
-    try { done = k ? await sentLog([{ k, id, need: outcome }], { name: who, mode, replyBy, via: viaRef.current, chases: r.chases || {} }) : 0; }
+    try { done = k ? await sentLog([{ k, id, need: outcome }], { name: who, mode, replyBy, via: viaRef.current, chases: r.chases || {}, sendId: sendId.current }) : 0; }
     catch (err) { sending.current = false; setBusy(false); snack("The update couldn't be logged: press I sent it to try again"); return; }
     if (!done) snack(`Recorded: chased ${pane.to.first || who} on ${fd((r.record && r.record.date) || TODAY)}. The update couldn't be staged.`);
     dropPolish();

@@ -261,28 +261,38 @@ export function sentLine(o){ const d=fd(o.today||TODAY), via=o.via==="message"?"
   return `${d}: Chased ${whom} by ${via}${o.n?` (reminder ${o.n})`:""}${by}.`; }
 /** Stage the line on each item (queued in order, each to its own item by ID, so reordering or unticking changes nothing) and offer
     one Undo for the batch. Returns how many were staged.
-    @param {{k:string,id:string,need?:string}[]} entries @param {{name:string,mode:string,replyBy?:string,via?:string,chases?:any}} o */
-export async function sentLog(entries,o){ let ok=0; const mine=[];   /* the staged entries this press made: Undo removes exactly these */ const via=o.via||sentVia(), ch=o.chases||SA().chases||{};
-  for(const e of entries){ const x=REC(e.k,e.id), f=SENT_FIELD[e.k]; if(!x||!f) continue;
+    @param {{k:string,id:string,need?:string}[]} entries @param {{name:string,mode:string,replyBy?:string,via?:string,chases?:any,sendId?:string,failed?:string[]}} o */
+export async function sentLog(entries,o){ let ok=0; const mine=[];   /* the staged entries this press made: Undo removes exactly these */ const via=o.via||sentVia(), ch=o.chases||SA().chases||{}, st=o.sendId?sendState(o.sendId):null, failed=o.failed||[];
+  for(const e of entries){ if(st&&st.done.has(e.id)) continue;   /* logged by an earlier press of this same send: never twice */
+    const x=REC(e.k,e.id), f=SENT_FIELD[e.k]; if(!x||!f){ failed.push(e.id); continue; }
     const conf=deBarred(deItem(e.k,x)), line=sentLine({name:o.name,via,mode:o.mode,n:(ch[e.id]||{}).n,replyBy:o.replyBy,need:e.need,confidential:conf});
     const was=String(x[f]||"").trim();
     const before=new Set(shared.PKS);
-    if(await pkCommit(e.k,e.id,{[f]:was?line+"\n"+was:line},"Latest update",was?"…":"none",line,{logNote:"Draft email: I sent it"})){ ok++; mine.push(...shared.PKS.filter(s=>!before.has(s)&&s.k===e.k&&s.id===e.id)); } }
-  if(!ok) return 0;
-  snack(ok===1?"Logged.":`Logged on ${plur(ok,"item")}.`,async()=>{ for(const s of mine.slice().reverse()) await pkUndoLast(s); });   /* the toast's own Undo button */
+    let good=false; try{ good=await pkCommit(e.k,e.id,{[f]:was?line+"\n"+was:line},"Latest update",was?"…":"none",line,{logNote:"Draft email: I sent it"}); }catch(err){ good=false; }
+    if(good){ ok++; if(st) st.done.add(e.id); mine.push(...shared.PKS.filter(s=>!before.has(s)&&s.k===e.k&&s.id===e.id)); } else failed.push(e.id); }
+  const bad=failed.length?` Couldn't log ${failed.join(", ")}: press I sent it again to log just those.`:"";
+  if(!ok){ if(bad) snack(bad.trim()); return 0; }
+  snack((ok===1?"Logged.":`Logged on ${plur(ok,"item")}.`)+bad,async()=>{ for(const s of mine.slice().reverse()) await pkUndoLast(s); });   /* the toast's own Undo button */
   return ok; }
+/** One send (one popup, one pane) remembers which items it has recorded and logged, so a retry after a failure repeats only what is missing. */
+export function sendState(id){ if(!shared.SENT) shared.SENT={}; if(!shared.SENT[id]) shared.SENT[id]={rec:new Set(),done:new Set()}; return shared.SENT[id]; }
 /* "I sent it" in the popup, update and chase modes: one record, then a Latest update on each ticked item */
 export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase needs the live server"); return; }
   const picked=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)); if(!picked.length){ snack("Tick the items you sent it about"); return; }
   if(btn.disabled) return;
   const ids=picked.map(i=>i.id), mode=shared.DE.mode==="update"?"update":"chase", name=shared.DE.name, replyBy=shared.DE.replyBy;
-  btn.disabled=true; const r=await api("/api/chases",{ids,mode});
-  if(!r.ok){ btn.disabled=false; snack(oneLine(r.message)||"Not recorded"); return; }
-  SA().chases=r.chases||{}; const chases=SA().chases;
-  let n=0; try{ n=await sentLog(picked.map(i=>({k:i.k,id:i.id})),{name,mode,replyBy,chases}); }
+  if(!shared.DE.sendId) shared.DE.sendId="de"+Date.now()+Math.random().toString(36).slice(2,6);
+  const sid=shared.DE.sendId, st=sendState(sid), fresh=ids.filter(i=>!st.rec.has(i));
+  btn.disabled=true;
+  if(fresh.length){ const r=await api("/api/chases",{ids:fresh,mode});
+    if(!r.ok){ btn.disabled=false; snack(oneLine(r.message)||"Not recorded"); return; }
+    fresh.forEach(i=>st.rec.add(i)); SA().chases=r.chases||{}; }
+  const chases=SA().chases||{}, failed=[];
+  let n=0; try{ n=await sentLog(picked.map(i=>({k:i.k,id:i.id})),{name,mode,replyBy,chases,sendId:sid,failed}); }
   catch(err){ btn.disabled=false; snack("The update couldn't be logged: press I sent it to try again"); return; }
+  if(failed.length){ btn.disabled=false; return; }   /* the popup stays so the missing ones can be retried; sentLog said which */
   if(shared.DE&&shared.DE.name===name&&$("#deDlg")?.open) $("#deDlg").close();
-  if(!n) snack(`Recorded on ${plur(ids.length,"item")}`);
+  if(!n&&!st.done.size) snack(`Recorded on ${plur(ids.length,"item")}`);
   if(shared.VIEW==="person"&&shared.PERSON) renderPerson(shared.PERSON); }
 /* Polish the wording: the model rewords the opening paragraph only (the table, subject and addresses never go to it); its version is
    shown beside the original, and Use this puts it in the email */

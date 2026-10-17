@@ -57,6 +57,10 @@ class SentCase(ChaseCase):
         cls.s_scripts, cls.s_room, cls.s_check = ids["Send the test scripts"], ids["Book the UAT room"], ids["Confirm the go-live checklist"]
         cls.s_conf = ids["Confidential: review the retention terms"]
 
+    def chase_records(self):
+        f = self.v.root / "system/staging/chases.json"
+        return json.loads(f.read_text())["chases"] if f.exists() else []
+
     def open_person_email(self, mode):
         self.b.eval("S.ownDomains=['client.com','example.com']")                              # every item starts ticked, as for a colleague
         self.b.eval(f"go('person','Sara Example'); openDraftEmail('Sara Example',{mode!r})")
@@ -269,7 +273,7 @@ class LogEdges(SentCase):
             b.click("#deSent")
             b.pump(0.8)
             self.assertFalse(b.eval("document.getElementById('deSent').disabled"))
-            self.assertIn("couldn't be logged", b.eval("document.getElementById('snackT').textContent"))
+            self.assertIn("Couldn't log", b.eval("document.getElementById('snackT').textContent"))
         finally:
             b.eval("shared.PKQ=window.__q")
         b.eval("document.getElementById('deDlg').close()")
@@ -280,11 +284,66 @@ class LogEdges(SentCase):
         b.eval("window.__q=shared.PKQ; shared.PKQ={then(){ throw new Error('boom') }}; 0")
         try:
             b.click("#chSent")
-            b.pump(0.8)
-            self.assertFalse(b.eval("document.getElementById('chSent').disabled"))
-            self.assertIn("couldn't be logged", b.eval("document.getElementById('snackT').textContent"))
+            b.wait("document.getElementById('pkChase').hidden")
+            b.pump(0.5)
+            self.assertIn("couldn't be staged", b.eval("document.getElementById('snackT').textContent"))      # recorded once; the pane doesn't hang
         finally:
             b.eval("shared.PKQ=window.__q")
+
+    def test_two_or_more_items_each_get_their_own_chase_line(self):
+        """#153 (Alan): every ticked item is logged, once, with its own reminder number and the reply-by date."""
+        b = self.b
+        self.open_person_email("chase")
+        b.eval("document.getElementById('deReply').value='19-10-2026'; document.getElementById('deReply').dispatchEvent(new Event('input',{bubbles:true}))")
+        picked = b.eval("[...document.querySelectorAll('#deInc [data-deit]')].filter(c=>c.checked).map(c=>c.dataset.deit.split(':')[1])")
+        self.assertGreaterEqual(len(picked), 2)
+        before = {i: len(staged(self.v.root, i)) for i in picked}
+        b.click("#deSent")
+        b.wait("!document.getElementById('deDlg').open")
+        b.pump(0.4)
+        for i in picked:
+            ch = staged(self.v.root, i)
+            self.assertEqual(len(ch), before[i] + 1, i)
+            ch = ch[-1:]
+            f = "reasoning" if i.startswith("ABC-D") else "resp" if "-R-" in i else "latest_update"
+            first = ch[0][1]["changes"].get(f) or " ".join(map(str, ch[0][1]["changes"].values()))
+            self.assertRegex(first.split("\n")[0], rf"^{shown(b)}: Chased Sara Example by email \(reminder \d+\); reply asked for by 19-10-2026\.$", i)
+        self.undo()
+
+    def test_a_retry_after_one_item_fails_logs_only_that_item_and_counts_the_chase_once(self):
+        """#153 (Alan): one item's staging fails, the toast names it, the popup stays; pressing again logs only it, with no second record."""
+        b = self.b
+        self.open_person_email("update")
+        picked = b.eval("[...document.querySelectorAll('#deInc [data-deit]')].filter(c=>c.checked).map(c=>c.dataset.deit.split(':')[1])")
+        self.assertGreaterEqual(len(picked), 2)
+        before = {i: len(staged(self.v.root, i)) for i in picked}
+        recs0 = self.chase_records()
+        b.eval("window.__w=shared.VW.write; window.__n=0; shared.VW.write=async function(...a){ if(window.__n++===0) throw new Error('disk full'); return window.__w.apply(this,a); }; 0")
+        try:
+            b.click("#deSent")
+            b.pump(1.0)
+            self.assertTrue(b.eval("document.getElementById('deDlg').open"), "the popup stays so the missing item can be retried")
+            self.assertRegex(b.eval("document.getElementById('snackT').textContent"), r"Couldn't log ABC-[A-Z]-\d+")
+            self.assertFalse(b.eval("document.getElementById('deSent').disabled"))
+        finally:
+            b.eval("shared.VW.write=window.__w")
+        done_first = [i for i in picked if len(staged(self.v.root, i)) > before[i]]
+        self.assertEqual(len(done_first), len(picked) - 1)
+        b.eval("document.getElementById('deSent').click()")
+        b.wait("!document.getElementById('deDlg').open")
+        b.pump(0.4)
+        for i in picked:
+            self.assertEqual(len(staged(self.v.root, i)), before[i] + 1, i)                       # once each, none doubled
+        recs = self.chase_records()
+        self.assertEqual(len(recs), len(recs0) + 1, "the chase is recorded once, not again on the retry")
+        self.assertEqual(sorted(recs[-1]["ids"]), sorted(picked))
+
+    def test_the_review_menu_says_draft_email_for_an_overdue_item(self):
+        """#153 (Alan): no 'Chase <name>' label left; the overdue item's menu offers Draft email twice at most."""
+        b = self.b
+        labels = b.eval(f"cxWork('actions',{self.s_scripts!r}).map(x=>x.label||'')")
+        self.assertFalse([x for x in labels if x.startswith("Chase")], labels)
+        self.assertEqual(len([x for x in labels if x.startswith("Draft email")]), 2, labels)
 
     def test_undo_after_the_entry_is_gone_says_so(self):
         """Finding 7: an Undo for something already applied or undone says so instead of doing nothing."""

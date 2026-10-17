@@ -1178,6 +1178,7 @@ def client_item_context(con, item_id):
         raise drafts.Refused(f"{item_id} is labelled {', '.join(excluded[item_id])}: client wording isn't drafted for it.")
     title = x.get("description") if table != "decisions" else x.get("decision")
     held = {"actions": x.get("latest_update"), "raid": x.get("response_action"), "decisions": x.get("reasoning")}[table]
+    held = linktext.sent_strip(held)                 # #153: the "I sent it" lines are internal, never in client wording
     more = linktext.words(held)                  # #121: the words go in the draft's text; the check below reads the address as well
     if drafts.secret(f"{title} {held or ''} {x.get('source') or ''}"):
         raise drafts.Refused(f"{item_id} is marked confidential or restricted: client wording isn't drafted for it.")
