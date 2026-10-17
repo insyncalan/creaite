@@ -20,6 +20,7 @@ import { placeAtCaret } from "../../core/caretPlace.js";
 import { attachItemPick, insertHash } from "../ItemPicker.jsx";
 import { chipClicked, itemChip, ITEM_HREF, itemOf, itemState } from "../../core/itemLink.js";
 import { Icon } from "../Icon.jsx";
+import { OWN_STEP, UNDO_DEPTH, cxUndoSteps, undoStash, undoTake } from "../../core/undoSteps.js";
 
 /** @typedef {{id: string, label: string, sub?: string, icon?: string}} PickOption */
 /** @typedef {{kind: "note"|"person", from: number, to: number, q: string, opts: PickOption[], i: number}} PickState */
@@ -170,7 +171,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const h = ed.current, p = pickRef.current;
     if (!h || !p) return;
     setPick(null);
-    const c = h.editor.chain().focus().deleteRange({ from: p.from, to: p.to });
+    const c = h.editor.chain().focus().setMeta(OWN_STEP, true).deleteRange({ from: p.from, to: p.to });
     if (p.kind === "note") { const t = o.id.startsWith("\u0000") ? o.id.slice(1) : o.id; c.insertContent(`[[${t}]] `).run(); return; }
     if (p.kind === "person") { c.insertContent([{ type: "text", text: "@" }, { type: "text", text: o.id, marks: [{ type: "link", attrs: { href: `creaite:person/${encodeURIComponent(o.id)}` } }] }, { type: "text", text: " " }]).run(); return; }
   };
@@ -178,7 +179,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
   const insert = what => {
     const h = ed.current;
     if (!h) return;
-    const c = h.editor.chain().focus();
+    const c = h.editor.chain().focus().setMeta(OWN_STEP, true);
     if (what === "table") c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (what === "item") insertHash(h);
     else if (what === "person" || what === "note") c.insertContent(what === "person" ? "@" : "[[").run();
@@ -192,7 +193,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
       const ref = onImage ? await onImage(f) : null, h = ed.current;
       if (!ref || !h) continue;
       const st = h.editor.state, end = st.doc.content.size, $p = st.doc.resolve(Math.min(st.selection.from, end)), after = $p.depth ? $p.after(1) : end;
-      h.editor.chain().insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
+      h.editor.chain().setMeta(OWN_STEP, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
       const cap = /** @type {HTMLElement|null} */ (box.current ? box.current.querySelector(`figure[data-ref="${CSS.escape(ref)}"] figcaption`) : null);
       if (cap) cap.focus();
     }
@@ -213,7 +214,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const ai = { place: "notes", project: () => props.current.code,
       confidential: () => { const c = noteCur.value; return !!(c && c.path === props.current.path && c.meta && c.meta.confidential); },
       key: () => `note:${props.current.path || ""}` };
-    const h = creaiteEditor(el, { features: "notes", markdown, extensions: [deco], ai, imageSrc: ref => (imageSrc ? imageSrc(ref) : null), editorProps: {
+    const h = creaiteEditor(el, { features: "notes", markdown, undoDepth: UNDO_DEPTH, extensions: [deco, cxUndoSteps], ai, imageSrc: ref => (imageSrc ? imageSrc(ref) : null), editorProps: {
       handleKeyDown: (/** @type {any} */ _v, /** @type {KeyboardEvent} */ e) => {
         const p = pickRef.current;
         if (!p) return false;
@@ -230,6 +231,8 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
         return false;
       } } });
     ed.current = h;
+    const myPath = props.current.path || "";          /* (the cleanup below runs after the next note's props are in) */
+    undoTake(myPath, h.editor);          /* #175: a note closed in this page and opened again as it was keeps its undo history */
     const slashOff = attachSlash(h, { profile: "notes", host: hostRows() });
     const itemOff = attachItemPick(h, { code: () => props.current.code });          /* #122 C: the shared `#` list */
     const input = () => { props.current.onInput(); };
@@ -245,7 +248,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     el.addEventListener("mouseleave", out);
     onBody(() => (h.touched() ? h.value() : null));
     return () => { el.removeEventListener("input", input); el.removeEventListener("blur", blur); el.removeEventListener("mouseover", over);
-      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); itemOff(); h.destroy(); ed.current = null; lineState.current.doc = null; };
+      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); itemOff(); undoStash(myPath, h.editor); h.destroy(); ed.current = null; lineState.current.doc = null; };
   }, [loadKey]);
 
   useEffect(() => {          /* #124: read only while its Delete note waits on the approval card */

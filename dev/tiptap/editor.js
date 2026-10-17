@@ -8,6 +8,7 @@
 import { Editor, Extension, Mark, Node, mergeAttributes } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { closeHistory } from "@tiptap/pm/history";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
 import Image from "@tiptap/extension-image";
@@ -21,6 +22,8 @@ import { writeMarkdown } from "./writer.js";
 export { Extension, Mark, Node, mergeAttributes, Plugin, PluginKey };
 // BL-301 B (Notes): decorations, for the note's wiki links and item chips (drawn, never written).
 export { Decoration, DecorationSet };
+// #175 (Notes): ProseMirror's closeHistory(tr), so the Notes editor can start a new undo step (core/editor.js cxUndoSteps).
+export { closeHistory };
 
 /** The pinned Tiptap version this file was written and gated against (tiptap.py's PINNED, set by the bundler). */
 export const PINNED = typeof __TIPTAP_PINNED__ === "undefined" ? null : __TIPTAP_PINNED__;   // eslint-disable-line no-undef

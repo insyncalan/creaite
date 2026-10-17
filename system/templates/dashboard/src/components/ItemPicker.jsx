@@ -9,6 +9,7 @@
 import { render } from "preact";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { placeAtCaret } from "../core/caretPlace.js";
+import { OWN_STEP } from "../core/undoSteps.js";
 import { itemByQuery, itemContent, itemOptions } from "../core/itemLink.js";
 import { Icon } from "./Icon.jsx";
 
@@ -94,7 +95,7 @@ export function attachItemPick(h, { code }) {
     const s = st;
     if (!s) return;
     close();
-    editor.chain().focus().deleteRange({ from: s.from, to: s.to }).insertContent(itemContent(o.id)).run();
+    editor.chain().focus().setMeta(OWN_STEP, true).deleteRange({ from: s.from, to: s.to }).insertContent(itemContent(o.id)).run();
   };
   /** @param {KeyboardEvent} e */
   const keys = e => {

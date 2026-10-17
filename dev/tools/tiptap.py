@@ -45,7 +45,8 @@ MANIFEST = "manifest.json"
 LICENCES = "licenses"
 EXPORTS = ("PINNED", "createEditor", "envelope", "wrap", "parser", "markdownOf", "roundTrip", "fromHtml", "roundTripAll",
            "Extension", "Mark", "Node", "mergeAttributes", "Plugin", "PluginKey",   # these six: the dashboard's wrapper
-           "Decoration", "DecorationSet")                                           # BL-301 B: the note's links and chips
+           "Decoration", "DecorationSet",                                          # BL-301 B: the note's links and chips
+           "closeHistory")                                                          # #175: Notes starts a new undo step
 GLOBAL_NAME = "CreaiteTiptap"
 STAMP = ".creaite-sha256"             # written last in each unpacked package: its tarball's hash, so a half-unpack never counts
 
