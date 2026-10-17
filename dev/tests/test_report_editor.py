@@ -474,9 +474,16 @@ class SheetBarTests(SheetCase):
         self.open_bar()
         self.assertEqual(b.eval(covers), [], "the section's own heading, the table above and the next heading stay uncovered")
         b.click(f"{BAR} [data-nt=link]")
-        b.wait(f"!document.querySelector({JQ(BAR + ' .rtelink')}).hidden")
+        b.wait("!!document.querySelector('.linkpop')", 5)                  # #120: the link form is one popover on the page, not a part of the bar
         b.pump(0.3)
-        self.assertEqual(b.eval(covers), [], "and the same with the link form open")
+        self.assertEqual(b.eval("document.querySelector('.linkpop').parentElement.className"), "linkroot")
+        self.assertEqual(b.eval("document.querySelector('.linkpop').closest('.page')"), None, "the form is not drawn inside the sheet's page")
+        self.assertEqual(b.eval(f"document.querySelectorAll({JQ(BAR)}).length"), 0, "the focus is in the form, so the bar is put away and covers nothing")
+        b.key("Escape")                                                      # Esc gives the cursor back to the text, and the bar comes back where it was
+        b.wait("!document.querySelector('.linkpop')", 5)
+        b.wait(f"!!document.querySelector({JQ(BAR)})", 5)
+        b.pump(0.3)
+        self.assertEqual(b.eval(covers), [], "and the same once the link form has closed")
 
     def test_it_floats_on_the_side_that_covers_less_when_the_usual_side_would_cover_a_control(self):
         b = self.b
