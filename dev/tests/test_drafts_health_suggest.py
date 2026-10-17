@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import drafts_fake  # noqa: E402
-from test_tracker import Vault  # noqa: E402
+from test_tracker import Vault, action  # noqa: E402
 
 NOW = "2026-10-17 09:00"
 GOOD = "Two actions are overdue and UAT start has slipped. [S1, S2] The next step is to escalate data access. [S1]"
@@ -178,6 +178,79 @@ class Suggest(unittest.TestCase):
         self.assertEqual(out["text"], "Two actions are overdue.")
         r = self.drafts("context", {"kind": "health", "code": "DEF", "to": "On track", "facts": []})
         self.assertIn("Say why in your own words", r["nothing"])
+
+    # ----- review fixes (health-203-fix-plain) -----
+    def overdue_action(self, n, **v):
+        """Add an overdue ABC action through the one writer (tracker.py apply)."""
+        self.v.propose(f"n{n}", [action(n, description=v.pop("description", f"Overdue thing {n}"), due_date="2026-09-01", **v)])
+        self.v.run("apply")
+        return self.sql("SELECT id FROM actions ORDER BY rowid DESC LIMIT 1")[0]["id"]
+
+    def source_texts(self):
+        c = self.ctx()
+        return " | ".join(s["text"] for s in c["sources"]), c["prompt"].split("--- FACTS ---")[1]
+
+    def test_confidential_items_never_reach_the_prompt_whatever_the_fact_length(self):
+        long_ = "Chase the supplier about the licence renewal and the data room access for the audit team " * 2 + "marked confidential"
+        a = self.overdue_action(31, description=long_)
+        b = self.overdue_action(32, description="Plain board action", latest_update="restricted: board only",
+                                source="projects/ABC/documents/restricted board paper.docx")
+        c_ = self.overdue_action(33, description="Short confidential note")
+        d_ = self.overdue_action(34, description="Documents source action", source="projects/ABC Example Programme/documents/Plan.docx")
+        self.sql("UPDATE raid SET response_action='confidential: legal view' WHERE description LIKE 'Test licences%'")
+        self.sql("UPDATE raid SET source='projects/ABC/documents/x.docx' WHERE description LIKE 'Data access delayed%'")
+        self.sql("INSERT INTO decisions (id, project, decision, made_by, status, needed_by, source) VALUES "
+                 "('ABC-D-090','ABC','Approve the restricted budget route','Jane Doe','Pending','2026-09-01','projects/ABC/documents/b.docx')")
+        texts, prompt = self.source_texts()
+        for gone in (a, b, c_, d_, "Plain board action", "Test licences", "Data access delayed", "restricted budget", "ABC-D-090"):
+            self.assertNotIn(gone, texts)
+            self.assertNotIn(gone, prompt)
+        self.assertIn("Escalate data access", texts)                    # ordinary facts remain
+
+    def test_a_confidential_closed_action_is_not_movement(self):
+        self.sql("INSERT INTO actions (id, project, description, owner, status, closed, raised, source) VALUES "
+                 "('ABC-A-095','ABC','Quiet closure','Alan Carter','Closed','2026-10-16','2026-10-01','projects/ABC/documents/c.docx')")
+        self.assertNotIn("Quiet closure", self.source_texts()[0])
+
+    def test_an_undone_health_change_is_not_the_last_set(self):
+        self.v.propose("h", [{"n": 1, "op": "update", "table": "projects", "id": "ABC",
+                              "changes": {"health": "On track", "health_reason": "All fine"}, "decision": "approved"}])
+        self.v.run("apply")
+        self.assertIn("last set", self.source_texts()[0])
+        self.assertIn("to On track", self.source_texts()[0])
+        self.v.run("undo")
+        texts = self.source_texts()[0]
+        self.assertNotIn("to On track", texts)
+        self.assertIn("to Off track", texts)                              # the earlier, still standing, change
+
+    def test_a_client_health_is_computed_from_client_visible_items_only(self):
+        self.sql("UPDATE raid SET priority='Urgent'")
+        for n in (41, 42, 43, 44):
+            self.overdue_action(n)                                        # internal-only and well overdue
+        internal = self.result(self.ctx())
+        self.assertNotEqual(internal["health"], "On track")
+        act = self.sql("SELECT id FROM actions WHERE description LIKE 'Escalate data access%'")[0]["id"]
+        self.sql("UPDATE actions SET client_visible=1, client_message=? WHERE id=?",
+                 "What it is: Access to your data is late.\nWhat it means for you: Testing may start later.\n"
+                 "What is being done: We are raising it.", act)
+        c = self.ctx(audience="client")
+        out = self.result(c, "Testing may start later because access is late. [S1]")
+        self.assertEqual(out["health"], "On track")
+        self.assertEqual(out["differs"], self.sql("SELECT health FROM projects WHERE code='ABC'")[0]["health"] != "On track")
+        self.assertNotIn("Urgent", json.dumps(out))
+
+    def test_the_cap_keeps_each_kind_and_movement_does_not_repeat_an_open_item(self):
+        for n in range(51, 59):
+            self.overdue_action(n)
+        c = self.ctx()
+        kinds = [s["kind"] for s in c["sources"]]
+        self.assertLessEqual(len(kinds), 12)
+        self.assertLessEqual(kinds.count("overdue"), 3)
+        for k in ("criteria", "milestone", "raid", "movement"):
+            self.assertIn(k, kinds)
+        self.assertTrue(any("Health was last set" in s["text"] for s in c["sources"]))
+        ids = [s["id"] for s in c["sources"] if s["kind"] != "criteria" and "Health was last set" not in s["text"]]
+        self.assertEqual(len(ids), len(set(ids)))
 
 
 if __name__ == "__main__":
