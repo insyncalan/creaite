@@ -54,7 +54,7 @@ export const linkWithAddress = text => linkSegments(text).map(x => (x.href ? `${
 /** Safe markup for the text: escaped, a link as an anchor that opens in a new tab and never hands over the opener. @param {unknown} text @returns {string} */
 export function linkHtml(text) {
   return linkSegments(text).map(x => (x.href
-    ? `<a class="tlink" href="${esc(x.href)}" target="_blank" rel="noopener noreferrer">${esc(x.t)}</a>`
+    ? `<a class="tlink" href="${esc(linkUrl(x.href))}" target="_blank" rel="noopener noreferrer">${esc(x.t)}</a>`
     : esc(x.t))).join("");
 }
 /** One link in the stored form; null when the address is refused. @param {string} words @param {string} href @returns {string|null} */

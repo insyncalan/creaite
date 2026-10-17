@@ -249,6 +249,7 @@ INTERNAL_HREFS = [
     ("activity.js", "${actHref(kind,id)}", 2, "actHref: a hash address built from a work item or milestone id"),
     ("ask.js", "m.href", 1, "handed to runClosure, which keeps only a hash address (next entry)"),
     ("ask.js", "${href}", 1, "runClosure: href is kept only if it matches /^#[\\w=%.|:&-]*$/ (a hash address), else it is empty and nothing is drawn"),
+    ("core/editor.js", "{ default:null }", 1, "the link mark's attribute declaration (its default), not an address"),
     ("components/LinkPopover.jsx", 'have ? have.href : ""', 1, "the popover's state; it is opened only through `open`, which is linkUrl(p.href)"),
     ("components/LinkPopover.jsx", "l.href", 1, "the popover's state, as above"),
     ("components/LinkPopover.jsx", "open", 2, "`open` is linkUrl(p.href), declared above the return"),
