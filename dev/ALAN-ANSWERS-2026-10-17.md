@@ -48,7 +48,7 @@ Built, in review. One open question: when do the old long guides go (the first-d
 For v2.1.0 you let the release publish overnight once the automated gates were green and did your hand checks afterwards. For v2.2.0: publish after the gates are green (hand checks afterwards, a failed check ships as v2.2.1), or wait for your hand checks first? **Answer:**
 
 ### A10. [2.3] #193 design-system tidy-up: nine visible changes, yes or no each
-Screenshots: `/private/tmp/claude-501/-Users-alanmahon-dev-env-creaite/d52ffadd-5b1b-4b44-93ee-b6ed15b8a6b9/scratchpad/tokens193/{before,after}/` (README.md has the numbers). Or "all nine".
+Screenshots: the before/after folder Team Stark named on #193 (its README.md has the numbers). Or "all nine".
 1. Saved-view chip 28 px/12 px radius becomes a 26 px pill: **Answer:**
 2. Project-page chips 20 px become 26 px: **Answer:**
 3. Report cockpit date input 28 px becomes 32 px: **Answer:**
