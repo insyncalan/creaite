@@ -1042,6 +1042,9 @@ body:has(#v-review.rvfloat:not([hidden])) .snack{bottom:calc(var(--rvh,0px) + 28
 .rvresult{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:6px 0;font-size:var(--fs-sm)} .rvresult:empty{display:none} .rvlearn{padding:10px 14px;border:1px solid var(--accent);border-radius:var(--r-md);background:color-mix(in srgb,var(--accent) 8%,var(--surface));display:grid;gap:6px}
 .rgroup h2 .rgtick{margin-right:6px;vertical-align:-2px} .rgroup h2 .rgc{font-weight:400;font-size:var(--fs-sm);margin-left:6px}
 .tag.stale{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--ink)}
+/* #177: age as quiet text; one banner when the queue is old; the outlier's age in the warning colour */
+#reviewBody .rvage{font-size:var(--fs-sm);color:var(--muted);margin-right:8px} #reviewBody .rvage.old{color:var(--warn);font-weight:600}
+.rvagebanner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:8px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm)}
 .rvdone{text-align:center;padding:32px 10px} .rvdone h2{margin:0 0 6px} .rvdacts{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
 dialog.rvdlg{width:min(560px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.rvdlg::backdrop{background:var(--scrim)} .rvdlg h2{margin:0 0 4px} .rvcnt{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px} .rvcnt>div{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs);color:var(--muted)} .rvcnt b{display:block;font-size:var(--fs-lg);color:var(--ink)}
 .rvcnt.warnc>div{background:color-mix(in srgb,var(--warn) 10%,var(--surface))} .rvlst{display:grid;gap:4px;max-height:260px;overflow:auto} .rvlst>div{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-sm);padding:4px 0;border-bottom:1px solid var(--line)}
@@ -5940,6 +5943,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     runTool: () => runTool,
     rvActive: () => rvActive,
     rvAdvance: () => rvAdvance,
+    rvAgeBanner: () => rvAgeBanner,
+    rvAgeText: () => rvAgeText,
+    rvAllOld: () => rvAllOld,
     rvApplied: () => rvApplied,
     rvApproveSelected: () => rvApproveSelected,
     rvBar: () => rvBar,
@@ -5972,6 +5978,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     rvNeeds: () => rvNeeds,
     rvOnly: () => rvOnly,
     rvOrder: () => rvOrder,
+    rvOutlier: () => rvOutlier,
     rvOwner: () => rvOwner,
     rvPaint: () => rvPaint,
     rvPasses: () => rvPasses,
@@ -5990,6 +5997,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     rvShown: () => rvShown,
     rvSrcKind: () => rvSrcKind,
     rvSrcLink: () => rvSrcLink,
+    rvStaleDays: () => rvStaleDays,
     rvSummary: () => rvSummary,
     rvSyncChk: () => rvSyncChk,
     rvTick: () => rvTick,
@@ -37727,7 +37735,7 @@ ${s5}`;
   var rvMovable = (r4) => !!r4 && !r4.done && (isMin(r4) || ["actions", "raid", "decisions"].includes(r4.kind));
   function revRow(r4, idx, g5, cls, head) {
     const minKids = isMin(r4) && head.kids.some(routineKid);
-    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${r4.stale && !r4.done ? html` <span class="tag stale">Stale · ${String(r4.age)} days</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}${revDetail(r4) ? html`<div class="why rdet">${raw(revDetail(r4))}</div>` : ""}<div class="why">${kindLabel(r4) ?? ""} · ${r4.why ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${raw(rjGuessHtml(r4))}</div><div class="why">${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div></td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini ok" data-act="ga" title="Approves the routine items; minutes, new decisions and new risks stay for one-by-one approval">Approve all from these minutes</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
+    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${rvOutlier(r4) ? html` <span class="tag stale rvold">Oldest · ${rvAgeText(r4)}</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}${revDetail(r4) ? html`<div class="why rdet">${raw(revDetail(r4))}</div>` : ""}<div class="why">${kindLabel(r4) ?? ""} · ${r4.why ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${raw(rjGuessHtml(r4))}</div><div class="why">${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div></td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rvage${rvOutlier(r4) ? " old" : ""}">${rvAgeText(r4)}</span> <span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini ok" data-act="ga" title="Approves the routine items; minutes, new decisions and new risks stay for one-by-one approval">Approve all from these minutes</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
     if (isConflict(r4)) {
       const live = viaServer(), btns = `<button class="mini" data-act="ck" ${live ? "" : 'disabled title="Needs the live server"'}>Keep current</button> <button class="mini ok" data-act="co" ${live ? "" : 'disabled title="Needs the live server"'}>Use this one</button>`;
       h5 = h5.replace(/<button class="mini ok" data-act="a">.*?<\/button>/, btns);
@@ -38011,9 +38019,28 @@ ${s5}`;
     return out;
   }
   var RVORD = { age: (r4) => -(r4.age || 0), kind: (r4) => Object.keys(RVKINDS).indexOf(r4.kind), due: (r4) => r4.rec.due || "9999" };
+  var rvStaleDays = () => +S.staleDays || 7;
+  var rvAgeText = (r4) => {
+    const d5 = Math.max(0, +r4.age || 0);
+    return d5 === 0 ? "today" : d5 === 1 ? "1 day" : `${d5} days`;
+  };
+  var rvOutlier = (r4) => !r4.done && !rvAllOld() && (+r4.age || 0) > 2 * rvStaleDays();
+  var rvAllOld = () => {
+    const und = REV.filter((r4) => !r4.done);
+    return und.length > 0 && und.every((r4) => r4.stale);
+  };
+  function rvAgeBanner(und) {
+    if (!und.length) return "";
+    const th2 = rvStaleDays(), on2 = RVO === "age", btn = html`<button type="button" class="btn${rvAllOld() ? " primary" : ""}" id="rvOldest" aria-pressed="${String(on2)}">${on2 ? "Oldest first: on" : "Oldest first"}</button>`;
+    if (rvAllOld()) return html`<div class="rvagebanner" id="rvAgeBanner" role="status"><span><b>All ${und.length} have waited more than ${th2} days.</b> Oldest first?</span>${btn}</div>`;
+    const o5 = und.filter(rvOutlier);
+    if (!o5.length) return "";
+    const mx2 = Math.max(...o5.map((r4) => +r4.age || 0));
+    return html`<div class="rvagebanner" id="rvAgeBanner" role="status"><span><b>${o5.length === 1 ? `1 has waited ${mx2} days.` : `${o5.length} have waited more than ${2 * th2} days.`}</b></span>${btn}</div>`;
+  }
   function rvRender() {
-    const und = REV.filter((r4) => !r4.done), stale = und.filter((r4) => r4.stale).length, shownN = und.filter((r4) => rvPasses(r4)).length;
-    putHTML($("#rvSub"), html`Claude's proposals. ${und.length} waiting${stale ? html` · <span class="tag stale">${stale} stale</span>` : ""}`);
+    const und = REV.filter((r4) => !r4.done), shownN = und.filter((r4) => rvPasses(r4)).length;
+    putHTML($("#rvSub"), html`Claude's proposals. ${und.length} waiting`);
     drawReviewFilters();
     rvApplied(shownN, und.length);
     rvRoutineBtn();
@@ -38026,16 +38053,16 @@ ${s5}`;
     let i5 = 0;
     const anyLive = G3.some((g5) => g5.blocks.some((b5) => b5.some((o5) => !o5.r.gone)));
     const groups = html`${G3.map((g5) => {
-      const rows2 = g5.blocks.flat(), live = rows2.filter((o5) => !o5.r.done && !isMin(o5.r)), st2 = rows2.filter((o5) => o5.r.stale && !o5.r.done).length, n4 = rows2.filter((o5) => !o5.r.done).length;
+      const rows2 = g5.blocks.flat(), live = rows2.filter((o5) => !o5.r.done && !isMin(o5.r)), n4 = rows2.filter((o5) => !o5.r.done).length;
       const all = live.length && live.every((o5) => RHL.has(o5.r.n));
-      return html`<div class="rgroup"><h2><input type="checkbox" class="rgtick" data-rg="${g5.key}" aria-label="Select the rows in ${g5.label}" ${raw(all ? "checked" : "")} ${raw(live.length ? "" : "disabled")}> ${raw(g5.title)} <span class="sub rgc">${n4 || !rows2.some((o5) => o5.r.gone) ? `${n4} proposal${n4 === 1 ? "" : "s"}` : "rejected just now"}${st2 ? html` · <span class="tag stale">${st2} stale</span>` : ""}</span></h2></div><div class="tbl"><table><tbody>${rows2.map((o5) => raw(o5.r.gone ? rjGoneRow(o5.r, o5.g, o5.cls) : revRow(o5.r, i5++, o5.g, o5.cls, o5.head)))}</tbody></table></div>`;
+      return html`<div class="rgroup"><h2><input type="checkbox" class="rgtick" data-rg="${g5.key}" aria-label="Select the rows in ${g5.label}" ${raw(all ? "checked" : "")} ${raw(live.length ? "" : "disabled")}> ${raw(g5.title)} <span class="sub rgc">${n4 || !rows2.some((o5) => o5.r.gone) ? `${n4} proposal${n4 === 1 ? "" : "s"}` : "rejected just now"}</span></h2></div><div class="tbl"><table><tbody>${rows2.map((o5) => raw(o5.r.gone ? rjGoneRow(o5.r, o5.g, o5.cls) : revRow(o5.r, i5++, o5.g, o5.cls, o5.head)))}</tbody></table></div>`;
     })}`;
     if (!und.length) {
       putHTML($("#reviewBody"), html`${rvEmptyHtml()}${G3.length ? groups : ""}`);
       rvBar();
       return;
     }
-    putHTML($("#reviewBody"), anyLive ? groups : html`<div class="empty"><div class="wempty"><h2>Nothing matches these filters</h2><div class="sub">${und.length} proposal${und.length === 1 ? "" : "s"} waiting outside them.</div><div class="wefoot"><button type="button" class="btn primary" id="rvClearF">Clear all filters</button></div></div></div>${groups}`);
+    putHTML($("#reviewBody"), anyLive ? html`${rvAgeBanner(und)}${groups}` : html`<div class="empty"><div class="wempty"><h2>Nothing matches these filters</h2><div class="sub">${und.length} proposal${und.length === 1 ? "" : "s"} waiting outside them.</div><div class="wefoot"><button type="button" class="btn primary" id="rvClearF">Clear all filters</button></div></div></div>${groups}`);
     rvBar();
   }
   var rvSrcLink = (r4) => {
@@ -38527,6 +38554,12 @@ ${s5}`;
       m5.classList.add("on");
       $("#rvDispBtn").setAttribute("aria-expanded", "true");
       $("#rvGrp").focus();
+    });
+    document.addEventListener("click", (e4) => {
+      if (!e4.target.closest("#rvOldest")) return;
+      RVO = RVO === "age" ? "" : "age";
+      rvChanged();
+      $("#rvOldest")?.focus();
     });
     $("#rvDispMenu").addEventListener("click", (e4) => {
       e4.stopPropagation();
@@ -67905,6 +67938,7 @@ ${d5.text}`);
         "runGen",
         "runSearch",
         "rvAdvance",
+        "rvAgeBanner",
         "rvBulkOK",
         "rvChanged",
         "rvDate",
