@@ -4519,6 +4519,11 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     acKey: () => acKey,
     acPick: () => acPick,
     acUpdate: () => acUpdate,
+    achgBtn: () => achgBtn,
+    achgHm: () => achgHm,
+    achgIsSession: () => achgIsSession,
+    achgRestore: () => achgRestore,
+    achgSessionText: () => achgSessionText,
     achgTier: () => achgTier,
     actBarProps: () => actBarProps,
     actConfirm: () => actConfirm,
@@ -60841,9 +60846,43 @@ ${d5.text}`);
   function achgTier(t47) {
     return t47 === "high" || t47 === "sensitive" ? raw(chgTierTag(t47 === "high")) : t47 === "ordinary" ? html`<span class="tag">Ordinary</span>` : html`<span class="x">—</span>`;
   }
+  var achgHm = (
+    /** @param {string} at */
+    (at2) => (at2 || "").slice(11, 16)
+  );
+  function achgIsSession(c5) {
+    return c5.op === "edit" && typeof c5.saves === "number" && !!c5.first_at && isNotePath(c5.path);
+  }
+  function achgSessionText(c5) {
+    const a5 = achgHm(c5.first_at), z4 = achgHm(c5.at), same2 = (c5.first_at || "").slice(0, 10) === (c5.at || "").slice(0, 10);
+    const span = c5.saves <= 1 || same2 && a5 === z4 ? a5 : same2 ? `${a5} to ${z4}` : `${fd(c5.first_at.slice(0, 10))} ${a5} to ${fd(c5.at.slice(0, 10))} ${z4}`;
+    return `${c5.saves} ${c5.saves === 1 ? "save" : "saves"}, ${span}`;
+  }
+  function achgBtn(c5) {
+    return c5.undone ? html`<span class="x">Undone</span>` : achgIsSession(c5) ? html`<button class="mini" data-achgrestore="${c5.id}" data-path="${c5.path}" data-at="${achgHm(c5.first_at)}">Restore ${achgHm(c5.first_at)}</button>` : html`<button class="mini" data-achgundo="${c5.id}">Undo</button>`;
+  }
+  async function achgRestore(id2, path, at2) {
+    const open2 = noteCur.value && noteCur.value.path === path;
+    if (open2 && !await noteFlush(true)) {
+      snack("Not restored: the open note couldn't be saved first, so it is as it was.");
+      return false;
+    }
+    if (open2) {
+      const l6 = await api("/api/changes/list", {}), mine = l6 && l6.ok ? (l6.changes || []).find((c5) => c5.path === path && c5.first_at && achgHm(c5.first_at) === at2 && c5.id >= id2) : null;
+      if (mine) id2 = mine.id;
+    }
+    const r4 = await api("/api/changes/undo", { id: id2 });
+    if (!r4 || !r4.ok) {
+      snack(oneLine(r4 && r4.message || "Not restored. The note is as it was."));
+      return false;
+    }
+    if (open2) await openNote(path, true);
+    snack(oneLine(r4.message || `Restored to ${at2}`));
+    return true;
+  }
   function askChangesHtml(rows2) {
     if (!rows2.length) return html`<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>`;
-    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td>${ACHG_OP[c5.op] || c5.op} <code>${c5.path}</code>${c5.to ? html` → <code>${c5.to}</code>` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right">${c5.undone ? html`<span class="x">Undone</span>` : html`<button class="mini" data-achgundo="${c5.id}">Undo</button>`}</td></tr>`)}</tbody></table>`;
+    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td>${achgIsSession(c5) ? html`Notes <code>${c5.path}</code> <span class="sub" data-achgsess>${achgSessionText(c5)}</span>` : html`${ACHG_OP[c5.op] || c5.op} <code>${c5.path}</code>`}${c5.to ? html` → <code>${c5.to}</code>` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right">${achgBtn(c5)}</td></tr>`)}</tbody></table>`;
   }
   var ACHGFIRST = true;
   async function renderAskChanges() {
@@ -60855,6 +60894,27 @@ ${d5.text}`);
       putHTML(box, html`<h2 style="margin:22px 0 4px">What ask creaite changed</h2><p class="sub" style="margin:0 0 10px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p><div class="tbl" id="achgTbl"></div>`);
       $("#actTbl").after(box);
       box.addEventListener("click", async (e4) => {
+        const rs2 = e4.target.closest("[data-achgrestore]"), ok2 = e4.target.closest("[data-achgrestoreyes]"), no2 = e4.target.closest("[data-achgrestoreno]");
+        if (rs2) {
+          const td2 = rs2.parentElement, noteName = rs2.dataset.path.split("/").pop().replace(/\.md$/, ""), q5 = document.createElement("span");
+          q5.dataset.achgq = "1";
+          rs2.hidden = true;
+          putHTML(q5, html`<span class="sub" data-achgask>Take “${noteName}” back to how it was at ${rs2.dataset.at}?</span> <button class="mini" data-achgrestoreyes="${rs2.dataset.achgrestore}" data-path="${rs2.dataset.path}" data-at="${rs2.dataset.at}">Restore ${rs2.dataset.at}</button> <button class="mini" data-achgrestoreno>Keep</button>`);
+          td2.append(q5);
+          return;
+        }
+        if (no2) {
+          const td2 = no2.closest("td");
+          td2.querySelector("[data-achgq]").remove();
+          td2.querySelector("[data-achgrestore]").hidden = false;
+          return;
+        }
+        if (ok2) {
+          ok2.disabled = true;
+          await achgRestore(+ok2.dataset.achgrestoreyes, ok2.dataset.path, ok2.dataset.at);
+          renderAskChanges();
+          return;
+        }
         const b5 = e4.target.closest("[data-achgundo]");
         if (!b5) return;
         b5.disabled = true;
@@ -71815,6 +71875,7 @@ ${d5.text}`);
         "applyTheme",
         "applyView",
         "applyWords",
+        "askChangesHtml",
         "askDeleteNote",
         "askLive",
         "askPerson",
@@ -72154,6 +72215,7 @@ ${d5.text}`);
         "projPeople",
         "publish",
         "pulseCheck",
+        "putHTML",
         "putHtml",
         "query",
         "quip",
