@@ -401,6 +401,7 @@
    "noteFocus",
    "noteFocusClose",
    "noteFocusOpen",
+   "noteGone",
    "noteLeave",
    "noteMeta",
    "noteSave",

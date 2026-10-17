@@ -36,6 +36,7 @@ class NotesTab(LiveBrowserCase):
         b.eval(f"(()=>{{ const i=document.getElementById('nnTitle'); i.value={json.dumps(title)}; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         b.eval(f"document.querySelector('#newNoteDlg input[value=\"{tpl}\"]').click()")
         b.click("#nnMake")
+        b.wait("!document.getElementById('newNoteDlg').open", 10)
         b.wait(f"noteCur.value&&noteCur.value.note.title==={json.dumps(title)}&&!!document.querySelector('.nbody.ProseMirror')", 15)
 
     def type_end(self, text):
