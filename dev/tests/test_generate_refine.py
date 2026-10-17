@@ -511,6 +511,13 @@ class RefineEditor(DraftCase):
         b.eval(f"(()=>{{ const t=document.getElementById('curRefineNote'); t.value={text!r}; t.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         n = b.eval("window.__bodies.length")
         b.click("#curRefineGo")
+        for _ in range(4):        # under load the editor is drawn again after the note is typed and takes it back: type it, press Go, until the request goes
+            try:
+                b.wait(f"window.__bodies.length>{n}", 6)
+                return
+            except TimeoutError:
+                b.eval(f"(()=>{{ const t=document.getElementById('curRefineNote'); if(t){{ t.value={text!r}; t.dispatchEvent(new Event('input',{{bubbles:true}})); }} }})()")
+                b.click("#curRefineGo")
         b.wait(f"window.__bodies.length>{n}")
 
     def vers(self):
