@@ -46,7 +46,7 @@ window.SB = (() => {
     && !base.has(el));
   const inPop = el => !!el && popups().some(p => p.contains(el) && p !== document.body);
   const state = i => { const o = L[i], a = document.activeElement, ad = a && a.getAttribute && a.getAttribute("aria-activedescendant");
-    return { expanded: o ? o.getAttribute("aria-expanded") : null, connected: !!(o && o.isConnected),
+    return { busy: !!(o && o.getAttribute("aria-busy") === "true"), expanded: o ? o.getAttribute("aria-expanded") : null, connected: !!(o && o.isConnected),
       open: popups().length, focusOnOpener: a === o, focusInPopup: inPop(a) || (!!ad && !!document.getElementById(ad)),
       active: a ? sig(a) + "|" + name(a) + (ad ? "|" + ad : "") : "", modal: !![...document.querySelectorAll("dialog:modal")].some(d => d !== baseModal),
       items: popups().reduce((n, p) => n + p.querySelectorAll('[role^="menuitem"]:not([aria-disabled="true"]),[role="option"]:not([aria-disabled="true"])').length, 0) }; };
