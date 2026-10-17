@@ -150,7 +150,7 @@ PAGE = r"""
   VSTATE="ok"; needVault=async()=>true;
   const key=(k,t)=>(t||document).dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true}));
   const type=q=>{ const i=$q("#helpQ"); i.value=q; i.dispatchEvent(new Event("input",{bubbles:true})); };
-  helpScreenSync.__tick=0;
+  const isOn=l=>!l.hidden&&!l.classList.contains("ghost");
 """
 
 
@@ -317,11 +317,11 @@ class PageTests(unittest.TestCase):
 
     def test_the_first_visit_line(self):
         o = self.probe("""
-          const line=()=>$q("#hFirst"), shown=()=>!line().hidden, seen=[];
+          const line=()=>$q("#hFirst"), shown=()=>isOn(line()), seen=[];
           try{ [...Object.keys(localStorage)].filter(k=>k.startsWith("creaite-help-line-")).forEach(k=>localStorage.removeItem(k)); }catch(e){}
           S.helpLine=true;
           go("today"); await wait(20); helpScreenSync();
-          out.today=[shown(),line().previousElementSibling&&line().previousElementSibling.id,line().textContent.trim()];
+          out.today=[shown(),line().previousElementSibling&&line().previousElementSibling.classList[0],line().textContent.trim()];
           // a key clears it and is not eaten: a later listener still sees it, undefaulted
           let got=null; const l=e=>{ got=[e.key,e.defaultPrevented]; }; document.addEventListener("keydown",l);
           document.dispatchEvent(new KeyboardEvent("keydown",{key:"x",bubbles:true,cancelable:true})); document.removeEventListener("keydown",l);
@@ -340,7 +340,7 @@ class PageTests(unittest.TestCase):
           go("projects"); helpScreenSync(); out.proj=shown(); openHelpPanel("projects"); helpScreenSync(); out.hp=!shown(); closeHelpPanel(); helpScreenSync(); out.hpAfter=shown();
           go("inbox"); helpScreenSync(); out.intake=shown(); const q=document.createElement("input"); document.body.append(q); q.focus(); helpScreenSync(); out.typing=!shown(); q.blur(); q.remove(); helpScreenSync(); out.typingAfter=shown();
           window.OUT=out;""")
-        self.assertEqual(o["today"], [True, "dayHead", "Press ? for help with Today"])
+        self.assertEqual(o["today"], [True, "dayband", "Press ? for help with Today"])      # after the band, never inside it
         self.assertTrue(o["keyAtOnce"])
         self.assertEqual(o["key"], [False, ["x", False]])
         self.assertTrue(o["downKeeps"] and o["clickAtOnce"])                           # nothing moves under a press
@@ -360,9 +360,9 @@ class PageTests(unittest.TestCase):
     def test_the_question_mark_clears_the_line_and_opens_the_panel(self):
         o = self.probe("""
           try{ localStorage.removeItem("creaite-help-line-review"); }catch(e){}
-          S.helpLine=true; go("review"); helpScreenSync(); out.before=!$q("#hFirst").hidden;
-          key("?"); helpScreenSync(); out.after=[$q("#hFirst").hidden,$q("#helpPanel").classList.contains("on")];
-          closeHelpPanel(); helpScreenSync(); out.later=$q("#hFirst").hidden;
+          S.helpLine=true; go("review"); helpScreenSync(); out.before=isOn($q("#hFirst"));
+          key("?"); helpScreenSync(); out.after=[!isOn($q("#hFirst")),$q("#helpPanel").classList.contains("on")];
+          closeHelpPanel(); helpScreenSync(); out.later=!isOn($q("#hFirst"));
           window.OUT=out;""")
         self.assertTrue(o["before"])
         self.assertEqual(o["after"], [True, True])
@@ -371,9 +371,9 @@ class PageTests(unittest.TestCase):
     def test_storage_failure_means_once_per_page_load_and_the_setting_turns_it_off(self):
         o = self.probe("""
           Storage.prototype.setItem=function(){ throw new Error("full"); }; Storage.prototype.getItem=function(){ throw new Error("blocked"); };
-          S.helpLine=true; go("today"); helpScreenSync(); out.first=!$q("#hFirst").hidden;
-          document.dispatchEvent(new KeyboardEvent("keydown",{key:"x",bubbles:true})); await wait(20); go("review"); go("today"); helpScreenSync(); out.again=!$q("#hFirst").hidden;
-          S.helpLine=false; go("work"); helpScreenSync(); out.off=$q("#hFirst").hidden; out.footStays=!$q("#hFoot").hidden;
+          S.helpLine=true; go("today"); helpScreenSync(); out.first=isOn($q("#hFirst"));
+          document.dispatchEvent(new KeyboardEvent("keydown",{key:"x",bubbles:true})); await wait(20); go("review"); go("today"); helpScreenSync(); out.again=isOn($q("#hFirst"));
+          S.helpLine=false; go("work"); helpScreenSync(); out.off=!isOn($q("#hFirst")); out.footStays=!$q("#hFoot").hidden;
           const st=getComputedStyle($q("#hFirst")); out.anim=[st.animationName,st.transitionDuration];
           window.OUT=out;""")
         self.assertTrue(o["first"])
@@ -409,7 +409,7 @@ class RealClickTests(LiveBrowserCase):
 
     def line(self):
         self.b.pump(0.4)
-        return self.b.eval("(()=>{ const l=document.getElementById('hFirst'); return [!l.hidden, l.dataset.k||'', "
+        return self.b.eval("(()=>{ const l=document.getElementById('hFirst'); return [!l.hidden&&!l.classList.contains('ghost'), l.dataset.k||'', "
                            "localStorage.getItem('creaite-help-line-work'), localStorage.getItem('creaite-help-line-today')]; })()")
 
     def test_a_rail_click_to_another_screen_shows_that_screens_line(self):
@@ -425,6 +425,58 @@ class RealClickTests(LiveBrowserCase):
         self.assertEqual(today, "1")                                                    # Today's was cleared by the click
         b.click("#v-work h1")                                                            # a click on the page clears Work's
         self.assertEqual(self.line()[:3], [False, "work", "1"])
+
+
+class NoShiftTests(LiveBrowserCase):
+    """Appearing and clearing the first-visit line move nothing, at 900 and 1400 px, with real clicks and keys; the foot line is not in the band."""
+    shared_server = True
+
+    def anchor(self):
+        """Whether the line is up, where the content under it is, and the line's height."""
+        self.b.pump(0.3)
+        return self.b.eval("(()=>{ const l=document.getElementById('hFirst'), n=l.nextElementSibling; "
+                           "return [!l.hidden&&getComputedStyle(l).visibility==='visible', Math.round(n.getBoundingClientRect().top), "
+                           "Math.round(l.getBoundingClientRect().height)]; })()")
+
+    def fresh(self, view):
+        self.b.eval(f"S.helpLine=true; helpLineReset(); go('{view}'); helpScreenSync()")
+        self.b.pump(0.3)
+
+    def test_nothing_moves_when_the_line_clears_on_a_click_a_key_or_the_chat(self):
+        for width in (900, 1400):
+            self.b.resize(width, 900)
+            for view, target in (("today", "#dayHead"), ("work", "#v-work h1"), ("review", "#v-review h1"), ("people", "#v-people h1")):
+                with self.subTest(width=width, view=view):
+                    self.fresh(view)
+                    on, y0, h = self.anchor()
+                    self.assertTrue(on)
+                    self.assertGreater(h, 20)
+                    self.b.click(target)                                            # the very first click
+                    self.assertEqual(self.anchor(), [False, y0, h])                 # gone, its slot kept
+                    self.assertEqual(self.b.eval("getComputedStyle(document.getElementById('hFirst')).visibility"), "hidden")
+                    self.fresh(view)
+                    self.b.key("x")                                                 # a key
+                    self.assertEqual(self.anchor(), [False, y0, h])
+                    self.fresh(view)
+                    self.b.eval("openChat()")                                       # the chat opening
+                    self.assertEqual(self.anchor()[1:], [y0, h])
+                    self.b.eval("closeChat(); document.activeElement.blur()")
+
+    def test_the_slot_is_given_up_when_you_go_to_a_screen_without_a_line(self):
+        self.b.resize(1400, 900)
+        self.fresh("today")
+        self.b.click("#dayHead")
+        self.b.eval("localStorage.setItem('creaite-help-line-review','1'); go('review'); helpScreenSync()")
+        self.assertEqual(self.b.eval("document.getElementById('hFirst').hidden"), True)
+
+    def test_the_foot_line_is_at_the_foot_of_the_page_never_inside_the_day_band(self):
+        b = self.b
+        b.resize(1400, 900)
+        self.fresh("today")
+        r = b.eval("(()=>{ const f=document.getElementById('hFoot'), band=document.querySelector('#v-today .dayband'), l=document.getElementById('hFirst'); "
+                   "return [band.contains(f), band.contains(l), band.innerText.includes('Press'), f.hidden, "
+                   "f.getBoundingClientRect().top>band.getBoundingClientRect().bottom, document.getElementById('v-today').lastElementChild===f]; })()")
+        self.assertEqual(r, [False, False, False, False, True, True])
 
 
 if __name__ == "__main__":

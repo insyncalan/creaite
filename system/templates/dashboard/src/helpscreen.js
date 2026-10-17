@@ -15,7 +15,7 @@ import { HD, helpFocusSearch } from "./help.js";
 export const SCREEN_OF={today:"today",work:"work",mine:"work",review:"review",projects:"projects",cockpit:"projects",people:"people",person:"people",notes:"notes",inbox:"intake",files:"files"};
 /** The eight pages that carry the foot line and the first-visit line (the page itself, not a project's or a person's page). */
 const LINE_OF={today:"today",work:"work",mine:"work",review:"review",projects:"projects",people:"people",notes:"notes",inbox:"intake",files:"files"};
-const TITLE={today:"#dayHead",work:"#v-work h1",review:"#v-review h1",projects:"#v-projects .hhead",people:"#v-people h1",notes:"#v-notes h1",intake:"#v-inbox h1",files:"#v-files h1"};
+const TITLE={today:"#v-today .dayband",work:"#v-work h1",review:"#v-review h1",projects:"#v-projects .hhead",people:"#v-people h1",notes:"#v-notes h1",intake:"#v-inbox h1",files:"#v-files h1"};
 const FOOT={today:"#v-today",work:"#v-work .wrapmax",review:"#v-review .wrapmax",projects:"#v-projects .wrapmax",people:"#v-people .wrapmax",notes:"#v-notes",intake:"#v-inbox .wrapmax",files:"#v-files .wrapmax"};
 
 export const screenKey=()=>SCREEN_OF[shared.VIEW]||"";
@@ -58,16 +58,20 @@ export function helpScreenSync(){ const line=node("hFirst","hfirst"), foot=node(
   foot.hidden=!host;
   const title=$(TITLE[key]);
   const due=S.helpLine!==false&&!lineSeen(key)&&!!title&&!blocked();
-  if(!due){ if(!line.hidden) line.hidden=true; return; }
+  if(!due){ line.classList.toggle("ghost",!!title&&line.dataset.k===key&&!line.hidden); if(!line.classList.contains("ghost")) line.hidden=true; return; }   /* #158 layout: on the same screen the slot stays (only invisible), so nothing moves; it collapses when you go elsewhere */
   if(title.nextElementSibling!==line) title.after(line);
   if(line.dataset.k!==key){ line.dataset.k=key; putHTML(line,raw(`Press ${kbd} for help with ${esc(sc.title)}`)); }
-  line.hidden=false; }
+  line.classList.remove("ghost"); line.hidden=false; }
 /** Any key or click clears the line and is not touched: it still does its normal job. */
 export function firstLineClear(/** @type {string=} */ only){ const line=$("#hFirst");
-  if(only&&(!line||line.hidden||line.dataset.k!==only)){ lineMark(only); return; }   /* the line up at the key or click is seen; a newer screen's line stays */
-  if(!line||line.hidden) return; const k=line.dataset.k; line.hidden=true; if(k) lineMark(k); }
+  if(only&&(!line||!lineOn(line)||line.dataset.k!==only)){ lineMark(only); return; }   /* the line up at the key or click is seen; a newer screen's line stays */
+  if(!line||!lineOn(line)) return; const k=line.dataset.k; line.classList.add("ghost"); if(k) lineMark(k); }   /* invisible, its height kept: nothing moves */
+/** Is the line visible (not collapsed, not the invisible slot)? */
+const lineOn=(/** @type {HTMLElement} */ l)=>!l.hidden&&!l.classList.contains("ghost");
+/** Forget which lines were seen (tests). */
+export function helpLineReset(){ MEM.clear(); try{ Object.keys(localStorage).filter(k=>k.startsWith("creaite-help-line-")).forEach(k=>localStorage.removeItem(k)); }catch(e){ /* none */ } }
 /** The key of the line that is showing right now ("" when none). */
-const showing=()=>{ const l=$("#hFirst"); return l&&!l.hidden?l.dataset.k||"":""; };
+const showing=()=>{ const l=$("#hFirst"); return l&&lineOn(l)?l.dataset.k||"":""; };
 
 /** BL-231: run once by src/main.js. */
 export function bootHelpScreen(){
