@@ -103,7 +103,7 @@ class LiveCurrentState(LiveBrowserCase):
                 seen["now"] = b.hit_report('[data-cure="cancel"]')
                 reached = "click:cancel" in seen["events"]
                 if attempt == 2 or reached:                      # the button got the click and did nothing: a real fault
-                    raise AssertionError(f"Cancel on a changed editor did not ask (attempt {attempt}, {where}): {seen}\n{e}")
+                    raise AssertionError(f"Cancel on a changed editor did not ask (attempt {attempt}, {where}): {seen}\n{e}") from e
 
     def save(self):
         b = self.b

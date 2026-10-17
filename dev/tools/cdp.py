@@ -262,15 +262,21 @@ class Browser:
 
     def box(self, selector):
         """The centre of the first element matching `selector`, scrolled into view, or None."""
-        return self.eval("""(()=>{ const e=document.querySelector(%s); if(!e) return null; e.scrollIntoView({block:"center",inline:"center"});
-          const r=e.getBoundingClientRect(); return r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()""" % json.dumps(selector))
+        return self.eval("""(()=>{ const e=document.querySelector(%s); if(!e) return null;
+          e.scrollIntoView({block:"center",inline:"center"});
+          const r=e.getBoundingClientRect(); return r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()"""
+                         % json.dumps(selector))
 
     def hit_report(self, selector):
         """What is at the centre of `selector` and how the element looks, for a click that missed (#152): the element at that point,
         the element's rectangle, its pointer-events, visibility and opacity, the viewport, the scroll position."""
-        return self.eval("""(s=>{ const t=document.querySelector(s); if(!t) return {missing:true}; const r=t.getBoundingClientRect(), cs=getComputedStyle(t);
-          const x=r.left+r.width/2, y=r.top+r.height/2, e=document.elementFromPoint(x,y), d=n=>n?n.tagName+(n.id?'#'+n.id:'')+(n.className&&n.className.split?'.'+n.className.split(' ').join('.'):''):null;
-          return {at:[Math.round(x),Math.round(y)], rect:[r.left,r.top,r.width,r.height].map(Math.round), element:d(e), parents:e?[e.parentElement,e.parentElement&&e.parentElement.parentElement].map(d):[],
+        return self.eval("""(s=>{
+          const t=document.querySelector(s); if(!t) return {missing:true};
+          const r=t.getBoundingClientRect(), cs=getComputedStyle(t);
+          const x=r.left+r.width/2, y=r.top+r.height/2, e=document.elementFromPoint(x,y);
+          const d=n=>n?n.tagName+(n.id?'#'+n.id:'')+(n.className&&n.className.split?'.'+n.className.split(' ').join('.'):''):null;
+          return {at:[Math.round(x),Math.round(y)], rect:[r.left,r.top,r.width,r.height].map(Math.round), element:d(e),
+            parents:e?[e.parentElement,e.parentElement&&e.parentElement.parentElement].map(d):[],
             isTarget:!!(e&&(e===t||t.contains(e))), pointerEvents:cs.pointerEvents, visibility:cs.visibility, opacity:cs.opacity,
             viewport:[innerWidth,innerHeight], scroll:[scrollX,scrollY], docHeight:document.documentElement.scrollHeight}; })(%s)""" % json.dumps(selector))
 
@@ -291,7 +297,10 @@ class Browser:
                 pos = again or pos
         if not pos:
             raise RuntimeError(f"can't click {selector}: it has no size (hidden?)")
-        hit = self.eval("""(()=>{ const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s); return !!(e&&t&&(t===e||t.contains(e)||(%s&&e.contains(t)))); })()""" % (pos["x"], pos["y"], json.dumps(selector), "false" if exact else "true"))
+        hit = self.eval("""(()=>{
+          const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s);
+          return !!(e&&t&&(t===e||t.contains(e)||(%s&&e.contains(t)))); })()"""
+                        % (pos["x"], pos["y"], json.dumps(selector), "false" if exact else "true"))
         if not hit:
             raise RuntimeError(f"can't click {selector}: something else is on top of it\n{self.hit_report(selector)}")
         for kind in ("mouseMoved", "mousePressed", "mouseReleased"):
@@ -303,7 +312,8 @@ class Browser:
         element to the centre of another (plus `offset`). With release=False it stops over the target, button still down, so a
         test can look at the drag in progress; finish it with mouse_up()."""
         rect = """(s=>{ const e=document.querySelector(s); if(!e) return null; const r=e.getBoundingClientRect();
-          return r.width&&r.height&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })(%s)"""
+          return r.width&&r.height&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth
+            ?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })(%s)"""
         b = self.box(to_selector)                                  # scroll the target into view first, then look at both without moving the page
         a = self.eval(rect % json.dumps(from_selector))
         if a is None:
