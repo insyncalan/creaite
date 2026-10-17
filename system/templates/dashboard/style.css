@@ -549,6 +549,7 @@ button.chip{cursor:pointer} button.chip:hover{background:var(--sunk)}
 /* ===== #193: the one field (inputs and selects): one height (--ctl-h), radius (--ctl-r), padding, ground and text size, whatever the page.
    The listed contexts take it; each keeps only its own width and margin. Deliberate variants outside it: the large search (--ctl-h-lg),
    a field inside a bar that draws the border (.actsearch, .sp-box), an in-place rename (.vren), Help's own palette (.hp-refidx) ===== */
+#personDlg select,
 .wbulk select,
 .wbulk .dwrap input,
 .saveview input,
