@@ -1,12 +1,12 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index b41bd889..deee5426 100644
+index b41bd889..6bae2c58 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -2321,6 +2321,7 @@ class Run:
                  continue
              self.session = ev.get("session_id") or self.session
              kind = ev.get("type")
-+            self._usage_seen(ev, kind)                  # #197: the model and the start load, counts only
++            self._usage_seen(ev, kind)                  # #197: the model, the start load and skill names, counts only
              if kind == "assistant":
                  self._on_assistant(ev)
              elif kind == "user":
@@ -26,29 +26,40 @@ index b41bd889..deee5426 100644
          release_sweep_lock([self.id], "timed out" if getattr(self, "timed_out", False) else "stopped" if self.stop
                             else "ended")                  # BL-328: however the run ended (finished, stopped, refused, failed)
          if self.plain:                                    # BL-326: one plain closure line, for success, failure and Stop
-@@ -2641,6 +2644,29 @@ class Run:
+@@ -2641,6 +2644,40 @@ class Run:
              swallowed("observe", e)
          # ===== end BL-228 =====
  
 +    # ===== #197 (v2.1.1): run usage monitor =====
 +    def _usage_seen(self, ev, kind):
-+        """The model (system init event) and the start load (the first assistant event's input and cache tokens). Never raises."""
++        """The model (system init event), the start load (the first assistant event's input and cache tokens) and, from every
++        assistant event, the names of the skills it called (names only, never their arguments; kept once each, in order).
++        Each part has its own guard: a fault is swallowed and the run and its events are unchanged. Never raises."""
++        if kind not in ("system", "assistant"):
++            return
 +        try:
++            import usage_log
 +            if kind == "system" and ev.get("subtype") == "init":
-+                import usage_log
 +                self.usage_model = usage_log.model_of(ev)
 +            elif kind == "assistant" and not getattr(self, "usage_start", 0):
-+                import usage_log
 +                self.usage_start = usage_log.start_tokens_of(ev)
 +        except Exception as e:  # noqa: BLE001  the monitor never touches the run
 +            swallowed("usage", e)
++        if kind == "assistant":
++            try:
++                seen = self.__dict__.setdefault("usage_skills", {})       # a dict keeps the names once each, in order
++                for name in usage_log.skills_of(ev):
++                    seen.setdefault(name, None)
++            except Exception as e:  # noqa: BLE001  a malformed event adds no skills
++                swallowed("usage", e)
 +
 +    def _usage_record(self):
 +        """One line in run-usage.jsonl for this run: finished, failed or stopped (stopped=True). Counts only. Never raises."""
 +        try:
 +            kind, label = usage_kind(self)
 +            run_usage(kind, getattr(self, "usage_result", None), label=label, model=getattr(self, "usage_model", ""),
-+                      seconds=time.time() - self.started, start_tokens=getattr(self, "usage_start", 0), stopped=bool(self.stop))
++                      seconds=time.time() - self.started, start_tokens=getattr(self, "usage_start", 0), stopped=bool(self.stop),
++                      skills=list(getattr(self, "usage_skills", None) or {}))
 +        except Exception as e:  # noqa: BLE001
 +            swallowed("usage", e)
 +    # ===== end #197 =====
@@ -56,7 +67,7 @@ index b41bd889..deee5426 100644
      def record(self, running=False, stopped=False):
          """Keep the exchange in the chat's history file as it happens (BL-20, BL-37). BL-262: under the run's lock, with how many
          of its events the history now reaches, so a page that draws the history asks only for the events after those."""
-@@ -2653,6 +2679,47 @@ class Run:
+@@ -2653,6 +2690,47 @@ class Run:
              self.recorded = len(self.events)
  
  
@@ -104,7 +115,7 @@ index b41bd889..deee5426 100644
  # ===== BL-257 (sprint-ask-flow): queued messages =====
  # A message sent while a run is going is queued here, with the chat it belongs to, in system/staging/ask/queue/queue.json (one queue:
  # one run at a time), so a reload or a closed page keeps it. When a run ends, the server starts the next one itself, in that chat,
-@@ -3586,7 +3653,7 @@ def vip_check(how="check"):
+@@ -3586,7 +3664,7 @@ def vip_check(how="check"):
          prompt = vip_prompt(since, vips, zone, parts)
          cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
                             "--disallowedTools", ",".join(vip_deny())], prompt)            # #91: after `--`; no --tools (#116)
@@ -113,7 +124,7 @@ index b41bd889..deee5426 100644
          try:
              r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
              found, why, cost = vip_reply(r)
-@@ -3595,6 +3662,7 @@ def vip_check(how="check"):
+@@ -3595,6 +3673,7 @@ def vip_check(how="check"):
          except OSError:
              why = VIP_NOT_STARTED
          took = time.monotonic() - began

@@ -1,9 +1,9 @@
 diff --git a/dev/tests/test_run_usage_hooks.py b/dev/tests/test_run_usage_hooks.py
 new file mode 100644
-index 00000000..8de4cd16
+index 00000000..f8fe0aa6
 --- /dev/null
 +++ b/dev/tests/test_run_usage_hooks.py
-@@ -0,0 +1,216 @@
+@@ -0,0 +1,268 @@
 +"""#197 run usage monitor, the guarded hooks in live_server.py: the run engine (Run.read's events, _on_result, _done) and the
 +VIP check each append one counts-only line to system/staging/run-usage.jsonl. Fails without the hooks.
 +
@@ -42,6 +42,11 @@ index 00000000..8de4cd16
 +spec = json.loads(sys.stdin.read())
 +if spec.get("broken"):                       # a usage_log that can't record: the run must end as it always does
 +    sys.modules["usage_log"] = object()
++if spec.get("skills_raise"):                 # a skills_of that raises: swallowed, the run and its events unchanged
++    import usage_log
++    def boom(ev):
++        raise RuntimeError("x")
++    usage_log.skills_of = boom
 +
 +class Proc:
 +    def __init__(self, lines, code):
@@ -81,7 +86,9 @@ index 00000000..8de4cd16
 +    run = make(spec.get("attrs") or {})
 +    run.proc = Proc("".join(json.dumps(e) + "\n" for e in spec["events"]), spec.get("returncode", 0))
 +    L.Run.read(run)
-+    print(json.dumps({"types": [e["type"] for e in run.events]}))
++    for e in run.events:
++        e.pop("done_at", None)
++    print(json.dumps({"types": [e["type"] for e in run.events], "events": run.events, "steps": run.steps, "said": run.said}))
 +'''
 +
 +VIP_FAKE = r"""#!/usr/bin/env python3
@@ -95,6 +102,24 @@ index 00000000..8de4cd16
 +                  "usage": {"input_tokens": 30, "output_tokens": 120, "cache_read_input_tokens": 15000,
 +                            "cache_creation_input_tokens": 900}}))
 +"""
++
++
++def skill(i, name, args="Mark ABC-A-003 done, Jane Doe asked"):
++    return {"type": "tool_use", "id": i, "name": "Skill", "input": {"skill": name, "args": args}}
++
++
++def said(*parts):
++    return {"type": "assistant", "session_id": "s-1", "message": {"content": list(parts)}}
++
++
++def ran(i):
++    return {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": i, "content": "ok"}]}}
++
++
++TWO_SKILLS = [INIT, FIRST, said(skill("k1", "cx-review")), ran("k1"), said(skill("k2", "cx-edit"), skill("k3", "cx-review")),
++              ran("k2"), ran("k3"), RESULT]
++ODD = said({"type": "tool_use", "id": "k9", "name": "Skill", "input": {"skill": ["not", "a", "name"]}},
++           {"type": "tool_use", "id": "k8", "name": "Skill", "input": {"skill": "   "}})
 +
 +
 +def with_usage_log(v):
@@ -139,6 +164,33 @@ index 00000000..8de4cd16
 +                          "input": 12, "output": 340, "cache_read": 26000, "cache_create": 500, "cost_usd": 0.0412,
 +                          "start_tokens": 13502, "stopped": False})
 +        self.assertGreaterEqual(ln["seconds"], 4.0)                    # wall time from the run's start
++
++    def test_skills_are_recorded_once_each_in_order_with_no_arguments(self):
++        self.feed({"events": TWO_SKILLS})
++        (ln,) = usage_lines(self.v)
++        self.assertEqual(ln["skills"], ["cx-review", "cx-edit"])
++        raw = (self.v.root / "system" / "staging" / "run-usage.jsonl").read_text()
++        for word in ("Mark ABC", "Jane", "args"):
++            self.assertNotIn(word, raw)
++
++    def test_a_run_with_no_skills_records_an_empty_list(self):
++        self.feed({"events": [INIT, FIRST, RESULT]})
++        (ln,) = usage_lines(self.v)
++        self.assertEqual(ln["skills"], [])
++
++    def test_a_malformed_skill_event_changes_nothing_but_adds_no_name(self):
++        events = [INIT, FIRST, ODD, ran("k9"), ran("k8"), RESULT]
++        on = self.feed({"events": events})
++        (ln,) = usage_lines(self.v)
++        self.assertEqual(ln["skills"], [])
++        off = self.feed({"broken": True, "events": events})          # the same run with the monitor out of action
++        self.assertEqual(on, off)
++
++    def test_a_skills_fault_never_touches_the_run(self):
++        plain = self.feed({"broken": True, "events": TWO_SKILLS})
++        raising = self.feed({"skills_raise": True, "events": TWO_SKILLS})
++        self.assertEqual(raising, plain)
++        self.assertEqual(usage_lines(self.v)[-1]["skills"], [])     # still one line, with no names
 +
 +    def test_no_text_in_the_file(self):
 +        self.feed({"events": [INIT, FIRST, RESULT]})
