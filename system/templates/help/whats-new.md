@@ -2,6 +2,31 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.2.0
+
+Notes become a place you can write in freely, creaite's AI reaches the text you select and the health you set, Help is rewritten short and searchable, and the screens you use all day get calmer.
+
+
+- **Help is shorter and you can find things in it.** One search over all of Help, a home of the twelve jobs, a ? key that opens help for the screen you are on, a one-line pointer the first time you visit each screen, a What's new tab with the notes for every release, and a one-page first-day card.
+- **AI on the text you select.** A small sparkle in the margin, and a bar that appears when you hover, with Turn into and Format as well as the AI actions. It works in Notes and in Current state.
+- **Notes save by themselves** about two seconds after you stop typing. There is no draft step, and Undo steps back one change at a time.
+- **Notes focus mode.** A quiet writing view, with the same note and cursor, and clear rules for how it closes.
+- **Links in every editor.** Add, change and remove a link anywhere you write text, and see links wherever text is shown.
+- **One editor everywhere.** The plain version and Draft email, report pages and the capture drawer join the same editor and toolbar; Current state gets a checklist and a focus mode.
+- **Generate current state, further.** Steer a draft again and again, keep versions and refine.
+- **Health with a ✦.** The sparkle beside a project's health, on its page and on the weekly report's health row, suggests the health and its reason from the tracker's facts, with the evidence shown. It is a draft; nothing changes until you accept it.
+- **The weekly report gets out of your way.** Scroll down and the search bar and title block go at once, leaving one slim bar with zoom, Export and Approve and file; they return only at the top of the report. The report has nearly the whole window.
+- **Meeting Prep on one page.** A single prep page, a peek when you hover on a meeting, and the agenda as a document you can edit.
+- **A calmer Today.** Saturday and Sunday hide unless something is planned, past days fold into one small icon, the Note link and Prepare pill are gone, a meeting's title opens its Prepare popup, and dates are smaller. Your commitments shows five items, then "Show more". The section that was called "To decide" is now Intake and Review, and folds like the others.
+- **Review shows age that means something,** in quiet text, and marks only the one that is different.
+- **Friday's Close the day card shows the weekend.** Anything planned for Saturday and Sunday appears under the next working day.
+- **A left side bar you can read.** Visible labels, a clear current page, grouped pages, a narrower and tighter bar, the wordmark as its toggle, and hover flyouts on Projects and Work.
+- **One hover standard.** Every tooltip, card and menu that opens on hover waits the same time.
+- **Health bars on Portfolio** have a legend and a tooltip showing the week and its reason.
+- **Work board.** You can resize the board's width, and the choice is remembered.
+- **ask creaite is steadier.** Esc closes the panel but never stops a running request (only Stop does), and a long old reply no longer rewrites itself on screen when you reopen it. One Esc now closes an item's peek (it took two).
+- **Calendar import and the sweep are tidier.** The sweep reads only today and the future for meetings, finished meetings no longer say "Not happened yet", and a window left open past midnight keeps today's date.
+
 ## creaite 2.1.0
 
 Reports, minutes and notes now live inside creaite, and the editor, Today and a handful of annoyances got better.
