@@ -338,12 +338,17 @@ class LogEdges(SentCase):
         self.assertEqual(len(recs), len(recs0) + 1, "the chase is recorded once, not again on the retry")
         self.assertEqual(sorted(recs[-1]["ids"]), sorted(picked))
 
-    def test_the_review_menu_says_draft_email_for_an_overdue_item(self):
-        """#153 (Alan): no 'Chase <name>' label left; the overdue item's menu offers Draft email twice at most."""
+    def test_the_review_menu_has_two_plain_draft_email_items_for_an_overdue_item(self):
+        """#153 (Alan): no 'Chase <name>' label; both items are plain Draft email and each opens the right mode in the popup."""
         b = self.b
         labels = b.eval(f"cxWork('actions',{self.s_scripts!r}).map(x=>x.label||'')")
         self.assertFalse([x for x in labels if x.startswith("Chase")], labels)
-        self.assertEqual(len([x for x in labels if x.startswith("Draft email")]), 2, labels)
+        self.assertEqual(labels.count("Draft email"), 2, labels)
+        for index, mode in ((0, "update"), (1, "chase")):
+            b.eval(f"cxWork('actions',{self.s_scripts!r}).filter(x=>x.label==='Draft email')[{index}].run()")
+            b.wait("document.getElementById('deDlg').open")
+            self.assertEqual(b.eval("DE.mode"), mode)
+            b.eval("document.getElementById('deDlg').close()")
 
     def test_undo_after_the_entry_is_gone_says_so(self):
         """Finding 7: an Undo for something already applied or undone says so instead of doing nothing."""

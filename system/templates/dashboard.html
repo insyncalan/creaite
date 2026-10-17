@@ -41650,7 +41650,7 @@ ${s5}`;
     const who2 = k5 === "decisions" ? null : pkWho(x5.o);
     if (who2 && PERS().some((p6) => p6.name === who2)) {
       out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2) });
-      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: `Draft email: reminder to ${who2}`, icon: "mail", run: () => openDraftEmail(who2, "chase") });
+      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2, "chase") });
     }
     return out;
   }

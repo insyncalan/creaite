@@ -389,7 +389,7 @@ Where: People › a person
 3. Untick any item you don't want in it. Add **Include latest update**, or set **Please reply by**, if you need to.
 4. Change the wording in the preview if you like (select some words for **Improve** or **Tone**), then press **Copy email** (or **Copy as plain text**) and paste it into Outlook.
 5. For someone outside your own email domains, items not marked client-visible start unticked and are tagged "internal". creaite never sends the email or makes an Outlook draft.
-6. **Chase overdue items** (at the top of the email) turns it into a reminder of what is overdue. The tone steps up with how often you have chased: a first reminder, a second, then a firmer one. After you send it, press **I sent it**: creaite notes the items and the date (nothing else), so the next chase knows ("chased 03-10-2026, once") and their page says so. Right-click an overdue item for **Draft email: reminder to** its owner.
+6. **Chase overdue items** (at the top of the email) turns it into a reminder of what is overdue. The tone steps up with how often you have chased: a first reminder, a second, then a firmer one. After you send it, press **I sent it**: creaite notes the items and the date (nothing else), so the next chase knows ("chased 03-10-2026, once") and their page says so. Right-click an overdue item and its menu shows two **Draft email** entries: the first opens an update request, the second the chase (the popup's mode switch tells them apart).
 7. **Polish** (with Warm, Neutral or Firm) rewords the opening paragraph only; the table, subject and addresses are never touched. Claude's version is shown beside yours: **Use this** or **Keep mine**.
 
 Or say: `what's open with Sara Example?` to see the list first.
