@@ -863,9 +863,10 @@ class TheReviewOf62593f6(Base):
         self.assertEqual(got, ["the internal health reason"])
 
     def test_decoded_text_keeps_its_punctuation_for_the_marker(self):
-        ok = "Costs are internal, only the licence is external &amp; billed separately."
-        for got in self.gate([ok]).values():
-            self.assertEqual(got, [[], [], []])                    # "internal, only" isn't the marker once decoded
+        oks = ["Costs are internal, only the licence is external &amp; billed separately.",   # "internal, only" isn't the marker
+               "See https://client.example.com/documents%2Fplan for the plan."]           # an external page's path isn't creaite's
+        for got in self.gate(oks).values():
+            self.assertEqual(got, [[], [], []])
         self.assert_found([("Note: health%5Fdiff.", MARKER), ("Note: internal%2Donly.", MARKER)])
         link = "See [plan](https://client.example.com/documents/plan) and more"         # the documents/ safeguard, decoded too
         self.assertEqual(self.findings(f"Progress. {link} &amp; less."), [])
