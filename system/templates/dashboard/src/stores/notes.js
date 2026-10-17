@@ -11,6 +11,7 @@
 import { signal } from "@preact/signals";
 import { D } from "../core/page.js";
 import { api, oneLine, viaServer } from "../core/server.js";
+import { undoDrop } from "../core/undoSteps.js";
 
 /** @typedef {{path: string, file: string, title: string, created: string, updated: string, tags: string[], pinned: boolean,
     confidential: boolean, date: string, with: string[], kind: string, mod: string, links: string[], items: string[],
@@ -162,6 +163,7 @@ export async function closeNote() {
 /** #124: the note at `path` was moved to the archive: forget it without a save (its file has gone, so a save would only fail).
     @param {string} path */
 export function noteGone(path) {
+  undoDrop(path);
   if (noteHeld.value === path) noteHeld.value = null;
   if (!noteCur.value || noteCur.value.path !== path) return;
   clearTimeout(ses.saveT);
@@ -464,6 +466,7 @@ async function renameToTitle(code, path, base, old) {
   const r = await api("/api/notes/rename", { path, base, old });
   if (!r || !r.ok) { if (r && r.message) notesMsg.value = oneLine(r.message); return; }
   if (!r.renamed) return;
+  undoDrop(r.from);
   const all = allNotes();
   all[code] = (all[code] || []).filter(x => x.path !== r.from);
   keepSummary(code, r.note);

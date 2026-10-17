@@ -13,6 +13,8 @@ import { Extension, Plugin, PluginKey, closeHistory } from "tiptap";
 export const UNDO_DEPTH = 500;
 /** A transaction with this meta is one undo step of its own: `editor.chain().focus().setMeta(OWN_STEP, true)…`. */
 export const OWN_STEP = "cxStep";
+/** The same, but the next change joins it instead of starting another (the slash menu's deletion of "/query", before its row's insert). */
+export const OWN_HEAD = "cxStepHead";
 /** How many closed notes keep their history. */
 export const STASH_MAX = 5;
 
@@ -23,7 +25,7 @@ function changeKind(tr) {
   return put === 0 && cut > 0 ? "del" : "ins";
 }
 /** @param {any} tr */
-const ownStep = tr => !!tr.getMeta(OWN_STEP) || !!tr.getMeta("paste") || ["paste", "cut", "drop"].includes(tr.getMeta("uiEvent"));
+const ownStep = tr => !!tr.getMeta(OWN_STEP) || !!tr.getMeta(OWN_HEAD) || !!tr.getMeta("paste") || ["paste", "cut", "drop"].includes(tr.getMeta("uiEvent"));
 /** The history plugin of a state. @param {any} state */
 const histPlugin = state => state.plugins.find((/** @type {any} */ p) => /^history\$/.test(p.key));
 /** Is this transaction an undo or a redo? @param {any} state @param {any} tr */
@@ -31,30 +33,39 @@ const isHistoryTr = (state, tr) => { const p = histPlugin(state); return !!(p &&
 
 const key = new PluginKey("cxUndoSteps");
 /** The extension Notes passes. */
-export const cxUndoSteps = Extension.create({ name: "cxUndoSteps", addProseMirrorPlugins: () => [new Plugin({ key,
+export const cxUndoSteps = Extension.create({ name: "cxUndoSteps", addProseMirrorPlugins: () => { let ev = /** @type {any} */ (null);
+  return [new Plugin({ key,
+  view: view => { ev = view; return {}; },
   state: {
-    init: () => ({ last: /** @type {string|null} */ (null), closeNext: false }),
+    init: () => ({ last: /** @type {string|null} */ (null), closeNext: false, head: false }),
     apply: (tr, v, _old, state) => {
-      if (!tr.docChanged) return v;
-      if (isHistoryTr(state, tr)) return { last: null, closeNext: false };
+      if (!tr.docChanged || tr.getMeta("appendedTransaction")) return v;          /* a transaction a plugin appended (the trailing paragraph, the link scrub) belongs to the change that caused it */
+      if (isHistoryTr(state, tr)) return { last: null, closeNext: false, head: false };
       if (tr.getMeta("addToHistory") === false) return v;
-      const own = ownStep(tr);
-      return { last: own ? null : changeKind(tr), closeNext: own };
+      const own = ownStep(tr), head = !!tr.getMeta(OWN_HEAD);
+      return { last: own ? null : changeKind(tr), closeNext: own && !head, head };
     } },
   /* The history plugin reads a transaction's close-history mark when it applies it, after this filter: marking it here puts
      the change in a new step. (A filter that only reads and marks; it never refuses.) */
   filterTransaction(tr, state) {
     if (!tr.docChanged || tr.getMeta("addToHistory") === false || isHistoryTr(state, tr)) return true;
+    if (ev && state !== ev.state) return true;          /* an appended transaction is filtered against the state after its root change, not the editor's own */
     const v = key.getState(state);
     if (!v) return true;
-    if (ownStep(tr) || v.closeNext || (v.last && changeKind(tr) !== v.last)) closeHistory(tr);
+    const own = ownStep(tr);
+    if (own && v.head) {          /* the change after a slash menu's "/query" deletion joins that deletion: one step. The history groups a change with the one before it only when it touches it (a block put after the paragraph does not), unless both carry the same composition id: so it gets the one the history already holds */
+      const p = histPlugin(state);
+      if (p) tr.setMeta("composition", p.getState(state).prevComposition);
+      return true;
+    }
+    if (own || v.closeNext || (v.last && changeKind(tr) !== v.last)) closeHistory(tr);
     return true;
-  } })] });
+  } })]; } });
 
 /* ----- the history of a closed note, kept in memory (the last STASH_MAX notes) ----- */
 /** @typedef {{map: any, step: ({ctor: any, json: any})|undefined, selection: any, mirrorOffset: any}} PackedItem */
 /** @typedef {{items: PackedItem[], eventCount: number}} PackedBranch */
-/** @typedef {{doc: string, item: any, done: PackedBranch, undone: PackedBranch}} Stash */
+/** @typedef {{doc: string, base: string, item: any, done: PackedBranch, undone: PackedBranch}} Stash */
 /** @type {Map<string, Stash>} */
 const stash = new Map();
 
@@ -63,8 +74,8 @@ const pack = b => ({ eventCount: b.eventCount, items: b.items.flatten().map((/**
   step: i.step ? { ctor: i.step.constructor, json: i.step.toJSON() } : undefined, selection: i.selection, mirrorOffset: i.mirrorOffset })) });
 
 /** Put the history of `editor` (about to be destroyed) by for the note at `path`. Nothing is kept when there is nothing to undo or redo.
-    @param {string} path @param {any} editor */
-export function undoStash(path, editor) {
+    @param {string} path @param {any} editor @param {string} base the file's base as last saved */
+export function undoStash(path, editor, base) {
   stash.delete(path);
   if (!path || !editor || editor.isDestroyed) return;
   const st = editor.state, p = histPlugin(st);
@@ -72,31 +83,32 @@ export function undoStash(path, editor) {
   const hs = p.getState(st);
   if (!hs.done.eventCount && !hs.undone.eventCount) return;
   const first = hs.done.items.length ? hs.done.items.get(0) : hs.undone.items.get(0);
-  stash.set(path, { doc: JSON.stringify(st.doc.toJSON()), item: first.constructor, done: pack(hs.done), undone: pack(hs.undone) });
+  stash.set(path, { base: base || "", doc: JSON.stringify(st.doc.toJSON()), item: first.constructor, done: pack(hs.done), undone: pack(hs.undone) });
   while (stash.size > STASH_MAX) stash.delete(/** @type {string} */ (stash.keys().next().value));
 }
 
 /** Give the note at `path` its history back, if the text `editor` opened with is exactly the text it was closed with (the file is
-    unchanged); otherwise the history stays empty. The stash is used once. @param {string} path @param {any} editor @returns {boolean} */
-export function undoTake(path, editor) {
+    unchanged, and its base is the one last saved); otherwise the history stays empty. The stash is used once.
+    @param {string} path @param {any} editor @param {string} base @returns {boolean} */
+export function undoTake(path, editor, base) {
   const s = stash.get(path);
   stash.delete(path);
   if (!s || !editor || editor.isDestroyed) return false;
   const st = editor.state, p = histPlugin(st);
-  if (!p || JSON.stringify(st.doc.toJSON()) !== s.doc) return false;
+  if (!p || (base || "") !== s.base || JSON.stringify(st.doc.toJSON()) !== s.doc) return false;
   const hs = p.getState(st), schema = st.schema;
   /** @param {PackedBranch} b */
-  const unpack = b => new hs.done.constructor(hs.done.items.append(b.items.map(i => {
+  const unpack = (b, from) => new hs.done.constructor(from.append(b.items.map(i => {
     const it = Object.create(s.item.prototype);
     it.map = i.map; it.step = i.step ? i.step.ctor.fromJSON(schema, i.step.json) : undefined; it.selection = i.selection; it.mirrorOffset = i.mirrorOffset;
     return it;
   })), b.eventCount);
   try {
-    const next = new hs.constructor(unpack(s.done), unpack(s.undone), null, 0, -1);
+    const next = new hs.constructor(unpack(s.done, hs.done.items), unpack(s.undone, hs.undone.items), null, 0, -1);
     editor.view.dispatch(st.tr.setMeta(p, { redo: false, historyState: next }).setMeta("addToHistory", false));
     return true;
   } catch (e) { return false; }
 }
-/** Forget every kept history. */
-export function undoForget() { stash.clear(); }
+/** Forget the kept history of the note at `path` (it was deleted, archived or renamed). @param {string} path */
+export function undoDrop(path) { stash.delete(path); }
 /* ===== end #175 ===== */

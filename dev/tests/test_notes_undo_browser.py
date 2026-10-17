@@ -254,7 +254,8 @@ class NotesUndo(LiveBrowserCase):
         b.eval("go('cockpit','ABC')")
         self.make("Picker")
         self.type_end("see [[Zet")
-        b.wait("!!document.getElementById('ntpick')&&document.querySelectorAll('#ntpick [role=option]').length>0", 10)
+        b.wait("%s==='see [[Zet'" % TEXT, 10)
+        b.wait("(document.querySelector('#ntpick [role=option][aria-selected=true]')||{textContent:''}).textContent.includes('Zeta target')", 10)
         b.key("Enter")
         self.assertIn("[[Zeta target]]", self.text())
         self.undo()
@@ -273,6 +274,107 @@ class NotesUndo(LiveBrowserCase):
         self.assertEqual(self.text(), "Clearly: Sandbox access granted yesterday.")
         self.undo()
         self.assertEqual(self.text(), "Sandbox access granted yesterday.", "one undo puts the whole text back")
+        self.undo()
+        self.assertEqual(self.text(), "")
+
+    # ---- a block put in at the end is one undo: the editor's own follow-up changes (the trailing paragraph, the link scrub) are not steps ----
+    def block_case(self, title, do, expect_text=None):
+        """Type a line, pause, run `do` (JS), then one undo must give back exactly the document from before it, and a second the empty note."""
+        b = self.b
+        self.make(title)
+        self.burst("hello")
+        before = b.eval("JSON.stringify(" + ED + ".getJSON())")
+        b.eval(do)
+        b.pump(0.1)
+        self.assertNotEqual(b.eval("JSON.stringify(" + ED + ".getJSON())"), before, "the block went in")
+        self.undo()
+        self.assertEqual(b.eval("JSON.stringify(" + ED + ".getJSON())"), before, "one undo removes the whole block, no stray paragraph left")
+        self.undo()
+        self.assertEqual(self.text(), "")
+
+    def test_a_table_from_a_command_is_one_undo(self):
+        self.block_case("Table cmd", ED + ".chain().focus('end').setMeta('cxStep',true).insertTable({rows:3,cols:3,withHeaderRow:true}).run()")
+
+    def test_a_pasted_table_at_the_end_is_one_undo(self):
+        self.block_case("Table paste", "(()=>{ const dt=new DataTransfer(); dt.setData('text/html','<table><tr><th>a</th><th>b</th></tr><tr><td>1</td><td>2</td></tr></table>'); "
+                        "document.querySelector('.nbody').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); return true; })()")
+
+    def test_a_template_or_ai_replacement_ending_in_a_block_is_one_undo(self):
+        self.block_case("Block md", ED + ".chain().focus('end').setMeta('cxStep',true).insertContent('## Heading\\n\\n- a\\n- b\\n\\n| x | y |\\n|---|---|\\n| 1 | 2 |', {contentType:'markdown'}).run()")
+
+    def test_a_link_the_guard_scrubs_is_one_undo(self):
+        self.block_case("Link scrub", ED + ".chain().focus('end').setMeta('cxStep',true).insertContent([{type:'text',text:'bad link',marks:[{type:'link',attrs:{href:'javascript:alert(1)'}}]},"
+                        "{type:'text',text:' tail'}]).run()")
+
+    def test_a_slash_menu_table_is_one_undo(self):
+        b = self.b
+        self.make("Slash table")
+        self.burst("hello")
+        self.burst(" /table")
+        b.wait("!!document.querySelector('.slashmenu [role=option], [role=listbox] [role=option]')", 10)
+        b.key("ArrowDown")
+        b.key("ArrowUp")
+        b.key("Enter")
+        b.wait("!!document.querySelector('.nbody table')", 10)
+        self.undo()
+        self.assertEqual(self.text(), "hello /table", "one undo takes the table and the deleted /table together")
+        self.assertFalse(b.eval("!!document.querySelector('.nbody table')"))
+        self.undo()
+        self.assertEqual(self.text(), "hello")
+
+    # ---- the history belongs to the note, whatever its title does or whatever happens to its file ----
+    def test_a_rename_then_switching_away_and_back_keeps_the_history(self):
+        b = self.b
+        self.make("Other two")
+        self.make("Rename keep")
+        self.burst("first")
+        self.burst(" second")
+        b.eval("(()=>{ const t=document.getElementById('noteTitle'); t.focus(); t.value='Renamed keep'; t.dispatchEvent(new Event('input',{bubbles:true})); t.blur(); return true; })()")
+        b.wait("noteCur.value.note.title==='Renamed keep'&&noteCur.value.path.endsWith('Renamed keep.md')", 15)
+        b.wait("noteSave.value.state==='saved'", 15)
+        self.switch_away_and_back("Other two")
+        b.wait("noteCur.value.note.title==='Renamed keep'", 10)
+        self.assertEqual(self.text(), "first second")
+        self.focus_end()
+        self.undo()
+        self.assertEqual(self.text(), "first", "after a rename and a switch, Cmd+Z still undoes")
+
+    def test_a_note_deleted_and_made_again_with_the_same_text_has_no_history(self):
+        b = self.b
+        self.make("Other three")
+        self.make("Gone and back")
+        f = self.notes_dir() / "Gone and back.md"
+        self.burst("same")
+        self.burst(" text")
+        self.undo()
+        self.wait_text(f, "same")
+        b.wait("noteSave.value.state==='saved'", 10)
+        path = b.eval("noteCur.value.path")
+        other = b.eval("notesList.value.find(n=>n.title==='Other three').path")
+        self.open_note(other)
+        self.assertEqual(b.eval("noteGone(%s)" % json.dumps(path)), None)                # archived or deleted: the page forgets it
+        self.open_note(path)
+        self.assertEqual(self.text(), "same")
+        self.assertFalse(b.eval(ED + ".can().undo()"), "a note of the same name does not inherit the old history")
+        self.assertFalse(b.eval(ED + ".can().redo()"))
+
+    def test_the_undone_steps_come_back_as_redo_after_switching(self):
+        self.make("Other four")
+        self.make("Two branches")
+        self.burst("one")
+        self.burst(" two")
+        self.burst(" three")
+        self.undo()
+        self.undo()
+        self.assertEqual(self.text(), "one")
+        self.switch_away_and_back("Other four")
+        self.focus_end()
+        self.redo()
+        self.assertEqual(self.text(), "one two", "the redo branch is the one that was undone, in order")
+        self.redo()
+        self.assertEqual(self.text(), "one two three")
+        self.undo()
+        self.undo()
         self.undo()
         self.assertEqual(self.text(), "")
 

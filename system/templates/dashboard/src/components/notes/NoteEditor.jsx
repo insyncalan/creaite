@@ -123,6 +123,11 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
   pickRef.current = pick;
   const marks = noteMarks.value, flashAt = noteFlash.value;
   const cur = noteCur.value, sentList = cur && path && cur.path === path ? cur.sent : null;
+  /* #175: this editor's note, for its undo history: the path (a rename keeps the editor and changes it) and the file's base as last saved */
+  const cell = useRef({ key: loadKey, path: path || "", base: "" });
+  if (cell.current.key !== loadKey) cell.current = { key: loadKey, path: path || "", base: "" };
+  if (path) cell.current.path = path;
+  if (cur && cur.path === (path || "")) cell.current.base = cur.base || "";
   const lineState = useRef({ markers: marks.markers, hover: marks.hover, flash: 0, doc: /** @type {any} */ (null), L: /** @type {any[]} */ ([]),
     sentList: /** @type {any} */ (null), sent: /** @type {Map<string, string[]>} */ (new Map()) });
   lineState.current.markers = marks.markers; lineState.current.hover = marks.hover;
@@ -231,8 +236,8 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
         return false;
       } } });
     ed.current = h;
-    const myPath = props.current.path || "";          /* (the cleanup below runs after the next note's props are in) */
-    undoTake(myPath, h.editor);          /* #175: a note closed in this page and opened again as it was keeps its undo history */
+    const mine = cell.current;          /* (the cleanup below runs after the next note's props are in; this editor's own cell keeps its last path and base) */
+    undoTake(mine.path, h.editor, mine.base);          /* #175: a note closed in this page and opened again as it was keeps its undo history */
     const slashOff = attachSlash(h, { profile: "notes", host: hostRows() });
     const itemOff = attachItemPick(h, { code: () => props.current.code });          /* #122 C: the shared `#` list */
     const input = () => { props.current.onInput(); };
@@ -248,7 +253,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     el.addEventListener("mouseleave", out);
     onBody(() => (h.touched() ? h.value() : null));
     return () => { el.removeEventListener("input", input); el.removeEventListener("blur", blur); el.removeEventListener("mouseover", over);
-      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); itemOff(); undoStash(myPath, h.editor); h.destroy(); ed.current = null; lineState.current.doc = null; };
+      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); itemOff(); undoStash(mine.path, h.editor, mine.base); h.destroy(); ed.current = null; lineState.current.doc = null; };
   }, [loadKey]);
 
   useEffect(() => {          /* #124: read only while its Delete note waits on the approval card */
