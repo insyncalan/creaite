@@ -897,7 +897,8 @@ class TheReviewOfce5d66b(Base):
         gone = ["\x00", "\x07", "\x1b", "\x1f", "\x7f", "\x80", "\x9d", "\ufdd0", "\ufdef", "\ufffe", "\uffff", "\U0001fffe",
                 "\U0010ffff"]
         breaks = ["\x0b", "\x0c", "\x1c", "\x1e", "\x85"]
-        got = self.py(f"print(json.dumps([edit_ai.unseen('a' + c + 'b') for c in {gone + breaks + ['\t', '\r']!r}]))")
+        cases = gone + breaks + ["\t", "\r"]
+        got = self.py(f"print(json.dumps([edit_ai.unseen('a' + c + 'b') for c in {cases!r}]))")
         self.assertEqual(got, ["ab"] * len(gone) + ["a\nb"] * len(breaks) + ["a\tb", "a\rb"])
         self.assert_found([("Waiting on Quen\x9dtin Marlow.", NAMED), ("Waiting on Quen\x07tin Marlow.", NAMED),
                            ("Note: internal\x9d-only.", MARKER), ("Note: internal\x07-only.", MARKER),
