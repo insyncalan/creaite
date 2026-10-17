@@ -1097,6 +1097,30 @@ def _hp_footer(lines, ctx):
     return ('<footer class="hp-foot">' + "".join(f"<span>{_hp_inline(ln, ctx)}</span>" for ln in lines) + "</footer>") if lines else ""
 
 
+def _hp_say(blocks, ctx, outline):
+    """Start here, Say this: the phrasebook table."""
+    tb = next((b for b in blocks if b["k"] == "table"), {"rows": []})
+    rows = tb["rows"]
+    for r in rows[1:]:
+        outline["say"] += re.findall(r"`([^`]+)`", r[0])
+    if not rows:
+        return ""
+    head = "".join(f"<th>{_hp_inline(c, ctx)}</th>" for c in rows[0])
+    body = "".join("<tr>" + "".join(f"<td>{_hp_inline(c, ctx, True)}</td>" for c in r) + "</tr>" for r in rows[1:])
+    return f'<div class="hp-phrases"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+def _hp_rules(lists, ctx, outline):
+    """Start here, Four rules."""
+    cards = []
+    for it in lists[0]["items"] if lists else []:
+        m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
+        if m:
+            cards.append(f'<div class="hp-rule"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
+            outline["rules"].append(m.group(1))
+    return '<div class="hp-rules">' + "".join(cards) + "</div>"
+
+
 def _hp_start(part, ctx, only=None):
     secs = {s["title"]: s for g in part["groups"] for s in g["sections"]}
     html, outline = [_hp_hero(part["intro"], ctx, True)], {"stages": [], "steps": [], "rhythm": [], "views": [], "say": [], "rules": []}
@@ -1158,20 +1182,9 @@ def _hp_start(part, ctx, only=None):
             body = '<div class="hp-views">' + "".join(cards) + "</div>" \
                 + (('<div class="hp-keys">' + "".join(f"<span>{_hp_inline(k.strip(), ctx)}</span>" for k in keys.split(" · ")) + "</div>") if keys else "")
         elif title == "Say this":
-            tb = next((b for b in blocks if b["k"] == "table"), {"rows": []})
-            rows = tb["rows"]
-            for r in rows[1:]:
-                outline["say"] += re.findall(r"`([^`]+)`", r[0])
-            body = ('<div class="hp-phrases"><table><thead><tr>' + "".join(f"<th>{_hp_inline(c, ctx)}</th>" for c in rows[0]) + "</tr></thead><tbody>"
-                    + "".join("<tr>" + "".join(f"<td>{_hp_inline(c, ctx, True)}</td>" for c in r) + "</tr>" for r in rows[1:]) + "</tbody></table></div>") if rows else ""
+            body = _hp_say(blocks, ctx, outline)
         elif title == "Four rules":
-            cards = []
-            for it in lists[0]["items"] if lists else []:
-                m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
-                if m:
-                    cards.append(f'<div class="hp-rule"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
-                    outline["rules"].append(m.group(1))
-            body = '<div class="hp-rules">' + "".join(cards) + "</div>"
+            body = _hp_rules(lists, ctx, outline)
         elif title == "The twelve jobs":
             jobs = help_jobs({"start": {"groups": [{"sections": [s]}]}})
             body = '<div class="hp-jobgrid">' + "".join(
@@ -1282,7 +1295,7 @@ def help_news(text=None):
 def help_check(jobs, screens, tasks, sections):
     """#158: every job and Screen id must be a page. Returns the problems (empty when all resolve)."""
     bad = [f"Jobs: {j['id']}" for j in jobs if j["id"] not in tasks]
-    for k, s in screens.items():
+    for s in screens.values():
         bad += [f"Screen {s['title']}: {i}" for i in s["ids"] if i not in tasks]
         if s["ref"] and s["ref"] not in sections:
             bad.append(f"Screen {s['title']}: Reference {s['ref']}")
@@ -1328,9 +1341,10 @@ def help_card(kind, text=None):
     jobs = help_jobs(parts)
     items = "".join(f'<li class="hp-topjob"><b>{_hp_inline(j["title"], ctx)}</b><span>{_hp_inline(j["line"], ctx)}</span>'
                     f'<em>Help \u203a How do I\u2026 \u203a {_hp_esc(tasks.get(j["id"], j["id"]))}</em></li>' for j in jobs)
-    return ('<header class="hp-hero">' + HELP_LOGO % "hp-logo sm" + f'<div><span class="hp-eyebrow">creaite {help_version()} \u00b7 top 12 jobs</span>'
-            '<h1>The twelve jobs</h1><p class="hp-lede">Press <kbd>?</kbd> in creaite, search for the page name, and the steps are there.</p></div></header>'
-            f'<ol class="hp-top12">{items}</ol>')
+    lede = "Press <kbd>?</kbd> in creaite, search for the page name, and the steps are there."
+    return ('<header class="hp-hero">' + HELP_LOGO % "hp-logo sm"
+            + f'<div><span class="hp-eyebrow">creaite {help_version()} \u00b7 top 12 jobs</span>'
+            f'<h1>The twelve jobs</h1><p class="hp-lede">{lede}</p></div></header>' + f'<ol class="hp-top12">{items}</ol>')
 
 
 def help_sections():

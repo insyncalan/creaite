@@ -23,7 +23,7 @@ export const screenInfo=(/** @type {string} */ k)=>HD.screens[k]||null;
 export function howLink(/** @type {string} */ k){ const s=screenInfo(k); return s?`<a class="hhow" href="#help-reference-${esc(s.ref)}" data-hhow="${esc(k)}">How ${esc(s.title)} works</a>`:""; }
 
 /* ----- the panel ----- */
-let FROM=null;
+let PANELFROM=null;
 export const helpPanelOpen=()=>!!$("#helpPanel")&&$("#helpPanel").classList.contains("on");
 export function openHelpPanel(/** @type {string} */ key){ const sc=screenInfo(key); if(!sc||!sc.ids.length) return false;
   const from=document.activeElement, p=$("#helpPanel"); closeChat();
@@ -33,10 +33,10 @@ export function openHelpPanel(/** @type {string} */ key){ const sc=screenInfo(ke
     <ul class="hpn-jobs">${sc.ids.map(id=>task(id)).filter(Boolean).map(t=>`<li><a href="#help-howto-${esc(t.id)}" data-hpn="howto-${esc(t.id)}"><b>${esc(t.title)}</b>${t.where?`<span>${esc(t.where)}</span>`:""}</a></li>`).join("")}</ul>
     <div class="hpn-f">${ref?`<a href="#help-reference-${esc(ref.id)}" data-hpn="reference-${esc(ref.id)}">How ${esc(sc.title)} works</a>`:""}<button type="button" class="linkbtn" id="hpnFind">Search all of Help</button></div>`));
   p.setAttribute("aria-labelledby","hpnT"); p.classList.add("on");
-  FROM=from&&from!==document.body&&!p.contains(from)?from:null;
+  PANELFROM=from&&from!==document.body&&!p.contains(from)?from:null;
   firstLineClear(); p.focus(); return true; }
 export function closeHelpPanel(/** @type {boolean=} */ noReturn){ const p=$("#helpPanel"); if(!p||!p.classList.contains("on")) return;
-  p.classList.remove("on"); const t=FROM; FROM=null;
+  p.classList.remove("on"); const t=PANELFROM; PANELFROM=null;
   if(p.contains(document.activeElement)) /** @type {HTMLElement} */ (document.activeElement).blur();
   if(!noReturn&&t&&t.isConnected) /** @type {HTMLElement} */ (t).focus(); }
 
@@ -68,12 +68,14 @@ export function firstLineClear(){ const line=$("#hFirst"); if(!line||line.hidden
 /** BL-231: run once by src/main.js. */
 export function bootHelpScreen(){
 node("hFirst","hfirst"); node("hFoot","hfoot");
-document.addEventListener("keydown",e=>{ if(["Shift","Control","Alt","Meta","CapsLock"].includes(e.key)) return; firstLineClear(); },true);
-document.addEventListener("pointerdown",()=>firstLineClear(),true);
+/* Any key or click clears the line after its own job is done (a timeout of 0): never swallowed, and never moving the page under a press */
+document.addEventListener("keydown",e=>{ if(["Shift","Control","Alt","Meta","CapsLock"].includes(e.key)) return; setTimeout(firstLineClear,0); },true);
+document.addEventListener("click",()=>setTimeout(firstLineClear,0),true);
 document.addEventListener("click",e=>{ const t=/** @type {HTMLElement} */ (e.target);
   const a=t.closest("[data-hpn]"); if(a){ e.preventDefault(); closeHelpPanel(true); go("help",/** @type {HTMLElement} */ (a).dataset.hpn); return; }
   if(t.closest("#hpnX")){ closeHelpPanel(); return; }
   if(t.closest("#hpnFind")){ closeHelpPanel(true); go("help"); helpFocusSearch(); return; }
   const h=t.closest("[data-hhow]"); if(h){ e.preventDefault(); const s=screenInfo(/** @type {HTMLElement} */ (h).dataset.hhow||""); if(s) go("help","reference-"+s.ref); } });
+helpScreenSync();
 window.setInterval(helpScreenSync,300);
 }

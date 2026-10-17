@@ -57572,7 +57572,8 @@ ${d5.text}`);
         add("start", h5.id, txt(h5), "start", "[aria-labelledby=" + h5.id + "]", "p,li,td,.hp-job span", [...e4.querySelectorAll("p,li,td,.hp-job span")]);
       });
     }
-    return HIDX = out;
+    HIDX = out;
+    return out;
   }
   function helpFind(q5) {
     const qw2 = hWords(q5);
@@ -57654,14 +57655,14 @@ ${d5.text}`);
     r4.hidden = false;
     r4.dataset.q = q5;
     if (!res.length) {
-      putHTML(r4, html`<div class="hp-none" role="status"><b>Nothing in Help for “${q5.trim()}”</b><span>Try another word, or ask creaite.</span><button type="button" class="btn primary" id="helpAsk">Ask creaite</button></div>`);
+      putHTML(r4, html`<div class="hp-none" role="status"><b>Nothing in Help for “${q5.trim()}”</b><span>Try another word, or ask creaite.</span><button type="button" class="btn primary" id="helpAsk">ask creaite</button></div>`);
       return;
     }
     let h5 = `<p class="hp-resn" role="status">${res.length} result${res.length === 1 ? "" : "s"}</p>`;
     HGROUPS.forEach((g5) => {
-      const rows2 = res.filter((x5) => x5.e.tab === g5);
-      if (!rows2.length) return;
-      h5 += `<section class="hp-resg" aria-label="${esc(HPARTS[g5])}"><h3>${esc(HPARTS[g5])}</h3>` + rows2.map((x5) => `<a class="hp-r" href="#help-${esc(x5.e.target)}" data-hit="${HIDX.indexOf(x5.e)}" data-li="${x5.li}"><span class="hp-rt">${esc(x5.e.title)}</span><span class="hp-rl">${helpMark(x5.line, q5)}</span></a>`).join("") + "</section>";
+      const grp = res.filter((x5) => x5.e.tab === g5);
+      if (!grp.length) return;
+      h5 += `<section class="hp-resg" aria-label="${esc(HPARTS[g5])}"><h3>${esc(HPARTS[g5])}</h3>` + grp.map((x5) => `<a class="hp-r" href="#help-${esc(x5.e.target)}" data-hit="${HIDX.indexOf(x5.e)}" data-li="${x5.li}"><span class="hp-rt">${esc(x5.e.title)}</span><span class="hp-rl">${helpMark(x5.line, q5)}</span></a>`).join("") + "</section>";
     });
     putHTML(r4, raw(h5));
   }
@@ -57915,7 +57916,7 @@ ${d5.text}`);
     const s5 = screenInfo(k5);
     return s5 ? `<a class="hhow" href="#help-reference-${esc(s5.ref)}" data-hhow="${esc(k5)}">How ${esc(s5.title)} works</a>` : "";
   }
-  var FROM2 = null;
+  var PANELFROM = null;
   var helpPanelOpen = () => !!$("#helpPanel") && $("#helpPanel").classList.contains("on");
   function openHelpPanel(key) {
     const sc2 = screenInfo(key);
@@ -57929,7 +57930,7 @@ ${d5.text}`);
     <div class="hpn-f">${ref ? `<a href="#help-reference-${esc(ref.id)}" data-hpn="reference-${esc(ref.id)}">How ${esc(sc2.title)} works</a>` : ""}<button type="button" class="linkbtn" id="hpnFind">Search all of Help</button></div>`));
     p6.setAttribute("aria-labelledby", "hpnT");
     p6.classList.add("on");
-    FROM2 = from && from !== document.body && !p6.contains(from) ? from : null;
+    PANELFROM = from && from !== document.body && !p6.contains(from) ? from : null;
     firstLineClear();
     p6.focus();
     return true;
@@ -57938,8 +57939,8 @@ ${d5.text}`);
     const p6 = $("#helpPanel");
     if (!p6 || !p6.classList.contains("on")) return;
     p6.classList.remove("on");
-    const t47 = FROM2;
-    FROM2 = null;
+    const t47 = PANELFROM;
+    PANELFROM = null;
     if (p6.contains(document.activeElement)) document.activeElement.blur();
     if (!noReturn && t47 && t47.isConnected) t47.focus();
   }
@@ -58019,9 +58020,9 @@ ${d5.text}`);
     node("hFoot", "hfoot");
     document.addEventListener("keydown", (e4) => {
       if (["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(e4.key)) return;
-      firstLineClear();
+      setTimeout(firstLineClear, 0);
     }, true);
-    document.addEventListener("pointerdown", () => firstLineClear(), true);
+    document.addEventListener("click", () => setTimeout(firstLineClear, 0), true);
     document.addEventListener("click", (e4) => {
       const t47 = (
         /** @type {HTMLElement} */
@@ -58058,6 +58059,7 @@ ${d5.text}`);
         if (s5) go2("help", "reference-" + s5.ref);
       }
     });
+    helpScreenSync();
     window.setInterval(helpScreenSync, 300);
   }
 
@@ -68795,6 +68797,7 @@ ${d5.text}`);
       return true;
     })(v5, arg, opt);
     if (r4 !== false && (v5 === "files" || v5 === "inbox")) filesOpened();
+    if (r4 !== false) helpScreenSync();
     tabTitle();
     if (!shared.LOADING) {
       if (r4 !== false && shared.VIEW !== from && !reduced()) {
@@ -70854,6 +70857,7 @@ ${d5.text}`);
         "closeCombobox",
         "closeDialog",
         "closeDisp",
+        "closeHelpPanel",
         "closeMenu",
         "closeNote",
         "closePanel",
@@ -70947,7 +70951,10 @@ ${d5.text}`);
         "healthCount",
         "healthEvidence",
         "healthFacts",
+        "helpFind",
         "helpGo",
+        "helpNorm",
+        "helpScreenSync",
         "hideSnack",
         "histClose",
         "hit",
@@ -70958,6 +70965,7 @@ ${d5.text}`);
         "hlPaint",
         "hlToggle",
         "hoverAttach",
+        "howLink",
         "html",
         "htmlToMd",
         "ibtn",
@@ -71063,6 +71071,7 @@ ${d5.text}`);
         "openFollowup",
         "openFound",
         "openGen",
+        "openHelpPanel",
         "openMenu",
         "openMilestone",
         "openNew",

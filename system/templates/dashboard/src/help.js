@@ -61,7 +61,7 @@ export function helpIndex(){ if(HIDX) return HIDX; const out=[], txt=el=>(el.tex
     else if(t.id==="reference") doc.querySelectorAll(".hp-ref").forEach(e=>{ const id=e.getAttribute("data-ref"); add("reference",id,txt(e.querySelector("h2")),"reference-"+id,"#hr-"+id,"p,li,td",[...e.querySelectorAll("p,li,td")]); });
     else if(t.id==="whatsnew") doc.querySelectorAll(".hp-new").forEach(e=>{ const id=e.id.slice(3); add("whatsnew",id,txt(e.querySelector("h2")),"whatsnew-"+id,"#hn-"+id,"p,li",[...e.querySelectorAll("p,li")]); });
     else doc.querySelectorAll("section.hp-sec,section.hp-loop").forEach(e=>{ const h=e.querySelector("h2"); if(!h) return; add("start",h.id,txt(h),"start","[aria-labelledby="+h.id+"]","p,li,td,.hp-job span",[...e.querySelectorAll("p,li,td,.hp-job span")]); }); }
-  return (HIDX=out); }
+  HIDX=out; return out; }
 /** The best matches for q: [{e, score, li, line}], best first. Every word of q must be found, in the title or a line. */
 export function helpFind(q){ const qw=hWords(q); if(!qw.length) return []; const out=[];
   for(const e of helpIndex()){ let tScore=0, ok=true;
@@ -85,10 +85,10 @@ export function helpSearchClear(){ const q=$("#helpQ"); if(q&&q.value){ q.value=
 export function helpSearchDraw(){ const q=$("#helpQ").value, r=$("#helpResults"), pane=$("#helpPane");
   if(!q.trim()){ helpSearchClear(); return; }
   const res=helpFind(q); pane.hidden=true; r.hidden=false; r.dataset.q=q;
-  if(!res.length){ putHTML(r,html`<div class="hp-none" role="status"><b>Nothing in Help for “${q.trim()}”</b><span>Try another word, or ask creaite.</span><button type="button" class="btn primary" id="helpAsk">Ask creaite</button></div>`); return; }
+  if(!res.length){ putHTML(r,html`<div class="hp-none" role="status"><b>Nothing in Help for “${q.trim()}”</b><span>Try another word, or ask creaite.</span><button type="button" class="btn primary" id="helpAsk">ask creaite</button></div>`); return; }
   let h=`<p class="hp-resn" role="status">${res.length} result${res.length===1?"":"s"}</p>`;
-  HGROUPS.forEach(g=>{ const rows=res.filter(x=>x.e.tab===g); if(!rows.length) return;
-    h+=`<section class="hp-resg" aria-label="${esc(HPARTS[g])}"><h3>${esc(HPARTS[g])}</h3>`+rows.map(x=>`<a class="hp-r" href="#help-${esc(x.e.target)}" data-hit="${HIDX.indexOf(x.e)}" data-li="${x.li}"><span class="hp-rt">${esc(x.e.title)}</span><span class="hp-rl">${helpMark(x.line,q)}</span></a>`).join("")+"</section>"; });
+  HGROUPS.forEach(g=>{ const grp=res.filter(x=>x.e.tab===g); if(!grp.length) return;
+    h+=`<section class="hp-resg" aria-label="${esc(HPARTS[g])}"><h3>${esc(HPARTS[g])}</h3>`+grp.map(x=>`<a class="hp-r" href="#help-${esc(x.e.target)}" data-hit="${HIDX.indexOf(x.e)}" data-li="${x.li}"><span class="hp-rt">${esc(x.e.title)}</span><span class="hp-rl">${helpMark(x.line,q)}</span></a>`).join("")+"</section>"; });
   putHTML(r,raw(h)); }
 export function helpFocusSearch(){ const q=$("#helpQ"); if(q){ q.focus(); q.select(); } }
 /* ⌘K: the tabs, the how-tos and the Reference sections whose title matches, each under "Help" ("Help: Hand over someone's work"),

@@ -39,6 +39,7 @@ def add(version, notes_file=None):
 
 
 def main(argv):
+    """The command line: add, check; anything else prints the help."""
     if len(argv) >= 2 and argv[0] == "add":
         NEWS.write_text(add(argv[1]), encoding="utf-8")
         print(f"Added creaite {argv[1]} to {NEWS.relative_to(REPO)}. Rebuild: python3 dev/tools/build_guides.py && "
