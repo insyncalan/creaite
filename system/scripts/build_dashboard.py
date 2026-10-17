@@ -904,6 +904,39 @@ def help_slug(title):
     return re.sub(r"[^a-z0-9 -]", "", title.lower()).strip().replace(" ", "-")
 
 
+SCREEN_LINE = re.compile(r"Screen:\s*(.+?)\s*→\s*(.+?)\s*$")
+
+
+def help_screens(text=None):
+    """#158 Phase B: the `Screen: Review → id, id, reference:id` lines of help.md → {screen: {"jobs": [how-to ids], "ref": id or ""}},
+    in file order. They are the lists the ? key panel offers; the Help page does not show them."""
+    if text is None:
+        f = paths.TEMPLATES / "help.md"
+        text = f.read_text(encoding="utf-8") if f.exists() else ""
+    text = re.sub(r"\A\s*<!--.*?-->", "", text, flags=re.S)
+    out = {}
+    for line in text.splitlines():
+        m = SCREEN_LINE.match(line)
+        if m:
+            ids = [i.strip() for i in m.group(2).split(",") if i.strip()]
+            out[m.group(1).strip()] = {"jobs": [i for i in ids if not i.startswith("reference:")],
+                                       "ref": next((i[10:] for i in ids if i.startswith("reference:")), "")}
+    return out
+
+
+def help_jobs(parts):
+    """The Jobs: block of Start here's "The twelve jobs" → [(title, how-to id)] in order."""
+    start = parts.get("start") or {"groups": []}
+    for g in start["groups"]:
+        for sec in g["sections"]:
+            if sec["title"] == "The twelve jobs":
+                blocks = _hp_blocks(sec["lines"])
+                for i, b in enumerate(blocks):
+                    if b["k"] == "p" and b["t"].strip() == "Jobs:" and i + 1 < len(blocks) and blocks[i + 1]["k"] == "ul":
+                        return [(a.strip(), b2.strip()) for a, _, b2 in (it["t"].partition("→") for it in blocks[i + 1]["items"])]
+    return []
+
+
 def help_parse(text=None):
     """help.md → {part id: {title, slug, intro: [lines], groups: [{name, intro, sections: [{title, slug, lines}]}], footer}}."""
     if text is None:
@@ -912,6 +945,8 @@ def help_parse(text=None):
     text = re.sub(r"\A\s*<!--.*?-->", "", text, flags=re.S)
     parts, part, group, section, in_footer = {}, None, None, None, False
     for line in text.splitlines():
+        if SCREEN_LINE.match(line):         # #158: a `Screen:` line is for the ? key panel, never shown on the page
+            continue
         m = re.match(r"# (.+?)\s*$", line)
         if m:
             slug = help_slug(m.group(1))
@@ -1056,7 +1091,7 @@ def _hp_head(sec, ctx, tag_id):
     blocks = _hp_blocks(sec["lines"])
     eye = next((b["t"] for b in blocks if b["k"] == "italic"), "")
     title = next((b["t"] for b in blocks if b["k"] == "bold"), sec["title"])
-    lead = [b["t"] for b in blocks if b["k"] == "p" and not re.match(r"(Where|Or say|Keys):", b["t"])]
+    lead = [b["t"] for b in blocks if b["k"] == "p" and not re.match(r"(Where|Or say|Keys|Jobs):", b["t"])]
     html = '<div class="hp-sechead">' + (f'<span class="hp-eyebrow">{_hp_inline(eye, ctx)}</span>' if eye else "") \
         + f'<h2 id="{tag_id}">{_hp_inline(title, ctx)}</h2>' + "".join(f"<p>{_hp_inline(p, ctx)}</p>" for p in lead) + "</div>"
     return html
@@ -1075,9 +1110,29 @@ def _hp_footer(lines, ctx):
     return ('<footer class="hp-foot">' + "".join(f"<span>{_hp_inline(ln, ctx)}</span>" for ln in lines) + "</footer>") if lines else ""
 
 
+def _hp_jobs(part, ctx, outline):
+    """Start here's grid of the twelve jobs: a card each, linking to its how-to."""
+    jobs = help_jobs({"start": part})
+    outline["jobs"] = [i for _, i in jobs]
+    return '<div class="hp-jobs">' + "".join(f'<div class="hp-job">{ctx.link(_hp_esc(t), i)}</div>' for t, i in jobs) + "</div>"
+
+
+def _hp_views(lists, blocks, ctx, outline):
+    """Start here, Where things are: a card per view and the Keys line."""
+    cards = []
+    for it in lists[0]["items"] if lists else []:
+        m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
+        if m:
+            cards.append(f'<div class="hp-view"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
+            outline["views"].append(m.group(1))
+    keys = next((b["t"][5:].strip() for b in blocks if b["k"] == "p" and b["t"].startswith("Keys:")), "")
+    return '<div class="hp-views">' + "".join(cards) + "</div>" \
+        + (('<div class="hp-keys">' + "".join(f"<span>{_hp_inline(k.strip(), ctx)}</span>" for k in keys.split(" · ")) + "</div>") if keys else "")
+
+
 def _hp_start(part, ctx):
     secs = {s["title"]: s for g in part["groups"] for s in g["sections"]}
-    html, outline = [_hp_hero(part["intro"], ctx, True)], {"stages": [], "steps": [], "rhythm": [], "views": [], "say": [], "rules": []}
+    html, outline = [_hp_hero(part["intro"], ctx, True)], {"stages": [], "steps": [], "rhythm": [], "views": [], "say": [], "rules": [], "jobs": []}
     for title, s in secs.items():
         blocks = _hp_blocks(s["lines"])
         sid = "hp-" + s["slug"]
@@ -1115,6 +1170,8 @@ def _hp_start(part, ctx):
                 cards.append(f'<div class="hp-step"><span class="hp-n">{n}</span><h3>{_hp_inline(name, ctx)}</h3><p>{_hp_inline(text, ctx)}</p></div>')
                 outline["steps"].append(name)
             body = '<div class="hp-steps">' + "".join(cards) + "</div>"
+        elif title == "The twelve jobs":
+            body = _hp_jobs(part, ctx, outline)
         elif title == "Every day":
             cards = []
             for it in lists[0]["items"] if lists else []:
@@ -1124,15 +1181,7 @@ def _hp_start(part, ctx):
                     outline["rhythm"].append({"when": m.group(1), "title": m.group(2)})
             body = '<div class="hp-rhythm">' + "".join(cards) + "</div>"
         elif title == "Where things are":
-            cards = []
-            for it in lists[0]["items"] if lists else []:
-                m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
-                if m:
-                    cards.append(f'<div class="hp-view"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
-                    outline["views"].append(m.group(1))
-            keys = next((b["t"][5:].strip() for b in blocks if b["k"] == "p" and b["t"].startswith("Keys:")), "")
-            body = '<div class="hp-views">' + "".join(cards) + "</div>" \
-                + (('<div class="hp-keys">' + "".join(f"<span>{_hp_inline(k.strip(), ctx)}</span>" for k in keys.split(" · ")) + "</div>") if keys else "")
+            body = _hp_views(lists, blocks, ctx, outline)
         elif title == "Say this":
             tb = next((b for b in blocks if b["k"] == "table"), {"rows": []})
             rows = tb["rows"]
@@ -1226,7 +1275,7 @@ def help_sections():
     if not parts:
         return {}
     tasks = [s["slug"] for g in parts.get("howto", {"groups": []})["groups"] for s in g["sections"]]
-    out = {"tabs": [], "tasks": [], "sections": [], "start": {}}
+    out = {"tabs": [], "tasks": [], "sections": [], "start": {}, "jobs": help_jobs(parts), "screens": help_screens()}
     for pid, builder in (("start", _hp_start), ("howto", _hp_howto), ("reference", _hp_reference)):
         if pid not in parts:
             continue

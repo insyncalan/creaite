@@ -95,6 +95,11 @@ body{background:var(--hp-ground);color:var(--hp-ink);font:400 var(--fs-lg)/1.5 v
 .hp-phrases th,.hp-phrases td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--hp-hair);vertical-align:top;font-size:var(--fs-lg)}
 .hp-phrases th{font:500 var(--fs-xs) var(--hp-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--hp-soft);position:static;background:transparent}
 .hp-phrases tr:last-child td{border-bottom:0} .hp-phrases td:first-child{white-space:nowrap}
+.hp-jobs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.hp-job{border:1px solid var(--hp-hair);border-radius:var(--r-md);background:var(--hp-paper);min-width:0}
+.hp-job a{display:block;padding:14px 16px;font-family:var(--hp-display);font-weight:700;color:var(--hp-ink);text-decoration:none;border-radius:var(--r-md)}
+.hp-job:hover,.hp-job:focus-within{border-color:var(--hp-teal);background:var(--hp-teal-soft)}
+.hp-job a:focus-visible{outline:2px solid var(--hp-teal);outline-offset:-2px}
 .hp-rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .hp-rule{border-top:3px solid var(--hp-green);background:var(--hp-green-soft);border-radius:0 0 var(--r-md) var(--r-md);padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .hp-rule b{font-family:var(--hp-display)} .hp-rule span{font-size:var(--fs-md);color:var(--hp-ink)}

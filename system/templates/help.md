@@ -15,6 +15,10 @@ python3 dev/tools/build_guides.py (a test fails while the guides are out of date
   with [text](#its-title-in-lower-case-with-hyphens), and to another part with [text](#how-do-i) or [text](#start-here).
 - Inline: **bold** is a button or label, `code` a command or path, ``double backticks`` a phrase to say. Single
   backticks are phrases too in "Or say:" lines and in the Say this table. [[K]] is a key.
+- Start here, The twelve jobs: a `Jobs:` line, then bullets "Title → page id" (a how-to's id). A card each, in this order.
+- `Screen: <screen> → id, id, reference:id` lines (anywhere; they are not shown on the page) list the jobs the ? key panel
+  offers on a screen: two to five how-to ids and one `reference:` id, the screen's Reference page. The screens are Today, Work,
+  Review, Projects, People, Notes, Intake and Files. A test checks that every id resolves.
 - A line of --- at the end of a part, then lines of text, is its footer.
 - {version} becomes the installed version. A paragraph that is only [start command] becomes this vault's server command.
 
@@ -59,6 +63,26 @@ About an hour, mostly telling creaite about your projects and the people on them
 No launcher yet? In Terminal run the command below, then open the address it prints in Chrome or Edge, not Safari.
 
 [start command]
+
+## The twelve jobs
+
+*Start with these*
+
+Most days are made of a few jobs. Pick one and it opens its page.
+
+Jobs:
+- Start the day → start-the-day
+- Review and approve proposals → review-and-approve-proposals
+- Turn a meeting into minutes → turn-a-meeting-into-minutes
+- Prepare for a meeting → prepare-for-a-meeting
+- Capture a note → capture-a-note
+- Add or change an item → add-or-change-an-item
+- Ask someone for an update → ask-someone-for-an-update
+- Close the day → close-the-day
+- Write the weekly report → write-the-weekly-report
+- Write a client report → write-a-client-report
+- Find anything → find-anything
+- Undo a mistake → undo-a-mistake
 
 ## Every day
 
@@ -117,6 +141,15 @@ Plain English works. **ABC** stands for your own project code.
 - **You approve every change**: Nothing reaches the tracker until you approve. Scheduled runs only propose.
 - **Every item has a source**: The meeting, email or chat it came from is always shown.
 - **Clients see only what you mark**: Client reports show only items marked client-visible. Confidential material stays out.
+
+Screen: Today → start-the-day, close-the-day, prepare-for-a-meeting, reference:today
+Screen: Work → add-or-change-an-item, move-work-on-the-board, change-an-item-from-k, hand-over-someones-work, reference:working-with-lists
+Screen: Review → review-and-approve-proposals, reject-with-a-reason, fix-the-wrong-project, when-it-looks-like-something-you-have, when-creaite-says-looks-done, reference:review
+Screen: Projects → update-a-projects-state-and-health, manage-milestones, write-the-weekly-report, keep-notes-on-a-project, reference:project-page
+Screen: People → find-a-persons-open-work, ask-someone-for-an-update, hand-over-someones-work, reference:people
+Screen: Notes → capture-a-note, keep-notes-on-a-project, turn-a-note-into-tracker-changes, reference:notes
+Screen: Intake → turn-a-meeting-into-minutes, why-isnt-my-meeting-in-intake, reference:intake
+Screen: Files → find-anything, reference:files
 
 ---
 
