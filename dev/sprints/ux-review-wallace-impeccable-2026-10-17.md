@@ -74,3 +74,7 @@ People, Files, Settings, Activity and Help were looked at; Milestones and the pr
 19. **Milestones and the project cockpit rendered as empty pages** in the audit. Both need a project chosen, so this is probably the audit not choosing one. Unverified: open both in the running app before logging anything.
 
 Looked at: 10 of 12 pages. Still to check on a real vault: Milestones and the cockpit. Not yet run: the Vercel interface guidelines pass.
+
+## Findings 11 and 19 checked (17-10-2026)
+
+Opened the project cockpit and Milestones in a throwaway vault on main (2.1.0) with a project chosen (`#cockpit=ABC`, `#milestones=ABC` and `DEF`). **Both render.** They were blank in the audit only because it opened them with no project; the audit's own `go("cockpit")` and `go("milestones")` show an empty page in that case (text length 0), which is the one real point: with no project chosen, both pages are blank rather than saying "Choose a project". No console errors. Two small things seen on Milestones with the sample data: the Plan with no milestones reads "0 achieved, 0 to come" over an empty timeline with no next step, and "Client view" looks selected (dark) when the page opens on Internal wording; the second needs a look at the real app before it is logged.

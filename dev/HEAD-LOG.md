@@ -4,6 +4,24 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | Answers file (dev/ALAN-ANSWERS-2026-10-17.md): #197 all seven YES (applies); #186 moves to v2.3.0; #200 go with the banner only (v2.3.0; the sweep timer is NOT approved); #203 assumptions correct; #134 leftovers stay in v2.2.0 (#206 back in v2.2.0); #176, #201 and Phase B approved, old guides replaced at the release; #193 yes to all visible changes; no Prep button on weekend meetings; the chase email's earlier Latest update lines are stripped (#153); v2.3.0 stays as is for now; the design system is for Alan to review and approve once done; no proxy needed; pm-intake-briefs merged to main (PR #2) | Alan's answers file |
+| 17-10-2026 | Alan | v2.2.0 is released as soon as the automated gates are green, tonight if possible, hand checks afterwards (a failed check ships as v2.2.1); Alan walks through #135's hand checks now | Alan: 'A9 go tonight', 'B3 let's do issue 135 now' |
+| 17-10-2026 | Alan | v2.2.0 SCOPE LOCKED at 22:40 (list on #135); Help Phase B is to go in as soon as possible (help-phase-b ae09002e pushed before its opus review so Team Cap can merge in parallel) | Alan: 'lock 2.2 now'; 'get the new help in asap' |
+| 17-10-2026 | Alan | v2.2.0 is trimmed to speed the release: items not yet started move to v2.3.0 (only #112 was unstarted, so only #112 moves); #179 and #180 (on hold) leave the release; all defects, the rail items and #186 stay in v2.2.0 (Jarvis read 'keep 186 in' as in v2.2.0) | Alan: 'review what has not started build in 2.2 and move it to 2.3 to accelerate the 2.2 release' |
+| 17-10-2026 | Alan | Intake (#179 step 1, #180 step 2, and #185 the combined page) is ON HOLD, low priority: no further work, not listed in digests until Alan raises it. intake-179 39e9d638 and intake-179-fix f04ef4bc stay local and unpushed | Alan: 'intake is on hold low priority' |
+| 17-10-2026 | Alan | #202 Weekly report banner: option A in the latest mockup (pm-intake-briefs cb72be85): hides at once on any down scroll, the slim bar stays, the full header returns only when the top of the report is at the top of the window and pushes the report down, no reveal on a slim-bar click; v2.2.0 | Alan confirmed the latest mockup |
+| 17-10-2026 | Alan | #194: the note-row menu opens WITHOUT opening the note | Alan's answer to the radar |
+| 17-10-2026 | Alan | Help (#158 Phase B) and the plain release notes (#201) go into v2.2.0 (they were v2.2.1); Jarvis to say whether it works | Alan: 'include help into 2.2' |
+| 17-10-2026 | Alan | #132 G8: API keys are an available option for ALL providers, Claude included (reverses the recommendation to hide Claude's key option) | Alan's answer on G8 |
+| 17-10-2026 | Alan | IT has approved the OpenAI egress (#132 G2/G4); #132 stays in v2.3.0 | Alan |
+| 17-10-2026 | Alan | #193: run all of it, findings 7 and 8 included (h1/h2 sizes; one button, input and chip style) | Alan: 'run all of 193' |
+| 17-10-2026 | Alan | #153: the Review menu label is plain 'Draft email', despite the perceived clash with the other menu item | Alan |
+| 17-10-2026 | Alan | Theme names (Notion, Linear, Cursor palettes): leave them | Alan's answer to the radar's Needs Alan list |
+| 17-10-2026 | Alan | Parked items (#183, #181 to #185, #112, and similar) are on hold: Jarvis does not discuss or list them until Alan raises them again | Alan: 'do not discuss until I raise them again' |
+| 17-10-2026 | Alan | #175 guarded proposal (notes-175-guarded-proposal caeaea94): YES to all six yes/no answers | Alan's answer to the radar |
+| 17-10-2026 | Alan | The narrower expanded rail (224 to 188 px, #198) ships in v2.2.0 (this reverses my earlier correction: the rail was meant after all) | Alan: 'Rail width (#156/#182) in v2.2.0' |
+| 17-10-2026 | Alan | #153 Draft email: the two leftover 'Chase' labels are renamed to Draft email; 'I sent it' updates every sent item with the fact that the chase has been sent | Alan's answer to the radar |
+| 17-10-2026 | Alan | #132 AI models: all approved, including G1c (round 1 item 3) | Alan: '132 - All approved' |
 | 17-10-2026 | Alan | Correction: 'put it in 2.2' meant the run usage monitor (#197), now v2.2.0 (was v2.1.1); the narrower rail (#198) is NOT placed in v2.2.0 and its release is open again | Jarvis misread Alan's message and corrected after Alan said so |
 | 17-10-2026 | Alan | The narrower expanded rail (224 to 188 px) ships in v2.2.0 as #198 (Jarvis read Alan's 'put it in 2.2' as the open rail-width question on #156; Alan to correct if he meant something else) | Alan: 'let's put it in 2.2' |
 | 17-10-2026 | Alan | Run usage monitor (#197) goes in v2.1.1; Team Stark prepares the guarded live_server.py diff (two hooks) with a plain-English README for Alan's review; nothing is applied until he approves the diff | Alan's decision, relayed by the Product Manager |

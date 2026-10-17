@@ -1,0 +1,10 @@
+{
+ "commit": "c237a088",
+ "branch": "origin/v220-int-gate",
+ "version_file": "2.1.0",
+ "subject": "cdp.py and test_current_state_live: the JS probes on short lines and the re-raise chained (check.py ",
+ "taken": "2026-10-17",
+ "palette": "creaite",
+ "mode": "light",
+ "viewport": "1400x1000"
+}
