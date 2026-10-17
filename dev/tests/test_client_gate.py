@@ -1073,6 +1073,8 @@ class TheReviewOfc39f6c4(Base):
         self.assert_found([(f"Note: {t}.", MARKER) for t in ("internal ; only", "internal . only", "internal:only", "internal;only",
                                                              "internal,only", "internal::only", "internal..only", "internal;;only",
                                                              "INTERNAL.ONLY")])
+        self.assert_found([(f"Keep it {t}.", MARKER) for t in ("internal,only", "internal::only", "internal..only",
+                                                                "internal;;only")])   # round 8: mid-sentence, not after a label
 
     def test_the_marker_exceptions_need_a_sentence_or_a_lower_case_run_on(self):
         """Round 8: "Only" starts a sentence only with a space and a lower-case word after it, and a file name, domain, address or
