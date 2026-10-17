@@ -214,6 +214,27 @@ class NotesUndo(LiveBrowserCase):
         self.assertFalse(b.eval(ED + ".can().undo()"), "a file changed outside creaite: no history")
         self.assertFalse(b.eval(ED + ".can().redo()"))
 
+    def test_a_file_changed_outside_with_the_same_text_has_no_history(self):
+        """The text matches but the file does not (its front matter changed outside creaite): the stash's base is not the file's, so no history."""
+        b = self.b
+        self.make("Other base")
+        self.make("Base check")
+        f = self.notes_dir() / "Base check.md"
+        self.burst("same")
+        self.burst(" text")
+        self.wait_text(f, "same text")
+        b.wait("noteSave.value.state==='saved'", 10)
+        path = b.eval("noteCur.value.path")
+        other = b.eval("notesList.value.find(n=>n.title==='Other base').path")
+        self.open_note(other)
+        old = f.read_text()
+        self.assertTrue(old.startswith("---\n"), old)
+        f.write_text(old.replace("---\n", "---\nseen_elsewhere: yes\n", 1))
+        self.open_note(path)
+        self.assertEqual(self.text(), "same text", "the text the editor opens with is the same")
+        self.assertFalse(b.eval(ED + ".can().undo()"), "a file changed outside creaite, even with the same text: no history")
+        self.assertFalse(b.eval(ED + ".can().redo()"))
+
     def test_a_reload_starts_with_nothing_to_undo(self):
         b = self.b
         self.make("Reload")
