@@ -182,9 +182,11 @@ class WorkToolbar(LiveBrowserCase):
         b.key("ArrowDown")
         self.assertEqual(b.eval("document.activeElement.dataset.newd"), "needed")
         b.key("Escape")
+        b.wait("!newMenuOpen() && document.activeElement.id==='newBtn'", 5)   # #152: focus goes back in an effect after the redraw: wait for it, don't race it
         self.assertEqual(b.eval("[newMenuOpen(), document.activeElement.id, $('#newBtn').getAttribute('aria-expanded')]"), [False, "newBtn", "false"])
         b.click("#newBtn")
-        b.eval("document.body.click()")                                     # a click away closes it
+        b.wait("newMenuOpen()", 5)
+        b.wait("(document.body.click(), !newMenuOpen())", 5)                 # a click away closes it (tried until the menu's listener is in: it is added in an effect)
         self.assertFalse(b.eval("newMenuOpen()"))
         b.click("#newBtn")
         b.click('#newDecMenu [data-newd="made"]')

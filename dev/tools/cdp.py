@@ -151,8 +151,10 @@ class Browser:
             self.call(f"{domain}.enable")
         # BL-136: tests and screenshots run with reduced motion, so nothing they check is caught mid-animation. A test of the
         # motion itself turns it back on: call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", ...}]).
-        if reduced_motion:
-            self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": "reduce"}])
+        # #152: a test of the motion needs the opposite, set outright: with nothing emulated Chrome follows the machine's own
+        # Reduce motion setting; where that is on (a Mac, apparently GitHub's macOS runner) every animation reads 'none'.
+        pref = "reduce" if reduced_motion else "no-preference"
+        self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": pref}])
 
     @staticmethod
     def _port_text(path):
@@ -238,6 +240,14 @@ class Browser:
             self.pump(every)
         raise TimeoutError(f"timed out waiting for: {js}\npage errors: {self.errors[-3:]}\n{self._where()}")
 
+    def frames(self, n=2, timeout=5):
+        """Wait for `n` rendered frames (requestAnimationFrame), so what the page does on its next frame has been done.
+        #152: a fixed pause is not that: a slow runner can take longer than any pause. A timeout says no frame came, with the page state."""
+        ok = self.eval("new Promise(res=>{ let k=%d; const f=()=>{ if(--k<=0) res(true); else requestAnimationFrame(f); };"
+                       " requestAnimationFrame(f); setTimeout(()=>res(false), %d); })" % (n, int(timeout * 1000)))
+        if not ok:
+            raise TimeoutError(f"no animation frame in {timeout}s (waiting for {n})\npage errors: {self.errors[-3:]}\n{self._where()}")
+
     WHERE_JS = """(()=>{ const a=document.activeElement, s=getSelection();
       const name=a?a.tagName+(a.id?'#'+a.id:'')+(a.className?'.'+String(a.className).split(' ')[0]:''):null;
       return {platform:navigator.platform, hasFocus:document.hasFocus(), visibility:document.visibilityState, active:name,
@@ -255,16 +265,35 @@ class Browser:
         return self.eval("""(()=>{ const e=document.querySelector(%s); if(!e) return null; e.scrollIntoView({block:"center",inline:"center"});
           const r=e.getBoundingClientRect(); return r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()""" % json.dumps(selector))
 
-    def click(self, selector, button="left", count=1, modifiers=0):
+    def hit_report(self, selector):
+        """What is at the centre of `selector` and how the element looks, for a click that missed (#152): the element at that point,
+        the element's rectangle, its pointer-events, visibility and opacity, the viewport, the scroll position."""
+        return self.eval("""(s=>{ const t=document.querySelector(s); if(!t) return {missing:true}; const r=t.getBoundingClientRect(), cs=getComputedStyle(t);
+          const x=r.left+r.width/2, y=r.top+r.height/2, e=document.elementFromPoint(x,y), d=n=>n?n.tagName+(n.id?'#'+n.id:'')+(n.className&&n.className.split?'.'+n.className.split(' ').join('.'):''):null;
+          return {at:[Math.round(x),Math.round(y)], rect:[r.left,r.top,r.width,r.height].map(Math.round), element:d(e), parents:e?[e.parentElement,e.parentElement&&e.parentElement.parentElement].map(d):[],
+            isTarget:!!(e&&(e===t||t.contains(e))), pointerEvents:cs.pointerEvents, visibility:cs.visibility, opacity:cs.opacity,
+            viewport:[innerWidth,innerHeight], scroll:[scrollX,scrollY], docHeight:document.documentElement.scrollHeight}; })(%s)""" % json.dumps(selector))
+
+    def click(self, selector, button="left", count=1, modifiers=0, exact=False):
         """A real mouse click at the element's centre (not element.click()), so overlays and hit-testing count.
-        modifiers is Chrome's bit mask: Alt 1, Ctrl 2, Command 4, Shift 8."""
+        modifiers is Chrome's bit mask: Alt 1, Ctrl 2, Command 4, Shift 8.
+        exact (#152): wait until the element has stopped moving (two frames in a row at the same place; the page may still be laying
+        out after the last action, and a centre measured before that is somewhere else afterwards), then require the point to be on
+        the element itself, not on something that merely contains it. A miss says what was there instead (hit_report)."""
         self.wait(f"!!({json.dumps(selector)} && document.querySelector({json.dumps(selector)}))", 10)
         pos = self.box(selector)
+        if exact and pos:
+            for _ in range(20):
+                self.frames(2)
+                again = self.box(selector)
+                if again and abs(again["x"] - pos["x"]) < 0.5 and abs(again["y"] - pos["y"]) < 0.5:
+                    break
+                pos = again or pos
         if not pos:
             raise RuntimeError(f"can't click {selector}: it has no size (hidden?)")
-        hit = self.eval("""(()=>{ const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s); return !!(e&&t&&(t===e||t.contains(e)||e.contains(t))); })()""" % (pos["x"], pos["y"], json.dumps(selector)))
+        hit = self.eval("""(()=>{ const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s); return !!(e&&t&&(t===e||t.contains(e)||(%s&&e.contains(t)))); })()""" % (pos["x"], pos["y"], json.dumps(selector), "false" if exact else "true"))
         if not hit:
-            raise RuntimeError(f"can't click {selector}: something else is on top of it")
+            raise RuntimeError(f"can't click {selector}: something else is on top of it\n{self.hit_report(selector)}")
         for kind in ("mouseMoved", "mousePressed", "mouseReleased"):
             self.call("Input.dispatchMouseEvent", type=kind, x=pos["x"], y=pos["y"], button=button, clickCount=count, modifiers=modifiers)
         self.pump(0.05)
