@@ -17,12 +17,12 @@ the same `linkUrl` (class CallSites), and a source-level guard (class NoBypass, 
 `linkUrl`, `linkAnchor` or `sourceHref` unless it is one of the fixed internal addresses listed in INTERNAL_HREFS.
 """
 import json
-import re
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from link_scan import offenders_in, strip_comments  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 
 SRC = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard" / "src"
@@ -209,6 +209,18 @@ class CallSites(LiveBrowserCase):
         self.none(f)
         self.assertEqual(f("javascript:alert(1)")["a"][0]["text"], "Sam: Plan")        # the row is still there, and opens as any row without an address
 
+    # Settings › Health: a fix that opens an address (components/settings/Health.jsx runHealthFix)
+    def test_a_health_fix_opens_only_an_address_linkurl_accepts(self):
+        def opened(url):
+            return self.b.eval("""(async()=>{ const realApi=window.api, realOpen=window.open, calls=[]; window.open=(...a)=>{ calls.push(a); return null; };
+              window.api=async()=>({ok:true,url:%s});
+              try { await runHealthFix({id:"connect"}); } finally { window.api=realApi; window.open=realOpen; }
+              return calls; })()""" % json.dumps(url))
+        self.assertEqual(opened("https://claude.ai/settings/connectors"), [["https://claude.ai/settings/connectors", "_blank", "noopener"]])
+        for url in HOSTILE:
+            with self.subTest(url=url):
+                self.assertEqual(opened(url), [], "a refused address was opened")
+
     # the prep page and its Shape panel (components/prep/*.jsx, stores/prepShape.js sourceHref). The components return Preact elements,
     # so the test reads the element's props (no render is needed); a source with no safe address comes back as plain text (a span).
     def test_prep_sources_agree(self):
@@ -229,58 +241,133 @@ class CallSites(LiveBrowserCase):
             self.assertEqual(one(fn, "mail", "http://intranet.example/m")["a"][0]["href"], "http://intranet.example/m")
 
 
-# Where an `href=` may be written without the validator on or just above its line: fixed addresses the page builds itself, never data from
-# mail, Teams, a file or a person. (file ending, start of the text from `href=`, why). Short on purpose; add to it only with a reason here.
+# Where an address may be written without the validator in the same expression (dev/tests/link_scan.py has the rules): a value that starts
+# with "#" (an address inside the page) never needs an entry. Each entry is (file ending, the exact value expression, how many times,
+# why it is safe). The count is exact, so a second identical expression in the same file fails until it is looked at.
 INTERNAL_HREFS = [
-    ("", r'^href=\\?"#', 'the page\'s own in-page address: "#", "#cockpit=…" and the like; a click is handled by a data- attribute'),
-    ("activity.js", r'^href="\$\{actHref\(', "actHref: a hash address built from a work item or milestone id"),
-    ("core/server.js", r'^href="http://127\.0\.0\.1:\$\{S\.port\}/"', "the live server's own address, from its saved port"),
-    ("meetings.js", r'^href="\$\{u\}"', "a blob: address the page made itself (URL.createObjectURL) for the prep page it just built"),
-    ("ask.js", r'^href="\$\{href\}"', "runClosure: href is kept only if it matches /^#[\\w=%.|:&-]*$/ (a hash address), else it is empty and nothing is drawn"),
-    ("ReportingSpace.jsx", r'^href=\{(?:wHref|cHref|href)\}', "a hash address from weeklyHref or clientReportHref (href is doOpen's parameter, given one of them)"),
-    ("ReportingCard.jsx", r'^href=\{(?:weeklyHref|clientReportHref)\(', "a hash address from weeklyHref or clientReportHref"),
-    ("LinkPopover.jsx", r'^href=\{open\} target="_blank" rel="noopener noreferrer">Open', "`open` is linkUrl(p.href), declared above the return"),
-    ("ToDecide.jsx", r'^href=\{href\} target="_blank" rel=\{LINK_REL\}', "`href` is linkUrl(r.link), declared at the top of TdLine"),
+    ("activity.js", "${actHref(kind,id)}", 2, "actHref: a hash address built from a work item or milestone id"),
+    ("ask.js", "m.href", 1, "handed to runClosure, which keeps only a hash address (next entry)"),
+    ("ask.js", "${href}", 1, "runClosure: href is kept only if it matches /^#[\\w=%.|:&-]*$/ (a hash address), else it is empty and nothing is drawn"),
+    ("components/LinkPopover.jsx", 'have ? have.href : ""', 1, "the popover's state; it is opened only through `open`, which is linkUrl(p.href)"),
+    ("components/LinkPopover.jsx", "l.href", 1, "the popover's state, as above"),
+    ("components/LinkPopover.jsx", "open", 2, "`open` is linkUrl(p.href), declared above the return"),
+    ("components/notes/NoteEditor.jsx", "`creaite:person/${encodeURIComponent(o.id)}`", 1, "a person link in a note: creaite's own address, never opened as a web address"),
+    ("core/itemLink.js", "`creaite:item/${id}`", 1, "a work item link in a note: creaite's own address, never opened as a web address"),
+    ("core/editorLink.js", 'String(m.attrs.href || "")', 1, "reads a link already in the document into the popover's state; opened only through linkUrl"),
+    ("components/prep/PrepPage.jsx", "href", 1, "`href` is sourceHref(s), declared on the line above"),
+    ("components/prep/PrepShape.jsx", "href", 1, "`href` is sourceHref(s), declared on the line above"),
+    ("components/today/ToDecide.jsx", "href", 1, "`href` is linkUrl(r.link), declared at the top of TdLine"),
+    ("components/reporting/ReportingCard.jsx", "weeklyHref(code, week)", 1, "a hash address built by weeklyHref"),
+    ("components/reporting/ReportingCard.jsx", "clientReportHref(code, week, c.client)", 1, "a hash address built by clientReportHref"),
+    ("components/reporting/ReportingSpace.jsx", "href", 2, "doOpen's parameter, given wHref or cHref (hash addresses)"),
+    ("components/reporting/ReportingSpace.jsx", "wHref", 1, "weeklyHref(code, week): a hash address"),
+    ("components/reporting/ReportingSpace.jsx", "cHref", 2, "clientReportHref(code, week, client): a hash address"),
+    ("core/fields.js", 'p.split("/").map(encodeURIComponent).join("/")', 1, "openPath without the server: a path inside the vault, each part encoded, opened relative to the page"),
+    ("core/server.js", "http://127.0.0.1:${Number(S.port)}/", 1, "the live server's own address on this laptop; the port is made a number"),
+    ("meetings.js", "${u}", 1, "a blob: address the page made itself (URL.createObjectURL) for the prep page it just built"),
+    ("meetings.js", '""', 2, "an empty window opened at once (the click counts) and filled later from the page's own document"),
 ]
 
 
+def source_files():
+    return [p for p in sorted(SRC.rglob("*")) if p.suffix in (".js", ".jsx") and p.name != "linkUrl.js"]
+
+
 class NoBypass(unittest.TestCase):
-    """#159, source level (no browser): a new renderer must use linkUrl. Every `href=` in the dashboard's source is either one of the
-    fixed internal addresses in INTERNAL_HREFS or sits on a line (or within the two before it) that names linkUrl, linkAnchor,
-    sourceHref or mailLink. A new anchor that writes an address from mail, Teams, a file or a person fails here."""
+    """#159, source level (no browser): a new renderer must use linkUrl. dev/tests/link_scan.py finds every place the dashboard's code
+    writes an address (href in a string, a template, JSX or an object, `.href =`, setAttribute, window.open, location), with comments
+    removed and the whole value expression read. Each must start with "#" or call linkUrl, linkAnchor, sourceHref, mailLink or
+    typedLinkUrl in that very expression, or be listed in INTERNAL_HREFS, exactly as often as listed."""
 
-    VALIDATED = re.compile(r"linkUrl|linkAnchor|sourceHref|mailLink")
-
-    @staticmethod
-    def offenders():
-        found = []
-        for p in sorted(SRC.rglob("*")):
-            if p.suffix not in (".js", ".jsx") or p.name == "linkUrl.js":
-                continue
-            lines = p.read_text(encoding="utf-8").split("\n")
-            for i, line in enumerate(lines):
-                for m in re.finditer(r"href=[\"{\\\\]", line):
-                    # inside a line comment or a block comment's prose: skip a line that is only a comment
-                    if line.lstrip().startswith(("/*", "*", "//")):
-                        continue
-                    tail = line[m.start():]
-                    if any(str(p.relative_to(SRC)).endswith(f) and re.match(pat, tail) for f, pat, _ in INTERNAL_HREFS):
-                        continue
-                    ctx = "\n".join(lines[max(0, i - 2):i + 1])
-                    if NoBypass.VALIDATED.search(ctx):
-                        continue
-                    found.append(f"{p.relative_to(SRC)}:{i + 1}: {tail[:90]}")
-        return found
-
-    def test_no_href_is_written_without_the_validator(self):
-        self.assertEqual(self.offenders(), [], "an href is built from data without core/linkUrl.js (use linkAnchor, linkUrl or sourceHref)")
+    def test_no_address_is_written_without_the_validator(self):
+        used, bad = {}, []
+        for p in source_files():
+            bad += offenders_in(p.read_text(encoding="utf-8"), str(p.relative_to(SRC)), INTERNAL_HREFS, used)
+        self.assertEqual(bad, [], "an address is written without core/linkUrl.js (use linkAnchor, linkUrl or sourceHref), or an entry in INTERNAL_HREFS is missing")
+        for f, value, count, _ in INTERNAL_HREFS:
+            self.assertEqual(used.get((f, value), 0), count, f"INTERNAL_HREFS {f} {value!r}: expected {count} use(s)")
 
     def test_the_allow_list_is_documented(self):
-        for f, pat, why in INTERNAL_HREFS:
-            self.assertTrue(why.strip(), pat)
-            re.compile(pat)
-            if f:
-                self.assertTrue(list(SRC.rglob(Path(f).name)), f"{f}: no such file")
+        for f, value, count, why in INTERNAL_HREFS:
+            self.assertTrue(why.strip(), (f, value))
+            self.assertGreater(count, 0)
+            self.assertTrue(list(SRC.rglob(Path(f).name)), f"{f}: no such file")
+
+
+PLANTED = {
+    "a comment that names the validator cannot vouch": '// uses linkAnchor\nconst x = html`<a href="${r.link}">x</a>`;',
+    "a block comment cannot vouch": '/* linkUrl(r.link) */ const x = `<a href="${r.link}">x</a>`;',
+    "a comment inside the value cannot vouch": '<a href={/* linkUrl(r.link) */ r.link}>x</a>',
+    "a line comment inside the value cannot vouch": 'a.setAttribute("href", // linkUrl(r.link)\n  r.link);',
+    "a JSX comment cannot vouch": '<li>{/* linkUrl */}<a href={r.link}>x</a></li>',
+    "a comment first on the line does not hide the code after it": '/* c */ out.push(`<a href="${r.link}">`);',
+    "single quotes": "const x = `<a href='${r.link}'>x</a>`;",
+    "unquoted": "const x = `<a href=${r.link}>x</a>`;",
+    "unquoted text": "const x = `<a href=${r.link} target=_blank>x</a>`;",
+    "a property": "a.href = r.link;",
+    "a property with a spaced operator": "link.href  =  r.link ;",
+    "setAttribute": 'a.setAttribute("href", r.link);',
+    "setAttribute, single quotes": "a.setAttribute('href', r.link);",
+    "an object": 'h("a", { href: r.link, class: "x" }, "x");',
+    "an object, quoted key": 'h("a", { "href": r.link });',
+    "window.open": 'window.open(r.url, "_blank", "noopener");',
+    "location assignment": "location = r.url;",
+    "location.href": "window.location.href = r.url;",
+    "location.assign": "location.assign(r.url);",
+    "a line that names linkAnchor for something else": 'const x = `${linkAnchor(a, "b")} <a href="${r.link}">x</a>`;',
+    "a line that names linkUrl for something else": "const k = linkUrl(a), m = html`<a href=${r.link}>x</a>`;",
+    "JSX": '<a href={r.link} target="_blank">x</a>',
+    "JSX with a validator named elsewhere on the line": '{linkUrl(a) ? <a href={r.link}>x</a> : null}',
+    "an escaped quote": 'const x = "<a href=\\"" + r.link + "\\">";',
+    "a template inside a template": "html`${list.map(x => html`<a href=\"${x.link}\">${x.t}</a>`)}`",
+    "an apostrophe in prose before it": "<p>Alan's note <a href={r.link}>x</a></p>",
+}
+FINE = {
+    "a hash": 'html`<a href="#" data-go="today">x</a>`;',
+    "a hash with data": 'html`<a href="#cockpit=${code}">x</a>`;',
+    "JSX hash": '<a href="#" onClick={go}>x</a>',
+    "linkUrl in JSX": '<a href={linkUrl(r.link) || ""}>x</a>',
+    "linkAnchor in a string": "const x = `<a href=\"${linkUrl(r.link)}\">x</a>`;",
+    "an object with a validator": 'h("a", { href: linkUrl(r.link) || "#" });',
+    "window.open with a validator": "window.open(linkUrl(r.url), '_blank');",
+    "setAttribute with a validator": 'a.setAttribute("href", sourceHref(s));',
+    "property with a validator": "a.href = mailLink(e);",
+    "a variable called href": "const href = r.url, x = 1;\nlet href2 = 2;",
+    "a comparison": "if (a.href === b.href) return;",
+    "a ternary": "const w = text === '' ? href : text;",
+    "href only in a comment": "// <a href={r.link}>\n/* window.open(x) */\nconst y = 1;",
+    "href only in a string of prose": 'const msg = "Use linkUrl";',
+}
+
+
+class PlantedOffenders(unittest.TestCase):
+    """The guard itself: planted offenders are all found, and the good forms are not (dev/tests/link_scan.py)."""
+
+    def test_every_planted_offender_is_found(self):
+        for name, code in PLANTED.items():
+            with self.subTest(name):
+                self.assertTrue(offenders_in(code, "planted.js"), f"not flagged: {code}")
+
+    def test_the_good_forms_are_not_flagged(self):
+        for name, code in FINE.items():
+            with self.subTest(name):
+                self.assertEqual(offenders_in(code, "fine.js"), [])
+
+    def test_an_allowed_value_is_allowed_exactly_as_often_as_listed(self):
+        allow = [("a.js", "${u}", 1, "reason")]
+        two = 'x(`<a href="${u}">`); y(`<a href="${u}">`);'
+        self.assertEqual(len(offenders_in(two, "dir/a.js", allow)), 1)               # the second one is new
+        self.assertEqual(len(offenders_in('x(`<a href="${u}">`);', "dir/a.js", allow)), 0)
+        self.assertEqual(len(offenders_in('x(`<a href="${u}">`);', "dir/b.js", allow)), 1)       # another file
+        self.assertEqual(len(offenders_in('x(`<a href="${u2}">`);', "dir/a.js", allow)), 1)      # another expression
+
+    def test_comments_are_removed_and_the_line_numbers_kept(self):
+        s = strip_comments("a // c\n/* two\nlines */ b `x // not a comment` \"y // nor this\" /re\\/gx/ c")
+        self.assertEqual(s.count("\n"), 2)
+        self.assertIn("x // not a comment", s)
+        self.assertIn("y // nor this", s)
+        self.assertNotIn(" c\n", s.split("\n")[0])
+        self.assertEqual(offenders_in("/* one\n two */\nwindow.open(r.u);", "p.js")[0].split(":")[1], "3")
 
 
 if __name__ == "__main__":

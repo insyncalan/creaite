@@ -3997,6 +3997,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     CARDTYPE: () => CARDTYPE,
     CARD_CLOSE: () => CARD_CLOSE,
     CARD_OPEN: () => CARD_OPEN,
+    CARD_WAITING: () => CARD_WAITING,
     CATOF: () => CATOF,
     CD_STEPS: () => CD_STEPS,
     CE_FIELDS: () => CE_FIELDS,
@@ -4130,6 +4131,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     HLTICK: () => HLTICK,
     HRANK: () => HRANK,
     HTABS: () => HTABS,
+    Health: () => Health,
     ICONS: () => ICONS,
     ID_RE: () => ID_RE,
     IGEDIT: () => IGEDIT,
@@ -4889,6 +4891,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     colPatch: () => colPatch,
     colResizer: () => colResizer,
     comboboxOpen: () => comboboxOpen,
+    commandIn: () => commandIn,
     commitRecord: () => commitRecord,
     confMark: () => confMark,
     confirmCard: () => confirmCard,
@@ -6160,6 +6163,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     runCk: () => runCk,
     runClosure: () => runClosure,
     runGen: () => runGen,
+    runHealthFix: () => runHealthFix,
     runReminder: () => runReminder,
     runSearch: () => runSearch,
     runTool: () => runTool,
@@ -11741,6 +11745,83 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     ] })) });
   }
 
+  // core/linkUrl.js
+  var LINK_MAX = 2048;
+  var INVISIBLE = /[\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
+  function hasBad(s5) {
+    for (let i5 = 0; i5 < s5.length; i5++) {
+      const c5 = s5.charCodeAt(i5);
+      if (c5 <= 32 || c5 >= 127 && c5 <= 160) return true;
+    }
+    return INVISIBLE.test(s5);
+  }
+  var ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
+  function linkUrl(s5) {
+    if (typeof s5 !== "string" || !s5 || s5.length > LINK_MAX) return null;
+    if (hasBad(s5) || ENTITY.test(s5) || /[\\<>"`]/.test(s5)) return null;
+    const m5 = /^([a-z][a-z\d+.-]*):/i.exec(s5);
+    if (!m5) return null;
+    const scheme = m5[1].toLowerCase(), rest = s5.slice(m5[0].length);
+    if (scheme === "http" || scheme === "https") {
+      const a5 = /^\/\/([^/?#]*)/.exec(rest);
+      if (!a5 || !a5[1]) return null;
+      const host2 = a5[1];
+      if (host2.includes("@")) return null;
+      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2)) return null;
+      try {
+        const u5 = new URL(scheme + ":" + rest);
+        if (u5.protocol !== scheme + ":" || !u5.hostname || u5.username || u5.password) return null;
+      } catch (e4) {
+        return null;
+      }
+      return scheme + ":" + rest;
+    }
+    if (scheme === "mailto") return mailtoOk(rest) ? "mailto:" + rest : null;
+    return null;
+  }
+  var MAIL_PARTS = ["subject", "body"];
+  function strictDecode(s5) {
+    if (/%(?![\da-f]{2})/i.test(s5)) return null;
+    try {
+      return decodeURIComponent(s5);
+    } catch (e4) {
+      return null;
+    }
+  }
+  function mailtoOk(rest) {
+    if (rest.includes("#")) return false;
+    const q5 = rest.indexOf("?"), mailbox = strictDecode(q5 < 0 ? rest : rest.slice(0, q5));
+    if (mailbox === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(mailbox)) return false;
+    if (q5 < 0) return true;
+    for (const part of rest.slice(q5 + 1).split("&")) {
+      if (!part) continue;
+      const eq = part.indexOf("="), key = strictDecode(eq < 0 ? part : part.slice(0, eq)), val2 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
+      if (key === null || val2 === null || !MAIL_PARTS.includes(key.toLowerCase())) return false;
+    }
+    return true;
+  }
+  var isLinkUrl = (s5) => linkUrl(s5) !== null;
+  function typedLinkUrl(s5) {
+    if (typeof s5 !== "string") return null;
+    const t47 = s5.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
+    if (!t47) return null;
+    if (/^[a-z][a-z\d+.-]*:/i.test(t47) && !/^[^/?#@\s]+\.[^/?#@\s]+:\d/.test(t47)) return linkUrl(t47);
+    if (t47.startsWith("//") || t47.startsWith("\\")) return null;
+    if (/^[^\s@/?#:]+@[^\s@/?#:]+\.[^\s@/?#:]+$/.test(t47)) return linkUrl("mailto:" + t47);
+    if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
+    return null;
+  }
+  var LINK_REL = "noopener noreferrer";
+  function unescHtml(s5) {
+    return String(s5).replace(/&(?:amp|lt|gt|quot);/g, (m5) => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"' })[m5]);
+  }
+  function linkAnchor(href, inner, cls) {
+    const u5 = linkUrl(href);
+    return u5 === null ? null : `<a href="${u5.replace(/&/g, "&amp;")}" target="_blank" rel="${LINK_REL}"${cls ? ` class="${cls}"` : ""}>${inner}</a>`;
+  }
+  var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
+  var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
+
   // components/settings/Health.jsx
   var CMD = /system\/scripts\/run [^,;"]+/;
   var commandIn = (how) => {
@@ -11754,7 +11835,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       markCardWaiting(f5.id || "");
       snack(CARD_WAITING + ": nothing moves until you approve it.");
     } else snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
-    if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
+    if (r4.ok && r4.url && !linkUrl(r4.url)) snack("That address can't be opened here");
+    else if (r4.ok && r4.url) window.open(
+      /** @type {string} */
+      linkUrl(r4.url),
+      "_blank",
+      "noopener"
+    );
     if (r4.ok && r4.card) await pendingEdit();
     if (r4.ok && !r4.url) checkHealth();
     return !!r4.ok;
@@ -12224,83 +12311,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   function drawTabs(host2, props) {
     R(/* @__PURE__ */ u2(Tabs, { ...props }), host2);
   }
-
-  // core/linkUrl.js
-  var LINK_MAX = 2048;
-  var INVISIBLE = /[\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
-  function hasBad(s5) {
-    for (let i5 = 0; i5 < s5.length; i5++) {
-      const c5 = s5.charCodeAt(i5);
-      if (c5 <= 32 || c5 >= 127 && c5 <= 160) return true;
-    }
-    return INVISIBLE.test(s5);
-  }
-  var ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
-  function linkUrl(s5) {
-    if (typeof s5 !== "string" || !s5 || s5.length > LINK_MAX) return null;
-    if (hasBad(s5) || ENTITY.test(s5) || /[\\<>"`]/.test(s5)) return null;
-    const m5 = /^([a-z][a-z\d+.-]*):/i.exec(s5);
-    if (!m5) return null;
-    const scheme = m5[1].toLowerCase(), rest = s5.slice(m5[0].length);
-    if (scheme === "http" || scheme === "https") {
-      const a5 = /^\/\/([^/?#]*)/.exec(rest);
-      if (!a5 || !a5[1]) return null;
-      const host2 = a5[1];
-      if (host2.includes("@")) return null;
-      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2)) return null;
-      try {
-        const u5 = new URL(scheme + ":" + rest);
-        if (u5.protocol !== scheme + ":" || !u5.hostname || u5.username || u5.password) return null;
-      } catch (e4) {
-        return null;
-      }
-      return scheme + ":" + rest;
-    }
-    if (scheme === "mailto") return mailtoOk(rest) ? "mailto:" + rest : null;
-    return null;
-  }
-  var MAIL_PARTS = ["subject", "body"];
-  function strictDecode(s5) {
-    if (/%(?![\da-f]{2})/i.test(s5)) return null;
-    try {
-      return decodeURIComponent(s5);
-    } catch (e4) {
-      return null;
-    }
-  }
-  function mailtoOk(rest) {
-    if (rest.includes("#")) return false;
-    const q5 = rest.indexOf("?"), mailbox = strictDecode(q5 < 0 ? rest : rest.slice(0, q5));
-    if (mailbox === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(mailbox)) return false;
-    if (q5 < 0) return true;
-    for (const part of rest.slice(q5 + 1).split("&")) {
-      if (!part) continue;
-      const eq = part.indexOf("="), key = strictDecode(eq < 0 ? part : part.slice(0, eq)), val2 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
-      if (key === null || val2 === null || !MAIL_PARTS.includes(key.toLowerCase())) return false;
-    }
-    return true;
-  }
-  var isLinkUrl = (s5) => linkUrl(s5) !== null;
-  function typedLinkUrl(s5) {
-    if (typeof s5 !== "string") return null;
-    const t47 = s5.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
-    if (!t47) return null;
-    if (/^[a-z][a-z\d+.-]*:/i.test(t47) && !/^[^/?#@\s]+\.[^/?#@\s]+:\d/.test(t47)) return linkUrl(t47);
-    if (t47.startsWith("//") || t47.startsWith("\\")) return null;
-    if (/^[^\s@/?#:]+@[^\s@/?#:]+\.[^\s@/?#:]+$/.test(t47)) return linkUrl("mailto:" + t47);
-    if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
-    return null;
-  }
-  var LINK_REL = "noopener noreferrer";
-  function unescHtml(s5) {
-    return String(s5).replace(/&(?:amp|lt|gt|quot);/g, (m5) => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"' })[m5]);
-  }
-  function linkAnchor(href, inner, cls) {
-    const u5 = linkUrl(href);
-    return u5 === null ? null : `<a href="${u5.replace(/&/g, "&amp;")}" target="_blank" rel="${LINK_REL}"${cls ? ` class="${cls}"` : ""}>${inner}</a>`;
-  }
-  var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
-  var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
 
   // core/editorProfiles.js
   var HEAD_SHIFT = 2;
@@ -69758,7 +69768,7 @@ ${d5.text}`);
     if (ALERT0 === null) ALERT0 = $("#liveAlert").innerHTML;
     if (!(shared.LIVELINK && !SERVED)) {
       if ($("#liveAlert").innerHTML !== ALERT0) putHTML($("#liveAlert"), raw(ALERT0));
-    } else putHTML($("#liveAlert"), html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${S.port}/">open the live dashboard</a> to save and apply directly.`);
+    } else putHTML($("#liveAlert"), html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save and apply directly.`);
     drawStatusDot($("#chSub"), shared.LIVE ? { status: "ok", word: "Claude Code on this laptop, working in your vault" } : { status: "off", word: "Live server not running — commands will be copied instead" });
     if (!shared.LOADING) errBanner();
   }
@@ -70326,7 +70336,6 @@ ${d5.text}`);
         "Icon",
         "IconButton",
         "LASTVISIT",
-        "LINK_REL",
         "MAC",
         "MFIRST",
         "MM",
@@ -70339,6 +70348,7 @@ ${d5.text}`);
         "MenuPanel",
         "NEG",
         "NOTE_OPEN",
+        "NoteEditor",
         "OLDSERVER",
         "OPENST",
         "OWN",
@@ -70356,6 +70366,7 @@ ${d5.text}`);
         "Peek",
         "PrepPage",
         "PrepPopup",
+        "PrepShape",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -70814,6 +70825,7 @@ ${d5.text}`);
         "rtOK",
         "runClosure",
         "runGen",
+        "runHealthFix",
         "runSearch",
         "rvAdvance",
         "rvBulkOK",

@@ -279,7 +279,7 @@ export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE
   $("#liveAlert").classList.toggle("on",!shared.LIVE); $("#liveAlert").classList.toggle("found",shared.LIVELINK);
   if(ALERT0===null) ALERT0=$("#liveAlert").innerHTML;
   if(!(shared.LIVELINK&&!SERVED)){ if($("#liveAlert").innerHTML!==ALERT0) putHTML($("#liveAlert"),raw(ALERT0)); }
-  else putHTML($("#liveAlert"),html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${S.port}/">open the live dashboard</a> to save and apply directly.`); drawStatusDot($("#chSub"),shared.LIVE?{status:"ok",word:"Claude Code on this laptop, working in your vault"}:{status:"off",word:"Live server not running — commands will be copied instead"});   /* BL-316: the StatusDot block */ 
+  else putHTML($("#liveAlert"),html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save and apply directly.`); drawStatusDot($("#chSub"),shared.LIVE?{status:"ok",word:"Claude Code on this laptop, working in your vault"}:{status:"off",word:"Live server not running — commands will be copied instead"});   /* BL-316: the StatusDot block */ 
   if(!shared.LOADING) errBanner(); }
 /* BL-86: the installed app. The service worker shows an offline page when the server is stopped; the page says "still here"
    every 10 seconds, so a server the launcher started can stop itself when the last window closes. */
