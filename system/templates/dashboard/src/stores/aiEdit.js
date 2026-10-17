@@ -58,6 +58,7 @@ export const AI_GROUPS = /** @type {Record<string, [string, string[]][]>} */ ({
   line: [["Improve", ["rewrite", "shorter", "executive"]]],
   report: [["Improve", ["shorter", "executive", "polish"]]],     // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
   minutes: [["Improve", ["shorter", "executive", "polish"]]],
+  client: [["Improve", ["shorter", "executive", "polish"]]],     // #123: the client sheet; Shorten, executive, Polish, no Make into
   readonly: [],                                                 // only Find the source, the sheet's own item
 });
 /** THE PLACE TABLE (#117): every editor place the selection bar is built for, and whether it is switched on. `ai`: the sparkle and bar show
@@ -74,6 +75,7 @@ export const AI_PLACE_TABLE = {
   line: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
   report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // v2.1.0 P5: the sheets keep their AI bar and Find the source
   minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+  client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // #123: the client sheet (edit_ai.py's client place)
   readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
 };
 /** True when a place's selection bar is switched on. @param {string} place */
