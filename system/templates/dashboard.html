@@ -10090,20 +10090,29 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     const byPointer = A2(false);
     const isOpen = A2(false);
     isOpen.current = open2;
+    const show = (
+      /** @param {boolean} v */
+      (v5) => {
+        isOpen.current = v5;
+        setOpen2(v5);
+      }
+    );
     const close = (how) => {
       back2.current = how === "esc";
       if (KB_OPEN === fold) KB_OPEN = null;
       if (back2.current) btn.current?.focus({ preventScroll: true });
-      setOpen2(false);
+      show(false);
       if (hover && menuGroup.current === btn.current) menuGroup.close();
     };
     const closeRef = A2(close);
     closeRef.current = close;
     const fold = A2(() => {
-      if (isOpen.current) closeRef.current("esc");
+      if (!isOpen.current) return;
+      const at2 = document.activeElement, inside = !at2 || at2 === document.body || at2 === btn.current || !!box.current?.contains(at2);
+      closeRef.current(inside ? "esc" : "away");
     }).current;
     h2(() => {
-      if (!open2 && KB_OPEN === fold) KB_OPEN = null;
+      if (KB_OPEN === fold && !isOpen.current) KB_OPEN = null;
     }, [open2]);
     h2(() => () => {
       if (KB_OPEN === fold) KB_OPEN = null;
@@ -10129,9 +10138,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
           KB_OPEN = null;
           byPointer.current = true;
           tipHide();
-          setOpen2(true);
+          show(true);
         },
-        close: () => setOpen2(false)
+        close: () => show(false)
       });
     }, [hover, why]);
     h2(() => {
@@ -10151,7 +10160,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         e4.preventDefault();
         byPointer.current = false;
         claimKb();
-        setOpen2(true);
+        show(true);
       } else if (byPointer.current) {
         e4.preventDefault();
         byPointer.current = false;
@@ -10192,7 +10201,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
             if (open2) close("pick");
             else {
               claimKb();
-              setOpen2(true);
+              show(true);
             }
           },
           children: [

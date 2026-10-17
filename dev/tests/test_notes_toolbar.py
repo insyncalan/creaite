@@ -362,6 +362,56 @@ class Toolbar(LiveBrowserCase):
         self.assertEqual(self.expanded("m-list"), "false")
         self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
 
+    def test_a_click_on_a_hover_opened_menu_takes_it_so_the_pointer_opening_another_folds_it(self):
+        b = self.b
+        self.make_note("Click claims")
+        self.reset("x")
+        self.hover(".nbar [data-nt=m-list]")                                        # the pointer opens List ...
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        b.pump(0.5)
+        b.click(".nbar [data-nt=m-list]")                                           # ... a click moves in (the keyboard has it now) ...
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        self.assertEqual(self.expanded("m-list"), "true")
+        self.hover(".nbar [data-nt=m-heading]")                                     # ... so the pointer opening Heading folds it
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-list"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+
+    def test_a_fold_does_not_pull_focus_back_when_focus_has_already_moved_elsewhere(self):
+        b = self.b
+        self.make_note("No theft")
+        self.reset("x")
+        b.click(".nbar [data-nt=m-list]")                                           # List open, focus inside it
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")                # focus into the note without a pointerdown or Tab
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.type("abc")
+        self.hover(".nbar [data-nt=m-heading]")                                     # the pointer opens Heading: List folds
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        b.pump(0.4)
+        self.assertEqual(self.expanded("m-list"), "false")
+        self.assertEqual(b.eval("document.activeElement===document.querySelector('.nbody')"), True, "the fold took focus out of the note")
+        b.type("def")
+        self.assertRegex(self.value(), r"xabcdef")
+        self.away()
+
+    def test_esc_then_down_in_the_same_tick_keeps_the_new_fold(self):
+        b = self.b
+        self.make_note("Same tick")
+        self.reset("x")
+        b.eval("""(async()=>{ const bt=document.querySelector('.nbar [data-nt=m-heading]'), key=k=>new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true});
+          bt.focus(); bt.dispatchEvent(key('ArrowDown')); await new Promise(r=>setTimeout(r,300));      // open by key, focus inside
+          document.activeElement.dispatchEvent(key('Escape'));                                          // Esc ...
+          for(let i=0;i<4;i++) await Promise.resolve();                                                 // (the close has rendered, its effect has not run)
+          bt.dispatchEvent(key('ArrowDown'));                                                           // ... and Down at once
+          await new Promise(r=>setTimeout(r,300)); })()""")
+        self.assertEqual(self.expanded("m-heading"), "true")
+        self.hover(".nbar [data-nt=m-list]")                                        # the pointer opens List: Heading, still the keyboard's, folds
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-heading"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+        self.away()
+
     def test_the_bar_is_one_tab_stop_and_the_menus_are_named(self):
         b = self.b
         self.make_note("Stop")
