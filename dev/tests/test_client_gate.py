@@ -1055,6 +1055,15 @@ class TheReviewOfc39f6c4(Base):
         got = self.py(f"print(json.dumps([sorted(client_leak.named(t, {reg + ['Will Price']!r}, every=True)) for t in {texts!r}]))")
         self.assertEqual(got, [[reg[0]], [reg[1]], [reg[2]], [], []])
 
+    def test_an_ideographic_character_is_an_initial_only_in_an_ideographic_name_or_with_a_dot(self):
+        """Round 8: "Mark 中 Field" and "Mark の Field" are not Mark Field (a CJK or kana character is a word, not an initial),
+        "Mark 中. Field" is; between the words of a name in that script it may still stand alone ("王 小 明" for 王 明)."""
+        reg = ["Mark Field", "王 明", "山田 太郎"]
+        texts = ["Mark 中 Field items.", "Mark の Field items.", "Mark 中. Field items.", "王 小 明",
+                 "山田 の 太郎", "Mark ب Field items."]
+        got = self.py(f"print(json.dumps([sorted(client_leak.named(t, {reg!r}, every=True)) for t in {texts!r}]))")
+        self.assertEqual(got, [[], [], [reg[0]], [reg[1]], [reg[2]], [reg[0]]])
+
     def test_one_rule_for_the_punctuated_marker(self):
         """Finding 4: up to three of . : ; , with no space is the marker, unless "Only" starts a sentence or the word runs on into a
         file name, domain or address; with a space before, only when nothing but punctuation follows "only"."""

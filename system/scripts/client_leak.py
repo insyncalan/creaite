@@ -283,20 +283,33 @@ def _class(test):
     return "".join(out)
 
 
-_INITIAL = []
+_INITIAL = {}
+# #127 round 8: the ideographic scripts (CJK ideographs, kana, Hangul syllables): one of their characters is a word or a syllable,
+# not an initial, so between the words of a name in another script it counts as an initial only with a dot ("Mark 中 Field" is not
+# Mark Field). Between the words of a name written in them it may stand alone ("王 小 明" for 王 明, round 7).
+IDEOGRAPHIC = ((0x2E80, 0x9FFF), (0xA960, 0xA97F), (0xAC00, 0xD7FF), (0xF900, 0xFAFF), (0xFF66, 0xFFDC), (0x16FE0, 0x18AFF),
+               (0x1AFF0, 0x1B2FF), (0x20000, 0x323AF))
 
 
-def initial():
+def _ideographic(c):
+    return any(a <= ord(c) <= b for a, b in IDEOGRAPHIC)
+
+
+def initial(ideographic_name=False):
     """#127 round 7: the initial between a name's words, in any script: a capital letter (one whose upper case is itself and
-    differs from its lower case: "Ł", "Б", not "a" or "ł"), or in a script with no case (Chinese, Arabic, Devanagari) a single
-    letter followed by a dot or a space ("王 小 明"); then a dot or the separator after it. Built once, when a name is first
-    matched (about 0.1 s)."""
-    if not _INITIAL:
+    differs from its lower case: "Ł", "Б", not "a" or "ł"), or in a script with no case (Arabic, Devanagari) a single letter
+    followed by a dot or a space; then a dot or the separator after it. Round 8: an ideographic character (IDEOGRAPHIC) only
+    with a dot, or with a space too between the words of a name written in an ideographic script (`ideographic_name`). Built
+    once each, when a name is first matched (about 0.1 s)."""
+    if ideographic_name not in _INITIAL:
         upper = _class(lambda c: c.upper() == c != c.lower())
-        caseless = _class(lambda c: c.isalpha() and c.upper() == c.lower())
-        _INITIAL.append(rf"(?-i:[{upper}]\.?|(?![\x00-\x7f])[{caseless}](?=[.\s])\.?)")   # case-sensitive, and an ASCII
-        #                                       # letter never tried against the caseless class: as fast as the Latin-1 class was
-    return _INITIAL[0]
+        caseless = _class(lambda c: c.isalpha() and c.upper() == c.lower() and not _ideographic(c))
+        ideo = _class(lambda c: c.isalpha() and _ideographic(c))
+        after = r"(?=[.\s])" if ideographic_name else r"(?=\.)"
+        _INITIAL[ideographic_name] = (rf"(?-i:[{upper}]\.?|(?![\x00-\x7f])[{caseless}](?=[.\s])\.?"
+                                      rf"|(?![\x00-\x7f])[{ideo}]{after}\.?)")
+        #                                       # case-sensitive, and an ASCII letter never tried against the caseless class
+    return _INITIAL[ideographic_name]
 
 
 def name_pattern(name):
@@ -313,7 +326,8 @@ def name_pattern(name):
     if len(words) == 1:
         return re.compile(rf"(?<![^\W_])(?i:{re.escape(words[0])})(?![^\W_])")
     joined = all(len(w) >= JOIN_PART for w in words) and sum(map(len, words)) >= JOIN_LEN
-    sep = f"(?:{NAME_SEP}{initial()}(?={NAME_SEP}))?(?:{NAME_SEP}){'?' if joined else ''}"     # an initial may stand between
+    mid = initial(all(map(_ideographic, "".join(words))))                                  # an initial may stand between
+    sep = f"(?:{NAME_SEP}{mid}(?={NAME_SEP}))?(?:{NAME_SEP}){'?' if joined else ''}"
     forms = ["(?i:" + sep.join(map(re.escape, words)) + ")"]
     if len(words) == 2:
         forms.append(rf"(?i:{re.escape(words[1])}\s{{0,3}},\s{{0,3}}{re.escape(words[0])})")
