@@ -54,11 +54,14 @@ export const AI_GROUPS = /** @type {Record<string, [string, string[]][]>} */ ({
   plain: [["Improve", ["rewrite", "shorter", "executive"]]],
   email: [["Improve", ["rewrite", "shorter", "longer"]], ["Tone", ["formal", "warmer"]]],
   line: [["Improve", ["rewrite", "shorter", "executive"]]],
+  report: [["Improve", ["shorter", "executive", "polish"]]],     // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
+  minutes: [["Improve", ["shorter", "executive", "polish"]]],
+  readonly: [],                                                 // only Find the source, the sheet's own item
 });
 /** THE PLACE TABLE (#117): every editor place the selection bar is built for, and whether it is switched on. `ai`: the sparkle and bar show
     at all; `turnInto`: Turn into (instant, no AI; rich editors whose storage holds every block kind); `formatNotes`: Format notes for
     several paragraphs (rich editors only); `improveOnly`: the place offers its Improve (and Tone) group and Ask… only. v2.1.0 switches on
-    notes and current; email, plain and line are built and OFF, so v2.2.0 is flipping `ai`, not a rebuild (dev/tests/test_ai_117.py lists
+    notes and current, and keeps the A4 sheets' report, minutes and readonly on as shipped (edit_ai.py SHEET_PLACES); email, plain and line are built and OFF, so v2.2.0 is flipping `ai`, not a rebuild (dev/tests/test_ai_117.py lists
     every place and asserts it). Current state's Turn into is off for good: its storage (headings ###..#####, no checklist) and the Word
     report can't take every kind. @type {Record<string, {ai: boolean, turnInto: boolean, formatNotes: boolean, improveOnly: boolean}>} */
 export const AI_PLACE_TABLE = {
@@ -67,12 +70,17 @@ export const AI_PLACE_TABLE = {
   email: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
   plain: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
   line: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
+  report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // v2.1.0 P5: the sheets keep their AI bar and Find the source
+  minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+  readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
 };
 /** True when a place's selection bar is switched on. @param {string} place */
 export const aiPlaceOn = place => !!(AI_PLACE_TABLE[place] && AI_PLACE_TABLE[place].ai);
 
 /** A place's own name for an option (v2.1.0 P5: the sheet's bar says "Shorten", as its mockup does). */
 const AI_NAMES = /** @type {Record<string, Record<string, string>>} */ ({ report: { shorter: "Shorten" }, minutes: { shorter: "Shorten" } });
+/** An option's name in a place: its own name there (AI_NAMES), else AI_OPTIONS'. @param {string} place @param {string} id */
+export const aiName = (place, id) => (AI_NAMES[place] || {})[id] || AI_OPTIONS[id][0];
 
 /**
  * @typedef {import("../core/editor.js").EdHandle} AiHandle
@@ -131,7 +139,7 @@ export function aiRunAction(id) {
 /** The options a place offers, as the menu lists them, with the registered items before "Or say what you want…".
     @param {string} place @returns {{id: string, name: string, line?: string, icon?: string}[]} */
 export const aiItems = place => {
-  const own = (AI_PLACES[place] || AI_PLACES.plain).map(id => ({ id, name: (AI_NAMES[place] || {})[id] || AI_OPTIONS[id][0], line: AI_OPTIONS[id][1] }));
+  const own = (AI_PLACES[place] || AI_PLACES.plain).map(id => ({ id, name: aiName(place, id), line: AI_OPTIONS[id][1] }));
   const extra = aiActionsFor(place).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
   const at = own.findIndex(o => o.id === "custom");
   return at < 0 ? own.concat(extra) : [...own.slice(0, at), ...extra, ...own.slice(at)];

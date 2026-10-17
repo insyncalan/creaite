@@ -21,7 +21,7 @@ import { Icon } from "./Icon.jsx";
 import { Menu } from "./Menu.jsx";
 import { ED_HOOKS, edTurnKind } from "../core/editor.js";
 import { placeAtCaret } from "../core/caretPlace.js";
-import { AI_GROUPS, AI_OPTIONS, AI_PLACE_TABLE, aiAccept, aiActionsFor, aiAttach, aiBar, aiChanges, aiDiff, aiDiscard, aiItems, aiRetry, aiRun,
+import { AI_GROUPS, AI_OPTIONS, AI_PLACE_TABLE, aiAccept, aiActionsFor, aiAttach, aiBar, aiChanges, aiDiff, aiDiscard, aiItems, aiName, aiRetry, aiRun,
   aiRunAction, aiSend, aiSug, aiToggle, aiTurn } from "../stores/aiEdit.js";
 
 /** Turn into's kinds, in the menu's order: [id, name]. */
@@ -83,7 +83,7 @@ export function AiBar({ bar }) {
   const pickAi = id => { if (!aiRunAction(id)) aiRun(id, "", { h: bar.h, ai: bar.ai }); };
   /** @type {[string, {id: string, name: string, line?: string, icon?: string}[]][]} */
   const groups = (AI_GROUPS[place] || AI_GROUPS.plain).map(([name, ids]) =>
-    [name, ids.map(id => ({ id, name: AI_OPTIONS[id][0], line: AI_OPTIONS[id][1] }))]);
+    [name, ids.map(id => ({ id, name: aiName(place, id), line: AI_OPTIONS[id][1] }))]);
   const into = aiActionsFor(place).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
   if (into.length) groups.push(["Make into", into]);
   /** ← → move along the bar's buttons (a menu's own keys are the menu's). @param {KeyboardEvent} e */
