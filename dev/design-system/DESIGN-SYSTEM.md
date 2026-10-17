@@ -137,7 +137,7 @@ Each row is every visible instance of the selector across the 12 snapshot pages:
 | Section title | `h2` | 22 (22), 33 (6), 23 (3) | 16px (28), 22px (6) | 700 (34) | 0px (34) | display font; 16 px mostly, 22 px in some places |
 | Sub-section title | `h3` | 24 (13), 16 (1) | 16px (13), 12px (1) | 700 (13), 500 (1) | 0px (14) | 16 px, weight 700 |
 
-Controls drawn by their own class and not rendered on these 12 pages (for example the Settings row controls in other states, `.fsel`, the details form `.fgrid` whose fields use a 4 × 8 px padding and a `--faint` border, and menus, dialogs and the peek) are described in `style.snapshot.css`; copy their markup from the running app or a screen that shows them rather than redrawing them.
+Two classes that look like components but are **not to be drawn**: `.fsel` (a 36 px, 16 px-radius select, `style.snapshot.css` line 676) is **dead CSS on this line: no screen uses it**, so it is not rendered and must not be copied into a mockup; `.fgrid` (the item details form, line 804 onward) is styled in the CSS (its fields have a 1 px `--faint` border, 8 px radius and 4 × 8 px padding at line 806) but is not rendered in these snapshots, so its sizes are **read from the CSS, not measured**. Menus, dialogs and the peek exist in the running app but not in the static snapshots; copy their markup from the app rather than redrawing them.
 
 ### Two things worth knowing
 
@@ -153,7 +153,7 @@ Controls drawn by their own class and not rendered on these 12 pages (for exampl
 
 ## 7. Known rough edges (do not copy them)
 
-On this line: line heights have no tokens (they arrive with #193); some font sizes, radii and layers are raw values; buttons, icon buttons and fields come in more than one size (section 5); page titles are 34 px on Today and Help and 22 px elsewhere. #193 tidies the first two.
+On this line (Team Stark's recount of the gate's stylesheet, 17-10-2026): font sizes have **19** distinct raw values, border radii **13**, layers **10** raw uses in **7** values, line heights **22** distinct values with no tokens, and **49** distinct raw heights. Buttons, icon buttons and fields come in more than one size (section 5), and page titles are 34 px on Today and Help and 22 px elsewhere. #193 (`tokens-193-full`) tidies sizes, radii, layers and line heights; the heights and the title sizes stay open.
 
 ## 8. Checklist before a mockup is shown
 
