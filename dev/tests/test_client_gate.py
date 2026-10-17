@@ -994,5 +994,81 @@ class TheReviewOfce5d66b(Base):
             self.assertEqual(got, [[], [], []])                          # control: emphasis on client-safe words
 
 
+class TheReviewOfc39f6c4(Base):
+    """#127 round 7 (review of c39f6c4): no check reads from one form of a text into the next (as written, as shown, decoded); a
+    shorter name inside an allowed one is not someone else; an initial in any script; one rule for the punctuated marker; emphasis
+    inside a word and nesting of any depth read as the HTML and PDF exports show them; a lone surrogate hides nothing."""
+    gate, assert_found = TheReviewOf55967e3.gate, TheReviewOf55967e3.assert_found
+
+    def assert_clean(self, texts, gate=None):
+        for text, got in (gate or self.gate)(texts).items():
+            self.assertEqual(got, [[], [], []], text)
+
+    def gate_as_is(self, texts):
+        """gate, with each text as the whole summary (no "Progress. " before it): where it starts matters here."""
+        return dict(zip(texts, self.py(
+            "con = client_leak.connect()\nout = []\n"
+            f"for t in {texts!r}:\n"
+            "    d = report_doc.client_doc('ABC')\n"
+            "    next(s for s in d['sections'] if s['id'] == 'summary')['text'] = t\n"
+            "    out.append([client_leak.findings(d), client_leak.plain_findings(con, 'ABC', t), edit_ai.client_problems('ABC', t)])\n"
+            "print(json.dumps(out))")))
+
+    def test_no_check_reads_across_two_forms_of_a_text(self):
+        """Finding 1: the as-written text ends "…internal", its shown or decoded copy starts "Only…": not the marker; nor a name
+        ending one form and starting the next. The marker hidden by emphasis is still found."""
+        self.assert_clean(["Only _two_ reviewers are needed; the rest of the review is internal",
+                           "Only **approved** figures go to the board; drafts stay internal",
+                           "Only the `export` file changes. The rest stays internal",
+                           "Only A &amp; B go out; the rest stays internal",
+                           "Marlow said **yes** to Quentin", "Marlow said yes &amp; thanks to Quentin"], gate=self.gate_as_is)
+        self.assert_found([("Note: internal _only_.", MARKER), ("Note: _internal-only_.", MARKER)])
+
+    def test_a_shorter_name_inside_an_allowed_one_is_not_another_person(self):
+        """Finding 2: Sam Patel may be shown; "Sam" is another person's alias. "Sam Patel will run it" names only Sam Patel; a Sam
+        standing on its own still counts."""
+        got = self.py("client_leak.people = lambda con, code, blocking=None: ({'Sam Patel'}, set())\n"
+                      "edit_ai._register_names = lambda: ['Sam Patel', 'Sam Jones', 'Sam']\n"
+                      "print(json.dumps([[f for f in edit_ai.client_problems('ABC', t) if 'named' in f] for t in "
+                      "('Sam Patel will run the rehearsal.', 'Waiting on Sam Patel.', 'Sam Patel and Sam will run it.')]))")
+        self.assertEqual(got, [[], [], ["Sam isn't named in the text"]])
+
+    def test_an_initial_in_any_script(self):
+        """Finding 3: a capital initial outside Latin-1, and a single letter in a script with no case, between a name's words."""
+        reg = ["Quentin Marlow", "\u0418\u0432\u0430\u043d \u041f\u0435\u0442\u0440\u043e\u0432", "\u738b \u660e"]
+        texts = ["Waiting on Quentin \u0141. Marlow.", "Waiting on \u0418\u0432\u0430\u043d \u0411. \u041f\u0435\u0442\u0440\u043e\u0432.",
+                 "\u738b \u5c0f \u660e", "Waiting on Quentin \u0142. Marlow.", "Will a price cap apply?"]
+        got = self.py(f"print(json.dumps([sorted(client_leak.named(t, {reg + ['Will Price']!r}, every=True)) for t in {texts!r}]))")
+        self.assertEqual(got, [[reg[0]], [reg[1]], [reg[2]], [], []])
+
+    def test_one_rule_for_the_punctuated_marker(self):
+        """Finding 4: up to three of . : ; , with no space is the marker, unless "Only" starts a sentence or the word runs on into a
+        file name, domain or address; with a space before, only when nothing but punctuation follows "only"."""
+        self.assert_clean(["See internal.only.yaml for it.", "Host internal.only.example.org is up.",
+                           "Mail internal.only@example.com today.", "Keep it internal.Only the totals go.", "Keep it internal:Only.",
+                           "Costs are internal : only licences go.", "Note: internal ; Only the totals.",
+                           "Keep it internal ; Only."])
+        self.assert_found([(f"Note: {t}.", MARKER) for t in ("internal ; only", "internal . only", "internal:only", "internal;only",
+                                                             "internal,only", "internal::only", "internal..only", "internal;;only",
+                                                             "INTERNAL.ONLY")])
+
+    def test_emphasis_inside_a_word_and_any_depth_of_nesting(self):
+        """Finding 5: the HTML and PDF exports draw emphasis inside a word ("inter*nal*-only" shows "internal-only"), and nesting
+        is undone until nothing changes; an underscore inside a word and "2*3*4" stay as they are."""
+        self.assert_found([("Note: inter*nal*-only.", MARKER), ("Note: inter****nal-only.", MARKER),
+                           ("Note: ~~**__*_internal_*__**~~-only.", MARKER), ("Blocked by ABC-A-0*0*4 now.", HIDDEN),
+                           ("Waiting on Quen*tin* Marlow.", NAMED)])
+        for text, got in self.gate(["Note: Line up the q*uie*t audit."]).items():
+            for k in range(3):
+                self.assertTrue(any("wording appears" in f for f in got[k]), (text, k, got[k]))
+        self.assert_clean(["Ratio 2*3*4 holds.", "The snake_case_field and my_internal_value are done."])
+
+    def test_a_lone_surrogate_is_unseen(self):
+        """Finding 6: docx_tools.esc drops a lone surrogate, so the check does too."""
+        self.assertEqual(self.py("print(json.dumps(edit_ai.unseen('a\\ud800b\\udfffc')))"), "abc")
+        self.assert_found([("Waiting on Quen\ud800tin Marlow.", NAMED), ("Blocked by ABC-A-0\udfff04.", HIDDEN),
+                           ("Note: internal\ud800-only.", MARKER)])
+
+
 if __name__ == "__main__":
     unittest.main()

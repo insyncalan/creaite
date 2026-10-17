@@ -193,8 +193,9 @@ SHOWN_AS_SPACE = {0x2800: " "}            # #127 round 5: the braille blank draw
 # #127 round 6: control characters (Cc) other than tab, line feed and carriage return, and the noncharacters (U+FDD0 to U+FDEF and
 # the last two of every plane): Word draws them as nothing (or won't open the file: docx_tools.esc strips them). Those Python's
 # splitlines breaks a line at (so a Word export starts a new line there: VT, FF, the separators U+001C to U+001E, NEL) are a line break.
+# #127 round 7: a lone surrogate (U+D800 to U+DFFF) too: docx_tools.esc drops it, so Word shows it as nothing.
 LINE_LIKE = "\x0b\x0c\x1c\x1d\x1e\x85"
-CONTROLS = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ufdd0-\ufdef"
+CONTROLS = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ufdd0-\ufdef\ud800-\udfff"
                       + "".join(chr(p * 0x10000 + 0xFFFE) + chr(p * 0x10000 + 0xFFFF) for p in range(17)) + "]")
 
 
@@ -288,7 +289,8 @@ def client_problems(code, text, original=""):
         found += drafts.internal_findings(con, code, client_leak.as_shown(text), client_leak.as_shown(original))   # #127 r6
         known = _register_names() + client_leak.project_owners(con, code)
         allowed = client_leak.named(original, known, every=True) | client_leak.people(con, code, blocking)[0]   # every name
-        found += [f"{n} isn't named in the text" for n in sorted(client_leak.named(text, known, every=True) - allowed)]   # (#127 r6)
+        found += [f"{n} isn't named in the text" for n in sorted(client_leak.named_beyond(text, known, allowed))]   # (#127 r6, r7:
+        #                                       # a shorter name inside an allowed one's match, "Sam" in "Sam Patel", isn't another person)
     except client_leak.RegisterUnreadable:                # #127: fails closed, with its own message
         found = [REGISTER]
     except (Exception, SystemExit):  # noqa: BLE001  fails closed
