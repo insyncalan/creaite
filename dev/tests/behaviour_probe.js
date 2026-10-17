@@ -24,6 +24,7 @@ if (!window.__SBW) {
 }
 window.SB = (() => {
   const vis = el => { if (!el || !el.isConnected) return false; if (el.closest("[hidden]")) return false;
+    if (el.checkVisibility && !el.checkVisibility({ visibilityProperty: true, contentVisibilityAuto: true })) return false;   /* inside a folded <details> (Today's Intake and Review, #168): drawn at size by Chrome, but not focusable */
     const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") return false;
     const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const POP = '[role="menu"],[role="listbox"],[role="dialog"],dialog[open],.ddmenu.on,.dmenu.on,.pkpop,.bmenu,.combo.open,.cal,#railMoreMenu,td.ce.editing';
