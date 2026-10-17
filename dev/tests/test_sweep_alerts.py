@@ -520,7 +520,7 @@ class PrepTests(unittest.TestCase):
           out.inv=document.querySelector('#prepDlg details.prepinv').textContent;
           out.intro=document.getElementById('prepFacts').textContent;
           document.getElementById('prepDlg').close(); renderToday();
-          const wk=document.querySelector('[data-prepday]'); out.tomorrowLink=!!wk; if(wk){ wk.click(); await new Promise(r=>setTimeout(r,50)); out.tomorrowWhen=document.getElementById('prepWhen').textContent; }   /* the header is a component: it redraws a moment later */
+          const wk=document.querySelector('.wkchip[data-prepgoday]'); out.tomorrowLink=!!wk; if(wk){ const day=wk.dataset.prepgoday, ev=(D.calendar.days[day]||[]).find(x=>!x.all_day&&`${day}|${x.start}|${x.title}`===wk.dataset.prepgo); openPrep(ev,day); await new Promise(r=>setTimeout(r,50)); out.tomorrowWhen=document.getElementById('prepWhen').textContent; }   /* the header is a component: it redraws a moment later */
           window.OUT=out;""", "prep-rank")
 
     @classmethod
@@ -768,7 +768,7 @@ class PrepPageStaticTests(unittest.TestCase):
               go("today"); renderToday(); openPrep(prepTimed()[0],TODAY); const b=document.querySelector('[data-prepview]');
               const title=b.dataset.tip; b.click();   /* BL-161: the one tooltip */ await new Promise(r=>setTimeout(r,50));
               document.getElementById('prepDlg').close(); SA().prep_pages={'09:00|ABC weekly':'projects/x/agendas/a.html'}; renderToday();
-              document.querySelector('#dayMeets .dmti').dispatchEvent(new FocusEvent("focus")); await new Promise(r=>setTimeout(r,50));   /* #140: the title's popup */
+              document.querySelector('#dayMeets .dmti').dispatchEvent(new PointerEvent("pointerover",{bubbles:true,pointerType:"mouse"})); await new Promise(r=>setTimeout(r,900));   /* #140, #111: the title's peek, after a rest (CARD_OPEN) */
               const g=document.querySelector('#dayMeets .dmpop [data-prepgo]'); g.click(); await new Promise(r=>setTimeout(r,50));   /* BL-287: shown, disabled */
               window.OUT={title, opened, fetched, said:document.body.textContent.includes("The Prep page needs the live server"),
                 go:[g.getAttribute('aria-disabled'), g.dataset.tip, location.hash.startsWith('#prep=')]};""", "prep-static")

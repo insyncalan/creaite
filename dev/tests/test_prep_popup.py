@@ -118,8 +118,8 @@ class PrepPopup(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .preplink, #dayMeets .prepgo, #dayMeets .prepmade, #dayMeets .mnote').length"), 0)
 
     def test_140_the_title_opens_a_popup_on_focus_with_prepare_then_the_agenda_actions(self):
-        """#140: tabbing to a meeting's title opens the popup (Prepare); with a saved page it offers Open agenda, Prepare again and
-        Open the file; Open agenda goes to the page inside creaite; Esc closes it and keeps focus on the title."""
+        """#140, #111 B: tabbing to a meeting's title opens the Prep peek (Open the prep page, no Prepare); with a saved page it adds
+        Agenda saved and Open the file; Open the prep page goes to the page inside creaite; Esc closes it and keeps focus on the title."""
         b = self.b
         b.call("Emulation.setFocusEmulationEnabled", enabled=True)
         b.eval("go('today'); renderToday()")
@@ -132,8 +132,8 @@ class PrepPopup(LiveBrowserCase):
             meta:p.querySelector('.pm').textContent, btns:[...p.querySelectorAll('button')].map(x=>x.textContent), primary:p.querySelector('.btn.primary').textContent,
             w:Math.round(p.getBoundingClientRect().width), internal:/Internal/.test(p.textContent)}; })()""")
         self.assertEqual((o["role"], o["exp"], o["haspopup"], o["head"]), ("dialog", "true", "dialog", "ABC weekly"))
-        self.assertEqual(o["btns"], ["Prepare"])
-        self.assertEqual(o["primary"], "Prepare")
+        self.assertEqual(o["btns"], ["Open the prep page"])
+        self.assertEqual(o["primary"], "Open the prep page")
         self.assertTrue(o["internal"])
         self.assertLessEqual(o["w"], 330)
         b.key("Escape")
@@ -142,11 +142,50 @@ class PrepPopup(LiveBrowserCase):
         b.eval("SA().prep_pages={'09:00|ABC weekly':`projects/ABC Example Programme/agendas/${TODAY} Prep - ABC weekly.html`}; renderToday(); document.activeElement.blur(); document.querySelector('#dayMeets .dmti').focus()")
         b.wait("document.querySelector('#dayMeets .dmpop .agsaved')")
         got = b.eval("[...document.querySelectorAll('#dayMeets .dmpop button')].map(x=>x.textContent)")
-        self.assertEqual(got, ["Open agenda", "Prepare again", "Open the file"])
+        self.assertEqual(got, ["Open the prep page", "Open the file"])
         self.assertIn("Agenda saved", b.eval("document.querySelector('#dayMeets .dmpop .agsaved').textContent"))
         b.click("#dayMeets .dmpop [data-prepgo]")
         b.wait("location.hash.startsWith('#prep=')")
         self.assertFalse(b.eval(f"!!{DLG} && {DLG}.open"))                                           # the old popup never opened
+
+    def test_111_the_peek_shows_the_aim_what_to_raise_and_the_ask_from_the_stored_focus(self):
+        """#111 B: the peek reads the page's stored focus through /api/prep/view; no Claude, nothing written by the peek."""
+        b = self.b
+        b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+        b.eval("go('today'); renderToday()")
+        b.wait("document.querySelector('#dayMeets .dmti')")
+        key = "09:00|ABC weekly"
+        r = b.eval(f"""api('/api/prep/focus/save', {{key:{key!r}, accept:true, instruction:'Agree the date', reading:{{focus:[],aim:'Agree the date',show:'focus-first'}},
+            notes:{{objective:[{{text:'Leave with a date for the credentials.'}}], talking_points:[{{text:'Credentials are late'}},{{text:'Test data pack'}},{{text:'UAT start'}},{{text:'A fourth thing'}}],
+            ask:[{{text:'Who can unblock by Monday?'}}], carried_over:[]}}}}).then(x=>x.ok)""")
+        self.assertTrue(r)
+        b.eval("document.querySelector('#dayMeets .dmti').focus()")
+        b.wait("document.querySelector('#dayMeets .prpeek .pkb')")
+        o = b.eval("""(()=>{ const p=document.querySelector('#dayMeets .prpeek'); return {labels:[...p.querySelectorAll('.pkl')].map(x=>x.textContent),
+          raise:[...p.querySelectorAll('.pkul li')].map(x=>x.textContent), text:p.textContent}; })()""")
+        self.assertEqual(o["labels"][:3], ["Your aim", "Raise", "Ask"])
+        self.assertEqual(o["raise"], ["Credentials are late", "Test data pack", "UAT start"])    # three, not four
+        self.assertIn("Leave with a date for the credentials.", o["text"])
+        self.assertIn("Who can unblock by Monday?", o["text"])
+        self.assertNotIn("Not shaped yet", o["text"])
+
+    def test_111_a_meeting_not_shaped_says_so_and_lists_what_is_in_play(self):
+        b = self.b
+        b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+        b.eval("go('today'); renderToday()")
+        b.wait("document.querySelector('#dayMeets .dmti')")
+        b.eval("document.querySelector('#dayMeets .dmti').focus()")
+        b.wait("document.querySelector('#dayMeets .prpeek .pkb, #dayMeets .prpeek .agnone')")
+        b.wait("/Not shaped yet/.test(document.querySelector('#dayMeets .prpeek').textContent)")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#dayMeets .prpeek .pkl')].map(x=>x.textContent)[0]"), "In play")
+
+    def test_111_the_peek_uses_the_shared_hover_constants_and_no_timer_of_its_own(self):
+        from pathlib import Path
+        src = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src"
+        for f in ("components/prep/PrepPopup.jsx", "components/today/DayMeetings.jsx", "components/today/WeekAhead.jsx", "stores/prepPopup.js"):
+            t = (src / f).read_text(encoding="utf-8")
+            self.assertNotIn("setTimeout", t, f)
+        self.assertIn("hoverAttach", (src / "components/prep/PrepPopup.jsx").read_text(encoding="utf-8"))
 
     def test_140_the_popup_opens_on_hover_after_a_rest_not_at_once(self):
         b = self.b

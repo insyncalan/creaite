@@ -290,12 +290,34 @@ class WeekCalm(Header):
         self.draw()
         o = b.eval("""(()=>{ const m=document.querySelector('#weekList .wk-meeting'); const cs=getComputedStyle(m), plain=getComputedStyle(document.querySelector('#weekList .wk-raid'));
           return {time:m.querySelector('.wktm').textContent, chips:[...m.querySelectorAll('.wkchip')].map(c=>c.textContent), tint:cs.backgroundColor!==plain.backgroundColor,
-            data:m.querySelector('.wkchip').dataset.prepday, others:document.querySelectorAll('#weekList .wk-raid .wkchip').length}; })()""")
+            data:m.querySelector('.wkchip').dataset.prepgoday, others:document.querySelectorAll('#weekList .wk-raid .wkchip').length}; })()""")
         self.assertEqual((o["time"], o["chips"], o["tint"], o["data"], o["others"]), ("10:00", ["Prep"], True, "2026-10-14", 0))
         b.eval("SA().prep_pages={...(SA().prep_pages||{}),'2026-10-14|10:00|ABC board':'projects/ABC Example Programme/agendas/x.html'}; renderToday()")
         self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wk-meeting')[0].querySelectorAll('.wkchip')].map(c=>c.textContent)"), ["Prep page made"])
         b.click("#weekList .wk-meeting .wkchip.made")
         b.wait("location.hash.startsWith('#prep=')")
+
+    def test_the_prep_chip_opens_the_prep_peek_111_on_focus_and_esc_closes_it(self):
+        """#111 B: the Week ahead's Prep chip carries the same peek as the day band's title; Open the prep page goes to the page."""
+        b = self.b
+        self.draw()
+        b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+        try:
+            b.key("Tab")
+            b.eval("document.querySelector('#weekList .wk-meeting .wkchip').focus()")
+            b.wait("document.querySelector('#weekList .prpeek')")
+            o = b.eval("""(()=>{ const p=document.querySelector('#weekList .prpeek'), c=document.querySelector('#weekList .wk-meeting .wkchip');
+              return {role:p.getAttribute('role'), exp:c.getAttribute('aria-expanded'), btns:[...p.querySelectorAll('button')].map(x=>x.textContent), h:p.querySelector('h4').textContent}; })()""")
+            self.assertEqual((o["role"], o["exp"], o["btns"], o["h"]), ("dialog", "true", ["Open the prep page"], "ABC board"))
+            b.key("Escape")
+            b.wait("!document.querySelector('#weekList .prpeek')")
+            self.assertTrue(b.eval("document.activeElement.classList.contains('wkchip')"))
+            b.eval("document.activeElement.blur(); document.querySelector('#weekList .wk-meeting .wkchip').focus()")
+            b.wait("document.querySelector('#weekList .prpeek')")
+            b.click("#weekList .prpeek .btn.primary")
+            b.wait("location.hash.startsWith('#prep=')")
+        finally:                                                      # the browser is shared by the class: leave it as found
+            b.eval("document.activeElement && document.activeElement.blur(); location.hash=''; go('today'); renderToday()")
 
     def test_actions_show_on_hover_or_focus_and_are_keyboard_reachable(self):
         b = self.b
