@@ -1,43 +1,88 @@
-"""Refresh dev/design-system/pages and shots: a static snapshot of each real screen (creaite palette, light, fictional sample data).
+"""Refresh dev/design-system: static snapshots of each real screen, the stylesheet they were drawn with, and which version they came from.
 
-Why: mockups start from these pages and the real style.css, so they cannot drift from the app (dev/design-system/README.md).
-Run from the dev repo root after a release changes how a screen looks:  python3 dev/tools/design_system_snapshots.py
-Uses the UI audit's throwaway vault and headless Chrome (cdp.py); development only, never touches the dev repo's own vault."""
-import sys, time, json
+Why: mockups start from these pages and this stylesheet, so they cannot drift from the app (dev/design-system/README.md). A snapshot is
+only as right as the code it was taken from, so every file says which commit that was (SNAPSHOT.json, and a comment in each page).
+Take snapshots from the RELEASE LINE the next release is built on (the integration gate, or main once a release is cut), never from an
+older line. Run from any checkout; --repo names the checkout whose app is photographed (default: this one):
+    python3 dev/tools/design_system_snapshots.py --repo /path/to/checkout-of-the-release-line [--out dev/design-system]
+Uses the UI audit's throwaway vault and headless Chrome (cdp.py); development only, never touches a real vault."""
+import argparse
+import json
+import subprocess
+import sys
+import time
+from datetime import date
 from pathlib import Path
-DEV = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(DEV / "tools"))
-sys.path.insert(0, str(DEV / "tests"))
-import ui_audit, proc_guard
-from cdp import Browser
-ROOT=str(DEV / "design-system") + "/"
-VIEWS=[("today","go('today')"),("work","go('work')"),("review","go('review')"),("projects","go('projects')"),("cockpit",None),("milestones",None),("intake","go('inbox')"),("files","go('files')"),("people","go('people')"),("activity","go('activity')"),("settings","go('settings')"),("help","go('help')")]
-HEAD='''<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../../../system/templates/dashboard/style.css">'''
-v, proc, base = ui_audit.start_server()
-try:
-    b = Browser(1400, 1000)
+
+HERE = Path(__file__).resolve().parents[1]
+VIEWS = [("today", "go('today')"), ("work", "go('work')"), ("review", "go('review')"), ("projects", "go('projects')"),
+         ("cockpit", None), ("milestones", None), ("intake", "go('inbox')"), ("files", "go('files')"), ("people", "go('people')"),
+         ("activity", "go('activity')"), ("settings", "go('settings')"), ("help", "go('help')")]
+FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:'
+         'wght@700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">')
+TOGGLE = "<script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script>"
+
+
+def git(repo, *a):
+    return subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True).stdout.strip()
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--repo", default=str(HERE.parent))
+    ap.add_argument("--out", default=str(HERE / "design-system"))
+    a = ap.parse_args()
+    repo, out = Path(a.repo).resolve(), Path(a.out).resolve()
+    sys.path.insert(0, str(repo / "dev" / "tools"))
+    sys.path.insert(0, str(repo / "dev" / "tests"))
+    import proc_guard
+    import ui_audit
+    from cdp import Browser
+    (out / "pages").mkdir(parents=True, exist_ok=True)
+    (out / "shots").mkdir(parents=True, exist_ok=True)
+    css = (repo / "system/templates/dashboard/style.css").read_text()
+    (out / "style.snapshot.css").write_text(css)
+    info = {"commit": git(repo, "rev-parse", "--short", "HEAD"), "branch": git(repo, "rev-parse", "--abbrev-ref", "HEAD"),
+            "version_file": (repo / "VERSION").read_text().strip(), "subject": git(repo, "log", "-1", "--format=%s")[:100],
+            "taken": date.today().isoformat(), "palette": "creaite", "mode": "light", "viewport": "1400x1000"}
+    (out / "SNAPSHOT.json").write_text(json.dumps(info, indent=1) + "\n")
+    note = ("A static snapshot of the real %s screen (creaite palette, light, fictional sample data) drawn by style.snapshot.css, taken from "
+            + "commit " + info["commit"] + " (" + info["branch"] + ", VERSION file " + info["version_file"] + ") on " + info["taken"]
+            + ". Alt+D toggles dark. Copy this file to start a mockup; see ../README.md.")
+    v, proc, base = ui_audit.start_server()
     try:
-        b.goto(base + "/"); b.wait("typeof go==='function' && LIVE", timeout=30); b.call("Page.setBypassCSP", enabled=True)
-        b.eval("(()=>{const r=document.documentElement; r.dataset.palette='creaite'; r.dataset.theme='light'; return true})()")
-        for name, js in VIEWS:
-            if js: b.eval(js); time.sleep(0.7)
-            else:
-                b.goto(base + ("/#cockpit=ABC" if name=="cockpit" else "/#milestones=ABC")); b.wait("typeof go==='function' && LIVE", timeout=30); time.sleep(1.2)
-                b.eval("(()=>{const r=document.documentElement; r.dataset.palette='creaite'; r.dataset.theme='light'; return true})()")
-            b.screenshot(ROOT+"shots/%s-light.png"%name)
-            html = b.eval("""(()=>{const c=document.documentElement.cloneNode(true);c.querySelectorAll('script,style,link[rel=stylesheet],meta').forEach(s=>s.remove());
-              c.querySelectorAll('#snack,.ask-panel').forEach(s=>{});return c.outerHTML})()""")
-            head_end = html.index("</head>") if "</head>" in html else None
-            if head_end is not None:
-                html = html[:html.index("<head>")+6] + HEAD + html[head_end:]
-            toggle = "<script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script>"
-            html = "<!doctype html>\n<!-- A static snapshot of the real %s page (creaite palette, light, fictional sample data), drawn by the app's own style.css. Alt+D toggles dark. Copy this file to start a mockup; see ../README.md. -->\n"%name + html.replace("</body>", toggle+"</body>")
-            open(ROOT+"pages/%s.html"%name, "w").write(html)
-            print(name, len(html))
-        print("errors:", list(b.errors)[:3])
+        b = Browser(1400, 1000)
+        try:
+            b.goto(base + "/")
+            b.wait("typeof go==='function' && LIVE", timeout=30)
+            b.call("Page.setBypassCSP", enabled=True)
+            theme = "(()=>{const r=document.documentElement; r.dataset.palette='creaite'; r.dataset.theme='light'; return true})()"
+            b.eval(theme)
+            for name, js in VIEWS:
+                if js:
+                    b.eval(js)
+                    time.sleep(0.7)
+                else:
+                    b.goto(base + ("/#cockpit=ABC" if name == "cockpit" else "/#milestones=ABC"))
+                    b.wait("typeof go==='function' && LIVE", timeout=30)
+                    time.sleep(1.2)
+                    b.eval(theme)
+                b.screenshot(str(out / "shots" / f"{name}-light.png"))
+                html = b.eval("(()=>{const c=document.documentElement.cloneNode(true);"
+                              "c.querySelectorAll('script,style,link[rel=stylesheet],meta').forEach(s=>s.remove());return c.outerHTML})()")
+                head = '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + FONTS + \
+                       '<link rel="stylesheet" href="../style.snapshot.css">'
+                html = html[:html.index("<head>") + 6] + head + html[html.index("</head>"):]
+                (out / "pages" / f"{name}.html").write_text("<!doctype html>\n<!-- " + (note % name) + " -->\n"
+                                                            + html.replace("</body>", TOGGLE + "</body>"))
+                print(name, len(html))
+            print("errors:", list(b.errors)[:3])
+        finally:
+            b.close()
     finally:
-        b.close()
-finally:
-    proc_guard.stop(proc, grace=10); v.cleanup()
+        proc_guard.stop(proc, grace=10)
+        v.cleanup()
+
+
+if __name__ == "__main__":
+    main()
