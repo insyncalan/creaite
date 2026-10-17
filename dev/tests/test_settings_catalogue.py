@@ -319,8 +319,7 @@ class SafeSettings(unittest.TestCase):
 
     def test_the_sweep_lookback_settings_are_in_the_safe_list(self):
         text = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
-        block = text[text.index("SAFE_SETTINGS = ("):].split(")
-", 1)[0]
+        block = text[text.index("SAFE_SETTINGS = ("):].split(")" + chr(10), 1)[0]
         for key in ("sweep.first_run_lookback_days", "sweep.max_lookback_days"):
             self.assertIn(f'"{key}"', block)
 
