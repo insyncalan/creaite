@@ -91,6 +91,23 @@ class StyleTokens(unittest.TestCase):
             self.assertTrue(v in Z_ALLOWED or re.fullmatch(r"var\(--z-[a-z0-9-]+\)", v),
                             "z-index:%s is a raw number; add a --z-* layer" % v)
 
+    def test_headings_use_tokens(self):
+        """#193: the page title and section heading sizes are --fs-h1 and --fs-h2 on the base rules."""
+        self.assertIn("h1{font:500 var(--fs-h1)/var(--lh-h1)", self.css)
+        self.assertIn("h2{font:500 var(--fs-h2)/var(--lh-h2)", self.css)
+        self.assertNotIn("font-size:15px;line-height:var(--lh-24)", self.css)
+
+    def test_one_field_one_chip(self):
+        """#193: one field rule and one chip rule; a context does not draw its own height, radius or ground again."""
+        n = len(re.findall(r"(?m)^\.chip,\.vchip\{", self.css))
+        self.assertEqual(n, 1, "one chip definition")
+        for ctx in (".prepmeta .chip{", ".shape .chip{", ".pp .chip{", ".rp .chip{", ".rp-cockcard .chip{"):
+            self.assertNotIn(ctx, self.css, ctx + " is a second chip style")
+        self.assertRegex(self.css, r"\.wbulk select[^{]*\{height:var\(--ctl-h\);border:1px solid var\(--line\);border-radius:var\(--ctl-r\)")
+        for pat in (r"\.fpl input\{[^}]*height:\d", r"\.handbar input\[type=text\]\{[^}]*height:\d",
+                    r"\.linkpop input\{[^}]*height:\d", r"\.fsel\{height:36px"):
+            self.assertNotRegex(self.css, pat, "a context draws its own field/button size: " + pat)
+
     def test_tokens_defined(self):
         s = CSS.read_text()
         for name in set(re.findall(r"var\((--(?:lh|z)-[a-z0-9-]+)\)", s)):
