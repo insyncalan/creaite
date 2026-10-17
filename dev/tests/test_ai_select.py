@@ -182,7 +182,8 @@ class AiOnSelection(LiveBrowserCase):
         b = self.b
         b.eval("AI_PLACE_TABLE.plain.ai=false; AI_PLACE_TABLE.line.ai=false; true")
         self.assertEqual(b.eval("Object.fromEntries(Object.entries(AI_PLACE_TABLE).map(([k,v])=>[k,v.ai]))"),
-                         {"notes": True, "current": True, "email": False, "plain": False, "line": False})
+                         {"notes": True, "current": True, "email": False, "plain": False, "line": False,
+                          "report": True, "minutes": True, "readonly": True})      # the A4 sheets stay on as v2.1.0 shipped
         for place in ("email", "plain", "line"):
             b.eval("""(p=>{ document.getElementById('offx')?.remove(); const el=document.createElement('div'); el.id='offx';
               el.style.cssText='position:fixed;top:120px;left:120px;width:400px;z-index:100;background:var(--surface)';
