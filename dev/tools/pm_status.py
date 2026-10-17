@@ -35,18 +35,25 @@ def main():
 
     section("Board items waiting on a mockup or brief (gh read only)")
     rc, out = run("gh", "issue", "list", "--repo", BOARD, "--state", "open",
-                  "--limit", "200", "--json", "number,title,labels")
+                  "--limit", "200", "--json", "number,title,body,labels")
     if rc != 0:
         print("gh unavailable:", out.splitlines()[0] if out else "no output")
     else:
+        # The board has no mockup, brief or design label (labels: bug,
+        # enhancement, sonnet, opus, review, UI). Pick by the UI label, or by
+        # a mockup, brief, Needs decision or Idea mention in the title or body.
+        # The project's State field is not read (gh project is not allowed).
+        words = ("mockup", "brief", "needs decision", "idea")
         found = False
         for i in json.loads(out):
-            names = " ".join(l["name"] for l in i["labels"]).lower()
-            if "mockup" in names or "brief" in names or "design" in names:
-                print(f"  #{i['number']} {i['title']}  [{names}]")
+            names = [l["name"].lower() for l in i["labels"]]
+            text = (i["title"] + " " + (i.get("body") or "")).lower()
+            hit = [w for w in words if w in text] + (["UI label"] if "ui" in names else [])
+            if hit:
+                print(f"  #{i['number']} {i['title']}  [{', '.join(hit)}]")
                 found = True
         if not found:
-            print("  none labelled mockup, brief or design")
+            print("  none found")
 
     section("Mockups and briefs newer than the last release")
     _, tag = run("git", "describe", "--tags", "--abbrev=0")
