@@ -1080,14 +1080,16 @@ class TheReviewOfc39f6c4(Base):
         self.assert_found([(t, MARKER) for t in (
             "Internal.Only", "Internal:Only", "Internal;Only", "INTERNAL:Only", "Note: internal.Only.", "**Internal.Only**",
             "Status: internal . Only", "Note: internal ;\nOnly", "INTERNAL.ONLY.DRAFT", "Label: internal.only.Do not forward.",
-            "internal.only.Final", "Status: internal:only/draft", "Status: internal.only/v2", "internal.only\\draft",
+            "internal.only.Final", "Status: internal:only/draft", "Status: internal.only/v2", "Note: internal.only\\draft",
             "Status: internal ; only do not forward", "Keep it internal:Only.", "Keep it internal ; Only.",
             "Note: INTERNAL.ONLY@ACME", "Note: internal.only@")])
         self.assert_clean(["Config lives in internal.only.yaml in the repo.", "Point DNS at internal.only.example.org today.",
                            "Write to internal.only@example.com for access.", "Keep it internal. Only the totals go.",
                            "The path is /srv/internal.only/data on the server.", "Version internal.only.v2 is the public label.",
                            "Item: Internal . Only the board signs.", "Scope remains internal ; only the training is shared.",
-                           "Data is internal:Only aggregated data leaves."])
+                           "Data is internal:Only aggregated data leaves.", "The path internal.only/config holds it."])
+        bare = ["internal.only\\draft", "Internal.Only", "INTERNAL.ONLY.DRAFT", "internal.only.Final", "Status: internal . Only"]
+        self.assertEqual(self.py(f"print(json.dumps([client_leak.marked(t) for t in {bare!r}]))"), [True] * len(bare))
 
     def test_emphasis_inside_a_word_and_any_depth_of_nesting(self):
         """Finding 5: the HTML and PDF exports draw emphasis inside a word ("inter*nal*-only" shows "internal-only"), and nesting

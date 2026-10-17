@@ -2388,16 +2388,15 @@ def split_panes(text, titles):
 #   - "Only" starts a sentence only when a space and a lower-case word follow ("internal.Only the totals go"), never alone
 #     ("Internal.Only", "Note: internal.Only.", "**Internal.Only**");
 #   - a file name, domain or address runs on in lower case (".yaml", ".example.org", ".v2", "@example.com"), never ".Do",
-#     ".DRAFT", ".Final" or "@ACME"; a path ("/data", "\draft") only when the marker is itself inside one ("/srv/internal.only/
-#     data"), not after a marker standing alone as a status ("Status: internal.only/v2");
+#     ".DRAFT", ".Final" or "@ACME"; a path ("/data", "\draft") too, but not after a marker standing alone as a status, at a
+#     line's start or right after a label ("Status: internal.only/v2"; "The path internal.only/config" is a path);
 #   - spaced, right after a label or at a line's start ("Status: internal ; only do not forward"), it is the marker whatever
 #     follows, unless "Only" starts a sentence ("Item: Internal . Only the board signs.").
 _ONLY_SENTENCE = r"(?-i:(?!Only[ \t]+[a-z]))"
 _RUNS_ON = r"(?-i:\.[a-z0-9][a-z0-9_-]*|@[a-z0-9])"
 INTERNAL_MARK = re.compile(r"\binternal[\s-]+only\b"
-                           r"|(?<![/\\])\binternal[.:;,]{1,3}" + _ONLY_SENTENCE + r"only\b(?!" + _RUNS_ON + r")"
-                           r"|(?<=[/\\])internal[.:;,]{1,3}" + _ONLY_SENTENCE + r"only\b(?!" + _RUNS_ON
-                           + r"|(?-i:[/\\][a-z0-9]))"
+                           r"|\binternal[.:;,]{1,3}" + _ONLY_SENTENCE + r"only\b(?!" + _RUNS_ON + r"|(?-i:[/\\][a-z0-9]))"
+                           r"|(?<![^\n:])[ \t]*internal[.:;,]{1,3}" + _ONLY_SENTENCE + r"only\b(?!" + _RUNS_ON + r")"
                            r"|\binternal\s+[.:;,]{1,3}\s*" + _ONLY_SENTENCE + r"only\b(?![ \t]*\w)"
                            r"|(?<![^\n:])[ \t]*internal\s+[.:;,]{1,3}\s*" + _ONLY_SENTENCE + r"only\b"
                            r"|\bnot for (?:the )?client\b|\bfor internal use\b|\bhealth_diff\b", re.I)
