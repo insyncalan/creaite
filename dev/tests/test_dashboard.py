@@ -157,7 +157,10 @@ class DashboardTests(unittest.TestCase):
                                                                          # BL-301 A: text inside the vendored Tiptap module (an error message
                                                                          # and a comment), never fetched
                                                                          "https://prosemirror.net/docs/guide/#generatable",
-                                                                         "https://github.com/markedjs/marked.`,"}
+                                                                         "https://github.com/markedjs/marked.`,",
+                                                                         # #120: the Link popover's address placeholder, shown as hint text,
+                                                                         # never fetched
+                                                                         "https://example.com"}
         self.assertEqual({u for u in links if "office365.com" not in u and not u.startswith("http://127.0.0.1:")},
                          set())   # only stored message links, and this Mac's own live server
         self.assertNotIn(str(self.v.root), self.html)
@@ -180,7 +183,8 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual([(i["alt"], i["ref"]) for i in abc["images"]], [("Delivery plan", "images/plan.png")])  # missing skipped
         self.assertTrue(abc["images"][0]["src"].startswith("data:image/png;base64,"))
         self.assertIn("current-state image not found", self.out)
-        self.assertEqual(len(abc["trail"]), 8)
+        self.assertEqual(len(abc["trail"]), 6)
+        self.assertEqual((len(abc["trailwhy"]), len(abc["trailend"])), (6, 6))    # #162: a reason and a Friday per bar
         self.assertEqual(abc["trail"][-2], "warn")                      # last week's update: At risk
         defp = next(p for p in self.data["projects"] if p["code"] == "DEF")
         self.assertEqual(defp["health"], "")                            # not set yet: shown neutral
@@ -260,7 +264,8 @@ class DashboardTests(unittest.TestCase):
         """The saved calendar holds true (Alan organised it) or the organiser's name (BL-42): only true is "You"."""
         from test_insight import chrome
         cal = self.v.root / "system/staging/calendar.json"
-        cal.write_text(json.dumps({"fetched": d(0) + " 07:00", "days": {d(0): [
+        day = date.today().isoformat()      # the headless page reads the real clock, so the calendar's day is the real one even when CREAITE_NOW pins the scripts' day
+        cal.write_text(json.dumps({"fetched": day + " 07:00", "days": {day: [
             {"start": "09:00", "end": "10:00", "title": "Mine", "where": "Teams", "organiser": True},
             {"start": "11:00", "end": "12:00", "title": "Theirs", "where": "Room 4", "organiser": "Jane Doe"}]}}))
         try:

@@ -5,6 +5,9 @@ as" with *change*; the draft notes (cited, editable, Regenerate keeping the sect
 the server's format, Discard counted); What's in focus ("n of N", N only the items listed; ticking out; Show everything instead;
 an item opens the full peek over the popup); a confidential meeting; 320 px. Nothing reaches the tracker.
 
+#111 piece A adds the same control on the prep page (PageShape: one Shape button, Shape again, a suggestion to use or
+discard, edited sections kept, raised items kept).
+
 Run: python3 dev/tests/test_prep_shape.py   (needs Google Chrome; skipped otherwise)
 """
 import json
@@ -102,6 +105,7 @@ class Shape(ShapeCase):
         chips = b.eval("[...document.querySelectorAll('#prepShape .readas .chip')].map(c=>c.textContent)")
         self.assertTrue(any("ABC-A-001" in c for c in chips), chips)
         self.assertIn("A date for data access", b.eval("document.querySelector('#prepShape .readas').textContent"))
+        b.wait("document.querySelector('#shN-objective') && document.querySelector('#shN-objective').value", 15)     # the editors fill a frame after they are drawn (#152)
         boxes = b.eval("[...document.querySelectorAll('#prepShape .shbox')].map(t=>[t.id,t.value])")
         self.assertEqual([x[0] for x in boxes], ["shN-objective", "shN-talking_points", "shN-ask", "shN-carried_over"])
         self.assertEqual(boxes[0][1], "Agree a date for data access.")
@@ -185,17 +189,19 @@ class Shape(ShapeCase):
         self.assertTrue(b.eval(f"(()=>{{ const s=document.getElementById('prepScroll'); return s.scrollWidth<=s.clientWidth+1 && {DLG}.scrollWidth<={DLG}.clientWidth+1; }})()"))
 
     def test_7_the_notes_have_ai_on_a_selection_with_the_meetings_project(self):
-        """BL-301 D: the shaped notes are on the one editor with AI on a selection (plain text, the meeting's project)."""
+        """BL-301 D: the shaped notes are on the one editor; AI on a selection is off for the plain place in v2.1.0 (#117)."""
         b = self.open_shape()
         self.shape()
         b.click("#shN-objective")
         b.key("a", 4)                                                                                   # ⌘A
+        b.wait("document.querySelector('#aiLayer .aispark')", 30)                                      # #117: the sparkle shows; its click opens the bar
+        b.click("#aiLayer .aispark")
         b.wait("document.querySelector('#aiLayer .aibar')", 30)
         self.assertEqual(b.eval("[aiBar.value.ai.place, aiBar.value.ai.project(), aiBar.value.ai.confidential()]"), ["plain", "ABC", False])
         b.click("#aiLayer .aibar button[aria-haspopup]")
         b.wait("document.querySelector('#aiLayer [role=menu]')")
         self.assertEqual(b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)"),
-                         ["rewrite", "shorter", "longer", "executive", "spelling", "custom"])
+                         ["rewrite", "shorter", "executive"])     # the plain place's Improve group (no separate spelling option, #117)
         b.key("Escape")
 
     def test_6_the_switch_in_settings_turns_it_off(self):
@@ -223,9 +229,109 @@ class Confidential(ShapeCase):
         self.assertNotIn("Board secret", call["prompt"])
         b.click("#shN-objective")                                                                       # BL-301 D: AI asks first
         b.key("a", 4)
+        b.wait("document.querySelector('#aiLayer .aispark')", 30)
+        b.click("#aiLayer .aispark")
         b.wait("document.querySelector('#aiLayer .aibar')", 30)
         self.assertTrue(b.eval("aiBar.value.ai.confidential()"))
         self.assertEqual(b.errors, [])
+
+
+PAGE = "document.querySelector('#pp-focus .ppsug')"
+
+
+class PageShapeCase(ShapeCase):
+    """#111 piece A: the one Shape control on the prep page (Shape, then Shape again), a suggestion to use or discard, Alan's edited
+    sections kept, the tracker untouched."""
+
+    def open_page(self):
+        b = self.b
+        b.eval("go('prep', TODAY+'|09:00|ABC weekly')")
+        b.wait("document.querySelector('#v-prep #pp-shape-btn') && !document.querySelector('#v-prep .pploading')", 30)
+        b.pump(1.0)                                      # the page opens Shape for this meeting (its chips and saved notes) after it draws
+        return b
+
+    def shape_page(self, text="Focus on ABC-A-001. I want a date from Jane."):
+        b = self.b
+        b.eval(f"(()=>{{ const t=document.getElementById('pp-shape-txt'); t.value={json.dumps(text)}; t.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
+        b.click("#pp-shape-btn")
+        b.wait(PAGE, 60)
+        return b
+
+
+class PageShape(PageShapeCase):
+    def test_1_one_shape_button_a_suggestion_use_this_saves_and_it_becomes_shape_again(self):
+        before = (self.v.root / "system/tracker.db").read_bytes()
+        b = self.open_page()
+        self.assertEqual(b.eval("document.querySelectorAll('[data-ppshape]').length"), 1)
+        self.assertEqual(b.eval("document.getElementById('pp-shape-btn').textContent"), "Shape")
+        self.shape_page()
+        self.assertEqual(b.eval("document.getElementById('pp-n-objective').value"), "", "nothing is written to the editors until Use this")
+        self.assertIn("Agree a date for data access.", b.eval(f"{PAGE}.textContent"))
+        self.assertEqual(b.eval(f"{PAGE}.querySelector('[data-open]').dataset.open"), "actions:ABC-A-001")      # cited
+        self.assertFalse((self.v.root / "system/staging/prep-focus.json").exists(), "a suggestion saves nothing")
+        b.click("#pp-focus [data-ppuse]")
+        b.wait("document.getElementById('pp-n-objective').value==='Agree a date for data access.'", 30)
+        b.wait(f"!{PAGE} && document.getElementById('pp-shape-btn').textContent==='Shape again'", 30)
+        rec = next(iter(json.loads((self.v.root / "system/staging/prep-focus.json").read_text())["meetings"].values()))
+        self.assertEqual(rec["notes"]["ask"][0]["text"], "Jane: a date.")
+        self.assertTrue(rec["accepted_at"])
+        self.assertEqual((self.v.root / "system/tracker.db").read_bytes(), before)
+        self.assertEqual(b.errors, [])
+
+    def test_2_shape_again_keeps_what_alan_wrote_and_discard_counts_a_rejection(self):
+        b = self.open_page()
+        self.shape_page()
+        b.click("#pp-focus [data-ppuse]")
+        b.wait("document.getElementById('pp-shape-btn').textContent==='Shape again'", 30)
+        b.eval("(()=>{ const t=document.getElementById('pp-n-ask'); t.focus(); t.value='My own ask'; t.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        self.assertTrue(self.wait_file(lambda: "My own ask" in (self.v.root / "system/staging/prep-focus.json").read_text()))
+        b.eval("document.getElementById('pp-shape-txt').focus()")
+        b.click("#pp-shape-btn")
+        b.wait(f"{PAGE} || document.querySelector('#pp-focus .wnote')", 60)
+        calls = [json.loads(x) for x in Path(str(self.fake) + ".calls").read_text().splitlines()]
+        self.assertEqual(len(calls), 2)
+        self.assertNotIn("My own ask", b.eval(f"({PAGE}||{{textContent:''}}).textContent"), "his edited Ask is not redrafted")
+        self.assertEqual(b.eval("document.getElementById('pp-n-ask').value"), "My own ask")
+        if b.eval(f"!!{PAGE}"):
+            b.click("#pp-focus [data-ppdiscard]")
+            b.wait(f"!{PAGE}", 30)
+            self.assertTrue(self.wait_file(lambda: (self.stats().get("shape") or {}).get("rejected") == 1))
+        self.assertEqual(b.eval("document.getElementById('pp-n-ask').value"), "My own ask")
+
+    def test_3_a_raised_item_stays_raised_through_shape(self):
+        b = self.open_page()
+        b.wait("document.querySelector('#pp-work .ppitem')", 30)
+        other = b.eval("[...document.querySelectorAll('#pp-work .ppitem')].map(e=>e.dataset.id).find(i=>i!=='ABC-A-001')")
+        b.click(f"#pp-work .ppitem[data-id='{other}'] [data-play=raise]")
+        b.wait(f"document.querySelector(\"#pp-work .ppitem[data-id='{other}'] .ppsel .on\").textContent==='Raise'", 30)
+        self.shape_page()
+        b.click("#pp-focus [data-ppuse]")
+        b.wait("document.getElementById('pp-shape-btn').textContent==='Shape again'", 30)
+        rec = next(iter(json.loads((self.v.root / "system/staging/prep-focus.json").read_text())["meetings"].values()))
+        ids = [f.get("id") for f in rec["reading"]["focus"]]
+        self.assertIn(other, ids)
+        self.assertIn("ABC-A-001", ids)
+
+
+class PageShapeOff(PageShapeCase):
+    def test_the_switch_in_settings_turns_it_off(self):
+        b = self.b
+        b.eval("S.drafting={...(S.drafting||{}),shape:false}")
+        self.open_page()
+        self.assertEqual(b.eval("document.getElementById('pp-shape-btn').getAttribute('aria-disabled')"), "true")
+        self.assertIn("off in Settings", b.eval("document.getElementById('pp-shape-btn').dataset.tip"))
+
+
+class PageShapeConfidential(PageShapeCase):
+    confidential = True
+
+    def test_a_confidential_meeting_is_shaped_from_the_text_and_the_tracker(self):
+        b = self.open_page()
+        b.wait("document.querySelector('#pp-focus .shconf')", 30)
+        self.shape_page()
+        call = json.loads(Path(str(self.fake) + ".calls").read_text().splitlines()[-1])
+        self.assertEqual(call["allowed"], "")                                                           # the run had no tools
+        self.assertNotIn("Board secret", call["prompt"])
 
 
 if __name__ == "__main__":

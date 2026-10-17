@@ -12,6 +12,7 @@ Dates are real Excel dates shown DD-MM-YYYY; they are stored YYYY-MM-DD.
 """
 import hashlib
 import json
+import re
 import sqlite3
 import subprocess
 import sys
@@ -28,6 +29,7 @@ except ImportError:
         rule = staticmethod(lambda text, *a: "")
         main = staticmethod(lambda script, fn, *a: fn(*a))
 
+import linktext  # noqa: E402  (#121: links in plain text)
 import review  # noqa: E402  (shared review details, BL-25)
 import tracker  # noqa: E402
 from openpyxl import Workbook, load_workbook  # noqa: E402
@@ -97,6 +99,10 @@ DATES = {"milestone_date", "due_date", "raised", "closed", "date", "week_ending"
 READ_ONLY = {"links"}       # sheets Excel only shows; edits to them are ignored on import (the sheet says so)
 LABELLED = tracker.LABELLED # tables whose rows carry a Labels column (a comma-separated list; never a drop-down)
 YES_NO = {"client_visible", "active", "state_set"}
+# #121: the longer text fields can hold `[words](address)`. A cell holds the words (never the brackets): with exactly one link the cell is
+# also a hyperlink to its address; with several, one cell cannot carry them all, so it reads "words (address)". The import never reads a
+# hyperlink, and a cell that still says what the export put there is not a change.
+LINK_FIELDS = {"client_message", "latest_update", "response_action", "reasoning", "options"}
 WIDE = {"description", "decision", "client_message", "latest_update", "response_action", "health_reason",
         "summary", "key_changes", "source", "reasoning", "options", "revisit", "state_reason", "internal_note"}
 CHOICES = {
@@ -167,10 +173,42 @@ def choices(table, field):
     return CHOICES.get((table, field)) or CHOICES.get(field)
 
 
+# #127 round 7: the characters an .xlsx can't hold (XML 1.0 refuses them): the C0 controls but tab, line feed and carriage return,
+# lone surrogates, and U+FFFE and U+FFFF. openpyxl refuses a C0 one (IllegalCharacterError, so the export after an apply failed and
+# the workbook went stale) and writes the others as XML Excel must repair. As docx_tools.esc does for Word: a vertical tab, form
+# feed or separator becomes a space, the rest go.
+NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def cell_text(value):
+    """A value as a cell may hold it: text without NOT_XML's characters; anything else as it is."""
+    if not isinstance(value, str):
+        return value
+    return NOT_XML.sub(lambda m: " " if m.group() in "\x0b\x0c\x1c\x1d\x1e" else "", value)
+
+
+def link_words(field, value):
+    """The text a cell holds for a stored value: a link field's links as their words (one link) or "words (address)" (several)."""
+    if field in LINK_FIELDS and isinstance(value, str) and linktext.has_link(value):
+        return linktext.words(value) if len(linktext.addresses(value)) == 1 else linktext.with_address(value)
+    return value
+
+
+def cell_link(field, value):
+    """The one address a cell is a hyperlink to, or None (no link, or several)."""
+    if field in LINK_FIELDS and isinstance(value, str):
+        found = linktext.addresses(value)
+        return found[0] if len(found) == 1 else None
+    return None
+
+
 def to_cell(field, value):
-    """A stored value as it goes in a cell: dates as real dates, flags as Yes or No."""
+    """A stored value as it goes in a cell: dates as real dates, flags as Yes or No, links as their words, text without the
+    characters a workbook can't hold (cell_text)."""
     if value is None:
         return None
+    if field in LINK_FIELDS:
+        return cell_text(link_words(field, value))
     if field in DATES:
         try:
             return date.fromisoformat(value)
@@ -178,7 +216,7 @@ def to_cell(field, value):
             return value
     if field in YES_NO:
         return "Yes" if int(value) else "No"
-    return value
+    return cell_text(value)
 
 
 def from_cell(field, value):
@@ -213,10 +251,30 @@ def same(a, b, field=None):
         return {n.lower() for n in tracker.label_names(a)} == {n.lower() for n in tracker.label_names(b)}
 
     def norm(x):
-        """The value with trailing spaces dropped; blank is None."""
+        """The value with trailing spaces dropped and as a cell holds it (cell_text: a character the export left out is no
+        edit); blank is None."""
+        x = cell_text(x)
         return None if x is None or str(x).strip() == "" else "\n".join(
             line.rstrip() for line in str(x).rstrip().splitlines())
     return norm(a) == norm(b)
+
+
+def lost_link_notes(notes, sheet, key, cols, changes, old):
+    """#121: an edited link cell is staged as the words typed, so say which cell loses its address."""
+    heads = {f: h for h, f in cols}
+    for f in changes:
+        if f in LINK_FIELDS and linktext.addresses(old.get(f) or ""):
+            notes.append(f"{sheet}: {key}'s {heads.get(f, f)} cell was edited, so its link address "
+                         f"({', '.join(linktext.addresses(old[f]))}) is replaced by the words typed; "
+                         "add the link again in Review if it should stay")
+
+
+def cell_changed(field, cell, stored):
+    """Whether a cell differs from the stored value it was exported from. A link field's cell that still says what the export wrote is not
+    a change (#121)."""
+    if same(cell, stored, field):
+        return False
+    return not (field in LINK_FIELDS and same(cell, link_words(field, stored), field))
 
 
 def blank_default(table, field):
@@ -273,6 +331,11 @@ def pending_rows():
     return out
 
 
+def review_rows():
+    """pending_rows as the Review sheet holds them: each value without the characters a workbook can't hold (cell_text)."""
+    return [[cell_text(v) for v in r] for r in pending_rows()]
+
+
 def add_list(ws, col, n_rows, values):
     """Add a drop-down of `values` to column `col`, rows 2 to `n_rows`."""
     dv = DataValidation(type="list", formula1='"' + ",".join(values) + '"', allow_blank=True,
@@ -305,6 +368,17 @@ def rows_of(con, table, keys):
     return rows
 
 
+def link_cells(ws, rows, cols):
+    """A cell holding exactly one link is a hyperlink to its address (#121)."""
+    for n, r in enumerate(rows, start=2):
+        for i, (_, f) in enumerate(cols, start=1):
+            href = cell_link(f, r.get(f))
+            if href:
+                c = ws.cell(row=n, column=i)
+                c.hyperlink = href
+                c.font = Font(color="0563C1", underline="single")
+
+
 def cmd_export():
     """Write tracker-view.xlsx from tracker.db, one sheet per table plus a Review sheet, and record the export.
 
@@ -332,6 +406,7 @@ def cmd_export():
         ws.append([label for label, _ in cols])
         for r in rows:
             ws.append([to_cell(f, r.get(f)) for _, f in cols])
+        link_cells(ws, rows, cols)
         n_rows = len(rows) + 1 + EXTRA_ROWS
         for i, (label, field) in enumerate(cols, start=1):
             col = get_column_letter(i)
@@ -367,7 +442,7 @@ def cmd_export():
 
     ws = wb.create_sheet("Review", 0)
     ws.append([c for c, _ in REVIEW_COLS])
-    review = pending_rows()
+    review = review_rows()
     for r in review:
         ws.append(r)
     for i, (label, width) in enumerate(REVIEW_COLS, start=1):
@@ -460,15 +535,15 @@ def cmd_import():
                 seen.add(key)
                 old = exported[key]
                 changes = {f: rec.get(f) if rec.get(f) is not None else blank_default(table, f) for _, f in cols
-                           if f not in locked and f not in keys and not same(rec.get(f), old.get(f), f)}
+                           if f not in locked and f not in keys and cell_changed(f, rec.get(f), old.get(f))}
                 if table == "milestones" and "baseline_date" in changes and old.get("baseline_date"):   # BL-186
                     changes.pop("baseline_date")
                     notes.append(f"{name}: {key}'s Baseline change was ignored: changing an agreed date is a rebaseline, which "
                                  "records a decision (the Milestones page's Rebaseline, or cx-edit)")
+                lost_link_notes(notes, name, key, cols, changes, old)
                 if changes:
-                    item = {"op": "update", "table": table, "id": key, "changes": changes}
-                    if old.get("updated_at"):
-                        item["based_on"] = old["updated_at"]
+                    item = {"op": "update", "table": table, "id": key, "changes": changes,
+                            **({"based_on": old["updated_at"]} if old.get("updated_at") else {})}
                     items.append(item)
             elif key and table != "updates":
                 notes.append(f"{name}: {key} isn't in the last export; row ignored (IDs are set by creaite)")

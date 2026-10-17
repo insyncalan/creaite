@@ -35,6 +35,9 @@ elif p.startswith("Suggest the reasoning"):
     reply = "REASONING:\nData access is late, so testing cannot finish in time. [S1] Nobody objected."
 elif p.startswith("Write the reason for a health change"):
     reply = "Two actions are overdue and UAT start has slipped. [S1, S2]"
+elif p.startswith("Write the reason for a suggested health"):     # #203: Suggest the health and its reason
+    reply = ("Two actions are overdue and UAT start has slipped. [S1, S2] The next step is to escalate data access. [S1]"
+             if "A client will read" not in p else "Testing may start later because access to your data is late. [S1]")
 elif p.startswith("Sharpen one vague action"):
     reply = "TITLE: Confirm who owns the cut-over data extract [S1, S3]\nWHY: No verb or object; made both plain."
 elif p.startswith("Write why the forecast"):
@@ -50,6 +53,14 @@ elif p.startswith("Polish the opening of a request for help"):      # BL-298: Po
              "OUTCOME: the Northgate commercials agreed on the Kestrel Group terms\nNEED: Tell me whether the Northgate terms can mirror the Kestrel Group contract.")
 elif p.startswith("Polish the cover paragraph"):
     reply = "TEXT: A gentle nudge on the items below, which are now overdue. [S1]"
+elif p.startswith("Write the project's status as") and "THIS IS A REFINEMENT" in p:      # #110 B: Steer it further
+    change = re.search(r"Alan's change: (.*)", p).group(1)
+    if "internal" in change:             # an instruction that tries to bring in what the facts do not hold: an unsourced sentence
+        reply = "UAT is at risk. [S1]\nThe supplier fee is being renegotiated behind the scenes."
+    elif "two" in change:
+        reply = "Refined twice: UAT is at risk because data access is late. [S1]"
+    else:
+        reply = "Refined: UAT is at risk. [S1] We are escalating it. [S2]"
 elif p.startswith("Write the project's status as"):
     form = re.search(r"FORM: (\S+)", p).group(1)
     reply = {"three": "UAT is at risk. [S1]\nData access is late. [S2]\nNext: escalate to the CIO. [S1]",

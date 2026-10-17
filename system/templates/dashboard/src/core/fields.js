@@ -7,6 +7,7 @@ import { chatScroll, nowIso, stampMsg, step } from "../ask.js";
 import { A, DEC, peopleAll, R, REV, useCount } from "./data.js";
 import { parseWords } from "./datewords.js";
 import { $, addHTML, esc, html, ic, putHTML, raw } from "./dom.js";
+import { linkAnchor } from "./linkUrl.js";
 import { mountCombobox } from "../components/Combobox.jsx";
 import { openDatePicker } from "../components/Picker.jsx";
 import { D, DATE, DDATE, fd, isMe, S, TODAY, toIso } from "./page.js";
@@ -28,8 +29,8 @@ export const NOTE_OPEN={fn:null};
 export const srcShort=x=>{ const o=srcParse(x); if(!o) return "—"; if(o.type==="File") return o.name.replace(/\.[a-z]+$/,""); if(o.type==="Email") return "Email · "+(o.Subject||""); if(o.type==="Teams") return "Teams · "+(o.Channel||o.Chat||""); return o.text; };
 export function srcHTML(x){ const o=srcParse(x); if(!o) return "—";
   if(o.type==="File"){ const mt=!shared.LOADING&&meetingOfFile(o.path); return `<a href="#" class="srclink" data-openfile="${esc(o.path)}"${o.line?` data-noteline="${o.line}"`:""}>${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>${mt&&meetingRoute(mt)?`<div><a href="#meeting=${mt}" class="linkbtn mhlink" title="Open this meeting's minutes, or its Review or Prep">Meeting</a></div>`:""}`; }
-  if(o.type==="Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Subject</dt><dd>${esc(o.Subject||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Outlook</a>`:'<span class="sub">No message link stored</span>'}`;
-  if(o.type==="Teams") return `<dl class="srcmeta"><dt>${o.Channel?"Channel":"Chat"}</dt><dd>${esc(o.Channel||o.Chat)}</dd><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Teams</a>`:'<span class="sub">No message link stored</span>'}`;
+  if(o.type==="Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Subject</dt><dd>${esc(o.Subject||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?(linkAnchor(o.Link,"Open in Outlook","srclink")||'<span class="sub">The message link is not a web address</span>'):'<span class="sub">No message link stored</span>'}`;
+  if(o.type==="Teams") return `<dl class="srcmeta"><dt>${o.Channel?"Channel":"Chat"}</dt><dd>${esc(o.Channel||o.Chat)}</dd><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?(linkAnchor(o.Link,"Open in Teams","srclink")||'<span class="sub">The message link is not a web address</span>'):'<span class="sub">No message link stored</span>'}`;
   return esc(o.text); }
 export let openPath = function(p){ if(!p) return; if(viaServer()){ api("/api/open",{path:p.replace(/\/$/,"")}).then(r=>{ if(!r.ok) snack(oneLine(r.message)); }); return; } window.open(p.split("/").map(encodeURIComponent).join("/"),"_blank","noopener"); };
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0042's place) */
@@ -151,7 +152,8 @@ export const cmdEnterPicker=()=>!!document.querySelector(".combo.open,#mvCal:not
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0057's place) */
 export function bootCmdEnter(){
 window.addEventListener("keydown",e=>{ if(!(e.key==="Enter"&&(e.metaKey||e.ctrlKey))) return; const ed=CMDENTER.find(x=>x.when(e.target)); if(!ed) return;
-  if(cmdEnterPicker()){ e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) setTimeout(()=>ed.save(),0); return; }   /* pick, then save: the key is this handler's alone, so nothing later in the page acts on it too */
+  if(cmdEnterPicker()){ if(isDateField(e.target)) dateSettle(e.target);   /* a typed "tomorrow" is read first: the date settle on Enter is on the document, which this stops the key short of */
+    e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) setTimeout(()=>ed.save(),0); return; }   /* pick, then save: the key is this handler's alone, so nothing later in the page acts on it too */
   e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) ed.save(); },true);
 /* the project panel and the forms (project details, health, a proposal): BL-78 */
 onCmdEnter("panel",t=>!!shared.CUR&&shared.EDITING&&!pkOn()&&(t===document.body||!!(t.closest&&t.closest("#panel"))),saveAndClose);

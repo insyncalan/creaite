@@ -12,58 +12,108 @@
      check (edit_ai.py check): every date, number, name or item ID lost or added.
    - Counts only, never text: offered, used (accepted) and rejected (discarded, or replaced by Try again) under the feature "edit"
      in draft-stats.json (/api/draft/stat). */
-import { signal } from "@preact/signals";
-import { edReplace, edSelection, edRange } from "../core/editor.js";
+import { effect, signal } from "@preact/signals";
+import { edReplace, edSelection, edRange, edTurnInto, TURN_NAMES } from "../core/editor.js";
 import { snack, viaServer } from "../core/server.js";
 import { shared } from "../core/state.js";
 import { draftAsk, draftStat } from "../drafts.js";
 
 export const AI_FEATURE = "edit";
-/** Every option (edit_ai.py OPTIONS): id → [name, what it does]. */
+/** Every option (edit_ai.py OPTIONS): id → [name, what it does]. There is no separate spelling option (#117): every reshape also fixes
+    spelling and grammar, in British English, and the suggestion says so. */
 export const AI_OPTIONS = /** @type {Record<string, [string, string]>} */ ({
   rewrite: ["Rewrite clearly", "The same points, in plainer words"],
   shorter: ["Shorter", "About half the length; the facts kept"],
   longer: ["Longer", "Fuller sentences; adds no facts"],
   executive: ["Make it executive", "The executive voice: the position and what matters first"],
-  spelling: ["Fix spelling and grammar", "British English; nothing else changed"],
-  polish: ["Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept"],
-  format: ["Format nicely", "Sub-headings, lists and bold where they help"],
-  checklist: ["Turn into a checklist", "One task a line, to tick off"],
+  format: ["Add headings and bold", "Sub-headings, lists and bold where they help"],
+  checklist: ["Pull out the tasks", "Finds the tasks and writes one a line to tick off"],
   summary: ["Summarise at the top", "A short summary first; the text kept below it"],
+  polish: ["Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept"],
+  notes: ["Format notes", "Rough notes sorted under headings, with bullets; every point kept"],
   formal: ["More formal", "A more formal tone for the email"],
   warmer: ["Warmer", "A warmer, friendlier tone for the email"],
   custom: ["Or say what you want…", "Your own instruction"],
 });
-/** Each place's options, in the menu's order (edit_ai.py PLACES; test_ai_select checks they agree). */
+/** Each place's options, in the menu's order (edit_ai.py PLACES; test_ai_select checks they agree). A new place (the client sheet's
+    `client`, #123) is added here, in AI_GROUPS and in AI_PLACE_TABLE, and in edit_ai.py PLACES, FORMATS and FORMAT_RULES. */
 export const AI_PLACES = /** @type {Record<string, string[]>} */ ({
-  notes: ["rewrite", "shorter", "longer", "executive", "spelling", "format", "checklist", "summary", "custom"],
-  current: ["rewrite", "shorter", "longer", "executive", "spelling", "format", "summary", "custom"],
-  plain: ["rewrite", "shorter", "longer", "executive", "spelling", "custom"],
-  email: ["rewrite", "shorter", "longer", "formal", "warmer", "spelling", "custom"],
-  line: ["rewrite", "shorter", "executive", "spelling", "custom"],
+  notes: ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"],
+  current: ["notes", "rewrite", "shorter", "longer", "executive", "format", "summary", "custom"],
+  plain: ["rewrite", "shorter", "executive", "custom"],
+  email: ["rewrite", "shorter", "longer", "formal", "warmer", "custom"],
+  line: ["rewrite", "shorter", "executive", "custom"],
   report: ["shorter", "executive", "polish", "custom"],     // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
   minutes: ["shorter", "executive", "polish", "custom"],
   client: ["shorter", "executive", "polish", "custom"],      // #123: the client sheet (client-visible facts only; the reply checked)
   readonly: [],                                              // a sheet that can't be edited: only Find the source
 });
+/** How the bar groups a place's AI options (the Format notes button and Ask… are not in a group; "Make into" holds the registered
+    items, part E's). Every id here is in AI_PLACES[place] (test_ai_select checks). */
+export const AI_GROUPS = /** @type {Record<string, [string, string[]][]>} */ ({
+  notes: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "checklist", "summary"]]],
+  current: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "summary"]]],
+  plain: [["Improve", ["rewrite", "shorter", "executive"]]],
+  email: [["Improve", ["rewrite", "shorter", "longer"]], ["Tone", ["formal", "warmer"]]],
+  line: [["Improve", ["rewrite", "shorter", "executive"]]],
+  report: [["Improve", ["shorter", "executive", "polish"]]],     // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
+  minutes: [["Improve", ["shorter", "executive", "polish"]]],
+  client: [["Improve", ["shorter", "executive", "polish"]]],     // #123: the client sheet; Shorten, executive, Polish, no Make into
+  readonly: [],                                                 // only Find the source, the sheet's own item
+});
+/** THE PLACE TABLE (#117; all places on from v2.2.0, #133): every editor place the selection bar is built for, and whether it is switched on.
+    `ai`: the sparkle and bar show at all; `turnInto`: Turn into (instant, no AI; rich editors whose storage holds every block kind);
+    `formatNotes`: Format notes for several paragraphs (rich editors only); `improveOnly`: the place offers its Improve (and Tone) group and
+    Ask… only. Notes and Current state are the rich places. The plain profile (#133) is `plain` (the item panel's longer fields, Prep's notes
+    and questions, the Prep popup's shaped notes), `line` (one-line text that is a sentence: the item's title, a Find updates title, decision
+    or memory line; a suggestion never breaks the line) and `email` (Draft email's preview, a shared-editor host; Improve and Tone only). Fields
+    that are keys or short labels are mounted with no `ai` option and so have no bar: the item panel's Revisit and Source, and Find updates'
+    Name, Role and Organisation. The A4 sheets (report, minutes, client, readonly: edit_ai.py SHEET_PLACES and CLIENT_PLACES) are on too. dev/tests/test_ai_117.py and test_editor_plain.py list every
+    place and assert it. Current state's Turn into is off for good: its storage (headings ###..#####, no checklist) and the Word report can't
+    take every kind. @type {Record<string, {ai: boolean, turnInto: boolean, formatNotes: boolean, improveOnly: boolean}>} */
+export const AI_PLACE_TABLE = {
+  notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
+  current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
+  email: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+  plain: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+  line: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+  report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // v2.1.0 P5: the sheets keep their AI bar and Find the source
+  minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+  client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // #123: the client sheet (edit_ai.py's client place)
+  readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+};
+/** True when a place's selection bar is switched on. @param {string} place */
+export const aiPlaceOn = place => !!(AI_PLACE_TABLE[place] && AI_PLACE_TABLE[place].ai);
 
 /** A place's own name for an option (v2.1.0 P5: the sheet's bar says "Shorten", as its mockup does). */
 const AI_NAMES = /** @type {Record<string, Record<string, string>>} */ ({ report: { shorter: "Shorten" }, minutes: { shorter: "Shorten" },
   client: { shorter: "Shorten" } });
+/** An option's name in a place: its own name there (AI_NAMES), else AI_OPTIONS'. @param {string} place @param {string} id */
+export const aiName = (place, id) => (AI_NAMES[place] || {})[id] || AI_OPTIONS[id][0];
 
 /**
  * @typedef {import("../core/editor.js").EdHandle} AiHandle
  * @typedef {import("../core/editor.js").EdAi} AiConf
  * @typedef {import("../core/editor.js").EdRange} AiRange
- * @typedef {{h: AiHandle, ai: AiConf, top: number, left: number, open?: number}} Bar
+ * @typedef {{h: AiHandle, ai: AiConf, from: number, to: number, open?: number, shown?: boolean, multi?: boolean}} Bar
  * @typedef {{h: AiHandle, ai: AiConf, range: AiRange, option: string, instruction: string, label: string,
  *   status: "ask"|"running"|"ready"|"failed", text?: string, notes?: {id: string, note: string}[], message?: string,
- *   changes?: boolean, steps?: number, top: number, left: number}} Sug
+ *   changes?: boolean, steps?: number}} Sug
  */
 /** @type {import("@preact/signals").Signal<Bar|null>} */
 export const aiBar = signal(null);
 /** @type {import("@preact/signals").Signal<Sug|null>} */
 export const aiSug = signal(null);
+/* The bar's own mark on its editor (#117): data-aibar="spark" while the sparkle is up, "open" while the bar is. Its own names: it never
+   sets aria-expanded, aria-haspopup, aria-controls or aria-activedescendant on the editor, which the `/` menu (SlashMenu.jsx) owns. */
+/** @type {HTMLElement|null} */
+let marked = null;
+effect(() => {
+  const b = aiBar.value, dom = b && !b.h.editor.isDestroyed ? /** @type {HTMLElement} */ (b.h.editor.view.dom) : null;
+  if (marked && marked !== dom) marked.removeAttribute("data-aibar");
+  if (dom) dom.setAttribute("data-aibar", b && b.shown ? "open" : "spark");
+  marked = dom;
+});
 /** The confidential texts already asked about on this page (asked once each). */
 const AI_ASKED = new Set();
 
@@ -98,37 +148,42 @@ export function aiRunAction(id) {
 /** The options a place offers, as the menu lists them, with the registered items before "Or say what you want…".
     @param {string} place @returns {{id: string, name: string, line?: string, icon?: string}[]} */
 export const aiItems = place => {
-  const own = (AI_PLACES[place] || AI_PLACES.plain).map(id => ({ id, name: (AI_NAMES[place] || {})[id] || AI_OPTIONS[id][0], line: AI_OPTIONS[id][1] }));
+  const own = (AI_PLACES[place] || AI_PLACES.plain).map(id => ({ id, name: aiName(place, id), line: AI_OPTIONS[id][1] }));
   const extra = aiActionsFor(place).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
   const at = own.findIndex(o => o.id === "custom");
   return at < 0 ? own.concat(extra) : [...own.slice(0, at), ...extra, ...own.slice(at)];
 };
 
-/** Where the bar (or the card) goes: under the selection, inside the window (fixed, so 320px works).
-    @param {AiHandle} h @param {number} from @param {number} to @param {number} [w] */
-export function aiPlace(h, from, to, w = 300) {
-  const v = h.editor.view;
-  let a, b;
-  try { a = v.coordsAtPos(from); b = v.coordsAtPos(to); } catch (e) { const r = h.el.getBoundingClientRect(); a = b = { left: r.left, bottom: r.top + 24, top: r.top }; }
-  const width = Math.min(w, window.innerWidth - 32), H = window.innerHeight;
-  const left = Math.max(16, Math.min(Math.min(a.left, b.left), window.innerWidth - width - 16));
-  const below = Math.max(b.bottom, a.bottom) + 6;
-  const need = w > 200 ? Math.min(520, H * 0.6) : 340;     // the card's height at most, or the bar with its menu open
-  // under the selection when there is room; else above it (the bar), or as low as it still fits (the card)
-  const top = H - below >= need ? below : w > 200 ? H - need - 8 : a.top - 40 >= 8 ? a.top - 40 : H - need - 8;
-  return { top: Math.max(8, Math.min(top, H - 48)), left };
-}
-
-/** Show the bar for `h`'s selection, or hide it when nothing is selected (a suggestion on screen stays).
+/** Until when a Turn into keeps the open bar open (the selection update it causes would otherwise fold it). */
+let keepOpenUntil = 0;
+/** Show the sparkle for `h`'s selection (the bar opens from it), or hide both when nothing is selected (a suggestion on screen stays).
+    Placing is the component's, with core/caretPlace.js placeAtCaret (the same placement the `/` menu has).
     @param {AiHandle} h @param {AiConf} ai */
 function barFor(h, ai) {
+  if (!aiPlaceOn(ai.place)) return;                                  // the place table: this place is switched off
   const s = h.editor.state.selection;
   if (s.empty || h.editor.isDestroyed || !h.editor.state.doc.textBetween(s.from, s.to, " ").trim()) {
     if (aiBar.value && aiBar.value.h === h && !barBusy()) aiBar.value = null;
     return;
   }
   aiHome(h);
-  aiBar.value = { h, ai, ...aiPlace(h, s.from, s.to, 120) };
+  const was = aiBar.value, range = edSelection(h);
+  if (!range && h.features === "email") { if (was && was.h === h && !barBusy()) aiBar.value = null; return; }   // an email's bar is for text inside one paragraph or cell (#133)
+  const shown = !!(was && was.h === h && was.shown && Date.now() < keepOpenUntil);
+  aiBar.value = { h, ai, from: s.from, to: s.to, shown, multi: !!range && !range.inline && h.features !== "plain" && h.features !== "email" };
+}
+/** Open or fold the bar from the sparkle. @param {boolean} [on] */
+export function aiToggle(on) {
+  const b = aiBar.value;
+  if (b) aiBar.value = { ...b, shown: on === undefined ? !b.shown : on, open: undefined };
+}
+/** Turn the selected blocks into `kind` (core/editor.js edTurnInto): instant, no AI; a toast with Undo (and ⌘Z, the editor's own history). @param {string} kind */
+export function aiTurn(kind) {
+  const b = aiBar.value;
+  if (!b || !AI_PLACE_TABLE[b.ai.place]?.turnInto) return;
+  keepOpenUntil = Date.now() + 400;
+  if (!edTurnInto(b.h, kind)) { snack("Select some text first (⌘A selects all of it)"); return; }
+  snack(`Turned into ${TURN_NAMES[kind]}`, () => { if (!b.h.editor.isDestroyed) { b.h.editor.commands.undo(); b.h.focus(); } });
 }
 /** The layer goes where the editor is: inside its open modal dialog element (the Prep popup), which is in the top layer and makes the
     rest of the page inert, else on the body (COMPONENTS.md: popovers inside a dialog render inside it). @param {AiHandle} h */
@@ -148,15 +203,19 @@ export function aiAttach(h, ai) {
   // after the editor has taken the focus (Tiptap focuses on the next frame), so a selection made with the focus works too
   const update = () => { setTimeout(() => { if (!h.editor.isDestroyed && (h.editor.view.hasFocus() || h.el.contains(document.activeElement))) barFor(h, ai); }, 0); };
   ed.on("selectionUpdate", update);
+  ed.on("update", update);                                           // Turn into changes the blocks under the same selection: the ticked kind follows
   ed.on("focus", update);
   h.el.addEventListener("focus", update);
   ed.on("blur", () => { setTimeout(() => { if (aiBar.value && aiBar.value.h === h && !barBusy() && document.activeElement !== h.el) aiBar.value = null; }, 0); });
   h.el.addEventListener("keydown", e => {
+    if (e.isComposing || h.editor.view.composing) return;                       // an input method is composing: its keys are its own
+    if (e.key === "Escape" && aiBar.value && aiBar.value.h === h && aiBar.value.shown) { e.preventDefault(); e.stopPropagation(); aiBar.value = null; return; }
     if (e.altKey && !e.metaKey && !e.ctrlKey && (e.code === "Slash" || e.key === "/")) {
+      if (!aiPlaceOn(ai.place)) return;                                          // the place table: this place is switched off, the key is nobody's
       e.preventDefault(); e.stopPropagation();
       if (!edSelection(h)) { snack("Select some text first (⌘A selects all of it), then Alt+/"); return; }
       barFor(h, ai);
-      if (aiBar.value) aiBar.value = { ...aiBar.value, open: Date.now() };
+      if (aiBar.value) aiBar.value = { ...aiBar.value, shown: true, open: Date.now() };
     }
   }, true);
   const destroy = h.destroy;
@@ -171,12 +230,12 @@ export function aiRun(option, instruction = "", on) {
   const range = (on && on.range) || edSelection(b.h);
   if (!range) { snack("Select some text first (⌘A selects all of it)"); return; }
   if (!AI_OPTIONS[option]) return;
-  const where = aiPlace(b.h, range.from, range.to, 480);
+  if (option === "notes" && range.inline) { snack("Format notes needs two or more paragraphs selected"); return; }
   aiHome(b.h);
   aiBar.value = null;
   /** @type {Sug} */
   const s = { h: b.h, ai: b.ai, range, option, instruction, label: option === "custom" ? instruction : AI_OPTIONS[option][0],
-    status: "running", ...where };
+    status: "running" };
   const key = b.ai.key ? b.ai.key() : b.ai.place;
   if (b.ai.confidential && b.ai.confidential() && !AI_ASKED.has(key)) { aiSug.value = { ...s, status: "ask" }; return; }
   ask(s);
@@ -211,6 +270,15 @@ export function aiAccept() {
   aiSug.value = null;
   draftStat(AI_FEATURE, "used");
   snack("Suggestion used. ⌘Z undoes it.");
+}
+/** Esc on the bar over a selection: it goes, the selection collapses to its end and focus is in the text. Returns whether a bar was open. */
+export function aiBarClose() {
+  const b = aiBar.value;
+  if (!b) return false;
+  aiBar.value = null;
+  const ed = b.h.editor;
+  if (!ed.isDestroyed) ed.chain().setTextSelection(ed.state.selection.to).focus().run();
+  return true;
 }
 /** Discard: nothing changes; focus goes back to the text. */
 export function aiDiscard() {

@@ -43,6 +43,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402,F401  (locations and bundled libraries, as every script does)
+import linktext  # noqa: E402  (#121: links in plain text)
 
 PARA = re.compile(r"<w:p(?: [^>]*)?>.*?</w:p>|<w:p(?: [^>]*)?/>", re.S)
 ROW = re.compile(r"<w:tr(?: [^>]*)?>.*?</w:tr>", re.S)
@@ -126,6 +127,10 @@ INLINE = re.compile(r"\[" + LABEL + r"\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*"
                     r"|(?<![\w*])\*(?!\s)" + EMPHASIS + r"(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)" + EMPHASIS + r"(?<!\s)_(?!\w)"
                     r"|\[" + LABEL + r"\]\(\s{0,20}<?" + CREAITE_SCHEME + r"[^)\n]{0,500}\)")
 # #127: a creaite: link is its words in Word, never Markdown (any case, %- or entity-encoded scheme, client_leak.SCHEME's reading)
+MAX_LEVEL = 3
+HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
+HEADING = re.compile(r"^#{3,5} ")
+HASHES = {v: "#" * k for k, v in HEADS.items()}
 ITEM_LINK = re.compile(r" ?\[([^\]\n]+)\]\(creaite:item/([A-Za-z0-9-]{3,30})\)")
 
 
@@ -136,10 +141,8 @@ def drop_item_links(text, keep):
     return ITEM_LINK.sub(lambda m: m.group(0) if keep(m.group(2)) else "", str(text or ""))
 
 
-MAX_LEVEL = 3
-HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
-HEADING = re.compile(r"^#{3,5} ")
-HASHES = {v: "#" * k for k, v in HEADS.items()}
+TASK = re.compile(r"^\[([ xX])\](?:\s+|$)")                # #134: a checklist item, "- [ ] text" / "- [x] text" (Current state's checklist)
+BOX = {" ": "☐ ", "x": "☑ "}                          # the glyphs Word shows for an unticked and a ticked item
 # BL-89: Current state has two writing panes, one message. They are stored in the one `## Current state` section with this line
 # between them; a text without it is just the left pane. Every reader except the dashboard's editor sees one continuous
 # message: the left pane's content, then the right pane's, with the marker removed and nothing added.
@@ -201,10 +204,16 @@ def one_message(text):
     return "\n\n".join(x for x in split_panes(text) if x)
 
 
-def md_blocks(text, panes=False):
-    """[("p", text) | ("h" | "h2" | "h3", text) (### #### #####) | ("q", text) | ("list", [(level, ordered, text)])
+# a line inside a quote that is a heading, a list item or a picture
+QUOTE_BLOCK = re.compile(r"^\s*(?:#{3,5} |[-*•]\s|\d+[.)]\s|!\[)")
+MAX_QUOTE = 2                                                              # quotes inside quotes: deeper than this are text
+
+
+def md_blocks(text, panes=False, _depth=0):
+    """[("p", text) | ("h" | "h2" | "h3", text) (### #### #####) | ("q", text) | ("qb", [blocks]) | ("list", [(level, ordered, text)])
     | ("img", (caption, ref))].
-    List items stay together across blank lines; a quote's lines join into one paragraph; an image is its own block.
+    List items stay together across blank lines; a quote's lines join into one paragraph, or, when it holds a heading, a list or a
+    picture (#134), are read again as blocks inside the quote (a "qb"); an image is its own block.
     The pane marker ends the paragraph before it and is dropped (a ("pane", None) block with panes=True, for md_normalise)."""
     blocks, para, quote = [], [], []
     marks = pane_lines(text)
@@ -215,7 +224,10 @@ def md_blocks(text, panes=False):
             blocks.append(("p", " ".join(para)))
             para.clear()
         if quote:
-            blocks.append(("q", " ".join(quote)))
+            if _depth < MAX_QUOTE and any(QUOTE_BLOCK.match(x) for x in quote):
+                blocks.append(("qb", md_blocks("\n".join(quote), _depth=_depth + 1)))
+            else:
+                blocks.append(("q", " ".join(quote)))
             quote.clear()
     for n, line in enumerate((text or "").splitlines() + [""]):
         if n in marks:
@@ -253,15 +265,38 @@ def md_blocks(text, panes=False):
     return blocks
 
 
+def task_split(text):
+    """(state, rest) of a checklist item's text: state " " or "x" and the text after "[ ] "; (None, text) for any other item."""
+    m = TASK.match(text or "")
+    return (m.group(1).lower(), text[m.end():]) if m else (None, text)
+
+
 def list_prefixes(items):
-    """The marker Word shows for each list item: "• " or "N. ", numbered per level."""
+    """The marker Word shows for each list item: "• ", "N. " (numbered per level) or, for a checklist item, "☐ " / "☑ "."""
     counters, kinds, out = [0] * (MAX_LEVEL + 1), [None] * (MAX_LEVEL + 1), []
     for level, ordered, _ in items:
         counters[level + 1:], kinds[level + 1:] = [0] * (MAX_LEVEL - level), [None] * (MAX_LEVEL - level)
         counters[level] = counters[level] + 1 if kinds[level] == ordered else 1
         kinds[level] = ordered
-        out.append(f"{counters[level]}. " if ordered else "• ")
+        box = None if ordered else task_split(items[len(out)][2])[0]
+        out.append(f"{counters[level]}. " if ordered else BOX[box] if box else "• ")
     return out
+
+
+def block_md(kind, body):
+    """One block as its canonical Markdown (a quote that holds blocks has each of its lines marked with "> ")."""
+    if kind == "p":
+        return body
+    if kind in HASHES:
+        return HASHES[kind] + " " + body
+    if kind == "q":
+        return "> " + body
+    if kind == "qb":
+        return "\n".join(("> " + x).rstrip() for x in "\n\n".join(block_md(k, b) for k, b in body).splitlines())
+    if kind == "img":
+        return f"![{body[0]}]({body[1]})"
+    return "\n".join("  " * level + (pre if ordered else "- ") + t
+                     for pre, (level, ordered, t) in zip(list_prefixes(body), body))
 
 
 def md_normalise(text):
@@ -274,44 +309,175 @@ def md_normalise(text):
                 last = len(out)
             seen = True
             continue
-        if kind == "p":
-            out.append(body)
-        elif kind in HASHES:
-            out.append(HASHES[kind] + " " + body)
-        elif kind == "q":
-            out.append("> " + body)
-        elif kind == "img":
-            out.append(f"![{body[0]}]({body[1]})")
-        else:
-            out.append("\n".join("  " * level + (pre if ordered else "- ") + t
-                                  for pre, (level, ordered, t) in zip(list_prefixes(body), body)))
+        out.append(block_md(kind, body))
     if last is not None and last == len(out):             # a marker with nothing after it is just the left pane
         out.pop()
     return "\n\n".join(out)
 
 
-def md_runs(text):
-    """[(text, bold, italic, strike, url)]."""
-    out, at = [], 0
-    for m in INLINE.finditer(text):
-        if m.start() > at:
-            out.append((text[at:m.start()], False, False, False, None))
-        if m.group(7) is not None:                         # #127: a creaite: link (an item, a person): its words only
-            out.append((m.group(7), False, False, False, None))
-        elif m.group(1) is not None:
-            out.append((m.group(1), False, False, False, m.group(2)))
-        elif m.group(3) is not None:
-            out.append((m.group(3), True, False, False, None))
-        elif m.group(4) is not None:
-            out.append((m.group(4), False, False, True, None))
-        elif m.group(7) is not None:
-            out.append((m.group(7), False, False, False, None))
+SPECIAL = re.compile(r"[\[*_~`]")
+STAR_CLOSE = re.compile(r"(?<![\s*])\*(?![\w*])")             # a lone * that can close an italic (not part of a ** or ***)
+UNDER_CLOSE = re.compile(r"(?<!\s)_(?!\w)")
+MAX_NEST = 5                                                  # marks inside marks: deeper than this stays as typed
+
+
+class _Frame:
+    """What one reading of a stretch of text keeps: where it is, the marks and address open, the plain text so far and what has failed."""
+    __slots__ = ("lo", "hi", "marks", "url", "depth", "buf", "failed")
+
+    def __init__(self, lo, hi, marks, url, depth):
+        self.lo, self.hi, self.marks, self.url, self.depth = lo, hi, marks, url, depth
+        self.buf = []
+        self.failed = {}                                       # kind of closer -> a start from which none exists before `hi`
+
+
+class _Reader:
+    """Inline Markdown read as a tree and flattened to runs: [text, bold, italic, strike, url, code] (see md_spans)."""
+
+    def __init__(self, text):
+        self.s = str(text or "")
+        self.out = []
+
+    def read(self):
+        """The runs of the whole text."""
+        self.run(_Frame(0, len(self.s), (False, False, False), None, 0))
+        return [tuple(r) for r in self.out if r[0]]
+
+    def add(self, f, text, code=False, marks=None, url=False):
+        """A run of `text` with the frame's marks (or `marks`, and its address unless `url` says another)."""
+        self.out.append([text, *(marks or f.marks), f.url if url is False else url, code])
+
+    def flush(self, f):
+        """The plain text read so far, as one run."""
+        if f.buf:
+            self.add(f, "".join(f.buf))
+            f.buf.clear()
+
+    def run(self, f):
+        """Read s[f.lo:f.hi]: plain text up to the next mark, then whatever the mark opens."""
+        s, i = self.s, f.lo
+        while i < f.hi:
+            m = SPECIAL.search(s, i, f.hi)
+            if not m:
+                f.buf.append(s[i:f.hi])
+                break
+            p = m.start()
+            f.buf.append(s[i:p])
+            end = getattr(self, "open_" + {"[": "link", "*": "star", "_": "under", "~": "tilde", "`": "code"}[m.group()])(f, p)
+            if end is None:
+                f.buf.append(m.group())
+                end = p + 1
+            i = end
+        self.flush(f)
+
+    def nest(self, f, a, b, marks=None, url=False):
+        """s[a:b] read as a stretch of its own, with more marks open (deeper than MAX_NEST it stays as typed)."""
+        self.flush(f)
+        inner = tuple(x or y for x, y in zip(marks or (False,) * 3, f.marks))
+        if f.depth < MAX_NEST:
+            self.run(_Frame(a, b, inner, f.url if url is False else url, f.depth + 1))
         else:
-            out.append((m.group(5) or m.group(6), False, True, False, None))
-        at = m.end()
-    if at < len(text):
-        out.append((text[at:], False, False, False, None))
-    return out
+            self.add(f, self.s[a:b])
+
+    def close(self, f, kind, start):
+        """Where the closer of `kind` is, searching from `start` (one character of content at least), or -1. A failed search is
+        remembered: no later opener of that kind can find a closer where this one could not."""
+        if kind in f.failed and start >= f.failed[kind]:
+            return -1
+        s = self.s
+        if kind in ("**", "~~", "***"):
+            q = s.find(kind, start, f.hi)
+        else:
+            m = (STAR_CLOSE if kind == "*" else UNDER_CLOSE).search(s, start, f.hi)
+            q = m.start() if m else -1
+        if q < 0:
+            f.failed[kind] = start
+        return q
+
+    def open_code(self, f, p):
+        """`code`: its words, plain. Returns where to go on from, or None when the backtick has no partner."""
+        q = self.s.find("`", p + 2, f.hi)
+        if q < 0:
+            return None
+        self.flush(f)
+        self.add(f, self.s[p + 1:q], code=True)
+        return q + 1
+
+    def open_link(self, f, p):
+        """[words](https:// or mailto: address), its words read for marks; a creaite: link (an item, a person; the scheme in any case,
+        %- or entity-encoded), its words only. Read with the client gate's own INLINE (#127), so the links Word draws are the links
+        the gate reads: one level of [brackets] in the words, every pattern bounded (linear in the text's length)."""
+        m = INLINE.match(self.s, p, f.hi)
+        if m and m.group(7) is not None:                       # #127: a creaite: link is its words, never a hyperlink
+            self.flush(f)
+            self.add(f, m.group(7))
+            return m.end()
+        if m and m.group(1) is not None:
+            n = len(self.out)
+            self.nest(f, m.start(1), m.end(1), url=None)
+            if len(self.out) > n:
+                self.out[-1][4] = m.group(2)                   # the address follows the link's last words only
+            return m.end()
+        return None
+
+    def open_star(self, f, p):
+        """*** bold italic, ** bold or * italic."""
+        s = self.s
+        if s.startswith("***", p):
+            q = self.close(f, "***", p + 4)
+            if q > 0:
+                self.nest(f, p + 3, q, (True, True, False))
+                return q + 3
+        if s.startswith("**", p):
+            q = self.close(f, "**", p + 3)
+            if q > 0:
+                self.nest(f, p + 2, q, (True, False, False))
+                return q + 2
+            f.buf.append("**")
+            return p + 2
+        before, after = s[p - 1] if p else "", s[p + 1] if p + 1 < f.hi else " "
+        if not (before.isalnum() or before in ("_", "*")) and not after.isspace() and after != "*":
+            q = self.close(f, "*", p + 2)
+            if q > 0:
+                self.nest(f, p + 1, q, (False, True, False))
+                return q + 1
+        return None
+
+    def open_under(self, f, p):
+        """_italic_ (not inside a word)."""
+        s = self.s
+        before, after = s[p - 1] if p else "", s[p + 1] if p + 1 < f.hi else " "
+        if not (before.isalnum() or before == "_") and not after.isspace():
+            q = self.close(f, "_", p + 2)
+            if q > 0:
+                self.nest(f, p + 1, q, (False, True, False))
+                return q + 1
+        return None
+
+    def open_tilde(self, f, p):
+        """~~strikethrough~~."""
+        if not self.s.startswith("~~", p):
+            return None
+        q = self.close(f, "~~", p + 3)
+        if q > 0:
+            self.nest(f, p + 2, q, (False, False, True))
+            return q + 2
+        f.buf.append("~~")
+        return p + 2
+
+
+def md_spans(text):
+    """[(text, bold, italic, strike, url, code)]: inline Markdown read as a tree and flattened, so the marks nest (**bold with
+    ~~strike~~ inside**, _italic **and bold**_, a link whose words are bold, `code`) and every mark that is paired is gone from the
+    text. One reader for Word (md_runs) and for HTML/PDF (prep_page.md_inline), so the two agree. Each opener looks for its closer
+    once (a failed search is remembered), and nesting is capped at MAX_NEST, so the work is linear in the text's length times the
+    cap. A mark with no partner stays as typed."""
+    return _Reader(text).read()
+
+
+def md_runs(text):
+    """[(text, bold, italic, strike, url)]: md_spans without the code flag (a code span is its words, plain)."""
+    return [r[:5] for r in md_spans(text)]
 
 
 def plain(text):
@@ -321,12 +487,19 @@ def plain(text):
 
 def md_lines(text):
     """Each block or list item as plain text, as Word shows it ("• item", "1. item"; headings and quotes as text)."""
+    return block_lines(md_blocks(text))
+
+
+def block_lines(blocks):
+    """md_lines for blocks already read (a quote's own blocks are shown line by line, like any others)."""
     lines = []
-    for kind, body in md_blocks(text):
+    for kind, body in blocks:
         if kind == "list":
-            lines += [pre + plain(t) for pre, (_, _, t) in zip(list_prefixes(body), body)]
+            lines += [pre + plain(task_split(t)[1] if pre in BOX.values() else t) for pre, (_, _, t) in zip(list_prefixes(body), body)]
         elif kind == "img":
             continue          # the picture and its caption aren't text to compare (review.py leaves captions out too)
+        elif kind == "qb":
+            lines += block_lines(body)
         else:
             lines.append(plain(body))
     return lines
@@ -338,6 +511,7 @@ def md_from_lines(lines):
     out = []
     for line in lines:
         text = re.sub(r"^\s*•\s+", "- ", line.strip())
+        text = re.sub(r"^[☐☑](?:\s+|$)", lambda m: "- [x] " if "☑" in m.group() else "- [ ] ", text).rstrip()   # #134: back to a checklist
         kind = "ul" if text.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", text) else None
         last = out[-1].splitlines()[-1] if out else ""
         if kind and kind == ("ul" if last.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", last) else None):
@@ -383,44 +557,50 @@ STYLES = {}   # style samples taken from {{STYLE_<NAME>}} paragraphs in the temp
 def md_paras(para, name, text):
     """Paragraphs for one Markdown entry, from the template paragraph holding {{NAME}}. A sub-heading uses the
     template's STYLE_TOPIC sample (the minutes' topic heading) when it has one, else bold text."""
-    marker = "\x00MD\x00"
+    marker = "\ue000MD\ue000"          # private-use characters: esc keeps them (it strips the \x00 this was; #127 round 6)
 
     def shell(template, key):
         """(the template paragraph with its placeholder marked, the run holding the mark, that run's style) for one placeholder."""
         base = replace_in(template, {key: marker})
         run = next(m for m in re.finditer(r"<w:r(?: [^>]*)?>.*?</w:r>", base, re.S) if marker in m.group())
         return base, run, (re.search(r"<w:rPr>.*?</w:rPr>", run.group(), re.S) or [None])[0]
-    base, run, rpr = shell(para, name)
+    base_shell, run, rpr = shell(para, name)
 
-    def one(prefix, body, shape=None, level=0, italic=False, use=None):
+    def one(prefix, body, shape=None, level=0, italic=False, use=None, base=0):
         """One Markdown block as a Word paragraph in the given shell: its runs styled, indented for a list item or a quote."""
-        b, rn, rp = use or (base, run, rpr)
+        b, rn, rp = use or (base_shell, run, rpr)
         runs = ([(prefix, False, False, False, None)] if prefix else []) + md_runs(body)
         xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st) for t, bo, it, st, u in runs)
         p = b[:rn.start()] + xml + b[rn.end():]
         if shape == "list":
-            p = with_indent(p, 360 * (level + 1), 360)
+            p = with_indent(p, base + 360 * (level + 1), 360)
         elif shape == "quote":
             p = with_indent(p, 567, 0)
         return p
     topic = shell(STYLES["STYLE_TOPIC"], "STYLE_TOPIC") if "STYLE_TOPIC" in STYLES else None
-    out = ""
-    for kind, body in md_blocks(text):
+
+    def draw_one(kind, body, inq):
+        """The paragraph(s) for one block; inside a quote (#134) each is italic and indented, a list further in."""
+        shape = "quote" if inq else None
         if kind == "p":
-            out += one("", body)
-        elif kind == "h":
-            out += one("", body, use=topic) if topic else one("", f"**{body}**")
-        elif kind == "h2":                  # #122: the second level, bold; the third, bold italic: each a step quieter than the one above
-            out += one("", f"**{body}**")
-        elif kind == "h3":
-            out += one("", f"**{body}**", italic=True)
-        elif kind == "q":
-            out += one("", body, "quote", italic=True)
-        elif kind == "img":                 # images are filled as image entries (current_entries); a stray one shows its caption
-            out += one("", body[0]) if body[0] else ""
-        else:
-            out += "".join(one(pre, t, "list", level) for pre, (level, _, t) in zip(list_prefixes(body), body))
-    return out or replace_in(para, {name: NONE})
+            return one("", body, shape, italic=inq)
+        if kind == "h":
+            return one("", body, use=topic) if topic and not inq else one("", f"**{body}**", shape, italic=inq)
+        if kind in ("h2", "h3"):            # #122: the second level, bold; the third, bold italic: each a step quieter than the one above
+            return one("", f"**{body}**", shape, italic=inq or kind == "h3")
+        if kind == "q":
+            return one("", body, "quote", italic=True)
+        if kind == "qb":
+            return draw(body, True)
+        if kind == "img":                   # images are filled as image entries (current_entries); a stray one shows its caption
+            return one("", body[0], shape, italic=inq) if body[0] else ""
+        return "".join(one(pre, task_split(t)[1] if pre in BOX.values() else t, "list", level, italic=inq, base=567 if inq else 0)
+                       for pre, (level, _, t) in zip(list_prefixes(body), body))
+
+    def draw(blocks, inq=False):
+        """The paragraphs for these blocks."""
+        return "".join(draw_one(kind, body, inq) for kind, body in blocks)
+    return draw(md_blocks(text)) or replace_in(para, {name: NONE})
 
 
 def item_para(para, name, entry):
@@ -445,9 +625,86 @@ def item_para(para, name, entry):
     return replace_in(para, {name: entry})
 
 
+# #127 round 6: the characters XML 1.0 doesn't allow (control characters other than tab, line feed and carriage return; U+FFFE,
+# U+FFFF; a lone surrogate): one of them in document.xml and Word won't open the file. Those a line could break at are a space.
+NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff\ud800-\udfff]")
+
+
 def esc(s):
-    """Text escaped for Word XML (&, < and >)."""
-    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    """Text escaped for Word XML (&, < and >), without the characters XML doesn't allow (NOT_XML; #127 round 6)."""
+    s = NOT_XML.sub(lambda m: " " if m.group() in "\x0b\x0c\x1c\x1d\x1e" else "", str(s))
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+# ===== #121: a link in a text value is a real Word hyperlink =====
+# A value holding `[words](address)` is filled with the words marked by control characters (\x01 index \x02 words \x03: none can occur in
+# Word text), and finish_links turns each mark into a <w:hyperlink> run once the whole part is filled, adding the relationship to the rels.
+# Only an address linktext.valid_address accepts is ever marked; anything else stays the literal characters.
+REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+LINKS = []                                          # the addresses of the marks of the fill in progress
+MARK = re.compile("\x01(\\d+)\x02([^\x01\x02\x03]*)\x03")
+RUN = re.compile(r"(<w:r(?: [^>]*)?>)(<w:rPr>(?:(?!</w:rPr>|</w:r>).)*</w:rPr>)?(<w:t(?: [^>]*)?>)([^<]*\x01[^<]*)(</w:t>)(</w:r>)", re.S)
+# the run properties that follow <w:u> in the schema, and those that follow <w:color>
+RPR_AFTER_U = "effect|bdr|shd|fitText|vertAlign|rtl|cs|em|lang|eastAsianLayout|specVanish|oMath"
+RPR_AFTER_COLOR = r"<w:(?:spacing|w|kern|position|sz|szCs|highlight|u|" + RPR_AFTER_U + r")\b"
+RPR_AFTER_U = r"<w:(?:" + RPR_AFTER_U + r")\b"
+
+
+def esc_links(value):
+    """A value escaped for Word XML, its links marked for finish_links (a value with none is escaped as always)."""
+    text = re.sub("[\x01-\x03]", "", str(value))
+    if "](" not in text:
+        return esc(text)
+    segs = linktext.segments(text)
+    if not any(h for _, h in segs):
+        return esc(text)
+    out = []
+    for t, h in segs:
+        if h:
+            LINKS.append(h)
+            out.append(f"\x01{len(LINKS) - 1}\x02{esc(t)}\x03")
+        else:
+            out.append(esc(t))
+    return "".join(out)
+
+
+def link_rpr(rpr):
+    """A run's properties in the hyperlink look (blue, underlined), in the order Word's schema wants them."""
+    rpr = re.sub(r"<w:(?:color|u)\b[^>]*/>", "", rpr or "<w:rPr></w:rPr>")
+    m = re.search(RPR_AFTER_COLOR, rpr)
+    at = m.start() if m else rpr.rindex("</w:rPr>")
+    rpr = rpr[:at] + '<w:color w:val="0563C1"/>' + rpr[at:]
+    m = re.search(RPR_AFTER_U, rpr)
+    at = m.start() if m else rpr.rindex("</w:rPr>")
+    return rpr[:at] + '<w:u w:val="single"/>' + rpr[at:]
+
+
+def finish_links(xml, rels):
+    """Turn the marks in a filled part into hyperlinks. `rels` collects (relationship id, address) for the document's rels part (None: the
+    part has no rels to add to, and a mark is left as its plain words). A mark inside a run of more than plain text is left as its words."""
+    def hyperlink(m, rpr):
+        """One mark as a <w:hyperlink> run, its relationship recorded."""
+        rid = f"rIdCreaiteLink{len(rels) + 1}"
+        rels.append((rid, LINKS[int(m.group(1))]))
+        return (f'<w:hyperlink r:id="{rid}" w:history="1"><w:r>{link_rpr(rpr)}'
+                f'<w:t xml:space="preserve">{m.group(2)}</w:t></w:r></w:hyperlink>')
+
+    def run(m):
+        """One text run split at its marks: plain runs in the run's own look, a hyperlink for each mark."""
+        if rels is None:
+            return m.group(0)
+        rpr = m.group(2) or ""
+        out, at, text = "", 0, m.group(4)
+
+        def plain(t):
+            """The run's look with some of its text (nothing for an empty piece)."""
+            return f'<w:r>{rpr}<w:t xml:space="preserve">{t}</w:t></w:r>' if t else ""
+        for k in MARK.finditer(text):
+            out += plain(text[at:k.start()]) + hyperlink(k, rpr)
+            at = k.end()
+        return out + plain(text[at:])
+    xml = RUN.sub(run, xml)
+    return MARK.sub(lambda k: k.group(2), xml).replace("\x01", "").replace("\x02", "").replace("\x03", "")
 
 
 def unesc(s):
@@ -476,7 +733,7 @@ def replace_in(xml, values):
     """Replace each {{NAME}} in the XML's text runs with its value, escaped; a placeholder not in `values` is left."""
     def sub(m):
         """One text run with its placeholders filled."""
-        text = re.sub(r"\{\{(\w+)\}\}", lambda p: esc(values[p.group(1)]) if p.group(1) in values else p.group(0),
+        text = re.sub(r"\{\{(\w+)\}\}", lambda p: esc_links(values[p.group(1)]) if p.group(1) in values else p.group(0),
                       m.group(2))
         return m.group(1) + text + m.group(3)
     return TEXT.sub(sub, xml)
@@ -592,6 +849,36 @@ def _fill_paragraph_lists(xml, values):
 # ===== end BL-229 (fill_xml) =====
 
 
+def fill_story(name, raw, values, link_rels):
+    """One story part filled: (its bytes, the {{PLACEHOLDERS}} left in it). Links become hyperlinks, listed in `link_rels`."""
+    xml = finish_links(fill_xml(raw.decode("utf-8"), values), link_rels if name == "word/document.xml" else None)
+    if name == "word/document.xml" and link_rels and "xmlns:r=" not in xml[:2000]:
+        xml = xml.replace("<w:document ", f'<w:document xmlns:r="{REL_NS}" ', 1)
+    left = set(re.findall(r"\{\{(\w+)\}\}", "".join(t for _, t, _ in TEXT.findall(xml))))
+    return xml.encode("utf-8"), left
+
+
+def add_relationships(parts, media, link_rels):
+    """The parts with the pictures (`media`) and hyperlinks (`link_rels`) added to the document's relationships and the picture types to
+    the content types; the pictures themselves follow the parts."""
+    image, hyper = f"{REL_NS}/image", f"{REL_NS}/hyperlink"
+    out_parts = []
+    for info, raw in parts:
+        if info.filename == "word/_rels/document.xml.rels":
+            raw = raw.decode("utf-8").replace("</Relationships>", "".join(
+                f'<Relationship Id="{rid}" Type="{image}" Target="{name[5:]}"/>' for name, _, rid in media)
+                + "".join(f'<Relationship Id="{rid}" Type="{hyper}" Target="{esc(href)}" TargetMode="External"/>'
+                          for rid, href in link_rels) + "</Relationships>").encode("utf-8")
+        elif info.filename == "[Content_Types].xml":
+            ct = raw.decode("utf-8")
+            for ext, mime in (("png", "image/png"), ("jpg", "image/jpeg"), ("jpeg", "image/jpeg")):
+                if media and any(name.endswith("." + ext) for name, _, _ in media) and f'Extension="{ext}"' not in ct:
+                    ct = ct.replace("<Default ", f'<Default Extension="{ext}" ContentType="{mime}"/><Default ', 1)
+            raw = ct.encode("utf-8")
+        out_parts.append((info, raw))
+    return out_parts + [(zipfile.ZipInfo(name), data) for name, data, _ in media]
+
+
 def cmd_fill(template, values_file, out):
     """The fill command: fill a template's {{PLACEHOLDERS}} from values.json (text, lists, Markdown, images, topic groups, table rows) and
     write out.docx. Returns 1, writing nothing, if any is left unfilled."""
@@ -618,31 +905,18 @@ def cmd_fill(template, values_file, out):
             values[key] = prepared
     parts = []
     left = set()
+    LINKS.clear()
+    link_rels = []                              # (relationship id, address) of the hyperlinks made (#121)
     for info, raw in read_parts(template):
         if STORY.match(info.filename):
-            xml = fill_xml(raw.decode("utf-8"), values)
-            left |= set(re.findall(r"\{\{(\w+)\}\}", "".join(t for _, t, _ in TEXT.findall(xml))))
-            raw = xml.encode("utf-8")
+            raw, unfilled = fill_story(info.filename, raw, values, link_rels)
+            left |= unfilled
         parts.append((info, raw))
     if left:
         print("Not filled: " + ", ".join(sorted(left)) + ". Nothing was written.")
         return 1
-    if media:
-        rels = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
-        out_parts = []
-        for info, raw in parts:
-            if info.filename == "word/_rels/document.xml.rels":
-                raw = raw.decode("utf-8").replace("</Relationships>", "".join(
-                    f'<Relationship Id="{rid}" Type="{rels}" Target="{name[5:]}"/>' for name, _, rid in media)
-                    + "</Relationships>").encode("utf-8")
-            elif info.filename == "[Content_Types].xml":
-                ct = raw.decode("utf-8")
-                for ext, mime in (("png", "image/png"), ("jpg", "image/jpeg"), ("jpeg", "image/jpeg")):
-                    if any(name.endswith("." + ext) for name, _, _ in media) and f'Extension="{ext}"' not in ct:
-                        ct = ct.replace("<Default ", f'<Default Extension="{ext}" ContentType="{mime}"/><Default ', 1)
-                raw = ct.encode("utf-8")
-            out_parts.append((info, raw))
-        parts = out_parts + [(zipfile.ZipInfo(name), data) for name, data, _ in media]
+    if media or link_rels:
+        parts = add_relationships(parts, media, link_rels)
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     write_parts(parts, out)
     print(f"Wrote {out}")
@@ -715,12 +989,29 @@ def story_text(xml):
     return "\n".join(lines)
 
 
+def show_links(xml, rels):
+    """A story part with each hyperlink followed by its address in brackets ("the plan (https://…)"), so a text preview of a report shows
+    where a link goes (#121). `rels` is the document's relationships part as text."""
+    where = {m.group(1): unesc(m.group(2))
+             for m in re.finditer(r'<Relationship\b[^>]*?\bId="([^"]+)"[^>]*?\bTarget="([^"]*)"[^>]*?/>', rels or "")}
+
+    def address(m):
+        """The hyperlink with its address after its words (a link the rels do not know is left as it is)."""
+        if m.group(2) not in where:
+            return m.group(0)
+        shown = esc(re.sub("^mailto:", "", where[m.group(2)], flags=re.I))
+        return m.group(1) + f'<w:r><w:t xml:space="preserve"> ({shown})</w:t></w:r>' + m.group(3)
+    return re.sub(r'(<w:hyperlink\b[^>]*?\br:id="([^"]+)"[^>]*>.*?)(</w:hyperlink>)', address, xml, flags=re.S)
+
+
 def cmd_text(path):
-    """The text command: print the document's body as plain text, tracked changes accepted."""
-    for info, raw in read_parts(path):
+    """The text command: print the document's body as plain text, tracked changes accepted, a hyperlink followed by its address."""
+    parts = read_parts(path)
+    rels = next((raw.decode("utf-8") for info, raw in parts if info.filename == "word/_rels/document.xml.rels"), "")
+    for info, raw in parts:
         if info.filename == "word/document.xml":
             xml, _ = accept_xml(raw.decode("utf-8"))
-            print(story_text(xml))
+            print(story_text(show_links(xml, rels)))
     return 0
 
 
@@ -801,7 +1092,7 @@ def put_text(para, text):
     runs = re.findall(r"<w:r>(?:(?!</w:r>).)*?<w:t(?: [^>]*)?>[^<]*</w:t>(?:(?!</w:r>).)*?</w:r>", para, re.S)
     if not runs:
         raise ValueError("the template paragraph has no text run to fill")
-    body = esc(text).replace("\n", '</w:t><w:br/><w:t xml:space="preserve">')
+    body = esc(linktext.with_address(text) if "](" in str(text) else text).replace("\n", '</w:t><w:br/><w:t xml:space="preserve">')
     first = re.sub(r"<w:t(?: [^>]*)?>[^<]*</w:t>", lambda m: f'<w:t xml:space="preserve">{body}</w:t>', runs[0], count=1)
     para = para.replace(runs[0], first, 1)
     for r in runs[1:]:

@@ -10,11 +10,14 @@
    - `menuMove`: the arrow keys alone, for the right-click menu's submenus (review.js cxOpen).
    Keyboard and names: the button has aria-haspopup="menu" and aria-expanded, and ↓ opens the menu. Inside it, ↑ ↓ Home End
    move, Enter or Space runs an item, and Esc closes it with focus back on the button. Tab or a click away closes it.
+   `hover` (#143, core/hover.js): the pointer opens it after MENU_OPEN without moving focus, a neighbouring menu takes MENU_NEXT,
+   it closes MENU_CLOSE after the pointer leaves the button and the list, Esc closes it, and a click or ↓ opens it with focus inside.
    Disabled items are aria-disabled and skipped. An item with `checked` is a menuitemcheckbox: picking it toggles it and the
    menu stays open. Headings and notes are words, not items. */
 import { render } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { tipHide } from "../core/dom.js";
+import { hoverAttach, menuGroup } from "../core/hover.js";
 import { Icon } from "./Icon.jsx";
 
 /** @typedef {{id: string, name?: string, line?: string, icon?: string, mark?: string, checked?: boolean, sep?: boolean,
@@ -30,6 +33,10 @@ import { Icon } from "./Icon.jsx";
     focusKey?: any, boxRef?: {current: HTMLDivElement | null}, children?: any}} MenuPanelProps */
 /** @typedef {{label: string, items: MenuItem[], onPick: (id: string) => void, id?: string, cls?: string,
     align?: "left" | "right", at?: {x: number, y: number}, loading?: boolean, onClose?: (how: MenuClose) => void}} PopMenuProps */
+
+/** The hover Menu the keyboard opened (its fold): the pointer opening another folds it, so one is open at a time (the group has let go of it). */
+/** @type {(() => void) | null} */
+let KB_OPEN = null;
 
 /** The items a key can move between: every item that isn't disabled.
     @param {Element | null} box @returns {HTMLElement[]} */
@@ -101,7 +108,7 @@ function MenuItems({ items, onPick }) {
       <button key={it.id} type="button" role={it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"} tabIndex={-1}
         class={it.cls} data-tip={it.tip} aria-checked={it.checked === undefined ? undefined : it.checked ? "true" : "false"}
         aria-disabled={it.disabled ? "true" : undefined} {...dataAttrs(it.data)} onClick={() => onPick(it)}>
-        {it.icon ? <Icon name={it.checked ? "check" : it.icon} /> : null}
+        {it.icon || (it.radio && it.checked) ? <Icon name={it.checked ? "check" : it.icon || "check"} /> : null}
         {it.icon || it.line
           ? <span><b>{it.name}{it.mark ? <span class="last"> · {it.mark}</span> : null}</b>{it.line ? <small>{it.line}</small> : null}</span>
           : <>{it.name}{it.mark ? <span class="last"> · {it.mark}</span> : null}</>}
@@ -109,41 +116,42 @@ function MenuItems({ items, onPick }) {
     ))}</>;
 }
 
-/** The hover menu open now (a Menu with `hover`), so pointing at another one folds it at once. @type {null | (() => void)} */
-let HOVER_OPEN = null;
-/** Pointer grace before a hover menu folds, so a diagonal move to its items doesn't close it. */
-const HOVER_GRACE = 220;
-
 /** A button that opens a menu of commands. `why` disables it (aria-disabled, the reason as its tooltip, `onBlocked` on a
     click). `data` adds data-* attributes to the button, and an item's `data` to that item. `ariaLabel` names a button whose
     words are a symbol ("…"); `chevron: false` leaves out the ▾ icon; `labelCls` classes the words; `id`, `menuId` and
-    `menuCls` give the button and the menu an id and the menu more classes; `hidden` hides the button. `hover` (BL-117): the menu
-    opens when a mouse points at the button and folds about 220 ms after it leaves (a click, Enter or ↓ opens it for the keyboard,
-    with focus in it; a hover-opened one leaves focus where it is). An item with `radio` and `checked` is a menuitemradio: ticked
+    `menuCls` give the button and the menu an id and the menu more classes; `hidden` hides the button. `hover`: the hover standard
+    (#143, core/hover.js; see the top of this file). An item with `radio` and `checked` is a menuitemradio: ticked
     when current, and picking it closes the menu.
     @param {MenuProps} props */
 export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btnCls, menuLabel, left, data, id, ariaLabel,
   chevron = true, labelCls, menuId, menuCls, hidden, hover }) {
-  const [open, setOpen] = useState(false), [, bump] = useState(0);
+  const [open, setOpen] = useState(false);
   const btn = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const back = useRef(false);
-  const byMouse = useRef(false), openedAt = useRef(0), noFocus = useRef(false), timer = useRef(0);
+  const box = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const byPointer = useRef(false);                       // #143: opened by hovering, so focus stays where it was
+  const isOpen = useRef(false); isOpen.current = open;   // #143: a late hover timer must not act on a menu already open
 
   /** @param {MenuClose} how */
-  const close = how => { back.current = how === "esc"; if (back.current) btn.current?.focus({ preventScroll: true }); clearTimeout(timer.current); if (HOVER_OPEN === fold) HOVER_OPEN = null; setOpen(false); };
-  const closeRef = useRef(close); closeRef.current = close;
-  const fold = useRef(() => closeRef.current("away")).current;
-  const pointIn = () => {
-    if (!hover || why) return;
-    clearTimeout(timer.current);
-    if (open) return;
-    if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
-    HOVER_OPEN = fold; byMouse.current = true; noFocus.current = true; openedAt.current = Date.now(); setOpen(true);
-  };
-  const pointOut = () => { if (hover && byMouse.current) { clearTimeout(timer.current); timer.current = window.setTimeout(fold, HOVER_GRACE); } };
-  useEffect(() => () => { clearTimeout(timer.current); if (HOVER_OPEN === fold) HOVER_OPEN = null; }, []);
+  const close = how => { back.current = how === "esc"; if (back.current) btn.current?.focus({ preventScroll: true }); setOpen(false);   /* Esc: focus is back before the list goes, so a bar shown only while focus is inside it (the Notes bar) stays */
+    if (hover && menuGroup.current === btn.current) menuGroup.close(); };
 
-  useEffect(() => { if (open && hover) { if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN(); HOVER_OPEN = fold; } }, [open]);   /* one hover-mode menu open at a time, however it was opened */
+  const closeRef = useRef(close); closeRef.current = close;
+  const fold = useRef(() => closeRef.current("esc")).current;   /* folded by another menu: focus goes back to its button, so the Notes bar (shown while focus is in it) stays */
+  useEffect(() => () => { if (KB_OPEN === fold) KB_OPEN = null; }, []);
+  useEffect(() => {
+    const b = btn.current; if (!hover || !b) return;
+    return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current, isOpen: () => isOpen.current,
+      open: () => { if (why || isOpen.current) return; if (KB_OPEN && KB_OPEN !== fold) KB_OPEN(); KB_OPEN = null; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
+  }, [hover, why]);
+  useLayoutEffect(() => {          /* #117: a hover menu that would run off the bottom of the window opens upward when there is room above (the AI bar near the window's foot) */
+    if (!hover || !open) return;
+    const b = btn.current, m = box.current;
+    if (!b || !m) return;
+    const r = m.getBoundingClientRect(), t = b.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 4 && t.top - 8 > r.height) m.classList.add("up");
+  }, [open]);
+
   useEffect(() => { if (!open && back.current) { back.current = false; btn.current?.focus(); } }, [open]);
 
   /** @param {MenuItem} it */
@@ -154,21 +162,26 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
   };
 
   /** @param {KeyboardEvent} e */
-  const onBtnKey = e => { if (e.key === "ArrowDown" && !why && !open) { e.preventDefault(); byMouse.current = false; noFocus.current = false; setOpen(true); } };
+  const onBtnKey = e => {
+    if (e.key !== "ArrowDown" || why) return;
+    if (!open) { e.preventDefault(); byPointer.current = false; if (hover) { if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close(); if (KB_OPEN && KB_OPEN !== fold) KB_OPEN(); KB_OPEN = fold; menuGroup.release(btn.current); } setOpen(true); }   /* one menu at a time: a neighbour the pointer opened folds */
+    else if (byPointer.current) { e.preventDefault(); byPointer.current = false; menuGroup.release(btn.current); menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); }   /* ↓ on a hover-opened menu moves in */
+  };
 
   return (
-    <span class={`dd${cls ? " " + cls : ""}`} onMouseEnter={pointIn} onMouseLeave={pointOut}>
+    <span class={`dd${cls ? " " + cls : ""}`}>
       <button type="button" class={btnCls || "btn"} id={id} ref={btn} hidden={hidden} aria-haspopup="menu"
         aria-expanded={open ? "true" : "false"} aria-label={ariaLabel} aria-disabled={why ? "true" : undefined}
         data-tip={why || tip} {...dataAttrs(data)} onKeyDown={onBtnKey}
         onClick={e => { e.preventDefault(); if (why) { onBlocked && onBlocked(); return; }
-          if (open && byMouse.current && e.detail > 0 && Date.now() - openedAt.current < 400) { noFocus.current = false; bump(n => n + 1); return; }   /* a click as the pointer arrives is "open it": it stays open, focus in it; a later click toggles it shut */
-          byMouse.current = hover && e.detail > 0; noFocus.current = false; if (open) close("pick"); else setOpen(true); }}>
+          if (hover) menuGroup.release(btn.current);          /* a click is the keyboard's and the mouse's own: no pending hover open, no hover close */
+          if (open && byPointer.current) { byPointer.current = false; menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); return; }   /* a click on a hover-opened menu keeps it and moves in */
+          byPointer.current = false; if (open) close("pick"); else setOpen(true); }}>
         {icon ? <Icon name={icon} /> : null}<span class={labelCls}>{label}</span>{chevron ? <Icon name="chevdown" cls="nch" /> : null}
       </button>
       {open ? (
         <MenuPanel label={menuLabel || ariaLabel || label} id={menuId} cls={`${left ? "left " : ""}${menuCls || ""}`}
-          anchor={btn.current} onClose={close} autoFocus={!noFocus.current} focusKey={noFocus.current}>
+          anchor={btn.current} onClose={close} boxRef={box} autoFocus={!byPointer.current}>
           <MenuItems items={items} onPick={pick} />
         </MenuPanel>
       ) : null}

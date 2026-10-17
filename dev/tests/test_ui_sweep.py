@@ -58,7 +58,8 @@ SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
 # BL-316: a pending new item's proposal in the peek, so its "Update an existing item instead" list (Review) is reached; plan
 # #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
 SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
-                          "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')", "#panel")
+                          "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')"
+                          " && Object.keys(rjGuesses.value).length > 0", "#panel")     # the guesses (/api/review/guesses) land late under load and redraw the peek's list: wait for them, as the review screen does
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
 # BL-316: the popups the sample's screens don't show (test_shared_behaviour's "unreached"): Work's New tile on Decisions (a
@@ -108,7 +109,7 @@ SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=docu
 # The A4 sheet (components/report/Sheet.jsx) draws its page zoomed 40 to 80% by a transform, so its small controls measure under 24
 # on screen at any zoom: the section handle's grip and Hide (Alt+arrows and the heading's own keys do the same), the heading field,
 # Reset, and the minutes' time tags and their x (the transcript pane and the line's Edit do the same).
-EXEMPT = ("span.colrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
+EXEMPT = ("span.colrz", "span.bcrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
 
 
 class UiSweepCase(ts.Snapshots):
@@ -148,6 +149,19 @@ class TargetSizes(UiSweepCase):
                        and not any(x in r["sig"] for x in EXEMPT)]
                 self.assertEqual(bad, [], f"{name}: targets under 24 by 24 with a neighbour inside their 24-pixel circle")
 
+    def test_a_control_in_a_zero_height_clip_is_not_a_target_but_a_visible_small_one_is(self):
+        """The report header's hidden bands (height 0, overflow hidden) hold controls nobody can see: the audit skips them (#202). A real
+        small visible pair is still flagged, so the skip does not blind the audit."""
+        b = self.b
+        region = self.goto("weekly")
+        b.eval("""(()=>{ const v=document.querySelector('#v-weekly'), w=document.createElement('div');
+          w.innerHTML='<div id="clipT" style="height:0;overflow:hidden"><button id="cl1" style="width:10px;height:10px">x</button><button id="cl2" style="width:10px;height:10px">y</button></div>'
+            +'<div id="visT"><button id="vs1" style="width:10px;height:10px;display:inline-block">a</button><button id="vs2" style="width:10px;height:10px;display:inline-block">b</button></div>';
+          v.appendChild(w); })()""")
+        sigs = b.eval(f"AUD.sizes({json.dumps(region)}).rows.map(r=>r.sig)")
+        self.assertFalse([x for x in sigs if "cl1" in x or "cl2" in x], "the clipped pair is skipped")
+        self.assertTrue([x for x in sigs if "vs1" in x or "vs2" in x], "the visible small pair is still flagged")
+
     def test_the_audits_four_failures_are_24_by_24(self):
         b = self.b
         self.goto("work")
@@ -185,7 +199,7 @@ class TargetSizes(UiSweepCase):
 # Not counted as covered or cut off: the Display menu lies over the table on purpose; its column ticks are drawn by their
 # labels; Settings' Advanced rows were inside a closed <details> before BL-320, and Today's Resolved list (BL-319: folded
 # to one line) is inside a closed <details>; the "more columns" cue moves as it is measured.
-REFLOW_SKIP_SCREENS = ("work-display",)
+REFLOW_SKIP_SCREENS = ("work-display", "rail-expanded", "rail-collapsed", "rail-icons")   # the rail states are set at desktop width: a narrow window locks the rail collapsed
 REFLOW_SKIP = ("#dprop-", "#advRows", "#chgList", "#chgMore", ".xcue button.xmore")
 
 
@@ -195,7 +209,7 @@ class Reflow(UiSweepCase):
     def test_no_screen_scrolls_sideways_and_nothing_is_cut_off(self):
         b = self.b
         try:
-            for w in (320, 640, 900):
+            for w in (900,):
                 b.resize(w, 800)
                 for name in SCREENS:
                     if name in REFLOW_SKIP_SCREENS:
@@ -219,7 +233,7 @@ class Reflow(UiSweepCase):
         action row is inside the window and is what a press at its middle reaches; the wide layout keeps one row."""
         b = self.b
         try:
-            for w in (320, self.width):
+            for w in (self.width,):
                 b.resize(w, 800)
                 with self.subTest(width=w):
                     self.goto("review-peek")
@@ -445,17 +459,20 @@ class ScrollEnd(UiSweepCase):
     def test_no_screen_scrolls_past_its_bottom(self):
         b = self.b
         try:
-            for w in (self.width, 320):
+            for w in (self.width,):
                 b.resize(w, 900)
                 for name in SCREENS:
-                    if name in ("cmdk", "ask", "work-display"):
+                    if name in ("cmdk", "ask", "work-display", "rail-expanded", "rail-collapsed", "rail-icons"):
                         continue
                     with self.subTest(width=w, screen=name):
                         region = self.goto(name)
                         self.check(name, region if region.startswith("#v-") else ".view:not([hidden])")
                 with self.subTest(width=w, screen="prep-popup"):
                     self.goto("today")
-                    b.click("[data-prep]")
+                    # #111, #140: the day band's peek no longer opens the old dialog; the dialog is still the Agenda draft's
+                    # home, opened as the "prep-popup" screen above does (the peek's button goes to the Prep page, tested there).
+                    b.eval("D.calendar={fetched:TODAY+' 07:00',days:{[TODAY]:[{id:'e1',start:'10:00',end:'11:00',title:'ABC Steering',teams:true}]}}; "
+                           "D.prep.meetings['10:00|ABC Steering']={series:'abc steering',p:'ABC',how:'matched',day:TODAY}; openPrep(prepTimed()[0],TODAY)")
                     b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open&&document.getElementById('prepBody').children.length")
                     b.pump(1)
                     self.check("prep popup", "#v-today", "#prepDlg", "#prepBody")

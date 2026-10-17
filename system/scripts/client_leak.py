@@ -12,6 +12,7 @@ BL-338). The check reads a creaite document's data (creaite_doc.py), never a Wor
   - text_findings: the wording check on any text, moved here from review.client_findings; IDs found however written (#127);
   - plain_findings: findings' checks on a text with no sections: review.client_findings reads a Word draft through it (#127).
 The names check fails closed: a people register that is missing or can't be read is a finding of its own (#127)."""
+import functools
 import json
 import re
 import sys
@@ -25,6 +26,21 @@ PARTNER_ONLY = {"partner only", "partner-only", "partner"}      # a label with o
 CLIENT_TABLES = ("actions", "raid", "decisions", "milestones")   # promises and workstreams never reach a client report
 TEXT_OF = {"actions": "description", "raid": "description", "decisions": "decision", "milestones": "name"}
 INTERNAL_WORDS = ("confidential", "restricted", "documents/")
+
+
+# #127 round 7: what the checks put between two forms of a text (as written, as shown, decoded) or two addresses. A newline, or
+# any punctuation, can be read across ("…the rest is internal" then "Only _two_ …" reads "internal\nOnly" as the marker; "internal\n.\nonly"
+# too), so the join is a word of its own that no name, ID, wording, health reason or marker holds: every pattern stops at it.
+JOIN = "\nqqjoinqq\n"
+
+
+def joined(*forms):
+    """The forms of a text one after another, JOIN between them, each once and in order (empty ones left out)."""
+    out = []
+    for f in forms:
+        if f and f not in out:
+            out.append(f)
+    return JOIN.join(out)
 
 
 def squash(t):
@@ -170,8 +186,14 @@ def _link_findings(con, text):
     """({item IDs the text's work-item links name}, [findings for a work-item link creaite can't read, and for a creaite: link of
     a kind a client report may not hold])."""
     ids, unread = link_refs(con, text)
-    return ids, [f"a link to a work item creaite can't read: “{a[:40]}”" for a in unread] + \
+    return ids, [f"a link to a work item creaite can't read: “{_before_join(a)[:40]}”" for a in unread] + \
         [f"a creaite link a client can't open: “creaite:{k}”" for k in sorted(creaite_kinds(text) - LINK_KINDS)]
+
+
+def _before_join(address):
+    """An address as a finding quotes it: up to JOIN's word (round 7: a link at the end of one form, its ID on the next line, is
+    read up to the join; the join is never shown), or the link itself when nothing comes before it."""
+    return address.split(JOIN.strip())[0].strip() or "creaite:item/"
 
 
 def text_findings(con, code, text, skip=()):
@@ -181,7 +203,7 @@ def text_findings(con, code, text, skip=()):
     look-alike characters, spaces or dots), and so is any other item the tracker holds that a client report can't show (a
     milestone or promise, or an item of another project); `skip`: items already found by the caller, not listed twice."""
     import edit_ai
-    raw, text = text, with_decoded(text)                       # #127 round 4: %- or entity-encoded words are read too
+    raw, text = text, with_decoded(as_shown(text))             # #127 round 4: %- or entity-encoded words are read too
     low = edit_ai.normal(text).lower()                         # (and invisible characters don't hide a word)
     ids, found = _link_findings(con, text)                     # #127: a work-item link's address counts as its ID
     ids |= edit_ai.loose_ids(con, text)
@@ -220,41 +242,101 @@ def person(owner):
     return re.sub(r"\s*\([^)]*\)\s*$", "", owner or "").strip()
 
 
-def _name_form(text):
+def _name_form(text, lower=True):
     """Text as a name is matched: as the ID check reads it (edit_ai.normal: NFKC, so a no-break space is a space; invisible
     characters gone), every run of whitespace (two spaces, a tab, a line break) one space, in lower case (#127 review), and its
-    accents dropped ("Quentín" is "quentin"; #127 round 4)."""
+    accents dropped ("Quentín" is "quentin"; #127 round 4; edit_ai.normal drops every combining mark since round 5), and a curly
+    apostrophe straight ("O’Neill" is "o'neill", either way round; round 5). `lower=False` keeps its capitals, for the forms of a
+    name that count only when written as one (name_pattern; round 6)."""
     import edit_ai
-    import unicodedata
-    t = re.sub(r"\s+", " ", edit_ai.normal(text or "")).lower()
-    if t.isascii():
-        return t
-    return unicodedata.normalize("NFC", "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn"))
+    t = re.sub(r"\s+", " ", edit_ai.normal(text or ""))
+    return (t.lower() if lower else t).translate(APOSTROPHES)
 
 
-NAME_SEP = r"[\s._\-+·'’*~`]{1,4}"      # between a name's words: spaces, a dot, dash, underscore or plus, emphasis marks
+APOSTROPHES = str.maketrans({c: "'" for c in "\u2019\u2018\u02bc\u2032"})
+
+
+NAME_SEP = r"(?:[\s._\-+·'’*~`/|;\\]{1,4}|,)"   # between a name's words: spaces, a dot, dash, underscore, plus, emphasis
+#                     # marks, (#127 round 5) a slash, bar, semicolon or backslash, and (round 6) a comma with no space ("Quentin,Marlow";
+#                     # "Quentin, Marlow" is a list, read the same decoded or not)
 JOIN_PART, JOIN_LEN = 3, 8                # #127 round 4: a name run together ("QuentinMarlow") only when each word has at least 3
 #                                         # letters and the whole at least 8, so "Max Well" never matches "maxwell"
 
 
+def _capitalised(word):
+    """A pattern for one word of a name written as a name: its first letter a capital, the rest in any case ("Marlow", "MARLOW")."""
+    return rf"(?-i:{re.escape(word[0].upper())})" + (rf"(?i:{re.escape(word[1:])})" if len(word) > 1 else "")
+
+
+SCRIPT_END = 0x323B0                      # past the last letter Unicode 15 assigns (CJK Extension H); nothing beyond is a letter
+
+
+def _class(test):
+    """A character class (its inside, for [...]) of every character up to SCRIPT_END that `test` accepts, as ranges."""
+    out, start, prev = [], None, None
+    for cp in range(SCRIPT_END + 1):
+        if cp < SCRIPT_END and test(chr(cp)):
+            start, prev = (cp if start is None else start), cp
+        elif start is not None:
+            out.append(re.escape(chr(start)) + (f"-{re.escape(chr(prev))}" if prev > start else ""))
+            start = None
+    return "".join(out)
+
+
+_INITIAL = {}
+# #127 round 8: the ideographic scripts (CJK ideographs, kana, Hangul syllables): one of their characters is a word or a syllable,
+# not an initial, so between the words of a name in another script it counts as an initial only with a dot ("Mark 中 Field" is not
+# Mark Field). Between the words of a name written in them it may stand alone ("王 小 明" for 王 明, round 7).
+IDEOGRAPHIC = ((0x2E80, 0x9FFF), (0xA960, 0xA97F), (0xAC00, 0xD7FF), (0xF900, 0xFAFF), (0xFF66, 0xFFDC), (0x16FE0, 0x18AFF),
+               (0x1AFF0, 0x1B2FF), (0x20000, 0x323AF))
+
+
+def _ideographic(c):
+    return any(a <= ord(c) <= b for a, b in IDEOGRAPHIC)
+
+
+def initial(ideographic_name=False):
+    """#127 round 7: the initial between a name's words, in any script: a capital letter (one whose upper case is itself and
+    differs from its lower case: "Ł", "Б", not "a" or "ł"), or in a script with no case (Arabic, Devanagari) a single letter
+    followed by a dot or a space; then a dot or the separator after it. Round 8: an ideographic character (IDEOGRAPHIC) only
+    with a dot, or with a space too between the words of a name written in an ideographic script (`ideographic_name`). Built
+    once each, when a name is first matched (about 0.1 s)."""
+    if ideographic_name not in _INITIAL:
+        upper = _class(lambda c: c.upper() == c != c.lower())
+        caseless = _class(lambda c: c.isalpha() and c.upper() == c.lower() and not _ideographic(c))
+        ideo = _class(lambda c: c.isalpha() and _ideographic(c))
+        after = r"(?=[.\s])" if ideographic_name else r"(?=\.)"
+        _INITIAL[ideographic_name] = (rf"(?-i:[{upper}]\.?|(?![\x00-\x7f])[{caseless}](?=[.\s])\.?"
+                                      rf"|(?![\x00-\x7f])[{ideo}]{after}\.?)")
+        #                                       # case-sensitive, and an ASCII letter never tried against the caseless class
+    return _INITIAL[ideographic_name]
+
+
 def name_pattern(name):
-    """The pattern a name is found by (#127 round 4): its words in order with any run of separators between them (NAME_SEP), or,
-    for a name whose words are all JOIN_PART letters or more and JOIN_LEN together, none ("QuentinMarlow", or the soft hyphen
-    Word hides); a two-word name also surname first after a comma ("Marlow, Quentin"). Always a whole word at each end, so a
-    longer name ("Marlowe") is not this one. None for a name with nothing to match."""
+    """The pattern a name is found by (#127 round 4), matched against _name_form(text, lower=False): its words in order, in any
+    case, with any run of separators between them (NAME_SEP), or, for a name whose words are all JOIN_PART letters or more and
+    JOIN_LEN together, none ("QuentinMarlow", or the soft hyphen Word hides); a capital initial between its words ("Quentin J.
+    Marlow"; never "a", so "Will a price cap" isn't Will Price; round 6); a two-word name also surname first after a comma
+    ("Marlow, Quentin") or, when both words have JOIN_PART letters or more and both are written with a capital, without one
+    ("Marlow Quentin", "MARLOW Quentin"; never "price will" or "Hill rose"; rounds 5 and 6). Always a whole word at each end, so
+    a longer name ("Marlowe") is not this one. None for a name with nothing to match."""
     words = re.findall(r"[^\W_]+(?:['’][^\W_]+)*", _name_form(name))
     if not words:
         return None
     if len(words) == 1:
-        return re.compile(rf"(?<![^\W_]){re.escape(words[0])}(?![^\W_])")
+        return re.compile(rf"(?<![^\W_])(?i:{re.escape(words[0])})(?![^\W_])")
     joined = all(len(w) >= JOIN_PART for w in words) and sum(map(len, words)) >= JOIN_LEN
-    sep = f"(?:{NAME_SEP}){'?' if joined else ''}"
-    forms = [sep.join(map(re.escape, words))]
+    mid = initial(all(map(_ideographic, "".join(words))))                                  # an initial may stand between
+    sep = f"(?:{NAME_SEP}{mid}(?={NAME_SEP}))?(?:{NAME_SEP}){'?' if joined else ''}"
+    forms = ["(?i:" + sep.join(map(re.escape, words)) + ")"]
     if len(words) == 2:
-        forms.append(rf"{re.escape(words[1])}\s{{0,3}},\s{{0,3}}{re.escape(words[0])}")
+        forms.append(rf"(?i:{re.escape(words[1])}\s{{0,3}},\s{{0,3}}{re.escape(words[0])})")
+        if min(map(len, words)) >= JOIN_PART:
+            forms.append(rf"{_capitalised(words[1])}(?:{NAME_SEP}){_capitalised(words[0])}")
     return re.compile(r"(?<![^\W_])(?:" + "|".join(forms) + r")(?![^\W_])")
 
 
+@functools.lru_cache(maxsize=16)      # #127 round 8: the same text is read by several checks; worked out once
 def _words_shown(text):
     """The text's words as Word shows them, Markdown's markers and link addresses gone (docx_tools.md_runs): "**Quentin** Marlow"
     and "[Quentin](https://…) Marlow" read "Quentin Marlow" (#127 round 4)."""
@@ -267,20 +349,89 @@ def _words_shown(text):
         return ""
 
 
-def named(text, people):
-    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once; whitespace, invisible
+EMPHASIS_MARKS = re.compile(r"[*_~`]")
+SHOWN_PASSES = 12               # #127 round 7: plain until nothing changes, at most this many times (each pass is linear)
+# #127 round 7: emphasis inside a word, as the HTML and PDF exports draw it ("inter*nal*-only", "ABC-A-0*0*4", "q~~uie~~t"): a run
+# of * or of two or more ~ with no space on either side and a letter or digit on one. An underscore inside a word is not
+# emphasis anywhere (snake_case stays as written).
+INTRAWORD = re.compile(r"(?<=\w)(?:\*+|~{2,})(?=[^\s*~])|(?<=[^\s*~])(?:\*+|~{2,})(?=\w)")
+
+
+def _plain_shown(t):
+    """The text as Word shows it: docx_tools.plain and backticks dropped, again until nothing changes (SHOWN_PASSES at most)."""
+    import docx_tools
+    shown = t
+    for _ in range(SHOWN_PASSES):
+        nxt = "\n".join(docx_tools.plain(ln) for ln in shown.split("\n")).replace("`", "")
+        if nxt == shown:
+            break
+        shown = nxt
+    return shown
+
+
+@functools.lru_cache(maxsize=16)      # #127 round 8: as _words_shown
+def as_shown(text):
+    """The text, and when it holds an emphasis mark (* _ ~ `) also as the exports show it (#127 round 6): Markdown's emphasis,
+    strike-through and link markers taken off as docx_tools.plain does, again until nothing changes (nested "**_x_**" too), and
+    code backticks dropped, so "_ABC-A-004_", "internal _only_" or "the ~~quiet~~ audit" read as their words. Round 7: also with
+    the emphasis marks inside a word dropped (INTRAWORD, as the HTML and PDF exports draw them), and each form after JOIN, so no
+    pattern reads from one form into the next."""
+    t = text or ""
+    if not EMPHASIS_MARKS.search(t):
+        return t
+    try:
+        inner = INTRAWORD.sub("", t)
+        shown = _plain_shown(t)
+        if inner == t:                  # round 8: no second pass for the same text
+            return joined(t, shown)
+        return joined(t, shown, inner, _plain_shown(inner))
+    except Exception:  # noqa: BLE001  the text as written is still read
+        return t
+
+
+def named(text, people, every=False):
+    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once (with `every`, as the
+    client gate asks, every one: "Quentin; Marlow" names both Quentin and Quentin Marlow; #127 round 6); whitespace, invisible
     characters, accents, separators between a name's words or none, surname first, and Markdown around its words don't hide it
     (_name_form, name_pattern, _words_shown)."""
-    low = _name_form(text)
-    shown = _words_shown(text)
-    low = f"{low}\n{_name_form(shown)}" if shown else low
+    low = _names_text(text)
     found = set()
     for p in people:
         if p and len(p) > 2:
             pat = name_pattern(p)
             if pat is not None and pat.search(low):
                 found.add(p)
+    if every:
+        return found
     return {p for p in found if not any(p != q and p.lower() in q.lower() for q in found)}   # "Sara" inside "Sara Khan"
+
+
+def _names_text(text):
+    """The text as names are matched in it: as written, as the exports show it (as_shown, emphasis inside a word too: "Quen*tin*
+    Marlow") and as Word shows its words, JOIN between (round 7)."""
+    return joined(_name_form(as_shown(text), lower=False), _name_form(_words_shown(text), lower=False))
+
+
+# #127 round 8: an allowed name's match covers other names only when its words are joined as a name's are (whitespace, a hyphen,
+# an initial): a list separator (; / | \ ,) or a full stop after a word ("Sam. Patel", "Sam; Patel", "Sam / Patel") is two people.
+LIST_SEP = re.compile(r"[;/|\\,]|(?:\w{2}|\s)\.\s")
+
+
+def named_beyond(text, people, allowed):
+    """#127 round 7: the people (names or aliases) the text names somewhere other than inside an allowed name: "Sam" in "Sam Patel
+    will run it" is Sam Patel, allowed, not someone else whose alias is Sam; "Sam Patel and Sam" still names a Sam. Every name
+    counts, as named(every=True) does, but only where it stands outside the span of an allowed name's match."""
+    low = _names_text(text)
+    spans = []
+    for a in allowed:
+        pat = name_pattern(a) if a and len(a) > 2 else None
+        spans += [m.span() for m in pat.finditer(low) if not LIST_SEP.search(m.group())] if pat is not None else []
+    out = set()
+    for p in people:
+        pat = name_pattern(p) if p and len(p) > 2 and p not in allowed else None
+        if pat is not None and any(not any(a <= m.start() and m.end() <= b for a, b in spans) for m in pat.finditer(low)):
+            out.add(p)
+    return out
 
 
 REGISTER_UNREAD = ("the people register couldn't be read, so the names couldn't be checked: fix it in Settings › People "
@@ -378,7 +529,7 @@ def name_findings(con, code, text, blocking=None):
         _, internal = people(con, code, blocking)
     except RegisterUnreadable:
         return [REGISTER_UNREAD]
-    return [f"{n} is named but owns only items a client report can't show" for n in sorted(named(text, internal))]
+    return [f"{n} is named but owns only items a client report can't show" for n in sorted(named(text, internal, every=True))]
 
 
 def doc_text(doc):
@@ -536,22 +687,32 @@ def address_text(text):
         if not re.match(r"(?:https?|mailto)\s{0,5}:", a, re.I):
             out.append(a)
         out.append(re.sub(r"[^0-9A-Za-z]+", " ", a).strip())
-    return "\n".join(out)
+    return JOIN.join(out)                           # round 7: one address is never read into the next
 
 
 def with_addresses(text):
     """A text with its link addresses added (address_text), and its %- or entity-encoded words (with_decoded): what a client check
     reads."""
-    extra = address_text(text)
-    return with_decoded(f"{text}\n{extra}" if extra else (text or ""))
+    return with_decoded(joined(text or "", address_text(text)))
+
+
+def _words_gap(m):
+    """A run of punctuation in with_decoded's words form: the first of a sentence's punctuation (, ; . ! ? :) it holds then a space,
+    as prose writes it, else a space (#127 round 6: "Quentin, Marlow" reads as it does undecoded, and "internal. Only" never as the
+    marker's "internal . only")."""
+    p = re.search(r"[,;.!?:]", m.group(0))
+    return p.group(0) + " " if p else " "
 
 
 def with_decoded(text):
     """#127 round 4: a text with, when it holds a % or an & that decoding changes, its decoded form added as plain words (_decoded:
     %-encoding undone to DECODE_LEVELS rounds, entities undone; a text encoded past that is unreadable_findings' finding). An
     encoded word outside any address a link pattern reads ("See Quentin%20Marlow.", an address a space or U+3000 breaks) is then
-    found as written. As words (any script's letters and digits, the rest a space), so an external page's path is never read as
-    one of creaite's own (documents/); the marker, IDs, names and the health reason are all found in words."""
+    found as written. #127 round 5: added twice. Once with its punctuation kept, its web addresses as words (raw_text, so an
+    external page's path is never read as one of creaite's own, documents/): the marker is matched there, so "health%5Fdiff" is
+    health_diff and "internal, only" stays two words apart. Once as words for the names and IDs, any other run of punctuation a
+    space but one holding a sentence's punctuation (, ; . ! ? :) that punctuation and a space (_words_gap), so the marker can't be
+    read across it."""
     t = text or ""
     if "%" not in t and "&" not in t:
         return t
@@ -559,8 +720,9 @@ def with_decoded(text):
     d = _decoded(t)
     if d == edit_ai.normal(t):
         return t
-    words = re.sub(r"[\W_]+", " ", d).strip()
-    return f"{t}\n{words}"
+    kept = raw_text(d)
+    words = re.sub(r"[\W_]+", _words_gap, d).strip()
+    return joined(t, kept, words)                   # round 7: JOIN between, so nothing is read across two forms
 
 
 def creaite_kinds(text):
@@ -670,7 +832,7 @@ def marked(text):
     invisible character or a look-alike dash hides none; #127 round 4)."""
     import drafts
     import edit_ai
-    return bool(drafts.INTERNAL_MARK.search(edit_ai.normal(text)))
+    return bool(drafts.INTERNAL_MARK.search(edit_ai.normal(as_shown(text))))       # round 6: as the exports show it too
 
 
 HEALTH_FLAG = re.compile(r"\s*(?:ON TRACK|AT RISK|OFF TRACK)\b")      # a Word report's health line starts with its flag, in capitals
@@ -717,7 +879,7 @@ def internal_findings(con, code, doc):
     rest = "\n\n".join([clean.get("title") or ""] + [f"{h}\n\n{t}" if i not in health_ids else h for i, h, t in shown]) \
         + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) + "\n" + raw_text(raw) + _addresses(raw)
     health += "\n" + raw_text(health_raw) + _addresses(health_raw)   # #127 review: the stored words and addresses too
-    found = drafts.internal_findings(con, code, with_decoded(rest))           # #127 round 4: encoded words read too
+    found = drafts.internal_findings(con, code, with_decoded(as_shown(rest)))   # round 4: encoded words; round 6: as shown
     health = with_decoded(health)
     if marked(health) and "an internal-only marker" not in found:
         found.append("an internal-only marker")

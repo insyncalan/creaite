@@ -72,19 +72,19 @@ function Bar({ doc, checks }) {
     line: w === "distributed" ? "Without Internal only lines or withheld items" : "Marked Internal" }));
   return (
     <span class="mnbarr">
-      <Menu label={`Version ${doc.version || 1}`} icon="history" btnCls="btn sm" menuLabel="Versions of these minutes" data={{ mnversions: "" }}
+      <Menu label={`Version ${doc.version || 1}`} icon="history" btnCls="btn sm" cls="rb-x" menuLabel="Versions of these minutes" data={{ mnversions: "" }}
         items={versions.map(x => ({ id: String(x.version), name: `Version ${x.version}${x.current ? " · on screen" : ""}`,
           line: `${x.at ? fd(x.at) : ""}${x.why ? ` · ${x.why}` : ""}${!x.current && x.backup ? " · opens the kept copy" : ""}` }))}
         onPick={id => { const x = versions.find(y => String(y.version) === id); if (x && !x.current && x.backup) openPath(x.backup); }} />
-      <span class="seg" role="group" aria-label="Versions to keep">
+      <span class="seg rb-x" role="group" aria-label="Versions to keep">
         <button type="button" aria-pressed={dist ? "false" : "true"} disabled={!draft} onClick={() => setDist(false)}>One version</button>
         <button type="button" aria-pressed={dist ? "true" : "false"} disabled={!draft} onClick={() => setDist(true)}>Internal + distributed</button>
       </span>
-      {dist ? <span class="seg" role="group" aria-label="Show">
+      {dist ? <span class="seg rb-x" role="group" aria-label="Show">
         {[["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k, l]) =>
           <button key={k} type="button" data-mnmode={k} aria-pressed={mode === k ? "true" : "false"} onClick={() => { minutesMode.value = /** @type {any} */ (k); }}>{l}</button>)}
       </span> : null}
-      <button type="button" class="btn sm" aria-pressed={paneOpen.value ? "true" : "false"} onClick={() => { paneOpen.value = !paneOpen.value; }}>Transcript</button>
+      <button type="button" class="btn sm rb-x" aria-pressed={paneOpen.value ? "true" : "false"} onClick={() => { paneOpen.value = !paneOpen.value; }}>Transcript</button>
       <Menu label="Export" icon="filetext" btnCls="btn sm" menuLabel="Export the minutes" data={{ mnexport: "" }}
         items={[...exports, ...mails]} onPick={exp} />
       {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan)} data-tip={v && v.plan ? undefined : "Nothing pending to approve"}
@@ -148,7 +148,7 @@ export function MinutesView() {
               ai={{ place: "minutes", project: () => String((doc.meta || {}).projects ? doc.meta.projects[0] : doc.project || ""), confidential: () => false }}
               onRedraft={side ? undefined : redrafter(() => ({ path: v.path, version: dist && mode === "distributed" ? "distributed" : "internal" }), "minutes")}
               onEvent={ev => { if (ev.type === "reload") loadMinutes({ path: v.path }); else countRedraft(ev, "minutes"); }}
-              toolbar={<Bar doc={doc} checks={checks} />} />
+              banner={{ title: doc.title, sub: `${doc.project_name || ""} · ${fd(doc.date)}` }} toolbar={<Bar doc={doc} checks={checks} />} />
           </MinutesCtx.Provider>
         </div>
         <TranscriptPane />

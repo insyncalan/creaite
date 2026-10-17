@@ -61,14 +61,14 @@ class Bars(LiveBrowserCase):
         b = self.b
         b.eval("go('notes','ABC')")
         b.wait("!!document.getElementById('notesNew')")
-        b.click("#notesNew")
-        b.wait("document.getElementById('newNoteDlg').open")
+        b.click_until("#notesNew", "document.getElementById('newNoteDlg').open")          # #152: a click lost to a redraw is pressed again
         b.eval(f"(()=>{{ const i=document.getElementById('nnTitle'); i.value={title!r}; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         b.eval("document.querySelector('#newNoteDlg input[value=\"blank\"]').click()")
         b.click("#nnMake")
         b.wait("!!document.querySelector('.nbody.ProseMirror')", 15)
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.frames(3)                                                  # the editor gives itself focus a frame later: let that land first (#152)
 
     def open_current(self, state=STATE):
         b = self.b
@@ -88,14 +88,15 @@ class Bars(LiveBrowserCase):
         b = self.b
         got = b.eval("(()=>{ const f=(p,h)=>profileTools(p,h).filter(t=>t!=='|').map(t=>t.id); "
                      "return { notes:f('notes',['note','person','item','table','image']), notesBare:f('notes',[]), current:f('current',['image','item']), "
-                     "plain:f('plain',['image']), none:f('none',[]), capture:f('capture',[]), names:Object.keys(ED_PROFILES) }; })()")
+                     "plain:f('plain',['image']), email:f('email',['image']), none:f('none',[]), capture:f('capture',[]), names:Object.keys(ED_PROFILES) }; })()")
         self.assertEqual(got["notes"], NOTES)
         self.assertEqual(got["notesBare"], ["m-heading", "b", "i", "s", "code", "m-list", "quote", "link", "undo", "redo"])      # no Insert menu without a host
         self.assertEqual(got["capture"], SHARED)
         self.assertEqual(got["current"], CURRENT)
         self.assertEqual(got["plain"], [])            # decision 2: plain fields keep plain text, no toolbar
+        self.assertEqual(got["email"], [])            # #133: Draft email's preview is the editor's Email feature set, with no toolbar
         self.assertEqual(got["none"], [])
-        self.assertEqual(sorted(got["names"]), ["capture", "current", "none", "notes", "plain"])
+        self.assertEqual(sorted(got["names"]), ["capture", "current", "email", "none", "notes", "plain", "sheet"])
         self.assertEqual(sorted(set(NOTES_ALL) - {"unlink"} - set(CURRENT)), sorted(["text", "task", "code", "note", "person", "table"]))
 
     def test_notes_current_and_the_capture_drawer_draw_their_profile(self):
@@ -194,19 +195,21 @@ class Bars(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-keyshortcuts')"), None)
         b.type("word")
         b.click(".nbar [data-nt=i]")
-        self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"), ["i"])
+        stops = "[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"
+        b.wait(f"{stops}.length===1", 5)                                 # the stop moves on the next render (#152: two stops for a moment on macOS CI)
+        self.assertEqual(b.eval(stops), ["i"])
         # a key pressed while an input method is composing is not ⌘⇧K / ⌘⇧X
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         mac = "true" if b.is_mac() else "false"
         b.eval("""document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:%s,ctrlKey:%s,shiftKey:true,isComposing:true,bubbles:true,cancelable:true}))""" % (mac, "false" if b.is_mac() else "true"))
         b.pump(0.2)
-        self.assertTrue(b.eval("document.querySelector('.nbar .rtelink').hidden"))
+        self.assertFalse(b.eval("!!document.querySelector('.linkpop')"))
         b.eval("(()=>{ const d=document.getElementById('cmdk'); if(d.open) d.close(); })()")        # (the palette's own key handler is not ours)
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         b.eval("""document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:%s,ctrlKey:%s,shiftKey:true,bubbles:true,cancelable:true}))""" % (mac, "false" if b.is_mac() else "true"))
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)       # and the same key not composing does open it
+        b.wait("!!document.querySelector('.linkpop')", 5)       # and the same key not composing does open it
 
     def test_targets_are_24px_and_the_bar_names_every_button(self):
         b = self.b
@@ -255,11 +258,11 @@ class Bars(LiveBrowserCase):
         b.type("see the plan")
         b.eval("(()=>{ const e=document.querySelector('.nbody').cxed.editor; const to=e.state.selection.from; e.commands.setTextSelection({from:to-8,to}); })()")
         b.key("k", mod | SHIFT)
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!!document.querySelector('.linkpop')", 5)
         self.assertFalse(b.eval(palette))
         b.type("https://example.com/plan")
         b.key("Enter")
-        b.wait("document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!document.querySelector('.linkpop')", 5)
         md = b.eval("document.querySelector('.nbody').cxed.value()")
         self.assertIn("see [the plan](https://example.com/plan)", md)
         b.key("k", mod)                                                  # ⌘K in an editor is still the palette
@@ -273,7 +276,7 @@ class Bars(LiveBrowserCase):
         b.type("bad link")
         b.key("a", mod)
         b.click(".nbar [data-nt=link]")
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!!document.querySelector('.linkpop')", 5)
         b.type("javascript:alert(1)")
         b.key("Enter")
         self.assertNotIn("javascript", b.eval("document.querySelector('.nbody').cxed.value()"))

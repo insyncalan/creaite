@@ -50,7 +50,7 @@ export const shared = {
   // ask: set where its `let` was
   AC: undefined, ASKCHAT: undefined, ASKQ: undefined, ASKSESSION: undefined, BUSY: undefined, CK: undefined,
   CKI: undefined, CKPICK: undefined, IMGURL: undefined, PIMG: undefined, QDECK: undefined, QNOW: undefined,
-  RBMARKED: undefined, RBOUT: undefined, RUN: undefined, RUNLABEL: undefined, SHOWN: undefined,
+  RBMARKED: undefined, RBOUT: undefined, REATT: undefined, RUN: undefined, RUNLABEL: undefined, SHOWN: undefined,
   // meetings: set where its `let` was
   PREPRUN: undefined, QCT: undefined,
   // help: set where its `let` was

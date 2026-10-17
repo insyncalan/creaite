@@ -8,6 +8,8 @@ import { REV } from "./data.js";
 import { $, $$ } from "./dom.js";
 import { closeCal } from "./fields.js";
 import { go, switchProject } from "./nav.js";
+import { closeHelpPanel, helpPanelOpen, openHelpPanel, screenKey } from "../helpscreen.js";
+import { helpFocusSearch } from "../help.js";
 import { copied, MAC, START_CMD } from "./page.js";
 import { snack } from "./server.js";
 import { shared } from "./state.js";
@@ -17,7 +19,7 @@ import { CHK, decide, isMin, renderReview, RHL, rjKey315, rvSyncChk, toggleGroup
 import { dayKey } from "../today.js";
 import { HL, hlClear, hlKey, openDisp, rvOnly, rvPaint } from "../work.js";
 /* click outside closes ask creaite and the detail panel — never while editing */
-export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer";   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
+export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";   /* #121: the link form and the field's corner button sit outside the peek and must not close it */   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0122's place) */
 export function bootCopyCommand(){
 /* copy the start command */
@@ -42,13 +44,14 @@ document.addEventListener("keydown",e=>{
   if((e.metaKey||e.ctrlKey)&&e.shiftKey&&!e.altKey&&e.key.toLowerCase()==="n"){ e.preventDefault(); openCapture(); return; }   /* BL-301 C: a note, from any page */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }   /* #122: ⌘K is the palette, Shift or not; inside a rich editor ⌘⇧K is the link form, caught first (components/EditorBar.jsx) */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="j"){ e.preventDefault(); $("#chat").classList.contains("on")?closeChat():openChat(); return; }
-  if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ hlClear(); if($("#panel").classList.contains("on")) closePanel(); return; }   /* #108: Esc from a peek opened from a row clears the row and closes the peek together, so no row stays highlighted */ if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&!$("#panel").classList.contains("on")){ RHL.clear(); CHK.clear(); renderReview(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
+  if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(helpPanelOpen()){ closeHelpPanel(); return; }   /* #158: the ? panel closes first, and focus goes back */ const pk=$("#panel").classList.contains("on");   /* #161: with a peek open, one Esc clears the highlight and closes the peek when the highlight is only the row the peek shows (or empty); with two or more rows highlighted the first Esc clears the selection and the peek stays */
+  if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ const one=HL.size===1&&(!shared.CUR||shared.CUR.mode!=="record"||HL.has(shared.CUR.id)); hlClear(); if(pk&&one) closePanel(); return; }   /* #108: Esc from a peek opened from a row clears the row and closes the peek together, so no row stays highlighted */ if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&(!pk||(RHL.size<=1&&CHK.size<=1))){ RHL.clear(); CHK.clear(); renderReview(); if(pk) closePanel(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
   if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
-  if(e.key==="/"){ e.preventDefault(); openChat(); return; }
+  if(e.key==="/"){ e.preventDefault(); if(shared.VIEW==="help"){ helpFocusSearch(); return; } openChat(); return; }   /* #158: in Help, / is the search box */
   if((e.key==="n"||e.key==="N")&&!e.shiftKey&&!document.querySelector("dialog[open]")){ e.preventDefault(); openCapture(); return; }   /* BL-301 C (Alan, 14-10-2026): N, the second key for a note: ⌘⇧N is Chrome's incognito window in an ordinary tab */   /* / is always ask creaite, on every page (Alan, 2026-10-09) */
   if((e.key==="f"||e.key==="F")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: F opens the field picker */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
-  if(e.key==="?"){ e.preventDefault(); go("help"); return; }
+  if(e.key==="?"){ e.preventDefault(); if(document.querySelector("dialog[open]")) return; if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
   if((e.key==="["||e.key==="]")&&shared.VIEW==="cockpit"){ e.preventDefault(); switchProject(e.key==="]"?1:-1); return; }
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
   if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */

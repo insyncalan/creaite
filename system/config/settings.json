@@ -3,6 +3,7 @@
   "sweep": {
     "due_from": "07:00",
     "first_run_lookback_days": 14,
+    "max_lookback_days": 3,
     "sources": {
       "inbox": true,
       "sent_items": true,
@@ -98,6 +99,7 @@
     "files_show_inbox": true,
     "files_show_portfolio": true,
     "files_show_documents": false,
+    "rail_labels": true,
     "undated_grace_days": 3,
     "flow_weeks": 8,
     "auto_apply": true,
@@ -246,7 +248,8 @@
   },
   "help": {
     "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true.",
-    "start_seen": true
+    "start_seen": true,
+    "first_line": true
   },
   "logging": {
     "level": "info",

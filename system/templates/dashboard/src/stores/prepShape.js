@@ -8,6 +8,7 @@
    prep page's focus band reads too). Nothing reaches the tracker and nothing is sent.
    Regenerate sends the boxes' text with creaite's last draft, so the server keeps every section Alan edited (per section). */
 import { signal } from "@preact/signals";
+import { linkUrl } from "../core/linkUrl.js";
 import { api, oneLine, snack, viaServer } from "../core/server.js";
 import { draftAsk, DRAFTFEATURES, draftStat } from "../drafts.js";
 import { DRAFTKIND } from "../projects.js";
@@ -19,12 +20,18 @@ export function bootPrepShape() {
   Object.assign(DRAFTKIND, { shape: "shape" });
 }
 
+/** The address to open a mail or Teams source at, or null: only what core/linkUrl.js accepts (#159), the one rule every prep
+    component uses. A source of any other type, or with no address, or with one that is refused, has none and is drawn as text.
+    @param {{type?: string, url?: string}} s @returns {string | null} */
+export const sourceHref = s => ((s.type === "mail" || s.type === "teams") && s.url ? linkUrl(s.url) : null);
+
 export const SHAPE_SECTIONS = /** @type {[string, string][]} */ ([["objective", "Objective"], ["talking_points", "Talking points"],
   ["ask", "Ask"], ["carried_over", "Carried over"]]);
 
 /** @typedef {{type: string, id?: string, kind?: string, path?: string, label?: string, url?: string, section?: string}} Typed */
 /** @typedef {{text: string, sources?: Typed[]}} NoteLine */
 /** @typedef {Record<string, NoteLine[]>} Notes */
+/** @typedef {{notes: Notes, checks: Check[]}} Proposal */
 /** @typedef {{focus: {id?: string, text: string}[], aim: string, show: string}} Reading */
 /** @typedef {{kind: string, id: string | null, label: string, why: string, insert: string}} ShapeChip */
 /** @typedef {{level: string, section: string, note: string}} Check */
@@ -179,10 +186,11 @@ export function giveBack(sec) {
 
 /** Shape (or Regenerate): run the draft through the run engine. The boxes' text and creaite's last draft go with it, so the
     sections Alan edited are kept; a reading he changed goes too. */
-export async function runShape() {
+/** @param {{fallback?: string}} [o] */
+export async function runShape(o = {}) {
   const key = shapeKey.value;
   if (!key || shapeBusy.value) return;
-  const instruction = shapeInstruction.value.trim();
+  const instruction = shapeInstruction.value.trim() || String(o.fallback || "").trim();   // the page's box is optional (#111 A)
   if (!instruction) { shapeMsg.value = "Write the focus and the aim first."; return; }
   /** @type {Record<string, any>} */
   const body = { key, instruction };
@@ -227,4 +235,54 @@ export function discardShape() {
   if (shapeDrafted.value) draftStat("shape", "rejected");
   shapeNotes.value = null; shapeDrafted.value = null; shapeText.value = {}; shapeChecks.value = []; shapeReading.value = null;
   shapeReadingMine.value = false; shapeFilter.value = null; shapeAccepted.value = "";
+}
+
+// ===== #111 piece A: the one-page prep page drives Shape through the same store ===================================
+/** What the last Shape run on the prep page gave and Alan has not yet used or discarded (a suggestion, never a write). */
+export const shapeProposal = signal(/** @type {Proposal | null} */ (null));
+
+/** The words sent when the "what to focus on" box is empty (the box is optional on the page). */
+export const SHAPE_DEFAULT = "Draft the objective, talking points and ask from the open items, the series and the research.";
+
+/** Put the focus record the page is showing into the store, so Shape sends what Alan has now (his edited sections are kept)
+    and Use this saves from it. The text he typed in the box is kept. @param {any} rec the view's model.focus */
+export function syncShape(rec) {
+  const r = rec || {};
+  shapeReading.value = r.reading || null;
+  shapeReadingMine.value = false;
+  const has = (/** @type {any} */ o) => !!o && Object.values(o).some(l => ((/** @type {any[]} */ (l)) || []).length);
+  /* typed notes with no draft of creaite's: an empty draft makes every typed section Alan's, so Shape keeps them */
+  shapeDrafted.value = has(r.drafted) ? r.drafted : has(r.notes) ? emptyNotes() : null;
+  shapeExcluded.value = r.excluded || [];
+  shapeAccepted.value = r.accepted_at || "";
+  if (!shapeInstruction.value && r.instruction) shapeInstruction.value = r.instruction;
+  fill(r.notes);
+}
+
+/** Shape / Shape again from the page: one run through /api/prep/shape; the result is a proposal to use or discard.
+    @param {any} rec the view's model.focus */
+export async function shapeOnPage(rec) {
+  syncShape(rec);
+  const prior = shapeDrafted.value;
+  shapeProposal.value = null;
+  const raised = ((rec && rec.reading && rec.reading.focus) || []).filter((/** @type {any} */ f) => f.id);
+  if (raised.length) { shapeReading.value = { ...(shapeReading.value || { aim: "", show: "focus-first" }), focus: raised }; shapeReadingMine.value = true; }   // Alan's raised items go to Claude as his own reading
+  await runShape({ fallback: SHAPE_DEFAULT });
+  const rd = shapeReading.value;       /* the items he raised stay raised, whatever Claude reads the box as */
+  if (raised.length && rd) shapeReading.value = { ...rd, focus: [...rd.focus, ...raised.filter((/** @type {any} */ f) => !rd.focus.some(x => x.id === f.id))].slice(0, 12) };
+  if (shapeDrafted.value && shapeDrafted.value !== prior) shapeProposal.value = { notes: notesNow(), checks: shapeChecks.value };
+}
+
+/** Use this: save the proposal as the notes (focus/save with accept). @returns {Promise<boolean>} */
+export async function useProposal() {
+  const ok = await acceptShape();
+  if (ok) shapeProposal.value = null;
+  return ok;
+}
+
+/** Discard: counted as a rejection; the page goes back to its saved notes. @param {any} rec */
+export function discardProposal(rec) {
+  discardShape();
+  shapeProposal.value = null;
+  syncShape(rec);
 }

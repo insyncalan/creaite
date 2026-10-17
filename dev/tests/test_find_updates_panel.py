@@ -212,6 +212,8 @@ class InTheNotesTab(LiveBrowserCase):
         self.assertIsNone(b.eval("document.querySelector('#noteSide .nctx')"))           # the context comes back on Close
         self.assertEqual(b.eval("document.getElementById('noteFind').getAttribute('aria-expanded')"), "true")
         self.assertTrue(b.eval("location.hash.endsWith('&find=1')"))
+        # the markers are drawn by the editor in a later frame than the panel's rows (#152: not yet there on a slow macOS runner)
+        b.wait("document.querySelectorAll('#v-notes .nbody [data-fu-mk]').length===6", 10)
         marks = b.eval("[...document.querySelectorAll('#v-notes .nbody [data-p]')].map(p=>[p.dataset.p, p.getAttribute('data-fu-mk')])")
         self.assertEqual(marks, [[str(n), str(n) if n < 7 else None] for n in range(1, 8)])
         risk = "[...document.querySelectorAll('#noteSide .fu-r')].find(r=>r.textContent.includes('Test data refresh'))"
@@ -222,6 +224,7 @@ class InTheNotesTab(LiveBrowserCase):
         self.assertIn(b.eval("noteSave.value.state"), ["", "saved"])                                    # drawing markers is never an edit
         b.click("#noteSide .fu-x")
         b.wait("!document.querySelector('#noteSide aside.fu') && !!document.querySelector('#noteSide .nctx')")
+        b.wait("document.querySelectorAll('#v-notes .nbody [data-fu-mk]').length===0", 10)                     # taken off a frame later
         self.assertEqual(b.eval("document.querySelectorAll('#v-notes .nbody [data-fu-mk]').length"), 0)
         self.assertEqual(b.eval("document.activeElement.id"), "noteFind")
         self.assertEqual(b.errors, [])
@@ -233,7 +236,7 @@ class InTheNotesTab(LiveBrowserCase):
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         b.type(" More.")
-        b.wait("['typing','draft'].includes(noteSave.value.state)", 10)
+        b.wait("['typing','saving','saved'].includes(noteSave.value.state)", 10)
         b.click("#noteFind")
         b.wait("!!document.querySelector('#noteSide aside.fu') && ['ready','none','error'].includes(fuState.value)", 40)
         self.assertIn("More.", (self.v.root / fx.NOTE).read_text())                       # saved before Claude read it

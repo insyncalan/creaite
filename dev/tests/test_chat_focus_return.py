@@ -27,6 +27,55 @@ class ChatFocusReturn(LiveBrowserCase):
         self.b.wait(CHAT_ON)
         self.b.wait("document.getElementById('chat').contains(document.activeElement)")
 
+    def settled(self, sel):
+        """Wait until the element has stopped moving (the chat panel slides in): a click on its middle while it is still sliding
+        lands beside it, and a click outside the chat closes it with focus left on <body> (the CI flake)."""
+        self.b.eval("""new Promise(res=>{ const el=document.querySelector(%r); let last=null, same=0;
+          const tick=()=>{ const r=el.getBoundingClientRect(), k=[r.left,r.top,r.width,r.height].join();
+            same = k===last ? same+1 : 0; last=k; if(same>=5) res(true); else requestAnimationFrame(tick); };
+          tick(); })""" % sel)
+
+    def row_case(self, close, redraw=False):
+        """Open the chat from the first Work row, optionally redraw the list, close the chat with `close()`, and check focus is back
+        on that row (found by its key). The page also reloads its data on its own now and then (`refreshAll`, driven by the server's
+        pulse) and redraws the Work list, which drops the focus that was just returned: that is not what this checks, so when
+        the row was redrawn after the chat closed the case is run again (the CI flake)."""
+        b = self.b
+        for _ in range(8):
+            row = self.open_from_work_row()
+            if redraw:
+                b.eval("renderWork()")                                   # the list is drawn again while the chat is open
+            b.eval("window.__after = document.querySelector('#workTbl tr[data-row]')")
+            close()
+            b.wait(f"!{CHAT_ON}")
+            got = b.wait(f"document.activeElement.dataset.row==={row!r} ? 'back' : (!window.__after.isConnected ? 'redrawn' : false)", 30)
+            if got == "back":
+                self.assertEqual(b.eval("document.activeElement.dataset.row||document.activeElement.tagName"), row)
+                return
+        self.fail("the Work list was drawn again after every close")
+
+    def open_from_work_row(self):
+        """Open the chat from the first Work row and return that row's key.
+
+        The Work list can be drawn again by a late render after the row was picked (a slow machine): the focus then drops to
+        <body> and the chat opens with no opener. So the row is marked, focused and checked to still be the focused, connected
+        row; after the chat opens the mark must still be on a connected row, else the chat is closed and the whole thing retried."""
+        b = self.b
+        for _ in range(6):
+            b.eval("go('work')")
+            b.wait("document.querySelector('#workTbl tr[data-row]')")
+            row = b.eval("(()=>{ const r=document.querySelector('#workTbl tr[data-row]'); if(!r.hasAttribute('tabindex')) r.tabIndex=-1;"
+                         " r.focus(); r.__mark=1; return document.activeElement===r ? r.dataset.row : null; })()")
+            if not row:
+                b.pump(0.2)
+                continue
+            self.open_with_slash()
+            if b.eval("(()=>{ const r=document.querySelector(`#workTbl tr[data-row=\"${CSS.escape(%r)}\"]`); return !!(r&&r.__mark); })()" % row):
+                return row
+            b.key("Escape")                                              # drawn again before the chat opened: no opener was kept
+            b.wait(f"!{CHAT_ON}")
+        self.fail("the Work list kept being drawn again")
+
     def test_people_rail_button_slash_esc(self):
         b = self.b
         b.eval("document.querySelector('.rail button[data-v=\"people\"]').focus()")
@@ -37,27 +86,15 @@ class ChatFocusReturn(LiveBrowserCase):
         self.assertTrue(b.eval("document.activeElement.matches('.rail button[data-v=\"people\"]')"))
 
     def test_a_work_row_and_the_close_button(self):
-        b = self.b
-        b.eval("go('work')")
-        b.wait("document.querySelector('#workTbl tr[data-row]')")
-        row = b.eval("(()=>{ const r=document.querySelector('#workTbl tr[data-row]'); if(!r.hasAttribute('tabindex')) r.tabIndex=-1; r.focus(); return r.dataset.row; })()")
-        self.open_with_slash()
-        b.click("#chatClose")
-        b.wait(f"!{CHAT_ON}")
-        b.wait(f"document.activeElement.dataset.row==={row!r}")            # focus comes back a moment after the panel closes
-        self.assertEqual(b.eval("document.activeElement.dataset.row"), row)
+        def close():
+            self.settled("#chatClose")
+            self.b.click("#chatClose")
+        self.row_case(close)
 
     def test_a_row_drawn_again_is_found_by_its_key(self):
-        b = self.b
-        b.eval("go('work')")
-        b.wait("document.querySelector('#workTbl tr[data-row]')")
-        row = b.eval("(()=>{ const r=document.querySelector('#workTbl tr[data-row]'); if(!r.hasAttribute('tabindex')) r.tabIndex=-1; r.focus(); return r.dataset.row; })()")
-        self.open_with_slash()
-        b.eval("renderWork()")                                           # the list is drawn again while the chat is open
-        b.key("Escape")
-        b.wait(f"!{CHAT_ON}")
-        b.wait(f"document.activeElement.dataset.row==={row!r}")
-        self.assertEqual(b.eval("document.activeElement.dataset.row||document.activeElement.tagName"), row)
+        def close():
+            self.b.key("Escape")
+        self.row_case(close, redraw=True)
 
     def test_the_opener_gone_goes_quietly_to_the_page(self):          # BL-312: was the heading (BL-211)
         b = self.b

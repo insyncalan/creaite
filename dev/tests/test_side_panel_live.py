@@ -36,8 +36,7 @@ class PanelCase(LiveBrowserCase):
         b.eval("go('work')")
         b.wait("document.querySelector('#workTbl tbody tr[data-row]')")
         id_ = id_ or self.first_action_id()
-        b.click(f'#workTbl tr[data-row="{id_}"] a.rowid')
-        b.wait("document.getElementById('panel').classList.contains('on')")
+        b.click_until(f'#workTbl tr[data-row="{id_}"] a.rowid', "document.getElementById('panel').classList.contains('on')")   # #152: pressed again if a redraw took the click
         import time
         last = -1
         for _ in range(40):                                                                         # wait for the slide to finish
@@ -283,14 +282,14 @@ class WidePanel(PanelCase):
     def test_the_peek_is_half_the_window_and_never_under_520(self):
         for window, want in ((1400, 700), (1200, 600), (1000, 520), (700, 520)):
             self.b.resize(window, 900)
-            # the rail turns to icons below 1200px on the media query's change event, which Chrome sends at the next frame, not on
+            # the rail starts collapsed below 1200px on the media query's change event, which Chrome sends at the next frame, not on
             # the resize; under load the click was aimed before the rail narrowed, so the table moved 156px left under it and the
             # press landed on another cell (an inline edit, no panel)
             self.b.wait(f"innerWidth==={window} && document.documentElement.classList.contains('railicons')==={str(window < 1200).lower()}")
             self.open_row()
             self.assertAlmostEqual(self.width(want), want, delta=1, msg=f"at {window}px")
             self.assertFalse(self.b.eval("EDITING"))
-            self.b.key("Escape")                                              # #108: one Esc clears the highlight and closes the peek together
+            self.b.key("Escape")                                              # #108, #161: one Esc clears the highlight and closes the peek
             self.b.wait("document.querySelectorAll('#workTbl tr.hl').length===0")
             self.wait_closed()
             self.assertLessEqual(self.width(), 1)

@@ -107,9 +107,7 @@ document.addEventListener("click",e=>{ if(e.target.closest("[data-preppage]")){ 
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-prep]"); if(b) openPrep(prepTimed()[+b.dataset.prep],TODAY); });
 document.addEventListener("click",e=>{ const g=e.target.closest("[data-prepgo]"); if(!g) return; e.preventDefault();   /* BL-287 */
   if(g.getAttribute("aria-disabled")==="true"){ snack("Opening a prep page needs the live server"); return; } location.hash=prepViewHref(g.dataset.prepgo,g.dataset.prepgoday); });
-/* BL-98: tomorrow's meetings get Prep too, from the Week ahead */
-document.addEventListener("click",e=>{ const b=e.target.closest("[data-prepday]"); if(!b) return; e.preventDefault(); const day=b.dataset.prepday;
-  const ev=(((D.calendar||{}).days||{})[day]||[]).find(x=>!x.all_day&&x.start===b.dataset.start&&x.title===b.dataset.title); if(ev) openPrep(ev,day); });
+/* #111: a later day's meeting (Week ahead) opens the Prep peek, then the prep page, through data-prepgo above (the old data-prepday popup is gone) */
 document.addEventListener("click",e=>{ if(e.target.closest("#prepDlg [data-nav], #prepDlg [data-proj]")) $("#prepDlg").close(); },true);
 }
 /* ===== Decisions and schema (BL-53, sprint 5) ===== */

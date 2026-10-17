@@ -25,6 +25,7 @@ import time
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import browser_slots  # noqa: E402
 import proc_guard  # noqa: E402
 
 MAC_CHROME_PATHS = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -112,6 +113,7 @@ class WebSocket:
 
 class Browser:
     def __init__(self, width=1280, height=900, args=(), reduced_motion=True):
+        browser_slots.hold()               # #89: at most CREAITE_BROWSER_SLOTS processes drive Chrome at once on this machine (off in CI)
         path = chrome_path()
         if not path:
             raise RuntimeError("Google Chrome (or Edge) isn't installed")
@@ -129,6 +131,9 @@ class Browser:
              # ci-macos-hang: on a Mac with no unlocked login keychain (a CI runner, a fresh HOME) Chrome waits on the keychain
              # and Page.navigate never answers; a mock keychain is what Puppeteer and Playwright use there (ignored elsewhere)
              "--use-mock-keychain",
+             # headless Chrome on Linux has no pointing device and reports (hover: none), so hover popups stood down on CI
+             # (core/hover.js canHover); say a mouse is attached. The touch tests fire touch events or fake matchMedia
+             "--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4",
              f"--window-size={width},{height}", *args, "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         port_file = os.path.join(self.profile, "DevToolsActivePort")
         for _ in range(100):
@@ -148,8 +153,13 @@ class Browser:
             self.call(f"{domain}.enable")
         # BL-136: tests and screenshots run with reduced motion, so nothing they check is caught mid-animation. A test of the
         # motion itself turns it back on: call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", ...}]).
-        if reduced_motion:
-            self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": "reduce"}])
+        # #152: a test of the motion needs the opposite, set outright: with nothing emulated Chrome follows the machine's own
+        # Reduce motion setting; where that is on (a Mac, apparently GitHub's macOS runner) every animation reads 'none'.
+        pref = "reduce" if reduced_motion else "no-preference"
+        self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": pref}])
+        # #152e: CDP_CPU_THROTTLE=4 runs the page 4 times slower, to reproduce on a fast machine what a slow CI runner shows
+        if os.environ.get("CDP_CPU_THROTTLE"):
+            self.call("Emulation.setCPUThrottlingRate", rate=float(os.environ["CDP_CPU_THROTTLE"]))
 
     @staticmethod
     def _port_text(path):
@@ -222,56 +232,127 @@ class Browser:
         self.wait(wait_for, timeout)
 
     def wait(self, js, timeout=10, every=0.05):
-        """Poll until `js` is truthy; return its value, or raise with the page's last errors."""
+        """Poll until `js` is truthy; return its value, or raise with the page's last errors.
+        A page whose main thread is starved (a loaded machine, another Chrome busy) can take longer than `timeout` to answer ONE
+        evaluation: that answer was then asked for before the time was up and is stale, so one last evaluation is made after the
+        deadline and a condition that holds by then passes. The message says how many polls were made and the slowest answer."""
         end = time.time() + timeout
-        last = None
-        while time.time() < end:
+        polls, slowest = 0, 0.0
+        expr = f"(()=>{{ const v=({js}); return v&&v.nodeType?true:v; }})()"          # an element counts as true
+        while True:
+            late = time.time() >= end
+            t0 = time.time()
             try:
-                last = self.eval(f"(()=>{{ const v=({js}); return v&&v.nodeType?true:v; }})()", wait=False)   # an element counts as true
+                last = self.eval(expr, wait=False)
             except RuntimeError:
                 last = None
+            polls += 1
+            slowest = max(slowest, time.time() - t0)
             if last:
                 return last
+            if late:
+                break
             self.pump(every)
-        raise TimeoutError(f"timed out waiting for: {js}\npage errors: {self.errors[-3:]}\n{self._where()}")
+        raise TimeoutError(f"timed out waiting for: {js}\npolls: {polls}, slowest answer {slowest:.1f}s\n"
+                           f"page errors: {self.errors[-3:]}\n{self._where()}")
+
+    def frames(self, n=2, timeout=5):
+        """Wait for `n` rendered frames (requestAnimationFrame), so what the page does on its next frame has been done.
+        #152: a fixed pause is not that: a slow runner can take longer than any pause. A timeout says no frame came, with the page state."""
+        ok = self.eval("new Promise(res=>{ let k=%d; const f=()=>{ if(--k<=0) res(true); else requestAnimationFrame(f); };"
+                       " requestAnimationFrame(f); setTimeout(()=>res(false), %d); })" % (n, int(timeout * 1000)))
+        if not ok:
+            raise TimeoutError(f"no animation frame in {timeout}s (waiting for {n})\npage errors: {self.errors[-3:]}\n{self._where()}")
 
     WHERE_JS = """(()=>{ const a=document.activeElement, s=getSelection();
       const name=a?a.tagName+(a.id?'#'+a.id:'')+(a.className?'.'+String(a.className).split(' ')[0]:''):null;
-      return {platform:navigator.platform, hasFocus:document.hasFocus(), visibility:document.visibilityState, active:name,
-              selection:s?{type:s.type, len:String(s).length}:null}; })()"""
+      const txt=sel=>{ const e=document.querySelector(sel); return e?(e.textContent||'').trim().slice(0,120):null; };
+      return {platform:navigator.platform, url:location.href.replace(/token=[^&#]*/,'token=*'), hasFocus:document.hasFocus(), visibility:document.visibilityState,
+              active:name, selection:s?{type:s.type, len:String(s).length}:null,
+              dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.id||d.className),
+              saveLine:txt('#noteSave'), snack:txt('#snack'), scroll:[Math.round(scrollX), Math.round(scrollY)]}; })()"""
 
     def _where(self):
-        """One line of where the page is, for a timeout: platform, focus, visibility, the active element and the selection."""
+        """The page's state, for a timeout or a failed test: URL, focus, visibility, the active element, the selection, open dialogs,
+        the note save line, the snack bar,
+        the scroll position and the last 5 console or page errors (extends, never replaces, the page errors line)."""
         try:
-            return "page state: " + json.dumps(self.eval(self.WHERE_JS, wait=False))
+            state = "page state: " + json.dumps(self.eval(self.WHERE_JS, wait=False))
         except Exception as e:                        # the page may be gone; a timeout still reports what it was waiting for
-            return f"page state unavailable ({type(e).__name__})"
+            state = f"page state unavailable ({type(e).__name__})"
+        return f"{state}\nlast page errors: {self.errors[-5:]}"
 
     def box(self, selector):
         """The centre of the first element matching `selector`, scrolled into view, or None."""
-        return self.eval("""(()=>{ const e=document.querySelector(%s); if(!e) return null; e.scrollIntoView({block:"center",inline:"center"});
-          const r=e.getBoundingClientRect(); return r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()""" % json.dumps(selector))
+        return self.eval("""(()=>{ const e=document.querySelector(%s); if(!e) return null;
+          e.scrollIntoView({block:"center",inline:"center"});
+          const r=e.getBoundingClientRect(); return r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()"""
+                         % json.dumps(selector))
 
-    def click(self, selector, button="left", count=1, modifiers=0):
+    def hit_report(self, selector):
+        """What is at the centre of `selector` and how the element looks, for a click that missed (#152): the element at that point,
+        the element's rectangle, its pointer-events, visibility and opacity, the viewport, the scroll position."""
+        return self.eval("""(s=>{
+          const t=document.querySelector(s); if(!t) return {missing:true};
+          const r=t.getBoundingClientRect(), cs=getComputedStyle(t);
+          const x=r.left+r.width/2, y=r.top+r.height/2, e=document.elementFromPoint(x,y);
+          const d=n=>n?n.tagName+(n.id?'#'+n.id:'')+(n.className&&n.className.split?'.'+n.className.split(' ').join('.'):''):null;
+          return {at:[Math.round(x),Math.round(y)], rect:[r.left,r.top,r.width,r.height].map(Math.round), element:d(e),
+            parents:e?[e.parentElement,e.parentElement&&e.parentElement.parentElement].map(d):[],
+            isTarget:!!(e&&(e===t||t.contains(e))), pointerEvents:cs.pointerEvents, visibility:cs.visibility, opacity:cs.opacity,
+            viewport:[innerWidth,innerHeight], scroll:[scrollX,scrollY], docHeight:document.documentElement.scrollHeight}; })(%s)""" % json.dumps(selector))
+
+    def click(self, selector, button="left", count=1, modifiers=0, exact=False):
         """A real mouse click at the element's centre (not element.click()), so overlays and hit-testing count.
-        modifiers is Chrome's bit mask: Alt 1, Ctrl 2, Command 4, Shift 8."""
+        modifiers is Chrome's bit mask: Alt 1, Ctrl 2, Command 4, Shift 8.
+        exact (#152): wait until the element has stopped moving (two frames in a row at the same place; the page may still be laying
+        out after the last action, and a centre measured before that is somewhere else afterwards), then require the point to be on
+        the element itself, not on something that merely contains it. A miss says what was there instead (hit_report)."""
         self.wait(f"!!({json.dumps(selector)} && document.querySelector({json.dumps(selector)}))", 10)
         pos = self.box(selector)
+        # #202: scrolling it into view can change the layout (the report header hides on a scroll down): measure again
+        if pos and not exact:
+            self.frames(2)
+            pos = self.eval("""(()=>{ const e=document.querySelector(%s); const r=e&&e.getBoundingClientRect();
+              return r&&r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()""" % json.dumps(selector)) or pos   # no second scroll
+        if exact and pos:
+            for _ in range(20):
+                self.frames(2)
+                again = self.box(selector)
+                if again and abs(again["x"] - pos["x"]) < 0.5 and abs(again["y"] - pos["y"]) < 0.5:
+                    break
+                pos = again or pos
         if not pos:
             raise RuntimeError(f"can't click {selector}: it has no size (hidden?)")
-        hit = self.eval("""(()=>{ const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s); return !!(e&&t&&(t===e||t.contains(e)||e.contains(t))); })()""" % (pos["x"], pos["y"], json.dumps(selector)))
+        hit = self.eval("""(()=>{
+          const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s);
+          return !!(e&&t&&(t===e||t.contains(e)||(%s&&e.contains(t)))); })()"""
+                        % (pos["x"], pos["y"], json.dumps(selector), "false" if exact else "true"))
         if not hit:
-            raise RuntimeError(f"can't click {selector}: something else is on top of it")
+            raise RuntimeError(f"can't click {selector}: something else is on top of it\n{self.hit_report(selector)}")
         for kind in ("mouseMoved", "mousePressed", "mouseReleased"):
             self.call("Input.dispatchMouseEvent", type=kind, x=pos["x"], y=pos["y"], button=button, clickCount=count, modifiers=modifiers)
         self.pump(0.05)
+
+    def click_until(self, selector, js, timeout=9, tries=3, **kw):
+        """Click, and press again if `js` has not come true: a redraw between the press and the release (the page re-reading its data
+        after the first paint, a resize handler) replaces the element and the click is lost (#152; BL-327). Only for a click that opens
+        or selects something, so a second press is harmless. The last miss raises the wait's TimeoutError, with the page state."""
+        for i in range(tries):
+            self.click(selector, **kw)
+            try:
+                return self.wait(js, timeout=timeout / tries)
+            except TimeoutError:
+                if i == tries - 1:
+                    raise
 
     def drag(self, from_selector, to_selector, steps=8, release=True, offset=(0, 0)):
         """A real press, move and release with the mouse button held (pointer events, not a synthesised drop): from the centre of one
         element to the centre of another (plus `offset`). With release=False it stops over the target, button still down, so a
         test can look at the drag in progress; finish it with mouse_up()."""
         rect = """(s=>{ const e=document.querySelector(s); if(!e) return null; const r=e.getBoundingClientRect();
-          return r.width&&r.height&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })(%s)"""
+          return r.width&&r.height&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth
+            ?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })(%s)"""
         b = self.box(to_selector)                                  # scroll the target into view first, then look at both without moving the page
         a = self.eval(rect % json.dumps(from_selector))
         if a is None:
@@ -334,8 +415,14 @@ class Browser:
         self.pump(0.2)
 
     def resize(self, width, height=900):
-        """Make the page this size (a small window)."""
+        """Make the page this size (a small window). Returns once the page has seen it: the `resize` event runs on the next
+        frame and the page's handlers redraw then, so a click or a measurement straight after could land on the old layout or on
+        a node that is replaced between the press and the release (#152: a dropped click on a slow macOS runner)."""
         self.call("Emulation.setDeviceMetricsOverride", width=width, height=height, deviceScaleFactor=1, mobile=False)
+        try:
+            self.frames(2, timeout=3)
+        except TimeoutError:                           # no frames (page not loaded yet): the old behaviour, nothing to wait for
+            pass
 
     def screenshot(self, path):
         with open(path, "wb") as f:

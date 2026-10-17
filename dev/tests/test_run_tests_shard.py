@@ -65,6 +65,31 @@ class ShardCoversEveryFileOnce(unittest.TestCase):
         self.assertFalse(listed - names, "shard_times.txt names a test file that doesn't exist")
 
 
+class CiSplit(unittest.TestCase):
+    """#89 round 2: the CI split (8 shards of the 3.14 set, 2 of the 3.9 set) covers every file exactly once and is balanced."""
+
+    def sets(self):
+        files = everything()
+        quick = [f for f in files if not support.is_chrome(f)]
+        return {"3.14 x8": (files, 8), "3.9 x2": (quick, 2)}
+
+    def test_every_file_in_exactly_one_shard_even_as_files_come_and_go(self):
+        for label, (files, n) in self.sets().items():
+            variants = {"as is": files, "one gone": files[1:], "one new": files + [Path("test_zz_new_file.py")],
+                        "three new, two gone": files[2:] + [Path(f"test_zz_{i}.py") for i in range(3)]}
+            for what, fs in variants.items():
+                seen = [f.name for i in range(1, n + 1) for f in run_tests.shard(fs, i, n)]
+                self.assertEqual(sorted(seen), sorted(f.name for f in fs), f"{label}, {what}: each file exactly once")
+
+    def test_the_heaviest_shard_is_within_15_percent_of_the_mean(self):
+        w = run_tests.shard_weights()
+        self.assertTrue(w, "shard_times.txt is empty")
+        for label, (files, n) in self.sets().items():
+            totals = [sum(w.get(f.name, run_tests.SHARD_DEFAULT) for f in run_tests.shard(files, i, n)) for i in range(1, n + 1)]
+            mean = sum(totals) / n
+            self.assertLessEqual(max(totals), mean * 1.15, f"{label}: shard totals {totals} (mean {mean:.0f})")
+
+
 class ShardArgument(unittest.TestCase):
     def test_good_and_bad(self):
         self.assertEqual(run_tests.shard_arg("2/3"), (2, 3))

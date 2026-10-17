@@ -47,12 +47,21 @@ def refuse_stale_guides(version, guide=None):
                                  "check test_help, and commit the guides with VERSION.")
 
 
+def refuse_missing_whats_new(version):
+    """#158: Help's What's new must carry this version's plain notes (dev/tools/whats_new.py add X.Y.Z copies them in)."""
+    import whats_new
+    if not whats_new.has(version):
+        raise update.UpdateError(f"system/templates/help/whats-new.md has no section for creaite {version}: "
+                                 f"run python3 dev/tools/whats_new.py add {version}, rebuild the dashboard and commit.")
+
+
 def build(tag=None, notes="", out=None, dirty=False):
     version = paths.VERSION_FILE.read_text(encoding="utf-8").strip()
     update.version_tuple(version)
     if tag and tag != f"v{version}":
         raise update.UpdateError(f"The tag {tag} doesn't match VERSION ({version}); expected v{version}.")
     refuse_stale_guides(version)
+    refuse_missing_whats_new(version)
     scope = list(paths.ENGINE) + list(paths.ENGINE_MERGED)
     listed = git("ls-files", "-z", *(["--cached", "--others", "--exclude-standard"] if dirty else []), "--", *scope)
     files = sorted({f for f in listed.split("\0") if f and not update.SKIP.search(f) and (REPO / f).is_file()})

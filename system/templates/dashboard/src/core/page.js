@@ -7,7 +7,12 @@ import { shared } from "./state.js";
 export const D=JSON.parse(document.getElementById("data").textContent);
 shared.LOADING=true;   /* BL-231: true while the page restores the address it was opened at, or opens Help on a first visit (below). That restore ran before later blocks added their steps to the functions it calls; those steps check LOADING, so it runs as it did. */
 /* today is the viewer's date, not the build date */
-export const TODAY=(()=>{ const d=new Date(), z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; })(), DATE=/^\d{4}-\d{2}-\d{2}$/, DDATE=/^\d{2}-\d{2}-\d{4}$/;
+/* #171: TODAY is a live binding, not a load-time constant: a window left open past midnight rolls it (core/dayroll.js calls setToday()),
+   and every reader sees the new day because ES imports read the exported variable itself. Never copy it into a module-level const. */
+const dayNow=()=>{ const d=new Date(), z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; };
+export let TODAY=dayNow();
+export const setToday=()=>{ const n=dayNow(); if(n===TODAY) return null; const was=TODAY; TODAY=n; return was; };   /* the old day, or null when the day hasn't changed */
+export const DATE=/^\d{4}-\d{2}-\d{2}$/, DDATE=/^\d{2}-\d{2}-\d{4}$/;
 /* storage and file names: YYYY-MM-DD. Everything shown or typed: DD-MM-YYYY */
 export const fd=iso=>iso&&DATE.test(iso.slice(0,10))?`${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}${iso.length>10?iso.slice(10):""}`:(iso||"");
 export const toIso=dd=>DDATE.test(dd)?`${dd.slice(6,10)}-${dd.slice(3,5)}-${dd.slice(0,2)}`:dd;

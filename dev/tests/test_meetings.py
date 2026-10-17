@@ -55,7 +55,7 @@ class CalendarTests(unittest.TestCase):
         return sweep(self.v, "calendar", str(self.spec))
 
     def test_window_ids_teams_and_nothing_else(self):
-        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-05", "to": "2026-10-15"})
+        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-05", "to": "2026-10-15", "keep_from": "2026-10-05"})   # #146: nothing saved yet, so the whole window
         out = self.calendar().stdout
         self.assertIn("Calendar saved: 4 meetings over 3 days", out)
         self.assertIn("Ignored 1: Anything marked private 1", out)                             # BL-97: the private 1:1
@@ -79,6 +79,7 @@ class CalendarTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d["sweep"]["ignore"][0]["on"] = False                                                 # the private rule off
         cfg.write_text(json.dumps(d))
+        (self.v.root / "system/staging/calendar.json").unlink()          # #146: past days already held are kept, so start afresh
         self.calendar()
         private = self.saved()["days"]["2026-10-05"][1]
         self.assertEqual(private, {"id": "ev-2", "start": "14:00", "end": "14:30", "all_day": False, "title": "Busy",
@@ -89,9 +90,138 @@ class CalendarTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d["inbox"]["meetings_from"] = 7
         cfg.write_text(json.dumps(d))
-        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout)["from"], "2026-10-01")
+        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout)["keep_from"], "2026-10-01")
         self.calendar()
         self.assertIn("2026-10-02", self.saved()["days"])
+
+    def test_past_days_already_held_are_kept_unchanged(self):
+        """#146: a sweep reads today forward; the past days the saved calendar holds are not replaced or lost."""
+        self.calendar()
+        before = self.saved()["days"]["2026-10-05"]
+        later = {"days": {"2026-10-05": [{"id": "x", "start": "08:00", "end": "08:30", "title": "Changed"}],
+                          "2026-10-08": [{"id": "ev-5", "start": "10:00", "end": "10:30", "title": "Today", "teams": True}]}}
+        self.spec.write_text(json.dumps(later))
+        sweep(self.v, "calendar", str(self.spec))
+        days = self.saved()["days"]
+        self.assertEqual(days["2026-10-05"], before)                      # unchanged
+        self.assertIn("2026-10-07", days)                                 # held past day not lost
+        self.assertEqual(days["2026-10-08"][0]["title"], "Today")
+        self.assertNotIn("2026-10-12", days)                              # future days are what the new read says
+
+
+class SweepFromTodayTests(unittest.TestCase):
+    """#146: a sweep re-reads today and later days only; a gap (nothing saved, or a week stale) is filled."""
+
+    def setUp(self):
+        self.v = v = Vault()
+        v.run("init")
+        self.cal = v.root / "system/staging/calendar.json"
+        self.spec = v.root / "system/staging/drafts/calendar.json"
+        self.cal.write_text(json.dumps({"fetched": "2026-10-07 08:00", "days": {
+            "2026-10-05": [{"id": "ev-1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Kept as saved",
+                            "where": "", "teams": True, "private": False, "organiser": True}],
+            "2026-10-08": [{"id": "ev-old", "start": "16:00", "end": "17:00", "all_day": False, "title": "Cancelled since",
+                            "where": "", "teams": True, "private": False, "organiser": True}]}}))
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def window(self, now=NOW):
+        return json.loads(sweep(self.v, "calendar-window", now=now).stdout)
+
+    def test_window_starts_today_not_monday(self):
+        self.assertEqual(self.window(), {"from": "2026-10-08", "to": "2026-10-15", "keep_from": "2026-10-05"})
+
+    def test_a_gap_is_filled_from_the_window_start(self):
+        # last fetched more than a week ago: from the day after what it reached; nothing saved: the whole window
+        self.assertEqual(self.window(now="2026-10-16 09:00")["from"], "2026-10-15")
+        self.cal.unlink()
+        self.assertEqual(self.window()["from"], "2026-10-05")
+
+    def test_a_new_user_still_gets_past_days(self):
+        self.cal.unlink()
+        self.spec.write_text(json.dumps({"days": {"2026-10-06": [{"id": "p", "start": "09:00", "end": "10:00", "title": "Tuesday"}],
+                                                  "2026-10-08": [{"id": "t", "start": "09:00", "end": "10:00", "title": "Today"}]}}))
+        out = sweep(self.v, "calendar", str(self.spec)).stdout
+        self.assertIn("filling a gap", out)
+        self.assertEqual(sorted(json.loads(self.cal.read_text())["days"]), ["2026-10-06", "2026-10-08"])
+
+    def test_past_days_are_kept_unchanged_and_today_is_replaced(self):
+        self.spec.write_text(json.dumps({"days": {
+            "2026-10-05": [{"id": "ev-1", "start": "09:00", "end": "10:00", "title": "Changed title"}],
+            "2026-10-04": [{"id": "ev-x", "start": "09:00", "end": "10:00", "title": "Before the window"}],
+            "2026-10-08": [{"id": "ev-new", "start": "11:00", "end": "12:00", "title": "Today's meeting"}],
+            "2026-10-09": [{"id": "ev-n2", "start": "11:00", "end": "12:00", "title": "Tomorrow"}]}}))
+        out = sweep(self.v, "calendar", str(self.spec)).stdout
+        self.assertIn("Calendar from today (past days kept as saved).", out)
+        days = json.loads(self.cal.read_text())["days"]
+        self.assertEqual(sorted(days), ["2026-10-05", "2026-10-08", "2026-10-09"])
+        self.assertEqual(days["2026-10-05"][0]["title"], "Kept as saved")
+        self.assertEqual([e["title"] for e in days["2026-10-08"]], ["Today's meeting"])
+
+    def test_a_recent_past_meeting_with_a_new_transcript_still_reaches_the_check(self):
+        self.spec.write_text(json.dumps({"days": {"2026-10-08": [{"id": "ev-new", "start": "11:00", "end": "12:00", "title": "Today", "teams": True}]}}))
+        sweep(self.v, "calendar", str(self.spec))
+        todo = sweep(self.v, "transcripts", "todo", now="2026-10-08 18:00").stdout
+        self.assertIn("ev-1", todo)
+
+
+class LookbackCapTests(unittest.TestCase):
+    """#146: mail and Teams read from the last sweep, never further back than sweep.max_lookback_days (3)."""
+
+    def setUp(self):
+        self.v = v = Vault()
+        v.run("init")
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def last(self, stamp):
+        (self.v.root / "system/staging/last-sweep.txt").write_text(stamp + "\n")
+
+    def window(self, *args, now="2026-10-08 09:30"):
+        return json.loads(sweep(self.v, "window", *args, now=now).stdout)
+
+    def test_a_five_day_gap_reads_three_days_and_says_so(self):
+        self.last("2026-10-03 08:00")
+        w = self.window()
+        self.assertEqual(w["start"], "2026-10-05 09:30")
+        self.assertEqual(w["capped"]["days"], 3)
+        self.assertEqual(w["capped"]["not_read_days"], 2)
+        self.assertEqual(w["capped"]["note"], "Read the last 3 days; 2 older days not read. Say 'sweep the last 7 days' to include them.")
+        self.assertTrue(w["advances_timestamp"])
+
+    def test_a_one_day_gap_reads_one_day(self):
+        self.last("2026-10-07 08:00")
+        w = self.window()
+        self.assertEqual(w["start"], "2026-10-07 08:00")
+        self.assertNotIn("capped", w)
+
+    def test_an_explicit_last_n_days_overrides_the_cap(self):
+        self.last("2026-10-03 08:00")
+        w = self.window("--days", "7")
+        self.assertEqual(w["start"], "2026-10-01 09:30")
+        self.assertNotIn("capped", w)
+        self.assertFalse(w["advances_timestamp"])
+
+    def test_the_cap_is_a_setting(self):
+        cfg = self.v.root / "system/config/settings.json"
+        d = json.loads(cfg.read_text())
+        d["sweep"]["max_lookback_days"] = 10
+        cfg.write_text(json.dumps(d))
+        self.last("2026-10-03 08:00")
+        self.assertEqual(self.window()["start"], "2026-10-03 08:00")
+
+    def test_the_first_run_keeps_its_own_lookback(self):
+        w = self.window()
+        self.assertEqual(w["kind"], "first run")
+        self.assertNotIn("capped", w)
+
+    def test_the_daily_catch_up_respects_it(self):
+        self.last("2026-10-01 08:00")
+        due = json.loads(sweep(self.v, "due", now="2026-10-08 09:30").stdout)
+        self.assertTrue(due["due"])
+        self.assertEqual(self.window()["capped"]["days"], 3)       # cx-sweep, run because it is due, reads this window
 
 
 def page_data(v):
@@ -104,7 +234,9 @@ def week_calendar(v, with_ids=True, today=None):
     """A calendar for one week: Monday, today, the day before Monday and the day after today. `today` defaults to the
     real date (the build then uses the real clock); a test that pins the clock with CREAITE_NOW passes the same day."""
     from datetime import date, timedelta
-    today = today or date.today()
+    if today is None:
+        fixed = os.environ.get("CREAITE_NOW")             # the build's clock: derive the days from it, else the real date
+        today = date.fromisoformat(fixed[:10]) if fixed else date.today()
     mon = today - timedelta(days=today.weekday())
     d = lambda x: x.isoformat()  # noqa: E731
     ev = lambda i, **k: ({"id": f"ev-{i}"} if with_ids else {}) | k  # noqa: E731
@@ -193,7 +325,7 @@ PAGE_SCRIPT = r"""
     nowHM=()=>"23:59"; renderMeetings();
     document.getElementById("mtgNew").click(); await wait(10);
     out.picked=[...MSEL];
-    out.ck=ckItems("process meeting").map(i=>i.l);
+    out.ck=ckItems("process meeting").map(i=>i.l).filter(l=>l.startsWith("Intake:"));
     document.getElementById("mtgGo").click(); await wait(10); out.during=rows().map(r=>r[2]);
     /* dev-test-steadiness: the page now runs in real time, so wait for the run to end and both rows to show their outcome
        (the draft from the server, the skip), not for fixed times that assumed virtual time */
@@ -224,7 +356,10 @@ class InboxPageTests(unittest.TestCase):
         from test_live_server import FAKE_CLAUDE
         cls.v = v = Vault()
         v.run("init")
-        cls.mon, cls.today = week_calendar(v)
+        # the page's TODAY is the browser's own clock, which CREAITE_NOW cannot pin: use the real date for the calendar and
+        # keep the pin out of the server, so the page and the data agree on today whatever the caller has set
+        from datetime import date
+        cls.mon, cls.today = week_calendar(v, today=date.today())
         fake = v.root / "fake_claude.py"
         fake.write_text(FAKE_CLAUDE)
         fake.chmod(0o755)
@@ -233,7 +368,7 @@ class InboxPageTests(unittest.TestCase):
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
-        env = {**os.environ, "CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(fake),
+        env = {**{k: x for k, x in os.environ.items() if k != "CREAITE_NOW"}, "CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(fake),
                "CREAITE_TEST_INJECT": str(v.root / "inject.html")}
         server = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], env=env,
                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

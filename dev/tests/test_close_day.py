@@ -100,6 +100,62 @@ class CloseData(unittest.TestCase):
         self.assertEqual(defaults["day"]["close_from"], "17:30")       # BL-320 (Alan, 14-10-2026): the accepted mockup's default
 
 
+class CloseNextWorkingDay(unittest.TestCase):
+    """#138: the day band hides an unplanned weekend, but Close the day's tomorrow is the next working day by the weekend setting,
+    not the band's next visible day. Fixed dates only; Friday 16-10-2026 and Thursday 15-10-2026."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+
+    def card(self, today, weekend, days):
+        import close_day
+        from datetime import date
+        st = {"work": {"weekend_days": weekend}}
+        d = {"projects": [], "days": {"days": [{"date": x, "long": x, "meetings": [{"start": "10:00", "title": t}]} for x, t in days]}}
+        return close_day.tomorrow(d, st, date.fromisoformat(today))
+
+    def test_a_friday_close_names_monday_even_with_a_saturday_meeting_in_the_band(self):
+        t = self.card("2026-10-16", [5, 6], [("2026-10-17", "Saturday thing"), ("2026-10-19", "Monday thing")])
+        self.assertEqual((t["day"], t["in_calendar"], [m["title"] for m in t["meetings"]]), ("2026-10-19", True, ["Monday thing"]))
+        self.assertTrue(t["friday"])
+
+    def test_a_changed_weekend_moves_the_gap(self):
+        t = self.card("2026-10-15", [4, 5], [("2026-10-16", "Friday thing"), ("2026-10-18", "Sunday thing")])    # Friday and Saturday off
+        self.assertEqual((t["day"], [m["title"] for m in t["meetings"]]), ("2026-10-18", ["Sunday thing"]))
+        self.assertFalse(t["friday"])
+
+    def weekend(self, today, weekend, days, extra=None):
+        import close_day
+        from datetime import date
+        d = {"projects": [{"code": "ABC", "name": "Alpha", "ms": [["Go live", "2026-10-18", "open", 1, None, 0, "Open"],
+                                                                  ["Old", "2026-10-17", "done", 2, None, 0, "Done"]]}],
+             "actions": [{"id": "ABC-A-1", "t": "Send plan", "p": "ABC", "due": "2026-10-17", "st": "Open"},
+                         {"id": "ABC-A-2", "t": "Closed one", "p": "ABC", "due": "2026-10-17", "st": "Closed"}],
+             "raid": [], "days": {"days": days}}
+        d.update(extra or {})
+        return close_day.tomorrow(d, {"work": {"weekend_days": weekend}}, date.fromisoformat(today))["weekend"]
+
+    def test_a_friday_close_lists_planned_weekend_work(self):
+        w = self.weekend("2026-10-16", [5, 6], [{"date": "2026-10-17", "long": "Saturday", "meetings": [
+            {"start": "10:00", "end": "11:00", "title": "Sat call"}, {"start": "12:00", "end": "13:00", "title": "Hush", "private": True},
+            {"start": "14:00", "end": "15:00", "title": "Secret", "confidential": True, "p": "ABC"}]}])
+        self.assertEqual([x["day"] for x in w], ["2026-10-17", "2026-10-18"])
+        sat, sun = w
+        self.assertEqual([m["title"] for m in sat["meetings"]], ["Sat call", "Busy", "Secret"])
+        self.assertNotIn("project", sat["meetings"][2])
+        self.assertEqual([x["t"] for x in sat["due"]], ["Send plan"])          # a closed action and a done milestone don't count
+        self.assertEqual((sun["meetings"], [x["type"] + x["t"] for x in sun["due"]]), ([], ["MilestoneGo live"]))
+
+    def test_an_unplanned_weekend_and_a_midweek_close_have_none(self):
+        none = {"actions": [], "projects": []}
+        self.assertEqual(self.weekend("2026-10-16", [5, 6], [], none), [])
+        self.assertEqual(self.weekend("2026-10-14", [5, 6], []), [])           # Wednesday: tomorrow is a working day
+        self.assertEqual(self.weekend("2026-10-16", [5, 6], [{"date": "2026-10-17", "meetings": []}], none), [])
+
+    def test_the_weekend_setting_decides_the_days(self):
+        w = self.weekend("2026-10-15", [4, 5], [], {"actions": [{"id": "x", "t": "Fri job", "p": "ABC", "due": "2026-10-16", "st": "Delayed"}],
+                                                    "projects": []})
+        self.assertEqual([(x["day"], x["due"][0]["t"]) for x in w], [("2026-10-16", "Fri job")])
+
+
 class CloseBrowser(LiveBrowserCase):
     shared_server = False
 

@@ -2,11 +2,13 @@
 /* ask.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0080-search-bl-07.js, 0085-ad-hoc-documents-and-permission-requests.js, 0086-bl-140-sprint-admin.js, 0087-bl-141-sprint-admin-what-ask-creaite-cha.js, 0088-bl-141-sprint-admin-the-one-card.js, 0089-bl-258-sprint-ask-flow.js, 0090-bl-194-sprint-ask-creaite-access-the-car.js, 0092-ask-creaite.js, 0093-bl-262-sprint-ask-flow.js, 0094-after-bl-262.js, 0095-bl-211-sprint-ui-audit.js, 0096-chat-and-sweep-markdown-in-the-chat-bl-1.js, 0097-bl-196-sprint-chat-text.js, 0098-bl-120-sprint-polish.js, 0100-chat-and-sweep-a-time-under-each-bubble.js, 0101-after-chat-and-sweep-times.js, 0102-bl-257-sprint-ask-flow.js, 0103-bl-262-sprint-ask-flow.js, 0104-after-bl-262.js, 0105-bl-139-sprint-final.js, 0106-after-bl-139.js, 0107-bl-259-sprint-ask-flow.js, 0108-after-bl-259.js, 0109-images-in-ask-creaite-bl-100.js, 0110-bl-201-sprint-chat-text.js, 0111-after-bl-201.js, 0112-bl-199-sprint-chat-text.js, 0113-after-bl-199.js, 0114-bl-145-fix-chat-box.js, 0117-after-bl-145.js, 0118-bl-148-sprint-ux.js, 0119-after-bl-148.js, 0120-command-palette.js, 0207-bl-205-sprint-insight.js, 0208-bl-206-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { closeHelpPanel } from "./helpscreen.js";
 import { openSpace } from "./components/reporting/ReportingSpace.jsx";
 import { clientReportHref, needsMe, thisWeek, weeklyHref } from "./stores/reporting.js";
 import { resumeDeleteNote } from "./components/notes/DeleteNote.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
+import { noteCur, noteFlush, openNote } from "./stores/notes.js";
 import { A, DEC, FILES, fpName, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
@@ -15,6 +17,7 @@ import { mWords } from "./core/motion.js";
 import { go, navBlocked, parseHash, pLink, restoreNav } from "./core/nav.js";
 import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
+import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
@@ -180,12 +183,35 @@ export function permissionInfo(ev){ const d=addEl("msg a info",html`${permission
 export const ACHG_OP={create:"Created",edit:"Changed",move:"Moved",delete:"Deleted"};
 /* BL-194 (sprint-ask-creaite-access): each change's tier, as the card showed it (a word and an icon); older entries have none */
 export function achgTier(t){ return t==="high"||t==="sensitive"?raw(chgTierTag(t==="high")):t==="ordinary"?html`<span class="tag">Ordinary</span>`:html`<span class="x">—</span>`; }
+/* #175: a notes row the server folded (it has `saves`) is one editing session: "12 saves, 14:02 to 14:31", and its button takes the
+   file back to how it was when the session began ("Restore 14:02"), through the same undo route. Other rows keep Undo. */
+export const achgHm=/** @param {string} at */ at=>(at||"").slice(11,16);
+export function achgIsSession(c){ return c.op==="edit"&&typeof c.saves==="number"&&!!c.first_at&&isNotePath(c.path); }
+export function achgSessionText(c){ const a=achgHm(c.first_at), z=achgHm(c.at), same=(c.first_at||"").slice(0,10)===(c.at||"").slice(0,10);
+  const span=c.saves<=1||(same&&a===z)?a:same?`${a} to ${z}`:`${fd(c.first_at.slice(0,10))} ${a} to ${fd(c.at.slice(0,10))} ${z}`;
+  return `${c.saves} ${c.saves===1?"save":"saves"}, ${span}`; }
+export function achgBtn(c){ return c.undone?html`<span class="x">Undone</span>`:achgIsSession(c)?html`<button class="mini" data-achgrestore="${c.id}" data-path="${c.path}" data-at="${achgHm(c.first_at)}">Restore ${achgHm(c.first_at)}</button>`:html`<button class="mini" data-achgundo="${c.id}">Undo</button>`; }
+/** Restore a note session: save the open note first (so the restore starts from what is on disk), restore, reopen it. */
+export async function achgRestore(id,path,at){
+  const open=noteCur.value&&noteCur.value.path===path;
+  if(open&&!await noteFlush(true)){ snack("Not restored: the open note couldn't be saved first, so it is as it was."); return false; }
+  if(open){ const l=await api("/api/changes/list",{}), mine=l&&l.ok?(l.changes||[]).find(c=>c.path===path&&c.first_at&&achgHm(c.first_at)===at&&c.id>=id):null; if(mine) id=mine.id; }   /* the flush may have added a save to this session: undo goes by the latest */
+  const r=await api("/api/changes/undo",{id});
+  if(!r||!r.ok){ snack(oneLine((r&&r.message)||"Not restored. The note is as it was.")); return false; }
+  if(open) await openNote(path,true);
+  snack(oneLine(r.message||`Restored to ${at}`)); return true; }
 export function askChangesHtml(rows){ if(!rows.length) return html`<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>`;
-  return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows.map(c=>html`<tr data-achg="${c.id}" data-tier="${c.tier||""}"><td style="white-space:nowrap">${fd(c.at.slice(0,10))} ${c.at.slice(11,16)}</td><td style="white-space:nowrap">${achgTier(c.tier)}</td><td>${ACHG_OP[c.op]||c.op} <code>${c.path}</code>${c.to?html` → <code>${c.to}</code>`:""}${c.approved?html` <span class="tag">approved on the card</span>`:""}</td><td>${c.why||""}</td><td style="text-align:right">${c.undone?html`<span class="x">Undone</span>`:html`<button class="mini" data-achgundo="${c.id}">Undo</button>`}</td></tr>`)}</tbody></table>`; }
+  return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows.map(c=>html`<tr data-achg="${c.id}" data-tier="${c.tier||""}"><td style="white-space:nowrap">${fd(c.at.slice(0,10))} ${c.at.slice(11,16)}</td><td style="white-space:nowrap">${achgTier(c.tier)}</td><td>${achgIsSession(c)?html`Notes <code>${c.path}</code> <span class="sub" data-achgsess>${achgSessionText(c)}</span>`:html`${ACHG_OP[c.op]||c.op} <code>${c.path}</code>`}${c.to?html` → <code>${c.to}</code>`:""}${c.approved?html` <span class="tag">approved on the card</span>`:""}</td><td>${c.why||""}</td><td style="text-align:right">${achgBtn(c)}</td></tr>`)}</tbody></table>`; }
 export let ACHGFIRST=true;   /* the What ask creaite changed list (BL-141): rows rise in the first time, a row just undone flashes */
 export async function renderAskChanges(){ const loading=shared.LOADING, was=new Set($$("#achgTbl tr[data-achg]").filter(t=>!t.querySelector("[data-achgundo]")).map(t=>t.dataset.achg));
   let box=$("#achg"); if(!box){ box=document.createElement("div"); box.id="achg"; putHTML(box,html`<h2 style="margin:22px 0 4px">What ask creaite changed</h2><p class="sub" style="margin:0 0 10px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p><div class="tbl" id="achgTbl"></div>`); $("#actTbl").after(box);
-    box.addEventListener("click",async e=>{ const b=e.target.closest("[data-achgundo]"); if(!b) return; b.disabled=true; const r=await api("/api/changes/undo",{id:+b.dataset.achgundo}); snack(oneLine(r.message||(r.ok?"Undone":"Not undone"))); renderAskChanges(); }); }
+    box.addEventListener("click",async e=>{
+      const rs=e.target.closest("[data-achgrestore]"), ok=e.target.closest("[data-achgrestoreyes]"), no=e.target.closest("[data-achgrestoreno]");
+      if(rs){ const td=rs.parentElement, noteName=rs.dataset.path.split("/").pop().replace(/\.md$/,""), q=document.createElement("span"); q.dataset.achgq="1"; rs.hidden=true;
+        putHTML(q,html`<span class="sub" data-achgask>Take “${noteName}” back to how it was at ${rs.dataset.at}?</span> <button class="mini" data-achgrestoreyes="${rs.dataset.achgrestore}" data-path="${rs.dataset.path}" data-at="${rs.dataset.at}">Restore ${rs.dataset.at}</button> <button class="mini" data-achgrestoreno>Keep</button>`); td.append(q); return; }
+      if(no){ const td=no.closest("td"); td.querySelector("[data-achgq]").remove(); td.querySelector("[data-achgrestore]").hidden=false; return; }
+      if(ok){ ok.disabled=true; await achgRestore(+ok.dataset.achgrestoreyes,ok.dataset.path,ok.dataset.at); renderAskChanges(); return; }
+      const b=e.target.closest("[data-achgundo]"); if(!b) return; b.disabled=true; const r=await api("/api/changes/undo",{id:+b.dataset.achgundo}); snack(oneLine(r.message||(r.ok?"Undone":"Not undone"))); renderAskChanges(); }); }
   if(!viaServer()) putHTML($("#achgTbl"),html`<div class="empty">This list needs the live server.</div>`);
   else { const r=await api("/api/changes/list",{}); putHTML($("#achgTbl"),r.ok?askChangesHtml(r.changes||[]):html`<div class="empty">${oneLine(r.message||"Couldn't read the list.")}</div>`); }
   if(loading) return; if(reduced()) { ACHGFIRST=false; return; } const rows=$$("#achgTbl tr[data-achg]");
@@ -334,9 +360,11 @@ export const GREET="Hi Alan. I run your requests through Claude Code in the vaul
    the last event drawn (its sequence number), so a reattach asks only for what is newer. */
 shared.SHOWN=null;
 export function greet(){ addEl("msg a",html`${GREET}`); }
-export function openChat(){ if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
+export function openChat(){ closeHelpPanel(true);   /* #158: the ? panel and ask creaite are never open together */
+  if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
       CHATFROM=ok?{el:f,key:chatFromKey(f)}:null; }
-  $("#chat").classList.add("on"); rbDismiss(); chatScroll(); if(!$("#chLog").children.length&&!ATTACHED){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
+  $("#chat").classList.add("on"); rbDismiss();   /* #148: no scroll call on open: Chrome keeps the place a hidden panel was left at, the size observer below pins a follower to the end, and the jump button stays as it was */
+  if(!$("#chLog").children.length&&!ATTACHED&&!shared.REATT){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
 /* ===== end BL-262 ===== */
 /* BL-35: the panel's width is dragged from its left edge (← → by keyboard; double-click resets) and remembered in
    this browser — a screen preference, not a setting */
@@ -379,12 +407,12 @@ export function bootAsk0095(){
 /* chat-only names (chatMdInline, chatMdBlocks): the page's own mdInline/mdBlocks draw Current state, Help and the rest */
 /* mdChat(text) returns HTML for one of creaite's replies. Every character is escaped first (esc), then blocks and inline
    forms are recognised on the escaped text, so nothing in a reply can become markup of its own. Links: https, http and
-   mailto only. Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
+   mailto only, and only an address core/linkUrl.js accepts (no name and password, one mailbox, no cc or bcc), drawn by
+   linkAnchor (new tab, rel="noopener noreferrer"). Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
    Current state keeps mdHtml. Placeholders (\u0001n\u0001) hold finished HTML while the rest is processed. */
 export const MDC={ITEM:/\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}\b/g, MAX:120000, URL:"((?:[^\\s()]|\\([^\\s()]*\\))+)",
   FENCE:/^ {0,3}(`{3,}|~{3,})[ \t]*([\w+#.-]*)[ \t]*$/, HEAD:/^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/, HR:/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/,
   QUOTE:/^ {0,3}&gt; ?/, LI:/^( *)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/, SEP:/^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/};
-export const mdSafeUrl=u=>/^(?:https?:\/\/|mailto:)[^\s"<>]+$/i.test(u);
 export let MDPATHS=null;
 export const mdPaths=()=>{ if(!MDPATHS||MDPATHS.n!==FILES.length) MDPATHS={n:FILES.length,list:FILES.filter(f=>f.path).map(f=>({path:f.path,e:esc(f.path)})).sort((a,b)=>b.e.length-a.e.length)}; return MDPATHS.list; };
 export const mdFileLink=(p,inner)=>`<a href="#" class="mdref" data-mdfile="${esc(p)}">${inner}</a>`, mdItemLink=id=>`<a href="#" class="mdref" data-mditem="${id}">${id}</a>`;
@@ -394,7 +422,7 @@ export function chatMdInline(s,st,noLinks){
     return keep(p?mdFileLink(p.path,`<code>${c}</code>`):ITEMCODE(c)?`<a href="#" class="mdref" data-mditem="${c.trim()}"><code>${c.trim()}</code></a>`:`<code>${c}</code>`); });
   if(!noLinks){
     s=s.replace(new RegExp("!\\[([^\\]\\n]*)\\]\\("+MDC.URL+"\\)","g"),(m,alt)=>alt);   /* images are not drawn: the alt text shows */
-    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>mdSafeUrl(url)?keep(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text,st,true)}</a>`):m);
+    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>{ const h=linkAnchor(unescHtml(url),chatMdInline(text,st,true)); return h?keep(h):m; });   /* the one validator and anchor: core/linkUrl.js (#159) */
     if(/projects\/|inbox\//.test(s)) for(const f of mdPaths()) if(s.includes(f.e)) s=s.split(f.e).join(keep(mdFileLink(f.path,f.e)));
     s=s.replace(MDC.ITEM,id=>itemTable(id)?keep(mdItemLink(id)):id); }
   return s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g,"<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g,"$1<strong>$2</strong>")
@@ -461,7 +489,7 @@ $("#chLog").addEventListener("click",e=>mdClick(e));
 /* ===== BL-196 (sprint-chat-text) ===== formatted text, never raw markdown. One renderer: mdChat (BL-109) draws every view
    that shows markdown from a file or a run; mdView wraps it in .mdv, which shares the chat's styles and clicks. Every character
    is escaped first, so an HTML tag in the text is shown as text and never runs; links are https, http or mailto only and open
-   with rel="noopener" in a new tab. hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
+   with rel="noopener noreferrer" in a new tab (core/linkUrl.js). hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
    a card whose title is an h2). A Copy beside such a view copies the original text, never the formatted one.
    Formatted: chat replies (BL-109), the release notes in Settings › creaite version › Review release, a confirmation card's
    text in the chat, and a Markdown file's preview in Intake's inbox. Current state, its sources and search answers keep mdHtml
@@ -520,7 +548,8 @@ export function setChat(chat,session){ const was=shared.ASKCHAT; if(chat!==was&&
   shared.ASKCHAT=chat; shared.ASKSESSION=session; store.set(CHATK,chat); store.set(SESSK,session);
   if(chat!==was){ if(was===null&&$("#chIn").value) draftSave(); else draftRestore(); } }
 export function newChat(){ if(shared.BUSY) return; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
-export async function loadChat(chat,quiet,skipRun){ const rec=await api("/api/chat",{chat}); if(rec.ok&&typeof skipRun==="function") skipRun=skipRun(rec); if(rec.ok&&skipRun) rec.messages=rec.messages.filter(m=>m.run!==skipRun);
+export async function loadChat(chat,quiet,skipRun){
+  const rec=await api("/api/chat",{chat}); if(rec.ok&&typeof skipRun==="function") skipRun=skipRun(rec); if(rec.ok&&skipRun) rec.messages=rec.messages.filter(m=>m.run!==skipRun);
   $("#chLog").textContent=""; shared.SHOWN=null;   /* BL-262: the whole history is drawn below in one step; it returns the record */
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
     if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
@@ -544,11 +573,11 @@ export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "no
     const un=r.code==="_portfolio"; await say(`Saved the note “${r.title}” in ${un?"Unfiled":pName(r.code)}${r.reason?(un?`: ${r.reason}`:` (${r.reason})`):""}. Find updates on the note turns it into tracker changes.`); return; }
   if(!viaServer()){ await say(SERVED?"The live server isn't running, so I can't run this here. Start it again, or copy the request into Claude Code.":"This is the file version of the dashboard. Open the live dashboard (start the live server), or copy the request into Claude Code.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
   await askLive(q,null); }
-/* BL-33: a running request can be stopped (the Send button becomes Stop; Esc in the input). Read-only requests stop
+/* BL-33: a running request can be stopped (the Send button becomes Stop; #130: only that button stops it, Esc just closes the panel and the run carries on). Read-only requests stop
    at once; a confirmed write stops once the step running now has finished. What's shown so far is kept. */
 export let ATTACHED=null; shared.RUN=null;
 export const SENDI=ic("arrowup"), STOPI=ic("stop");   /* BL-161 */
-export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; b.dataset.key=on?"Esc":"Enter"; b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
+export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
 export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; shared.RUN.stopping=true; const res=await api("/api/ask/stop",{run:shared.RUN.id});
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
@@ -604,7 +633,11 @@ export async function attachDraw(run){ if(shared.SHOWN&&shared.SHOWN.run===run.i
   if(!has){ const d=addEl("msg u",html`${run.message}`,run.started||undefined); if(run.plain) runAsk(d); }
   shared.SHOWN={run:run.id,seq:after}; return after; }
 /* ===== end BL-262 ===== */
-export async function reattach(){ if(!viaServer()) return; queueLoad(); const r=await api("/api/ask/running"); if(r.ok&&r.run) attachRun(r.run); else { pendingCard(); pendingEdit(); } }   /* BL-257: the queue comes back too; BL-258: a change card too */   /* BL-141: a card still waiting comes back */
+export async function reattach(){ if(!viaServer()) return; queueLoad(); shared.REATT=true; let run=null;   /* #148: openChat leaves the first draw of the log to this, until it is done */
+  try{ const r=await api("/api/ask/running"); if(r.ok&&r.run) run=r.run; else if(shared.ASKCHAT&&!$("#chLog").children.length&&!ATTACHED) await loadChat(shared.ASKCHAT,true); }   /* the saved chat is drawn before the panel is opened, so opening it shows it whole at once */
+  finally{ shared.REATT=false; }
+  if(!run&&$("#chat").classList.contains("on")&&!$("#chLog").children.length&&!ATTACHED) greet();   /* #148: a first-time user who opened the panel while the running check was in flight (openChat left both the draw and the greeting to this) */
+  if(run) attachRun(run); else { pendingCard(); pendingEdit(); } }
 /* ===== BL-139 (sprint-final) =====
    A small badge fixed at the bottom right shows that ask creaite is working and, afterwards, that it has finished. It follows
    every run the run engine makes: a chat message, Process selected, a transcript check or load, a sweep or calendar refresh, a
@@ -638,7 +671,8 @@ export function rbEnd(state){ if(RB.state!=="running") return; rbStop(); RB.took
     if(VIPD().notify===true&&"Notification" in window&&Notification.permission==="granted"){ try{ const n=new Notification(RBWORDS[RB.state],{body:RB.took?`${RB.state==="done"?"took":"after"} ${RB.took}`:"",tag:"creaite-run"}); n.onclick=()=>{ window.focus(); openChat(); n.close(); }; }catch(e){} } } }
 export function rbCancel(){ if(RB.state==="running"){ rbStop(); RB.state=""; rbDraw(); } }
 export function rbDismiss(){ if(RB.state&&RB.state!=="running"){ RB.state=""; rbDraw(); } rbUnmark(); }
-export function askWorking(on){ $("#askBtn").classList.toggle("working",on); }
+export function askWorking(on){ const b=$("#askBtn"); b.classList.toggle("working",on);
+  if(on){ b.setAttribute("aria-label","ask creaite (working)"); b.title="ask creaite (working)"; } else { b.removeAttribute("aria-label"); b.removeAttribute("title"); } }   /* #130: the dot alone is not a name; the plain name returns when the run ends */
 export function askFinished(o){ rbEnd(o||"done"); }
  
 /* the other runs: Generate and Make it executive, the Prep page and a search answer wrap their own functions */
@@ -718,14 +752,14 @@ export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, ou
   if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
   if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check the live server window."); retryOffer("failed",body); return; }
   const work=()=>live?working():document.createElement("div");   /* BL-262 */ let next=null;
-  const rd=res.body.getReader(), dec=new TextDecoder(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
-  for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i;
+  const rd=res.body.getReader(), dec=new TextDecoder(), t0=performance.now(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
+  for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i; const replayed=url==="/api/ask/attach"&&performance.now()-t0<150;   /* #148: the backlog an attach opens with (the server sends it as soon as the stream opens), is drawn as it was: no words fading in */
     while((i=buf.indexOf("\n\n"))>=0){ const chunk=buf.slice(0,i); buf=buf.slice(i+2); if(!chunk.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(chunk.slice(6)); }catch(e){ continue; }
       if(ev.seq&&runId) shared.SHOWN={run:runId,seq:ev.seq};   /* BL-262: the last event drawn */
       if(plain&&!PLAINEV.includes(ev.type)){ if(ev.type==="stopped") outcome="stopped"; else if(ev.type==="error") outcome="failed"; continue; }   /* BL-326: a run creaite started shows its steps and its closure, never its prompt, reply or raw output */
       if(ev.type==="closure"){ spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
       else if(ev.type==="step"){ spin.remove(); grp=stepGroup(grp,ev.label); spin=work(); }
-      else if(ev.type==="text"){ spin.remove(); grp=null; replies.push(mWords(await sayMd(fdText(ev.text))));   /* BL-136: a live reply's words fade in */ claimsNote(ev.checked); spin=work(); }
+      else if(ev.type==="text"){ spin.remove(); grp=null; { const d=await sayMd(fdText(ev.text)); replies.push(live&&!replayed?mWords(d):d); }   /* BL-136: a live reply's words fade in; #148: not a finished run replayed (ended: live is false) nor the backlog an attach opens with (replayed) */ claimsNote(ev.checked); spin=work(); }
       else if(ev.type==="cant"){ spin.remove(); grp=null; cantCard(ev); spin=work(); }   /* BL-314: the plain "I can't", with where it can be done */
       else if(ev.type==="confirm") conf=ev;
       else if(ev.type==="permission") perm=ev;      /* BL-140: a rule that isn't added, and why */
@@ -863,7 +897,7 @@ $("#chIn").addEventListener("input",acUpdate);
 $("#chIn").addEventListener("blur",()=>setTimeout(acClose,120));
 $("#acMenu").addEventListener("mousedown",e=>{ const o=e.target.closest("[data-aci]"); if(o){ e.preventDefault(); acPick(+o.dataset.aci); } });
 $("#chSend").onclick=()=>shared.RUN?stopAsk():send();
-$("#chIn").addEventListener("keydown",e=>{ if(acKey(e)) return; if(e.key==="Escape"&&shared.RUN){ e.preventDefault(); e.stopPropagation(); stopAsk(); return; } if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } });
+$("#chIn").addEventListener("keydown",e=>{ if(acKey(e)) return; if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } });
 }
 /* ===== BL-145 (fix-chat-box) ===== the message box grows with what is typed. chFit() sets #chIn's height from its content,
    between one row and about half the panel's height (never more than half the window), and scrolls inside beyond that with the
@@ -962,7 +996,8 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
     FILES.filter(f=>f.p!=="inbox").forEach(f=>add("Files",f.n,[fpName(f.p),f.f,f.sub].filter(Boolean).join(" › "),()=>openPath(f.path),f.p)); }   /* BL-101: the name shown, the code still finds it */
   if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ shared.WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ shared.WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ shared.WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
   const hk=helpCk(q), hfirst=/^(help|how)/.test(q.trim());   /* BL-84: "help" and "how do I…" list the tasks first */
-  return [...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...searchCkItems()]; })(q);
+  const sc=searchCkItems(), askRow=sc.filter(x=>String(x.l).startsWith("ask creaite:")), restSc=sc.filter(x=>!askRow.includes(x));   /* a question's ask row stays first, ahead of the Help rows */
+  return [...askRow,...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...restSc]; })(q);
   if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
   MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
     if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("inbox"); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */

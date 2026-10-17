@@ -266,6 +266,62 @@ class DayData(unittest.TestCase):
                                   "|Sara Khan on leave"])                  # unchanged: today's and tomorrow's only
 
 
+sys.path.insert(0, str(HERE.parent.parent / "system/scripts"))
+
+
+class WeekendRule(unittest.TestCase):
+    """#138 (Alan, 16-10-2026): a weekend day is in the day line only when something is planned on it: a timed meeting, or an open
+    action, RAID item or milestone due that day. Today always shows. work.weekend_days is followed."""
+
+    LOOK = {"today": "2026-10-13", "weekend": {5, 6}, "due": set(), "names": {}, "projects": [], "remembered": {}, "hot": {}, "hm": "11:05",
+            "by_id": {}, "by_time": {}, "minutes": {}, "pages": {}, "monday": date(2026, 10, 12)}
+
+    def rec(self, day, events=None, **look):
+        import build_dashboard
+        return build_dashboard.day_record(day, events or [], {**self.LOOK, **look})
+
+    def test_a_weekend_day_with_nothing_planned_is_left_out(self):
+        self.assertIsNone(self.rec(date(2026, 10, 17)))
+        self.assertIsNone(self.rec(date(2026, 10, 17), [{"title": "Family day", "all_day": True}]))     # an all-day note is not a plan
+
+    def test_a_meeting_or_work_due_that_day_brings_it_in(self):
+        self.assertEqual(self.rec(date(2026, 10, 17), [ev("m", "10:00", "11:00", "Offsite")])["date"], "2026-10-17")
+        rec = self.rec(date(2026, 10, 17), due={"2026-10-17"})
+        self.assertEqual((rec["date"], rec["weekend"], rec["meetings"]), ("2026-10-17", True, []))
+        self.assertIsNone(self.rec(date(2026, 10, 18), due={"2026-10-17"}))                              # another day's work does not
+
+    def test_today_on_a_weekend_always_shows(self):
+        self.assertEqual(self.rec(date(2026, 10, 17), today="2026-10-17")["today"], True)
+
+    def test_a_changed_weekend_is_followed_and_a_working_day_is_never_left_out(self):
+        self.assertIsNone(self.rec(date(2026, 10, 16), weekend={4, 5}))                                  # Friday made a weekend day
+        self.assertEqual(self.rec(date(2026, 10, 17), weekend={6})["date"], "2026-10-17")                # Saturday made a working day
+        self.assertEqual(self.rec(date(2026, 10, 15))["date"], "2026-10-15")
+
+    def test_a_project_with_only_a_next_milestone_date_and_no_milestone_rows_builds_its_days(self):
+        """The fallback milestone row has six elements, with no state: planned_days and week_ahead must not read past it."""
+        import build_dashboard
+        proj = {"ms": [["Go live", "2026-10-17", "", None, None, None]]}
+        self.assertEqual(build_dashboard.planned_days({"projects": [proj]}, []), {"2026-10-17"})
+        v = Vault()
+        try:
+            world(v)
+            out = py(v, "import sqlite3, build_dashboard; c = sqlite3.connect('system/tracker.db'); c.execute('DELETE FROM milestones'); "
+                        "c.execute(\"UPDATE projects SET next_milestone='Go live', milestone_date='2026-10-17' WHERE code='ABC'\"); c.commit(); c.close(); "
+                        "d = build_dashboard.collect(); print(json.dumps([[x['date'] for x in d['days']['days']], bool(d.get('week'))]))")
+        finally:
+            v.cleanup()
+        self.assertIn("2026-10-17", out[0])                      # the Saturday, planned by the milestone
+        self.assertTrue(out[1])
+
+    def test_the_planned_days_are_open_actions_raid_items_and_milestones(self):
+        import build_dashboard
+        items = [{"due": "2026-10-17"}, {"due": None}]
+        proj = {"ms": [["UAT", "2026-10-18", "", "ABC-M-001", None, None, "Planned"], ["Done", "2026-10-24", "done", "ABC-M-002", None, None, "Done"],
+                       ["Cancelled", "2026-10-25", "", "ABC-M-003", None, None, "Cancelled"]]}
+        self.assertEqual(build_dashboard.planned_days({"projects": [proj]}, items), {"2026-10-17", "2026-10-18"})
+
+
 class ThroughTheServer(unittest.TestCase):
     """POST /api/today/days, and the Prep page run's day check."""
 

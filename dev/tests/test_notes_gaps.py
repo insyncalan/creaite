@@ -7,7 +7,8 @@ Run: python3 dev/tests/test_notes_gaps.py
     only PNG or JPEG, 2 MB at most; an opened note carries its pictures for the editor;
   - after a save that changed the title, /api/notes/rename moves the file to the new name through filechange.py (a move, backed up
     and undoable, made with the route's own one-time approval), a taken name gets a number, and [[old]] links in other notes point
-    at the new title through filechange.py; a note with unsaved typing is listed, never touched; nothing moves when the name fits;
+    at the new title through filechange.py (#119: no drafts, so a note open elsewhere sees the change as a conflict at its next
+    save); nothing moves when the name fits;
   - a Working session note's date and attendees change with a save.
 """
 import base64
@@ -26,10 +27,11 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
 class NotesGaps(test_notes_tab.NotesServer):
     test_1_templates_make_notes_through_filechange = None          # part B's own tests run in their own file
-    test_2_draft_then_save_once_and_undo = None
+    test_2_save_once_and_undo = None
     test_3_changed_outside_is_never_overwritten = None
     test_4_list_portfolio_and_refusals = None
     test_5_dashboard_data_and_files = None
+    test_6_saves_in_one_editing_session_keep_one_backup = None
 
     def new(self, title, **kw):
         r = self.post("/api/notes/new", {"code": "ABC", "template": kw.pop("template", "blank"), "title": title, **kw})
@@ -73,8 +75,7 @@ class NotesGaps(test_notes_tab.NotesServer):
                                            "base": other["base"]})
         self.assertTrue(s0["ok"], s0)
         typing = self.new("Half typed")
-        self.post("/api/notes/save", {"path": typing["note"]["path"], "body": "Also [[Vendor positions]].\n", "base": typing["base"]})
-        self.post("/api/notes/draft", {"path": typing["note"]["path"], "body": "Still typing", "base": "x"})
+        ts = self.post("/api/notes/save", {"path": typing["note"]["path"], "body": "Also [[Vendor positions]].\n", "base": typing["base"]})
         self.new("Supplier positions")                                    # the new name is taken: the file gets a number
         s = self.post("/api/notes/save", {"path": rel, "changes": {"title": "Supplier positions"}, "base": r["base"]})
         self.assertTrue(s["ok"], s)
@@ -92,13 +93,14 @@ class NotesGaps(test_notes_tab.NotesServer):
         self.assertTrue(moves[0]["approved"], "made with the route's one-time approval")
         text = (self.v.root / other["note"]["path"]).read_text()
         self.assertIn("[[Supplier positions]] and [[Supplier positions|their view]]", text)
-        self.assertEqual(m["relinked"], [other["note"]["path"]])
-        self.assertEqual([x["path"] for x in m["listed"]], [typing["note"]["path"]])
-        self.assertIn("[[Vendor positions]]", (self.v.root / typing["note"]["path"]).read_text(), "a note being typed is never touched")
+        self.assertEqual(sorted(m["relinked"]), sorted([other["note"]["path"], typing["note"]["path"]]))
+        self.assertEqual(m["listed"], [])
+        stale = self.post("/api/notes/save", {"path": typing["note"]["path"], "body": "Still typing\n", "base": ts["base"]})
+        self.assertTrue(stale.get("conflict"), "a page still showing the old text is told, never overwrites the relink")
         again = self.post("/api/notes/rename", {"path": m["note"]["path"], "base": m["base"], "old": "Supplier positions"})
         self.assertFalse(again["renamed"], "nothing moves when the name fits")
         relinks = [e for e in self.log() if e.get("op") == "edit" and e.get("why") == "a link to a note whose title changed"]
-        self.assertEqual(len(relinks), 1)
+        self.assertEqual(len(relinks), 2)
         self.assertEqual(self.undo(moves[0]["id"]).returncode, 0, "the move is undoable")
         self.assertTrue((self.v.root / rel).is_file())
 

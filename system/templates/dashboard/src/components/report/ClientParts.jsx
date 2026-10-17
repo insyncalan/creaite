@@ -8,6 +8,7 @@
      or partner-only item, the plain reason it can never be shown; Add for a row that became client-visible since.
    - Every section: Matching internal or Edited for the client, and Match internal (clientDoc.matchClientSection: client-safe).
    Everything drawn here is the client document's own content; the internal report is read only. */
+import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cellsFor, CLIENT_FLAGS, flagOf, healthDiff, matchClientSection, matchState, secOf } from "./clientDoc.js";
 import { openRef } from "./Sheet.jsx";
@@ -15,6 +16,10 @@ import { crCheck, crDirty, crDoc, crInternal, runCheck } from "../../stores/clie
 
 /** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
 /** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
+
+/** #203: set when Use on the health suggestion records a flag that differs from the internal one: the flag's popover then opens by itself,
+    on its reason, so Alan writes why (nothing else forces it). */
+export const crAskWhy = signal(false);
 
 /** Take a new client document onto the page. @param {SheetDoc} next */
 export function setClientDoc(next) { crDoc.value = next; crDirty.value = true; }
@@ -82,6 +87,15 @@ export function HealthSection({ ctx }) {
   };
   const matchHealth = () => { matchOne("health"); setOpen(false); };
   const needWhy = pick !== inFlag && !why.trim();
+  const ask = crAskWhy.value, focusWhy = useRef(false);
+  useEffect(() => {
+    if (!ask || !d || !edit || !diff) return;                  // wait for the document that holds the difference
+    crAskWhy.value = false;
+    if (!String(diff.reason || "").trim()) { focusWhy.current = true; begin(); }
+  }, [ask, diff]);
+  useEffect(() => {                                   // the popover opened for the reason: the cursor goes to it (after the popover's own first focus)
+    if (open && focusWhy.current) { focusWhy.current = false; setTimeout(() => /** @type {HTMLElement|null} */ (document.getElementById("crWhy"))?.focus(), 0); }
+  }, [open]);
   return (
     <div class="crhealth" data-crhealth>
       <div class="crhcol">

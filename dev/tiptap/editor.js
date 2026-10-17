@@ -8,6 +8,7 @@
 import { Editor, Extension, Mark, Node, mergeAttributes } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { closeHistory } from "@tiptap/pm/history";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
 import Image from "@tiptap/extension-image";
@@ -21,6 +22,8 @@ import { writeMarkdown } from "./writer.js";
 export { Extension, Mark, Node, mergeAttributes, Plugin, PluginKey };
 // BL-301 B (Notes): decorations, for the note's wiki links and item chips (drawn, never written).
 export { Decoration, DecorationSet };
+// #175 (Notes): ProseMirror's closeHistory(tr), so the Notes editor can start a new undo step (core/editor.js cxUndoSteps).
+export { closeHistory };
 
 /** The pinned Tiptap version this file was written and gated against (tiptap.py's PINNED, set by the bundler). */
 export const PINNED = typeof __TIPTAP_PINNED__ === "undefined" ? null : __TIPTAP_PINNED__;   // eslint-disable-line no-undef
@@ -39,10 +42,11 @@ const PLAIN = { blockquote: false, bold: false, bulletList: false, code: false, 
   heading: false, horizontalRule: false, italic: false, listItem: false, listKeymap: false, orderedList: false,
   strike: false, link: false, underline: false, trailingNode: false };
 
-// Each place switches on what it needs (BL-301 A): Current state has no tables or checklists; Notes have everything.
+// Each place switches on what it needs (BL-301 A): Current state has no tables; it has checklists since #134 (v2.2.0);
+// Notes have everything.
 const FEATURES = {
   plain: () => [StarterKit.configure(PLAIN)],
-  current: () => [...base(), Markdown],
+  current: () => [...base(), TaskList, TaskItem.configure({ nested: true }), Markdown],
   notes: () => [...base(), TaskList, TaskItem.configure({ nested: true }), TableKit.configure({ table: false }), TableForm,
     Markdown],
 };

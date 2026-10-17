@@ -2,6 +2,7 @@
 /* core/dom.js (BL-231 step 2b): the DOM helpers, escaping (`html`), the icons and the one tooltip.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0002-core.js, 0003-bl-228-d-sprint-escaping.js, 0004-bl-158-sprint-icons.js */
+import { TIP_CLOSE, TIP_NEXT, TIP_OPEN } from "./hover.js";   /* #143: the one hover standard's tooltip delays */
 /* ======================= core ======================= */
 /* BL-303: an optional root, so a lookup inside a popup or panel searches only there (the page when it is left out). */
 /** @param {string} s @param {ParentNode} [root] @returns {any} */
@@ -35,7 +36,7 @@ export function writeDoc(w,h){ w.document.write(htmlPart(h)); }
    Lucide Contributors 2022 and, for the parts from Feather, Cole Bemis 2013-2022 (MIT). Permission to use, copy, modify and/or
    distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and
    this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES.
-   The tooltip: any element with data-tip (and data-key for a shortcut that exists) shows #tip after 250ms of hover and at once
+   The tooltip: any element with data-tip (and data-key for a shortcut that exists) shows #tip after TIP_OPEN of hover (core/hover.js) and at once
    on keyboard focus; Esc, scrolling, a click or leaving hides it; the pointer can move onto it (WCAG 1.4.13); inverse colours. */
 export const ICONS={
   /* the rail, the header and the section headers (unchanged shapes) */
@@ -80,6 +81,9 @@ export const ICONS={
   chevdown:'<path d="m6 9 6 6 6-6"/>',
   /* Notes header (#115): the list's quiet double chevrons  */
   chevsright:'<path d="M13 6l6 6-6 6M5 6l6 6-6 6"/>',
+  /* #115 focus mode: lift the note over the page, and leave */
+  expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',
+  shrink:'<path d="M20 10h-6V4M4 14h6v6M14 10l7-7M10 14l-7 7"/>',
   chevsleft:'<path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/>',
   calendar:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   filetext:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
@@ -134,8 +138,8 @@ export function bootTooltips(){
 paintIcons();
 document.addEventListener("mouseover",e=>{ const t=e.target; if(!t.closest) return; if(t.closest("#tip")){ clearTimeout(TIP.hide); return; }
   const el=t.closest("[data-tip]"); if(el&&el===TIP.el){ clearTimeout(TIP.hide); return; }
-  if(el){ tipShow(el,TIP.el?0:250); return; }   /* moving from one icon to the next, the tooltip follows at once */
-  clearTimeout(TIP.show); if(TIP.el){ clearTimeout(TIP.hide); TIP.hide=setTimeout(tipHide,120); } });
+  if(el){ tipShow(el,TIP.el?TIP_NEXT:TIP_OPEN); return; }   /* #143: the first after TIP_OPEN, the next while one shows after TIP_NEXT */
+  clearTimeout(TIP.show); if(TIP.el){ clearTimeout(TIP.hide); TIP.hide=setTimeout(tipHide,TIP_CLOSE); } });
 document.addEventListener("mouseleave",tipHide);
 document.addEventListener("focusin",e=>{ const el=e.target.closest&&e.target.closest("[data-tip]"); if(el&&e.target.matches(":focus-visible")) tipShow(el,0); else if(TIP.el) tipHide(); });
 document.addEventListener("focusout",e=>{ if(TIP.el&&(e.target===TIP.el||TIP.el.contains(e.target))) tipHide(); });

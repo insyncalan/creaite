@@ -77,14 +77,45 @@ def open_first_item(b):
     b.click("#workTbl tbody tr[data-row] a.rowid")
 
 
+def fold_intake_and_review(b):
+    """#168: Today with Intake and Review folded by a real click on its heading, as a person folds it: the count (and the
+    "new" mark while a message is unseen) stay on the one line."""
+    b.wait("document.getElementById('tdFold') && !document.getElementById('tdSec').hidden")
+    b.click("#tdFold>summary")
+    b.wait("!document.getElementById('tdFold').open")
+
+
 def open_cmdk(b):
     b.key("k", META)
 
 
 
+def rail_state(width, labels):
+    """#156: the rail in one of its three states (188px expanded; 76px collapsed with labels; 56px icons only), reached as
+    test_rail_states does: the wordmark toggle, then Labels when collapsed."""
+    def step(b):
+        open_health(b)                  # the badge on More and Health comes from the health answer: the fixed one, so it never depends on order
+        # The stub only answers a check that runs after it is installed; a page that already checked (a shared server, an earlier
+        # screen, CI with no problems) keeps its own count. Set the count the stub's answer gives, as checkHealth would.
+        n = len(HEALTH_ANSWER.get("problems", []))
+        b.wait(f"(healthCount.value={n}, document.getElementById('railHealthBadge') && document.getElementById('railHealthBadge').textContent.trim()==='{n}')", 15)
+        def w():
+            return b.eval("Math.round(document.querySelector('.rail').getBoundingClientRect().width)")
+        if width == 188 and w() != 188:
+            b.click("#railTog")
+        if width != 188 and w() == 188:
+            b.click("#railTog")
+        b.wait(f"Math.round(document.querySelector('.rail').getBoundingClientRect().width)!==188 || {width}===188", 5)
+        if width != 188:
+            b.eval(f"railSetLabels({'true' if labels else 'false'})")
+        b.wait(f"Math.round(document.querySelector('.rail').getBoundingClientRect().width)==={width}", 5)
+    return step
+
+
 # name: (how to get there: JavaScript, or a step that drives the browser; what to wait for; the region to keep).
 SCREENS = {
     "today": ("go('today')", "!document.getElementById('v-today').hidden", "#v-today"),
+    "today-intake-folded": (fold_intake_and_review, "!document.getElementById('v-today').hidden", "#tdSec"),
     "work": ("go('work')", "document.querySelector('#workTbl tbody tr')", "#v-work"),
     "work-panel": (open_first_item, "document.getElementById('panel').classList.contains('on')", "#panel"),
     # BL-315's guesses come from /api/review/guesses, fetched when Review opens (two scripts under the server's lock): under load
@@ -107,6 +138,9 @@ SCREENS = {
     "cmdk": (open_cmdk, "document.getElementById('cmdk').open", "#cmdk"),
     "ask": ("openChat()", "!document.getElementById('chat').hidden || document.getElementById('chat').classList.contains('on')",
             "#chat"),
+    "rail-expanded": (rail_state(188, True), "Math.round(document.querySelector('.rail').getBoundingClientRect().width)===188", ".rail"),
+    "rail-collapsed": (rail_state(76, True), "Math.round(document.querySelector('.rail').getBoundingClientRect().width)===76", ".rail"),
+    "rail-icons": (rail_state(56, False), "Math.round(document.querySelector('.rail').getBoundingClientRect().width)===56", ".rail"),
 }
 
 MASKS = [
@@ -143,6 +177,9 @@ def normalise(html, root):
     for pat, rep in MASKS:
         html = pat.sub(rep, html)
     html = renumber_ids(html)
+    # whether a table overflows sideways depends on the machine's fonts (Linux CI is wider than a Mac): mask the "more columns" cue
+    html = re.sub(r'<div class="xcue[^"]*"[^>]*>.*?</button>\s*</div>', "", html, flags=re.S)
+    html = re.sub(r' xscroll(?: xstick)?"( data-xc="1")?( style="--xstick:[^"]*")?', '"', html)
     html = STYLE.sub(lambda m: 'style="' + re.sub(r"-?\d+(?:\.\d+)?(px|%|em|rem)", r"#\1", m.group(1)) + '"', html)
     html = re.sub(r'aria-valuenow="\d+"', 'aria-valuenow="#"', html)   # v1.9.5: a resize handle's value is the column's measured width
     html = re.sub(r">\s*<", ">\n<", re.sub(r"[ \t]+", " ", html))
@@ -200,7 +237,8 @@ class Snapshots(LiveBrowserCase):
         go, ready, region = SCREENS[name]
         b = self.b
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
-               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); go('today')")
+               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); go('today'); "
+               "{ const f=document.getElementById('tdFold'); if(f) f.open=true; }")   # #168: unfold, so one screen's fold never reaches the next
         if callable(go):
             go(b)
         else:

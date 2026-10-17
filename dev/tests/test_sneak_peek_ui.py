@@ -110,6 +110,91 @@ class Case(LiveBrowserCase):
         return next(r for r in self.v.rows(table) if r["id"] == id_)
 
 
+class ClosesWithItsHost(Case):
+    """#151: Sneak peek belongs to the peek or the milestone editor; whichever way they close, the box goes and nothing stays on screen."""
+    shared_server = True
+
+    @classmethod
+    def load(cls, v):
+        super().load(v)          # a second action, so J and K have somewhere to go
+        v.propose("second", [action(5, description="Book the UAT room", owner="Sara Example", due_date="2026-10-12", priority="Medium",
+                                    raised="2026-10-05", source=f"{ABC}/minutes/2026-10-05 Weekly.docx — Actions")])
+        v.run("apply")
+
+    GONE = """!document.getElementById('spIn')&&!document.getElementById('panel').classList.contains('sp-open')
+      &&document.getElementById('pkSneak').hidden&&!document.querySelector('.sp-box')"""
+
+    def peek_box(self, id_=None, k="actions"):
+        b = self.b
+        self.open(id_ or self.act, k)
+        self.box()
+        b.eval("document.activeElement.blur()")
+
+    def assert_nothing_left(self, panel_open=False):
+        b = self.b
+        b.wait(self.GONE, 10)
+        self.assertEqual(b.eval("document.getElementById('panel').classList.contains('on')"), panel_open)
+        self.assertEqual(b.eval("document.querySelectorAll('.sp-box,.sp-host:not([hidden])').length"), 0)
+
+    def test_an_outside_click_closes_both(self):
+        self.peek_box()
+        self.b.click("#workQ")
+        self.b.wait("!document.getElementById('panel').classList.contains('on')")
+        self.assert_nothing_left()
+
+    def test_esc_closes_both(self):
+        b = self.b
+        self.peek_box()
+        for _ in range(3):
+            if b.eval("document.getElementById('panel').classList.contains('on')"):
+                b.key("Escape")
+        self.assert_nothing_left()
+
+    def test_the_close_arrow_closes_both(self):
+        self.peek_box()
+        self.b.click("#pkClose")
+        self.assert_nothing_left()
+
+    def test_j_and_k_to_another_item_close_the_box(self):
+        b = self.b
+        self.peek_box(self.act)
+        before = b.eval("CUR.id")
+        b.key("j")
+        b.wait(f"CUR&&CUR.id!=={before!r}", 10)
+        self.assert_nothing_left(panel_open=True)
+        b.key("k")
+        b.wait(f"CUR&&CUR.id==={before!r}", 10)
+        self.assertEqual(b.eval("!!document.querySelector('.sp-box')"), False)
+
+    def test_the_page_changing_closes_both(self):
+        b = self.b
+        self.peek_box()
+        b.eval("go('cockpit','ABC')")
+        b.wait(self.GONE, 10)
+        self.assertEqual(b.eval("document.querySelectorAll('.sp-box').length"), 0)
+        self.assertFalse(b.eval("document.getElementById('panel').classList.contains('sp-open')"))
+
+    def test_the_milestone_editor_closing_closes_the_box(self):
+        b = self.b
+        gone = "!document.querySelector('.sp-box')&&document.getElementById('mvSneak').hidden&&!document.getElementById('mvPeek').classList.contains('sp-open')"
+        self.open_ms()
+        self.box()
+        b.click("[data-mvpk=close]")
+        b.wait(gone, 10)
+        self.open_ms()
+        self.box()
+        b.eval("document.activeElement.blur()")
+        for _ in range(3):
+            if b.eval("!document.getElementById('mvPeek').hidden"):
+                b.key("Escape")
+        b.wait(gone, 10)
+        self.open_ms()
+        self.box()
+        b.eval("go('work')")
+        b.wait(gone, 10)
+        self.assertFalse(b.eval("!!document.querySelector('.sp-box')"))
+
+
 class Opening(Case):
     shared_server = True
 

@@ -54,7 +54,7 @@ class Toolbar(LiveBrowserCase):
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         b.eval("""(()=>{ const e=document.querySelector('.nbody').cxed.editor; let p=1; e.state.doc.descendants((n,pos)=>{ if(n.isTextblock&&n.content.size) p=pos+n.nodeSize-1; });
           e.commands.setTextSelection(p); })()""")                    # the caret in the last line's text (focus('end') can land after a list)
-        b.pump(0.1)
+        b.frames(3)       # the editor's deferred focus (a frame after focus()) has landed; before it, a button focused next loses it (#152)
 
     def select_all(self):
         self.b.eval("document.querySelector('.nbody').cxed.editor.commands.selectAll()")
@@ -148,16 +148,17 @@ class Toolbar(LiveBrowserCase):
         self.reset("see plan")
         self.select_all()
         b.click(".nbar [data-nt=link]")
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
-        self.assertEqual(b.eval("!!document.querySelector('.nbar [data-rl=remove]')"), False)       # nothing to remove yet
+        b.wait("!!document.querySelector('.linkpop.form')", 5)
+        self.assertEqual(b.eval("!!document.querySelector('.linkpop [data-lk=remove]')"), False)       # nothing to remove yet
         b.type("https://example.com/plan")
         b.key("Enter")
-        b.wait("document.querySelector('.nbar .rtelink').hidden", 5)
+        b.wait("!document.querySelector('.linkpop')", 5)
         self.assertIn("[see plan](https://example.com/plan)", self.value())
+        b.eval("document.querySelector('.nbody').cxed.editor.commands.setTextSelection(3)")   # inside the link
         b.click(".nbar [data-nt=link]")                          # the cursor is in the link: the same button edits it, and removes it
-        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)
-        b.wait("!!document.querySelector('.nbar [data-rl=remove]')", 5)
-        b.click(".nbar [data-rl=remove]")
+        b.wait("!!document.querySelector('.linkpop.form')", 5)
+        b.wait("!!document.querySelector('.linkpop [data-lk=remove]')", 5)
+        b.click(".linkpop [data-lk=remove]")
         b.wait("!document.querySelector('.nbody').cxed.value().includes('](')", 5)
         self.assertIn("see plan", self.value())
         self.assertEqual(b.eval("document.querySelectorAll('.nbar [data-nt=unlink]').length"), 0)
@@ -222,7 +223,10 @@ class Toolbar(LiveBrowserCase):
         self.assertEqual(self.expanded("m-heading"), "false")
         self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
         b.pump(0.5)
-        b.click(".nbar [data-nt=m-list]")                         # a click on the open menu's button toggles it shut (a second tap on touch)
+        b.click(".nbar [data-nt=m-list]")                         # #143: a click on a hover-opened menu keeps it and moves focus in ...
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        self.assertEqual(self.expanded("m-list"), "true")
+        b.click(".nbar [data-nt=m-list]")                         # ... and the next click on the open menu's button shuts it
         b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='false'", 5)
 
     def test_keyboard_opens_with_down_or_enter_and_esc_returns_focus(self):

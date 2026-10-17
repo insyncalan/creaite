@@ -7,9 +7,11 @@ report.saved_current, report.replace_current), so the levels are stored `###`, `
 `## ` line must never come out of the editor. Word reads the same three (docx_tools). The editor's own side (the mapping both
 ways, the toolbar writing them, a paste) is test_editor_bar.
 """
+import itertools
 import re
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -67,6 +69,290 @@ class Headings(unittest.TestCase):
         self.assertNotIn("<w:i/>", runs[1])
         self.assertIn("<w:b/><w:i/>", runs[2])                          # the third level: bold italic
         self.assertNotIn("<w:b/>", runs[3])
+
+    # ----- #134: the checklist (Current state stores "- [ ] text" / "- [x] text"; Word shows a box glyph) -----
+    TASKS = "#### Next steps\n\n- [ ] Book the room\n- [x] Send the pack\n  - [ ] Nested step\n\n- an ordinary bullet\n\n##### Later\n\n1. numbered"
+
+    def test_a_checklist_is_kept_by_normalising_and_never_makes_a_level_two_line(self):
+        self.assertEqual(dt.md_normalise(self.TASKS), self.TASKS.replace("\n\n- an ordinary", "\n- an ordinary"))
+        self.assertEqual(dt.md_normalise(dt.md_normalise(self.TASKS)), dt.md_normalise(self.TASKS))
+        self.assertIsNone(re.search(r"(?m)^#{1,2} ", dt.md_normalise(self.TASKS)))
+
+    def test_word_shows_a_checklist_with_box_glyphs_and_no_brackets(self):
+        lines = dt.md_lines(self.TASKS)
+        self.assertEqual(lines, ["Next steps", "☐ Book the room", "☑ Send the pack", "☐ Nested step", "• an ordinary bullet", "Later", "1. numbered"])
+        para = '<w:p><w:r><w:rPr/><w:t>{{CURRENT}}</w:t></w:r></w:p>'
+        xml = dt.md_paras(para, "CURRENT", self.TASKS)
+        texts = [t for t in re.findall(r"<w:t[^>]*>(.*?)</w:t>", xml)]
+        self.assertIn("☐ ", texts)
+        self.assertIn("☑ ", texts)
+        self.assertIn("Book the room", texts)
+        self.assertNotIn("[ ]", xml)
+        self.assertNotIn("[x]", xml)
+        self.assertNotIn("#", xml)
+
+    def test_a_checklist_edited_in_word_comes_back_as_a_checklist(self):
+        back = dt.md_from_lines(dt.md_lines(self.TASKS))
+        self.assertIn("- [ ] Book the room\n- [x] Send the pack\n- [ ] Nested step", back)
+        self.assertEqual(dt.md_lines(back)[1:4], ["☐ Book the room", "☑ Send the pack", "☐ Nested step"])
+
+    def test_the_prep_page_shows_a_checklist_item_with_its_glyph(self):
+        import prep_page
+        blocks = prep_page.md_blocks("- [ ] one\n- [x] two\n- three")
+        self.assertEqual(blocks, [("ul", ["☐ one", "☑ two", "three"])])
+
+    # ----- #134 (review): what the report sheet's toolbar writes, as Word and HTML/PDF draw it -----
+    SHEET = "### Big\n\n#### Mid\n\n##### Small\n\n> a quote\n> over two lines\n\nSome ~~gone~~ words and **bold** ones.\n\n- item ~~struck~~"
+
+    def test_what_the_sheet_toolbar_writes_leaves_no_marker_in_word_or_html(self):
+        import creaite_doc
+        para = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+        word = "\n".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", dt.md_paras(para, "TEXT", self.SHEET)))
+        html = creaite_doc.md_html(self.SHEET)
+        for mark in ("#", ">", "~~"):
+            self.assertNotIn(mark, word)
+        for mark in ("#", "&gt;", "~~"):
+            self.assertNotIn(mark, html)
+        self.assertIn("<blockquote><p>a quote over two lines</p></blockquote>", html)
+        self.assertIn("<s>gone</s>", html)
+        self.assertIn("<s>struck</s>", html)
+        self.assertIn("<strong>bold</strong>", html)
+        self.assertIn("<w:strike/>", dt.md_paras(para, "TEXT", self.SHEET))
+        self.assertEqual(dt.md_lines(self.SHEET)[3], "a quote over two lines")
+
+    def test_a_level_one_or_two_line_is_what_word_cannot_draw_which_is_why_the_sheet_shifts_its_levels(self):
+        # the sheet editor writes Heading 1 to 3 as ### #### ##### (headShift, as Current state does); a bare # or ## would show as text in Word
+        para = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+        self.assertIn("# Big", "\n".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", dt.md_paras(para, "TEXT", "# Big"))))
+
+    # ----- #134 (review): the checklist reads the same in Word and on the Prep page -----
+    TASK_CASES = ["- [ ]", "- [x]", "- [X]", "- [ ] a", "- [x] a b", "* [ ] star", "1. [ ] a", "2) [x] b", "- [ ]a", "- plain", "- [] none", "- [y] no"]
+
+    def test_word_and_prep_agree_on_every_checklist_shape(self):
+        import prep_page
+        for md in self.TASK_CASES:
+            with self.subTest(md=md):
+                word = dt.md_lines(md)[0]
+                kind, items = prep_page.md_blocks(md)[0]
+                glyph = word[:1] in "☐☑"
+                shown = word if glyph else re.sub(r"^(?:• |\d+\. )", "", word)
+                self.assertEqual(shown.strip(), items[0].strip())
+                self.assertEqual(glyph, items[0][:1] in "☐☑")
+
+    def test_an_empty_checklist_item_is_a_box_in_both_and_a_numbered_one_is_text_in_both(self):
+        import prep_page
+        self.assertEqual(dt.md_lines("- [ ]"), ["☐ "])
+        self.assertEqual(prep_page.md_blocks("- [ ]"), [("ul", ["☐"])])
+        self.assertEqual(dt.md_lines("1. [ ] a"), ["1. [ ] a"])
+        self.assertEqual(prep_page.md_blocks("1. [ ] a"), [("ol", ["[ ] a"])])
+        self.assertEqual(dt.md_from_lines(["☐ "]), "- [ ]")                      # an empty box edited in Word comes back as one
+
+    # ----- #134 (independent review): a list whose first item is empty, marks that nest, a quote that holds blocks -----
+    @staticmethod
+    def base_md_blocks(md):
+        """prep_page.md_blocks as it was before #134 (commit 0fdbe4a), for lists, paragraphs and headings: the behaviour the refactor must keep."""
+        t = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", str(md or ""))
+        t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)
+        blocks, st = [], {"para": [], "lst": None}
+
+        def flush():
+            if st["para"]:
+                blocks.append(("p", " ".join(st["para"])))
+            if st["lst"]:
+                blocks.append(st["lst"])
+            st["para"], st["lst"] = [], None
+
+        def item(line, bullet, number):
+            kind = "ul" if bullet else "ol"
+            if st["para"] or (st["lst"] and st["lst"][0] != kind):
+                flush()
+            st["lst"] = st["lst"] or (kind, [])
+            st["lst"][1].append((bullet or number).group(1).strip())
+
+        def other(line, head):
+            if head:
+                flush()
+                blocks.append(("p", f"**{head.group(1).strip().strip('*')}**"))
+            elif st["lst"] and line[:1].isspace():
+                st["lst"][1][-1] += " " + line.strip()
+            else:
+                if st["lst"]:
+                    flush()
+                st["para"].append(line.strip())
+        for line in t.splitlines():
+            bullet, number = re.match(r"\s*[-*•]\s+(.*)", line), re.match(r"\s*\d+[.)]\s+(.*)", line)
+            if not line.strip():
+                flush()
+            elif bullet or number:
+                item(line, bullet, number)
+            else:
+                other(line, re.match(r"\s*#+\s*(.*)", line))
+        flush()
+        return blocks
+
+    def test_a_list_whose_first_item_is_empty_does_not_crash_and_keeps_its_items(self):
+        import prep_page
+        import creaite_doc
+        for md in ("- \n  x", "1. \n  x", "* \n\tx", "- a\n- \n  x", "- \n- \n  x", "1) \n   x\n2) y"):
+            with self.subTest(md=md):
+                self.assertEqual(prep_page.md_blocks(md), self.base_md_blocks(md))
+                creaite_doc.md_html(md)                                       # the HTML and PDF export, and the Prep page
+        self.assertEqual(prep_page.md_blocks("- a\n- \n  x"), [("ul", ["a", "x".rjust(2)])])
+
+    def test_lists_paragraphs_and_headings_read_as_before_for_every_short_mix_of_lines(self):
+        import prep_page
+        lines = ["- a", "- ", "-", "* b", "• c", "1. d", "2) ", "  x", "\ty", "", "text", "# h", "### H *", "  - n", "plain two", "1.x"]
+        for n in (1, 2, 3, 4):
+            for combo in itertools.product(lines, repeat=n):
+                md = "\n".join(combo)
+                self.assertEqual(prep_page.md_blocks(md), self.base_md_blocks(md), repr(md))
+
+    # every mark the bar writes, in every order it can be nested (bold **, italic _ or *, strikethrough ~~)
+    WRAPS = (("bold", "**"), ("italic", "_"), ("italic", "*"), ("strike", "~~"))
+
+    def nestings(self):
+        """(set of marks, Markdown) for x wrapped in every ordered pair and triple of marks, and each mark alone."""
+        for size in (1, 2, 3):
+            for combo in itertools.permutations(self.WRAPS, size):
+                names = [n for n, _ in combo]
+                if len(set(names)) < size:
+                    continue
+                inner = "x"
+                for _, w in reversed(combo):
+                    inner = w + inner + w
+                yield set(names), f"a {inner} b"
+
+    def test_marks_nest_in_word_with_no_marker_left_over(self):
+        para = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+        n = 0
+        for marks, md in self.nestings():
+            with self.subTest(md=md):
+                n += 1
+                runs = dt.md_runs(md)
+                self.assertEqual("".join(r[0] for r in runs), "a x b")
+                x = next(r for r in runs if r[0] == "x")
+                self.assertEqual({"bold": x[1], "italic": x[2], "strike": x[3]}, {m: m in marks for m in ("bold", "italic", "strike")})
+                xml = dt.md_paras(para, "TEXT", md)
+                for mark in ("**", "_", "~~", "`"):
+                    self.assertNotIn(mark, "".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", xml)))
+                self.assertEqual("<w:strike/>" in xml, "strike" in marks)
+        self.assertGreater(n, 25)
+
+    def test_marks_nest_in_html_and_pdf_the_same_way(self):
+        import creaite_doc
+        for marks, md in self.nestings():
+            with self.subTest(md=md):
+                html = creaite_doc.md_html(md)
+                self.assertEqual(re.sub(r"<[^>]+>", "", html), "<p>a x b</p>".replace("<p>", "").replace("</p>", ""))
+                for mark in ("**", "_", "~~", "`", "*"):
+                    self.assertNotIn(mark, html)
+                tags = {"bold": "strong", "italic": "em", "strike": "s"}
+                inner = re.search(r"((?:<(?:strong|em|s)>)+)x((?:</(?:strong|em|s)>)+)", html)
+                self.assertIsNotNone(inner, html)
+                self.assertEqual(set(re.findall(r"<(\w+)>", inner.group(1))), {tags[m] for m in marks})
+
+    def test_a_pair_of_marks_inside_a_longer_sentence_and_beside_each_other(self):
+        import creaite_doc
+        for md, want in (("~~a **b** c~~", "<p><s>a </s><strong><s>b</s></strong><s> c</s></p>"),
+                         ("**a** and _b_ and ~~c~~", "<p><strong>a</strong> and <em>b</em> and <s>c</s></p>"),
+                         ("**`x`** y", "<p><strong>x</strong> y</p>"), ("snake_case and 5 * 3", "<p>snake_case and 5  3</p>")):
+            with self.subTest(md=md):
+                self.assertEqual(creaite_doc.md_html(md), want)
+        self.assertEqual(dt.plain("[**a** b](http://u.example) z"), "a b (http://u.example) z")       # the address follows the link's last words once
+        self.assertEqual([r[4] for r in dt.md_runs("[**a** b](http://u.example) z")], [None, "http://u.example", None])
+
+    def test_reading_marks_takes_time_in_proportion_to_the_text_even_for_text_made_of_openers(self):
+        import prep_page
+        for unit in ("*a ", "_a ", "~~a ", "**a ", "[", "[a ", "`a ", "**_~~a ", "*a _b ", "[a](http://x ", "*a* "):
+            with self.subTest(unit=unit):
+                text = unit * 30000
+                started = time.perf_counter()
+                dt.md_runs(text)
+                prep_page.md_inline(text)
+                self.assertLess(time.perf_counter() - started, 3.0)
+
+    def test_a_quote_can_hold_headings_and_lists_and_both_exports_draw_them_inside_it(self):
+        import creaite_doc
+        import prep_page
+        md = "> #### Inside\n> - one\n> - two\n>\n> closing words"
+        self.assertEqual(dt.md_blocks(md), [("qb", [("h2", "Inside"), ("list", [(0, False, "one"), (0, False, "two")]), ("p", "closing words")])])
+        para = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+        xml = dt.md_paras(para, "TEXT", md)
+        shown = "\n".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", xml))
+        for mark in ("#", ">", "- one"):
+            self.assertNotIn(mark, shown)
+        self.assertEqual(dt.md_lines(md), ["Inside", "• one", "• two", "closing words"])
+        self.assertIn('w:left="927"', xml)                                                # a list item in a quote: the quote's indent and its own
+        self.assertEqual(xml.count("<w:i/>"), xml.count("<w:r>"), "everything in the quote is italic")
+        html = creaite_doc.md_html(md)
+        self.assertEqual(html, "<blockquote><p><strong>Inside</strong></p><ul><li>one</li><li>two</li></ul><p>closing words</p></blockquote>")
+        self.assertEqual(prep_page.blocks_html(prep_page.md_blocks("> - a")), "<blockquote><ul><li>a</li></ul></blockquote>")
+        self.assertEqual(dt.md_normalise(md), "> #### Inside\n>\n> - one\n> - two\n>\n> closing words")
+        self.assertEqual(dt.md_normalise(dt.md_normalise(md)), dt.md_normalise(md))             # stored text is stable
+        self.assertEqual(dt.md_blocks("> a\n> b"), [("q", "a b")])                               # a plain quote is as it was
+
+    def test_the_prep_page_styles_a_quote_and_the_state_summary_leaves_quotes_out_of_the_points(self):
+        import prep_page
+        self.assertIn("blockquote{", prep_page.CSS)
+        import creaite_doc
+        self.assertIn("blockquote{", creaite_doc.CSS)                                     # the Word-like rule for a quote in HTML and PDF
+        head, points, n = prep_page.state_parts("Headline\n\n> a quote\n\n- one\n- two")
+        self.assertEqual((head, points, n), ("Headline", ["one", "two"], 2))
+        self.assertEqual(prep_page.state_parts("Headline\n\n> a quote\n\nPara")[1:], (["a quote", "Para"], 2))
+        self.assertEqual(prep_page.state_parts("Headline\n\n> - a\n\n- one")[1:], (["one"], 1))
+
+
+WORD_PARA = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+
+def word_texts(md):
+    """The words Word gets for one Markdown entry (md_paras), read back with a real XML parser (so invalid XML fails here)."""
+    import xml.etree.ElementTree as ET
+    xml = f'<w:body xmlns:w="{W_NS}">' + dt.md_paras(WORD_PARA, "TEXT", md) + "</w:body>"
+    return "".join(t.text or "" for t in ET.fromstring(xml.encode("utf-8")).iter(f"{{{W_NS}}}t"))
+
+
+class TheSharedReaderKeepsTheClientGatesRules(unittest.TestCase):
+    """#134 x #127: the one inline reader (md_spans, behind md_runs, plain and md_paras) reads a link as client-gate-127f's
+    docx_tools.INLINE does: a creaite: link in any case or encoding is its words only, a link's words may hold one level of
+    [brackets], and what goes into Word is escaped by the gate's XML-safe esc. Shown here on a Word checklist item."""
+
+    def test_a_creaite_link_in_any_case_in_a_checklist_item_is_its_words_only(self):
+        for link in ("[the vendor](creaite:item/ABC-A-004)", "[the vendor](CREAITE:item/ABC-A-004)",
+                     "[the vendor](Creaite:Item/ABC-A-004)", "[the vendor](creaite%3Aitem/ABC-A-004)",
+                     "[the vendor](CREAITE%253Aitem/ABC-A-004)", "[the vendor](creaite&#58;item/ABC-A-004)",
+                     "[the vendor](creaite&colon;item/ABC-A-004)", "[the vendor]( <CREAITE:item/ABC-A-004>)",
+                     "[the vendor](creaite:person/Jane%20Doe)", "[the vendor](CREAITE:ABC-A-004)"):
+            md = f"- [ ] Chase {link} today"
+            with self.subTest(link=link):
+                self.assertEqual(dt.md_lines(md), ["☐ Chase the vendor today"])
+                self.assertEqual(word_texts(md), "☐ Chase the vendor today")
+                self.assertEqual([r[4] for r in dt.md_runs(f"Chase {link} today")], [None, None, None])   # never a hyperlink
+        self.assertEqual([dt.plain(t) for t in ("See [p](CREAITE:item/ABC-A-002).", "See [p](creaite%3Aitem/ABC-A-002).",
+                                                "See [p](creaite&#58;item/ABC-A-002).")], ["See p."] * 3)   # 127f's expectation
+        self.assertEqual(dt.plain("Text creaite: notes/ are kept"), "Text creaite: notes/ are kept")       # prose stays
+
+    def test_a_links_words_may_hold_bracketed_labels(self):
+        md = "- [x] Read [the [draft] plan](https://example.com/p) and [the [v2] note](CREAITE:item/ABC-A-002)"
+        self.assertEqual(dt.md_lines(md), ["☑ Read the [draft] plan (https://example.com/p) and the [v2] note"])
+        self.assertEqual(word_texts(md), "☑ Read the [draft] plan (https://example.com/p) and the [v2] note")
+        self.assertEqual([dt.plain(t) for t in ("See [a [b] c](creaite:item/ABC-A-002).", "See [a [b] c](https://example.com/x).")],
+                         ["See a [b] c.", "See a [b] c (https://example.com/x)."])                         # 127f's expectation
+        runs = dt.md_runs("[a [b] **c**](https://example.com/x) z")
+        self.assertEqual([(r[0], r[1], r[4]) for r in runs], [("a [b] ", False, None), ("c", True, "https://example.com/x"),
+                                                              (" z", False, None)])
+        self.assertEqual(dt.plain("[a [b] c [d [e] f](https://example.com/x)"), "[a [b] c d [e] f (https://example.com/x)")
+
+    def test_xml_special_and_illegal_characters_in_a_checklist_item_are_escaped(self):
+        md = '- [ ] Fix <b> & "quotes" \x07bell\x00 nul\x1fus \ufffe\uffff\ud800 [the <x> & y](CREAITE:item/ABC-A-004)'
+        self.assertEqual(word_texts(md), '☐ Fix <b> & "quotes" bell nulus  the <x> & y')       # (\x0b and \x0c split lines first)
+        xml = dt.md_paras(WORD_PARA, "TEXT", md)
+        self.assertIn("&lt;b&gt; &amp;", xml)
+        for c in ("\x00", "\x07", "\x1f", "\ufffe", "\uffff", "\ud800"):
+            self.assertNotIn(c, xml)
+        self.assertEqual(dt.esc("a\x07b\x0bc<&>"), "ab c&lt;&amp;&gt;")
+        self.assertEqual(word_texts("- [x] MD and \ue000 stay"), "☑ MD and \ue000 stay")   # the private marker never leaks or breaks
 
 
 if __name__ == "__main__":

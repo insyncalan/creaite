@@ -80,6 +80,14 @@ class Catalogue(unittest.TestCase):
         self.assertTrue({"sweep.due_from", "dashboard.theme", "backups.daily", "vip.check_minutes"} <=
                         {k for r in sc.ESSENTIAL_ROWS for k in r[3]})
 
+    def test_the_sweep_lookback_cap_is_an_advanced_setting_with_its_reason(self):      # #146
+        key = "sweep.max_lookback_days"
+        self.assertEqual(self.flat[key], 3)
+        self.assertEqual(sc.CATALOGUE[key][0], "Sweep")
+        self.assertIn("three days", sc.CATALOGUE[key][3].lower())
+        self.assertNotIn(key, {k for r in sc.ESSENTIAL_ROWS for k in r[3]})            # Advanced, not Essentials
+        self.assertEqual(json.loads((REPO / "system/config/settings.json").read_text())["sweep"]["max_lookback_days"], 3)
+
     def test_fixed_keys_are_settings(self):
         self.assertTrue(set(sc.FIXED) <= set(sc.CATALOGUE))
         self.assertIn("locations.projects_root", sc.FIXED)
@@ -304,6 +312,16 @@ class Routes(unittest.TestCase):
         self.assertTrue(all(p["fix"]["id"] in health_fixes.FIXES for p in out["problems"] if p["fix"]["built"]))
         self.assertEqual([f["id"] for f in out["standalone"]], ["icon", "m365"])
         self.assertEqual(list(self.v.root.rglob(".doctor-write-test")), [])
+
+
+class SafeSettings(unittest.TestCase):
+    """#146: ask creaite may change the sweep's lookback settings (live_server.SAFE_SETTINGS names the keys it may write)."""
+
+    def test_the_sweep_lookback_settings_are_in_the_safe_list(self):
+        text = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
+        block = text[text.index("SAFE_SETTINGS = ("):].split(")" + chr(10), 1)[0]
+        for key in ("sweep.first_run_lookback_days", "sweep.max_lookback_days"):
+            self.assertIn(f'"{key}"', block)
 
 
 if __name__ == "__main__":

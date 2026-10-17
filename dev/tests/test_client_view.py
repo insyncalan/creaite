@@ -388,6 +388,9 @@ class ClientSheetAi(LiveBrowserCase):
         b.click(sec + " .ProseMirror")
         b.type(" Testing could start late.")
         b.key("a", 4)
+        b.pump(0.3)
+        b.wait("document.querySelector('#aiLayer .aispark')")
+        b.click("#aiLayer .aispark")
         b.wait("document.querySelector('#aiLayer .aibar')")
 
     def suggest(self):

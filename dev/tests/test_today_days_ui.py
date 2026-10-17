@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_today_days as fx  # noqa: E402  (fixes CREAITE_NOW and the fixture's TODAY on import)
+fx.LONG = {"2026-10-12": "Monday 12th October"}
 from live_browser import LiveBrowserCase, pin_page_clock  # noqa: E402
 
 TABS = "[...document.querySelectorAll('#todayDate [role=tab]')]"
@@ -37,12 +38,20 @@ class TodayFixture(LiveBrowserCase):
 
     def setUp(self):
         super().setUp()
+        self.b.call("Emulation.setFocusEmulationEnabled", enabled=True)
         pin_page_clock(self.b, fx.NOW)
         self.b.eval("go('today')")
         self.b.wait(f"{TABS}.length>1")
 
     def chosen(self):
         return self.b.eval(f"{SEL}.dataset.tab")
+
+    def pick_past(self, iso):
+        """Choose an earlier day from the history icon's menu (#147), as a pointer or the keyboard would."""
+        b = self.b
+        b.click("#todayDate .dypastbtn")
+        b.wait("document.querySelector('#todayDate [role=menu]')")
+        b.eval(f"[...document.querySelectorAll('#todayDate [role=menuitem]')].find(i=>i.dataset.id==={json.dumps(iso)} || i.textContent.includes({json.dumps(fx.LONG[iso])})).click()")
 
 
 class DayLine(TodayFixture):
@@ -55,10 +64,10 @@ class DayLine(TodayFixture):
     def test_the_day_line_lists_the_calendar_s_days_with_today_written_out(self):
         b = self.b
         tabs = b.eval(f"{TABS}.map(t=>[t.dataset.tab,t.textContent,t.getAttribute('aria-selected'),t.getAttribute('aria-current'),t.tabIndex])")
-        self.assertEqual([t[0] for t in tabs], ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-18",
-                                                "2026-10-19", "2026-10-20"])      # Saturday (all day only) out, Sunday in
-        self.assertEqual(tabs[1][1:], ["Tuesday 13th October", "true", "date", 0])
-        self.assertEqual(tabs[0][1:], ["Mon 12", "false", None, -1])
+        self.assertEqual([t[0] for t in tabs], ["2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-18",
+                                                "2026-10-19", "2026-10-20"])      # #147: today on; Monday waits behind the icon. Saturday (all day only) out, Sunday in
+        self.assertEqual(tabs[0][1:], ["Tue 13 October", "true", "date", 0])
+        self.assertEqual(tabs[1][1:], ["Wed 14", "false", None, -1])
         self.assertEqual(b.eval("document.querySelector('#todayDate [role=tablist]').getAttribute('aria-label')"), "Days in the calendar")
         self.assertEqual(b.eval("[...document.querySelectorAll('#todayDate .daywk')].map(e=>e.textContent+'|'+e.nextElementSibling.dataset.tab)"),
                          ["Next week|2026-10-19"])
@@ -69,13 +78,23 @@ class DayLine(TodayFixture):
         self.assertEqual(b.eval("document.querySelectorAll('#v-today [aria-keyshortcuts]').length"), 0)
         self.assertIsNone(b.eval("document.querySelector('#dayMeets .dayaway')"))   # today: no "as of today" line
 
+    def test_today_is_written_short_with_its_month_at_10px_in_the_accent_colour(self):
+        b = self.b
+        self.assertEqual(b.eval(f"{TABS}[0].textContent"), "Tue 13 October")
+        self.assertEqual(b.eval(f"getComputedStyle({TABS}[0]).fontSize"), "10px")
+        self.assertEqual(b.eval(f"getComputedStyle({TABS}[0]).fontSize"), b.eval(f"getComputedStyle({TABS}[1]).fontSize"))     # like the other dates
+        b.click('#todayDate [data-tab="2026-10-16"]')
+        self.assertEqual(b.eval(f"{TABS}[0].textContent"), "Tue 13 October")
+        self.assertEqual(b.eval(f"getComputedStyle({TABS}[0]).fontSize"), "10px")                  # still 10px when another day is chosen
+        self.assertEqual(b.eval(f"getComputedStyle({SEL}).fontSize"), "10px")
+
     def test_click_another_day_then_today_s_tab_is_short_with_its_dot_and_only_the_band_changes(self):
         b = self.b
         below = "['#attnList','#mineList','#chgList','#weekList','#pfTbl','#briefText'].map(q=>document.querySelector(q).innerHTML).join('|')"
         before, head = b.eval(below), b.eval("document.getElementById('dayHead').textContent")
         b.click('#todayDate [data-tab="2026-10-16"]')
         self.assertEqual(self.chosen(), "2026-10-16")
-        self.assertEqual(b.eval(f"{TABS}.map(t=>t.textContent)")[1], "Today")
+        self.assertEqual(b.eval(f"{TABS}.map(t=>t.textContent)")[0], "Tue 13 October")
         self.assertEqual(b.eval(f"{SEL}.textContent"), "Friday 16th October")
         self.assertNotEqual(b.eval("document.getElementById('dayHead').textContent"), head)
         self.assertEqual(b.eval("document.getElementById('dayHead').textContent"), "One meeting, Alan, with the afternoon wide open.")
@@ -116,9 +135,9 @@ class DayLine(TodayFixture):
         b.key("End")
         self.assertEqual((self.chosen(), b.eval("document.activeElement.dataset.tab")), ("2026-10-20", "2026-10-20"))
         b.key("Home")
-        self.assertEqual((self.chosen(), b.eval("document.activeElement.dataset.tab")), ("2026-10-12", "2026-10-12"))
+        self.assertEqual((self.chosen(), b.eval("document.activeElement.dataset.tab")), ("2026-10-13", "2026-10-13"))   # the line starts at today (#147)
         b.key("ArrowLeft")
-        self.assertEqual(self.chosen(), "2026-10-12")
+        self.assertEqual(self.chosen(), "2026-10-13")
 
     def test_two_swipes_in_a_row_without_a_click_and_the_momentum_is_ignored(self):
         b = self.b
@@ -128,6 +147,8 @@ class DayLine(TodayFixture):
             for d in (dx * 0.6, dx, dx, dx * 0.5, dx * 0.2, dx * 0.1, dx * 0.05):     # a gesture and its momentum tail
                 b.call("Input.dispatchMouseEvent", type="mouseWheel", x=x, y=y, deltaX=d, deltaY=0)
             b.pump(0.3)                                                               # a pause ends the gesture
+            b.frames(2)                                                               # (and the page's 120 ms idle timer has had its turn: #152)
+            b.pump(0.2)
         swipe(30)
         self.assertEqual(self.chosen(), "2026-10-14")                       # one day for one gesture, tail and all
         swipe(30)
@@ -176,7 +197,7 @@ class DayLine(TodayFixture):
     # ---- past days: follow-up ----
     def test_a_past_day_shows_each_meeting_s_follow_up(self):
         b = self.b
-        b.click('#todayDate [data-tab="2026-10-12"]')
+        self.pick_past("2026-10-12")
         got = {m["t"]: m["acts"] for m in self.meetings()}
         self.assertEqual(got["ABC weekly Example Programme"], ["Minutes made"])                     # processed.txt
         self.assertEqual(got["ABC steering committee Example Programme"], ["Transcript ready", "Process"])
@@ -188,37 +209,126 @@ class DayLine(TodayFixture):
         b.eval("D.days.days[0].meetings[0].follow={state:'minutes',draft:true,cleared:false}; renderDay()")
         self.assertEqual({m["t"]: m["acts"] for m in self.meetings()}["ABC weekly Example Programme"][:1], ["Draft in Review"])
 
-    # ---- today and later: Prep ----
-    def test_later_days_have_one_pill_prepare_for_a_meeting_worth_it_and_a_confidential_one_shows_no_project(self):
+    # ---- today and later: Prep, in a popup on the title (#140) ----
+    def popup(self, ix=0):
+        """Tab-focus the title of meeting `ix` and read its popup."""
+        b = self.b
+        b.call("Emulation.setFocusEmulationEnabled", enabled=True)      # #143: keyboard focus opens a peek only on a focused page (:focus-visible)
+        b.eval("document.activeElement && document.activeElement.blur()")
+        b.key("Tab")                                                    # keyboard modality, so the script's focus() is :focus-visible after a mouse click
+        b.eval(f"document.querySelectorAll('#dayMeets .dmti')[{ix}].focus()")
+        b.wait("document.querySelector('#dayMeets .dmpop')")
+        return b.eval("""(()=>{ const p=document.querySelector('#dayMeets .dmpop'); return {head:p.querySelector('h4').textContent, meta:p.querySelector('.pm').textContent,
+            btns:[...p.querySelectorAll('button')].map(x=>x.textContent), text:p.textContent}; })()""")
+
+    def test_later_days_have_no_pill_the_title_opens_a_popup_and_a_confidential_one_shows_no_project(self):
         b = self.b
         today = {m["t"]: m["acts"] for m in self.meetings()}
-        self.assertEqual(today["DEF stand-up Digital Enablement"], ["Prep"])
-        self.assertEqual(today["ABC risk review Example Programme"], ["Prepare"])                # a review meeting: the accent pill
+        self.assertEqual(today["DEF stand-up Digital Enablement"], [])                           # #140: the Prep and Prepare pills are gone
+        self.assertEqual(today["ABC risk review Example Programme"], [])
+        self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .preplink, #dayMeets .mnote').length"), 0)
+        got = self.popup(1)
+        self.assertEqual((got["head"], got["btns"]), ("ABC risk review", ["Open the prep page"]))
+        self.assertIn("Worth preparing", got["text"])                                             # a review meeting says why
+        self.assertEqual(self.popup(0)["btns"], ["Open the prep page"])
         b.click('#todayDate [data-tab="2026-10-14"]')
         board = b.eval("""(()=>{ const d=document.querySelector('#dayMeets .dm'); return {text:d.innerText, proj:!!d.querySelector('[data-proj]'),
-            wh:!!d.querySelector('.wh'), pill:d.querySelector('.preplink').textContent}; })()""")
-        self.assertEqual(board, {"text": board["text"], "proj": False, "wh": False, "pill": "Prep"})
+            wh:!!d.querySelector('.wh'), pill:!!d.querySelector('.preplink')}; })()""")
+        self.assertEqual(board, {"text": board["text"], "proj": False, "wh": False, "pill": False})
         self.assertNotIn("Room 7", board["text"])                                                   # only its title and times
+        conf = self.popup(0)
+        self.assertEqual((conf["btns"], "Room 7" in conf["text"], "Example Programme" in conf["text"]), (["Open the prep page"], False, False))
         b.click('#todayDate [data-tab="2026-10-16"]')
-        pill = b.eval("(()=>{ const p=document.querySelector('#dayMeets .preplink'); return [p.textContent,p.getAttribute('aria-label'),p.className]; })()")
-        self.assertEqual(pill, ["Prepare", "Prepare for ABC steering", "chip cta plan preplink"])
-        b.click("#dayMeets .preplink")
-        b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open")
-        # the Prep popup's header (BL-286 A, joined on release-190): the day written out, the project as a chip
-        self.assertEqual(b.eval("document.getElementById('prepWhen').textContent"), "Friday 16th October · 10:00 – 11:00 · Teams")
-        self.assertEqual(b.eval("document.getElementById('prepTitle').textContent"), "ABC steering")
-        self.assertEqual(b.eval("document.getElementById('prepProjBtn').dataset.code"), "ABC")   # three days out, its project known
-        self.assertIsNone(b.eval("document.querySelector('#prepDlg [data-prepview]').getAttribute('aria-disabled')"))
+        got = self.popup(0)
+        self.assertEqual((got["head"], got["meta"].startswith("Friday 10:00"), got["btns"]), ("ABC steering", True, ["Open the prep page"]))
+        self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop [data-prepgo]').getAttribute('aria-disabled')"), None)
+        b.click("#dayMeets .dmpop .btn.primary")                                                    # #111: the peek goes to the page, never the old popup
+        b.wait("location.hash.startsWith('#prep=2026-10-16')||decodeURIComponent(location.hash).startsWith('#prep=2026-10-16|10:00|ABC steering')")
+        self.assertFalse(b.eval("!!document.getElementById('prepDlg') && document.getElementById('prepDlg').open"))
 
-    def test_a_prep_page_shows_the_open_icon_and_its_chip(self):
+    def test_a_past_day_has_no_popup_and_a_private_meeting_none(self):
+        b = self.b
+        self.pick_past("2026-10-12")
+        self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .dmti').length"), 0)
+        b.click('#todayDate [data-tab="2026-10-13"]')
+        b.eval("document.querySelectorAll('#dayMeets .dmti')[0].focus()")
+
+    def test_a_saved_agenda_shows_agenda_saved_the_page_and_the_file(self):
         b = self.b
         b.click('#todayDate [data-tab="2026-10-16"]')
-        self.assertIsNone(b.eval("document.querySelector('#dayMeets .prepgo')"))
-        b.eval(f"SA().prep_pages={{...(SA().prep_pages||{{}}),{json.dumps(fx.FRIDAY)}:'projects/ABC Example Programme/agendas/x.html'}}; renderDay()")
-        # BL-287 as the Prep popup branch draws it (joined on release-190): its own button, enabled with the live server
-        out = b.eval("""(()=>{ const o=document.querySelector('#dayMeets .prepgo'); return [o.getAttribute('aria-label'), o.getAttribute('aria-disabled'), !!o.querySelector('svg path'),
-            o.nextElementSibling.textContent, o.previousElementSibling.classList.contains('preplink')]; })()""")
-        self.assertEqual(out, ["Open the prep page for ABC steering", None, True, "Prep page made", True])
+        self.assertEqual(self.popup(0)["btns"], ["Open the prep page"])
+        b.eval(f"SA().prep_pages={{...(SA().prep_pages||{{}}),{json.dumps(fx.FRIDAY)}:'projects/ABC Example Programme/agendas/x.html'}}; renderDay(); document.activeElement.blur()")
+        b.key("Escape")                                                 # the first popup must be gone before the second is read: on a slow runner the wait in popup() passed on the stale one
+        b.wait("!document.querySelector('#dayMeets .dmpop')")
+        got = self.popup(0)
+        self.assertEqual(got["btns"], ["Open the prep page", "Open the file"])
+        self.assertIn("Agenda saved", got["text"])
+        self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop [data-prepgo]').getAttribute('aria-disabled')"), None)   # enabled with the live server
+        self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop .btn.primary').textContent"), "Open the prep page")
+        b.key("Escape")
+        b.wait("!document.querySelector('#dayMeets .dmpop')")
+        self.assertTrue(b.eval("document.activeElement.classList.contains('dmti')"))
+
+    # ---- the day line's earlier days (#147) ----
+    def test_147_past_days_are_behind_one_icon_newest_first_and_the_chosen_one_shows(self):
+        b = self.b
+        self.assertEqual(b.eval("document.querySelectorAll('#todayDate .dypast').length"), 1)
+        self.assertEqual(b.eval("document.querySelector('#todayDate .dypastbtn').getAttribute('aria-haspopup')"), "menu")
+        b.click("#todayDate .dypastbtn")
+        b.wait("document.querySelector('#todayDate [role=menu]')")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#todayDate [role=menuitem]')].map(i=>i.textContent.replace(/ · .*/,''))"), ["Monday 12th October"])
+        b.key("Escape")
+        b.wait("!document.querySelector('#todayDate [role=menu]')")
+        self.pick_past("2026-10-12")
+        self.assertEqual(self.chosen(), "2026-10-12")
+        self.assertEqual(b.eval(f"{TABS}.map(t=>t.dataset.tab)")[:2], ["2026-10-12", "2026-10-13"])      # shown in the line, today still reachable
+        self.assertEqual(b.eval(f"{TABS}.map(t=>t.textContent)")[1], "Tue 13 October")
+        b.click('#todayDate [data-tab="2026-10-13"]')
+        self.assertEqual(b.eval(f"{TABS}.map(t=>t.dataset.tab)")[0], "2026-10-13")                     # a day not chosen leaves the line again
+
+    def test_147_the_arrows_still_step_through_every_day(self):
+        b = self.b
+        b.eval("document.querySelector('.dayedge.l').click()")
+        self.assertEqual(self.chosen(), "2026-10-12")
+        self.assertEqual(b.eval(f"{TABS}.map(t=>t.dataset.tab)")[0], "2026-10-12")
+        self.assertTrue(b.eval("document.querySelector('.dayedge.l').disabled"))
+
+    def test_147_the_icon_works_from_the_keyboard_enter_opens_arrows_move_escape_closes_and_returns_focus(self):
+        b = self.b
+        b.eval("D.days.days.unshift({...D.days.days[0], date:'2026-10-11', dow:'Sunday', short:'Sun 11', long:'Sunday 11th October', meetings:[], all_day:[]}); renderDay()")
+        b.wait("document.querySelector('#todayDate .dypastbtn')")
+        b.eval("document.querySelector('#todayDate .dypastbtn').focus()")
+        b.key("Enter")
+        b.wait("document.querySelector('#todayDate [role=menu]')")
+        items = "[...document.querySelectorAll('#todayDate [role=menuitem]')]"
+        self.assertGreaterEqual(b.eval(f"{items}.length"), 2)
+        first = b.eval(f"{items}.indexOf(document.activeElement)")
+        self.assertEqual(first, 0)                                                                       # focus lands on the first item
+        b.key("ArrowDown")
+        self.assertEqual(b.eval(f"{items}.indexOf(document.activeElement)"), 1)
+        b.key("ArrowUp")
+        self.assertEqual(b.eval(f"{items}.indexOf(document.activeElement)"), 0)
+        b.key("Escape")
+        b.wait("!document.querySelector('#todayDate [role=menu]')")
+        self.assertTrue(b.eval("document.activeElement.classList.contains('dypastbtn')"))                # focus back on the history icon
+
+    def test_a_synthesised_day_follows_the_weekend_setting(self):
+        b = self.b
+        self.assertEqual(b.eval("[S.weekendDays, synthDay('2026-10-16').weekend, synthDay('2026-10-17').weekend, synthDay('2026-10-18').weekend]"),
+                         [[5, 6], False, True, True])
+        b.eval("S.weekendDays=[4,5]")                                                                      # Friday and Saturday
+        self.assertEqual(b.eval("[synthDay('2026-10-16').weekend, synthDay('2026-10-17').weekend, synthDay('2026-10-18').weekend]"), [True, True, False])
+
+    def test_147_the_icon_opens_on_hover_and_there_is_none_without_past_days(self):
+        b = self.b
+        r = b.eval("(()=>{ const e=document.querySelector('#todayDate .dypastbtn').getBoundingClientRect(); return [e.left+e.width/2, e.top+e.height/2]; })()")
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=r[0], y=r[1])
+        b.wait("document.querySelector('#todayDate [role=menu]')")
+        b.eval("goDay('2026-10-12')")
+        self.assertEqual(b.eval("document.querySelectorAll('#todayDate .dypast').length"), 1)
+        # a calendar that starts today has nothing to drop down
+        b.eval("D.days.days=D.days.days.filter(d=>d.date>=TODAY); renderDay()")
+        self.assertEqual(b.eval("document.querySelectorAll('#todayDate .dypast').length"), 0)
 
     # ---- small screens ----
     def test_at_320_px_nothing_scrolls_sideways(self):

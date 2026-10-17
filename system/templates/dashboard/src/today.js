@@ -2,22 +2,24 @@
 /* today.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0025-today.js, 0026-today-brief-bl-72.js, 0027-bl-149-sprint-ux.js, 0028-after-bl-149.js, 0159-bl-156-sprint-ux.js, 0164-bl-166-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { howLink } from "./helpscreen.js";
 import { dcIcon, openChat, say, send } from "./ask.js";
+import { linkWords as lw } from "./core/linkText.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { openDatePicker } from "./components/Picker.jsx";
-import { parseWhen, weekendNote, WK, wkAsk } from "./core/fields.js";
+import { parseWhen, weekendNote, WK, wkAsk, wkDays } from "./core/fields.js";
 import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
 import { drawDayMeetings } from "./components/today/DayMeetings.jsx";
-import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { drawDayTabs } from "./components/today/DayTabs.jsx";
 import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
 import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
+import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
-import { countLink, go, jumpLink, navBlocked, openWork, pLink } from "./core/nav.js";
+import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -26,7 +28,7 @@ import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
-import { decorateWarnings, openPrep, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
+import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
@@ -98,12 +100,11 @@ export function renderToday(){
   renderDay();   /* BL-293: the date or the day line too */
   const pend=REV.filter(r=>!r.done), mineOver=A.filter(x=>isMe(x.o)&&overdue(x)), mineSoon=A.filter(x=>isMe(x.o)&&soon(x)), off=P.filter(p=>p.health==="Off track");
   putHTML($("#briefText"),html`<b>${pend.length} proposal${pend.length===1?"":"s"}</b> need${pend.length===1?"s":""} your decision, ${raw(countLink(`${plur(mineOver.length,"overdue action")} of yours`,mineOver.length,"actions:overdue:",{o:["@me"]},`<b>${mineOver.length} of your actions</b>`))} ${mineOver.length===1?"is":"are"} overdue${off.length?html`, and <b>${andList(off.map(p=>p.name))}</b> ${off.length===1?"is":"are"} off track`:""}.`);
-  renderToDecide();   /* BL-319: To decide, first after the band */
   renderDn();   /* BL-210: Decisions needed, ahead of Needs attention */
   const att=attentionItems(), ac=capped(att.map((x,i)=>x.html(i+1)),5,"attn");
-  $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
+  $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention. ${raw(howLink("today"))}</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
   const mine=[...mineOver,...mineSoon].sort((a,b)=>a.due.localeCompare(b.due)), mc=capped(mine.map((x,i)=>tl(i+1,tLink(html`data-open="actions:${x.id}"`,html`${x.t??""}`),
-    html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${x.upd.length>140?x.upd.slice(0,139)+"…":x.upd}`:""}.`,itemActs("actions",x))),S.listCap||10,"mine");
+    html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${lw(x.upd).length>140?lw(x.upd).slice(0,139)+"…":lw(x.upd)}`:""}.`,itemActs("actions",x))),5,"mine");
   putHTML($("#nMine"),raw(mine.length?countLink(`${plur(mine.length,"action")} of yours due or overdue`,mine.length,"actions:open:",{st:["Open","Delayed"],due:["overdue","soon"],o:["@me"]}):""));   /* BL-190 */ putHTML($("#mineList"),mc.html?raw(mc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing due from you this week.</span></div></li>`); putHTML($("#mineMore"),raw(mc.more));
   renderPromises();   /* BL-125 A: You owe and Waiting on */
   /* Resolved: items closed since the last visit, from the change log */
@@ -113,6 +114,7 @@ export function renderToday(){
   $("#chgTitle").textContent=`${done.length} since ${longDate(LASTVISIT.slice(0,10))}`;   /* BL-319: folded to one line, the count in it */
   putHTML($("#chgList"),rc.html?raw(rc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0,10))}.</span></div></li>`);
   putHTML($("#chgMore"),html`${raw(rc.more)}${rc.more?" · ":""}<a class="s" href="#" data-go="activity">See all activity</a>`);
+  renderToDecide();   /* #168: Intake and Review, just above Week ahead (BL-319 had it first after the band) */
   renderWeek();   /* BL-319: day by day to next Monday, each row saying why it is there */
   putHTML($("#pfTbl"),raw(portfolioTable("pf",true))); mountStatusDots($("#pfTbl")); pfResize($("#pfTbl"));   /* BL-285; BL-256 */
   decorateWarnings($("#mineList"));   /* BL-49 */
@@ -167,7 +169,7 @@ export function renderDay(){ const cal=D.calendar, first=(S.me||"").split(" ")[0
    chosen day lives in memory only (stores/today.js), so a reload opens on today. Today's meetings still come from the
    calendar as the page holds it (D.calendar), with what the server worked out for each (its follow-up, Prep and plan). */
 const WDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:d.getDay()%6===0,week:0,meetings:[],all_day:[]}; }
+export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:wkDays().has((d.getDay()+6)%7),week:0,meetings:[],all_day:[]}; }
 /** The days the line offers: the server's, with today added when the calendar holds nothing for it. */
 export function dayList(){ if(!D.calendar) return []; const L=[...(((D.days||{}).days)||[])];
   if(!L.some(d=>d.date===TODAY)){ L.push(synthDay(TODAY)); L.sort((a,b)=>a.date.localeCompare(b.date)); } return L; }
@@ -182,7 +184,7 @@ export function dayView(iso){ const raw=((D.calendar||{}).days||{})[iso], rec=da
       meetings:timed.map((e,i)=>{ const priv=!!e.private, s=srv.find(m=>m.start===e.start&&(priv?m.private:m.title===e.title)), conf=!!(s&&s.confidential)||isConf(e);
         const prep=priv?null:(s&&s.prep)||(iso>=TODAY&&prepOf(e,iso)?{key:prepKey(e,iso)}:null);
         return extra({start:e.start,end:e.end,title:e.title??"",private:priv,confidential:conf,id:e.id||(s&&s.id)||null,p:priv||conf?null:(s&&s.p)||e.p||null,
-          where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i}); })}; }
+          where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i,attendees:conf||priv||!Array.isArray(e.attendees)?undefined:e.attendees.length}); })}; }
   if(rec&&iso!==TODAY) return {known:true,meetings:srv.map(m=>extra({...m,ix:null})),allDay:(rec.all_day||[]).map(t=>({title:t,p:null}))};
   return {known:false,meetings:[],allDay:[]}; }
 /** Show day `iso`, sliding the band in from its side. False when there is no day line. */
@@ -213,15 +215,6 @@ export function onDayWheel(e){ if(SWIPE.seen.has(e)) return; SWIPE.seen.add(e);
   if(Math.abs(SWIPE.acc)>40){ SWIPE.locked=true; SWIPE.min=ax; stepDay(SWIPE.acc>0?1:-1); SWIPE.acc=0; } }
 /* what the band's buttons do */
 export const DAYRUN=new Map();   /* a check or a process under way, by calendar ID: "Checking…" */
-const seriesOf=t=>String(t||"").toLowerCase().replace(/\[[^\]]*\]/g," ").replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w&&!/^\d+$/.test(w)).join(" ");
-/** The Prep popup for a meeting on any day the calendar holds. A day without a Prep brief in the page (after tomorrow) gets
-    a starting one from what the day line knows (its project, the series, the last seven days), as build_dashboard.prep_entry
-    begins it; the popup's own routes take the dated key for any day (BL-286). */
-export function dayPrep(m){ const iso=dayShown(), raw=(((D.calendar||{}).days||{})[iso]||[]).find(x=>!x.all_day&&x.start===m.start&&x.title===m.title);
-  const e=raw||{start:m.start,end:m.end,title:m.title,where:m.confidential?"":m.where||"",p:m.p}, key=prepKey(e,iso);
-  if(!D.prep) D.prep=/** @type {any} */({}); if(!D.prep.meetings) D.prep.meetings={}; const pm=D.prep.meetings;
-  if(!pm[key]) pm[key]={series:seriesOf(m.title),p:m.confidential?null:m.p||null,how:m.p?"matched":"unsure",last:null,day:iso,since:pkAdd(iso,-7)};
-  openPrep(e,iso); }
 /** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
 export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
   DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
@@ -230,7 +223,7 @@ export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!r
 export async function dayCheck(m){ const row=MTG().find(x=>x.id===m.id)||{id:m.id,title:m.title,day:dayShown(),start:m.start};
   DAYRUN.set(m.id,"Checking…"); renderDay();
   try{ await checkMeeting(row); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
-export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c),note:(m,day)=>{ openCapture({meeting:{day,start:m.start,title:m.title}}); }};   /* BL-301 C: Note for this meeting */
+export const DAYACTS={open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
 /* ===== end BL-293 ===== */
 /* BL-270 (sprint-ui-sweep): the calendar's read time, when it is from an earlier day, is a footnote at the bottom right of Today */
 export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!(cal&&cal.fetched&&cal.fetched.slice(0,10)!==TODAY); f.hidden=!old;
@@ -290,13 +283,62 @@ export function evidence(p){ const nw=WARNS().filter(w=>w.p===p.code).length, ov
   /* BL-190 (sprint-links): each figure is its own link (a zero stays plain); a click on one doesn't also open the row's project page */
   const nd=undatedWork(p.code).length, c=p.code, nm=pName(c);
   return `<span class="ev">${countLink(`${plur(ov,"overdue action")} in ${nm}`,ov,`actions:overdue:${c}`,null,`Overdue <b class="${ov?"bad":""}">${ov}</b>`)} · ${jumpLink(`${plur(nd,"open item")} with no due date in ${nm}`,nd,c,"undated",`No date <b>${nd}</b>`)} · ${countLink(`${plur(urg,"urgent open RAID item")} in ${nm}`,urg,`raid:urgentonly:${c}`,null,`Urgent risks <b class="${urg?"bad":""}">${urg}</b>`)} · ${jumpLink(`Milestone slip of ${p.slip} day${p.slip===1?"":"s"} in ${nm}`,p.slip,c,"ms",`Slip <b class="${p.slip?"bad":""}">${p.slip?p.slip+" days":"none"}</b>`)} · Warnings <b class="${nw?"bad":""}">${nw}</b></span>`; }
-export const spark=p=>`<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">${p.trail.map(t=>`<i class="s-${t}"></i>`).join("")}</span>`;
+/* #162 (Alan, 16-10-2026): the health trend is six weeks (as the weekly report), oldest first, one bar per week ending Friday. Height is
+   health (option B): tall green On track, medium amber At risk, a short red stub Off track, a thin line when no update was
+   approved; the colour repeats the height. The strip is one tab stop (Left/Right/Home/End move between weeks, Esc closes the tip);
+   a dot under the last bar is this week. Hover or focus shows the week, its health in words, whether it changed, that week's
+   reason when one is stored, and the six weeks again. The ? on the column header opens the key. */
+const SPN={ok:"On track",warn:"At risk",bad:"Off track","":"No update"};
+export const legBtn=()=>`<button type="button" class="legbtn" aria-label="What the health bars mean" aria-haspopup="dialog" aria-expanded="false"></button>`;
+export const spark=p=>{ const t=p.trail, last=t[t.length-1];
+  return `<span class="spark" tabindex="0" role="group" data-sp="${esc(p.code)}" aria-label="Health, last ${t.length} weeks, oldest first. ${last?SPN[last]:"No update"} this week. Arrow keys move between weeks.">${t.map((x,i)=>`<i class="s-${x}" data-i="${i}"></i>`).join("")}</span>`; };
+const sparkWeek=(p,i)=>{ const t=p.trail[i], pv=i?p.trail[i-1]:null, why=(p.trailwhy||[])[i]||"", end=(p.trailend||[])[i]||"";
+  const ch=!t?"No update approved this week":pv===null?"First week shown":pv===""?"No update the week before":pv===t?`Unchanged from ${SPN[pv]}`:`Changed from ${SPN[pv]}`;
+  return {t,end,ch,why,word:SPN[t]}; };
+export function sparkTipHtml(p,i){ const w=sparkWeek(p,i), n=p.trail.length;
+  return `<div class="spk-wk">Week ending ${fd(w.end)}${i===n-1?" · this week":""}</div><div class="spk-h">${w.t?`<span class="spk-dot s-${w.t}"></span>`:""}${w.word}</div><div class="spk-ch">${w.ch}</div>${w.why?`<div class="spk-why">${esc(w.why)}</div>`:""}`
+   +`<ol class="spk-list" aria-label="The last ${n} weeks">${p.trail.map((x,j)=>`<li${j===i?' class="cur" aria-current="true"':""}><span class="spark mini" aria-hidden="true"><i class="s-${x}"></i></span><span class="spk-d">${fd((p.trailend||[])[j]||"")}</span><span class="spk-w">${SPN[x]}</span></li>`).join("")}</ol>`; }
+/** The key (the ? popover): the four bars, drawn as they are in the table. */
+export const sparkKeyHtml=()=>`<div class="spk-key" id="sparkLeg" role="dialog" aria-label="What the health bars mean" tabindex="-1"><div class="spk-kt">Health, last 6 weeks</div><div class="spk-ks">One bar a week, oldest to newest, each a week ending Friday. Taller is healthier. Rest on a bar for the week's reason: the week's update summary, shortened to 160 characters.</div>${["ok","warn","bad",""].map(x=>`<div class="spk-kr"><span class="spark mini" aria-hidden="true"><i class="s-${x}"></i></span>${SPN[x]}${x===""?" that week":""}</div>`).join("")}<div class="spk-kr"><span class="spk-kdot" aria-hidden="true"></span>This week</div></div>`;
+/* The tip and the key are one element each, appended to the body when first needed (delegated, so every table and the project page share them). */
+let sparkAt=null, sparkI=0;
+const sparkEl=()=>document.querySelector(`.spark[data-sp="${CSS.escape(sparkAt||"")}"]:not(.mini)`);
+function sparkShow(el,i){ const p=P.find(x=>x.code===el.dataset.sp); if(!p) return; sparkAt=p.code; sparkI=i;
+  let tip=$("#sparkTip"); if(!tip){ tip=document.createElement("div"); tip.id="sparkTip"; tip.setAttribute("role","tooltip"); tip.setAttribute("aria-live","polite"); document.body.appendChild(tip); }
+  putHTML(tip,raw(sparkTipHtml(p,i))); tip.hidden=false; el.setAttribute("aria-describedby","sparkTip");
+  [...el.children].forEach((b,j)=>b.classList.toggle("cur",j===i));
+  const r=el.children[i].getBoundingClientRect(), h=tip.offsetHeight, w=tip.offsetWidth; let y=r.top-h-10; if(y<8) y=r.bottom+14;
+  tip.style.left=Math.round(Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8))+"px"; tip.style.top=Math.round(y)+"px"; }
+function sparkHide(){ if(cardGroup.current instanceof Element&&cardGroup.current.matches(".spark")) cardGroup.close();   /* #160: the card group lets go too */ const tip=$("#sparkTip"); if(tip) tip.hidden=true; const el=sparkEl(); if(el){ el.removeAttribute("aria-describedby"); [...el.children].forEach(b=>b.classList.remove("cur")); } sparkAt=null; }
+function sparkKeyClose(back){ const k=$("#sparkLeg"); if(!k) return; const btn=document.querySelector('.legbtn[aria-expanded="true"]')||$(".legbtn"); k.remove(); document.querySelectorAll(".legbtn").forEach(b=>b.setAttribute("aria-expanded","false")); if(back&&btn) btn.focus(); }
+export function wireSpark(){
+  const idx=e=>{ const b=e.target.closest&&e.target.closest(".spark:not(.mini) > i"); return b?+b.dataset.i:null; };
+  /* #160: the pointer goes through the shared card group (core/hover.js): the delays are the card standard, none of its own */
+  let wantI=null;
+  const spkH=el=>({ open:()=>sparkShow(el,wantI===null?el.children.length-1:wantI), close:sparkHide });
+  document.addEventListener("pointerover",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el||e.pointerType==="touch"||!canHover()) return; const i=idx(e);
+    if(sparkAt===el.dataset.sp&&!$("#sparkTip").hidden){ if(i!==null&&i!==sparkI) sparkShow(el,i); cardGroup.enter(el,spkH(el)); return; }
+    wantI=i; cardGroup.enter(el,spkH(el)); });
+  document.addEventListener("pointerout",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el||el.contains(e.relatedTarget)||e.pointerType==="touch") return; cardGroup.leave(el); });
+  document.addEventListener("focusin",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(el&&e.target===el) sparkShow(el,el.children.length-1); });
+  document.addEventListener("focusout",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(el&&e.target===el) sparkHide(); });
+  document.addEventListener("keydown",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]");
+    if(el&&e.target===el){ const n=el.children.length; let i=sparkAt===el.dataset.sp?sparkI:n-1;
+      if(e.key==="ArrowLeft") i=Math.max(0,i-1); else if(e.key==="ArrowRight") i=Math.min(n-1,i+1); else if(e.key==="Home") i=0; else if(e.key==="End") i=n-1;
+      else if(e.key==="Escape"){ if(sparkAt){ e.stopPropagation(); sparkHide(); } return; } else return;
+      e.preventDefault(); e.stopPropagation(); sparkShow(el,i); return; }
+    if(e.key==="Escape"&&$("#sparkLeg")){ e.stopPropagation(); sparkKeyClose(true); } },true);
+  document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest(".legbtn");
+    if(b){ e.stopPropagation(); if($("#sparkLeg")){ sparkKeyClose(false); return; } addHTML(document.body,"beforeend",raw(sparkKeyHtml()));
+      const k=$("#sparkLeg"), r=b.getBoundingClientRect(); k.style.top=Math.round(r.bottom+6)+"px"; k.style.left=Math.round(Math.min(Math.max(8,r.left-20),innerWidth-k.offsetWidth-8))+"px"; b.setAttribute("aria-expanded","true"); k.focus(); return; }
+    if($("#sparkLeg")&&!e.target.closest("#sparkLeg")) sparkKeyClose(false); },true);
+}
 /* BL-285: the Portfolio table. The description is no longer a line under the name: it is the name's tooltip (data-tip), shown on
    hover and on keyboard focus (the name is a button that opens the project), and read by screen readers from a hidden span
    (aria-describedby). The columns resize like Work's (pfResize), remembered under portfolio|<column>. */
-export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","8 weeks"],["next","Next milestone"]];
+export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","6 weeks"],["next","Next milestone"]];
 /** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots). BL-325: the next milestone's relative date is mid-sentence in brackets, so lower case ("(in 24 days)") */
-export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
+export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}${k==="trend"?legBtn():""}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
   return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
 export function pfResize(box){ if(box) $$("thead th[data-col]",box).forEach(th=>colResizer(th,"portfolio|"+th.dataset.col)); }
 /* BL-316: a reminder's "…" menu is the Menu block's (openMenu): Run report now, Dismiss for this session, Dismiss forever */
@@ -308,6 +350,7 @@ export function remPick(id,d){ if(d==="run"){ runReminder(REMINDERS.find(r=>r.id
   renderToday(); snack(d==="s"?"Hidden for this session":"Hidden for good (this one)",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==id)); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(dismissedS().filter(x=>x!==id))); renderToday(); }); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0028(){
+wireSpark();
 $("#attnList").addEventListener("click",e=>{ const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
   if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
   if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
@@ -400,8 +443,8 @@ if(viaServer()) suStatus().then(()=>{ if(shared.VIEW==="today") renderSetup(); }
 }
 /* ===== BL-319 (v1.9.2): Today as one home =====
    (dev/mockups/today-one-home-mockup.html, tab "Today, one home"). The day band stays exactly as BL-293 drew it, at full width;
-   under it, at a 980px reading width, the sections in order and unboxed: To decide, First thing, Decisions needed, Needs
-   attention, Your commitments (with You owe and Waiting on), Week ahead, Resolved (folded to one line) and Portfolio. Each
+   under it, at a 980px reading width, the sections in order and unboxed: First thing, Decisions needed, Needs
+   attention, Your commitments (with You owe and Waiting on), Intake and Review (#168, was To decide and first), Week ahead, Resolved (folded to one line) and Portfolio. Each
    row's actions are icons (IconButton, or tib for the rows still drawn as text), named on hover and to a screen reader,
    55% until the row is pointed at or tabbed into; nothing moves. Every change has Undo: an approval or a rejection the
    apply's Undo, a dismissed message its own, Mark done and Move the date the staged change's (Undo last). */
@@ -420,7 +463,7 @@ export const tdApprovable=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind)&&
 const revSrc=r=>/-sweep(-\d+)?\.json$/.test(r.file)?"sweep":/-(dashboard|edit)(-\d+)?\.json$/.test(r.file)?"your edits":/-excel(-\d+)?\.json$/.test(r.file)?"Excel import"
   :REV.some(x=>x.file===r.file&&x.kind==="draft"&&x.ref==="meeting")?"minutes":"proposal";
 const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Proposal";
-/** To decide's rows, newest first: proposals in Review, transcripts ready in Intake, messages from people Alan follows (never labelled) */
+/** Intake and Review's rows (BL-319 called it To decide), newest first: proposals in Review, transcripts ready in Intake, messages from people Alan follows (never labelled) */
 export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]);
   REV.filter(r=>!r.done).forEach(r=>{ const at=revAt(r), ok=tdApprovable(r), t=String(r.rec&&r.rec.t||""), acts=[];
     if(ok) acts.push({id:"approve",icon:"check",label:"Approve and save",name:`Approve and save: ${t}`,primary:true});
@@ -534,8 +577,13 @@ export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
     menu(); await rjLoadGuesses(); if(rjGuesses.value!==was&&rjMenu.value&&rjMenu.value.anchor===btn) menu(); return; }   /* BL-316: open at once; again with the guesses when they arrive */
   if(act.id==="review") tdToReview(r.n); }
 export function tdOpen(row){ if(row.kind==="review") tdToReview(row.n); else if(row.kind==="transcript") go("inbox"); }
-export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return;
+const TDFOLD="creaite-intake-review-hidden";   /* #168: per viewer, this browser only (localStorage), as Week ahead's */
+let tdFoldWired=false;
+function wireTdFold(){ const f=/** @type {HTMLDetailsElement|null} */($("#tdFold")); if(!f||tdFoldWired) return; tdFoldWired=true;
+  f.open=store.get(TDFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(TDFOLD,!f.open)); }
+export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return; wireTdFold();
   const L=toDecideRows(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length; sec.hidden=!L.length;
+  { const nw=$("#tdNew"); if(nw) nw.hidden=!VIPS().length; }   /* #168: a folded heading still shows an unseen alert (BL-99); never the word that says who is followed (BL-288) */
   $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
   drawToDecide(body,{rows:L,total,cap:TDCAP,open:EXPAND.has("td"),onAct:tdAct,onOpen:tdOpen,onReview:()=>go("review"),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
@@ -568,37 +616,44 @@ export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="
   if(what==="update"){ openRecord(k,id,k==="raid"?"resp":"upd"); return; }
   if(what==="decide"){ dnDecide(id); return; }
   if(what==="open"&&btn&&btn.dataset.p) go("cockpit",btn.dataset.p); }
-/** the Week ahead's groups: Urgent with no date, each day, Further ahead */
+/** the Week ahead's groups: Urgent with no date, each day, Further ahead.
+    #112 (Alan, 16-10-2026): calm rows. Overdue work is not here (it is in Your commitments when it is Alan's, and in the quiet
+    line above the days when it is someone else's); nothing already under Your commitments is repeated. */
 export function weekGroups(){ const W=D.week; if(!W) return [];
-  const live=viaServer(), out=/** @type {any[]} */([]), quiet=(i,first)=>first&&i.kind==="actions"&&isMe(i.o);   /* mine are already under Your commitments */
-  const tagOf=i=>{ const k=i.kind==="milestone"?"Milestone":i.kind==="decisions"?"Decision":i.kind==="raid"?(i.type||"Risk"):"Action"; return i.pr==="Urgent"||i.pr==="High"?`${k} · ${i.pr}`:k; };
-  const toneOf=i=>i.od||i.pr==="Urgent"?"bad":i.pr==="High"||(i.kind==="milestone"&&i.slip)?"warn":"";
-  const whyOf=(i,further,undated)=>{ if(undated) return "no date set"; if(i.od) return `${i.od} day${i.od===1?"":"s"} ${i.kind==="decisions"?"late":"overdue"}`;
+  const live=viaServer(), out=/** @type {any[]} */([]);
+  const mineIds=new Set(A.filter(x=>isMe(x.o)&&(overdue(x)||soon(x))).map(x=>x.id)), quiet=i=>i.kind==="actions"&&mineIds.has(i.id);   /* mine are already under Your commitments */
+  const dotOf=i=>i.pr==="Urgent"?"u":i.pr==="High"?"h":"";
+  const whyOf=(i,further,undated)=>{ if(undated) return "no date set";
     const w=i.kind==="decisions"?"needed by":i.weekend?"due over the weekend":"due";
     const d=further&&i.date?` ${longDay(i.date)}`:"";
-    return i.kind==="milestone"?`${w}${d} · ${i.slip?"at risk":"on track"}`:`${w}${d}`; };
+    return i.kind==="milestone"?(further&&i.date?`${longDay(i.date)} · `:"")+(i.slip?"at risk":"on track"):`${w}${d}`; };
   const whoOf=i=>i.kind==="milestone"?"":i.kind==="decisions"?(isMe(i.o)?"yours":i.o?`asked of ${who(i.o)}`:"no one asked"):(isMe(i.o)?"yours":who(i.o)||"no owner");
-  const item=(i,key,further,undated=false)=>({key,kind:i.kind,tag:tagOf(i),tone:toneOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
-    who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.od?"bad":i.kind==="milestone"&&i.slip?"warn":"",
+  const item=(i,key,further,undated=false)=>({key,kind:i.kind,dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
+    who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
-  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null;
-    return {key:`m${day}${e.start}${e.title}`,kind:"meeting",tag:"Meeting",tone:e.plan?"acc":"",t:`${e.start} ${e.title??""}`,
-      open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",
-      why:e.plan?`worth preparing: ${e.plan}`:"in your calendar",whyTone:"",prepgo:pg?{key:pg.key,day,when:pg.when,live}:undefined,
-      acts:can?[{id:"prep",icon:"filetext",label:"Make a prep page",name:`Prepare for ${e.title??"the meeting"}`,primary:!!e.plan,data:{prepday:day,start:e.start||"",title:e.title||""}}]:[]}; };
+  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"", key=prepKey(e,day);
+    return {key:`m${day}${e.start}${e.title}`,kind:"meeting",time:e.start||"",t,
+      open:can?{prepgo:key,prepgoday:day}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",why:"",
+      chip:can?{made:!!pg,label:pg?"Prep page made":"Prep",aria:`Open the prep page for ${t}`,key,day,live,title:t,start:e.start||"",where:e.where||"",
+        pname:e.p?pName(e.p):"",pageWhen:pg?pg.when:"",page:pg?pg.path:null}:undefined,
+      acts:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
   group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
-  (W.days||[]).forEach((d,n)=>{ const first=n===0;
-    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i,first)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
+  (W.days||[]).forEach(d=>{
+    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
   group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
   return out; }
+/** The open actions that are overdue and owned by others (RAID items, decisions and milestones are not counted, so the count is exactly the Actions tab's list at the address): the quiet line above the days (#112). */
+export function othersOverdue(){ const n=[...A].filter(x=>overdue(x)&&!isMe(x.o)).length;
+  return {n,nav:navOf("actions:open:",{st:["Open","Delayed"],due:["overdue"],"!o":["@me"]})}; }
 const WEEKFOLD="creaite-week-ahead-hidden";   /* #105: per viewer, this browser only (localStorage) */
 let weekFoldWired=false;
 function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; weekFoldWired=true;
   f.open=store.get(WEEKFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(WEEKFOLD,!f.open)); }
 export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
-  $("#weekTo").textContent=W?`to ${longDay(W.to)}`:"";
-  drawWeekAhead(host,{groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
+  $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}`:"";   /* #105: the quiet count and the end date, as Resolved's */
+  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

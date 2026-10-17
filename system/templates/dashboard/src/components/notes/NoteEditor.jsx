@@ -1,7 +1,7 @@
 // @ts-check
 /* NoteEditor (BL-301 B): an open note's body on the one editor (core/editor.js, `features: "notes"`: headings, lists, checklists,
    tables, links). It is editable as soon as it opens: no Edit, Save or Cancel. The toolbar shows while the cursor is in the note.
-   Each change tells the store (stores/notes.js), which keeps a draft and writes the file once per editing session.
+   Each change tells the store (stores/notes.js), which writes the file about two seconds after the last key (#119).
 
    Pickers, typed in the text: `[[` a note, `@` a person from the people register, `#` a work item, `/` at the start of a line or after a space the
    insert menu (components/SlashMenu.jsx, #122 B; the [[ @ # lists are placed at the caret too, core/caretPlace.js). A note link is written `[[Title]]`, a person `@[Name](creaite:person/<name>)`, a work item `[ABC-A-003 · Action: Send the plan](creaite:item/ABC-A-003)` (core/itemLink.js; older links, whose words are only the ID, still work):
@@ -20,12 +20,13 @@ import { placeAtCaret } from "../../core/caretPlace.js";
 import { attachItemPick, insertHash } from "../ItemPicker.jsx";
 import { chipClicked, itemChip, ITEM_HREF, itemOf, itemState } from "../../core/itemLink.js";
 import { Icon } from "../Icon.jsx";
+import { OWN_JOIN, OWN_STEP, UNDO_DEPTH, cxUndoSteps, undoHeadEnd, undoStash, undoTake } from "../../core/undoSteps.js";
 
 /** @typedef {{id: string, label: string, sub?: string, icon?: string}} PickOption */
 /** @typedef {{kind: "note"|"person", from: number, to: number, q: string, opts: PickOption[], i: number}} PickState */
 /** @typedef {{markdown: string, code: string, label: string, loadKey: string, noteTitles: () => string[],
     onInput: () => void, onBody: (get: (() => string|null) | null) => void, onOpenNote: (title: string) => void,
-    onOpenItem: (id: string) => void, restored?: boolean, toolbarExtra?: import("preact").ComponentChildren,
+    onOpenItem: (id: string) => void, toolbarExtra?: import("preact").ComponentChildren,
     path?: string, onHoverLine?: (line: number) => void,
     imageSrc?: (ref: string) => (string|null), onImage?: (file: File) => Promise<string|null>, readOnly?: boolean}} Props */
 
@@ -113,7 +114,7 @@ function lineDecos(L, markers, hover, flash, sent) {
 }
 
 /** The note's body on the one editor. @param {Props} props */
-export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
+export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
   const fileIn = useRef(/** @type {HTMLInputElement|null} */ (null));
   const ed = useRef(/** @type {import("../../core/editor.js").EdHandle|null} */ (null));
@@ -122,6 +123,11 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
   pickRef.current = pick;
   const marks = noteMarks.value, flashAt = noteFlash.value;
   const cur = noteCur.value, sentList = cur && path && cur.path === path ? cur.sent : null;
+  /* #175: this editor's note, for its undo history: the path (a rename keeps the editor and changes it) and the file's base as last saved */
+  const cell = useRef({ key: loadKey, path: path || "", base: "" });
+  if (cell.current.key !== loadKey) cell.current = { key: loadKey, path: path || "", base: "" };
+  if (path) cell.current.path = path;
+  if (cur && cur.path === (path || "")) cell.current.base = cur.base || "";
   const lineState = useRef({ markers: marks.markers, hover: marks.hover, flash: 0, doc: /** @type {any} */ (null), L: /** @type {any[]} */ ([]),
     sentList: /** @type {any} */ (null), sent: /** @type {Map<string, string[]>} */ (new Map()) });
   lineState.current.markers = marks.markers; lineState.current.hover = marks.hover;
@@ -170,7 +176,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const h = ed.current, p = pickRef.current;
     if (!h || !p) return;
     setPick(null);
-    const c = h.editor.chain().focus().deleteRange({ from: p.from, to: p.to });
+    const c = h.editor.chain().focus().setMeta(OWN_STEP, true).deleteRange({ from: p.from, to: p.to });
     if (p.kind === "note") { const t = o.id.startsWith("\u0000") ? o.id.slice(1) : o.id; c.insertContent(`[[${t}]] `).run(); return; }
     if (p.kind === "person") { c.insertContent([{ type: "text", text: "@" }, { type: "text", text: o.id, marks: [{ type: "link", attrs: { href: `creaite:person/${encodeURIComponent(o.id)}` } }] }, { type: "text", text: " " }]).run(); return; }
   };
@@ -178,11 +184,12 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
   const insert = what => {
     const h = ed.current;
     if (!h) return;
-    const c = h.editor.chain().focus();
+    const c = h.editor.chain().focus().setMeta(OWN_JOIN, true);
     if (what === "table") c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (what === "item") insertHash(h);
     else if (what === "person" || what === "note") c.insertContent(what === "person" ? "@" : "[[").run();
     else if (what.startsWith("tpl:")) { const t = /** @type {any} */ (D).note_templates?.[what.slice(4)]; if (t) c.insertContent(t, { contentType: "markdown" }).run(); }
+    undoHeadEnd(h.editor);          /* a row that put nothing in (no such template) leaves no pending join */
   };
   /** BL-301 B gaps: pictures, as BL-63's in Current state (the image node shown as creaite's figure, the caption its alt text).
       Each is filed in the notes folder's _images/ as it is added, then put after the block holding the cursor (else at the end),
@@ -192,7 +199,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
       const ref = onImage ? await onImage(f) : null, h = ed.current;
       if (!ref || !h) continue;
       const st = h.editor.state, end = st.doc.content.size, $p = st.doc.resolve(Math.min(st.selection.from, end)), after = $p.depth ? $p.after(1) : end;
-      h.editor.chain().insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
+      h.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
       const cap = /** @type {HTMLElement|null} */ (box.current ? box.current.querySelector(`figure[data-ref="${CSS.escape(ref)}"] figcaption`) : null);
       if (cap) cap.focus();
     }
@@ -213,7 +220,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const ai = { place: "notes", project: () => props.current.code,
       confidential: () => { const c = noteCur.value; return !!(c && c.path === props.current.path && c.meta && c.meta.confidential); },
       key: () => `note:${props.current.path || ""}` };
-    const h = creaiteEditor(el, { features: "notes", markdown, extensions: [deco], ai, imageSrc: ref => (imageSrc ? imageSrc(ref) : null), editorProps: {
+    const h = creaiteEditor(el, { features: "notes", markdown, undoDepth: UNDO_DEPTH, extensions: [deco, cxUndoSteps], ai, imageSrc: ref => (imageSrc ? imageSrc(ref) : null), editorProps: {
       handleKeyDown: (/** @type {any} */ _v, /** @type {KeyboardEvent} */ e) => {
         const p = pickRef.current;
         if (!p) return false;
@@ -230,6 +237,8 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
         return false;
       } } });
     ed.current = h;
+    const mine = cell.current;          /* (the cleanup below runs after the next note's props are in; this editor's own cell keeps its last path and base) */
+    undoTake(mine.path, h.editor, mine.base);          /* #175: a note closed in this page and opened again as it was keeps its undo history */
     const slashOff = attachSlash(h, { profile: "notes", host: hostRows() });
     const itemOff = attachItemPick(h, { code: () => props.current.code });          /* #122 C: the shared `#` list */
     const input = () => { props.current.onInput(); };
@@ -243,9 +252,9 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const out = () => { const f = props.current.onHoverLine; if (f) f(0); };
     el.addEventListener("mouseover", over);
     el.addEventListener("mouseleave", out);
-    onBody(() => (h.touched() || restored ? h.value() : null));
+    onBody(() => (h.touched() ? h.value() : null));
     return () => { el.removeEventListener("input", input); el.removeEventListener("blur", blur); el.removeEventListener("mouseover", over);
-      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); itemOff(); h.destroy(); ed.current = null; lineState.current.doc = null; };
+      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); itemOff(); undoStash(mine.path, h.editor, mine.base); h.destroy(); ed.current = null; lineState.current.doc = null; };
   }, [loadKey]);
 
   useEffect(() => {          /* #124: read only while its Delete note waits on the approval card */
@@ -284,7 +293,8 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
         host={hostRows()}
         extra={<>{toolbarExtra}
           <input ref={fileIn} type="file" class="nimgfile" accept="image/png,image/jpeg" multiple hidden aria-hidden="true" tabIndex={-1}
-            onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); await addImages(i.files); i.value = ""; }} /></>} />
+            onCancel={() => { if (ed.current) undoHeadEnd(ed.current.editor); }}
+            onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); try { await addImages(i.files); } finally { if (ed.current) undoHeadEnd(ed.current.editor); } i.value = ""; }} /></>} />
       <div ref={box} class="nbody rted" role="textbox" aria-multiline="true" aria-label={label} spellcheck data-ph="Write here… [[ links a note, @ a person, # a work item, / inserts"
         aria-controls={pick ? "ntpick" : undefined} aria-activedescendant={pick && pick.opts[pick.i] ? optId(pick.i) : undefined} />
       {pick ? (

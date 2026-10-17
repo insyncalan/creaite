@@ -39,6 +39,7 @@ export * from "./ask.js";
 export * from "./meetings.js";
 
 export * from "./help.js";
+export * from "./helpscreen.js";
 
 export * from "./drafts.js";
 
@@ -62,6 +63,8 @@ export * from "./components/Tabs.jsx";
 export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and Settings › People */
 export * from "./components/Toast.jsx";   /* BL-316: the message at the foot of the page */
 export * from "./components/prep/PrepPage.jsx";   /* BL-286 D: Meetings › Prep */
+export * from "./components/settings/Health.jsx";   /* #159: runHealthFix is tested by name (test_link_renderers) */
+export * from "./components/prep/PrepShape.jsx";   /* #159: its source link is tested by name (test_link_renderers) */
 export * from "./stores/prep.js";
 export * from "./components/today/DayTabs.jsx";
 export * from "./components/today/DayCurve.jsx";
@@ -84,8 +87,13 @@ export * from "./components/notes/CaptureDrawer.jsx";   /* BL-301 C: the capture
 export * from "./stores/capture.js";
 export * from "./components/AiSelect.jsx";   /* BL-301 D: AI on selected text */
 export * from "./stores/aiEdit.js";
+export * from "./components/LinkPopover.jsx";   /* #120: links in the rich editors */
+export * from "./core/linkUrl.js";
+export * from "./core/linkText.js";   /* #121: links in plain text */
+export * from "./core/editorLink.js";
 
 import { bootAiSelect } from "./components/AiSelect.jsx";
+import { bootLinkPopover } from "./components/LinkPopover.jsx";
 
 export * from "./components/peek/SneakPeek.jsx";   /* BL-322: Sneak peek */
 export * from "./components/peek/PeekProps.jsx";   /* BL-316: the peek's properties as Chips */
@@ -104,6 +112,7 @@ export * from "./components/reporting/ReportingCard.jsx";
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
 import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAsk0096, bootAsk0098, bootAsk0101, bootAsk0102, bootAsk0105, bootAsk0107, bootAsk0109, bootAsk0113, bootAsk0117, bootAsk0118, bootAsk0119, bootAsk0120, bootAsk0207, bootAsk0208, reattach } from "./ask.js";
 import { bootData } from "./core/data.js";
+import { bootDayRoll } from "./core/dayroll.js";
 import { bootDialogs } from "./components/dialogs/PageDialogs.jsx";
 import { bootTooltips } from "./core/dom.js";
 import { bootCalendar, bootCmdEnter, bootDateWords, bootOwnerCombo, bootSources, bootTickBoxes, bootWeekendNote } from "./core/fields.js";
@@ -118,6 +127,7 @@ import { bootDrafts0129, bootDrafts0160, bootDrafts0196, bootDrafts0202, bootDra
 import { bootFiles0068, bootFiles0069 } from "./files.js";
 import { bootNotes } from "./notes.js";
 import { bootHelp0091, bootHelp0158, bootHelp0161, bootHelp0162, firstHelp } from "./help.js";
+import { bootHelpScreen } from "./helpscreen.js";
 import { bootIntake0053, bootIntake0134, bootIntake0135, bootIntake0136, bootIntake0137, inboxBadge } from "./intake.js";
 import { bootPrepShape } from "./stores/prepShape.js";
 import { bootMeetings0125, bootMeetings0126, bootMeetings0143, bootMeetings0144, bootMeetings0145, bootMeetings0201, openFromAddress } from "./meetings.js";
@@ -137,6 +147,7 @@ publish(page);
 bootDialogs();   /* BL-316: first, so every step after finds the dialogs' inner ids */
 bootTooltips();
 bootAiSelect();   /* BL-301 D: before any editor is made */
+bootLinkPopover();   /* #120: likewise */
 bootDevTag();
 bootRail0007();
 bootTheme();
@@ -253,6 +264,7 @@ bootToday0159();
 bootDrafts0160();
 bootHelp0161();
 bootHelp0162();
+bootHelpScreen();
 bootSettings0163();
 bootToday0164();
 bootPanel0165();
@@ -300,4 +312,5 @@ bootAsk0208();
 bootReview0209();
 bootReview0315();
 bootNotes();   /* BL-301 B */
+bootDayRoll();   /* #171 */
 bootPageRefresh();   /* BL-327: last, once everything is drawn */

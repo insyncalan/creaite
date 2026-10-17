@@ -2,7 +2,9 @@
 /* work.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0030-work.js, 0031-bl-150-sprint-ux.js, 0032-bl-159-sprint-icons.js, 0033-bl-160-sprint-icons.js, 0034-after-bl-160-js.js, 0035-work-board-bl-103-sprint-4a.js, 0036-bl-128-sprint-work-views.js, 0037-decisions-board-bl-103-sprint-debug-log.js, 0038-bl-129-sprint-work-views.js, 0039-bl-130-sprint-work-views.js, 0040-bl-132-sprint-work-views.js, 0041-bl-131-sprint-work-views.js, 0130-person-rows-bl-68.js, 0131-bl-122-sprint-polish.js, 0132-bl-123-sprint-polish.js, 0133-bl-124-sprint-polish.js, 0147-bl-134-sprint-all-items.js, 0148-bl-138-sprint-all-items.js, 0149-bl-190-sprint-links.js, 0150-after-bl-190-people.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
+import { linkHtml, linkWords } from "./core/linkText.js";
 import { drawFilterBar, fitFilterBar } from "./components/FilterBar.jsx";
 
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
@@ -73,7 +75,7 @@ export const countFor=(k,v)=>{ const d=defOf(k), one=new Set([v]); return items(
 /* sorting: a header click sorts, again reverses, a third time returns to the default order */
 // @ts-expect-error TS2362: true and false subtract as 1 and 0 (overdue items sort first)
 export const DEFSORT={actions:(a,b)=>(overdue(b)-overdue(a))||(a.due||"9").localeCompare(b.due||"9"),raid:(a,b)=>PRIOS.indexOf(a.pr)-PRIOS.indexOf(b.pr),decisions:(a,b)=>(a.st==="Pending")!==(b.st==="Pending")?(a.st==="Pending"?-1:1):a.st==="Pending"?(a.due||"9").localeCompare(b.due||"9"):b.date.localeCompare(a.date)};   /* BL-53: pending first, soonest needed first */
-export const SORTKEY={t:x=>x.t.toLowerCase(),o:x=>who(x.o).toLowerCase(),due:x=>x.due||"9999",pr:x=>PRIOS.indexOf(x.pr),st:x=>x.st,ws:x=>(x.ws||"").toLowerCase(),type:x=>x.type,resp:x=>(x.resp||"").toLowerCase(),by:x=>(x.by||"").toLowerCase(),date:x=>x.date,id:x=>x.id,src:x=>srcKind(x),upd:x=>x.upd_at||"",raised:x=>x.raised||""};   /* upd and raised: the Work board's sort chooser */
+export const SORTKEY={t:x=>x.t.toLowerCase(),o:x=>who(x.o).toLowerCase(),due:x=>x.due||"9999",pr:x=>PRIOS.indexOf(x.pr),st:x=>x.st,ws:x=>(x.ws||"").toLowerCase(),type:x=>x.type,resp:x=>linkWords(x.resp||"").toLowerCase(),by:x=>(x.by||"").toLowerCase(),date:x=>x.date,id:x=>x.id,src:x=>srcKind(x),upd:x=>x.upd_at||"",raised:x=>x.raised||""};   /* upd and raised: the Work board's sort chooser */
 export function rows(t=shared.WT,L=items().filter(x=>passes(x)),s=SORT[t],def=DEFSORT[t]){ if(!s) return L.sort(def);   /* BL-68: any page can sort its own list of one type */
   if(s.col==="_def"){ L.sort(def); return s.dir==="desc"?L.reverse():L; }   /* BL-128: the default order, reversed */
   const k=SORTKEY[s.col]||(()=>""); return L.sort((a,b)=>{ const x=k(a),y=k(b); return (x<y?-1:x>y?1:0)*(s.dir==="desc"?-1:1)||def(a,b); }); }
@@ -168,13 +170,13 @@ shared.COLVIS=store.get("creaite-cols",{actions:["t","o","due","pr","st"],raid:[
 export const cmTag=x=>x.client&&!("cmd" in x?cmdOK(x.cmd):cmOK(x.cm))?' <span class="tag warn">· client messaging to complete</span>':"";
 export function cell(k,x,t=shared.WT){ if(t==="all") return allCell(k,x);
   if(t==="decisions"&&k==="due") return `<td data-f="due" class="${decLate(x)?"late":""}" style="white-space:nowrap">${x.due?fd(x.due):"—"}<div class="x">${x.st==="Pending"&&x.due?rel(x.due):""}</div></td>`;
-  const h=(()=>{ if(k==="t"){ const sub=t==="actions"?`${x.ws?esc(x.ws):""}${x.upd?` · ${esc(x.upd)}`:""}`:t==="raid"?`${x.type}${x.ws?" · "+esc(x.ws):""}${x.type==="Dependency"&&x.st==="Open"&&!x.ms?" · not attached":""}`:""; return `<td class="title" data-f="t">${ico(kindOf(t,x))}${esc(x.t)}${cmTag(x)}${x.ar?' <span class="tag">Archived</span>':""}<div class="x"><a href="#" class="rowid" data-rid="${x.id}" title="Open ${x.id}">${x.id}</a> · ${pLink(x.p)}${sub}</div></td>`; }
+  const h=(()=>{ if(k==="t"){ const sub=t==="actions"?`${x.ws?esc(x.ws):""}${x.upd?` · ${linkHtml(x.upd)}`:""}`:t==="raid"?`${x.type}${x.ws?" · "+esc(x.ws):""}${x.type==="Dependency"&&x.st==="Open"&&!x.ms?" · not attached":""}`:""; return `<td class="title" data-f="t">${ico(kindOf(t,x))}${esc(x.t)}${cmTag(x)}${x.ar?' <span class="tag">Archived</span>':""}<div class="x"><a href="#" class="rowid" data-rid="${x.id}" title="Open ${x.id}">${x.id}</a> · ${pLink(x.p)}${sub}</div></td>`; }
   if(k==="o") return `<td data-f="o">${personLink(x.o)}</td>`;
   if(k==="due") return `<td data-f="due" class="${(t==="actions"?overdue(x):x.st==="Open"&&x.due&&x.due<TODAY)?"late":""}" style="white-space:nowrap">${x.due?fd(x.due):"—"}<div class="x">${x.due&&OPENST(x.st)?rel(x.due):""}</div></td>`;
   if(k==="pr") return `<td data-f="${t==="raid"?"imp":"pr"}" class="${x.pr==="Urgent"?"prio-urgent":""}">${x.pr}</td>`;
   if(k==="st") return `<td data-f="st">${x.st}</td>`;
   if(k==="ws") return `<td data-f="ws">${esc(x.ws||"—")}</td>`;
-  if(k==="resp") return `<td data-f="resp" class="x">${x.resp?esc(x.resp):'<span class="tag bad">None yet</span>'}</td>`;
+  if(k==="resp") return `<td data-f="resp" class="x">${x.resp?linkHtml(x.resp):'<span class="tag bad">None yet</span>'}</td>`;
   if(k==="by") return `<td data-f="by">${personLink(x.by,x.by)}</td>`;
   if(k==="date") return `<td data-f="date" style="white-space:nowrap">${fd(x.date)}</td>`;
   if(k==="id") return `<td class="x idc" style="white-space:nowrap">${x.id}</td>`;
@@ -204,7 +206,7 @@ export function renderWork(){ const fresh=!WINIT[shared.WT], dv=fresh?defaultVie
   renderApplied(items().length,L.length); renderLayoutBar();
   if(layoutOf(shared.WT)==="board"){ $("#workTbl").textContent=""; renderBoard(L); return; }
   $("#workBoard").textContent="";
-  putHTML($("#workTbl"),html`${raw(rowHead(shared.WT,C,s))}<tbody>${raw(listBody(shared.WT,C,L)||`<tr><td colspan="${C.length}"><div class="empty">${shared.WQ.trim()?`Nothing in this view matches “${esc(shared.WQ.trim())}”.`:"Nothing in this view."}</div></td></tr>`)}</tbody>`);
+  putHTML($("#workTbl"),html`${raw(rowHead(shared.WT,C,s))}<tbody>${raw(listBody(shared.WT,C,L)||`<tr><td colspan="${C.length}"><div class="empty">${shared.WQ.trim()?`Nothing in this view matches “${esc(shared.WQ.trim())}”.`:"Nothing in this view."} ${howLink("work")}</div></td></tr>`)}</tbody>`);
   rzApply(); sizeList(); })();
   { const total=items().length, shown=items().filter(x=>passes(x)).length, h=hiddenCount();
     const ht=h.n?` · ${h.n} ${h.closed?"closed ":""}hidden${h.closed?"":" by the status filter"}`:"", hs=$("#whidden"); if(hs) hs.textContent=ht;
@@ -264,7 +266,7 @@ export function colResizer(th,k,after){ if(shared.RZ[k]){ th.style.width=shared.
   h.addEventListener("click",e=>e.stopPropagation());
   h.addEventListener("pointerdown",e=>{ e.preventDefault(); const x0=e.clientX,w0=th.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
     const mv=ev=>put(w0+ev.clientX-x0);
-    const up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); document.body.classList.remove("resizing"); store.set("creaite-colwidths",shared.RZ); if(after) after(); };
+    const up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); h.removeEventListener("pointercancel",up); document.body.classList.remove("resizing"); store.set("creaite-colwidths",shared.RZ); if(after) after(); };
     h.addEventListener("pointermove",mv); h.addEventListener("pointerup",up); });
   h.addEventListener("dblclick",e=>{ e.stopPropagation(); delete shared.RZ[k]; th.style.width=""; th.style.minWidth=""; store.set("creaite-colwidths",shared.RZ); snack("Column width reset"); });
   h.addEventListener("keydown",e=>{ if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight") return; e.preventDefault(); put(th.getBoundingClientRect().width+(e.key==="ArrowRight"?16:-16)); store.set("creaite-colwidths",shared.RZ); });
@@ -370,6 +372,24 @@ export function cardHtml(t,x,g){ if(t==="decisions"){
     <div class="bcm"><span class="bid">${esc(x.id)}</span>${ptCode(x)}${x.client?'<span class="bcv" title="Client-visible" aria-label="Client-visible">◐</span>':""}<span class="sp"></span>${P4.includes("o")?`<span class="bown" title="${esc(x.o&&x.o!=="TBC"?x.o:"No owner yet")}">${esc(initials(x.o))}</span>`:""}</div>
     <div class="bcm">${P4.includes("due")?`<span class="bdue ${od?"late":""}">${esc(due)}</span>`:""}<span class="sp"></span>${extra}${P4.includes("pr")?`<span class="bpri ${x.pr==="Urgent"?"prio-urgent":""}">${esc(x.pr||"")}</span>`:""}<button class="bmv" type="button" aria-haspopup="menu" aria-label="Move ${esc(x.id)} to…" title="Move to…">⋯</button></div></div>`; }
 export const bcKey=(t,g,key)=>`${t}|${g}|${key}`;
+/* #144: each board column's width, per board (tab and grouping), remembered in the browser. 260 to 640 px, 270 by default;
+   the handle on a column's right edge drags, ←/→ move it 16 px, a double-click puts it back. */
+export const BW_MIN=260, BW_MAX=640, BW_DEF=270;
+/* A remembered width is only trusted as a finite number inside the limits; anything else (null, arrays, strings, NaN, huge or negative values) is dropped on load. */
+const bwOk=w=>typeof w==="number"&&Number.isFinite(w)&&w>=BW_MIN&&w<=BW_MAX;
+const bwClean=raw=>{ const out={}; if(!raw||typeof raw!=="object"||Array.isArray(raw)) return out;
+  Object.keys(raw).forEach(b=>{ const o=raw[b]; if(!o||typeof o!=="object"||Array.isArray(o)) return; const k={};
+    Object.keys(o).forEach(c=>{ if(bwOk(o[c])) k[c]=Math.round(o[c]); }); if(Object.keys(k).length) out[b]=k; }); return out; };
+export const BW=bwClean(store.get("creaite-boardw",{}));
+const bwBoard=()=>BCUR?`${BCUR.t}|${BCUR.g}`:`${shared.WT}|${groupOf(shared.WT)}`;
+export const bwGet=(b,key)=>{ const o=BW[b]; if(!o||typeof o!=="object") return undefined; const w=o[key]; return bwOk(w)?w:undefined; };
+const bwStyle=(b,key)=>{ const w=bwGet(b,key); return w?` style="flex-basis:${w}px;width:${w}px"`:""; };
+const bwHandle=(b,key,label,w)=>`<span class="bcrz" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize ${esc(label)} column" aria-valuemin="${BW_MIN}" aria-valuemax="${BW_MAX}" aria-valuenow="${w||BW_DEF}"></span>`;
+export function bwPut(b,key,w,save){ w=Number(w); if(!Number.isFinite(w)) w=BW_DEF; w=Math.round(Math.max(BW_MIN,Math.min(BW_MAX,w)));
+  if(w===BW_DEF){ if(BW[b]){ delete BW[b][key]; if(!Object.keys(BW[b]).length) delete BW[b]; } } else { if(!BW[b]||typeof BW[b]!=="object") BW[b]={}; BW[b][key]=w; }
+  $$("#workBoard .bcol").forEach(c=>{ if(c.dataset.col!==key) return; c.style.flexBasis=w+"px"; c.style.width=w+"px"; const h=c.querySelector(".bcrz"); if(h) h.setAttribute("aria-valuenow",String(w)); });
+  if(save) store.set("creaite-boardw",BW); return w; }
+export function bwReset(b,key){ bwPut(b,key,BW_DEF,true); }
 export function renderBoard(L){ const t=shared.WT, sg=subOf(t,"board"), g=groupOf(t), el=$("#workBoard");
   if(sg!=="none"&&L.length){ const B=boardCols(t,L,g); if(!B.pick){   /* swimlanes: one row per sub-group value, each with the board's columns */
     const lanes=wgGroups(t,sg,L,!BHIDE[t]); BCUR={t,g,cols:B.cols,sub:sg,lanes};
@@ -378,19 +398,19 @@ export function renderBoard(L){ const t=shared.WT, sg=subOf(t,"board"), g=groupO
       return `<section class="blane${coll?" collapsed":""}" data-lane="${esc(ln.key)}" aria-label="${esc(ln.label)}, ${n} item${n===1?"":"s"}">
         <header class="blh"><button class="bcoll" type="button" data-bcoll="${esc(k)}" aria-expanded="${!coll}" aria-label="${coll?"Expand":"Collapse"} ${esc(ln.label)}">${ic("chevdown","chev")}</button><h3>${esc(ln.label)} · ${n}</h3></header>
         ${coll?"":`<div class="blcols">${cols.map(c=>{ const it=c.items.filter(x=>inl.has(x.id)), m=it.length;
-          return `<section class="bcol${c.drop?"":" nodrop"}" data-col="${esc(c.key)}" data-lane="${esc(ln.key)}" aria-label="${esc(c.label)} in ${esc(ln.label)}, ${m} item${m===1?"":"s"}"><header class="bch"><h3>${esc(c.label)} · ${m}</h3></header>
-            <div class="bcards" role="list">${it.map(x=>cardHtml(t,x,g)).join("")||'<div class="bnone">Nothing here</div>'}</div><div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div></section>`; }).join("")}</div>`}</section>`; }).join(""))}</div>`);
+          return `<section class="bcol${c.drop?"":" nodrop"}" data-col="${esc(c.key)}" data-lane="${esc(ln.key)}"${bwStyle(`${t}|${g}`,c.key)} aria-label="${esc(c.label)} in ${esc(ln.label)}, ${m} item${m===1?"":"s"}"><header class="bch"><h3>${esc(c.label)} · ${m}</h3></header>
+            <div class="bcards" role="list">${it.map(x=>cardHtml(t,x,g)).join("")||'<div class="bnone">Nothing here</div>'}</div><div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div>${bwHandle(`${t}|${g}`,c.key,c.label,bwGet(`${t}|${g}`,c.key))}</section>`; }).join("")}</div>`}</section>`; }).join(""))}</div>`);
     markSel(); return; } }
   const B=boardCols(t,L,g);
   if(B.pick){ BCUR={t,g,cols:[]}; putHTML(el,html`<div class="bpick"><b>Group by milestone needs one project.</b> Milestones belong to a project, so choose one: <select id="bpickP" aria-label="Project for the milestone board"><option value="">Choose a project</option>${P.map(p=>html`<option value="${p.code}">${p.name}</option>`)}</select></div>`); return; }
   BCUR={t,g,cols:B.cols}; let cols=B.cols; if(BHIDE[t]) cols=cols.filter(c=>c.items.length||c.hidden);
-  if(!L.length){ putHTML(el,html`<div class="empty">${shared.WQ.trim()?html`Nothing in this view matches “${shared.WQ.trim()}”.`:"Nothing in this view."}</div>`); return; }
+  if(!L.length){ putHTML(el,html`<div class="empty">${shared.WQ.trim()?html`Nothing in this view matches “${shared.WQ.trim()}”.`:"Nothing in this view."} ${raw(howLink("work"))}</div>`); return; }
   putHTML(el,raw(cols.map(c=>{ const k=bcKey(t,g,c.key), coll=!!BCOLL[k], n=c.items.length;
-    return `<section class="bcol${coll?" collapsed":""}${c.drop?"":" nodrop"}" data-col="${esc(c.key)}" aria-label="${esc(c.label)}, ${n} item${n===1?"":"s"}">
+    return `<section class="bcol${coll?" collapsed":""}${c.drop?"":" nodrop"}" data-col="${esc(c.key)}"${coll?"":bwStyle(`${t}|${g}`,c.key)} aria-label="${esc(c.label)}, ${n} item${n===1?"":"s"}">
       <header class="bch"><button class="bcoll" type="button" data-bcoll="${esc(k)}" aria-expanded="${!coll}" aria-label="${coll?"Expand":"Collapse"} ${esc(c.label)}">${ic("chevdown","chev")}</button><h3>${esc(c.label)} · ${n}</h3></header>
       ${coll?"":`<div class="bcards" role="list">${c.items.map(x=>cardHtml(t,x,g)).join("")||'<div class="bnone">Nothing here</div>'}</div>
       ${c.limited&&(c.hidden||BSHOWALL.has(k))?`<button class="linkbtn bshow" type="button" data-bshow="${esc(k)}">${BSHOWALL.has(k)?`Last ${+S.boardClosedDays||14} days only`:`Show all (${c.hidden} older)`}</button>`:""}
-      <div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div>`}</section>`; }).join("")||`<div class="empty">Nothing in this view.</div>`));
+      <div class="bdrop" aria-hidden="true">${c.drop?"Drop to move here":esc(c.why||"Can't drop here")}</div>${bwHandle(`${t}|${g}`,c.key,c.label,bwGet(`${t}|${g}`,c.key))}`}</section>`; }).join("")||`<div class="empty">Nothing in this view.</div>`));
   markSel(); }
 export function renderLayoutBar(){ const t=shared.WT, bd=layoutOf(t)==="board";
   $$("#wlay button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.lay===(bd?"board":"list"))));
@@ -461,6 +481,13 @@ $("#workBoard").addEventListener("click",e=>{ if(performance.now()-BNOCLICK<30) 
   const sh=e.target.closest("[data-bshow]"); if(sh){ const k=sh.dataset.bshow; BSHOWALL.has(k)?BSHOWALL.delete(k):BSHOWALL.add(k); renderWork(); return; }
   const col=e.target.closest(".bcol.collapsed"); if(col){ const k=bcKey(shared.WT,groupOf(shared.WT),col.dataset.col); BCOLL[k]=false; store.set("creaite-boardcoll",BCOLL); renderWork(); return; }
   const c=e.target.closest(".bcard"); if(c) hlRowClick(e,shared.WT,c); });
+$("#workBoard").addEventListener("pointerdown",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h||e.button!==0) return; e.preventDefault(); e.stopPropagation();
+  const col=h.closest(".bcol"), key=col.dataset.col, b=bwBoard(), x0=e.clientX, w0=col.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
+  const mv=ev=>bwPut(b,key,w0+ev.clientX-x0,false), up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); h.removeEventListener("pointercancel",up); document.body.classList.remove("resizing"); store.set("creaite-boardw",BW); BNOCLICK=performance.now(); };
+  h.addEventListener("pointermove",mv); h.addEventListener("pointerup",up); h.addEventListener("pointercancel",up); },true);
+$("#workBoard").addEventListener("dblclick",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h) return; e.stopPropagation(); bwReset(bwBoard(),h.closest(".bcol").dataset.col); snack("Column width reset"); },true);
+$("#workBoard").addEventListener("keydown",e=>{ const h=e.target.closest&&e.target.closest(".bcrz"); if(!h||(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")) return; e.preventDefault(); e.stopPropagation();
+  const col=h.closest(".bcol"); bwPut(bwBoard(),col.dataset.col,col.getBoundingClientRect().width+(e.key==="ArrowRight"?16:-16),true); },true);
 $("#workBoard").addEventListener("dblclick",e=>{ const c=e.target.closest(".bcard"); if(c&&!e.target.closest(".bmv")) hlRowOpen(e,shared.WT,c); });
 $("#workBoard").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.closest(".bcard")) e.preventDefault(); });
 $("#workBoard").addEventListener("change",e=>{ if(e.target.id==="bpickP"&&e.target.value){ PROJF.clear(); PROJF.add(e.target.value); workChanged(); } });
@@ -708,7 +735,7 @@ export function hiddenCount(){ if(layoutOf(shared.WT)==="board") return {n:BCUR&
   if(!FX.st.size) return {n:0}; const out=items().filter(x=>passes(x,"st")&&!passes(x)); return {n:out.length,closed:out.every(x=>CLOSEDST[shared.WT].includes(x.st))}; }
 export const itemsWord=n=>`${n} item${n===1?"":"s"}`;
 export function emptyHtml(){ const F=activeFilters();
-  if(!F.length) return `<div class="wempty"><h2>Nothing here yet</h2></div>`;
+  if(!F.length) return `<div class="wempty"><h2>Nothing here yet</h2><div class="sub">${howLink("work")}</div></div>`;
   const rel=F.map(f=>({...f,n:items().filter(x=>passes(x,f.k)).length})), cl=withClosed();
   const head=F.length===1&&F[0].k==="q"?`Nothing in this view matches “${esc(shared.WQ.trim())}”`:`Nothing matches ${F.length===1?"this filter":`these ${F.length} filters`}`;
   return relaxHtml(head,rel,itemsWord,cl?`<div><span>Include closed items</span><span class="sub">${itemsWord(cl)}</span><button type="button" class="btn" data-relax="closed">Show</button></div>`:"","items"); }
@@ -1135,7 +1162,7 @@ export function renderPeople(){ const T=peopleTabs(), none=shared.PTAB==="none",
   const nameCell=x=>`<td class="title"><a href="#" class="plink2" data-person="${esc(x.name)}">${esc(isMe(x.name)?`You (${x.name})`:x.name)}</a>${x.p||isMe(x.name)?"":` <span class="tag warn" title="${none?"Seen on items but isn’t in the people register":"Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x.p&&x.p.org?esc(x.p.org):'<span class="sub">—</span>'}</td><td>${x.p&&x.p.role?esc(x.p.role):'<span class="sub">—</span>'}</td><td>${x.codes.map(pLink).join(" ")||'<span class="sub">—</span>'}</td>`;
   $("#peopleTbl").setAttribute("role","tabpanel");
-  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl||"—"))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
+  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl||"—"))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
     ${raw(personCounts(x))}</tr>`)}</tbody></table>`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0148(){

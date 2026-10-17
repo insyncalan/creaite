@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+import browser_slots  # noqa: E402
 import proc_guard  # noqa: E402
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_tracker import Vault  # noqa: E402
@@ -126,6 +127,7 @@ class LiveBrowserCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        browser_slots.hold()      # #89: wait for one of the machine's browser slots (off in CI); held until this process ends
         if cls.shared_server:
             cls.addClassCleanup(cls.stop_server)      # BL-172: runs even when setUpClass fails after the vault is made
             cls.start_server()
@@ -146,11 +148,25 @@ class LiveBrowserCase(unittest.TestCase):
             try:
                 self.b.goto(self.base + "/")
                 self.b.wait("typeof go==='function' && LIVE")
+                self.b.eval("typeof helpScreenSync==='function' && (S.helpLine=false, helpScreenSync(), true)")      # #158: the first-visit line (38 px) clears on the first click and would shift every layout assertion; test_help_finding sets S.helpLine itself
                 break
             except ConnectionError:
                 self.b.close()
                 if attempt == 2:
                     raise
+
+    def _callTestMethod(self, method):
+        """A failing test says where the page was, as a failing wait does (nothing about what passes changes)."""
+        try:
+            return super()._callTestMethod(method)
+        except (AssertionError, TimeoutError) as e:
+            b = getattr(self, "b", None)
+            if b is not None and "page state" not in str(e):
+                try:
+                    e.args = (f"{e}\n{b._where()}",) + e.args[1:]
+                except Exception:
+                    pass
+            raise
 
     def _close_browser(self):
         b, self.b = getattr(self, "b", None), None

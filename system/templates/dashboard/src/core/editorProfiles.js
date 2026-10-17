@@ -9,8 +9,12 @@
    - current: Current state's two panes. The same, minus what its storage can't hold yet: no checklist (v2.2.0), no code (Word can't
               show it), no table, and no [[ @ (notes and people are Notes'); `#` work-item links are there (#122 step C: stored as plain Markdown, drawn as a chip).
    - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
-              selection bar (#117) and links (v2.2.0), never headings or checklists.
-   - none:    a host that sets its own frame (the report sheets) and draws nothing.
+              selection bar (#117) and links (#121, v2.2.0), never headings or checklists.
+   - sheet:   the report sheets' rich text (weekly and client, #134): Current state's editor with the one-line grouped bar (Heading and List
+              menus, B I S, quote, link, undo, redo) shown above the active field. No Insert menu: a sheet has no # or picture host, and a client
+              sheet never offers an internal item. No checklist until the editor has one (v2.2.0).
+   - email:   Draft email's preview (#133): the email as styled HTML on the editor's Email feature set (core/editor.js). No toolbar and no `/` menu.
+   - none:    a host that draws no bar (a table cell on a sheet).
 
    The tools a host does itself (it owns the pickers and the file input) are `host: true`: the bar shows one only when the host
    says it can do it, so the capture drawer, which has no pickers yet, shows the shared buttons alone.
@@ -66,9 +70,11 @@ export const ED_TOOLS = {
 export const ED_MENUS = {
   heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map(x => x === "|" ? x : ED_TOOLS[x]) },
   list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map(x => x === "|" ? x : ED_TOOLS[x]) },
+  /* #134: the report sheets' List menu: a sheet's field is Current state's, which has no checklist until the editor does (v2.2.0) */
+  listsheet: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "|", "indent", "outdent"].map(x => x === "|" ? x : ED_TOOLS[x]) },
   insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map(x => ED_TOOLS[x]) },
 };
-/** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, node?: string, is?: string, alias?: string[],
+/** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, hook?: string, node?: string, is?: string, alias?: string[],
     run?: (c: any, e: any) => any}} SlashDef */
 /** The rows of the `/` menu. `run` gets a focused chain that has already removed the typed "/query". `host` rows are done by the host
     (it owns the pickers, the table's template and the file input) and show only when it can; `node` names a schema node the row needs.
@@ -85,6 +91,7 @@ export const ED_SLASH = {
   codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: c => c.toggleCodeBlock() },
   table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
   image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
+  link: { id: "link", group: "Link", name: "Link", desc: "A web page or an email address (⌘⇧K)", icon: "↗", alias: ["url", "web", "href", "address"], hook: "link" },
   item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", alias: ["item", "work", "workitem", "issue", "action", "risk", "decision"], host: true },
   person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
   note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
@@ -94,10 +101,10 @@ export const ED_SLASH = {
 };
 /** The `/` menu's rows per profile, in order; a profile with none has no menu (plain: its fields store plain text). @type {Record<string, string[]>} */
 export const ED_SLASH_ROWS = {
-  notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note",
+  notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "link", "item", "person", "note",
     "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
-  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "item"],
-  plain: [], none: [],
+  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
+  plain: [], email: [], none: [],
 };
 /** How well a row matches a typed query: 0 an exact id or alias, 1 an id, alias or name that starts with it, 2 a word of the name, 3 anywhere in the name or description, 9 no match.
     The `/` menu lets Enter pick a row without an arrow only at 0 or 1 (#122 B review H1: "Amber /Red" matches "numbered" at 3 and must stay text). @param {SlashDef} r @param {string} q @returns {number} */
@@ -141,7 +148,10 @@ export const ED_PROFILES = {
       "undo", "redo"] },
   current: { tip: "Current state",
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"] },
-  plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
+  sheet: { tip: "A report sheet's text: Current state's editor, one line, grouped (#134)",
+    tools: ["m:heading", "|", "b", "i", "s", "|", "m:listsheet", "quote", "|", "link", "|", "undo", "redo"] },
+  plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar (the selection bar: Improve and Ask, #133)", tools: [] },
+  email: { tip: "Draft email's preview: Outlook HTML, no toolbar (the selection bar: Improve, Tone and Ask, #133)", tools: [] },
   none: { tip: "a host that draws its own frame (the report sheets)", tools: [] },
 };
 

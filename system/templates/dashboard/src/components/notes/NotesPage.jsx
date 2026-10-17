@@ -1,7 +1,9 @@
 // @ts-check
 /* NotesPage (BL-301 B): a project's Notes tab (#notes=ABC), or the portfolio's notes (#notes=_portfolio, under Portfolio).
    Left: the list (search, Pinned, Recent), collapsible with « and » or ⌘\ (remembered per browser; the note widens). Centre: the
-   open note, editable at once (NoteEditor), with its title, tags and flags in the header and "Saved" when the file is written.
+   open note, editable at once (NoteEditor), with its title, tags and flags in the header and "Saved 14:02" when the file is written
+   (about two seconds after the last key, #119). The note can be lifted over the page (focus mode, the same live element); Esc, a click
+   outside and the leave icon all save first and then close, or ask what to do when the save failed.
    Right: Mentioned in (notes that link here), Linked work (the items it mentions, live) and People. "+ New note" makes one from
    a template (Blank, Stakeholder, Lessons learned, Working session). Text only through JSX. */
 import { useEffect, useState } from "preact/hooks";
@@ -9,11 +11,11 @@ import { P, pName } from "../../core/data.js";
 import { fd, readDate, TODAY } from "../../core/page.js";
 import { snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNotes, noteBodyFrom, noteCur, noteFind, noteFindP, noteFlush, noteImageSrc, noteLoading,
-  noteHeld, noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
-  useStaleDraft } from "../../stores/notes.js";
+import { addNoteImage, allNotes, closeNote, createNote, loadNotes, noteBodyFrom, noteCopyText, noteCur, noteFind, noteFindP, noteFlush, noteFocus,
+  noteFocusClose, noteFocusOpen, noteImageSrc, noteLeave, noteLeaveCopy, noteLeaveKeep, noteLeaveRetry, noteLoading, noteMarks, noteMeta, noteRenamed,
+  noteDiscardAsk, noteDiscardNow, noteEscape, noteHeld, noteEscLayers, noteOpenFileVersion, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList } from "../../stores/notes.js";
 import { fuHover, fuPath } from "../../stores/findUpdates.js";
-import { aiAction } from "../../stores/aiEdit.js";
+import { aiAction, aiBarClose, aiDiscard, aiSug } from "../../stores/aiEdit.js";
 import { FindUpdates } from "./FindUpdates.jsx";
 import { askDeleteNote, DeleteNoteDialog } from "./DeleteNote.jsx";
 import { Dialog } from "../Dialog.jsx";
@@ -157,15 +159,86 @@ function NoteSide({ code, onOpen, onOpenItem }) {
     onMarks={(markers, hover) => { noteMarks.value = { markers, hover }; }} /></div>;
 }
 
-/** The save state, as the header says it. */
+/** The save state, as the header says it (#119): "Saved 14:02" once the file is written, "Editing" while typing, "Saving…" as it is written,
+    "Not saved" when it couldn't be, and a short word for a file that changed outside creaite. The reason is in the banner below. */
 function SaveLine() {
   const s = noteSave.value;
-  const text = s.state === "saved" ? `Saved${s.at ? ` ${s.at}` : ""}` : s.state === "saving" ? "Saving…" : s.state === "typing" ? "Editing" :
-    s.state === "draft" ? (s.msg || "Draft kept") : s.msg || "";
-  return <span class={`nsave ${s.state}`} id="noteSave" role="status" aria-live="polite">{text}</span>;
+  const text = s.state === "saved" ? `Saved${s.at ? ` ${s.at}` : ""}` : s.state === "typing" ? "Editing" : s.state === "saving" ? "Saving…" :
+    s.state === "conflict" ? "Changed outside creaite" : s.state === "wait" || s.state === "error" ? "Not saved" : "";
+  return <span class={`nsave ${s.state}`} id="noteSave" data-save={s.state || undefined} role="status" aria-live="polite">{text}</span>;
 }
 
-/** The open note: header, body, the stale-draft question. @param {{code: string, onOpen: (path: string) => void,
+/* Esc over the note closes what is on top first: the AI suggestion, then the bar over a selection (a link popover adds itself in
+   stores/notes.js noteEscLayers). The / menu and the pickers, the date pop-up, the tag box and menus take Esc themselves. */
+noteEscLayers.push(() => { if (!aiSug.value) return false; aiDiscard(); return true; }, () => aiBarClose());
+
+/** A key pressed while an input method is composing text (Esc cancels the composition, not the note). @param {KeyboardEvent} e */
+const composing = e => e.isComposing || e.keyCode === 229;
+/** Esc when nothing has focus (the page body: a click on the note's blank space): the same close path. A capture listener on the
+    document, only while focus mode is on; it acts only when no element has focus, so every overlay and field that takes Esc itself
+    still gets it first. */
+function FocusKeys() {
+  useEffect(() => {
+    /** @param {KeyboardEvent} e */
+    const key = e => {
+      if (e.key !== "Escape" || composing(e) || !noteFocus.value || document.querySelector("dialog[open]")) return;
+      const t = e.target;
+      if (t instanceof Element && t !== document.body && t !== document.documentElement) return;
+      e.preventDefault(); e.stopPropagation();
+      if (!noteEscape()) noteFocusClose();
+    };
+    document.addEventListener("keydown", key, true);
+    return () => document.removeEventListener("keydown", key, true);
+  }, []);
+  return null;
+}
+
+const NOTE_TABBABLE = 'button:not([disabled]),[href],input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable=true]';
+/** Tab stays inside the lifted note (a modal): from the last control to the first, and back. @param {KeyboardEvent} e @param {HTMLElement} root */
+function trapTab(e, root) {
+  const all = /** @type {HTMLElement[]} */ ([...root.querySelectorAll(NOTE_TABBABLE)]).filter(x => x.offsetParent !== null || x.getClientRects().length > 0);
+  if (!all.length) return;
+  const first = all[0], last = all[all.length - 1], at = document.activeElement;
+  if (e.shiftKey && (at === first || !root.contains(at))) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (at === last || !root.contains(at))) { e.preventDefault(); first.focus(); }
+}
+
+/** Everything on the page except the lifted note is inert while focus mode is on (no clicks, no Tab, hidden from a screen reader):
+    at each level from the note up to the body, every sibling that is not on the path to the note is marked. The scrim, a native
+    dialog (the "couldn't save" question, a pop-up in one) and the overlay layers on the body (messages, menus, the AI bar and the pickers, whether drawn already or later) stay live. What was
+    already inert stays as it was. */
+const BEHIND_ON_BODY = "#chat,#runBadge";                  // the only things on the body, beside the page itself, that belong to the page behind
+function FocusInert() {
+  useEffect(() => {
+    const root = document.querySelector(".ndoc.nfocus");
+    /** @type {Element[]} */
+    const marked = [];
+    for (let el = /** @type {Element | null} */ (root); el && el !== document.body; el = el.parentElement) {
+      for (const sib of /** @type {Element[]} */ ([...(el.parentElement ? el.parentElement.children : [])])) {
+        if (el.parentElement === document.body && !sib.matches(BEHIND_ON_BODY)) continue;        // (the body also holds the overlay layers: menus, pickers, messages, the AI bar)
+        if (sib === el || sib.hasAttribute("inert") || sib.hasAttribute("data-nscrim") || sib.tagName === "SCRIPT" || sib.tagName === "STYLE"
+          || sib.matches("dialog,[role=dialog]") || sib.querySelector("dialog")) continue;
+        sib.setAttribute("inert", ""); marked.push(sib);
+      }
+    }
+    return () => { for (const m of marked) m.removeAttribute("inert"); };
+  }, []);
+  return null;
+}
+
+/** ⌘⇧F (Ctrl+Shift+F) enters focus mode on the open note, and leaves it by the one close path. @param {KeyboardEvent} e */
+export function focusShortcut(e) {
+  if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.altKey || String(e.key).toLowerCase() !== "f" || composing(e)) return false;
+  if (document.querySelector("dialog[open]")) return false;                // (the "couldn't save" question is answered first)
+  if (noteFocus.value) { e.preventDefault(); noteFocusClose(); return true; }
+  if (!noteCur.value) return false;
+  e.preventDefault();
+  const a = document.activeElement;
+  noteFocusOpen(a && a !== document.body ? a : document.getElementById("noteExpand"));
+  return true;
+}
+
+/** The open note: header, body, the banner when it couldn't be saved. @param {{code: string, onOpen: (path: string) => void,
     onOpenItem: (id: string) => void, onNew: (title: string) => void, onOpenFile: (path: string) => void}} props */
 function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
   const cur = noteCur.value;
@@ -173,49 +246,110 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
     <article class="ndoc empty">
       {noteLoading.value ? <p class="sub">Opening…</p> : <>
         <h2>{notesList.value.length ? "Pick a note on the left, or start a new one" : "No notes yet"}</h2>
+        <p class="sub"><a class="hhow" href="#help-reference-notes" data-hhow="notes">How Notes works</a></p>
         <p class="sub">Notes are your own working thinking: stakeholders, positions, lessons, a conversation. They stay internal and are never extracted on their own.</p>
       </>}
     </article>);
   const m = cur.meta || {}, n = cur.note, tags = /** @type {string[]} */ (m.tags || []);
   const conf = !!m.confidential, pinned = !!m.pinned;
   const created = String(m.created || n.created || "");
+  const focus = noteFocus.value, st = noteSave.value;
+  /** Esc and Tab in the lifted note: the topmost overlay closes first; with none open Esc leaves focus mode (the one close path).
+      A modal dialog (the "couldn't save" one) takes Esc itself. @param {KeyboardEvent} e */
+  const onKey = e => {
+    if (!noteFocus.value || composing(e) || (e.target instanceof Element && e.target.closest("dialog"))) return;
+    if (e.key === "Tab") { trapTab(e, /** @type {HTMLElement} */ (e.currentTarget)); return; }
+    if (e.key !== "Escape") return;                  // (the editor marks Esc as handled itself, so defaultPrevented says nothing; an overlay that took Esc stopped it)
+    e.preventDefault(); e.stopPropagation();
+    if (!noteEscape()) noteFocusClose();
+  };
+  /* the same element in both modes (never moved or copied: the cursor, date, tags and save line stay live); the slots before it
+     hold the empty place the note leaves in the page and the dimmed scrim, so it keeps its place in the tree */
   return (
-    <article class="ndoc" aria-labelledby="noteTitle">
-      <div class="nhead">
-        <div class="trow">
-          <input class="ntitle" id="noteTitle" aria-label="Title" value={String(m.title ?? n.title)} maxLength={160}
-            onInput={e => noteMeta({ title: /** @type {HTMLInputElement} */ (e.target).value })} />
-          <SaveLine />
-          <span class="nslot" id="noteFindSlot" data-slot="find-updates"><FindButton /></span>
-          <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
-            items={[{ id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
-              { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
-              { id: "file", name: "Show the file", line: n.path, icon: "folder" },
-              { id: "sep", sep: true }, { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }]}
-            onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else if (id === "del") askDeleteNote(); else onOpenFile(n.path); }} />
+    <>
+      {focus ? <div class="ndocgh" aria-hidden="true" /> : null}
+      {focus ? <div class="nscrim" data-nscrim onClick={e => { if (e.target === e.currentTarget) noteFocusClose(); }} /> : null}
+      <article key="doc" class={`ndoc${focus ? " nfocus" : ""}`} aria-labelledby="noteTitle" role={focus ? "dialog" : undefined}
+        aria-modal={focus ? "true" : undefined} data-focus={focus ? "on" : undefined} onKeyDown={onKey}>
+        <div class="nhead">
+          <div class="trow">
+            <button type="button" class="ib sm nexpand" id="noteExpand" data-nfocus={focus ? "leave" : "open"} aria-label={focus ? "Leave focus" : "Focus on this note"}
+              data-tip={focus ? "Leave focus (Esc or ⌘⇧F)" : "Focus on this note (⌘⇧F)"} onClick={e => { if (noteFocus.value) noteFocusClose(); else noteFocusOpen(/** @type {Element} */ (e.currentTarget)); }}>
+              <Icon name={focus ? "shrink" : "expand"} /></button>
+            <input class="ntitle" id="noteTitle" aria-label="Title" value={String(m.title ?? n.title)} maxLength={160}
+              onInput={e => noteMeta({ title: /** @type {HTMLInputElement} */ (e.target).value })} onBlur={() => { noteFlush(); }} />
+            <SaveLine />
+            <span class="nslot" id="noteFindSlot" data-slot="find-updates"><FindButton /></span>
+            <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
+              items={[{ id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
+                { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
+                { id: "file", name: "Show the file", line: n.path, icon: "folder" },
+                 { id: "sep", sep: true }, { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }]}
+              onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else if (id === "del") askDeleteNote(); else onOpenFile(n.path); }} />
+          </div>
+          <div class="meta props">
+            {created ? <span>Created {fd(created)}</span> : null}
+            {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
+          </div>
+          <NoteTags tags={tags} />
         </div>
-        <div class="meta props">
-          {created ? <span>Created {fd(created)}</span> : null}
-          {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.path}|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
+        {focus ? <><FocusEnter /><FocusKeys /><FocusInert /></> : null}
+        {focus && notesMsg.value ? <div class="nmsg" role="status" data-nfocusmsg>{notesMsg.value}</div> : null}
+        {st.state === "conflict" || st.state === "error" || st.state === "wait" ? (
+          <div class="nstale" role="alert" data-nbanner={st.state}><span>{st.msg}</span>
+            <button type="button" class="btn sm" data-ncopy onClick={() => { noteCopyText().then(ok => snack(ok ? "Your text is copied" : "It couldn't be copied: select it in the note instead")); }}>Copy my text</button>
+            {st.state === "conflict" ? <button type="button" class="btn sm" data-nopenfile onClick={() => { noteOpenFileVersion(); }}>Open the file's version</button> : null}
+            <button type="button" class="btn sm" data-ndiscard onClick={() => noteDiscardAsk(false)}>Discard my typing</button></div>) : null}
+        {noteHeld.value === cur.path ? (
+          <div class="nstale nheld" role="status"><span>Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card.</span></div>) : null}
+        <NoteEditor key={`n${cur.load}`} readOnly={noteHeld.value === cur.path} loadKey={`n${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
+          noteTitles={() => titlesFor(code)} onInput={noteTyped} onBody={noteBodyFrom} path={cur.path} imageSrc={noteImageSrc} onImage={addNoteImage}
+          onHoverLine={l => { if (noteFind.value && fuHover.value !== l) fuHover.value = l; }}
+          onOpenItem={onOpenItem} onOpenNote={t => { const hit = noteByTitle(code, t); if (hit) onOpen(hit.path); else onNew(t); }} />
+      </article>
+    </>);
+}
+
+/** On entering focus mode the cursor goes into the note (where it was, if it was in it). */
+function FocusEnter() {
+  useEffect(() => {
+    const ed = /** @type {any} */ (document.querySelector(".ndoc.nfocus .nbody"));
+    if (ed && ed.cxed) ed.cxed.focus();
+  }, []);
+  return null;
+}
+
+/** The question when leaving focus mode and the note couldn't be saved: the note stays open, nothing is dropped. The reason is
+    the save line's own message. Esc is Keep editing. */
+function LeaveDialog() {
+  const q = noteLeave.value, st = noteSave.value;
+  return (
+    <Dialog open={q !== null} onClose={noteLeaveKeep} labelledBy="noteLeaveH" describedBy="noteLeaveP" id="noteLeaveDlg" focus="[data-nlkeep]">
+      {q && q.confirm ? (
+        <div class="nleave" data-nlstage="discard">
+          <h2 id="noteLeaveH">Discard what you typed?</h2>
+          <p id="noteLeaveP">It isn't saved, and it can't be got back unless you copied it. The note shows the file's version again.</p>
+          <div class="nlfoot">
+            <button type="button" class="btn" data-nlkeep onClick={noteLeaveKeep}>Cancel</button>
+            <button type="button" class="btn primary" data-nldiscard onClick={() => { noteDiscardNow(); }}>Discard my typing</button>
+          </div>
         </div>
-        <NoteTags tags={tags} />
-      </div>
-      {cur.stale ? (
-        <div class="nstale" role="alert">
-          <span>This note changed outside creaite after you last typed in it. Your unsaved typing from {fd(cur.stale.at.slice(0, 16))} is kept.</span>
-          <button type="button" class="btn sm" onClick={useStaleDraft}>Use my typing</button>
-          <button type="button" class="btn sm" onClick={dropStaleDraft}>Keep the file</button>
-        </div>) : null}
-      {noteSave.value.state === "conflict" ? (
-        <div class="nstale" role="alert"><span>{noteSave.value.msg}</span>
-          <button type="button" class="btn sm" onClick={() => openNote(cur.path)}>Open the file's version</button></div>) : null}
-      {noteHeld.value === cur.path ? (
-        <div class="nstale nheld" role="status"><span>Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card.</span></div>) : null}
-      <NoteEditor key={`${cur.path}|${cur.load}`} readOnly={noteHeld.value === cur.path} loadKey={`${cur.path}|${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
-        noteTitles={() => titlesFor(code)} onInput={noteTyped} onBody={noteBodyFrom} restored={!!cur.restored} path={cur.path} imageSrc={noteImageSrc} onImage={addNoteImage}
-        onHoverLine={l => { if (noteFind.value && fuHover.value !== l) fuHover.value = l; }}
-        onOpenItem={onOpenItem} onOpenNote={t => { const hit = noteByTitle(code, t); if (hit) onOpen(hit.path); else onNew(t); }} />
-    </article>);
+      ) : (
+        <div class="nleave" data-nlstage="ask">
+          <h2 id="noteLeaveH">This note isn't saved</h2>
+          <p id="noteLeaveP">{st.msg || "It couldn't be saved."} Your typing is still in the note.{q && q.copyFailed ? " It couldn't be copied: select the text and copy it yourself, or keep editing." : ""}</p>
+          <div class="nlfoot">
+            <button type="button" class="btn" data-nlkeep onClick={noteLeaveKeep}>Keep editing</button>
+            <button type="button" class="btn" data-nlcopy onClick={() => { noteLeaveCopy(); }}>Copy my text then close</button>
+            <button type="button" class="btn primary" data-nlretry onClick={() => { noteLeaveRetry(); }}>Save again</button>
+          </div>
+          <p class="nlalt">
+            {st.state === "conflict" ? <button type="button" class="linkbtn" data-nlopen onClick={() => { noteOpenFileVersion(); }}>Open the file's version</button> : null}
+            <button type="button" class="linkbtn" data-nlgiveup onClick={() => noteDiscardAsk(true)}>Discard my typing</button>
+          </p>
+        </div>
+      )}
+    </Dialog>);
 }
 
 /** BL-301 B gaps: a Working session's date and who it was with, editable in the note's header after it is made. The date is typed or
@@ -293,6 +427,7 @@ export function NotesPage({ code, onGo, onOpenItem, onOpenFile, onAddressChange 
         <NoteSide code={code} onOpen={openPath} onOpenItem={onOpenItem} />
       </div>
       <DeleteNoteDialog />
+      <LeaveDialog />
       <NewNote code={code} open={dlg !== null} title={dlg || ""} onClose={() => setDlg(null)} onMade={() => { setDlg(null); onAddressChange(); }} />
     </div>);
 }

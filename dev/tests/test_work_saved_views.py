@@ -6,6 +6,7 @@ Run: python3 dev/tests/test_work_saved_views.py   (needs Google Chrome; skipped 
 import json
 import sqlite3
 import sys
+import time
 import unittest
 from contextlib import closing
 from datetime import date, timedelta
@@ -57,6 +58,23 @@ class Views(LiveBrowserCase):
 
     def saved(self, tab="actions"):
         return json.loads((self.v.root / "system/config/settings.json").read_text())["work"]["saved_views"].get(tab, [])
+
+    def settle(self, read, want, secs=10):
+        """The page changes its own list first and writes settings.json a moment later (an await), so a test that reads the file
+        straight after the page changed polls until it shows `want` (#152: on a slow macOS runner the write came after the read)."""
+        end, got = time.time() + secs, None
+        while time.time() < end:
+            got = read()
+            if got == want:
+                break
+            self.b.pump(0.1)
+        self.assertEqual(got, want)
+
+    def settled_names(self, want):
+        self.settle(lambda: [v["name"] for v in self.saved()], want)
+
+    def settled_default(self, key, want):
+        self.settle(lambda: json.loads((self.v.root / "system/config/settings.json").read_text())["defaults"][key], want)
 
     def save_as(self, name):
         b = self.b
@@ -118,7 +136,7 @@ class Views(LiveBrowserCase):
         b.click('#wviews [data-vmenu="Third"]')
         b.click('#vmenuPop [data-vm="up"]')
         b.wait("SAVED.actions[1].name==='Third'", 5)
-        self.assertEqual([v["name"] for v in self.saved()], ["First", "Third", "Highs"])
+        self.settled_names(["First", "Third", "Highs"])
         # the default view for Actions, set on the Settings page
         b.eval("go('settings','views')")
         b.wait("document.querySelector('select[data-k=\"defActionView\"]')")
@@ -126,8 +144,7 @@ class Views(LiveBrowserCase):
         self.assertTrue(b.eval("!!document.querySelector('select[data-k=\"defDecisionView\"]')"))
         b.eval("(()=>{ const s=document.querySelector('select[data-k=\"defActionView\"]'); s.value='saved:Highs'; s.dispatchEvent(new Event('change',{bubbles:true})); })()")
         b.wait("JSON.stringify(S.defActionView)==='\"saved:Highs\"'", 5)
-        b.pump(0.5)
-        self.assertEqual(json.loads((self.v.root / "system/config/settings.json").read_text())["defaults"]["actions_status_filter"], "saved:Highs")
+        self.settled_default("actions_status_filter", "saved:Highs")
         b.goto(self.base + "/")
         b.wait("typeof go==='function' && LIVE")
         self.open_work()
@@ -140,19 +157,17 @@ class Views(LiveBrowserCase):
         b.type("High ones")
         b.key("Enter")
         b.wait("SAVED.actions.some(v=>v.name==='High ones')", 5)
-        b.pump(0.3)
-        self.assertEqual(json.loads((self.v.root / "system/config/settings.json").read_text())["defaults"]["actions_status_filter"], "saved:High ones")
+        self.settled_default("actions_status_filter", "saved:High ones")
         b.click('#wviews [data-vmenu="First"]')
         b.click('#vmenuPop [data-vm="delete"]')
         b.wait("!SAVED.actions.some(v=>v.name==='First')", 5)
-        self.assertEqual([v["name"] for v in self.saved()], ["Third", "High ones"])
+        self.settled_names(["Third", "High ones"])
         # the Decisions tab's default
         b.eval("go('settings','views')")
         b.wait("document.querySelector('select[data-k=\"defDecisionView\"]')")
         b.eval("(()=>{ const s=document.querySelector('select[data-k=\"defDecisionView\"]'); s.value='pending'; s.dispatchEvent(new Event('change',{bubbles:true})); })()")
         b.wait("S.defDecisionView==='pending'", 5)
-        b.pump(0.5)
-        self.assertEqual(json.loads((self.v.root / "system/config/settings.json").read_text())["defaults"]["decisions_view"], "pending")
+        self.settled_default("decisions_view", "pending")
         b.goto(self.base + "/")
         b.wait("typeof go==='function' && LIVE")
         self.open_work("decisions")

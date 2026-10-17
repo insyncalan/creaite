@@ -24,7 +24,7 @@ import { approveWeekly, editDoc, exportWeekly, loadWeekly, saveWeekly, setWeekly
 
 const sectionWords = (/** @type {string} */ label, /** @type {string} */ empty) => (/** @type {any} */ ctx) => <Words ctx={ctx} label={label} empty={empty} />;
 const WEEKLY_RENDER = { byId: {
-  header: (/** @type {any} */ c) => <WkHeader ctx={c} />, health: (/** @type {any} */ c) => <WkHealth ctx={c} />, glance: (/** @type {any} */ c) => <Glance ctx={c} />,
+  header: (/** @type {any} */ c) => <WkHeader ctx={c} />, health: Object.assign((/** @type {any} */ c) => <WkHealth ctx={c} />, { ownSpark: true }), glance: (/** @type {any} */ c) => <Glance ctx={c} />,
   summary: sectionWords("Summary", "Say what matters this week"), milestones: (/** @type {any} */ c) => <Timeline ctx={c} />,
   asks: (/** @type {any} */ c) => <Asks ctx={c} />, this_week: sectionWords("This week", "Nothing recorded"), next_week: sectionWords("Next week", "Nothing recorded"),
   decisions: (/** @type {any} */ c) => <Decisions ctx={c} />, risks: (/** @type {any} */ c) => <Risks ctx={c} />,
@@ -82,7 +82,7 @@ export function WeeklyView() {
           ai={{ place: "report", project: () => doc.project, confidential: () => false }}
           onRedraft={redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report")}
           onEvent={ev => { if (ev.type === "reload") loadWeekly(/** @type {any} */ (weeklyArg.value)); else countRedraft(ev, "report"); }}
-          toolbar={<WeeklyBar doc={doc} readOnly={readOnly} />} />
+          banner={{ title: "Weekly report", sub: `${doc.project_name} · ${fd(doc.date)}` }} toolbar={<WeeklyBar doc={doc} readOnly={readOnly} />} />
       </div>
     </div>);
 }

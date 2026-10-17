@@ -6,6 +6,9 @@ with a stand-in `claude` whose runs can be held part-way (a "gated" message wait
 - A reload draws the chat in one step: no step-by-step replay (no working line, no words fading in) of what had arrived.
 - /api/ask/attach takes a sequence number and sends only newer events; the history says how far it reaches.
 - The greeting appears at once.
+- #130: Esc never stops a run. In the chat box it closes the panel and the run carries on (the top-bar button keeps its working
+  dot, reopening or a reload shows the run); Esc with no run just closes; the Stop button is the only thing that stops one.
+  At 1400px and at 900px.
 
 Run: python3 dev/tests/test_ask_reopen.py   (needs Google Chrome; skipped otherwise)
 """
@@ -21,18 +24,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
+CHAT_ON = "document.getElementById('chat').classList.contains('on')"
+
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys, time
 args = sys.argv[1:]
 message = args[args.index("--") + 1].split("\n")[0]
 session = args[args.index("--resume") + 1] if "--resume" in args else "sess-" + os.urandom(4).hex()
 out = lambda o: print(json.dumps(o), flush=True)
+def big_text(name):      # 700 words in seven paragraphs: well over the 400 words that a live reply fades in up to
+    return "\n\n".join(" ".join("w%d" % i for i in range(k * 100, k * 100 + 100)) for k in range(7)) + "\n\nEND" + name
 out({"type": "system", "subtype": "init", "session_id": session})
 name = message.split()[-1]
 if message.startswith("gated"):
     out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t1", "name": "Read",
                                                        "input": {"file_path": "CLAUDE.md"}}]}})
     out({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": "ok"}]}})
+    if " big " in message:      # a large reply, then a tool step: its text event is out at once, and the run waits for the release
+        out({"type": "assistant", "message": {"content": [{"type": "text", "text": big_text(name)}]}})
+        out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t2", "name": "Read", "input": {"file_path": "CLAUDE.md"}}]}})
+        out({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t2", "content": "ok"}]}})
     out({"type": "assistant", "message": {"content": [{"type": "text", "text": "Part one of " + name + "."}]}})
     for _ in range(600):
         if os.path.exists("release-" + name):
@@ -40,6 +51,9 @@ if message.startswith("gated"):
         time.sleep(0.1)
     out({"type": "assistant", "message": {"content": [{"type": "text", "text": "Part two of " + name + "."}]}})
     out({"type": "result", "result": "Part two of " + name + ".", "session_id": session})
+elif message.startswith("big"):
+    out({"type": "assistant", "message": {"content": [{"type": "text", "text": big_text(name)}]}})
+    out({"type": "result", "result": "ok", "session_id": session})
 else:
     out({"type": "assistant", "message": {"content": [{"type": "text", "text": "Reply to: " + message}]}})
     out({"type": "result", "result": "ok", "session_id": session})
@@ -52,6 +66,16 @@ WATCH = r'''(()=>{ window.SEEN={working:0,mw:0,typed:0};
     new MutationObserver(list=>list.forEach(m=>{ if(m.type==="characterData"||(m.type==="childList"&&m.target.classList&&m.target.classList.contains("msg")&&!m.addedNodes.length)) SEEN.typed++;
       m.addedNodes.forEach(n=>{ if(n.nodeType!==1) return; if(n.matches(".step.working")||n.querySelector(".step.working")) SEEN.working++;
         if(n.matches(".mw")||n.querySelector(".mw")) SEEN.mw++; }); })).observe(log,{childList:true,subtree:true,characterData:true}); };
+  document.addEventListener("DOMContentLoaded",go); })();'''
+
+# Sampled on every frame from the first line of the page: how much of each reply is there, and whether the log ever went empty
+# after it had content. A reply must be full length the first time it is seen and never shrink.
+SAMPLE = r'''(()=>{ window.FR={frames:[],maxlog:0,blank:0,mutations:0,nodes:new Set()}; let first=true;
+  const go=()=>{ const log=document.getElementById("chLog"); if(!log){ requestAnimationFrame(go); return; }
+    new MutationObserver(l=>{ FR.mutations+=l.length; }).observe(log,{childList:true,subtree:true,characterData:true});
+    const tick=()=>{ const n=[...log.children].filter(c=>!c.matches('.step.working')).length, lens=[...log.querySelectorAll(".msg.a")].map(m=>m.textContent.length);
+      log.querySelectorAll('.msg.a').forEach(m=>{ if(m.textContent.length>1000) FR.nodes.add(m); }); if(n<FR.maxlog) FR.blank++; FR.maxlog=Math.max(FR.maxlog,n); FR.frames.push([n,lens,log.querySelectorAll(".mw").length]); requestAnimationFrame(tick); };
+    tick(); };
   document.addEventListener("DOMContentLoaded",go); })();'''
 
 
@@ -117,6 +141,15 @@ class AskReopen(LiveBrowserCase):
     def reload_watched(self):
         self.b.call("Page.addScriptToEvaluateOnNewDocument", source=WATCH)
         self.b.reload("typeof go==='function' && LIVE")
+
+    def sample_reload(self):
+        self.b.call("Page.addScriptToEvaluateOnNewDocument", source=SAMPLE)
+        self.b.reload("typeof go==='function' && LIVE")
+
+    def long_frames(self, marker):
+        """The reply lengths (per frame) of the reply holding `marker`, from the frame it first appeared."""
+        frames = self.b.eval("FR.frames")
+        return [[l for l in lens] for n, lens, mw in frames if any(l for l in lens)], frames
 
     # ── the tests ──
     def test_the_greeting_appears_at_once(self):
@@ -204,6 +237,329 @@ class AskReopen(LiveBrowserCase):
         self.assertNotIn("seq", plain[0])                                    # unnumbered unless asked: other readers are unchanged
         self.assertEqual(len(plain), len(later))
         self.post("/api/ask/ack", {"run": "r-test-dddddd"})
+
+    def sent_long_reply_then_reload(self, name):
+        """Send a long message from this page, let it finish, then reload with the frame sampler running."""
+        b = self.b
+        b.eval("openChat()")
+        b.eval(f"$('#chIn').value='big {name}'; send()", wait=False)
+        b.wait(f"[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('END{name}'))", 20)
+        b.wait("!RUN", 20)
+        b.pump(0.3)
+        full = b.eval("[...document.querySelectorAll('#chLog .msg.a')].pop().textContent.length")
+        self.sample_reload()
+        b.wait("document.getElementById('chLog').children.length>0", 20)      # the saved chat is drawn behind the closed panel
+        b.pump(0.5)
+        return full
+
+    def test_a_long_saved_reply_is_there_whole_on_open_and_never_changes(self):
+        b = self.b
+        full = self.sent_long_reply_then_reload("f")
+        self.assertGreater(full, 3000)       # 700 words: over the 400 a live reply fades in up to
+        b.eval("FR.opened=FR.frames.length; FR.muts0=FR.mutations; FR.mw0=document.querySelectorAll('#chLog .mw').length; openChat()")
+        b.pump(1.0)
+        shown = [lens for n, lens, mw in b.eval("FR.frames.slice(FR.opened)") if lens]
+        self.assertTrue(shown)
+        self.assertEqual(set(l for lens in shown for l in lens if l > 200), {full}, "the reply was not whole on the first frame")
+        self.assertEqual(b.eval("FR.mutations-FR.muts0"), 0, "the log changed after the panel opened")
+        self.assertEqual(b.eval("FR.blank"), 0, "the log went empty after it had content")
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .mw').length"), 0)
+        # and the reply was never smaller than whole on any frame of the whole load
+        allseen = [l for n, lens, mw in b.eval("FR.frames") for l in lens if l > 200]
+        self.assertEqual(set(allseen), {full})
+
+    def test_the_saved_chat_is_drawn_once_even_if_the_panel_is_opened_during_the_load(self):
+        b = self.b
+        b.eval("openChat()")
+        b.eval("$('#chIn').value='big j'; send()", wait=False)
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDj'))", 20)
+        b.wait("!RUN", 20)
+        b.call("Page.addScriptToEvaluateOnNewDocument", source="(()=>{ const t=setInterval(()=>{ if(typeof openChat==='function'&&typeof LIVE!=='undefined'){ clearInterval(t); openChat(); } },1); })();")
+        self.sample_reload()
+        b.pump(1.0)
+        self.assertEqual(b.eval("FR.blank"), 0)
+        draws = b.eval("FR.frames.filter((x,i,a)=>i&&a[i-1][1].length&&x[1].length&&JSON.stringify(x[1])!==JSON.stringify(a[i-1][1])).length")
+        self.assertEqual(draws, 0, "the saved reply changed after it was first shown")
+        self.assertEqual(b.eval("FR.nodes.size"), 1, "the saved chat was drawn more than once")
+
+    # The browser keeps a hidden panel's scrollTop (measured: Chrome restores it when display:none is lifted), so the page saves
+    # nothing of its own. What the page does on open is only: following the end, go to the end; otherwise leave the place and
+    # the "New activity" button as they were. Chrome does lose the place when the log is redrawn while hidden (it empties to 0);
+    # that is a follower again, so it opens at the end.
+    def scrolled_chat(self, name):
+        b = self.b
+        self.sent_long_reply_then_reload(name)
+        b.eval("openChat()")
+        b.pump(0.3)
+        b.eval("$('#chLog').scrollTop=400")
+        b.pump(0.3)        # the scroll event: the user is no longer following the end
+        self.assertEqual(round(b.eval("$('#chLog').scrollTop")), 400)
+        self.assertTrue(b.eval("$('#chJump').hidden"))
+
+    def at_end(self):
+        return self.b.eval("(l=>l.scrollHeight-l.scrollTop-l.clientHeight)($('#chLog'))") <= 12
+
+    def test_a_place_scrolled_back_to_is_kept_across_close_and_open_without_a_jump_button(self):
+        b = self.b
+        self.scrolled_chat("k")
+        b.eval("closeChat()")
+        b.pump(0.2)
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertEqual(round(b.eval("$('#chLog').scrollTop")), 400, "the panel jumped when it was reopened")
+        self.assertTrue(b.eval("$('#chJump').hidden"), "reopening a panel that nothing happened to offered 'New activity'")
+
+    def test_new_text_that_arrived_while_it_was_closed_keeps_the_place_and_offers_the_jump(self):
+        b = self.b
+        self.scrolled_chat("q")
+        b.eval("closeChat()")
+        b.pump(0.2)
+        b.eval("addEl('msg a','arrived while hidden')")
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertEqual(round(b.eval("$('#chLog').scrollTop")), 400)
+        self.assertFalse(b.eval("$('#chJump').hidden"), "the new text was not offered")
+
+    def test_following_the_end_a_panel_reopens_at_the_end_after_text_arrived_while_closed(self):
+        b = self.b
+        self.sent_long_reply_then_reload("r")
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertTrue(self.at_end())
+        b.eval("closeChat()")
+        b.pump(0.2)
+        b.eval("addEl('msg a', 'late '.repeat(400))")        # while hidden the pin to the end has nothing to scroll
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertTrue(self.at_end(), "a panel that was at the end did not reopen at the end")
+
+    def test_a_chat_redrawn_while_closed_opens_at_the_end(self):
+        b = self.b
+        self.scrolled_chat("s")
+        b.eval("closeChat()")
+        b.pump(0.2)
+        b.eval("loadChat(ASKCHAT,true)")                      # the log empties and refills while hidden: Chrome has lost the place
+        b.pump(0.5)
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertTrue(self.at_end(), "a chat redrawn while closed did not open at the end")
+        self.assertTrue(b.eval("$('#chJump').hidden"))
+
+    def test_a_first_time_user_is_greeted_even_if_the_panel_opens_while_the_running_check_is_in_flight(self):
+        b = self.b
+        b.eval("try{localStorage.clear()}catch(e){}")
+        b.call("Page.addScriptToEvaluateOnNewDocument", source="""(()=>{ const f=window.fetch; window.fetch=function(u,o){ if(String(u)==="/api/ask/running")
+          return new Promise(r=>setTimeout(r,800)).then(()=>f.apply(this,arguments)); return f.apply(this,arguments); }; })();""")
+        b.reload("typeof go==='function' && LIVE")
+        self.assertIsNone(b.eval("ASKCHAT"))
+        b.eval("openChat()")
+        self.assertEqual(b.eval("$('#chLog').children.length"), 0, "the running check was not in flight")
+        b.wait("document.querySelectorAll('#chLog .msg.a').length>0", 10)
+        b.pump(1.5)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#chLog .msg.a')].map(m=>m.textContent)"), [b.eval("GREET")])
+
+    def test_a_finished_run_replayed_is_drawn_plain_and_a_live_one_still_fades(self):
+        t, _ = self.ask_in_background("gated i", "r-test-iiiiii")
+        self.until_history_has("Part one of i")
+        self.release("i")
+        t.join(30)
+        self.reload_watched()
+        b = self.b
+        b.eval("openChat()")
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of i'))", 20)
+        b.pump(0.5)
+        # the history lacks the run (as an older record would): the whole run is replayed, and it is finished
+        b.eval("window.SEEN.mw=0; $('#chLog').textContent=''; SHOWN=null")
+        b.eval("attachRun({id:'r-test-iiiiii',kind:'ask',chat:null,done:true,message:'gated i',confirmed:false})")
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of i'))", 20)
+        b.pump(0.8)
+        self.assertEqual(b.eval("SEEN.mw"), 0, "a finished run's replay faded its words in")
+        self.post("/api/ask/ack", {"run": "r-test-iiiiii"})
+
+    def test_the_backlog_an_attach_opens_with_is_drawn_plain(self):
+        t, _ = self.ask_in_background("gated l", "r-test-llllll")
+        self.until_history_has("Part one of l")
+        self.release("l")
+        t.join(30)                                         # the run ended between the page asking and attaching: all of it is backlog
+        b = self.b
+        b.eval("window.SEEN={mw:0}; new MutationObserver(l=>l.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1&&(n.matches('.mw')||n.querySelector('.mw'))) SEEN.mw++; }))).observe(document.getElementById('chLog'),{childList:true,subtree:true})")
+        b.eval("$('#chLog').textContent=''; SHOWN=null")
+        b.eval("attachRun({id:'r-test-llllll',kind:'ask',chat:null,done:false,message:'gated l',confirmed:false})")
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of l'))", 20)
+        b.pump(0.8)
+        self.assertEqual(b.eval("SEEN.mw"), 0, "the backlog an attach opens with faded in")
+
+
+    def test_a_large_reply_still_arriving_at_reopen_is_not_redrawn_and_the_new_text_streams(self):
+        t, _ = self.ask_in_background("gated big m", "r-test-mmmmmm")
+        self.until_history_has("Part one of m")
+        self.b.call("Page.addScriptToEvaluateOnNewDocument", source=WATCH)
+        self.sample_reload()
+        b = self.b
+        b.wait("document.getElementById('chLog').children.length>0 && RUN", 20)     # drawn behind the closed panel; the run followed
+        b.eval("openChat()")
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDm'))", 20)
+        b.pump(0.6)
+        self.assertEqual(b.eval("SEEN.mw"), 0, "the large reply that had already arrived was animated")
+        self.tag()
+        b.eval("FR.mw0=SEEN.mw")
+        self.release("m")
+        t.join(30)
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of m'))", 20)
+        self.assertEqual(self.kept(), 0, "finished text was redrawn while the run went on")
+        self.assertEqual(b.eval("FR.nodes.size"), 1, "the large reply was drawn more than once")
+        self.assertEqual(b.eval("FR.blank"), 0)
+        self.assertGreater(b.eval("SEEN.mw"), 0)                       # the new text streams in, as before
+        self.assertEqual((self.count("ENDm"), self.count("Part two of m")), (1, 1))
+
+
+    def test_a_finished_run_replayed_slowly_is_still_drawn_plain(self):
+        """Finished is known from the run (done), not from how fast its events arrive: a replay held up for 400 ms is not animated."""
+        t, _ = self.ask_in_background("gated n", "r-test-nnnnnn")
+        self.until_history_has("Part one of n")
+        self.release("n")
+        t.join(30)
+        b = self.b
+        b.eval("window.SEEN={mw:0}; new MutationObserver(l=>l.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1&&(n.matches('.mw')||n.querySelector('.mw'))) SEEN.mw++; }))).observe(document.getElementById('chLog'),{childList:true,subtree:true})")
+        b.eval("""window.__f=fetch; window.fetch=async(u,o)=>{ const r=await __f(u,o); if(!String(u).includes('/api/ask/attach')) return r; const rd=r.body.getReader();
+          return new Response(new ReadableStream({async start(c){ await new Promise(x=>setTimeout(x,400)); for(;;){ const {value,done}=await rd.read(); if(done){ c.close(); return; } c.enqueue(value); } }}),{status:r.status,headers:r.headers}); }""")
+        b.eval("$('#chLog').textContent=''; SHOWN=null")
+        b.eval("attachRun({id:'r-test-nnnnnn',kind:'ask',chat:null,done:true,message:'gated n',confirmed:false})")
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of n'))", 20)
+        b.pump(0.8)
+        b.eval("window.fetch=__f")
+        self.assertEqual(b.eval("SEEN.mw"), 0, "a finished run replayed slowly faded its words in")
+
+
+    def test_opening_the_panel_while_the_saved_chat_loads_asks_for_it_once(self):
+        b = self.b
+        b.eval("openChat()")
+        b.eval("$('#chIn').value='big p'; send()", wait=False)
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDp'))", 20)
+        b.wait("!RUN", 20)
+        b.call("Page.addScriptToEvaluateOnNewDocument", source="""(()=>{ window.__asks=0; const f=window.fetch; window.fetch=function(u,o){ if(String(u)==="/api/chat"){ __asks++;
+          return new Promise(r=>setTimeout(r,700)).then(()=>f.apply(this,arguments)); } return f.apply(this,arguments); }; })();""")
+        self.sample_reload()
+        b.eval("openChat()")                        # while the history is still on its way
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDp'))", 20)
+        b.pump(1.2)
+        self.assertEqual(b.eval("__asks"), 1, "the saved chat was asked for twice")
+        self.assertEqual(b.eval("FR.nodes.size"), 1, "the saved reply was drawn twice")
+
+
+    # ── #130: Esc never stops a run ──
+    def watch_stops(self):
+        """Count the calls to /api/ask/stop the page makes."""
+        self.b.eval("window.STOPS=0; const f=window.fetch; window.fetch=function(u,o){ if(String(u).includes('/api/ask/stop')) STOPS++; return f.apply(this,arguments); }; 1")
+
+    def start_gated(self, name):
+        b = self.b
+        b.eval("openChat()")
+        b.eval(f"$('#chIn').value='gated {name}'; send()", wait=False)
+        b.wait(f"[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part one of {name}'))", 20)
+        b.eval("$('#chIn').focus()")
+        self.assertTrue(b.eval("!!RUN && document.getElementById('chSend').getAttribute('aria-label')==='Stop'"))
+
+    def esc_with_a_run(self, name):
+        b = self.b
+        self.watch_stops()
+        self.start_gated(name)
+        run = b.eval("RUN.id")
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        b.pump(0.6)
+        self.assertEqual(b.eval("STOPS"), 0, "Esc called /api/ask/stop")
+        self.assertTrue(b.eval("!!RUN && !RUN.stopping"), "Esc stopped the run")
+        self.assertTrue(b.eval("document.getElementById('askBtn').classList.contains('working')"), "the top-bar button shows no run while the panel is closed")
+        self.assertEqual(b.eval("[document.getElementById('askBtn').getAttribute('aria-label'), document.getElementById('askBtn').title]"),
+                         ["ask creaite (working)"] * 2, "the working state has no accessible name")
+        self.assertEqual(self.post("/api/ask/running", {})["run"]["id"], run)           # the server is still running it
+        b.eval("openChat()")                                                             # reopening shows it, still going
+        self.assertTrue(b.eval("!!RUN && document.getElementById('chSend').getAttribute('aria-label')==='Stop'"))
+        self.release(name)
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of %s'))" % name, 20)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.stopped').length"), 0)
+        b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)   # cleared when it ends
+        self.assertEqual(b.eval("[document.getElementById('askBtn').getAttribute('aria-label'), document.getElementById('askBtn').title]"), [None, ""])
+        self.assertEqual(b.eval("STOPS"), 0)
+
+    def test_esc_in_the_box_with_a_run_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_with_a_run("e")
+
+    def test_esc_with_a_run_at_900px_wide(self):
+        self.b.call("Emulation.setDeviceMetricsOverride", width=900, height=900, deviceScaleFactor=1, mobile=False)
+        self.esc_with_a_run("f")
+
+    def test_esc_with_a_run_then_a_reload_reattaches_and_shows_it_going(self):
+        b = self.b
+        self.start_gated("g")
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        self.reload_watched()                                                            # panel closed, page reloaded mid-run
+        b.wait("document.getElementById('askBtn').classList.contains('working')", 20)    # the sign shows before the panel is opened
+        b.eval("openChat()")
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part one of g'))", 20)
+        self.assertTrue(b.eval("document.getElementById('chSend').getAttribute('aria-label')==='Stop'"))
+        self.release("g")
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of g'))", 20)
+        b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)
+
+    def esc_from(self, name, focus_js):
+        """Esc with focus somewhere other than the box: the panel closes, nothing is stopped, the run carries on."""
+        b = self.b
+        self.watch_stops()
+        self.start_gated(name)
+        b.eval(focus_js)
+        self.assertTrue(b.eval("document.getElementById('chat').contains(document.activeElement) && document.activeElement.id!=='chIn'"))
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        b.pump(0.6)
+        self.assertEqual(b.eval("STOPS"), 0, "Esc called /api/ask/stop")
+        self.assertTrue(b.eval("!!RUN && !RUN.stopping"))
+        self.release(name)
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of %s'))" % name, 20)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.stopped').length + STOPS"), 0)
+
+    def test_esc_with_focus_on_the_stop_button_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_from("j", "document.getElementById('chSend').focus()")
+
+    def test_esc_with_focus_in_the_panel_body_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_from("k", "(()=>{ const l=document.getElementById('chLog'); l.tabIndex=-1; l.focus(); })()")
+
+    def test_esc_with_no_run_closes_the_panel(self):
+        b = self.b
+        self.watch_stops()
+        b.eval("openChat(); $('#chIn').focus()")
+        self.assertTrue(b.eval("!RUN && document.getElementById('chSend').getAttribute('aria-label')==='Send'"))
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        self.assertEqual(b.eval("STOPS"), 0)
+
+    def test_esc_on_the_autocomplete_closes_only_the_list_even_with_a_run(self):
+        b = self.b
+        self.start_gated("h")
+        b.eval("$('#chIn').value='/'; $('#chIn').dispatchEvent(new Event('input',{bubbles:true}))")
+        b.wait("!document.getElementById('acMenu').hidden", 10)
+        b.key("Escape")
+        b.wait("document.getElementById('acMenu').hidden", 10)
+        self.assertTrue(b.eval("document.getElementById('chat').classList.contains('on') && !!RUN"))   # the panel stays, the run too
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")                                                                          # the second Esc closes the panel
+        self.assertTrue(b.eval("!!RUN && !RUN.stopping"))
+        self.release("h")
+        b.wait("!RUN", 20)
+
+    def test_the_stop_button_is_the_only_thing_that_stops_a_run(self):
+        b = self.b
+        self.watch_stops()
+        self.start_gated("i")
+        self.assertIsNone(b.eval("document.getElementById('chSend').dataset.key||null"))   # no "Esc" shown on Stop
+        b.click("#chSend")
+        b.wait("STOPS===1 && !RUN", 20)
+        b.wait("document.querySelector('#chLog .step.stopped')", 10)
+        self.assertTrue(b.eval(CHAT_ON))                                                   # the panel stays open
+        b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)
+        self.assertEqual(b.eval("document.getElementById('chSend').dataset.key"), "Enter")
 
 
 if __name__ == "__main__":

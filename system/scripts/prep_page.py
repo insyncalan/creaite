@@ -29,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import docx_tools  # noqa: E402  (md_spans: the one reader of **bold**, _italic_, ~~strike~~ and `code`, shared with Word)
 
 REGISTRY = paths.STAGING / "prep-pages.json"
 FILE_BACKUPS = paths.BACKUPS / "files"
@@ -523,6 +524,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px} th,td{t
 td.why{color:var(--accent)} a{color:var(--accent)} .empty{color:var(--muted);font-style:italic;margin:8px 0 0} ul{margin:8px 0 0;padding-left:20px} li{margin:4px 0}
 .src{color:var(--muted);font-size:13px} .tag{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted)}
 footer{color:var(--muted);font-size:12px;margin-top:24px}
+blockquote{margin:8px 0;padding:0 0 0 12px;border-left:3px solid var(--line);color:var(--muted)} blockquote p{margin:0 0 6px}
 .rep{max-width:70ch} .rep .proj{margin:14px 0 22px} .rep h3{font-size:16px;margin:0 0 6px;line-height:1.4} .rep h3.rh{margin-top:26px}
 .rep p{margin:8px 0} .rep .headline{font-size:16px;line-height:1.55} .rep ul.points{margin:10px 0;padding-left:22px} .rep ul.points li{margin:9px 0;line-height:1.55}
 .rep .upd{color:var(--ink)} .rep details.full,.rep details.more{background:none;border:0;border-top:1px solid var(--line);border-radius:0;padding:8px 0 0;margin:12px 0 0}
@@ -531,7 +533,7 @@ footer{color:var(--muted);font-size:12px;margin-top:24px}
 .health{display:inline-block;font:600 12px/1 var(--font);border:1px solid currentColor;border-radius:999px;padding:4px 8px;vertical-align:middle;margin-left:4px}
 .health.ok{color:var(--ok)} .health.warnh{color:var(--warn)} .health.bad{color:var(--bad)}
 ul.reps{list-style:none;padding:0;margin:6px 0 12px} ul.reps li{margin:6px 0} .rn{margin:10px 0 0}
-@media print{body{background:#fff;color:#000;font-size:12px} main{max-width:none;padding:0} details{border:0;padding:0;margin:10px 0;page-break-inside:avoid} summary h2::before{content:""} a{color:#000;text-decoration:none} .internal{border-color:#000;color:#000;background:none}}
+@media print{body{background:#fff;color:#000;font-size:12px} main{max-width:none;padding:0} details{border:0;padding:0;margin:10px 0;page-break-inside:avoid} summary h2::before{content:""} a{color:#000;text-decoration:none} a.tlink::after{content:" (" attr(href) ")";font-size:.9em} .internal{border-color:#000;color:#000;background:none}}
 """
 
 
@@ -630,57 +632,85 @@ HEALTH_ICON = {"On track": "✔", "At risk": "▲", "Off track": "✖"}       # 
 HEALTH_CLASS = {"On track": "ok", "At risk": "warnh", "Off track": "bad"}
 
 
-def md_blocks(md):
-    """Current state (Markdown) as [("p", text) | ("ul", [items]) | ("ol", [items])]. Pictures are dropped, links keep their text,
-    a heading becomes a bold paragraph. Nothing else is understood."""
+def task_glyph(text):
+    """#134: a checklist item's "[ ]" / "[x]" (with text after it or on its own) as the box Word shows (☐ / ☑).
+    docx_tools.TASK reads the same items; both apply it to bullets only (a numbered "1. [ ] a" is text in each)."""
+    def box(m):
+        """The glyph for a matched box, and the space after it when text followed."""
+        return ("☑" if m.group(1) in "xX" else "☐") + (" " if m.group().strip() != m.group() else "")
+    return re.sub(r"^\[([ xX])\](?:\s+|$)", box, text)
+
+
+def md_line(line):
+    """(kind, text) of one Current state line: "q" a quote line, "ul" or "ol" a list item (a checklist box drawn on a bullet), "head" a
+    heading of any level, "text" anything else. #134"""
+    for kind, pattern in (("q", r"\s*>\s?(.*)"), ("ul", r"\s*[-*•]\s+(.*)"), ("ol", r"\s*\d+[.)]\s+(.*)"), ("head", r"\s*#+\s*(.*)")):
+        m = re.match(pattern, line)
+        if m:
+            text = m.group(1).strip()
+            return kind, task_glyph(text) if kind == "ul" else text
+    return "text", line.strip()
+
+
+def md_blocks(md, _depth=0):
+    """Current state (Markdown) as [("p", text) | ("q", text) | ("qb", [blocks]) | ("ul", [items]) | ("ol", [items])]. Pictures are
+    dropped, links keep their text, a heading (any level) becomes a bold paragraph, a "> " run of lines one quote (#134: the sheet
+    toolbar writes them), and a quote that holds a heading or a list is read again as blocks inside it (a "qb").
+    Nothing else is understood."""
     t = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", str(md or ""))
     t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)
-    blocks, para, lst = [], [], None
+    blocks, cur, items = [], None, []
 
     def flush():
-        """End the paragraph or list being built and add it to the blocks."""
-        nonlocal para, lst
-        if para:
-            blocks.append(("p", " ".join(para)))
-        if lst:
-            blocks.append(lst)
-        para, lst = [], None
+        """End the block being built (a paragraph, a quote or a list) and add it to the blocks."""
+        nonlocal cur, items
+        if cur == "q":
+            if _depth < 2 and any(md_line(x)[0] in ("ul", "ol", "head") for x in items):
+                blocks.append(("qb", md_blocks("\n".join(items), _depth + 1)))
+            elif any(items):
+                blocks.append(("q", " ".join(x for x in items if x)))
+        elif cur and items:
+            blocks.append((cur, " ".join(items) if cur == "p" else items))
+        cur, items = None, []
 
     for line in t.splitlines():
+        kind, text = md_line(line)
         if not line.strip():
             flush()
-            continue
-        bullet = re.match(r"\s*[-*•]\s+(.*)", line)
-        number = re.match(r"\s*\d+[.)]\s+(.*)", line)
-        head = re.match(r"\s*#+\s*(.*)", line)
-        if bullet or number:
-            kind = "ul" if bullet else "ol"
-            if para or (lst and lst[0] != kind):
-                flush()
-            lst = lst or (kind, [])
-            lst[1].append((bullet or number).group(1).strip())
-        elif head:
+        elif kind == "head":
             flush()
-            blocks.append(("p", f"**{head.group(1).strip().strip('*')}**"))
-        elif lst and line[:1].isspace():
-            lst[1][-1] += " " + line.strip()
+            blocks.append(("p", f"**{text.strip('*')}**"))
+        elif kind == "text" and cur in ("ul", "ol") and line[:1].isspace():
+            items[-1] += " " + text
         else:
-            if lst:
+            want = "p" if kind == "text" else kind
+            if want != cur:
                 flush()
-            para.append(line.strip())
+                cur = want
+            if text or cur in ("ul", "ol", "q"):          # an empty list item stays one (it can be continued on the next line)
+                items.append(text)
     flush()
     return blocks
 
 
 def md_inline(t):
-    """Escaped text with **bold** kept; every other mark is dropped."""
-    parts = re.split(r"\*\*(.+?)\*\*", str(t or "").replace("`", ""))
-    return "".join(f"<strong>{esc(x)}</strong>" if i % 2 else esc(re.sub(r"\*|(?<!\w)_|_(?!\w)", "", x)) for i, x in enumerate(parts))
+    """Escaped text with **bold**, _italic_ and ~~strikethrough~~ kept, nested as they were written (#134; the same reading as Word's,
+    docx_tools.md_spans), a `code` span as its words; every other mark is dropped."""
+    out = []
+    for text, bold, italic, strike, _, code in docx_tools.md_spans(str(t or "")):
+        x = esc(text if code else re.sub(r"[*`]|(?<!\w)_|_(?!\w)", "", text))
+        for on, tag in ((italic, "em"), (strike, "s"), (bold, "strong")):
+            if on:
+                x = f"<{tag}>{x}</{tag}>"
+        out.append(x)
+    return "".join(out)
 
 
 def blocks_html(blocks):
-    """HTML for md_blocks' blocks: paragraphs and lists, with **bold** kept."""
+    """HTML for md_blocks' blocks: paragraphs, quotes and lists, with **bold**, _italic_ and ~~strikethrough~~ kept."""
     return "".join(f"<p>{md_inline(b[1])}</p>" if b[0] == "p" else
+                   f"<blockquote><p>{md_inline(b[1])}</p></blockquote>" if b[0] == "q" else
+                   f"<blockquote>{blocks_html(b[1])}</blockquote>" if b[0] == "qb" else
                    f"<{b[0]}>{''.join(f'<li>{md_inline(x)}</li>' for x in b[1])}</{b[0]}>" for b in blocks)
 
 
@@ -689,9 +719,9 @@ def state_parts(md, n=5):
     its list items, or, with no list, the paragraphs after it."""
     blocks = md_blocks(md)
     head = next((b[1] for b in blocks if b[0] == "p"), "")
-    points = [x for b in blocks if b[0] != "p" for x in b[1]]
+    points = [x for b in blocks if b[0] in ("ul", "ol") for x in b[1]]
     if not points:
-        points = [b[1] for b in blocks if b[0] == "p"][1:]
+        points = [b[1] for b in blocks if b[0] in ("p", "q")][1:]
     return head, points[:n], len(points)
 
 

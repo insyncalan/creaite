@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import linktext  # noqa: E402  (#121: links in plain text show as their words in the activity lines)
 import review  # noqa: E402  (classification shared with cx-review: bulk rule, needs a project)
 from docx_tools import md_normalise  # noqa: E402  (Current state is Markdown, BL-22, BL-47)
 import propose  # noqa: E402  (register learning checks, BL-28)
@@ -32,7 +33,7 @@ HELP_FONTS = [("Schibsted Grotesk", 500, "schibsted-grotesk-500.woff2"), ("Schib
 IMAGE_LIMIT = 2 * 1024 * 1024        # per image embedded from a project's current state (BL-12)
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
                ".webp": "image/webp", ".svg": "image/svg+xml"}
-WEEK = 8
+WEEK = 6                  # #162: the health trend shows six weeks, as the weekly report does
 FIELD_LABELS = {"due_date": "due date", "client_visible": "client-visible", "client_message": "client messaging",
                 "latest_update": "latest update", "response_action": "response", "health_reason": "health reason",
                 "next_milestone": "next milestone", "milestone_date": "milestone date", "made_by": "made by",
@@ -107,11 +108,28 @@ def embed_image(folder, alt, ref):
 # ── Sections of the data ──────────────────────────────────────────────────────
 
 def trail(con, code, today):
-    """Health for the last 8 week-ending Fridays, oldest first ('' where no update was approved)."""
+    """Health for the last 6 week-ending Fridays, oldest first ('' where no update was approved)."""
+    return [h for h, _ in trail_weeks(con, code, today)]
+
+
+def trail_dates(today):
+    """The week-ending Fridays the trend covers, oldest first (YYYY-MM-DD)."""
     friday = today - timedelta(days=(today.weekday() - 4) % 7)
-    weeks = [(friday - timedelta(weeks=i)).isoformat() for i in range(WEEK - 1, -1, -1)]
-    found = {r["week_ending"]: r["health"] for r in rows(con, "SELECT week_ending, health FROM updates WHERE project = ?", code)}
-    return [{"On track": "ok", "At risk": "warn", "Off track": "bad"}.get(found.get(w), "") for w in weeks]
+    return [(friday - timedelta(weeks=i)).isoformat() for i in range(WEEK - 1, -1, -1)]
+
+
+def trail_weeks(con, code, today):
+    """#162: (health, reason) for the last 6 week-ending Fridays, oldest first; ('', '') where no update was approved. The reason is
+    the week's stored update summary, cut to one line for the tooltip."""
+    weeks = trail_dates(today)
+    found = {r["week_ending"]: r for r in rows(con, "SELECT week_ending, health, summary FROM updates WHERE project = ?", code)}
+    short = {"On track": "ok", "At risk": "warn", "Off track": "bad"}
+    out = []
+    for w in weeks:
+        r = found.get(w)
+        why = " ".join((r["summary"] or "").split()) if r else ""
+        out.append((short.get(r["health"], "") if r else "", why if len(why) <= 160 else why[:159].rstrip() + "…"))
+    return out
 
 
 def milestones(con, project, actions):
@@ -655,9 +673,9 @@ def _act_skip(r):
 def _act_change(r, tbl, made):
     """The words for one change (BL-43): created (with owner and due, or type and priority), undone, a note, or old → new."""
     label = FIELD_LABELS.get(r["field"], r["field"].replace("_", " "))
-    val = lambda v: (shown(v) if r["field"] in DATE_LIKE else v) or "—"  # noqa: E731
+    val = lambda v: (shown(v) if r["field"] in DATE_LIKE else linktext.words(v)) or "—"  # noqa: E731
     if r["field"] == "note":
-        return f"note: {r['new_value']}"
+        return f"note: {linktext.words(r['new_value'])}"
     if r["op"] == "insert":
         extra = ([f"owner {made['owner']}"] if tbl == "actions" and made.get("owner") else []) + \
                 ([f"due {shown(made['due_date'])}"] if tbl == "actions" and made.get("due_date") else []) + \
@@ -880,6 +898,10 @@ def reminders(settings, projects, file_list, today, now):
 # once, in the comment at the top of help.md.
 HELP_PARTS = {"start-here": "start", "how-do-i": "howto", "reference": "reference"}
 HELP_FILES = {"start": "guide-first-day.html", "howto": "guide-how-to.html"}
+HELP_SCREEN_RE = re.compile(r"^Screen:.*\n?", re.M)
+HELP_NEWS_FILE = "help/whats-new.md"      # #158: the plain release notes, copied in at release (never read from dev/)
+HELP_SCREENS = {"today": "Today", "work": "Work", "review": "Review", "projects": "Projects", "people": "People",
+                "notes": "Notes", "intake": "Intake", "files": "Files"}
 HELP_STAGE_ICONS = [
     '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13L21 13v6H3v-6z"/>',
     '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
@@ -910,6 +932,7 @@ def help_parse(text=None):
         f = paths.TEMPLATES / "help.md"
         text = f.read_text(encoding="utf-8") if f.exists() else ""
     text = re.sub(r"\A\s*<!--.*?-->", "", text, flags=re.S)
+    text = re.sub(HELP_SCREEN_RE, "", text)      # #158: the Screen: lines are data, not page text
     parts, part, group, section, in_footer = {}, None, None, None, False
     for line in text.splitlines():
         m = re.match(r"# (.+?)\s*$", line)
@@ -1024,6 +1047,8 @@ def _hp_inline(t, ctx, chips=False):
         else:
             s = _hp_esc(seg)
             s = re.sub(r"\[\[(.+?)\]\]", r"<kbd>\1</kbd>", s)
+            s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s\"'<>]+)\)",
+                       lambda m: f'<a href="{m.group(2)}" target="_blank" rel="noopener noreferrer">{m.group(1)}</a>', s)   # #158: an outside link
             s = re.sub(r"\[([^\]]+)\]\((#[^)]+)\)", lambda m: ctx.link(m.group(1), m.group(2)[1:]), s)
             out.append(re.sub(r"\*\*(.+?)\*\*", r'<b class="ui">\1</b>', s))
     return "".join(out)
@@ -1056,7 +1081,7 @@ def _hp_head(sec, ctx, tag_id):
     blocks = _hp_blocks(sec["lines"])
     eye = next((b["t"] for b in blocks if b["k"] == "italic"), "")
     title = next((b["t"] for b in blocks if b["k"] == "bold"), sec["title"])
-    lead = [b["t"] for b in blocks if b["k"] == "p" and not re.match(r"(Where|Or say|Keys):", b["t"])]
+    lead = [b["t"] for b in blocks if b["k"] == "p" and not re.match(r"(Where|Or say|Keys|Jobs):", b["t"])]
     html = '<div class="hp-sechead">' + (f'<span class="hp-eyebrow">{_hp_inline(eye, ctx)}</span>' if eye else "") \
         + f'<h2 id="{tag_id}">{_hp_inline(title, ctx)}</h2>' + "".join(f"<p>{_hp_inline(p, ctx)}</p>" for p in lead) + "</div>"
     return html
@@ -1075,10 +1100,36 @@ def _hp_footer(lines, ctx):
     return ('<footer class="hp-foot">' + "".join(f"<span>{_hp_inline(ln, ctx)}</span>" for ln in lines) + "</footer>") if lines else ""
 
 
-def _hp_start(part, ctx):
+def _hp_say(blocks, ctx, outline):
+    """Start here, Say this: the phrasebook table."""
+    tb = next((b for b in blocks if b["k"] == "table"), {"rows": []})
+    rows = tb["rows"]
+    for r in rows[1:]:
+        outline["say"] += re.findall(r"`([^`]+)`", r[0])
+    if not rows:
+        return ""
+    head = "".join(f"<th>{_hp_inline(c, ctx)}</th>" for c in rows[0])
+    body = "".join("<tr>" + "".join(f"<td>{_hp_inline(c, ctx, True)}</td>" for c in r) + "</tr>" for r in rows[1:])
+    return f'<div class="hp-phrases"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+def _hp_rules(lists, ctx, outline):
+    """Start here, Four rules."""
+    cards = []
+    for it in lists[0]["items"] if lists else []:
+        m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
+        if m:
+            cards.append(f'<div class="hp-rule"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
+            outline["rules"].append(m.group(1))
+    return '<div class="hp-rules">' + "".join(cards) + "</div>"
+
+
+def _hp_start(part, ctx, only=None):
     secs = {s["title"]: s for g in part["groups"] for s in g["sections"]}
     html, outline = [_hp_hero(part["intro"], ctx, True)], {"stages": [], "steps": [], "rhythm": [], "views": [], "say": [], "rules": []}
     for title, s in secs.items():
+        if only and title not in only:      # #158: the first-day card draws three of Start here's sections
+            continue
         blocks = _hp_blocks(s["lines"])
         sid = "hp-" + s["slug"]
         if title == "The loop":
@@ -1134,24 +1185,19 @@ def _hp_start(part, ctx):
             body = '<div class="hp-views">' + "".join(cards) + "</div>" \
                 + (('<div class="hp-keys">' + "".join(f"<span>{_hp_inline(k.strip(), ctx)}</span>" for k in keys.split(" · ")) + "</div>") if keys else "")
         elif title == "Say this":
-            tb = next((b for b in blocks if b["k"] == "table"), {"rows": []})
-            rows = tb["rows"]
-            for r in rows[1:]:
-                outline["say"] += re.findall(r"`([^`]+)`", r[0])
-            body = ('<div class="hp-phrases"><table><thead><tr>' + "".join(f"<th>{_hp_inline(c, ctx)}</th>" for c in rows[0]) + "</tr></thead><tbody>"
-                    + "".join("<tr>" + "".join(f"<td>{_hp_inline(c, ctx, True)}</td>" for c in r) + "</tr>" for r in rows[1:]) + "</tbody></table></div>") if rows else ""
+            body = _hp_say(blocks, ctx, outline)
         elif title == "Four rules":
-            cards = []
-            for it in lists[0]["items"] if lists else []:
-                m = re.match(r"\*\*(.+?)\*\*:?\s*(.*)$", it["t"])
-                if m:
-                    cards.append(f'<div class="hp-rule"><b>{_hp_inline(m.group(1), ctx)}</b><span>{_hp_inline(m.group(2), ctx)}</span></div>')
-                    outline["rules"].append(m.group(1))
-            body = '<div class="hp-rules">' + "".join(cards) + "</div>"
+            body = _hp_rules(lists, ctx, outline)
+        elif title == "The twelve jobs":
+            jobs = help_jobs({"start": {"groups": [{"sections": [s]}]}})
+            body = '<div class="hp-jobgrid">' + "".join(
+                f'<a class="hp-job" href="#help-howto-{j["id"]}" data-help="howto-{j["id"]}"><b>{_hp_inline(j["title"], ctx)}</b>'
+                f'<span>{_hp_inline(j["line"], ctx)}</span></a>' for j in jobs) + "</div>"
         else:
             body = _hp_plain([b for b in blocks if b["k"] in ("ul", "ol", "table")], ctx)
         html.append(f'<section class="hp-sec" aria-labelledby="{sid}">{head}{body}</section>')
-    html.append(_hp_footer(part["footer"], ctx))
+    if not only:
+        html.append(_hp_footer(part["footer"], ctx))
     return "".join(html), outline
 
 
@@ -1199,9 +1245,82 @@ def _hp_reference(part, ctx):
         side.append(f'<div class="hp-refidxg"><span class="hp-eyebrow">{_hp_inline(g["name"], ctx)}</span>{"".join(links)}</div>')
     lead = "".join(f'<p class="hp-reflead">{_hp_inline(b["t"], ctx)}</p>' for b in _hp_blocks(part["intro"]) if b["k"] == "p")
     html = ('<div class="hp-reflay"><nav class="hp-refidx" aria-label="Reference sections">'
-            '<input id="helpQ" type="search" placeholder="Search reference" aria-label="Search the reference">' + "".join(side)
+            + "".join(side)
             + f'</nav><div class="hp-refbody">{lead}{"".join(body)}</div></div>')
     return html, outline
+
+
+def help_screens(text=None):
+    """#158: the `Screen: Review -> id, id | Reference: id` lines of help.md -> {screen key: {title, ids, ref}}."""
+    if text is None:
+        f = paths.TEMPLATES / "help.md"
+        text = f.read_text(encoding="utf-8") if f.exists() else ""
+    out = {}
+    for line in re.findall(r"^Screen:.*$", text, re.M):
+        m = re.fullmatch(r"Screen:\s*(.+?)\s*(?:->|\u2192)\s*([^|\n]+?)\s*(?:\|\s*Reference:\s*([a-z0-9-]+))?\s*", line)
+        if not m:
+            raise ValueError(f"help.md: a Screen line is not 'Screen: Name -> id, id | Reference: id': {line}")
+        key = m.group(1).strip().lower()
+        if key in out:
+            raise ValueError(f"help.md: a second Screen line for {m.group(1).strip()}: {line}")
+        out[key] = {"title": m.group(1).strip(), "ids": [i.strip() for i in m.group(2).split(",") if i.strip()],
+                    "ref": m.group(3) or ""}
+    return out
+
+
+def help_jobs(parts):
+    """#158: the `Jobs:` block under Start here -> [{id, title, line}] (a bullet `[Title](#page-id): one line`)."""
+    out = []
+    for g in parts.get("start", {"groups": []})["groups"]:
+        for s in g["sections"]:
+            for b in _hp_blocks(s["lines"]):
+                if b["k"] == "ul":
+                    for it in b["items"]:
+                        m = re.match(r"\[([^\]]+)\]\(#([^)]+)\)\s*:?\s*(.*)$", it["t"])
+                        if m:
+                            out.append({"id": m.group(2), "title": m.group(1), "line": m.group(3)})
+    return out
+
+
+def help_news(text=None):
+    """#158: system/templates/help/whats-new.md -> (lead-in lines, [{v, lines}] newest first), a `## creaite X.Y.Z` section each."""
+    if text is None:
+        f = paths.TEMPLATES / HELP_NEWS_FILE
+        text = f.read_text(encoding="utf-8") if f.exists() else ""
+    lead, items, cur = [], [], None
+    for line in text.splitlines():
+        m = re.match(r"## creaite (\d+\.\d+\.\d+)\s*$", line)
+        if m:
+            cur = {"v": m.group(1), "lines": []}
+            items.append(cur)
+        elif line.startswith("# "):
+            continue
+        else:
+            (cur["lines"] if cur else lead).append(line)
+    return lead, items
+
+
+def help_check(jobs, screens, tasks, sections):
+    """#158: every job and Screen id must be a page. Returns the problems (empty when all resolve)."""
+    bad = [f"Jobs: {j['id']}" for j in jobs if j["id"] not in tasks]
+    for s in screens.values():
+        bad += [f"Screen {s['title']}: {i}" for i in s["ids"] if i not in tasks]
+        if s["ref"] and s["ref"] not in sections:
+            bad.append(f"Screen {s['title']}: Reference {s['ref']}")
+    bad += [f"Screen {k}: not a screen" for k in screens if k not in HELP_SCREENS]
+    return bad
+
+
+def _hp_news(lead, items, ctx):
+    head = "".join(f'<p class="hp-lede">{_hp_inline(b["t"], ctx)}</p>' for b in _hp_blocks(lead) if b["k"] == "p")
+    html = ['<header class="hp-hero">' + HELP_LOGO % "hp-logo sm" + '<div><span class="hp-eyebrow">Release notes</span>'
+            f"<h1>What\u2019s new</h1>{head}</div></header>"]
+    for it in items:
+        vid = it["v"].replace(".", "-")
+        body = _hp_plain([b for b in _hp_blocks(it["lines"]) if b["k"] in ("p", "ul", "ol")], ctx)
+        html.append(f'<article class="hp-new" id="hn-{vid}" data-ver="{it["v"]}"><span class="hp-ver">{it["v"]}</span>'
+                    f'<div class="hp-newbody"><h2>creaite {it["v"]}</h2>{body}</div></article>')
+    return "".join(html), [{"id": it["v"].replace(".", "-"), "title": "creaite " + it["v"]} for it in items]
 
 
 def help_version():
@@ -1219,14 +1338,32 @@ def help_part(part_id, mode="guide", text=None):
     return {"start": _hp_start, "howto": _hp_howto, "reference": _hp_reference}[part_id](p, ctx)[0]
 
 
+def help_card(kind, text=None):
+    """#158: the two printed cards, drawn from help.md. "start": the first-day card (the loop, your first hour, the four rules;
+    one page). "howto": the top-12 card (the twelve jobs, one line and the page name each; two pages)."""
+    parts = help_parse(text)
+    tasks = {s["slug"]: s["title"] for g in parts.get("howto", {"groups": []})["groups"] for s in g["sections"]}
+    ctx = _HelpCtx("guide", kind, help_version(), list(tasks))
+    if kind == "start":
+        return _hp_start(parts["start"], ctx, only=("The loop", "Your first hour", "Four rules"))[0]
+    jobs = help_jobs(parts)
+    items = "".join(f'<li class="hp-topjob"><b>{_hp_inline(j["title"], ctx)}</b><span>{_hp_inline(j["line"], ctx)}</span>'
+                    f'<em>Help \u203a How do I\u2026 \u203a {_hp_esc(tasks.get(j["id"], j["id"]))}</em></li>' for j in jobs)
+    lede = "Press <kbd>?</kbd> in creaite, search for the page name, and the steps are there."
+    return ('<header class="hp-hero">' + HELP_LOGO % "hp-logo sm"
+            + f'<div><span class="hp-eyebrow">creaite {help_version()} \u00b7 top 12 jobs</span>'
+            f'<h1>The twelve jobs</h1><p class="hp-lede">{lede}</p></div></header>' + f'<ol class="hp-top12">{items}</ol>')
+
+
 def help_sections():
-    """system/templates/help.md → the Help page: three tabs (HTML each), the task and reference lists (for ⌘K and
-    the indexes) and an outline of Start here. The page puts the vault's server command where [start command] stands."""
+    """system/templates/help.md -> the Help page: four tabs (HTML each; What's new from help/whats-new.md), the task and
+    reference lists (for the search and the indexes), the jobs, the Screen lists and an outline of Start here. The page
+    puts the vault's server command where [start command] stands."""
     parts = help_parse()
     if not parts:
         return {}
     tasks = [s["slug"] for g in parts.get("howto", {"groups": []})["groups"] for s in g["sections"]]
-    out = {"tabs": [], "tasks": [], "sections": [], "start": {}}
+    out = {"tabs": [], "tasks": [], "sections": [], "start": {}, "jobs": [], "screens": {}, "news": []}
     for pid, builder in (("start", _hp_start), ("howto", _hp_howto), ("reference", _hp_reference)):
         if pid not in parts:
             continue
@@ -1239,6 +1376,15 @@ def help_sections():
             out["tasks"] = extra
         else:
             out["sections"] = extra
+    out["jobs"] = help_jobs(parts)
+    out["screens"] = help_screens()
+    lead, items = help_news()
+    if items:
+        html, out["news"] = _hp_news(lead, items, _HelpCtx("dashboard", "whatsnew", help_version(), tasks))
+        out["tabs"].append({"id": "whatsnew", "title": "What\u2019s new", "html": html})
+    bad = help_check(out["jobs"], out["screens"], set(tasks), {s["id"] for s in out["sections"]})
+    if bad:
+        raise ValueError("help.md has links that do not resolve: " + "; ".join(bad))
     return out
 
 
@@ -1271,6 +1417,7 @@ def ui_settings(s):
             "undatedGrace": g("dashboard", "undated_grace_days", d=3),      # BL-95
             "flowWeeks": flow_weeks(s),                                     # BL-91
             "weekPrios": list(g("dashboard", "week_ahead_priorities", d=None) or []),   # BL-235 (fix-small-17): empty means every priority
+            "helpLine": bool(g("help", "first_line", d=True)),   # #158: the first-visit "Press ? for help" line
             "helpSeen": g("help", "start_seen", d=False),   # BL-84: Help › Start here shows once, on the first visit
             "port": g("live_mode", "port", d=8765), "healthSecs": g("live_mode", "health_check_seconds", d=30),
             "defPriority": g("defaults", "new_action_priority", d="Medium"),
@@ -1283,6 +1430,7 @@ def ui_settings(s):
             "boardClosedDays": g("work", "board", "closed_days", d=14),          # closed items shown in a board's Closed column
             "weekendDays": sorted(tracker.weekend_days(s)),                     # BL-181: Monday 0
             "rail": g("dashboard", "rail", d=None),               # BL-163 (sprint-rail): the left rail's order, hidden items and display
+            "railLabels": bool(g("dashboard", "rail_labels", d=True)),   # #156: Labels when collapsed
             "listCap": g("dashboard", "project_list_cap", d=10),   # BL-48
             "genDays": g("dashboard", "generate_days", d=7)}       # BL-46    # BL-45: Alan's saved Work views
 
@@ -1479,8 +1627,10 @@ def collect(now=None, timings=None):
         mem = memory(folders[p["code"]]) if p["code"] in folders else {"client": "", "rhythm": "Weekly", "current": "",
                                                                        "images": [], "cstitle": CS_TITLE_DEFAULT}
         ms, slip = milestones(con, p, actions)
+        tw = trail_weeks(con, p["code"], today)
         projects.append({"code": p["code"], "name": p["name"], "client": mem["client"], "health": p["health"] or "",
-                         "reason": p["health_reason"] or "", "trail": trail(con, p["code"], today), "slip": slip,
+                         "reason": p["health_reason"] or "", "trail": [h for h, _ in tw], "trailwhy": [w for _, w in tw],
+                         "trailend": trail_dates(today), "slip": slip,
                          "rhythm": mem["rhythm"], "cstitle": mem["cstitle"], "ms": ms, "current": mem["current"], "images": mem["images"],
                          "sponsor": p["sponsor"] or "", "phase": p["phase"] or "",
                          "undated": undated_counts(actions, raid, p["code"]),       # BL-95
@@ -1634,29 +1784,13 @@ def hot_projects(open_items, today):
             for p, n in hot.items()}
 
 
-def week_late(today, open_items, decisions, shown):
-    """BL-319: the Week ahead's late rows, for its first day: open work already past its date (only the priorities the
-    setting lists; `shown` None is every one) and pending decisions already past the date they were needed by, each with
-    `od`, the days late, so the row can say why it is there."""
-    iso, out = today.isoformat(), []
-    for k, x in open_items:
-        if x["due"] and x["due"] < iso and (shown is None or x.get("pr") in shown):
-            out.append({"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": x.get("pr"),
-                        **({"type": x.get("type")} if k == "raid" else {}), "od": (today - date.fromisoformat(x["due"])).days})
-    for d in decisions:
-        if d.get("st") == "Pending" and d.get("due") and d["due"] < iso:
-            out.append({"kind": "decisions", "id": d["id"], "p": d["p"], "t": d["t"], "o": d.get("by") or "",
-                        "od": (today - date.fromisoformat(d["due"])).days})
-    return out
-
-
 def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisions=()):
     """The Week ahead (BL-72): for each working day to next Monday (and a weekend day only when there is a meeting), the
     meetings and the open work, milestones and Urgent or High items due, Urgent first. Weekend deadlines wait until
     Monday, undated Urgent work leads, and the two weeks after list only key milestones and Urgent or High deadlines.
-    BL-319 (v1.9.2): pending decisions needed in the window land on their day (decisions have no priority, so every one);
-    the work the priority setting lists that is already overdue, and decisions already late, land on the first day shown
-    with `od` (days late), so each row can say why it is there; a milestone carries `slip` when it is at risk."""
+    BL-319 (v1.9.2): pending decisions needed in the window land on their day (decisions have no priority, so every one); a
+    milestone carries `slip` when it is at risk. #112 (v2.2.0): nothing already overdue is listed (BL-319's late rows and
+    their `od` are gone)."""
     days = week_window(today)
     shown = _dig(settings, ("dashboard", "week_ahead_priorities"), None)      # which priorities the Week ahead lists; empty or missing: all
     shown = set(shown) if shown else None
@@ -1689,7 +1823,7 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
                             "pr": r.get("pr")})
     for p in projects:
         for m in p["ms"]:
-            if m[1] and m[2] != "done" and m[6] not in ("Done", "Cancelled") and \
+            if m[1] and m[2] != "done" and (len(m) < 7 or m[6] not in ("Done", "Cancelled")) and \
                     today.isoformat() <= m[1] <= days[-1].isoformat():
                 land(m[1], {"kind": "milestone", "id": m[3], "p": p["code"], "t": m[0], "slip": m[2] == "slip"})
     for d in decisions:                # BL-319: decisions needed in the window
@@ -1697,11 +1831,9 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
             land(d["due"], {"kind": "decisions", "id": d["id"], "p": d["p"], "t": d["t"], "o": d.get("by") or ""})
     # BL-127: no weekly or client report lines; the reminders in Needs attention (build_dashboard.reminders) carry them
     keep = [d for d in days if not out[d.isoformat()]["weekend"] or out[d.isoformat()]["meetings"]]
-    if keep:                           # BL-319: what is already late lands on the first day shown, saying how late
-        out[keep[0].isoformat()]["items"] += week_late(today, open_items, decisions, shown)
-    rank = {"Urgent": 0, "High": 1}
-    for d in out.values():             # late first, then Urgent, then High, then the rest, in the order they were found
-        d["items"].sort(key=lambda i: (0 if i.get("od") else 1, rank.get(i.get("pr"), 2)))
+    rank = {"Urgent": 0, "High": 1}    # #112 (Alan, 16-10-2026): overdue work no longer leads the Week ahead (Your commitments
+    for d in out.values():             # holds Alan's; the page's quiet line counts other people's), so a day is Urgent, High, the rest
+        d["items"].sort(key=lambda i: rank.get(i.get("pr"), 2))
     # Urgent work with no date can't sit on a day: it leads the Week ahead instead
     undated = [{"kind": k, "id": x["id"], "p": x["p"], "t": x["t"], "o": x["o"], "pr": "Urgent"}
                for k, x in open_items if x.get("pr") == "Urgent" and not x["due"] and (shown is None or "Urgent" in shown)]
@@ -1711,7 +1843,7 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
                for k, x in open_items if x["due"] and end < x["due"] <= horizon
                and x.get("pr") in ("Urgent", "High") and (shown is None or x.get("pr") in shown)]
     further += [{"date": m[1], "kind": "milestone", "id": m[3], "p": p["code"], "t": m[0]} for p in projects for m in p["ms"]
-                if m[1] and m[2] != "done" and m[6] not in ("Done", "Cancelled") and end < m[1] <= horizon]
+                if m[1] and m[2] != "done" and (len(m) < 7 or m[6] not in ("Done", "Cancelled")) and end < m[1] <= horizon]
     further.sort(key=lambda i: (i["date"], i["kind"] != "milestone"))
     return {"from": today.isoformat(), "to": end, "days": [out[d.isoformat()] for d in keep],
             "undated": undated, "further": further, "further_to": horizon}
@@ -2352,6 +2484,8 @@ def inbox_meetings(settings, projects, today):
 # No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar import reads them); today
 # and later its Prep key, whether it is worth preparing for (the Week ahead's plan) and its prep page (BL-286's records). A
 # confidential meeting keeps only its title, times, event ID and those states; a private one is "Busy" with its times.
+# #138 (Alan, 16-10-2026): a weekend day (work.weekend_days) is in the line only when something is planned on it: a timed
+# meeting, or an open action, RAID item or milestone due that day. Today is always in it.
 TXWHY = {"none": "No transcript for this meeting", "not_transcribed": "Not transcribed yet", "no_access": "No access to the transcript"}
 
 
@@ -2378,6 +2512,7 @@ def calendar_days(d, now):
 
 def day_lookups(d, now):
     """What every day's meetings are looked up in, read once: projects, Calendar import's rows, filed minutes and prep pages."""
+    import tracker
     today, rows_ = now.date(), import_rows(d)
     items = [x for x in d.get("actions") or [] if x["st"] in ("Open", "Delayed")] + [x for x in d.get("raid") or [] if x["st"] == "Open"]
     projects = d.get("projects") or []
@@ -2385,7 +2520,18 @@ def day_lookups(d, now):
             "projects": projects, "remembered": (d.get("prep") or {}).get("series") or {},
             "names": {p["code"]: p["name"] for p in projects}, "hot": hot_projects([(None, x) for x in items], today),
             "by_id": {m["id"]: m for m in rows_ if m.get("id")}, "by_time": {(m["day"], m["start"], m["title"]): m for m in rows_},
-            "minutes": filed_minutes(d.get("files") or []), "pages": prep_pages_by_meeting()}
+            "minutes": filed_minutes(d.get("files") or []), "pages": prep_pages_by_meeting(),
+            "weekend": tracker.weekend_days(), "due": planned_days(d, items)}
+
+
+def planned_days(d, items):
+    """{YYYY-MM-DD} of the days an open action, RAID item or milestone is due (#138), so a weekend day with such work is planned."""
+    due = {x["due"] for x in items if x.get("due")}
+    for p in d.get("projects") or []:
+        for m in p.get("ms") or []:
+            if m[1] and m[2] != "done" and (len(m) < 7 or m[6] not in ("Done", "Cancelled")):
+                due.add(m[1])
+    return due
 
 
 def import_rows(d):
@@ -2421,16 +2567,17 @@ def prep_pages_by_meeting():
 
 
 def day_record(day, events, look):
-    """One day of the day line, or None for a weekend day without a timed meeting."""
+    """One day of the day line, or None for a weekend day with nothing planned: no timed meeting and no work due (#138).
+    Today is never left out."""
     events = [e for e in events if isinstance(e, dict)] if isinstance(events, list) else []
     timed = sorted((e for e in events if not e.get("all_day")), key=lambda e: (e.get("start") or "", e.get("title") or ""))
-    if day.weekday() >= 5 and not timed:
+    iso, weekend = day.isoformat(), day.weekday() in look["weekend"]
+    if weekend and not timed and iso != look["today"] and iso not in look["due"]:
         return None
-    iso = day.isoformat()
     year = "" if str(day.year) == look["today"][:4] else f" {day.year}"
     long_ = f"{DAYS[day.weekday()]} {ordinal(day.day)} {day.strftime('%B')}{year}"
     return {"date": iso, "date_shown": shown(iso), "dow": DAYS[day.weekday()], "short": f"{DAYS[day.weekday()][:3]} {day.day}",
-            "long": long_, "today": iso == look["today"], "past": iso < look["today"], "weekend": day.weekday() >= 5,
+            "long": long_, "today": iso == look["today"], "past": iso < look["today"], "weekend": weekend,
             "week": (day - look["monday"]).days // 7,
             "meetings": [day_meeting(e, iso, look) for e in timed],
             "all_day": ["Busy" if e.get("private") else str(e.get("title") or "")[:140] for e in events if e.get("all_day")]}

@@ -10,6 +10,7 @@
    runs (BL-10, BL-03) are listed under Archiving. The check runs when
    Health opens (if it hasn't this visit) and on Check again; it takes a few seconds, shown as it runs. */
 import { useEffect, useState } from "preact/hooks";
+import { linkUrl } from "../../core/linkUrl.js";
 import { copied, fd } from "../../core/page.js";
 import { api, snack, viaServer } from "../../core/server.js";
 import { checkHealth, healthResult, healthBusy, healthError, healthCardWaiting, markCardWaiting } from "../../stores/settings.js";
@@ -27,7 +28,8 @@ export async function runHealthFix(f) {
   /* a move waits on the approval card: nothing has changed yet, so it is never "Done" (BL-09, #94) */
   if (r.ok && r.card) { markCardWaiting(f.id || ""); snack(CARD_WAITING + ": nothing moves until you approve it."); }
   else snack(r.message || (r.ok ? "Done" : "It wasn't fixed"));
-  if (r.ok && r.url) window.open(r.url, "_blank", "noopener");
+  if (r.ok && r.url && !linkUrl(r.url)) snack("That address can't be opened here");     /* #159: only an address core/linkUrl.js accepts is opened */
+  else if (r.ok && r.url) window.open(/** @type {string} */ (linkUrl(r.url)), "_blank", "noopener");
   if (r.ok && r.card) await pendingEdit();      /* BL-09: a move waits on the approval card in ask creaite */
   if (r.ok && !r.url) checkHealth();
   return !!r.ok;

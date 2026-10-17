@@ -17,7 +17,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { SheetPage, openSheetRef, labelOf } from "./SheetPage.jsx";
-import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom } from "./sheetLib.js";
+import { A4_W, CONTENT_MM, headerPolicy, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom } from "./sheetLib.js";
 
 export { openSheetRef as openRef };
 
@@ -44,7 +44,8 @@ export { openSheetRef as openRef };
 /** @typedef {{byId?: Record<string, any>, byType?: Record<string, (c: SectionCtx) => any>,
     row?: Record<string, (c: RowCtx) => any>}} SheetRenderers */
 /** @typedef {{text?: string, panes?: {title: string, text: string}[], sources: {ref: string, label: string}[], lines?: string[],
-    notes?: {id: string, note: string}[], sentences?: {text: string, refs: string[], unsourced: boolean}[]}} Redraft */
+    notes?: {id: string, note: string}[], sentences?: {text: string, refs: string[], unsourced: boolean}[],
+    health?: string, tone?: string, diff?: string, evidence?: {ref: string, text: string}[], apply?: (doc: SheetDoc, s: SheetSection) => SheetDoc}} Redraft */   // #203: health, tone, diff, evidence, apply are a health suggestion's
 /** @typedef {{id: string, section: string, field?: string, row?: number, pane?: number, quote: string, note?: string, last?: string,
     actions?: {id: string, label: string}[]}} SheetCheck */
 /** @typedef {{doc: SheetDoc, label: string, baseVersion?: number, scrollKey?: string, renderers?: SheetRenderers, readOnly?: boolean,
@@ -57,7 +58,7 @@ export { openSheetRef as openRef };
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
     onOpenItem?: (ref: string) => boolean, partner?: SheetPartner|null, onChange: (doc: SheetDoc, why: string) => void,
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
-    toolbar?: any}} SheetProps */
+    toolbar?: any, banner?: {title: string, sub?: string}}} SheetProps */
 
 /** Where each page was left, by scrollKey (in memory, for the page's life): the zoom, and per pane the section at the top and the
     offset into it in unscaled pixels. @type {Map<string, {id: string, off: number, vy: number}>} */
@@ -231,6 +232,56 @@ function relayout(root) {
   });
 }
 
+/** #202 (mockup report-banner, option A): the header is part of the layout. The first downward scroll (any distance, no delay) hides the
+    search bar and the title block and leaves the toolbar as one slim bar (title, project and date, zoom, Show as exported, the view's
+    buttons). The rule for when it returns is headerPolicy (sheetLib.js); a Tab into a control in a hidden band always brings it back; a
+    click in the slim bar, a menu item included, never does.
+    Nothing slides. The state is the class `rpt-slim` on the sheet root (style.css); closing the view clears it.
+    @param {{current: HTMLDivElement|null}} root */
+function useBannerHide(root) {
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const last = /** @type {Map<Element, number>} */ (new Map());
+    let up = 0;
+    const slim = (/** @type {boolean} */ on) => {
+      if (el.classList.contains("rpt-slim") === on) return;
+      el.classList.toggle("rpt-slim", on);
+      if (!on) document.querySelectorAll(".main>.bar, .wrhead, .mnhead, .crhead").forEach(n => { n.scrollTop = 0; });   // a focus may have scrolled the clipped band
+    };
+    /* Hiding gives the scroller the header's room. A report too short to stay scrollable with that room would drop to the top, show the
+       header again and flip back and forth, so it only hides when it stays scrollable. */
+    const canHide = (/** @type {HTMLElement} */ t) => {
+      let room = 0;
+      document.querySelectorAll(".main>.bar, .wrhead, .mnhead, .crhead").forEach(n => { room += /** @type {HTMLElement} */ (n).offsetHeight; });
+      return t.scrollHeight - t.clientHeight - room > 0;
+    };
+    const onScroll = (/** @type {Event} */ e) => {
+      const t = /** @type {HTMLElement} */ (e.target);
+      if (!t.classList || !(t.classList.contains("sheet-scroll") || t.classList.contains("mnwrap"))) return;     // the minutes scroll as a whole at 900 px
+      const y = t.scrollTop, d = y - (last.get(t) || 0);
+      last.set(t, y);
+      up = d < 0 ? up - d : 0;
+      const act = headerPolicy(y, d, up);     // the rule is in sheetLib.js, in one place
+      if (act === "hide") { if (canHide(t)) slim(true); } else if (act === "show") slim(false);
+    };
+    const focus = (/** @type {FocusEvent} */ e) => {       // Tab into a control in a hidden band
+      const t = /** @type {HTMLElement|null} */ (e.target);
+      if (el.classList.contains("rpt-slim") && el.offsetParent && t && t.closest && t.closest(".main>.bar, .wrhead, .mnhead, .crhead")) slim(false);
+    };
+    const wrap = el.closest(".mnwrap");                    // the minutes at 900 px scroll as a whole, outside the sheet
+    el.addEventListener("scroll", onScroll, true); if (wrap) wrap.addEventListener("scroll", onScroll);
+    document.addEventListener("focusin", focus);
+    const ro = new ResizeObserver(() => { if (!el.offsetParent) { el.classList.remove("rpt-slim"); last.clear(); } });   // the view was closed
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", onScroll, true); if (wrap) wrap.removeEventListener("scroll", onScroll); ro.disconnect();
+      document.removeEventListener("focusin", focus);
+      el.classList.remove("rpt-slim");
+    };
+  }, []);
+}
+
 /** The A4 sheet. @param {SheetProps} props */
 export function Sheet(props) {
   const { doc, partner = null, scrollKey = "", checks = [], onEvent = () => {} } = props;
@@ -252,6 +303,7 @@ export function Sheet(props) {
   const zref = useRef(zoom); zref.current = zoom;
   const eref = useRef(exported); eref.current = exported;
 
+  useBannerHide(root);
   const main = useSaver({ baseVersion: props.baseVersion, onSave: props.onSave, readOnly: leftRO, onEvent });
   const side = useSaver({ baseVersion: partner ? partner.baseVersion : undefined, onSave: partner ? partner.onSave : undefined,
     readOnly: !partner || !!partner.readOnly, onEvent });
@@ -351,15 +403,16 @@ export function Sheet(props) {
   return (
     <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick}>
       <div class="sheet-bar" role="toolbar" aria-label="Report">
+        <span class="sheet-mini">{props.banner ? <><b>{props.banner.title}</b>{props.banner.sub ? <span class="sub">{props.banner.sub}</span> : null}</> : <b>{doc.title}</b>}</span>
         <span class="sheet-zoom" role="group" aria-label="Zoom">
           <button type="button" class="btn sm" aria-label="Zoom out" onClick={() => setZoom(stepZoom(zoom, -1))} disabled={zoom <= 0.4}>−</button>
           <span class="sheet-zv" aria-live="polite" data-zoom={zoom}>{Math.round(zoom * 100)}%</span>
           <button type="button" class="btn sm" aria-label="Zoom in" onClick={() => setZoom(stepZoom(zoom, 1))} disabled={zoom >= 0.8}>+</button>
         </span>
-        <button type="button" class="btn" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
+        <button type="button" class="btn sheet-exp" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
         {partner && !exported ? <label class="sheet-tog"><input type="checkbox" checked={together} onChange={e => setTogether(/** @type {HTMLInputElement} */ (e.currentTarget).checked)} /> Scroll together</label> : null}
-        {partner && !exported && !partner.readOnly ? <button type="button" class="btn" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id)) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
-        <span class="sub sheet-status" role="status">{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
+        {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id)) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
+        <span class="sub sheet-status" role="status" data-bad={main.line && !/^Saved/.test(main.line) ? "1" : undefined}>{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
         {openChecks && !exported ? <span class="sheet-checks" data-checks={openChecks}>{openChecks} {openChecks === 1 ? "check" : "checks"} open</span> : null}
         <span class="sheet-barr">{props.toolbar || null}</span>
       </div>

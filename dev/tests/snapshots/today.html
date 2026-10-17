@@ -31,6 +31,7 @@
 </span>
 </button>
 </div>
+<p id="hFirst" class="hfirst" data-k="today">Press <kbd>?</kbd> for help with Today</p>
 <!-- BL-270 -->
 <div class="thome tbrief" id="tBrief">
 <section class="tsec setupsec" id="setupList" aria-labelledby="hSetup">
@@ -90,102 +91,6 @@
 <p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>
 </section>
 <!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
-<section class="tsec tdsec" id="tdSec" aria-labelledby="hTd">
-<h2 class="th" id="hTd">To decide <span class="cnt" id="nTd">4</span>
-</h2>
-<div id="tdBody">
-<ol class="bl tdlist" id="tdList" aria-labelledby="hTd">
-<li class="tdrow td-review" data-td="rv2">
-<span class="tag tdtag acc">Minutes</span>
-<div class="tb">
-<a class="t" href="#">Minutes: ABC Steering</a>
-<p>Example Programme · minutes · approved on its own, in Review</p>
-</div>
-<span class="tacts">
-<button type="button" class="ib sm pri" aria-label="Open in Review: Minutes: ABC Steering" data-tip="Open in Review" data-tdact="review">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
-<path d="M4 5h16v11H8l-4 4z">
-</path>
-<path d="m9 10.5 2 2 4-4">
-</path>
-</svg>
-</button>
-</span>
-</li>
-<li class="tdrow td-review" data-td="rv4">
-<span class="tag tdtag acc">Action</span>
-<div class="tb">
-<a class="t" href="#">Chase legal on the SOW</a>
-<p>Example Programme · minutes</p>
-</div>
-<span class="tacts">
-<button type="button" class="ib sm pri" aria-label="Approve and save: Chase legal on the SOW" data-tip="Approve and save" data-tdact="approve">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="check">
-<path d="M20 6 9 17l-5-5">
-</path>
-</svg>
-</button>
-<button type="button" class="ib sm" aria-label="Reject, with a reason: Chase legal on the SOW" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
-<path d="M18 6 6 18M6 6l12 12">
-</path>
-</svg>
-</button>
-</span>
-</li>
-<li class="tdrow td-review" data-td="rv3">
-<span class="tag tdtag acc">Risk</span>
-<div class="tb">
-<a class="t" href="#">Vendor exits the market</a>
-<p>Example Programme · minutes · approved on its own, in Review</p>
-</div>
-<span class="tacts">
-<button type="button" class="ib sm pri" aria-label="Open in Review: Vendor exits the market" data-tip="Open in Review" data-tdact="review">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
-<path d="M4 5h16v11H8l-4 4z">
-</path>
-<path d="m9 10.5 2 2 4-4">
-</path>
-</svg>
-</button>
-<button type="button" class="ib sm" aria-label="Reject, with a reason: Vendor exits the market" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
-<path d="M18 6 6 18M6 6l12 12">
-</path>
-</svg>
-</button>
-</span>
-</li>
-<li class="tdrow td-review" data-td="rv1">
-<span class="tag tdtag acc">Action</span>
-<div class="tb">
-<a class="t" href="#">Confirm data owner</a>
-<p>minutes · needs a project</p>
-</div>
-<span class="tacts">
-<button type="button" class="ib sm pri" aria-label="Open in Review: Confirm data owner" data-tip="Open in Review" data-tdact="review">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
-<path d="M4 5h16v11H8l-4 4z">
-</path>
-<path d="m9 10.5 2 2 4-4">
-</path>
-</svg>
-</button>
-<button type="button" class="ib sm" aria-label="Reject, with a reason: Confirm data owner" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
-<path d="M18 6 6 18M6 6l12 12">
-</path>
-</svg>
-</button>
-</span>
-</li>
-</ol>
-<div class="moreline tdfoot">
-<a href="#" class="s" id="tdReview">Open Review (4)</a>
-</div>
-</div>
-</section>
-<!-- BL-319: first after the band -->
 <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden="">
 <h2 class="th" id="hFt">First thing <span class="cnt" id="nFt">
 </span>
@@ -353,21 +258,131 @@
 </div>
 </section>
 <!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
+<section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd">
+<details id="tdFold" open="">
+<summary>
+<h2 class="th" id="hTd">Intake and Review <span class="cnt" id="nTd">4</span>
+<span class="tdnew" id="tdNew" hidden="">new</span>
+</h2>
+</summary>
+<div id="tdBody">
+<ol class="bl tdlist" id="tdList" aria-labelledby="hTd">
+<li class="tdrow td-review" data-td="rv2">
+<span class="tag tdtag acc">Minutes</span>
+<div class="tb">
+<a class="t" href="#">Minutes: ABC Steering</a>
+<p>Example Programme · minutes · approved on its own, in Review</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Open in Review: Minutes: ABC Steering" data-tip="Open in Review" data-tdact="review">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
+<path d="M4 5h16v11H8l-4 4z">
+</path>
+<path d="m9 10.5 2 2 4-4">
+</path>
+</svg>
+</button>
+</span>
+</li>
+<li class="tdrow td-review" data-td="rv4">
+<span class="tag tdtag acc">Action</span>
+<div class="tb">
+<a class="t" href="#">Chase legal on the SOW</a>
+<p>Example Programme · minutes</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Approve and save: Chase legal on the SOW" data-tip="Approve and save" data-tdact="approve">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="check">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Reject, with a reason: Chase legal on the SOW" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</span>
+</li>
+<li class="tdrow td-review" data-td="rv3">
+<span class="tag tdtag acc">Risk</span>
+<div class="tb">
+<a class="t" href="#">Vendor exits the market</a>
+<p>Example Programme · minutes · approved on its own, in Review</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Open in Review: Vendor exits the market" data-tip="Open in Review" data-tdact="review">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
+<path d="M4 5h16v11H8l-4 4z">
+</path>
+<path d="m9 10.5 2 2 4-4">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Reject, with a reason: Vendor exits the market" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</span>
+</li>
+<li class="tdrow td-review" data-td="rv1">
+<span class="tag tdtag acc">Action</span>
+<div class="tb">
+<a class="t" href="#">Confirm data owner</a>
+<p>minutes · needs a project</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Open in Review: Confirm data owner" data-tip="Open in Review" data-tdact="review">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
+<path d="M4 5h16v11H8l-4 4z">
+</path>
+<path d="m9 10.5 2 2 4-4">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Reject, with a reason: Confirm data owner" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</span>
+</li>
+</ol>
+<div class="moreline tdfoot">
+<a href="#" class="s" id="tdReview">Open Review (4)</a>
+</div>
+</div>
+</details>
+</section>
+<!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
 <section class="tsec tres" id="weekSec" aria-labelledby="hWeek">
 <details id="weekFold" open="">
 <summary>
-<h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo">to Monday 12th October</span>
+<h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo">2 items to Monday 12th October</span>
 </h2>
 </summary>
 <div id="weekList">
 <div class="wkday" data-day="wkund">
 <h3 class="wkdh" id="wkd-wkund">Urgent, with no date</h3>
-<ol class="bl wklist" aria-labelledby="wkd-wkund">
+<ul class="wkl" aria-labelledby="wkd-wkund">
 <li class="wkrow wk-raid" data-wk="u0ABC-003">
-<span class="tag wktag bad">Risk · Urgent</span>
+<span class="wkdot u" role="img" aria-label="Urgent">
+</span>
+<span class="wkic" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="alert">
+<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3">
+</path>
+<path d="M12 9v4M12 17h.01">
+</path>
+</svg>
+</span>
 <div class="tb">
 <a class="t" href="#" data-open="raid:ABC-#1">Data access delayed → UAT slips</a>
-<span class="wkwho"> — TBC, <a class="s" href="#" data-cock="ABC">Example Programme</a>
+<span class="wkwho">TBC · <a class="s" href="#" data-cock="ABC">Example Programme</a>
 </span>
 </div>
 <span class="wkwhy">no date set</span>
@@ -382,16 +397,23 @@
 </button>
 </span>
 </li>
-</ol>
+</ul>
 </div>
 <div class="wkday" data-day="wk2026-10-12">
 <h3 class="wkdh" id="wkd-wk2026-10-12">Monday 12th October</h3>
-<ol class="bl wklist" aria-labelledby="wkd-wk2026-10-12">
+<ul class="wkl" aria-labelledby="wkd-wk2026-10-12">
 <li class="wkrow wk-actions" data-wk="2026-10-12actionsABC-A-002">
-<span class="tag wktag">Action</span>
+<span class="wkdot" aria-hidden="true">
+</span>
+<span class="wkic" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="check">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</span>
 <div class="tb">
 <a class="t" href="#" data-open="actions:ABC-A-#2">Book UAT environment</a>
-<span class="wkwho"> — Sara Example, <a class="s" href="#" data-cock="ABC">Example Programme</a>
+<span class="wkwho">Sara Example · <a class="s" href="#" data-cock="ABC">Example Programme</a>
 </span>
 </div>
 <span class="wkwhy">due</span>
@@ -414,7 +436,7 @@
 </button>
 </span>
 </li>
-</ol>
+</ul>
 </div>
 </div>
 </details>
@@ -456,7 +478,9 @@
 <th data-col="evidence">Evidence<span class="colrz" tabindex="0" role="separator" aria-label="Resize Evidence column" aria-orientation="vertical" aria-valuemin="60" aria-valuemax="900" aria-valuenow="#">
 </span>
 </th>
-<th data-col="trend">8 weeks<span class="colrz" tabindex="0" role="separator" aria-label="Resize 8 weeks column" aria-orientation="vertical" aria-valuemin="60" aria-valuemax="900" aria-valuenow="#">
+<th data-col="trend">6 weeks<button type="button" class="legbtn" aria-label="What the health bars mean" aria-haspopup="dialog" aria-expanded="false">
+</button>
+<span class="colrz" tabindex="0" role="separator" aria-label="Resize 6 weeks column" aria-orientation="vertical" aria-valuemin="60" aria-valuemax="900" aria-valuenow="#">
 </span>
 </th>
 <th data-col="next">Next milestone<span class="colrz" tabindex="0" role="separator" aria-label="Resize Next milestone column" aria-orientation="vertical" aria-valuemin="60" aria-valuemax="900" aria-valuenow="#">
@@ -490,22 +514,18 @@
 </span>
 </td>
 <td>
-<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">
-<i class="s-">
+<span class="spark" tabindex="0" role="group" data-sp="ABC" aria-label="Health, last 6 weeks, oldest first. No update this week. Arrow keys move between weeks.">
+<i class="s-" data-i="0">
 </i>
-<i class="s-">
+<i class="s-" data-i="1">
 </i>
-<i class="s-">
+<i class="s-" data-i="2">
 </i>
-<i class="s-">
+<i class="s-" data-i="3">
 </i>
-<i class="s-">
+<i class="s-warn" data-i="4">
 </i>
-<i class="s-">
-</i>
-<i class="s-warn">
-</i>
-<i class="s-">
+<i class="s-" data-i="5">
 </i>
 </span>
 </td>
@@ -532,22 +552,18 @@
 </span>
 </td>
 <td>
-<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">
-<i class="s-">
+<span class="spark" tabindex="0" role="group" data-sp="DEF" aria-label="Health, last 6 weeks, oldest first. No update this week. Arrow keys move between weeks.">
+<i class="s-" data-i="0">
 </i>
-<i class="s-">
+<i class="s-" data-i="1">
 </i>
-<i class="s-">
+<i class="s-" data-i="2">
 </i>
-<i class="s-">
+<i class="s-" data-i="3">
 </i>
-<i class="s-">
+<i class="s-" data-i="4">
 </i>
-<i class="s-">
-</i>
-<i class="s-">
-</i>
-<i class="s-">
+<i class="s-" data-i="5">
 </i>
 </span>
 </td>
@@ -562,4 +578,5 @@
 <p class="calfoot" id="calFoot" hidden="">
 </p>
 <!-- BL-270: "Calendar as read on …", at the page's foot -->
+<p id="hFoot" class="hfoot" data-k="today">Press <kbd>?</kbd> for help with Today</p>
 </section>

@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { drawPeekNotes } from "./notes.js";
+import { linkWords } from "./core/linkText.js";
 import { actHref, actId } from "./activity.js";
 import { closeChat, openChat, send } from "./ask.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
@@ -15,6 +16,7 @@ import { statusDotNodes } from "./components/StatusDot.jsx";
 import { peekMark, peekPropNodes } from "./components/peek/PeekProps.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { creaiteEditor } from "./core/editor.js";
+import { linkAnchor, linkUrl, unescHtml } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
 import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
@@ -24,6 +26,7 @@ import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD,
 import { api, applyNow, applySoon, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
+import { hsAsk, hsCardHtml, hsSparkHtml, hsStat, hsUse } from "./healthSuggest.js";
 import { draftAsk, draftBtn, draftCardHtml, draftStat, draftWhyNot } from "./drafts.js";
 import { pdDrop, pdKeyOf, pdOffer, pdRaw, pdWhen, pKeysShow } from "./help.js";
 import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js";
@@ -109,10 +112,13 @@ export function splitPanes(t){ t=String(t||""); const ms=paneMarkers(t); if(!ms.
   return [t.slice(0,ms[0]).trim(),right.replace(/\n{3,}/g,"\n\n").trim()]; }
 export function joinPanes(l,r){ l=String(l||"").trim(); r=String(r||"").trim(); return r?(l?l+"\n\n":"")+PANE+"\n\n"+r:l; }
 /* #122 C: a work-item link, `[ABC-A-012 · Action: title](creaite:item/ABC-A-012)`, reads as its words and opens the item; a click is handled by the delegate below */
-export function mdInline(t){ return esc(t).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g,(m,a,id)=>`<a href="#" class="itemref" data-oi="${id}">${a}</a>`)
-  .replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g,(m,a,u)=>`<a href="${u}" target="_blank" rel="noopener">${a}</a>`)
-  .replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/~~(.+?)~~/g,"<s>$1</s>")
-  .replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g,"$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g,"$1<i>$2</i>"); }
+export function mdInline(t){ const kept=[], keep=h=>{ kept.push(h); return "\u0001"+(kept.length-1)+"\u0001"; };
+  /* the emphasis pass (bold, strike, italic); finished links are held out as placeholders so it never reaches an anchor's attributes (#159) */
+  const emph=s=>s.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/~~(.+?)~~/g,"<s>$1</s>")
+    .replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g,"$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g,"$1<i>$2</i>");
+  const s=esc(String(t??"").split("\u0001").join("")).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g,(m,a,id)=>keep(`<a href="#" class="itemref" data-oi="${id}">${emph(a)}</a>`))
+    .replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g,(m,a,u)=>{ const h=a.includes("\u0001")?null:linkAnchor(unescHtml(u),emph(a)); return h?keep(h):m; });   /* the one validator and anchor: core/linkUrl.js */
+  return emph(s).replace(new RegExp("\u0001(\\d+)\u0001","g"),(m,n)=>kept[+n]??""); }
 export function mdBlocks(text){ const /** @type {any[]} */ B=[]; let para=[], quote=[];
   const flush=()=>{ if(para.length){ B.push(["p",para.join(" ")]); para=[]; } if(quote.length){ B.push(["q",quote.join(" ")]); quote=[]; } };
   const marks=paneLines(text), lines=String(text||"").split("\n").concat([""]);
@@ -144,7 +150,7 @@ export function htmlToMd(root){ const blocks=[]; let cur="";
     if(tag==="UL"||tag==="OL") return ""; const inner=[...n.childNodes].map(inl).join("");
     if(tag==="BR") return " "; const w=(m)=>{ const t=inner.trim(); if(!t) return inner; const lead=inner.match(/^\s*/)[0], trail=inner.match(/\s*$/)[0]; return lead+m+t+m+trail; };
     const st=n.style||{};
-    if(tag==="A"){ const href=n.getAttribute("href")||""; return /^(https?:|mailto:)/i.test(href)&&inner.trim()?`[${inner.trim()}](${href})`:inner; }
+    if(tag==="A"){ const href=n.getAttribute("href")||""; const u=linkUrl(href); return u&&inner.trim()?`[${inner.trim()}](${u})`:inner; }
     if(tag==="B"||tag==="STRONG"||+st.fontWeight>=600||st.fontWeight==="bold") return w("**");
     if(tag==="I"||tag==="EM"||st.fontStyle==="italic") return w("*");
     if(tag==="S"||tag==="STRIKE"||tag==="DEL"||/line-through/.test(st.textDecoration||"")||/line-through/.test(st.textDecorationLine||"")) return w("~~");
@@ -200,7 +206,7 @@ export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
   shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
-export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
+export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); HSG=null; HSUSED=null; shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
 export function curObj(){ return shared.CUR.mode==="record"?REC(shared.CUR.k,shared.CUR.id):shared.CUR.draft; }
 export const PKK=["actions","raid","decisions"];   /* declared before drawPanel, which runs at load */
 export const pkNew=()=>!!(shared.CUR&&(shared.CUR.mode==="new"||shared.CUR.mode==="msnew"));   /* declared before drawPanel, which runs at load */
@@ -222,7 +228,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   $("#panel").classList.toggle("pover",shared.CUR.mode==="health");   /* #109: the health form is over the page, not beside it */
   $("#pBody").classList.toggle("editing",shared.EDITING); $("#editBanner").textContent=shared.CUR.mode==="proposal"?"Editing a proposal — nothing reaches the tracker until it's approved":"Editing — changes apply when you save";
   let h=""; for(const [n,l,t,opts] of F){ if(n==="#"){ h+=`<div class="fsec">${l}</div>`; continue; } const v=shared.CUR.pre&&n in shared.CUR.pre?shared.CUR.pre[n]:x[n];   /* CUR.pre: "Record the decision" fills the form first (BL-53) */
-    h+=`<dt>${l}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
+    h+=`<dt>${l}${shared.EDITING?labelAdorn(shared.CUR.k,shared.CUR.mode,n):""}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
   if(shared.CUR.mode==="proposal"&&!x.p) h=`<div class="cmnote">Choose a project before saving.</div>`+h;
   if(shared.CUR.mode==="record"||shared.CUR.mode==="proposal"){ const src=shared.CUR.mode==="record"?x.src:REV.find(r=>r.n===shared.CUR.n).src; h+=`<div class="fsec">Record</div>${shared.CUR.mode==="record"?`<dt>ID</dt><dd>${shared.CUR.id}</dd>`:""}<dt>Source</dt><dd>${srcHTML(src)}</dd>${shared.CUR.mode==="record"?`<dt>Last updated</dt><dd>${x.upd_at?fd(x.upd_at):"—"}</dd>`:""}`; }
   if(shared.CUR.mode==="proposal"){ const sig=learnable(REV.find(r=>r.n===shared.CUR.n)); if(sig) h+=`<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`; }
@@ -338,7 +344,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
     const lc=$("#f_learn"); if(lc&&lc.checked&&f.p) learnSignal(f.p,lc.dataset.kind,lc.dataset.value);
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
     closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } return; }
-  if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; closePanel();
+  if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; hsSaved(); closePanel();
     await save(`${p.name} health: ${before.health||"not set"} → ${f.health}`,[{op:"update",table:"projects",id:p.code,changes:{health:f.health,health_reason:f.reason}}],null,()=>Object.assign(p,f),()=>Object.assign(p,before)); return; }
 }
 /* Current state is saved as a proposal that rewrites the section in the project's CLAUDE.md (undoable) */
@@ -385,7 +391,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))) return;   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft chase goes back to the item first */
@@ -694,7 +700,8 @@ PK.det={};
    the stored text stays as it was. Their text is read and set by textContent as before (the editor answers for it), so the
    commit on leaving the field, Esc, the rules and the AI drafts are unchanged. */
 export function pkEdMount(root){ if(!root) return; root.querySelectorAll(".pked").forEach(el=>{ if(el.cxed) return;
-  creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent",
+  creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent",links:!!el.dataset.pkml,      /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
+    
     ...(el.dataset.pkml||el.id==="pkTitle"?{ai:{place:el.dataset.pkml?"plain":"line",project:()=>{ const x=shared.CUR&&pkX(shared.CUR.k,pkCid()); return (x&&x.p)||""; }}}:{})}); }); }   /* BL-301 D: AI on a selection in the longer fields, and the title (one line: place "line", a suggestion never breaks it) */
 export const pkDetOpen=(x,id)=>!!((PK.pc&&PK.pc.id===id)||(id in PK.det?PK.det[id]:!!x.client));
 export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#pkDetT"); tg.setAttribute("aria-expanded",String(open)); $("#pkDet").hidden=!open; if(!open) return;
@@ -751,7 +758,7 @@ export function pkFeedItems(x,k){ const id=pkCid(), out=[], ul=pkUpdLabel(k);
   out.push(...feedLines(pkHistory(id),ch=>/^created\b/.test(ch)?"src":ch.toLowerCase().startsWith(ul+":")?"upd":"act"));   /* BL-250 A: shared; B: the whole history */
   if(shared.CUR.mode==="record") out.push({type:"src",who:"Source",html:`<div class="pk-src">${srcHTML(x.src)}</div>`,when:""});
   return out; }
-export const pkShort=(s,n=60)=>{ s=String(s??"").replace(/\s+/g," ").trim(); return !s?"empty":s.length>n?s.slice(0,n-1)+"…":s; };
+export const pkShort=(s,n=60)=>{ s=linkWords(String(s??"")).replace(/\s+/g," ").trim(); return !s?"empty":s.length>n?s.slice(0,n-1)+"…":s; };
 export function pkFeed(x,k){ const tab=PK.tab||"all";
   drawTabs($("#pkTabsHost"),{items:feedTabItems(tab,"pktab","pkTabSel"),selected:tab,onSelect:v=>{ if(!shared.CUR) return; PK.tab=v; pkFeed(curObj(),shared.CUR.k); },
     label:"Activity",className:"pk-tabs",tabClass:"pk-tab",id:"pkTabs",wrap:true});   /* BL-316: the Tabs building block */
@@ -1267,9 +1274,39 @@ export function healthFacts(code){ const ev=healthEvidence(code);
 export function drHealthDraw(){ const ev=$("#hEvidence"); if(!ev||!shared.CUR||shared.CUR.mode!=="health") return; let host=$("#hDraft");
   if(!host){ addHTML(ev,"afterend",html`<div id="hDraft" class="pkdrhost"></div>`); host=$("#hDraft"); }
   const c=shared.DRH&&shared.DRH.code===shared.CUR.code?shared.DRH:null;
-  putHTML(host,html`<div>${raw(draftBtn("health","Draft the reason","Word the reason from the evidence above, in one executive sentence",'data-drhealth="1"'))}</div>${c?raw(c.html):""}`); }
+  putHTML(host,html`<div>${raw(draftBtn("health","Draft the reason","Word the reason from the evidence above, in one executive sentence",'data-drhealth="1"'))}</div>${c?raw(c.html):""}`); hSugDraw(); }
+/* ===== #203 ===== the sparkle beside the Health label suggests the health and its reason (healthSuggest.js). The label hook is general:
+   FLABEL gets (kind, mode, field) and answers HTML that sits right of the label text. The card sits under the evidence; Use fills the
+   two fields (nothing saved), Save uses it and presses the form's Save, Reject (or Esc) clears it and gives the focus back to the sparkle. */
+export const FLABEL=[];
+export const labelAdorn=(k,mode,n)=>FLABEL.map(f=>f(k,mode,n)).join("");
+FLABEL.push((k,mode,n)=>k==="project"&&mode==="health"&&n==="health"?hsSparkHtml():"");
+/** @type {any} */ let HSG=null;                         /* {code, html, d, reason} */
+export function hSugDraw(){ const ev=$("#hEvidence"); if(!ev||!shared.CUR||shared.CUR.mode!=="health") return; let host=$("#hSug");
+  if(!host){ addHTML(ev,"afterend",html`<div id="hSug" class="hsg-host"></div>`); host=$("#hSug"); }
+  const c=HSG&&HSG.code===shared.CUR.code?HSG:null;
+  putHTML(host,raw(c?(c.d?hsCardHtml(c.d,c.reason):c.html):"")); }
+function hsClose(rejected){ if(rejected&&HSG&&HSG.d) hsStat("rejected"); HSG=null; hSugDraw(); const b=$("#pFields [data-hsuggest]"); if(b) b.focus(); }
+/** @type {any} */ let HSUSED=null;                       /* {suggested}: Use filled the form; counted when the form is saved, not before */
+/** Called by the health form once it has passed validation and is being saved: counts the suggestion that was used (a kept reason counts as used). */
+export function hsSaved(){ if(!HSUSED) return; hsStat(HSUSED.kept?"used":hsUse($("#f_reason")?.value,HSUSED.suggested)); HSUSED=null; }
+function hsFill(){ const c=HSG; if(!c||!c.d) return false; const hs=$("#f_health"), rs=$("#f_reason"); if(!hs||!rs) return false;
+  hs.value=c.d.health; hs.dispatchEvent(new Event("change",{bubbles:true}));
+  const kept=rs.value!==c.base;
+  if(kept) snack("Your reason was kept: you changed it while the suggestion was being written");   /* never overwritten silently */
+  else { rs.value=c.reason; rs.dispatchEvent(new Event("input",{bubbles:true})); }
+  HSUSED={suggested:c.d.reason,kept}; HSG=null; hSugDraw(); return true; }
+async function hsRun(){ if(!shared.CUR||shared.CUR.mode!=="health") return; const b=$("#pFields [data-hsuggest]");
+  if(b&&b.getAttribute("aria-disabled")==="true"){ snack(b.dataset.tip||"Drafting isn't available"); return; }
+  const why=draftWhyNot("health"); if(why){ snack(why); return; }
+  const code=shared.CUR.code, mine={code,html:"",d:null,reason:"",base:$("#f_reason")?.value??""}; HSG=mine;
+  const res=await hsAsk(code,"internal",{status:h=>{ if(HSG===mine){ mine.html=h?`<div class="drstatus" role="status">${h}</div>`:""; hSugDraw(); } }});
+  if(HSG!==mine) return;
+  if(res.nothing){ mine.html=`<div class="drnone" role="status">${esc(res.nothing)}</div>`; hSugDraw(); return; }
+  if(!res.ok||!res.d){ HSG=null; hSugDraw(); snack(res.message||"No draft came back"); return; }
+  mine.d=res.d; mine.reason=res.d.reason; hSugDraw(); const card=$("#hsgCard"); if(card) card.querySelector("[data-hsdo=use]")?.focus(); }
 /* the forecast */
-shared.DRF=null;                                          /* {id, fc, html, d, used} */
+shared.DRF=null;                                         /* {id, fc, html, d, used} */
 export function drFcDraw(){ const w=$("#mvFcWhy"); if(!w||!shared.MV.pend) return; const lab=w.closest(".mv-inl"); if(!lab) return; let host=$("#mvFcDraft");
   if(!host){ addHTML(lab,"afterend",html`<div id="mvFcDraft" class="pkdrhost"></div>`); host=$("#mvFcDraft"); }
   const c=shared.DRF&&shared.DRF.id===shared.MV.pend.id&&shared.DRF.fc===shared.MV.pend.fc?shared.DRF:null;
@@ -1289,6 +1326,12 @@ $("#pFields").addEventListener("click",async e=>{ const b=e.target.closest("[dat
   if(res.nothing){ mine.html=`<div class="drnone" role="status">${esc(res.nothing)}</div>`; drHealthDraw(); return; }
   if(!res.ok){ shared.DRH=null; drHealthDraw(); snack(res.message||"No draft came back"); return; }
   mine.d=res; mine.html=draftCardHtml(res,{title:`Draft reason: ${to}`,use:"Use this"}); drHealthDraw(); });
+$("#pFields").addEventListener("click",e=>{ const s=e.target.closest("[data-hsuggest]"), u=e.target.closest("#hSug [data-hsdo]");   /* #203 */
+  if(s){ e.preventDefault(); hsRun(); return; } if(!u) return; e.preventDefault(); const w=u.dataset.hsdo;
+  if(w==="reject"){ hsClose(true); return; }
+  if(!HSG||!HSG.d) return; if(hsFill()){ if(w==="save") $("#pSave").click(); else { const t=$("#f_reason"); if(t) t.focus(); } } });
+$("#pFields").addEventListener("input",e=>{ if(HSG&&e.target.id==="hsgReason") HSG.reason=e.target.value; });
+$("#pFields").addEventListener("keydown",e=>{ if(e.key==="Escape"&&e.target.closest&&e.target.closest("#hSug")&&HSG&&HSG.d){ e.preventDefault(); e.stopPropagation(); hsClose(true); } });
 /* counted when the form is saved (used or edited) or left (rejected) */
 $("#pFoot").addEventListener("click",e=>{ if(!shared.DRH||!shared.DRH.used||!e.target.closest("#pSave")) return; draftStat("reason",drSame($("#f_reason")?.value,shared.DRH.used)?"used":"edited"); shared.DRH=null; },true);
 document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drfc]"), u=e.target.closest("#mvFcDraft [data-drdo]");

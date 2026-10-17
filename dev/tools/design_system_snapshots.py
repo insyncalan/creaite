@@ -20,14 +20,17 @@ VIEWS = [("today", "go('today')"), ("work", "go('work')"), ("review", "go('revie
          ("activity", "go('activity')"), ("settings", "go('settings')"), ("help", "go('help')")]
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:'
          'wght@700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">')
-TOGGLE = "<script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script>"
+TOGGLE = ("<script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;"
+          "r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script>")
 
 
 def git(repo, *a):
+    """Run one git command in the repo and return its trimmed standard output."""
     return subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True).stdout.strip()
 
 
 def main():
+    """Take the design-system snapshots of the running app (see ../README.md)."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=str(HERE.parent))
     ap.add_argument("--out", default=str(HERE / "design-system"))
@@ -44,9 +47,11 @@ def main():
     (out / "style.snapshot.css").write_text(css)
     info = {"commit": git(repo, "rev-parse", "--short", "HEAD"), "branch": git(repo, "rev-parse", "--abbrev-ref", "HEAD"),
             "version_file": (repo / "VERSION").read_text().strip(), "subject": git(repo, "log", "-1", "--format=%s")[:100],
-            "taken": date.today().isoformat(), "palette": "creaite", "mode": "light", "viewport": "1400x1000"}
+            "taken": date.today().isoformat(), "palette": "creaite", "mode": "light",
+            "viewport": "1400x1000"}
     (out / "SNAPSHOT.json").write_text(json.dumps(info, indent=1) + "\n")
-    note = ("A static snapshot of the real %s screen (creaite palette, light, fictional sample data) drawn by style.snapshot.css, taken from "
+    note = ("A static snapshot of the real %s screen (creaite palette, light, fictional sample data) drawn by style.snapshot.css, "
+            "taken from "
             + "commit " + info["commit"] + " (" + info["branch"] + ", VERSION file " + info["version_file"] + ") on " + info["taken"]
             + ". Alt+D toggles dark. Copy this file to start a mockup; see ../README.md.")
     v, proc, base = ui_audit.start_server()

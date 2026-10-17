@@ -2321,6 +2321,7 @@ class Run:
                 continue
             self.session = ev.get("session_id") or self.session
             kind = ev.get("type")
+            self._usage_seen(ev, kind)                  # #197: the model, the start load and skill names, counts only
             if kind == "assistant":
                 self._on_assistant(ev)
             elif kind == "user":
@@ -2431,6 +2432,7 @@ class Run:
         self.denied = [f"{d.get('tool_name', '')} {json.dumps(d.get('tool_input') or {}, ensure_ascii=False)[:120]}".strip()
                        for d in ev.get("permission_denials") or []]
         self.denied_raw = [d for d in ev.get("permission_denials") or [] if isinstance(d, dict)]     # BL-140
+        self.usage_result = ev                       # #197: usage_log reads only its numbers, at the run's end
         return ev.get("result") or ""
 
     def _end_guarded(self, proc, final):
@@ -2594,6 +2596,7 @@ class Run:
     # ===== end BL-326 =====
 
     def _done(self):
+        self._usage_record()                              # #197: one counts-only line, however the run ended
         release_sweep_lock([self.id], "timed out" if getattr(self, "timed_out", False) else "stopped" if self.stop
                            else "ended")                  # BL-328: however the run ended (finished, stopped, refused, failed)
         if self.plain:                                    # BL-326: one plain closure line, for success, failure and Stop
@@ -2641,6 +2644,40 @@ class Run:
             swallowed("observe", e)
         # ===== end BL-228 =====
 
+    # ===== #197 (v2.1.1): run usage monitor =====
+    def _usage_seen(self, ev, kind):
+        """The model (system init event), the start load (the first assistant event's input and cache tokens) and, from every
+        assistant event, the names of the skills it called (names only, never their arguments; kept once each, in order).
+        Each part has its own guard: a fault is swallowed and the run and its events are unchanged. Never raises."""
+        if kind not in ("system", "assistant"):
+            return
+        try:
+            import usage_log
+            if kind == "system" and ev.get("subtype") == "init":
+                self.usage_model = usage_log.model_of(ev)
+            elif kind == "assistant" and not getattr(self, "usage_start", 0):
+                self.usage_start = usage_log.start_tokens_of(ev)
+        except Exception as e:  # noqa: BLE001  the monitor never touches the run
+            swallowed("usage", e)
+        if kind == "assistant":
+            try:
+                seen = self.__dict__.setdefault("usage_skills", {})       # a dict keeps the names once each, in order
+                for name in usage_log.skills_of(ev):
+                    seen.setdefault(name, None)
+            except Exception as e:  # noqa: BLE001  a malformed event adds no skills
+                swallowed("usage", e)
+
+    def _usage_record(self):
+        """One line in run-usage.jsonl for this run: finished, failed or stopped (stopped=True). Counts only. Never raises."""
+        try:
+            kind, label = usage_kind(self)
+            run_usage(kind, getattr(self, "usage_result", None), label=label, model=getattr(self, "usage_model", ""),
+                      seconds=time.time() - self.started, start_tokens=getattr(self, "usage_start", 0), stopped=bool(self.stop),
+                      skills=list(getattr(self, "usage_skills", None) or {}))
+        except Exception as e:  # noqa: BLE001
+            swallowed("usage", e)
+    # ===== end #197 =====
+
     def record(self, running=False, stopped=False):
         """Keep the exchange in the chat's history file as it happens (BL-20, BL-37). BL-262: under the run's lock, with how many
         of its events the history now reaches, so a page that draws the history asks only for the events after those."""
@@ -2651,6 +2688,47 @@ class Run:
                                       stopped=stopped, running=running, run=self.id, images=self.images,
                                       sent=datetime.fromtimestamp(self.started).isoformat(timespec="seconds")) or self.chat
             self.recorded = len(self.events)
+
+
+# ===== #197 (v2.1.1): run usage monitor: one counts-only line per finished Claude run (usage_log.py, the file's one writer) =====
+# The run engine's kinds to the monitor's: a chat and a search answer are "ask" (a typed sweep is "sweep"); an AI draft, Draft from
+# the message, Shape, Edit with AI and Find updates are "draft"; Generate and Make it executive are "generate". The label is the
+# engine's kind or the draft's kind: fixed words, never the text of a prompt, a reply or a name. A failure never touches the run.
+USAGE_KIND = {"ask": "ask", "search": "ask", "sweep": "sweep", "prep": "prep", "check": "check", "load": "load",
+              "generate": "generate", "edit-ai": "draft", "shape-closed": "draft", "notes-find": "draft"}
+
+
+def usage_kind(run):
+    """(the monitor's kind, a short fixed label) for a run of the run engine."""
+    kind, job = getattr(run, "kind", "ask"), getattr(run, "job", None)
+    if getattr(run, "sweep", False):
+        return "sweep", "chat"
+    if isinstance(job, AlertDraftJob):
+        return "draft", "alert"
+    if isinstance(job, DraftJob) and kind in ("generate", "shape-closed"):
+        draft = str((getattr(job, "req", None) or {}).get("kind") or "")
+        return "draft", draft if draft in DRAFT_KINDS or draft == "shape" else "draft"
+    return USAGE_KIND.get(kind, "ask"), kind if kind in USAGE_KIND else "other"
+
+
+def run_usage(kind, result=None, **counts):
+    """usage_log.record, guarded: it never raises, and an import fault is swallowed here too."""
+    try:
+        import usage_log
+        usage_log.record(kind, result, **counts)
+    except Exception as e:  # noqa: BLE001  the monitor never touches a run
+        swallowed("usage", e)
+
+
+def vip_usage(r, took):
+    """The VIP check's line: its `--output-format json` reply has the run's usage and cost; a check that timed out or never
+    started (r None) records as stopped. Never raises."""
+    try:
+        reply = json.loads(r.stdout or "{}") if r is not None else None
+        run_usage("vip", reply if isinstance(reply, dict) else None, label="check", seconds=took, stopped=r is None)
+    except Exception:  # noqa: BLE001  a reply that isn't JSON still records its seconds
+        run_usage("vip", None, label="check", seconds=took)
+# ===== end #197 =====
 
 
 # ===== BL-257 (sprint-ask-flow): queued messages =====
@@ -3268,6 +3346,7 @@ def main():
     clear_card_marks(0)                                  # #124 F3: no Approve is in progress at start
     for f in (paths.STAGING / "changes").glob("*.json") if (paths.STAGING / "changes").is_dir() else []:
         f.unlink(missing_ok=True)
+    retire_note_drafts()                                 # #175: the Notes tab's old typed drafts, backed up and logged once
     if LAUNCHED:
         LAST_HERE[0] = time.time()
         threading.Thread(target=watch_for_close, args=(httpd,), daemon=True).start()
@@ -3586,7 +3665,7 @@ def vip_check(how="check"):
         prompt = vip_prompt(since, vips, zone, parts)
         cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
                            "--disallowedTools", ",".join(vip_deny())], prompt)            # #91: after `--`; no --tools (#116)
-        found, why, cost, began = None, "", None, time.monotonic()
+        found, why, cost, began, r = None, "", None, time.monotonic(), None
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
             found, why, cost = vip_reply(r)
@@ -3595,6 +3674,7 @@ def vip_check(how="check"):
         except OSError:
             why = VIP_NOT_STARTED
         took = time.monotonic() - began
+        vip_usage(r, took)                                # #197: tokens and cost, counts only
         if not isinstance(found, list):                   # the reason shown is fixed words: never the model's or a tool's
             VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {vip_why(why)}"
             print(VIP_STATUS["last_error"], flush=True)
@@ -4398,11 +4478,45 @@ def _events_follow(handler, seq):
 # ===== BL-141 (sprint-admin): what ask creaite changed =====
 # Activity's read-only list of the files ask creaite (and the card) changed, today and the last seven days, each with its Undo.
 def changes_list_route(handler, req):
-    """POST /api/changes/list: the files ask creaite and the card changed in the last seven days, newest first (BL-141)."""
+    """POST /api/changes/list: the files ask creaite and the card changed in the last seven days, newest first (BL-141). #175 (M1
+    of Team Cap's #119 review): the saves of one editing session (the same file, session and backup) are one row, its latest save,
+    with `saves` (how many) and `first_at` (when the session began). Its button (the page says "Restore <first_at>", Alan
+    17-10-2026) sends the latest save's id to /api/changes/undo, which puts the file back as it was before the session began: a
+    file-level restore, unchanged from #119. The files log is unchanged: still one line per save."""
     import filechange
-    rows = [{k: e.get(k) for k in ("id", "at", "op", "path", "to", "why", "via", "approved", "undone", "tier")}
-            for e in filechange.changes(days=7) if e.get("via") in ("ask", "dashboard")]
+    rows, at = [], {}
+    for e in filechange.changes(days=7):
+        if e.get("via") not in ("ask", "dashboard"):
+            continue
+        row = {k: e.get(k) for k in ("id", "at", "op", "path", "to", "why", "via", "approved", "undone", "tier")}
+        group = (e.get("path"), e.get("session"), e.get("backup")) if e.get("op") == "edit" and e.get("session") else None
+        if group in at:                                            # a later save of a session already listed: it takes the row
+            first = rows[at[group]]
+            row.update(saves=first["saves"] + 1, first_at=first["first_at"])
+            rows[at[group]] = row
+            continue
+        if group:
+            at[group] = len(rows)
+            row.update(saves=1, first_at=e.get("at"))
+        rows.append(row)
+    rows.sort(key=lambda r: r["id"])
     return handler.send(200, {"ok": True, "changes": rows[::-1]})
+
+
+def retire_note_drafts():
+    """#175: at start-up, the Notes tab's old typed drafts (system/staging/drafts/notes/<16 hex>.json, unused since #119) are
+    moved into one file-change backup and logged (filechange.retire_note_drafts); the Capture drawer's capture-*.json stay. A
+    failure is logged and never stops the server."""
+    try:
+        import filechange
+        n = filechange.retire_note_drafts()
+    except Exception as e:  # noqa: BLE001  start-up goes on; the drafts stay until the next start
+        if debuglog is not None:
+            debuglog.warn("notes", f"old note drafts not cleared ({type(e).__name__})")
+        return 0
+    if n and debuglog is not None:
+        debuglog.info("notes", f"{n} old note draft{'s' if n != 1 else ''} moved to a file-change backup (#175)")
+    return n
 
 
 def changes_undo_route(handler, req):
@@ -4870,15 +4984,13 @@ def note_card_apply(c):
             return {"ok": False, "stale": True, "message": why}
         c["state"] = "approved"                                          # used once, before anything runs
         res = edit_apply(c)
-        if res.get("ok") and c.get("_note"):
-            notes.drop_draft(c["_note"]["path"])                         # nothing is left under the old path
     if res.get("ok"):
         notes_reindex()
     return res
 
 
 def note_changed(notes, note):
-    """Why a Delete note card can't move the note now (it changed after Alan confirmed, or typing waits in a draft), or None."""
+    """Why a Delete note card can't move the note now (it changed after Alan confirmed), or None."""
     if not note:
         return None
     p = paths.resolve(note["path"])
@@ -4886,7 +4998,7 @@ def note_changed(notes, note):
         now = notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")) if p.is_file() and not p.is_symlink() else None
     except OSError:  # a note that can't be read now isn't the one confirmed
         now = None
-    if now != note["sha"] or notes.read_draft(note["path"]):
+    if now != note["sha"]:
         return "Not deleted: the note changed after you confirmed. Delete it again to confirm the new version."
     return None
 
@@ -7050,17 +7162,19 @@ main = main_with_restart
 
 # ===== BL-301 B (v20-notes-tab): the Notes tab =====
 # POST /api/notes/list  {code}                                  a project's (or _portfolio's) notes: front matter and references, no text
-# POST /api/notes/get   {path}                                  one note: its body, front matter, the text's fingerprint and any draft
+# POST /api/notes/get   {path}                                  one note: its body, front matter and the text's fingerprint
 # POST /api/notes/new   {code, template, title, date?, with?}   a new note from one of the four templates, created through filechange.py
-# POST /api/notes/draft {path, body?, changes?, base}           what Alan has typed, kept in system/staging/drafts/notes/ (no project file)
-# POST /api/notes/save  {path, body?, changes?, base}           the note's file written through filechange.py: backed up, logged, undoable
-# The page saves a draft as Alan types and the file once per editing session (on leaving the note, or after 30 seconds without
-# typing). A note changed outside creaite since it was opened is never overwritten: the draft is kept and the page says so. The
-# search index is refreshed after a save, in the background. Notes are internal and passive: nothing here extracts or stages.
+# POST /api/notes/save  {path, body?, changes?, base, session?} the note's file written through filechange.py: backed up, logged, undoable
+# #119: the page writes the file as Alan types (a moment after the last key) and names its editing session (`session`: a new id each
+# time a note is opened and after 5 minutes idle), so filechange.py keeps ONE backup per session, not one per save. A save without
+# a session (an older page) is backed up on its own, as before. A note changed outside creaite since it was opened is never
+# overwritten: nothing is written and the page says so. The search index is refreshed after a save, in the background. Notes are
+# internal and passive: nothing here extracts or stages.
 NOTES_LOCK = threading.Lock()
 NOTES_INDEX = {"busy": False, "again": False}
 NOTE_BODY_LIMIT = 400_000
 NOTE_WHY = "a note saved in the Notes tab"
+NOTE_SESSION = re.compile(r"[A-Za-z0-9-]{8,64}")   # #119: the page's editing-session id (a UUID); anything else is no session
 
 
 def notes_code(code):
@@ -7121,20 +7235,16 @@ def notes_target(handler, req):
 
 
 def notes_get_route(handler, req):
-    """One note to open: its body and front matter, the fingerprint a save is checked against, and a draft not yet written."""
+    """One note to open: its body and front matter, and the fingerprint a save is checked against."""
     t = notes_target(handler, req)
     if not t:
         return None
     notes, code, p, rel = t
     text = p.read_text(encoding="utf-8", errors="ignore")
     meta, body = notes.parse(text)
-    draft = notes.read_draft(rel)
-    if draft and draft.get("base") != notes.text_sha(text):
-        draft["stale"] = True                       # the file changed since the draft was typed: the page asks which to keep
     return handler.send(200, {"ok": True, "code": code, "note": notes.summary(p, code), "body": body,
                               "meta": {k: meta.get(k) for k in notes.FIELDS if k in meta}, "base": notes.text_sha(text),
-                              "draft": draft, "sent": note_sent_lines(notes, rel, body),
-                              "images": note_images(code, body + "\n" + str((draft or {}).get("body") or ""))})     # BL-301 B gaps
+                              "sent": note_sent_lines(notes, rel, body), "images": note_images(code, body)})     # BL-301 B gaps
 
 
 def note_sent_lines(notes, rel, body=None):
@@ -7189,26 +7299,10 @@ def notes_body(req):
     return False if len(body) > NOTE_BODY_LIMIT else body
 
 
-def notes_draft_route(handler, req):
-    """Keep what Alan typed (the body and the front-matter changes) as the note's draft. No project file is written."""
-    t = notes_target(handler, req)
-    if not t:
-        return None
-    notes, _code, _p, rel = t
-    body = notes_body(req)
-    if body is False:
-        return handler.send(400, {"ok": False, "message": "That note is too long to save."})
-    at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with NOTES_LOCK:                                    # #124: never beside a Delete note's check and move
-        if not _p.is_file():
-            return handler.send(404, {"ok": False, "message": "That note isn't there any more."})
-        notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""), at)
-    return handler.send(200, {"ok": True, "at": at})
-
-
 def notes_save_route(handler, req):
     """Write the note's file through filechange.py (backed up, logged, undoable), unless it changed outside creaite since it was
-    opened (`base`): then nothing is written and the draft is kept."""
+    opened (`base`): then nothing is written. #119: `session`, the page's editing-session id, lets filechange.py keep one backup
+    per session; a missing or malformed one means a backup for this save alone."""
     import filechange
     t = notes_target(handler, req)
     if not t:
@@ -7217,21 +7311,20 @@ def notes_save_route(handler, req):
     body = notes_body(req)
     if body is False:
         return handler.send(400, {"ok": False, "message": "That note is too long to save."})
+    sid = req.get("session")
+    session = {"session": f"{rel}:{sid}"} if isinstance(sid, str) and NOTE_SESSION.fullmatch(sid) else {}
     with NOTES_LOCK:
         text = p.read_text(encoding="utf-8", errors="ignore")
         if str(req.get("base") or "") != notes.text_sha(text):
-            notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""),
-                             datetime.now().strftime("%Y-%m-%d %H:%M:%S"))          # the typing is kept, never lost
             return handler.send(200, {"ok": False, "conflict": True, "message": "This note was changed outside creaite since you "
-                                      "opened it, so it wasn't saved. Your typing is kept as a draft."})
+                                      "opened it, so it wasn't saved."})
         new = notes.saved_text(text, body, req.get("changes"))
         if new is None:
-            notes.drop_draft(rel)
             return handler.send(200, {"ok": True, "unchanged": True, "note": notes.summary(p, code), "base": notes.text_sha(text)})
-        done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY}, via="dashboard")
+        done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY, **session},
+                                       via="dashboard", own=True)
         if done != 0:
             return handler.send(200, {"ok": False, "wait": done == filechange.NEEDS, "message": msg})
-        notes.drop_draft(rel)
     notes_reindex()
     m = re.search(r"\(change (\d+)", msg)
     return handler.send(200, {"ok": True, "note": notes.summary(p, code), "base": notes.text_sha(new),
@@ -7239,7 +7332,7 @@ def notes_save_route(handler, req):
 
 
 NOTES_ROUTES = {"/api/notes/list": notes_list_route, "/api/notes/get": notes_get_route, "/api/notes/new": notes_new_route,
-                "/api/notes/draft": notes_draft_route, "/api/notes/save": notes_save_route}
+                "/api/notes/save": notes_save_route}
 DRAFT_ROUTES.update(NOTES_ROUTES)              # dispatched with the drafts' routes (do_POST stays as it is)
 # ===== end BL-301 B =====
 
@@ -7253,8 +7346,8 @@ DRAFT_ROUTES.update(NOTES_ROUTES)              # dispatched with the drafts' rou
 # issues that approval itself, bound to exactly this move, and only when the move's ONLY reason for approval is that it is a move:
 # the note and the new name must each be ordinary on their own (a note directly in a notes folder; never in a run marked by
 # outside content, never a settings file, never someone else's). Otherwise nothing is moved and the note keeps its name. A link in
-# another note is changed through filechange.py (ordinary: Alan's own notes); a note being typed in (it has a draft), or one
-# filechange won't change, is listed instead, never touched.
+# another note is changed through filechange.py (ordinary: Alan's own notes); one filechange won't change is listed instead, never
+# touched. A note open and being typed in elsewhere sees the change as "changed outside creaite" at its next save (`base`).
 NOTE_IMAGE_MAX = 40                         # pictures sent with an opened note at most
 NOTE_RENAME_WHY = "the note's title changed in the Notes tab"
 NOTE_RELINK_WHY = "a link to a note whose title changed"
@@ -7342,8 +7435,6 @@ def notes_relink(skip, old_names, title):
             name = str(notes.parse(text)[0].get("title") or f.stem)
             if not notes.link_safe(title):
                 listed.append({"path": rel, "title": name, "why": "the new title can't stand in a [[…]] link"})
-            elif notes.read_draft(rel):
-                listed.append({"path": rel, "title": name, "why": "it has typing not yet saved"})
             else:
                 done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_RELINK_WHY},
                                                via="dashboard")
@@ -7378,7 +7469,6 @@ def notes_rename_route(handler, req):
         done, msg = filechange.perform(ch, token, "dashboard")
         if done != 0:
             return handler.send(200, {"ok": False, "message": f"Saved, but the file keeps its name: {msg}"})
-        notes.drop_draft(rel)
         old = [str(req.get("old") or ""), p.stem]
         changed, listed = notes_relink(to, old, title)
     notes_reindex()
@@ -7415,8 +7505,6 @@ def notes_delete_route(handler, req):
         if str(req.get("base") or "") != notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")):
             return handler.send(200, {"ok": False, "message": "Not deleted: the note changed since it was saved. Open it again "
                                       "and try once more."})
-        if notes.read_draft(rel):
-            return handler.send(200, {"ok": False, "message": "Not deleted: the note has typing not yet saved. Save it first."})
         if filechange.verdict("edit", rel)[0] != "ordinary":
             return handler.send(200, {"ok": False, "wait": True, "message": "Not deleted: moving this note needs more than the "
                                       "card now (ask creaite has read outside content, or the file isn't only yours). Try again "
@@ -7607,7 +7695,8 @@ RESULT_ROUTES = ("/api/apply", "/api/undo", "/api/review")                    # 
 BROWSER_LIMIT, BROWSER_WINDOW = 20, 60.0                                      # page errors accepted per minute
 BROWSER = {"since": 0.0, "n": 0, "dropped": 0}
 BROWSER_LOCK = threading.Lock()
-SAFE_SETTINGS = ("sweep.due_from", "sweep.first_run_lookback_days", "sweep.sources.", "sweep.show_possible_matches",
+SAFE_SETTINGS = ("sweep.due_from", "sweep.first_run_lookback_days", "sweep.max_lookback_days", "sweep.sources.",
+                 "sweep.show_possible_matches",
                  "vip.enabled", "vip.check_minutes", "vip.notify", "reminders.enabled", "reminders.weekly_report_",
                  "review.", "health.", "dashboard.", "backups.", "live_mode.", "assistant.", "defaults.",
                  "work.", "warnings.", "search.", "inbox.meetings_from",

@@ -19,4 +19,5 @@ declare module "tiptap" {
   export const PluginKey: any;
   export const Decoration: any;          // BL-301 B: the note's drawn links and chips
   export const DecorationSet: any;
+  export const closeHistory: any;          // #175: Notes starts a new undo step (ProseMirror's closeHistory)
 }

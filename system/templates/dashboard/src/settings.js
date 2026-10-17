@@ -16,6 +16,7 @@ import { MoreSettings } from "./components/settings/MoreSettings.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { openPath } from "./core/fields.js";
+import { linkAnchor, linkUrl } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
@@ -29,7 +30,7 @@ import { decLate, decLateWords, decRank } from "./meetings.js";
 import { drawPanel, ebMarkSeen, errBanner, openNew, markStagedRows, pkDraw, PKDRAW, pkNewOffer, pkNote, pkSaveAndClose, pkSaving, REC } from "./panel.js";
 import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG } from "./projects.js";
 import { draftOn, renderReview } from "./review.js";
-import { setRailCount } from "./stores/rail.js";
+import { railLabelsOn, setRailCount } from "./stores/rail.js";
 import { PEOPLE_MOVE, personPromises, plur, projLink, renderToday, tl } from "./today.js";
 import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, relaxHtml, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
@@ -190,6 +191,7 @@ export function setSynced(ch){ let reload=false, look=false;
     else if(k.startsWith("warnings.")){ const [,sig,f]=k.split("."), W=D.warn_settings||(D.warn_settings={}); W[sig]={...(W[sig]||{}),[f]:v}; }
     else if(k==="search.debounce_ms") SEARCHCFG.debounce_ms=v;
     else if(k==="dashboard.generate_days") S.genDays=v;
+    else if(k==="dashboard.rail_labels") railLabelsOn.value=v!==false;   /* #156: Labels when collapsed */
     else if(k==="logging.level") DIAG.level=v;
     else if(k.startsWith("day.")||k==="work.weekend_days"||k==="dashboard.flow_weeks") reload=true; }
   if(look){ themeFade(); applyTheme(); applyMotion(); }
@@ -615,6 +617,8 @@ export function pfBind(){ const body=$("#settingsBody"), inMgr=e=>e.target.close
 
 
 /* links both ways: an owner name opens that person's page; Alan's own page is My work */
+/* a person's address from the register, as a plain mail link when it is one mailbox (core/linkUrl.js judges it), else as plain text */
+export const mailLink=e=>{ const u=linkUrl("mailto:"+e); return u?html`<a href="${u}">${e}</a>`:html`${e}`; };   /* a mailto opens the mail app: no target, no rel */
 export const personLink=(n,label)=>!n||n==="TBC"?esc(label||n||""):`<a href="#" class="plink2" data-person="${esc(isMe(n)?S.me:personOf(n))}" title="Open ${esc(isMe(n)?"My work":personOf(n)+"’s page")}">${esc(label||who(n))}</a>`;
 
 /* BL-56: the People view and a page per person. Counts only: no scores, ratings or on-time percentages. */
@@ -635,7 +639,7 @@ export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) sh
   const recent=x.D.filter(d=>d.date>=cutoff.toISOString().slice(0,10)).sort((a,b)=>b.date.localeCompare(a.date)), leads=Object.entries(D.leads||{}).filter(([k])=>personOf(k)===name).flatMap(([,v])=>v);
   putHTML(el,html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav>
    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}${p||isMe(name)?"":html` <span class="tag warn" title="Owns items but isn’t in the people register">not in register</span>`}</h1>
-     <p class="sub" style="margin:2px 0">${p&&(p.org||p.role)?[p.org,p.role].filter(Boolean).join(" · "):"Organisation and role not recorded"}${p&&p.email?html` · <a href="mailto:${p.email}">${p.email}</a>`:""}</p>
+     <p class="sub" style="margin:2px 0">${p&&(p.org||p.role)?[p.org,p.role].filter(Boolean).join(" · "):"Organisation and role not recorded"}${p&&p.email?html` · ${mailLink(p.email)}`:""}</p>
      ${p&&p.aliases.length?html`<p class="sub" style="margin:2px 0">Also written as ${p.aliases.join(", ")}</p>`:""}</div>
      ${raw(ibtn("pencil",p?"Edit details":"Add details",'id="ppEdit" aria-haspopup="dialog"',"bd"))}</div>
    <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x.oo.length,"open action")} owned by ${name}`,x.oo.length,"actions:open:",{o:ownersOf(x.oo)},`<b>${x.oo.length}</b> open action${x.oo.length===1?"":"s"}`))}</span><span>${raw(countLink(`${plur(x.or.length,"open RAID item")} owned by ${name}`,x.or.length,"raid:open:",{o:ownersOf(x.or)},`<b>${x.or.length}</b> open risk${x.or.length===1?"":"s"} and issue${x.or.length===1?"":"s"}`))}</span><span class="${x.late?"late":""}">${raw(countLink(`${plur(x.late,"overdue item")} owned by ${name}`,x.late,"all:open:",{st:["Open"],due:["overdue"],ty:["Action","Risk","Issue","Assumption","Dependency"],o:ownersOf(latesOf(x))},`<b>${x.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ")||"—")}</span></div>
@@ -819,10 +823,10 @@ export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[person
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
 /* BL-288: nothing says why a message is shown (who Alan follows is never labelled); BL-296: each has Create work item and
-   Dismiss (Undo in the message). BL-319: the messages are rows of Today's To decide (today.js toDecideRows), newest first with
+   Dismiss (Undo in the message). BL-319: the messages are rows of Today's Intake and Review (today.js toDecideRows), newest first with
    the proposals and transcripts; their two icons keep the data-alertdo buttons this file's handler runs. */
 export const ALERTWORD={mail:"email",teams:"Teams message",calendar:"invite"};
-/* after a row goes: focus to the same button on the row now in its place in To decide (or its first action), else To decide's heading */
+/* after a row goes: focus to the same button on the row now in its place in Intake and Review (or its first action), else its heading */
 export function alertFocus(id,what){ const vis=()=>$$("#tdList > li").filter(l=>!l.hidden), i=vis().findIndex(r=>r.dataset.td==="al"+id); return ()=>{
   const L=vis(), next=L[Math.min(Math.max(0,i),L.length-1)];
   const b=next&&(next.querySelector(`[data-alertdo="${what}"]`)||next.querySelector("[data-tdact]")); if(b){ /** @type {HTMLElement} */(b).focus(); return; }
@@ -834,14 +838,14 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   else if(a) a.seen=r.at||nowStamp();
   await vipPoll(); vipBadge(); renderToday(); back();   /* BL-342 N1: the server's counts for the other cards on the same item */
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Intake and Review"); }); }
 /* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
 export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
   const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"handled");
   if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } await vipPoll(); vipBadge(); renderToday(); back();
   snack("Marked handled",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Intake and Review"); }); }
 /* BL-342 Part 2: Chase on a thread matched to an item that is waiting on someone else: BL-224's Draft email in Chase mode for that
    item's owner, the item ticked. Nothing is sent or written; the builder falls back to an update request when the item isn't past its date. */
 export function alertChase(id){ const a=(VIPD().alerts||[]).find(x=>x.id===id), m=a&&a.match, it=m&&m.id&&REC("actions",m.id);
@@ -913,16 +917,16 @@ export async function alertUnstage(d){ let ok=false;
   const a=(VIPD().alerts||[]).find(z=>z.id===d.al.id), it=a&&d.al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===d.al.cand):null;
   if(it){ delete it.made; delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; }
   VIPNOTED.add(d.al.id); vipBadge(); await reloadData(); renderToday();
-  snack(u.ok?`Undone: the new ${d.word} is no longer staged, and the message is back in To decide`:`Unstaged; the message wasn't put back: ${u.message||"try again"}`); }
+  snack(u.ok?`Undone: the new ${d.word} is no longer staged, and the message is back in Intake and Review`:`Unstaged; the message wasn't put back: ${u.message||"try again"}`); }
 /* why Draft from the message can't run, or "" */
 export function alertDraftWhy(al){ return /^(private|confidential)$/i.test(al.marker||"")?`Not for a ${al.marker.toLowerCase()} message`:!draftOn("sharpen")?"Sharpen a vague action is off in Settings › Advanced › AI drafts":!viaServer()?"Drafting needs the live server":""; }
 /* the strip at the top of the peek: where it came from, the type, Draft from the message, Save and Cancel */
 export function alertPeekDraw(x,k){ let el=$("#pkAlert"); const al=shared.CUR&&shared.CUR.mode==="new"&&!shared.CUR.staged?shared.CUR.alert:null;
   if(!al){ if(el) el.hidden=true; return; }
   if(!el){ const d=$("#pkDraft"); if(d) addHTML(d,"afterend",html`<div class="pk-alert" id="pkAlert" role="group" aria-label="Made from a message"></div>`); else addHTML($("#pkScroll"),"afterbegin",html`<div class="pk-alert" id="pkAlert" role="group" aria-label="Made from a message"></div>`); el=$("#pkAlert"); }
-  const cur=alertTypeOf(k,x), why=alertDraftWhy(al), when=vipWhen({sent:al.sent}), key=[al.id,cur,why].join("|"); el.hidden=false;
+  const cur=alertTypeOf(k,x), why=alertDraftWhy(al), when=vipWhen({sent:al.sent}), alOpen=al.link?linkAnchor(al.link,"Open the message","hlink"):null, key=[al.id,cur,why].join("|"); el.hidden=false;
   if(el.dataset.key===key) return; el.dataset.key=key;   /* drawn once: a redraw between a press and its release would lose the click */
-  putHTML(el,html`<div class="pk-alert-from">From ${al.who}’s ${ALERTWORD[al.kind]||"message"}${when?`, ${when}`:""}${al.link?html` · <a href="${al.link}" target="_blank" rel="noopener" class="hlink">Open the message</a>`:""}</div>
+  putHTML(el,html`<div class="pk-alert-from">From ${al.who}’s ${ALERTWORD[al.kind]||"message"}${when?`, ${when}`:""}${alOpen?html` · ${raw(alOpen)}`:""}</div>
     <div class="pk-alert-row"><span class="pk-alert-types" role="group" aria-label="Make it">${ALERTTYPES.map(([t,w])=>html`<button type="button" class="mini" data-alerttype="${t}" aria-pressed="${t===cur?"true":"false"}">${w}</button>`)}</span>
     <button type="button" class="drbtn" data-alertdraft="1" aria-label="Draft from the message" data-tip="${why||"Reads the message (read only) and suggests a sharper title and any date it states. Nothing is saved until you save"}"${why?raw(' aria-disabled="true"'):""}>${raw(ic("spark"))}<span>Draft from the message</span></button>
     <span class="pk-alert-st" role="status" id="pkAlertSt"></span><span class="sp"></span>

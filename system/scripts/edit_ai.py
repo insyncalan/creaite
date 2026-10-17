@@ -57,13 +57,10 @@ OPTIONS = {
     "executive": ("Make it executive", "The executive voice: the position and what matters first",
                   "Rewrite the text in the executive voice below: bottom line first, quantified, names and dates, outcomes before "
                   "activities. Keep its facts and add none."),
-    "spelling": ("Fix spelling and grammar", "British English; nothing else changed",
-                 "Correct the spelling, grammar and punctuation only, in British English. Change nothing else: not the wording, "
-                 "the order or the formatting."),
-    "format": ("Format nicely", "Sub-headings, lists and bold where they help",
+    "format": ("Add headings and bold", "Sub-headings, lists and bold where they help",
                "Format the text so it is easy to scan: short paragraphs, bulleted or numbered lists and sub-headings where they "
                "help, bold for the few key words. Keep the words themselves."),
-    "checklist": ("Turn into a checklist", "One task a line, to tick off",
+    "checklist": ("Pull out the tasks", "Finds the tasks and writes one a line to tick off",
                   "Turn the text into a checklist: one task a line, each starting with a verb, written as Markdown task items "
                   "(\"- [ ] \"). Keep the owner and date with a task when the text gives them."),
     "summary": ("Summarise at the top", "A short summary first; the text kept below it",
@@ -72,6 +69,10 @@ OPTIONS = {
     "polish": ("Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept",
                "Polish the text: correct spelling, grammar and punctuation in British English, and smooth awkward wording lightly. "
                "Keep its facts, its order, its length and its voice; add and remove nothing."),
+    "notes": ("Format notes", "Rough notes sorted under headings, with bullets; every point kept",
+              "Format these rough notes: sort them under short headings with bullets beneath. Keep every point and every date, "
+              "number, name and item ID; add nothing and drop nothing. If the text already has headings (a Working session "
+              "note's template), keep those headings and file the points under them."),
     "formal": ("More formal", "A more formal tone for the email",
                "Rewrite the text in a more formal, professional tone. Keep its facts and its length."),
     "warmer": ("Warmer", "A warmer, friendlier tone for the email",
@@ -81,13 +82,17 @@ OPTIONS = {
 # Each place chooses its options (BL-301 D). "plain": the peek's fields and Prep's boxes (plain text, so no formatting);
 # "current": Current state (no checklists or tables, which the Word reports can't take); "notes": a note (everything);
 # "email": the Draft email (More formal and Warmer added); "line": a one-line field, the peek's title (Alan, 14-10-2026: the
-# suggestion stays one line, and Accept never breaks it).
+# suggestion stays one line, and Accept never breaks it). #117: there is no separate spelling option (every option but Ask… also
+# corrects spelling, grammar and punctuation, see context()), and "notes" (Format notes) leads where blocks exist: notes and current.
+# v2.1.0 switches on the bar for notes and current only (the page's place table, AI_PLACE_TABLE); email, plain and line are listed so
+# that v2.2.0 is a switch. "report", "minutes" and "readonly" are the A4 sheet's (v2.1.0 P5), kept exactly as shipped (SHEET_PLACES).
+# The client sheet's `client` place (#123) is added here, in FORMATS and in FORMAT_RULES.
 PLACES = {
-    "notes": ["rewrite", "shorter", "longer", "executive", "spelling", "format", "checklist", "summary", "custom"],
-    "current": ["rewrite", "shorter", "longer", "executive", "spelling", "format", "summary", "custom"],
-    "plain": ["rewrite", "shorter", "longer", "executive", "spelling", "custom"],
-    "email": ["rewrite", "shorter", "longer", "formal", "warmer", "spelling", "custom"],
-    "line": ["rewrite", "shorter", "executive", "spelling", "custom"],
+    "notes": ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"],
+    "current": ["notes", "rewrite", "shorter", "longer", "executive", "format", "summary", "custom"],
+    "plain": ["rewrite", "shorter", "executive", "custom"],
+    "email": ["rewrite", "shorter", "longer", "formal", "warmer", "custom"],
+    "line": ["rewrite", "shorter", "executive", "custom"],
     "report": ["shorter", "executive", "polish", "custom"],      # v2.1.0 P5: the A4 sheet (reports and minutes)
     "minutes": ["shorter", "executive", "polish", "custom"],
     "client": ["shorter", "executive", "polish", "custom"],      # #123: the client sheet (client-safe facts and reply check)
@@ -95,16 +100,58 @@ PLACES = {
 }
 FORMATS = {"notes": "markdown", "current": "markdown", "plain": "plain", "email": "plain", "line": "line", "report": "markdown",
            "minutes": "markdown", "client": "markdown", "readonly": "plain"}
+# The A4 sheet's places (v2.1.0 P5/P6/P8; the client report's sheet is "report"): their option sets, format rules and prompts stay
+# exactly as v2.1.0 shipped them. #117 adds nothing here: no spelling sentence (Polish already does that), no new option, and the
+# shipped Markdown rule, word for word. A client-safe change to these places is its own item (#123's `client` place), never #117's.
+SHEET_PLACES = ("report", "minutes", "readonly")
+SPELLING = " Also correct any spelling, grammar and punctuation, in British English."
+# The Markdown rule, per place (#117). The heading levels the place may write: a note stores `#` to `###`; Current state is stored
+# SHIFTED by two (`###` to `#####`), because a `## ` line ends its `## Current state` section (build_dashboard.py, report.py read to
+# the next `## `). The text Claude is given is in the stored levels, so it is told the stored ones; result() also re-levels a stray
+# `#` or `##` line for Current state, and the page does too (core/editor.js headsSafe) before anything is written.
+_MARKDOWN = ("The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, {heads} "
+             "headings{note}, quotes, links{tasks}. Keep any link, image or HTML comment exactly as it is.")
+_PLAIN = ("The text is plain text, one paragraph a line. Reply in plain text: no Markdown, no bullets or symbols that weren't "
+          "there, one paragraph a line.")
+_LINE = "The text is one line: a title. Reply with one line of plain text only: no line breaks, no Markdown, no bullets."
+# v2.1.0's Markdown rule for the sheet, unchanged (no task items: the sheet's reports can't take them)
+_SHEET_MARKDOWN = ("The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, \"### \" "
+                   "sub-headings, quotes, links. Keep any link, image or HTML comment exactly as it is.")
 CLIENT_PLACES = {"client"}
 CLIENT_RULE = ("This text is for the client. Use only what the text holds and the item IDs listed below; never add an internal "
                "health view or its reason, internal-only wording, or anyone's name the text doesn't already give.")
 FORMAT_RULES = {
-    "markdown": "The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, \"### \" "
-                "sub-headings, quotes, links{tasks}. Keep any link, image or HTML comment exactly as it is.",
-    "plain": "The text is plain text, one paragraph a line. Reply in plain text: no Markdown, no bullets or symbols that weren't "
-             "there, one paragraph a line.",
-    "line": "The text is one line: a title. Reply with one line of plain text only: no line breaks, no Markdown, no bullets.",
+    "notes": _MARKDOWN.format(heads="\"# \", \"## \" and \"### \"", note="", tasks=", \"- [ ] \" task items"),
+    "current": _MARKDOWN.format(heads="\"### \", \"#### \" and \"##### \"",
+                                note=" (never \"# \" or \"## \": a \"## \" line would end this section)", tasks=""),
+    "plain": _PLAIN,
+    "email": _PLAIN,
+    "line": _LINE,
+    "report": _SHEET_MARKDOWN,
+    "minutes": _SHEET_MARKDOWN,
+    "client": _SHEET_MARKDOWN,
+    "readonly": _PLAIN,
 }
+# how far a place's stored heading levels are shifted from the editor's 1 to 3 (Current state's are written `###` to `#####`)
+HEAD_SHIFT = {"current": 2}
+FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
+
+def relevel(text, place):
+    """A place that stores its headings shifted never gets a heading above its lowest level: Current state's `#` and `##` lines
+    become `###` and `####` (outside fenced code), so no `## ` line can end the `## Current state` section (#117)."""
+    shift = HEAD_SHIFT.get(place)
+    if not shift:
+        return text
+    out, fence = [], False
+    for line in (text or "").split("\n"):
+        if FENCE_RE.match(line):
+            fence = not fence
+        m = None if fence else re.match(r"^((?:> {0,4}|>\t)*)(#{1,6})([ \t].*|)$", line)
+        if m and len(m.group(2)) <= shift:
+            line = m.group(1) + "#" * (len(m.group(2)) + shift) + m.group(3)
+        out.append(line)
+    return "\n".join(out)
 
 
 def one_line(text):
@@ -182,38 +229,66 @@ NO_PROJECT, UNCHECKED, REGISTER = "no project", "the check couldn't run", "the p
 # #127 round 4: characters Word shows as nothing that aren't format characters (Unicode category Cf, all dropped by unseen): the
 # combining grapheme joiner, variation selectors, Mongolian free variation selectors, Khmer inherent vowels, Hangul fillers and the
 # unassigned U+2065 among the invisible operators.
-SHOWN_AS_NOTHING = frozenset([0x034F, 0x115F, 0x2065, 0x1160, 0x17B4, 0x17B5, 0x180B, 0x180C, 0x180D, 0x180F, 0x3164, 0xFFA0]
-                             + list(range(0xFE00, 0xFE10)) + list(range(0xE0100, 0xE01F0)))
+# #127 round 5: Unicode's whole Default_Ignorable_Code_Point set (DerivedCoreProperties), assigned or not, as (first, last): an
+# unassigned one (U+FFF0, U+E0080, U+E01F0) isn't category Cf, but Word and a browser still draw it as nothing.
+DEFAULT_IGNORABLE = ((0x00AD, 0x00AD), (0x034F, 0x034F), (0x061C, 0x061C), (0x115F, 0x1160), (0x17B4, 0x17B5),
+                     (0x180B, 0x180F), (0x200B, 0x200F), (0x202A, 0x202E), (0x2060, 0x206F), (0x3164, 0x3164),
+                     (0xFE00, 0xFE0F), (0xFEFF, 0xFEFF), (0xFFA0, 0xFFA0), (0xFFF0, 0xFFF8), (0x1BCA0, 0x1BCA3),
+                     (0x1D173, 0x1D17A), (0xE0000, 0xE0FFF))
+SHOWN_AS_NOTHING = frozenset(cp for a, b in DEFAULT_IGNORABLE for cp in range(a, b + 1))
+SHOWN_AS_SPACE = {0x2800: " "}            # #127 round 5: the braille blank draws as a space
+# #127 round 6: control characters (Cc) other than tab, line feed and carriage return, and the noncharacters (U+FDD0 to U+FDEF and
+# the last two of every plane): Word draws them as nothing (or won't open the file: docx_tools.esc strips them). Those Python's
+# splitlines breaks a line at (so a Word export starts a new line there: VT, FF, the separators U+001C to U+001E, NEL) are a line break.
+# #127 round 7: a lone surrogate (U+D800 to U+DFFF) too: docx_tools.esc drops it, so Word shows it as nothing.
+LINE_LIKE = "\x0b\x0c\x1c\x1d\x1e\x85"
+CONTROLS = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ufdd0-\ufdef\ud800-\udfff"
+                      + "".join(chr(p * 0x10000 + 0xFFFE) + chr(p * 0x10000 + 0xFFFF) for p in range(17)) + "]")
 
 
 def unseen(text):
     """Text without the characters Word shows as nothing: every format character (category Cf: zero-width, direction marks and
-    isolates, tags, the soft hyphen, the interlinear annotation marks) and SHOWN_AS_NOTHING (#127 round 4)."""
+    isolates, tags, the soft hyphen, the interlinear annotation marks) and every default-ignorable one (SHOWN_AS_NOTHING, assigned
+    or not); the braille blank is a space (#127 rounds 4 and 5); control characters and noncharacters (CONTROLS) are gone, or a
+    line break where a Word export breaks the line (LINE_LIKE; round 6)."""
+    import unicodedata
+    t = CONTROLS.sub(lambda m: "\n" if m.group() in LINE_LIKE else "", text or "")     # round 6: controls and noncharacters
+    if t.isascii():
+        return t
+    return "".join(c for c in t if ord(c) not in SHOWN_AS_NOTHING and unicodedata.category(c) != "Cf").translate(SHOWN_AS_SPACE)
+
+
+def unmarked(text):
+    """Text without its combining marks (#127 round 5): NFKD, then every mark (Mn, Me and Mc) dropped, so an accent or an
+    enclosing circle on a digit or a letter hides no ID, marker or name (an acute accent on a 0 of ABC-A-004 still reads ABC-A-004;
+    Word draws the mark, so the reader still reads the ID). A name in a script
+    that writes vowels as marks (Devanagari, Arabic) is still found: the register's name goes through the same fold as the text,
+    so both lose the same marks."""
     import unicodedata
     t = text or ""
     if t.isascii():
         return t
-    return "".join(c for c in t if ord(c) not in SHOWN_AS_NOTHING and unicodedata.category(c) != "Cf")
+    return "".join(c for c in unicodedata.normalize("NFKD", t) if not unicodedata.category(c).startswith("M"))
 
 
 def normal(text):
     """Text as the client check matches it: NFKC, invisible characters gone (unseen, before and after NFKC, which can make a
-    filler of a compatibility one), dashes and look-alike letters made plain."""
+    filler of a compatibility one), combining marks gone (unmarked), dashes and look-alike letters made plain."""
     import unicodedata
-    t = unseen(unicodedata.normalize("NFKC", unseen(text))).translate(LOOK_ALIKE)
+    t = unseen(unicodedata.normalize("NFKC", unmarked(unseen(text)))).translate(LOOK_ALIKE)
     return re.sub(r"\d", lambda m: str(unicodedata.decimal(m.group(), 0)), t)      # #127 review: any script's digits, as 0-9
 
 
 def loose_ids(con, text):
     """Every item ID a text holds, however it is written: the strict form anywhere, and for each of the tracker's project codes,
-    any case, with spaces, dots, dashes, underscores, slashes, colons or brackets for its hyphens ("ABC (A) 004"), or run on to a
-    word before it ("seeABC-A-004"); with a letter part, the number may also drop its zeros ("ABC-A-4") or write them as O
+    any case, with spaces, dots, dashes, underscores, slashes, backslashes, colons or brackets for its hyphens ("ABC (A) 004"),
+    or run on to a word before it ("seeABC-A-004"); with a letter part, the number may also drop its zeros ("ABC-A-4") or write them as O
     ("ABC-A-OO4"), always as a whole number ("ABC-A-40" is ABC-A-040, never ABC-A-004), and not one a slash, colon or dot continues
     ("ABC A 10/09"). A loose match counts only when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when
     there is no ABC-100); it fails closed, so an ID the tracker can't be asked about counts."""
     t = normal(text)
     out = set(ID_RE.findall(t))
-    up, sep = t.upper(), r"[\s_.\-/:()]*"
+    up, sep = t.upper(), r"[\s_.\-/:()\\]*"         # #127 round 5: a Markdown backslash escape ("ABC\-A\-004") too
     for (c,) in con.execute("SELECT code FROM projects"):
         for m in re.finditer(rf"{re.escape(c)}{sep}(?:([A-NP-Z]){sep}([0-9O]{{1,3}})|([0-9O]{{3}}))(?![0-9O]|[/:.]\d)", up):
             num = (m.group(2) or m.group(3)).replace("O", "0").zfill(3)
@@ -258,10 +333,11 @@ def client_problems(code, text, original=""):
         blocking = client_leak.blocking_labels(con)
         found = [why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(loose_ids(con, text))) if why]
         found += client_leak.text_findings(con, code, text or "")
-        found += drafts.internal_findings(con, code, text or "", original)
+        found += drafts.internal_findings(con, code, client_leak.as_shown(text), client_leak.as_shown(original))   # #127 r6
         known = _register_names() + client_leak.project_owners(con, code)
-        allowed = names(original, known) | client_leak.people(con, code, blocking)[0]
-        found += [f"{n} isn't named in the text" for n in sorted(names(text, known) - allowed)]
+        allowed = client_leak.named(original, known, every=True) | client_leak.people(con, code, blocking)[0]   # every name
+        found += [f"{n} isn't named in the text" for n in sorted(client_leak.named_beyond(text, known, allowed))]   # (#127 r6, r7:
+        #                                       # a shorter name inside an allowed one's match, "Sam" in "Sam Patel", isn't another person)
     except client_leak.RegisterUnreadable:                # #127: fails closed, with its own message
         found = [REGISTER]
     except (Exception, SystemExit):  # noqa: BLE001  fails closed
@@ -346,6 +422,12 @@ def _report_found(code, d):
         and doc.get("project") == code
 
 
+def _needs_blocks(option, text):
+    """Format notes is offered for a multi-block selection only: two or more non-empty lines."""
+    if option == "notes" and sum(1 for ln in text.splitlines() if ln.strip()) < 2:
+        raise Refused("Format notes needs two or more paragraphs.")
+
+
 def request(req):
     """The request checked: (option, text, code, place, instruction) or Refused. The place is bound_place's."""
     code = str(req.get("code") or "")
@@ -361,6 +443,7 @@ def request(req):
         raise Refused("Select some text first.")
     if len(text) > MAX_TEXT:
         raise Refused(f"That's too much text for one suggestion; select under {MAX_TEXT // 1000}k characters.")
+    _needs_blocks(option, text)
     instruction = " ".join(str(req.get("instruction") or "").split())
     if option == "custom" and not instruction:
         raise Refused("Say what you want done with the text.")
@@ -382,12 +465,14 @@ def context(req):
         "Do what Alan asks with the text, and only that. His instruction: " + instruction)
     if client:
         task += "\n\n" + CLIENT_RULE
+    if option != "custom" and place not in SHEET_PLACES and place not in CLIENT_PLACES:    # every reshape also fixes spelling and grammar
+        task += SPELLING                                    # (the page says so); the sheets' and the client sheet's prompts stay as shipped
     if option == "executive":
         import report
         task += "\n\nThe executive voice:\n" + report.style_guide()
     template = string.Template((paths.TEMPLATES / "drafts" / "edit-ai.md").read_text(encoding="utf-8"))
     prompt = template.substitute(
-        task=task, format_rule=FORMAT_RULES[fmt].format(tasks=", \"- [ ] \" task items" if place == "notes" else ""),
+        task=task, format_rule=FORMAT_RULES[place],
         project=facts["name"] or "none given",
         people=", ".join(facts["people"]) or "none listed",
         ids=", ".join(facts["ids"]) or "none",
@@ -463,6 +548,7 @@ def result(body):
     bad = client_problems(ctx.get("code") or "", text, ctx.get("original") or "") if ctx.get("place") in CLIENT_PLACES else []
     if bad:
         return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"), "message": refusal(bad, True)}
+    text = relevel(text, ctx.get("place"))                 # Current state never gets a `# ` or `## ` line (it would end the section)
     return {"text": text, "notes": check(ctx.get("original") or "", text, ctx.get("people") or []), "option": ctx.get("option"),
             "format": ctx.get("format")}
 

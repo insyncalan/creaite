@@ -83,9 +83,10 @@ class IconSet(LiveBrowserCase):
         b.key("Tab")
         b.pump(0.05)
         self.assertEqual(b.eval("document.activeElement.id"), "themeBtn")
+        b.wait("(()=>{ const t=document.getElementById('tip'); return !!(t&&t.classList.contains('on')); })()", 5)    # #152: drawn a frame after the focus
         self.assertIn("theme", self.tip())
         b.key("Escape")
-        b.pump(0.05)
+        b.wait("(()=>{ const t=document.getElementById('tip'); return !(t&&t.classList.contains('on')); })()", 5)
         self.assertIsNone(self.tip())
 
     def test_the_theme_icon_shows_the_destination(self):
@@ -182,9 +183,11 @@ class WorkToolbar(LiveBrowserCase):
         b.key("ArrowDown")
         self.assertEqual(b.eval("document.activeElement.dataset.newd"), "needed")
         b.key("Escape")
+        b.wait("!newMenuOpen() && document.activeElement.id==='newBtn'", 5)   # #152: focus goes back in an effect after the redraw: wait for it, don't race it
         self.assertEqual(b.eval("[newMenuOpen(), document.activeElement.id, $('#newBtn').getAttribute('aria-expanded')]"), [False, "newBtn", "false"])
         b.click("#newBtn")
-        b.eval("document.body.click()")                                     # a click away closes it
+        b.wait("newMenuOpen()", 5)
+        b.wait("(document.body.click(), !newMenuOpen())", 5)                 # a click away closes it (tried until the menu's listener is in: it is added in an effect)
         self.assertFalse(b.eval("newMenuOpen()"))
         b.click("#newBtn")
         b.click('#newDecMenu [data-newd="made"]')
@@ -270,7 +273,7 @@ class TheRest(LiveBrowserCase):
         self.assertEqual(b.eval("$('#chSend').dataset.key"), "Enter")
         b.eval("setRunning(true)")
         self.assertEqual(self.named("#chSend")[0], ["Stop", "Stop", "", "stop"])
-        self.assertEqual(b.eval("$('#chSend').dataset.key"), "Esc")
+        self.assertIsNone(b.eval("$('#chSend').dataset.key"))               # #130: Esc never stops a run, so Stop shows no key
         r = b.eval("(()=>{ const r=$('#chSend').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })()")
         self.assertEqual(r, [32, 32])                                        # the same round button, not a second Stop
         b.eval("setRunning(false)")

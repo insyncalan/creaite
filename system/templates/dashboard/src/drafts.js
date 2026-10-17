@@ -4,18 +4,21 @@
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
 import { closePicker } from "./components/Picker.jsx";
+import { linkSegments, linkWithAddress } from "./core/linkText.js";
+import { linkUrl } from "./core/linkUrl.js";
 import { makeDraftEmailDialog } from "./components/dialogs/PageDialogs.jsx";
 import { drawCk, rbEnd, rbStart } from "./ask.js";
 import { drawChips } from "./components/Chip.jsx";
 import { A, open, P, pName, soon, wsFor } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, ICONS, putHTML, raw } from "./core/dom.js";
-import { CALI, closeCal, parseWhen } from "./core/fields.js";
+import { creaiteEditor, edEmailHtml } from "./core/editor.js";
+import { CALI, CMDENTER, closeCal, onCmdEnter, parseWhen } from "./core/fields.js";
 import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.js";
 import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { putHtml } from "./meetings.js";
 import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, REC } from "./panel.js";
-import { DRAFTKIND, GEN_AUD, GEN_AUDNOTE, GEN_FORMS, genSummary } from "./projects.js";
+import { curRefine, curVersion, DRAFTKIND, GEN_AUD, GEN_AUDNOTE, GEN_FORMS, genSummary } from "./projects.js";
 import { draftOn, SPARKI } from "./review.js";
 import { PERS, personPool, renderPerson, row, SA, SETSECTIONS } from "./settings.js";
 import { plur } from "./today.js";
@@ -54,16 +57,19 @@ export const deHead=t=>`<p style="${DE_FONT}color:${DE_COLOURS.ink};margin:16px 
 export const deTimes=n=>n===1?"once":n===2?"twice":`${n} times`;
 export const deChasedWords=c=>`Chased ${fd(c.last)}, ${deTimes(c.n)}`;
 export const deReplyBy=r=>r?` It would be helpful to hear back by ${new Date(r+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(r)}.`:"";
+/** #121: plain text with links as the email's HTML: the words escaped, a link as an anchor with its colour written in (a mail program drops classes). The rich copy keeps the
+    link; the plain copy (deTextRows) shows "words (address)". Only an address core/linkUrl.js accepts is ever an anchor. @param {unknown} t */
+export const deLinks=t=>linkSegments(t).map(x=>x.href?`<a href="${esc(linkUrl(x.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link||"#0b5cad"};text-decoration:underline;">${esc(x.t)}</a>`:esc(x.t)).join("");
 export function deRowHtml(i,o){ const C=DE_COLOURS, e=esc, d=deDue(i.due,o.today,o.dueSoon??7), colour=d.level==="over"?C.red:d.level==="soon"?C.amber:C.ink, strong=d.level==="over"?"font-weight:bold;":"";
-  const what=i.k==="raid"?`<b style="font-weight:bold;">${e(i.type||"Risk")}:</b> ${e(i.t)}<br><span style="color:${C.muted};">Response: ${e(String(i.resp||"").trim()||"none recorded yet")}</span>`:i.k==="decisions"?`<b style="font-weight:bold;">Decision needed:</b> ${e(i.t)}`:e(i.t);
-  const upd=o.includeUpdate&&String(i.upd||"").trim()?`<br><span style="color:${C.muted};">Latest update: ${e(i.upd)}</span>`:"";
+  const what=i.k==="raid"?`<b style="font-weight:bold;">${e(i.type||"Risk")}:</b> ${e(i.t)}<br><span style="color:${C.muted};">Response: ${String(i.resp||"").trim()?deLinks(String(i.resp).trim()):"none recorded yet"}</span>`:i.k==="decisions"?`<b style="font-weight:bold;">Decision needed:</b> ${e(i.t)}`:e(i.t);
+  const upd=o.includeUpdate&&String(i.upd||"").trim()?`<br><span style="color:${C.muted};">Latest update: ${deLinks(i.upd)}</span>`:"";
   const ch=o.chased&&o.chased[i.id]?`<br><span style="color:${C.muted};">${e(deChasedWords(o.chased[i.id]))}</span>`:"";
   return `<tr style="vertical-align:top;">${deTd(e(i.noid?"":i.id),"white-space:nowrap;")}${deTd(what+upd+ch)}${deTd(`<span style="color:${colour};${strong}">${e(d.date)}</span>${d.words?`<br><span style="color:${colour};${strong}">${e(d.words)}</span>`:""}`,"white-space:nowrap;")}${deTd(i.pr==="Urgent"?`<b style="font-weight:bold;">Urgent</b>`:e(i.pr||""),"white-space:nowrap;")}</tr>`; }
 export function deTableHtml(list,o){ return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID","9%")}${deTh("Item")}${deTh("Due","18%")}${deTh("Priority","10%")}</tr>${list.map(i=>deRowHtml(i,o)).join("")}</table>`; }
 export function deTextRows(list,o){ const w=Math.max(...list.map(i=>(i.noid?"":i.id).length)), out=[], pad="".padEnd(w);
   list.forEach(i=>{ const d=deDue(i.due,o.today,o.dueSoon??7); out.push(`  ${(i.noid?"":i.id).padEnd(w)}  ${i.k==="raid"?`${i.type||"Risk"}: `:i.k==="decisions"?"Decision needed: ":""}${i.t}  |  ${d.date}${d.words?` (${d.words})`:""}  |  ${i.pr||""}`);
-    if(i.k==="raid") out.push(`  ${pad}  Response: ${String(i.resp||"").trim()||"none recorded yet"}`);
-    if(o.includeUpdate&&String(i.upd||"").trim()) out.push(`  ${pad}  Latest update: ${i.upd}`);
+    if(i.k==="raid") out.push(`  ${pad}  Response: ${linkWithAddress(String(i.resp||"").trim())||"none recorded yet"}`);
+    if(o.includeUpdate&&String(i.upd||"").trim()) out.push(`  ${pad}  Latest update: ${linkWithAddress(i.upd)}`);
     if(o.chased&&o.chased[i.id]) out.push(`  ${pad}  ${deChasedWords(o.chased[i.id])}`); });
   return out; }
 export const dePicked=o=>o.items.filter(i=>!o.picked||o.picked.has(i.k+":"+i.id));
@@ -128,7 +134,7 @@ export const deOverdue=i=>!!i.due&&i.due<TODAY;
 export const deDefaults=(items,outside)=>new Set(items.filter(i=>!outside||i.client).map(i=>i.k+":"+i.id));
 export const deMe=n=>String(n||"").trim().toLowerCase()===String(S.me||"").trim().toLowerCase();
 export function deDlgEl(){ let d=$("#deDlg"); if(d) return d;
-  d=makeDraftEmailDialog(); d.addEventListener("click",e=>{ if(e.target.closest("#deClose")) d.close(); });   /* a click on the scrim is the Dialog's: it closes when nothing is typed */ d.addEventListener("close",()=>{ if(d.open) return; closeCal(); if(shared.DE&&shared.DE.polish) draftStat("email","rejected"); shared.DE=null; }); return d; }   /* the close event is queued: a popup opened again meanwhile keeps its email */
+  d=makeDraftEmailDialog(); d.addEventListener("click",e=>{ if(e.target.closest("#deClose")) d.close(); });   /* a click on the scrim is the Dialog's: it closes when nothing is typed */ d.addEventListener("close",()=>{ if(d.open) return; closeCal(); dePrevDrop(); if(shared.DE&&shared.DE.polish) draftStat("email","rejected"); shared.DE=null; }); return d; }   /* the close event is queued: a popup opened again meanwhile keeps its email */
 export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=title; drawDraftEmail(true); openDialog(d); }
 /* from a person's page: an update request, or a chase of their overdue items */
 /* only (BL-210, Decisions needed): one item's ID; it alone starts ticked (if the outside-address rule allows), the rest are offered unticked */
@@ -186,7 +192,7 @@ export function dePolishHtml(){ const tone=shared.DE.tone||"neutral", off=!draft
   return `<div class="detone${off?" off":""}"><span class="sub">Polish the wording of the opening paragraph:</span>${["warm","neutral","firm"].map(t=>`<button type="button" class="vchip" data-detone="${t}" aria-pressed="${tone===t}"${off?" disabled":""}>${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}${draftBtn("polish","Polish","Reword the opening paragraph only, in this tone; the table, subject and addresses are never touched",'data-depolish="1"')}</div><div id="dePolish" class="depolish">${shared.DE.polish?shared.DE.polish.html:""}</div>`; }
 /* redraw the whole popup (first: build it) or just the preview and subject */
 export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(shared.DE.items.map(i=>i.p))].sort();
-  if(first){ const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${i.noid?"":esc(i.id)+" · "}${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
+  if(first){ dePrevDrop(); const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${i.noid?"":esc(i.id)+" · "}${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
     const outsideNote=shared.DE.mode==="followup"?(shared.DE.attendees.length?"An attendee's address is outside your own domains":"There are no attendee addresses on record"):shared.DE.email?"This address is outside your own domains":"There's no email address on record";
     putHtml($("#deBody"),`${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
       <div class="derow"><label for="deSubj">Subject</label><input type="text" id="deSubj"><button class="mini" id="deCopySubj">Copy</button></div>
@@ -198,9 +204,31 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
       <div id="dePrev" contenteditable="true" role="textbox" aria-multiline="true" aria-label="The email, editable"></div>
       <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode==="chase"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Record that you sent this chase (the items and today's date only), so the next one steps up">I sent it</button>`:""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
     $("#deDone").onclick=()=>$("#deDlg").close(); if(shared.DE.includeUpdate&&$("#deUpd")) $("#deUpd").checked=true; if(shared.DE.replyBy) $("#deReply").value=fd(shared.DE.replyBy); }
-  putHtml($("#dePrev"),em.html); shared.DE.edited=false; $("#deNote").hidden=true; if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; }
+  dePrevPut(em.html); shared.DE.edited=false; $("#deNote").hidden=true; if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; }
+/* ===== #133 ===== the preview is a host of the shared editor (core/editor.js, features "email"): the same selection bar as the other editors
+   (Improve: Rewrite, Shorter, Longer; Tone: More formal, Warmer; Ask…), on text inside one paragraph or cell, so the table and the colours
+   are never reshaped. The builder (draftEmail) stays the source (BL-83): the preview shows what it built, `shared.DE.built` is that HTML,
+   and what is copied is that HTML until the email is edited, then the editor's document in the same wrapper (deHtml). */
+/** Put the builder's HTML in the preview: a new editor on first use, else quietly into the one there (not an edit). @param {string} html */
+export function dePrevPut(html){ const el=$("#dePrev"); if(!el) return; shared.DE.built=html;
+  /* INTERIM (#133, until the edit_ai client-facts fix): the AI bar is off whenever the recipient is outside, because a suggestion for an
+     outside email could be written without the client-safe facts. It is mounted again when the recipient is internal; an editor that
+     was mounted the other way is rebuilt (the recipient changes with the follow-up's attendees, which redraw the popup). */
+  const ai=!shared.DE.outside;
+  if(el.cxed&&!el.cxed.editor.isDestroyed&&el.cxed.aiOn===ai){ el.cxed.setValue(html); return; }
+  creaiteEditor(el,{ features:"email", html, ...(ai?{ ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; } } }:{}) });
+  if(el.cxed) el.cxed.aiOn=ai; }
+/** End the preview's editor (the popup is redrawn or closed), and with it the selection bar over it. */
+export function dePrevDrop(){ const el=$("#dePrev"); if(el&&el.cxed) el.cxed.destroy(); }
+/** The HTML Copy email puts on the clipboard. An unedited email is the builder's HTML as the browser holds it (what the preview's own
+    innerHTML always was: a table with its body, attributes as the parser writes them), byte for byte; an edited one is the editor's document
+    inside the builder's wrapper, each cell's lone paragraph unwrapped and every inline style kept. */
+export function deHtml(){ const el=$("#dePrev");
+  if(shared.DE.edited&&el&&el.cxed&&!el.cxed.editor.isDestroyed) return `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${edEmailHtml(el.cxed.editor)}</div>`;
+  const t=document.createElement("div"); putHtml(t,shared.DE.built||""); return t.innerHTML; }
+/* ===== end #133 ===== */
 /* an option changed: redraw the email, unless the person has edited it, in which case ask first (their edits would be lost) */
-export function deOptionsChanged(){ if(!shared.DE.edited){ const em=deBuild(); putHtml($("#dePrev"),em.html); if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; return; }
+export function deOptionsChanged(){ if(!shared.DE.edited){ const em=deBuild(); dePrevPut(em.html); if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; return; }
   const n=$("#deNote"); n.hidden=false; putHtml(n,'You\'ve edited the email, so it hasn\'t changed with your last choice. <button class="mini" id="deRedraw">Redraw it (your edits are lost)</button>'); }
 export function deSay(btn,msg,ok){ $("#deMsg").textContent=msg; if(ok&&btn) copied(btn); }   /* BL-136: the drawn tick and "Copied" */
 /* when the browser refuses the clipboard, select what to copy and say so, never fail silently */
@@ -208,7 +236,7 @@ export function deSelect(id){ const el=$("#"+id); if(!el) return; if(el.select){
 export async function deCopyText(text,btn,selectId){ try{ if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error("no clipboard"); await navigator.clipboard.writeText(text); deSay(btn,"Copied",true); }
   catch(err){ deSelect(selectId); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
 /* what is on screen is what is copied: the preview's own HTML (with any edits) and its text, together, so Outlook pastes the table and the colours */
-export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=prev.innerHTML, text=shared.DE.edited?prev.innerText:deBuild().text;
+export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=deHtml(), text=shared.DE.edited?prev.innerText:deBuild().text;
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
     if(withHtml){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); }
     else await navigator.clipboard.writeText(text);
@@ -255,7 +283,7 @@ document.addEventListener("change",e=>{ if(!shared.DE) return; const t=e.target;
   else if(t.id==="deUpd"){ shared.DE.includeUpdate=t.checked; deOptionsChanged(); }
   else if(t.id==="deLead"){ shared.DE.lead=t.value; deOptionsChanged(); } });
 document.addEventListener("click",e=>{ if(!shared.DE) return; const t=e.target;
-  if(t.closest("#deRedraw")){ shared.DE.edited=false; shared.DE.subjEdited=false; const em=deBuild(); putHtml($("#dePrev"),em.html); $("#deSubj").value=em.subject; $("#deNote").hidden=true; return; }
+  if(t.closest("#deRedraw")){ shared.DE.subjEdited=false; const em=deBuild(); dePrevPut(em.html); shared.DE.edited=false; $("#deSubj").value=em.subject; $("#deNote").hidden=true; return; }
   const md=t.closest("[data-demode]"); if(md&&!md.disabled&&md.dataset.demode!==shared.DE.mode){ openDraftEmail(shared.DE.name,md.dataset.demode,shared.DE.only); return; }
   const tn=t.closest("[data-detone]"); if(tn){ shared.DE.tone=tn.dataset.detone; $$("[data-detone]").forEach(x=>x.setAttribute("aria-pressed",x===tn)); return; }
   if(t.closest("[data-depolish]")){ dePolish(); return; }
@@ -323,7 +351,7 @@ export async function draftAsk(body,o={}){ const status=o.status||(()=>{});
         else if(ev.type==="draft"){ const {type,...d}=ev; Object.assign(out,d,{got:true}); } } }
     api("/api/ask/ack",{run:id}).catch(()=>{});
     if(out.stopped){ shared.RBOUT="stopped"; return {ok:false,stopped:true,message:"Stopped; nothing changed"}; }
-    if(!out.got||(!out.text&&!out.items&&!out.prefill)){ shared.RBOUT="failed"; return {ok:false,message:out.message||"No draft came back"}; }
+    if(!out.got||(!out.text&&!out.items&&!out.prefill&&!(out.health&&out.reason))){ shared.RBOUT="failed"; return {ok:false,message:out.message||"No draft came back",length_notes:out.length_notes||[]}; }
     out.ok=true; return out;
   } finally{ DRRUN=null; status(""); if(started) rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }
 export function draftTextHtml(d){ const src=d.sources||[], S2=d.sentences||[];
@@ -384,11 +412,11 @@ export function genFold(){ const [form,...rest]=genSummary(), el=$("#genSumTxt")
 /* back to a new dialog: setup showing, no draft (an unused one counts as rejected), Draw on folded, not busy. Change settings, Discard, closing and opening do this */
 export function genReset(){ GENSEQ++;                      /* a draft still being written belongs to the dialog as it was: it is stopped and its result is never shown */
   if(GENCALL&&DRRUN){ const r=DRRUN; api("/api/ask/stop",{run:r.id}).then(x=>{ if(!x.ok) r.ctl.abort(); }); }
-  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),"");
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),""); refineUnmount();   /* every version goes with the draft */
   $("#genSetup").hidden=false; $("#genSum").hidden=true; genBusy(false); genFooter(); }
 function genBusy(on){ if(on) $("#genGo").setAttribute("aria-disabled","true"); else $("#genGo").removeAttribute("aria-disabled"); }
-export function genFormCard(d){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[])[1]||"Status", aud=(GEN_AUD.find(x=>x[0]===d.audience)||[])[1]||"", loose=d.unsourced||0;
-  return `<div class="drcard" role="region" aria-label="${esc(name)}" tabindex="-1"><div class="drhead">${ic("spark")}<b>${esc(name)}</b><span class="sub">${esc(aud)} · not saved: copy it where you need it</span></div>
+export function genFormCard(d,v){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[])[1]||"Status", aud=(GEN_AUD.find(x=>x[0]===d.audience)||[])[1]||"", loose=d.unsourced||0;
+  return `<div class="drcard" role="region" aria-label="${esc(name)}" tabindex="-1"><div class="drhead">${ic("spark")}<b>${esc(name)}</b><span class="sub">${esc(aud)} · not saved: copy it where you need it</span>${v&&v.n>1?versBarHtml(v.at,v.n,"gver"):""}</div>
     ${genFormText(d)}${loose?`<div class="drnote">${loose} sentence${loose===1?" has":"s have"} no source: check ${loose===1?"it":"them"} before you use it.</div>`:""}
     ${(d.length_notes||[]).length?`<div class="drnote" role="note">${d.length_notes.map(esc).join(" ")}</div>`:`<div class="drnote">${d.words} words.</div>`}${draftSrcHtml(d,false,"Written from")}
     <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-gfdo="discard">Discard</button><button type="button" class="btn" data-gfdo="plain">Copy as plain text</button>${d.form==="teams"?"":'<button type="button" class="btn primary" data-gfdo="rich">Copy</button>'}</div><div class="sub" id="gfMsg" role="status"></div></div>`; }
@@ -399,14 +427,14 @@ export function genFormText(d){ const src=d.sources||[], lines=d.form==="steerin
   return `<div class="drtext">${(d.sentences||[]).map(one).join(lines?"<br>":" ")}</div>`; }
 let GENSEQ=0, GENCALL=false;                                   /* which dialog session a draft belongs to; a form draft is being written */
 export async function genFormDraft(body){ const out=$("#genOut"), why=draftWhyNot("status-form"); if(why){ snack(why); return; }
-  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form, mine=++GENSEQ;
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; refineUnmount(); const form=shared.GEN.form, mine=++GENSEQ;   /* a new draft: the old one's refine box and versions go */
   genFold(); genBusy(true);                                  /* #110: the setup folds to its summary while it is written; Generate again waits */
   let res; GENCALL=true; try{ res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>{ if(mine===GENSEQ) putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:""); }}); }
   finally{ GENCALL=false; if(mine===GENSEQ) genBusy(false); }
   if(mine!==GENSEQ){ if(res.ok&&!res.nothing) draftStat("forms","rejected"); return; }   /* the dialog was closed, reset or opened again meanwhile: this draft is not its own, and was never used */
   if(res.nothing){ putHtml(out,`<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`); return; }
   if(!res.ok){ putHtml(out,""); genReset(); snack(res.message||"No draft came back"); return; }   /* a failure gives the setup back */
-  GENFM={d:res,form,used:false}; putHtml(out,genFormCard(res)); out.querySelector(".drcard")?.focus?.(); }
+  GENFM={d:res,form,used:false,edited:false,body:{...body},vers:[res],at:0}; putHtml(out,genFormCard(res,{at:0,n:1})); refineMount(body.audience==="client"); out.querySelector(".drcard")?.focus?.(); }
 export async function genFormCopy(rich,btn){ const d=GENFM.d, html=d.form==="steering"?mdHtml(d.text):d.text.split(/\n+/).map(x=>`<p>${esc(x)}</p>`).join("");
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
     if(rich){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([d.text],{type:"text/plain"})})]); }
@@ -414,6 +442,49 @@ export async function genFormCopy(rich,btn){ const d=GENFM.d, html=d.form==="ste
     copied(btn); $("#gfMsg").textContent="Copied"; }
   catch(err){ $("#gfMsg").textContent=`Your browser blocked copying: select the text and press ${MOD}C`; return; }
   if(!GENFM.used){ GENFM.used=true; draftStat("forms","used"); } }
+/* ===== #110 B: Steer it further. Under a form's result in the Generate dialog, and under the unsaved Current state draft in the cockpit
+   editor (projects.js curRefine): a box, four starters that append a sentence, Refine (⌘↵). A refine is the draft kind "status-form"
+   asked again on the run engine with the previous version (`text`) and the change (`note`): the facts are worked out again for the same
+   period and audience, so a version draws on exactly what the first did, and the server keeps only sourced sentences for any audience
+   but Internal. Each is a new version; Back and On move between them; Discard, closing and Change settings drop them all. Nothing is
+   saved or sent by a refine; the editor's Save is the only save. ===== */
+export const REFINE_TEXT_MAX=1500, REFINE_NOTE_MAX=500, REFINE_INS_MAX=300;      /* what /api/draft takes for `text` and `note`; the change itself, leaving room for the first steer */
+export const REFINE_STARTERS=[["shorter","Shorter","Make it shorter."],["plainer","Plainer words","Use plainer words."],["decision","Lead with the decision","Lead with the decision."],["risks","Add the risks","Add the risks."]];
+export function refineNote(ins,steer){ ins=String(ins||"").replace(/\s+/g," ").trim().slice(0,300); const first=String(steer||"").replace(/\s+/g," ").trim(), room=REFINE_NOTE_MAX-ins.length-27;
+  return first&&room>20?`${ins} (The first steer was: ${first.slice(0,room)})`:ins; }
+export function versBarHtml(at,n,attr){ return `<span class="vers" role="group" aria-label="Versions">Version ${at+1} of ${n}${at>0?` · <button type="button" class="genlink" data-${attr}="back">Back to version ${at}</button>`:""}${at<n-1?` · <button type="button" class="genlink" data-${attr}="next">On to version ${at+2}</button>`:""}</span>`; }
+export const refineStatusHtml=h=>h?`<div class="drstatus" role="status">${h}</div>`:"";
+const REFINE_NOT_CLIENT="Steer it further is not available for a Client-safe draft yet.";      /* the server refuses it too (drafts.py REFINE_NOT_CLIENT) */
+export function refineHtml(scope,o={}){ const cur=scope==="cur";
+  if(o.client) return `<div class="genref" id="${scope}Refine" data-refine-off="${scope}"><div class="drnote" role="note">${esc(REFINE_NOT_CLIENT)}</div></div>`;
+  return `<div class="genref" id="${scope}Refine" data-refine="${scope}"><label for="${scope}RefineNote">Steer it further <span class="sub">Each change makes a new version. ${cur?"Nothing is saved until you press Save.":"Nothing is saved or sent."}</span></label>
+    <textarea id="${scope}RefineNote" rows="2" placeholder="For example: shorter, lead with the decision, leave out the overdue actions">${esc(o.note||"")}</textarea>
+    <div class="genrow"><span class="sub">Try:</span><span class="genstarts">${REFINE_STARTERS.map(([k,l])=>`<button type="button" class="genlink" data-rstart="${k}">${esc(l)}</button>`).join(" ")}</span><span class="sp"></span>${cur?'<span id="curVers"></span>':""}<button type="button" class="btn" id="${scope}RefineGo" data-refinego="${scope}"${o.busy?' aria-disabled="true"':""}>Refine<span class="kbd" aria-hidden="true">${MOD}↵</span></button></div>
+    <div id="${scope}RefineWork" aria-live="polite">${refineStatusHtml(o.status)}</div><div id="${scope}RefineMsg">${o.msg?`<div class="drnote" role="note">${esc(o.msg)}</div>`:""}</div></div>`; }
+/* one refine on the run engine: the new version's draft, or null (the reason shown) */
+export async function refineAsk(o){ const why=draftWhyNot("status-form"); if(why){ snack(why); return null; }
+  const ins=String(o.ins||"").replace(/\s+/g," ").trim();
+  if(ins.length>REFINE_INS_MAX){ snack(`A change can be ${REFINE_INS_MAX} characters at most; yours is ${ins.length}. Shorten it.`); return null; }
+  if(o.text.length>REFINE_TEXT_MAX){ snack(`This draft is over ${REFINE_TEXT_MAX} characters, more than a refine can take. Shorten it first.`); return null; }
+  const b=o.body, res=await draftAsk({kind:"status-form",code:b.code,from:b.from,to:b.to,audience:b.audience,length:b.length,form:o.form,text:o.text,note:refineNote(ins,b.note)},
+    {label:`Refining version ${o.fromV} into version ${o.toV}…`,status:o.status});
+  if(res.nothing){ snack(res.nothing); return null; }
+  if(!res.ok){ const n=(res.length_notes||[]).join(" "); snack(n?`${n} No new version was made.`:res.message||"No new version came back"); return null; }   /* the server's count of what it left out, when there is one */
+  return res; }
+export function refineMount(client){ const h=$("#genRefineHost"); if(!h) return; putHTML(h,raw(refineHtml("gen",{client:!!client}))); h.hidden=false; }
+export function refineUnmount(){ const h=$("#genRefineHost"); if(!h) return; putHTML(h,raw("")); h.hidden=true; }
+let GENREF=false;                                              /* a refine is being written in the dialog */
+export async function genRefine(){ const g=GENFM; if(!g||GENREF||!$("#genDlg").open) return; const box=$("#genRefineNote"), ins=box.value.trim();
+  if(!ins){ snack("Say what to change first, or pick one of the quick ones."); box.focus(); return; }
+  GENREF=true; GENCALL=true; $("#genRefineGo").setAttribute("aria-disabled","true"); genBusy(true);   /* GENCALL: closing or Change settings stops it */
+  let res=null; try{ res=await refineAsk({body:g.body,form:g.form,text:g.vers[g.at].text,ins,fromV:g.at+1,toV:g.vers.length+1,status:h=>{ const el=$("#genRefineWork"); if(el&&GENFM===g) putHtml(el,refineStatusHtml(h)); }}); }
+  finally{ GENREF=false; GENCALL=false; if(GENFM===g) genBusy(false); $("#genRefineGo")?.removeAttribute("aria-disabled"); }
+  if(GENFM!==g||!$("#genDlg").open||!res) return;              /* closed or discarded while it was written, or it failed: nothing changes */
+  g.vers.push(res); g.at=g.vers.length-1; g.d=res; if(!g.edited){ g.edited=true; draftStat("forms","edited"); }   /* a refine is an edit of the same draft */
+  box.value=""; putHtml($("#genOut"),genFormCard(res,{at:g.at,n:g.vers.length})); box.focus(); }   /* focus stays in the box, so ⌘↵ goes on refining and never regenerates */
+export function genVersion(way){ const g=GENFM; if(!g||GENREF) return; const at=g.at+(way==="next"?1:-1); if(at<0||at>=g.vers.length) return;
+  g.at=at; g.d=g.vers[at]; putHtml($("#genOut"),genFormCard(g.d,{at,n:g.vers.length})); $("#genOut .drcard")?.focus?.(); }
+/* ===== end #110 B ===== */
 /* ===== end BL-227 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootDrafts0202(){
@@ -423,6 +494,16 @@ $("#genDlg").addEventListener("click",e=>{ const b=e.target.closest("[data-gfdo]
   if(b.dataset.gfdo==="discard"){ genReset(); $("#genDays").focus(); return; }
   genFormCopy(b.dataset.gfdo==="rich",b); });
 $("#genDlg").addEventListener("close",()=>{ closePicker("owner",false); genReset(); });
+/* #110 B: by data attribute, from the dialog or the editor: a starter appends its sentence to its own box; Refine; Back and On */
+document.addEventListener("click",e=>{ const st=e.target.closest("[data-rstart]");
+  if(st){ const box=st.closest("[data-refine]")?.querySelector("textarea"), x=REFINE_STARTERS.find(a=>a[0]===st.dataset.rstart); if(!box||!x) return;
+    const v=box.value.replace(/\s+$/,""); box.value=(v?v+" ":"")+x[2]; box.dispatchEvent(new Event("input",{bubbles:true})); box.focus(); return; }
+  const rg=e.target.closest("[data-refinego]"); if(rg){ e.preventDefault(); if(rg.getAttribute("aria-disabled")==="true") return; if(rg.dataset.refinego==="cur") curRefine(); else genRefine(); return; }
+  const gv=e.target.closest("[data-gver]"); if(gv){ e.preventDefault(); genVersion(gv.dataset.gver); return; }
+  const cv=e.target.closest("[data-cver]"); if(cv){ e.preventDefault(); curVersion(cv.dataset.cver); } });
+onCmdEnter("refine",t=>!!(t&&t.closest&&t.closest("[data-refine]")),()=>{ const sc=document.activeElement&&document.activeElement.closest&&document.activeElement.closest("[data-refine]");
+  if(!sc) return; if(sc.dataset.refine==="cur") curRefine(); else genRefine(); });
+CMDENTER.unshift(CMDENTER.pop());                       /* its own key, before the dialog's "generate" and the editor's save */
 }
 /* ===== BL-224 (sprint-drafts-writing) ===== Polish the wording's switch and kind (the email modes are in the Draft email block, above) */
 /* ===== end BL-224 ===== */

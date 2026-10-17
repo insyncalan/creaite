@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { Chip } from "../Chip.jsx";
 import { Icon } from "../Icon.jsx";
 import { TextEditor } from "../TextEditor.jsx";
+import { LINK_REL } from "../../core/linkUrl.js";
 import { fd } from "../../core/page.js";
 import { viaServer } from "../../core/server.js";
 import { draftWhyNot } from "../../drafts.js";
@@ -23,8 +24,8 @@ import { kOfId } from "../../work.js";
 import { popupRev, prepNow, prepShape } from "../../stores/prepPopup.js";
 import { acceptShape, addChip, closeShape, discardShape, editedSections, giveBack, notesNow, openShape, previewFilter, runShape,
   SHAPE_SECTIONS, setReading, shapeAccepted, shapeBusy, shapeChecks, shapeChips, shapeConfidential, shapeDrafted, shapeExcluded,
-  shapeFilter, shapeInstruction, shapeKey, shapeMsg, shapeReading, shapeSourcesN, shapeSteps, shapeText, shapeUsed,
-  toggleExcluded } from "../../stores/prepShape.js";
+  shapeFilter, shapeInstruction, shapeKey, shapeMsg, shapeProposal, shapeReading, shapeSourcesN, shapeSteps, shapeText, shapeUsed,
+  discardProposal, shapeOnPage, sourceHref, toggleExcluded, useProposal } from "../../stores/prepShape.js";
 
 const SHAPE_ID_RE = /\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b/;
 const shPlural = (/** @type {number} */ n, /** @type {string} */ one) => `${n} ${one}${n === 1 ? "" : "s"}`;
@@ -41,8 +42,9 @@ export function ShapeSource({ s }) {
     return k ? <a href="#" class="shcite" data-open={`${k}:${s.id}`} data-tip="Opens the item">{text}</a> : <span class="shcite plain">{text}</span>;
   }
   if (s.type === "file" && s.path) return <a href="#" class="shcite" data-dropen={s.path} data-tip={`Opens ${s.path}`}>{text}</a>;
-  if ((s.type === "mail" || s.type === "teams") && s.url && /^https:\/\//.test(s.url)) {
-    return <a href={s.url} class="shcite" target="_blank" rel="noopener noreferrer" data-tip={s.type === "mail" ? "Opens in Outlook" : "Opens in Teams"}>{text}</a>;
+  const href = sourceHref(s);
+  if (href) {
+    return <a href={href} class="shcite" target="_blank" rel={LINK_REL} data-tip={s.type === "mail" ? "Opens in Outlook" : "Opens in Teams"}>{text}</a>;
   }
   return <span class="shcite plain">{text}</span>;
 }
@@ -146,7 +148,7 @@ function Notes() {
               <label id={`shN-${k}-l`}>{label}</label>
               {edited.has(k) ? <span class="sub shmine">Your edit, kept on Regenerate · <button type="button" class="linkbtn" onClick={() => giveBack(k)}>let creaite redraft it</button></span> : null}
             </div>
-            <TextEditor id={`shN-${k}`} cls="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} labelledBy={`shN-${k}-l`} ai={ai}
+            <TextEditor id={`shN-${k}`} cls="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} labelledBy={`shN-${k}-l`} ai={ai} links
               describedBy={lines.length ? `shC-${k}` : undefined} onInput={t => { shapeText.value = { ...shapeText.value, [k]: t }; }} />
             {lines.length ? (
               <ol class="shcites" id={`shC-${k}`} aria-label={`${label}: each line's source`}>
@@ -259,4 +261,61 @@ export function PrepShape() {
 export function mountPrepShape(el) {
   render(<PrepShape />, el);
   prepShape.value = key => { if (shapeKey.value === key) closeShape(); else openShape(key); };
+}
+
+
+/** #111 piece A: the prep page's ONE Shape control, under the three editors. An optional "what to focus on" box and one button,
+    "Shape" the first time and "Shape again" after (the page says which with `again`). The run is the same as the popup's
+    (/api/prep/shape, streamed: progress, Stop, one run at a time); what comes back is a suggestion, shown here with Use this
+    and Discard, and the sections Alan has edited are kept. Nothing is saved until Use this; nothing reaches the tracker.
+    @param {{rec: any, again: boolean, onUsed: () => void}} props */
+export function PageShape({ rec, again, onUsed }) {
+  const busy = shapeBusy.value, why = draftWhyNot("shape"), prop = shapeProposal.value, conf = shapeConfidential.value;
+  const run = () => { if (!why && !busy) shapeOnPage(rec); };
+  const saved = (rec && rec.notes) || {};
+  const flat = (/** @type {import("../../stores/prepShape.js").NoteLine[]} */ L) => (L || []).map(l => l.text.replace(/\s+/g, " ").trim()).join("\n");
+  const changed = prop ? SHAPE_SECTIONS.filter(([k]) => flat(prop.notes[k]) !== flat(saved[k])) : [];
+  return (
+    <div class="ppshape">
+      {conf ? <p class="sub shconf" role="note">Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents.</p> : null}
+      <div class="ppshrow">
+        <input id="pp-shape-txt" type="text" maxLength={4000} value={shapeInstruction.value} aria-label="What to focus on (optional)"
+          placeholder="What to focus on? Optional: lead with the decision…"
+          onInput={e => { shapeInstruction.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); run(); } }} />
+        <button type="button" class="btn ai" id="pp-shape-btn" data-ppshape="1" aria-disabled={why || busy ? "true" : undefined}
+          data-tip={why || (again ? "Draft again from the box and the open items; the sections you edited are kept" : "Draft the objective, talking points and ask from the open items, the series and the research")}
+          onClick={run}><Icon name="spark" />{again ? "Shape again" : "Shape"}</button>
+      </div>
+      {busy === "shape" ? (
+        <div class="shrun" role="status"><span class="spin" aria-hidden="true"></span>
+          <span>Shaping the meeting{shapeSourcesN.value ? ` from ${shPlural(shapeSourcesN.value, "source")}` : ""}{shapeSteps.value ? ` · ${shPlural(shapeSteps.value, "step")}` : ""}</span>
+          <button type="button" class="mini" data-drstop>Stop</button></div>
+      ) : null}
+      {shapeMsg.value && !busy ? <p class="wnote" role="status">{shapeMsg.value}</p> : null}
+      {!viaServer() ? <p class="wnote">Shaping needs the live server.</p> : null}
+      {prop && !busy ? (
+        <div class="ppsug" role="region" aria-label="Suggestion from creaite">
+          <div class="shdh">
+            <span class="tag shai"><Icon name="spark" />Suggestion from creaite</span>
+            <span class="sub">{changed.length ? `${shPlural(changed.length, "section")} changed${changed.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed."}</span>
+            <span class="sp"></span>
+            <button type="button" class="btn shsm" data-ppdiscard="1" onClick={() => discardProposal(rec)}>Discard</button>
+            <button type="button" class="btn primary shsm" data-ppuse="1" disabled={!changed.length || !shapeReading.value}
+              onClick={async () => { if (await useProposal()) onUsed(); }}>Use this</button>
+          </div>
+          {prop.checks.length ? (
+            <ul class="shchecks" aria-label="Checks on the draft">
+              {prop.checks.map((c, i) => <li key={i} class={c.level === "error" ? "bad" : "warn"}>{c.section ? `${c.section}: ` : ""}{c.note}</li>)}
+            </ul>) : null}
+          {changed.map(([k, label]) => (
+            <div class="shsec" key={k}>
+              <div class="shsech"><b>{label}</b></div>
+              <ul class="ppsugl">{(prop.notes[k] || []).map((l, i) => (
+                <li key={i}>{l.text} {(l.sources || []).length ? (l.sources || []).map((src, j) => <ShapeSource key={j} s={src} />) : <span class="drtag" role="note">no source</span>}</li>))}</ul>
+            </div>))}
+        </div>
+      ) : null}
+    </div>
+  );
 }

@@ -108,6 +108,9 @@ def left_out(doc, con=None):
     con = con or client_leak.connect()
     meta = doc.get("meta") or {}
     ready, why = report_doc.client_ready(doc)
+    diff = _health_difference(doc)
+    if ready and diff and not str(diff.get("reason") or "").strip():       # #203: a differing flag needs its reason, written by Alan
+        ready, why = False, "Write why the client's health differs from the internal health: open the health flag on the client report."
     return {"items": left_items(doc, con),
             "sections": [{"id": s["id"], "heading": s.get("heading") or s["id"]} for s in doc.get("sections") or [] if s.get("hidden")],
             "logos": _unticked_logos(doc), "tags": sum(len(s.get("tags") or []) for s in doc.get("sections") or [] if not s.get("hidden")),

@@ -85,7 +85,7 @@ SCRIPT = r"""
     document.querySelector("#vsAnswer [data-vsstop]").click(); await until(()=>ASKQ.done,30); out.stopped=[el("vsAnswer").textContent.includes("Stopped."),!!document.querySelector("#vsAnswer [data-vscontinue]")];
     document.querySelector("#vsAnswer [data-vsdismiss]").click(); out.dismissed=el("vsAnswer").hidden;
     // ⌘K offers Ask for a question
-    openCk(); el("cmdkIn").value="why did go-live move?"; el("cmdkIn").dispatchEvent(new Event("input")); out.ckAsk=[...document.querySelectorAll("#cmdkList button")][0].textContent; el("cmdk").close();
+    openCk(); el("cmdkIn").value="why did go-live move?"; el("cmdkIn").dispatchEvent(new Event("input")); out.ckAsk=[...document.querySelectorAll("#cmdkList button")][0].textContent; out.ckAskFirst=document.querySelector("#cmdkList button").textContent.startsWith("ask creaite:"); el("cmdk").close();
     // without the live server: a plain note
     const was=LIVE; LIVE=false; vsClear(); await type(el("vsInput"),"data access",400); out.offline=el("vsNote").textContent; LIVE=was;
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
@@ -197,6 +197,7 @@ class SearchPageTests(unittest.TestCase):
         self.assertEqual(r["running"][0], True)
         self.assertEqual(r["stopped"], [True, False])
         self.assertTrue(r["dismissed"])
+        self.assertTrue(r["ckAskFirst"])                                                      # the ask row stays first, ahead of the Help rows
         self.assertEqual(r["ckAsk"], "ask creaite: “why did go-live move?”An answer with sources")
 
     def test_a_plain_note_without_the_live_server(self):

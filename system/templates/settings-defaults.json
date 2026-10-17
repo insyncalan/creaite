@@ -3,6 +3,7 @@
   "sweep": {
     "due_from": "07:00",
     "first_run_lookback_days": 14,
+    "max_lookback_days": 3,
     "sources": {
       "inbox": true,
       "sent_items": true,
@@ -99,6 +100,7 @@
     "files_show_portfolio": true,
     "files_show_documents": false,
     "show_archived": false,
+    "rail_labels": true,
     "week_ahead_priorities": [
       "Urgent"
     ],
@@ -290,7 +292,8 @@
   },
   "help": {
     "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true.",
-    "start_seen": false
+    "start_seen": false,
+    "first_line": true
   },
   "drafting": {
     "_about": "AI drafts (BL-218 to BL-227): each feature on (true) or off. A draft is a suggestion, never a write: it lands in an unsaved field, a pending proposal or a dialog. Settings › General › AI drafts.",

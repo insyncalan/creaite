@@ -47,7 +47,8 @@ out({"type": "assistant", "message": {"content": [{"type": "text", "text": reply
 out({"type": "result", "result": reply, "session_id": "sess-d"})
 ''' % json.dumps(fx.ROWS)
 
-NOTES_OPTIONS = ["rewrite", "shorter", "longer", "executive", "spelling", "format", "checklist", "summary", "fu-line", "custom"]
+NOTES_OPTIONS = [("improve", ["rewrite", "shorter", "longer", "executive"]), ("structure", ["format", "checklist", "summary"]),
+                 ("make into", ["fu-line"])]
 LINE4 = "Phase 1 go-live probably moves two weeks"
 
 
@@ -79,11 +80,13 @@ class AiInANote(LiveBrowserCase):
           const find=w=>{ let at=-1; doc.descendants((n,pos)=>{ if(at<0&&n.isText){ const i=n.text.indexOf(w); if(i>=0) at=pos+i; } }); return at; };
           const a=find(%s), z=find(%s)+%d; h.focus(); h.editor.commands.setTextSelection({from:a,to:z}); })()"""
                     % (json.dumps(words), json.dumps(upto or words), len(upto or words)))
+        self.b.wait("document.querySelector('#aiLayer .aispark')")
+        self.b.click("#aiLayer .aispark")
         self.b.wait("document.querySelector('#aiLayer .aibar')")
 
-    def menu(self):
+    def menu(self, group="improve"):
         b = self.b
-        b.click("#aiLayer .aibar button[aria-haspopup]")
+        b.click(f'#aiLayer .aibar button[data-tip="AI: {group}"]')
         b.wait("document.querySelector('#aiLayer [role=menu]')")
         return b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)")
 
@@ -97,7 +100,15 @@ class AiInANote(LiveBrowserCase):
     def test_the_bar_offers_the_notes_options_and_make_this_an_action_before_say_what_you_want(self):
         self.open_note()
         self.select("Sandbox access granted")
-        self.assertEqual(self.menu(), NOTES_OPTIONS)
+        got = []
+        for g, _ in NOTES_OPTIONS:
+            got.append((g, self.menu(g)))
+            self.b.key("Escape")
+            self.b.wait("!document.querySelector('#aiLayer [role=menu]')")
+        self.assertEqual(got, NOTES_OPTIONS)
+        self.assertTrue(self.b.eval("!!document.querySelector('#aiLayer .aifmt')"))              # Turn into, apart from the AI zone
+        self.assertFalse(self.b.eval("!!document.querySelector('#aiLayer [data-ai=notes]')"))   # one line: no Format notes
+        self.menu("make into")
         name = self.b.eval("document.querySelector('#aiLayer [role=menu] [data-ai=\"fu-line\"]').textContent")
         self.assertIn("Make this an action, a risk, a decision or an update", name)
         self.b.key("Escape")
@@ -123,7 +134,7 @@ class AiInANote(LiveBrowserCase):
         b.click("#aiLayer .aisug [data-aifirst]")                                                   # Accept
         b.wait("!document.querySelector('#aiLayer .aisug')")
         b.wait("document.querySelector('#v-notes .nbody').cxed.value().includes('Clearly: Sandbox access granted yesterday.')")
-        b.wait("['typing','draft','saving','saved'].includes(noteSave.value.state)", 10)            # an edit, saved as typing is
+        b.wait("['typing','saving','saved'].includes(noteSave.value.state)", 10)            # an edit, saved as typing is
         b.pump(0.5)                                                                                  # the counts are posted, not awaited
         got, raw = self.stats()
         self.assertEqual((got.get("offered"), got.get("used")), (1, 1))
@@ -135,7 +146,7 @@ class AiInANote(LiveBrowserCase):
         b = self.b
         self.open_note()
         self.select("probably moves two weeks")
-        self.menu()
+        self.menu("make into")
         b.click("#aiLayer [role=menu] [data-ai=\"fu-line\"]")
         b.wait("!!document.querySelector('#noteSide aside.fu') && ['ready','none','error','ask'].includes(fuState.value)", 40)
         self.assertEqual(b.eval("fuState.value"), "ready")
@@ -155,7 +166,7 @@ class AiInANote(LiveBrowserCase):
         b = self.b
         self.open_note()
         self.select("Sandbox access", upto="probably moves")
-        self.menu()
+        self.menu("make into")
         b.click("#aiLayer [role=menu] [data-ai=\"fu-line\"]")
         b.wait("document.getElementById('snack').classList.contains('on')")
         self.assertIn("one line of the note", b.eval("document.getElementById('snackT').textContent"))

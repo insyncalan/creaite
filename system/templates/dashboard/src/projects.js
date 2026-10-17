@@ -2,8 +2,10 @@
 /* projects.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0029-projects-cockpit.js, 0054-generate-current-state-with-claude-bl-46.js, 0055-executive-current-state-bl-106.js, 0056-current-state-edited-in-place-bl-47.js, 0058-bl-162-sprint-rail.js, 0059-bl-207-sprint-insight.js, 0081-dashboard-pages-bl-87-to-bl-95.js, 0082-bl-190-sprint-links.js, 0083-after-bl-190-flow.js, 0124-insight-bl-51-bl-49-bl-54.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { howLink } from "./helpscreen.js";
 import { mountReportingCard } from "./components/reporting/ReportingCard.jsx";
 import { openDialog } from "./components/Dialog.jsx";
+import { linkHtml } from "./core/linkText.js";
 import { makePrepDialog } from "./components/dialogs/PageDialogs.jsx";
 import { mountAiMenu } from "./components/AiSelect.jsx";
 import { mountEditorBar, unmountEditorBar } from "./components/EditorBar.jsx";
@@ -22,7 +24,7 @@ import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, MOD, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { draftBtn, draftStat, draftWhyNot, DRRUN, genFormDraft, genFormOptions, genReset } from "./drafts.js";
+import { draftBtn, draftStat, draftWhyNot, DRRUN, GENFM, genFormDraft, genFormOptions, genReset, refineAsk, refineHtml, refineStatusHtml, versBarHtml } from "./drafts.js";
 import { FOPEN } from "./files.js";
 import { pdDrop } from "./help.js";
 import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, dnBlock, dnDecisionHtml, dnList, dnOk, isSteering, prepReports, putHtml } from "./meetings.js";
@@ -35,10 +37,10 @@ import { mountPrepShape } from "./components/prep/PrepShape.jsx";
 import { loadBrief, popupRev } from "./stores/prepPopup.js";
 import { draftOn, pencil, SPARKI } from "./review.js";
 import { nm, renderSettings, row } from "./settings.js";
-import { pfResize, plur, portfolioTable, spark, tl } from "./today.js";
+import { legBtn, pfResize, plur, portfolioTable, spark, tl } from "./today.js";
 import { allBucket, boardMove, hit, isoAdd, PRIOS, rows } from "./work.js";
 /* ======================= Projects + cockpit ======================= */
-export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); }
+export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. ${raw(howLink("projects"))} <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); }
 export const DRAFTKIND={};                                   /* kind → feature; each kind's block adds its own */
 /* BL-300: Top risks and issues: the text under each item is its latest update, falling back to the response (Alan,
    13-10-2026), cut at two lines (.rk-txt; #107, Alan 15-10-2026, was five); a cut one gets a quiet "More" and its full text as a tooltip, and the row
@@ -70,14 +72,14 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run||DRRUN?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run||DRRUN?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
-     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
+     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}${raw(legBtn())}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions",A.filter(x=>x.p===code&&overdue(x)).length,1,"actions:overdue"],["No due date",undatedWork(code).length,0,""],["Urgent risks",R.filter(r=>r.p===code&&r.st==="Open"&&r.pr==="Urgent").length,1,"raid:urgentonly"],["Milestone slip",p.slip?p.slip+" days":"None",p.slip,""],["Due in "+S.dueSoon+" days",A.filter(x=>x.p===code&&soon(x)).length,0,"actions:soon",{st:["Open","Delayed"]}]].map(([l,v,b,nav,ex])=>`<div class="evbox${nav?" click":""}" ${nav?`data-nav="${esc(navOf(`${nav}:${code}`,ex))}" role="link" tabindex="0" title="Open in Work"`:""}><div class="v ${b&&v&&v!=="None"?"bad":""}">${v}</div><div class="l">${l}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p))}
      <div id="cockRep"></div><!-- BL-337: the Reporting card (components/reporting/ReportingCard.jsx) -->
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts.length?html` <span class="sub">· ${acts.length}</span>`:""}</h2><div class="mini-list">${raw(acts.slice(0,S.listCap||10).map(x=>`<div data-open="actions:${x.id}" style="cursor:pointer"><span class="${overdue(x)?"late":""}" style="display:inline-block;width:110px">${rel(x.due)}</span>${ico("action")}${esc(x.t)} <span class="sub">— ${esc(who(x.o))}</span></div>`).join("")||'<div class="sub">Nothing due in the next '+S.dueSoon+' days.</div>')}</div>${acts.length>(S.listCap||10)?html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts.length-(S.listCap||10))} more — see all ›</a> `:""}${raw(seeAll(nOpenA,`${pName(code)} open action`,"actions:open:"+code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map(r=>`<div class="rkrow" data-open="raid:${r.id}" tabindex="0" style="cursor:pointer">${ico(r.type)}<span class="${r.pr==="Urgent"?"prio-urgent":"tag"}">${r.pr}</span> <span class="sub">${r.type}</span> ${esc(r.t)}<div class="sub rk-txt">${esc(rkText(r))}</div></div>`).join("")||'<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR,`${pName(code)} open RAID item`,"raid:open:"+code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map(r=>`<div class="rkrow" data-open="raid:${r.id}" tabindex="0" style="cursor:pointer">${ico(r.type)}<span class="${r.pr==="Urgent"?"prio-urgent":"tag"}">${r.pr}</span> <span class="sub">${r.type}</span> ${esc(r.t)}<div class="sub rk-txt">${linkHtml(rkText(r))}</div></div>`).join("")||'<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR,`${pName(code)} open RAID item`,"raid:open:"+code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map(d=>`<div data-open="decisions:${d.id}" style="cursor:pointer">${ico("decision")}${esc(d.t)}<div class="sub">${fd(d.date)} — ${esc(d.by)}</div></div>`).join("")||'<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec,`${pName(code)} decision`,"decisions:all:"+code))}</div>
      ${raw(depsCard(code))}
      ${cv?html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv)} client-visible item${cv===1?"":"s"} still need client messaging before the next client report.</div></div>`:""}
@@ -166,12 +168,47 @@ export async function runGen(body,kind){ shared.RBOUT=""; rbStart(kind==="rewrit
   shared.GEN.run=null; genStatus(""); api("/api/ask/ack",{run:id}).catch(()=>{});   /* BL-326: seen here, so ask creaite doesn't draw it again */ if(stopped){ shared.RBOUT="stopped"; snack("Stopped; nothing changed"); return; }
   const text=said.join("\n\n"), [draft,src=""]=text.split(/^SOURCES:\s*$/m); if(!draft.trim()){ snack("No draft came back"); return; }
   if(kind==="rewrite"){ execResult(body.code,body.text,fdMd(draft.trim())); return; }
-  genDraft(body.code,fdMd(draft.trim()),src.trim(),{audience:body.audience,length:body.length,from:body.from,to:body.to}); }
+  genDraft(body.code,fdMd(draft.trim()),src.trim(),{audience:body.audience,length:body.length,from:body.from,to:body.to,note:body.note}); }
   finally{ rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }
 export function genDraft(code,md,sources,opts){ if(shared.VIEW!=="cockpit"||shared.COCK!==code) go("cockpit",code);
   if(!shared.CURED) startCurEdit(code); if(!shared.CURED) return; curLoad(1,md); shared.CURED.dirty=true; shared.CURED.sources=sources||"";
-  shared.CURED.opts=opts||null; shared.CURED.notes=null; shared.CURED.facts=""; shared.CURED.rewrite=null; shared.CURED.claims=null; shared.CURED.ev={}; mountCurEdit(); claimsInit("ed"); curCheck();   /* BL-207: the marks become claims */
+  shared.CURED.opts=opts||null; shared.CURED.notes=null; shared.CURED.facts=""; shared.CURED.rewrite=null; shared.CURED.claims=null; shared.CURED.ev={}; shared.CURED.vers=[{md}]; shared.CURED.at=0; shared.CURED.refineNote=""; mountCurEdit(); claimsInit("ed"); curCheck();   /* BL-207: the marks become claims */
   snack("Draft ready — edit it, then Save. Nothing is written until you do."); }
+/* ===== #110 B: Steer it further under the unsaved Current state draft in the editor. The draft is the left pane; each refine writes
+   a new version of it (drafts.js refineAsk: the same facts, the version shown and the change), with each sentence's fact marks put
+   back so the sources and the no-source marks are worked out again for it. Versions live in the editor (CURED.vers) until it is
+   closed; Save is still the only save. ===== */
+export function curVersSync(){ const c=shared.CURED; if(!c) return; const n=(c.vers||[]).length, v=(c.vers||[])[c.at||0]||{};
+  const el=$("#curVers"); if(el) putHtml(el,n>1?versBarHtml(c.at||0,n,"cver"):""); const m=$("#curRefineMsg"); if(m) putHtml(m,v.msg?`<div class="drnote" role="note">${esc(v.msg)}</div>`:""); }
+/* a version's Markdown with each sentence's fact marks ({F3, F5}) put after it, from the draft's own sentences and sources */
+export function refinedMd(res){ let md=String(res.text||""), pos=0; const ids=r=>((res.sources||[]).find(x=>x.ref===r)||{}).id;
+  for(const s of res.sentences||[]){ const i=md.indexOf(s.text,pos); if(i<0) continue; pos=i+s.text.length;
+    const f=[...new Set((s.refs||[]).map(ids).filter(x=>/^F\d+$/.test(String(x||""))))]; if(!f.length) continue;
+    const mark=` {${f.join(", ")}}`; md=md.slice(0,pos)+mark+md.slice(pos); pos+=mark.length; }
+  return md; }
+/* the editor's words as they stand, with each sentence's fact marks put back: after a hand edit the editor's Markdown has none, and without them a restored
+   version would be one claim with no source. A sentence with no source gets an empty mark ({}) so its edge is kept; one the text no longer matches goes unmarked. */
+export function curSnap(c){ const root=$("#curEd"); if(!root) return null; const set=c.claims||{}; let md=stripMarks(edValue(root)), pos=0;
+  for(const n of claimOrder(root)){ const cl=set[n]; if(!cl) continue; const t=claimText(root,n), i=md.indexOf(t,pos); if(i<0) continue; pos=i+t.length;
+    const mark=(cl.ids||[]).length?` {${cl.ids.join(", ")}}`:" {}"; md=md.slice(0,pos)+mark+md.slice(pos); pos+=mark.length; }
+  return {md}; }
+function curShow(c,v){ curLoad(1,v.md); c.dirty=true; c.notes=null; c.claims=null; c.rewrite=null; mountCurEdit(); claimsInit("ed"); curCheck(); curVersSync(); }
+function curStatus(c,h){ c.refineStatus=h; const el=$("#curRefineWork"); if(el) putHtml(el,refineStatusHtml(h)); }   /* kept in state: the editor can be drawn again while it is written */
+export async function curRefine(){ const c=shared.CURED; if(!c||!c.opts||c.refining) return; const box=$("#curRefineNote"), ins=box?box.value.trim():"";
+  if(!ins){ snack("Say what to change first, or pick one of the quick ones."); if(box) box.focus(); return; }
+  const fromAt=c.at||0, snap=curSnap(c); if(!snap) return; c.vers=c.vers||[{}]; Object.assign(c.vers[fromAt],snap);   /* the words as they stand, edits and all */
+  c.refining=true; c.refineStatus=""; $("#curRefineGo")?.setAttribute("aria-disabled","true");
+  let res=null; try{ res=await refineAsk({body:{code:c.code,...c.opts},form:"current",text:stripMarks(snap.md).trim(),ins,fromV:fromAt+1,toV:c.vers.length+1,status:h=>curStatus(c,h)}); }
+  finally{ c.refining=false; c.refineStatus=""; $("#curRefineGo")?.removeAttribute("aria-disabled"); }
+  if(shared.CURED!==c) return;                                   /* closed while it was written */
+  const late=curSnap(c); if(late) Object.assign(c.vers[fromAt],late);   /* whatever was typed while it was written stays in the version it was typed in */
+  if(!res) return;                                               /* it failed: the editor is as it was */
+  const v={md:fdMd(refinedMd(res)),msg:(res.length_notes||[]).join(" ")}; c.vers.push(v); c.at=c.vers.length-1; c.refineNote="";
+  if(!c.edited){ c.edited=true; draftStat("forms","edited"); }   /* a refine is an edit of the same draft */
+  curShow(c,v); }
+export function curVersion(way){ const c=shared.CURED; if(!c||c.refining||!c.vers) return; const at=(c.at||0)+(way==="next"?1:-1); if(at<0||at>=c.vers.length) return;
+  const snap=curSnap(c); if(snap) Object.assign(c.vers[c.at||0],snap); c.at=at; curShow(c,c.vers[at]); }
+/* ===== end #110 B ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0054(){
 if(!GEN_AUD.some(a=>a[0]===shared.GEN.aud)) shared.GEN.aud="internal";
@@ -185,8 +222,10 @@ $("#genDlg").addEventListener("click",e=>{ const st=e.target.closest("[data-gsta
   if(e.target.closest("#genSrcBtn")) genSrcOpen($("#genSrcBtn").getAttribute("aria-expanded")!=="true");
   if(e.target.closest("#genChange")){ genReset(); $("#genDays").focus(); } });
 $("#genSrc").addEventListener("change",()=>genSrcLine());
+document.addEventListener("input",e=>{ if(e.target.id==="curRefineNote"&&shared.CURED) shared.CURED.refineNote=e.target.value; });   /* #110 B: what is typed survives the editor being drawn again */
 /* ⌘↵ generates here (#101 has not built the shared dialog key yet; this is the one on this dialog) */
-onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t)); },()=>{ if(pickerOpenFor()){ closePicker("owner"); return; }   /* a menu open: ⌘↵ only closes it, so what is generated is what the strip shows */
+onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t))&&!(t.closest&&t.closest("[data-refine]")); },()=>{ if(GENFM&&GENFM.vers&&GENFM.vers.length>1){ snack(`${MOD}↵ refines from here. Press Generate again to start over; it drops the versions.`); return; }   /* never regenerate over versions by a stray key */
+  if(pickerOpenFor()){ closePicker("owner"); return; }   /* a menu open: ⌘↵ only closes it, so what is generated is what the strip shows */
   $("#genGo").click(); });
 $("#genDlg").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("#genFrom,#genTo")){ e.preventDefault(); $("#genGo").click(); } });   /* Enter in a date box generates, as the primary button; it never closes the dialog */
 $("#genForm").addEventListener("submit",e=>{ if(e.submitter&&e.submitter.value!=="go") return; e.preventDefault(); if($("#genGo").getAttribute("aria-disabled")==="true") return;   /* a draft is being written */
@@ -225,9 +264,10 @@ export function factsHtml(t){ return String(t||"").split(/\n(?=## )/).map(b=>{ c
   return `<div class="factblk">${head}<ul>${L.slice(head?1:0).map(x=>`<li>${esc(x.replace(/^- /,""))}</li>`).join("")}</ul></div>`; }).join(""); }
 export async function curCheck(text,original){ const cur=shared.CURED; if(!cur||!viaServer()) return; text=text??edValue($("#curEd")); if(!String(text).trim()){ cur.notes=[]; setNotes(); return; }
   const claims=cur.claims?claimsPayload("ed"):undefined;   /* BL-207 */
-  cur.checking=true; setNotes(); const r=await api("/api/current/check",{code:cur.code,text,sources:cur.sources||"",original,claims,...execOpts()}); cur.checking=false;
-  if(shared.CURED!==cur) return; if(r.ok){ cur.notes=r.notes; cur.facts=r.facts; if(r.evidence) claimsApply("ed",r.evidence,claims); } else { cur.notes=null; snack(oneLine(r.message)||"Couldn't check the draft"); }
-  setNotes(); return r; }
+  const gen=cur.gen|0; cur.checking=true; curReady(false); setNotes(); const r=await api("/api/current/check",{code:cur.code,text,sources:cur.sources||"",original,claims,...execOpts()});
+  if(shared.CURED!==cur||(cur.gen|0)!==gen) return;   /* closed, or another version loaded meanwhile (that one has its own check): this answer is for text no longer shown */
+  cur.checking=false; if(r.ok){ cur.notes=r.notes; cur.facts=r.facts; if(r.evidence) claimsApply("ed",r.evidence,claims); } else { cur.notes=null; snack(oneLine(r.message)||"Couldn't check the draft"); }
+  setNotes(); curReady(true); return r; }
 export function rewriteHtml(){ const rw=shared.CURED&&shared.CURED.rewrite; if(!rw) return "";
   const notes=rw.notes?(rw.notes.length?`<ul class="rwnotes">${rw.notes.map(x=>`<li>${esc(x.note)}</li>`).join("")}</ul>`:'<div class="oknote">✓ Passes the checks and keeps your dates and numbers.</div>'):'<div class="sub">Checking…</div>';
   return `<div class="genrewrite" id="genRewrite" role="region" aria-label="Executive version"><div class="rwhead"><strong>Executive version</strong> <span class="sub">A draft. What is in the editor above is unchanged until you use this.</span></div>
@@ -276,7 +316,7 @@ export function curAttach(n){ const c=shared.CURED, slot=$(n===2?"#curEd2":"#cur
   attachSlash(c[k],{profile:"current",host:{image:pickImage,item:()=>insertHash(c[k])}});   /* #122 B: the / menu (taken away with the editor) */
   attachItemPick(c[k],{code:()=>(shared.CURED&&shared.CURED.code)||""}); }   /* #122 C: the shared # list, this project's items (taken away with the editor) */
 /** a new text for pane n (a draft, or the executive version): its editor is made again from it when the card is drawn */
-export function curLoad(n,md){ const c=shared.CURED; if(!c) return; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
+export function curLoad(n,md){ const c=shared.CURED; if(!c) return; c.gen=(c.gen|0)+1; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
 export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; const p=P.find(x=>x.code===code); if(!p) return; const [l,r]=splitPanes(p.current||"");
   if(pane===2) store.set("creaite-cur-collapsed",false);
   shared.CURED={code,orig:p.current||"",src1:l,src2:r,ed1:null,ed2:null,dirty:false,uploads:{},removed:new Set(),last:pane||1}; mountCurEdit();
@@ -284,19 +324,24 @@ export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; 
   if(!shared.CURED) return; const ev=evSaved(code), root=$("#curEd"); if(!ev||!root) return;
     const set={}; claimsMatch(root,ev).forEach(({n,h})=>{ const e=ev[h]; set[n]={text:claimText(root,n),ids:[],how:(e.how==="none"||e.how==="kept")?"none":"saved",saved:e,touched:true,...(e.kept!=null?{kept:e.kept}:{})}; });
     if(Object.keys(set).length){ shared.CURED.claims=set; claimPaint("ed"); } }
-export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=card&&card.querySelector(".curtext"); if(!shared.CURED||!box||shared.COCK!==shared.CURED.code) return;
+/** a signal for tests and assistive tech, no visible change: #curEd carries data-ready once the editor is mounted, its version drawn and the wording check has landed
+    (the check changes the height of the notes above the version bar), and data-draw="N" (counts up with each draw). Both are taken off while a draw or a check is under way. */
+function curReady(on){ const e=$("#curEd"); if(!e) return; if(on) e.dataset.ready="1"; else e.removeAttribute("data-ready"); }
+function curDrawn(){ const e=$("#curEd"); if(!e) return; shared.CURDRAW=(shared.CURDRAW|0)+1; e.dataset.draw=String(shared.CURDRAW); if(!shared.CURED.checking) curReady(true); }
+export function mountCurEdit(){ curReady(false); (()=>{ const card=$("#v-cockpit .curcard"), box=card&&card.querySelector(".curtext"); if(!shared.CURED||!box||shared.COCK!==shared.CURED.code) return;
   card.classList.add("editing"); card.querySelectorAll(".pencil").forEach(b=>b.hidden=true);
   curBarOff();
   putHTML(box,html`<div class="rte inplace"><div id="curBar" class="curbar"></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`,`<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`,"edit",!!splitPanes(shared.CURED.orig)[1]||!!String(shared.CURED.ed2?edValue(shared.CURED.ed2.el):shared.CURED.src2||"").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
+    ${shared.CURED.opts&&viaServer()?raw(refineHtml("cur",{client:shared.CURED.opts.audience==="client",note:shared.CURED.refineNote||"",busy:shared.CURED.refining,status:shared.CURED.refineStatus,msg:((shared.CURED.vers||[])[shared.CURED.at||0]||{}).msg})):""}
     ${shared.CURED.sources?html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>`:""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts?"":"hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
   curAttach(1); curAttach(2); curBar(); curAiMenu(); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
   if(shared.CURED){ const t=csTitle(shared.CURED.code);
     $("#curEd")?.setAttribute("aria-label",`${t}, left pane`); $("#curEd2")?.setAttribute("aria-label",`${t}, right pane`); csHead(shared.CURED.code); }
-  if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); } }
+  if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); curVersSync(); curDrawn(); } }
 export function endCurEdit(){ curBarOff(); evPanelClose(); curDrop(); DISCARD=null; $("#discardBar").classList.remove("on"); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); }
 export const figRefs=ed=>[...ed.querySelectorAll("figure.cimg")].map(f=>f.dataset.ref).filter(r=>r&&!r.startsWith("new:"));
 /* BL-76: an image taken out with its × stays out when saved; one that merely isn't in a drafted text is kept. (Only the × removes a

@@ -551,6 +551,18 @@ class GenerateDialog(DraftCase):
         self.assertEqual(b.eval("window.__sent"), 1)
         self.assertEqual(b.eval("window.__reached"), 0)                                                 # nothing later in the page saw the key
 
+    def test_a_typed_date_is_read_when_cmd_enter_is_pressed_with_a_picker_open(self):
+        """The date settle on Enter is on the document; the picker-open path stops the key short of it, so it settles the field itself."""
+        b = self.b
+        self.hold_drafts()
+        self.pick("#genFormKind", "Teams message")
+        self.pick("#genDays", "Dates")
+        b.eval("""(()=>{ const c=document.createElement('div'); c.className='combo open'; document.body.appendChild(c); const f=document.getElementById('genFrom'); f.value='tomorrow'; f.focus(); })()""")
+        b.key("Enter", modifiers=4)
+        b.wait("window.__sent>=1")
+        self.assertEqual(b.eval("window.__sent"), 1)
+        self.assertRegex(b.eval("document.getElementById('genFrom').value"), r"^\d\d-\d\d-\d{4}$")                         # "tomorrow" became a date
+
     def test_with_a_draft_shown_the_cmd_enter_marker_is_on_generate_again_not_copy(self):
         b = self.b
         self.assertTrue(b.eval("document.getElementById('genGo').hasAttribute('data-cmdenter')"))

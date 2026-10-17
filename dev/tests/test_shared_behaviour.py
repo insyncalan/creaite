@@ -25,6 +25,8 @@ on a listed one that now passes, so the list only shrinks. BL-316 is done when i
 SB_REPORT=1 prints every opener's result as a table (the audit's raw data) and the inventory; SB_ONLY=today,work runs only
 those screens (the "unreached" lines are then not judged).
 
+The Undo half is in test_shared_undo.py (#89: a file of its own, so the two run side by side).
+
 Run: python3 dev/tests/test_shared_behaviour.py   (needs Google Chrome; the inventory test runs without it)
 """
 import json
@@ -79,7 +81,17 @@ def _note_made(b):
 def _notes_ai(b):
     _note_made(b)
     b.click("#v-notes .nbody")
-    b.key("a", 4)                                    # ⌘A: all of the text, which shows the AI bar
+    for attempt in (1, 2, 3):                        # #152: a ⌘A that arrives before the editor has taken its focus selects nothing
+        b.wait("document.activeElement===document.querySelector('#v-notes .nbody')", 5)
+        b.frames(3)
+        b.key("a", 4)                                # ⌘A: all of the text, which shows the sparkle in the margin (#117)
+        try:
+            b.wait("document.querySelector('#aiLayer .aispark')", 5)
+            break
+        except TimeoutError:
+            if attempt == 3:
+                raise
+    b.click("#aiLayer .aispark")                     # the sparkle opens the AI bar
     b.pump(0.3)
 
 
@@ -107,6 +119,9 @@ SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
+SCREENS["today-days"] = ("D.calendar={fetched:TODAY+' 07:00',days:{}}; D.days={first:pkAdd(TODAY,-1),last:TODAY,today:TODAY,fetched:null,days:[{date:pkAdd(TODAY,-1),dow:'Monday',short:'Mon 1',long:'Monday',today:false,past:true,weekend:false,week:0,meetings:[],all_day:[]},"
+                         "{date:TODAY,dow:'Tuesday',short:'Tue 2',long:'Tuesday',today:true,past:false,weekend:false,week:0,meetings:[],all_day:[]}]}; go('today'); renderToday()",
+                         "!!document.querySelector('#todayDate .dypastbtn')", "#v-today")   # #147: the day line's earlier-days menu needs a calendar with a past day
 SCREENS["notes"] = (_notes_open, "!!document.getElementById('notesNew')", "#v-notes")
 SCREENS["notes-ai"] = (_notes_ai, "!!document.querySelector('#aiLayer .aibar')", "#aiLayer")
 SCREENS["notes-session"] = (_notes_session, "!!document.getElementById('noteDateBtn')", "#v-notes")
@@ -124,7 +139,7 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
                            "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-clientreport [data-crcheck]:not([disabled])')", "#v-clientreport")
-EXTRA = ("clientreport", "weekly-logos")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
+EXTRA = ("clientreport", "weekly-logos", "today-days")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
 ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
@@ -135,7 +150,7 @@ ON_SCREEN = {"work-display": "VIEW==='work'"}
 VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
-SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
+SCREEN_AREAS = {"today": "Today", "today-days": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
                 "work-panel-decision": "Peek", "work-panel-new": "Peek", "meeting": "Meetings",
                 "review": "Review", "review-peek": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
@@ -434,6 +449,11 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         """Enter on opener i: (its state, what it got wrong), or (None, why) when nothing opened."""
         self.press("Enter", 0.4)
         s = self.state(i)
+        for _ in range(16):          # a list that asks the live server first (Review's "Update an existing item instead", aria-busy meanwhile) opens when it answers; the server is slower late in a long run
+            if (s["open"] or s["modal"]) and not s["busy"]:
+                break
+            self.b.pump(0.25)
+            s = self.state(i)
         if not s["open"] and not s["modal"]:
             return None, ["Enter opens nothing"]
         bad = []
@@ -615,13 +635,44 @@ class SharedBehaviour(Driver, us.UiSweepCase):
             bad.append("Esc doesn't return focus to the control")
         return bad
 
+    def rail(self):
+        """#139: the rail's Projects and Work open a flyout on hover, and from the keyboard with → or ↓ (Enter keeps going to
+        the page, as the icon always did, so the Enter script can't drive them): the list opens with focus in it and
+        aria-expanded true; ↓ ↑ move inside it; Esc closes it with focus back on the button."""
+        b = self.b
+        self.goto("today")
+        b.eval(PROBE + ";true")
+        bad = []
+        for v in ("work", "projects"):
+            sel = f"#railMain [data-v={v}]"
+            b.eval(f"document.querySelector('{sel}').focus()")
+            self.press("ArrowRight", 0.5)
+            self.seen.append({"ids": [f"railFly-{v}", "railFly-"], "labels": [], "classes": []})
+            if b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')") != "true":
+                bad.append(f"{v}: → opens nothing")
+                continue
+            if not b.eval(f"!!document.activeElement.closest('#railFly-{v}')"):
+                bad.append(f"{v}: focus stays outside the list")
+            first = b.eval("document.activeElement.textContent")
+            self.press("ArrowDown")
+            self.press("ArrowUp")
+            if b.eval("document.activeElement.textContent") != first or not b.eval(f"!!document.activeElement.closest('#railFly-{v}')"):
+                bad.append(f"{v}: ↓ ↑ take focus out of the list")
+            self.press("Escape", 0.4)
+            if b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')") != "false":
+                bad.append(f"{v}: Esc leaves it open")
+            elif not b.eval(f"document.activeElement===document.querySelector('{sel}')"):
+                bad.append(f"{v}: Esc doesn't return focus to the button")
+        return bad
+
     # The dialogs no aria-haspopup control opens, each driven by its own script: (the screen that must be in the run, the
     # script, its name in the report and the expected-failures list, its area, what it opens).
     KEYED = (("today", "cmdk", "cmdk dialog#cmdk", "Shell", "⌘K", "Search or jump to"),
              ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"),
              ("notes", "ndel", "ndel dialog#noteDelDlg", "Core", "Delete note…", "Delete note?"),
              ("minutes-approve", "mnapp", "mnapp dialog#mnApprove", "minutes", "Approve minutes", "Approve the minutes"),
-             ("clientreport", "crleft", "crleft dialog#crLeftDlg", "clientreport", "Check and export", "Left out of the client's report"))
+             ("clientreport", "crleft", "crleft dialog#crLeftDlg", "clientreport", "Check and export", "Left out of the client's report"),
+             ("today", "rail", "rail menu#railFly", "Shell", "→ on Projects, Work", "Rail flyouts"))
 
     def keyed_dialogs(self, only, report, found):
         for screen, script, sig, area, how, label in self.KEYED:
@@ -644,7 +695,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
                 if bad:
                     found.add((screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
         self.keyed_dialogs(only, report, found)
-        msg = judge("keys", found, set(only) | {"cmdk", "parch", "ndel", "mnapp", "crleft"})
+        msg = judge("keys", found, set(only) | {"cmdk", "parch", "ndel", "mnapp", "crleft", "rail"})
         if os.environ.get("SB_ONLY"):
             self.assertFalse(msg, "\n".join(msg))
             return                                   # only some screens: what they didn't reach isn't a finding
@@ -655,63 +706,6 @@ class SharedBehaviour(Driver, us.UiSweepCase):
             for a, x in sorted(missed):
                 print(f"  {a:12} {x}")
         msg += judge("unreached", missed)
-        self.assertFalse(msg, "\n".join(msg))
-
-
-def undo_group(name):
-    """Openers that differ only by the item they act on are one group: the Undo check chooses from the first of each."""
-    return re.sub(r"\b[A-Z][A-Z0-9]{2,6}-[A-Z]+-\d+\b", "", name.split(":")[0]).strip()
-
-
-class SharedUndo(Driver, us.UiSweepCase):
-    """BL-316: a change made from a menu or a list offers Undo (a sample vault of its own: this one changes data)."""
-
-    def pick(self, i, o):
-        """Open, ↓, Enter. What it got wrong when it saved a change (no Undo on offer), or None when nothing was saved
-        (a filter, a view, a page, a dialog that asks first) or the control was left alone."""
-        b = self.b
-        if o["kind"] == "dialog" or any(x in o["sig"] for x in VIEW_ONLY) or not b.eval(f"SB.focus({i})"):
-            return None
-        self.press("Enter", 0.4)
-        if not self.state(i)["open"]:
-            return None
-        w0 = b.eval("SB.writes().writes")
-        self.press("ArrowDown", 0.2)
-        self.press("Enter", 1.0)
-        if b.eval("SB.writes().writes") == w0:
-            return None                              # nothing saved (a filter, a view, a page): nothing to undo
-        for _ in range(8):
-            u = b.eval("SB.undo()")
-            if u:
-                b.eval(f"document.querySelector({u!r}).click()")         # put the sample back for the next control
-                b.pump(1.0)
-                return []
-            if b.eval(f"SB.state({i}).modal"):
-                return None                          # it asks first: the change is the dialog's, not the menu's
-            b.pump(0.25)
-        return ["a change is saved with no Undo"]
-
-    def test_a_change_from_a_menu_or_list_offers_undo(self):
-        report = os.environ.get("SB_REPORT")
-        only = os.environ.get("SB_ONLY", "").split(",") if os.environ.get("SB_ONLY") else list(SCREENS)
-        found = set()
-        for name in only:
-            done = set()
-
-            def once(i, o, done=done):
-                g = (o["sig"], undo_group(o["name"]))
-                if g in done:
-                    return None
-                done.add(g)
-                return self.pick(i, o)
-            for o, bad in self.each_opener(name, once):
-                if bad is None:
-                    continue
-                if report:
-                    print(f"undo {name:16} {o['kind']:8} {o['sig'][:48]:48} {o['name'][:40]:40} {'; '.join(bad) or 'ok'}")
-                if bad:
-                    found.add((screen_area(name), f"undo: {name} {o['sig']} “{undo_group(o['name'])}”: {'; '.join(bad)}"))
-        msg = judge("undo", found, set(only))
         self.assertFalse(msg, "\n".join(msg))
 
 

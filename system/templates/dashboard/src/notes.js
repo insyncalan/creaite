@@ -14,11 +14,11 @@ import { NOTE_OPEN, openPath } from "./core/fields.js";
 import { go, navWrite } from "./core/nav.js";
 import { shared } from "./core/state.js";
 import { mount } from "./components/mount.js";
-import { NotesPage, toggleFind } from "./components/notes/NotesPage.jsx";
+import { focusShortcut, NotesPage, toggleFind } from "./components/notes/NotesPage.jsx";
 import { itemOf } from "./components/notes/NoteEditor.jsx";
 import { drawProjectTabs } from "./components/project/ProjectTabs.jsx";
 import { openRecord } from "./panel.js";
-import { allNotes, closeNote, loadNotes, noteCur, noteFind, noteFlash, noteFlush, noteFlushOnExit, notesCode, notesList, notesMentioning, openNote,
+import { allNotes, closeNote, loadNotes, noteCur, noteFind, noteFlash, noteFlush, noteFlushOnExit, noteFocus, noteLeave, noteUnsavedAtExit, notesCode, notesList, notesMentioning, openNote,
   toggleNotesList } from "./stores/notes.js";
 
 /** The project (or _portfolio) a stored note path belongs to, from the page's data; null when it isn't a known note.
@@ -70,7 +70,7 @@ export function openNoteAt(path, line, o = {}) {
 }
 
 /** The page is leaving the Notes tab: the open note's editing session ends (its file is written). */
-export function notesLeave() { noteFlush(); }
+export function notesLeave() { noteFlush(); noteFocus.value = false; noteLeave.value = null; }
 
 /** The cockpit's tabs (Overview, Notes). @param {string} code */
 export function drawCockpitTabs(code) {
@@ -97,10 +97,17 @@ export function drawPeekNotes(id) {
   if (host) render(id ? h(/** @type {any} */ (NoteMentions), { id }) : null, host);
 }
 
+/** #119 (Alan's call, easy to take out: delete this function and its one call): closing or reloading the page while typing could not
+    be saved (the file changed outside creaite, an error, a wait) asks the browser to confirm, since no draft is kept any more. */
+function bootUnloadGuard() {
+  window.addEventListener("beforeunload", e => { if (noteUnsavedAtExit()) { e.preventDefault(); e.returnValue = ""; } });
+}
+
 /* BL-231: what this block does at load, run by src/main.js */
 export function bootNotes() {
   document.addEventListener("keydown", e => {
     if (shared.VIEW === "notes" && (e.metaKey || e.ctrlKey) && e.key === "\\") { e.preventDefault(); toggleNotesList(); }
+    else if (shared.VIEW === "notes") focusShortcut(e);          /* #136: ⌘⇧F enters and leaves focus mode */
   });
   document.addEventListener("click", e => {            /* before Files' own handler: a note opens in the Notes tab */
     const t = /** @type {Element} */ (e.target);
@@ -113,5 +120,6 @@ export function bootNotes() {
   }, true);
   NOTE_OPEN.fn = (/** @type {string} */ p, /** @type {number} */ line) => { openNoteAt(p, line); };   /* BL-301 E: a source's "#p4" opens the note there */
   window.addEventListener("pagehide", noteFlushOnExit);
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") noteFlush(); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") noteFlush(false); });   /* hiding the tab saves; it is not leaving the note, so no rename */
+  bootUnloadGuard();
 }

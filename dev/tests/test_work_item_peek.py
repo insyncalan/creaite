@@ -50,7 +50,8 @@ class PeekCase(LiveBrowserCase):
         id_ = id_ or b.eval({"actions": "A", "raid": "R", "decisions": "DEC"}[k] + ".find(x=>x.p==='ABC').id")
         if click:
             b.wait(f"document.querySelector('#workTbl tr[data-row=\"{id_}\"] a.rowid')")
-            b.click(f'#workTbl tr[data-row="{id_}"] a.rowid')
+            b.click_until(f'#workTbl tr[data-row="{id_}"] a.rowid',                 # #152: a click lost to a redraw is pressed again
+                          f"CUR&&CUR.id==={id_!r}&&document.getElementById('panel').classList.contains('peek')")
         else:
             b.eval(f"openRecord({k!r},{id_!r})")
         b.wait(f"CUR&&CUR.id==={id_!r}&&document.getElementById('panel').classList.contains('peek')")
@@ -137,6 +138,8 @@ class Overlay(PeekCase):
 
     def test_over_the_page_half_the_window_never_under_520_and_clear_of_the_chat(self):
         b = self.b
+        if b.eval("innerWidth>=1200 && document.querySelector('.rail').getBoundingClientRect().width>100"):
+            b.click("#railTog")          # #156: the rail is open from 1200px; this test is about the peek beside the chat, so collapse it
         for width in (1400, 1100):
             b.resize(width, 900)
             b.eval("closePanel(); closeChat(); go('work')")
@@ -422,6 +425,8 @@ class Toolbar(PeekCase):
 
     def test_icons_on_the_right_no_keys_chip_and_menus_inside_the_window(self):
         b = self.b
+        if b.eval("document.querySelector('.rail').getBoundingClientRect().width>100"):
+            b.click("#railTog")          # #156: the rail is open from 1200px; the toolbar's one-row check is about the toolbar, so collapse it
         for width in (1400, 1100, 900):
             b.resize(width, 900)
             b.eval("closePanel(); go('work')")
@@ -432,9 +437,9 @@ class Toolbar(PeekCase):
               return {fields:Math.max(...fields), funnel:r('#moreBtn').left, lay:r('#wlay').left, disp:r('#dispBtn').left, nw:r('#newBtn').left, top:r('#moreBtn').top, fieldTop:document.querySelector('#stBtn')?r('#stBtn').top:null}; })())"""))
             if x["fieldTop"] is not None and abs(x["fieldTop"] - x["top"]) < 8:
                 self.assertGreater(x["funnel"], x["fields"], width)                              # the funnel is with the icons, on the right
-            self.assertLess(x["funnel"], x["lay"])
-            self.assertLess(x["lay"], x["disp"])
-            self.assertLess(x["disp"], x["nw"])
+            self.assertLess(x["funnel"], x["lay"], width)
+            self.assertLess(x["lay"], x["disp"], width)
+            self.assertLess(x["disp"], x["nw"], width)
             for btn, menu in (("#moreBtn", "#moreMenu"), ("#dispBtn", "#dispMenu")):
                 b.click(btn)
                 b.pump(0.4)

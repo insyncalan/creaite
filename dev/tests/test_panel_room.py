@@ -81,7 +81,11 @@ class PanelRoom(LiveBrowserCase):
                 b.eval("openRecord('actions',A[0].id)")
                 self.settle(0.8)
                 now = self.geom()
-                self.assertEqual((now["content"], now["shell"], now["row"][:2], now["folds"]), (base["content"], base["shell"], base["row"][:2], base["folds"]), (width, chat))
+                self.assertEqual((now["content"], now["shell"], now["row"][:2]), (base["content"], base["shell"], base["row"][:2]), (width, chat))
+                if width == 1000:      # #156: the collapsed rail leaves 924px, where the filter bar fits by about 1px: opening the peek may unfold one filter, never fold more
+                    self.assertLessEqual(now["folds"], base["folds"], (width, chat))
+                else:
+                    self.assertEqual(now["folds"], base["folds"], (width, chat))
                 self.assertAlmostEqual(now["row"][2], base["row"][2], delta=1, msg=(width, chat))  # the open row's own mark may round a pixel
                 self.assertGreaterEqual(now["panel"][2], 520, (width, chat))
                 if chat:

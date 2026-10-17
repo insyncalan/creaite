@@ -24,6 +24,7 @@ if (!window.__SBW) {
 }
 window.SB = (() => {
   const vis = el => { if (!el || !el.isConnected) return false; if (el.closest("[hidden]")) return false;
+    if (el.checkVisibility && !el.checkVisibility({ visibilityProperty: true, contentVisibilityAuto: true })) return false;   /* inside a folded <details> (Today's Intake and Review, #168): drawn at size by Chrome, but not focusable */
     const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") return false;
     const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const POP = '[role="menu"],[role="listbox"],[role="dialog"],dialog[open],.ddmenu.on,.dmenu.on,.pkpop,.bmenu,.combo.open,.cal,#railMoreMenu,td.ce.editing';
@@ -34,7 +35,8 @@ window.SB = (() => {
   /** every visible opener in the region, in document order (a disabled one says why and opens nothing: left out) */
   const openers = region => { const roots = [...document.querySelectorAll(region)];      /* every match: the shell is ".rail,header.bar" */
     L = (roots.length ? roots : [document]).flatMap(root => [...root.querySelectorAll("[aria-haspopup]:not([aria-haspopup=false])")]).filter(el => vis(el) && !el.disabled
-      && el.getAttribute("aria-disabled") !== "true" && !el.closest(".ddmenu.on,[role=menu],[role=listbox]"));
+      && el.getAttribute("aria-disabled") !== "true" && !el.closest(".ddmenu.on,[role=menu],[role=listbox]")
+      && !el.matches("#railMain [data-v]"));   /* #139: the rail's Projects and Work open a list on hover or →/↓; Enter goes to the page (test_shared_behaviour's `rail`) */
     return L.map((el, i) => ({ i, sig: sig(el), name: name(el), kind: el.getAttribute("aria-haspopup"), role: el.getAttribute("role") || el.tagName.toLowerCase() })); };
   /** what is open: visible popups, ignoring the page's permanent regions and what was already showing when the opener
       took focus (the test has closed every popup by then): the dialog a screen is (the Prep popup, the milestone editor)
@@ -44,7 +46,7 @@ window.SB = (() => {
     && !base.has(el));
   const inPop = el => !!el && popups().some(p => p.contains(el) && p !== document.body);
   const state = i => { const o = L[i], a = document.activeElement, ad = a && a.getAttribute && a.getAttribute("aria-activedescendant");
-    return { expanded: o ? o.getAttribute("aria-expanded") : null, connected: !!(o && o.isConnected),
+    return { busy: !!(o && o.getAttribute("aria-busy") === "true"), expanded: o ? o.getAttribute("aria-expanded") : null, connected: !!(o && o.isConnected),
       open: popups().length, focusOnOpener: a === o, focusInPopup: inPop(a) || (!!ad && !!document.getElementById(ad)),
       active: a ? sig(a) + "|" + name(a) + (ad ? "|" + ad : "") : "", modal: !![...document.querySelectorAll("dialog:modal")].some(d => d !== baseModal),
       items: popups().reduce((n, p) => n + p.querySelectorAll('[role^="menuitem"]:not([aria-disabled="true"]),[role="option"]:not([aria-disabled="true"])').length, 0) }; };

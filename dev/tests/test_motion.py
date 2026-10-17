@@ -123,6 +123,13 @@ class Motion(LiveBrowserCase):
         self.b.eval(f"go({v!r})")
         self.b.wait(f"VIEW==={v!r}")
 
+    def chips_measured(self, key=None):
+        """#152: wait for the page to have measured the filter-chip row (it does on the frame after a render; a slow runner can be
+        late), in this tab and, with `key`, with that chip in it. A fixed pause was a guess at that."""
+        self.b.frames(2)
+        k = f" && c._mchips.has({key!r})" if key else ""
+        self.b.wait(f"(c=>!!c && !!c._mchips && c._mctx===(typeof WT==='undefined'?'':WT){k})(document.getElementById('wapplied'))", 10)
+
     def settings_file(self):
         return json.loads((self.v.root / "system" / "config" / "settings.json").read_text())
 
@@ -321,13 +328,13 @@ class Motion(LiveBrowserCase):
         b = self.b
         self.page("work")
         b.eval("document.documentElement.style.setProperty('--k',20)")
-        b.pump(0.1)                                                       # the chip row's first measure is taken on the next frame
+        self.chips_measured()                                             # the chip row's first measure is taken on the next frame
         n = b.eval("$$('#wapplied .fchip').length")
         b.eval("setOf('pr').add('High'); renderWork()")
         self.assertEqual(b.eval("$$('#wapplied .fchip').length"), n + 1)
         self.assertEqual(b.eval("document.querySelector('#wapplied [data-clr=pr]').closest('.fchip').getAnimations().length"), 1)
         self.assertEqual(b.eval("$$('#wapplied .fchip').reduce((n,c)=>n+c.getAnimations().length,0)"), 1)   # only the new one
-        b.pump(0.1)
+        self.chips_measured("pr")                                         # the row is measured again with the new chip in it
         b.eval("document.querySelector('#wapplied [data-clr=pr]').click()")
         self.assertEqual(b.eval("$$('#wapplied .fchip').length"), n)      # gone from the row at once
         self.assertEqual(b.eval("$$('body > .mghost').length"), 1)       # a copy fades where it was
@@ -339,12 +346,12 @@ class Motion(LiveBrowserCase):
         b = self.b
         self.page("work")
         b.eval("document.documentElement.style.setProperty('--k',20)")
-        b.pump(0.1)
+        self.chips_measured()
         n = b.eval("$$('#wapplied .fchip').length")
         b.eval("setOf('pr').add('High'); setOf('pr').add('Medium'); WQ='a'; renderWork()")   # two new chips together
         self.assertEqual(b.eval("$$('#wapplied .fchip').length"), n + 2)
         self.assertEqual(b.eval("$$('#wapplied .fchip').reduce((n,c)=>n+c.getAnimations().length,0)"), 0)
-        b.pump(0.1)
+        self.chips_measured()
         b.eval("document.getElementById('clearF').click()")             # Clear all
         self.assertEqual(b.eval("$$('.mghost').length"), 0)
         b.eval("document.documentElement.style.setProperty('--k',1)")
@@ -516,14 +523,16 @@ class MotionPages(LiveBrowserCase):
         n = b.eval("$$('#workTbl tr[data-row]').length")
         self.assertLessEqual(n, 30)
         self.slow()
+        b.frames(2)                                                      # the page has settled after the filter
         b.eval("document.querySelector('#workTbl th[data-col=t]').click()")
-        b.pump(0.1)
+        # #152: the rows glide on the frame after the click; wait for that, not for a pause (the glide lasts 6 s at this speed)
+        b.wait("$$('#workTbl tr[data-row]').some(t=>t.getAnimations().length)", 10)
         moving = b.eval("$$('#workTbl tr[data-row]').filter(t=>t.getAnimations().length).length")
         self.assertGreater(moving, 0)
         b.eval("PROJF.clear(); renderWork()")
         self.assertGreater(b.eval("$$('#workTbl tr[data-row]').length"), 30)
         b.eval("document.querySelector('#workTbl th[data-col=t]').click()")
-        b.pump(0.1)
+        b.frames(3)                                                      # the frame on which a glide would have started has come
         self.assertEqual(b.eval("$$('#workTbl tr[data-row]').filter(t=>t.getAnimations().length).length"), 0)
         b.eval("document.querySelector('#workTbl th[data-col=t]').click(); document.querySelector('#workTbl th[data-col=t]').click()")   # twice, fast
         self.slow(1)
@@ -674,7 +683,7 @@ class MotionPages(LiveBrowserCase):
         n = b.eval("(()=>{ const d=document.createElement('div'); d.textContent=Array(450).fill('word').join(' '); mWords(d); return d.querySelectorAll('.mw').length; })()")
         self.assertEqual(n, 0)
         self.assertTrue(b.eval("!!document.querySelector('#chLog .msg') || true"))
-        self.assertIn("mWords(await sayMd(", script())                                             # live replies only (history uses addEl)
+        self.assertIn("live&&!replayed?mWords(d):d", script())                                   # #148: live replies only, not a finished run replayed (history uses addEl)
 
     def test_the_typing_dots_and_the_input_border_only_while_working_or_focused(self):
         b = self.b
@@ -759,7 +768,7 @@ class MotionReview(LiveBrowserCase):
         b.wait(f"REV.find(r=>r.n==={ns[0]})?.done==='approved'")
         b.wait(f"(t=>t&&$$('td',t).some(td=>td.getAnimations().length))(document.querySelector('#reviewBody tr[data-n=\"{ns[0]}\"]'))")   # it tints where it is
         b.eval(f"[{ns[1]},{ns[2]},{ns[3]}].forEach(n=>decide(n,'rejected'))")                    # three within a frame
-        b.wait(f"[{ns[1]},{ns[2]},{ns[3]}].every(n=>REV.find(r=>r.n===n)?.done==='rejected')", 20)
+        b.wait(f"[{ns[1]},{ns[2]},{ns[3]}].every(n=>REV.find(r=>r.n===n)?.done==='rejected')", 60)   # --k 20 slows the tints 20 times
         b.eval("document.documentElement.style.setProperty('--k',1)")
         rows = b.eval("$$('#reviewBody tr[data-n]').map(t=>t.dataset.n)")
         self.assertEqual(len(rows), len(set(rows)))                                                # nothing doubled
