@@ -105,6 +105,17 @@ class OwnSave(unittest.TestCase):
         code, msg = self.perform("system/scripts/reach.py", own=True)
         self.assertEqual(code, 1, "the never list still refuses: " + msg)
 
+    def test_a_note_that_links_into_the_never_list_is_still_refused_with_own(self):
+        import os
+        target = self.v.root / "system/scripts/reach.py"
+        before = target.read_bytes()
+        link = self.v.root / ABC / "notes" / "Evil.md"
+        os.symlink(target, link)
+        self.write_run(marked=True)
+        code, msg = self.perform(f"{ABC}/notes/Evil.md", data=b"changed\n", own=True)
+        self.assertNotEqual(code, 0, msg)
+        self.assertEqual(target.read_bytes(), before, "the never-list file was not touched")
+
     def test_the_source_never_reads_own_from_a_request(self):
         live = (HERE.parent.parent / "system/scripts/live_server.py").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"own=True", live)), 1, "only the notes save route passes own=True")
