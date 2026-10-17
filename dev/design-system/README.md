@@ -16,3 +16,7 @@ Mockups in `dev/mockups/` made before 17-10-2026 draw their own CSS (a close cop
 ## How this folder is made
 
 `index.html` is generated, never edited by hand: `python3 dev/tools/design_system_guide.py`. Its inputs are made by, in order (each takes `DS_REPO=<checkout of the release line>`): `dev/tools/design_system_snapshots.py` (pages, shots, `style.snapshot.css`, `SNAPSHOT.json`), then `dev/tools/design_system_components/capture_live.py` (menus, dialogs, peek, toast, icons, page skeletons), `capture_states.py` (forced hover, focus, active and disabled states), `capture_composites.py` (composite pieces) and `specimens.py` (real markup of each component).
+
+## Committing pictures
+
+Regenerated screenshots and component captures stay in git history for good, so commit them **only at a release milestone** (the v2.2.0 cut, #198 and #193 landing, and releases after), never on every edit. The scripts regenerate every picture, and only the pictures `index.html` links are kept (the rest are removed). The specimens, scripts and `index.html` are what matter day to day.
