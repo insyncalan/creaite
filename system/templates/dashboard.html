@@ -4994,6 +4994,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     deGreeting: () => deGreeting,
     deHead: () => deHead,
     deHost: () => deHost,
+    deHtml: () => deHtml,
     deIsoDays: () => deIsoDays,
     deItem: () => deItem,
     deItems: () => deItems,
@@ -5010,6 +5011,8 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     dePolish: () => dePolish,
     dePolishDo: () => dePolishDo,
     dePolishHtml: () => dePolishHtml,
+    dePrevDrop: () => dePrevDrop,
+    dePrevPut: () => dePrevPut,
     deRank: () => deRank,
     deReplyBy: () => deReplyBy,
     deRowHtml: () => deRowHtml,
@@ -5134,6 +5137,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     ebState: () => ebState,
     edActs: () => edActs,
     edClaim: () => edClaim,
+    edEmailHtml: () => edEmailHtml,
     edLine: () => edLine,
     edOf: () => edOf,
     edRange: () => edRange,
@@ -10522,2027 +10526,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     if (!a5 || !words) return null;
     const addr = /^(?:[^()\s]|\([^()\s]*\))+$/.test(a5) ? a5 : a5.replace(/\(/g, "%28").replace(/\)/g, "%29");
     return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
-  }
-
-  // components/Menu.jsx
-  var KB_OPEN = null;
-  var menuItemsIn = (box) => box ? (
-    /** @type {HTMLElement[]} */
-    [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
-  ) : [];
-  function menuMove(e4, items2) {
-    const L3 = items2, i5 = L3.indexOf(
-      /** @type {HTMLElement} */
-      document.activeElement
-    );
-    let to2 = null;
-    if (e4.key === "ArrowDown") to2 = L3[(i5 + 1) % L3.length];
-    else if (e4.key === "ArrowUp") to2 = L3[(i5 < 0 ? 0 : i5 + L3.length - 1) % L3.length];
-    else if (e4.key === "Home") to2 = L3[0];
-    else if (e4.key === "End") to2 = L3[L3.length - 1];
-    else return false;
-    e4.preventDefault();
-    e4.stopPropagation();
-    to2?.focus({ preventScroll: true });
-    return true;
-  }
-  var dataAttrs = (
-    /** @param {Record<string, string> | undefined} d */
-    (d5) => Object.fromEntries(Object.entries(d5 || {}).map(([k5, v5]) => [`data-${k5}`, v5]))
-  );
-  function MenuPanel({ label, id: id2, cls, bare, style, hidden, anchor, onClose, onKey, autoFocus = true, focusKey, boxRef, children }) {
-    const own = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), box = boxRef || own;
-    const closeRef = A2(onClose);
-    closeRef.current = onClose;
-    _2(() => {
-      if (hidden || !autoFocus) return;
-      tipHide();
-      (menuItemsIn(box.current)[0] || box.current)?.focus({ preventScroll: true });
-    }, [hidden, focusKey]);
-    h2(() => {
-      if (hidden) return;
-      const away = (e4) => {
-        const t47 = (
-          /** @type {Node} */
-          e4.target
-        );
-        if (!box.current?.contains(t47) && !(anchor && anchor.contains(t47))) closeRef.current("away");
-      };
-      document.addEventListener("pointerdown", away, true);
-      document.addEventListener("click", away, true);
-      return () => {
-        document.removeEventListener("pointerdown", away, true);
-        document.removeEventListener("click", away, true);
-      };
-    }, [hidden, anchor]);
-    const keys = (e4) => {
-      if (onKey) onKey(e4);
-      if (e4.defaultPrevented) return;
-      const field = (
-        /** @type {Element} */
-        e4.target.matches("input,textarea,select")
-      );
-      if (!field && menuMove(e4, menuItemsIn(box.current))) return;
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        onClose("esc");
-      } else if (e4.key === "Tab") onClose("tab");
-    };
-    return /* @__PURE__ */ u2(
-      "div",
-      {
-        class: `${bare ? "" : "ddmenu newmenu on "}${cls || ""}`.trim(),
-        id: id2,
-        role: "menu",
-        "aria-label": label,
-        ref: box,
-        tabIndex: -1,
-        hidden,
-        style,
-        onKeyDown: keys,
-        children
-      }
-    );
-  }
-  function MenuItems({ items: items2, onPick }) {
-    return /* @__PURE__ */ u2(S2, { children: items2.map((it2, i5) => it2.sep ? /* @__PURE__ */ u2("hr", { role: "separator" }, `s${i5}`) : it2.head ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: it2.head }, `h${i5}`) : it2.note ? /* @__PURE__ */ u2("div", { class: "sub mnote", role: "presentation", children: it2.note }, `n${i5}`) : /* @__PURE__ */ u2(
-      "button",
-      {
-        type: "button",
-        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
-        tabIndex: -1,
-        class: it2.cls,
-        "data-tip": it2.tip,
-        "aria-checked": it2.checked === void 0 ? void 0 : it2.checked ? "true" : "false",
-        "aria-disabled": it2.disabled ? "true" : void 0,
-        ...dataAttrs(it2.data),
-        onClick: () => onPick(it2),
-        children: [
-          it2.icon || it2.radio && it2.checked ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon || "check" }) : null,
-          it2.icon || it2.line ? /* @__PURE__ */ u2("span", { children: [
-            /* @__PURE__ */ u2("b", { children: [
-              it2.name,
-              it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
-                " · ",
-                it2.mark
-              ] }) : null
-            ] }),
-            it2.line ? /* @__PURE__ */ u2("small", { children: it2.line }) : null
-          ] }) : /* @__PURE__ */ u2(S2, { children: [
-            it2.name,
-            it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
-              " · ",
-              it2.mark
-            ] }) : null
-          ] })
-        ]
-      },
-      it2.id
-    )) });
-  }
-  function Menu({
-    label,
-    items: items2,
-    onPick,
-    icon,
-    tip,
-    why,
-    onBlocked,
-    cls,
-    btnCls,
-    menuLabel,
-    left,
-    data,
-    id: id2,
-    ariaLabel,
-    chevron = true,
-    labelCls,
-    menuId,
-    menuCls,
-    hidden,
-    hover
-  }) {
-    const [open2, setOpen2] = d2(false);
-    const btn = A2(
-      /** @type {HTMLButtonElement | null} */
-      null
-    );
-    const back2 = A2(false);
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    const byPointer = A2(false);
-    const isOpen = A2(false);
-    isOpen.current = open2;
-    const close = (how) => {
-      back2.current = how === "esc";
-      if (back2.current) btn.current?.focus({ preventScroll: true });
-      setOpen2(false);
-      if (hover && menuGroup.current === btn.current) menuGroup.close();
-    };
-    const closeRef = A2(close);
-    closeRef.current = close;
-    const fold = A2(() => closeRef.current("esc")).current;
-    h2(() => () => {
-      if (KB_OPEN === fold) KB_OPEN = null;
-    }, []);
-    h2(() => {
-      const b5 = btn.current;
-      if (!hover || !b5) return;
-      return hoverAttach(b5, {
-        group: menuGroup,
-        focusOpens: false,
-        panel: () => box.current,
-        isOpen: () => isOpen.current,
-        open: () => {
-          if (why || isOpen.current) return;
-          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
-          KB_OPEN = null;
-          byPointer.current = true;
-          tipHide();
-          setOpen2(true);
-        },
-        close: () => setOpen2(false)
-      });
-    }, [hover, why]);
-    _2(() => {
-      if (!hover || !open2) return;
-      const b5 = btn.current, m5 = box.current;
-      if (!b5 || !m5) return;
-      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
-      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
-    }, [open2]);
-    h2(() => {
-      if (!open2 && back2.current) {
-        back2.current = false;
-        btn.current?.focus();
-      }
-    }, [open2]);
-    const pick = (it2) => {
-      if (it2.disabled) return;
-      if (it2.checked === void 0 || it2.radio) close("pick");
-      onPick(it2.id);
-    };
-    const onBtnKey = (e4) => {
-      if (e4.key !== "ArrowDown" || why) return;
-      if (!open2) {
-        e4.preventDefault();
-        byPointer.current = false;
-        if (hover) {
-          if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
-          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
-          KB_OPEN = fold;
-          menuGroup.release(btn.current);
-        }
-        setOpen2(true);
-      } else if (byPointer.current) {
-        e4.preventDefault();
-        byPointer.current = false;
-        menuGroup.release(btn.current);
-        menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
-      }
-    };
-    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
-      /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: btnCls || "btn",
-          id: id2,
-          ref: btn,
-          hidden,
-          "aria-haspopup": "menu",
-          "aria-expanded": open2 ? "true" : "false",
-          "aria-label": ariaLabel,
-          "aria-disabled": why ? "true" : void 0,
-          "data-tip": why || tip,
-          ...dataAttrs(data),
-          onKeyDown: onBtnKey,
-          onClick: (e4) => {
-            e4.preventDefault();
-            if (why) {
-              onBlocked && onBlocked();
-              return;
-            }
-            if (hover) menuGroup.release(btn.current);
-            if (open2 && byPointer.current) {
-              byPointer.current = false;
-              menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
-              return;
-            }
-            byPointer.current = false;
-            if (open2) close("pick");
-            else setOpen2(true);
-          },
-          children: [
-            icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
-            /* @__PURE__ */ u2("span", { class: labelCls, children: label }),
-            chevron ? /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" }) : null
-          ]
-        }
-      ),
-      open2 ? /* @__PURE__ */ u2(
-        MenuPanel,
-        {
-          label: menuLabel || ariaLabel || label,
-          id: menuId,
-          cls: `${left ? "left " : ""}${menuCls || ""}`,
-          anchor: btn.current,
-          onClose: close,
-          boxRef: box,
-          autoFocus: !byPointer.current,
-          children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
-        }
-      ) : null
-    ] });
-  }
-  function mountMenu(box, props) {
-    R(/* @__PURE__ */ u2(Menu, { ...props }), box);
-  }
-  function mountMenuPanel(box, props, items2, field) {
-    R(/* @__PURE__ */ u2(MenuPanel, { ...props, children: [
-      field ? /* @__PURE__ */ u2("input", { type: "text", "aria-label": "Type here" }) : null,
-      /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: () => {
-      } })
-    ] }), box);
-  }
-  var POP = null;
-  function PopMenu({ anchor, props }) {
-    const { label, items: items2, onPick, id: id2, cls, align, at: at2, loading: loading2 } = props;
-    const wrap = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    _2(() => {
-      const el2 = (
-        /** @type {HTMLElement | null} */
-        wrap.current?.firstElementChild || null
-      );
-      if (!el2) return;
-      const w6 = el2.offsetWidth, h5 = el2.offsetHeight;
-      const r4 = at2 ? { left: at2.x, right: at2.x, top: at2.y, bottom: at2.y } : anchor && anchor.isConnected ? anchor.getBoundingClientRect() : { left: innerWidth / 2, right: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
-      let top = r4.bottom + (at2 ? 0 : 4);
-      if (top + h5 > innerHeight - 8) top = Math.max(8, r4.top - h5 - 4);
-      const left = align === "right" ? r4.right - w6 : r4.left;
-      el2.style.top = `${Math.max(8, Math.min(top, innerHeight - h5 - 8))}px`;
-      el2.style.left = `${Math.max(8, Math.min(left, innerWidth - w6 - 8))}px`;
-    });
-    const pick = (it2) => {
-      if (it2.disabled) return;
-      if (it2.checked === void 0) closeMenu("pick");
-      onPick(it2.id);
-    };
-    return /* @__PURE__ */ u2("div", { ref: wrap, children: /* @__PURE__ */ u2(MenuPanel, { label, id: id2, cls: `pop${cls ? " " + cls : ""}`, anchor, onClose: closeMenu, focusKey: loading2, children: loading2 ? /* @__PURE__ */ u2("div", { class: "msk", "aria-hidden": "true", children: [
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", {})
-    ] }) : /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick }) }) });
-  }
-  function openMenu(anchor, props) {
-    if (POP && POP.anchor !== anchor) closeMenu("away");
-    if (!POP) {
-      const host2 = document.createElement("div");
-      host2.className = "pophost";
-      document.body.appendChild(host2);
-      POP = { host: host2, anchor, props };
-      if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-    }
-    POP.props = props;
-    R(/* @__PURE__ */ u2(PopMenu, { anchor, props }), POP.host);
-  }
-  function closeMenu(how = "away") {
-    const p6 = POP;
-    if (!p6) return;
-    POP = null;
-    R(null, p6.host);
-    p6.host.remove();
-    const a5 = p6.anchor;
-    if (a5 && a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
-    if ((how === "esc" || how === "tab") && a5 && a5.isConnected) a5.focus({ preventScroll: true });
-    if (p6.props.onClose) p6.props.onClose(how);
-  }
-  function menuOpenFor(anchor) {
-    return !!POP && (anchor === void 0 || POP.anchor === anchor);
-  }
-
-  // components/FilterBar.jsx
-  var FB_BARS = /* @__PURE__ */ new WeakMap();
-  var FB_OPEN = /* @__PURE__ */ new Set();
-  var FB_MORE = "+more";
-  var fbBtnId = (f5) => f5.btnId;
-  var fbMenuId = (f5) => f5.menuId || `${f5.id}Menu`;
-  var fbMain = (p6) => p6.fields.filter((f5) => f5.main);
-  var fbPickList = (p6) => [...p6.fields.filter((f5) => f5.main), ...p6.fields.filter((f5) => !f5.main)];
-  function fbState(host2) {
-    let s5 = FB_BARS.get(host2);
-    if (!s5) {
-      s5 = { props: { fields: [], onSelect: () => {
-      } }, ui: { open: null, keep: null, q: {}, fold: [] }, host: host2 };
-      FB_BARS.set(host2, s5);
-    }
-    return s5;
-  }
-  function drawFilterBar(host2, props) {
-    const s5 = fbState(host2);
-    s5.props = props;
-    if (!s5.ui.open) s5.ui.keep = null;
-    fbPaint(s5);
-    fbFit(s5);
-  }
-  function filterBarOpen(host2) {
-    const s5 = host2 && FB_BARS.get(host2), o5 = s5 && s5.ui.open;
-    return o5 === FB_MORE ? "more" : o5 || null;
-  }
-  function openFilterBar(host2, which) {
-    const s5 = host2 && FB_BARS.get(host2);
-    if (!s5) return;
-    fbOpen(s5, which === "more" ? FB_MORE : which);
-  }
-  function closeFilterBar(host2, back2) {
-    const s5 = host2 && FB_BARS.get(host2);
-    if (s5) fbClose(s5, !!back2);
-  }
-  function fitFilterBar(host2) {
-    const s5 = host2 && FB_BARS.get(host2);
-    if (s5) fbFit(s5);
-  }
-  function fbPaint(s5) {
-    R(/* @__PURE__ */ u2(FilterBar, { ...s5.props, ui: s5.ui, host: s5.host }), s5.host);
-  }
-  function fbDd(s5, id2) {
-    const f5 = id2 === FB_MORE ? null : s5.props.fields.find((x5) => x5.id === id2);
-    const mid = id2 === FB_MORE ? s5.props.more?.menuId : f5 && fbMenuId(f5);
-    const m5 = mid ? document.getElementById(mid) : null;
-    return m5 && s5.host.contains(m5) ? (
-      /** @type {HTMLElement} */
-      m5.parentElement
-    ) : null;
-  }
-  var fbBtn = (s5, id2) => (
-    /** @type {HTMLElement | null} */
-    fbDd(s5, id2)?.querySelector(":scope>button") || null
-  );
-  var fbMenu = (s5, id2) => (
-    /** @type {HTMLElement | null} */
-    fbDd(s5, id2)?.querySelector(":scope>.ddmenu") || null
-  );
-  function fbOpen(s5, id2) {
-    if (s5.ui.open && s5.ui.open !== id2) fbClose(s5, false);
-    s5.ui.open = id2;
-    s5.ui.keep = null;
-    if (id2 === FB_MORE) s5.props.more?.onOpen?.();
-    else s5.ui.q[id2] = "";
-    FB_OPEN.add(s5);
-    fbPaint(s5);
-    const m5 = fbMenu(s5, id2);
-    if (!m5) return;
-    const to2 = id2 === FB_MORE ? m5.querySelector(".fpl input[type=search]") || fbFirstIn(m5.querySelector(".fpr")) || m5.querySelector('.fpf[aria-selected="true"]') : m5.querySelector("input.mq") || m5.querySelector('[role="option"]') || m5;
-    to2?.focus({ preventScroll: true });
-  }
-  function fbClose(s5, back2) {
-    const was = s5.ui.open;
-    if (!was) return;
-    s5.ui.open = null;
-    s5.ui.keep = was;
-    FB_OPEN.delete(s5);
-    fbPaint(s5);
-    if (back2) fbBtn(s5, was)?.focus({ preventScroll: true });
-  }
-  var fbFirstIn = (box) => box ? (
-    /** @type {HTMLElement | null} */
-    box.querySelector('[role="option"]') || box.querySelector(".seg button") || box.querySelector(".drange input")
-  ) : null;
-  function fbAway(e4) {
-    const t47 = (
-      /** @type {Node} */
-      e4.target
-    );
-    [...FB_OPEN].forEach((s5) => {
-      const dd2 = s5.ui.open && fbDd(s5, s5.ui.open);
-      if (!s5.host.isConnected) {
-        FB_OPEN.delete(s5);
-        return;
-      }
-      if (dd2 && !dd2.contains(t47)) fbClose(s5, false);
-    });
-  }
-  if (typeof document !== "undefined") {
-    document.addEventListener("pointerdown", fbAway, true);
-    document.addEventListener("click", fbAway, true);
-    document.addEventListener("focusin", fbAway);
-  }
-  function fbFit(s5) {
-    const fold = s5.props.fold;
-    if (!fold) return;
-    const bar = fold();
-    if (bar === false) return;
-    const main = fbMain(s5.props), dds = (
-      /** @type {HTMLElement[]} */
-      [...s5.host.querySelectorAll(":scope>.dd:not(:has(>.fpmenu))")]
-    );
-    dds.forEach((d5) => d5.classList.remove("wfold"));
-    const folded = [];
-    if (bar) {
-      const first = (
-        /** @type {HTMLElement} */
-        bar.firstElementChild
-      );
-      const wrapped = () => [...bar.children, ...dds].some((c5) => {
-        const h5 = (
-          /** @type {HTMLElement} */
-          c5
-        );
-        return h5.offsetParent && h5.offsetWidth && h5.offsetHeight > 8 && h5.offsetTop > first.offsetTop + 8;
-      });
-      const can = dds.map((d5, i5) => [d5, main[i5]]).filter(([d5, f5], i5) => i5 > 0 && f5 && !/** @type {FilterField} */
-      f5.on).reverse();
-      for (const [d5, f5] of can) {
-        if (!wrapped()) break;
-        d5.classList.add("wfold");
-        folded.push(
-          /** @type {FilterField} */
-          f5.id
-        );
-      }
-    }
-    if (folded.join("|") !== s5.ui.fold.join("|")) {
-      s5.ui.fold = folded;
-      fbPaint(s5);
-    }
-  }
-  function fbStep(e4, list, ends) {
-    const i5 = list.indexOf(
-      /** @type {HTMLElement} */
-      document.activeElement
-    );
-    let to2 = null;
-    if (e4.key === "ArrowDown") to2 = list[Math.min(list.length - 1, i5 + 1)];
-    else if (e4.key === "ArrowUp") to2 = list[Math.max(0, i5 - 1)];
-    else if (e4.key === "Home") to2 = ends[0];
-    else if (e4.key === "End") to2 = ends[ends.length - 1];
-    else return false;
-    e4.preventDefault();
-    e4.stopPropagation();
-    to2?.focus({ preventScroll: true });
-    return true;
-  }
-  var fbOpts = (box) => box ? (
-    /** @type {HTMLElement[]} */
-    [...box.querySelectorAll('[role="option"]')]
-  ) : [];
-  function fbListKeys(s5, f5, e4) {
-    const m5 = fbMenu(s5, f5.id);
-    if (!m5) return;
-    const t47 = (
-      /** @type {HTMLElement} */
-      e4.target
-    ), opts = fbOpts(m5);
-    if (e4.key === "Escape") {
-      e4.preventDefault();
-      e4.stopPropagation();
-      fbClose(s5, true);
-      return;
-    }
-    if (e4.key === "Tab") {
-      fbClose(s5, false);
-      fbBtn(s5, f5.id)?.focus({ preventScroll: true });
-      return;
-    }
-    if (t47.matches("input.mq")) {
-      if (e4.key === "ArrowDown" && opts.length) {
-        e4.preventDefault();
-        opts[0].focus({ preventScroll: true });
-      } else if (e4.key === "ArrowUp") fbStep(e4, fbControls(m5), opts);
-      return;
-    }
-    if ((e4.key === " " || e4.key === "Enter") && t47.getAttribute("role") === "option") {
-      e4.preventDefault();
-      e4.stopPropagation();
-      fbTick(s5, f5, t47);
-      return;
-    }
-    fbStep(e4, fbControls(m5), opts);
-  }
-  var fbControls = (m5) => (
-    /** @type {HTMLElement[]} */
-    [...m5.querySelectorAll('.seg button,input.mq,.acts button,[role="option"]')]
-  );
-  function fbPickKeys(s5, e4) {
-    const m5 = fbMenu(s5, FB_MORE), more = s5.props.more;
-    if (!m5 || !more) return;
-    const t47 = (
-      /** @type {HTMLElement} */
-      e4.target
-    ), right = m5.querySelector(".fpr");
-    const fieldBtn = () => (
-      /** @type {HTMLElement | null} */
-      m5.querySelector('.fpf[aria-selected="true"]')
-    );
-    if (e4.key === "Escape") {
-      e4.preventDefault();
-      e4.stopPropagation();
-      fbClose(s5, true);
-      return;
-    }
-    if (t47.matches(".fpl input[type=search]")) {
-      if (e4.key === "Enter") {
-        e4.preventDefault();
-        (fbFirstIn(right) || fieldBtn())?.focus();
-      } else if (e4.key === "ArrowDown") {
-        e4.preventDefault();
-        fieldBtn()?.focus();
-      }
-      return;
-    }
-    if (t47.matches(".fpf")) {
-      const L3 = (
-        /** @type {HTMLElement[]} */
-        [...m5.querySelectorAll(".fpf")]
-      ), i5 = L3.indexOf(t47);
-      const j5 = e4.key === "ArrowDown" ? Math.min(L3.length - 1, i5 + 1) : e4.key === "ArrowUp" ? Math.max(0, i5 - 1) : e4.key === "Home" ? 0 : e4.key === "End" ? L3.length - 1 : -1;
-      if (j5 >= 0) {
-        e4.preventDefault();
-        const k5 = L3[j5].dataset.fpk || "";
-        if (k5 !== more.field) more.onField(k5);
-        m5.querySelector(`.fpf[data-fpk="${CSS.escape(k5)}"]`)?.focus();
-        return;
-      }
-      if (e4.key === "ArrowRight" || e4.key === "Enter") {
-        e4.preventDefault();
-        fbFirstIn(right)?.focus();
-      }
-      return;
-    }
-    if (!right || !right.contains(t47) || t47.matches(".drange input")) return;
-    if (e4.key === "ArrowLeft") {
-      e4.preventDefault();
-      fieldBtn()?.focus();
-      return;
-    }
-    const f5 = s5.props.fields.find((x5) => x5.id === more.field);
-    if (f5 && (e4.key === " " || e4.key === "Enter") && t47.getAttribute("role") === "option") {
-      e4.preventDefault();
-      e4.stopPropagation();
-      fbTick(s5, f5, t47);
-      return;
-    }
-    fbStep(
-      e4,
-      /** @type {HTMLElement[]} */
-      [...right.querySelectorAll('.seg button,[role="option"]')],
-      fbOpts(right)
-    );
-  }
-  function fbTick(s5, f5, opt) {
-    const inp = (
-      /** @type {HTMLInputElement | null} */
-      opt.querySelector("input")
-    );
-    if (!inp) return;
-    fbChoose(s5, f5, inp.value, f5.single ? true : !inp.checked);
-  }
-  function fbChoose(s5, f5, v5, on2) {
-    const had = document.activeElement && s5.host.contains(document.activeElement);
-    const sel = [...f5.selected || []];
-    s5.props.onSelect(f5.id, f5.single ? [v5] : on2 ? sel.includes(v5) ? sel : [...sel, v5] : sel.filter((x5) => x5 !== v5));
-    const a5 = document.activeElement;
-    if (had && a5 && a5.matches('[role="option"] input')) a5.closest('[role="option"]')?.focus({ preventScroll: true });
-  }
-  function fbAct(s5, f5, what, shown2) {
-    const sel = [...f5.selected || []];
-    s5.props.onSelect(f5.id, what === "me" ? [...f5.onlyMe || []] : what === "all" ? [.../* @__PURE__ */ new Set([...sel, ...shown2.map((o5) => o5.value)])] : []);
-    if (s5.ui.q[f5.id]) (fbMenu(s5, f5.id)?.querySelector("input.mq") || null)?.focus();
-  }
-  function fbSetNot(s5, f5, not, box) {
-    s5.props.onNot?.(f5.id, not);
-    (box?.querySelector(`.seg [data-neg="${not ? 1 : 0}"]`) || null)?.focus();
-  }
-  function FbIsNot({ f: f5, s: s5, box }) {
-    const n4 = !!f5.not;
-    return /* @__PURE__ */ u2("div", { class: "isnot", children: [
-      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Match", children: [
-        /* @__PURE__ */ u2("button", { type: "button", "data-neg": "0", "data-nk": f5.id, "aria-pressed": n4 ? "false" : "true", onClick: () => fbSetNot(s5, f5, false, box()), children: "is" }),
-        /* @__PURE__ */ u2("button", { type: "button", "data-neg": "1", "data-nk": f5.id, "aria-pressed": n4 ? "true" : "false", onClick: () => fbSetNot(s5, f5, true, box()), children: "is not" })
-      ] }),
-      /* @__PURE__ */ u2("span", { class: "sub", children: n4 ? "none of" : "any of" })
-    ] });
-  }
-  function FbOptions({ f: f5, s: s5, opts, name }) {
-    const sel = /* @__PURE__ */ new Set();
-    if (f5.selected) for (const v5 of f5.selected) sel.add(v5);
-    if (!opts.length) return /* @__PURE__ */ u2("div", { class: "sub", style: { padding: "6px 14px" }, children: "Nothing to choose" });
-    return /* @__PURE__ */ u2(S2, { children: opts.map((o5) => {
-      const on2 = sel.has(o5.value);
-      return /* @__PURE__ */ u2(
-        "label",
-        {
-          class: o5.count || on2 ? "" : "dim",
-          role: "option",
-          "aria-selected": on2 ? "true" : "false",
-          tabIndex: -1,
-          children: [
-            /* @__PURE__ */ u2(
-              "input",
-              {
-                type: f5.single ? "radio" : "checkbox",
-                name: f5.single ? name : void 0,
-                "data-fk": f5.id,
-                value: o5.value,
-                checked: on2,
-                tabIndex: -1,
-                "aria-hidden": "true",
-                onChange: (e4) => fbChoose(
-                  s5,
-                  f5,
-                  o5.value,
-                  /** @type {HTMLInputElement} */
-                  e4.currentTarget.checked
-                )
-              }
-            ),
-            o5.label,
-            o5.extra ? /* @__PURE__ */ u2(S2, { children: [
-              " ",
-              /* @__PURE__ */ u2("span", { class: "sub", children: o5.extra })
-            ] }) : null,
-            /* @__PURE__ */ u2("small", { children: o5.count ?? "" })
-          ]
-        },
-        o5.value
-      );
-    }) });
-  }
-  function FbFieldMenu({ f: f5, s: s5, folded }) {
-    const isOpen = s5.ui.open === f5.id, shown2 = isOpen || s5.ui.keep === f5.id, mid = fbMenuId(f5);
-    const all = shown2 && f5.options ? f5.options() : [], q5 = (s5.ui.q[f5.id] || "").toLowerCase();
-    const opts = q5 ? all.filter((o5) => o5.label.toLowerCase().includes(q5)) : all;
-    const box = () => document.getElementById(mid);
-    return /* @__PURE__ */ u2("span", { class: `dd${folded ? " wfold" : ""}`, children: [
-      /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: `btn fbtn${f5.on ? " on" : ""}`,
-          id: fbBtnId(f5),
-          ...dataAttrs(f5.data),
-          "aria-haspopup": "listbox",
-          "aria-expanded": isOpen ? "true" : "false",
-          "aria-controls": mid,
-          onClick: (e4) => {
-            e4.preventDefault();
-            if (isOpen && box()?.classList.contains("on")) fbClose(s5, false);
-            else fbOpen(s5, f5.id);
-          },
-          onKeyDown: (e4) => {
-            if (e4.key === "ArrowDown" && !isOpen) {
-              e4.preventDefault();
-              fbOpen(s5, f5.id);
-            }
-          },
-          children: f5.button ?? f5.label
-        }
-      ),
-      /* @__PURE__ */ u2("div", { class: `ddmenu left${isOpen ? " on" : ""}`, id: mid, tabIndex: shown2 ? -1 : void 0, onKeyDown: (e4) => fbListKeys(s5, f5, e4), children: shown2 ? /* @__PURE__ */ u2(S2, { children: [
-        f5.not === void 0 ? null : /* @__PURE__ */ u2(FbIsNot, { f: f5, s: s5, box }),
-        all.length > 6 ? /* @__PURE__ */ u2(
-          "input",
-          {
-            type: "search",
-            class: "mq",
-            "data-fk": f5.id,
-            placeholder: `Search ${f5.label.toLowerCase()}`,
-            "aria-label": `Search ${f5.label.toLowerCase()}`,
-            value: s5.ui.q[f5.id] || "",
-            autocomplete: "off",
-            onInput: (e4) => {
-              s5.ui.q[f5.id] = /** @type {HTMLInputElement} */
-              e4.currentTarget.value;
-              fbPaint(s5);
-            }
-          }
-        ) : null,
-        /* @__PURE__ */ u2("div", { class: "acts", children: [
-          f5.onlyMe ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ma": "me", onClick: () => fbAct(s5, f5, "me", opts), children: "Only me" }) : null,
-          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ma": "all", onClick: () => fbAct(s5, f5, "all", opts), children: "Select all" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ma": "clear", onClick: () => fbAct(s5, f5, "clear", opts), children: "Clear" })
-        ] }),
-        /* @__PURE__ */ u2("div", { role: "listbox", "aria-multiselectable": f5.single ? void 0 : "true", "aria-label": f5.label, children: /* @__PURE__ */ u2(FbOptions, { f: f5, s: s5, opts, name: `${mid}-opt` }) })
-      ] }) : null })
-    ] });
-  }
-  function FbPicker({ s: s5, more }) {
-    const fields = fbPickList(s5.props), fq = (more.query || "").toLowerCase();
-    const vis = fq ? fields.filter((f6) => f6.label.toLowerCase().includes(fq)) : fields;
-    const f5 = fields.find((x5) => x5.id === more.field) || fields[0];
-    const headId = more.headId || `${more.menuId}H`;
-    const box = () => document.getElementById(more.menuId);
-    let sec = "";
-    return /* @__PURE__ */ u2("div", { class: "fpick", children: [
-      /* @__PURE__ */ u2("div", { class: "fpl", children: [
-        more.onQuery ? /* @__PURE__ */ u2(
-          "input",
-          {
-            type: "search",
-            id: "fpq",
-            placeholder: "Find a field…",
-            "aria-label": "Find a field",
-            value: more.query || "",
-            autocomplete: "off",
-            onInput: (e4) => more.onQuery?.(
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value
-            )
-          }
-        ) : null,
-        /* @__PURE__ */ u2("div", { class: "fplist", role: "listbox", "aria-label": more.listLabel || "Fields", children: [
-          vis.map((x5) => {
-            const head = x5.section && x5.section !== sec ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: x5.section }) : null;
-            sec = x5.section || "";
-            const on2 = x5.id === (f5 && f5.id);
-            return /* @__PURE__ */ u2(S2, { children: [
-              head,
-              /* @__PURE__ */ u2(
-                "button",
-                {
-                  type: "button",
-                  role: "option",
-                  class: `fpf${x5.on ? " on" : ""}`,
-                  "data-fpk": x5.id,
-                  "aria-selected": on2 ? "true" : "false",
-                  tabIndex: on2 ? 0 : -1,
-                  onClick: () => {
-                    if (x5.id !== more.field) more.onField(x5.id);
-                  },
-                  children: [
-                    x5.label,
-                    x5.mark ? /* @__PURE__ */ u2(S2, { children: [
-                      " ",
-                      /* @__PURE__ */ u2("small", { children: x5.mark })
-                    ] }) : null
-                  ]
-                }
-              )
-            ] }, x5.id);
-          }),
-          !vis.length ? /* @__PURE__ */ u2("div", { class: "sub", style: { padding: "6px 4px" }, children: "No field matches" }) : null
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "fpr", children: [
-        f5 && f5.range ? /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2("h3", { id: headId, children: f5.label }),
-          /* @__PURE__ */ u2("div", {
-            class: "drange",
-            /** @type {("from" | "to")[]} */
-            children: ["from", "to"].map((end, i5) => /* @__PURE__ */ u2(S2, { children: [
-              i5 ? /* @__PURE__ */ u2("span", { children: "and" }) : null,
-              /* @__PURE__ */ u2(
-                "input",
-                {
-                  type: "text",
-                  ...{ [`data-${f5.id}`]: end },
-                  placeholder: "DD-MM-YYYY",
-                  value: f5.range?.[end] || "",
-                  "aria-label": `${f5.range?.name} ${end}`,
-                  onChange: (e4) => s5.props.onRange?.(
-                    f5.id,
-                    end,
-                    /** @type {HTMLInputElement} */
-                    e4.currentTarget.value
-                  )
-                }
-              )
-            ] }, end))
-          })
-        ] }) : f5 ? /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2("h3", { id: headId, children: f5.label }),
-          f5.note ? /* @__PURE__ */ u2("p", { class: "sub", style: { margin: "0 0 6px" }, children: f5.note }) : null,
-          f5.not === void 0 ? null : /* @__PURE__ */ u2(FbIsNot, { f: f5, s: s5, box }),
-          /* @__PURE__ */ u2("div", { class: "fpopts", role: "listbox", "aria-multiselectable": f5.single ? void 0 : "true", "aria-labelledby": headId, children: /* @__PURE__ */ u2(FbOptions, { f: f5, s: s5, opts: f5.options ? f5.options() : [], name: `${more.menuId}-opt` }) })
-        ] }) : null,
-        /* @__PURE__ */ u2("div", { class: "fpfoot", children: [
-          /* @__PURE__ */ u2("span", { class: "sub", id: more.resultId, children: more.result }),
-          /* @__PURE__ */ u2("span", { class: "sp" }),
-          more.clearAll ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", id: more.clearAll.id, onClick: () => {
-            more.clearAll?.run();
-            (box()?.querySelector('.fpf[aria-selected="true"]') || null)?.focus();
-          }, children: "Clear all" }) : null,
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: more.doneId, onClick: () => fbClose(s5, true), children: "Done" })
-        ] })
-      ] })
-    ] });
-  }
-  function FbFunnel({ s: s5, more }) {
-    const isOpen = s5.ui.open === FB_MORE, shown2 = isOpen || s5.ui.keep === FB_MORE, n4 = s5.ui.fold.length;
-    const tip = more.label + (n4 ? `. ${n4} more filter${n4 === 1 ? " is" : "s are"} here` : "");
-    const inner = /* @__PURE__ */ u2(S2, { children: [
-      /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: `ib bd fbtn${more.on ? " on" : ""}`,
-          id: more.id,
-          "aria-haspopup": "dialog",
-          "aria-expanded": isOpen ? "true" : "false",
-          "aria-controls": more.menuId,
-          "data-key": more.key,
-          "aria-label": tip,
-          "data-tip": tip,
-          onClick: (e4) => {
-            e4.preventDefault();
-            if (isOpen && document.getElementById(more.menuId)?.classList.contains("on")) fbClose(s5, false);
-            else fbOpen(s5, FB_MORE);
-          },
-          children: [
-            /* @__PURE__ */ u2(Icon, { name: "funnel" }),
-            more.count ? /* @__PURE__ */ u2("span", { class: "fcount", "aria-hidden": "true", children: more.count }) : null
-          ]
-        }
-      ),
-      /* @__PURE__ */ u2("div", { class: `ddmenu left fpmenu${isOpen ? " on" : ""}`, id: more.menuId, role: "dialog", "aria-label": more.menuLabel, onKeyDown: (e4) => fbPickKeys(s5, e4), children: shown2 ? /* @__PURE__ */ u2(FbPicker, { s: s5, more }) : null })
-    ] });
-    return s5.props.bare ? inner : /* @__PURE__ */ u2("span", { class: "dd", children: inner });
-  }
-  function FilterBar({ ui: ui2, host: host2, ...props }) {
-    const s5 = fbState(host2);
-    s5.props = props;
-    s5.ui = ui2;
-    return /* @__PURE__ */ u2(S2, { children: [
-      props.bare ? null : fbMain(props).map((f5) => /* @__PURE__ */ u2(FbFieldMenu, { f: f5, s: s5, folded: ui2.fold.includes(f5.id) }, f5.id)),
-      props.more ? /* @__PURE__ */ u2(FbFunnel, { s: s5, more: props.more }) : null
-    ] });
-  }
-
-  // stores/settings.js
-  var catalogue = y3(null);
-  var catalogueError = y3("");
-  var query = y3("");
-  var healthResult = y3(null);
-  var healthBusy = y3(false);
-  var healthError = y3("");
-  var healthCardWaiting = y3(
-    /** @type {string[]} */
-    []
-  );
-  var markCardWaiting = (id2) => {
-    if (id2 && !healthCardWaiting.value.includes(id2)) healthCardWaiting.value = [...healthCardWaiting.value, id2];
-  };
-  var COUNT_KEY = "creaite-health-count";
-  var healthCount = y3(0);
-  var healthCheckedAt = g3(() => healthResult.value ? healthResult.value.checked : "");
-  var SAVED = [];
-  var told = (changes) => SAVED.forEach((f5) => {
-    try {
-      f5(changes);
-    } catch (e4) {
-    }
-  });
-  var settingOf = (key) => catalogue.value ? catalogue.value.settings.find((s5) => s5.key === key) : void 0;
-  var loading = null;
-  function loadCatalogue() {
-    if (loading) return loading;
-    loading = (async () => {
-      const r4 = await api("/api/settings/catalogue", {});
-      if (r4.ok) {
-        catalogue.value = /** @type {Catalogue} */
-        r4;
-        catalogueError.value = "";
-      } else catalogueError.value = r4.message || "Couldn't read the settings";
-      loading = null;
-      return !!r4.ok;
-    })();
-    return loading;
-  }
-  async function saveSettings(changes) {
-    if (!await writeSettings(changes)) return false;
-    told(changes);
-    await loadCatalogue();
-    return true;
-  }
-  async function resetSettings(keys) {
-    const r4 = await api("/api/settings/reset", keys.length === 1 ? { key: keys[0] } : { keys });
-    if (!r4.ok) return { ok: false, message: r4.message || "Couldn't reset it", reset: [] };
-    if (r4.catalogue) catalogue.value = r4.catalogue;
-    const vals = {};
-    for (const k5 of r4.reset || []) {
-      const s5 = settingOf(k5);
-      if (s5) vals[k5] = s5.value;
-    }
-    if (Object.keys(vals).length) told(vals);
-    return { ok: true, message: "", reset: r4.reset || [] };
-  }
-  async function checkHealth() {
-    if (healthBusy.value) return;
-    healthBusy.value = true;
-    healthError.value = "";
-    try {
-      const r4 = await api("/api/health", {});
-      if (r4.ok) {
-        healthResult.value = /** @type {HealthResult} */
-        r4;
-        healthCount.value = (r4.problems || []).length;
-        const still = (r4.problems || []).map((p6) => p6.fix && p6.fix.id);
-        healthCardWaiting.value = healthCardWaiting.value.filter((id2) => still.includes(id2));
-        store.set(COUNT_KEY, { n: healthCount.value, at: Date.now() });
-      } else healthError.value = r4.message || "The health check didn't run";
-    } finally {
-      healthBusy.value = false;
-    }
-  }
-  var lastCheckAt = () => {
-    const c5 = store.get(COUNT_KEY, null);
-    return c5 && typeof c5.at === "number" ? c5.at : 0;
-  };
-  function showHealthCount(n4) {
-    void n4;
-  }
-  function startSettingsStore() {
-    const c5 = store.get(COUNT_KEY, null);
-    if (c5 && typeof c5.n === "number") healthCount.value = c5.n;
-    j3(() => showHealthCount(healthCount.value));
-  }
-
-  // components/settings/SettingRow.jsx
-  var N2 = 0;
-  var rowId = () => "ss" + ++N2;
-  function SettingRow({ id: id2, label, line, note, changed, keys, resettable = true, fixedWhy = "", saved = false, children }) {
-    const [busy2, setBusy] = d2(false);
-    const reset = async () => {
-      setBusy(true);
-      const r4 = await resetSettings(keys);
-      setBusy(false);
-      snack(r4.ok ? r4.reset.length ? `${label}: back to its default` : `${label} was already at its default` : r4.message);
-    };
-    return /* @__PURE__ */ u2("div", { class: "srow", "data-keys": keys.join(" "), children: [
-      /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2("span", { id: id2, children: label }),
-        changed && /* @__PURE__ */ u2("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
-        (line || note) && /* @__PURE__ */ u2("small", { id: id2 + "h", children: [
-          line,
-          note ? /* @__PURE__ */ u2("span", { class: "setnote", children: [
-            line ? " " : "",
-            note
-          ] }) : null
-        ] }),
-        !resettable && fixedWhy && /* @__PURE__ */ u2("small", { class: "setfixed", children: [
-          "Set at set-up: ",
-          fixedWhy
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "setctl", children: [
-        saved && /* @__PURE__ */ u2("span", { class: "saved", role: "status", children: "Saved" }),
-        children,
-        changed && resettable && /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "mini setreset",
-            disabled: busy2,
-            "aria-label": `Reset ${label} to its default`,
-            title: "Back to the default",
-            onClick: reset,
-            children: "Reset"
-          }
-        )
-      ] })
-    ] });
-  }
-
-  // components/settings/Essentials.jsx
-  var WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  var WEEK_PRIOS = ["Urgent", "High", "Medium", "Low"];
-  var SWEEP_SOURCES = [
-    ["sweep.sources.inbox", "Inbox"],
-    ["sweep.sources.sent_items", "Sent Items"],
-    ["sweep.sources.teams_chats", "Teams chats"],
-    ["sweep.sources.teams_channels", "Teams channels"],
-    ["sweep.sources.calendar", "Calendar"]
-  ];
-  var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
-  var settingWords = (q5) => q5.toLowerCase().split(/\s+/).filter(Boolean);
-  var settingHasAll = (text, w6) => {
-    const t47 = text.toLowerCase();
-    return w6.every((x5) => t47.includes(x5));
-  };
-  var val = (k5) => {
-    const s5 = settingOf(k5);
-    return s5 ? s5.value : void 0;
-  };
-  function Essential({ row: row2 }) {
-    const [id2] = d2(rowId);
-    const [saved, setSaved] = d2(false);
-    const t47 = A2(0);
-    const keys = row2.keys, k5 = keys[0];
-    const save2 = async (changes) => {
-      const ok2 = await saveSettings(changes);
-      if (ok2) {
-        setSaved(true);
-        clearTimeout(t47.current);
-        t47.current = window.setTimeout(() => setSaved(false), 2500);
-      }
-      return ok2;
-    };
-    const named = { "aria-labelledby": id2, "aria-describedby": id2 + "h" };
-    const text = (parse, bad, ph2 = "") => /* @__PURE__ */ u2(
-      "input",
-      {
-        type: "text",
-        ...named,
-        value: val(k5) ?? "",
-        placeholder: ph2,
-        size: 8,
-        onChange: async (e4) => {
-          const el2 = (
-            /** @type {HTMLInputElement} */
-            e4.currentTarget
-          ), v5 = parse(el2.value.trim());
-          if (v5 === void 0) {
-            snack(bad);
-            el2.value = val(k5) ?? "";
-            return;
-          }
-          if (!await save2({ [k5]: v5 })) el2.value = val(k5) ?? "";
-        }
-      }
-    );
-    const select = (opts, key = k5) => /* @__PURE__ */ u2(
-      "select",
-      {
-        ...key === k5 ? named : { "aria-label": `${row2.label}: ${key.endsWith("_day") ? "day" : key}` },
-        value: String(val(key) ?? ""),
-        onChange: async (e4) => {
-          const el2 = (
-            /** @type {HTMLSelectElement} */
-            e4.currentTarget
-          );
-          if (!await save2({ [key]: el2.value })) el2.value = String(val(key) ?? "");
-        },
-        children: opts.map(([v5, l6]) => /* @__PURE__ */ u2("option", { value: v5, children: l6 }))
-      }
-    );
-    const sw3 = () => /* @__PURE__ */ u2(
-      "input",
-      {
-        type: "checkbox",
-        class: "switch",
-        ...named,
-        checked: !!val(k5),
-        onChange: async (e4) => {
-          const el2 = (
-            /** @type {HTMLInputElement} */
-            e4.currentTarget
-          );
-          if (!await save2({ [k5]: el2.checked })) el2.checked = !!val(k5);
-        }
-      }
-    );
-    const ticks = (all, short = (v5) => v5) => {
-      const have = Array.isArray(val(k5)) ? val(k5) : [];
-      return /* @__PURE__ */ u2("span", { class: "setticks", role: "group", ...named, children: all.map((v5) => /* @__PURE__ */ u2("label", { class: "settick", children: [
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            type: "checkbox",
-            checked: have.includes(v5),
-            "aria-label": v5,
-            onChange: async (e4) => {
-              const el2 = (
-                /** @type {HTMLInputElement} */
-                e4.currentTarget
-              ), box = el2.closest("[role=group]");
-              const now = all.filter((x5) => {
-                const b5 = box && /** @type {HTMLInputElement|null} */
-                box.querySelector(`input[aria-label="${x5}"]`);
-                return b5 ? b5.checked : have.includes(x5);
-              });
-              if (!await save2({ [k5]: now })) el2.checked = have.includes(v5);
-            }
-          }
-        ),
-        " ",
-        short(v5)
-      ] })) });
-    };
-    let control;
-    switch (k5) {
-      case "identity.name":
-        control = text((v5) => v5 || void 0, "Your name can't be empty", "Full name");
-        break;
-      case "work.weekend_days":
-        control = ticks(WEEKDAYS, (v5) => v5.slice(0, 3));
-        break;
-      case "sweep.due_from":
-        control = text((v5) => HHMM.test(v5) ? v5 : void 0, "Use 24-hour HH:MM, such as 07:00", "HH:MM");
-        break;
-      case "sweep.sources.inbox":
-        control = /* @__PURE__ */ u2("span", { class: "setticks", role: "group", ...named, children: SWEEP_SOURCES.map(([key, l6]) => /* @__PURE__ */ u2("label", { class: "settick", children: [
-          /* @__PURE__ */ u2(
-            "input",
-            {
-              type: "checkbox",
-              checked: !!val(key),
-              onChange: async (e4) => {
-                const el2 = (
-                  /** @type {HTMLInputElement} */
-                  e4.currentTarget
-                );
-                if (!await save2({ [key]: el2.checked })) el2.checked = !!val(key);
-              }
-            }
-          ),
-          " ",
-          l6
-        ] })) });
-        break;
-      case "day.close_from":
-        control = text((v5) => v5 === "" ? null : HHMM.test(v5) ? v5 : void 0, "Use HH:MM, such as 17:30, or leave it empty for off", "Off");
-        break;
-      case "day.catchup_sweep":
-        control = select([["start", "Start it when the card opens"], ["offer", "Ask first"], ["off", "Off"]]);
-        break;
-      case "reminders.weekly_report_day":
-        control = /* @__PURE__ */ u2("span", { class: "setpair", children: [
-          select(WEEKDAYS.slice(0, 5).map((d5) => [d5, d5])),
-          /* @__PURE__ */ u2(
-            "input",
-            {
-              type: "text",
-              "aria-label": `${row2.label}: time`,
-              value: val("reminders.weekly_report_from") ?? "",
-              size: 6,
-              placeholder: "HH:MM",
-              onChange: async (e4) => {
-                const el2 = (
-                  /** @type {HTMLInputElement} */
-                  e4.currentTarget
-                ), v5 = el2.value.trim();
-                if (!HHMM.test(v5)) {
-                  snack("Use 24-hour HH:MM, such as 12:00");
-                  el2.value = val("reminders.weekly_report_from") ?? "";
-                  return;
-                }
-                if (!await save2({ "reminders.weekly_report_from": v5 })) el2.value = val("reminders.weekly_report_from") ?? "";
-              }
-            }
-          )
-        ] });
-        break;
-      case "dashboard.auto_apply":
-        control = sw3();
-        break;
-      case "dashboard.week_ahead_priorities":
-        control = ticks(WEEK_PRIOS);
-        break;
-      case "vip.enabled":
-        control = sw3();
-        break;
-      case "vip.check_minutes":
-        control = /* @__PURE__ */ u2("span", { class: "setpair", children: [
-          /* @__PURE__ */ u2(
-            "input",
-            {
-              type: "number",
-              ...named,
-              min: 10,
-              max: 240,
-              step: 5,
-              value: val(k5) ?? 30,
-              style: "width:80px",
-              onChange: async (e4) => {
-                const el2 = (
-                  /** @type {HTMLInputElement} */
-                  e4.currentTarget
-                ), v5 = Math.round(Number(el2.value));
-                if (!Number.isFinite(v5) || v5 < 10 || v5 > 240) {
-                  snack("Use a number of minutes from 10 to 240");
-                  el2.value = String(val(k5) ?? 30);
-                  return;
-                }
-                if (!await save2({ [k5]: v5 })) el2.value = String(val(k5) ?? 30);
-              }
-            }
-          ),
-          " ",
-          /* @__PURE__ */ u2("span", { class: "sub", children: "minutes" })
-        ] });
-        break;
-      case "dashboard.theme":
-        control = select([["System", "Follow my Mac"], ["Light", "Light"], ["Dark", "Dark"]]);
-        break;
-      case "dashboard.palette":
-        control = select(THEMES.map((x5) => [x5.id, x5.id]));
-        break;
-      case "dashboard.motion":
-        control = select([["System", "Follow my Mac"], ["Reduce", "Reduce"], ["Full", "Full"]]);
-        break;
-      case "drafting.update":
-        control = /* @__PURE__ */ u2(AllSwitch, { keys, named, save: save2 });
-        break;
-      default:
-        control = sw3();
-    }
-    const pending = k5 === "dashboard.auto_apply" && val(k5) === false && shared.PENDING && shared.PENDING.length;
-    return /* @__PURE__ */ u2(
-      SettingRow,
-      {
-        id: id2,
-        label: row2.label,
-        line: row2.line,
-        changed: row2.changed,
-        keys,
-        saved,
-        resettable: keys.every((x5) => {
-          const s5 = settingOf(x5);
-          return !s5 || s5.resettable;
-        }),
-        children: [
-          control,
-          pending ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "applyNow", onClick: () => applyPending(), children: [
-            "Apply ",
-            shared.PENDING.length,
-            " waiting"
-          ] }) : null
-        ]
-      }
-    );
-  }
-  function AllSwitch({ keys, named, save: save2 }) {
-    const on2 = keys.filter((x5) => val(x5) !== false).length, all = on2 === keys.length, mixed = on2 > 0 && !all;
-    const ref = A2(
-      /** @type {HTMLInputElement|null} */
-      null
-    );
-    h2(() => {
-      if (ref.current) ref.current.indeterminate = mixed;
-    });
-    return /* @__PURE__ */ u2(
-      "input",
-      {
-        ref,
-        type: "checkbox",
-        class: "switch",
-        ...named,
-        checked: all,
-        onChange: async (e4) => {
-          const v5 = (
-            /** @type {HTMLInputElement} */
-            e4.currentTarget.checked
-          );
-          await save2(Object.fromEntries(keys.map((x5) => [x5, v5])));
-        }
-      }
-    );
-  }
-  function Essentials() {
-    const c5 = catalogue.value;
-    if (!c5) return /* @__PURE__ */ u2("div", { class: "card wide", children: [
-      /* @__PURE__ */ u2("h2", { children: "Essentials" }),
-      /* @__PURE__ */ u2("p", { class: "sub", role: "status", children: catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.") })
-    ] });
-    const w6 = settingWords(query.value);
-    const rows2 = c5.essentials.filter((r4) => !w6.length || settingHasAll(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6));
-    if (!rows2.length) return null;
-    const sections = [...new Set(rows2.map((r4) => r4.section))];
-    return /* @__PURE__ */ u2("div", { class: "setstack", children: sections.map((s5) => /* @__PURE__ */ u2("div", { class: "card", "data-ess": s5, children: [
-      /* @__PURE__ */ u2("h2", { children: s5 }),
-      rows2.filter((r4) => r4.section === s5).map((r4) => /* @__PURE__ */ u2(Essential, { row: r4 }, r4.keys.join(" ")))
-    ] })) });
-  }
-
-  // components/settings/Health.jsx
-  var CMD = /system\/scripts\/run [^,;"]+/;
-  var commandIn = (how) => {
-    const m5 = CMD.exec(how || "");
-    return m5 ? m5[0].trim() : "";
-  };
-  var CARD_WAITING = "On the approval card, waiting for you";
-  async function runHealthFix(f5) {
-    const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
-    if (r4.ok && r4.card) {
-      markCardWaiting(f5.id || "");
-      snack(CARD_WAITING + ": nothing moves until you approve it.");
-    } else snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
-    if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
-    if (r4.ok && r4.card) await pendingEdit();
-    if (r4.ok && !r4.url) checkHealth();
-    return !!r4.ok;
-  }
-  function FixButton({ f: f5, label }) {
-    const [busy2, setBusy] = d2(false);
-    return /* @__PURE__ */ u2(
-      "button",
-      {
-        type: "button",
-        class: "btn primary",
-        disabled: busy2 || !viaServer(),
-        "aria-label": `${f5.button}: ${label}`,
-        onClick: async () => {
-          setBusy(true);
-          await runHealthFix(f5);
-          setBusy(false);
-        },
-        children: busy2 ? "Working…" : f5.button
-      }
-    );
-  }
-  var mbOf = (n4) => `${(n4 / 1e6).toFixed(n4 >= 1e7 ? 0 : 1)} MB`;
-  function RestoreBackup() {
-    const [zips, setZips] = d2(
-      /** @type {BackupZip[]|null} */
-      null
-    );
-    const [plan, setPlan] = d2(
-      /** @type {{zip:string, day:string, lines:PlanLine[]}|null} */
-      null
-    );
-    const [busy2, setBusy] = d2(false), [done, setDone] = d2(
-      /** @type {string[]} */
-      []
-    );
-    const list = async () => {
-      setBusy(true);
-      const r4 = await api("/api/backup/list", {});
-      setBusy(false);
-      if (r4.ok) {
-        setZips(r4.zips || []);
-        setPlan(null);
-        setDone([]);
-      } else snack(r4.message || "Couldn't list the backups");
-    };
-    const preview = async (z4) => {
-      setBusy(true);
-      const r4 = await api("/api/backup/preview", { zip: z4.name });
-      setBusy(false);
-      if (r4.ok) setPlan({ zip: z4.name, day: r4.day || z4.day, lines: r4.plan || [] });
-      else snack(r4.message || "That backup can't be restored");
-    };
-    const restore = async () => {
-      if (!plan) return;
-      setBusy(true);
-      const r4 = await api("/api/backup/restore", { zip: plan.zip });
-      setBusy(false);
-      snack(r4.message || (r4.ok ? "Restored" : "It wasn't restored"));
-      if (r4.ok) {
-        setPlan(null);
-        setDone(r4.done || []);
-      }
-    };
-    return /* @__PURE__ */ u2("div", { class: "hrestore", id: "backupRestore", children: [
-      /* @__PURE__ */ u2("h3", { class: "hsub", children: "Restore from a backup" }),
-      /* @__PURE__ */ u2("p", { class: "sub", children: "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched." }),
-      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy2 || !viaServer(), onClick: list, children: "Choose a backup…" }),
-      zips && !plan && (zips.length ? /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Backups", children: zips.map((z4) => /* @__PURE__ */ u2("li", { class: "hrow", "data-zip": z4.name, children: [
-        /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
-        /* @__PURE__ */ u2("div", { class: "hbody", children: [
-          /* @__PURE__ */ u2("div", { class: "t", children: fd(z4.day) }),
-          /* @__PURE__ */ u2("div", { class: "d", children: [
-            z4.where,
-            " · ",
-            mbOf(z4.size)
-          ] })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
-      ] })) }) : /* @__PURE__ */ u2("p", { class: "sub", children: "There are no backups yet: one is made each day." })),
-      plan && /* @__PURE__ */ u2("div", { class: "card hconfirm", role: "group", "aria-label": "Confirm the restore", id: "backupConfirm", children: [
-        /* @__PURE__ */ u2("div", { class: "t", children: [
-          "Restore from the backup of ",
-          fd(plan.day),
-          "?"
-        ] }),
-        /* @__PURE__ */ u2("p", { class: "sub", children: "This will replace:" }),
-        /* @__PURE__ */ u2("ul", { class: "hsteps", children: plan.lines.map((l6) => /* @__PURE__ */ u2("li", { "data-path": l6.path, children: [
-          /* @__PURE__ */ u2("code", { children: l6.path }),
-          " — ",
-          l6.what
-        ] })) }),
-        /* @__PURE__ */ u2("div", { class: "hact", children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy2, onClick: restore, children: busy2 ? "Restoring…" : "Restore" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: () => setPlan(null), children: "Cancel" })
-        ] })
-      ] }),
-      done.length > 0 && /* @__PURE__ */ u2("ul", { class: "hsteps", "aria-label": "What was restored", children: done.map((d5) => /* @__PURE__ */ u2("li", { children: d5 })) })
-    ] });
-  }
-  function Problem({ p: p6 }) {
-    const [open2, setOpen2] = d2(false);
-    const bad = p6.severity === "fail", hid = `hhow-${p6.id}`, cmd = commandIn(p6.fix.how);
-    const copy = (e4) => {
-      const b5 = (
-        /** @type {HTMLElement} */
-        e4.currentTarget
-      );
-      (navigator.clipboard ? navigator.clipboard.writeText(cmd) : Promise.reject()).then(() => {
-        copied(b5);
-        snack("Copied");
-      }, () => snack("Couldn't copy"));
-    };
-    return /* @__PURE__ */ u2("li", { class: "hrow", "data-check": p6.id, children: [
-      /* @__PURE__ */ u2("span", { class: `hico ${bad ? "bad" : "warn"}`, "aria-hidden": "true", children: "!" }),
-      /* @__PURE__ */ u2("div", { class: "hbody", children: [
-        /* @__PURE__ */ u2("div", { class: "t", children: [
-          p6.title,
-          " ",
-          /* @__PURE__ */ u2("span", { class: `tag ${bad ? "bad" : "warn"}`, children: bad ? "Needs fixing" : "Worth a look" })
-        ] }),
-        p6.detail && /* @__PURE__ */ u2("div", { class: "d", children: p6.detail }),
-        p6.fix.built && /* @__PURE__ */ u2("div", { class: "hdoes", children: p6.fix.does }),
-        p6.fix.id && healthCardWaiting.value.includes(p6.fix.id) && /* @__PURE__ */ u2("div", { class: "hdoes hwait", role: "status", children: [
-          CARD_WAITING,
-          "."
-        ] }),
-        !p6.fix.built && open2 && /* @__PURE__ */ u2("div", { class: "hhow", id: hid, children: [
-          p6.fix.how ? /* @__PURE__ */ u2("span", { children: p6.fix.how }) : /* @__PURE__ */ u2("span", { children: "Only you can take this step: the line above says what is wrong." }),
-          cmd && /* @__PURE__ */ u2("button", { type: "button", class: "mini", "aria-label": `Copy the command: ${cmd}`, onClick: copy, children: "Copy" })
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "hact", children: p6.fix.built ? /* @__PURE__ */ u2(FixButton, { f: p6.fix, label: p6.title }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-expanded": open2 ? "true" : "false", "aria-controls": open2 ? hid : void 0, onClick: () => setOpen2(!open2), children: "How to fix" }) })
-    ] });
-  }
-  function Health() {
-    const res = healthResult.value, busy2 = healthBusy.value, err = healthError.value;
-    h2(() => {
-      if (!res && !busy2 && viaServer()) checkHealth();
-    }, []);
-    const n4 = res ? res.problems.length : 0, alone = res && res.standalone ? res.standalone : [];
-    return /* @__PURE__ */ u2("div", { class: "card wide", id: "healthCard", children: [
-      /* @__PURE__ */ u2("div", { class: "hhead", children: [
-        /* @__PURE__ */ u2("h2", { children: "Health" }),
-        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy2 ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy2 || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
-      ] }),
-      !viaServer() && !res && /* @__PURE__ */ u2("p", { class: "sub", children: "The health check needs the live server." }),
-      err && /* @__PURE__ */ u2("p", { class: "sub hbad", role: "alert", children: err }),
-      res && /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("p", { class: "sub hsum", children: n4 ? `${n4} thing${n4 === 1 ? "" : "s"} need${n4 === 1 ? "s" : ""} you.` : "Nothing needs you." }),
-        n4 > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "What needs you", children: res.problems.map((p6) => /* @__PURE__ */ u2(Problem, { p: p6 }, p6.id)) }),
-        res.stopped.length > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Errors that have stopped", children: res.stopped.map((s5) => /* @__PURE__ */ u2("li", { class: "hrow stopped", children: [
-          /* @__PURE__ */ u2("span", { class: "hico ok", "aria-hidden": "true", children: "✓" }),
-          /* @__PURE__ */ u2("div", { class: "hbody", children: [
-            /* @__PURE__ */ u2("div", { class: "t", children: [
-              "Stopped: ",
-              s5.area,
-              " ",
-              /* @__PURE__ */ u2("span", { class: "tag", children: [
-                s5.count,
-                " ×"
-              ] })
-            ] }),
-            /* @__PURE__ */ u2("div", { class: "d", children: [
-              s5.message,
-              " (",
-              s5.span,
-              ")"
-            ] })
-          ] }),
-          /* @__PURE__ */ u2("div", { class: "hact" })
-        ] })) }),
-        /* @__PURE__ */ u2("details", { class: "hfine", children: [
-          /* @__PURE__ */ u2("summary", { children: [
-            res.fine,
-            " check",
-            res.fine === 1 ? "" : "s",
-            " fine"
-          ] }),
-          /* @__PURE__ */ u2("p", { class: "sub", children: res.fine_names.join(", ") })
-        ] }),
-        (res.archiving || []).length > 0 && /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2("h3", { class: "hsub", children: "Archiving" }),
-          /* @__PURE__ */ u2("ul", { class: "hsteps", id: "healthArchiving", "aria-label": "Archiving", children: (res.archiving || []).map((a5) => /* @__PURE__ */ u2("li", { children: a5 })) })
-        ] }),
-        alone.length > 0 && /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2("h3", { class: "hsub", children: "If you need them" }),
-          /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Fixes no check can see", children: alone.map((f5) => /* @__PURE__ */ u2("li", { class: "hrow", "data-fix": f5.id, children: [
-            /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
-            /* @__PURE__ */ u2("div", { class: "hbody", children: [
-              /* @__PURE__ */ u2("div", { class: "t", children: f5.title }),
-              /* @__PURE__ */ u2("div", { class: "d", children: f5.does })
-            ] }),
-            /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2(FixButton, { f: f5, label: f5.title }) })
-          ] })) })
-        ] })
-      ] }),
-      res && res.backups && res.backups.length > 0 && /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("h3", { class: "hsub", children: "Backups" }),
-        /* @__PURE__ */ u2("p", { class: "sub", children: "Each day a closed zip of the database backup, your settings, staging and the vault's history goes to your OneDrive backup folder. ask creaite's chats, the people you follow, the engine and the live database never leave the laptop." }),
-        /* @__PURE__ */ u2("ul", { class: "hsteps", children: res.backups.map((b5) => /* @__PURE__ */ u2("li", { children: b5 })) })
-      ] }),
-      /* @__PURE__ */ u2(RestoreBackup, {}),
-      /* @__PURE__ */ u2("h3", { class: "hsub", children: "After every update, creaite does this for you" }),
-      /* @__PURE__ */ u2("ul", { class: "hsteps", children: [
-        /* @__PURE__ */ u2("li", { children: "Backs up first, and rolls back if a step fails" }),
-        /* @__PURE__ */ u2("li", { children: "Makes this vault's launcher again" }),
-        /* @__PURE__ */ u2("li", { children: "Asks Chrome to refresh its copy of the app's icon" }),
-        /* @__PURE__ */ u2("li", { children: "Restarts the live server on the new version, and runs the health check" })
-      ] })
-    ] });
-  }
-
-  // components/settings/MoreSettings.jsx
-  var LIMITS = {
-    "assistant.run_timeout_minutes": [1, 240],
-    "logging.max_mb": [1, 500],
-    "logging.keep_days": [1, 90],
-    "search.debounce_ms": [0, 2e3],
-    "search.ask_budget_chars": [1e3, 2e5],
-    "review.spot_check_every": [0, 100],
-    "logging.repeat_window_hours": [1, 168],
-    "live_mode.health_check_seconds": [5, 3600]
-  };
-  var CHOICES = { "dashboard.generate_days": [7, 14, 30], "logging.level": ["info", "debug"] };
-  function settingShown(v5) {
-    if (v5 === null || v5 === void 0 || v5 === "") return "none";
-    if (typeof v5 === "boolean") return v5 ? "on" : "off";
-    if (Array.isArray(v5)) return v5.length ? v5.every((x5) => typeof x5 !== "object") ? v5.join(", ") : `${v5.length} entries` : "none";
-    if (typeof v5 === "object") {
-      const n4 = Object.keys(v5).length;
-      return n4 ? `${n4} entries` : "none";
-    }
-    return String(v5);
-  }
-  function One({ s: s5 }) {
-    const [id2] = d2(rowId);
-    const [saved, setSaved] = d2(false);
-    const t47 = A2(0);
-    const named = { "aria-labelledby": id2, "aria-describedby": id2 + "h" };
-    const save2 = async (nv, undo) => {
-      if (!await saveSettings({ [s5.key]: nv })) {
-        undo();
-        return;
-      }
-      setSaved(true);
-      clearTimeout(t47.current);
-      t47.current = window.setTimeout(() => setSaved(false), 2500);
-    };
-    const d5 = s5.default, v5 = s5.value;
-    let control = null;
-    if (!s5.resettable) control = /* @__PURE__ */ u2("code", { class: "setval", children: settingShown(v5) });
-    else if (CHOICES[s5.key]) {
-      control = /* @__PURE__ */ u2("select", { ...named, value: String(v5), onChange: (e4) => {
-        const el2 = (
-          /** @type {HTMLSelectElement} */
-          e4.currentTarget
-        );
-        const nv = typeof d5 === "number" ? Number(el2.value) : el2.value;
-        save2(nv, () => {
-          el2.value = String(v5);
-        });
-      }, children: CHOICES[s5.key].map((o5) => /* @__PURE__ */ u2("option", { value: String(o5), children: String(o5) })) });
-    } else if (typeof d5 === "boolean") {
-      control = /* @__PURE__ */ u2(
-        "input",
-        {
-          type: "checkbox",
-          class: "switch",
-          ...named,
-          checked: !!v5,
-          onChange: (e4) => {
-            const el2 = (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget
-            );
-            save2(el2.checked, () => {
-              el2.checked = !!v5;
-            });
-          }
-        }
-      );
-    } else if (typeof d5 === "number") {
-      const [lo2, hi2] = LIMITS[s5.key] || [0, Infinity], whole = Number.isInteger(d5);
-      control = /* @__PURE__ */ u2(
-        "input",
-        {
-          type: "number",
-          ...named,
-          value: v5 ?? "",
-          min: lo2,
-          max: hi2 === Infinity ? void 0 : hi2,
-          step: whole ? 1 : "any",
-          style: "width:100px",
-          onChange: (e4) => {
-            const el2 = (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget
-            ), n4 = Number(el2.value);
-            if (el2.value.trim() === "" || !Number.isFinite(n4) || whole && !Number.isInteger(n4) || n4 < lo2 || n4 > hi2) {
-              snack(hi2 === Infinity ? `Use a ${whole ? "whole " : ""}number, ${lo2} or more` : `Use a ${whole ? "whole " : ""}number from ${lo2} to ${hi2}`);
-              el2.value = String(v5 ?? "");
-              return;
-            }
-            save2(n4, () => {
-              el2.value = String(v5 ?? "");
-            });
-          }
-        }
-      );
-    } else if (s5.key === "inbox.meetings_from") {
-      control = /* @__PURE__ */ u2(
-        "input",
-        {
-          type: "text",
-          ...named,
-          value: String(v5 ?? ""),
-          size: 8,
-          onChange: (e4) => {
-            const el2 = (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget
-            ), x5 = el2.value.trim().toLowerCase();
-            const nv = x5 === "monday" ? "monday" : /^\d+$/.test(x5) && Number(x5) <= 366 ? Number(x5) : null;
-            if (nv === null) {
-              snack("Use “monday” or a number of days (up to 366)");
-              el2.value = String(v5 ?? "");
-              return;
-            }
-            save2(nv, () => {
-              el2.value = String(v5 ?? "");
-            });
-          }
-        }
-      );
-    } else if (typeof d5 === "string" || d5 === null) {
-      control = /* @__PURE__ */ u2(
-        "input",
-        {
-          type: "text",
-          ...named,
-          value: v5 ?? "",
-          size: 14,
-          onChange: (e4) => {
-            const el2 = (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget
-            );
-            save2(el2.value.trim(), () => {
-              el2.value = v5 ?? "";
-            });
-          }
-        }
-      );
-    } else if (Array.isArray(d5) && (Array.isArray(v5) ? v5 : d5).every((x5) => typeof x5 === "string")) {
-      control = /* @__PURE__ */ u2(
-        "input",
-        {
-          type: "text",
-          ...named,
-          value: (Array.isArray(v5) ? v5 : []).join(", "),
-          size: 18,
-          placeholder: "Comma-separated",
-          onChange: (e4) => {
-            const el2 = (
-              /** @type {HTMLInputElement} */
-              e4.currentTarget
-            );
-            save2(el2.value.split(",").map((x5) => x5.trim()).filter(Boolean), () => {
-              el2.value = (Array.isArray(v5) ? v5 : []).join(", ");
-            });
-          }
-        }
-      );
-    } else control = /* @__PURE__ */ u2("span", { class: "sub setval", children: settingShown(v5) });
-    return /* @__PURE__ */ u2(
-      SettingRow,
-      {
-        id: id2,
-        label: s5.label,
-        line: s5.line,
-        note: `Default: ${settingShown(d5)}. ${s5.reason}`,
-        changed: s5.changed,
-        keys: [s5.key],
-        resettable: s5.resettable,
-        fixedWhy: s5.fixed_why,
-        saved,
-        children: control
-      }
-    );
-  }
-  function MoreSettings({ covered: covered2 }) {
-    const c5 = catalogue.value;
-    if (!c5) return null;
-    const w6 = settingWords(query.value);
-    const list = c5.settings.filter((s5) => s5.tier !== "essentials" && !covered2(s5.key) && (!w6.length || settingHasAll(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6)));
-    if (!list.length) return null;
-    const groupOf2 = (s5) => s5.tier === "developer" ? "Developer" : s5.group;
-    const groups = [...c5.groups.filter((g5) => g5 !== "Developer"), "Developer"].filter((g5) => list.some((s5) => groupOf2(s5) === g5));
-    return /* @__PURE__ */ u2("div", { class: "setstack", children: groups.map((g5) => /* @__PURE__ */ u2("div", { class: "card", "data-more": g5, children: [
-      /* @__PURE__ */ u2("h2", { children: g5 }),
-      list.filter((s5) => groupOf2(s5) === g5).map((s5) => /* @__PURE__ */ u2(One, { s: s5 }, s5.key))
-    ] })) });
-  }
-
-  // components/Tabs.jsx
-  var tabId = (idBase, id2) => `${idBase}-tab-${id2}`;
-  var panelId = (idBase, id2) => `${idBase}-panel-${id2}`;
-  function Tabs({ items: items2, tabs, selected, onSelect, label, className, cls, tabClass, controls, idBase, wrap, id: id2, vertical }) {
-    const list = items2 || tabs || [], round = wrap ?? !items2;
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), keyed = A2(false);
-    _2(() => {
-      if (!keyed.current) return;
-      keyed.current = false;
-      const b5 = box.current && /** @type {HTMLElement | null} */
-      box.current.querySelector('[role="tab"][aria-selected="true"]');
-      if (b5) b5.focus();
-    });
-    const onKey = (e4) => {
-      const i5 = list.findIndex((t47) => t47.id === selected), last = list.length - 1;
-      const next = vertical ? "ArrowDown" : "ArrowRight", prev = vertical ? "ArrowUp" : "ArrowLeft";
-      let j5 = e4.key === next ? i5 + 1 : e4.key === prev ? i5 - 1 : e4.key === "Home" ? 0 : e4.key === "End" ? last : null;
-      if (j5 === null || e4.metaKey || e4.ctrlKey || e4.altKey) return;
-      e4.preventDefault();
-      j5 = round ? (j5 + list.length) % list.length : Math.max(0, Math.min(last, j5));
-      const to2 = list[j5];
-      if (!to2) return;
-      keyed.current = true;
-      onSelect(to2.id);
-    };
-    const listCls = items2 ? className : ["tabs", cls, className].filter(Boolean).join(" ");
-    return /* @__PURE__ */ u2("div", { class: listCls, id: id2, role: "tablist", "aria-label": label, "aria-orientation": vertical ? "vertical" : void 0, ref: box, onKeyDown: onKey, children: list.map((t47, n4) => {
-      const on2 = t47.id === selected, inTab = on2 || n4 === 0 && !list.some((x5) => x5.id === selected);
-      return /* @__PURE__ */ u2(S2, { children: [
-        t47.before,
-        /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            role: "tab",
-            class: [tabClass, t47.className].filter(Boolean).join(" ") || void 0,
-            "aria-selected": on2 ? "true" : "false",
-            id: t47.tabId || (idBase ? tabId(idBase, t47.id) : void 0),
-            "aria-current": t47.current ? "date" : void 0,
-            "aria-controls": t47.controls || (idBase ? panelId(idBase, t47.id) : controls),
-            "aria-label": t47.name,
-            tabIndex: inTab ? 0 : -1,
-            "data-tab": t47.id,
-            ...dataAttrs(t47.data),
-            onClick: () => onSelect(t47.id),
-            children: [
-              t47.label,
-              t47.count != null ? /* @__PURE__ */ u2(S2, { children: [
-                " ",
-                /* @__PURE__ */ u2("span", { class: "sub", children: t47.count })
-              ] }) : null
-            ]
-          }
-        )
-      ] }, t47.id);
-    }) });
-  }
-  function drawTabs(host2, props) {
-    R(/* @__PURE__ */ u2(Tabs, { ...props }), host2);
-  }
-
-  // core/editorProfiles.js
-  var HEAD_SHIFT = 2;
-  var ED_TOOLS = {
-    text: { id: "text", label: "T", name: "Text", tip: "Plain text (also clears a heading)", run: (c5) => c5.setParagraph(), on: (e4) => !e4.isActive("heading") },
-    h1: { id: "h1", label: "H1", name: "Heading 1", run: (c5) => c5.toggleHeading({ level: 1 }), on: (e4) => e4.isActive("heading", { level: 1 }) },
-    h2: { id: "h2", label: "H2", name: "Heading 2", run: (c5) => c5.toggleHeading({ level: 2 }), on: (e4) => e4.isActive("heading", { level: 2 }) },
-    h3: { id: "h3", label: "H3", name: "Heading 3", run: (c5) => c5.toggleHeading({ level: 3 }), on: (e4) => e4.isActive("heading", { level: 3 }) },
-    b: { id: "b", keys: "Meta+B Control+B", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: (c5) => c5.toggleBold(), on: (e4) => e4.isActive("bold") },
-    i: { id: "i", keys: "Meta+I Control+I", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: (c5) => c5.toggleItalic(), on: (e4) => e4.isActive("italic") },
-    s: { id: "s", keys: "Meta+Shift+X Control+Shift+X", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: (c5) => c5.toggleStrike(), on: (e4) => e4.isActive("strike") },
-    code: { id: "code", label: "</>", name: "Code", run: (c5) => c5.toggleCode(), on: (e4) => e4.isActive("code") },
-    ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: (c5) => c5.toggleBulletList(), on: (e4) => e4.isActive("bulletList") },
-    ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: (c5) => c5.toggleOrderedList(), on: (e4) => e4.isActive("orderedList") },
-    task: { id: "task", label: "☑", name: "Checklist", run: (c5) => c5.toggleTaskList(), on: (e4) => e4.isActive("taskList") },
-    outdent: {
-      id: "outdent",
-      keys: "Shift+Tab",
-      hint: "⇧Tab",
-      label: "⇤",
-      name: "Outdent",
-      tip: "Outdent (⇧Tab)",
-      rc: "outdent",
-      run: (c5, e4) => c5.liftListItem(itemType(e4)),
-      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
-    },
-    indent: {
-      id: "indent",
-      keys: "Tab",
-      hint: "Tab",
-      label: "⇥",
-      name: "Indent",
-      tip: "Indent: a nested list (Tab)",
-      rc: "indent",
-      run: (c5, e4) => c5.sinkListItem(itemType(e4)),
-      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
-    },
-    quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: (c5) => c5.toggleBlockquote(), on: (e4) => e4.isActive("blockquote") },
-    link: { id: "link", keys: "Meta+Shift+K Control+Shift+K", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: (e4) => e4.isActive("link") },
-    unlink: { id: "unlink", label: "Unlink", name: "Remove the link", rc: "unlink", run: (c5) => c5.extendMarkRange("link").unsetLink(), can: (e4) => e4.isActive("link") },
-    clear: { id: "clear", label: "Clear", name: "Clear formatting", rc: "removeFormat", run: (c5) => c5.unsetAllMarks().clearNodes() },
-    note: { id: "note", label: "[[ ]]", name: "Link to a note", tip: "Link to a note ([[)", host: true },
-    person: { id: "person", label: "@", name: "Mention a person", tip: "Mention a person (@)", host: true },
-    item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
-    table: { id: "table", label: "▦", name: "Table", host: true },
-    image: { id: "image", label: "Image", name: "Add a picture", hint: "PNG or JPEG, 2 MB", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
-    undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
-    redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
-  };
-  var ED_MENUS = {
-    heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
-    list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
-    /* #134: the report sheets' List menu: a sheet's field is Current state's, which has no checklist until the editor does (v2.2.0) */
-    listsheet: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
-    insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map((x5) => ED_TOOLS[x5]) }
-  };
-  var ED_SLASH = {
-    text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", alias: ["paragraph", "plain"], run: (c5) => c5.setParagraph() },
-    h1: { id: "h1", group: "Text", name: "Heading 1", desc: "Big section heading", icon: "H1", alias: ["h1", "heading1"], run: (c5) => c5.setHeading({ level: 1 }) },
-    h2: { id: "h2", group: "Text", name: "Heading 2", desc: "Medium section heading", icon: "H2", alias: ["h2", "heading2"], run: (c5) => c5.setHeading({ level: 2 }) },
-    h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", alias: ["h3", "heading3"], run: (c5) => c5.setHeading({ level: 3 }) },
-    ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", alias: ["ul", "bullet", "bullets"], is: "bulletList", run: (c5) => c5.toggleBulletList() },
-    ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", alias: ["ol", "num", "number", "numbered"], is: "orderedList", run: (c5) => c5.toggleOrderedList() },
-    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "tick", "check", "checkbox"], is: "taskList", node: "taskList", run: (c5) => c5.toggleTaskList() },
-    quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", alias: ["quote", "bq", "blockquote"], is: "blockquote", run: (c5) => c5.toggleBlockquote() },
-    codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
-    table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
-    image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
-    link: { id: "link", group: "Link", name: "Link", desc: "A web page or an email address (⌘⇧K)", icon: "↗", alias: ["url", "web", "href", "address"], hook: "link" },
-    item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", alias: ["item", "work", "workitem", "issue", "action", "risk", "decision"], host: true },
-    person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
-    note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
-    "tpl:stakeholder": { id: "tpl:stakeholder", group: "Templates", name: "Stakeholder", desc: "Role, what matters to them, how they work", icon: "◇", host: true },
-    "tpl:lessons-learned": { id: "tpl:lessons-learned", group: "Templates", name: "Lessons learned", desc: "What happened, what to change", icon: "◇", host: true },
-    "tpl:working-session": { id: "tpl:working-session", group: "Templates", name: "Working session", desc: "A conversation: its date and who it was with", icon: "◇", host: true }
-  };
-  var ED_SLASH_ROWS = {
-    notes: [
-      "text",
-      "h1",
-      "h2",
-      "h3",
-      "ul",
-      "ol",
-      "task",
-      "quote",
-      "codeblock",
-      "table",
-      "image",
-      "link",
-      "item",
-      "person",
-      "note",
-      "tpl:stakeholder",
-      "tpl:lessons-learned",
-      "tpl:working-session"
-    ],
-    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
-    plain: [],
-    none: []
-  };
-  function slashRank(r4, q5) {
-    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " "), typed2 = ql2.split(" ");
-    if (!ql2) return 9;
-    const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
-    const inOrder2 = (name2) => {
-      const w6 = name2.split(" ");
-      let at2 = 0;
-      return typed2.every((t47) => {
-        while (at2 < w6.length && !w6[at2].startsWith(t47)) at2++;
-        return at2++ < w6.length;
-      });
-    };
-    if (ids.includes(ql2)) return 0;
-    if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
-    if (typed2.length > 1 && inOrder2(name)) return 1;
-    if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
-    if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
-    return 9;
-  }
-  function slashRows(profile, hostRows, schema, q5 = "") {
-    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
-    const avail = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
-    if (!ql2) return avail;
-    const rank = (r4) => slashRank(r4, ql2);
-    return avail.map((r4, i5) => ({ r: r4, i: i5, k: rank(r4) })).filter((x5) => x5.k < 9).sort((a5, b5) => a5.k - b5.k || a5.i - b5.i).map((x5) => x5.r);
-  }
-  function itemType(e4) {
-    return e4.isActive("taskItem") ? "taskItem" : "listItem";
-  }
-  var ED_PROFILES = {
-    notes: {
-      tip: "Notes: one line, grouped into hover menus (Heading, List, Insert)",
-      tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"]
-    },
-    capture: {
-      tip: "The capture drawer: the shared buttons, flat (no pickers yet)",
-      tools: [
-        "h1",
-        "h2",
-        "h3",
-        "|",
-        "b",
-        "i",
-        "s",
-        "code",
-        "|",
-        "ul",
-        "ol",
-        "task",
-        "outdent",
-        "indent",
-        "quote",
-        "|",
-        "link",
-        "unlink",
-        "clear",
-        "|",
-        "undo",
-        "redo"
-      ]
-    },
-    current: {
-      tip: "Current state",
-      tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"]
-    },
-    sheet: {
-      tip: "A report sheet's text: Current state's editor, one line, grouped (#134)",
-      tools: ["m:heading", "|", "b", "i", "s", "|", "m:listsheet", "quote", "|", "link", "|", "undo", "redo"]
-    },
-    plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
-    none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
-  };
-  function menuFor(m5, hostTools) {
-    if (!m5) return null;
-    const list = (
-      /** @type {(ToolDef|"|")[]} */
-      (m5.items || []).filter((x5) => x5 === "|" || !x5.host || hostTools.includes(x5.id))
-    );
-    while (list.length && list[0] === "|") list.shift();
-    while (list.length && list[list.length - 1] === "|") list.pop();
-    return list.some((x5) => x5 !== "|") ? { ...m5, items: list } : null;
-  }
-  function profileTools(profile, hostTools = []) {
-    const out = [];
-    for (const id2 of (ED_PROFILES[profile] || ED_PROFILES.none).tools) {
-      if (id2 === "|") {
-        if (out.length && out[out.length - 1] !== "|") out.push("|");
-        continue;
-      }
-      if (id2.startsWith("m:")) {
-        const m5 = menuFor(ED_MENUS[id2.slice(2)], hostTools);
-        if (m5) out.push(m5);
-        continue;
-      }
-      const t47 = ED_TOOLS[id2];
-      if (t47 && (!t47.host || hostTools.includes(id2))) out.push(t47);
-    }
-    while (out.length && out[out.length - 1] === "|") out.pop();
-    return out;
-  }
-  function runTool(h5, id2) {
-    const t47 = ED_TOOLS[id2];
-    if (!h5 || !t47 || !t47.run) return false;
-    const e4 = h5.editor;
-    t47.run(e4.chain().focus(), e4).run();
-    return true;
   }
 
   // ../../vendor/tiptap/tiptap.module.js
@@ -27852,8 +25835,73 @@ ${s5}`;
       return ["a", isLinkUrl(h5) ? { class: "tlink", href: h5, target: "_blank", rel: "noopener noreferrer" } : { class: "tlink" }, 0];
     }
   });
+  var EMAIL_ATTRS = ["style", "align", "cellpadding", "cellspacing", "border", "width", "valign", "bgcolor"];
+  var EmailStyles = j4.create({
+    name: "emailStyles",
+    addGlobalAttributes() {
+      return [{
+        types: ["paragraph", "table", "tableRow", "tableCell", "tableHeader"],
+        attributes: Object.fromEntries(EMAIL_ATTRS.map((a5) => [a5, {
+          default: null,
+          parseHTML: (el2) => el2.getAttribute(a5),
+          renderHTML: (v5) => v5[a5] == null ? {} : a5 === "style" ? { style: v5.style, "data-cx-style": v5.style } : { [a5]: v5[a5] }
+        }]))
+      }];
+    }
+  });
+  var EmailSpan = de.create({
+    name: "emailSpan",
+    inclusive: false,
+    addAttributes() {
+      return { style: { default: null, parseHTML: (el2) => el2.getAttribute("style"), renderHTML: (a5) => a5.style ? { style: a5.style, "data-cx-style": a5.style } : {} } };
+    },
+    parseHTML() {
+      return [{ tag: "span[style]" }];
+    },
+    renderHTML({ HTMLAttributes }) {
+      return ["span", HTMLAttributes, 0];
+    }
+  });
+  var emailSet = (list) => list.filter((x5) => x5 && ["starterKit", "bold", "italic", "hardBreak", "tableKit", "table"].includes(x5.name)).map((x5) => x5.name === "starterKit" ? x5.configure({
+    heading: false,
+    blockquote: false,
+    codeBlock: false,
+    horizontalRule: false,
+    strike: false,
+    code: false,
+    bold: false,
+    italic: false,
+    link: false,
+    hardBreak: false,
+    bulletList: false,
+    orderedList: false,
+    listItem: false,
+    listKeymap: false,
+    trailingNode: false
+  }) : x5).concat([EmailStyles, EmailSpan]);
+  function edEmailHtml(editor) {
+    try {
+      editor.view.domObserver.flush();
+    } catch (e4) {
+    }
+    const t47 = new DOMParser().parseFromString(editor.getHTML(), "text/html").body;
+    t47.querySelectorAll("[data-cx-style]").forEach((e4) => {
+      e4.setAttribute("style", e4.getAttribute("data-cx-style"));
+      e4.removeAttribute("data-cx-style");
+    });
+    t47.querySelectorAll("colgroup").forEach((e4) => e4.remove());
+    t47.querySelectorAll('[colspan="1"],[rowspan="1"]').forEach((e4) => {
+      if (e4.getAttribute("colspan") === "1") e4.removeAttribute("colspan");
+      if (e4.getAttribute("rowspan") === "1") e4.removeAttribute("rowspan");
+    });
+    t47.querySelectorAll("td,th").forEach((c5) => {
+      const k5 = c5.children;
+      if (k5.length === 1 && k5[0].tagName === "P" && !k5[0].getAttribute("style") && c5.childNodes.length === 1) k5[0].replaceWith(...k5[0].childNodes);
+    });
+    return t47.innerHTML;
+  }
   function creaiteEditor(el2, o5 = {}) {
-    const features = o5.features || "current", plain = features === "plain", links = !plain || !!o5.links, multiline = o5.multiline !== false, headShift = plain ? 0 : o5.headShift | 0;
+    const features = o5.features || "current", plain = features === "plain", email = features === "email", links = !email && (!plain || !!o5.links), multiline = o5.multiline !== false, headShift = plain || email ? 0 : o5.headShift | 0;
     if (
       /** @type {any} */
       el2.cxed
@@ -27865,6 +25913,10 @@ ${s5}`;
         orig = String(v5 ?? "");
         return { json: plainDoc(orig, links) };
       }
+      if (email) {
+        orig = String(v5 ?? o5.html ?? "");
+        return { html: orig };
+      }
       if (o5.html !== void 0 && v5 === void 0) {
         orig = null;
         return { html: o5.html };
@@ -27873,7 +25925,7 @@ ${s5}`;
       env = B1(orig);
       return { markdown: headsIn(env.inner, headShift) };
     };
-    const content = load2(plain ? o5.text : o5.markdown);
+    const content = load2(plain ? o5.text : email ? o5.html : o5.markdown);
     const props = {
       ...o5.editorProps || {},
       handleKeyDown: (view, e4) => {
@@ -27902,13 +25954,14 @@ ${s5}`;
       ...plain ? { transformPastedText: (t47) => multiline ? t47.replace(/\r\n?/g, "\n") : t47.replace(/\s*[\r\n]+\s*/g, " ") } : {}
     };
     const editor = Np({ mount: el2 }, {
-      features,
+      features: email ? "notes" : features,
       ...content,
       injectCSS: false,
       editorProps: props,
-      extensions: (list) => {
+      extensions: (email0) => {
+        const list = email ? emailSet(email0) : email0;
         const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5 && x5.name === "link" ? x5.extend({ inclusive: false }) : x5 && x5.name === "starterKit" && headShift ? x5.configure({ heading: { levels: [1, 2, 3] } }) : x5);
-        return [...out, ...plain ? links ? [PlainLink] : [] : [ClaimMark], ...links ? [j4.create({ name: "cxLinkGuard", addProseMirrorPlugins: () => [linkGuard(ED_QUIET)] })] : [], ...o5.extensions || []];
+        return [...out, ...plain ? links ? [PlainLink] : [] : email ? [] : [ClaimMark], ...links ? [j4.create({ name: "cxLinkGuard", addProseMirrorPlugins: () => [linkGuard(ED_QUIET)] })] : [], ...o5.extensions || []];
       }
     });
     if (links) scrubNow(editor, ED_QUIET);
@@ -27933,10 +25986,17 @@ ${s5}`;
       value: () => {
         if (!touched && orig !== null) return orig;
         if (plain) return plainText(editor.state.doc);
+        if (email) return edEmailHtml(editor);
         const md2 = headsOut(_1(editor, dropClaims(editor.getJSON())).markdown, headShift);
         return env ? H1(env, md2) : md2;
       },
       setValue: (v5) => {
+        if (email) {
+          try {
+            editor.view.domObserver.flush();
+          } catch (e4) {
+          }
+        }
         const c5 = load2(v5);
         editor.chain().setMeta(ED_QUIET, true).setMeta("addToHistory", false).setContent(c5.json ?? c5.html ?? c5.markdown, { emitUpdate: false, ...c5.markdown !== void 0 ? { contentType: "markdown" } : {} }).run();
         touched = false;
@@ -28027,6 +26087,12 @@ ${s5}`;
       const text2 = doc.textBetween(from, to2, "\n");
       return text2.trim() ? { from, to: to2, text: text2, inline: false } : null;
     }
+    if (h5.features === "email") {
+      const $a2 = doc.resolve(from), $b2 = doc.resolve(to2);
+      if (!$a2.sameParent($b2) || !$a2.parent.isTextblock) return null;
+      const text2 = doc.textBetween(from, to2, "\n", "\n");
+      return text2.trim() ? { from, to: to2, text: text2, inline: true } : null;
+    }
     const $f2 = doc.resolve(from), $t2 = doc.resolve(to2);
     if ($f2.sameParent($t2) && $f2.parent.isTextblock) {
       const cut = $f2.parent.cut($f2.parentOffset, $t2.parentOffset);
@@ -28049,7 +26115,14 @@ ${s5}`;
     if (!now || now.text !== r4.text) return false;
     let content;
     if (h5.multiline === false) text = String(text).replace(/\s*[\r\n]+\s*/g, " ").trim();
-    if (h5.features === "plain") {
+    if (h5.features === "email") {
+      const L3 = String(text).replace(/\r\n?/g, "\n").trim().split(/\s*\n\s*/).filter(Boolean);
+      content = [];
+      L3.forEach((l6, i5) => {
+        if (i5) content.push({ type: "hardBreak" });
+        content.push({ type: "text", text: l6 });
+      });
+    } else if (h5.features === "plain") {
       const L3 = String(text).replace(/\r\n?/g, "\n").split("\n");
       content = L3.length === 1 ? L3[0] ? [{ type: "text", text: L3[0] }] : [] : plainDoc(L3.join("\n")).content;
     } else {
@@ -28124,6 +26197,2029 @@ ${s5}`;
     else if (kind === "task") c5.toggleTaskList();
     else if (kind === "quote") c5.toggleBlockquote();
     return c5.run();
+  }
+
+  // components/Menu.jsx
+  var KB_OPEN = null;
+  var menuItemsIn = (box) => box ? (
+    /** @type {HTMLElement[]} */
+    [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
+  ) : [];
+  function menuMove(e4, items2) {
+    const L3 = items2, i5 = L3.indexOf(
+      /** @type {HTMLElement} */
+      document.activeElement
+    );
+    let to2 = null;
+    if (e4.key === "ArrowDown") to2 = L3[(i5 + 1) % L3.length];
+    else if (e4.key === "ArrowUp") to2 = L3[(i5 < 0 ? 0 : i5 + L3.length - 1) % L3.length];
+    else if (e4.key === "Home") to2 = L3[0];
+    else if (e4.key === "End") to2 = L3[L3.length - 1];
+    else return false;
+    e4.preventDefault();
+    e4.stopPropagation();
+    to2?.focus({ preventScroll: true });
+    return true;
+  }
+  var dataAttrs = (
+    /** @param {Record<string, string> | undefined} d */
+    (d5) => Object.fromEntries(Object.entries(d5 || {}).map(([k5, v5]) => [`data-${k5}`, v5]))
+  );
+  function MenuPanel({ label, id: id2, cls, bare, style, hidden, anchor, onClose, onKey, autoFocus = true, focusKey, boxRef, children }) {
+    const own = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), box = boxRef || own;
+    const closeRef = A2(onClose);
+    closeRef.current = onClose;
+    _2(() => {
+      if (hidden || !autoFocus) return;
+      tipHide();
+      (menuItemsIn(box.current)[0] || box.current)?.focus({ preventScroll: true });
+    }, [hidden, focusKey]);
+    h2(() => {
+      if (hidden) return;
+      const away = (e4) => {
+        const t47 = (
+          /** @type {Node} */
+          e4.target
+        );
+        if (!box.current?.contains(t47) && !(anchor && anchor.contains(t47))) closeRef.current("away");
+      };
+      document.addEventListener("pointerdown", away, true);
+      document.addEventListener("click", away, true);
+      return () => {
+        document.removeEventListener("pointerdown", away, true);
+        document.removeEventListener("click", away, true);
+      };
+    }, [hidden, anchor]);
+    const keys = (e4) => {
+      if (onKey) onKey(e4);
+      if (e4.defaultPrevented) return;
+      const field = (
+        /** @type {Element} */
+        e4.target.matches("input,textarea,select")
+      );
+      if (!field && menuMove(e4, menuItemsIn(box.current))) return;
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        onClose("esc");
+      } else if (e4.key === "Tab") onClose("tab");
+    };
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: `${bare ? "" : "ddmenu newmenu on "}${cls || ""}`.trim(),
+        id: id2,
+        role: "menu",
+        "aria-label": label,
+        ref: box,
+        tabIndex: -1,
+        hidden,
+        style,
+        onKeyDown: keys,
+        children
+      }
+    );
+  }
+  function MenuItems({ items: items2, onPick }) {
+    return /* @__PURE__ */ u2(S2, { children: items2.map((it2, i5) => it2.sep ? /* @__PURE__ */ u2("hr", { role: "separator" }, `s${i5}`) : it2.head ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: it2.head }, `h${i5}`) : it2.note ? /* @__PURE__ */ u2("div", { class: "sub mnote", role: "presentation", children: it2.note }, `n${i5}`) : /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
+        tabIndex: -1,
+        class: it2.cls,
+        "data-tip": it2.tip,
+        "aria-checked": it2.checked === void 0 ? void 0 : it2.checked ? "true" : "false",
+        "aria-disabled": it2.disabled ? "true" : void 0,
+        ...dataAttrs(it2.data),
+        onClick: () => onPick(it2),
+        children: [
+          it2.icon || it2.radio && it2.checked ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon || "check" }) : null,
+          it2.icon || it2.line ? /* @__PURE__ */ u2("span", { children: [
+            /* @__PURE__ */ u2("b", { children: [
+              it2.name,
+              it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
+                " · ",
+                it2.mark
+              ] }) : null
+            ] }),
+            it2.line ? /* @__PURE__ */ u2("small", { children: it2.line }) : null
+          ] }) : /* @__PURE__ */ u2(S2, { children: [
+            it2.name,
+            it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
+              " · ",
+              it2.mark
+            ] }) : null
+          ] })
+        ]
+      },
+      it2.id
+    )) });
+  }
+  function Menu({
+    label,
+    items: items2,
+    onPick,
+    icon,
+    tip,
+    why,
+    onBlocked,
+    cls,
+    btnCls,
+    menuLabel,
+    left,
+    data,
+    id: id2,
+    ariaLabel,
+    chevron = true,
+    labelCls,
+    menuId,
+    menuCls,
+    hidden,
+    hover
+  }) {
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    );
+    const back2 = A2(false);
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const byPointer = A2(false);
+    const isOpen = A2(false);
+    isOpen.current = open2;
+    const close = (how) => {
+      back2.current = how === "esc";
+      if (back2.current) btn.current?.focus({ preventScroll: true });
+      setOpen2(false);
+      if (hover && menuGroup.current === btn.current) menuGroup.close();
+    };
+    const closeRef = A2(close);
+    closeRef.current = close;
+    const fold = A2(() => closeRef.current("esc")).current;
+    h2(() => () => {
+      if (KB_OPEN === fold) KB_OPEN = null;
+    }, []);
+    h2(() => {
+      const b5 = btn.current;
+      if (!hover || !b5) return;
+      return hoverAttach(b5, {
+        group: menuGroup,
+        focusOpens: false,
+        panel: () => box.current,
+        isOpen: () => isOpen.current,
+        open: () => {
+          if (why || isOpen.current) return;
+          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+          KB_OPEN = null;
+          byPointer.current = true;
+          tipHide();
+          setOpen2(true);
+        },
+        close: () => setOpen2(false)
+      });
+    }, [hover, why]);
+    _2(() => {
+      if (!hover || !open2) return;
+      const b5 = btn.current, m5 = box.current;
+      if (!b5 || !m5) return;
+      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
+      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
+    }, [open2]);
+    h2(() => {
+      if (!open2 && back2.current) {
+        back2.current = false;
+        btn.current?.focus();
+      }
+    }, [open2]);
+    const pick = (it2) => {
+      if (it2.disabled) return;
+      if (it2.checked === void 0 || it2.radio) close("pick");
+      onPick(it2.id);
+    };
+    const onBtnKey = (e4) => {
+      if (e4.key !== "ArrowDown" || why) return;
+      if (!open2) {
+        e4.preventDefault();
+        byPointer.current = false;
+        if (hover) {
+          if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
+          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+          KB_OPEN = fold;
+          menuGroup.release(btn.current);
+        }
+        setOpen2(true);
+      } else if (byPointer.current) {
+        e4.preventDefault();
+        byPointer.current = false;
+        menuGroup.release(btn.current);
+        menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
+      }
+    };
+    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: btnCls || "btn",
+          id: id2,
+          ref: btn,
+          hidden,
+          "aria-haspopup": "menu",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": ariaLabel,
+          "aria-disabled": why ? "true" : void 0,
+          "data-tip": why || tip,
+          ...dataAttrs(data),
+          onKeyDown: onBtnKey,
+          onClick: (e4) => {
+            e4.preventDefault();
+            if (why) {
+              onBlocked && onBlocked();
+              return;
+            }
+            if (hover) menuGroup.release(btn.current);
+            if (open2 && byPointer.current) {
+              byPointer.current = false;
+              menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
+              return;
+            }
+            byPointer.current = false;
+            if (open2) close("pick");
+            else setOpen2(true);
+          },
+          children: [
+            icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
+            /* @__PURE__ */ u2("span", { class: labelCls, children: label }),
+            chevron ? /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" }) : null
+          ]
+        }
+      ),
+      open2 ? /* @__PURE__ */ u2(
+        MenuPanel,
+        {
+          label: menuLabel || ariaLabel || label,
+          id: menuId,
+          cls: `${left ? "left " : ""}${menuCls || ""}`,
+          anchor: btn.current,
+          onClose: close,
+          boxRef: box,
+          autoFocus: !byPointer.current,
+          children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
+        }
+      ) : null
+    ] });
+  }
+  function mountMenu(box, props) {
+    R(/* @__PURE__ */ u2(Menu, { ...props }), box);
+  }
+  function mountMenuPanel(box, props, items2, field) {
+    R(/* @__PURE__ */ u2(MenuPanel, { ...props, children: [
+      field ? /* @__PURE__ */ u2("input", { type: "text", "aria-label": "Type here" }) : null,
+      /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: () => {
+      } })
+    ] }), box);
+  }
+  var POP = null;
+  function PopMenu({ anchor, props }) {
+    const { label, items: items2, onPick, id: id2, cls, align, at: at2, loading: loading2 } = props;
+    const wrap = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      const el2 = (
+        /** @type {HTMLElement | null} */
+        wrap.current?.firstElementChild || null
+      );
+      if (!el2) return;
+      const w6 = el2.offsetWidth, h5 = el2.offsetHeight;
+      const r4 = at2 ? { left: at2.x, right: at2.x, top: at2.y, bottom: at2.y } : anchor && anchor.isConnected ? anchor.getBoundingClientRect() : { left: innerWidth / 2, right: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
+      let top = r4.bottom + (at2 ? 0 : 4);
+      if (top + h5 > innerHeight - 8) top = Math.max(8, r4.top - h5 - 4);
+      const left = align === "right" ? r4.right - w6 : r4.left;
+      el2.style.top = `${Math.max(8, Math.min(top, innerHeight - h5 - 8))}px`;
+      el2.style.left = `${Math.max(8, Math.min(left, innerWidth - w6 - 8))}px`;
+    });
+    const pick = (it2) => {
+      if (it2.disabled) return;
+      if (it2.checked === void 0) closeMenu("pick");
+      onPick(it2.id);
+    };
+    return /* @__PURE__ */ u2("div", { ref: wrap, children: /* @__PURE__ */ u2(MenuPanel, { label, id: id2, cls: `pop${cls ? " " + cls : ""}`, anchor, onClose: closeMenu, focusKey: loading2, children: loading2 ? /* @__PURE__ */ u2("div", { class: "msk", "aria-hidden": "true", children: [
+      /* @__PURE__ */ u2("i", {}),
+      /* @__PURE__ */ u2("i", {}),
+      /* @__PURE__ */ u2("i", {})
+    ] }) : /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick }) }) });
+  }
+  function openMenu(anchor, props) {
+    if (POP && POP.anchor !== anchor) closeMenu("away");
+    if (!POP) {
+      const host2 = document.createElement("div");
+      host2.className = "pophost";
+      document.body.appendChild(host2);
+      POP = { host: host2, anchor, props };
+      if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    }
+    POP.props = props;
+    R(/* @__PURE__ */ u2(PopMenu, { anchor, props }), POP.host);
+  }
+  function closeMenu(how = "away") {
+    const p6 = POP;
+    if (!p6) return;
+    POP = null;
+    R(null, p6.host);
+    p6.host.remove();
+    const a5 = p6.anchor;
+    if (a5 && a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
+    if ((how === "esc" || how === "tab") && a5 && a5.isConnected) a5.focus({ preventScroll: true });
+    if (p6.props.onClose) p6.props.onClose(how);
+  }
+  function menuOpenFor(anchor) {
+    return !!POP && (anchor === void 0 || POP.anchor === anchor);
+  }
+
+  // components/FilterBar.jsx
+  var FB_BARS = /* @__PURE__ */ new WeakMap();
+  var FB_OPEN = /* @__PURE__ */ new Set();
+  var FB_MORE = "+more";
+  var fbBtnId = (f5) => f5.btnId;
+  var fbMenuId = (f5) => f5.menuId || `${f5.id}Menu`;
+  var fbMain = (p6) => p6.fields.filter((f5) => f5.main);
+  var fbPickList = (p6) => [...p6.fields.filter((f5) => f5.main), ...p6.fields.filter((f5) => !f5.main)];
+  function fbState(host2) {
+    let s5 = FB_BARS.get(host2);
+    if (!s5) {
+      s5 = { props: { fields: [], onSelect: () => {
+      } }, ui: { open: null, keep: null, q: {}, fold: [] }, host: host2 };
+      FB_BARS.set(host2, s5);
+    }
+    return s5;
+  }
+  function drawFilterBar(host2, props) {
+    const s5 = fbState(host2);
+    s5.props = props;
+    if (!s5.ui.open) s5.ui.keep = null;
+    fbPaint(s5);
+    fbFit(s5);
+  }
+  function filterBarOpen(host2) {
+    const s5 = host2 && FB_BARS.get(host2), o5 = s5 && s5.ui.open;
+    return o5 === FB_MORE ? "more" : o5 || null;
+  }
+  function openFilterBar(host2, which) {
+    const s5 = host2 && FB_BARS.get(host2);
+    if (!s5) return;
+    fbOpen(s5, which === "more" ? FB_MORE : which);
+  }
+  function closeFilterBar(host2, back2) {
+    const s5 = host2 && FB_BARS.get(host2);
+    if (s5) fbClose(s5, !!back2);
+  }
+  function fitFilterBar(host2) {
+    const s5 = host2 && FB_BARS.get(host2);
+    if (s5) fbFit(s5);
+  }
+  function fbPaint(s5) {
+    R(/* @__PURE__ */ u2(FilterBar, { ...s5.props, ui: s5.ui, host: s5.host }), s5.host);
+  }
+  function fbDd(s5, id2) {
+    const f5 = id2 === FB_MORE ? null : s5.props.fields.find((x5) => x5.id === id2);
+    const mid = id2 === FB_MORE ? s5.props.more?.menuId : f5 && fbMenuId(f5);
+    const m5 = mid ? document.getElementById(mid) : null;
+    return m5 && s5.host.contains(m5) ? (
+      /** @type {HTMLElement} */
+      m5.parentElement
+    ) : null;
+  }
+  var fbBtn = (s5, id2) => (
+    /** @type {HTMLElement | null} */
+    fbDd(s5, id2)?.querySelector(":scope>button") || null
+  );
+  var fbMenu = (s5, id2) => (
+    /** @type {HTMLElement | null} */
+    fbDd(s5, id2)?.querySelector(":scope>.ddmenu") || null
+  );
+  function fbOpen(s5, id2) {
+    if (s5.ui.open && s5.ui.open !== id2) fbClose(s5, false);
+    s5.ui.open = id2;
+    s5.ui.keep = null;
+    if (id2 === FB_MORE) s5.props.more?.onOpen?.();
+    else s5.ui.q[id2] = "";
+    FB_OPEN.add(s5);
+    fbPaint(s5);
+    const m5 = fbMenu(s5, id2);
+    if (!m5) return;
+    const to2 = id2 === FB_MORE ? m5.querySelector(".fpl input[type=search]") || fbFirstIn(m5.querySelector(".fpr")) || m5.querySelector('.fpf[aria-selected="true"]') : m5.querySelector("input.mq") || m5.querySelector('[role="option"]') || m5;
+    to2?.focus({ preventScroll: true });
+  }
+  function fbClose(s5, back2) {
+    const was = s5.ui.open;
+    if (!was) return;
+    s5.ui.open = null;
+    s5.ui.keep = was;
+    FB_OPEN.delete(s5);
+    fbPaint(s5);
+    if (back2) fbBtn(s5, was)?.focus({ preventScroll: true });
+  }
+  var fbFirstIn = (box) => box ? (
+    /** @type {HTMLElement | null} */
+    box.querySelector('[role="option"]') || box.querySelector(".seg button") || box.querySelector(".drange input")
+  ) : null;
+  function fbAway(e4) {
+    const t47 = (
+      /** @type {Node} */
+      e4.target
+    );
+    [...FB_OPEN].forEach((s5) => {
+      const dd2 = s5.ui.open && fbDd(s5, s5.ui.open);
+      if (!s5.host.isConnected) {
+        FB_OPEN.delete(s5);
+        return;
+      }
+      if (dd2 && !dd2.contains(t47)) fbClose(s5, false);
+    });
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("pointerdown", fbAway, true);
+    document.addEventListener("click", fbAway, true);
+    document.addEventListener("focusin", fbAway);
+  }
+  function fbFit(s5) {
+    const fold = s5.props.fold;
+    if (!fold) return;
+    const bar = fold();
+    if (bar === false) return;
+    const main = fbMain(s5.props), dds = (
+      /** @type {HTMLElement[]} */
+      [...s5.host.querySelectorAll(":scope>.dd:not(:has(>.fpmenu))")]
+    );
+    dds.forEach((d5) => d5.classList.remove("wfold"));
+    const folded = [];
+    if (bar) {
+      const first = (
+        /** @type {HTMLElement} */
+        bar.firstElementChild
+      );
+      const wrapped = () => [...bar.children, ...dds].some((c5) => {
+        const h5 = (
+          /** @type {HTMLElement} */
+          c5
+        );
+        return h5.offsetParent && h5.offsetWidth && h5.offsetHeight > 8 && h5.offsetTop > first.offsetTop + 8;
+      });
+      const can = dds.map((d5, i5) => [d5, main[i5]]).filter(([d5, f5], i5) => i5 > 0 && f5 && !/** @type {FilterField} */
+      f5.on).reverse();
+      for (const [d5, f5] of can) {
+        if (!wrapped()) break;
+        d5.classList.add("wfold");
+        folded.push(
+          /** @type {FilterField} */
+          f5.id
+        );
+      }
+    }
+    if (folded.join("|") !== s5.ui.fold.join("|")) {
+      s5.ui.fold = folded;
+      fbPaint(s5);
+    }
+  }
+  function fbStep(e4, list, ends) {
+    const i5 = list.indexOf(
+      /** @type {HTMLElement} */
+      document.activeElement
+    );
+    let to2 = null;
+    if (e4.key === "ArrowDown") to2 = list[Math.min(list.length - 1, i5 + 1)];
+    else if (e4.key === "ArrowUp") to2 = list[Math.max(0, i5 - 1)];
+    else if (e4.key === "Home") to2 = ends[0];
+    else if (e4.key === "End") to2 = ends[ends.length - 1];
+    else return false;
+    e4.preventDefault();
+    e4.stopPropagation();
+    to2?.focus({ preventScroll: true });
+    return true;
+  }
+  var fbOpts = (box) => box ? (
+    /** @type {HTMLElement[]} */
+    [...box.querySelectorAll('[role="option"]')]
+  ) : [];
+  function fbListKeys(s5, f5, e4) {
+    const m5 = fbMenu(s5, f5.id);
+    if (!m5) return;
+    const t47 = (
+      /** @type {HTMLElement} */
+      e4.target
+    ), opts = fbOpts(m5);
+    if (e4.key === "Escape") {
+      e4.preventDefault();
+      e4.stopPropagation();
+      fbClose(s5, true);
+      return;
+    }
+    if (e4.key === "Tab") {
+      fbClose(s5, false);
+      fbBtn(s5, f5.id)?.focus({ preventScroll: true });
+      return;
+    }
+    if (t47.matches("input.mq")) {
+      if (e4.key === "ArrowDown" && opts.length) {
+        e4.preventDefault();
+        opts[0].focus({ preventScroll: true });
+      } else if (e4.key === "ArrowUp") fbStep(e4, fbControls(m5), opts);
+      return;
+    }
+    if ((e4.key === " " || e4.key === "Enter") && t47.getAttribute("role") === "option") {
+      e4.preventDefault();
+      e4.stopPropagation();
+      fbTick(s5, f5, t47);
+      return;
+    }
+    fbStep(e4, fbControls(m5), opts);
+  }
+  var fbControls = (m5) => (
+    /** @type {HTMLElement[]} */
+    [...m5.querySelectorAll('.seg button,input.mq,.acts button,[role="option"]')]
+  );
+  function fbPickKeys(s5, e4) {
+    const m5 = fbMenu(s5, FB_MORE), more = s5.props.more;
+    if (!m5 || !more) return;
+    const t47 = (
+      /** @type {HTMLElement} */
+      e4.target
+    ), right = m5.querySelector(".fpr");
+    const fieldBtn = () => (
+      /** @type {HTMLElement | null} */
+      m5.querySelector('.fpf[aria-selected="true"]')
+    );
+    if (e4.key === "Escape") {
+      e4.preventDefault();
+      e4.stopPropagation();
+      fbClose(s5, true);
+      return;
+    }
+    if (t47.matches(".fpl input[type=search]")) {
+      if (e4.key === "Enter") {
+        e4.preventDefault();
+        (fbFirstIn(right) || fieldBtn())?.focus();
+      } else if (e4.key === "ArrowDown") {
+        e4.preventDefault();
+        fieldBtn()?.focus();
+      }
+      return;
+    }
+    if (t47.matches(".fpf")) {
+      const L3 = (
+        /** @type {HTMLElement[]} */
+        [...m5.querySelectorAll(".fpf")]
+      ), i5 = L3.indexOf(t47);
+      const j5 = e4.key === "ArrowDown" ? Math.min(L3.length - 1, i5 + 1) : e4.key === "ArrowUp" ? Math.max(0, i5 - 1) : e4.key === "Home" ? 0 : e4.key === "End" ? L3.length - 1 : -1;
+      if (j5 >= 0) {
+        e4.preventDefault();
+        const k5 = L3[j5].dataset.fpk || "";
+        if (k5 !== more.field) more.onField(k5);
+        m5.querySelector(`.fpf[data-fpk="${CSS.escape(k5)}"]`)?.focus();
+        return;
+      }
+      if (e4.key === "ArrowRight" || e4.key === "Enter") {
+        e4.preventDefault();
+        fbFirstIn(right)?.focus();
+      }
+      return;
+    }
+    if (!right || !right.contains(t47) || t47.matches(".drange input")) return;
+    if (e4.key === "ArrowLeft") {
+      e4.preventDefault();
+      fieldBtn()?.focus();
+      return;
+    }
+    const f5 = s5.props.fields.find((x5) => x5.id === more.field);
+    if (f5 && (e4.key === " " || e4.key === "Enter") && t47.getAttribute("role") === "option") {
+      e4.preventDefault();
+      e4.stopPropagation();
+      fbTick(s5, f5, t47);
+      return;
+    }
+    fbStep(
+      e4,
+      /** @type {HTMLElement[]} */
+      [...right.querySelectorAll('.seg button,[role="option"]')],
+      fbOpts(right)
+    );
+  }
+  function fbTick(s5, f5, opt) {
+    const inp = (
+      /** @type {HTMLInputElement | null} */
+      opt.querySelector("input")
+    );
+    if (!inp) return;
+    fbChoose(s5, f5, inp.value, f5.single ? true : !inp.checked);
+  }
+  function fbChoose(s5, f5, v5, on2) {
+    const had = document.activeElement && s5.host.contains(document.activeElement);
+    const sel = [...f5.selected || []];
+    s5.props.onSelect(f5.id, f5.single ? [v5] : on2 ? sel.includes(v5) ? sel : [...sel, v5] : sel.filter((x5) => x5 !== v5));
+    const a5 = document.activeElement;
+    if (had && a5 && a5.matches('[role="option"] input')) a5.closest('[role="option"]')?.focus({ preventScroll: true });
+  }
+  function fbAct(s5, f5, what, shown2) {
+    const sel = [...f5.selected || []];
+    s5.props.onSelect(f5.id, what === "me" ? [...f5.onlyMe || []] : what === "all" ? [.../* @__PURE__ */ new Set([...sel, ...shown2.map((o5) => o5.value)])] : []);
+    if (s5.ui.q[f5.id]) (fbMenu(s5, f5.id)?.querySelector("input.mq") || null)?.focus();
+  }
+  function fbSetNot(s5, f5, not, box) {
+    s5.props.onNot?.(f5.id, not);
+    (box?.querySelector(`.seg [data-neg="${not ? 1 : 0}"]`) || null)?.focus();
+  }
+  function FbIsNot({ f: f5, s: s5, box }) {
+    const n4 = !!f5.not;
+    return /* @__PURE__ */ u2("div", { class: "isnot", children: [
+      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Match", children: [
+        /* @__PURE__ */ u2("button", { type: "button", "data-neg": "0", "data-nk": f5.id, "aria-pressed": n4 ? "false" : "true", onClick: () => fbSetNot(s5, f5, false, box()), children: "is" }),
+        /* @__PURE__ */ u2("button", { type: "button", "data-neg": "1", "data-nk": f5.id, "aria-pressed": n4 ? "true" : "false", onClick: () => fbSetNot(s5, f5, true, box()), children: "is not" })
+      ] }),
+      /* @__PURE__ */ u2("span", { class: "sub", children: n4 ? "none of" : "any of" })
+    ] });
+  }
+  function FbOptions({ f: f5, s: s5, opts, name }) {
+    const sel = /* @__PURE__ */ new Set();
+    if (f5.selected) for (const v5 of f5.selected) sel.add(v5);
+    if (!opts.length) return /* @__PURE__ */ u2("div", { class: "sub", style: { padding: "6px 14px" }, children: "Nothing to choose" });
+    return /* @__PURE__ */ u2(S2, { children: opts.map((o5) => {
+      const on2 = sel.has(o5.value);
+      return /* @__PURE__ */ u2(
+        "label",
+        {
+          class: o5.count || on2 ? "" : "dim",
+          role: "option",
+          "aria-selected": on2 ? "true" : "false",
+          tabIndex: -1,
+          children: [
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                type: f5.single ? "radio" : "checkbox",
+                name: f5.single ? name : void 0,
+                "data-fk": f5.id,
+                value: o5.value,
+                checked: on2,
+                tabIndex: -1,
+                "aria-hidden": "true",
+                onChange: (e4) => fbChoose(
+                  s5,
+                  f5,
+                  o5.value,
+                  /** @type {HTMLInputElement} */
+                  e4.currentTarget.checked
+                )
+              }
+            ),
+            o5.label,
+            o5.extra ? /* @__PURE__ */ u2(S2, { children: [
+              " ",
+              /* @__PURE__ */ u2("span", { class: "sub", children: o5.extra })
+            ] }) : null,
+            /* @__PURE__ */ u2("small", { children: o5.count ?? "" })
+          ]
+        },
+        o5.value
+      );
+    }) });
+  }
+  function FbFieldMenu({ f: f5, s: s5, folded }) {
+    const isOpen = s5.ui.open === f5.id, shown2 = isOpen || s5.ui.keep === f5.id, mid = fbMenuId(f5);
+    const all = shown2 && f5.options ? f5.options() : [], q5 = (s5.ui.q[f5.id] || "").toLowerCase();
+    const opts = q5 ? all.filter((o5) => o5.label.toLowerCase().includes(q5)) : all;
+    const box = () => document.getElementById(mid);
+    return /* @__PURE__ */ u2("span", { class: `dd${folded ? " wfold" : ""}`, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: `btn fbtn${f5.on ? " on" : ""}`,
+          id: fbBtnId(f5),
+          ...dataAttrs(f5.data),
+          "aria-haspopup": "listbox",
+          "aria-expanded": isOpen ? "true" : "false",
+          "aria-controls": mid,
+          onClick: (e4) => {
+            e4.preventDefault();
+            if (isOpen && box()?.classList.contains("on")) fbClose(s5, false);
+            else fbOpen(s5, f5.id);
+          },
+          onKeyDown: (e4) => {
+            if (e4.key === "ArrowDown" && !isOpen) {
+              e4.preventDefault();
+              fbOpen(s5, f5.id);
+            }
+          },
+          children: f5.button ?? f5.label
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: `ddmenu left${isOpen ? " on" : ""}`, id: mid, tabIndex: shown2 ? -1 : void 0, onKeyDown: (e4) => fbListKeys(s5, f5, e4), children: shown2 ? /* @__PURE__ */ u2(S2, { children: [
+        f5.not === void 0 ? null : /* @__PURE__ */ u2(FbIsNot, { f: f5, s: s5, box }),
+        all.length > 6 ? /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "search",
+            class: "mq",
+            "data-fk": f5.id,
+            placeholder: `Search ${f5.label.toLowerCase()}`,
+            "aria-label": `Search ${f5.label.toLowerCase()}`,
+            value: s5.ui.q[f5.id] || "",
+            autocomplete: "off",
+            onInput: (e4) => {
+              s5.ui.q[f5.id] = /** @type {HTMLInputElement} */
+              e4.currentTarget.value;
+              fbPaint(s5);
+            }
+          }
+        ) : null,
+        /* @__PURE__ */ u2("div", { class: "acts", children: [
+          f5.onlyMe ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ma": "me", onClick: () => fbAct(s5, f5, "me", opts), children: "Only me" }) : null,
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ma": "all", onClick: () => fbAct(s5, f5, "all", opts), children: "Select all" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ma": "clear", onClick: () => fbAct(s5, f5, "clear", opts), children: "Clear" })
+        ] }),
+        /* @__PURE__ */ u2("div", { role: "listbox", "aria-multiselectable": f5.single ? void 0 : "true", "aria-label": f5.label, children: /* @__PURE__ */ u2(FbOptions, { f: f5, s: s5, opts, name: `${mid}-opt` }) })
+      ] }) : null })
+    ] });
+  }
+  function FbPicker({ s: s5, more }) {
+    const fields = fbPickList(s5.props), fq = (more.query || "").toLowerCase();
+    const vis = fq ? fields.filter((f6) => f6.label.toLowerCase().includes(fq)) : fields;
+    const f5 = fields.find((x5) => x5.id === more.field) || fields[0];
+    const headId = more.headId || `${more.menuId}H`;
+    const box = () => document.getElementById(more.menuId);
+    let sec = "";
+    return /* @__PURE__ */ u2("div", { class: "fpick", children: [
+      /* @__PURE__ */ u2("div", { class: "fpl", children: [
+        more.onQuery ? /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "search",
+            id: "fpq",
+            placeholder: "Find a field…",
+            "aria-label": "Find a field",
+            value: more.query || "",
+            autocomplete: "off",
+            onInput: (e4) => more.onQuery?.(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            )
+          }
+        ) : null,
+        /* @__PURE__ */ u2("div", { class: "fplist", role: "listbox", "aria-label": more.listLabel || "Fields", children: [
+          vis.map((x5) => {
+            const head = x5.section && x5.section !== sec ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: x5.section }) : null;
+            sec = x5.section || "";
+            const on2 = x5.id === (f5 && f5.id);
+            return /* @__PURE__ */ u2(S2, { children: [
+              head,
+              /* @__PURE__ */ u2(
+                "button",
+                {
+                  type: "button",
+                  role: "option",
+                  class: `fpf${x5.on ? " on" : ""}`,
+                  "data-fpk": x5.id,
+                  "aria-selected": on2 ? "true" : "false",
+                  tabIndex: on2 ? 0 : -1,
+                  onClick: () => {
+                    if (x5.id !== more.field) more.onField(x5.id);
+                  },
+                  children: [
+                    x5.label,
+                    x5.mark ? /* @__PURE__ */ u2(S2, { children: [
+                      " ",
+                      /* @__PURE__ */ u2("small", { children: x5.mark })
+                    ] }) : null
+                  ]
+                }
+              )
+            ] }, x5.id);
+          }),
+          !vis.length ? /* @__PURE__ */ u2("div", { class: "sub", style: { padding: "6px 4px" }, children: "No field matches" }) : null
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "fpr", children: [
+        f5 && f5.range ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("h3", { id: headId, children: f5.label }),
+          /* @__PURE__ */ u2("div", {
+            class: "drange",
+            /** @type {("from" | "to")[]} */
+            children: ["from", "to"].map((end, i5) => /* @__PURE__ */ u2(S2, { children: [
+              i5 ? /* @__PURE__ */ u2("span", { children: "and" }) : null,
+              /* @__PURE__ */ u2(
+                "input",
+                {
+                  type: "text",
+                  ...{ [`data-${f5.id}`]: end },
+                  placeholder: "DD-MM-YYYY",
+                  value: f5.range?.[end] || "",
+                  "aria-label": `${f5.range?.name} ${end}`,
+                  onChange: (e4) => s5.props.onRange?.(
+                    f5.id,
+                    end,
+                    /** @type {HTMLInputElement} */
+                    e4.currentTarget.value
+                  )
+                }
+              )
+            ] }, end))
+          })
+        ] }) : f5 ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("h3", { id: headId, children: f5.label }),
+          f5.note ? /* @__PURE__ */ u2("p", { class: "sub", style: { margin: "0 0 6px" }, children: f5.note }) : null,
+          f5.not === void 0 ? null : /* @__PURE__ */ u2(FbIsNot, { f: f5, s: s5, box }),
+          /* @__PURE__ */ u2("div", { class: "fpopts", role: "listbox", "aria-multiselectable": f5.single ? void 0 : "true", "aria-labelledby": headId, children: /* @__PURE__ */ u2(FbOptions, { f: f5, s: s5, opts: f5.options ? f5.options() : [], name: `${more.menuId}-opt` }) })
+        ] }) : null,
+        /* @__PURE__ */ u2("div", { class: "fpfoot", children: [
+          /* @__PURE__ */ u2("span", { class: "sub", id: more.resultId, children: more.result }),
+          /* @__PURE__ */ u2("span", { class: "sp" }),
+          more.clearAll ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", id: more.clearAll.id, onClick: () => {
+            more.clearAll?.run();
+            (box()?.querySelector('.fpf[aria-selected="true"]') || null)?.focus();
+          }, children: "Clear all" }) : null,
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: more.doneId, onClick: () => fbClose(s5, true), children: "Done" })
+        ] })
+      ] })
+    ] });
+  }
+  function FbFunnel({ s: s5, more }) {
+    const isOpen = s5.ui.open === FB_MORE, shown2 = isOpen || s5.ui.keep === FB_MORE, n4 = s5.ui.fold.length;
+    const tip = more.label + (n4 ? `. ${n4} more filter${n4 === 1 ? " is" : "s are"} here` : "");
+    const inner = /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: `ib bd fbtn${more.on ? " on" : ""}`,
+          id: more.id,
+          "aria-haspopup": "dialog",
+          "aria-expanded": isOpen ? "true" : "false",
+          "aria-controls": more.menuId,
+          "data-key": more.key,
+          "aria-label": tip,
+          "data-tip": tip,
+          onClick: (e4) => {
+            e4.preventDefault();
+            if (isOpen && document.getElementById(more.menuId)?.classList.contains("on")) fbClose(s5, false);
+            else fbOpen(s5, FB_MORE);
+          },
+          children: [
+            /* @__PURE__ */ u2(Icon, { name: "funnel" }),
+            more.count ? /* @__PURE__ */ u2("span", { class: "fcount", "aria-hidden": "true", children: more.count }) : null
+          ]
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: `ddmenu left fpmenu${isOpen ? " on" : ""}`, id: more.menuId, role: "dialog", "aria-label": more.menuLabel, onKeyDown: (e4) => fbPickKeys(s5, e4), children: shown2 ? /* @__PURE__ */ u2(FbPicker, { s: s5, more }) : null })
+    ] });
+    return s5.props.bare ? inner : /* @__PURE__ */ u2("span", { class: "dd", children: inner });
+  }
+  function FilterBar({ ui: ui2, host: host2, ...props }) {
+    const s5 = fbState(host2);
+    s5.props = props;
+    s5.ui = ui2;
+    return /* @__PURE__ */ u2(S2, { children: [
+      props.bare ? null : fbMain(props).map((f5) => /* @__PURE__ */ u2(FbFieldMenu, { f: f5, s: s5, folded: ui2.fold.includes(f5.id) }, f5.id)),
+      props.more ? /* @__PURE__ */ u2(FbFunnel, { s: s5, more: props.more }) : null
+    ] });
+  }
+
+  // stores/settings.js
+  var catalogue = y3(null);
+  var catalogueError = y3("");
+  var query = y3("");
+  var healthResult = y3(null);
+  var healthBusy = y3(false);
+  var healthError = y3("");
+  var healthCardWaiting = y3(
+    /** @type {string[]} */
+    []
+  );
+  var markCardWaiting = (id2) => {
+    if (id2 && !healthCardWaiting.value.includes(id2)) healthCardWaiting.value = [...healthCardWaiting.value, id2];
+  };
+  var COUNT_KEY = "creaite-health-count";
+  var healthCount = y3(0);
+  var healthCheckedAt = g3(() => healthResult.value ? healthResult.value.checked : "");
+  var SAVED = [];
+  var told = (changes) => SAVED.forEach((f5) => {
+    try {
+      f5(changes);
+    } catch (e4) {
+    }
+  });
+  var settingOf = (key) => catalogue.value ? catalogue.value.settings.find((s5) => s5.key === key) : void 0;
+  var loading = null;
+  function loadCatalogue() {
+    if (loading) return loading;
+    loading = (async () => {
+      const r4 = await api("/api/settings/catalogue", {});
+      if (r4.ok) {
+        catalogue.value = /** @type {Catalogue} */
+        r4;
+        catalogueError.value = "";
+      } else catalogueError.value = r4.message || "Couldn't read the settings";
+      loading = null;
+      return !!r4.ok;
+    })();
+    return loading;
+  }
+  async function saveSettings(changes) {
+    if (!await writeSettings(changes)) return false;
+    told(changes);
+    await loadCatalogue();
+    return true;
+  }
+  async function resetSettings(keys) {
+    const r4 = await api("/api/settings/reset", keys.length === 1 ? { key: keys[0] } : { keys });
+    if (!r4.ok) return { ok: false, message: r4.message || "Couldn't reset it", reset: [] };
+    if (r4.catalogue) catalogue.value = r4.catalogue;
+    const vals = {};
+    for (const k5 of r4.reset || []) {
+      const s5 = settingOf(k5);
+      if (s5) vals[k5] = s5.value;
+    }
+    if (Object.keys(vals).length) told(vals);
+    return { ok: true, message: "", reset: r4.reset || [] };
+  }
+  async function checkHealth() {
+    if (healthBusy.value) return;
+    healthBusy.value = true;
+    healthError.value = "";
+    try {
+      const r4 = await api("/api/health", {});
+      if (r4.ok) {
+        healthResult.value = /** @type {HealthResult} */
+        r4;
+        healthCount.value = (r4.problems || []).length;
+        const still = (r4.problems || []).map((p6) => p6.fix && p6.fix.id);
+        healthCardWaiting.value = healthCardWaiting.value.filter((id2) => still.includes(id2));
+        store.set(COUNT_KEY, { n: healthCount.value, at: Date.now() });
+      } else healthError.value = r4.message || "The health check didn't run";
+    } finally {
+      healthBusy.value = false;
+    }
+  }
+  var lastCheckAt = () => {
+    const c5 = store.get(COUNT_KEY, null);
+    return c5 && typeof c5.at === "number" ? c5.at : 0;
+  };
+  function showHealthCount(n4) {
+    void n4;
+  }
+  function startSettingsStore() {
+    const c5 = store.get(COUNT_KEY, null);
+    if (c5 && typeof c5.n === "number") healthCount.value = c5.n;
+    j3(() => showHealthCount(healthCount.value));
+  }
+
+  // components/settings/SettingRow.jsx
+  var N2 = 0;
+  var rowId = () => "ss" + ++N2;
+  function SettingRow({ id: id2, label, line, note, changed, keys, resettable = true, fixedWhy = "", saved = false, children }) {
+    const [busy2, setBusy] = d2(false);
+    const reset = async () => {
+      setBusy(true);
+      const r4 = await resetSettings(keys);
+      setBusy(false);
+      snack(r4.ok ? r4.reset.length ? `${label}: back to its default` : `${label} was already at its default` : r4.message);
+    };
+    return /* @__PURE__ */ u2("div", { class: "srow", "data-keys": keys.join(" "), children: [
+      /* @__PURE__ */ u2("div", { children: [
+        /* @__PURE__ */ u2("span", { id: id2, children: label }),
+        changed && /* @__PURE__ */ u2("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
+        (line || note) && /* @__PURE__ */ u2("small", { id: id2 + "h", children: [
+          line,
+          note ? /* @__PURE__ */ u2("span", { class: "setnote", children: [
+            line ? " " : "",
+            note
+          ] }) : null
+        ] }),
+        !resettable && fixedWhy && /* @__PURE__ */ u2("small", { class: "setfixed", children: [
+          "Set at set-up: ",
+          fixedWhy
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "setctl", children: [
+        saved && /* @__PURE__ */ u2("span", { class: "saved", role: "status", children: "Saved" }),
+        children,
+        changed && resettable && /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "mini setreset",
+            disabled: busy2,
+            "aria-label": `Reset ${label} to its default`,
+            title: "Back to the default",
+            onClick: reset,
+            children: "Reset"
+          }
+        )
+      ] })
+    ] });
+  }
+
+  // components/settings/Essentials.jsx
+  var WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var WEEK_PRIOS = ["Urgent", "High", "Medium", "Low"];
+  var SWEEP_SOURCES = [
+    ["sweep.sources.inbox", "Inbox"],
+    ["sweep.sources.sent_items", "Sent Items"],
+    ["sweep.sources.teams_chats", "Teams chats"],
+    ["sweep.sources.teams_channels", "Teams channels"],
+    ["sweep.sources.calendar", "Calendar"]
+  ];
+  var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+  var settingWords = (q5) => q5.toLowerCase().split(/\s+/).filter(Boolean);
+  var settingHasAll = (text, w6) => {
+    const t47 = text.toLowerCase();
+    return w6.every((x5) => t47.includes(x5));
+  };
+  var val = (k5) => {
+    const s5 = settingOf(k5);
+    return s5 ? s5.value : void 0;
+  };
+  function Essential({ row: row2 }) {
+    const [id2] = d2(rowId);
+    const [saved, setSaved] = d2(false);
+    const t47 = A2(0);
+    const keys = row2.keys, k5 = keys[0];
+    const save2 = async (changes) => {
+      const ok2 = await saveSettings(changes);
+      if (ok2) {
+        setSaved(true);
+        clearTimeout(t47.current);
+        t47.current = window.setTimeout(() => setSaved(false), 2500);
+      }
+      return ok2;
+    };
+    const named = { "aria-labelledby": id2, "aria-describedby": id2 + "h" };
+    const text = (parse, bad, ph2 = "") => /* @__PURE__ */ u2(
+      "input",
+      {
+        type: "text",
+        ...named,
+        value: val(k5) ?? "",
+        placeholder: ph2,
+        size: 8,
+        onChange: async (e4) => {
+          const el2 = (
+            /** @type {HTMLInputElement} */
+            e4.currentTarget
+          ), v5 = parse(el2.value.trim());
+          if (v5 === void 0) {
+            snack(bad);
+            el2.value = val(k5) ?? "";
+            return;
+          }
+          if (!await save2({ [k5]: v5 })) el2.value = val(k5) ?? "";
+        }
+      }
+    );
+    const select = (opts, key = k5) => /* @__PURE__ */ u2(
+      "select",
+      {
+        ...key === k5 ? named : { "aria-label": `${row2.label}: ${key.endsWith("_day") ? "day" : key}` },
+        value: String(val(key) ?? ""),
+        onChange: async (e4) => {
+          const el2 = (
+            /** @type {HTMLSelectElement} */
+            e4.currentTarget
+          );
+          if (!await save2({ [key]: el2.value })) el2.value = String(val(key) ?? "");
+        },
+        children: opts.map(([v5, l6]) => /* @__PURE__ */ u2("option", { value: v5, children: l6 }))
+      }
+    );
+    const sw3 = () => /* @__PURE__ */ u2(
+      "input",
+      {
+        type: "checkbox",
+        class: "switch",
+        ...named,
+        checked: !!val(k5),
+        onChange: async (e4) => {
+          const el2 = (
+            /** @type {HTMLInputElement} */
+            e4.currentTarget
+          );
+          if (!await save2({ [k5]: el2.checked })) el2.checked = !!val(k5);
+        }
+      }
+    );
+    const ticks = (all, short = (v5) => v5) => {
+      const have = Array.isArray(val(k5)) ? val(k5) : [];
+      return /* @__PURE__ */ u2("span", { class: "setticks", role: "group", ...named, children: all.map((v5) => /* @__PURE__ */ u2("label", { class: "settick", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            checked: have.includes(v5),
+            "aria-label": v5,
+            onChange: async (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.currentTarget
+              ), box = el2.closest("[role=group]");
+              const now = all.filter((x5) => {
+                const b5 = box && /** @type {HTMLInputElement|null} */
+                box.querySelector(`input[aria-label="${x5}"]`);
+                return b5 ? b5.checked : have.includes(x5);
+              });
+              if (!await save2({ [k5]: now })) el2.checked = have.includes(v5);
+            }
+          }
+        ),
+        " ",
+        short(v5)
+      ] })) });
+    };
+    let control;
+    switch (k5) {
+      case "identity.name":
+        control = text((v5) => v5 || void 0, "Your name can't be empty", "Full name");
+        break;
+      case "work.weekend_days":
+        control = ticks(WEEKDAYS, (v5) => v5.slice(0, 3));
+        break;
+      case "sweep.due_from":
+        control = text((v5) => HHMM.test(v5) ? v5 : void 0, "Use 24-hour HH:MM, such as 07:00", "HH:MM");
+        break;
+      case "sweep.sources.inbox":
+        control = /* @__PURE__ */ u2("span", { class: "setticks", role: "group", ...named, children: SWEEP_SOURCES.map(([key, l6]) => /* @__PURE__ */ u2("label", { class: "settick", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "checkbox",
+              checked: !!val(key),
+              onChange: async (e4) => {
+                const el2 = (
+                  /** @type {HTMLInputElement} */
+                  e4.currentTarget
+                );
+                if (!await save2({ [key]: el2.checked })) el2.checked = !!val(key);
+              }
+            }
+          ),
+          " ",
+          l6
+        ] })) });
+        break;
+      case "day.close_from":
+        control = text((v5) => v5 === "" ? null : HHMM.test(v5) ? v5 : void 0, "Use HH:MM, such as 17:30, or leave it empty for off", "Off");
+        break;
+      case "day.catchup_sweep":
+        control = select([["start", "Start it when the card opens"], ["offer", "Ask first"], ["off", "Off"]]);
+        break;
+      case "reminders.weekly_report_day":
+        control = /* @__PURE__ */ u2("span", { class: "setpair", children: [
+          select(WEEKDAYS.slice(0, 5).map((d5) => [d5, d5])),
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "text",
+              "aria-label": `${row2.label}: time`,
+              value: val("reminders.weekly_report_from") ?? "",
+              size: 6,
+              placeholder: "HH:MM",
+              onChange: async (e4) => {
+                const el2 = (
+                  /** @type {HTMLInputElement} */
+                  e4.currentTarget
+                ), v5 = el2.value.trim();
+                if (!HHMM.test(v5)) {
+                  snack("Use 24-hour HH:MM, such as 12:00");
+                  el2.value = val("reminders.weekly_report_from") ?? "";
+                  return;
+                }
+                if (!await save2({ "reminders.weekly_report_from": v5 })) el2.value = val("reminders.weekly_report_from") ?? "";
+              }
+            }
+          )
+        ] });
+        break;
+      case "dashboard.auto_apply":
+        control = sw3();
+        break;
+      case "dashboard.week_ahead_priorities":
+        control = ticks(WEEK_PRIOS);
+        break;
+      case "vip.enabled":
+        control = sw3();
+        break;
+      case "vip.check_minutes":
+        control = /* @__PURE__ */ u2("span", { class: "setpair", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "number",
+              ...named,
+              min: 10,
+              max: 240,
+              step: 5,
+              value: val(k5) ?? 30,
+              style: "width:80px",
+              onChange: async (e4) => {
+                const el2 = (
+                  /** @type {HTMLInputElement} */
+                  e4.currentTarget
+                ), v5 = Math.round(Number(el2.value));
+                if (!Number.isFinite(v5) || v5 < 10 || v5 > 240) {
+                  snack("Use a number of minutes from 10 to 240");
+                  el2.value = String(val(k5) ?? 30);
+                  return;
+                }
+                if (!await save2({ [k5]: v5 })) el2.value = String(val(k5) ?? 30);
+              }
+            }
+          ),
+          " ",
+          /* @__PURE__ */ u2("span", { class: "sub", children: "minutes" })
+        ] });
+        break;
+      case "dashboard.theme":
+        control = select([["System", "Follow my Mac"], ["Light", "Light"], ["Dark", "Dark"]]);
+        break;
+      case "dashboard.palette":
+        control = select(THEMES.map((x5) => [x5.id, x5.id]));
+        break;
+      case "dashboard.motion":
+        control = select([["System", "Follow my Mac"], ["Reduce", "Reduce"], ["Full", "Full"]]);
+        break;
+      case "drafting.update":
+        control = /* @__PURE__ */ u2(AllSwitch, { keys, named, save: save2 });
+        break;
+      default:
+        control = sw3();
+    }
+    const pending = k5 === "dashboard.auto_apply" && val(k5) === false && shared.PENDING && shared.PENDING.length;
+    return /* @__PURE__ */ u2(
+      SettingRow,
+      {
+        id: id2,
+        label: row2.label,
+        line: row2.line,
+        changed: row2.changed,
+        keys,
+        saved,
+        resettable: keys.every((x5) => {
+          const s5 = settingOf(x5);
+          return !s5 || s5.resettable;
+        }),
+        children: [
+          control,
+          pending ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "applyNow", onClick: () => applyPending(), children: [
+            "Apply ",
+            shared.PENDING.length,
+            " waiting"
+          ] }) : null
+        ]
+      }
+    );
+  }
+  function AllSwitch({ keys, named, save: save2 }) {
+    const on2 = keys.filter((x5) => val(x5) !== false).length, all = on2 === keys.length, mixed = on2 > 0 && !all;
+    const ref = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    h2(() => {
+      if (ref.current) ref.current.indeterminate = mixed;
+    });
+    return /* @__PURE__ */ u2(
+      "input",
+      {
+        ref,
+        type: "checkbox",
+        class: "switch",
+        ...named,
+        checked: all,
+        onChange: async (e4) => {
+          const v5 = (
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.checked
+          );
+          await save2(Object.fromEntries(keys.map((x5) => [x5, v5])));
+        }
+      }
+    );
+  }
+  function Essentials() {
+    const c5 = catalogue.value;
+    if (!c5) return /* @__PURE__ */ u2("div", { class: "card wide", children: [
+      /* @__PURE__ */ u2("h2", { children: "Essentials" }),
+      /* @__PURE__ */ u2("p", { class: "sub", role: "status", children: catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.") })
+    ] });
+    const w6 = settingWords(query.value);
+    const rows2 = c5.essentials.filter((r4) => !w6.length || settingHasAll(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6));
+    if (!rows2.length) return null;
+    const sections = [...new Set(rows2.map((r4) => r4.section))];
+    return /* @__PURE__ */ u2("div", { class: "setstack", children: sections.map((s5) => /* @__PURE__ */ u2("div", { class: "card", "data-ess": s5, children: [
+      /* @__PURE__ */ u2("h2", { children: s5 }),
+      rows2.filter((r4) => r4.section === s5).map((r4) => /* @__PURE__ */ u2(Essential, { row: r4 }, r4.keys.join(" ")))
+    ] })) });
+  }
+
+  // components/settings/Health.jsx
+  var CMD = /system\/scripts\/run [^,;"]+/;
+  var commandIn = (how) => {
+    const m5 = CMD.exec(how || "");
+    return m5 ? m5[0].trim() : "";
+  };
+  var CARD_WAITING = "On the approval card, waiting for you";
+  async function runHealthFix(f5) {
+    const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
+    if (r4.ok && r4.card) {
+      markCardWaiting(f5.id || "");
+      snack(CARD_WAITING + ": nothing moves until you approve it.");
+    } else snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
+    if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
+    if (r4.ok && r4.card) await pendingEdit();
+    if (r4.ok && !r4.url) checkHealth();
+    return !!r4.ok;
+  }
+  function FixButton({ f: f5, label }) {
+    const [busy2, setBusy] = d2(false);
+    return /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: "btn primary",
+        disabled: busy2 || !viaServer(),
+        "aria-label": `${f5.button}: ${label}`,
+        onClick: async () => {
+          setBusy(true);
+          await runHealthFix(f5);
+          setBusy(false);
+        },
+        children: busy2 ? "Working…" : f5.button
+      }
+    );
+  }
+  var mbOf = (n4) => `${(n4 / 1e6).toFixed(n4 >= 1e7 ? 0 : 1)} MB`;
+  function RestoreBackup() {
+    const [zips, setZips] = d2(
+      /** @type {BackupZip[]|null} */
+      null
+    );
+    const [plan, setPlan] = d2(
+      /** @type {{zip:string, day:string, lines:PlanLine[]}|null} */
+      null
+    );
+    const [busy2, setBusy] = d2(false), [done, setDone] = d2(
+      /** @type {string[]} */
+      []
+    );
+    const list = async () => {
+      setBusy(true);
+      const r4 = await api("/api/backup/list", {});
+      setBusy(false);
+      if (r4.ok) {
+        setZips(r4.zips || []);
+        setPlan(null);
+        setDone([]);
+      } else snack(r4.message || "Couldn't list the backups");
+    };
+    const preview = async (z4) => {
+      setBusy(true);
+      const r4 = await api("/api/backup/preview", { zip: z4.name });
+      setBusy(false);
+      if (r4.ok) setPlan({ zip: z4.name, day: r4.day || z4.day, lines: r4.plan || [] });
+      else snack(r4.message || "That backup can't be restored");
+    };
+    const restore = async () => {
+      if (!plan) return;
+      setBusy(true);
+      const r4 = await api("/api/backup/restore", { zip: plan.zip });
+      setBusy(false);
+      snack(r4.message || (r4.ok ? "Restored" : "It wasn't restored"));
+      if (r4.ok) {
+        setPlan(null);
+        setDone(r4.done || []);
+      }
+    };
+    return /* @__PURE__ */ u2("div", { class: "hrestore", id: "backupRestore", children: [
+      /* @__PURE__ */ u2("h3", { class: "hsub", children: "Restore from a backup" }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched." }),
+      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy2 || !viaServer(), onClick: list, children: "Choose a backup…" }),
+      zips && !plan && (zips.length ? /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Backups", children: zips.map((z4) => /* @__PURE__ */ u2("li", { class: "hrow", "data-zip": z4.name, children: [
+        /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
+        /* @__PURE__ */ u2("div", { class: "hbody", children: [
+          /* @__PURE__ */ u2("div", { class: "t", children: fd(z4.day) }),
+          /* @__PURE__ */ u2("div", { class: "d", children: [
+            z4.where,
+            " · ",
+            mbOf(z4.size)
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
+      ] })) }) : /* @__PURE__ */ u2("p", { class: "sub", children: "There are no backups yet: one is made each day." })),
+      plan && /* @__PURE__ */ u2("div", { class: "card hconfirm", role: "group", "aria-label": "Confirm the restore", id: "backupConfirm", children: [
+        /* @__PURE__ */ u2("div", { class: "t", children: [
+          "Restore from the backup of ",
+          fd(plan.day),
+          "?"
+        ] }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "This will replace:" }),
+        /* @__PURE__ */ u2("ul", { class: "hsteps", children: plan.lines.map((l6) => /* @__PURE__ */ u2("li", { "data-path": l6.path, children: [
+          /* @__PURE__ */ u2("code", { children: l6.path }),
+          " — ",
+          l6.what
+        ] })) }),
+        /* @__PURE__ */ u2("div", { class: "hact", children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy2, onClick: restore, children: busy2 ? "Restoring…" : "Restore" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: () => setPlan(null), children: "Cancel" })
+        ] })
+      ] }),
+      done.length > 0 && /* @__PURE__ */ u2("ul", { class: "hsteps", "aria-label": "What was restored", children: done.map((d5) => /* @__PURE__ */ u2("li", { children: d5 })) })
+    ] });
+  }
+  function Problem({ p: p6 }) {
+    const [open2, setOpen2] = d2(false);
+    const bad = p6.severity === "fail", hid = `hhow-${p6.id}`, cmd = commandIn(p6.fix.how);
+    const copy = (e4) => {
+      const b5 = (
+        /** @type {HTMLElement} */
+        e4.currentTarget
+      );
+      (navigator.clipboard ? navigator.clipboard.writeText(cmd) : Promise.reject()).then(() => {
+        copied(b5);
+        snack("Copied");
+      }, () => snack("Couldn't copy"));
+    };
+    return /* @__PURE__ */ u2("li", { class: "hrow", "data-check": p6.id, children: [
+      /* @__PURE__ */ u2("span", { class: `hico ${bad ? "bad" : "warn"}`, "aria-hidden": "true", children: "!" }),
+      /* @__PURE__ */ u2("div", { class: "hbody", children: [
+        /* @__PURE__ */ u2("div", { class: "t", children: [
+          p6.title,
+          " ",
+          /* @__PURE__ */ u2("span", { class: `tag ${bad ? "bad" : "warn"}`, children: bad ? "Needs fixing" : "Worth a look" })
+        ] }),
+        p6.detail && /* @__PURE__ */ u2("div", { class: "d", children: p6.detail }),
+        p6.fix.built && /* @__PURE__ */ u2("div", { class: "hdoes", children: p6.fix.does }),
+        p6.fix.id && healthCardWaiting.value.includes(p6.fix.id) && /* @__PURE__ */ u2("div", { class: "hdoes hwait", role: "status", children: [
+          CARD_WAITING,
+          "."
+        ] }),
+        !p6.fix.built && open2 && /* @__PURE__ */ u2("div", { class: "hhow", id: hid, children: [
+          p6.fix.how ? /* @__PURE__ */ u2("span", { children: p6.fix.how }) : /* @__PURE__ */ u2("span", { children: "Only you can take this step: the line above says what is wrong." }),
+          cmd && /* @__PURE__ */ u2("button", { type: "button", class: "mini", "aria-label": `Copy the command: ${cmd}`, onClick: copy, children: "Copy" })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "hact", children: p6.fix.built ? /* @__PURE__ */ u2(FixButton, { f: p6.fix, label: p6.title }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-expanded": open2 ? "true" : "false", "aria-controls": open2 ? hid : void 0, onClick: () => setOpen2(!open2), children: "How to fix" }) })
+    ] });
+  }
+  function Health() {
+    const res = healthResult.value, busy2 = healthBusy.value, err = healthError.value;
+    h2(() => {
+      if (!res && !busy2 && viaServer()) checkHealth();
+    }, []);
+    const n4 = res ? res.problems.length : 0, alone = res && res.standalone ? res.standalone : [];
+    return /* @__PURE__ */ u2("div", { class: "card wide", id: "healthCard", children: [
+      /* @__PURE__ */ u2("div", { class: "hhead", children: [
+        /* @__PURE__ */ u2("h2", { children: "Health" }),
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy2 ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy2 || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
+      ] }),
+      !viaServer() && !res && /* @__PURE__ */ u2("p", { class: "sub", children: "The health check needs the live server." }),
+      err && /* @__PURE__ */ u2("p", { class: "sub hbad", role: "alert", children: err }),
+      res && /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("p", { class: "sub hsum", children: n4 ? `${n4} thing${n4 === 1 ? "" : "s"} need${n4 === 1 ? "s" : ""} you.` : "Nothing needs you." }),
+        n4 > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "What needs you", children: res.problems.map((p6) => /* @__PURE__ */ u2(Problem, { p: p6 }, p6.id)) }),
+        res.stopped.length > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Errors that have stopped", children: res.stopped.map((s5) => /* @__PURE__ */ u2("li", { class: "hrow stopped", children: [
+          /* @__PURE__ */ u2("span", { class: "hico ok", "aria-hidden": "true", children: "✓" }),
+          /* @__PURE__ */ u2("div", { class: "hbody", children: [
+            /* @__PURE__ */ u2("div", { class: "t", children: [
+              "Stopped: ",
+              s5.area,
+              " ",
+              /* @__PURE__ */ u2("span", { class: "tag", children: [
+                s5.count,
+                " ×"
+              ] })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "d", children: [
+              s5.message,
+              " (",
+              s5.span,
+              ")"
+            ] })
+          ] }),
+          /* @__PURE__ */ u2("div", { class: "hact" })
+        ] })) }),
+        /* @__PURE__ */ u2("details", { class: "hfine", children: [
+          /* @__PURE__ */ u2("summary", { children: [
+            res.fine,
+            " check",
+            res.fine === 1 ? "" : "s",
+            " fine"
+          ] }),
+          /* @__PURE__ */ u2("p", { class: "sub", children: res.fine_names.join(", ") })
+        ] }),
+        (res.archiving || []).length > 0 && /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("h3", { class: "hsub", children: "Archiving" }),
+          /* @__PURE__ */ u2("ul", { class: "hsteps", id: "healthArchiving", "aria-label": "Archiving", children: (res.archiving || []).map((a5) => /* @__PURE__ */ u2("li", { children: a5 })) })
+        ] }),
+        alone.length > 0 && /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("h3", { class: "hsub", children: "If you need them" }),
+          /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Fixes no check can see", children: alone.map((f5) => /* @__PURE__ */ u2("li", { class: "hrow", "data-fix": f5.id, children: [
+            /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
+            /* @__PURE__ */ u2("div", { class: "hbody", children: [
+              /* @__PURE__ */ u2("div", { class: "t", children: f5.title }),
+              /* @__PURE__ */ u2("div", { class: "d", children: f5.does })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2(FixButton, { f: f5, label: f5.title }) })
+          ] })) })
+        ] })
+      ] }),
+      res && res.backups && res.backups.length > 0 && /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("h3", { class: "hsub", children: "Backups" }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "Each day a closed zip of the database backup, your settings, staging and the vault's history goes to your OneDrive backup folder. ask creaite's chats, the people you follow, the engine and the live database never leave the laptop." }),
+        /* @__PURE__ */ u2("ul", { class: "hsteps", children: res.backups.map((b5) => /* @__PURE__ */ u2("li", { children: b5 })) })
+      ] }),
+      /* @__PURE__ */ u2(RestoreBackup, {}),
+      /* @__PURE__ */ u2("h3", { class: "hsub", children: "After every update, creaite does this for you" }),
+      /* @__PURE__ */ u2("ul", { class: "hsteps", children: [
+        /* @__PURE__ */ u2("li", { children: "Backs up first, and rolls back if a step fails" }),
+        /* @__PURE__ */ u2("li", { children: "Makes this vault's launcher again" }),
+        /* @__PURE__ */ u2("li", { children: "Asks Chrome to refresh its copy of the app's icon" }),
+        /* @__PURE__ */ u2("li", { children: "Restarts the live server on the new version, and runs the health check" })
+      ] })
+    ] });
+  }
+
+  // components/settings/MoreSettings.jsx
+  var LIMITS = {
+    "assistant.run_timeout_minutes": [1, 240],
+    "logging.max_mb": [1, 500],
+    "logging.keep_days": [1, 90],
+    "search.debounce_ms": [0, 2e3],
+    "search.ask_budget_chars": [1e3, 2e5],
+    "review.spot_check_every": [0, 100],
+    "logging.repeat_window_hours": [1, 168],
+    "live_mode.health_check_seconds": [5, 3600]
+  };
+  var CHOICES = { "dashboard.generate_days": [7, 14, 30], "logging.level": ["info", "debug"] };
+  function settingShown(v5) {
+    if (v5 === null || v5 === void 0 || v5 === "") return "none";
+    if (typeof v5 === "boolean") return v5 ? "on" : "off";
+    if (Array.isArray(v5)) return v5.length ? v5.every((x5) => typeof x5 !== "object") ? v5.join(", ") : `${v5.length} entries` : "none";
+    if (typeof v5 === "object") {
+      const n4 = Object.keys(v5).length;
+      return n4 ? `${n4} entries` : "none";
+    }
+    return String(v5);
+  }
+  function One({ s: s5 }) {
+    const [id2] = d2(rowId);
+    const [saved, setSaved] = d2(false);
+    const t47 = A2(0);
+    const named = { "aria-labelledby": id2, "aria-describedby": id2 + "h" };
+    const save2 = async (nv, undo) => {
+      if (!await saveSettings({ [s5.key]: nv })) {
+        undo();
+        return;
+      }
+      setSaved(true);
+      clearTimeout(t47.current);
+      t47.current = window.setTimeout(() => setSaved(false), 2500);
+    };
+    const d5 = s5.default, v5 = s5.value;
+    let control = null;
+    if (!s5.resettable) control = /* @__PURE__ */ u2("code", { class: "setval", children: settingShown(v5) });
+    else if (CHOICES[s5.key]) {
+      control = /* @__PURE__ */ u2("select", { ...named, value: String(v5), onChange: (e4) => {
+        const el2 = (
+          /** @type {HTMLSelectElement} */
+          e4.currentTarget
+        );
+        const nv = typeof d5 === "number" ? Number(el2.value) : el2.value;
+        save2(nv, () => {
+          el2.value = String(v5);
+        });
+      }, children: CHOICES[s5.key].map((o5) => /* @__PURE__ */ u2("option", { value: String(o5), children: String(o5) })) });
+    } else if (typeof d5 === "boolean") {
+      control = /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "checkbox",
+          class: "switch",
+          ...named,
+          checked: !!v5,
+          onChange: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget
+            );
+            save2(el2.checked, () => {
+              el2.checked = !!v5;
+            });
+          }
+        }
+      );
+    } else if (typeof d5 === "number") {
+      const [lo2, hi2] = LIMITS[s5.key] || [0, Infinity], whole = Number.isInteger(d5);
+      control = /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "number",
+          ...named,
+          value: v5 ?? "",
+          min: lo2,
+          max: hi2 === Infinity ? void 0 : hi2,
+          step: whole ? 1 : "any",
+          style: "width:100px",
+          onChange: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget
+            ), n4 = Number(el2.value);
+            if (el2.value.trim() === "" || !Number.isFinite(n4) || whole && !Number.isInteger(n4) || n4 < lo2 || n4 > hi2) {
+              snack(hi2 === Infinity ? `Use a ${whole ? "whole " : ""}number, ${lo2} or more` : `Use a ${whole ? "whole " : ""}number from ${lo2} to ${hi2}`);
+              el2.value = String(v5 ?? "");
+              return;
+            }
+            save2(n4, () => {
+              el2.value = String(v5 ?? "");
+            });
+          }
+        }
+      );
+    } else if (s5.key === "inbox.meetings_from") {
+      control = /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          ...named,
+          value: String(v5 ?? ""),
+          size: 8,
+          onChange: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget
+            ), x5 = el2.value.trim().toLowerCase();
+            const nv = x5 === "monday" ? "monday" : /^\d+$/.test(x5) && Number(x5) <= 366 ? Number(x5) : null;
+            if (nv === null) {
+              snack("Use “monday” or a number of days (up to 366)");
+              el2.value = String(v5 ?? "");
+              return;
+            }
+            save2(nv, () => {
+              el2.value = String(v5 ?? "");
+            });
+          }
+        }
+      );
+    } else if (typeof d5 === "string" || d5 === null) {
+      control = /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          ...named,
+          value: v5 ?? "",
+          size: 14,
+          onChange: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget
+            );
+            save2(el2.value.trim(), () => {
+              el2.value = v5 ?? "";
+            });
+          }
+        }
+      );
+    } else if (Array.isArray(d5) && (Array.isArray(v5) ? v5 : d5).every((x5) => typeof x5 === "string")) {
+      control = /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          ...named,
+          value: (Array.isArray(v5) ? v5 : []).join(", "),
+          size: 18,
+          placeholder: "Comma-separated",
+          onChange: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget
+            );
+            save2(el2.value.split(",").map((x5) => x5.trim()).filter(Boolean), () => {
+              el2.value = (Array.isArray(v5) ? v5 : []).join(", ");
+            });
+          }
+        }
+      );
+    } else control = /* @__PURE__ */ u2("span", { class: "sub setval", children: settingShown(v5) });
+    return /* @__PURE__ */ u2(
+      SettingRow,
+      {
+        id: id2,
+        label: s5.label,
+        line: s5.line,
+        note: `Default: ${settingShown(d5)}. ${s5.reason}`,
+        changed: s5.changed,
+        keys: [s5.key],
+        resettable: s5.resettable,
+        fixedWhy: s5.fixed_why,
+        saved,
+        children: control
+      }
+    );
+  }
+  function MoreSettings({ covered: covered2 }) {
+    const c5 = catalogue.value;
+    if (!c5) return null;
+    const w6 = settingWords(query.value);
+    const list = c5.settings.filter((s5) => s5.tier !== "essentials" && !covered2(s5.key) && (!w6.length || settingHasAll(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6)));
+    if (!list.length) return null;
+    const groupOf2 = (s5) => s5.tier === "developer" ? "Developer" : s5.group;
+    const groups = [...c5.groups.filter((g5) => g5 !== "Developer"), "Developer"].filter((g5) => list.some((s5) => groupOf2(s5) === g5));
+    return /* @__PURE__ */ u2("div", { class: "setstack", children: groups.map((g5) => /* @__PURE__ */ u2("div", { class: "card", "data-more": g5, children: [
+      /* @__PURE__ */ u2("h2", { children: g5 }),
+      list.filter((s5) => groupOf2(s5) === g5).map((s5) => /* @__PURE__ */ u2(One, { s: s5 }, s5.key))
+    ] })) });
+  }
+
+  // components/Tabs.jsx
+  var tabId = (idBase, id2) => `${idBase}-tab-${id2}`;
+  var panelId = (idBase, id2) => `${idBase}-panel-${id2}`;
+  function Tabs({ items: items2, tabs, selected, onSelect, label, className, cls, tabClass, controls, idBase, wrap, id: id2, vertical }) {
+    const list = items2 || tabs || [], round = wrap ?? !items2;
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), keyed = A2(false);
+    _2(() => {
+      if (!keyed.current) return;
+      keyed.current = false;
+      const b5 = box.current && /** @type {HTMLElement | null} */
+      box.current.querySelector('[role="tab"][aria-selected="true"]');
+      if (b5) b5.focus();
+    });
+    const onKey = (e4) => {
+      const i5 = list.findIndex((t47) => t47.id === selected), last = list.length - 1;
+      const next = vertical ? "ArrowDown" : "ArrowRight", prev = vertical ? "ArrowUp" : "ArrowLeft";
+      let j5 = e4.key === next ? i5 + 1 : e4.key === prev ? i5 - 1 : e4.key === "Home" ? 0 : e4.key === "End" ? last : null;
+      if (j5 === null || e4.metaKey || e4.ctrlKey || e4.altKey) return;
+      e4.preventDefault();
+      j5 = round ? (j5 + list.length) % list.length : Math.max(0, Math.min(last, j5));
+      const to2 = list[j5];
+      if (!to2) return;
+      keyed.current = true;
+      onSelect(to2.id);
+    };
+    const listCls = items2 ? className : ["tabs", cls, className].filter(Boolean).join(" ");
+    return /* @__PURE__ */ u2("div", { class: listCls, id: id2, role: "tablist", "aria-label": label, "aria-orientation": vertical ? "vertical" : void 0, ref: box, onKeyDown: onKey, children: list.map((t47, n4) => {
+      const on2 = t47.id === selected, inTab = on2 || n4 === 0 && !list.some((x5) => x5.id === selected);
+      return /* @__PURE__ */ u2(S2, { children: [
+        t47.before,
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            role: "tab",
+            class: [tabClass, t47.className].filter(Boolean).join(" ") || void 0,
+            "aria-selected": on2 ? "true" : "false",
+            id: t47.tabId || (idBase ? tabId(idBase, t47.id) : void 0),
+            "aria-current": t47.current ? "date" : void 0,
+            "aria-controls": t47.controls || (idBase ? panelId(idBase, t47.id) : controls),
+            "aria-label": t47.name,
+            tabIndex: inTab ? 0 : -1,
+            "data-tab": t47.id,
+            ...dataAttrs(t47.data),
+            onClick: () => onSelect(t47.id),
+            children: [
+              t47.label,
+              t47.count != null ? /* @__PURE__ */ u2(S2, { children: [
+                " ",
+                /* @__PURE__ */ u2("span", { class: "sub", children: t47.count })
+              ] }) : null
+            ]
+          }
+        )
+      ] }, t47.id);
+    }) });
+  }
+  function drawTabs(host2, props) {
+    R(/* @__PURE__ */ u2(Tabs, { ...props }), host2);
+  }
+
+  // core/editorProfiles.js
+  var HEAD_SHIFT = 2;
+  var ED_TOOLS = {
+    text: { id: "text", label: "T", name: "Text", tip: "Plain text (also clears a heading)", run: (c5) => c5.setParagraph(), on: (e4) => !e4.isActive("heading") },
+    h1: { id: "h1", label: "H1", name: "Heading 1", run: (c5) => c5.toggleHeading({ level: 1 }), on: (e4) => e4.isActive("heading", { level: 1 }) },
+    h2: { id: "h2", label: "H2", name: "Heading 2", run: (c5) => c5.toggleHeading({ level: 2 }), on: (e4) => e4.isActive("heading", { level: 2 }) },
+    h3: { id: "h3", label: "H3", name: "Heading 3", run: (c5) => c5.toggleHeading({ level: 3 }), on: (e4) => e4.isActive("heading", { level: 3 }) },
+    b: { id: "b", keys: "Meta+B Control+B", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: (c5) => c5.toggleBold(), on: (e4) => e4.isActive("bold") },
+    i: { id: "i", keys: "Meta+I Control+I", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: (c5) => c5.toggleItalic(), on: (e4) => e4.isActive("italic") },
+    s: { id: "s", keys: "Meta+Shift+X Control+Shift+X", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: (c5) => c5.toggleStrike(), on: (e4) => e4.isActive("strike") },
+    code: { id: "code", label: "</>", name: "Code", run: (c5) => c5.toggleCode(), on: (e4) => e4.isActive("code") },
+    ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: (c5) => c5.toggleBulletList(), on: (e4) => e4.isActive("bulletList") },
+    ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: (c5) => c5.toggleOrderedList(), on: (e4) => e4.isActive("orderedList") },
+    task: { id: "task", label: "☑", name: "Checklist", run: (c5) => c5.toggleTaskList(), on: (e4) => e4.isActive("taskList") },
+    outdent: {
+      id: "outdent",
+      keys: "Shift+Tab",
+      hint: "⇧Tab",
+      label: "⇤",
+      name: "Outdent",
+      tip: "Outdent (⇧Tab)",
+      rc: "outdent",
+      run: (c5, e4) => c5.liftListItem(itemType(e4)),
+      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
+    },
+    indent: {
+      id: "indent",
+      keys: "Tab",
+      hint: "Tab",
+      label: "⇥",
+      name: "Indent",
+      tip: "Indent: a nested list (Tab)",
+      rc: "indent",
+      run: (c5, e4) => c5.sinkListItem(itemType(e4)),
+      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
+    },
+    quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: (c5) => c5.toggleBlockquote(), on: (e4) => e4.isActive("blockquote") },
+    link: { id: "link", keys: "Meta+Shift+K Control+Shift+K", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: (e4) => e4.isActive("link") },
+    unlink: { id: "unlink", label: "Unlink", name: "Remove the link", rc: "unlink", run: (c5) => c5.extendMarkRange("link").unsetLink(), can: (e4) => e4.isActive("link") },
+    clear: { id: "clear", label: "Clear", name: "Clear formatting", rc: "removeFormat", run: (c5) => c5.unsetAllMarks().clearNodes() },
+    note: { id: "note", label: "[[ ]]", name: "Link to a note", tip: "Link to a note ([[)", host: true },
+    person: { id: "person", label: "@", name: "Mention a person", tip: "Mention a person (@)", host: true },
+    item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
+    table: { id: "table", label: "▦", name: "Table", host: true },
+    image: { id: "image", label: "Image", name: "Add a picture", hint: "PNG or JPEG, 2 MB", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
+    undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
+    redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
+  };
+  var ED_MENUS = {
+    heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    /* #134: the report sheets' List menu: a sheet's field is Current state's, which has no checklist until the editor does (v2.2.0) */
+    listsheet: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map((x5) => ED_TOOLS[x5]) }
+  };
+  var ED_SLASH = {
+    text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", alias: ["paragraph", "plain"], run: (c5) => c5.setParagraph() },
+    h1: { id: "h1", group: "Text", name: "Heading 1", desc: "Big section heading", icon: "H1", alias: ["h1", "heading1"], run: (c5) => c5.setHeading({ level: 1 }) },
+    h2: { id: "h2", group: "Text", name: "Heading 2", desc: "Medium section heading", icon: "H2", alias: ["h2", "heading2"], run: (c5) => c5.setHeading({ level: 2 }) },
+    h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", alias: ["h3", "heading3"], run: (c5) => c5.setHeading({ level: 3 }) },
+    ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", alias: ["ul", "bullet", "bullets"], is: "bulletList", run: (c5) => c5.toggleBulletList() },
+    ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", alias: ["ol", "num", "number", "numbered"], is: "orderedList", run: (c5) => c5.toggleOrderedList() },
+    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "tick", "check", "checkbox"], is: "taskList", node: "taskList", run: (c5) => c5.toggleTaskList() },
+    quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", alias: ["quote", "bq", "blockquote"], is: "blockquote", run: (c5) => c5.toggleBlockquote() },
+    codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
+    table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
+    image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
+    link: { id: "link", group: "Link", name: "Link", desc: "A web page or an email address (⌘⇧K)", icon: "↗", alias: ["url", "web", "href", "address"], hook: "link" },
+    item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", alias: ["item", "work", "workitem", "issue", "action", "risk", "decision"], host: true },
+    person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
+    note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
+    "tpl:stakeholder": { id: "tpl:stakeholder", group: "Templates", name: "Stakeholder", desc: "Role, what matters to them, how they work", icon: "◇", host: true },
+    "tpl:lessons-learned": { id: "tpl:lessons-learned", group: "Templates", name: "Lessons learned", desc: "What happened, what to change", icon: "◇", host: true },
+    "tpl:working-session": { id: "tpl:working-session", group: "Templates", name: "Working session", desc: "A conversation: its date and who it was with", icon: "◇", host: true }
+  };
+  var ED_SLASH_ROWS = {
+    notes: [
+      "text",
+      "h1",
+      "h2",
+      "h3",
+      "ul",
+      "ol",
+      "task",
+      "quote",
+      "codeblock",
+      "table",
+      "image",
+      "link",
+      "item",
+      "person",
+      "note",
+      "tpl:stakeholder",
+      "tpl:lessons-learned",
+      "tpl:working-session"
+    ],
+    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
+    plain: [],
+    email: [],
+    none: []
+  };
+  function slashRank(r4, q5) {
+    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " "), typed2 = ql2.split(" ");
+    if (!ql2) return 9;
+    const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
+    const inOrder2 = (name2) => {
+      const w6 = name2.split(" ");
+      let at2 = 0;
+      return typed2.every((t47) => {
+        while (at2 < w6.length && !w6[at2].startsWith(t47)) at2++;
+        return at2++ < w6.length;
+      });
+    };
+    if (ids.includes(ql2)) return 0;
+    if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
+    if (typed2.length > 1 && inOrder2(name)) return 1;
+    if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
+    if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
+    return 9;
+  }
+  function slashRows(profile, hostRows, schema, q5 = "") {
+    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
+    const avail = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
+    if (!ql2) return avail;
+    const rank = (r4) => slashRank(r4, ql2);
+    return avail.map((r4, i5) => ({ r: r4, i: i5, k: rank(r4) })).filter((x5) => x5.k < 9).sort((a5, b5) => a5.k - b5.k || a5.i - b5.i).map((x5) => x5.r);
+  }
+  function itemType(e4) {
+    return e4.isActive("taskItem") ? "taskItem" : "listItem";
+  }
+  var ED_PROFILES = {
+    notes: {
+      tip: "Notes: one line, grouped into hover menus (Heading, List, Insert)",
+      tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"]
+    },
+    capture: {
+      tip: "The capture drawer: the shared buttons, flat (no pickers yet)",
+      tools: [
+        "h1",
+        "h2",
+        "h3",
+        "|",
+        "b",
+        "i",
+        "s",
+        "code",
+        "|",
+        "ul",
+        "ol",
+        "task",
+        "outdent",
+        "indent",
+        "quote",
+        "|",
+        "link",
+        "unlink",
+        "clear",
+        "|",
+        "undo",
+        "redo"
+      ]
+    },
+    current: {
+      tip: "Current state",
+      tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"]
+    },
+    sheet: {
+      tip: "A report sheet's text: Current state's editor, one line, grouped (#134)",
+      tools: ["m:heading", "|", "b", "i", "s", "|", "m:listsheet", "quote", "|", "link", "|", "undo", "redo"]
+    },
+    plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar (the selection bar: Improve and Ask, #133)", tools: [] },
+    email: { tip: "Draft email's preview: Outlook HTML, no toolbar (the selection bar: Improve, Tone and Ask, #133)", tools: [] },
+    none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
+  };
+  function menuFor(m5, hostTools) {
+    if (!m5) return null;
+    const list = (
+      /** @type {(ToolDef|"|")[]} */
+      (m5.items || []).filter((x5) => x5 === "|" || !x5.host || hostTools.includes(x5.id))
+    );
+    while (list.length && list[0] === "|") list.shift();
+    while (list.length && list[list.length - 1] === "|") list.pop();
+    return list.some((x5) => x5 !== "|") ? { ...m5, items: list } : null;
+  }
+  function profileTools(profile, hostTools = []) {
+    const out = [];
+    for (const id2 of (ED_PROFILES[profile] || ED_PROFILES.none).tools) {
+      if (id2 === "|") {
+        if (out.length && out[out.length - 1] !== "|") out.push("|");
+        continue;
+      }
+      if (id2.startsWith("m:")) {
+        const m5 = menuFor(ED_MENUS[id2.slice(2)], hostTools);
+        if (m5) out.push(m5);
+        continue;
+      }
+      const t47 = ED_TOOLS[id2];
+      if (t47 && (!t47.host || hostTools.includes(id2))) out.push(t47);
+    }
+    while (out.length && out[out.length - 1] === "|") out.pop();
+    return out;
+  }
+  function runTool(h5, id2) {
+    const t47 = ED_TOOLS[id2];
+    if (!h5 || !t47 || !t47.run) return false;
+    const e4 = h5.editor;
+    t47.run(e4.chain().focus(), e4).run();
+    return true;
   }
 
   // core/caretPlace.js
@@ -28319,8 +28415,12 @@ ${s5}`;
     }
     aiHome(h5);
     const was = aiBar.value, range = edSelection(h5);
+    if (!range && h5.features === "email") {
+      if (was && was.h === h5 && !barBusy()) aiBar.value = null;
+      return;
+    }
     const shown2 = !!(was && was.h === h5 && was.shown && Date.now() < keepOpenUntil);
-    aiBar.value = { h: h5, ai: ai2, from: s5.from, to: s5.to, shown: shown2, multi: !!range && !range.inline && h5.features !== "plain" };
+    aiBar.value = { h: h5, ai: ai2, from: s5.from, to: s5.to, shown: shown2, multi: !!range && !range.inline && h5.features !== "plain" && h5.features !== "email" };
   }
   function aiToggle(on2) {
     const b5 = aiBar.value;
@@ -53233,6 +53333,7 @@ ${d5.text}`);
     d5.addEventListener("close", () => {
       if (d5.open) return;
       closeCal();
+      dePrevDrop();
       if (shared.DE && shared.DE.polish) draftStat("email", "rejected");
       shared.DE = null;
     });
@@ -53417,6 +53518,7 @@ ${d5.text}`);
   function drawDraftEmail(first) {
     const em2 = deBuild(), codes = [...new Set(shared.DE.items.map((i5) => i5.p))].sort();
     if (first) {
+      dePrevDrop();
       const row2 = (i5) => {
         const w6 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
         return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${i5.noid ? "" : esc(i5.id) + " · "}${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
@@ -53435,15 +53537,41 @@ ${d5.text}`);
       if (shared.DE.includeUpdate && $("#deUpd")) $("#deUpd").checked = true;
       if (shared.DE.replyBy) $("#deReply").value = fd(shared.DE.replyBy);
     }
-    putHtml($("#dePrev"), em2.html);
+    dePrevPut(em2.html);
     shared.DE.edited = false;
     $("#deNote").hidden = true;
     if (!shared.DE.subjEdited) $("#deSubj").value = em2.subject;
   }
+  function dePrevPut(html2) {
+    const el2 = $("#dePrev");
+    if (!el2) return;
+    shared.DE.built = html2;
+    const ai2 = !shared.DE.outside;
+    if (el2.cxed && !el2.cxed.editor.isDestroyed && el2.cxed.aiOn === ai2) {
+      el2.cxed.setValue(html2);
+      return;
+    }
+    creaiteEditor(el2, { features: "email", html: html2, ...ai2 ? { ai: { place: "email", project: () => {
+      const d5 = shared.DE;
+      return d5 && (d5.items && d5.items[0] && d5.items[0].p || d5.codes && d5.codes[0]) || "";
+    } } } : {} });
+    if (el2.cxed) el2.cxed.aiOn = ai2;
+  }
+  function dePrevDrop() {
+    const el2 = $("#dePrev");
+    if (el2 && el2.cxed) el2.cxed.destroy();
+  }
+  function deHtml() {
+    const el2 = $("#dePrev");
+    if (shared.DE.edited && el2 && el2.cxed && !el2.cxed.editor.isDestroyed) return `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${edEmailHtml(el2.cxed.editor)}</div>`;
+    const t47 = document.createElement("div");
+    putHtml(t47, shared.DE.built || "");
+    return t47.innerHTML;
+  }
   function deOptionsChanged() {
     if (!shared.DE.edited) {
       const em2 = deBuild();
-      putHtml($("#dePrev"), em2.html);
+      dePrevPut(em2.html);
       if (!shared.DE.subjEdited) $("#deSubj").value = em2.subject;
       return;
     }
@@ -53481,7 +53609,7 @@ ${d5.text}`);
     }
   }
   async function deCopyEmail(withHtml, btn) {
-    const prev = $("#dePrev"), html2 = prev.innerHTML, text = shared.DE.edited ? prev.innerText : deBuild().text;
+    const prev = $("#dePrev"), html2 = deHtml(), text = shared.DE.edited ? prev.innerText : deBuild().text;
     try {
       if (!navigator.clipboard) throw new Error("no clipboard");
       if (withHtml) {
@@ -53614,10 +53742,10 @@ ${d5.text}`);
       if (!shared.DE) return;
       const t47 = e4.target;
       if (t47.closest("#deRedraw")) {
-        shared.DE.edited = false;
         shared.DE.subjEdited = false;
         const em2 = deBuild();
-        putHtml($("#dePrev"), em2.html);
+        dePrevPut(em2.html);
+        shared.DE.edited = false;
         $("#deSubj").value = em2.subject;
         $("#deNote").hidden = true;
         return;
@@ -55866,6 +55994,7 @@ ${d5.text}`);
     const id2 = `fuf-${row2.key}-${f5.f}`, v5 = valueOf(row2, f5);
     const [bad, setBad] = d2("");
     if (f5.kind === "text") {
+      const ai2 = f5.part === "person" ? void 0 : { place: "line", project: () => row2.item && (row2.item.values && row2.item.values.project || row2.item.project) || "" };
       return /* @__PURE__ */ u2(
         TextEditor,
         {
@@ -55876,6 +56005,7 @@ ${d5.text}`);
           cls: "fu-in fu-ed",
           labelledBy: `${id2}-l`,
           links: true,
+          ai: ai2,
           onCommit: (t47) => {
             if (t47.trim() !== v5) fuEdit(row2.key, f5, t47.trim());
           }
@@ -70513,6 +70643,7 @@ ${d5.text}`);
         "Peek",
         "PrepPage",
         "PrepPopup",
+        "PrepShape",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -70653,6 +70784,7 @@ ${d5.text}`);
         "dayShown",
         "days",
         "dcIcon",
+        "deBuild",
         "deCopyText",
         "dePolish",
         "deRowHtml",
@@ -70887,6 +71019,7 @@ ${d5.text}`);
         "pkCommit",
         "pkDescL",
         "pkDraw",
+        "pkEdMount",
         "pkFeed",
         "pkLast",
         "pkNote",
@@ -70895,6 +71028,7 @@ ${d5.text}`);
         "pkOwner",
         "pkPropSave",
         "pkQuiet",
+        "pkRev",
         "pkSetDate",
         "pkSetStatus",
         "pkShort",
@@ -70914,6 +71048,7 @@ ${d5.text}`);
         "projPeople",
         "publish",
         "pulseCheck",
+        "putHtml",
         "query",
         "quip",
         "quipNow",

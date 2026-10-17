@@ -107,6 +107,38 @@ const PlainLink=Mark.create({ name:"link", inclusive:false, excludes:"link",
   addAttributes(){ return { href:{ default:null } }; },
   parseHTML(){ return [{ tag:"a[href]", getAttrs:el=>{ const h=/** @type {HTMLElement} */ (el).getAttribute("href"); return isLinkUrl(h)?{ href:h }:false; } }]; },
   renderHTML({ HTMLAttributes }){ const h=HTMLAttributes.href; return ["a", isLinkUrl(h)?{ class:"tlink", href:h, target:"_blank", rel:"noopener noreferrer" }:{ class:"tlink" }, 0]; } });
+/* ===== #133 ===== the Email feature set: Draft email's preview (drafts.js #dePrev) as a host of the one editor. The email is HTML for Outlook
+   (inline styles, a table of actions, coloured spans). The document keeps what the builder wrote beside the content, so an edit
+   brings the styles along: every block carries its `style` (and the table's align, cellpadding, cellspacing, border and width) as
+   attributes, and a coloured run is the `emailSpan` mark. Nothing here is Markdown: the builder (drafts.js draftEmail) stays the source,
+   an unedited email is copied from the builder and only an edited one is written from this document (drafts.js deHtml). */
+/** The attributes an email's blocks keep as written. */
+const EMAIL_ATTRS = ["style", "align", "cellpadding", "cellspacing", "border", "width", "valign", "bgcolor"];
+const EmailStyles = Extension.create({ name: "emailStyles",
+  addGlobalAttributes(){ return [{ types:["paragraph","table","tableRow","tableCell","tableHeader"],
+    attributes:Object.fromEntries(EMAIL_ATTRS.map(a=>[a,{ default:null, parseHTML:el=>el.getAttribute(a),
+      renderHTML:v=>v[a]==null?{}:a==="style"?{ style:v.style, "data-cx-style":v.style }:{ [a]:v[a] } }])) }]; } });   /* Tiptap rewrites a style through the CSSOM (rgb(), spaces): the text as written rides in data-cx-style and is put back on copy */
+/** A run with its own inline style (the muted grey and the red or amber of a due date): <span style="color:…">. */
+const EmailSpan = Mark.create({ name:"emailSpan", inclusive:false,
+  addAttributes(){ return { style:{ default:null, parseHTML:el=>el.getAttribute("style"), renderHTML:a=>a.style?{ style:a.style, "data-cx-style":a.style }:{} } }; },
+  parseHTML(){ return [{ tag:"span[style]" }]; },
+  renderHTML({ HTMLAttributes }){ return ["span", HTMLAttributes, 0]; } });
+/** The extensions an email keeps from the notes set (everything else, Markdown included, is left out: typing `# ` or `- ` in an email
+    must not start a heading or a list; a pasted list or heading is flattened to paragraphs). @param {any[]} list @returns {any[]} */
+const emailSet = list => list.filter(x => x && ["starterKit","bold","italic","hardBreak","tableKit","table"].includes(x.name))
+  .map(x => x.name === "starterKit" ? x.configure({ heading:false, blockquote:false, codeBlock:false, horizontalRule:false, strike:false, code:false,
+    bold:false, italic:false, link:false, hardBreak:false, bulletList:false, orderedList:false, listItem:false, listKeymap:false, trailingNode:false }) : x)
+  .concat([EmailStyles, EmailSpan]);
+/** An email document as the HTML an email client takes: the editor's own HTML, a cell's lone paragraph unwrapped (the builder wrote the
+    cell's text directly, and a paragraph's margin would grow every row), the editor's marks (strong) kept. @param {any} editor @returns {string} */
+export function edEmailHtml(editor){ try{ editor.view.domObserver.flush(); }catch(e){ /* nothing pending */ }
+  const t=new DOMParser().parseFromString(editor.getHTML(),"text/html").body;   /* parsed, never set into the page */
+  t.querySelectorAll("[data-cx-style]").forEach(e=>{ e.setAttribute("style",e.getAttribute("data-cx-style")); e.removeAttribute("data-cx-style"); });
+  t.querySelectorAll("colgroup").forEach(e=>e.remove());       /* the editor's column widths: the builder's table has none */
+  t.querySelectorAll('[colspan="1"],[rowspan="1"]').forEach(e=>{ if(e.getAttribute("colspan")==="1") e.removeAttribute("colspan"); if(e.getAttribute("rowspan")==="1") e.removeAttribute("rowspan"); });
+  t.querySelectorAll("td,th").forEach(c=>{ const k=c.children; if(k.length===1&&k[0].tagName==="P"&&!k[0].getAttribute("style")&&c.childNodes.length===1) k[0].replaceWith(...k[0].childNodes); });
+  return t.innerHTML; }
+/* ===== end #133 ===== */
 
 /**
  * BL-301 D: AI on selected text. `place` chooses the options (edit_ai.py PLACES: "current", "plain", "notes", "email");
@@ -114,7 +146,7 @@ const PlainLink=Mark.create({ name:"link", inclusive:false, excludes:"link",
  * once (per `key()`) before the text goes to Claude.
  * @typedef {{place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
  *   document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)}} EdAi
- * @typedef {{features?: "current"|"plain"|"notes", markdown?: string, html?: string, text?: string, multiline?: boolean,
+ * @typedef {{features?: "current"|"plain"|"notes"|"email", markdown?: string, html?: string, text?: string, multiline?: boolean,
  *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value",
  *   ai?: EdAi, headShift?: number, links?: boolean}} EdOptions
  * @typedef {{el: HTMLElement, editor: any, features: string, links?: boolean, multiline?: boolean, headShift: number, value: () => string, setValue: (v: string) => void,
@@ -124,24 +156,25 @@ const PlainLink=Mark.create({ name:"link", inclusive:false, excludes:"link",
  * The one editor on `el` (BL-301 A). `el` itself becomes the editable root.
  * @param {HTMLElement} el @param {EdOptions} [o] @returns {EdHandle}
  */
-export function creaiteEditor(el,o={}){ const features=o.features||"current", plain=features==="plain", links=!plain||!!o.links, multiline=o.multiline!==false, headShift=plain?0:(o.headShift|0);
+export function creaiteEditor(el,o={}){ const features=o.features||"current", plain=features==="plain", email=features==="email", links=!email&&(!plain||!!o.links), multiline=o.multiline!==false, headShift=plain||email?0:(o.headShift|0);
   if(/** @type {any} */ (el).cxed) /** @type {any} */ (el).cxed.destroy();
   let orig="", env=null, touched=false;
   const load=v=>{ touched=false;
     if(plain){ orig=String(v??""); return { json:plainDoc(orig,links) }; }
+    if(email){ orig=String(v??o.html??""); return { html:orig }; }       /* #133: the builder's HTML is the source; value() gives it back until the email is edited */
     if(o.html!==undefined&&v===undefined){ orig=null; return { html:o.html }; }
     orig=String(v??""); env=envelope(orig); return { markdown:headsIn(env.inner,headShift) }; };
-  const content=load(plain?o.text:o.markdown);
+  const content=load(plain?o.text:email?o.html:o.markdown);
   const props={ ...(o.editorProps||{}),
     handleKeyDown:(view,e)=>{ if(!multiline&&e.key==="Enter") return true; const f=/** @type {any} */ (o.editorProps||{}).handleKeyDown; return f?f(view,e):false; },
     ...(links?{ handlePaste:(view,e)=>{ if(pasteLink(editor,/** @type {ClipboardEvent} */ (e),(m,u)=>{ if(ED_HOOKS.link) ED_HOOKS.link.toast(m,u); })) return true;
         const f=/** @type {any} */ (o.editorProps||{}).handlePaste; return f?f(view,e):false; } }:{}),
     ...(plain?{ transformPastedText:t=>multiline?t.replace(/\r\n?/g,"\n"):t.replace(/\s*[\r\n]+\s*/g," ") }:{}) };
-  const editor=createEditor({ mount:el },{ features, ...content, injectCSS:false, editorProps:props,
-    extensions:list=>{ const out=list.map(x=>x&&x.name==="image"?x.extend({ addNodeView:()=>figureView(o.imageSrc) })
+  const editor=createEditor({ mount:el },{ features:email?"notes":features, ...content, injectCSS:false, editorProps:props,
+    extensions:email0=>{ const list=email?emailSet(email0):email0; const out=list.map(x=>x&&x.name==="image"?x.extend({ addNodeView:()=>figureView(o.imageSrc) })
         :x&&x.name==="link"?x.extend({ inclusive:false })      // #120: typing after a link is outside it (a pasted or made link does not swallow the next word)
         :x&&x.name==="starterKit"&&headShift?x.configure({ heading:{ levels:[1,2,3] } }):x);      // a shifted host has the three levels it can store (typed #### is text)
-      return [...out,...(plain?(links?[PlainLink]:[]):[ClaimMark]),...(links?[Extension.create({ name:"cxLinkGuard", addProseMirrorPlugins:()=>[linkGuard(ED_QUIET)] })]:[]),...(o.extensions||[])]; } });
+      return [...out,...(plain?(links?[PlainLink]:[]):email?[]:[ClaimMark]),...(links?[Extension.create({ name:"cxLinkGuard", addProseMirrorPlugins:()=>[linkGuard(ED_QUIET)] })]:[]),...(o.extensions||[])]; } });
   if(links) scrubNow(editor,ED_QUIET);      /* #120: a refused address in the text it was opened with shows as plain text (quietly; an untouched text is still given back as it came) */
   const blank=()=>{ el.classList.toggle("blank",editor.isEmpty); };
   editor.on("transaction",({ transaction:tr })=>{ if(!tr.docChanged) return; blank(); if(tr.getMeta(ED_QUIET)) return; touched=true;
@@ -151,8 +184,10 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
   const h={ el, editor, features, links, multiline, headShift,
     value:()=>{ if(!touched&&orig!==null) return orig;
       if(plain) return plainText(editor.state.doc);
+      if(email) return edEmailHtml(editor);
       const md=headsOut(markdownOf(editor,dropClaims(editor.getJSON())).markdown,headShift); return env?wrap(env,md):md; },
-    setValue:v=>{ const c=load(v); editor.chain().setMeta(ED_QUIET,true).setMeta("addToHistory",false)
+    setValue:v=>{ if(email){ try{ editor.view.domObserver.flush(); }catch(e){ /* nothing pending */ } }   /* a change the page made to the DOM and the editor has not read yet is read first, so it cannot come back after the new text */
+      const c=load(v); editor.chain().setMeta(ED_QUIET,true).setMeta("addToHistory",false)
       .setContent(c.json??c.html??c.markdown,{ emitUpdate:false, ...(c.markdown!==undefined?{ contentType:"markdown" }:{}) }).run(); touched=false; blank(); },
     touched:()=>touched,
     focus:at=>{ editor.commands.focus(at??null); },
@@ -199,6 +234,9 @@ export const ED_HOOKS={ ai:null, link:null };
  */
 export function edRange(h,from,to){ const ed=h.editor, doc=ed.state.doc; if(to<=from) return null;
   if(h.features==="plain"){ const text=doc.textBetween(from,to,"\n"); return text.trim()?{ from, to, text, inline:false }:null; }
+  if(h.features==="email"){ const $a=doc.resolve(from), $b=doc.resolve(to);        /* #133: one paragraph or one cell, as text: a suggestion never reshapes the table or crosses a cell */
+    if(!$a.sameParent($b)||!$a.parent.isTextblock) return null;
+    const text=doc.textBetween(from,to,"\n","\n"); return text.trim()?{ from, to, text, inline:true }:null; }
   const $f=doc.resolve(from), $t=doc.resolve(to);
   if($f.sameParent($t)&&$f.parent.isTextblock){ const cut=$f.parent.cut($f.parentOffset,$t.parentOffset);
     const json={ type:"doc", content:[{ type:"paragraph", ...(cut.content.size?{ content:cut.content.toJSON() }:{}) }] };
@@ -217,7 +255,9 @@ export function edReplace(h,r,text){ const ed=h.editor; if(ed.isDestroyed) retur
   const now=r.to<=ed.state.doc.content.size?edRange(h,r.from,r.to):null; if(!now||now.text!==r.text) return false;
   let content;
   if(h.multiline===false) text=String(text).replace(/\s*[\r\n]+\s*/g," ").trim();   /* a one-line field stays one line (the peek's title) */
-  if(h.features==="plain"){ const L=String(text).replace(/\r\n?/g,"\n").split("\n"); content=L.length===1?(L[0]?[{ type:"text", text:L[0] }]:[]):plainDoc(L.join("\n")).content; }
+  if(h.features==="email"){ const L=String(text).replace(/\r\n?/g,"\n").trim().split(/\s*\n\s*/).filter(Boolean);   /* lines of an email's paragraph are line breaks, never a new block */
+    content=[]; L.forEach((l,i)=>{ if(i) content.push({ type:"hardBreak" }); content.push({ type:"text", text:l }); }); }
+  else if(h.features==="plain"){ const L=String(text).replace(/\r\n?/g,"\n").split("\n"); content=L.length===1?(L[0]?[{ type:"text", text:L[0] }]:[]):plainDoc(L.join("\n")).content; }
   else { const blocks=(ed.schema.nodeFromJSON(ed.markdown.parse(headsIn(headsSafe(String(text),h.headShift),h.headShift))).toJSON().content)||[];
     content=r.inline&&blocks.length===1&&blocks[0].type==="paragraph"?(blocks[0].content||[]):blocks; }
   const chain=ed.chain().focus();
