@@ -227,18 +227,29 @@ class Browser:
         self.wait(wait_for, timeout)
 
     def wait(self, js, timeout=10, every=0.05):
-        """Poll until `js` is truthy; return its value, or raise with the page's last errors."""
+        """Poll until `js` is truthy; return its value, or raise with the page's last errors.
+        A page whose main thread is starved (a loaded machine, another Chrome busy) can take longer than `timeout` to answer ONE
+        evaluation: that answer was then asked for before the time was up and is stale, so one last evaluation is made after the
+        deadline and a condition that holds by then passes. The message says how many polls were made and the slowest answer."""
         end = time.time() + timeout
-        last = None
-        while time.time() < end:
+        polls, slowest = 0, 0.0
+        expr = f"(()=>{{ const v=({js}); return v&&v.nodeType?true:v; }})()"          # an element counts as true
+        while True:
+            late = time.time() >= end
+            t0 = time.time()
             try:
-                last = self.eval(f"(()=>{{ const v=({js}); return v&&v.nodeType?true:v; }})()", wait=False)   # an element counts as true
+                last = self.eval(expr, wait=False)
             except RuntimeError:
                 last = None
+            polls += 1
+            slowest = max(slowest, time.time() - t0)
             if last:
                 return last
+            if late:
+                break
             self.pump(every)
-        raise TimeoutError(f"timed out waiting for: {js}\npage errors: {self.errors[-3:]}\n{self._where()}")
+        raise TimeoutError(f"timed out waiting for: {js}\npolls: {polls}, slowest answer {slowest:.1f}s\n"
+                           f"page errors: {self.errors[-3:]}\n{self._where()}")
 
     def frames(self, n=2, timeout=5):
         """Wait for `n` rendered frames (requestAnimationFrame), so what the page does on its next frame has been done.
@@ -250,15 +261,20 @@ class Browser:
 
     WHERE_JS = """(()=>{ const a=document.activeElement, s=getSelection();
       const name=a?a.tagName+(a.id?'#'+a.id:'')+(a.className?'.'+String(a.className).split(' ')[0]:''):null;
-      return {platform:navigator.platform, hasFocus:document.hasFocus(), visibility:document.visibilityState, active:name,
-              selection:s?{type:s.type, len:String(s).length}:null}; })()"""
+      const txt=sel=>{ const e=document.querySelector(sel); return e?(e.textContent||'').trim().slice(0,120):null; };
+      return {platform:navigator.platform, url:location.href.replace(/token=[^&#]*/,'token=*'), hasFocus:document.hasFocus(), visibility:document.visibilityState,
+              active:name, selection:s?{type:s.type, len:String(s).length}:null,
+              dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.id||d.className),
+              saveLine:txt('#noteSave'), snack:txt('#snack'), scroll:[Math.round(scrollX), Math.round(scrollY)]}; })()"""
 
     def _where(self):
-        """One line of where the page is, for a timeout: platform, focus, visibility, the active element and the selection."""
+        """The page's state, for a timeout or a failed test: URL, focus, visibility, the active element, the selection, open dialogs,
+        the note save line, the snack bar, the scroll position and the last 5 console or page errors (extends, never replaces, the page errors line)."""
         try:
-            return "page state: " + json.dumps(self.eval(self.WHERE_JS, wait=False))
+            state = "page state: " + json.dumps(self.eval(self.WHERE_JS, wait=False))
         except Exception as e:                        # the page may be gone; a timeout still reports what it was waiting for
-            return f"page state unavailable ({type(e).__name__})"
+            state = f"page state unavailable ({type(e).__name__})"
+        return f"{state}\nlast page errors: {self.errors[-5:]}"
 
     def box(self, selector):
         """The centre of the first element matching `selector`, scrolled into view, or None."""
