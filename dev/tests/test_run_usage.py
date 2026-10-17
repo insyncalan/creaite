@@ -100,6 +100,40 @@ class Skills(Base):
         usage_log.record("ask", RESULT, root=self.root)
         self.assertEqual(self.lines()[0]["skills"], [])
 
+    def ev(self, *names, key="skill"):
+        return {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {key: n}} for n in names]}}
+
+    def test_free_text_skill_names_never_reach_the_line(self):
+        typed = ["Meeting notes about Jane Doe and her pay", "projects/ABC Secret/documents/plan.docx", "../../etc/passwd",
+                 "jane-doe-salary", "evil:Jane Doe", "Evil:cx-minutes", "jane-doe:salary", "x" * 500]
+        got = usage_log.skills_of(self.ev(*typed, "cx-minutes"))
+        self.assertEqual(got, ["cx-minutes", "other"])
+        usage_log.record("ask", RESULT, root=self.root, skills=typed + ["cx-review"])
+        text = self.file.read_text()
+        for bad in ("Jane", "Secret", "passwd", "salary", "xxxx", "plan.docx"):
+            self.assertNotIn(bad, text)
+        self.assertEqual(self.lines()[0]["skills"], ["cx-review", "other"])
+
+    def test_known_skill_names_are_kept(self):
+        self.assertEqual(usage_log.skills_of(self.ev("cx-sweep", "cx-prep", "docx", "document-skills:xlsx", "creaite:cx-edit")),
+                         ["cx-sweep", "cx-prep", "docx", "document-skills:xlsx", "creaite:cx-edit"])
+
+    def test_name_is_the_fallback_key(self):
+        self.assertEqual(usage_log.skills_of(self.ev("cx-edit", key="name")), ["cx-edit"])
+        self.assertEqual(usage_log.skills_of(self.ev("Jane Doe's pay", key="name")), ["other"])
+
+    def test_skill_list_is_capped_at_twenty(self):
+        d = self.root / "skills"
+        for i in range(30):
+            (d / f"s{i:02d}").mkdir(parents=True)
+        names = [f"s{i:02d}" for i in range(30)]
+        got = usage_log.skills_of(self.ev(*names), skills_dir=d)
+        self.assertEqual(got, names[:19] + ["other"])
+        self.assertEqual(usage_log.clean_skills(names[:20], d), names[:20])      # exactly twenty: no change
+        self.assertEqual(usage_log.clean_skills(names[:20] + ["free text"], d), names[:19] + ["other"])
+        usage_log.record("ask", RESULT, root=self.root, skills=[f"free text {i}" for i in range(500)])      # a 500-name list
+        self.assertEqual(self.lines()[0]["skills"], ["other"])
+
     def test_report_lists_days_since_a_skill_last_ran(self):
         skills = self.root / ".claude" / "skills"
         for n in ("cx-minutes", "cx-review", "cx-prep", "other"):
