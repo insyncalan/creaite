@@ -780,7 +780,7 @@ th[data-col]{cursor:pointer} .sarrow{margin-left:4px;font-size:var(--fs-2xs)}
 .seeall{display:inline-block;margin-top:10px;font-size:var(--fs-sm);color:var(--muted);text-decoration:none} .seeall:hover{color:var(--ink);text-decoration:underline}
 .evbox.click{cursor:pointer} .evbox.click:hover,.evbox.click:focus-visible{background:var(--sunk)}
 .pswitch{display:flex;gap:4px;align-items:center} .pswitch select{height:32px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 8px;max-width:240px} .pencil:hover,.pencil:focus-visible{opacity:1;color:var(--ink);background:var(--sunk)}
-.ddmenu.left{left:0;right:auto} .ddmenu.on{display:block}
+.ddmenu.left{left:0;right:auto} .ddmenu.on{display:block} .ddmenu.up{top:auto;bottom:calc(100% + 4px)}
 .ddmenu label{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:pointer;font-size:var(--fs-sm)} .ddmenu label:hover{background:var(--sunk)}
 .ddmenu small{margin-left:auto;color:var(--muted)} .ddmenu .acts{display:flex;gap:4px;padding:2px 10px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .ddmenu input[type=search]{width:calc(100% - 20px);margin:4px 10px 6px;height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg)}
@@ -3166,10 +3166,21 @@ button.nchip{font:inherit;font-size:12px}
 .nbody figure.cimg img{max-width:100%;height:auto}
 /* ===== end BL-301 B gaps ===== */
 /* ===== BL-301 D (v20-ai-select): AI on selected text: the bar over a selection and the suggestion (components/AiSelect.jsx) ===== */
-.aibar{position:fixed;z-index:220;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);padding:3px;max-width:calc(100vw - 32px)}
+.aibar{position:fixed;z-index:220;display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:3px;max-width:calc(100vw - 32px)}
 .aibar .aibtn{min-height:28px;padding:2px 10px}
+.aibar .aizone{display:flex;align-items:center;gap:2px;border-radius:8px;padding:0 2px}
+.aibar .aiai{background:var(--accent-soft)} .aibar .aiai .btn{background:transparent;border-color:transparent} .aibar .aiai .btn:hover,.aibar .aiai .btn[aria-expanded=true]{background:var(--surface);color:var(--accent)}
+.aibar .aifmt .btn{background:transparent;border-color:transparent} .aibar .aifmt .btn:hover,.aibar .aifmt .btn[aria-expanded=true]{background:var(--sunk)}
+.aibar .ailab{display:inline-flex;align-items:center;gap:4px;padding:0 4px 0 6px;font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)} .aibar .ailab .i{width:14px;height:14px}
+.aibar [role=menuitemradio]:not(:has(svg)){padding-left:34px}
 .aibar .aiask{display:flex;gap:6px;align-items:center;width:min(420px,calc(100vw - 48px))}
 .aibar .aiask input{flex:1;min-width:0;min-height:28px}
+.aispark{position:fixed;z-index:219;width:28px;height:28px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--accent);cursor:pointer;box-shadow:var(--shadow-pop);animation:aispin .15s ease-out}
+.aispark:hover,.aispark[aria-expanded=true]{background:var(--accent-soft)}
+.aispark:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+@keyframes aispin{from{opacity:0;transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.aispark{animation:none}}
+@media (forced-colors:active){.aispark,.aibar,.aibar .aiai{border:1px solid CanvasText;forced-color-adjust:auto} .aispark[aria-expanded=true]{border-color:Highlight}}
 .aisug{position:fixed;z-index:220;width:min(480px,calc(100vw - 32px));max-height:min(60vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;box-shadow:var(--shadow-pop);padding:10px 12px;font-size:14px}
 .aisug .aisughd{display:flex;align-items:center;gap:6px;margin-bottom:4px} .aisug .aisughd .i{color:var(--accent)}
 .aisug .aitext{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;margin:6px 0}
@@ -3814,8 +3825,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     AG_CAP: () => AG_CAP,
     AI_ACTIONS: () => AI_ACTIONS,
     AI_FEATURE: () => AI_FEATURE,
+    AI_GROUPS: () => AI_GROUPS,
     AI_OPTIONS: () => AI_OPTIONS,
     AI_PLACES: () => AI_PLACES,
+    AI_PLACE_TABLE: () => AI_PLACE_TABLE,
     ALERT0: () => ALERT0,
     ALERTTYPES: () => ALERTTYPES,
     ALERTWORD: () => ALERTWORD,
@@ -3830,6 +3843,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     AiBar: () => AiBar,
     AiLayer: () => AiLayer,
     AiMenu: () => AiMenu,
+    AiSpark: () => AiSpark,
     AiSuggestion: () => AiSuggestion,
     BASETITLE: () => BASETITLE,
     BCLALL: () => BCLALL,
@@ -4246,6 +4260,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     TOAST_LAYERS: () => TOAST_LAYERS,
     TOAST_MS: () => TOAST_MS,
     TODAY: () => TODAY,
+    TURN_NAMES: () => TURN_NAMES,
     TVIPSEEN: () => TVIPSEEN,
     TXLABEL: () => TXLABEL,
     TXWHY: () => TXWHY,
@@ -4343,12 +4358,15 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     aiDiscard: () => aiDiscard,
     aiHome: () => aiHome,
     aiItems: () => aiItems,
-    aiPlace: () => aiPlace,
+    aiName: () => aiName,
+    aiPlaceOn: () => aiPlaceOn,
     aiRetry: () => aiRetry,
     aiRun: () => aiRun,
     aiRunAction: () => aiRunAction,
     aiSend: () => aiSend,
     aiSug: () => aiSug,
+    aiToggle: () => aiToggle,
+    aiTurn: () => aiTurn,
     alertChase: () => alertChase,
     alertClose: () => alertClose,
     alertDismiss: () => alertDismiss,
@@ -4962,6 +4980,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     edReplace: () => edReplace,
     edSelection: () => edSelection,
     edSet: () => edSet,
+    edTurnInto: () => edTurnInto,
+    edTurnKind: () => edTurnKind,
     edValue: () => edValue,
     editCardHtml: () => editCardHtml,
     editCtl: () => editCtl,
@@ -5085,6 +5105,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     hashOf: () => hashOf,
     headsIn: () => headsIn,
     headsOut: () => headsOut,
+    headsSafe: () => headsSafe,
     health: () => health,
     healthEvidence: () => healthEvidence,
     healthFacts: () => healthFacts,
@@ -7803,8 +7824,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         b5.offsetParent !== null || b5.getClientRects().length > 0
       )
     );
-    const marked = [...d5.querySelectorAll("button[data-cmdenter]")].filter(vis);
-    const all = marked.length ? marked : [...d5.querySelectorAll("button.primary")].filter(vis);
+    const marked2 = [...d5.querySelectorAll("button[data-cmdenter]")].filter(vis);
+    const all = marked2.length ? marked2 : [...d5.querySelectorAll("button.primary")].filter(vis);
     return (
       /** @type {HTMLButtonElement | null} */
       all.length ? all[all.length - 1] : null
@@ -10039,7 +10060,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         ...dataAttrs(it2.data),
         onClick: () => onPick(it2),
         children: [
-          it2.icon ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon }) : null,
+          it2.icon || it2.radio && it2.checked ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon || "check" }) : null,
           it2.icon || it2.line ? /* @__PURE__ */ u2("span", { children: [
             /* @__PURE__ */ u2("b", { children: [
               it2.name,
@@ -10127,6 +10148,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         close: () => setOpen2(false)
       });
     }, [hover, why]);
+    _2(() => {
+      if (!hover || !open2) return;
+      const b5 = btn.current, m5 = box.current;
+      if (!b5 || !m5) return;
+      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
+      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
+    }, [open2]);
     h2(() => {
       if (!open2 && back2.current) {
         back2.current = false;
@@ -27408,6 +27436,7 @@ ${s5}`;
   }
   var headsIn = (md2, shift2) => shift2 ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 > shift2 && n4 <= shift2 + 3 ? "#".repeat(n4 - shift2) + rest : "​" + z4 + "#".repeat(n4) + rest) : md2;
   var headsOut = (md2, shift2) => shift2 ? mapHeads(md2, (z4, n4, rest) => z4 !== "" ? z4.slice(1) + "#".repeat(n4) + rest : "#".repeat(Math.min(n4, 3) + shift2) + rest) : md2;
+  var headsSafe = (md2, shift2) => shift2 ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 <= shift2 ? "#".repeat(n4 + shift2) + rest : z4 + "#".repeat(n4) + rest) : md2;
   var plainDoc = (t47) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => l6 ? { type: "paragraph", content: [{ type: "text", text: l6 }] } : { type: "paragraph" }) });
   var plainText = (doc) => {
     const L3 = [];
@@ -27599,11 +27628,77 @@ ${s5}`;
       const L3 = String(text).replace(/\r\n?/g, "\n").split("\n");
       content = L3.length === 1 ? L3[0] ? [{ type: "text", text: L3[0] }] : [] : plainDoc(L3.join("\n")).content;
     } else {
-      const blocks2 = ed3.schema.nodeFromJSON(ed3.markdown.parse(headsIn(String(text), h5.headShift))).toJSON().content || [];
+      const blocks2 = ed3.schema.nodeFromJSON(ed3.markdown.parse(headsIn(headsSafe(String(text), h5.headShift), h5.headShift))).toJSON().content || [];
       content = r4.inline && blocks2.length === 1 && blocks2[0].type === "paragraph" ? blocks2[0].content || [] : blocks2;
     }
     const chain = ed3.chain().focus();
     return (content.length ? chain.insertContentAt({ from: r4.from, to: r4.to }, content, { updateSelection: true }) : chain.deleteRange({ from: r4.from, to: r4.to })).run();
+  }
+  var TURN_NAMES = (
+    /** @type {Record<string,string>} */
+    {
+      text: "text",
+      h1: "heading 1",
+      h2: "heading 2",
+      h3: "heading 3",
+      ul: "a bulleted list",
+      ol: "a numbered list",
+      task: "a checklist",
+      quote: "a quote"
+    }
+  );
+  function edTurnKind(h5) {
+    const ed3 = h5.editor, s5 = ed3.state.selection;
+    const kinds = /* @__PURE__ */ new Set();
+    ed3.state.doc.nodesBetween(s5.from, s5.to, (n4, pos, parent) => {
+      if (!n4.isTextblock) return;
+      const $p2 = ed3.state.doc.resolve(pos);
+      let k5 = n4.type.name === "heading" ? "h" + n4.attrs.level : "text";
+      for (let d5 = $p2.depth; d5 > 0; d5--) {
+        const t47 = $p2.node(d5).type.name;
+        if (t47 === "taskList") {
+          k5 = "task";
+          break;
+        }
+        if (t47 === "bulletList") {
+          k5 = "ul";
+          break;
+        }
+        if (t47 === "orderedList") {
+          k5 = "ol";
+          break;
+        }
+        if (t47 === "blockquote") {
+          k5 = "quote";
+          break;
+        }
+      }
+      kinds.add(k5);
+      return false;
+    });
+    return kinds.size === 1 ? [...kinds][0] : "";
+  }
+  function edTurnInto(h5, kind) {
+    const ed3 = h5.editor;
+    if (ed3.isDestroyed || !TURN_NAMES[kind] || ed3.state.selection.empty) return false;
+    const { from, to: to2 } = ed3.state.selection;
+    let a5 = -1, z4 = -1;
+    ed3.state.doc.nodesBetween(from, to2, (n4, pos) => {
+      if (n4.isTextblock && n4.content.size) {
+        if (a5 < 0) a5 = pos + 1;
+        z4 = pos + n4.nodeSize - 1;
+      }
+      return !n4.isTextblock;
+    });
+    const c5 = ed3.chain().focus();
+    if (a5 >= 0 && z4 >= a5) c5.setTextSelection({ from: Math.max(from, a5), to: Math.min(to2, z4) });
+    c5.clearNodes();
+    if (kind === "h1" || kind === "h2" || kind === "h3") c5.setHeading({ level: +kind[1] });
+    else if (kind === "ul") c5.toggleBulletList();
+    else if (kind === "ol") c5.toggleOrderedList();
+    else if (kind === "task") c5.toggleTaskList();
+    else if (kind === "quote") c5.toggleBlockquote();
+    return c5.run();
   }
 
   // stores/capture.js
@@ -27620,17 +27715,39 @@ ${s5}`;
       } catch (e4) {
         return;
       }
+      let c02 = c5;
+      if (o5.from !== void 0) {
+        try {
+          c02 = view.coordsAtPos(Math.min(o5.from, view.state.doc.content.size));
+        } catch (e4) {
+        }
+      }
       const vw2 = document.documentElement.clientWidth, vh2 = window.innerHeight;
       el2.style.position = "fixed";
+      if (o5.level !== void 0) {
+        const w02 = el2.offsetWidth, h02 = el2.offsetHeight;
+        el2.style.left = `${Math.max(4, Math.min(o5.x ? o5.x() : c5.left, vw2 - w02 - 4))}px`;
+        el2.style.top = `${Math.max(edge, Math.min(c5.top + o5.level, vh2 - h02 - edge))}px`;
+        el2.dataset.side = "level";
+        return;
+      }
       el2.style.maxHeight = "";
-      el2.style.overflowY = "auto";
+      if (o5.scroll !== false) el2.style.overflowY = "auto";
       const w6 = el2.offsetWidth, natural = Math.min(el2.scrollHeight, max);
-      const below = vh2 - c5.bottom - gap - edge, above = c5.top - gap - edge;
-      const up2 = natural > below && above > below;
+      const below = vh2 - c5.bottom - gap - edge, above = c02.top - gap - edge;
+      const up2 = Math.max(natural, o5.need || 0) > below && above > below;
+      if (o5.overlap && natural > below && natural > above) {
+        const h22 = Math.min(natural, vh2 - 2 * edge);
+        el2.style.maxHeight = `${h22}px`;
+        el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
+        el2.style.top = `${Math.max(edge, vh2 - edge - h22)}px`;
+        el2.dataset.side = "over";
+        return;
+      }
       const room = Math.max(60, up2 ? above : below), h5 = Math.min(natural, room);
-      el2.style.maxHeight = `${Math.min(max, room)}px`;
-      el2.style.left = `${Math.max(edge, Math.min(c5.left, vw2 - w6 - edge))}px`;
-      el2.style.top = `${up2 ? Math.max(edge, c5.top - gap - h5) : c5.bottom + gap}px`;
+      if (o5.scroll !== false) el2.style.maxHeight = `${Math.min(max, room)}px`;
+      el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
+      el2.style.top = `${up2 ? Math.max(edge, c02.top - gap - h5) : c5.bottom + gap}px`;
       el2.dataset.side = up2 ? "above" : "below";
     };
     put2();
@@ -28357,11 +28474,11 @@ ${s5}`;
       shorter: ["Shorter", "About half the length; the facts kept"],
       longer: ["Longer", "Fuller sentences; adds no facts"],
       executive: ["Make it executive", "The executive voice: the position and what matters first"],
-      spelling: ["Fix spelling and grammar", "British English; nothing else changed"],
-      polish: ["Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept"],
-      format: ["Format nicely", "Sub-headings, lists and bold where they help"],
-      checklist: ["Turn into a checklist", "One task a line, to tick off"],
+      format: ["Add headings and bold", "Sub-headings, lists and bold where they help"],
+      checklist: ["Pull out the tasks", "Finds the tasks and writes one a line to tick off"],
       summary: ["Summarise at the top", "A short summary first; the text kept below it"],
+      polish: ["Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept"],
+      notes: ["Format notes", "Rough notes sorted under headings, with bullets; every point kept"],
       formal: ["More formal", "A more formal tone for the email"],
       warmer: ["Warmer", "A warmer, friendlier tone for the email"],
       custom: ["Or say what you want…", "Your own instruction"]
@@ -28370,11 +28487,11 @@ ${s5}`;
   var AI_PLACES = (
     /** @type {Record<string, string[]>} */
     {
-      notes: ["rewrite", "shorter", "longer", "executive", "spelling", "format", "checklist", "summary", "custom"],
-      current: ["rewrite", "shorter", "longer", "executive", "spelling", "format", "summary", "custom"],
-      plain: ["rewrite", "shorter", "longer", "executive", "spelling", "custom"],
-      email: ["rewrite", "shorter", "longer", "formal", "warmer", "spelling", "custom"],
-      line: ["rewrite", "shorter", "executive", "spelling", "custom"],
+      notes: ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"],
+      current: ["notes", "rewrite", "shorter", "longer", "executive", "format", "summary", "custom"],
+      plain: ["rewrite", "shorter", "executive", "custom"],
+      email: ["rewrite", "shorter", "longer", "formal", "warmer", "custom"],
+      line: ["rewrite", "shorter", "executive", "custom"],
       report: ["shorter", "executive", "polish", "custom"],
       // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
       minutes: ["shorter", "executive", "polish", "custom"],
@@ -28384,6 +28501,33 @@ ${s5}`;
       // a sheet that can't be edited: only Find the source
     }
   );
+  var AI_GROUPS = (
+    /** @type {Record<string, [string, string[]][]>} */
+    {
+      notes: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "checklist", "summary"]]],
+      current: [["Improve", ["rewrite", "shorter", "longer", "executive"]], ["Structure", ["format", "summary"]]],
+      plain: [["Improve", ["rewrite", "shorter", "executive"]]],
+      email: [["Improve", ["rewrite", "shorter", "longer"]], ["Tone", ["formal", "warmer"]]],
+      line: [["Improve", ["rewrite", "shorter", "executive"]]],
+      report: [["Improve", ["shorter", "executive", "polish"]]],
+      // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
+      minutes: [["Improve", ["shorter", "executive", "polish"]]],
+      readonly: []
+      // only Find the source, the sheet's own item
+    }
+  );
+  var AI_PLACE_TABLE = {
+    notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
+    current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
+    email: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
+    plain: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
+    line: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
+    report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+    // v2.1.0 P5: the sheets keep their AI bar and Find the source
+    minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+    readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false }
+  };
+  var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
   var AI_NAMES = (
     /** @type {Record<string, Record<string, string>>} */
     {
@@ -28392,8 +28536,19 @@ ${s5}`;
       client: { shorter: "Shorten" }
     }
   );
+  var aiName = (place2, id2) => (AI_NAMES[place2] || {})[id2] || AI_OPTIONS[id2][0];
   var aiBar = y3(null);
   var aiSug = y3(null);
+  var marked = null;
+  j3(() => {
+    const b5 = aiBar.value, dom = b5 && !b5.h.editor.isDestroyed ? (
+      /** @type {HTMLElement} */
+      b5.h.editor.view.dom
+    ) : null;
+    if (marked && marked !== dom) marked.removeAttribute("data-aibar");
+    if (dom) dom.setAttribute("data-aibar", b5 && b5.shown ? "open" : "spark");
+    marked = dom;
+  });
   var AI_ASKED = /* @__PURE__ */ new Set();
   var AI_ACTIONS = [];
   function aiAction(a5) {
@@ -28416,36 +28571,42 @@ ${s5}`;
     return true;
   }
   var aiItems = (place2) => {
-    const own = (AI_PLACES[place2] || AI_PLACES.plain).map((id2) => ({ id: id2, name: (AI_NAMES[place2] || {})[id2] || AI_OPTIONS[id2][0], line: AI_OPTIONS[id2][1] }));
+    const own = (AI_PLACES[place2] || AI_PLACES.plain).map((id2) => ({ id: id2, name: aiName(place2, id2), line: AI_OPTIONS[id2][1] }));
     const extra = aiActionsFor(place2).map((a5) => ({ id: a5.id, name: a5.name, line: a5.line, icon: a5.icon }));
     const at2 = own.findIndex((o5) => o5.id === "custom");
     return at2 < 0 ? own.concat(extra) : [...own.slice(0, at2), ...extra, ...own.slice(at2)];
   };
-  function aiPlace(h5, from, to2, w6 = 300) {
-    const v5 = h5.editor.view;
-    let a5, b5;
-    try {
-      a5 = v5.coordsAtPos(from);
-      b5 = v5.coordsAtPos(to2);
-    } catch (e4) {
-      const r4 = h5.el.getBoundingClientRect();
-      a5 = b5 = { left: r4.left, bottom: r4.top + 24, top: r4.top };
-    }
-    const width = Math.min(w6, window.innerWidth - 32), H4 = window.innerHeight;
-    const left = Math.max(16, Math.min(Math.min(a5.left, b5.left), window.innerWidth - width - 16));
-    const below = Math.max(b5.bottom, a5.bottom) + 6;
-    const need = w6 > 200 ? Math.min(520, H4 * 0.6) : 340;
-    const top = H4 - below >= need ? below : w6 > 200 ? H4 - need - 8 : a5.top - 40 >= 8 ? a5.top - 40 : H4 - need - 8;
-    return { top: Math.max(8, Math.min(top, H4 - 48)), left };
-  }
+  var keepOpenUntil = 0;
   function barFor(h5, ai2) {
+    if (!aiPlaceOn(ai2.place)) return;
     const s5 = h5.editor.state.selection;
     if (s5.empty || h5.editor.isDestroyed || !h5.editor.state.doc.textBetween(s5.from, s5.to, " ").trim()) {
       if (aiBar.value && aiBar.value.h === h5 && !barBusy()) aiBar.value = null;
       return;
     }
     aiHome(h5);
-    aiBar.value = { h: h5, ai: ai2, ...aiPlace(h5, s5.from, s5.to, 120) };
+    const was = aiBar.value, range = edSelection(h5);
+    const shown2 = !!(was && was.h === h5 && was.shown && Date.now() < keepOpenUntil);
+    aiBar.value = { h: h5, ai: ai2, from: s5.from, to: s5.to, shown: shown2, multi: !!range && !range.inline && h5.features !== "plain" };
+  }
+  function aiToggle(on2) {
+    const b5 = aiBar.value;
+    if (b5) aiBar.value = { ...b5, shown: on2 === void 0 ? !b5.shown : on2, open: void 0 };
+  }
+  function aiTurn(kind) {
+    const b5 = aiBar.value;
+    if (!b5 || !AI_PLACE_TABLE[b5.ai.place]?.turnInto) return;
+    keepOpenUntil = Date.now() + 400;
+    if (!edTurnInto(b5.h, kind)) {
+      snack("Select some text first (⌘A selects all of it)");
+      return;
+    }
+    snack(`Turned into ${TURN_NAMES[kind]}`, () => {
+      if (!b5.h.editor.isDestroyed) {
+        b5.h.editor.commands.undo();
+        b5.h.focus();
+      }
+    });
   }
   function aiHome(h5) {
     const l6 = document.getElementById("aiLayer");
@@ -28468,6 +28629,7 @@ ${s5}`;
       }, 0);
     };
     ed3.on("selectionUpdate", update);
+    ed3.on("update", update);
     ed3.on("focus", update);
     h5.el.addEventListener("focus", update);
     ed3.on("blur", () => {
@@ -28476,7 +28638,15 @@ ${s5}`;
       }, 0);
     });
     h5.el.addEventListener("keydown", (e4) => {
+      if (e4.isComposing || h5.editor.view.composing) return;
+      if (e4.key === "Escape" && aiBar.value && aiBar.value.h === h5 && aiBar.value.shown) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        aiBar.value = null;
+        return;
+      }
       if (e4.altKey && !e4.metaKey && !e4.ctrlKey && (e4.code === "Slash" || e4.key === "/")) {
+        if (!aiPlaceOn(ai2.place)) return;
         e4.preventDefault();
         e4.stopPropagation();
         if (!edSelection(h5)) {
@@ -28484,7 +28654,7 @@ ${s5}`;
           return;
         }
         barFor(h5, ai2);
-        if (aiBar.value) aiBar.value = { ...aiBar.value, open: Date.now() };
+        if (aiBar.value) aiBar.value = { ...aiBar.value, shown: true, open: Date.now() };
       }
     }, true);
     const destroy = h5.destroy;
@@ -28503,7 +28673,10 @@ ${s5}`;
       return;
     }
     if (!AI_OPTIONS[option]) return;
-    const where2 = aiPlace(b5.h, range.from, range.to, 480);
+    if (option === "notes" && range.inline) {
+      snack("Format notes needs two or more paragraphs selected");
+      return;
+    }
     aiHome(b5.h);
     aiBar.value = null;
     const s5 = {
@@ -28513,8 +28686,7 @@ ${s5}`;
       option,
       instruction,
       label: option === "custom" ? instruction : AI_OPTIONS[option][0],
-      status: "running",
-      ...where2
+      status: "running"
     };
     const key = b5.ai.key ? b5.ai.key() : b5.ai.place;
     if (b5.ai.confidential && b5.ai.confidential() && !AI_ASKED.has(key)) {
@@ -28622,6 +28794,56 @@ ${s5}`;
   }
 
   // components/AiSelect.jsx
+  var TURN = [
+    ["text", "Text"],
+    ["h1", "Heading 1"],
+    ["h2", "Heading 2"],
+    ["h3", "Heading 3"],
+    ["ul", "Bulleted list"],
+    ["ol", "Numbered list"],
+    ["task", "Checklist"],
+    ["quote", "Quote"]
+  ];
+  var leftOf = (view, from, to2) => {
+    try {
+      return Math.min(view.coordsAtPos(from).left, view.coordsAtPos(to2).left);
+    } catch (e4) {
+      return 16;
+    }
+  };
+  function AiSpark({ bar }) {
+    const el2 = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    );
+    _2(() => {
+      if (!el2.current || bar.h.editor.isDestroyed) return void 0;
+      return placeAtCaret(bar.h.editor.view, bar.from, el2.current, { level: -2, x: () => bar.h.el.getBoundingClientRect().left - 36 });
+    }, [bar.h, bar.from, bar.to]);
+    return /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: "aispark",
+        id: "aiSpark",
+        ref: el2,
+        "aria-label": "AI and formatting on the selected text",
+        "data-tip": "AI and formatting on the selected text (Alt+/)",
+        "aria-expanded": bar.shown ? "true" : "false",
+        "aria-controls": "aiBarBox",
+        onClick: () => aiToggle(),
+        onKeyDown: (e4) => {
+          if (e4.key === "Escape" && bar.shown) {
+            e4.preventDefault();
+            e4.stopPropagation();
+            aiBar.value = null;
+            if (!bar.h.editor.isDestroyed) bar.h.focus();
+          }
+        },
+        children: /* @__PURE__ */ u2(Icon, { name: "spark" })
+      }
+    );
+  }
   function AiBar({ bar }) {
     const [asking, setAsking] = d2(false);
     const [words, setWords] = d2("");
@@ -28636,57 +28858,150 @@ ${s5}`;
     h2(() => {
       if (asking) input.current?.focus();
     }, [asking]);
+    _2(() => {
+      if (!box.current || bar.h.editor.isDestroyed) return void 0;
+      const v5 = bar.h.editor.view;
+      return placeAtCaret(v5, bar.to, box.current, { from: bar.from, x: () => leftOf(v5, bar.from, bar.to), need: 200, scroll: false, gap: 6 });
+    }, [bar.h, bar.from, bar.to, asking]);
     h2(() => {
-      if (bar.open) box.current?.querySelector("button[aria-haspopup]")?.click();
+      if (bar.open) (box.current?.querySelector(".aiai button[aria-haspopup]") || box.current?.querySelector("button[aria-haspopup]"))?.click();
     }, [bar.open]);
+    h2(() => {
+      const away = (e4) => {
+        const t47 = (
+          /** @type {Node} */
+          e4.target
+        ), layer = document.getElementById("aiLayer");
+        if (layer?.contains(t47) || bar.h.el.contains(t47)) return;
+        aiBar.value = null;
+      };
+      document.addEventListener("pointerdown", away, true);
+      return () => document.removeEventListener("pointerdown", away, true);
+    }, [bar.h]);
     const back2 = () => {
       setAsking(false);
       setWords("");
       if (!bar.h.editor.isDestroyed) bar.h.focus();
     };
-    return /* @__PURE__ */ u2("div", { class: "aibar", role: "toolbar", "aria-label": "AI on the selected text", ref: box, style: { top: `${bar.top}px`, left: `${bar.left}px` }, children: asking ? /* @__PURE__ */ u2("form", { class: "aiask", onSubmit: (e4) => {
+    const place2 = bar.ai.place, row2 = AI_PLACE_TABLE[place2];
+    const turnOn = !!row2?.turnInto && bar.h.features === "notes";
+    const cur = turnOn ? edTurnKind(bar.h) : "";
+    const pickAi = (id2) => {
+      if (!aiRunAction(id2)) aiRun(id2, "", { h: bar.h, ai: bar.ai });
+    };
+    const groups = (AI_GROUPS[place2] || AI_GROUPS.plain).map(([name, ids]) => [name, ids.map((id2) => ({ id: id2, name: aiName(place2, id2), line: AI_OPTIONS[id2][1] }))]);
+    const into = aiActionsFor(place2).map((a5) => ({ id: a5.id, name: a5.name, line: a5.line, icon: a5.icon }));
+    if (into.length) groups.push(["Make into", into]);
+    const move = (e4) => {
+      const t47 = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (t47.closest("[role=menu]") || t47.closest("input") || !t47.closest("button")) return;
+      const k5 = e4.key === "ArrowRight" ? 1 : e4.key === "ArrowLeft" ? -1 : 0;
+      if (!k5 && e4.key !== "Home" && e4.key !== "End") return;
+      const all = (
+        /** @type {HTMLElement[]} */
+        [...box.current?.querySelectorAll("button") || []].filter((b5) => !b5.closest("[role=menu]"))
+      );
+      const i5 = all.indexOf(
+        /** @type {HTMLElement} */
+        t47.closest("button")
+      );
+      const to2 = e4.key === "Home" ? 0 : e4.key === "End" ? all.length - 1 : (i5 + k5 + all.length) % all.length;
       e4.preventDefault();
-      if (words.trim()) aiRun("custom", words.trim(), { h: bar.h, ai: bar.ai });
-    }, children: [
-      /* @__PURE__ */ u2(
-        "input",
-        {
-          ref: input,
-          type: "text",
-          value: words,
-          maxLength: 400,
-          placeholder: "Say what you want done with the text",
-          "aria-label": "Say what you want done with the selected text",
-          onInput: (e4) => setWords(
-            /** @type {HTMLInputElement} */
-            e4.currentTarget.value
-          ),
-          onKeyDown: (e4) => {
-            if (e4.key === "Escape") {
-              e4.preventDefault();
-              e4.stopPropagation();
-              back2();
-            }
-          }
-        }
-      ),
-      /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", "aria-disabled": words.trim() ? void 0 : "true", children: "Ask" })
-    ] }) : /* @__PURE__ */ u2(
-      Menu,
+      e4.stopPropagation();
+      all[to2]?.focus();
+    };
+    return /* @__PURE__ */ u2(
+      "div",
       {
-        label: "AI",
-        icon: "spark",
-        btnCls: "btn aibtn",
-        menuLabel: "AI on the selected text",
-        tip: "AI on the selected text (Alt+/)",
-        items: aiItems(bar.ai.place).map((it2) => ({ ...it2, icon: it2.icon || (it2.id === "custom" ? "msg" : "spark"), data: { ai: it2.id } })),
-        onPick: (id2) => {
-          if (id2 === "custom") setAsking(true);
-          else if (!aiRunAction(id2)) aiRun(id2, "", { h: bar.h, ai: bar.ai });
+        class: "aibar",
+        id: "aiBarBox",
+        role: "toolbar",
+        "aria-label": "AI and formatting on the selected text",
+        ref: box,
+        onKeyDown: (e4) => {
+          if (e4.isComposing) return;
+          move(e4);
+          if (e4.key === "Escape" && !e4.defaultPrevented) {
+            e4.preventDefault();
+            e4.stopPropagation();
+            aiBar.value = null;
+            if (!bar.h.editor.isDestroyed) bar.h.focus();
+          }
         },
-        left: true
+        children: asking ? /* @__PURE__ */ u2("form", { class: "aiask", onSubmit: (e4) => {
+          e4.preventDefault();
+          if (words.trim()) aiRun("custom", words.trim(), { h: bar.h, ai: bar.ai });
+        }, children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              ref: input,
+              type: "text",
+              value: words,
+              maxLength: 400,
+              placeholder: "Say what you want done with the text",
+              "aria-label": "Say what you want done with the selected text",
+              onInput: (e4) => setWords(
+                /** @type {HTMLInputElement} */
+                e4.currentTarget.value
+              ),
+              onKeyDown: (e4) => {
+                if (e4.isComposing) return;
+                if (e4.key === "Escape") {
+                  e4.preventDefault();
+                  e4.stopPropagation();
+                  back2();
+                } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
+                  e4.preventDefault();
+                  e4.stopPropagation();
+                  if (words.trim()) aiRun("custom", words.trim(), { h: bar.h, ai: bar.ai });
+                }
+              }
+            }
+          ),
+          /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", "aria-disabled": words.trim() ? void 0 : "true", children: "Ask" })
+        ] }) : /* @__PURE__ */ u2(S2, { children: [
+          turnOn ? /* @__PURE__ */ u2("div", { class: "aizone aifmt", role: "group", "aria-label": "Formatting", children: /* @__PURE__ */ u2(
+            Menu,
+            {
+              label: "Turn into",
+              btnCls: "btn aibtn",
+              menuLabel: "Turn into",
+              tip: "Change the type of the selected blocks (no AI)",
+              hover: true,
+              left: true,
+              items: TURN.map(([id2, name]) => ({ id: id2, name, checked: cur === id2, radio: true, data: { turn: id2 } })),
+              onPick: aiTurn
+            }
+          ) }) : null,
+          /* @__PURE__ */ u2("div", { class: "aizone aiai", role: "group", "aria-label": "AI", children: [
+            /* @__PURE__ */ u2("span", { class: "ailab", children: [
+              /* @__PURE__ */ u2(Icon, { name: "spark" }),
+              " AI"
+            ] }),
+            bar.multi && row2?.formatNotes ? /* @__PURE__ */ u2("button", { type: "button", class: "btn aibtn", "data-ai": "notes", "data-tip": AI_OPTIONS.notes[1], onClick: () => pickAi("notes"), children: "Format notes" }) : null,
+            groups.map(([name, items2]) => /* @__PURE__ */ u2(
+              Menu,
+              {
+                label: name,
+                btnCls: "btn aibtn",
+                menuLabel: name,
+                tip: `AI: ${name.toLowerCase()}`,
+                hover: true,
+                left: true,
+                items: items2.map((it2) => ({ ...it2, icon: it2.icon || "spark", data: { ai: it2.id } })),
+                onPick: pickAi
+              },
+              name
+            )),
+            /* @__PURE__ */ u2("button", { type: "button", class: "btn aibtn", "data-ai": "custom", onClick: () => setAsking(true), children: "Ask…" })
+          ] })
+        ] })
       }
-    ) });
+    );
   }
   function AiSuggestion({ s: s5 }) {
     const card = A2(
@@ -28700,6 +29015,11 @@ ${s5}`;
       );
       first?.focus();
     }, [s5.status]);
+    _2(() => {
+      if (!card.current || s5.h.editor.isDestroyed) return void 0;
+      const v5 = s5.h.editor.view;
+      return placeAtCaret(v5, s5.range.to, card.current, { from: s5.range.from, x: () => leftOf(v5, s5.range.from, s5.range.to), max: 520, gap: 6, overlap: true });
+    }, [s5.h, s5.range.from, s5.range.to, s5.status, s5.changes]);
     const notes = s5.notes || [];
     return /* @__PURE__ */ u2(
       "div",
@@ -28709,12 +29029,16 @@ ${s5}`;
         "aria-modal": "false",
         "aria-labelledby": "aiSugH",
         ref: card,
-        style: { top: `${s5.top}px`, left: `${s5.left}px` },
         onKeyDown: (e4) => {
+          if (e4.isComposing) return;
           if (e4.key === "Escape") {
             e4.preventDefault();
             e4.stopPropagation();
             aiDiscard();
+          } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey) && s5.status === "ready") {
+            e4.preventDefault();
+            e4.stopPropagation();
+            aiAccept();
           }
         },
         children: [
@@ -28743,6 +29067,7 @@ ${s5}`;
           ] }) : /* @__PURE__ */ u2(S2, { children: [
             /* @__PURE__ */ u2("p", { class: "sub", role: "status", children: "A suggestion: your text is unchanged until you accept it." }),
             /* @__PURE__ */ u2("div", { class: "aitext", tabIndex: 0, "aria-label": s5.changes ? "The changes" : "The suggestion", children: s5.changes ? aiDiff(s5.range.text, s5.text || "").map(([k5, t47], i5) => k5 === "=" ? /* @__PURE__ */ u2("span", { children: t47 }, i5) : k5 === "-" ? /* @__PURE__ */ u2("del", { class: "aidel", children: t47 }, i5) : /* @__PURE__ */ u2("ins", { class: "aiins", children: t47 }, i5)) : s5.text }),
+            s5.option !== "custom" ? /* @__PURE__ */ u2("p", { class: "oknote", "data-aispell": true, children: "✓ Spelling and grammar fixed too (British English)." }) : null,
             notes.length ? /* @__PURE__ */ u2("ul", { class: "ainotes", "aria-label": "Check it", children: notes.map((n4) => /* @__PURE__ */ u2("li", { children: n4.note }, n4.id)) }) : /* @__PURE__ */ u2("p", { class: "oknote", children: "✓ Keeps your dates, numbers, names and item IDs." }),
             /* @__PURE__ */ u2("div", { class: "aiacts", children: [
               /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": s5.changes ? "true" : "false", onClick: aiChanges, children: "Show changes" }),
@@ -28758,7 +29083,10 @@ ${s5}`;
   }
   function AiLayer() {
     const s5 = aiSug.value, b5 = aiBar.value;
-    return s5 ? /* @__PURE__ */ u2(AiSuggestion, { s: s5 }) : b5 ? /* @__PURE__ */ u2(AiBar, { bar: b5 }, b5.h.el.id || "bar") : null;
+    return s5 ? /* @__PURE__ */ u2(AiSuggestion, { s: s5 }) : b5 ? /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(AiSpark, { bar: b5 }),
+      b5.shown ? /* @__PURE__ */ u2(AiBar, { bar: b5 }, b5.h.el.id || "bar") : null
+    ] }) : null;
   }
   function AiMenu({ place: place2, target, onExecutive }) {
     return /* @__PURE__ */ u2(
@@ -67463,7 +67791,9 @@ ${d5.text}`);
         "A",
         "ACTKINDS",
         "AI_ACTIONS",
+        "AI_GROUPS",
         "AI_PLACES",
+        "AI_PLACE_TABLE",
         "AiBar",
         "AiSuggestion",
         "Asks",
@@ -67601,7 +67931,10 @@ ${d5.text}`);
         "aiAction",
         "aiBar",
         "aiItems",
+        "aiPlaceOn",
+        "aiRun",
         "aiSug",
+        "aiTurn",
         "allRows",
         "allViews",
         "anim",
@@ -67707,6 +68040,7 @@ ${d5.text}`);
         "edOf",
         "edSelection",
         "edSet",
+        "edTurnInto",
         "edValue",
         "editProposal",
         "errBanner",
@@ -67736,6 +68070,7 @@ ${d5.text}`);
         "hashOf",
         "headsIn",
         "headsOut",
+        "headsSafe",
         "health",
         "healthEvidence",
         "healthFacts",

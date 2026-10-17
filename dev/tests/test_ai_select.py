@@ -67,6 +67,8 @@ class TheScript(unittest.TestCase):
     def test_each_place_chooses_its_options_and_the_page_lists_the_same(self):
         got = edit_ai(self.v, "options")
         ids = {p: [o["id"] for o in L] for p, L in got.items()}
+        self.assertEqual(ids["notes"][0], "notes")                         # Format notes leads where blocks exist
+        self.assertNotIn("spelling", [i for L in ids.values() for i in L])  # no separate spelling option (BL-117)
         self.assertIn("checklist", ids["notes"])
         self.assertNotIn("checklist", ids["current"])                     # Current state takes no checklists
         self.assertFalse({"format", "checklist", "summary"} & set(ids["plain"]))   # plain text stays plain
@@ -76,6 +78,16 @@ class TheScript(unittest.TestCase):
         block = re.search(r"AI_PLACES = /\*\* .*? \*/ \(\{(.*?)\}\);", page, re.S).group(1)
         page_ids = {m.group(1): re.findall(r'"(\w+)"', m.group(2)) for m in re.finditer(r"(\w+): \[(.*?)\]", block)}
         self.assertEqual(page_ids, ids)
+        groups = re.search(r"AI_GROUPS = /\*\* .*? \*/ \(\{(.*?)\}\);", page, re.S).group(1)       # the bar's groups hold only offered options
+        for place, body in re.findall(r"(\w+): \[(\[.*?\])\],?\n", groups):
+            grouped = set(re.findall(r'"(\w+)"', re.sub(r'\["[A-Z][\w ]*",', "[", body)))
+            self.assertLessEqual(grouped, set(ids[place]), place)
+            self.assertEqual(grouped, set(ids[place]) - {"notes", "custom"}, place)   # every other option is in a group
+        # each place's option set, as the issue lists it
+        self.assertEqual(ids["email"], ["rewrite", "shorter", "longer", "formal", "warmer", "custom"])
+        self.assertEqual(ids["plain"], ["rewrite", "shorter", "executive", "custom"])
+        self.assertEqual(ids["line"], ids["plain"])
+        self.assertNotIn("checklist", ids["current"])
 
     def test_the_prompt_holds_the_text_the_option_and_the_projects_name_people_and_open_ids_only(self):
         ctx = edit_ai(self.v, "context", {"option": "shorter", "text": "Escalate the data access issue.", "code": "ABC", "place": "current"})
@@ -88,12 +100,29 @@ class TheScript(unittest.TestCase):
         self.assertNotIn("You have tools", p)
         self.assertIn("no tools", p)
 
+    def test_every_reshape_fixes_spelling_and_grammar_and_format_notes_keeps_every_point(self):
+        for opt in ("rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "notes"):
+            ctx = edit_ai(self.v, "context", {"option": opt, "text": "First point.\n\nSecond point.", "code": "ABC", "place": "notes"})
+            self.assertIn("spelling, grammar and punctuation, in British English", ctx["prompt"], opt)
+        notes = edit_ai(self.v, "context", {"option": "notes", "text": "met sara\n\nlate by 2 weeks 20-10-2026", "place": "notes"})
+        self.assertIn("Keep every point", notes["prompt"])
+        self.assertIn("add nothing", notes["prompt"])
+        self.assertIn("keep those headings", notes["prompt"])               # a Working session note keeps its own
+        custom = edit_ai(self.v, "context", {"option": "custom", "instruction": "Make it louder", "text": "x", "place": "plain"})
+        self.assertNotIn("spelling, grammar", custom["prompt"])              # Ask… does only what was asked
+        lost = edit_ai(self.v, "result", {"context": {"original": "Met Sara Khan on 20-10-2026, 40% done, ABC-A-001.", "people": ["Sara Khan"]},
+                                          "reply": "<<<SUGGESTION\n## Notes\n- Met on 20-10-2026.\nSUGGESTION>>>"})
+        self.assertTrue({"ids-lost", "names-lost"} <= {n["id"] for n in lost["notes"]})   # the check names what the sort lost
+
     def test_make_it_executive_carries_the_executive_voice(self):
         ctx = edit_ai(self.v, "context", {"option": "executive", "text": "We are late.", "code": "ABC", "place": "plain"})
         self.assertIn("Bottom line first", ctx["prompt"])
 
     def test_requests_it_refuses(self):
         for body, why in (({"option": "nope", "text": "x", "place": "plain"}, "offered"),
+                          ({"option": "spelling", "text": "x", "place": "notes"}, "offered"),         # gone (BL-117)
+                          ({"option": "notes", "text": "One paragraph only.", "place": "notes"}, "two or more"),
+                          ({"option": "notes", "text": "x\n\ny", "place": "plain"}, "offered"),
                           ({"option": "checklist", "text": "x", "place": "plain"}, "offered"),
                           ({"option": "rewrite", "text": "x", "place": "elsewhere"}, "place"),
                           ({"option": "rewrite", "text": "  ", "place": "plain"}, "Select"),
@@ -144,6 +173,26 @@ class AiOnSelection(LiveBrowserCase):
     def server_env(cls):
         return {"CREAITE_CLAUDE": str(cls.fake)}
 
+    def setUp(self):
+        super().setUp()
+        self.b.eval("AI_PLACE_TABLE.plain.ai=true; AI_PLACE_TABLE.line.ai=true; true")     # v2.2.0's places, switched on for these tests
+        self.addCleanup(lambda: self.b and self.b.eval("AI_PLACE_TABLE.plain.ai=false; AI_PLACE_TABLE.line.ai=false; true"))
+
+    def test_the_place_table_lists_every_place_and_off_places_show_no_ai_element(self):
+        b = self.b
+        b.eval("AI_PLACE_TABLE.plain.ai=false; AI_PLACE_TABLE.line.ai=false; true")
+        self.assertEqual(b.eval("Object.fromEntries(Object.entries(AI_PLACE_TABLE).map(([k,v])=>[k,v.ai]))"),
+                         {"notes": True, "current": True, "email": False, "plain": False, "line": False,
+                          "report": True, "minutes": True, "readonly": True})      # the A4 sheets stay on as v2.1.0 shipped
+        for place in ("email", "plain", "line"):
+            b.eval("""(p=>{ document.getElementById('offx')?.remove(); const el=document.createElement('div'); el.id='offx';
+              el.style.cssText='position:fixed;top:120px;left:120px;width:400px;z-index:100;background:var(--surface)';
+              document.body.appendChild(el); const h=creaiteEditor(el,{features:'plain',text:'Some text here.',ai:{place:p}});
+              h.focus(); h.editor.commands.selectAll(); })(%s)""" % json.dumps(place))
+            b.pump(0.4)
+            self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aispark, #aiLayer .aibar')"), place)
+            b.eval("document.getElementById('offx').cxed.destroy(); document.getElementById('offx').remove(); true")
+
     def stats(self):
         p = self.v.root / "system/staging/draft-stats.json"
         return json.loads(p.read_text()).get("edit", {}) if p.exists() else {}
@@ -162,13 +211,32 @@ class AiOnSelection(LiveBrowserCase):
         self.b.eval("""(()=>{ const h=document.querySelector(%s).cxed, doc=h.editor.state.doc; let at=-1;
           doc.descendants((n,pos)=>{ if(at<0&&n.isText){ const i=n.text.indexOf(%s); if(i>=0) at=pos+i; } });
           h.focus(); h.editor.commands.setTextSelection({from:at,to:at+%d}); })()""" % (json.dumps(el), json.dumps(words), len(words)))
+        self.b.wait("document.querySelector('#aiLayer .aispark')")
+        self.b.click("#aiLayer .aispark")                                   # the sparkle in the margin opens the bar
         self.b.wait("document.querySelector('#aiLayer .aibar')")
+
+    GROUP = {"rewrite": "improve", "shorter": "improve", "longer": "improve", "executive": "improve", "format": "structure",
+             "checklist": "structure", "summary": "structure", "formal": "tone", "warmer": "tone"}
+
+    def open_group(self, group):
+        self.b.click(f'#aiLayer .aibar button[data-tip="AI: {group}"]')
+        self.b.wait("document.querySelector('#aiLayer [role=menu]')")
 
     def pick(self, option):
         b = self.b
-        b.click("#aiLayer .aibar button[aria-haspopup]")
-        b.wait("document.querySelector('#aiLayer [role=menu]')")
+        self.open_group(self.GROUP[option])
         b.click(f"#aiLayer [role=menu] [data-ai={option}]")
+
+    def bar_options(self):
+        """Every AI option the open bar offers, group by group: [(group, [ids])], then Ask… and Format notes if present."""
+        b = self.b
+        out = []
+        for g in b.eval("[...document.querySelectorAll('#aiLayer .aibar .aiai button[aria-haspopup]')].map(x=>x.dataset.tip.slice(4))"):
+            self.open_group(g)
+            out.append((g, b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)")))
+            b.key("Escape")
+            b.wait("!document.querySelector('#aiLayer [role=menu]')")
+        return out
 
     def ready(self):
         self.b.wait("document.querySelector('#aiLayer .aisug .aitext')||document.querySelector('#aiLayer .aisug [role=alert]')", 20)
@@ -180,10 +248,11 @@ class AiOnSelection(LiveBrowserCase):
         before = b.eval("edValue(document.getElementById('curEd'))")
         sentence = "Build is two weeks behind because data access is late"
         self.select_words("#curEd", sentence)
-        b.click("#aiLayer .aibar button[aria-haspopup]")
-        b.wait("document.querySelector('#aiLayer [role=menu]')")
-        menu = b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)")
-        self.assertEqual(menu, ["rewrite", "shorter", "longer", "executive", "spelling", "format", "summary", "custom"])
+        self.assertEqual(self.bar_options(), [("improve", ["rewrite", "shorter", "longer", "executive"]), ("structure", ["format", "summary"])])
+        self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aifmt')"))          # Current state: no Turn into
+        self.assertFalse(b.eval("!!document.querySelector('#aiLayer [data-ai=notes]')"))  # one sentence: no Format notes
+        self.assertTrue(b.eval("!!document.querySelector('#aiLayer [data-ai=custom]')"))   # Ask… stays
+        self.open_group("improve")
         b.click("#aiLayer [role=menu] [data-ai=shorter]")
         card = self.ready()
         self.assertIn("Shorter", card)
@@ -230,10 +299,12 @@ class AiOnSelection(LiveBrowserCase):
         self.open_current()
         b.eval("document.getElementById('curEd').cxed.focus()")
         b.key("a", META)                                                                          # ⌘A: the whole pane
-        b.wait("document.querySelector('#aiLayer .aibar')")
+        b.wait("document.querySelector('#aiLayer .aispark')")                                   # the sparkle, bar still closed
+        self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aibar')"))
         b.key("/", ALT)
         b.wait("document.querySelector('#aiLayer [role=menu]')&&document.activeElement.closest('[role=menu]')")
-        b.click("#aiLayer [role=menu] [data-ai=custom]")
+        b.key("Escape")
+        b.click("#aiLayer .aibar [data-ai=custom]")
         b.wait("document.activeElement&&document.activeElement.matches('#aiLayer .aiask input')")
         b.type("Make it louder")
         b.key("Enter")
@@ -247,7 +318,7 @@ class AiOnSelection(LiveBrowserCase):
     def test_the_route_runs_claude_with_no_tools_at_all(self):
         self.open_current()
         self.select_words("#curEd", "UAT preparation")
-        self.pick("spelling")
+        self.pick("rewrite")
         self.ready()
         args = json.loads(Path(str(self.fake) + ".argv.json").read_text())
         self.assertEqual(args[args.index("--tools") + 1], "")
@@ -294,16 +365,16 @@ class AiOnSelection(LiveBrowserCase):
         b.eval("document.getElementById('pkDesc').cxed.setValue('Sara to send teh plan.')")
         b.click("#pkDesc")
         b.key("a", META)                                                                          # ⌘A: all of the field
+        b.wait("document.querySelector('#aiLayer .aispark')")
+        b.click("#aiLayer .aispark")
         b.wait("document.querySelector('#aiLayer .aibar')")
-        b.click("#aiLayer .aibar button[aria-haspopup]")
-        b.wait("document.querySelector('#aiLayer [role=menu]')")
-        menu = b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)")
-        self.assertEqual(menu, ["rewrite", "shorter", "longer", "executive", "spelling", "custom"])
-        b.click("#aiLayer [role=menu] [data-ai=spelling]")
+        self.assertEqual(self.bar_options(), [("improve", ["rewrite", "shorter", "executive"])])   # a plain field: Improve only
+        self.pick("rewrite")
         self.ready()
         self.assertIn("Keeps your dates", b.eval("document.querySelector('#aiLayer .aisug').textContent"))
+        self.assertIn("Spelling and grammar fixed too", b.eval("document.querySelector('#aiLayer .aisug').textContent"))
         b.click("#aiLayer .aisug [data-aifirst]")
-        b.wait("document.getElementById('pkDesc').textContent==='Sara to send the plan.'")
+        b.wait("document.getElementById('pkDesc').textContent==='Clearly: Sara to send teh plan.'")
 
     def test_the_peeks_title_stays_one_line(self):
         """Alan, 14-10-2026: the title has AI on a selection too; the suggestion is one line and Accept never breaks it."""
@@ -317,12 +388,11 @@ class AiOnSelection(LiveBrowserCase):
         b.eval("document.getElementById('pkTitle').cxed.setValue('Confirm data access date')")
         b.click("#pkTitle")
         b.key("a", META)
+        b.wait("document.querySelector('#aiLayer .aispark')")
+        b.click("#aiLayer .aispark")
         b.wait("document.querySelector('#aiLayer .aibar')")
-        b.click("#aiLayer .aibar button[aria-haspopup]")
-        b.wait("document.querySelector('#aiLayer [role=menu]')")
-        menu = b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)")
-        self.assertEqual(menu, ["rewrite", "shorter", "executive", "spelling", "custom"])
-        b.click("#aiLayer [role=menu] [data-ai=rewrite]")
+        self.assertEqual(self.bar_options(), [("improve", ["rewrite", "shorter", "executive"])])
+        self.pick("rewrite")
         self.ready()
         self.assertIn("The text is one line", Path(str(self.fake) + ".prompt").read_text())
         self.assertEqual(b.eval("document.querySelector('#aiLayer .aitext').textContent"),

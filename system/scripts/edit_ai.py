@@ -57,13 +57,10 @@ OPTIONS = {
     "executive": ("Make it executive", "The executive voice: the position and what matters first",
                   "Rewrite the text in the executive voice below: bottom line first, quantified, names and dates, outcomes before "
                   "activities. Keep its facts and add none."),
-    "spelling": ("Fix spelling and grammar", "British English; nothing else changed",
-                 "Correct the spelling, grammar and punctuation only, in British English. Change nothing else: not the wording, "
-                 "the order or the formatting."),
-    "format": ("Format nicely", "Sub-headings, lists and bold where they help",
+    "format": ("Add headings and bold", "Sub-headings, lists and bold where they help",
                "Format the text so it is easy to scan: short paragraphs, bulleted or numbered lists and sub-headings where they "
                "help, bold for the few key words. Keep the words themselves."),
-    "checklist": ("Turn into a checklist", "One task a line, to tick off",
+    "checklist": ("Pull out the tasks", "Finds the tasks and writes one a line to tick off",
                   "Turn the text into a checklist: one task a line, each starting with a verb, written as Markdown task items "
                   "(\"- [ ] \"). Keep the owner and date with a task when the text gives them."),
     "summary": ("Summarise at the top", "A short summary first; the text kept below it",
@@ -72,6 +69,10 @@ OPTIONS = {
     "polish": ("Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept",
                "Polish the text: correct spelling, grammar and punctuation in British English, and smooth awkward wording lightly. "
                "Keep its facts, its order, its length and its voice; add and remove nothing."),
+    "notes": ("Format notes", "Rough notes sorted under headings, with bullets; every point kept",
+              "Format these rough notes: sort them under short headings with bullets beneath. Keep every point and every date, "
+              "number, name and item ID; add nothing and drop nothing. If the text already has headings (a Working session "
+              "note's template), keep those headings and file the points under them."),
     "formal": ("More formal", "A more formal tone for the email",
                "Rewrite the text in a more formal, professional tone. Keep its facts and its length."),
     "warmer": ("Warmer", "A warmer, friendlier tone for the email",
@@ -81,13 +82,17 @@ OPTIONS = {
 # Each place chooses its options (BL-301 D). "plain": the peek's fields and Prep's boxes (plain text, so no formatting);
 # "current": Current state (no checklists or tables, which the Word reports can't take); "notes": a note (everything);
 # "email": the Draft email (More formal and Warmer added); "line": a one-line field, the peek's title (Alan, 14-10-2026: the
-# suggestion stays one line, and Accept never breaks it).
+# suggestion stays one line, and Accept never breaks it). #117: there is no separate spelling option (every option but Ask… also
+# corrects spelling, grammar and punctuation, see context()), and "notes" (Format notes) leads where blocks exist: notes and current.
+# v2.1.0 switches on the bar for notes and current only (the page's place table, AI_PLACE_TABLE); email, plain and line are listed so
+# that v2.2.0 is a switch. "report", "minutes" and "readonly" are the A4 sheet's (v2.1.0 P5), kept exactly as shipped (SHEET_PLACES).
+# The client sheet's `client` place (#123) is added here, in FORMATS and in FORMAT_RULES.
 PLACES = {
-    "notes": ["rewrite", "shorter", "longer", "executive", "spelling", "format", "checklist", "summary", "custom"],
-    "current": ["rewrite", "shorter", "longer", "executive", "spelling", "format", "summary", "custom"],
-    "plain": ["rewrite", "shorter", "longer", "executive", "spelling", "custom"],
-    "email": ["rewrite", "shorter", "longer", "formal", "warmer", "spelling", "custom"],
-    "line": ["rewrite", "shorter", "executive", "spelling", "custom"],
+    "notes": ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"],
+    "current": ["notes", "rewrite", "shorter", "longer", "executive", "format", "summary", "custom"],
+    "plain": ["rewrite", "shorter", "executive", "custom"],
+    "email": ["rewrite", "shorter", "longer", "formal", "warmer", "custom"],
+    "line": ["rewrite", "shorter", "executive", "custom"],
     "report": ["shorter", "executive", "polish", "custom"],      # v2.1.0 P5: the A4 sheet (reports and minutes)
     "minutes": ["shorter", "executive", "polish", "custom"],
     "client": ["shorter", "executive", "polish", "custom"],      # #123: the client sheet (client-safe facts and reply check)
@@ -95,16 +100,58 @@ PLACES = {
 }
 FORMATS = {"notes": "markdown", "current": "markdown", "plain": "plain", "email": "plain", "line": "line", "report": "markdown",
            "minutes": "markdown", "client": "markdown", "readonly": "plain"}
+# The A4 sheet's places (v2.1.0 P5/P6/P8; the client report's sheet is "report"): their option sets, format rules and prompts stay
+# exactly as v2.1.0 shipped them. #117 adds nothing here: no spelling sentence (Polish already does that), no new option, and the
+# shipped Markdown rule, word for word. A client-safe change to these places is its own item (#123's `client` place), never #117's.
+SHEET_PLACES = ("report", "minutes", "readonly")
+SPELLING = " Also correct any spelling, grammar and punctuation, in British English."
+# The Markdown rule, per place (#117). The heading levels the place may write: a note stores `#` to `###`; Current state is stored
+# SHIFTED by two (`###` to `#####`), because a `## ` line ends its `## Current state` section (build_dashboard.py, report.py read to
+# the next `## `). The text Claude is given is in the stored levels, so it is told the stored ones; result() also re-levels a stray
+# `#` or `##` line for Current state, and the page does too (core/editor.js headsSafe) before anything is written.
+_MARKDOWN = ("The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, {heads} "
+             "headings{note}, quotes, links{tasks}. Keep any link, image or HTML comment exactly as it is.")
+_PLAIN = ("The text is plain text, one paragraph a line. Reply in plain text: no Markdown, no bullets or symbols that weren't "
+          "there, one paragraph a line.")
+_LINE = "The text is one line: a title. Reply with one line of plain text only: no line breaks, no Markdown, no bullets."
+# v2.1.0's Markdown rule for the sheet, unchanged (no task items: the sheet's reports can't take them)
+_SHEET_MARKDOWN = ("The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, \"### \" "
+                   "sub-headings, quotes, links. Keep any link, image or HTML comment exactly as it is.")
 CLIENT_PLACES = {"client"}
 CLIENT_RULE = ("This text is for the client. Use only what the text holds and the item IDs listed below; never add an internal "
                "health view or its reason, internal-only wording, or anyone's name the text doesn't already give.")
 FORMAT_RULES = {
-    "markdown": "The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, \"### \" "
-                "sub-headings, quotes, links{tasks}. Keep any link, image or HTML comment exactly as it is.",
-    "plain": "The text is plain text, one paragraph a line. Reply in plain text: no Markdown, no bullets or symbols that weren't "
-             "there, one paragraph a line.",
-    "line": "The text is one line: a title. Reply with one line of plain text only: no line breaks, no Markdown, no bullets.",
+    "notes": _MARKDOWN.format(heads="\"# \", \"## \" and \"### \"", note="", tasks=", \"- [ ] \" task items"),
+    "current": _MARKDOWN.format(heads="\"### \", \"#### \" and \"##### \"",
+                                note=" (never \"# \" or \"## \": a \"## \" line would end this section)", tasks=""),
+    "plain": _PLAIN,
+    "email": _PLAIN,
+    "line": _LINE,
+    "report": _SHEET_MARKDOWN,
+    "minutes": _SHEET_MARKDOWN,
+    "client": _SHEET_MARKDOWN,
+    "readonly": _PLAIN,
 }
+# how far a place's stored heading levels are shifted from the editor's 1 to 3 (Current state's are written `###` to `#####`)
+HEAD_SHIFT = {"current": 2}
+FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
+
+def relevel(text, place):
+    """A place that stores its headings shifted never gets a heading above its lowest level: Current state's `#` and `##` lines
+    become `###` and `####` (outside fenced code), so no `## ` line can end the `## Current state` section (#117)."""
+    shift = HEAD_SHIFT.get(place)
+    if not shift:
+        return text
+    out, fence = [], False
+    for line in (text or "").split("\n"):
+        if FENCE_RE.match(line):
+            fence = not fence
+        m = None if fence else re.match(r"^((?:> {0,4}|>\t)*)(#{1,6})([ \t].*|)$", line)
+        if m and len(m.group(2)) <= shift:
+            line = m.group(1) + "#" * (len(m.group(2)) + shift) + m.group(3)
+        out.append(line)
+    return "\n".join(out)
 
 
 def one_line(text):
@@ -346,6 +393,12 @@ def _report_found(code, d):
         and doc.get("project") == code
 
 
+def _needs_blocks(option, text):
+    """Format notes is offered for a multi-block selection only: two or more non-empty lines."""
+    if option == "notes" and sum(1 for ln in text.splitlines() if ln.strip()) < 2:
+        raise Refused("Format notes needs two or more paragraphs.")
+
+
 def request(req):
     """The request checked: (option, text, code, place, instruction) or Refused. The place is bound_place's."""
     code = str(req.get("code") or "")
@@ -361,6 +414,7 @@ def request(req):
         raise Refused("Select some text first.")
     if len(text) > MAX_TEXT:
         raise Refused(f"That's too much text for one suggestion; select under {MAX_TEXT // 1000}k characters.")
+    _needs_blocks(option, text)
     instruction = " ".join(str(req.get("instruction") or "").split())
     if option == "custom" and not instruction:
         raise Refused("Say what you want done with the text.")
@@ -382,12 +436,14 @@ def context(req):
         "Do what Alan asks with the text, and only that. His instruction: " + instruction)
     if client:
         task += "\n\n" + CLIENT_RULE
+    if option != "custom" and place not in SHEET_PLACES and place not in CLIENT_PLACES:    # every reshape also fixes spelling and grammar
+        task += SPELLING                                    # (the page says so); the sheets' and the client sheet's prompts stay as shipped
     if option == "executive":
         import report
         task += "\n\nThe executive voice:\n" + report.style_guide()
     template = string.Template((paths.TEMPLATES / "drafts" / "edit-ai.md").read_text(encoding="utf-8"))
     prompt = template.substitute(
-        task=task, format_rule=FORMAT_RULES[fmt].format(tasks=", \"- [ ] \" task items" if place == "notes" else ""),
+        task=task, format_rule=FORMAT_RULES[place],
         project=facts["name"] or "none given",
         people=", ".join(facts["people"]) or "none listed",
         ids=", ".join(facts["ids"]) or "none",
@@ -463,6 +519,7 @@ def result(body):
     bad = client_problems(ctx.get("code") or "", text, ctx.get("original") or "") if ctx.get("place") in CLIENT_PLACES else []
     if bad:
         return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"), "message": refusal(bad, True)}
+    text = relevel(text, ctx.get("place"))                 # Current state never gets a `# ` or `## ` line (it would end the section)
     return {"text": text, "notes": check(ctx.get("original") or "", text, ctx.get("people") or []), "option": ctx.get("option"),
             "format": ctx.get("format")}
 

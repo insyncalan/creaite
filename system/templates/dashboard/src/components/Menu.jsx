@@ -108,7 +108,7 @@ function MenuItems({ items, onPick }) {
       <button key={it.id} type="button" role={it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"} tabIndex={-1}
         class={it.cls} data-tip={it.tip} aria-checked={it.checked === undefined ? undefined : it.checked ? "true" : "false"}
         aria-disabled={it.disabled ? "true" : undefined} {...dataAttrs(it.data)} onClick={() => onPick(it)}>
-        {it.icon ? <Icon name={it.checked ? "check" : it.icon} /> : null}
+        {it.icon || (it.radio && it.checked) ? <Icon name={it.checked ? "check" : it.icon || "check"} /> : null}
         {it.icon || it.line
           ? <span><b>{it.name}{it.mark ? <span class="last"> · {it.mark}</span> : null}</b>{it.line ? <small>{it.line}</small> : null}</span>
           : <>{it.name}{it.mark ? <span class="last"> · {it.mark}</span> : null}</>}
@@ -119,7 +119,9 @@ function MenuItems({ items, onPick }) {
 /** A button that opens a menu of commands. `why` disables it (aria-disabled, the reason as its tooltip, `onBlocked` on a
     click). `data` adds data-* attributes to the button, and an item's `data` to that item. `ariaLabel` names a button whose
     words are a symbol ("…"); `chevron: false` leaves out the ▾ icon; `labelCls` classes the words; `id`, `menuId` and
-    `menuCls` give the button and the menu an id and the menu more classes; `hidden` hides the button.
+    `menuCls` give the button and the menu an id and the menu more classes; `hidden` hides the button. `hover`: the hover standard
+    (#143, core/hover.js; see the top of this file). An item with `radio` and `checked` is a menuitemradio: ticked
+    when current, and picking it closes the menu.
     @param {MenuProps} props */
 export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btnCls, menuLabel, left, data, id, ariaLabel,
   chevron = true, labelCls, menuId, menuCls, hidden, hover }) {
@@ -142,6 +144,13 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
     return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current, isOpen: () => isOpen.current,
       open: () => { if (why || isOpen.current) return; if (KB_OPEN && KB_OPEN !== fold) KB_OPEN(); KB_OPEN = null; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
   }, [hover, why]);
+  useLayoutEffect(() => {          /* #117: a hover menu that would run off the bottom of the window opens upward when there is room above (the AI bar near the window's foot) */
+    if (!hover || !open) return;
+    const b = btn.current, m = box.current;
+    if (!b || !m) return;
+    const r = m.getBoundingClientRect(), t = b.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 4 && t.top - 8 > r.height) m.classList.add("up");
+  }, [open]);
 
   useEffect(() => { if (!open && back.current) { back.current = false; btn.current?.focus(); } }, [open]);
 
