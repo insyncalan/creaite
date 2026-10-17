@@ -15,7 +15,12 @@ brackets balance one level deep (`a_(b)`); one that does not is percent-encoded 
 """
 import ipaddress
 import re
+import sys
+from pathlib import Path
 from urllib.parse import unquote
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402,F401  (the one place locations are defined; every script imports it)
 
 LINK_MAX = 2048
 LINK = re.compile(r"\[((?:[^\[\]\\\n]|\\[\[\]\\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)")
@@ -23,7 +28,7 @@ _BAD = re.compile("[\u0000-\u0020\u007f-\u00a0\u00ad\u061c\u115f\u1160\u1680\u18
                   "\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]")             # controls, spaces and invisible marks
 _ENTITY = re.compile(r"&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)", re.I)
 _SCHEME = re.compile(r"^([a-z][a-z\d+.-]*):", re.I)
-_HOST = re.compile(r"^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::(\d{1,5}))?$", re.I)
+_HOST = re.compile(r"^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::(\d{1,5}))?$", re.I | re.A)
 _ONE_ADDRESS = re.compile(r"^[^@\s,;]+@[^@\s,;]+$")
 
 
@@ -56,14 +61,33 @@ def _web_address(scheme, rest):
     return scheme + ":" + rest
 
 
-def _mail_address(rest):
-    """The address when it is mailto: and exactly one mailbox (a list would hide who gets it), else None."""
-    who = re.split(r"[?#]", rest, maxsplit=1)[0]
+def _strict_unquote(s):
+    """`s` with every percent escape decoded, or None when one is bad (a stray % or bad UTF-8): refused, never left as written."""
+    if re.search(r"%(?![\da-f]{2})", s, re.I):
+        return None
     try:
-        who = unquote(who, errors="strict")
+        return unquote(s, errors="strict")
     except UnicodeDecodeError:
-        pass          # a bad escape is judged as it was written, as the dashboard's check does
-    return "mailto:" + rest if _ONE_ADDRESS.match(who) else None
+        return None
+
+
+def _mail_address(rest):
+    """The address when it is mailto: exactly one mailbox, as a mail program decodes it (a list would hide who gets it), and a query
+    of subject and body only (bcc and cc would add receivers), else None."""
+    if "#" in rest:
+        return None
+    who, _, query = rest.partition("?")
+    who = _strict_unquote(who)
+    if who is None or not _ONE_ADDRESS.match(who):
+        return None
+    for part in (query.split("&") if "?" in rest else []):
+        if not part:
+            continue
+        key, eq, val = part.partition("=")
+        key, val = _strict_unquote(key), _strict_unquote(val)
+        if key is None or val is None or key.lower() not in ("subject", "body"):
+            return None
+    return "mailto:" + rest
 
 
 def valid_address(s):
