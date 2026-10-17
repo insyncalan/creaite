@@ -63034,7 +63034,8 @@ ${d5.text}`);
         }));
       }
       const hk3 = helpCk(q6), hfirst = /^(help|how)/.test(q6.trim());
-      return [...hfirst ? hk3 : [], ...out2.slice(0, 60), ...hfirst ? [] : hk3, ...searchCkItems()];
+      const sc2 = searchCkItems(), askRow = sc2.filter((x5) => String(x5.l).startsWith("ask creaite:")), restSc = sc2.filter((x5) => !askRow.includes(x5));
+      return [...askRow, ...hfirst ? hk3 : [], ...out2.slice(0, 60), ...hfirst ? [] : hk3, ...restSc];
     })(q5);
     if (!q5 || "new note quick capture".includes(q5.toLowerCase())) out.splice(out.findIndex((x5) => x5.g === "Actions") + 1 || out.length, 0, { g: "Actions", l: "New note", h: "⌘⇧N", fn: () => openCapture() });
     MTG().filter((m5) => mtgCanPick(m5)).forEach((m5) => {
