@@ -8,6 +8,7 @@ import { clientReportHref, needsMe, thisWeek, weeklyHref } from "./stores/report
 import { resumeDeleteNote } from "./components/notes/DeleteNote.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
+import { noteCur, noteFlush, openNote } from "./stores/notes.js";
 import { A, DEC, FILES, fpName, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
@@ -181,12 +182,35 @@ export function permissionInfo(ev){ const d=addEl("msg a info",html`${permission
 export const ACHG_OP={create:"Created",edit:"Changed",move:"Moved",delete:"Deleted"};
 /* BL-194 (sprint-ask-creaite-access): each change's tier, as the card showed it (a word and an icon); older entries have none */
 export function achgTier(t){ return t==="high"||t==="sensitive"?raw(chgTierTag(t==="high")):t==="ordinary"?html`<span class="tag">Ordinary</span>`:html`<span class="x">—</span>`; }
+/* #175: a notes row the server folded (it has `saves`) is one editing session: "12 saves, 14:02 to 14:31", and its button takes the
+   file back to how it was when the session began ("Restore 14:02"), through the same undo route. Other rows keep Undo. */
+export const achgHm=/** @param {string} at */ at=>(at||"").slice(11,16);
+export function achgIsSession(c){ return c.op==="edit"&&typeof c.saves==="number"&&!!c.first_at&&isNotePath(c.path); }
+export function achgSessionText(c){ const a=achgHm(c.first_at), z=achgHm(c.at), same=(c.first_at||"").slice(0,10)===(c.at||"").slice(0,10);
+  const span=c.saves<=1||(same&&a===z)?a:same?`${a} to ${z}`:`${fd(c.first_at.slice(0,10))} ${a} to ${fd(c.at.slice(0,10))} ${z}`;
+  return `${c.saves} ${c.saves===1?"save":"saves"}, ${span}`; }
+export function achgBtn(c){ return c.undone?html`<span class="x">Undone</span>`:achgIsSession(c)?html`<button class="mini" data-achgrestore="${c.id}" data-path="${c.path}" data-at="${achgHm(c.first_at)}">Restore ${achgHm(c.first_at)}</button>`:html`<button class="mini" data-achgundo="${c.id}">Undo</button>`; }
+/** Restore a note session: save the open note first (so the restore starts from what is on disk), restore, reopen it. */
+export async function achgRestore(id,path,at){
+  const open=noteCur.value&&noteCur.value.path===path;
+  if(open&&!await noteFlush(true)){ snack("Not restored: the open note couldn't be saved first, so it is as it was."); return false; }
+  if(open){ const l=await api("/api/changes/list",{}), mine=l&&l.ok?(l.changes||[]).find(c=>c.path===path&&c.first_at&&achgHm(c.first_at)===at&&c.id>=id):null; if(mine) id=mine.id; }   /* the flush may have added a save to this session: undo goes by the latest */
+  const r=await api("/api/changes/undo",{id});
+  if(!r||!r.ok){ snack(oneLine((r&&r.message)||"Not restored. The note is as it was.")); return false; }
+  if(open) await openNote(path,true);
+  snack(oneLine(r.message||`Restored to ${at}`)); return true; }
 export function askChangesHtml(rows){ if(!rows.length) return html`<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>`;
-  return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows.map(c=>html`<tr data-achg="${c.id}" data-tier="${c.tier||""}"><td style="white-space:nowrap">${fd(c.at.slice(0,10))} ${c.at.slice(11,16)}</td><td style="white-space:nowrap">${achgTier(c.tier)}</td><td>${ACHG_OP[c.op]||c.op} <code>${c.path}</code>${c.to?html` → <code>${c.to}</code>`:""}${c.approved?html` <span class="tag">approved on the card</span>`:""}</td><td>${c.why||""}</td><td style="text-align:right">${c.undone?html`<span class="x">Undone</span>`:html`<button class="mini" data-achgundo="${c.id}">Undo</button>`}</td></tr>`)}</tbody></table>`; }
+  return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows.map(c=>html`<tr data-achg="${c.id}" data-tier="${c.tier||""}"><td style="white-space:nowrap">${fd(c.at.slice(0,10))} ${c.at.slice(11,16)}</td><td style="white-space:nowrap">${achgTier(c.tier)}</td><td>${achgIsSession(c)?html`Notes <code>${c.path}</code> <span class="sub" data-achgsess>${achgSessionText(c)}</span>`:html`${ACHG_OP[c.op]||c.op} <code>${c.path}</code>`}${c.to?html` → <code>${c.to}</code>`:""}${c.approved?html` <span class="tag">approved on the card</span>`:""}</td><td>${c.why||""}</td><td style="text-align:right">${achgBtn(c)}</td></tr>`)}</tbody></table>`; }
 export let ACHGFIRST=true;   /* the What ask creaite changed list (BL-141): rows rise in the first time, a row just undone flashes */
 export async function renderAskChanges(){ const loading=shared.LOADING, was=new Set($$("#achgTbl tr[data-achg]").filter(t=>!t.querySelector("[data-achgundo]")).map(t=>t.dataset.achg));
   let box=$("#achg"); if(!box){ box=document.createElement("div"); box.id="achg"; putHTML(box,html`<h2 style="margin:22px 0 4px">What ask creaite changed</h2><p class="sub" style="margin:0 0 10px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p><div class="tbl" id="achgTbl"></div>`); $("#actTbl").after(box);
-    box.addEventListener("click",async e=>{ const b=e.target.closest("[data-achgundo]"); if(!b) return; b.disabled=true; const r=await api("/api/changes/undo",{id:+b.dataset.achgundo}); snack(oneLine(r.message||(r.ok?"Undone":"Not undone"))); renderAskChanges(); }); }
+    box.addEventListener("click",async e=>{
+      const rs=e.target.closest("[data-achgrestore]"), ok=e.target.closest("[data-achgrestoreyes]"), no=e.target.closest("[data-achgrestoreno]");
+      if(rs){ const td=rs.parentElement, noteName=rs.dataset.path.split("/").pop().replace(/\.md$/,""), q=document.createElement("span"); q.dataset.achgq="1"; rs.hidden=true;
+        putHTML(q,html`<span class="sub" data-achgask>Take “${noteName}” back to how it was at ${rs.dataset.at}?</span> <button class="mini" data-achgrestoreyes="${rs.dataset.achgrestore}" data-path="${rs.dataset.path}" data-at="${rs.dataset.at}">Restore ${rs.dataset.at}</button> <button class="mini" data-achgrestoreno>Keep</button>`); td.append(q); return; }
+      if(no){ const td=no.closest("td"); td.querySelector("[data-achgq]").remove(); td.querySelector("[data-achgrestore]").hidden=false; return; }
+      if(ok){ ok.disabled=true; await achgRestore(+ok.dataset.achgrestoreyes,ok.dataset.path,ok.dataset.at); renderAskChanges(); return; }
+      const b=e.target.closest("[data-achgundo]"); if(!b) return; b.disabled=true; const r=await api("/api/changes/undo",{id:+b.dataset.achgundo}); snack(oneLine(r.message||(r.ok?"Undone":"Not undone"))); renderAskChanges(); }); }
   if(!viaServer()) putHTML($("#achgTbl"),html`<div class="empty">This list needs the live server.</div>`);
   else { const r=await api("/api/changes/list",{}); putHTML($("#achgTbl"),r.ok?askChangesHtml(r.changes||[]):html`<div class="empty">${oneLine(r.message||"Couldn't read the list.")}</div>`); }
   if(loading) return; if(reduced()) { ACHGFIRST=false; return; } const rows=$$("#achgTbl tr[data-achg]");
