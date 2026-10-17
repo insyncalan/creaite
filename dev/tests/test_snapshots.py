@@ -87,7 +87,10 @@ def rail_state(width, labels):
     test_rail_states does: the wordmark toggle, then Labels when collapsed."""
     def step(b):
         open_health(b)                  # the badge on More and Health comes from the health answer: the fixed one, so it never depends on order
-        b.wait("document.getElementById('railHealthBadge') && document.getElementById('railHealthBadge').textContent.trim()==='1'", 15)
+        # The stub only answers a check that runs after it is installed; a page that already checked (a shared server, an earlier
+        # screen, CI with no problems) keeps its own count. Set the count the stub's answer gives, as checkHealth would.
+        n = len(HEALTH_ANSWER.get("problems", []))
+        b.wait(f"(healthCount.value={n}, document.getElementById('railHealthBadge') && document.getElementById('railHealthBadge').textContent.trim()==='{n}')", 15)
         def w():
             return b.eval("Math.round(document.querySelector('.rail').getBoundingClientRect().width)")
         if width == 224 and w() != 224:
