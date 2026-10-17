@@ -264,7 +264,8 @@ class DashboardTests(unittest.TestCase):
         """The saved calendar holds true (Alan organised it) or the organiser's name (BL-42): only true is "You"."""
         from test_insight import chrome
         cal = self.v.root / "system/staging/calendar.json"
-        cal.write_text(json.dumps({"fetched": d(0) + " 07:00", "days": {d(0): [
+        day = date.today().isoformat()      # the headless page reads the real clock, so the calendar's day is the real one even when CREAITE_NOW pins the scripts' day
+        cal.write_text(json.dumps({"fetched": day + " 07:00", "days": {day: [
             {"start": "09:00", "end": "10:00", "title": "Mine", "where": "Teams", "organiser": True},
             {"start": "11:00", "end": "12:00", "title": "Theirs", "where": "Room 4", "organiser": "Jane Doe"}]}}))
         try:
