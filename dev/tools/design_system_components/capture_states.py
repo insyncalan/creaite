@@ -28,7 +28,9 @@ SPEC=[("btn","files","#filesRefresh",["default","hover","focus","active","disabl
 ("rail-item-current","today",".rail .nv[aria-current=page]",["default","hover"]),
 ("tab","work",".tabs button[aria-selected=false]",["default","hover","focus"]),
 ("tab-on","work",".tabs button[aria-selected=true]",["default","hover","focus"]),
-("link","files","#filesTbl a",["default","hover","focus"])]
+("link","files","#filesTbl a",["default","hover","focus"]),
+("check","settings","input[type=checkbox]",["default","hover","focus","checked","disabled"]),
+("switch","settings",".switch",["default","hover","focus","checked","disabled"])]
 ONLY=sys.argv[1:]
 if ONLY: SPEC=[x for x in SPEC if x[0] in ONLY]
 b=Browser(1400,1000); res={}
@@ -56,10 +58,12 @@ try:
             if not nid: res.setdefault(key,{})[mode]="missing"; continue
             b.eval("document.querySelector(%s).scrollIntoView({block:'center'})"%json.dumps(sel)); time.sleep(0.1)
             for st in states:
+                chk = st=="checked"
+                b.eval("(()=>{const e=document.querySelector('[data-dsx]');if(e&&'checked' in e){e.checked=%s}})()"%('true' if chk else 'false'))
                 dis = st=="disabled"
                 if dis: b.eval("document.querySelector(%s).disabled=true;document.querySelector(%s).setAttribute('aria-disabled','true')"%(json.dumps(sel),json.dumps(sel)))
                 else: b.eval("document.querySelector(%s).disabled=false;document.querySelector(%s).removeAttribute('aria-disabled')"%(json.dumps(sel),json.dumps(sel)))
-                pseudo(nid,[] if dis or st=="default" else [st]); time.sleep(0.12)
+                pseudo(nid,[] if dis or st in ("default","checked") else [st]); time.sleep(0.12)
                 r=b.eval("(()=>{const e=document.querySelector(%s);const r=e.getBoundingClientRect();return [r.left,r.top,r.width,r.height]})()"%json.dumps(sel))
                 x,y,w,h=r; pad=8
                 d=b.call("Page.captureScreenshot",format="png",clip={"x":max(0,x-pad),"y":max(0,y-pad),"width":min(w,520)+2*pad,"height":min(h,80)+2*pad,"scale":2})["data"]

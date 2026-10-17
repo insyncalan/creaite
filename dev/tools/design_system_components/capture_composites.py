@@ -23,6 +23,7 @@ ITEMS=[("filter-bar","go('work')",["#v-work .toolbar","#wapplied"]),
 ("milestone-card","location.hash='#milestones=ABC'",["#v-milestones .card"]),
 ("page-head-crumb","location.hash='#cockpit=ABC'",["#v-cockpit .crumb","#v-cockpit h1"]),
 ("notes-two-pane","location.hash='#notes=ABC'",["#v-notes .wrapmax"]),
+("work-rows","go('work')",["#v-work .tbl.list"]),
 ("report-bar","location.hash='#weekly=ABC&week=2026-10-16'",["#v-weekly"]),
 ]
 res={}

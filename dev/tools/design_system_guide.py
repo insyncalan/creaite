@@ -30,6 +30,8 @@ def toks(b):
 
 light = toks(block(':root[data-palette="creaite"]{'))
 dark = toks(block(':root[data-palette="creaite"][data-theme="dark"]{'))
+cursor_l = toks(block(':root[data-palette="Cursor"]{'))
+cursor_d = toks(block(':root[data-palette="Cursor"][data-theme="dark"]{'))
 scale = toks(css[css.index("/* ===== BL-325 scale"):css.index("/* ===== end BL-325 scale")])
 motion = toks(block(":root{--k:1;"))
 nocomment = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
@@ -90,8 +92,9 @@ def cell(label, html):
 
 
 def comp(cid, title, cls, use, stage, measure="", extra="", dont="", strip=""):
+    code = f'<details class="ds-code"><summary>Markup (real, to copy)</summary><button type="button" class="ds-copy">Copy</button><pre>{esc(re.sub(r"> <", ">\n<", stage))}</pre></details>' if 'not visible' not in stage and '<' in stage else ''
     return f'''<article class="ds-comp" id="c-{cid}"><header><h3>{esc(title)}</h3><code>{esc(cls)}</code></header>
-<p class="ds-use">{use}</p><div class="ds-stage">{stage}</div>{strip}{('<p class="ds-meas">Measured: ' + esc(measure) + '</p>') if measure else ''}{extra}{('<p class="ds-dont"><b>Not for:</b> ' + dont + '</p>') if dont else ''}</article>'''
+<p class="ds-use">{use}</p><div class="ds-stage">{stage}</div>{code}{strip}{('<p class="ds-meas">Measured: ' + esc(measure) + '</p>') if measure else ''}{extra}{('<p class="ds-dont"><b>Not for:</b> ' + dont + '</p>') if dont else ''}</article>'''
 
 
 # ------------------------------------------------------------------ foundations
@@ -129,6 +132,7 @@ crow = "".join(f'<tr><td><code>{a}</code> on <code>{b}</code></td><td>{contrast(
                f'<td>{"AA" if min(contrast(light[a], light[b]), contrast(dark[a], dark[b])) >= 4.5 else "large text only" if min(contrast(light[a], light[b]), contrast(dark[a], dark[b])) >= 3 else "below AA"}</td></tr>' for a, b in pairs)
 
 fs_rows = "".join(f'<div class="ds-ty"><span style="font-size:{v}">Aa Quick brown fox</span><code>{k} · {v}</code></div>' for k, v in scale.items() if k.startswith("--fs-"))
+pal_rows = "".join(f'<tr><td><code>{t}</code></td>' + ''.join(f'<td><span class="ds-chipc" style="background:{d.get(t, "")}"></span> {d.get(t, "-")}</td>' for d in (light, dark, cursor_l, cursor_d)) + '</tr>' for t in ("--bg", "--surface", "--sunk", "--ink", "--muted", "--line", "--accent", "--accent-soft", "--bad", "--warn", "--ok"))
 sp = "".join(f'<div class="ds-sp"><i style="width:{n}px;height:{n}px"></i><code>{n}</code></div>' for n in (2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64))
 rad = "".join(f'<div class="ds-rad"><i style="border-radius:var({k})"></i><code>{k} · {scale[k]}</code></div>' for k in ("--r-sm", "--r-md", "--r-lg", "--r-xl", "--r-pill"))
 shd = "".join(f'<div class="ds-shd"><i style="box-shadow:var({k})"></i><code>{k}</code></div>' for k in ("--shadow-sm", "--shadow-md", "--shadow-lg"))
@@ -149,13 +153,22 @@ def outline_lines(node, depth=0, out=None, limit=48):
     return out
 
 
+def variants(page):
+    out = ''
+    if (DS / 'shots' / f'{page}-900-light.png').exists():
+        out += f'<details><summary>At 900 px wide</summary><img src="shots/{page}-900-light.png" alt="{page} at 900 px" loading="lazy" style="max-width:100%;border:1px solid var(--line);border-radius:var(--r-md)"></details>'
+    if (DS / 'shots' / f'{page}-cursor-light.png').exists():
+        out += f'<details><summary>In the Cursor palette</summary><img class="only-light" src="shots/{page}-cursor-light.png" alt="{page} in Cursor" loading="lazy" style="max-width:100%;border:1px solid var(--line);border-radius:var(--r-md)"><img class="only-dark" src="shots/{page}-cursor-dark.png" alt="{page} in Cursor, dark" loading="lazy" style="max-width:100%;border:1px solid var(--line);border-radius:var(--r-md)"></details>'
+    return out
+
+
 def pattern(pid, title, view, use, parts, rules_, page, outline_key=None):
     ol = live["outlines"].get(outline_key or "")
     skel = esc("\n".join(outline_lines(ol))) if ol else ""
     return f'''<article class="ds-pat" id="p-{pid}"><header><h3>{esc(title)}</h3><a href="pages/{page}.html" target="_blank">open the real screen</a></header>
 <div class="ds-pat-grid"><div class="ds-shot">{both_shot(page)}</div><div class="ds-pat-text"><p class="ds-use">{use}</p>
 <h4>Composition, top to bottom</h4><ol>{"".join(f"<li>{p}</li>" for p in parts)}</ol><h4>Rules</h4><ul>{"".join(f"<li>{r}</li>" for r in rules_)}</ul>
-{('<details><summary>Skeleton from the running app (tag, id, classes)</summary><pre>' + skel + '</pre></details>') if skel else ''}</div></div></article>'''
+{('<details><summary>Skeleton from the running app (tag, id, classes)</summary><pre>' + skel + '</pre></details>') if skel else ''}{variants(page if page not in ('cockpit',) else '')}</div></div></article>'''
 
 
 def both_shot(name):
@@ -228,6 +241,17 @@ PAT = [
             ["One primary button per card at most.", "Controls repeat only if they do different things."],
             "intake", "projects"),
 ]
+PAT.append(pattern("prep", "Prep: three columns around one meeting", "prep",
+            "A working page for one thing you are about to do: a meeting.",
+            ["Breadcrumb, <code>h1</code>, a row of chips (kind, date and time, project, health, series position).", "Actions at the left (Refresh research, Draft agenda); the save note and Print at the right.",
+             "Tabs (Prep, Invite, History).", "Three columns: an outline list at the left; the editors in the middle (mono labels, a ✦ Shape control, then \"In play\" rows with a Raise / Note / Skip switch); cards at the right (When and who, Latest reporting, This series)."],
+            ["The outline lists exactly what is on the page, in order.", "Editors save as you type and say so (\"Saved as you type\").", "Facts about other things come as cards at the side, never inline."],
+            "prep"))
+PAT.append(pattern("client-doc", "Document page, client version (Client report)", "clientreport",
+            "The same sheet pattern as the weekly report, seen as the client sees it.",
+            ["The same bar and sheet as the weekly report.", "Only client-visible items, in the client's words; what is left out is listed, with the reason, before any export."],
+            ["Never anything marked Sensitive or partner-only.", "The one primary action is still alone in the bar."],
+            "clientreport"))
 PAT = [p for p in PAT]
 
 # ------------------------------------------------------------------ components
@@ -265,10 +289,13 @@ C.append(comp("input", "Text input and select", "input · select", "Standard fie
               f'<div class="ds-row">{cell("input", S("input"))}{cell("select", S("select"))}</div>', "input " + M("input") + " · select " + M("select"),
               extra='<p class="ds-meas">Other field heights exist by context: the top-bar search is 36 px, the vault search 40 px, a date field inside a dense row 28 px.</p>',
               strip=state_strip("input", ["default", "hover", "focus", "disabled"], "input") + state_strip("select", ["default", "hover", "focus", "disabled"], "select")))
+C.append(comp("date-error", "Field error", ".dwrap + its message", "A mistake in a typed date is shown at the field, in the error colour, with the format it expects; nothing is saved from it.",
+              '<div class="ds-shotbox">' + both("date-invalid", "a date field with a typed mistake") + '</div>', "message in --bad; the field keeps what you typed"))
 C.append(comp("date", "Date field", ".dwrap  + the popup calendar", "Every date is a text field in DD-MM-YYYY with a calendar button; the button opens the popup calendar (below). Dates can also be typed in words in some fields.",
               f'<div class="ds-row">{S("dwrap")}</div>', M("dwrap")))
 C.append(comp("check", "Check box, switch, setting row", "input[type=checkbox] · .switch · .srow", "A check box is one of several; a switch is on or off right now. A setting row puts its label and one line of help at the left, its control at the right.",
-              f'<div class="ds-col">{S("srow")}</div>', "switch " + M("switch") + " · row " + M("srow")))
+              f'<div class="ds-col">{S("srow")}</div>', "switch " + M("switch") + " · row " + M("srow"),
+              strip=state_strip("check", ["default", "hover", "focus", "checked", "disabled"], "check box") + state_strip("switch", ["default", "hover", "focus", "checked", "disabled"], "switch")))
 C.append(comp("tabs", "Tabs", ".tabs", "Different content of the same kind on one page. The selected tab has an accent underline.",
               f'<div class="ds-col">{S("tabs")}</div>', M("tabs"), strip=state_strip("tab", ["default", "hover", "focus"], "tab") + state_strip("tab-on", ["default", "hover", "focus"], "selected tab")))
 C.append(comp("tree", "Folder list", "#tree  (button.l1 · .l2 · .l3)", "A hierarchy you pick one place in, with counts at the right.",
@@ -292,12 +319,15 @@ D.append(("peek-panel", "Peek", "#panel.peek", "An item opens over the right hal
 D.append(("dialog-customise-sidebar", "Dialog (Customise sidebar)", "dialog", "A centred card on a scrim for a short, self-contained job. Cancel and the one main action at the foot; Reset at the left when it applies."))
 D.append(("command-palette", "Command palette", "#cmdk", "⌘K: search, jump, and run commands."))
 D.append(("ask-panel", "ask creaite panel", "#chat", "The assistant opens over the page on the right and never squeezes it. Esc closes the panel but never stops a running request; only Stop stops it."))
+D.append(("ask-running", "ask creaite while it works", "#chat", "A request in progress: the question, a folded step line (\"1 step\"), and a typing indicator while the answer arrives. Stop appears while it runs; Esc closes the panel but never stops the request."))
+D.append(("ai-suggestion", "AI suggestion card", ".sheet-redraft", "A ✦ draft under the section it is for: the sparkle and a title, the suggested text, amber warnings from the check (what it leaves out, what it adds, what has no source), the source facts as outlined boxes, then Keep mine and Use this. Nothing changes until Use this. (The words in this picture come from the test stand-in, not a real model.)"))
 D.append(("live-alert", "Live-server alert", "#liveAlert.on", "Shown at the top of every page when the live server is not running: what is held, and how to restart it."))
 D.append(("dialog-board", "Dialog (small)", "dialog", "A short question with its answer buttons."))
 D.append(("dialog-generate", "Dialog (large)", "dialog", "A larger job with settings and a result (Generate current state)."))
 D.append(("dialog-person", "Dialog (form)", "dialog", "A form in a dialog: fields, then Cancel and the main action."))
 COMP = [("filter-bar", "Filter bar", "Work: .toolbar + .views + .wapplied", "Search, filter buttons, the funnel with its count, the layout switch and Display, the + button; then the view pills; then the applied filters as chips with Clear all and the count."),
         ("queue-group", "Queue group", "Review: .rgroup + .tbl", "A group header (check box, name, count, how many are stale) over a card of rows that each carry their facts in muted lines and the same row actions."),
+        ("work-rows", "Rows of work", "Work: .tbl.list", "A work row is two lines: the title with a state box, then the ID (a dotted link) and the project in muted text. The owner is a dotted link (You for the current user); the due date is red with \"n days late\" when it is late, otherwise plain with \"In n days\"; urgent priority is red."),
         ("brief-band", "Day band", "Today: .dayband .bandin", "A mono date line, a display greeting, one sentence of what matters, and the calendar controls, on the day tint."),
         ("brief-section", "Numbered section", "Today: .tsec  (h2.th + ol.bl)", "A display h2 with its count, then numbered one-sentence rows with their tools at the right."),
         ("settings-group", "Settings group", ".card + .srow", "A card with a display title and rows: label and one line of help at the left, the control at the right."),
@@ -357,7 +387,7 @@ hrows = "".join(f"<tr><td>{a}</td><td>{b}</td></tr>" for a, b in hover)
 edges = ("On this line: font sizes have 19 distinct raw values, border radii 13, layers 10 raw uses in 7 values, line heights 22 distinct with no tokens, 49 distinct raw heights (Team Stark's recount, 17-10-2026). "
          "Controls come in more than one size by context (section 4); page titles are 34 px on Today and Help and 22 px elsewhere; <code>.fsel</code> is dead CSS (a 36 px, 16 px radius select no screen uses): do not copy it. #193 (tokens-193-full) tidies sizes, radii, layers and line heights.")
 
-NAV = [("start", "Build a page"), ("rules", "Ten rules"), ("foundations", "Foundations"), ("shell", "The app shell"), ("components", "Components"), ("patterns", "Page patterns"), ("interaction", "Interaction"),
+NAV = [("start", "Build a page"), ("rules", "Ten rules"), ("foundations", "Foundations"), ("palettes", "Palettes"), ("shell", "The app shell"), ("components", "Components"), ("patterns", "Page patterns"), ("interaction", "Interaction"),
        ("content", "Words"), ("a11y", "Accessibility"), ("check", "Checklist"), ("edges", "Rough edges"), ("version", "Version")]
 ten = ["One primary button per region.", "Controls are the standard ones at their standard sizes.", "Colours are tokens only; it must work in dark and in every palette.", "Spacing, sizes, radii and layers come from the scale.",
        "Titles are display-font <code>h1</code>/<code>h2</code>; body is the text font; tables and labels use mono.", "Every list has an empty state; every change has Undo or a clear way back.",
@@ -385,6 +415,7 @@ table.ds-t{width:100%;border-collapse:collapse;background:var(--surface);border:
 .ds-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}.ds-cell{margin:0;display:grid;gap:6px;justify-items:start}.ds-cell figcaption{font:500 var(--fs-xs) var(--mono);color:var(--muted)}.ds-col{display:grid;gap:12px}.ds-meas,.ds-dont{margin:10px 0 0;font-size:var(--fs-sm);color:var(--muted)}.ds-dont b{color:var(--bad)}
 .ds-states{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}.ds-st{margin:0;display:grid;gap:4px;justify-items:center}.ds-st img{height:auto;max-width:260px;max-height:64px;border-radius:var(--r-sm)}.ds-st img.only-light{display:block}.ds-st img.only-dark{display:none}:root[data-theme=dark] .ds-st img.only-light{display:none}:root[data-theme=dark] .ds-st img.only-dark{display:block}.ds-st figcaption{font:500 var(--fs-2xs) var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .ds-pat-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;margin-top:10px}.ds-shot img{width:100%;height:auto;border:1px solid var(--line);border-radius:var(--r-md)}.ds-pat-text ol,.ds-pat-text ul{margin:0;padding-left:20px}.ds-pat-text li{margin:3px 0}.ds-pat-text details{margin-top:12px}.ds-pat-text pre{font:500 var(--fs-xs)/1.5 var(--mono);background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);padding:10px;overflow:auto;max-height:260px}
+.ds-chipc{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--line);vertical-align:-1px}.ds-code{margin-top:10px}.ds-code summary{cursor:pointer;color:var(--accent);font-size:var(--fs-sm)}.ds-code pre{font:500 var(--fs-xs)/1.5 var(--mono);background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);padding:10px;overflow:auto;max-height:260px;white-space:pre-wrap;word-break:break-all}.ds-copy{float:right;margin:6px 0 0;height:26px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r-md);padding:0 10px;font:500 var(--fs-xs) var(--font);cursor:pointer}.ds-find{width:100%;height:32px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--bg);color:var(--ink);padding:0 10px;font:400 var(--fs-sm) var(--font);margin:0 0 10px}
 .ds-main code{font:500 .92em var(--mono);background:var(--sunk);border-radius:var(--r-sm);padding:1px 5px}.ds-comp header code{background:none;padding:0}
 @media (max-width:1100px){.ds{grid-template-columns:1fr}.ds-nav{position:static;height:auto}.ds-pat-grid,.ds-two{grid-template-columns:1fr}}
 """
@@ -396,10 +427,10 @@ html = f'''<!doctype html>
 <link rel="stylesheet" href="style.snapshot.css">
 <style>
 {CSS}</style></head><body><div class="ds">
-<nav class="ds-nav" aria-label="Sections"><b>creaite_</b><small>Design system and guide to building a page</small>
+<nav class="ds-nav" aria-label="Sections"><b>creaite_</b><small>Design system and guide to building a page</small><input class=\"ds-find\" id=\"dsFind\" type=\"search\" placeholder=\"Find a component or pattern\" aria-label=\"Find a component or pattern\">
 {"".join(f'<a href="#{i}">{esc(t)}</a>' for i, t in NAV)}
-<h6>Components</h6>{"".join(f'<a href="#c-{c}">{esc(t)}</a>' for c, t in [("type", "Text"), ("btn", "Buttons"), ("ib", "Icon buttons"), ("vchip", "Pills"), ("tags", "Tags and chips"), ("input", "Fields"), ("tbl", "Table"), ("card", "Card"), ("menu-list", "Menus"), ("peek-panel", "Peek"), ("dialog-customise-sidebar", "Dialogs"), ("toast", "Toast")])}
-<h6>Patterns</h6>{"".join(f'<a href="#p-{c}">{esc(t)}</a>' for c, t in [("list", "List page"), ("tabbed", "Tabbed list"), ("queue", "Queue"), ("brief", "Brief"), ("detail", "Detail"), ("settings", "Settings"), ("doc", "Document"), ("two-pane", "Two panes"), ("docs", "Docs"), ("cards-sections", "Cards")])}
+<h6>Components</h6>{"".join(f'<a href="#c-{c}">{esc(t)}</a>' for c, t in [("type", "Text"), ("btn", "Buttons"), ("ib", "Icon buttons"), ("vchip", "Pills"), ("tags", "Tags and chips"), ("input", "Fields"), ("tbl", "Table"), ("card", "Card"), ("menu-list", "Menus"), ("peek-panel", "Peek"), ("dialog-customise-sidebar", "Dialogs"), ("toast", "Toast"), ("ai-suggestion", "AI suggestion"), ("ask-running", "ask creaite working")])}
+<h6>Patterns</h6>{"".join(f'<a href="#p-{c}">{esc(t)}</a>' for c, t in [("list", "List page"), ("tabbed", "Tabbed list"), ("queue", "Queue"), ("brief", "Brief"), ("detail", "Detail"), ("settings", "Settings"), ("doc", "Document"), ("client-doc", "Client report"), ("prep", "Prep"), ("two-pane", "Two panes"), ("docs", "Docs"), ("cards-sections", "Cards")])}
 <div class="ds-ctl" role="group" aria-label="Theme"><button type="button" data-th="light" aria-pressed="true">Light</button><button type="button" data-th="dark" aria-pressed="false">Dark</button></div>
 <div class="ds-ctl" role="group" aria-label="Palette"><button type="button" data-pal="creaite" aria-pressed="true">creaite</button><button type="button" data-pal="Cursor" aria-pressed="false">Cursor</button></div></nav>
 <main class="ds-main"><h1>creaite design system</h1>
@@ -423,6 +454,10 @@ html = f'''<!doctype html>
 <h3 style="margin-top:28px">Motion</h3><table class="ds-t"><thead><tr><th>Token</th><th>Value</th></tr></thead><tbody>{mot}</tbody></table><p class="ds-meas"><code>--k</code> is 1 normally and 0 under reduced motion; every duration is multiplied by it.</p>
 <h3 style="margin-top:28px">Icons ({len(live["icons"])})</h3><p class="ds-lead">The app's own icon table. 24 px grid, 1.8 px round-cap stroke, <code>currentColor</code>. Click one to copy its name. The sparkle (<code>spark</code>) is the AI mark.</p><div class="ds-icons">{icons}</div></section>
 
+<section id="palettes"><h2 class="ds-h">Palettes: creaite and Cursor</h2><p class="ds-lead">Two palettes are tested in every release (creaite, the default, and Cursor). A page must work in both, light and dark. A palette changes colours, fonts and a few shapes; never the layout. Use the toggle at the left to see this whole guide in each.</p>
+<table class="ds-t"><thead><tr><th>Token</th><th>creaite light</th><th>creaite dark</th><th>Cursor light</th><th>Cursor dark</th></tr></thead><tbody>{pal_rows}</tbody></table>
+<p class="ds-meas">Cursor draws the accent as orange, the page on warm paper, and its shadows as a hairline ring; its type is its own gothic with Inter behind it. creaite is teal on cool grey with Source Sans 3, Schibsted Grotesk and JetBrains Mono. The other seven palettes exist but are not tested.</p></section>
+
 <section id="shell"><h2 class="ds-h">The app shell</h2><p class="ds-lead">Every page lives inside the same frame. Never redraw it.</p>
 <div class="ds-two"><div class="ds-box"><h3>Anatomy</h3><ul><li><b>Side bar</b> (<code>.rail</code>): {light.get("--rail-w", "224px")} wide expanded (<code>--rail-w</code>), 56 px icons only, 76 px icons with labels; items 36 px; Today first, More at the foot.</li><li><b>Top bar</b> (<code>.bar</code>): 53 px; search or jump (⌘K) at the left, ask creaite and the theme switch at the right.</li><li><b>Page</b> (<code>.view</code>): padding 20 × 24 × 40 px on the page tint; content in <code>.wrapmax</code>, max 1500 px.</li><li><b>Peek</b> (<code>#panel.peek</code>): over the right half, at least 520 px, 50% of the window.</li><li><b>ask creaite</b> panel opens over the page, never squeezing it.</li></ul></div>
 <div class="ds-box"><h3>The real frame</h3><p class="ds-use">Every snapshot in <code>pages/</code> carries it. Start from <a href="blank.html">blank.html</a>.</p>{both_shot("files")}</div></div></section>
@@ -433,7 +468,7 @@ html = f'''<!doctype html>
 
 <section id="patterns"><h2 class="ds-h">Page patterns</h2><p class="ds-lead">Nine ways a creaite page is put together. Pick one; do not invent a tenth without saying why. Each links to the real screen and shows its skeleton from the running app.</p>{"".join(PAT)}
 <h3 style="margin:24px 0 8px">States every page has</h3><ul><li><b>Empty:</b> the <code>.empty</code> box (components) says what is missing and the next step.</li><li><b>Offline:</b> the live-server alert above, on every page.</li><li><b>Loading:</b> the stylesheet has no spinner or skeleton component (checked); a long job shows as steps in the ask creaite panel, or a <code>.prog</code> bar. Do not invent one.</li><li><b>Error:</b> an error banner (<code>.errbanner</code>) under the page banners, dismissible; a failed save says what to do.</li></ul>
-<p class="ds-meas">Not snapshotted because they need a meeting: the minutes view, the Prep page and the client report. They follow the Document pattern (a sheet on a tinted canvas with a bar above it).</p></section>
+<p class="ds-meas">The minutes view is not snapshotted (it opens from a staged meeting's Open draft in Review); it follows the Document pattern: a sheet on a tinted canvas with a bar above it, the transcript beside the draft.</p></section>
 
 <section id="interaction"><h2 class="ds-h">Interaction</h2><div class="ds-two"><div class="ds-box"><h3>Keys</h3><table class="ds-t"><tbody>{kbrows}</tbody></table></div><div class="ds-box"><h3>The one hover standard</h3><table class="ds-t"><tbody>{hrows}</tbody></table><p class="ds-meas">From <code>src/core/hover.js</code>. Keyboard focus opens a tooltip or card with no delay; Esc dismisses it and it stays shut until the pointer leaves.</p></div></div>
 <ul><li>Changes made in the page show at once and save in the background; an Undo toast follows anything undoable (10 seconds with Undo, 5 otherwise, and it waits while you point at it).</li><li>Anything that writes to the record waits for an approval; what creaite suggests always waits in Review.</li><li>Esc closes the top-most layer first (a menu or popup before the dialog or peek under it); it never stops a running request.</li></ul></section>
@@ -449,6 +484,8 @@ const root=document.documentElement;
 document.querySelectorAll('[data-th]').forEach(b=>b.addEventListener('click',()=>{{root.dataset.theme=b.dataset.th;document.querySelectorAll('[data-th]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))}}));
 document.querySelectorAll('[data-pal]').forEach(b=>b.addEventListener('click',()=>{{root.dataset.palette=b.dataset.pal;document.querySelectorAll('[data-pal]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))}}));
 document.querySelectorAll('.ds-ic').forEach(b=>b.addEventListener('click',()=>{{try{{navigator.clipboard.writeText(b.dataset.name)}}catch(e){{}}b.style.borderColor='var(--accent)'}}));
+document.querySelectorAll('.ds-copy').forEach(b=>b.addEventListener('click',()=>{{const t=b.parentElement.querySelector('pre').textContent;try{{navigator.clipboard.writeText(t)}}catch(e){{}}b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200)}}));
+document.getElementById('dsFind').addEventListener('input',e=>{{const q=e.target.value.toLowerCase();document.querySelectorAll('.ds-nav a').forEach(a=>{{a.style.display=(!q||a.textContent.toLowerCase().includes(q))?'':'none'}})}});
 document.addEventListener('keydown',e=>{{if(e.altKey&&e.key==='d'){{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark'}}}});
 </script></body></html>
 '''
