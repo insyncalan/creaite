@@ -70,6 +70,18 @@ class Base(unittest.TestCase):
     def ctx(self, req):
         return self.py(f"print(json.dumps(drafts.context({req!r}), ensure_ascii=False))")
 
+    def assert_linear(self, out):
+        """Each {name: [seconds at size n, seconds at 4n]} grows linearly (#127 round 6: growth, not wall-clock seconds, so a loaded
+        machine doesn't fail it): 4n takes under 8 times n (linear is about 4, quadratic 16) or under a second, and under 30 s."""
+        for name, (small, large) in out.items():
+            self.assertLess(large, 30.0, name)
+            self.assertLess(large, max(8 * small, 1.0), (name, small, large))
+
+
+# The timing tests' prelude: took(run) is the best of two runs, so one slow moment under load doesn't count.
+TIMER = ("import time\ndef took(run):\n    best = None\n    for _ in range(2):\n        t0 = time.perf_counter(); run()\n"
+         "        best = min(best, time.perf_counter() - t0) if best is not None else time.perf_counter() - t0\n    return best\n")
+
 
 class TheSectionAudienceIsBoundOnTheServer(Base):
     """Part 1: drafts.report_request binds the audience from the report named, as edit_ai.bound_place does."""
@@ -431,14 +443,14 @@ class WorkItemLinks(Base):
         self.assertIn(SAFE_LINK, tail)
 
     def test_the_filter_and_the_gate_are_linear(self):
-        """Review finding 4: 100 KB of one long token takes well under a second (the old patterns took tens of seconds)."""
-        code = ("import time\nout = {}\nfor name, s in (('[', '[' * 100000), ('](', '](' * 50000), ('creaite', 'creaite' * 15000),"
-                " ('[a](', '[a](' * 25000), ('[a](creaite:', '[a](creaite:' * 9000)):\n"
-                "    t0 = time.time(); client_leak.drop_item_links('ABC', s)\n"
-                "    client_leak.text_findings(client_leak.connect(), 'ABC', client_leak.with_addresses(s)); out[name] = time.time() - t0\n"
+        """Review finding 4: 100 KB of one long token grows linearly (the old patterns took tens of seconds)."""
+        code = (TIMER + "out = {}\nfor name, u, k in (('[', '[', 100000), ('](', '](', 50000), ('creaite', 'creaite', 15000),"
+                " ('[a](', '[a](', 25000), ('[a](creaite:', '[a](creaite:', 9000)):\n"
+                "    def run(s): client_leak.drop_item_links('ABC', s); "
+                "client_leak.text_findings(client_leak.connect(), 'ABC', client_leak.with_addresses(s))\n"
+                "    out[name] = [took(lambda: run(u * (k // 4))), took(lambda: run(u * k))]\n"
                 "print(json.dumps(out))")
-        for name, took in self.py(code).items():
-            self.assertLess(took, 1.0, name)
+        self.assert_linear(self.py(code))
 
     def test_the_filter_takes_each_link_out_whole(self):
         for name, link in LINK_VARIANTS + (("other project", "[the other ledger](creaite:item/DEF-A-001)"),):
@@ -509,15 +521,17 @@ class TheReviewOf2a77459(Base):
 
     def test_every_check_is_linear_on_brackets(self):
         """Finding 3: creaite_doc._plain and docx_tools.md_runs took tens of seconds on 100 KB of "["."""
-        code = ("import time, docx_tools\ncon = client_leak.connect()\nout = {}\n"
-                "for name, s in (('[', '[' * 100000), ('[a](', '[a](' * 25000), ('![a](', '![a](' * 20000)):\n"
-                "    d = report_doc.client_doc('ABC')\n    next(x for x in d['sections'] if x['id'] == 'summary')['text'] = s\n"
-                "    for f, run in (('findings', lambda: client_leak.findings(d)), ('plain', lambda: client_leak.plain_findings(con, 'ABC', s)),"
-                " ('client_problems', lambda: edit_ai.client_problems('ABC', s)), ('md_runs', lambda: docx_tools.md_runs(s))):\n"
-                "        t0 = time.time(); run(); out[name + ' ' + f] = time.time() - t0\n"
+        code = (TIMER + "import docx_tools\ncon = client_leak.connect()\nout = {}\n"
+                "def doc(s):\n    d = report_doc.client_doc('ABC')\n"
+                "    next(x for x in d['sections'] if x['id'] == 'summary')['text'] = s\n    return d\n"
+                "RUNS = (('findings', lambda s, d: client_leak.findings(d)), ('plain', lambda s, d: client_leak.plain_findings(con, 'ABC', s)),"
+                " ('client_problems', lambda s, d: edit_ai.client_problems('ABC', s)), ('md_runs', lambda s, d: docx_tools.md_runs(s)))\n"
+                "for name, u, k in (('[', '[', 100000), ('[a](', '[a](', 25000), ('![a](', '![a](', 20000)):\n"
+                "    small, large = u * (k // 4), u * k\n    ds, dl = doc(small), doc(large)\n"
+                "    for f, run in RUNS:\n"
+                "        out[name + ' ' + f] = [took(lambda: run(small, ds)), took(lambda: run(large, dl))]\n"
                 "print(json.dumps(out))")
-        for name, took in self.py(code).items():
-            self.assertLess(took, 5.0, name)
+        self.assert_linear(self.py(code))
 
     def test_the_scheme_in_capitals_is_found_and_dropped(self):
         link = f"[p](CREAITE:item/{INTERNAL_ID})"
@@ -628,17 +642,18 @@ class TheReviewOf199ac40(Base):
 
     def test_emphasis_and_images_are_linear(self):
         """100 KB of "![", "*a " or "_a " took up to 15 s in md_runs and creaite_doc._plain (the old unbounded patterns)."""
-        code = ("import time, docx_tools\ncon = client_leak.connect()\nout = {}\n"
+        code = (TIMER + "import docx_tools\ncon = client_leak.connect()\nout = {}\n"
+                "def doc(s):\n    d = report_doc.client_doc('ABC')\n"
+                "    next(x for x in d['sections'] if x['id'] == 'summary')['text'] = s\n    return d\n"
+                "RUNS = (('findings', lambda s, d: client_leak.findings(d)), ('plain', lambda s, d: client_leak.plain_findings(con, 'ABC', s)),"
+                " ('client_problems', lambda s, d: edit_ai.client_problems('ABC', s)), ('md_runs', lambda s, d: docx_tools.md_runs(s)))\n"
                 "for name, p in (('![', '!['), ('*a ', '*a '), ('_a ', '_a ')):\n"
-                "    s = (p * 50000)[:100000]\n"
-                "    d = report_doc.client_doc('ABC')\n    next(x for x in d['sections'] if x['id'] == 'summary')['text'] = s\n"
-                "    for f, run in (('findings', lambda: client_leak.findings(d)), ('plain', lambda: client_leak.plain_findings(con, 'ABC', s)),"
-                " ('client_problems', lambda: edit_ai.client_problems('ABC', s)), ('md_runs', lambda: docx_tools.md_runs(s))):\n"
-                "        t0 = time.time(); run(); out[name + ' ' + f] = time.time() - t0\n"
-                "t0 = time.time(); creaite_doc._plain('![' * 150000); out['_plain 300 KB'] = time.time() - t0\n"
+                "    small, large = (p * 50000)[:25000], (p * 50000)[:100000]\n    ds, dl = doc(small), doc(large)\n"
+                "    for f, run in RUNS:\n"
+                "        out[name + ' ' + f] = [took(lambda: run(small, ds)), took(lambda: run(large, dl))]\n"
+                "out['_plain 300 KB'] = [took(lambda: creaite_doc._plain('![' * 37500)), took(lambda: creaite_doc._plain('![' * 150000))]\n"
                 "print(json.dumps(out))")
-        for name, took in self.py(code).items():
-            self.assertLess(took, 5.0, name)
+        self.assert_linear(self.py(code))
         got = self.py("import docx_tools\nprint(json.dumps([docx_tools.plain(t) for t in ('**Bold** and _italic_ and *it* and ~~gone~~',"
                       " 'snake_case_word stays', '2 * 3 * 4')]))")
         self.assertEqual(got, ["Bold and italic and it and gone", "snake_case_word stays", "2 * 3 * 4"])     # unchanged
