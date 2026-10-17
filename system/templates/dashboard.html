@@ -49895,11 +49895,11 @@ ${d5.text}`);
   var HEALTHS = ["On track", "At risk", "Off track"];
   function hsNorm(r4) {
     if (!r4 || !HEALTHS.includes(String(r4.health))) return null;
-    const cur = r4.current || {}, health2 = String(r4.health), now = String(cur.health || "");
+    const cur = r4.current || {}, hv = String(r4.health), now = String(cur.health || "");
     return {
-      health: health2,
+      health: hv,
       reason: String(r4.reason || r4.text || ""),
-      differs: typeof r4.differs === "boolean" ? r4.differs : !!now && now !== health2,
+      differs: typeof r4.differs === "boolean" ? r4.differs : !!now && now !== hv,
       current: { health: now, reason: String(cur.reason || "") },
       evidence: (Array.isArray(r4.evidence) ? r4.evidence : []).map((e4) => ({ ref: String(e4 && e4.ref || ""), text: String(e4 && e4.text || "") })),
       audience: r4.audience === "client" ? "client" : "internal"
@@ -52833,7 +52833,8 @@ ${d5.text}`);
       snack(why);
       return;
     }
-    const code = shared.CUR.code, mine = HSG = { code, html: "" };
+    const code = shared.CUR.code, mine = { code, html: "", d: null, reason: "" };
+    HSG = mine;
     const res = await hsAsk(code, "internal", { status: (h5) => {
       if (HSG === mine) {
         mine.html = h5 ? `<div class="drstatus" role="status">${h5}</div>` : "";
