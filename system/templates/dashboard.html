@@ -3302,7 +3302,10 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-root.rpt-slim>.sheet-bar,.sheet-root.rpt-slim>.sheet-bar :is(.sheet-barr,.wr-barr,.crbarr,.mnbarr){flex-wrap:nowrap}
 .sheet-root.rpt-slim>.sheet-bar .sheet-barr{flex:none}
 .sheet-root.rpt-slim>.sheet-bar .sheet-mini{display:inline-flex}
-.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status,.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+.sheet-root.rpt-slim>.sheet-bar .sheet-status[data-bad]{display:inline;white-space:nowrap}   /* "Unsaved changes", "Not saved." stay visible and announced */
+.sheet-root.rpt-slim>.sheet-bar{position:relative}
+.sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
 @media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
 .main:has(.view:not([hidden]) .sheet-root.rpt-slim)>.bar,
 .view:not([hidden]):has(.sheet-root.rpt-slim) :is(.wrhead,.mnhead,.crhead){height:0;min-height:0;padding-top:0;padding-bottom:0;border-width:0;overflow:hidden;flex:none}
@@ -65023,7 +65026,7 @@ ${d5.text}`);
           ] }),
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Zoom in", onClick: () => setZoom(stepZoom(zoom, 1)), disabled: zoom >= 0.8, children: "+" })
         ] }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": exported ? "true" : "false", onClick: () => setExported(!exported), children: "Show as exported" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-exp", "aria-pressed": exported ? "true" : "false", onClick: () => setExported(!exported), children: "Show as exported" }),
         partner && !exported ? /* @__PURE__ */ u2("label", { class: "sheet-tog", children: [
           /* @__PURE__ */ u2("input", { type: "checkbox", checked: together, onChange: (e4) => setTogether(
             /** @type {HTMLInputElement} */
@@ -65036,7 +65039,7 @@ ${d5.text}`);
             for (const x5 of doc.sections) if (match && match.differs(x5.id)) partner.match(x5.id);
           } else changeSide(matchAll(doc, partner.doc), "Matched internal");
         }, children: "Match internal for every section" }) : null,
-        /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", children: [
+        /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": main.line && !/^Saved/.test(main.line) ? "1" : void 0, children: [
           main.line,
           partner && side.line ? ` · ${partner.label}: ${side.line}` : ""
         ] }),
@@ -66573,7 +66576,7 @@ ${d5.text}`);
       ) : null,
       /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crcheck": true, disabled: !ready, "data-tip": ready ? void 0 : "Approve the internal report first", title: ready ? void 0 : "Approve the internal report first", onClick: openCheck, children: "Check and export ▾" }),
       draft ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", "data-crapprove": true, disabled: !ready, title: ready ? void 0 : "Approve the internal report first", onClick: () => approve(false), children: "Approve client report" }) : null,
-      note ? /* @__PURE__ */ u2("span", { class: "crnote rb-x", role: "status", children: [
+      note ? /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
         note,
         " ",
         /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => approve(true), children: "Approve anyway" }) : null

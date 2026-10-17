@@ -61,7 +61,7 @@ function ClientBar({ doc, note, setNote }) {
         onClick={() => { const a = crArg.value; if (a) loadClientReport(a, true); }}>Refresh from the approved week</button> : null}
       <button type="button" class="btn sm" data-crcheck disabled={!ready} data-tip={ready ? undefined : "Approve the internal report first"} title={ready ? undefined : "Approve the internal report first"} onClick={openCheck}>Check and export ▾</button>
       {draft ? <button type="button" class="btn sm primary" data-crapprove disabled={!ready} title={ready ? undefined : "Approve the internal report first"} onClick={() => approve(false)}>Approve client report</button> : null}
-      {note ? <span class="crnote rb-x" role="status">{note} {/awaiting review/.test(note) ? <button type="button" class="btn sm" data-crforce onClick={() => approve(true)}>Approve anyway</button> : null}</span> : null}
+      {note ? <span class="crnote" role="status">{note} {/awaiting review/.test(note) ? <button type="button" class="btn sm" data-crforce onClick={() => approve(true)}>Approve anyway</button> : null}</span> : null}
     </span>
   );
 }

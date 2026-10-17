@@ -123,14 +123,37 @@ class Banner:
                 self.assertEqual(self.scroll_top(), 2)
 
     def test_a_click_in_the_slim_bar_keeps_it_hidden(self):
+        """Clicks that do not scroll on their own (the zoom label, Show as exported, a menu item), so a header that stays hidden
+        is the rule, not a re-hide after a re-layout. Any click in the bar bringing the header back fails this."""
         for w, h in WIDTHS:
             with self.subTest(width=w):
                 self.start(w, h)
                 self.hide()
-                self.press(f"{self.VIEW} .sheet-bar [aria-label='Zoom in']")
-                self.b.pump(0.6)
-                self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)))
+                before = (self.scroll_top(), self.b.eval(f"document.querySelector('{self.VIEW} .sheet-zv').textContent"))
+                self.press(f"{self.VIEW} .sheet-bar .sheet-zv")
+                self.b.pump(0.4)
+                self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)), "the zoom label")
+                self.assertEqual((self.scroll_top(), self.b.eval(f"document.querySelector('{self.VIEW} .sheet-zv').textContent")), before,
+                                 "and nothing changed")
+                self.press(f"{self.VIEW} .sheet-bar .sheet-exp")
+                self.b.pump(0.5)
+                self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)), "Show as exported")
                 self.assertAlmostEqual(self.header_height(), 48, delta=1.5)
+                self.menu_click()
+                self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)), "a menu item")
+                self.assertAlmostEqual(self.header_height(), 48, delta=1.5)
+
+    def menu_click(self):
+        """Open the toolbar's Export menu (when the view has one) and pick its HTML item with real clicks."""
+        if not self.b.eval(f"!!document.querySelector('{self.VIEW} .sheet-barr [aria-haspopup]')"):
+            return
+        self.press(f"{self.VIEW} .sheet-barr [aria-haspopup]")
+        self.b.pump(0.4)
+        item = self.b.eval("(()=>{const i=[...document.querySelectorAll('[role^=menuitem]')].find(e=>/HTML/.test(e.textContent)); "
+                           "if(!i) return null; i.setAttribute('data-pick','1'); return 1})()")
+        if item:
+            self.press("[data-pick='1']")
+        self.b.pump(0.6)
 
     def test_tab_into_a_hidden_control_brings_the_header_back(self):
         for w, h in WIDTHS:
@@ -168,6 +191,20 @@ class WeeklyBanner(Banner, LiveBrowserCase):
         self.b.eval("go('weekly',{code:'ABC'})")
         self.b.wait("document.querySelector('#v-weekly section[data-id=current_state]')", 20)
 
+    def test_a_save_that_fails_shows_in_the_slim_bar(self):
+        """A real failed save (the save route stubbed to refuse) while the bar is slim: 'Not saved.' is visible, and it is a status."""
+        self.start(1400, 1000)
+        self.hide()
+        self.b.eval("""(()=>{ const real=window.fetch.bind(window);
+          window.fetch=(u,o)=>String(u).endsWith('/api/report/save')?Promise.resolve(new Response(JSON.stringify({ok:false,message:'Not saved.'}),
+            {headers:{'Content-Type':'application/json'}})):real(u,o); })()""")
+        self.b.eval("document.querySelector('#v-weekly [data-id=risks] tbody tr .wr-eye').click()")
+        self.b.eval("document.querySelector('#v-weekly .sheet-root').dispatchEvent(new KeyboardEvent('keydown',{key:'s',metaKey:true,bubbles:true,cancelable:true}))")
+        self.b.wait("/Not saved/.test(document.querySelector('#v-weekly .sheet-status').textContent)", 10)
+        self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)), "still the slim bar")
+        self.assertGreater(self.b.eval("document.querySelector('#v-weekly .sheet-status').getBoundingClientRect().width"), 20)
+        self.assertEqual(self.b.eval("document.querySelector('#v-weekly .sheet-status').getAttribute('role')"), "status")
+
     def test_the_slim_bar_has_the_weekly_buttons(self):
         self.start(1400, 1000)
         self.hide()
@@ -195,6 +232,27 @@ class ClientBanner(Banner, LiveBrowserCase):
     def open_view(self):
         self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
         self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+
+
+class ClientNote(ClientBanner):
+    """A failed Approve client report from the slim bar leaves its message on screen, with Approve anyway."""
+
+    def test_a_failed_approve_from_the_slim_bar_is_visible(self):
+        self.start(1400, 1000)
+        self.hide()
+        self.b.eval("""(()=>{ const real=window.fetch.bind(window);
+          window.fetch=(u,o)=>String(u).endsWith('/api/report/approve')&&/"kind":"client"/.test(String(o&&o.body))
+            ?Promise.resolve(new Response(JSON.stringify({ok:false,message:'The check is awaiting review'}),{headers:{'Content-Type':'application/json'}})):real(u,o); })()""")
+        self.b.eval("document.querySelector('[data-crapprove]').disabled=false")
+        self.press("[data-crapprove]")
+        self.b.wait("document.querySelector('.crnote')", 10)
+        self.b.pump(0.3)
+        self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)), "still the slim bar")
+        r = self.b.eval("(()=>{const n=document.querySelector('.crnote').getBoundingClientRect(), f=document.querySelector('[data-crforce]').getBoundingClientRect();"
+                        "return [n.width,n.height,n.top,f.width,f.height]})()")
+        self.assertGreater(r[0], 100)
+        self.assertGreater(r[1], 10)
+        self.assertGreater(r[3], 20, "Approve anyway can be pressed")
 
 
 class MinutesBanner(Banner, LiveBrowserCase):

@@ -54,8 +54,11 @@ window.AUD = (() => {
       set.add(e);
     }
     const out = [];
+    // a control inside a zero-size box that clips (the report's hidden header bands: height 0, overflow hidden) has no visible area: not a target
+    const clipped = e => { for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) { const s = getComputedStyle(p);
+      if (s.overflowX !== 'visible' || s.overflowY !== 'visible') { const r = p.getBoundingClientRect(); if (r.height < 1 || r.width < 1) return true; } } return false; };
     for (const e of set) {
-      if (!vis(e)) continue;
+      if (!vis(e) || clipped(e)) continue;
       // a child of another target (e.g. a span inside a button) is part of that target
       let anc = e.parentElement, inner = false;
       while (anc) { if (set.has(anc) && anc.tagName !== 'LABEL') { inner = true; break; } anc = anc.parentElement; }

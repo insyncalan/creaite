@@ -408,10 +408,10 @@ export function Sheet(props) {
           <span class="sheet-zv" aria-live="polite" data-zoom={zoom}>{Math.round(zoom * 100)}%</span>
           <button type="button" class="btn sm" aria-label="Zoom in" onClick={() => setZoom(stepZoom(zoom, 1))} disabled={zoom >= 0.8}>+</button>
         </span>
-        <button type="button" class="btn" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
+        <button type="button" class="btn sheet-exp" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
         {partner && !exported ? <label class="sheet-tog"><input type="checkbox" checked={together} onChange={e => setTogether(/** @type {HTMLInputElement} */ (e.currentTarget).checked)} /> Scroll together</label> : null}
         {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id)) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
-        <span class="sub sheet-status" role="status">{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
+        <span class="sub sheet-status" role="status" data-bad={main.line && !/^Saved/.test(main.line) ? "1" : undefined}>{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
         {openChecks && !exported ? <span class="sheet-checks" data-checks={openChecks}>{openChecks} {openChecks === 1 ? "check" : "checks"} open</span> : null}
         <span class="sheet-barr">{props.toolbar || null}</span>
       </div>
