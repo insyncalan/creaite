@@ -77,6 +77,14 @@ def open_first_item(b):
     b.click("#workTbl tbody tr[data-row] a.rowid")
 
 
+def fold_intake_and_review(b):
+    """#168: Today with Intake and Review folded by a real click on its heading, as a person folds it: the count (and the
+    "new" mark while a message is unseen) stay on the one line."""
+    b.wait("document.getElementById('tdFold') && !document.getElementById('tdSec').hidden")
+    b.click("#tdFold>summary")
+    b.wait("!document.getElementById('tdFold').open")
+
+
 def open_cmdk(b):
     b.key("k", META)
 
@@ -85,6 +93,7 @@ def open_cmdk(b):
 # name: (how to get there: JavaScript, or a step that drives the browser; what to wait for; the region to keep).
 SCREENS = {
     "today": ("go('today')", "!document.getElementById('v-today').hidden", "#v-today"),
+    "today-intake-folded": (fold_intake_and_review, "!document.getElementById('v-today').hidden", "#tdSec"),
     "work": ("go('work')", "document.querySelector('#workTbl tbody tr')", "#v-work"),
     "work-panel": (open_first_item, "document.getElementById('panel').classList.contains('on')", "#panel"),
     # BL-315's guesses come from /api/review/guesses, fetched when Review opens (two scripts under the server's lock): under load
@@ -200,7 +209,8 @@ class Snapshots(LiveBrowserCase):
         go, ready, region = SCREENS[name]
         b = self.b
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
-               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); go('today')")
+               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); go('today'); "
+               "{ const f=document.getElementById('tdFold'); if(f) f.open=true; }")   # #168: unfold, so one screen's fold never reaches the next
         if callable(go):
             go(b)
         else:

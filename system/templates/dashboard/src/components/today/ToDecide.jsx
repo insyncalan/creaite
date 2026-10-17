@@ -131,7 +131,7 @@ export function ToDecide(props) {
   );
 }
 
-/** Draw To decide into #tdBody (only today.js calls it). @param {Element} host @param {ToDecideProps} props */
+/** Draw Intake and Review (was To decide) into #tdBody (only today.js calls it). @param {Element} host @param {ToDecideProps} props */
 export function drawToDecide(host, props) {
   render(<ToDecide {...props} />, host);
 }
