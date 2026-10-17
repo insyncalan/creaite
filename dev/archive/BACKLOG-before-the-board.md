@@ -41,7 +41,7 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | ID | Item | Source | Size | Plan |
 |----|------|--------|------|------|
 | BL-09 | **Archive and restore whole projects**, into `_Archive/` (and **zz Archive is renamed _Archive throughout**) | Alan | M–L | **In v1.9.4 (Alan, 14-10-2026)**, on its own (moved from v1.9.3 the same day; before that "after the trial"). The guard exception and the four open points agreed (Alan, 14-10-2026): **ready for a sprint**, after BL-320's Health |
-| BL-304 | **Technical: changes appear at once, and only what changed is redrawn.** An edit shows on screen immediately and is staged and applied in the background (put back, with the reason, if it fails); the page keeps its data in memory and BL-253's events update just the changed records instead of reloading `/api/data` | Alan, 13-10-2026 (from the Linear, Asana and Plane research) | L | **In v1.9.4 (Alan, 14-10-2026)**, beside BL-09 |
+| BL-304 | **Technical: changes appear at once, and only what changed is redrawn.** An edit shows on screen immediately and is staged and applied in the background (put back, with the reason, if it fails); the page keeps its data in memory and BL-253's events update just the changed records instead of reloading `/api/data` | Alan, 13-10-2026 (from the three reference products research) | L | **In v1.9.4 (Alan, 14-10-2026)**, beside BL-09 |
 | BL-327 | **Defect.** Saving is sometimes slow (14 to 24 s instead of about 1) and the first page load after a start takes 5 to 14.5 s: after an apply, the OneDrive backup copy and a full search-index rebuild run before the save returns | Alan, 14-10-2026 (live debug log, 13-10) | S–M | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
 | BL-328 | **Defect.** A sweep that ends abnormally (stopped, timed out, or cut off when the server stops) leaves its lock, so the next sweep waits until the lock is 30 minutes old | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
 | BL-329 | **Defect.** Two servers start at once: the launcher starts a second while the first is still starting, which fails with "exit 1" (three times on 13-10) | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
@@ -81,7 +81,7 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 
 | ID | Item | Source | Size | Plan |
 |----|------|--------|------|------|
-| BL-313 | **Plain words:** with automatic apply on, nothing on screen or in ask creaite says "staged", "apply" or "proposal"; your own change is "Saved" (with Undo); what creaite suggests "waits for you in Review" | Alan, 13-10-2026 (UX review against Linear, Asana and Plane) | M (was S) | **On hold (Alan, 14-10-2026)**; the review is in dev/reviews/BL-313-review.md |
+| BL-313 | **Plain words:** with automatic apply on, nothing on screen or in ask creaite says "staged", "apply" or "proposal"; your own change is "Saved" (with Undo); what creaite suggests "waits for you in Review" | Alan, 13-10-2026 (UX review against three reference products) | M (was S) | **On hold (Alan, 14-10-2026)**; the review is in dev/reviews/BL-313-review.md |
 | BL-40 | More named themes | Alan | S | **On hold (Alan, 14-10-2026)** |
 | BL-183 | Health evidence and calibration: a banner when the declared health is better than the evidence, and your own health calls scored afterwards | Alan, from the 11-10-2026 research | S | **On hold again (Alan, 14-10-2026)**, out of v1.9.4: not buildable as written (where calibration shows is undecided; no Done-when). Eight recommendations recorded in its write-up for when it resumes |
 | BL-317 | **Reports you live in:** one living Status page per project (health, Current state, milestones, top risks, help needed), edited in place with evidence; each week a snapshot; Client view; Export to Word from it | Alan, 13-10-2026 | L | **On hold (Alan, 14-10-2026): design paused, to revisit later; in no release.** Mockup so far: the project page as six tabs, with Milestones worked through (`dev/mockups/project-page-mockup.html`; published https://claude.ai/artifact/Xk2SGW7fz6AJGCr45bPjfL) |
@@ -357,7 +357,7 @@ After BL-212's headers, add `Content-Security-Policy` for the page. It is within
 
 **Decided (Alan, 14-10-2026): Retry after "changed elsewhere" overwrites.** When an instant save is refused because the item changed elsewhere, **Retry** re-applies Alan's value on top of the item as it now is, so his value wins; it doesn't go to Review as a conflict. The other change stays in Activity and can be undone.
 
-Raised 2026-10-13 (Alan), from research into how Linear, Asana and Plane are built (Linear's local-first object pool and optimistic updates; Asana's LunaDb subscriptions; Plane's MobX stores). **Technical. In v1.9.0 (Alan, 13-10-2026; moved from v2.0.0), after BL-256 in the same release** (it needs signals and the component store). No schema change.
+Raised 2026-10-13 (Alan), from research into how three reference products are built (a local-first object pool and optimistic updates; live subscriptions; observable stores). **Technical. In v1.9.0 (Alan, 13-10-2026; moved from v2.0.0), after BL-256 in the same release** (it needs signals and the component store). No schema change.
 
 **Why.** Today an edit waits for the server to stage and apply it (about 3 seconds with auto-apply) before the screen changes, and many actions reload all of the page's data (`/api/data`) and redraw whole sections. The tools Alan compares creaite with feel instant because the screen never waits: the change shows at once and is saved in the background. creaite is already local (SQLite on the laptop), so it can have the same feel without their sync machinery.
 
@@ -384,7 +384,7 @@ Raised 2026-10-13 (Alan), from research into how Linear, Asana and Plane are bui
 ## Deferred options
 
 - **Portfolio workstream categories** (raised with BL-58, 2026-10-06; set aside for now). A short shared list (Data, Build, Testing, Change and adoption, Commercial, Governance, Cut-over) that each project's workstreams map to, so portfolio views and BL-02 can roll up "all testing" without forcing identical names. Revisit with BL-02.
-- **Linear as the backend.** Reviewed twice and deferred: strong built-in health updates, initiatives and a Claude connector (Basic about $120 a year for one user), but data would leave the laptop and need IT approval. Revisit later.
+- **A reference product as the backend.** Reviewed twice and deferred: strong built-in health updates, initiatives and a Claude connector (Basic about $120 a year for one user), but data would leave the laptop and need IT approval. Revisit later.
 
 ## Phase 3 requirement (not a backlog item)
 
@@ -413,7 +413,7 @@ Raised 2026-10-13 (Alan), from research into how Linear, Asana and Plane are bui
 ### BL-313 — Plain words
 **On hold (Alan, 14-10-2026).** The review is in `dev/reviews/BL-313-review.md`.
 
-Raised 2026-10-13 (Alan), from the UX review against Linear, Asana and Plane: the dashboard's code uses "proposal" about 230 times, "apply" about 230 and "staged" over 100, and much of it reaches Alan. **In v2.1.0 (Alan, 13-10-2026; moved from v1.9.1), on hold for Alan's full review before it is committed; the review pack is `dev/reviews/BL-313-review.md`.** No schema change.
+Raised 2026-10-13 (Alan), from the UX review against three reference products: the dashboard's code uses "proposal" about 230 times, "apply" about 230 and "staged" over 100, and much of it reaches Alan. **In v2.1.0 (Alan, 13-10-2026; moved from v1.9.1), on hold for Alan's full review before it is committed; the review pack is `dev/reviews/BL-313-review.md`.** No schema change.
 
 **One model, in Alan's words:** what you change is saved (with Undo); what creaite suggests waits for you in Review.
 - **With auto-apply on (the default):** your own edits read "Saved", with Undo; the peek's staged dot means "saving"; no "staged", "apply", "Apply", "pending apply" or "proposal" in the dashboard, its messages or Help.
@@ -571,7 +571,7 @@ Raised 2026-10-14 (Alan). **In v1.9.3 (Alan, 14-10-2026). Mockup and scope accep
 
 **Decided (Alan, 14-10-2026), all as recommended:** risk → issue allowed, with a confirm; revisit with Enter, reasoning and options as Claude drafts only; promises and the chase hand-off allowed; the name Sneak peek, with a sparkle icon in the peek's top bar.
 
-**Ideas from similar tools, for the build:** mark what was understood in the box as you type, with a click to take a word back out (Todoist's Quick Add); `@` for people with a short pick list (Linear, Jira); the form's own checks, never round them (Jira Rovo's ROVO-985 is the counter-example).
+**Ideas from similar tools, for the build:** mark what was understood in the box as you type, with a click to take a word back out (a task app's quick add); `@` for people with a short pick list (two reference products); the form's own checks, never round them (one reference product's form bug is the counter-example).
 
 **Done when:** each agreed field and task works on each kind of item it applies to, with a test; one `/` still opens ask creaite and `//` opens the box, and neither fires inside a field; the confirm list can't be made with plain Enter; every change is undoable and logged; nothing is sent and no other existing item changes; with AI drafts off the plain-code part works and the Claude parts say why they can't; Help is updated.
 

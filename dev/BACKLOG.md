@@ -366,7 +366,7 @@ The release plan is `dev/sprints/v200-notes-release.md`.
 
 **Decided (Alan, 14-10-2026): Retry after "changed elsewhere" overwrites.** When an instant save is refused because the item changed elsewhere, **Retry** re-applies Alan's value on top of the item as it now is, so his value wins; it doesn't go to Review as a conflict. The other change stays in Activity and can be undone.
 
-Raised 2026-10-13 (Alan), from research into how Linear, Asana and Plane are built (Linear's local-first object pool and optimistic updates; Asana's LunaDb subscriptions; Plane's MobX stores). **Technical. In v1.9.0 (Alan, 13-10-2026; moved from v2.0.0), after BL-256 in the same release** (it needs signals and the component store). No schema change.
+Raised 2026-10-13 (Alan), from research into how three reference products are built (a local-first object pool and optimistic updates; live subscriptions; observable stores). **Technical. In v1.9.0 (Alan, 13-10-2026; moved from v2.0.0), after BL-256 in the same release** (it needs signals and the component store). No schema change.
 
 **Why.** Today an edit waits for the server to stage and apply it (about 3 seconds with auto-apply) before the screen changes, and many actions reload all of the page's data (`/api/data`) and redraw whole sections. The tools Alan compares creaite with feel instant because the screen never waits: the change shows at once and is saved in the background. creaite is already local (SQLite on the laptop), so it can have the same feel without their sync machinery.
 
@@ -391,7 +391,7 @@ Raised 2026-10-13 (Alan), from research into how Linear, Asana and Plane are bui
 
 **On hold (Alan, 14-10-2026).** The review is in `dev/reviews/BL-313-review.md`.
 
-Raised 2026-10-13 (Alan), from the UX review against Linear, Asana and Plane: the dashboard's code uses "proposal" about 230 times, "apply" about 230 and "staged" over 100, and much of it reaches Alan. **In v2.1.0 (Alan, 13-10-2026; moved from v1.9.1), on hold for Alan's full review before it is committed; the review pack is `dev/reviews/BL-313-review.md`.** No schema change.
+Raised 2026-10-13 (Alan), from the UX review against three reference products: the dashboard's code uses "proposal" about 230 times, "apply" about 230 and "staged" over 100, and much of it reaches Alan. **In v2.1.0 (Alan, 13-10-2026; moved from v1.9.1), on hold for Alan's full review before it is committed; the review pack is `dev/reviews/BL-313-review.md`.** No schema change.
 
 **One model, in Alan's words:** what you change is saved (with Undo); what creaite suggests waits for you in Review.
 - **With auto-apply on (the default):** your own edits read "Saved", with Undo; the peek's staged dot means "saving"; no "staged", "apply", "Apply", "pending apply" or "proposal" in the dashboard, its messages or Help.
