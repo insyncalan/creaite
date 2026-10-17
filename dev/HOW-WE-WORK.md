@@ -23,7 +23,7 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 | From | To | How |
 |---|---|---|
 | A team lead | Jarvis | A comment on the item's issue, starting "Team Cap, HH:MM:" or "Team Stark, HH:MM:" (the time from `date`). On Jarvis's laptop, a direct message as well |
-| Jarvis | A team lead | A comment on the item's issue (or #34 for anything general), starting "Jarvis, HH:MM, to Team …:". On the same laptop, a direct message as well |
+| Jarvis | A team lead | A comment on the item's issue (or #99, the standing Jarvis-Team Cap channel, for anything general), starting "Jarvis, HH:MM, to Team …:". On the same laptop, a direct message as well |
 | Anyone | Alan | Only through Jarvis: the digests (07:57 and 15:57 full, 11:57 and 19:57 lite), or straight away for a security or guard problem, possible data loss or a broken release |
 | Alan | Anyone | He tells Jarvis, or comments on the issue. A team lead hearing a decision from Alan passes it to Jarvis, who records it once Alan confirms it directly |
 
