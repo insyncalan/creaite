@@ -1593,6 +1593,7 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
   :root[data-motion="full"] .spin,:root[data-motion="full"] .mspin,:root[data-motion="full"] .mdots i{animation-duration:0s!important;animation-iteration-count:1!important}
   :root:not([data-motion="full"]) #askBtn.working::after,:root:not([data-motion="full"]) .askbtn[data-state=answering] .spark{animation:none}
   :root:not([data-motion="full"]) .sp-flash{animation:none;background-color:var(--warn-soft)}   /* BL-322: Sneak peek's flash holds still */
+  :root:not([data-motion="full"]) .aispark{animation:none}                                          /* #117: the AI sparkle's slide-in */
 }
 :root[data-motion="reduce"] #askBtn.working::after,:root[data-motion="reduce"] .askbtn[data-state=answering] .spark{animation:none}   /* the ask pulses are removed, not just stopped */
 :root[data-motion="reduce"] *,:root[data-motion="reduce"] *::before,:root[data-motion="reduce"] *::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:0s!important;transition-delay:0s!important;scroll-behavior:auto!important}
@@ -3268,7 +3269,6 @@ button.nchip{font:inherit;font-size:12px}
 .aispark:hover,.aispark[aria-expanded=true]{background:var(--accent-soft)}
 .aispark:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 @keyframes aispin{from{opacity:0;transform:translateX(4px)}}
-@media (prefers-reduced-motion:reduce){.aispark{animation:none}}
 @media (forced-colors:active){.aispark,.aibar,.aibar .aiai{border:1px solid CanvasText;forced-color-adjust:auto} .aispark[aria-expanded=true]{border-color:Highlight}}
 .aisug{position:fixed;z-index:220;width:min(480px,calc(100vw - 32px));max-height:min(60vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;box-shadow:var(--shadow-pop);padding:10px 12px;font-size:14px}
 .aisug .aisughd{display:flex;align-items:center;gap:6px;margin-bottom:4px} .aisug .aisughd .i{color:var(--accent)}

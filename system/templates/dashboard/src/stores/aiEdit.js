@@ -58,22 +58,25 @@ export const AI_GROUPS = /** @type {Record<string, [string, string[]][]>} */ ({
   line: [["Improve", ["rewrite", "shorter", "executive"]]],
   report: [["Improve", ["shorter", "executive", "polish"]]],     // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
   minutes: [["Improve", ["shorter", "executive", "polish"]]],
+  client: [["Improve", ["shorter", "executive", "polish"]]],     // #123: the client sheet, as v2.1.0 shipped it
   readonly: [],                                                 // only Find the source, the sheet's own item
 });
 /** THE PLACE TABLE (#117): every editor place the selection bar is built for, and whether it is switched on. `ai`: the sparkle and bar show
     at all; `turnInto`: Turn into (instant, no AI; rich editors whose storage holds every block kind); `formatNotes`: Format notes for
-    several paragraphs (rich editors only); `improveOnly`: the place offers its Improve (and Tone) group and Ask… only. v2.1.0 switches on
-    notes and current, and keeps the A4 sheets' report, minutes and readonly on as shipped (edit_ai.py SHEET_PLACES); email, plain and line are built and OFF, so v2.2.0 is flipping `ai`, not a rebuild (dev/tests/test_ai_117.py lists
-    every place and asserts it). Current state's Turn into is off for good: its storage (headings ###..#####, no checklist) and the Word
+    several paragraphs (rich editors only); `improveOnly`: the place offers its Improve (and Tone) group and Ask… only. Every place v2.1.0
+    had the bar on is ON here: notes and current, the email draft, the plain fields and the one-line title, and the A4 sheets (report,
+    minutes, client, readonly: edit_ai.py SHEET_PLACES and CLIENT_PLACES). A place missing from this table has no bar at all (the client sheet's
+    row was once missing); dev/tests/test_ai_117.py lists every place and asserts it. Current state's Turn into is off for good: its storage (headings ###..#####, no checklist) and the Word
     report can't take every kind. @type {Record<string, {ai: boolean, turnInto: boolean, formatNotes: boolean, improveOnly: boolean}>} */
 export const AI_PLACE_TABLE = {
   notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
   current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
-  email: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
-  plain: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
-  line: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
+  email: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+  plain: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+  line: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
   report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // v2.1.0 P5: the sheets keep their AI bar and Find the source
   minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+  client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // #123: the client sheet keeps its AI bar and Find the source
   readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
 };
 /** True when a place's selection bar is switched on. @param {string} place */

@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import LiveBrowserCase, pin_page_clock  # noqa: E402
 import test_close_day_guided as guided  # noqa: E402  (fixes the clock, the vault's dates and the stand-in Claude)
 
 CARD = "document.getElementById('closeDlg')"
@@ -37,6 +37,10 @@ class CloseDayCard(LiveBrowserCase):
     @classmethod
     def server_env(cls):
         return {"CREAITE_NOW": guided.NOW, "CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")}
+
+    def setUp(self):
+        super().setUp()
+        pin_page_clock(self.b, guided.NOW)                                     # the page's TODAY is the server's, not the runner's real day
 
     def tracker(self):
         return [self.v.rows(t) for t in ("actions", "raid", "decisions")]
@@ -79,17 +83,11 @@ class CloseDayCard(LiveBrowserCase):
         self.assertIn("1 new item for Review", self.text())
         self.assertEqual(b.eval(SAID), "Step 1 of 4, Catch up")                  # the live region names the step
         b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')")   # focus is back on Next after the card redraws
-        # ← → move between the steps. One key press, then wait on the step itself: a second press while a slow render is still
-        # settling moved on past Today (the CI flake), so a press is repeated only when the step is still Catch up after a long wait.
-        for _ in range(3):
-            b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')", 30)
-            b.key("ArrowRight")
-            try:
-                b.wait(f"{STEP}!=='Catch up'", 30)
-                break
-            except TimeoutError:                                                 # the key went to a card still redrawing: focus Next and again
-                b.eval("document.querySelector('#closeDlg [data-cdnext]').focus()")
-        b.wait(f"{STEP}==='Today'", 30)
+        # ← → move between the steps. ONE key press, never repeated: a press that was only slow (CI under load) and a repeat both
+        # landed, moving on past Today (the CI flake: the first wait timed out, the retry made two steps). Wait long on the step itself.
+        b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')", 60)
+        b.key("ArrowRight")
+        b.wait(f"{STEP}==='Today'", 90)
         self.assertIn("Moved today", self.text())
         b.click("#closeDlg [data-cdnext]")
         b.wait(f"{STEP}==='Loose ends'")

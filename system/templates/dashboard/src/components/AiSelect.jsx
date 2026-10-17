@@ -21,8 +21,14 @@ import { Icon } from "./Icon.jsx";
 import { Menu } from "./Menu.jsx";
 import { ED_HOOKS, edTurnKind } from "../core/editor.js";
 import { placeAtCaret } from "../core/caretPlace.js";
-import { AI_GROUPS, AI_OPTIONS, AI_PLACE_TABLE, aiAccept, aiActionsFor, aiAttach, aiBar, aiBarClose, aiChanges, aiDiff, aiDiscard, aiItems, aiName, aiRetry, aiRun,
+import { AI_GROUPS, AI_OPTIONS, AI_PLACES, AI_PLACE_TABLE, aiAccept, aiActionsFor, aiAttach, aiBar, aiBarClose, aiChanges, aiDiff, aiDiscard, aiItems, aiName, aiRetry, aiRun,
   aiRunAction, aiSend, aiSug, aiToggle, aiTurn } from "../stores/aiEdit.js";
+
+/** True where edit_ai.py's prompt has the spelling sentence: every place but the A4 sheets and the client sheet (their prompts stay as v2.1.0 shipped
+    them, and Polish already corrects spelling). @param {string} place */
+const SPELLS = place => !SHEETS.includes(place);
+/** The A4 sheets' places (reports, minutes, the client sheet, a read-only sheet): their one registered item is Find the source. */
+const SHEETS = ["report", "minutes", "client", "readonly"];
 
 /** Turn into's kinds, in the menu's order: [id, name]. */
 const TURN = [["text", "Text"], ["h1", "Heading 1"], ["h2", "Heading 2"], ["h3", "Heading 3"], ["ul", "Bulleted list"],
@@ -85,7 +91,10 @@ export function AiBar({ bar }) {
   const groups = (AI_GROUPS[place] || AI_GROUPS.plain).map(([name, ids]) =>
     [name, ids.map(id => ({ id, name: aiName(place, id), line: AI_OPTIONS[id][1] }))]);
   const into = aiActionsFor(place).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
-  if (into.length) groups.push(["Make into", into]);
+  // "Make into" is the Notes editors' (their registered item makes a tracker item). The sheets' own item (Find the source) is not a
+  // "make into": it sits in the AI zone as its own button, where v2.1.0 listed it.
+  const asks = (AI_PLACES[place] || []).includes("custom");
+  if (into.length && !SHEETS.includes(place)) groups.push(["Make into", into]);
   /** ← → move along the bar's buttons (a menu's own keys are the menu's). @param {KeyboardEvent} e */
   const move = e => {
     const t = /** @type {HTMLElement} */ (e.target);
@@ -132,7 +141,10 @@ export function AiBar({ bar }) {
               <Menu key={name} label={name} btnCls="btn aibtn" menuLabel={name} tip={`AI: ${name.toLowerCase()}`} hover left
                 items={items.map(it => ({ ...it, icon: it.icon || "spark", data: { ai: it.id } }))} onPick={pickAi} />
             ))}
-            <button type="button" class="btn aibtn" data-ai="custom" onClick={() => setAsking(true)}>Ask…</button>
+            {into.length && SHEETS.includes(place) ? into.map(it => (
+              <button key={it.id} type="button" class="btn aibtn" data-ai={it.id} data-tip={it.line} onClick={() => pickAi(it.id)}>{it.name}</button>
+            )) : null}
+            {asks ? <button type="button" class="btn aibtn" data-ai="custom" onClick={() => setAsking(true)}>Ask…</button> : null}
           </div>
         </>
       )}
@@ -185,7 +197,7 @@ export function AiSuggestion({ s }) {
             {s.changes ? aiDiff(s.range.text, s.text || "").map(([k, t], i) => k === "=" ? <span key={i}>{t}</span>
               : k === "-" ? <del key={i} class="aidel">{t}</del> : <ins key={i} class="aiins">{t}</ins>) : s.text}
           </div>
-          {s.option !== "custom" ? <p class="oknote" data-aispell>✓ Spelling and grammar fixed too (British English).</p> : null}
+          {s.option !== "custom" && SPELLS(s.ai.place) ? <p class="oknote" data-aispell>✓ Spelling and grammar fixed too (British English).</p> : null}
           {notes.length ? <ul class="ainotes" aria-label="Check it">{notes.map(n => <li key={n.id}>{n.note}</li>)}</ul>
             : <p class="oknote">✓ Keeps your dates, numbers, names and item IDs.</p>}
           <div class="aiacts">

@@ -1603,6 +1603,7 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
   :root[data-motion="full"] .spin,:root[data-motion="full"] .mspin,:root[data-motion="full"] .mdots i{animation-duration:0s!important;animation-iteration-count:1!important}
   :root:not([data-motion="full"]) #askBtn.working::after,:root:not([data-motion="full"]) .askbtn[data-state=answering] .spark{animation:none}
   :root:not([data-motion="full"]) .sp-flash{animation:none;background-color:var(--warn-soft)}   /* BL-322: Sneak peek's flash holds still */
+  :root:not([data-motion="full"]) .aispark{animation:none}                                          /* #117: the AI sparkle's slide-in */
 }
 :root[data-motion="reduce"] #askBtn.working::after,:root[data-motion="reduce"] .askbtn[data-state=answering] .spark{animation:none}   /* the ask pulses are removed, not just stopped */
 :root[data-motion="reduce"] *,:root[data-motion="reduce"] *::before,:root[data-motion="reduce"] *::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:0s!important;transition-delay:0s!important;scroll-behavior:auto!important}
@@ -3278,7 +3279,6 @@ button.nchip{font:inherit;font-size:12px}
 .aispark:hover,.aispark[aria-expanded=true]{background:var(--accent-soft)}
 .aispark:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 @keyframes aispin{from{opacity:0;transform:translateX(4px)}}
-@media (prefers-reduced-motion:reduce){.aispark{animation:none}}
 @media (forced-colors:active){.aispark,.aibar,.aibar .aiai{border:1px solid CanvasText;forced-color-adjust:auto} .aispark[aria-expanded=true]{border-color:Highlight}}
 .aisug{position:fixed;z-index:220;width:min(480px,calc(100vw - 32px));max-height:min(60vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;box-shadow:var(--shadow-pop);padding:10px 12px;font-size:14px}
 .aisug .aisughd{display:flex;align-items:center;gap:6px;margin-bottom:4px} .aisug .aisughd .i{color:var(--accent)}
@@ -28929,6 +28929,8 @@ ${s5}`;
       report: [["Improve", ["shorter", "executive", "polish"]]],
       // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
       minutes: [["Improve", ["shorter", "executive", "polish"]]],
+      client: [["Improve", ["shorter", "executive", "polish"]]],
+      // #123: the client sheet, as v2.1.0 shipped it
       readonly: []
       // only Find the source, the sheet's own item
     }
@@ -28936,12 +28938,14 @@ ${s5}`;
   var AI_PLACE_TABLE = {
     notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
     current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
-    email: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
-    plain: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
-    line: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
+    email: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    plain: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    line: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
     report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
     // v2.1.0 P5: the sheets keep their AI bar and Find the source
     minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+    client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
+    // #123: the client sheet keeps its AI bar and Find the source
     readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false }
   };
   var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
@@ -29219,6 +29223,8 @@ ${s5}`;
   }
 
   // components/AiSelect.jsx
+  var SPELLS = (place2) => !SHEETS.includes(place2);
+  var SHEETS = ["report", "minutes", "client", "readonly"];
   var TURN = [
     ["text", "Text"],
     ["h1", "Heading 1"],
@@ -29315,7 +29321,8 @@ ${s5}`;
     };
     const groups = (AI_GROUPS[place2] || AI_GROUPS.plain).map(([name, ids]) => [name, ids.map((id2) => ({ id: id2, name: aiName(place2, id2), line: AI_OPTIONS[id2][1] }))]);
     const into = aiActionsFor(place2).map((a5) => ({ id: a5.id, name: a5.name, line: a5.line, icon: a5.icon }));
-    if (into.length) groups.push(["Make into", into]);
+    const asks = (AI_PLACES[place2] || []).includes("custom");
+    if (into.length && !SHEETS.includes(place2)) groups.push(["Make into", into]);
     const move = (e4) => {
       const t47 = (
         /** @type {HTMLElement} */
@@ -29420,7 +29427,8 @@ ${s5}`;
               },
               name
             )),
-            /* @__PURE__ */ u2("button", { type: "button", class: "btn aibtn", "data-ai": "custom", onClick: () => setAsking(true), children: "Ask…" })
+            into.length && SHEETS.includes(place2) ? into.map((it2) => /* @__PURE__ */ u2("button", { type: "button", class: "btn aibtn", "data-ai": it2.id, "data-tip": it2.line, onClick: () => pickAi(it2.id), children: it2.name }, it2.id)) : null,
+            asks ? /* @__PURE__ */ u2("button", { type: "button", class: "btn aibtn", "data-ai": "custom", onClick: () => setAsking(true), children: "Ask…" }) : null
           ] })
         ] })
       }
@@ -29490,7 +29498,7 @@ ${s5}`;
           ] }) : /* @__PURE__ */ u2(S2, { children: [
             /* @__PURE__ */ u2("p", { class: "sub", role: "status", children: "A suggestion: your text is unchanged until you accept it." }),
             /* @__PURE__ */ u2("div", { class: "aitext", tabIndex: 0, "aria-label": s5.changes ? "The changes" : "The suggestion", children: s5.changes ? aiDiff(s5.range.text, s5.text || "").map(([k5, t47], i5) => k5 === "=" ? /* @__PURE__ */ u2("span", { children: t47 }, i5) : k5 === "-" ? /* @__PURE__ */ u2("del", { class: "aidel", children: t47 }, i5) : /* @__PURE__ */ u2("ins", { class: "aiins", children: t47 }, i5)) : s5.text }),
-            s5.option !== "custom" ? /* @__PURE__ */ u2("p", { class: "oknote", "data-aispell": true, children: "✓ Spelling and grammar fixed too (British English)." }) : null,
+            s5.option !== "custom" && SPELLS(s5.ai.place) ? /* @__PURE__ */ u2("p", { class: "oknote", "data-aispell": true, children: "✓ Spelling and grammar fixed too (British English)." }) : null,
             notes.length ? /* @__PURE__ */ u2("ul", { class: "ainotes", "aria-label": "Check it", children: notes.map((n4) => /* @__PURE__ */ u2("li", { children: n4.note }, n4.id)) }) : /* @__PURE__ */ u2("p", { class: "oknote", children: "✓ Keeps your dates, numbers, names and item IDs." }),
             /* @__PURE__ */ u2("div", { class: "aiacts", children: [
               /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": s5.changes ? "true" : "false", onClick: aiChanges, children: "Show changes" }),

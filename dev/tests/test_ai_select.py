@@ -175,15 +175,14 @@ class AiOnSelection(LiveBrowserCase):
 
     def setUp(self):
         super().setUp()
-        self.b.eval("AI_PLACE_TABLE.plain.ai=true; AI_PLACE_TABLE.line.ai=true; true")     # v2.2.0's places, switched on for these tests
-        self.addCleanup(lambda: self.b and self.b.eval("AI_PLACE_TABLE.plain.ai=false; AI_PLACE_TABLE.line.ai=false; true"))
+        self.addCleanup(lambda: self.b and self.b.eval("for(const p of ['email','plain','line']) AI_PLACE_TABLE[p].ai=true; true"))   # on, as v2.1.0 had them
 
-    def test_the_place_table_lists_every_place_and_off_places_show_no_ai_element(self):
+    def test_the_place_table_lists_every_place_and_a_switched_off_place_shows_no_ai_element(self):
         b = self.b
-        b.eval("AI_PLACE_TABLE.plain.ai=false; AI_PLACE_TABLE.line.ai=false; true")
         self.assertEqual(b.eval("Object.fromEntries(Object.entries(AI_PLACE_TABLE).map(([k,v])=>[k,v.ai]))"),
-                         {"notes": True, "current": True, "email": False, "plain": False, "line": False,
-                          "report": True, "minutes": True, "readonly": True})      # the A4 sheets stay on as v2.1.0 shipped
+                         {"notes": True, "current": True, "email": True, "plain": True, "line": True,
+                          "report": True, "minutes": True, "client": True, "readonly": True})      # every place v2.1.0 had the bar on
+        b.eval("for(const p of ['email','plain','line']) AI_PLACE_TABLE[p].ai=false; true")        # the switch still turns a place off
         for place in ("email", "plain", "line"):
             b.eval("""(p=>{ document.getElementById('offx')?.remove(); const el=document.createElement('div'); el.id='offx';
               el.style.cssText='position:fixed;top:120px;left:120px;width:400px;z-index:100;background:var(--surface)';

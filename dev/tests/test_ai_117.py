@@ -267,18 +267,19 @@ class Bar117(LiveBrowserCase):
         b = self.b
         want = {"notes": dict(ai=True, turnInto=True, formatNotes=True, improveOnly=False),
                 "current": dict(ai=True, turnInto=False, formatNotes=True, improveOnly=False),
-                "email": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True),
-                "plain": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True),
-                "line": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True)}
-        sheet = {"report", "minutes", "readonly"}
+                "email": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),       # v2.1.0 had the bar here: it stays on
+                "plain": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
+                "line": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True)}
+        sheet = {"report", "minutes", "client", "readonly"}
         self.assertEqual({k: v for k, v in b.eval("AI_PLACE_TABLE").items() if k not in sheet}, want)
         self.assertEqual([k for k in b.eval("Object.keys(AI_PLACE_TABLE)") if k not in sheet], list(want))
-        self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(want) | sheet | {"client"})   # the page, edit_ai.py and the groups list the same
+        self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(want) | sheet)   # the page, edit_ai.py and the groups list the same
         self.assertEqual(set(b.eval("Object.keys(AI_GROUPS)")), set(want) | sheet)
-        self.assertEqual(set(edit_ai.PLACES), set(want) | sheet | {"client"})      # #123's client place, as v2.1.0 shipped it
-        self.assertEqual(b.eval("Object.keys(AI_PLACE_TABLE).filter(p=>['report','minutes','readonly'].includes(p))"),
-                         ["report", "minutes", "readonly"])                    # the sheet's places stay on, with no Turn into or Format notes
-        for p in ("report", "minutes", "readonly"):
+        self.assertEqual(set(edit_ai.PLACES), set(want) | sheet)      # #123's client place, as v2.1.0 shipped it
+        self.assertEqual(b.eval("Object.keys(AI_PLACE_TABLE).filter(p=>['report','minutes','client','readonly'].includes(p))"),
+                         ["report", "minutes", "client", "readonly"])          # the sheet's places stay on, with no Turn into or Format notes
+        self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(b.eval("Object.keys(AI_PLACE_TABLE)")))   # a place with options but no row has no bar
+        for p in ("report", "minutes", "client", "readonly"):
             self.assertEqual(b.eval(f"AI_PLACE_TABLE.{p}"), dict(ai=True, turnInto=False, formatNotes=False, improveOnly=False), p)
         for place, row in want.items():
             self.assertEqual(b.eval(f"aiPlaceOn({json.dumps(place)})"), row["ai"], place)
@@ -297,21 +298,52 @@ class Bar117(LiveBrowserCase):
                 self.assertIsNone(b.eval("AIE.el.getAttribute('data-aibar')"))
             b.eval(CLEAN)
 
-    def test_off_places_switch_on_without_rework_and_list_improve_only(self):
-        """v2.2.0 is flipping the flag: with `ai` on, the email and plain places offer their Improve (and Tone) groups and Ask…, no Turn into."""
+    def test_the_email_and_plain_places_have_the_bar_and_list_improve_only(self):
+        """v2.1.0 had the bar on the email draft, the peek's longer fields and its title: they offer their Improve (and Tone) group and Ask…, no Turn into."""
         b = self.b
-        self.addCleanup(lambda: self.b and self.b.eval("for(const p of ['email','plain','line']) AI_PLACE_TABLE[p].ai=false; true"))
         want = {"email": [("improve", ["rewrite", "shorter", "longer"]), ("tone", ["formal", "warmer"])],
                 "plain": [("improve", ["rewrite", "shorter", "executive"])], "line": [("improve", ["rewrite", "shorter", "executive"])]}
         for place, groups in want.items():
-            b.eval(f"AI_PLACE_TABLE.{place}.ai=true")
             self.mount(place, "Some plain text\nOn two lines" if place != "line" else "A one line title")
             self.select_all()
             self.assertEqual(self.groups(), groups, place)
             self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aifmt, {LAYER} [data-ai=notes]')"), place)
             self.assertTrue(b.eval(f"!!document.querySelector('{LAYER} [data-ai=custom]')"), place)
             b.eval(CLEAN)
-            b.eval(f"AI_PLACE_TABLE.{place}.ai=false")
+
+    def test_the_client_sheet_and_the_other_sheets_keep_their_bar_find_the_source_and_no_make_into(self):
+        """A place with options but no row in the table lost its bar once (the client sheet): every place has both. The sheets' own item
+        is a button of its own, never under 'Make into' (the Notes' group); Ask… shows only where the place offers it."""
+        b = self.b
+        for place, groups, asks in (("client", [("improve", ["shorter", "executive", "polish"])], True),
+                                    ("report", [("improve", ["shorter", "executive", "polish"])], True),
+                                    ("minutes", [("improve", ["shorter", "executive", "polish"])], True),
+                                    ("readonly", [], False)):
+            self.mount(place, "Some plain text\nOn two lines")
+            self.select_all()
+            self.assertEqual(self.groups(), groups, place)
+            self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aiai [data-ai=source]').textContent"), "Find the source", place)
+            self.assertEqual(b.eval(f"!!document.querySelector('{LAYER} .aiai [data-ai=source]').closest('[role=menu]')"), False, place)
+            self.assertEqual(b.eval(f"[...document.querySelectorAll('{LAYER} .aibar button')].some(e=>/make into/i.test(e.textContent+e.dataset.tip))"),
+                             False, place)
+            self.assertEqual(b.eval(f"!!document.querySelector('{LAYER} .aibar [data-ai=custom]')"), asks, f"{place}: Ask… only where custom is offered")
+            self.assertEqual(b.eval(f"AI_PLACES.{place}.includes('custom')"), asks, place)
+            b.eval(CLEAN)
+
+    def test_the_spelling_note_shows_only_where_the_prompt_has_the_spelling_sentence(self):
+        b = self.b
+        for place, note in (("notes", True), ("current", True), ("email", True), ("plain", True), ("line", True),
+                            ("report", False), ("minutes", False), ("client", False)):
+            self.reply("Short.")
+            self.mount(place, "A rather long sentence here that wants shortening")
+            self.select_all()
+            b.click(f'{LAYER} .aiai [data-ai=shorter], {LAYER} .aiai button[data-tip="AI: improve"]')
+            if b.eval(f"!!document.querySelector('{LAYER} [role=menu]')"):
+                b.click(f"{LAYER} [role=menu] [data-ai=shorter]")
+            card = self.ready()
+            self.assertEqual("Spelling and grammar fixed too" in card, note, place)
+            self.assertEqual("Also correct any spelling" in Path(str(self.fake) + ".prompt").read_text(), note, place)
+            b.eval(CLEAN)
 
     # ---- option sets per place ---------------------------------------------------------------------------------------------
     def test_notes_offers_turn_into_apart_from_the_ai_zone_and_current_does_not(self):
@@ -600,9 +632,10 @@ class Bar117(LiveBrowserCase):
         self.assertEqual(b.eval("AIE.editor.view.dom.getAttribute('data-aibar')"), "open")
         self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aispark').getAttribute('aria-expanded')"), "true")
         self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aispark').getAttribute('aria-controls')"), "aiBarBox")
-        b.key("Escape")                                                                           # Esc folds the bar (the sparkle stays on a selection)
+        b.key("Escape")                                                                           # Esc closes the bar; #119: the selection collapses, so the sparkle goes too
         b.wait(f"!document.querySelector('{LAYER} .aibar')")
-        self.assertEqual(b.eval("AIE.editor.view.dom.getAttribute('data-aibar')"), "spark")
+        self.assertTrue(b.eval("AIE.editor.state.selection.empty"))
+        self.assertIsNone(b.eval("AIE.editor.view.dom.getAttribute('data-aibar')"))
         self.assertTrue(b.eval("document.activeElement===AIE.editor.view.dom||AIE.el.contains(document.activeElement)"))
 
     def test_the_slash_menu_and_the_bar_never_show_together(self):
@@ -643,7 +676,8 @@ class Bar117(LiveBrowserCase):
         b.key("Escape")                                                                           # closes the bar; focus back in the text
         b.wait(f"!document.querySelector('{LAYER} .aibar')")
         self.assertTrue(b.eval("AIE.el.contains(document.activeElement)"))
-        self.assertTrue(b.eval(f"!!document.querySelector('{LAYER} .aispark')"))
+        self.assertTrue(b.eval("AIE.editor.state.selection.empty"))                               # #119: the selection collapsed to its end, so no sparkle
+        self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aispark')"))
 
     def test_alt_slash_with_a_composition_is_ignored_and_without_a_selection_says_so(self):
         b = self.b
