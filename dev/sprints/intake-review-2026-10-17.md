@@ -91,3 +91,4 @@ Next, if you agree the direction: a mockup of the queue (Ready, Waiting, Done re
 5. **Stage C2 (auto-load) and C3 (draft by series):** later. Put in the backlog, to be decided with the 13-11-2026 review of the AI ideas. Not decided.
 
 Mockup of all five changes: `dev/mockups/intake-queue-mockup.html`. Alan liked options 2 and 3 of change C.
+Alan liked change D (the result on the row, ending in Review them) as mocked up (17-10-2026).
