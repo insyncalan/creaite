@@ -56,14 +56,13 @@ function NotesList({ code, onOpen, onOpenFile }) {
   const open = notesListOpen.value, q = notesQuery.value.trim().toLowerCase(), cur = noteCur.value;
   const L = notesList.value.filter(n => !q || n.title.toLowerCase().includes(q) || n.tags.some(t => t.toLowerCase().includes(q)));
   const pinned = L.filter(n => n.pinned), recent = L.filter(n => !n.pinned);
-  /** The note's … menu for a row (#194): the note opens first (it is what the menu acts on), then the same menu as its … button, at the pointer
-      or under the row for the keyboard. Esc closes it with focus back on the row. @param {Event} e @param {NoteSummary} n @param {number} x @param {number} y */
-  const rowMenu = async (e, n, x, y) => {
+  /** The note's … menu for a row (#194): the same menu as its … button, for THAT row's note, with nothing opened or switched (the open note, its
+      typing, scroll and focus are not touched). At the pointer, or under the row for the keyboard. Esc closes it with focus back on the row.
+      @param {Event} e @param {NoteSummary} n @param {number} x @param {number} y */
+  const rowMenu = (e, n, x, y) => {
     e.preventDefault(); e.stopPropagation();
     const btn = /** @type {HTMLElement} */ (e.currentTarget);
-    if (!noteCur.value || noteCur.value.path !== n.path) { await onOpen(n.path); btn.focus({ preventScroll: true }); }
-    const c = noteCur.value; if (!c || c.path !== n.path) return;            // it didn't open (unsaved typing, or an error): no menu for it
-    const m = c.meta || {}, st = { pinned: !!m.pinned, confidential: !!m.confidential, path: n.path };
+    const st = { pinned: !!n.pinned, confidential: !!n.confidential, path: n.path, title: n.title, code };
     openMenu(btn, { label: "Note", cls: "nrowmenu", at: { x, y }, items: noteMenuItems(st),
       onPick: id => { noteMenuPick(id, st, onOpenFile); if (id === "pin" || id === "conf") setTimeout(() => { if (btn.isConnected) btn.focus({ preventScroll: true }); }, 0); } });
   };
@@ -260,7 +259,7 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
             <span class="nslot" id="noteFindSlot" data-slot="find-updates"><FindButton /></span>
             <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
               items={noteMenuItems({ pinned, confidential: conf, path: n.path })}
-              onPick={id => noteMenuPick(id, { pinned, confidential: conf, path: n.path }, onOpenFile)} />
+              onPick={id => noteMenuPick(id, { pinned, confidential: conf, path: n.path, title: n.title, code: cur.code }, onOpenFile)} />
           </div>
           <div class="meta props">
             {created ? <span>Created {fd(created)}</span> : null}
