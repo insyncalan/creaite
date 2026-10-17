@@ -203,6 +203,41 @@ function trapTab(e, root) {
   else if (!e.shiftKey && (at === last || !root.contains(at))) { e.preventDefault(); first.focus(); }
 }
 
+/** Everything on the page except the lifted note is inert while focus mode is on (no clicks, no Tab, hidden from a screen reader):
+    at each level from the note up to the body, every sibling that is not on the path to the note is marked. The scrim, a native
+    dialog (the "couldn't save" question, a pop-up in one) and the overlay layers on the body (messages, menus, the AI bar and the pickers, whether drawn already or later) stay live. What was
+    already inert stays as it was. */
+const BEHIND_ON_BODY = "#chat,#runBadge";                  // the only things on the body, beside the page itself, that belong to the page behind
+function FocusInert() {
+  useEffect(() => {
+    const root = document.querySelector(".ndoc.nfocus");
+    /** @type {Element[]} */
+    const marked = [];
+    for (let el = /** @type {Element | null} */ (root); el && el !== document.body; el = el.parentElement) {
+      for (const sib of /** @type {Element[]} */ ([...(el.parentElement ? el.parentElement.children : [])])) {
+        if (el.parentElement === document.body && !sib.matches(BEHIND_ON_BODY)) continue;        // (the body also holds the overlay layers: menus, pickers, messages, the AI bar)
+        if (sib === el || sib.hasAttribute("inert") || sib.hasAttribute("data-nscrim") || sib.tagName === "SCRIPT" || sib.tagName === "STYLE"
+          || sib.matches("dialog,[role=dialog]") || sib.querySelector("dialog")) continue;
+        sib.setAttribute("inert", ""); marked.push(sib);
+      }
+    }
+    return () => { for (const m of marked) m.removeAttribute("inert"); };
+  }, []);
+  return null;
+}
+
+/** ⌘⇧F (Ctrl+Shift+F) enters focus mode on the open note, and leaves it by the one close path. @param {KeyboardEvent} e */
+export function focusShortcut(e) {
+  if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.altKey || String(e.key).toLowerCase() !== "f" || composing(e)) return false;
+  if (document.querySelector("dialog[open]")) return false;                // (the "couldn't save" question is answered first)
+  if (noteFocus.value) { e.preventDefault(); noteFocusClose(); return true; }
+  if (!noteCur.value) return false;
+  e.preventDefault();
+  const a = document.activeElement;
+  noteFocusOpen(a && a !== document.body ? a : document.getElementById("noteExpand"));
+  return true;
+}
+
 /** The open note: header, body, the banner when it couldn't be saved. @param {{code: string, onOpen: (path: string) => void,
     onOpenItem: (id: string) => void, onNew: (title: string) => void, onOpenFile: (path: string) => void}} props */
 function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
@@ -238,7 +273,7 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
         <div class="nhead">
           <div class="trow">
             <button type="button" class="ib sm nexpand" id="noteExpand" data-nfocus={focus ? "leave" : "open"} aria-label={focus ? "Leave focus" : "Focus on this note"}
-              data-tip={focus ? "Leave focus (Esc)" : "Focus on this note"} onClick={e => { if (noteFocus.value) noteFocusClose(); else noteFocusOpen(/** @type {Element} */ (e.currentTarget)); }}>
+              data-tip={focus ? "Leave focus (Esc or ⌘⇧F)" : "Focus on this note (⌘⇧F)"} onClick={e => { if (noteFocus.value) noteFocusClose(); else noteFocusOpen(/** @type {Element} */ (e.currentTarget)); }}>
               <Icon name={focus ? "shrink" : "expand"} /></button>
             <input class="ntitle" id="noteTitle" aria-label="Title" value={String(m.title ?? n.title)} maxLength={160}
               onInput={e => noteMeta({ title: /** @type {HTMLInputElement} */ (e.target).value })} onBlur={() => { noteFlush(); }} />
@@ -257,7 +292,7 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
           </div>
           <NoteTags tags={tags} />
         </div>
-        {focus ? <><FocusEnter /><FocusKeys /></> : null}
+        {focus ? <><FocusEnter /><FocusKeys /><FocusInert /></> : null}
         {focus && notesMsg.value ? <div class="nmsg" role="status" data-nfocusmsg>{notesMsg.value}</div> : null}
         {st.state === "conflict" || st.state === "error" || st.state === "wait" ? (
           <div class="nstale" role="alert" data-nbanner={st.state}><span>{st.msg}</span>
