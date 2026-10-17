@@ -255,6 +255,31 @@ class Bar117(LiveBrowserCase):
         b.click(f"{LAYER} .aibar .aifmt button[aria-haspopup]")
         b.wait(f"document.querySelector('{LAYER} [role=menu]')")
 
+    TURN_STATE_JS = """(()=>{ const q=s=>document.querySelector(s), l=q('#aiLayer'), m=l&&l.querySelector('[role=menu]'), bar=window.aiBar&&aiBar.value;
+      const ed=window.AIE&&AIE.editor, sel=ed&&!ed.isDestroyed?ed.state.selection:null, a=document.activeElement, blocks=[];
+      if(sel) ed.state.doc.nodesBetween(sel.from,sel.to,(n,pos)=>{ if(n.isTextblock){ blocks.push(n.type.name+(n.attrs.level||'')+':'+n.content.size); return false; } });
+      return {menuOpen:!!m, ticks:m?[...m.querySelectorAll('[data-turn]')].map(e=>e.dataset.turn+'='+e.getAttribute('aria-checked')):null,
+        selection:sel?[sel.from,sel.to]:null, blocks,
+        editorFocused:ed&&!ed.isDestroyed?ed.view.hasFocus():null, active:a?a.tagName+(a.id?'#'+a.id:'')+(a.getAttribute('data-turn')?'[turn='+a.getAttribute('data-turn')+']':''):null,
+        bar:bar?{shown:bar.shown,from:bar.from,to:bar.to}:null, barInDom:!!(l&&l.querySelector('.aibar')), md:window.AIE?AIE.value():null}; })()"""
+
+    def wait_tick(self, kind, timeout=5):
+        """Wait for Turn into's menu to tick `kind`; on a timeout say what the menu, the editor's selection and the focus were (#152e)."""
+        b = self.b
+        tick = f"document.querySelector('{LAYER} [role=menu] [data-turn={kind}]')?.getAttribute('aria-checked')"
+        try:
+            b.wait(f"{tick}==='true'", timeout)
+        except TimeoutError as e:
+            raise TimeoutError(f"{e}\nTurn into state: {json.dumps(b.eval(self.TURN_STATE_JS), default=str)}") from None
+        self.assertEqual(b.eval(tick), "true", kind)
+
+    def focus_editor(self):
+        """Put the cursor back in the editor and wait until it is there: the editor's focus() lands on the next frame, and a key sent
+        before that goes to whatever had the focus (#152e: ⌘Z on macOS CI found the page's body, so nothing was undone)."""
+        b = self.b
+        b.eval("AIE.focus(); true")
+        b.wait("AIE.editor.view.hasFocus()", 5)
+
     def ready(self):
         self.b.wait(f"document.querySelector('{LAYER} .aisug .aitext')||document.querySelector('{LAYER} .aisug [role=alert]')", 20)
         return self.b.eval(f"document.querySelector('{LAYER} .aisug').textContent")
@@ -418,15 +443,13 @@ class Bar117(LiveBrowserCase):
             self.assertFalse(b.eval("!!window.aiSug.value"))                                     # no Claude run, no suggestion
             self.assertTrue(b.eval(f"!!document.querySelector('{LAYER} .aibar')"))                # the bar stays open for the next turn
             self.turn_menu()
-            tick = f"document.querySelector('{LAYER} [role=menu] [data-turn={kind}]')?.getAttribute('aria-checked')"
-            b.wait(f"{tick}==='true'", 5)                       # the tick follows the editor's selection a render later (#152: macOS CI)
-            self.assertEqual(b.eval(tick), "true", kind)
+            self.wait_tick(kind)                                # the tick follows the editor's selection a render later (#152: macOS CI)
             b.key("Escape")
             b.pump(0.6)                                                                          # the editor's history groups edits made within half a second
         # the toast's Undo and ⌘Z: both use the editor's own history
         b.click("#snack button, #snackU")
         b.wait("AIE.value()=='- [ ] Alpha line\\n- [ ] Beta line'")
-        b.eval("AIE.focus(); true")
+        self.focus_editor()
         b.key("z", META)
         b.wait("AIE.value()=='1. Alpha line\\n2. Beta line'")
 
@@ -485,9 +508,12 @@ class Bar117(LiveBrowserCase):
         b.wait("/## Purpose/.test(AIE.value())")
         self.assertTrue(b.eval("/^## Purpose/m.test(AIE.value())&&/^- Send the revised/m.test(AIE.value())"))
         self.assertIsNone(b.eval("aiSug.value"))
-        b.eval("AIE.focus(); true")
+        self.focus_editor()
         b.key("z", META)                                                                         # one ⌘Z undoes the whole suggestion
-        b.wait("!/## Purpose/.test(AIE.value())")
+        try:
+            b.wait("!/## Purpose/.test(AIE.value())")
+        except TimeoutError as e:
+            raise TimeoutError(f"{e}\neditor: " + json.dumps(b.eval("({focused:AIE.editor.view.hasFocus(), canUndo:AIE.editor.can().undo(), md:AIE.value()})"))) from None
         self.assertEqual(b.eval("AIE.value().replace(/\\s+$/,'')"), before.replace("\r", "").rstrip())
         args = json.loads(Path(str(self.fake) + ".argv.json").read_text())
         self.assertEqual(args[args.index("--tools") + 1], "")                                    # still the tool-less run

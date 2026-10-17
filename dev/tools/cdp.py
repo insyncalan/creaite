@@ -155,6 +155,9 @@ class Browser:
         # Reduce motion setting; where that is on (a Mac, apparently GitHub's macOS runner) every animation reads 'none'.
         pref = "reduce" if reduced_motion else "no-preference"
         self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": pref}])
+        # #152e: CDP_CPU_THROTTLE=4 runs the page 4 times slower, to reproduce on a fast machine what a slow CI runner shows
+        if os.environ.get("CDP_CPU_THROTTLE"):
+            self.call("Emulation.setCPUThrottlingRate", rate=float(os.environ["CDP_CPU_THROTTLE"]))
 
     @staticmethod
     def _port_text(path):
