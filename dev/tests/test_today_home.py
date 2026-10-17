@@ -361,6 +361,19 @@ class WeekCalm(Header):
         self.assertEqual(b.eval("document.querySelectorAll('#mineMore [data-more=mine]').length"), 1)
         self.assertTrue(b.eval("document.getElementById('mineSec').contains(document.getElementById('tOwe'))"))   # You owe stays inside
 
+    def test_150_control_is_a_button_at_900px_and_keeps_focus(self):
+        b = self.b
+        self.commitments(8)
+        b.resize(900, 1000)
+        sel = "#mineMore [data-more=mine]"
+        self.assertEqual(b.eval(f"document.querySelector('{sel}').tagName"), "BUTTON")
+        self.assertEqual(b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')"), "false")
+        b.click(sel)
+        self.assertEqual(b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')"), "true")
+        self.assertEqual(b.eval("document.querySelectorAll('#mineList>li').length>5"), True)
+        self.assertEqual(b.eval("(()=>{ const d=document.scrollingElement; return d.scrollWidth-d.clientWidth; })()"), 0)
+        b.eval("EXPAND.delete('mine'); renderToday()")
+
 
 class NoFileNames(Home):
     shared_server = True
