@@ -291,6 +291,11 @@ def pending_rows():
     return out
 
 
+def review_rows():
+    """pending_rows as the Review sheet holds them: each value without the characters a workbook can't hold (cell_text)."""
+    return [[cell_text(v) for v in r] for r in pending_rows()]
+
+
 def add_list(ws, col, n_rows, values):
     """Add a drop-down of `values` to column `col`, rows 2 to `n_rows`."""
     dv = DataValidation(type="list", formula1='"' + ",".join(values) + '"', allow_blank=True,
@@ -385,9 +390,9 @@ def cmd_export():
 
     ws = wb.create_sheet("Review", 0)
     ws.append([c for c, _ in REVIEW_COLS])
-    review = pending_rows()
+    review = review_rows()
     for r in review:
-        ws.append([cell_text(v) for v in r])
+        ws.append(r)
     for i, (label, width) in enumerate(REVIEW_COLS, start=1):
         col = get_column_letter(i)
         ws.column_dimensions[col].width = width
