@@ -428,12 +428,12 @@ class ActivityPage(LiveBrowserCase):
         b.click("#actDlgCancel")
         b.wait("!document.getElementById('actDlg').open")
 
-    def test_entries_that_cannot_be_chosen_have_no_tick(self):
+    def test_entries_that_cannot_be_chosen_have_a_disabled_tick(self):
         b = self.b
         self.go_activity()
         r = b.eval("""(()=>{ ACT.unshift({at:'2026-10-10 09:00',what:'ABC-A-001 · changed',by:'You'}); renderActivity();
-          const first=document.querySelector('#actTbl tbody tr'); return {row:first.dataset.row||null, tick:!!first.querySelector('input[type=checkbox]')}; })()""")
-        self.assertEqual(r, {"row": None, "tick": False})
+          const first=document.querySelector('#actTbl tbody tr'); const cb=first.querySelector('input[type=checkbox]'); return {row:first.dataset.row||null, tick:!!cb, off:!!cb&&cb.disabled}; })()""")
+        self.assertEqual(r, {"row": None, "tick": True, "off": True})   # #191: a tick box on every row, disabled where it cannot be chosen
 
     def test_the_footer_says_when_the_cap_is_reached(self):
         b = self.b
