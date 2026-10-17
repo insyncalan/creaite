@@ -41,7 +41,8 @@ export function WkHeader({ ctx }) {
 
 const HEALTH_FLAGS = ["On track", "At risk", "Off track"];
 
-/** WkHealth: the flag, six weeks, the reason. @param {{ctx: SectionCtx}} props */
+/** WkHealth: the flag, six weeks, the reason. Its heading is hidden, so the ✦ that suggests the health and its reason (#203) sits
+    right of the flag. @param {{ctx: SectionCtx}} props */
 export function WkHealth({ ctx }) {
   const { doc, section: s } = ctx, d = s.data || {}, flag = d.flag || "", t = wkTone(flag);
   /** @type {{date: string, flag: string}[]} */
@@ -51,7 +52,7 @@ export function WkHealth({ ctx }) {
   return (
     <div class="wr-health" data-wkTone={t}>
       <div class="wr-hcol">
-        <div class={`wr-flag ${t}`}>{(flag || "Not set").toUpperCase()}</div>
+        <div class="wr-flagrow"><div class={`wr-flag ${t}`}>{(flag || "Not set").toUpperCase()}</div><ctx.Spark /></div>
         <div class="wr-trend" role="img" aria-label={aria}>{weeks.map((w, i) => <i key={i} class={wkTone(w.flag)} />)}</div>
         <div class="wr-tlbl"><span>{wkDm(weeks[0].date)}</span><span>{wkDm(doc.date)}</span></div>
         {ctx.editing ? <Menu label="Change" btnCls="btn sm wr-chg" menuLabel="Health for this week" items={HEALTH_FLAGS.map(f => ({ id: f, name: f, checked: f === flag }))}

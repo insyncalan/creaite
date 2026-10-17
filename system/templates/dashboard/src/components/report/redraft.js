@@ -9,6 +9,7 @@
    - Counts (offered is the server's; used, edited and rejected are here): counts only, never text. "Edited" is a used suggestion
      Alan then changed (#90 review K5), so it is counted on top of "used". */
 import { draftAsk, draftStat } from "../../drafts.js";
+import { HS_FEATURE, hsAsk, hsDiffLine, hsTone } from "../../healthSuggest.js";
 
 /** @typedef {{id: string, heading: string, type: string, text?: string, panes?: {title: string, text: string}[]}} Sec */
 
@@ -37,12 +38,25 @@ export function redraftAnswer(r, s) {
 /** What the Sheet's onRedraft calls: asks for the draft and answers the Redraft, or throws the words to show.
     @param {() => Record<string, any>} base the report or minutes the section is in (read when ✦ is pressed)
     @param {"report"|"minutes"} place @returns {(s: Sec) => Promise<import("./Sheet.jsx").Redraft>} */
-export function redrafter(base, place) {
-  return async s => redraftAnswer(await draftAsk(redraftRequest(s, base(), REDRAFT_KIND[place]), { label: `Redrafting ${s.heading}` }), s);
+export function redrafter(base, place, audience = "internal", applyFor) {
+  return async s => s.type === "health" ? healthAnswer(await hsAsk(String(base().code || ""), audience), applyFor)
+    : redraftAnswer(await draftAsk(redraftRequest(s, base(), REDRAFT_KIND[place]), { label: `Redrafting ${s.heading}` }), s);
+}
+
+/** #203: the Redraft for a health row from hsAsk's answer: the suggested flag and reason, the difference flagged in plain words, the
+    evidence with item IDs. `applyFor(d)` (the client sheet) gives how Use changes the whole document, as it also records why its flag
+    differs from the internal one. Throws the words to show.
+    @param {any} r @param {((d: any) => (doc: any, s: any) => any)} [applyFor] @returns {import("./Sheet.jsx").Redraft} */
+export function healthAnswer(r, applyFor) {
+  if (r.nothing) throw new Error(r.nothing);
+  if (!r.ok || !r.d) throw new Error(r.message || "No draft came back");
+  const d = r.d;
+  return { text: d.reason, health: d.health, tone: hsTone(d.health), diff: hsDiffLine(d), evidence: d.evidence, sources: [],
+    ...(applyFor ? { apply: applyFor(d) } : {}) };
 }
 
 /** The Sheet's `redraft` event: counted as used, edited or rejected. @param {any} ev @param {"report"|"minutes"} place */
 export function countRedraft(ev, place) {
   if (ev.type !== "redraft") return;
-  draftStat(REDRAFT_KIND[place], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
+  draftStat(ev.section === "health" ? HS_FEATURE : REDRAFT_KIND[place], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
 }
