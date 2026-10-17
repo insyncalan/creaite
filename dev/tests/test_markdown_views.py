@@ -75,7 +75,7 @@ class MarkdownViews(LiveBrowserCase):
         self.assertIn("python3 system/scripts/update.py", r["code"])
         self.assertEqual(r["nested"], 1)
         self.assertEqual(r["ol"], 2)
-        self.assertEqual(r["link"], ["https://example.com/notes", "noopener", "_blank", "link"])
+        self.assertEqual(r["link"], ["https://example.com/notes", "noopener noreferrer", "_blank", "link"])
         self.assertEqual(r["ws"], "normal")
 
     def test_copy_copies_the_original_text(self):

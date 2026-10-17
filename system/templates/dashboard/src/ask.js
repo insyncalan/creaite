@@ -15,6 +15,7 @@ import { mWords } from "./core/motion.js";
 import { go, navBlocked, parseHash, pLink, restoreNav } from "./core/nav.js";
 import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
+import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
@@ -381,12 +382,12 @@ export function bootAsk0095(){
 /* chat-only names (chatMdInline, chatMdBlocks): the page's own mdInline/mdBlocks draw Current state, Help and the rest */
 /* mdChat(text) returns HTML for one of creaite's replies. Every character is escaped first (esc), then blocks and inline
    forms are recognised on the escaped text, so nothing in a reply can become markup of its own. Links: https, http and
-   mailto only. Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
+   mailto only, and only an address core/linkUrl.js accepts (no name and password, one mailbox, no cc or bcc), drawn by
+   linkAnchor (new tab, rel="noopener noreferrer"). Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
    Current state keeps mdHtml. Placeholders (\u0001n\u0001) hold finished HTML while the rest is processed. */
 export const MDC={ITEM:/\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}\b/g, MAX:120000, URL:"((?:[^\\s()]|\\([^\\s()]*\\))+)",
   FENCE:/^ {0,3}(`{3,}|~{3,})[ \t]*([\w+#.-]*)[ \t]*$/, HEAD:/^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/, HR:/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/,
   QUOTE:/^ {0,3}&gt; ?/, LI:/^( *)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/, SEP:/^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/};
-export const mdSafeUrl=u=>/^(?:https?:\/\/|mailto:)[^\s"<>]+$/i.test(u);
 export let MDPATHS=null;
 export const mdPaths=()=>{ if(!MDPATHS||MDPATHS.n!==FILES.length) MDPATHS={n:FILES.length,list:FILES.filter(f=>f.path).map(f=>({path:f.path,e:esc(f.path)})).sort((a,b)=>b.e.length-a.e.length)}; return MDPATHS.list; };
 export const mdFileLink=(p,inner)=>`<a href="#" class="mdref" data-mdfile="${esc(p)}">${inner}</a>`, mdItemLink=id=>`<a href="#" class="mdref" data-mditem="${id}">${id}</a>`;
@@ -396,7 +397,7 @@ export function chatMdInline(s,st,noLinks){
     return keep(p?mdFileLink(p.path,`<code>${c}</code>`):ITEMCODE(c)?`<a href="#" class="mdref" data-mditem="${c.trim()}"><code>${c.trim()}</code></a>`:`<code>${c}</code>`); });
   if(!noLinks){
     s=s.replace(new RegExp("!\\[([^\\]\\n]*)\\]\\("+MDC.URL+"\\)","g"),(m,alt)=>alt);   /* images are not drawn: the alt text shows */
-    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>mdSafeUrl(url)?keep(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text,st,true)}</a>`):m);
+    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>{ const h=linkAnchor(unescHtml(url),chatMdInline(text,st,true)); return h?keep(h):m; });   /* the one validator and anchor: core/linkUrl.js (#159) */
     if(/projects\/|inbox\//.test(s)) for(const f of mdPaths()) if(s.includes(f.e)) s=s.split(f.e).join(keep(mdFileLink(f.path,f.e)));
     s=s.replace(MDC.ITEM,id=>itemTable(id)?keep(mdItemLink(id)):id); }
   return s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g,"<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g,"$1<strong>$2</strong>")
@@ -463,7 +464,7 @@ $("#chLog").addEventListener("click",e=>mdClick(e));
 /* ===== BL-196 (sprint-chat-text) ===== formatted text, never raw markdown. One renderer: mdChat (BL-109) draws every view
    that shows markdown from a file or a run; mdView wraps it in .mdv, which shares the chat's styles and clicks. Every character
    is escaped first, so an HTML tag in the text is shown as text and never runs; links are https, http or mailto only and open
-   with rel="noopener" in a new tab. hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
+   with rel="noopener noreferrer" in a new tab (core/linkUrl.js). hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
    a card whose title is an h2). A Copy beside such a view copies the original text, never the formatted one.
    Formatted: chat replies (BL-109), the release notes in Settings › creaite version › Review release, a confirmation card's
    text in the chat, and a Markdown file's preview in Intake's inbox. Current state, its sources and search answers keep mdHtml

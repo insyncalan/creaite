@@ -397,7 +397,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertEqual(r["kept"], ["cockpit", True])
         self.assertEqual(r["discarded"], ["work", None])
         self.assertEqual(r["htmlNew"], '<h3>Next</h3><blockquote>Quote</blockquote><ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>'
-                                       '<p>See <a href="https://e.com" target="_blank" rel="noopener">x</a> and <s>old</s>.</p>')
+                                       '<p>See <a href="https://e.com" target="_blank" rel="noopener noreferrer">x</a> and <s>old</s>.</p>')
 
     def test_generated_draft_in_the_editor(self):
         md, src, dirty = self.result["gen"]

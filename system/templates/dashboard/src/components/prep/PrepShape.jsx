@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { Chip } from "../Chip.jsx";
 import { Icon } from "../Icon.jsx";
 import { TextEditor } from "../TextEditor.jsx";
+import { LINK_REL } from "../../core/linkUrl.js";
 import { fd } from "../../core/page.js";
 import { viaServer } from "../../core/server.js";
 import { draftWhyNot } from "../../drafts.js";
@@ -24,7 +25,7 @@ import { popupRev, prepNow, prepShape } from "../../stores/prepPopup.js";
 import { acceptShape, addChip, closeShape, discardShape, editedSections, giveBack, notesNow, openShape, previewFilter, runShape,
   SHAPE_SECTIONS, setReading, shapeAccepted, shapeBusy, shapeChecks, shapeChips, shapeConfidential, shapeDrafted, shapeExcluded,
   shapeFilter, shapeInstruction, shapeKey, shapeMsg, shapeProposal, shapeReading, shapeSourcesN, shapeSteps, shapeText, shapeUsed,
-  discardProposal, shapeOnPage, toggleExcluded, useProposal } from "../../stores/prepShape.js";
+  discardProposal, shapeOnPage, sourceHref, toggleExcluded, useProposal } from "../../stores/prepShape.js";
 
 const SHAPE_ID_RE = /\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b/;
 const shPlural = (/** @type {number} */ n, /** @type {string} */ one) => `${n} ${one}${n === 1 ? "" : "s"}`;
@@ -41,8 +42,9 @@ export function ShapeSource({ s }) {
     return k ? <a href="#" class="shcite" data-open={`${k}:${s.id}`} data-tip="Opens the item">{text}</a> : <span class="shcite plain">{text}</span>;
   }
   if (s.type === "file" && s.path) return <a href="#" class="shcite" data-dropen={s.path} data-tip={`Opens ${s.path}`}>{text}</a>;
-  if ((s.type === "mail" || s.type === "teams") && s.url && /^https:\/\//.test(s.url)) {
-    return <a href={s.url} class="shcite" target="_blank" rel="noopener noreferrer" data-tip={s.type === "mail" ? "Opens in Outlook" : "Opens in Teams"}>{text}</a>;
+  const href = sourceHref(s);
+  if (href) {
+    return <a href={href} class="shcite" target="_blank" rel={LINK_REL} data-tip={s.type === "mail" ? "Opens in Outlook" : "Opens in Teams"}>{text}</a>;
   }
   return <span class="shcite plain">{text}</span>;
 }

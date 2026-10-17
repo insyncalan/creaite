@@ -19,6 +19,7 @@
    Dismiss, then "Staged for Review" with Undo; and a promise that looks kept, said in one quiet line like a close. */
 import { render } from "preact";
 import { IconButton } from "../IconButton.jsx";
+import { LINK_REL, linkUrl } from "../../core/linkUrl.js";
 
 /** @typedef {{id: string, icon: string, label: string, name?: string, primary?: boolean, why?: string, data?: Record<string, string>, haspopup?: string}} TdAct */
 /** @typedef {{key: string, tag: string, t: string, sub?: string, acts: TdAct[]}} TdCand */
@@ -35,6 +36,8 @@ import { IconButton } from "../IconButton.jsx";
 function TdLine({ r, hidden, p }) {
   /** @param {MouseEvent} e */
   const open = e => { e.preventDefault(); p.onOpen(r); };
+  /** a message's address from mail or Teams: only what core/linkUrl.js accepts is a link (#159) */
+  const href = linkUrl(r.link);
   /** @param {TdAct[]} list */
   const acts = list => list.map(a => (
     <IconButton key={a.id} icon={a.icon} label={a.label} name={a.name} primary={a.primary} why={a.why} haspopup={a.haspopup}
@@ -47,8 +50,8 @@ function TdLine({ r, hidden, p }) {
       <div class="tb">
         {r.kind === "quiet"
           ? <span class="t">{r.t}</span>
-          : r.link
-            ? <a class="t" href={r.link} target="_blank" rel="noopener">{r.t}</a>
+          : href
+            ? <a class="t" href={href} target="_blank" rel={LINK_REL}>{r.t}</a>
             : <a class="t" href="#" onClick={open}>{r.t}</a>}
         {r.mark ? <>{" "}<span class="tag tdctag tdmark">{r.mark}</span></> : null}
         <p>{r.meta}</p>

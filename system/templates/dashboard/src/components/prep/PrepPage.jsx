@@ -17,6 +17,7 @@ import { PrepEditor } from "./PrepEditor.jsx";
 import { PageShape } from "./PrepShape.jsx";
 import { Tabs, panelId, tabId } from "../Tabs.jsx";
 import { $ } from "../../core/dom.js";
+import { LINK_REL } from "../../core/linkUrl.js";
 import { openWork, tabTitle } from "../../core/nav.js";
 import { D, fd, mScroll, TODAY } from "../../core/page.js";
 import { snack, viaServer } from "../../core/server.js";
@@ -24,7 +25,7 @@ import { draftAgenda, prepOpen, prepPage } from "../../meetings.js";
 import { openPrep } from "../../projects.js";
 import { kOfId } from "../../work.js";
 import { loadPrep, playOf, prepViewKey, prepLoading, prepSaving, prepSavedSay, prepTab, prepView, saveFocus, saveQuestions, saveSection, setPlay } from "../../stores/prep.js";
-import { closeShape, openShape, shapeFilter, shapeKey, syncShape } from "../../stores/prepShape.js";
+import { closeShape, openShape, shapeFilter, shapeKey, sourceHref, syncShape } from "../../stores/prepShape.js";
 
 
 const SECTIONS = [["objective", "Objective"], ["talking_points", "Talking points"], ["ask", "Ask"], ["carried_over", "Carried over"]];
@@ -58,7 +59,8 @@ export function SourceLink({ s, label, cite }) {
   const text = label || s.label || s.id || "";
   const cls = cite ? "ppcite" : "pplink";
   if (s.type === "file" && s.path) return <a href="#" class={cls} data-openfile={s.path} data-tip={`${FILEKIND[s.kind || "file"]?.[1] || "opens the file"}: ${s.path}`}>{text}</a>;
-  if ((s.type === "mail" || s.type === "teams") && s.url) return <a href={s.url} class={cls} target="_blank" rel="noopener noreferrer" data-tip={s.type === "mail" ? "Opens in Outlook" : "Opens in Teams"}>{text}</a>;
+  const href = sourceHref(s);
+  if (href) return <a href={href} class={cls} target="_blank" rel={LINK_REL} data-tip={s.type === "mail" ? "Opens in Outlook" : "Opens in Teams"}>{text}</a>;
   if (s.type === "item" && s.id) { const k = kOfId(s.id); return k ? <a href="#" class={cls} data-open={`${k}:${s.id}`} data-tip="Opens the item">{text}</a> : <span class={cls}>{text}</span>; }
   return <span class={cite ? "ppcite plain" : ""}>{text}</span>;
 }
@@ -67,8 +69,8 @@ export function SourceLink({ s, label, cite }) {
     @param {import("../../stores/prep.js").Typed} s @returns {[string, string]} */
 function ppSrcKind(s) {
   if (s.type === "file") return ["filetext", `${(s.path || "").split("/").slice(-2, -1)[0] || "File"} · ${FILEKIND[s.kind || "file"]?.[1] || "opens the file"}`];
-  if (s.type === "mail") return ["mail", s.url ? "Opens in Outlook" : "Mail · no link was kept"];
-  if (s.type === "teams") return ["chat", s.url ? "Opens in Teams" : "Teams · no link was kept"];
+  if (s.type === "mail") return ["mail", sourceHref(s) ? "Opens in Outlook" : "Mail · no link was kept"];
+  if (s.type === "teams") return ["chat", sourceHref(s) ? "Opens in Teams" : "Teams · no link was kept"];
   if (s.type === "item") return ["work", "Opens the item"];
   if (s.type === "tracker") return ["work", "The tracker"];
   if (s.type === "invite") return ["calendar", "The calendar invite"];
@@ -340,7 +342,7 @@ function SourcesCard({ mo }) {
         const body = <><Icon name={icon} /><span><span class="nm">{s.label || s.id}</span>{how ? <span class="sub">{how}</span> : null}</span></>;
         const k = s.type === "item" && s.id ? kOfId(s.id) : null;
         return <li key={i}>{s.type === "file" && s.path ? <a href="#" class="ppsrc" data-openfile={s.path}>{body}<span class="go">↗</span></a>
-          : (s.type === "mail" || s.type === "teams") && s.url ? <a href={s.url} class="ppsrc" target="_blank" rel="noopener noreferrer">{body}<span class="go">↗</span></a>
+          : sourceHref(s) ? <a href={sourceHref(s)} class="ppsrc" target="_blank" rel={LINK_REL}>{body}<span class="go">↗</span></a>
           : k ? <a href="#" class="ppsrc" data-open={`${k}:${s.id}`}>{body}<span class="go">↗</span></a>
           : s.type === "invite" ? <a href="#" class="ppsrc" onClick={e => { e.preventDefault(); prepTab.value = "invite"; }}>{body}</a>
           : <div class="ppsrc">{body}</div>}</li>;
