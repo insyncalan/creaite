@@ -265,21 +265,21 @@ class MeetingPrepTests(unittest.TestCase):
             self.skipTest("Google Chrome not installed")
         out, errors = chrome(self.v, """
           const wait=ms=>new Promise(r=>setTimeout(r,ms)); go("today"); await wait(50);
-          const links=[...document.querySelectorAll("#dayMeets .preplink")].map(b=>b.getAttribute("aria-label"));
-          document.querySelector('[data-prep="0"]').click(); await wait(50);
+          const links=[...document.querySelectorAll("#dayMeets .dmti")].map(b=>b.textContent);
+          openPrep(prepTimed()[0],TODAY); await wait(50);
           const dlg=document.getElementById("prepDlg"), body=()=>dlg.innerText;
           const matched={open:dlg.open, title:document.getElementById("prepTitle").textContent, text:body(),
                          proj:document.getElementById("prepProjBtn").dataset.code};
           dlg.querySelector('[data-open^="actions:"]').click(); await wait(50);
           const opened={dlg:dlg.open, panel:document.getElementById("panel").classList.contains("on"), cur:CUR&&CUR.id};
-          closePanel(); await wait(50); opened.back=dlg.matches(":modal"); dlg.close(); document.querySelector('[data-prep="1"]').click(); await wait(50);
+          closePanel(); await wait(50); opened.back=dlg.matches(":modal"); dlg.close(); openPrep(prepTimed()[1],TODAY); await wait(50);
           const unsure={text:body(), proj:document.getElementById("prepProjBtn").dataset.code};
-          dlg.close(); document.querySelector('[data-prep="2"]').click(); await wait(50);
+          dlg.close(); openPrep(prepTimed()[2],TODAY); await wait(50);
           const portfolio=body();
           window.OUT={links, matched, opened, unsure, portfolio};""")
         self.assertEqual(errors, [])
-        self.assertEqual(out["links"], ["Prepare for ABC Steering", "Prep for Weekly sync 12", "Prepare for Portfolio review",
-                                        "Prep for Portal walkthrough"])   # none for the private one; BL-293: Prepare when worth it
+        self.assertEqual(out["links"], ["ABC Steering", "Weekly sync 12", "Portfolio review",
+                                        "Portal walkthrough"])   # #140: a title with a Prepare popup for each, none for the private one
         mt = out["matched"]
         self.assertTrue(mt["open"])
         self.assertEqual((mt["title"], mt["proj"]), ("ABC Steering", "ABC"))

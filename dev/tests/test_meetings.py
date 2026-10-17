@@ -104,7 +104,9 @@ def week_calendar(v, with_ids=True, today=None):
     """A calendar for one week: Monday, today, the day before Monday and the day after today. `today` defaults to the
     real date (the build then uses the real clock); a test that pins the clock with CREAITE_NOW passes the same day."""
     from datetime import date, timedelta
-    today = today or date.today()
+    if today is None:
+        fixed = os.environ.get("CREAITE_NOW")             # the build's clock: derive the days from it, else the real date
+        today = date.fromisoformat(fixed[:10]) if fixed else date.today()
     mon = today - timedelta(days=today.weekday())
     d = lambda x: x.isoformat()  # noqa: E731
     ev = lambda i, **k: ({"id": f"ev-{i}"} if with_ids else {}) | k  # noqa: E731
@@ -224,7 +226,10 @@ class InboxPageTests(unittest.TestCase):
         from test_live_server import FAKE_CLAUDE
         cls.v = v = Vault()
         v.run("init")
-        cls.mon, cls.today = week_calendar(v)
+        # the page's TODAY is the browser's own clock, which CREAITE_NOW cannot pin: use the real date for the calendar and
+        # keep the pin out of the server, so the page and the data agree on today whatever the caller has set
+        from datetime import date
+        cls.mon, cls.today = week_calendar(v, today=date.today())
         fake = v.root / "fake_claude.py"
         fake.write_text(FAKE_CLAUDE)
         fake.chmod(0o755)
@@ -233,7 +238,7 @@ class InboxPageTests(unittest.TestCase):
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
-        env = {**os.environ, "CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(fake),
+        env = {**{k: x for k, x in os.environ.items() if k != "CREAITE_NOW"}, "CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(fake),
                "CREAITE_TEST_INJECT": str(v.root / "inject.html")}
         server = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], env=env,
                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

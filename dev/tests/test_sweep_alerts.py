@@ -768,7 +768,8 @@ class PrepPageStaticTests(unittest.TestCase):
               go("today"); renderToday(); openPrep(prepTimed()[0],TODAY); const b=document.querySelector('[data-prepview]');
               const title=b.dataset.tip; b.click();   /* BL-161: the one tooltip */ await new Promise(r=>setTimeout(r,50));
               document.getElementById('prepDlg').close(); SA().prep_pages={'09:00|ABC weekly':'projects/x/agendas/a.html'}; renderToday();
-              const g=document.querySelector('#dayMeets .prepgo'); g.click(); await new Promise(r=>setTimeout(r,50));   /* BL-287: shown, disabled */
+              document.querySelector('#dayMeets .dmti').dispatchEvent(new FocusEvent("focus")); await new Promise(r=>setTimeout(r,50));   /* #140: the title's popup */
+              const g=document.querySelector('#dayMeets .dmpop [data-prepgo]'); g.click(); await new Promise(r=>setTimeout(r,50));   /* BL-287: shown, disabled */
               window.OUT={title, opened, fetched, said:document.body.textContent.includes("The Prep page needs the live server"),
                 go:[g.getAttribute('aria-disabled'), g.dataset.tip, location.hash.startsWith('#prep=')]};""", "prep-static")
             self.assertEqual(errors, [])

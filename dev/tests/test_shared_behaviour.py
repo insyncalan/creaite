@@ -107,6 +107,9 @@ SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
+SCREENS["today-days"] = ("D.calendar={fetched:TODAY+' 07:00',days:{}}; D.days={first:pkAdd(TODAY,-1),last:TODAY,today:TODAY,fetched:null,days:[{date:pkAdd(TODAY,-1),dow:'Monday',short:'Mon 1',long:'Monday',today:false,past:true,weekend:false,week:0,meetings:[],all_day:[]},"
+                         "{date:TODAY,dow:'Tuesday',short:'Tue 2',long:'Tuesday',today:true,past:false,weekend:false,week:0,meetings:[],all_day:[]}]}; go('today'); renderToday()",
+                         "!!document.querySelector('#todayDate .dypastbtn')", "#v-today")   # #147: the day line's earlier-days menu needs a calendar with a past day
 SCREENS["notes"] = (_notes_open, "!!document.getElementById('notesNew')", "#v-notes")
 SCREENS["notes-ai"] = (_notes_ai, "!!document.querySelector('#aiLayer .aibar')", "#aiLayer")
 SCREENS["notes-session"] = (_notes_session, "!!document.getElementById('noteDateBtn')", "#v-notes")
@@ -124,7 +127,7 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
                            "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-clientreport [data-crcheck]:not([disabled])')", "#v-clientreport")
-EXTRA = ("clientreport", "weekly-logos")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
+EXTRA = ("clientreport", "weekly-logos", "today-days")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
 ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
@@ -135,7 +138,7 @@ ON_SCREEN = {"work-display": "VIEW==='work'"}
 VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
-SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
+SCREEN_AREAS = {"today": "Today", "today-days": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
                 "work-panel-decision": "Peek", "work-panel-new": "Peek", "meeting": "Meetings",
                 "review": "Review", "review-peek": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",

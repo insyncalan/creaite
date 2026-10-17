@@ -5,19 +5,18 @@
 import { dcIcon, openChat, say, send } from "./ask.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { openDatePicker } from "./components/Picker.jsx";
-import { parseWhen, weekendNote, WK, wkAsk } from "./core/fields.js";
+import { parseWhen, weekendNote, WK, wkAsk, wkDays } from "./core/fields.js";
 import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
 import { drawDayMeetings } from "./components/today/DayMeetings.jsx";
-import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { drawDayTabs } from "./components/today/DayTabs.jsx";
 import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
 import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { mDots } from "./core/motion.js";
-import { countLink, go, jumpLink, navBlocked, openWork, pLink } from "./core/nav.js";
+import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -103,7 +102,7 @@ export function renderToday(){
   const att=attentionItems(), ac=capped(att.map((x,i)=>x.html(i+1)),5,"attn");
   $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
   const mine=[...mineOver,...mineSoon].sort((a,b)=>a.due.localeCompare(b.due)), mc=capped(mine.map((x,i)=>tl(i+1,tLink(html`data-open="actions:${x.id}"`,html`${x.t??""}`),
-    html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${x.upd.length>140?x.upd.slice(0,139)+"…":x.upd}`:""}.`,itemActs("actions",x))),S.listCap||10,"mine");
+    html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${x.upd.length>140?x.upd.slice(0,139)+"…":x.upd}`:""}.`,itemActs("actions",x))),5,"mine");
   putHTML($("#nMine"),raw(mine.length?countLink(`${plur(mine.length,"action")} of yours due or overdue`,mine.length,"actions:open:",{st:["Open","Delayed"],due:["overdue","soon"],o:["@me"]}):""));   /* BL-190 */ putHTML($("#mineList"),mc.html?raw(mc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing due from you this week.</span></div></li>`); putHTML($("#mineMore"),raw(mc.more));
   renderPromises();   /* BL-125 A: You owe and Waiting on */
   /* Resolved: items closed since the last visit, from the change log */
@@ -167,7 +166,7 @@ export function renderDay(){ const cal=D.calendar, first=(S.me||"").split(" ")[0
    chosen day lives in memory only (stores/today.js), so a reload opens on today. Today's meetings still come from the
    calendar as the page holds it (D.calendar), with what the server worked out for each (its follow-up, Prep and plan). */
 const WDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:d.getDay()%6===0,week:0,meetings:[],all_day:[]}; }
+export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:wkDays().has((d.getDay()+6)%7),week:0,meetings:[],all_day:[]}; }
 /** The days the line offers: the server's, with today added when the calendar holds nothing for it. */
 export function dayList(){ if(!D.calendar) return []; const L=[...(((D.days||{}).days)||[])];
   if(!L.some(d=>d.date===TODAY)){ L.push(synthDay(TODAY)); L.sort((a,b)=>a.date.localeCompare(b.date)); } return L; }
@@ -182,7 +181,7 @@ export function dayView(iso){ const raw=((D.calendar||{}).days||{})[iso], rec=da
       meetings:timed.map((e,i)=>{ const priv=!!e.private, s=srv.find(m=>m.start===e.start&&(priv?m.private:m.title===e.title)), conf=!!(s&&s.confidential)||isConf(e);
         const prep=priv?null:(s&&s.prep)||(iso>=TODAY&&prepOf(e,iso)?{key:prepKey(e,iso)}:null);
         return extra({start:e.start,end:e.end,title:e.title??"",private:priv,confidential:conf,id:e.id||(s&&s.id)||null,p:priv||conf?null:(s&&s.p)||e.p||null,
-          where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i}); })}; }
+          where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i,attendees:conf||priv||!Array.isArray(e.attendees)?undefined:e.attendees.length}); })}; }
   if(rec&&iso!==TODAY) return {known:true,meetings:srv.map(m=>extra({...m,ix:null})),allDay:(rec.all_day||[]).map(t=>({title:t,p:null}))};
   return {known:false,meetings:[],allDay:[]}; }
 /** Show day `iso`, sliding the band in from its side. False when there is no day line. */
@@ -230,7 +229,7 @@ export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!r
 export async function dayCheck(m){ const row=MTG().find(x=>x.id===m.id)||{id:m.id,title:m.title,day:dayShown(),start:m.start};
   DAYRUN.set(m.id,"Checking…"); renderDay();
   try{ await checkMeeting(row); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
-export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c),note:(m,day)=>{ openCapture({meeting:{day,start:m.start,title:m.title}}); }};   /* BL-301 C: Note for this meeting */
+export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
 /* ===== end BL-293 ===== */
 /* BL-270 (sprint-ui-sweep): the calendar's read time, when it is from an earlier day, is a footnote at the bottom right of Today */
 export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!(cal&&cal.fetched&&cal.fetched.slice(0,10)!==TODAY); f.hidden=!old;
@@ -568,37 +567,43 @@ export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="
   if(what==="update"){ openRecord(k,id,k==="raid"?"resp":"upd"); return; }
   if(what==="decide"){ dnDecide(id); return; }
   if(what==="open"&&btn&&btn.dataset.p) go("cockpit",btn.dataset.p); }
-/** the Week ahead's groups: Urgent with no date, each day, Further ahead */
+/** the Week ahead's groups: Urgent with no date, each day, Further ahead.
+    #112 (Alan, 16-10-2026): calm rows. Overdue work is not here (it is in Your commitments when it is Alan's, and in the quiet
+    line above the days when it is someone else's); nothing already under Your commitments is repeated. */
 export function weekGroups(){ const W=D.week; if(!W) return [];
-  const live=viaServer(), out=/** @type {any[]} */([]), quiet=(i,first)=>first&&i.kind==="actions"&&isMe(i.o);   /* mine are already under Your commitments */
-  const tagOf=i=>{ const k=i.kind==="milestone"?"Milestone":i.kind==="decisions"?"Decision":i.kind==="raid"?(i.type||"Risk"):"Action"; return i.pr==="Urgent"||i.pr==="High"?`${k} · ${i.pr}`:k; };
-  const toneOf=i=>i.od||i.pr==="Urgent"?"bad":i.pr==="High"||(i.kind==="milestone"&&i.slip)?"warn":"";
-  const whyOf=(i,further,undated)=>{ if(undated) return "no date set"; if(i.od) return `${i.od} day${i.od===1?"":"s"} ${i.kind==="decisions"?"late":"overdue"}`;
+  const live=viaServer(), out=/** @type {any[]} */([]);
+  const mineIds=new Set(A.filter(x=>isMe(x.o)&&(overdue(x)||soon(x))).map(x=>x.id)), quiet=i=>i.kind==="actions"&&mineIds.has(i.id);   /* mine are already under Your commitments */
+  const dotOf=i=>i.pr==="Urgent"?"u":i.pr==="High"?"h":"";
+  const whyOf=(i,further,undated)=>{ if(undated) return "no date set";
     const w=i.kind==="decisions"?"needed by":i.weekend?"due over the weekend":"due";
     const d=further&&i.date?` ${longDay(i.date)}`:"";
-    return i.kind==="milestone"?`${w}${d} · ${i.slip?"at risk":"on track"}`:`${w}${d}`; };
+    return i.kind==="milestone"?(further&&i.date?`${longDay(i.date)} · `:"")+(i.slip?"at risk":"on track"):`${w}${d}`; };
   const whoOf=i=>i.kind==="milestone"?"":i.kind==="decisions"?(isMe(i.o)?"yours":i.o?`asked of ${who(i.o)}`:"no one asked"):(isMe(i.o)?"yours":who(i.o)||"no owner");
-  const item=(i,key,further,undated=false)=>({key,kind:i.kind,tag:tagOf(i),tone:toneOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
-    who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.od?"bad":i.kind==="milestone"&&i.slip?"warn":"",
+  const item=(i,key,further,undated=false)=>({key,kind:i.kind,dot:dotOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
+    who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.kind==="milestone"&&i.slip?"warn":"",
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
-  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null;
-    return {key:`m${day}${e.start}${e.title}`,kind:"meeting",tag:"Meeting",tone:e.plan?"acc":"",t:`${e.start} ${e.title??""}`,
-      open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",
-      why:e.plan?`worth preparing: ${e.plan}`:"in your calendar",whyTone:"",prepgo:pg?{key:pg.key,day,when:pg.when,live}:undefined,
-      acts:can?[{id:"prep",icon:"filetext",label:"Make a prep page",name:`Prepare for ${e.title??"the meeting"}`,primary:!!e.plan,data:{prepday:day,start:e.start||"",title:e.title||""}}]:[]}; };
+  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, t=e.title??"";
+    return {key:`m${day}${e.start}${e.title}`,kind:"meeting",time:e.start||"",t,
+      open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",why:"",
+      chip:can?(pg?{made:true,label:"Prep page made",aria:`Open the prep page for ${t}`,key:pg.key,day,live}:{made:false,label:"Prep",aria:`Prepare for ${t}`,day,live,data:{prepday:day,start:e.start||"",title:e.title||""}}):undefined,
+      acts:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
   group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
-  (W.days||[]).forEach((d,n)=>{ const first=n===0;
-    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i,first)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
+  (W.days||[]).forEach(d=>{
+    group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
   group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
   return out; }
+/** The open actions that are overdue and owned by others (RAID items, decisions and milestones are not counted, so the count is exactly the Actions tab's list at the address): the quiet line above the days (#112). */
+export function othersOverdue(){ const n=[...A].filter(x=>overdue(x)&&!isMe(x.o)).length;
+  return {n,nav:navOf("actions:open:",{st:["Open","Delayed"],due:["overdue"],"!o":["@me"]})}; }
 const WEEKFOLD="creaite-week-ahead-hidden";   /* #105: per viewer, this browser only (localStorage) */
 let weekFoldWired=false;
 function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; weekFoldWired=true;
   f.open=store.get(WEEKFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(WEEKFOLD,!f.open)); }
 export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
-  $("#weekTo").textContent=W?`to ${longDay(W.to)}`:"";
-  drawWeekAhead(host,{groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
+  $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}`:"";   /* #105: the quiet count and the end date, as Resolved's */
+  drawWeekAhead(host,{groups,others:othersOverdue(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

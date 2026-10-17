@@ -205,16 +205,161 @@ class Sections(Home):
         b = self.b
         self.today()
         o = b.eval("""(()=>{ const was=S.weekPrios; D.week={from:TODAY,to:pkAdd(TODAY,5),days:[{date:pkAdd(TODAY,1),dow:"",weekend:false,meetings:[],items:[
-            {kind:"decisions",id:"ABC-D-009",p:"ABC",t:"Pick a vendor",o:"Omar Ali"},{kind:"raid",id:"ABC-R-009",p:"ABC",t:"A risk",o:"Omar Ali",type:"Risk",pr:"Urgent",od:3},
+            {kind:"decisions",id:"ABC-D-009",p:"ABC",t:"Pick a vendor",o:"Omar Ali"},{kind:"raid",id:"ABC-R-009",p:"ABC",t:"A risk",o:"Omar Ali",type:"Risk",pr:"Urgent"},
             {kind:"milestone",id:"ABC-M-001",p:"ABC",t:"UAT",slip:true}]}],undated:[],further:[]};
-          S.weekPrios=["Urgent"]; renderToday(); const out={rows:[...document.querySelectorAll('#weekList li.wkrow')].map(l=>[l.querySelector('.wktag').textContent,l.querySelector('.wkwhy').textContent,[...l.querySelectorAll('.tacts button')].map(x=>x.dataset.tip)]),
+          S.weekPrios=["Urgent"]; renderToday(); const out={rows:[...document.querySelectorAll('#weekList li.wkrow')].map(l=>[l.className.replace('wkrow ',''),(l.querySelector('.wkdot')||{className:'none'}).className.replace('wkdot','').trim(),l.querySelector('.wkwhy').textContent,[...l.querySelectorAll('.tacts button')].map(x=>x.dataset.tip)]),
             note:document.querySelectorAll('#weekList .wknote').length};
           S.weekPrios=["Urgent","High"]; renderToday(); out.note2=document.querySelectorAll('#weekList .wknote').length; out.text=document.getElementById('weekList').textContent; S.weekPrios=was; return out; })()""")
-        self.assertEqual(o["rows"], [["Decision", "needed by", ["Draft a chase"]],
-                                     ["Risk · Urgent", "3 days overdue", ["Write an update", "Draft a chase"]],
-                                     ["Milestone", "due · at risk", ["Open the project"]]])
+        self.assertEqual(o["rows"], [["wk-decisions", "", "needed by", ["Draft a chase"]],
+                                     ["wk-raid", "u", "due", ["Write an update", "Draft a chase"]],          # #112: a red dot, not a tag; the why is one word
+                                     ["wk-milestone", "", "at risk", ["Open the project"]]])
         self.assertEqual((o["note"], o["note2"]), (0, 0))                # #104: the "Urgent work, every milestone and decision, and meetings" note is gone
         self.assertNotIn("every milestone and decision", o["text"])
+
+
+class WeekCalm(Header):
+    """#112 and #105 (Alan, 16-10-2026): the Week ahead as calm rows with Resolved's fold, the quiet overdue line, the Prep chip;
+    #150: Your commitments shows five, then +n more. Over the fixture calendar (Tuesday 13-10-2026 11:05)."""
+
+    WEEK = """D.week={from:TODAY,to:'2026-10-19',days:[
+      {date:TODAY,dow:'Tuesday',weekend:false,meetings:[],items:[{kind:'actions',id:'ZZZ-A-001',p:'ABC',t:'Mine due soon',o:S.me,pr:'Urgent'},
+        {kind:'actions',id:'ZZZ-A-002',p:'ABC',t:'Theirs due today',o:'Omar Ali',pr:'High'}]},
+      {date:'2026-10-14',dow:'Wednesday',weekend:false,meetings:[{start:'10:00',end:'11:00',title:'ABC board',p:'ABC'},{start:'12:00',end:'13:00',title:'DEF sync',p:'DEF'}],
+        items:[{kind:'raid',id:'ZZZ-R-001',p:'ABC',t:'A risk',o:'Omar Ali',type:'Risk',pr:'Urgent'},{kind:'milestone',id:'ZZZ-M-001',p:'ABC',t:'UAT start',slip:true},
+        {kind:'decisions',id:'ZZZ-D-001',p:'ABC',t:'Pick a vendor',o:'Omar Ali'}]}],undated:[],further:[]};
+      D.prep=D.prep||{}; D.prep.meetings=D.prep.meetings||{}; D.prep.meetings['2026-10-14|10:00|ABC board']={series:'abc board',p:'ABC',how:'matched',last:null,day:'2026-10-14',since:'2026-10-07'};
+      D.prep.meetings['2026-10-14|12:00|DEF sync']={series:'def sync',p:'DEF',how:'matched',last:null,day:'2026-10-14',since:'2026-10-07'};"""
+
+    def draw(self, extra=""):
+        b = self.b
+        b.eval("""(()=>{ const x=A.filter(a=>a.id.startsWith('ZZZ')); x.forEach(a=>A.splice(A.indexOf(a),1)); R.filter(a=>a.id.startsWith('ZZZ')).forEach(a=>R.splice(R.indexOf(a),1)); })()""")
+        b.eval("A.push({id:'ZZZ-A-001',p:'ABC',t:'Mine due soon',o:S.me,st:'Open',due:pkAdd(TODAY,1)})")
+        b.eval(self.WEEK + extra + "; go('today'); renderToday()")
+        b.wait("document.querySelector('#weekList .wkrow')")
+
+    def test_calm_rows_one_list_a_day_no_tags_and_nothing_repeated(self):
+        b = self.b
+        self.draw()
+        o = b.eval("""(()=>{ const days=[...document.querySelectorAll('#weekList .wkday')];
+          return {heads:days.map(d=>d.querySelector('.wkdh').textContent), lists:days.map(d=>d.querySelectorAll('ul.wkl').length),
+            rows:days.map(d=>[...d.querySelectorAll('li.wkrow')].map(l=>[l.className.replace('wkrow ',''), (l.querySelector('.t')||{}).textContent, (l.querySelector('.wkdot')||{className:''}).className.replace('wkdot','').trim(),
+              (l.querySelector('.wkwhy')||{textContent:''}).textContent, !!l.querySelector('.wkic svg'), l.querySelectorAll('.wktag,.tag').length])),
+            who:document.querySelector('.wkrow .wkwho').textContent, link:!!document.querySelector('.wkrow .wkwho a[data-cock]'),
+            below:(()=>{ const r=document.querySelector('.wkrow .tb .t').getBoundingClientRect(), w=document.querySelector('.wkrow .wkwho').getBoundingClientRect(); return w.top>=r.top+r.height/2; })()}; })()""")
+        self.assertEqual(o["lists"], [1, 1])
+        self.assertEqual(o["rows"][0], [["wk-actions", "Theirs due today", "h", "due", True, 0]])             # mine is under Your commitments: not repeated
+        self.assertEqual([r[0] for r in o["rows"][1]], ["wk-meeting", "wk-meeting", "wk-raid", "wk-milestone", "wk-decisions"])
+        self.assertEqual([r[3] for r in o["rows"][1]], ["", "", "due", "at risk", "needed by"])               # one quiet word; a meeting has none
+        self.assertEqual(o["rows"][1][2][2], "u")                                                              # Urgent: a red dot
+        self.assertTrue(all(r[4] and r[5] == 0 for r in o["rows"][1][2:]))                                    # a kind icon, no tag or pill
+        self.assertTrue(o["link"] and o["below"])                                                              # who and the project under the title
+
+    def test_the_fold_says_how_many_items_and_to_when_like_resolved(self):
+        b = self.b
+        self.draw()
+        self.assertEqual(b.eval("document.getElementById('weekTo').textContent"), "6 items to Monday 19th October")
+        self.assertEqual(b.eval("document.querySelector('#weekFold>summary h2').firstChild.textContent.trim()"), "Week ahead")
+
+    def test_quiet_overdue_line_counts_other_people_s_work_links_to_work_and_hides_at_zero(self):
+        b = self.b
+        self.draw("""; A.push({id:'ZZZ-A-010',p:'ABC',t:'Late theirs',o:'Omar Ali',st:'Open',due:pkAdd(TODAY,-3)},{id:'ZZZ-A-011',p:'ABC',t:'Late theirs 2',o:'Sara Khan',st:'Open',due:pkAdd(TODAY,-1)},
+          {id:'ZZZ-A-012',p:'ABC',t:'Late mine',o:S.me,st:'Open',due:pkAdd(TODAY,-2)},{id:'ZZZ-A-013',p:'ABC',t:'Closed late',o:'Omar Ali',st:'Closed',due:pkAdd(TODAY,-2)});
+          R.push({id:'ZZZ-R-010',p:'ABC',t:'Late risk theirs',o:'Omar Ali',st:'Open',due:pkAdd(TODAY,-4)},{id:'ZZZ-R-011',p:'ABC',t:'Late risk mine',o:S.me,st:'Open',due:pkAdd(TODAY,-4)},
+          {id:'ZZZ-R-012',p:'ABC',t:'Closed risk',o:'Omar Ali',st:'Closed',due:pkAdd(TODAY,-4)})""")
+        # only actions count (the two added here), so the number is the Actions tab's list; RAID items, decisions and milestones are not counted
+        want = b.eval("A.filter(a=>!a.id.startsWith('ZZZ')&&(a.st==='Open'||a.st==='Delayed')&&a.due&&a.due<TODAY&&!isMe(a.o)).length") + 2
+        o = b.eval("(()=>{ const p=document.querySelector('#weekList .wkpoint'); return {text:p.textContent, nav:p.querySelector('a').dataset.nav, first:document.querySelector('#weekList').firstElementChild===p}; })()")
+        self.assertEqual(o["text"], f"{want} actions owned by others are overdue. See them in Work")
+        self.assertTrue(o["first"])                                                                            # above the days
+        self.assertIn("due=overdue", o["nav"])
+        self.assertIn("!o=%40me", o["nav"])                                                                    # overdue, and not mine
+        b.eval("document.querySelector('#weekList .wkpoint a').click()")
+        b.wait("VIEW==='work'")
+        self.assertEqual(b.eval("WT"), "actions")                                                      # the count and the list are the same set
+        self.assertEqual(b.eval("[...document.querySelectorAll('#v-work .chip, #v-work .fchip, #v-work [data-filter]')].length>=0"), True)
+        self.draw("""; A.splice(0,A.length,...A.filter(a=>isMe(a.o)||a.id.startsWith('ZZZ-A-00'))); R.splice(0,R.length,...R.filter(a=>isMe(a.o)||a.id.startsWith('ZZZ-R-00'))); renderToday()""")
+        self.assertEqual(b.eval("document.querySelectorAll('#weekList .wkpoint').length"), 0)                # hidden at zero
+
+    def test_overdue_work_no_longer_leads_the_week(self):
+        b = self.b
+        self.draw("""; A.push({id:'ZZZ-A-010',p:'ABC',t:'Late theirs',o:'Omar Ali',st:'Open',due:pkAdd(TODAY,-3)}); D.week.days[0].items.push({kind:'actions',id:'ZZZ-A-010',p:'ABC',t:'Late theirs',o:'Omar Ali',od:3})""")
+        self.assertNotIn("overdue", b.eval("[...document.querySelectorAll('#weekList .wkwhy')].map(x=>x.textContent).join(' ')"))
+
+    def test_a_meeting_row_is_tinted_with_its_time_and_one_prep_chip(self):
+        b = self.b
+        self.draw()
+        o = b.eval("""(()=>{ const m=document.querySelector('#weekList .wk-meeting'); const cs=getComputedStyle(m), plain=getComputedStyle(document.querySelector('#weekList .wk-raid'));
+          return {time:m.querySelector('.wktm').textContent, chips:[...m.querySelectorAll('.wkchip')].map(c=>c.textContent), tint:cs.backgroundColor!==plain.backgroundColor,
+            data:m.querySelector('.wkchip').dataset.prepday, others:document.querySelectorAll('#weekList .wk-raid .wkchip').length}; })()""")
+        self.assertEqual((o["time"], o["chips"], o["tint"], o["data"], o["others"]), ("10:00", ["Prep"], True, "2026-10-14", 0))
+        b.eval("SA().prep_pages={...(SA().prep_pages||{}),'2026-10-14|10:00|ABC board':'projects/ABC Example Programme/agendas/x.html'}; renderToday()")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wk-meeting')[0].querySelectorAll('.wkchip')].map(c=>c.textContent)"), ["Prep page made"])
+        b.click("#weekList .wk-meeting .wkchip.made")
+        b.wait("location.hash.startsWith('#prep=')")
+
+    def test_actions_show_on_hover_or_focus_and_are_keyboard_reachable(self):
+        b = self.b
+        self.draw()
+        self.assertEqual(b.eval("getComputedStyle(document.querySelector('#weekList .wk-raid .tacts')).opacity"), "0")
+        b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+        b.eval("document.querySelector('#weekList .wk-raid .tacts button').focus()")
+        b.pump(0.4)
+        self.assertEqual(b.eval("getComputedStyle(document.querySelector('#weekList .wk-raid .tacts')).opacity"), "1")          # focus-within
+        self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wk-raid .tacts button')].map(x=>x.dataset.tip)"), ["Write an update", "Draft a chase"])
+
+    def test_more_after_six_rows_a_day_and_further_ahead_is_kept(self):
+        b = self.b
+        self.draw("""; D.week.days[1].items=[1,2,3,4,5,6,7].map(n=>({kind:'actions',id:'ZZZ-A-9'+n,p:'ABC',t:'Item '+n,o:'Omar Ali',pr:'Low'})); D.week.further=[{date:'2026-10-26',kind:'actions',id:'ZZZ-A-100',p:'ABC',t:'Far one',o:'Omar Ali',pr:'High'}]""")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wkday:nth-child(2) li.wkrow')].filter(l=>!l.hidden).length"), 6)
+        self.assertEqual(b.eval("document.querySelector('#weekList [data-more]').textContent"), "+3 more")
+        self.assertIn("Further ahead", b.eval("[...document.querySelectorAll('#weekList .wkdh')].map(h=>h.textContent).join('|')"))
+        self.assertIn("Monday 26th October", b.eval("document.querySelector('#weekList .wkday:last-child .wkwhy').textContent"))
+
+    def test_the_fold_follows_forced_colours_and_both_widths(self):
+        b = self.b
+        self.draw()
+        for w in (1400, 900):
+            b.resize(w, 1000)
+            self.assertEqual(b.eval("(()=>{ const d=document.scrollingElement; return d.scrollWidth-d.clientWidth; })()"), 0, w)
+        b.call("Emulation.setEmulatedMedia", features=[{"name": "forced-colors", "value": "active"}])
+        self.assertTrue(b.eval("!!document.querySelector('#weekList .wkdot.u') && getComputedStyle(document.querySelector('#weekList .wkdot.u')).backgroundColor!==''"))
+
+    # ---- #150: Your commitments shows five, then +n more ----
+    def commitments(self, n):
+        b = self.b
+        b.eval("""(()=>{ A.filter(a=>a.id.startsWith('ZZZ-C')).forEach(a=>A.splice(A.indexOf(a),1)); })()""")
+        b.eval(f"for(let i=1;i<={n};i++) A.push({{id:'ZZZ-C'+i,p:'ABC',t:'Commitment '+i,o:S.me,st:'Open',due:pkAdd(TODAY,-i)}})")
+        b.eval("EXPAND.delete('mine'); go('today'); renderToday()")
+
+    def test_150_five_rows_then_more_expands_and_folds(self):
+        b = self.b
+        self.commitments(8)
+        base = b.eval("A.filter(a=>!a.id.startsWith('ZZZ-C')&&isMe(a.o)&&(overdue(a)||soon(a))).length")
+        total = base + 8
+        shown = "[...document.querySelectorAll('#mineList>li')].filter(l=>!l.hidden).length"
+        self.assertEqual(b.eval(shown), 5)
+        self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), f"+{total - 5} more")
+        self.assertIn(str(total), b.eval("document.getElementById('nMine').textContent"))                      # the count is the total
+        b.eval("document.querySelector('#mineMore [data-more=mine]').focus()")
+        b.click("#mineMore [data-more=mine]")
+        self.assertEqual(b.eval(shown), total)
+        self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), "Show fewer")
+        self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').getAttribute('aria-expanded')"), "true")
+        b.click("#mineMore [data-more=mine]")
+        self.assertEqual(b.eval(shown), 5)
+        # the order and the row actions after expanding
+        b.eval("EXPAND.add('mine'); renderToday()")
+        self.assertTrue(b.eval("document.querySelectorAll('#mineList>li:nth-child(8) [data-tdo=done]').length")==1)
+        b.eval("EXPAND.delete('mine'); renderToday()")
+
+    def test_150_no_control_at_five_or_fewer_and_you_owe_is_unchanged(self):
+        b = self.b
+        b.eval("A.filter(a=>!a.id.startsWith('ZZZ-C')&&isMe(a.o)).forEach(a=>a.st='Closed')")
+        self.commitments(5)
+        self.assertEqual(b.eval("document.querySelectorAll('#mineMore [data-more=mine]').length"), 0)
+        self.commitments(6)
+        self.assertEqual(b.eval("document.querySelectorAll('#mineMore [data-more=mine]').length"), 1)
+        self.assertTrue(b.eval("document.getElementById('mineSec').contains(document.getElementById('tOwe'))"))   # You owe stays inside
 
 
 class NoFileNames(Home):

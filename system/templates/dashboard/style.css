@@ -572,14 +572,15 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .dayband{position:relative;overscroll-behavior-x:none;touch-action:pan-y}
 .brief #todayDate{position:static;display:block}   /* not the menus' .dd: the edges sit on the band */
 .daytabs{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 4px;min-width:0;margin-left:-6px}
-.daytabs .dy{border:0;background:none;padding:4px 6px;min-height:24px;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-weight:500;font-size:var(--fs-xs);line-height:1.2;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);white-space:nowrap}
+.daytabs .dy{border:0;background:none;padding:4px 6px;min-height:24px;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-weight:500;font-size:var(--fs-2xs);line-height:1.2;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);white-space:nowrap}   /* #140: 10px (was 12) */
 .daytabs .dy:hover{color:var(--day-ink)}
 .daytabs .dy.today{color:var(--accent)}
-.daytabs .dy[aria-selected="true"]{color:var(--accent);font-weight:600;font-size:var(--fs-xs);letter-spacing:.12em;cursor:default}
+.daytabs .dy[aria-selected="true"]:not(.today){font-size:10px;line-height:1.14}   /* #140 (Alan): the chosen day is 10px too, so every date on the line is one size; today stays accent-coloured */
+.daytabs .dy[aria-selected="true"]{color:var(--accent);font-weight:600;letter-spacing:.12em;cursor:default}
 .daytabs .dy[aria-selected="true"]:not(.today){color:var(--day-ink)}
 .daytabs .dy.today:not([aria-selected="true"])::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:4px;vertical-align:middle}
 .daytabs .dy:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
-.daytabs .daysep{color:var(--day-rule);font-size:var(--fs-xs)}
+.daytabs .daysep{color:var(--day-rule);font-size:var(--fs-2xs)}
 .daytabs .daywk{font-size:var(--fs-2xs);line-height:1;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);padding:0 6px 0 10px;margin-left:4px;border-left:1px solid var(--day-rule);white-space:nowrap}   /* v1.9.5 check 6: no .7 fade; 10 px words need 4.5:1 */
 /* the arrows never move (Alan, 13-10-2026): both sit at the band's top right, a fixed place on every day, whatever the headline,
    the meetings or the day line's wrapping; the line keeps room for them. At an end the arrow stays, disabled and dimmed. */
@@ -2900,18 +2901,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdtag.acc,.wktag.acc{background:var(--accent-soft);color:var(--accent)}
 .tdtag.warn,.wktag.warn{background:var(--warn-soft);color:var(--warn)}
 .tdtag.bad,.wktag.bad{background:var(--bad-soft);color:var(--bad)}
-#tBrief .tdrow,#tBrief .wkrow{gap:12px}
-#tBrief .tdrow .tb a.t,#tBrief .wkrow .tb .t{font-weight:600}
+#tBrief .tdrow{gap:12px}
+#tBrief .tdrow .tb a.t{font-weight:600}
 #tBrief .tdfoot{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px}
 #tBrief .tdfoot a.s{font-weight:500}
 .wkday+.wkday{margin-top:8px}
 #tBrief .wknote{margin:-4px 0 4px;font-size:var(--fs-sm);color:var(--day-muted,var(--muted))}
 .wkdh{font:600 var(--fs-xs)/16px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--day-muted,var(--muted));margin:8px 0 0;display:flex;gap:6px;align-items:baseline}
 .wkdh .wkdn{text-transform:none;letter-spacing:0}
-#tBrief .wkrow .tb{font-size:var(--fs-md);line-height:20px}
-#tBrief .wkrow .wkwho{color:var(--day-muted,var(--muted))}
-#tBrief .wkrow .prepgo{margin-left:6px;vertical-align:middle}
-#tBrief .wkrow .prepmade{margin-left:4px}
 .wkwhy{flex:0 1 auto;max-width:100%;align-self:flex-start;margin-top:1px;font-size:var(--fs-xs);line-height:18px;padding:0 8px;border-radius:var(--r-md);border:1px solid var(--day-rule,var(--line));color:var(--day-muted,var(--muted))}
 .wkwhy:empty{display:none}
 .wkwhy.bad{border-color:var(--bad);color:var(--bad)} .wkwhy.warn{border-color:var(--warn);color:var(--warn)}
@@ -2927,7 +2924,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tres>details>summary:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 @media (max-width:480px){
   #tBrief ol.bl>li>.tb{flex:1 1 calc(100% - 40px)}   /* a row's buttons go under its words, never squeezing them to a word a line */
-  #tBrief .tdrow,#tBrief .wkrow{flex-wrap:wrap} #tBrief .tdrow .tb,#tBrief .wkrow .tb{flex-basis:calc(100% - 90px)}
+  #tBrief .tdrow{flex-wrap:wrap} #tBrief .tdrow .tb{flex-basis:calc(100% - 90px)}
   #tBrief .wkwhy{margin-left:0}
 }
 /* ===== end BL-319 ===== */
@@ -3555,3 +3552,62 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 #panel.pover.on .pin{width:100%}
 body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,calc((100vw - var(--chatw,420px))*.5)),calc(100vw - var(--rail-w,72px) - var(--chatw,420px)))}
 @media (max-width:600px){#panel.pover.on,body:has(#chat.on) #panel.pover.on{width:100vw;right:0}}
+
+/* ===== #140, #147 (Alan, 16-10-2026): the day band's meeting popup and the day line's history icon =====
+   A meeting's title is a quiet dotted link; pointing at it (after CARD_OPEN) or tabbing to it opens a popup under it. The popup
+   is the page's own card, whatever the band's tone (a past meeting's dimmed words do not reach into it). The day line's earlier
+   days wait behind one icon at its left. */
+.dm .tt{position:relative}
+.dm .dmti{border-bottom:1px dotted var(--day-muted);cursor:default}
+.dm .dmti:hover,.dm .dmti:focus-visible{color:var(--accent);border-bottom-color:var(--accent);outline:none}
+.dm .dmtw:focus-within .dmti{color:var(--accent)}
+.dmpop{position:absolute;left:0;top:calc(100% + 2px);z-index:var(--z-pop-over,30);width:330px;max-width:calc(100vw - 48px);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:12px 14px;text-align:left;font-size:var(--fs-sm);line-height:1.4;font-weight:400;letter-spacing:0;text-transform:none}
+.dm:last-child .dmpop{left:auto;right:0}
+.dm:first-child:last-child .dmpop{left:0;right:auto}
+.dm.past .dmpop,.dm.past .dmpop *{color:var(--ink)}
+.dm.past .dmpop .sub,.dm.past .dmpop .pm,.dm.past .dmpop small{color:var(--muted)}
+.dm.past .dmpop .btn.primary{color:var(--accent-ink,#fff)}
+.dm.past .dmpop .linkbtn{color:var(--accent)}
+.dmpop h4{font:700 var(--fs-lg)/1.25 var(--font);margin:0 0 2px;color:var(--ink)}
+.dmpop .pm{font-size:var(--fs-xs);color:var(--muted);margin:0 0 8px}
+.dmpop .agrow{display:flex;align-items:center;gap:8px;margin-top:6px}
+.dmpop .agrow .linkbtn{margin-left:auto}
+.dmpop .agnone{margin:8px 0 0}
+.dmpop .agsaved{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk)}
+.dmpop .agsaved .agw{flex:1;min-width:0} .dmpop .agsaved b{display:block;font-weight:500} .dmpop .agsaved small{display:block;color:var(--muted);font-size:var(--fs-xs)}
+.dmpop .agok{color:var(--ok)}
+.dmpop button[aria-disabled="true"]{opacity:.55;cursor:default}
+.brief #todayDate:has(.dypast){display:flex;align-items:center;gap:2px}
+.dypast{margin-left:-6px;display:flex;align-items:center;height:24px} .dypast .dypastbtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:24px;padding:0;border:0;background:none;border-radius:var(--r-sm);color:var(--day-muted);cursor:pointer;opacity:.7}
+.dypast .dypastbtn:hover,.dypast .dypastbtn[aria-expanded="true"]{opacity:1;color:var(--day-ink);background:color-mix(in srgb,var(--surface) 60%,transparent)} .dypast .dypastbtn:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px;opacity:1}
+.dypast .dypastbtn .i{width:14px;height:14px}
+.dypast .ddmenu{left:0;right:auto;top:30px;transform-origin:top left}
+.brief #todayDate:has(.dypast) .daytabs{margin-left:0}
+
+/* ===== #112 (Alan, 16-10-2026): the Week ahead as calm rows (mockup: dev/mockups/today-week-ahead-mockup.html) =====
+   A quiet day heading, one rounded list a day; a row has a priority dot and a kind icon, the title with who and the project
+   under it, one quiet word on the right, and its actions only on hover or focus. A meeting row is tinted with its time and a
+   quiet Prep chip. The quiet line above the days counts other people's overdue work. */
+#tBrief .wkpoint{margin:0 0 8px;font-size:var(--fs-sm);color:var(--day-muted,var(--muted))} #tBrief .wkpoint a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+#tBrief .wkdh{margin:10px 0 4px 4px;font:500 var(--fs-xs)/16px var(--font);letter-spacing:.1em;color:var(--faint,var(--day-muted))}
+#tBrief .wkl{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+#tBrief .wkl>li.wkrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;border-top:1px solid var(--line);position:relative;margin:0}
+#tBrief .wkl>li.wkrow:first-child{border-top:0;border-radius:var(--r-lg) var(--r-lg) 0 0} #tBrief .wkl>li.wkrow:last-child{border-radius:0 0 var(--r-lg) var(--r-lg)} #tBrief .wkl>li.wkrow:only-child{border-radius:var(--r-lg)}
+#tBrief .wkl>li.wkrow[hidden]{display:none}
+#tBrief .wkl>li.wk-meeting{background:var(--sunk)}
+#tBrief .wkrow .tb{flex:1;min-width:0;font-size:var(--fs-md);line-height:20px}
+#tBrief .wkrow .tb .t{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tBrief .wkrow .wkwho{display:block;font-size:var(--fs-xs);line-height:16px;color:var(--muted)}
+#tBrief .wkrow .wkwho a.s{color:var(--accent);text-decoration:underline;text-underline-offset:2px;display:inline-block;padding:4px 0;margin:-4px 0}   /* a 24px target */
+.wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} .wkdot.u{background:var(--bad);opacity:1} .wkdot.h{background:var(--warn);opacity:1}
+.wkic{flex:none;width:20px;display:inline-grid;place-items:center;color:var(--muted)} .wkic .i{width:14px;height:14px}
+.wktm{flex:none;width:44px;font:500 var(--fs-xs)/16px var(--mono,var(--font));color:var(--muted)}
+.wkwhy{flex:none;align-self:center;font-size:var(--fs-xs);line-height:16px;color:var(--muted);white-space:nowrap;border:0;padding:0;margin:0;border-radius:0}
+.wkwhy.warn{color:var(--warn)}
+.wkchip{flex:none;display:inline-flex;align-items:center;height:22px;padding:0 9px;border:1px solid var(--accent);border-radius:var(--r-pill);background:none;color:var(--accent);font:500 var(--fs-xs)/1 var(--font);cursor:pointer}
+.wkchip:hover,.wkchip:focus-visible{background:var(--accent-soft)} .wkchip:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
+.wkchip.made{border-color:var(--line);color:var(--muted)} .wkchip[aria-disabled="true"]{opacity:.55;cursor:default}
+#tBrief .wkl .tacts{opacity:0;transition:opacity var(--d1);margin-left:0;align-self:center}
+#tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
+@media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
+@media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }

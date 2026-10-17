@@ -223,8 +223,8 @@ class WeekAheadDataTests(unittest.TestCase):
                 self.act(4, "2026-10-08", st="Closed"), self.act(5, None)]
         w = self.week("2026-10-05", actions=acts)                             # Monday: the window ends on Monday the 12th
         landed = [(i["id"], i.get("od")) for d in w["days"] for i in d["items"] if i["kind"] == "actions"]
-        # BL-319: the overdue one leads the first day, saying how late; closed and undated ones don't land
-        self.assertEqual(landed, [("ABC-A-002", 1), ("ABC-A-001", None), ("ABC-A-003", None)])
+        # #112: overdue work no longer leads the first day; overdue, closed and undated ones don't land
+        self.assertEqual(landed, [("ABC-A-001", None), ("ABC-A-003", None)])
 
     def test_milestones_land_on_their_day_and_reports_do_not(self):
         """BL-127: the Week ahead has no weekly or client report lines; the reminders in Needs attention carry them."""
@@ -293,8 +293,8 @@ class WeekAheadDataTests(unittest.TestCase):
     # ===== end BL-235 =====
 
     def test_decisions_late_work_and_milestones_at_risk_say_why(self):
-        """BL-319: pending decisions needed in the window land on their day; late work (the priorities the setting lists) and
-        late decisions land on the first day with `od`; a milestone carries `slip`."""
+        """BL-319: pending decisions needed in the window land on their day; a milestone carries `slip`. #112: late work and
+        late decisions are not listed at all."""
         acts = [dict(self.act(1, "2026-10-01"), pr="Urgent"), dict(self.act(2, "2026-10-02"), pr="Low")]
         decs = [{"id": "ABC-D-001", "p": "ABC", "t": "Pick a vendor", "by": "Jane Doe", "st": "Pending", "due": "2026-10-07"},
                 {"id": "ABC-D-002", "p": "ABC", "t": "Late one", "by": "Jane Doe", "st": "Pending", "due": "2026-10-03"},
@@ -302,7 +302,7 @@ class WeekAheadDataTests(unittest.TestCase):
         proj = {"code": "ABC", "rhythm": "", "ms": [["UAT", "2026-10-08", "slip", "ABC-M-001", None, None, "Planned"]]}
         w = bd.week_ahead(date(2026, 10, 5), acts, [], [proj], [], {"dashboard": {"week_ahead_priorities": ["Urgent"]}}, None, decs)
         by = {d["date"]: [(i["kind"], i["id"], i.get("od"), i.get("slip")) for i in d["items"]] for d in w["days"]}
-        self.assertEqual(by["2026-10-05"], [("actions", "ABC-A-001", 4, None), ("decisions", "ABC-D-002", 2, None)])   # Low is left out
+        self.assertEqual(by["2026-10-05"], [])                                                  # nothing overdue leads the first day (#112)
         self.assertEqual(by["2026-10-07"], [("decisions", "ABC-D-001", None, None)])
         self.assertEqual(by["2026-10-08"], [("milestone", "ABC-M-001", None, True)])
 
@@ -456,7 +456,7 @@ class TodayBriefTests(PageTests):
             {date:"2026-10-13",dow:"Tuesday",weekend:false,meetings:[],items:[]},
             {date:"2026-10-16",dow:"Friday",weekend:false,meetings:[],items:[{kind:"actions",id:"ABC-A-004",p:"ABC",t:"Friday action",o:"Sara Example"}]}]};
           go("today"); renderToday(); const days=[...document.querySelectorAll("#weekList .wkday")];
-          window.OUT={days:days.map(d=>[d.querySelector(".wkdh").textContent,false,[...d.querySelectorAll("li.wkrow")].map(x=>x.querySelector(".tb").textContent+" | "+x.querySelector(".wkwhy").textContent)]),to:document.getElementById("weekTo").textContent,note:document.querySelectorAll("#weekList .wknote").length,
+          window.OUT={days:days.map(d=>[d.querySelector(".wkdh").textContent,false,[...d.querySelectorAll("li.wkrow")].map(x=>x.querySelector(".t").textContent+" — "+x.querySelector(".wkwho").textContent+" | "+(x.querySelector(".wkwhy")||{textContent:""}).textContent)]),to:document.getElementById("weekTo").textContent,note:document.querySelectorAll("#weekList .wknote").length,
             acts:[...document.querySelectorAll("#weekList li.wkrow")].map(x=>[...x.querySelectorAll(".tacts button")].map(b=>b.dataset.tip))};
           D.week={from:"2026-10-09",to:"2026-10-09",days:[]}; renderToday(); window.OUT.empty=document.querySelector("#weekList .none").textContent;""")
         names = [d[0] for d in o["days"]]
@@ -465,11 +465,11 @@ class TodayBriefTests(PageTests):
         self.assertFalse(any(d[1] for d in o["days"]))                           # no "one thing" / "a couple of things" counts
         self.assertIn("Theirs today", today[2][0])
         self.assertFalse(any("Mine today" in x for x in today[2]))                  # mine are under Your commitments already
-        self.assertEqual(o["days"][1][2], ["10:00 Offsite — Example Programme | in your calendar"])   # a weekend day appears for its meeting
-        self.assertEqual(o["days"][2][2][0], "Over the weekend — Sara Example, Example Programme | due over the weekend")   # BL-319: why it is there
-        self.assertEqual(o["days"][2][2][1], "UAT start — Example Programme | due · on track")
+        self.assertEqual(o["days"][1][2], ["Offsite — Example Programme | "])   # a weekend day appears for its meeting (#112: a time and no why word)
+        self.assertEqual(o["days"][2][2][0], "Over the weekend — Sara Example · Example Programme | due over the weekend")   # BL-319: why it is there
+        self.assertEqual(o["days"][2][2][1], "UAT start — Example Programme | on track")
         self.assertIn("Friday action", o["days"][3][2][0])
-        self.assertEqual(o["to"], "to Friday 16th October")
+        self.assertEqual(o["to"], "5 items to Friday 16th October")        # #105: the count and the end date, as Resolved's
         self.assertEqual(o["note"], 0)   # #104: no note under the Week ahead heading
         self.assertEqual(o["acts"][0], ["Draft a chase", "Move the date"])          # someone else's action: chase it, or move it
         self.assertEqual(o["acts"][3], ["Open the project"])                          # a milestone
@@ -486,7 +486,7 @@ class TodayBriefTests(PageTests):
           const out={}; go("today");
           for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); renderToday();
             const probes={title:"#attnList a.t", number:"#attnList .n", body:"#attnList p", inlineLink:"#attnList p a.s", quiet:"#attnList button.qa", dots:"#attnList .dots",
-              heading:"#tBrief h2.th", count:"#tBrief .th .cnt", late:"#mineList .late, #weekList .wkwhy", weekLine:"#weekList .wkrow .tb", dayLabel:"#weekList .wkdh", weekTag:"#weekList .wktag",
+              heading:"#tBrief h2.th", count:"#tBrief .th .cnt", late:"#mineList .late, #weekList .wkwhy", weekLine:"#weekList .wkrow .tb", dayLabel:"#weekList .wkdh", weekWho:"#weekList .wkrow .wkwho",
               none:"#chgList .none", headline:"#dayHead", date:"#todayDate", lead:"#briefText"};
             for(const [k,sel] of Object.entries(probes)){ const el=document.querySelector(sel); if(!el) continue; out[`${pal}|${mode}|${k}`]=ratio(getComputedStyle(el).color,bg(el)); }
             const dot=document.querySelector("#dayLine .dot"); if(dot) out[`${pal}|${mode}|dot`]=ratio(getComputedStyle(dot).fill,bg(dot)); }

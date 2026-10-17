@@ -385,10 +385,9 @@ class Drawer(LiveBrowserCase):
     def test_note_for_this_meeting(self):
         b = self.b
         b.eval("go('today')")
-        b.wait("document.querySelectorAll('#dayMeets .mnote').length>0")
-        labels = b.eval("[...document.querySelectorAll('#dayMeets .mnote')].map(x=>x.getAttribute('aria-label'))")
-        self.assertEqual(labels, ["Note for this meeting: ABC Steering", "Note for this meeting: Board pay review"])   # never the private one
-        b.eval("document.querySelector('#dayMeets .mnote').click()")
+        b.wait("document.querySelectorAll('#dayMeets .dm').length>0")
+        self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .mnote').length"), 0)   # #140: the Note link is gone from the band
+        b.eval("openCapture({meeting:{day:TODAY,start:'09:00',title:'ABC Steering'}})")   # the drawer's own entry for a meeting stays
         b.wait("!document.getElementById('capDrawer').hidden&&document.getElementById('capTitle').value==='ABC Steering'", 10)
         got = b.eval("""[document.getElementById('capH').textContent, document.getElementById('capProj').value,
           document.getElementById('capWhy').textContent, document.querySelector('#capDrawer .capmeet').textContent,

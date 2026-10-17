@@ -455,7 +455,10 @@ class ScrollEnd(UiSweepCase):
                         self.check(name, region if region.startswith("#v-") else ".view:not([hidden])")
                 with self.subTest(width=w, screen="prep-popup"):
                     self.goto("today")
-                    b.click("[data-prep]")
+                    b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+                    b.eval("document.querySelector('#dayMeets .dmti').focus()")        # #140: Prepare is in the title's popup
+                    b.wait("document.querySelector('#dayMeets .dmpop .btn.primary')")
+                    b.click("#dayMeets .dmpop .btn.primary")
                     b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open&&document.getElementById('prepBody').children.length")
                     b.pump(1)
                     self.check("prep popup", "#v-today", "#prepDlg", "#prepBody")
