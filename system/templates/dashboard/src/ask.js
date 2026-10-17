@@ -382,7 +382,8 @@ export function bootAsk0095(){
 /* chat-only names (chatMdInline, chatMdBlocks): the page's own mdInline/mdBlocks draw Current state, Help and the rest */
 /* mdChat(text) returns HTML for one of creaite's replies. Every character is escaped first (esc), then blocks and inline
    forms are recognised on the escaped text, so nothing in a reply can become markup of its own. Links: https, http and
-   mailto only. Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
+   mailto only, and only an address core/linkUrl.js accepts (no name and password, one mailbox, no cc or bcc), drawn by
+   linkAnchor (new tab, rel="noopener noreferrer"). Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
    Current state keeps mdHtml. Placeholders (\u0001n\u0001) hold finished HTML while the rest is processed. */
 export const MDC={ITEM:/\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}\b/g, MAX:120000, URL:"((?:[^\\s()]|\\([^\\s()]*\\))+)",
   FENCE:/^ {0,3}(`{3,}|~{3,})[ \t]*([\w+#.-]*)[ \t]*$/, HEAD:/^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/, HR:/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/,
@@ -463,7 +464,7 @@ $("#chLog").addEventListener("click",e=>mdClick(e));
 /* ===== BL-196 (sprint-chat-text) ===== formatted text, never raw markdown. One renderer: mdChat (BL-109) draws every view
    that shows markdown from a file or a run; mdView wraps it in .mdv, which shares the chat's styles and clicks. Every character
    is escaped first, so an HTML tag in the text is shown as text and never runs; links are https, http or mailto only and open
-   with rel="noopener" in a new tab. hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
+   with rel="noopener noreferrer" in a new tab (core/linkUrl.js). hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
    a card whose title is an h2). A Copy beside such a view copies the original text, never the formatted one.
    Formatted: chat replies (BL-109), the release notes in Settings › creaite version › Review release, a confirmation card's
    text in the chat, and a Markdown file's preview in Intake's inbox. Current state, its sources and search answers keep mdHtml

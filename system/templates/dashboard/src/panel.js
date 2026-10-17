@@ -15,7 +15,7 @@ import { statusDotNodes } from "./components/StatusDot.jsx";
 import { peekMark, peekPropNodes } from "./components/peek/PeekProps.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { creaiteEditor } from "./core/editor.js";
-import { linkAnchor, unescHtml } from "./core/linkUrl.js";
+import { linkAnchor, linkUrl, unescHtml } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
 import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
@@ -148,7 +148,7 @@ export function htmlToMd(root){ const blocks=[]; let cur="";
     if(tag==="UL"||tag==="OL") return ""; const inner=[...n.childNodes].map(inl).join("");
     if(tag==="BR") return " "; const w=(m)=>{ const t=inner.trim(); if(!t) return inner; const lead=inner.match(/^\s*/)[0], trail=inner.match(/\s*$/)[0]; return lead+m+t+m+trail; };
     const st=n.style||{};
-    if(tag==="A"){ const href=n.getAttribute("href")||""; return /^(https?:|mailto:)/i.test(href)&&inner.trim()?`[${inner.trim()}](${href})`:inner; }
+    if(tag==="A"){ const href=n.getAttribute("href")||""; const u=linkUrl(href); return u&&inner.trim()?`[${inner.trim()}](${u})`:inner; }
     if(tag==="B"||tag==="STRONG"||+st.fontWeight>=600||st.fontWeight==="bold") return w("**");
     if(tag==="I"||tag==="EM"||st.fontStyle==="italic") return w("*");
     if(tag==="S"||tag==="STRIKE"||tag==="DEL"||/line-through/.test(st.textDecoration||"")||/line-through/.test(st.textDecorationLine||"")) return w("~~");

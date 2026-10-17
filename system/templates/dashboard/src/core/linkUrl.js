@@ -101,10 +101,12 @@ export function unescHtml(s) {
 /** The ONE anchor for a web or mail address, as HTML: `inner` (already safe HTML) inside a link to `href`, which is opened in a new tab
     with `LINK_REL`. Null when `linkUrl` refuses the address, so a renderer shows the text as it was. `href` is the raw address (use
     `unescHtml` first on one found in escaped text); it is written with "&" as "&amp;", the only character `linkUrl` lets through
-    that an attribute needs changed. @param {unknown} href @param {string} inner @returns {string|null} */
-export function linkAnchor(href, inner) {
+    that an attribute needs changed. `cls` is an optional class name fixed in code (never data), written after `rel`. Components
+    (JSX) do not build HTML: they ask `linkUrl` and draw plain text when it gives null.
+    @param {unknown} href @param {string} inner @param {string} [cls] @returns {string|null} */
+export function linkAnchor(href, inner, cls) {
   const u = linkUrl(href);
-  return u === null ? null : `<a href="${u.replace(/&/g, "&amp;")}" target="_blank" rel="${LINK_REL}">${inner}</a>`;
+  return u === null ? null : `<a href="${u.replace(/&/g, "&amp;")}" target="_blank" rel="${LINK_REL}"${cls ? ` class="${cls}"` : ""}>${inner}</a>`;
 }
 
 /** An address a note keeps for creaite's own links (a work item or a person), which are not web addresses and never open anywhere.
