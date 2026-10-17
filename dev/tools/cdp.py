@@ -25,6 +25,7 @@ import time
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import browser_slots  # noqa: E402
 import proc_guard  # noqa: E402
 
 MAC_CHROME_PATHS = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -112,6 +113,7 @@ class WebSocket:
 
 class Browser:
     def __init__(self, width=1280, height=900, args=(), reduced_motion=True):
+        browser_slots.hold()               # #89: at most CREAITE_BROWSER_SLOTS processes drive Chrome at once on this machine (off in CI)
         path = chrome_path()
         if not path:
             raise RuntimeError("Google Chrome (or Edge) isn't installed")

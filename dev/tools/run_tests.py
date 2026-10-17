@@ -83,7 +83,7 @@ EVERYTHING = ("VERSION", "system/creaite-rules.md", ".claude/", "system/config/"
 FILE_TIMEOUT = float(os.environ.get("CREAITE_FILE_TIMEOUT") or 900)   # seconds; 0 means no limit (see --file-timeout)
 # A file that is slow by design waits on a browser for every screen of the sample (test_shared_behaviour.py: about 1000 s on a
 # laptop, mostly waiting, 43 screens by 4 checks), so it gets a longer limit of its own; --file-timeout 0 still means none.
-SLOW_FILES = {"test_shared_behaviour.py": 2700}
+SLOW_FILES = {"test_shared_behaviour.py": 2700, "test_shared_undo.py": 2700}   # #89: the Undo half has its own file
 RERUN_MAX = int(os.environ.get("CREAITE_RERUN_MAX") or 15)            # more failures than this are not re-run alone
 TIMED_OUT = -1000                     # the exit code a file gets when it was stopped for running too long
 CI = bool(os.environ.get("GITHUB_ACTIONS"))   # on a runner, print a failure's output as it happens (folded), not only at the end
@@ -321,6 +321,8 @@ class Runner:
         env = {**os.environ, "CREAITE_NO_LAUNCH": "1",           # BL-171: a test never starts Word or another app
                "CREAITE_TEST_TAG": tag(f),                         # BL-172: its vaults carry its name
                "TMPDIR": str(tmp), "TMP": str(tmp), "TEMP": str(tmp)}   # BL-246: everything it makes lands here
+        if slot is not None:
+            env["CREAITE_CHROME_SLOT"] = "1"                        # #89: it already holds a Chrome slot; browser_slots.hold() adds none
         t, p, out, timed_out = time.time(), None, [], False
         limit = self.timeout and max(self.timeout, SLOW_FILES.get(f.name, 0))      # None: no limit
         try:

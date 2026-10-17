@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+import browser_slots  # noqa: E402
 import proc_guard  # noqa: E402
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_tracker import Vault  # noqa: E402
@@ -126,6 +127,7 @@ class LiveBrowserCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        browser_slots.hold()      # #89: wait for one of the machine's browser slots (off in CI); held until this process ends
         if cls.shared_server:
             cls.addClassCleanup(cls.stop_server)      # BL-172: runs even when setUpClass fails after the vault is made
             cls.start_server()
