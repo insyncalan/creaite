@@ -439,6 +439,11 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         """Enter on opener i: (its state, what it got wrong), or (None, why) when nothing opened."""
         self.press("Enter", 0.4)
         s = self.state(i)
+        for _ in range(16):          # a list that asks the live server first (Review's "Update an existing item instead") opens when it answers; the server is slower late in a long run
+            if s["open"] or s["modal"]:
+                break
+            self.b.pump(0.25)
+            s = self.state(i)
         if not s["open"] and not s["modal"]:
             return None, ["Enter opens nothing"]
         bad = []
