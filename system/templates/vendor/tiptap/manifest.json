@@ -7,12 +7,12 @@
   "target": "es2020",
   "minified": true,
   "sources": {
-   "dev/tiptap/editor.js": "498eb6c00d1686d1bc73045d926cfd7885bd1303db84e695c22f9c174fafc350",
+   "dev/tiptap/editor.js": "effdca35854f5d255e96b36229aaba2b7ce858e13f1d5cbb3217c18000def477",
    "dev/tiptap/source.js": "17dcd905761c7672f5a9e1f0a48707c19782c21ddf9bda6b747bd6df36a98978",
    "dev/tiptap/writer.js": "3ccb421b1ed2c8305a27fbd23a43f58151d846a9056a9d4ed0ff6d4f9f96b197"
   },
-  "bytes": 511087,
-  "gzipped": 161599
+  "bytes": 511145,
+  "gzipped": 161717
  },
  "exports": [
   "PINNED",
@@ -31,7 +31,8 @@
   "Plugin",
   "PluginKey",
   "Decoration",
-  "DecorationSet"
+  "DecorationSet",
+  "closeHistory"
  ],
  "packages": {
   "@tiptap/core": {
@@ -418,6 +419,6 @@
   "licenses/tiptap-pm-3.31.3-THIRD_PARTY_LICENSES.md": "eabc218716e37c2439772ed9133ac7ac1e593b6a5c60370dc1295282c93c9b09",
   "licenses/tiptap-starter-kit-3.31.3-LICENSE.md": "c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
   "licenses/w3c-keyname-2.2.8-LICENSE": "869c30f368eb08735e779027b9f4bc9fea2f39624351856aebe42741f0bc0884",
-  "tiptap.module.js": "2d3a8c4ce5f486707fd74e9be00bd53e2ef2ebe85b6e89eb911caf606961dfc1"
+  "tiptap.module.js": "865e73cc05a47c9d75359af4b0b8018864bdf2f87840c020b7522e45b7033c12"
  }
 }

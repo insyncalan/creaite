@@ -9,6 +9,7 @@
    - linkAt, applyLink, removeLink, internalIn: the commands the popover and the toolbar use.
    Nothing here imports the editor, so core/editor.js can use it. */
 import { Plugin, PluginKey } from "tiptap";
+import { OWN_STEP } from "./undoSteps.js";
 import { isInternalHref, keepHref, linkUrl, typedLinkUrl } from "./linkUrl.js";
 
 /** The transaction that takes the refused link marks out of `doc`, or null when there are none. @param {any} tr @param {any} doc */
@@ -88,7 +89,7 @@ export function applyLink(editor, { from, to, text, address }) {
   if (to > from && internalIn(doc, from, to)) return false;
   const words = text === "" ? href : text, same = to > from && doc.textBetween(from, to) === words;
   const mark = { type: "link", attrs: { href } };
-  const c = editor.chain().focus();
+  const c = editor.chain().focus().setMeta(OWN_STEP, true);
   if (same) c.setTextSelection({ from, to }).setMark("link", { href });
   else c.insertContentAt({ from, to }, { type: "text", text: words, marks: [mark] });
   const ok = c.run();

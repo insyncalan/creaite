@@ -16,6 +16,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { slashRows, slashRank } from "../core/editorProfiles.js";
 import { placeAtCaret } from "../core/caretPlace.js";
 import { ED_HOOKS } from "../core/editor.js";
+import { OWN_STEP } from "../core/undoSteps.js";
 
 /** @typedef {import("../core/editorProfiles.js").SlashDef} SlashDef */
 /** @typedef {{from: number, to: number, q: string, rows: SlashDef[], i: number}} SlashState */
@@ -127,7 +128,7 @@ export function attachSlash(h, { profile, host }) {
     const s = st;
     if (!s) return;
     close();
-    const c = editor.chain().focus().deleteRange({ from: s.from, to: s.to });
+    const c = editor.chain().focus().setMeta(OWN_STEP, true).deleteRange({ from: s.from, to: s.to });
     if (r.host) { c.run(); const f = host && host[r.id]; if (f) f(); return; }
     if (r.hook) { c.run(); const k = /** @type {any} */ (ED_HOOKS)[r.hook]; if (k && k.open) k.open(h); return; }          /* a row the editor itself does (Link: its form, components/LinkPopover.jsx) */
     if (r.is && (r.is === "blockquote" ? editor.isActive(r.is) : nearestList(editor) === r.is)) { c.run(); return; }          /* already in that block: only the "/query" goes (a toggle would take the line OUT of the list or quote) */

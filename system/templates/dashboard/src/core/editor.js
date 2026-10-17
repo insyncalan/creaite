@@ -20,6 +20,7 @@ import { createEditor, envelope, wrap, markdownOf, Extension, Mark, mergeAttribu
 import { addHTML, ic, raw } from "./dom.js";
 import { shared } from "./state.js";
 import { linkGuard, pasteLink, scrubNow } from "./editorLink.js";
+import { OWN_STEP } from "./undoSteps.js";
 
 /** A transaction with this meta changes the document without counting as an edit (claim marks put on as it opens). */
 export const ED_QUIET="cxQuiet";
@@ -104,7 +105,7 @@ const plainText=doc=>{ const L=[]; doc.forEach(p=>{ L.push(p.textContent); }); r
  *   document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)}} EdAi
  * @typedef {{features?: "current"|"plain"|"notes", markdown?: string, html?: string, text?: string, multiline?: boolean,
  *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value",
- *   ai?: EdAi, headShift?: number}} EdOptions
+ *   ai?: EdAi, headShift?: number, undoDepth?: number}} EdOptions
  * @typedef {{el: HTMLElement, editor: any, features: string, multiline?: boolean, headShift: number, value: () => string, setValue: (v: string) => void,
  *   touched: () => boolean, focus: (at?: any) => void, destroy: () => void}} EdHandle
  */
@@ -128,7 +129,7 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
   const editor=createEditor({ mount:el },{ features, ...content, injectCSS:false, editorProps:props,
     extensions:list=>{ const out=list.map(x=>x&&x.name==="image"?x.extend({ addNodeView:()=>figureView(o.imageSrc) })
         :x&&x.name==="link"?x.extend({ inclusive:false })      // #120: typing after a link is outside it (a pasted or made link does not swallow the next word)
-        :x&&x.name==="starterKit"&&headShift?x.configure({ heading:{ levels:[1,2,3] } }):x);      // a shifted host has the three levels it can store (typed #### is text)
+        :x&&x.name==="starterKit"&&(headShift||o.undoDepth)?x.configure({ ...(headShift?{ heading:{ levels:[1,2,3] } }:{}), ...(o.undoDepth?{ undoRedo:{ depth:o.undoDepth } }:{}) }):x);      // #175: Notes keeps more undo steps      // a shifted host has the three levels it can store (typed #### is text)
       return [...out,...(plain?[]:[ClaimMark,Extension.create({ name:"cxLinkGuard", addProseMirrorPlugins:()=>[linkGuard(ED_QUIET)] })]),...(o.extensions||[])]; } });
   if(!plain) scrubNow(editor,ED_QUIET);      /* #120: a refused address in the text it was opened with shows as plain text (quietly; an untouched text is still given back as it came) */
   const blank=()=>{ el.classList.toggle("blank",editor.isEmpty); };
@@ -208,7 +209,7 @@ export function edReplace(h,r,text){ const ed=h.editor; if(ed.isDestroyed) retur
   if(h.features==="plain"){ const L=String(text).replace(/\r\n?/g,"\n").split("\n"); content=L.length===1?(L[0]?[{ type:"text", text:L[0] }]:[]):plainDoc(L.join("\n")).content; }
   else { const blocks=(ed.schema.nodeFromJSON(ed.markdown.parse(headsIn(headsSafe(String(text),h.headShift),h.headShift))).toJSON().content)||[];
     content=r.inline&&blocks.length===1&&blocks[0].type==="paragraph"?(blocks[0].content||[]):blocks; }
-  const chain=ed.chain().focus();
+  const chain=ed.chain().focus().setMeta(OWN_STEP,true);      /* #175: an AI replacement is one undo step of its own */
   return (content.length?chain.insertContentAt({ from:r.from, to:r.to },content,{ updateSelection:true }):chain.deleteRange({ from:r.from, to:r.to })).run(); }
 /* ----- BL-117: Turn into (formatting, no AI): the type of the selected blocks, by the editor's own commands ----- */
 /** The kinds Turn into offers: id → the name the toast uses. */
