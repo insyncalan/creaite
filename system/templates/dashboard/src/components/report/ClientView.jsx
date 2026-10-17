@@ -50,13 +50,13 @@ function ClientBar({ doc, note, setNote }) {
   };
   return (
     <span class="crbarr">
-      <span class={`tag ${ready ? "ok" : "warn"}`} data-crbase>{ready ? "Internal: approved · facts locked" : "Internal: not approved yet"}</span>
-      <span class="seg" role="group" aria-label="View">
+      <span class={`tag rb-x ${ready ? "ok" : "warn"}`} data-crbase>{ready ? "Internal: approved · facts locked" : "Internal: not approved yet"}</span>
+      <span class="seg rb-x" role="group" aria-label="View">
         <button type="button" data-crmode="client" aria-pressed={mode === "client" ? "true" : "false"} onClick={() => { crMode.value = "client"; }}>Client report</button>
         <button type="button" data-crmode="side" aria-pressed={mode === "side" ? "true" : "false"} disabled={!crInternal.value} onClick={() => { crMode.value = "side"; }}>Side by side</button>
       </span>
-      {draft && mode !== "side" ? <button type="button" class="btn sm" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchClientAll(d, i)); }}>Match internal for every section</button> : null}
-      {draft && ready && info && info.baseline && !(doc.based_on && doc.based_on.version === info.baseline.version) ? <button type="button" class="btn sm" data-crrefresh
+      {draft && mode !== "side" ? <button type="button" class="btn sm rb-x" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchClientAll(d, i)); }}>Match internal for every section</button> : null}
+      {draft && ready && info && info.baseline && !(doc.based_on && doc.based_on.version === info.baseline.version) ? <button type="button" class="btn sm rb-x" data-crrefresh
         title="This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save."
         onClick={() => { const a = crArg.value; if (a) loadClientReport(a, true); }}>Refresh from the approved week</button> : null}
       <button type="button" class="btn sm" data-crcheck disabled={!ready} data-tip={ready ? undefined : "Approve the internal report first"} title={ready ? undefined : "Approve the internal report first"} onClick={openCheck}>Check and export ▾</button>
@@ -107,7 +107,7 @@ export function ClientView() {
           onRedraft={side ? undefined : redrafter(() => ({ code: doc.project,
             document: { kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" } }), "report", "client", clientHealthApply)}
           onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); else countRedraft(ev, "report"); }}
-          toolbar={<ClientBar doc={doc} note={note} setNote={setNote} />} />
+          banner={{ title: "Client report", sub: `${doc.project_name || (a && a.code) || ""} · ${fd(doc.date)}` }} toolbar={<ClientBar doc={doc} note={note} setNote={setNote} />} />
       </div>
       <LeftOutDialog client={doc.client || ""} onExport={doExport} />
     </div>

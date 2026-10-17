@@ -82,7 +82,7 @@ export function WeeklyView() {
           ai={{ place: "report", project: () => doc.project, confidential: () => false }}
           onRedraft={redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report")}
           onEvent={ev => { if (ev.type === "reload") loadWeekly(/** @type {any} */ (weeklyArg.value)); else countRedraft(ev, "report"); }}
-          toolbar={<WeeklyBar doc={doc} readOnly={readOnly} />} />
+          banner={{ title: "Weekly report", sub: `${doc.project_name} · ${fd(doc.date)}` }} toolbar={<WeeklyBar doc={doc} readOnly={readOnly} />} />
       </div>
     </div>);
 }

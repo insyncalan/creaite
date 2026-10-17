@@ -140,7 +140,7 @@ class MinutesEditor(LiveBrowserCase):
         return self.ev("(()=>{const a=document.activeElement; return a?(a.id||a.getAttribute('aria-label')||a.textContent||'').trim():''})()")
 
     def click_outside(self):
-        self.b.click("#mnTitle")
+        self.b.click("#v-minutes .sheet-zv")                    # in the toolbar, which stays on screen when the header hides on a scroll (#202)
         self.b.pump(0.2)
 
     def wait_saved(self, js):
@@ -188,6 +188,8 @@ class MinutesEditor(LiveBrowserCase):
         marked = self.ev("document.querySelector('.sheet-pair > .sheet-fit > .sheet-a4 > .page .mnline.internal').textContent")
         self.assertNotIn("The committee reviewed", self.ev("document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page')[1].textContent"))
         self.assertIn("The committee reviewed", marked)
+        b.eval("document.querySelector('.sheet-scroll').scrollTop=0")   # #202: the top brings the full toolbar back
+        b.pump(0.3)
         b.click("[data-mnmode=distributed]")                     # the Distributed page alone: the marked line isn't there
         b.wait("!document.querySelector('.sheet-pair')")
         self.assertNotIn("The committee reviewed", self.ev("document.querySelector('#v-minutes .page').textContent"))
