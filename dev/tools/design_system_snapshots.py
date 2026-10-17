@@ -15,9 +15,13 @@ from datetime import date
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]
-VIEWS = [("today", "go('today')"), ("work", "go('work')"), ("review", "go('review')"), ("projects", "go('projects')"),
-         ("cockpit", None), ("milestones", None), ("intake", "go('inbox')"), ("files", "go('files')"), ("people", "go('people')"),
-         ("activity", "go('activity')"), ("settings", "go('settings')"), ("help", "go('help')")]
+# (name, js to open it or None, address to open it when it has no js). Meeting-bound pages (minutes, prep, client report) need a
+# meeting and are not snapshotted.
+VIEWS = [("today", "go('today')", None), ("work", "go('work')", None), ("review", "go('review')", None), ("projects", "go('projects')", None),
+         ("cockpit", None, "#cockpit=ABC"), ("milestones", None, "#milestones=ABC"), ("intake", "go('inbox')", None), ("files", "go('files')", None),
+         ("people", "go('people')", None), ("person", None, "#person=Alan%20Carter"), ("activity", "go('activity')", None),
+         ("settings", "go('settings')", None), ("help", "go('help')", None), ("reports", None, "#reports"),
+         ("reporting", None, "#reporting=ABC"), ("weekly", None, "#weekly=ABC&week=2026-10-16"), ("notes", None, "#notes=ABC")]
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:'
          'wght@700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">')
 TOGGLE = "<script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script>"
@@ -31,6 +35,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=str(HERE.parent))
     ap.add_argument("--out", default=str(HERE / "design-system"))
+    ap.add_argument("--label", default="", help="the branch name to record (a detached checkout has none)")
     a = ap.parse_args()
     repo, out = Path(a.repo).resolve(), Path(a.out).resolve()
     sys.path.insert(0, str(repo / "dev" / "tools"))
@@ -42,7 +47,7 @@ def main():
     (out / "shots").mkdir(parents=True, exist_ok=True)
     css = (repo / "system/templates/dashboard/style.css").read_text()
     (out / "style.snapshot.css").write_text(css)
-    info = {"commit": git(repo, "rev-parse", "--short", "HEAD"), "branch": git(repo, "rev-parse", "--abbrev-ref", "HEAD"),
+    info = {"commit": git(repo, "rev-parse", "--short", "HEAD"), "branch": a.label or git(repo, "rev-parse", "--abbrev-ref", "HEAD"),
             "version_file": (repo / "VERSION").read_text().strip(), "subject": git(repo, "log", "-1", "--format=%s")[:100],
             "taken": date.today().isoformat(), "palette": "creaite", "mode": "light", "viewport": "1400x1000"}
     (out / "SNAPSHOT.json").write_text(json.dumps(info, indent=1) + "\n")
@@ -58,16 +63,20 @@ def main():
             b.call("Page.setBypassCSP", enabled=True)
             theme = "(()=>{const r=document.documentElement; r.dataset.palette='creaite'; r.dataset.theme='light'; return true})()"
             b.eval(theme)
-            for name, js in VIEWS:
+            for name, js, addr in VIEWS:
                 if js:
                     b.eval(js)
                     time.sleep(0.7)
                 else:
-                    b.goto(base + ("/#cockpit=ABC" if name == "cockpit" else "/#milestones=ABC"))
+                    b.goto(base + "/" + addr)
                     b.wait("typeof go==='function' && LIVE", timeout=30)
-                    time.sleep(1.2)
+                    time.sleep(1.5)
                     b.eval(theme)
                 b.screenshot(str(out / "shots" / f"{name}-light.png"))
+                b.eval("(()=>{document.documentElement.dataset.theme='dark';return true})()")
+                time.sleep(0.2)
+                b.screenshot(str(out / "shots" / f"{name}-dark.png"))
+                b.eval(theme)
                 html = b.eval("(()=>{const c=document.documentElement.cloneNode(true);"
                               "c.querySelectorAll('script,style,link[rel=stylesheet],meta').forEach(s=>s.remove());return c.outerHTML})()")
                 head = '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + FONTS + \
