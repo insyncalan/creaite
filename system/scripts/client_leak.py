@@ -392,6 +392,11 @@ def _names_text(text):
     return joined(_name_form(as_shown(text), lower=False), _name_form(_words_shown(text), lower=False))
 
 
+# #127 round 8: an allowed name's match covers other names only when its words are joined as a name's are (whitespace, a hyphen,
+# an initial): a list separator (; / | \ ,) or a full stop after a word ("Sam. Patel", "Sam; Patel", "Sam / Patel") is two people.
+LIST_SEP = re.compile(r"[;/|\\,]|(?:\w{2}|\s)\.\s")
+
+
 def named_beyond(text, people, allowed):
     """#127 round 7: the people (names or aliases) the text names somewhere other than inside an allowed name: "Sam" in "Sam Patel
     will run it" is Sam Patel, allowed, not someone else whose alias is Sam; "Sam Patel and Sam" still names a Sam. Every name
@@ -400,7 +405,7 @@ def named_beyond(text, people, allowed):
     spans = []
     for a in allowed:
         pat = name_pattern(a) if a and len(a) > 2 else None
-        spans += [m.span() for m in pat.finditer(low)] if pat is not None else []
+        spans += [m.span() for m in pat.finditer(low) if not LIST_SEP.search(m.group())] if pat is not None else []
     out = set()
     for p in people:
         pat = name_pattern(p) if p and len(p) > 2 and p not in allowed else None

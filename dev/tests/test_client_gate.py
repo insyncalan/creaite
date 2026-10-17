@@ -1036,6 +1036,17 @@ class TheReviewOfc39f6c4(Base):
                       "('Sam Patel will run the rehearsal.', 'Waiting on Sam Patel.', 'Sam Patel and Sam will run it.')]))")
         self.assertEqual(got, [[], [], ["Sam isn't named in the text"]])
 
+    def test_a_list_separator_inside_an_allowed_name_hides_no_one(self):
+        """Round 8: an allowed name's match joined by ; / | or a full stop after a word is two people, so it hides neither."""
+        texts = ["We met Sam. Patel will run the rehearsal.", "Thanks to Sam; Patel signs off.", "Ask Sam / Patel for it.",
+                 "Ask Sam | Patel for it.", "Sam; Patel; Khan attend.", "Ali; Khan attend.", "Sam Patel will run the rehearsal.",
+                 "Sam-Patel will run it.", "Sam P. Patel will run it.", "Sam Patel and Sam will run it."]
+        got = self.py("client_leak.people = lambda con, code, blocking=None: ({'Sam Patel', 'Ali Khan'}, set())\n"
+                      "edit_ai._register_names = lambda: ['Sam Patel', 'Ali Khan', 'Sam', 'Patel', 'Khan', 'Ali']\n"
+                      f"print(json.dumps([sorted(f.split(' isn')[0] for f in edit_ai.client_problems('ABC', t) if 'named' in f) "
+                      f"for t in {texts!r}]))")
+        self.assertEqual(got, [["Patel", "Sam"]] * 4 + [["Khan", "Patel", "Sam"], ["Ali", "Khan"], [], [], [], ["Sam"]])
+
     def test_an_initial_in_any_script(self):
         """Finding 3: a capital initial outside Latin-1, and a single letter in a script with no case, between a name's words."""
         reg = ["Quentin Marlow", "\u0418\u0432\u0430\u043d \u041f\u0435\u0442\u0440\u043e\u0432", "\u738b \u660e"]
