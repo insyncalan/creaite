@@ -498,7 +498,7 @@ class RefineEditor(DraftCase):
         b = self.b
         marked = text.replace(".", ". {F1}", 1).replace("late.", "late. {F2}").replace("November.", "November. {F1}")        # the fact marks a drafted Current state carries
         b.eval(f"genDraft('ABC',{json.dumps(marked)},'',{{audience:'internal',length:'standard',from:'2026-10-02',to:'2026-10-09',note:''}})")
-        b.wait("document.getElementById('curEd')&&document.getElementById('curRefine')", 30)
+        b.wait("!!document.querySelector('#curEd[data-ready]')&&!!document.getElementById('curRefine')", 30)
 
     def editor(self):
         return self.b.eval("document.getElementById('curEd').innerText.trim()")
@@ -506,26 +506,26 @@ class RefineEditor(DraftCase):
     def reply(self, *drafts_):
         self.b.eval(f"window.__replies.push(...{json.dumps(list(drafts_))})")
 
+    READY = "!!document.querySelector('#curEd[data-ready]')&&!!document.getElementById('curRefineNote')"
+
+    def ready(self):
+        """The editor is mounted and its version drawn: the product's own signal (#curEd[data-ready=1]; data-draw counts the draws)."""
+        self.b.wait(self.READY, 30)
+
     def refine(self, text):
         b = self.b
+        self.ready()
         b.eval(f"(()=>{{ const t=document.getElementById('curRefineNote'); t.value={text!r}; t.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         n = b.eval("window.__bodies.length")
         b.click("#curRefineGo")
-        for _ in range(4):        # under load the editor is drawn again after the note is typed and takes it back: type it, press Go, until the request goes
-            try:
-                b.wait(f"window.__bodies.length>{n}", 6)
-                return
-            except TimeoutError:
-                b.eval(f"(()=>{{ const t=document.getElementById('curRefineNote'); if(t){{ t.value={text!r}; t.dispatchEvent(new Event('input',{{bubbles:true}})); }} }})()")
-                b.click("#curRefineGo")
-        b.wait(f"window.__bodies.length>{n}")
+        b.wait(f"window.__bodies.length>{n}", 30)
 
     def vers(self):
         return self.b.eval("document.getElementById('curVers').textContent")
 
     def editor_says(self, text):
         """The editor's words (spaces and paragraphs as one), once it shows them: it is drawn a moment after a version is loaded."""
-        self.b.wait(f"document.getElementById('curEd')&&document.getElementById('curEd').innerText.split(/\\s+/).join(' ').trim()==={json.dumps(text)}", 20)
+        self.b.wait(f"!!document.querySelector('#curEd[data-ready]')&&document.getElementById('curEd').innerText.split(/\\s+/).join(' ').trim()==={json.dumps(text)}", 20)
         return text
 
     def stats(self):
@@ -555,7 +555,7 @@ class RefineEditor(DraftCase):
     def test_a_client_safe_current_state_draft_is_not_offered_a_refine_and_says_why(self):
         b = self.b
         b.eval("genDraft('ABC','Falcon is on track. {F1}','',{audience:'client',length:'standard',from:'2026-10-02',to:'2026-10-09',note:''})")
-        b.wait("document.getElementById('curEd')&&document.getElementById('curRefine')", 30)
+        b.wait("!!document.querySelector('#curEd[data-ready]')&&!!document.getElementById('curRefine')", 30)
         self.assertEqual(b.eval("document.querySelector('#curRefine .drnote').textContent"), "Steer it further is not available for a Client-safe draft yet.")
         self.assertEqual(b.eval("!!document.getElementById('curRefineNote')||!!document.getElementById('curRefineGo')"), False)
         self.assertEqual(b.errors, [])
@@ -593,6 +593,7 @@ class RefineEditor(DraftCase):
         self.assertEqual(self.stat("edited", 1), 1)
         # the sources and the no-source marks are worked out again for the new version: the sourced sentence carries its fact, the other has none
         b.wait("CURED.claims&&Object.keys(CURED.claims).length>0", 20)
+        self.ready()
         marks = b.eval("[...document.querySelectorAll('#curEd .claim')].map(x=>x.dataset.c)")
         self.assertTrue(marks)
         self.assertEqual(b.eval("Object.values(CURED.claims).map(c=>c.ids.length>0)"), [True, False])
@@ -605,10 +606,12 @@ class RefineEditor(DraftCase):
         self.reply(draft("Falcon is off track.", form="current"))
         self.refine("Shorter")
         b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
+        self.ready()
         b.click("[data-cver=back]")
         self.assertEqual(self.editor_says("Falcon is off track. Data access is late. UAT starts in November."), "Falcon is off track. Data access is late. UAT starts in November.")
         self.assertEqual(self.vers(), "Version 1 of 2 · On to version 2")
         self.assertEqual(b.eval("Object.values(CURED.claims).filter(c=>c.ids.length).length"), 3)                             # the first draft's marks are back
+        self.ready()
         b.click("[data-cver=next]")
         self.assertEqual(self.editor_says("Falcon is off track."), "Falcon is off track.")
         self.assertEqual(b.eval("CURED.vers.length"), 2)
@@ -628,6 +631,7 @@ class RefineEditor(DraftCase):
         self.reply(draft("Falcon is off track.", form="current"))
         self.refine("Shorter")
         b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
+        self.ready()
         b.click("[data-cver=back]")
         self.editor_says("Falcon is off track. Data access is late. UAT starts in November. Plus one new sentence of my own.")
         self.assertEqual(self.states(), ["ok", "ok", "ok", "none"])                                                            # the untouched sentences keep their sources
@@ -645,6 +649,7 @@ class RefineEditor(DraftCase):
         b.eval("window.__hold=false; window.__rel()")
         b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
         self.editor_says("Falcon is off track.")
+        self.ready()
         b.click("[data-cver=back]")
         self.editor_says("Falcon is off track. Data access is late. UAT starts in November. MY LATE EDIT.")                   # not lost
 
@@ -671,11 +676,14 @@ class RefineEditor(DraftCase):
         self.refine("Shorter")
         b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
         self.assertEqual(b.eval("document.querySelector('#curRefineMsg .drnote').textContent"), "1 sentence has no source, so it was left out of this version.")
+        self.ready()
         b.click("[data-cver=back]")
         self.editor_says("Falcon is off track. Data access is late. UAT starts in November.")
         b.wait("document.getElementById('curRefineMsg').innerHTML===''", 20)
         self.assertEqual(b.eval("document.getElementById('curRefineMsg').innerHTML"), "")                                       # version 1 has no such note
+        self.ready()
         b.click("[data-cver=next]")
+        self.ready()
         b.wait("/left out of this version/.test(document.getElementById('curRefineMsg').textContent)", 20)                       # drawn a moment after the click
         self.assertIn("left out of this version", b.eval("document.getElementById('curRefineMsg').textContent"))
 
