@@ -764,7 +764,8 @@ class PrepPageStaticTests(unittest.TestCase):
             (v.root / "system/staging/calendar.json").write_text(json.dumps({"fetched": f"{day} 07:00", "days": {day: [
                 {"id": "t1", "start": "09:00", "end": "10:00", "title": "ABC weekly", "all_day": False, "private": False}]}}))
             run(v, "build_dashboard.py", now=f"{day} 08:00")
-            out, errors = chrome(v, """let opened=0; window.open=()=>{ opened++; return null; }; let fetched=0; const f0=window.fetch; window.fetch=(...a)=>{ fetched++; return f0(...a); };
+            out, errors = chrome(v, """const HOVER=true; const mm0=window.matchMedia.bind(window); window.matchMedia=q=>/hover: *hover/.test(q)?{matches:HOVER,media:q,addEventListener(){},removeEventListener(){},addListener(){},removeListener(){}}:mm0(q);   /* headless Linux Chrome reports no hover: the peek needs it (hover.js canHover) */
+              let opened=0; window.open=()=>{ opened++; return null; }; let fetched=0; const f0=window.fetch; window.fetch=(...a)=>{ fetched++; return f0(...a); };
               go("today"); renderToday(); openPrep(prepTimed()[0],TODAY); const b=document.querySelector('[data-prepview]');
               const title=b.dataset.tip; b.click();   /* BL-161: the one tooltip */ await new Promise(r=>setTimeout(r,50));
               document.getElementById('prepDlg').close(); SA().prep_pages={'09:00|ABC weekly':'projects/x/agendas/a.html'}; renderToday();
