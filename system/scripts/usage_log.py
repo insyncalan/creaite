@@ -24,11 +24,13 @@ Calls the guarded hooks make:
     usage_log.model_of(init_event)                        -> str, on the system init event
     usage_log.skills_of(assistant_event)                  -> list[str], on EVERY assistant event; the hook unions them in order
     usage_log.record(kind, result_event_or_None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, skills=None)
-    (skills: the names collected from the run; the line gets "skills": [...], empty when none)
+    (skills: the names collected from the run; the line gets "skills": [...], empty when none. Only known skill names are kept,
+    anything else typed becomes "other"; at most 20 entries a line: record() cleans them again)
 A stopped or failed run passes result_event=None (or what it has) and still records. record() never raises.
 """
 import json
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -73,19 +75,70 @@ def model_of(event) -> str:
         return ""
 
 
-def skills_of(event) -> list:
+# A skill name is kept only when it is one creaite knows: a folder in .claude/skills/, a plugin skill of a fixed list, or
+# "<plugin>:<one of those>". Anything else the model typed (a sentence, a path, a person) becomes the literal "other".
+OTHER = "other"
+MAX_SKILLS = 20                     # names per line, "other" included; the rest are counted as "other" once
+PLUGIN_SKILLS = ("docx", "pdf", "pptx", "xlsx")     # the Office skills creaite's rules name (document-skills plugin)
+_PART = r"[a-z0-9][a-z0-9-]{0,39}"
+
+
+def shipped_skills(skills_dir=None) -> set:
+    """Folder names in .claude/skills/ (read only); empty when the folder can't be read."""
+    d = Path(skills_dir) if skills_dir else paths.ROOT / ".claude" / "skills"
+    try:
+        return {p.name for p in d.iterdir() if p.is_dir()}
+    except OSError:
+        return set()
+
+
+def plain_skill(name, known=None) -> str:
+    """One raw skill name -> itself when known, otherwise "other". Never raises."""
+    if not isinstance(name, str):
+        return OTHER
+    name = name.strip()
+    known = shipped_skills() if known is None else known
+    if name in known or name in PLUGIN_SKILLS:
+        return name
+    plugin, sep, skill = name.partition(":")
+    if sep and re.fullmatch(_PART, plugin) and (skill in known or skill in PLUGIN_SKILLS):
+        return name
+    return OTHER
+
+
+def clean_skills(names, skills_dir=None) -> list:
+    """Raw names -> known names (deduped, in order), unknown ones as one "other", at most MAX_SKILLS entries in all."""
+    known = shipped_skills(skills_dir)
+    kept, other = [], False
+    for n in names or []:
+        p = plain_skill(n, known)
+        if p == OTHER:
+            other = True
+        elif p not in kept:
+            kept.append(p)
+    if len(kept) > MAX_SKILLS - (1 if other else 0):
+        other = True
+        kept = kept[:MAX_SKILLS - 1]
+    return kept + [OTHER] if other else kept
+
+
+def skills_of(event, skills_dir=None) -> list:
     """Skill names called in one assistant event: content items {"type":"tool_use","name":"Skill","input":{"skill":"<name>"}}
-    (shape confirmed on a real run, 17-10-2026). Names only, never the other arguments; deduped, in order; never raises."""
-    out = []
+    (shape confirmed on a real run, 17-10-2026; "name" is the fallback, as live_server.describe_tool reads it). Only known names
+    (see clean_skills); what the model typed otherwise is never kept. Deduped, in order; never raises."""
+    raw = []
     try:
         for c in (event.get("message") or event).get("content") or []:
             if isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") == "Skill":
-                name = (c.get("input") or {}).get("skill")
-                if isinstance(name, str) and name.strip() and name.strip()[:60] not in out:
-                    out.append(name.strip()[:60])
+                inp = c.get("input") or {}
+                name = inp.get("skill")
+                if not (isinstance(name, str) and name.strip()):
+                    name = inp.get("name")
+                if isinstance(name, str) and name.strip():
+                    raw.append(name)
     except (AttributeError, TypeError):     # a malformed event has no skills
         return []
-    return out
+    return clean_skills(raw, skills_dir)
 
 
 def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, at=None, skills=None) -> dict:
@@ -113,7 +166,7 @@ def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0,
             "cost_usd": cost,
             "start_tokens": _int(start_tokens),
             "stopped": bool(stopped),
-            "skills": list(dict.fromkeys(str(s)[:60] for s in (skills or []) if isinstance(s, str)))}
+            "skills": clean_skills(s for s in (skills or []) if isinstance(s, str))}
 
 
 def record(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, root=None, skills=None):
