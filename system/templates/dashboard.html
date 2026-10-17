@@ -57134,11 +57134,11 @@ ${d5.text}`);
   var BEHIND_ON_BODY = "#chat,#runBadge";
   function FocusInert() {
     h2(() => {
-      const root = document.querySelector(".ndoc.nfocus");
-      const marked = [];
+      const root2 = document.querySelector(".ndoc.nfocus");
+      const marked2 = [];
       for (let el2 = (
         /** @type {Element | null} */
-        root
+        root2
       ); el2 && el2 !== document.body; el2 = el2.parentElement) {
         for (
           const sib of
@@ -57148,11 +57148,11 @@ ${d5.text}`);
           if (el2.parentElement === document.body && !sib.matches(BEHIND_ON_BODY)) continue;
           if (sib === el2 || sib.hasAttribute("inert") || sib.hasAttribute("data-nscrim") || sib.tagName === "SCRIPT" || sib.tagName === "STYLE" || sib.matches("dialog,[role=dialog]") || sib.querySelector("dialog")) continue;
           sib.setAttribute("inert", "");
-          marked.push(sib);
+          marked2.push(sib);
         }
       }
       return () => {
-        for (const m5 of marked) m5.removeAttribute("inert");
+        for (const m5 of marked2) m5.removeAttribute("inert");
       };
     }, []);
     return null;
