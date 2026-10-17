@@ -22,7 +22,9 @@ anything); take it with start_tokens_of(first assistant event).
 Calls the guarded hooks make:
     usage_log.start_tokens_of(assistant_event)            -> int, on the run's first assistant event
     usage_log.model_of(init_event)                        -> str, on the system init event
-    usage_log.record(kind, result_event_or_None, label="", model="", seconds=0.0, start_tokens=0, stopped=False)
+    usage_log.skills_of(assistant_event)                  -> list[str], on EVERY assistant event; the hook unions them in order
+    usage_log.record(kind, result_event_or_None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, skills=None)
+    (skills: the names collected from the run; the line gets "skills": [...], empty when none)
 A stopped or failed run passes result_event=None (or what it has) and still records. record() never raises.
 """
 import json
@@ -71,7 +73,22 @@ def model_of(event) -> str:
         return ""
 
 
-def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, at=None) -> dict:
+def skills_of(event) -> list:
+    """Skill names called in one assistant event: content items {"type":"tool_use","name":"Skill","input":{"skill":"<name>"}}
+    (shape confirmed on a real run, 17-10-2026). Names only, never the other arguments; deduped, in order; never raises."""
+    out = []
+    try:
+        for c in (event.get("message") or event).get("content") or []:
+            if isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") == "Skill":
+                name = (c.get("input") or {}).get("skill")
+                if isinstance(name, str) and name.strip() and name.strip()[:60] not in out:
+                    out.append(name.strip()[:60])
+    except (AttributeError, TypeError):     # a malformed event has no skills
+        return []
+    return out
+
+
+def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, at=None, skills=None) -> dict:
     """The counts-only line. Reads only numbers (and the model id) from the result event."""
     r = result if isinstance(result, dict) else {}
     u = r.get("usage") if isinstance(r.get("usage"), dict) else {}
@@ -95,16 +112,17 @@ def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0,
             "cache_create": _int(u.get("cache_creation_input_tokens")),
             "cost_usd": cost,
             "start_tokens": _int(start_tokens),
-            "stopped": bool(stopped)}
+            "stopped": bool(stopped),
+            "skills": list(dict.fromkeys(str(s)[:60] for s in (skills or []) if isinstance(s, str)))}
 
 
-def record(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, root=None):
+def record(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, root=None, skills=None):
     """Append one line. Returns it, or None when nothing was written (development repository, or any failure)."""
     try:
         base = Path(root) if root else paths.ROOT
         if (base / ".creaite-dev").exists():
             return None
-        line = line_for(kind, result, label, model, seconds, start_tokens, stopped)
+        line = line_for(kind, result, label, model, seconds, start_tokens, stopped, skills=skills)
         f = base / "system" / "staging" / "run-usage.jsonl" if root else paths.RUN_USAGE
         f.parent.mkdir(parents=True, exist_ok=True)
         with open(f, "a", encoding="utf-8") as fh:

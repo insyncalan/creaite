@@ -41,7 +41,7 @@ class UsageLog(Base):
         (ln,) = self.lines()
         self.assertEqual(ln, {"at": "2026-10-12T09:30:00", "kind": "ask", "label": "Chat", "model": "claude-sonnet-5-5", "seconds": 4.2,
                               "turns": 3, "input": 2, "output": 40, "cache_read": 649, "cache_create": 2536, "cost_usd": 0.010253,
-                              "start_tokens": 3187, "stopped": False})
+                              "start_tokens": 3187, "stopped": False, "skills": []})
 
     def test_run_usage_appended_for_each_kind(self):
         for k in usage_log.KINDS:
@@ -74,6 +74,45 @@ class UsageLog(Base):
 
     def test_model_of_init_event(self):
         self.assertEqual(usage_log.model_of({"type": "system", "subtype": "init", "model": "claude-sonnet-5-5"}), "claude-sonnet-5-5")
+
+
+SKILL_EVENT = {"type": "assistant", "message": {"content": [
+    {"type": "text", "text": "ok"},
+    {"type": "tool_use", "name": "Skill", "input": {"skill": "cx-minutes", "args": "SECRET ARGS about Jane Doe"}},
+    {"type": "tool_use", "name": "Skill", "input": {"skill": "cx-minutes"}},
+    {"type": "tool_use", "name": "Bash", "input": {"command": "ls"}},
+    {"type": "tool_use", "name": "Skill", "input": {"skill": "cx-review"}}]}}
+
+
+class Skills(Base):
+    def test_skills_recorded_from_skill_tool_calls(self):
+        self.assertEqual(usage_log.skills_of(SKILL_EVENT), ["cx-minutes", "cx-review"])
+        usage_log.record("ask", RESULT, root=self.root, skills=usage_log.skills_of(SKILL_EVENT))
+        self.assertEqual(self.lines()[0]["skills"], ["cx-minutes", "cx-review"])
+        self.assertNotIn("SECRET", self.file.read_text())
+        self.assertNotIn("Jane", self.file.read_text())
+
+    def test_skills_of_none_and_malformed(self):
+        self.assertEqual(usage_log.skills_of({"type": "assistant", "message": {"content": [{"type": "text", "text": "x"}]}}), [])
+        for bad in (None, 5, "x", {}, {"message": None}, {"message": {"content": 7}}, {"message": {"content": [None, 3, {"name": "Skill"},
+                    {"type": "tool_use", "name": "Skill", "input": None}, {"type": "tool_use", "name": "Skill", "input": {"skill": 4}}]}}):
+            self.assertEqual(usage_log.skills_of(bad), [])
+        usage_log.record("ask", RESULT, root=self.root)
+        self.assertEqual(self.lines()[0]["skills"], [])
+
+    def test_report_lists_days_since_a_skill_last_ran(self):
+        skills = self.root / ".claude" / "skills"
+        for n in ("cx-minutes", "cx-review", "cx-prep", "other"):
+            (skills / n).mkdir(parents=True)
+        rows = [{"at": "2026-10-02T08:00:00", "kind": "ask", "skills": ["cx-minutes"]},
+                {"at": "2026-10-11T08:00:00", "kind": "ask", "skills": ["cx-minutes", "cx-review"]},
+                {"at": "2026-10-09T08:00:00", "kind": "ask"}]        # an old line without the key
+        t = {s["skill"]: s for s in usage_report.skills_table(rows, days=7, skills_dir=skills)}
+        self.assertEqual((t["cx-minutes"]["runs"], t["cx-minutes"]["ever"], t["cx-minutes"]["days_since"]), (1, 2, 1))
+        self.assertEqual(t["cx-review"]["days_since"], 1)
+        self.assertEqual((t["cx-prep"]["runs"], t["cx-prep"]["days_since"]), (0, None))
+        self.assertNotIn("other", t)
+        self.assertEqual(usage_report.skills_table(rows, days=1, skills_dir=skills)[-1]["skill"], "cx-prep")
 
 
 class UsageReport(Base):

@@ -65,15 +65,55 @@ def summarise(rows, days=7, today=None) -> list:
     return out
 
 
+def skill_names(skills_dir=None) -> list:
+    """The cx-* skill folders in .claude/skills/ (read only)."""
+    d = Path(skills_dir) if skills_dir else paths.ROOT / ".claude" / "skills"
+    return sorted(p.name for p in d.iterdir() if p.is_dir() and p.name.startswith("cx-")) if d.is_dir() else []
+
+
+def skills_table(all_rows, days=7, today=None, skills_dir=None) -> list:
+    """One dict per skill: runs in the last `days` days, runs ever, and days since it last ran (the whole file, not --days).
+    A cx-* skill never seen has runs 0 and days_since None ("never run"). Old lines without "skills" count as none."""
+    today = today or _today()
+    first = (today - timedelta(days=days - 1)).isoformat()
+    seen = {}
+    for r in all_rows:
+        day = str(r["at"])[:10]
+        for name in r.get("skills") or []:
+            s = seen.setdefault(name, {"runs": 0, "ever": 0, "last": ""})
+            s["ever"] += 1
+            s["last"] = max(s["last"], day)
+            if first <= day <= today.isoformat():
+                s["runs"] += 1
+    for name in skill_names(skills_dir):
+        seen.setdefault(name, {"runs": 0, "ever": 0, "last": ""})
+    out = [{"skill": n, "runs": s["runs"], "ever": s["ever"],
+            "days_since": (today - datetime.strptime(s["last"], "%Y-%m-%d").date()).days if s["last"] else None}
+           for n, s in seen.items()]
+    out.sort(key=lambda s: (s["days_since"] is None,s["days_since"] or 0, s["skill"]))
+    return out
+
+
+def print_skills(all_rows, days) -> None:
+    """The skills section: runs in --days, and days since last run over the whole file."""
+    print(f"\nSkills (runs in the last {days} days; days since last run uses the whole file)")
+    print(f"{'Skill':<28}{'Runs':>6}{'Ever':>6}{'Days since':>12}")
+    for s in skills_table(all_rows, days):
+        since = "never run" if s["days_since"] is None else str(s["days_since"])
+        print(f"{s['skill']:<28}{s['runs']:>6}{s['ever']:>6}{since:>12}")
+
+
 def main(argv=None) -> int:
     """Print the report."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--file")
     a = ap.parse_args(argv)
-    rows = summarise(load(a.file), a.days)
+    every = load(a.file)
+    rows = summarise(every, a.days)
     if not rows:
         print("No runs recorded in that time.")
+        print_skills(every, a.days)
         return 0
     print(f"{'Day':<11}{'Kind':<10}{'Runs':>5}{'Tokens':>10}{'Avg':>9}{'Start min/med/max':>22}{'Start share':>12}{'Cost $':>9}")
     for s in rows:
@@ -84,6 +124,7 @@ def main(argv=None) -> int:
     cost = sum(s["cost_usd"] for s in rows)
     med = statistics.median([s["start_median"] for s in rows for _ in range(s["runs"])])
     print(f"Total: {n} runs, ${cost:.2f}, start load about {round(med)} tokens a run.")
+    print_skills(every, a.days)
     return 0
 
 
