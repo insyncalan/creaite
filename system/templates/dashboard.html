@@ -47951,8 +47951,8 @@ ${pre}**Current state title:** ${title}`);
     }, true);
   }
   var mailLink = (e4) => {
-    const a5 = linkAnchor("mailto:" + e4, esc(e4));
-    return raw(a5 || esc(e4));
+    const u5 = linkUrl("mailto:" + e4);
+    return u5 ? html`<a href="${u5}">${e4}</a>` : html`${e4}`;
   };
   var personLink = (n4, label) => !n4 || n4 === "TBC" ? esc(label || n4 || "") : `<a href="#" class="plink2" data-person="${esc(isMe(n4) ? S.me : personOf(n4))}" title="Open ${esc(isMe(n4) ? "My work" : personOf(n4) + "’s page")}">${esc(label || who(n4))}</a>`;
   var RECENT_DEC_DAYS = 90;

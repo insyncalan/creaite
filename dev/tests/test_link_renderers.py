@@ -181,7 +181,8 @@ class CallSites(LiveBrowserCase):
     # Settings › People: the register's mailbox
     def test_a_registers_mailbox_is_linked_only_when_it_is_one_mailbox(self):
         r = self.anchors('mailLink("sam@example.com")')
-        self.assertEqual([(a["href"], a["rel"]) for a in r["a"]], [("mailto:sam@example.com", "noopener noreferrer")])
+        self.assertEqual([(a["href"], a["rel"]) for a in r["a"]], [("mailto:sam@example.com", None)])     # a mailto opens the mail app: no rel
+        self.assertEqual(self.b.eval('mailLink("sam@example.com").s'), '<a href="mailto:sam@example.com">sam@example.com</a>')      # and no target
         for bad in ("a@b.example,c@d.example", "javascript:alert(1)", "x@y.example?bcc=z@evil.example", "<img src=x onerror=alert(1)>"):
             with self.subTest(bad=bad):
                 r = self.anchors("mailLink(%s)" % json.dumps(bad))
@@ -254,6 +255,7 @@ INTERNAL_HREFS = [
     ("components/notes/NoteEditor.jsx", "`creaite:person/${encodeURIComponent(o.id)}`", 1, "a person link in a note: creaite's own address, never opened as a web address"),
     ("core/itemLink.js", "`creaite:item/${id}`", 1, "a work item link in a note: creaite's own address, never opened as a web address"),
     ("core/editorLink.js", 'String(m.attrs.href || "")', 1, "reads a link already in the document into the popover's state; opened only through linkUrl"),
+    ("settings.js", "${u}", 1, "mailLink: u is linkUrl(\"mailto:\" + e), declared on the same line"),
     ("components/prep/PrepPage.jsx", "href", 1, "`href` is sourceHref(s), declared on the line above"),
     ("components/prep/PrepShape.jsx", "href", 1, "`href` is sourceHref(s), declared on the line above"),
     ("components/today/ToDecide.jsx", "href", 1, "`href` is linkUrl(r.link), declared at the top of TdLine"),

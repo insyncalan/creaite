@@ -16,7 +16,7 @@ import { MoreSettings } from "./components/settings/MoreSettings.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { openPath } from "./core/fields.js";
-import { linkAnchor } from "./core/linkUrl.js";
+import { linkAnchor, linkUrl } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
@@ -617,8 +617,8 @@ export function pfBind(){ const body=$("#settingsBody"), inMgr=e=>e.target.close
 
 
 /* links both ways: an owner name opens that person's page; Alan's own page is My work */
-/* a person's address from the register, as a mail link when it is one mailbox (core/linkUrl.js judges it), else as plain text */
-export const mailLink=e=>{ const a=linkAnchor("mailto:"+e,esc(e)); return raw(a||esc(e)); };
+/* a person's address from the register, as a plain mail link when it is one mailbox (core/linkUrl.js judges it), else as plain text */
+export const mailLink=e=>{ const u=linkUrl("mailto:"+e); return u?html`<a href="${u}">${e}</a>`:html`${e}`; };   /* a mailto opens the mail app: no target, no rel */
 export const personLink=(n,label)=>!n||n==="TBC"?esc(label||n||""):`<a href="#" class="plink2" data-person="${esc(isMe(n)?S.me:personOf(n))}" title="Open ${esc(isMe(n)?"My work":personOf(n)+"’s page")}">${esc(label||who(n))}</a>`;
 
 /* BL-56: the People view and a page per person. Counts only: no scores, ratings or on-time percentages. */
