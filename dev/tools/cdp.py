@@ -274,7 +274,8 @@ class Browser:
 
     def _where(self):
         """The page's state, for a timeout or a failed test: URL, focus, visibility, the active element, the selection, open dialogs,
-        the note save line, the snack bar, the scroll position and the last 5 console or page errors (extends, never replaces, the page errors line)."""
+        the note save line, the snack bar,
+        the scroll position and the last 5 console or page errors (extends, never replaces, the page errors line)."""
         try:
             state = "page state: " + json.dumps(self.eval(self.WHERE_JS, wait=False))
         except Exception as e:                        # the page may be gone; a timeout still reports what it was waiting for
@@ -309,7 +310,8 @@ class Browser:
         the element itself, not on something that merely contains it. A miss says what was there instead (hit_report)."""
         self.wait(f"!!({json.dumps(selector)} && document.querySelector({json.dumps(selector)}))", 10)
         pos = self.box(selector)
-        if pos and not exact:       # #202: scrolling it into view can change the layout (the report header hides on a scroll down): measure again
+        # #202: scrolling it into view can change the layout (the report header hides on a scroll down): measure again
+        if pos and not exact:
             self.frames(2)
             pos = self.eval("""(()=>{ const e=document.querySelector(%s); const r=e&&e.getBoundingClientRect();
               return r&&r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()""" % json.dumps(selector)) or pos   # no second scroll
