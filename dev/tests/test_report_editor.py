@@ -512,7 +512,9 @@ class SheetBarTests(SheetCase):
           e.style.cssText = 'position:absolute;margin:0;padding:0;border:0;left:' + (({left} - r.left) / k) + 'px;top:' + (({top} - r.top) / k) + 'px;width:' + ({width} / k) + 'px;height:' + ({height} / k) + 'px';
           pg.appendChild(e); }})()""")
 
-    def test_opening_the_link_form_makes_the_bar_taller_never_wider_and_keeps_its_buttons_inside_it(self):
+    def test_the_link_form_is_a_popover_that_leaves_the_bar_as_it_was_when_it_closes(self):
+        """#120 moved the link form out of the bar (it was a row inside it that made the bar taller): the popover takes the focus, so the bar is put away
+        while it is open and comes back, the same width and in the same place, when Esc closes it."""
         b = self.b
         for width, zooms in ((1400, 0), (900, 8)):
             with self.subTest(window=width):
@@ -523,26 +525,28 @@ class SheetBarTests(SheetCase):
                 self.open_bar()
                 before = b.eval(self.PLACE)
                 b.click(f"{BAR} [data-nt=link]")
-                b.wait(f"!document.querySelector({JQ(BAR + ' .rtelink')}).hidden")
+                b.wait("!!document.querySelector('.linkpop')", 5)
+                b.pump(0.3)
+                self.assertEqual(b.eval(f"document.querySelectorAll({JQ(BAR)}).length"), 0, "the bar is put away while the form has the focus")
+                b.key("Escape")
+                b.wait("!document.querySelector('.linkpop')", 5)
+                b.wait(f"!!document.querySelector({JQ(BAR)})", 5)
                 b.pump(0.3)
                 after = b.eval(self.PLACE)
-                self.assertLessEqual(abs(after["width"] - before["width"]), 3, "the form is a row of its own: the bar does not grow sideways")
-                self.assertGreater(after["height"], before["height"])
-                out = b.eval(f"""(() => {{ const bar = document.querySelector({JQ(BAR)}), r = bar.getBoundingClientRect();
-                  return [...bar.querySelectorAll('.rtelink input, .rtelink button')].filter(x => {{ const q = x.getBoundingClientRect();
-                    return q.right > r.right + 1 || q.left < r.left - 1 || q.bottom > r.bottom + 1 || q.top < r.top - 1; }}).map(x => x.textContent || x.placeholder); }})()""")
-                self.assertEqual(out, [], "Add, Remove link and Cancel stay inside the bar")
+                self.assertLessEqual(abs(after["width"] - before["width"]), 3, "the bar is no wider than it was")
+                self.assertLessEqual(abs(after["height"] - before["height"]), 3, "and no taller")
+                self.assertEqual(after["spot"], before["spot"])
                 b.eval("document.activeElement && document.activeElement.blur()")
 
-    def test_the_bar_picks_its_spot_again_when_the_link_form_makes_it_taller(self):
+    def test_the_bar_picks_its_spot_again_when_it_changes_size(self):
         b = self.b
         self.open_bar()
         short = b.eval(self.PLACE)
-        # a control that only the taller bar would reach: 20 px beyond the short bar, on the side it grows towards, across the whole sheet
+        # a control that only a taller bar would reach: 20 px beyond the short bar, on the side it grows towards, across the whole sheet
         top = short["top"] - 25 if short["spot"][0] == "a" else short["bottom"] + 15
         self.put("button", 0, top, 1400, 8)
-        b.click(f"{BAR} [data-nt=link]")
-        b.wait(f"!document.querySelector({JQ(BAR + ' .rtelink')}).hidden")
+        # a size change the bar can have (a narrow window wrapping its groups, a zoom): here a row added to the bar itself, so only the observer sees it
+        b.eval(f"""(() => {{ const bar = document.querySelector({JQ(BAR)}), r = document.createElement('div'); r.id = 'extra'; r.style.cssText = 'width:10px;height:70px'; bar.appendChild(r); }})()""")
         b.wait(f"document.querySelector({JQ(self.SECTION + ' .sheet-edwrap')}).dataset.bar !== {JQ(short['spot'])}", 5)
         tall = b.eval(self.PLACE)
         blocker = b.eval("(() => { const q = document.getElementById('blocker').getBoundingClientRect(); return [q.top, q.bottom]; })()")
