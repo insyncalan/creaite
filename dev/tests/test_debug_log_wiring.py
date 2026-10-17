@@ -453,6 +453,12 @@ from live_browser import LiveBrowserCase  # noqa: E402
 class DashboardDiagnostics(LiveBrowserCase):
     """The page's error hook, the errors banner (BL-180; it replaced the quiet link in the top bar), and Settings › Diagnostics, in a real browser."""
 
+    follow_pin = False         # #178: the debug log is stamped with the real clock, so the server and the page keep the real clock too
+
+    @classmethod
+    def server_env(cls):
+        return {"CREAITE_NOW": ""}
+
     def log_text(self):
         out = ""
         for p in sorted((self.v.root / "system" / "logs").glob("debug-*.log")):

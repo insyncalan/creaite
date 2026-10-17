@@ -57,6 +57,7 @@ def free_port():
 class LiveBrowserCase(unittest.TestCase):
     shared_server = False      # True: one vault and server for the whole class (tests must not change data)
     width, height = 1400, 1000
+    follow_pin = True          # #178: with CREAITE_NOW set, the page clock is pinned to it too (False: a test about the real clock)
     reduced_motion = True      # BL-136: the page loads with the system's reduced motion on (a motion test sets False)
 
     @classmethod
@@ -146,7 +147,7 @@ class LiveBrowserCase(unittest.TestCase):
             try:
                 self.b.goto(self.base + "/")
                 self.b.wait("typeof go==='function' && LIVE")
-                if os.environ.get("CREAITE_NOW"):      # #178: the page's clock agrees with the pinned server and data
+                if self.follow_pin and os.environ.get("CREAITE_NOW"):      # #178: the page's clock agrees with the pinned server and data
                     pin_page_clock(self.b, os.environ["CREAITE_NOW"][:16])
                 break
             except ConnectionError:

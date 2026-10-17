@@ -30,11 +30,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
-from test_dashboard import now as pinned_clock, today as pinned_today  # noqa: E402
+from test_dashboard import today as pinned_today  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 TODAY = pinned_today().isoformat()
+REAL_DAY = date.today().isoformat()      # live_server.plain_chat_id names the day's history chat from the real clock (CREAITE_NOW does not move it)
 
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys, time
@@ -112,7 +113,7 @@ def start(name):
     if name == "load":
         return L.Handler.transcript_run(h, {"id": "t1"}, "load")
     if name == "sweep":
-        return L.RUNS[L.start_catchup(pinned_clock())["run"]["id"]]
+        return L.RUNS[L.start_catchup(datetime.now())["run"]["id"]]
     raise SystemExit(name)
 
 out = {}
@@ -231,7 +232,7 @@ class Server(unittest.TestCase):
         self.assertTrue(any(e["type"] == "text" for e in evs))
 
     def test_the_history_keeps_the_plain_lines_never_the_prompt(self):
-        f = self.v.root / f"system/staging/ask/runs-{TODAY}.json"
+        f = self.v.root / f"system/staging/ask/runs-{REAL_DAY}.json"
         rec = json.loads(f.read_text(encoding="utf-8"))
         raw = f.read_text(encoding="utf-8")
         self.assertTrue(rec["title"].startswith("Runs creaite started"))
@@ -410,7 +411,7 @@ class Panel(LiveBrowserCase):
         _, t = self.started_elsewhere("/api/prep/page", {"key": "09:00|ABC weekly"})
         t.join(60)
         self.post("/api/ask/ack", {"run": self.post("/api/ask/running", {})["run"]["id"]})
-        self.b.eval(f"openChat(); loadChat('runs-{TODAY}')")
+        self.b.eval(f"openChat(); loadChat('runs-{REAL_DAY}')")
         d = self.drawn()
         self.assertTrue(d["you"][-1].startswith("Prep page for ABC weekly, "))
         self.assertIn("Saved the prep page in Example Programme › agendas", d["replies"][-1])
@@ -435,7 +436,7 @@ class Panel(LiveBrowserCase):
         self.drawn()
         self.decorated()
         self.assertEqual(self.b.eval(self.EDITS), [True, False])        # Alan's "How is ABC?", then the Prep page's ask
-        self.b.eval(f"loadChat('runs-{TODAY}')")                        # the history draws it the same way
+        self.b.eval(f"loadChat('runs-{REAL_DAY}')")                        # the history draws it the same way
         self.drawn()
         self.decorated()
         self.assertEqual(self.b.eval(self.EDITS)[-1], False)
