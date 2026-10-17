@@ -38,6 +38,12 @@ export async function hsAsk(code, audience, o = {}) {
   return d ? { ok: true, d } : { ok: false, message: "The suggestion couldn't be read; nothing changed" };
 }
 
+/** The suggestion compared with the health the page shows (the client sheet's own flag, not the tracker's): "you have" and `differs`
+    follow that flag. @param {HealthSuggestion} d @param {string} [shown] @returns {HealthSuggestion} */
+export function hsAgainst(d, shown) {
+  return shown ? { ...d, differs: shown !== d.health, current: { ...d.current, health: shown } } : d;
+}
+
 /** The sentence that flags a difference, or "" when the facts agree. @param {HealthSuggestion} d */
 export const hsDiffLine = d => d.differs ? `The facts suggest ${d.health}, you have ${d.current.health || "no health set"}.` : "";
 /** The CSS class of a health, for its chip. @param {string} h */

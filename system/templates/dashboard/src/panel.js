@@ -201,7 +201,7 @@ export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
   shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
-export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); HSG=null; shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
+export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); HSG=null; HSUSED=null; shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
 export function curObj(){ return shared.CUR.mode==="record"?REC(shared.CUR.k,shared.CUR.id):shared.CUR.draft; }
 export const PKK=["actions","raid","decisions"];   /* declared before drawPanel, which runs at load */
 export const pkNew=()=>!!(shared.CUR&&(shared.CUR.mode==="new"||shared.CUR.mode==="msnew"));   /* declared before drawPanel, which runs at load */
@@ -1281,13 +1281,16 @@ export function hSugDraw(){ const ev=$("#hEvidence"); if(!ev||!shared.CUR||share
   const c=HSG&&HSG.code===shared.CUR.code?HSG:null;
   putHTML(host,raw(c?(c.d?hsCardHtml(c.d,c.reason):c.html):"")); }
 function hsClose(rejected){ if(rejected&&HSG&&HSG.d) hsStat("rejected"); HSG=null; hSugDraw(); const b=$("#pFields [data-hsuggest]"); if(b) b.focus(); }
+/** @type {any} */ let HSUSED=null;                       /* {suggested}: Use filled the form; counted when the form is saved, not before */
 function hsFill(){ const c=HSG; if(!c||!c.d) return false; const hs=$("#f_health"), rs=$("#f_reason"); if(!hs||!rs) return false;
-  hs.value=c.d.health; hs.dispatchEvent(new Event("change",{bubbles:true})); rs.value=c.reason; rs.dispatchEvent(new Event("input",{bubbles:true}));
-  hsStat(hsUse(c.reason,c.d.reason)); HSG=null; hSugDraw(); return true; }
+  hs.value=c.d.health; hs.dispatchEvent(new Event("change",{bubbles:true}));
+  if(rs.value!==c.base) snack("Your reason was kept: you changed it while the suggestion was being written");   /* never overwritten silently */
+  else { rs.value=c.reason; rs.dispatchEvent(new Event("input",{bubbles:true})); }
+  HSUSED={suggested:c.d.reason}; HSG=null; hSugDraw(); return true; }
 async function hsRun(){ if(!shared.CUR||shared.CUR.mode!=="health") return; const b=$("#pFields [data-hsuggest]");
   if(b&&b.getAttribute("aria-disabled")==="true"){ snack(b.dataset.tip||"Drafting isn't available"); return; }
   const why=draftWhyNot("health"); if(why){ snack(why); return; }
-  const code=shared.CUR.code, mine={code,html:"",d:null,reason:""}; HSG=mine;
+  const code=shared.CUR.code, mine={code,html:"",d:null,reason:"",base:$("#f_reason")?.value??""}; HSG=mine;
   const res=await hsAsk(code,"internal",{status:h=>{ if(HSG===mine){ mine.html=h?`<div class="drstatus" role="status">${h}</div>`:""; hSugDraw(); } }});
   if(HSG!==mine) return;
   if(res.nothing){ mine.html=`<div class="drnone" role="status">${esc(res.nothing)}</div>`; hSugDraw(); return; }
@@ -1320,6 +1323,7 @@ $("#pFields").addEventListener("click",e=>{ const s=e.target.closest("[data-hsug
   if(!HSG||!HSG.d) return; if(hsFill()){ if(w==="save") $("#pSave").click(); else { const t=$("#f_reason"); if(t) t.focus(); } } });
 $("#pFields").addEventListener("input",e=>{ if(HSG&&e.target.id==="hsgReason") HSG.reason=e.target.value; });
 $("#pFields").addEventListener("keydown",e=>{ if(e.key==="Escape"&&e.target.closest&&e.target.closest("#hSug")&&HSG&&HSG.d){ e.preventDefault(); e.stopPropagation(); hsClose(true); } });
+$("#pFoot").addEventListener("click",e=>{ if(!HSUSED||!e.target.closest("#pSave")) return; hsStat(hsUse($("#f_reason")?.value,HSUSED.suggested)); HSUSED=null; },true);   /* #203: used or edited, once the form is saved */
 /* counted when the form is saved (used or edited) or left (rejected) */
 $("#pFoot").addEventListener("click",e=>{ if(!shared.DRH||!shared.DRH.used||!e.target.closest("#pSave")) return; draftStat("reason",drSame($("#f_reason")?.value,shared.DRH.used)?"used":"edited"); shared.DRH=null; },true);
 document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drfc]"), u=e.target.closest("#mvFcDraft [data-drdo]");

@@ -26,7 +26,7 @@ REPLY = {"health": "At risk", "reason": "Two actions are overdue and UAT start h
          "evidence": [{"ref": "ABC-A-001", "text": "is overdue"}, {"ref": "ABC-M-001", "text": "forecast later than agreed"}],
          "audience": "internal"}
 
-STUB = """(()=>{ const f=window.fetch, st=window.__hs={calls:[],posts:[],reply:%s,nothing:'',fail:false};
+STUB = """(()=>{ const f=window.fetch, st=window.__hs={calls:[],posts:[],reply:%s,nothing:'',fail:false,delay:0};
   window.fetch=function(u,o){ const url=String(u);
     if(o&&o.method==='POST') st.posts.push(url);
     if(url==='/api/draft'&&o&&o.body){ const body=JSON.parse(o.body);
@@ -34,7 +34,8 @@ STUB = """(()=>{ const f=window.fetch, st=window.__hs={calls:[],posts:[],reply:%
         const ev=st.fail?[{type:'error',message:'The model did not answer'},{type:'draft',ok:false,message:'No draft came back'},{type:'done'}]
           :st.nothing?null:[{type:'draft',ok:true,...st.reply},{type:'done'}];
         if(!ev) return Promise.resolve(new Response(JSON.stringify({ok:true,nothing:st.nothing}),{headers:{'Content-Type':'application/json'}}));
-        return Promise.resolve(new Response(ev.map(e=>'data: '+JSON.stringify(e)+'\\n\\n').join(''),{headers:{'Content-Type':'text/event-stream'}})); } }
+        const resp=new Response(ev.map(e=>'data: '+JSON.stringify(e)+'\\n\\n').join(''),{headers:{'Content-Type':'text/event-stream'}});
+        return new Promise(r=>setTimeout(()=>r(resp),st.delay)); } }
     return f.apply(this,arguments); }; })()"""
 
 
@@ -120,12 +121,80 @@ class HealthSuggest(LiveBrowserCase):
         for _ in range(60):
             if self.health()[0] == "At risk":
                 break
-            b.wait("true", 1)
+            time.sleep(0.25)
         self.assertEqual(self.health(), ("At risk", REPLY["reason"] + " Edited."))
-        saves = b.eval("window.__hs.posts.filter(u=>/apply|stage|propose|save/.test(u)&&!u.includes('/draft'))")
-        self.assertEqual(len(saves), len(set(saves)) if saves else 0)
-        self.assertLessEqual(len(saves), 2)                                                                              # one save: a stage and its apply
+        self.assertEqual(len(self.saves()), 1, self.saves())                                                              # one save, not two
+        self.counted_event("edited", 1)                                                                                         # counted when saved, once
         self.assertEqual(b.errors, [])
+
+    def saves(self):
+        """The applies the page sent: a save stages with /api/fs and applies once with /api/apply."""
+        return self.b.eval("window.__hs.posts.filter(u=>u==='/api/apply')")
+
+    def counted_event(self, event, n):
+        for _ in range(40):
+            if self.stats_reason().get(event, 0) >= n:
+                break
+            time.sleep(0.25)
+        time.sleep(0.5)
+        self.assertEqual(self.stats_reason().get(event, 0), n)
+
+    def test_a_real_double_press_of_the_card_save_saves_once(self):
+        b = self.b
+        self.suggest()
+        b.eval("(()=>{ const x=document.querySelector('#hSug [data-hsdo=save]'); x.click(); x.click(); })()")
+        b.wait("!document.getElementById('panel').classList.contains('on')")
+        for _ in range(60):
+            if self.health()[0] == "At risk":
+                break
+            time.sleep(0.25)
+        time.sleep(1)
+        self.assertEqual(self.health(), ("At risk", REPLY["reason"]))
+        self.assertEqual(len(self.saves()), 1, self.saves())
+        self.assertEqual(b.errors, [])
+
+    def test_save_while_the_suggestion_is_loading_saves_once_and_the_late_answer_changes_nothing(self):
+        b = self.b
+        self.open_form()
+        b.eval("window.__hs.delay=1200")
+        b.click("#pFields [data-hsuggest]")
+        b.eval("(()=>{ const r=document.getElementById('f_reason'); r.value='Written while it loaded.'; r.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.click("#pSave")
+        b.wait("!document.getElementById('panel').classList.contains('on')")
+        time.sleep(2)                                                                                                     # the late answer arrives
+        for _ in range(40):
+            if self.health()[1] == "Written while it loaded.":
+                break
+            time.sleep(0.25)
+        self.assertEqual(self.health()[1], "Written while it loaded.")
+        self.assertEqual(len(self.saves()), 1, self.saves())
+        self.assertFalse(b.eval("!!document.querySelector('#hSug .drcard')"))
+        self.assertEqual(b.errors, [])
+
+    def test_use_counts_only_when_the_form_is_saved_not_when_it_is_cancelled(self):
+        b = self.b
+        self.suggest()
+        b.click("#hSug [data-hsdo=use]")
+        b.click("#pCancel")
+        time.sleep(1)
+        self.assertEqual((self.stats_reason().get("used", 0), self.stats_reason().get("edited", 0)), (0, 0))
+        self.suggest()
+        b.click("#hSug [data-hsdo=use]")
+        b.eval("document.getElementById('pSave').click()")                                                                # the run badge covers the button
+        self.counted_event("used", 1)
+
+    def test_use_keeps_a_reason_alan_wrote_while_the_suggestion_was_loading(self):
+        b = self.b
+        before = self.health()
+        self.open_form()
+        b.eval("window.__hs.delay=800")
+        b.click("#pFields [data-hsuggest]")
+        b.eval("(()=>{ const r=document.getElementById('f_reason'); r.value='Alan wrote this.'; r.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.wait("document.querySelector('#hSug .drcard')", 15)
+        b.click("#hSug [data-hsdo=use]")
+        b.wait("document.getElementById('f_health').value==='At risk'")
+        self.assertEqual(b.eval("document.getElementById('f_reason').value"), "Alan wrote this.")                       # not overwritten silently
+        self.assertEqual(self.health(), before)
 
     def test_reject_clears_and_counts_and_esc_does_the_same_and_returns_focus(self):
         b = self.b
@@ -204,12 +273,36 @@ class ReportRow:
         b = self.b
         self.suggest()
         self.assertEqual(b.eval(f"document.querySelector('{self.section} [data-hflag]').textContent"), "At risk")
-        self.assertIn("The facts suggest At risk, you have On track.", b.eval(f"document.querySelector('{self.section} .sheet-hdiff').textContent"))
+        self.assertEqual(b.eval(f"document.querySelector('{self.section} .sheet-hdiff').textContent"), f"The facts suggest At risk, you have {self.shown_flag()}.")
         self.assertEqual(b.eval(f"[...document.querySelectorAll('{self.section} .sheet-hwhy li')].map(l=>l.textContent.trim())"),
                          ["ABC-A-001 is overdue", "ABC-M-001 forecast later than agreed"])
         self.assertEqual(b.eval(f"[...document.querySelectorAll('{self.section} .sheet-hwhy button')].map(x=>x.textContent)"), ["ABC-A-001", "ABC-M-001"])
         self.assertEqual(b.eval(f"[...document.querySelectorAll('{self.section} .sheet-rdb button')].map(x=>x.textContent)"), ["Reject", "Use"])
         self.assertEqual(b.errors, [])
+
+    flag_sel = ".wr-flag"
+
+    def shown_flag(self):
+        """The flag the sheet shows, in the tracker's words (the page draws it in capitals)."""
+        t = self.b.eval(f"document.querySelector('{self.section} {self.flag_sel}').textContent").lower()
+        return next(h for h in ("On track", "At risk", "Off track") if h.lower() == t)
+
+    def test_the_difference_is_measured_against_the_flag_the_sheet_shows(self):
+        b = self.b
+        self.open_report()
+        flag = self.shown_flag()
+        other = next(h for h in ("On track", "At risk", "Off track") if h != flag)
+        tracker = next(h for h in ("On track", "At risk", "Off track") if h not in (flag, other))             # what projects.health says: not the sheet's flag
+        b.eval(STUB % json.dumps({**REPLY, "health": other, "differs": False, "current": {"health": tracker, "reason": ""}}))
+        b.click(f"{self.section} .sheet-spark")
+        b.wait(f"document.querySelector('{self.section} .sheet-redraft [data-hflag]')", 15)
+        self.assertEqual(b.eval(f"document.querySelector('{self.section} .sheet-hdiff').textContent"), f"The facts suggest {other}, you have {flag}.")
+        b.click(f"{self.section} .sheet-rdb button")
+        b.wait(f"!document.querySelector('{self.section} .sheet-redraft')")
+        b.eval(STUB % json.dumps({**REPLY, "health": flag, "differs": True, "current": {"health": tracker, "reason": ""}}))
+        b.click(f"{self.section} .sheet-spark")
+        b.wait(f"document.querySelector('{self.section} .sheet-redraft [data-hflag]')", 15)
+        self.assertFalse(b.eval(f"!!document.querySelector('{self.section} .sheet-hdiff')"))                      # it agrees with the sheet
 
     def test_reject_changes_nothing_and_counts_and_esc_gives_the_focus_back(self):
         b = self.b
@@ -267,6 +360,7 @@ class WeeklyHealthRow(ReportRow, LiveBrowserCase):
 
 class ClientHealthRow(ReportRow, LiveBrowserCase):
     section = "#v-clientreport section[data-id=health]"
+    flag_sel = ".crflag"
 
     @classmethod
     def load(cls, v):
@@ -289,6 +383,11 @@ class ClientHealthRow(ReportRow, LiveBrowserCase):
         b.wait(f"!document.querySelector('{self.section} .sheet-redraft')")
         self.assertEqual(b.eval(f"document.querySelector('{self.section} .crflag').textContent"), "OFF TRACK")
         self.assertTrue(b.eval("!!document.querySelector('#v-clientreport [data-crdif]')"))          # it differs from the internal flag, and says so
+        # the reason the flag differs is Alan's to write: Use records the difference but does not invent the reason
+        b.click("#v-clientreport [data-crflag]")
+        b.wait("document.getElementById('crWhy')")
+        self.assertEqual(b.eval("document.getElementById('crWhy').value"), "")
+        self.assertTrue(b.eval("document.querySelector('[data-crhsave]').disabled"))
         self.assertEqual(b.errors, [])
 
 
