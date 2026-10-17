@@ -50,7 +50,7 @@ NO_GUARD = "(()=>{ noteSave.value={state:'saved'}; return true; })()"
 CLIP = "(()=>{ window.__clip=null; Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async t=>{ window.__clip=t; }}}); return true; })()"
 
 
-# page names these tests use: AUTOSAVE_MS noteFocusClose noteEscape noteFocusOpen noteFlushOnExit notesList noteLeave noteText
+# page names these tests use: AUTOSAVE_MS noteFocusClose noteEscape noteFocusOpen noteFlushOnExit notesList noteLeave noteText createNote
 class AutosavePage(LiveBrowserCase):
     width, height = 1400, 1000
     log, notes_dir, make, type_end = (notes_tab_browser.NotesTab.log, notes_tab_browser.NotesTab.notes_dir, notes_tab_browser.NotesTab.make,
@@ -428,6 +428,9 @@ class AutosavePage(LiveBrowserCase):
         self.assertEqual(b.eval(f"openNote({json.dumps(other)})"), False)
         self.assertEqual(b.eval("noteCur.value.note.title"), "Erroring", "not opened over unsaved text")
         self.assertIn("stays open", b.eval("notesMsg.value"))
+        self.assertIsNone(b.eval("createNote('ABC',{template:'blank',title:'Not over it'})"), "nor is a new note made over it")
+        self.assertFalse((self.notes_dir() / "Not over it.md").exists(), "refused before anything is made")
+        self.assertEqual(b.eval("noteCur.value.note.title"), "Erroring")
         self.assertIn("held text", b.eval("document.querySelector('.nbody').textContent"))
         self.assertNotIn("held text", f.read_text())
         b.eval("window.__fail=null")
