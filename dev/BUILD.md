@@ -139,7 +139,7 @@ Open this folder in the Code tab of the Claude desktop app and work through the 
 > - **BL-31:** Current state edited full width, in a stretchable box, with the panel widened to 640px while editing.
 > - **BL-32:** History is a dropdown of the 10 most recent chats over the current chat; starting an 11th deletes the oldest.
 > - **BL-34:** "Run report now" at the top of a report reminder's menu sends its command to Ask creaite (greyed out without the live server).
-> - **BL-33:** a Stop button in place of Send while a request runs (Esc too); read-only requests stop at once, a confirmed write after its running step; the live server ends `claude -p` on Stop or when the page goes away; the stopped exchange is kept, marked.
+> - **BL-33:** a Stop button in place of Send while a request runs (Esc too) (Esc removed, #130); read-only requests stop at once, a confirmed write after its running step; the live server ends `claude -p` on Stop or when the page goes away; the stopped exchange is kept, marked.
 
 **Check:** the tests pass; each works in the live dashboard.
 
@@ -613,7 +613,7 @@ Brief: `dev/archive/sprints/icons.md`; design: `dev/mockups/icons-mockup.html` (
 
 - Project page foot: **Weekly report** and **Client report** (page icon and word, named "Draft weekly report", "Draft client report") and Browse files (folder). Person page: Edit details (pencil; no E key, which is the panel's), **Draft email** (envelope), **Hand over…** (bent arrow). Prep: **Prep page** (spark; its old `title` is now its tooltip), Open last prep page (arrow out of a box), **One-pager** and **Client-safe one-pager** (page icon; named "Draft the one-pager", "Draft the client-safe one-pager").
 - Rows: Files' Open folder; Intake's Preview (eye) and Remove from Intake (bin); Settings › People and the register lists' Edit details or Add details (pencil), Rename (T), Restore (curved arrow), Remove from list or Retire (bin); Activity's Undo this change and Undo this apply; Settings' Copy the command (ticks for a second: `copied()` calls `icTick` for an icon button), Check now (circular arrow), Reset column widths and order (curved arrow).
-- ask creaite: Send is a round accent button with an up arrow (Enter) and becomes the stop square (Esc) while a run is going, one button (`setRunning`); close is the x.
+- ask creaite: Send is a round accent button with an up arrow (Enter) and becomes the stop square while a run is going (Esc does not stop it, #130), one button (`setRunning`); close is the x.
 
 ### Departures and choices (on Alan's behalf)
 

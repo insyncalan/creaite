@@ -6,6 +6,9 @@ with a stand-in `claude` whose runs can be held part-way (a "gated" message wait
 - A reload draws the chat in one step: no step-by-step replay (no working line, no words fading in) of what had arrived.
 - /api/ask/attach takes a sequence number and sends only newer events; the history says how far it reaches.
 - The greeting appears at once.
+- #130: Esc never stops a run. In the chat box it closes the panel and the run carries on (the top-bar button keeps its working
+  dot, reopening or a reload shows the run); Esc with no run just closes; the Stop button is the only thing that stops one.
+  At 1400px and at 900px.
 
 Run: python3 dev/tests/test_ask_reopen.py   (needs Google Chrome; skipped otherwise)
 """
@@ -20,6 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
+
+CHAT_ON = "document.getElementById('chat').classList.contains('on')"
 
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys, time
@@ -204,6 +209,121 @@ class AskReopen(LiveBrowserCase):
         self.assertNotIn("seq", plain[0])                                    # unnumbered unless asked: other readers are unchanged
         self.assertEqual(len(plain), len(later))
         self.post("/api/ask/ack", {"run": "r-test-dddddd"})
+
+
+    # ── #130: Esc never stops a run ──
+    def watch_stops(self):
+        """Count the calls to /api/ask/stop the page makes."""
+        self.b.eval("window.STOPS=0; const f=window.fetch; window.fetch=function(u,o){ if(String(u).includes('/api/ask/stop')) STOPS++; return f.apply(this,arguments); }; 1")
+
+    def start_gated(self, name):
+        b = self.b
+        b.eval("openChat()")
+        b.eval(f"$('#chIn').value='gated {name}'; send()", wait=False)
+        b.wait(f"[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part one of {name}'))", 20)
+        b.eval("$('#chIn').focus()")
+        self.assertTrue(b.eval("!!RUN && document.getElementById('chSend').getAttribute('aria-label')==='Stop'"))
+
+    def esc_with_a_run(self, name):
+        b = self.b
+        self.watch_stops()
+        self.start_gated(name)
+        run = b.eval("RUN.id")
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        b.pump(0.6)
+        self.assertEqual(b.eval("STOPS"), 0, "Esc called /api/ask/stop")
+        self.assertTrue(b.eval("!!RUN && !RUN.stopping"), "Esc stopped the run")
+        self.assertTrue(b.eval("document.getElementById('askBtn').classList.contains('working')"), "the top-bar button shows no run while the panel is closed")
+        self.assertEqual(b.eval("[document.getElementById('askBtn').getAttribute('aria-label'), document.getElementById('askBtn').title]"),
+                         ["ask creaite (working)"] * 2, "the working state has no accessible name")
+        self.assertEqual(self.post("/api/ask/running", {})["run"]["id"], run)           # the server is still running it
+        b.eval("openChat()")                                                             # reopening shows it, still going
+        self.assertTrue(b.eval("!!RUN && document.getElementById('chSend').getAttribute('aria-label')==='Stop'"))
+        self.release(name)
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of %s'))" % name, 20)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.stopped').length"), 0)
+        b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)   # cleared when it ends
+        self.assertEqual(b.eval("[document.getElementById('askBtn').getAttribute('aria-label'), document.getElementById('askBtn').title]"), [None, ""])
+        self.assertEqual(b.eval("STOPS"), 0)
+
+    def test_esc_in_the_box_with_a_run_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_with_a_run("e")
+
+    def test_esc_with_a_run_at_900px_wide(self):
+        self.b.call("Emulation.setDeviceMetricsOverride", width=900, height=900, deviceScaleFactor=1, mobile=False)
+        self.esc_with_a_run("f")
+
+    def test_esc_with_a_run_then_a_reload_reattaches_and_shows_it_going(self):
+        b = self.b
+        self.start_gated("g")
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        self.reload_watched()                                                            # panel closed, page reloaded mid-run
+        b.wait("document.getElementById('askBtn').classList.contains('working')", 20)    # the sign shows before the panel is opened
+        b.eval("openChat()")
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part one of g'))", 20)
+        self.assertTrue(b.eval("document.getElementById('chSend').getAttribute('aria-label')==='Stop'"))
+        self.release("g")
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of g'))", 20)
+        b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)
+
+    def esc_from(self, name, focus_js):
+        """Esc with focus somewhere other than the box: the panel closes, nothing is stopped, the run carries on."""
+        b = self.b
+        self.watch_stops()
+        self.start_gated(name)
+        b.eval(focus_js)
+        self.assertTrue(b.eval("document.getElementById('chat').contains(document.activeElement) && document.activeElement.id!=='chIn'"))
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        b.pump(0.6)
+        self.assertEqual(b.eval("STOPS"), 0, "Esc called /api/ask/stop")
+        self.assertTrue(b.eval("!!RUN && !RUN.stopping"))
+        self.release(name)
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of %s'))" % name, 20)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.stopped').length + STOPS"), 0)
+
+    def test_esc_with_focus_on_the_stop_button_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_from("j", "document.getElementById('chSend').focus()")
+
+    def test_esc_with_focus_in_the_panel_body_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_from("k", "(()=>{ const l=document.getElementById('chLog'); l.tabIndex=-1; l.focus(); })()")
+
+    def test_esc_with_no_run_closes_the_panel(self):
+        b = self.b
+        self.watch_stops()
+        b.eval("openChat(); $('#chIn').focus()")
+        self.assertTrue(b.eval("!RUN && document.getElementById('chSend').getAttribute('aria-label')==='Send'"))
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        self.assertEqual(b.eval("STOPS"), 0)
+
+    def test_esc_on_the_autocomplete_closes_only_the_list_even_with_a_run(self):
+        b = self.b
+        self.start_gated("h")
+        b.eval("$('#chIn').value='/'; $('#chIn').dispatchEvent(new Event('input',{bubbles:true}))")
+        b.wait("!document.getElementById('acMenu').hidden", 10)
+        b.key("Escape")
+        b.wait("document.getElementById('acMenu').hidden", 10)
+        self.assertTrue(b.eval("document.getElementById('chat').classList.contains('on') && !!RUN"))   # the panel stays, the run too
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")                                                                          # the second Esc closes the panel
+        self.assertTrue(b.eval("!!RUN && !RUN.stopping"))
+        self.release("h")
+        b.wait("!RUN", 20)
+
+    def test_the_stop_button_is_the_only_thing_that_stops_a_run(self):
+        b = self.b
+        self.watch_stops()
+        self.start_gated("i")
+        self.assertIsNone(b.eval("document.getElementById('chSend').dataset.key||null"))   # no "Esc" shown on Stop
+        b.click("#chSend")
+        b.wait("STOPS===1 && !RUN", 20)
+        b.wait("document.querySelector('#chLog .step.stopped')", 10)
+        self.assertTrue(b.eval(CHAT_ON))                                                   # the panel stays open
+        b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)
+        self.assertEqual(b.eval("document.getElementById('chSend').dataset.key"), "Enter")
 
 
 if __name__ == "__main__":
