@@ -19,6 +19,7 @@ Closing rules (focus mode, the same live element):
     aria-haspopup: test_shared_behaviour lists it as a deliberate "unreached" exception and these tests drive it instead;
   - Esc closes the topmost overlay first (/ menu, [[ picker, AI bar and suggestion, a registered layer, the date pop-up, the tag box)
     and the next leaves; focus goes back to the control that opened focus mode, else the title.
+The lifted note (#136): the page behind is inert, Tab never leaves the note, and Cmd/Ctrl+Shift+F enters and leaves focus mode.
 """
 import json
 import sys
@@ -739,6 +740,90 @@ class AutosavePage(LiveBrowserCase):
         self.assertGreater(len(last["body"]), 100000)
         b.wait("!noteDirty()", 10)
         self.assertEqual(b.eval("window.__rej"), 0, "no unhandled rejection")
+
+    # ---- #136: the lifted note, the inert page, Tab, Cmd+Shift+F ----
+    def test_tab_never_leaves_the_note_and_the_page_behind_is_inert(self):
+        b = self.b
+        self.make("Trap")
+        self.focus_on()
+        # the page behind is inert; the note, the scrim, dialogs and the overlay layers on the body are not
+        self.assertEqual(b.eval("(()=>{ const n=document.querySelector('.ndoc.nfocus'); let el=n, bad=[]; while(el&&el!==document.body){"
+                                " for(const s of el.parentElement.children){ if(s===el||['SCRIPT','STYLE','DIALOG'].includes(s.tagName)||s.hasAttribute('data-nscrim')||s.querySelector('dialog')) continue;"
+                                " if(el.parentElement===document.body&&!s.matches('#chat,#runBadge')) continue;"
+                                " if(!s.hasAttribute('inert')) bad.push(s.tagName+'.'+s.className); } el=el.parentElement; } return bad.join(','); })()"), "",
+                         "every sibling on the way up from the note is inert")
+        self.assertEqual(b.eval("!!document.querySelector('.ndoc.nfocus').closest('[inert]')"), False)
+        self.assertEqual(b.eval("!!document.querySelector('.nlist').closest('[inert]')"), True, "the notes list is inert")
+        self.assertEqual(b.eval("!!document.querySelector('.crumb').closest('[inert]')"), True, "the breadcrumb is inert")
+        self.assertEqual(b.eval("!!document.getElementById('aiLayer').closest('[inert]')"), False, "the AI layer stays live")
+        # a point on the page behind lands on the scrim, never on the list or the breadcrumb
+        for x, y in ((60, 300), (60, 120)):
+            self.assertEqual(b.eval(f"(()=>{{ const e=document.elementFromPoint({x},{y}); return e&&e.hasAttribute('data-nscrim'); }})()"), True, f"({x},{y}) is the scrim")
+        # Tab and Shift+Tab, many times: focus is never outside the lifted note
+        b.eval("document.getElementById('noteExpand').focus()")
+        seen = set()
+        for i in range(40):
+            b.key("Tab", 8 if i % 5 == 4 else 0)
+            self.assertEqual(b.eval("!!document.activeElement.closest('.ndoc.nfocus')"), True, f"Tab {i} stayed in the note")
+            seen.add(b.eval("document.activeElement.id||document.activeElement.className"))
+        self.assertGreater(len(seen), 2, "Tab really moved between the note's controls")
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")
+        b.key("Tab", 8)
+        self.assertEqual(b.eval("!!document.activeElement.closest('.ndoc.nfocus')"), True)
+        b.click("#noteExpand")                                                        # leaving lifts the inert off
+        b.wait("!noteFocus.value", 10)
+        self.assertEqual(b.eval("document.querySelectorAll('[inert]').length"), 0, "nothing is left inert")
+
+    def test_cmd_shift_f_enters_and_leaves_focus_mode_and_focus_returns_to_the_opener(self):
+        b = self.b
+        self.make("Shortcut")
+        mod = 4 if b.is_mac() else 2
+        self.type_end("some words")
+        b.wait("!noteDirty()", 10)
+        self.assertEqual(b.eval("noteFocus.value"), False)
+        b.key("F", mod | 8)                                                           # from the editor: in
+        b.wait("noteFocus.value&&!!document.querySelector('.ndoc.nfocus')", 5)
+        self.assertEqual(b.eval("document.activeElement===document.querySelector('.nbody')"), True, "the cursor is in the note")
+        b.key("F", mod | 8)                                                           # and out, by the one close path
+        b.wait("!noteFocus.value", 10)
+        self.assertEqual(b.eval("document.querySelector('.ndoc').classList.contains('nfocus')"), False)
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)        # focus returns to the opener: the editor
+        self.assertIn("some words", (self.notes_dir() / "Shortcut.md").read_text())
+        b.eval("document.getElementById('noteTitle').focus()")                        # opened from the title field: back to the title
+        b.key("F", mod | 8)
+        b.wait("noteFocus.value", 5)
+        b.key("F", mod | 8)
+        b.wait("!noteFocus.value", 10)
+        b.wait("document.activeElement.id==='noteTitle'", 5)
+        b.key("F", mod)                                                               # not without the shift
+        b.pump(0.3)
+        self.assertEqual(b.eval("noteFocus.value"), False)
+        f = self.notes_dir() / "Shortcut.md"                                          # a failing save: the same question as Esc, the typing kept
+        b.key("F", mod | 8)
+        b.wait("noteFocus.value", 5)
+        f.write_text(f.read_text() + "\nchanged elsewhere\n")
+        self.type_end("held text")
+        b.key("F", mod | 8)
+        b.wait("document.getElementById('noteLeaveDlg').open", 10)
+        self.assertEqual(b.eval("noteFocus.value"), True)
+        b.key("F", mod | 8)                                                           # while the question is open it does nothing more
+        b.pump(0.3)
+        self.assertEqual(b.eval("noteFocus.value&&document.getElementById('noteLeaveDlg').open"), True)
+
+    def test_the_lifted_note_is_fixed_over_a_scrim_in_both_modes_and_palettes(self):
+        b = self.b
+        self.make("Look")
+        for theme in ("light", "dark"):
+            for pal in ("creaite", "Cursor"):
+                b.eval(f"(()=>{{ document.documentElement.dataset.theme='{theme}'; document.documentElement.dataset.palette='{pal}'; return true; }})()")
+                self.focus_on()
+                r = b.eval("(()=>{ const n=document.querySelector('.ndoc.nfocus'), c=getComputedStyle(n), s=getComputedStyle(document.querySelector('[data-nscrim]')); return {pos:c.position, bg:c.backgroundColor, scrim:s.backgroundColor}; })()")
+                self.assertEqual(r["pos"], "fixed")
+                self.assertNotEqual(r["bg"], "rgba(0, 0, 0, 0)", f"{theme}/{pal}: the note has a surface")
+                self.assertNotEqual(r["scrim"], "rgba(0, 0, 0, 0)", f"{theme}/{pal}: the scrim dims the page")
+                self.assertNotEqual(r["bg"], r["scrim"])
+                b.click("#noteExpand")
+                b.wait("!noteFocus.value", 10)
 
     # ---- Esc layers, focus, the live element ----
     def test_esc_closes_the_topmost_overlay_first_then_leaves_focus_mode(self):
