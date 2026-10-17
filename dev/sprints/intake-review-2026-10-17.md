@@ -81,3 +81,13 @@ Step 1 alone removes most of today's friction without changing what creaite does
 5. **Stage C2 (auto-load): interested, later, or never?** Recommend later, decided with the 13-11 review.
 
 Next, if you agree the direction: a mockup of the queue (Ready, Waiting, Done recently) with the three actions and the result line, in the same style as the Review age mockup, with a state switch for "all ready", "mixed ages", "nothing waiting" and "just processed".
+
+## 7. Alan's answers (17-10-2026)
+
+1. **Load into inbox:** not needed. Load and process happen together; "Later" covers load-now-process-later. Decided.
+2. **Organiser and Where columns:** not needed. They go to the row's detail. Decided.
+3. **ask creaite while Process runs:** yes. A normal Process runs in the background with progress on the row, and ask creaite stays free to use meanwhile (it does not open by itself and is never blocked by the run). Decided.
+4. **Order:** step 1 (A and B) first; step 2 (D and E) as its own item afterwards. Decided.
+5. **Stage C2 (auto-load) and C3 (draft by series):** later. Put in the backlog, to be decided with the 13-11-2026 review of the AI ideas. Not decided.
+
+Mockup of all five changes: `dev/mockups/intake-queue-mockup.html`. Alan liked options 2 and 3 of change C.
