@@ -505,7 +505,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px v
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
-.shell{display:grid;grid-template-columns:var(--rail-w,224px) 1fr;height:100vh}   /* BL-163: the rail's width is one variable */
+.shell{display:grid;grid-template-columns:var(--rail-w,188px) 1fr;height:100vh}   /* BL-163: the rail's width is one variable */
 .rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:stretch;padding:8px 6px;gap:1px}
 .logo{font:700 var(--fs-lg)/1 var(--font);color:var(--accent);margin:4px 0 14px}
 .devtag{display:block;width:max-content;margin:4px auto 0;padding:1px 4px;border:1px solid var(--line);border-radius:var(--r-sm);font:600 var(--fs-2xs)/1.2 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}   /* development repository only */
@@ -1782,12 +1782,12 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .cstbtn:hover{background:var(--sunk)} .cstbtn .csp{width:14px;height:14px;color:var(--muted);opacity:0} .cstbtn:hover .csp,.cstbtn:focus-visible .csp{opacity:1}
 .cstin{font:inherit;letter-spacing:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--accent);border-radius:var(--r-md);padding:0 6px;margin:0 -8px;width:min(100%,30ch);height:30px}
 /* ===== end BL-162 (CSS) ===== */
-/* ===== BL-163 (sprint-rail), BL-319 part 6, #156 ===== the sidebar in three states: expanded (224px, each name beside its icon),
+/* ===== BL-163 (sprint-rail), BL-319 part 6, #156 ===== the sidebar in three states: expanded (188px, each name beside its icon),
    collapsed with labels (76px, each name under its icon; Labels when collapsed, on by default) or collapsed icons only (56px).
    The wordmark in the head is the toggle ("creaite_", "c_" when collapsed). The pages at the top, More at the bottom opening beside
    it (hover or click), Customise sidebar (a modal dialog with two lists). Colour is never the only cue: counts are numbers, the
    current page has its pill, bold name, accent bar and aria-current, and icons only, every icon has its name and the one tooltip. */
-:root{--rail-w:224px} :root.railicons{--rail-w:56px} :root.railicons.raillabels{--rail-w:76px}
+:root{--rail-w:188px} :root.railicons{--rail-w:56px} :root.railicons.raillabels{--rail-w:76px}
 .rail{overflow-y:auto;overflow-x:hidden} .rail button[hidden]{display:none}
 .rail button:focus-visible{outline:3px solid var(--focus);outline-offset:0}
 .railgrp{display:flex;flex-direction:column;align-items:stretch;gap:1px;width:100%}

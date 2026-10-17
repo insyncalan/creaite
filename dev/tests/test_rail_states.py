@@ -4,7 +4,7 @@ the Labels when collapsed setting, in a real browser against the real live serve
 Run: python3 dev/tests/test_rail_states.py   (needs Google Chrome; skipped otherwise)
 
 Done when (the issue's list):
-- expanded 224px (names beside the icons); collapsed 76px with each name under its icon (Labels when collapsed on, the
+- expanded 188px (names beside the icons); collapsed 76px with each name under its icon (Labels when collapsed on, the
   default) or 56px icons only (off); the setting is dashboard.rail_labels, saved to settings.json and kept across a reload; the
   window's first state is expanded at 1200px and wider, collapsed below, and under 900px the rail stays collapsed;
 - the wordmark is the toggle (aria-expanded, "Collapse the rail" / "Expand the rail", Enter and Space, "c_" when collapsed), no
@@ -113,10 +113,13 @@ class RailStates(LiveBrowserCase):
     # ── the three states ──
     def test_expanded_labels_under_icons_and_icons_only(self):
         b = self.b
-        self.assertEqual(self.rail_w(), 224)                                                   # 1400px: expanded by default
+        self.assertEqual(self.rail_w(), 188)                                                   # 1400px: expanded by default
         t = self.rect(".rail [data-v=work] .rl")["l"] - self.rect(".rail [data-v=work] svg")["r"]
         self.assertGreater(t, 4)                                                               # the name is beside the icon
         self.assertEqual(self.rect(".rail [data-v=work]")["h"], 36)
+        clipped = b.eval("""[...document.querySelectorAll('.rail .rl, .rail .rbadge, .rail .badge')].filter(e=>e.offsetParent
+          && (e.scrollWidth>e.clientWidth+1 || e.getBoundingClientRect().right>document.querySelector('.rail').getBoundingClientRect().right+0.5)).map(e=>e.textContent)""")
+        self.assertEqual(clipped, [])                                                          # #198: 188px clips no name or count
         b.click("#railTog")
         self.wait_w(76)
         ic, rl = self.rect(".rail [data-v=work] svg"), self.rect(".rail [data-v=work] .rl")
@@ -177,7 +180,7 @@ class RailStates(LiveBrowserCase):
         self.assertEqual(self.rail_w(), 56)
         self.assertFalse(b.eval("railLabelsOn.value && document.querySelector('.rail').className.includes('labelled')"))
         b.click("#railTog")                                                                    # and the wordmark opens it
-        self.wait_w(224)
+        self.wait_w(188)
 
     # ── the wordmark toggle ──
     def test_the_wordmark_is_the_toggle(self):
@@ -195,7 +198,7 @@ class RailStates(LiveBrowserCase):
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail .cmark')).display"), "block")   # "c_"
         self.assertEqual(b.eval("document.querySelector('.rail .cmark').textContent"), "c_")
         b.key(" ")
-        self.wait_w(224)
+        self.wait_w(188)
         # a small chevron shows on hover when expanded
         b.eval("document.activeElement.blur()")
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail .rchev')).opacity"), "0")
@@ -225,13 +228,13 @@ class RailStates(LiveBrowserCase):
     def test_first_state_by_width_and_the_rail_stays_collapsed_under_900px(self):
         b = self.b
         b.resize(1200, 800)
-        self.wait_w(224)                                                                       # 1200px and wider: expanded
+        self.wait_w(188)                                                                       # 1200px and wider: expanded
         b.resize(1199, 800)
         self.wait_w(76)                                                                        # below: collapsed
         b.click("#railTog")                                                                    # and can be opened
-        self.wait_w(224)
+        self.wait_w(188)
         b.resize(900, 800)
-        self.wait_w(224)                                                                       # a choice made here is kept
+        self.wait_w(188)                                                                       # a choice made here is kept
         b.eval("localStorage.clear()")
         b.reload("typeof go==='function' && LIVE")
         self.wait_w(76)

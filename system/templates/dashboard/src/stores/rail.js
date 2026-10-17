@@ -12,7 +12,7 @@
      (#156): it means Labels when collapsed OFF, and the rail starts collapsed in a browser that has not chosen yet. Nothing
      writes it any more except the Customise sidebar dialog's "Icons only".
 
-   #156 (the rail's three states): expanded (224px, labels beside the icons), collapsed with labels (76px, each label under its
+   #156 (the rail's three states): expanded (188px, labels beside the icons), collapsed with labels (76px, each label under its
    icon; the setting dashboard.rail_labels, default on), collapsed icons only (56px). The wordmark toggles it, remembered in this
    browser (localStorage). With no choice yet, the rail is expanded at 1200px and wider and collapsed below that; under 900px it
    is always collapsed. */

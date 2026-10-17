@@ -5,7 +5,7 @@
    (#railFoot) and Customise sidebar (#railCustBox, a modal dialog). Old code reaches the sidebar only through the store
    (setRailView, setRailCount), never its DOM.
 
-   #156: three states (expanded 224px; collapsed with labels under the icons 76px; collapsed icons only 56px). The wordmark is the
+   #156: three states (expanded 188px; collapsed with labels under the icons 76px; collapsed icons only 56px). The wordmark is the
    toggle (#railTog, in the shell: "creaite_" expanded, "c_" collapsed), as is ⌘\; the choice is this browser's (stores/rail.js).
    Labels when collapsed is dashboard.rail_labels (Settings › Essentials, More's menu, Customise sidebar).
 
