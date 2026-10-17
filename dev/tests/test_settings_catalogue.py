@@ -314,5 +314,16 @@ class Routes(unittest.TestCase):
         self.assertEqual(list(self.v.root.rglob(".doctor-write-test")), [])
 
 
+class SafeSettings(unittest.TestCase):
+    """#146: ask creaite may change the sweep's lookback settings (live_server.SAFE_SETTINGS names the keys it may write)."""
+
+    def test_the_sweep_lookback_settings_are_in_the_safe_list(self):
+        text = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
+        block = text[text.index("SAFE_SETTINGS = ("):].split(")
+", 1)[0]
+        for key in ("sweep.first_run_lookback_days", "sweep.max_lookback_days"):
+            self.assertIn(f'"{key}"', block)
+
+
 if __name__ == "__main__":
     unittest.main()
