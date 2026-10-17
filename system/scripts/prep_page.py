@@ -631,61 +631,71 @@ HEALTH_CLASS = {"On track": "ok", "At risk": "warnh", "Off track": "bad"}
 
 
 def task_glyph(text):
-    """#134: a checklist item's "[ ] " / "[x] " as the box Word shows (☐ / ☑)."""
-    return re.sub(r"^\[([ xX])\]\s+", lambda m: "☑ " if m.group(1) in "xX" else "☐ ", text)
+    """#134: a checklist item's "[ ]" / "[x]" (with text after it or on its own) as the box Word shows (☐ / ☑).
+    docx_tools.TASK reads the same items; both apply it to bullets only (a numbered "1. [ ] a" is text in each)."""
+    def box(m):
+        """The glyph for a matched box, and the space after it when text followed."""
+        return ("☑" if m.group(1) in "xX" else "☐") + (" " if m.group().strip() != m.group() else "")
+    return re.sub(r"^\[([ xX])\](?:\s+|$)", box, text)
+
+
+def md_line(line):
+    """(kind, text) of one Current state line: "q" a quote line, "ul" or "ol" a list item (a checklist box drawn on a bullet), "head" a
+    heading of any level, "text" anything else. #134"""
+    for kind, pattern in (("q", r"\s*>\s?(.*)"), ("ul", r"\s*[-*•]\s+(.*)"), ("ol", r"\s*\d+[.)]\s+(.*)"), ("head", r"\s*#+\s*(.*)")):
+        m = re.match(pattern, line)
+        if m:
+            text = m.group(1).strip()
+            return kind, task_glyph(text) if kind == "ul" else text
+    return "text", line.strip()
 
 
 def md_blocks(md):
-    """Current state (Markdown) as [("p", text) | ("ul", [items]) | ("ol", [items])]. Pictures are dropped, links keep their text,
-    a heading becomes a bold paragraph. Nothing else is understood."""
+    """Current state (Markdown) as [("p", text) | ("q", text) | ("ul", [items]) | ("ol", [items])]. Pictures are dropped, links keep
+    their text, a heading (any level) becomes a bold paragraph, a "> " run of lines one quote (#134: the sheet toolbar writes them).
+    Nothing else is understood."""
     t = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", str(md or ""))
     t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)
-    blocks, para, lst = [], [], None
+    blocks, cur, items = [], None, []
 
     def flush():
-        """End the paragraph or list being built and add it to the blocks."""
-        nonlocal para, lst
-        if para:
-            blocks.append(("p", " ".join(para)))
-        if lst:
-            blocks.append(lst)
-        para, lst = [], None
+        """End the block being built (a paragraph, a quote or a list) and add it to the blocks."""
+        nonlocal cur, items
+        if cur and items:
+            blocks.append((cur, " ".join(items) if cur in ("p", "q") else items))
+        cur, items = None, []
 
     for line in t.splitlines():
+        kind, text = md_line(line)
         if not line.strip():
             flush()
-            continue
-        bullet = re.match(r"\s*[-*•]\s+(.*)", line)
-        number = re.match(r"\s*\d+[.)]\s+(.*)", line)
-        head = re.match(r"\s*#+\s*(.*)", line)
-        if bullet or number:
-            kind = "ul" if bullet else "ol"
-            if para or (lst and lst[0] != kind):
-                flush()
-            lst = lst or (kind, [])
-            lst[1].append(task_glyph((bullet or number).group(1).strip()))
-        elif head:
+        elif kind == "head":
             flush()
-            blocks.append(("p", f"**{head.group(1).strip().strip('*')}**"))
-        elif lst and line[:1].isspace():
-            lst[1][-1] += " " + line.strip()
+            blocks.append(("p", f"**{text.strip('*')}**"))
+        elif kind == "text" and cur in ("ul", "ol") and line[:1].isspace():
+            items[-1] += " " + text
         else:
-            if lst:
+            want = "p" if kind == "text" else kind
+            if want != cur:
                 flush()
-            para.append(line.strip())
+                cur = want
+            items.extend([text] if text else [])
     flush()
     return blocks
 
 
 def md_inline(t):
-    """Escaped text with **bold** kept; every other mark is dropped."""
-    parts = re.split(r"\*\*(.+?)\*\*", str(t or "").replace("`", ""))
-    return "".join(f"<strong>{esc(x)}</strong>" if i % 2 else esc(re.sub(r"\*|(?<!\w)_|_(?!\w)", "", x)) for i, x in enumerate(parts))
+    """Escaped text with **bold** and ~~strikethrough~~ kept (#134); every other mark is dropped."""
+    parts = re.split(r"(\*\*.+?\*\*|~~.+?~~)", str(t or "").replace("`", ""))
+    return "".join(f"<strong>{esc(x[2:-2])}</strong>" if x.startswith("**") and len(x) > 4 else
+                   f"<s>{esc(x[2:-2])}</s>" if x.startswith("~~") and len(x) > 4 else
+                   esc(re.sub(r"\*|(?<!\w)_|_(?!\w)", "", x)) for x in parts)
 
 
 def blocks_html(blocks):
-    """HTML for md_blocks' blocks: paragraphs and lists, with **bold** kept."""
+    """HTML for md_blocks' blocks: paragraphs, quotes and lists, with **bold** and ~~strikethrough~~ kept."""
     return "".join(f"<p>{md_inline(b[1])}</p>" if b[0] == "p" else
+                   f"<blockquote><p>{md_inline(b[1])}</p></blockquote>" if b[0] == "q" else
                    f"<{b[0]}>{''.join(f'<li>{md_inline(x)}</li>' for x in b[1])}</{b[0]}>" for b in blocks)
 
 
@@ -694,9 +704,9 @@ def state_parts(md, n=5):
     its list items, or, with no list, the paragraphs after it."""
     blocks = md_blocks(md)
     head = next((b[1] for b in blocks if b[0] == "p"), "")
-    points = [x for b in blocks if b[0] != "p" for x in b[1]]
+    points = [x for b in blocks if b[0] in ("ul", "ol") for x in b[1]]
     if not points:
-        points = [b[1] for b in blocks if b[0] == "p"][1:]
+        points = [b[1] for b in blocks if b[0] in ("p", "q")][1:]
     return head, points[:n], len(points)
 
 

@@ -99,6 +99,52 @@ class Headings(unittest.TestCase):
         blocks = prep_page.md_blocks("- [ ] one\n- [x] two\n- three")
         self.assertEqual(blocks, [("ul", ["☐ one", "☑ two", "three"])])
 
+    # ----- #134 (review): what the report sheet's toolbar writes, as Word and HTML/PDF draw it -----
+    SHEET = "### Big\n\n#### Mid\n\n##### Small\n\n> a quote\n> over two lines\n\nSome ~~gone~~ words and **bold** ones.\n\n- item ~~struck~~"
+
+    def test_what_the_sheet_toolbar_writes_leaves_no_marker_in_word_or_html(self):
+        import creaite_doc
+        para = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+        word = "\n".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", dt.md_paras(para, "TEXT", self.SHEET)))
+        html = creaite_doc.md_html(self.SHEET)
+        for mark in ("#", ">", "~~"):
+            self.assertNotIn(mark, word)
+        for mark in ("#", "&gt;", "~~"):
+            self.assertNotIn(mark, html)
+        self.assertIn("<blockquote><p>a quote over two lines</p></blockquote>", html)
+        self.assertIn("<s>gone</s>", html)
+        self.assertIn("<s>struck</s>", html)
+        self.assertIn("<strong>bold</strong>", html)
+        self.assertIn("<w:strike/>", dt.md_paras(para, "TEXT", self.SHEET))
+        self.assertEqual(dt.md_lines(self.SHEET)[3], "a quote over two lines")
+
+    def test_a_level_one_or_two_line_is_what_word_cannot_draw_which_is_why_the_sheet_shifts_its_levels(self):
+        # the sheet editor writes Heading 1 to 3 as ### #### ##### (headShift, as Current state does); a bare # or ## would show as text in Word
+        para = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+        self.assertIn("# Big", "\n".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", dt.md_paras(para, "TEXT", "# Big"))))
+
+    # ----- #134 (review): the checklist reads the same in Word and on the Prep page -----
+    TASK_CASES = ["- [ ]", "- [x]", "- [X]", "- [ ] a", "- [x] a b", "* [ ] star", "1. [ ] a", "2) [x] b", "- [ ]a", "- plain", "- [] none", "- [y] no"]
+
+    def test_word_and_prep_agree_on_every_checklist_shape(self):
+        import prep_page
+        for md in self.TASK_CASES:
+            with self.subTest(md=md):
+                word = dt.md_lines(md)[0]
+                kind, items = prep_page.md_blocks(md)[0]
+                glyph = word[:1] in "☐☑"
+                shown = word if glyph else re.sub(r"^(?:• |\d+\. )", "", word)
+                self.assertEqual(shown.strip(), items[0].strip())
+                self.assertEqual(glyph, items[0][:1] in "☐☑")
+
+    def test_an_empty_checklist_item_is_a_box_in_both_and_a_numbered_one_is_text_in_both(self):
+        import prep_page
+        self.assertEqual(dt.md_lines("- [ ]"), ["☐ "])
+        self.assertEqual(prep_page.md_blocks("- [ ]"), [("ul", ["☐"])])
+        self.assertEqual(dt.md_lines("1. [ ] a"), ["1. [ ] a"])
+        self.assertEqual(prep_page.md_blocks("1. [ ] a"), [("ol", ["[ ] a"])])
+        self.assertEqual(dt.md_from_lines(["☐ "]), "- [ ]")                      # an empty box edited in Word comes back as one
+
 
 if __name__ == "__main__":
     unittest.main()

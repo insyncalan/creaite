@@ -3621,9 +3621,17 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
 @media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
 
-/* ===== #134 ===== the report sheet's one-line grouped toolbar: above the active rich field, outside it, taking no room */
+/* ===== #134 ===== the report sheet's one-line grouped toolbar: floats beside the active rich field, outside it, taking no room.
+   --sc is the page's zoom: the bar is counter-scaled so its buttons stay their real size (28 by 26 px or more) at 40%; its width is
+   capped at the field's own width on screen, so it wraps rather than leaves the page. data-bar says where it floats (a/b above or below,
+   l/r flush left or right): the field's script picks the spot that hides the fewest controls. */
 .sheet-edwrap{position:relative}
-.sheet-edwrap>.sheet-rtebar{position:absolute;left:0;bottom:100%;margin-bottom:4px;z-index:var(--z-raised);width:max-content;max-width:100%;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow-pop,0 6px 18px rgba(0,0,0,.18))}
+.sheet-edwrap>.sheet-rtebar{position:absolute;left:0;bottom:100%;margin-bottom:4px;z-index:var(--z-raised);width:max-content;max-width:calc(100% * var(--sc,1));flex-wrap:wrap;
+  transform:scale(calc(1 / var(--sc,1)));transform-origin:left bottom;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow-pop,0 6px 18px rgba(0,0,0,.18))}
+.sheet-edwrap[data-bar$="r"]>.sheet-rtebar{left:auto;right:0;transform-origin:right bottom}
+.sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
+.sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
+.sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
 </style>
 </head>
 <body>
@@ -60750,13 +60758,14 @@ ${d5.text}`);
 
   // components/report/SheetText.jsx
   function inline(t47) {
-    const out = [], re2 = /\*\*([^*]+)\*\*|\*([^*\n]+)\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+    const out = [], re2 = /\*\*([^*]+)\*\*|\*([^*\n]+)\*|\[([^\]\n]+)\]\(([^)\s]+)\)|~~([^~\n]+)~~/g;
     let last = 0, k5 = 0;
     for (const m5 of t47.matchAll(re2)) {
       const at2 = m5.index || 0;
       if (at2 > last) out.push(t47.slice(last, at2));
       if (m5[1] != null) out.push(/* @__PURE__ */ u2("strong", { children: m5[1] }, k5++));
       else if (m5[2] != null) out.push(/* @__PURE__ */ u2("em", { children: m5[2] }, k5++));
+      else if (m5[5] != null) out.push(/* @__PURE__ */ u2("s", { children: m5[5] }, k5++));
       else out.push(m5[3]);
       last = at2 + m5[0].length;
     }
@@ -60771,10 +60780,15 @@ ${d5.text}`);
     ), list = (
       /** @type {{ordered: boolean, items: string[]}|null} */
       null
+    ), quote = (
+      /** @type {string[]} */
+      []
     ), k5 = 0;
     const flushPara = () => {
       if (para.length) out.push(/* @__PURE__ */ u2("p", { children: inline(para.join(" ")) }, k5++));
+      if (quote.length) out.push(/* @__PURE__ */ u2("blockquote", { children: /* @__PURE__ */ u2("p", { children: inline(quote.join(" ")) }) }, k5++));
       para = [];
+      quote = [];
     };
     const flushList = () => {
       if (!list) return;
@@ -60783,8 +60797,12 @@ ${d5.text}`);
       list = null;
     };
     for (const raw2 of lines) {
-      const b5 = /^\s*(?:[-*]\s+)(.*)$/.exec(raw2), n4 = /^\s*\d+[.)]\s+(.*)$/.exec(raw2), h5 = /^#{1,6}\s+(.*)$/.exec(raw2);
-      if (b5 || n4) {
+      const b5 = /^\s*(?:[-*]\s+)(.*)$/.exec(raw2), n4 = /^\s*\d+[.)]\s+(.*)$/.exec(raw2), h5 = /^#{1,6}\s+(.*)$/.exec(raw2), q5 = /^\s*>\s?(.*)$/.exec(raw2);
+      if (q5) {
+        flushPara();
+        flushList();
+        if (q5[1].trim()) quote.push(q5[1].trim());
+      } else if (b5 || n4) {
         flushPara();
         const ordered = !!n4;
         if (list && list.ordered !== ordered) flushList();
@@ -60802,6 +60820,7 @@ ${d5.text}`);
         flushList();
       } else {
         flushList();
+        if (quote.length) flushPara();
         para.push(raw2.trim());
       }
     }
@@ -60864,7 +60883,7 @@ ${d5.text}`);
         box.current
       );
       const editorProps = { handleScrollToSelection: keepCaretInView };
-      const h5 = creaiteEditor(el2, rich ? { features: "current", markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
+      const h5 = creaiteEditor(el2, rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
       ed3.current = h5;
       h5.editor.setEditable(editable);
       const input = () => on2.current(h5.value());
@@ -60891,10 +60910,30 @@ ${d5.text}`);
       if (ed3.current) paintChecks(ed3.current, checks);
     }, [key]);
     const [active, setActive] = d2(false);
+    const [spot, setSpot] = d2(
+      /** @type {BarSpot} */
+      "al"
+    );
     const wrap = A2(
       /** @type {HTMLDivElement|null} */
       null
     );
+    const showBar = active && editable && rich;
+    _2(() => {
+      const w6 = wrap.current, bar = w6 && /** @type {HTMLElement|null} */
+      w6.querySelector(".sheet-rtebar");
+      if (!showBar || !w6 || !bar) return;
+      const place2 = () => {
+        const at2 = barSpot(w6, bar);
+        setSpot((s5) => s5 === at2 ? s5 : at2);
+      };
+      place2();
+      const ro2 = typeof ResizeObserver === "function" ? new ResizeObserver(place2) : null;
+      if (ro2) ro2.observe(bar);
+      return () => {
+        if (ro2) ro2.disconnect();
+      };
+    }, [showBar]);
     const field = /* @__PURE__ */ u2(
       "div",
       {
@@ -60913,6 +60952,7 @@ ${d5.text}`);
       {
         ref: wrap,
         class: "sheet-edwrap",
+        "data-bar": showBar ? spot : void 0,
         onFocusIn: () => setActive(true),
         onFocusOut: (e4) => {
           const to2 = (
@@ -60922,11 +60962,39 @@ ${d5.text}`);
           if (!to2 || !wrap.current || !wrap.current.contains(to2)) setActive(false);
         },
         children: [
-          active && editable ? /* @__PURE__ */ u2(EditorBar, { profile: "sheet", handle: () => ed3.current, cls: "sheet-rtebar", label: `Formatting: ${label}` }) : null,
+          showBar ? /* @__PURE__ */ u2(EditorBar, { profile: "sheet", handle: () => ed3.current, cls: "sheet-rtebar", label: `Formatting: ${label}` }) : null,
           field
         ]
       }
     );
+  }
+  function barCovers(w6, bar, spot) {
+    const f5 = w6.getBoundingClientRect(), b5 = bar.getBoundingClientRect(), gap = 4;
+    const top = spot[0] === "b" ? f5.bottom + gap : f5.top - gap - b5.height, left = spot[1] === "r" ? Math.max(f5.left, f5.right - b5.width) : f5.left;
+    const box = { left, right: left + b5.width, top, bottom: top + b5.height };
+    const page = w6.closest(".page");
+    if (!page) return 0;
+    let n4 = 0;
+    for (const el2 of page.querySelectorAll("input, button, a[href], td, th")) {
+      if (w6.contains(el2) || bar.contains(el2) || el2.closest(".sheet-handle")) continue;
+      const r4 = el2.getBoundingClientRect();
+      if (r4.width < 2 || r4.height < 2 || getComputedStyle(el2).visibility === "hidden") continue;
+      if (Math.min(r4.right, box.right) - Math.max(r4.left, box.left) > 2 && Math.min(r4.bottom, box.bottom) - Math.max(r4.top, box.top) > 2) n4++;
+    }
+    return n4;
+  }
+  function barSpot(w6, bar) {
+    const order = ["al", "ar", "bl", "br"];
+    let best = order[0], least = Infinity;
+    for (const s5 of order) {
+      const n4 = barCovers(w6, bar, s5);
+      if (n4 < least) {
+        best = s5;
+        least = n4;
+      }
+      if (!least) break;
+    }
+    return best;
   }
 
   // components/report/sheetLib.js

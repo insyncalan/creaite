@@ -204,6 +204,7 @@ th{background:#f3f4f7}
 .figure b{display:block;font-size:18px}
 .panes{display:flex;gap:14px}.panes>div{flex:1}
 .flag{font-weight:700}
+blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid #d6d9e0;color:#555}blockquote p{margin:0}
 @media print{body{background:#fff}.page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0}@page{size:A4;margin:16mm}}
 """
 

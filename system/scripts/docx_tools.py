@@ -132,7 +132,7 @@ def drop_item_links(text, keep):
     return ITEM_LINK.sub(lambda m: m.group(0) if keep(m.group(2)) else "", str(text or ""))
 
 
-TASK = re.compile(r"^\[([ xX])\]\s+")                # #134: a checklist item, "- [ ] text" / "- [x] text" (Current state's checklist)
+TASK = re.compile(r"^\[([ xX])\](?:\s+|$)")                # #134: a checklist item, "- [ ] text" / "- [x] text" (Current state's checklist)
 BOX = {" ": "☐ ", "x": "☑ "}                          # the glyphs Word shows for an unticked and a ticked item
 MAX_LEVEL = 3
 HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
@@ -341,7 +341,7 @@ def md_from_lines(lines):
     out = []
     for line in lines:
         text = re.sub(r"^\s*•\s+", "- ", line.strip())
-        text = re.sub(r"^[☐☑]\s+", lambda m: "- [x] " if "☑" in m.group() else "- [ ] ", text)       # #134: back to a checklist item
+        text = re.sub(r"^[☐☑](?:\s+|$)", lambda m: "- [x] " if "☑" in m.group() else "- [ ] ", text).rstrip()   # #134: back to a checklist
         kind = "ul" if text.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", text) else None
         last = out[-1].splitlines()[-1] if out else ""
         if kind and kind == ("ul" if last.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", last) else None):
