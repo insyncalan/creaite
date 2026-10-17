@@ -29261,7 +29261,8 @@ ${s5}`;
           if (e4.key === "Escape" && bar.shown) {
             e4.preventDefault();
             e4.stopPropagation();
-            aiBarClose();
+            aiBar.value = null;
+            if (!bar.h.editor.isDestroyed) bar.h.focus();
           }
         },
         children: /* @__PURE__ */ u2(Icon, { name: "spark" })
@@ -29351,7 +29352,8 @@ ${s5}`;
           if (e4.key === "Escape" && !e4.defaultPrevented) {
             e4.preventDefault();
             e4.stopPropagation();
-            aiBarClose();
+            aiBar.value = null;
+            if (!bar.h.editor.isDestroyed) bar.h.focus();
           }
         },
         children: asking ? /* @__PURE__ */ u2("form", { class: "aiask", onSubmit: (e4) => {
