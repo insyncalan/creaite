@@ -185,8 +185,14 @@ def _link_findings(con, text):
     """({item IDs the text's work-item links name}, [findings for a work-item link creaite can't read, and for a creaite: link of
     a kind a client report may not hold])."""
     ids, unread = link_refs(con, text)
-    return ids, [f"a link to a work item creaite can't read: “{a[:40]}”" for a in unread] + \
+    return ids, [f"a link to a work item creaite can't read: “{_before_join(a)[:40]}”" for a in unread] + \
         [f"a creaite link a client can't open: “creaite:{k}”" for k in sorted(creaite_kinds(text) - LINK_KINDS)]
+
+
+def _before_join(address):
+    """An address as a finding quotes it: up to JOIN's word (round 7: a link at the end of one form, its ID on the next line, is
+    read up to the join; the join is never shown), or the link itself when nothing comes before it."""
+    return address.split(JOIN.strip())[0].strip() or "creaite:item/"
 
 
 def text_findings(con, code, text, skip=()):
@@ -287,7 +293,8 @@ def initial():
     if not _INITIAL:
         upper = _class(lambda c: c.upper() == c != c.lower())
         caseless = _class(lambda c: c.isalpha() and c.upper() == c.lower())
-        _INITIAL.append(rf"(?:(?-i:[{upper}])\.?|[{caseless}](?=[.\s])\.?)")
+        _INITIAL.append(rf"(?-i:[{upper}]\.?|(?![\x00-\x7f])[{caseless}](?=[.\s])\.?)")   # case-sensitive, and an ASCII
+        #                                       # letter never tried against the caseless class: as fast as the Latin-1 class was
     return _INITIAL[0]
 
 

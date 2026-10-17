@@ -1023,6 +1023,9 @@ class TheReviewOfc39f6c4(Base):
                            "Only A &amp; B go out; the rest stays internal",
                            "Marlow said **yes** to Quentin", "Marlow said yes &amp; thanks to Quentin"], gate=self.gate_as_is)
         self.assert_found([("Note: internal _only_.", MARKER), ("Note: _internal-only_.", MARKER)])
+        for text, got in self.gate(["See creaite:item/\nABC-A-004 now."]).items():     # the join is never shown in a finding
+            self.assertTrue(got[0] and got[1], text)
+            self.assertFalse([f for k in got for f in k if "qqjoinqq" in f], got)
 
     def test_a_shorter_name_inside_an_allowed_one_is_not_another_person(self):
         """Finding 2: Sam Patel may be shown; "Sam" is another person's alias. "Sam Patel will run it" names only Sam Patel; a Sam
