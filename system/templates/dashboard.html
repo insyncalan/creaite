@@ -3295,6 +3295,17 @@ button.nchip{font:inherit;font-size:12px}
    its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
 :root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
 .sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
+/* #202 (mockup report-banner, A): the header is in the layout. On a down scroll the search bar and the title block collapse to nothing
+   (still focusable: a Tab into one brings the header back) and the toolbar is the one slim bar. Nothing slides, so reduced motion needs no rule. */
+.sheet-mini{display:none;align-items:baseline;gap:10px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-mini b{font-size:var(--fs-lg);font-weight:600}
+.sheet-root.rpt-slim>.sheet-bar,.sheet-root.rpt-slim>.sheet-bar :is(.sheet-barr,.wr-barr,.crbarr,.mnbarr){flex-wrap:nowrap}
+.sheet-root.rpt-slim>.sheet-bar .sheet-barr{flex:none}
+.sheet-root.rpt-slim>.sheet-bar .sheet-mini{display:inline-flex}
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status,.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+@media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
+.main:has(.view:not([hidden]) .sheet-root.rpt-slim)>.bar,
+.view:not([hidden]):has(.sheet-root.rpt-slim) :is(.wrhead,.mnhead,.crhead){height:0;min-height:0;padding-top:0;padding-bottom:0;border-width:0;overflow:hidden;flex:none}
 .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
 .sheet-zoom{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 4px;height:var(--ctl-h)}
 .sheet-zoom .btn{border:0;min-width:26px}
@@ -3466,7 +3477,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-ck{background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
 .mnap-err{color:var(--bad)}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
+@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto;overflow-anchor:none} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
   .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} }
 @media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
 /* ===== end v2.1.0 P7 ===== */
@@ -4121,6 +4132,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     GREET: () => GREET,
     GROUPS: () => GROUPS,
     HD: () => HD,
+    HEADER_HIDE_OVER: () => HEADER_HIDE_OVER,
+    HEADER_SHOW_AT_TOP: () => HEADER_SHOW_AT_TOP,
+    HEADER_SHOW_ON_UP: () => HEADER_SHOW_ON_UP,
     HEAD_SHIFT: () => HEAD_SHIFT,
     HEALTH_SHAPES: () => HEALTH_SHAPES,
     HI: () => HI,
@@ -5254,6 +5268,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     handOver: () => handOver,
     handle: () => handle,
     hashOf: () => hashOf,
+    headerPolicy: () => headerPolicy,
     headsIn: () => headsIn,
     headsOut: () => headsOut,
     headsSafe: () => headsSafe,
@@ -63760,6 +63775,15 @@ ${d5.text}`);
     for (let k5 = 1; k5 * page < end - 1; k5++) marks.push(k5 * page);
     return { pushes, marks };
   }
+  var HEADER_HIDE_OVER = 0;
+  var HEADER_SHOW_ON_UP = Infinity;
+  var HEADER_SHOW_AT_TOP = 0;
+  function headerPolicy(top, delta, up2) {
+    if (top <= HEADER_SHOW_AT_TOP) return "show";
+    if (delta > HEADER_HIDE_OVER) return "hide";
+    if (delta < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
+    return "keep";
+  }
 
   // components/report/SheetPage.jsx
   function openSheetRef(ref, own) {
@@ -64708,6 +64732,71 @@ ${d5.text}`);
       return marks;
     });
   }
+  function useBannerHide(root2) {
+    h2(() => {
+      const el2 = root2.current;
+      if (!el2) return;
+      const last = (
+        /** @type {Map<Element, number>} */
+        /* @__PURE__ */ new Map()
+      );
+      let up2 = 0;
+      const slim = (on2) => {
+        if (el2.classList.contains("rpt-slim") === on2) return;
+        el2.classList.toggle("rpt-slim", on2);
+        if (!on2) document.querySelectorAll(".main>.bar, .wrhead, .mnhead, .crhead").forEach((n4) => {
+          n4.scrollTop = 0;
+        });
+      };
+      const canHide = (t47) => {
+        let room = 0;
+        document.querySelectorAll(".main>.bar, .wrhead, .mnhead, .crhead").forEach((n4) => {
+          room += /** @type {HTMLElement} */
+          n4.offsetHeight;
+        });
+        return t47.scrollHeight - t47.clientHeight - room > 0;
+      };
+      const onScroll = (e4) => {
+        const t47 = (
+          /** @type {HTMLElement} */
+          e4.target
+        );
+        if (!t47.classList || !(t47.classList.contains("sheet-scroll") || t47.classList.contains("mnwrap"))) return;
+        const y5 = t47.scrollTop, d5 = y5 - (last.get(t47) || 0);
+        last.set(t47, y5);
+        up2 = d5 < 0 ? up2 - d5 : 0;
+        const act = headerPolicy(y5, d5, up2);
+        if (act === "hide") {
+          if (canHide(t47)) slim(true);
+        } else if (act === "show") slim(false);
+      };
+      const focus = (e4) => {
+        const t47 = (
+          /** @type {HTMLElement|null} */
+          e4.target
+        );
+        if (el2.classList.contains("rpt-slim") && el2.offsetParent && t47 && t47.closest && t47.closest(".main>.bar, .wrhead, .mnhead, .crhead")) slim(false);
+      };
+      const wrap = el2.closest(".mnwrap");
+      el2.addEventListener("scroll", onScroll, true);
+      if (wrap) wrap.addEventListener("scroll", onScroll);
+      document.addEventListener("focusin", focus);
+      const ro2 = new ResizeObserver(() => {
+        if (!el2.offsetParent) {
+          el2.classList.remove("rpt-slim");
+          last.clear();
+        }
+      });
+      ro2.observe(el2);
+      return () => {
+        el2.removeEventListener("scroll", onScroll, true);
+        if (wrap) wrap.removeEventListener("scroll", onScroll);
+        ro2.disconnect();
+        document.removeEventListener("focusin", focus);
+        el2.classList.remove("rpt-slim");
+      };
+    }, []);
+  }
   function Sheet(props) {
     const { doc, partner = null, scrollKey = "", checks = [], onEvent = () => {
     } } = props;
@@ -64749,6 +64838,7 @@ ${d5.text}`);
     zref.current = zoom;
     const eref = A2(exported);
     eref.current = exported;
+    useBannerHide(root2);
     const main = useSaver({ baseVersion: props.baseVersion, onSave: props.onSave, readOnly: leftRO, onEvent });
     const side = useSaver({
       baseVersion: partner ? partner.baseVersion : void 0,
@@ -64921,6 +65011,10 @@ ${d5.text}`);
     const note = main.conflict;
     return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, children: [
       /* @__PURE__ */ u2("div", { class: "sheet-bar", role: "toolbar", "aria-label": "Report", children: [
+        /* @__PURE__ */ u2("span", { class: "sheet-mini", children: props.banner ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("b", { children: props.banner.title }),
+          props.banner.sub ? /* @__PURE__ */ u2("span", { class: "sub", children: props.banner.sub }) : null
+        ] }) : /* @__PURE__ */ u2("b", { children: doc.title }) }),
         /* @__PURE__ */ u2("span", { class: "sheet-zoom", role: "group", "aria-label": "Zoom", children: [
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Zoom out", onClick: () => setZoom(stepZoom(zoom, -1)), disabled: zoom <= 0.4, children: "−" }),
           /* @__PURE__ */ u2("span", { class: "sheet-zv", "aria-live": "polite", "data-zoom": zoom, children: [
@@ -64937,7 +65031,7 @@ ${d5.text}`);
           ) }),
           " Scroll together"
         ] }) : null,
-        partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: () => {
+        partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-matchall", onClick: () => {
           if (partner.match) {
             for (const x5 of doc.sections) if (match && match.differs(x5.id)) partner.match(x5.id);
           } else changeSide(matchAll(doc, partner.doc), "Matched internal");
@@ -65838,6 +65932,7 @@ ${d5.text}`);
             );
             else countRedraft(ev, "report");
           },
+          banner: { title: "Weekly report", sub: `${doc.project_name} · ${fd(doc.date)}` },
           toolbar: /* @__PURE__ */ u2(WeeklyBar, { doc, readOnly })
         }
       ) })
@@ -66449,8 +66544,8 @@ ${d5.text}`);
       setNote(msg);
     };
     return /* @__PURE__ */ u2("span", { class: "crbarr", children: [
-      /* @__PURE__ */ u2("span", { class: `tag ${ready ? "ok" : "warn"}`, "data-crbase": true, children: ready ? "Internal: approved · facts locked" : "Internal: not approved yet" }),
-      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "View", children: [
+      /* @__PURE__ */ u2("span", { class: `tag rb-x ${ready ? "ok" : "warn"}`, "data-crbase": true, children: ready ? "Internal: approved · facts locked" : "Internal: not approved yet" }),
+      /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "View", children: [
         /* @__PURE__ */ u2("button", { type: "button", "data-crmode": "client", "aria-pressed": mode === "client" ? "true" : "false", onClick: () => {
           crMode.value = "client";
         }, children: "Client report" }),
@@ -66458,7 +66553,7 @@ ${d5.text}`);
           crMode.value = "side";
         }, children: "Side by side" })
       ] }),
-      draft && mode !== "side" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
+      draft && mode !== "side" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm rb-x", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
         const d5 = crDoc.value, i5 = crInternal.value;
         if (d5 && i5) setClientDoc(matchClientAll(d5, i5));
       }, children: "Match internal for every section" }) : null,
@@ -66466,7 +66561,7 @@ ${d5.text}`);
         "button",
         {
           type: "button",
-          class: "btn sm",
+          class: "btn sm rb-x",
           "data-crrefresh": true,
           title: "This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save.",
           onClick: () => {
@@ -66478,7 +66573,7 @@ ${d5.text}`);
       ) : null,
       /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crcheck": true, disabled: !ready, "data-tip": ready ? void 0 : "Approve the internal report first", title: ready ? void 0 : "Approve the internal report first", onClick: openCheck, children: "Check and export ▾" }),
       draft ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", "data-crapprove": true, disabled: !ready, title: ready ? void 0 : "Approve the internal report first", onClick: () => approve(false), children: "Approve client report" }) : null,
-      note ? /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
+      note ? /* @__PURE__ */ u2("span", { class: "crnote rb-x", role: "status", children: [
         note,
         " ",
         /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => approve(true), children: "Approve anyway" }) : null
@@ -66564,6 +66659,7 @@ ${d5.text}`);
             if (ev.type === "reload" && a5) loadClientReport(a5);
             else countRedraft(ev, "report");
           },
+          banner: { title: "Client report", sub: `${doc.project_name || a5 && a5.code || ""} · ${fd(doc.date)}` },
           toolbar: /* @__PURE__ */ u2(ClientBar, { doc, note, setNote })
         }
       ) }),
@@ -67837,6 +67933,7 @@ ${d5.text}`);
           label: `Version ${doc.version || 1}`,
           icon: "history",
           btnCls: "btn sm",
+          cls: "rb-x",
           menuLabel: "Versions of these minutes",
           data: { mnversions: "" },
           items: versions.map((x5) => ({
@@ -67850,15 +67947,15 @@ ${d5.text}`);
           }
         }
       ),
-      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Versions to keep", children: [
+      /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "Versions to keep", children: [
         /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "false" : "true", disabled: !draft, onClick: () => setDist(false), children: "One version" }),
         /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "true" : "false", disabled: !draft, onClick: () => setDist(true), children: "Internal + distributed" })
       ] }),
-      dist ? /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Show", children: [["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-mnmode": k5, "aria-pressed": mode === k5 ? "true" : "false", onClick: () => {
+      dist ? /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "Show", children: [["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-mnmode": k5, "aria-pressed": mode === k5 ? "true" : "false", onClick: () => {
         minutesMode.value = /** @type {any} */
         k5;
       }, children: l6 }, k5)) }) : null,
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-pressed": paneOpen.value ? "true" : "false", onClick: () => {
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm rb-x", "aria-pressed": paneOpen.value ? "true" : "false", onClick: () => {
         paneOpen.value = !paneOpen.value;
       }, children: "Transcript" }),
       /* @__PURE__ */ u2(
@@ -67980,6 +68077,7 @@ ${d5.text}`);
               if (ev.type === "reload") loadMinutes({ path: v5.path });
               else countRedraft(ev, "minutes");
             },
+            banner: { title: doc.title, sub: `${doc.project_name || ""} · ${fd(doc.date)}` },
             toolbar: /* @__PURE__ */ u2(Bar, { doc, checks })
           }
         ) }) }),
@@ -70520,6 +70618,7 @@ ${d5.text}`);
         "grpToggle",
         "handle",
         "hashOf",
+        "headerPolicy",
         "headsIn",
         "headsOut",
         "headsSafe",

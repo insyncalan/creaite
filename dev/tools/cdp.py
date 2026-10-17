@@ -288,6 +288,10 @@ class Browser:
         the element itself, not on something that merely contains it. A miss says what was there instead (hit_report)."""
         self.wait(f"!!({json.dumps(selector)} && document.querySelector({json.dumps(selector)}))", 10)
         pos = self.box(selector)
+        if pos and not exact:       # #202: scrolling it into view can change the layout (the report header hides on a scroll down): measure again
+            self.frames(2)
+            pos = self.eval("""(()=>{ const e=document.querySelector(%s); const r=e&&e.getBoundingClientRect();
+              return r&&r.width&&r.height?{x:r.left+r.width/2,y:r.top+r.height/2}:null; })()""" % json.dumps(selector)) or pos   # no second scroll
         if exact and pos:
             for _ in range(20):
                 self.frames(2)

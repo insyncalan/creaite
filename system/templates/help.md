@@ -804,6 +804,7 @@ Where: Review › Open draft on minutes · address `#minutes=`
 - **Formatting:** click into a section's text and a one-line bar appears just above it: **Heading** and **List** menus, bold, italic, strikethrough, quote, link, undo and redo. It floats over the sheet, so nothing moves when it shows, and it moves to the side that hides the least. A table cell has no bar. Headings, quotes and strikethrough come out in Word, the web page and the PDF.
 - **✦ on a section** finds the source of a line, runs its check, or suggests a fresh draft. Source tags and checks show as you write. Select text and press **AI** for the usual suggestions, plus **Polish** (spelling, grammar and light smoothing; facts and length kept).
 - **Side by side** shows two versions, scrolling together and levelled. **≠** marks a difference, and **Match internal** copies the internal wording across for that section or all of them. **Show as exported** shows the page as it will be filed.
+- **Scrolling down** hides the search bar and the title block at once and leaves one slim bar (title, project and date, zoom, **Show as exported**, **Export**, **Approve and file**). Scrolling up does not bring them back; they return at the top of the report, or when you Tab to one of them. Clicking in the slim bar never brings them back.
 - It saves as you write (and [[⌘S]]). If the report changed somewhere else, the sheet says **This changed somewhere else** and offers **Reload**; it never overwrites.
 
 ## The client view
