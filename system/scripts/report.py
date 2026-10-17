@@ -55,6 +55,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import linktext  # noqa: E402  (#121: links in plain text)
 import paths  # noqa: E402
 try:
     import log as debuglog  # BL-102: the debug log (not `log`: some scripts have a function of that name); optional
@@ -298,6 +299,8 @@ def _adhoc_cell(r, k, table, names, today_iso):
         v = (tracker.shown(v) if v else "") + (f" · {(today() - date.fromisoformat(r['due_date'])).days} days late" if late else "")
     if k == "project":
         v = names.get(v, v)                                  # BL-101: the project's name, not its code
+    if k in ("latest_update", "response_action", "reasoning", "options", "client_message") and isinstance(v, str):
+        v = linktext.with_address(v)                         # #121: a link reads "words (address)", never the raw characters
     return v if v not in (None,) else ""
 # ===== end BL-229 (adhoc_rows) =====
 
@@ -466,6 +469,11 @@ class _Week:
         return bool(d) and self.mon.isoformat() <= d[:10] <= self.fri.isoformat()
 
 
+def _plain(text):
+    """A link field's words without the addresses (#121), for what the model reads; None stays None."""
+    return linktext.words(text) if text else text
+
+
 def weekly_data(code, week_ending=None):
     """The facts a weekly report is drafted from (the weekly-data command): the week, health and the suggested health, overdue actions,
     risks, milestones, the week's changes and the rest. Read only."""
@@ -504,7 +512,8 @@ def weekly_data(code, week_ending=None):
         "actions_closed": [a["id"] + " " + a["description"] for a in actions if a["status"] == "Closed" and wk.holds(a["closed"])],
         "overdue": [{"id": a["id"], "text": a["description"], "owner": a["owner"], "due": a["due_date"]} for a in overdue],
         "top_risks": [{"id": r["id"], "type": r["type"], "text": r["description"], "priority": r["priority"],
-                       "owner": r["owner"], "response": r["response_action"]} for r in risks[:5]],
+                       "owner": r["owner"], "response": _plain(r["response_action"])}
+                      for r in risks[:5]],
         "decisions": _week_decisions(con, code, wk),
         "decisions_needed": decisions_needed(con, code, wk.cut),                       # BL-53
         "decisions_to_revisit": _week_revisits(con, code, wk),
@@ -1050,7 +1059,7 @@ def _context_open(con, code, period):
                                      + (" (overdue)" if a["due_date"] and a["due_date"] < period.end else "") for a in acts] or []
     return out + ["", "## Open risks, issues, assumptions and dependencies"] + \
         [f"- {r['id']} {r['type']}, {r['priority'] or 'priority not set'}: {r['description']}"
-         + (f" — response: {r['response_action']}" if r["response_action"] else " — no response yet") for r in risks]
+         + (f" — response: {linktext.words(r['response_action'])}" if r["response_action"] else " — no response yet") for r in risks]
 
 
 def _context_milestones(con, code):
@@ -1168,8 +1177,9 @@ def client_item_context(con, item_id):
     if item_id in excluded:
         raise drafts.Refused(f"{item_id} is labelled {', '.join(excluded[item_id])}: client wording isn't drafted for it.")
     title = x.get("description") if table != "decisions" else x.get("decision")
-    more = {"actions": x.get("latest_update"), "raid": x.get("response_action"), "decisions": x.get("reasoning")}[table]
-    if drafts.secret(f"{title} {more or ''} {x.get('source') or ''}"):
+    held = {"actions": x.get("latest_update"), "raid": x.get("response_action"), "decisions": x.get("reasoning")}[table]
+    more = linktext.words(held)                  # #121: the words go in the draft's text; the check below reads the address as well
+    if drafts.secret(f"{title} {held or ''} {x.get('source') or ''}"):
         raise drafts.Refused(f"{item_id} is marked confidential or restricted: client wording isn't drafted for it.")
     kind = {"actions": "action", "raid": (x.get("type") or "risk").lower(), "decisions": "decision"}[table]
     text = title.strip() + (f"\n{({'actions': 'Latest update', 'raid': 'Response', 'decisions': 'Reasoning'})[table]}: {more.strip()}" if more and more.strip() else "")

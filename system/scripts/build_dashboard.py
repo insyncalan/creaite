@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import linktext  # noqa: E402  (#121: links in plain text show as their words in the activity lines)
 import review  # noqa: E402  (classification shared with cx-review: bulk rule, needs a project)
 from docx_tools import md_normalise  # noqa: E402  (Current state is Markdown, BL-22, BL-47)
 import propose  # noqa: E402  (register learning checks, BL-28)
@@ -672,9 +673,9 @@ def _act_skip(r):
 def _act_change(r, tbl, made):
     """The words for one change (BL-43): created (with owner and due, or type and priority), undone, a note, or old → new."""
     label = FIELD_LABELS.get(r["field"], r["field"].replace("_", " "))
-    val = lambda v: (shown(v) if r["field"] in DATE_LIKE else v) or "—"  # noqa: E731
+    val = lambda v: (shown(v) if r["field"] in DATE_LIKE else linktext.words(v)) or "—"  # noqa: E731
     if r["field"] == "note":
-        return f"note: {r['new_value']}"
+        return f"note: {linktext.words(r['new_value'])}"
     if r["op"] == "insert":
         extra = ([f"owner {made['owner']}"] if tbl == "actions" and made.get("owner") else []) + \
                 ([f"due {shown(made['due_date'])}"] if tbl == "actions" and made.get("due_date") else []) + \
