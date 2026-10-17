@@ -20,7 +20,7 @@ import { placeAtCaret } from "../../core/caretPlace.js";
 import { attachItemPick, insertHash } from "../ItemPicker.jsx";
 import { chipClicked, itemChip, ITEM_HREF, itemOf, itemState } from "../../core/itemLink.js";
 import { Icon } from "../Icon.jsx";
-import { OWN_STEP, UNDO_DEPTH, cxUndoSteps, undoStash, undoTake } from "../../core/undoSteps.js";
+import { OWN_JOIN, OWN_STEP, UNDO_DEPTH, cxUndoSteps, undoHeadEnd, undoStash, undoTake } from "../../core/undoSteps.js";
 
 /** @typedef {{id: string, label: string, sub?: string, icon?: string}} PickOption */
 /** @typedef {{kind: "note"|"person", from: number, to: number, q: string, opts: PickOption[], i: number}} PickState */
@@ -184,11 +184,12 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
   const insert = what => {
     const h = ed.current;
     if (!h) return;
-    const c = h.editor.chain().focus().setMeta(OWN_STEP, true);
+    const c = h.editor.chain().focus().setMeta(OWN_JOIN, true);
     if (what === "table") c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (what === "item") insertHash(h);
     else if (what === "person" || what === "note") c.insertContent(what === "person" ? "@" : "[[").run();
     else if (what.startsWith("tpl:")) { const t = /** @type {any} */ (D).note_templates?.[what.slice(4)]; if (t) c.insertContent(t, { contentType: "markdown" }).run(); }
+    undoHeadEnd(h.editor);          /* a row that put nothing in (no such template) leaves no pending join */
   };
   /** BL-301 B gaps: pictures, as BL-63's in Current state (the image node shown as creaite's figure, the caption its alt text).
       Each is filed in the notes folder's _images/ as it is added, then put after the block holding the cursor (else at the end),
@@ -198,7 +199,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
       const ref = onImage ? await onImage(f) : null, h = ed.current;
       if (!ref || !h) continue;
       const st = h.editor.state, end = st.doc.content.size, $p = st.doc.resolve(Math.min(st.selection.from, end)), after = $p.depth ? $p.after(1) : end;
-      h.editor.chain().setMeta(OWN_STEP, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
+      h.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
       const cap = /** @type {HTMLElement|null} */ (box.current ? box.current.querySelector(`figure[data-ref="${CSS.escape(ref)}"] figcaption`) : null);
       if (cap) cap.focus();
     }
@@ -292,7 +293,8 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
         host={hostRows()}
         extra={<>{toolbarExtra}
           <input ref={fileIn} type="file" class="nimgfile" accept="image/png,image/jpeg" multiple hidden aria-hidden="true" tabIndex={-1}
-            onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); await addImages(i.files); i.value = ""; }} /></>} />
+            onCancel={() => { if (ed.current) undoHeadEnd(ed.current.editor); }}
+            onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); try { await addImages(i.files); } finally { if (ed.current) undoHeadEnd(ed.current.editor); } i.value = ""; }} /></>} />
       <div ref={box} class="nbody rted" role="textbox" aria-multiline="true" aria-label={label} spellcheck data-ph="Write here… [[ links a note, @ a person, # a work item, / inserts"
         aria-controls={pick ? "ntpick" : undefined} aria-activedescendant={pick && pick.opts[pick.i] ? optId(pick.i) : undefined} />
       {pick ? (

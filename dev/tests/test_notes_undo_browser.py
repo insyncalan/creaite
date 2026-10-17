@@ -399,6 +399,72 @@ class NotesUndo(LiveBrowserCase):
         self.undo()
         self.assertEqual(self.text(), "")
 
+    # ---- a slash row that puts nothing in leaves nothing pending ----
+    def slash_row(self, text, row_wait="!!document.querySelector('.slashmenu [role=option]')"):
+        b = self.b
+        self.burst("hello")
+        self.burst(text)
+        b.wait(row_wait, 10)
+        b.key("Enter")
+
+    def paste_text(self, text):
+        self.b.eval("(()=>{ const dt=new DataTransfer(); dt.setData('text/plain',%s); document.querySelector('.nbody').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); return true; })()" % json.dumps(text))
+        self.b.pump(0.2)
+
+    def test_a_cancelled_image_row_does_not_pull_a_later_paste_into_its_step(self):
+        b = self.b
+        self.make("Image cancel")
+        self.slash_row(" /image")
+        b.eval("document.querySelector('.nimgfile').dispatchEvent(new Event('cancel'))")          # the file picker was cancelled
+        b.pump(1.5)
+        self.assertEqual(self.text(), "hello ")
+        self.focus_end()
+        self.paste_text("PASTED")
+        self.assertEqual(self.text(), "hello PASTED")
+        self.undo()
+        self.assertEqual(self.text(), "hello ", "one undo takes back only the paste")
+
+    def test_a_cancelled_image_row_does_not_pull_a_later_insert_into_its_step(self):
+        b = self.b
+        self.make("Image cancel two")
+        self.slash_row(" /image")
+        b.eval("document.querySelector('.nimgfile').dispatchEvent(new Event('cancel'))")
+        b.pump(0.3)
+        b.eval("document.querySelector('.nbody').cxed.focus('end'); true")
+        b.eval(ED + ".chain().focus('end').setMeta('cxStepJoin',true).insertTable({rows:2,cols:2}).run()")      # the toolbar's table, much later
+        self.assertTrue(b.eval("!!document.querySelector('.nbody table')"))
+        self.undo()
+        self.assertFalse(b.eval("!!document.querySelector('.nbody table')"))
+        self.assertEqual(self.text(), "hello ", "the deleted /image is a step of its own, not joined by a later insert")
+
+    def test_a_cancelled_link_form_then_typing_is_a_step_of_its_own(self):
+        b = self.b
+        self.make("Link cancel")
+        self.slash_row(" /link")
+        b.wait("!!document.querySelector('.linkpop')", 10)
+        b.key("Escape")                                                                # the form is cancelled; the cursor is back in the text
+        b.wait("!document.querySelector('.linkpop')&&document.activeElement===document.querySelector('.nbody')", 5)
+        b.type("X")
+        self.assertEqual(self.text(), "hello X")
+        self.undo()
+        self.assertEqual(self.text(), "hello ", "the typing is its own step, not merged into the deletion of /link")
+
+    def test_the_history_groups_equal_composition_ids_whatever_the_time_and_place(self):
+        """The slash menu's join rests on this in prosemirror-history (test_notes_undo_shape pins the source; this runs it)."""
+        b = self.b
+        self.make("Composition")
+        self.burst("hello")
+        self.burst(" there")
+        ev = "(()=>{const e=%s; const p=e.state.plugins.find(p=>/^history/.test(p.key)); return p.getState(e.state).done.eventCount; })()" % ED
+        start = b.eval(ev)
+        comp = "%s.state.plugins.find(p=>/^history/.test(p.key)).getState(%s.state).prevComposition" % (ED, ED)
+        self.assertEqual(b.eval(comp), -1)
+        self.assertEqual(b.eval("(()=>{const e=%s; e.view.dispatch(e.state.tr.insertText('A',1).setMeta('addToHistory',true)); return true; })()" % ED), True)
+        self.assertEqual(b.eval(ev), start + 1, "far from the last change and without an id: its own step")
+        self.assertEqual(b.eval("(()=>{const e=%s; e.view.dispatch(e.state.tr.insertText('B',e.state.doc.content.size-1).setMeta('composition',%s)); return true; })()" % (ED, comp)), True)
+        self.assertEqual(b.eval(ev), start + 1, "the same composition id joins it, however far")
+        self.assertEqual(b.eval(comp), -1, "a change with no id keeps the one it had")
+
 
 if __name__ == "__main__":
     unittest.main()

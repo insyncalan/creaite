@@ -15,6 +15,9 @@ export const UNDO_DEPTH = 500;
 export const OWN_STEP = "cxStep";
 /** The same, but the next change joins it instead of starting another (the slash menu's deletion of "/query", before its row's insert). */
 export const OWN_HEAD = "cxStepHead";
+/** An own step that joins a pending `OWN_HEAD` (the row's own insert, after the slash menu's deletion); with none pending it is `OWN_STEP`. */
+export const OWN_JOIN = "cxStepJoin";
+const HEAD_END = "cxHeadEnd";
 /** How many closed notes keep their history. */
 export const STASH_MAX = 5;
 
@@ -25,7 +28,7 @@ function changeKind(tr) {
   return put === 0 && cut > 0 ? "del" : "ins";
 }
 /** @param {any} tr */
-const ownStep = tr => !!tr.getMeta(OWN_STEP) || !!tr.getMeta(OWN_HEAD) || !!tr.getMeta("paste") || ["paste", "cut", "drop"].includes(tr.getMeta("uiEvent"));
+const ownStep = tr => !!tr.getMeta(OWN_STEP) || !!tr.getMeta(OWN_HEAD) || !!tr.getMeta(OWN_JOIN) || !!tr.getMeta("paste") || ["paste", "cut", "drop"].includes(tr.getMeta("uiEvent"));
 /** The history plugin of a state. @param {any} state */
 const histPlugin = state => state.plugins.find((/** @type {any} */ p) => /^history\$/.test(p.key));
 /** Is this transaction an undo or a redo? @param {any} state @param {any} tr */
@@ -39,11 +42,12 @@ export const cxUndoSteps = Extension.create({ name: "cxUndoSteps", addProseMirro
   state: {
     init: () => ({ last: /** @type {string|null} */ (null), closeNext: false, head: false }),
     apply: (tr, v, _old, state) => {
+      if (tr.getMeta(HEAD_END)) return { ...v, head: false };          /* the row's action ended without a change (cancelled, nothing to insert) */
       if (!tr.docChanged || tr.getMeta("appendedTransaction")) return v;          /* a transaction a plugin appended (the trailing paragraph, the link scrub) belongs to the change that caused it */
       if (isHistoryTr(state, tr)) return { last: null, closeNext: false, head: false };
       if (tr.getMeta("addToHistory") === false) return v;
       const own = ownStep(tr), head = !!tr.getMeta(OWN_HEAD);
-      return { last: own ? null : changeKind(tr), closeNext: own && !head, head };
+      return { last: own ? null : changeKind(tr), closeNext: own, head };
     } },
   /* The history plugin reads a transaction's close-history mark when it applies it, after this filter: marking it here puts
      the change in a new step. (A filter that only reads and marks; it never refuses.) */
@@ -53,7 +57,7 @@ export const cxUndoSteps = Extension.create({ name: "cxUndoSteps", addProseMirro
     const v = key.getState(state);
     if (!v) return true;
     const own = ownStep(tr);
-    if (own && v.head) {          /* the change after a slash menu's "/query" deletion joins that deletion: one step. The history groups a change with the one before it only when it touches it (a block put after the paragraph does not), unless both carry the same composition id: so it gets the one the history already holds */
+    if (tr.getMeta(OWN_JOIN) && v.head) {          /* the row's own insert after a slash menu's "/query" deletion joins that deletion: one step. The history groups a change with the one before it only when it touches it (a block put after the paragraph does not), unless both carry the same composition id: so it gets the one the history already holds */
       const p = histPlugin(state);
       if (p) tr.setMeta("composition", p.getState(state).prevComposition);
       return true;
@@ -108,6 +112,10 @@ export function undoTake(path, editor, base) {
     editor.view.dispatch(st.tr.setMeta(p, { redo: false, historyState: next }).setMeta("addToHistory", false));
     return true;
   } catch (e) { return false; }
+}
+/** The slash row's action ended without joining (cancelled, or nothing to insert): the next change is an ordinary one. @param {any} editor */
+export function undoHeadEnd(editor) {
+  if (editor && !editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta(HEAD_END, true).setMeta("addToHistory", false));
 }
 /** Forget the kept history of the note at `path` (it was deleted, archived or renamed). @param {string} path */
 export function undoDrop(path) { stash.delete(path); }
