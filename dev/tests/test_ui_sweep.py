@@ -164,7 +164,7 @@ class TargetSizes(UiSweepCase):
 # Not counted as covered or cut off: the Display menu lies over the table on purpose; its column ticks are drawn by their
 # labels; Settings' Advanced rows were inside a closed <details> before BL-320, and Today's Resolved list (BL-319: folded
 # to one line) is inside a closed <details>; the "more columns" cue moves as it is measured.
-REFLOW_SKIP_SCREENS = ("work-display",)
+REFLOW_SKIP_SCREENS = ("work-display", "rail-expanded", "rail-collapsed", "rail-icons")   # the rail states are set at desktop width: a narrow window locks the rail collapsed
 REFLOW_SKIP = ("#dprop-", "#advRows", "#chgList", "#chgMore", ".xcue button.xmore")
 
 
@@ -427,7 +427,7 @@ class ScrollEnd(UiSweepCase):
             for w in (self.width, 320):
                 b.resize(w, 900)
                 for name in SCREENS:
-                    if name in ("cmdk", "ask", "work-display"):
+                    if name in ("cmdk", "ask", "work-display", "rail-expanded", "rail-collapsed", "rail-icons"):
                         continue
                     with self.subTest(width=w, screen=name):
                         region = self.goto(name)
