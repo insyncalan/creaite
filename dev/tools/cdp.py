@@ -27,6 +27,11 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import proc_guard  # noqa: E402
 
+# harness-timeout: nothing in the driver waits for ever. A silent Chrome or DevTools raises a TimeoutError that names what it waited for.
+# Generous, so a slow or loaded machine does not fail falsely; the unit test shortens them.
+START_TIMEOUT = 60      # seconds for Chrome to start and publish its DevTools port
+CALL_TIMEOUT = 60       # seconds of silence from DevTools (one call, one handshake, one /json request)
+
 MAC_CHROME_PATHS = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
                     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"]
 
@@ -47,10 +52,11 @@ def chrome_path():
 class WebSocket:
     """Just enough RFC 6455 for one local DevTools connection: text frames, masked, fragments joined."""
 
-    def __init__(self, url):
+    def __init__(self, url, timeout=None):
         host, rest = url[len("ws://"):].split("/", 1)
         h, p = host.split(":")
-        self.sock = socket.create_connection((h, int(p)), timeout=30)
+        self.timeout = timeout or CALL_TIMEOUT      # harness-timeout: no read waits longer than this (a silent DevTools raises)
+        self.sock = socket.create_connection((h, int(p)), timeout=self.timeout)
         key = base64.b64encode(os.urandom(16)).decode()
         self.sock.sendall((f"GET /{rest} HTTP/1.1\r\nHost: {host}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                            f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
@@ -134,15 +140,23 @@ class Browser:
              "--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4",
              f"--window-size={width},{height}", *args, "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         port_file = os.path.join(self.profile, "DevToolsActivePort")
-        for _ in range(100):
+        end = time.time() + START_TIMEOUT
+        while True:
             if os.path.exists(port_file) and self._port_text(port_file).count("\n") >= 1:
                 break
+            if self.proc.poll() is not None:
+                code = self.proc.returncode
+                self.close()
+                raise RuntimeError(f"Chrome exited with {code} before it published its DevTools port")
+            if time.time() > end:
+                self.close()
+                raise TimeoutError(f"Chrome didn't publish its DevTools port within {START_TIMEOUT}s")
             time.sleep(0.1)
-        else:
-            self.close()
-            raise RuntimeError("Chrome didn't start")
         self.port = int(self._port_text(port_file).split("\n")[0])
-        tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json"))
+        try:
+            tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json", timeout=CALL_TIMEOUT))
+        except (socket.timeout, TimeoutError) as e:
+            raise TimeoutError(f"Chrome's DevTools /json on port {self.port} gave no answer within {CALL_TIMEOUT}s") from e
         self.ws = WebSocket(next(t for t in tabs if t["type"] == "page")["webSocketDebuggerUrl"])
         self.n = 0
         self.events = []
@@ -182,8 +196,14 @@ class Browser:
         self.n += 1
         mine = self.n
         self.ws.send(json.dumps({"id": mine, "method": method, "params": params}))
+        end = time.time() + CALL_TIMEOUT
         while True:
-            msg = json.loads(self.ws.recv())
+            if time.time() > end:
+                raise TimeoutError(f"no answer to {method} within {CALL_TIMEOUT}s (DevTools kept sending other events)")
+            try:
+                msg = json.loads(self.ws.recv())
+            except (socket.timeout, TimeoutError) as e:
+                raise TimeoutError(f"no answer to {method} within {self.ws.timeout}s: DevTools went silent") from e
             if msg.get("id") == mine:
                 if "error" in msg:
                     raise RuntimeError(f"{method}: {msg['error'].get('message')}")
@@ -207,7 +227,7 @@ class Browser:
         except (socket.timeout, TimeoutError):
             pass
         finally:
-            self.ws.sock.settimeout(30)
+            self.ws.sock.settimeout(self.ws.timeout)
 
     def eval(self, js, wait=True):
         """Run JavaScript in the page and return its value (awaiting a promise if `wait`)."""
