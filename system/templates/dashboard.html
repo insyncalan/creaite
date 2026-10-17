@@ -25862,7 +25862,7 @@ ${s5}`;
       return ["span", HTMLAttributes, 0];
     }
   });
-  var emailSet = (list) => list.filter((x5) => x5 && ["starterKit", "bold", "italic", "link", "hardBreak", "tableKit", "table"].includes(x5.name)).map((x5) => x5.name === "starterKit" ? x5.configure({
+  var emailSet = (list) => list.filter((x5) => x5 && ["starterKit", "bold", "italic", "hardBreak", "tableKit", "table"].includes(x5.name)).map((x5) => x5.name === "starterKit" ? x5.configure({
     heading: false,
     blockquote: false,
     codeBlock: false,
@@ -53546,14 +53546,16 @@ ${d5.text}`);
     const el2 = $("#dePrev");
     if (!el2) return;
     shared.DE.built = html2;
-    if (el2.cxed && !el2.cxed.editor.isDestroyed) {
+    const ai2 = !shared.DE.outside;
+    if (el2.cxed && !el2.cxed.editor.isDestroyed && el2.cxed.aiOn === ai2) {
       el2.cxed.setValue(html2);
       return;
     }
-    creaiteEditor(el2, { features: "email", html: html2, ai: { place: "email", project: () => {
+    creaiteEditor(el2, { features: "email", html: html2, ...ai2 ? { ai: { place: "email", project: () => {
       const d5 = shared.DE;
       return d5 && (d5.items && d5.items[0] && d5.items[0].p || d5.codes && d5.codes[0]) || "";
-    } } });
+    } } } : {} });
+    if (el2.cxed) el2.cxed.aiOn = ai2;
   }
   function dePrevDrop() {
     const el2 = $("#dePrev");

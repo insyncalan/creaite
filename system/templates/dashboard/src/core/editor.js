@@ -125,7 +125,7 @@ const EmailSpan = Mark.create({ name:"emailSpan", inclusive:false,
   renderHTML({ HTMLAttributes }){ return ["span", HTMLAttributes, 0]; } });
 /** The extensions an email keeps from the notes set (everything else, Markdown included, is left out: typing `# ` or `- ` in an email
     must not start a heading or a list; a pasted list or heading is flattened to paragraphs). @param {any[]} list @returns {any[]} */
-const emailSet = list => list.filter(x => x && ["starterKit","bold","italic","link","hardBreak","tableKit","table"].includes(x.name))
+const emailSet = list => list.filter(x => x && ["starterKit","bold","italic","hardBreak","tableKit","table"].includes(x.name))
   .map(x => x.name === "starterKit" ? x.configure({ heading:false, blockquote:false, codeBlock:false, horizontalRule:false, strike:false, code:false,
     bold:false, italic:false, link:false, hardBreak:false, bulletList:false, orderedList:false, listItem:false, listKeymap:false, trailingNode:false }) : x)
   .concat([EmailStyles, EmailSpan]);

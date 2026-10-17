@@ -343,6 +343,7 @@ class DraftEmail(_Base):
         b = self.b
         self.open_email()
         b.eval("edOf(document.getElementById('dePrev')).focus('start'); true")
+        b.wait("document.activeElement===document.getElementById('dePrev')", 5)   # Tiptap's focus lands on the next frame
         b.type("# not a heading")
         b.eval("edOf(document.getElementById('dePrev')).editor.commands.setTextSelection(1); true")
         b.type("- not a list")
@@ -352,6 +353,42 @@ class DraftEmail(_Base):
         html, _ = self.copy(True)
         self.assertIn("not a heading", html)
         self.assertIn("not a list", html)
+
+    def test_the_email_has_no_link_mark_so_nothing_links_and_a_pasted_link_is_flattened(self):
+        b = self.b
+        self.open_email()
+        self.assertTrue(b.eval("edOf(document.getElementById('dePrev')).editor.schema.marks.link===undefined"))
+        b.eval("edOf(document.getElementById('dePrev')).focus('start'); true")
+        b.wait("document.activeElement===document.getElementById('dePrev')", 5)   # Tiptap's focus lands on the next frame
+        b.type("see www.example.com ")
+        b.eval("""(()=>{ const e=edOf(document.getElementById('dePrev')).editor; e.view.pasteHTML('<a href="https://evil.example/x">pasted words</a>');
+          })()""")
+        b.pump(0.3)
+        self.assertEqual(b.eval("document.querySelectorAll('#dePrev a').length"), 0)
+        html, _ = self.copy(True)
+        self.assertIn("www.example.com", html)
+        self.assertIn("pasted words", html)
+        self.assertNotIn("<a ", html)
+        self.assertNotIn("href", html)
+
+    def test_the_ai_bar_is_off_for_an_outside_recipient_and_on_for_an_internal_one(self):
+        # interim (#133) until the edit_ai client-facts fix: no Ask... sparkle for an outside recipient, back when the recipient is internal
+        b = self.b
+        self.open_email()
+        self.assertFalse(b.eval("DE.outside"))
+        self.select_in("#dePrev", "I hope you're well")
+        self.assertTrue(self.sparked(), "internal recipient: the bar is there")
+        b.eval(CLEAN)
+        b.eval('REG[0].email="sara@client.example"; openDraftEmail("Sara Example"); true')   # the recipient becomes outside
+        b.wait("!!document.querySelector('#dePrev.ProseMirror')")
+        self.select_in("#dePrev", "I hope you're well")
+        self.assertTrue(b.eval("DE.outside"))
+        self.assertFalse(self.sparked(), "outside recipient: no bar")
+        b.eval(CLEAN)
+        b.eval('REG[0].email="sara@brightwater.example"; openDraftEmail("Sara Example"); true')   # and internal again
+        b.wait("!!document.querySelector('#dePrev.ProseMirror')")
+        self.select_in("#dePrev", "I hope you're well")
+        self.assertTrue(self.sparked(), "internal again: the bar is back")
 
     def test_at_900px_the_email_bar_fits(self):
         b = self.b

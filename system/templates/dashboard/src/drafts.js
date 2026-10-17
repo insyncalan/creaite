@@ -210,8 +210,13 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
    and what is copied is that HTML until the email is edited, then the editor's document in the same wrapper (deHtml). */
 /** Put the builder's HTML in the preview: a new editor on first use, else quietly into the one there (not an edit). @param {string} html */
 export function dePrevPut(html){ const el=$("#dePrev"); if(!el) return; shared.DE.built=html;
-  if(el.cxed&&!el.cxed.editor.isDestroyed){ el.cxed.setValue(html); return; }
-  creaiteEditor(el,{ features:"email", html, ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; } } }); }
+  /* INTERIM (#133, until the edit_ai client-facts fix): the AI bar is off whenever the recipient is outside, because a suggestion for an
+     outside email could be written without the client-safe facts. It is mounted again when the recipient is internal; an editor that
+     was mounted the other way is rebuilt (the recipient changes with the follow-up's attendees, which redraw the popup). */
+  const ai=!shared.DE.outside;
+  if(el.cxed&&!el.cxed.editor.isDestroyed&&el.cxed.aiOn===ai){ el.cxed.setValue(html); return; }
+  creaiteEditor(el,{ features:"email", html, ...(ai?{ ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; } } }:{}) });
+  if(el.cxed) el.cxed.aiOn=ai; }
 /** End the preview's editor (the popup is redrawn or closed), and with it the selection bar over it. */
 export function dePrevDrop(){ const el=$("#dePrev"); if(el&&el.cxed) el.cxed.destroy(); }
 /** The HTML Copy email puts on the clipboard. An unedited email is the builder's HTML as the browser holds it (what the preview's own
