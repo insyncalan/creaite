@@ -38,6 +38,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import linktext  # noqa: E402  (#121: a link in item text is matched by its words)
 import notes  # noqa: E402  (BL-301: a note's text and its confidential mark)
 import paths  # noqa: E402
 import propose  # noqa: E402  (the people register's reader; read only)
@@ -270,6 +271,16 @@ def owner_forms(vocab, name):
     return sorted(forms)
 
 
+def words_match(row, cols, terms, any_term):
+    """True unless the row only matched through a link's address (#121): when a searched column holds `[words](address)`, the terms are
+    checked again against the words alone. A row with no link in it matched on the SQL already and is kept as it is."""
+    if not terms or not any(isinstance(row.get(c), str) and "](" in row[c] and linktext.has_link(row[c]) for c in cols):
+        return True
+    hay = [linktext.words(str(row.get(c) or "")).lower() for c in cols]
+    found = [any(t.lower() in h for h in hay) for t in terms]
+    return any(found) if any_term else all(found)
+
+
 def item_rows(con, vocab, terms, flt, any_term=False):
     """Tracker items matching the words and filters, with plain SQL LIKE beside the index (nothing is copied into it)."""
     kinds = flt["kinds"]
@@ -309,8 +320,8 @@ def item_rows(con, vocab, terms, flt, any_term=False):
             where.append(f"{dcol} <= ?")
             args.append(flt["to"])
         sql = f"SELECT *, {dcol} AS _date FROM {table}" + (" WHERE " + " AND ".join(where) if where else "")
-        for r in con.execute(sql + f" ORDER BY _date DESC, id LIMIT 400", args):
-            out.append((table, dict(r), text))
+        found = (dict(r) for r in con.execute(sql + f" ORDER BY _date DESC, id LIMIT 400", args))
+        out.extend((table, row, text) for row in found if words_match(row, cols, terms, any_term))   # #121: a link's address is never matched
     return out
 
 
@@ -629,7 +640,8 @@ def item_line(table, r):
         what = r["description"]
     elif table == "raid":
         bits = [r["type"], r["status"], f"owner {r['owner']}", f"priority {r['priority']}" if r["priority"] else ""]
-        what = r["description"] + (f" — response: {r['response_action']}" if r["response_action"] else " — no response yet")
+        reply = f" — response: {linktext.words(r['response_action'])}" if r["response_action"] else " — no response yet"
+        what = r["description"] + reply
     elif table == "decisions":
         bits = ["Decision", f"made by {r['made_by']}" if r["made_by"] else "", f"on {tracker.shown(r['date'])}" if r["date"] else ""]
         what = r["decision"]
