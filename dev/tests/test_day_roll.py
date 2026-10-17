@@ -23,7 +23,7 @@ THURSDAY, FRIDAY = "2026-10-08", "2026-10-09"
 SHIM = """(()=>{ const R=Date, base=new R(2026,9,8,9,30).getTime()-R.now(); window.__clockOff=base;
   class D extends R{ constructor(...a){ if(a.length) super(...a); else super(R.now()+window.__clockOff); } static now(){ return R.now()+window.__clockOff; } }
   window.Date=D; })();"""
-ROW = """(()=>{ const tr=[...document.querySelectorAll('#mtgBody tr[data-mid]')].find(t=>t.textContent.includes('Late call')); return tr?tr.textContent:null; })()"""
+ROW = """(()=>{ const tr=[...document.querySelectorAll('#mtgBody .inrow[data-mid]')].find(t=>t.textContent.includes('Late call')); return tr?tr.textContent:null; })()"""
 
 
 class DayRollTests(LiveBrowserCase):
@@ -56,12 +56,12 @@ class DayRollTests(LiveBrowserCase):
     def open_intake(self):
         b = self.b
         b.eval("go('inbox')")
-        b.wait("document.querySelector('#mtgBody tr[data-mid]')")
+        b.wait("document.querySelector('#mtgBody .inrow[data-mid]')")
 
     def test_the_new_day_makes_yesterdays_meeting_happened_and_moves_today(self):
         b = self.b
         self.open_intake()
-        self.assertIn("Not happened yet", b.eval(ROW))
+        self.assertIsNone(b.eval(ROW))                                         # #179: a meeting that has not ended is not in the queue yet
         b.eval("go('today')")
         b.wait("document.querySelector('#v-today')")
         self.assertEqual(b.eval("dayShown()"), THURSDAY)
@@ -70,8 +70,8 @@ class DayRollTests(LiveBrowserCase):
         b.wait("TODAY==='2026-10-09'", 20)
         b.wait("dayShown()==='2026-10-09'", 20)
         self.open_intake()
-        b.wait("document.querySelector('#mtgBody tr[data-mid]')")
-        self.assertNotIn("Not happened yet", b.eval(ROW))
+        b.wait("document.querySelector('#mtgBody .inrow[data-mid]')")
+        self.assertIn("Late call", b.eval(ROW))                                # the new day: it has happened, so it is a row
         self.assertEqual(b.eval("WEEKSTART"), "2026-10-05")
         self.assertEqual(b.eval("[...document.querySelectorAll('.snack,#snackT')].map(e=>e.textContent).join('|').includes('new day')"), False)
 
@@ -115,18 +115,18 @@ class ZoneTests(LiveBrowserCase):
         b.call("Page.addScriptToEvaluateOnNewDocument", source=SHIM.replace("new R(2026,9,8,9,30)", "new R(2026,9,16,23,39)"))
         b.reload("typeof go==='function' && LIVE")
         b.eval("go('inbox')")
-        b.wait("document.querySelector('#mtgBody tr[data-mid]')")
-        return b.eval("""[...document.querySelectorAll('#mtgBody tr[data-mid]')].map(t=>({t:t.textContent,
-          off:(t.querySelector('input[type=checkbox]')||{}).disabled}))""")
+        b.wait("document.querySelector('#mtgBody .inrow[data-mid]')")
+        return b.eval("""[...document.querySelectorAll('#mtgBody .inrow[data-mid]')].map(t=>({t:t.textContent, g:t.dataset.g,
+          off:(t.querySelector('[data-ia=process]')||{disabled:true}).disabled}))""")
 
     def check(self, zone):
         rows = self.rows(zone)
         self.assertEqual(self.b.eval("TODAY"), FRI)
         for title in ("Afternoon one", "Afternoon two"):
             r = next(x for x in rows if title in x["t"])
-            self.assertNotIn("Not happened yet", r["t"], zone)
+            self.assertEqual(r["g"], "ready", zone)
             self.assertFalse(r["off"], zone)
-        self.assertIn("Not happened yet", next(x for x in rows if "Not yet ended" in x["t"])["t"] + "Not happened yet")
+        self.assertFalse([x for x in rows if "Not yet ended" in x["t"]], zone)                # it has not ended: not in the queue yet
 
     def test_los_angeles(self):
         self.check("America/Los_Angeles")

@@ -261,7 +261,8 @@ class TheRest(LiveBrowserCase):
         self.assertEqual(self.named("#filesTbl button[data-openfile]")[0], ["Open folder", "Open folder", "", "folderopen"])
         b.eval("go('inbox')")
         b.pump(0.3)
-        got = self.named("#inboxTbl [data-inprev], #inboxTbl [data-inrm]")
+        b.eval("document.querySelectorAll('#mtgBody .inrow[data-inf] [data-ia=det]').forEach(x=>x.click())")      # #179: a file's Preview and Remove are under its Details
+        got = self.named("#mtgBody [data-inprev], #mtgBody [data-inrm]")
         self.assertIn(["Preview", "Preview", "", "eye"], got)
         self.assertIn(["Remove from Intake", "Remove from Intake", "", "trash"], got)
 

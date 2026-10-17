@@ -1103,23 +1103,27 @@ dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);
 #boardDlg .dwrap{width:170px;margin:4px 0 8px} #boardDlg .dwrap input{height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink)} .bdquick{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
 .bcard{transition:border-color var(--d1),box-shadow var(--d1)} .bcol{transition:background-color var(--d1)}
 @media (max-width:640px){ .boardctl{width:100%} }
-/* ===== Meetings in the Inbox (BL-42 phase 2) ===== */
-.mtgsec{margin:0} .mtghead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px} .mtghead .sp{flex:1}
-.mtgtbl .mtgday td{background:var(--sunk);font-weight:600;font-size:var(--fs-xs);color:var(--muted)} .mtgtbl td{vertical-align:middle}
-.mtgtbl tr.mtglater td{opacity:.5} .mtgtbl tr.mtglater td:last-child,.mtgtbl tr.mtglater td:nth-last-child(2),.mtgtbl tr.mtglater td:nth-last-child(3){opacity:.8}   /* not happened yet */
-/* Transcripts in Calendar import (BL-42 phase 3, BL-104): a transcript that exists and isn't processed gets a tint, an accent bar and a
-   Transcript badge; the others are muted. The tint is built from each theme's own accent and surface, light and dark. */
-:root{--tx-tint:color-mix(in srgb,var(--accent) 11%,var(--surface))}
-.mtgchips{display:flex;gap:6px;margin:0 0 10px} .mtgtbl tr.mtgtx td{background:var(--tx-tint)} .mtgtbl tr.mtgtx td:first-child{box-shadow:inset 4px 0 0 var(--accent)}
-.txbadge{display:inline-block;font-size:var(--fs-xs);font-weight:600;padding:1px 6px;border:1px solid var(--accent);border-radius:var(--r-sm);color:var(--ink);background:var(--surface);margin-right:4px}
-.mtgtbl tr.mtgmute td{color:var(--muted)} .mtgtbl tr.mtgmute .title{color:var(--muted)} .mtgtbl tr.mtgdone td{opacity:.75}
-.mtgtbl tr.mtgtx:has(input:checked) td{background:color-mix(in srgb,var(--accent) 22%,var(--surface))} .mtgtbl tr.mtgtx:has(input:checked) td:first-child{box-shadow:inset 6px 0 0 var(--accent)}
-.mtgtbl tr:has(input:checked):not(.mtgtx) td{background:var(--sunk)}
-.mtgyes{font-weight:500;color:var(--ink)} .mtgwhen{font-size:var(--fs-xs);min-height:0} .mtgchk{font-size:var(--fs-xs)}
-/* Clear day (BL-104) */
-.mtgdayh{display:flex;align-items:center;gap:8px} .mtgdayh .sp{flex:1} .mtgclr{padding:0 10px}   /* v1.9.5 check 9: a .btn, 32px (was 24px) */
-.mtgx{border:0;background:none;color:var(--muted);font-size:var(--fs-lg);line-height:1;width:24px;height:24px;border-radius:var(--r-md);cursor:pointer} .mtgx:hover,.mtgx:focus-visible{background:var(--sunk);color:var(--ink)}
-.mtgconfirm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border:1px solid var(--warn);border-radius:var(--r-md);background:var(--sunk);font-size:var(--fs-sm)} .mtgconfirm .sp{flex:1}
+/* ===== Intake (#179): one queue in Review's row shape; reuses Review's tokens, adds none ===== */
+.inhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px} .inbtns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--muted)} .btn.quiet:hover{border-color:var(--line);color:var(--ink)}
+.btn.off{opacity:.45;cursor:default}
+.kbdhint.inkeys,#inKeys{margin:0 0 6px} .inlive{margin:0 0 10px;font-size:var(--fs-xs);color:var(--faint)}
+.ingrp{display:flex;align-items:baseline;gap:10px;margin:18px 0 6px} .ingrp h2{margin:0;font-size:var(--fs-lg)}
+.inrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-lg);padding:10px 14px;margin:0 0 8px}
+.inrow.sel{outline:2px solid var(--accent);outline-offset:1px} .inrow.done{background:var(--sunk)}
+.inmain{min-width:0} .int{font-weight:600} .inm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--muted)}
+.inact{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end} .inage{font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;margin-right:6px} .inage.old{color:var(--warn);font-weight:600}
+.inchip{display:inline-block;font-size:var(--fs-xs);font-weight:600;padding:0 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);line-height:19px} .inchip.warn{background:var(--warn-soft);color:var(--warn)}
+.indtb{height:22px;padding:0 6px}
+.instate{grid-column:1/-1;font-size:var(--fs-sm);color:var(--ink);border-top:1px solid var(--line);padding-top:6px;margin-top:2px;display:flex;gap:8px;align-items:center}
+.inprog{grid-column:1/-1;height:4px;border-radius:2px;background:var(--sunk);overflow:hidden} .inprog i{display:block;height:100%;width:40%;background:var(--accent);animation:inprog 1.4s ease-in-out infinite alternate} @keyframes inprog{from{margin-left:0}to{margin-left:60%}}
+@media (prefers-reduced-motion:reduce){ .inprog i{animation:none;width:60%} }
+.indet{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:var(--fs-sm);color:var(--muted);border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.indrop{padding:12px 14px;margin:0 0 8px;text-align:left} #v-inbox.dragover .indrop{border-color:var(--ink);color:var(--ink)}
+.mtgchk{font-size:var(--fs-xs)}
+/* Cleared (BL-104) */
+.mtgclr{padding:0 10px}
+
 .mtgcleared{margin-top:12px;font-size:var(--fs-sm)} .mtgcleared .clrlink{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font:inherit} .mtgcleared .clrlink:hover{text-decoration:underline}
 .mtgclrlist{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md)} .mtgclrlist .clrday{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--sunk);font-weight:600;font-size:var(--fs-xs);color:var(--muted)} .mtgclrlist .clrday .sp{flex:1}
 .mtgclrlist .clrrow{display:flex;align-items:center;gap:10px;padding:6px 10px;border-top:1px solid var(--line)} .mtgclrlist .clrrow .sp{flex:1}

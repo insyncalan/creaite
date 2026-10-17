@@ -96,16 +96,12 @@
         <div class="kbdhint" id="rvHint"></div>
       </div></section>
       <section class="view" id="v-inbox" hidden><div class="wrapmax">
-        <h1>Intake</h1><p class="sub" style="margin:4px 0 14px">Transcripts and minutes waiting to be processed. Files you add are saved to the inbox folder. Processing drafts the minutes and proposed items for Review; nothing is filed until you approve.</p>
-        <!-- ===== Intake sections (BL-73) ===== -->
-        <section class="card isec" id="isecCal" aria-labelledby="isecCalH"><header class="ish"><h2 id="isecCalH">Calendar import</h2></header>
-          <p class="sub ipurpose">Pick meetings from your calendar and load their transcripts.</p><div id="isecCalBody"></div></section>
-        <section class="card isec" id="isecUp" aria-labelledby="isecUpH"><header class="ish"><h2 id="isecUpH">Upload files</h2></header>
-          <p class="sub ipurpose">Drop transcripts or minutes you already have.</p>
-        <div class="dropzone" id="inboxDrop" tabindex="0" role="button" aria-label="Add files to Intake">Drop transcripts or minutes here, or <button class="linkbtn" id="inboxPick" type="button">choose files</button><span class="sub"> · .vtt, .docx, .txt, .md or .pdf, up to 25 MB each</span><input type="file" id="inboxFile" multiple accept=".vtt,.docx,.txt,.md,.pdf" hidden></div>
-        <div class="toolbar" style="margin-top:12px"><button class="btn" id="inboxNew">Select new</button><span class="sp"></span><button class="btn primary" id="inboxGo" disabled>Process selected</button></div>
-        <div class="tbl"><table id="inboxTbl"></table></div>
-        </section>
+        <div class="inhead"><div><h1>Intake</h1><p class="sub" id="inSub" style="margin:4px 0 0">Meetings that have ended and files you dropped.</p></div>
+          <div class="inbtns"><span class="sub" id="mtgRead"></span><button class="btn quiet" id="mtgRefresh" type="button">Refresh</button><button class="btn primary" id="inAll" type="button" disabled>Process all ready (0)</button></div></div>
+        <div class="kbdhint" id="inKeys"><span class="kbd">↑</span> <span class="kbd">↓</span> move · <span class="kbd">Enter</span> process · <span class="kbd">N</span> not needed · <span class="kbd">H</span> later</div>
+        <p class="sub inlive">Process and Refresh need creaite running in live mode. Processing drafts the minutes and proposed items for Review; nothing is filed until you approve.</p>
+        <div id="mtgBody"></div>
+        <input type="file" id="inboxFile" multiple accept=".vtt,.docx,.txt,.md,.pdf" hidden>
       </div></section>
       <section class="view" id="v-files" hidden><div class="wrapmax">
         <h1>Files</h1>

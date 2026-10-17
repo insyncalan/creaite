@@ -24,7 +24,7 @@ import { shared } from "./core/state.js";
 import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
-import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
+import { checkMeeting, INSEL, MRUN, MSEL, MTG, processInbox, processMeetings, readyList, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
@@ -213,8 +213,8 @@ export function onDayWheel(e){ if(SWIPE.seen.has(e)) return; SWIPE.seen.add(e);
   if(Math.abs(SWIPE.acc)>40){ SWIPE.locked=true; SWIPE.min=ax; stepDay(SWIPE.acc>0?1:-1); SWIPE.acc=0; } }
 /* what the band's buttons do */
 export const DAYRUN=new Map();   /* a check or a process under way, by calendar ID: "Checking…" */
-/** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
-export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
+/** Process an ended meeting's transcript, as Intake does (load it unless it is loaded, then cx-minutes). */
+export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake to process this meeting"); return; }
   DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
   try{ await processMeetings(); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
 /** Look for an ended meeting's transcript (Alan, 13-10-2026: a meeting not checked yet offers Check). */
@@ -467,10 +467,14 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
     const why=!r.p&&r.kind!=="files"?"needs a project":(r.flags||[]).includes("conflict")?"conflicts with a newer change":r.indiv||["draft","files"].includes(r.kind)?"approved on its own, in Review":"";
     tdl.push({key:"rv"+r.n,kind:"review",n:r.n,at,tag:tdTag(r),tone:"acc",t,acts,
       meta:[r.p?pName(r.p):"", `${revSrc(r)}${at?" "+whenWords(at):""}`, why].filter(Boolean).join(" · ")}); });
-  MTG().filter(mtgHasTx).forEach(m=>{ const at=`${m.day||""} ${m.end||m.start||""}`.trim(), run=MRUN[m.id], why=run==="processing"||run==="loading"?"Processing…":live?"":"Needs the live server";
+  readyList().filter(r=>r.kind==="f").forEach(r=>{ const f=r.f, at=String(f.date||"");   /* #179: the same ready list as Intake's badge: a dropped file is a row too */
+    tdl.push({key:"tf"+f.path,kind:"transcript",path:f.path,at,tag:"File",tone:"",t:f.name,
+      meta:["Ready in Intake",f.p&&f.p!=="_portfolio"?pName(f.p):"",whenWords(at)].filter(Boolean).join(" · "),
+      acts:[{id:"process",icon:"play",label:"Process the file",name:`Process the file: ${f.name}`,primary:true,why:live?"":"Needs the live server"}]}); });
+  readyList().filter(r=>r.kind==="m").map(r=>r.m).forEach(m=>{ const at=`${m.day||""} ${m.end||m.start||""}`.trim(), run=MRUN[m.id], why=run==="processing"||run==="loading"?"Processing…":live?"":"Needs the live server";
     tdl.push({key:"tx"+m.id,kind:"transcript",id:m.id,at,tag:"Transcript",tone:"",t:m.title||"Meeting",
       meta:["Ready in Intake",m.p&&m.p!=="_portfolio"?pName(m.p):"",whenWords(at)].filter(Boolean).join(" · "),
-      acts:[{id:"process",icon:"play",label:"Process the transcript",name:`Process the transcript of ${m.title||"the meeting"}`,primary:true,why}]}); });
+      acts:[{id:"process",icon:"play",label:"Process the transcript",name:`Process the transcript: ${m.title||"the meeting"}`,primary:true,why}]}); });
   VIPS().forEach(a=>{ if("summary" in a&&a.marker!=="private"){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
     const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
     tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",mark:confMark(a),
@@ -563,7 +567,7 @@ export async function tdProcess(id){ const m=MTG().find(x=>x.id===id); if(!m) re
   if(shared.VIEW==="today") renderToday(); try{ await processMeetings(); } finally{ if(shared.VIEW==="today") renderToday(); } }
 /** a row's action (a message's two run through settings.js's [data-alertdo] handler) */
 export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
-  if(row.kind==="transcript"&&act.id==="process"){ await tdProcess(row.id); return; }
+  if(row.kind==="transcript"&&act.id==="process"){ if(row.path){ INSEL.clear(); INSEL.add(row.path); if(shared.VIEW==="today") renderToday(); try{ await processInbox(); } finally{ if(shared.VIEW==="today") renderToday(); } return; } await tdProcess(row.id); return; }
   if(row.kind!=="review") return; const r=REV.find(x=>x.n===row.n); if(!r||r.done) return;
   if(act.id==="approve"){ if(!tdApprovable(r)){ tdToReview(r.n); return; } await decide(r.n,"approved"); return; }   /* Undo: the apply's (decide) */
   /* BL-315: the same reasons menu as Review (rjMenuFor: the seven reasons, Use each guess, No reason, Duplicate's item), through

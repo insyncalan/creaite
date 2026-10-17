@@ -314,19 +314,18 @@ PAGE_SCRIPT = r"""
   try{
     nowHM=()=>"23:59";                                          // late in the day: today's meetings have all ended
     await checkLive(); go("inbox"); await wait(50);
-    const rows=()=>[...document.querySelectorAll("#mtgBody tr[data-mid]")].map(tr=>[tr.querySelector("td.title").innerText,
-      tr.querySelector("input").disabled, tr.cells[6].innerText.trim(), tr.cells[3].innerText.trim(), tr.cells[4].innerText.trim()]);
-    out.read=document.getElementById("mtgRead").textContent; out.days=[...document.querySelectorAll("#mtgBody .mtgday")].map(r=>r.innerText);
-    out.before=rows(); out.transcript=document.querySelector("#mtgBody tr[data-mid]").cells[7].innerText;
-    // earlier in the day, today's 08:30 to 09:00 meeting is in progress: greyed and not selectable until it ends
-    nowHM=()=>"08:45"; renderMeetings(); const bz=[...document.querySelectorAll("#mtgBody tr[data-mid]")].find(tr=>tr.querySelector("td.title").innerText.startsWith("Busy"));
-    out.early={later:bz.classList.contains("mtglater"),disabled:bz.querySelector("input").disabled,state:bz.cells[6].innerText.trim()};
-    nowHM=()=>"08:00"; renderMeetings(); out.before0800=[...document.querySelectorAll("#mtgBody tr[data-mid]")].find(tr=>tr.querySelector("td.title").innerText.startsWith("Busy")).cells[6].innerText.trim();
+    const rows=()=>[...document.querySelectorAll("#mtgBody .inrow[data-mid]")].map(r=>[r.querySelector(".int").innerText, r.dataset.g,
+      (r.querySelector(".instate")||{innerText:""}).innerText.trim()]);
+    const has=t=>rows().some(r=>r[0].startsWith(t));
+    out.read=document.getElementById("mtgRead").textContent;
+    out.before=rows();
+    // earlier in the day, today's 08:30 to 09:00 meeting is in progress (#179: not in the queue until it ends)
+    nowHM=()=>"08:45"; renderMeetings(); out.early=has("Busy");
+    nowHM=()=>"08:00"; renderMeetings(); out.before0800=has("Busy");
     nowHM=()=>"23:59"; renderMeetings();
-    document.getElementById("mtgNew").click(); await wait(10);
-    out.picked=[...MSEL];
+    out.ready=rows().filter(r=>r[1]==="ready").map(r=>r[0]);
     out.ck=ckItems("process meeting").map(i=>i.l);
-    document.getElementById("mtgGo").click(); await wait(10); out.during=rows().map(r=>r[2]);
+    MSEL.add("ev-1"); MSEL.add("ev-2"); processMeetings(); await wait(10); out.during=rows().map(r=>r[2]);
     /* dev-test-steadiness: the page now runs in real time, so wait for the run to end and both rows to show their outcome
        (the draft from the server, the skip), not for fixed times that assumed virtual time */
     const state=t=>{ const r=rows().find(x=>x[0]===t); return r?r[2]:""; };
@@ -398,23 +397,20 @@ class InboxPageTests(unittest.TestCase):
         r = self.r
         self.assertEqual(r["errors"], [])
         self.assertIn("Calendar read", r["read"])
-        self.assertIn(f"{self.today:%d-%m-%Y}", r["days"][0])                       # newest day first
         titles = [row[0] for row in r["before"]]
         self.assertIn("ABC Steering", titles)
         self.assertNotIn("Tomorrow", titles)
-        busy = next(row for row in r["before"] if row[0].startswith("Busy"))
-        self.assertFalse(busy[1])                                                              # private: pickable by hand
         steering = next(row for row in r["before"] if row[0] == "ABC Steering")
-        self.assertEqual((steering[2], steering[3], steering[4]), ("Loaded in the inbox, not processed yet", "Teams", "You"))      # ev-1 has its transcript in the inbox (BL-137: its state is on the row)
-        self.assertIn("Not checked yet", r["transcript"])                                      # BL-42 phase 3: nothing looked up yet
-        self.assertEqual(r["early"], {"later": True, "disabled": True,
-                                      "state": "In progress: a transcript comes after it ends"})   # not ended yet
-        self.assertEqual(r["before0800"], "Not happened yet")
-        self.assertEqual(sorted(r["picked"]), ["ev-1", "ev-2"])                                # Select new leaves the private one
+        self.assertEqual(steering[1], "ready")                                                 # ev-1 has its transcript loaded (BL-137): it is ready
+        weekly = next(row for row in r["before"] if row[0] == "Weekly sync 12")
+        self.assertEqual(weekly[1], "waiting")                                                 # BL-42 phase 3: nothing looked up yet, so no transcript to process
+        self.assertFalse(r["early"])                                                           # not ended yet: not in the queue
+        self.assertFalse(r["before0800"])
+        self.assertEqual(r["ready"], ["ABC Steering"])
         self.assertEqual(sorted(r["ck"]), sorted(["Intake: process meeting ABC Steering", "Intake: process meeting Weekly sync 12",
                                                   "Intake: process meeting Busy"]))
 
-    def test_process_selected_one_by_one_then_refresh(self):
+    def test_process_one_by_one_then_refresh(self):
         r = self.r
         self.assertTrue(any(s.startswith(("Loading", "Processing")) for s in r["during"]))  # progress shows on the rows
         self.assertEqual([i for _, i in r["loaded"]], ["ev-2"])                                # ev-1 was loaded already; ev-2 is loaded first (BL-119)

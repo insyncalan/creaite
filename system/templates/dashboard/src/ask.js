@@ -18,7 +18,7 @@ import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVE
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
-import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, renderMeetings } from "./intake.js";
+import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, readyCount, renderMeetings } from "./intake.js";
 import { prepPage } from "./meetings.js";
 import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { openMilestone, openNewMilestone } from "./milestones.js";
@@ -947,8 +947,8 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]")
 /* ======================= command palette ======================= */
 shared.CK=[]; shared.CKI=0;
 export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn,kw)=>{ if(!q||(l+" "+h+" "+(kw||"")).toLowerCase().includes(q)) out.push({g,l,h,fn}); };   /* kw: words that find it without showing (a project's code) */
-  const nNew=(D.inbox||[]).filter(f=>f.state==="new").length, nRep=needsMe().length;   /* BL-337 */
-  [["today","Today",""],["inbox","Intake",nNew?`${nNew} new`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["review","Review",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
+  const nNew=readyCount(), nRep=needsMe().length;   /* BL-337 */
+  [["today","Today",""],["inbox","Intake",nNew?`${nNew} ready`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["review","Review",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
@@ -957,7 +957,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(q) P.forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>{ location.hash=clientReportHref(p.code,thisWeek(),(p.client||"").trim()||"Client"); },`client report ${p.code}`));   /* P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });
   add("Actions","Add files to Intake","",()=>{ go("inbox"); $("#inboxFile").click(); });
-  if(nNew) add("Actions","Process new Intake files",`${nNew} new`,()=>{ go("inbox"); $("#inboxNew").click(); });
+  if(nNew) add("Actions","Process all ready in Intake",`${nNew} ready`,()=>{ go("inbox"); $("#inAll").click(); });
   if(shared.VIEW==="cockpit"&&shared.COCK){ const c=shared.COCK;   /* the project page you're on */
     add("Actions",`Generate current state: ${c}`,"",()=>openGen(c)); add("Actions",`Edit current state: ${c}`,"",()=>startCurEdit(c));
     add("Actions",`Add milestone: ${c}`,"",()=>openNewMilestone(c)); add("Actions",`Add image: ${c}`,"",()=>{ go("cockpit",c); startCurEdit(c); pickImage(); }); add("Actions",`Edit health: ${c}`,"",()=>openProject(c,"health")); }

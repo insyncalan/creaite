@@ -1,5 +1,5 @@
-"""BL-42 phase 3 and BL-104 in the browser (Sprint 4b): Calendar import shows what the sweep found for each meeting, highlights the
-meetings with a transcript, and loads them through the run engine. A real browser against the real live server; the run is a
+"""BL-42 phase 3 and BL-104 in the browser (Sprint 4b), reshaped by #179: Intake shows what the sweep found for each meeting (a meeting
+with a transcript is a Ready row, the others wait) and Process loads the transcript through the run engine, then processes it. A real browser against the real live server; the run is a
 stand-in `claude` replaying fixture tool results (dev/tests/test_transcripts.py), so Microsoft 365 is never called.
 
 Run: python3 dev/tests/test_transcripts_ui.py   (needs Google Chrome; skipped otherwise)
@@ -54,14 +54,20 @@ class Case(LiveBrowserCase):
     def open_intake(self):
         b = self.b
         b.eval("go('inbox')")
-        b.wait("document.querySelector('#mtgBody tr[data-mid]')")
+        b.wait("document.querySelector('#mtgBody .inrow[data-mid]')")
         return b
 
     def row(self, eid):
-        return f'#mtgBody tr[data-mid="{eid}"]'
+        return f'#mtgBody .inrow[data-mid="{eid}"]'
 
-    def classes(self, eid):
-        return self.b.eval(f"document.querySelector('{self.row(eid)}').className")
+    def group(self, eid):
+        return self.b.eval(f"document.querySelector('{self.row(eid)}').dataset.g")
+
+    def text(self, eid):
+        return self.b.eval(f"document.querySelector('{self.row(eid)}').innerText")
+
+    def state(self, eid):
+        return self.b.eval(f"(document.querySelector('{self.row(eid)} .instate')||{{innerText:''}}).innerText")
 
     def inbox(self):
         """What a load wrote: the sample files populate() puts in the inbox are left out."""
@@ -71,61 +77,28 @@ class Case(LiveBrowserCase):
 class Highlight(Case):
     shared_server = True
 
-    def test_a_transcript_that_is_not_processed_stands_out(self):
+    def test_a_meeting_with_a_transcript_is_a_ready_row_and_says_so(self):
         self.open_intake()
-        self.assertIn("mtgtx", self.classes("ev-1"))
-        self.assertEqual(self.b.eval(f"document.querySelector('{self.row('ev-1')} .txbadge').textContent"), "Transcript")      # words, not only colour
-        self.assertIn("Transcript available", self.b.eval(f"document.querySelector('{self.row('ev-1')}').cells[7].innerText"))
-        bar = self.b.eval(f"getComputedStyle(document.querySelector('{self.row('ev-1')} td')).boxShadow")
-        self.assertIn("inset", bar)                                                                                                # the accent bar
-        plain = self.b.eval(f"getComputedStyle(document.querySelector('{self.row('ev-2')} td')).backgroundColor")
-        tint = self.b.eval(f"getComputedStyle(document.querySelector('{self.row('ev-1')} td')).backgroundColor")
-        self.assertNotEqual(plain, tint)
+        self.assertEqual(self.group("ev-1"), "ready")
+        self.assertIn("Transcript ready", self.text("ev-1"))                                       # words, not only colour
+        self.assertEqual(self.b.eval(f"document.querySelectorAll('{self.row('ev-1')} [data-ia]:not([data-ia=det])').length"), 3)
 
-    def test_the_others_are_muted_and_a_processed_one_is_quiet(self):
+    def test_the_others_wait_and_a_processed_one_is_done(self):
         self.open_intake()
         for eid, label in (("ev-2", "Not transcribed"), ("ev-room", "No transcript")):
-            self.assertIn("mtgmute", self.classes(eid), eid)
-            self.assertNotIn("mtgtx", self.classes(eid))
-            self.assertIn(label, self.b.eval(f"document.querySelector('{self.row(eid)}').cells[7].innerText"))
-        self.assertIn("mtgdone", self.classes("ev-done"))                         # processed: quiet, even though a transcript exists
-        self.assertNotIn("mtgtx", self.classes("ev-done"))
-        self.assertEqual(self.b.eval(f"document.querySelectorAll('{self.row('ev-done')} .txbadge').length"), 0)
-        self.assertIn("Already processed", self.b.eval(f"document.querySelector('{self.row('ev-done')}').cells[6].innerText"))
+            self.assertEqual(self.group(eid), "waiting", eid)
+            self.assertIn("Waiting for transcript", self.text(eid))
+            self.assertIn(label, self.text(eid))
+        self.assertEqual(self.group("ev-done"), "done")                                             # processed: quiet, even though a transcript exists
+        self.assertIn("Already processed", self.text("ev-done"))
+        self.assertNotIn("Transcript ready", self.text("ev-done"))
 
-    def test_the_chip_shows_only_meetings_with_transcripts_and_all_brings_the_rest_back(self):
+    def test_a_waiting_row_has_no_process_button(self):
         b = self.open_intake()
-        every = b.eval("document.querySelectorAll('#mtgBody tr[data-mid]').length")
-        self.assertEqual(b.eval("document.querySelector('#mtgChips [data-show=tx]').textContent"), "With transcripts · 1")
-        b.click('#mtgChips [data-show="tx"]')
-        b.wait("document.querySelectorAll('#mtgBody tr[data-mid]').length===1")
-        self.assertEqual(b.eval("document.querySelector('#mtgBody tr[data-mid]').dataset.mid"), "ev-1")
-        self.assertEqual(b.eval("document.querySelector('#mtgChips [data-show=tx]').getAttribute('aria-pressed')"), "true")
-        self.assertEqual(b.eval("document.querySelector('#mtgBody .mtgclr').textContent"), "Clear day · 1")       # only what is listed
-        b.click('#mtgChips [data-show="all"]')
-        b.wait(f"document.querySelectorAll('#mtgBody tr[data-mid]').length==={every}")
+        for eid in ("ev-2", "ev-room"):
+            self.assertEqual(b.eval(f"document.querySelectorAll('{self.row(eid)} [data-ia=process]').length"), 0, eid)    # nothing to load
 
-    def test_select_with_transcripts_ticks_only_those_and_enables_the_load_buttons(self):
-        b = self.open_intake()
-        b.click("#mtgTx")
-        self.assertEqual(b.eval("[...MSEL]"), ["ev-1"])
-        self.assertEqual(b.eval("document.getElementById('mtgLoad').textContent"), "Load 1 into inbox")
-        self.assertIsNone(b.eval("document.getElementById('mtgLoadGo')"))                 # BL-119: Load and process is gone
-        self.assertEqual(b.eval("document.getElementById('mtgGo').textContent"), "Process 1 selected")
-        self.assertFalse(b.eval("document.getElementById('mtgLoad').disabled"))
-        # a ticked row keeps its own, stronger look
-        ticked = b.eval(f"getComputedStyle(document.querySelector('{self.row('ev-1')} td')).backgroundColor")
-        b.click("#mtgTx")
-        b.eval("MSEL.clear(); renderMeetings()")
-        unticked = b.eval(f"getComputedStyle(document.querySelector('{self.row('ev-1')} td')).backgroundColor")
-        self.assertNotEqual(ticked, unticked)
-
-    def test_loading_is_refused_for_meetings_without_a_transcript(self):
-        b = self.open_intake()
-        b.eval("MSEL.add('ev-2'); MSEL.add('ev-room'); renderMeetings()")
-        self.assertTrue(b.eval("document.getElementById('mtgLoad').disabled"))     # Not transcribed, No transcript: nothing to load
-
-    def test_the_tint_reads_in_every_theme_and_mode(self):
+    def test_the_row_reads_in_every_theme_and_mode(self):
         b = self.open_intake()
 
         def rgb(text):
@@ -135,54 +108,49 @@ class Highlight(Case):
         def lum(c):
             f = lambda v: (v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4  # noqa: E731
             return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2])
+
+        def ratio(fg, bg):
+            a, c = lum(rgb(fg)), lum(rgb(bg))
+            return (max(a, c) + 0.05) / (min(a, c) + 0.05)
+        b.eval(f"document.querySelector('{self.row('ev-1')} .inage').classList.add('old')")      # the amber age
         for palette in TEST_PALETTES:
             for mode in ("Light", "Dark"):
                 b.eval(f"S.palette={palette!r}; S.theme={mode!r}; applyTheme()")
                 b.pump(0.3)
-                bg, ink = b.eval(f"(()=>{{ const td=document.querySelector('{self.row('ev-1')} .title'), c=getComputedStyle(td); return [c.backgroundColor, c.color]; }})()")
-                a, c = lum(rgb(bg)), lum(rgb(ink))
-                ratio = (max(a, c) + 0.05) / (min(a, c) + 0.05)
-                self.assertGreaterEqual(ratio, 4.5, (palette, mode, bg, ink, ratio))
+                got = b.eval(f"""(()=>{{ const r=document.querySelector('{self.row('ev-1')}'), q=s=>getComputedStyle(r.querySelector(s));
+                  return {{surface:getComputedStyle(r).backgroundColor, title:q('.int').color, age:q('.inage').color,
+                           chip:q('.inchip').color, chipbg:q('.inchip').backgroundColor}}; }})()""")
+                self.assertGreaterEqual(ratio(got["title"], got["surface"]), 4.5, (palette, mode, "title", got))
+                self.assertGreaterEqual(ratio(got["age"], got["surface"]), 4.5, (palette, mode, "amber age", got))
+                self.assertGreaterEqual(ratio(got["chip"], got["chipbg"]), 4.5, (palette, mode, "chip", got))
 
 
 class Loading(Case):
-    def test_load_into_inbox_writes_the_files_and_the_row_says_loaded(self):
+    def test_process_loads_then_hands_the_file_to_the_minutes_run(self):
+        """BL-119, #179: Process does what Load into inbox and Process did, in one step; the transcript and its chat are saved first."""
         b = self.open_intake()
         self.script(route_steps())
-        b.click("#mtgTx")
-        b.click("#mtgLoad")
-        b.wait("/Loaded/.test(document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]').cells[7].innerText)", 30)
+        b.click(f"{self.row('ev-1')} [data-ia=process]")
+        b.wait("/Couldn.t|Draft ready/.test((document.querySelector('#mtgBody [data-mid=\"ev-1\"] .instate')||{innerText:''}).innerText)", 40)
+        seen = json.loads((self.v.root / "fake_seen.json").read_text())
+        self.assertEqual(seen["prompt"], f"process inbox/{DAY} ABC Steering.vtt")        # the file the server wrote, never a re-typed transcript
         stem = f"{DAY} ABC Steering"
         self.assertEqual(self.inbox(), [f"{stem} - chat.txt", f"{stem}.vtt"])
         self.assertIn("Event ID: ev-1", (self.v.root / "inbox" / f"{stem}.vtt").read_text())
-        self.assertFalse(b.eval("RUN"))                                              # the run engine is free again
         self.assertEqual(json.loads((self.v.root / "system/staging/transcripts.json").read_text())["checked"]["ev-1"]["status"], "available")
-        self.assertEqual(b.eval("document.getElementById('mtgLoad').disabled"), True)    # nothing ticked any more
-        self.assertIn("Loaded", b.eval("document.getElementById('chLog').textContent"))
-
-    def test_process_selected_loads_then_hands_the_file_to_the_minutes_run(self):
-        """BL-119: the one Process button does what Load and process did."""
-        b = self.open_intake()
-        self.script(route_steps(chat=False))
-        b.click("#mtgTx")
-        b.click("#mtgGo")
-        b.wait("/Couldn.t|Draft ready/.test(document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]').cells[6].innerText)", 40)
-        seen = json.loads((self.v.root / "fake_seen.json").read_text())
-        self.assertEqual(seen["prompt"], f"process inbox/{DAY} ABC Steering.vtt")        # the file the server wrote, never a re-typed transcript
-        self.assertEqual(self.inbox(), [f"{DAY} ABC Steering.vtt"])
+        self.assertFalse(b.eval("RUN"))                                                  # the run engine is free again
+        self.assertFalse(b.eval("document.getElementById('chat').classList.contains('on')"))   # and ask creaite never opened
 
     def test_rows_without_a_transcript_are_skipped_with_the_reason_and_the_others_carry_on(self):
+        """The same path from the palette's "process meeting" action, which can pick any ended meeting."""
         b = self.open_intake()
         self.script(route_steps(chat=False))
-        b.eval("['ev-room','ev-2','ev-1'].forEach(id=>MSEL.add(id)); renderMeetings()")
-        self.assertEqual(b.eval("document.getElementById('mtgGo').textContent"), "Process 3 selected")
-        b.click("#mtgGo")
-        b.wait("/Couldn.t|Draft ready/.test(document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]').cells[6].innerText)", 40)
-        state = lambda eid: b.eval(f"document.querySelector('{self.row(eid)}').cells[6].innerText")  # noqa: E731
-        self.assertIn("Skipped", state("ev-room"))
-        self.assertIn("No transcript for this meeting", state("ev-room"))
-        self.assertIn("Skipped", state("ev-2"))
-        self.assertIn("Not transcribed yet", state("ev-2"))
+        b.eval("['ev-room','ev-2','ev-1'].forEach(id=>MSEL.add(id)); processMeetings()")
+        b.wait("/Couldn.t|Draft ready/.test((document.querySelector('#mtgBody [data-mid=\"ev-1\"] .instate')||{innerText:''}).innerText)", 40)
+        self.assertIn("Skipped", self.state("ev-room"))
+        self.assertIn("No transcript for this meeting", self.state("ev-room"))
+        self.assertIn("Skipped", self.state("ev-2"))
+        self.assertIn("Not transcribed yet", self.state("ev-2"))
         seen = json.loads((self.v.root / "fake_seen.json").read_text())
         self.assertEqual(seen["prompt"], f"process inbox/{DAY} ABC Steering.vtt")        # only the loadable one ran; Claude never looked for the others
         self.assertEqual(self.inbox(), [f"{DAY} ABC Steering.vtt"])
@@ -190,38 +158,37 @@ class Loading(Case):
     def test_only_skipped_rows_run_nothing_and_open_nothing(self):
         b = self.open_intake()
         before = b.eval("document.getElementById('chLog').children.length")
-        b.eval("MSEL.add('ev-room'); renderMeetings()")
-        b.click("#mtgGo")
-        b.wait("/Skipped/.test(document.querySelector('#mtgBody tr[data-mid=\"ev-room\"]').cells[6].innerText)")
+        b.eval("MSEL.add('ev-room'); processMeetings()")
+        b.wait("/Skipped/.test(document.querySelector('#mtgBody [data-mid=\"ev-room\"] .instate').innerText)")
         self.assertEqual(self.inbox(), [])
         self.assertFalse(b.eval("RUN"))
         self.assertEqual(b.eval("document.getElementById('chLog').children.length"), before)         # no chat messages were started
 
     def test_check_again_updates_the_row_and_loads_nothing(self):
         b = self.open_intake()
-        self.assertIn("mtgmute", self.classes("ev-2"))
+        self.assertEqual(self.group("ev-2"), "waiting")
         steps = route_steps(ev=event(eid="ev-2"), tr=read(event(eid="ev-2")["meetingTranscriptUrl"], transcript_result()), chat=False)
         for s in steps:
             s["input"] = json.loads(json.dumps(s["input"]).replace("ABC Steering", "Weekly sync 12"))
         self.script(steps)
+        b.click(f'{self.row("ev-2")} [data-ia=det]')                                       # Check again is under Details
         b.click(f'{self.row("ev-2")} .mtgchk')
-        b.wait("/Transcript available/.test(document.querySelector('#mtgBody tr[data-mid=\"ev-2\"]').cells[7].innerText)", 30)
-        self.assertIn("mtgtx", self.classes("ev-2"))
+        b.wait("document.querySelector('#mtgBody [data-mid=\"ev-2\"][data-g=ready]')", 30)
+        self.assertIn("Transcript ready", self.text("ev-2"))
         self.assertEqual(self.inbox(), [])
-        self.assertIn("Transcript available", b.eval(f"document.querySelector('{self.row('ev-2')}').cells[7].innerText"))
 
-    def test_the_load_button_waits_while_ask_creaite_is_busy(self):
+    def test_process_waits_while_ask_creaite_is_busy(self):
         b = self.open_intake()
-        b.eval("MSEL.add('ev-1'); RUN={id:'x'}; renderMeetings()")
-        self.assertTrue(b.eval("document.getElementById('mtgLoad').disabled"))
-        self.assertIn("busy", b.eval("document.getElementById('mtgLoad').title"))
+        b.eval("RUN={id:'x'}; renderMeetings()")
+        self.assertTrue(b.eval(f"document.querySelector('{self.row('ev-1')} [data-ia=process]').disabled"))
+        self.assertTrue(b.eval("document.getElementById('inAll').disabled"))
         b.eval("RUN=null; renderMeetings()")
-        self.assertFalse(b.eval("document.getElementById('mtgLoad').disabled"))
+        self.assertFalse(b.eval(f"document.querySelector('{self.row('ev-1')} [data-ia=process]').disabled"))
 
 
 class UploadList(Case):
     """BL-137: Upload files lists only uploaded files; a file Calendar import loaded is known by its recorded event ID and its state,
-    Preview and Remove are on its meeting row."""
+    Preview and Remove are on its meeting row (#179: under Details)."""
 
     def stage(self, processed=False):
         inbox = self.v.root / "inbox"
@@ -233,51 +200,48 @@ class UploadList(Case):
             with open(self.v.root / "system/processed.txt", "a", encoding="utf-8") as f:
                 f.write(f"{DAY} | calendar:ev-1 | projects/x | 1\n")
         b = self.open_intake()
-        b.eval("reloadData().then(()=>{ renderInbox(); renderMeetings(); })")
+        b.eval("reloadData().then(()=>{ renderInbox(); })")
         b.pump(1.0)
         return b
 
     SAMPLE = ["ABC weekly sync.vtt", "Copy of filed.vtt", "Recording.vtt"]            # the files populate() leaves in the inbox, all uploads
 
     def uploads(self):
-        return self.b.eval("[...document.querySelectorAll('#inboxTbl tbody tr[data-inf]')].map(r=>r.querySelector('.title').textContent.trim())")
+        return self.b.eval("[...document.querySelectorAll('#mtgBody .inrow[data-inf] .int')].map(r=>r.textContent.trim())")
 
     def test_a_loaded_file_is_never_listed_under_upload_files(self):
         b = self.stage()
         self.assertEqual(sorted(self.uploads()), sorted(self.SAMPLE + ["My own notes.vtt"]))     # the transcript and its chat are not there; the uploads are
-        self.assertNotIn("ABC Steering", b.eval("document.getElementById('inboxTbl').textContent"))
-        self.assertNotIn("From calendar", b.eval("document.getElementById('inboxTbl').textContent"))
-        row = b.eval("document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]').innerText")
-        self.assertIn("Loaded", row)                                                          # its state is on the meeting row
+        self.assertEqual(b.eval("document.querySelectorAll('#mtgBody .inrow[data-g=files][data-inf*=\"ABC Steering\"]').length"), 0)
+        self.assertIn("Transcript ready", self.text("ev-1"))                                    # its state is on the meeting row
         rows = b.eval("(D.inbox||[]).map(f=>[f.name,f.uploaded,!!f.event])")
         self.assertIn(["My own notes.vtt", True, False], rows)
         self.assertIn([f"{DAY} ABC Steering.vtt", False, True], rows)                         # marked as loaded in the data
 
-    def test_the_badge_still_counts_a_waiting_loaded_transcript_but_select_new_and_process_never_include_it(self):
+    def test_the_badge_counts_a_waiting_loaded_transcript_once_and_process_all_never_takes_it_as_a_file(self):
         b = self.stage()
-        before = b.eval("[...(D.inbox||[])].filter(f=>f.state==='new').length")
-        self.assertEqual(b.eval("document.getElementById('inboxBadge').textContent"), str(before))   # the loaded transcript waits too
-        self.assertTrue(b.eval("(D.inbox||[]).some(f=>f.event&&f.state==='new')"))
-        b.click("#inboxNew")
-        picked = b.eval("[...INSEL]")
-        self.assertIn("inbox/My own notes.vtt", picked)
-        self.assertFalse([p for p in picked if "ABC Steering" in p])                         # a loaded file is never ticked
-        self.assertEqual(b.eval("document.getElementById('inboxGo').textContent"), f"Process {len(picked)} selected")
+        ready = b.eval("readyList().map(r=>r.kind+':'+(r.kind==='m'?r.m.id:r.f.name))")
+        self.assertIn("m:ev-1", ready)                                                         # the loaded transcript waits, as its meeting
+        self.assertFalse([x for x in ready if x.startswith("f:") and "ABC Steering" in x])      # never also as a file
+        self.assertEqual(b.eval("document.getElementById('inboxBadge').textContent"), str(len(ready)))
+        self.assertEqual(b.eval("document.getElementById('inAll').textContent"), f"Process all ready ({len(ready)})")
 
     def test_preview_and_remove_are_on_the_meeting_row_and_undo_brings_both_files_back(self):
         b = self.stage()
-        own = b.eval("document.querySelectorAll('#inboxTbl [data-inprev], #inboxTbl [data-inrm]').length")
+        b.eval("uploadedFiles().forEach(f=>INDET.add(f.path)); renderInbox()")
+        own = b.eval("document.querySelectorAll('#mtgBody [data-inprev], #mtgBody [data-inrm]').length")
         self.assertEqual(own, 2 * len(self.SAMPLE + ["My own notes.vtt"]))                      # the uploads keep their own Preview and Remove
-        b.click('#mtgBody tr[data-mid="ev-1"] [data-mprev]')
+        b.click(f'{self.row("ev-1")} [data-ia=det]')
+        b.click(f'{self.row("ev-1")} [data-mprev]')
         b.wait("document.getElementById('inPrev').open")
         self.assertIn("Hello there", b.eval("document.getElementById('inPrevText').textContent"))
         b.eval("document.getElementById('inPrev').close()")
-        b.click('#mtgBody tr[data-mid="ev-1"] [data-mrm]')
+        b.click(f'{self.row("ev-1")} [data-mrm]')
         b.wait("/Removed the loaded transcript/.test(document.getElementById('snackT').textContent)", 20)   # the message, before it fades
-        b.wait("!document.querySelector('#mtgBody tr[data-mid=\"ev-1\"] [data-mrm]')", 20)
+        b.wait("!document.querySelector('#mtgBody [data-mid=\"ev-1\"] [data-mrm]')", 20)
         self.assertEqual(self.inbox(), [])                                                    # the transcript and its chat are both out of the inbox
         b.click("#snackU")                                                                     # one Undo puts both back
-        b.wait("document.querySelector('#mtgBody tr[data-mid=\"ev-1\"] [data-mrm]')", 20)
+        b.wait("D.inbox.some(f=>f.event==='ev-1')", 20)
         self.assertEqual(self.inbox(), [f"{DAY} ABC Steering - chat.txt", f"{DAY} ABC Steering.vtt"])
         self.assertIn("My own notes.vtt", self.uploads())
         self.assertFalse([n for n in self.uploads() if "ABC Steering" in n])
@@ -285,10 +249,11 @@ class UploadList(Case):
     def test_a_processed_meeting_shows_already_processed_and_offers_no_remove(self):
         b = self.stage(processed=True)
         self.assertEqual(sorted(self.uploads()), sorted(self.SAMPLE + ["My own notes.vtt"]))
-        row = b.eval("document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]').innerText")
-        self.assertIn("Already processed", row)
-        self.assertEqual(b.eval("document.querySelectorAll('#mtgBody tr[data-mid=\"ev-1\"] [data-mrm]').length"), 0)
-        self.assertEqual(b.eval("document.querySelectorAll('#mtgBody tr[data-mid=\"ev-1\"] [data-mprev]').length"), 1)    # it can still be read
+        self.assertEqual(self.group("ev-1"), "done")
+        self.assertIn("Already processed", self.text("ev-1"))
+        b.click(f'{self.row("ev-1")} [data-ia=det]')
+        self.assertEqual(b.eval(f"document.querySelectorAll('{self.row('ev-1')} [data-mrm]').length"), 0)
+        self.assertEqual(b.eval(f"document.querySelectorAll('{self.row('ev-1')} [data-mprev]').length"), 1)    # it can still be read
 
 
 if __name__ == "__main__":

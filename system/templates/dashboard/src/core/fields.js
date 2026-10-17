@@ -159,7 +159,7 @@ onCmdEnter("panel",t=>!!shared.CUR&&shared.EDITING&&!pkOn()&&(t===document.body|
 }
 /* ===== BL-216 (sprint-ui-sweep) ===== a small tick box answers a click anywhere in the 24 by 24 square round it, inside its
    cell (Review's rows and group ticks, Intake's meetings and files, Activity's changes). The box keeps its drawn size. */
-export const TICK24="#reviewBody td,#reviewBody .rgroup h2,#mtgBody td,#inboxTbl td,#actTbl td.actck";
+export const TICK24="#reviewBody td,#reviewBody .rgroup h2,#actTbl td.actck";
 export function tickNear(host,x,y){ return [...host.querySelectorAll(":scope>input[type=checkbox]")].find(i=>{ const r=i.getBoundingClientRect(); return Math.abs(x-(r.left+r.width/2))<=12&&Math.abs(y-(r.top+r.height/2))<=12; }); }
 /* ===== end BL-216 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0062's place) */

@@ -76,10 +76,10 @@ SCRIPT = r"""
       await runGen({code:"ABC",from:"2026-09-29",to:TODAY,sources:["tracker"],note:""}); window.fetch=realF;
       out.gen=[htmlToMd(document.getElementById("curEd")),document.querySelector("#v-cockpit .gensrc")?.textContent||"",CURED&&CURED.dirty];
       document.querySelector("[data-cure=cancel]").click(); document.querySelector('[data-dis="go"]').click(); }
-    // BL-42: the Inbox lists files with state; Select new picks only new ones
-    go("inbox"); out.inboxRows=[...document.querySelectorAll("#inboxTbl tbody tr[data-inf]")].length; document.getElementById("inboxNew").click();
-    out.inboxBtns=[...document.querySelectorAll("#inboxTbl tbody tr[data-inf] button")].map(b=>b.getAttribute("aria-label")).slice(0,2);   /* BL-161: icons, named */
-    out.inboxSel=[INSEL.size,(D.inbox||[]).filter(f=>f.state==="new").length,document.getElementById("inboxGo").textContent,location.hash]; INSEL.clear();
+    // BL-42, #179: Intake lists files as rows; Process all ready counts the new ones
+    go("inbox"); out.inboxRows=[...document.querySelectorAll("#mtgBody .inrow[data-inf]")].length; document.querySelectorAll("#mtgBody .inrow[data-inf] [data-ia=det]").forEach(x=>x.click());
+    out.inboxBtns=[...document.querySelectorAll("#mtgBody .inrow[data-inf] [data-inprev], #mtgBody .inrow[data-inf] [data-inrm]")].map(b=>b.getAttribute("aria-label")).slice(0,2);   /* BL-161: icons, named */
+    out.inboxSel=[readyCount(),(D.inbox||[]).filter(f=>f.state==="new").length,document.getElementById("inAll").textContent,location.hash]; INDET.clear();
     // BL-62: Work filters behave
     { go("work"); loadTab("actions"); renderWork(); const a=A.find(x=>x.due); WQ=fd(a.due); out.f62search=rows().some(x=>x.id===a.id); WQ="";
       applyView("open"); PRIF.add("High"); syncView(); renderWork(); document.querySelector('#wtabs [data-t="raid"]').click(); out.f62raidClean=[...PRIF].length;
@@ -415,7 +415,7 @@ class DashboardEditingTests(unittest.TestCase):
         rows, (sel, new, label, hash_) = self.result["inboxRows"], self.result["inboxSel"]
         self.assertGreaterEqual(rows, 1)
         self.assertEqual(sel, new)
-        self.assertEqual(label, f"Process {new} selected")
+        self.assertEqual(label, f"Process all ready ({new})")
         self.assertEqual(hash_, "#intake")          # BL-70: the new address; #inbox still opens it (test_today_brief.py)
         self.assertEqual(self.result["inboxBtns"], ["Preview", "Remove from Intake"])
 

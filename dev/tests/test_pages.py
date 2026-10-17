@@ -338,7 +338,7 @@ class FilesLiveTests(FilesLiveBase):
         touch(self.v.root / "inbox" / "Late arrival.vtt", "WEBVTT")
         self.b.eval("go('inbox')")
         self.b.wait("document.body.textContent.includes('Late arrival.vtt')")
-        self.assertIn("Late arrival.vtt", self.b.eval("document.getElementById('inboxTbl').textContent"))
+        self.assertIn("Late arrival.vtt", self.b.eval("document.getElementById('mtgBody').textContent"))
 
 
 class FilesFileVersionTests(unittest.TestCase):

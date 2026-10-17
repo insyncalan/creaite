@@ -1,4 +1,4 @@
-"""BL-104 Clear day (Sprint 4a): set a day's meetings aside in Intake's Calendar import, in a real browser against the real
+"""BL-104 clear (Sprint 4a), now Not needed with a reason (#179): set meetings aside in Intake, in a real browser against the real
 live server, plus the data rules behind it.
 
 Run: python3 dev/tests/test_clear_day.py   (the page tests need Google Chrome; skipped otherwise)
@@ -116,7 +116,8 @@ class ClearData:
 
 
 class ClearDayPage:
-    """Real clicks on the live page. The vault has a fictional calendar for the pinned week."""
+    """Real clicks on the live page (#179: Not needed, with a reason, replaced Clear day and the per-row cross). The vault has a
+    fictional calendar for the pinned week; none of its meetings has a transcript status yet, so they are rows under Waiting."""
     NOW = None
 
     @classmethod
@@ -136,57 +137,43 @@ class ClearDayPage:
     def go_intake(self):
         b = self.b
         b.eval("go('inbox')")
-        b.wait("document.querySelector('#mtgBody tr[data-mid]')")
+        b.wait("document.querySelector('#mtgBody .inrow[data-mid]')")
         return b
 
     def titles(self):
-        return self.b.eval("[...document.querySelectorAll('#mtgBody tr[data-mid] td.title')].map(t=>t.firstChild.textContent.trim())")
+        return self.b.eval("[...document.querySelectorAll('#mtgBody .inrow[data-mid] .int')].map(t=>t.textContent.trim())")
 
     def mon_day(self):
         return self.mon.isoformat()
-
-    def day_titles(self, day):
-        """Titles of the rows under one day's heading."""
-        return self.b.eval("""(day=>{ const out=[]; let on=false; for(const tr of document.querySelectorAll('#mtgBody tbody tr')){
-          if(tr.classList.contains('mtgday')){ on=!!tr.querySelector('[data-day="'+day+'"]'); continue; }
-          if(on) out.push(tr.querySelector('td.title').firstChild.textContent.trim()); } return out; })(%s)""" % json.dumps(day))
-
-    def clear_button(self, day):
-        return f'#mtgBody .mtgclr[data-clr="day"][data-day="{day}"]'
 
     def cleared_file(self):
         p = self.v.root / "system/staging/intake-cleared.json"
         return json.loads(p.read_text())["cleared"] if p.exists() else []
 
-    def clear(self, selector, day=None):
-        """Click a Clear control and wait until the clearing has finished: its "Cleared …" message is the last thing it does.
-        dev-test-steadiness: the day's rows and its button go when the page reloads its data, before that message and its
-        Undo; under load a test that went on when the button went found no message, or an Undo with no size."""
+    def not_needed(self, mid, reason="No decisions"):
+        """Not needed on a row, a reason from the menu; waits for the message that is the last thing it does."""
         b = self.b
         b.eval("document.getElementById('snackT').textContent=''")
-        b.click(selector)
-        self.wait_cleared(day)
+        b.click(f'#mtgBody [data-mid="{mid}"] [data-ia=not]')
+        b.wait("document.getElementById('inNotMenu')")
+        b.eval("[...document.querySelectorAll('#inNotMenu [role=menuitem]')].find(x=>x.textContent.trim()==%s).click()" % json.dumps(reason))
+        b.wait("/^Not needed/.test(document.getElementById('snackT').textContent)", 20)
+        b.wait(f"!document.querySelector('#mtgBody [data-mid=\"{mid}\"]')")
 
-    def wait_cleared(self, day=None):
-        self.b.wait("/^Cleared /.test(document.getElementById('snackT').textContent)", 20)
-        if day:
-            self.b.wait(f"!document.querySelector('{self.clear_button(day)}')")
-
-    def test_clear_day_removes_the_days_meetings_and_they_stay_gone(self):
+    def test_not_needed_removes_the_meeting_and_it_stays_gone(self):
         b = self.go_intake()
-        day = self.mon_day()
-        n = len(self.day_titles(day))
-        self.assertGreaterEqual(n, 2)
-        self.assertEqual(b.eval(f"document.querySelector('{self.clear_button(day)}').textContent"), f"Clear day · {n}")
+        n = len(self.titles())
+        self.assertIn("ABC Steering", self.titles())
         processed = self.v.root / "system/processed.txt"
         before = processed.read_text() if processed.exists() else None
-        self.clear(self.clear_button(day), day)
-        self.assertEqual(self.day_titles(day), [])
-        self.assertIn("Cleared", b.eval("document.getElementById('snackT').textContent"))
+        self.not_needed("ev-1")
+        self.assertNotIn("ABC Steering", self.titles())
+        self.assertEqual(len(self.titles()), n - 1)
+        self.assertIn("Not needed: No decisions", b.eval("document.getElementById('snackT').textContent"))
         self.assertTrue(b.eval("document.getElementById('snackU').offsetParent!==null"))          # Undo is offered
-        self.assertEqual(sorted(e["key"] for e in self.cleared_file()), ["ev-1", "ev-2"] + (["ev-3"] if self.today == self.mon else []))
+        self.assertEqual(keys_of(self.cleared_file()), ["ev-1"])
         self.assertEqual(before, processed.read_text() if processed.exists() else None)            # not processed
-        # after a refresh of the page and after the sweep re-reads the calendar, they are still gone
+        # after a refresh of the page and after the sweep re-reads the calendar, it is still gone
         b.reload("typeof go==='function' && LIVE")
         b.eval("go('inbox')")
         b.wait("document.getElementById('mtgBody').textContent.length>0")
@@ -200,87 +187,59 @@ class ClearDayPage:
     def test_a_meeting_added_to_a_cleared_day_shows_as_new(self):
         b = self.go_intake()
         day = self.mon_day()
-        self.clear(self.clear_button(day), day)
+        self.not_needed("ev-1")
+        self.not_needed("ev-2")
         cal = json.loads((self.v.root / "system/staging/calendar.json").read_text())
         cal["days"][day].append({"id": "ev-late", "start": "17:00", "end": "17:30", "title": "Late invite", "teams": True})
         (self.v.root / "system/staging/calendar.json").write_text(json.dumps(cal))
         b.eval("reloadData()")
         b.wait("D.meetings.rows.some(r=>r.id==='ev-late')")
-        self.assertEqual(self.day_titles(day), ["Late invite"])
+        self.assertIn("Late invite", self.titles())
+        self.assertNotIn("ABC Steering", self.titles())
 
-    def test_undo_brings_them_back(self):
+    def test_undo_brings_it_back(self):
         b = self.go_intake()
-        day = self.mon_day()
-        n = len(self.day_titles(day))
-        self.clear(self.clear_button(day), day)
+        n = len(self.titles())
+        self.not_needed("ev-1")
         b.click("#snackU")
-        b.wait(f"document.querySelector('{self.clear_button(day)}')")
-        self.assertEqual(len(self.day_titles(day)), n)
+        b.wait("document.querySelector('#mtgBody [data-mid=\"ev-1\"]')")
+        self.assertEqual(len(self.titles()), n)
         self.assertEqual(self.cleared_file(), [])
 
-    def test_cleared_list_restore_and_restore_day_and_per_meeting_x(self):
+    def test_cleared_list_restore_and_restore_day(self):
         b = self.go_intake()
-        day = self.mon_day()
-        n = len(self.day_titles(day))
-        # the per-meeting ×
-        self.clear('#mtgBody tr[data-mid="ev-2"] .mtgx')
-        b.wait("!document.querySelector('#mtgBody tr[data-mid=\"ev-2\"]')")
-        self.assertEqual(len(self.day_titles(day)), n - 1)
+        n = len(self.titles())
+        self.not_needed("ev-2", "Informal chat")
+        self.assertEqual(len(self.titles()), n - 1)
         self.assertEqual(b.eval("document.querySelector('#mtgBody .mtgcleared .clrlink').textContent"), "Cleared (1)")
-        # the list: grouped by day, each with Restore
+        # the list: grouped by day, each with Restore, and the reason it was set aside
         b.click("#mtgBody .mtgcleared .clrlink")
         b.wait("document.querySelector('#mtgBody .mtgclrlist')")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#mtgBody .clrrow')].map(r=>r.textContent)")[0].count("Weekly sync 12"), 1)
+        row = b.eval("[...document.querySelectorAll('#mtgBody .clrrow')].map(r=>r.textContent)")[0]
+        self.assertEqual(row.count("Weekly sync 12"), 1)
+        self.assertIn("Informal chat", row)
         b.click('#mtgBody .mtgclr[data-clr="restore"]')
-        b.wait("document.querySelector('#mtgBody tr[data-mid=\"ev-2\"]')")
-        self.assertEqual(len(self.day_titles(day)), n)
+        b.wait("document.querySelector('#mtgBody [data-mid=\"ev-2\"]')")
+        self.assertEqual(len(self.titles()), n)
         self.assertFalse(b.eval("!!document.querySelector('#mtgBody .mtgcleared')"))              # nothing cleared: no link
         # Restore day
-        self.clear(self.clear_button(day), day)
+        self.not_needed("ev-1")
+        self.not_needed("ev-2")
         b.click("#mtgBody .mtgcleared .clrlink")
         b.wait("document.querySelector('#mtgBody .mtgclrlist')")
         b.click('#mtgBody .mtgclr[data-clr="restoreday"]')
-        b.wait(f"document.querySelector('{self.clear_button(day)}')")
-        self.assertEqual(len(self.day_titles(day)), n)
+        b.wait("document.querySelector('#mtgBody [data-mid=\"ev-1\"]') && document.querySelector('#mtgBody [data-mid=\"ev-2\"]')")
+        self.assertEqual(len(self.titles()), n)
 
-    def test_cleared_meetings_are_not_selectable(self):
+    def test_cleared_meetings_are_not_ready(self):
+        """A meeting with a transcript that is set aside leaves Ready, Process all ready and the badge."""
         b = self.go_intake()
-        self.clear('#mtgBody tr[data-mid="ev-1"] .mtgx')
-        b.wait("!document.querySelector('#mtgBody tr[data-mid=\"ev-1\"]')")
-        b.click("#mtgNew")
-        picked = b.eval("[...MSEL]")
-        self.assertNotIn("ev-1", picked)
-        self.assertIn("ev-2", picked)
-        self.assertEqual(b.eval("document.getElementById('inboxBadge').textContent"),
-                         str(b.eval("(D.inbox||[]).filter(f=>f.state==='new').length")))                # the rail badge counts files only
-
-    def test_safeguard_asks_before_clearing_an_unprocessed_transcript(self):
-        b = self.go_intake()
-        day = self.mon_day()
-        n = len(self.day_titles(day))
-        # the sweep's transcript check (BL-42 phase 3) isn't built yet: give two rows a sample status
-        b.eval("D.meetings.rows.filter(r=>r.id==='ev-1'||r.id==='ev-2').forEach(r=>r.transcript='available'); renderMeetings()")
-        b.click(self.clear_button(day))
-        b.wait("document.querySelector('#mtgBody .mtgconfirm')")
-        self.assertEqual(b.eval("document.querySelector('#mtgBody .mtgconfirm span').textContent"),
-                         "2 of these have transcripts you haven't processed. Clear anyway?")
-        self.assertEqual(self.cleared_file(), [])                                                  # nothing cleared yet
-        b.click('#mtgBody [data-clr="no"]')
-        b.wait("!document.querySelector('#mtgBody .mtgconfirm')")
-        self.assertEqual(len(self.day_titles(day)), n)
-        b.click(self.clear_button(day))
-        b.wait("document.querySelector('#mtgBody .mtgconfirm')")
-        self.clear('#mtgBody [data-clr="yes"]', day)
-        self.assertEqual(self.day_titles(day), [])
-        # a processed transcript doesn't trigger it
-        self.assertTrue(len(self.cleared_file()) >= 2)
-
-    def test_a_processed_transcript_clears_without_asking(self):
-        b = self.go_intake()
-        day = self.mon_day()
-        b.eval("D.meetings.rows.filter(r=>r.id==='ev-1'||r.id==='ev-2').forEach(r=>{ r.transcript='available'; r.processed='%s'; }); renderMeetings()" % day)
-        self.clear(self.clear_button(day), day)
-        self.assertFalse(b.eval("!!document.querySelector('#mtgBody .mtgconfirm')"))
+        b.eval("D.meetings.rows.forEach(r=>{ if(r.id==='ev-1'||r.id==='ev-2') r.transcript='available'; }); renderMeetings()")
+        self.assertEqual(b.eval("readyList().filter(r=>r.kind==='m').map(r=>r.m.id).sort()"), ["ev-1", "ev-2"])
+        self.not_needed("ev-1")
+        b.eval("D.meetings.rows.forEach(r=>{ if(r.id==='ev-2') r.transcript='available'; }); renderMeetings()")
+        self.assertEqual(b.eval("readyList().filter(r=>r.kind==='m').map(r=>r.m.id)"), ["ev-2"])
+        self.assertEqual(b.eval("document.getElementById('inboxBadge').textContent"), str(b.eval("readyCount()")))
 
 
 class ClearDataMonday(ClearData, unittest.TestCase):

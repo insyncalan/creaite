@@ -125,8 +125,8 @@ class PastTimeContrast(Base):
 
 # (name, how to get there, what must be shown, selectors measured)
 SCREENS = (
-    ("intake", "go('inbox')", "document.querySelector('#mtgBody .btn.mtgclr') && document.querySelector('#mtgBody select.mtgp')",
-     ("#mtgBody .btn.mtgclr", "#mtgBody select.mtgp")),
+    ("intake", "go('inbox')", "document.querySelector('#mtgBody .btn[data-ia=process]') && document.querySelector('#mtgBody select.mtgp')",
+     ("#mtgBody .btn[data-ia=process]", "#mtgBody .btn[data-ia=not]", "#mtgBody select.mtgp")),
     ("activity", "go('activity')", "document.getElementById('actQ')", ("#actQ",)),
     ("settings-essentials", "go('settings','essentials')", "document.getElementById('setq')?.offsetParent", ("#setq",)),
     ("settings-advanced", "go('settings','advanced')", "document.getElementById('setq')?.offsetParent", ("#setq",)),

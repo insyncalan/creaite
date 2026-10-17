@@ -59,13 +59,13 @@ class IntakeNameTests(PageTests):
           window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, hint, names, files, tree, chips, badge:document.getElementById("inboxBadge").getAttribute("aria-label"),
             drop:document.getElementById("inboxDrop").getAttribute("aria-label")};""")
         self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake", "Intake", "Intake"))
-        self.assertIn("saved to the inbox folder", o["hint"])
+        self.assertIn("nothing is filed until you approve", o["hint"])
         self.assertIn("Go to|Intake", o["names"])
         self.assertIn("Actions|Add files to Intake", o["names"])
         self.assertTrue(any(f.startswith("Intake|") for f in o["files"]))
         self.assertFalse(any("Inbox" in n.split("|")[1] for n in o["names"] if not n.startswith(("Files|", "Items|"))))
         self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" in o["chips"])
-        self.assertRegex(o["badge"], r"^\d+ new files? in Intake$")
+        self.assertRegex(o["badge"], r"^\d+ ready in Intake$")
         self.assertEqual(o["drop"], "Add files to Intake")
 
     def test_the_address(self):
@@ -79,42 +79,19 @@ class IntakeNameTests(PageTests):
 
 
 class IntakeSectionsTests(PageTests):
-    """BL-73: Calendar import and Upload files are separate framed sections, in that order (Quick capture became the drawer, BL-301 C)."""
+    """#179 (was BL-73's two sections): Intake is one queue under one header, not framed sections; the drop target sits in the list."""
 
-    def test_two_sections_in_order_each_with_its_own_heading_purpose_and_buttons(self):
+    def test_one_queue_with_a_header_and_two_buttons(self):
         o = self.probe("""
-          go("inbox"); const secs=[...document.querySelectorAll("#v-inbox .isec")];
-          const info=secs.map(s=>({id:s.id,h:s.querySelector("h2").textContent,icon:!!s.querySelector(".ish svg"),purpose:s.querySelector(".ipurpose").textContent,
-            buttons:[...s.querySelectorAll("button[id]")].map(b=>b.id),labelled:s.getAttribute("aria-labelledby")===s.querySelector("h2").id}));
-          const rects=secs.map(s=>s.getBoundingClientRect()), within=(s,sel)=>!!s.querySelector(sel);
-          window.OUT={info,gaps:rects.slice(1).map((r,i)=>Math.round(r.top-rects[i].bottom)),stacked:rects.slice(1).every((r,i)=>r.top>=rects[i].bottom),
-            widths:rects.map(r=>Math.round(r.width)),
-            where:{drop:within(secs[1],"#inboxDrop"),table:within(secs[1],"#inboxTbl"),mtg:within(secs[0],"#mtgSec")},
-            h1s:[...document.querySelectorAll("#v-inbox h1, #v-inbox h2")].map(h=>h.textContent)};""")
-        self.assertEqual([i["h"] for i in o["info"]], ["Calendar import", "Upload files"])   # BL-301 C: Quick capture became the drawer
-        self.assertEqual([i["id"] for i in o["info"]], ["isecCal", "isecUp"])
-        self.assertTrue(all(i["labelled"] and not i["icon"] for i in o["info"]))   # BL-325: a plain sentence-case h2, as Settings, no icon
-        self.assertEqual([i["purpose"] for i in o["info"]], [
-            "Pick meetings from your calendar and load their transcripts.", "Drop transcripts or minutes you already have."])
-        cal, up = (i["buttons"] for i in o["info"])
-        self.assertEqual(cal, ["mtgRefresh", "mtgNew", "mtgTx", "mtgLoad", "mtgGo"])   # Refresh, Select new, Select with transcripts, Load into inbox, Process selected (BL-119: one process button)
-        self.assertIn("inboxNew", up)
-        self.assertIn("inboxGo", up)
-        self.assertEqual(o["where"], {"drop": True, "table": True, "mtg": True})
-        self.assertTrue(o["stacked"])                                                    # nothing side by side
-        self.assertTrue(all(g >= 24 for g in o["gaps"]), o["gaps"])                      # a visible gap between panels
-        self.assertEqual(len(set(o["widths"])), 1)                                       # the same frame, the same width
-        self.assertEqual(o["h1s"][:1], ["Intake"])
-
-    def test_the_sections_use_the_themes_own_card_frame(self):
-        o = self.probe("""
-          go("inbox"); const out={};
-          for(const pal of TEST_PALETTES) for(const mode of ["light","dark"]){ S.palette=pal; S.theme=mode==="dark"?"Dark":"Light"; applyTheme();
-            const cs=getComputedStyle(document.getElementById("isecUp")), card=getComputedStyle(document.querySelector("#v-inbox .tbl")); 
-            out[pal+"|"+mode]=[cs.borderTopWidth!=="0px", cs.backgroundColor!=="rgba(0, 0, 0, 0)", cs.borderTopLeftRadius===card.borderTopLeftRadius]; }
-          window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
-        for key, (bordered, filled, same_radius) in o["out"].items():
-            self.assertTrue(bordered and filled, key)
+          go("inbox");
+          window.OUT={secs:document.querySelectorAll("#v-inbox .isec").length, h1s:[...document.querySelectorAll("#v-inbox h1")].map(h=>h.textContent),
+            head:[...document.querySelectorAll("#v-inbox .inhead button")].map(b=>b.id), drop:!!document.querySelector("#mtgBody #inboxDrop"),
+            groups:[...document.querySelectorAll("#mtgBody .ingrp h2")].map(h=>h.textContent)};""")
+        self.assertEqual(o["secs"], 0)
+        self.assertEqual(o["h1s"], ["Intake"])
+        self.assertEqual(o["head"], ["mtgRefresh", "inAll"])                            # Refresh (quiet) and the one bulk button
+        self.assertTrue(o["drop"])
+        self.assertIn("Upload files", o["groups"])
 
 
 # BL-301 C: QuickCaptureDateTests went with Quick Capture's form (the capture drawer replaced it; test_capture_drawer).
