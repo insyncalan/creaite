@@ -5737,6 +5737,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     prepPeekable: () => prepPeekable,
     prepPgStat: () => prepPgStat,
     prepReports: () => prepReports,
+    prepSavedSay: () => prepSavedSay,
     prepSaving: () => prepSaving,
     prepShow: () => prepShow,
     prepTab: () => prepTab,
@@ -52066,6 +52067,7 @@ ${d5.text}`);
     /** @type {string} */
     ""
   );
+  var prepSavedSay = y3("");
   var pageAsked = 0;
   async function loadPrep(key, o5 = {}) {
     const mine = ++pageAsked, same2 = prepViewKey.value === key;
@@ -52090,6 +52092,7 @@ ${d5.text}`);
       return false;
     }
     prepSaving.value = what;
+    prepSavedSay.value = "";
     const r4 = await api("/api/prep/focus/save", { key, ...part });
     prepSaving.value = "";
     if (!r4 || !r4.ok) {
@@ -52102,6 +52105,7 @@ ${d5.text}`);
       else if (Array.isArray(part.questions)) prepView.value = { ...v5, model: { ...v5.model, focus: r4.focus, questions: r4.focus && r4.focus.questions || part.questions, questions_edited: true } };
       else prepView.value = { ...v5, model: { ...v5.model, focus: r4.focus } };
     }
+    prepSavedSay.value = "Saved";
     if (!o5.quiet) snack(r4.page ? "Saved, and the Agendas page was updated" : "Saved");
     return true;
   }
@@ -60405,7 +60409,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("h2", { id: "pp-h-focus", children: [
         /* @__PURE__ */ u2(Icon, { name: "spark" }),
         "Your aim for this meeting",
-        /* @__PURE__ */ u2("span", { class: "sub ppstamp", role: "status", children: saving === "notes" ? "Saving…" : "Saved as you type" })
+        /* @__PURE__ */ u2("span", { class: "sub ppstamp", children: saving === "notes" ? "Saving…" : "Saved as you type" })
       ] }),
       reading.aim ? /* @__PURE__ */ u2("p", { class: "ppaim", children: [
         /* @__PURE__ */ u2("b", { children: "Aim:" }),
@@ -60556,7 +60560,7 @@ ${d5.text}`);
           onSave: saveQuestions
         }
       ),
-      /* @__PURE__ */ u2("p", { class: "sub ppstamp", role: "status", children: saving === "questions" ? "Saving…" : mo2.questions_edited ? /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("p", { class: "sub ppstamp", children: saving === "questions" ? "Saving…" : mo2.questions_edited ? /* @__PURE__ */ u2(S2, { children: [
         "Your questions · ",
         /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => saveFocus({ questions: null }, "questions"), children: "Use creaite's questions" })
       ] }) : "One a line; saved as you type" })
@@ -60742,6 +60746,12 @@ ${d5.text}`);
     ] });
   }
   function PrepPage() {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { id: "pp-saved", class: "vh", role: "status", "aria-live": "polite", "aria-atomic": "true", children: prepSavedSay.value }),
+      /* @__PURE__ */ u2(PrepBody, {})
+    ] });
+  }
+  function PrepBody() {
     const v5 = prepView.value, tab = prepTab.value, saving = prepSaving.value, key = prepViewKey.value;
     h2(() => {
       if (!key || !v5 || !v5.ok) return;
@@ -60759,7 +60769,9 @@ ${d5.text}`);
       ] })
     ] });
     const mo2 = v5.model, researching = saving.startsWith("research:") ? saving.slice(9) : "";
-    return /* @__PURE__ */ u2("div", { class: "pp", children: [
+    return /* @__PURE__ */ u2("div", { class: "pp", onInput: () => {
+      if (prepSavedSay.value) prepSavedSay.value = "";
+    }, children: [
       /* @__PURE__ */ u2(Header, { v: v5, researching }),
       /* @__PURE__ */ u2("div", { role: "tabpanel", id: panelId("pp", "prep"), "aria-labelledby": tabId("pp", "prep"), hidden: tab !== "prep", children: /* @__PURE__ */ u2("div", { class: "ppb", children: [
         /* @__PURE__ */ u2(Outline, { mo: mo2 }),

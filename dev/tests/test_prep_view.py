@@ -167,6 +167,23 @@ class PrepView(LiveBrowserCase):
         b.wait("!/Saving/.test(document.querySelector('#pp-focus .ppstamp').textContent)")
         self.assertEqual(self.text("#pp-focus .ppstamp"), "Saved as you type")
 
+    def test_6a_saved_is_announced_by_one_polite_live_region_and_typing_is_silent(self):
+        """#111 piece A: one persistent polite region says "Saved" after each save; it is empty while typing."""
+        b = self.b
+        self.open_view()
+        q = "document.querySelectorAll('#pp-saved')"
+        self.assertEqual(b.eval(f"{q}.length"), 1)
+        self.assertEqual(b.eval("document.getElementById('pp-saved').getAttribute('aria-live')"), "polite")
+        self.assertEqual(b.eval("document.getElementById('pp-saved').getAttribute('role')"), "status")
+        b.eval("window.__ppReg = document.getElementById('pp-saved')")
+        self.assertEqual(b.eval("document.getElementById('pp-saved').textContent"), "")
+        for text in ("First line", "Second line"):
+            b.eval(f"(()=>{{ const t=document.querySelector('#pp-n-objective'); t.focus(); t.value={json.dumps(text)}; t.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
+            self.assertEqual(b.eval("document.getElementById('pp-saved').textContent"), "", "typing announces nothing")
+            b.wait("document.getElementById('pp-saved').textContent==='Saved'", 15)
+            self.assertEqual(b.eval(f"{q}.length"), 1)
+            self.assertTrue(b.eval("window.__ppReg === document.getElementById('pp-saved')"), "the same element, not re-created per save")
+
     def test_6b_raise_note_skip_n_of_n_and_show_the_rest_never_touch_the_tracker(self):
         b = self.b
         before = (self.v.root / "system/tracker.db").read_bytes()

@@ -41,6 +41,8 @@ export const prepView = signal(/** @type {PrepViewResult | null} */ (null));
 export const prepLoading = signal(false);
 export const prepTab = signal("prep");
 export const prepSaving = signal(/** @type {string} */ (""));
+/** The words the page's one polite live region says: "Saved" after each save, "" while saving or typing (#111 piece A). */
+export const prepSavedSay = signal("");
 
 let pageAsked = 0;
 /** Load (or reload) a meeting's view. Claude never runs: the server reads the stored content.
@@ -67,6 +69,7 @@ export async function saveFocus(part, what, o = {}) {
   if (!key) return false;
   if (!viaServer()) { snack("Saving needs the live server"); return false; }
   prepSaving.value = what;
+  prepSavedSay.value = "";                                  // cleared first, so the same word is announced again after the next save
   const r = await api("/api/prep/focus/save", { key, ...part });
   prepSaving.value = "";
   if (!r || !r.ok) { snack(oneLine((r && r.message) || "") || "Not saved"); return false; }
@@ -76,6 +79,7 @@ export async function saveFocus(part, what, o = {}) {
     else if (Array.isArray(part.questions)) prepView.value = { ...v, model: { ...v.model, focus: r.focus, questions: (r.focus && r.focus.questions) || part.questions, questions_edited: true } };
     else prepView.value = { ...v, model: { ...v.model, focus: r.focus } };
   }
+  prepSavedSay.value = "Saved";
   if (!o.quiet) snack(r.page ? "Saved, and the Agendas page was updated" : "Saved");
   return true;
 }

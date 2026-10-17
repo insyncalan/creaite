@@ -23,7 +23,7 @@ import { snack, viaServer } from "../../core/server.js";
 import { draftAgenda, prepOpen, prepPage } from "../../meetings.js";
 import { openPrep } from "../../projects.js";
 import { kOfId } from "../../work.js";
-import { loadPrep, playOf, prepViewKey, prepLoading, prepSaving, prepTab, prepView, saveFocus, saveQuestions, saveSection, setPlay } from "../../stores/prep.js";
+import { loadPrep, playOf, prepViewKey, prepLoading, prepSaving, prepSavedSay, prepTab, prepView, saveFocus, saveQuestions, saveSection, setPlay } from "../../stores/prep.js";
 import { closeShape, openShape, shapeFilter, shapeKey, syncShape } from "../../stores/prepShape.js";
 
 
@@ -153,7 +153,7 @@ function AimCard({ mo, saving }) {
   return (
     <section class="card pc ppfocus" id="pp-focus" tabIndex={-1} aria-labelledby="pp-h-focus">
       <h2 id="pp-h-focus"><Icon name="spark" />Your aim for this meeting
-        <span class="sub ppstamp" role="status">{saving === "notes" ? "Saving…" : "Saved as you type"}</span></h2>
+        <span class="sub ppstamp">{saving === "notes" ? "Saving…" : "Saved as you type"}</span></h2>
       {reading.aim ? <p class="ppaim"><b>Aim:</b> {reading.aim}</p> : null}
       {focusText ? <p class="sub ppfocustxt">Focus: {focusText}</p> : null}
       {AIM.map(([k, label]) => {
@@ -245,7 +245,7 @@ function QuestionsCard({ mo, saving }) {
       <h2 id="pp-h-questions">Questions to ask</h2>
       <PrepEditor id="pp-q" label="Questions and asks, one a line" value={start} rows={Math.max(3, (mo.questions || []).length + 1)}
         placeholder="One question or ask a line" ai={aiOf(mo)} onSave={saveQuestions} />
-      <p class="sub ppstamp" role="status">{saving === "questions" ? "Saving…" : mo.questions_edited
+      <p class="sub ppstamp">{saving === "questions" ? "Saving…" : mo.questions_edited
         ? <>Your questions · <button type="button" class="linkbtn" onClick={() => saveFocus({ questions: null }, "questions")}>Use creaite's questions</button></>
         : "One a line; saved as you type"}</p>
     </section>
@@ -366,8 +366,18 @@ function InvitePanel({ mo }) {
   );
 }
 
-/** The whole screen, drawn from the store. */
+/** The whole screen, drawn from the store. A single polite live region (always the first child, so it is never re-created) says
+    "Saved" after each save; typing alone says nothing (#111 piece A). */
 export function PrepPage() {
+  return (
+    <>
+      <div id="pp-saved" class="vh" role="status" aria-live="polite" aria-atomic="true">{prepSavedSay.value}</div>
+      <PrepBody />
+    </>
+  );
+}
+
+function PrepBody() {
   const v = prepView.value, tab = prepTab.value, saving = prepSaving.value, key = prepViewKey.value;
   /* Shape on the page uses the shape store: open it for this meeting (chips, confidential) and load the saved record into it */
   useEffect(() => {
@@ -381,7 +391,7 @@ export function PrepPage() {
       <div class="card"><p>{v.message || "Couldn't load the prep page."}</p><button type="button" class="btn" data-go="today">Back to Today</button></div></div>);
   const mo = v.model, researching = saving.startsWith("research:") ? saving.slice(9) : "";
   return (
-    <div class="pp">
+    <div class="pp" onInput={() => { if (prepSavedSay.value) prepSavedSay.value = ""; }}>
       <Header v={v} researching={researching} />
       <div role="tabpanel" id={panelId("pp", "prep")} aria-labelledby={tabId("pp", "prep")} hidden={tab !== "prep"}>
         <div class="ppb">
