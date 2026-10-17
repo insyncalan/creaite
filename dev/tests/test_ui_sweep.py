@@ -455,10 +455,10 @@ class ScrollEnd(UiSweepCase):
                         self.check(name, region if region.startswith("#v-") else ".view:not([hidden])")
                 with self.subTest(width=w, screen="prep-popup"):
                     self.goto("today")
-                    b.call("Emulation.setFocusEmulationEnabled", enabled=True)
-                    b.eval("document.querySelector('#dayMeets .dmti').focus()")        # #140: Prepare is in the title's popup
-                    b.wait("document.querySelector('#dayMeets .dmpop .btn.primary')")
-                    b.click("#dayMeets .dmpop .btn.primary")
+                    # #111, #140: the day band's peek no longer opens the old dialog; the dialog is still the Agenda draft's
+                    # home, opened as the "prep-popup" screen above does (the peek's button goes to the Prep page, tested there).
+                    b.eval("D.calendar={fetched:TODAY+' 07:00',days:{[TODAY]:[{id:'e1',start:'10:00',end:'11:00',title:'ABC Steering',teams:true}]}}; "
+                           "D.prep.meetings['10:00|ABC Steering']={series:'abc steering',p:'ABC',how:'matched',day:TODAY}; openPrep(prepTimed()[0],TODAY)")
                     b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open&&document.getElementById('prepBody').children.length")
                     b.pump(1)
                     self.check("prep popup", "#v-today", "#prepDlg", "#prepBody")
