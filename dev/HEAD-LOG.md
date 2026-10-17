@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | Run usage monitor (#197) goes in v2.1.1; Team Stark prepares the guarded live_server.py diff (two hooks) with a plain-English README for Alan's review; nothing is applied until he approves the diff | Alan's decision, relayed by the Product Manager |
 | 17-10-2026 | Alan | #175 design r3 agreed: keep the 30-minute cap; leftover confidential drafts stay in place; wording 'Restore'; Activity on a notes row is a file-level restore to the session's start; the Cmd+Z history is kept when switching notes within the page | Alan's answers to the five open questions |
 | 17-10-2026 | Alan | The UX review items #188 to #193 go into v2.3.0 | Alan: 'place all UX review items into 2.3' |
 | 17-10-2026 | Alan | #133 accepted with the interim (AI bar off for outside recipients); the real fix (client facts and client checks for outside recipients, then the bar back on) is backlog item #186 | Edit_ai.py is guarded-adjacent, so a proposal first |
