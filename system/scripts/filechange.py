@@ -347,7 +347,8 @@ NOTE_DRAFT = re.compile(r"[0-9a-f]{16}\.json(\.tmp)?")
 
 def retire_note_drafts(folder=None):
     """Move the Notes tab's old drafts (NOTE_DRAFT names except leftover .json.tmp files, which always stay where they are, regular
-    files directly in `folder`, default notes.DRAFT_DIR), other than a confidential note's, into one backup folder and log it once. Returns how many were moved."""
+    files directly in `folder`, default notes.DRAFT_DIR), other than a confidential note's, into one backup folder and log it once.
+    Returns how many were moved."""
     import notes
     d = Path(folder) if folder else notes.DRAFT_DIR
     found = [f for f in (d.iterdir() if d.is_dir() and not d.is_symlink() else [])
