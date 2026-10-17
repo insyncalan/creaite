@@ -5,6 +5,7 @@
 import { openDialog } from "./components/Dialog.jsx";
 import { closePicker } from "./components/Picker.jsx";
 import { linkSegments, linkWithAddress } from "./core/linkText.js";
+import { linkUrl } from "./core/linkUrl.js";
 import { makeDraftEmailDialog } from "./components/dialogs/PageDialogs.jsx";
 import { drawCk, rbEnd, rbStart } from "./ask.js";
 import { drawChips } from "./components/Chip.jsx";
@@ -58,7 +59,7 @@ export const deChasedWords=c=>`Chased ${fd(c.last)}, ${deTimes(c.n)}`;
 export const deReplyBy=r=>r?` It would be helpful to hear back by ${new Date(r+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(r)}.`:"";
 /** #121: plain text with links as the email's HTML: the words escaped, a link as an anchor with its colour written in (a mail program drops classes). The rich copy keeps the
     link; the plain copy (deTextRows) shows "words (address)". Only an address core/linkUrl.js accepts is ever an anchor. @param {unknown} t */
-export const deLinks=t=>linkSegments(t).map(x=>x.href?`<a href="${esc(x.href)}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link||"#0b5cad"};text-decoration:underline;">${esc(x.t)}</a>`:esc(x.t)).join("");
+export const deLinks=t=>linkSegments(t).map(x=>x.href?`<a href="${esc(linkUrl(x.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link||"#0b5cad"};text-decoration:underline;">${esc(x.t)}</a>`:esc(x.t)).join("");
 export function deRowHtml(i,o){ const C=DE_COLOURS, e=esc, d=deDue(i.due,o.today,o.dueSoon??7), colour=d.level==="over"?C.red:d.level==="soon"?C.amber:C.ink, strong=d.level==="over"?"font-weight:bold;":"";
   const what=i.k==="raid"?`<b style="font-weight:bold;">${e(i.type||"Risk")}:</b> ${e(i.t)}<br><span style="color:${C.muted};">Response: ${String(i.resp||"").trim()?deLinks(String(i.resp).trim()):"none recorded yet"}</span>`:i.k==="decisions"?`<b style="font-weight:bold;">Decision needed:</b> ${e(i.t)}`:e(i.t);
   const upd=o.includeUpdate&&String(i.upd||"").trim()?`<br><span style="color:${C.muted};">Latest update: ${deLinks(i.upd)}</span>`:"";

@@ -282,19 +282,81 @@ class AskReopen(LiveBrowserCase):
         self.assertEqual(draws, 0, "the saved reply changed after it was first shown")
         self.assertEqual(b.eval("FR.nodes.size"), 1, "the saved chat was drawn more than once")
 
-    def test_the_scroll_position_is_kept_across_close_and_open(self):
+    # The browser keeps a hidden panel's scrollTop (measured: Chrome restores it when display:none is lifted), so the page saves
+    # nothing of its own. What the page does on open is only: following the end, go to the end; otherwise leave the place and
+    # the "New activity" button as they were. Chrome does lose the place when the log is redrawn while hidden (it empties to 0);
+    # that is a follower again, so it opens at the end.
+    def scrolled_chat(self, name):
         b = self.b
-        self.sent_long_reply_then_reload("k")
+        self.sent_long_reply_then_reload(name)
         b.eval("openChat()")
         b.pump(0.3)
         b.eval("$('#chLog').scrollTop=400")
-        b.pump(0.3)
+        b.pump(0.3)        # the scroll event: the user is no longer following the end
         self.assertEqual(round(b.eval("$('#chLog').scrollTop")), 400)
+        self.assertTrue(b.eval("$('#chJump').hidden"))
+
+    def at_end(self):
+        return self.b.eval("(l=>l.scrollHeight-l.scrollTop-l.clientHeight)($('#chLog'))") <= 12
+
+    def test_a_place_scrolled_back_to_is_kept_across_close_and_open_without_a_jump_button(self):
+        b = self.b
+        self.scrolled_chat("k")
         b.eval("closeChat()")
         b.pump(0.2)
         b.eval("openChat()")
         b.pump(0.3)
         self.assertEqual(round(b.eval("$('#chLog').scrollTop")), 400, "the panel jumped when it was reopened")
+        self.assertTrue(b.eval("$('#chJump').hidden"), "reopening a panel that nothing happened to offered 'New activity'")
+
+    def test_new_text_that_arrived_while_it_was_closed_keeps_the_place_and_offers_the_jump(self):
+        b = self.b
+        self.scrolled_chat("q")
+        b.eval("closeChat()")
+        b.pump(0.2)
+        b.eval("addEl('msg a','arrived while hidden')")
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertEqual(round(b.eval("$('#chLog').scrollTop")), 400)
+        self.assertFalse(b.eval("$('#chJump').hidden"), "the new text was not offered")
+
+    def test_following_the_end_a_panel_reopens_at_the_end_after_text_arrived_while_closed(self):
+        b = self.b
+        self.sent_long_reply_then_reload("r")
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertTrue(self.at_end())
+        b.eval("closeChat()")
+        b.pump(0.2)
+        b.eval("addEl('msg a', 'late '.repeat(400))")        # while hidden the pin to the end has nothing to scroll
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertTrue(self.at_end(), "a panel that was at the end did not reopen at the end")
+
+    def test_a_chat_redrawn_while_closed_opens_at_the_end(self):
+        b = self.b
+        self.scrolled_chat("s")
+        b.eval("closeChat()")
+        b.pump(0.2)
+        b.eval("loadChat(ASKCHAT,true)")                      # the log empties and refills while hidden: Chrome has lost the place
+        b.pump(0.5)
+        b.eval("openChat()")
+        b.pump(0.3)
+        self.assertTrue(self.at_end(), "a chat redrawn while closed did not open at the end")
+        self.assertTrue(b.eval("$('#chJump').hidden"))
+
+    def test_a_first_time_user_is_greeted_even_if_the_panel_opens_while_the_running_check_is_in_flight(self):
+        b = self.b
+        b.eval("try{localStorage.clear()}catch(e){}")
+        b.call("Page.addScriptToEvaluateOnNewDocument", source="""(()=>{ const f=window.fetch; window.fetch=function(u,o){ if(String(u)==="/api/ask/running")
+          return new Promise(r=>setTimeout(r,800)).then(()=>f.apply(this,arguments)); return f.apply(this,arguments); }; })();""")
+        b.reload("typeof go==='function' && LIVE")
+        self.assertIsNone(b.eval("ASKCHAT"))
+        b.eval("openChat()")
+        self.assertEqual(b.eval("$('#chLog').children.length"), 0, "the running check was not in flight")
+        b.wait("document.querySelectorAll('#chLog .msg.a').length>0", 10)
+        b.pump(1.5)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#chLog .msg.a')].map(m=>m.textContent)"), [b.eval("GREET")])
 
     def test_a_finished_run_replayed_is_drawn_plain_and_a_live_one_still_fades(self):
         t, _ = self.ask_in_background("gated i", "r-test-iiiiii")

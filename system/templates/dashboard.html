@@ -4064,6 +4064,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     CARDTYPE: () => CARDTYPE,
     CARD_CLOSE: () => CARD_CLOSE,
     CARD_OPEN: () => CARD_OPEN,
+    CARD_WAITING: () => CARD_WAITING,
     CATOF: () => CATOF,
     CD_STEPS: () => CD_STEPS,
     CE_FIELDS: () => CE_FIELDS,
@@ -4078,7 +4079,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     CHK: () => CHK,
     CHNEAR: () => CHNEAR,
     CHREC: () => CHREC,
-    CHSAVED: () => CHSAVED,
     CHSTARTED: () => CHSTARTED,
     CHTOP: () => CHTOP,
     CKFN: () => CKFN,
@@ -4200,6 +4200,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     HPARTS: () => HPARTS,
     HRANK: () => HRANK,
     HTABS: () => HTABS,
+    Health: () => Health,
     ICONS: () => ICONS,
     ID_RE: () => ID_RE,
     IGEDIT: () => IGEDIT,
@@ -4227,6 +4228,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     LCOLL: () => LCOLL,
     LINK_MAX: () => LINK_MAX,
     LINK_REFUSED: () => LINK_REFUSED,
+    LINK_REL: () => LINK_REL,
     LLF: () => LLF,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
@@ -4342,9 +4344,11 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     PSORTT: () => PSORTT,
     PULSE: () => PULSE,
     PageDialogs: () => PageDialogs,
+    PageShape: () => PageShape,
     Peek: () => Peek,
     PeekBar: () => PeekBar,
     PrepPage: () => PrepPage,
+    PrepShape: () => PrepShape,
     QUEUE: () => QUEUE,
     QUIPMAX: () => QUIPMAX,
     QUIPMIN: () => QUIPMIN,
@@ -4452,6 +4456,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     SVW: () => SVW,
     SWEPT: () => SWEPT,
     SafeHTML: () => SafeHTML,
+    ShapeSource: () => ShapeSource,
     Sheet: () => Sheet,
     SneakIcon: () => SneakIcon,
     SneakPeek: () => SneakPeek,
@@ -4966,6 +4971,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     colPatch: () => colPatch,
     colResizer: () => colResizer,
     comboboxOpen: () => comboboxOpen,
+    commandIn: () => commandIn,
     commitRecord: () => commitRecord,
     confMark: () => confMark,
     confirmCard: () => confirmCard,
@@ -5459,6 +5465,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     lev: () => lev,
     lineSeen: () => lineSeen,
     linesFrom: () => linesFrom,
+    linkAnchor: () => linkAnchor,
     linkAt: () => linkAt,
     linkGuard: () => linkGuard,
     linkHtml: () => linkHtml,
@@ -5514,6 +5521,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     mSnapRows: () => mSnapRows,
     mTick: () => mTick,
     mWords: () => mWords,
+    mailLink: () => mailLink,
     makeArchiveAskDialog: () => makeArchiveAskDialog,
     makeDraftEmailDialog: () => makeDraftEmailDialog,
     makePrepDialog: () => makePrepDialog,
@@ -5532,7 +5540,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     mdInline: () => mdInline,
     mdItemLink: () => mdItemLink,
     mdPaths: () => mdPaths,
-    mdSafeUrl: () => mdSafeUrl,
     mdView: () => mdView,
     meNames: () => meNames,
     meetingOfFile: () => meetingOfFile,
@@ -5559,6 +5566,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     mountMenu: () => mountMenu,
     mountMenuPanel: () => mountMenuPanel,
     mountOwnerFields: () => mountOwnerFields,
+    mountPrepShape: () => mountPrepShape,
     mountRejectMenu: () => mountRejectMenu,
     mountRejectsList: () => mountRejectsList,
     mountReportingCard: () => mountReportingCard,
@@ -6263,6 +6271,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     runCk: () => runCk,
     runClosure: () => runClosure,
     runGen: () => runGen,
+    runHealthFix: () => runHealthFix,
     runReminder: () => runReminder,
     runSearch: () => runSearch,
     runTool: () => runTool,
@@ -6513,6 +6522,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     undatedWork: () => undatedWork,
     undoApply: () => undoApply,
     undoWords: () => undoWords,
+    unescHtml: () => unescHtml,
     uniq: () => uniq,
     unknownOwner: () => unknownOwner,
     unmountChase: () => unmountChase,
@@ -9406,6 +9416,14 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
     return null;
   }
+  var LINK_REL = "noopener noreferrer";
+  function unescHtml(s5) {
+    return String(s5).replace(/&(?:amp|lt|gt|quot);/g, (m5) => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"' })[m5]);
+  }
+  function linkAnchor(href, inner, cls) {
+    const u5 = linkUrl(href);
+    return u5 === null ? null : `<a href="${u5.replace(/&/g, "&amp;")}" target="_blank" rel="${LINK_REL}"${cls ? ` class="${cls}"` : ""}>${inner}</a>`;
+  }
   var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
   var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
 
@@ -9433,7 +9451,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
   var linkWords = (text) => typeof text === "string" && !text.includes("](") ? text : linkSegments(text).map((x5) => x5.t).join("");
   var linkWithAddress = (text) => linkSegments(text).map((x5) => x5.href ? `${x5.t} (${x5.href.replace(/^mailto:/i, "")})` : x5.t).join("");
   function linkHtml(text) {
-    return linkSegments(text).map((x5) => x5.href ? `<a class="tlink" href="${esc(x5.href)}" target="_blank" rel="noopener noreferrer">${esc(x5.t)}</a>` : esc(x5.t)).join("");
+    return linkSegments(text).map((x5) => x5.href ? `<a class="tlink" href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   }
   function linkWrite(words, href) {
     const a5 = linkUrl(href);
@@ -24834,7 +24852,7 @@ ${s5}`;
   var plainDoc = (t47, links) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => {
     if (!l6) return { type: "paragraph" };
     if (!links) return { type: "paragraph", content: [{ type: "text", text: l6 }] };
-    const segs = linkSegments(l6).map((x5) => x5.href ? { type: "text", text: x5.t, marks: [{ type: "link", attrs: { href: x5.href } }] } : { type: "text", text: x5.t });
+    const segs = linkSegments(l6).map((x5) => x5.href ? { type: "text", text: x5.t, marks: [{ type: "link", attrs: { href: linkUrl(x5.href) } }] } : { type: "text", text: x5.t });
     return segs.length ? { type: "paragraph", content: segs } : { type: "paragraph" };
   }) });
   var plainText = (doc) => {
@@ -24863,12 +24881,12 @@ ${s5}`;
           /** @type {HTMLElement} */
           el2.getAttribute("href")
         );
-        return isLinkUrl(h5) ? { href: h5 } : false;
+        return isLinkUrl(h5) ? { href: linkUrl(h5) } : false;
       } }];
     },
     renderHTML({ HTMLAttributes }) {
       const h5 = HTMLAttributes.href;
-      return ["a", isLinkUrl(h5) ? { class: "tlink", href: h5, target: "_blank", rel: "noopener noreferrer" } : { class: "tlink" }, 0];
+      return ["a", isLinkUrl(h5) ? { class: "tlink", href: linkUrl(h5), target: "_blank", rel: "noopener noreferrer" } : { class: "tlink" }, 0];
     }
   });
   var EMAIL_ATTRS = ["style", "align", "cellpadding", "cellspacing", "border", "width", "valign", "bgcolor"];
@@ -26626,6 +26644,16 @@ ${s5}`;
     h2(() => {
       if (asking) input.current?.focus();
     }, [asking]);
+    const [, redraw] = d2(0);
+    h2(() => {
+      const ed3 = bar.h.editor;
+      if (ed3.isDestroyed) return void 0;
+      const again = () => redraw((n4) => n4 + 1);
+      ed3.on("transaction", again);
+      return () => {
+        if (!ed3.isDestroyed) ed3.off("transaction", again);
+      };
+    }, [bar.h]);
     _2(() => {
       if (!box.current || bar.h.editor.isDestroyed) return void 0;
       const v5 = bar.h.editor.view;
@@ -29954,7 +29982,13 @@ ${s5}`;
       markCardWaiting(f5.id || "");
       snack(CARD_WAITING + ": nothing moves until you approve it.");
     } else snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
-    if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
+    if (r4.ok && r4.url && !linkUrl(r4.url)) snack("That address can't be opened here");
+    else if (r4.ok && r4.url) window.open(
+      /** @type {string} */
+      linkUrl(r4.url),
+      "_blank",
+      "noopener"
+    );
     if (r4.ok && r4.card) await pendingEdit();
     if (r4.ok && !r4.url) checkHealth();
     return !!r4.ok;
@@ -31835,6 +31869,10 @@ ${s5}`;
       }
     }, true);
   }
+  var mailLink = (e4) => {
+    const u5 = linkUrl("mailto:" + e4);
+    return u5 ? html`<a href="${u5}">${e4}</a>` : html`${e4}`;
+  };
   var personLink = (n4, label) => !n4 || n4 === "TBC" ? esc(label || n4 || "") : `<a href="#" class="plink2" data-person="${esc(isMe(n4) ? S.me : personOf(n4))}" title="Open ${esc(isMe(n4) ? "My work" : personOf(n4) + "’s page")}">${esc(label || who(n4))}</a>`;
   var RECENT_DEC_DAYS = 90;
   function PERS() {
@@ -31884,7 +31922,7 @@ ${s5}`;
       const recent = x5.D.filter((d5) => d5.date >= cutoff.toISOString().slice(0, 10)).sort((a5, b5) => b5.date.localeCompare(a5.date)), leads = Object.entries(D.leads || {}).filter(([k5]) => personOf(k5) === name).flatMap(([, v5]) => v5);
       putHTML(el2, html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav>
    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}${p6 || isMe(name) ? "" : html` <span class="tag warn" title="Owns items but isn’t in the people register">not in register</span>`}</h1>
-     <p class="sub" style="margin:2px 0">${p6 && (p6.org || p6.role) ? [p6.org, p6.role].filter(Boolean).join(" · ") : "Organisation and role not recorded"}${p6 && p6.email ? html` · <a href="mailto:${p6.email}">${p6.email}</a>` : ""}</p>
+     <p class="sub" style="margin:2px 0">${p6 && (p6.org || p6.role) ? [p6.org, p6.role].filter(Boolean).join(" · ") : "Organisation and role not recorded"}${p6 && p6.email ? html` · ${mailLink(p6.email)}` : ""}</p>
      ${p6 && p6.aliases.length ? html`<p class="sub" style="margin:2px 0">Also written as ${p6.aliases.join(", ")}</p>` : ""}</div>
      ${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", 'id="ppEdit" aria-haspopup="dialog"', "bd"))}</div>
    <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x5.oo.length, "open action")} owned by ${name}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) }, `<b>${x5.oo.length}</b> open action${x5.oo.length === 1 ? "" : "s"}`))}</span><span>${raw(countLink(`${plur(x5.or.length, "open RAID item")} owned by ${name}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) }, `<b>${x5.or.length}</b> open risk${x5.or.length === 1 ? "" : "s"} and issue${x5.or.length === 1 ? "" : "s"}`))}</span><span class="${x5.late ? "late" : ""}">${raw(countLink(`${plur(x5.late, "overdue item")} owned by ${name}`, x5.late, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(latesOf(x5)) }, `<b>${x5.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ") || "—")}</span></div>
@@ -32672,11 +32710,11 @@ ${s5}`;
       else addHTML($("#pkScroll"), "afterbegin", html`<div class="pk-alert" id="pkAlert" role="group" aria-label="Made from a message"></div>`);
       el2 = $("#pkAlert");
     }
-    const cur = alertTypeOf(k5, x5), why = alertDraftWhy(al2), when2 = vipWhen({ sent: al2.sent }), key2 = [al2.id, cur, why].join("|");
+    const cur = alertTypeOf(k5, x5), why = alertDraftWhy(al2), when2 = vipWhen({ sent: al2.sent }), alOpen = al2.link ? linkAnchor(al2.link, "Open the message", "hlink") : null, key2 = [al2.id, cur, why].join("|");
     el2.hidden = false;
     if (el2.dataset.key === key2) return;
     el2.dataset.key = key2;
-    putHTML(el2, html`<div class="pk-alert-from">From ${al2.who}’s ${ALERTWORD[al2.kind] || "message"}${when2 ? `, ${when2}` : ""}${al2.link ? html` · <a href="${al2.link}" target="_blank" rel="noopener" class="hlink">Open the message</a>` : ""}</div>
+    putHTML(el2, html`<div class="pk-alert-from">From ${al2.who}’s ${ALERTWORD[al2.kind] || "message"}${when2 ? `, ${when2}` : ""}${alOpen ? html` · ${raw(alOpen)}` : ""}</div>
     <div class="pk-alert-row"><span class="pk-alert-types" role="group" aria-label="Make it">${ALERTTYPES.map(([t47, w6]) => html`<button type="button" class="mini" data-alerttype="${t47}" aria-pressed="${t47 === cur ? "true" : "false"}">${w6}</button>`)}</span>
     <button type="button" class="drbtn" data-alertdraft="1" aria-label="Draft from the message" data-tip="${why || "Reads the message (read only) and suggests a sharper title and any date it states. Nothing is saved until you save"}"${why ? raw(' aria-disabled="true"') : ""}>${raw(ic("spark"))}<span>Draft from the message</span></button>
     <span class="pk-alert-st" role="status" id="pkAlertSt"></span><span class="sp"></span>
@@ -39211,6 +39249,7 @@ ${s5}`;
     DRAFTFEATURES.push(["shape", "Shape the meeting", "Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's carried over, each line cited"]);
     Object.assign(DRAFTKIND, { shape: "shape" });
   }
+  var sourceHref = (s5) => (s5.type === "mail" || s5.type === "teams") && s5.url ? linkUrl(s5.url) : null;
   var SHAPE_SECTIONS = (
     /** @type {[string, string][]} */
     [
@@ -39924,6 +39963,7 @@ ${s5}`;
       e4.preventDefault();
       p6.onOpen(r4);
     };
+    const href = linkUrl(r4.link);
     const acts2 = (list) => list.map((a5) => /* @__PURE__ */ u2(
       IconButton,
       {
@@ -39947,7 +39987,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("li", { class: `tdrow td-${r4.kind}`, "data-td": r4.key, hidden, children: [
       r4.tag ? /* @__PURE__ */ u2("span", { class: `tag tdtag${r4.tone ? " " + r4.tone : ""}`, children: r4.tag }) : null,
       /* @__PURE__ */ u2("div", { class: "tb", children: [
-        r4.kind === "quiet" ? /* @__PURE__ */ u2("span", { class: "t", children: r4.t }) : r4.link ? /* @__PURE__ */ u2("a", { class: "t", href: r4.link, target: "_blank", rel: "noopener", children: r4.t }) : /* @__PURE__ */ u2("a", { class: "t", href: "#", onClick: open2, children: r4.t }),
+        r4.kind === "quiet" ? /* @__PURE__ */ u2("span", { class: "t", children: r4.t }) : href ? /* @__PURE__ */ u2("a", { class: "t", href, target: "_blank", rel: LINK_REL, children: r4.t }) : /* @__PURE__ */ u2("a", { class: "t", href: "#", onClick: open2, children: r4.t }),
         r4.mark ? /* @__PURE__ */ u2(S2, { children: [
           " ",
           /* @__PURE__ */ u2("span", { class: "tag tdctag tdmark", children: r4.mark })
@@ -42930,7 +42970,8 @@ ${s5}`;
     const o5 = srcParse(r4.src);
     if (!o5) return "";
     if (o5.type === "File") return ` · <a href="#" class="srclink" data-openfile="${esc(o5.path)}">Open source</a>`;
-    return o5.Link ? ` · <a href="${esc(o5.Link)}" target="_blank" rel="noopener" class="srclink">Open source</a>` : "";
+    const a5 = o5.Link ? linkAnchor(o5.Link, "Open source", "srclink") : null;
+    return a5 ? ` · ${a5}` : "";
   };
   function rvHintHtml() {
     return raw([["J", "K", "move"], ["Shift", "J", "extend"], ["Space", "select"], ["A", "approve"], ["R", "reject with a reason"], ["E", "edit"], [MAC ? "⌘" : "Ctrl", "Z", "undo"]].map((a5) => a5.slice(0, -1).map((k5) => `<span class="kbd">${k5}</span>`).join(" ") + " " + a5[a5.length - 1]).join(" · "));
@@ -45870,8 +45911,9 @@ ${s5}`;
       return k5 ? /* @__PURE__ */ u2("a", { href: "#", class: "shcite", "data-open": `${k5}:${s5.id}`, "data-tip": "Opens the item", children: text }) : /* @__PURE__ */ u2("span", { class: "shcite plain", children: text });
     }
     if (s5.type === "file" && s5.path) return /* @__PURE__ */ u2("a", { href: "#", class: "shcite", "data-dropen": s5.path, "data-tip": `Opens ${s5.path}`, children: text });
-    if ((s5.type === "mail" || s5.type === "teams") && s5.url && /^https:\/\//.test(s5.url)) {
-      return /* @__PURE__ */ u2("a", { href: s5.url, class: "shcite", target: "_blank", rel: "noopener noreferrer", "data-tip": s5.type === "mail" ? "Opens in Outlook" : "Opens in Teams", children: text });
+    const href = sourceHref(s5);
+    if (href) {
+      return /* @__PURE__ */ u2("a", { href, class: "shcite", target: "_blank", rel: LINK_REL, "data-tip": s5.type === "mail" ? "Opens in Outlook" : "Opens in Teams", children: text });
     }
     return /* @__PURE__ */ u2("span", { class: "shcite plain", children: text });
   }
@@ -48796,7 +48838,7 @@ ${pre}**Current state title:** ${title}`);
   var deTimes = (n4) => n4 === 1 ? "once" : n4 === 2 ? "twice" : `${n4} times`;
   var deChasedWords = (c5) => `Chased ${fd(c5.last)}, ${deTimes(c5.n)}`;
   var deReplyBy = (r4) => r4 ? ` It would be helpful to hear back by ${(/* @__PURE__ */ new Date(r4 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(r4)}.` : "";
-  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(x5.href)}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
+  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   function deRowHtml(i5, o5) {
     const C5 = DE_COLOURS, e4 = esc, d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7), colour = d5.level === "over" ? C5.red : d5.level === "soon" ? C5.amber : C5.ink, strong = d5.level === "over" ? "font-weight:bold;" : "";
     const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${String(i5.resp || "").trim() ? deLinks(String(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
@@ -50772,8 +50814,8 @@ ${pre}**Current state title:** ${title}`);
       const mt2 = !shared.LOADING && meetingOfFile(o5.path);
       return `<a href="#" class="srclink" data-openfile="${esc(o5.path)}"${o5.line ? ` data-noteline="${o5.line}"` : ""}>${esc(o5.name)}</a>${o5.section ? ` <span class="sub">· ${esc(o5.section)}</span>` : ""}<div class="sub">${esc(o5.path.slice(0, o5.path.lastIndexOf("/")))}</div>${mt2 && meetingRoute(mt2) ? `<div><a href="#meeting=${mt2}" class="linkbtn mhlink" title="Open this meeting's minutes, or its Review or Prep">Meeting</a></div>` : ""}`;
     }
-    if (o5.type === "Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o5.From || "—")}</dd><dt>Subject</dt><dd>${esc(o5.Subject || "—")}</dd><dt>Sent</dt><dd>${esc(fd(o5.Sent || "—"))}</dd></dl>${o5.Link ? `<a href="${esc(o5.Link)}" target="_blank" rel="noopener" class="srclink">Open in Outlook</a>` : '<span class="sub">No message link stored</span>'}`;
-    if (o5.type === "Teams") return `<dl class="srcmeta"><dt>${o5.Channel ? "Channel" : "Chat"}</dt><dd>${esc(o5.Channel || o5.Chat)}</dd><dt>From</dt><dd>${esc(o5.From || "—")}</dd><dt>Sent</dt><dd>${esc(fd(o5.Sent || "—"))}</dd></dl>${o5.Link ? `<a href="${esc(o5.Link)}" target="_blank" rel="noopener" class="srclink">Open in Teams</a>` : '<span class="sub">No message link stored</span>'}`;
+    if (o5.type === "Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o5.From || "—")}</dd><dt>Subject</dt><dd>${esc(o5.Subject || "—")}</dd><dt>Sent</dt><dd>${esc(fd(o5.Sent || "—"))}</dd></dl>${o5.Link ? linkAnchor(o5.Link, "Open in Outlook", "srclink") || '<span class="sub">The message link is not a web address</span>' : '<span class="sub">No message link stored</span>'}`;
+    if (o5.type === "Teams") return `<dl class="srcmeta"><dt>${o5.Channel ? "Channel" : "Chat"}</dt><dd>${esc(o5.Channel || o5.Chat)}</dd><dt>From</dt><dd>${esc(o5.From || "—")}</dd><dt>Sent</dt><dd>${esc(fd(o5.Sent || "—"))}</dd></dl>${o5.Link ? linkAnchor(o5.Link, "Open in Teams", "srclink") || '<span class="sub">The message link is not a web address</span>' : '<span class="sub">No message link stored</span>'}`;
     return esc(o5.text);
   }
   var openPath = function(p6) {
@@ -55299,7 +55341,16 @@ ${d5.text}`);
     return r4 ? (l6 ? l6 + "\n\n" : "") + PANE + "\n\n" + r4 : l6;
   }
   function mdInline(t47) {
-    return esc(t47).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g, (m5, a5, id2) => `<a href="#" class="itemref" data-oi="${id2}">${a5}</a>`).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g, (m5, a5, u5) => `<a href="${u5}" target="_blank" rel="noopener">${a5}</a>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
+    const kept = [], keep2 = (h5) => {
+      kept.push(h5);
+      return "" + (kept.length - 1) + "";
+    };
+    const emph = (s6) => s6.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
+    const s5 = esc(String(t47 ?? "").split("").join("")).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g, (m5, a5, id2) => keep2(`<a href="#" class="itemref" data-oi="${id2}">${emph(a5)}</a>`)).replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (m5, a5, u5) => {
+      const h5 = a5.includes("") ? null : linkAnchor(unescHtml(u5), emph(a5));
+      return h5 ? keep2(h5) : m5;
+    });
+    return emph(s5).replace(new RegExp("(\\d+)", "g"), (m5, n4) => kept[+n4] ?? "");
   }
   function mdBlocks(text) {
     const B4 = [];
@@ -55395,7 +55446,8 @@ ${d5.text}`);
       const st2 = n4.style || {};
       if (tag === "A") {
         const href = n4.getAttribute("href") || "";
-        return /^(https?:|mailto:)/i.test(href) && inner.trim() ? `[${inner.trim()}](${href})` : inner;
+        const u5 = linkUrl(href);
+        return u5 && inner.trim() ? `[${inner.trim()}](${u5})` : inner;
       }
       if (tag === "B" || tag === "STRONG" || +st2.fontWeight >= 600 || st2.fontWeight === "bold") return w6("**");
       if (tag === "I" || tag === "EM" || st2.fontStyle === "italic") return w6("*");
@@ -61198,8 +61250,6 @@ ${d5.text}`);
     }
     $("#chat").classList.add("on");
     rbDismiss();
-    if (CHFOLLOW || CHSAVED == null) chatScroll();
-    else $("#chLog").scrollTop = CHTOP = CHSAVED;
     if (!$("#chLog").children.length && !ATTACHED && !shared.REATT) {
       if (shared.ASKCHAT && viaServer()) loadChat(shared.ASKCHAT, true);
       else greet();
@@ -61216,7 +61266,6 @@ ${d5.text}`);
   }
   function closeChat() {
     const wasOn = $("#chat").classList.contains("on"), inside = $("#chat").contains(document.activeElement);
-    if (wasOn) CHSAVED = $("#chLog").scrollTop;
     $("#chat").classList.remove("on");
     if ($("#chat").contains(document.activeElement)) document.activeElement.blur();
     if (wasOn && inside && (!document.activeElement || document.activeElement === document.body)) {
@@ -61296,7 +61345,6 @@ ${d5.text}`);
     LI: /^( *)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/,
     SEP: /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/
   };
-  var mdSafeUrl = (u5) => /^(?:https?:\/\/|mailto:)[^\s"<>]+$/i.test(u5);
   var MDPATHS = null;
   var mdPaths = () => {
     if (!MDPATHS || MDPATHS.n !== FILES.length) MDPATHS = { n: FILES.length, list: FILES.filter((f5) => f5.path).map((f5) => ({ path: f5.path, e: esc(f5.path) })).sort((a5, b5) => b5.e.length - a5.e.length) };
@@ -61314,7 +61362,10 @@ ${d5.text}`);
     });
     if (!noLinks) {
       s5 = s5.replace(new RegExp("!\\[([^\\]\\n]*)\\]\\(" + MDC.URL + "\\)", "g"), (m5, alt) => alt);
-      s5 = s5.replace(new RegExp("\\[([^\\]\\n]+)\\]\\(" + MDC.URL + "\\)", "g"), (m5, text, url) => mdSafeUrl(url) ? keep2(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text, st2, true)}</a>`) : m5);
+      s5 = s5.replace(new RegExp("\\[([^\\]\\n]+)\\]\\(" + MDC.URL + "\\)", "g"), (m5, text, url) => {
+        const h5 = linkAnchor(unescHtml(url), chatMdInline(text, st2, true));
+        return h5 ? keep2(h5) : m5;
+      });
       if (/projects\/|inbox\//.test(s5)) {
         for (const f5 of mdPaths()) if (s5.includes(f5.e)) s5 = s5.split(f5.e).join(keep2(mdFileLink(f5.path, f5.e)));
       }
@@ -61485,7 +61536,7 @@ ${d5.text}`);
     $("#chLog").addEventListener("click", (e4) => mdClick(e4));
   }
   var mdView = (text, o5) => `<div class="mdv">${mdChat(text, o5)}</div>`;
-  var CHFOLLOW = true, CHTOP = 0, CHSAVED = null;
+  var CHFOLLOW = true, CHTOP = 0;
   var CHNEAR = 12;
   function chatPin() {
     if (!CHFOLLOW) return;
@@ -61623,7 +61674,6 @@ ${d5.text}`);
   }
   function newChat() {
     if (shared.BUSY) return;
-    CHSAVED = null;
     setChat(null, null);
     $("#chLog").textContent = "";
     shared.SHOWN = null;
@@ -61631,7 +61681,6 @@ ${d5.text}`);
     $("#chIn").focus();
   }
   async function loadChat(chat, quiet, skipRun) {
-    if (chat !== shared.ASKCHAT) CHSAVED = null;
     const rec = await api("/api/chat", { chat });
     if (rec.ok && typeof skipRun === "function") skipRun = skipRun(rec);
     if (rec.ok && skipRun) rec.messages = rec.messages.filter((m5) => m5.run !== skipRun);
@@ -61923,6 +61972,7 @@ ${d5.text}`);
     } finally {
       shared.REATT = false;
     }
+    if (!run && $("#chat").classList.contains("on") && !$("#chLog").children.length && !ATTACHED) greet();
     if (run) attachRun(run);
     else {
       pendingCard();
@@ -64110,7 +64160,8 @@ ${d5.text}`);
     const text = label || s5.label || s5.id || "";
     const cls = cite ? "ppcite" : "pplink";
     if (s5.type === "file" && s5.path) return /* @__PURE__ */ u2("a", { href: "#", class: cls, "data-openfile": s5.path, "data-tip": `${FILEKIND[s5.kind || "file"]?.[1] || "opens the file"}: ${s5.path}`, children: text });
-    if ((s5.type === "mail" || s5.type === "teams") && s5.url) return /* @__PURE__ */ u2("a", { href: s5.url, class: cls, target: "_blank", rel: "noopener noreferrer", "data-tip": s5.type === "mail" ? "Opens in Outlook" : "Opens in Teams", children: text });
+    const href = sourceHref(s5);
+    if (href) return /* @__PURE__ */ u2("a", { href, class: cls, target: "_blank", rel: LINK_REL, "data-tip": s5.type === "mail" ? "Opens in Outlook" : "Opens in Teams", children: text });
     if (s5.type === "item" && s5.id) {
       const k5 = kOfId(s5.id);
       return k5 ? /* @__PURE__ */ u2("a", { href: "#", class: cls, "data-open": `${k5}:${s5.id}`, "data-tip": "Opens the item", children: text }) : /* @__PURE__ */ u2("span", { class: cls, children: text });
@@ -64119,8 +64170,8 @@ ${d5.text}`);
   }
   function ppSrcKind(s5) {
     if (s5.type === "file") return ["filetext", `${(s5.path || "").split("/").slice(-2, -1)[0] || "File"} · ${FILEKIND[s5.kind || "file"]?.[1] || "opens the file"}`];
-    if (s5.type === "mail") return ["mail", s5.url ? "Opens in Outlook" : "Mail · no link was kept"];
-    if (s5.type === "teams") return ["chat", s5.url ? "Opens in Teams" : "Teams · no link was kept"];
+    if (s5.type === "mail") return ["mail", sourceHref(s5) ? "Opens in Outlook" : "Mail · no link was kept"];
+    if (s5.type === "teams") return ["chat", sourceHref(s5) ? "Opens in Teams" : "Teams · no link was kept"];
     if (s5.type === "item") return ["work", "Opens the item"];
     if (s5.type === "tracker") return ["work", "The tracker"];
     if (s5.type === "invite") return ["calendar", "The calendar invite"];
@@ -64548,7 +64599,7 @@ ${d5.text}`);
         return /* @__PURE__ */ u2("li", { children: s5.type === "file" && s5.path ? /* @__PURE__ */ u2("a", { href: "#", class: "ppsrc", "data-openfile": s5.path, children: [
           body2,
           /* @__PURE__ */ u2("span", { class: "go", children: "↗" })
-        ] }) : (s5.type === "mail" || s5.type === "teams") && s5.url ? /* @__PURE__ */ u2("a", { href: s5.url, class: "ppsrc", target: "_blank", rel: "noopener noreferrer", children: [
+        ] }) : sourceHref(s5) ? /* @__PURE__ */ u2("a", { href: sourceHref(s5), class: "ppsrc", target: "_blank", rel: LINK_REL, children: [
           body2,
           /* @__PURE__ */ u2("span", { class: "go", children: "↗" })
         ] }) : k5 ? /* @__PURE__ */ u2("a", { href: "#", class: "ppsrc", "data-open": `${k5}:${s5.id}`, children: [
@@ -71204,7 +71255,7 @@ ${d5.text}`);
     if (ALERT0 === null) ALERT0 = $("#liveAlert").innerHTML;
     if (!(shared.LIVELINK && !SERVED)) {
       if ($("#liveAlert").innerHTML !== ALERT0) putHTML($("#liveAlert"), raw(ALERT0));
-    } else putHTML($("#liveAlert"), html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${S.port}/">open the live dashboard</a> to save and apply directly.`);
+    } else putHTML($("#liveAlert"), html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${Number(S.port)}/">open the live dashboard</a> to save and apply directly.`);
     drawStatusDot($("#chSub"), shared.LIVE ? { status: "ok", word: "Claude Code on this laptop, working in your vault" } : { status: "off", word: "Live server not running — commands will be copied instead" });
     if (!shared.LOADING) errBanner();
   }
@@ -71784,6 +71835,7 @@ ${d5.text}`);
         "MenuPanel",
         "NEG",
         "NOTE_OPEN",
+        "NoteEditor",
         "OLDSERVER",
         "OPENST",
         "OWN",
@@ -71827,7 +71879,9 @@ ${d5.text}`);
         "SU",
         "SWEPT",
         "SafeHTML",
+        "ShapeSource",
         "Sheet",
+        "SourceLink",
         "StatusDot",
         "TEMPLATES",
         "THEMES",
@@ -71855,6 +71909,7 @@ ${d5.text}`);
         "acClose",
         "acDraw",
         "acItems",
+        "actHref",
         "actPaint",
         "addEl",
         "aiAction",
@@ -71864,6 +71919,7 @@ ${d5.text}`);
         "aiRun",
         "aiSug",
         "aiTurn",
+        "alertPeekDraw",
         "allRows",
         "allViews",
         "anim",
@@ -71901,6 +71957,7 @@ ${d5.text}`);
         "cell",
         "chFit",
         "changesCardHtml",
+        "chatMdInline",
         "checkHealth",
         "checkLive",
         "checkMeeting",
@@ -71913,6 +71970,7 @@ ${d5.text}`);
         "claimState",
         "claimsNote",
         "clearAllFilters",
+        "clientReportHref",
         "closeCapture",
         "closeChat",
         "closeCombobox",
@@ -71974,6 +72032,7 @@ ${d5.text}`);
         "drawPrep",
         "drawStatusDot",
         "drawTabs",
+        "drawToDecide",
         "drawToast",
         "dueKey",
         "edOf",
@@ -72052,6 +72111,7 @@ ${d5.text}`);
         "kindLabel",
         "laneDrop",
         "layoutOf",
+        "linkAnchor",
         "linkSegments",
         "linkUrl",
         "linkWithAddress",
@@ -72065,11 +72125,13 @@ ${d5.text}`);
         "mLandRow",
         "mScroll",
         "mWords",
+        "mailLink",
         "markHelpSeen",
         "matchAll",
         "mdBlocks",
         "mdChat",
         "mdHtml",
+        "mdInline",
         "meetingOfFile",
         "meetingRoute",
         "menuOpenFor",
@@ -72270,7 +72332,9 @@ ${d5.text}`);
         "row",
         "rows",
         "rtOK",
+        "runClosure",
         "runGen",
+        "runHealthFix",
         "runSearch",
         "rvAdvance",
         "rvAgeBanner",
@@ -72284,6 +72348,7 @@ ${d5.text}`);
         "rvSet",
         "rvShown",
         "rvSrcKind",
+        "rvSrcLink",
         "rvSyncChk",
         "rvWhyNot",
         "save",
@@ -72316,6 +72381,7 @@ ${d5.text}`);
         "snack",
         "snapshot",
         "soon",
+        "sourceHref",
         "spaceCode",
         "spaceWeek",
         "spark",
@@ -72347,6 +72413,7 @@ ${d5.text}`);
         "undatedCard",
         "undoApply",
         "undoWords",
+        "unescHtml",
         "updReview",
         "validate",
         "viaServer",
@@ -72357,6 +72424,7 @@ ${d5.text}`);
         "vsClear",
         "warnsOf",
         "weekView",
+        "weeklyHref",
         "wflag",
         "who",
         "within",

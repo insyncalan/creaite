@@ -391,6 +391,7 @@ class WeekCalm(Header):
         self.assertEqual(b.eval(f"document.querySelector('{sel}').tagName"), "BUTTON")
         self.assertEqual(b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')"), "false")
         b.click(sel)
+        b.wait(f"document.querySelector('{sel}')?.getAttribute('aria-expanded')==='true'", 5)      # #152: drawn a frame after the click
         self.assertEqual(b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')"), "true")
         self.assertEqual(b.eval("document.querySelectorAll('#mineList>li').length>5"), True)
         self.assertEqual(b.eval("(()=>{ const d=document.scrollingElement; return d.scrollWidth-d.clientWidth; })()"), 0)

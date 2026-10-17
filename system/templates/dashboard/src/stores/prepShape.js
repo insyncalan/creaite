@@ -8,6 +8,7 @@
    prep page's focus band reads too). Nothing reaches the tracker and nothing is sent.
    Regenerate sends the boxes' text with creaite's last draft, so the server keeps every section Alan edited (per section). */
 import { signal } from "@preact/signals";
+import { linkUrl } from "../core/linkUrl.js";
 import { api, oneLine, snack, viaServer } from "../core/server.js";
 import { draftAsk, DRAFTFEATURES, draftStat } from "../drafts.js";
 import { DRAFTKIND } from "../projects.js";
@@ -18,6 +19,11 @@ export function bootPrepShape() {
   DRAFTFEATURES.push(["shape", "Shape the meeting", "Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's carried over, each line cited"]);
   Object.assign(DRAFTKIND, { shape: "shape" });
 }
+
+/** The address to open a mail or Teams source at, or null: only what core/linkUrl.js accepts (#159), the one rule every prep
+    component uses. A source of any other type, or with no address, or with one that is refused, has none and is drawn as text.
+    @param {{type?: string, url?: string}} s @returns {string | null} */
+export const sourceHref = s => ((s.type === "mail" || s.type === "teams") && s.url ? linkUrl(s.url) : null);
 
 export const SHAPE_SECTIONS = /** @type {[string, string][]} */ ([["objective", "Objective"], ["talking_points", "Talking points"],
   ["ask", "Ask"], ["carried_over", "Carried over"]]);

@@ -20,7 +20,7 @@ import { createEditor, envelope, wrap, markdownOf, Extension, Mark, mergeAttribu
 import { addHTML, ic, raw } from "./dom.js";
 import { shared } from "./state.js";
 import { linkGuard, pasteLink, scrubNow } from "./editorLink.js";
-import { isLinkUrl } from "./linkUrl.js";
+import { isLinkUrl, linkUrl } from "./linkUrl.js";
 import { linkSegments, linkWrite } from "./linkText.js";
 import { OWN_STEP } from "./undoSteps.js";
 
@@ -98,7 +98,7 @@ export const headsSafe=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z===""&&n<=shif
     words; the same text with any other address stays the literal characters it is. */
 const plainDoc=(t,links)=>({ type:"doc", content:String(t??"").split("\n").map(l=>{ if(!l) return { type:"paragraph" };
   if(!links) return { type:"paragraph", content:[{ type:"text", text:l }] };
-  const segs=linkSegments(l).map(x=>x.href?{ type:"text", text:x.t, marks:[{ type:"link", attrs:{ href:x.href } }] }:{ type:"text", text:x.t });
+  const segs=linkSegments(l).map(x=>x.href?{ type:"text", text:x.t, marks:[{ type:"link", attrs:{ href:linkUrl(x.href) } }] }:{ type:"text", text:x.t });
   return segs.length?{ type:"paragraph", content:segs }:{ type:"paragraph" }; }) });
 /** A document's plain text: its paragraphs, one a line; a link written `[words](address)` (#121). */
 const plainText=doc=>{ const L=[]; doc.forEach(p=>{ let line=""; p.forEach(c=>{ const m=c.isText&&c.marks.find(x=>x.type.name==="link"); const w=m?linkWrite(c.text,m.attrs.href):null; line+=w??c.textContent; }); L.push(line); }); return L.join("\n"); };
@@ -106,8 +106,8 @@ const plainText=doc=>{ const L=[]; doc.forEach(p=>{ let line=""; p.forEach(c=>{ 
     mark core/editorLink.js and components/LinkPopover.jsx act on, so a plain field has the very same link as a rich one, stored as `[words](address)`. */
 const PlainLink=Mark.create({ name:"link", inclusive:false, excludes:"link",
   addAttributes(){ return { href:{ default:null } }; },
-  parseHTML(){ return [{ tag:"a[href]", getAttrs:el=>{ const h=/** @type {HTMLElement} */ (el).getAttribute("href"); return isLinkUrl(h)?{ href:h }:false; } }]; },
-  renderHTML({ HTMLAttributes }){ const h=HTMLAttributes.href; return ["a", isLinkUrl(h)?{ class:"tlink", href:h, target:"_blank", rel:"noopener noreferrer" }:{ class:"tlink" }, 0]; } });
+  parseHTML(){ return [{ tag:"a[href]", getAttrs:el=>{ const h=/** @type {HTMLElement} */ (el).getAttribute("href"); return isLinkUrl(h)?{ href:linkUrl(h) }:false; } }]; },
+  renderHTML({ HTMLAttributes }){ const h=HTMLAttributes.href; return ["a", isLinkUrl(h)?{ class:"tlink", href:linkUrl(h), target:"_blank", rel:"noopener noreferrer" }:{ class:"tlink" }, 0]; } });
 /* ===== #133 ===== the Email feature set: Draft email's preview (drafts.js #dePrev) as a host of the one editor. The email is HTML for Outlook
    (inline styles, a table of actions, coloured spans). The document keeps what the builder wrote beside the content, so an edit
    brings the styles along: every block carries its `style` (and the table's align, cellpadding, cellspacing, border and width) as

@@ -768,7 +768,7 @@ class MotionReview(LiveBrowserCase):
         b.wait(f"REV.find(r=>r.n==={ns[0]})?.done==='approved'")
         b.wait(f"(t=>t&&$$('td',t).some(td=>td.getAnimations().length))(document.querySelector('#reviewBody tr[data-n=\"{ns[0]}\"]'))")   # it tints where it is
         b.eval(f"[{ns[1]},{ns[2]},{ns[3]}].forEach(n=>decide(n,'rejected'))")                    # three within a frame
-        b.wait(f"[{ns[1]},{ns[2]},{ns[3]}].every(n=>REV.find(r=>r.n===n)?.done==='rejected')", 20)
+        b.wait(f"[{ns[1]},{ns[2]},{ns[3]}].every(n=>REV.find(r=>r.n===n)?.done==='rejected')", 60)   # --k 20 slows the tints 20 times
         b.eval("document.documentElement.style.setProperty('--k',1)")
         rows = b.eval("$$('#reviewBody tr[data-n]').map(t=>t.dataset.n)")
         self.assertEqual(len(rows), len(set(rows)))                                                # nothing doubled

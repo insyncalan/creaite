@@ -10,6 +10,7 @@ import { drawFilterBar } from "./components/FilterBar.jsx";
 import { actHref } from "./activity.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, SWEPT, wsFor } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
+import { linkAnchor } from "./core/linkUrl.js";
 import { CALI, DATE_HELP, srcHTML, srcParse, srcShort, weekendNote, wkLong } from "./core/fields.js";
 import { typing } from "./core/keys.js";
 import { mDots, mRowGone, mSnapRows } from "./core/motion.js";
@@ -223,7 +224,7 @@ export function rvRender(){ const und=REV.filter(r=>!r.done), shownN=und.filter(
   putHTML($("#reviewBody"),anyLive?html`${rvAgeBanner(und)}${groups}`
     :html`<div class="empty"><div class="wempty"><h2>Nothing matches these filters</h2><div class="sub">${und.length} proposal${und.length===1?"":"s"} waiting outside them.</div><div class="wefoot"><button type="button" class="btn primary" id="rvClearF">Clear all filters</button></div></div></div>${groups}`);
   rvBar(); }
-export const rvSrcLink=r=>{ if(r.nodraft&&r.tsrc) return ` · <a href="#" class="srclink" data-openfile="${esc(r.tsrc)}">Open source</a>`; /* BL-260: the transcript */ const o=srcParse(r.src); if(!o) return ""; if(o.type==="File") return ` · <a href="#" class="srclink" data-openfile="${esc(o.path)}">Open source</a>`; return o.Link?` · <a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open source</a>`:""; };
+export const rvSrcLink=r=>{ if(r.nodraft&&r.tsrc) return ` · <a href="#" class="srclink" data-openfile="${esc(r.tsrc)}">Open source</a>`; /* BL-260: the transcript */ const o=srcParse(r.src); if(!o) return ""; if(o.type==="File") return ` · <a href="#" class="srclink" data-openfile="${esc(o.path)}">Open source</a>`; const a=o.Link?linkAnchor(o.Link,"Open source","srclink"):null; return a?` · ${a}`:""; };
 export function rvHintHtml(){ return raw([["J","K","move"],["Shift","J","extend"],["Space","select"],["A","approve"],["R","reject with a reason"],["E","edit"],[MAC?"⌘":"Ctrl","Z","undo"]].map(a=>a.slice(0,-1).map(k=>`<span class="kbd">${k}</span>`).join(" ")+" "+a[a.length-1]).join(" · ")); }
 export function rvEmptyHtml(){ const s=shared.RVSTATS, any=s.approved||s.rejected||s.edited;
   return html`<div class="empty rvdone"><h2>Nothing left to review</h2><div class="sub">${raw(howLink("review"))}</div>${any?html`<div class="sub">This session: approved ${s.approved} · rejected ${s.rejected} · edited ${s.edited}</div>`:""}

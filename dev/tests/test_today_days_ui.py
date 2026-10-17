@@ -147,6 +147,8 @@ class DayLine(TodayFixture):
             for d in (dx * 0.6, dx, dx, dx * 0.5, dx * 0.2, dx * 0.1, dx * 0.05):     # a gesture and its momentum tail
                 b.call("Input.dispatchMouseEvent", type="mouseWheel", x=x, y=y, deltaX=d, deltaY=0)
             b.pump(0.3)                                                               # a pause ends the gesture
+            b.frames(2)                                                               # (and the page's 120 ms idle timer has had its turn: #152)
+            b.pump(0.2)
         swipe(30)
         self.assertEqual(self.chosen(), "2026-10-14")                       # one day for one gesture, tail and all
         swipe(30)

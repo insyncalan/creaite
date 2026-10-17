@@ -81,8 +81,16 @@ def _note_made(b):
 def _notes_ai(b):
     _note_made(b)
     b.click("#v-notes .nbody")
-    b.key("a", 4)                                    # ⌘A: all of the text, which shows the sparkle in the margin (#117)
-    b.wait("document.querySelector('#aiLayer .aispark')", 15)
+    for attempt in (1, 2, 3):                        # #152: a ⌘A that arrives before the editor has taken its focus selects nothing
+        b.wait("document.activeElement===document.querySelector('#v-notes .nbody')", 5)
+        b.frames(3)
+        b.key("a", 4)                                # ⌘A: all of the text, which shows the sparkle in the margin (#117)
+        try:
+            b.wait("document.querySelector('#aiLayer .aispark')", 5)
+            break
+        except TimeoutError:
+            if attempt == 3:
+                raise
     b.click("#aiLayer .aispark")                     # the sparkle opens the AI bar
     b.pump(0.3)
 

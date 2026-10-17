@@ -17,6 +17,7 @@ import { mWords } from "./core/motion.js";
 import { go, navBlocked, parseHash, pLink, restoreNav } from "./core/nav.js";
 import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
+import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
@@ -362,7 +363,7 @@ export function greet(){ addEl("msg a",html`${GREET}`); }
 export function openChat(){ closeHelpPanel(true);   /* #158: the ? panel and ask creaite are never open together */
   if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
       CHATFROM=ok?{el:f,key:chatFromKey(f)}:null; }
-  $("#chat").classList.add("on"); rbDismiss(); if(CHFOLLOW||CHSAVED==null) chatScroll(); else $("#chLog").scrollTop=CHTOP=CHSAVED;   /* #148: where it was left */
+  $("#chat").classList.add("on"); rbDismiss();   /* #148: no scroll call on open: Chrome keeps the place a hidden panel was left at, the size observer below pins a follower to the end, and the jump button stays as it was */
   if(!$("#chLog").children.length&&!ATTACHED&&!shared.REATT){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
 /* ===== end BL-262 ===== */
 /* BL-35: the panel's width is dragged from its left edge (← → by keyboard; double-click resets) and remembered in
@@ -370,7 +371,6 @@ export function openChat(){ closeHelpPanel(true);   /* #158: the ? panel and ask
 export const CHATW0=420, chatClamp=w=>Math.round(Math.max(360,Math.min(window.innerWidth*0.7,w)));
 export function setChatWidth(w,save){ w=chatClamp(w); document.documentElement.style.setProperty("--chatw",w+"px"); $("#chGrip").setAttribute("aria-valuenow",w); if(save) store.set("creaite-chat-width",w); return w; }
 export function closeChat(){ const wasOn=$("#chat").classList.contains("on"), inside=$("#chat").contains(document.activeElement);   /* BL-211 */
-  if(wasOn) CHSAVED=$("#chLog").scrollTop;   /* #148: a hidden panel forgets its scroll position */
   $("#chat").classList.remove("on"); if($("#chat").contains(document.activeElement)) document.activeElement.blur();
     if(wasOn&&inside&&(!document.activeElement||document.activeElement===document.body)){ const t=chatReturnTarget(); if(t){ if(t.tabIndex<0&&!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1"); t.focus(); } }
     if(wasOn) CHATFROM=null; }
@@ -407,12 +407,12 @@ export function bootAsk0095(){
 /* chat-only names (chatMdInline, chatMdBlocks): the page's own mdInline/mdBlocks draw Current state, Help and the rest */
 /* mdChat(text) returns HTML for one of creaite's replies. Every character is escaped first (esc), then blocks and inline
    forms are recognised on the escaped text, so nothing in a reply can become markup of its own. Links: https, http and
-   mailto only. Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
+   mailto only, and only an address core/linkUrl.js accepts (no name and password, one mailbox, no cc or bcc), drawn by
+   linkAnchor (new tab, rel="noopener noreferrer"). Used for creaite's replies (live and from History) and nowhere else: Alan's bubbles stay plain, and
    Current state keeps mdHtml. Placeholders (\u0001n\u0001) hold finished HTML while the rest is processed. */
 export const MDC={ITEM:/\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}\b/g, MAX:120000, URL:"((?:[^\\s()]|\\([^\\s()]*\\))+)",
   FENCE:/^ {0,3}(`{3,}|~{3,})[ \t]*([\w+#.-]*)[ \t]*$/, HEAD:/^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/, HR:/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/,
   QUOTE:/^ {0,3}&gt; ?/, LI:/^( *)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/, SEP:/^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/};
-export const mdSafeUrl=u=>/^(?:https?:\/\/|mailto:)[^\s"<>]+$/i.test(u);
 export let MDPATHS=null;
 export const mdPaths=()=>{ if(!MDPATHS||MDPATHS.n!==FILES.length) MDPATHS={n:FILES.length,list:FILES.filter(f=>f.path).map(f=>({path:f.path,e:esc(f.path)})).sort((a,b)=>b.e.length-a.e.length)}; return MDPATHS.list; };
 export const mdFileLink=(p,inner)=>`<a href="#" class="mdref" data-mdfile="${esc(p)}">${inner}</a>`, mdItemLink=id=>`<a href="#" class="mdref" data-mditem="${id}">${id}</a>`;
@@ -422,7 +422,7 @@ export function chatMdInline(s,st,noLinks){
     return keep(p?mdFileLink(p.path,`<code>${c}</code>`):ITEMCODE(c)?`<a href="#" class="mdref" data-mditem="${c.trim()}"><code>${c.trim()}</code></a>`:`<code>${c}</code>`); });
   if(!noLinks){
     s=s.replace(new RegExp("!\\[([^\\]\\n]*)\\]\\("+MDC.URL+"\\)","g"),(m,alt)=>alt);   /* images are not drawn: the alt text shows */
-    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>mdSafeUrl(url)?keep(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text,st,true)}</a>`):m);
+    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>{ const h=linkAnchor(unescHtml(url),chatMdInline(text,st,true)); return h?keep(h):m; });   /* the one validator and anchor: core/linkUrl.js (#159) */
     if(/projects\/|inbox\//.test(s)) for(const f of mdPaths()) if(s.includes(f.e)) s=s.split(f.e).join(keep(mdFileLink(f.path,f.e)));
     s=s.replace(MDC.ITEM,id=>itemTable(id)?keep(mdItemLink(id)):id); }
   return s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g,"<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g,"$1<strong>$2</strong>")
@@ -489,7 +489,7 @@ $("#chLog").addEventListener("click",e=>mdClick(e));
 /* ===== BL-196 (sprint-chat-text) ===== formatted text, never raw markdown. One renderer: mdChat (BL-109) draws every view
    that shows markdown from a file or a run; mdView wraps it in .mdv, which shares the chat's styles and clicks. Every character
    is escaped first, so an HTML tag in the text is shown as text and never runs; links are https, http or mailto only and open
-   with rel="noopener" in a new tab. hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
+   with rel="noopener noreferrer" in a new tab (core/linkUrl.js). hBase puts the text's headings under the page's own (a "#" in release notes is level 3 in
    a card whose title is an h2). A Copy beside such a view copies the original text, never the formatted one.
    Formatted: chat replies (BL-109), the release notes in Settings › creaite version › Review release, a confirmation card's
    text in the chat, and a Markdown file's preview in Intake's inbox. Current state, its sources and search answers keep mdHtml
@@ -506,7 +506,7 @@ export const mdView=(text,o)=>`<div class="mdv">${mdChat(text,o)}</div>`;
    message, a step added to the fold, the working line, the panel resizing) used to leave the view a few pixels short and the
    browser's own scroll event then read that as Alan scrolling away, so the button showed while he was at the bottom. Now any
    change in the log or its size keeps the view at the bottom while following, and a scroll that didn't go up never stops it. */
-export let CHFOLLOW=true, CHTOP=0, CHSAVED=null; export const CHNEAR=12;
+export let CHFOLLOW=true, CHTOP=0; export const CHNEAR=12;
 export function chatPin(){ if(!CHFOLLOW) return; const l=$("#chLog"); l.scrollTop=l.scrollHeight; CHTOP=l.scrollTop; }
 export const chatNear=()=>{ const l=$("#chLog"); return l.scrollHeight-l.scrollTop-l.clientHeight<=CHNEAR; };
 export function chatScroll(force){ const l=$("#chLog"), b=$("#chJump");
@@ -547,8 +547,8 @@ shared.ASKSESSION=store.get(SESSK,store.get("creaite-ask-session",null)); shared
 export function setChat(chat,session){ const was=shared.ASKCHAT; if(chat!==was&&$("#chIn").value&&was!==null) draftSave();
   shared.ASKCHAT=chat; shared.ASKSESSION=session; store.set(CHATK,chat); store.set(SESSK,session);
   if(chat!==was){ if(was===null&&$("#chIn").value) draftSave(); else draftRestore(); } }
-export function newChat(){ if(shared.BUSY) return; CHSAVED=null; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
-export async function loadChat(chat,quiet,skipRun){ if(chat!==shared.ASKCHAT) CHSAVED=null;   /* #148: another chat has no saved place */
+export function newChat(){ if(shared.BUSY) return; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
+export async function loadChat(chat,quiet,skipRun){
   const rec=await api("/api/chat",{chat}); if(rec.ok&&typeof skipRun==="function") skipRun=skipRun(rec); if(rec.ok&&skipRun) rec.messages=rec.messages.filter(m=>m.run!==skipRun);
   $("#chLog").textContent=""; shared.SHOWN=null;   /* BL-262: the whole history is drawn below in one step; it returns the record */
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
@@ -636,6 +636,7 @@ export async function attachDraw(run){ if(shared.SHOWN&&shared.SHOWN.run===run.i
 export async function reattach(){ if(!viaServer()) return; queueLoad(); shared.REATT=true; let run=null;   /* #148: openChat leaves the first draw of the log to this, until it is done */
   try{ const r=await api("/api/ask/running"); if(r.ok&&r.run) run=r.run; else if(shared.ASKCHAT&&!$("#chLog").children.length&&!ATTACHED) await loadChat(shared.ASKCHAT,true); }   /* the saved chat is drawn before the panel is opened, so opening it shows it whole at once */
   finally{ shared.REATT=false; }
+  if(!run&&$("#chat").classList.contains("on")&&!$("#chLog").children.length&&!ATTACHED) greet();   /* #148: a first-time user who opened the panel while the running check was in flight (openChat left both the draw and the greeting to this) */
   if(run) attachRun(run); else { pendingCard(); pendingEdit(); } }
 /* ===== BL-139 (sprint-final) =====
    A small badge fixed at the bottom right shows that ask creaite is working and, afterwards, that it has finished. It follows
