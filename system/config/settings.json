@@ -248,7 +248,8 @@
   },
   "help": {
     "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true.",
-    "start_seen": true
+    "start_seen": true,
+    "first_line": true
   },
   "logging": {
     "level": "info",
