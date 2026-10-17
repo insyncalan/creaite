@@ -58,7 +58,8 @@ SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
 # BL-316: a pending new item's proposal in the peek, so its "Update an existing item instead" list (Review) is reached; plan
 # #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
 SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
-                          "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')", "#panel")
+                          "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')"
+                          " && Object.keys(rjGuesses.value).length > 0", "#panel")     # the guesses (/api/review/guesses) land late under load and redraw the peek's list: wait for them, as the review screen does
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
 # BL-316: the popups the sample's screens don't show (test_shared_behaviour's "unreached"): Work's New tile on Decisions (a
