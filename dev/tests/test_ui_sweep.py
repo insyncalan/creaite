@@ -109,7 +109,7 @@ SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=docu
 # The A4 sheet (components/report/Sheet.jsx) draws its page zoomed 40 to 80% by a transform, so its small controls measure under 24
 # on screen at any zoom: the section handle's grip and Hide (Alt+arrows and the heading's own keys do the same), the heading field,
 # Reset, and the minutes' time tags and their x (the transcript pane and the line's Edit do the same).
-EXEMPT = ("span.colrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
+EXEMPT = ("span.colrz", "span.bcrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
 
 
 class UiSweepCase(ts.Snapshots):

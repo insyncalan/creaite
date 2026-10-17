@@ -148,6 +148,7 @@ class LiveBrowserCase(unittest.TestCase):
             try:
                 self.b.goto(self.base + "/")
                 self.b.wait("typeof go==='function' && LIVE")
+                self.b.eval("typeof helpScreenSync==='function' && (S.helpLine=false, helpScreenSync(), true)")      # #158: the first-visit line (38 px) clears on the first click and would shift every layout assertion; test_help_finding sets S.helpLine itself
                 break
             except ConnectionError:
                 self.b.close()
