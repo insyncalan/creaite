@@ -770,7 +770,7 @@ th[data-col]{cursor:pointer} .sarrow{margin-left:4px;font-size:var(--fs-2xs)}
 .seeall{display:inline-block;margin-top:10px;font-size:var(--fs-sm);color:var(--muted);text-decoration:none} .seeall:hover{color:var(--ink);text-decoration:underline}
 .evbox.click{cursor:pointer} .evbox.click:hover,.evbox.click:focus-visible{background:var(--sunk)}
 .pswitch{display:flex;gap:4px;align-items:center} .pswitch select{height:32px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 8px;max-width:240px} .pencil:hover,.pencil:focus-visible{opacity:1;color:var(--ink);background:var(--sunk)}
-.ddmenu.left{left:0;right:auto} .ddmenu.on{display:block}
+.ddmenu.left{left:0;right:auto} .ddmenu.on{display:block} .ddmenu.up{top:auto;bottom:calc(100% + 4px)}
 .ddmenu label{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:pointer;font-size:var(--fs-sm)} .ddmenu label:hover{background:var(--sunk)}
 .ddmenu small{margin-left:auto;color:var(--muted)} .ddmenu .acts{display:flex;gap:4px;padding:2px 10px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .ddmenu input[type=search]{width:calc(100% - 20px);margin:4px 10px 6px;height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg)}
@@ -3156,10 +3156,21 @@ button.nchip{font:inherit;font-size:12px}
 .nbody figure.cimg img{max-width:100%;height:auto}
 /* ===== end BL-301 B gaps ===== */
 /* ===== BL-301 D (v20-ai-select): AI on selected text: the bar over a selection and the suggestion (components/AiSelect.jsx) ===== */
-.aibar{position:fixed;z-index:220;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);padding:3px;max-width:calc(100vw - 32px)}
+.aibar{position:fixed;z-index:220;display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:3px;max-width:calc(100vw - 32px)}
 .aibar .aibtn{min-height:28px;padding:2px 10px}
+.aibar .aizone{display:flex;align-items:center;gap:2px;border-radius:8px;padding:0 2px}
+.aibar .aiai{background:var(--accent-soft)} .aibar .aiai .btn{background:transparent;border-color:transparent} .aibar .aiai .btn:hover,.aibar .aiai .btn[aria-expanded=true]{background:var(--surface);color:var(--accent)}
+.aibar .aifmt .btn{background:transparent;border-color:transparent} .aibar .aifmt .btn:hover,.aibar .aifmt .btn[aria-expanded=true]{background:var(--sunk)}
+.aibar .ailab{display:inline-flex;align-items:center;gap:4px;padding:0 4px 0 6px;font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)} .aibar .ailab .i{width:14px;height:14px}
+.aibar [role=menuitemradio]:not(:has(svg)){padding-left:34px}
 .aibar .aiask{display:flex;gap:6px;align-items:center;width:min(420px,calc(100vw - 48px))}
 .aibar .aiask input{flex:1;min-width:0;min-height:28px}
+.aispark{position:fixed;z-index:219;width:28px;height:28px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--accent);cursor:pointer;box-shadow:var(--shadow-pop);animation:aispin .15s ease-out}
+.aispark:hover,.aispark[aria-expanded=true]{background:var(--accent-soft)}
+.aispark:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+@keyframes aispin{from{opacity:0;transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.aispark{animation:none}}
+@media (forced-colors:active){.aispark,.aibar,.aibar .aiai{border:1px solid CanvasText;forced-color-adjust:auto} .aispark[aria-expanded=true]{border-color:Highlight}}
 .aisug{position:fixed;z-index:220;width:min(480px,calc(100vw - 32px));max-height:min(60vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;box-shadow:var(--shadow-pop);padding:10px 12px;font-size:14px}
 .aisug .aisughd{display:flex;align-items:center;gap:6px;margin-bottom:4px} .aisug .aisughd .i{color:var(--accent)}
 .aisug .aitext{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;margin:6px 0}

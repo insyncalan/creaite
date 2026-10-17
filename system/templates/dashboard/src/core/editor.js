@@ -84,6 +84,11 @@ export const headsIn=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z===""&&n>shift&&
     @param {string} md @param {number} shift */
 export const headsOut=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z!==""?z.slice(1)+"#".repeat(n)+rest:"#".repeat(Math.min(n,3)+shift)+rest):md;
 /*HEADS-END*/
+/** #117: a suggestion (or any text) about to be written into a host that stores its headings shifted (Current state, `headShift` 2) never holds a
+    `# ` or `## ` line: those would be written back as they are, and a `## ` line ends the `## Current state` section. They become `###` and `####`
+    (the shift is added), so a stray `##` from the AI lands as `####`. A line already shifted (`###` and deeper), a literal one (U+200B first) and
+    fenced code are left alone. @param {string} md @param {number} shift */
+export const headsSafe=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z===""&&n<=shift?"#".repeat(n+shift)+rest:z+"#".repeat(n)+rest):md;
 
 /** Plain text as a document: one paragraph a line. */
 const plainDoc=t=>({ type:"doc", content:String(t??"").split("\n").map(l=>l?{ type:"paragraph", content:[{ type:"text", text:l }] }:{ type:"paragraph" }) });
@@ -194,8 +199,31 @@ export function edReplace(h,r,text){ const ed=h.editor; if(ed.isDestroyed) retur
   let content;
   if(h.multiline===false) text=String(text).replace(/\s*[\r\n]+\s*/g," ").trim();   /* a one-line field stays one line (the peek's title) */
   if(h.features==="plain"){ const L=String(text).replace(/\r\n?/g,"\n").split("\n"); content=L.length===1?(L[0]?[{ type:"text", text:L[0] }]:[]):plainDoc(L.join("\n")).content; }
-  else { const blocks=(ed.schema.nodeFromJSON(ed.markdown.parse(headsIn(String(text),h.headShift))).toJSON().content)||[];
+  else { const blocks=(ed.schema.nodeFromJSON(ed.markdown.parse(headsIn(headsSafe(String(text),h.headShift),h.headShift))).toJSON().content)||[];
     content=r.inline&&blocks.length===1&&blocks[0].type==="paragraph"?(blocks[0].content||[]):blocks; }
   const chain=ed.chain().focus();
   return (content.length?chain.insertContentAt({ from:r.from, to:r.to },content,{ updateSelection:true }):chain.deleteRange({ from:r.from, to:r.to })).run(); }
+/* ----- BL-117: Turn into (formatting, no AI): the type of the selected blocks, by the editor's own commands ----- */
+/** The kinds Turn into offers: id → the name the toast uses. */
+export const TURN_NAMES=/** @type {Record<string,string>} */ ({ text:"text", h1:"heading 1", h2:"heading 2", h3:"heading 3", ul:"a bulleted list",
+  ol:"a numbered list", task:"a checklist", quote:"a quote" });
+/** What every selected block is now, as a Turn into id, or "" when they differ. @param {EdHandle} h */
+export function edTurnKind(h){ const ed=h.editor, s=ed.state.selection; const kinds=new Set();
+  ed.state.doc.nodesBetween(s.from,s.to,(n,pos,parent)=>{ if(!n.isTextblock) return;
+    const $p=ed.state.doc.resolve(pos); let k=n.type.name==="heading"?"h"+n.attrs.level:"text";
+    for(let d=$p.depth;d>0;d--){ const t=$p.node(d).type.name; if(t==="taskList"){ k="task"; break; } if(t==="bulletList"){ k="ul"; break; }
+      if(t==="orderedList"){ k="ol"; break; } if(t==="blockquote"){ k="quote"; break; } }
+    kinds.add(k); return false; });
+  return kinds.size===1?[...kinds][0]:""; }
+/** Turn the selected blocks into `kind`: first plain paragraphs (out of any list or quote), then the kind, in one transaction (one
+    ⌘Z). Every block the selection touches is converted, whatever it was. @param {EdHandle} h @param {string} kind @returns {boolean} */
+export function edTurnInto(h,kind){ const ed=h.editor; if(ed.isDestroyed||!TURN_NAMES[kind]||ed.state.selection.empty) return false;
+  const { from, to }=ed.state.selection; let a=-1, z=-1;      /* only the blocks that hold text: ⌘A also takes the empty paragraph the editor keeps at the end, which must stay a paragraph */
+  ed.state.doc.nodesBetween(from,to,(n,pos)=>{ if(n.isTextblock&&n.content.size){ if(a<0) a=pos+1; z=pos+n.nodeSize-1; } return !n.isTextblock; });
+  const c=ed.chain().focus(); if(a>=0&&z>=a) c.setTextSelection({ from:Math.max(from,a), to:Math.min(to,z) });
+  c.clearNodes();
+  if(kind==="h1"||kind==="h2"||kind==="h3") c.setHeading({ level:+kind[1] });
+  else if(kind==="ul") c.toggleBulletList(); else if(kind==="ol") c.toggleOrderedList();
+  else if(kind==="task") c.toggleTaskList(); else if(kind==="quote") c.toggleBlockquote();
+  return c.run(); }
 /* ===== end BL-301 D ===== */
