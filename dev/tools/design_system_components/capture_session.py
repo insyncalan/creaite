@@ -69,7 +69,29 @@ try:
         res["prep"] = b.eval("location.hash")
         load("#client-report=FAL/2026-10-16/Northgate%20Energy")
         save_page(b, "clientreport")
-        # not captured: the minutes view (it opens from Review's Open draft of a staged meeting, which the click did not reach in a headless run)
+        # the minutes view: stage a meeting as cx-minutes does, then open its draft by its address
+        import subprocess
+        from datetime import date, timedelta
+        import test_v210
+        day = (date.today() - timedelta(days=2)).isoformat()
+        (s.vault / "inbox" / f"{day} FAL Steering committee.vtt").write_text(test_v210.VTT, encoding="utf-8")
+        (s.vault / "system/staging/drafts/meeting.json").write_text(json.dumps(test_v210.meeting_spec(day, 2)), encoding="utf-8")
+        r = subprocess.run([sys.executable, "-I", "system/scripts/minutes.py", "stage", "system/staging/drafts/meeting.json"], cwd=s.vault, capture_output=True, text=True)
+        res["minutes-stage"] = r.returncode
+        from urllib.parse import quote
+        load("#minutes=" + quote(f"system/staging/drafts/{day} Steering committee.html", safe=""))
+        res["minutes-view"] = b.eval("VIEW")
+        if res["minutes-view"] == "minutes":
+            save_page(b, "minutes")
+        # a real error in the debug log, so the error banner shows
+        subprocess.run([sys.executable, "-I", "-c", "import sys; sys.path.insert(0,'system/scripts'); import log; log.error('server','Example failure for the design system')"], cwd=s.vault, capture_output=True, text=True)
+        load("")
+        time.sleep(2.0)
+        for mode in ("light", "dark"):
+            b.eval("document.documentElement.dataset.theme=%s" % json.dumps(mode))
+            time.sleep(0.2)
+            res.setdefault("error-banner", {})[mode] = clip(b, "#errBanner:not([hidden])", DSOUT + f"components/error-banner-{mode}.png", 8)
+        b.eval(theme)
         # an AI suggestion card (the stand-in answers)
         load("#weekly=FAL&week=2026-10-16")
         n = b.eval("document.querySelectorAll('.sheet-spark').length")

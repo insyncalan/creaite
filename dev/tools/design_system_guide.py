@@ -252,6 +252,34 @@ PAT.append(pattern("client-doc", "Document page, client version (Client report)"
             ["The same bar and sheet as the weekly report.", "Only client-visible items, in the client's words; what is left out is listed, with the reason, before any export."],
             ["Never anything marked Sensitive or partner-only.", "The one primary action is still alone in the bar."],
             "clientreport"))
+PAT.append(pattern("minutes", "Document page with a side panel (Minutes)", "minutes",
+            "The Document pattern when the sheet needs its source beside it.",
+            ["Breadcrumb, <code>h1</code>, a sub-line (project, date, status).", "A bar: zoom and Show as exported, an open-checks chip; then version, view switch, Transcript, Export and the one primary (Approve minutes).",
+             "The sheet on its canvas; at the right a Transcript panel with its own search and the turns, each with a time tag that scrolls the transcript."],
+            ["Time tags sit on the sheet's lines and link to the panel; the panel closes with its ✕.", "A toast says what happened at the foot (\"7 new items in Review\")."],
+            "minutes"))
+PAT.append(pattern("reports", "Roll-up table across projects (Reports)", "reports",
+            "One row per project for a recurring job, with the state of each and an Open button.",
+            ["Breadcrumb, <code>h1</code>, a sub-line, and a week stepper at the right (a pair of ink-selected buttons).", "A tinted note that says what needs doing, with a two-way switch (Needs me | All projects).",
+             "A <code>.tbl</code> of projects: health, internal state as a chip, client state as a chip, and Open (primary on the row that needs you)."],
+            ["State is a chip (Due, Not drafted, Filed), never colour alone.", "The note under the table says what Open does."],
+            "reports"))
+PAT.append(pattern("reporting", "A space for one thing over time (Reporting)", "reporting",
+            "Everything about one project's reporting: a list of weeks and the two reports for the chosen week.",
+            ["Breadcrumb, <code>h1</code>, a sub-line.", "Left: a stack of week cards (the chosen one outlined), each with its state chips.", "Right: two cards (Weekly report, Client report) each with a preview, two facts and its actions; then a tinted call-to-action strip; then a card for what was filed."],
+            ["Only the next sensible action is primary; the rest are plain; a blocked one says why (\"Approve the internal report first\").", "A dashed tinted strip offers the combined action."],
+            "reporting"))
+PAT.append(pattern("person", "Detail page: a person (People)", "person",
+            "Everything a person has with you: their work, what closed lately, decisions they made.",
+            ["Breadcrumb, <code>h1</code>, a sub-line; actions at the right (Draft email, Hand over, an edit icon).", "A one-line summary of figures (open actions, open risks and issues, overdue, projects).",
+             "Cards, each with a display title and a count: Open work (with its own <code>.tbl</code>), Closed in the last 14 days, Decisions made."],
+            ["An empty card says so in one plain line (\"Nothing closed lately.\").", "Counts are in the title, not in a badge."],
+            "person"))
+PAT.append(pattern("milestones", "A single-purpose view with a switch (Milestones)", "milestones",
+            "One visual thing with two ways of looking at it (Plan | Movement) and an Internal | Client view.",
+            ["Breadcrumb, <code>h1</code>, a project picker and the one primary (Add milestone) at the right.", "Two <code>.seg</code> switches.", "A card holding the plan: a month strip with Today marked."],
+            ["The client view is the plain card: no pills or notes.", "The Add button is the only primary."],
+            "milestones"))
 PAT = [p for p in PAT]
 
 # ------------------------------------------------------------------ components
@@ -321,6 +349,7 @@ D.append(("command-palette", "Command palette", "#cmdk", "⌘K: search, jump, an
 D.append(("ask-panel", "ask creaite panel", "#chat", "The assistant opens over the page on the right and never squeezes it. Esc closes the panel but never stops a running request; only Stop stops it."))
 D.append(("ask-running", "ask creaite while it works", "#chat", "A request in progress: the question, a folded step line (\"1 step\"), and a typing indicator while the answer arrives. Stop appears while it runs; Esc closes the panel but never stops the request."))
 D.append(("ai-suggestion", "AI suggestion card", ".sheet-redraft", "A ✦ draft under the section it is for: the sparkle and a title, the suggested text, amber warnings from the check (what it leaves out, what it adds, what has no source), the source facts as outlined boxes, then Keep mine and Use this. Nothing changes until Use this. (The words in this picture come from the test stand-in, not a real model.)"))
+D.append(("error-banner", "Error banner", ".errbanner", "Under the other page banners: how many errors, what kind, Investigate (opens Settings › Diagnostics), ask creaite to look, and a ✕ that dismisses it until a newer error. Shown only for an error not yet seen."))
 D.append(("live-alert", "Live-server alert", "#liveAlert.on", "Shown at the top of every page when the live server is not running: what is held, and how to restart it."))
 D.append(("dialog-board", "Dialog (small)", "dialog", "A short question with its answer buttons."))
 D.append(("dialog-generate", "Dialog (large)", "dialog", "A larger job with settings and a result (Generate current state)."))
@@ -341,8 +370,8 @@ dyn_html = "".join(f'<article class="ds-comp" id="c-{n}"><header><h3>{esc(t)}</h
 
 # ------------------------------------------------------------------ the guide
 repo_steps = [
-    ("Choose the pattern.", "Pick the nearest of the nine patterns in section 5 (a list, a tabbed list, a queue, a brief, a detail page, settings, a document, two panes, docs, cards). If none fits, say why in the write-up before drawing anything."),
-    ("Copy its snapshot.", "For a mockup copy <code>pages/&lt;pattern&gt;.html</code> (or <code>blank.html</code>) into <code>dev/mockups/</code>, change the stylesheet link to <code>../design-system/style.snapshot.css</code>, and replace the content of the <code>#v-…</code> section only. Keep the rail and the top bar."),
+    ("Choose the pattern.", "Pick the nearest of the page patterns in section 5 (a list, a tabbed list, a queue, a brief, a detail page, settings, a document, two panes, docs, cards). If none fits, say why in the write-up before drawing anything."),
+    ("Copy its snapshot.", "Quickest: copy a starter from <a href=\"templates/list.html\">templates/</a> (list, tabbed list, detail, settings). Otherwise, for a mockup copy <code>pages/&lt;pattern&gt;.html</code> (or <code>blank.html</code>) into <code>dev/mockups/</code>, change the stylesheet link to <code>../design-system/style.snapshot.css</code>, and replace the content of the <code>#v-…</code> section only. Keep the rail and the top bar."),
     ("Build the page in the standard order.", "<code>&lt;section class=\"view\" id=\"v-name\"&gt;&lt;div class=\"wrapmax\"&gt;</code>, then (if a detail page) the <code>.crumb</code>, then <code>h1</code>, then <code>.sub</code>, then the control row (<code>.toolbar</code>), then the content (cards or a <code>.tbl</code>)."),
     ("Use the components as they are.", "Buttons 32 px, one primary per region; icon buttons labelled; view pills for views; the funnel for filters; dates as text with a calendar button; counts and Refresh at the right of the control row."),
     ("Say what is empty, loading and wrong.", "Every list has an empty state that names the next step; an error says what happened and what to do; Undo accompanies every change that can be undone."),
@@ -358,9 +387,10 @@ code_steps = [
     "Test it: the shared behaviour test (<code>dev/tests/test_shared_behaviour.py</code>) walks every menu, picker and dialog for keys and focus; add the page to the snapshots in <code>dev/tests/snapshots/</code> and write its own tests.",
 ]
 
-kb = [("⌘K", "command palette: search, jump, run"), ("/", "focus the search on a page that has one (in Help, the Help search)"), ("?", "help for this screen"), ("F", "add a filter (Work, Review)"),
-      ("D", "the Display menu (Work)"), ("⌘↵", "save and close an editor or a dialog"), ("Esc", "close the top-most thing: menu, popup, dialog, then the panel; it never stops a running request"),
-      ("Alt + ↑ ↓ ← →", "move a row or a section"), ("⌘⇧N", "a note from anywhere"), ("Tab / Shift+Tab", "every control is reachable in reading order")]
+kb = [("⌘K", "the command palette: search, jump to a place, run a command"), ("⌘J", "open or close ask creaite"), ("/", "open ask creaite (when you are not typing)"), ("?", "Help"),
+      ("F", "add a filter (Work)"), ("D", "the Display menu (Work)"), ("⌘↵", "save and close an editor or a dialog"),
+      ("Esc", "close the top-most thing: a menu or popup before the dialog or peek under it; it never stops a running request"),
+      ("Alt + ↑ ↓ ← →", "move a row or a section (side bar dialog, report sections)"), ("⌘⇧N", "a note from anywhere"), ("Tab / Shift+Tab", "every control is reachable in reading order")]
 kbrows = "".join(f"<tr><td><kbd>{esc(k)}</kbd></td><td>{esc(v)}</td></tr>" for k, v in kb)
 
 voice = [
@@ -430,7 +460,7 @@ html = f'''<!doctype html>
 <nav class="ds-nav" aria-label="Sections"><b>creaite_</b><small>Design system and guide to building a page</small><input class=\"ds-find\" id=\"dsFind\" type=\"search\" placeholder=\"Find a component or pattern\" aria-label=\"Find a component or pattern\">
 {"".join(f'<a href="#{i}">{esc(t)}</a>' for i, t in NAV)}
 <h6>Components</h6>{"".join(f'<a href="#c-{c}">{esc(t)}</a>' for c, t in [("type", "Text"), ("btn", "Buttons"), ("ib", "Icon buttons"), ("vchip", "Pills"), ("tags", "Tags and chips"), ("input", "Fields"), ("tbl", "Table"), ("card", "Card"), ("menu-list", "Menus"), ("peek-panel", "Peek"), ("dialog-customise-sidebar", "Dialogs"), ("toast", "Toast"), ("ai-suggestion", "AI suggestion"), ("ask-running", "ask creaite working")])}
-<h6>Patterns</h6>{"".join(f'<a href="#p-{c}">{esc(t)}</a>' for c, t in [("list", "List page"), ("tabbed", "Tabbed list"), ("queue", "Queue"), ("brief", "Brief"), ("detail", "Detail"), ("settings", "Settings"), ("doc", "Document"), ("client-doc", "Client report"), ("prep", "Prep"), ("two-pane", "Two panes"), ("docs", "Docs"), ("cards-sections", "Cards")])}
+<h6>Patterns</h6>{"".join(f'<a href="#p-{c}">{esc(t)}</a>' for c, t in [("list", "List page"), ("tabbed", "Tabbed list"), ("queue", "Queue"), ("brief", "Brief"), ("detail", "Detail"), ("settings", "Settings"), ("doc", "Document"), ("client-doc", "Client report"), ("minutes", "Minutes"), ("reports", "Reports"), ("reporting", "Reporting space"), ("person", "Person"), ("milestones", "Milestones"), ("prep", "Prep"), ("two-pane", "Two panes"), ("docs", "Docs"), ("cards-sections", "Cards")])}
 <div class="ds-ctl" role="group" aria-label="Theme"><button type="button" data-th="light" aria-pressed="true">Light</button><button type="button" data-th="dark" aria-pressed="false">Dark</button></div>
 <div class="ds-ctl" role="group" aria-label="Palette"><button type="button" data-pal="creaite" aria-pressed="true">creaite</button><button type="button" data-pal="Cursor" aria-pressed="false">Cursor</button></div></nav>
 <main class="ds-main"><h1>creaite design system</h1>
@@ -466,7 +496,7 @@ html = f'''<!doctype html>
 {"".join(C)}
 <h3 style="margin:28px 0 8px">Floating and modal components (live screenshots)</h3>{dyn_html}<h3 style="margin:28px 0 8px">Composite pieces (live screenshots)</h3>{comp_html}</section>
 
-<section id="patterns"><h2 class="ds-h">Page patterns</h2><p class="ds-lead">Nine ways a creaite page is put together. Pick one; do not invent a tenth without saying why. Each links to the real screen and shows its skeleton from the running app.</p>{"".join(PAT)}
+<section id="patterns"><h2 class="ds-h">Page patterns</h2><p class="ds-lead">Seventeen ways a creaite page is put together, in a handful of families (list, queue, brief, detail, settings, document, two panes, docs). Pick the nearest; do not invent another without saying why. Each links to the real screen and shows its skeleton from the running app.</p>{"".join(PAT)}
 <h3 style="margin:24px 0 8px">States every page has</h3><ul><li><b>Empty:</b> the <code>.empty</code> box (components) says what is missing and the next step.</li><li><b>Offline:</b> the live-server alert above, on every page.</li><li><b>Loading:</b> the stylesheet has no spinner or skeleton component (checked); a long job shows as steps in the ask creaite panel, or a <code>.prog</code> bar. Do not invent one.</li><li><b>Error:</b> an error banner (<code>.errbanner</code>) under the page banners, dismissible; a failed save says what to do.</li></ul>
 <p class="ds-meas">The minutes view is not snapshotted (it opens from a staged meeting's Open draft in Review); it follows the Document pattern: a sheet on a tinted canvas with a bar above it, the transcript beside the draft.</p></section>
 
@@ -489,5 +519,32 @@ document.getElementById('dsFind').addEventListener('input',e=>{{const q=e.target
 document.addEventListener('keydown',e=>{{if(e.altKey&&e.key==='d'){{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark'}}}});
 </script></body></html>
 '''
+
+# ------------------------------------------------------------------ starter pages: the blank shell with a real skeleton in it
+def starter(name, inner, title):
+    base = (DS / "blank.html").read_text()
+    a = base.index('id="v-files"')
+    i = base.index('<div class="wrapmax">', a) + len('<div class="wrapmax">')
+    j = base.index("</div></section>", i)
+    page = base[:i] + inner + base[j:]
+    page = page.replace("<title>", "<title>", 1)
+    (DS / "templates").mkdir(exist_ok=True)
+    note = f"<!-- Starter page: {title}. The real app shell with a skeleton of real classes; replace the content, keep the structure (see ../index.html, page patterns). Stylesheet: ../style.snapshot.css. -->\n"
+    page = page.replace('href="style.snapshot.css"', 'href="../style.snapshot.css"')
+    (DS / "templates" / f"{name}.html").write_text(page.replace("<!doctype html>\n", "<!doctype html>\n" + note, 1))
+
+
+def two_rows(tbl):
+    rows = re.findall(r"<tr[ >].*?</tr>", tbl, flags=re.S)
+    head, body = rows[0], rows[1:3]
+    return re.sub(r"<tbody>.*</tbody>", "<tbody>" + "".join(body) + "</tbody>", tbl, flags=re.S)
+
+
+tbl2 = two_rows(S("tbl"))
+starter("list", f'<h1>Page title</h1><p class="sub">One line saying what this page is for.</p><div class="toolbar" style="margin-top:8px">{S("input")}{S("select")}<span style="flex:1"></span><span class="sub">2 of 2</span><button class="btn">Refresh</button></div><div style="margin-top:10px">{tbl2}</div>', "List page")
+starter("tabbed-list", f'<h1>Page title</h1>{S("tabs")}<div class="toolbar">{S("input")}{S("ib-bd")}{S("seg")}</div><div class="views" style="margin-top:8px">{spec["vchip"]["d"]["html"] if spec.get("vchip",{}).get("d") else ""}</div><div style="margin-top:10px">{tbl2}</div>', "Tabbed list")
+starter("detail", f'{S("crumb")}<h1>Page title</h1><p class="sub">One line saying whose this is.</p>{S("tabs")}<div style="margin-top:14px">{S("card")}{S("card")}</div>', "Detail page")
+starter("settings", f'<h1>Settings group</h1><p class="sub">Rows of one control each.</p>{S("setgroup")}', "Settings group")
+
 (DS / "index.html").write_text(html)
 print("index.html", len(html), "bytes;", len(C), "components,", len(PAT), "patterns,", len(D), "floating components,", len(live["icons"]), "icons")
