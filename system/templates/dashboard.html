@@ -4070,7 +4070,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     CHK: () => CHK,
     CHNEAR: () => CHNEAR,
     CHREC: () => CHREC,
-    CHSAVED: () => CHSAVED,
     CHSTARTED: () => CHSTARTED,
     CHTOP: () => CHTOP,
     CKFN: () => CKFN,
@@ -61002,8 +61001,6 @@ ${d5.text}`);
     }
     $("#chat").classList.add("on");
     rbDismiss();
-    if (CHFOLLOW || CHSAVED == null) chatScroll();
-    else $("#chLog").scrollTop = CHTOP = CHSAVED;
     if (!$("#chLog").children.length && !ATTACHED && !shared.REATT) {
       if (shared.ASKCHAT && viaServer()) loadChat(shared.ASKCHAT, true);
       else greet();
@@ -61020,7 +61017,6 @@ ${d5.text}`);
   }
   function closeChat() {
     const wasOn = $("#chat").classList.contains("on"), inside = $("#chat").contains(document.activeElement);
-    if (wasOn) CHSAVED = $("#chLog").scrollTop;
     $("#chat").classList.remove("on");
     if ($("#chat").contains(document.activeElement)) document.activeElement.blur();
     if (wasOn && inside && (!document.activeElement || document.activeElement === document.body)) {
@@ -61291,7 +61287,7 @@ ${d5.text}`);
     $("#chLog").addEventListener("click", (e4) => mdClick(e4));
   }
   var mdView = (text, o5) => `<div class="mdv">${mdChat(text, o5)}</div>`;
-  var CHFOLLOW = true, CHTOP = 0, CHSAVED = null;
+  var CHFOLLOW = true, CHTOP = 0;
   var CHNEAR = 12;
   function chatPin() {
     if (!CHFOLLOW) return;
@@ -61429,7 +61425,6 @@ ${d5.text}`);
   }
   function newChat() {
     if (shared.BUSY) return;
-    CHSAVED = null;
     setChat(null, null);
     $("#chLog").textContent = "";
     shared.SHOWN = null;
@@ -61437,7 +61432,6 @@ ${d5.text}`);
     $("#chIn").focus();
   }
   async function loadChat(chat, quiet, skipRun) {
-    if (chat !== shared.ASKCHAT) CHSAVED = null;
     const rec = await api("/api/chat", { chat });
     if (rec.ok && typeof skipRun === "function") skipRun = skipRun(rec);
     if (rec.ok && skipRun) rec.messages = rec.messages.filter((m5) => m5.run !== skipRun);
@@ -61729,6 +61723,7 @@ ${d5.text}`);
     } finally {
       shared.REATT = false;
     }
+    if (!run && $("#chat").classList.contains("on") && !$("#chLog").children.length && !ATTACHED) greet();
     if (run) attachRun(run);
     else {
       pendingCard();

@@ -339,7 +339,7 @@ export function greet(){ addEl("msg a",html`${GREET}`); }
 export function openChat(){ closeHelpPanel(true);   /* #158: the ? panel and ask creaite are never open together */
   if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
       CHATFROM=ok?{el:f,key:chatFromKey(f)}:null; }
-  $("#chat").classList.add("on"); rbDismiss(); if(CHFOLLOW||CHSAVED==null) chatScroll(); else $("#chLog").scrollTop=CHTOP=CHSAVED;   /* #148: where it was left */
+  $("#chat").classList.add("on"); rbDismiss();   /* #148: no scroll call on open: Chrome keeps the place a hidden panel was left at, the size observer below pins a follower to the end, and the jump button stays as it was */
   if(!$("#chLog").children.length&&!ATTACHED&&!shared.REATT){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
 /* ===== end BL-262 ===== */
 /* BL-35: the panel's width is dragged from its left edge (← → by keyboard; double-click resets) and remembered in
@@ -347,7 +347,6 @@ export function openChat(){ closeHelpPanel(true);   /* #158: the ? panel and ask
 export const CHATW0=420, chatClamp=w=>Math.round(Math.max(360,Math.min(window.innerWidth*0.7,w)));
 export function setChatWidth(w,save){ w=chatClamp(w); document.documentElement.style.setProperty("--chatw",w+"px"); $("#chGrip").setAttribute("aria-valuenow",w); if(save) store.set("creaite-chat-width",w); return w; }
 export function closeChat(){ const wasOn=$("#chat").classList.contains("on"), inside=$("#chat").contains(document.activeElement);   /* BL-211 */
-  if(wasOn) CHSAVED=$("#chLog").scrollTop;   /* #148: a hidden panel forgets its scroll position */
   $("#chat").classList.remove("on"); if($("#chat").contains(document.activeElement)) document.activeElement.blur();
     if(wasOn&&inside&&(!document.activeElement||document.activeElement===document.body)){ const t=chatReturnTarget(); if(t){ if(t.tabIndex<0&&!t.hasAttribute("tabindex")) t.setAttribute("tabindex","-1"); t.focus(); } }
     if(wasOn) CHATFROM=null; }
@@ -483,7 +482,7 @@ export const mdView=(text,o)=>`<div class="mdv">${mdChat(text,o)}</div>`;
    message, a step added to the fold, the working line, the panel resizing) used to leave the view a few pixels short and the
    browser's own scroll event then read that as Alan scrolling away, so the button showed while he was at the bottom. Now any
    change in the log or its size keeps the view at the bottom while following, and a scroll that didn't go up never stops it. */
-export let CHFOLLOW=true, CHTOP=0, CHSAVED=null; export const CHNEAR=12;
+export let CHFOLLOW=true, CHTOP=0; export const CHNEAR=12;
 export function chatPin(){ if(!CHFOLLOW) return; const l=$("#chLog"); l.scrollTop=l.scrollHeight; CHTOP=l.scrollTop; }
 export const chatNear=()=>{ const l=$("#chLog"); return l.scrollHeight-l.scrollTop-l.clientHeight<=CHNEAR; };
 export function chatScroll(force){ const l=$("#chLog"), b=$("#chJump");
@@ -524,8 +523,8 @@ shared.ASKSESSION=store.get(SESSK,store.get("creaite-ask-session",null)); shared
 export function setChat(chat,session){ const was=shared.ASKCHAT; if(chat!==was&&$("#chIn").value&&was!==null) draftSave();
   shared.ASKCHAT=chat; shared.ASKSESSION=session; store.set(CHATK,chat); store.set(SESSK,session);
   if(chat!==was){ if(was===null&&$("#chIn").value) draftSave(); else draftRestore(); } }
-export function newChat(){ if(shared.BUSY) return; CHSAVED=null; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
-export async function loadChat(chat,quiet,skipRun){ if(chat!==shared.ASKCHAT) CHSAVED=null;   /* #148: another chat has no saved place */
+export function newChat(){ if(shared.BUSY) return; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
+export async function loadChat(chat,quiet,skipRun){
   const rec=await api("/api/chat",{chat}); if(rec.ok&&typeof skipRun==="function") skipRun=skipRun(rec); if(rec.ok&&skipRun) rec.messages=rec.messages.filter(m=>m.run!==skipRun);
   $("#chLog").textContent=""; shared.SHOWN=null;   /* BL-262: the whole history is drawn below in one step; it returns the record */
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
@@ -613,6 +612,7 @@ export async function attachDraw(run){ if(shared.SHOWN&&shared.SHOWN.run===run.i
 export async function reattach(){ if(!viaServer()) return; queueLoad(); shared.REATT=true; let run=null;   /* #148: openChat leaves the first draw of the log to this, until it is done */
   try{ const r=await api("/api/ask/running"); if(r.ok&&r.run) run=r.run; else if(shared.ASKCHAT&&!$("#chLog").children.length&&!ATTACHED) await loadChat(shared.ASKCHAT,true); }   /* the saved chat is drawn before the panel is opened, so opening it shows it whole at once */
   finally{ shared.REATT=false; }
+  if(!run&&$("#chat").classList.contains("on")&&!$("#chLog").children.length&&!ATTACHED) greet();   /* #148: a first-time user who opened the panel while the running check was in flight (openChat left both the draw and the greeting to this) */
   if(run) attachRun(run); else { pendingCard(); pendingEdit(); } }
 /* ===== BL-139 (sprint-final) =====
    A small badge fixed at the bottom right shows that ask creaite is working and, afterwards, that it has finished. It follows
