@@ -494,6 +494,65 @@ class SheetBarTests(SheetCase):
           return res; })()""")
         self.assertEqual(got[spot], min(got.values()))
 
+    SECTION = "#shFix section[data-id='this_week']"
+    PLACE = f"""(() => {{ const w = document.querySelector({JQ("#shFix section[data-id='this_week'] .sheet-edwrap")}), bar = w.querySelector('.sheet-rtebar'), r = bar.getBoundingClientRect();
+      return {{spot: w.dataset.bar, left: r.left, top: r.top, width: r.width, height: r.height, bottom: r.bottom, right: r.right}}; }})()"""
+
+    def put(self, tag, left, top, width, height):
+        """A control (or a pane title) of the test's own, at these screen coordinates in the page (which is scaled by the zoom), where only the bar can cover it."""
+        self.b.eval(f"""(() => {{ const pg = document.querySelector('#shFix .page'), r = pg.getBoundingClientRect(), k = r.width / pg.offsetWidth;
+          const e = document.createElement({JQ(tag)}); e.id = 'blocker'; e.textContent = 'x';
+          e.style.cssText = 'position:absolute;margin:0;padding:0;border:0;left:' + (({left} - r.left) / k) + 'px;top:' + (({top} - r.top) / k) + 'px;width:' + ({width} / k) + 'px;height:' + ({height} / k) + 'px';
+          pg.appendChild(e); }})()""")
+
+    def test_opening_the_link_form_makes_the_bar_taller_never_wider_and_keeps_its_buttons_inside_it(self):
+        b = self.b
+        for width, zooms in ((1400, 0), (900, 8)):
+            with self.subTest(window=width):
+                b.resize(width, 1000)
+                for _ in range(zooms):
+                    b.eval("document.querySelector('#shFix [aria-label=\"Zoom out\"]:not(:disabled)')?.click()")
+                b.pump(0.3)
+                self.open_bar()
+                before = b.eval(self.PLACE)
+                b.click(f"{BAR} [data-nt=link]")
+                b.wait(f"!document.querySelector({JQ(BAR + ' .rtelink')}).hidden")
+                b.pump(0.3)
+                after = b.eval(self.PLACE)
+                self.assertLessEqual(abs(after["width"] - before["width"]), 3, "the form is a row of its own: the bar does not grow sideways")
+                self.assertGreater(after["height"], before["height"])
+                out = b.eval(f"""(() => {{ const bar = document.querySelector({JQ(BAR)}), r = bar.getBoundingClientRect();
+                  return [...bar.querySelectorAll('.rtelink input, .rtelink button')].filter(x => {{ const q = x.getBoundingClientRect();
+                    return q.right > r.right + 1 || q.left < r.left - 1 || q.bottom > r.bottom + 1 || q.top < r.top - 1; }}).map(x => x.textContent || x.placeholder); }})()""")
+                self.assertEqual(out, [], "Add, Remove link and Cancel stay inside the bar")
+                b.eval("document.activeElement && document.activeElement.blur()")
+
+    def test_the_bar_picks_its_spot_again_when_the_link_form_makes_it_taller(self):
+        b = self.b
+        self.open_bar()
+        short = b.eval(self.PLACE)
+        # a control that only the taller bar would reach: 20 px beyond the short bar, on the side it grows towards, across the whole sheet
+        top = short["top"] - 25 if short["spot"][0] == "a" else short["bottom"] + 15
+        self.put("button", 0, top, 1400, 8)
+        b.click(f"{BAR} [data-nt=link]")
+        b.wait(f"!document.querySelector({JQ(BAR + ' .rtelink')}).hidden")
+        b.wait(f"document.querySelector({JQ(self.SECTION + ' .sheet-edwrap')}).dataset.bar !== {JQ(short['spot'])}", 5)
+        tall = b.eval(self.PLACE)
+        blocker = b.eval("(() => { const q = document.getElementById('blocker').getBoundingClientRect(); return [q.top, q.bottom]; })()")
+        self.assertTrue(tall["bottom"] <= blocker[0] or tall["top"] >= blocker[1], "the taller bar was moved clear of the control")
+
+    def test_the_bar_keeps_clear_of_a_pane_title_as_of_any_other_control(self):
+        b = self.b
+        self.open_bar()
+        first = b.eval(self.PLACE)
+        b.eval("document.activeElement && document.activeElement.blur()")
+        b.wait(f"!document.querySelector({JQ(BAR)})")
+        self.put("h3", first["left"] + 10, first["top"] + 8, 200, 20)           # a pane's title, where the bar would float
+        self.open_bar()
+        now = b.eval(self.PLACE)
+        self.assertNotEqual(now["spot"], first["spot"])
+        self.assertTrue(now["bottom"] <= first["top"] + 8 or now["top"] >= first["top"] + 28, "the bar is not over the title")
+
     def test_the_buttons_stay_their_real_size_at_40_percent_and_the_bar_stays_inside_the_field(self):
         b = self.b
         for _ in range(12):
@@ -534,6 +593,53 @@ class SheetBarTests(SheetCase):
         self.assertIn("> Paragraph 4", text)
         self.assertIn("~~gone~~", text)
         assert_exports_are_clean(self, text)
+
+# Texts the exports and "Show as exported" must draw alike (#134 review): marks nested every way the bar writes them, quotes of every kind,
+# lists, checklists, headings, strays and code. No `>` inside a link or a table; none is a client text.
+EXPORT_CORPUS = [
+    "plain words", "**b** and _i_ and ~~s~~", "**~~x~~**", "_~~x~~_", "**_x_**", "~~**x**~~", "_**x**_", "~~_x_~~", "***x***", "**_~~x~~_**",
+    "~~a **b** c~~", "_a **b** c_", "**a _b_ c**", "> one\n> two\n> three", "> one\n\n> two", "> #### h\n> - a\n> - b", "> - a\n>\n> text",
+    "> 1. a\n> 2. b", "> **~~x~~** _y_", "- a\n- b\n\n1. c\n2. d", "- [ ] t\n- [x] u", "- a\n  more\n- b", "- \n  x", "### H\n\ntext",
+    "##### Small\n\n#### Mid\n\n### Big", "snake_case and 5 * 3 and *star*", "`code **x**` and `y`", "a `b", "text\n> quote\ntext", "- a\n> q",
+    "[l](http://u) words", "![i](x.png)\ntext", "a & b < c > d \" e", "- **~~x~~** item\n- _y_ item", "1. one\n   two\n2. three",
+    "**a**b **c** _d_e_ f_g", "~~~~ x ~~", "** ** x", "__bold__ and ___x___",
+]
+
+
+class ShowAsExportedTests(SheetCase):
+    """#134 (review): "Show as exported" draws the text as the HTML export does, for every text in the corpus: the same quotes (one block for
+    its lines), the same marks (nested, italic drawn, nothing literal) and the same lists."""
+
+    def view(self, texts):
+        """Each text drawn by the sheet in Show as exported, as the HTML of the section's text."""
+        return self.b.eval("""(async texts => { SH.exported = true; const out = [];
+          for (const t of texts) { SH.doc = JSON.parse(JSON.stringify(SH.doc)); SH.doc.sections.find(s => s.id === 'this_week').text = t; SH.draw();
+            await new Promise(r => requestAnimationFrame(r));
+            out.push(document.querySelector('#shFix section[data-id="this_week"] .sheet-md').innerHTML); } return out; })""" + f"({JQ(texts)})")
+
+    @staticmethod
+    def export_html(text):
+        import creaite_doc
+        return creaite_doc.md_html(text).replace("&quot;", '"').replace("&#x27;", "'")
+
+    def test_the_view_is_the_html_export_for_every_text_in_the_corpus(self):
+        got = self.view(EXPORT_CORPUS)
+        for text, shown in zip(EXPORT_CORPUS, got):
+            with self.subTest(text=text):
+                self.assertEqual(shown, self.export_html(text))
+
+    def test_a_multi_line_quote_is_one_block_italic_is_drawn_and_a_combined_mark_leaves_no_marker(self):
+        got = dict(zip(["q", "i", "bs"], self.view(["> one\n> two\n> three", "_it_ and *it*", "**~~x~~**"])))
+        self.assertEqual(got["q"], "<blockquote><p>one two three</p></blockquote>")
+        self.assertEqual(got["i"], "<p><em>it</em> and <em>it</em></p>")
+        self.assertEqual(got["bs"], "<p><strong><s>x</s></strong></p>")
+
+    def test_a_quote_is_drawn_with_its_rule_in_the_sheet(self):
+        self.view(["> a quote\n> over two lines"])
+        got = self.b.eval("""(() => { const c = getComputedStyle(document.querySelector('#shFix section[data-id="this_week"] .sheet-md blockquote'));
+          return [c.borderLeftWidth, c.paddingLeft, c.borderLeftStyle]; })()""")
+        self.assertEqual(got, ["3px", "12px", "solid"])
+
 
 class RedraftCheckTests(SheetCase):
     def test_the_spark_shows_a_fresh_draft_beside_the_words_and_nothing_changes_before_a_choice(self):

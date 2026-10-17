@@ -3738,6 +3738,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .sheet-edwrap[data-bar$="r"]>.sheet-rtebar{left:auto;right:0;transform-origin:right bottom}
 .sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
 .sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
+.sheet-rtebar .rtelink{flex:1 1 100%;margin:0;min-width:0;contain:inline-size} .sheet-rtebar .rtelink input{flex:1 1 60px;min-width:0;width:auto}   /* the link form is a row of its own: opening it makes the bar taller, never wider, and its buttons stay inside */
 .sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
 /* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
 .linkpop{position:fixed;z-index:221;width:320px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop,0 8px 24px rgba(0,0,0,.18));padding:10px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);color:var(--ink)}

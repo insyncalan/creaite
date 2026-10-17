@@ -3748,6 +3748,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .sheet-edwrap[data-bar$="r"]>.sheet-rtebar{left:auto;right:0;transform-origin:right bottom}
 .sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
 .sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
+.sheet-rtebar .rtelink{flex:1 1 100%;margin:0;min-width:0;contain:inline-size} .sheet-rtebar .rtelink input{flex:1 1 60px;min-width:0;width:auto}   /* the link form is a row of its own: opening it makes the bar taller, never wider, and its buttons stay inside */
 .sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
 /* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
 .linkpop{position:fixed;z-index:221;width:320px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop,0 8px 24px rgba(0,0,0,.18));padding:10px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);color:var(--ink)}
@@ -31882,8 +31883,8 @@ ${s5}`;
       if (e4.key === "Enter" && e4.target.matches && e4.target.matches("[data-ms]")) openMilestone(e4.target.dataset.ms);
     });
   }
-  function feedLines(lines, typeOf, textOf2) {
-    return lines.map((a5) => {
+  function feedLines(lines2, typeOf, textOf2) {
+    return lines2.map((a5) => {
       const ch2 = String(a5.change || a5.what || "");
       return { type: typeOf(ch2, a5), who: a5.by, html: `<span class="chg">${esc(textOf2 ? textOf2(ch2, a5) : ch2)}</span>`, when: a5.at, state: a5.reverted || a5.undone ? "undone" : PKAPPLIED.has(a5.apply_id) ? "applied" : "" };
     });
@@ -36509,8 +36510,8 @@ ${s5}`;
         return;
       }
       const [v5, b5] = await Promise.all([api("/api/prep/view", { key }).catch(() => null), api("/api/prep/brief", { key }).catch(() => null)]);
-      const lines = peekLines(v5, b5);
-      peeks.value = { ...peeks.value, [key]: { key, at: Date.now(), lines, failed: !lines } };
+      const lines2 = peekLines(v5, b5);
+      peeks.value = { ...peeks.value, [key]: { key, at: Date.now(), lines: lines2, failed: !lines2 } };
     };
     inflight[key] = run().finally(() => {
       delete inflight[key];
@@ -36758,7 +36759,7 @@ ${s5}`;
     /** @type {Notes} */
     Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, []]))
   );
-  var textOf = (lines) => (lines || []).map((l6) => l6.text).join("\n");
+  var textOf = (lines2) => (lines2 || []).map((l6) => l6.text).join("\n");
   function shapeLinesFrom(text, before) {
     const old = before || [];
     return String(text || "").split("\n").map((s5) => s5.trim()).filter(Boolean).slice(0, 12).map((t47, i5) => {
@@ -43555,7 +43556,7 @@ ${s5}`;
         ": the notes are on the prep page. Accept again after a change."
       ] }) : null,
       SHAPE_SECTIONS.map(([k5, label]) => {
-        const lines = now[k5] || [];
+        const lines2 = now[k5] || [];
         return /* @__PURE__ */ u2("div", { class: "shsec", children: [
           /* @__PURE__ */ u2("div", { class: "shsech", children: [
             /* @__PURE__ */ u2("label", { id: `shN-${k5}-l`, children: label }),
@@ -43569,17 +43570,17 @@ ${s5}`;
             {
               id: `shN-${k5}`,
               cls: "shgrow shbox",
-              rows: Math.max(2, lines.length + 1),
+              rows: Math.max(2, lines2.length + 1),
               value: texts[k5] || "",
               labelledBy: `shN-${k5}-l`,
               ai: ai2,
-              describedBy: lines.length ? `shC-${k5}` : void 0,
+              describedBy: lines2.length ? `shC-${k5}` : void 0,
               onInput: (t47) => {
                 shapeText.value = { ...shapeText.value, [k5]: t47 };
               }
             }
           ),
-          lines.length ? /* @__PURE__ */ u2("ol", { class: "shcites", id: `shC-${k5}`, "aria-label": `${label}: each line's source`, children: lines.map((l6, i5) => /* @__PURE__ */ u2("li", { children: (l6.sources || []).length ? (l6.sources || []).map((s5, j5) => /* @__PURE__ */ u2(ShapeSource, { s: s5 }, j5)) : /* @__PURE__ */ u2("span", { class: "drtag", role: "note", children: "no source" }) }, i5)) }) : null
+          lines2.length ? /* @__PURE__ */ u2("ol", { class: "shcites", id: `shC-${k5}`, "aria-label": `${label}: each line's source`, children: lines2.map((l6, i5) => /* @__PURE__ */ u2("li", { children: (l6.sources || []).length ? (l6.sources || []).map((s5, j5) => /* @__PURE__ */ u2(ShapeSource, { s: s5 }, j5)) : /* @__PURE__ */ u2("span", { class: "drtag", role: "note", children: "no source" }) }, i5)) }) : null
         ] }, k5);
       })
     ] });
@@ -47229,26 +47230,26 @@ ${pre}**Current state title:** ${title}`);
   var pKey = (t47) => String(t47 || "").replace(/\([^)]*\)/g, " ").toLowerCase().replace(/[.,]/g, " ").split(/\s+/).filter(Boolean).join(" ");
   var pCell = (v5) => String(v5 ?? "").replace(/\|/g, "/").replace(/\n/g, " ").trim();
   var pSplit = (line) => line.trim().replace(/^\|+|\|+$/g, "").split("|").map((c5) => c5.trim());
-  function pTable(lines) {
-    const at2 = lines.indexOf("## People");
+  function pTable(lines2) {
+    const at2 = lines2.indexOf("## People");
     if (at2 < 0) return null;
     let i5 = at2 + 1;
-    while (i5 < lines.length && !lines[i5].startsWith("|")) {
-      if (lines[i5].startsWith("## ")) return null;
+    while (i5 < lines2.length && !lines2[i5].startsWith("|")) {
+      if (lines2[i5].startsWith("## ")) return null;
       i5++;
     }
-    if (i5 >= lines.length) return null;
+    if (i5 >= lines2.length) return null;
     const head = i5, rows2 = [];
     i5 += 2;
-    while (i5 < lines.length && lines[i5].startsWith("|")) rows2.push(i5++);
+    while (i5 < lines2.length && lines2[i5].startsWith("|")) rows2.push(i5++);
     return { head, rows: rows2 };
   }
   function peopleParse(text) {
-    const lines = text.split("\n"), t47 = pTable(lines);
+    const lines2 = text.split("\n"), t47 = pTable(lines2);
     if (!t47) return [];
-    const cols = pSplit(lines[t47.head]), out = [];
+    const cols = pSplit(lines2[t47.head]), out = [];
     for (const i5 of t47.rows) {
-      const cells = pSplit(lines[i5]), row2 = {};
+      const cells = pSplit(lines2[i5]), row2 = {};
       cols.forEach((c5, j5) => {
         row2[c5] = cells[j5] || "";
       });
@@ -47271,10 +47272,10 @@ ${pre}**Current state title:** ${title}`);
     return out;
   }
   function peopleText(text, people) {
-    const lines = text.split("\n");
-    if (lines[lines.length - 1] === "") lines.pop();
-    const t47 = pTable(lines);
-    let cols = t47 ? pSplit(lines[t47.head]) : [];
+    const lines2 = text.split("\n");
+    if (lines2[lines2.length - 1] === "") lines2.pop();
+    const t47 = pTable(lines2);
+    let cols = t47 ? pSplit(lines2[t47.head]) : [];
     cols = [...cols, ...PCOLS.filter((c5) => !cols.includes(c5))];
     people.forEach((p6) => Object.keys(p6.extra || {}).forEach((c5) => {
       if (!cols.includes(c5)) cols.push(c5);
@@ -47287,11 +47288,11 @@ ${pre}**Current state title:** ${title}`);
     const row2 = (a5) => "| " + a5.join(" | ") + " |", table = [row2(cols), "|" + cols.map((c5) => "-".repeat(c5.length + 2)).join("|") + "|", ...people.map((p6) => row2(cols.map((c5) => cell2(p6, c5))))];
     if (t47) {
       const end = (t47.rows.length ? t47.rows[t47.rows.length - 1] : t47.head + 1) + 1;
-      lines.splice(t47.head, end - t47.head, ...table);
-    } else if (lines.includes("## People")) {
-      lines.splice(lines.indexOf("## People") + 1, 0, "", ...table);
-    } else lines.push("", "## People", "", ...table);
-    return lines.join("\n") + "\n";
+      lines2.splice(t47.head, end - t47.head, ...table);
+    } else if (lines2.includes("## People")) {
+      lines2.splice(lines2.indexOf("## People") + 1, 0, "", ...table);
+    } else lines2.push("", "## People", "", ...table);
+    return lines2.join("\n") + "\n";
   }
   var lev = (a5, b5) => {
     let prev = Array.from({ length: b5.length + 1 }, (_6, i5) => i5);
@@ -50015,9 +50016,9 @@ ${d5.text}`);
         quote = [];
       }
     };
-    const marks = paneLines(text), lines = String(text || "").split("\n").concat([""]);
-    for (let n4 = 0; n4 < lines.length; n4++) {
-      const line = lines[n4];
+    const marks = paneLines(text), lines2 = String(text || "").split("\n").concat([""]);
+    for (let n4 = 0; n4 < lines2.length; n4++) {
+      const line = lines2[n4];
       if (marks.has(n4)) {
         flush();
         continue;
@@ -50129,8 +50130,8 @@ ${d5.text}`);
         const tag = n4.nodeType === 1 ? n4.tagName : "";
         if (tag === "UL" || tag === "OL") {
           flush();
-          const lines = listMd(n4, 0, []);
-          if (lines.length) blocks2.push(lines.join("\n"));
+          const lines2 = listMd(n4, 0, []);
+          if (lines2.length) blocks2.push(lines2.join("\n"));
         } else if (/^H[1-6]$/.test(tag)) {
           flush();
           const t47 = flat2(inl(n4));
@@ -52968,10 +52969,10 @@ ${d5.text}`);
     const items2 = dePicked(o5), codes = [...new Set(items2.map((i5) => i5.p))].sort(), reply = deReplyBy(o5.replyBy), open2 = o5.cover || DE_OPEN, ask2 = `${DE_ASK}${items2.some((i5) => i5.k === "decisions") ? " " + DE_DECIDE : ""}${reply} ${DE_THANKS}`;
     const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join(""), [endH, endT] = deClose(o5);
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
-    const lines = [deGreeting(o5.now, first), "", open2, ""];
-    codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
-    lines.push(ask2, ...endT);
-    return { to: o5.email || "", subject: deSubject(items2, today), html: html2, text: lines.join("\n"), items: items2 };
+    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
+    codes.forEach((c5) => lines2.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
+    lines2.push(ask2, ...endT);
+    return { to: o5.email || "", subject: deSubject(items2, today), html: html2, text: lines2.join("\n"), items: items2 };
   }
   var DE_CHASE = [
     { subj: "Reminder", open: "A quick reminder about the items below, which are now past their due dates.", ask: "Could you let me know where each one stands, and when I can expect it?" },
@@ -52988,11 +52989,11 @@ ${d5.text}`);
     const ask2 = `${t47.ask}${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5);
     const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join("");
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
-    const lines = [deGreeting(o5.now, first), "", open2, ""];
-    codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
-    lines.push(ask2, ...endT);
+    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
+    codes.forEach((c5) => lines2.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
+    lines2.push(ask2, ...endT);
     const subject = !items2.length ? t47.subj : items2.length === 1 ? `${items2[0].id} · ${t47.subj}` : `${codes.join(" / ")} · ${t47.subj}: ${items2.length} overdue items`;
-    return { to: o5.email || "", subject, html: html2, text: lines.join("\n"), items: items2, level: lv2.level };
+    return { to: o5.email || "", subject, html: html2, text: lines2.join("\n"), items: items2, level: lv2.level };
   }
   function deOwners(acts2, o5) {
     const names = [o5.lead, ...(o5.attendees || []).map((a5) => a5.name)].filter(Boolean), all = [...new Set(acts2.map((i5) => i5.o || "No owner"))];
@@ -53006,15 +53007,15 @@ ${d5.text}`);
     const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when2}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask2 = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
-    const lines = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
-    if (o5.summary) lines.push("Summary", o5.summary, "");
-    if (decs.length) lines.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
+    const lines2 = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
+    if (o5.summary) lines2.push("Summary", o5.summary, "");
+    if (decs.length) lines2.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
     if (acts2.length) {
-      lines.push("Actions");
-      owners.forEach((n4) => lines.push(n4, ...deTextRows(mine(n4), o5), ""));
+      lines2.push("Actions");
+      owners.forEach((n4) => lines2.push(n4, ...deTextRows(mine(n4), o5), ""));
     }
-    lines.push(ask2, ...endT);
-    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${o5.internal ? "[Internal] " : ""}${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines.join("\n"), items: items2 };
+    lines2.push(ask2, ...endT);
+    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${o5.internal ? "[Internal] " : ""}${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines2.join("\n"), items: items2 };
   }
   shared.DE = null;
   var deHost = (addr) => String(addr || "").split("@")[1]?.trim().toLowerCase() || "";
@@ -53704,9 +53705,9 @@ ${d5.text}`);
     <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-gfdo="discard">Discard</button><button type="button" class="btn" data-gfdo="plain">Copy as plain text</button>${d5.form === "teams" ? "" : '<button type="button" class="btn primary" data-gfdo="rich">Copy</button>'}</div><div class="sub" id="gfMsg" role="status"></div></div>`;
   }
   function genFormText(d5) {
-    const src = d5.sources || [], lines = d5.form === "steering" || d5.form === "three", fmt = (t47) => esc(t47.replace(/^[-*]\s+/, "• ")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    const src = d5.sources || [], lines2 = d5.form === "steering" || d5.form === "three", fmt = (t47) => esc(t47.replace(/^[-*]\s+/, "• ")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
     const one = (x5) => x5.unsourced ? `<mark class="drloose">${fmt(x5.text)}</mark><span class="drtag" role="note">no source</span>` : `<span>${fmt(x5.text)}</span>${x5.refs.map((r4) => `<sup class="drref" data-tip="${esc((src.find((y5) => y5.ref === r4) || {}).text || r4)}">${esc(r4)}</sup>`).join("")}`;
-    return `<div class="drtext">${(d5.sentences || []).map(one).join(lines ? "<br>" : " ")}</div>`;
+    return `<div class="drtext">${(d5.sentences || []).map(one).join(lines2 ? "<br>" : " ")}</div>`;
   }
   var GENSEQ = 0, GENCALL = false;
   async function genFormDraft(body2) {
@@ -56466,14 +56467,14 @@ ${d5.text}`);
   var flat = (t47) => String(t47 || "").replace(/<!--[\s\S]*?-->/g, "").replace(/\[([^\]\n]*)\]\([^)\n]*\)/g, "$1").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
   var LISTS = /* @__PURE__ */ new Set(["bulletList", "orderedList", "taskList"]);
   function blockLines(doc, md2) {
-    const lines = noteLines(md2).map(flat), out = [];
+    const lines2 = noteLines(md2).map(flat), out = [];
     let i5 = 0;
     const take2 = (node, pos) => {
       const t47 = flat(node.textContent);
       if (!t47) return;
-      for (let j5 = i5; j5 < lines.length; j5++) if (lines[j5].includes(t47) || t47.includes(lines[j5]) && lines[j5]) {
+      for (let j5 = i5; j5 < lines2.length; j5++) if (lines2[j5].includes(t47) || t47.includes(lines2[j5]) && lines2[j5]) {
         i5 = j5;
-        out.push({ pos, size: node.nodeSize, line: j5 + 1, key: lines[j5] });
+        out.push({ pos, size: node.nodeSize, line: j5 + 1, key: lines2[j5] });
         return;
       }
     };
@@ -59600,8 +59601,8 @@ ${d5.text}`);
     }
     putHTML(acts2, html`<span class='sub'>${r4.ok ? html`${raw(MTICK)}Approved` : "Approved, with problems"}</span>`);
     chgRollbackNumbers(d5, r4.results);
-    const lines = (r4.results || []).map((x5) => `${x5.ok ? "✓" : "✗"} ${oneLine(x5.message)}`);
-    addEl("msg a", html`${lines.length ? lines.join("\n") : oneLine(r4.message || "")}`);
+    const lines2 = (r4.results || []).map((x5) => `${x5.ok ? "✓" : "✗"} ${oneLine(x5.message)}`);
+    addEl("msg a", html`${lines2.length ? lines2.join("\n") : oneLine(r4.message || "")}`);
     if (!(r4.results || []).some((x5) => x5.ok)) return false;
     snack(oneLine(r4.message || "Changes made"), () => go2("activity"));
     const msg = "The approved changes are made. Carry on with my last request.";
@@ -59951,14 +59952,14 @@ ${d5.text}`);
     return s5.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, "<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g, "$1<strong>$2</strong>").replace(/~~(?=\S)([\s\S]*?\S)~~/g, "<del>$1</del>").replace(/(^|[^\w*\u0001])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?!\*)/g, "$1<em>$2</em>").replace(/(^|[^\w])_(?=[^\s_])([^_\n]*?[^\s_])_(?!\w)/g, "$1<em>$2</em>");
   }
   var ITEMCODE = (c5) => /^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/.test(c5.trim()) && !!itemTable(c5.trim());
-  function chatMdBlocks(lines, st2, depth) {
-    const out = [], n4 = lines.length, blank2 = (l6) => /^\s*$/.test(l6), inl = (t47) => chatMdInline(t47, st2);
+  function chatMdBlocks(lines2, st2, depth) {
+    const out = [], n4 = lines2.length, blank2 = (l6) => /^\s*$/.test(l6), inl = (t47) => chatMdInline(t47, st2);
     const cells = (l6) => l6.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c5) => c5.trim().replace(/\\\|/g, "|"));
-    const tableAt = (i6) => i6 + 1 < n4 && lines[i6].includes("|") && MDC.SEP.test(lines[i6 + 1]) && lines[i6 + 1].includes("-") && cells(lines[i6]).length === cells(lines[i6 + 1]).length;
-    const startsBlock = (i6) => MDC.FENCE.test(lines[i6]) || MDC.HEAD.test(lines[i6]) || MDC.HR.test(lines[i6]) || MDC.QUOTE.test(lines[i6]) || MDC.LI.test(lines[i6]) || tableAt(i6);
+    const tableAt = (i6) => i6 + 1 < n4 && lines2[i6].includes("|") && MDC.SEP.test(lines2[i6 + 1]) && lines2[i6 + 1].includes("-") && cells(lines2[i6]).length === cells(lines2[i6 + 1]).length;
+    const startsBlock = (i6) => MDC.FENCE.test(lines2[i6]) || MDC.HEAD.test(lines2[i6]) || MDC.HR.test(lines2[i6]) || MDC.QUOTE.test(lines2[i6]) || MDC.LI.test(lines2[i6]) || tableAt(i6);
     let i5 = 0;
     while (i5 < n4) {
-      const l6 = lines[i5];
+      const l6 = lines2[i5];
       if (blank2(l6)) {
         i5++;
         continue;
@@ -59967,7 +59968,7 @@ ${d5.text}`);
       if (m5) {
         const mark = m5[1], code = [];
         i5++;
-        while (i5 < n4 && !(lines[i5].trim().startsWith(mark[0].repeat(mark.length)) && /^[`~]+\s*$/.test(lines[i5].trim()))) code.push(lines[i5++]);
+        while (i5 < n4 && !(lines2[i5].trim().startsWith(mark[0].repeat(mark.length)) && /^[`~]+\s*$/.test(lines2[i5].trim()))) code.push(lines2[i5++]);
         i5++;
         out.push(`<div class="mdcode"><button type="button" class="mini mdcopy" data-mdcopy aria-label="Copy the code">Copy</button><pre><code>${code.join("\n")}</code></pre></div>`);
         continue;
@@ -59979,10 +59980,10 @@ ${d5.text}`);
         continue;
       }
       if (tableAt(i5)) {
-        const head = cells(lines[i5]), al2 = cells(lines[i5 + 1]).map((c5) => /^:-+:$/.test(c5) ? "c" : /-:$/.test(c5) ? "r" : "");
+        const head = cells(lines2[i5]), al2 = cells(lines2[i5 + 1]).map((c5) => /^:-+:$/.test(c5) ? "c" : /-:$/.test(c5) ? "r" : "");
         i5 += 2;
         const rows2 = [];
-        while (i5 < n4 && !blank2(lines[i5]) && lines[i5].includes("|")) rows2.push(cells(lines[i5++]));
+        while (i5 < n4 && !blank2(lines2[i5]) && lines2[i5].includes("|")) rows2.push(cells(lines2[i5++]));
         const td2 = (t47, k5, tag) => `<${tag}${al2[k5] ? ` class="ta-${al2[k5]}"` : ""}>${inl(t47 || "")}</${tag}>`;
         out.push(`<div class="mdtable"><table><thead><tr>${head.map((c5, k5) => td2(c5, k5, "th")).join("")}</tr></thead><tbody>${rows2.map((r4) => `<tr>${head.map((_6, k5) => td2(r4[k5], k5, "td")).join("")}</tr>`).join("")}</tbody></table></div>`);
         continue;
@@ -59994,7 +59995,7 @@ ${d5.text}`);
       }
       if (MDC.QUOTE.test(l6)) {
         const q5 = [];
-        while (i5 < n4 && MDC.QUOTE.test(lines[i5])) q5.push(lines[i5++].replace(MDC.QUOTE, ""));
+        while (i5 < n4 && MDC.QUOTE.test(lines2[i5])) q5.push(lines2[i5++].replace(MDC.QUOTE, ""));
         out.push(`<blockquote>${depth < 6 ? chatMdBlocks(q5, st2, depth + 1) : inl(q5.join("\n")).replace(/\n/g, "<br>")}</blockquote>`);
         continue;
       }
@@ -60002,7 +60003,7 @@ ${d5.text}`);
         const items2 = [];
         let fence = null;
         while (i5 < n4) {
-          const x5 = lines[i5], lm2 = fence ? null : MDC.LI.exec(x5);
+          const x5 = lines2[i5], lm2 = fence ? null : MDC.LI.exec(x5);
           if (lm2) {
             items2.push({ ind: lm2[1].length, ord: /\d/.test(lm2[2]), num: parseInt(lm2[2]), off: lm2[1].length + lm2[2].length + 1, lines: [lm2[3]] });
             i5++;
@@ -60010,9 +60011,9 @@ ${d5.text}`);
           }
           if (blank2(x5)) {
             let j5 = i5;
-            while (j5 < n4 && blank2(lines[j5])) j5++;
-            if (items2.length && j5 < n4 && (MDC.LI.test(lines[j5]) || /^ {2,}\S/.test(lines[j5]))) {
-              if (!MDC.LI.test(lines[j5])) items2[items2.length - 1].lines.push("");
+            while (j5 < n4 && blank2(lines2[j5])) j5++;
+            if (items2.length && j5 < n4 && (MDC.LI.test(lines2[j5]) || /^ {2,}\S/.test(lines2[j5]))) {
+              if (!MDC.LI.test(lines2[j5])) items2[items2.length - 1].lines.push("");
               i5 = j5;
               continue;
             }
@@ -60058,7 +60059,7 @@ ${d5.text}`);
       }
       const para = [l6];
       i5++;
-      while (i5 < n4 && !blank2(lines[i5]) && !startsBlock(i5)) para.push(lines[i5++]);
+      while (i5 < n4 && !blank2(lines2[i5]) && !startsBlock(i5)) para.push(lines2[i5++]);
       out.push(`<p>${inl(para.join("\n")).replace(/\n/g, "<br>")}</p>`);
     }
     return out.join("");
@@ -60066,9 +60067,9 @@ ${d5.text}`);
   function mdChat(text, o5) {
     text = String(text ?? "");
     if (text.length > MDC.MAX) return `<div class="mdraw">${esc(text)}</div>`;
-    const st2 = [], lines = esc(text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/\r\n?/g, "\n")).split("\n");
+    const st2 = [], lines2 = esc(text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/\r\n?/g, "\n")).split("\n");
     st2.hb = o5 && o5.hBase || 0;
-    let h5 = chatMdBlocks(lines, st2, 0);
+    let h5 = chatMdBlocks(lines2, st2, 0);
     for (let k5 = 0; k5 < 6 && /\u0001\d+\u0001/.test(h5); k5++) h5 = h5.replace(/\u0001(\d+)\u0001/g, (m5, x5) => st2[x5]);
     return h5;
   }
@@ -62895,16 +62896,16 @@ ${d5.text}`);
         focusText
       ] }) : null,
       AIM.map(([k5, label]) => {
-        const lines = notes[k5] || [];
-        const cites = lines.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
+        const lines2 = notes[k5] || [];
+        const cites = lines2.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
         return /* @__PURE__ */ u2("div", { class: "ppnote", children: [
           /* @__PURE__ */ u2(
             PrepEditor,
             {
               id: `pp-n-${k5}`,
               label,
-              value: lines.map((l6) => l6.text).join("\n"),
-              rows: Math.max(2, lines.length + 1),
+              value: lines2.map((l6) => l6.text).join("\n"),
+              rows: Math.max(2, lines2.length + 1),
               placeholder: "One line each",
               ai: aiOf(mo2),
               onSave: (t47) => saveSection(k5, t47)
@@ -63058,11 +63059,11 @@ ${d5.text}`);
     ] });
   }
   function CarriedCard({ mo: mo2 }) {
-    const lines = ((mo2.focus || {}).notes || {}).carried_over || [], old = mo2.carried || [];
+    const lines2 = ((mo2.focus || {}).notes || {}).carried_over || [], old = mo2.carried || [];
     return /* @__PURE__ */ u2("section", { class: "card pc", id: "pp-carried", tabIndex: -1, "aria-labelledby": "pp-h-carried", children: [
       /* @__PURE__ */ u2("h2", { id: "pp-h-carried", children: "Carried over" }),
-      lines.length || old.length ? /* @__PURE__ */ u2("ul", { class: "ppmini", children: [
-        lines.map((l6, i5) => /* @__PURE__ */ u2("li", { children: l6.text }, `n${i5}`)),
+      lines2.length || old.length ? /* @__PURE__ */ u2("ul", { class: "ppmini", children: [
+        lines2.map((l6, i5) => /* @__PURE__ */ u2("li", { children: l6.text }, `n${i5}`)),
         old.map((c5, i5) => /* @__PURE__ */ u2("li", { children: [
           c5.point,
           " ",
@@ -63287,76 +63288,186 @@ ${d5.text}`);
   }
 
   // components/report/SheetText.jsx
-  function inline(t47) {
-    const out = [], re2 = /\*\*([^*]+)\*\*|\*([^*\n]+)\*|\[([^\]\n]+)\]\(([^)\s]+)\)|~~([^~\n]+)~~/g;
-    let last = 0, k5 = 0;
-    for (const m5 of t47.matchAll(re2)) {
-      const at2 = m5.index || 0;
-      if (at2 > last) out.push(t47.slice(last, at2));
-      if (m5[1] != null) out.push(/* @__PURE__ */ u2("strong", { children: m5[1] }, k5++));
-      else if (m5[2] != null) out.push(/* @__PURE__ */ u2("em", { children: m5[2] }, k5++));
-      else if (m5[5] != null) out.push(/* @__PURE__ */ u2("s", { children: m5[5] }, k5++));
-      else out.push(m5[3]);
-      last = at2 + m5[0].length;
-    }
-    if (last < t47.length) out.push(t47.slice(last));
-    return out;
+  var WORD = "[\\p{L}\\p{N}_]";
+  var isWord = (c5) => c5 != null && new RegExp(`^${WORD}$`, "u").test(c5);
+  var isSpace = (c5) => c5 != null && /^\s$/.test(c5);
+  function expSpans(s5) {
+    const out = [];
+    const run = (lo2, hi2, bold, italic, strike, depth) => {
+      let buf = "";
+      const failed = {};
+      const flush = () => {
+        if (buf) {
+          out.push([buf, bold, italic, strike, false]);
+          buf = "";
+        }
+      };
+      const span = (a5, b5, m5) => {
+        flush();
+        if (depth < 5) run(a5, b5, m5.bold || bold, m5.italic || italic, m5.strike || strike, depth + 1);
+        else out.push([s5.slice(a5, b5), bold, italic, strike, false]);
+      };
+      const close = (kind, start) => {
+        if (kind in failed && start >= failed[kind]) return -1;
+        let q5 = -1;
+        if (kind === "**" || kind === "~~" || kind === "***") {
+          q5 = s5.indexOf(kind, start);
+          if (q5 + kind.length > hi2) q5 = -1;
+        } else for (let k5 = start; k5 < hi2; k5++) {
+          if (s5[k5] !== (kind === "*" ? "*" : "_")) continue;
+          const prev = s5[k5 - 1], next = k5 + 1 < hi2 ? s5[k5 + 1] : void 0;
+          if (kind === "*" ? !isSpace(prev) && prev !== "*" && !isWord(next) && next !== "*" : !isSpace(prev) && !isWord(next)) {
+            q5 = k5;
+            break;
+          }
+        }
+        if (q5 < 0) failed[kind] = start;
+        return q5;
+      };
+      let i5 = lo2;
+      while (i5 < hi2) {
+        let p6 = -1;
+        for (let k5 = i5; k5 < hi2; k5++) if ("*_~`".includes(s5[k5])) {
+          p6 = k5;
+          break;
+        }
+        if (p6 < 0) {
+          buf += s5.slice(i5, hi2);
+          break;
+        }
+        const c5 = s5[p6];
+        buf += s5.slice(i5, p6);
+        i5 = p6 + 1;
+        if (c5 === "`") {
+          const q5 = s5.indexOf("`", p6 + 2);
+          if (q5 > 0 && q5 < hi2) {
+            flush();
+            out.push([s5.slice(p6 + 1, q5), bold, italic, strike, true]);
+            i5 = q5 + 1;
+            continue;
+          }
+        } else if (c5 === "*") {
+          if (s5.startsWith("***", p6)) {
+            const q5 = close("***", p6 + 4);
+            if (q5 > 0) {
+              span(p6 + 3, q5, { bold: true, italic: true });
+              i5 = q5 + 3;
+              continue;
+            }
+          }
+          if (s5.startsWith("**", p6)) {
+            const q5 = close("**", p6 + 3);
+            if (q5 > 0) {
+              span(p6 + 2, q5, { bold: true });
+              i5 = q5 + 2;
+            } else {
+              buf += "**";
+              i5 = p6 + 2;
+            }
+            continue;
+          }
+          if ((p6 === 0 || !(isWord(s5[p6 - 1]) || s5[p6 - 1] === "*")) && p6 + 1 < hi2 && !isSpace(s5[p6 + 1]) && s5[p6 + 1] !== "*") {
+            const q5 = close("*", p6 + 2);
+            if (q5 > 0) {
+              span(p6 + 1, q5, { italic: true });
+              i5 = q5 + 1;
+              continue;
+            }
+          }
+        } else if (c5 === "_") {
+          if ((p6 === 0 || !isWord(s5[p6 - 1])) && p6 + 1 < hi2 && !isSpace(s5[p6 + 1])) {
+            const q5 = close("_", p6 + 2);
+            if (q5 > 0) {
+              span(p6 + 1, q5, { italic: true });
+              i5 = q5 + 1;
+              continue;
+            }
+          }
+        } else if (c5 === "~" && s5.startsWith("~~", p6)) {
+          const q5 = close("~~", p6 + 3);
+          if (q5 > 0) {
+            span(p6 + 2, q5, { strike: true });
+            i5 = q5 + 2;
+          } else {
+            buf += "~~";
+            i5 = p6 + 2;
+          }
+          continue;
+        }
+        buf += c5;
+      }
+      flush();
+    };
+    run(0, s5.length, false, false, false, 0);
+    return out.filter((r4) => r4[0]);
   }
-  function mdNodes(text) {
-    const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n"), out = [];
-    let para = (
-      /** @type {string[]} */
-      []
-    ), list = (
-      /** @type {{ordered: boolean, items: string[]}|null} */
-      null
-    ), quote = (
-      /** @type {string[]} */
-      []
-    ), k5 = 0;
-    const flushPara = () => {
-      if (para.length) out.push(/* @__PURE__ */ u2("p", { children: inline(para.join(" ")) }, k5++));
-      if (quote.length) out.push(/* @__PURE__ */ u2("blockquote", { children: /* @__PURE__ */ u2("p", { children: inline(quote.join(" ")) }) }, k5++));
-      para = [];
-      quote = [];
-    };
-    const flushList = () => {
-      if (!list) return;
-      const li2 = list.items.map((x5, i5) => /* @__PURE__ */ u2("li", { children: inline(x5) }, i5));
-      out.push(list.ordered ? /* @__PURE__ */ u2("ol", { children: li2 }, k5++) : /* @__PURE__ */ u2("ul", { children: li2 }, k5++));
-      list = null;
-    };
-    for (const raw2 of lines) {
-      const b5 = /^\s*(?:[-*]\s+)(.*)$/.exec(raw2), n4 = /^\s*\d+[.)]\s+(.*)$/.exec(raw2), h5 = /^#{1,6}\s+(.*)$/.exec(raw2), q5 = /^\s*>\s?(.*)$/.exec(raw2);
-      if (q5) {
-        flushPara();
-        flushList();
-        if (q5[1].trim()) quote.push(q5[1].trim());
-      } else if (b5 || n4) {
-        flushPara();
-        const ordered = !!n4;
-        if (list && list.ordered !== ordered) flushList();
-        if (!list) list = { ordered, items: [] };
-        list.items.push(
-          /** @type {RegExpExecArray} */
-          (b5 || n4)[1]
-        );
-      } else if (h5) {
-        flushPara();
-        flushList();
-        out.push(/* @__PURE__ */ u2("h3", { children: inline(h5[1]) }, k5++));
-      } else if (!raw2.trim()) {
-        flushPara();
-        flushList();
-      } else {
-        flushList();
-        if (quote.length) flushPara();
-        para.push(raw2.trim());
+  function inline(t47) {
+    return expSpans(String(t47 || "")).map(([text, bold, italic, strike, code]) => {
+      let x5 = code ? text : text.replace(/[*`]|(?<![\p{L}\p{N}_])_|_(?![\p{L}\p{N}_])/gu, "");
+      if (italic) x5 = /* @__PURE__ */ u2("em", { children: x5 });
+      if (strike) x5 = /* @__PURE__ */ u2("s", { children: x5 });
+      if (bold) x5 = /* @__PURE__ */ u2("strong", { children: x5 });
+      return x5;
+    });
+  }
+  function expLine(line) {
+    const kinds = [["q", /^\s*>\s?(.*)$/], ["ul", /^\s*[-*•]\s+(.*)$/], ["ol", /^\s*\d+[.)]\s+(.*)$/], ["head", /^\s*#+\s*(.*)$/]];
+    for (const [kind, re2] of kinds) {
+      const m5 = re2.exec(line);
+      if (m5) {
+        const text = m5[1].trim();
+        return [kind, kind === "ul" ? text.replace(/^\[([ xX])\](?:\s+|$)/, (all, x5) => (/[xX]/.test(x5) ? "☑" : "☐") + (all.trim() !== all ? " " : "")) : text];
       }
     }
-    flushPara();
-    flushList();
-    return out;
+    return ["text", line.trim()];
+  }
+  function expBlocks(md2, depth = 0) {
+    const t47 = String(md2 || "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+    const blocks2 = [];
+    let cur = (
+      /** @type {string|null} */
+      null
+    ), items2 = (
+      /** @type {string[]} */
+      []
+    );
+    const flush = () => {
+      if (cur === "q") {
+        if (depth < 2 && items2.some((x5) => ["ul", "ol", "head"].includes(expLine(x5)[0]))) blocks2.push({ kind: "qb", blocks: expBlocks(items2.join("\n"), depth + 1) });
+        else if (items2.some((x5) => x5)) blocks2.push({ kind: "q", text: items2.filter((x5) => x5).join(" ") });
+      } else if (cur && items2.length) blocks2.push(cur === "p" ? { kind: "p", text: items2.join(" ") } : { kind: cur, items: items2 });
+      cur = null;
+      items2 = [];
+    };
+    for (const line of lines(t47)) {
+      const [kind, text] = expLine(line);
+      if (!line.trim()) flush();
+      else if (kind === "head") {
+        flush();
+        blocks2.push({ kind: "p", text: `**${text.replace(/^\*+|\*+$/g, "")}**` });
+      } else if (kind === "text" && (cur === "ul" || cur === "ol") && /^\s/.test(line)) items2[items2.length - 1] += " " + text;
+      else {
+        const want = kind === "text" ? "p" : kind;
+        if (want !== cur) {
+          flush();
+          cur = want;
+        }
+        if (text || cur === "ul" || cur === "ol" || cur === "q") items2.push(text);
+      }
+    }
+    flush();
+    return blocks2;
+  }
+  function lines(t47) {
+    let x5 = t47.replace(/\r\n/g, "\n");
+    for (const sep of ["\r", "\v", "\f", "", "", "", "", "\u2028", "\u2029"]) x5 = x5.split(sep).join("\n");
+    return x5.split("\n");
+  }
+  function expNodes(blocks2) {
+    return blocks2.map((b5, k5) => b5.kind === "p" ? /* @__PURE__ */ u2("p", { children: inline(b5.text || "") }, k5) : b5.kind === "q" ? /* @__PURE__ */ u2("blockquote", { children: /* @__PURE__ */ u2("p", { children: inline(b5.text || "") }) }, k5) : b5.kind === "qb" ? /* @__PURE__ */ u2("blockquote", { children: expNodes(b5.blocks || []) }, k5) : b5.kind === "ol" ? /* @__PURE__ */ u2("ol", { children: (b5.items || []).map((x5, i5) => /* @__PURE__ */ u2("li", { children: inline(x5) }, i5)) }, k5) : /* @__PURE__ */ u2("ul", { children: (b5.items || []).map((x5, i5) => /* @__PURE__ */ u2("li", { children: inline(x5) }, i5)) }, k5));
+  }
+  function mdNodes(text) {
+    return expNodes(expBlocks(text));
   }
   function paintChecks(h5, checks) {
     const ed3 = h5.editor;
@@ -63505,7 +63616,7 @@ ${d5.text}`);
     const page = w6.closest(".page");
     if (!page) return 0;
     let n4 = 0;
-    for (const el2 of page.querySelectorAll("input, button, a[href], td, th")) {
+    for (const el2 of page.querySelectorAll("input, button, a[href], td, th, h3")) {
       if (w6.contains(el2) || bar.contains(el2) || el2.closest(".sheet-handle")) continue;
       const r4 = el2.getBoundingClientRect();
       if (r4.width < 2 || r4.height < 2 || getComputedStyle(el2).visibility === "hidden") continue;
@@ -66219,11 +66330,11 @@ ${d5.text}`);
     const close = () => {
       crDialog.value = false;
     };
-    const lines = [];
+    const lines2 = [];
     if (lo2) {
       for (const g5 of Object.keys(GROUP_LABEL)) {
         const its = lo2.items.filter((x5) => x5.group === g5 && x5.kind !== "other");
-        if (its.length) lines.push(/* @__PURE__ */ u2("li", { "data-leftgroup": g5, children: [
+        if (its.length) lines2.push(/* @__PURE__ */ u2("li", { "data-leftgroup": g5, children: [
           /* @__PURE__ */ u2("b", { children: [
             its.length,
             " ",
@@ -66235,19 +66346,19 @@ ${d5.text}`);
           "."
         ] }, g5));
       }
-      if (lo2.sections.length) lines.push(/* @__PURE__ */ u2("li", { children: [
+      if (lo2.sections.length) lines2.push(/* @__PURE__ */ u2("li", { children: [
         /* @__PURE__ */ u2("b", { children: "Hidden sections:" }),
         " ",
         lo2.sections.map((s5) => s5.heading).join(", "),
         "."
       ] }, "sec"));
-      lines.push(/* @__PURE__ */ u2("li", { children: [
+      lines2.push(/* @__PURE__ */ u2("li", { children: [
         /* @__PURE__ */ u2("b", { children: "Internal notes and sources:" }),
         " creaite checks, source chips",
         lo2.tags ? ` (${lo2.tags} here)` : "",
         ", item IDs and the page's editing data."
       ] }, "notes"));
-      if (lo2.logos.length) lines.push(/* @__PURE__ */ u2("li", { children: [
+      if (lo2.logos.length) lines2.push(/* @__PURE__ */ u2("li", { children: [
         /* @__PURE__ */ u2("b", { children: [
           lo2.logos.length > 1 ? "Logos" : "A logo",
           ":"
@@ -66256,7 +66367,7 @@ ${d5.text}`);
         lo2.logos.join(" and "),
         ", unticked for this client."
       ] }, "logo"));
-      if (lo2.health) lines.push(/* @__PURE__ */ u2("li", { children: [
+      if (lo2.health) lines2.push(/* @__PURE__ */ u2("li", { children: [
         /* @__PURE__ */ u2("b", { children: "Health:" }),
         " shown as ",
         lo2.health.client,
@@ -66273,7 +66384,7 @@ ${d5.text}`);
         "'s report"
       ] }),
       !c5 ? /* @__PURE__ */ u2("p", { class: "sub", children: "Checking…" }) : !c5.ok || !lo2 ? /* @__PURE__ */ u2("p", { class: "mnerr", role: "alert", children: c5.message || "The check didn't run." }) : /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("ul", { class: "crleft", "data-crleft-list": true, children: lines }),
+        /* @__PURE__ */ u2("ul", { class: "crleft", "data-crleft-list": true, children: lines2 }),
         lo2.findings.length ? /* @__PURE__ */ u2("div", { class: "crbad", role: "alert", "data-crfindings": true, children: [
           /* @__PURE__ */ u2("b", { children: "Possible internal content. Fix it before exporting:" }),
           /* @__PURE__ */ u2("ul", { children: lo2.findings.map((f5, i5) => /* @__PURE__ */ u2("li", { children: f5 }, i5)) })
@@ -69545,7 +69656,7 @@ ${d5.text}`);
     if (!re2.test(md2)) return md2.replace(/\s*$/, "\n\n## Current state\n\n" + text.trim() + "\n");
     const placed2 = new Set(text.split("\n").map((l6) => (l6.match(MD_IMG) || [])[2]).filter(Boolean));
     return md2.replace(re2, (m5, h5, body2) => {
-      const lines = body2.split("\n"), g5 = lines.filter((l6) => /^_.*_$/.test(l6.trim())), im2 = lines.filter((l6) => l6.trim().startsWith("![") && !placed2.has((l6.match(MD_IMG) || [])[2]) && !dropped.includes((l6.match(MD_IMG) || [])[2]));
+      const lines2 = body2.split("\n"), g5 = lines2.filter((l6) => /^_.*_$/.test(l6.trim())), im2 = lines2.filter((l6) => l6.trim().startsWith("![") && !placed2.has((l6.match(MD_IMG) || [])[2]) && !dropped.includes((l6.match(MD_IMG) || [])[2]));
       return h5 + "\n" + (g5.length ? g5.join("\n") + "\n\n" : "") + text.trim() + "\n" + (im2.length ? "\n" + im2.join("\n") + "\n" : "") + "\n";
     });
   }
