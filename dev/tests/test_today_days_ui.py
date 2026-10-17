@@ -256,6 +256,8 @@ class DayLine(TodayFixture):
         b.click('#todayDate [data-tab="2026-10-16"]')
         self.assertEqual(self.popup(0)["btns"], ["Open the prep page"])
         b.eval(f"SA().prep_pages={{...(SA().prep_pages||{{}}),{json.dumps(fx.FRIDAY)}:'projects/ABC Example Programme/agendas/x.html'}}; renderDay(); document.activeElement.blur()")
+        b.key("Escape")                                                 # the first popup must be gone before the second is read: on a slow runner the wait in popup() passed on the stale one
+        b.wait("!document.querySelector('#dayMeets .dmpop')")
         got = self.popup(0)
         self.assertEqual(got["btns"], ["Open the prep page", "Open the file"])
         self.assertIn("Agenda saved", got["text"])
