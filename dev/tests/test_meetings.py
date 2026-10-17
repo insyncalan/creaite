@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import Vault  # noqa: E402
+from test_dashboard import today as pinned_today  # noqa: E402
 
 NOW = "2026-10-08 09:30"          # a Thursday: the window starts Monday 05-10-2026
 
@@ -104,7 +105,7 @@ def week_calendar(v, with_ids=True, today=None):
     """A calendar for one week: Monday, today, the day before Monday and the day after today. `today` defaults to the
     real date (the build then uses the real clock); a test that pins the clock with CREAITE_NOW passes the same day."""
     from datetime import date, timedelta
-    today = today or date.today()
+    today = today or pinned_today()
     mon = today - timedelta(days=today.weekday())
     d = lambda x: x.isoformat()  # noqa: E731
     ev = lambda i, **k: ({"id": f"ev-{i}"} if with_ids else {}) | k  # noqa: E731

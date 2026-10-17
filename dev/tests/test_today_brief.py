@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import TEST_PALETTES, TEST_PALETTES_JS  # noqa: E402
+from test_dashboard import today as pinned_today  # noqa: E402
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -330,9 +331,9 @@ class WeekAheadDataTests(unittest.TestCase):
         import json
         data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', html, re.S).group(1))
         w = data["week"]
-        self.assertEqual(w["from"], date.today().isoformat())
+        self.assertEqual(w["from"], pinned_today().isoformat())
         self.assertEqual(date.fromisoformat(w["to"]).weekday(), 0)                         # BL-319: next Monday
-        self.assertEqual(w["to"], bd.week_window(date.today())[-1].isoformat())
+        self.assertEqual(w["to"], bd.week_window(pinned_today())[-1].isoformat())
 
 
 @unittest.skipUnless(CHROME.exists(), "Google Chrome not installed")

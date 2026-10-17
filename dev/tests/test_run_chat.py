@@ -30,10 +30,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
+from test_dashboard import now as pinned_clock, today as pinned_today  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
-TODAY = date.today().isoformat()
+TODAY = pinned_today().isoformat()
 
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys, time
@@ -111,7 +112,7 @@ def start(name):
     if name == "load":
         return L.Handler.transcript_run(h, {"id": "t1"}, "load")
     if name == "sweep":
-        return L.RUNS[L.start_catchup(datetime.now())["run"]["id"]]
+        return L.RUNS[L.start_catchup(pinned_clock())["run"]["id"]]
     raise SystemExit(name)
 
 out = {}

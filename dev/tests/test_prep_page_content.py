@@ -19,12 +19,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 from live_browser import LiveBrowserCase  # noqa: E402
+from test_dashboard import today as pinned_today  # noqa: E402
 from test_decisions_prep import prep_world  # noqa: E402
 from test_tracker import ABC, Vault, action  # noqa: E402
 import build_dashboard as bd  # noqa: E402
 import prep_page  # noqa: E402
 
-TODAY = date.today()
+TODAY = pinned_today()
 
 
 def d(n):

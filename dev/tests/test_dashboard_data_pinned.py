@@ -30,6 +30,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+os.environ.pop("CREAITE_NOW", None)       # #178: this file pins its own world (FIXED, NOW); an outer pin would move populate()'s dates off it
 import test_dashboard  # noqa: E402
 from test_tracker import ABC, Vault, action, make_draft  # noqa: E402
 

@@ -17,6 +17,7 @@ one deadline said as "by Friday"), a decision and a risk. The view opens from Re
 Run: python3 dev/tests/test_minutes_editor.py      (Chrome tier; skipped without Chrome)
 """
 import json
+from datetime import datetime
 import os
 import subprocess
 import sys
@@ -29,7 +30,16 @@ from test_dashboard import d, populate  # noqa: E402
 from test_tracker import ABC, Vault  # noqa: E402
 
 TITLE = "[ABC] Steering committee"
-DAY = d(-1)
+def _meeting_day():
+    """#178: the latest Tuesday to Thursday up to yesterday, from the pinned day. On a Friday "by Friday" and "next week" can
+    name the same day (no check would show), and so can a Sunday or Monday; so the minutes day is never a Friday to Monday."""
+    n = -1
+    while datetime.fromisoformat(d(n)).weekday() not in (1, 2, 3):
+        n -= 1
+    return d(n)
+
+
+DAY = _meeting_day()
 TURNS = [(0, 1, "Alan Carter", "Morning all, first the SOW."), (0, 20, "Omar Ali", "I'll send the revised SOW next week."),
          (1, 5, "Jane Doe", "We agreed the pilot stays on the lighthouse site."),
          (2, 10, "Omar Ali", "Data access is still late, that's the risk."),

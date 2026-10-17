@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import Vault  # noqa: E402
+from test_dashboard import today as pinned_today  # noqa: E402
 
 NOW = "2026-10-08 09:30"
 
@@ -355,7 +356,7 @@ class VipPageTests(unittest.TestCase):
         from test_insight import chrome
         cls.v = v = vip_vault()
         from datetime import date
-        record(v, [{"kind": "mail", "from": MIA2, "subject": "Quick word", "sent": f"{date.today().isoformat()} 07:12",
+        record(v, [{"kind": "mail", "from": MIA2, "subject": "Quick word", "sent": f"{pinned_today().isoformat()} 07:12",
                     "link": "https://outlook.office365.com/owa/?ItemID=m1", "gist": "Asks to confirm the go-live date."}], "start-up")
         f = v.root / "system/staging/drafts/sweep.json"
         f.write_text(json.dumps({"items": [
@@ -486,7 +487,7 @@ class PrepTests(unittest.TestCase):
         from test_insight import chrome
         cls.v = v = Vault()
         populate(v)
-        today, tomorrow = date.today(), date.today() + timedelta(days=1)
+        today, tomorrow = pinned_today(), pinned_today() + timedelta(days=1)
         cls.today, cls.tomorrow = today.isoformat(), tomorrow
         f = v.root / "system/staging/drafts/calendar.json"
         f.parent.mkdir(parents=True, exist_ok=True)
@@ -623,7 +624,7 @@ class PrepPageTests(unittest.TestCase):
         from test_live_server import free_port
         cls.v = v = Vault()
         populate(v)
-        cls.day = date.today().isoformat()
+        cls.day = pinned_today().isoformat()
         (v.root / "system/staging/calendar.json").write_text(json.dumps({"fetched": f"{cls.day} 07:00", "days": {cls.day: [
             {"id": "t1", "start": "09:00", "end": "10:00", "title": "ABC weekly", "where": "Teams", "teams": True,
              "organiser": "Jane Doe", "all_day": False, "private": False, "sensitivity": "normal",
@@ -760,7 +761,7 @@ class PrepPageStaticTests(unittest.TestCase):
         v = Vault()
         try:
             populate(v)
-            day = date.today().isoformat()
+            day = pinned_today().isoformat()
             (v.root / "system/staging/calendar.json").write_text(json.dumps({"fetched": f"{day} 07:00", "days": {day: [
                 {"id": "t1", "start": "09:00", "end": "10:00", "title": "ABC weekly", "all_day": False, "private": False}]}}))
             run(v, "build_dashboard.py", now=f"{day} 08:00")

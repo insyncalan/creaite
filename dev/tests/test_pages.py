@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from live_browser import TEST_PALETTES, TEST_PALETTES_JS, LiveBrowserCase  # noqa: E402
+from test_dashboard import today as pinned_today  # noqa: E402
 from test_dashboard import CHROME, d, png, populate  # noqa: E402
 from test_onedrive_projects import OneDriveCase, touch  # noqa: E402
 from test_insight import chrome, log, py  # noqa: E402
@@ -1485,7 +1486,7 @@ class DependencyWarningTests(unittest.TestCase):
             cfg.write_text(json.dumps(data))
 
     def test_it_follows_the_dates(self):
-        later = (date.today() + timedelta(days=12)).isoformat() + " 09:00"                              # UAT start has passed its forecast by then
+        later = (pinned_today() + timedelta(days=12)).isoformat() + " 09:00"                              # UAT start has passed its forecast by then
         self.assertIn(self.ids["Data extract from the client"], {w["id"] for w in self.warnings(later)})
         self.assertEqual(len(self.warnings()), 2)
 
