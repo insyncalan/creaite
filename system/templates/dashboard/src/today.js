@@ -15,7 +15,7 @@ import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
 import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
-import { CARD_CLOSE, CARD_OPEN } from "./core/hovertime.js";
+import { CARD_CLOSE, CARD_OPEN } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";

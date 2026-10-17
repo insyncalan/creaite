@@ -4489,6 +4489,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     bootCountLinks: () => bootCountLinks,
     bootData: () => bootData,
     bootDateWords: () => bootDateWords,
+    bootDayRoll: () => bootDayRoll,
     bootDebugLog: () => bootDebugLog,
     bootDevTag: () => bootDevTag,
     bootDialogs: () => bootDialogs,
@@ -4822,6 +4823,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     dayList: () => dayList,
     dayPrep: () => dayPrep,
     dayProcess: () => dayProcess,
+    dayRollBlocked: () => dayRollBlocked,
     dayShape: () => dayShape,
     dayShown: () => dayShown,
     daySlide: () => daySlide,
@@ -5961,6 +5963,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     rjWith: () => rjWith,
     rkClamp: () => rkClamp,
     rkText: () => rkText,
+    rollDay: () => rollDay,
+    rollWeekStart: () => rollWeekStart,
     routineKid: () => routineKid,
     row: () => row,
     rowCounts: () => rowCounts,
@@ -6101,6 +6105,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     setSearchSections: () => setSearchSections,
     setSplit: () => setSplit,
     setSynced: () => setSynced,
+    setToday: () => setToday,
     setUnmount: () => setUnmount,
     setupShown: () => setupShown,
     setupSteps: () => setupSteps,
@@ -6941,10 +6946,19 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   // core/page.js
   var D = JSON.parse(document.getElementById("data").textContent);
   shared.LOADING = true;
-  var TODAY = (() => {
+  var dayNow = () => {
     const d5 = /* @__PURE__ */ new Date(), z4 = (n4) => String(n4).padStart(2, "0");
     return `${d5.getFullYear()}-${z4(d5.getMonth() + 1)}-${z4(d5.getDate())}`;
-  })(), DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
+  };
+  var TODAY = dayNow();
+  var setToday = () => {
+    const n4 = dayNow();
+    if (n4 === TODAY) return null;
+    const was = TODAY;
+    TODAY = n4;
+    return was;
+  };
+  var DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
   var fd = (iso2) => iso2 && DATE.test(iso2.slice(0, 10)) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}${iso2.length > 10 ? iso2.slice(10) : ""}` : iso2 || "";
   var toIso = (dd2) => DDATE.test(dd2) ? `${dd2.slice(6, 10)}-${dd2.slice(3, 5)}-${dd2.slice(0, 2)}` : dd2;
   function readDate(text, today = TODAY) {
@@ -67906,11 +67920,15 @@ ${d5.text}`);
   var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
   var LASTVISIT = store.get("creaite-lastvisit", D.data_at);
   var SWEPT = D.last_sweep || "never";
-  var WEEKSTART = (() => {
+  var weekStart = () => {
     const d5 = new Date(TODAY);
     d5.setDate(d5.getDate() - (d5.getDay() + 6) % 7);
     return d5.toISOString().slice(0, 10);
-  })();
+  };
+  var WEEKSTART = weekStart();
+  var rollWeekStart = () => {
+    WEEKSTART = weekStart();
+  };
   var PEOPLE = D.people || { added: [], hidden: [] }, REGD = D.people_register || { exists: false, path: "projects/_portfolio/people-register.md", people: [], template: "" }, WSL = store.get("creaite-ws", D.workstreams || { added: [], hidden: [] });
   shared.REG = REGD.people.map((p6) => ({ ...p6, extra: {} }));
   var saveWs = () => {
@@ -67950,6 +67968,44 @@ ${d5.text}`);
       });
       shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
     })();
+  }
+
+  // core/dayroll.js
+  var warnedFor = "";
+  var rolling = false;
+  var dayRollBlocked = () => !!(shared.EDITING && shared.CUR || shared.CURED && shared.CURED.dirty || pkNewPending() || PK.dirty || noteDirty());
+  var dayOf = () => {
+    const d5 = /* @__PURE__ */ new Date(), z4 = (n4) => String(n4).padStart(2, "0");
+    return `${d5.getFullYear()}-${z4(d5.getMonth() + 1)}-${z4(d5.getDate())}`;
+  };
+  async function rollDay() {
+    if (rolling || dayOf() === TODAY) return "same";
+    if (dayRollBlocked()) {
+      const day = dayOf();
+      if (warnedFor !== day) {
+        warnedFor = day;
+        snack("It's a new day: reload");
+      }
+      return "blocked";
+    }
+    rolling = true;
+    try {
+      const was = setToday();
+      if (!was) return "same";
+      rollWeekStart();
+      if (selDay.value === was) selDay.value = "";
+      if (SERVED) await reloadData();
+      else refreshAll();
+      return "rolled";
+    } finally {
+      rolling = false;
+    }
+  }
+  function bootDayRoll() {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") rollDay();
+    });
+    setInterval(rollDay, 6e4);
   }
 
   // core/globals.json
@@ -68181,6 +68237,7 @@ ${d5.text}`);
         "cxReview",
         "dateHint",
         "dayList",
+        "dayShown",
         "days",
         "dcIcon",
         "deCopyText",
@@ -68718,6 +68775,11 @@ ${d5.text}`);
         put(n4, { get: () => page[n4], set });
       }
     }
+    for (const n4 of ["TODAY", "WEEKSTART"]) {
+      seams.add(n4);
+      put(n4, { get: () => page[n4], set: () => {
+      } });
+    }
     const skip = /* @__PURE__ */ new Set([...globals_default.names.live, ...globals_default.names.not_on_window, ...seams]);
     for (const n4 of globals_default.names.tests) if (n4 in page && !skip.has(n4)) put(n4, { value: page[n4], writable: true });
   }
@@ -68895,6 +68957,7 @@ ${d5.text}`);
   bootReview0209();
   bootReview0315();
   bootNotes();
+  bootDayRoll();
   bootPageRefresh();
   return __toCommonJS(main_exports);
 })();
