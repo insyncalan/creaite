@@ -263,13 +263,14 @@ def behaviour_driver(case, screens):
     `screens` (behaviour_screens) in `case`'s browser. Its methods are that test's own, unchanged; only the screens, going to
     them and the Archive prompt's project (FAL, not the sample's ABC) differ."""
     import test_shared_behaviour as tsb
+    import test_shared_undo as tsu      # #89: the Undo half moved to its own file
     import test_ui_sweep as us
 
     class Drv(tsb.Driver):
         opened, arrows, escape, tab_closes, drive, cmdk = (tsb.SharedBehaviour.opened, tsb.SharedBehaviour.arrows,
                                                           tsb.SharedBehaviour.escape, tsb.SharedBehaviour.tab_closes,
                                                           tsb.SharedBehaviour.drive, tsb.SharedBehaviour.cmdk)
-        pick = tsb.SharedUndo.pick
+        pick = tsu.SharedUndo.pick
 
         def __init__(self):
             self.b, self.seen = case.b, []
