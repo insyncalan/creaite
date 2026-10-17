@@ -3,6 +3,7 @@
   "sweep": {
     "due_from": "07:00",
     "first_run_lookback_days": 14,
+    "max_lookback_days": 3,
     "sources": {
       "inbox": true,
       "sent_items": true,

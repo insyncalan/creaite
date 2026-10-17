@@ -2,7 +2,8 @@
 
 Commands:
   due                      is the daily sweep due? (last success before today's sweep.due_from, and it's now after it)
-  window [--days N]        the window to search: since the last successful sweep, or the first-run look-back, or N days
+  window [--days N]        the window to search: since the last successful sweep (never further back than
+                           sweep.max_lookback_days, 3; a "capped" note says so), or the first-run look-back, or N days (no cap)
   lock | unlock            one sweep at a time (system/staging/sweep.lock; older than 30 minutes counts as stale). BL-328: the
                            lock records the live server's run (CREAITE_RUN_ID), so the server releases it when that run ends
   unlock --if-idle         release the lock only when no sweep holds it (Settings › Health's Release)
@@ -19,9 +20,10 @@ Commands:
                            sent, text, attachments}]}), as JSON with a hint (Looks done, Maybe done, Not done) and reasons:
                            plain code, for cx-sweep to judge. Read-only; the input file is removed once read
   calendar <calendar.json> save Alan's meetings for the dashboard's Today day view and the Inbox's Meetings
-                           (system/staging/calendar.json); days before the window start are dropped
-  calendar-window          the days the calendar should cover, as JSON: from the start of settings.json
-                           inbox.meetings_from ("monday" = Monday of this week, or a number of days back) to 7 days ahead
+                           (system/staging/calendar.json); days before the window start are dropped; past days already held are kept
+  calendar-window          the days a sweep reads from Outlook, as JSON: today to 7 days ahead (#146; past days already held are
+                           kept, not read again); keep_from is the start of the Calendar import window (settings.json
+                           inbox.meetings_from: "monday" = Monday of this week, or a number of days back)
   transcripts todo|record <facts.json>|show
                            BL-42 phase 3: which meetings in the Calendar import window to look up for a transcript, and keep what
                            was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py
@@ -116,21 +118,40 @@ def due_info():
             "last": last.strftime("%Y-%m-%d %H:%M") if last else None}
 
 
+def lookback_cap(s):
+    """sweep.max_lookback_days (#146): the furthest back a since-the-last-sweep window reaches; default 3, at least 1."""
+    try:
+        return max(1, int(s.get("max_lookback_days", 3)))
+    except (TypeError, ValueError):
+        return 3
+
+
 def window(days=None):
-    """The window to search: the last `days` days, else since the last sweep, else the first-run look-back."""
+    """The window to search: the last `days` days (which overrides the cap), else since the last sweep but never further back
+    than sweep.max_lookback_days (#146), else the first-run look-back. `capped` names the cap when it bites."""
     t, last = now(), last_sweep()
     s = paths.load_settings().get("sweep", {})
+    cap, capped = lookback_cap(s), None
     if days:
         start, kind = t - timedelta(days=days), f"last {days} days"
     elif last:
         start, kind = last, "since the last sweep"
+        if t - timedelta(days=cap) > last:
+            start, kind = t - timedelta(days=cap), f"last {cap} days (capped)"
+            skipped = max(0, (start.date() - last.date()).days)
+            capped = {"days": cap, "not_read_days": skipped,
+                      "note": f"Read the last {cap} days; {skipped} older day{'s' if skipped != 1 else ''} not read. "
+                              f"Say 'sweep the last {max(7, cap + skipped)} days' to include {'them' if skipped != 1 else 'it'}."}
     else:
         start, kind = t - timedelta(days=s.get("first_run_lookback_days", 14)), "first run"
     debuglog.info("sweep", f"window {start:%Y-%m-%d %H:%M} to {t:%Y-%m-%d %H:%M} ({kind})")
-    return {"start": start.strftime("%Y-%m-%d %H:%M"), "end": t.strftime("%Y-%m-%d %H:%M"), "kind": kind,
-            "advances_timestamp": not days, "sources": s.get("sources", {}),
-            "show_possible_matches": s.get("show_possible_matches", True),
-            "ignore": [r for r in ignore_rules() if r.get("on", True)]}                 # BL-97: the rules in force
+    out = {"start": start.strftime("%Y-%m-%d %H:%M"), "end": t.strftime("%Y-%m-%d %H:%M"), "kind": kind,
+           "advances_timestamp": not days, "sources": s.get("sources", {}),
+           "show_possible_matches": s.get("show_possible_matches", True),
+           "ignore": [r for r in ignore_rules() if r.get("on", True)]}                 # BL-97: the rules in force
+    if capped:
+        out["capped"] = capped
+    return out
 
 
 # ===== BL-328: the lock records the run that holds it, so it never outlives the sweep =====
@@ -580,6 +601,23 @@ def calendar_window(today=None):
     return start, today + timedelta(days=7)
 
 
+def calendar_fetch_from(today=None):
+    """First day a sweep asks Outlook for (#146): today, because a past meeting does not change. Earlier only when the saved
+    calendar has a gap: none saved yet (the whole window), or it was last fetched more than a week before today (its
+    seven days ahead no longer reach today). Never before the window start. calendar() keeps past days already saved."""
+    today = today or now().date()
+    start = calendar_window(today)[0]
+    try:
+        data = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return start
+    try:
+        held_to = datetime.strptime(str((data or {}).get("fetched") or "")[:10], "%Y-%m-%d").date() + timedelta(days=7)
+    except (ValueError, AttributeError):
+        return today                       # a calendar with no fetch date: nothing to say about a gap
+    return min(today, max(start, held_to + timedelta(days=1)))
+
+
 def calendar_span(today=None):
     """(first day, last day) the saved calendar holds now, as dates, or None without one (BL-293): calendar_window(), its last
     day cut to the fetch's own seven days ahead when the calendar was saved on an earlier day."""
@@ -666,6 +704,25 @@ def localise(spec_days, bad):
     return out
 
 
+def keep_held_past_days(days, start_day, today_day):
+    """#146: the past days (inside the window) the saved calendar already holds stay as they are; they win over the same day
+    in this save, because past meetings don't change and a sweep no longer reads them."""
+    try:
+        held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+    except (OSError, ValueError, AttributeError):
+        held = {}
+    for day, rows in held.items():
+        if start_day <= str(day) < today_day and isinstance(rows, list):
+            days[day] = rows
+    return dict(sorted(days.items()))
+
+
+def organiser_of(ev):
+    """True when Alan organised the event, else the organiser's name (or False)."""
+    org = ev.get("organiser")
+    return (str(org).strip()[:80] or False) if isinstance(org, str) else bool(org)
+
+
 def calendar(spec_file):
     """Keep the day view's, the Inbox's and meeting prep's meetings: event ID, times, title, place, Teams or not, the
     organiser, and the invite's details for prep (BL-98, see invite_details). Ignored events (BL-97: private ones,
@@ -680,6 +737,8 @@ def calendar(spec_file):
     days, bad, ignored = {}, [], {}
     rules, vips = ignore_rules(), vip_addresses()                  # BL-97: ignored events are never saved
     start_day = calendar_window()[0].isoformat()
+    today_day = now().date().isoformat()
+    fetch_from = calendar_fetch_from().isoformat()       # before the save: the save moves the "fetched" stamp
     for day, events in sorted(localise(spec.get("days"), bad).items()):     # BL-107: local times, local dates
         if day < start_day:              # before the window (BL-42): not kept
             continue
@@ -696,8 +755,7 @@ def calendar(spec_file):
                 continue
             sens = str(ev.get("sensitivity") or "").lower()
             private = bool(ev.get("private")) or sens in ("private", "personal")
-            org = ev.get("organiser")
-            org = (str(org).strip()[:80] or False) if isinstance(org, str) else bool(org)   # True: Alan; else a name
+            org = organiser_of(ev)                          # True: Alan; else a name
             row = {"start": "" if all_day else start, "end": "" if all_day else end, "all_day": all_day,
                    "title": "Busy" if private else str(ev.get("title") or "Meeting")[:140],
                    "where": "" if private else str(ev.get("where") or "")[:80],
@@ -709,6 +767,7 @@ def calendar(spec_file):
                 row = {"id": str(ev["id"]).strip()[:512], **row}
             kept.append(row)
         days[day] = sorted(kept, key=lambda e: (not e["all_day"], e["start"]))
+    days = keep_held_past_days(days, start_day, today_day)
     paths.CALENDAR.write_text(json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days}, indent=1,
                                          ensure_ascii=False), encoding="utf-8")
     n = sum(len(v) for v in days.values())
@@ -716,7 +775,9 @@ def calendar(spec_file):
                   f"{len(bad)} with times that could not be read, {sum(ignored.values())} ignored")
     print(f"Calendar saved: {n} meeting{'s' if n != 1 else ''} over {len(days)} day{'s' if len(days) != 1 else ''}."
           + (f" Skipped (bad times): {'; '.join(bad)}." if bad else "")
-          + (f" {ignored_text(ignored)}." if ignored else ""))
+          + (f" {ignored_text(ignored)}." if ignored else "")
+          + (" Calendar from today (past days kept as saved)." if fetch_from >= today_day
+             else f" Calendar from {tracker.shown(fetch_from)} (filling a gap; past days kept as saved)."))
     tally_ignored(ignored)
     paths.consume_draft(spec_file)                                      # BL-118: the calendar is saved
     return 0
@@ -2073,8 +2134,8 @@ def main(argv):
     if a.cmd == "calendar":
         return calendar(a.spec)
     if a.cmd == "calendar-window":
-        first, last = calendar_window()
-        print(json.dumps({"from": first.isoformat(), "to": last.isoformat()}))
+        print(json.dumps({"from": calendar_fetch_from().isoformat(), "to": calendar_window()[1].isoformat(),
+                          "keep_from": calendar_window()[0].isoformat()}))
         return 0
     if a.cmd == "ignore":
         return ignore_cmd(a.spec)

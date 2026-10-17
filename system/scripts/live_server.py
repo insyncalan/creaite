@@ -7607,7 +7607,8 @@ RESULT_ROUTES = ("/api/apply", "/api/undo", "/api/review")                    # 
 BROWSER_LIMIT, BROWSER_WINDOW = 20, 60.0                                      # page errors accepted per minute
 BROWSER = {"since": 0.0, "n": 0, "dropped": 0}
 BROWSER_LOCK = threading.Lock()
-SAFE_SETTINGS = ("sweep.due_from", "sweep.first_run_lookback_days", "sweep.sources.", "sweep.show_possible_matches",
+SAFE_SETTINGS = ("sweep.due_from", "sweep.first_run_lookback_days", "sweep.max_lookback_days", "sweep.sources.",
+                 "sweep.show_possible_matches",
                  "vip.enabled", "vip.check_minutes", "vip.notify", "reminders.enabled", "reminders.weekly_report_",
                  "review.", "health.", "dashboard.", "backups.", "live_mode.", "assistant.", "defaults.",
                  "work.", "warnings.", "search.", "inbox.meetings_from",
