@@ -253,5 +253,40 @@ class Suggest(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
 
 
+    # ----- review fixes 2 (health-203-fix2-plain) -----
+    def uat(self):
+        return self.sql("SELECT id FROM milestones WHERE project='ABC' AND name LIKE 'UAT%'")[0]["id"]
+
+    def test_a_decisions_options_and_a_milestones_own_fields_keep_it_out(self):
+        self.sql("INSERT INTO decisions (id, project, decision, made_by, status, needed_by, options, reasoning, source) VALUES "
+                 "('ABC-D-090','ABC','Pick the vendor ZQXDEC','Jane Doe','Pending','2026-10-01','confidential: vendor A or B',"
+                 "'because','projects/ABC/minutes/m.md')")
+        self.assertNotIn("ZQXDEC", self.source_texts()[1])
+        for col, val in (("description", "confidential acquisition gate"), ("internal_note", "restricted"),
+                         ("source", "projects/ABC/documents/a.docx")):
+            self.sql(f"UPDATE milestones SET {col}=? WHERE id=?", val, self.uat())
+            self.assertNotIn("Milestone UAT start", self.source_texts()[0], col)
+            self.sql(f"UPDATE milestones SET {col}=? WHERE id=?", "plain" if col != "source" else "Alan (cx-edit)", self.uat())
+        self.assertIn("Milestone UAT start", self.source_texts()[0])
+
+    def test_a_confidential_milestone_name_is_not_in_the_criteria_line(self):
+        self.sql("UPDATE milestones SET name='Confidential merger close' WHERE id=?", self.uat())
+        texts, prompt = self.source_texts()
+        self.assertNotIn("Confidential merger", texts)
+        self.assertNotIn("Confidential merger", prompt)
+        self.assertEqual(self.result(self.ctx())["health"], "At risk")        # the health itself is unchanged
+
+    def test_archived_items_are_not_facts_and_do_not_drive_the_health(self):
+        for n in (61, 62):
+            self.overdue_action(n, description=f"Archived thing ZQXARCH{n}")
+        self.sql("UPDATE actions SET archived=1 WHERE description LIKE 'Archived thing%'")
+        self.sql("UPDATE milestones SET archived=1 WHERE id=?", self.uat())
+        self.sql("UPDATE raid SET archived=1")
+        texts, prompt = self.source_texts()
+        self.assertNotIn("ZQXARCH", prompt)
+        self.assertNotIn("UAT start", texts)
+        self.assertNotIn("criteria give", texts)                              # nothing live drives it any more except the escalation action
+
+
 if __name__ == "__main__":
     unittest.main()
