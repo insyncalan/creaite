@@ -118,18 +118,39 @@ class Queue(Case):
         n = len(READY) + self.n_files()
         self.assertEqual(self.label(), f"Process all ready ({n})")
         self.assertFalse(self.b.eval("document.getElementById('inAll').disabled"))
-        self.b.eval("D.meetings.rows=[]; D.inbox=[]; renderInbox()")
-        self.assertEqual(self.label(), "Process all ready (0)")
-        self.assertTrue(self.b.eval("document.getElementById('inAll').disabled"))
-        self.assertLess(float(self.b.eval("getComputedStyle(document.getElementById('inAll')).opacity")), 1)   # and it looks disabled
-        self.assertTrue(self.b.eval("document.getElementById('inAll').classList.contains('off')"))
+        got = self.b.eval("""(()=>{ D.meetings.rows=[]; D.inbox=[]; renderInbox(); const e=document.getElementById('inAll');
+          return [e.textContent, e.disabled, parseFloat(getComputedStyle(e).opacity), e.classList.contains('off')]; })()""")   # one step: a background reload cannot slip in
+        self.assertEqual(got[:2], ["Process all ready (0)", True])
+        self.assertLess(got[2], 1)                                                                            # and it looks disabled
+        self.assertTrue(got[3])
 
-    def test_age_is_quiet_and_an_outlier_turns_amber(self):
+    def test_age_is_quiet_and_an_outlier_follows_reviews_rule(self):
+        """#177's rule, shared: an outlier is more than twice the stale setting, and none is marked when every ready row is old."""
         age = lambda mid: self.b.eval(f"(e=>[e.textContent,e.classList.contains('old'),getComputedStyle(e).color])(document.querySelector('{self.row(mid)} .inage'))")  # noqa: E731
-        self.assertEqual(age("ev-b")[:2], ["2 days", False])
-        a = age("ev-a")
-        self.assertEqual(a[:2], ["4 days", True])
-        self.assertNotEqual(a[2], age("ev-b")[2])
+        self.assertEqual([age(m)[1] for m in ("ev-a", "ev-b", "ev-c")], [False, False, False])         # the default 7 days: 4 days is not an outlier
+        self.b.eval("S.staleDays=1; renderInbox()")                                                      # twice 1 is 2: 4 days is, 2 and 1 are not
+        self.assertEqual([age(m)[1] for m in ("ev-a", "ev-b", "ev-c")], [True, False, False])
+        self.assertNotEqual(age("ev-a")[2], age("ev-b")[2])                                              # amber against quiet
+        self.b.eval("D.inbox=[]; D.meetings.rows=D.meetings.rows.filter(r=>r.id==='ev-a'); renderInbox()")   # every ready row is past the setting
+        self.assertFalse(age("ev-a")[1])                                                                 # a banner's job in Review; here nothing is marked
+
+    def test_intake_and_review_word_an_age_the_same(self):
+        """One helper: the age text on a row is Review's for the same number of days."""
+        for mid, n in (("ev-a", 4), ("ev-b", 2), ("ev-c", 1)):
+            self.assertEqual(self.b.eval(f"document.querySelector('{self.row(mid)} .inage').textContent"),
+                             self.b.eval(f"rvAgeText({{age:{n}}})"))
+        self.assertEqual(self.b.eval("[0,1,2,12].map(n=>[ageWords(n),rvAgeText({age:n})])"),
+                         [["today", "today"], ["1 day", "1 day"], ["2 days", "2 days"], ["12 days", "12 days"]])
+        self.assertEqual(self.b.eval("[ageOutlier(15,false),ageOutlier(14,false),ageOutlier(15,true)]"), [True, False, False])
+
+    def test_quiet_buttons_outside_intake_keep_their_style(self):
+        """The Intake-only quiet style must not reach other pages' .btn.quiet (the sidebar dialog's Reset, for one)."""
+        got = self.b.eval("""(()=>{ const b=document.createElement('button'); b.className='btn quiet'; document.getElementById('v-today').appendChild(b);
+          const t=document.createElement('i'); t.style.color='var(--accent)'; document.body.appendChild(t);
+          const out=[getComputedStyle(b).color,getComputedStyle(t).color]; b.remove(); t.remove(); return out; })()""")
+        self.assertEqual(got[0], got[1])                                                                 # accent text, as the global rule has it
+        inside = self.b.eval("getComputedStyle(document.querySelector('#mtgBody .indtb')).color")
+        self.assertNotEqual(inside, got[1])                                                              # Intake's own is muted
 
     def test_details_holds_organiser_and_where(self):
         row = self.row("ev-c")
@@ -262,8 +283,16 @@ class Moves(Case):
         self.assertEqual(self.label(), f"Process all ready ({n0})")
 
     HOLD = """askLive=async(q,c)=>{ window.ASKED.push(q); if(!/^process /.test(q)) return;
-        await new Promise(r=>{ window.REL=r; });
+        RUN={id:'t',ctl:new AbortController()}; setRunning(true);
+        await new Promise(r=>{ window.REL=r; }); RUN=null; setRunning(false);
         await api("/api/fs",{op:"write",path:"system/staging/proposed-test-mtg.json",text:JSON.stringify({created:"2026-10-16T09:00:00",source_run:"cx-minutes",files:[],items:[],meeting:{key:"calendar:ev-a",title:"Example Programme steering",date:"2026-10-12",projects:["ABC"],draft:null,transcript:null,minutes_decision:"pending",file_ops:[]}})}); }; window.ASKED=[];"""
+
+    # every ready meeting is loaded (an upload carrying its event ID) and gets a draft; calls are recorded in order
+    STUBS = """window.CALLS=[]; window.b64=s=>btoa(unescape(encodeURIComponent(s)));
+        jobLive=async(url,body)=>{ CALLS.push('load:'+body.id); const m=D.meetings.rows.find(r=>r.id===body.id);
+          await api("/api/inbox/upload",{name:m.day+" "+m.title+".vtt",data:b64("WEBVTT\\n\\nNOTE\\nEvent ID: "+body.id+"\\n\\n00:00:01.000 --> 00:00:02.000\\nHi\\n")}); };
+        askLive=async(q)=>{ CALLS.push('ask:'+q); const m=D.meetings.rows.find(r=>q.includes(r.title));
+          if(m) await api("/api/fs",{op:"write",path:"system/staging/proposed-test-"+m.id+".json",text:JSON.stringify({created:"2026-10-16T09:00:00",source_run:"cx-minutes",files:[],items:[],meeting:{key:"calendar:"+m.id,title:m.title,date:m.day,projects:["ABC"],draft:null,transcript:null,minutes_decision:"pending",file_ops:[]}})}); };"""
 
     def test_process_runs_in_background(self):
         b = self.b
@@ -274,7 +303,10 @@ class Moves(Case):
         self.assertFalse(b.eval("document.getElementById('chat').classList.contains('on')"))                  # ask creaite did not open by itself
         self.assertEqual(self.b.eval(f"document.querySelectorAll('{self.row('ev-a')} .inprog').length"), 1)  # progress is on the row
         self.assertEqual(self.buttons("ev-a"), ["Processing"])
-        b.eval("openChat()")                                                                                  # and it is free to use meanwhile
+        self.assertTrue(b.eval("!!RUN"))                                                                      # a run is active (the engine is busy)...
+        self.assertTrue(b.eval(f"document.querySelector('{self.row('ev-b')} [data-ia=process]').disabled"))   # ...so other rows wait, one run at a time
+        self.assertTrue(b.eval("document.getElementById('inAll').disabled"))
+        b.eval("openChat()")                                                                                  # and ask creaite is free to use meanwhile
         b.wait("document.getElementById('chat').classList.contains('on')")
         b.eval("document.getElementById('chIn').focus()")
         b.type("hello there")
@@ -289,15 +321,114 @@ class Moves(Case):
         b.click(f"{self.row('ev-a')} [data-ia=review]")
         b.wait("VIEW==='review'")
 
-    def test_process_all_ready_runs_every_row_and_leaves_ask_creaite_closed(self):
+    def test_process_all_ready_attempts_every_ready_row_and_leaves_none_in_ready(self):
         b = self.b
-        b.eval("""window.ASKED=[]; jobLive=async()=>{}; askLive=async(q,c)=>{ window.ASKED.push(q); };""")
+        b.eval(self.STUBS)
         b.eval("closeChat()")
-        n_files = self.n_files()
+        order = b.eval("readyList().map(r=>r.kind==='m'?r.m.id:'file')")
+        self.assertEqual(sorted(order), ["ev-a", "ev-b", "ev-c", "file", "file"])
         b.click("#inAll")
-        b.wait(f"ASKED.length>={1 + (1 if {n_files} else 0)}", 30)
+        b.wait("!document.querySelector('#mtgBody .inrow[data-g=ready]') && CALLS.filter(c=>c.startsWith('ask:')).length>=4", 60)
         self.assertFalse(b.eval("document.getElementById('chat').classList.contains('on')"))
-        self.assertTrue(any(q.startswith("process inbox/2026-10-12 Example Programme steering.vtt") for q in b.eval("ASKED")))
+        calls = b.eval("CALLS")
+        asked = [c for c in calls if c.startswith("ask:")]
+        self.assertEqual(len(asked), 4)                                                                       # every meeting once, then the files once
+        titles = {"ev-a": "Example Programme steering", "ev-b": "Vendor onboarding check-in", "ev-c": "Budget walk-through"}
+        meetings = [m for m in order if m != "file"]
+        for m, c in zip(meetings, asked):
+            self.assertIn(titles[m], c)                                                                      # in the list's order, none dropped
+        self.assertIn("ABC weekly sync.vtt", asked[3])
+        self.assertIn("Recording.vtt", asked[3])
+        self.assertEqual(sorted(c for c in calls if c.startswith("load:")), ["load:ev-b", "load:ev-c"])      # ev-a was loaded already
+        self.assertEqual(b.eval("document.querySelectorAll('#mtgBody .inrow[data-g=ready]').length"), 0)     # none is left in Ready
+        self.assertTrue(all(m in self.titles("done") for m in titles.values()))
+
+    def test_stop_stops_the_batch(self):
+        b = self.b
+        b.eval(self.STUBS + """ askLive=async(q)=>{ CALLS.push('ask:'+q); RUN={id:'t',ctl:new AbortController()}; await stopAsk(); RUN=null; };""")
+        b.click("#inAll")
+        b.wait("CALLS.some(c=>c.startsWith('ask:'))", 30)
+        b.wait("!RUN && !Object.values(MRUN).some(v=>v==='processing'||v==='loading')", 30)
+        b.pump(1.0)
+        calls = b.eval("CALLS")
+        self.assertEqual([c for c in calls if c.startswith("ask:")][1:], [])                                  # nothing more started after Stop
+        self.assertEqual(len([c for c in calls if c.startswith("load:")]), 1)                                 # not even a second load
+        self.assertGreaterEqual(b.eval("document.querySelectorAll('#mtgBody .inrow[data-g=ready]').length"), 2)  # the others wait, unprocessed
+
+    def test_a_row_stays_busy_between_the_load_and_the_process(self):
+        b = self.b
+        b.eval(self.STUBS + """ askLive=async(q)=>{ CALLS.push('ask:'+q); RUN={id:'t',ctl:new AbortController()}; await new Promise(r=>{ window.REL=r; }); RUN=null; };
+          window.SEEN=[]; window.POLL=setInterval(()=>SEEN.push(!!document.querySelector('#mtgBody [data-mid="ev-b"] [data-ia=process]')),2);""")
+        b.click(f"{self.row('ev-b')} [data-ia=process]")
+        b.wait("CALLS.some(c=>c.startsWith('ask:'))", 30)
+        b.eval("clearInterval(POLL); REL()")
+        seen = b.eval("SEEN")
+        first_gone = seen.index(False)
+        self.assertNotIn(True, seen[first_gone:])                                                             # Process never came back before it ended
+
+    def test_enter_processes_and_h_sets_later(self):
+        b = self.b
+        b.eval(self.HOLD)
+        b.eval("document.activeElement&&document.activeElement.blur()")
+        b.key("H")
+        b.wait("document.querySelector('#mtgBody .inrow[data-g=later]')")
+        self.assertEqual(self.titles("later"), ["Budget walk-through"])                                       # H: the cursor row (the first ready one)
+        b.key("ArrowDown")                                                                                    # after H the cursor is on the next row (ev-b)
+        self.assertEqual(b.eval("document.querySelector('#mtgBody .inrow.sel').dataset.mid"), "ev-a")
+        b.key("Enter")                                                                                        # Enter: Process on the cursor row
+        b.wait(f"document.querySelector('{self.row('ev-a')}').classList.contains('run')", 20)
+        b.wait("ASKED.some(q=>/^process inbox\\/.*steering/.test(q))", 20)
+        b.eval("REL()")
+
+    def test_a_loaded_transcript_always_has_a_row(self):
+        """Process loaded it and failed, and its meeting has left the calendar window: it is a row of its own, counted once."""
+        b = self.b
+        (self.v.root / "inbox" / "2026-09-01 Old call.vtt").write_text("WEBVTT\n\nNOTE\nEvent ID: ev-old\n\n00:00:01.000 --> 00:00:02.000\nHi\n")
+        (self.v.root / "inbox" / "2026-09-01 Old call - chat.txt").write_text("Event ID: ev-old\n\n[08:01] Sara: hi\n")
+        n0 = b.eval("readyCount()")
+        b.eval("reloadData()")
+        b.wait("(D.inbox||[]).some(f=>f.event==='ev-old')", 20)
+        self.assertEqual(b.eval("readyCount()"), n0 + 1)                                                      # the chat companion is not a second one
+        self.assertIn("2026-09-01 Old call.vtt", self.titles("files"))
+        self.assertNotIn("2026-09-01 Old call - chat.txt", self.titles("files"))
+        self.assertIn("Loaded transcript", b.eval("document.querySelector('#mtgBody .inrow[data-inf$=\"Old call.vtt\"]').innerText"))
+        self.assertEqual(b.eval("document.getElementById('inboxBadge').textContent"), str(n0 + 1))
+        self.assertEqual(b.eval("document.getElementById('inAll').textContent"), f"Process all ready ({n0 + 1})")
+        b.eval("go('today')")
+        b.wait("document.querySelector('#tdList')")
+        self.assertEqual(b.eval("toDecideRows().filter(r=>r.kind==='transcript').length"), n0 + 1)
+
+    def test_today_file_row_says_when_ask_creaite_is_busy(self):
+        b = self.b
+        b.eval("go('today')")
+        b.wait("document.querySelector('#tdList')")
+        b.eval("document.getElementById('snackT').textContent=''; RUN={id:'x'}")
+        b.eval("tdAct({kind:'transcript',key:'tf',path:(readyList().find(r=>r.kind==='f')).f.path},{id:'process'},null)")
+        b.wait("/busy/.test(document.getElementById('snackT').textContent)", 10)
+        b.eval("RUN=null")
+
+    def test_focus_stays_and_progress_is_announced(self):
+        b = self.b
+        row = self.row("ev-b")
+        b.eval(f"document.querySelector('{row} [data-ia=det]').focus()")
+        b.key("Enter")
+        b.wait(f"document.querySelector('{row} .indet')")
+        self.assertEqual(b.eval("[document.activeElement.dataset.ia, document.activeElement.closest('.inrow').dataset.mid]"), ["det", "ev-b"])
+        b.eval(f"document.querySelector('{row} [data-ia=later]').focus()")
+        b.key("Enter")
+        b.wait("document.querySelector('#mtgBody .inrow[data-g=later][data-mid=\"ev-b\"]')")
+        self.assertEqual(b.eval("document.activeElement.closest('.inrow').dataset.mid"), "ev-b")              # the row moved; focus went with it
+        b.click(f"{self.row('ev-c')} [data-ia=not]")
+        b.wait("document.getElementById('inNotMenu')")
+        b.eval("[...document.querySelectorAll('#inNotMenu [role=menuitem]')][0].click()")
+        b.wait("!document.querySelector('#mtgBody [data-mid=\"ev-c\"]')", 20)
+        self.assertTrue(b.eval("!!document.activeElement.closest('#mtgBody')"))                               # focus is in the list, not lost to the page
+        b.eval(self.HOLD)
+        b.click(f"{self.row('ev-a')} [data-ia=process]")
+        b.wait(f"document.querySelector('{self.row('ev-a')} .instate')", 20)
+        b.eval(f"window.KEPT=document.querySelector('{self.row('ev-a')} .instate'); renderInbox()")
+        self.assertTrue(b.eval(f"document.querySelector('{self.row('ev-a')} .instate')===KEPT"))              # the same live region, text updated in place
+        b.eval("REL()")
 
 
 if __name__ == "__main__":

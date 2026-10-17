@@ -1108,7 +1108,7 @@ dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);
 @media (max-width:640px){ .boardctl{width:100%} }
 /* ===== Intake (#179): one queue in Review's row shape; reuses Review's tokens, adds none ===== */
 .inhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px} .inbtns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.btn.quiet{border-color:transparent;background:transparent;color:var(--muted)} .btn.quiet:hover{border-color:var(--line);color:var(--ink)}
+#v-inbox .btn.quiet{border-color:transparent;background:transparent;color:var(--muted)} #v-inbox .btn.quiet:hover{border-color:var(--line);color:var(--ink)}
 .btn.off{opacity:.45;cursor:default}
 .kbdhint.inkeys,#inKeys{margin:0 0 6px} .inlive{margin:0 0 10px;font-size:var(--fs-xs);color:var(--faint)}
 .ingrp{display:flex;align-items:baseline;gap:10px;margin:18px 0 6px} .ingrp h2{margin:0;font-size:var(--fs-lg)}

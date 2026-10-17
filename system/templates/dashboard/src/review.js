@@ -201,8 +201,11 @@ export const RVORD={age:r=>-(r.age||0),kind:r=>Object.keys(RVKINDS).indexOf(r.ki
 /* #177: age is quiet text on every row ("today", "1 day", "12 days"); the stale setting speaks only through one banner. All proposals older
    than it: "All 4 have waited more than 7 days. Oldest first?". Only some: a banner only for those older than twice the setting, and only those rows are marked. */
 export const rvStaleDays=()=>+S.staleDays||7;
-export const rvAgeText=r=>{ const d=Math.max(0,+r.age||0); return d===0?"today":d===1?"1 day":`${d} days`; };
-export const rvOutlier=r=>!r.done&&!rvAllOld()&&(+r.age||0)>2*rvStaleDays();
+/** the one age rule (#177), also Intake's (#179): days as quiet text; an outlier is more than twice the stale setting, and none is marked when all are old */
+export const ageWords=d=>{ d=Math.max(0,+d||0); return d===0?"today":d===1?"1 day":`${d} days`; };
+export const ageOutlier=(d,allOld)=>!allOld&&(+d||0)>2*rvStaleDays();
+export const rvAgeText=r=>ageWords(r.age);
+export const rvOutlier=r=>!r.done&&ageOutlier(r.age,rvAllOld());
 export const rvAllOld=()=>{ const und=REV.filter(r=>!r.done); return und.length>0&&und.every(r=>r.stale); };
 export function rvAgeBanner(und){ if(!und.length) return ""; const th=rvStaleDays(), on=RVO==="age", btn=html`<button type="button" class="btn${rvAllOld()?" primary":""}" id="rvOldest" aria-pressed="${String(on)}">${on?"Oldest first: on":"Oldest first"}</button>`;
   if(rvAllOld()) return html`<div class="rvagebanner" id="rvAgeBanner" role="status"><span><b>All ${und.length} have waited more than ${th} days.</b> Oldest first?</span>${btn}</div>`;

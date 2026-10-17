@@ -24,7 +24,7 @@ import { shared } from "./core/state.js";
 import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
-import { checkMeeting, INSEL, MRUN, MSEL, MTG, processInbox, processMeetings, readyList, refreshCalendar } from "./intake.js";
+import { checkMeeting, INSEL, mtgBusy, MSEL, MTG, processInbox, processMeetings, readyList, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
@@ -471,7 +471,7 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
     tdl.push({key:"tf"+f.path,kind:"transcript",path:f.path,at,tag:"File",tone:"",t:f.name,
       meta:["Ready in Intake",f.p&&f.p!=="_portfolio"?pName(f.p):"",whenWords(at)].filter(Boolean).join(" · "),
       acts:[{id:"process",icon:"play",label:"Process the file",name:`Process the file: ${f.name}`,primary:true,why:live?"":"Needs the live server"}]}); });
-  readyList().filter(r=>r.kind==="m").map(r=>r.m).forEach(m=>{ const at=`${m.day||""} ${m.end||m.start||""}`.trim(), run=MRUN[m.id], why=run==="processing"||run==="loading"?"Processing…":live?"":"Needs the live server";
+  readyList().filter(r=>r.kind==="m").map(r=>r.m).forEach(m=>{ const at=`${m.day||""} ${m.end||m.start||""}`.trim(), why=live?"":"Needs the live server";   /* a row being processed is not ready any more: it leaves this list */
     tdl.push({key:"tx"+m.id,kind:"transcript",id:m.id,at,tag:"Transcript",tone:"",t:m.title||"Meeting",
       meta:["Ready in Intake",m.p&&m.p!=="_portfolio"?pName(m.p):"",whenWords(at)].filter(Boolean).join(" · "),
       acts:[{id:"process",icon:"play",label:"Process the transcript",name:`Process the transcript: ${m.title||"the meeting"}`,primary:true,why}]}); });
@@ -567,7 +567,7 @@ export async function tdProcess(id){ const m=MTG().find(x=>x.id===id); if(!m) re
   if(shared.VIEW==="today") renderToday(); try{ await processMeetings(); } finally{ if(shared.VIEW==="today") renderToday(); } }
 /** a row's action (a message's two run through settings.js's [data-alertdo] handler) */
 export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
-  if(row.kind==="transcript"&&act.id==="process"){ if(row.path){ INSEL.clear(); INSEL.add(row.path); if(shared.VIEW==="today") renderToday(); try{ await processInbox(); } finally{ if(shared.VIEW==="today") renderToday(); } return; } await tdProcess(row.id); return; }
+  if(row.kind==="transcript"&&act.id==="process"){ if(row.path){ if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; } INSEL.clear(); INSEL.add(row.path); if(shared.VIEW==="today") renderToday(); try{ await processInbox(); } finally{ if(shared.VIEW==="today") renderToday(); } return; } await tdProcess(row.id); return; }
   if(row.kind!=="review") return; const r=REV.find(x=>x.n===row.n); if(!r||r.done) return;
   if(act.id==="approve"){ if(!tdApprovable(r)){ tdToReview(r.n); return; } await decide(r.n,"approved"); return; }   /* Undo: the apply's (decide) */
   /* BL-315: the same reasons menu as Review (rjMenuFor: the seven reasons, Use each guess, No reason, Duplicate's item), through

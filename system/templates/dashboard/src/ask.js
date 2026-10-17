@@ -18,7 +18,7 @@ import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVE
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
-import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, readyCount, renderMeetings } from "./intake.js";
+import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, readyCount, renderInbox, renderMeetings } from "./intake.js";
 import { prepPage } from "./meetings.js";
 import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { openMilestone, openNewMilestone } from "./milestones.js";
@@ -551,8 +551,8 @@ export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "no
    at once; a confirmed write stops once the step running now has finished. What's shown so far is kept. */
 export let ATTACHED=null; shared.RUN=null;
 export const SENDI=ic("arrowup"), STOPI=ic("stop");   /* BL-161 */
-export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
-export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; shared.RUN.stopping=true; const res=await api("/api/ask/stop",{run:shared.RUN.id});
+export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); if(shared.VIEW==="inbox") renderInbox(); }   /* #179: Intake's buttons follow the engine being busy or free */   /* BL-161: one round button, the arrow or the stop square */
+export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; shared.RUN.stopping=true; /** @type {any} */(shared).STOPPED=Date.now();   /* #179: Intake's batch starts nothing more */ const res=await api("/api/ask/stop",{run:shared.RUN.id});
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
 export let askLive = async function(q,confirmed){ const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
@@ -613,7 +613,7 @@ export async function reattach(){ if(!viaServer()) return; queueLoad(); shared.R
   if(run) attachRun(run); else { pendingCard(); pendingEdit(); } }
 /* ===== BL-139 (sprint-final) =====
    A small badge fixed at the bottom right shows that ask creaite is working and, afterwards, that it has finished. It follows
-   every run the run engine makes: a chat message, Process selected, a transcript check or load, a sweep or calendar refresh, a
+   every run the run engine makes: a chat message, Intake's Process, a transcript check or load, a sweep or calendar refresh, a
    report or one-off document (all through askStream), Generate and Make it executive (runGen), the Prep page and a search answer.
    Running: the spark pulses (not under reduced motion), "ask creaite is working…", what is running where known, and the time it has
    taken. Finished: a tick and "ask creaite has finished", with how long it took; it stays until it is dismissed (×), the chat is

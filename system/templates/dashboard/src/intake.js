@@ -19,6 +19,7 @@ import { go } from "./core/nav.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { setRailCount } from "./stores/rail.js";
+import { ageOutlier, ageWords, rvStaleDays } from "./review.js";
 export const INSEL=new Set(); export let INRUN=[];
 export const kb=n=>n>1048576?`${(n/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`;
 /* ======================= files you dropped ======================= */
@@ -80,7 +81,10 @@ export function intakeRows(){ const g=/** @type {{ready:IRow[],files:IRow[],wait
     if(r==="loading"||r==="processing"||r==="checking"){ g.ready.push(it); return; }
     if(isLater(k,m)){ g.later.push(it); return; }
     (!m.private&&!!m.id&&(m.transcript==="available"||!!m.loaded)?g.ready:g.waiting).push(it); });
-  uploadedFiles().forEach(f=>{ const it=/** @type {IRow} */({kind:"f",k:f.path,f,title:f.name,day:f.date});
+  /* a transcript Process loaded whose meeting row is no longer in the calendar window (or was set aside) is still a row: as a file */
+  const have=new Set(MTG().map(m=>m.id));
+  const orphans=(D.inbox||[]).filter(f=>f.event&&!have.has(f.event)&&!/ - chat\.txt$/.test(f.name||""));
+  [...uploadedFiles(),...orphans].forEach(f=>{ const it=/** @type {IRow} */({kind:"f",k:f.path,f,title:f.name,day:f.date});
     if(f.state==="draft"||f.state==="processed"){ g.done.push(it); return; }
     if(INRUN.includes(f.path)){ g.files.push(it); return; }
     if(f.state==="new"&&isLater(f.path,null)) g.later.push(it); else g.files.push(it); });
@@ -93,7 +97,7 @@ export const readyCount=()=>readyList().length;
 export function inboxBadge(){ const n=readyCount(); setRailCount("inbox",n,`${n} ready in Intake`); }   /* BL-70: Intake; ids and the inbox/ folder keep their names */
 /* ----- the rows ----- */
 const ageDays=/** @param {string} d */d=>d?Math.max(0,-days(d.slice(0,10))):0;
-const ageText=/** @param {number} n */n=>n<=0?"today":n===1?"1 day":`${n} days`;
+let ALLOLD=false;   /* every ready row is past the stale setting: Review's rule, no row is marked then */
 export const INDET=new Set(); export let INCUR="";
 const org=m=>m.organiser===true?"You":m.organiser?m.organiser:"Not known";
 const projSel=(m,i)=>html`<select class="mtgp" data-mi="${i}" aria-label="Project for ${m.title}"><option value="" ${raw(!m.p?"selected":"")}>Not sure</option>${P.map(p=>html`<option value="${p.code}" ${raw(m.p===p.code?"selected":"")}>${p.name}</option>`)}<option value="_portfolio" ${raw(m.p==="_portfolio"?"selected":"")}>Portfolio</option></select>`;
@@ -110,7 +114,7 @@ function rowState(r){ if(r.kind==="f"){ const f=r.f; if(INRUN.includes(f.path)) 
   if(x&&x.startsWith("skipped:")) return html`<span class="tag">Skipped</span> ${x.slice(8)}`;
   if(x&&x.startsWith("failed:")) return html`<span class="tag warn">Couldn't</span> ${x.slice(7)}`;
   return ""; }
-function rowChip(r,grp){ if(grp==="done") return ""; if(r.kind==="f") return html`<span class="inchip">Uploaded file</span>`;
+function rowChip(r,grp){ if(grp==="done") return ""; if(r.kind==="f") return html`<span class="inchip">${r.f.event?"Loaded transcript":"Uploaded file"}</span>`;
   const m=r.m; if(grp==="waiting") return html`<span class="inchip warn">Waiting for transcript</span> <span class="sub">${m.private?"Private":!m.id?"Refresh to pick this meeting":m.transcript?TXLABEL[m.transcript]:m.teams?"Not checked yet":"Not a Teams meeting"}</span>`;
   return html`<span class="inchip">Transcript ready</span>`; }
 function details(r){ if(!INDET.has(r.k)) return "";
@@ -125,11 +129,11 @@ function rowActs(r,grp){ const live=viaServer(), busy=mtgBusy(), k=r.k, run=runn
   if(grp==="waiting") return not;
   if(grp==="later") return html`<button type="button" class="btn" data-ia="unlater">Back to Ready</button>${not}`;
   return html`<button type="button" class="btn primary" data-ia="process" ${dis(!live||busy)}>Process</button>${not}<button type="button" class="btn" data-ia="later">Later</button>`; }
-function rowHTML(r,grp){ const m=r.m, f=r.f, day=r.kind==="m"?m.day:f.date, n=ageDays(day), old=n>=3&&grp!=="done", run=running(r), st=rowState(r);
+function rowHTML(r,grp){ const m=r.m, f=r.f, day=r.kind==="m"?m.day:f.date, n=ageDays(day), old=grp!=="done"&&ageOutlier(n,ALLOLD), run=running(r), st=rowState(r);
   const when=r.kind==="m"?html`${new Date(day).toLocaleDateString("en-GB",{weekday:"short"})} ${fd(day)}, ${m.start}–${m.end}`:html`Dropped ${fd(day)}`;
   const proj=r.kind==="m"?(m.private?html`<span class="sub">Private</span>`:projSel(m,r.i)):(f.p?html`${(P.find(p=>p.code===f.p)||{name:f.p}).name}`:html`<span class="sub">Not sure</span>`);
   const attr=r.kind==="m"?html`data-mid="${m.id||""}" data-mi="${r.i}"`:html`data-inf="${f.path}"`;
-  return html`<div class="inrow${r.k===INCUR?" sel":""}${run?" run":""}${grp==="done"?" done":""}" role="listitem" data-ik="${r.k}" data-g="${grp}" ${attr}><div class="inmain"><div class="int">${r.title}</div><div class="inm"><span>${when}</span><span>${proj}</span>${rowChip(r,grp)}<button type="button" class="btn quiet indtb" data-ia="det" aria-expanded="${String(INDET.has(r.k))}">Details</button></div></div><div class="inact"><span class="inage${old?" old":""}">${ageText(n)}</span>${rowActs(r,grp)}</div>${st?html`<div class="instate" role="status">${st}</div>`:""}${run?html`<div class="inprog" aria-hidden="true"><i></i></div>`:""}${details(r)}</div>`; }
+  return html`<div class="inrow${r.k===INCUR?" sel":""}${run?" run":""}${grp==="done"?" done":""}" role="listitem" data-ik="${r.k}" data-g="${grp}" ${attr}><div class="inmain"><div class="int">${r.title}</div><div class="inm"><span>${when}</span><span>${proj}</span>${rowChip(r,grp)}<button type="button" class="btn quiet indtb" data-ia="det" aria-expanded="${String(INDET.has(r.k))}">Details</button></div></div><div class="inact"><span class="inage${old?" old":""}">${ageWords(n)}</span>${rowActs(r,grp)}</div>${st?html`<div class="instate" role="status">${st}</div>`:""}${run?html`<div class="inprog" aria-hidden="true"><i></i></div>`:""}${details(r)}</div>`; }
 const inGrpHead=(name,count)=>html`<div class="ingrp"><h2>${name}</h2><span class="sub">${count}</span></div>`;
 function dropzone(){ return html`<div class="dropzone indrop" id="inboxDrop" tabindex="0" role="button" aria-label="Add files to Intake"><button class="linkbtn" id="inboxPick" type="button">Choose files</button> or drop them here, anywhere on this page. <span class="sub">.vtt, .docx, .txt, .md or .pdf, up to 25 MB each. Each becomes a row with a project to confirm.</span></div>`; }
 /* ----- Cleared (BL-104) and the reason Not needed recorded ----- */
@@ -151,30 +155,44 @@ export function renderInbox(){ const mt=D.meetings||{}, g=intakeRows(), live=via
   const empty=!mt.fetched?html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now.</div>`
     :nothing?html`<div class="empty">Nothing here yet. Meetings appear when they end, and transcripts as they arrive.</div>`
     :!g.ready.length?html`<div class="empty">Nothing ready. A meeting appears here when its transcript arrives.</div>`:"";
-  const upN=g.files.length;
+  const upN=g.files.length, act=readyList(); ALLOLD=act.length>0&&act.every(r=>ageDays(r.kind==="m"?r.m.day:r.f.date)>rvStaleDays());
+  const olds=new Map($$("#mtgBody .instate").map(e=>[/** @type {HTMLElement} */(e.closest(".inrow")).dataset.ik,e])), fo=inFocusSpec();
   putHTML($("#mtgBody"),html`${section("Ready",g.ready,"ready")}${empty}<div class="ingrp"><h2>Upload files</h2><span class="sub">${upN?`${upN} waiting`:"drop transcripts or minutes anywhere on this page"}</span></div>${dropzone()}<div role="list">${g.files.map(r=>rowHTML(r,"files"))}</div>${section("Waiting",g.waiting,"waiting")}${section("Later",g.later,"later")}${section("Done recently",g.done,"done")}${clrList()}`);
-  inboxBadge(); }
+  $$("#mtgBody .inrow").forEach(r=>{ const nw=r.querySelector(".instate"), o=olds.get(r.dataset.ik); if(nw&&o){ if(o.textContent!==nw.textContent||o.childNodes.length!==nw.childNodes.length) o.replaceChildren(...nw.childNodes); nw.replaceWith(o); } });   /* the same live region, so progress is announced */
+  inFocusBack(fo); inboxBadge(); }
 export const renderMeetings=renderInbox;
+/** where focus was in the list, so a redraw puts it back on the same row and control */
+function inFocusSpec(){ const a=document.activeElement, rw=a&&a.closest&&a.closest("#mtgBody .inrow"); if(!rw) return null;
+  return {k:/** @type {HTMLElement} */(rw).dataset.ik, ia:/** @type {HTMLElement} */(a).dataset.ia||"", sel:a.matches(".mtgp")}; }
+function inFocusBack(fo){ if(!fo) return; const rw=$$("#mtgBody .inrow").find(x=>x.dataset.ik===fo.k); if(!rw) return;
+  const el=(fo.sel&&rw.querySelector(".mtgp"))||(fo.ia&&rw.querySelector(`[data-ia="${fo.ia}"]`))||rw.querySelector("button:not([disabled])");
+  if(el) /** @type {HTMLElement} */(el).focus({preventScroll:true}); }
+/** after a rw leaves the list (Not needed): focus the cursor rw's first control */
+export function inFocusCursor(){ const rw=$$("#mtgBody .inrow").find(x=>x.dataset.ik===INCUR)||$("#mtgBody .inrow"); const b=rw&&rw.querySelector("button:not([disabled])"); if(b) /** @type {HTMLElement} */(b).focus({preventScroll:true}); }
 /* ======================= Process: load the transcript, then process, in the background ======================= */
+/** Stop (ask.js stopAsk) was pressed since `t0`: the batch starts nothing more */
+const stopped=/** @param {number} t0 */t0=>(/** @type {any} */(shared).STOPPED||0)>=t0;
 export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id)); if(!L.length) return;
   if(!viaServer()){ snack("Processing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
-  MSEL.clear(); const PL=L.length>1?`Processing ${L.length} meetings`:`Processing “${L[0].title}”`;     /* BL-139: what the badge says */
-  for(const m of L){ const why=mtgSkip(m); if(why){ MRUN[m.id]="skipped:"+why; renderInbox(); continue; }
+  MSEL.clear(); const t0=Date.now(), PL=L.length>1?`Processing ${L.length} meetings`:`Processing “${L[0].title}”`;     /* BL-139: what the badge says */
+  for(const m of L){ if(stopped(t0)) break; const why=mtgSkip(m); if(why){ MRUN[m.id]="skipped:"+why; renderInbox(); continue; }
     const when=`${fd(m.day)} at ${m.start}`; let now=m;
     if(!m.loaded){ MRUN[m.id]="loading"; renderInbox(); runAsk(addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`));
-      shared.RUNLABEL=PL; try{ await jobLive("/api/transcripts/load",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); now=MTG().find(x=>x.id===m.id);
+      shared.RUNLABEL=PL; try{ await jobLive("/api/transcripts/load",{id:m.id}); }catch(e){} await reloadData(); now=MTG().find(x=>x.id===m.id);
+      if(stopped(t0)){ delete MRUN[m.id]; renderInbox(); break; }
       if(!now||!now.loaded){ MRUN[m.id]="skipped:"+(TXWHY[now&&now.transcript]||"No transcript could be loaded"); renderInbox(); continue; } }
     MRUN[m.id]="processing"; renderInbox(); addEl("msg u",html`${`Process the meeting “${m.title}” (${when})`}`); const before=$$("#chLog .msg.a").length;
     shared.RUNLABEL=PL; try{ await askLive(`process ${now.loaded}`,`Process “${m.title}” (${when}) into draft minutes and proposed items`); }catch(e){} await reloadData();
+    if(stopped(t0)){ delete MRUN[m.id]; await reloadData(); renderInbox(); break; }
     const after=MTG().find(x=>x.id===m.id), said=[...$$("#chLog .msg.a")].slice(before).map(e=>e.textContent.trim()).filter(Boolean).pop()||"";
     MRUN[m.id]=after&&(after.draft||after.processed)?"draft":`failed:${oneLine(said).split(/(?<=[.!?])\s/)[0].slice(0,140)||"no draft came back"}`; renderInbox(); } }
 /** one row */
 export async function processRow(r){ if(r.kind==="m"){ MSEL.clear(); MSEL.add(r.m.id); await processMeetings(); } else { INSEL.clear(); INSEL.add(r.f.path); await processInbox(); } }
 /** the one bulk button: every ready meeting, then every file, one run after another */
 export async function processAllReady(){ const L=readyList(); if(!L.length) return; if(!viaServer()){ snack("Processing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
-  const ms=L.filter(r=>r.kind==="m"), fs=L.filter(r=>r.kind==="f");
+  const t0=Date.now(), ms=L.filter(r=>r.kind==="m"), fs=L.filter(r=>r.kind==="f");
   MSEL.clear(); ms.forEach(r=>MSEL.add(r.m.id)); INSEL.clear(); fs.forEach(r=>INSEL.add(r.f.path));
-  if(ms.length) await processMeetings(); if(fs.length) await processInbox(); }
+  if(ms.length) await processMeetings(); if(fs.length&&!stopped(t0)) await processInbox(); else INSEL.clear(); }
 export async function refreshCalendar(){ const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
   try{ if(!viaServer()){ snack("Refreshing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   $("#mtgRead").textContent="Refreshing…"; addEl("msg u","Refresh calendar");
@@ -215,7 +233,7 @@ export async function mtgRestore(body){ const r=await api("/api/intake/clear",bo
 /** the reason menu for a row's Not needed; picking one sets it aside */
 export function notNeededMenu(r,anchor){ if(!viaServer()) return;
   openMenu(anchor,{label:"Not needed because",id:"inNotMenu",items:[{id:"hd",head:"Not needed because"},...NOT_REASONS.map(x=>({id:x,name:x}))],
-    onPick:async why=>{ if(r.kind==="m") await mtgClear([r.m],why); else { await removeInbox(r.f.path); } } }); }
+    onPick:async why=>{ if(r.kind==="m") await mtgClear([r.m],why); else { await removeInbox(r.f.path); } if(shared.VIEW==="inbox") inFocusCursor(); } }); }
 /* ======================= keys: as in Review (arrows or J K move, Enter does the main thing, N and H as the buttons) ======================= */
 const cursorRows=()=>$$("#mtgBody [data-ik]").filter(el=>el.dataset.g!=="done");
 function setCursor(k){ INCUR=k; $$("#mtgBody .inrow").forEach(el=>el.classList.toggle("sel",el.dataset.ik===k)); const el=$$("#mtgBody .inrow").find(x=>x.dataset.ik===k); if(el) el.scrollIntoView({block:"nearest"}); }
@@ -229,7 +247,7 @@ export function intakeKey(/** @type {KeyboardEvent} */ e){ if(shared.VIEW!=="inb
   const r=rowOf(keys[i]); if(!r) return false; const grp=els[i].dataset.g, ready=grp==="ready"||grp==="files";
   if(e.key==="Enter"){ if(t&&t.closest&&t.closest("button,a,input,select,textarea")) return false; if(!ready||running(r)||!viaServer()||mtgBusy()) return false; e.preventDefault(); processRow(r); return true; }
   if(e.key==="n"||e.key==="N"){ if(running(r)) return false; e.preventDefault(); const b=/** @type {HTMLElement|null} */(els[i].querySelector('[data-ia="not"]')); if(b&&!(/** @type {HTMLButtonElement} */(b)).disabled) notNeededMenu(r,b); return true; }
-  if(e.key==="h"||e.key==="H"){ if(!ready||running(r)) return false; e.preventDefault(); setLater(r.k,r.kind==="m"?r.m.transcript:""); renderInbox(); return true; }
+  if(e.key==="h"||e.key==="H"){ if(!ready||running(r)) return false; e.preventDefault(); const nx=keys[i+1]||keys[i-1]; setLater(r.k,r.kind==="m"?r.m.transcript:""); if(nx) INCUR=nx; renderInbox(); return true; }
   return false; }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootIntake(){

@@ -117,14 +117,14 @@ class Scriptable1(HandcheckCase):
         self.note(13, f"{len(today)} headings (Decisions needed seeded: a pending FAL decision through propose.py stage and tracker.py apply), same font as Settings' ({settings[0].split('|')[0]}), none uppercase or small caps; title 34px")
 
     def test_c14_intake_names(self):
-        """14. Intake → "Calendar import", "Upload files" and "Quick capture" in sentence case, with no icons beside them.
-        Help and Settings › Advanced use the same names."""
+        """14. Intake → "Upload files" (the one heading left after #179 made Intake one queue; Calendar import and Quick capture went) in
+        sentence case, with no icon beside it. Help uses the same name."""
         b = self.b
-        names = ["Calendar import", "Upload files", "Quick capture"]
+        names = ["Upload files"]
         self.screen("intake")
-        heads = b.eval("[...document.querySelectorAll('#v-inbox .isec .ish h2')].map(e=>({t:e.innerText.trim(), icons:e.parentElement.querySelectorAll('svg,img,.i').length, tt:getComputedStyle(e).textTransform}))")
-        self.assertEqual([h["t"] for h in heads], names)
-        self.assertEqual([h["icons"] for h in heads], [0, 0, 0], "no icons beside them")
+        heads = b.eval("[...document.querySelectorAll('#v-inbox .ingrp h2')].map(e=>({t:e.innerText.trim(), icons:e.parentElement.querySelectorAll('svg,img,.i').length, tt:getComputedStyle(e).textTransform}))")
+        self.assertIn(names[0], [h["t"] for h in heads])
+        self.assertEqual({h["icons"] for h in heads}, {0}, "no icons beside them")
         self.assertEqual({h["tt"] for h in heads}, {"none"})
         self.screen("help")
         help_text = b.eval("document.getElementById('v-help').innerText")

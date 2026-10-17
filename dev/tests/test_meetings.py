@@ -341,7 +341,7 @@ PAGE_SCRIPT = r"""
 
 
 class InboxPageTests(unittest.TestCase):
-    """Item 3 in headless Chrome, served live: the Meetings section, Select new, Process selected one by one
+    """Item 3 in headless Chrome, served live: Intake's queue, Process one by one
     (stubbed run engine) and Refresh."""
 
     @classmethod
