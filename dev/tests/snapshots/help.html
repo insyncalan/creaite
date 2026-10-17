@@ -1,11 +1,17 @@
 <section class="view" id="v-help">
 <div class="hp-shell">
+<div class="hp-search" role="search">
+<input id="helpS" type="search" placeholder="Search all of Help" aria-label="Search all of Help" autocomplete="off" spellcheck="false">
+<span class="hp-skey" aria-hidden="true">/</span>
+</div>
 <div class="tabhost" id="helpTabsHost">
 <div class="tabs" id="helpTabs" role="tablist" aria-label="Help">
 <button type="button" role="tab" aria-selected="true" id="htab-start" tabindex="0" data-tab="start" data-help="start">Start here</button>
 <button type="button" role="tab" aria-selected="false" id="htab-howto" tabindex="-1" data-tab="howto" data-help="howto">How do I…</button>
 <button type="button" role="tab" aria-selected="false" id="htab-reference" tabindex="-1" data-tab="reference" data-help="reference">Reference</button>
 </div>
+</div>
+<div id="helpRes" class="hs-res" role="region" aria-label="Search results" aria-live="polite" hidden="">
 </div>
 <div id="helpPane" role="tabpanel" data-tab="start" aria-labelledby="htab-start">
 <div class="hp-wrap hp-start">
@@ -23,7 +29,7 @@
 <div>
 <span class="hp-eyebrow">creaite X.Y.Z · first day</span>
 <h1>Claude drafts. You approve. creaite keeps the record.</h1>
-<p class="hp-lede">creaite reads your meetings, mail and Teams, proposes the actions, decisions, risks and issues it finds, and keeps them in one tracker once you approve. Everything stays in one folder on your laptop.</p>
+<p class="hp-lede">creaite reads your meetings, mail and Teams, proposes the actions, decisions, risks and issues it finds, and keeps them in one tracker once you approve. The tracker, the engine and your history stay in one folder on your Mac.</p>
 </div>
 </header>
 <section class="hp-loop" aria-labelledby="hp-the-loop">
@@ -42,9 +48,9 @@
 </path>
 </svg>Material arrives</h3>
 <ul>
-<li>Meetings picked from your calendar (Intake › Calendar import)</li>
+<li>Meetings you pick from your calendar (Intake › Calendar import)</li>
 <li>Transcripts and minutes you drop in (Upload files)</li>
-<li>Notes from a call or your own thinking (a note, <kbd>⌘⇧N</kbd>), turned into items with Find updates</li>
+<li>A note from a call or your own thinking (<kbd>⌘⇧N</kbd>), turned into items with Find updates</li>
 <li>The daily mail and Teams sweep</li>
 </ul>
 <svg class="hp-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -59,7 +65,7 @@
 <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6">
 </path>
 </svg>Claude drafts</h3>
-<p>Draft minutes, plus proposed new items and updates to open ones, each citing its source. It matches every item to a project and owner.</p>
+<p>Draft minutes and proposed items, each citing its source and matched to a project and owner.</p>
 <svg class="hp-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
 <path d="M5 12h14M13 6l6 6-6 6">
 </path>
@@ -72,7 +78,7 @@
 <path d="M5 12.5 10 17l9-10">
 </path>
 </svg>Review</h3>
-<p>In Review, approve, edit or reject each proposal. Routine items can be approved in bulk; minutes, new decisions and new risks are approved one at a time.</p>
+<p>In Review, approve, edit or reject each proposal. Routine items can be approved together; minutes, new decisions and new risks one at a time.</p>
 <span class="hp-gate">The only gate</span>
 <svg class="hp-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
 <path d="M5 12h14M13 6l6 6-6 6">
@@ -88,7 +94,7 @@
 <path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3">
 </path>
 </svg>Apply</h3>
-<p>Apply writes what you approved to the tracker and files the minutes in the project folder. Every apply can be undone.</p>
+<p>Approved items go into the tracker and the minutes are filed. Edits you make yourself save at once; <b class="ui">Apply</b> is for what Claude proposed, and can be undone.</p>
 <svg class="hp-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
 <path d="M5 12h14M13 6l6 6-6 6">
 </path>
@@ -103,41 +109,53 @@
 <path d="M3 9h18M8 13h3M8 16h8">
 </path>
 </svg>See and report</h3>
-<p>The dashboard updates at once. Weekly and client reports are drafted from the tracker as creaite pages, and you approve them before they're filed.</p>
+<p>The dashboard updates at once. Weekly and client reports are drafted from the tracker as creaite pages, and you approve them before they are filed.</p>
 </div>
 </div>
 <p class="hp-back">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
 <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4">
 </path>
-</svg>The next meeting starts the loop again. When a meeting discusses an item that's still open, Claude proposes an update to it, never a duplicate.</p>
+</svg>The next meeting starts the loop again. When it discusses an open item, Claude proposes an update to it, never a duplicate.</p>
 </section>
 <section class="hp-sec" aria-labelledby="hp-your-first-hour">
 <div class="hp-sechead">
 <span class="hp-eyebrow">Once</span>
 <h2 id="hp-your-first-hour">Your first hour</h2>
-<p>About an hour, most of it telling creaite about your projects and the people on them.</p>
+<p>About an hour, mostly telling creaite about your projects and the people on them. Three words first: the <b class="ui">vault</b> is creaite's folder on your Mac, the <b class="ui">launcher</b> is the creaite app that opens it, and the <b class="ui">live server</b> is the small program behind the page, which the launcher starts for you.</p>
+<p>No launcher yet? In Terminal run the command below, then open the address it prints in Chrome or Edge, not Safari.</p>
+<div class="cmdbox">
+<code>cd <VAULT> &amp;&amp; python3 system/scripts/live_server.py</code>
+<button type="button" class="ib sm" aria-label="Copy the command" data-tip="Copy the command" data-copycmd="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="copy">
+<rect x="8" y="8" width="13" height="13" rx="2">
+</rect>
+<path d="M4 16V5a2 2 0 0 1 2-2h10">
+</path>
+</svg>
+</button>
+</div>
 </div>
 <div class="hp-steps">
 <div class="hp-step">
 <span class="hp-n">1</span>
 <h3>Install</h3>
-<p>Download <b class="ui">creaite-X.Y.Z.zip</b> from the release, not "Source code". Run <code>python3 ~/Downloads/creaite-X.Y.Z.zip</code> and choose a folder outside OneDrive and iCloud.</p>
+<p>Download <b class="ui">creaite-X.Y.Z.zip</b> from the release, not "Source code", and run it with Python 3 as the release page shows. Choose a folder outside OneDrive and iCloud.</p>
 </div>
 <div class="hp-step">
 <span class="hp-n">2</span>
 <h3>Say "setup"</h3>
-<p>Open the folder in Claude Code, connect Microsoft 365, and say <span class="hp-say">setup</span>. It asks before each step: git, your name and role, projects, people, a memory file for each project, and the <b class="ui">creaite</b> launcher (say yes).</p>
+<p>Open the folder in Claude Code, connect Microsoft 365, and say <span class="hp-say">setup</span>. It asks before each step: your name, projects, people and the launcher (say yes).</p>
 </div>
 <div class="hp-step">
 <span class="hp-n">3</span>
 <h3>Open creaite</h3>
-<p>double-click the <b class="ui">creaite</b> app in your Applications folder (or <code>creaite.command</code> in the vault). It starts the live server and opens creaite in its own Chrome window. If you have no launcher yet: in Terminal, <code>system/scripts/run live_server.py</code>, then open the address it prints in Chrome or Edge, not Safari.</p>
+<p>Double-click the <b class="ui">creaite</b> app. It starts the live server and opens creaite in its own Chrome window.</p>
 </div>
 <div class="hp-step">
 <span class="hp-n">4</span>
 <h3>First sweep</h3>
-<p>Let setup run the first sweep over the last 14 days, or press <b class="ui">Run the first sweep</b> on Today. Then open Review and approve what's right. Until set-up is done, Today shows a short checklist of these steps, each with its button. <b class="ui">Settings › Health › Set-up</b> runs the health check and rebuilds the views from the page, and says how to do the two things it can't (connect Microsoft 365, make the launcher), with <b class="ui">Copy</b> and <b class="ui">Check again</b>.</p>
+<p>Let setup run it, or press <b class="ui">Run the first sweep</b> on Today. Then open <b class="ui">Review</b> and approve what's right. Until set-up is done, Today shows a checklist of these steps. <b class="ui">Settings › Health › Set-up</b> runs the health check.</p>
 </div>
 </div>
 </section>
@@ -159,13 +177,13 @@
 </div>
 <div class="hp-beat">
 <span class="hp-when">Whenever it suits</span>
-<h3>Review and apply</h3>
-<p>Clear Review in minutes. Then check Today for what's overdue, due and changed.</p>
+<h3>Review</h3>
+<p>Clear Review in minutes, then check Today for what's overdue, due and changed. In the evening, <a href="#help-howto-close-the-day" data-help="howto-close-the-day">Close the day</a>.</p>
 </div>
 <div class="hp-beat">
 <span class="hp-when">Friday from 12:00</span>
 <h3>Report</h3>
-<p>A reminder to run the <span class="hp-say">weekly report</span>. Client reports come on each project's own schedule.</p>
+<p>A reminder to run the <span class="hp-say">weekly report</span>. Client reports follow each project's own schedule.</p>
 </div>
 </div>
 </section>
@@ -173,51 +191,51 @@
 <div class="hp-sechead">
 <span class="hp-eyebrow">The dashboard</span>
 <h2 id="hp-where-things-are">Where things are</h2>
-<p>Every edit you make on the dashboard is written as a proposal and applied at once, with Undo.</p>
+<p>Your edits save at once, with Undo.</p>
 </div>
 <div class="hp-views">
 <div class="hp-view">
 <b>Today</b>
-<span>A morning brief: your meetings, what needs attention, your commitments, what was resolved, the week ahead</span>
+<span>your meetings, what needs attention, your commitments, the week ahead</span>
 </div>
 <div class="hp-view">
 <b>Intake</b>
-<span>Two ways in: Calendar import and Upload files (a note is <kbd>⌘⇧N</kbd>, from any page)</span>
+<span>(under <b class="ui">More</b>): Calendar import and Upload files</span>
 </div>
 <div class="hp-view">
 <b>Projects</b>
-<span>Current state, health checked against evidence, milestones, early warnings, and each project's Notes</span>
+<span>each project's state, health with its evidence, milestones and notes</span>
 </div>
 <div class="hp-view">
 <b>Reports</b>
-<span>Every project's week at once: its internal report and each client's report, with a count of what needs you</span>
+<span>every project's week at once, its internal report and each client's, with a count of what needs you</span>
 </div>
 <div class="hp-view">
 <b>Work</b>
-<span>Every action, risk, issue and decision, with filters and saved views</span>
+<span>every action, risk, issue and decision, with filters and saved views</span>
 </div>
 <div class="hp-view">
 <b>People</b>
-<span>Each person's open work, Draft email, and handover</span>
+<span>each person's open work, Draft email and handover</span>
 </div>
 <div class="hp-view">
 <b>Review</b>
-<span>Proposals grouped by project, nested under their minutes</span>
+<span>Claude's proposals, grouped by project</span>
 </div>
 <div class="hp-view">
 <b>Files</b>
-<span>Minutes, transcripts, documents and reports, with search that answers with sources</span>
+<span>(under <b class="ui">More</b>): minutes, transcripts and reports, with search that answers with sources</span>
 </div>
 <div class="hp-view">
 <b>Settings</b>
-<span>(the gear): Sweep time, reminders, health rules, registers, themes</span>
+<span>(under <b class="ui">More</b>): sweep time, reminders, health rules, registers, themes. <b class="ui">Activity</b>, also under <b class="ui">More</b>, lists every change, with Undo.</span>
 </div>
 </div>
 <div class="hp-keys">
 <span>
 <kbd>⌘K</kbd> search or jump anywhere</span>
 <span>
-<kbd>⌘J</kbd> ask creaite, the assistant</span>
+<kbd>⌘J</kbd> ask creaite</span>
 <span>
 <kbd>J</kbd>/<kbd>K</kbd>, <kbd>A</kbd>, <kbd>R</kbd> move, approve and reject in Review</span>
 </div>
@@ -226,7 +244,7 @@
 <div class="hp-sechead">
 <span class="hp-eyebrow">Phrasebook</span>
 <h2 id="hp-say-this">Say this in Claude Code or ask creaite</h2>
-<p>Plain English works. These are the phrases each skill listens for.</p>
+<p>Plain English works. <b class="ui">ABC</b> stands for your own project code.</p>
 </div>
 <div class="hp-phrases">
 <table>
@@ -247,7 +265,7 @@
 <td>
 <span class="hp-say">sweep</span>
 </td>
-<td>Outlook and Teams since the last sweep become proposals. It also runs by itself each morning.</td>
+<td>Outlook and Teams since the last sweep become proposals. It also runs each morning.</td>
 </tr>
 <tr>
 <td>
@@ -259,19 +277,19 @@
 <td>
 <span class="hp-say">mark ABC-A-003 done</span>
 </td>
-<td>Any change in plain words, shown before → after, then applied.</td>
+<td>Any change in plain words, shown before → after.</td>
 </tr>
 <tr>
 <td>
 <span class="hp-say">weekly report</span>
 </td>
-<td>Health with reasons, an update, and a report page for each project, filed when you approve.</td>
+<td>Health with reasons and a report page for each project, filed when you approve.</td>
 </tr>
 <tr>
 <td>
 <span class="hp-say">client report ABC</span>
 </td>
-<td>A client-safe report page. Only items marked client-visible appear in it.</td>
+<td>A client-safe report page. Only items marked client-visible appear.</td>
 </tr>
 <tr>
 <td>
@@ -289,7 +307,7 @@
 <td>
 <span class="hp-say">setup</span> · <span class="hp-say">update creaite</span>
 </td>
-<td>Health check and repair. Install a new release, shown first, with your data kept.</td>
+<td>Health check and repair. Install a new release, shown first.</td>
 </tr>
 </tbody>
 </table>
@@ -302,25 +320,25 @@
 </div>
 <div class="hp-rules">
 <div class="hp-rule">
-<b>Local only</b>
-<span>All project data stays in the vault folder on your laptop. Never cloud folders, never shared.</span>
+<b>Your data stays yours</b>
+<span>The tracker, engine and history stay on this laptop. Project files and one daily backup zip may sit in your company OneDrive. Nothing goes to any other service.</span>
 </div>
 <div class="hp-rule">
-<b>You approve every write</b>
-<span>Claude proposes; nothing reaches the tracker until you approve and apply. Scheduled runs only propose.</span>
+<b>You approve every change</b>
+<span>Nothing reaches the tracker until you approve. Scheduled runs only propose.</span>
 </div>
 <div class="hp-rule">
-<b>A source on every row</b>
-<span>Every item names the meeting, email or chat it came from, so you can always check it.</span>
+<b>Every item has a source</b>
+<span>The meeting, email or chat it came from is always shown.</span>
 </div>
 <div class="hp-rule">
-<b>Client-safe by default</b>
-<span>Client reports show only what you've marked client-visible. Confidential material stays out.</span>
+<b>Clients see only what you mark</b>
+<span>Client reports show only items marked client-visible. Confidential material stays out.</span>
 </div>
 </div>
 </section>
 <footer class="hp-foot">
-<span>Dates are shown DD-MM-YYYY. Keep the live server running while you use the dashboard. If it stops, a red alert appears across the top with the command to start it and <b class="ui">Check again</b>, and your edits wait until it's back; while it runs there is nothing to see. When mail and Teams were last swept, and when the data was built, are in Settings › Health › Live server and backups.</span>
+<span>Dates are shown DD-MM-YYYY. Keep the live server running while you use the dashboard. If it stops, a red alert appears across the top with the command to start it and <b class="ui">Check again</b>, and your edits wait until it's back. When mail and Teams were last swept is in Settings › Health › Live server and backups.</span>
 <span>
 <a href="#help-howto" data-help="howto">How-to: step-by-step for common jobs ›</a>
 </span>

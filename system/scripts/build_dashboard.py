@@ -1199,7 +1199,7 @@ def _hp_reference(part, ctx):
         side.append(f'<div class="hp-refidxg"><span class="hp-eyebrow">{_hp_inline(g["name"], ctx)}</span>{"".join(links)}</div>')
     lead = "".join(f'<p class="hp-reflead">{_hp_inline(b["t"], ctx)}</p>' for b in _hp_blocks(part["intro"]) if b["k"] == "p")
     html = ('<div class="hp-reflay"><nav class="hp-refidx" aria-label="Reference sections">'
-            '<input id="helpQ" type="search" placeholder="Search reference" aria-label="Search the reference">' + "".join(side)
+            + "".join(side)
             + f'</nav><div class="hp-refbody">{lead}{"".join(body)}</div></div>')
     return html, outline
 

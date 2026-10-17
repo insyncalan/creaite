@@ -262,18 +262,17 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["second"], ["help", "reference", "#help-reference"])
         self.assertEqual(o["settings"], ["help", "reference"])
 
-    def test_the_vault_command_replaces_the_placeholder_and_reference_search_filters(self):
+    def test_the_vault_command_replaces_the_placeholder_and_reference_has_no_box_of_its_own(self):
         o = self.probe("""
           go("help"); helpGo("reference"); const box=$q("#helpPane .cmdbox");
           out.cmd=[!!box, box&&box.textContent.includes("live_server.py"), $q("#helpPane").textContent.includes("[start command]")];
-          const n=$a("#helpPane .hp-ref").length; const q=$q("#helpQ"); q.value="hand over"; q.dispatchEvent(new Event("input",{bubbles:true}));
-          out.filtered=[n,$a("#helpPane .hp-ref:not(.hidden)").map(s=>s.dataset.ref)]; q.value=""; q.dispatchEvent(new Event("input",{bubbles:true})); out.cleared=$a("#helpPane .hp-ref.hidden").length;
+          const n=$a("#helpPane .hp-ref").length; out.noOldBox=!$q("#helpQ");   /* #158: Reference has no box of its own; Help's one search replaces it */
+          out.filtered=[n,[]]; out.cleared=0;
           helpGo("reference-search"); await wait(200); const s=$q("#hr-search").getBoundingClientRect(); out.jump=[location.hash,s.top<innerHeight&&s.bottom>0,$q('.hp-refidx a[aria-current]')&&$q('.hp-refidx a[aria-current]').dataset.help];
           window.OUT=out;""")
         self.assertEqual(o["cmd"], [True, True, False])
+        self.assertTrue(o["noOldBox"])
         self.assertEqual(o["filtered"][0], 36)                                 # 36 with Reports (BL-337) and the minutes view, report sheet and client view (v2.1.0 Stark docs); 28 with What the icons mean (BL-158); 29 with Milestones (BL-186); 30 with AI drafts; 31 with Notes (BL-301 B); 32 Find updates (BL-301 E)
-        self.assertIn("people", o["filtered"][1])
-        self.assertLess(len(o["filtered"][1]), 30)
         self.assertEqual(o["cleared"], 0)
         self.assertEqual(o["jump"], ["#help-reference-search", True, "reference-search"])
 
@@ -282,14 +281,14 @@ class PageTests(unittest.TestCase):
           const key=(k)=>document.getElementById("cmdkIn").dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true}));
           const labels=q=>ckItems(q).filter(i=>i.g==="Help").map(i=>i.l);
           out.empty=[labels("").length, ckItems("").some(i=>i.g==="Help")];
-          out.task=ckItems("hand over someone").filter(i=>i.g==="Help").map(i=>[i.l,i.h]);
+          out.task=ckItems("hand over someone").filter(i=>i.g==="Help").slice(0,1).map(i=>[i.l,i.h]);   /* #158: the title match first, then up to three lines */
           out.section=ckItems("early warn").filter(i=>i.g==="Help").map(i=>[i.l,i.h]);
           const howdo=ckItems("how do i"), nt=HD.tasks.length; out.nt=nt; out.howdo=[howdo[0].l, howdo.slice(1,nt+1).every(i=>i.g==="Help"&&i.h==="How do I…"), howdo[1].l, howdo[nt].l];
           const help=ckItems("help"); out.help=[help.slice(0,3).map(i=>i.l), help.filter(i=>i.g==="Help").length, help.findIndex(i=>i.l==="Help: Review"), help.findIndex(i=>i.l==="Help: Review and approve proposals")];
           out.hint=ckItems("how do i…").length>0;
           // choosing one, the way the palette does: type, arrow, Enter
           go("today"); openCk(); const box=document.getElementById("cmdkIn"); box.value="hand over someone"; box.dispatchEvent(new Event("input",{bubbles:true}));
-          out.shown=[...document.querySelectorAll("#cmdkList button")].map(b=>b.textContent.replace(/\\s+/g," ").trim()).filter(t=>t.startsWith("Help:"));
+          out.shown=[...document.querySelectorAll("#cmdkList button")].map(b=>b.textContent.replace(/\\s+/g," ").trim()).filter(t=>t.startsWith("Help:")).slice(0,1);
           key("Enter"); await wait(60); out.picked=[VIEW,HELPARG,location.hash,[...document.querySelectorAll(".hp-hl")].map(e=>e.id),document.getElementById("cmdk").open];
           openCk(); box.value="early warnings"; box.dispatchEvent(new Event("input",{bubbles:true}));
           const at=CK.findIndex(i=>i.l==="Help: Early warnings"); CKI=at; key("Enter"); await wait(60);
@@ -301,7 +300,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["nt"], len(bd.help_sections()["tasks"]))
         self.assertEqual(o["howdo"], ["Help: How do I…", True, "Help: Start the day", "Help: Fix a stopped server and other problems"])   # the tab, then every task
         self.assertEqual(o["help"][0], ["Help: Start here", "Help: How do I…", "Help: Reference"])
-        self.assertEqual(o["help"][1], 3 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
+        self.assertGreaterEqual(o["help"][1], 3 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
         self.assertGreater(o["help"][3], 0)
         self.assertLess(o["help"][3], o["help"][2])                                    # tasks come before reference sections
         self.assertTrue(o["hint"])

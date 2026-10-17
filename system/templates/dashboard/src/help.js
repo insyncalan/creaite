@@ -9,6 +9,8 @@ import { go, navWrite } from "./core/nav.js";
 import { cmdBox, D, S, store } from "./core/page.js";
 import { snack, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
+import { ckAsk } from "./ask.js";
+import { hmark, hnorm, hsnip, helpFind, HPARTS } from "./helpSearch.js";
 import { drawPanel, PDAGE, pdAll, pdPut, pkNew, REC } from "./panel.js";
 import { hit } from "./work.js";
 /* ===== Help (BL-84) ===== */
@@ -19,7 +21,7 @@ export const HD=D.help&&D.help.tabs?D.help:{tabs:[],tasks:[],sections:[]}, HTABS
 shared.HELPARG="start";
 export function helpNorm(a){ a=String(a||""); const i=a.indexOf("-"), tab=i<0?a:a.slice(0,i), rest=i<0?"":a.slice(i+1);
   if(!HTABS.includes(tab)) return null;
-  if(rest&&!(tab==="howto"?HD.tasks:tab==="reference"?HD.sections:[]).some(x=>x.id===rest)) return tab;
+  if(rest&&!(tab==="howto"?HD.tasks:tab==="reference"?HD.sections:tab==="whatsnew"?(HD.versions||[]).map(v=>({id:v})):[]).some(x=>x.id===rest)) return tab;
   return rest?`${tab}-${rest}`:tab; }
 export function renderHelp(arg){ if(!HD.tabs.length){ putHTML($("#helpPane"),html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`); return; }
   const a=helpNorm(arg)||helpNorm(store.get("creaite-help-tab","start"))||HTABS[0], i=a.indexOf("-"), tab=i<0?a:a.slice(0,i), rest=i<0?"":a.slice(i+1), changed=!$("#helpPane").dataset.tab||$("#helpPane").dataset.tab!==tab;
@@ -32,8 +34,28 @@ export function renderHelp(arg){ if(!HD.tabs.length){ putHTML($("#helpPane"),htm
   const target=rest?(tab==="howto"?document.getElementById("ht-"+rest):document.getElementById("hr-"+rest)):null;
   if(target){ target.scrollIntoView({block:"start"});   /* the embedded fonts can swap in after this and move it: go there again */
     if(document.fonts&&document.fonts.status!=="loaded") document.fonts.ready.then(()=>{ if(shared.HELPARG===a&&target.isConnected) target.scrollIntoView({block:"start"}); }); }
-  else if(changed) $("#v-help").scrollTop=0; }
-export function helpGo(arg){ const a=helpNorm(arg); if(!a) return; renderHelp(a); navWrite(true); }
+  else if(changed) $("#v-help").scrollTop=0;
+  helpResHide(); helpApplyFind(); }
+export function helpGo(arg,find){ const a=helpNorm(arg); if(!a) return; shared.HELPFIND=find||null; renderHelp(a); navWrite(true); }
+/* #158 part 1: one search over all of Help. The box sits above the tabs; "/" focuses it while Help is open; results replace the page
+   until one is chosen (or the box is cleared). A chosen result opens its page scrolled to the matching line, which is marked. */
+export function helpResHide(){ const r=$("#helpRes"); if(r) r.hidden=true; const p=$("#helpPane"); if(p) p.hidden=false; }
+export function helpSearchFocus(){ const i=$("#helpS"); if(i){ i.focus(); i.select(); } }
+export function helpSearchDraw(){ const i=$("#helpS"), box=$("#helpRes"), q=i.value.trim();
+  if(!q||!HD.tabs.length){ helpResHide(); return; }
+  const res=helpFind(HD.tabs,q); $("#helpPane").hidden=true; box.hidden=false;
+  if(!res.length){ putHTML(box,raw(`<div class="hs-none"><p>Nothing in Help for ‘${esc(q)}’.</p><button type="button" class="btn" data-hs-ask>Ask creaite</button></div>`)); return; }
+  const groups=new Map(); res.forEach(r=>{ if(!groups.has(r.page.part)) groups.set(r.page.part,[]); groups.get(r.page.part).push(r); });
+  const CAP=8, ordered=[...groups.entries()].sort((a,b)=>b[1][0].score-a[1][0].score);
+  putHTML(box,raw(ordered.map(g=>`<section class="hs-g"><h2>${esc(HPARTS[g[0]]||g[0])} <small>${g[1].length}</small></h2><ul>`
+    +g[1].slice(0,CAP).map(r=>`<li><a class="hs-r" href="#help-${esc(r.page.arg)}" data-help="${esc(r.page.arg)}" data-line="${esc(r.line)}"><b class="hs-t">${esc(r.page.title)}</b><span class="hs-l">${hmark(hsnip(r.line,q),q)}</span></a></li>`).join("")
+    +(g[1].length>CAP?`<li class="hs-more">${g[1].length-CAP} more: add a word to narrow it</li>`:"")+"</ul></section>").join(""))); }
+/* the line a result matched, found again in the open page: scrolled to the middle and marked until the next page opens */
+export function helpApplyFind(){ $$("#helpPane .hp-found").forEach(e=>e.classList.remove("hp-found")); const f=shared.HELPFIND; shared.HELPFIND=null; if(!f||!f.line) return;
+  const i=shared.HELPARG.indexOf("-"), tab=i<0?shared.HELPARG:shared.HELPARG.slice(0,i), rest=i<0?"":shared.HELPARG.slice(i+1);
+  const root=(rest&&(tab==="howto"?document.getElementById("ht-"+rest):tab==="reference"?document.getElementById("hr-"+rest):tab==="whatsnew"?document.getElementById("wn-"+rest):null))||$("#helpPane"), want=hnorm(f.line);
+  const el=[...root.querySelectorAll("p,li,td,th,h1,h2,h3")].find(x=>{ const c=x.cloneNode(true); c.querySelectorAll("ul,ol,svg").forEach(y=>y.remove()); return hnorm(c.textContent.replace(/\s+/g," ").trim())===want; });
+  if(el){ el.classList.add("hp-found"); el.scrollIntoView({block:"center"}); } }
 /* First visit: a vault whose help.start_seen is false opens on Help › Start here once, then sets it true (a settings write,
    logged as usual). A link with an address (a bookmark, #review) is never overridden; the setting is only written when the
    dashboard can write without asking (the live server, or a vault folder already connected), so it shows again until it can. */
@@ -44,15 +66,19 @@ export function firstHelp(){ if(S.helpSeen||shared.HADHASH) return false; go("he
 /* ⌘K: every task and reference section is an entry under "Help" ("Help: Hand over someone's work"); they appear once two
    letters are typed, and choosing one opens its tab at that place */
 export function helpCk(q){ q=q.toLowerCase(); if(q.trim().length<2) return [];
-  const hit=(l,h)=>(l+" "+h).toLowerCase().includes(q), out=[];
-  HD.tabs.forEach(t=>{ if(hit("Help: "+t.title,"")) out.push({g:"Help",l:"Help: "+t.title,h:"",fn:()=>go("help",t.id)}); });
-  HD.tasks.forEach(t=>{ if(hit("Help: "+t.title,"How do I…")) out.push({g:"Help",l:"Help: "+t.title,h:"How do I…",fn:()=>go("help","howto-"+t.id)}); });
-  HD.sections.forEach(x=>{ if(hit("Help: "+x.title,"Reference")) out.push({g:"Help",l:"Help: "+x.title,h:"Reference",fn:()=>go("help","reference-"+x.id)}); });
+  const hit=(l,h)=>(l+" "+h).toLowerCase().includes(q), out=[], titled=new Set();
+  HD.tabs.forEach(t=>{ if(hit("Help: "+t.title,"")){ out.push({g:"Help",l:"Help: "+t.title,h:"",fn:()=>go("help",t.id)}); titled.add(t.id); } });
+  HD.tasks.forEach(t=>{ if(hit("Help: "+t.title,"How do I…")){ out.push({g:"Help",l:"Help: "+t.title,h:"How do I…",fn:()=>go("help","howto-"+t.id)}); titled.add("howto-"+t.id); } });
+  HD.sections.forEach(x=>{ if(hit("Help: "+x.title,"Reference")){ out.push({g:"Help",l:"Help: "+x.title,h:"Reference",fn:()=>go("help","reference-"+x.id)}); titled.add("reference-"+x.id); } });
+  /* #158: the same index as Help's own search: the best three lines, from pages whose title did not already match */
+  if(q.trim().length>=3) helpFind(HD.tabs,q).filter(r=>!titled.has(r.page.arg)).slice(0,3).forEach(r=>out.push({g:"Help",l:"Help: "+r.page.title,h:hsnip(r.line,q,70),fn:()=>{ go("help",r.page.arg); shared.HELPFIND={line:r.line}; helpApplyFind(); }}));
   return out; }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootHelp0091(){
-document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]:not([role=tab])"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help); });   /* the tabs are the Tabs block's (BL-316) */
-document.addEventListener("input",e=>{ if(e.target.id!=="helpQ") return; const q=e.target.value.toLowerCase().trim(); $$("#helpPane .hp-ref").forEach(s=>s.classList.toggle("hidden",!!q&&!s.textContent.toLowerCase().includes(q))); });
+document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]:not([role=tab])"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help,l.dataset.line?{line:l.dataset.line}:null); });   /* the tabs are the Tabs block's (BL-316) */
+document.addEventListener("input",e=>{ if(e.target.id==="helpS") helpSearchDraw(); });
+document.addEventListener("keydown",e=>{ if(e.target.id!=="helpS"||e.key!=="Escape") return; e.stopPropagation(); if(e.target.value){ e.target.value=""; helpSearchDraw(); } else e.target.blur(); },true);
+document.addEventListener("click",e=>{ if(e.target.closest("#helpRes [data-hs-ask]")) ckAsk($("#helpS").value.trim()); });
 }
 /* ===== BL-155 (sprint-ux) ===== the key-hint line under Work's and Review's lists shows until the Keys chip was opened once in
    this browser (localStorage creaite-keys-seen). BL-175 (sprint-peek) removed the chip: Help lists the keys (the ? key), and a

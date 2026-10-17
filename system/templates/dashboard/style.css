@@ -1286,6 +1286,21 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 }
 /* ===== end BL-168 ===== */
 /* ===== end Help (BL-84) ===== */
+/* ===== Help finding (#158 Phase B): the search box, its results and the line a result lands on ===== */
+.hp-search{position:relative;max-width:1080px;margin:18px auto 0}
+.hp-search input{width:100%;height:40px;border:1px solid var(--hp-hair);border-radius:var(--r-xl);padding:0 44px 0 16px;background:var(--hp-paper);color:var(--hp-ink);font:inherit;font-size:var(--fs-lg)}
+.hp-search input:focus-visible{outline:2px solid var(--hp-teal);outline-offset:1px}
+.hp-skey{position:absolute;right:14px;top:50%;transform:translateY(-50%);border:1px solid var(--hp-hair);border-radius:var(--r-md);padding:0 7px;font:500 var(--fs-sm) var(--hp-mono);color:var(--hp-soft);background:var(--hp-ground)}
+.hs-res{padding:18px 0 56px;font-family:var(--hp-body);color:var(--hp-ink)}
+.hs-g{margin-bottom:22px} .hs-g h2{font:600 var(--fs-md) var(--hp-display);letter-spacing:.04em;text-transform:uppercase;color:var(--hp-soft);margin:0 0 8px} .hs-g h2 small{font-weight:400;margin-left:6px}
+.hs-g ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.hs-r{display:block;padding:10px 14px;border:1px solid var(--hp-hair);border-radius:var(--r-lg);background:var(--hp-paper);text-decoration:none;color:var(--hp-ink)} .hs-r:hover,.hs-r:focus-visible{border-color:var(--hp-teal);background:var(--hp-teal-soft)}
+.hs-t{display:block;font:600 var(--fs-lg) var(--hp-display)} .hs-l{display:block;margin-top:2px;color:var(--hp-soft);font-size:var(--fs-md);line-height:1.45}
+.hs-l mark,.hs-t mark{background:var(--hp-amber-soft);color:var(--hp-ink);border-radius:2px;padding:0 1px}
+.hs-more,.hs-none p{color:var(--hp-soft);font-size:var(--fs-md)} .hs-none{padding:24px 0;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.hp-found{background:var(--hp-amber-soft);border-radius:var(--r-md);box-shadow:0 0 0 4px var(--hp-amber-soft)}
+/* ===== end Help finding (#158) ===== */
+
 #helpTabs{position:sticky;top:0;z-index:var(--z-sticky);background:var(--hp-ground);margin-top:0;padding-top:14px} #helpTabs button{color:var(--hp-soft)} #helpTabs button[aria-selected="true"]{color:var(--hp-ink)}
 /* ===== Sweep and alerts (BL-97, BL-99, BL-98) ===== */
 .iglist{margin-top:6px} .igrow{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)} .igrow:first-child{border-top:0}

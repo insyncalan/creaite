@@ -140,7 +140,7 @@
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
         <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
       </div></section>
-      <section class="view" id="v-help" hidden><div class="hp-shell"><div class="tabhost" id="helpTabsHost"></div><div id="helpPane" role="tabpanel"></div></div></section>
+      <section class="view" id="v-help" hidden><div class="hp-shell"><div class="hp-search" role="search"><input id="helpS" type="search" placeholder="Search all of Help" aria-label="Search all of Help" autocomplete="off" spellcheck="false"><span class="hp-skey" aria-hidden="true">/</span></div><div class="tabhost" id="helpTabsHost"></div><div id="helpRes" class="hs-res" role="region" aria-label="Search results" aria-live="polite" hidden></div><div id="helpPane" role="tabpanel"></div></div></section>
       <aside class="panel" id="panel" aria-label="Details"><div class="pin">
         <div class="ph"><div style="flex:1"><div class="id" id="pId"></div><h2 id="pTitle"></h2></div><button class="btn quiet" id="pClose">Close</button></div>
         <div class="pb" id="pBody"><div class="editbanner" id="editBanner">Editing — changes apply when you save</div><dl class="fgrid" id="pFields"></dl></div>
