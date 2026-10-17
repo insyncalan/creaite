@@ -1,0 +1,62 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index bd930aba..49f1b6ff 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -3267,6 +3267,7 @@ def main():
+     clear_card_marks(0)                                  # #124 F3: no Approve is in progress at start
+     for f in (paths.STAGING / "changes").glob("*.json") if (paths.STAGING / "changes").is_dir() else []:
+         f.unlink(missing_ok=True)
++    retire_note_drafts()                                 # #175: the Notes tab's old typed drafts, backed up and logged once
+     if LAUNCHED:
+         LAST_HERE[0] = time.time()
+         threading.Thread(target=watch_for_close, args=(httpd,), daemon=True).start()
+@@ -4397,13 +4398,46 @@ def _events_follow(handler, seq):
+ # ===== BL-141 (sprint-admin): what ask creaite changed =====
+ # Activity's read-only list of the files ask creaite (and the card) changed, today and the last seven days, each with its Undo.
+ def changes_list_route(handler, req):
+-    """POST /api/changes/list: the files ask creaite and the card changed in the last seven days, newest first (BL-141)."""
++    """POST /api/changes/list: the files ask creaite and the card changed in the last seven days, newest first (BL-141). #175 (M1
++    of Team Cap's #119 review): the saves of one editing session (the same file, session and backup) are one row, its latest save,
++    with `saves` (how many) and `first_at` (when the session began); its Undo is the latest save's, which undoes the whole session.
++    The files log is unchanged: still one line per save."""
+     import filechange
+-    rows = [{k: e.get(k) for k in ("id", "at", "op", "path", "to", "why", "via", "approved", "undone", "tier")}
+-            for e in filechange.changes(days=7) if e.get("via") in ("ask", "dashboard")]
++    rows, at = [], {}
++    for e in filechange.changes(days=7):
++        if e.get("via") not in ("ask", "dashboard"):
++            continue
++        row = {k: e.get(k) for k in ("id", "at", "op", "path", "to", "why", "via", "approved", "undone", "tier")}
++        group = (e.get("path"), e.get("session"), e.get("backup")) if e.get("op") == "edit" and e.get("session") else None
++        if group in at:                                            # a later save of a session already listed: it takes the row
++            first = rows[at[group]]
++            row.update(saves=first["saves"] + 1, first_at=first["first_at"])
++            rows[at[group]] = row
++            continue
++        if group:
++            at[group] = len(rows)
++            row.update(saves=1, first_at=e.get("at"))
++        rows.append(row)
++    rows.sort(key=lambda r: r["id"])
+     return handler.send(200, {"ok": True, "changes": rows[::-1]})
+ 
+ 
++def retire_note_drafts():
++    """#175: at start-up, the Notes tab's old typed drafts (system/staging/drafts/notes/<16 hex>.json, unused since #119) are
++    moved into one file-change backup and logged (filechange.retire_note_drafts); the Capture drawer's capture-*.json stay. A
++    failure is logged and never stops the server."""
++    try:
++        import filechange
++        n = filechange.retire_note_drafts()
++    except Exception as e:  # noqa: BLE001  start-up goes on; the drafts stay until the next start
++        if debuglog is not None:
++            debuglog.warn("notes", f"old note drafts not cleared ({type(e).__name__})")
++        return 0
++    if n and debuglog is not None:
++        debuglog.info("notes", f"{n} old note draft{'s' if n != 1 else ''} moved to a file-change backup (#175)")
++    return n
++
++
+ def changes_undo_route(handler, req):
+     """Undo one change from the list: filechange.py undo <n>, which refuses if the file has changed since."""
+     n = req.get("id")
