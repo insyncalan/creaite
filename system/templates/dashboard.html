@@ -5172,6 +5172,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     learnLabel: () => learnLabel,
     learnSignal: () => learnSignal,
     learnable: () => learnable,
+    legBtn: () => legBtn,
     lev: () => lev,
     linesFrom: () => linesFrom,
     listBody: () => listBody,
@@ -35977,6 +35978,7 @@ ${s5}`;
     return `<span class="ev">${countLink(`${plur(ov, "overdue action")} in ${nm3}`, ov, `actions:overdue:${c5}`, null, `Overdue <b class="${ov ? "bad" : ""}">${ov}</b>`)} · ${jumpLink(`${plur(nd2, "open item")} with no due date in ${nm3}`, nd2, c5, "undated", `No date <b>${nd2}</b>`)} · ${countLink(`${plur(urg, "urgent open RAID item")} in ${nm3}`, urg, `raid:urgentonly:${c5}`, null, `Urgent risks <b class="${urg ? "bad" : ""}">${urg}</b>`)} · ${jumpLink(`Milestone slip of ${p6.slip} day${p6.slip === 1 ? "" : "s"} in ${nm3}`, p6.slip, c5, "ms", `Slip <b class="${p6.slip ? "bad" : ""}">${p6.slip ? p6.slip + " days" : "none"}</b>`)} · Warnings <b class="${nw2 ? "bad" : ""}">${nw2}</b></span>`;
   }
   var SPN = { ok: "On track", warn: "At risk", bad: "Off track", "": "No update" };
+  var legBtn = () => `<button type="button" class="legbtn" aria-label="What the health bars mean" aria-haspopup="dialog" aria-expanded="false"></button>`;
   var spark = (p6) => {
     const t47 = p6.trail, last = t47[t47.length - 1];
     return `<span class="spark" tabindex="0" role="group" data-sp="${esc(p6.code)}" aria-label="Health, last ${t47.length} weeks, oldest first. ${last ? SPN[last] : "No update"} this week. Arrow keys move between weeks.">${t47.map((x5, i5) => `<i class="s-${x5}" data-i="${i5}"></i>`).join("")}</span>`;
@@ -35990,7 +35992,7 @@ ${s5}`;
     const w6 = sparkWeek(p6, i5), n4 = p6.trail.length;
     return `<div class="spk-wk">Week ending ${fd(w6.end)}${i5 === n4 - 1 ? " · this week" : ""}</div><div class="spk-h">${w6.t ? `<span class="spk-dot s-${w6.t}"></span>` : ""}${w6.word}</div><div class="spk-ch">${w6.ch}</div>${w6.why ? `<div class="spk-why">${esc(w6.why)}</div>` : ""}<ol class="spk-list" aria-label="The last ${n4} weeks">${p6.trail.map((x5, j5) => `<li${j5 === i5 ? ' class="cur" aria-current="true"' : ""}><span class="spark mini" aria-hidden="true"><i class="s-${x5}"></i></span><span class="spk-d">${fd((p6.trailend || [])[j5] || "")}</span><span class="spk-w">${SPN[x5]}</span></li>`).join("")}</ol>`;
   }
-  var sparkKeyHtml = () => `<div class="spk-key" id="sparkLeg" role="dialog" aria-label="What the health bars mean" tabindex="-1"><div class="spk-kt">Health, last 6 weeks</div><div class="spk-ks">One bar a week, oldest to newest, each a week ending Friday. Taller is healthier.</div>${["ok", "warn", "bad", ""].map((x5) => `<div class="spk-kr"><span class="spark mini" aria-hidden="true"><i class="s-${x5}"></i></span>${SPN[x5]}${x5 === "" ? " that week" : ""}</div>`).join("")}<div class="spk-kr"><span class="spk-kdot" aria-hidden="true"></span>This week</div></div>`;
+  var sparkKeyHtml = () => `<div class="spk-key" id="sparkLeg" role="dialog" aria-label="What the health bars mean" tabindex="-1"><div class="spk-kt">Health, last 6 weeks</div><div class="spk-ks">One bar a week, oldest to newest, each a week ending Friday. Taller is healthier. Rest on a bar for the week's reason: the week's update summary, shortened to 160 characters.</div>${["ok", "warn", "bad", ""].map((x5) => `<div class="spk-kr"><span class="spark mini" aria-hidden="true"><i class="s-${x5}"></i></span>${SPN[x5]}${x5 === "" ? " that week" : ""}</div>`).join("")}<div class="spk-kr"><span class="spk-kdot" aria-hidden="true"></span>This week</div></div>`;
   var sparkAt = null, sparkI = 0, sparkT = 0;
   var sparkEl = () => document.querySelector(`.spark[data-sp="${CSS.escape(sparkAt || "")}"]:not(.mini)`);
   function sparkShow(el2, i5) {
@@ -36114,7 +36116,7 @@ ${s5}`;
   }
   var PFCOLS = [["project", "Project"], ["health", "Health"], ["evidence", "Evidence"], ["trend", "6 weeks"], ["next", "Next milestone"]];
   function portfolioTable(id2 = "pf", dots = false) {
-    return `<table><thead><tr>${PFCOLS.map(([k5, l6]) => `<th data-col="${k5}">${l6}${k5 === "trend" ? `<button type="button" class="legbtn" aria-label="What the health bars mean" aria-haspopup="dialog" aria-expanded="false"></button>` : ""}</th>`).join("")}</tr></thead><tbody>${P3.map((p6) => {
+    return `<table><thead><tr>${PFCOLS.map(([k5, l6]) => `<th data-col="${k5}">${l6}${k5 === "trend" ? legBtn() : ""}</th>`).join("")}</tr></thead><tbody>${P3.map((p6) => {
       const nm3 = p6.ms.find((m5) => m5[2] !== "done") || p6.ms[p6.ms.length - 1] || ["No milestones yet", "", ""], ds2 = (p6.client || "").trim(), did = `${id2}d-${p6.code}`;
       return `<tr class="click" data-cock="${p6.code}"><td><button type="button" class="pfname"${ds2 ? ` data-tip="${esc(ds2)}" aria-describedby="${did}"` : ""}>${esc(p6.name)}</button>${ds2 ? `<span class="vh" id="${did}">${esc(ds2)}</span>` : ""}</td><td>${dots ? `<span data-statusdot="${esc(p6.health || "")}"></span>` : health(p6.health)}<div class="sub" style="max-width:36ch">${esc(p6.reason)}</div></td><td>${evidence(p6)}</td><td>${spark(p6)}</td><td>${esc(nm3[0])}${nm3[1] ? `<div class="sub ${nm3[2] === "slip" ? "late" : ""}">${longDay(nm3[1])} (${rel(nm3[1]).replace(/^./, (c5) => c5.toLowerCase())})</div>` : ""}</td></tr>`;
     }).join("")}</tbody></table>`;
@@ -42095,7 +42097,7 @@ ${s5}`;
    <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
-     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
+     <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}${raw(legBtn())}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R3.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v5, b5, nav, ex2]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex2))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v5 && v5 !== "None" ? "bad" : ""}">${v5}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p6))}
      <div id="cockRep"></div><!-- BL-337: the Reporting card (components/reporting/ReportingCard.jsx) -->

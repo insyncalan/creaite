@@ -228,6 +228,19 @@ class Portfolio(ts.Snapshots):
         self.assertFalse(b.eval("!!document.getElementById('sparkLeg')"))
         self.assertEqual(b.eval("document.activeElement.classList.contains('legbtn')"), True)
 
+    def test_the_project_page_strip_has_the_key_and_it_says_the_reason_is_shortened(self):
+        b = self.b
+        b.eval("go('cockpit','ABC')")
+        b.wait("VIEW==='cockpit' && COCK==='ABC'", 5)
+        b.click(".cock .legbtn")
+        b.wait("document.getElementById('sparkLeg')", 5)
+        self.assertIn("shortened to 160 characters", b.eval("document.getElementById('sparkLeg').textContent"))
+        b.key("Escape")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('sparkLeg')"))
+        self.assertEqual(b.eval("document.activeElement.classList.contains('legbtn') && !!document.activeElement.closest('.cock')"), True,
+                         "Esc returns focus to the button that was opened")
+
     def test_the_bars_read_in_both_palettes_and_modes(self):
         b = self.b
         for palette in TEST_PALETTES:
