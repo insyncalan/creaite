@@ -61,6 +61,23 @@ TOP = """(() => { const sc = document.querySelector('#shFix .sheet-scroll'), t =
     if (r.bottom - t > 1) return [s.dataset.id, Math.round(t - r.top)]; } return null; })()"""
 
 
+def assert_exports_are_clean(case, text):
+    """Text the sheet saved, as Word (docx_tools.md_paras) and HTML/PDF (creaite_doc.md_html) draw it: every marker is gone from what is shown."""
+    import re
+    import docx_tools as dt
+    import creaite_doc
+    para = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+    shown = re.findall(r"<w:t[^>]*>(.*?)</w:t>", dt.md_paras(para, "TEXT", text))
+    joined = "\n".join(shown)
+    for mark in ("#", "&gt;", ">", "~~"):
+        case.assertNotIn(mark, joined, f"Word shows a literal {mark!r}: {joined!r}")
+    html = creaite_doc.md_html(text)
+    for mark in ("#", "&gt;", "~~"):
+        case.assertNotIn(mark, html, f"HTML/PDF shows a literal {mark!r}: {html!r}")
+
+
+
+
 class SheetCase(LiveBrowserCase):
     shared_server = True        # the fixture changes no data
 
@@ -376,6 +393,147 @@ class TextTests(SheetCase):
         self.assertEqual(self.sh("own"), [self.ref])
         self.assertFalse(b.eval("document.getElementById('panel').classList.contains('on')"))
 
+
+BAR = "#shFix section[data-id='this_week'] .sheet-rtebar"
+WEEK_TEXT = "#shFix section[data-id='this_week'] .sheet-rich"
+JQ = json.dumps
+
+
+class SheetBarTests(SheetCase):
+    """#134: the report sheet's one-line grouped toolbar (the `sheet` profile): where it shows, what it holds, where it floats, how big it is
+    at every zoom, and that what it writes comes out of Word, HTML and PDF as it was meant (no literal #, > or ~~)."""
+
+    def open_bar(self):
+        self.b.click(f"{WEEK_TEXT} p")
+        self.b.wait(f"!!document.querySelector({JQ(BAR)})")
+
+    def pick(self, menu, cmd):
+        """Open a bar menu with the pointer and click one item, as a person does."""
+        b = self.b
+        b.click(f"{BAR} [data-nt={menu}]")
+        b.wait(f"!!document.querySelector({JQ(BAR + ' [role=menu] [data-cmd=' + cmd + ']')})", 5)
+        b.click(f"{BAR} [role=menu] [data-cmd={cmd}]")
+
+    def menu_items(self, menu):
+        b = self.b
+        b.click(f"{BAR} [data-nt={menu}]")
+        b.wait(f"!!document.querySelector({JQ(BAR + ' [role=menu] [data-cmd]')})", 5)
+        got = b.eval(f"[...document.querySelectorAll({JQ(BAR + ' [role=menu] [data-cmd]')})].map(x => x.dataset.cmd)")
+        b.eval(f"document.querySelector({JQ(WEEK_TEXT)}).focus()")
+        return got
+
+    def test_the_bar_shows_when_a_field_is_active_with_the_grouped_tools_and_nothing_else(self):
+        b = self.b
+        self.assertEqual(b.eval(f"document.querySelectorAll({JQ(BAR)}).length"), 0)
+        self.open_bar()
+        self.assertEqual(b.eval(f"[...document.querySelectorAll({JQ(BAR + ' [data-nt]')})].map(x => x.dataset.nt)"),
+                         ["m-heading", "b", "i", "s", "m-list", "quote", "link", "undo", "redo"])          # no Insert menu, no # or picture
+        self.assertEqual(self.menu_items("m-heading"), ["text", "h1", "h2", "h3", "clear"])
+        self.assertEqual(self.menu_items("m-list"), ["ul", "ol", "indent", "outdent"])                   # no checklist until the editor has one
+
+    def test_the_bar_takes_no_room_and_floats_over_the_sheet(self):
+        b = self.b
+        geo = """(() => { const p = document.querySelector('#shFix .sheet-a4 .page'), n = document.querySelector('#shFix section[data-id="risks"]'),
+          w = document.querySelector('#shFix section[data-id="this_week"] .sheet-edwrap'); return [p.offsetHeight, n.getBoundingClientRect().top - p.getBoundingClientRect().top, w.getBoundingClientRect().height]; })()"""
+        before = b.eval(geo)
+        self.open_bar()
+        self.assertEqual(b.eval(f"getComputedStyle(document.querySelector({JQ(BAR)})).position"), "absolute")
+        self.assertEqual(b.eval(geo), before, "the page, the next section and the field's wrapper keep their size and place")
+        self.assertGreater(b.eval(f"document.querySelector({JQ(BAR)}).getBoundingClientRect().height"), 20)
+
+    def test_the_bar_goes_when_the_focus_leaves_and_stays_while_it_is_in_the_bar(self):
+        b = self.b
+        self.open_bar()
+        b.click(f"{BAR} [data-nt=b]")                                        # a press on the bar keeps the field's focus
+        self.assertEqual(b.eval(f"document.querySelectorAll({JQ(BAR)}).length"), 1)
+        b.click("#shFix section[data-id='next_week'] .sheet-rich p")           # another field: this one's bar goes, that one's shows
+        b.wait(f"!document.querySelector({JQ(BAR)})")
+        b.wait("!!document.querySelector('#shFix section[data-id=\"next_week\"] .sheet-rtebar')")
+        b.click("#shFix section[data-id='this_week'] .sheet-h")                # a heading input is not a rich field
+        b.wait("!document.querySelector('#shFix .sheet-rtebar')")
+
+    def test_a_table_cell_and_a_read_only_sheet_get_no_bar(self):
+        b = self.b
+        b.click("#shFix section[data-id='asks'] tbody tr:nth-child(2) td:nth-child(2) .sheet-ed")
+        b.wait("document.activeElement.closest('td')")
+        self.assertEqual(b.eval("document.querySelectorAll('#shFix .sheet-rtebar').length"), 0)
+        self.assertEqual(b.eval("document.querySelectorAll('#shFix td .sheet-edwrap, #shFix td .sheet-rtebar').length"), 0)
+        b.eval("SH.readOnly = true; SH.draw();")
+        b.wait("[...document.querySelectorAll('#shFix .sheet-rich')].every(e => e.getAttribute('contenteditable') === 'false')")
+        b.eval(f"document.querySelector({JQ(WEEK_TEXT)}).dispatchEvent(new FocusEvent('focusin', {{bubbles: true}}))")      # a focus a read-only field could still get
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.querySelectorAll('#shFix .sheet-rtebar').length"), 0)
+
+    def test_the_bar_hides_nothing_the_person_may_need_and_still_does_not_with_the_link_form_open(self):
+        b = self.b
+        covers = f"""(() => {{ const bar = document.querySelector({JQ(BAR)}), r = bar.getBoundingClientRect(), page = bar.closest('.page'), w = bar.parentElement, out = [];
+          for (const el of page.querySelectorAll('input, button, a[href], td, th')) {{ if (w.contains(el) || el.closest('.sheet-handle')) continue; const q = el.getBoundingClientRect();
+            if (q.width < 2 || q.height < 2 || getComputedStyle(el).visibility === 'hidden') continue;
+            if (Math.min(q.right, r.right) - Math.max(q.left, r.left) > 2 && Math.min(q.bottom, r.bottom) - Math.max(q.top, r.top) > 2) out.push((el.className || el.tagName) + ':' + (el.value || el.textContent).slice(0, 12)); }}
+          return out; }})()"""
+        self.open_bar()
+        self.assertEqual(b.eval(covers), [], "the section's own heading, the table above and the next heading stay uncovered")
+        b.click(f"{BAR} [data-nt=link]")
+        b.wait(f"!document.querySelector({JQ(BAR + ' .rtelink')}).hidden")
+        b.pump(0.3)
+        self.assertEqual(b.eval(covers), [], "and the same with the link form open")
+
+    def test_it_floats_on_the_side_that_covers_less_when_the_usual_side_would_cover_a_control(self):
+        b = self.b
+        b.click("#shFix section[data-id='summary'] .sheet-rich p")
+        b.wait("!!document.querySelector('#shFix section[data-id=\"summary\"] .sheet-rtebar')")
+        spot = b.eval("document.querySelector('#shFix section[data-id=summary] .sheet-edwrap').dataset.bar")
+        self.assertIn(spot, ["al", "ar", "bl", "br"])
+        # the chosen spot covers no more controls than any other (counted from the page itself, at the bar's size)
+        got = b.eval("""(() => { const w = document.querySelector('#shFix section[data-id="summary"] .sheet-edwrap'), bar = w.querySelector('.sheet-rtebar');
+          const f = w.getBoundingClientRect(), r = bar.getBoundingClientRect(), page = w.closest('.page'), res = {};
+          for (const s of ['al', 'ar', 'bl', 'br']) { const top = s[0] === 'b' ? f.bottom + 4 : f.top - 4 - r.height, left = s[1] === 'r' ? Math.max(f.left, f.right - r.width) : f.left; let n = 0;
+            for (const el of page.querySelectorAll('input, button, a[href], td, th')) { if (w.contains(el) || el.closest('.sheet-handle')) continue; const q = el.getBoundingClientRect();
+              if (q.width < 2 || q.height < 2 || getComputedStyle(el).visibility === 'hidden') continue;
+              if (Math.min(q.right, left + r.width) - Math.max(q.left, left) > 2 && Math.min(q.bottom, top + r.height) - Math.max(q.top, top) > 2) n++; } res[s] = n; }
+          return res; })()""")
+        self.assertEqual(got[spot], min(got.values()))
+
+    def test_the_buttons_stay_their_real_size_at_40_percent_and_the_bar_stays_inside_the_field(self):
+        b = self.b
+        for _ in range(12):
+            b.eval("document.querySelector('#shFix [aria-label=\"Zoom out\"]:not(:disabled)')?.click()")
+        self.assertEqual(self.zoom(), 0.4)
+        b.eval("document.getElementById('shFix').style.width = '420px'")            # a narrow window: the field is narrower than the bar's one line
+        b.wait(f"document.querySelector({JQ(WEEK_TEXT)}).getBoundingClientRect().width < 200")
+        self.open_bar()
+        sizes = b.eval(f"[...document.querySelectorAll({JQ(BAR + ' button[data-nt]')})].map(x => {{ const r = x.getBoundingClientRect(); return [r.width, r.height]; }})")
+        self.assertTrue(sizes)
+        for w, h in sizes:
+            self.assertGreaterEqual(w, 27.5)
+            self.assertGreaterEqual(h, 25.5)                         # the spec's 28 by 26 px, whatever the page's zoom
+        got = b.eval(f"[document.querySelector({JQ(BAR)}).getBoundingClientRect().width, document.querySelector({JQ(WEEK_TEXT)}).getBoundingClientRect().width]")
+        self.assertLessEqual(got[0], got[1] + 1)                     # it wraps rather than leave the page
+
+    def test_what_the_bar_writes_comes_out_of_word_html_and_pdf_without_a_literal_marker(self):
+        import docx_tools as dt
+        import creaite_doc
+        b = self.b
+        paras = lambda n: f"{WEEK_TEXT} > :nth-child({n})"
+        self.open_bar()
+        for n, cmd in ((1, "h1"), (2, "h2"), (3, "h3")):
+            b.click(paras(n))
+            self.pick("m-heading", cmd)
+        b.click(paras(4))
+        b.click(f"{BAR} [data-nt=quote]")
+        b.click(paras(5))
+        b.click(f"{BAR} [data-nt=s]")
+        b.type("gone")
+        b.click(f"{BAR} [data-nt=s]")
+        b.wait("SH.changes.length > 3")
+        text = self.sh("doc.sections.find(s => s.id === 'this_week').text")
+        self.assertIsNone(__import__("re").search(r"(?m)^#{1,2} ", text), text)                       # the sheet stores Current state's levels, never # or ##
+        self.assertIn("### Paragraph 1", text)
+        self.assertIn("#### Paragraph 2", text)
+        self.assertIn("##### Paragraph 3", text)
+        self.assertIn("> Paragraph 4", text)
+        self.assertIn("~~gone~~", text)
+        assert_exports_are_clean(self, text)
 
 class RedraftCheckTests(SheetCase):
     def test_the_spark_shows_a_fresh_draft_beside_the_words_and_nothing_changes_before_a_choice(self):

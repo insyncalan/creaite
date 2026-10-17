@@ -3728,3 +3728,15 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .wkpk{position:relative;display:inline-flex;flex:none} .wkpk .dmpop{left:auto;right:0}
 .wkpk .dmpop,.wkpk .dmpop *{color:var(--ink)} .wkpk .dmpop .sub,.wkpk .dmpop .pm,.wkpk .dmpop small,.wkpk .dmpop .pkl{color:var(--muted)}
 .wkpk .dmpop .btn.primary{color:var(--accent-ink,#fff)} .wkpk .dmpop .linkbtn{color:var(--accent)}
+
+/* ===== #134 ===== the report sheet's one-line grouped toolbar: floats beside the active rich field, outside it, taking no room.
+   --sc is the page's zoom: the bar is counter-scaled so its buttons stay their real size (28 by 26 px or more) at 40%; its width is
+   capped at the field's own width on screen, so it wraps rather than leaves the page. data-bar says where it floats (a/b above or below,
+   l/r flush left or right): the field's script picks the spot that hides the fewest controls. */
+.sheet-edwrap{position:relative}
+.sheet-edwrap>.sheet-rtebar{position:absolute;left:0;bottom:100%;margin-bottom:4px;z-index:var(--z-raised);width:max-content;max-width:calc(100% * var(--sc,1));flex-wrap:wrap;
+  transform:scale(calc(1 / var(--sc,1)));transform-origin:left bottom;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow-pop,0 6px 18px rgba(0,0,0,.18))}
+.sheet-edwrap[data-bar$="r"]>.sheet-rtebar{left:auto;right:0;transform-origin:right bottom}
+.sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
+.sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
+.sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
