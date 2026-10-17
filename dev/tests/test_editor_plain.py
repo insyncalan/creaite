@@ -115,7 +115,8 @@ class ThePlainProfile(_Base):
                 "email": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
                 "plain": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
                 "line": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True)}
-        self.assertEqual(b.eval("AI_PLACE_TABLE"), want)
+        sheet = {"report", "minutes", "client", "readonly"}      # the A4 sheets stay on as the gate has them
+        self.assertEqual({k: v for k, v in b.eval("AI_PLACE_TABLE").items() if k not in sheet}, want)
         groups = {"plain": [("improve", ["rewrite", "shorter", "executive"])], "line": [("improve", ["rewrite", "shorter", "executive"])]}
         for place, g in groups.items():
             self.mount_plain(place, "Some plain text\nOn two lines" if place == "plain" else "A one line title")
