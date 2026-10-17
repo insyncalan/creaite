@@ -9433,7 +9433,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
   var linkWords = (text) => typeof text === "string" && !text.includes("](") ? text : linkSegments(text).map((x5) => x5.t).join("");
   var linkWithAddress = (text) => linkSegments(text).map((x5) => x5.href ? `${x5.t} (${x5.href.replace(/^mailto:/i, "")})` : x5.t).join("");
   function linkHtml(text) {
-    return linkSegments(text).map((x5) => x5.href ? `<a class="tlink" href="${esc(x5.href)}" target="_blank" rel="noopener noreferrer">${esc(x5.t)}</a>` : esc(x5.t)).join("");
+    return linkSegments(text).map((x5) => x5.href ? `<a class="tlink" href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   }
   function linkWrite(words, href) {
     const a5 = linkUrl(href);
@@ -24834,7 +24834,7 @@ ${s5}`;
   var plainDoc = (t47, links) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => {
     if (!l6) return { type: "paragraph" };
     if (!links) return { type: "paragraph", content: [{ type: "text", text: l6 }] };
-    const segs = linkSegments(l6).map((x5) => x5.href ? { type: "text", text: x5.t, marks: [{ type: "link", attrs: { href: x5.href } }] } : { type: "text", text: x5.t });
+    const segs = linkSegments(l6).map((x5) => x5.href ? { type: "text", text: x5.t, marks: [{ type: "link", attrs: { href: linkUrl(x5.href) } }] } : { type: "text", text: x5.t });
     return segs.length ? { type: "paragraph", content: segs } : { type: "paragraph" };
   }) });
   var plainText = (doc) => {
@@ -24863,12 +24863,12 @@ ${s5}`;
           /** @type {HTMLElement} */
           el2.getAttribute("href")
         );
-        return isLinkUrl(h5) ? { href: h5 } : false;
+        return isLinkUrl(h5) ? { href: linkUrl(h5) } : false;
       } }];
     },
     renderHTML({ HTMLAttributes }) {
       const h5 = HTMLAttributes.href;
-      return ["a", isLinkUrl(h5) ? { class: "tlink", href: h5, target: "_blank", rel: "noopener noreferrer" } : { class: "tlink" }, 0];
+      return ["a", isLinkUrl(h5) ? { class: "tlink", href: linkUrl(h5), target: "_blank", rel: "noopener noreferrer" } : { class: "tlink" }, 0];
     }
   });
   var EMAIL_ATTRS = ["style", "align", "cellpadding", "cellspacing", "border", "width", "valign", "bgcolor"];
@@ -48810,7 +48810,7 @@ ${pre}**Current state title:** ${title}`);
   var deTimes = (n4) => n4 === 1 ? "once" : n4 === 2 ? "twice" : `${n4} times`;
   var deChasedWords = (c5) => `Chased ${fd(c5.last)}, ${deTimes(c5.n)}`;
   var deReplyBy = (r4) => r4 ? ` It would be helpful to hear back by ${(/* @__PURE__ */ new Date(r4 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(r4)}.` : "";
-  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(x5.href)}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
+  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   function deRowHtml(i5, o5) {
     const C5 = DE_COLOURS, e4 = esc, d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7), colour = d5.level === "over" ? C5.red : d5.level === "soon" ? C5.amber : C5.ink, strong = d5.level === "over" ? "font-weight:bold;" : "";
     const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${String(i5.resp || "").trim() ? deLinks(String(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
@@ -71473,6 +71473,7 @@ ${d5.text}`);
         "MenuPanel",
         "NEG",
         "NOTE_OPEN",
+        "NoteEditor",
         "OLDSERVER",
         "OPENST",
         "OWN",
@@ -71516,7 +71517,9 @@ ${d5.text}`);
         "SU",
         "SWEPT",
         "SafeHTML",
+        "ShapeSource",
         "Sheet",
+        "SourceLink",
         "StatusDot",
         "TEMPLATES",
         "THEMES",
@@ -71544,6 +71547,7 @@ ${d5.text}`);
         "acClose",
         "acDraw",
         "acItems",
+        "actHref",
         "actPaint",
         "addEl",
         "aiAction",
@@ -71553,6 +71557,7 @@ ${d5.text}`);
         "aiRun",
         "aiSug",
         "aiTurn",
+        "alertPeekDraw",
         "allRows",
         "allViews",
         "anim",
@@ -71589,6 +71594,7 @@ ${d5.text}`);
         "cell",
         "chFit",
         "changesCardHtml",
+        "chatMdInline",
         "checkHealth",
         "checkLive",
         "checkMeeting",
@@ -71601,6 +71607,7 @@ ${d5.text}`);
         "claimState",
         "claimsNote",
         "clearAllFilters",
+        "clientReportHref",
         "closeCapture",
         "closeChat",
         "closeCombobox",
@@ -71662,6 +71669,7 @@ ${d5.text}`);
         "drawPrep",
         "drawStatusDot",
         "drawTabs",
+        "drawToDecide",
         "drawToast",
         "dueKey",
         "edOf",
@@ -71740,6 +71748,7 @@ ${d5.text}`);
         "kindLabel",
         "laneDrop",
         "layoutOf",
+        "linkAnchor",
         "linkSegments",
         "linkUrl",
         "linkWithAddress",
@@ -71753,11 +71762,13 @@ ${d5.text}`);
         "mLandRow",
         "mScroll",
         "mWords",
+        "mailLink",
         "markHelpSeen",
         "matchAll",
         "mdBlocks",
         "mdChat",
         "mdHtml",
+        "mdInline",
         "meetingOfFile",
         "meetingRoute",
         "menuOpenFor",
@@ -71957,7 +71968,9 @@ ${d5.text}`);
         "row",
         "rows",
         "rtOK",
+        "runClosure",
         "runGen",
+        "runHealthFix",
         "runSearch",
         "rvAdvance",
         "rvAgeBanner",
@@ -71971,6 +71984,7 @@ ${d5.text}`);
         "rvSet",
         "rvShown",
         "rvSrcKind",
+        "rvSrcLink",
         "rvSyncChk",
         "rvWhyNot",
         "save",
@@ -72003,6 +72017,7 @@ ${d5.text}`);
         "snack",
         "snapshot",
         "soon",
+        "sourceHref",
         "spaceCode",
         "spaceWeek",
         "spark",
@@ -72034,6 +72049,7 @@ ${d5.text}`);
         "undatedCard",
         "undoApply",
         "undoWords",
+        "unescHtml",
         "updReview",
         "validate",
         "viaServer",
@@ -72044,6 +72060,7 @@ ${d5.text}`);
         "vsClear",
         "warnsOf",
         "weekView",
+        "weeklyHref",
         "wflag",
         "who",
         "within",
