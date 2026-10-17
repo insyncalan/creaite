@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 17-10-2026 | Alan | Intake (#179 step 1, #180 step 2, and #185 the combined page) is ON HOLD, low priority: no further work, not listed in digests until Alan raises it. intake-179 39e9d638 and intake-179-fix f04ef4bc stay local and unpushed | Alan: 'intake is on hold low priority' |
 | 17-10-2026 | Alan | #202 Weekly report banner: option A in the latest mockup (pm-intake-briefs cb72be85): hides at once on any down scroll, the slim bar stays, the full header returns only when the top of the report is at the top of the window and pushes the report down, no reveal on a slim-bar click; v2.2.0 | Alan confirmed the latest mockup |
 | 17-10-2026 | Alan | #194: the note-row menu opens WITHOUT opening the note | Alan's answer to the radar |
 | 17-10-2026 | Alan | Help (#158 Phase B) and the plain release notes (#201) go into v2.2.0 (they were v2.2.1); Jarvis to say whether it works | Alan: 'include help into 2.2' |
