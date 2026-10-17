@@ -14,7 +14,7 @@ import { NOTE_OPEN, openPath } from "./core/fields.js";
 import { go, navWrite } from "./core/nav.js";
 import { shared } from "./core/state.js";
 import { mount } from "./components/mount.js";
-import { NotesPage, toggleFind } from "./components/notes/NotesPage.jsx";
+import { focusShortcut, NotesPage, toggleFind } from "./components/notes/NotesPage.jsx";
 import { itemOf } from "./components/notes/NoteEditor.jsx";
 import { drawProjectTabs } from "./components/project/ProjectTabs.jsx";
 import { openRecord } from "./panel.js";
@@ -107,6 +107,7 @@ function bootUnloadGuard() {
 export function bootNotes() {
   document.addEventListener("keydown", e => {
     if (shared.VIEW === "notes" && (e.metaKey || e.ctrlKey) && e.key === "\\") { e.preventDefault(); toggleNotesList(); }
+    else if (shared.VIEW === "notes") focusShortcut(e);          /* #136: ⌘⇧F enters and leaves focus mode */
   });
   document.addEventListener("click", e => {            /* before Files' own handler: a note opens in the Notes tab */
     const t = /** @type {Element} */ (e.target);
