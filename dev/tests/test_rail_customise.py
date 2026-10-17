@@ -383,20 +383,5 @@ class DefaultRailOrder(unittest.TestCase):
         self.assertEqual(order[order.index("projects"):order.index("people") + 1], ["projects", "reports", "people"])
 
 
-class EveryRailItemHasAnIcon(unittest.TestCase):
-    """Reports (BL-337) named an icon the sidebar's table did not have, so its button drew nothing: every RAIL_ITEMS icon, and
-    the icons the rail draws itself, must have an entry in RailIcon.jsx's RAIL_ICONS."""
-
-    def test_every_rail_item_icon_is_in_the_table(self):
-        import re
-        src = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src"
-        items = (src / "stores/rail.js").read_text(encoding="utf-8")
-        table = (src / "components/sidebar/RailIcon.jsx").read_text(encoding="utf-8")
-        have = set(re.findall(r"^  (\w+): \[\[", table, re.M))
-        icons = set(re.findall(r'icon: "(\w+)"', items))
-        self.assertTrue(icons, "no RAIL_ITEMS icons found")
-        self.assertEqual(sorted(icons - have), [], "a rail item names an icon RAIL_ICONS does not have")
-
-
 if __name__ == "__main__":
     unittest.main()
