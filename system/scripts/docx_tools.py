@@ -119,6 +119,17 @@ def drawing(rid, n, w_px, h_px, name):
 # (BL-63). Everything else is plain text.
 LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
+LABEL = r"((?:[^\[\]\n]|\[[^\[\]\n]{0,300}\]){1,500})"   # a link's words, one level of [brackets] in them; never crosses a "["
+CREAITE_SCHEME = r"(?i:creaite\s{0,5}(?::|%(?:25){0,4}3a|&#0{0,5}58;|&#x0{0,5}3a;|&colon;))"     # as the gate reads it, decoded
+EMPHASIS = r"(.{1,1000}?)"      # #127 review: bold, italic or struck words, at most 1000 characters: linear, never quadratic
+INLINE = re.compile(r"\[" + LABEL + r"\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*" + EMPHASIS + r"\*\*|~~" + EMPHASIS + r"~~"
+                    r"|(?<![\w*])\*(?!\s)" + EMPHASIS + r"(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)" + EMPHASIS + r"(?<!\s)_(?!\w)"
+                    r"|\[" + LABEL + r"\]\(\s{0,20}<?" + CREAITE_SCHEME + r"[^)\n]{0,500}\)")
+# #127: a creaite: link is its words in Word, never Markdown (any case, %- or entity-encoded scheme, client_leak.SCHEME's reading)
+MAX_LEVEL = 3
+HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
+HEADING = re.compile(r"^#{3,5} ")
+HASHES = {v: "#" * k for k, v in HEADS.items()}
 ITEM_LINK = re.compile(r" ?\[([^\]\n]+)\]\(creaite:item/([A-Za-z0-9-]{3,30})\)")
 
 
@@ -131,10 +142,6 @@ def drop_item_links(text, keep):
 
 TASK = re.compile(r"^\[([ xX])\](?:\s+|$)")                # #134: a checklist item, "- [ ] text" / "- [x] text" (Current state's checklist)
 BOX = {" ": "☐ ", "x": "☑ "}                          # the glyphs Word shows for an unticked and a ticked item
-MAX_LEVEL = 3
-HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
-HEADING = re.compile(r"^#{3,5} ")
-HASHES = {v: "#" * k for k, v in HEADS.items()}
 # BL-89: Current state has two writing panes, one message. They are stored in the one `## Current state` section with this line
 # between them; a text without it is just the left pane. Every reader except the dashboard's editor sees one continuous
 # message: the left pane's content, then the right pane's, with the marker removed and nothing added.
@@ -307,10 +314,7 @@ def md_normalise(text):
     return "\n\n".join(out)
 
 
-LINK = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)")
-ITEM_LINK_AT = re.compile(r"\[([^\]\n]+)\]\(creaite:item/[A-Za-z0-9-]{3,30}\)")
 SPECIAL = re.compile(r"[\[*_~`]")
-BRACKET_END = re.compile(r"[\]\n]")
 STAR_CLOSE = re.compile(r"(?<![\s*])\*(?![\w*])")             # a lone * that can close an italic (not part of a ** or ***)
 UNDER_CLOSE = re.compile(r"(?<!\s)_(?!\w)")
 MAX_NEST = 5                                                  # marks inside marks: deeper than this stays as typed
@@ -318,13 +322,12 @@ MAX_NEST = 5                                                  # marks inside mar
 
 class _Frame:
     """What one reading of a stretch of text keeps: where it is, the marks and address open, the plain text so far and what has failed."""
-    __slots__ = ("lo", "hi", "marks", "url", "depth", "buf", "failed", "bad_link")
+    __slots__ = ("lo", "hi", "marks", "url", "depth", "buf", "failed")
 
     def __init__(self, lo, hi, marks, url, depth):
         self.lo, self.hi, self.marks, self.url, self.depth = lo, hi, marks, url, depth
         self.buf = []
         self.failed = {}                                       # kind of closer -> a start from which none exists before `hi`
-        self.bad_link = lo                                     # no link can start before this (a failed link's first "]")
 
 
 class _Reader:
@@ -400,24 +403,20 @@ class _Reader:
         return q + 1
 
     def open_link(self, f, p):
-        """[words](address) and a work-item link's words."""
-        s = self.s
-        if p < f.bad_link:
-            return None
-        lm = LINK.match(s, p, f.hi)
-        if lm:
-            n = len(self.out)
-            self.nest(f, lm.start(1), lm.end(1), url=None)
-            if len(self.out) > n:
-                self.out[-1][4] = lm.group(2)                  # the address follows the link's last words only
-            return lm.end()
-        im = ITEM_LINK_AT.match(s, p, f.hi)
-        if im:
+        """[words](https:// or mailto: address), its words read for marks; a creaite: link (an item, a person; the scheme in any case,
+        %- or entity-encoded), its words only. Read with the client gate's own INLINE (#127), so the links Word draws are the links
+        the gate reads: one level of [brackets] in the words, every pattern bounded (linear in the text's length)."""
+        m = INLINE.match(self.s, p, f.hi)
+        if m and m.group(7) is not None:                       # #127: a creaite: link is its words, never a hyperlink
             self.flush(f)
-            self.add(f, im.group(1))
-            return im.end()
-        e = BRACKET_END.search(s, p + 1, f.hi)
-        f.bad_link = e.start() if e else f.hi
+            self.add(f, m.group(7))
+            return m.end()
+        if m and m.group(1) is not None:
+            n = len(self.out)
+            self.nest(f, m.start(1), m.end(1), url=None)
+            if len(self.out) > n:
+                self.out[-1][4] = m.group(2)                   # the address follows the link's last words only
+            return m.end()
         return None
 
     def open_star(self, f, p):
@@ -557,7 +556,7 @@ STYLES = {}   # style samples taken from {{STYLE_<NAME>}} paragraphs in the temp
 def md_paras(para, name, text):
     """Paragraphs for one Markdown entry, from the template paragraph holding {{NAME}}. A sub-heading uses the
     template's STYLE_TOPIC sample (the minutes' topic heading) when it has one, else bold text."""
-    marker = "\x00MD\x00"
+    marker = "\ue000MD\ue000"          # private-use characters: esc keeps them (it strips the \x00 this was; #127 round 6)
 
     def shell(template, key):
         """(the template paragraph with its placeholder marked, the run holding the mark, that run's style) for one placeholder."""
@@ -625,9 +624,15 @@ def item_para(para, name, entry):
     return replace_in(para, {name: entry})
 
 
+# #127 round 6: the characters XML 1.0 doesn't allow (control characters other than tab, line feed and carriage return; U+FFFE,
+# U+FFFF; a lone surrogate): one of them in document.xml and Word won't open the file. Those a line could break at are a space.
+NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff\ud800-\udfff]")
+
+
 def esc(s):
-    """Text escaped for Word XML (&, < and >)."""
-    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    """Text escaped for Word XML (&, < and >), without the characters XML doesn't allow (NOT_XML; #127 round 6)."""
+    s = NOT_XML.sub(lambda m: " " if m.group() in "\x0b\x0c\x1c\x1d\x1e" else "", str(s))
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def unesc(s):

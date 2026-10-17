@@ -302,5 +302,58 @@ class Headings(unittest.TestCase):
         self.assertEqual(prep_page.state_parts("Headline\n\n> - a\n\n- one")[1:], (["one"], 1))
 
 
+WORD_PARA = '<w:p><w:r><w:rPr/><w:t>{{TEXT}}</w:t></w:r></w:p>'
+W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+
+def word_texts(md):
+    """The words Word gets for one Markdown entry (md_paras), read back with a real XML parser (so invalid XML fails here)."""
+    import xml.etree.ElementTree as ET
+    xml = f'<w:body xmlns:w="{W_NS}">' + dt.md_paras(WORD_PARA, "TEXT", md) + "</w:body>"
+    return "".join(t.text or "" for t in ET.fromstring(xml.encode("utf-8")).iter(f"{{{W_NS}}}t"))
+
+
+class TheSharedReaderKeepsTheClientGatesRules(unittest.TestCase):
+    """#134 x #127: the one inline reader (md_spans, behind md_runs, plain and md_paras) reads a link as client-gate-127f's
+    docx_tools.INLINE does: a creaite: link in any case or encoding is its words only, a link's words may hold one level of
+    [brackets], and what goes into Word is escaped by the gate's XML-safe esc. Shown here on a Word checklist item."""
+
+    def test_a_creaite_link_in_any_case_in_a_checklist_item_is_its_words_only(self):
+        for link in ("[the vendor](creaite:item/ABC-A-004)", "[the vendor](CREAITE:item/ABC-A-004)",
+                     "[the vendor](Creaite:Item/ABC-A-004)", "[the vendor](creaite%3Aitem/ABC-A-004)",
+                     "[the vendor](CREAITE%253Aitem/ABC-A-004)", "[the vendor](creaite&#58;item/ABC-A-004)",
+                     "[the vendor](creaite&colon;item/ABC-A-004)", "[the vendor]( <CREAITE:item/ABC-A-004>)",
+                     "[the vendor](creaite:person/Jane%20Doe)", "[the vendor](CREAITE:ABC-A-004)"):
+            md = f"- [ ] Chase {link} today"
+            with self.subTest(link=link):
+                self.assertEqual(dt.md_lines(md), ["☐ Chase the vendor today"])
+                self.assertEqual(word_texts(md), "☐ Chase the vendor today")
+                self.assertEqual([r[4] for r in dt.md_runs(f"Chase {link} today")], [None, None, None])   # never a hyperlink
+        self.assertEqual([dt.plain(t) for t in ("See [p](CREAITE:item/ABC-A-002).", "See [p](creaite%3Aitem/ABC-A-002).",
+                                                "See [p](creaite&#58;item/ABC-A-002).")], ["See p."] * 3)   # 127f's expectation
+        self.assertEqual(dt.plain("Text creaite: notes/ are kept"), "Text creaite: notes/ are kept")       # prose stays
+
+    def test_a_links_words_may_hold_bracketed_labels(self):
+        md = "- [x] Read [the [draft] plan](https://example.com/p) and [the [v2] note](CREAITE:item/ABC-A-002)"
+        self.assertEqual(dt.md_lines(md), ["☑ Read the [draft] plan (https://example.com/p) and the [v2] note"])
+        self.assertEqual(word_texts(md), "☑ Read the [draft] plan (https://example.com/p) and the [v2] note")
+        self.assertEqual([dt.plain(t) for t in ("See [a [b] c](creaite:item/ABC-A-002).", "See [a [b] c](https://example.com/x).")],
+                         ["See a [b] c.", "See a [b] c (https://example.com/x)."])                         # 127f's expectation
+        runs = dt.md_runs("[a [b] **c**](https://example.com/x) z")
+        self.assertEqual([(r[0], r[1], r[4]) for r in runs], [("a [b] ", False, None), ("c", True, "https://example.com/x"),
+                                                              (" z", False, None)])
+        self.assertEqual(dt.plain("[a [b] c [d [e] f](https://example.com/x)"), "[a [b] c d [e] f (https://example.com/x)")
+
+    def test_xml_special_and_illegal_characters_in_a_checklist_item_are_escaped(self):
+        md = '- [ ] Fix <b> & "quotes" \x07bell\x00 nul\x1fus \ufffe\uffff\ud800 [the <x> & y](CREAITE:item/ABC-A-004)'
+        self.assertEqual(word_texts(md), '☐ Fix <b> & "quotes" bell nulus  the <x> & y')       # (\x0b and \x0c split lines first)
+        xml = dt.md_paras(WORD_PARA, "TEXT", md)
+        self.assertIn("&lt;b&gt; &amp;", xml)
+        for c in ("\x00", "\x07", "\x1f", "\ufffe", "\uffff", "\ud800"):
+            self.assertNotIn(c, xml)
+        self.assertEqual(dt.esc("a\x07b\x0bc<&>"), "ab c&lt;&amp;&gt;")
+        self.assertEqual(word_texts("- [x] MD and \ue000 stay"), "☑ MD and \ue000 stay")   # the private marker never leaks or breaks
+
+
 if __name__ == "__main__":
     unittest.main()
