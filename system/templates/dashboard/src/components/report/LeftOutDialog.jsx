@@ -23,7 +23,7 @@ export function LeftOutDialog({ client, onExport }) {
     if (lo.sections.length) lines.push(<li key="sec"><b>Hidden sections:</b> {lo.sections.map(s => s.heading).join(", ")}.</li>);
     lines.push(<li key="notes"><b>Internal notes and sources:</b> creaite checks, source chips{lo.tags ? ` (${lo.tags} here)` : ""}, item IDs and the page's editing data.</li>);
     if (lo.logos.length) lines.push(<li key="logo"><b>{lo.logos.length > 1 ? "Logos" : "A logo"}:</b> {lo.logos.join(" and ")}, unticked for this client.</li>);
-    if (lo.health) lines.push(<li key="health"><b>Health:</b> shown as {lo.health.client} (internal: {lo.health.internal}), with your reason kept internally.</li>);
+    if (lo.health) lines.push(<li key="health"><b>Health:</b> shown as {lo.health.client} (internal: {lo.health.internal}), {String(lo.health.reason || "").trim() ? "with your reason kept internally" : "no reason written yet"}.</li>);
   }
   const blocked = !lo || !lo.ready || lo.findings.length > 0;
   return (

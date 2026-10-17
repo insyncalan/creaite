@@ -351,7 +351,7 @@ export async function draftAsk(body,o={}){ const status=o.status||(()=>{});
         else if(ev.type==="draft"){ const {type,...d}=ev; Object.assign(out,d,{got:true}); } } }
     api("/api/ask/ack",{run:id}).catch(()=>{});
     if(out.stopped){ shared.RBOUT="stopped"; return {ok:false,stopped:true,message:"Stopped; nothing changed"}; }
-    if(!out.got||(!out.text&&!out.items&&!out.prefill)){ shared.RBOUT="failed"; return {ok:false,message:out.message||"No draft came back",length_notes:out.length_notes||[]}; }
+    if(!out.got||(!out.text&&!out.items&&!out.prefill&&!(out.health&&out.reason))){ shared.RBOUT="failed"; return {ok:false,message:out.message||"No draft came back",length_notes:out.length_notes||[]}; }
     out.ok=true; return out;
   } finally{ DRRUN=null; status(""); if(started) rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }
 export function draftTextHtml(d){ const src=d.sources||[], S2=d.sentences||[];

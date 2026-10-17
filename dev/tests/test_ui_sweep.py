@@ -109,7 +109,7 @@ SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=docu
 # The A4 sheet (components/report/Sheet.jsx) draws its page zoomed 40 to 80% by a transform, so its small controls measure under 24
 # on screen at any zoom: the section handle's grip and Hide (Alt+arrows and the heading's own keys do the same), the heading field,
 # Reset, and the minutes' time tags and their x (the transcript pane and the line's Edit do the same).
-EXEMPT = ("span.colrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
+EXEMPT = ("span.colrz", "span.bcrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
 
 
 class UiSweepCase(ts.Snapshots):
@@ -148,6 +148,19 @@ class TargetSizes(UiSweepCase):
                 bad = [r for r in rows if not r["spaced"] and not r["inline"] and not r["disabled"]
                        and not any(x in r["sig"] for x in EXEMPT)]
                 self.assertEqual(bad, [], f"{name}: targets under 24 by 24 with a neighbour inside their 24-pixel circle")
+
+    def test_a_control_in_a_zero_height_clip_is_not_a_target_but_a_visible_small_one_is(self):
+        """The report header's hidden bands (height 0, overflow hidden) hold controls nobody can see: the audit skips them (#202). A real
+        small visible pair is still flagged, so the skip does not blind the audit."""
+        b = self.b
+        region = self.goto("weekly")
+        b.eval("""(()=>{ const v=document.querySelector('#v-weekly'), w=document.createElement('div');
+          w.innerHTML='<div id="clipT" style="height:0;overflow:hidden"><button id="cl1" style="width:10px;height:10px">x</button><button id="cl2" style="width:10px;height:10px">y</button></div>'
+            +'<div id="visT"><button id="vs1" style="width:10px;height:10px;display:inline-block">a</button><button id="vs2" style="width:10px;height:10px;display:inline-block">b</button></div>';
+          v.appendChild(w); })()""")
+        sigs = b.eval(f"AUD.sizes({json.dumps(region)}).rows.map(r=>r.sig)")
+        self.assertFalse([x for x in sigs if "cl1" in x or "cl2" in x], "the clipped pair is skipped")
+        self.assertTrue([x for x in sigs if "vs1" in x or "vs2" in x], "the visible small pair is still flagged")
 
     def test_the_audits_four_failures_are_24_by_24(self):
         b = self.b

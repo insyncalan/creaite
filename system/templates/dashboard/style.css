@@ -2429,6 +2429,12 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .drsrc{margin-top:8px} .drsl{margin:4px 0 0;padding-left:16px} .drsl li{margin:2px 0}
 .drfoot{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap} .drfoot .sp{flex:1}
 .drstatus,.drnone{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:var(--fs-sm);color:var(--muted)} .drnone svg{width:14px;height:14px}
+.hspark{border:0;background:none;color:var(--accent);width:24px;height:24px;margin-left:4px;padding:0;border-radius:var(--r-sm);display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle}   /* #203: plain, the app's own sparkle, right of the label text */
+.hspark svg{width:18px;height:18px} .hspark:hover{background:var(--sunk)} .hspark:focus-visible{outline:2px solid var(--focus);outline-offset:2px} .hspark[aria-disabled="true"]{color:var(--faint);cursor:default}
+.hsg-host{grid-column:1/-1} .hsg-host:empty{display:none}
+.hsg-chip{display:inline-block;font-size:var(--fs-xs);font-weight:600;line-height:20px;padding:0 8px;border-radius:var(--r-pill)} .hsg-chip.ok{background:var(--ok-soft);color:var(--ok)} .hsg-chip.warn{background:var(--warn-soft);color:var(--warn)} .hsg-chip.bad{background:var(--bad-soft);color:var(--bad)}
+.hsg-diff{margin:0 0 6px;font-size:var(--fs-sm);font-weight:600;color:var(--ink)} .hsg-reason{width:100%;min-height:64px;resize:vertical;box-sizing:border-box}
+.hsg-why{margin:8px 0 0;padding:0;list-style:none;font-size:var(--fs-sm);color:var(--muted)} .hsg-why li{margin:3px 0}
 .drchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px} .drchips .sub{font-size:var(--fs-xs)}
 .drstats{margin-top:6px;font-size:var(--fs-xs);color:var(--muted)} .drstats td{padding:2px 12px 2px 0}
 .drstale{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:8px 0 0;font-size:var(--fs-sm);color:var(--muted)} .drbst{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)} .drbst:empty{display:none}
@@ -3328,6 +3334,20 @@ button.nchip{font:inherit;font-size:12px}
    its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
 :root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
 .sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
+/* #202 (mockup report-banner, A): the header is in the layout. On a down scroll the search bar and the title block collapse to nothing
+   (still focusable: a Tab into one brings the header back) and the toolbar is the one slim bar. Nothing slides, so reduced motion needs no rule. */
+.sheet-mini{display:none;align-items:baseline;gap:10px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-mini b{font-size:var(--fs-lg);font-weight:600}
+.sheet-root.rpt-slim>.sheet-bar,.sheet-root.rpt-slim>.sheet-bar :is(.sheet-barr,.wr-barr,.crbarr,.mnbarr){flex-wrap:nowrap}
+.sheet-root.rpt-slim>.sheet-bar .sheet-barr{flex:none}
+.sheet-root.rpt-slim>.sheet-bar .sheet-mini{display:inline-flex}
+.sheet-root.rpt-slim>.sheet-bar .sheet-status[data-bad]{display:inline;white-space:nowrap}   /* "Unsaved changes", "Not saved." stay visible and announced */
+.sheet-root.rpt-slim>.sheet-bar{position:relative}
+.sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+@media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
+.main:has(.view:not([hidden]) .sheet-root.rpt-slim)>.bar,
+.view:not([hidden]):has(.sheet-root.rpt-slim) :is(.wrhead,.mnhead,.crhead){height:0;min-height:0;padding-top:0;padding-bottom:0;border-width:0;overflow:hidden;flex:none}
 .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
 .sheet-zoom{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 4px;height:var(--ctl-h)}
 .sheet-zoom .btn{border:0;min-width:26px}
@@ -3412,6 +3432,9 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-rdb{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
 .sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
 .sheet-rdnotes{margin:4px 0 6px;padding-left:18px;font-size:13px} .sheet-rdnotes li{color:var(--warn)}   /* #90 review F5: the reply's checks */
+.sheet-hflag{padding:0 8px;border-radius:var(--r-pill);line-height:20px} .sheet-hflag.ok{background:var(--ok-soft);color:var(--ok)} .sheet-hflag.warn{background:var(--warn-soft);color:var(--warn)} .sheet-hflag.bad{background:var(--bad-soft);color:var(--bad)}   /* #203 */
+.wr-flagrow{display:flex;align-items:center;gap:4px} .wr-flagrow .sheet-spark{flex:none}
+.sheet-hdiff{margin:0 0 4px;font-weight:600} .sheet-hwhy{margin:6px 0;padding:0;list-style:none;color:var(--muted)} .sheet-hwhy li{margin:3px 0}
 .sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
@@ -3499,7 +3522,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-ck{background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
 .mnap-err{color:var(--bad)}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
+@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto;overflow-anchor:none} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
   .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} }
 @media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
 /* ===== end v2.1.0 P7 ===== */

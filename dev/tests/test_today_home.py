@@ -321,9 +321,13 @@ class WeekCalm(Header):
 
     def test_actions_show_on_hover_or_focus_and_are_keyboard_reachable(self):
         b = self.b
+        # Turning focus emulation on fires the page's window "focus" event; its server check (pulseCheck) then reloads the page's data
+        # and redraws Today a moment later, which replaced the test's fixture week and the focused button (the old flake: it depended
+        # on whether the reload landed before or after the focus). So turn it on first and let that reload finish, then set up the week.
+        b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+        b.pump(1.0)
         self.draw()
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#weekList .wk-raid .tacts')).opacity"), "0")
-        b.call("Emulation.setFocusEmulationEnabled", enabled=True)
         b.eval("document.querySelector('#weekList .wk-raid .tacts button').focus()")
         b.pump(0.4)
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#weekList .wk-raid .tacts')).opacity"), "1")          # focus-within
@@ -390,7 +394,7 @@ class WeekCalm(Header):
         sel = "#mineMore [data-more=mine]"
         self.assertEqual(b.eval(f"document.querySelector('{sel}').tagName"), "BUTTON")
         self.assertEqual(b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')"), "false")
-        b.click(sel)
+        b.click(sel, exact=True)         # the resize re-lays the page out for a few frames: click where the button has stopped, not where it was
         b.wait(f"document.querySelector('{sel}')?.getAttribute('aria-expanded')==='true'", 5)      # #152: drawn a frame after the click
         self.assertEqual(b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')"), "true")
         self.assertEqual(b.eval("document.querySelectorAll('#mineList>li').length>5"), True)

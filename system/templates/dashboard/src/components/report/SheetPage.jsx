@@ -79,11 +79,11 @@ function Tag({ tag }) {
 /** ✦ for a renderer that draws its own heading row; nothing when the sheet draws it beside the heading. */
 function Spark() {
   const h = /** @type {Here} */ (useContext(SHEET_HERE));
-  return h.spark && !h.sparkInHeading && !h.exported ? <SparkButton on={h.spark} heading={h.s.heading} /> : null;
+  return h.spark && !h.sparkInHeading && !h.exported ? <SparkButton on={h.spark} heading={h.s.heading} health={h.s.type === "health"} /> : null;
 }
-/** @param {{on: () => void, heading: string}} props */
-function SparkButton({ on, heading }) {
-  return <button type="button" class="sheet-spark" aria-label={`Suggest a fresh draft of ${heading}`} data-tip="Suggest a fresh draft" onClick={on}><Icon name="spark" /></button>;
+/** @param {{on: () => void, heading: string, health?: boolean}} props */
+function SparkButton({ on, heading, health }) {
+  return <button type="button" class="sheet-spark" aria-label={health ? "Suggest health and reason" : `Suggest a fresh draft of ${heading}`} data-tip="Suggest a fresh draft" onClick={on}><Icon name="spark" /></button>;
 }
 
 /** @param {SheetSection} s */
@@ -159,7 +159,7 @@ const docKey = d => JSON.stringify([d.kind, d.project, d.date, d.client || "", d
 
 /** The section's own words (its text and panes), as they were when ✦ was pressed: a changed section makes a suggestion stale.
     An edit that puts the words back is not a change. @param {any} s */
-const wordsKey = s => JSON.stringify([s.text ?? null, s.panes ?? null]);
+const wordsKey = s => JSON.stringify([s.text ?? null, s.panes ?? null, s.type === "health" ? (s.data || {}).flag ?? null : null]);   // #203: a health's flag is part of its words
 
 let DRAGGING = /** @type {string|null} */ (null);
 
@@ -178,7 +178,7 @@ function SectionBlock({ s, i, p, peer }) {
     const u = afterUse.current;
     if (!u) return;
     if (u.doc !== docNow) { afterUse.current = null; return; }
-    if (wordsNow !== u.put && wordsNow !== u.before) { afterUse.current = null; onEvent({ type: "redraft", id: s.id, choice: "edited" }); }
+    if (wordsNow !== u.put && wordsNow !== u.before) { afterUse.current = null; onEvent({ type: "redraft", id: s.id, choice: "edited", ...(s.type === "health" ? { section: "health" } : {}) }); }
   }, [wordsNow, docNow]);
   /** Why a suggestion can't be used: another document, or this section's words changed since ✦. @param {any} r */
   const staleWhy = r => r && r.from && (r.from !== liveKey.current ? "doc" : r.words !== liveWords.current ? "words" : "");
@@ -194,7 +194,7 @@ function SectionBlock({ s, i, p, peer }) {
     onChange("figures" in patch || "heading" in patch || "hidden" in patch ? syncLayout(nd) : nd, why);       // the layout keeps in step
   };
   const ownRender = (p.renderers.byId || {})[s.id] || (p.renderers.byType || {})[s.type];
-  const sparkOn = !!p.onRedraft && !exported && (s.type === "text" || s.type === "panes");
+  const sparkOn = !!p.onRedraft && !exported && (s.type === "text" || s.type === "panes" || s.type === "health");   // #203: the health row suggests too
   const spark = p.onRedraft && !exported ? async () => {
     if (running.current) return;
     const from = docNow, words = wordsNow;
@@ -203,6 +203,7 @@ function SectionBlock({ s, i, p, peer }) {
     try { const a = await p.onRedraft?.(s); const r = { from, words }; setRd(staleWhy(r) ? { status: "stale", ...r, why: staleWhy(r) } : { status: "ready", answer: a, ...r }); } catch (e) { setRd({ status: "failed", message: String((e && /** @type {any} */ (e).message) || "No draft came back") }); }
     finally { running.current = false; }
   } : null;
+  const ownSpark = sparkOn && !!ownRender && !!(/** @type {any} */ (ownRender)).ownSpark;   // #203: a renderer with no visible heading (the weekly health row) draws the ✦ itself, with <ctx.Spark />
   const fixed = s.type === "header" && ((p.renderers.byId || {}).header || {}).fixed !== false;
   const grip = (/** @type {KeyboardEvent} */ e) => {
     if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
@@ -216,7 +217,7 @@ function SectionBlock({ s, i, p, peer }) {
   const ctx = { section: s, doc, editing, exported, readOnly, update, setDoc: (nd, why) => onChange(nd, why), setMeta: (patch, why) => onChange({ ...doc, meta: { ...(doc.meta || {}), ...patch } }, why),
     Text, ItemRef, Tag, Spark, level: key => ({ "data-level": key }), peer };
   const here = { s, doc, editing, exported, readOnly, ai: p.aiFor(s, readOnly), checks: p.checks, update, onOpenItem: p.onOpenItem, onEvent,
-    spark, sparkInHeading: sparkOn };
+    spark, sparkInHeading: sparkOn && !ownSpark };
   const differs = p.side === "left" && peer ? sectionDiffers(s, peer) : false;
   const tags = tagsOf(s);
   const nowName = (/** @type {string} */ v) => { if (v.trim() && v.trim() !== s.heading) change(renameHeading(doc, s.id, v), "Heading renamed", null); else setName(s.heading); };
@@ -253,7 +254,7 @@ function SectionBlock({ s, i, p, peer }) {
           onBlur={e => nowName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); /** @type {HTMLInputElement} */ (e.currentTarget).blur(); } if (e.key === "Escape") setName(s.heading); }} /> : s.heading}
         {editing && s.heading !== defaultHeading(s) ? <button type="button" class="sheet-reset" onClick={() => change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id })}>Reset</button> : null}
-        {sparkOn && spark ? <SparkButton on={spark} heading={s.heading} /> : null}
+        {sparkOn && !ownSpark && spark ? <SparkButton on={spark} heading={s.heading} health={s.type === "health"} /> : null}
         {editing && tags.length ? <button type="button" class="sheet-untag" onClick={() => { update({ tags: [] }, "Tags removed"); onEvent({ type: "tag", removed: true, all: true, id: s.id }); }}>Remove all tags</button> : null}
         {differs && peer ? <span class="sheet-diff" tabIndex={0} title={`${p.peerLabel} reads differently here`}>≠ {p.peerLabel}</span> : null}
         {p.side === "right" && !readOnly && !exported && p.match && !p.match.readOnly ? <span class="sheet-match">{p.match.label(s.id)}
@@ -264,12 +265,15 @@ function SectionBlock({ s, i, p, peer }) {
         if (used.current) return;                                                                          // a double click counts and applies once
         used.current = true;
         if (choice === "use") {
-          const patch = { ...(a.text != null ? { text: a.text } : {}), ...(a.panes ? { panes: a.panes } : {}) };
+          const patch = { ...(a.text != null ? { text: a.text } : {}), ...(a.panes ? { panes: a.panes } : {}),
+            ...(a.health ? { data: { ...(sec.data || {}), flag: a.health } } : {}) };
           afterUse.current = { doc: docNow, put: wordsKey({ ...s, ...patch }), before: wordsNow };
-          update(patch, "Redraft used");
+          if (a.apply) change(a.apply(doc, s), "Redraft used", null); else update(patch, "Redraft used");   // #203: the client sheet also records why its flag differs
         }
         else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a.lines || []).map((/** @type {string} */ l) => `- ${l}`).join("\n")}` }, "New lines added");
-        onEvent({ type: "redraft", id: s.id, choice }); setRd(null); }} /> : null}
+        onEvent({ type: "redraft", id: s.id, choice, ...(s.type === "health" ? { section: "health" } : {}) }); setRd(null);
+        if (a.health && !(choice === "use" && a.apply)) setTimeout(() => /** @type {HTMLElement|null} */ (box.current?.querySelector(".sheet-spark"))?.focus(), 0); }}
+        onOpen={ref => { openSheetRef(ref, p.onOpenItem); onEvent({ type: "item", ref }); }} known={ref => known(ref, doc)} /> : null}
       {ownRender ? ownRender(ctx) : <SheetDefault ctx={ctx} rowFn={(p.renderers.row || {})[s.id]} />}
     </section></SHEET_HERE.Provider>;
 }
@@ -280,21 +284,27 @@ const checkNotes = a => [...(a.notes || []).map((/** @type {any} */ n) => String
   ...(a.sentences || []).filter((/** @type {any} */ x) => x.unsourced && String(x.text || "").trim()).map((/** @type {any} */ x) => `No source: “${String(x.text).trim()}”`)];
 
 /** A fresh draft beside Alan's words: Keep mine, Use this, Add the new lines. Nothing changes before a choice.
-    @param {{rd: any, s: SheetSection, readOnly: boolean, close: () => void, onUse: (choice: "keep"|"use"|"add", a: any) => void}} props */
-function Redraft({ rd, s, readOnly, close, onUse }) {
+    @param {{rd: any, s: SheetSection, readOnly: boolean, close: () => void, onUse: (choice: "keep"|"use"|"add", a: any) => void,
+      onOpen: (ref: string) => void, known: (ref: string) => boolean}} props */
+function Redraft({ rd, s, readOnly, close, onUse, onOpen, known }) {
   if (rd.status === "running") return <div class="sheet-redraft" role="status">Drafting {s.heading}…</div>;
   if (rd.status === "stale") return <div class="sheet-redraft" role="alert">{rd.why === "words" ? "You've changed this section since; the suggestion was made from the earlier words." : "This suggestion was made from an earlier version."}<button type="button" class="btn sm" onClick={close}>Close</button></div>;
   if (rd.status === "failed") return <div class="sheet-redraft" role="alert">{rd.message}<button type="button" class="btn sm" onClick={close}>Close</button></div>;
   const a = rd.answer || {};
-  return <div class="sheet-redraft" role="region" aria-label={`A fresh draft of ${s.heading}`}>
-    <div class="sheet-rdh"><Icon name="spark" /> A fresh draft</div>
+  const hl = !!a.health;                                       // #203: a health suggestion: the flag, a difference, the evidence
+  return <div class="sheet-redraft" role="region" aria-label={hl ? "Suggested health and reason" : `A fresh draft of ${s.heading}`} tabIndex={hl ? -1 : undefined}
+    onKeyDown={hl ? e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onUse("keep", a); } } : undefined}>
+    <div class="sheet-rdh"><Icon name="spark" /> {hl ? <>Suggested: <b class={`sheet-hflag ${a.tone || ""}`} data-hflag>{a.health}</b></> : "A fresh draft"}</div>
+    {hl && a.diff ? <div class="sheet-hdiff" role="note">{a.diff}</div> : null}
     {a.text != null ? <div class="sheet-md">{mdNodes(a.text)}</div> : null}
     {(a.panes || []).map((/** @type {any} */ x, /** @type {number} */ k) => <div key={k}><h3>{x.title}</h3><div class="sheet-md">{mdNodes(x.text)}</div></div>)}
     {(a.lines || []).length ? <ul class="sheet-lines">{a.lines.map((/** @type {string} */ l, /** @type {number} */ k) => <li key={k}>{l}</li>)}</ul> : null}
     {checkNotes(a).length ? <ul class="sheet-rdnotes" aria-label="Check it">{checkNotes(a).map((n, k) => <li key={k}>{n}</li>)}</ul> : null}
+    {hl && (a.evidence || []).length ? <ul class="sheet-hwhy" aria-label="Evidence">{a.evidence.map((/** @type {any} */ e) => <li key={e.ref}>
+      {known(e.ref) ? <button type="button" class="linkbtn sheet-ref" onClick={() => onOpen(e.ref)}>{e.ref}</button> : <b>{e.ref}</b>} {e.text}</li>)}</ul> : null}
     {(a.sources || []).length ? <div class="sheet-srcs">{a.sources.map((/** @type {any} */ x) => <span key={x.ref} class="chip">{x.label || x.ref}</span>)}</div> : null}
-    <div class="sheet-rdb"><button type="button" class="btn sm" onClick={() => onUse("keep", a)}>Keep mine</button>
-      {readOnly ? null : <button type="button" class="btn sm primary" onClick={() => onUse("use", a)}>Use this</button>}
+    <div class="sheet-rdb"><button type="button" class="btn sm" onClick={() => onUse("keep", a)}>{hl ? "Reject" : "Keep mine"}</button>
+      {readOnly ? null : <button type="button" class="btn sm primary" data-hsuse={hl ? "" : undefined} onClick={() => onUse("use", a)}>{hl ? "Use" : "Use this"}</button>}
       {readOnly || !(a.lines || []).length ? null : <button type="button" class="btn sm" onClick={() => onUse("add", a)}>Add the new lines</button>}</div>
   </div>;
 }

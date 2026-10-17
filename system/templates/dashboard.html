@@ -2439,6 +2439,12 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .drsrc{margin-top:8px} .drsl{margin:4px 0 0;padding-left:16px} .drsl li{margin:2px 0}
 .drfoot{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap} .drfoot .sp{flex:1}
 .drstatus,.drnone{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:var(--fs-sm);color:var(--muted)} .drnone svg{width:14px;height:14px}
+.hspark{border:0;background:none;color:var(--accent);width:24px;height:24px;margin-left:4px;padding:0;border-radius:var(--r-sm);display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle}   /* #203: plain, the app's own sparkle, right of the label text */
+.hspark svg{width:18px;height:18px} .hspark:hover{background:var(--sunk)} .hspark:focus-visible{outline:2px solid var(--focus);outline-offset:2px} .hspark[aria-disabled="true"]{color:var(--faint);cursor:default}
+.hsg-host{grid-column:1/-1} .hsg-host:empty{display:none}
+.hsg-chip{display:inline-block;font-size:var(--fs-xs);font-weight:600;line-height:20px;padding:0 8px;border-radius:var(--r-pill)} .hsg-chip.ok{background:var(--ok-soft);color:var(--ok)} .hsg-chip.warn{background:var(--warn-soft);color:var(--warn)} .hsg-chip.bad{background:var(--bad-soft);color:var(--bad)}
+.hsg-diff{margin:0 0 6px;font-size:var(--fs-sm);font-weight:600;color:var(--ink)} .hsg-reason{width:100%;min-height:64px;resize:vertical;box-sizing:border-box}
+.hsg-why{margin:8px 0 0;padding:0;list-style:none;font-size:var(--fs-sm);color:var(--muted)} .hsg-why li{margin:3px 0}
 .drchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px} .drchips .sub{font-size:var(--fs-xs)}
 .drstats{margin-top:6px;font-size:var(--fs-xs);color:var(--muted)} .drstats td{padding:2px 12px 2px 0}
 .drstale{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:8px 0 0;font-size:var(--fs-sm);color:var(--muted)} .drbst{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)} .drbst:empty{display:none}
@@ -3338,6 +3344,20 @@ button.nchip{font:inherit;font-size:12px}
    its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
 :root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
 .sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
+/* #202 (mockup report-banner, A): the header is in the layout. On a down scroll the search bar and the title block collapse to nothing
+   (still focusable: a Tab into one brings the header back) and the toolbar is the one slim bar. Nothing slides, so reduced motion needs no rule. */
+.sheet-mini{display:none;align-items:baseline;gap:10px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-mini b{font-size:var(--fs-lg);font-weight:600}
+.sheet-root.rpt-slim>.sheet-bar,.sheet-root.rpt-slim>.sheet-bar :is(.sheet-barr,.wr-barr,.crbarr,.mnbarr){flex-wrap:nowrap}
+.sheet-root.rpt-slim>.sheet-bar .sheet-barr{flex:none}
+.sheet-root.rpt-slim>.sheet-bar .sheet-mini{display:inline-flex}
+.sheet-root.rpt-slim>.sheet-bar .sheet-status[data-bad]{display:inline;white-space:nowrap}   /* "Unsaved changes", "Not saved." stay visible and announced */
+.sheet-root.rpt-slim>.sheet-bar{position:relative}
+.sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+@media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
+.main:has(.view:not([hidden]) .sheet-root.rpt-slim)>.bar,
+.view:not([hidden]):has(.sheet-root.rpt-slim) :is(.wrhead,.mnhead,.crhead){height:0;min-height:0;padding-top:0;padding-bottom:0;border-width:0;overflow:hidden;flex:none}
 .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
 .sheet-zoom{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 4px;height:var(--ctl-h)}
 .sheet-zoom .btn{border:0;min-width:26px}
@@ -3422,6 +3442,9 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-rdb{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
 .sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
 .sheet-rdnotes{margin:4px 0 6px;padding-left:18px;font-size:13px} .sheet-rdnotes li{color:var(--warn)}   /* #90 review F5: the reply's checks */
+.sheet-hflag{padding:0 8px;border-radius:var(--r-pill);line-height:20px} .sheet-hflag.ok{background:var(--ok-soft);color:var(--ok)} .sheet-hflag.warn{background:var(--warn-soft);color:var(--warn)} .sheet-hflag.bad{background:var(--bad-soft);color:var(--bad)}   /* #203 */
+.wr-flagrow{display:flex;align-items:center;gap:4px} .wr-flagrow .sheet-spark{flex:none}
+.sheet-hdiff{margin:0 0 4px;font-weight:600} .sheet-hwhy{margin:6px 0;padding:0;list-style:none;color:var(--muted)} .sheet-hwhy li{margin:3px 0}
 .sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
@@ -3509,7 +3532,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-ck{background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
 .mnap-err{color:var(--bad)}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
+@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto;overflow-anchor:none} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
   .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} }
 @media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
 /* ===== end v2.1.0 P7 ===== */
@@ -4156,6 +4179,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     FIELD: () => FIELD,
     FILES: () => FILES,
     FL: () => FL,
+    FLABEL: () => FLABEL,
     FLN: () => FLN,
     FNAME: () => FNAME,
     FNEW: () => FNEW,
@@ -4179,6 +4203,9 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     GREET: () => GREET,
     GROUPS: () => GROUPS,
     HD: () => HD,
+    HEADER_HIDE_OVER: () => HEADER_HIDE_OVER,
+    HEADER_SHOW_AT_TOP: () => HEADER_SHOW_AT_TOP,
+    HEADER_SHOW_ON_UP: () => HEADER_SHOW_ON_UP,
     HEAD_SHIFT: () => HEAD_SHIFT,
     HEALTH_SHAPES: () => HEALTH_SHAPES,
     HGROUPS: () => HGROUPS,
@@ -4514,6 +4541,11 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     acKey: () => acKey,
     acPick: () => acPick,
     acUpdate: () => acUpdate,
+    achgBtn: () => achgBtn,
+    achgHm: () => achgHm,
+    achgIsSession: () => achgIsSession,
+    achgRestore: () => achgRestore,
+    achgSessionText: () => achgSessionText,
     achgTier: () => achgTier,
     actBarProps: () => actBarProps,
     actConfirm: () => actConfirm,
@@ -5329,14 +5361,17 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     grpRows: () => grpRows,
     grpTicks: () => grpTicks,
     grpToggle: () => grpToggle,
+    hSugDraw: () => hSugDraw,
     handOver: () => handOver,
     handle: () => handle,
     hasLink: () => hasLink,
     hashOf: () => hashOf,
+    headerPolicy: () => headerPolicy,
     headsIn: () => headsIn,
     headsOut: () => headsOut,
     headsSafe: () => headsSafe,
     health: () => health,
+    healthAnswer: () => healthAnswer,
     healthCount: () => healthCount,
     healthEvidence: () => healthEvidence,
     healthFacts: () => healthFacts,
@@ -5375,6 +5410,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     hoverAttach: () => hoverAttach,
     hoverGroup: () => hoverGroup,
     howLink: () => howLink,
+    hsSaved: () => hsSaved,
     html: () => html,
     htmlPart: () => htmlPart,
     htmlToMd: () => htmlToMd,
@@ -5434,6 +5470,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     kidsOf: () => kidsOf,
     kindLabel: () => kindLabel,
     kindOf: () => kindOf,
+    labelAdorn: () => labelAdorn,
     landOn: () => landOn,
     laneDrop: () => laneDrop,
     lastDays: () => lastDays,
@@ -49475,7 +49512,7 @@ ${pre}**Current state title:** ${title}`);
         shared.RBOUT = "stopped";
         return { ok: false, stopped: true, message: "Stopped; nothing changed" };
       }
-      if (!out.got || !out.text && !out.items && !out.prefill) {
+      if (!out.got || !out.text && !out.items && !out.prefill && !(out.health && out.reason)) {
         shared.RBOUT = "failed";
         return { ok: false, message: out.message || "No draft came back", length_notes: out.length_notes || [] };
       }
@@ -55143,6 +55180,60 @@ ${d5.text}`);
     return true;
   }
 
+  // healthSuggest.js
+  var HS_FEATURE = "reason";
+  var HS_NAME = "Suggest health and reason";
+  var HS_TIP = "Suggest a fresh draft";
+  var HEALTHS = ["On track", "At risk", "Off track"];
+  function hsNorm(r4) {
+    if (!r4 || !HEALTHS.includes(String(r4.health))) return null;
+    const cur = r4.current || {}, hv = String(r4.health), now = String(cur.health || "");
+    return {
+      health: hv,
+      reason: String(r4.reason || r4.text || ""),
+      differs: typeof r4.differs === "boolean" ? r4.differs : !!now && now !== hv,
+      current: { health: now, reason: String(cur.reason || "") },
+      evidence: (Array.isArray(r4.evidence) ? r4.evidence : []).map((e4) => ({ ref: String(e4 && e4.ref || ""), text: String(e4 && e4.text || "") })),
+      audience: r4.audience === "client" ? "client" : "internal"
+    };
+  }
+  async function hsAsk(code, audience, o5 = {}) {
+    const why = draftWhyNot("health");
+    if (why) return { ok: false, message: why };
+    const res = await draftAsk({ kind: "health", field: "suggest", code, audience }, { label: "Suggesting the health", status: o5.status });
+    if (res.nothing) return { ok: false, nothing: res.nothing };
+    if (!res.ok) return { ok: false, message: res.message || "No draft came back" };
+    const d5 = hsNorm(res);
+    return d5 ? { ok: true, d: d5 } : { ok: false, message: "The suggestion couldn't be read; nothing changed" };
+  }
+  function hsAgainst(d5, shown2) {
+    return shown2 ? { ...d5, differs: shown2 !== d5.health, current: { ...d5.current, health: shown2 } } : d5;
+  }
+  var hsDiffLine = (d5) => d5.differs ? `The facts suggest ${d5.health}, you have ${d5.current.health || "no health set"}.` : "";
+  var hsTone = (h5) => h5 === "On track" ? "ok" : h5 === "At risk" ? "warn" : "bad";
+  var hsUse = (a5, b5) => String(a5 || "").replace(/\s+/g, " ").trim() === String(b5 || "").replace(/\s+/g, " ").trim() ? "used" : "edited";
+  var hsStat = (event) => draftStat(HS_FEATURE, event);
+  function hsSparkHtml() {
+    const why = draftWhyNot("health");
+    return `<button type="button" class="hspark" data-hsuggest aria-label="${HS_NAME}" data-tip="${esc(why || HS_TIP)}"${why ? ' aria-disabled="true"' : ""}>${ic("spark")}</button>`;
+  }
+  function hsEvidenceHtml(L3) {
+    return `<ul class="hsg-why" aria-label="Evidence">${L3.map((e4) => {
+      const f5 = itemOf(e4.ref);
+      return `<li>${f5 ? `<a href="#" class="hlink" data-open="${f5.k}:${esc(e4.ref)}">${esc(e4.ref)}</a>` : `<b>${esc(e4.ref)}</b>`} ${esc(e4.text)}</li>`;
+    }).join("")}</ul>`;
+  }
+  function hsCardHtml(d5, reason) {
+    const diff = hsDiffLine(d5), chip = (h5) => `<span class="hsg-chip ${hsTone(h5)}">${esc(h5)}</span>`;
+    return `<div class="drcard hsg" role="region" aria-label="Suggested health and reason" tabindex="-1" id="hsgCard">
+    <div class="drhead">${ic("spark")}<b>Suggested: ${chip(d5.health)}</b>${d5.current.health ? `<span class="sub">now ${chip(d5.current.health)}${diff ? "" : " · agrees with you"}</span>` : ""}</div>
+    ${diff ? `<div class="hsg-diff" role="note">${esc(diff)}</div>` : ""}
+    <textarea id="hsgReason" class="hsg-reason" aria-label="Suggested reason">${esc(reason)}</textarea>
+    ${hsEvidenceHtml(d5.evidence)}
+    <div class="drnote">A draft from the tracker. Nothing is saved until you press Save.</div>
+    <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-hsdo="reject">Reject</button><button type="button" class="btn" data-hsdo="use">Use</button><button type="button" class="btn primary" data-hsdo="save">Save</button></div></div>`;
+  }
+
   // panel.js
   shared.CUR = null;
   shared.EDITING = false;
@@ -55552,6 +55643,8 @@ ${d5.text}`);
   function openProject(code, what) {
     if (curGuard(() => openProject(code, what))) return;
     const p6 = P4.find((x5) => x5.code === code);
+    HSG = null;
+    HSUSED = null;
     shared.CUR = { mode: what, k: "project", code, draft: { health: p6.health, reason: p6.reason, current: p6.current } };
     shared.EDITING = true;
     shared.HBACK = what === "health" && document.activeElement && document.activeElement.closest("[data-edproj]") || null;
@@ -55601,7 +55694,7 @@ ${d5.text}`);
             continue;
           }
           const v5 = shared.CUR.pre && n4 in shared.CUR.pre ? shared.CUR.pre[n4] : x5[n4];
-          h5 += `<dt>${l6}</dt><dd>${shared.EDITING && t47 !== "ro" ? editCtl(n4, t47, t47 === "calc" ? prio(x5.imp, x5.lik) : v5, opts) : viewVal(n4, t47, v5, x5)}</dd>`;
+          h5 += `<dt>${l6}${shared.EDITING ? labelAdorn(shared.CUR.k, shared.CUR.mode, n4) : ""}</dt><dd>${shared.EDITING && t47 !== "ro" ? editCtl(n4, t47, t47 === "calc" ? prio(x5.imp, x5.lik) : v5, opts) : viewVal(n4, t47, v5, x5)}</dd>`;
         }
         if (shared.CUR.mode === "proposal" && !x5.p) h5 = `<div class="cmnote">Choose a project before saving.</div>` + h5;
         if (shared.CUR.mode === "record" || shared.CUR.mode === "proposal") {
@@ -55968,6 +56061,7 @@ ${d5.text}`);
     }
     if (shared.CUR.mode === "health") {
       const p6 = P4.find((x5) => x5.code === shared.CUR.code), before = { health: p6.health, reason: p6.reason };
+      hsSaved();
       closePanel();
       await save(`${p6.name} health: ${before.health || "not set"} → ${f5.health}`, [{ op: "update", table: "projects", id: p6.code, changes: { health: f5.health, health_reason: f5.reason } }], null, () => Object.assign(p6, f5), () => Object.assign(p6, before));
       return;
@@ -57998,6 +58092,91 @@ ${d5.text}`);
     }
     const c5 = shared.DRH && shared.DRH.code === shared.CUR.code ? shared.DRH : null;
     putHTML(host2, html`<div>${raw(draftBtn("health", "Draft the reason", "Word the reason from the evidence above, in one executive sentence", 'data-drhealth="1"'))}</div>${c5 ? raw(c5.html) : ""}`);
+    hSugDraw();
+  }
+  var FLABEL = [];
+  var labelAdorn = (k5, mode, n4) => FLABEL.map((f5) => f5(k5, mode, n4)).join("");
+  FLABEL.push((k5, mode, n4) => k5 === "project" && mode === "health" && n4 === "health" ? hsSparkHtml() : "");
+  var HSG = null;
+  function hSugDraw() {
+    const ev = $("#hEvidence");
+    if (!ev || !shared.CUR || shared.CUR.mode !== "health") return;
+    let host2 = $("#hSug");
+    if (!host2) {
+      addHTML(ev, "afterend", html`<div id="hSug" class="hsg-host"></div>`);
+      host2 = $("#hSug");
+    }
+    const c5 = HSG && HSG.code === shared.CUR.code ? HSG : null;
+    putHTML(host2, raw(c5 ? c5.d ? hsCardHtml(c5.d, c5.reason) : c5.html : ""));
+  }
+  function hsClose(rejected) {
+    if (rejected && HSG && HSG.d) hsStat("rejected");
+    HSG = null;
+    hSugDraw();
+    const b5 = $("#pFields [data-hsuggest]");
+    if (b5) b5.focus();
+  }
+  var HSUSED = null;
+  function hsSaved() {
+    if (!HSUSED) return;
+    hsStat(HSUSED.kept ? "used" : hsUse($("#f_reason")?.value, HSUSED.suggested));
+    HSUSED = null;
+  }
+  function hsFill() {
+    const c5 = HSG;
+    if (!c5 || !c5.d) return false;
+    const hs2 = $("#f_health"), rs2 = $("#f_reason");
+    if (!hs2 || !rs2) return false;
+    hs2.value = c5.d.health;
+    hs2.dispatchEvent(new Event("change", { bubbles: true }));
+    const kept = rs2.value !== c5.base;
+    if (kept) snack("Your reason was kept: you changed it while the suggestion was being written");
+    else {
+      rs2.value = c5.reason;
+      rs2.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    HSUSED = { suggested: c5.d.reason, kept };
+    HSG = null;
+    hSugDraw();
+    return true;
+  }
+  async function hsRun() {
+    if (!shared.CUR || shared.CUR.mode !== "health") return;
+    const b5 = $("#pFields [data-hsuggest]");
+    if (b5 && b5.getAttribute("aria-disabled") === "true") {
+      snack(b5.dataset.tip || "Drafting isn't available");
+      return;
+    }
+    const why = draftWhyNot("health");
+    if (why) {
+      snack(why);
+      return;
+    }
+    const code = shared.CUR.code, mine = { code, html: "", d: null, reason: "", base: $("#f_reason")?.value ?? "" };
+    HSG = mine;
+    const res = await hsAsk(code, "internal", { status: (h5) => {
+      if (HSG === mine) {
+        mine.html = h5 ? `<div class="drstatus" role="status">${h5}</div>` : "";
+        hSugDraw();
+      }
+    } });
+    if (HSG !== mine) return;
+    if (res.nothing) {
+      mine.html = `<div class="drnone" role="status">${esc(res.nothing)}</div>`;
+      hSugDraw();
+      return;
+    }
+    if (!res.ok || !res.d) {
+      HSG = null;
+      hSugDraw();
+      snack(res.message || "No draft came back");
+      return;
+    }
+    mine.d = res.d;
+    mine.reason = res.d.reason;
+    hSugDraw();
+    const card = $("#hsgCard");
+    if (card) card.querySelector("[data-hsdo=use]")?.focus();
   }
   shared.DRF = null;
   function drFcDraw() {
@@ -58065,6 +58244,39 @@ ${d5.text}`);
       mine.d = res;
       mine.html = draftCardHtml(res, { title: `Draft reason: ${to2}`, use: "Use this" });
       drHealthDraw();
+    });
+    $("#pFields").addEventListener("click", (e4) => {
+      const s5 = e4.target.closest("[data-hsuggest]"), u5 = e4.target.closest("#hSug [data-hsdo]");
+      if (s5) {
+        e4.preventDefault();
+        hsRun();
+        return;
+      }
+      if (!u5) return;
+      e4.preventDefault();
+      const w6 = u5.dataset.hsdo;
+      if (w6 === "reject") {
+        hsClose(true);
+        return;
+      }
+      if (!HSG || !HSG.d) return;
+      if (hsFill()) {
+        if (w6 === "save") $("#pSave").click();
+        else {
+          const t47 = $("#f_reason");
+          if (t47) t47.focus();
+        }
+      }
+    });
+    $("#pFields").addEventListener("input", (e4) => {
+      if (HSG && e4.target.id === "hsgReason") HSG.reason = e4.target.value;
+    });
+    $("#pFields").addEventListener("keydown", (e4) => {
+      if (e4.key === "Escape" && e4.target.closest && e4.target.closest("#hSug") && HSG && HSG.d) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        hsClose(true);
+      }
     });
     $("#pFoot").addEventListener("click", (e4) => {
       if (!shared.DRH || !shared.DRH.used || !e4.target.closest("#pSave")) return;
@@ -60704,9 +60916,43 @@ ${d5.text}`);
   function achgTier(t47) {
     return t47 === "high" || t47 === "sensitive" ? raw(chgTierTag(t47 === "high")) : t47 === "ordinary" ? html`<span class="tag">Ordinary</span>` : html`<span class="x">—</span>`;
   }
+  var achgHm = (
+    /** @param {string} at */
+    (at2) => (at2 || "").slice(11, 16)
+  );
+  function achgIsSession(c5) {
+    return c5.op === "edit" && typeof c5.saves === "number" && !!c5.first_at && isNotePath(c5.path);
+  }
+  function achgSessionText(c5) {
+    const a5 = achgHm(c5.first_at), z4 = achgHm(c5.at), same2 = (c5.first_at || "").slice(0, 10) === (c5.at || "").slice(0, 10);
+    const span = c5.saves <= 1 || same2 && a5 === z4 ? a5 : same2 ? `${a5} to ${z4}` : `${fd(c5.first_at.slice(0, 10))} ${a5} to ${fd(c5.at.slice(0, 10))} ${z4}`;
+    return `${c5.saves} ${c5.saves === 1 ? "save" : "saves"}, ${span}`;
+  }
+  function achgBtn(c5) {
+    return c5.undone ? html`<span class="x">Undone</span>` : achgIsSession(c5) ? html`<button class="mini" data-achgrestore="${c5.id}" data-path="${c5.path}" data-at="${achgHm(c5.first_at)}">Restore ${achgHm(c5.first_at)}</button>` : html`<button class="mini" data-achgundo="${c5.id}">Undo</button>`;
+  }
+  async function achgRestore(id2, path, at2) {
+    const open2 = noteCur.value && noteCur.value.path === path;
+    if (open2 && !await noteFlush(true)) {
+      snack("Not restored: the open note couldn't be saved first, so it is as it was.");
+      return false;
+    }
+    if (open2) {
+      const l6 = await api("/api/changes/list", {}), mine = l6 && l6.ok ? (l6.changes || []).find((c5) => c5.path === path && c5.first_at && achgHm(c5.first_at) === at2 && c5.id >= id2) : null;
+      if (mine) id2 = mine.id;
+    }
+    const r4 = await api("/api/changes/undo", { id: id2 });
+    if (!r4 || !r4.ok) {
+      snack(oneLine(r4 && r4.message || "Not restored. The note is as it was."));
+      return false;
+    }
+    if (open2) await openNote(path, true);
+    snack(oneLine(r4.message || `Restored to ${at2}`));
+    return true;
+  }
   function askChangesHtml(rows2) {
     if (!rows2.length) return html`<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>`;
-    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td>${ACHG_OP[c5.op] || c5.op} <code>${c5.path}</code>${c5.to ? html` → <code>${c5.to}</code>` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right">${c5.undone ? html`<span class="x">Undone</span>` : html`<button class="mini" data-achgundo="${c5.id}">Undo</button>`}</td></tr>`)}</tbody></table>`;
+    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td>${achgIsSession(c5) ? html`Notes <code>${c5.path}</code> <span class="sub" data-achgsess>${achgSessionText(c5)}</span>` : html`${ACHG_OP[c5.op] || c5.op} <code>${c5.path}</code>`}${c5.to ? html` → <code>${c5.to}</code>` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right">${achgBtn(c5)}</td></tr>`)}</tbody></table>`;
   }
   var ACHGFIRST = true;
   async function renderAskChanges() {
@@ -60718,6 +60964,27 @@ ${d5.text}`);
       putHTML(box, html`<h2 style="margin:22px 0 4px">What ask creaite changed</h2><p class="sub" style="margin:0 0 10px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p><div class="tbl" id="achgTbl"></div>`);
       $("#actTbl").after(box);
       box.addEventListener("click", async (e4) => {
+        const rs2 = e4.target.closest("[data-achgrestore]"), ok2 = e4.target.closest("[data-achgrestoreyes]"), no2 = e4.target.closest("[data-achgrestoreno]");
+        if (rs2) {
+          const td2 = rs2.parentElement, noteName = rs2.dataset.path.split("/").pop().replace(/\.md$/, ""), q5 = document.createElement("span");
+          q5.dataset.achgq = "1";
+          rs2.hidden = true;
+          putHTML(q5, html`<span class="sub" data-achgask>Take “${noteName}” back to how it was at ${rs2.dataset.at}?</span> <button class="mini" data-achgrestoreyes="${rs2.dataset.achgrestore}" data-path="${rs2.dataset.path}" data-at="${rs2.dataset.at}">Restore ${rs2.dataset.at}</button> <button class="mini" data-achgrestoreno>Keep</button>`);
+          td2.append(q5);
+          return;
+        }
+        if (no2) {
+          const td2 = no2.closest("td");
+          td2.querySelector("[data-achgq]").remove();
+          td2.querySelector("[data-achgrestore]").hidden = false;
+          return;
+        }
+        if (ok2) {
+          ok2.disabled = true;
+          await achgRestore(+ok2.dataset.achgrestoreyes, ok2.dataset.path, ok2.dataset.at);
+          renderAskChanges();
+          return;
+        }
         const b5 = e4.target.closest("[data-achgundo]");
         if (!b5) return;
         b5.disabled = true;
@@ -62835,7 +63102,8 @@ ${d5.text}`);
         }));
       }
       const hk3 = helpCk(q6), hfirst = /^(help|how)/.test(q6.trim());
-      return [...hfirst ? hk3 : [], ...out2.slice(0, 60), ...hfirst ? [] : hk3, ...searchCkItems()];
+      const sc2 = searchCkItems(), askRow = sc2.filter((x5) => String(x5.l).startsWith("ask creaite:")), restSc = sc2.filter((x5) => !askRow.includes(x5));
+      return [...askRow, ...hfirst ? hk3 : [], ...out2.slice(0, 60), ...hfirst ? [] : hk3, ...restSc];
     })(q5);
     if (!q5 || "new note quick capture".includes(q5.toLowerCase())) out.splice(out.findIndex((x5) => x5.g === "Actions") + 1 || out.length, 0, { g: "Actions", l: "New note", h: "⌘⇧N", fn: () => openCapture() });
     MTG().filter((m5) => mtgCanPick(m5)).forEach((m5) => {
@@ -64935,6 +65203,15 @@ ${d5.text}`);
     for (let k5 = 1; k5 * page < end - 1; k5++) marks.push(k5 * page);
     return { pushes, marks };
   }
+  var HEADER_HIDE_OVER = 0;
+  var HEADER_SHOW_ON_UP = Infinity;
+  var HEADER_SHOW_AT_TOP = 0;
+  function headerPolicy(top, delta, up2) {
+    if (top <= HEADER_SHOW_AT_TOP) return "show";
+    if (delta > HEADER_HIDE_OVER) return "hide";
+    if (delta < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
+    return "keep";
+  }
 
   // components/report/SheetPage.jsx
   function openSheetRef(ref, own) {
@@ -65057,10 +65334,10 @@ ${d5.text}`);
       /** @type {Here} */
       x2(SHEET_HERE)
     );
-    return h5.spark && !h5.sparkInHeading && !h5.exported ? /* @__PURE__ */ u2(SparkButton, { on: h5.spark, heading: h5.s.heading }) : null;
+    return h5.spark && !h5.sparkInHeading && !h5.exported ? /* @__PURE__ */ u2(SparkButton, { on: h5.spark, heading: h5.s.heading, health: h5.s.type === "health" }) : null;
   }
-  function SparkButton({ on: on2, heading }) {
-    return /* @__PURE__ */ u2("button", { type: "button", class: "sheet-spark", "aria-label": `Suggest a fresh draft of ${heading}`, "data-tip": "Suggest a fresh draft", onClick: on2, children: /* @__PURE__ */ u2(Icon, { name: "spark" }) });
+  function SparkButton({ on: on2, heading, health: health2 }) {
+    return /* @__PURE__ */ u2("button", { type: "button", class: "sheet-spark", "aria-label": health2 ? "Suggest health and reason" : `Suggest a fresh draft of ${heading}`, "data-tip": "Suggest a fresh draft", onClick: on2, children: /* @__PURE__ */ u2(Icon, { name: "spark" }) });
   }
   var tagsOf = (s5) => (
     /** @type {SheetTag[]} */
@@ -65222,7 +65499,7 @@ ${d5.text}`);
     }) });
   }
   var docKey = (d5) => JSON.stringify([d5.kind, d5.project, d5.date, d5.client || "", d5.version || 0, d5.id || d5.path || d5.title || "", d5.audience || ""]);
-  var wordsKey = (s5) => JSON.stringify([s5.text ?? null, s5.panes ?? null]);
+  var wordsKey = (s5) => JSON.stringify([s5.text ?? null, s5.panes ?? null, s5.type === "health" ? (s5.data || {}).flag ?? null : null]);
   var DRAGGING = (
     /** @type {string|null} */
     null
@@ -65251,7 +65528,7 @@ ${d5.text}`);
       }
       if (wordsNow !== u5.put && wordsNow !== u5.before) {
         afterUse.current = null;
-        onEvent({ type: "redraft", id: s5.id, choice: "edited" });
+        onEvent({ type: "redraft", id: s5.id, choice: "edited", ...s5.type === "health" ? { section: "health" } : {} });
       }
     }, [wordsNow, docNow]);
     const staleWhy = (r4) => r4 && r4.from && (r4.from !== liveKey.current ? "doc" : r4.words !== liveWords.current ? "words" : "");
@@ -65282,7 +65559,7 @@ ${d5.text}`);
       onChange("figures" in patch || "heading" in patch || "hidden" in patch ? syncLayout(nd2) : nd2, why);
     };
     const ownRender = (p6.renderers.byId || {})[s5.id] || (p6.renderers.byType || {})[s5.type];
-    const sparkOn = !!p6.onRedraft && !exported && (s5.type === "text" || s5.type === "panes");
+    const sparkOn = !!p6.onRedraft && !exported && (s5.type === "text" || s5.type === "panes" || s5.type === "health");
     const spark2 = p6.onRedraft && !exported ? async () => {
       if (running.current) return;
       const from = docNow, words = wordsNow;
@@ -65300,6 +65577,8 @@ ${d5.text}`);
         running.current = false;
       }
     } : null;
+    const ownSpark = sparkOn && !!ownRender && !!/** @type {any} */
+    ownRender.ownSpark;
     const fixed = s5.type === "header" && ((p6.renderers.byId || {}).header || {}).fixed !== false;
     const grip = (e4) => {
       if (!e4.altKey || e4.key !== "ArrowUp" && e4.key !== "ArrowDown") return;
@@ -65337,7 +65616,7 @@ ${d5.text}`);
       onOpenItem: p6.onOpenItem,
       onEvent,
       spark: spark2,
-      sparkInHeading: sparkOn
+      sparkInHeading: sparkOn && !ownSpark
     };
     const differs = p6.side === "left" && peer ? sectionDiffers(s5, peer) : false;
     const tags = tagsOf(s5);
@@ -65445,7 +65724,7 @@ ${d5.text}`);
               }
             ) : s5.heading,
             editing && s5.heading !== defaultHeading(s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-reset", onClick: () => change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id }), children: "Reset" }) : null,
-            sparkOn && spark2 ? /* @__PURE__ */ u2(SparkButton, { on: spark2, heading: s5.heading }) : null,
+            sparkOn && !ownSpark && spark2 ? /* @__PURE__ */ u2(SparkButton, { on: spark2, heading: s5.heading, health: s5.type === "health" }) : null,
             editing && tags.length ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-untag", onClick: () => {
               update({ tags: [] }, "Tags removed");
               onEvent({ type: "tag", removed: true, all: true, id: s5.id });
@@ -65459,21 +65738,44 @@ ${d5.text}`);
               p6.match.differs(s5.id) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => p6.match?.one(s5.id), children: "Match internal" }) : null
             ] }) : null
           ] }),
-          rd2 ? /* @__PURE__ */ u2(Redraft, { rd: staleWhy(rd2) ? { status: "stale", why: staleWhy(rd2) } : rd2, s: s5, readOnly: !editing, close: () => setRd(null), onUse: (choice, a5) => {
-            if (staleWhy(rd2)) {
-              setRd({ ...rd2, status: "stale", why: staleWhy(rd2) });
-              return;
+          rd2 ? /* @__PURE__ */ u2(
+            Redraft,
+            {
+              rd: staleWhy(rd2) ? { status: "stale", why: staleWhy(rd2) } : rd2,
+              s: s5,
+              readOnly: !editing,
+              close: () => setRd(null),
+              onUse: (choice, a5) => {
+                if (staleWhy(rd2)) {
+                  setRd({ ...rd2, status: "stale", why: staleWhy(rd2) });
+                  return;
+                }
+                if (used.current) return;
+                used.current = true;
+                if (choice === "use") {
+                  const patch = {
+                    ...a5.text != null ? { text: a5.text } : {},
+                    ...a5.panes ? { panes: a5.panes } : {},
+                    ...a5.health ? { data: { ...sec.data || {}, flag: a5.health } } : {}
+                  };
+                  afterUse.current = { doc: docNow, put: wordsKey({ ...s5, ...patch }), before: wordsNow };
+                  if (a5.apply) change2(a5.apply(doc, s5), "Redraft used", null);
+                  else update(patch, "Redraft used");
+                } else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a5.lines || []).map((l6) => `- ${l6}`).join("\n")}` }, "New lines added");
+                onEvent({ type: "redraft", id: s5.id, choice, ...s5.type === "health" ? { section: "health" } : {} });
+                setRd(null);
+                if (a5.health && !(choice === "use" && a5.apply)) setTimeout(() => (
+                  /** @type {HTMLElement|null} */
+                  box.current?.querySelector(".sheet-spark")?.focus()
+                ), 0);
+              },
+              onOpen: (ref) => {
+                openSheetRef(ref, p6.onOpenItem);
+                onEvent({ type: "item", ref });
+              },
+              known: (ref) => known(ref, doc)
             }
-            if (used.current) return;
-            used.current = true;
-            if (choice === "use") {
-              const patch = { ...a5.text != null ? { text: a5.text } : {}, ...a5.panes ? { panes: a5.panes } : {} };
-              afterUse.current = { doc: docNow, put: wordsKey({ ...s5, ...patch }), before: wordsNow };
-              update(patch, "Redraft used");
-            } else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a5.lines || []).map((l6) => `- ${l6}`).join("\n")}` }, "New lines added");
-            onEvent({ type: "redraft", id: s5.id, choice });
-            setRd(null);
-          } }) : null,
+          ) : null,
           ownRender ? ownRender(ctx) : /* @__PURE__ */ u2(SheetDefault, { ctx, rowFn: (p6.renderers.row || {})[s5.id] })
         ]
       }
@@ -65483,7 +65785,7 @@ ${d5.text}`);
     ...(a5.notes || []).map((n4) => String(n4.note || "")).filter(Boolean),
     ...(a5.sentences || []).filter((x5) => x5.unsourced && String(x5.text || "").trim()).map((x5) => `No source: “${String(x5.text).trim()}”`)
   ];
-  function Redraft({ rd: rd2, s: s5, readOnly, close, onUse }) {
+  function Redraft({ rd: rd2, s: s5, readOnly, close, onUse, onOpen, known: known2 }) {
     if (rd2.status === "running") return /* @__PURE__ */ u2("div", { class: "sheet-redraft", role: "status", children: [
       "Drafting ",
       s5.heading,
@@ -65498,25 +65800,52 @@ ${d5.text}`);
       /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: close, children: "Close" })
     ] });
     const a5 = rd2.answer || {};
-    return /* @__PURE__ */ u2("div", { class: "sheet-redraft", role: "region", "aria-label": `A fresh draft of ${s5.heading}`, children: [
-      /* @__PURE__ */ u2("div", { class: "sheet-rdh", children: [
-        /* @__PURE__ */ u2(Icon, { name: "spark" }),
-        " A fresh draft"
-      ] }),
-      a5.text != null ? /* @__PURE__ */ u2("div", { class: "sheet-md", children: mdNodes(a5.text) }) : null,
-      (a5.panes || []).map((x5, k5) => /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2("h3", { children: x5.title }),
-        /* @__PURE__ */ u2("div", { class: "sheet-md", children: mdNodes(x5.text) })
-      ] }, k5)),
-      (a5.lines || []).length ? /* @__PURE__ */ u2("ul", { class: "sheet-lines", children: a5.lines.map((l6, k5) => /* @__PURE__ */ u2("li", { children: l6 }, k5)) }) : null,
-      checkNotes(a5).length ? /* @__PURE__ */ u2("ul", { class: "sheet-rdnotes", "aria-label": "Check it", children: checkNotes(a5).map((n4, k5) => /* @__PURE__ */ u2("li", { children: n4 }, k5)) }) : null,
-      (a5.sources || []).length ? /* @__PURE__ */ u2("div", { class: "sheet-srcs", children: a5.sources.map((x5) => /* @__PURE__ */ u2("span", { class: "chip", children: x5.label || x5.ref }, x5.ref)) }) : null,
-      /* @__PURE__ */ u2("div", { class: "sheet-rdb", children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => onUse("keep", a5), children: "Keep mine" }),
-        readOnly ? null : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", onClick: () => onUse("use", a5), children: "Use this" }),
-        readOnly || !(a5.lines || []).length ? null : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => onUse("add", a5), children: "Add the new lines" })
-      ] })
-    ] });
+    const hl2 = !!a5.health;
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: "sheet-redraft",
+        role: "region",
+        "aria-label": hl2 ? "Suggested health and reason" : `A fresh draft of ${s5.heading}`,
+        tabIndex: hl2 ? -1 : void 0,
+        onKeyDown: hl2 ? (e4) => {
+          if (e4.key === "Escape") {
+            e4.preventDefault();
+            e4.stopPropagation();
+            onUse("keep", a5);
+          }
+        } : void 0,
+        children: [
+          /* @__PURE__ */ u2("div", { class: "sheet-rdh", children: [
+            /* @__PURE__ */ u2(Icon, { name: "spark" }),
+            " ",
+            hl2 ? /* @__PURE__ */ u2(S2, { children: [
+              "Suggested: ",
+              /* @__PURE__ */ u2("b", { class: `sheet-hflag ${a5.tone || ""}`, "data-hflag": true, children: a5.health })
+            ] }) : "A fresh draft"
+          ] }),
+          hl2 && a5.diff ? /* @__PURE__ */ u2("div", { class: "sheet-hdiff", role: "note", children: a5.diff }) : null,
+          a5.text != null ? /* @__PURE__ */ u2("div", { class: "sheet-md", children: mdNodes(a5.text) }) : null,
+          (a5.panes || []).map((x5, k5) => /* @__PURE__ */ u2("div", { children: [
+            /* @__PURE__ */ u2("h3", { children: x5.title }),
+            /* @__PURE__ */ u2("div", { class: "sheet-md", children: mdNodes(x5.text) })
+          ] }, k5)),
+          (a5.lines || []).length ? /* @__PURE__ */ u2("ul", { class: "sheet-lines", children: a5.lines.map((l6, k5) => /* @__PURE__ */ u2("li", { children: l6 }, k5)) }) : null,
+          checkNotes(a5).length ? /* @__PURE__ */ u2("ul", { class: "sheet-rdnotes", "aria-label": "Check it", children: checkNotes(a5).map((n4, k5) => /* @__PURE__ */ u2("li", { children: n4 }, k5)) }) : null,
+          hl2 && (a5.evidence || []).length ? /* @__PURE__ */ u2("ul", { class: "sheet-hwhy", "aria-label": "Evidence", children: a5.evidence.map((e4) => /* @__PURE__ */ u2("li", { children: [
+            known2(e4.ref) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn sheet-ref", onClick: () => onOpen(e4.ref), children: e4.ref }) : /* @__PURE__ */ u2("b", { children: e4.ref }),
+            " ",
+            e4.text
+          ] }, e4.ref)) }) : null,
+          (a5.sources || []).length ? /* @__PURE__ */ u2("div", { class: "sheet-srcs", children: a5.sources.map((x5) => /* @__PURE__ */ u2("span", { class: "chip", children: x5.label || x5.ref }, x5.ref)) }) : null,
+          /* @__PURE__ */ u2("div", { class: "sheet-rdb", children: [
+            /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => onUse("keep", a5), children: hl2 ? "Reject" : "Keep mine" }),
+            readOnly ? null : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", "data-hsuse": hl2 ? "" : void 0, onClick: () => onUse("use", a5), children: hl2 ? "Use" : "Use this" }),
+            readOnly || !(a5.lines || []).length ? null : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => onUse("add", a5), children: "Add the new lines" })
+          ] })
+        ]
+      }
+    );
   }
   function SheetPage(p6) {
     const { doc, exported, readOnly, onChange, onEvent } = p6;
@@ -65883,6 +66212,71 @@ ${d5.text}`);
       return marks;
     });
   }
+  function useBannerHide(root2) {
+    h2(() => {
+      const el2 = root2.current;
+      if (!el2) return;
+      const last = (
+        /** @type {Map<Element, number>} */
+        /* @__PURE__ */ new Map()
+      );
+      let up2 = 0;
+      const slim = (on2) => {
+        if (el2.classList.contains("rpt-slim") === on2) return;
+        el2.classList.toggle("rpt-slim", on2);
+        if (!on2) document.querySelectorAll(".main>.bar, .wrhead, .mnhead, .crhead").forEach((n4) => {
+          n4.scrollTop = 0;
+        });
+      };
+      const canHide = (t47) => {
+        let room = 0;
+        document.querySelectorAll(".main>.bar, .wrhead, .mnhead, .crhead").forEach((n4) => {
+          room += /** @type {HTMLElement} */
+          n4.offsetHeight;
+        });
+        return t47.scrollHeight - t47.clientHeight - room > 0;
+      };
+      const onScroll = (e4) => {
+        const t47 = (
+          /** @type {HTMLElement} */
+          e4.target
+        );
+        if (!t47.classList || !(t47.classList.contains("sheet-scroll") || t47.classList.contains("mnwrap"))) return;
+        const y5 = t47.scrollTop, d5 = y5 - (last.get(t47) || 0);
+        last.set(t47, y5);
+        up2 = d5 < 0 ? up2 - d5 : 0;
+        const act = headerPolicy(y5, d5, up2);
+        if (act === "hide") {
+          if (canHide(t47)) slim(true);
+        } else if (act === "show") slim(false);
+      };
+      const focus = (e4) => {
+        const t47 = (
+          /** @type {HTMLElement|null} */
+          e4.target
+        );
+        if (el2.classList.contains("rpt-slim") && el2.offsetParent && t47 && t47.closest && t47.closest(".main>.bar, .wrhead, .mnhead, .crhead")) slim(false);
+      };
+      const wrap = el2.closest(".mnwrap");
+      el2.addEventListener("scroll", onScroll, true);
+      if (wrap) wrap.addEventListener("scroll", onScroll);
+      document.addEventListener("focusin", focus);
+      const ro2 = new ResizeObserver(() => {
+        if (!el2.offsetParent) {
+          el2.classList.remove("rpt-slim");
+          last.clear();
+        }
+      });
+      ro2.observe(el2);
+      return () => {
+        el2.removeEventListener("scroll", onScroll, true);
+        if (wrap) wrap.removeEventListener("scroll", onScroll);
+        ro2.disconnect();
+        document.removeEventListener("focusin", focus);
+        el2.classList.remove("rpt-slim");
+      };
+    }, []);
+  }
   function Sheet(props) {
     const { doc, partner = null, scrollKey = "", checks = [], onEvent = () => {
     } } = props;
@@ -65924,6 +66318,7 @@ ${d5.text}`);
     zref.current = zoom;
     const eref = A2(exported);
     eref.current = exported;
+    useBannerHide(root2);
     const main = useSaver({ baseVersion: props.baseVersion, onSave: props.onSave, readOnly: leftRO, onEvent });
     const side = useSaver({
       baseVersion: partner ? partner.baseVersion : void 0,
@@ -66096,6 +66491,10 @@ ${d5.text}`);
     const note = main.conflict;
     return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, children: [
       /* @__PURE__ */ u2("div", { class: "sheet-bar", role: "toolbar", "aria-label": "Report", children: [
+        /* @__PURE__ */ u2("span", { class: "sheet-mini", children: props.banner ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("b", { children: props.banner.title }),
+          props.banner.sub ? /* @__PURE__ */ u2("span", { class: "sub", children: props.banner.sub }) : null
+        ] }) : /* @__PURE__ */ u2("b", { children: doc.title }) }),
         /* @__PURE__ */ u2("span", { class: "sheet-zoom", role: "group", "aria-label": "Zoom", children: [
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Zoom out", onClick: () => setZoom(stepZoom(zoom, -1)), disabled: zoom <= 0.4, children: "−" }),
           /* @__PURE__ */ u2("span", { class: "sheet-zv", "aria-live": "polite", "data-zoom": zoom, children: [
@@ -66104,7 +66503,7 @@ ${d5.text}`);
           ] }),
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Zoom in", onClick: () => setZoom(stepZoom(zoom, 1)), disabled: zoom >= 0.8, children: "+" })
         ] }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": exported ? "true" : "false", onClick: () => setExported(!exported), children: "Show as exported" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-exp", "aria-pressed": exported ? "true" : "false", onClick: () => setExported(!exported), children: "Show as exported" }),
         partner && !exported ? /* @__PURE__ */ u2("label", { class: "sheet-tog", children: [
           /* @__PURE__ */ u2("input", { type: "checkbox", checked: together, onChange: (e4) => setTogether(
             /** @type {HTMLInputElement} */
@@ -66112,12 +66511,12 @@ ${d5.text}`);
           ) }),
           " Scroll together"
         ] }) : null,
-        partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: () => {
+        partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-matchall", onClick: () => {
           if (partner.match) {
             for (const x5 of doc.sections) if (match && match.differs(x5.id)) partner.match(x5.id);
           } else changeSide(matchAll(doc, partner.doc), "Matched internal");
         }, children: "Match internal for every section" }) : null,
-        /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", children: [
+        /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": main.line && !/^Saved/.test(main.line) ? "1" : void 0, children: [
           main.line,
           partner && side.line ? ` · ${partner.label}: ${side.line}` : ""
         ] }),
@@ -66206,12 +66605,29 @@ ${d5.text}`);
       sentences: (r4.sentences || []).map((x5) => ({ text: String(x5.text || ""), refs: x5.refs || [], unsourced: !!x5.unsourced }))
     };
   }
-  function redrafter(base, place2) {
-    return async (s5) => redraftAnswer(await draftAsk(redraftRequest(s5, base(), REDRAFT_KIND[place2]), { label: `Redrafting ${s5.heading}` }), s5);
+  function redrafter(base, place2, audience = "internal", applyFor) {
+    return async (s5) => s5.type === "health" ? healthAnswer(await hsAsk(String(base().code || ""), audience), applyFor, String(
+      /** @type {any} */
+      (s5.data || {}).flag || ""
+    )) : redraftAnswer(await draftAsk(redraftRequest(s5, base(), REDRAFT_KIND[place2]), { label: `Redrafting ${s5.heading}` }), s5);
+  }
+  function healthAnswer(r4, applyFor, shown2 = "") {
+    if (r4.nothing) throw new Error(r4.nothing);
+    if (!r4.ok || !r4.d) throw new Error(r4.message || "No draft came back");
+    const d5 = hsAgainst(r4.d, shown2);
+    return {
+      text: d5.reason,
+      health: d5.health,
+      tone: hsTone(d5.health),
+      diff: hsDiffLine(d5),
+      evidence: d5.evidence,
+      sources: [],
+      ...applyFor ? { apply: applyFor(d5) } : {}
+    };
   }
   function countRedraft(ev, place2) {
     if (ev.type !== "redraft") return;
-    draftStat(REDRAFT_KIND[place2], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
+    draftStat(ev.section === "health" ? HS_FEATURE : REDRAFT_KIND[place2], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
   }
 
   // components/report/weekly/weeklyDoc.js
@@ -66871,7 +67287,10 @@ ${d5.text}`);
     const aria = `WkHealth over ${weeks.length} weeks: ${weeks.map((w6) => `${w6.flag || "not set"}`).join(", ")}`;
     return /* @__PURE__ */ u2("div", { class: "wr-health", "data-wkTone": t47, children: [
       /* @__PURE__ */ u2("div", { class: "wr-hcol", children: [
-        /* @__PURE__ */ u2("div", { class: `wr-flag ${t47}`, children: (flag || "Not set").toUpperCase() }),
+        /* @__PURE__ */ u2("div", { class: "wr-flagrow", children: [
+          /* @__PURE__ */ u2("div", { class: `wr-flag ${t47}`, children: (flag || "Not set").toUpperCase() }),
+          /* @__PURE__ */ u2(ctx.Spark, {})
+        ] }),
         /* @__PURE__ */ u2("div", { class: "wr-trend", role: "img", "aria-label": aria, children: weeks.map((w6, i5) => /* @__PURE__ */ u2("i", { class: wkTone(w6.flag) }, i5)) }),
         /* @__PURE__ */ u2("div", { class: "wr-tlbl", children: [
           /* @__PURE__ */ u2("span", { children: wkDm(weeks[0].date) }),
@@ -66903,7 +67322,7 @@ ${d5.text}`);
   var sectionWords = (label, empty) => (ctx) => /* @__PURE__ */ u2(Words, { ctx, label, empty });
   var WEEKLY_RENDER = { byId: {
     header: (c5) => /* @__PURE__ */ u2(WkHeader, { ctx: c5 }),
-    health: (c5) => /* @__PURE__ */ u2(WkHealth, { ctx: c5 }),
+    health: Object.assign((c5) => /* @__PURE__ */ u2(WkHealth, { ctx: c5 }), { ownSpark: true }),
     glance: (c5) => /* @__PURE__ */ u2(Glance, { ctx: c5 }),
     summary: sectionWords("Summary", "Say what matters this week"),
     milestones: (c5) => /* @__PURE__ */ u2(Timeline, { ctx: c5 }),
@@ -67013,6 +67432,7 @@ ${d5.text}`);
             );
             else countRedraft(ev, "report");
           },
+          banner: { title: "Weekly report", sub: `${doc.project_name} · ${fd(doc.date)}` },
           toolbar: /* @__PURE__ */ u2(WeeklyBar, { doc, readOnly })
         }
       ) })
@@ -67207,6 +67627,7 @@ ${d5.text}`);
   }
 
   // components/report/ClientParts.jsx
+  var crAskWhy = y3(false);
   function setClientDoc(next) {
     crDoc.value = next;
     crDirty.value = true;
@@ -67296,6 +67717,24 @@ ${d5.text}`);
       setOpen2(false);
     };
     const needWhy = pick !== inFlag && !why.trim();
+    const ask2 = crAskWhy.value, focusWhy = A2(false);
+    h2(() => {
+      if (!ask2 || !d5 || !edit || !diff) return;
+      crAskWhy.value = false;
+      if (!String(diff.reason || "").trim()) {
+        focusWhy.current = true;
+        begin();
+      }
+    }, [ask2, diff]);
+    h2(() => {
+      if (open2 && focusWhy.current) {
+        focusWhy.current = false;
+        setTimeout(() => (
+          /** @type {HTMLElement|null} */
+          document.getElementById("crWhy")?.focus()
+        ), 0);
+      }
+    }, [open2]);
     return /* @__PURE__ */ u2("div", { class: "crhealth", "data-crhealth": true, children: [
       /* @__PURE__ */ u2("div", { class: "crhcol", children: [
         edit ? /* @__PURE__ */ u2("button", { type: "button", class: `crflag ${cls}`, ref: btn, "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", "data-crflag": true, onClick: () => open2 ? setOpen2(false) : begin(), children: flag.toUpperCase() }) : /* @__PURE__ */ u2("span", { class: `crflag ${cls}`, children: flag.toUpperCase() }),
@@ -67547,7 +67986,9 @@ ${d5.text}`);
         lo2.health.client,
         " (internal: ",
         lo2.health.internal,
-        "), with your reason kept internally."
+        "), ",
+        String(lo2.health.reason || "").trim() ? "with your reason kept internally" : "no reason written yet",
+        "."
       ] }, "health"));
     }
     const blocked2 = !lo2 || !lo2.ready || lo2.findings.length > 0;
@@ -67624,8 +68065,8 @@ ${d5.text}`);
       setNote(msg);
     };
     return /* @__PURE__ */ u2("span", { class: "crbarr", children: [
-      /* @__PURE__ */ u2("span", { class: `tag ${ready ? "ok" : "warn"}`, "data-crbase": true, children: ready ? "Internal: approved · facts locked" : "Internal: not approved yet" }),
-      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "View", children: [
+      /* @__PURE__ */ u2("span", { class: `tag rb-x ${ready ? "ok" : "warn"}`, "data-crbase": true, children: ready ? "Internal: approved · facts locked" : "Internal: not approved yet" }),
+      /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "View", children: [
         /* @__PURE__ */ u2("button", { type: "button", "data-crmode": "client", "aria-pressed": mode === "client" ? "true" : "false", onClick: () => {
           crMode.value = "client";
         }, children: "Client report" }),
@@ -67633,7 +68074,7 @@ ${d5.text}`);
           crMode.value = "side";
         }, children: "Side by side" })
       ] }),
-      draft && mode !== "side" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
+      draft && mode !== "side" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm rb-x", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
         const d5 = crDoc.value, i5 = crInternal.value;
         if (d5 && i5) setClientDoc(matchClientAll(d5, i5));
       }, children: "Match internal for every section" }) : null,
@@ -67641,7 +68082,7 @@ ${d5.text}`);
         "button",
         {
           type: "button",
-          class: "btn sm",
+          class: "btn sm rb-x",
           "data-crrefresh": true,
           title: "This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save.",
           onClick: () => {
@@ -67734,17 +68175,33 @@ ${d5.text}`);
           onRedraft: side ? void 0 : redrafter(() => ({
             code: doc.project,
             document: { kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" }
-          }), "report"),
+          }), "report", "client", clientHealthApply),
           onEvent: (ev) => {
             if (ev.type === "reload" && a5) loadClientReport(a5);
             else countRedraft(ev, "report");
           },
+          banner: { title: "Client report", sub: `${doc.project_name || a5 && a5.code || ""} · ${fd(doc.date)}` },
           toolbar: /* @__PURE__ */ u2(ClientBar, { doc, note, setNote })
         }
       ) }),
       /* @__PURE__ */ u2(LeftOutDialog, { client: doc.client || "", onExport: doExport })
     ] });
   }
+  var askWhy = (health2) => {
+    if (crInternal.value && flagOf(
+      /** @type {SheetDoc} */
+      crInternal.value
+    ) !== health2) crAskWhy.value = true;
+  };
+  var clientHealthApply = (d5) => (doc, s5) => (askWhy(d5.health), {
+    ...doc,
+    sections: doc.sections.map((x5) => x5.id === s5.id ? { ...x5, text: d5.reason, data: { .../** @type {any} */
+    x5.data || {}, flag: d5.health } } : x5),
+    meta: healthDiff(doc, crInternal.value ? flagOf(
+      /** @type {SheetDoc} */
+      crInternal.value
+    ) : d5.health, d5.health, "")
+  });
   var crMounted = false;
   function renderClientReport(arg) {
     const el2 = $("#v-clientreport");
@@ -69012,6 +69469,7 @@ ${d5.text}`);
           label: `Version ${doc.version || 1}`,
           icon: "history",
           btnCls: "btn sm",
+          cls: "rb-x",
           menuLabel: "Versions of these minutes",
           data: { mnversions: "" },
           items: versions.map((x5) => ({
@@ -69025,15 +69483,15 @@ ${d5.text}`);
           }
         }
       ),
-      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Versions to keep", children: [
+      /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "Versions to keep", children: [
         /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "false" : "true", disabled: !draft, onClick: () => setDist(false), children: "One version" }),
         /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "true" : "false", disabled: !draft, onClick: () => setDist(true), children: "Internal + distributed" })
       ] }),
-      dist ? /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Show", children: [["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-mnmode": k5, "aria-pressed": mode === k5 ? "true" : "false", onClick: () => {
+      dist ? /* @__PURE__ */ u2("span", { class: "seg rb-x", role: "group", "aria-label": "Show", children: [["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-mnmode": k5, "aria-pressed": mode === k5 ? "true" : "false", onClick: () => {
         minutesMode.value = /** @type {any} */
         k5;
       }, children: l6 }, k5)) }) : null,
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-pressed": paneOpen.value ? "true" : "false", onClick: () => {
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm rb-x", "aria-pressed": paneOpen.value ? "true" : "false", onClick: () => {
         paneOpen.value = !paneOpen.value;
       }, children: "Transcript" }),
       /* @__PURE__ */ u2(
@@ -69155,6 +69613,7 @@ ${d5.text}`);
               if (ev.type === "reload") loadMinutes({ path: v5.path });
               else countRedraft(ev, "minutes");
             },
+            banner: { title: doc.title, sub: `${doc.project_name || ""} · ${fd(doc.date)}` },
             toolbar: /* @__PURE__ */ u2(Bar, { doc, checks })
           }
         ) }) }),
@@ -71574,6 +72033,7 @@ ${d5.text}`);
         "applyTheme",
         "applyView",
         "applyWords",
+        "askChangesHtml",
         "askDeleteNote",
         "askLive",
         "askPerson",
@@ -71709,6 +72169,7 @@ ${d5.text}`);
         "grpToggle",
         "handle",
         "hashOf",
+        "headerPolicy",
         "headsIn",
         "headsOut",
         "headsSafe",
@@ -71919,6 +72380,7 @@ ${d5.text}`);
         "projPeople",
         "publish",
         "pulseCheck",
+        "putHTML",
         "putHtml",
         "query",
         "quip",
