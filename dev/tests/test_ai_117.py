@@ -273,9 +273,9 @@ class Bar117(LiveBrowserCase):
         sheet = {"report", "minutes", "readonly"}
         self.assertEqual({k: v for k, v in b.eval("AI_PLACE_TABLE").items() if k not in sheet}, want)
         self.assertEqual([k for k in b.eval("Object.keys(AI_PLACE_TABLE)") if k not in sheet], list(want))
-        self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(want) | sheet)             # the page, edit_ai.py and the groups list the same
+        self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(want) | sheet | {"client"})   # the page, edit_ai.py and the groups list the same
         self.assertEqual(set(b.eval("Object.keys(AI_GROUPS)")), set(want) | sheet)
-        self.assertEqual(set(edit_ai.PLACES), set(want) | sheet)
+        self.assertEqual(set(edit_ai.PLACES), set(want) | sheet | {"client"})      # #123's client place, as v2.1.0 shipped it
         self.assertEqual(b.eval("Object.keys(AI_PLACE_TABLE).filter(p=>['report','minutes','readonly'].includes(p))"),
                          ["report", "minutes", "readonly"])                    # the sheet's places stay on, with no Turn into or Format notes
         for p in ("report", "minutes", "readonly"):
