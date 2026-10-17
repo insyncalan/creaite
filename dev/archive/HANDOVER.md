@@ -67,10 +67,10 @@ This captures the design conversation (October 2026) so it can be resumed from a
 
 ## Options considered and rejected
 
-- **Linear as the backend.** Reviewed twice, and deferred for now. Its strengths are built-in project health updates, initiatives and an official Claude connector; Basic costs about $120 a year for one user. It would replace the tracker script and dashboard, but data would leave the laptop and IT approval would be needed. Revisit later.
-- **monday.com.** Weakest free tier for a solo user, and paid plans have a 3-seat minimum.
+- **A hosted work tracker as the backend.** Reviewed twice, and deferred for now. Its strengths are built-in project health updates, initiatives and an official Claude connector; Basic costs about $120 a year for one user. It would replace the tracker script and dashboard, but data would leave the laptop and IT approval would be needed. Revisit later.
+- **Another hosted work tracker.** Weakest free tier for a solo user, and paid plans have a 3-seat minimum.
 - **Moving the vault to OneDrive.** It would allow cloud scheduled tasks, but Alan chose local only.
-- **Microsoft Planner/Lists, Jira, Notion, OpenProject, Taiga, Plane.** All are hosted or a poor fit.
+- **Other trackers and wikis (Microsoft's, open-source and hosted).** All are hosted or a poor fit.
 - **Excel as the record.** Superseded by the SQLite hybrid, because it was fragile under automation.
 - **Markdown with Obsidian, or JSON with a live web app,** as storage.
 - **Streamlit, Datasette, Evidence.dev and WeasyPrint.** They need a server, Node.js or a painful Windows install.
