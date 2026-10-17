@@ -4,8 +4,6 @@
 <div class="setlayout">
 <div class="setside">
 <input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off">
-<label class="setchg">
-<input type="checkbox" id="setChanged"> Show changed only</label>
 <div class="tabhost" id="setcatsHost">
 <div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
 <button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="essentials" data-scat="essentials">Essentials</button>
@@ -185,7 +183,7 @@
 </div>
 <div class="setctl">
 <span class="setpair">
-<input type="number" aria-labelledby="ss#11" aria-describedby="ss#11h" min="5" step="5" style="width: #px;">
+<input type="number" aria-labelledby="ss#11" aria-describedby="ss#11h" min="10" max="240" step="5" style="width: #px;">
 <span class="sub">minutes</span>
 </span>
 </div>
@@ -250,7 +248,7 @@
 <input type="checkbox" class="switch" aria-labelledby="ss#15" aria-describedby="ss#15h">
 </div>
 </div>
-<div class="srow" data-keys="drafting.update drafting.client drafting.thinking drafting.reason drafting.agenda drafting.email drafting.forms drafting.repeat drafting.done drafting.sharpen drafting.shape">
+<div class="srow" data-keys="drafting.update drafting.client drafting.thinking drafting.reason drafting.agenda drafting.email drafting.forms drafting.repeat drafting.done drafting.sharpen drafting.shape drafting.report-section drafting.minutes-section">
 <div>
 <span id="ss#16">AI drafts</span>
 <small id="ss#16h">Suggestions you can use, edit or ignore. Never applied by themselves.</small>
