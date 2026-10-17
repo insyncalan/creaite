@@ -53,7 +53,7 @@
 <li><b>3 · In the More menu only:</b> nothing on screen. More's flyout ends with "Customise sidebar" holding Show labels and Collapse. Cleanest, most hidden; best if you rarely change it.</li>
 <li><b>4 · The wordmark is the toggle:</b> pressing "creaite_" collapses and expands, with a small chevron on hover. No extra icon, still in the top-left.</li></ul></div>
 <div class="cardn"><h3>Rules built in</h3><ul>
-<li><b>Expanded</b> (224px) always has labels beside the icons. <b>Collapsed</b> is 76px with each label under its icon (Labels when collapsed: On) or 56px icons only (Off).</li>
+<li><b>Expanded</b> (188px small, was 224px: about half the empty space beside the words) always has labels beside the icons. <b>Collapsed</b> is 76px with each label under its icon (Labels when collapsed: On) or 56px icons only (Off).</li>
 <li><b>Icons only never opens the full rail.</b> Point at Projects, Work or More and only their flyout opens (after 0.2 s, closing 0.3 s after you leave); other icons show a tooltip after 0.4 s.</li>
 <li>More sits at the bottom, as live; its amber "1" means a problem and says so on hover. Review's count is the accent colour.</li>
 <li>No navigation shortcuts. Targets are 36px tall in the list (52px with a label under the icon), with a 3px focus ring.</li></ul></div></div>
@@ -64,7 +64,7 @@ const ITEMS=[["today","Today",null],["work","Work",null],["review","Review",7],[
 const FL={projects:[["Active projects"],["Falcon Data Platform","b"],["Orbit Customer App","w"],["Meridian Contact Centre AI","ok"],["Tide Billing Migration","ok"]],work:[["Work"],["Actions","","14"],["RAID","","9"],["Decisions","","4"],["All items","","27"]],more:[["More"],["Intake","","3"],["Files"],["Activity"],["Health","w","1 problem"],["Settings"],["Help"]]};
 let cd="live",labels=true,collapsed=false,act="today",dark=false,tt=null,fT=null;
 const mode=()=>!collapsed?"A":(labels?"B":"C");
-let sz="S";const SZ={S:{ic:21,rh:36,rhB:52,fs:14,fsB:11,A:224,B:76,C:56,tgt:"36 px rows (today)"},M:{ic:24,rh:42,rhB:58,fs:15,fsB:12,A:244,B:84,C:64,tgt:"42 px rows"},L:{ic:28,rh:48,rhB:66,fs:16,fsB:13,A:264,B:96,C:72,tgt:"48 px rows"}};
+let sz="S";const SZ={S:{ic:21,rh:36,rhB:52,fs:14,fsB:11,A:188,B:76,C:56,tgt:"36 px rows (as today)"},M:{ic:24,rh:42,rhB:58,fs:15,fsB:12,A:204,B:84,C:64,tgt:"42 px rows"},L:{ic:28,rh:48,rhB:66,fs:16,fsB:13,A:220,B:96,C:72,tgt:"48 px rows"}};
 const width=()=>SZ[sz][mode()];
 function applySize(){const z=SZ[sz];let st=document.getElementById("szs");if(!st){st=document.createElement("style");st.id="szs";document.head.appendChild(st)}
  st.textContent=`.rail .it{height:${z.rh}px;font-size:${z.fs}px}.rail .it svg{width:${z.ic}px;height:${z.ic}px}.rail.B .it{height:${z.rhB}px;font-size:${z.fsB}px}.rail.C .it{height:${z.rh}px}`;
