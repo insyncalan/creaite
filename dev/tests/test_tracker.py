@@ -135,7 +135,8 @@ class Vault:
 
     def run(self, *args, script="tracker.py", ok=True, cwd=None):
         r = subprocess.run([sys.executable, str(self.root / "system" / "scripts" / script), *args],
-                           cwd=cwd or tempfile.gettempdir(), capture_output=True, text=True)
+                           cwd=cwd or tempfile.gettempdir(), capture_output=True, text=True,
+                           timeout=300)      # harness-timeout: a script that never returns fails the test, loudly
         if ok and r.returncode != 0:
             raise AssertionError(f"{script} {args} failed:\n{r.stdout}\n{r.stderr}")
         return r
