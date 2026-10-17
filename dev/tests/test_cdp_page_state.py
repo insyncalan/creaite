@@ -1,5 +1,4 @@
 """A failing wait, and a failing test in a LiveBrowserCase, say where the page was (no Chrome: the page is a fake)."""
-import json
 import sys
 import unittest
 from pathlib import Path
