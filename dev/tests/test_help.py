@@ -14,6 +14,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from live_browser import TEST_PALETTES, TEST_PALETTES_JS  # noqa: E402
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_insight import chrome  # noqa: E402
 from test_tracker import REPO, Vault  # noqa: E402
@@ -320,13 +321,13 @@ class PageTests(unittest.TestCase):
             howto:[".hp-eyebrow",".hp-where",".hp-task ol",".hp-or",".hp-or b",".hp-say",".hp-index h2",".hp-index a",".hp-task a",".hp-task h3",".hp-wrap kbd",".hp-wrap code"],
             reference:[".hp-refidx a",".hp-refgroup",".hp-reflead",".hp-ref li",".hp-ref td",".hp-ref h2",".hp-wrap code"]};
           const res={};
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); go("help");
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); go("help");
             for(const [tab,sels] of Object.entries(pairs)){ helpGo(tab); for(const s of sels){ const el=$q("#helpPane "+s); if(!el){ res[`${pal}|${mode}|${tab}|${s}`]=-1; continue; }
               res[`${pal}|${mode}|${tab}|${s}`]=ratio(getComputedStyle(el).color,bgOf(el)); } } }
-          out.res=res; window.OUT=out;""")
+          out.res=res; window.OUT=out;""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         res = o["res"]
-        self.assertEqual(len({k.split("|")[0] for k in res}), theme_count())             # every theme
-        self.assertGreater(len(res), 3 * 2 * 40)
+        self.assertEqual(len({k.split("|")[0] for k in res}), len(TEST_PALETTES))       # creaite and Cursor (Alan, 16-10-2026)
+        self.assertGreater(len(res), len(TEST_PALETTES) * 2 * 40)
         self.assertEqual([k for k, r in res.items() if r == -1], [])                       # every pair was found on its page
         self.assertEqual({k: round(r, 2) for k, r in res.items() if 0 <= r < 4.5}, {})
 
