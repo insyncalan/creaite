@@ -281,6 +281,12 @@ def words_match(row, cols, terms, any_term):
     return any(found) if any_term else all(found)
 
 
+def matched_rows(con, sql, args, cols, terms, any_term):
+    """The rows the SQL finds, as dicts, less any that matched only through a link's address (#121)."""
+    found = (dict(r) for r in con.execute(sql + " ORDER BY _date DESC, id LIMIT 400", args))
+    return [row for row in found if words_match(row, cols, terms, any_term)]
+
+
 def item_rows(con, vocab, terms, flt, any_term=False):
     """Tracker items matching the words and filters, with plain SQL LIKE beside the index (nothing is copied into it)."""
     kinds = flt["kinds"]
@@ -320,8 +326,7 @@ def item_rows(con, vocab, terms, flt, any_term=False):
             where.append(f"{dcol} <= ?")
             args.append(flt["to"])
         sql = f"SELECT *, {dcol} AS _date FROM {table}" + (" WHERE " + " AND ".join(where) if where else "")
-        found = (dict(r) for r in con.execute(sql + f" ORDER BY _date DESC, id LIMIT 400", args))
-        out.extend((table, row, text) for row in found if words_match(row, cols, terms, any_term))   # #121: a link's address is never matched
+        out.extend((table, row, text) for row in matched_rows(con, sql, args, cols, terms, any_term))
     return out
 
 

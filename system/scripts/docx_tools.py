@@ -850,7 +850,7 @@ def _fill_paragraph_lists(xml, values):
 
 
 def fill_story(name, raw, values, link_rels):
-    """One story part filled: (its bytes, the {{PLACEHOLDERS}} left in it). The document's links become hyperlinks, listed in `link_rels`."""
+    """One story part filled: (its bytes, the {{PLACEHOLDERS}} left in it). Links become hyperlinks, listed in `link_rels`."""
     xml = finish_links(fill_xml(raw.decode("utf-8"), values), link_rels if name == "word/document.xml" else None)
     if name == "word/document.xml" and link_rels and "xmlns:r=" not in xml[:2000]:
         xml = xml.replace("<w:document ", f'<w:document xmlns:r="{REL_NS}" ', 1)
