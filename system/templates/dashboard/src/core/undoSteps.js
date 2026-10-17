@@ -17,9 +17,9 @@ export const OWN_STEP = "cxStep";
 export const STASH_MAX = 5;
 
 /** @param {any} tr @returns {"del"|"ins"} deleting only (nothing put in), else typing/inserting */
-function kindOf(tr) {
+function changeKind(tr) {
   let put = 0, cut = 0;
-  for (const s of tr.steps) { const sl = s.slice; if (sl) { put += sl.size; cut += (s.to - s.from) || 0; } else put += 1; }
+  for (const s of tr.steps) { const part = s.slice; if (part) { put += part.size; cut += (s.to - s.from) || 0; } else put += 1; }
   return put === 0 && cut > 0 ? "del" : "ins";
 }
 /** @param {any} tr */
@@ -34,12 +34,12 @@ const key = new PluginKey("cxUndoSteps");
 export const cxUndoSteps = Extension.create({ name: "cxUndoSteps", addProseMirrorPlugins: () => [new Plugin({ key,
   state: {
     init: () => ({ last: /** @type {string|null} */ (null), closeNext: false }),
-    apply(tr, v, _old, state) {
+    apply: (tr, v, _old, state) => {
       if (!tr.docChanged) return v;
       if (isHistoryTr(state, tr)) return { last: null, closeNext: false };
       if (tr.getMeta("addToHistory") === false) return v;
       const own = ownStep(tr);
-      return { last: own ? null : kindOf(tr), closeNext: own };
+      return { last: own ? null : changeKind(tr), closeNext: own };
     } },
   /* The history plugin reads a transaction's close-history mark when it applies it, after this filter: marking it here puts
      the change in a new step. (A filter that only reads and marks; it never refuses.) */
@@ -47,7 +47,7 @@ export const cxUndoSteps = Extension.create({ name: "cxUndoSteps", addProseMirro
     if (!tr.docChanged || tr.getMeta("addToHistory") === false || isHistoryTr(state, tr)) return true;
     const v = key.getState(state);
     if (!v) return true;
-    if (ownStep(tr) || v.closeNext || (v.last && kindOf(tr) !== v.last)) closeHistory(tr);
+    if (ownStep(tr) || v.closeNext || (v.last && changeKind(tr) !== v.last)) closeHistory(tr);
     return true;
   } })] });
 

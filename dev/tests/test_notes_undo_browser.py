@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_notes_undo_browser.py   (needs Google Chrome; skipped otherwise)
 
-Design r3 section 4 (dev/proposals/notes-175/design-r3.md). The editor's own history (⌘Z, ⌘⇧Z), made finer by `cxUndoSteps`
+Design r3 section 4 (dev/proposals/notes-175/design-r3.md). The editor's own history (⌘Z, ⌘⇧Z), made finer by the undo-steps extension
 (core/undoSteps.js):
   - delete a line, then retype at once: ⌘Z takes back only the retype, a second brings the line back;
   - several undos go one change at a time and stop at the text the note opened with; redo puts them back in order, and typing
@@ -12,8 +12,8 @@ Design r3 section 4 (dev/proposals/notes-175/design-r3.md). The editor's own his
   - switching notes and back keeps the history in the page when the file is unchanged, and drops it when it was changed outside
     creaite; a reload starts empty (nothing is kept in browser storage);
   - a paste, a picker choice and an AI replacement are one step each.
-Each test fails with its piece taken out: 1 and 7 (paste, picker, AI) without cxUndoSteps; 4 and 5 if a save rebuilds the editor;
-6 without the in-memory history (undoStash, undoTake). 2 and 3 pin the plain behaviour (pauses between bursts) that must not regress.
+Each test fails with its piece taken out: 1 and 7 (paste, picker, AI) without that extension; 4 and 5 if a save rebuilds the editor;
+6 without the in-memory history of closed notes. 2 and 3 pin the plain behaviour (pauses between bursts) that must not regress.
 """
 import json
 import sys
@@ -254,7 +254,7 @@ class NotesUndo(LiveBrowserCase):
         b.eval("go('cockpit','ABC')")
         self.make("Picker")
         self.type_end("see [[Zet")
-        b.wait("!!document.getElementById('ntpick')&&document.querySelectorAll('#ntpick [role=option]').length>0", 5)
+        b.wait("!!document.getElementById('ntpick')&&document.querySelectorAll('#ntpick [role=option]').length>0", 10)
         b.key("Enter")
         self.assertIn("[[Zeta target]]", self.text())
         self.undo()

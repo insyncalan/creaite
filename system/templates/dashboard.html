@@ -27466,12 +27466,12 @@ ${s5}`;
   var UNDO_DEPTH = 500;
   var OWN_STEP = "cxStep";
   var STASH_MAX = 5;
-  function kindOf2(tr2) {
+  function changeKind(tr2) {
     let put2 = 0, cut = 0;
     for (const s5 of tr2.steps) {
-      const sl3 = s5.slice;
-      if (sl3) {
-        put2 += sl3.size;
+      const part = s5.slice;
+      if (part) {
+        put2 += part.size;
         cut += s5.to - s5.from || 0;
       } else put2 += 1;
     }
@@ -27491,12 +27491,12 @@ ${s5}`;
         /** @type {string|null} */
         null
       ), closeNext: false }),
-      apply(tr2, v5, _old, state) {
+      apply: (tr2, v5, _old, state) => {
         if (!tr2.docChanged) return v5;
         if (isHistoryTr(state, tr2)) return { last: null, closeNext: false };
         if (tr2.getMeta("addToHistory") === false) return v5;
         const own = ownStep(tr2);
-        return { last: own ? null : kindOf2(tr2), closeNext: own };
+        return { last: own ? null : changeKind(tr2), closeNext: own };
       }
     },
     /* The history plugin reads a transaction's close-history mark when it applies it, after this filter: marking it here puts
@@ -27505,7 +27505,7 @@ ${s5}`;
       if (!tr2.docChanged || tr2.getMeta("addToHistory") === false || isHistoryTr(state, tr2)) return true;
       const v5 = key.getState(state);
       if (!v5) return true;
-      if (ownStep(tr2) || v5.closeNext || v5.last && kindOf2(tr2) !== v5.last) Dk(tr2);
+      if (ownStep(tr2) || v5.closeNext || v5.last && changeKind(tr2) !== v5.last) Dk(tr2);
       return true;
     }
   })] });
@@ -58864,11 +58864,11 @@ ${d5.text}`);
       return;
     }
     if (wk2.length) {
-      const kindOf3 = (
+      const kindOf2 = (
         /** @param {string} id */
         (id2) => A4.some((x5) => x5.id === id2) ? "actions" : R3.some((x5) => x5.id === id2) ? "raid" : DEC.some((x5) => x5.id === id2) ? "decisions" : ""
       );
-      const k5 = kindOf3(wk2[0]) || "actions", mine = wk2.filter((id2) => kindOf3(id2) === k5);
+      const k5 = kindOf2(wk2[0]) || "actions", mine = wk2.filter((id2) => kindOf2(id2) === k5);
       const codes = [...new Set(mine.map((id2) => {
         const x5 = [...A4, ...R3, ...DEC].find((y5) => y5.id === id2);
         return x5 && x5.p;
