@@ -167,7 +167,9 @@ class Rules(unittest.TestCase):
         self.assertIn("(401)", pv.refused_words("openai", 401))
 
     def test_a_real_vault_connects_nothing_until_the_keychain_is_built(self):
+        """Off a Mac (and on every vault until the keychain is built): never the real keychain from a test (#132 G1 proposal)."""
         old = os.environ.pop("CREAITE_FAKE_PROVIDERS", None)
+        platform, sys.platform = sys.platform, "linux"
         pv._BACKEND.clear()
         try:
             store, lister = pv.backend()
@@ -178,6 +180,7 @@ class Rules(unittest.TestCase):
             with self.assertRaises(pv.NotBuilt):
                 store.put("openai", GOOD_KEY)
         finally:
+            sys.platform = platform
             pv._BACKEND.clear()
             if old is not None:
                 os.environ["CREAITE_FAKE_PROVIDERS"] = old

@@ -1,0 +1,140 @@
+#132 G5: confidential material only to Claude, enforced in the server.
+PROPOSAL, not applied. Applies to origin/ai-models-132 36e2b36 with G3 applied first (it changes model_choice and run_model).
+2 files, 4 hunks, +66 -8. Guarded: live_server.py's run_model and model_choice, which G3 adds. The run launch itself is not
+touched again.
+
+live_server.py
+ 1 @@ CONFIDENTIAL_KINDS (a closed meeting's Shape); model_choice calls providers.route_for, never route, and says why a job
+      whose chosen model is another provider's stays on Claude (confidential, or not checked yet)
+ 2 @@ run_model takes what the server declared (and the text, for G4) and returns that note
+providers.py
+ 3 @@ stepped_down: "Step down one kind" at a limit no longer takes confidential writing to a quick-edit model of another
+      provider (a gap in the built policy, found by the new gate)
+ 4 @@ route() uses stepped_down; then SECRET_MARKS, confidential_job (fail closed: tools jobs, declared, unchecked, marked),
+      send_allowed (the gate any call to another provider must pass), route_for (the server's one way to pick a model)
+
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 82f36ac..8e2f5f4 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2123,20 +2123,27 @@ KIND_JOB = {"ask": "tools", "sweep": "tools", "search": "tools", "prep": "tools"
+             "vip": "tools", "generate": "write", "shape-closed": "write", "edit-ai": "quick", "notes-find": "quick"}
+ CLAUDE_ALIASES = ("opus", "sonnet", "haiku")       # the only values --model is ever given
+ UNAVAILABLE = "The model chosen for this isn't available now, so this ran on the recommended model."
++CONFIDENTIAL_KINDS = ("shape-closed",)             # #132 G5: a run the server already knows is confidential (a closed meeting)
+ 
+ 
+-def model_choice(job, settings=None):
+-    """What run_model decides from: the model the job routes to now (providers.route), the job's default, that model's entry
+-    (None when it isn't on offer) and what the setting asks for."""
++def model_choice(job, settings=None, declared=None, text=""):
++    """What run_model decides from: the model the job routes to now (providers.route_for: G5, never route), the job's default,
++    that model's entry (None when it isn't on offer), what the setting asks for, and `held`: why a job whose chosen model is
++    another provider's stays on Claude (confidential, or not checked yet), else ""."""
+     import providers
+     settings = paths.load_settings() if settings is None else settings
+-    pick = providers.route(job, settings)["model"]
++    routed = providers.route_for(job, settings, text=text, declared=declared)                  # #132 G5
++    pick, wanted = routed["model"], str(providers.chosen(job, settings))
++    held = ""
++    if routed["why"] == "confidential" and not wanted.startswith("claude:"):                     # #132 G5
++        held = providers.CONFIDENTIAL_WORDS if routed["confidential_why"] in ("declared", "marked") else \
++            f"{providers.PROVIDERS.get(wanted.partition(':')[0], ('That provider',))[0]} isn't used for this yet."
+     return {"pick": pick, "default": providers.setting({}, f"ai.jobs.{job}"), "asked": providers.setting(settings, f"ai.jobs.{job}"),
+             "found": providers.model(pick, settings) if pick else None, "tools": providers.JOBS[job]["tools"],
+-            "name": providers.PROVIDERS.get(str(pick).partition(":")[0], (str(pick),))[0]}
++            "name": providers.PROVIDERS.get(str(pick).partition(":")[0], (str(pick),))[0], "held": held}
+ 
+ 
+-def run_model(kind, settings=None):
++def run_model(kind, settings=None, text="", declared=None):
+     """(alias, note): the Claude model to start a run of this kind with, or None to start it exactly as before #132. None while
+     the kind's job is at its default, so every launch is byte for byte today's until Alan chooses another model. Fails closed to
+     today's launch (with a note in plain words) when the choice isn't a Claude model (`claude` runs only Claude; other
+@@ -2146,9 +2153,11 @@ def run_model(kind, settings=None):
+     if job is None:
+         return None, ""
+     try:
+-        c = model_choice(job, settings)
++        c = model_choice(job, settings, True if kind in CONFIDENTIAL_KINDS else declared, text)   # #132 G5
+     except Exception as e:  # noqa: BLE001  fail closed: today's launch
+         return None, f"The AI model setting couldn't be read ({type(e).__name__}), so this ran on Claude's usual model."
++    if c["held"]:                                                                                  # #132 G5
++        return None, f"{c['held']} So Claude ran it."
+     pick, found = c["pick"], c["found"]
+     if not pick or pick == c["default"]:
+         return None, "" if c["asked"] == pick else UNAVAILABLE
+diff --git a/system/scripts/providers.py b/system/scripts/providers.py
+index aa0dba0..e1744e0 100644
+--- a/system/scripts/providers.py
++++ b/system/scripts/providers.py
+@@ -510,6 +510,13 @@ def disconnect_changes(provider, settings, store=None):
+ 
+ 
+ # ── Routing: which model a job runs on (the policy; wiring it into runs is the guarded part) ────────────────────────────
++def stepped_down(job, settings, store=None, confidential=False):
++    """The model a job steps down to at a limit: the next kind down's choice, or its recommended Claude model when the material
++    is confidential and that choice is another provider's (#132 G5)."""
++    down = chosen(STEP_DOWN[job], settings, store)
++    return JOBS[STEP_DOWN[job]]["recommended"] if confidential and not down.startswith("claude:") else down
++
++
+ def route(job, settings, store=None, confidential=False, limited=False):
+     """Which model a job runs on now: {model, wait, ask, why}. The rules, in order:
+     - confidential material only ever goes to Claude: a non-Claude choice runs on the job's recommended model instead;
+@@ -529,12 +536,54 @@ def route(job, settings, store=None, confidential=False, limited=False):
+         if alt:
+             return {"model": alt[0]["id"], "wait": False, "ask": False, "why": "limit: another connected model"}
+     if mode == "step_down" and job in STEP_DOWN:
+-        return {"model": chosen(STEP_DOWN[job], settings, store), "wait": False, "ask": False, "why": "limit: stepped down"}
++        return {"model": stepped_down(job, settings, store, confidential), "wait": False, "ask": False,
++                "why": "limit: stepped down"}
+     if mode == "ask":
+         return {"model": None, "wait": False, "ask": True, "why": "limit: ask"}
+     return {"model": None, "wait": True, "ask": False, "why": "limit: waits for the reset"}
+ 
+ 
++# ── #132 G5 (proposal): confidential material only to Claude, decided in the server ─────────────────────────────────────
++# route() already keeps a confidential job on Claude. These make that the server's one way to pick a model: the live server
++# calls route_for (never route) for every run, and send_allowed is the gate any call to a provider other than Claude must pass
++# first (G4's direct call; none exists yet). Fail closed: a job is confidential unless the server has shown it isn't.
++SECRET_MARKS = __import__("re").compile(r"(?i)\b(confidential|restricted)\b|client-safe:\s*no")
++CONFIDENTIAL_WORDS = "Confidential material is only ever sent to Claude."
++
++
++def confidential_job(job, text="", declared=None):
++    """(confidential, why) for one job. why: "tools" (a job that uses tools reads files and mail itself, so it is Claude's
++    only), "declared" (the server found a confidential meeting or note, or a client-restricted item), "unchecked" (the call
++    site made no check: counts as confidential), "marked" (the text sent is marked confidential or restricted, or Client-safe:
++    no), or "" (declared not confidential by the server, and the text is clean)."""
++    if JOBS.get(job, {"tools": True})["tools"]:
++        return True, "tools"
++    if declared is True:
++        return True, "declared"
++    if declared is not False:
++        return True, "unchecked"
++    if SECRET_MARKS.search(text or ""):
++        return True, "marked"
++    return False, ""
++
++
++def send_allowed(model_id, confidential):
++    """The gate before any call to a provider: Refused for confidential material (or material not shown to be otherwise) to a
++    provider other than Claude."""
++    if not str(model_id or "").startswith("claude:") and confidential is not False:
++        raise Refused(CONFIDENTIAL_WORDS)
++
++
++def route_for(job, settings, text="", declared=None, store=None, limited=False):
++    """route(), with the job's confidentiality decided here from what the server knows (confidential_job), and the gate checked
++    on the answer: the server's only way to pick a model. Adds "confidential" and "confidential_why" to route's answer."""
++    conf, why = confidential_job(job, text, declared)
++    out = route(job, settings, store, confidential=conf, limited=limited)
++    if out["model"]:
++        send_allowed(out["model"], conf)
++    return dict(out, confidential=conf, confidential_why=why)
++
++
+ def retry_kind(job, check_notes):
+     """A quick edit whose plain-code check found a changed date, number, name or ID is tried once on the next kind up: that
+     kind, or None (no retry: the check passed, or it isn't a quick edit)."""
