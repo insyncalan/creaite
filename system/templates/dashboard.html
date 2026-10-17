@@ -3847,6 +3847,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     BULK_MAX: () => BULK_MAX,
     CALI: () => CALI,
     CARDTYPE: () => CARDTYPE,
+    CARD_CLOSE: () => CARD_CLOSE,
+    CARD_OPEN: () => CARD_OPEN,
     CATOF: () => CATOF,
     CD_STEPS: () => CD_STEPS,
     CE_FIELDS: () => CE_FIELDS,
@@ -4015,6 +4017,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     MD_IMG: () => MD_IMG,
     MD_LIST: () => MD_LIST,
     MD_MAX: () => MD_MAX,
+    MENU_CLOSE: () => MENU_CLOSE,
+    MENU_NEXT: () => MENU_NEXT,
+    MENU_OPEN: () => MENU_OPEN,
     MFIRST: () => MFIRST,
     MLV: () => MLV,
     MLVAT: () => MLVAT,
@@ -4234,6 +4239,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     THEME_OLD: () => THEME_OLD,
     TICK24: () => TICK24,
     TIP: () => TIP,
+    TIP_CLOSE: () => TIP_CLOSE,
+    TIP_NEXT: () => TIP_NEXT,
+    TIP_OPEN: () => TIP_OPEN,
     TOAST_ACTION_MS: () => TOAST_ACTION_MS,
     TOAST_LAYERS: () => TOAST_LAYERS,
     TOAST_MS: () => TOAST_MS,
@@ -4578,6 +4586,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     btnLabel: () => btnLabel,
     btnLabel0: () => btnLabel0,
     calFoot: () => calFoot,
+    canHover: () => canHover,
     cancelCurEdit: () => cancelCurEdit,
     cantCard: () => cantCard,
     cantGo: () => cantGo,
@@ -4588,6 +4597,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     capped: () => capped,
     captureDone: () => captureDone,
     cardClose: () => cardClose,
+    cardGroup: () => cardGroup,
     cardHtml: () => cardHtml,
     cardKept: () => cardKept,
     cardPromises: () => cardPromises,
@@ -5101,6 +5111,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     hlRowOpen: () => hlRowOpen,
     hlSettle: () => hlSettle,
     hlToggle: () => hlToggle,
+    hoverAttach: () => hoverAttach,
+    hoverGroup: () => hoverGroup,
     html: () => html,
     htmlPart: () => htmlPart,
     htmlToMd: () => htmlToMd,
@@ -5120,6 +5132,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     imgView: () => imgView,
     inProj: () => inProj,
     inSpan: () => inSpan,
+    inTriangle: () => inTriangle,
     inboxBadge: () => inboxBadge,
     initials: () => initials,
     insertImage: () => insertImage,
@@ -5236,6 +5249,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     meetingOfFile: () => meetingOfFile,
     meetingRoute: () => meetingRoute,
     memPath: () => memPath,
+    menuGroup: () => menuGroup,
     menuItemsIn: () => menuItemsIn,
     menuMove: () => menuMove,
     menuOpenFor: () => menuOpenFor,
@@ -5990,6 +6004,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     rwWrap: () => rwWrap,
     rzApply: () => rzApply,
     sLink: () => sLink,
+    safeTriangle: () => safeTriangle,
     sameF: () => sameF,
     save: () => save,
     saveAndClose: () => saveAndClose,
@@ -6410,6 +6425,246 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     HASH0: void 0
   };
 
+  // core/hover.js
+  var TIP_OPEN = 400, TIP_CLOSE = 150, TIP_NEXT = 100;
+  var CARD_OPEN = 600, CARD_CLOSE = 300;
+  var MENU_OPEN = 200, MENU_CLOSE = 300, MENU_NEXT = 80;
+  var DELAYS = { card: { open: CARD_OPEN, close: CARD_CLOSE, next: CARD_OPEN }, menu: { open: MENU_OPEN, close: MENU_CLOSE, next: MENU_NEXT } };
+  function inTriangle(p6, a5, b5, c5) {
+    const s5 = (u5, v5, w6) => (u5.x - w6.x) * (v5.y - w6.y) - (v5.x - w6.x) * (u5.y - w6.y);
+    const d12 = s5(p6, a5, b5), d22 = s5(p6, b5, c5), d32 = s5(p6, c5, a5);
+    return !((d12 < 0 || d22 < 0 || d32 < 0) && (d12 > 0 || d22 > 0 || d32 > 0));
+  }
+  function safeTriangle(from, r4) {
+    if (from.x <= r4.left) return [from, { x: r4.left, y: r4.top }, { x: r4.left, y: r4.bottom }];
+    if (from.x >= r4.right) return [from, { x: r4.right, y: r4.top }, { x: r4.right, y: r4.bottom }];
+    if (from.y <= r4.top) return [from, { x: r4.left, y: r4.top }, { x: r4.right, y: r4.top }];
+    return [from, { x: r4.left, y: r4.bottom }, { x: r4.right, y: r4.bottom }];
+  }
+  function hoverGroup(kind, clock2 = {}) {
+    const T6 = DELAYS[kind];
+    const set = clock2.set || ((fn2, ms2) => setTimeout(fn2, ms2)), clear = clock2.clear || ((id2) => clearTimeout(id2));
+    let cur = null;
+    let openT = 0, closeT = 0, wantKey = null;
+    let dismissed = null;
+    let released = null;
+    let tri = null;
+    const stopOpen = () => {
+      clear(openT);
+      openT = 0;
+      wantKey = null;
+    };
+    const stopClose = () => {
+      clear(closeT);
+      closeT = 0;
+      tri = null;
+    };
+    const shut = () => {
+      stopClose();
+      const c5 = cur;
+      cur = null;
+      if (c5) c5.h.close();
+    };
+    const show = (key, h5) => {
+      released = null;
+      stopOpen();
+      stopClose();
+      if (cur && cur.key !== key) shut();
+      if (!cur) {
+        cur = { key, h: h5 };
+        h5.open();
+      }
+    };
+    const later2 = () => {
+      stopClose();
+      closeT = set(() => {
+        closeT = 0;
+        tri = null;
+        shut();
+      }, T6.close);
+    };
+    return {
+      kind,
+      /** The key of the popup showing, or null. */
+      get current() {
+        return cur ? cur.key : null;
+      },
+      /** The pointer arrived at a trigger: open after the delay (the short one when a neighbour is showing).
+          @param {any} key @param {HoverHandlers} h */
+      enter(key, h5) {
+        if (dismissed === key) return;
+        if (released && released.key === key) {
+          if (released.h.isOpen && released.h.isOpen()) return;
+          released = null;
+        }
+        if (cur && cur.key === key) {
+          stopClose();
+          return;
+        }
+        if (wantKey === key) return;
+        stopOpen();
+        stopClose();
+        wantKey = key;
+        openT = set(() => {
+          openT = 0;
+          wantKey = null;
+          show(key, h5);
+        }, cur ? T6.next : T6.open);
+      },
+      /** The pointer left a trigger (with where it was, for the safe triangle): a wait to open is dropped; an open popup closes after
+          the grace unless the pointer reaches it.
+          @param {any} key @param {Point} [at] */
+      leave(key, at2) {
+        if (dismissed === key) dismissed = null;
+        if (wantKey === key) stopOpen();
+        if (cur && cur.key === key) {
+          later2();
+          tri = at2 ? { from: at2, h: cur.h } : null;
+        }
+      },
+      /** The pointer moved: while it heads for the open popup (inside the safe triangle), the close is put off.
+          @param {Point} p */
+      move(p6) {
+        if (!tri || !cur || !closeT) return;
+        const r4 = tri.h.rect && tri.h.rect();
+        if (!r4) return;
+        const [a5, b5, c5] = safeTriangle(tri.from, r4);
+        if (inTriangle(p6, a5, b5, c5)) {
+          const f5 = tri.from;
+          later2();
+          tri = { from: f5, h: cur.h };
+        }
+      },
+      /** The pointer is on the popup itself: it stays. */
+      panelEnter() {
+        stopClose();
+      },
+      /** The pointer left the popup (and is not on its trigger): it closes after the grace. */
+      panelLeave() {
+        if (cur) later2();
+      },
+      /** Keyboard focus: opens at once. @param {any} key @param {HoverHandlers} h */
+      focus(key, h5) {
+        if (dismissed === key) return;
+        show(key, h5);
+      },
+      /** Focus left the trigger and the popup: closes at once. @param {any} key */
+      blur(key) {
+        if (wantKey === key) stopOpen();
+        if (dismissed === key) dismissed = null;
+        if (cur && cur.key === key) shut();
+      },
+      /** Esc: whatever shows is closed at once, and the trigger stays quiet until the pointer has left it. Returns whether
+          anything was closed. */
+      dismiss() {
+        const was = cur ? cur.key : wantKey;
+        stopOpen();
+        const had = !!cur;
+        shut();
+        if (was != null) dismissed = was;
+        return had;
+      },
+      /** The keyboard has taken the popup (focus went into it, or a click or ↓ on its trigger): the group lets go without closing it,
+          so Esc, Tab and the arrows are the popup's own and the pointer drifting away no longer closes it. A wait to open is dropped.
+          @param {any} key */
+      release(key) {
+        if (wantKey === key) stopOpen();
+        if (cur && cur.key === key) {
+          stopClose();
+          released = { key, h: cur.h };
+          cur = null;
+        }
+      },
+      /** Close at once without the Esc rule (the trigger was removed, or the page changed). */
+      close() {
+        stopOpen();
+        shut();
+      }
+    };
+  }
+  var menuGroup = hoverGroup("menu");
+  var cardGroup = hoverGroup("card");
+  var canHover = () => typeof matchMedia !== "function" || matchMedia("(hover: hover)").matches;
+  function hoverAttach(trigger, o5) {
+    const { group, panel } = o5, focusOpens = o5.focusOpens !== false;
+    const h5 = { isOpen: o5.isOpen, open: o5.open, close: () => {
+      document.removeEventListener("pointermove", track, true);
+      o5.close();
+    }, rect: () => {
+      const p6 = panel();
+      return p6 ? p6.getBoundingClientRect() : null;
+    } };
+    let at2 = "";
+    const touch = (e4) => e4.pointerType === "touch" || !canHover();
+    const zone = (t47) => {
+      const n4 = (
+        /** @type {Node | null} */
+        t47
+      );
+      if (!n4) return "";
+      if (trigger.contains(n4)) return "trigger";
+      const p6 = panel();
+      return p6 && p6.contains(n4) ? "panel" : "";
+    };
+    const track = (e4) => group.move({ x: e4.clientX, y: e4.clientY });
+    const pointerAt = (e4, t47) => {
+      if (touch(e4)) return;
+      const z4 = zone(t47);
+      if (z4 === at2) return;
+      const was = at2;
+      at2 = z4;
+      if (z4 === "trigger") {
+        document.removeEventListener("pointermove", track, true);
+        group.enter(trigger, h5);
+      } else if (z4 === "panel") {
+        document.removeEventListener("pointermove", track, true);
+        group.panelEnter();
+      } else if (was === "trigger") {
+        group.leave(trigger, { x: e4.clientX, y: e4.clientY });
+        document.addEventListener("pointermove", track, true);
+      } else group.panelLeave();
+    };
+    const over = (e4) => pointerAt(e4, e4.target);
+    const out = (e4) => {
+      if (!e4.relatedTarget) pointerAt(e4, null);
+    };
+    const focusin = (e4) => {
+      if (focusOpens && trigger.matches(":focus-visible") && e4.target === trigger) group.focus(trigger, h5);
+    };
+    const focusout = (e4) => {
+      const to2 = (
+        /** @type {Node | null} */
+        e4.relatedTarget
+      ), p6 = panel();
+      if (!to2 || !trigger.contains(to2) && !(p6 && p6.contains(to2))) group.blur(trigger);
+    };
+    const taken2 = (e4) => {
+      const p6 = panel();
+      if (group.current === trigger && p6 && e4.target instanceof Node && p6.contains(e4.target)) group.release(trigger);
+    };
+    const key = (e4) => {
+      if (e4.key === "Escape" && group.current === trigger && group.dismiss()) {
+        e4.stopPropagation();
+      }
+    };
+    document.addEventListener("pointerover", over, true);
+    document.addEventListener("pointerout", out, true);
+    trigger.addEventListener("focusin", focusin);
+    trigger.addEventListener("focusout", focusout);
+    document.addEventListener("keydown", key, true);
+    document.addEventListener("focusin", taken2, true);
+    return () => {
+      document.removeEventListener("focusin", taken2, true);
+      document.removeEventListener("pointerover", over, true);
+      document.removeEventListener("pointerout", out, true);
+      document.removeEventListener("pointermove", track, true);
+      document.removeEventListener("keydown", key, true);
+      trigger.removeEventListener("focusin", focusin);
+      trigger.removeEventListener("focusout", focusout);
+      if (group.current === trigger) group.close();
+    };
+  }
+
   // core/dom.js
   var $ = (s5, root = document) => root.querySelector(s5);
   var $$ = (s5, root = document) => [...root.querySelectorAll(s5)];
@@ -6609,13 +6864,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         return;
       }
       if (el2) {
-        tipShow(el2, TIP.el ? 0 : 250);
+        tipShow(el2, TIP.el ? TIP_NEXT : TIP_OPEN);
         return;
       }
       clearTimeout(TIP.show);
       if (TIP.el) {
         clearTimeout(TIP.hide);
-        TIP.hide = setTimeout(tipHide, 120);
+        TIP.hide = setTimeout(tipHide, TIP_CLOSE);
       }
     });
     document.addEventListener("mouseleave", tipHide);
@@ -9687,6 +9942,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   }
 
   // components/Menu.jsx
+  var KB_OPEN = null;
   var menuItemsIn = (box) => box ? (
     /** @type {HTMLElement[]} */
     [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
@@ -9805,8 +10061,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       it2.id
     )) });
   }
-  var HOVER_OPEN = null;
-  var HOVER_GRACE = 220;
   function Menu({
     label,
     items: items2,
@@ -9829,50 +10083,50 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     hidden,
     hover
   }) {
-    const [open2, setOpen2] = d2(false), [, bump] = d2(0);
+    const [open2, setOpen2] = d2(false);
     const btn = A2(
       /** @type {HTMLButtonElement | null} */
       null
     );
     const back2 = A2(false);
-    const byMouse = A2(false), openedAt = A2(0), noFocus = A2(false), timer2 = A2(0);
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const byPointer = A2(false);
+    const isOpen = A2(false);
+    isOpen.current = open2;
     const close = (how) => {
       back2.current = how === "esc";
       if (back2.current) btn.current?.focus({ preventScroll: true });
-      clearTimeout(timer2.current);
-      if (HOVER_OPEN === fold) HOVER_OPEN = null;
       setOpen2(false);
+      if (hover && menuGroup.current === btn.current) menuGroup.close();
     };
     const closeRef = A2(close);
     closeRef.current = close;
-    const fold = A2(() => closeRef.current("away")).current;
-    const pointIn = () => {
-      if (!hover || why) return;
-      clearTimeout(timer2.current);
-      if (open2) return;
-      if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
-      HOVER_OPEN = fold;
-      byMouse.current = true;
-      noFocus.current = true;
-      openedAt.current = Date.now();
-      setOpen2(true);
-    };
-    const pointOut = () => {
-      if (hover && byMouse.current) {
-        clearTimeout(timer2.current);
-        timer2.current = window.setTimeout(fold, HOVER_GRACE);
-      }
-    };
+    const fold = A2(() => closeRef.current("esc")).current;
     h2(() => () => {
-      clearTimeout(timer2.current);
-      if (HOVER_OPEN === fold) HOVER_OPEN = null;
+      if (KB_OPEN === fold) KB_OPEN = null;
     }, []);
     h2(() => {
-      if (open2 && hover) {
-        if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
-        HOVER_OPEN = fold;
-      }
-    }, [open2]);
+      const b5 = btn.current;
+      if (!hover || !b5) return;
+      return hoverAttach(b5, {
+        group: menuGroup,
+        focusOpens: false,
+        panel: () => box.current,
+        isOpen: () => isOpen.current,
+        open: () => {
+          if (why || isOpen.current) return;
+          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+          KB_OPEN = null;
+          byPointer.current = true;
+          tipHide();
+          setOpen2(true);
+        },
+        close: () => setOpen2(false)
+      });
+    }, [hover, why]);
     h2(() => {
       if (!open2 && back2.current) {
         back2.current = false;
@@ -9885,14 +10139,25 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       onPick(it2.id);
     };
     const onBtnKey = (e4) => {
-      if (e4.key === "ArrowDown" && !why && !open2) {
+      if (e4.key !== "ArrowDown" || why) return;
+      if (!open2) {
         e4.preventDefault();
-        byMouse.current = false;
-        noFocus.current = false;
+        byPointer.current = false;
+        if (hover) {
+          if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
+          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+          KB_OPEN = fold;
+          menuGroup.release(btn.current);
+        }
         setOpen2(true);
+      } else if (byPointer.current) {
+        e4.preventDefault();
+        byPointer.current = false;
+        menuGroup.release(btn.current);
+        menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
       }
     };
-    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, onMouseEnter: pointIn, onMouseLeave: pointOut, children: [
+    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
       /* @__PURE__ */ u2(
         "button",
         {
@@ -9914,13 +10179,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
               onBlocked && onBlocked();
               return;
             }
-            if (open2 && byMouse.current && e4.detail > 0 && Date.now() - openedAt.current < 400) {
-              noFocus.current = false;
-              bump((n4) => n4 + 1);
+            if (hover) menuGroup.release(btn.current);
+            if (open2 && byPointer.current) {
+              byPointer.current = false;
+              menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
               return;
             }
-            byMouse.current = hover && e4.detail > 0;
-            noFocus.current = false;
+            byPointer.current = false;
             if (open2) close("pick");
             else setOpen2(true);
           },
@@ -9939,8 +10204,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
           cls: `${left ? "left " : ""}${menuCls || ""}`,
           anchor: btn.current,
           onClose: close,
-          autoFocus: !noFocus.current,
-          focusKey: noFocus.current,
+          boxRef: box,
+          autoFocus: !byPointer.current,
           children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
         }
       ) : null
@@ -34893,12 +35158,6 @@ ${s5}`;
   function drawDayCurve(host2, props) {
     R(props ? /* @__PURE__ */ u2(DayCurve, { ...props }, props.day) : null, host2);
   }
-
-  // core/hovertime.js
-  var CARD_OPEN = 600;
-  var CARD_CLOSE = 300;
-  var MENU_OPEN = 200;
-  var MENU_CLOSE = 300;
 
   // components/today/DayMeetings.jsx
   function Proj({ code, name }) {
@@ -67211,6 +67470,7 @@ ${d5.text}`);
         "BASETITLE",
         "BCLALL",
         "BHIDE",
+        "CARD_OPEN",
         "CHK",
         "CMDENTER",
         "COLS",
@@ -67314,6 +67574,9 @@ ${d5.text}`);
         "TEMPLATES",
         "THEMES",
         "TICK24",
+        "TIP_CLOSE",
+        "TIP_NEXT",
+        "TIP_OPEN",
         "TOAST_ACTION_MS",
         "TOAST_MS",
         "TODAY",
@@ -67366,6 +67629,7 @@ ${d5.text}`);
         "calFoot",
         "cantGo",
         "capped",
+        "cardGroup",
         "catOf",
         "catalogue",
         "ceApply",
@@ -67485,6 +67749,7 @@ ${d5.text}`);
         "hlOnly",
         "hlPaint",
         "hlToggle",
+        "hoverAttach",
         "html",
         "htmlToMd",
         "ibtn",

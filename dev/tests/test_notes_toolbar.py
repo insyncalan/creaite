@@ -222,7 +222,10 @@ class Toolbar(LiveBrowserCase):
         self.assertEqual(self.expanded("m-heading"), "false")
         self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
         b.pump(0.5)
-        b.click(".nbar [data-nt=m-list]")                         # a click on the open menu's button toggles it shut (a second tap on touch)
+        b.click(".nbar [data-nt=m-list]")                         # #143: a click on a hover-opened menu keeps it and moves focus in ...
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        self.assertEqual(self.expanded("m-list"), "true")
+        b.click(".nbar [data-nt=m-list]")                         # ... and the next click on the open menu's button shuts it
         b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='false'", 5)
 
     def test_keyboard_opens_with_down_or_enter_and_esc_returns_focus(self):
