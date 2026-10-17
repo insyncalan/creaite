@@ -188,18 +188,14 @@ class Shape(ShapeCase):
         self.assertTrue(b.eval(f"(()=>{{ const s=document.getElementById('prepScroll'); return s.scrollWidth<=s.clientWidth+1 && {DLG}.scrollWidth<={DLG}.clientWidth+1; }})()"))
 
     def test_7_the_notes_have_ai_on_a_selection_with_the_meetings_project(self):
-        """BL-301 D: the shaped notes are on the one editor with AI on a selection (plain text, the meeting's project)."""
+        """BL-301 D: the shaped notes are on the one editor; AI on a selection is off for the plain place in v2.1.0 (#117)."""
         b = self.open_shape()
         self.shape()
         b.click("#shN-objective")
         b.key("a", 4)                                                                                   # ⌘A
-        b.wait("document.querySelector('#aiLayer .aibar')", 30)
-        self.assertEqual(b.eval("[aiBar.value.ai.place, aiBar.value.ai.project(), aiBar.value.ai.confidential()]"), ["plain", "ABC", False])
-        b.click("#aiLayer .aibar button[aria-haspopup]")
-        b.wait("document.querySelector('#aiLayer [role=menu]')")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)"),
-                         ["rewrite", "shorter", "longer", "executive", "spelling", "custom"])
-        b.key("Escape")
+        b.pump(0.8)                                                                                     # #117: the plain place is built and OFF in v2.1.0 (AI_PLACE_TABLE)
+        self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aispark, #aiLayer .aibar')"))
+        self.assertIsNone(b.eval("document.querySelector('#shN-objective').closest('[data-aibar]')?.dataset.aibar ?? null"))
 
     def test_6_the_switch_in_settings_turns_it_off(self):
         b = self.b
@@ -226,8 +222,8 @@ class Confidential(ShapeCase):
         self.assertNotIn("Board secret", call["prompt"])
         b.click("#shN-objective")                                                                       # BL-301 D: AI asks first
         b.key("a", 4)
-        b.wait("document.querySelector('#aiLayer .aibar')", 30)
-        self.assertTrue(b.eval("aiBar.value.ai.confidential()"))
+        b.pump(0.8)                                                                                     # #117: no AI on a plain place in v2.1.0, so none on a confidential meeting's notes either
+        self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aispark, #aiLayer .aibar')"))
         self.assertEqual(b.errors, [])
 
 
