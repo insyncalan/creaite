@@ -4,12 +4,13 @@ Run: python3 dev/tests/test_notes_tab.py
 
   - a note is created from each template in the project's notes folder (made on the first note) through filechange.py, logged
     as a dashboard change and undoable; a taken title gets a number;
-  - a draft is kept in system/staging/drafts/notes/ (no project file changes) and comes back when the note is opened again;
-  - a save writes the file once through filechange.py (front matter kept, `updated` stamped, the draft dropped); an unchanged save
-    writes nothing; a note changed outside creaite since it was opened is never overwritten (the draft is kept);
+  - a save writes the file once through filechange.py (front matter kept, `updated` stamped); an unchanged save writes nothing;
+    a note changed outside creaite since it was opened is never overwritten; no draft is kept (#119: the draft route is gone);
   - the list carries front matter and references (links, items, people), never text; portfolio notes are listed too;
   - the dashboard's data carries each project's notes and the templates; Files lists notes as their own folder (the portfolio's too);
-  - paths outside a notes folder are refused.
+  - paths outside a notes folder are refused;
+  - #119: saves naming one editing session keep one backup, and one Undo puts back the text from before it; a save without a
+    session, or with a malformed one, is backed up on its own.
 """
 import json
 import os
@@ -95,19 +96,15 @@ class NotesServer(unittest.TestCase):
         again = self.post("/api/notes/new", {"code": "ABC", "template": "blank", "title": "T blank"})
         self.assertTrue(again["note"]["file"].startswith("T blank-2"), again["note"]["file"])
 
-    def test_2_draft_then_save_once_and_undo(self):
+    def test_2_save_once_and_undo(self):
         r = self.post("/api/notes/new", {"code": "ABC", "template": "blank", "title": "Data access"})
         rel, base = r["note"]["path"], r["base"]
         p = self.v.root / rel
         before = p.read_text()
         body = "See [[Data access]] and [ABC-A-001](creaite:item/ABC-A-001), with @[Sara Example](creaite:person/Sara%20Example).\n"
-        d = self.post("/api/notes/draft", {"path": rel, "body": body, "changes": {"tags": ["data"]}, "base": base})
-        self.assertTrue(d["ok"])
-        self.assertEqual(p.read_text(), before, "a draft never touches the project file")
-        drafts = list((self.v.root / "system/staging/drafts/notes").glob("*.json"))
-        self.assertEqual(len(drafts), 1)
-        got = self.post("/api/notes/get", {"path": rel})
-        self.assertEqual(got["draft"]["body"], body)
+        gone = self.post("/api/notes/draft", {"path": rel, "body": body, "base": base})
+        self.assertEqual(gone["status"], 404, "#119: no draft route")
+        self.assertNotIn("draft", self.post("/api/notes/get", {"path": rel}))
         n_before = len(self.log())
         s = self.post("/api/notes/save", {"path": rel, "body": body, "changes": {"tags": ["data"], "pinned": True}, "base": base})
         self.assertTrue(s["ok"], s)
@@ -119,7 +116,7 @@ class NotesServer(unittest.TestCase):
         self.assertEqual(s["note"]["items"], ["ABC-A-001"])
         self.assertEqual(s["note"]["links"], ["Data access"])
         self.assertEqual(s["note"]["people"], ["Sara Example"])
-        self.assertFalse(list((self.v.root / "system/staging/drafts/notes").glob("*.json")), "the draft goes once written")
+        self.assertFalse((self.v.root / "system/staging/drafts/notes").is_dir(), "no draft is kept")
         same = self.post("/api/notes/save", {"path": rel, "body": body, "base": s["base"]})
         self.assertTrue(same.get("unchanged"))
         self.assertEqual(len(self.log()), n_before + 1)
@@ -137,7 +134,8 @@ class NotesServer(unittest.TestCase):
         self.assertFalse(s["ok"])
         self.assertTrue(s["conflict"])
         self.assertIn("Typed in Finder.", p.read_text())
-        self.assertTrue(self.post("/api/notes/get", {"path": rel})["draft"]["stale"])
+        self.assertNotIn("draft", s["message"])
+        self.assertFalse((self.v.root / "system/staging/drafts/notes").is_dir(), "no draft is kept")
 
     def test_3b_a_list_item_with_newlines_cannot_break_the_front_matter(self):
         # L3: a malformed tags item (a newline, a front-matter fence, a flag) stays one tag on one line (throwaway vault).
@@ -181,6 +179,37 @@ class NotesServer(unittest.TestCase):
         kinds = {(f["p"], f["f"]) for f in data["files"]}
         self.assertIn(("ABC", "notes"), kinds)
         self.assertIn(("_portfolio", "notes"), kinds)
+
+    def test_6_saves_in_one_editing_session_keep_one_backup(self):
+        # #119: the page names its editing session; filechange.py keeps one backup per session, one per save without it
+        r = self.post("/api/notes/new", {"code": "ABC", "template": "blank", "title": "Autosaved"})
+        rel, base = r["note"]["path"], r["base"]
+        p = self.v.root / rel
+        before = p.read_text()
+        n = len(self.log())
+        sid = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0"
+        for i in range(4):
+            s = self.post("/api/notes/save", {"path": rel, "body": f"typed {i}\n", "base": base, "session": sid})
+            self.assertTrue(s["ok"], s)
+            base = s["base"]
+        edits = [e for e in self.log()[n:] if e.get("op") == "edit"]
+        self.assertEqual(len(edits), 4)
+        self.assertEqual(len({e["backup"] for e in edits}), 1, "one backup for the session")
+        self.assertNotIn(sid, (self.v.root / "system/config/files-log.jsonl").read_text(), "the session id is never logged")
+        for bad in ("short", "x" * 65, "has space in it", 12345678, None):
+            s = self.post("/api/notes/save", {"path": rel, "body": f"bad {bad}\n", "base": base, "session": bad})
+            self.assertTrue(s["ok"], s)
+            base = s["base"]
+        tail = [e for e in self.log()[n:] if e.get("op") == "edit"][4:]
+        self.assertEqual(len({e["backup"] for e in tail}), 5, "no session, or a malformed one: a backup for each save")
+        self.assertTrue(all("session" not in e for e in tail))
+        for _ in tail:
+            self.assertEqual(subprocess.run([sys.executable, str(self.v.root / "system/scripts/filechange.py"), "undo"],
+                                            cwd=self.v.root, capture_output=True, text=True).returncode, 0)
+        u = subprocess.run([sys.executable, str(self.v.root / "system/scripts/filechange.py"), "undo"], cwd=self.v.root,
+                           capture_output=True, text=True)
+        self.assertEqual(u.returncode, 0, u.stdout + u.stderr)
+        self.assertEqual(p.read_text(), before, "one Undo puts back the text from before the session")
 
 
 if __name__ == "__main__":

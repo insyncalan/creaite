@@ -233,7 +233,7 @@ class InTheNotesTab(LiveBrowserCase):
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         b.type(" More.")
-        b.wait("['typing','draft'].includes(noteSave.value.state)", 10)
+        b.wait("['typing','saving','saved'].includes(noteSave.value.state)", 10)
         b.click("#noteFind")
         b.wait("!!document.querySelector('#noteSide aside.fu') && ['ready','none','error'].includes(fuState.value)", 40)
         self.assertIn("More.", (self.v.root / fx.NOTE).read_text())                       # saved before Claude read it

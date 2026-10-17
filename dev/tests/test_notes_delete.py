@@ -161,12 +161,6 @@ class NotesDelete(test_notes_tab.NotesServer):
         stale = self.post("/api/notes/delete", {"path": path, "base": "0" * 16})
         self.assertFalse(stale["ok"])
         self.assertIn("changed since it was saved", stale["message"])
-        self.post("/api/notes/draft", {"path": path, "body": "typing", "base": r["base"]})
-        typing = self.delete(r)
-        self.assertFalse(typing["ok"])
-        self.assertIn("typing not yet saved", typing["message"])
-        for x in (self.v.root / "system/staging/drafts/notes").glob("*.json"):
-            x.unlink()                                                        # the typing dropped: now it may go on the card
         d = self.delete(r)                                                                           # a card, never answered
         self.assertTrue(d["ok"])
         self.assertFalse(self.post("/api/edit/approve", {"card": "e-0000000000000000"})["ok"])       # a card that isn't there
@@ -243,27 +237,21 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertTrue(done["ok"], done)
         self.assertIn("Typed after the confirm box.", (self.archive() / "Still typing.md").read_text())   # the version confirmed
 
-    def test_i_unsaved_typing_in_another_window_refuses_approve(self):
+    def test_i_a_save_from_another_window_refuses_approve(self):
         r = self.new("Two windows")
         f, path = self.folder() / "Two windows.md", r["note"]["path"]
         d = self.delete(r)
         other = self.post("/api/notes/get", {"path": path})                                           # window 2 has it open
-        self.post("/api/notes/draft", {"path": path, "body": "Window two's typing.\n", "base": other["base"]})
+        s = self.post("/api/notes/save", {"path": path, "body": "Window two's typing.\n", "base": other["base"]})    # #119: window 2 saves as it types
+        self.assertTrue(s["ok"], s)
         got = self.post("/api/edit/approve", {"card": d["card"]["card"]})
         self.assertFalse(got["ok"])
         self.assertIn("changed after you confirmed", got["message"])
         self.assertTrue(f.is_file())
-        self.assertEqual(self.post("/api/notes/get", {"path": path})["draft"]["body"], "Window two's typing.\n")   # nothing lost
-        s = self.post("/api/notes/save", {"path": path, "body": "Window two's typing.\n", "base": other["base"]})
-        self.assertTrue(s["ok"], s)
+        self.assertIn("Window two's typing.", f.read_text())                                          # nothing lost
         done = self.post("/api/edit/approve", {"card": self.post("/api/notes/delete", {"path": path, "base": s["base"]})["card"]["card"]})
         self.assertTrue(done["ok"], done)
-        drafts = self.v.root / "system/staging/drafts/notes"
-        self.assertEqual([x for x in drafts.glob("*.json") if path in x.read_text()], [])          # no draft orphaned
-        late = self.post("/api/notes/draft", {"path": path, "body": "too late", "base": s["base"]})   # a window that missed it
-        self.assertEqual(late["status"], 404)
-        self.assertEqual([x for x in drafts.glob("*.json") if path in x.read_text()], [])
-        self.assertEqual(self.post("/api/notes/save", {"path": path, "body": "x", "base": s["base"]})["status"], 404)
+        self.assertEqual(self.post("/api/notes/save", {"path": path, "body": "x", "base": s["base"]})["status"], 404)   # a window that missed it
 
     def test_j_apply_waits_for_notes_lock_and_lock_order(self):
         r = self.new("Raced")

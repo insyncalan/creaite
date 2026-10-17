@@ -135,7 +135,7 @@ export function closeCapture() {
   if (!capOpen.value) return;
   clearTimeout(timer);
   const n = capNote.value;
-  if (typed(n)) { keep(); snack("Note kept as a draft: ⌘⇧N to carry on"); }
+  if (typed(n)) { keep(); snack("Note kept: ⌘⇧N to carry on"); }
   capOpen.value = false;
   const back = opener;
   opener = null;
@@ -223,7 +223,7 @@ export function CaptureDrawer() {
         <h2 id="capH">{meeting ? "Note for this meeting" : "New note"}</h2>
         <span class="sp" />
         {typed(n) ? <button type="button" class="linkbtn capdiscard" onClick={() => discard()}>Discard</button> : null}
-        <IconButton icon="x" label="Close" name="Close the note (the draft is kept)" onClick={() => closeCapture()} />
+        <IconButton icon="x" label="Close" name="Close the note (what you typed is kept)" onClick={() => closeCapture()} />
       </div>
       <div class="capwhere">
         <label for="capProj">Project</label>
@@ -247,7 +247,7 @@ export function CaptureDrawer() {
       <div ref={box} id="capBody" class="capbody" role="textbox" aria-multiline="true" aria-label="Note" aria-describedby="capSaved"
         data-ph="Type the note: what was said, what you think, who to follow up…" spellcheck />
       <div class="capfoot">
-        <span class="sub" id="capSaved" role="status" aria-live="polite">{capMsg.value || (n.saved ? `Draft saved ${capWhen(n.saved)}` : live ? "Saved as you type" : "Notes need the live server")}</span>
+        <span class="sub" id="capSaved" role="status" aria-live="polite">{capMsg.value || (n.saved ? `Saved ${capWhen(n.saved)}` : live ? "Saved as you type" : "Notes need the live server")}</span>
         <span class="sp" />
         <button type="button" class="btn ai" id="capFind" disabled={capBusy.value} aria-disabled={off ? "true" : undefined} data-tip={off || "Save it, then open it with Find updates"}
           onClick={() => captureDone(true)}>Done and find updates</button>
@@ -259,9 +259,9 @@ export function CaptureDrawer() {
           <h3 id="capRecentH">Recent notes</h3>
           <ul>
             {drafts.map(d => (
-              <li><button type="button" class="caprow" onClick={() => resume(d)} aria-label={`Carry on with the draft ${d.title || "Untitled"}`}>
+              <li><button type="button" class="caprow" onClick={() => resume(d)} aria-label={`Carry on with the unfinished note ${d.title || "Untitled"}`}>
                 <b>{d.title || (d.body || "").trim().split("\n")[0].slice(0, 60) || "Untitled"}</b><span class="sp" />
-                <span class="sub">Draft · {where(d.code)} · {capWhen(d.at)}</span></button></li>))}
+                <span class="sub">Unfinished · {where(d.code)} · {capWhen(d.at)}</span></button></li>))}
             {recent.notes.map(r => (
               <li><button type="button" class="caprow" onClick={() => { capOpen.value = false; openNoteFull({ code: r.code, path: r.path, find: false }); }}
                 aria-label={`Open the note ${r.title}`}>

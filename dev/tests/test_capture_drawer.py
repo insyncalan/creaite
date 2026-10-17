@@ -283,7 +283,7 @@ class Drawer(LiveBrowserCase):
         b.type("Omar Ali thinks the paper can go on 21-10")
         b.wait("document.getElementById('capProj').value==='ABC'", 10)
         self.assertEqual(b.eval("document.getElementById('capWhy').textContent"), "guessed from “Omar Ali”")
-        b.wait("/Draft saved/.test(document.getElementById('capSaved').textContent)", 10)
+        b.wait("/Saved \\d/.test(document.getElementById('capSaved').textContent)", 10)
         self.assertTrue(list((self.v.root / "system/staging/drafts/notes").glob("capture-*.json")))
         b.eval("(()=>{ const s=document.getElementById('capProj'); s.value='DEF'; s.dispatchEvent(new Event('change',{bubbles:true})); })()")
         b.wait("document.getElementById('capWhy').textContent==='chosen by you'")
@@ -309,7 +309,7 @@ class Drawer(LiveBrowserCase):
         b.key("Escape")
         b.wait("document.getElementById('capDrawer').hidden")
         self.assertEqual(b.eval("document.activeElement&&document.activeElement.id"), opener)
-        b.wait("/kept as a draft/.test(document.getElementById('snackT').textContent)")
+        b.wait("/Note kept/.test(document.getElementById('snackT').textContent)")
         b.wait("document.querySelector('#capDrawer')&&true")
         self.assertEqual(self.notes(PORTFOLIO_NOTES), [])                          # nothing written
         b.pump(0.5)

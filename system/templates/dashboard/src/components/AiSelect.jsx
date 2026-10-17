@@ -21,7 +21,7 @@ import { Icon } from "./Icon.jsx";
 import { Menu } from "./Menu.jsx";
 import { ED_HOOKS, edTurnKind } from "../core/editor.js";
 import { placeAtCaret } from "../core/caretPlace.js";
-import { AI_GROUPS, AI_OPTIONS, AI_PLACE_TABLE, aiAccept, aiActionsFor, aiAttach, aiBar, aiChanges, aiDiff, aiDiscard, aiItems, aiName, aiRetry, aiRun,
+import { AI_GROUPS, AI_OPTIONS, AI_PLACE_TABLE, aiAccept, aiActionsFor, aiAttach, aiBar, aiBarClose, aiChanges, aiDiff, aiDiscard, aiItems, aiName, aiRetry, aiRun,
   aiRunAction, aiSend, aiSug, aiToggle, aiTurn } from "../stores/aiEdit.js";
 
 /** Turn into's kinds, in the menu's order: [id, name]. */
@@ -44,7 +44,7 @@ export function AiSpark({ bar }) {
     <button type="button" class="aispark" id="aiSpark" ref={el} aria-label="AI and formatting on the selected text" data-tip="AI and formatting on the selected text (Alt+/)"
       aria-expanded={bar.shown ? "true" : "false"} aria-controls="aiBarBox"
       onClick={() => aiToggle()}
-      onKeyDown={e => { if (e.key === "Escape" && bar.shown) { e.preventDefault(); e.stopPropagation(); aiBar.value = null; if (!bar.h.editor.isDestroyed) bar.h.focus(); } }}>
+      onKeyDown={e => { if (e.key === "Escape" && bar.shown) { e.preventDefault(); e.stopPropagation(); aiBarClose(); } }}>
       <Icon name="spark" />
     </button>
   );
@@ -102,7 +102,7 @@ export function AiBar({ bar }) {
       onKeyDown={e => {
         if (e.isComposing) return;
         move(e);
-        if (e.key === "Escape" && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); aiBar.value = null; if (!bar.h.editor.isDestroyed) bar.h.focus(); }
+        if (e.key === "Escape" && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); aiBarClose(); }       /* #119: the bar goes, the selection collapses to its end, focus is in the text */
       }}>
       {asking ? (
         <form class="aiask" onSubmit={e => { e.preventDefault(); if (words.trim()) aiRun("custom", words.trim(), { h: bar.h, ai: bar.ai }); }}>

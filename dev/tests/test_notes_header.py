@@ -72,7 +72,7 @@ class NotesHeader(LiveBrowserCase):
             b.resize(w, 900)
             b.pump(0.4)
             tops = b.eval("[...document.querySelectorAll('.trow > *')].map(e=>Math.round(e.getBoundingClientRect().top+e.getBoundingClientRect().height/2))")
-            self.assertEqual(len(tops), 4, tops)          # title, Saved, Find updates, more
+            self.assertEqual(len(tops), 5, tops)          # focus icon (#119), title, Saved, Find updates, more
             self.assertLessEqual(max(tops) - min(tops), 4, f"title row wraps at {w}: {tops}")
             find, title, more = self.rect("#noteFind"), self.rect("#noteTitle"), self.rect(".trow .nmorewrap")
             self.assertGreater(find[0], title[0])
