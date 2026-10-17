@@ -13,6 +13,7 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 
 - **Jarvis** runs the plan: a fresh Claude session given the charter. There is one Jarvis at a time, and Jarvis moves with Alan (the baton). The pinned "Head" issue on the board (insyncalan/creaite-plan#82) says which laptop Jarvis is on, and holds the baton procedure, the start-up brief and each handover note.
 - **A team lead per laptop** runs the build agents: **Team Cap** on laptop 1, **Team Stark** on laptop 2. There is no cap on build agents.
+- **The Product Manager** (a permanent session; charter in `dev/PRODUCT-MANAGER.md`) owns mockups on the design-system snapshots, briefs, plain release notes, hand-check sheets, research and the design system. It asks Jarvis for anything on the board, never touches guarded files, and today never pushes.
 - **Alan** decides what the charter keeps for him. A default Jarvis raises goes ahead at the second digest after it was raised, never overnight.
 - **Digests:** four a day (full at 08:00 and 16:00, lite at 12:00 and 20:00), and on demand.
 
@@ -23,6 +24,7 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 | From | To | How |
 |---|---|---|
 | A team lead | Jarvis | A comment on the item's issue, starting "Team Cap, HH:MM:" or "Team Stark, HH:MM:" (the time from `date`). On Jarvis's laptop, a direct message as well |
+| The Product Manager | Jarvis | A comment on #210, starting "Product Manager, HH:MM:", with a one-line heartbeat every 2 hours while working. Questions end "For Jarvis:" or "For Alan:". On the same laptop, a direct message as well |
 | Jarvis | A team lead | A comment on the item's issue (or #34 for anything general), starting "Jarvis, HH:MM, to Team …:". On the same laptop, a direct message as well |
 | Anyone | Alan | Only through Jarvis: the digests (07:57 and 15:57 full, 11:57 and 19:57 lite), or straight away for a security or guard problem, possible data loss or a broken release |
 | Alan | Anyone | He tells Jarvis, or comments on the issue. A team lead hearing a decision from Alan passes it to Jarvis, who records it once Alan confirms it directly |
