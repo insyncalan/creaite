@@ -13,6 +13,7 @@
    - sheet:   the report sheets' rich text (weekly and client, #134): Current state's editor with the one-line grouped bar (Heading and List
               menus, B I S, quote, link, undo, redo) shown above the active field. No Insert menu: a sheet has no # or picture host, and a client
               sheet never offers an internal item. No checklist until the editor has one (v2.2.0).
+   - email:   Draft email's preview (#133): the email as styled HTML on the editor's Email feature set (core/editor.js). No toolbar and no `/` menu.
    - none:    a host that draws no bar (a table cell on a sheet).
 
    The tools a host does itself (it owns the pickers and the file input) are `host: true`: the bar shows one only when the host
@@ -103,7 +104,7 @@ export const ED_SLASH_ROWS = {
   notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "link", "item", "person", "note",
     "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
   current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
-  plain: [], none: [],
+  plain: [], email: [], none: [],
 };
 /** How well a row matches a typed query: 0 an exact id or alias, 1 an id, alias or name that starts with it, 2 a word of the name, 3 anywhere in the name or description, 9 no match.
     The `/` menu lets Enter pick a row without an arrow only at 0 or 1 (#122 B review H1: "Amber /Red" matches "numbered" at 3 and must stay text). @param {SlashDef} r @param {string} q @returns {number} */
@@ -149,7 +150,8 @@ export const ED_PROFILES = {
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"] },
   sheet: { tip: "A report sheet's text: Current state's editor, one line, grouped (#134)",
     tools: ["m:heading", "|", "b", "i", "s", "|", "m:listsheet", "quote", "|", "link", "|", "undo", "redo"] },
-  plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
+  plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar (the selection bar: Improve and Ask, #133)", tools: [] },
+  email: { tip: "Draft email's preview: Outlook HTML, no toolbar (the selection bar: Improve, Tone and Ask, #133)", tools: [] },
   none: { tip: "a host that draws its own frame (the report sheets)", tools: [] },
 };
 
