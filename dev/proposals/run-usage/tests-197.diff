@@ -1,0 +1,222 @@
+diff --git a/dev/tests/test_run_usage_hooks.py b/dev/tests/test_run_usage_hooks.py
+new file mode 100644
+index 00000000..8de4cd16
+--- /dev/null
++++ b/dev/tests/test_run_usage_hooks.py
+@@ -0,0 +1,216 @@
++"""#197 run usage monitor, the guarded hooks in live_server.py: the run engine (Run.read's events, _on_result, _done) and the
++VIP check each append one counts-only line to system/staging/run-usage.jsonl. Fails without the hooks.
++
++Each case runs the real Run.read (as test_run_read_pinned does: a stand-in process feeding a recorded stream) or the real
++vip_check (a stand-in claude, CREAITE_CLAUDE) inside a throwaway vault, with a fixed clock (CREAITE_NOW). Fictional data only.
++
++Run: python3 dev/tests/test_run_usage_hooks.py     (quick tier: no Chrome)
++"""
++import json
++import os
++import shutil
++import subprocess
++import sys
++import unittest
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++from test_sweep_alerts import check_since, vip_vault  # noqa: E402
++from test_tracker import Vault  # noqa: E402
++
++REPO = Path(__file__).resolve().parents[2]
++NOW = "2026-10-12 09:30"
++SECRET = "SECRET REPLY TEXT about Jane Doe"
++INIT = {"type": "system", "subtype": "init", "session_id": "s-1", "model": "claude-sonnet-5-5", "cwd": "/somewhere/private"}
++FIRST = {"type": "assistant", "session_id": "s-1",
++         "message": {"content": [{"type": "text", "text": SECRET}],
++                     "usage": {"input_tokens": 2, "cache_read_input_tokens": 13000, "cache_creation_input_tokens": 500}}}
++RESULT = {"type": "result", "subtype": "success", "session_id": "s-1", "result": SECRET, "num_turns": 3, "duration_ms": 4200,
++          "total_cost_usd": 0.0412, "permission_denials": [],
++          "usage": {"input_tokens": 12, "output_tokens": 340, "cache_read_input_tokens": 26000, "cache_creation_input_tokens": 500}}
++
++HARNESS = r'''
++import io, json, sys, threading, time
++sys.path.insert(0, "system/scripts")
++import live_server as L
++spec = json.loads(sys.stdin.read())
++if spec.get("broken"):                       # a usage_log that can't record: the run must end as it always does
++    sys.modules["usage_log"] = object()
++
++class Proc:
++    def __init__(self, lines, code):
++        self.stdout, self.stderr, self.returncode, self._code, self.pid = io.StringIO(lines), io.StringIO(""), None, code, 0
++    def poll(self):
++        return self.returncode
++    def wait(self, timeout=None):
++        self.returncode = self._code
++        return self.returncode
++    def terminate(self):
++        self.returncode = self._code
++    kill = terminate
++
++def make(attrs):
++    run = L.Run.__new__(L.Run)
++    base = {"id": "r-1", "message": "How is ABC?", "session": None, "chat": None, "confirmed": False, "kind": "ask", "images": [],
++            "job": None, "label": "How is ABC?", "tooluse": {}, "events": [], "cond": threading.Condition(), "watchers": 0,
++            "pending": {}, "said": [], "steps": [], "stop": False, "deferred": False, "done": False, "seen": False,
++            "started": time.time() - 5, "guarded": False, "sweep": False, "lines": {}, "closer": None}
++    base.update(attrs)
++    for k, v in base.items():
++        setattr(run, k, v)
++    return run
++
++if spec.get("kinds"):
++    out = []
++    for attrs in spec["kinds"]:
++        job = attrs.pop("job", None)
++        run = make(attrs)
++        if job == "draft":
++            run.job = L.DraftJob({"kind": "update"}, {})
++        elif job == "alert":
++            run.job = L.AlertDraftJob.__new__(L.AlertDraftJob)
++        out.append(list(L.usage_kind(run)))
++    print(json.dumps(out))
++else:
++    run = make(spec.get("attrs") or {})
++    run.proc = Proc("".join(json.dumps(e) + "\n" for e in spec["events"]), spec.get("returncode", 0))
++    L.Run.read(run)
++    print(json.dumps({"types": [e["type"] for e in run.events]}))
++'''
++
++VIP_FAKE = r"""#!/usr/bin/env python3
++import json, sys
++from pathlib import Path
++mode = (Path(__file__).parent / "vip-mode").read_text().strip()
++if mode == "fail":
++    print("not json at all"); sys.exit(1)
++print(json.dumps({"type": "result", "subtype": "success", "result": "SECRET MESSAGE TEXT []", "total_cost_usd": 0.0731,
++                  "num_turns": 4, "duration_ms": 9000, "modelUsage": {"claude-haiku-5-5": {"costUSD": 0.0731}},
++                  "usage": {"input_tokens": 30, "output_tokens": 120, "cache_read_input_tokens": 15000,
++                            "cache_creation_input_tokens": 900}}))
++"""
++
++
++def with_usage_log(v):
++    """The vault gets the plain code the hooks call (make_vault copies only the scripts it lists)."""
++    for f in ("usage_log.py", "usage_report.py"):
++        shutil.copy2(REPO / "system" / "scripts" / f, v.root / "system" / "scripts" / f)
++    return v
++
++
++def usage_lines(v):
++    f = v.root / "system" / "staging" / "run-usage.jsonl"
++    return [json.loads(x) for x in f.read_text().splitlines()] if f.exists() else []
++
++
++class RunEngineHook(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.v = with_usage_log(Vault())
++        cls.v.run("init")
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.v.cleanup()
++
++    def setUp(self):
++        (self.v.root / "system" / "staging" / "run-usage.jsonl").unlink(missing_ok=True)
++        (self.v.root / ".creaite-dev").unlink(missing_ok=True)
++
++    def feed(self, spec):
++        r = subprocess.run([sys.executable, "-c", HARNESS], input=json.dumps(spec), cwd=self.v.root, capture_output=True,
++                           text=True, timeout=120, env={**os.environ, "CREAITE_NOW": NOW})
++        self.assertEqual(r.returncode, 0, r.stderr)
++        return json.loads(r.stdout.strip().splitlines()[-1])
++
++    def test_an_answered_chat_records_one_line_with_its_counts(self):
++        got = self.feed({"events": [INIT, FIRST, RESULT]})
++        self.assertEqual(got["types"][-1], "done")
++        (ln,) = usage_lines(self.v)
++        self.assertEqual({k: ln[k] for k in ("at", "kind", "label", "model", "turns", "input", "output", "cache_read",
++                                             "cache_create", "cost_usd", "start_tokens", "stopped")},
++                         {"at": "2026-10-12T09:30:00", "kind": "ask", "label": "ask", "model": "claude-sonnet-5-5", "turns": 3,
++                          "input": 12, "output": 340, "cache_read": 26000, "cache_create": 500, "cost_usd": 0.0412,
++                          "start_tokens": 13502, "stopped": False})
++        self.assertGreaterEqual(ln["seconds"], 4.0)                    # wall time from the run's start
++
++    def test_no_text_in_the_file(self):
++        self.feed({"events": [INIT, FIRST, RESULT]})
++        raw = (self.v.root / "system" / "staging" / "run-usage.jsonl").read_text()
++        for word in ("SECRET", "Jane", "How is ABC", "/somewhere"):
++            self.assertNotIn(word, raw)
++
++    def test_stopped_run_still_recorded(self):
++        self.feed({"attrs": {"stop": True}, "events": [INIT, FIRST], "returncode": -15})
++        (ln,) = usage_lines(self.v)
++        self.assertEqual((ln["stopped"], ln["start_tokens"], ln["model"], ln["output"]), (True, 13502, "claude-sonnet-5-5", 0))
++
++    def test_a_failed_run_still_recorded(self):
++        self.feed({"events": [], "returncode": 1})
++        (ln,) = usage_lines(self.v)
++        self.assertEqual((ln["kind"], ln["stopped"], ln["input"], ln["cost_usd"]), ("ask", False, 0, 0.0))
++
++    def test_run_usage_appended_for_each_kind(self):
++        for kind in ("ask", "sweep", "prep", "check", "load", "generate"):
++            self.feed({"attrs": {"kind": kind, "label": "x"}, "events": [INIT, FIRST, RESULT]})
++        self.assertEqual([x["kind"] for x in usage_lines(self.v)], ["ask", "sweep", "prep", "check", "load", "generate"])
++
++    def test_the_engines_kinds_map_to_the_monitors(self):
++        got = self.feed({"kinds": [{"kind": "ask"}, {"kind": "search"}, {"kind": "ask", "sweep": True}, {"kind": "sweep"},
++                                   {"kind": "prep"}, {"kind": "check"}, {"kind": "load"}, {"kind": "generate"},
++                                   {"kind": "generate", "job": "draft"}, {"kind": "generate", "job": "alert"},
++                                   {"kind": "edit-ai"}, {"kind": "shape-closed"}, {"kind": "notes-find"}, {"kind": "new-kind"}]})
++        self.assertEqual(got, [["ask", "ask"], ["ask", "search"], ["sweep", "chat"], ["sweep", "sweep"], ["prep", "prep"],
++                               ["check", "check"], ["load", "load"], ["generate", "generate"], ["draft", "update"],
++                               ["draft", "alert"], ["draft", "edit-ai"], ["draft", "shape-closed"], ["draft", "notes-find"],
++                               ["ask", "other"]])
++
++    def test_a_monitor_fault_never_touches_the_run(self):
++        plain = self.feed({"events": [INIT, FIRST, RESULT]})
++        broken = self.feed({"broken": True, "events": [INIT, FIRST, RESULT]})
++        self.assertEqual(broken, plain)
++
++    def test_not_written_in_the_dev_repo(self):
++        (self.v.root / ".creaite-dev").write_text("")
++        self.feed({"events": [INIT, FIRST, RESULT]})
++        self.assertEqual(usage_lines(self.v), [])
++
++
++class VipHook(unittest.TestCase):
++    """vip_check's one `claude -p --output-format json` call records its tokens and cost."""
++
++    def setUp(self):
++        self.v = with_usage_log(vip_vault())
++        check_since(self.v)
++        self.fake = self.v.root / "fake_claude.py"
++        self.fake.write_text(VIP_FAKE)
++        self.fake.chmod(0o755)
++
++    def tearDown(self):
++        self.v.cleanup()
++
++    def check(self, mode):
++        (self.v.root / "vip-mode").write_text(mode)
++        code = "import sys; sys.path.insert(0, 'system/scripts'); import live_server; print(live_server.vip_check())"
++        r = subprocess.run([sys.executable, "-c", code], cwd=self.v.root, capture_output=True, text=True, timeout=120,
++                           env={**os.environ, "CREAITE_CLAUDE": str(self.fake), "CREAITE_NOW": NOW, "CREAITE_TZ_OFFSET": "+04:00"})
++        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
++        return r.stdout
++
++    def test_vip_cost_and_tokens_recorded(self):
++        self.check("ok")
++        (ln,) = usage_lines(self.v)
++        self.assertEqual({k: ln[k] for k in ("kind", "label", "model", "turns", "input", "output", "cache_read", "cache_create",
++                                             "cost_usd", "stopped")},
++                         {"kind": "vip", "label": "check", "model": "claude-haiku-5-5", "turns": 4, "input": 30, "output": 120,
++                          "cache_read": 15000, "cache_create": 900, "cost_usd": 0.0731, "stopped": False})
++        self.assertNotIn("SECRET", (self.v.root / "system" / "staging" / "run-usage.jsonl").read_text())
++
++    def test_a_failed_vip_check_still_recorded(self):
++        self.check("fail")
++        (ln,) = usage_lines(self.v)
++        self.assertEqual((ln["kind"], ln["input"], ln["cost_usd"]), ("vip", 0, 0.0))
++
++
++if __name__ == "__main__":
++    unittest.main()
