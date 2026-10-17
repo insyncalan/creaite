@@ -768,6 +768,8 @@ def build_health(con, req):
     code, to = str(req.get("code") or ""), req.get("to")
     if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", code) or not con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone():
         raise Refused("Not a project.")
+    if req.get("field") == "suggest":                       # #203: the health and its reason, from the tracker alone
+        return suggest_health(con, code, "client" if req.get("audience") == "client" else "internal")
     if to not in HEALTH:
         raise Refused("Choose the health first.")
     facts = [short(f, 200) for f in (req.get("facts") or []) if isinstance(f, str) and f.strip()][:10]
@@ -777,6 +779,156 @@ def build_health(con, req):
     kept, listed = number(src)
     return Draft({"name": tracker.project_label(code), "to": to, "sources": listed, "style": report.style_guide()}, kept,
                  item={"code": code})
+
+
+# ===== #203: Suggest the health and its reason (plain code half) =====
+# A health request with field "suggest" ignores any page facts: the code reads the tracker, works the health out (report.health_evidence,
+# the project's own criteria), and the model only words the reason from the numbered facts. Client wording: audience "client" (the
+# existing `audience` key); the facts are client-visible items in their client wording only, and the reply passes edit_ai.client_problems.
+SUGGEST_FACTS = 12
+
+
+def _client_words(row):
+    """A client-visible item's client wording (report.client_text); '' when it has none. Its internal text is never used for a client."""
+    import report
+    return report.client_text(row["client_message"] or "")
+
+
+def _last_health_set(con, code):
+    """(date of the last health change, the health then) from the change log, else the last `updates` row; (None, None) if neither."""
+    row = con.execute("SELECT at, new_value FROM change_log WHERE tbl = 'projects' AND item_id = ? AND field = 'health' AND op <> 'undo' "
+                      "ORDER BY at DESC, rowid DESC LIMIT 1", (code,)).fetchone()
+    if row:
+        return row[0][:10], row[1]
+    row = con.execute("SELECT week_ending, health FROM updates WHERE project = ? ORDER BY week_ending DESC LIMIT 1", (code,)).fetchone()
+    return (row[0][:10], row[1]) if row else (None, None)
+
+
+def _plural_days(n):
+    return f"{n} day{'s' if n != 1 else ''}"
+
+
+def _facts_overdue(con, code, client, t):
+    """(id, kind, text) for each overdue action: the client's wording for a client suggestion, else the action as written."""
+    for r in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open','Delayed') AND due_date < ? ORDER BY due_date, id",
+                         (code, t)):
+        days = _plural_days((date.fromisoformat(t) - date.fromisoformat(r["due_date"])).days)
+        words = _client_words(r) if client else short(r["description"], 120)
+        if words:
+            more = "" if client else f" (due {tracker.shown(r['due_date'])})"
+            who = "" if client else f" ({r['owner']})"
+            yield r["id"], "overdue", f"Action overdue by {days}{more}: {short(words, 140)}{who}"
+
+
+def _facts_milestones(con, code, t):
+    """(id, kind, text) for each planned milestone that has slipped or is past its forecast date."""
+    import report
+    for m in report.milestones(con, code):
+        late = bool(m["forecast_date"]) and m["forecast_date"] < t
+        if m["status"] == "Planned" and (m["slip_days"] > 0 or late):
+            fc = f"forecast {tracker.shown(m['forecast_date'])}, " if m["forecast_date"] else ""
+            gap = f"{m['slip_days']} days later than agreed" if m["slip_days"] > 0 else "past its forecast date"
+            yield m["id"], "milestone", f"Milestone {m['name']}: {fc}{gap}"
+
+
+def _facts_raid(con, code, client):
+    """(id, kind, text) for each open risk and issue, Urgent first."""
+    for r in con.execute("SELECT * FROM raid WHERE project = ? AND status = 'Open' ORDER BY priority = 'Urgent' DESC, id", (code,)):
+        words = _client_words(r) if client else short(r["description"], 140)
+        if words:
+            tag = f" ({r['priority']})" if r["priority"] and not client else ""
+            yield r["id"], "raid", f"Open {r['type'].lower()}{tag}: {words}"
+
+
+def _facts_decisions(con, code, client, t):
+    """(id, kind, text) for each pending decision past its needed-by date."""
+    import report
+    for d in report.decisions_needed(con, code, date.fromisoformat(t)):
+        if d["overdue_days"]:
+            row = con.execute("SELECT client_message FROM decisions WHERE id = ?", (d["id"],)).fetchone()
+            words = _client_words(row) if client else short(d["text"], 140)
+            if words:
+                yield d["id"], "decision", f"Decision overdue by {_plural_days(d['overdue_days'])}: {words}"
+
+
+def _facts_movement(con, code):
+    """(id, kind, text) for what changed since the health was last set (internal only): the last setting, and up to three actions
+    closed and three risks or issues raised since."""
+    since, then = _last_health_set(con, code)
+    if not since:
+        return
+    yield code, "movement", f"Health was last set on {tracker.shown(since)}" + (f" to {then}" if then else "")
+    for r in con.execute("SELECT id, description FROM actions WHERE project = ? AND status IN ('Complete','Closed') AND closed >= ? "
+                         "ORDER BY closed DESC, id LIMIT 3", (code, since)):
+        yield r["id"], "movement", f"Action closed since: {short(r['description'], 120)}"
+    for r in con.execute("SELECT id, type, description FROM raid WHERE project = ? AND raised >= ? ORDER BY raised DESC, id LIMIT 3",
+                         (code, since)):
+        yield r["id"], "movement", f"{r['type']} raised since: {short(r['description'], 120)}"
+
+
+def suggest_facts(con, code, client):
+    """[{id, kind, text}] for a health suggestion, most telling first, from the tracker only: overdue actions, milestones that have
+    moved or are late, open risks and issues, overdue decisions, and what changed since the health was last set. A client one holds
+    client-visible items only (client_leak.item_problem), in their client wording, and no movement."""
+    import client_leak
+    t = today()
+    blocking = client_leak.blocking_labels(con) if client else None
+    found = [*_facts_overdue(con, code, client, t), *_facts_milestones(con, code, t), *_facts_raid(con, code, client),
+             *_facts_decisions(con, code, client, t)] + ([] if client else list(_facts_movement(con, code)))
+    return [{"id": ref, "kind": k, "text": text} for ref, k, text in found
+            if not (secret(text) or VIP_RE.search(text) or (client and client_leak.item_problem(con, ref, blocking)))]
+
+
+def suggest_health(con, code, audience):
+    """Builder for Suggest the health and its reason (#203). The health is report.health_evidence's, never the model's."""
+    import report
+    client = audience == "client"
+    ev = report.health_evidence(code)
+    suggested = ev["suggested"]
+    cur = con.execute("SELECT health, health_reason FROM projects WHERE code = ?", (code,)).fetchone()
+    # the internal reason never rides a client reply, so a client request's `current` holds the health only
+    current = {"health": cur["health"] or "", "reason": "" if client else (cur["health_reason"] or "")}
+    src = suggest_facts(con, code, client)
+    if not client and ev["reasons"]:
+        src.insert(0, {"id": code, "kind": "criteria", "text": f"The tracker's criteria give {suggested}: " + "; ".join(ev["reasons"])})
+    if not src:
+        raise Nothing("The tracker holds nothing to explain a health: no overdue actions, slipped milestones, open risks or overdue "
+                      "decisions" + (" that a client may see" if client else "") + ". Say why in your own words.")
+    kept, listed = number(src)
+    note = ("A client will read this: plain client wording, with no item numbers, internal names or internal reasons."
+            if client else "This is for Alan's own record (internal).")
+    return Draft({"name": tracker.project_label(code), "to": suggested, "sources": listed, "style": report.style_guide(),
+                  "audience_note": note},
+                 kept, item={"code": code},
+                 extra={"template": "health-suggest", "suggest": True, "audience": audience, "code": code, "health": suggested,
+                        "current": current, "differs": suggested != current["health"]})
+
+
+@parser("health")
+def parse_health(reply, ctx):
+    """The reason as the default parser reads it; for a suggestion also the health (the code's), whether it differs, the current
+    health and the evidence (every fact it was given, by item ID). A client reason keeps only sentences with a source and is dropped
+    whole if it fails the client check."""
+    out = default_parse(reply, ctx)
+    ex = ctx.get("extra") or {}
+    if not ex.get("suggest"):
+        return out
+    client = ex.get("audience") == "client"
+    if client:
+        out = default_parse(refine_keep_sourced(reply, ctx["sources"])[0], ctx)
+    sents = out["sentences"][:3]
+    reason = " ".join(s["text"] for s in sents)
+    if client and reason:
+        import edit_ai
+        if edit_ai.client_problems(ex.get("code") or "", reason, "") or VIP_RE.search(reason):
+            reason, sents = "", []
+            out["message"] = "The draft was dropped: it held wording that isn't client-safe."
+    out.update(sentences=sents, text=reason, health=ex["health"], reason=reason, differs=ex["differs"], current=ex["current"],
+               audience=ex["audience"], evidence=[{"ref": s["id"], "text": s["text"]} for s in ctx["sources"]])
+    return out
+
+
+# ===== end #203 =====
 
 
 @kind("forecast", "reason")
