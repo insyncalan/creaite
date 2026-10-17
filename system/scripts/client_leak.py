@@ -12,6 +12,7 @@ BL-338). The check reads a creaite document's data (creaite_doc.py), never a Wor
   - text_findings: the wording check on any text, moved here from review.client_findings; IDs found however written (#127);
   - plain_findings: findings' checks on a text with no sections: review.client_findings reads a Word draft through it (#127).
 The names check fails closed: a people register that is missing or can't be read is a finding of its own (#127)."""
+import functools
 import json
 import re
 import sys
@@ -321,6 +322,7 @@ def name_pattern(name):
     return re.compile(r"(?<![^\W_])(?:" + "|".join(forms) + r")(?![^\W_])")
 
 
+@functools.lru_cache(maxsize=16)      # #127 round 8: the same text is read by several checks; worked out once
 def _words_shown(text):
     """The text's words as Word shows them, Markdown's markers and link addresses gone (docx_tools.md_runs): "**Quentin** Marlow"
     and "[Quentin](https://…) Marlow" read "Quentin Marlow" (#127 round 4)."""
@@ -353,6 +355,7 @@ def _plain_shown(t):
     return shown
 
 
+@functools.lru_cache(maxsize=16)      # #127 round 8: as _words_shown
 def as_shown(text):
     """The text, and when it holds an emphasis mark (* _ ~ `) also as the exports show it (#127 round 6): Markdown's emphasis,
     strike-through and link markers taken off as docx_tools.plain does, again until nothing changes (nested "**_x_**" too), and
@@ -364,7 +367,8 @@ def as_shown(text):
         return t
     try:
         inner = INTRAWORD.sub("", t)
-        return joined(t, _plain_shown(t), inner, _plain_shown(inner))
+        shown = _plain_shown(t)
+        return joined(t, shown) if inner == t else joined(t, shown, inner, _plain_shown(inner))   # round 8: no second pass for the same text
     except Exception:  # noqa: BLE001  the text as written is still read
         return t
 

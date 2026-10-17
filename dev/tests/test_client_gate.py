@@ -1093,6 +1093,17 @@ class TheReviewOfc39f6c4(Base):
                 self.assertTrue(any("wording appears" in f for f in got[k]), (text, k, got[k]))
         self.assert_clean(["Ratio 2*3*4 holds.", "The snake_case_field and my_internal_value are done."])
 
+    def test_the_shown_form_is_worked_out_once(self):
+        """Round 8, speed: a text with no emphasis inside a word is shown once, not twice, and the same text read by several
+        checks is worked out once; the result is the same."""
+        got = self.py("calls = []\nreal = client_leak._plain_shown\n"
+                      "client_leak._plain_shown = lambda t: calls.append(t) or real(t)\n"
+                      "a = client_leak.as_shown('Note: **bold** text.')\nb = client_leak.as_shown('Note: **bold** text.')\n"
+                      "c = client_leak.as_shown('Note: inter*nal*-only.')\nn = len(calls)\n"
+                      "client_leak.named('Quen*tin* Marlow', ['Quentin Marlow'])\nclient_leak.named('Quen*tin* Marlow', ['Quentin Marlow'])\n"
+                      "print(json.dumps([n, a == b, c.split(client_leak.JOIN), client_leak._words_shown.cache_info().hits]))")
+        self.assertEqual(got, [3, True, ["Note: inter*nal*-only.", "Note: internal-only."], 1])
+
     def test_a_lone_surrogate_is_unseen(self):
         """Finding 6: docx_tools.esc drops a lone surrogate, so the check does too."""
         self.assertEqual(self.py("print(json.dumps(edit_ai.unseen('a\\ud800b\\udfffc')))"), "abc")
