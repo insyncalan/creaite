@@ -25,7 +25,7 @@ The canvas, private to Alan: https://claude.ai/artifact/RkigC5p5wzn91rJiUR7i8j (
 ## Why (from the research, 12-10-2026)
 
 - The AI sparkle has become a cliché that reads as "experimental feature"; the old icon's spark goes.
-- AI and productivity brands are moving from cold minimalism to warmth and character (Granola's hand-drawn G is the nearest neighbour).
+- AI and productivity brands are moving from cold minimalism to warmth and character (a meeting-notes product's hand-drawn letter mark is the nearest neighbour).
 - Logos are systems: a core mark with a simple small size and a motion idea.
 - macOS 26 builds icons from flat layers and adds the glass itself: Stage is three flat shapes, so it layers cleanly.
 

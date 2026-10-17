@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Notes editor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+/* Notes editor fixes (Alan, 15-10-2026): aligned checklist, the / menu anchored at the caret in the Notion pattern, three headings, work-item links that say what they are, the save line's wording. Demo data only. */
+:root{--bg:#F3F6F7;--surface:#fff;--sunk:#F6F9FA;--ink:#14212A;--muted:#4D5C66;--faint:#6F7D86;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#fff;--accent-soft:#DCEFF2;--warn:#8A5A00;--warn-soft:#FBF0DA;--bad:#B3261E;--ok:#2E6B3A;
+--font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;--shadow-pop:0 8px 24px rgba(0,0,0,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1518;--surface:#171E22;--sunk:#1B2428;--ink:#E4EAED;--muted:#A2AEB5;--faint:#86939A;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A;--accent-soft:#16363C;--warn:#F0C66B;--warn-soft:#3A2C10;--bad:#F2B8B5;--ok:#9FD6A5}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--font);padding:24px 16px 80px}
+.page{max-width:1080px;margin:0 auto}h1{font:800 26px/1.15 var(--display);margin:0 0 6px}h2{font:700 18px var(--display);margin:34px 0 4px}.lede,.sub{color:var(--muted)}.lede{max-width:78ch;margin:0 0 6px}.sub{font-size:13px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}@media (max-width:900px){.two{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:16px 22px}.card h3{font:600 12px var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px}
+.doc{font-size:15px;line-height:1.55;position:relative}.doc p{margin:0 0 8px}.doc h1{font:700 26px/1.25 var(--font);margin:12px 0 6px}.doc h2{font:700 20px/1.3 var(--font);margin:12px 0 6px}.doc h3{font:600 17px/1.3 var(--font);margin:10px 0 4px}
+/* checklist: today vs fixed */
+ul.task{list-style:none;margin:0;padding:2px 0 0}ul.task li{display:flex;gap:8px;align-items:flex-start;margin:0 0 6px}
+.today input{appearance:none;width:24px;height:24px;margin:2px -1px 0 -1px;border:1.5px solid var(--muted);border-radius:6px;flex:none;background:var(--surface)}.today li{line-height:1.55}
+.fix label{flex:none;height:1.55em;display:flex;align-items:center}.fix input{appearance:none;width:18px;height:18px;margin:0;border:1.5px solid var(--muted);border-radius:5px;background:var(--surface);cursor:pointer;position:relative}
+.fix input:checked{background:var(--accent);border-color:var(--accent)}.fix input:checked::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.fix li.d span{color:var(--muted);text-decoration:line-through}
+/* the / menu, anchored under the caret */
+.stagewrap{position:relative;min-height:470px}.caretline{display:inline-block}.caret{display:inline-block;width:1px;height:1.1em;background:var(--ink);vertical-align:text-bottom;animation:bl 1s steps(1) infinite}@keyframes bl{50%{opacity:0}}@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+.menu{position:absolute;left:0;top:100%;margin-top:4px;width:340px;max-height:360px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);z-index:5;padding:4px}
+.menu.up{top:auto;bottom:100%;margin:0 0 4px}.menu .g{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 3px}
+.menu .r{display:flex;gap:10px;align-items:center;padding:5px 8px;border-radius:7px;cursor:pointer}.menu .r.on{background:var(--accent-soft)}
+.menu .ic{width:30px;height:30px;border:1px solid var(--line);border-radius:7px;background:var(--surface);display:grid;place-items:center;flex:none;font:600 12px var(--font);color:var(--ink)}.menu .r.on .ic{border-color:var(--accent)}
+.menu .t{display:block;font-weight:500;font-size:14px;line-height:1.25}.menu .d{display:block;color:var(--muted);font-size:12px;line-height:1.25}.menu .k{margin-left:auto;font:500 11px var(--mono);color:var(--faint)}
+.menu .none{padding:10px;color:var(--muted)}.menu .foot{position:sticky;bottom:-4px;background:var(--surface);border-top:1px solid var(--line);margin:4px -4px -4px;padding:6px 12px;font-size:11px;color:var(--faint)}
+.fl{display:flex;gap:8px;align-items:center;margin:0 0 10px}.fl input{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:var(--sunk);color:var(--ink);width:260px}.st{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:28px;padding:0 10px;font:500 12px var(--font);cursor:pointer}.st[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+/* the # picker and the inserted link */
+.pick{width:100%;max-width:560px;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);background:var(--surface);padding:4px}.pick .h{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:6px 8px 2px}
+.pick .r{display:grid;grid-template-columns:96px 70px 1fr;gap:8px;align-items:center;padding:6px 8px;border-radius:7px}.pick .r.on{background:var(--accent-soft)}.pick .id{font:500 12px var(--mono)}.pick .ty{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:0 8px;justify-self:start;color:var(--muted)}.pick .ti{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nchip{font:500 12px var(--mono);background:var(--warn-soft);color:var(--warn);border-radius:6px;padding:1px 6px;text-decoration:none;white-space:nowrap}.nchip::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:5px}
+.today-l{color:var(--muted)}.res{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);margin:6px 0 0}
+.sv{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0 0}.sv div{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px 14px;min-width:200px}.sv b{display:block;font-size:12px;color:var(--faint);font-weight:500;margin-bottom:2px}.sv span{color:var(--muted);font-size:13px}.sv i{font-style:normal;color:var(--ok)}
+
+.tbw{border:1px solid var(--line);border-radius:10px;background:var(--surface);position:relative}.tbl{display:flex;flex-wrap:wrap;gap:2px;align-items:center;padding:6px 10px}.tbl b{min-width:30px;height:28px;padding:0 6px;display:inline-grid;place-items:center;border-radius:6px;font:600 13px var(--font);color:var(--muted);cursor:default}.tbl .m{cursor:pointer;display:inline-flex;gap:4px;align-items:center;color:var(--ink)}.tbl .m:hover,.tbl .m.o{background:var(--accent-soft);color:var(--accent)}.tbl i{width:1px;height:18px;background:var(--line);margin:0 5px}.tbl .m svg{width:9px;height:9px;opacity:.7}
+.tbm{position:absolute;z-index:5;min-width:200px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px}.tbm[hidden]{display:none}.tbm div{display:flex;gap:10px;padding:5px 10px;border-radius:7px;cursor:pointer;font-size:14px;align-items:center}.tbm div:hover{background:var(--accent-soft)}.tbm span{width:22px;color:var(--muted);font:600 12px var(--font);text-align:center}.tbm small{margin-left:auto;color:var(--faint);font:11px var(--mono)}.tbm hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+</style></head><body><div class="page">
+<h1>Notes editor</h1>
+<p class="lede">Five fixes from Alan's review, on the creaite theme. Interactive: type in the filter to narrow the / menu, use the buttons to move it, and click a row in the # picker.</p>
+
+<h2>1. The checklist lines up with its text</h2>
+<p class="sub">Today the shared 24px checkbox (sized for a big click target) sits lower than the first line of text. The fix: an 18px box centred on the first line, with the label as tall as one line of text and the whole row still a click target.</p>
+<div class="two"><div class="card"><h3>Today</h3><div class="doc"><ul class="task today"><li><input type="checkbox"><span>This is a story of a girl</span></li><li><input type="checkbox"><span>This is another story</span></li></ul></div></div>
+<div class="card"><h3>Fixed</h3><div class="doc"><ul class="task fix"><li><label><input type="checkbox"></label><span>This is a story of a girl</span></li><li class="d"><label><input type="checkbox" checked></label><span>This is another story</span></li></ul></div></div></div>
+
+<h2>2. The / menu, and three headings</h2>
+<p class="sub">What is wrong today (from Alan's screenshot): the menu opens below the last heading at the end of the note, not under the "/" he typed in the middle of it, and it runs off the bottom of the note card. It is also one flat list of nine rows with no descriptions, and the only heading is "Sub-heading". The cause is for the build agent to find (the menu's position is measured from the caret). The mockup follows the Notion pattern (from what I know of Notion; its help page is thin on this): it opens under the caret, groups the blocks, shows an icon tile, a name and a one-line description per row, narrows as you type, flips above near the bottom, and shows the keys at the foot.</p>
+<div class="fl"><input id="flt" placeholder='Filter, e.g. "he" or "risk"' aria-label="Filter the menu" value=""><button class="st" id="up" aria-pressed="false">Opens above (near the bottom)</button></div>
+<div class="card"><div class="stagewrap" id="sw"><div class="doc"><h2 style="margin-top:0">Purpose</h2><p>Agree the data-sharing approach with the client's legal team.</p><p class="caretline" id="cl">/<span id="q"></span><span class="caret"></span><div class="menu" id="menu" role="listbox" aria-label="Insert"></div></p></div></div></div>
+
+<h2>3. A work item link says what it is</h2>
+<p class="sub">Today <b>#</b> inserts only the ID. Proposed: it inserts the ID (the link and its live status dot, as now) followed by the designation and the title, so the line reads on its own, in creaite and in the plain file. Recommended: the words are written as text once (they do not change if the item is later renamed; the dot does). Alternative: the file keeps only the ID and the chip shows the words live.</p>
+<div class="two"><div><div class="pick" id="pk" role="listbox" aria-label="Link a work item"><div class="h">Work items</div></div></div>
+<div class="card"><h3>Result in the note</h3><div class="doc"><p class="today-l">Today: <a class="nchip" href="#" onclick="return false">FAL-R-001</a></p><p>Proposed: <span id="ins"></span></p></div></div></div>
+
+<h2>4. What "Draft kept" means</h2>
+<p class="sub">Typing is saved in two steps, so nothing is lost. A second after your last key creaite keeps a <b>draft copy</b> ("Draft kept"): it is stored, but the note's file is not rewritten yet. The file itself is written after 30 seconds without typing, or when you leave the note, and the line then says "Saved". If the page closed in between, your draft comes back. "Draft kept" is accurate but opaque. Proposed wording:</p>
+<div class="sv"><div><b>While you type</b><span>Today: Editing</span><br><i>Proposed: Editing</i></div><div><b>A second after the last key</b><span>Today: Draft kept</span><br><i>Proposed: Draft saved, not filed yet</i></div><div><b>After 30 s or on leaving</b><span>Today: Saved 14:02</span><br><i>Proposed: Saved 14:02 (unchanged)</i></div></div>
+
+<h2>5. The toolbar: 23 buttons to one line</h2>
+<p class="sub">Team Stark's shared toolbar has 23 buttons and wraps to two lines at the editor's width (screenshots at 1400 and 900px). Option (a) accepts two lines. Option (b), recommended: group the rarely used ones in hover menus (the same behaviour as the AI bar): 11 controls, one line at 900px. Nothing is lost: Unlink is Remove in the link popover (#120), Indent and Outdent are Tab and Shift+Tab (and in the List menu), Clear formatting is the first entry of the Heading menu ("Text"), and the Insert menu holds [[ note, @ person, # work item, Table and Image.</p>
+<div class="two"><div><div class="sub" style="margin:0 0 4px">(a) Today: two lines</div><div class="tbw"><div class="tbl"><b>H1</b><b>H2</b><b>H3</b><i></i><b>B</b><b>I</b><b>S</b><b>&lt;/&gt;</b><i></i><b>•</b><b>1.</b><b>☑</b><b>⇤</b><b>⇥</b><b>❝</b><i></i><b>Link</b><b>Unlink</b><b>Clear</b><i></i><b>[[ ]]</b><b>@</b><b>#ID</b><b>▦</b><b>Image</b><i></i><b>↶</b><b>↷</b></div></div></div>
+<div><div class="sub" style="margin:0 0 4px">(b) Grouped: one line (point at a group)</div><div class="tbw"><div class="tbl" id="tb2"><b class="m" data-g="h">Heading <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4 4-4"/></svg></b><i></i><b>B</b><b>I</b><b>S</b><b>&lt;/&gt;</b><i></i><b class="m" data-g="l">List <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4 4-4"/></svg></b><b>❝</b><i></i><b>🔗</b><b class="m" data-g="i">Insert <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4 4-4"/></svg></b><i></i><b>↶</b><b>↷</b></div>
+<div class="tbm" id="tbm" hidden></div></div></div></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const ITEMS=[
+ ["Text",[["T","Text","Plain paragraph"],["H1","Heading 1","Big section heading"],["H2","Heading 2","Medium section heading"],["H3","Heading 3","Small section heading"]]],
+ ["Lists",[["•","Bulleted list","A simple list"],["1.","Numbered list","A list with numbers"],["☑","Checklist","Tick things off"]]],
+ ["Blocks",[["❝","Quote","Set a passage apart"],["▦","Table","Rows and columns"],["▣","Image","PNG or JPEG, up to 2 MB"]]],
+ ["Link",[["#","Work item","Link an action, risk, issue or decision","#"],["@","Person","Mention someone from the register","@"],["[[","Note","Link to another note","[["]]],
+ ["Templates",[["◇","Stakeholder","Role, what matters to them, how they work"],["◇","Lessons learned","What happened, what to change"],["◇","Working session","A conversation: its date and who it was with"]]]];
+let sel=1;
+function draw(){const q=$("#flt").value.trim().toLowerCase();$("#q").textContent=q;let html="",n=0,flat=[];
+ for(const [g,rows] of ITEMS){const m=rows.filter(r=>!q||r[1].toLowerCase().includes(q)||r[2].toLowerCase().includes(q)||(q==="h"&&r[1].startsWith("Heading")));if(!m.length)continue;html+='<div class="g">'+g+'</div>';
+  for(const r of m){flat.push(r);html+='<div class="r'+(flat.length-1===sel?" on":"")+'" role="option" data-i="'+(flat.length-1)+'"><span class="ic" aria-hidden="true">'+r[0]+'</span><span><span class="t">'+r[1]+'</span><span class="d">'+r[2]+'</span></span>'+(r[3]?'<span class="k">'+r[3]+'</span>':"")+'</div>'}}
+ if(!flat.length)html='<div class="none">No match</div>';
+ $("#menu").innerHTML=html+'<div class="foot">↑↓ to move · ↵ to insert · esc to close</div>'}
+$("#flt").addEventListener("input",()=>{sel=0;draw()});
+$("#menu").addEventListener("mouseover",e=>{const r=e.target.closest(".r");if(r){sel=+r.dataset.i;document.querySelectorAll("#menu .r").forEach(x=>x.classList.toggle("on",x===r))}});
+$("#up").addEventListener("click",()=>{const u=$("#menu").classList.toggle("up");$("#up").setAttribute("aria-pressed",String(u));$("#sw").style.paddingTop=u?"340px":"0"});
+const IT=[["FAL-R-001","Risk","Further access delay pushes go-live into Q1"],["FAL-A-014","Action","Escalate production data access to the client CIO"],["FAL-I-003","Issue","Production data access not granted"],["FAL-D-002","Decision","Revised data-sharing agreement approved"]];
+function pk(i){$("#pk").innerHTML='<div class="h">Work items</div>'+IT.map((t,k)=>'<div class="r'+(k===i?" on":"")+'" role="option" data-k="'+k+'"><span class="id">'+t[0]+'</span><span class="ty">'+t[1]+'</span><span class="ti">'+t[2]+'</span></div>').join("");
+ const t=IT[i];$("#ins").innerHTML='<a class="nchip" href="#" onclick="return false">'+t[0]+'</a> · '+t[1]+': '+t[2]}
+$("#pk").addEventListener("click",e=>{const r=e.target.closest(".r");if(r)pk(+r.dataset.k)});
+
+const TBM={h:[["T","Text (clears the heading)",""],["H1","Heading 1","#"],["H2","Heading 2","##"],["H3","Heading 3","###"],["hr"],["✕","Clear formatting","⌘\\"]],l:[["•","Bulleted list",""],["1.","Numbered list",""],["☑","Checklist",""],["hr"],["⇥","Indent","Tab"],["⇤","Outdent","⇧Tab"]],i:[["[[","Link to a note","[["],["@","Mention a person","@"],["#","Link a work item","#"],["hr"],["▦","Table",""],["▣","Image",""]]};
+let tt=null;const tb=document.getElementById("tb2"),tm=document.getElementById("tbm");
+function tbOpen(k,el){clearTimeout(tt);tm.hidden=false;tm.innerHTML=TBM[k].map(r=>r[0]==="hr"?"<hr>":"<div><span>"+r[0]+"</span>"+r[1]+"<small>"+r[2]+"</small></div>").join("");const b=el.getBoundingClientRect(),w=tm.parentElement.getBoundingClientRect();tm.style.left=(b.left-w.left)+"px";tm.style.top=(b.bottom-w.top+4)+"px";tb.querySelectorAll(".m").forEach(x=>x.classList.toggle("o",x===el))}
+function tbClose(){tt=setTimeout(()=>{tm.hidden=true;tb.querySelectorAll(".m").forEach(x=>x.classList.remove("o"))},220)}
+tb.addEventListener("mouseover",e=>{const m=e.target.closest(".m");if(m)tbOpen(m.dataset.g,m)});tb.addEventListener("mouseleave",tbClose);tm.addEventListener("mouseenter",()=>clearTimeout(tt));tm.addEventListener("mouseleave",tbClose);
+draw();pk(0);
+</script></body></html>

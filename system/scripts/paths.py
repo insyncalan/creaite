@@ -53,6 +53,7 @@ MENTIONS    = STAGING / "mentions.jsonl"            # open items raised again in
 INTAKE_CLEARED = STAGING / "intake-cleared.json"   # meetings set aside in Intake's Calendar import (BL-104 Clear day); never processed.txt
 TRANSCRIPTS = STAGING / "transcripts.json"       # each meeting's transcript status from the sweep (BL-42 phase 3): never text, a passcode or a PIN
 NOTES_SENT  = STAGING / "notes-sent.json"        # BL-301: what Find updates applied from each note (paragraph, fingerprint, IDs)
+RUN_USAGE   = STAGING / "run-usage.jsonl"       # #197: one counts-only line per finished Claude run (usage_log.py appends; usage_report.py reads)
 MINUTES_TEMPLATE = TEMPLATES / "minutes-template.docx"
 WEEKLY_TEMPLATE  = TEMPLATES / "weekly-report-template.docx"
 CLIENT_TEMPLATE  = TEMPLATES / "client-report-template.docx"
