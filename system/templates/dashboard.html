@@ -55379,6 +55379,46 @@ ${d5.text}`);
       first.focus();
     }
   }
+  var BEHIND_ON_BODY = "#chat,#runBadge";
+  function FocusInert() {
+    h2(() => {
+      const root = document.querySelector(".ndoc.nfocus");
+      const marked = [];
+      for (let el2 = (
+        /** @type {Element | null} */
+        root
+      ); el2 && el2 !== document.body; el2 = el2.parentElement) {
+        for (
+          const sib of
+          /** @type {Element[]} */
+          [...el2.parentElement ? el2.parentElement.children : []]
+        ) {
+          if (el2.parentElement === document.body && !sib.matches(BEHIND_ON_BODY)) continue;
+          if (sib === el2 || sib.hasAttribute("inert") || sib.hasAttribute("data-nscrim") || sib.tagName === "SCRIPT" || sib.tagName === "STYLE" || sib.matches("dialog,[role=dialog]") || sib.querySelector("dialog")) continue;
+          sib.setAttribute("inert", "");
+          marked.push(sib);
+        }
+      }
+      return () => {
+        for (const m5 of marked) m5.removeAttribute("inert");
+      };
+    }, []);
+    return null;
+  }
+  function focusShortcut(e4) {
+    if (!(e4.metaKey || e4.ctrlKey) || !e4.shiftKey || e4.altKey || String(e4.key).toLowerCase() !== "f" || composing(e4)) return false;
+    if (document.querySelector("dialog[open]")) return false;
+    if (noteFocus.value) {
+      e4.preventDefault();
+      noteFocusClose();
+      return true;
+    }
+    if (!noteCur.value) return false;
+    e4.preventDefault();
+    const a5 = document.activeElement;
+    noteFocusOpen(a5 && a5 !== document.body ? a5 : document.getElementById("noteExpand"));
+    return true;
+  }
   function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
     const cur = noteCur.value;
     if (!cur) return /* @__PURE__ */ u2("article", { class: "ndoc empty", children: noteLoading.value ? /* @__PURE__ */ u2("p", { class: "sub", children: "Opening…" }) : /* @__PURE__ */ u2(S2, { children: [
@@ -55432,7 +55472,7 @@ ${d5.text}`);
                     id: "noteExpand",
                     "data-nfocus": focus ? "leave" : "open",
                     "aria-label": focus ? "Leave focus" : "Focus on this note",
-                    "data-tip": focus ? "Leave focus (Esc)" : "Focus on this note",
+                    "data-tip": focus ? "Leave focus (Esc or ⌘⇧F)" : "Focus on this note (⌘⇧F)",
                     onClick: (e4) => {
                       if (noteFocus.value) noteFocusClose();
                       else noteFocusOpen(
@@ -55500,7 +55540,8 @@ ${d5.text}`);
             ] }),
             focus ? /* @__PURE__ */ u2(S2, { children: [
               /* @__PURE__ */ u2(FocusEnter, {}),
-              /* @__PURE__ */ u2(FocusKeys, {})
+              /* @__PURE__ */ u2(FocusKeys, {}),
+              /* @__PURE__ */ u2(FocusInert, {})
             ] }) : null,
             focus && notesMsg.value ? /* @__PURE__ */ u2("div", { class: "nmsg", role: "status", "data-nfocusmsg": true, children: notesMsg.value }) : null,
             st2.state === "conflict" || st2.state === "error" || st2.state === "wait" ? /* @__PURE__ */ u2("div", { class: "nstale", role: "alert", "data-nbanner": st2.state, children: [
@@ -55857,7 +55898,7 @@ ${d5.text}`);
       if (shared.VIEW === "notes" && (e4.metaKey || e4.ctrlKey) && e4.key === "\\") {
         e4.preventDefault();
         toggleNotesList();
-      }
+      } else if (shared.VIEW === "notes") focusShortcut(e4);
     });
     document.addEventListener("click", (e4) => {
       const t47 = (
