@@ -382,7 +382,9 @@ def as_shown(text):
     try:
         inner = INTRAWORD.sub("", t)
         shown = _plain_shown(t)
-        return joined(t, shown) if inner == t else joined(t, shown, inner, _plain_shown(inner))   # round 8: no second pass for the same text
+        if inner == t:                  # round 8: no second pass for the same text
+            return joined(t, shown)
+        return joined(t, shown, inner, _plain_shown(inner))
     except Exception:  # noqa: BLE001  the text as written is still read
         return t
 
