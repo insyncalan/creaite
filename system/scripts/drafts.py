@@ -2374,7 +2374,10 @@ def split_panes(text, titles):
 # #90 review F1: the reply check's second line for a client section. The client facts never hold the tracker's health reason, so a
 # client draft that brings it in (whole, or a run of five of its words), or an internal-only marker, is dropped. Words already in
 # the section as Alan wrote it are his, not the draft's, and do not count.
-INTERNAL_MARK = re.compile(r"\binternal[\s-]+only\b|\bnot for (?:the )?client\b|\bfor internal use\b|\bhealth_diff\b", re.I)
+# #127 round 6: also "internal:only", "internal.only" and "internal ; only": punctuation with no space after "internal" or a space
+# before it, as prose never writes it ("internal. Only", "internal; only" and "internal, only" stay prose)
+INTERNAL_MARK = re.compile(r"\binternal(?:[\s-]+|[;.:]|\s+[;.:]\s*)only\b|\bnot for (?:the )?client\b|\bfor internal use\b"
+                           r"|\bhealth_diff\b", re.I)
 RUN = 5
 
 

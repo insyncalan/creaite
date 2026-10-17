@@ -287,8 +287,8 @@ def client_problems(code, text, original=""):
         found += client_leak.text_findings(con, code, text or "")
         found += drafts.internal_findings(con, code, text or "", original)
         known = _register_names() + client_leak.project_owners(con, code)
-        allowed = names(original, known) | client_leak.people(con, code, blocking)[0]
-        found += [f"{n} isn't named in the text" for n in sorted(names(text, known) - allowed)]
+        allowed = client_leak.named(original, known, every=True) | client_leak.people(con, code, blocking)[0]   # every name
+        found += [f"{n} isn't named in the text" for n in sorted(client_leak.named(text, known, every=True) - allowed)]   # (#127 r6)
     except client_leak.RegisterUnreadable:                # #127: fails closed, with its own message
         found = [REGISTER]
     except (Exception, SystemExit):  # noqa: BLE001  fails closed

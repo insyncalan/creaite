@@ -928,5 +928,51 @@ class TheReviewOfce5d66b(Base):
         self.assertEqual(got, ["ab<&>", "ab<&>", "a b<&>", "a b<&>", "ab<&>", "ab<&>", "ab<&>", "ab<&>"])
 
 
+    def test_common_word_names_are_not_read_in_prose(self):
+        """Finding 1: the surname first without a comma counts only with both words capitalised, and an initial only in capitals."""
+        reg = ["Will Price", "Grace Day", "Mark Field", "Rose Hill", "Quentin Marlow"]
+        prose = ["The price will rise after the contract review.", "A 30 day grace period applies.", "Field mark-up is due on Friday.",
+                 "Hill rose to the occasion.", "Will a price cap apply?", "Waiting on Quentin j. Marlow.", "Waiting on marlow quentin."]
+        names = ["Waiting on Marlow, Quentin.", "Waiting on Quentin J. Marlow.", "Waiting on MARLOW Quentin.",
+                 "Waiting on Marlow Quentin.", "Waiting on quentin marlow.", "Price Will signed it."]
+        got = self.py(f"print(json.dumps([sorted(client_leak.named(t, {reg!r}, every=True)) for t in {prose + names!r}]))")
+        self.assertEqual(got, [[]] * len(prose) + [["Quentin Marlow"]] * 5 + [["Will Price"]])
+
+    def test_a_comma_reads_the_same_decoded_and_every_name_is_reported(self):
+        """Finding 5: "Quentin,Marlow" is a name and "Quentin, Marlow" a list, with an &amp; elsewhere or not; every register name
+        that matches is reported on the gate's paths (Quentin and Quentin Marlow)."""
+        got = self.py("print(json.dumps([sorted(client_leak.named(client_leak.with_decoded(t), ['Quentin Marlow'])) for t in "
+                      "('Waiting on Quentin,Marlow.', 'Waiting on Quentin,Marlow &amp; co.', 'Waiting on Quentin, Marlow.', "
+                      "'Waiting on Quentin, Marlow &amp; co.')]))")
+        self.assertEqual(got, [["Quentin Marlow"], ["Quentin Marlow"], [], []])
+        got = self.py("con = client_leak.connect()\n"
+                      "client_leak.people = lambda con, code, blocking=None: (set(), {'Quentin', 'Quentin Marlow'})\n"
+                      "edit_ai._register_names = lambda: ['Quentin', 'Quentin Marlow']\n"
+                      "t = 'Waiting on Quentin; Marlow.'\n"
+                      "print(json.dumps([client_leak.name_findings(con, 'ABC', t), edit_ai.client_problems('ABC', t), "
+                      "sorted(edit_ai.names(t, ['Quentin', 'Quentin Marlow'])), edit_ai.client_problems('ABC', t, t)]))")
+        self.assertEqual([sorted(f.split(" is")[0] for f in got[0]), sorted(f.split(" isn")[0] for f in got[1] if "named" in f),
+                          got[2]], [["Quentin", "Quentin Marlow"], ["Quentin", "Quentin Marlow"], ["Quentin Marlow"]])
+        self.assertEqual([f for f in got[3] if "named" in f], [])          # the original names both: neither is new
+
+    def test_sentence_punctuation_keeps_the_marker_apart_and_spaced_marks_join_it(self):
+        """Findings 3 and 4: in the words form "internal. Only" (any of . ; ! ? : with an &amp; elsewhere) is prose; "internal ; only",
+        "internal . only" and "internal:only" are the marker with or without one; an underscore joins it when decoded."""
+        oks = ["Planning is internal. Only their PMO attends &amp; signs.", "Costs are internal; only the licence &amp; support.",
+               "Planning is internal! Only the PMO &amp; sponsor.", "Is it internal? Only the PMO &amp; sponsor know.",
+               "Costs are internal: only the licence &amp; support are external.", "Costs are internal; only the licence is billed.",
+               "Planning is internal. Only their PMO attends."]
+        for text, got in self.gate(oks).items():
+            self.assertEqual(got, [[], [], []], text)
+        self.assert_found([(t, MARKER) for t in ("Note: internal ; only.", "Note: internal . only.", "Note: internal:only.",
+                                                 "Note: internal ; only &amp; more.", "Note: internal:only &amp; more.")])
+        self.assert_found([("Note: internal_only &amp; more.", MARKER)], kinds=(0, 1))
+
+    def test_every_apostrophe_folds(self):
+        got = self.py("print(json.dumps([sorted(client_leak.named(t, [\"Ada O'Neill\"])) for t in "
+                      "('Met Ada O\u2018Neill.', 'Met Ada O\u02bcNeill.', 'Met Ada O\u2032Neill.', 'Met Ada O\u2019Neill.')]))")
+        self.assertEqual(got, [["Ada O'Neill"]] * 4)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -220,42 +220,55 @@ def person(owner):
     return re.sub(r"\s*\([^)]*\)\s*$", "", owner or "").strip()
 
 
-def _name_form(text):
+def _name_form(text, lower=True):
     """Text as a name is matched: as the ID check reads it (edit_ai.normal: NFKC, so a no-break space is a space; invisible
     characters gone), every run of whitespace (two spaces, a tab, a line break) one space, in lower case (#127 review), and its
     accents dropped ("Quentín" is "quentin"; #127 round 4; edit_ai.normal drops every combining mark since round 5), and a curly
-    apostrophe straight ("O’Neill" is "o'neill", either way round; round 5)."""
+    apostrophe straight ("O’Neill" is "o'neill", either way round; round 5). `lower=False` keeps its capitals, for the forms of a
+    name that count only when written as one (name_pattern; round 6)."""
     import edit_ai
-    return re.sub(r"\s+", " ", edit_ai.normal(text or "")).lower().translate(APOSTROPHES)
+    t = re.sub(r"\s+", " ", edit_ai.normal(text or ""))
+    return (t.lower() if lower else t).translate(APOSTROPHES)
 
 
 APOSTROPHES = str.maketrans({c: "'" for c in "\u2019\u2018\u02bc\u2032"})
 
 
-NAME_SEP = r"[\s._\-+·'’*~`/|;\\]{1,4}"   # between a name's words: spaces, a dot, dash, underscore, plus, emphasis marks,
-#                                         # and (#127 round 5) a slash, bar, semicolon or backslash
+NAME_SEP = r"(?:[\s._\-+·'’*~`/|;\\]{1,4}|,)"   # between a name's words: spaces, a dot, dash, underscore, plus, emphasis
+#                     # marks, (#127 round 5) a slash, bar, semicolon or backslash, and (round 6) a comma with no space ("Quentin,Marlow";
+#                     # "Quentin, Marlow" is a list, read the same decoded or not)
 JOIN_PART, JOIN_LEN = 3, 8                # #127 round 4: a name run together ("QuentinMarlow") only when each word has at least 3
 #                                         # letters and the whole at least 8, so "Max Well" never matches "maxwell"
 
 
+def _capitalised(word):
+    """A pattern for one word of a name written as a name: its first letter a capital, the rest in any case ("Marlow", "MARLOW")."""
+    return rf"(?-i:{re.escape(word[0].upper())})" + (rf"(?i:{re.escape(word[1:])})" if len(word) > 1 else "")
+
+
+INITIAL = r"(?-i:[A-Z\u00c0-\u00d6\u00d8-\u00de])\.?"   # #127 round 6: a capital letter, then a dot or the separator after it
+
+
 def name_pattern(name):
-    """The pattern a name is found by (#127 round 4): its words in order with any run of separators between them (NAME_SEP), or,
-    for a name whose words are all JOIN_PART letters or more and JOIN_LEN together, none ("QuentinMarlow", or the soft hyphen
-    Word hides); a single-letter initial between its words ("Quentin J. Marlow"); a two-word name also surname first after a comma
-    ("Marlow, Quentin") or, when both words have JOIN_PART letters or more, without one ("Marlow Quentin"; #127 round 5). Always a
-    whole word at each end, so a longer name ("Marlowe") is not this one. None for a name with nothing to match."""
+    """The pattern a name is found by (#127 round 4), matched against _name_form(text, lower=False): its words in order, in any
+    case, with any run of separators between them (NAME_SEP), or, for a name whose words are all JOIN_PART letters or more and
+    JOIN_LEN together, none ("QuentinMarlow", or the soft hyphen Word hides); a capital initial between its words ("Quentin J.
+    Marlow"; never "a", so "Will a price cap" isn't Will Price; round 6); a two-word name also surname first after a comma
+    ("Marlow, Quentin") or, when both words have JOIN_PART letters or more and both are written with a capital, without one
+    ("Marlow Quentin", "MARLOW Quentin"; never "price will" or "Hill rose"; rounds 5 and 6). Always a whole word at each end, so
+    a longer name ("Marlowe") is not this one. None for a name with nothing to match."""
     words = re.findall(r"[^\W_]+(?:['’][^\W_]+)*", _name_form(name))
     if not words:
         return None
     if len(words) == 1:
-        return re.compile(rf"(?<![^\W_]){re.escape(words[0])}(?![^\W_])")
+        return re.compile(rf"(?<![^\W_])(?i:{re.escape(words[0])})(?![^\W_])")
     joined = all(len(w) >= JOIN_PART for w in words) and sum(map(len, words)) >= JOIN_LEN
-    sep = f"(?:{NAME_SEP}[^\\W\\d_]\\.?(?={NAME_SEP}))?(?:{NAME_SEP}){'?' if joined else ''}"     # an initial may stand between
-    forms = [sep.join(map(re.escape, words))]
+    sep = f"(?:{NAME_SEP}{INITIAL}(?={NAME_SEP}))?(?:{NAME_SEP}){'?' if joined else ''}"     # an initial may stand between
+    forms = ["(?i:" + sep.join(map(re.escape, words)) + ")"]
     if len(words) == 2:
-        forms.append(rf"{re.escape(words[1])}\s{{0,3}},\s{{0,3}}{re.escape(words[0])}")
+        forms.append(rf"(?i:{re.escape(words[1])}\s{{0,3}},\s{{0,3}}{re.escape(words[0])})")
         if min(map(len, words)) >= JOIN_PART:
-            forms.append(rf"{re.escape(words[1])}(?:{NAME_SEP}){re.escape(words[0])}")
+            forms.append(rf"{_capitalised(words[1])}(?:{NAME_SEP}){_capitalised(words[0])}")
     return re.compile(r"(?<![^\W_])(?:" + "|".join(forms) + r")(?![^\W_])")
 
 
@@ -271,19 +284,22 @@ def _words_shown(text):
         return ""
 
 
-def named(text, people):
-    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once; whitespace, invisible
+def named(text, people, every=False):
+    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once (with `every`, as the
+    client gate asks, every one: "Quentin; Marlow" names both Quentin and Quentin Marlow; #127 round 6); whitespace, invisible
     characters, accents, separators between a name's words or none, surname first, and Markdown around its words don't hide it
     (_name_form, name_pattern, _words_shown)."""
-    low = _name_form(text)
+    low = _name_form(text, lower=False)
     shown = _words_shown(text)
-    low = f"{low}\n{_name_form(shown)}" if shown else low
+    low = f"{low}\n{_name_form(shown, lower=False)}" if shown else low
     found = set()
     for p in people:
         if p and len(p) > 2:
             pat = name_pattern(p)
             if pat is not None and pat.search(low):
                 found.add(p)
+    if every:
+        return found
     return {p for p in found if not any(p != q and p.lower() in q.lower() for q in found)}   # "Sara" inside "Sara Khan"
 
 
@@ -382,7 +398,7 @@ def name_findings(con, code, text, blocking=None):
         _, internal = people(con, code, blocking)
     except RegisterUnreadable:
         return [REGISTER_UNREAD]
-    return [f"{n} is named but owns only items a client report can't show" for n in sorted(named(text, internal))]
+    return [f"{n} is named but owns only items a client report can't show" for n in sorted(named(text, internal, every=True))]
 
 
 def doc_text(doc):
@@ -550,6 +566,14 @@ def with_addresses(text):
     return with_decoded(f"{text}\n{extra}" if extra else (text or ""))
 
 
+def _words_gap(m):
+    """A run of punctuation in with_decoded's words form: the first of a sentence's punctuation (, ; . ! ? :) it holds then a space,
+    as prose writes it, else a space (#127 round 6: "Quentin, Marlow" reads as it does undecoded, and "internal. Only" never as the
+    marker's "internal . only")."""
+    p = re.search(r"[,;.!?:]", m.group(0))
+    return p.group(0) + " " if p else " "
+
+
 def with_decoded(text):
     """#127 round 4: a text with, when it holds a % or an & that decoding changes, its decoded form added as plain words (_decoded:
     %-encoding undone to DECODE_LEVELS rounds, entities undone; a text encoded past that is unreadable_findings' finding). An
@@ -557,7 +581,8 @@ def with_decoded(text):
     found as written. #127 round 5: added twice. Once with its punctuation kept, its web addresses as words (raw_text, so an
     external page's path is never read as one of creaite's own, documents/): the marker is matched there, so "health%5Fdiff" is
     health_diff and "internal, only" stays two words apart. Once as words for the names and IDs, any other run of punctuation a
-    space but one holding a sentence's punctuation (, ; . ! ? :) a full stop, so the marker can't be read across it."""
+    space but one holding a sentence's punctuation (, ; . ! ? :) that punctuation and a space (_words_gap), so the marker can't be
+    read across it."""
     t = text or ""
     if "%" not in t and "&" not in t:
         return t
@@ -566,7 +591,7 @@ def with_decoded(text):
     if d == edit_ai.normal(t):
         return t
     kept = raw_text(d)
-    words = re.sub(r"[\W_]+", lambda m: " . " if re.search(r"[,;.!?:]", m.group(0)) else " ", d).strip()
+    words = re.sub(r"[\W_]+", _words_gap, d).strip()
     return f"{t}\n{kept}\n{words}"
 
 
