@@ -74,7 +74,7 @@ class Sidebar(LiveBrowserCase):
         b = self.b
         self.assertEqual(self.top(), TOP)
         self.assertEqual(self.more(), MORE)
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail')).width"), "224px")
+        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail')).width"), "188px")
         self.assertEqual(b.eval("document.querySelector('.rail [data-v=today]').getAttribute('aria-current')"), "page")
         self.assertEqual(b.eval("document.querySelector('.rail [data-v=work] .rl').textContent"), "Work")   # names shown
         # the wordmark is the toggle (#156), above the pages
@@ -112,7 +112,7 @@ class Sidebar(LiveBrowserCase):
         # the key expands it again, wherever focus is
         b.eval("go('work')")
         b.key("\\", META)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='188px'")
         self.assertEqual(b.eval("document.getElementById('railTog').getAttribute('aria-label')"), "Collapse the rail")
         b.key("\\", META)
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")
@@ -152,14 +152,14 @@ class Sidebar(LiveBrowserCase):
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # under 1200px it starts collapsed (labels on)
         self.assertFalse(b.eval("document.getElementById('railTog').disabled"))            # and can be opened
         b.resize(1250, 800)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")        # 1200px and wider: expanded
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='188px'")        # 1200px and wider: expanded
         b.resize(800, 800)
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # under 900px: always collapsed
         self.assertTrue(b.eval("document.getElementById('railTog').disabled"))
         self.assertTrue(b.eval("[...document.querySelectorAll('.rail button[data-v]')].every(x=>x.getAttribute('aria-label'))"))
         self.assertNotEqual((self.saved() or {}).get("display"), "icons")                     # nothing saved: it's the window
         b.resize(1400, 900)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='188px'")
 
     # ── More ──
     def test_more_opens_beside_it_with_an_amber_badge_for_problems(self):
@@ -356,7 +356,7 @@ class Sidebar(LiveBrowserCase):
         b.eval("railSave({...RAILCFG,display:'icons'}).then(ok=>{window.__ok=ok})")
         b.wait("window.__ok===false")
         self.assertEqual(b.eval("RAILCFG.display"), "titles")
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='188px'")
 
 
 class EveryRailItemHasAnIcon(unittest.TestCase):
