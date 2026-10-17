@@ -27,7 +27,7 @@ export function PrepEditor({ id, label, value, onSave, rows = 3, placeholder, hi
   return (
     <div class="ppfld">
       <label id={`${id}-l`}>{label}{hint ? <em> {hint}</em> : null}</label>
-      <TextEditor id={id} cls={cls} rows={rows} value={value} placeholder={placeholder} labelledBy={`${id}-l`} ai={ai}
+      <TextEditor id={id} cls={cls} rows={rows} value={value} placeholder={placeholder} labelledBy={`${id}-l`} ai={ai} links
         onInput={t => { typed.current = t; if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(flush, SAVE_PAUSE); }}
         onCommit={t => { typed.current = t; flush(); }} />
     </div>

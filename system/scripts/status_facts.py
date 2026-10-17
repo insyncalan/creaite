@@ -26,6 +26,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import linktext  # noqa: E402  (#121: a link in item text is its words in the facts)
 import paths  # noqa: E402
 import tracker  # noqa: E402
 import report  # noqa: E402
@@ -60,7 +61,7 @@ def strip_ids(text):
 
 def sent(text):
     """A sentence: its own full stop, never two."""
-    return (text or "").strip().rstrip(".") + "."
+    return linktext.words(text or "").strip().rstrip(".") + "."
 
 
 def plural(n, one, many):
@@ -119,7 +120,8 @@ def client_org_matcher(client):
 
 def what_it_is(row):
     """A client-visible item's own wording (its client message's first part), else its description."""
-    return report.message_parts(row["client_message"]).get(report.HEADINGS[0]) or row.get("description") or row.get("decision") or ""
+    own = report.message_parts(row["client_message"]).get(report.HEADINGS[0])
+    return linktext.words(own or row.get("description") or row.get("decision") or "")
 
 
 def item_key(row):
@@ -211,7 +213,8 @@ def exposure_part(con, p, code, start, end, client):
             part.add(f"{r['type']}: " + sent(report.client_text(r["client_message"])), r["id"])
             continue
         part.add(f"{r['type']}, {r['priority'] or 'priority not set'}: " + sent(r["description"]) + f" {owner_text(r['owner'])}. "
-                 + (f"Response: {r['response_action'].strip().rstrip('.')}" if r["response_action"] else "No response recorded yet")
+                 + (f"Response: {linktext.words(r['response_action']).strip().rstrip('.')}" if r["response_action"]
+                    else "No response recorded yet")
                  + (f" (due {shown(r['due_date'])})" if r["response_action"] and r["due_date"] else "") + ".", r["id"])
     if len(risks) > cfg["max_risks"]:
         part.add(f"{plural(len(risks) - cfg['max_risks'], 'further open risk or issue', 'further open risks and issues')}, not named here.")
@@ -250,7 +253,7 @@ def decision_asks(con, code, end, client, names):
         row = report.rows(con, "SELECT * FROM decisions WHERE id = ?", d["id"])[0]
         if client and not (row["client_visible"] and tracker.message_complete("decisions", row["client_message"])):
             continue
-        text = row["client_message"].strip() if client else d["text"]
+        text = linktext.words(row["client_message"]).strip() if client else d["text"]
         mine = not client and is_me(d["by"], names)
         who = "Alan" if mine else (re.sub(r"\s*\([^)]*\)\s*$", "", d["by"] or "").strip() or "")
         late = f", {d['overdue_days']} day{'s' if d['overdue_days'] != 1 else ''} overdue" if d["overdue_days"] else ""

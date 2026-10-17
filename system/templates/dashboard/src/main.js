@@ -86,6 +86,7 @@ export * from "./components/AiSelect.jsx";   /* BL-301 D: AI on selected text */
 export * from "./stores/aiEdit.js";
 export * from "./components/LinkPopover.jsx";   /* #120: links in the rich editors */
 export * from "./core/linkUrl.js";
+export * from "./core/linkText.js";   /* #121: links in plain text */
 export * from "./core/editorLink.js";
 
 import { bootAiSelect } from "./components/AiSelect.jsx";

@@ -17,6 +17,7 @@
    milestone move is locked. Clicking a row opens it in the peek's layout to edit it first. Apply applies the ticked rows as one
    apply (Undo in the snackbar); Save for later puts them in Review. Text only through JSX; tokens-only CSS (style.css, BL-301 E). */
 import { Fragment, render } from "preact";
+import { linkWords } from "../../core/linkText.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { REGD } from "../../core/data.js";
 import { Icon } from "../Icon.jsx";
@@ -55,7 +56,7 @@ function Field({ row, f }) {
   const id = `fuf-${row.key}-${f.f}`, v = valueOf(row, f);
   const [bad, setBad] = useState("");
   if (f.kind === "text") {
-    return <TextEditor id={id} value={v} multiline={false} rows={1} cls="fu-in fu-ed" labelledBy={`${id}-l`}
+    return <TextEditor id={id} value={v} multiline={false} rows={1} cls="fu-in fu-ed" labelledBy={`${id}-l`} links
       onCommit={t => { if (t.trim() !== v) fuEdit(row.key, f, t.trim()); }} />;
   }
   if (f.kind === "enum") {
@@ -116,7 +117,7 @@ function Row({ row, marker }) {
           onClick={() => { fuOpen.value = open ? "" : row.key; }} onFocus={() => { fuHover.value = row.p; }}>
           <span class="fu-ty">{row.type}{row.flags.map(f => <span key={f.t} class={`fu-flag ${f.tone || "soft"}`} title={f.tip}>{f.t}</span>)}</span>
           {row.text && <span class="fu-tx">{row.text}</span>}
-          {(row.change || []).map(c => <span key={c.f} class="fu-ch">{c.label} <s>{c.from || "—"}</s> <span aria-hidden="true">→</span><span class="vh"> to </span> {c.to}</span>)}
+          {(row.change || []).map(c => <span key={c.f} class="fu-ch">{c.label} <s>{linkWords(c.from) || "—"}</s> <span aria-hidden="true">→</span><span class="vh"> to </span> {linkWords(c.to)}</span>)}
         </button>
         {row.notes.map(n => <div key={n} class="fu-q">{n}</div>)}
         {(row.lock || row.invalid) && <div class={row.invalid ? "fu-bad" : "fu-q"} id={`fun-${row.key}`}>

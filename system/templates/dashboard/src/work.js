@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
+import { linkHtml, linkWords } from "./core/linkText.js";
 import { drawFilterBar, fitFilterBar } from "./components/FilterBar.jsx";
 
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
@@ -73,7 +74,7 @@ export const countFor=(k,v)=>{ const d=defOf(k), one=new Set([v]); return items(
 /* sorting: a header click sorts, again reverses, a third time returns to the default order */
 // @ts-expect-error TS2362: true and false subtract as 1 and 0 (overdue items sort first)
 export const DEFSORT={actions:(a,b)=>(overdue(b)-overdue(a))||(a.due||"9").localeCompare(b.due||"9"),raid:(a,b)=>PRIOS.indexOf(a.pr)-PRIOS.indexOf(b.pr),decisions:(a,b)=>(a.st==="Pending")!==(b.st==="Pending")?(a.st==="Pending"?-1:1):a.st==="Pending"?(a.due||"9").localeCompare(b.due||"9"):b.date.localeCompare(a.date)};   /* BL-53: pending first, soonest needed first */
-export const SORTKEY={t:x=>x.t.toLowerCase(),o:x=>who(x.o).toLowerCase(),due:x=>x.due||"9999",pr:x=>PRIOS.indexOf(x.pr),st:x=>x.st,ws:x=>(x.ws||"").toLowerCase(),type:x=>x.type,resp:x=>(x.resp||"").toLowerCase(),by:x=>(x.by||"").toLowerCase(),date:x=>x.date,id:x=>x.id,src:x=>srcKind(x),upd:x=>x.upd_at||"",raised:x=>x.raised||""};   /* upd and raised: the Work board's sort chooser */
+export const SORTKEY={t:x=>x.t.toLowerCase(),o:x=>who(x.o).toLowerCase(),due:x=>x.due||"9999",pr:x=>PRIOS.indexOf(x.pr),st:x=>x.st,ws:x=>(x.ws||"").toLowerCase(),type:x=>x.type,resp:x=>linkWords(x.resp||"").toLowerCase(),by:x=>(x.by||"").toLowerCase(),date:x=>x.date,id:x=>x.id,src:x=>srcKind(x),upd:x=>x.upd_at||"",raised:x=>x.raised||""};   /* upd and raised: the Work board's sort chooser */
 export function rows(t=shared.WT,L=items().filter(x=>passes(x)),s=SORT[t],def=DEFSORT[t]){ if(!s) return L.sort(def);   /* BL-68: any page can sort its own list of one type */
   if(s.col==="_def"){ L.sort(def); return s.dir==="desc"?L.reverse():L; }   /* BL-128: the default order, reversed */
   const k=SORTKEY[s.col]||(()=>""); return L.sort((a,b)=>{ const x=k(a),y=k(b); return (x<y?-1:x>y?1:0)*(s.dir==="desc"?-1:1)||def(a,b); }); }
@@ -168,13 +169,13 @@ shared.COLVIS=store.get("creaite-cols",{actions:["t","o","due","pr","st"],raid:[
 export const cmTag=x=>x.client&&!("cmd" in x?cmdOK(x.cmd):cmOK(x.cm))?' <span class="tag warn">· client messaging to complete</span>':"";
 export function cell(k,x,t=shared.WT){ if(t==="all") return allCell(k,x);
   if(t==="decisions"&&k==="due") return `<td data-f="due" class="${decLate(x)?"late":""}" style="white-space:nowrap">${x.due?fd(x.due):"—"}<div class="x">${x.st==="Pending"&&x.due?rel(x.due):""}</div></td>`;
-  const h=(()=>{ if(k==="t"){ const sub=t==="actions"?`${x.ws?esc(x.ws):""}${x.upd?` · ${esc(x.upd)}`:""}`:t==="raid"?`${x.type}${x.ws?" · "+esc(x.ws):""}${x.type==="Dependency"&&x.st==="Open"&&!x.ms?" · not attached":""}`:""; return `<td class="title" data-f="t">${ico(kindOf(t,x))}${esc(x.t)}${cmTag(x)}${x.ar?' <span class="tag">Archived</span>':""}<div class="x"><a href="#" class="rowid" data-rid="${x.id}" title="Open ${x.id}">${x.id}</a> · ${pLink(x.p)}${sub}</div></td>`; }
+  const h=(()=>{ if(k==="t"){ const sub=t==="actions"?`${x.ws?esc(x.ws):""}${x.upd?` · ${linkHtml(x.upd)}`:""}`:t==="raid"?`${x.type}${x.ws?" · "+esc(x.ws):""}${x.type==="Dependency"&&x.st==="Open"&&!x.ms?" · not attached":""}`:""; return `<td class="title" data-f="t">${ico(kindOf(t,x))}${esc(x.t)}${cmTag(x)}${x.ar?' <span class="tag">Archived</span>':""}<div class="x"><a href="#" class="rowid" data-rid="${x.id}" title="Open ${x.id}">${x.id}</a> · ${pLink(x.p)}${sub}</div></td>`; }
   if(k==="o") return `<td data-f="o">${personLink(x.o)}</td>`;
   if(k==="due") return `<td data-f="due" class="${(t==="actions"?overdue(x):x.st==="Open"&&x.due&&x.due<TODAY)?"late":""}" style="white-space:nowrap">${x.due?fd(x.due):"—"}<div class="x">${x.due&&OPENST(x.st)?rel(x.due):""}</div></td>`;
   if(k==="pr") return `<td data-f="${t==="raid"?"imp":"pr"}" class="${x.pr==="Urgent"?"prio-urgent":""}">${x.pr}</td>`;
   if(k==="st") return `<td data-f="st">${x.st}</td>`;
   if(k==="ws") return `<td data-f="ws">${esc(x.ws||"—")}</td>`;
-  if(k==="resp") return `<td data-f="resp" class="x">${x.resp?esc(x.resp):'<span class="tag bad">None yet</span>'}</td>`;
+  if(k==="resp") return `<td data-f="resp" class="x">${x.resp?linkHtml(x.resp):'<span class="tag bad">None yet</span>'}</td>`;
   if(k==="by") return `<td data-f="by">${personLink(x.by,x.by)}</td>`;
   if(k==="date") return `<td data-f="date" style="white-space:nowrap">${fd(x.date)}</td>`;
   if(k==="id") return `<td class="x idc" style="white-space:nowrap">${x.id}</td>`;

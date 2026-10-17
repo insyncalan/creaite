@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { drawPeekNotes } from "./notes.js";
+import { linkWords } from "./core/linkText.js";
 import { actHref, actId } from "./activity.js";
 import { closeChat, openChat, send } from "./ask.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
@@ -385,7 +386,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))) return;   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft chase goes back to the item first */
@@ -694,7 +695,8 @@ PK.det={};
    the stored text stays as it was. Their text is read and set by textContent as before (the editor answers for it), so the
    commit on leaving the field, Esc, the rules and the AI drafts are unchanged. */
 export function pkEdMount(root){ if(!root) return; root.querySelectorAll(".pked").forEach(el=>{ if(el.cxed) return;
-  creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent",
+  creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent",links:!!el.dataset.pkml,      /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
+    
     ...(el.dataset.pkml||el.id==="pkTitle"?{ai:{place:el.dataset.pkml?"plain":"line",project:()=>{ const x=shared.CUR&&pkX(shared.CUR.k,pkCid()); return (x&&x.p)||""; }}}:{})}); }); }   /* BL-301 D: AI on a selection in the longer fields, and the title (one line: place "line", a suggestion never breaks it) */
 export const pkDetOpen=(x,id)=>!!((PK.pc&&PK.pc.id===id)||(id in PK.det?PK.det[id]:!!x.client));
 export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#pkDetT"); tg.setAttribute("aria-expanded",String(open)); $("#pkDet").hidden=!open; if(!open) return;
@@ -751,7 +753,7 @@ export function pkFeedItems(x,k){ const id=pkCid(), out=[], ul=pkUpdLabel(k);
   out.push(...feedLines(pkHistory(id),ch=>/^created\b/.test(ch)?"src":ch.toLowerCase().startsWith(ul+":")?"upd":"act"));   /* BL-250 A: shared; B: the whole history */
   if(shared.CUR.mode==="record") out.push({type:"src",who:"Source",html:`<div class="pk-src">${srcHTML(x.src)}</div>`,when:""});
   return out; }
-export const pkShort=(s,n=60)=>{ s=String(s??"").replace(/\s+/g," ").trim(); return !s?"empty":s.length>n?s.slice(0,n-1)+"…":s; };
+export const pkShort=(s,n=60)=>{ s=linkWords(String(s??"")).replace(/\s+/g," ").trim(); return !s?"empty":s.length>n?s.slice(0,n-1)+"…":s; };
 export function pkFeed(x,k){ const tab=PK.tab||"all";
   drawTabs($("#pkTabsHost"),{items:feedTabItems(tab,"pktab","pkTabSel"),selected:tab,onSelect:v=>{ if(!shared.CUR) return; PK.tab=v; pkFeed(curObj(),shared.CUR.k); },
     label:"Activity",className:"pk-tabs",tabClass:"pk-tab",id:"pkTabs",wrap:true});   /* BL-316: the Tabs building block */
