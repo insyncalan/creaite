@@ -262,9 +262,10 @@ export function factsHtml(t){ return String(t||"").split(/\n(?=## )/).map(b=>{ c
   return `<div class="factblk">${head}<ul>${L.slice(head?1:0).map(x=>`<li>${esc(x.replace(/^- /,""))}</li>`).join("")}</ul></div>`; }).join(""); }
 export async function curCheck(text,original){ const cur=shared.CURED; if(!cur||!viaServer()) return; text=text??edValue($("#curEd")); if(!String(text).trim()){ cur.notes=[]; setNotes(); return; }
   const claims=cur.claims?claimsPayload("ed"):undefined;   /* BL-207 */
-  cur.checking=true; setNotes(); const r=await api("/api/current/check",{code:cur.code,text,sources:cur.sources||"",original,claims,...execOpts()}); cur.checking=false;
-  if(shared.CURED!==cur) return; if(r.ok){ cur.notes=r.notes; cur.facts=r.facts; if(r.evidence) claimsApply("ed",r.evidence,claims); } else { cur.notes=null; snack(oneLine(r.message)||"Couldn't check the draft"); }
-  setNotes(); return r; }
+  const gen=cur.gen|0; cur.checking=true; curReady(false); setNotes(); const r=await api("/api/current/check",{code:cur.code,text,sources:cur.sources||"",original,claims,...execOpts()});
+  if(shared.CURED!==cur||(cur.gen|0)!==gen) return;   /* closed, or another version loaded meanwhile (that one has its own check): this answer is for text no longer shown */
+  cur.checking=false; if(r.ok){ cur.notes=r.notes; cur.facts=r.facts; if(r.evidence) claimsApply("ed",r.evidence,claims); } else { cur.notes=null; snack(oneLine(r.message)||"Couldn't check the draft"); }
+  setNotes(); curReady(true); return r; }
 export function rewriteHtml(){ const rw=shared.CURED&&shared.CURED.rewrite; if(!rw) return "";
   const notes=rw.notes?(rw.notes.length?`<ul class="rwnotes">${rw.notes.map(x=>`<li>${esc(x.note)}</li>`).join("")}</ul>`:'<div class="oknote">✓ Passes the checks and keeps your dates and numbers.</div>'):'<div class="sub">Checking…</div>';
   return `<div class="genrewrite" id="genRewrite" role="region" aria-label="Executive version"><div class="rwhead"><strong>Executive version</strong> <span class="sub">A draft. What is in the editor above is unchanged until you use this.</span></div>
@@ -313,7 +314,7 @@ export function curAttach(n){ const c=shared.CURED, slot=$(n===2?"#curEd2":"#cur
   attachSlash(c[k],{profile:"current",host:{image:pickImage,item:()=>insertHash(c[k])}});   /* #122 B: the / menu (taken away with the editor) */
   attachItemPick(c[k],{code:()=>(shared.CURED&&shared.CURED.code)||""}); }   /* #122 C: the shared # list, this project's items (taken away with the editor) */
 /** a new text for pane n (a draft, or the executive version): its editor is made again from it when the card is drawn */
-export function curLoad(n,md){ const c=shared.CURED; if(!c) return; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
+export function curLoad(n,md){ const c=shared.CURED; if(!c) return; c.gen=(c.gen|0)+1; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
 export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; const p=P.find(x=>x.code===code); if(!p) return; const [l,r]=splitPanes(p.current||"");
   if(pane===2) store.set("creaite-cur-collapsed",false);
   shared.CURED={code,orig:p.current||"",src1:l,src2:r,ed1:null,ed2:null,dirty:false,uploads:{},removed:new Set(),last:pane||1}; mountCurEdit();
@@ -321,7 +322,11 @@ export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; 
   if(!shared.CURED) return; const ev=evSaved(code), root=$("#curEd"); if(!ev||!root) return;
     const set={}; claimsMatch(root,ev).forEach(({n,h})=>{ const e=ev[h]; set[n]={text:claimText(root,n),ids:[],how:(e.how==="none"||e.how==="kept")?"none":"saved",saved:e,touched:true,...(e.kept!=null?{kept:e.kept}:{})}; });
     if(Object.keys(set).length){ shared.CURED.claims=set; claimPaint("ed"); } }
-export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=card&&card.querySelector(".curtext"); if(!shared.CURED||!box||shared.COCK!==shared.CURED.code) return;
+/** a signal for tests and assistive tech, no visible change: #curEd carries data-ready once the editor is mounted, its version drawn and the wording check has landed
+    (the check changes the height of the notes above the version bar), and data-draw="N" (counts up with each draw). Both are taken off while a draw or a check is under way. */
+function curReady(on){ const e=$("#curEd"); if(!e) return; if(on) e.dataset.ready="1"; else e.removeAttribute("data-ready"); }
+function curDrawn(){ const e=$("#curEd"); if(!e) return; shared.CURDRAW=(shared.CURDRAW|0)+1; e.dataset.draw=String(shared.CURDRAW); if(!shared.CURED.checking) curReady(true); }
+export function mountCurEdit(){ curReady(false); (()=>{ const card=$("#v-cockpit .curcard"), box=card&&card.querySelector(".curtext"); if(!shared.CURED||!box||shared.COCK!==shared.CURED.code) return;
   card.classList.add("editing"); card.querySelectorAll(".pencil").forEach(b=>b.hidden=true);
   curBarOff();
   putHTML(box,html`<div class="rte inplace"><div id="curBar" class="curbar"></div>
@@ -334,7 +339,7 @@ export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=
   curAttach(1); curAttach(2); curBar(); curAiMenu(); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
   if(shared.CURED){ const t=csTitle(shared.CURED.code);
     $("#curEd")?.setAttribute("aria-label",`${t}, left pane`); $("#curEd2")?.setAttribute("aria-label",`${t}, right pane`); csHead(shared.CURED.code); }
-  if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); curVersSync(); } }
+  if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); curVersSync(); curDrawn(); } }
 export function endCurEdit(){ curBarOff(); evPanelClose(); curDrop(); DISCARD=null; $("#discardBar").classList.remove("on"); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); }
 export const figRefs=ed=>[...ed.querySelectorAll("figure.cimg")].map(f=>f.dataset.ref).filter(r=>r&&!r.startsWith("new:"));
 /* BL-76: an image taken out with its × stays out when saved; one that merely isn't in a drafted text is kept. (Only the × removes a

@@ -44482,11 +44482,13 @@ ${s5}`;
       return;
     }
     const claims = cur.claims ? claimsPayload("ed") : void 0;
+    const gen = cur.gen | 0;
     cur.checking = true;
+    curReady(false);
     setNotes();
     const r4 = await api("/api/current/check", { code: cur.code, text, sources: cur.sources || "", original, claims, ...execOpts() });
+    if (shared.CURED !== cur || (cur.gen | 0) !== gen) return;
     cur.checking = false;
-    if (shared.CURED !== cur) return;
     if (r4.ok) {
       cur.notes = r4.notes;
       cur.facts = r4.facts;
@@ -44496,6 +44498,7 @@ ${s5}`;
       snack(oneLine(r4.message) || "Couldn't check the draft");
     }
     setNotes();
+    curReady(true);
     return r4;
   }
   function rewriteHtml() {
@@ -44642,6 +44645,7 @@ ${s5}`;
   function curLoad(n4, md2) {
     const c5 = shared.CURED;
     if (!c5) return;
+    c5.gen = (c5.gen | 0) + 1;
     const k5 = n4 === 2 ? "ed2" : "ed1";
     if (c5[k5]) {
       c5[k5].destroy();
@@ -44671,7 +44675,21 @@ ${s5}`;
       claimPaint("ed");
     }
   }
+  function curReady(on2) {
+    const e4 = $("#curEd");
+    if (!e4) return;
+    if (on2) e4.dataset.ready = "1";
+    else e4.removeAttribute("data-ready");
+  }
+  function curDrawn() {
+    const e4 = $("#curEd");
+    if (!e4) return;
+    shared.CURDRAW = (shared.CURDRAW | 0) + 1;
+    e4.dataset.draw = String(shared.CURDRAW);
+    if (!shared.CURED.checking) curReady(true);
+  }
   function mountCurEdit() {
+    curReady(false);
     (() => {
       const card = $("#v-cockpit .curcard"), box = card && card.querySelector(".curtext");
       if (!shared.CURED || !box || shared.COCK !== shared.CURED.code) return;
@@ -44706,6 +44724,7 @@ ${s5}`;
       rwWrap();
       evRefresh();
       curVersSync();
+      curDrawn();
     }
   }
   function endCurEdit() {
