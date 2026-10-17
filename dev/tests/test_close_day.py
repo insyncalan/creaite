@@ -100,6 +100,29 @@ class CloseData(unittest.TestCase):
         self.assertEqual(defaults["day"]["close_from"], "17:30")       # BL-320 (Alan, 14-10-2026): the accepted mockup's default
 
 
+class CloseNextWorkingDay(unittest.TestCase):
+    """#138: the day band hides an unplanned weekend, but Close the day's tomorrow is the next working day by the weekend setting,
+    not the band's next visible day. Fixed dates only; Friday 16-10-2026 and Thursday 15-10-2026."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+
+    def card(self, today, weekend, days):
+        import close_day
+        from datetime import date
+        st = {"work": {"weekend_days": weekend}}
+        d = {"projects": [], "days": {"days": [{"date": x, "long": x, "meetings": [{"start": "10:00", "title": t}]} for x, t in days]}}
+        return close_day.tomorrow(d, st, date.fromisoformat(today))
+
+    def test_a_friday_close_names_monday_even_with_a_saturday_meeting_in_the_band(self):
+        t = self.card("2026-10-16", [5, 6], [("2026-10-17", "Saturday thing"), ("2026-10-19", "Monday thing")])
+        self.assertEqual((t["day"], t["in_calendar"], [m["title"] for m in t["meetings"]]), ("2026-10-19", True, ["Monday thing"]))
+        self.assertTrue(t["friday"])
+
+    def test_a_changed_weekend_moves_the_gap(self):
+        t = self.card("2026-10-15", [4, 5], [("2026-10-16", "Friday thing"), ("2026-10-18", "Sunday thing")])    # Friday and Saturday off
+        self.assertEqual((t["day"], [m["title"] for m in t["meetings"]]), ("2026-10-18", ["Sunday thing"]))
+        self.assertFalse(t["friday"])
+
+
 class CloseBrowser(LiveBrowserCase):
     shared_server = False
 
