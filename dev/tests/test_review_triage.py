@@ -30,7 +30,7 @@ def pending(item):
 def created(days_ago):
     fixed = os.environ.get("CREAITE_NOW")                                  # #177: days come from creaite's clock, never the real date
     now = datetime.strptime(fixed, "%Y-%m-%d %H:%M") if fixed else datetime.now()
-    return (now - timedelta(days=days_ago)).strftime("%Y-%m-%dT09:00:00")
+    return (now - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:00")   # same time of day: whole days at any hour (09:00 read 0 days before 09:00)
 
 
 def load_queue(v):
