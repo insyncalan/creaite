@@ -96,6 +96,18 @@ class PersonMenu(SentCase):
         self.assertIn("No email on record: add details first", b.eval(f'document.querySelector("{MENU}").textContent'))
         b.key("Escape")
 
+    def test_add_details_opens_the_details_dialog_on_the_persons_page(self):
+        """Finding 8: choosing Add details lands on the person's page and opens the details dialog (no fixed delay)."""
+        b = self.b
+        b.eval("""window.__em=(REG.find(x=>x.name==='Tom Reid')||{}).email; (REG.find(x=>x.name==='Tom Reid')||{}).email=''; openContextMenu(cxPerson('Tom Reid',''),200,200,{label:'Tom Reid'})""")
+        b.wait(f'!!document.querySelector("{MENU}")')
+        b.eval(f"""[...document.querySelectorAll("{MENU} [role=menuitem]")].find(x=>x.textContent.includes("Add details")).click()""")
+        try:
+            b.wait("document.getElementById('personDlg').open")
+            self.assertEqual(b.eval("VIEW"), "person")
+        finally:
+            b.eval("document.getElementById('personDlg').close(); (REG.find(x=>x.name==='Tom Reid')||{}).email=window.__em")
+
     def test_a_registered_person_without_an_email_also_gets_add_details(self):
         b = self.b
         b.eval("""REG.push({name:'Quiet Person',email:'',aliases:[],org:'',role:'',extra:{}}); openContextMenu(cxPerson('Quiet Person',''),200,200,{label:'Quiet Person'})""")

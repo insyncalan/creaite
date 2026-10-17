@@ -582,7 +582,7 @@ export function cxPerson(name,only){ const x=PERS().find(y=>y.name===name), p=x&
   out.push({label:"Draft email",icon:"mail",disabled:!email,hint:email?"":"No email on record: add details first",run:()=>openDraftEmail(name,"update",starts)},
     {label:`Open ${first}'s page`,icon:"user",run:()=>go("person",name)});
   if(email) out.push({label:"Copy email address",icon:"copy",run:()=>cxCopy(email,"the email address")});
-  if(!email) out.push({label:"Add details",icon:"pencil",run:()=>{ go("person",name); setTimeout(()=>{ const b=$("#ppEdit"); if(b) b.click(); },120); }});
+  if(!email) out.push({label:"Add details",icon:"pencil",run:()=>{ go("person",name); let n=0; const tick=()=>{ const b=$("#ppEdit"); if(b){ b.click(); return; } if(++n<30) requestAnimationFrame(tick); }; tick(); }});
   return out; }
 /* the focused row for Shift+F10 and the context-menu key: the focused element's item, or the list's cursor row */
 export function cxCursor(){ const a=document.activeElement; let c=a&&a!==document.body?cxTarget(a):null; if(c) return c;

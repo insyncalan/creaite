@@ -358,7 +358,7 @@ NEVER = [   # (what it looks like, why, where to go instead); the first that mat
                 r"(?:items?|actions?|overdue|risks?|issues?|decisions?|milestones?)\b"),
      "This box changes the one item that's open. For several items at once, ask creaite or say it in Claude Code (cx-edit).", "ask"),
     (re.compile(r"^(?!.*client (?:message|messaging|wording)).*\b(?:email|e-mail|mail|teams|send|message|ping|whatsapp|slack)\b"),
-     "Nothing is ever sent from here. Draft chase writes the email for you to copy and send.", "draft_chase"),
+     "Nothing is ever sent from here. Draft email writes the email for you to copy and send.", "draft_chase"),
     (re.compile(r"\b(?:health|rag|project details?|sponsor|phase)\b"),
      "That isn't part of this item. Health and project details are on the project page.", "project_page"),
     (re.compile(r"\bsettings?\b"), "Settings aren't changed from here.", "settings"),
@@ -428,7 +428,7 @@ def _promise(r, raw, t, low, s0):
 
 
 def _chase(r, raw, t, low, s0):
-    """"chase Tom, firmer": hand over to Draft chase (BL-298) with the recipient and the tone. Nothing is sent."""
+    """"chase Tom, firmer": hand over to Draft email (BL-298) with the recipient and the tone. Nothing is sent."""
     m = re.match(r"^chase\s+(.+?)(?:[,\s]+(?:in\s+)?(?:a\s+|the\s+)?(first|second|firmer|firm|gentle|polite|friendly|stronger)"
                  r"(?:\s+(?:one|reminder|tone|time))?)?$", low)
     if not m:
@@ -443,7 +443,7 @@ def _chase(r, raw, t, low, s0):
     tone = {"first": 0, "gentle": 0, "polite": 0, "friendly": 0, "second": 1, "firmer": 2, "firm": 2, "stronger": 2}.get(m.group(2))
     r.task = {"kind": "chase", "pane": {"id": r.row["id"], "tone": tone, "to": to}}
     word = {0: "First", 1: "Second", 2: "Firmer"}.get(tone, "the tone from how often it was chased")
-    r.mark(s0, s0 + len(t), f"Draft chase{(' to ' + to) if to else ''}, {word}. Nothing is sent")
+    r.mark(s0, s0 + len(t), f"Draft email{(' to ' + to) if to else ''}, {word}. Nothing is sent")
     return True
 
 

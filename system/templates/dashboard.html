@@ -41563,10 +41563,16 @@ ${s5}`;
     if (email) out.push({ label: "Copy email address", icon: "copy", run: () => cxCopy(email, "the email address") });
     if (!email) out.push({ label: "Add details", icon: "pencil", run: () => {
       go2("person", name);
-      setTimeout(() => {
+      let n4 = 0;
+      const tick = () => {
         const b5 = $("#ppEdit");
-        if (b5) b5.click();
-      }, 120);
+        if (b5) {
+          b5.click();
+          return;
+        }
+        if (++n4 < 30) requestAnimationFrame(tick);
+      };
+      tick();
     } });
     return out;
   }
@@ -49681,7 +49687,15 @@ ${d5.text}`);
       SA().chases = r4.chases || {};
       const k5 = sentKindOf(id2);
       const who2 = pane.to.name || pane.to.first || "them";
-      const done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {} }) : 0;
+      let done = 0;
+      try {
+        done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {} }) : 0;
+      } catch (err2) {
+        sending.current = false;
+        setBusy(false);
+        snack("The update couldn't be logged: press I sent it to try again");
+        return;
+      }
       if (!done) snack(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be staged.`);
       dropPolish();
       onBack();
@@ -51734,7 +51748,10 @@ ${d5.text}`);
   async function pkUndoLast(only) {
     await shared.PKQ;
     const s5 = only || shared.PKS[shared.PKS.length - 1];
-    if (only && !shared.PKS.includes(only)) return;
+    if (only && !shared.PKS.includes(only)) {
+      snack("Already applied or undone");
+      return;
+    }
     await (async () => {
       if (!s5) return;
       let ok2 = false;
@@ -53393,6 +53410,7 @@ ${d5.text}`);
     openDialog(d5);
   }
   function openDraftEmail(name, mode = "update", only) {
+    shared.SENTVIA = "";
     (() => {
       const x5 = PERS().find((y5) => y5.name === name);
       if (!x5) return;
@@ -53656,7 +53674,6 @@ ${d5.text}`);
     }
   }
   async function deCopyEmail(withHtml, btn) {
-    shared.SENTVIA = withHtml ? "email" : "message";
     const prev = $("#dePrev"), html2 = deHtml(), text = shared.DE.edited ? prev.innerText : deBuild().text;
     try {
       if (!navigator.clipboard) throw new Error("no clipboard");
@@ -53664,6 +53681,7 @@ ${d5.text}`);
         if (typeof ClipboardItem === "undefined" || !navigator.clipboard.write) throw new Error("no rich clipboard");
         await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html2], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
       } else await navigator.clipboard.writeText(text);
+      shared.SENTVIA = withHtml ? "email" : "message";
       deSay(btn, withHtml ? "Copied: paste it into Outlook" : "Copied as plain text", true);
     } catch (err) {
       deSelect("dePrev");
@@ -53726,7 +53744,14 @@ ${d5.text}`);
     }
     SA().chases = r4.chases || {};
     const chases = SA().chases;
-    const n4 = await sentLog(picked.map((i5) => ({ k: i5.k, id: i5.id })), { name, mode, replyBy, chases });
+    let n4 = 0;
+    try {
+      n4 = await sentLog(picked.map((i5) => ({ k: i5.k, id: i5.id })), { name, mode, replyBy, chases });
+    } catch (err) {
+      btn.disabled = false;
+      snack("The update couldn't be logged: press I sent it to try again");
+      return;
+    }
     if (shared.DE && shared.DE.name === name && $("#deDlg")?.open) $("#deDlg").close();
     if (!n4) snack(`Recorded on ${plur(ids.length, "item")}`);
     if (shared.VIEW === "person" && shared.PERSON) renderPerson(shared.PERSON);
@@ -70976,7 +71001,6 @@ ${d5.text}`);
         "kindLabel",
         "laneDrop",
         "layoutOf",
-        "linkHtml",
         "linkSegments",
         "linkUrl",
         "linkWithAddress",
@@ -71219,6 +71243,7 @@ ${d5.text}`);
         "seeAll",
         "send",
         "sensitive",
+        "sentLog",
         "setChatWidth",
         "setLayout",
         "setLive",

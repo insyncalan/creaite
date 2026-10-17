@@ -47,12 +47,15 @@ class SentCase(ChaseCase):
                    latest_update="Scripts half written", source="Email · Subject: scripts · Sent: 2026-10-05 10:00"),
             action(9, description="Book the UAT room", owner="Sara Example", due_date="2026-10-09", raised="2026-10-05",
                    source="Email · Subject: room · Sent: 2026-10-05 10:00"),
+            action(11, description="Confidential: review the retention terms", owner="Sara Example", due_date="2026-10-08", raised="2026-10-05",
+                   latest_update="Terms with legal", source="Email · Subject: terms · Sent: 2026-10-05 10:00"),
             action(10, description="Confirm the go-live checklist", owner="Sara Example", due_date="2026-10-30", raised="2026-10-05",
                    source="Email · Subject: checklist · Sent: 2026-10-05 10:00"),
         ])
         v.run("apply")
         ids = {r["description"]: r["id"] for r in v.rows("actions")}
         cls.s_scripts, cls.s_room, cls.s_check = ids["Send the test scripts"], ids["Book the UAT room"], ids["Confirm the go-live checklist"]
+        cls.s_conf = ids["Confidential: review the retention terms"]
 
     def open_person_email(self, mode):
         self.b.eval("S.ownDomains=['client.com','example.com']")                              # every item starts ticked, as for a colleague
@@ -223,6 +226,71 @@ class PopupISentIt(SentCase):
         b.pump(0.5)
         self.assertTrue(b.eval("document.getElementById('deDlg').open"))
         self.assertFalse((self.v.root / "system/staging/chases.json").exists())
+
+
+class LogEdges(SentCase):
+    shared_server = True
+
+    def test_a_confidential_item_logs_the_short_form(self):
+        """Finding 4: who and how only, no reminder number, reply-by or detail. The pane and the popup refuse to offer a confidential
+        item, so the logger is called as the page calls it, for an item that became confidential after the pane opened."""
+        b = self.b
+        for mode, word in (("chase", "Chased"), ("update", "Emailed")):
+            b.eval(f"sentLog([{{k:'actions',id:{self.s_conf!r}}}],{{name:'Sara Example',mode:{mode!r},replyBy:'2026-10-19',chases:{{{self.s_conf!r}:{{n:2}}}}}}); 0")
+            b.wait(f"PKS.some(s=>s.id==={self.s_conf!r})")
+            b.pump(0.4)
+            line = staged(self.v.root, self.s_conf)[-1][1]["changes"]["latest_update"].split("\n")[0]
+            self.assertEqual(line, f"{shown(b)}: {word} Sara Example by email.")
+            self.undo()
+            self.assertEqual(staged(self.v.root, self.s_conf), [])
+
+    def test_the_copy_choice_does_not_leak_into_the_next_popup(self):
+        """Finding 5: Copy as plain text in one popup, then a new popup: I sent it without copying says email."""
+        b = self.b
+        self.open_person_email("update")
+        b.eval(CLIPBOARD)
+        b.click("#deCopyText")
+        b.pump(0.4)
+        b.eval("document.getElementById('deDlg').close()")
+        self.open_person_email("update")
+        b.click("#deSent")
+        b.wait("!document.getElementById('deDlg').open")
+        b.pump(0.4)
+        line = staged(self.v.root, self.s_scripts)[-1][1]["changes"]["latest_update"].split("\n")[0]
+        self.assertIn("by email asking for an update", line)
+        self.undo()
+
+    def test_a_failure_while_logging_leaves_the_popup_button_usable(self):
+        """Finding 6: if staging throws, the button is enabled again and the person is told."""
+        b = self.b
+        self.open_person_email("update")
+        b.eval("window.__q=shared.PKQ; shared.PKQ={then(){ throw new Error('boom') }}; 0")
+        try:
+            b.click("#deSent")
+            b.pump(0.8)
+            self.assertFalse(b.eval("document.getElementById('deSent').disabled"))
+            self.assertIn("couldn't be logged", b.eval("document.getElementById('snackT').textContent"))
+        finally:
+            b.eval("shared.PKQ=window.__q")
+        b.eval("document.getElementById('deDlg').close()")
+
+    def test_a_failure_while_logging_in_the_pane_lets_it_go_back(self):
+        b = self.b
+        self.chase(self.theirs)
+        b.eval("window.__q=shared.PKQ; shared.PKQ={then(){ throw new Error('boom') }}; 0")
+        try:
+            b.click("#chSent")
+            b.pump(0.8)
+            self.assertFalse(b.eval("document.getElementById('chSent').disabled"))
+            self.assertIn("couldn't be logged", b.eval("document.getElementById('snackT').textContent"))
+        finally:
+            b.eval("shared.PKQ=window.__q")
+
+    def test_undo_after_the_entry_is_gone_says_so(self):
+        """Finding 7: an Undo for something already applied or undone says so instead of doing nothing."""
+        b = self.b
+        b.eval("pkUndoLast({name:'gone-dashboard.json',k:'actions',id:'X-1'})")
+        b.wait("/already/i.test(document.getElementById('snackT').textContent)")
 
 
 class CopyIdAndNames(SentCase):

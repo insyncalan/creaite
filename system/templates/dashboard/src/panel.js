@@ -619,7 +619,7 @@ export async function pkApply(){ PKNEWIDS=[]; await shared.PKQ; const n=shared.P
     snack(done?`Applied ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still staged (changed elsewhere since)`:""}. A backup was taken first`:"Nothing applied: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null);   /* BL-179: names what it created */
     return done; } finally{ $("#pkApply").disabled=false; } }
 export async function pkUndoLast(only){ await shared.PKQ; const s=only||shared.PKS[shared.PKS.length-1];   /* only: undo exactly this staged entry (#153), not the last one */
-  if(only&&!shared.PKS.includes(only)) return;   /* already undone or applied */
+  if(only&&!shared.PKS.includes(only)){ snack("Already applied or undone"); return; }
   await (async()=>{ if(!s) return; let ok=false;
   try{ ok=await vq(async()=>{ const path="system/staging/"+s.name; if(!/-dashboard(-\d+)?\.json$/.test(s.name)||!await shared.VW.exists(path)) return false;
       const data=JSON.parse(await shared.VW.read(path)); if(data.source_run!=="dashboard"||(data.items||[]).some(i=>i.applied)) return false;

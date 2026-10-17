@@ -137,7 +137,7 @@ export function deDlgEl(){ let d=$("#deDlg"); if(d) return d;
 export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=title; drawDraftEmail(true); openDialog(d); }
 /* from a person's page: an update request, or a chase of their overdue items */
 /* only (BL-210, Decisions needed): one item's ID; it alone starts ticked (if the outside-address rule allows), the rest are offered unticked */
-export function openDraftEmail(name,mode="update",only){ (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
+export function openDraftEmail(name,mode="update",only){ shared.SENTVIA=""; (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
   const all=deItems(x), ok=all.filter(i=>!deBarred(i)), email=(x.p&&x.p.email)||"", chase=ok.filter(deOverdue);
   if(!ok.length){ snack(`Nothing open for ${name}, so no email is needed`); return; }
   if(mode==="chase"&&(!chase.length||deMe(name)||(only&&!chase.some(i=>i.id===only)))) mode="update";   /* BL-342 N3: a thread's Chase on an item not past its date opens the update email */
@@ -235,10 +235,11 @@ export function deSelect(id){ const el=$("#"+id); if(!el) return; if(el.select){
 export async function deCopyText(text,btn,selectId){ try{ if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error("no clipboard"); await navigator.clipboard.writeText(text); deSay(btn,"Copied",true); }
   catch(err){ deSelect(selectId); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
 /* what is on screen is what is copied: the preview's own HTML (with any edits) and its text, together, so Outlook pastes the table and the colours */
-export async function deCopyEmail(withHtml,btn){ shared.SENTVIA=withHtml?"email":"message"; const prev=$("#dePrev"), html=deHtml(), text=shared.DE.edited?prev.innerText:deBuild().text;
+export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=deHtml(), text=shared.DE.edited?prev.innerText:deBuild().text;
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
     if(withHtml){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); }
     else await navigator.clipboard.writeText(text);
+    shared.SENTVIA=withHtml?"email":"message";   /* only once the copy has gone through */
     deSay(btn,withHtml?"Copied: paste it into Outlook":"Copied as plain text",true); }
   catch(err){ deSelect("dePrev"); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
 /* ===== v2.3.0 #153 ===== "I sent it" logs the work. In the pane and in this popup it records the chase (chases.json: item IDs, the date and
@@ -278,7 +279,8 @@ export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase ne
   btn.disabled=true; const r=await api("/api/chases",{ids,mode});
   if(!r.ok){ btn.disabled=false; snack(oneLine(r.message)||"Not recorded"); return; }
   SA().chases=r.chases||{}; const chases=SA().chases;
-  const n=await sentLog(picked.map(i=>({k:i.k,id:i.id})),{name,mode,replyBy,chases});
+  let n=0; try{ n=await sentLog(picked.map(i=>({k:i.k,id:i.id})),{name,mode,replyBy,chases}); }
+  catch(err){ btn.disabled=false; snack("The update couldn't be logged: press I sent it to try again"); return; }
   if(shared.DE&&shared.DE.name===name&&$("#deDlg")?.open) $("#deDlg").close();
   if(!n) snack(`Recorded on ${plur(ids.length,"item")}`);
   if(shared.VIEW==="person"&&shared.PERSON) renderPerson(shared.PERSON); }
