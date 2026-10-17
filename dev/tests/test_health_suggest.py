@@ -196,6 +196,21 @@ class HealthSuggest(LiveBrowserCase):
         self.assertEqual(b.eval("document.getElementById('f_reason').value"), "Alan wrote this.")                       # not overwritten silently
         self.assertEqual(self.health(), before)
 
+    def test_a_kept_reason_counts_as_used_and_a_save_that_fails_validation_counts_nothing(self):
+        b = self.b
+        self.open_form()
+        b.eval("window.__hs.delay=600")
+        b.click("#pFields [data-hsuggest]")
+        b.eval("(()=>{ const r=document.getElementById('f_reason'); r.value='Alan wrote this.'; r.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.wait("document.querySelector('#hSug .drcard')", 15)
+        b.click("#hSug [data-hsdo=use]")
+        b.eval("(()=>{ const r=document.getElementById('f_reason'); r.value=''; r.dispatchEvent(new Event('input',{bubbles:true})); document.getElementById('pSave').click(); })()")
+        time.sleep(1)
+        self.assertEqual((self.stats_reason().get("used", 0), self.stats_reason().get("edited", 0)), (0, 0))      # the form refused to save: nothing counted
+        b.eval("(()=>{ const r=document.getElementById('f_reason'); r.value='Alan wrote this.'; r.dispatchEvent(new Event('input',{bubbles:true})); document.getElementById('pSave').click(); })()")
+        self.counted_event("used", 1)
+        self.assertEqual(self.stats_reason().get("edited", 0), 0)                                                     # his own reason: used, not edited
+
     def test_reject_clears_and_counts_and_esc_does_the_same_and_returns_focus(self):
         b = self.b
         self.suggest()
@@ -383,12 +398,40 @@ class ClientHealthRow(ReportRow, LiveBrowserCase):
         b.wait(f"!document.querySelector('{self.section} .sheet-redraft')")
         self.assertEqual(b.eval(f"document.querySelector('{self.section} .crflag').textContent"), "OFF TRACK")
         self.assertTrue(b.eval("!!document.querySelector('#v-clientreport [data-crdif]')"))          # it differs from the internal flag, and says so
-        # the reason the flag differs is Alan's to write: Use records the difference but does not invent the reason
-        b.click("#v-clientreport [data-crflag]")
+        # the reason the flag differs is Alan's to write: Use records the difference but does not invent it, and opens the popover on it
         b.wait("document.getElementById('crWhy')")
+        self.assertEqual(b.eval("(document.activeElement||{}).id+'/'+(document.activeElement||{}).tagName"), "crWhy/TEXTAREA")
         self.assertEqual(b.eval("document.getElementById('crWhy').value"), "")
         self.assertTrue(b.eval("document.querySelector('[data-crhsave]').disabled"))
         self.assertEqual(b.errors, [])
+
+
+class ClientCheckNeedsTheReason(unittest.TestCase):
+    """The existing client check: a health difference with an EMPTY reason is not ready; with a reason it is."""
+
+    def left_out(self, reason):
+        import client_check
+        import client_leak
+        doc = {"project": "ABC", "date": "2026-10-09", "sections": [],
+               "meta": {"health_diff": {"internal": "On track", "client": "At risk", "reason": reason}}}
+        keep = (client_check.report_doc.client_ready, client_check.left_items, client_check._unticked_logos, client_leak.findings, client_leak.connect)
+        client_check.report_doc.client_ready = lambda d: (True, "")
+        client_check.left_items = lambda d, c: []
+        client_check._unticked_logos = lambda d: []
+        client_leak.findings = lambda d, c: []
+        client_leak.connect = lambda: None
+        try:
+            return client_check.left_out(doc)
+        finally:
+            (client_check.report_doc.client_ready, client_check.left_items, client_check._unticked_logos,
+             client_leak.findings, client_leak.connect) = keep
+
+    def test_an_empty_reason_is_not_ready_and_a_written_one_is(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+        empty = self.left_out("  ")
+        self.assertFalse(empty["ready"])
+        self.assertIn("Write why the client's health differs", empty["not_ready"])
+        self.assertTrue(self.left_out("The client only sees the confirmed items.")["ready"])
 
 
 if __name__ == "__main__":

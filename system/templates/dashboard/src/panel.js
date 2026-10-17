@@ -340,7 +340,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
     const lc=$("#f_learn"); if(lc&&lc.checked&&f.p) learnSignal(f.p,lc.dataset.kind,lc.dataset.value);
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
     closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } return; }
-  if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; closePanel();
+  if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; hsSaved(); closePanel();
     await save(`${p.name} health: ${before.health||"not set"} → ${f.health}`,[{op:"update",table:"projects",id:p.code,changes:{health:f.health,health_reason:f.reason}}],null,()=>Object.assign(p,f),()=>Object.assign(p,before)); return; }
 }
 /* Current state is saved as a proposal that rewrites the section in the project's CLAUDE.md (undoable) */
@@ -1284,11 +1284,14 @@ export function hSugDraw(){ const ev=$("#hEvidence"); if(!ev||!shared.CUR||share
   putHTML(host,raw(c?(c.d?hsCardHtml(c.d,c.reason):c.html):"")); }
 function hsClose(rejected){ if(rejected&&HSG&&HSG.d) hsStat("rejected"); HSG=null; hSugDraw(); const b=$("#pFields [data-hsuggest]"); if(b) b.focus(); }
 /** @type {any} */ let HSUSED=null;                       /* {suggested}: Use filled the form; counted when the form is saved, not before */
+/** Called by the health form once it has passed validation and is being saved: counts the suggestion that was used (a kept reason counts as used). */
+export function hsSaved(){ if(!HSUSED) return; hsStat(HSUSED.kept?"used":hsUse($("#f_reason")?.value,HSUSED.suggested)); HSUSED=null; }
 function hsFill(){ const c=HSG; if(!c||!c.d) return false; const hs=$("#f_health"), rs=$("#f_reason"); if(!hs||!rs) return false;
   hs.value=c.d.health; hs.dispatchEvent(new Event("change",{bubbles:true}));
-  if(rs.value!==c.base) snack("Your reason was kept: you changed it while the suggestion was being written");   /* never overwritten silently */
+  const kept=rs.value!==c.base;
+  if(kept) snack("Your reason was kept: you changed it while the suggestion was being written");   /* never overwritten silently */
   else { rs.value=c.reason; rs.dispatchEvent(new Event("input",{bubbles:true})); }
-  HSUSED={suggested:c.d.reason}; HSG=null; hSugDraw(); return true; }
+  HSUSED={suggested:c.d.reason,kept}; HSG=null; hSugDraw(); return true; }
 async function hsRun(){ if(!shared.CUR||shared.CUR.mode!=="health") return; const b=$("#pFields [data-hsuggest]");
   if(b&&b.getAttribute("aria-disabled")==="true"){ snack(b.dataset.tip||"Drafting isn't available"); return; }
   const why=draftWhyNot("health"); if(why){ snack(why); return; }
@@ -1325,7 +1328,6 @@ $("#pFields").addEventListener("click",e=>{ const s=e.target.closest("[data-hsug
   if(!HSG||!HSG.d) return; if(hsFill()){ if(w==="save") $("#pSave").click(); else { const t=$("#f_reason"); if(t) t.focus(); } } });
 $("#pFields").addEventListener("input",e=>{ if(HSG&&e.target.id==="hsgReason") HSG.reason=e.target.value; });
 $("#pFields").addEventListener("keydown",e=>{ if(e.key==="Escape"&&e.target.closest&&e.target.closest("#hSug")&&HSG&&HSG.d){ e.preventDefault(); e.stopPropagation(); hsClose(true); } });
-$("#pFoot").addEventListener("click",e=>{ if(!HSUSED||!e.target.closest("#pSave")) return; hsStat(hsUse($("#f_reason")?.value,HSUSED.suggested)); HSUSED=null; },true);   /* #203: used or edited, once the form is saved */
 /* counted when the form is saved (used or edited) or left (rejected) */
 $("#pFoot").addEventListener("click",e=>{ if(!shared.DRH||!shared.DRH.used||!e.target.closest("#pSave")) return; draftStat("reason",drSame($("#f_reason")?.value,shared.DRH.used)?"used":"edited"); shared.DRH=null; },true);
 document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drfc]"), u=e.target.closest("#mvFcDraft [data-drdo]");

@@ -272,7 +272,7 @@ function SectionBlock({ s, i, p, peer }) {
         }
         else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a.lines || []).map((/** @type {string} */ l) => `- ${l}`).join("\n")}` }, "New lines added");
         onEvent({ type: "redraft", id: s.id, choice, ...(s.type === "health" ? { section: "health" } : {}) }); setRd(null);
-        if (a.health) setTimeout(() => /** @type {HTMLElement|null} */ (box.current?.querySelector(".sheet-spark"))?.focus(), 0); }}
+        if (a.health && !(choice === "use" && a.apply)) setTimeout(() => /** @type {HTMLElement|null} */ (box.current?.querySelector(".sheet-spark"))?.focus(), 0); }}
         onOpen={ref => { openSheetRef(ref, p.onOpenItem); onEvent({ type: "item", ref }); }} known={ref => known(ref, doc)} /> : null}
       {ownRender ? ownRender(ctx) : <SheetDefault ctx={ctx} rowFn={(p.renderers.row || {})[s.id]} />}
     </section></SHEET_HERE.Provider>;
