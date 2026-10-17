@@ -48,7 +48,7 @@ class Header(LiveBrowserCase):
           const first=arrows(); goDay('2026-10-16'); const later=arrows(); goDay(TODAY);
           return {pieces:['todayDate','dayHead','dayLine','dayMeets','dayClose'].every(id=>band.contains(document.getElementById(id))),
             full:Math.round(r(band).width)===v.clientWidth, first, later, labels:[...document.querySelectorAll('.dayedge')].map(e=>e.getAttribute('aria-label')),
-            next:band.nextElementSibling.id, firstSec:[...document.querySelectorAll('#tBrief>.tsec')].find(s=>!s.hidden).id}; })()""")
+            next:(n=>n.id==='hFirst'?n.nextElementSibling:n)(band.nextElementSibling).id, firstSec:[...document.querySelectorAll('#tBrief>.tsec')].find(s=>!s.hidden).id}; })()""")
         self.assertTrue(o["pieces"])                                    # the day line, headline, the line, the meetings, Close the day
         self.assertTrue(o["full"])                                      # the header at full width
         self.assertEqual(o["labels"], ["Previous day", "Next day"])
