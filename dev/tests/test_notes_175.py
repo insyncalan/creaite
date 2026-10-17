@@ -120,12 +120,12 @@ class OldDrafts(Base):
         self.d = self.v.root / DRAFTS
         self.d.mkdir(parents=True, exist_ok=True)
         self.old = {f"{HEX}.json": json.dumps({"path": NOTE, "body": "old typing", "changes": {}}),
-                    f"{HEX[::-1]}.json": json.dumps({"path": OTHER, "body": "since deleted"}),
-                    f"{HEX}.json.tmp": "{"}
+                    f"{HEX[::-1]}.json": json.dumps({"path": OTHER, "body": "since deleted"})}
         self.kept = {"capture-1a2b3c.json": json.dumps({"body": "the drawer"}), "other.json": "{}", "ABCDEF0123456789.json": "{}",
                      f"{'c' * 16}.json": json.dumps({"path": NOTE, "body": "secret typing", "changes": {"confidential": True}}),
                      f"{'d' * 16}.json": json.dumps({"path": f"{ABC}/notes/Gone.md", "body": "since deleted"}),
-                     f"{HEX}0.json": "{}"}
+                     f"{HEX}0.json": "{}", f"{HEX}.json.tmp": "{",
+                     f"{'c' * 16}.json.tmp": json.dumps({"path": NOTE, "body": "secret typing", "changes": {"confidential": True}})}
         for name, text in {**self.old, **self.kept}.items():
             (self.d / name).write_text(text, encoding="utf-8")
         (self.d / "sub").mkdir()
@@ -137,7 +137,7 @@ class OldDrafts(Base):
 
     def test_only_the_old_note_drafts_are_moved_into_one_backup(self):
         self.save("an earlier change\n", session=None)
-        self.assertEqual(self.retire(), 3)
+        self.assertEqual(self.retire(), 2)
         left = sorted(f.name for f in self.d.iterdir())
         self.assertEqual(left, sorted([*self.kept, "sub", f"{'e' * 16}.json"]))
         self.assertTrue((self.d / f"{'e' * 16}.json").is_symlink())
@@ -151,7 +151,7 @@ class OldDrafts(Base):
         self.assertNotIn("old typing", (self.v.root / "system/config/files-log.jsonl").read_text(), "never the text")
 
     def test_nothing_to_do_writes_nothing(self):
-        self.assertEqual(self.retire(), 3)
+        self.assertEqual(self.retire(), 2)
         before = (self.v.root / "system/config/files-log.jsonl").read_text()
         self.assertEqual(self.retire(), 0)
         self.assertEqual((self.v.root / "system/config/files-log.jsonl").read_text(), before)
@@ -177,6 +177,14 @@ class OldDrafts(Base):
             self.assertTrue(any(p.endswith(name) for p in after), after)
         backups = self.v.root / "system/backups/files/changes"
         self.assertNotIn("secret typing", "".join(f.read_text() for f in backups.rglob("*.json")))
+
+    def test_a_leftover_json_tmp_draft_is_never_moved_even_a_confidential_one(self):
+        self.retire()
+        for name in (f"{HEX}.json.tmp", f"{'c' * 16}.json.tmp"):
+            self.assertTrue((self.d / name).is_file(), name)
+            self.assertEqual((self.d / name).read_text(encoding="utf-8"), self.kept[name], "left in place, byte for byte")
+        backups = self.v.root / "system/backups/files/changes"
+        self.assertNotIn("secret typing", "".join(f.read_text() for f in backups.rglob("*") if f.is_file()))
 
     def test_the_live_server_clears_them_at_start_up(self):
         src = (self.v.root / "system/scripts/live_server.py").read_text(encoding="utf-8")

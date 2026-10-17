@@ -346,12 +346,15 @@ NOTE_DRAFT = re.compile(r"[0-9a-f]{16}\.json(\.tmp)?")
 
 
 def retire_note_drafts(folder=None):
-    """Move the Notes tab's old drafts (NOTE_DRAFT names, regular files directly in `folder`, default notes.DRAFT_DIR), other than
-    a confidential note's, into one backup folder and log it once. Returns how many were moved."""
+    """Move the Notes tab's old drafts (NOTE_DRAFT names except leftover .json.tmp files, which always stay where they are, regular
+    files directly in `folder`, default notes.DRAFT_DIR), other than a confidential note's, into one backup folder and log it once.
+    Returns how many were moved."""
     import notes
     d = Path(folder) if folder else notes.DRAFT_DIR
     found = [f for f in (d.iterdir() if d.is_dir() and not d.is_symlink() else [])
-             if NOTE_DRAFT.fullmatch(f.name) and f.is_file() and not f.is_symlink()]
+             if NOTE_DRAFT.fullmatch(f.name) and not f.name.endswith(".tmp")
+             and f.is_file() and not f.is_symlink()]
+    # a leftover .tmp is never moved: confidential_places reads only *.json
     held = set(reach.confidential_places()) if found else set()
     found = sorted(f for f in found if Path(os.path.realpath(f)) not in held)
     if not found:
