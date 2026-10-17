@@ -27057,7 +27057,7 @@ ${s5}`;
       if (!a5 || !a5[1]) return null;
       const host2 = a5[1];
       if (host2.includes("@")) return null;
-      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2) && !/[\u0080-\uffff]/.test(host2)) return null;
+      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2)) return null;
       try {
         const u5 = new URL(scheme + ":" + rest);
         if (u5.protocol !== scheme + ":" || !u5.hostname || u5.username || u5.password) return null;
@@ -27066,19 +27066,29 @@ ${s5}`;
       }
       return scheme + ":" + rest;
     }
-    if (scheme === "mailto") {
-      const mailbox = rest.split(/[?#]/)[0];
-      if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;
-      return "mailto:" + rest;
-    }
+    if (scheme === "mailto") return mailtoOk(rest) ? "mailto:" + rest : null;
     return null;
   }
-  function safeDecode(s5) {
+  var MAIL_PARTS = ["subject", "body"];
+  function strictDecode(s5) {
+    if (/%(?![\da-f]{2})/i.test(s5)) return null;
     try {
       return decodeURIComponent(s5);
     } catch (e4) {
-      return s5;
+      return null;
     }
+  }
+  function mailtoOk(rest) {
+    if (rest.includes("#")) return false;
+    const q5 = rest.indexOf("?"), who2 = strictDecode(q5 < 0 ? rest : rest.slice(0, q5));
+    if (who2 === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(who2)) return false;
+    if (q5 < 0) return true;
+    for (const part of rest.slice(q5 + 1).split("&")) {
+      if (!part) continue;
+      const eq = part.indexOf("="), key = strictDecode(eq < 0 ? part : part.slice(0, eq)), val2 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
+      if (key === null || val2 === null || !MAIL_PARTS.includes(key.toLowerCase())) return false;
+    }
+    return true;
   }
   var isLinkUrl = (s5) => linkUrl(s5) !== null;
   function typedLinkUrl(s5) {
