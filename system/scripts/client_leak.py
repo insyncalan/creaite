@@ -223,16 +223,17 @@ def person(owner):
 def _name_form(text):
     """Text as a name is matched: as the ID check reads it (edit_ai.normal: NFKC, so a no-break space is a space; invisible
     characters gone), every run of whitespace (two spaces, a tab, a line break) one space, in lower case (#127 review), and its
-    accents dropped ("Quentín" is "quentin"; #127 round 4)."""
+    accents dropped ("Quentín" is "quentin"; #127 round 4; edit_ai.normal drops every combining mark since round 5), and a curly
+    apostrophe straight ("O’Neill" is "o'neill", either way round; round 5)."""
     import edit_ai
-    import unicodedata
-    t = re.sub(r"\s+", " ", edit_ai.normal(text or "")).lower()
-    if t.isascii():
-        return t
-    return unicodedata.normalize("NFC", "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn"))
+    return re.sub(r"\s+", " ", edit_ai.normal(text or "")).lower().translate(APOSTROPHES)
 
 
-NAME_SEP = r"[\s._\-+·'’*~`]{1,4}"      # between a name's words: spaces, a dot, dash, underscore or plus, emphasis marks
+APOSTROPHES = str.maketrans({c: "'" for c in "\u2019\u2018\u02bc\u2032"})
+
+
+NAME_SEP = r"[\s._\-+·'’*~`/|;\\]{1,4}"   # between a name's words: spaces, a dot, dash, underscore, plus, emphasis marks,
+#                                         # and (#127 round 5) a slash, bar, semicolon or backslash
 JOIN_PART, JOIN_LEN = 3, 8                # #127 round 4: a name run together ("QuentinMarlow") only when each word has at least 3
 #                                         # letters and the whole at least 8, so "Max Well" never matches "maxwell"
 
@@ -240,18 +241,21 @@ JOIN_PART, JOIN_LEN = 3, 8                # #127 round 4: a name run together ("
 def name_pattern(name):
     """The pattern a name is found by (#127 round 4): its words in order with any run of separators between them (NAME_SEP), or,
     for a name whose words are all JOIN_PART letters or more and JOIN_LEN together, none ("QuentinMarlow", or the soft hyphen
-    Word hides); a two-word name also surname first after a comma ("Marlow, Quentin"). Always a whole word at each end, so a
-    longer name ("Marlowe") is not this one. None for a name with nothing to match."""
+    Word hides); a single-letter initial between its words ("Quentin J. Marlow"); a two-word name also surname first after a comma
+    ("Marlow, Quentin") or, when both words have JOIN_PART letters or more, without one ("Marlow Quentin"; #127 round 5). Always a
+    whole word at each end, so a longer name ("Marlowe") is not this one. None for a name with nothing to match."""
     words = re.findall(r"[^\W_]+(?:['’][^\W_]+)*", _name_form(name))
     if not words:
         return None
     if len(words) == 1:
         return re.compile(rf"(?<![^\W_]){re.escape(words[0])}(?![^\W_])")
     joined = all(len(w) >= JOIN_PART for w in words) and sum(map(len, words)) >= JOIN_LEN
-    sep = f"(?:{NAME_SEP}){'?' if joined else ''}"
+    sep = f"(?:{NAME_SEP}[^\\W\\d_]\\.?(?={NAME_SEP}))?(?:{NAME_SEP}){'?' if joined else ''}"     # an initial may stand between
     forms = [sep.join(map(re.escape, words))]
     if len(words) == 2:
         forms.append(rf"{re.escape(words[1])}\s{{0,3}},\s{{0,3}}{re.escape(words[0])}")
+        if min(map(len, words)) >= JOIN_PART:
+            forms.append(rf"{re.escape(words[1])}(?:{NAME_SEP}){re.escape(words[0])}")
     return re.compile(r"(?<![^\W_])(?:" + "|".join(forms) + r")(?![^\W_])")
 
 
@@ -550,8 +554,10 @@ def with_decoded(text):
     """#127 round 4: a text with, when it holds a % or an & that decoding changes, its decoded form added as plain words (_decoded:
     %-encoding undone to DECODE_LEVELS rounds, entities undone; a text encoded past that is unreadable_findings' finding). An
     encoded word outside any address a link pattern reads ("See Quentin%20Marlow.", an address a space or U+3000 breaks) is then
-    found as written. As words (any script's letters and digits, the rest a space), so an external page's path is never read as
-    one of creaite's own (documents/); the marker, IDs, names and the health reason are all found in words."""
+    found as written. #127 round 5: added twice. Once with its punctuation kept, its web addresses as words (raw_text, so an
+    external page's path is never read as one of creaite's own, documents/): the marker is matched there, so "health%5Fdiff" is
+    health_diff and "internal, only" stays two words apart. Once as words for the names and IDs, any other run of punctuation a
+    space but one holding a sentence's punctuation (, ; . ! ? :) a full stop, so the marker can't be read across it."""
     t = text or ""
     if "%" not in t and "&" not in t:
         return t
@@ -559,8 +565,9 @@ def with_decoded(text):
     d = _decoded(t)
     if d == edit_ai.normal(t):
         return t
-    words = re.sub(r"[\W_]+", " ", d).strip()
-    return f"{t}\n{words}"
+    kept = raw_text(d)
+    words = re.sub(r"[\W_]+", lambda m: " . " if re.search(r"[,;.!?:]", m.group(0)) else " ", d).strip()
+    return f"{t}\n{kept}\n{words}"
 
 
 def creaite_kinds(text):

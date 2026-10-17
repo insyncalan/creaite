@@ -824,5 +824,67 @@ class TheReviewOf55967e3(Base):
                            ("See creaite:\\\\note/7 now.", "a creaite link a client can't open")], (0, 1))
 
 
+MARKER = "it holds an internal-only marker"
+
+
+class TheReviewOf62593f6(Base):
+    """#127 round 5 (review of 62593f6): every default-ignorable character is unseen, assigned or not, and the braille blank is a
+    space; combining and enclosing marks hide no ID, marker or name; decoded text keeps its punctuation for the marker; more ways
+    of writing a name and a backslash-escaped ID."""
+    gate, assert_found = TheReviewOf55967e3.gate, TheReviewOf55967e3.assert_found
+
+    def test_every_default_ignorable_character_is_unseen(self):
+        cps = [cp for a, b in ((0x00AD, 0x00AD), (0x034F, 0x034F), (0x061C, 0x061C), (0x115F, 0x1160), (0x17B4, 0x17B5),
+                               (0x180B, 0x180F), (0x200B, 0x200F), (0x202A, 0x202E), (0x2060, 0x206F), (0x3164, 0x3164),
+                               (0xFE00, 0xFE0F), (0xFEFF, 0xFEFF), (0xFFA0, 0xFFA0), (0xFFF0, 0xFFF8), (0x1BCA0, 0x1BCA3),
+                               (0x1D173, 0x1D17A), (0xE0000, 0xE0FFF)) for cp in (a, (a + b) // 2, b)]
+        cps += [0xE0080, 0xE0100, 0xE01EF, 0xE01F0]               # the reviewer's, and the variation selectors supplement
+        got = self.py(f"print(json.dumps([edit_ai.unseen('a' + chr(cp) + 'b') for cp in {cps + [0x2800]!r}]))")
+        self.assertEqual(got[:-1], ["ab"] * len(cps), [hex(c) for c, g in zip(cps, got) if g != "ab"])
+        self.assertEqual(got[-1], "a b")                          # the braille blank draws as a space
+        self.assert_found([(f"Waiting on Quen{chr(0xFFF0)}tin Marlow.", NAMED), (f"Blocked by ABC-A-0{chr(0xE0080)}04.", HIDDEN),
+                           (f"Note: internal{chr(0xE01F0)}-only.", MARKER), (f"Waiting on Quentin{chr(0x2800)}Marlow.", NAMED),
+                           (f"Blocked by ABC-A-0{chr(0xE0100)}04.", HIDDEN)])
+        got = self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', 'Before. creaite' + chr(0xFFF0) + "
+                      f"':item/{INTERNAL_ID} After.')))")
+        self.assertEqual(got.split(), ["Before.", "After."])
+
+    def test_combining_marks_hide_no_id_marker_or_name(self):
+        self.assert_found([(f"Blocked by ABC-A-0{chr(0x301)}04.", HIDDEN), (f"Note: internal{chr(0x336)}-only.", MARKER),
+                           (f"Blocked by ABC-A-0{chr(0x20DD)}04.", HIDDEN), (f"Waiting on Quen{chr(0x20DD)}tin Marlow.", NAMED)])
+        hindi = "\u0905\u0928\u093f\u0932 \u0915\u0941\u092e\u093e\u0930"          # a name whose vowels are marks, both folded
+        got = self.py("print(json.dumps([sorted(client_leak.named(t, [" + repr(hindi) + ", 'Zo\u00eb Kent'])) for t in "
+                      + repr([f"Met {hindi} today.", "Met Zoe\u0308 Kent today.", "Met Zoe Kent today.", "Met Zo Kent."]) + "]))")
+        self.assertEqual(got, [[hindi], ["Zo\u00eb Kent"], ["Zo\u00eb Kent"], []])
+        got = self.py("import sqlite3\nc = sqlite3.connect('system/tracker.db')\n"   # a test vault: an accented health reason
+                      "c.execute(\"UPDATE projects SET health_reason = 'R\u00e9sum\u00e9 d\u00e9lay\u00e9' WHERE code = 'ABC'\")\n"
+                      "c.commit()\nprint(json.dumps(drafts.internal_findings(client_leak.connect(), 'ABC', "
+                      "'The R\u00e9sum\u00e9 d\u00e9lay\u00e9.')))")
+        self.assertEqual(got, ["the internal health reason"])
+
+    def test_decoded_text_keeps_its_punctuation_for_the_marker(self):
+        ok = "Costs are internal, only the licence is external &amp; billed separately."
+        for got in self.gate([ok]).values():
+            self.assertEqual(got, [[], [], []])                    # "internal, only" isn't the marker once decoded
+        self.assert_found([("Note: health%5Fdiff.", MARKER), ("Note: internal%2Donly.", MARKER)])
+        link = "See [plan](https://client.example.com/documents/plan) and more"         # the documents/ safeguard, decoded too
+        self.assertEqual(self.findings(f"Progress. {link} &amp; less."), [])
+        got = self.py("d = report_doc.client_doc('ABC')\n"                 # an encoded marker where the reason may stand
+                      "next(s for s in d['sections'] if s.get('type') == 'health')['text'] = 'Behind plan. internal%2Donly.'\n"
+                      "print(json.dumps(client_leak.findings(d)))")
+        self.assertIn(MARKER, got)
+
+    def test_a_name_however_written_and_a_backslash_escaped_id(self):
+        self.assert_found([(t, NAMED) for t in (
+            "Waiting on Quentin J. Marlow.", "Waiting on Quentin J Marlow.", "Waiting on Marlow Quentin.", "Waiting on Quentin/Marlow.",
+            "Waiting on Quentin|Marlow.", "Waiting on Quentin;Marlow.", "Waiting on Quentin\\Marlow.")] + [
+            ("Blocked by ABC\\-A\\-004.", HIDDEN)])
+        got = self.py("print(json.dumps([sorted(client_leak.named(t, [\"Ada O'Neill\", 'Ida O\u2019Hare', 'Al Mortimer', 'Al Lee', "
+                      "'Quentin Marlow'])) "
+                      "for t in ('Met Ada O\u2019Neill.', \"Met Ida O'Hare.\", 'see almortimer', 'Al Mortimer', 'Lee Al', "
+                      "'Quentin Smarlow', 'Quentin a. Marlowe')]))")
+        self.assertEqual(got, [["Ada O'Neill"], ["Ida O\u2019Hare"], [], ["Al Mortimer"], [], [], []])   # controls: short, longer
+
+
 if __name__ == "__main__":
     unittest.main()

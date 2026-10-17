@@ -2400,7 +2400,7 @@ def internal_findings(con, code, text, original=""):
     text, original = edit_ai.normal(text), edit_ai.normal(original)
     found = []
     row = con.execute("SELECT health_reason FROM projects WHERE code = ?", (code,)).fetchone()
-    reason = (row[0] if row else "") or ""
+    reason = edit_ai.normal((row[0] if row else "") or "")      # #127 round 5: folded as the text is (its accents too)
     if reason.strip() and carries(text, reason) and not carries(original, reason):
         found.append("the internal health reason")
     if INTERNAL_MARK.search(text or "") and not INTERNAL_MARK.search(original or ""):

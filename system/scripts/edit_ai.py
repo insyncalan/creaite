@@ -182,38 +182,58 @@ NO_PROJECT, UNCHECKED, REGISTER = "no project", "the check couldn't run", "the p
 # #127 round 4: characters Word shows as nothing that aren't format characters (Unicode category Cf, all dropped by unseen): the
 # combining grapheme joiner, variation selectors, Mongolian free variation selectors, Khmer inherent vowels, Hangul fillers and the
 # unassigned U+2065 among the invisible operators.
-SHOWN_AS_NOTHING = frozenset([0x034F, 0x115F, 0x2065, 0x1160, 0x17B4, 0x17B5, 0x180B, 0x180C, 0x180D, 0x180F, 0x3164, 0xFFA0]
-                             + list(range(0xFE00, 0xFE10)) + list(range(0xE0100, 0xE01F0)))
+# #127 round 5: Unicode's whole Default_Ignorable_Code_Point set (DerivedCoreProperties), assigned or not, as (first, last): an
+# unassigned one (U+FFF0, U+E0080, U+E01F0) isn't category Cf, but Word and a browser still draw it as nothing.
+DEFAULT_IGNORABLE = ((0x00AD, 0x00AD), (0x034F, 0x034F), (0x061C, 0x061C), (0x115F, 0x1160), (0x17B4, 0x17B5),
+                     (0x180B, 0x180F), (0x200B, 0x200F), (0x202A, 0x202E), (0x2060, 0x206F), (0x3164, 0x3164),
+                     (0xFE00, 0xFE0F), (0xFEFF, 0xFEFF), (0xFFA0, 0xFFA0), (0xFFF0, 0xFFF8), (0x1BCA0, 0x1BCA3),
+                     (0x1D173, 0x1D17A), (0xE0000, 0xE0FFF))
+SHOWN_AS_NOTHING = frozenset(cp for a, b in DEFAULT_IGNORABLE for cp in range(a, b + 1))
+SHOWN_AS_SPACE = {0x2800: " "}            # #127 round 5: the braille blank draws as a space
 
 
 def unseen(text):
     """Text without the characters Word shows as nothing: every format character (category Cf: zero-width, direction marks and
-    isolates, tags, the soft hyphen, the interlinear annotation marks) and SHOWN_AS_NOTHING (#127 round 4)."""
+    isolates, tags, the soft hyphen, the interlinear annotation marks) and every default-ignorable one (SHOWN_AS_NOTHING, assigned
+    or not); the braille blank is a space (#127 rounds 4 and 5)."""
     import unicodedata
     t = text or ""
     if t.isascii():
         return t
-    return "".join(c for c in t if ord(c) not in SHOWN_AS_NOTHING and unicodedata.category(c) != "Cf")
+    return "".join(c for c in t if ord(c) not in SHOWN_AS_NOTHING and unicodedata.category(c) != "Cf").translate(SHOWN_AS_SPACE)
+
+
+def unmarked(text):
+    """Text without its combining marks (#127 round 5): NFKD, then every mark (Mn, Me and Mc) dropped, so an accent or an
+    enclosing circle on a digit or a letter hides no ID, marker or name (an acute accent on a 0 of ABC-A-004 still reads ABC-A-004;
+    Word draws the mark, so the reader still reads the ID). A name in a script
+    that writes vowels as marks (Devanagari, Arabic) is still found: the register's name goes through the same fold as the text,
+    so both lose the same marks."""
+    import unicodedata
+    t = text or ""
+    if t.isascii():
+        return t
+    return "".join(c for c in unicodedata.normalize("NFKD", t) if not unicodedata.category(c).startswith("M"))
 
 
 def normal(text):
     """Text as the client check matches it: NFKC, invisible characters gone (unseen, before and after NFKC, which can make a
-    filler of a compatibility one), dashes and look-alike letters made plain."""
+    filler of a compatibility one), combining marks gone (unmarked), dashes and look-alike letters made plain."""
     import unicodedata
-    t = unseen(unicodedata.normalize("NFKC", unseen(text))).translate(LOOK_ALIKE)
+    t = unseen(unicodedata.normalize("NFKC", unmarked(unseen(text)))).translate(LOOK_ALIKE)
     return re.sub(r"\d", lambda m: str(unicodedata.decimal(m.group(), 0)), t)      # #127 review: any script's digits, as 0-9
 
 
 def loose_ids(con, text):
     """Every item ID a text holds, however it is written: the strict form anywhere, and for each of the tracker's project codes,
-    any case, with spaces, dots, dashes, underscores, slashes, colons or brackets for its hyphens ("ABC (A) 004"), or run on to a
+    any case, with spaces, dots, dashes, underscores, slashes, backslashes, colons or brackets for its hyphens ("ABC (A) 004"), or run on to a
     word before it ("seeABC-A-004"); with a letter part, the number may also drop its zeros ("ABC-A-4") or write them as O
     ("ABC-A-OO4"), always as a whole number ("ABC-A-40" is ABC-A-040, never ABC-A-004), and not one a slash, colon or dot continues
     ("ABC A 10/09"). A loose match counts only when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when
     there is no ABC-100); it fails closed, so an ID the tracker can't be asked about counts."""
     t = normal(text)
     out = set(ID_RE.findall(t))
-    up, sep = t.upper(), r"[\s_.\-/:()]*"
+    up, sep = t.upper(), r"[\s_.\-/:()\\]*"         # #127 round 5: a Markdown backslash escape ("ABC\-A\-004") too
     for (c,) in con.execute("SELECT code FROM projects"):
         for m in re.finditer(rf"{re.escape(c)}{sep}(?:([A-NP-Z]){sep}([0-9O]{{1,3}})|([0-9O]{{3}}))(?![0-9O]|[/:.]\d)", up):
             num = (m.group(2) or m.group(3)).replace("O", "0").zfill(3)
