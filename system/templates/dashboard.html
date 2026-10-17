@@ -38636,14 +38636,13 @@ ${s5}`;
     return `<div class="spk-wk">Week ending ${fd(w6.end)}${i5 === n4 - 1 ? " · this week" : ""}</div><div class="spk-h">${w6.t ? `<span class="spk-dot s-${w6.t}"></span>` : ""}${w6.word}</div><div class="spk-ch">${w6.ch}</div>${w6.why ? `<div class="spk-why">${esc(w6.why)}</div>` : ""}<ol class="spk-list" aria-label="The last ${n4} weeks">${p6.trail.map((x5, j5) => `<li${j5 === i5 ? ' class="cur" aria-current="true"' : ""}><span class="spark mini" aria-hidden="true"><i class="s-${x5}"></i></span><span class="spk-d">${fd((p6.trailend || [])[j5] || "")}</span><span class="spk-w">${SPN[x5]}</span></li>`).join("")}</ol>`;
   }
   var sparkKeyHtml = () => `<div class="spk-key" id="sparkLeg" role="dialog" aria-label="What the health bars mean" tabindex="-1"><div class="spk-kt">Health, last 6 weeks</div><div class="spk-ks">One bar a week, oldest to newest, each a week ending Friday. Taller is healthier. Rest on a bar for the week's reason: the week's update summary, shortened to 160 characters.</div>${["ok", "warn", "bad", ""].map((x5) => `<div class="spk-kr"><span class="spark mini" aria-hidden="true"><i class="s-${x5}"></i></span>${SPN[x5]}${x5 === "" ? " that week" : ""}</div>`).join("")}<div class="spk-kr"><span class="spk-kdot" aria-hidden="true"></span>This week</div></div>`;
-  var sparkAt = null, sparkI = 0, sparkT = 0;
+  var sparkAt = null, sparkI = 0;
   var sparkEl = () => document.querySelector(`.spark[data-sp="${CSS.escape(sparkAt || "")}"]:not(.mini)`);
   function sparkShow(el2, i5) {
     const p6 = P3.find((x5) => x5.code === el2.dataset.sp);
     if (!p6) return;
     sparkAt = p6.code;
     sparkI = i5;
-    clearTimeout(sparkT);
     let tip = $("#sparkTip");
     if (!tip) {
       tip = document.createElement("div");
@@ -38663,7 +38662,7 @@ ${s5}`;
     tip.style.top = Math.round(y5) + "px";
   }
   function sparkHide() {
-    clearTimeout(sparkT);
+    if (cardGroup.current instanceof Element && cardGroup.current.matches(".spark")) cardGroup.close();
     const tip = $("#sparkTip");
     if (tip) tip.hidden = true;
     const el2 = sparkEl();
@@ -38686,23 +38685,24 @@ ${s5}`;
       const b5 = e4.target.closest && e4.target.closest(".spark:not(.mini) > i");
       return b5 ? +b5.dataset.i : null;
     };
-    document.addEventListener("mouseover", (e4) => {
+    let wantI = null;
+    const spkH = (el2) => ({ open: () => sparkShow(el2, wantI === null ? el2.children.length - 1 : wantI), close: sparkHide });
+    document.addEventListener("pointerover", (e4) => {
       const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");
-      if (!el2) return;
+      if (!el2 || e4.pointerType === "touch" || !canHover()) return;
       const i5 = idx(e4);
       if (sparkAt === el2.dataset.sp && !$("#sparkTip").hidden) {
         if (i5 !== null && i5 !== sparkI) sparkShow(el2, i5);
-        else clearTimeout(sparkT);
+        cardGroup.enter(el2, spkH(el2));
         return;
       }
-      clearTimeout(sparkT);
-      sparkT = setTimeout(() => sparkShow(el2, i5 === null ? el2.children.length - 1 : i5), CARD_OPEN);
+      wantI = i5;
+      cardGroup.enter(el2, spkH(el2));
     });
-    document.addEventListener("mouseout", (e4) => {
+    document.addEventListener("pointerout", (e4) => {
       const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");
-      if (!el2 || el2.contains(e4.relatedTarget)) return;
-      clearTimeout(sparkT);
-      sparkT = setTimeout(sparkHide, CARD_CLOSE);
+      if (!el2 || el2.contains(e4.relatedTarget) || e4.pointerType === "touch") return;
+      cardGroup.leave(el2);
     });
     document.addEventListener("focusin", (e4) => {
       const el2 = e4.target.closest && e4.target.closest(".spark[data-sp]");

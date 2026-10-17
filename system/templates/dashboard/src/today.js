@@ -16,7 +16,7 @@ import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
 import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
-import { CARD_CLOSE, CARD_OPEN } from "./core/hover.js";
+import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
@@ -300,22 +300,25 @@ export function sparkTipHtml(p,i){ const w=sparkWeek(p,i), n=p.trail.length;
 /** The key (the ? popover): the four bars, drawn as they are in the table. */
 export const sparkKeyHtml=()=>`<div class="spk-key" id="sparkLeg" role="dialog" aria-label="What the health bars mean" tabindex="-1"><div class="spk-kt">Health, last 6 weeks</div><div class="spk-ks">One bar a week, oldest to newest, each a week ending Friday. Taller is healthier. Rest on a bar for the week's reason: the week's update summary, shortened to 160 characters.</div>${["ok","warn","bad",""].map(x=>`<div class="spk-kr"><span class="spark mini" aria-hidden="true"><i class="s-${x}"></i></span>${SPN[x]}${x===""?" that week":""}</div>`).join("")}<div class="spk-kr"><span class="spk-kdot" aria-hidden="true"></span>This week</div></div>`;
 /* The tip and the key are one element each, appended to the body when first needed (delegated, so every table and the project page share them). */
-let sparkAt=null, sparkI=0, sparkT=0;
+let sparkAt=null, sparkI=0;
 const sparkEl=()=>document.querySelector(`.spark[data-sp="${CSS.escape(sparkAt||"")}"]:not(.mini)`);
-function sparkShow(el,i){ const p=P.find(x=>x.code===el.dataset.sp); if(!p) return; sparkAt=p.code; sparkI=i; clearTimeout(sparkT);
+function sparkShow(el,i){ const p=P.find(x=>x.code===el.dataset.sp); if(!p) return; sparkAt=p.code; sparkI=i;
   let tip=$("#sparkTip"); if(!tip){ tip=document.createElement("div"); tip.id="sparkTip"; tip.setAttribute("role","tooltip"); tip.setAttribute("aria-live","polite"); document.body.appendChild(tip); }
   putHTML(tip,raw(sparkTipHtml(p,i))); tip.hidden=false; el.setAttribute("aria-describedby","sparkTip");
   [...el.children].forEach((b,j)=>b.classList.toggle("cur",j===i));
   const r=el.children[i].getBoundingClientRect(), h=tip.offsetHeight, w=tip.offsetWidth; let y=r.top-h-10; if(y<8) y=r.bottom+14;
   tip.style.left=Math.round(Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8))+"px"; tip.style.top=Math.round(y)+"px"; }
-function sparkHide(){ clearTimeout(sparkT); const tip=$("#sparkTip"); if(tip) tip.hidden=true; const el=sparkEl(); if(el){ el.removeAttribute("aria-describedby"); [...el.children].forEach(b=>b.classList.remove("cur")); } sparkAt=null; }
+function sparkHide(){ if(cardGroup.current instanceof Element&&cardGroup.current.matches(".spark")) cardGroup.close();   /* #160: the card group lets go too */ const tip=$("#sparkTip"); if(tip) tip.hidden=true; const el=sparkEl(); if(el){ el.removeAttribute("aria-describedby"); [...el.children].forEach(b=>b.classList.remove("cur")); } sparkAt=null; }
 function sparkKeyClose(back){ const k=$("#sparkLeg"); if(!k) return; const btn=document.querySelector('.legbtn[aria-expanded="true"]')||$(".legbtn"); k.remove(); document.querySelectorAll(".legbtn").forEach(b=>b.setAttribute("aria-expanded","false")); if(back&&btn) btn.focus(); }
 export function wireSpark(){
   const idx=e=>{ const b=e.target.closest&&e.target.closest(".spark:not(.mini) > i"); return b?+b.dataset.i:null; };
-  document.addEventListener("mouseover",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el) return; const i=idx(e);
-    if(sparkAt===el.dataset.sp&&!$("#sparkTip").hidden){ if(i!==null&&i!==sparkI) sparkShow(el,i); else clearTimeout(sparkT); return; }
-    clearTimeout(sparkT); sparkT=setTimeout(()=>sparkShow(el,i===null?el.children.length-1:i),CARD_OPEN); });
-  document.addEventListener("mouseout",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el||el.contains(e.relatedTarget)) return; clearTimeout(sparkT); sparkT=setTimeout(sparkHide,CARD_CLOSE); });
+  /* #160: the pointer goes through the shared card group (core/hover.js): the delays are the card standard, none of its own */
+  let wantI=null;
+  const spkH=el=>({ open:()=>sparkShow(el,wantI===null?el.children.length-1:wantI), close:sparkHide });
+  document.addEventListener("pointerover",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el||e.pointerType==="touch"||!canHover()) return; const i=idx(e);
+    if(sparkAt===el.dataset.sp&&!$("#sparkTip").hidden){ if(i!==null&&i!==sparkI) sparkShow(el,i); cardGroup.enter(el,spkH(el)); return; }
+    wantI=i; cardGroup.enter(el,spkH(el)); });
+  document.addEventListener("pointerout",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(!el||el.contains(e.relatedTarget)||e.pointerType==="touch") return; cardGroup.leave(el); });
   document.addEventListener("focusin",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(el&&e.target===el) sparkShow(el,el.children.length-1); });
   document.addEventListener("focusout",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]"); if(el&&e.target===el) sparkHide(); });
   document.addEventListener("keydown",e=>{ const el=e.target.closest&&e.target.closest(".spark[data-sp]");
