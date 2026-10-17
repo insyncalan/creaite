@@ -242,6 +242,11 @@ def perform(ch, approval=None, via="cli", run=None, own=False):
 # having changed the file since, joins a session. Anything else gets its own backup, as before. The log keeps a hash of the token.
 SESSION_IDLE = 300                              # seconds without a save that end an editing session
 SESSION_MAX = 1024                              # characters in a session token at most
+# #175 (M2 of Team Cap's #119 review; cap kept, Alan 17-10-2026): a session also ends 30 minutes after its first save, so one
+# Activity Restore (a file-level restore to the session's start; the editor's own Cmd+Z is the everyday undo) goes back at most
+# about 30 minutes. The next save starts a new session with its own backup (the text as the last session left it), so Restore
+# goes back one session at a time: the newer session first, then the older one.
+SESSION_MAX_AGE = 1800                          # seconds from a session's first save after which the next save starts a new one
 
 
 def session_key(ch, target):
@@ -278,20 +283,41 @@ def _same_session(last, key, here, via):
         bool(last.get("backup"))
 
 
+def _age(entry):
+    """Seconds since a log entry's `at`, or None when it can't be read."""
+    try:
+        return (datetime.now() - datetime.strptime(str(entry.get("at")), "%Y-%m-%d %H:%M:%S")).total_seconds()
+    except ValueError:
+        return None
+
+
+def _session_first(es, last):
+    """#175: the session's first save: the log entry whose id is the number of the backup folder `last` shares (changes/<n>/),
+    an edit of the same file in the same session with the same backup; None when it isn't in the log."""
+    try:
+        n = int(Path(str(last["backup"])).parent.name)
+    except (KeyError, ValueError):
+        return None
+    return next((e for e in es if e.get("id") == n and e.get("op") == "edit" and e.get("path") == last.get("path") and
+                 e.get("session") == last.get("session") and e.get("backup") == last.get("backup")), None)
+
+
 def session_backup(key, target, via):
     """The backup of the editing session this save continues, or None. The last logged change to this file (as its path, or as
     where a move went) must be an ordinary edit of the same session by the same route, outside any run, under SESSION_IDLE seconds
-    ago, its result still the file as it is now, and its backup still the earlier version it logged."""
+    ago, its result still the file as it is now, and its backup still the earlier version it logged; and (#175) the session's
+    first save must be in the log and under SESSION_MAX_AGE seconds ago."""
     here = stored(target)
-    last = next((e for e in reversed(entries()) if here in (e.get("path"), e.get("to"))), None)
+    es = entries()
+    last = next((e for e in reversed(es) if here in (e.get("path"), e.get("to"))), None)
     if not _same_session(last, key, here, via):
         return None
-    try:
-        age = (datetime.now() - datetime.strptime(str(last.get("at")), "%Y-%m-%d %H:%M:%S")).total_seconds()
-    except ValueError:
+    age, first = _age(last), _session_first(es, last)
+    started = _age(first) if first else None
+    if age is None or started is None or not 0 <= age < SESSION_IDLE or not 0 <= started < SESSION_MAX_AGE:
         return None
     backup = paths.resolve(last["backup"])
-    if not 0 <= age < SESSION_IDLE or sha(target) != last.get("after") or not backup.is_file() or sha(backup) != last.get("before"):
+    if sha(target) != last.get("after") or not backup.is_file() or sha(backup) != last.get("before"):
         return None
     return backup
 
@@ -304,6 +330,43 @@ def session_saves(todo, last):
     return [e["id"] for e in todo if e["id"] < last["id"] and e.get("op") == "edit" and e.get("session") == last["session"]
             and e.get("backup") == last.get("backup") and e.get("path") == last["path"]]
 # ===== end #119 =====
+
+
+# ===== #175 (L1 of Team Cap's #119 review): the Notes tab's old typed drafts, cleared once they can't be used =====
+# Since #119 the Notes tab keeps no draft: it writes the note itself. Drafts it kept before (system/staging/drafts/notes/<16 hex of
+# the note's path>.json, and a <…>.json.tmp left by an interrupted write) are no longer read or removed by anything, yet they go into
+# the daily zip and make reach.confidential_places hold back the search index and the backups. The live server calls this at
+# start-up: each such file is moved into ONE backup folder, system/backups/files/changes/<n>/, with one line in the files log (op
+# "cleanup": not a change Activity lists or Restore touches; Tidy up removes the folder after backups.file_change_days, 90). Only
+# those names, only regular files directly in that folder: never the Capture drawer's capture-*.json, never a symlink, a subfolder
+# or anything else. A draft reach.confidential_places counts as a confidential note's typed copy is left where it is, never moved
+# and never deleted (Alan, 17-10-2026: moving it into the backups would let a held run read it once no note is confidential).
+# Nothing to do: nothing is written.
+NOTE_DRAFT = re.compile(r"[0-9a-f]{16}\.json(\.tmp)?")
+
+
+def retire_note_drafts(folder=None):
+    """Move the Notes tab's old drafts (NOTE_DRAFT names, regular files directly in `folder`, default notes.DRAFT_DIR), other than
+    a confidential note's, into one backup folder and log it once. Returns how many were moved."""
+    import notes
+    d = Path(folder) if folder else notes.DRAFT_DIR
+    found = [f for f in (d.iterdir() if d.is_dir() and not d.is_symlink() else [])
+             if NOTE_DRAFT.fullmatch(f.name) and f.is_file() and not f.is_symlink()]
+    held = set(reach.confidential_places()) if found else set()
+    found = sorted(f for f in found if Path(os.path.realpath(f)) not in held)
+    if not found:
+        return 0
+    n_id = next_id()
+    keep = CHANGES / f"{n_id:04d}"
+    keep.mkdir(parents=True, exist_ok=True)
+    for f in found:
+        shutil.copy2(f, keep / f.name)                              # the copy first, always
+        f.unlink()
+    log({"id": n_id, "at": now(), "op": "cleanup", "path": paths.rel(d), "files": [f.name for f in found],
+         "backup": paths.rel(keep), "via": "server", "tier": "ordinary",
+         "why": "#175: the Notes tab's old typed drafts, no longer used since #119"})
+    return len(found)
+# ===== end #175 =====
 
 
 def _refused(ch, op, why, target):
