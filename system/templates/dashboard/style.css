@@ -505,17 +505,18 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px v
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
-.shell{display:grid;grid-template-columns:var(--rail-w,212px) 1fr;height:100vh}   /* BL-163: the rail's width is one variable */
-.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:stretch;padding:10px 8px;gap:2px}
+.shell{display:grid;grid-template-columns:var(--rail-w,224px) 1fr;height:100vh}   /* BL-163: the rail's width is one variable */
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:stretch;padding:8px 6px;gap:1px}
 .logo{font:700 var(--fs-lg)/1 var(--font);color:var(--accent);margin:4px 0 14px}
 .devtag{display:block;width:max-content;margin:4px auto 0;padding:1px 4px;border:1px solid var(--line);border-radius:var(--r-sm);font:600 var(--fs-2xs)/1.2 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}   /* development repository only */
 .rail button{width:100%;height:36px;flex:none;border:0;background:none;border-radius:var(--r-md);padding:0 8px;display:flex;align-items:center;gap:12px;font:500 var(--fs-sm)/18px var(--font);color:var(--muted);cursor:pointer;position:relative;text-align:left}
 .rail button svg{width:20px;height:20px;flex:none}
 .rail button:hover{background:var(--sunk);color:var(--ink)}
-.rail button[aria-current="page"]{background:var(--sunk);color:var(--ink)} .rail button[aria-current="page"] svg{color:var(--accent)}
-.rail button[aria-current="page"]::before{content:"";position:absolute;left:-8px;top:9px;bottom:9px;width:3px;border-radius:var(--r-sm);background:var(--accent)}
+/* #156: the current page is a tonal pill in the accent, a bold label and a thicker icon, and the 3px bar on the rail's edge (never colour alone) */
+.rail button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700} .rail button[aria-current="page"] svg{color:var(--accent);stroke-width:2.2}
+.rail button[aria-current="page"]::before{content:"";position:absolute;left:-6px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
 .rail .rl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.rail .badge{margin-left:auto;min-width:18px;height:18px;border-radius:var(--r-md);background:var(--bad);color:var(--bad-ink);font:500 var(--fs-xs)/18px var(--font);padding:0 4px;text-align:center;flex:none}
+.rail .badge{margin-left:auto;min-width:18px;height:18px;border-radius:var(--r-md);background:var(--accent);color:var(--accent-ink);font:500 var(--fs-xs)/18px var(--font);padding:0 4px;text-align:center;flex:none}
 .rail .grow{flex:1}
 /* ===== Live indicator in the rail (BL-71, BL-82): a dot alone, no word. Solid when running, a hollow ring when stopped, so the state isn't colour alone;
    --ok and --bad meet 3:1 on the rail's surface in every theme and mode; the label and hover text carry the words ===== */
@@ -1781,29 +1782,52 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .cstbtn:hover{background:var(--sunk)} .cstbtn .csp{width:14px;height:14px;color:var(--muted);opacity:0} .cstbtn:hover .csp,.cstbtn:focus-visible .csp{opacity:1}
 .cstin{font:inherit;letter-spacing:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--accent);border-radius:var(--r-md);padding:0 6px;margin:0 -8px;width:min(100%,30ch);height:30px}
 /* ===== end BL-162 (CSS) ===== */
-/* ===== BL-163 (sprint-rail), BL-319 part 6 ===== the sidebar: 212px with the pages' names, or collapsed to a 56px rail of icons
-   (dashboard.rail's display, the toggle at the top-left and ⌘\); the pages at the top, More at the bottom opening upwards
-   (sideways when collapsed), Customise sidebar (a modal dialog with two lists). Colour is never the only cue: counts are numbers,
-   the current page has its accent bar and aria-current, and collapsed, every icon has its name and the one tooltip. */
-:root{--rail-w:212px} :root.railicons{--rail-w:56px}
+/* ===== BL-163 (sprint-rail), BL-319 part 6, #156 ===== the sidebar in three states: expanded (224px, each name beside its icon),
+   collapsed with labels (76px, each name under its icon; Labels when collapsed, on by default) or collapsed icons only (56px).
+   The wordmark in the head is the toggle ("creaite_", "c_" when collapsed). The pages at the top, More at the bottom opening beside
+   it (hover or click), Customise sidebar (a modal dialog with two lists). Colour is never the only cue: counts are numbers, the
+   current page has its pill, bold name, accent bar and aria-current, and icons only, every icon has its name and the one tooltip. */
+:root{--rail-w:224px} :root.railicons{--rail-w:56px} :root.railicons.raillabels{--rail-w:76px}
 .rail{overflow-y:auto;overflow-x:hidden} .rail button[hidden]{display:none}
-.railgrp{display:flex;flex-direction:column;align-items:stretch;gap:2px;width:100%}
-.rail .rhead{display:flex;align-items:center;gap:6px;height:36px;margin:0 0 10px;flex:none} .rtogbox{display:contents}
-.rail .rhead .logo{margin:0;align-items:flex-start;min-width:0}
-.rail button.rtog{width:36px;height:36px;padding:0;justify-content:center;color:var(--faint)}
-.rail button.rtog:hover,.rail button.rtog:focus-visible{color:var(--ink);background:var(--sunk)} .rail button.rtog svg{width:18px;height:18px}
-.rail.collapsed .rhead .logo{display:none}
-.rail.collapsed button.nv{justify-content:center;padding:0} .rail.collapsed .rl{display:none}
-.rail.collapsed .badge{position:absolute;top:2px;right:2px;margin:0;min-width:14px;height:14px;font-size:var(--fs-2xs);line-height:14px;padding:0 4px}
+.rail button:focus-visible{outline:3px solid var(--focus);outline-offset:0}
+.railgrp{display:flex;flex-direction:column;align-items:stretch;gap:1px;width:100%}
+.rail .rhead{display:flex;align-items:center;height:44px;margin:0 0 6px;flex:none}
+.rail button.rtog{height:40px;padding:0 8px;flex-direction:row;justify-content:flex-start;gap:4px;margin:0;color:var(--ink);font:700 var(--fs-xl)/1 var(--font)}
+.rail button.rtog:hover,.rail button.rtog:focus-visible{background:var(--sunk);color:var(--ink)} .rail button.rtog:disabled{cursor:default;background:none}
+.rail button.rtog .wm{width:84px;height:auto;flex:none}
+.rail button.rtog .cmark{display:none;font:700 var(--fs-xl)/1 var(--font);color:var(--ink);width:100%;text-align:center} .rail button.rtog .cmark i{font-style:normal;color:var(--saffron)}
+.rail button.rtog .rchev{width:16px;height:16px;margin-left:auto;opacity:0;color:var(--muted);transition:opacity .15s}
+.rail button.rtog:hover .rchev,.rail button.rtog:focus-visible .rchev{opacity:1} .rail button.rtog:disabled .rchev{display:none}
+.rail.collapsed button.rtog{justify-content:center;padding:0} .rail.collapsed button.rtog .wm,.rail.collapsed button.rtog .lt,.rail.collapsed button.rtog .rchev{display:none} .rail.collapsed button.rtog .cmark{display:block}
+.rail .rl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rail.collapsed button.nv{justify-content:center;padding:0} .rail.icons .rl{display:none}
+.rail.labelled button.nv{flex-direction:column;gap:1px;height:52px;padding:3px 2px;}
+.rail.labelled button.nv .rl{font-size:11px;line-height:14px;max-width:100%;text-align:center}
+.rail.collapsed .badge{position:absolute;top:2px;right:6px;margin:0;min-width:16px;height:16px;font-size:var(--fs-2xs);line-height:16px;padding:0 4px}
+.rail.icons .badge{right:3px;top:1px}
+.rail .badge.warn{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);line-height:16px}
 .railmore{flex:none}
-#railMoreMenu{position:fixed;z-index:var(--z-top);width:220px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:2px}
+#railMoreMenu{position:fixed;z-index:var(--z-menu);width:240px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:1px}
 #railMoreMenu[hidden]{display:none}
-.rail #railMoreMenu button.nv{justify-content:flex-start;padding:0 8px} .rail #railMoreMenu .rl{display:inline}
+.rail #railMoreMenu button.nv{justify-content:flex-start;flex-direction:row;height:36px;padding:0 8px;font-size:var(--fs-sm)} .rail #railMoreMenu .rl{display:inline;font-size:var(--fs-sm);text-align:left}
 .rail #railMoreMenu .badge{position:static;margin-left:auto;min-width:18px;height:18px;font-size:var(--fs-xs);line-height:18px;padding:0 4px}
+.rail #railMoreMenu .badge.warn{line-height:16px}
 .rail #railMoreMenu button[aria-current="page"]::before{left:-6px}
+.rail #railMoreMenu .fsec2{padding:6px 8px 2px;font:500 var(--fs-xs)/16px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rail #railMoreMenu .rsw .sw{margin-left:auto;width:34px;height:20px;border-radius:999px;background:var(--line);position:relative;flex:none;border:1px solid var(--muted)}
+.rail #railMoreMenu .rsw .sw::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:transform .12s}
+.rail #railMoreMenu .rsw .sw.on{background:var(--accent);border-color:var(--accent)} .rail #railMoreMenu .rsw .sw.on::after{transform:translateX(14px);background:var(--accent-ink)}
 .railsep{height:1px;background:var(--line);margin:4px 2px}
+/* #139: the hover flyouts of Projects and Work, beside the rail (collapsed or not), above the page and below dialogs and the peek (--z-menu) */
+.rail .railfly{position:fixed;z-index:var(--z-menu);width:max-content;min-width:220px;max-width:320px;max-height:360px;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px;display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-content:start}
+.rail .railfly button{height:32px;width:100%;padding:0 8px;gap:10px;justify-content:flex-start;color:var(--ink);border-radius:var(--r-sm);white-space:nowrap;font-size:var(--fs-sm)}
+.rail .railfly button:hover,.rail .railfly button:focus-visible{background:var(--accent-soft)}
+.rail .railfly .mname{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
+.rail .railfly .health{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)} .rail .railfly .health svg{width:14px;height:14px}
+.rail .railfly .fcount{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)}
+.rail .railfly .mnote{padding:6px 8px;color:var(--muted)}
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
-@media (max-width:480px){ :root.railicons{--rail-w:48px} .rail.collapsed{padding:10px 4px} .rail.collapsed button[aria-current="page"]::before{left:-4px} }
+@media (max-width:480px){ :root.railicons,:root.railicons.raillabels{--rail-w:48px} .rail.collapsed{padding:10px 4px} .rail.collapsed button[aria-current="page"]::before{left:-4px} .rail.labelled .rl{display:none} }
 #railCust{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);padding:16px 16px 14px;box-shadow:var(--shadow-lg)}
 #railCust::backdrop{background:var(--scrim)}
 #railCust h2{margin:0 0 4px;font-size:var(--fs-lg)} #railCust .sub{margin:0;font-size:var(--fs-xs)}
@@ -1812,7 +1836,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 #railCust h3{font:600 var(--fs-xs)/16px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 4px 6px}
 #railCust ul{margin:0;padding:6px;border:1px dashed var(--line);border-radius:var(--r-md);min-height:120px;display:grid;gap:2px;align-content:start}
 #railCust .rcempty{margin:6px 4px 0}
-#railCust .rcicons{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm)}
+#railCust .rcicons{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);margin-top:6px}
 #railCust .rcfoot{display:flex;align-items:center;gap:8px;margin-top:14px} #railCust .rcfoot .grow{flex:1}
 .rpi .grip[hidden]{display:grid;visibility:hidden}
 .rpi{display:flex;align-items:center;gap:6px;padding:4px;border-radius:var(--r-md);list-style:none} .rpi:focus-within,.rpi:hover{background:var(--sunk)}
@@ -2563,7 +2587,9 @@ a.seeall{margin-top:8px}
   .tabs button,.pk-tabs button,.acttabs [role=tab]{border-bottom:2px solid Canvas}
   .tabs button[aria-selected="true"],.pk-tabs button[aria-selected="true"],.acttabs [role=tab][aria-selected="true"]{border-bottom-color:Highlight}
   .setcats button{border-left:2px solid Canvas} .setcats button[aria-selected="true"]{border-left-color:Highlight}
-  .rail button[aria-current="page"]{forced-color-adjust:none;color:Highlight} .rail button[aria-current="page"]::before{forced-color-adjust:none;background:Highlight}
+  .rail button[aria-current="page"]{forced-color-adjust:none;color:Highlight;border:2px solid Highlight} .rail button[aria-current="page"]::before{forced-color-adjust:none;background:Highlight}
+  .rail .railfly,#railMoreMenu{border:1px solid CanvasText} .rail .railfly button:hover,.rail .railfly button:focus-visible,#railMoreMenu button:focus-visible{outline:2px solid Highlight}
+  #railMoreMenu .rsw .sw{forced-color-adjust:none} .rail button.rtog:focus-visible{outline-color:Highlight}
   #cmdkList button[aria-selected="true"],#cmdkList button:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   #cmdkIn:focus,#cmdkIn:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   .spark i,.chs .dot,.pkstage .dot,.ib .fcount,.rail .badge,.mv-mk.achieved{forced-color-adjust:none}

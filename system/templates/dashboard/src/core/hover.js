@@ -14,6 +14,10 @@
    - touch: nothing here reacts to a touch pointer (a tap keeps what it did before). Reduced motion removes the fade in CSS;
      the delays are the same.
 
+   - decided (#160): a menu the keyboard has taken (released) is not closed when the pointer opens a different hover menu, so the two
+     can show together. Closing a menu the user is working in, because the pointer passed another trigger, is the worse fault.
+     The released one closes by its own Esc, Tab or a pick.
+
    `hoverGroup` is the state machine (pure: timers are injectable, so a test runs it on a fake clock); `hoverAttach` wires it to
    a trigger and a popup in the page. The tooltip (core/dom.js) uses the TIP_ constants, Menu.jsx's `hover` uses the menu group. */
 

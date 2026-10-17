@@ -5,7 +5,7 @@ Run: python3 dev/tests/test_rail_customise.py   (needs Google Chrome; skipped ot
 The sidebar is drawn by components (components/sidebar/, dev/COMPONENTS.md) from stores/rail.js: RAIL_ITEMS and the saved
 choice in settings.json, dashboard.rail = {order, more, hidden, display}, written through writeSettings (a backup and a log
 line). The top holds Today, Work, Review, Projects, Reports (BL-337) and People; More, at the bottom, holds Intake, Files, Activity and
-Settings and opens upwards (sideways when collapsed). The collapse toggle sits at the top-left before the wordmark, in the
+Settings and opens upwards (sideways when collapsed). The wordmark in the head is the collapse toggle (#156), in the
 same place either way; ⌘\\ does the same; the choice is remembered. Collapsed, the sidebar is a 56px rail of named icons
 with badges. Customise sidebar moves pages between the two lists by drag, by its arrow buttons or by Alt and the arrow
 keys; Today is always first; Icons only; Reset to default; Done saves, Cancel and Esc don't.
@@ -74,15 +74,14 @@ class Sidebar(LiveBrowserCase):
         b = self.b
         self.assertEqual(self.top(), TOP)
         self.assertEqual(self.more(), MORE)
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail')).width"), "212px")
+        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail')).width"), "224px")
         self.assertEqual(b.eval("document.querySelector('.rail [data-v=today]').getAttribute('aria-current')"), "page")
         self.assertEqual(b.eval("document.querySelector('.rail [data-v=work] .rl').textContent"), "Work")   # names shown
-        # the toggle sits at the top-left, before the wordmark
-        tog, logo, first = self.rect("#railTog"), self.rect(".rail .logo"), self.rect("#railMain button")
-        self.assertLess(tog["r"], logo["l"] + 1)
+        # the wordmark is the toggle (#156), above the pages
+        tog, first = self.rect("#railTog"), self.rect("#railMain button")
         self.assertLess(tog["b"], first["t"] + 1)
         self.assertEqual(b.eval("document.getElementById('railTog').getAttribute('aria-expanded')"), "true")
-        self.assertEqual(b.eval("document.getElementById('railTog').getAttribute('aria-label')"), "Collapse the sidebar")
+        self.assertEqual(b.eval("document.getElementById('railTog').getAttribute('aria-label')"), "Collapse the rail")
         self.assertEqual(b.eval("document.getElementById('railTog').getAttribute('aria-controls')"), "rail")
         # More is at the bottom, below the pages
         self.assertGreater(self.rect("#railMore")["t"], self.rect("#railMain")["b"] + 40)
@@ -99,89 +98,97 @@ class Sidebar(LiveBrowserCase):
         b = self.b
         before = self.rect("#railTog")
         b.click("#railTog")
-        self.wait_saved("r.display==='icons'")
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='56px'")
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.shell')).gridTemplateColumns.split(' ')[0]"), "56px")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # labels when collapsed: on by default
+        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.shell')).gridTemplateColumns.split(' ')[0]"), "76px")
         after = self.rect("#railTog")
-        self.assertEqual((before["l"], before["t"], before["w"]), (after["l"], after["t"], after["w"]))   # in the same place
-        t = b.eval("(e=>[e.getAttribute('aria-expanded'),e.getAttribute('aria-label'),e.dataset.tip])(document.getElementById('railTog'))")
-        self.assertEqual(t, ["false", "Expand the sidebar", "Expand the sidebar"])
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail .logo')).display"), "none")
+        self.assertEqual((before["l"], before["t"]), (after["l"], after["t"]))             # in the same place
+        t = b.eval("(e=>[e.getAttribute('aria-expanded'),e.getAttribute('aria-label')])(document.getElementById('railTog'))")
+        self.assertEqual(t, ["false", "Expand the rail"])
+        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail .wm')).display"), "none")   # "c_" instead of the word
+        self.assertEqual(b.eval("document.querySelector('.rail .cmark').textContent"), "c_")
+        self.assertNotEqual((self.saved() or {}).get("display"), "icons")                  # this browser's choice, not the settings file's
         self.reload()
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail')).width"), "56px")
-        # ⌘\ expands it again, wherever focus is
+        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.rail')).width"), "76px")
+        # the key expands it again, wherever focus is
         b.eval("go('work')")
         b.key("\\", META)
-        self.wait_saved("r.display==='titles'")
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='212px'")
-        self.assertEqual(b.eval("document.getElementById('railTog').getAttribute('aria-label')"), "Collapse the sidebar")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")
+        self.assertEqual(b.eval("document.getElementById('railTog').getAttribute('aria-label')"), "Collapse the rail")
         b.key("\\", META)
-        self.wait_saved("r.display==='icons'")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")
 
     def test_collapsed_icons_are_named_with_tooltips_badges_and_the_accent_bar(self):
         b = self.b
         pending = b.eval("REV.filter(r=>!r.done).length")
         self.assertGreater(pending, 0)
-        b.eval("railSave({...RAILCFG,display:'icons'})")
+        b.eval("railSave({...RAILCFG,display:'icons'})")                                       # a saved "icons": icons only, collapsed
         self.wait_saved("r.display==='icons'")
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='56px'")
-        names = b.eval("[...document.querySelectorAll('#railMain button[data-v]')].map(x=>[x.getAttribute('aria-label'),x.dataset.tip,x.querySelector('.rl').offsetParent===null])")
-        self.assertEqual([n[1] for n in names], ["Today", "Work", "Review", "Projects", "Reports", "People"])
-        self.assertTrue(all(n[0].startswith(n[1]) and n[2] for n in names), names)            # named, words not shown
+        names = b.eval("[...document.querySelectorAll('#railMain button[data-v]')].map(x=>[x.getAttribute('aria-label'),x.dataset.tip||null,x.querySelector('.rl').offsetParent===null])")
+        self.assertEqual([n[1] for n in names], ["Today", None, "Review", None, "Reports", "People"])    # Work and Projects have flyouts instead
+        self.assertTrue(all(n[0].split(",")[0] in ("Today", "Work", "Review", "Projects", "Reports", "People") and n[2] for n in names), names)   # named, words not shown
         self.assertEqual(names[2][0], f"Review, {pending} waiting")                            # the count in the name too
         r = b.eval("""(()=>{ const rail=document.querySelector('.rail').getBoundingClientRect(), bd=document.getElementById('revBadge'), x=bd.getBoundingClientRect();
           return {inside:x.left>=rail.left&&x.right<=rail.right+1, shown:getComputedStyle(bd).display!=='none', text:bd.textContent}; })()""")
         self.assertEqual(r, {"inside": True, "shown": True, "text": str(pending)})
         bar = b.eval("getComputedStyle(document.querySelector('.rail button[aria-current=page]'),'::before').width")
         self.assertEqual(bar, "3px")                                                          # the current page keeps its bar
-        # the one tooltip, beside the rail
-        b.eval("document.querySelector('.rail [data-v=people]').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))")
+        # the one tooltip, beside the rail, after the hover standard's 400 ms
+        p = b.box(".rail [data-v=people]")
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=p["x"], y=p["y"], button="none")
         b.wait("document.getElementById('tip')&&document.getElementById('tip').classList.contains('on')")
         self.assertEqual(b.eval("document.getElementById('tip').textContent"), "People")
         self.assertGreaterEqual(self.rect("#tip")["l"], self.rect(".rail")["r"])
         # expanded, no tooltip on a page (its name is shown)
         b.eval("railSave({...RAILCFG,display:'titles'})")
         self.wait_saved("r.display==='titles'")
+        b.click("#railTog")                                                                   # (a browser choice: collapse, then expand)
+        b.click("#railTog")
         b.wait("!document.querySelector('.rail [data-v=people]').dataset.tip")
 
-    def test_a_narrow_window_always_shows_the_icons_and_hides_the_toggle(self):
+    def test_the_first_state_follows_the_width_and_under_900px_the_rail_stays_collapsed(self):
         b = self.b
         b.resize(1000, 800)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='56px'")         # under 1200px: collapsed
-        b.resize(420, 800)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='48px'")         # under 480px: 48px, as before BL-319
-        self.assertTrue(b.eval("document.getElementById('railTog').hidden"))
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # under 1200px it starts collapsed (labels on)
+        self.assertFalse(b.eval("document.getElementById('railTog').disabled"))            # and can be opened
+        b.resize(1250, 800)
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")        # 1200px and wider: expanded
+        b.resize(800, 800)
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # under 900px: always collapsed
+        self.assertTrue(b.eval("document.getElementById('railTog').disabled"))
         self.assertTrue(b.eval("[...document.querySelectorAll('.rail button[data-v]')].every(x=>x.getAttribute('aria-label'))"))
         self.assertNotEqual((self.saved() or {}).get("display"), "icons")                     # nothing saved: it's the window
         b.resize(1400, 900)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='212px'")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")
 
     # ── More ──
-    def test_more_opens_upwards_with_a_badge_for_what_waits_inside(self):
+    def test_more_opens_beside_it_with_an_amber_badge_for_problems(self):
         b = self.b
-        pending = b.eval("REV.filter(r=>!r.done).length")
         b.eval("railSave({...RAILCFG,order:['today','work','projects','people'],more:['review','inbox','files','activity','settings']})")
         self.wait_saved("r.more[0]==='review'")
-        b.wait("document.getElementById('railMoreBadge').textContent!=='0'")
-        new = b.eval("(D.inbox||[]).filter(f=>f.state==='new').length")
-        m = b.eval("(()=>{ const m=document.getElementById('railMore'); return {label:m.getAttribute('aria-label'), badge:document.getElementById('railMoreBadge').textContent, shown:getComputedStyle(document.getElementById('railMoreBadge')).display}; })()")
-        self.assertEqual(m["badge"], str(pending + new))
-        self.assertNotEqual(m["shown"], "none")
-        self.assertTrue(m["label"].startswith(f"More: Review has {pending} waiting"), m)   # a count and a name, never colour alone
+        pending = b.eval("REV.filter(r=>!r.done).length")
+        b.eval("healthCount.value=1")                                                          # one problem from Settings > Health
+        b.wait("document.getElementById('railMoreBadge').textContent==='1'")
+        m = b.eval("(()=>{ const m=document.getElementById('railMore'); return {label:m.getAttribute('aria-label'), shown:getComputedStyle(document.getElementById('railMoreBadge')).display}; })()")
+        self.assertEqual(m["label"], "More, 1 problem")
+        self.assertNotEqual(m["shown"], "none")                                                # a count and a name, never colour alone
         self.open_more()
         self.assertEqual(b.eval("document.getElementById('railMore').getAttribute('aria-expanded')"), "true")
-        menu, btn = self.rect("#railMoreMenu"), self.rect("#railMore")
-        self.assertLessEqual(menu["b"], btn["t"])                                             # upwards
+        menu, btn, rail = self.rect("#railMoreMenu"), self.rect("#railMore"), self.rect(".rail")
+        self.assertGreaterEqual(menu["l"], rail["r"])                                          # beside the rail
+        self.assertLessEqual(menu["b"], btn["b"] + 1)
         self.assertEqual(b.eval("document.activeElement.dataset.v"), "review")               # focus on the first page
         self.assertIn(str(pending), b.eval("document.querySelector('#railMoreMenu [data-v=review]').textContent"))
-        self.assertEqual(b.eval("[...document.querySelectorAll('#railMoreMenu [role=menuitem]')].pop().textContent"), "Customise sidebar…")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#railMoreMenu [role^=menuitem]')].map(x=>x.id||x.dataset.v)"),
+                         ["review", "inbox", "files", "activity", "railHealth", "settings", "railHelp", "railCustBtn", "railLabelsSw"])
+        self.assertIn("1", b.eval("document.getElementById('railHealth').textContent"))
         b.key("ArrowDown")
         self.assertEqual(b.eval("document.activeElement.dataset.v"), "inbox")
         b.key("End")
-        self.assertEqual(b.eval("document.activeElement.id"), "railCustBtn")
+        self.assertEqual(b.eval("document.activeElement.id"), "railLabelsSw")
         b.key("Home")
         b.key("ArrowUp")                                                                       # wraps round
-        self.assertEqual(b.eval("document.activeElement.id"), "railCustBtn")
+        self.assertEqual(b.eval("document.activeElement.id"), "railLabelsSw")
         b.key("Escape")
         b.wait("document.getElementById('railMoreMenu').hidden")
         self.assertEqual(b.eval("document.activeElement.id"), "railMore")
@@ -203,7 +210,7 @@ class Sidebar(LiveBrowserCase):
         self.open_more()
         self.assertGreaterEqual(self.rect("#railMoreMenu")["l"], self.rect(".rail")["r"])
         self.assertTrue(b.eval("[...document.querySelectorAll('#railMoreMenu .rl')].every(x=>x.offsetParent!==null)"))   # names shown in the menu
-        self.assertEqual(b.eval("document.getElementById('railMore').dataset.tip").split(":")[0], "More")
+        self.assertFalse(b.eval("!!document.getElementById('railMore').dataset.tip"))          # its flyout, not a tooltip
 
     def test_an_empty_more_is_hidden(self):
         b = self.b
@@ -349,7 +356,22 @@ class Sidebar(LiveBrowserCase):
         b.eval("railSave({...RAILCFG,display:'icons'}).then(ok=>{window.__ok=ok})")
         b.wait("window.__ok===false")
         self.assertEqual(b.eval("RAILCFG.display"), "titles")
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='212px'")
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")
+
+
+class EveryRailItemHasAnIcon(unittest.TestCase):
+    """Reports (BL-337) named an icon the sidebar's table did not have, so its button drew nothing: every RAIL_ITEMS icon, and
+    the icons the rail draws itself, must have an entry in RailIcon.jsx's RAIL_ICONS."""
+
+    def test_every_rail_item_icon_is_in_the_table(self):
+        import re
+        src = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src"
+        items = (src / "stores/rail.js").read_text(encoding="utf-8")
+        table = (src / "components/sidebar/RailIcon.jsx").read_text(encoding="utf-8")
+        have = set(re.findall(r"^  (\w+): \[\[", table, re.M))
+        icons = set(re.findall(r'icon: "(\w+)"', items))
+        self.assertTrue(icons, "no RAIL_ITEMS icons found")
+        self.assertEqual(sorted(icons - have), [], "a rail item names an icon RAIL_ICONS does not have")
 
 
 class DefaultRailOrder(unittest.TestCase):

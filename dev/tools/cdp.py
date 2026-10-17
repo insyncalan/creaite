@@ -130,7 +130,7 @@ class Browser:
              # and Page.navigate never answers; a mock keychain is what Puppeteer and Playwright use there (ignored elsewhere)
              "--use-mock-keychain",
              # headless Chrome on Linux has no pointing device and reports (hover: none), so hover popups stood down on CI
-             # (the hover standard stands down on it); say a mouse is attached. The touch tests fire touch events or fake matchMedia
+             # (core/hover.js canHover); say a mouse is attached. The touch tests fire touch events or fake matchMedia
              "--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4",
              f"--window-size={width},{height}", *args, "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         port_file = os.path.join(self.profile, "DevToolsActivePort")
