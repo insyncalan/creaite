@@ -408,16 +408,24 @@ def criteria(overdue, raid, nxt, cut, h):
 HEALTH_RANK = {"On track": 0, "At risk": 1, "Off track": 2}
 
 
-def health_evidence(code):
-    """{suggested, reasons} for a project now (BL-52: health better than this needs a reason)."""
+def health_evidence(code, client_only=False):
+    """{suggested, reasons} for a project now (BL-52: health better than this needs a reason). `client_only` (#203): the same criteria
+    over client-visible items alone (client_leak.item_problem passes them), so an internal-only item never drives a client-facing
+    flag; it carries no early warnings."""
     con = tracker.connect()
     cut = today()
     actions = rows(con, "SELECT * FROM actions WHERE project = ? AND status IN ('Open','Delayed') AND due_date < ?",
                    code, cut.isoformat())
     raid = rows(con, "SELECT * FROM raid WHERE project = ? AND status = 'Open'", code)
-    nxt = next((m for m in milestones(con, code) if m["status"] == "Planned"), None)
+    mss = [m for m in milestones(con, code) if m["status"] == "Planned"]
+    if client_only:
+        import client_leak
+        blocking = client_leak.blocking_labels(con)
+        shown_ = lambda x: not client_leak.item_problem(con, x["id"], blocking)      # noqa: E731
+        actions, raid, mss = ([x for x in xs if shown_(x)] for xs in (actions, raid, mss))
+    nxt = mss[0] if mss else None
     suggested, off, risk = criteria(actions, raid, nxt, cut, paths.load_settings().get("health", {}))
-    return {"suggested": suggested, "reasons": off or risk, "warnings": project_warnings(code)}   # BL-51: evidence too
+    return {"suggested": suggested, "reasons": off or risk, "warnings": [] if client_only else project_warnings(code)}   # BL-51
 
 
 def project_warnings(code):
