@@ -26,15 +26,15 @@ import { aiBar } from "../stores/aiEdit.js";
 
 export const LINK_REFUSED = "Only http, https and mailto addresses can be linked.";
 
-/** @typedef {import("../core/editor.js").EdHandle} EdHandle */
-/** @typedef {{mode: "view", h: EdHandle, from: number, to: number, href: string}
-    | {mode: "form", h: EdHandle, from: number, to: number, href: string, text: string, existing: boolean, whole: boolean, key: number}} PopState */
+/** @typedef {import("../core/editor.js").EdHandle} LinkEd */
+/** @typedef {{mode: "view", h: LinkEd, from: number, to: number, href: string}
+    | {mode: "form", h: LinkEd, from: number, to: number, href: string, text: string, existing: boolean, whole: boolean, key: number}} PopState */
 
 /** @type {PopState|null} */
 let pop = null;
-let root = /** @type {HTMLDivElement|null} */ (null), unplace = /** @type {(() => void)|null} */ (null), seq = 0, formKey = 0;
+let root = /** @type {HTMLDivElement|null} */ (null), unplace = /** @type {(() => void)|null} */ (null), linkSeq = 0, formKey = 0;
 
-/** The popover's host element, in the editor's modal dialog when it is in one. @param {EdHandle} h */
+/** The popover's host element, in the editor's modal dialog when it is in one. @param {LinkEd} h */
 function home(h) {
   if (!root) { root = document.createElement("div"); root.className = "linkroot"; }
   const host = /** @type {HTMLElement} */ (h.el.closest("dialog[open]") || document.body);
@@ -57,7 +57,7 @@ function closePop(back) {
   }
 }
 /** Draw the popover for the current state, placed under the words. */
-function draw() {
+function drawLink() {
   const p = pop;
   if (!p || p.h.editor.isDestroyed) { closePop(); return; }
   const r = home(p.h);
@@ -67,28 +67,34 @@ function draw() {
   if (box) unplace = placeAtCaret(p.h.editor.view, p.to, box, { from: p.from, x: () => leftAt(p.h.editor.view, p.from), max: 320, scroll: false });
 }
 
-/** Open the link form for an editor: the selection (or the link under the cursor). @param {EdHandle} h */
+/** Open the link form for an editor: the selection (or the link under the cursor). @param {LinkEd} h */
 export function openLinkForm(h) {
   const ed = h.editor;
   if (!h || ed.isDestroyed) return false;
-  const sel = ed.state.selection, $f = sel.$from;
+  const sel = ed.state.selection;
+  let $f = sel.$from, a = sel.from, z = sel.to;
+  if (!sel.empty && !sel.node && !$f.parent.isTextblock) {          /* ⌘A is the whole document: the link goes over the text in it */
+    let x = -1, y = -1;
+    ed.state.doc.nodesBetween(sel.from, sel.to, (/** @type {any} */ n, /** @type {number} */ pos) => { if (n.isTextblock && n.content.size) { if (x < 0) x = pos + 1; y = pos + n.nodeSize - 1; } return !n.isTextblock; });
+    if (x >= 0) { a = x; z = y; $f = ed.state.doc.resolve(x); }
+  }
   if (sel.node || !$f || !$f.parent.isTextblock || $f.parent.type.spec.code) { snack("Put the cursor in some text to add a link"); return false; }
   if (!ed.state.schema.marks.link) return false;
-  if (internalIn(ed.state.doc, sel.from, sel.to) || (sel.empty && $f.marks().some((/** @type {any} */ m) => m.type.name === "link") && !linkAt(ed))) {
+  if (internalIn(ed.state.doc, a, z) || (sel.empty && $f.marks().some((/** @type {any} */ m) => m.type.name === "link") && !linkAt(ed))) {
     snack("A work item or person link can't also be a web link"); return false;
   }
-  const have = linkAt(ed), from = have ? have.from : sel.from, to = have ? have.to : sel.to;
-  const whole = !$f.sameParent(sel.$to);                       // several paragraphs: the words stay as they are
+  const have = linkAt(ed), from = have ? have.from : a, to = have ? have.to : z;
+  const whole = !$f.sameParent(ed.state.doc.resolve(z));                       // several paragraphs: the words stay as they are
   const text = have ? have.text : ed.state.doc.textBetween(from, to);
   if (aiBar.value && aiBar.value.h === /** @type {any} */ (h)) aiBar.value = null;
   pop = { mode: "form", h, from, to, href: have ? have.href : "", text, existing: !!have, whole, key: ++formKey };
-  draw();
+  drawLink();
   return true;
 }
 
 /** The form. @param {{p: Extract<PopState, {mode: "form"}>}} props */
 function LinkForm({ p }) {
-  const id = useRef(`linkpop-${++seq}`).current;
+  const id = useRef(`linkpop-${++linkSeq}`).current;
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
     const addrIn = useRef(/** @type {HTMLInputElement|null} */ (null));
   const [text, setText] = useState(p.text);
@@ -157,7 +163,7 @@ function LinkView({ p }) {
   );
 }
 
-/** Show the view for the link under the cursor, or put the view away. @param {EdHandle} h */
+/** Show the view for the link under the cursor, or put the view away. @param {LinkEd} h */
 function look(h) {
   const ed = h.editor;
   if (ed.isDestroyed) return;
@@ -166,11 +172,11 @@ function look(h) {
   if (pop && pop.mode === "form") return;
   if (pop && pop.mode === "view" && pop.h === h && pop.from === l.from && pop.to === l.to && pop.href === l.href) return;
   pop = { mode: "view", h, from: l.from, to: l.to, href: l.href };
-  draw();
+  drawLink();
 }
 
 /** What creaiteEditor does for a rich editor (ED_HOOKS.link.attach): a click on a link shows its view; ⌘⇧K is the form; Tab reaches the
-    view; leaving the text puts it away. @param {EdHandle} h */
+    view; leaving the text puts it away. @param {LinkEd} h */
 export function attachLink(h) {
   const el = h.el, ed = h.editor;
   /** @param {MouseEvent} e */

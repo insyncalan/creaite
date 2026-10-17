@@ -16,9 +16,14 @@
 /** The longest address kept. */
 export const LINK_MAX = 2048;
 
-/** Control characters, spaces of every kind, the invisible marks and the line and paragraph separators. */
-// eslint-disable-next-line no-control-regex
-const BAD_CHARS = /[\u0000-\u0020\u007f-\u00a0\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
+/** Invisible and look-alike-space characters (zero-width marks, line and paragraph separators, ideographic and hangul fillers). */
+const INVISIBLE = /[\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
+/** Whether `s` holds a control character, a space of any kind (the ASCII ones are 0x00 to 0x20, 0x7f to 0xa0 are the delete and C1 controls
+    and the no-break space) or an invisible mark. A loop, not a pattern, so the control range is plain numbers. @param {string} s */
+function hasBad(s) {
+  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); if (c <= 0x20 || (c >= 0x7f && c <= 0xa0)) return true; }
+  return INVISIBLE.test(s);
+}
 /** A character-entity, numeric or named ("&#106;", "&#x6A;", "&colon;", "&Tab;"). A bare "&" in a query ("a=1&b=2") is fine. */
 const ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
 
@@ -26,7 +31,7 @@ const ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
     @param {unknown} s @returns {string|null} */
 export function linkUrl(s) {
   if (typeof s !== "string" || !s || s.length > LINK_MAX) return null;
-  if (BAD_CHARS.test(s) || ENTITY.test(s) || /[\\<>"`]/.test(s)) return null;
+  if (hasBad(s) || ENTITY.test(s) || /[\\<>"`]/.test(s)) return null;
   const m = /^([a-z][a-z\d+.-]*):/i.exec(s);
   if (!m) return null;                                                   // no scheme: relative, protocol-relative (//host) or bare text
   const scheme = m[1].toLowerCase(), rest = s.slice(m[0].length);
@@ -35,13 +40,13 @@ export function linkUrl(s) {
     if (!a || !a[1]) return null;                                        // "https:example.com", "https:///x": not an address
     const host = a[1];
     if (host.includes("@")) return null;                                 // a name and password before the host hides where it goes
-    if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host) && !/[^\x00-\x7f]/.test(host)) return null;
+    if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host) && !/[\u0080-\uffff]/.test(host)) return null;
     try { const u = new URL(scheme + ":" + rest); if (u.protocol !== scheme + ":" || !u.hostname || u.username || u.password) return null; } catch (e) { return null; }
     return scheme + ":" + rest;
   }
   if (scheme === "mailto") {
-    const who = rest.split(/[?#]/)[0];
-    if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(who))) return null;      // one address (no list: it would hide who gets it)
+    const mailbox = rest.split(/[?#]/)[0];
+    if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;      // one address (no list: it would hide the receivers)
     return "mailto:" + rest;
   }
   return null;
@@ -70,7 +75,7 @@ export function typedLinkUrl(s) {
 
 /** An address a note keeps for creaite's own links (a work item or a person), which are not web addresses and never open anywhere.
     @param {unknown} s @returns {boolean} */
-export const isInternalHref = s => typeof s === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s) && !BAD_CHARS.test(s);
+export const isInternalHref = s => typeof s === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s) && !hasBad(s);
 
 /** Whether a link already in a document may stay in it: a web or mail address `linkUrl` accepts, or one of creaite's own.
     @param {unknown} s @returns {boolean} */

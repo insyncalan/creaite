@@ -486,7 +486,7 @@ class Drawer(LiveBrowserCase):
         self.open()
         self.cap_menu()
         rows = b.eval("[...document.querySelectorAll('.slashmenu [role=option][data-slash]')].map(o=>o.dataset.slash)")
-        self.assertEqual(rows, ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock"],
+        self.assertEqual(rows, ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "link"],
                          "no [[ @ # lists, table, image or templates yet (step C): a row the drawer cannot do is not offered")
         b.type("head")
         b.pump(0.1)
