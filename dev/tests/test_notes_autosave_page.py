@@ -754,6 +754,14 @@ class AutosavePage(LiveBrowserCase):
             self.assertEqual(b.eval("noteFocus.value"), True, "the first Esc closed the overlay only")
             self.assertFalse(self.dialog_open())
 
+        def sparkle_esc():
+            """#117 keeps the sparkle on a selection after Esc folds the bar; it is the next layer (#119 x #117, integration), so it
+            takes one Esc of its own and focus mode stays."""
+            b.wait("!!document.querySelector('#aiLayer .aispark')", 5)
+            b.key("Escape")
+            b.wait("!document.querySelector('#aiLayer .aispark')", 5)
+            self.assertEqual(b.eval("noteFocus.value"), True, "the sparkle's Esc closed it only")
+
         def second_esc_leaves():
             b.key("Escape")
             b.wait("!noteFocus.value", 8)
@@ -768,17 +776,22 @@ class AutosavePage(LiveBrowserCase):
         one_esc_closes("!!document.querySelector('#ntpick')", "!document.querySelector('#ntpick')")
         second_esc_leaves()
         b.eval("document.querySelector('.nbody').cxed.editor.commands.setContent('hello world')")    # the picker's text goes
-        b.eval("document.querySelector('.nbody').cxed.editor.commands.selectAll()")  # the AI bar over a selection
+        b.eval("document.querySelector('.nbody').cxed.editor.commands.selectAll()")  # the AI bar over a selection (#117: the sparkle opens it)
+        b.wait("!!document.querySelector('#aiLayer .aispark')", 5)
+        b.click("#aiLayer .aispark")
         one_esc_closes("!!document.querySelector('.aibar')", "!document.querySelector('.aibar')")
+        sparkle_esc()
         second_esc_leaves()
         b.eval("document.querySelector('.nbody').cxed.editor.commands.selectAll()")  # the bar with its menu open: menu, then bar, then leave
+        b.wait("!!document.querySelector('#aiLayer .aispark')", 5)
+        b.key("/", 1)                                                                 # Alt+/ opens the bar with its first menu open (#117)
         b.wait("!!document.querySelector('.aibar')", 5)
-        b.key("/", 1)
         b.wait("!!document.querySelector('.aibar [role=menu]')", 5)
         b.key("Escape")
         b.wait("!document.querySelector('.aibar [role=menu]')", 5)
         self.assertEqual(b.eval("!!document.querySelector('.aibar')&&noteFocus.value"), True)
         one_esc_closes("!!document.querySelector('.aibar')", "!document.querySelector('.aibar')")
+        sparkle_esc()
         second_esc_leaves()
         # the AI suggestion, with the cursor in the text and with focus in the card
         b.eval("""(()=>{ const h=document.querySelector('.nbody').cxed; aiSug.value={h,ai:{place:'notes'},option:'x',label:'Tighten',status:'ready',text:'Hi',notes:[],

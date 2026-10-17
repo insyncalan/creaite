@@ -79,10 +79,10 @@ def _note_made(b):
 def _notes_ai(b):
     _note_made(b)
     b.click("#v-notes .nbody")
-    b.key("a", 4)                                    # ⌘A: all of the text, which shows the sparkle (#117); its click opens the AI bar
+    b.key("a", 4)                                    # ⌘A: all of the text, which shows the sparkle in the margin (#117)
+    b.wait("document.querySelector('#aiLayer .aispark')", 15)
+    b.click("#aiLayer .aispark")                     # the sparkle opens the AI bar
     b.pump(0.3)
-    b.wait("document.querySelector('#aiLayer .aispark')")
-    b.click("#aiLayer .aispark")
 
 
 def _notes_session(b):
