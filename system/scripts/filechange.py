@@ -116,9 +116,10 @@ def run_state():
     return data["run"], reach.is_marked(data), n
 
 
-def verdict(op, path, to=None):
-    """(kind, reason) for this change, from reach.classify, with the run's mark and count."""
-    _run, marked, count = run_state()
+def verdict(op, path, to=None, own=False):
+    """(kind, reason) for this change, from reach.classify, with the run's mark and count. `own` (#119, Alan 17-10-2026): the
+    change is Alan's own note save from the dashboard, so no ask creaite run's mark or count applies to it."""
+    _run, marked, count = (None, False, 0) if own else run_state()
     v = reach.classify(path, OP_KIND[op], marked=marked, count=count)
     if op == "move" and to is not None:
         v = reach.worst(v, reach.classify(to, "create", marked=marked, count=count))
@@ -183,7 +184,17 @@ def record_request(ch, reason):
     return f
 
 
-def perform(ch, approval=None, via="cli", run=None):
+def _is_own(own, op, target):
+    """#119: `own` counts only for an edit of a note (a create, another file or a settings file never)."""
+    return bool(own) and op == "edit" and paths.is_note(target)
+
+
+def _run_tag(run, own):
+    """The run id the log line carries: none for Alan's own note save, else the given run or the one in progress."""
+    return run if own else (run or run_state()[0])
+
+
+def perform(ch, approval=None, via="cli", run=None, own=False):
     """Make one change: {op, path, to?, data?, from?, why}. Returns (code, message): 0 done, 1 refused, 3 needs approval. A
     sensitive change is made only with `approval`, a token the live server issued in this same process for exactly this change
     (reach.APPROVALS); a token from anywhere else, used, expired or for another change is refused. BL-265: the refusals, the
@@ -193,7 +204,11 @@ def perform(ch, approval=None, via="cli", run=None):
     refused = _refused(ch, op, why, target)
     if refused:
         return 1, refused
-    kind, reason = verdict(op, ch["path"], ch.get("to"))
+    # ===== #119 (Alan, 17-10-2026): `own`, honoured only for an edit of a note, by a route in the live server that builds the change
+    # itself (never from a request body): Alan's typing is not an ask creaite run's change, so it carries no run tag and is not
+    # counted against the run's limit. The never list, the settings-file check and the tiers are untouched. =====
+    own = _is_own(own, op, target)
+    kind, reason = verdict(op, ch["path"], ch.get("to"), own=own)
     if kind == "never":
         return 1, f"Not changed: {reason}."
     approved = False
@@ -205,7 +220,7 @@ def perform(ch, approval=None, via="cli", run=None):
     problem = _settings_refused(ch, op, target, before_bytes)
     if problem:
         return 1, problem
-    run = run or run_state()[0]
+    run = _run_tag(run, own)
     n_id = next_id()
     # ===== BL-194 (sprint-ask-creaite-access): the tier in the log (a label only; the decision above is unchanged) =====
     tier = "ordinary" if kind == "ordinary" else reach.tier(ch["path"], OP_KIND[op], before_bytes, ch.get("data"), to=ch.get("to"))[0]
