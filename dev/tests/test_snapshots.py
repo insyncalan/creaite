@@ -82,6 +82,25 @@ def open_cmdk(b):
 
 
 
+def rail_state(width, labels):
+    """#156: the rail in one of its three states (224px expanded; 76px collapsed with labels; 56px icons only), reached as
+    test_rail_states does: the wordmark toggle, then Labels when collapsed."""
+    def step(b):
+        open_health(b)                  # the badge on More and Health comes from the health answer: the fixed one, so it never depends on order
+        b.wait("document.getElementById('railHealthBadge') && document.getElementById('railHealthBadge').textContent.trim()==='1'", 15)
+        def w():
+            return b.eval("Math.round(document.querySelector('.rail').getBoundingClientRect().width)")
+        if width == 224 and w() != 224:
+            b.click("#railTog")
+        if width != 224 and w() == 224:
+            b.click("#railTog")
+        b.wait(f"Math.round(document.querySelector('.rail').getBoundingClientRect().width)!==224 || {width}===224", 5)
+        if width != 224:
+            b.eval(f"railSetLabels({'true' if labels else 'false'})")
+        b.wait(f"Math.round(document.querySelector('.rail').getBoundingClientRect().width)==={width}", 5)
+    return step
+
+
 # name: (how to get there: JavaScript, or a step that drives the browser; what to wait for; the region to keep).
 SCREENS = {
     "today": ("go('today')", "!document.getElementById('v-today').hidden", "#v-today"),
@@ -107,6 +126,9 @@ SCREENS = {
     "cmdk": (open_cmdk, "document.getElementById('cmdk').open", "#cmdk"),
     "ask": ("openChat()", "!document.getElementById('chat').hidden || document.getElementById('chat').classList.contains('on')",
             "#chat"),
+    "rail-expanded": (rail_state(224, True), "Math.round(document.querySelector('.rail').getBoundingClientRect().width)===224", ".rail"),
+    "rail-collapsed": (rail_state(76, True), "Math.round(document.querySelector('.rail').getBoundingClientRect().width)===76", ".rail"),
+    "rail-icons": (rail_state(56, False), "Math.round(document.querySelector('.rail').getBoundingClientRect().width)===56", ".rail"),
 }
 
 MASKS = [
