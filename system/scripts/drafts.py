@@ -820,14 +820,15 @@ def _confidential(row):
     """Whether an item must stay out of a draft: its full text, latest update, response or source is marked confidential or
     restricted, or it comes from a documents/ folder (as chase_facts checks), however short the fact made of it is."""
     d = dict(row)
-    text = " ".join(str(d.get(k) or "") for k in ("description", "decision", "latest_update", "response_action", "source"))
+    text = " ".join(str(d.get(k) or "") for k in ("name", "description", "decision", "options", "reasoning", "revisit",
+                                              "latest_update", "response_action", "internal_note", "state_reason", "source"))
     return bool(secret(text) or re.search(r"(^|/)documents/", str(d.get("source") or "")))
 
 
 def _facts_overdue(con, code, client, t):
     """(id, kind, text) for each overdue action: the client's wording for a client suggestion, else the action as written."""
-    for r in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open','Delayed') AND due_date < ? ORDER BY due_date, id",
-                         (code, t)):
+    for r in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open','Delayed') AND due_date < ? "
+                         "AND archived = 0 ORDER BY due_date, id", (code, t)):
         days = _plural_days((date.fromisoformat(t) - date.fromisoformat(r["due_date"])).days)
         words = _client_words(r) if client else short(r["description"], 120)
         if words and not _confidential(r):
@@ -841,7 +842,7 @@ def _facts_milestones(con, code, t):
     import report
     for m in report.milestones(con, code):
         late = bool(m["forecast_date"]) and m["forecast_date"] < t
-        if m["status"] == "Planned" and (m["slip_days"] > 0 or late):
+        if m["status"] == "Planned" and (m["slip_days"] > 0 or late) and not m["archived"] and not _confidential(m):
             fc = f"forecast {tracker.shown(m['forecast_date'])}, " if m["forecast_date"] else ""
             gap = f"{m['slip_days']} days later than agreed" if m["slip_days"] > 0 else "past its forecast date"
             yield m["id"], "milestone", f"Milestone {m['name']}: {fc}{gap}"
@@ -849,7 +850,8 @@ def _facts_milestones(con, code, t):
 
 def _facts_raid(con, code, client):
     """(id, kind, text) for each open risk and issue, Urgent first."""
-    for r in con.execute("SELECT * FROM raid WHERE project = ? AND status = 'Open' ORDER BY priority = 'Urgent' DESC, id", (code,)):
+    for r in con.execute("SELECT * FROM raid WHERE project = ? AND status = 'Open' AND archived = 0 "
+                         "ORDER BY priority = 'Urgent' DESC, id", (code,)):
         words = _client_words(r) if client else short(r["description"], 140)
         if words and not _confidential(r):
             tag = f" ({r['priority']})" if r["priority"] and not client else ""
@@ -860,8 +862,8 @@ def _facts_decisions(con, code, client, t):
     """(id, kind, text) for each pending decision past its needed-by date."""
     import report
     for d in report.decisions_needed(con, code, date.fromisoformat(t)):
-        if d["overdue_days"]:
-            row = con.execute("SELECT * FROM decisions WHERE id = ?", (d["id"],)).fetchone()
+        row = con.execute("SELECT * FROM decisions WHERE id = ?", (d["id"],)).fetchone() if d["overdue_days"] else None
+        if row is not None and not row["archived"]:
             words = _client_words(row) if client else short(d["text"], 140)
             if words and not _confidential(row):
                 yield d["id"], "decision", f"Decision overdue by {_plural_days(d['overdue_days'])}: {words}"
@@ -875,10 +877,11 @@ def _facts_movement(con, code):
         return
     yield code, "movement", f"Health was last set on {tracker.shown(since)}" + (f" to {then}" if then else "")
     for r in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Complete','Closed') AND closed >= ? "
-                         "ORDER BY closed DESC, id LIMIT 3", (code, since)):
+                         "AND archived = 0 ORDER BY closed DESC, id LIMIT 3", (code, since)):
         if not _confidential(r):
             yield r["id"], "movement", f"Action closed since: {short(r['description'], 120)}"
-    for r in con.execute("SELECT * FROM raid WHERE project = ? AND raised >= ? ORDER BY raised DESC, id LIMIT 3", (code, since)):
+    for r in con.execute("SELECT * FROM raid WHERE project = ? AND raised >= ? AND archived = 0 "
+                         "ORDER BY raised DESC, id LIMIT 3", (code, since)):
         if not _confidential(r):
             yield r["id"], "movement", f"{r['type']} raised since: {short(r['description'], 120)}"
 
@@ -915,7 +918,7 @@ def suggest_health(con, code, audience):
     """Builder for Suggest the health and its reason (#203). The health is report.health_evidence's, never the model's."""
     import report
     client = audience == "client"
-    ev = report.health_evidence(code, client_only=client)           # a client one: client-visible items alone drive it
+    ev = report.health_evidence(code, client_only=client, live_only=True)           # a client one: client-visible items alone drive it
     suggested = ev["suggested"]
     cur = con.execute("SELECT health, health_reason FROM projects WHERE code = ?", (code,)).fetchone()
     # the internal reason never rides a client reply, so a client request's `current` holds the health only
@@ -923,7 +926,9 @@ def suggest_health(con, code, audience):
     src = suggest_facts(con, code, client)
     if not client and ev["reasons"]:
         why = "; ".join(_no_ids(r) for r in ev["reasons"])
-        src.insert(0, {"id": code, "kind": "criteria", "text": f"The tracker's criteria give {suggested}: {why}"})
+        line = f"The tracker's criteria give {suggested}: {why}"
+        if not (secret(line) or VIP_RE.search(line)):          # a reason naming a confidential milestone is left out: the health stays
+            src.insert(0, {"id": code, "kind": "criteria", "text": line})
     if not src:
         raise Nothing("The tracker holds nothing to explain a health: no overdue actions, slipped milestones, open risks or overdue "
                       "decisions" + (" that a client may see" if client else "") + ". Say why in your own words.")

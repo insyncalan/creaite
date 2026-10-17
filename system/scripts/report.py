@@ -411,16 +411,18 @@ def criteria(overdue, raid, nxt, cut, h):
 HEALTH_RANK = {"On track": 0, "At risk": 1, "Off track": 2}
 
 
-def health_evidence(code, client_only=False):
+def health_evidence(code, client_only=False, live_only=False):
     """{suggested, reasons} for a project now (BL-52: health better than this needs a reason). `client_only` (#203): the same criteria
     over client-visible items alone (client_leak.item_problem passes them), so an internal-only item never drives a client-facing
-    flag; it carries no early warnings."""
+    flag; it carries no early warnings. `live_only`: archived items are left out (suggest mode; default keeps the old behaviour)."""
     con = tracker.connect()
     cut = today()
     actions = rows(con, "SELECT * FROM actions WHERE project = ? AND status IN ('Open','Delayed') AND due_date < ?",
                    code, cut.isoformat())
     raid = rows(con, "SELECT * FROM raid WHERE project = ? AND status = 'Open'", code)
     mss = [m for m in milestones(con, code) if m["status"] == "Planned"]
+    if live_only:
+        actions, raid, mss = ([x for x in xs if not x.get("archived")] for xs in (actions, raid, mss))
     if client_only:
         import client_leak
         blocking = client_leak.blocking_labels(con)
