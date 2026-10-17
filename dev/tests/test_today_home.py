@@ -327,7 +327,7 @@ class WeekCalm(Header):
         b.eval("document.querySelector('#weekList .wk-raid .tacts button').focus()")
         b.pump(0.4)
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#weekList .wk-raid .tacts')).opacity"), "1")          # focus-within
-        self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wk-raid .tacts button')].map(x=>x.dataset.tip)"), ["Write an update", "Draft a chase"])
+        self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wk-raid .tacts button')].map(x=>x.dataset.tip)"), ["Write an update", "Draft email"])
 
     def test_more_after_six_rows_a_day_and_further_ahead_is_kept(self):
         b = self.b
