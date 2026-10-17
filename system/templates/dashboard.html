@@ -3818,6 +3818,13 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
 .linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 @media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}
+
+/* #204: Choose a project (Cockpit and Milestones with no project) */
+.choose{max-width:640px} .choose h1{margin:0 0 4px} .choose>.sub{margin:0 0 14px;color:var(--muted)}
+.chooselist{list-style:none;margin:0;padding:4px 0}
+.chooselink{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;color:var(--ink);text-decoration:none;border-radius:var(--r-md)}
+.chooselink:hover{background:var(--sunk)} .chooselink:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.chooselink .chname{font-weight:500}
 </style>
 </head>
 <body>
@@ -4881,6 +4888,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     chgRollbackNumbers: () => chgRollbackNumbers,
     chgTierTag: () => chgTierTag,
     choosePrep: () => choosePrep,
+    chooseProject: () => chooseProject,
     citeFind: () => citeFind,
     ckAsk: () => ckAsk,
     ckChipsHtml: () => ckChipsHtml,
@@ -34637,7 +34645,8 @@ ${s5}`;
     const code = shared.MSCODE, p6 = P4.find((x5) => x5.code === code), el2 = $("#v-milestones");
     if (!el2) return;
     if (!p6) {
-      el2.textContent = "";
+      if (!code) chooseProject(el2, "milestones");
+      else el2.textContent = "";
       return;
     }
     const cli = shared.MVAUD === "cli";
@@ -35886,7 +35895,7 @@ ${s5}`;
       mvEdClose(true);
     });
     shared.MVREADY = true;
-    if (/^#milestones=/.test(shared.HASH0 || "")) {
+    if (/^#milestones(=|&|$)/.test(shared.HASH0 || "")) {
       const st2 = parseHash(shared.HASH0);
       if (st2) {
         restoreNav(st2);
@@ -46324,10 +46333,32 @@ ${s5}`;
       }
     });
   }
+  function chooseProject(el2, page) {
+    if (!el2) return;
+    const name = page === "milestones" ? "Milestones" : "The project page";
+    putHTML(el2, P4.length ? html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><p class="sub">${name} shows one project. Pick the one to open.</p>
+    <ul class="chooselist card" aria-labelledby="chooseH">${raw(P4.map((p6) => `<li><a href="#${page}=${esc(p6.code)}" class="chooselink" data-choose="${page}" data-code="${esc(p6.code)}"><span class="chname">${esc(p6.name)}</span>${health(p6.health)}</a></li>`).join(""))}</ul></div></div>` : html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><div class="empty card">No projects yet. Add one in <a href="#settings/people" data-go-settings="people">Settings › People and projects</a>.</div></div></div>`);
+  }
+  document.addEventListener("click", (e4) => {
+    const a5 = e4.target.closest && e4.target.closest("[data-choose]");
+    if (a5) {
+      e4.preventDefault();
+      go2(a5.dataset.choose === "milestones" ? "milestones" : "cockpit", a5.dataset.code);
+      return;
+    }
+    const s5 = e4.target.closest && e4.target.closest("[data-go-settings]");
+    if (s5) {
+      e4.preventDefault();
+      go2("settings", s5.dataset.goSettings);
+    }
+  });
   function renderCockpit(code) {
     (() => {
       const p6 = P4.find((x5) => x5.code === code);
-      if (!p6) return;
+      if (!p6) {
+        if (!code) chooseProject($("#v-cockpit"), "cockpit");
+        return;
+      }
       queueMicrotask(mountCurEdit);
       const acts2 = A4.filter((x5) => x5.p === code && open(x5) && (overdue(x5) || soon(x5))).sort((a5, b5) => (a5.due || "9").localeCompare(b5.due || "9"));
       const order = ["Urgent", "High", "Medium", "Low"];
@@ -69194,9 +69225,9 @@ ${d5.text}`);
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
     if (st2 && st2.v === "minutes") return `#minutes=${encodeURIComponent(typeof st2.arg === "string" ? st2.arg : "")}`;
     if (st2 && st2.v === "clientreport") return `#client-report=${typeof st2.arg === "string" ? st2.arg : ""}`;
-    if (st2 && st2.v === "milestones") return `#milestones=${st2.arg}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
+    if (st2 && st2.v === "milestones") return `#milestones${st2.arg ? `=${st2.arg}` : ""}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
     if (st2 && st2.v === "people") return "#people" + (st2.arg === "none" ? "/none" : "");
-    let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? `cockpit=${st2.arg}` : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && st2.lg !== "none" ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : st2.v === "inbox" ? "intake" : st2.v;
+    let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? st2.arg ? `cockpit=${st2.arg}` : "cockpit" : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && st2.lg !== "none" ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : st2.v === "inbox" ? "intake" : st2.v;
     if (st2.item) h5 += `&item=${st2.item.id}`;
     h5 = "#" + h5;
     if (st2 && st2.v === "activity" && st2.aq) {
@@ -69266,12 +69297,12 @@ ${d5.text}`);
       }
     }
     {
-      const q5 = String(h5 || "").replace(/^#/, ""), mm2 = /^milestones=([^&]+)(.*)$/.exec(q5);
+      const q5 = String(h5 || "").replace(/^#/, ""), mm2 = /^milestones(?:=([^&]*))?((?:&.*)?)$/.exec(q5);
       if (mm2) {
-        const code = decodeURIComponent(mm2[1]);
-        if (!P4.some((p6) => p6.code === code)) return null;
+        const code = mm2[1] ? decodeURIComponent(mm2[1]) : "";
+        if (code && !P4.some((p6) => p6.code === code)) return null;
         const kv = Object.fromEntries(mm2[2].split("&").filter(Boolean).map((x6) => x6.split("=")));
-        return { v: "milestones", arg: code, mv: kv.v === "movement" ? "move" : "plan", ms: kv.ms ? decodeURIComponent(kv.ms) : null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+        return { v: "milestones", arg: code || null, mv: kv.v === "movement" ? "move" : "plan", ms: kv.ms ? decodeURIComponent(kv.ms) : null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
       }
     }
     {
@@ -69303,8 +69334,10 @@ ${d5.text}`);
         return st3;
       }
       if (v5 === "cockpit") {
-        if (!P4.some((p6) => p6.code === arg)) return null;
-        st3.arg = arg;
+        if (arg) {
+          if (!P4.some((p6) => p6.code === arg)) return null;
+          st3.arg = arg;
+        }
       } else if (v5 === "work") {
         st3.wt = ["actions", "raid", "decisions", "all"].includes(arg) ? arg : "actions";
         st3.wv = kv.v || null;
@@ -69447,8 +69480,8 @@ ${d5.text}`);
       shared.RF = null;
     }
     if (v5 === "milestones") {
-      if (!P4.some((p6) => p6.code === arg)) return false;
-      shared.MSNEXT = arg;
+      if (arg && !P4.some((p6) => p6.code === arg)) return false;
+      shared.MSNEXT = arg || null;
     }
     if (shared.MVREADY && (shared.MV.peek || shared.MV.add)) mvEdClose(true);
     const from = shared.VIEW, fromPage = mPageOf(shared.VIEW);
@@ -69490,6 +69523,7 @@ ${d5.text}`);
       if (v6 === "work" && !arg2) {
       }
       if (v6 === "cockpit") shared.COCK = arg2;
+      if (v6 === "milestones" && !arg2) shared.MSCODE = null;
       if (v6 === "person") shared.PERSON = arg2;
       if (v6 === "notes") shared.NOTECODE = arg2;
       if (v6 === "settings" && arg2) STAB = arg2;
@@ -72287,7 +72321,7 @@ ${d5.text}`);
   shared.HADHASH = !!location.hash && !/^#openfile=/.test(location.hash);
   openFromAddress();
   shared.HASH0 = location.hash;
-  restoreNav(/^#?milestones=/.test(location.hash || "") ? null : parseHash(location.hash));
+  restoreNav(/^#?milestones(=|&|$)/.test(location.hash || "") ? null : parseHash(location.hash));
   navWrite(false);
   firstHelp();
   shared.LOADING = false;

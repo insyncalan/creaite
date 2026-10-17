@@ -60,9 +60,9 @@ export function hashOf(st){ if(st&&st.v==="weekly") return `#weekly=${st.arg||""
   if(st&&st.v==="prep") return prepHref(st.arg||"");   /* BL-286 D: #prep=<the dated meeting key> */
   if(st&&st.v==="minutes") return `#minutes=${encodeURIComponent(typeof st.arg==="string"?st.arg:"")}`;   /* v2.1.0 P7 */
   if(st&&st.v==="clientreport") return `#client-report=${typeof st.arg==="string"?st.arg:""}`;   /* v2.1.0 P8 */
-  if(st&&st.v==="milestones") return `#milestones=${st.arg}&v=${st.mv==="move"?"movement":"plan"}${st.ms?`&ms=${st.ms}`:""}`;   /* BL-245 */
+  if(st&&st.v==="milestones") return `#milestones${st.arg?`=${st.arg}`:""}&v=${st.mv==="move"?"movement":"plan"}${st.ms?`&ms=${st.ms}`:""}`;   /* BL-245 */
   if(st&&st.v==="people") return "#people"+(st.arg==="none"?"/none":"");   /* BL-190 */
-  let h=st.v==="help"?`help-${st.arg||"start"}`:st.v==="settings"?`settings/${st.arg||"general"}`:st.v==="cockpit"?`cockpit=${st.arg}`:st.v==="person"?`person=${encodeURIComponent(st.arg)}`:st.v==="work"?`work=${st.wt}${st.wv?`&v=${encodeURIComponent(st.wv)}`:""}${st.p&&st.p.length?`&p=${st.p.join(",")}`:""}${!st.wv&&st.fx?(Object.keys(st.fx).length?Object.entries(st.fx).map(([k,v])=>`&${k}=${v.map(encodeURIComponent).join(",")}`).join(""):"&f=none"):""}${st.lay==="board"?`&lay=board&g=${st.g}`:st.lg&&st.lg!=="none"?`&lg=${st.lg}`:""}${st.sg&&st.sg!=="none"?`&sg=${st.sg}`:""}${st.sort?`&s=${st.sort.col}.${st.sort.dir}`:""}${st.q&&st.q.trim()?`&q=${encodeURIComponent(st.q.trim().replace(/[&=#]/g," "))}`:""}${st.from?`&from=${st.from}`:""}${!st.wv&&st.vb?`&vb=${encodeURIComponent(st.vb)}`:""}`:st.v==="inbox"?"intake":st.v;
+  let h=st.v==="help"?`help-${st.arg||"start"}`:st.v==="settings"?`settings/${st.arg||"general"}`:st.v==="cockpit"?(st.arg?`cockpit=${st.arg}`:"cockpit"):st.v==="person"?`person=${encodeURIComponent(st.arg)}`:st.v==="work"?`work=${st.wt}${st.wv?`&v=${encodeURIComponent(st.wv)}`:""}${st.p&&st.p.length?`&p=${st.p.join(",")}`:""}${!st.wv&&st.fx?(Object.keys(st.fx).length?Object.entries(st.fx).map(([k,v])=>`&${k}=${v.map(encodeURIComponent).join(",")}`).join(""):"&f=none"):""}${st.lay==="board"?`&lay=board&g=${st.g}`:st.lg&&st.lg!=="none"?`&lg=${st.lg}`:""}${st.sg&&st.sg!=="none"?`&sg=${st.sg}`:""}${st.sort?`&s=${st.sort.col}.${st.sort.dir}`:""}${st.q&&st.q.trim()?`&q=${encodeURIComponent(st.q.trim().replace(/[&=#]/g," "))}`:""}${st.from?`&from=${st.from}`:""}${!st.wv&&st.vb?`&vb=${encodeURIComponent(st.vb)}`:""}`:st.v==="inbox"?"intake":st.v;
   if(st.item) h+=`&item=${st.item.id}`; h="#"+h;
   if(st&&st.v==="activity"&&st.aq){ const a=st.aq, p=[];
     if((a.q||"").trim()) p.push("q="+encodeURIComponent(a.q.trim())); if((a.types||[]).length) p.push("type="+a.types.map(encodeURIComponent).join(","));
@@ -75,17 +75,17 @@ export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")); 
   { const mm=/^#?notes=([^&]+)(?:&n=([^&]*))?/.exec(String(h||"")); if(mm){ let code="", n=null; try{ code=decodeURIComponent(mm[1]); n=mm[2]?decodeURIComponent(mm[2]):null; }catch(e){ return null; }
     if(!notesCodeOk(code)) return null; return {v:"notes",arg:code,note:n,find:/[&]find=1(&|$)/.test(String(h||"")),wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* BL-301 B */
   { const mm=/^#?minutes=(.+)$/.exec(String(h||"")); if(mm){ let a=""; try{ a=decodeURIComponent(mm[1]); }catch(e){ return null; } return /\.html$/i.test(a)?{v:"minutes",arg:a,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}:null; } }   /* v2.1.0 P7: #minutes=<stored path> */
-  { const q=String(h||"").replace(/^#/,""), mm=/^milestones=([^&]+)(.*)$/.exec(q);
-    if(mm){ const code=decodeURIComponent(mm[1]); if(!P.some(p=>p.code===code)) return null;
+  { const q=String(h||"").replace(/^#/,""), mm=/^milestones(?:=([^&]*))?((?:&.*)?)$/.exec(q);
+    if(mm){ const code=mm[1]?decodeURIComponent(mm[1]):""; if(code&&!P.some(p=>p.code===code)) return null;
     const kv=Object.fromEntries(mm[2].split("&").filter(Boolean).map(x=>x.split("=")));
-    return {v:"milestones",arg:code,mv:kv.v==="movement"?"move":"plan",ms:kv.ms?decodeURIComponent(kv.ms):null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* BL-245 */
+    return {v:"milestones",arg:code||null,mv:kv.v==="movement"?"move":"plan",ms:kv.ms?decodeURIComponent(kv.ms):null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* BL-245 */
   { const m=/^#?people(?:\/(none|work))?$/.exec(h||""); if(m) return {v:"people",arg:m[1]||"work",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-190 */
   let x=String(h||""); if(/^#?activity\?/.test(x)) x=x.replace("?","&");
   const st=(h=>{ const q=(h||"").replace(/^#/,""); if(!q) return null; const parts=q.split("&"), [v,arg]=parts[0].split("=").map(decodeURIComponent), kv=Object.fromEntries(parts.slice(1).map(x=>{ const [k,val=""]=x.split("="); return [k,k==="v"||k==="q"||k==="vb"?decodeURIComponent(val):val]; }));
   const st={v,arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0};
   { const sm=/^settings(?:\/([^/]+))?$/.exec(v); if(sm){ st.v="settings"; st.arg=sm[1]||arg||null; if(st.arg&&!setResolve(st.arg)) st.arg=null; return st; } }   /* BL-115: #settings/<category or section>; the old #settings and #settings=<tab> too */
   if(/^help(-|$)/.test(v)){ st.v="help"; st.arg=helpNorm(v.slice(5))||null; return st; }   /* BL-84: #help-start, #help-howto-<task>… */
-  if(v==="cockpit"){ if(!P.some(p=>p.code===arg)) return null; st.arg=arg; }
+  if(v==="cockpit"){ if(arg){ if(!P.some(p=>p.code===arg)) return null; st.arg=arg; } }   /* #204: bare #cockpit is the Choose a project page */
   else if(v==="work"){ st.wt=["actions","raid","decisions","all"].includes(arg)?arg:"actions";   /* BL-134: #work=all */ st.wv=kv.v||null; st.vb=kv.vb||null; st.p=(kv.p||"").split(",").filter(c=>P.some(p=>p.code===c)); st.q=kv.q||""; st.from=P.some(p=>p.code===kv.from)?kv.from:null;
     const fx={}; [...new Set(["st","due","o","pr","ws","ty","rs","src","cv","dt","dr","rr","cr","vip","ms",...FDEFS[st.wt].map(d=>d[0])])].filter(k=>k!=="p").flatMap(k=>[k,"!"+k]).forEach(k=>{ if(kv[k]!==undefined) fx[k]=kv[k].split(",").map(decodeURIComponent); });   /* BL-130: "!key" is "is not"; BL-318: the project filter is st.p, never a filter set, or a reload with a view and a project lost the view */ st.fx=Object.keys(fx).length?fx:kv.f==="none"?{}:null;   /* BL-77: "&f=none" is a list with no filters on (e.g. closed items shown too) */
     if(kv.s){ const [col,dir]=kv.s.split("."); st.sort={col,dir:dir==="desc"?"desc":"asc"}; }
@@ -121,7 +121,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
   const sc=st.scroll||0; requestAnimationFrame(()=>{ const el=viewEl(); if(el) el.scrollTop=sc; }); shared.NAVSTATE=navState(); shared.NAVSTATE.scroll=sc; }
 export const mPageOf=v=>v==="work"||v==="mine"||v==="person"?"work":v==="review"?"review":v==="today"?"today":null;   /* declared before go, which runs at load */
 export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   /* BL-206 */
-  if(v==="milestones"){ if(!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg; }
+  if(v==="milestones"){ if(arg&&!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg||null; }   /* #204: no project is the Choose a project page */
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
   const from=shared.VIEW, fromPage=mPageOf(shared.VIEW);
   if(from==="notes"&&v!=="notes") notesLeave();   /* BL-301 B: leaving the note ends its editing session (its file is written) */
@@ -136,7 +136,7 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   const id={cockpit:"v-cockpit",mine:"v-work"}[v]||"v-"+v; $("#"+id).hidden=false; $("#"+id).scrollTop=0;
   const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects",reporting:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
   setRailView(railKey);   /* BL-163, BL-319: the sidebar marks the page (through its store) */
-  if(v==="mine"){ shared.WT="actions"; applyView("mine"); } if(v==="work"&&!arg) {} if(v==="cockpit") shared.COCK=arg; if(v==="person") shared.PERSON=arg; if(v==="notes") shared.NOTECODE=arg;
+  if(v==="mine"){ shared.WT="actions"; applyView("mine"); } if(v==="work"&&!arg) {} if(v==="cockpit") shared.COCK=arg; if(v==="milestones"&&!arg) shared.MSCODE=null; if(v==="person") shared.PERSON=arg; if(v==="notes") shared.NOTECODE=arg;
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
   ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),weekly:()=>renderWeekly(arg),clientreport:()=>renderClientReport(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
