@@ -2429,6 +2429,12 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .drsrc{margin-top:8px} .drsl{margin:4px 0 0;padding-left:16px} .drsl li{margin:2px 0}
 .drfoot{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap} .drfoot .sp{flex:1}
 .drstatus,.drnone{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:var(--fs-sm);color:var(--muted)} .drnone svg{width:14px;height:14px}
+.hspark{border:0;background:none;color:var(--accent);width:24px;height:24px;margin-left:4px;padding:0;border-radius:var(--r-sm);display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle}   /* #203: plain, the app's own sparkle, right of the label text */
+.hspark svg{width:18px;height:18px} .hspark:hover{background:var(--sunk)} .hspark:focus-visible{outline:2px solid var(--focus);outline-offset:2px} .hspark[aria-disabled="true"]{color:var(--faint);cursor:default}
+.hsg-host{grid-column:1/-1} .hsg-host:empty{display:none}
+.hsg-chip{display:inline-block;font-size:var(--fs-xs);font-weight:600;line-height:20px;padding:0 8px;border-radius:var(--r-pill)} .hsg-chip.ok{background:var(--ok-soft);color:var(--ok)} .hsg-chip.warn{background:var(--warn-soft);color:var(--warn)} .hsg-chip.bad{background:var(--bad-soft);color:var(--bad)}
+.hsg-diff{margin:0 0 6px;font-size:var(--fs-sm);font-weight:600;color:var(--ink)} .hsg-reason{width:100%;min-height:64px;resize:vertical;box-sizing:border-box}
+.hsg-why{margin:8px 0 0;padding:0;list-style:none;font-size:var(--fs-sm);color:var(--muted)} .hsg-why li{margin:3px 0}
 .drchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px} .drchips .sub{font-size:var(--fs-xs)}
 .drstats{margin-top:6px;font-size:var(--fs-xs);color:var(--muted)} .drstats td{padding:2px 12px 2px 0}
 .drstale{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:8px 0 0;font-size:var(--fs-sm);color:var(--muted)} .drbst{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)} .drbst:empty{display:none}
@@ -3412,6 +3418,9 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-rdb{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
 .sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
 .sheet-rdnotes{margin:4px 0 6px;padding-left:18px;font-size:13px} .sheet-rdnotes li{color:var(--warn)}   /* #90 review F5: the reply's checks */
+.sheet-hflag{padding:0 8px;border-radius:var(--r-pill);line-height:20px} .sheet-hflag.ok{background:var(--ok-soft);color:var(--ok)} .sheet-hflag.warn{background:var(--warn-soft);color:var(--warn)} .sheet-hflag.bad{background:var(--bad-soft);color:var(--bad)}   /* #203 */
+.wr-flagrow{display:flex;align-items:center;gap:4px} .wr-flagrow .sheet-spark{flex:none}
+.sheet-hdiff{margin:0 0 4px;font-weight:600} .sheet-hwhy{margin:6px 0;padding:0;list-style:none;color:var(--muted)} .sheet-hwhy li{margin:3px 0}
 .sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}

@@ -9,7 +9,7 @@
 import { render } from "preact";
 import { useState } from "preact/hooks";
 import { CLIENT_RENDERERS, setClientDoc } from "./ClientParts.jsx";
-import { matchClientAll, matchClientSection } from "./clientDoc.js";
+import { flagOf, healthDiff, matchClientAll, matchClientSection } from "./clientDoc.js";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
 import { countRedraft, redrafter } from "./redraft.js";
 import { Sheet } from "./Sheet.jsx";
@@ -105,7 +105,7 @@ export function ClientView() {
             document: () => ({ kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" }) }}
           /* #127: the ✦ names this report too; the server binds the audience from it, never from a claim */
           onRedraft={side ? undefined : redrafter(() => ({ code: doc.project,
-            document: { kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" } }), "report")}
+            document: { kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" } }), "report", "client", clientHealthApply)}
           onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); else countRedraft(ev, "report"); }}
           toolbar={<ClientBar doc={doc} note={note} setNote={setNote} />} />
       </div>
@@ -113,6 +113,12 @@ export function ClientView() {
     </div>
   );
 }
+
+/** #203: Use on the client sheet's health suggestion: the client's flag and headline, and why the flag differs from the internal one when
+    it does. The reason is left empty: Alan writes why in the flag's popover (kept internally, never on the client's page). @param {{health: string, reason: string}} d */
+const clientHealthApply = d => (/** @type {SheetDoc} */ doc, /** @type {{id: string}} */ s) => ({
+  ...doc, sections: doc.sections.map(x => x.id === s.id ? { ...x, text: d.reason, data: { ...((/** @type {any} */ (x)).data || {}), flag: d.health } } : x),
+  meta: healthDiff(doc, crInternal.value ? flagOf(/** @type {SheetDoc} */ (crInternal.value)) : d.health, d.health, "") });
 
 let crMounted = false;
 /** Draw the client view into #v-clientreport and open the report: {code, week?, client?} or its address text "CODE/week/client".

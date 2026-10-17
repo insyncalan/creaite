@@ -25,6 +25,7 @@ import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD,
 import { api, applyNow, applySoon, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
+import { hsAsk, hsCardHtml, hsSparkHtml, hsStat, hsUse } from "./healthSuggest.js";
 import { draftAsk, draftBtn, draftCardHtml, draftStat, draftWhyNot } from "./drafts.js";
 import { pdDrop, pdKeyOf, pdOffer, pdRaw, pdWhen, pKeysShow } from "./help.js";
 import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js";
@@ -201,7 +202,7 @@ export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
   shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
-export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
+export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); HSG=null; HSUSED=null; shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
 export function curObj(){ return shared.CUR.mode==="record"?REC(shared.CUR.k,shared.CUR.id):shared.CUR.draft; }
 export const PKK=["actions","raid","decisions"];   /* declared before drawPanel, which runs at load */
 export const pkNew=()=>!!(shared.CUR&&(shared.CUR.mode==="new"||shared.CUR.mode==="msnew"));   /* declared before drawPanel, which runs at load */
@@ -223,7 +224,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   $("#panel").classList.toggle("pover",shared.CUR.mode==="health");   /* #109: the health form is over the page, not beside it */
   $("#pBody").classList.toggle("editing",shared.EDITING); $("#editBanner").textContent=shared.CUR.mode==="proposal"?"Editing a proposal — nothing reaches the tracker until it's approved":"Editing — changes apply when you save";
   let h=""; for(const [n,l,t,opts] of F){ if(n==="#"){ h+=`<div class="fsec">${l}</div>`; continue; } const v=shared.CUR.pre&&n in shared.CUR.pre?shared.CUR.pre[n]:x[n];   /* CUR.pre: "Record the decision" fills the form first (BL-53) */
-    h+=`<dt>${l}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
+    h+=`<dt>${l}${shared.EDITING?labelAdorn(shared.CUR.k,shared.CUR.mode,n):""}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
   if(shared.CUR.mode==="proposal"&&!x.p) h=`<div class="cmnote">Choose a project before saving.</div>`+h;
   if(shared.CUR.mode==="record"||shared.CUR.mode==="proposal"){ const src=shared.CUR.mode==="record"?x.src:REV.find(r=>r.n===shared.CUR.n).src; h+=`<div class="fsec">Record</div>${shared.CUR.mode==="record"?`<dt>ID</dt><dd>${shared.CUR.id}</dd>`:""}<dt>Source</dt><dd>${srcHTML(src)}</dd>${shared.CUR.mode==="record"?`<dt>Last updated</dt><dd>${x.upd_at?fd(x.upd_at):"—"}</dd>`:""}`; }
   if(shared.CUR.mode==="proposal"){ const sig=learnable(REV.find(r=>r.n===shared.CUR.n)); if(sig) h+=`<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`; }
@@ -1269,9 +1270,36 @@ export function healthFacts(code){ const ev=healthEvidence(code);
 export function drHealthDraw(){ const ev=$("#hEvidence"); if(!ev||!shared.CUR||shared.CUR.mode!=="health") return; let host=$("#hDraft");
   if(!host){ addHTML(ev,"afterend",html`<div id="hDraft" class="pkdrhost"></div>`); host=$("#hDraft"); }
   const c=shared.DRH&&shared.DRH.code===shared.CUR.code?shared.DRH:null;
-  putHTML(host,html`<div>${raw(draftBtn("health","Draft the reason","Word the reason from the evidence above, in one executive sentence",'data-drhealth="1"'))}</div>${c?raw(c.html):""}`); }
+  putHTML(host,html`<div>${raw(draftBtn("health","Draft the reason","Word the reason from the evidence above, in one executive sentence",'data-drhealth="1"'))}</div>${c?raw(c.html):""}`); hSugDraw(); }
+/* ===== #203 ===== the sparkle beside the Health label suggests the health and its reason (healthSuggest.js). The label hook is general:
+   FLABEL gets (kind, mode, field) and answers HTML that sits right of the label text. The card sits under the evidence; Use fills the
+   two fields (nothing saved), Save uses it and presses the form's Save, Reject (or Esc) clears it and gives the focus back to the sparkle. */
+export const FLABEL=[];
+export const labelAdorn=(k,mode,n)=>FLABEL.map(f=>f(k,mode,n)).join("");
+FLABEL.push((k,mode,n)=>k==="project"&&mode==="health"&&n==="health"?hsSparkHtml():"");
+/** @type {any} */ let HSG=null;                         /* {code, html, d, reason} */
+export function hSugDraw(){ const ev=$("#hEvidence"); if(!ev||!shared.CUR||shared.CUR.mode!=="health") return; let host=$("#hSug");
+  if(!host){ addHTML(ev,"afterend",html`<div id="hSug" class="hsg-host"></div>`); host=$("#hSug"); }
+  const c=HSG&&HSG.code===shared.CUR.code?HSG:null;
+  putHTML(host,raw(c?(c.d?hsCardHtml(c.d,c.reason):c.html):"")); }
+function hsClose(rejected){ if(rejected&&HSG&&HSG.d) hsStat("rejected"); HSG=null; hSugDraw(); const b=$("#pFields [data-hsuggest]"); if(b) b.focus(); }
+/** @type {any} */ let HSUSED=null;                       /* {suggested}: Use filled the form; counted when the form is saved, not before */
+function hsFill(){ const c=HSG; if(!c||!c.d) return false; const hs=$("#f_health"), rs=$("#f_reason"); if(!hs||!rs) return false;
+  hs.value=c.d.health; hs.dispatchEvent(new Event("change",{bubbles:true}));
+  if(rs.value!==c.base) snack("Your reason was kept: you changed it while the suggestion was being written");   /* never overwritten silently */
+  else { rs.value=c.reason; rs.dispatchEvent(new Event("input",{bubbles:true})); }
+  HSUSED={suggested:c.d.reason}; HSG=null; hSugDraw(); return true; }
+async function hsRun(){ if(!shared.CUR||shared.CUR.mode!=="health") return; const b=$("#pFields [data-hsuggest]");
+  if(b&&b.getAttribute("aria-disabled")==="true"){ snack(b.dataset.tip||"Drafting isn't available"); return; }
+  const why=draftWhyNot("health"); if(why){ snack(why); return; }
+  const code=shared.CUR.code, mine={code,html:"",d:null,reason:"",base:$("#f_reason")?.value??""}; HSG=mine;
+  const res=await hsAsk(code,"internal",{status:h=>{ if(HSG===mine){ mine.html=h?`<div class="drstatus" role="status">${h}</div>`:""; hSugDraw(); } }});
+  if(HSG!==mine) return;
+  if(res.nothing){ mine.html=`<div class="drnone" role="status">${esc(res.nothing)}</div>`; hSugDraw(); return; }
+  if(!res.ok||!res.d){ HSG=null; hSugDraw(); snack(res.message||"No draft came back"); return; }
+  mine.d=res.d; mine.reason=res.d.reason; hSugDraw(); const card=$("#hsgCard"); if(card) card.querySelector("[data-hsdo=use]")?.focus(); }
 /* the forecast */
-shared.DRF=null;                                          /* {id, fc, html, d, used} */
+shared.DRF=null;                                         /* {id, fc, html, d, used} */
 export function drFcDraw(){ const w=$("#mvFcWhy"); if(!w||!shared.MV.pend) return; const lab=w.closest(".mv-inl"); if(!lab) return; let host=$("#mvFcDraft");
   if(!host){ addHTML(lab,"afterend",html`<div id="mvFcDraft" class="pkdrhost"></div>`); host=$("#mvFcDraft"); }
   const c=shared.DRF&&shared.DRF.id===shared.MV.pend.id&&shared.DRF.fc===shared.MV.pend.fc?shared.DRF:null;
@@ -1291,6 +1319,13 @@ $("#pFields").addEventListener("click",async e=>{ const b=e.target.closest("[dat
   if(res.nothing){ mine.html=`<div class="drnone" role="status">${esc(res.nothing)}</div>`; drHealthDraw(); return; }
   if(!res.ok){ shared.DRH=null; drHealthDraw(); snack(res.message||"No draft came back"); return; }
   mine.d=res; mine.html=draftCardHtml(res,{title:`Draft reason: ${to}`,use:"Use this"}); drHealthDraw(); });
+$("#pFields").addEventListener("click",e=>{ const s=e.target.closest("[data-hsuggest]"), u=e.target.closest("#hSug [data-hsdo]");   /* #203 */
+  if(s){ e.preventDefault(); hsRun(); return; } if(!u) return; e.preventDefault(); const w=u.dataset.hsdo;
+  if(w==="reject"){ hsClose(true); return; }
+  if(!HSG||!HSG.d) return; if(hsFill()){ if(w==="save") $("#pSave").click(); else { const t=$("#f_reason"); if(t) t.focus(); } } });
+$("#pFields").addEventListener("input",e=>{ if(HSG&&e.target.id==="hsgReason") HSG.reason=e.target.value; });
+$("#pFields").addEventListener("keydown",e=>{ if(e.key==="Escape"&&e.target.closest&&e.target.closest("#hSug")&&HSG&&HSG.d){ e.preventDefault(); e.stopPropagation(); hsClose(true); } });
+$("#pFoot").addEventListener("click",e=>{ if(!HSUSED||!e.target.closest("#pSave")) return; hsStat(hsUse($("#f_reason")?.value,HSUSED.suggested)); HSUSED=null; },true);   /* #203: used or edited, once the form is saved */
 /* counted when the form is saved (used or edited) or left (rejected) */
 $("#pFoot").addEventListener("click",e=>{ if(!shared.DRH||!shared.DRH.used||!e.target.closest("#pSave")) return; draftStat("reason",drSame($("#f_reason")?.value,shared.DRH.used)?"used":"edited"); shared.DRH=null; },true);
 document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drfc]"), u=e.target.closest("#mvFcDraft [data-drdo]");
