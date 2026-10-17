@@ -15,6 +15,7 @@ import { statusDotNodes } from "./components/StatusDot.jsx";
 import { peekMark, peekPropNodes } from "./components/peek/PeekProps.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { creaiteEditor } from "./core/editor.js";
+import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
 import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
@@ -109,10 +110,13 @@ export function splitPanes(t){ t=String(t||""); const ms=paneMarkers(t); if(!ms.
   return [t.slice(0,ms[0]).trim(),right.replace(/\n{3,}/g,"\n\n").trim()]; }
 export function joinPanes(l,r){ l=String(l||"").trim(); r=String(r||"").trim(); return r?(l?l+"\n\n":"")+PANE+"\n\n"+r:l; }
 /* #122 C: a work-item link, `[ABC-A-012 · Action: title](creaite:item/ABC-A-012)`, reads as its words and opens the item; a click is handled by the delegate below */
-export function mdInline(t){ return esc(t).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g,(m,a,id)=>`<a href="#" class="itemref" data-oi="${id}">${a}</a>`)
-  .replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g,(m,a,u)=>`<a href="${u}" target="_blank" rel="noopener">${a}</a>`)
-  .replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/~~(.+?)~~/g,"<s>$1</s>")
-  .replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g,"$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g,"$1<i>$2</i>"); }
+export function mdInline(t){ const kept=[], keep=h=>{ kept.push(h); return "\u0001"+(kept.length-1)+"\u0001"; };
+  /* the emphasis pass (bold, strike, italic); finished links are held out as placeholders so it never reaches an anchor's attributes (#159) */
+  const emph=s=>s.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/~~(.+?)~~/g,"<s>$1</s>")
+    .replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g,"$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g,"$1<i>$2</i>");
+  const s=esc(String(t??"").split("\u0001").join("")).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g,(m,a,id)=>keep(`<a href="#" class="itemref" data-oi="${id}">${emph(a)}</a>`))
+    .replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g,(m,a,u)=>{ const h=a.includes("\u0001")?null:linkAnchor(unescHtml(u),emph(a)); return h?keep(h):m; });   /* the one validator and anchor: core/linkUrl.js */
+  return emph(s).replace(new RegExp("\u0001(\\d+)\u0001","g"),(m,n)=>kept[+n]??""); }
 export function mdBlocks(text){ const /** @type {any[]} */ B=[]; let para=[], quote=[];
   const flush=()=>{ if(para.length){ B.push(["p",para.join(" ")]); para=[]; } if(quote.length){ B.push(["q",quote.join(" ")]); quote=[]; } };
   const marks=paneLines(text), lines=String(text||"").split("\n").concat([""]);

@@ -88,6 +88,25 @@ export function typedLinkUrl(s) {
   return null;
 }
 
+/** The `rel` of every link creaite draws that opens an address outside the page. */
+export const LINK_REL = "noopener noreferrer";
+
+/** Text that went through `esc` (core/dom.js) back to what it was, in one pass ("&amp;lt;" gives "&lt;", never "<"). A Markdown renderer
+    escapes the whole text first and then finds `[words](address)` in it, so the address it finds has "&" as "&amp;": it must be judged
+    as the address it is, not as an entity. @param {string} s @returns {string} */
+export function unescHtml(s) {
+  return String(s).replace(/&(?:amp|lt|gt|quot);/g, m => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"' })[m]);
+}
+
+/** The ONE anchor for a web or mail address, as HTML: `inner` (already safe HTML) inside a link to `href`, which is opened in a new tab
+    with `LINK_REL`. Null when `linkUrl` refuses the address, so a renderer shows the text as it was. `href` is the raw address (use
+    `unescHtml` first on one found in escaped text); it is written with "&" as "&amp;", the only character `linkUrl` lets through
+    that an attribute needs changed. @param {unknown} href @param {string} inner @returns {string|null} */
+export function linkAnchor(href, inner) {
+  const u = linkUrl(href);
+  return u === null ? null : `<a href="${u.replace(/&/g, "&amp;")}" target="_blank" rel="${LINK_REL}">${inner}</a>`;
+}
+
 /** An address a note keeps for creaite's own links (a work item or a person), which are not web addresses and never open anywhere.
     @param {unknown} s @returns {boolean} */
 export const isInternalHref = s => typeof s === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s) && !hasBad(s);

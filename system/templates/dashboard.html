@@ -4157,6 +4157,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     LCOLL: () => LCOLL,
     LINK_MAX: () => LINK_MAX,
     LINK_REFUSED: () => LINK_REFUSED,
+    LINK_REL: () => LINK_REL,
     LLF: () => LLF,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
@@ -5356,6 +5357,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     legBtn: () => legBtn,
     lev: () => lev,
     linesFrom: () => linesFrom,
+    linkAnchor: () => linkAnchor,
     linkAt: () => linkAt,
     linkGuard: () => linkGuard,
     linkUrl: () => linkUrl,
@@ -5424,7 +5426,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     mdInline: () => mdInline,
     mdItemLink: () => mdItemLink,
     mdPaths: () => mdPaths,
-    mdSafeUrl: () => mdSafeUrl,
     mdView: () => mdView,
     meNames: () => meNames,
     meetingOfFile: () => meetingOfFile,
@@ -6397,6 +6398,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     undatedWork: () => undatedWork,
     undoApply: () => undoApply,
     undoWords: () => undoWords,
+    unescHtml: () => unescHtml,
     uniq: () => uniq,
     unknownOwner: () => unknownOwner,
     unmountChase: () => unmountChase,
@@ -27524,6 +27526,14 @@ ${s5}`;
     if (/^[^\s@/?#:]+@[^\s@/?#:]+\.[^\s@/?#:]+$/.test(t47)) return linkUrl("mailto:" + t47);
     if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
     return null;
+  }
+  var LINK_REL = "noopener noreferrer";
+  function unescHtml(s5) {
+    return String(s5).replace(/&(?:amp|lt|gt|quot);/g, (m5) => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"' })[m5]);
+  }
+  function linkAnchor(href, inner) {
+    const u5 = linkUrl(href);
+    return u5 === null ? null : `<a href="${u5.replace(/&/g, "&amp;")}" target="_blank" rel="${LINK_REL}">${inner}</a>`;
   }
   var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
   var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
@@ -50000,7 +50010,16 @@ ${d5.text}`);
     return r4 ? (l6 ? l6 + "\n\n" : "") + PANE + "\n\n" + r4 : l6;
   }
   function mdInline(t47) {
-    return esc(t47).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g, (m5, a5, id2) => `<a href="#" class="itemref" data-oi="${id2}">${a5}</a>`).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g, (m5, a5, u5) => `<a href="${u5}" target="_blank" rel="noopener">${a5}</a>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
+    const kept = [], keep2 = (h5) => {
+      kept.push(h5);
+      return "" + (kept.length - 1) + "";
+    };
+    const emph = (s6) => s6.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
+    const s5 = esc(String(t47 ?? "").split("").join("")).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g, (m5, a5, id2) => keep2(`<a href="#" class="itemref" data-oi="${id2}">${emph(a5)}</a>`)).replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (m5, a5, u5) => {
+      const h5 = a5.includes("") ? null : linkAnchor(unescHtml(u5), emph(a5));
+      return h5 ? keep2(h5) : m5;
+    });
+    return emph(s5).replace(new RegExp("(\\d+)", "g"), (m5, n4) => kept[+n4] ?? "");
   }
   function mdBlocks(text) {
     const B4 = [];
@@ -59924,7 +59943,6 @@ ${d5.text}`);
     LI: /^( *)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/,
     SEP: /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/
   };
-  var mdSafeUrl = (u5) => /^(?:https?:\/\/|mailto:)[^\s"<>]+$/i.test(u5);
   var MDPATHS = null;
   var mdPaths = () => {
     if (!MDPATHS || MDPATHS.n !== FILES.length) MDPATHS = { n: FILES.length, list: FILES.filter((f5) => f5.path).map((f5) => ({ path: f5.path, e: esc(f5.path) })).sort((a5, b5) => b5.e.length - a5.e.length) };
@@ -59942,7 +59960,10 @@ ${d5.text}`);
     });
     if (!noLinks) {
       s5 = s5.replace(new RegExp("!\\[([^\\]\\n]*)\\]\\(" + MDC.URL + "\\)", "g"), (m5, alt) => alt);
-      s5 = s5.replace(new RegExp("\\[([^\\]\\n]+)\\]\\(" + MDC.URL + "\\)", "g"), (m5, text, url) => mdSafeUrl(url) ? keep2(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text, st2, true)}</a>`) : m5);
+      s5 = s5.replace(new RegExp("\\[([^\\]\\n]+)\\]\\(" + MDC.URL + "\\)", "g"), (m5, text, url) => {
+        const h5 = linkAnchor(unescHtml(url), chatMdInline(text, st2, true));
+        return h5 ? keep2(h5) : m5;
+      });
       if (/projects\/|inbox\//.test(s5)) {
         for (const f5 of mdPaths()) if (s5.includes(f5.e)) s5 = s5.split(f5.e).join(keep2(mdFileLink(f5.path, f5.e)));
       }
@@ -70417,6 +70438,7 @@ ${d5.text}`);
         "cell",
         "chFit",
         "changesCardHtml",
+        "chatMdInline",
         "checkHealth",
         "checkLive",
         "checkMeeting",
@@ -70559,6 +70581,7 @@ ${d5.text}`);
         "kindLabel",
         "laneDrop",
         "layoutOf",
+        "linkAnchor",
         "linkUrl",
         "loadChat",
         "loadPrep",
@@ -70573,6 +70596,7 @@ ${d5.text}`);
         "mdBlocks",
         "mdChat",
         "mdHtml",
+        "mdInline",
         "meetingOfFile",
         "meetingRoute",
         "menuOpenFor",
@@ -70840,6 +70864,7 @@ ${d5.text}`);
         "undatedCard",
         "undoApply",
         "undoWords",
+        "unescHtml",
         "updReview",
         "validate",
         "viaServer",

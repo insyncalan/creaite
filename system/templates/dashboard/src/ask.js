@@ -15,6 +15,7 @@ import { mWords } from "./core/motion.js";
 import { go, navBlocked, parseHash, pLink, restoreNav } from "./core/nav.js";
 import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
+import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
@@ -386,7 +387,6 @@ export function bootAsk0095(){
 export const MDC={ITEM:/\b[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}\b/g, MAX:120000, URL:"((?:[^\\s()]|\\([^\\s()]*\\))+)",
   FENCE:/^ {0,3}(`{3,}|~{3,})[ \t]*([\w+#.-]*)[ \t]*$/, HEAD:/^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/, HR:/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/,
   QUOTE:/^ {0,3}&gt; ?/, LI:/^( *)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/, SEP:/^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/};
-export const mdSafeUrl=u=>/^(?:https?:\/\/|mailto:)[^\s"<>]+$/i.test(u);
 export let MDPATHS=null;
 export const mdPaths=()=>{ if(!MDPATHS||MDPATHS.n!==FILES.length) MDPATHS={n:FILES.length,list:FILES.filter(f=>f.path).map(f=>({path:f.path,e:esc(f.path)})).sort((a,b)=>b.e.length-a.e.length)}; return MDPATHS.list; };
 export const mdFileLink=(p,inner)=>`<a href="#" class="mdref" data-mdfile="${esc(p)}">${inner}</a>`, mdItemLink=id=>`<a href="#" class="mdref" data-mditem="${id}">${id}</a>`;
@@ -396,7 +396,7 @@ export function chatMdInline(s,st,noLinks){
     return keep(p?mdFileLink(p.path,`<code>${c}</code>`):ITEMCODE(c)?`<a href="#" class="mdref" data-mditem="${c.trim()}"><code>${c.trim()}</code></a>`:`<code>${c}</code>`); });
   if(!noLinks){
     s=s.replace(new RegExp("!\\[([^\\]\\n]*)\\]\\("+MDC.URL+"\\)","g"),(m,alt)=>alt);   /* images are not drawn: the alt text shows */
-    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>mdSafeUrl(url)?keep(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text,st,true)}</a>`):m);
+    s=s.replace(new RegExp("\\[([^\\]\\n]+)\\]\\("+MDC.URL+"\\)","g"),(m,text,url)=>{ const h=linkAnchor(unescHtml(url),chatMdInline(text,st,true)); return h?keep(h):m; });   /* the one validator and anchor: core/linkUrl.js (#159) */
     if(/projects\/|inbox\//.test(s)) for(const f of mdPaths()) if(s.includes(f.e)) s=s.split(f.e).join(keep(mdFileLink(f.path,f.e)));
     s=s.replace(MDC.ITEM,id=>itemTable(id)?keep(mdItemLink(id)):id); }
   return s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g,"<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g,"$1<strong>$2</strong>")
