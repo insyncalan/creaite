@@ -32,6 +32,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))      # dev/tests, for the tests this borrows from
 import measure
 import test_rail_icon_size as tris
 import test_topbar_hide as tbh
@@ -40,7 +41,7 @@ from hcbase import NOTES, SCREENS, HandcheckCase, db_rows
 KIND = {**{n: "scriptable" for n in (3, 4, 5, 6, 7, 9, 10, 11, 12)},
         **{n: "measurable" for n in (1, 2, 8, 13)}}
 
-# No check is live only as a whole. Parts that are: a real sweep (5), a real recipient's mailbox (11, 14), a real model's wording.
+# No check is live only as a whole. Parts that are: a real sweep (5), a real recipient's mailbox (11), a real model's wording.
 LIVE_ONLY = {}
 NOTES.update({
     5: "the stand-in Claude answers the sweep; a real sweep (mail, Teams, the calendar) is live only",
