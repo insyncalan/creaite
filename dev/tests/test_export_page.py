@@ -338,6 +338,71 @@ class PictureMetadata(LeakPass2):
         self.assertIsNotNone(self.build(self.client(), page(css=css))[1])
 
 
+class Leak3(LeakPass2):
+    """v241 (Team Cap's 00:05 verdict): image-set, spaced and escaped addresses in client CSS, the CSP, invisible blanks, picture tails."""
+    SVG = '<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="9">Walrus budget cut</text></svg>'
+
+    def b64(self):
+        return base64.b64encode(self.SVG.encode()).decode()
+
+    def refused_or_dropped(self, pg):
+        for kind, path in self.both():
+            out, why = self.build(path, pg)
+            leaked = out is not None and (self.b64()[10:50] in out or "beacon.example" in out)
+            self.assertFalse(leaked, f"{kind}: kept")
+
+    def test_image_set_with_hidden_words_or_an_outside_address_is_never_kept(self):
+        sp = "data: image/svg+xml;base64," + self.b64()
+        tab = "data:ima\\9 ge/svg+xml;base64," + self.b64()
+        for css in (f'.page{{background-image:image-set("{sp}" 1x)}}', f'.page{{background-image:image-set("{tab}" 1x)}}',
+                    f'.page{{background-image:-webkit-image-set("{sp}" 1x)}}', '.page{background-image:image-set("https://beacon.example/a.png" 1x)}',
+                    '.page{background:cross-fade(url(#a),url(#b),50%)}', '.page{background:src("https://beacon.example/a.png")}'):
+            self.refused_or_dropped(page(css=css))
+        self.refused_or_dropped(page(self.wrap(f"<p style='background-image:image-set(\"{sp}\" 1x)'>x</p>")))
+
+    def test_escaped_url_and_spaced_or_tab_escaped_svg_addresses_are_refused(self):
+        sp = "data: image/svg+xml;base64," + self.b64()
+        tab = "data:ima\\9 ge/svg+xml;base64," + self.b64()
+        for css in ('.page{background:u\\72l(https://beacon.example/a.png)}', f'.page{{background:url("{tab}")}}', f'.page{{background:url("{sp}")}}',
+                    '.page{background:\\75rl("https://beacon.example/a.png")}'):
+            self.refused_or_dropped(page(css=css))
+            for kind, path in self.both():
+                self.assertIsNotNone(self.build(path, page(css=css))[1], f"{kind}: {css}")
+
+    def test_the_exported_page_carries_a_content_security_policy(self):
+        out, why = self.build(self.saved(), page())
+        self.assertIsNone(why)
+        self.assertIn("Content-Security-Policy", out)
+        self.assertIn("default-src 'none'; img-src data:; style-src 'unsafe-inline'", out)
+
+    def test_blank_characters_are_invisible_to_fold(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import export_page
+        for ch in ("\u17b4", "\u2800"):
+            self.assertEqual(export_page.fold("Wal" + ch + "rus"), "walrus", hex(ord(ch)))
+
+    def test_a_png_chunk_past_the_end_and_jpeg_bytes_after_the_end_are_dropped(self):
+        import struct
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import docx_tools
+        needle = b"Walrus budget cut"
+        png = (b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + bytes(13) + b"\0\0\0\0" + struct.pack(">I", 500) + b"tEXt" + needle)
+        self.assertNotIn(needle, docx_tools.strip_image_metadata(png))
+
+        def seg(marker, body):
+            return bytes([0xFF, marker]) + struct.pack(">H", len(body) + 2) + body
+        jpg = (b"\xff\xd8" + seg(0xC0, b"\x08\x00\x14\x00\x28\x01\x01\x11\x00") + seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x12\x34\xff\xd9"
+               + needle + seg(0xFE, needle))
+        out = docx_tools.strip_image_metadata(jpg)
+        self.assertNotIn(needle, out)
+        self.assertTrue(out.endswith(b"\x12\x34\xff\xd9"))
+        prog = (b"\xff\xd8" + seg(0xC2, b"\x08\x00\x14\x00\x28\x01\x01\x11\x00") + seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x12\xff\x00\x34"
+                + seg(0xFE, needle) + seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x56\xff\xd9")
+        out = docx_tools.strip_image_metadata(prog)
+        self.assertNotIn(needle, out)
+        self.assertEqual(out.count(b"\xff\xda"), 2)
+
+
 class Fallback(Base):
     """Check 12: with no page, or one that fails the check, the Python renderer still gives a file and says it is plain."""
 
