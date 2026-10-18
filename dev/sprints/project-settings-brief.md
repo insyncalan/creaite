@@ -6,7 +6,7 @@ Product Manager, 18-10-2026, for Team Stark. Mockup (approved and locked by Alan
 
 1. **A Settings icon (cog) at the foot of the project page,** beside the Reports icon (#225) and Browse files, same size and style, name on hover. It opens a **full page**, not a side panel: breadcrumb (Projects › the project › Settings), "Project settings", the project's name and code, and "Each change saves on its own, with Undo."
 2. **The app's own settings layout:** a search box and a vertical list of categories on the left, cards of labelled rows on the right (a label, a line of help, the control).
-3. **Categories (no Workstreams; Alan, 18-10-2026):**
+3. **Categories (no Workstreams here: Alan, 18-10-2026, workstreams stay in Settings › People and projects):**
    - **General:** name, client, code (changing it renames every item and asks first), status (Active, On hold, Closed), the project's folder with Open folder.
    - **People and partners:** the people on this project (name, role, organisation; add, edit, remove) and the partner organisations (name, people; add, edit, remove). People come from the people register; adding one here adds them to the register.
    - **Logos:** the firm's logo (shared by every project, always shown), the client's, and **one row for each partner organisation defined in People and partners** (Alan: the Logos page gets its partners from there; adding or removing a partner organisation there adds or removes its logo row here). Add, Change and Remove, as in the reporting hub's settings; the same files, the same names (`firm.<ext>`, `<CODE>-client.<ext>`, a partner's `<CODE>-partner-<n>.<ext>` or as Stark decides), kept out of git.
@@ -17,7 +17,7 @@ Product Manager, 18-10-2026, for Team Stark. Mockup (approved and locked by Alan
 
 ## Rules
 
-Each change saves on its own, with Undo (as the milestones peek does today). A setting here and the same setting elsewhere (the client report, the logos, Settings › People and projects) is one setting. No guarded file should be needed; if one is, say so first. Related: #103 (review of Settings › People and projects) should be folded in or retired once this lands.
+Each change saves on its own, with Undo (as the milestones peek does today). A setting here and the same setting elsewhere (the client report, the logos, Settings › People and projects) is one setting. No guarded file should be needed; if one is, say so first. Related: #103 (review of Settings › People and projects). **Workstreams stays in Settings › People and projects (Alan, 18-10-2026)**: do not retire that card; if #103 later retires the rest of that page, the Workstreams card needs a home first.
 
 ## Open for Stark
 
