@@ -49,7 +49,7 @@ function weekRows(code, doc, on) {
     const v = weekView(code, w), isShown = w === shown;
     return { week: w, tone: tones[w] || "n", current: isShown,
       internal: isShown && doc ? internalStatus(doc).label : v.internal.label,
-      client: isShown && on && cd ? clientStatus(cd, ci).label : v.clients[0].state.label };
+      client: isShown && on && cd ? clientStatus(cd, ci).label : (v.clients[0] ? v.clients[0].state.label : "") };
   });
 }
 

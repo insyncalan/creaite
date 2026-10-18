@@ -71868,7 +71868,7 @@ ${d5.text}`);
         tone: tones[w6] || "n",
         current: isShown,
         internal: isShown && doc ? internalStatus(doc).label : v5.internal.label,
-        client: isShown && on2 && cd2 ? clientStatus(cd2, ci2).label : v5.clients[0].state.label
+        client: isShown && on2 && cd2 ? clientStatus(cd2, ci2).label : v5.clients[0] ? v5.clients[0].state.label : ""
       };
     });
   }
