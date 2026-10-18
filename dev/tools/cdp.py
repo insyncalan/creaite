@@ -227,8 +227,18 @@ class Browser:
         self.wait(wait_for, timeout)
 
     def reload(self, wait_for="document.readyState==='complete'", timeout=20):
+        # A fixed pause is not "the reload has happened": under load the old document can still answer after it, the wait passes on
+        # the OLD page and the next call meets the new one before it has booted ("go is not defined"). Mark the old document and
+        # wait for the mark to be gone.
+        marked = False
+        try:
+            marked = bool(self.eval("(window.__cdpOld=true)", wait=False))
+        except RuntimeError:
+            pass
         self.call("Page.reload", ignoreCache=True)
         time.sleep(0.3)
+        if marked:
+            self.wait("!window.__cdpOld", timeout)
         self.wait(wait_for, timeout)
 
     def wait(self, js, timeout=10, every=0.05):

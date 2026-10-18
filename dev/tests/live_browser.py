@@ -146,6 +146,7 @@ class LiveBrowserCase(unittest.TestCase):
             try:
                 self.b.goto(self.base + "/")
                 self.b.wait("typeof go==='function' && LIVE")
+                self.settle()
                 self.b.eval("typeof helpScreenSync==='function' && (S.helpLine=false, helpScreenSync(), true)")      # #158: the first-visit line (38 px) clears on the first click and would shift every layout assertion; test_help_finding sets S.helpLine itself
                 if self.pin_clock and os.environ.get("CREAITE_NOW"):   # #178: a pinned run pins the page too, so page and data agree
                     pin_page_clock(self.b, os.environ["CREAITE_NOW"])
@@ -154,6 +155,14 @@ class LiveBrowserCase(unittest.TestCase):
                 self.b.close()
                 if attempt == 2:
                     raise
+
+    def settle(self):
+        """BL-327: data older than PAGE_FRESH seconds is shown at once and the page re-reads it straight after its first paint
+        (reloadData splices A, R, REV ... and redraws). On a loaded machine that re-read lands after a test has already changed
+        A or P in the page and silently puts the server's copy back. Wait until no reload is in flight (it is counted before the
+        first paint ends, so zero means the boot refresh is done), then a frame for the redraw it caused."""
+        self.b.wait("typeof PULSE==='undefined' || PULSE.reloads===0", 30)
+        self.b.frames(2)
 
     def _callTestMethod(self, method):
         """A failing test says where the page was, as a failing wait does (nothing about what passes changes)."""
