@@ -21,16 +21,15 @@ Product Manager, 18-10-2026, for Team Stark. Mockup (approved and locked by Alan
 
 Load and Process happen together (no "Load into inbox"); Organiser and Where move to the row's detail; a normal Process does not open ask creaite; Later is a snooze (the meeting leaves the ready list and returns when a transcript arrives); Not needed asks for a reason (Informal chat, No decisions, Duplicate of another meeting, Other) and is undoable; auto-load and drafting by series stay in the backlog for the 13-11-2026 review.
 
-## Open questions for Alan (from Stark's scout, #232; I will put them to him)
-1. **Does a guessed field make an item non-routine?** Today it does not (owner, date and evidence are never tested).
-2. **The exact "routine" wording** on the group heading (the proposal above).
-3. **What brings a Later meeting back?** The step 1 brief says a transcript arriving; is that enough, or also a date?
-4. **Is an "invalid" proposal held back in the list?**
-5. **A jump to a time in the source** (Open source opens the whole file today).
+## Alan's answers to the open questions (18-10-2026)
+1. **A guessed field does not make an item non-routine** (as today).
+2. **The routine wording is approved:** "Each has a project and no conflict, and none is a change you approve one by one."
+3. **A Later meeting comes back when a transcript arrives** (nothing else brings it back).
+4. **An "invalid" proposal is held back in the list, for now;** to be reviewed in production.
+5. **Open source opens the whole file;** there is no jump to a time, so the source lines show no times (removed in the dated mockup copy).
 
 ## Open points for Stark (not decided by Alan)
 
-- **Times in the source lines.** The mockup shows a time next to each source ("00:31:05"). Today's Open source opens the whole file with no jump to a place. Build it as today (no time) unless Alan says he wants the jump; ask before building a jump.
 - **The Later group** is specified in the step 1 brief but not drawn in the mockup; build it as that brief says (a group below Waiting; a way to bring a meeting back).
 - **Guarded files.** A first cut needs none: the reason for Not needed goes in the cleared-meetings file. The optional guarded tweak to the clear route is a proposal for Jarvis, not needed first.
 
