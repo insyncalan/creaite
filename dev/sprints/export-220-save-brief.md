@@ -12,7 +12,7 @@ Product Manager, 18-10-2026, for Team Stark. Hub mockup (locked, c6f549ed) shows
 4. **A failed save says so plainly** (why, and that nothing was written), not "Not exported".
 5. Same for the internal and the client report, and for each of the three formats. Writes go through the file-change route (`filechange.py`): backed up, logged, undoable. Messages are in British English, with dates as DD-MM-YYYY.
 
-**Alan's ruling (18-10-2026): the HTML export uses the plain name too** (no "(read only)" in it), the same as Word and PDF. No filed reports exist yet, so no migration is needed; if the plain name clashes with the filed report, the clash dialog in item 3 handles it.
+**Alan's ruling (18-10-2026): the HTML export uses the plain name too** (no "(read only)" in it), the same as Word and PDF. No filed reports exist yet, so no migration is needed; the plain name is reserved for the filed report (agreed with Team Stark, 18-10-2026): the first HTML export of an unfiled report is offered "… (2).html" (Add a number default, Rename; no Overwrite), and Approve and file is never blocked by an export; once filed, exporting HTML at the plain name asks Overwrite, Rename or Add a number (Overwrite backs up the filed report, undoable).
 
 ## Acceptance checks
 
