@@ -95,9 +95,12 @@ def image_size(data):
     raise ValueError("not a PNG or JPEG image")
 
 
-def drawing(rid, n, w_px, h_px, name):
-    """The Word run for an inline image with relationship `rid`, scaled down to the page width when wider."""
+def drawing(rid, n, w_px, h_px, name, show_w=None):
+    """The Word run for an inline image with relationship `rid`, scaled down to the page width when wider. `show_w` (#227) is the
+    width in pixels to show it at (96 to the inch), the height following; a picture drawn at twice the size stays sharp."""
     w, h = w_px * 9525, h_px * 9525
+    if show_w:
+        w, h = round(show_w * 9525), round(h_px * show_w * 9525 / w_px)
     if w > MAX_WIDTH_EMU:
         w, h = MAX_WIDTH_EMU, round(h * MAX_WIDTH_EMU / w)
     return ('<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
@@ -885,9 +888,26 @@ def cmd_fill(template, values_file, out):
     values = json.loads(Path(values_file).read_text(encoding="utf-8"))
     media = []                                  # (part name, bytes, rel id) for images
     for key, items in values.items():
-        if isinstance(items, list) and any(isinstance(e, dict) and "image" in e for e in items):
+        if isinstance(items, list) and any(isinstance(e, dict) and ("image" in e or "images" in e) for e in items):
             prepared = []
             for entry in items:
+                if isinstance(entry, dict) and "images" in entry:         # #227: several pictures side by side in one paragraph
+                    runs = ""
+                    for one in entry["images"]:
+                        f = Path(one["image"])
+                        if not f.is_file() or f.suffix.lower() not in IMAGE_TYPES:
+                            print(f"Note: image not found or not PNG/JPEG, left out: {one['image']}")
+                            continue
+                        data = f.read_bytes()
+                        w, h = image_size(data)
+                        n = len(media) + 1
+                        rid = f"rIdCreaiteImg{n}"
+                        media.append((f"word/media/creaite-{n}{f.suffix.lower()}", data, rid))
+                        runs += drawing(rid, n, w, h, one.get("name") or f.name, one.get("width")) + \
+                            '<w:r><w:t xml:space="preserve">    </w:t></w:r>'
+                    if runs:
+                        prepared.append({"drawing": runs, "caption": ""})
+                    continue
                 if not (isinstance(entry, dict) and "image" in entry):    # Markdown between images (BL-63)
                     prepared.append(entry)
                     continue
@@ -901,7 +921,7 @@ def cmd_fill(template, values_file, out):
                 n = len(media) + 1
                 rid = f"rIdCreaiteImg{n}"
                 media.append((f"word/media/creaite-{n}{f.suffix.lower()}", data, rid))
-                prepared.append({"drawing": drawing(rid, n, w, h, f.name), "caption": entry.get("caption", "")})
+                prepared.append({"drawing": drawing(rid, n, w, h, f.name, entry.get("width")), "caption": entry.get("caption", "")})
             values[key] = prepared
     parts = []
     left = set()
