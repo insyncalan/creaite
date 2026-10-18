@@ -905,7 +905,7 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .copt.act,.copt:hover{background:var(--accent-soft)} .copt.new{color:var(--accent);font-weight:500}
 .cdel{border:0;background:none;width:24px;height:24px;border-radius:50%;cursor:pointer;color:var(--muted)} .cdel:hover{background:var(--bad-soft);color:var(--bad)}
 .rgroup{margin:16px 0 6px;display:flex;align-items:center;gap:10px}
-.why{font-size:var(--fs-xs);color:var(--muted)} .indiv{font-size:var(--fs-xs);color:var(--warn)}
+.why{font-size:var(--fs-xs);color:var(--muted)} .why.rvmeta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}   /* #229: one meta line */ .indiv{font-size:var(--fs-xs);color:var(--warn)}
 .cock{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px} .card h2{margin-bottom:8px}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:6px 0 16px}
@@ -6426,6 +6426,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rvDef: () => rvDef,
     rvDispClose: () => rvDispClose,
     rvDock: () => rvDock,
+    rvDraftBtn: () => rvDraftBtn,
     rvDrawDisp: () => rvDrawDisp,
     rvDup: () => rvDup,
     rvEmptyHtml: () => rvEmptyHtml,
@@ -6467,6 +6468,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rvSummary: () => rvSummary,
     rvSyncChk: () => rvSyncChk,
     rvTick: () => rvTick,
+    rvTip: () => rvTip,
     rvWhyNot: () => rvWhyNot,
     rvfCount: () => rvfCount,
     rwWrap: () => rwWrap,
@@ -42870,6 +42872,16 @@ ${s5}`;
     if (snap && now && now.done && !before) mRowGone(snap, n4, v5);
     return res;
   };
+  var rvDraftBtn = (r4) => {
+    const m5 = / · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/.exec(revDetail(r4) || "");
+    return m5 ? raw(m5[0]) : "";
+  };
+  var rvTip = (r4) => {
+    const d5 = (revDetail(r4) || "").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/, "");
+    if (!d5) return "";
+    const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
+    return t47 ? raw(` data-tip="${esc(t47)}"`) : "";
+  };
   var WKRVF = { actions: ["due", "due_date"], raid: ["due", "due_date"], decisions: ["due", "needed_by"] };
   var draftOn = (f5) => !(S.drafting && S.drafting[f5] === false);
   var rvDup = (r4) => draftOn("repeat") && r4.dup || null;
@@ -42901,11 +42913,11 @@ ${s5}`;
   var rvMovable = (r4) => !!r4 && !r4.done && (isMin(r4) || ["actions", "raid", "decisions"].includes(r4.kind));
   function revRow(r4, idx, g5, cls, head) {
     const minKids = isMin(r4) && head.kids.some(routineKid);
-    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${rvOutlier(r4) ? html` <span class="tag stale rvold">Oldest · ${rvAgeText(r4)}</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}${revDetail(r4) ? html`<div class="why rdet">${raw(revDetail(r4))}</div>` : ""}<div class="why">${kindLabel(r4) ?? ""} · ${r4.why ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${raw(rjGuessHtml(r4))}</div><div class="why">${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div></td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rvage${rvOutlier(r4) ? " old" : ""}">${rvAgeText(r4)}</span> <span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini" data-act="ga" title="Approves the routine items from these minutes; the minutes, new decisions and new risks stay for one-by-one approval">Approve ${head.kids.filter(routineKid).length} routine</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
+    let h5 = String(html`<tr class="click ${cls || ""} ${idx === shared.RSEL ? "sel" : ""}${RHL.has(r4.n) ? " hl" : ""}" aria-selected="${String(RHL.has(r4.n))}" data-ri="${idx}" data-n="${r4.n}" data-g="${g5}"><td style="width:32px"><input type="checkbox" aria-label="${isMin(r4) ? "Select the routine items from these minutes" : `Select ${r4.rec.t ?? ""}`}" ${raw(isMin(r4) ? minKids && head.kids.filter(routineKid).every((k5) => CHK.has(k5.n)) ? "checked" : "" : RHL.has(r4.n) ? "checked" : "")} ${raw(r4.done || isMin(r4) && !minKids ? "disabled" : "")}></td><td class="title">${head && head.kids.length ? html`<button class="mini tog" data-act="t" aria-expanded="${String(!head.closed)}" title="${head.closed ? "Show" : "Hide"} its items">${raw(ic("chevdown", "chev"))}${head.kids.length} item${head.kids.length === 1 ? "" : "s"}</button> ` : ""}${raw(revIco(r4))}${r4.rec.t ?? ""}${r4.edited ? html` <span class="tag">· edited</span>` : ""}${rvOutlier(r4) ? html` <span class="tag stale rvold">Oldest · ${rvAgeText(r4)}</span>` : ""}${rvDup(r4) && !r4.done ? raw(llTag(r4)) : ""}<div class="why rvmeta"${rvTip(r4)}>${kindLabel(r4) ?? ""}${r4.indiv ? html` · <span class="indiv">approve individually</span>` : ""}${rvDraftBtn(r4)}${raw(rjGuessHtml(r4))} · ${r4.why ?? ""} · ${fdText(srcShort(r4.src)) ?? ""}${raw(rvSrcLink(r4))}</div></td><td style="white-space:nowrap;text-align:right">${r4.done ? html`<span class="${r4.done === "approved" ? "h-ok" : "h-bad"}" style="font-weight:500">${r4.done === "approved" ? "Approved" : "Rejected"}</span>` : html`<span class="rvage${rvOutlier(r4) ? " old" : ""}">${rvAgeText(r4)}</span> <span class="rowact">${isMin(r4) && viaServer() ? raw(ibtn("refresh", "Refresh items", 'data-act="f"', "sm")) : ""}${raw(ibtn("pencil", r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", 'data-act="e"', "sm", "E"))}</span> ${head && head.kids.some(routineKid) ? html`<button class="mini" data-act="ga" title="Approves the routine items from these minutes; the minutes, new decisions and new risks stay for one-by-one approval">Approve ${head.kids.filter(routineKid).length} routine</button> ` : ""}<button class="mini ok" data-act="a"${r4.nodraft ? html` disabled title="${NODRAFT_MSG}"` : ""}>${raw(ic("check"))}Approve</button> ${raw(rvRejectOK(r4) ? ibtn("x", "Reject, with a reason", 'data-act="r" aria-haspopup="menu"', "sm no", "R") : ibtn("x", "Reject", 'data-act="r"', "sm no", "R"))}${["draft", "files"].includes(r4.kind) ? "" : raw(ibtn("chevdown", "Reject with a reason", 'data-act="rr" aria-haspopup="menu"', "sm no rvrr", "Shift+R"))}`}</td></tr>`);
     if (isConflict(r4)) {
       const live = viaServer(), btns = `<button class="mini" data-act="ck" ${live ? "" : 'disabled title="Needs the live server"'}>Keep current</button> <button class="mini ok" data-act="co" ${live ? "" : 'disabled title="Needs the live server"'}>Use this one</button>`;
       h5 = h5.replace(/<button class="mini ok" data-act="a">.*?<\/button>/, btns);
-      const i5 = h5.indexOf('<div class="why">');
+      const i5 = h5.indexOf('<div class="why rvmeta"');
       if (i5 > 0) h5 = h5.slice(0, i5) + conflictHtml(r4) + h5.slice(i5);
     }
     if (!shared.LOADING && rvMovable(r4)) h5 = h5.replace('<span class="rowact">', `<span class="rowact"><button type="button" class="mini rvpj" data-act="pj" aria-haspopup="menu" title="${isMin(r4) ? "Move these minutes and their items to another project" : "Move to another project"}">${ic("projects")}Project</button>`);
@@ -64426,8 +64438,6 @@ ${d5.text}`);
         {
           id: "type",
           label: "Kind",
-          main: true,
-          btnId: "actTypeBtn",
           menuId: "actTypeMenu",
           on: !!types.length,
           selected: types,

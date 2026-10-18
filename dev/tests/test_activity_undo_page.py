@@ -70,12 +70,12 @@ class ActivityPage(ActivityBase):
         b = self.b
         self.go_activity()
         # BL-316: Kind is the FilterBar block's list (was a row of toggles)
-        b.click("#actTypeBtn")
-        b.wait("document.getElementById('actTypeMenu').classList.contains('on')")
-        b.click('#actTypeMenu [role=option]:has(input[value="Risk"])')
+        b.click("#actFunnel")                                      # #229: the kind filter is the funnel's field list
+        b.wait("!!document.querySelector('#actPick [role=option]')")
+        b.click('#actPick [role=option]:has(input[value="Risk"])')
+        b.wait("(shared.ACTF.types||[]).includes('Risk')")
         self.assertTrue(all("ABC-004" in r for r in self.rows()), self.rows())
-        self.assertEqual(b.eval("document.querySelector('#actTypeMenu [role=option]:has(input[value=\"Risk\"])').getAttribute('aria-selected')"), "true")
-        self.assertEqual(b.eval("document.getElementById('actTypeBtn').textContent.trim()"), "Kind: Risk")
+        self.assertEqual(b.eval("document.querySelector('#actPick [role=option]:has(input[value=\"Risk\"])').getAttribute('aria-selected')"), "true")
         b.key("Escape")
         b.eval("document.getElementById('actQ').value='data'; document.getElementById('actQ').dispatchEvent(new Event('input',{bubbles:true}))")
         self.assertIn("q=data", b.eval("location.hash"))

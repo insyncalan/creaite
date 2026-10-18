@@ -72,7 +72,7 @@ export const actFCount=()=>((shared.ACTF.types||[]).length?1:0)+(shared.ACTF.fro
 export function actBarProps(){ const types=shared.ACTF.types||[], have=new Set(shared.ACT.map(actKind)), name=t=>(actKindOf(t)||["",t])[1];
   const others=shared.ACT.filter(a=>actMatch(a,"types")), n=actFCount(), from=shared.ACTF.from, to=shared.ACTF.to, dOn=!!(from||to);
   return {fields:[
-      {id:"type",label:"Kind",main:true,btnId:"actTypeBtn",menuId:"actTypeMenu",on:!!types.length,selected:types,mark:types.length?"set":"",
+      {id:"type",label:"Kind",menuId:"actTypeMenu",on:!!types.length,selected:types,mark:types.length?"set":"",
         button:types.length?`Kind: ${types.length<=2?types.map(name).join(", "):types.length+" chosen"}`:"Kind",
         options:()=>ACTKINDS.filter(k=>have.has(k[0])||types.includes(k[0])).map(k=>({value:k[0],label:k[1],count:others.filter(a=>actKind(a)===k[0]).length}))},
       {id:"when",label:"When",on:dOn,mark:dOn?"set":"",note:"The day each change was made",range:{from:from?fd(from):"",to:to?fd(to):"",name:"Changed"}}],
