@@ -1900,7 +1900,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .actdates input{width:112px;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
 #actTypes{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%} #actTypes .vchip{display:inline-flex;align-items:center;gap:4px} #actTypes .vchip svg{width:14px;height:14px}
 .acticon{display:inline-flex;vertical-align:-3px;margin-right:6px;color:var(--muted)} .acticon svg{width:16px;height:16px}
-#actTbl th.actck,#actTbl td.actck{width:30px;padding-right:0} #actTbl td.actck input{vertical-align:middle;cursor:pointer}
+#actTbl th.actck,#actTbl td.actck{width:30px;padding-right:0} #actTbl td.actck input{vertical-align:middle;cursor:pointer} #actTbl td.actck input:disabled{cursor:default;opacity:.4}
 #actTbl tr.undone td.actchg{text-decoration:line-through;color:var(--muted)} .actundone{font-style:italic}
 .actvh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #actDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(580px,92vw);background:var(--surface);color:var(--ink)}

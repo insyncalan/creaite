@@ -1910,7 +1910,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .actdates input{width:112px;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
 #actTypes{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%} #actTypes .vchip{display:inline-flex;align-items:center;gap:4px} #actTypes .vchip svg{width:14px;height:14px}
 .acticon{display:inline-flex;vertical-align:-3px;margin-right:6px;color:var(--muted)} .acticon svg{width:16px;height:16px}
-#actTbl th.actck,#actTbl td.actck{width:30px;padding-right:0} #actTbl td.actck input{vertical-align:middle;cursor:pointer}
+#actTbl th.actck,#actTbl td.actck{width:30px;padding-right:0} #actTbl td.actck input{vertical-align:middle;cursor:pointer} #actTbl td.actck input:disabled{cursor:default;opacity:.4}
 #actTbl tr.undone td.actchg{text-decoration:line-through;color:var(--muted)} .actundone{font-style:italic}
 .actvh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #actDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(580px,92vw);background:var(--surface);color:var(--ink)}
@@ -63845,7 +63845,7 @@ ${d5.text}`);
   function actRow(a5, i5) {
     const rid = a5.rowid && !a5.reverted && !a5.undone ? `r${a5.rowid}` : "";
     const end = a5.reverted ? html`<span class="x actundone" title="Put back by a later undo">undone</span>` : a5.undo ? raw(ibtn("undo", "Undo this change", html`data-undoact="${i5}"`, "sm")) : viaServer() && a5.apply_id && a5.apply_id === D.latest_apply && !a5.undone ? raw(ibtn("undo", "Undo this apply", html`data-undoapply="${a5.apply_id}"`, "sm")) : html`<span class="x" title="Only the latest apply can be undone here; tick older changes to undo them">Applied</span>`;
-    return html`<tr${rid ? html` data-row="${rid}"` : ""}${a5.reverted ? html` class="undone"` : ""}><td class="actck">${rid ? html`<input type="checkbox" aria-label="Select: ${actId(a5)} ${a5.change || a5.what || ""}">` : ""}</td><td class="actwhen" style="white-space:nowrap">${fd(a5.at)}</td><td class="actchg">${actIcon(a5)}${actLine(a5)}</td><td class="x">${a5.by}</td><td style="text-align:right">${end}</td></tr>`;
+    return html`<tr${rid ? html` data-row="${rid}"` : ""}${a5.reverted ? html` class="undone"` : ""}><td class="actck">${rid ? html`<input type="checkbox" aria-label="Select: ${actId(a5)} ${a5.change || a5.what || ""}">` : html`<input type="checkbox" disabled title="This change can't be undone here" aria-label="Not selectable: ${actId(a5)} ${a5.change || a5.what || ""}">`}</td><td class="actwhen" style="white-space:nowrap">${fd(a5.at)}</td><td class="actchg">${actIcon(a5)}${actLine(a5)}</td><td class="x">${a5.by}</td><td style="text-align:right">${end}</td></tr>`;
   }
   var ACTSHOW = 300;
   function renderActivity() {
