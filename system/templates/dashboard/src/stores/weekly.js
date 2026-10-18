@@ -6,6 +6,7 @@
    (the project's logo files, read only). Nothing here sends anything. */
 import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
+import { saveExport } from "./exportSave.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{ok: boolean, message?: string, doc?: SheetDoc, path?: string, where?: string, version?: number, filed?: boolean,
@@ -73,10 +74,10 @@ export async function approveWeekly(doc, force) {
   return r || { ok: false, message: "The apply didn't run; nothing was changed." };
 }
 
-/** Export the saved report as html, docx or pdf (P2's export, opened once made). @param {SheetDoc} doc @param {string} fmt */
+/** Export the saved report as html, docx or pdf and save it in the project's Reports folder (#220: a taken name asks, a save says
+    where; see stores/exportSave.js). @param {SheetDoc} doc @param {string} fmt */
 export async function exportWeekly(doc, fmt) {
-  const r = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
-  return r || { ok: false, message: "Not exported." };
+  return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
 }
 
 /** Unsaved edits on the page (the sheet saves them; Approve and Export save first). */

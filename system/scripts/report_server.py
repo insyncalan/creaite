@@ -12,8 +12,11 @@
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
-  POST /api/report/export  {kind, code, week_ending, client?, fmt, file_beside?}: P2's export (the contract's call), from the draft
-                           or the filed report; a client report only once its internal week is approved and nothing would leak, and its
+  POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?}: P2's export (the contract's call), from the
+                           draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
+                           a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate);
+  POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
+                           A client report is exported only once its internal week is approved and nothing would leak, and its
                            answer then carries `left_out`: the check of what is left out runs before every client export
 """
 import base64
@@ -227,8 +230,87 @@ def launch(stored):
     return True
 
 
+def _plain_name(name, ext):
+    """A typed file name made safe: one name (no folder, no leading dot, 150 characters at most) that ends with `ext`; None when it
+    can't be a file name."""
+    name = " ".join(str(name or "").split())
+    if not name or "/" in name or "\\" in name or name.startswith(".") or len(name) > 150:
+        return None
+    return name if name.lower().endswith(ext) else name + ext
+
+
+def _taken(folder, name):
+    """Whether anything of that name is in the folder already."""
+    f = folder / name
+    return f.exists() or f.is_symlink()
+
+
+def _numbered(folder, name):
+    """The next free "Name (2).ext" in the folder (filechange.free_name: the number a create adds by itself)."""
+    import filechange
+    return filechange.free_name(folder / name).name
+
+
+def _not_saved(handler, why, **extra):
+    """The answer when the file was not saved: plainly why, and that nothing was written (#220)."""
+    return refuse(handler, f"Not saved: {why} Nothing was written.", saved=False, **extra)
+
+
+def _file_in_reports(handler, draft, folder, name, overwrite, fmt, label):
+    """File the exported draft in the Reports folder as `name` through filechange.py: a create (never overwriting) or, on Overwrite,
+    an edit that backs the earlier file up first. The draft in system/staging/drafts/ goes in every case."""
+    import re
+    import filechange
+    import reach
+    target = folder / name
+    ch = {"op": "edit" if overwrite else "create", "path": paths.rel(target), "data": draft.read_bytes(), "from": paths.rel(draft),
+          "why": f"{fmt.upper()} export of {target.stem}" + (" (replaced at your choice)" if overwrite else "")}
+    try:
+        token = reach.APPROVALS.issue(filechange.fingerprint(ch)) if overwrite else None   # Alan's own Overwrite: this change, once
+        code, msg = filechange.perform(ch, token, "dashboard")
+    except OSError as e:
+        for stray in folder.glob(f".{name}.part"):
+            stray.unlink(missing_ok=True)
+        return _not_saved(handler, f"the {label} folder can't be written to ({e.strerror or e.__class__.__name__}).")
+    finally:
+        draft.unlink(missing_ok=True)
+    if code == filechange.NEEDS:
+        filechange.record_request(ch, msg[len("Needs approval: "):].rstrip("."))
+        return _not_saved(handler, msg)
+    if code != 0:
+        return _not_saved(handler, msg)
+    final = re.match(r"(?:Created|Changed) (.+?) \(change (\d+)", msg)
+    stored = final.group(1) if final else ch["path"]
+    return {"ok": True, "saved": True, "format": fmt, "path": stored, "name": Path(stored).name, "folder": paths.rel(folder),
+            "folder_label": label, "replaced": bool(overwrite), "change": int(final.group(2)) if final else None, "filed": True,
+            "message": f"{'Replaced' if overwrite else 'Saved'} {Path(stored).name} in {label}."}
+
+
+def _settle_name(folder, name, ext, req, label):
+    """(name, overwrite, asked): the file name to save as, from the page's choice for a taken name (`on_clash`: number, rename with
+    `new_name`, or overwrite), and `asked`: the answer to give instead when the name is taken and no choice was made (or the typed
+    name can't be used), else None."""
+    choice = req.get("on_clash")
+    if choice == "rename":
+        name = _plain_name(req.get("new_name"), ext)
+        if not name:
+            return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
+    if not _taken(folder, name):
+        return name, False, None
+    if choice == "number":
+        return _numbered(folder, name), False, None
+    if choice == "overwrite" and (folder / name).is_file():
+        return name, True, None
+    return name, False, {"ok": False, "clash": True, "name": name, "numbered": _numbered(folder, name),
+                         "message": f"{name} is already in {label}."}
+
+
 def export_route(handler, req):
-    """POST /api/report/export: the report exported as HTML, Word or PDF (see the module's description). Nothing is ever sent."""
+    """POST /api/report/export: the report exported as HTML, Word or PDF, and saved first into the project's Reports folder (#220).
+    Opening is a separate choice (/api/open, /api/report/reveal). The answer: {ok, saved, path, name, folder, folder_label,
+    replaced, message}; a taken name answers {ok: false, clash: true, name, numbered, folder, folder_label} and writes nothing
+    until the page asks again with on_clash "number", "rename" (and new_name) or "overwrite"; a failed save says why and that
+    nothing was written. Nothing is ever sent."""
     kind, code, fri, client = target(req)
     fmt = req.get("fmt")
     if fmt not in FORMATS:
@@ -247,12 +329,40 @@ def export_route(handler, req):
     fn = export_call()
     if fn is None:
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
-    out = fn(path, fmt, file_beside=bool(req.get("file_beside", creaite_doc.file_beside_default(kind))), open_after=True)
-    if out.get("ok") and out.get("path"):
-        out["launched"] = launch(out["path"])
+    filed = paths.resolve(report_doc.filed_path(kind, code, fri, client))
+    folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
+    name = filed.stem + (" (read only)" if fmt == "html" else "") + ext      # the filed report is the .html: a page export is told apart
+    label = f"{creaite_doc.project_name(code) or code} › Reports"
+    where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
+    name, overwrite, asked = _settle_name(folder, name, ext, req, label)
+    if asked:
+        return answer(handler, {"ok": False, **asked, **where})
+    out = fn(path, fmt, file_beside=False, open_after=False)           # made in system/staging/drafts/, filed below
+    if not out.get("ok"):
+        return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
+    saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
     if left is not None:
-        out["left_out"] = left
-    return answer(handler, out)
+        saved["left_out"] = left
+    return answer(handler, saved)
+
+
+def reveal_route(handler, req):
+    """POST /api/report/reveal {path}: show a saved file in Finder (Show in Finder), or open the folder when the path is a folder.
+    Only a stored path under projects/. With CREAITE_NO_LAUNCH (the tests) nothing opens and `launched` is false."""
+    import re
+    rel = str(req.get("path") or "")
+    if not re.fullmatch(r"projects/.+", rel) or ".." in Path(rel).parts or not paths.resolve(rel).exists():
+        return refuse(handler, "That file or folder isn't there to show.")
+    real = paths.resolve(rel)
+    if os.environ.get("CREAITE_NO_LAUNCH"):
+        return answer(handler, {"ok": True, "launched": False, "path": str(real)})
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", "-R", str(real)] if real.is_file() else ["open", str(real)])
+    elif os.name == "nt":
+        subprocess.Popen(["explorer", "/select,", str(real)] if real.is_file() else ["explorer", str(real)])
+    else:
+        subprocess.Popen(["xdg-open", str(real.parent if real.is_file() else real)])
+    return answer(handler, {"ok": True, "launched": True})
 
 
 LOGO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml"}
@@ -285,4 +395,5 @@ def routes(lock, run, latest_apply):
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
-            "/api/report/export": guarded(export_route), "/api/report/logo": guarded(logo_route)}
+            "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
+            "/api/report/logo": guarded(logo_route)}

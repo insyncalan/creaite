@@ -67266,6 +67266,183 @@ ${d5.text}`);
     ] });
   }
 
+  // stores/exportSave.js
+  var exportClash = y3(
+    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
+    null
+  );
+  var exportSaved = y3(
+    /** @type {ExportAnswer|null} */
+    null
+  );
+  var exportFailed = y3("");
+  async function saveExport(body2) {
+    exportFailed.value = "";
+    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
+    if (r4.ok) {
+      exportClash.value = null;
+      exportSaved.value = r4;
+    } else if (r4.clash) {
+      exportSaved.value = null;
+      exportClash.value = { body: body2, r: r4 };
+    } else {
+      exportClash.value = null;
+      exportSaved.value = null;
+      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
+    }
+    return r4;
+  }
+  async function answerClash(choice, newName) {
+    const c5 = exportClash.value;
+    if (!c5) return null;
+    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
+  }
+  function cancelClash() {
+    exportClash.value = null;
+  }
+  var openFolder = (folder) => api("/api/open", { path: folder });
+  var showInFinder = (path) => api("/api/report/reveal", { path });
+  var openSaved = (path) => api("/api/open", { path });
+
+  // components/report/ExportSave.jsx
+  var dismiss = () => {
+    exportSaved.value = null;
+    exportFailed.value = "";
+  };
+  function ClashDialog() {
+    const c5 = exportClash.value, r4 = c5 && c5.r;
+    const [choice, setChoice] = d2(
+      /** @type {"number"|"rename"|"overwrite"} */
+      "number"
+    );
+    const [typed2, setTyped] = d2("");
+    h2(() => {
+      if (r4) {
+        setChoice("number");
+        setTyped(String(r4.name || ""));
+      }
+    }, [r4]);
+    const name = String(r4 && r4.name || ""), ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
+    const go3 = () => {
+      if (choice === "rename" && !typed2.trim()) return;
+      answerClash(choice, typed2.trim());
+    };
+    const radio = (v5) => /* @__PURE__ */ u2("input", { type: "radio", name: "clash", value: v5, checked: choice === v5, onChange: () => setChoice(v5) });
+    return /* @__PURE__ */ u2(Dialog, { open: !!c5, onClose: cancelClash, labelledBy: "exportClashH", id: "exportClashDlg", class: "mnapprove", focus: "#exportClashGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
+      /* @__PURE__ */ u2("h2", { id: "exportClashH", children: "A file with that name is already there" }),
+      /* @__PURE__ */ u2("p", { class: "sub", id: "exportClashP", children: [
+        "“",
+        name,
+        "” is already in ",
+        /* @__PURE__ */ u2("a", { href: "#", class: "folderlink", "data-export-folder": true, onClick: (e4) => {
+          e4.preventDefault();
+          if (r4 && r4.folder) openFolder(r4.folder);
+        }, children: r4 && r4.folder_label }),
+        "."
+      ] }),
+      /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
+        /* @__PURE__ */ u2("legend", { children: "What would you like to do?" }),
+        /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
+          radio("number"),
+          " ",
+          /* @__PURE__ */ u2("span", { children: [
+            "Add a number",
+            /* @__PURE__ */ u2("span", { class: "sub", children: [
+              " Saves as “",
+              r4 && r4.numbered,
+              "”"
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
+          radio("rename"),
+          " ",
+          /* @__PURE__ */ u2("span", { style: "flex:1;min-width:0", children: [
+            "Rename it",
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                class: "pkdt",
+                id: "exportClashRename",
+                "aria-label": "New file name",
+                style: "display:block;width:100%;margin-top:6px",
+                value: typed2,
+                onFocus: () => setChoice("rename"),
+                onInput: (e4) => {
+                  setTyped(
+                    /** @type {HTMLInputElement} */
+                    e4.target.value
+                  );
+                  setChoice("rename");
+                },
+                placeholder: `Name${ext}`
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
+          radio("overwrite"),
+          " ",
+          /* @__PURE__ */ u2("span", { children: [
+            "Overwrite the existing file",
+            /* @__PURE__ */ u2("span", { class: "sub", children: " The earlier file is backed up first, as for any file change." })
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "mnap-foot", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "exportClashNo", onClick: cancelClash, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "exportClashGo", onClick: go3, children: "Save" })
+      ] })
+    ] }) });
+  }
+  function SavedToast() {
+    const r4 = exportSaved.value, bad = exportFailed.value;
+    h2(() => {
+      if (!r4) return void 0;
+      const t47 = setTimeout(dismiss, 15e3);
+      return () => clearTimeout(t47);
+    }, [r4]);
+    if (bad) return /* @__PURE__ */ u2("div", { class: "snack on", role: "alert", "data-export-failed": true, children: [
+      /* @__PURE__ */ u2("span", { children: bad }),
+      /* @__PURE__ */ u2("button", { type: "button", onClick: dismiss, children: "Close" })
+    ] });
+    if (!r4) return null;
+    return /* @__PURE__ */ u2("div", { class: "snack on", role: "status", "data-export-saved": true, children: [
+      /* @__PURE__ */ u2("span", { children: [
+        r4.replaced ? "Replaced" : "Saved",
+        " ",
+        r4.name,
+        " in ",
+        /* @__PURE__ */ u2(
+          "a",
+          {
+            href: "#",
+            class: "folderlink",
+            "data-export-folder": true,
+            style: "color:inherit",
+            onClick: (e4) => {
+              e4.preventDefault();
+              if (r4.folder) openFolder(r4.folder);
+            },
+            children: r4.folder_label
+          }
+        )
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", onClick: () => {
+        if (r4.path) showInFinder(r4.path);
+      }, children: "Show in Finder" }),
+      /* @__PURE__ */ u2("button", { type: "button", onClick: () => {
+        if (r4.path) openSaved(r4.path);
+      }, children: "Open" })
+    ] });
+  }
+  function ExportSave() {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(ClashDialog, {}),
+      /* @__PURE__ */ u2(SavedToast, {})
+    ] });
+  }
+
   // components/report/redraft.js
   var REDRAFT_KIND = (
     /** @type {const} */
@@ -67891,8 +68068,7 @@ ${d5.text}`);
     return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
   }
   async function exportWeekly(doc, fmt) {
-    const r4 = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
-    return r4 || { ok: false, message: "Not exported." };
+    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
   }
   var weeklyDirty = false;
   var setWeeklyDirty = (on2) => {
@@ -68017,8 +68193,8 @@ ${d5.text}`);
     current_state: (c5) => /* @__PURE__ */ u2(CurrentState, { ctx: c5 })
   } };
   async function saveFirst() {
-    const d5 = weeklyDoc.value;
-    if (!d5 || !weeklyDirty) return true;
+    const d5 = weeklyDoc.value, v5 = weeklyView.value;
+    if (!d5 || !(weeklyDirty || v5 && v5.where === "new")) return true;
     const r4 = await saveWeekly({ doc: d5, base_version: weeklyBase.value });
     if (!r4.ok) {
       snack(r4.message || "The report wasn't saved");
@@ -68031,8 +68207,7 @@ ${d5.text}`);
     const approved = doc.state === "approved";
     const exp = async (fmt) => {
       if (!await saveFirst()) return;
-      const r4 = await exportWeekly(doc, fmt);
-      snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+      await exportWeekly(doc, fmt);
     };
     const approve = async () => {
       if (!await saveFirst()) return;
@@ -68117,7 +68292,8 @@ ${d5.text}`);
           banner: { title: "Weekly report", sub: `${doc.project_name} · ${fd(doc.date)}` },
           toolbar: /* @__PURE__ */ u2(WeeklyBar, { doc, readOnly })
         }
-      ) })
+      ) }),
+      /* @__PURE__ */ u2(ExportSave, {})
     ] });
   }
   var wkMounted = false;
@@ -68305,7 +68481,7 @@ ${d5.text}`);
       const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
       if (!s5.ok) return s5;
     }
-    return api("/api/report/export", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt });
+    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt });
   }
 
   // components/report/ClientParts.jsx
@@ -68724,13 +68900,8 @@ ${d5.text}`);
   }
   async function doExport(fmt) {
     const r4 = await exportClientReport(fmt);
-    if (r4 && r4.ok) {
-      crDialog.value = false;
-      snack(`Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}`);
-    } else {
-      await runCheck();
-      snack(String(r4 && r4.message || "Not exported").split("\n")[0]);
-    }
+    if (r4 && (r4.ok || r4.clash)) crDialog.value = false;
+    else await runCheck();
   }
   function ClientBar({ doc, note, setNote }) {
     const info = crInfo.value, ready = !!(info && info.ready), mode = crMode.value, draft = doc.state !== "approved";
@@ -68866,7 +69037,8 @@ ${d5.text}`);
           toolbar: /* @__PURE__ */ u2(ClientBar, { doc, note, setNote })
         }
       ) }),
-      /* @__PURE__ */ u2(LeftOutDialog, { client: doc.client || "", onExport: doExport })
+      /* @__PURE__ */ u2(LeftOutDialog, { client: doc.client || "", onExport: doExport }),
+      /* @__PURE__ */ u2(ExportSave, {})
     ] });
   }
   var askWhy = (health2) => {
@@ -72597,6 +72769,7 @@ ${d5.text}`);
         "EXPAND",
         "EditorBar",
         "Essentials",
+        "ExportSave",
         "FDEFS",
         "FF",
         "FILES",

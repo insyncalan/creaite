@@ -461,7 +461,7 @@ class ReportRoutes(unittest.TestCase):
         self.section(doc, "summary")["text"] = "Testing starts on plan."
         self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 1})["ok"])
         e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "docx"})
-        self.assertEqual((e["ok"], e["filed"], e["launched"]), (True, False, False), e)   # BL-335: not filed beside unless ticked
+        self.assertEqual((e["ok"], e["filed"], e.get("launched")), (True, True, None), e)   # #220: saved in Reports first; opening is separate
         self.assertIn("Client report - Example Programme (Example Client Ltd).docx", e["message"])
         a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
         self.assertIn("awaiting review", a["message"])           # test_1's Undo left its proposal waiting in Review

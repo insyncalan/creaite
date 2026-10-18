@@ -462,7 +462,7 @@ Where: Today's reminder · Claude Code
 2. Clear Review first. A project with pending items is held back.
 3. For each project, check the proposed health, its reasons and the current state, then approve. The report is filed in the project's `reports/` folder as a web page (`2026-10-16 Weekly report - <Project name>.html`) that opens in any browser. Approving is one apply, so **Undo** puts the earlier report back.
 4. A filed report is never saved over. To correct one, edit it: that starts a new draft and the filed report stays as it was until you approve the new one.
-5. To send it, export it as a web page, Word or PDF (a PDF needs Chrome). The export is made from the same report, so all three say the same and nothing you hid is in them. It is filed beside the report only if you turn on **Settings › Advanced › Reports and minutes › File report exports beside it** (off to start with); otherwise it is made in a temporary place and opened for you. creaite never sends it.
+5. To send it, export it as a web page, Word or PDF (a PDF needs Chrome). The export is made from the same report, so all three say the same and nothing you hid is in them. It is saved first in the project's Reports folder, and a message says where (**Show in Finder** and **Open** are on it; opening is your choice). If a file with that name is already there, you choose **Add a number**, **Rename it** or **Overwrite the existing file** (the earlier one is backed up); nothing is overwritten without that choice. If the save fails, it says so and nothing is written. creaite never sends it.
 
 Or say: `weekly report` `weekly report ABC`
 
