@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- LOCKED: approved by Alan on 18-10-2026 (approved version: commit 88ad88e1). Revised later on 18-10-2026 at Alan's request (the firm's logo in the report header): needs his re-approval to lock again. MOCKUP reporting hub (PM, 18-10-2026): one place to review and edit the internal and the client weekly report, alone or side by side, with the client report switchable per project; built on the weekly snapshot; everything marked NEW is new or fixed, nothing is built. Fictional data. A static snapshot of the real weekly screen (creaite palette, light, fictional sample data) drawn by style.snapshot.css, taken from commit c237a088 (origin/v220-int-gate, VERSION file 2.1.0) on 2026-10-17. Alt+D toggles dark. Copy this file to start a mockup; see ../README.md. -->
+<!-- LOCKED: approved by Alan on 18-10-2026 (approved version: commit 88ad88e1). Revised later on 18-10-2026 at Alan's request (logos in the report header, click to add): needs his re-approval to lock again. MOCKUP reporting hub (PM, 18-10-2026): one place to review and edit the internal and the client weekly report, alone or side by side, with the client report switchable per project; built on the weekly snapshot; everything marked NEW is new or fixed, nothing is built. Fictional data. A static snapshot of the real weekly screen (creaite palette, light, fictional sample data) drawn by style.snapshot.css, taken from commit c237a088 (origin/v220-int-gate, VERSION file 2.1.0) on 2026-10-17. Alt+D toggles dark. Copy this file to start a mockup; see ../README.md. -->
 <html lang="en-GB" data-theme="light" data-palette="creaite" data-reduced="1" style="--chatw: 420px;" class="mready"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap"><link rel="stylesheet" href="../design-system/style.snapshot.css"><style>
 /* NEW / FIXED (reporting hub). Tokens and the app's own classes only. */
 .hubbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -139,6 +139,10 @@ tr.mk-out td:not(.eyec),.wr-stat.mk-out>*:not(.wr-eye){opacity:.4}
 .hubpane .wr-logos{display:flex;gap:10px;align-items:center;flex:none}
 .mk-logo{display:inline-flex;gap:8px;align-items:center;height:40px;padding:0 10px;border:1px dashed var(--line);border-radius:6px;color:var(--muted);background:var(--surface);font-size:11px}
 .mk-logo b{display:grid;place-items:center;width:24px;height:24px;border-radius:4px;background:var(--accent-soft);color:var(--accent);font:700 12px var(--font)}
+.firm-img{height:34px;width:auto;max-width:160px;display:block}
+.cfgact{display:flex;gap:10px;align-items:center}
+.cfglogo{grid-template-columns:32px minmax(0,1fr) auto}
+.mk-logo{cursor:pointer;font:inherit}.mk-logo.has{border-style:solid;padding:0 8px}.mk-logo:hover{background:var(--accent-soft);color:var(--ink)}.firm-img{height:34px;width:auto;max-width:160px;display:block}
 </style></head>
 <body>
 <div class="shell">
@@ -279,9 +283,9 @@ tr.mk-out td:not(.eyec),.wr-stat.mk-out>*:not(.wr-eye){opacity:.4}
   <div class="cfgrow"><label for="cfgNm">Client name on the report</label><input id="cfgNm" class="pkdt" value="Example Client Ltd"></div>
   <div class="cfgrow"><label>Reminder</label><label class="cfgck"><input type="checkbox" checked> Remind me on the due day</label></div>
   <div class="cfgrow top"><label>Logos in the report header</label><div class="cfglogos" role="group" aria-label="Logos in the report header">
-    <label class="cfglogo"><span class="mark">F</span><span>The firm<span class="sub">Always shown</span></span><input type="checkbox" checked disabled></label>
-    <label class="cfglogo"><span class="mark">C</span><span>The client<span class="sub">Shown on this client's reports</span></span><input type="checkbox" checked></label>
-    <label class="cfglogo"><span class="mark">P</span><span>A partner<span class="sub">Only if one is involved</span></span><input type="checkbox"></label></div></div>
+    <div class="cfglogo" data-k="F"><span class="mark">F</span><span>The firm<span class="sub">Used by every project's reports. Always shown.</span></span><span class="cfgact"><button type="button" class="btn sm" data-add="F">Add logo</button><input type="checkbox" checked disabled aria-label="The firm's logo is always shown"></span></div>
+    <div class="cfglogo" data-k="C"><span class="mark">C</span><span>The client<span class="sub">Shown on this project's reports</span></span><span class="cfgact"><button type="button" class="btn sm" data-add="C">Add logo</button><input type="checkbox" checked aria-label="Show the client's logo"></span></div>
+    <div class="cfglogo" data-k="P"><span class="mark">P</span><span>A partner<span class="sub">Only if one is involved</span></span><span class="cfgact"><button type="button" class="btn sm" data-add="P">Add logo</button><input type="checkbox" aria-label="Show the partner's logo"></span></div></div></div>
   <p class="sub">The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects › Example Programme.</p>
  </div>
  <div class="cfgfoot"><button type="button" class="btn sm primary" id="cfgDone">Done</button></div>
@@ -470,8 +474,11 @@ function eyeify(){$$('.wr-eye').forEach(function(b){b.innerHTML=b.getAttribute('
 document.addEventListener('click',function(e){var b=e.target.closest('.wr-eye');if(!b)return;var on=b.getAttribute('aria-pressed')!=='false';b.setAttribute('aria-pressed',!on);var r=b.closest('tr,.wr-stat');if(r)r.classList.toggle('mk-out',on);eyeify()});
 var pI=$('#pI'),pC=$('#pC');initSheet(pI,'internal');initSheet(pC,'client');eyeify();
 // the logos chosen in the client report settings print in the header of both reports (the firm's is always there)
-function renderLogos(){var on={F:true,C:$$('.cfglogo input')[1].checked,P:$$('.cfglogo input')[2].checked};
- $$('.wr-logos').forEach(function(d){d.innerHTML=[['F','Firm logo'],['C','Client logo'],['P','Partner logo']].filter(function(x){return on[x[0]]}).map(function(x){return '<span class="mk-logo" title="'+x[1]+'" aria-label="'+x[1]+'"><b>'+x[0]+'</b><span>'+x[1]+'</span></span>'}).join('')})}
+var logoData={F:null,C:null,P:null};
+function renderLogos(){var on={F:true,C:$$('.cfglogo input')[1].checked,P:$$('.cfglogo input')[2].checked};var NM={F:'firm',C:'client',P:'partner'};
+ $$('.wr-logos').forEach(function(d){d.innerHTML=['F','C','P'].filter(function(k){return on[k]}).map(function(k){var t=logoData[k]?'Change the '+NM[k]+' logo':'Add the '+NM[k]+' logo';return '<button type="button" class="mk-logo'+(logoData[k]?' has':'')+'" data-k="'+k+'" title="'+t+'" aria-label="'+t+'">'+(logoData[k]?'<img class="firm-img" alt="" src="'+logoData[k]+'">':'<b>+</b><span>Add '+NM[k]+' logo</span>')+'</button>'}).join('')});
+ $$('.cfglogo').forEach(function(t){var k=t.dataset.k,m=$('.mark',t),bt=$('[data-add]',t);if(logoData[k]){m.innerHTML='<img alt="" src="'+logoData[k]+'" style="max-width:30px;max-height:30px">';bt.textContent='Change'}else{m.textContent=k;bt.textContent='Add logo'}})}
+document.addEventListener('click',function(e){var b=e.target.closest('.mk-logo,[data-add]');if(!b)return;var k=b.dataset.k||b.dataset.add,f=document.createElement('input');f.type='file';f.accept='image/png,image/jpeg,image/svg+xml';f.onchange=function(){var r=new FileReader();r.onload=function(){logoData[k]=r.result;renderLogos();setTimeout(fit,0);toast('Logo added: saved as '+(k==='F'?'firm.png':'ABC-'+(k==='C'?'client':'partner')+'.png')+' in the logos folder')};if(f.files[0])r.readAsDataURL(f.files[0])};f.click()});
 $$('.cfglogo input').forEach(function(i){i.addEventListener('change',function(){renderLogos();setTimeout(fit,0)})});renderLogos();
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeMenu();hideMenus();$('#hubCfg').hidden=true}});
 // ---- the hub
