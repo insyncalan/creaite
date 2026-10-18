@@ -355,9 +355,10 @@ function Redraft({ rd, s, readOnly, close, onUse, onOpen, known }) {
 export function SheetPage(p) {
   const { doc, exported, readOnly, onChange, onEvent } = p;
   const editing = !exported && !readOnly;
-  useLayoutEffect(() => {                                   // a moved section keeps the focus on its handle
+  const page = useRef(/** @type {HTMLDivElement|null} */ (null));
+  useLayoutEffect(() => {                                   // a moved section keeps the focus on its handle (on this page: the same section is on both)
     const id = p.refocus.current;
-    if (id) { p.refocus.current = null; /** @type {HTMLElement|null} */ (document.querySelector(`[data-grip="${CSS.escape(id)}"]`))?.focus(); }
+    if (id) { p.refocus.current = null; /** @type {HTMLElement|null} */ (page.current && page.current.querySelector(`[data-grip="${CSS.escape(id)}"]`))?.focus(); }
   });
   const setMeta = (/** @type {Record<string, any>} */ patch, /** @type {string} */ why) => onChange({ ...doc, meta: { ...(doc.meta || {}), ...patch } }, why);
   const out = [];
@@ -378,7 +379,7 @@ export function SheetPage(p) {
     const last = doc.sections[doc.sections.length - 1], nd = withTextSection(doc, last ? last.id : null), nid = nd.sections[nd.sections.length - 1].id;
     markNewText(nid); onChange(nd, "Text section added"); onEvent({ type: "text-added", id: nid });
   };
-  return <div class="page" data-audience={doc.audience || "internal"} data-report={p.report ? "sheet" : undefined}>
+  return <div class="page" ref={page} data-audience={doc.audience || "internal"} data-report={p.report ? "sheet" : undefined} data-pane={p.side || undefined}>
     {p.report ? null : <header class="doc"><div><h1>{doc.title}</h1><div class="sub">{(/** @type {any} */ (doc)).project_name || ""}{(/** @type {any} */ (doc)).client ? ` · ${(/** @type {any} */ (doc)).client}` : ""}</div></div><div class="sub">{label}</div></header>}
     {out}
     {editing ? <div class="sheet-addfoot"><button type="button" class="btn sheet-addtext" data-addtext onClick={addFoot}><Icon name="plus" /> Add a text section</button></div> : null}

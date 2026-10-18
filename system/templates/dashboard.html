@@ -67517,11 +67517,15 @@ ${d5.text}`);
   function SheetPage(p6) {
     const { doc, exported, readOnly, onChange, onEvent } = p6;
     const editing = !exported && !readOnly;
+    const page = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
     _2(() => {
       const id2 = p6.refocus.current;
       if (id2) {
         p6.refocus.current = null;
-        document.querySelector(`[data-grip="${CSS.escape(id2)}"]`)?.focus();
+        (page.current && page.current.querySelector(`[data-grip="${CSS.escape(id2)}"]`))?.focus();
       }
     });
     const setMeta = (patch, why) => onChange({ ...doc, meta: { ...doc.meta || {}, ...patch } }, why);
@@ -67558,7 +67562,7 @@ ${d5.text}`);
       onChange(nd2, "Text section added");
       onEvent({ type: "text-added", id: nid });
     };
-    return /* @__PURE__ */ u2("div", { class: "page", "data-audience": doc.audience || "internal", "data-report": p6.report ? "sheet" : void 0, children: [
+    return /* @__PURE__ */ u2("div", { class: "page", ref: page, "data-audience": doc.audience || "internal", "data-report": p6.report ? "sheet" : void 0, "data-pane": p6.side || void 0, children: [
       p6.report ? null : /* @__PURE__ */ u2("header", { class: "doc", children: [
         /* @__PURE__ */ u2("div", { children: [
           /* @__PURE__ */ u2("h1", { children: doc.title }),
@@ -67712,7 +67716,7 @@ ${d5.text}`);
       const s5 = st2.current;
       if (s5.dirty) flush();
     }, []);
-    return { line, conflict, removed, change: change2, flush, reload };
+    return { line, conflict, removed, change: change2, flush, reload, known: () => st2.current.latest };
   }
   function removedLine(r4) {
     if (!r4 || Array.isArray(r4) && !r4.length) return "";
@@ -67984,6 +67988,11 @@ ${d5.text}`);
       /** @type {string|null} */
       null
     );
+    const refocusR = A2(
+      /** @type {string|null} */
+      null
+    );
+    const activeRight = A2(false);
     const [zl2, setZl] = d2(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
     const [xl2, setXl] = d2(false);
     const [together, setTogether] = d2(true);
@@ -68042,39 +68051,56 @@ ${d5.text}`);
       partner.onChange(nd2, why);
       side.change(nd2);
     };
-    const aiFor = (s5, ro2) => {
-      const a5 = P5.current.ai;
+    const aiFor = (s5, ro2, right = false) => {
+      const ai2 = () => right && P5.current.partner && P5.current.partner.ai || P5.current.ai, pane = `${sid}${right ? "r" : "l"}`;
+      const a5 = ai2();
       if (!a5) return void 0;
       return {
         place: ro2 || eref.current ? "readonly" : a5.place,
-        sheetId: sid,
-        project: () => P5.current.ai && P5.current.ai.project ? P5.current.ai.project() : "",
-        confidential: () => !!(P5.current.ai && P5.current.ai.confidential && P5.current.ai.confidential()),
-        key: () => `sheet:${sid}:${s5.id}`,
-        document: () => P5.current.ai && P5.current.ai.document ? P5.current.ai.document() : null
+        sheetId: pane,
+        project: () => {
+          const x5 = ai2();
+          return x5 && x5.project ? x5.project() : "";
+        },
+        confidential: () => {
+          const x5 = ai2();
+          return !!(x5 && x5.confidential && x5.confidential());
+        },
+        key: () => `sheet:${pane}:${s5.id}`,
+        document: () => {
+          const x5 = ai2();
+          return x5 && x5.document ? x5.document() : null;
+        }
       };
     };
     h2(() => {
-      SHEET_SOURCES.set(sid, async (range, h5) => {
+      const finder = (right) => async (range, h5) => {
         const at2 = h5.el.getBoundingClientRect(), sectionId = (h5.el.closest("section[data-id]") || {}).dataset?.id;
         const place2 = { x: Math.max(8, Math.min(at2.left, window.innerWidth - 340)), y: Math.min(at2.bottom + 6, window.innerHeight - 160) };
-        if (!P5.current.onSelectAction) {
+        const find = right && P5.current.partner && P5.current.partner.onSelectAction || P5.current.onSelectAction;
+        if (!find) {
           setFound({ ...place2, message: "Finding the source isn't available here." });
           return;
         }
         setFound({ ...place2, message: "Looking…" });
         try {
-          const a5 = await P5.current.onSelectAction("source", { sectionId, text: range.text });
+          const a5 = await find("source", { sectionId, text: range.text });
           setFound({ ...place2, items: a5 && a5.found || [], message: a5 && a5.found && a5.found.length ? "" : "No source found." });
         } catch (e4) {
           setFound({ ...place2, message: "Couldn't look for the source." });
         }
-      });
+      };
+      SHEET_SOURCES.set(`${sid}l`, finder(false));
+      SHEET_SOURCES.set(`${sid}r`, finder(true));
       return () => {
-        SHEET_SOURCES.delete(sid);
+        SHEET_SOURCES.delete(`${sid}l`);
+        SHEET_SOURCES.delete(`${sid}r`);
       };
     }, []);
     const partnerDoc = partner ? partner.doc : null;
+    h2(() => {
+      if (partner && partnerDoc && !partner.readOnly && partner.dirty && partner.dirty() && side.known() !== partnerDoc) side.change(partnerDoc);
+    }, [partnerDoc]);
     const match = partner && partnerDoc ? {
       readOnly: !!partner.readOnly,
       label: (id2) => labelOf(doc, partnerDoc, id2, partner.label),
@@ -68116,8 +68142,19 @@ ${d5.text}`);
       if (!mod) return;
       if (e4.key === "s" || e4.key === "S") {
         e4.preventDefault();
-        main.flush();
-        side.flush();
+        const pg2 = (
+          /** @type {HTMLElement|null} */
+          /** @type {HTMLElement} */
+          e4.target.closest ? (
+            /** @type {HTMLElement} */
+            e4.target.closest(".page[data-pane]")
+          ) : null
+        );
+        if (!pg2 || !partner) {
+          main.flush();
+          side.flush();
+        } else if (pg2.dataset.pane === "right") side.flush();
+        else main.flush();
         return;
       }
       if (e4.key === "+" || e4.key === "=") {
@@ -68152,35 +68189,51 @@ ${d5.text}`);
     };
     const pinch = (dy2) => setZoom(pinchZoom(zref.current, dy2));
     const addText = A2(
-      /** @type {(afterId: string|null) => (string|null)} */
+      /** @type {(afterId: string|null, right?: boolean) => (string|null)} */
       (() => null)
     );
-    addText.current = (afterId) => {
-      if (leftRO) return null;
-      const had = new Set(P5.current.doc.sections.map((s5) => s5.id)), nd2 = withTextSection(P5.current.doc, afterId), nid = (nd2.sections.find((s5) => !had.has(s5.id)) || {}).id || null;
-      changeMain(nd2, "Text section added");
+    addText.current = (afterId, right = false) => {
+      const pt2 = P5.current.partner;
+      if (right ? !pt2 || pt2.readOnly : leftRO) return null;
+      const base = right && pt2 ? pt2.doc : P5.current.doc;
+      const had = new Set(base.sections.map((s5) => s5.id)), nd2 = withTextSection(base, afterId), nid = (nd2.sections.find((s5) => !had.has(s5.id)) || {}).id || null;
+      (right ? changeSide : changeMain)(nd2, "Text section added");
       onEvent({ type: "text-added", id: nid });
       return nid;
     };
-    h2(() => bindTextSections((afterId) => addText.current(afterId)), []);
+    h2(() => bindTextSections((afterId) => addText.current(afterId, activeRight.current)), []);
+    const usePane = (e4) => {
+      const pg2 = (
+        /** @type {HTMLElement|null} */
+        /** @type {HTMLElement} */
+        e4.target.closest ? (
+          /** @type {HTMLElement} */
+          e4.target.closest(".page[data-pane]")
+        ) : null
+      );
+      if (pg2) activeRight.current = pg2.dataset.pane === "right";
+    };
     const pageProps = (d5, p6, sd2) => ({
       doc: d5,
       renderers: (p6 ? p6.renderers || props.renderers : props.renderers) || {},
       extras: p6 ? [] : props.extras || [],
       exported,
-      readOnly: p6 ? !!p6.readOnly || !!props.readOnly : leftRO,
+      readOnly: p6 ? !!p6.readOnly || !!props.readOnly && !props.panesApart : leftRO,
       peerDoc: p6 ? doc : partnerDoc,
       peerLabel: partner ? partner.label : "",
       side: sd2,
       onChange: p6 ? changeSide : changeMain,
       onOpenItem: props.onOpenItem,
       onEvent,
-      onRedraft: p6 ? void 0 : props.onRedraft,
-      aiFor,
+      onRedraft: p6 ? p6.onRedraft : props.onRedraft,
+      aiFor: (s5, ro2) => aiFor(s5, ro2, !!p6),
       checks: p6 ? [] : checks,
-      refocus,
+      refocus: p6 ? refocusR : refocus,
       match: p6 ? match : null,
-      report: props.report,
+      report: props.report && partner ? { ...props.report, addText: (id2) => {
+        const nid = addText.current(id2, !!p6);
+        if (nid) markNewText(nid);
+      } } : props.report,
       addTo: !p6 && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (id2) => {
         if (partner.match) partner.match(id2);
         else changeSide(matchSection(doc, partnerDoc, id2), "Matched internal");
@@ -68193,10 +68246,11 @@ ${d5.text}`);
         restorers.current.delete(fn2);
       };
     };
+    const both = `${main.line}${partner && side.line ? `${main.line ? " · " : ""}${partner.label}: ${side.line}` : ""}`;
     const openChecks = checks.length;
     const note = main.conflict;
-    return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, "data-report-sheet": props.report ? props.report.audience : void 0, children: [
-      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: main.line, bad: !!main.line && !/^Saved/.test(main.line) }) : /* @__PURE__ */ u2(S2, { children: [
+    return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, onFocusIn: usePane, onPointerDownCapture: usePane, "data-report-sheet": props.report ? props.report.audience : void 0, children: [
+      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some((l6) => !!l6 && !/^Saved/.test(l6)) }) : /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("span", { class: "sheet-mini", children: props.banner ? /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("b", { children: props.banner.title }),
           props.banner.sub ? /* @__PURE__ */ u2("span", { class: "sub", children: props.banner.sub }) : null
@@ -72318,6 +72372,18 @@ ${d5.text}`);
       ] }) : null
     ] });
   }
+  var internalChange = (d5) => {
+    editDoc(d5);
+    if (crInternal.value) crInternal.value = d5;
+  };
+  var internalSave = async (req) => {
+    const r4 = await saveWeekly(req);
+    if (r4.ok) setWeeklyDirty(false);
+    return r4;
+  };
+  var internalAi = (doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
+  var internalRedraft = (doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
+  var clientRedraft = (cd2) => redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply);
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
     const iLocked = doc.state === "approved" && !weeklyEditing.value;
@@ -72374,7 +72440,7 @@ ${d5.text}`);
           onChange: setClientDoc,
           onSave: saveClientPage,
           ai: clientAi,
-          onRedraft: redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply),
+          onRedraft: clientRedraft(cd2),
           onEvent: (ev) => {
             if (ev.type === "reload") reloadClient();
             else countRedraft(ev, "report");
@@ -72393,11 +72459,13 @@ ${d5.text}`);
           doc,
           baseVersion: weeklyBase.value,
           scrollKey: key2,
-          readOnly: false,
-          leftReadOnly: true,
+          readOnly: iLocked,
+          panesApart: true,
           renderers: WEEKLY_RENDER,
-          onChange: () => {
-          },
+          onChange: internalChange,
+          onSave: internalSave,
+          ai: internalAi(doc),
+          onRedraft: internalRedraft(doc),
           partner: {
             doc: cd2,
             label: "Client",
@@ -72407,9 +72475,11 @@ ${d5.text}`);
             readOnly: cFiled,
             match: (id2) => setClientDoc(matchFor(id2)),
             onChange: setClientDoc,
-            onSave: saveClientPage
+            onSave: saveClientPage,
+            dirty: () => crDirty.value,
+            ai: clientAi,
+            onRedraft: clientRedraft(cd2)
           },
-          ai: clientAi,
           onEvent: (ev) => {
             if (ev.type === "reload") {
               if (ev.partner) reloadClient();
@@ -72430,17 +72500,10 @@ ${d5.text}`);
         scrollKey: `weekly:${doc.project}:${doc.date}`,
         readOnly: iLocked,
         renderers: WEEKLY_RENDER,
-        onChange: (d5) => {
-          editDoc(d5);
-          if (crInternal.value) crInternal.value = d5;
-        },
-        onSave: async (req) => {
-          const r4 = await saveWeekly(req);
-          if (r4.ok) setWeeklyDirty(false);
-          return r4;
-        },
-        ai: { place: "report", project: () => doc.project, confidential: () => false },
-        onRedraft: redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report"),
+        onChange: internalChange,
+        onSave: internalSave,
+        ai: internalAi(doc),
+        onRedraft: internalRedraft(doc),
         onEvent: (ev) => {
           if (ev.type === "reload") reloadHub();
           else countRedraft(ev, "report");

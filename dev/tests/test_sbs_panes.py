@@ -43,6 +43,7 @@ def ed(page, sec="summary"):
 
 
 class SideBySideEditing(H.Hub):
+    shared_server = False                                      # each test has its own vault: they save drafts
     # ---- helpers ----------------------------------------------------------------------------------------------------
     def open_side(self, w=1400, h=1000):
         self.open_hub(w, h)
@@ -115,7 +116,7 @@ class SideBySideEditing(H.Hub):
         self.assertEqual(self.q("window.__saves"), ["internal"], "only the internal report was saved")
         self.assertIn("Saved", self.status())
         self.write(CLI, " Walnut.")
-        self.b.wait("window.__saves.length>=2", 10)
+        self.b.wait("/Client: Saved/.test(document.querySelector('#v-reporting .sheet-status').innerText)", 10)
         self.assertEqual(self.q("window.__saves"), ["internal", "client"])
         self.assertRegex(self.status(), r"Saved.*Client: Saved", "each pane has its own save line")
 
@@ -214,7 +215,7 @@ class SideBySideEditing(H.Hub):
           return {inside:[...document.querySelectorAll('#v-reporting .page')].map(p=>p.contains(b.h.el)), place:b.ai.place, kind:d&&d.kind, key:b.ai.key&&b.ai.key()}})()"""
         seen = {}
         for name, page in (("internal", INT), ("client", CLI)):
-            self.focus_in(page)
+            self.write(page, " Some words for the bar")
             self.q(f"document.querySelector({json.dumps(ed(page))}).cxed.editor.chain().focus().selectAll().run()")
             self.b.wait(f"(()=>{{const b=aiBar.value; return !!b && document.querySelector({json.dumps(page)}).contains(b.h.el)}})()", 10)
             seen[name] = self.q(probe)
@@ -289,8 +290,8 @@ class SideBySideEditing(H.Hub):
         self.b.wait(f"!!document.querySelector('{INT} section[data-id=risks] .rs-pick-open')", 15)
         self.open_picker(INT)
         self.open_picker(CLI)
-        self.focus_in(INT)
-        self.focus_in(CLI)
+        self.write(INT, " Some words")
+        self.write(CLI, " Some words")
         self.q(f"document.querySelector({json.dumps(ed(CLI))}).cxed.editor.chain().focus().selectAll().run()")
         self.b.pump(0.3)
         self.press(self.menu_btn(INT, "glance"))
@@ -310,11 +311,15 @@ class SideBySideEditing(H.Hub):
         # two pickers and the AI bar: each Esc closes the one the focus is in
         self.open_picker(INT)
         self.open_picker(CLI)
-        self.focus_in(INT)
+        self.write(INT, " Some words")
         self.q(f"document.querySelector({json.dumps(ed(INT))}).cxed.editor.chain().focus().selectAll().run()")
+        self.b.wait("document.querySelector('#aiLayer .aispark')", 10)    # the sparkle first, as a person sees it
         self.b.key("/", 1)                                         # Alt + / opens the AI bar's menu
         self.b.wait("!!aiBar.value && aiBar.value.shown", 10)
-        self.b.key("Escape")
+        for _ in range(3):                                         # the bar's menu closes first, then the bar
+            if not self.q("!!aiBar.value && !!aiBar.value.shown"):
+                break
+            self.b.key("Escape")
         self.b.wait("!aiBar.value || !aiBar.value.shown", 10)
         self.assertEqual(self.q("document.querySelectorAll('#v-reporting .rs-picker').length"), 2, "the bar's Esc left both pickers open")
         self.b.click(f"{CLI} section[data-id=risks] .rs-pick-search")
@@ -341,11 +346,13 @@ class SideBySideEditing(H.Hub):
                 self.assertEqual(tops[0], tops[1], "scrolled together")
                 heights = self.q(f"['{INT}','{CLI}'].map(p=>Math.round(document.querySelector(p+' section[data-id=summary]').getBoundingClientRect().height))")
                 self.assertEqual(heights[0], heights[1], "a section is as tall in both panes, so they stay level while you type")
-                top = self.q("document.querySelector('#v-reporting .sheet-scroll').scrollTop")
-                self.focus_in(CLI)
-                self.b.type(" more words")
+                self.q("document.querySelector('#v-reporting .sheet-scroll').scrollTop=120")
+                self.b.pump(0.2)
+                self.b.type(" more words")                                # the internal editor still has the focus
                 self.b.pump(0.3)
-                self.assertAlmostEqual(self.q("document.querySelector('#v-reporting .sheet-scroll').scrollTop"), top, delta=60, msg="typing does not jump the scroll")
+                self.assertAlmostEqual(self.q("document.querySelector('#v-reporting .sheet-scroll').scrollTop"), 120, delta=60, msg="typing does not jump the scroll")
+                tops = self.q("[...document.querySelectorAll('#v-reporting .page')].map(x=>Math.round(x.getBoundingClientRect().top))")
+                self.assertEqual(tops[0], tops[1], "still level after typing")
 
     # ---- (e) ------------------------------------------------------------------------------------------------------
     def test_sbs_e_internal_edits_never_reach_client_output(self):
@@ -367,14 +374,17 @@ class SideBySideEditing(H.Hub):
         self.assertNotIn("Zanzibarinternal", client)
         self.assertNotIn("Marzipaninternal", client)
         # the client export (HTML and Word), once the internal week is approved, has none of it
-        a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": WEEK, "force": True})
+        doc = self.api("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": WEEK})["doc"]
+        next(x for x in doc["sections"] if x["id"] == "health")["text"] = "UAT start slipped two weeks."     # a health that is not On track needs its reason
+        self.assertTrue(self.api("/api/report/save", {"doc": doc, "base_version": doc["version"]})["ok"])
+        a =self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": WEEK, "force": True})
         self.assertTrue(a["ok"], a)
         self.open_side()
         self.b.wait(self.editable(CLI), 15)
         self.write(CLI, " Quillfeather for the client.")
         self.assertIn("Quillfeather", self.saved("client", has="Quillfeather"))
         for fmt in ("html", "docx"):
-            r = self.api("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": WEEK, "fmt": fmt, "on_clash": "overwrite"})
+            r = self.api("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": WEEK, "fmt": fmt, "on_clash": "number"})
             self.assertTrue(r.get("ok"), r)
             path = self.v.root / r["path"]
             if fmt == "docx":
@@ -390,6 +400,14 @@ class SideBySideEditing(H.Hub):
         self.b.wait(f"!!document.querySelector('{CLI} section[data-id=summary] .sheet-match')", 15)
         self.assertIn("Edited for the client", self.q(f"document.querySelector('{CLI} section[data-id=summary] .sheet-match').textContent"))
         self.assertNotIn("Zanzibarinternal", self.text_of(CLI))
+        self.press(f"{CLI} section[data-id=summary] .sheet-match .linkbtn")           # the person's own act: Match internal
+        self.b.wait(f"document.querySelector('{CLI} section[data-id=summary]').innerText.includes('Zanzibarinternal')", 10)
+        self.assertIn("Matching internal", self.q(f"document.querySelector('{CLI} section[data-id=summary] .sheet-match').textContent"))
+        self.assertIn("Zanzibarinternal", self.saved("client", has="Zanzibarinternal"), "and the client pane saves what it was given")
+        self.b.click("#hubEdit")                                                       # the approved internal pane is read only until Edit again
+        self.b.wait(f"!!document.querySelector('{INT} section[data-id={free}] [data-addto]')", 10)
+        self.b.click(f"{INT} section[data-id={free}] [data-addto]")                      # an internal text section is added only when asked
+        self.b.wait(f"document.querySelectorAll('{CLI} section[data-id={free}]').length===1", 10)
 
 
 if __name__ == "__main__":
