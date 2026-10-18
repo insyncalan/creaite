@@ -153,11 +153,11 @@ class SheetChecks:
     # ---- the section menu --------------------------------------------------------------------------------------------------
     def open_menu(self, sid="risks"):
         self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] .sheet-hbtn').click()")
-        self.b.wait("!!document.querySelector('[role=menu]')", 5)
+        self.b.wait("!!document.querySelector('.pophost [role=menu]')", 5)
         self.b.pump(0.15)
 
     def menu_report(self):
-        return self.q("""(()=>{const m=document.querySelector('[role=menu]'), r=m.getBoundingClientRect(), rail=document.querySelector('.rail'),
+        return self.q("""(()=>{const m=document.querySelector('.pophost [role=menu]'), r=m.getBoundingClientRect(), rail=document.querySelector('.rail'),
           rr=rail?rail.getBoundingClientRect():{right:0}, items=[...m.querySelectorAll('[role^=menuitem]')];
           return {l:r.left,t:r.top,r:r.right,b:r.bottom,iw:innerWidth,ih:innerHeight,rail:rr.right,w:r.width,
             inScaled:!!m.closest('.sheet-a4'), names:items.map(i=>i.textContent.trim()),
@@ -204,13 +204,13 @@ class SheetChecks:
         btn = f"{self.VIEW} section[data-id=risks] .sheet-hbtn"
         self.q(f"document.querySelector('{btn}').focus()")
         self.b.key("Enter")
-        self.b.wait("!!document.querySelector('[role=menu]')", 5)
+        self.b.wait("!!document.querySelector('.pophost [role=menu]')", 5)
         first = self.q("document.activeElement.textContent.trim()")
         self.assertIn("Leave out", first)
         self.b.key("ArrowDown")
         self.assertNotEqual(self.q("document.activeElement.textContent.trim()"), first, "arrows move")
         self.b.key("Escape")
-        self.b.wait("!document.querySelector('[role=menu]')", 5)
+        self.b.wait("!document.querySelector('.pophost [role=menu]')", 5)
         self.assertTrue(self.q(f"document.activeElement===document.querySelector('{btn}')"), "focus returns to the chevron")
 
     def test_add_text_section_is_disabled_with_a_tip_until_it_lands(self):
@@ -224,7 +224,7 @@ class SheetChecks:
     def test_leave_out_of_the_export_from_the_menu(self):
         self.start()
         self.open_menu("this_week")
-        self.q("[...document.querySelectorAll('[role=menuitem]')].find(i=>/Leave out of the export/.test(i.textContent)).click()")
+        self.q("[...document.querySelectorAll('.pophost [role=menuitem]')].find(i=>/Leave out of the export/.test(i.textContent)).click()")
         self.b.wait(f"!!document.querySelector('{self.VIEW} [data-hidden=this_week]')", 5)
 
     # ---- the eyes ----------------------------------------------------------------------------------------------------------
@@ -273,16 +273,14 @@ class SheetChecks:
         self.start()
         for sid in self.PICK_SECTIONS:
             self.open_picker(sid)
-            rows = self.pick_rows(sid)
-            inside = self.q(f"[...document.querySelectorAll('{self.VIEW} section[data-id={sid}] tbody tr')].map(r=>r.textContent)")
-            self.assertTrue(rows, f"{sid}: something to pick")
-            for r in rows:
-                self.assertFalse(any(self.ref_of(r) in t for t in inside if self.ref_of(r)), f"{sid}: {r} is already in the report")
+            refs = self.pick_refs(sid)
+            inside = self.q(f"[...document.querySelectorAll('{self.VIEW} section[data-id={sid}] tbody tr')].map(r=>r.dataset.ref)")
+            self.assertTrue(refs, f"{sid}: something to pick")
+            for r in refs:
+                self.assertNotIn(r, inside, f"{sid}: {r} is already in the report")
 
-    @staticmethod
-    def ref_of(text):
-        m = re.search(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b", text)
-        return m.group(0) if m else ""
+    def pick_refs(self, sid):
+        return self.q(f"[...document.querySelectorAll('{self.VIEW} section[data-id={sid}] .rs-pick-row')].map(r=>r.dataset.ref)")
 
     def test_picker_adds_an_existing_item_marked_new_and_saves_nothing_until_approve(self):
         self.start()
@@ -290,12 +288,13 @@ class SheetChecks:
         before = self.q(f"document.querySelectorAll('{self.VIEW} section[data-id={sid}] tbody tr').length")
         tracker_before = self.v.rows("raid"), self.v.rows("actions")
         self.open_picker(sid)
-        want = self.ref_of(self.pick_rows(sid)[0])
+        want = self.pick_refs(sid)[0]
         self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] .rs-pick-row input[type=checkbox]').click()")
         self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] .rs-pick-add').click()")
         self.b.wait(f"document.querySelectorAll('{self.VIEW} section[data-id={sid}] tbody tr').length=={before + 1}", 5)
         self.assertFalse(self.q(f"!!document.querySelector('{self.VIEW} section[data-id={sid}] .rs-picker')"), "the picker closes")
         row = f"{self.VIEW} section[data-id={sid}] tbody tr[data-ref='{want}']"
+        self.b.wait(f"!!document.querySelector(\"{row} .rs-new\")", 5)
         self.assertTrue(self.q(f"!!document.querySelector(\"{row} .rs-new\")"), "marked New")
         self.assertEqual(self.q(f"document.querySelector(\"{row} .rs-new\").textContent.trim()"), "New")
         self.assertTrue(self.q(f"!!document.querySelector(\"{row} .rs-eye\")"), "with its eye")
@@ -339,7 +338,7 @@ class WeeklySheet(SheetChecks, LiveBrowserCase):
         TD.populate(v)
         put_logos(v)
         v.propose("spare", [
-            TD.new("raid", 30, project="ABC", type="Risk", description="Spare risk for the picker", impact="Low", likelihood="Low",
+            TD.new("raid", 30, project="ABC", type="Assumption", description="Spare assumption for the picker", impact="Low", likelihood="Low",
                    raised=TD.d(-2), source="s")])
         TD.stamped_apply(v)
 
@@ -364,17 +363,12 @@ class WeeklySheet(SheetChecks, LiveBrowserCase):
 
 class ClientSheet(SheetChecks, LiveBrowserCase):
     VIEW, AUDIENCE, TITLE = "#v-clientreport", "client", "Client report · Client"
+    PICK_SECTIONS = ("overdue",)       # the client report holds every client-visible risk already; client-visible actions that are not late are free to pick
 
     @classmethod
     def load(cls, v):
         R.populate(v)
         put_logos(v)
-        v.propose("spare", [
-            R.new("raid", 30, project="ABC", type="Risk", description="Spare client risk for the picker", impact="Low", likelihood="Low",
-                  raised="2026-10-08", client_visible=1, source="s",
-                  client_message="What it is: A spare risk.\nWhat it means for you: Nothing yet.\nWhat is being done: Watching it.")])
-        v.run("apply")
-
     @classmethod
     def server_env(cls):
         return {"CREAITE_NOW": R.NOW, "CREAITE_NO_LAUNCH": "1"}
@@ -396,7 +390,6 @@ class ClientSheet(SheetChecks, LiveBrowserCase):
         self.q("document.querySelector('#v-clientreport section[data-id=overdue] .rs-pick-cancel').click()")
         self.open_picker("risks")
         text = " ".join(self.pick_rows("risks"))
-        self.assertIn("Spare client risk", text)
         self.assertNotIn("Vendor exits the market", text, "the internal-only risk is never offered")
 
     def test_match_internal_is_kept_per_section(self):

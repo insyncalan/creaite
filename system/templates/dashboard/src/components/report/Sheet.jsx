@@ -59,7 +59,8 @@ export { openSheetRef as openRef };
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
     onOpenItem?: (ref: string) => boolean, partner?: SheetPartner|null, onChange: (doc: SheetDoc, why: string) => void,
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
-    toolbar?: any, banner?: {title: string, sub?: string}}} SheetProps */
+    toolbar?: any, banner?: {title: string, sub?: string},
+    report?: {audience: string, addText?: (sectionId: string) => void}}} SheetProps */   // report: set by ReportSheet (the weekly and client reports); the minutes leave it out and keep their title block
 
 /** Where each page was left, by scrollKey (in memory, for the page's life): the zoom, and per pane the section at the top and the
     offset into it in unscaled pixels. @type {Map<string, {id: string, off: number, vy: number}>} */
@@ -394,7 +395,7 @@ export function Sheet(props) {
     doc: d, renderers: (p ? p.renderers || props.renderers : props.renderers) || {}, extras: p ? [] : props.extras || [], exported,
     readOnly: p ? !!p.readOnly || !!props.readOnly : leftRO, peerDoc: p ? doc : partnerDoc, peerLabel: partner ? partner.label : "",
     side: sd, onChange: p ? changeSide : changeMain, onOpenItem: props.onOpenItem, onEvent, onRedraft: p ? undefined : props.onRedraft,
-    aiFor, checks: p ? [] : checks, refocus, match: p ? match : null });
+    aiFor, checks: p ? [] : checks, refocus, match: p ? match : null, report: props.report });
   const frame = (/** @type {SheetDoc} */ d, /** @type {SheetPartner|null} */ p, /** @type {number} */ scale, /** @type {number} */ k) =>
     <SheetFrame key={p ? "r" : "l"} scale={scale} breaks={breaks[k] || []}><SheetPage {...pageProps(d, p, partner ? (p ? "right" : "left") : "")} /></SheetFrame>;
   const reg = (/** @type {() => void} */ fn) => { restorers.current.add(fn); return () => { restorers.current.delete(fn); }; };
@@ -402,7 +403,7 @@ export function Sheet(props) {
   const openChecks = checks.length;
   const note = main.conflict;
   return (
-    <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick}>
+    <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick} data-report-sheet={props.report ? props.report.audience : undefined}>
       <div class="sheet-bar" role="toolbar" aria-label="Report">
         <span class="sheet-mini">{props.banner ? <><b>{props.banner.title}</b>{props.banner.sub ? <span class="sub">{props.banner.sub}</span> : null}</> : <b>{doc.title}</b>}</span>
         <span class="sheet-zoom" role="group" aria-label="Zoom">

@@ -5,6 +5,7 @@
 import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
 import { saveExport } from "./exportSave.js";
+import { readLogos } from "./weekly.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{group: string, ref: string, title: string, why: string, kind: string}} LeftItem */
@@ -29,6 +30,8 @@ export const crInfo = signal(/** @type {{where: string, filed: boolean, ready: b
 export const crMode = signal(/** @type {"client"|"side"} */ ("client"));
 /** The last left-out check, for the page's "Not in this report" lists and the dialog. */
 export const crCheck = signal(/** @type {Check|null} */ (null));
+/** The project's logo files the page may draw ([{kind, path}]); their pictures are read into stores/weekly.js's weeklyLogos. */
+export const crLogos = signal(/** @type {{kind: string, path: string}[]} */ ([]));
 export const crBusy = signal("");
 export const crDialog = signal(false);
 export const crDirty = signal(false);
@@ -52,6 +55,8 @@ export async function loadClientReport(arg, fresh) {
   if (!c || !c.ok || !c.doc) { crOpen.value = { ok: false, message: oneLine((c && c.message) || "") || "Couldn't open the client report" }; crDoc.value = null; return; }
   crInternal.value = i && i.ok ? i.doc : null;
   crDoc.value = c.doc;
+  crLogos.value = c.logos || [];
+  readLogos(arg.code, c.logos || []);
   crBase.value = Number(c.doc.version) || undefined;
   crInfo.value = { where: c.where, filed: !!c.filed, ready: !!c.ready, not_ready: c.not_ready || "", baseline: c.baseline || null, findings: c.findings || [] };
   crOpen.value = { ok: true };

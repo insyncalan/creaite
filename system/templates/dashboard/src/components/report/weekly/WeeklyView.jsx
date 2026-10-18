@@ -6,7 +6,7 @@
    sends anything. */
 import { render } from "preact";
 import { Menu } from "../../Menu.jsx";
-import { Sheet } from "../Sheet.jsx";
+import { ReportSheet } from "../ReportParts.jsx";
 import { ExportSave } from "../ExportSave.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
 import { Glance } from "./Glance.jsx";
@@ -24,7 +24,7 @@ import { approveWeekly, editDoc, exportWeekly, loadWeekly, saveWeekly, setWeekly
 /** @typedef {import("../Sheet.jsx").SheetDoc} SheetDoc */
 
 const sectionWords = (/** @type {string} */ label, /** @type {string} */ empty) => (/** @type {any} */ ctx) => <Words ctx={ctx} label={label} empty={empty} />;
-const WEEKLY_RENDER = { byId: {
+export const WEEKLY_RENDER = { byId: {
   header: (/** @type {any} */ c) => <WkHeader ctx={c} />, health: Object.assign((/** @type {any} */ c) => <WkHealth ctx={c} />, { ownSpark: true }), glance: (/** @type {any} */ c) => <Glance ctx={c} />,
   summary: sectionWords("Summary", "Say what matters this week"), milestones: (/** @type {any} */ c) => <Timeline ctx={c} />,
   asks: (/** @type {any} */ c) => <Asks ctx={c} />, this_week: sectionWords("This week", "Nothing recorded"), next_week: sectionWords("Next week", "Nothing recorded"),
@@ -78,7 +78,7 @@ export function WeeklyView() {
         <p class="sub wrmeta">{doc.project_name} · week ending {fd(doc.date)} · {state}{doc.version ? ` · version ${doc.version}` : ""}</p>
       </header>
       <div class="wrsheet">
-        <Sheet doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={readOnly}
+        <ReportSheet audience="internal" doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={readOnly}
           renderers={WEEKLY_RENDER} onChange={editDoc} onSave={async req => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; }}
           ai={{ place: "report", project: () => doc.project, confidential: () => false }}
           onRedraft={redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report")}

@@ -13,8 +13,8 @@ import { flagOf, healthDiff, matchClientAll, matchClientSection } from "./client
 import { ExportSave } from "./ExportSave.jsx";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
 import { countRedraft, redrafter } from "./redraft.js";
-import { Sheet } from "./Sheet.jsx";
-import { INTERNAL_RENDERERS } from "./WeeklyPartner.jsx";
+import { ReportSheet } from "./ReportParts.jsx";
+import { WEEKLY_RENDER } from "./weekly/WeeklyView.jsx";
 import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
@@ -93,9 +93,9 @@ export function ClientView() {
         <p class="sub crmeta">{doc.project_name || (a && a.code) || ""} · week ending {fd(doc.date)} · {filed ? "Approved and filed" : info && info.where === "new" ? "New, not yet saved" : "Draft, not yet approved"}
           {filed ? " · Edits start a new draft" : ""}</p>
       </header>
-      <div class="crsheet">
-        <Sheet doc={side && internal ? internal : doc} baseVersion={crBase.value} scrollKey={key} exported={exported} onExported={setExported}
-          readOnly={filed && !side} leftReadOnly renderers={side ? INTERNAL_RENDERERS : CLIENT_RENDERERS}
+      <div class="crsheet wrsheet">
+        <ReportSheet audience="client" doc={side && internal ? internal : doc} baseVersion={crBase.value} scrollKey={key} exported={exported} onExported={setExported}
+          readOnly={filed && !side} leftReadOnly renderers={side ? WEEKLY_RENDER : CLIENT_RENDERERS}
           partner={side ? { doc, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: filed, match: id => setClientDoc(matchFor(id)),
             onChange: setClientDoc, onSave: saveClientPage } : null}
           onChange={side ? () => {} : setClientDoc} onSave={side ? undefined : saveClientPage}

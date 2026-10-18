@@ -48,7 +48,7 @@ function takeWeekly(r) {
 }
 
 /** The logo files for the project, as data (once each). @param {string} code @param {{kind: string, path: string}[]} logos */
-async function readLogos(code, logos) {
+export async function readLogos(code, logos) {
   const have = weeklyLogos.value, want = logos.filter(l => !(l.path in have));
   if (!want.length) return;
   const r = await api("/api/report/logo", { code, paths: want.map(l => l.path) });

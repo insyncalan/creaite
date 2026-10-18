@@ -3640,16 +3640,16 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-pn{font-size:26px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin:2px 0 1px}
 .wr-wk{font-size:var(--fs-sm);color:var(--rp-grey)}
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:24px;width:auto;display:block}
+.wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:36px;width:auto;max-width:180px;object-fit:contain;display:block;background:none;border:0;box-shadow:none}   /* #221: drawn straight on the page, no box, at most 36 x 180 (Round 9) */
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
-.wr-health{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px}
-.wr-hcol{display:grid;gap:3px;width:120px}
-.wr-flag{font-weight:700;font-size:var(--fs-sm);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey)}
+.wr-health{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px;position:relative}   /* #221: the indicator is 96 px (was 120) */
+.wr-hcol{display:grid;gap:3px;width:96px;min-width:0}
+.wr-flag{font-weight:700;font-size:var(--fs-xs);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey);white-space:nowrap;overflow:hidden}   /* 12 px, one line */
 .wr-flag.a{background:var(--rp-amber)} .wr-flag.g{background:var(--rp-ok)} .wr-flag.r{background:var(--rp-red)}
 .wr-trend{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;height:9px}
 .wr-trend i{display:block;background:var(--rp-rule)} .wr-trend i.g{background:var(--rp-ok)} .wr-trend i.a{background:var(--rp-amber)} .wr-trend i.r{background:var(--rp-red)}
 .wr-tlbl{font-size:9.5px;color:var(--rp-grey);letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
-.wr-chg{margin-top:6px}
+.wr-chg{margin-top:6px;max-width:100%} .wr-hcol .dd{display:block} .wr-hcol .btn.sm{width:100%;justify-content:center}
 .wrsheet .page .btn{background:var(--rp-white);color:var(--rp-ink);border:1px solid var(--rp-rule)} .wrsheet .page .btn:hover{background:var(--rp-soft)}
 .wr-why .wr-rich>p:first-child>span:first-child>b:first-child{display:block;font-size:var(--fs-lg);line-height:1.35;margin-bottom:6px}
 .wr-last{font-size:var(--fs-xs);color:var(--rp-grey);margin-top:4px}
@@ -3660,14 +3660,15 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-stat .n{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere} .wr-stat .n.r{color:var(--rp-red)}
 .wr-stat .c{font-size:var(--fs-xs);color:var(--rp-grey)}
 .wr-seye{position:absolute;top:2px;right:2px}
-.wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:var(--fs-sm);padding:0;min-width:24px;min-height:24px}
+.wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:var(--fs-sm);padding:0;min-width:24px;min-height:24px;display:inline-grid;place-items:center;border-radius:var(--r-sm)}
+.wr-eye svg{width:16px;height:16px} .wr-eye[aria-pressed="false"]{color:var(--rp-grey);opacity:.7} .wr-eye:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
 .wr-eye:hover{color:var(--rp-ink)}
 .wr-count{font-size:11px;color:var(--rp-grey);margin-top:6px}
 .wr-rich{min-width:0} .wr-rich.wr-edit{cursor:text;border-radius:var(--r-xs);min-height:20px} .wr-rich.wr-edit:hover{background:rgba(44,111,170,.07)}
 .wr-rich.wr-edit:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
 .wr-inl{display:inline-block;vertical-align:baseline} .wr-inl p{display:inline;margin:0}
 .wrsheet .page .sheet-text{width:100%;min-height:48px;field-sizing:content;font:inherit;color:var(--rp-ink);background:var(--rp-white);border:1px solid var(--rp-blue);border-radius:var(--r-xs);padding:4px 6px;resize:vertical}
-.wr-tlwrap{border:1px solid var(--rp-rule);background:var(--rp-white);overflow-x:auto;overflow-y:hidden;height:104px;min-height:80px;max-height:320px;resize:vertical;position:relative}
+.wr-tlwrap{margin-bottom:16px;border:1px solid var(--rp-rule);background:var(--rp-white);overflow-x:auto;overflow-y:hidden;height:104px;min-height:80px;max-height:320px;resize:vertical;position:relative}
 .wr-tl{display:block;max-width:none}
 .wr-tlline{stroke:var(--rp-rule);stroke-width:2} .wr-tltx,.wr-tlnow{font-size:var(--fs-2xs);fill:var(--rp-grey)} .wr-tlnow{fill:var(--rp-ink)}
 .wr-tltoday{stroke:var(--rp-ink);stroke-dasharray:3 3} .wr-tllab{font-size:10.5px;fill:var(--rp-ink)}
@@ -3675,7 +3676,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-ms circle.fill{fill:var(--rp-ok)} .wr-ms.a circle.fill{fill:var(--rp-amber)} .wr-ms.r circle.fill{fill:var(--rp-red)} .wr-ms circle.hollow{fill:var(--rp-paper)}
 .wr-ms .wr-slip{stroke:var(--rp-red);stroke-width:2} .wr-ms circle.wr-slipc{fill:none;stroke:var(--rp-red);stroke-dasharray:3 2}
 .wr-tlgrab{font-size:10.5px;color:var(--rp-grey);text-align:right;margin-top:2px}
-.wr-tbl{min-width:0;margin-top:8px}
+.wr-tbl{min-width:0;margin-top:8px} .wr-timeline .wr-tbl{margin-top:0}   /* #221: the milestone list starts 16 px below the picture (its margin-bottom), also in Show as exported */
 table.wr-r{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
 table.wr-r th{background:none;font-family:inherit;position:static;text-align:left;font-weight:600;color:var(--rp-grey);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px 6px 0;border-bottom:1px solid var(--rp-ink)}
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
@@ -3752,6 +3753,29 @@ tr.crhid td{color:var(--paper-mute)} tr.crhid .creye{color:var(--paper-ink)}
 #v-clientreport .sheet-a4 .page .cropts button{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
 #v-clientreport .sheet-a4 .page .cropts button[aria-pressed="true"]{border-color:var(--paper-link);background:var(--paper-sunk)}
 /* ===== end v2.1.0 P8 ===== */
+/* ===== #221 + #217 (H2 of the Reporting hub): one sheet for the internal and the client report. Both views carry .wrsheet, so the page,
+   the header, the health indicator, the tables and the eyes are styled once. Tokens only for font sizes and radii. ===== */
+.wr-why{display:flex;gap:8px;align-items:flex-start;min-width:0} .wr-whytext{flex:1;min-width:0}
+.wr-facts{font-size:var(--fs-xs);margin-top:4px}
+:root[data-theme="dark"] .wr-logo img{background:var(--rp-white);padding:3px 6px;border-radius:var(--r-sm);box-sizing:border-box}   /* a small light plate so a dark logo does not vanish */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wr-logo img{background:var(--rp-white);padding:3px 6px;border-radius:var(--r-sm);box-sizing:border-box}}
+.rs-logomenu{position:relative;display:inline-block}
+.rs-logopop{position:absolute;right:0;top:100%;z-index:var(--z-raised);margin-top:4px;background:var(--rp-white);color:var(--rp-ink);border:1px solid var(--rp-rule);border-radius:var(--r-md);box-shadow:var(--shadow-pop);padding:8px 10px;display:grid;gap:6px;font-size:var(--fs-xs);white-space:nowrap}
+.rs-new{display:inline-block;margin-left:6px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--rp-blue);border:1px solid var(--rp-blue);border-radius:var(--r-sm);padding:0 5px;vertical-align:baseline}
+.sheet-hbtn{display:inline-grid;place-items:center} .sheet-hbtn svg{width:14px;height:14px}
+.ddmenu.pop.rsmenu{min-width:0;width:max-content;max-width:min(280px,calc(100vw - 16px));padding:4px;font-size:var(--fs-sm)}
+.rsmenu button{align-items:center;gap:8px;padding:4px 10px;min-height:28px;white-space:nowrap}
+.rsmenu button svg.i{margin-top:0;width:15px;height:15px;color:var(--muted);flex:none} .rsmenu b{font-weight:400}
+.rs-pick{margin-top:6px}
+.rs-picker{border:1px solid var(--rp-rule);background:var(--rp-white);padding:8px;display:grid;gap:6px}
+.rs-pick-search{width:100%;box-sizing:border-box;min-height:28px;border:1px solid var(--rp-rule);border-radius:var(--r-sm);background:var(--rp-white);color:var(--rp-ink);font:inherit;font-size:var(--fs-sm);padding:0 8px}
+.rs-pick-list{max-height:220px;overflow:auto;display:grid;align-content:start}
+.rs-pick-row{display:grid;grid-template-columns:20px 84px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:28px;padding:0 4px;font-size:var(--fs-xs);cursor:pointer}
+.rs-pick-row:hover{background:var(--rp-soft)} .rs-pick-id{font-variant-numeric:tabular-nums;color:var(--rp-grey)} .rs-pick-m{color:var(--rp-grey)}
+.rs-pick-foot{display:flex;gap:6px;align-items:center} .rs-pick-foot .sub{flex:1;font-size:var(--fs-xs)}
+.wr-decs li{display:flex;gap:6px;align-items:flex-start} .wr-decbody{min-width:0;flex:1}
+.wr-decs li.hidrow .wr-decbody{opacity:.38}
+
 /* ===== BL-337 (v2.1.0 P9) ===== Reports, the reporting space and the cockpit's Reporting card (components/reporting/) */
 
 .rp .chip,.rp-cockcard .chip{border:0;padding:0 8px;background:var(--sunk);color:var(--muted);font-weight:500;white-space:nowrap}   /* #193: neutral report chips keep their grey tint, 26px tall */

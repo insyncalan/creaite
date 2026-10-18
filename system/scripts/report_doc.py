@@ -444,6 +444,64 @@ def approved_weeks(code):
     return sorted(out, reverse=True)
 
 
+def pickable(doc):
+    """Add from the tracker (#217, #221): the open items Alan may add to this report's tables, per section, not already in it.
+    Read only: nothing is written, and the tracker is never changed by adding. Each candidate is {ref, title, meta, row, item}: the
+    row is what the section would hold (marked `source: "added"`), the item what the document keeps of it. A weekly report may
+    take any open RAID item (an assumption or a dependency too) or action and any decision of the project; a client report only the client-safe facts (client-visible,
+    complete client wording, no label that keeps it out: client_facts), so a private item is never even offered. Actions that are not
+    overdue can be picked too (they go under Overdue actions as 'not due yet')."""
+    kind, code = doc.get("kind"), str(doc.get("project") or "")
+    if kind not in KINDS or not CODE.match(code):
+        raise ReportError("Say which report: weekly or client, and the project's code.")
+    have = {s["id"]: {r.get("ref") for r in s.get("rows") or []} for s in doc.get("sections") or [] if s.get("type") == "table"}
+    out = {"risks": [], "overdue": [], "decisions": []}
+    if kind == "client":
+        facts = client_facts(code)
+        for r in facts["raid"]:
+            out["risks"].append({"ref": r["id"], "title": r["title"], "meta": r["type"], "item": r,
+                                 "row": {"ref": r["id"], "shown": True, "source": "added", "cells": {"type": r["type"], "risk": r["title"]}}})
+        for a in facts["actions"]:
+            if a["status"] in ("In progress", "Delayed"):
+                out["overdue"].append({"ref": a["id"], "title": a["title"], "meta": " · ".join(x for x in (a["owner"], shown(a["due_date"])) if x),
+                                       "item": a, "row": {"ref": a["id"], "shown": True, "source": "added",
+                                                          "cells": {"action": a["title"], "owner": a["owner"], "due": shown(a["due_date"])}}})
+        for d in facts["decisions"]:
+            when = shown(d["date"]) if d["status"] == "Made" else ("Needed by " + shown(d["needed_by"]) if d.get("needed_by") else "Needed")
+            out["decisions"].append({"ref": d["id"], "title": d["title"], "meta": when, "item": d, "row": {
+                "ref": d["id"], "shown": True, "source": "added",
+                "cells": {"decision": d["title"] if d["status"] == "Made" else f"Decision needed: {d['title']}", "date": when}}})
+    else:
+        import report
+        import tracker
+        with tracker.connect() as con:
+            def one(ref):
+                return item(con, ref)
+            for r in con.execute("SELECT * FROM raid WHERE project = ? AND status = 'Open'", (code,)).fetchall():
+                r = dict(r)
+                out["risks"].append({"ref": r["id"], "title": f"{r['type']}: {r['description']}", "meta": " · ".join(x for x in (r["priority"], r["owner"]) if x),
+                                     "_p": report.ORDER.index(r["priority"] or "Low"), "item": one(r["id"]), "row": {
+                                         "ref": r["id"], "shown": True, "source": "added",
+                                         "cells": {"id": r["id"], "risk": f"{r['type']}: {r['description']}", "priority": r["priority"] or "", "owner": r["owner"]}}})
+            for a in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open', 'Delayed') "
+                                 "ORDER BY COALESCE(due_date, '9999'), id", (code,)).fetchall():
+                a = dict(a)
+                due = shown(a["due_date"])
+                out["overdue"].append({"ref": a["id"], "title": a["description"], "meta": " · ".join(x for x in (a["owner"], due) if x),
+                                       "item": one(a["id"]), "row": {"ref": a["id"], "shown": True, "source": "added", "cells": {
+                                           "id": a["id"], "action": a["description"], "owner": a["owner"], "due": due or "not due yet"}}})
+            for d in con.execute("SELECT * FROM decisions WHERE project = ? AND status IN ('Made', 'Pending') "
+                                 "ORDER BY COALESCE(date, needed_by, '0') DESC, id DESC LIMIT 60", (code,)).fetchall():
+                d = dict(d)
+                src = (one(d["id"]) or {}).get("source")
+                out["decisions"].append({"ref": d["id"], "title": d["decision"], "meta": " · ".join(x for x in (d["made_by"], shown(d["date"])) if x),
+                                         "item": one(d["id"]), "row": {"ref": d["id"], "shown": True, "source": "added", "cells": {
+                                             "decision": d["decision"], "by": d["made_by"] or "Not recorded", "date": shown(d["date"]),
+                                             "source": source_label(src)}}})
+        out["risks"].sort(key=lambda c: c.pop("_p"))
+    return {sid: [c for c in found if c["ref"] not in have.get(sid, set())] for sid, found in out.items() if sid in have}
+
+
 def baseline(code, on):
     """The approved internal week a client report dated `on` locks to: the latest approved week ending on or before it, as
     {date, path, version}, or None (BL-336: a fortnightly or monthly client uses the latest approved week)."""
