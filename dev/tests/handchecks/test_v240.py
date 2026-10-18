@@ -4,8 +4,9 @@ as Team Stark's branches land.
 Run them all, fill the Results table and make the screenshot sheet:  python3 dev/tools/handcheck.py v2.4.0
 Run this file on its own (it makes the vault itself, for check 35):   python3 dev/tests/handchecks/test_v240.py
 
-Numbered to the Product Manager's draft sheet (`git show origin/pm-intake-briefs:dev/handchecks/drafts/v2.4.0-DRAFT.md`, 36 checks,
-28 struck, numbering kept; it moves to dev/handchecks/v2.4.0.md when Team Stark's landed list arrives). One method per check,
+Numbered to the Product Manager's draft sheet (`git show origin/pm-intake-briefs:dev/handchecks/drafts/v2.4.0-DRAFT.md`, 37 checks,
+28 struck, numbering kept; read again 18-10-2026 against origin/pm-intake-briefs 15739c12; it moves to dev/handchecks/v2.4.0.md when
+Team Stark's landed list arrives). One method per check,
 `test_cNN_…`, its docstring quoting the sheet's check.
 
 How a check is wired (as test_v220.py): most of 2.4.0 has its own tests in dev/tests (the sheet names them under each check).
@@ -21,7 +22,8 @@ exists, and the note says what still has to be added when the rest lands.
 
 Kinds are the sheet's map (KIND below). A part that only a person with the real Finder, Word or trackpad can do is said in NOTES
 (HAND_PARTS), because a LIVE_ONLY entry would replace the scripted Pass.
-  Wrapped     1 to 34, 36      the named tests (no vault, server or Chrome of its own); 28 is struck
+  Wrapped     1 to 34, 36, 37  the named tests (no vault, server or Chrome of its own); 28 is struck; 29, 30 and 32 have no test
+                               named by the sheet yet (marked phase 2, so dev/tools/handcheck.py --list shows them as gaps)
   Always      35               doctor and the page errors on the hand-check vault (shared; nothing changes data)
 Desktop (1400 px) and 900 px only for the sheet (Alan, 15-10-2026).
 """
@@ -35,7 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hcbase
-from hcbase import NOTES, HandcheckCase
+from hcbase import NOTES, HandcheckCase, phase2
 
 HERE = Path(__file__).resolve().parent
 TESTS = HERE.parent
@@ -43,7 +45,7 @@ REPO = HERE.parents[2]
 
 # The sheet's automation map (PM, for Team Stark to confirm). Changes as built are noted here when Stark's list arrives.
 KIND = {**{n: "scriptable" for n in (1, 2, 3, 4, 6, 7, *range(9, 15), 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
-                                     *range(29, 37))},
+                                     *range(29, 38))},
         **{n: "measurable" for n in (5, 8, 15)},
         **{n: "judgement" for n in (27,)}}
 # 28 is struck (Check this report, #170, is out of 2.4.0): no kind, no row.
@@ -51,6 +53,7 @@ KIND = {**{n: "scriptable" for n in (1, 2, 3, 4, 6, 7, *range(9, 15), 16, 17, 18
 # A whole check that only a person can do. None: every check has a scripted part. The hand parts are in NOTES.
 LIVE_ONLY = {}
 HAND_PARTS = {
+    8: "the look of the logo (colours, transparency, plate) is judged on the screenshot sheet",
     16: "the feel of the trackpad pinch is live only; the wheel event with Ctrl or Cmd is scripted",
     20: "the real Finder window (Show in Finder) and the real viewers (Open) are live only; the answer and the toast are scripted",
     24: "Word itself on the laptop (no repair prompt) is live only; the LibreOffice render and the package checks are scripted",
@@ -61,14 +64,38 @@ for _n, _t in HAND_PARTS.items():
 
 # Check number: what it is missing from the draft sheet today (the check passes on what is named; see PARTIAL above)
 PARTIAL = {
-    4: "still to come from the hub agents: the Client and Side by side switches hiding when off, Approve and Export offering only "
-       "the internal report",
-    8: "still to come: the logo drawn in the report header (36 px high, 180 wide, a dark plate on dark)",
-    20: "no test yet that Settings › Advanced no longer has the row 'File report exports beside it' (the golden changed on v240-int)",
+    4: "no test yet that Approve offers only the internal report when the client report is off (the sheet's 'still to come')",
+    7: "no test names 'clicking a button on the line never brings them back'",
+    8: "the sheet says the logo sits on a dark plate on dark, the h2 test and note say a light plate on dark: Stark to confirm",
+    10: "no test names text sections or Show as exported in the client report under this check (37 covers the text-section rule)",
+    12: "test_add_text_section_is_disabled_with_a_tip_until_it_lands (h2) is stale now that p240-h5 lands and is not wired",
+    13: "only the 96 px width is tested; 120 px at 100%, the six-week strip's width and Change as the small button are not named",
+    15: "the check says 'Added by you', the tests and Stark's note say the row is marked New: PM and Stark to settle the word",
+    17: "no test names AI on selected text or undo and redo; the check's items that slip are named by Stark",
+    18: "measured on the weekly sheet only; the client sheet and the on-screen (not exported) gap are not named",
+    20: "no test yet that Settings › Advanced no longer has the row 'File report exports beside it' (only its golden changed)",
+    27: "no test names transparency kept or an SVG becoming a PNG for Word",
+    33: "only the export page's dates are tested; the hub's dates are not named",
+    36: "no test named for 'Both saves two files, each with its own name-clash choice, one message names both'",
 }
 
 # ── the named tests, per check: [(file in dev/tests, (test names), branch that brings them)] ─────────────────────────────────
 P4, P3, P220, P226, P227, P229 = "p240-h4", "p240-h3", "p240-220", "p240-226", "p240-227", "p240-229"
+H1, H2, H5 = "p240-h1", "p240-h2", "p240-h5"
+HUB = "test_reporting_hub"
+SHEET = "test_report_sheet"
+TS = "test_report_text_section"
+TS_ROUTES = "test_report_text_section_routes"
+TS_UI = "test_report_text_section_ui"
+TS_GATE = "test_report_text_section_gate"
+BOTH = ("WeeklySheet.", "ClientSheet.")   # the shared SheetChecks run for both sheets
+
+
+def both(*names):
+    """The sheet test names for both sheets: ('WeeklySheet.x', 'ClientSheet.x', ...)."""
+    return tuple(c + n for n in names for c in BOTH)
+
+
 SAVE = "test_report_export_save"
 PAGE = "test_report_export_page"
 SETTING = "test_client_report_setting"
@@ -80,7 +107,10 @@ CLIENT_VIEW = "test_client_view"
 NAMED = {
     1: [("test_icons", ("TheRest.test_project_and_person_pages",), P4)],
     2: [("test_icons", ("TheRest.test_project_and_person_pages",), P4)],
-    4: [(SETTING, ("Storage.test_missing_lines_mean_on_with_reminder_and_every_logo", "Storage.test_off_and_on_are_read",
+    3: [(HUB, ("ViewSwitch.test_the_switch_shows_internal_client_and_side_by_side",
+               "SideBySide.test_both_sheets_at_a_readable_size_in_one_scroller"), H1)],
+    4: [(HUB, ("ViewSwitch.test_no_client_report_no_switch_and_no_client_status",), H1),
+        (SETTING, ("Storage.test_missing_lines_mean_on_with_reminder_and_every_logo", "Storage.test_off_and_on_are_read",
                    "Storage.test_the_rhythm_line_is_not_taken_for_the_setting",
                    "Storage.test_the_template_and_a_new_project_start_off", "Reminders.test_on_reminds",
                    "Reminders.test_off_has_no_client_reminder_but_keeps_the_weekly_one",
@@ -91,7 +121,14 @@ NAMED = {
                  "test_settings_projects_and_the_panel_are_one_setting",
                  "test_off_the_reports_page_lists_only_the_internal_report",
                  "test_off_the_reporting_space_and_card_do_not_break"), P3)],
-    8: [(SETTING, ("Routes.test_a_new_draft_starts_with_the_project_logo_choice_in_both_reports",
+    5: [(HUB, ("Toolbar.test_one_line_32px_controls_cog_last", "Toolbar.test_icons_always_names_as_tooltips_and_accessible_names",
+               "Toolbar.test_the_menus_open_inside_the_window"), H1)],
+    6: [(HUB, ("WeekMenu.test_the_date_opens_a_list_of_weeks_and_jumps", "WeekMenu.test_a_date_in_the_box_jumps_to_that_weeks_friday"),
+               H1)],
+    7: [(HUB, ("Scroll.test_the_first_tick_hides_search_and_title_and_leaves_one_line_with_a_short_title",
+               "Scroll.test_scrolling_up_never_brings_it_back_only_the_top_does"), H1)],
+    8: [(SHEET, both("test_logos_at_the_right_drawn_straight_on_the_page", "test_logos_sit_on_a_light_plate_on_dark"), H2),
+        (SETTING, ("Routes.test_a_new_draft_starts_with_the_project_logo_choice_in_both_reports",
                    "Routes.test_upload_saves_the_file_under_the_right_name",
                    "Routes.test_a_trimmed_copy_is_drawn_and_the_original_stays_untouched",
                    "Routes.test_a_jpeg_says_a_transparent_png_or_svg_sits_better", "Routes.test_an_svg_is_kept_as_it_is",
@@ -102,6 +139,26 @@ NAMED = {
                  "test_the_file_chooser_adds_a_logo_and_remove_takes_it_away",
                  "test_a_jpeg_is_told_a_transparent_png_or_svg_sits_better",
                  "test_a_file_that_is_not_a_picture_is_refused_and_nothing_is_saved"), P3)],
+    9: [(SHEET, both("test_one_title_block"), H2)],
+    10: [(SHEET, ("OneComponent.test_both_views_mount_the_one_report_sheet",
+                  "OneComponent.test_the_client_has_no_renderer_of_its_own_for_the_shared_parts",
+                  *both("test_one_sheet_same_structure"), "ClientSheet.test_match_internal_is_kept_per_section"), H2)],
+    11: [(HUB, ("Actions.test_approve_menu_internal_first_then_client",
+                "Actions.test_a_client_export_before_the_internal_week_is_approved_opens_the_left_out_dialog_and_exports_nothing"), H1)],
+    12: [(SHEET, both("test_section_menu_is_a_discreet_popup_fully_visible_at_every_zoom_and_900",
+                      "test_section_menu_at_every_sheet_zoom", "test_section_menu_keyboard"), H2)],
+    13: [(SHEET, both("test_health_indicator_is_96_wide_in_both_palettes_light_and_dark"), H2)],
+    14: [(SHEET, ("OneComponent.test_no_dot_characters_in_the_sheet_sources",
+                  *both("test_eyes_replace_the_dots", "test_eye_toggles_and_slashes_in_both_palettes")), H2)],
+    15: [(SHEET, (*both("test_picker_lists_existing_open_items_not_already_in_the_report", "test_picker_search_narrows_the_list",
+                        "test_picker_adds_an_existing_item_marked_new_and_saves_nothing_until_approve",
+                        "test_picker_cancel_changes_nothing"), "ClientSheet.test_picker_offers_client_visible_items_only"), H2)],
+    16: [(HUB, ("Toolbar.test_zoom_is_one_joined_control_and_the_pinch_still_zooms",), H1)],
+    17: [(TS, ("HtmlRender", "WordWrite"), H5),
+         (TS_ROUTES, ("TextSectionRoutes",), H5),
+         (TS_UI, ("AddAndEdit", "Pictures", "MoveHideDelete"), H5),
+         (TS_GATE, ("Profile",), H5)],
+    18: [(SHEET, ("WeeklySheet.test_16px_between_the_timeline_picture_and_the_milestone_list",), H2)],
     19: [("test_review_meta_229", ("test_a_row_has_exactly_one_meta_line", "test_detail_on_hover_and_in_the_peek_and_marks_stay"), P229),
          ("test_activity_kind_229", ("test_no_kind_button_and_the_funnel_filters_by_kind",), P229),
          ("test_activity_even_browser", ("test_search_and_funnel_are_even",), P229)],
@@ -136,13 +193,22 @@ NAMED = {
     26: [(CLIENT_VIEW, ("ClientBrowser.test_c08_the_client_export_is_the_clients_exported_page_and_holds_nothing_internal",), P226),
          (EXPORT_PAGE, ("Server.test_c08_a_client_report_page_is_checked_for_internal_wording_too",), P226),
          (WORD, ("test_check_08_client_report_same_writer",), P227)],
-    27: [(PAGE, ("test_c01_header_logos_one_title",), P226),
+    27: [(SHEET, both("test_logos_at_the_right_drawn_straight_on_the_page"), H2),
+         (PAGE, ("test_c01_header_logos_one_title",), P226),
          (WORD, ("test_check_01_title_block_once_and_the_reports_logos",), P227)],
     31: [(PAGE, ("test_c12_without_a_page_the_python_renderer_still_makes_a_file_and_says_so",
                  "test_c12b_a_page_that_fails_the_server_check_gives_the_plain_file_without_the_leak"), P226),
          (EXPORT_PAGE, ("Fallback",), P226)],
     33: [(PAGE, ("test_c09_dates_are_dd_mm_yyyy",), P226)],
     34: [("test_no_real_names", ("NoRealNames",), "main")],
+    36: [(HUB, ("Actions.test_export_asks_which_report_only_when_the_client_report_is_on",
+                "EntryPoints.test_the_old_pages_are_retired"), H1),
+         (SETTING, ("Storage.test_the_template_and_a_new_project_start_off",), P3),
+         (PANEL, ("test_settings_projects_and_the_panel_are_one_setting",), P3)],
+    37: [(TS, ("ClientRule",), H5),
+         (TS_ROUTES, ("test_a_new_client_draft_has_none_of_the_internal_text_sections",
+                      "test_a_text_section_written_in_the_client_report_is_exported_and_an_internal_one_is_not"), H5),
+         (TS_UI, ("ClientRuleUI",), H5)],
 }
 
 # Checks the draft sheet says have no test yet (Team Stark names one, or a hub branch lands): skipped with this reason.
@@ -236,7 +302,7 @@ def plan(n, tests=None):
 
 
 class Wrapped(unittest.TestCase):
-    """Checks 1 to 34 and 36: they call the tests they name, or skip with what they wait for."""
+    """Checks 1 to 34, 36 and 37: they call the tests they name, or skip with what they wait for."""
 
     def setUp(self):
         n = int(self._testMethodName[6:8])
@@ -283,7 +349,7 @@ class Wrapped(unittest.TestCase):
     def test_c03_internal_client_side_by_side(self):
         """3. Internal | Client | Side by side: each shows the right report; side by side shows both at a readable size and
         scrolling together."""
-        self.waiting()
+        self.named(3)
 
     def test_c04_client_report_on_or_off(self):
         """4. The client report setting (cog, last on the line): off → the switch disappears, only the internal report shows, no
@@ -294,17 +360,17 @@ class Wrapped(unittest.TestCase):
     def test_c05_one_line_of_controls(self):
         """5. All controls on one line (view switch, week menu, zoom, Show as exported, Export, Approve, cog) at 1400 px; icons with
         tooltips; the cog is the right-most."""
-        self.waiting()
+        self.named(5)
 
     def test_c06_week_menu(self):
         """6. The week Menu: the date with a drop-down list of weeks (health dot, internal and client status, jump to a date); no
         "<" or ">"."""
-        self.waiting()
+        self.named(6)
 
     def test_c07_header_goes_on_scroll(self):
         """7. Scroll the report down → the search bar and title block go at once, leaving the one line; they return only at the very
         top; clicking a button on the line never brings them back."""
-        self.waiting()
+        self.named(7)
 
     def test_c08_click_to_add_a_logo(self):
         """8. Logos: click a logo's place in the report header → choose a file → it appears in both reports; the file is saved in
@@ -315,55 +381,55 @@ class Wrapped(unittest.TestCase):
     def test_c09_one_header(self):
         """9. One header: no repeated "Weekly report / project" title; the title block reads "Weekly report · Internal" (client:
         "Client report · Client")."""
-        self.waiting()
+        self.named(9)
 
     def test_c10_identical_editing(self):
         """10. The client report has the same editing as the internal one: the section menu, eyes, Add from the tracker, text
         sections, Show as exported; each client section says "Matching internal" or "Edited for the client" with a Match internal
         button."""
-        self.waiting()
+        self.named(10)
 
     def test_c11_approve_order(self):
         """11. Approve: the internal report first; the client report only after the internal one is approved."""
-        self.waiting()
+        self.named(11)
 
     # ── The report page (#217, #218) ──
 
     def test_c12_section_menu(self):
         """12. Section menu: small, with an icon per item, fully visible at 80%, 100% and 120% zoom and at 900 px wide; Esc closes it
         and returns focus."""
-        self.waiting()
+        self.named(12)
 
     def test_c13_health_row(self):
         """13. The health indicator keeps its original width (120 px at 100%, 96 px in the hub); the six-week strip and its dates
         are the same width; Change is the small button."""
-        self.waiting()
+        self.named(13)
 
     def test_c14_eyes(self):
         """14. The include or leave-out switch is an eye (a crossed-out eye when left out), never a dot, everywhere it is used."""
-        self.waiting()
+        self.named(14)
 
     def test_c15_add_from_the_tracker(self):
         """15. "Add from the tracker" under Risks and issues and under Overdue actions lists open items not yet in the report;
         adding marks them "Added by you"; the tracker is unchanged; non-overdue actions can be added; the client report offers
         only client-visible items."""
-        self.waiting()
+        self.named(15)
 
     def test_c16_trackpad_zoom(self):
         """16. Pinch (or Ctrl or Cmd with the scroll wheel) over the report zooms it in and out in every view; the zoom control
         shows the percentage and returns to Fit."""
-        self.waiting()
+        self.named(16)
 
     def test_c17_free_text_section(self):
         """17. A free-text section can be added at the foot and from any section's menu, given a heading, edited with the whole
         editor (heading menu, B I S, code, lists including checklist, quote, link, Insert with table, picture and code block, undo
         and redo, the `/` menu, AI on selected text), moved, left out of the export and deleted. (#218; items that slip are named
         by Stark.)"""
-        self.waiting()
+        self.named(17)
 
     def test_c18_gap_under_the_timeline(self):
         """18. The milestone list starts below the timeline picture with a clear gap, on screen and in Show as exported."""
-        self.waiting()
+        self.named(18)
 
     # ── Review and Activity (#229) ──
 
@@ -429,23 +495,26 @@ class Wrapped(unittest.TestCase):
 
     # ── Always ──
 
+    @phase2('no test found yet (the draft sheet names none): the screenshot sheet shows the hub and report once the hub screens are in hcbase.SCREENS')
     def test_c29_themes_and_widths(self):
         """29. Light and dark, creaite and Cursor palettes, at 1400 px and 900 px: the hub, the report and the dialogs."""
-        self.waiting("waiting for the hub screen (p240-h3, p240-h4) to take the screenshot sheet: " + NO_TEST)
+        pass
 
+    @phase2('no test found yet (the draft sheet names none); h2 has test_section_menu_keyboard for the section menu only')
     def test_c30_keyboard(self):
         """30. Keyboard: the toolbar, the week menu, the section menu, the cog panel and the export dialog work without a mouse; Esc
         closes each."""
-        self.waiting()
+        pass
 
     def test_c31_fallback(self):
         """31. Fallback: with no browser or live server an export still produces a plain file, and says so."""
         self.named(31)
 
+    @phase2('no test found yet (the draft sheet names none); h1 has Actions.test_a_client_export_before_the_internal_week_is_approved_... for the refusal half')
     def test_c32_reopened_and_refused(self):
         """32. Left out items stay out when the report is reopened, and a client export is refused before the internal one is
         approved."""
-        self.waiting()
+        pass
 
     def test_c33_dates(self):
         """33. Dates in DD-MM-YYYY everywhere in the hub and the exports."""
@@ -460,7 +529,13 @@ class Wrapped(unittest.TestCase):
         each with its own name-clash choice, and one message names both. With it OFF, Export exports the internal report with no
         question. A new project starts with the client report OFF. The client switch is one setting, in the hub's cog panel and in
         Settings › Projects. The separate client report page is gone."""
-        self.waiting()
+        self.named(36)
+
+    def test_c37_a_text_section_stays_internal(self):
+        """37. A text section is internal until it is written or matched in the client report: "Match internal for every section"
+        never brings an internal text section over; each is added by its own "Add to the client report" link (shown in Side by side
+        next to the internal one); an unmatched internal text section is in no client output (the page, HTML, Word, search)."""
+        self.named(37)
 
 
 class Always(HandcheckCase):
