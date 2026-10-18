@@ -47,8 +47,8 @@ Product Manager, 18-10-2026, from Alan's screenshots and requests; revised the s
 
 **Seen (Alan):** choosing HTML opens the page in the browser, and PDF opens in Adobe. He cannot tell that a file was saved, or where.
 **What the code does today (read, not run):** the Export menu calls `exportWeekly`, and the only message afterwards is a brief toast, "Exported: <file name>", with no folder. The viewer then opens (the live server's open call). I have not run an export, so whether the file reaches the project's Reports folder is for Team Stark to confirm.
-**Fix:** after an export the toast names the folder and has two actions, **Show in Finder** and **Open**; the file is saved first, into the project's Reports folder (as the filed report is), and opening is a separate choice, not the only visible result. Word, HTML and PDF behave the same. A failed save says so plainly.
-**Done when:** each of HTML, Word and PDF leaves a real file in the stated folder with the report's name and date; the toast shows the path and both actions work; nothing is overwritten silently (a taken name gets a number).
+**Fix:** after an export the toast names the folder and has two actions, **Show in Finder** and **Open**; the file is saved first, into the project's Reports folder (as the filed report is), and opening is a separate choice, not the only visible result. Word, HTML and PDF behave the same. If the name is already taken, the user is asked what to do: **Overwrite**, **Rename** (they type a name) or **Add a number** (the default is the next free number); nothing is overwritten without that choice. A failed save says so plainly.
+**Done when:** each of HTML, Word and PDF leaves a real file in the stated folder with the report's name and date; the toast shows the path and both actions work; a taken name offers Overwrite, Rename or Add a number, and nothing is overwritten without the user's choice (an overwrite keeps the earlier file's backup, as for any file change).
 
 ## Client-safe
 
