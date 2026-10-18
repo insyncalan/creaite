@@ -134,6 +134,42 @@ export function tipUp(root){ const L=root.matches&&root.matches("button")?[root]
     const k=(b.title||"").match(/\((Esc|Shift\+R|[A-Z])\)\s*$/); b.dataset.tip=lab; if(k&&!b.dataset.key) b.dataset.key=k[1]; b.removeAttribute("title"); }); }
 /* ===== end BL-158 (JS: set, helper, tooltip) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0004's place) */
+/* insyncalan/creaite-plan#85: a click is not lost when the page redraws between the press and the release. Chrome sends no click
+   at all when the pressed node has been removed from the page (a data refresh, BL-327, BL-253), whether the whole row went, the
+   pressed cell inside a row that stayed, or the row was taken out and put back (a keyed reorder). The press remembers its row's
+   key (data-row) and the pressed node, and watches for either being removed while the button is down; at the release, if one was
+   (or one is not in the page), and the element now under the pointer is the same row by key, the click is made there. A press on
+   one row released on another is still no click on either. The swallow below is the safety net if the browser sends its own. */
+const PRESS={key:null,el:null,node:null,at:"",sent:false,lost:false,mo:/** @type {MutationObserver|null} */(null)};
+/* where a node sits inside its row, as child positions: a press and a release at the same place in the row are one cell's click */
+const rowPlace=(top,from)=>{ const out=[]; for(let at=from;at&&at!==top;at=at.parentNode) out.push([...at.parentNode.children].indexOf(at)); return out.join("."); };
+/* the node at such a place in a row (the row itself for ""); the row when the place no longer exists */
+const placeNode=(top,place)=>{ let n=top; if(place==="") return n; for(const i of place.split(".").reverse()){ const c=n.children[+i]; if(!c) return top; n=c; } return n; };
+/* a removal that takes the pressed node out of the page (also one that puts it back): the browser has dropped the click */
+const pressRemoved=ms=>{ for(const m of ms) for(const n of m.removedNodes) if(PRESS.node&&n.contains(PRESS.node)) PRESS.lost=true; };
+const pressEnd=()=>{ if(PRESS.mo){ pressRemoved(PRESS.mo.takeRecords()); PRESS.mo.disconnect(); } };
+export function bootLostClick(){
+PRESS.mo=new MutationObserver(pressRemoved);
+const pressClear=()=>{ pressEnd(); PRESS.key=null; PRESS.el=null; PRESS.node=null; PRESS.sent=false; PRESS.lost=false; };
+document.addEventListener("mousedown",e=>{ pressClear(); if(e.button!==0||!e.target.closest) return;
+  const r=e.target.closest("[data-row]"); if(r){ PRESS.key=r.dataset.row; PRESS.el=r; PRESS.node=e.target; PRESS.at=rowPlace(r,e.target);
+    /** @type {MutationObserver} */(PRESS.mo).observe(document,{childList:true,subtree:true}); } },true);
+document.addEventListener("contextmenu",pressClear,true);   /* Ctrl+click on a Mac is a context menu, and the browser sends no click for it */
+document.addEventListener("mouseup",e=>{ pressEnd(); const el=PRESS.el, node=PRESS.node, key=PRESS.key;
+  if(!e.isTrusted||e.button!==0||el==null||node==null||key==null||!e.target.closest) return;
+  if(!PRESS.lost&&el.isConnected&&node.isConnected) return;
+  const landed=e.target.closest("[data-row]"); if(!landed||landed.dataset.row!==key) return;
+  PRESS.sent=true;
+  /* the same place in the row: that cell; another cell of the row: the row itself, as the browser does for two nodes it shares a parent with */
+  const place=rowPlace(landed,e.target)===PRESS.at?rowPlace(landed,e.target):"";
+  const tgt=/** @type {Element} */(place===""?landed:e.target);
+  setTimeout(()=>{ PRESS.sent=false;   /* the browser's own click, if it sends one, comes with the release; a later trusted click (Enter, Space, a label) is a different click */
+    let t=tgt;
+    if(!t.isConnected){ const r=document.querySelector(`[data-row="${CSS.escape(key)}"]`); t=r?placeNode(r,place):t; }   /* a second redraw before the timer: find the row again by its key */
+    if(t.isConnected) t.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window,detail:e.detail||1,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
+      ctrlKey:e.ctrlKey,shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,button:0})); },0); },true);
+document.addEventListener("click",e=>{ if(PRESS.sent&&e.isTrusted){ PRESS.sent=false; e.stopImmediatePropagation(); } },true);   /* a click the browser did send is not handled twice */
+}
 export function bootTooltips(){
 paintIcons();
 document.addEventListener("mouseover",e=>{ const t=e.target; if(!t.closest) return; if(t.closest("#tip")){ clearTimeout(TIP.hide); return; }

@@ -114,7 +114,7 @@ import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAs
 import { bootData } from "./core/data.js";
 import { bootDayRoll } from "./core/dayroll.js";
 import { bootDialogs } from "./components/dialogs/PageDialogs.jsx";
-import { bootTooltips } from "./core/dom.js";
+import { bootLostClick, bootTooltips } from "./core/dom.js";
 import { bootCalendar, bootCmdEnter, bootDateWords, bootOwnerCombo, bootSources, bootTickBoxes, bootWeekendNote } from "./core/fields.js";
 import { publish } from "./core/globals.js";
 import { bootCopyCommand, bootKeyboard } from "./core/keys.js";
@@ -148,6 +148,7 @@ bootDialogs();   /* BL-316: first, so every step after finds the dialogs' inner 
 bootTooltips();
 bootAiSelect();   /* BL-301 D: before any editor is made */
 bootLinkPopover();   /* #120: likewise */
+bootLostClick();
 bootDevTag();
 bootRail0007();
 bootTheme();
