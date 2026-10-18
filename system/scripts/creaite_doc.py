@@ -484,10 +484,13 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True):
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
-    folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract."""
+    folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
+    #226: for "html" and "pdf", `page` (the report page's own exported view; export_page.build checks it against the report) is
+    what is written and printed; with none, or one that fails the check, the plain renderer below is, and the answer says
+    `plain: True` (and `plain_why` when a page was refused)."""
     def fail(message, **extra):
         """The answer when nothing was exported."""
         return {"ok": False, "format": fmt, "message": message, **extra}
@@ -496,11 +499,22 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True):
     try:
         doc = read(path)
         _check_baseline(doc)
-        draft = _make_export(doc, fmt, real(path).stem)
+        built, why = None, None
+        if page is not None and fmt in ("html", "pdf"):
+            import export_page
+            try:
+                built = export_page.build(doc, page, page_title(doc))
+            except export_page.PageRefused as e:
+                why = str(e)
+        draft = _make_export(doc, fmt, real(path).stem, built)
     except DocError as e:
         return fail(str(e))
     out = {"ok": True, "format": fmt, "path": paths.rel(draft), "draft": paths.rel(draft), "filed": False,
            "open_after": bool(open_after)}
+    if fmt in ("html", "pdf") and built is None:
+        out["plain"] = True
+        if why:
+            out["plain_why"] = why
     folder = real(out_dir) if out_dir else real(path).parent if file_beside else None
     if folder is None or folder.resolve() == paths.DRAFTS.resolve():
         return {**out, "message": f"Exported {paths.rel(draft)}."}
@@ -522,18 +536,18 @@ def _check_baseline(doc):
                        "approved.")
 
 
-def _make_export(doc, fmt, stem):
+def _make_export(doc, fmt, stem, built=None):
     """Write the export into system/staging/drafts/ and return its path. Raises DocError."""
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
     # An HTML export never takes the document's own draft path (drafts/<name>.html): a plain page there would stand in for the draft.
     draft = paths.free_path(paths.DRAFTS, stem + (" (read only)" if fmt == "html" else ""), EXPORTS[fmt])
     if fmt == "html":
-        draft.write_text(render(doc, editing=False), encoding="utf-8")
+        draft.write_text(built or render(doc, editing=False), encoding="utf-8")
     elif fmt == "docx":
         word_export(doc, draft)
     else:
         page = paths.free_path(paths.DRAFTS, f"{stem} print", ".html")
-        page.write_text(render(doc, editing=False), encoding="utf-8")
+        page.write_text(built or render(doc, editing=False), encoding="utf-8")
         try:
             print_pdf(page, draft)
         finally:

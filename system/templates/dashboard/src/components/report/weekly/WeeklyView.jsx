@@ -7,6 +7,7 @@
 import { render } from "preact";
 import { Menu } from "../../Menu.jsx";
 import { Sheet } from "../Sheet.jsx";
+import { reportExportPage, WEEKLY_EXPORT } from "../exportPage.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
 import { Glance } from "./Glance.jsx";
 import { CurrentState, Words } from "./Notes.jsx";
@@ -32,7 +33,7 @@ const WEEKLY_RENDER = { byId: {
 
 /** Save what is on the page; false (and a message) when it didn't save. */
 async function saveFirst() {
-  const d = weeklyDoc.value; if (!d || !weeklyDirty) return true;
+  const d = weeklyDoc.value; if (!d || (!weeklyDirty && !(weeklyView.value && weeklyView.value.where === "new"))) return true;
   const r = await saveWeekly({ doc: d, base_version: weeklyBase.value });
   if (!r.ok) { snack(r.message || "The report wasn't saved"); return false; }
   setWeeklyDirty(false); return true;
@@ -43,8 +44,10 @@ function WeeklyBar({ doc, readOnly }) {
   const approved = doc.state === "approved";
   const exp = async (/** @type {string} */ fmt) => {
     if (!(await saveFirst())) return;
-    const r = await exportWeekly(doc, fmt);
-    snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
+    const now = weeklyDoc.value || doc;
+    const page = fmt === "docx" ? null : await reportExportPage(now, WEEKLY_RENDER, WEEKLY_EXPORT, weeklyBase.value);   // #226: the exported page itself
+    const r = await exportWeekly(now, fmt, page);
+    snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}${r.plain ? " (plain version)" : ""}` : String(r.message || "Not exported").split("\n")[0]);
   };
   const approve = async () => {
     if (!(await saveFirst())) return;

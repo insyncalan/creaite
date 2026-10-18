@@ -83,11 +83,13 @@ export async function approveClientReport(force) {
   return api("/api/report/approve", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, doc: d, base_version: crBase.value, force: !!force });
 }
 
-/** Export the client report (the page saved first); the route runs the left-out check again and answers with it.
-    @param {"html"|"docx"|"pdf"} fmt */
-export async function exportClientReport(fmt) {
+/** Export the client report (the page saved first); the route runs the left-out check again and answers with it. #226: for html and pdf
+    `makePage` draws the saved report as it is exported (components/report/exportPage.jsx), and the server checks it again.
+    @param {"html"|"docx"|"pdf"} fmt @param {(doc: any, version: number) => Promise<any>} [makePage] */
+export async function exportClientReport(fmt, makePage) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
-  return api("/api/report/export", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt });
+  const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
+  return api("/api/report/export", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt, page: page || undefined });
 }

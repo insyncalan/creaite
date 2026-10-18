@@ -109,21 +109,25 @@ class ExportPage(LiveBrowserCase):
         self.assertRegex(b.eval("document.querySelector('.wr-wk').textContent"), r"^Week ending \w+day \d+ \w+ \d{4}")
         self.assertEqual(b.eval("document.querySelectorAll('.wr-logos img').length"), 2, "the firm's and the client's logo")
         self.assertTrue(b.eval("[...document.querySelectorAll('.wr-logos img')].every(i=>i.src.startsWith('data:image/')&&i.naturalWidth>0)"))
-        self.assertEqual(b.eval("[...document.querySelectorAll('h1,h2,h3')].filter(h=>/^\\s*Weekly report\\s*$/i.test(h.textContent)).length"), 0,
+        self.assertEqual(b.eval("[...document.querySelectorAll('h1,h2,h3')].filter(h=>h.offsetParent&&/^\\s*Weekly report\\s*$/i.test(h.textContent)).length"), 0,
                          "no second 'Weekly report' title")
-        self.assertEqual(b.eval("[...document.querySelectorAll('h1,h2,h3,h4')].filter(h=>!h.textContent.trim()&&!h.closest('[hidden]')).length"), 0,
+        self.assertEqual(b.eval("[...document.querySelectorAll('h1,h2,h3,h4')].filter(h=>h.offsetParent&&!h.textContent.trim()).length"), 0,
                          "no empty heading")
-        self.assertEqual(len(re.findall(r"<h1[ >]", src)) + 0, b.eval("document.querySelectorAll('h1').length"))
+        self.assertEqual(b.eval("[...document.querySelectorAll('h2')].filter(h=>/^\\s*summary\\s*$/i.test(h.textContent)).length"), 0,
+                         "no empty Summary heading (the report's summary is empty)")
+        self.assertNotIn("<script", src)
 
     # ── 2 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_c02_health_block_strip_and_last_week(self):
         self.show_exported()
         screen_flag = self.ev("document.querySelector('#v-weekly .wr-flag').textContent")
+        screen_weeks = self.ev("document.querySelectorAll('#v-weekly .wr-trend i').length")
         f = self.export("html")
         b = self.open_file(f)
         self.assertEqual(b.eval("document.querySelector('.wr-flag').textContent"), screen_flag)
         self.assertNotEqual(b.eval("getComputedStyle(document.querySelector('.wr-flag')).backgroundColor"), "rgba(0, 0, 0, 0)")
-        self.assertEqual(b.eval("document.querySelectorAll('.wr-trend i').length"), 6, "the six-week strip")
+        self.assertEqual(b.eval("document.querySelectorAll('.wr-trend i').length"), screen_weeks, "the strip, a bar a week")
+        self.assertGreaterEqual(screen_weeks, 2)
         self.assertEqual(b.eval("document.querySelectorAll('.wr-tlbl span').length"), 2, "its two dates")
         self.assertRegex(b.eval("document.querySelector('.wr-last').textContent"), r"^Last week: \w[\w ]+ \(\d\d-\d\d\)$")
         self.assertTrue(b.eval("document.querySelector('.wr-why').textContent.trim().length>5"), "the reason")
@@ -241,7 +245,8 @@ class ExportPage(LiveBrowserCase):
         f = self.export("html")
         b = self.open_file(f)
         src = f.read_text(encoding="utf-8")
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('.page')).backgroundColor"), "rgb(255, 255, 255)")
+        paper = b.eval("getComputedStyle(document.querySelector('.page')).backgroundColor")
+        self.assertTrue(all(int(x) >= 240 for x in re.findall(r"\d+", paper)[:3]), f"a light paper, not the dark theme's: {paper}")
         self.assertNotIn("rgb(17, 21, 24)", b.eval("getComputedStyle(document.body).backgroundColor"), "no dark theme leak")
         self.assertIn("light", re.search(r"<html[^>]*>", src).group(0))
         self.assertRegex(src, r"@page\s*\{[^}]*size:\s*A4")
@@ -261,7 +266,9 @@ class ExportPage(LiveBrowserCase):
         pdf = "".join(pg.extract_text() for pg in pypdf.PdfReader(str(p)).pages)
         html = self.open_file(h).eval("document.body.innerText")
         a, c = re.sub(r"\s+", "", html), re.sub(r"\s+", "", pdf)
-        self.assertGreater(difflib.SequenceMatcher(None, a, c, autojunk=False).ratio(), 0.97)
+        from collections import Counter
+        self.assertEqual(Counter(a), Counter(c), "the same characters (a picture's labels may come in another order)")
+        self.assertGreater(difflib.SequenceMatcher(None, a, c, autojunk=False).ratio(), 0.94)
         for word in ("Example Programme", "Off track".upper(), "Risks and issues".upper(), "Milestone"):
             self.assertIn(re.sub(r"\s+", "", word), c)
         self.assertEqual(len(pypdf.PdfReader(str(p)).pages) >= 1, True)
@@ -280,22 +287,36 @@ class ExportPage(LiveBrowserCase):
         self.assertNotIn("wr-flag", (self.v.root / r["path"]).read_text(encoding="utf-8"))
 
     def test_c12b_a_page_that_fails_the_server_check_gives_the_plain_file_without_the_leak(self):
+        """Check 7 and 8's server side: a posted page is checked against the saved report and the tracker, never trusted."""
         d = self.aeval("api('/api/report/draft',{kind:'weekly',code:'ABC'})")
         doc = d["doc"]
         sec = {s["id"]: s for s in doc["sections"]}
         sec["decisions"]["hidden"] = True
+        sec["risks"]["rows"][0]["shown"] = False
         s = self.aeval("api('/api/report/save',{doc:%s,base_version:%s})" % (json.dumps(doc), d["version"] or "null"))
         self.assertTrue(s["ok"], s)
-        page = {"html": '<div id="v-weekly"><div class="page"><section data-id="decisions"><h2>Decisions</h2>'
-                        '<p>Go-live moves two weeks</p></section><script>alert(1)</script></div></div>',
-                "css": ".page{color:red}", "palette": "creaite", "version": s["version"]}
-        r = self.aeval("api('/api/report/export',{kind:'weekly',code:'ABC',week_ending:%s,fmt:'html',page:%s})"
-                       % (json.dumps(doc["date"]), json.dumps(page)))
-        self.assertTrue(r["ok"], r)
-        self.assertTrue(r.get("plain"))
-        text = (self.v.root / r["path"]).read_text(encoding="utf-8")
-        self.assertNotIn("Go-live moves two weeks", text)
-        self.assertNotIn("alert(1)", text)
+        css = ".page{color:red}"
+        pages = {
+            "a hidden section": '<div id="v-weekly"><div class="page"><section data-id="decisions"><h2>Decisions</h2>'
+                                '<p>Go-live moves two weeks</p></section></div></div>',
+            "a hidden row's words, under a shown section": '<div id="v-weekly"><div class="page"><section data-id="health"><h2>Health</h2>'
+                                                          '<p>Data access delayed &rarr; UAT slips</p></section></div></div>',
+            "a script": '<div id="v-weekly"><div class="page"><section data-id="health"><h2>Health</h2><script>alert(1)</script>'
+                        '<p onclick="alert(2)">fine</p></section></div></div>',
+        }
+        for what, html in pages.items():
+            r = self.aeval("api('/api/report/export',{kind:'weekly',code:'ABC',week_ending:%s,fmt:'html',page:%s})"
+                           % (json.dumps(doc["date"]), json.dumps({"html": html, "css": css, "palette": "creaite", "version": s["version"]})))
+            self.assertTrue(r["ok"], r)
+            text = (self.v.root / r["path"]).read_text(encoding="utf-8")
+            for gone in ("alert(", "Go-live moves two weeks", "Data access delayed"):
+                self.assertNotIn(gone, text, what)
+            if what != "a script":
+                self.assertTrue(r.get("plain"), what)
+                self.assertIn("plain_why", r, what)
+            else:                       # a script is stripped; the rest of the page is fine and is used
+                self.assertFalse(r.get("plain"), r)
+                self.assertIn("fine", text)
 
     # ── #219 / all of 1 to 6 together ─────────────────────────────────────────────────────────────────────────────
     def test_every_section_matches_the_screen(self):

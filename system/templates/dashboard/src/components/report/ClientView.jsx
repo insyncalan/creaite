@@ -13,6 +13,7 @@ import { flagOf, healthDiff, matchClientAll, matchClientSection } from "./client
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
 import { countRedraft, redrafter } from "./redraft.js";
 import { Sheet } from "./Sheet.jsx";
+import { CLIENT_EXPORT, reportExportPage } from "./exportPage.jsx";
 import { INTERNAL_RENDERERS } from "./WeeklyPartner.jsx";
 import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
@@ -34,8 +35,8 @@ async function openCheck() {
 
 /** @param {"html"|"docx"|"pdf"} fmt */
 async function doExport(fmt) {
-  const r = await exportClientReport(fmt);
-  if (r && r.ok) { crDialog.value = false; snack(`Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}`); }
+  const r = await exportClientReport(fmt, (d, v) => reportExportPage(d, CLIENT_RENDERERS, CLIENT_EXPORT, v));
+  if (r && r.ok) { crDialog.value = false; snack(`Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}${r.plain ? " (plain version)" : ""}`); }
   else { await runCheck(); snack(String((r && r.message) || "Not exported").split("\n")[0]); }
 }
 

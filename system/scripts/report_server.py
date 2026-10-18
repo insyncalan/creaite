@@ -12,9 +12,12 @@
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
-  POST /api/report/export  {kind, code, week_ending, client?, fmt, file_beside?}: P2's export (the contract's call), from the draft
+  POST /api/report/export  {kind, code, week_ending, client?, fmt, file_beside?, page?}: P2's export (the contract's call), from the draft
                            or the filed report; a client report only once its internal week is approved and nothing would leak, and its
-                           answer then carries `left_out`: the check of what is left out runs before every client export
+                           answer then carries `left_out`: the check of what is left out runs before every client export.
+                           #226: HTML and PDF are the report page's own exported view, posted as `page: {html, css, palette, version}`
+                           and re-checked against the saved report by export_page.build; with no page, or one that fails, the plain
+                           renderer makes the file and the answer says `plain: true`
 """
 import base64
 import os
@@ -247,7 +250,11 @@ def export_route(handler, req):
     fn = export_call()
     if fn is None:
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
-    out = fn(path, fmt, file_beside=bool(req.get("file_beside", creaite_doc.file_beside_default(kind))), open_after=True)
+    out = fn(path, fmt, file_beside=bool(req.get("file_beside", creaite_doc.file_beside_default(kind))), open_after=True,
+             page=req.get("page") if isinstance(req.get("page"), dict) else None)
+    if out.get("ok") and out.get("plain"):        # #226: no page, or one the server's check refused: the plain renderer made it
+        out["message"] = f"{out.get('message') or 'Exported.'} This is the plain version" + (
+            f" (the report page was not used: {out['plain_why']})." if out.get("plain_why") else ": open the report in creaite to export the formatted one.")
     if out.get("ok") and out.get("path"):
         out["launched"] = launch(out["path"])
     if left is not None:

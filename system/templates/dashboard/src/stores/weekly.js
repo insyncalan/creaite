@@ -73,9 +73,11 @@ export async function approveWeekly(doc, force) {
   return r || { ok: false, message: "The apply didn't run; nothing was changed." };
 }
 
-/** Export the saved report as html, docx or pdf (P2's export, opened once made). @param {SheetDoc} doc @param {string} fmt */
-export async function exportWeekly(doc, fmt) {
-  const r = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
+/** Export the saved report as html, docx or pdf (P2's export, opened once made). #226: for html and pdf `page` is the report page as it
+    is exported (components/report/exportPage.jsx); the server checks it against the saved report and falls back to the plain renderer.
+    @param {SheetDoc} doc @param {string} fmt @param {any} [page] */
+export async function exportWeekly(doc, fmt, page) {
+  const r = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || undefined });
   return r || { ok: false, message: "Not exported." };
 }
 
