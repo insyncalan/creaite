@@ -136,13 +136,13 @@ SCREENS["weekly-logos"] = ("(()=>{ if(!window.__wrLogos){ window.__wrLogos=1; co
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,logos:[{kind:'firm',path:'logos/firm.png'},{kind:'client',path:'logos/client.png'}]}),"
                            "{headers:{'Content-Type':'application/json'}})); }; } go('weekly',{code:'ABC'}); })()",
-                           "document.querySelector('#v-weekly [data-wrlogos]')", "#v-weekly")
+                           "document.querySelector('#v-reporting [data-wrlogos]')", "#v-reporting")
 # The sample has no approved internal week, which keeps Check and export disabled: the client draft is answered as ready here
 # (nothing is written; the check and the export still go to the server, and Esc is all the script presses).
 SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; const f=window.fetch.bind(window); window.fetch=(u,o)=>{ const r=f(u,o); "
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
-                           "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-clientreport [data-crcheck]:not([disabled])')", "#v-clientreport")
+                           "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-reporting .crhealth')", "#v-reporting")
 EXTRA = ("clientreport", "weekly-logos", "today-days")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
@@ -616,13 +616,14 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         return bad
 
     def crleft(self):
-        """v2.1.0 P8: the client report's Check and export (a plain button) opens #crLeftDlg after the left-out check: Enter on
-        it opens it with focus in it (Cancel); Esc closes it and focus is back on the button. Nothing is exported."""
+        """v2.1.0 P8; #221 H1: the left-out check dialog #crLeftDlg (no control opens it now: it opens when a client export is refused, and
+        with #170's Check this report): opened here from the Approve button's place, it takes focus (Cancel); Esc closes it and focus is
+        back where it was. Nothing is exported."""
         b = self.b
         self.goto("clientreport")
         b.eval(PROBE + ";true")
-        b.eval("document.querySelector('#v-clientreport [data-crcheck]').focus()")
-        self.press("Enter", 0.5)
+        b.eval("document.querySelector('#v-reporting #hubApprove').focus()")
+        b.eval("crDialog.value=true; runCheck(); true")
         try:
             b.wait("document.getElementById('crLeftDlg')?.open", 20)
         except TimeoutError:
@@ -635,7 +636,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         self.press("Escape", 0.4)
         if b.eval("document.getElementById('crLeftDlg').open"):
             bad.append("Esc leaves it open")
-        elif not b.eval("document.activeElement === document.querySelector('#v-clientreport [data-crcheck]')"):
+        elif not b.eval("document.activeElement === document.querySelector('#v-reporting #hubApprove')"):
             bad.append("Esc doesn't return focus to the control")
         return bad
 

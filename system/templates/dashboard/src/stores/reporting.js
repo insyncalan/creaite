@@ -131,25 +131,25 @@ export function reportsBadge() {
 export const spaceCode = signal("");
 export const spaceWeek = signal("");
 
-/** P6's weekly view: #weekly=<code>&week=<Friday>.
-    @param {string} code @param {string} week */
-export const weeklyHref = (code, week) => `#weekly=${code}&week=${week}`;
+/** The old weekly view's address, now the hub's (#221): #reporting=<code>&w=<Friday>. @param {string} code @param {string} week */
+export const weeklyHref = (code, week) => reportingHref(code, week);
 
-/** P8's client view: #client-report=CODE/week/client.
-    @param {string} code @param {string} week @param {string} client */
-export const clientReportHref = (code, week, client) => `#client-report=${code}/${week}/${encodeURIComponent(client)}`;
+/** The old client view's address, now the hub's Client view (#221): #reporting=<code>&w=<Friday>&v=client.
+    @param {string} code @param {string} week @param {string} [_client] */
+export const clientReportHref = (code, week, _client) => reportingHref(code, week, "client");
 
 /** @param {string} week */
 export const weekLabel = week => week.split("-").reverse().join("-");
 
-/** The address of a project's reporting space. @param {string} code @param {string} [week] */
-export function reportingHref(code, week) {
-  return `#reporting=${code}${week ? `&w=${week}` : ""}`;
+/** The address of a project's reporting hub (#221). @param {string} code @param {string} [week] YYYY-MM-DD @param {string} [view] "client" or "side" (Internal is the default and not written) */
+export function reportingHref(code, week, view) {
+  return `#reporting=${code}${week ? `&w=${week}` : ""}${view === "client" || view === "side" ? `&v=${view}` : ""}`;
 }
-/** The state of "#reporting=ABC&w=2026-10-09", or null (an older address's &e= is read and dropped). @param {string} hash @param {(c: string) => boolean} known */
+/** The state of "#reporting=ABC&w=2026-10-09&v=client", or null (an older address's &e= is read and dropped).
+    @param {string} hash @param {(c: string) => boolean} known @returns {{code: string, week: string, view: "internal"|"client"|"side"}|null} */
 export function parseReporting(hash, known) {
   const m = /^#?reporting=([A-Z][A-Z0-9]{2,6})((?:&[a-z]=[^&]*)*)$/.exec(String(hash || ""));
   if (!m || !known(m[1])) return null;
   const kv = Object.fromEntries(m[2].split("&").filter(Boolean).map(x => x.split("=")));
-  return { code: m[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "" };
+  return { code: m[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "", view: kv.v === "client" || kv.v === "side" ? kv.v : "internal" };
 }

@@ -59,7 +59,9 @@ export { openSheetRef as openRef };
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
     onOpenItem?: (ref: string) => boolean, partner?: SheetPartner|null, onChange: (doc: SheetDoc, why: string) => void,
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
-    toolbar?: any, banner?: {title: string, sub?: string}}} SheetProps */
+    toolbar?: any, banner?: {title: string, sub?: string},
+    renderBar?: (c: {zoom: number, setZoom: (z: number) => void, exported: boolean, setExported: (on: boolean) => void, status: string, bad: boolean}) => any,
+    belowBar?: any}} SheetProps */
 
 /** Where each page was left, by scrollKey (in memory, for the page's life): the zoom, and per pane the section at the top and the
     offset into it in unscaled pixels. @type {Map<string, {id: string, off: number, vy: number}>} */
@@ -403,7 +405,8 @@ export function Sheet(props) {
   const note = main.conflict;
   return (
     <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick}>
-      <div class="sheet-bar" role="toolbar" aria-label="Report">
+      <div class={`sheet-bar${props.renderBar ? " hubline" : ""}`} role="toolbar" aria-label="Report">
+        {props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: main.line, bad: !!main.line && !/^Saved/.test(main.line) }) : <>
         <span class="sheet-mini">{props.banner ? <><b>{props.banner.title}</b>{props.banner.sub ? <span class="sub">{props.banner.sub}</span> : null}</> : <b>{doc.title}</b>}</span>
         <span class="sheet-zoom" role="group" aria-label="Zoom">
           <button type="button" class="btn sm" aria-label="Zoom out" onClick={() => setZoom(stepZoom(zoom, -1))} disabled={zoom <= 0.4}>−</button>
@@ -415,8 +418,9 @@ export function Sheet(props) {
         {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id)) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
         <span class="sub sheet-status" role="status" data-bad={main.line && !/^Saved/.test(main.line) ? "1" : undefined}>{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
         {openChecks && !exported ? <span class="sheet-checks" data-checks={openChecks}>{openChecks} {openChecks === 1 ? "check" : "checks"} open</span> : null}
-        <span class="sheet-barr">{props.toolbar || null}</span>
+        <span class="sheet-barr">{props.toolbar || null}</span></>}
       </div>
+      {props.belowBar || null}
       {note ? <div class="sheet-note" role="alert">{note} <button type="button" class="btn sm" onClick={() => { main.reload(); onEvent({ type: "reload" }); }}>Reload</button></div> : null}
       {main.removed ? <div class="sheet-note sheet-removed" role="status">{main.removed}</div> : null}
       {partner && side.conflict ? <div class="sheet-note" role="alert">{partner.label}: {side.conflict} <button type="button" class="btn sm" onClick={() => { side.reload(); onEvent({ type: "reload", partner: true }); }}>Reload</button></div> : null}

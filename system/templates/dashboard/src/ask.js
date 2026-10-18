@@ -4,7 +4,8 @@
    boot…() functions that src/main.js calls in today's order. */
 import { closeHelpPanel } from "./helpscreen.js";
 import { openSpace } from "./components/reporting/ReportingSpace.jsx";
-import { clientReportHref, needsMe, thisWeek, weeklyHref } from "./stores/reporting.js";
+import { needsMe, thisWeek } from "./stores/reporting.js";
+import { clientReportOn } from "./stores/reportingSettings.js";
 import { resumeDeleteNote } from "./components/notes/DeleteNote.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
@@ -979,9 +980,9 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
-  if(q) P.forEach(p=>add("Reporting",`Weekly report: ${p.name}`,"this week's weekly view",()=>{ location.hash=weeklyHref(p.code,thisWeek()); },`weekly report ${p.code}`));   /* P6's address; opens once P6 merges */
+  if(q) P.forEach(p=>add("Reporting",`Weekly report: ${p.name}`,"this week's weekly view",()=>openSpace(p.code,thisWeek(),"internal"),`weekly report ${p.code}`));   /* #221: the hub's Internal view */
   if(q) P.forEach(p=>add("Reporting",`Reporting: ${p.name}`,"this week's reports",()=>openSpace(p.code),`weekly report ${p.code} client report ${p.code} reporting ${p.code}`));   /* BL-337: ⌘K reaches the reporting space */
-  if(q) P.forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>{ location.hash=clientReportHref(p.code,thisWeek(),(p.client||"").trim()||"Client"); },`client report ${p.code}`));   /* P8's address; opens once P8 merges */
+  if(q) P.filter(p=>clientReportOn(p.code)).forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>openSpace(p.code,thisWeek(),"client"),`client report ${p.code}`));   /* #221: the hub's Client view (only for a project that has a client report); P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });
   add("Actions","Add files to Intake","",()=>{ go("inbox"); $("#inboxFile").click(); });
   if(nNew) add("Actions","Process new Intake files",`${nNew} new`,()=>{ go("inbox"); $("#inboxNew").click(); });

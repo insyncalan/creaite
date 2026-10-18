@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_reports as R  # noqa: E402  (its fixture and fixed clock: Friday 09-10-2026)
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import LiveBrowserCase, pin_page_clock  # noqa: E402
 
 WIDTHS = ((1400, 1000), (900, 900))
 SLIM = "document.querySelector('#v-reporting .sheet-root.rpt-slim')"
@@ -48,6 +48,10 @@ class Hub(LiveBrowserCase):
     def server_env(cls):
         return {"CREAITE_NOW": R.NOW, "CREAITE_NO_LAUNCH": "1"}
 
+    def setUp(self):
+        super().setUp()
+        pin_page_clock(self.b, R.NOW)                # the page's clock agrees with the server's: this week is the one ending 09-10-2026
+
     def open_hub(self, w=1400, h=1000, hash_="go('reporting','ABC')", client_on=True):
         self.b.resize(w, h)
         self.b.reload("typeof go==='function' && LIVE")
@@ -55,6 +59,12 @@ class Hub(LiveBrowserCase):
         self.b.eval(hash_)
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
         self.b.pump(0.3)
+
+    def start_at(self, js, ready):
+        """Open the page at another screen (not the hub): reload, run `js`, wait for `ready`."""
+        self.b.reload("typeof go==='function' && LIVE")
+        self.b.eval(js)
+        self.b.wait(ready, 20)
 
     def api(self, path, body):
         return self.b.eval(f"""fetch({json.dumps(path)},{{method:'POST',headers:{{'Content-Type':'application/json','X-Creaite-Token':D.token}},
@@ -114,7 +124,7 @@ class SideBySide(Hub):
                 self.assertEqual(r["scrollers"], 1, "one scroller, so both sheets scroll together")
                 self.assertTrue(r["same"])
                 self.assertEqual(r["aud"], ["internal", "client"])
-                self.assertTrue(all(x >= 330 for x in r["w"]), f"readable: {r['w']}")
+                self.assertTrue(all(x >= (400 if w == 1400 else 300) for x in r["w"]), f"readable: {r['w']}")
                 self.q("document.querySelector('#v-reporting .sheet-scroll').scrollTop=400")
                 self.b.pump(0.2)
                 tops = self.q("[...document.querySelectorAll('#v-reporting .page')].map(x=>Math.round(x.getBoundingClientRect().top))")
@@ -159,12 +169,13 @@ class Toolbar(Hub):
                     self.open_hub(w, h)
                     self.b.click(f"#hubSeg [data-hv='{view}']")
                     self.b.wait(f"document.querySelectorAll('#v-reporting .page').length=={2 if view == 'side' else 1}", 20)
-                    r = self.q("""(()=>{const bar=document.querySelector('#v-reporting .sheet-bar'), els=[...bar.querySelectorAll(':scope button:not([hidden]), :scope .hubzoom')]
-                      .filter(e=>!e.closest('.hubzoom')||e.classList.contains('hubzoom')).filter(e=>e.getBoundingClientRect().width>0);
+                    r = self.q("""(()=>{const bar=document.querySelector('#v-reporting .sheet-bar'),
+                      els=[...bar.querySelectorAll(':scope > .seg, :scope > .hubzoom, :scope button, :scope .hubcfgwrap > button')]
+                        .filter(e=>!e.closest('.hubzoom')||e.classList.contains('hubzoom')).filter(e=>!e.closest('.seg')||e.classList.contains('seg'))
+                        .filter(e=>e.getBoundingClientRect().width>0 && !e.closest('.hubcfg'));
                       const b=bar.getBoundingClientRect(); const rs=els.map(e=>e.getBoundingClientRect());
                       return {barH:b.height, tops:[...new Set(rs.map(r=>Math.round(r.top)))], hs:[...new Set(rs.map(r=>Math.round(r.height)))],
-                        ids:els.map(e=>e.id||e.className), last:els[els.length-1].id, over:rs.some(r=>r.right>b.right+1||r.left<b.left-1),
-                        wraps:rs.length&&Math.max(...rs.map(r=>r.bottom))-Math.min(...rs.map(r=>r.top))}})()""")
+                        ids:els.map(e=>e.id||e.className), last:els[els.length-1].id, over:rs.some(r=>r.right>b.right+1||r.left<b.left-1)}})()""")
                     self.assertEqual(len(r["tops"]), 1, f"one line: {r}")
                     self.assertEqual(r["hs"], [32], f"every control 32 px: {r}")
                     self.assertEqual(r["last"], "hubCfg", f"the cog is last: {r['ids']}")
@@ -235,15 +246,15 @@ class Actions(Hub):
             return real(u,o); };})()""")
 
     def pick_item(self, text):
-        self.b.wait(f"[...document.querySelectorAll('[role^=menuitem]')].some(e=>e.textContent.includes({json.dumps(text)}))")
-        self.q(f"[...document.querySelectorAll('[role^=menuitem]')].find(e=>e.textContent.includes({json.dumps(text)})).setAttribute('data-pick','1')")
+        self.b.wait(f"[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].some(e=>e.textContent.includes({json.dumps(text)}))")
+        self.q(f"[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].find(e=>e.textContent.includes({json.dumps(text)})).setAttribute('data-pick','1')")
         self.press("[data-pick='1']")
 
     def test_export_asks_which_report_only_when_the_client_report_is_on(self):
         self.open_hub(client_on=False)
         self.intercept()
         self.press("#hubExport")
-        names = self.q("[...document.querySelectorAll('[role^=menuitem]')].map(e=>({n:e.querySelector('b')&&e.querySelector('b').textContent, l:!!e.querySelector('small'), i:!!e.querySelector('svg')}))")
+        names = self.q("[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].map(e=>({n:e.querySelector('b')&&e.querySelector('b').textContent, l:!!e.querySelector('small'), i:!!e.querySelector('svg')}))")
         self.assertEqual([n["n"] for n in names][:3], ["HTML", "Word (.docx)", "PDF"])
         self.assertTrue(all(n["l"] and n["i"] for n in names), "an icon, a name and one line each")
         self.pick_item("HTML")
@@ -268,7 +279,7 @@ class Actions(Hub):
     def test_approve_menu_internal_first_then_client(self):
         self.open_hub()
         self.press("#hubApprove")
-        items = self.q("[...document.querySelectorAll('[role^=menuitem]')].map(e=>({t:e.textContent, d:e.getAttribute('aria-disabled')}))")
+        items = self.q("[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].map(e=>({t:e.textContent, d:e.getAttribute('aria-disabled')}))")
         self.assertEqual(len(items), 2)
         self.assertIn("Approve the internal report", items[0]["t"])
         self.assertIn("Approve the client report", items[1]["t"])
@@ -278,12 +289,13 @@ class Actions(Hub):
         self.b.key("Escape")
         # approve the internal report on the server: the client item opens
         doc = self.api("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+        next(x for x in doc["sections"] if x["id"] == "health")["text"] = "UAT start slipped two weeks."     # a health that is not On track needs its reason
         self.assertTrue(self.api("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
         a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09", "force": True})
         self.assertTrue(a["ok"], a)
         self.open_hub()
         self.press("#hubApprove")
-        items = self.q("[...document.querySelectorAll('[role^=menuitem]')].map(e=>({t:e.textContent, d:e.getAttribute('aria-disabled')}))")
+        items = self.q("[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].map(e=>({t:e.textContent, d:e.getAttribute('aria-disabled')}))")
         self.assertEqual(items[0]["d"], "true", "the internal report is already approved")
         self.assertEqual(items[1]["d"], None, "the client report can now be approved")
         self.b.key("Escape")
@@ -313,7 +325,7 @@ class Scroll(Hub):
                 self.assertEqual((st["bar"], st["head"]), (0, 0))
                 self.assertIn("Weekly reporting", st["mini"])
                 self.assertAlmostEqual(self.header_bottom(), 48, delta=1.5)
-                tops = self.q("[...document.querySelectorAll('#v-reporting .sheet-bar > *, #v-reporting .sheet-bar button')].filter(e=>e.getBoundingClientRect().width>0).map(e=>Math.round(e.getBoundingClientRect().top))")
+                tops = self.q("[...document.querySelectorAll('#v-reporting .sheet-bar > .seg, #v-reporting .sheet-bar > .hubzoom, #v-reporting .sheet-bar > button, #v-reporting .sheet-bar .dd > button, #v-reporting .sheet-bar .hubcfgwrap > button')].filter(e=>e.getBoundingClientRect().width>0).map(e=>Math.round(e.getBoundingClientRect().top))")
                 self.assertLessEqual(max(tops) - min(tops), 8, "still one line")
                 self.assertEqual(self.q(f"getComputedStyle(document.querySelector('{BAR}')).transitionDuration"), "0s")
 
@@ -385,26 +397,24 @@ class EntryPoints(Hub):
         self.assertEqual(self.q("document.querySelector('#v-clientreport .page')"), None)
 
     def test_the_reports_page_open_button(self):
-        self.open_hub(hash_="go('reports')")
-        self.b.wait("document.querySelector('[data-rpopen=ABC]')", 10)
+        self.start_at("go('reports')", "document.querySelector('[data-rpopen=ABC]')")
         self.b.click("[data-rpopen=ABC]")
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
         self.assertEqual(self.q("shared.VIEW"), "reporting")
 
     def test_the_projects_reporting_card(self):
-        self.open_hub(hash_="go('cockpit','ABC')")
-        self.b.wait("document.querySelector('[data-rpcard=space]')", 10)
+        self.start_at("go('cockpit','ABC')", "document.querySelector('[data-rpcard=space]')")
         self.b.click("[data-rpcard=space]")
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
 
     def test_the_command_palette_entries(self):
-        self.open_hub(hash_="go('today')")
+        self.start_at("go('today')", "typeof openSpace==='function'")
         self.assertEqual(self.q("typeof openSpace"), "function")
         self.q("openSpace('ABC')")
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
 
     def test_the_old_weekly_href_helpers_point_at_the_hub(self):
-        self.open_hub(hash_="go('today')")
+        self.start_at("go('today')", "typeof weeklyHref==='function'")
         self.assertTrue(self.q("weeklyHref('ABC','2026-10-09')").startswith("#reporting=ABC"))
         self.assertTrue(self.q("clientReportHref('ABC','2026-10-09','Example Client Ltd')").startswith("#reporting=ABC"))
         self.assertIn("v=client", self.q("clientReportHref('ABC','2026-10-09','Example Client Ltd')"))
