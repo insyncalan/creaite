@@ -127,6 +127,11 @@ tr.mk-out td:not(.eyec),.wr-stat.mk-out>*:not(.wr-eye){opacity:.4}
 .wkpop{width:460px}.wkrow>span{white-space:nowrap}
 .mk-bar{flex-wrap:wrap;justify-content:center;max-width:min(940px,92vw);border-radius:16px}.mk-bar button{white-space:nowrap}
 .sheet-bar.hubline{flex-wrap:nowrap!important;overflow:hidden}
+
+.hubpane .wr-tlwrap{margin-bottom:16px}
+.hubpane .wr-timeline>div:last-child{margin-top:16px}
+.cfgkeep{margin:8px 0 0;font-size:13px}
+.asexp .eyec{display:none}
 </style></head>
 <body>
 <div class="shell">
@@ -260,7 +265,8 @@ tr.mk-out td:not(.eyec),.wr-stat.mk-out>*:not(.wr-eye){opacity:.4}
 </div>
 <div class="hubcfg" id="hubCfg" role="dialog" aria-label="Client report settings" hidden>
  <h3>Client report for Example Programme</h3>
- <label class="cfgsw"><input type="checkbox" id="cfgOn" checked><span><b>This project needs a separate client report</b><span class="sub">Turn off if the client only receives the internal report, or nothing at all. Nothing is deleted.</span></span></label>
+ <label class="cfgsw"><input type="checkbox" id="cfgOn" checked><span><b>This project needs a separate client report</b><span class="sub">Turn off if the client only receives the internal report, or nothing at all.</span></span></label>
+ <p class="sub cfgkeep">This applies to every future report of this project until you change it. Reports already written are kept as they are, and turning it off deletes nothing.</p>
  <div class="cfgbody" id="cfgBody">
   <div class="cfgrow"><label for="cfgRh">How often</label><select id="cfgRh"><option>Weekly</option><option selected>Fortnightly</option><option>Monthly</option></select></div>
   <div class="cfgrow"><label for="cfgNm">Client name on the report</label><input id="cfgNm" class="pkdt" value="Example Client Ltd"></div>
