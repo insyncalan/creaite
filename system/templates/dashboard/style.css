@@ -3646,9 +3646,10 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:36px;width:auto;max-width:180px;object-fit:contain;display:block;background:none;border:0;box-shadow:none}   /* #221: drawn straight on the page, no box, at most 36 x 180 (Round 9) */
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
 /* #233 a: the logo's place in the header is a button (edit mode only): a dashed Add tile, or the logo itself with a dashed outline on hover and focus */
+.wr-logos:has(.wr-logo-slot){gap:6px} .wr-logos:has(.wr-logo-slot) .wr-lsep{display:none} .wr-logos:has(.wr-logo-slot) .wr-logo{gap:0}
 .wr-logo-slot{position:relative;display:inline-flex;align-items:center}
-.wr-logo-add{display:inline-flex;gap:8px;align-items:center;height:40px;padding:0 10px;border:1px dashed var(--rp-rule);border-radius:var(--r-sm);color:var(--rp-grey);background:var(--rp-paper);font:inherit;font-size:var(--fs-xs,11px);cursor:pointer}
-.wr-logo-add b{display:grid;place-items:center;width:24px;height:24px;border-radius:var(--r-sm);background:var(--rp-soft);color:var(--rp-ink);font-weight:700;font-size:var(--fs-sm)}
+.wr-logo-add{display:inline-flex;gap:4px;align-items:center;height:26px;padding:0 6px;white-space:nowrap;border:1px dashed var(--rp-rule);border-radius:var(--r-sm);color:var(--rp-grey);background:var(--rp-paper);font:inherit;font-size:10px;cursor:pointer}
+.wr-logo-add b{font-weight:700;font-size:var(--fs-sm);color:var(--rp-ink)}
 .wr-logo-add:hover{background:var(--rp-soft);color:var(--rp-ink)}
 .wr-logo-btn{display:inline-flex;border:0;background:none;padding:0;cursor:pointer;border-radius:var(--r-sm)}
 .wr-logo-btn:hover{outline:1px dashed var(--rp-rule);outline-offset:4px}

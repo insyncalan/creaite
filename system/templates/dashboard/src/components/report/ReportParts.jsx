@@ -57,7 +57,7 @@ function LogoSlot({ code, kind, pic }) {
     <span class="wr-logo-slot" onKeyDown={e => { if (ask && e.key === "Escape") { e.stopPropagation(); e.preventDefault(); stop(); } }}>
       <button type="button" ref={btn} data-hdr-logo={kind} class={pic ? "wr-logo-btn" : "wr-logo-add"} aria-label={label} title={label}
         onClick={() => (pic && kind === "firm" ? setAsk(true) : choose())}>
-        {pic ? <img src={pic} alt="" /> : <><b aria-hidden="true">+</b><span>Add {name} logo</span></>}</button>
+        {pic ? <img src={pic} alt={`${KIND[kind]} logo`} /> : <><b aria-hidden="true">+</b><span>Add {name} logo</span></>}</button>
       {ask ? <span class="wr-logo-ask" role="group" aria-label="Replace the firm logo?">
         <span class="sub" role="alert">This logo is used by all projects. Replace it?</span>
         <button type="button" class="btn sm" data-hdr-logo-yes={kind} onClick={() => { setAsk(false); choose(); }}>Replace</button>
