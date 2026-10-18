@@ -53,6 +53,13 @@ class TheGateAtTheEnd(Base):
             got = self.findings(text)
             self.assertTrue(any(why in f for f in got), (text, got))
 
+    def test_a_marker_the_notes_writer_escaped_is_still_found(self):
+        """v240-leak2: the Notes writer escapes '-' (and other punctuation), so 'internal-only' is stored as 'internal\\-only'."""
+        for text in ("internal\\-only: the vendor.", "Internal\\-Only", "internal \\- only"):
+            got = self.findings(text)
+            self.assertTrue(any("an internal-only marker" in f for f in got), (text, got))
+        self.assertEqual(self.findings("The internal.only\\draft path."), [], "a path still isn't a marker")
+
     def test_approve_and_export_refuse_it(self):
         self.approve_week()
         r = self.py("d = report_doc.client_doc('ABC')\n"

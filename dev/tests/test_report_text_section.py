@@ -202,8 +202,16 @@ class HtmlRender(Tmp):
         self.assertNotIn("walrus", self.page(d, editing=False), "left out of the export")
         filed = self.page(d, editing=True)
         self.assertNotIn("walrus", filed.split('<script type="application/json"')[0], "not drawn on the filed page")
-        self.assertEqual(creaite_doc.loads(filed)["sections"][1]["text"], "walrus words",
-                         "kept in the data so Show brings Alan's words back after a save (a text section can't be refilled)")
+        self.assertNotIn("walrus", filed, "v240-leak2: a filed or exported file never carries a hidden text section's words")
+        self.assertNotIn("text", creaite_doc.loads(filed)["sections"][1])
+        for aud in ("client", "distributed", "internal"):
+            for fn in (lambda x: creaite_doc.dumps(x), lambda x: creaite_doc.render(x, editing=True), lambda x: json.dumps(creaite_doc.clean(x))):
+                x = self.doc(*base_sections(freetext("walrus words", hidden=True, audience="client")), kind="client" if aud == "client" else "weekly",
+                             audience=aud)
+                self.assertNotIn("walrus", fn(x), aud)
+        kept = creaite_doc.dumps(d, keep_text=True)
+        self.assertEqual(creaite_doc.loads(kept)["sections"][1]["text"], "walrus words",
+                         "the working draft keeps it so Show brings Alan's words back after a save (a text section can't be refilled)")
 
     def test_the_section_sits_where_it_was_put_and_moves(self):
         page = self.page()

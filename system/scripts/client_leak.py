@@ -835,7 +835,7 @@ def marked(text):
     invisible character or a look-alike dash hides none; #127 round 4)."""
     import drafts
     import edit_ai
-    return bool(drafts.INTERNAL_MARK.search(edit_ai.normal(as_shown(text))))       # round 6: as the exports show it too
+    return bool(drafts.INTERNAL_MARK.search(drafts.unescaped(edit_ai.normal(as_shown(text)))))       # round 6: as the exports show it too
 
 
 HEALTH_FLAG = re.compile(r"\s*(?:ON TRACK|AT RISK|OFF TRACK)\b")      # a Word report's health line starts with its flag, in capitals

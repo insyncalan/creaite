@@ -2641,6 +2641,15 @@ INTERNAL_MARK = re.compile(r"\binternal[\s-]+only\b"
                            r"|\binternal\s+[.:;,]{1,3}\s*" + _ONLY_SENTENCE + r"only\b(?![ \t]*\w)"
                            r"|(?<![^\n:])[ \t]*internal\s+[.:;,]{1,3}\s*" + _ONLY_SENTENCE + r"only\b"
                            r"|\bnot for (?:the )?client\b|\bfor internal use\b|\bhealth_diff\b", re.I)
+MD_ESCAPE = re.compile(r"\\([!-/:-@\[-`{-~])")      # a backslash before ASCII punctuation: Markdown's escape
+
+
+def unescaped(text):
+    """Text with Markdown's backslash escapes read as the character ("internal\\-only", as the Notes writer stores a typed
+    "internal-only", is "internal-only"); a backslash before a letter or digit (a path) stays. v240-leak2."""
+    return MD_ESCAPE.sub(r"\1", text or "")
+
+
 RUN = 5
 
 
@@ -2663,7 +2672,7 @@ def internal_findings(con, code, text, original=""):
     marker, when the section's own words did not already hold it. Both are read as the ID check reads text (edit_ai.normal: an
     invisible character or a look-alike dash hides neither; #127 round 4)."""
     import edit_ai
-    text, original = edit_ai.normal(text), edit_ai.normal(original)
+    text, original = unescaped(edit_ai.normal(text)), unescaped(edit_ai.normal(original))
     found = []
     row = con.execute("SELECT health_reason FROM projects WHERE code = ?", (code,)).fetchone()
     reason = edit_ai.normal((row[0] if row else "") or "")      # #127 round 5: folded as the text is (its accents too)
