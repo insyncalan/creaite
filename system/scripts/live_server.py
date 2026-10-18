@@ -2045,6 +2045,21 @@ SEARCH_TOOLS = ["Read", "Grep", "Glob"]
 KIND_TOOLS["search"] = list(SEARCH_TOOLS)
 KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill",
                          *vault_permissions.m365_read_tools()]
+
+
+def never_read_denies():
+    """#132 S1: reach.py's never list, the places barred even to reading (secrets, the operating system), as Read deny rules
+    for a run that has no guard hook (Search's answer): `Read(~/.ssh)` and `Read(~/.ssh/**)`, `Read(//etc/**)`. Claude Code
+    applies Read rules to its other reading tools (Grep, Glob) as well. A deny beats every allow, so this only takes away."""
+    out = []
+    for base, pattern, ops, _why in reach.NEVER:
+        if ops == "all" and base in ("home", "abs"):
+            at = f"~/{pattern}" if base == "home" else f"/{pattern}"
+            out += [f"Read({at})", f"Read({at}/**)"]
+    return out
+
+
+KIND_DENIES["search"] += never_read_denies()                          # #132 S1
 KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS), "--strict-mcp-config"]    # F4 (#116 review): it uses no MCP at all
 # ===== F2 (#116 review, 15-10-2026): every run kind names its built-in tools =====
 # A run started with no --tools gets EVERY built-in tool in the installed Claude Code, including ones that run headless without

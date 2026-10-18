@@ -3,3 +3,4 @@ g1c-never-list-held-runs
 g2-model-list
 g3-chosen-model
 g5-confidential-only-claude
+s1-search-never-reads
