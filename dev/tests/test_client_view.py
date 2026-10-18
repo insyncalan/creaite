@@ -205,7 +205,7 @@ class ClientBrowser(LiveBrowserCase):
 
     def open_view(self, week="2026-10-09"):
         self.b.eval(f"go('clientreport',{{code:'ABC',week:'{week}'}})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+        self.b.wait("document.querySelector('#v-clientreport .wr-health')", 20)
 
     def approve_internal(self, summary="The internal summary, not for the client."):
         doc = self.api("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
@@ -225,7 +225,8 @@ class ClientBrowser(LiveBrowserCase):
 
     def test_client_health_needs_a_reason_and_match_internal_health_takes_the_internal_flag(self):
         self.open_view()
-        flag = "document.querySelector('[data-crflag]')"
+        flag = "document.querySelector('.crflag')"
+        change = "document.querySelector('[data-crflag]')"
         self.b.click("[data-crflag]")
         self.b.wait("document.querySelector('.crpop')")
         self.assertTrue(self.b.eval("document.activeElement && document.activeElement.closest('.crpop')!==null"))
@@ -239,7 +240,7 @@ class ClientBrowser(LiveBrowserCase):
         self.b.wait("document.querySelector('.crpop')")
         self.b.key("Escape")                                                           # Esc closes it, focus back on the flag
         self.b.wait("!document.querySelector('.crpop')")
-        self.assertTrue(self.b.eval(f"document.activeElement === {flag}"))
+        self.assertTrue(self.b.eval(f"document.activeElement === {change}"))
         self.b.click("[data-crflag]")
         self.b.click("[data-crmatchhealth]")
         internal = self.b.eval("(()=>{ const m=document.querySelector('[data-crdif]'); return m?m.textContent:'' })()")
@@ -248,11 +249,11 @@ class ClientBrowser(LiveBrowserCase):
     def test_an_eye_hides_a_row_and_match_internal_copies_a_section(self):
         self.approve_internal()
         self.open_view()
-        self.b.click("[data-crtable='risks'] [data-creye]")
-        self.assertTrue(self.b.eval("!!document.querySelector('[data-crtable=\"risks\"] tr.crhid')"))
-        self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('.crcount').textContent"))
-        self.b.click("[data-crtable='risks'] [data-creye]")                           # back: cells rebuilt from the client item
-        self.assertIn("Test licences are not yet ordered.", self.words("[data-crtable='risks']"))
+        self.b.click("#v-clientreport section[data-id=risks] .rs-eye")
+        self.assertTrue(self.b.eval("!!document.querySelector('#v-clientreport section[data-id=risks] tr.hidrow')"))
+        self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('#v-clientreport section[data-id=risks] .wr-count').textContent"))
+        self.b.click("#v-clientreport section[data-id=risks] .rs-eye")                           # back: cells rebuilt from the client item
+        self.assertIn("Test licences are not yet ordered.", self.words("#v-clientreport section[data-id=risks]"))
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Edited for the client")
         self.b.click("[data-matchone='summary']")
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Matching internal")

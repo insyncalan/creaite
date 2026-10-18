@@ -387,7 +387,7 @@ class ClientHealthRow(ReportRow, LiveBrowserCase):
 
     def open_report(self):
         self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+        self.b.wait("document.querySelector('#v-clientreport .wr-health')", 20)
 
     def test_the_client_sheet_asks_for_the_client_audience_and_use_sets_the_client_flag(self):
         b = self.b

@@ -310,12 +310,12 @@ class SheetChecks:
     def test_picker_cancel_changes_nothing(self):
         self.start()
         sid = self.PICK_SECTIONS[0]
-        before = self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] table').innerHTML")
+        before = self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}]').innerHTML")
         self.open_picker(sid)
         self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] .rs-pick-row input[type=checkbox]').click()")
         self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] .rs-pick-cancel').click()")
         self.b.wait(f"!document.querySelector('{self.VIEW} section[data-id={sid}] .rs-picker')", 5)
-        self.assertEqual(self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] table').innerHTML"), before)
+        self.assertEqual(self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}]').innerHTML"), before)
         self.assertNotIn("Unsaved", self.q(f"document.querySelector('{self.VIEW} .sheet-status').textContent"))
 
     def test_picker_search_narrows_the_list(self):
@@ -384,7 +384,8 @@ class ClientSheet(SheetChecks, LiveBrowserCase):
         self.start()
         self.open_picker("overdue")
         text = " ".join(self.pick_rows("overdue"))
-        self.assertIn("Sign the statement of work", text)
+        self.assertIn("The signed statement of work", text, "the client's own wording, not the internal title")
+        self.assertNotIn("Sign the statement of work", text)
         for private in ("Escalate data access to the client CIO", "Confirm tester names"):
             self.assertNotIn(private, text, "an internal-only action is never offered")
         self.q("document.querySelector('#v-clientreport section[data-id=overdue] .rs-pick-cancel').click()")

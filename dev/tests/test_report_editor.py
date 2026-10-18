@@ -250,7 +250,7 @@ class MoveHideTests(SheetCase):
     def test_hide_leaves_a_bar_and_show_brings_it_back(self):
         b = self.b
         b.click("#shFix section[data-id='asks'] .sheet-hbtn")
-        b.eval("[...document.querySelectorAll('[role^=menuitem]')].find(x=>/Hide this section/.test(x.textContent)).click()")
+        b.eval("[...document.querySelectorAll('[role^=menuitem]')].find(x=>/Hide this section|Leave out of the export/.test(x.textContent)).click()")
         b.wait("SH.doc.sections.find(s=>s.id==='asks').hidden===true")
         self.assertEqual(self.sh("doc.layout.hidden"), ["asks"])
         self.assertFalse(b.eval("!!document.querySelector('#shFix section[data-id=\"asks\"]')"))
@@ -281,7 +281,7 @@ class MoveHideTests(SheetCase):
         b.key("ArrowUp", ALT)
         b.wait("SH.changes.includes('Section moved')")
         b.click("#shFix section[data-id='next_week'] .sheet-hbtn")
-        b.eval("[...document.querySelectorAll('[role^=menuitem]')].find(x=>/Hide this section/.test(x.textContent)).click()")
+        b.eval("[...document.querySelectorAll('[role^=menuitem]')].find(x=>/Hide this section|Leave out of the export/.test(x.textContent)).click()")
         b.wait("SH.doc.layout.hidden.length===1")
         self.rename("glance", "The figures")
         b.wait("SH.doc.layout.headings.glance==='The figures'")

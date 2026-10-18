@@ -267,7 +267,7 @@ class ClientTop(Report, Common, LiveBrowserCase):
 
     def open_view(self):
         self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+        self.b.wait("document.querySelector('#v-clientreport .wr-health')", 20)
 
 
 class MinutesTop(Report, Common, LiveBrowserCase):
