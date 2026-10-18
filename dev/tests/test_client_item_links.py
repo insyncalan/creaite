@@ -41,6 +41,32 @@ EDITED = f"[the vendor thing we discussed](creaite:item/{INTERNAL})"      # the 
 DRAFT = "system/staging/drafts/2026-10-09 Client report - Example Programme (Example Client Ltd).html"
 
 
+SWEEP = r"""import itertools
+schemes = ['creaite:', 'CREAITE:', 'creaite%3A', 'creaite&#58;', 'creaite：', 'creaite :', 'cre​aite:', 'creaite%253A',
+           'creaite\t:']
+nouns = ['item/', 'item:', 'item#', 'items/', 'task/', 'note/', 'person/', 'item?id=', 'ITEM/', 'item /', 'item\\', 'thing/', '//item/']
+ids = ['ABC-A-001', 'abc-a-001', 'ABC-D-008']
+wraps = ['[the vendor thing]({a})', '[the vendor\nthing]( {a} )', '[the vendor\tthing](\t{a}\n)', '[the [x] vendor thing]({a})',
+         '<a href="{a}">the vendor thing</a>', "<a href='{a}'>the vendor <b>thing</b></a>", 'vendor <{a}>',
+         'the vendor thing {a}', '[the vendor thing][r]\n\n[r]: {a}', '[the vendor thing]\n\n[the  Vendor thing]:\n {a}',
+         '[x]({a}) [the vendor\nthing]({a})']
+bad, n = [], 0
+d0 = report_doc.client_doc('ABC')
+for sc, no, i, w in itertools.product(schemes, nouns, ids, wraps):
+    text = 'Plan. ' + w.format(a=sc + no + i) + ' Then.'
+    d = json.loads(json.dumps(d0))
+    next(s for s in d['sections'] if s['id'] == 'summary')['text'] = text
+    n += 1
+    try:
+        out, _ = report_doc.client_item_links(d)
+    except report_doc.ReportError:
+        continue
+    kept = next(s for s in out['sections'] if s['id'] == 'summary')['text']
+    if ('vendor' in kept.lower() and not w.startswith('vendor <') or 'creaite' in kept.lower()) and not client_leak.findings(out):
+        bad.append(text)
+print(json.dumps([n, bad[:10], len(bad)]))"""
+
+
 def state(link):
     return f"### Position\n\nWaiting on {link} before {SLINK} can close."
 
@@ -225,7 +251,20 @@ print(json.dumps(res))""")
              'Plan. <a href="creaite:item/ABC-A-001">Escalate data <b>access</b> to the client CIO</a> Then.',
              "Plan. <A HREF='creaite:item/ABC-A-001'>Escalate data <i>access</i>\nto the client CIO</a> Then.",
              "Plan. creaite:item/ABC-A-001 Then.",                                                     # a bare address: no words
-             "Plan. [Escalate data access to the client CIO](creaite%3Aitem/ABC-A-001 ) Then.\n[x](creaite:item/ABC-A-001"]
+             "Plan. [Escalate data access to the client CIO](creaite%3Aitem/ABC-A-001 ) Then.\n[x](creaite:item/ABC-A-001",
+             # third review of f467b175: other address shapes and nouns, mixed links, note and person links
+             "Plan. [Escalate data access to the client\nteam]( creaite:item:ABC-A-001 ) Then.",
+             "Plan. [the vendor thing\nwe discussed]( creaite:item#ABC-A-001 ) Then.",
+             "Plan. [the vendor thing\nwe discussed]( creaite:task/ABC-A-001 ) Then.",
+             'Plan. <a href="creaite:item#ABC-A-001">the vendor <b>thing</b> we discussed</a> Then.',
+             'Plan. <a href="creaite:note/ABC-A-001">the vendor <b>thing</b> we discussed</a> Then.',
+             "Plan. [a](creaite:item/ABC-A-004 creaite:item/ABC-A-001) [the vendor\nthing]( creaite:item#ABC-D-008 ) Then.",
+             "Plan. [Internal pricing\nnotes]( creaite:note/2026-10-01-pricing ) Then.",
+             "Plan. [the vendor\tthing]( CREAITE:ITEM#abc-a-001 ) Then.",
+             "Plan. [the vendor\nthing](creaite%3Aitem:ABC-A-001) Then.",
+             "Plan. [the vendor\nthing](creaite\uff1aitem/ABC-A-001) Then.",
+             "Plan. [the vendor\nthing](creaite:widget/ABC-A-001) Then.",
+             "Plan. [the vendor\nthing](creaite:person/Omar%20Ali) Then."]
 
     def test_a_link_that_cant_be_taken_out_whole_is_refused_and_never_filed(self):
         # end to end, as the page's Approve does it (report_server: save_draft, then stage_client): whatever save_draft lets
@@ -245,6 +284,28 @@ print(json.dumps(res))""")
             r = self.py(f"report_doc.client_doc('ABC', spec={{'current_state': {text!r}}})", ok=False)   # the spec route too
             self.assertNotEqual(r.returncode, 0, text)
             self.assertIn("ReportError", r.stderr)
+
+    def test_a_sweep_of_link_shapes_never_keeps_a_hidden_items_words_unrefused(self):
+        # property-style: schemes x nouns x IDs x wrappers for a hidden item (words "the vendor thing"). For each, client_item_links
+        # refuses, or what it keeps holds no "vendor", or the gate approve runs (client_leak.findings) refuses it
+        got = self.py(SWEEP)
+        self.assertGreater(got[0], 2000)
+        self.assertEqual(got[2], 0, got[1])
+
+    def test_a_whole_link_whose_target_isnt_a_known_item_is_refused_when_a_link_goes(self):
+        # every creaite: occurrence must be inside a whole link to an item the tracker holds; a whole link to anything else
+        # (another noun, an unknown ID, a second address) refuses the save rather than be taken out or kept on a guess
+        for text in (f"[w](creaite:task/{SEEN}) and {ILINK}.", f"[w](creaite:note/2026-10-01-pricing) and {ILINK}.",
+                     f"[w](creaite:item/{SEEN} creaite:note/x) and {ILINK}.", f"[w](creaite:item/ABC-A-999) and {ILINK}."):
+            r = self.py("d = report_doc.client_doc('ABC')\n"
+                        f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                        "report_doc.client_item_links(d)", ok=False)
+            self.assertNotEqual(r.returncode, 0, text)
+            self.assertIn("couldn't be taken out whole", r.stderr, text)
+        got = self.py("d = report_doc.client_doc('ABC')\n"                                 # control: whole links to items
+                      f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {'Paperwork: ' + SLINK + ' and ' + ILINK + '.'!r}\n"
+                      "print(json.dumps(next(s for s in report_doc.client_item_links(d)[0]['sections'] if s['id'] == 'summary')['text']))")
+        self.assertEqual(got, f"Paperwork: {SLINK} and .")
 
     def test_the_second_check_refuses_a_hidden_items_wording_left_behind(self):
         # the first check (every hidden address inside a whole link) taken away: what is left still may not hold the item's words
