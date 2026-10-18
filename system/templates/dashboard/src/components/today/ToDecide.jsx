@@ -29,8 +29,9 @@ import { LINK_REL, linkUrl } from "../../core/linkUrl.js";
     owners?: string, files?: string, rel?: string, relId?: string, relT?: string, relWhy?: string, count?: string,
     closeWhy?: string, closeStaged?: string, closeCard?: string, proms?: TdProm[], keptWhy?: string, keptStaged?: string,
     keptCard?: string}} TdRow */
-/** @typedef {{rows: TdRow[], total: number, cap: number, open: boolean, onAct: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
-    onOpen: (row: TdRow) => void, onReview: () => void, blocked: (why: string) => void}} ToDecideProps */
+/** @typedef {{key: string, n: number, text: string, go: string}} TdPart */
+/** @typedef {{rows: TdRow[], line?: TdPart[], total: number, cap: number, open: boolean, onAct: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
+    onOpen: (row: TdRow) => void, onReview: () => void, onGo?: (page: string) => void, blocked: (why: string) => void}} ToDecideProps */
 
 /** One row. @param {{r: TdRow, hidden: boolean, p: ToDecideProps}} props */
 function TdLine({ r, hidden, p }) {
@@ -120,15 +121,24 @@ function TdLine({ r, hidden, p }) {
 export function ToDecide(props) {
   const { rows, total, cap, open, onReview } = props, more = rows.length - cap;
   /** @param {MouseEvent} e */
-  const review = e => { e.preventDefault(); onReview(); };
+  const line = props.line || [];
+  /** @param {string} page @param {MouseEvent} e */
+  const go = (page, e) => { e.preventDefault(); if (props.onGo) props.onGo(page); else onReview(); };
   return (
     <>
+      {line.length ? (
+        <p class="tdline" id="tdLine">
+          {line.map((x, i) => (
+            <>{i ? (i === line.length - 1 ? " and " : ", ") : ""}<a href="#" class="s" data-tdline={x.key} onClick={e => go(x.go, e)}>{x.text}</a></>
+          ))}
+        </p>
+      ) : null}
       <ol class="bl tdlist" id="tdList" aria-labelledby="hTd">
         {rows.map((r, i) => <TdLine key={r.key} r={r} hidden={!open && i >= cap} p={props} />)}
       </ol>
       <div class="moreline tdfoot">
         {more > 0 ? <><button type="button" class="qa" aria-expanded={open ? "true" : "false"} data-more="td">{open ? "Show fewer" : `+${more} more`}</button>{" · "}</> : null}
-        {total ? <a href="#" class="s" id="tdReview" onClick={review}>{`Open Review (${total})`}</a> : <span class="none">Nothing waits in Review.</span>}
+        {line.length || !rows.length ? null : <span class="none">Nothing waits in Review.</span>}
       </div>
     </>
   );
