@@ -112,6 +112,16 @@ How the logos keep their transparency and sit well on the page:
 
 "Check this report" (#170) stays out of v2.4.0 and its button is removed from the hub toolbar. The current mockup is the dated copy `reporting-hub-mockup-2026-10-18b.html`, identical to the approved one (c6f549ed) except for that button; the approved original stays as history. **Approved by Alan on 18-10-2026**: the copy is the current locked mockup.
 
+## Round 12: deferred after 2.4.0 (differences between the build and the locked mockup)
+
+Relayed by Jarvis from Team Cap's differences list (18-10-2026); the details sit with Stark and Cap. None holds the release. In the order I would do them:
+1. **Click the logo's place in the report header to add or change the logo** (Alan's requirement, Round 8). **Not built:** in 2.4.0 a logo is added or changed in the cog panel only. **The next item.** The 2.4.0 notes say so.
+2. **Partner logo tile default.** The build has the partner tile ticked by default; the mockup has it unticked (only the firm's and the client's show until a partner is chosen). Align the build to the mockup.
+3. **Toolbar words versus icons.** The mockup's toolbar is icons only, always, with the words as tooltips and accessible names; the build differs in where it shows words. Align the build to the mockup.
+4. **The sparkle beside the health reason** (the plain app sparkle that suggests a health and a reason) is not in the hub build. Add it as the mockup shows.
+5. **The extra "Which report" step.** The build asks for a report where the mockup does not. The rule (Alan, 18-10-2026): Export asks Internal, Client or Both only when the project's client report is on, and never otherwise. Align the build to that rule.
+6. **Section menu width** is 288 px in the build and 300 px in the mockup. Trivial; align to the mockup.
+
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
 Discreet section menu; eye icons; "Add from the tracker" (existing open items, client-visible only for the client report); the free-text section with the whole editor (v2.4.0, still subject to the export gaps named in the earlier brief); export fidelity for the health block, the figures, the timeline picture and the milestone list in HTML, Word and PDF; exports that save to the Reports folder and say where, with the **name-clash choice (Add a number, Rename, Overwrite)** as drawn; (the Check this report button, #170, is out of 2.4.0).
