@@ -86,7 +86,7 @@ Full audit: dev/sprints/weekly-report-export-audit-2026-10-18.md (on branch expo
 2. **Word: keep the separate writer and close the gaps** (timeline and health strip as pictures made from the same exported sheet, logos, full tables, one title, DD-MM-YYYY, no empty sections). About **3 to 4 days**. Converting HTML to Word is not recommended (a new library, ignores the firm's styles, a worse result).
 3. **Risks to manage:** re-check hidden and client content on the server before writing a file; a fixed light print theme; the fallback path needs its own tests; hand checks 16 and 74 change. Word can only be checked by XML here; add LibreOffice to the development tools (Brewfile) or accept hand checks on the laptop.
 4. **Order:** the export work is the foundation for the hub, the free-text section (#218) and the HTML export defect (#219); it should come first. Total about **8 to 10 Sonnet days** across HTML, PDF and Word.
-**For Alan:** approve this direction (one renderer for HTML and PDF, a repaired Word writer), and say whether LibreOffice may be added to the development tools.
+**Alan's decision (18-10-2026): approved.** One renderer for HTML and PDF (the sheet's own exported mode, with the Python renderer kept as the fallback), and a repaired Word writer. **LibreOffice may be added to the development tools** (dev/Brewfile; development only, never needed to run creaite) so Word and PDF output can be rendered and compared in tests. Still no reporting development until Alan gives the go-ahead.
 
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
