@@ -5792,6 +5792,7 @@ def ai_disconnect_route(handler, req):
         return handler.send(400, {"ok": False, "message": "That provider can't be disconnected."})
     settings = paths.load_settings()
     changes = providers.disconnect_changes(provider, settings)
+    providers.forget_all(provider)                            # #132 G10: a key tested but not yet kept goes too
     try:
         providers.backend()[0].remove(provider)
     except providers.KeychainError as e:                      # #132 G1: the key is still there, so nothing else changes
@@ -7665,11 +7666,21 @@ def restart_when_free():
     if debuglog is not None:
         debuglog.info("server", "restarting after an update")
     print("Restarting the live server on the new version…", flush=True)
+    forget_tested_keys()                                  # #132 G10
     try:
         EVENTS.close()
     except Exception as e:  # noqa: BLE001  the restart goes ahead
         swallowed("restart", e)
     os.execv(sys.executable, [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
+
+
+def forget_tested_keys():
+    """#132 G10: drop any key tested but not yet kept (providers.forget_all), as the server stops or restarts."""
+    try:
+        import providers
+        providers.forget_all()
+    except Exception as e:  # noqa: BLE001  never stops a stop
+        swallowed("stop", e)
 
 
 def restart_asked(signum, frame):
@@ -7686,6 +7697,7 @@ def stopped_by_signal(signum, frame):
     """SIGTERM: release the sweep lock this server's runs hold (BL-328), end the runs, then stop exactly as SIGTERM always
     did (the default action, so launchd sees the same exit)."""
     import signal
+    forget_tested_keys()                                  # #132 G10
     try:
         for run in list(RUNS.values()):
             end_process(run.proc)
@@ -7709,6 +7721,7 @@ def main_with_restart():
     try:
         return _main_before_restart()
     finally:
+        forget_tested_keys()                              # #132 G10
         try:
             if json.loads(launcher.SERVER_FILE.read_text(encoding="utf-8")).get("pid") == os.getpid():
                 launcher.SERVER_FILE.unlink()

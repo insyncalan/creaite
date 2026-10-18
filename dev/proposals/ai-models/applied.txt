@@ -8,3 +8,4 @@ g4-direct-call
 g6-limit-card
 g7-quick-edit-retry
 g9-health
+g10-fake-switch-and-tested-key

@@ -522,8 +522,15 @@ class HttpsLister(Lister):
 
 
 def fake_mode():
-    """True when the live server was started by a test with the fake provider (never in a real vault)."""
-    return os.environ.get("CREAITE_FAKE_PROVIDERS") == "1"
+    """True when the live server was started by a test with the fake provider. #132 G10: the switch alone isn't enough; it is
+    honoured only in the development repository (.creaite-dev in the vault root) or a test's throwaway vault (inside the
+    system's temporary folder), so a stray CREAITE_FAKE_PROVIDERS=1 can never make a real vault show a fake provider."""
+    if os.environ.get("CREAITE_FAKE_PROVIDERS") != "1":
+        return False
+    import tempfile
+    import paths
+    root = Path(paths.ROOT).resolve()
+    return (root / ".creaite-dev").is_file() or Path(tempfile.gettempdir()).resolve() in root.parents
 
 
 _BACKEND = {}
@@ -533,6 +540,8 @@ def backend():
     """(the key store, the lister): the fakes under a test; on a Mac the keychain store (#132 G1) and the HTTPS model list
     (#132 G2); else the not-built stand-ins. Only the live server calls this."""
     if not _BACKEND:
+        if os.environ.get("CREAITE_FAKE_PROVIDERS") == "1" and not fake_mode():          # #132 G10
+            _log("CREAITE_FAKE_PROVIDERS ignored: this isn't the development repository or a test's vault")
         if fake_mode():
             _BACKEND["pair"] = (MemoryStore(), FakeLister())
         elif sys.platform == "darwin":
@@ -1116,21 +1125,35 @@ def _label(model_id, settings):
 # ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
 # Test and connect asks the provider for its models; the key is kept here, in the live server's memory only, until Alan
 # presses Done (it then goes to the key store) or Cancel (it is dropped), and for PENDING_SECONDS at most. Only a built key
-# store (or the test fake) ever reaches this: the not-built lister refuses first.
-PENDING_SECONDS = 600
+# store (or the test fake) ever reaches this: the not-built lister refuses first. #132 G10: five minutes, not ten; one held key
+# per provider (a new Test drops the last); used once (take); dropped by a timer when it runs out even if nothing else
+# happens, on Disconnect of that provider, and when the server stops or restarts (forget_all); never written anywhere.
+PENDING_SECONDS = 300
 _PENDING = {}
 
 
 def hold(provider, key, ids, now=None):
     """Keep a tested key and its models until Done; returns the one-time id the page sends back."""
     import secrets
+    import threading
     import time
     now = time.time() if now is None else now
-    for k in [k for k, v in _PENDING.items() if v["until"] < now]:
+    for k in [k for k, v in _PENDING.items() if v["until"] < now or v["provider"] == provider]:     # G10: one per provider
         _PENDING.pop(k, None)
     pid = secrets.token_urlsafe(16)
     _PENDING[pid] = {"provider": provider, "key": key, "ids": list(ids), "until": now + PENDING_SECONDS}
+    timer = threading.Timer(PENDING_SECONDS, forget, (pid,))       # G10: gone when it runs out (real seconds, from now)
+    timer.daemon = True
+    timer.start()
     return pid
+
+
+def forget_all(provider=None):
+    """Drop every held key, or the provider's (#132 G10: Disconnect, server stop and restart); how many were dropped."""
+    gone = [k for k, v in list(_PENDING.items()) if provider is None or v["provider"] == provider]
+    for k in gone:
+        _PENDING.pop(k, None)
+    return len(gone)
 
 
 def take(pid, now=None):
