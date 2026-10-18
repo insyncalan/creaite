@@ -383,7 +383,7 @@ class ClientRuleUI(LiveBrowserCase):
         self.assertEqual(self.b.eval(f"{self.pages(1)}.querySelectorAll('section[data-id=free_int]').length"), 0)
         self.b.eval(f"{left}.querySelector('section[data-id=free_int] [data-addto]').click()")
         self.b.wait(f"{self.pages(1)}.querySelectorAll('section[data-id=free_int]').length===1", 10)
-        self.assertIn("walrus", self.b.eval(f"{self.pages(1)}.querySelector('section[data-id=free_int]').innerText"))
+        self.b.wait(f"{self.pages(1)}.querySelector('section[data-id=free_int]').innerText.includes('walrus')", 10)
         ids = self.b.eval(f"[...{self.pages(1)}.querySelectorAll('.page > section[data-id]')].map(s=>s.dataset.id)")
         self.assertEqual(ids[ids.index("free_int") - 1], "summary", "it lands where it stood")
 
