@@ -559,11 +559,46 @@ def _links_in(s):
     return "creaite" in client_leak._decoded(s).lower() or client_leak.overencoded(s)
 
 
-def _drop_links(x, code, con):
-    """A section's value with every string's creaite: links a client may not have taken out (client_leak.drop_item_links)."""
+def _schemes(t):
+    """How many creaite: schemes a text holds, as client_leak reads them (decoded)."""
     import client_leak
+    return len(client_leak.SCHEME.findall(client_leak._decoded(t)))
+
+
+def _part_stripped(s, out):
+    """Whether drop_item_links' output `out` may hold part of a link it took out of `s` (#123 review): its words' brackets or
+    parentheses no longer balance as they did (a line break or a [bracket] inside a link's words, so only its tail went), or a
+    reference definition went while its [label] stays (a collapsed or shortcut reference link keeps its words)."""
+    import client_leak
+    import edit_ai
+    import html
+    t = html.unescape(edit_ai.unseen(s))
+    if any(t.count(a) - t.count(b) != out.count(a) - out.count(b) for a, b in ("[]", "()")):
+        return True
+    labels = lambda x: {m.group(1).strip().lower() for m in client_leak.REF_DEF.finditer(x)}   # noqa: E731
+    low = out.lower()
+    return any(f"[{lab}]" in low for lab in labels(t) - labels(out))
+
+
+def _drop_one(s, code, con):
+    """One string with the creaite: links a client may not have taken out whole; the string exactly as it was when none went (#123
+    review: drop_item_links rewrites entities in the whole string). Refuses (ReportError) rather than keep part of a link."""
+    import client_leak
+    if not _links_in(s):
+        return s
+    out = client_leak.drop_item_links(code, s, con)
+    if _schemes(out) == _schemes(s):
+        return s
+    if _part_stripped(s, out):
+        raise ReportError("A work-item link a client report can't show couldn't be taken out whole (a line break or brackets in its "
+                          "words, or a reference link), so nothing was saved. Take the link out, then save again.")
+    return out
+
+
+def _drop_links(x, code, con):
+    """A section's value with every string's creaite: links a client may not have taken out (_drop_one)."""
     if isinstance(x, str):
-        return client_leak.drop_item_links(code, x, con) if _links_in(x) else x
+        return _drop_one(x, code, con)
     if isinstance(x, list):
         return [_drop_links(v, code, con) for v in x]
     if isinstance(x, dict):
@@ -587,6 +622,8 @@ def client_item_links(doc, con=None):
         sections = _drop_links(doc.get("sections") or [], code, con)
         after = client_leak.raw_strings({"sections": sections})
         gone = sorted({i for i in client_leak.item_links(before)} - {i for i in client_leak.item_links(after)})
+    except ReportError:
+        raise
     except Exception as e:  # noqa: BLE001  fails closed
         raise ReportError("The work-item links couldn't be checked against the tracker, so nothing was built or saved. "
                           "Try again; if it keeps happening, run the health check.") from e

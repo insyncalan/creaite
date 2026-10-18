@@ -205,6 +205,45 @@ print(json.dumps(res))""")
             self.assertNotIn(INTERNAL.lower(), text.lower(), f)
             self.assertNotIn("the thing", text, f)
 
+    # ---- review of 6e5de819: never part-strip a link; leave a string with nothing taken out exactly as it was -----------------
+
+    PARTS = ["Plan. [Absorb the phase one overrun\ninternally](creaite:item/ABC-D-008) Then.",
+             "Plan. [Escalate data access to the client\nCIO](creaite:item/ABC-A-001) Then.",
+             "Plan. [Confirm tester\nnames](creaite:item/ABC-A-004) Then.",
+             "Plan. [the [x] thing](creaite:item/ABC-A-001) Then.",                                    # nested brackets
+             "Plan. [the vendor thing][] Then.\n\n[the vendor thing]: creaite:item/ABC-A-001",      # a collapsed reference
+             "Plan. [the vendor thing] Then.\n\n[the vendor thing]: creaite:item/ABC-A-001"]        # a shortcut reference
+
+    def test_a_link_that_cant_be_taken_out_whole_is_refused_and_never_filed(self):
+        # end to end, as the page's Approve does it (report_server: save_draft, then stage_client): whatever save_draft lets
+        # through, approve still refuses; nothing part-stripped is ever saved
+        for text in self.PARTS:
+            got = self.py(f"d = report_doc.client_doc('ABC')\n"
+                          f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                          "try:\n    r = report_doc.save_draft(d)\nexcept report_doc.ReportError as e:\n"
+                          "    print(json.dumps(['save refused', str(e)]))\n    raise SystemExit\n"
+                          "saved = next(s for s in creaite_doc.read(r['path'])['sections'] if s['id'] == 'summary')['text']\n"
+                          "try:\n    report_doc.stage_client(r['path'])\n    print(json.dumps(['staged', saved]))\n"
+                          "except report_doc.ReportError as e:\n    print(json.dumps(['approve refused', saved]))")
+            self.assertNotEqual(got[0], "staged", (text, got))
+            if got[0] == "save refused":
+                self.assertFalse((self.v.root / DRAFT).exists(), text)
+                self.assertIn("couldn't be taken out whole", got[1])
+            r = self.py(f"report_doc.client_doc('ABC', spec={{'current_state': {text!r}}})", ok=False)   # the spec route too
+            self.assertNotEqual(r.returncode, 0, text)
+            self.assertIn("ReportError", r.stderr)
+
+    def test_a_string_with_no_link_taken_out_is_kept_exactly(self):
+        for text in ("R&amp;D at creaite:item/ABC-A-002 and &lt;b&gt;x&lt;/b&gt;", "We use creaite: notes/ here, &amp; more",
+                     f"Waiting on {SLINK}, R&amp;D &lt;b&gt;"):
+            got = self.py(f"d = report_doc.client_doc('ABC')\n"
+                          f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                          "r = report_doc.save_draft(d)\n"
+                          "print(json.dumps([r['removed'], next(s for s in creaite_doc.read(r['path'])['sections'] "
+                          "if s['id'] == 'summary')['text']]))")
+            self.assertEqual(got, [[], text], text)
+            (self.v.root / DRAFT).unlink()
+
     def test_client_item_links_fails_closed_when_the_tracker_cant_be_read(self):
         r = self.py("import client_leak\n"
                     "def boom(*a, **k): raise RuntimeError('tracker unreadable')\n"
