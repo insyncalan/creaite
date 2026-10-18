@@ -89,12 +89,15 @@ export const crLogoPaths = signal(/** @type {Record<string, string>} */ ({}));
 export const crLogoData = signal(/** @type {Record<string, string>} */ ({}));
 /** the last thing the logo controls have to say (a JPEG hint, a refusal) */
 export const crLogoNote = signal("");
+/** the project whose logo files crLogoPaths holds (the report header trusts the paths only for its own project) */
+export const crLogoFor = signal("");
 
 /** Read the project's logo files as data. @param {string} code */
 export async function readClientLogos(code) {
   if (!viaServer()) return;
   const r = await api("/api/report/logo", { code });
   if (!r || !r.ok) return;
+  crLogoFor.value = code;
   crLogoPaths.value = Object.fromEntries((r.list || []).map((/** @type {{kind: string, path: string}} */ x) => [x.kind, x.path]));
   crLogoData.value = r.logos || {};
   weeklyLogos.value = { ...weeklyLogos.peek(), ...(r.logos || {}) };      // the report headers draw the new picture too

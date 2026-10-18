@@ -3655,6 +3655,16 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:36px;width:auto;max-width:180px;object-fit:contain;display:block;background:none;border:0;box-shadow:none}   /* #221: drawn straight on the page, no box, at most 36 x 180 (Round 9) */
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+/* #233 a: the logo's place in the header is a button (edit mode only): a dashed Add tile, or the logo itself with a dashed outline on hover and focus */
+.wr-logos:has(.wr-logo-slot){gap:6px} .wr-logos:has(.wr-logo-slot) .wr-lsep{display:none} .wr-logos:has(.wr-logo-slot) .wr-logo{gap:0}
+.wr-logo-slot{position:relative;display:inline-flex;align-items:center}
+.wr-logo-add{display:inline-flex;gap:4px;align-items:center;height:26px;padding:0 6px;white-space:nowrap;border:1px dashed var(--rp-rule);border-radius:var(--r-sm);color:var(--rp-grey);background:var(--rp-paper);font:inherit;font-size:10px;cursor:pointer}
+.wr-logo-add b{font-weight:700;font-size:var(--fs-sm);color:var(--rp-ink)}
+.wr-logo-add:hover{background:var(--rp-soft);color:var(--rp-ink)}
+.wr-logo-btn{display:inline-flex;border:0;background:none;padding:0;cursor:pointer;border-radius:var(--r-sm)}
+.wr-logo-btn:hover{outline:1px dashed var(--rp-rule);outline-offset:4px}
+.wr-logo-add:focus-visible,.wr-logo-btn:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:3px}
+.wr-logo-ask{position:absolute;top:100%;right:0;z-index:var(--z-pop-over,30);margin-top:6px;display:flex;gap:8px;align-items:center;white-space:nowrap;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md,8px);box-shadow:var(--shadow-pop);padding:8px 10px}
 /* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
 #crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
 .hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - var(--cr-top,56px) - 16px);overflow:auto}
@@ -5239,6 +5249,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     covered: () => covered,
     crDialog: () => crDialog,
     crLogoData: () => crLogoData,
+    crLogoFor: () => crLogoFor,
     crLogoNote: () => crLogoNote,
     crLogoPaths: () => crLogoPaths,
     crTick: () => crTick,
@@ -26695,10 +26706,12 @@ ${s5}`;
     {}
   );
   var crLogoNote = y3("");
+  var crLogoFor = y3("");
   async function readClientLogos(code) {
     if (!viaServer()) return;
     const r4 = await api("/api/report/logo", { code });
     if (!r4 || !r4.ok) return;
+    crLogoFor.value = code;
     crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
     crLogoData.value = r4.logos || {};
     weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
@@ -68389,10 +68402,83 @@ ${d5.text}`);
     /** @type {Record<string, string>} */
     { firm: "Firm", client: "Client", partner: "Partner" }
   );
+  var ALL_KINDS = (
+    /** @type {const} */
+    ["firm", "client", "partner"]
+  );
+  var LOGO_ACCEPT = "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg";
+  function LogoSlot({ code, kind, pic }) {
+    const file = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    ), btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    const [ask2, setAsk] = d2(false);
+    const name = KIND[kind].toLowerCase(), label = `${pic ? "Change" : "Add"} ${name} logo`;
+    const choose = () => file.current && file.current.click();
+    const stop = () => {
+      setAsk(false);
+      setTimeout(() => btn.current && btn.current.focus(), 0);
+    };
+    const picked = async (e4) => {
+      const input = (
+        /** @type {HTMLInputElement} */
+        e4.target
+      ), f5 = input.files && input.files[0];
+      if (f5) await uploadClientLogo(code, kind, f5);
+      input.value = "";
+    };
+    return /* @__PURE__ */ u2("span", { class: "wr-logo-slot", onKeyDown: (e4) => {
+      if (ask2 && e4.key === "Escape") {
+        e4.stopPropagation();
+        e4.preventDefault();
+        stop();
+      }
+    }, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          "data-hdr-logo": kind,
+          class: pic ? "wr-logo-btn" : "wr-logo-add",
+          "aria-label": label,
+          title: label,
+          onClick: () => pic && kind === "firm" ? setAsk(true) : choose(),
+          children: pic ? /* @__PURE__ */ u2("img", { src: pic, alt: `${KIND[kind]} logo` }) : /* @__PURE__ */ u2(S2, { children: [
+            /* @__PURE__ */ u2("b", { "aria-hidden": "true", children: "+" }),
+            /* @__PURE__ */ u2("span", { children: [
+              "Add ",
+              name,
+              " logo"
+            ] })
+          ] })
+        }
+      ),
+      ask2 ? /* @__PURE__ */ u2("span", { class: "wr-logo-ask", role: "group", "aria-label": "Replace the firm logo?", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: "This logo is used by all projects. Replace it?" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-hdr-logo-yes": kind, onClick: () => {
+          setAsk(false);
+          choose();
+        }, children: "Replace" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-hdr-logo-no": kind, onClick: stop, children: "Cancel" })
+      ] }) : null,
+      /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: LOGO_ACCEPT, "data-hdr-logo-file": kind, tabIndex: -1, onChange: picked })
+    ] });
+  }
   function ReportHeader({ ctx, logos, data }) {
     const { doc, section: s5 } = ctx, d5 = s5.data || {}, client = doc.kind === "client";
+    const code = String(doc.project || ""), edit = ctx.editing && !ctx.exported && !ctx.readOnly && !!code;
+    h2(() => {
+      if (edit) readClientLogos(code);
+    }, [edit, code]);
     const chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : ["firm", "client", "partner"];
     const shown2 = logos.filter((l6) => l6.kind === "firm" || chosen.includes(l6.kind));
+    const slots = edit ? ALL_KINDS.filter((k5) => k5 === "firm" || chosen.includes(k5)) : [];
+    const live = crLogoFor.value === code;
+    const pathOf = (k5) => (live ? crLogoPaths.value[k5] : (shown2.find((l6) => l6.kind === k5) || {}).path) || "";
     const meta = doc.meta || {};
     const period = d5.period_start ? `${wkDmy(d5.period_start)} to ${wkDmy(d5.period_end || doc.date)}` : "";
     return /* @__PURE__ */ u2("header", { class: "wr-hd", children: [
@@ -68405,7 +68491,10 @@ ${d5.text}`);
         ] }),
         client && ctx.editing ? /* @__PURE__ */ u2("div", { class: "wr-facts sub", children: meta.facts_week ? `Facts from the internal report for week ending ${wkDmy(meta.facts_week)}${meta.locked ? ", locked" : ""}` : "Facts as the tracker stands now: they lock when the internal report is approved" }) : null
       ] }),
-      /* @__PURE__ */ u2("div", { class: "wr-logos", children: shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
+      /* @__PURE__ */ u2("div", { class: "wr-logos", children: edit ? slots.map((k5, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
+        i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
+        /* @__PURE__ */ u2(LogoSlot, { code, kind: k5, pic: data[pathOf(k5)] || "" })
+      ] }, k5)) : shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
         i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
         data[l6.path] ? /* @__PURE__ */ u2("img", { src: data[l6.path], alt: `${KIND[l6.kind] || l6.kind} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: KIND[l6.kind] || l6.kind })
       ] }, l6.kind)) })
@@ -74892,6 +74981,7 @@ ${d5.text}`);
         "sensitive",
         "sentLog",
         "setChatWidth",
+        "setClientLogos",
         "setClientName",
         "setLayout",
         "setLive",
