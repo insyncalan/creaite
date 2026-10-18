@@ -172,6 +172,21 @@ class HtmlRender(Tmp):
         self.assertEqual(base64.b64decode(m.group(1) or m.group(2)), self.photo)
         self.assertNotIn("_images/", s)
 
+    def test_a_picture_in_a_page_carries_none_of_its_own_metadata(self):
+        """v240-leak2 (c): a PNG's text chunks (a hidden word in a file the client opens) are left out of the HTML page."""
+        import struct
+        import zlib
+        needle = b"Walrus budget cut"
+        kind, data = b"tEXt", b"Comment\0" + needle
+        chunk = struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+        i = self.photo.index(b"IDAT") - 4
+        (self.images / "2026-10-18-site.png").write_bytes(self.photo[:i] + chunk + self.photo[i:])
+        for editing in (False, True):
+            page = self.page(editing=editing)
+            blob = base64.b64decode(re.search(r'src="data:image/png;base64,([^"]+)"', page).group(1))
+            self.assertNotIn(needle, blob)
+            self.assertEqual(blob, self.photo, "only the pixels are kept")
+
     def test_a_picture_outside_images_is_never_read(self):
         (self.tmp / "secret.png").write_bytes(png(8, 8))
         for ref in ("../secret.png", "/etc/passwd", "_images/../secret.png", "https://example.com/x.png", "_images/missing.png"):

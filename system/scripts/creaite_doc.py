@@ -519,6 +519,7 @@ def _inline(t):
 def _image_html(doc, alt, ref):
     """A picture as a figure with the file inside the page (a data address), or the words saying it wasn't found."""
     import base64
+    import docx_tools
     f = text_image(doc, ref)
     if f is None:
         return f"<p><em>Picture not found: {esc(alt or ref)}</em></p>"
@@ -526,7 +527,7 @@ def _image_html(doc, alt, ref):
         return f"<p><em>Picture too large to include: {esc(alt or ref)}</em></p>"
     mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
     cap = f"<figcaption>{esc(alt)}</figcaption>" if alt else ""
-    return f'<figure><img src="data:{mime};base64,{base64.b64encode(f.read_bytes()).decode("ascii")}" alt="{esc(alt)}">{cap}</figure>'
+    return f'<figure><img src="data:{mime};base64,{base64.b64encode(docx_tools.strip_image_metadata(f.read_bytes())).decode("ascii")}" alt="{esc(alt)}">{cap}</figure>'
 
 
 def _list_html(b, doc):

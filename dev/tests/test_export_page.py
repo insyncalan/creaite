@@ -5,7 +5,9 @@ The posted page is never trusted: its markup is rebuilt through an allow-list, i
 the saved report (sections, rows, words that belong to hidden content, a client report's wording). Anything refused gives the plain
 file, whose own tests are test_report_exports.py. Acceptance check 8 (client) and 12 (fallback) of the #226 brief are here too.
 """
+import base64
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -290,6 +292,35 @@ class LeakPass2(Base):
             out, why = self.build(path, page(self.wrap(f'<img src="{src}">')))
             self.assertTrue(why or "walrus" not in (out or "").lower(), kind)
             self.assertNotIn("image/svg", (out or "").split("</style>", 2)[-1], kind)
+
+
+class PictureMetadata(LeakPass2):
+    """v240-leak2 (c): a picture's own metadata (PNG text chunks) in the posted page is dropped from the file."""
+
+    def tagged(self):
+        import base64
+        import struct
+        import zlib
+        raw = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==")
+        kind, data = b"tEXt", b"Comment\0Walrus budget cut"
+        chunk = struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+        i = raw.index(b"IDAT") - 4
+        return "data:image/png;base64," + base64.b64encode(raw[:i] + chunk + raw[i:]).decode()
+
+    def test_a_png_in_an_img_loses_its_text_chunks_in_client_and_internal_files(self):
+        for kind, path in self.both():
+            out, why = self.build(path, page(self.wrap(f'<img src="{self.tagged()}">')))
+            self.assertIsNone(why, f"{kind}: {why}")
+            src = re.search(r'<img[^>]*src="data:image/png;base64,([^"]+)"', out.split("</style>", 2)[-1])
+            self.assertIsNotNone(src, kind)
+            blob = base64.b64decode(src.group(1))
+            self.assertNotIn(b"Walrus", blob, kind)
+            self.assertNotIn(b"tEXt", blob, kind)
+            self.assertTrue(blob.startswith(b"\x89PNG") and b"IDAT" in blob, kind)
+
+    def test_a_client_file_refuses_a_css_picture_that_still_carries_metadata(self):
+        css = f".page{{background:url({self.tagged()})}}"
+        self.assertIsNotNone(self.build(self.client(), page(css=css))[1])
 
 
 class Fallback(Base):

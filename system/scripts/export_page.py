@@ -107,6 +107,8 @@ def safe_css_value(v, client=False):
         a = m.group(2).strip()
         if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
             return False
+    if client and not metadata_free(v):
+        return False
     if SVG_ADDR.search(css_decode(v)) or SVG_ADDR.search(v):
         return not client and css_svg_words(v) is not None
     return True
@@ -179,6 +181,32 @@ def svg_words(value, depth=0):
     return [text, re.sub(r"<[^>]*>", "", text), unquote(text), re.sub(r"<[^>]*>", "", unquote(text))]
 
 
+RASTER_ADDR = re.compile(r"^data:image/(?:png|jpe?g)((?:;[\w=-]+)*);base64,([A-Za-z0-9+/=\s]+)$", re.I)
+
+
+def clean_picture(value):
+    """A PNG or JPEG data address with the picture's own metadata (text chunks, EXIF, comments) removed; anything else as it was."""
+    import docx_tools
+    m = RASTER_ADDR.match(value.strip())
+    if m is None:
+        return value
+    try:
+        raw = base64.b64decode(re.sub(r"\s+", "", m.group(2)), validate=True)
+    except ValueError:
+        return value
+    head = value.strip()[:value.strip().index(";base64,")]
+    return head + ";base64," + base64.b64encode(docx_tools.strip_image_metadata(raw)).decode("ascii")
+
+
+def metadata_free(css):
+    """Whether every PNG or JPEG address in style rules is already without metadata (a client file takes no other)."""
+    for m in URL_IN_CSS.finditer(css):
+        a = m.group(2).strip()
+        if RASTER_ADDR.match(a) and clean_picture(a) != a:
+            return False
+    return True
+
+
 def src_ok(tag, value):
     """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words)."""
     return tag == "img" and bool(DATA_IMAGE.match(value)) and (not SVG_URI.match(value) or svg_words(value) is not None)
@@ -224,6 +252,7 @@ class Clean(HTMLParser):
         for name, value in attrs:
             name, value = name.lower(), "" if value is None else value
             if keep_attr(tag, svg, name, value, self.client):
+                value = clean_picture(value) if name == "src" else value
                 keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
                 if name != "src":
                     self.attr_values.append(keep[-1][1])
