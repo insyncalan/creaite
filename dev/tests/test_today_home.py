@@ -3,8 +3,8 @@
 Run: python3 dev/tests/test_today_home.py   (Chrome tier; skipped without Chrome)
 One class per Done-when point:
   Header      the header is BL-293's day band, exactly, at full width, with its arrows fixed at the top right;
-  ToDecide    Intake and Review (was To decide), just above Week ahead: Review, transcripts ready and messages, newest first, top five, "Open Review (n)";
-              icon actions with Undo (approve and save; reject with a reason; never approve for a one-at-a-time item);
+  ToDecide    Intake and Review (was To decide), just above Week ahead: #208, one line ("4 proposals in Review and 2 transcripts ready
+              in Intake", each count a link, gone at zero); messages keep their cards under it;
   Sections    every current section present, in order, unboxed; Resolved folded to one line; the Week ahead to next Monday
               with why each row is there, following dashboard.week_ahead_priorities; the Portfolio as it was;
   Icons       row icons named on hover and to screen readers, 55% until pointed at or tabbed into, nothing moves; Mark done
@@ -48,7 +48,7 @@ class Header(LiveBrowserCase):
           const first=arrows(); goDay('2026-10-16'); const later=arrows(); goDay(TODAY);
           return {pieces:['todayDate','dayHead','dayLine','dayMeets','dayClose'].every(id=>band.contains(document.getElementById(id))),
             full:Math.round(r(band).width)===v.clientWidth, first, later, labels:[...document.querySelectorAll('.dayedge')].map(e=>e.getAttribute('aria-label')),
-            next:(n=>n.id==='hFirst'?n.nextElementSibling:n)(band.nextElementSibling).id, firstSec:[...document.querySelectorAll('#tBrief>.tsec')].find(s=>!s.hidden).id}; })()""")
+            next:(n=>{ while(n.id==='hFirst'||n.id==='sweepDue') n=n.nextElementSibling; return n; })(band.nextElementSibling).id, firstSec:[...document.querySelectorAll('#tBrief>.tsec')].find(s=>!s.hidden).id}; })()""")
         self.assertTrue(o["pieces"])                                    # the day line, headline, the line, the meetings, Close the day
         self.assertTrue(o["full"])                                      # the header at full width
         self.assertEqual(o["labels"], ["Previous day", "Next day"])
@@ -75,88 +75,100 @@ class Home(LiveBrowserCase):
 
     def today(self):
         self.b.eval("go('today'); renderToday()")
-        self.b.wait("document.querySelector('#tdList>li')")
+        self.b.wait("document.getElementById('tdLine')")
 
 
 class ToDecide(Home):
+    """#208 (v2.3.0): Intake and Review is one quiet line, not a list. Messages (BL-334) keep their cards under it."""
     shared_server = False
 
-    def test_it_comes_first_newest_first_top_five_then_open_review(self):
+    def test_one_line_with_the_rails_counts_and_links_and_no_rows(self):
+        b = self.b
+        self.today()
+        o = b.eval(f"""(()=>{{ const l=document.getElementById('tdLine'); return {{first:document.getElementById('tdSec').nextElementSibling.id,
+          text:l.textContent, rows:document.querySelectorAll('#tdList>li.td-review,#tdList>li.td-transcript').length,
+          pending:REV.filter(r=>!r.done).length, count:document.getElementById('nTd').textContent, tx:MTG().filter(mtgHasTx).length,
+          line:tdLine().map(x=>x.key+':'+x.n), links:[...l.querySelectorAll('a')].map(a=>[a.dataset.tdline,a.textContent]),
+          foot:document.querySelector('#tBrief .tdfoot').textContent}}; }})()""")
+        self.assertEqual(o["first"], "weekSec")                         # #168: still just above Week ahead
+        self.assertEqual(o["rows"], 0)                                  # the per-item rows are off Today
+        self.assertEqual(o["links"][0], ["review", f"{o['pending']} proposal{'' if o['pending'] == 1 else 's'} in Review"])
+        self.assertTrue(o["text"].startswith(f"{o['pending']} proposal"))
+        self.assertIn(f"review:{o['pending']}", o["line"])              # Review's count is the rail badge's (renderBadge)
+        self.assertEqual(o["count"], str(sum(int(x.split(":")[1]) for x in o["line"])))
+        self.assertNotIn("Open Review", o["foot"])
+        self.assertNotIn("VIP", o["text"])
+
+    def test_every_count_is_a_real_link_focusable_and_enter_goes_to_its_page(self):
+        b = self.b
+        self.today()
+        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'}]; D.meetings={rows:[{id:'mx1',title:'Steering',p:'ABC',day:'2026-10-13',start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null}]}; renderToday()")
+        keys = b.eval("[...document.querySelectorAll('#tdLine a')].map(a=>a.dataset.tdline)")
+        self.assertEqual(keys, ["review", "transcripts", "files"])
+        for key, view in (("review", "review"), ("transcripts", "inbox"), ("files", "inbox")):
+            hrefs = b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').getAttribute('href')")
+            self.assertEqual(hrefs, "#" + view)                          # a real target, not "#"
+            b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').focus()")
+            self.assertTrue(b.eval(f"document.activeElement===document.querySelector('#tdLine [data-tdline={key}]')"))
+            b.key("Enter")
+            b.wait(f"VIEW==='{view}'")
+            b.eval("go('today'); renderToday()")
+            b.wait("document.getElementById('tdLine')")
+
+    def test_a_new_file_or_proposal_while_today_is_open_updates_the_line(self):
+        b = self.b
+        self.today()
+        before = b.eval("tdLine().map(x=>x.key+':'+x.n).join()")
+        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'late.docx'}]; inboxBadge(); renderToday()")
+        # the refresh path (files.js refreshFiles) re-renders Today: simulate its last line
+        b.eval("""window.fetch=async()=>({ok:true,json:async()=>({ok:true,files:[],archived:[],inbox:[...(D.inbox||[]),{state:'new',name:'later.docx'}]})}); refreshFiles(true)""")
+        b.wait("/new files? in Intake/.test(document.getElementById('tdLine').textContent)")
+        n = b.eval("tdLine().find(x=>x.key==='files').n")
+        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=files]').textContent"), f"{n} new files in Intake")
+        old = int(b.eval("tdLine().find(x=>x.key==='review').n"))
+        b.eval("REV.push({n:9901,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:1,rec:{t:'Late one'},src:''}); renderBadge(); renderToday()")
+        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=review]').textContent"), f"{old + 1} proposals in Review")
+        self.assertNotEqual(before, b.eval("tdLine().map(x=>x.key+':'+x.n).join()"))
+
+    def test_the_intake_part_says_what_the_rail_counts(self):
+        b = self.b
+        self.today()
+        o = b.eval("""(()=>{ const f=(D.inbox||[]).filter(x=>x.state==='new').length; D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'},{state:'new',name:'b.docx'}];
+          const n=f+2; renderToday(); const a=document.querySelector('#tdLine [data-tdline=files]');
+          return {text:a&&a.textContent, n}; })()""")
+        self.assertEqual(o["text"], f"{o['n']} new files in Intake")
+
+    def test_it_is_one_line_it_folds_like_before_and_goes_at_zero(self):
+        b = self.b
+        self.today()
+        for w in (1400, 900):
+            b.resize(w, 1000)
+            h = b.eval("document.getElementById('tdLine').getBoundingClientRect().height")
+            self.assertLess(h, 60)                                      # one line (it may wrap at 900px, never a list)
+            self.assertEqual(b.eval("document.documentElement.scrollWidth<=innerWidth"), True)
+        b.eval("document.querySelector('#tdFold > summary').click()")
+        self.assertFalse(b.eval("document.getElementById('tdFold').open"))
+        self.assertEqual(b.eval("document.getElementById('tdLine').checkVisibility()"), False)
+        b.eval("document.querySelector('#tdFold > summary').click()")
+        self.assertEqual(b.eval("document.getElementById('tdLine').checkVisibility()"), True)
+        b.eval("REV.forEach(r=>{r.done='approved'}); D.inbox=[]; MTG().forEach(m=>{m.processed=true}); renderToday()")
+        self.assertTrue(b.eval("document.getElementById('tdSec').hidden"))
+        self.assertTrue(b.eval("!document.getElementById('tdLine')"))
+
+    def test_messages_keep_their_cards_under_the_line_newest_first(self):
         b = self.b
         b.eval("""SA().vip={people:{},alerts:[{id:'m1',who:'Tom Reid',subject:'Signed FDS',kind:'mail',sent:'2099-01-01T09:00',p:'ABC',link:'https://x/1'},
           {id:'m2',who:'Sam Lee',subject:'Shortlist',kind:'teams',sent:'2000-01-01T09:00',p:'ABC'},{id:'m3',who:'Sam Lee',subject:'Budget',kind:'mail',sent:'2000-01-01T08:00',p:''}]}""")
         self.today()
-        o = b.eval(f"""(()=>{{ const L={TD}; return {{first:document.getElementById('tdSec').nextElementSibling.id,
-          kinds:L.map(l=>l.className), msgs:L.filter(l=>l.classList.contains('td-message')).map(l=>l.dataset.td), shown:L.filter(l=>!l.hidden).length, all:L.length, pending:REV.filter(r=>!r.done).length,
-          foot:document.querySelector('#tBrief .tdfoot').textContent, count:document.getElementById('nTd').textContent,
-          tag:L[0].querySelector('.tdtag').textContent, text:document.getElementById('tdSec').textContent}}; }})()""")
-        self.assertEqual(o["first"], "weekSec")                          # #168: Intake and Review sits just above Week ahead
-        self.assertIn("td-message", o["kinds"][0])                     # the newest first: the message (sent in 2099)
+        o = b.eval(f"""(()=>{{ const L={TD}; return {{msgs:L.map(l=>l.dataset.td), tag:L[0].querySelector('.tdtag').textContent,
+          order:document.getElementById('tdLine').compareDocumentPosition(document.getElementById('tdList')),
+          text:document.getElementById('tdSec').textContent, count:document.getElementById('nTd').textContent,
+          n:tdLine().reduce((a,x)=>a+x.n,0)+3}}; }})()""")
+        self.assertEqual(o["msgs"], ["alm1", "alm2", "alm3"])
         self.assertEqual(o["tag"], "Message")
-        self.assertNotIn("VIP", o["text"])                              # BL-288: never labelled
-        self.assertEqual(o["shown"], min(5, o["all"]))
-        self.assertEqual(o["count"], str(o["all"]))
-        self.assertIn(f"Open Review ({o['pending']})", o["foot"])
-        self.assertGreater(o["all"], 5)
-        self.assertIn(f"+{o['all'] - 5} more", o["foot"])
-        self.assertEqual(o["msgs"], ["alm1", "alm2", "alm3"])            # newest first
-        b.click("#tBrief .tdfoot button.qa")
-        b.wait(f"{TD}.every(l=>!l.hidden)")
-        b.click("#tdReview")
-        b.wait("VIEW==='review'")
-
-    def test_the_bulk_rule_only_routine_rows_have_approve(self):
-        b = self.b
-        self.today()
-        b.eval("EXPAND.add('td'); renderToday()")
-        rows = b.eval(f"""{TD}.filter(l=>l.classList.contains('td-review')).map(l=>{{ const r=REV.find(x=>'rv'+x.n===l.dataset.td);
-          return [tdApprovable(r), r.kind, !!r.indiv, [...l.querySelectorAll('[data-tdact]')].map(x=>x.dataset.tdact)]; }})""")
-        self.assertTrue(rows)
-        self.assertTrue(any(r[0] for r in rows) and any(not r[0] for r in rows))
-        for ok, kind, indiv, acts in rows:
-            if ok:
-                self.assertEqual(acts, ["approve", "reject"])
-            else:                                                       # minutes, a new risk …: to Review, never approved here
-                self.assertEqual(acts[0], "review")
-                self.assertNotIn("approve", acts)
-                if kind in ("draft", "files"):
-                    self.assertEqual(acts, ["review"])
-
-    def test_approve_and_save_then_undo(self):
-        b = self.b
-        self.today()
-        b.eval("EXPAND.add('td'); renderToday()")
-        key = b.eval(f"{TD}.find(l=>l.querySelector('[data-tdact=approve]')).dataset.td")
-        n = int(key[2:])
-        b.click(f'#tdList li[data-td="{key}"] [data-tdact="approve"]')
-        b.wait(f"REV.find(r=>r.n==={n}).done==='approved' || !REV.some(r=>r.n==={n}&&!r.done)", 20)
-        b.wait(f"!document.querySelector('#tdList li[data-td=\"{key}\"]')")
-        b.wait("document.getElementById('snack').classList.contains('on') && document.getElementById('snackU') && !document.getElementById('snackU').hidden", 20)
-        self.assertTrue(b.eval("document.activeElement.closest('#tdList')!==null || document.activeElement.id==='hTd'"))   # focus stays in Intake and Review
-        b.click("#snackU")                                              # Undo
-        b.wait(f"REV.some(r=>r.n==={n}&&!r.done) || [...document.querySelectorAll('#tdList>li')].some(l=>l.dataset.td==='{key}')", 30)
-
-    def test_reject_opens_bl_315_s_menu_esc_returns_a_reason_rejects_with_undo(self):
-        b = self.b
-        self.today()
-        sel = "#tdList [data-tdact=reject]"
-        b.eval(f"document.querySelector('{sel}').focus()")
-        b.key("Enter")
-        b.wait("document.getElementById('rvReason')")
-        items = b.eval("[...document.querySelectorAll('#rvReason [role=menuitem]')].map(x=>x.textContent)")
-        self.assertTrue(any("Not an action" in x for x in items))
-        b.key("Escape")
-        b.wait("!document.getElementById('rvReason')")
-        self.assertTrue(b.eval(f"document.activeElement===document.querySelector('{sel}')"))
-        key = b.eval(f"document.querySelector('{sel}').closest('li').dataset.td")      # BL-315's menu: a reason, then Undo
-        title = b.eval(f"JSON.stringify(REV.find(r=>'rv'+r.n==='{key}').rec.t)")
-        b.click(f'#tdList li[data-td="{key}"] [data-tdact=reject]')
-        b.wait("document.getElementById('rvReason')")
-        b.key("1")
-        b.wait(f"!document.querySelector('#tdList li[data-td=\"{key}\"]')", 20)
-        b.wait("/Rejected 1 as Not an action/.test(document.getElementById('snackT').textContent)", 20)
-        b.click("#snackU")
-        b.wait(f"REV.some(r=>!r.done&&r.rec&&r.rec.t==={title})", 30)
+        self.assertTrue(o["order"] & 4)                                 # the list follows the line
+        self.assertNotIn("VIP", o["text"])                              # BL-288
+        self.assertEqual(o["count"], str(o["n"]))
 
 
 class Sections(Home):
@@ -210,8 +222,8 @@ class Sections(Home):
           S.weekPrios=["Urgent"]; renderToday(); const out={rows:[...document.querySelectorAll('#weekList li.wkrow')].map(l=>[l.className.replace('wkrow ',''),(l.querySelector('.wkdot')||{className:'none'}).className.replace('wkdot','').trim(),l.querySelector('.wkwhy').textContent,[...l.querySelectorAll('.tacts button')].map(x=>x.dataset.tip)]),
             note:document.querySelectorAll('#weekList .wknote').length};
           S.weekPrios=["Urgent","High"]; renderToday(); out.note2=document.querySelectorAll('#weekList .wknote').length; out.text=document.getElementById('weekList').textContent; S.weekPrios=was; return out; })()""")
-        self.assertEqual(o["rows"], [["wk-decisions", "", "needed by", ["Draft a chase"]],
-                                     ["wk-raid", "u", "due", ["Write an update", "Draft a chase"]],          # #112: a red dot, not a tag; the why is one word
+        self.assertEqual(o["rows"], [["wk-decisions", "", "needed by", ["Draft email"]],
+                                     ["wk-raid", "u", "due", ["Write an update", "Draft email"]],          # #112: a red dot, not a tag; the why is one word
                                      ["wk-milestone", "", "at risk", ["Open the project"]]])
         self.assertEqual((o["note"], o["note2"]), (0, 0))                # #104: the "Urgent work, every milestone and decision, and meetings" note is gone
         self.assertNotIn("every milestone and decision", o["text"])
@@ -331,7 +343,7 @@ class WeekCalm(Header):
         b.eval("document.querySelector('#weekList .wk-raid .tacts button').focus()")
         b.pump(0.4)
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#weekList .wk-raid .tacts')).opacity"), "1")          # focus-within
-        self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wk-raid .tacts button')].map(x=>x.dataset.tip)"), ["Write an update", "Draft a chase"])
+        self.assertEqual(b.eval("[...document.querySelectorAll('#weekList .wk-raid .tacts button')].map(x=>x.dataset.tip)"), ["Write an update", "Draft email"])
 
     def test_more_after_six_rows_a_day_and_further_ahead_is_kept(self):
         b = self.b
@@ -363,15 +375,18 @@ class WeekCalm(Header):
         base = b.eval("A.filter(a=>!a.id.startsWith('ZZZ-C')&&isMe(a.o)&&(overdue(a)||soon(a))).length")
         total = base + 8
         shown = "[...document.querySelectorAll('#mineList>li')].filter(l=>!l.hidden).length"
+        b.wait(f"{shown}===5 && document.querySelector('#mineMore [data-more=mine]')", 30)    # the list has drawn (a read before it did saw 1 row, #89)
         self.assertEqual(b.eval(shown), 5)
         self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), f"+{total - 5} more")
         self.assertIn(str(total), b.eval("document.getElementById('nMine').textContent"))                      # the count is the total
         b.eval("document.querySelector('#mineMore [data-more=mine]').focus()")
         b.click("#mineMore [data-more=mine]")
+        b.wait(f"{shown}==={total}", 30)
         self.assertEqual(b.eval(shown), total)
         self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), "Show fewer")
         self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').getAttribute('aria-expanded')"), "true")
         b.click("#mineMore [data-more=mine]")
+        b.wait(f"{shown}===5", 30)
         self.assertEqual(b.eval(shown), 5)
         # the order and the row actions after expanding
         b.eval("EXPAND.add('mine'); renderToday()")
@@ -413,7 +428,7 @@ class NoFileNames(Home):
         self.today()
         b.eval("EXPAND.add('td'); EXPAND.add('attn'); renderToday(); document.getElementById('resFold').open=true")
         text = b.eval("document.getElementById('v-today').innerText")
-        self.assertIn("Demo action", text)
+        self.assertIn("proposals in Review", text)                    # #208: a count, never a title or a file name
         self.assertNotIn("proposed-", text)
         self.assertNotIn(".json", text)
 
@@ -429,7 +444,7 @@ class Icons(Home):
         self.assertGreater(o["n"], 3)
         self.assertTrue(o["named"])
         self.assertEqual(o["op"], "0.55")
-        sel = "#tdList>li:first-child .tacts button"
+        sel = "#mineList>li:first-child .tacts button"
         b.eval(f"document.querySelector('{sel}').scrollIntoView({{block:'center'}})")   # #168: lower on the page now, so focus must not scroll it
         b.pump(0.3)
         before = b.eval(f"JSON.stringify(document.querySelector('{sel}').getBoundingClientRect())")
@@ -481,7 +496,7 @@ class Icons(Home):
         self.today()
         o = b.eval("""(()=>({dn:[...document.querySelectorAll('#dnList .tacts button')].map(x=>x.dataset.tip),
           rem:[...document.querySelectorAll('#attnList .rem .tacts button')].map(x=>x.dataset.tip)}))()""")
-        self.assertIn("Draft a chase", o["dn"])
+        self.assertIn("Draft email", o["dn"])
         self.assertIn("Open", o["dn"])
         self.assertTrue(o["rem"] and all(t.startswith(("Draft", "Run", "Needs", "Already")) for t in o["rem"]))
 

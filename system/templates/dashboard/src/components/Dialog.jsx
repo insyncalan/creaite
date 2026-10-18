@@ -22,6 +22,7 @@
    clicked on purpose: bulk Approve, Undo, Merge, Cancel them all and archive). Dialogs the page's own handler covers (core/fields.js
    CMDENTER: the peek, the panel, the milestone editor) are not <dialog>s and are unchanged. */
 import { useEffect, useRef } from "preact/hooks";
+import { pickedAnchor } from "./Menu.jsx";
 
 const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 /** What had focus when each open dialog opened. @type {WeakMap<HTMLDialogElement, Element | null>} */
@@ -74,7 +75,11 @@ function focusIn(d, focus) {
 export function openDialog(target, { focus, modal = true } = {}) {
   const d = dialogEl(target);
   if (!d || d.open) return d;
-  if (!OPENER.has(d)) { OPENER.set(d, document.activeElement); TYPED.set(d, false); }   // a swap keeps the first opener
+  if (!OPENER.has(d)) {
+    const a = document.activeElement, picked = pickedAnchor();   // always read, so a pick never goes stale; opened by a menu item: back to the menu's control
+    const from = !a || a === document.body || !a.isConnected ? picked : null;
+    OPENER.set(d, from || a); TYPED.set(d, false);
+  }   // a swap keeps the first opener
   if (modal) d.showModal(); else d.show();
   focusIn(d, focus);
   return d;

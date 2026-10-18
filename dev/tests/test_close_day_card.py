@@ -69,6 +69,27 @@ class CloseDayCard(LiveBrowserCase):
             b.pump(0.3)
         b.wait(f"{STEP}==='{name}'")
 
+    STEPS = ["Catch up", "Today", "Loose ends", "Tomorrow"]
+
+    def press_to_step(self, want):
+        """Reach `want` by arrow keys, waiting on the step's STATE. The card skips a step that has nothing in it, and the Today
+        step has nothing until the card's data has loaded, so under load ArrowRight can pass over it (the #89 flake: the step read
+        'Loose ends'): then ArrowLeft comes back, now that the data is in. A press that did not move the card is repeated only after a long
+        wait. A failure prints the page's state (the step, the live region, the focused element)."""
+        b, order = self.b, self.STEPS
+        for _ in range(8):
+            now = b.eval(STEP)
+            if now == want:
+                return
+            key = "ArrowLeft" if order.index(now) > order.index(want) else "ArrowRight"
+            b.key(key)
+            for _ in range(60):                                                  # up to 30 s for this press to land
+                if b.eval(STEP) != now:
+                    break
+                b.pump(0.5)
+        state = b.eval(f"({{step: {STEP}, said: {SAID}, focus: document.activeElement && document.activeElement.outerHTML.slice(0, 120)}})")
+        self.fail(f"the step never read {want!r}: {state}")
+
     def text(self):
         return self.b.eval(f"{CARD}.textContent")
 
@@ -83,11 +104,10 @@ class CloseDayCard(LiveBrowserCase):
         self.assertIn("1 new item for Review", self.text())
         self.assertEqual(b.eval(SAID), "Step 1 of 4, Catch up")                  # the live region names the step
         b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')")   # focus is back on Next after the card redraws
-        # ← → move between the steps. ONE key press, never repeated: a press that was only slow (CI under load) and a repeat both
-        # landed, moving on past Today (the CI flake: the first wait timed out, the retry made two steps). Wait long on the step itself.
+        # ← → move between the steps (press_to_step: waits on the step, and comes back with ← if the card passed over Today before its data
+        # had loaded, the #89 flake).
         b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')", 60)
-        b.key("ArrowRight")
-        b.wait(f"{STEP}==='Today'", 90)
+        self.press_to_step("Today")
         self.assertIn("Moved today", self.text())
         b.click("#closeDlg [data-cdnext]")
         b.wait(f"{STEP}==='Loose ends'")

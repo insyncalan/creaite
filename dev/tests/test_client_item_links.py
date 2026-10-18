@@ -24,7 +24,7 @@ try:
     import report_doc
     if not hasattr(report_doc, "client_item_links"):          # the gate is here but the link wiring (Cap's #123 follow-up) is not
         raise ImportError("report_doc.client_item_links")
-    import test_client_leak as T
+    import client_leak_support as T
     import test_reports as R
     BASE = T.Base
 except ImportError:                                           # this tree has no client gate yet

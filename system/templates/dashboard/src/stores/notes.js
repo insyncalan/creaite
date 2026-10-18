@@ -194,6 +194,25 @@ export function noteMeta(changes, now) {
   if (now) { ses.dirty = true; ses.rev++; noteFlush(); } else noteTyped();
 }
 
+/** #194: pin or mark confidential a note that is NOT the open one (the row's menu), by its path: the file is read and written like any save,
+    with nothing from the open note (its typing, cursor, scroll or state) involved. The open note itself goes the usual way.
+    `toggle` names a flag (pinned, confidential) that the menu's possibly stale view made `changes` from: it is flipped from the note as it is
+    when read here, so the toggle always flips the CURRENT state.
+    @param {string} path @param {Record<string, any>} changes @param {string} [toggle] @returns {Promise<boolean>} */
+export async function noteMetaFor(path, changes, toggle) {
+  const c = noteCur.value;
+  if (c && c.path === path) { noteMeta(toggle ? { [toggle]: !(c.meta && c.meta[toggle] !== undefined ? c.meta[toggle] : c.note[toggle]) } : changes, true); return true; }
+  if (noteHeld.value === path) { notesMsg.value = "This note waits on the approval card to be deleted: answer the card first."; return false; }
+  if (!viaServer()) { notesMsg.value = "Changing a note needs the live server."; return false; }
+  const g = await api("/api/notes/get", { path });
+  if (!g || !g.ok) { notesMsg.value = oneLine((g && g.message) || "That note couldn't be read."); return false; }
+  if (toggle) changes = { [toggle]: !(g.note && g.note[toggle]) };
+  const r = await api("/api/notes/save", { path, body: null, changes, base: g.base, session: newSid() }).catch(() => null);
+  if (!r || !r.ok) { notesMsg.value = oneLine((r && r.message) || "Not saved."); return false; }
+  keepSummary(g.code, r.note);
+  return true;
+}
+
 const body = () => { try { return ses.getBody ? ses.getBody() : null; } catch (e) { return null; } };
 /** The text Alan sees in the note, as Markdown: what "Copy my text" copies. */
 export function noteText() { const c = noteCur.value, b = body(); return b ?? (c ? c.body : "") ?? ""; }

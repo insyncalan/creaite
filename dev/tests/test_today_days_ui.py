@@ -260,7 +260,13 @@ class DayLine(TodayFixture):
         b.eval(f"SA().prep_pages={{...(SA().prep_pages||{{}}),{json.dumps(fx.FRIDAY)}:'projects/ABC Example Programme/agendas/x.html'}}; renderDay(); document.activeElement.blur()")
         b.key("Escape")                                                 # the first popup must be gone before the second is read: on a slow runner the wait in popup() passed on the stale one
         b.wait("!document.querySelector('#dayMeets .dmpop')")
-        got = self.popup(0)
+        for _ in range(4):                                              # a slow runner can still show the first render: close and read again
+            got = self.popup(0)
+            if len(got["btns"]) == 2:
+                break
+            b.key("Escape")
+            b.wait("!document.querySelector('#dayMeets .dmpop')")
+            b.eval("renderDay()")
         self.assertEqual(got["btns"], ["Open the prep page", "Open the file"])
         self.assertIn("Agenda saved", got["text"])
         self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop [data-prepgo]').getAttribute('aria-disabled')"), None)   # enabled with the live server
@@ -328,6 +334,7 @@ class DayLine(TodayFixture):
         self.assertEqual(b.eval("document.querySelectorAll('#todayDate .dypast').length"), 1)
         # a calendar that starts today has nothing to drop down
         b.eval("D.days.days=D.days.days.filter(d=>d.date>=TODAY); renderDay()")
+        b.wait("document.querySelectorAll('#todayDate .dypast').length===0")
         self.assertEqual(b.eval("document.querySelectorAll('#todayDate .dypast').length"), 0)
 
     # ---- small screens ----

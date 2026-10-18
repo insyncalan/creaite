@@ -4,7 +4,7 @@
    decision in #panel) or the milestone editor (#mvPeek), never for a proposal or a new item:
    - `//` outside a field (one `/` still does what it always did: creaite waits about a third of a second for a second slash, then
      replays the first, so ask creaite, or the page's own search, opens as before); never inside a field;
-   - the sparkle in the peek's top bar, immediately left of Draft chase (#pkSneakBtn; in the milestone editor, before Close);
+   - the sparkle in the peek's top bar, immediately left of Draft email (#pkSneakBtn; in the milestone editor, before Close);
    - the quiet "// Change this item in words" line at the foot of the peek.
    Esc closes it and focus goes back where it was. The box is a Preact component (components/peek/SneakPeek.jsx); this module puts
    it in place, keeps the peek scrolled so nothing hides behind it (the scroll area's bottom padding follows the box's height), and
@@ -62,7 +62,7 @@ export function stageFields(stage, id) {
 const SLASH_WAIT = 330;        // ms: a second slash within this opens Sneak peek; otherwise the first does what it always did
 let slashT = 0, replaying = false;
 
-/** The item Sneak peek would work on now, or null (no peek, a proposal, a new item, Draft chase open, a new milestone).
+/** The item Sneak peek would work on now, or null (no peek, a proposal, a new item, Draft email open, a new milestone).
     @returns {SneakAt|null} */
 export function sneakWhere() {
   if (pkOn() && shared.CUR && shared.CUR.mode === "record" && PKK.includes(shared.CUR.k) && !chaseIsOpen()) return { where: "peek", id: shared.CUR.id, k: shared.CUR.k };
@@ -119,7 +119,7 @@ export function sneakClose(back) {
   SNK.opener = null;
 }
 
-/** The box's actions on the page: the peek's save path, Undo, Draft chase, going somewhere, asking creaite.
+/** The box's actions on the page: the peek's save path, Undo, Draft email, going somewhere, asking creaite.
     @param {SneakAt} at @returns {import("./components/peek/SneakPeek.jsx").SneakActs} */
 function acts(at) {
   return {
@@ -129,10 +129,10 @@ function acts(at) {
       return { ok: !!u.ok, message: u.ok ? "" : oneLine(u.message) || "Couldn't undo it: undo it in Activity." }; },
     chase: pane => { const start = {};
       if (pane && pane.tone != null) start.tone = pane.tone; if (pane && pane.to) start.to = pane.to;
-      sneakClose(false); if (at.where !== "peek") { snack("Draft chase opens from an action, a risk or issue, or a decision"); return; } chaseOpen(start); },
+      sneakClose(false); if (at.where !== "peek") { snack("Draft email opens from an action, a risk or issue, or a decision"); return; } chaseOpen(start); },
     go: (task, item) => sneakGo(at, task, item),
     point: (to, text) => {
-      if (to === "draft_chase") { sneakClose(false); if (at.where === "peek") chaseOpen(); else snack("Draft chase opens from an action, a risk or issue, or a decision"); return; }
+      if (to === "draft_chase") { sneakClose(false); if (at.where === "peek") chaseOpen(); else snack("Draft email opens from an action, a risk or issue, or a decision"); return; }
       if (to === "ask") { sneakAsk(at, text); return; }
       sneakClose(false);
       if (to === "project_page") { const p = projectOf(at); if (p) go("cockpit", p); return; }
@@ -232,7 +232,7 @@ function sneakDraw(_x, _k, fresh) {
   if (SNK.at && SNK.at.where === "peek" && (fresh || !on || SNK.at.id !== pkCid())) sneakClose(false);
 }
 
-/* BL-231: what this block did at load, run in today's order by src/main.js (after the Draft chase's block) */
+/* BL-231: what this block did at load, run in today's order by src/main.js (after the Draft email's block) */
 export function bootSneak() {
   ICONS.sneak = SNEAK_ICON.map(([, a]) => `<path d="${a.d}"/>`).join("");
   Object.assign(DRAFTKIND, { "sneak-update": "update" });     /* the contract's new draft kind, under Draft the latest update's switch */
@@ -244,7 +244,7 @@ export function bootSneak() {
   PKDRAW.push(sneakDraw);
   document.addEventListener("click", e => {
     const t = /** @type {Element} */ (e.target); if (!t || !t.closest) return;
-    if (SNK.at && t.closest("#pkChaseBtn")) sneakClose(false);       /* Draft chase takes the item's place: the box goes */
+    if (SNK.at && t.closest("#pkChaseBtn")) sneakClose(false);       /* Draft email takes the item's place: the box goes */
     const b = t.closest("#pkSneakBtn,#mvSneakBtn,#pkSneakHintBtn,#mvSneakHintBtn"); if (!b) return;
     e.preventDefault(); e.stopPropagation();
     if ((b.id === "pkSneakBtn" || b.id === "mvSneakBtn") && SNK.at) { sneakClose(true); return; }

@@ -58,7 +58,7 @@ export * from "./components/report/Sheet.jsx";   /* v2.1.0 P5: the A4 sheet */
 export * from "./components/report/sheetLib.js";
 export * from "./components/report/redraft.js";   /* #90: the ✦ (redraftAnswer is what the tests drive) */
 
-export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft chase in the peek */
+export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft email in the peek */
 export * from "./components/Tabs.jsx";
 export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and Settings › People */
 export * from "./components/Toast.jsx";   /* BL-316: the message at the foot of the page */
@@ -114,11 +114,12 @@ import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAs
 import { bootData } from "./core/data.js";
 import { bootDayRoll } from "./core/dayroll.js";
 import { bootDialogs } from "./components/dialogs/PageDialogs.jsx";
-import { bootTooltips } from "./core/dom.js";
+import { bootLostClick, bootTooltips } from "./core/dom.js";
 import { bootCalendar, bootCmdEnter, bootDateWords, bootOwnerCombo, bootSources, bootTickBoxes, bootWeekendNote } from "./core/fields.js";
 import { publish } from "./core/globals.js";
 import { bootCopyCommand, bootKeyboard } from "./core/keys.js";
 import { bootMotionHooks } from "./core/motion.js";
+import { bootTopBar } from "./core/topbar.js";   /* #207 */
 import { bootCountLinks, bootGoLinks, bootNav, bootOpenAll, bootTabTitle, navWrite, parseHash, restoreNav } from "./core/nav.js";
 import { bootDevTag, bootMotion, bootTheme, bootThemeButton, S } from "./core/page.js";
 import { bootDebugLog, bootEventStream, bootLive, bootPageRefresh, bootPulse, bootToast, checkLive, renderBadge, status, vaultInit } from "./core/server.js";
@@ -148,6 +149,7 @@ bootDialogs();   /* BL-316: first, so every step after finds the dialogs' inner 
 bootTooltips();
 bootAiSelect();   /* BL-301 D: before any editor is made */
 bootLinkPopover();   /* #120: likewise */
+bootLostClick();
 bootDevTag();
 bootRail0007();
 bootTheme();
@@ -156,6 +158,7 @@ bootData();
 bootToast();
 bootLive();
 bootNav();
+bootTopBar();   /* #207 */
 bootCountLinks();
 bootGoLinks();
 bootToday0026();
@@ -252,7 +255,7 @@ status(); renderBadge(); inboxBadge(); vaultInit(); checkLive(); setInterval(che
 shared.HADHASH=!!location.hash&&!/^#openfile=/.test(location.hash);
 openFromAddress();                                                       /* BL-126: clears the address, so what follows is a plain start */
 shared.HASH0=location.hash;   /* BL-186: the address as opened (the Milestones page is restored once its block has run) */
-restoreNav(/^#?milestones=/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
+restoreNav(/^#?milestones(=|&|$)/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
 firstHelp();
 shared.LOADING=false;
 bootDebugLog();

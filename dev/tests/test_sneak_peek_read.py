@@ -405,6 +405,14 @@ class Tasks(SneakCase):
         self.assertEqual(self.v.rows("links"), before)
         p.unlink()
 
+    def test_the_chase_hand_off_says_draft_email_not_draft_chase(self):
+        """#153 finding 2: the button was renamed Draft email; the hand-off's marked words and the help line say the same."""
+        out = self.read(self.A, "chase Tom, firmer")
+        self.assertIn("Draft email to Tom Reid, Firmer. Nothing is sent", json.dumps(out))
+        self.assertNotIn("Draft chase", json.dumps(out))
+        src = (Path(__file__).resolve().parents[2] / "system/scripts/sneak_peek.py").read_text()
+        self.assertNotIn("Draft chase", src)
+
     def test_chase_goto_facts(self):
         out = self.read(self.A, "chase Tom, firmer")
         self.assertEqual(out["task"], {"kind": "chase", "pane": {"id": self.A, "tone": 2, "to": "Tom Reid"}})

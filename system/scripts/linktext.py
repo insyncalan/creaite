@@ -181,3 +181,23 @@ def write(words_, href):
     if not re.fullmatch(r"(?:[^()\s]|\([^()\s]*\))+", a):
         a = a.replace("(", "%28").replace(")", "%29")
     return "[" + re.sub(r"[\[\]\\]", lambda m: "\\" + m.group(0), words_) + "](" + a + ")"
+
+
+# ===== #153 ===== the dated lines "I sent it" writes on an item are INTERNAL. "17-10-2026: Chased Sara Example by email (reminder 1);
+# reply asked for by 19-10-2026.", "...: Emailed Tom Reid by message asking for an update.", "...: Asked Chris Dunn for a decision by
+# email.". They sit in an action's Latest update, a risk's Response or a decision's Reasoning (drafts.js sentLine writes one fixed
+# shape), so plain code recognises them by that shape and no client path carries them; no schema change is needed.
+SENT_LINE = re.compile(r"^[ \t]*\d{2}-\d{2}-\d{4}: (?:Chased|Emailed|Asked) [^\n]*?\bby (?:email|message)\b[^\n]*$", re.M)
+
+
+def sent_has(text):
+    """Whether a text holds an "I sent it" line."""
+    return bool(SENT_LINE.search(text or ""))
+
+
+def sent_strip(text):
+    """The text without its "I sent it" lines (and the blank lines they leave); the rest as it was."""
+    if not text or not SENT_LINE.search(text):
+        return text
+    return SENT_LINE.sub("", text).strip("\n").strip()
+# ===== end #153 =====

@@ -65,7 +65,7 @@ class IntakeNameTests(PageTests):
         self.assertIn("Actions|Add files to Intake", o["names"])
         self.assertTrue(any(f.startswith("Intake|") for f in o["files"]))
         self.assertFalse(any("Inbox" in n.split("|")[1] for n in o["names"] if not n.startswith(("Files|", "Items|"))))
-        self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" in o["chips"])
+        self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" not in o["chips"])   # #192: Intake is in the tree once, not a pill)
         self.assertRegex(o["badge"], r"^\d+ new files? in Intake$")
         self.assertEqual(o["drop"], "Add files to Intake")
 
@@ -384,11 +384,11 @@ class TodayBriefTests(PageTests):
           const meet={n:1,p:"ABC",kind:"draft",why:"Draft minutes",indiv:true,file:"proposed-2026-10-05-0900.json",ref:"meeting",projects:["ABC"],rec:{t:"Draft minutes: ABC Steering"}};
           setRev([meet,...grp("proposed-2026-10-05-0900.json",2,[{}]),...grp("proposed-0000-00-01-demo.json",10,[{},{}])]); go("today"); renderToday();
           window.OUT={attn:document.getElementById("attnList").textContent, qa:document.querySelectorAll("#attnList [data-qa]").length,
-            td:document.querySelectorAll("#tdList > li.td-review").length};""")
+            td:(document.getElementById("tdLine")||{textContent:""}).textContent};""")
         self.assertNotIn("Review the", o["attn"])
         self.assertNotIn("routine", o["attn"])
         self.assertEqual(o["qa"], 0)
-        self.assertEqual(o["td"], 4)                                                  # every proposal is a row of To decide
+        self.assertTrue(o["td"].startswith("4 proposals in Review"))                  # #208: every proposal is counted in Intake and Review's one line
 
     def test_reminders_move_in_with_run_and_dismiss_in_a_menu(self):
         o = self.probe(self.SETUP + """
@@ -472,7 +472,7 @@ class TodayBriefTests(PageTests):
         self.assertIn("Friday action", o["days"][3][2][0])
         self.assertEqual(o["to"], "5 items to Friday 16th October")        # #105: the count and the end date, as Resolved's
         self.assertEqual(o["note"], 0)   # #104: no note under the Week ahead heading
-        self.assertEqual(o["acts"][0], ["Draft a chase", "Move the date"])          # someone else's action: chase it, or move it
+        self.assertEqual(o["acts"][0], ["Draft email", "Move the date"])          # someone else's action: chase it, or move it
         self.assertEqual(o["acts"][3], ["Open the project"])                          # a milestone
         self.assertEqual(o["empty"], "Nothing is due or booked until Friday 9th October.")
 

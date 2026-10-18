@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_live_server import free_port  # noqa: E402
 from test_sweep_alerts import check_since, vip_file, vip_vault  # noqa: E402
-from test_vip_single_call import FAKE, MAIL_ID, NOW, OFF, SECRET, SARA, py, seed, thread  # noqa: E402
+from vip_single_call_support import FAKE, MAIL_ID, NOW, OFF, SECRET, SARA, py, seed, thread  # noqa: E402
 
 ALAN_ADDR, SARA_ADDR, BEN = "alan@brightwater.example", "sara@brightwater.example", "Ben Ito <ben@brightwater.example>"
 AT = f"2026-10-08T09:10{OFF}"                  # Alan's reply in the thread (over 15 minutes old, so not waited for)

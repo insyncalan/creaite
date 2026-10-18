@@ -428,12 +428,33 @@ class ActivityPage(LiveBrowserCase):
         b.click("#actDlgCancel")
         b.wait("!document.getElementById('actDlg').open")
 
-    def test_entries_that_cannot_be_chosen_have_no_tick(self):
+    def test_entries_that_cannot_be_chosen_have_a_disabled_tick(self):
         b = self.b
         self.go_activity()
         r = b.eval("""(()=>{ ACT.unshift({at:'2026-10-10 09:00',what:'ABC-A-001 · changed',by:'You'}); renderActivity();
-          const first=document.querySelector('#actTbl tbody tr'); return {row:first.dataset.row||null, tick:!!first.querySelector('input[type=checkbox]')}; })()""")
-        self.assertEqual(r, {"row": None, "tick": False})
+          const first=document.querySelector('#actTbl tbody tr'); const cb=first.querySelector('input[type=checkbox]'); return {row:first.dataset.row||null, tick:!!cb, off:!!cb&&cb.disabled}; })()""")
+        self.assertEqual(r, {"row": None, "tick": True, "off": True})   # #191: a tick box on every row, disabled where it cannot be chosen
+
+    def test_the_disabled_tick_is_skipped_by_a_range_and_not_counted(self):
+        """#191: a range across a row that cannot be chosen never takes it, its tick cannot be ticked, and Undo n counts only chosen rows.
+        (Activity has no select-all key and J/K are not bound there: ranges and ticks are how several rows are chosen.)"""
+        b = self.b
+        self.go_activity()
+        b.eval("""(()=>{ const x={at:'2026-10-10 09:00',what:'ABC-A-001 · changed',by:'You'}; ACT.unshift({...x}); ACT.splice(3,0,{...x}); renderActivity(); })()""")
+        b.eval("document.activeElement&&document.activeElement.blur(); hlClear(); actPaint()")
+        order = b.eval("[...document.querySelectorAll('#actTbl tbody tr')].map(t=>t.dataset.row||null)")
+        self.assertIsNone(order[0])
+        self.assertIsNone(order[3])
+        ok = [r for r in order if r]
+        cell = lambda r: f'#actTbl tr[data-row="{r}"] td.actwhen'  # noqa: E731
+        b.click(cell(ok[0]))
+        b.click(cell(ok[3]), modifiers=SHIFT)                                            # a range from the first to the fourth, over the disabled row
+        self.assertEqual(self.sel_rows(), ok[:4])                                        # the range spans the disabled row without taking it
+        b.eval("document.querySelector('#actTbl tr:not([data-row]) input').click()")        # a disabled tick does nothing
+        self.assertEqual(self.sel_rows(), ok[:4])
+        self.assertEqual(b.eval("document.querySelectorAll('#actTbl tr:not([data-row]) input:checked').length"), 0)
+        self.assertEqual(b.eval("document.getElementById('actUndoSel').textContent.trim()"), "Undo 4")
+        self.assertEqual(b.eval("document.querySelectorAll('#actTbl input[disabled]').length"), 2)
 
     def test_the_footer_says_when_the_cap_is_reached(self):
         b = self.b

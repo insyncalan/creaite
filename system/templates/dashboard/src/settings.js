@@ -30,7 +30,7 @@ import { decLate, decLateWords, decRank } from "./meetings.js";
 import { drawPanel, ebMarkSeen, errBanner, openNew, markStagedRows, pkDraw, PKDRAW, pkNewOffer, pkNote, pkSaveAndClose, pkSaving, REC } from "./panel.js";
 import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG } from "./projects.js";
 import { draftOn, renderReview } from "./review.js";
-import { railLabelsOn, setRailCount } from "./stores/rail.js";
+import { railIconSize, railLabelsOn, railSizeNorm, setRailCount } from "./stores/rail.js";
 import { PEOPLE_MOVE, personPromises, plur, projLink, renderToday, tl } from "./today.js";
 import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, relaxHtml, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
@@ -192,6 +192,7 @@ export function setSynced(ch){ let reload=false, look=false;
     else if(k==="search.debounce_ms") SEARCHCFG.debounce_ms=v;
     else if(k==="dashboard.generate_days") S.genDays=v;
     else if(k==="dashboard.rail_labels") railLabelsOn.value=v!==false;   /* #156: Labels when collapsed */
+    else if(k==="dashboard.rail_icon_size"){ railIconSize.value=railSizeNorm(v); S.railIconSize=railIconSize.value; }   /* #182 */
     else if(k==="logging.level") DIAG.level=v;
     else if(k.startsWith("day.")||k==="work.weekend_days"||k==="dashboard.flow_weeks") reload=true; }
   if(look){ themeFade(); applyTheme(); applyMotion(); }

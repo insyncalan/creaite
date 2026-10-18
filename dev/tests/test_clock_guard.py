@@ -64,8 +64,8 @@ SCRIPTS = {
 }
 DASHBOARD_JS = {
     "ask.js": 15, "components/notes/CaptureDrawer.jsx": 1, "components/notes/DeleteNote.jsx": 1,
-    "components/peek/ChasePane.jsx": 1, "components/report/weekly/weeklyDoc.js": 1, "core/data.js": 1, "core/dayroll.js": 1,
-    "core/motion.js": 1, "core/page.js": 2, "core/server.js": 7, "drafts.js": 3, "files.js": 1, "help.js": 2, "intake.js": 2,
+    "components/peek/ChasePane.jsx": 2, "components/Menu.jsx": 2, "components/notes/NotesPage.jsx": 2, "components/report/weekly/weeklyDoc.js": 1, "core/data.js": 1, "core/dayroll.js": 1,
+    "core/motion.js": 1, "core/page.js": 2, "core/server.js": 7, "drafts.js": 4, "files.js": 1, "help.js": 2, "intake.js": 2,
     "meetings.js": 2, "milestones.js": 2, "panel.js": 6, "projects.js": 3, "review.js": 1, "settings.js": 5, "sneak.js": 3,
     "stores/aiEdit.js": 3, "stores/notes.js": 3, "stores/prepPopup.js": 3, "stores/settings.js": 1, "today.js": 3,
 }

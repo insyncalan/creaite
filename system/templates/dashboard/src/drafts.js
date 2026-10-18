@@ -17,7 +17,7 @@ import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.j
 import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { putHtml } from "./meetings.js";
-import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, REC } from "./panel.js";
+import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, pkUndoLast, REC } from "./panel.js";
 import { curRefine, curVersion, DRAFTKIND, GEN_AUD, GEN_AUDNOTE, GEN_FORMS, genSummary } from "./projects.js";
 import { draftOn, SPARKI } from "./review.js";
 import { PERS, personPool, renderPerson, row, SA, SETSECTIONS } from "./settings.js";
@@ -138,7 +138,7 @@ export function deDlgEl(){ let d=$("#deDlg"); if(d) return d;
 export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=title; drawDraftEmail(true); openDialog(d); }
 /* from a person's page: an update request, or a chase of their overdue items */
 /* only (BL-210, Decisions needed): one item's ID; it alone starts ticked (if the outside-address rule allows), the rest are offered unticked */
-export function openDraftEmail(name,mode="update",only){ (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
+export function openDraftEmail(name,mode="update",only){ shared.SENTVIA=""; (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
   const all=deItems(x), ok=all.filter(i=>!deBarred(i)), email=(x.p&&x.p.email)||"", chase=ok.filter(deOverdue);
   if(!ok.length){ snack(`Nothing open for ${name}, so no email is needed`); return; }
   if(mode==="chase"&&(!chase.length||deMe(name)||(only&&!chase.some(i=>i.id===only)))) mode="update";   /* BL-342 N3: a thread's Chase on an item not past its date opens the update email */
@@ -202,7 +202,7 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
       <div class="deopts">${shared.DE.mode==="followup"?"":'<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
       ${dePolishHtml()}<div id="deNote" class="denote" hidden></div>
       <div id="dePrev" contenteditable="true" role="textbox" aria-multiline="true" aria-label="The email, editable"></div>
-      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode==="chase"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Record that you sent this chase (the items and today's date only), so the next one steps up">I sent it</button>`:""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
+      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode==="chase"||shared.DE.mode==="update"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Log that you sent it: a dated Latest update on each ticked item (the items, names and dates only, never the email)">I sent it</button>`:""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
     $("#deDone").onclick=()=>$("#deDlg").close(); if(shared.DE.includeUpdate&&$("#deUpd")) $("#deUpd").checked=true; if(shared.DE.replyBy) $("#deReply").value=fd(shared.DE.replyBy); }
   dePrevPut(em.html); shared.DE.edited=false; $("#deNote").hidden=true; if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; }
 /* ===== #133 ===== the preview is a host of the shared editor (core/editor.js, features "email"): the same selection bar as the other editors
@@ -240,20 +240,67 @@ export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=d
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
     if(withHtml){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); }
     else await navigator.clipboard.writeText(text);
+    shared.SENTVIA=withHtml?"email":"message";   /* only once the copy has gone through */
     deSay(btn,withHtml?"Copied: paste it into Outlook":"Copied as plain text",true); }
   catch(err){ deSelect("dePrev"); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
-/* "I sent it" (Chase): one record of the items picked and today's date; the next chase steps up and the person's page says so */
+/* ===== v2.3.0 #153 ===== "I sent it" logs the work. In the pane and in this popup it records the chase (chases.json: item IDs, the date and
+   the mode, as before) and stages a dated Latest update on each item through the peek's own staging (pkCommit: a proposal already
+   approved, source_run dashboard, applied with the others), with one Undo for the batch. A decision's text is its Reasoning, a
+   risk's its Response (pkUpdLabel). Never the email's text, only who, when, how and the reply-by date. */
+export const sentKindOf=id=>["actions","raid","decisions"].find(k=>REC(k,id));
+export const SENT_FIELD={actions:"upd",raid:"resp",decisions:"why"};
+/** how Alan sent it: "email" after Copy email / Copy for Outlook, "message" after Copy as text; email when neither. */
+export const sentVia=()=>shared.SENTVIA==="message"?"message":"email";
+/** The dated line for one item. mode: chase (others' item), update (asking for an update), help (Alan's own item), decision.
+    n is the reminder number once recorded; confidential items get the short form (who and how, no detail).
+    @param {{today?:string,name:string,via?:string,mode:string,n?:number,replyBy?:string,need?:string,confidential?:boolean}} o */
+export function sentLine(o){ const d=fd(o.today||TODAY), via=o.via==="message"?"message":"email", whom=o.name||"them", by=o.replyBy?`; reply asked for by ${fd(o.replyBy)}`:"";
+  if(o.confidential) return `${d}: ${o.mode==="update"?"Emailed":"Chased"} ${whom} by ${via}.`;
+  if(o.mode==="update") return `${d}: Emailed ${whom} by ${via} asking for an update.`;
+  if(o.mode==="help"){ const need=String(o.need||"").replace(/\s+/g," ").replace(/\s+done\.?$/i,"").replace(/\.$/,"").trim().slice(0,80); return `${d}: Asked ${whom} by ${via} for ${need||"help"}.`; }
+  if(o.mode==="decision") return `${d}: Asked ${whom} for a decision by ${via}${by}.`;
+  return `${d}: Chased ${whom} by ${via}${o.n?` (reminder ${o.n})`:""}${by}.`; }
+/** Stage the line on each item (queued in order, each to its own item by ID, so reordering or unticking changes nothing) and offer
+    one Undo for the batch. Returns how many were staged.
+    @param {{k:string,id:string,need?:string}[]} entries @param {{name:string,mode:string,replyBy?:string,via?:string,chases?:any,sendId?:string,failed?:string[]}} o */
+export async function sentLog(entries,o){ let ok=0; const mine=[];   /* the staged entries this press made: Undo removes exactly these */ const via=o.via||sentVia(), ch=o.chases||SA().chases||{}, st=o.sendId?sendState(o.sendId):null, failed=o.failed||[];
+  for(const e of entries){ if(st&&st.done.has(e.id)) continue;   /* logged by an earlier press of this same send: never twice */
+    const x=REC(e.k,e.id), f=SENT_FIELD[e.k]; if(!x||!f){ failed.push(e.id); continue; }
+    const conf=deBarred(deItem(e.k,x)), line=sentLine({name:o.name,via,mode:o.mode,n:(ch[e.id]||{}).n,replyBy:o.replyBy,need:e.need,confidential:conf});
+    const was=String(x[f]||"").trim();
+    const before=new Set(shared.PKS);
+    let good=false; try{ good=await pkCommit(e.k,e.id,{[f]:was?line+"\n"+was:line},"Latest update",was?"…":"none",line,{logNote:"Draft email: I sent it"}); }catch(err){ good=false; }
+    if(good){ ok++; if(st) st.done.add(e.id); mine.push(...shared.PKS.filter(s=>!before.has(s)&&s.k===e.k&&s.id===e.id)); } else failed.push(e.id); }
+  const bad=failed.length?` Couldn't log ${failed.join(", ")}: press I sent it again to log just those.`:"";
+  if(!ok){ if(bad) snack(bad.trim()); return 0; }
+  snack((ok===1?"Logged.":`Logged on ${plur(ok,"item")}.`)+bad,async()=>{ for(const s of mine.slice().reverse()) await pkUndoLast(s); });   /* the toast's own Undo button */
+  return ok; }
+/** One send (one popup, one pane) remembers which items it has recorded and logged, so a retry after a failure repeats only what is missing. */
+export function sendState(id){ if(!shared.SENT) shared.SENT={}; if(!shared.SENT[id]) shared.SENT[id]={rec:new Set(),done:new Set()}; return shared.SENT[id]; }
+/* "I sent it" in the popup, update and chase modes: one record, then a Latest update on each ticked item */
 export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase needs the live server"); return; }
-  const ids=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)).map(i=>i.id); if(!ids.length){ snack("Tick the items you chased"); return; }
-  btn.disabled=true; const r=await api("/api/chases",{ids,mode:"chase"}); btn.disabled=false;
-  if(!r.ok){ snack(oneLine(r.message)||"Not recorded"); return; }
-  SA().chases=r.chases||{}; deSay(btn,`Recorded: ${plur(ids.length,"item")} chased today`,true); if(shared.VIEW==="person"&&shared.PERSON) renderPerson(shared.PERSON); }
+  const picked=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)); if(!picked.length){ snack("Tick the items you sent it about"); return; }
+  if(btn.disabled) return;
+  const ids=picked.map(i=>i.id), mode=shared.DE.mode==="update"?"update":"chase", name=shared.DE.name, replyBy=shared.DE.replyBy;
+  if(!shared.DE.sendId) shared.DE.sendId="de"+Date.now()+Math.random().toString(36).slice(2,6);
+  const sid=shared.DE.sendId, st=sendState(sid), fresh=ids.filter(i=>!st.rec.has(i));
+  btn.disabled=true;
+  if(fresh.length){ const r=await api("/api/chases",{ids:fresh,mode});
+    if(!r.ok){ btn.disabled=false; snack(oneLine(r.message)||"Not recorded"); return; }
+    fresh.forEach(i=>st.rec.add(i)); SA().chases=r.chases||{}; }
+  const chases=SA().chases||{}, failed=[];
+  let n=0; try{ n=await sentLog(picked.map(i=>({k:i.k,id:i.id})),{name,mode,replyBy,chases,sendId:sid,failed}); }
+  catch(err){ btn.disabled=false; snack("The update couldn't be logged: press I sent it to try again"); return; }
+  if(failed.length){ btn.disabled=false; return; }   /* the popup stays so the missing ones can be retried; sentLog said which */
+  if(shared.DE&&shared.DE.name===name&&$("#deDlg")?.open) $("#deDlg").close();
+  if(!n&&!st.done.size) snack(`Recorded on ${plur(ids.length,"item")}`);
+  if(shared.VIEW==="person"&&shared.PERSON) renderPerson(shared.PERSON); }
 /* Polish the wording: the model rewords the opening paragraph only (the table, subject and addresses never go to it); its version is
    shown beside the original, and Use this puts it in the email */
 export function deCover(){ const b=draftEmail({...deBuildArgs(),cover:""}); return (b.text.split("\n")[2]||"").trim(); }
 export const deBuildArgs=()=>({mode:shared.DE.mode,name:shared.DE.name,email:shared.DE.email,items:shared.DE.items,picked:shared.DE.picked,includeUpdate:shared.DE.includeUpdate,replyBy:shared.DE.replyBy,now:new Date(),today:TODAY,dueSoon:S.dueSoon,
   names:{},from:"",chased:SA().chases||{},title:shared.DE.title,day:shared.DE.day,codes:shared.DE.codes,attendees:shared.DE.attendees,lead:shared.DE.lead,summary:shared.DE.summary});
-/* One Polish run for the Draft email and the Draft chase pane (BL-298): the kind's switch first (draftWhyNot; {ok:false, why} when
+/* One Polish run for the Draft email and the Draft email pane (BL-298): the kind's switch first (draftWhyNot; {ok:false, why} when
    it is off, with no run), then draftAsk. kind "polish" rewords the opening only; "polish-help" (Alan's own item in the pane) also
    suggests To get … done and What I need from you. */
 export async function polishAsk(body,o={}){ const why=draftWhyNot(body.kind); if(why) return {ok:false,why:true,message:why};

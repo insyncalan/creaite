@@ -3,6 +3,7 @@
    a list or across to the other), by its arrow buttons (Move up, Move down, Move to More or Move to the sidebar), or
    with Alt and an arrow key on its row (↑ ↓ within the list, ← → across). Today always comes first in the sidebar;
    Settings can live in either. Icons only collapses the sidebar to icons (what older versions saved as display "icons"), and
+   Icon size (#182; Small (today's), Medium or Large, saved to dashboard.rail_icon_size) is a three-way choice below the two switches.
    Labels when collapsed (#156; the same setting as More's switch) puts each label under its icon when it is collapsed; turning one
    on turns the other off. Reset to default puts back the default lists.
    Nothing is saved until Done (Cancel, Esc or a click outside with nothing changed leave it as it was); Done saves to
@@ -12,17 +13,17 @@
    aloud (a polite live region). */
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Dialog, closeDialog } from "../Dialog.jsx";
-import { RAIL_DEF, railCfg, railCustOpen, railItem, railLabelsOn } from "../../stores/rail.js";
+import { RAIL_DEF, railCfg, railCustOpen, railIconSize, railItem, railLabelsOn } from "../../stores/rail.js";
 import { RailIcon } from "./RailIcon.jsx";
 
 /** @typedef {import("../../stores/rail.js").RailCfg} RailCfg */
-/** @typedef {{onSave: (cfg: RailCfg, labels: boolean) => void, onClose: () => void}} CustomiseSidebarProps */
-/** @typedef {{top: string[], more: string[], icons: boolean, labels: boolean}} Draft */
+/** @typedef {{onSave: (cfg: RailCfg, labels: boolean, size: string) => void, onClose: () => void}} CustomiseSidebarProps */
+/** @typedef {{top: string[], more: string[], icons: boolean, labels: boolean, size: string}} Draft */
 
 /** @param {RailCfg} c @returns {Draft} */
-const draftOf = c => ({ top: [...c.order], more: [...c.more], icons: c.display === "icons", labels: railLabelsOn.value });
+const draftOf = c => ({ top: [...c.order], more: [...c.more], icons: c.display === "icons", labels: railLabelsOn.value, size: railIconSize.value });
 /** @param {Draft} a @param {Draft} b */
-const same = (a, b) => a.top.join() === b.top.join() && a.more.join() === b.more.join() && a.icons === b.icons && a.labels === b.labels;
+const same = (a, b) => a.top.join() === b.top.join() && a.more.join() === b.more.join() && a.icons === b.icons && a.labels === b.labels && a.size === b.size;
 
 /** Move `id` to `zone` at `at` (Today stays first; nothing else may go above it).
     @param {Draft} d @param {string} id @param {"top"|"more"} zone @param {number} at @returns {Draft} */
@@ -86,7 +87,7 @@ export function CustomiseSidebar({ onSave, onClose }) {
     const how = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: inTop ? null : "swap", ArrowRight: inTop ? "swap" : null }[e.key];
     if (!how) return; e.preventDefault(); mv(id, /** @type {"up"|"down"|"swap"} */ (how));
   };
-  const done = () => { onSave({ order: d.top, more: d.more, hidden: [], display: d.icons ? "icons" : "titles" }, d.labels); closeDialog("railCust"); };
+  const done = () => { onSave({ order: d.top, more: d.more, hidden: [], display: d.icons ? "icons" : "titles" }, d.labels, d.size); closeDialog("railCust"); };
   /* Esc and the scrim close it; the owner is told (onClose) once it has closed, so its focus return lands outside the modal */
   const shut = () => { const el = /** @type {HTMLDialogElement | null} */ (document.getElementById("railCust")); if (el && el.open) el.close(); else onClose(); };
 
@@ -127,10 +128,14 @@ export function CustomiseSidebar({ onSave, onClose }) {
         onChange={e => { const on = /** @type {HTMLInputElement} */ (e.currentTarget).checked; setD({ ...d, labels: on, icons: on ? false : d.icons }); }} /> Labels when collapsed</label>
       <label class="rcicons"><input type="checkbox" class="switch" role="switch" id="railCustIcons" checked={d.icons}
         onChange={e => { const on = /** @type {HTMLInputElement} */ (e.currentTarget).checked; setD({ ...d, icons: on, labels: on ? false : d.labels }); }} /> Icons only</label>
+      <div class="rcsize" role="group" aria-labelledby="railCustSizeH"><h3 id="railCustSizeH">Icon size</h3>
+        <div class="rcszs">{[["small", "Small"], ["medium", "Medium"], ["large", "Large"]].map(([k, l]) => (
+          <button type="button" class="rcsz" data-size={k} aria-pressed={d.size === k ? "true" : "false"} onClick={() => { setD({ ...d, size: k }); setSaid(`${l} icons`); }}>
+            <span class="rcszi" aria-hidden="true"><RailIcon name="today" /></span><span>{l}</span></button>))}</div></div>
       <p class="vh" aria-live="polite">{said}</p>
       <div class="rcfoot">
         <button type="button" class="btn quiet" id="railCustReset"
-          onClick={() => { setD({ ...draftOf(RAIL_DEF), labels: true }); setSaid("Back to the default sidebar"); }}>Reset to default</button>
+          onClick={() => { setD({ ...draftOf(RAIL_DEF), labels: true, size: "small" }); setSaid("Back to the default sidebar"); }}>Reset to default</button>
         <span class="grow"></span>
         <button type="button" class="btn" id="railCustCancel" onClick={() => closeDialog("railCust")}>Cancel</button>
         <button type="button" class="btn primary" id="railCustDone" onClick={done}>Done</button>

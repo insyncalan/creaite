@@ -62,53 +62,29 @@
 </button>
 </div>
 <div>
-<div class="views" id="fquick" style="margin-bottom:#px">
+<div class="fbar">
+<div class="views" id="fquick" style="margin:0">
 <button class="vchip" data-q="all" aria-pressed="true">All files</button>
 <button class="vchip" data-q="latest" aria-pressed="false">Latest reports</button>
 <button class="vchip" data-q="week" aria-pressed="false">This week's meetings</button>
-<button class="vchip" data-q="inbox" aria-pressed="false">Intake</button>
-<button class="vchip" data-rep="Weekly" aria-pressed="false" title="Reports filed in the Weekly folder">Weekly</button>
-<button class="vchip" data-rep="Adhoc" aria-pressed="false" title="Reports filed in the Adhoc folder">Adhoc</button>
-<button class="vchip" data-rep="Steerco" aria-pressed="false" title="Reports filed in the Steerco folder">Steerco</button>
+<button class="vchip" data-q="archived" aria-pressed="false">Archived</button>
 </div>
-<div class="toolbar" style="margin-top:0">
-<!-- BL-214 (sprint-ui-audit): each filter has a name -->
-<input id="fsName" type="search" aria-label="Search file names" placeholder="Search file names" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;min-width:#px;background:var(--surface);font-size:var(--ctl-fs)">
-<select id="fsType" aria-label="File type" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;background:var(--surface);font-size:var(--ctl-fs)">
-<option value="All">All types</option>
-<option>docx</option>
-<option>pdf</option>
-<option>vtt</option>
-<option>xlsx</option>
-</select>
-<label class="sub" for="fsFrom">From</label>
-<span class="dwrap" style="width:#px">
-<input id="fsFrom" type="text" placeholder="DD-MM-YYYY" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;width:#%;background:var(--surface);font-size:var(--ctl-fs)">
-<button class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date">
-<svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="calendar" aria-hidden="true">
-<rect x="3.5" y="5" width="17" height="15" rx="2">
-</rect>
-<path d="M3.5 10h17M8 3v4M16 3v4">
+<span class="dd fmwrap">
+<button type="button" class="ib bd fbtn" id="fmBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="fmenu" aria-label="Filter" data-tip="Filter">
+<svg data-ic="funnel" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="funnel" aria-hidden="true">
+<path d="M3 4h18l-7 8.5V19l-4 2v-8.5z">
 </path>
 </svg>
 </button>
-</span>
-<label class="sub" for="fsTo">To</label>
-<span class="dwrap" style="width:#px">
-<input id="fsTo" type="text" placeholder="DD-MM-YYYY" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;width:#%;background:var(--surface);font-size:var(--ctl-fs)">
-<button class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date">
-<svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="calendar" aria-hidden="true">
-<rect x="3.5" y="5" width="17" height="15" rx="2">
-</rect>
-<path d="M3.5 10h17M8 3v4M16 3v4">
-</path>
-</svg>
-</button>
+<div class="ddmenu left fmenu" id="fmenu" role="dialog" aria-label="Filter files">
+</div>
 </span>
 <span style="flex:1">
 </span>
 <span class="sub" id="filesCount" aria-live="polite">6 of 6 files</span>
 <button class="btn" id="filesRefresh">Refresh</button>
+</div>
+<div class="wapplied" id="fchips" hidden="">
 </div>
 <div class="tbl" id="filesTbl">
 <table>

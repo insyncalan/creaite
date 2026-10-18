@@ -1162,7 +1162,7 @@ export function renderPeople(){ const T=peopleTabs(), none=shared.PTAB==="none",
   const nameCell=x=>`<td class="title"><a href="#" class="plink2" data-person="${esc(x.name)}">${esc(isMe(x.name)?`You (${x.name})`:x.name)}</a>${x.p||isMe(x.name)?"":` <span class="tag warn" title="${none?"Seen on items but isn’t in the people register":"Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x.p&&x.p.org?esc(x.p.org):'<span class="sub">—</span>'}</td><td>${x.p&&x.p.role?esc(x.p.role):'<span class="sub">—</span>'}</td><td>${x.codes.map(pLink).join(" ")||'<span class="sub">—</span>'}</td>`;
   $("#peopleTbl").setAttribute("role","tabpanel");
-  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl||"—"))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
+  putHTML($("#peopleTbl"),!L.length?html`<div class="empty">${none?"Everyone creaite knows has something assigned.":"No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>`:none?html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("cl","Closed items",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}<td class="num">${raw(countLink(`${plur(x.cl,"closed item")} of ${x.name}`,x.cl,"all:closed:",{st:["Closed","Cancelled"],o:ownersOf([...x.A,...x.R,...x.D])},x.cl))}</td></tr>`)}</tbody></table>`:html`<table><thead><tr>${raw(th("name","Name"))}${raw(th("org","Organisation"))}${raw(th("role","Role"))}<th>Projects</th>${raw(th("oa","Open actions",1))}${raw(th("or","Open RAID",1))}${raw(th("dw","Decisions waiting",1))}${raw(th("late","Overdue",1))}</tr></thead><tbody>${L.map(x=>html`<tr class="click" data-pp="${x.name}">${raw(nameCell(x))}
     ${raw(personCounts(x))}</tr>`)}</tbody></table>`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0148(){
@@ -1171,14 +1171,14 @@ Object.assign(PSORTS,{dw:x=>x.dw.length,cl:x=>x.cl});
 }
 /* ===== BL-190 (sprint-links) ===== the People list's figures open Work filtered to that person (every spelling of their name on
    the items counted, so aliases are included) and that kind: Open actions (status Open only, as All open lists them), Open RAID,
-   Decisions waiting (they are the one asked) and Overdue (All items: their Open and Delayed actions and RAID items past due). A zero stays plain. */
+   Decisions waiting (they are the one asked) and Overdue (All items: their Open and Delayed actions and RAID items past due). A zero stays plain and is always written "0" (#190; never a dash). */
 export const ownersOf=L=>[...new Set(L.map(i=>i.o||i.by).filter(Boolean))];
 export const latesOf=x=>[...x.oa,...x.or].filter(i=>i.due&&i.due<TODAY);
 export function personCounts(x){ const nm=isMe(x.name)?"you":x.name, late=latesOf(x);
   return `<td class="num">${countLink(`${plur(x.oo.length,"open action")} owned by ${nm}`,x.oo.length,"actions:open:",{o:ownersOf(x.oo)})}</td>`
     +`<td class="num">${countLink(`${plur(x.or.length,"open RAID item")} owned by ${nm}`,x.or.length,"raid:open:",{o:ownersOf(x.or)})}</td>`
-    +`<td class="num">${countLink(`${plur(x.dw.length,"decision")} waiting on ${nm}`,x.dw.length,"decisions:pending:",{o:ownersOf(x.dw)},x.dw.length||"—")}</td>`
-    +`<td class="num ${x.late?"late":""}">${countLink(`${plur(late.length,"overdue item")} owned by ${nm}`,late.length,"all:open:",{st:["Open"],due:["overdue"],ty:["Action","Risk","Issue","Assumption","Dependency"],o:ownersOf(late)},late.length||"—")}</td>`; }
+    +`<td class="num">${countLink(`${plur(x.dw.length,"decision")} waiting on ${nm}`,x.dw.length,"decisions:pending:",{o:ownersOf(x.dw)})}</td>`
+    +`<td class="num ${x.late?"late":""}">${countLink(`${plur(late.length,"overdue item")} owned by ${nm}`,late.length,"all:open:",{st:["Open"],due:["overdue"],ty:["Action","Risk","Issue","Assumption","Dependency"],o:ownersOf(late)})}</td>`; }
 /* ===== end BL-190 (People) ===== */
 /* the address: #people is With work, #people/none Nothing assigned; go("people") with no tab keeps the one last used */
 /* ===== end BL-138 ===== */

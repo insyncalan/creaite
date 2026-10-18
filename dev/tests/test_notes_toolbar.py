@@ -258,6 +258,161 @@ class Toolbar(LiveBrowserCase):
         b.wait("/^## x$/m.test(document.querySelector('.nbody').cxed.value())", 5)
         self.assertEqual(self.expanded("m-heading"), "false")
 
+    # ---- a keyboard-opened menu's fold must not outlive the menu (review of 46863145: a stale fold took focus out of the note) ----
+
+    def open_heading_by_keyboard(self):
+        b = self.b
+        b.eval("document.querySelector('.nbar [data-nt=m-heading]').focus()")
+        b.key("ArrowDown")
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+
+    def back_in_the_note_then_hover_list_and_type(self, keep):
+        """Click back into the note, type, point at List (the pointer opens a menu), type again: nothing may take focus."""
+        b = self.b
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.type("abc")
+        self.hover(".nbar [data-nt=m-list]")
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        b.pump(0.4)
+        self.assertEqual(b.eval("document.activeElement===document.querySelector('.nbody')"), True, "the stale fold took focus out of the note")
+        b.type("def")
+        self.assertRegex(self.value(), keep)
+        self.away()
+
+    def test_a_closed_keyboard_menu_leaves_no_fold_behind_after_esc(self):
+        b = self.b
+        self.make_note("Stale esc")
+        self.reset("x")
+        self.open_heading_by_keyboard()
+        b.key("Escape")
+        b.wait("document.activeElement===document.querySelector('.nbar [data-nt=m-heading]')", 5)
+        self.assertEqual(self.expanded("m-heading"), "false")
+        self.back_in_the_note_then_hover_list_and_type(r"xabcdef")
+
+    def test_a_closed_keyboard_menu_leaves_no_fold_behind_after_a_pick(self):
+        b = self.b
+        self.make_note("Stale pick")
+        self.reset("x")
+        self.open_heading_by_keyboard()
+        b.key("ArrowDown")
+        b.key("ArrowDown")
+        b.wait("document.activeElement.dataset.cmd==='h2'", 5)
+        b.key("Enter")
+        b.wait("/^## x$/m.test(document.querySelector('.nbody').cxed.value())", 5)
+        self.assertEqual(self.expanded("m-heading"), "false")
+        self.back_in_the_note_then_hover_list_and_type(r"(?s)## x.*abcdef")
+
+    def test_esc_puts_focus_on_the_opener_before_the_list_goes_so_the_bar_stays(self):
+        b = self.b
+        self.make_note("Esc first")
+        self.reset("x")
+        self.open_heading_by_keyboard()
+        b.eval("""(()=>{ window.__seen=[]; const bar=document.querySelector('.nbar'), btn=document.querySelector('.nbar [data-nt=m-heading]');
+          window.__obs=new MutationObserver(()=>{ window.__seen.push([!!document.querySelector('.nbar [role=menu]'), document.activeElement===btn, !!document.querySelector('.nbar')&&document.querySelector('.nbar').offsetParent!==null]); });
+          window.__obs.observe(bar,{childList:true,subtree:true,attributes:true}); })()""")
+        b.key("Escape")
+        b.wait("document.activeElement===document.querySelector('.nbar [data-nt=m-heading]')", 5)
+        b.pump(0.3)
+        # whenever the list was gone, the opener already had focus and the bar was still shown
+        bad = b.eval("window.__seen.filter(r=>!r[0] && (!r[1] || !r[2])).length")
+        self.assertEqual(bad, 0, "the list went before focus was back on the opener")
+        self.assertEqual(b.eval("document.querySelector('.nbar').offsetParent!==null"), True)
+
+    def test_a_keyboard_opened_menu_folds_when_the_pointer_opens_another(self):
+        b = self.b
+        self.make_note("Fold")
+        self.reset("x")
+        self.open_heading_by_keyboard()
+        self.hover(".nbar [data-nt=m-list]")
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-heading"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+        self.assertEqual(b.eval("document.activeElement===document.querySelector('.nbar [data-nt=m-heading]')"), True)    # folded: focus is on its opener, not lost
+        self.away()
+
+    def test_enter_and_click_opened_menus_fold_too_when_the_pointer_opens_another(self):
+        b = self.b
+        self.make_note("Fold more")
+        self.reset("x")
+        b.eval("document.querySelector('.nbar [data-nt=m-list]').focus()")          # Enter opens List, focus inside
+        b.key("Enter")
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        self.hover(".nbar [data-nt=m-heading]")
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-list"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+        self.away()
+        b.wait("document.querySelectorAll('.nbar [role=menu]').length===0", 5)
+        b.click(".nbar [data-nt=m-list]")                                           # a click opens List with focus inside
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        self.hover(".nbar [data-nt=m-heading]")
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-list"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+        self.away()
+        b.wait("document.querySelectorAll('.nbar [role=menu]').length===0", 5)
+        self.hover(".nbar [data-nt=m-list]")                                        # hover List, Down moves in ...
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        b.eval("document.querySelector('.nbar [data-nt=m-list]').focus()")
+        b.key("ArrowDown")
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        self.hover(".nbar [data-nt=m-heading]")                                     # ... then the pointer opens Heading
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-list"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+
+    def test_a_click_on_a_hover_opened_menu_takes_it_so_the_pointer_opening_another_folds_it(self):
+        b = self.b
+        self.make_note("Click claims")
+        self.reset("x")
+        self.hover(".nbar [data-nt=m-list]")                                        # the pointer opens List ...
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        b.pump(0.5)
+        b.click(".nbar [data-nt=m-list]")                                           # ... a click moves in (the keyboard has it now) ...
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        self.assertEqual(self.expanded("m-list"), "true")
+        self.hover(".nbar [data-nt=m-heading]")                                     # ... so the pointer opening Heading folds it
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-list"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+
+    def test_a_fold_does_not_pull_focus_back_when_focus_has_already_moved_elsewhere(self):
+        b = self.b
+        self.make_note("No theft")
+        self.reset("x")
+        b.click(".nbar [data-nt=m-list]")                                           # List open, focus inside it
+        b.wait("document.activeElement.getAttribute('role') && document.activeElement.getAttribute('role').startsWith('menuitem')", 5)
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")                # focus into the note without a pointerdown or Tab
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.type("abc")
+        self.hover(".nbar [data-nt=m-heading]")                                     # the pointer opens Heading: List folds
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        b.pump(0.4)
+        self.assertEqual(self.expanded("m-list"), "false")
+        self.assertEqual(b.eval("document.activeElement===document.querySelector('.nbody')"), True, "the fold took focus out of the note")
+        b.type("def")
+        self.assertRegex(self.value(), r"xabcdef")
+        self.away()
+
+    def test_esc_then_down_in_the_same_tick_keeps_the_new_fold(self):
+        b = self.b
+        self.make_note("Same tick")
+        self.reset("x")
+        b.eval("""(async()=>{ const bt=document.querySelector('.nbar [data-nt=m-heading]'), key=k=>new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true});
+          bt.focus(); bt.dispatchEvent(key('ArrowDown')); await new Promise(r=>setTimeout(r,300));      // open by key, focus inside
+          document.activeElement.dispatchEvent(key('Escape'));                                          // Esc ...
+          for(let i=0;i<4;i++) await Promise.resolve();                                                 // (the close has rendered, its effect has not run)
+          bt.dispatchEvent(key('ArrowDown'));                                                           // ... and Down at once
+          await new Promise(r=>setTimeout(r,300)); })()""")
+        self.assertEqual(self.expanded("m-heading"), "true")
+        self.hover(".nbar [data-nt=m-list]")                                        # the pointer opens List: Heading, still the keyboard's, folds
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-heading"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+        self.away()
+
     def test_the_bar_is_one_tab_stop_and_the_menus_are_named(self):
         b = self.b
         self.make_note("Stop")

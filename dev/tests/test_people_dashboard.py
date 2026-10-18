@@ -49,6 +49,8 @@ SCRIPT = r"""
     go("people"); out.peopleHash=location.hash; out.rail=document.querySelector(".rail button[data-v=people]").getAttribute("aria-current"); out.heading=document.querySelector("#v-people h1").textContent;
     const prow=()=>[...document.querySelectorAll("#peopleTbl tbody tr")].map(tr=>[...tr.cells].map(c=>c.textContent.replace(/\s+/g," ").trim()));
     out.peopleRows=prow();
+    { const cs=e=>e&&getComputedStyle(e); const a=document.querySelector("#peopleTbl td.num a.cntl");   // #190: right-aligned counts, not drawn as links
+      out.numStyle=[cs(document.querySelector("#peopleTbl thead th.num")).textAlign,cs(document.querySelector("#peopleTbl tbody td.num")).textAlign,a?cs(a).textDecorationLine:"none"]; }
     out.ptabs=[...document.querySelectorAll("#ptabs [data-ptab]")].map(b=>[b.textContent.replace(/\s+/g," ").trim(),b.getAttribute("aria-selected")]);   // BL-138
     document.querySelector('#ptabs [data-ptab="none"]').click(); out.noneRows=prow(); out.noneHash=location.hash; document.querySelector('#ptabs [data-ptab="work"]').click();
     document.querySelector("#peopleTbl th[data-psort=oa]").click(); out.byActions=prow().map(r=>r[0]);
@@ -197,6 +199,12 @@ class PeopleDashboardTests(unittest.TestCase):
         self.assertEqual(r["newDlg"], [True, "Zed Quill", True])                              # details only: no match step
         self.assertEqual(r["pickedNew"], ["Zed Quill", True])
 
+    def test_counts_right_aligned_one_zero_style(self):
+        r = self.r
+        self.assertEqual(r["numStyle"], ["right", "right", "none"])                          # #190
+        for row in r["peopleRows"] + r["noneRows"]:
+            self.assertNotIn("—", row[4:])                                                    # a zero is 0, never a dash
+
     def test_saving_a_typed_owner(self):
         r = self.r
         self.assertEqual(r["mapped"], ["Sara Example", False])                                 # alias → full name, no prompt
@@ -213,8 +221,8 @@ class PeopleDashboardTests(unittest.TestCase):
         self.assertEqual((r["peopleHash"], r["rail"], r["heading"]), ("#people", "page", "People"))
         rows = {x[0].replace(" not in register", ""): x[1:] for x in r["peopleRows"]}
         self.assertEqual(r["peopleRows"][0][0], "You (Alan Carter)")                           # Alan first, no "not in register"
-        self.assertEqual(rows["Omar Ali"], ["Enable", "Project manager", "Digital Enablement", "2", "0", "—", "—"])
-        self.assertEqual(rows["Sara Example"], ["Example Client Ltd", "Delivery lead", "Example Programme", "1", "0", "—", "—"])
+        self.assertEqual(rows["Omar Ali"], ["Enable", "Project manager", "Digital Enablement", "2", "0", "0", "0"])
+        self.assertEqual(rows["Sara Example"], ["Example Client Ltd", "Delivery lead", "Example Programme", "1", "0", "0", "0"])
         self.assertNotIn("Jane Doe", rows)                                                     # BL-138: a made decision alone is history
         none = {x[0]: x[1:] for x in r["noneRows"]}
         self.assertEqual(none["Jane Doe"][2:], ["Example Programme", "1"])                      # on Nothing assigned: projects, closed items
@@ -712,7 +720,7 @@ class PeopleTabsTests(LiveBrowserCase):
         self.assertEqual(b.eval("PTAB"), "work")
         work = {r[0]: r[1:] for r in self.rows()}
         self.assertEqual(self.rows()[0][0], "You (Alan Carter)")                                   # You first
-        self.assertEqual(work["Sara Example"][3:], ["1", "0", "1", "—"])                           # open action, a decision waiting (Overdue stays actions and RAID)
+        self.assertEqual(work["Sara Example"][3:], ["1", "0", "1", "0"])                           # open action, a decision waiting (Overdue stays actions and RAID)
         self.assertEqual(work["Omar Ali"][3:6], ["1", "0", "1"])
         self.assertIn("Priya Waits not in register", work)                                       # an open action alone counts
         self.assertNotIn("Jane Doe", self.names())                                                # a made decision alone does not
@@ -739,6 +747,28 @@ class PeopleTabsTests(LiveBrowserCase):
         names += self.names()
         self.assertNotIn("Omar Ali", names)
         self.assertNotIn("Jane Doe", names)
+
+    def test_a_count_link_shows_a_focus_outline_when_reached_by_tab(self):
+        """#190: the count links lose their dotted underline in the People table; focus must still be visible (a computed outline)."""
+        b = self.open_people()
+        b.eval("document.querySelector('#ptabs [data-ptab=\"work\"]').focus()")
+        for _ in range(40):
+            b.key("Tab")
+            if b.eval("!!document.activeElement.matches('#peopleTbl a.cntl')"):
+                break
+        self.assertTrue(b.eval("document.activeElement.matches('#peopleTbl a.cntl')"), b.eval("document.activeElement.outerHTML.slice(0,120)"))
+        o = b.eval("(()=>{ const c=getComputedStyle(document.activeElement); return [c.outlineStyle, parseFloat(c.outlineWidth), document.activeElement.matches(':focus-visible')]; })()")
+        self.assertNotEqual(o[0], "none", o)
+        self.assertGreater(o[1], 0, o)
+        self.assertTrue(o[2], o)
+
+    def test_the_person_page_counts_read_zero_not_a_dash(self):
+        b = self.open_people()
+        b.eval("go('person','Priya Waits')")
+        b.wait("VIEW==='person'&&document.querySelector('.ppcounts')")
+        t = b.eval("[...document.querySelectorAll('.ppcounts > *')].map(x=>x.textContent.replace(/\\s+/g,' ').trim())")
+        self.assertTrue(any(x.startswith("0 ") for x in t), t)                                # she owns no risks: 0
+        self.assertFalse(any("—" in x or x.startswith("-") for x in t), t)
 
     def test_sorting_each_tab_and_the_tab_survives_reload_and_the_address(self):
         b = self.open_people()

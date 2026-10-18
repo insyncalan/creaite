@@ -638,7 +638,7 @@ ACT_CAP = 2000                                              # Activity lists the
 LOG_SQL = ("SELECT c.rowid AS rowid, c.*, a.undone_at FROM change_log c LEFT JOIN applies a ON a.apply_id = c.apply_id "
            "WHERE c.tbl != 'rejected' AND c.field != 'updated_at' {where} ORDER BY c.rowid DESC {limit}")
 LINKED = {"links": "from_item", "item_labels": "item_id"}   # the one logged field that stands for a whole link or label row
-BY = {"dashboard": "You, in the dashboard", "cx-edit": "You, via cx-edit", "excel-import": "Excel import",
+BY = {"dashboard": "You, in the dashboard", "cx-edit": "You, by hand", "excel-import": "Excel import",
       "assistant": "ask creaite", "undo": "Undo", "archive": "Archived for age"}     # BL-10: the daily archiving
 
 
@@ -1388,6 +1388,18 @@ def help_sections():
     return out
 
 
+def sweep_due_info():
+    """#200: whether the daily sweep is due (sweep.due_info(): the last success before today's sweep.due_from, and now after it),
+    for Today's 'Sweep due since 07:00' banner. {due, due_from, last}; CREAITE_NOW fixes the clock as in sweep.py."""
+    try:
+        import sweep
+        d = sweep.due_info()
+        return {"due": bool(d["due"]), "due_from": d["due_from"], "last": d["last"]}
+    except Exception as e:      # the banner is a convenience; a failure here never stops the build
+        swallowed("sweep_due", e)
+        return {"due": False, "due_from": "07:00", "last": None}
+
+
 def ui_settings(s):
     """settings.json → the dashboard's settings keys."""
     import tracker      # BL-181: the weekend days
@@ -1431,6 +1443,7 @@ def ui_settings(s):
             "weekendDays": sorted(tracker.weekend_days(s)),                     # BL-181: Monday 0
             "rail": g("dashboard", "rail", d=None),               # BL-163 (sprint-rail): the left rail's order, hidden items and display
             "railLabels": bool(g("dashboard", "rail_labels", d=True)),   # #156: Labels when collapsed
+            "railIconSize": g("dashboard", "rail_icon_size", d="small"),   # #182: Icon size
             "listCap": g("dashboard", "project_list_cap", d=10),   # BL-48
             "genDays": g("dashboard", "generate_days", d=7)}       # BL-46    # BL-45: Alan's saved Work views
 
@@ -1647,7 +1660,7 @@ def collect(now=None, timings=None):
     out = {
         "built_at": now.strftime("%Y-%m-%d %H:%M"), "data_at": (last_apply or now.strftime("%Y-%m-%d %H:%M"))[:16],
         "records_v": records_version(con),                     # BL-327: what the live server checks before reusing this data
-        "last_sweep": sweep, "live": False, "vault_path": None,
+        "last_sweep": sweep, "sweep_due": sweep_due_info(), "live": False, "vault_path": None,
         "settings": ui_settings(settings), "people": settings.get("people", {"added": [], "hidden": []}),
         "workstreams": settings.get("workstreams", {"added": [], "hidden": []}),
         "projects": projects, "actions": actions, "raid": raid, "decisions": decision_waits(con, decisions),

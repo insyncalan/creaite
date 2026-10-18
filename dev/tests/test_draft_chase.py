@@ -1,4 +1,4 @@
-"""BL-298 (sprint-draft-chase-server): Draft chase from the peek, the server and Python side.
+"""BL-298 (sprint-draft-chase-server): Draft email from the peek, the server and Python side.
 
 Run: python3 dev/tests/test_draft_chase.py
 The wording for the three modes (chase, help, decision) and the three tones, exactly as accepted (dev/BACKLOG.md › BL-298 › As

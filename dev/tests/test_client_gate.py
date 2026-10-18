@@ -318,7 +318,7 @@ class WorkItemLinks(Base):
         self.assertTrue(any(ITEM in f for f in got), got)
 
     def approve_week(self):
-        import test_client_leak as L
+        import client_leak_support as L
         self.py(L.APPROVE_WEEK + "print(json.dumps(p.name))")
         self.v.at("apply", script="tracker.py")
 
