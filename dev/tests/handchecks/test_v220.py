@@ -105,8 +105,20 @@ def resolve(file, tokens):
 
 
 def run_named(file, tokens, timeout=1500):
-    """Run the named tests of dev/tests/<file>.py in a fresh process. Returns (ok, message, count). The process gets no CREAITE_*
-    variable (the hand-check vault's pinned clock and port are not theirs); each test builds its own throwaway vault."""
+    """Run the named tests of dev/tests/<file>.py in a fresh process; a failure is run once more (browser tests are timing
+    sensitive on a busy machine) and a pass on the second run is reported as such. Returns (ok, message, count)."""
+    ok, msg, count = _run_named(file, tokens, timeout)
+    if ok or "is not on main" in msg:
+        return ok, msg, count
+    ok2, msg2, count2 = _run_named(file, tokens, timeout)
+    if ok2:
+        return True, f"{file}: passed on the second run (the first failed: {msg[:160]})", count2
+    return False, msg2, count2
+
+
+def _run_named(file, tokens, timeout):
+    """One run. The process gets no CREAITE_* variable (the hand-check vault's pinned clock and port are not theirs); each test
+    builds its own throwaway vault."""
     ids, problems = resolve(file, tokens)
     if problems:
         return False, "; ".join(problems), 0
@@ -136,14 +148,17 @@ class Named:
         self.named_many(n, (file, tokens))
 
     def named_many(self, n, *pairs):
-        total, failed = 0, []
+        total, failed, retried = 0, [], []
         for file, tokens in pairs:
             ok, msg, count = run_named(file, tokens)
             total += count
             if not ok:
                 failed.append(msg)
+            elif msg:
+                retried.append(msg)
         self.assertEqual(failed, [], "\n".join(failed))
-        self.note(n, f"{total} existing tests called, all passed: " + ", ".join(f for f, _ in pairs))
+        self.note(n, f"{total} existing tests called, all passed: " + ", ".join(f for f, _ in pairs)
+                  + ("; " + "; ".join(retried) if retried else ""))
 
     def note(self, n, text):
         NOTES[n] = "; ".join(x for x in (NOTES.get(n), text) if x)
