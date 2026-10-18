@@ -247,7 +247,7 @@ class HelpChecks(V220Case):
         b = self.b
         self.screen("help")
         tabs = b.eval("[...document.querySelectorAll('#v-help [role=tab]')].map(t=>t.textContent.trim())")
-        self.assertIn("What's new", tabs)
+        self.assertIn("What's new", [t.replace("\u2019", "'") for t in tabs])
         self.note(5, "the vault's Help tabs: " + ", ".join(tabs))
 
     def test_c06_printed_cards(self):
@@ -315,10 +315,11 @@ class TodayChecks(V220Case):
         b = self.b
         self.screen("today")
         heads = b.eval("[...document.querySelectorAll('#v-today h2')].map(h=>h.textContent.trim())")
-        self.assertIn("Intake and Review", heads)
-        self.assertNotIn("To decide", heads)
-        if "Week ahead" in heads:
-            self.assertEqual(heads.index("Intake and Review") + 1, heads.index("Week ahead"), "just above Week ahead")
+        at = lambda name: next((i for i, h in enumerate(heads) if h.startswith(name)), None)      # a heading carries its count
+        self.assertIsNotNone(at("Intake and Review"), heads)
+        self.assertIsNone(at("To decide"), heads)
+        if at("Week ahead") is not None:
+            self.assertEqual(at("Intake and Review") + 1, at("Week ahead"), "just above Week ahead")
         self.named_many(13, ("test_today_home", ("test_every_section_in_order_unboxed_resolved_folded",
                                                   "test_it_is_one_line_it_folds_like_before_and_goes_at_zero",
                                                   "test_every_count_is_a_real_link_focusable_and_enter_goes_to_its_page",
