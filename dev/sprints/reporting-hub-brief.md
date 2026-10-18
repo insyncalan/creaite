@@ -1,6 +1,6 @@
 # Brief: one Reporting hub for the internal and the client weekly report
 
-**Status: the mockup is LOCKED, approved by Alan on 18-10-2026. All reporting items are in release 2.4. No reporting development starts until Alan gives the go-ahead.**
+**Status: the mockup is LOCKED, approved by Alan on 18-10-2026 (approved version: commit 88ad88e1; since revised once, for the header logos in Round 8, and awaiting his re-approval). All reporting items are in release 2.4. No reporting development starts until Alan gives the go-ahead.**
 
 Product Manager, 18-10-2026, from Alan's requests and screenshots. Mockup: dev/mockups/reporting-hub-mockup.html (built on the real weekly snapshot; use the Internal, Client and Side by side switch; the week control; "Client report" settings at the top right; Export and Approve menus; the foot bar switches "Client report: required / not required", opens the settings and the export name-clash dialog). **No development on reporting until Alan gives the go-ahead after a complete UI review.** Alan's plan: reporting moves into release 2.4; the defects are for the next patch (he wrote 2.3.1, which is already out, so I read it as the next patch, 2.3.4; Jarvis to confirm). This brief supersedes dev/sprints/weekly-report-tidy-brief.md where they differ; that brief's items stay as the detail for the defects.
 
@@ -87,6 +87,10 @@ Full audit: dev/sprints/weekly-report-export-audit-2026-10-18.md (on branch expo
 3. **Risks to manage:** re-check hidden and client content on the server before writing a file; a fixed light print theme; the fallback path needs its own tests; hand checks 16 and 74 change. Word can only be checked by XML here; add LibreOffice to the development tools (Brewfile) or accept hand checks on the laptop.
 4. **Order:** the export work is the foundation for the hub, the free-text section (#218) and the HTML export defect (#219); it should come first. Total about **8 to 10 Sonnet days** across HTML, PDF and Word.
 **Alan's decision (18-10-2026): approved.** One renderer for HTML and PDF (the sheet's own exported mode, with the Python renderer kept as the fallback), and a repaired Word writer. **LibreOffice may be added to the development tools** (dev/Brewfile; development only, never needed to run creaite) so Word and PDF output can be rendered and compared in tests. Still no reporting development until Alan gives the go-ahead.
+
+## Round 8 (Alan, 18-10-2026): logos in the report header
+
+The report header carries the **firm's logo** (always), and the client's and a partner's logo when they are ticked in the client report settings, at the right of the title block, in both the internal and the client report. The mockup shows placeholder tiles ("Firm logo", "Client logo"); ticking or unticking a logo in the settings panel changes both headers at once. The logos are the real picture files the user has set (not drawn by the mockup), they print in every export (HTML, PDF and Word: today none of them do; see the export audit), and a missing logo file shows nothing, not a broken picture.
 
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
