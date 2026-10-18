@@ -2,7 +2,7 @@
 
 **Status: the mockup is LOCKED, approved by Alan on 18-10-2026 (first approved version: commit 88ad88e1; revised for the header logos, Rounds 8 and 9, and re-approved by Alan on 18-10-2026 at commit d752dbd4). All reporting items are in release 2.4. No reporting development starts until Alan gives the go-ahead.**
 
-Product Manager, 18-10-2026, from Alan's requests and screenshots. Mockup: dev/mockups/reporting-hub-mockup.html (built on the real weekly snapshot; use the Internal, Client and Side by side switch; the week control; "Client report" settings at the top right; Export and Approve menus; the foot bar switches "Client report: required / not required", opens the settings and the export name-clash dialog). **No development on reporting until Alan gives the go-ahead after a complete UI review.** Alan's plan: reporting moves into release 2.4; the defects are for the next patch (he wrote 2.3.1, which is already out, so I read it as the next patch, 2.3.4; Jarvis to confirm). This brief supersedes dev/sprints/weekly-report-tidy-brief.md where they differ; that brief's items stay as the detail for the defects.
+Product Manager, 18-10-2026, from Alan's requests and screenshots. Mockup: dev/mockups/reporting-hub-mockup-2026-10-18b.html (the current copy, without the Check this report button; the approved original c6f549ed stays as history in dev/mockups/reporting-hub-mockup.html) (built on the real weekly snapshot; use the Internal, Client and Side by side switch; the week control; "Client report" settings at the top right; Export and Approve menus; the foot bar switches "Client report: required / not required", opens the settings and the export name-clash dialog). **No development on reporting until Alan gives the go-ahead after a complete UI review.** Alan's plan: reporting moves into release 2.4; the defects are for the next patch (he wrote 2.3.1, which is already out, so I read it as the next patch, 2.3.4; Jarvis to confirm). This brief supersedes dev/sprints/weekly-report-tidy-brief.md where they differ; that brief's items stay as the detail for the defects.
 
 ## What Alan asked for in this round
 
@@ -32,7 +32,7 @@ They choose which **logos print in the header of this client's reports**: the fi
 One page for a project's weekly reporting, replacing the separate weekly and client pages:
 - **Switch: Internal | Client | Side by side.** Side by side shows both sheets at a readable size with their scrolling kept together, so a client section can be compared with the internal section it came from.
 - **Week control** (earlier and later week) and **status chips**: "Internal: draft", "Client: waits for the internal report" (the client facts lock when the internal report is approved, as today).
-- **One shared toolbar:** zoom, Show as exported, Check this report, Export, **Approve** (Approve the internal report; Approve the client report, available once the internal one is approved). Actions apply to the report in view, or both when side by side. Export asks Internal, Client or Both only when the project's client report is on; with it off it exports the internal report without a question.
+- **One shared toolbar:** zoom, Show as exported, Export, **Approve** (Approve the internal report; Approve the client report, available once the internal one is approved). Actions apply to the report in view, or both when side by side. Export asks Internal, Client or Both only when the project's client report is on; with it off it exports the internal report without a question.
 - Reached from the project's reporting space, from Reports, and from the weekly report reminder.
 
 ## 6: client report on or off, per project
@@ -51,7 +51,7 @@ One page for a project's weekly reporting, replacing the separate weekly and cli
 ## Round 3 changes (Alan, 18-10-2026)
 
 - **Client report settings is a cog icon only**, no text (tooltip and screen-reader name "Client report settings: on" or "off").
-- **All controls on one line:** view switch, week navigation, zoom, Show as exported, Check this report, the cog, Export and Approve. When the window is too narrow for the words, "Show as exported" and "Check this report" fall back to icons (the page measures its own line; no wrapping).
+- **All controls on one line:** view switch, week navigation, zoom, Show as exported, the cog, Export and Approve. When the window is too narrow for the words, "Show as exported" and "Check this report" fall back to icons (the page measures its own line; no wrapping).
 - **The scrolling header is shown as in the live version** (the approved #202 and #207 behaviour): scroll the report down and the search and ask creaite bar and the title block go at once, leaving the one line of controls with a short title ("Weekly reporting, project, week"); they come back only when you are at the very top, and no button on the line brings them back. The report gets the freed room.
 - **Week navigation options** (the foot bar switches them): **Stepper** (what we had: arrows and a date), **Menu** (the date opens a list of weeks, each with its health dot and the internal and client status, and a jump-to-date box) and **Ribbon** (the last six weeks as small pills, each with its health dot, today's draft dashed, the open week dark, plus a chevron that opens the Menu for older weeks). **Recommendation: the Ribbon with its Menu.** The six pills are the same six weeks as the health strip, so the health trend and which weeks are approved show without opening anything; one click moves to a week. It needs width, so on a narrow window it falls back to the Stepper with the Menu.
 
@@ -69,7 +69,7 @@ One page for a project's weekly reporting, replacing the separate weekly and cli
 
 ## Round 6 (Alan, 18-10-2026)
 
-- **Approved:** the icon controls on the hub's toolbar (Show as exported, Check this report, the cog) as drawn.
+- **Approved:** the icon controls on the hub's toolbar (Show as exported, the cog) as drawn.
 - **Defect: remove the "Weekly report" and "Client report" buttons from the bottom of the project page.** They are two bare buttons that open the two separate report pages. With one hub they are redundant. **Alan: at the bottom of the project page, beside the Files icon, a Reports icon opens reporting for the project (the hub).** Other ways in: the project page's Reporting card, the Reports page, and the weekly report reminder. Done when neither button is on the project page, the Reports icon sits beside the Files icon (same size and style, a name on hover, opens the hub for that project), and every link to a report still works. It touches reporting, so it waits for the hold with the rest.
 
 ## Round 7: the export audit (Team Stark, read-only, 18-10-2026)
@@ -105,12 +105,16 @@ How the logos keep their transparency and sit well on the page:
 ## Round 10: final choices (Alan, 18-10-2026)
 
 - **Week navigation is the Menu**: the week's date with a drop-down list of weeks (health dot, internal and client status, jump to a date); no "<" or ">" arrows. The Stepper and Ribbon options are dropped from the spec.
-- **The toolbar uses icons**, always: zoom (− Fit +), Show as exported, Check this report, Export, Approve, and the cog last. The words appear as tooltips and screen-reader names.
+- **The toolbar uses icons**, always: zoom (− Fit +), Show as exported, Export, Approve, and the cog last. The words appear as tooltips and screen-reader names.
 - The mockup's foot bar keeps only what demonstrates behaviour (client report required or not, settings, the export dialog); there are no design option switches.
+
+## Round 11 (Alan, 18-10-2026, via Jarvis): #170 is out of 2.4.0
+
+"Check this report" (#170) stays out of v2.4.0 and its button is removed from the hub toolbar. The current mockup is the dated copy `reporting-hub-mockup-2026-10-18b.html`, identical to the approved one (c6f549ed) except for that button; the approved original stays as history. Alan to re-approve the copy (or the instruction of 18-10 stands as his approval).
 
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
-Discreet section menu; eye icons; "Add from the tracker" (existing open items, client-visible only for the client report); the free-text section with the whole editor (v2.4.0, still subject to the export gaps named in the earlier brief); export fidelity for the health block, the figures, the timeline picture and the milestone list in HTML, Word and PDF; exports that save to the Reports folder and say where, with the **name-clash choice (Add a number, Rename, Overwrite)** as drawn; and the approved Check this report (#170).
+Discreet section menu; eye icons; "Add from the tracker" (existing open items, client-visible only for the client report); the free-text section with the whole editor (v2.4.0, still subject to the export gaps named in the earlier brief); export fidelity for the health block, the figures, the timeline picture and the milestone list in HTML, Word and PDF; exports that save to the Reports folder and say where, with the **name-clash choice (Add a number, Rename, Overwrite)** as drawn; (the Check this report button, #170, is out of 2.4.0).
 
 ## Client-safe
 
