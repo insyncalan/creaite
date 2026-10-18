@@ -112,15 +112,25 @@ How the logos keep their transparency and sit well on the page:
 
 "Check this report" (#170) stays out of v2.4.0 and its button is removed from the hub toolbar. The current mockup is the dated copy `reporting-hub-mockup-2026-10-18b.html`, identical to the approved one (c6f549ed) except for that button; the approved original stays as history. **Approved by Alan on 18-10-2026**: the copy is the current locked mockup.
 
-## Round 12: deferred after 2.4.0 (differences between the build and the locked mockup)
+## Round 12 (corrected 18-10-2026): deferred after 2.4.0, checked by Stark (his comment on #135, 22:10)
 
-Relayed by Jarvis from Team Cap's differences list (18-10-2026); the details sit with Stark and Cap. None holds the release. In the order I would do them:
-1. **Click the logo's place in the report header to add or change the logo** (Alan's requirement, Round 8). **Not built:** in 2.4.0 a logo is added or changed in the cog panel only. **The next item.** The 2.4.0 notes say so.
-2. **Partner logo tile default.** The build has the partner tile ticked by default; the mockup has it unticked (only the firm's and the client's show until a partner is chosen). Align the build to the mockup.
-3. **Toolbar words versus icons.** The mockup's toolbar is icons only, always, with the words as tooltips and accessible names; the build differs in where it shows words. Align the build to the mockup.
-4. **The sparkle beside the health reason** (the plain app sparkle that suggests a health and a reason) is not in the hub build. Add it as the mockup shows.
-5. **The extra "Which report" step.** The build asks for a report where the mockup does not. The rule (Alan, 18-10-2026): Export asks Internal, Client or Both only when the project's client report is on, and never otherwise. Align the build to that rule.
-6. **Section menu width** is 288 px in the build and 300 px in the mockup. Trivial; align to the mockup.
+Differences between the build and the locked mockup. None holds the release. **Correct as written:**
+1. **Click the logo's place in the report header to add or change the logo** (Alan's requirement, Round 8). Not built: in 2.4.0 a logo is added or changed in the cog panel only. Size M. **First.**
+2. **Partner logo tile default.** The build has it ticked by default; the mockup has it unticked. Size S. **Needs Alan's call:** the build reads "no logos line = every logo on", so changing the default would change what existing projects print. Options: (a) new projects start with the partner unticked and existing projects are unchanged (my recommendation); (b) every project's partner logo is unticked until chosen.
+3. **Section menu width:** 288 px in the build, 300 px in the mockup. Size S.
+
+**Struck from my earlier list (wrong or already done):** the toolbar is icons only, always (tested); Export asks Internal, Client or Both only when the client report is on (tested); the sparkle beside the health reason is built (by H2); #170 is a different feature and is out.
+
+**Added by Stark and Cap:**
+4. **Editable Side by side** (#230, branch p241-sbs): both reports editable at once. Size M, 1 to 1.5 Sonnet days.
+5. **Grey pane and label-row layout** (Cap #6): the report's pane and the label row differ from the mockup. Size M.
+6. **Cap L4 to L7 and L10:** small to medium differences on Cap's list (details with Cap; not seen by me).
+7. **Neutral week-list dots** for weeks the open report does not hold. Size S.
+8. **Side by side readable at about 310 px a page at 900 px wide:** Alan accepted this (18-10-2026); no action.
+
+### Scope proposal for the next release (one release, no point release per defect)
+
+Item 1 first, then 4, then 5; items 2, 3 and 7 are small and ride along once Alan decides 2; item 6 is sized when Cap's details are in. Recommendation: one release containing 1, 4, 5, 6, 3 and 7, with 2 as option (a). Hand checks follow the release and never hold it.
 
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
