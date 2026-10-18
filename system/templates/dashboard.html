@@ -5773,6 +5773,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     loadReportImages: () => loadReportImages,
     loadTab: () => loadTab,
     localDay: () => localDay,
+    logoKindName: () => logoKindName,
+    logoKindsOf: () => logoKindsOf,
     longDate: () => longDate,
     longDay: () => longDay,
     longText: () => longText,
@@ -6123,6 +6125,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     parseHash: () => parseHash,
     parseReporting: () => parseReporting,
     parseWhen: () => parseWhen,
+    partnersOf: () => partnersOf,
     passes: () => passes,
     pasteLink: () => pasteLink,
     pdAll: () => pdAll,
@@ -6820,6 +6823,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     thisWeek: () => thisWeek,
     tib: () => tib,
     tickNear: () => tickNear,
+    ticksOf: () => ticksOf,
+    tilesOf: () => tilesOf,
     tipBox: () => tipBox,
     tipHide: () => tipHide,
     tipShow: () => tipShow,
@@ -26635,9 +26640,24 @@ ${s5}`;
     const p6 = project(code);
     return !p6 || p6.crrem !== false;
   };
+  function partnersOf(code) {
+    const p6 = project(code);
+    return p6 && Array.isArray(p6.partners) ? p6.partners : [];
+  }
+  function logoKindsOf(code) {
+    const ps2 = partnersOf(code);
+    return ["firm", "client", ...ps2.length ? ps2.map((x5) => `partner:${x5.slug}`) : ["partner"]];
+  }
+  function logoKindName(code, kind) {
+    if (kind === "firm") return "Firm";
+    if (kind === "client") return "Client";
+    const own = partnersOf(code).find((x5) => `partner:${x5.slug}` === kind);
+    return own ? `Partner: ${own.name}` : "Partner";
+  }
+  var ticksOf = (kinds, chosen) => kinds.filter((k5) => k5 === "firm" || chosen.includes(k5) || chosen.includes("partner") && k5.startsWith("partner"));
   function clientLogosOn(code) {
-    const p6 = project(code), l6 = p6 && Array.isArray(p6.crlogos) ? p6.crlogos : LOGO_KINDS;
-    return LOGO_KINDS.filter((k5) => k5 === "firm" || l6.includes(k5));
+    const p6 = project(code), kinds = logoKindsOf(code);
+    return ticksOf(kinds, p6 && Array.isArray(p6.crlogos) ? p6.crlogos : kinds);
   }
   function changed() {
     crTick.value++;
@@ -26665,8 +26685,10 @@ ${s5}`;
   async function setClientLogos(code, kinds) {
     const p6 = project(code);
     if (!p6) return false;
-    const list = LOGO_KINDS.filter((k5) => k5 === "firm" || kinds.includes(k5));
-    if (!await setMemLine(code, "Client report logos", list.join(", "), "client_report_logos")) return false;
+    const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
+    const everyPartner = parts.every((k5) => list.includes(k5));
+    const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
+    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
     p6.crlogos = list;
     changed();
     return true;
@@ -68400,14 +68422,7 @@ ${d5.text}`);
   function ReportSheet({ audience, addText = addTextSection, ...rest }) {
     return /* @__PURE__ */ u2(Sheet, { ...rest, report: { audience, addText } });
   }
-  var KIND = (
-    /** @type {Record<string, string>} */
-    { firm: "Firm", client: "Client", partner: "Partner" }
-  );
-  var ALL_KINDS = (
-    /** @type {const} */
-    ["firm", "client", "partner"]
-  );
+  var nameOf = (code, kind) => logoKindName(code, kind).replace(/^Partner: /, "");
   var LOGO_ACCEPT = "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg";
   function LogoSlot({ code, kind, pic }) {
     const file = A2(
@@ -68418,7 +68433,7 @@ ${d5.text}`);
       null
     );
     const [ask2, setAsk] = d2(false);
-    const name = KIND[kind].toLowerCase(), label = `${pic ? "Change" : "Add"} ${name} logo`;
+    const name = kind.startsWith("partner:") ? nameOf(code, kind) : kind, label = `${pic ? "Change" : "Add"} ${name} logo`;
     const choose = () => file.current && file.current.click();
     const stop = () => {
       setAsk(false);
@@ -68449,7 +68464,7 @@ ${d5.text}`);
           "aria-label": label,
           title: label,
           onClick: () => pic && kind === "firm" ? setAsk(true) : choose(),
-          children: pic ? /* @__PURE__ */ u2("img", { src: pic, alt: `${KIND[kind]} logo` }) : /* @__PURE__ */ u2(S2, { children: [
+          children: pic ? /* @__PURE__ */ u2("img", { src: pic, alt: `${nameOf(code, kind)} logo` }) : /* @__PURE__ */ u2(S2, { children: [
             /* @__PURE__ */ u2("b", { "aria-hidden": "true", children: "+" }),
             /* @__PURE__ */ u2("span", { children: [
               "Add ",
@@ -68476,9 +68491,9 @@ ${d5.text}`);
     h2(() => {
       if (edit) readClientLogos(code);
     }, [edit, code]);
-    const chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : ["firm", "client", "partner"];
-    const shown2 = logos.filter((l6) => l6.kind === "firm" || chosen.includes(l6.kind));
-    const slots = edit ? ALL_KINDS.filter((k5) => k5 === "firm" || chosen.includes(k5)) : [];
+    const every = logoKindsOf(code), chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : every;
+    const shown2 = logos.filter((l6) => ticksOf([l6.kind], chosen).length);
+    const slots = edit ? ticksOf(every, chosen) : [];
     const live = crLogoFor.value === code;
     const pathOf = (k5) => (live ? crLogoPaths.value[k5] : (shown2.find((l6) => l6.kind === k5) || {}).path) || "";
     const meta = doc.meta || {};
@@ -68498,7 +68513,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2(LogoSlot, { code, kind: k5, pic: data[pathOf(k5)] || "" })
       ] }, k5)) : shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
         i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
-        data[l6.path] ? /* @__PURE__ */ u2("img", { src: data[l6.path], alt: `${KIND[l6.kind] || l6.kind} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: KIND[l6.kind] || l6.kind })
+        data[l6.path] ? /* @__PURE__ */ u2("img", { src: data[l6.path], alt: `${nameOf(code, l6.kind)} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: nameOf(code, l6.kind) })
       ] }, l6.kind)) })
     ] });
   }
@@ -72199,14 +72214,14 @@ ${d5.text}`);
   }
 
   // components/report/hub/ClientReportPanel.jsx
-  var TILES = (
-    /** @type {{kind: TileKind, mark: string, name: string, line: string}[]} */
-    [
-      { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
-      { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
-      { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" }
-    ]
-  );
+  function tilesOf(code) {
+    const ps2 = partnersOf(code);
+    return [
+      { kind: "firm", mark: "F", name: "The firm", who: "firm's", noun: "firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
+      { kind: "client", mark: "C", name: "The client", who: "client's", noun: "client", line: "Shown on this project's reports" },
+      ...ps2.length ? ps2.map((p6) => ({ kind: `partner:${p6.slug}`, mark: "P", name: `Partner: ${p6.name}`, who: `${p6.name}'s`, noun: p6.name, line: "Shown on this project's reports" })) : [{ kind: "partner", mark: "P", name: "A partner", who: "partner's", noun: "partner", line: "Only if one is involved" }]
+    ];
+  }
   var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
   function LogoTile({ code, t: t47, ticked }) {
     const file = A2(
@@ -72242,7 +72257,7 @@ ${d5.text}`);
             class: "btn sm",
             "data-logo-add": t47.kind,
             onClick: () => file.current && file.current.click(),
-            "aria-label": `${pic ? "Change" : "Add"} the ${firm ? "firm's" : t47.kind === "client" ? "client's" : "partner's"} logo`,
+            "aria-label": `${pic ? "Change" : "Add"} the ${t47.who} logo`,
             children: pic ? "Change" : "Add logo"
           }
         ),
@@ -72253,12 +72268,12 @@ ${d5.text}`);
             class: "btn sm",
             "data-logo-remove": t47.kind,
             onClick: () => setAsk(true),
-            "aria-label": `Remove the ${t47.kind} logo`,
+            "aria-label": `Remove the ${t47.noun} logo`,
             children: "Remove"
           }
         ) : null,
-        pic && ask2 ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.kind} logo?`, children: [
-          /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.kind} logo?` }),
+        pic && ask2 ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.noun} logo?`, children: [
+          /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.noun} logo?` }),
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-yes": t47.kind, onClick: () => {
             setAsk(false);
             removeClientLogo(code, t47.kind);
@@ -72273,7 +72288,7 @@ ${d5.text}`);
             checked: firm || ticked,
             disabled: firm,
             "data-logo-tick": t47.kind,
-            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.kind}'s logo in the header`,
+            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.who} logo in the header`,
             onChange: firm ? void 0 : toggle
           }
         )
@@ -72357,7 +72372,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2("div", { class: "cfgrow top", children: [
           /* @__PURE__ */ u2("label", { id: "cfgLogosL", children: "Logos in the report header" }),
           /* @__PURE__ */ u2("div", { class: "cfglogos", role: "group", "aria-labelledby": "cfgLogosL", children: [
-            TILES.map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
+            tilesOf(code).map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
             crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "sub cfgnote", role: "status", id: "cfgLogoNote", children: crLogoNote.value }) : null
           ] })
         ] }),

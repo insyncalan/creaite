@@ -12,19 +12,25 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { P } from "../../../core/data.js";
 import { hubCfg } from "../../../stores/hub.js";
 import {
-  CLIENT_NAME_MAX, clientLogosOn, clientReminderOn, clientReportOn, crLogoData, crLogoNote, crLogoPaths, crTick, readClientLogos, removeClientLogo,
+  CLIENT_NAME_MAX, clientLogosOn, clientReminderOn, clientReportOn, crLogoData, crLogoNote, crLogoPaths, crTick, partnersOf, readClientLogos, removeClientLogo,
   setClientLogos, setClientName, setClientReminder, setClientRhythm, setClientReport, uploadClientLogo,
 } from "../../../stores/reportingSettings.js";
 
-/** @typedef {import("../../../stores/reportingSettings.js").LogoKind} TileKind */
-const TILES = /** @type {{kind: TileKind, mark: string, name: string, line: string}[]} */ ([
-  { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
-  { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
-  { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" },
-]);
+/** @typedef {{kind: string, mark: string, name: string, line: string, who: string, noun: string}} Tile */
+/** The tiles of a project: the firm, the client, then one for each partner organisation on its Partners line (#228 B), or the one old
+    "A partner" tile when it lists none. @param {string} code @returns {Tile[]} */
+export function tilesOf(code) {
+  const ps = partnersOf(code);
+  return [
+    { kind: "firm", mark: "F", name: "The firm", who: "firm's", noun: "firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
+    { kind: "client", mark: "C", name: "The client", who: "client's", noun: "client", line: "Shown on this project's reports" },
+    ...(ps.length ? ps.map(p => ({ kind: `partner:${p.slug}`, mark: "P", name: `Partner: ${p.name}`, who: `${p.name}'s`, noun: p.name, line: "Shown on this project's reports" }))
+      : [{ kind: "partner", mark: "P", name: "A partner", who: "partner's", noun: "partner", line: "Only if one is involved" }]),
+  ];
+}
 const RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
 
-/** One logo tile. @param {{code: string, t: (typeof TILES)[number], ticked: boolean}} props */
+/** One logo tile. @param {{code: string, t: Tile, ticked: boolean}} props */
 function LogoTile({ code, t, ticked }) {
   const file = useRef(/** @type {HTMLInputElement|null} */ (null));
   const path = crLogoPaths.value[t.kind], pic = path ? crLogoData.value[path] : "";
@@ -46,16 +52,16 @@ function LogoTile({ code, t, ticked }) {
       <span class="cfgname">{t.name}<span class="sub">{t.line}</span></span>
       <span class="cfgact">
         <button type="button" class="btn sm" data-logo-add={t.kind} onClick={() => file.current && file.current.click()}
-          aria-label={`${pic ? "Change" : "Add"} the ${firm ? "firm's" : t.kind === "client" ? "client's" : "partner's"} logo`}>{pic ? "Change" : "Add logo"}</button>
+          aria-label={`${pic ? "Change" : "Add"} the ${t.who} logo`}>{pic ? "Change" : "Add logo"}</button>
         {pic && !ask ? <button type="button" class="btn sm" data-logo-remove={t.kind} onClick={() => setAsk(true)}
-          aria-label={`Remove the ${t.kind} logo`}>Remove</button> : null}
-        {pic && ask ? <span class="cfgask" role="group" aria-label={`Remove the ${t.kind} logo?`}>
-          <span class="sub" role="alert">{firm ? "Remove the firm's logo for all projects?" : `Remove the ${t.kind} logo?`}</span>
+          aria-label={`Remove the ${t.noun} logo`}>Remove</button> : null}
+        {pic && ask ? <span class="cfgask" role="group" aria-label={`Remove the ${t.noun} logo?`}>
+          <span class="sub" role="alert">{firm ? "Remove the firm's logo for all projects?" : `Remove the ${t.noun} logo?`}</span>
           <button type="button" class="btn sm" data-logo-remove-yes={t.kind} onClick={() => { setAsk(false); removeClientLogo(code, t.kind); }}>Remove</button>
           <button type="button" class="btn sm" data-logo-remove-no={t.kind} onClick={() => setAsk(false)}>Keep</button></span> : null}
         <input type="file" hidden ref={file} accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg" data-logo-file={t.kind} onChange={picked} />
         <input type="checkbox" checked={firm || ticked} disabled={firm} data-logo-tick={t.kind}
-          aria-label={firm ? "The firm's logo is always shown" : `Show the ${t.kind}'s logo in the header`} onChange={firm ? undefined : toggle} />
+          aria-label={firm ? "The firm's logo is always shown" : `Show the ${t.who} logo in the header`} onChange={firm ? undefined : toggle} />
       </span>
     </div>
   );
@@ -91,7 +97,7 @@ export function ClientReportPanel({ code, onClose }) {
               onChange={e => setClientReminder(code, /** @type {HTMLInputElement} */ (e.target).checked)} /> Remind me on the due day</label></div>
           <div class="cfgrow top"><label id="cfgLogosL">Logos in the report header</label>
             <div class="cfglogos" role="group" aria-labelledby="cfgLogosL">
-              {TILES.map(t => <LogoTile key={t.kind} code={code} t={t} ticked={ticked.includes(t.kind)} />)}
+              {tilesOf(code).map(t => <LogoTile key={t.kind} code={code} t={t} ticked={ticked.includes(t.kind)} />)}
               {crLogoNote.value ? <p class="sub cfgnote" role="status" id="cfgLogoNote">{crLogoNote.value}</p> : null}
             </div></div>
           <p class="sub">The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects.</p>

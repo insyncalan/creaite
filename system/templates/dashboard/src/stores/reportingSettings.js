@@ -17,7 +17,8 @@ import { weeklyLogos } from "./weekly.js";
 import { repTick } from "./reporting.js";
 
 export const LOGO_KINDS = /** @type {const} */ (["firm", "client", "partner"]);
-/** @typedef {"firm"|"client"|"partner"} LogoKind */
+/** A logo kind: "firm", "client", "partner" (the one old partner, when the project lists none) or "partner:<slug>" (#228 B).
+    @typedef {string} LogoKind */
 
 /** bumped when a setting changes, so an open panel or Settings row redraws */
 export const crTick = signal(0);
@@ -30,10 +31,36 @@ export const clientReportOn = code => { const p = project(code); return !p || p.
 export const clientReportCogLabel = code => `Client report settings: ${clientReportOn(code) ? "on" : "off"}`;
 /** Whether a reminder is wanted on the client report's due day. @param {string} code */
 export const clientReminderOn = code => { const p = project(code); return !p || p.crrem !== false; };
+/** The project's partner organisations, in the order of its CLAUDE.md `Partners` line; the slug is made by the server (build_dashboard.py
+    partners_of), never here. @param {string} code @returns {{name: string, slug: string}[]} */
+export function partnersOf(code) {
+  const p = project(code);
+  return p && Array.isArray(p.partners) ? p.partners : [];
+}
+
+/** The project's logo kinds, the firm's first: firm, client, then "partner:<slug>" for each partner (or the one old "partner").
+    @param {string} code @returns {LogoKind[]} */
+export function logoKindsOf(code) {
+  const ps = partnersOf(code);
+  return ["firm", "client", ...(ps.length ? ps.map(x => `partner:${x.slug}`) : ["partner"])];
+}
+
+/** What a kind is called to Alan: "Firm", "Client", "Partner", or "Partner: <name>". @param {string} code @param {LogoKind} kind */
+export function logoKindName(code, kind) {
+  if (kind === "firm") return "Firm";
+  if (kind === "client") return "Client";
+  const own = partnersOf(code).find(x => `partner:${x.slug}` === kind);
+  return own ? `Partner: ${own.name}` : "Partner";
+}
+
+/** Which of `kinds` a layout's logo list ticks: a bare "partner" is every partner; the firm's is always on.
+    @param {string[]} kinds @param {string[]} chosen */
+export const ticksOf = (kinds, chosen) => kinds.filter(k => k === "firm" || chosen.includes(k) || (chosen.includes("partner") && k.startsWith("partner")));
+
 /** The logos ticked for the header of this project's reports, the firm's first. @param {string} code @returns {LogoKind[]} */
 export function clientLogosOn(code) {
-  const p = project(code), l = p && Array.isArray(p.crlogos) ? p.crlogos : LOGO_KINDS;
-  return LOGO_KINDS.filter(k => k === "firm" || l.includes(k));
+  const p = project(code), kinds = logoKindsOf(code);
+  return ticksOf(kinds, p && Array.isArray(p.crlogos) ? p.crlogos : kinds);
 }
 
 /** The pages and reminders that follow the setting redraw. */
@@ -59,8 +86,10 @@ export async function setClientReminder(code, on) {
 /** @param {string} code @param {LogoKind[]} kinds the ticked logos (the firm's is always kept) @returns {Promise<boolean>} */
 export async function setClientLogos(code, kinds) {
   const p = project(code); if (!p) return false;
-  const list = LOGO_KINDS.filter(k => k === "firm" || kinds.includes(k));
-  if (!await setMemLine(code, "Client report logos", list.join(", "), "client_report_logos")) return false;
+  const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter(k => k.startsWith("partner"));
+  const everyPartner = parts.every(k => list.includes(k));
+  const line = everyPartner ? [...list.filter(k => !k.startsWith("partner")), "partner"] : list;      // every partner ticked: one `partner`, so one added later is ticked too
+  if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
   p.crlogos = list; changed(); return true;
 }
 
