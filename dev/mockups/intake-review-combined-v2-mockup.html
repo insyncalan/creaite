@@ -181,7 +181,18 @@ var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){retu
 function I(d){return '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>'}
 var CAL=I('<rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M4 10h16M9 3v4M15 3v4"></path>'),DOC=I('<path d="M6 3h8l4 4v14H6z"></path><path d="M14 3v4h4"></path>'),X=I('<path d="M6 6l12 12M18 6L6 18"></path>'),CK=I('<path d="M5 12.5l4.5 4.5L19 7.5"></path>');
 var MEET=[{id:1,t:'Example Programme steering',w:'Thu 15:00',st:'ready',d:4},{id:2,t:'Vendor onboarding check-in',w:'Fri 10:30',st:'ready',d:0},{id:3,t:'Supplier call',w:'Fri 16:00',st:'waiting',d:0},
-{id:4,t:'Risk review',w:'Tue 09:30',st:'drafted',d:3,props:[{k:'Minutes',t:'Draft minutes: risk review',q:'Draft minutes of the call: 1 decision, 4 actions, 2 risks.'},{k:'Risk',t:'Vendor may exit the market',q:'“If they pull out we lose the connector.”'},{k:'Action',t:'Confirm data owner (due 22-10)',q:'“Omar, can you confirm who owns the data?”'}]},
+{id:4,t:'Risk review',w:'Tue 09:30',st:'drafted',d:3,props:[
+{k:'Minutes',t:'Minutes: Risk review',src:'Draft minutes'},
+{k:'Decision',t:'Hold the pilot go-live at 20-11-2026',o:'Steering group',det:'Made by Rashid Al Suwaidi',ind:1,src:'00:31:05'},
+{k:'Risk',t:'The vendor may exit the market, with no second source for the connector',o:'Sam Okoro',det:'High \u00b7 no response yet',ind:1,src:'00:12:40'},
+{k:'Risk',t:'The test environment may not be ready for UAT',o:'Lena Fischer',det:'Medium \u00b7 no response yet',ind:1,src:'00:18:22'},
+{k:'Issue',t:'Test licences have not been ordered',o:'Priya Nair',det:'High \u00b7 raised today',src:'00:21:10'},
+{k:'Dependency',t:'The access list is needed before pilot setup',o:'Alan Carter',det:'Medium \u00b7 needed by 26-10-2026',src:'00:24:48'},
+{k:'Action',t:'Confirm who owns the data',o:'Omar Hale',det:'Due 22-10-2026 \u00b7 Medium',src:'00:14:03'},
+{k:'Action',t:'Order the test licences',o:'Priya Nair',det:'Due 21-10-2026 \u00b7 High',src:'00:21:55'},
+{k:'Action',t:'Send the revised budget',o:'Alan Carter',det:'Due 23-10-2026 \u00b7 Medium',src:'00:27:30'},
+{k:'Action',t:'Share the test schedule',o:'Sam Okoro',det:'Due 26-10-2026 \u00b7 Medium',src:'00:29:12'},
+{k:'Action',t:'Book the vendor demo',o:'Lena Fischer',det:'Due 28-10-2026 \u00b7 Low',src:'00:33:40'}]},
 {id:5,t:'Budget walk-through',w:'Mon 14:00',st:'drafted',d:1,props:[{k:'Decision',t:'Hold the contingency at 8%',q:'“We agree to hold contingency at eight percent.”'},{k:'Action',t:'Send the revised budget',q:'“I’ll send the revised budget Friday.”'}]},
 {id:6,t:'Steering committee prep',w:'Mon 09:00',st:'done',d:5,res:'5 approved, 1 rejected'}];
 var MAIL=[{k:'Action',t:'Reply to the legal query on clause 9',o:'Sara Khan',src:'Mail from Lena Park, 16-10',d:1},{k:'Update',t:'Mark done: Draft the comms plan',o:'Lena Park',src:'Mail, 14-10 (probably done)',d:3},{k:'Risk',t:'Supplier lead times growing',o:'Sam Okoro',src:'Teams chat, 15-10',d:2}];
@@ -191,6 +202,12 @@ var age=function(d){return d===0?'today':d===1?'1 day':d+' days'};
 var nProc=function(){return rows.filter(function(r){return r.st==='ready'}).length};
 var nApp=function(){return rows.filter(function(r){return r.st==='drafted'}).reduce(function(a,r){return a+r.props.length},0)+(sample==='empty'?0:MAIL.length)};
 function stale(d){return d>=3?' <span class="tag stale">Stale · '+d+' days</span>':''}
+
+var KI={Action:I('<path d="M9 11l3 3 8-8"></path><path d="M5 12v7h14v-7"></path>'),Risk:I('<path d="M12 3l10 18H2z"></path><path d="M12 10v5M12 18v.4"></path>'),Issue:I('<circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5M12 16.2v.4"></path>'),Dependency:I('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path>'),Decision:I('<path d="M5 21V4M5 4h13l-3 4 3 4H5"></path>'),Minutes:DOC};
+function mblock(r){var p=r.props,par=p[0],ch=p.slice(1);var routine=ch.filter(function(c){return !c.ind}).length;
+ var h='<tr class="click mparent"><td style="width:32px"><input type="checkbox" aria-label="Select the routine items from these minutes"></td><td class="title"><button class="mini tog" aria-expanded="true" title="Hide its items">'+ch.length+' items</button> '+par.t+stale(r.d)+'<div class="why">Draft \u00b7 Draft minutes \u00b7 <span class="indiv">approve individually</span></div><div class="why">'+r.w+' \u00b7 <a href="#" class="srclink">Open source</a></div></td><td style="white-space:nowrap;text-align:right"><button class="mini ok" data-a="x" title="Approves the routine items; minutes, new decisions and new risks stay for one-by-one approval">Approve routine ('+routine+')</button> <button class="mini ok" data-a="x">'+CK+'Approve</button> <button type="button" class="ib sm no" aria-label="Reject" data-tip="Reject" data-a="x">'+X+'</button></td></tr>';
+ ch.forEach(function(c){h+='<tr class="click mchild"><td style="width:32px"><input type="checkbox" aria-label="Select"></td><td class="title"><span class="ki" aria-hidden="true">'+(KI[c.k]||'')+'</span>'+c.t+'<div class="why rdet">'+c.o+' \u00b7 '+c.det+'</div><div class="why">'+c.k+(c.ind?' \u00b7 <span class="indiv">approve individually</span>':'')+' \u00b7 Strong match</div><div class="why">'+r.t+' \u00b7 '+c.src+' \u00b7 <a href="#" class="srclink">Open source</a></div></td><td style="white-space:nowrap;text-align:right"><button class="mini ok" data-a="x">'+CK+'Approve</button> <button type="button" class="ib sm no" aria-label="Reject, with a reason" data-tip="Reject, with a reason" data-a="x">'+X+'</button></td></tr>'});
+ return h}
 function table(rowsHtml){return '<div class="tbl"><table><tbody>'+rowsHtml+'</tbody></table></div>'}
 function tr(title,whys,acts,ico){return '<tr class="click"><td style="width:32px"><input type="checkbox" aria-label="Select"></td><td class="title">'+(ico?'<span class="ki" aria-hidden="true">'+ico+'</span>':'')+title+whys.map(function(w){return '<div class="why">'+w+'</div>'}).join('')+'</td><td style="white-space:nowrap;text-align:right">'+acts+'</td></tr>'}
 function mrow(r,mode){var a='',w=[r.w+' · Example Programme'];
@@ -200,7 +217,7 @@ function mrow(r,mode){var a='',w=[r.w+' · Example Programme'];
  else if(r.st==='drafted'){w.push(r.props.length+' proposals to check · '+age(r.d));a=mode==='inline'?'<button class="mini" data-a="open" data-id="'+r.id+'">'+(open===r.id?'Close':'Check them')+'</button>':'<button class="mini" data-a="toreview">Review them</button>'}
  else{w.push(r.res);a='<span class="icsub">Done</span>'}
  var h=tr(r.t+(r.st==='ready'||r.st==='drafted'?stale(r.d):''),w,a,CAL);
- if(mode==='inline'&&open===r.id)h+='<tr><td></td><td colspan="2" class="icinl">'+inl(r)+'</td></tr>';
+ if(mode==='inline'&&open===r.id){h+=(r.props[0]&&r.props[0].k==='Minutes'&&r.props.length>3)?mblock(r):'<tr><td></td><td colspan="2" class="icinl">'+inl(r)+'</td></tr>'}
  return h}
 function inl(r){var p=r.props[pi];if(!p)return '<div class="icsub" style="color:var(--ok)">All '+r.props.length+' checked. <button class="mini" data-a="close">Done</button></div>';
  return '<div class="icsub">'+(pi+1)+' of '+r.props.length+'</div><div style="font-weight:600"><span class="tag">'+p.k+'</span> '+p.t+'</div><div class="q">'+p.q+'</div><div class="acts"><button class="mini ok" data-a="ap">'+CK+'Approve</button><button class="mini" data-a="x">Edit</button><button class="mini" data-a="ap">Reject…</button><button class="mini" data-a="ap">Later</button></div>'}
@@ -213,7 +230,7 @@ function V2(){var tabs='<div class="tabhost"><div class="tabs" role="tablist" ar
  if(lane==='process'){var l=rows.filter(function(r){return ['ready','waiting','running'].indexOf(r.st)>-1});h+=tools('<button class="btn" data-a="all"'+(nProc()?'':' disabled')+'>Process all ready ('+nProc()+')</button>')+(l.length?table(l.map(function(r){return mrow(r,'link')}).join('')):empty('Nothing to process. Meetings appear when they end.'))+grp('Upload files','drop files anywhere on this page')+'<div class="empty" style="text-align:left"><button class="btn">Choose files…</button> or drop them here.</div>'}
  else{var d=rows.filter(function(r){return r.st==='drafted'});h+=tools('<button class="btn">Approve routine <span class="sub">('+nApp()+')</span></button>');
   if(!d.length&&sample==='empty')h+=empty('Nothing to approve.');
-  d.forEach(function(r){h+=grp(r.t,r.props.length+' proposals · '+age(r.d))+table(r.props.map(function(p){return tr(p.t,['<span class="tag">'+p.k+'</span> · Example Programme'],'<button class="mini ok" data-a="x">'+CK+'Approve</button> <button type="button" class="ib sm no" aria-label="Reject, with a reason" data-tip="Reject, with a reason" data-a="x">'+X+'</button>','')}).join(''))});
+  d.forEach(function(r){h+=grp(r.t,r.props.length+' proposals \u00b7 '+age(r.d))+((r.props[0]&&r.props[0].k==='Minutes'&&r.props.length>3)?table(mblock(r)):table(r.props.map(function(p){return tr(p.t,['<span class="tag">'+p.k+'</span> \u00b7 Example Programme'],'<button class="mini ok" data-a="x">'+CK+'Approve</button> <button type="button" class="ib sm no" aria-label="Reject, with a reason" data-tip="Reject, with a reason" data-a="x">'+X+'</button>','')}).join('')))});
   if(sample!=='empty')h+=grp('From mail and Teams',MAIL.length+' proposals')+mail()}
  return h}
 function V1(){var f=function(s){return rows.filter(function(r){return r.st===s}).length};var a=rows.filter(function(r){return r.st==='ready'||r.st==='waiting'||r.st==='running'}).length,d=f('drafted'),n=f('done');
