@@ -9,6 +9,10 @@
                            or stage_client), applied at once with tracker.py apply, the one writer, so Undo works as always
                            A weekly approval re-locks the project's client drafts to that week (relock_client_drafts; `relocked`)
   POST /api/report/logo    {code, paths}: the project's logo files as data (read only; v2.1.0 P6): only files report_doc.logos names
+  POST /api/report/logo/save   {code, kind, ext, original, drawn?}: a logo added or changed from the screen (H3, #221; base64): the file
+                           chosen is kept as it was (`<name>-original.<ext>`) and the trimmed copy that is drawn is `<name>.png`; an
+                           SVG, or a file sent without a trimmed copy, is saved as `<name>.<ext>`. Through filechange.py
+  POST /api/report/logo/remove {code, kind}: the logo and its original deleted (Alan's own click: one approval for exactly that change)
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
@@ -395,7 +399,105 @@ def logo_route(handler, req):
     return answer(handler, {"ok": True, "logos": out})
 
 
-HOST = {}       # the live server's own lock, run and latest_apply (live_server registers them; never a second copy of the module)
+LOGO_KIND_NAMES = ("firm", "client", "partner")
+JPEG_HINT = "A transparent PNG or SVG sits better. The picture is kept as it is."
+
+
+def _logo_type(raw):
+    """"png", "jpg" or "svg" from the file's own first bytes, or None when it is not a picture creaite draws."""
+    if raw[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if raw[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if b"<svg" in raw[:2000].lower():
+        return "svg"
+    return None
+
+
+def _logo_bytes(value):
+    """The bytes of a base64 field, or None when it is missing or not base64."""
+    try:
+        return base64.b64decode(str(value or ""), validate=True) or None
+    except ValueError:
+        return None
+
+
+def _logo_change(handler, ch):
+    """Make one file change for the logos through filechange.py. Alan's own click: a delete or a replace carries a one-time approval
+    for exactly that change. Returns the refusal's answer, or None when it was made."""
+    import filechange
+    import reach
+    token = reach.APPROVALS.issue(filechange.fingerprint(ch)) if ch["op"] in ("edit", "delete") else None
+    code, msg = filechange.perform(ch, token, "dashboard")
+    if code == filechange.NEEDS:
+        filechange.record_request(ch, msg[len("Needs approval: "):].rstrip("."))
+    return None if code == 0 else refuse(handler, f"Logo not saved: {msg}")
+
+
+def _logo_target(req):
+    """(code, kind, stem) of a logo request; raises ReportError for a project or kind creaite doesn't know."""
+    code, kind = str(req.get("code") or ""), req.get("kind")
+    if not report_doc.CODE.match(code) or kind not in LOGO_KIND_NAMES:
+        raise report_doc.ReportError("Say which project and which logo: firm, client or partner.")
+    try:
+        paths.project_dir(code)
+    except LookupError:
+        raise report_doc.ReportError(f"{code} isn't a project creaite knows.") from None
+    return code, kind, "firm" if kind == "firm" else f"{code}-{kind}"
+
+
+def _logo_files(stem):
+    """Every logo file of that name now in the logos folder: the picture drawn and the original kept."""
+    if not paths.REPORT_LOGOS.is_dir():
+        return []
+    return [f for f in sorted(paths.REPORT_LOGOS.iterdir())
+            if f.is_file() and f.suffix.lower() in report_doc.LOGO_EXT and f.stem in (stem, f"{stem}-original")]
+
+
+def logo_save_route(handler, req):
+    """POST /api/report/logo/save (see the module's description): the logo for the firm or a project's client or partner, saved under
+    its name in system/branding/logos/. A file that isn't a PNG, JPEG or SVG picture, or is over 400 kB, is refused and nothing is
+    written."""
+    code, kind, stem = _logo_target(req)
+    raw, drawn = _logo_bytes(req.get("original")), _logo_bytes(req.get("drawn"))
+    kind_of = _logo_type(raw or b"")
+    ext = str(req.get("ext") or "").lower().lstrip(".").replace("jpeg", "jpg")
+    if not raw or not kind_of or kind_of != ext:
+        return refuse(handler, "That isn't a PNG, JPEG or SVG picture. Nothing was saved.")
+    if len(raw) > LOGO_MAX or (drawn and len(drawn) > LOGO_MAX):
+        return refuse(handler, "That logo is over 400 kB. Choose a smaller file. Nothing was saved.")
+    if drawn is not None and _logo_type(drawn) != "png":
+        return refuse(handler, "The trimmed copy must be a PNG. Nothing was saved.")
+    keep = [(f"{stem}-original.{ext}", raw), (f"{stem}.png", drawn)] if drawn and kind_of != "svg" else [(f"{stem}.{ext}", raw)]
+    for old in _logo_files(stem):                                  # a stale file of another type must not win
+        if old.name not in dict(keep):
+            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {kind} logo"})
+            if err:
+                return err
+    for name, data in keep:
+        target = paths.REPORT_LOGOS / name
+        ch = {"op": "edit" if target.exists() else "create", "path": paths.rel(target), "data": data,
+              "why": f"{kind.capitalize()} logo added or changed from the report settings"}
+        err = _logo_change(handler, ch)
+        if err:
+            return err
+    out = {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is saved."}
+    if kind_of == "jpg":
+        out["hint"] = JPEG_HINT
+    return answer(handler, out)
+
+
+def logo_remove_route(handler, req):
+    """POST /api/report/logo/remove (see the module's description)."""
+    code, kind, stem = _logo_target(req)
+    for old in _logo_files(stem):
+        err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Removed the {kind} logo"})
+        if err:
+            return err
+    return answer(handler, {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is removed."})
+
+
+HOST = {}     # the live server's own lock, run and latest_apply (live_server registers them; never a second copy of the module)
 
 
 def routes(lock, run, latest_apply):
@@ -404,4 +506,5 @@ def routes(lock, run, latest_apply):
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
-            "/api/report/logo": guarded(logo_route)}
+            "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
+            "/api/report/logo/remove": guarded(logo_remove_route)}

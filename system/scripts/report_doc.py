@@ -119,7 +119,25 @@ def layout_for(code, kind, client=None):
     """The layout a project's next weekly report (or a client's next client report) starts from."""
     mine = stored_layouts().get(code) or {}
     saved = mine.get("weekly") if kind == "weekly" else (mine.get("clients") or {}).get(client or "")
-    return normal_layout(kind, saved)
+    lay = normal_layout(kind, saved)
+    chosen = project_logos(code)
+    if chosen is not None:                                       # H3 (#221): one choice for both reports' headers
+        lay["logos"] = chosen
+    return lay
+
+
+def project_logos(code):
+    """The logos the project's client report setting ticks (its CLAUDE.md `Client report logos` line), the firm's first; None when
+    the project has no such line, or no folder yet, so a report keeps the layout it remembered."""
+    import re
+    import build_dashboard
+    try:
+        text = (paths.project_dir(code) / "CLAUDE.md").read_text(encoding="utf-8")
+    except (LookupError, OSError):
+        return None
+    if not re.search(r"\*\*Client report logos:\*\*", text):
+        return None
+    return build_dashboard.client_report_setting(text)["logos"]
 
 
 def remember_layout(code, kind, layout, client=None):
@@ -149,7 +167,8 @@ def remember_layout(code, kind, layout, client=None):
 def logo_file(code, kind):
     """The logo file for the firm, or a project's client or partner logo, or None when none is set."""
     stem = "firm" if kind == "firm" else f"{code}-{kind}"
-    return next((paths.REPORT_LOGOS / f"{stem}{e}" for e in LOGO_EXT if (paths.REPORT_LOGOS / f"{stem}{e}").is_file()), None)
+    have = [paths.REPORT_LOGOS / f"{stem}{e}" for e in LOGO_EXT if (paths.REPORT_LOGOS / f"{stem}{e}").is_file()]
+    return max(have, key=lambda f: f.stat().st_mtime) if have else None          # H3: the one added last wins
 
 
 def logos(code, wanted=LOGO_KINDS):

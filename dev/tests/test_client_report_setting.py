@@ -103,11 +103,11 @@ class SessionStart(unittest.TestCase):
         v = Vault()
         self.addCleanup(v.cleanup)
         populate(v)
-        ids = lambda: [r["id"] for r in json.loads(v.run("start", "--json", "--force", script="session.py").stdout)["reminders"]]  # noqa: E731
+        ids = lambda: re.findall(r"say (client report ABC)", v.run("start", "--force", script="session.py").stdout)  # noqa: E731
         mem = v.root / ABC / "CLAUDE.md"
-        self.assertTrue([i for i in ids() if i.startswith("client:ABC")])
+        self.assertTrue(ids())
         mem.write_text(mem.read_text().replace("- **Client report rhythm:**", "- **Client report:** off\n- **Client report rhythm:**"))
-        self.assertFalse([i for i in ids() if i.startswith("client:ABC")])
+        self.assertFalse(ids())
 
 
 class Routes(unittest.TestCase):
