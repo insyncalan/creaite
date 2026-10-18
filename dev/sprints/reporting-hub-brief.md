@@ -58,6 +58,13 @@ One page for a project's weekly reporting, replacing the separate weekly and cli
 - **Space under the milestone picture:** in the report, and in "Show as exported", the milestone list starts 16 px below the timeline picture, never touching it. The same rule in the HTML, Word and PDF export (a gap between the picture and the table).
 - **The client report setting is persistent:** it is stored on the project and holds for every future report until Alan changes it (no per-week question). Reports already written are kept as they are; turning it off deletes nothing and turning it on again restores the client side. The panel says so in one line.
 
+## Round 5 changes (Alan, 18-10-2026)
+
+- **The cog is the right-most control** (after Approve).
+- **Week navigation, Menu option:** just the date with a drop-down list; no "<" and ">" arrows. (The Stepper option keeps its arrows; the Ribbon has none.)
+- **Trackpad zoom stays:** a pinch (or Ctrl or Cmd with the scroll wheel) over the report zooms it in and out, as in the live report, in the internal, client and side-by-side views; the zoom control shows the percentage, the buttons step it, and clicking the percentage returns to Fit. In the mockup, pinch over the report to try it.
+- **Do all exports match the report as edited?** Not verified, and for HTML we know they do not (the defect in item 5). From the code, not from a test: an export is made on the server (`/api/report/export`, `report_server.py` and `report.py`) by a renderer separate from the on-screen sheet, so the two can drift; PDF is labelled "printed from the page", so it likely inherits the HTML's gaps; Word uses the firm's template, a third renderer. Team Stark's scout also found code block, table and picture have gaps in all three. **Needed before any build: a read-only export audit** that, for the demo report with every kind of content, lists per section what each of HTML, Word and PDF loses compared with "Show as exported". The fix direction to decide on after the audit: **one renderer** (the sheet's own markup and styles) for HTML and PDF, and a checked mapping for Word, with an automated comparison as the test.
+
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
 Discreet section menu; eye icons; "Add from the tracker" (existing open items, client-visible only for the client report); the free-text section with the whole editor (v2.4.0, still subject to the export gaps named in the earlier brief); export fidelity for the health block, the figures, the timeline picture and the milestone list in HTML, Word and PDF; exports that save to the Reports folder and say where, with the **name-clash choice (Add a number, Rename, Overwrite)** as drawn; and the approved Check this report (#170).
