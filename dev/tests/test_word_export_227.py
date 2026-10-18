@@ -46,6 +46,8 @@ ITEMS = {
                   "forecast_date": "2026-11-25", "status": "Planned", "percent_complete": 40},
     "ABC-M-003": {"table": "milestones", "id": "ABC-M-003", "title": "Leftout milestone", "baseline_date": "2026-12-01",
                   "forecast_date": "2026-12-01", "status": "Planned"},
+    "ABC-M-004": {"table": "milestones", "id": "ABC-M-004", "title": "Confidential vendor exit", "baseline_date": "2026-12-15",
+                  "forecast_date": "2026-12-15", "status": "Planned", "client_visible": 0},
     "ABC-002": {"table": "raid", "id": "ABC-002", "title": "Vendor capacity", "response_action": "Book a second crew"},
     "ABC-A-005": {"table": "actions", "id": "ABC-A-005", "title": "Send the plan", "due_date": "2026-10-15"},
 }
@@ -72,7 +74,7 @@ def sections(tmp):
         {"id": "asks", "type": "table", "heading": "What we need from people", "hidden": False,
          "columns": [{"key": "ask", "label": "Ask"}, {"key": "from", "label": "From"}], "rows": []},
         {"id": "milestones", "type": "timeline", "heading": "Milestones", "hidden": False, "text": "",
-         "data": {"timeline": ["ABC-M-001", "ABC-M-002", "ABC-M-003"], "milestones": ["ABC-M-001", "ABC-M-002"]}},
+         "data": {"timeline": ["ABC-M-001", "ABC-M-002", "ABC-M-003", "ABC-M-004"], "milestones": ["ABC-M-001", "ABC-M-002"]}},
         {"id": "this_week", "type": "text", "heading": "This week", "hidden": False,
          "text": "**Done:** the plan.\n\n- [ ] book room\n- [x] order kit\n- plain point\n\n"
                  f"![Site photo]({tmp / 'images' / 'site.png'})\n\n![Lost photo]({tmp / 'images' / 'lost.png'})"},
@@ -106,7 +108,10 @@ class Base(unittest.TestCase):
         self.sizes = []
         self.real_pic = getattr(creaite_doc, "picture_png", None)
 
+        self.svgs = []
+
         def fake(svg, w, h, **kw):
+            self.svgs.append(svg)
             self.sizes.append((w, h))
             return png(int(w), int(h))
         creaite_doc.picture_png = fake
@@ -239,6 +244,23 @@ class Checks(Base):
         self.assertIsNotNone(self.table_with("Milestone"))
         self.assertNotIn("walrus", self.alltext())
         self.assertNotRegex(self.alltext(), ISO)
+
+    def test_check_08b_a_milestone_that_is_not_client_safe_is_never_named_in_a_client_export(self):
+        self.build(self.doc("client", audience="client", client="Harbour Board"))
+        every = self.xml + " ".join(self.svgs) + " ".join(n + str(v) for n, v in self.parts.items() if n.endswith(".xml"))
+        self.assertNotIn("Confidential vendor", every, "text, picture alt text or the picture's drawing")
+        self.assertNotIn("ABC-M-004", every)
+        self.assertTrue(any("Go-live" in v for v in self.svgs), "the client-safe milestones are still drawn")
+
+    def test_check_08c_a_client_timeline_draws_what_the_screen_does_a_left_out_one_stays_in_the_picture_not_the_table(self):
+        self.build(self.doc("client", audience="client", client="Harbour Board"))
+        self.assertTrue(any("Leftout milestone" in v for v in self.svgs))
+        self.assertNotIn("Leftout", self.alltext(), "the list leaves it out")
+
+    def test_check_08d_an_internal_export_draws_every_milestone(self):
+        self.build()
+        self.assertTrue(any("Leftout milestone" in v and "Confidential vendor exit" in v for v in self.svgs))
+        self.assertNotIn("Leftout", self.alltext(), "but the list still leaves it out")
 
     def test_check_09_no_guarded_file_changed(self):
         guarded = ("tracker.py", "filechange.py", "live_server.py", "reach.py", "permissions.py", "backup.py", "update.py")

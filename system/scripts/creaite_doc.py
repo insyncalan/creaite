@@ -571,6 +571,7 @@ LOGO_HEIGHT = 40            # px in Word (96 to the inch)
 STRIP = (360, 34)
 TIMELINE_WIDTH = 640
 IMG_EXT = (".png", ".jpg", ".jpeg")
+INTERNAL_TIMELINE_DRAWS_ALL = True       # the sheet's timeline always shows every milestone (Alan may change this for internal reports)
 
 
 def _nobraces(text):
@@ -828,6 +829,20 @@ class _Word:
         return parts + [("t", [{"header": _nobraces(lab)} for _k, lab in heads], body,
                          lambda r, c: TONE_HEX[tone[(r, c)]] if tone.get((r, c)) else None)]
 
+    def _client(self):
+        """True for a client report."""
+        return self.doc.get("audience") == "client" or self.doc.get("kind") == "client"
+
+    def _drawn(self, s, every):
+        """The milestones the timeline picture draws: every one the section's timeline names, as the sheet does (leaving one out of
+        the list tidies the list only). A client report never draws one that isn't client-safe (not client-visible, or cancelled),
+        even if a document still names it: the gate drops those from the timeline, and this is a second line. Internal reports:
+        flip INTERNAL_TIMELINE_DRAWS_ALL to draw only the listed ones."""
+        if self._client():
+            return [m for m in every if int(m.get("client_visible", 1) or 0) == 1 and m.get("status") != "Cancelled"]
+        listed = set((s.get("data") or {}).get("milestones") or [])
+        return every if INTERNAL_TIMELINE_DRAWS_ALL else [m for m in every if not listed or m["id"] in listed]
+
     def _milestones(self, s):
         """Every milestone the timeline names, with its id, by agreed date."""
         d = s.get("data") or {}
@@ -839,7 +854,7 @@ class _Word:
 
     def timeline(self, s):
         """Milestones: the timeline as a picture, then the chosen milestones as a table (Milestone, Agreed, Expected, Progress, State)."""
-        every = self._milestones(s)
+        every = self._drawn(s, self._milestones(s))
         parts = [("e", self.md(s.get("text")))] if str(s.get("text") or "").strip() else []
         if not every:
             return parts + [("e", [{"md": "No milestones are set for this project."}])]
