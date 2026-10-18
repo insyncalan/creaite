@@ -3134,6 +3134,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdnew[hidden]{display:none}
 .tdnew::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 #hTd{gap:4px}
+/* #208: the one line for Review and Intake: quiet text, each count a link */
+.tdline{margin:2px 0 6px;font-size:13px;color:var(--ink2,var(--muted))}
+.tdline a{font-weight:600}
 @media (max-width:480px){
   #tBrief ol.bl>li>.tb{flex:1 1 calc(100% - 40px)}   /* a row's buttons go under its words, never squeezing them to a word a line */
   #tBrief .tdrow{flex-wrap:wrap} #tBrief .tdrow .tb{flex-basis:calc(100% - 90px)}
@@ -6603,12 +6606,9 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     tLink: () => tLink,
     tabId: () => tabId,
     tabTitle: () => tabTitle,
-    tdAct: () => tdAct,
-    tdApprovable: () => tdApprovable,
     tdFocusAfter: () => tdFocusAfter,
     tdFocusMark: () => tdFocusMark,
-    tdOpen: () => tdOpen,
-    tdProcess: () => tdProcess,
+    tdLine: () => tdLine,
     tdToReview: () => tdToReview,
     themeFade: () => themeFade,
     themeIcon: () => themeIcon,
@@ -40214,7 +40214,7 @@ ${s5}`;
   function TdLine({ r: r4, hidden, p: p6 }) {
     const open2 = (e4) => {
       e4.preventDefault();
-      p6.onOpen(r4);
+      if (p6.onOpen) p6.onOpen(r4);
     };
     const href = linkUrl(r4.link);
     const acts2 = (list) => list.map((a5) => /* @__PURE__ */ u2(
@@ -40228,12 +40228,14 @@ ${s5}`;
         haspopup: a5.haspopup,
         data: { tdact: a5.id, ...a5.data || {} },
         onBlocked: () => p6.blocked(a5.why || ""),
-        onClick: a5.data && a5.data.alertdo ? void 0 : (e4) => p6.onAct(
-          r4,
-          a5,
-          /** @type {HTMLElement} */
-          e4.currentTarget
-        )
+        onClick: a5.data && a5.data.alertdo ? void 0 : (e4) => {
+          if (p6.onAct) p6.onAct(
+            r4,
+            a5,
+            /** @type {HTMLElement} */
+            e4.currentTarget
+          );
+        }
       },
       a5.id
     ));
@@ -40347,18 +40349,24 @@ ${s5}`;
   }
   function ToDecide(props) {
     const { rows: rows2, total, cap, open: open2, onReview } = props, more = rows2.length - cap;
-    const review = (e4) => {
+    const line = props.line || [];
+    const go3 = (page, e4) => {
       e4.preventDefault();
-      onReview();
+      if (props.onGo) props.onGo(page);
+      else onReview();
     };
     return /* @__PURE__ */ u2(S2, { children: [
+      line.length ? /* @__PURE__ */ u2("p", { class: "tdline", id: "tdLine", children: line.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
+        i5 ? i5 === line.length - 1 ? " and " : ", " : "",
+        /* @__PURE__ */ u2("a", { href: `#${x5.go}`, class: "s", "data-tdline": x5.key, onClick: (e4) => go3(x5.go, e4), children: x5.text })
+      ] })) }) : null,
       /* @__PURE__ */ u2("ol", { class: "bl tdlist", id: "tdList", "aria-labelledby": "hTd", children: rows2.map((r4, i5) => /* @__PURE__ */ u2(TdLine, { r: r4, hidden: !open2 && i5 >= cap, p: props }, r4.key)) }),
       /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: [
         more > 0 ? /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }),
           " · "
         ] }) : null,
-        total ? /* @__PURE__ */ u2("a", { href: "#", class: "s", id: "tdReview", onClick: review, children: `Open Review (${total})` }) : /* @__PURE__ */ u2("span", { class: "none", children: "Nothing waits in Review." })
+        line.length || !rows2.length ? null : /* @__PURE__ */ u2("span", { class: "none", children: "Nothing waits in Review." })
       ] })
     ] });
   }
@@ -40482,39 +40490,6 @@ ${s5}`;
   function drawWeekAhead(host2, props) {
     R(/* @__PURE__ */ u2(WeekAhead, { ...props }), host2);
   }
-
-  // stores/rejects.js
-  var REASONS = ["Not an action", "Duplicate", "Chatter", "Already done", "Wrong project", "Doesn't need tracking", "For another team"];
-  var rjReasons = y3(REASONS);
-  var rjGuesses = y3({});
-  var rjGuessFor = y3("");
-  var rjMenu = y3(null);
-  function rjOpenMenu(m5) {
-    rjMenu.value = m5;
-  }
-  function rjCloseMenu(back2) {
-    const m5 = rjMenu.value;
-    rjMenu.value = null;
-    if (m5 && m5.onClose) m5.onClose();
-    if (back2 && m5 && m5.anchor && m5.anchor.isConnected) m5.anchor.focus({ preventScroll: true });
-  }
-  var rjGone = y3([]);
-  function rjAddGone(L3) {
-    const keys = new Set(L3.map((g5) => g5.key));
-    rjGone.value = [...rjGone.value.filter((g5) => !keys.has(g5.key)), ...L3];
-  }
-  function rjDropGone(keys) {
-    const k5 = new Set(keys);
-    rjGone.value = rjGone.value.filter((g5) => !k5.has(g5.key));
-  }
-  function rjSetGone(keys, f5) {
-    const k5 = new Set(keys);
-    rjGone.value = rjGone.value.map((g5) => k5.has(g5.key) ? { ...g5, ...f5(g5) } : g5);
-  }
-  function rjLeave() {
-    if (rjGone.value.length) rjGone.value = [];
-  }
-  var rjRecent = y3({ state: "idle", items: [] });
 
   // stores/today.js
   var selDay = y3("");
@@ -41462,7 +41437,6 @@ ${s5}`;
     return w6 ? `${w6[1]} ${w6[2]}:${w6[3]}` : "";
   };
   var whenWords = (at2) => !at2 ? "" : at2.slice(0, 10) === TODAY ? at2.slice(11, 16) : `${longDay(at2.slice(0, 10))}${at2.length > 10 ? ", " + at2.slice(11, 16) : ""}`;
-  var tdApprovable = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind) && routineKid(r4);
   var revSrc = (r4) => /-sweep(-\d+)?\.json$/.test(r4.file) ? "sweep" : /-(dashboard|edit)(-\d+)?\.json$/.test(r4.file) ? "your edits" : /-excel(-\d+)?\.json$/.test(r4.file) ? "Excel import" : REV.some((x5) => x5.file === r4.file && x5.kind === "draft" && x5.ref === "meeting") ? "minutes" : "proposal";
   var tdTag = (r4) => r4.kind === "draft" ? r4.ref === "meeting" ? "Minutes" : "Report" : kindLabel(r4) || "Proposal";
   function toDecideRows() {
@@ -41470,38 +41444,7 @@ ${s5}`;
       /** @type {any[]} */
       []
     );
-    REV.filter((r4) => !r4.done).forEach((r4) => {
-      const at2 = revAt(r4), ok2 = tdApprovable(r4), t47 = String(r4.rec && r4.rec.t || ""), acts2 = [];
-      if (ok2) acts2.push({ id: "approve", icon: "check", label: "Approve and save", name: `Approve and save: ${t47}`, primary: true });
-      else acts2.push({ id: "review", icon: "review", label: "Open in Review", name: `Open in Review: ${t47}`, primary: true });
-      if (!["draft", "files"].includes(r4.kind)) acts2.push({ id: "reject", icon: "x", label: "Reject, with a reason", name: `Reject, with a reason: ${t47}`, haspopup: "menu" });
-      const why = !r4.p && r4.kind !== "files" ? "needs a project" : (r4.flags || []).includes("conflict") ? "conflicts with a newer change" : r4.indiv || ["draft", "files"].includes(r4.kind) ? "approved on its own, in Review" : "";
-      tdl.push({
-        key: "rv" + r4.n,
-        kind: "review",
-        n: r4.n,
-        at: at2,
-        tag: tdTag(r4),
-        tone: "acc",
-        t: t47,
-        acts: acts2,
-        meta: [r4.p ? pName(r4.p) : "", `${revSrc(r4)}${at2 ? " " + whenWords(at2) : ""}`, why].filter(Boolean).join(" · ")
-      });
-    });
-    MTG().filter(mtgHasTx).forEach((m5) => {
-      const at2 = `${m5.day || ""} ${m5.end || m5.start || ""}`.trim(), run = MRUN[m5.id], why = run === "processing" || run === "loading" ? "Processing…" : live ? "" : "Needs the live server";
-      tdl.push({
-        key: "tx" + m5.id,
-        kind: "transcript",
-        id: m5.id,
-        at: at2,
-        tag: "Transcript",
-        tone: "",
-        t: m5.title || "Meeting",
-        meta: ["Ready in Intake", m5.p && m5.p !== "_portfolio" ? pName(m5.p) : "", whenWords(at2)].filter(Boolean).join(" · "),
-        acts: [{ id: "process", icon: "play", label: "Process the transcript", name: `Process the transcript of ${m5.title || "the meeting"}`, primary: true, why }]
-      });
-    });
+    void live;
     VIPS().forEach((a5) => {
       if ("summary" in a5 && a5.marker !== "private") {
         tdl.push(convRow(a5));
@@ -41719,50 +41662,6 @@ ${s5}`;
     const tr2 = $(`#reviewBody tr[data-n="${r4.n}"]`);
     if (tr2) tr2.scrollIntoView({ block: "center" });
   }
-  async function tdProcess(id2) {
-    const m5 = MTG().find((x5) => x5.id === id2);
-    if (!m5) return;
-    MSEL.clear();
-    MSEL.add(id2);
-    if (shared.VIEW === "today") renderToday();
-    try {
-      await processMeetings();
-    } finally {
-      if (shared.VIEW === "today") renderToday();
-    }
-  }
-  async function tdAct(row2, act, btn) {
-    tdFocusMark(row2.key, act.id);
-    if (row2.kind === "transcript" && act.id === "process") {
-      await tdProcess(row2.id);
-      return;
-    }
-    if (row2.kind !== "review") return;
-    const r4 = REV.find((x5) => x5.n === row2.n);
-    if (!r4 || r4.done) return;
-    if (act.id === "approve") {
-      if (!tdApprovable(r4)) {
-        tdToReview(r4.n);
-        return;
-      }
-      await decide(r4.n, "approved");
-      return;
-    }
-    if (act.id === "reject") {
-      const menu = () => rjMenuFor([r4], btn, () => {
-        if (shared.VIEW === "today") renderToday();
-      }), was = rjGuesses.value;
-      menu();
-      await rjLoadGuesses();
-      if (rjGuesses.value !== was && rjMenu.value && rjMenu.value.anchor === btn) menu();
-      return;
-    }
-    if (act.id === "review") tdToReview(r4.n);
-  }
-  function tdOpen(row2) {
-    if (row2.kind === "review") tdToReview(row2.n);
-    else if (row2.kind === "transcript") go2("inbox");
-  }
   var TDFOLD = "creaite-intake-review-hidden";
   var tdFoldWired = false;
   function wireTdFold() {
@@ -41775,18 +41674,25 @@ ${s5}`;
     f5.open = store.get(TDFOLD, false) !== true;
     f5.addEventListener("toggle", () => store.set(TDFOLD, !f5.open));
   }
+  function tdLine() {
+    const pr2 = REV.filter((r4) => !r4.done).length, nTr = MTG().filter(mtgHasTx).length, fl2 = (D.inbox || []).filter((f5) => f5.state === "new").length, L3 = [];
+    if (pr2) L3.push({ key: "review", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} in Review`, go: "review" });
+    if (nTr) L3.push({ key: "transcripts", n: nTr, text: `${nTr} transcript${nTr === 1 ? "" : "s"} ready in Intake`, go: "inbox" });
+    if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} in Intake`, go: "inbox" });
+    return L3;
+  }
   function renderToDecide() {
     const sec = $("#tdSec"), body2 = $("#tdBody");
     if (!sec || !body2) return;
     wireTdFold();
-    const L3 = toDecideRows(), total = REV.filter((r4) => !r4.done).length, n4 = L3.filter((r4) => r4.kind !== "quiet").length;
-    sec.hidden = !L3.length;
+    const L3 = toDecideRows(), line = tdLine(), total = REV.filter((r4) => !r4.done).length, n4 = L3.filter((r4) => r4.kind !== "quiet").length + line.reduce((a5, x5) => a5 + x5.n, 0);
+    sec.hidden = !L3.length && !line.length;
     {
       const nw2 = $("#tdNew");
       if (nw2) nw2.hidden = !VIPS().length;
     }
     $("#nTd").textContent = n4 ? String(n4) : "";
-    drawToDecide(body2, { rows: L3, total, cap: TDCAP, open: EXPAND.has("td"), onAct: tdAct, onOpen: tdOpen, onReview: () => go2("review"), blocked: (why) => snack(why) });
+    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {
@@ -42198,6 +42104,39 @@ ${s5}`;
     });
     if (!MAC) $("#kK").textContent = "Ctrl K";
   }
+
+  // stores/rejects.js
+  var REASONS = ["Not an action", "Duplicate", "Chatter", "Already done", "Wrong project", "Doesn't need tracking", "For another team"];
+  var rjReasons = y3(REASONS);
+  var rjGuesses = y3({});
+  var rjGuessFor = y3("");
+  var rjMenu = y3(null);
+  function rjOpenMenu(m5) {
+    rjMenu.value = m5;
+  }
+  function rjCloseMenu(back2) {
+    const m5 = rjMenu.value;
+    rjMenu.value = null;
+    if (m5 && m5.onClose) m5.onClose();
+    if (back2 && m5 && m5.anchor && m5.anchor.isConnected) m5.anchor.focus({ preventScroll: true });
+  }
+  var rjGone = y3([]);
+  function rjAddGone(L3) {
+    const keys = new Set(L3.map((g5) => g5.key));
+    rjGone.value = [...rjGone.value.filter((g5) => !keys.has(g5.key)), ...L3];
+  }
+  function rjDropGone(keys) {
+    const k5 = new Set(keys);
+    rjGone.value = rjGone.value.filter((g5) => !k5.has(g5.key));
+  }
+  function rjSetGone(keys, f5) {
+    const k5 = new Set(keys);
+    rjGone.value = rjGone.value.map((g5) => k5.has(g5.key) ? { ...g5, ...f5(g5) } : g5);
+  }
+  function rjLeave() {
+    if (rjGone.value.length) rjGone.value = [];
+  }
+  var rjRecent = y3({ state: "idle", items: [] });
 
   // components/review/RejectMenu.jsx
   var ID = /^[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}$/;
@@ -46093,6 +46032,7 @@ ${s5}`;
     inboxBadge();
     if (shared.VIEW === "files") renderFiles();
     else if (shared.VIEW === "inbox") renderInbox();
+    else if (shared.VIEW === "today") renderToday();
     return true;
   }
   function filesOpened() {
@@ -72820,6 +72760,7 @@ ${d5.text}`);
         "mounted",
         "moveCol",
         "msOpts",
+        "mtgHasTx",
         "mtgTx",
         "mvAct",
         "mvAddCommit",
@@ -73080,7 +73021,7 @@ ${d5.text}`);
         "synthDay",
         "tabId",
         "tabTitle",
-        "tdApprovable",
+        "tdLine",
         "thisWeek",
         "tl",
         "toIso",

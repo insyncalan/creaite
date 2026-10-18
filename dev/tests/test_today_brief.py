@@ -384,11 +384,11 @@ class TodayBriefTests(PageTests):
           const meet={n:1,p:"ABC",kind:"draft",why:"Draft minutes",indiv:true,file:"proposed-2026-10-05-0900.json",ref:"meeting",projects:["ABC"],rec:{t:"Draft minutes: ABC Steering"}};
           setRev([meet,...grp("proposed-2026-10-05-0900.json",2,[{}]),...grp("proposed-0000-00-01-demo.json",10,[{},{}])]); go("today"); renderToday();
           window.OUT={attn:document.getElementById("attnList").textContent, qa:document.querySelectorAll("#attnList [data-qa]").length,
-            td:document.querySelectorAll("#tdList > li.td-review").length};""")
+            td:(document.getElementById("tdLine")||{textContent:""}).textContent};""")
         self.assertNotIn("Review the", o["attn"])
         self.assertNotIn("routine", o["attn"])
         self.assertEqual(o["qa"], 0)
-        self.assertEqual(o["td"], 4)                                                  # every proposal is a row of To decide
+        self.assertTrue(o["td"].startswith("4 proposals in Review"))                  # #208: every proposal is counted in Intake and Review's one line
 
     def test_reminders_move_in_with_run_and_dismiss_in_a_menu(self):
         o = self.probe(self.SETUP + """

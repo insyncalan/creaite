@@ -3124,6 +3124,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdnew[hidden]{display:none}
 .tdnew::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 #hTd{gap:4px}
+/* #208: the one line for Review and Intake: quiet text, each count a link */
+.tdline{margin:2px 0 6px;font-size:13px;color:var(--ink2,var(--muted))}
+.tdline a{font-weight:600}
 @media (max-width:480px){
   #tBrief ol.bl>li>.tb{flex:1 1 calc(100% - 40px)}   /* a row's buttons go under its words, never squeezing them to a word a line */
   #tBrief .tdrow{flex-wrap:wrap} #tBrief .tdrow .tb{flex-basis:calc(100% - 90px)}

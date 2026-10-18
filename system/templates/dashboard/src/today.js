@@ -23,14 +23,13 @@ import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./c
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
-import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
+import { draftOn, RHL } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
@@ -456,26 +455,12 @@ export const TDCAP=5;
 export const revAt=r=>{ const w=String(r.file||"").match(/^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/); return w?`${w[1]} ${w[2]}:${w[3]}`:""; };
 /** "14:02" today, "Monday 12th October, 09:30" before */
 export const whenWords=at=>!at?"":at.slice(0,10)===TODAY?at.slice(11,16):`${longDay(at.slice(0,10))}${at.length>10?", "+at.slice(11,16):""}`;
-/** the bulk rule (FR-81): Approve and save from To decide only for what may be approved on its own row. Never minutes, a report or a
-    file change, never a one-at-a-time item (a new decision, a new risk, a closing update …: indiv), nor one that needs a project or
-    has a conflict. Those go to Review. */
-export const tdApprovable=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind)&&routineKid(r);
 const revSrc=r=>/-sweep(-\d+)?\.json$/.test(r.file)?"sweep":/-(dashboard|edit)(-\d+)?\.json$/.test(r.file)?"your edits":/-excel(-\d+)?\.json$/.test(r.file)?"Excel import"
   :REV.some(x=>x.file===r.file&&x.kind==="draft"&&x.ref==="meeting")?"minutes":"proposal";
 const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Proposal";
 /** Intake and Review's rows (BL-319 called it To decide), newest first: proposals in Review, transcripts ready in Intake, messages from people Alan follows (never labelled) */
-export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]);
-  REV.filter(r=>!r.done).forEach(r=>{ const at=revAt(r), ok=tdApprovable(r), t=String(r.rec&&r.rec.t||""), acts=[];
-    if(ok) acts.push({id:"approve",icon:"check",label:"Approve and save",name:`Approve and save: ${t}`,primary:true});
-    else acts.push({id:"review",icon:"review",label:"Open in Review",name:`Open in Review: ${t}`,primary:true});
-    if(!["draft","files"].includes(r.kind)) acts.push({id:"reject",icon:"x",label:"Reject, with a reason",name:`Reject, with a reason: ${t}`,haspopup:"menu"});
-    const why=!r.p&&r.kind!=="files"?"needs a project":(r.flags||[]).includes("conflict")?"conflicts with a newer change":r.indiv||["draft","files"].includes(r.kind)?"approved on its own, in Review":"";
-    tdl.push({key:"rv"+r.n,kind:"review",n:r.n,at,tag:tdTag(r),tone:"acc",t,acts,
-      meta:[r.p?pName(r.p):"", `${revSrc(r)}${at?" "+whenWords(at):""}`, why].filter(Boolean).join(" · ")}); });
-  MTG().filter(mtgHasTx).forEach(m=>{ const at=`${m.day||""} ${m.end||m.start||""}`.trim(), run=MRUN[m.id], why=run==="processing"||run==="loading"?"Processing…":live?"":"Needs the live server";
-    tdl.push({key:"tx"+m.id,kind:"transcript",id:m.id,at,tag:"Transcript",tone:"",t:m.title||"Meeting",
-      meta:["Ready in Intake",m.p&&m.p!=="_portfolio"?pName(m.p):"",whenWords(at)].filter(Boolean).join(" · "),
-      acts:[{id:"process",icon:"play",label:"Process the transcript",name:`Process the transcript of ${m.title||"the meeting"}`,primary:true,why}]}); });
+export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]); void live;
+  /* #208 (Alan, 17-10-2026): proposals in Review and transcripts in Intake are no longer listed here: tdLine() says how many, in one line */
   VIPS().forEach(a=>{ if("summary" in a&&a.marker!=="private"){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
     const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
     tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",mark:confMark(a),
@@ -564,28 +549,23 @@ export function tdFocusMark(key,what){ const i=$$("#tdList > li").filter(l=>!l.h
 /** a proposal's row in Review, highlighted (as First thing opens one) */
 export function tdToReview(n){ go("review"); const r=REV.find(x=>x.n===n&&!x.done); if(!r) return; RHL.clear(); RHL.add(r.n); rvPaint();
   const tr=$(`#reviewBody tr[data-n="${r.n}"]`); if(tr) tr.scrollIntoView({block:"center"}); }
-export async function tdProcess(id){ const m=MTG().find(x=>x.id===id); if(!m) return; MSEL.clear(); MSEL.add(id);
-  if(shared.VIEW==="today") renderToday(); try{ await processMeetings(); } finally{ if(shared.VIEW==="today") renderToday(); } }
-/** a row's action (a message's two run through settings.js's [data-alertdo] handler) */
-export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
-  if(row.kind==="transcript"&&act.id==="process"){ await tdProcess(row.id); return; }
-  if(row.kind!=="review") return; const r=REV.find(x=>x.n===row.n); if(!r||r.done) return;
-  if(act.id==="approve"){ if(!tdApprovable(r)){ tdToReview(r.n); return; } await decide(r.n,"approved"); return; }   /* Undo: the apply's (decide) */
-  /* BL-315: the same reasons menu as Review (rjMenuFor: the seven reasons, Use each guess, No reason, Duplicate's item), through
-     /api/review/reject, with its one message and Undo; the guesses are fetched first, so the row's guess is offered */
-  if(act.id==="reject"){ const menu=()=>rjMenuFor([r],btn,()=>{ if(shared.VIEW==="today") renderToday(); }), was=rjGuesses.value;
-    menu(); await rjLoadGuesses(); if(rjGuesses.value!==was&&rjMenu.value&&rjMenu.value.anchor===btn) menu(); return; }   /* BL-316: open at once; again with the guesses when they arrive */
-  if(act.id==="review") tdToReview(r.n); }
-export function tdOpen(row){ if(row.kind==="review") tdToReview(row.n); else if(row.kind==="transcript") go("inbox"); }
 const TDFOLD="creaite-intake-review-hidden";   /* #168: per viewer, this browser only (localStorage), as Week ahead's */
 let tdFoldWired=false;
 function wireTdFold(){ const f=/** @type {HTMLDetailsElement|null} */($("#tdFold")); if(!f||tdFoldWired) return; tdFoldWired=true;
   f.open=store.get(TDFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(TDFOLD,!f.open)); }
+/** #208: the one line for Review and Intake, each count a link to its page; nothing when all are zero. The counts are the rail's:
+    Review's badge (pending proposals) and Intake's (new files), plus the transcripts ready in Intake's calendar import.
+    @returns {{key:string,n:number,text:string,go:string}[]} */
+export function tdLine(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(mtgHasTx).length, fl=(D.inbox||[]).filter(f=>f.state==="new").length, L=[];
+  if(pr) L.push({key:"review",n:pr,text:`${pr} proposal${pr===1?"":"s"} in Review`,go:"review"});
+  if(nTr) L.push({key:"transcripts",n:nTr,text:`${nTr} transcript${nTr===1?"":"s"} ready in Intake`,go:"inbox"});
+  if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} in Intake`,go:"inbox"});
+  return L; }
 export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return; wireTdFold();
-  const L=toDecideRows(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length; sec.hidden=!L.length;
+  const L=toDecideRows(), line=tdLine(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length+line.reduce((a,x)=>a+x.n,0); sec.hidden=!L.length&&!line.length;
   { const nw=$("#tdNew"); if(nw) nw.hidden=!VIPS().length; }   /* #168: a folded heading still shows an unseen alert (BL-99); never the word that says who is followed (BL-288) */
   $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
-  drawToDecide(body,{rows:L,total,cap:TDCAP,open:EXPAND.has("td"),onAct:tdAct,onOpen:tdOpen,onReview:()=>go("review"),blocked:why=>snack(why)});
+  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onReview:()=>go("review"),onGo:pg=>go(pg),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */

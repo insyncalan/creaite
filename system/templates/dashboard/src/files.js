@@ -10,6 +10,7 @@ import { api, oneLine, SERVED, snack, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { pendingEdit } from "./ask.js";
 import { inboxBadge, renderInbox } from "./intake.js";
+import { renderToday } from "./today.js";
 /* ======================= Files ======================= */
 shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.get("creaite-files-open",[]));
 /* BL-331: the reports and minutes BL-03 archived (still in their _Archive), listed only under the Archived chip, each with Move back */
@@ -60,7 +61,7 @@ export async function refreshFiles(force){ if(!SERVED||!shared.LIVE||shared.FBUS
     [...FNEW].forEach(p=>{ if(!FSEEN.has(p)) FNEW.delete(p); }); }
   catch(e){ FERR=`Couldn't refresh the file list (${e.message}); showing the list from ${clockOf(FAT||D.built_at)||"the last build"}.`; }
   finally{ clearTimeout(slow); shared.FBUSY=false; }
-  inboxBadge(); if(shared.VIEW==="files") renderFiles(); else if(shared.VIEW==="inbox") renderInbox(); return true; }
+  inboxBadge(); if(shared.VIEW==="files") renderFiles(); else if(shared.VIEW==="inbox") renderInbox(); else if(shared.VIEW==="today") renderToday(); return true; }   /* #208: the line on Today counts new files */
 /* looking at Files again clears what was new last time */
 export function filesOpened(){ if(FSEEN){ FNEW.clear(); FSEEN=new Set(FILES.map(f=>f.path)); } else FSEEN=new Set(FILES.map(f=>f.path)); refreshFiles(true); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
