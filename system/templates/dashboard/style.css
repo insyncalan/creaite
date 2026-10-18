@@ -3643,6 +3643,27 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:24px;width:auto;display:block}
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+/* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
+#crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
+.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - 80px);overflow:auto}
+.hubcfg h3{margin:0 0 10px;font:600 var(--fs-lg)/var(--lh-20) var(--font)}
+.cfgsw{display:flex;gap:10px;align-items:flex-start;padding:0 0 10px;border-bottom:1px solid var(--line);font-size:var(--fs-md)}
+.cfgsw .sub{display:block;font-size:var(--fs-sm)} .cfgsw .switch{flex:none}
+.cfgkeep,.cfgoff{margin:8px 0 0}
+.cfgbody{padding-top:10px;display:grid;gap:10px}
+.cfgrow{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center;font-size:var(--fs-md)}
+.cfgrow.top{align-items:start} .cfgrow>label:first-child{color:var(--muted)}
+.cfgrow select,.cfgrow input.pkdt{min-height:var(--ctl-h)}
+.cfgck{display:flex;gap:8px;align-items:center}
+.cfglogos{display:grid;gap:6px}
+.cfglogo{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;font-size:var(--fs-sm)}
+.cfglogo .sub{display:block;font-size:var(--fs-xs)}
+.cfglogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+.cfglogo .mark img{max-width:100%;max-height:100%;display:block}
+.cfglogo:has(input[data-logo-tick]:disabled) .cfgname,.cfglogo:has(input[data-logo-tick]:disabled) .mark{opacity:.6}
+.cfgact{display:flex;gap:6px;align-items:center}
+.cfgnote{margin:0}
+.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px}
 .wr-health{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px}
 .wr-hcol{display:grid;gap:3px;width:120px}
 .wr-flag{font-weight:700;font-size:var(--fs-sm);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey)}

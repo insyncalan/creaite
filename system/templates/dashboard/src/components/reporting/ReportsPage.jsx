@@ -48,7 +48,7 @@ function ReportsView() {
                 <td><b>{p.name}</b></td>
                 <td><StatusDot health={p.health} /></td>
                 <td><StateChip s={v.internal} /></td>
-                <td><div class="rp-cl">{v.clients.map(c => <span key={c.client}><span class="sub">{c.client}</span> <StateChip s={c.state} /></span>)}</div></td>
+                <td>{v.clients.length ? <div class="rp-cl">{v.clients.map(c => <span key={c.client}><span class="sub">{c.client}</span> <StateChip s={c.state} /></span>)}</div> : <span class="sub">No client report</span>}</td>
                 <td><button type="button" class={`btn sm${i === 0 ? " primary" : ""}`} data-rpopen={p.code} aria-label={`Open ${p.name}'s reporting`} onClick={() => openSpace(p.code, week === cur ? "" : week)}>Open</button></td>
               </tr>
             )) : <tr><td colSpan={5}><div class="empty">Nothing needs you this week. Choose All projects to see every report.</div></td></tr>}

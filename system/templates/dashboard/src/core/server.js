@@ -252,6 +252,24 @@ export async function setRhythm(code,val){ if(!await needVault()) return false;
     await shared.VW.append("system/config/settings-log.jsonl",JSON.stringify({at:stampFull(),key:`client_report_rhythm.${code}`,old:m[2],new:val.toLowerCase()})+"\n"); }); return true;
   }catch(e){ snack("Not saved: "+e.message); return false; } }
 
+/* H3 (#221): one "- **<label>:** <value>" line of a project's CLAUDE.md, the way the rhythm is saved (needs the vault, a copy of the
+   file in system/backups/files/, a line in settings-log.jsonl). A line that is missing is added under the rhythm line, or under
+   "Client / partner". The line's italic note (_(…)_) stays. Returns whether it was saved; `was` is the old value. */
+export function memLineEdit(text,label,val){
+  const lab=label.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"), re=new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*"+lab+":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$","m");
+  const m=text.match(re); if(m) return {text:text.replace(re,(_,a,b,c)=>a+val+(c?c.replace(/^\s*/,"   "):"")),was:m[2].trim()};
+  const near=/^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text)||/^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
+  if(!near) return null;
+  const at=near.index+near[0].length; return {text:text.slice(0,at)+"\n"+near[1]+"**"+label+":** "+val+text.slice(at),was:""};
+}
+export async function setMemLine(code,label,val,key){ if(!await needVault()) return false;
+  try{ await vq(async()=>{ const path=memPath(code), text=await shared.VW.read(path), r=memLineEdit(text,label,val);
+    if(!r) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
+    if(r.text===text) return;
+    await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`,".md"),text); await shared.VW.write(path,r.text);
+    await shared.VW.append("system/config/settings-log.jsonl",JSON.stringify({at:stampFull(),key:`${key}.${code}`,old:r.was,new:val})+"\n"); }); return true;
+  }catch(e){ snack("Not saved: "+e.message); return false; } }
+
 /* ======================= live, apply, undo, the toast ======================= */
 shared.LIVE=!!D.live; shared.HELD=[]; shared.DATA_AT=D.data_at||"";
 shared.UNDO=null;
