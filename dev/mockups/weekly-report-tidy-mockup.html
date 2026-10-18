@@ -12,33 +12,40 @@
 .mk-menu button:hover,.mk-menu button:focus-visible{background:var(--accent-soft)}
 .mk-menu svg{width:15px;height:15px;color:var(--muted);flex:none}
 .mk-menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
-/* FIXED: the health column holds its width; the six-week strip and the button stay inside it */
-.wr-health{grid-template-columns:168px minmax(0,1fr)}
-.wr-hcol{width:168px;box-sizing:border-box}
+/* FIXED: the indicator keeps its original 120 px; the six-week strip, its dates and the button stay inside it */
 .wr-hcol>*{max-width:100%;box-sizing:border-box}
-.wr-flag{font-size:12px;letter-spacing:.06em;padding:8px 0;white-space:nowrap}
 .wr-trend{width:100%}.wr-tlbl{width:100%}
 .wr-chg{margin-top:4px;min-height:28px;padding:0 10px;font-size:13px;width:auto;align-self:start}
 .wr-why .wr-rich{display:inline}
 .hspark{display:inline-flex;vertical-align:middle;margin-left:8px;color:var(--accent);background:none;border:0;cursor:pointer;padding:2px}
-/* NEW: add a risk, issue or action */
+/* FIXED: the in-the-report switch is an eye, not a dot */
+.wr-eye{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;font-size:0;color:var(--muted);background:none;border:0;border-radius:6px;cursor:pointer;padding:0}
+.wr-eye svg{width:16px;height:16px}.wr-eye:hover{background:var(--accent-soft);color:var(--ink)}.wr-eye[aria-pressed=false]{color:var(--faint,var(--muted))}
+tr.mk-out td:not(.eyec),.wr-stat.mk-out>*:not(.wr-eye){opacity:.4}
+/* NEW: add work items that are already in the tracker */
 .mk-addrow{display:flex;gap:10px;align-items:center;margin:6px 0 0;font-size:13px}
 .mk-addrow .linkbtn{font-size:13px}
-.mk-form{display:grid;grid-template-columns:minmax(0,1fr) 160px 120px auto auto;gap:6px;align-items:center;margin:6px 0 0;padding:8px;border:1px solid var(--line);border-radius:var(--r-md,8px);background:var(--surface)}
-.mk-form input,.mk-form select{min-height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:400 14px var(--font);padding:0 10px}
+.mk-pick{margin:6px 0 0;border:1px solid var(--line);border-radius:var(--r-md,8px);background:var(--surface);padding:8px}
+.mk-pick input[type=search]{width:100%;min-height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:400 14px var(--font);padding:0 10px;margin:0 0 6px}
+.mk-pick label{display:grid;grid-template-columns:20px 90px minmax(0,1fr) 120px 100px;gap:8px;align-items:center;min-height:32px;font-size:13px;padding:0 4px;border-radius:6px}
+.mk-pick label:hover{background:var(--accent-soft)}
+.mk-pick .foot{display:flex;gap:6px;align-items:center;margin-top:6px}.mk-pick .foot .sub{flex:1;font-size:12px}
 .mk-new{display:inline-block;margin-left:6px;font:600 11px var(--font);color:var(--accent)}
 /* NEW: the free-text section */
 .mk-ed{border:1px solid var(--line);border-radius:var(--r-md,8px);background:var(--surface)}
-.mk-edtb{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--line)}
-.mk-edtb button{width:28px;height:28px;border:0;background:none;border-radius:6px;color:var(--muted);font:600 13px var(--font);cursor:pointer}
+.mk-edtb{display:flex;flex-wrap:wrap;gap:2px;padding:4px;border-bottom:1px solid var(--line)}
+.mk-edtb button{min-width:28px;padding:0 6px;height:28px;border:0;background:none;border-radius:6px;color:var(--muted);font:600 13px var(--font);cursor:pointer}
 .mk-edtb button:hover{background:var(--accent-soft);color:var(--ink)}
 .mk-edtb .sp{flex:1}.mk-edtb .sub{align-self:center;padding:0 8px;font-size:12px}
 .mk-edc{min-height:84px;padding:10px 12px;font-size:14px;outline:none}.mk-edc:empty::before{content:attr(data-ph);color:var(--faint,var(--muted))}
+.asexp .sheet-handle,.asexp .wr-eye,.asexp .wr-count,.asexp .wr-tlgrab,.asexp .mk-addrow,.asexp .mk-pick,.asexp .mk-addsec,.asexp .wr-chg,.asexp .hspark,.asexp .sheet-spark,.asexp .wr-link,.asexp .mk-edtb,.asexp .mk-menu{display:none!important}
+.asexp .mk-ed{border:0}.asexp .mk-edc{padding:0;min-height:0}
+.mk-asexp{display:none;margin:0 0 10px;font:600 12px var(--font);color:var(--muted)}.asexp .mk-asexp{display:block}
 .mk-addsec{display:flex;justify-content:center;margin:24px 0 8px}
 .mk-bar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:9999;display:flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill,999px);box-shadow:var(--shadow-pop);padding:6px 10px;font:500 12px var(--font);color:var(--muted)}
 </style></head>
 <body>
-<div class="mk-bar">Mockup: hover a section and use its menu (left of the page); add a risk or action under its table; Add a section at the foot.</div>
+<div class="mk-bar">Mockup: hover a section and use its menu (left of the page); add items from the tracker under a table; Add a section at the foot; Show as exported.</div>
 <div class="shell">
   <nav class="rail" id="rail" aria-label="Main" aria-describedby="railHint"><span class="vh" id="railHint">Right-click the sidebar, or press Shift+F10 on a page in it, to customise it</span><!-- BL-191 -->
     <!-- BL-273 (sprint-ui-sweep): the Stage wordmark, "creaite" in IBM Plex Mono 600 outlined as paths (dev/reference/logo/wordmark-paths.json,
@@ -292,20 +299,35 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()}
 // free-text section
 var n=0;
 function addText(after){n++;var s=document.createElement('section');s.dataset.id='text_'+n;
- s.innerHTML='<div class="sheet-handle"><button type="button" class="sheet-grip" aria-label="Move this section" data-tip="Drag to move">⋮⋮</button><span class="dd"><button type="button" class="sheet-hbtn" aria-haspopup="menu" aria-label="Section options"><svg class="i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button></span></div><h2><input class="sheet-h" aria-label="Section heading" placeholder="Section heading" style="width:18ch"></h2><div class="mk-ed"><div class="mk-edtb" role="toolbar" aria-label="Text"><button type="button" aria-label="Bold"><b>B</b></button><button type="button" aria-label="Italic"><i>I</i></button><button type="button" aria-label="Bulleted list">•</button><button type="button" aria-label="Numbered list">1.</button><button type="button" aria-label="Link">↗</button><span class="sp"></span><span class="sub">One text box, as everywhere else</span></div><div class="mk-edc" contenteditable="true" data-ph="Write here. Anything you add is part of the report and its exports."></div></div>';
+ s.innerHTML='<div class="sheet-handle"><button type="button" class="sheet-grip" aria-label="Move this section" data-tip="Drag to move">⋮⋮</button><span class="dd"><button type="button" class="sheet-hbtn" aria-haspopup="menu" aria-label="Section options"><svg class="i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button></span></div><h2><input class="sheet-h" aria-label="Section heading" placeholder="Section heading" style="width:18ch"></h2><div class="mk-ed"><div class="mk-edtb" role="toolbar" aria-label="Text"><button type="button" aria-label="Heading">Heading \u25be</button><button type="button" aria-label="Bold"><b>B</b></button><button type="button" aria-label="Italic"><i>I</i></button><button type="button" aria-label="Strikethrough"><s>S</s></button><button type="button" aria-label="Code">&lt;/&gt;</button><button type="button" aria-label="List">List \u25be</button><button type="button" aria-label="Quote">\u275d</button><button type="button" aria-label="Link">Link</button><button type="button" aria-label="Insert">Insert \u25be</button><button type="button" aria-label="Undo">\u21b6</button><button type="button" aria-label="Redo">\u21b7</button><span class="sp"></span><span class="sub">The one editor, as in Notes: type / for more; select text for AI</span></div><div class="mk-edc" contenteditable="true" data-ph="Write here. Anything you add is part of the report and its exports."></div></div>';
  (after?after.insertAdjacentElement('afterend',s):page.appendChild(s));$('.sheet-h',s).focus();s.scrollIntoView({block:'center',behavior:'smooth'})}
 // the Add a section button
 var foot=document.createElement('div');foot.className='mk-addsec';foot.innerHTML='<button type="button" class="btn">'+ICON.plus+' Add a text section</button>';page.insertAdjacentElement('afterend',foot);$('button',foot).onclick=function(){var all=secs();addText(all[all.length-1])};
-// add a risk, issue or action
-function addRow(secId,label,kind){var s=$('.sheet-a4 section[data-id="'+secId+'"]');var tbl=$('table',s);if(!tbl)return;
- var row=document.createElement('div');row.className='mk-addrow';row.innerHTML='<button type="button" class="linkbtn">+ '+label+'</button><span class="sub">'+(kind==='risk'?'Added to the tracker, with Undo.':'Added to the tracker, with Undo. It shows here once it is overdue.')+'</span>';
- var host=tbl.closest('div')||tbl.parentNode;tbl.insertAdjacentElement('afterend',row);
- $('button',row).onclick=function(){if($('.mk-form',s))return;var f=document.createElement('div');f.className='mk-form';
-  f.innerHTML=(kind==='risk'?'<input aria-label="What is the risk or issue" placeholder="What is the risk or issue?"><select aria-label="Type"><option>Risk</option><option>Issue</option></select><select aria-label="Priority"><option>Medium</option><option>High</option><option>Urgent</option></select>':'<input aria-label="What is the action" placeholder="What needs doing?"><select aria-label="Owner"><option>Alan Carter</option><option>Priya Nair</option><option>Lena Fischer</option></select><input type="text" aria-label="Due" value="23-10-2026">')+'<button type="button" class="btn sm primary">Add</button><button type="button" class="btn sm">Cancel</button>';
+// the eye switch
+var EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>',EYEOFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18M10.6 5.2A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6A17 17 0 0 0 2 12s4 7 10 7a9.7 9.7 0 0 0 4.4-1"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg>';
+function eyeify(){$$('.wr-eye').forEach(function(b){var on=b.getAttribute('aria-pressed')!=='false';b.innerHTML=on?EYE:EYEOFF})}
+document.addEventListener('click',function(e){var b=e.target.closest('.wr-eye');if(!b)return;var on=b.getAttribute('aria-pressed')!=='false';b.setAttribute('aria-pressed',!on);var r=b.closest('tr,.wr-stat');if(r)r.classList.toggle('mk-out',on);eyeify()});
+eyeify();
+// add work items already in the tracker
+var POOL={risks:[['ABC-006','Supplier staffing short in November','High','Sam Okoro'],['ABC-007','Test environment not ready before 26-10-2026','Medium','Lena Fischer'],['ABC-008','Data masking rules not agreed','Medium','Priya Nair']],
+ overdue:[['ABC-A-002','Book the UAT environment','Lena Fischer','23-10-2026'],['ABC-A-003','Send the revised budget','Priya Nair','21-10-2026'],['ABC-A-004','Confirm the data owner','Alan Carter','25-10-2026']]};
+function addRow(secId,label){var s=$('.sheet-a4 section[data-id="'+secId+'"]');var tbl=$('table',s);if(!tbl)return;
+ var row=document.createElement('div');row.className='mk-addrow';row.innerHTML='<button type="button" class="linkbtn">+ '+label+'</button><span class="sub">Open items already in the tracker. To make a new one, use Work.</span>';tbl.insertAdjacentElement('afterend',row);
+ var cnt=$('.wr-count',s);
+ $('button',row).onclick=function(){if($('.mk-pick',s))return;var f=document.createElement('div');f.className='mk-pick';
+  f.innerHTML='<input type="search" aria-label="Search open items" placeholder="Search open items by ID, words or owner">'+POOL[secId].map(function(x,i){return '<label><input type="checkbox" data-i="'+i+'"><span>'+x[0]+'</span><span>'+x[1]+'</span><span>'+x[3]+'</span><span>'+x[2]+'</span></label>'}).join('')+'<div class="foot"><span class="sub">Ticked items are added to the report. Nothing in the tracker changes.</span><button type="button" class="btn sm primary">Add to the report</button><button type="button" class="btn sm">Cancel</button></div>';
   row.insertAdjacentElement('afterend',f);$('input',f).focus();
   $('.btn:not(.primary)',f).onclick=function(){f.remove()};
-  $('.btn.primary',f).onclick=function(){var t=$('input',f).value||(kind==='risk'?'New risk':'New action');var tr=document.createElement('tr');
-   tr.innerHTML=kind==='risk'?'<td></td><td>ABC-005</td><td>'+t+'<span class="mk-new">New</span></td><td>'+$$('select',f)[1].value.toUpperCase()+'</td><td>TBC</td><td></td>':'<td></td><td>ABC-A-002</td><td>'+t+'<span class="mk-new">New</span></td><td>'+$('select',f).value+'</td><td>'+$$('input',f)[1].value+'</td><td></td>';
-   $('tbody',tbl).appendChild(tr);f.remove()}}}
-addRow('risks','Add a risk or issue','risk');addRow('overdue','Add an action','action');
+  $('.btn.primary',f).onclick=function(){$$('input[type=checkbox]:checked',f).forEach(function(c){var x=POOL[secId][+c.dataset.i];var tr=document.createElement('tr');
+    tr.innerHTML=secId==='risks'?'<td class="eyec"><button type="button" class="wr-eye" aria-pressed="true">\u25c9</button></td><td class="num"><button type="button" class="linkbtn sheet-ref">'+x[0]+'</button></td><td>'+x[1]+'<span class="mk-new">Added by you</span></td><td><span class="wr-st '+(x[2]==='High'?'r':'a')+'">'+x[2].toUpperCase()+'</span></td><td>'+x[3]+'</td><td></td>':'<td class="eyec"><button type="button" class="wr-eye" aria-pressed="true">\u25c9</button></td><td class="num"><button type="button" class="linkbtn sheet-ref">'+x[0]+'</button></td><td>'+x[1]+'<span class="mk-new">Added by you</span></td><td>'+x[2]+'</td><td>'+x[3]+'</td><td>not due yet</td>';
+    $('tbody',tbl).appendChild(tr)});eyeify();if(cnt)cnt.textContent=cnt.textContent.replace(/Showing \d+ of \d+/,'Showing '+$$('tbody tr',tbl).length+' of '+(+$$('tbody tr',tbl).length+ (POOL[secId].length-$$('input:checked',f).length)));f.remove()}}}
+addRow('risks','Add from the tracker');addRow('overdue','Add from the tracker');
+// the milestone list
+(function(){var s=$('.sheet-a4 section[data-id="milestones"]');var lk=$('.wr-link',s);if(!lk)return;var box=document.createElement('div');box.hidden=true;
+ box.innerHTML='<table class="wr-r"><thead><tr><th class="eyec"></th><th>Milestone</th><th>Agreed</th><th>Expected</th><th>Progress</th><th>State</th></tr></thead><tbody>'+
+ [['ABC-M-001','Design sign-off','28-09-2026','achieved 28-09','','g','ACHIEVED'],['ABC-M-002','UAT start','27-10-2026','10-11-2026 (+14)','','a','SLIPPED'],['ABC-M-003','Pilot go-live','20-11-2026','04-12-2026 (+14)','','a','SLIPPED'],['ABC-M-004','Go-live readiness review','11-12-2026','11-12-2026','','g','ON TRACK'],['ABC-M-005','Rollout','15-01-2027','15-01-2027','','g','ON TRACK']].map(function(r){return '<tr><td class="eyec"><button type="button" class="wr-eye" aria-pressed="true">\u25c9</button></td><td><span class="linkbtn sheet-ref">'+r[0]+'</span> '+r[1]+'</td><td>'+r[2]+'</td><td'+(r[5]==='a'?' style="color:var(--rp-red);font-weight:600"':'')+'>'+r[3]+'</td><td>'+r[4]+'</td><td><span class="wr-st '+r[5]+'">'+r[6]+'</span></td></tr>'}).join('')+'</tbody></table><div class="wr-count">Showing 5 of 5 milestones in the list. Leaving one out tidies the list only; the timeline always shows every milestone.</div>';
+ lk.parentNode.appendChild(box);lk.onclick=function(){box.hidden=!box.hidden;lk.setAttribute('aria-expanded',!box.hidden);lk.textContent=box.hidden?'Show the milestone list \u25be':'Hide the milestone list \u25b4'};lk.click();eyeify()})();
+// as exported
+(function(){var a4=$('.sheet-a4'),page=$('.page',a4);var n=document.createElement('div');n.className='mk-asexp';n.textContent='As exported (HTML, Word, PDF): health, the figures, the timeline picture and the milestone list keep their structure and format; screen controls are gone.';page.insertAdjacentElement('afterbegin',n);
+ var b=$$('.sheet-bar .btn').filter(function(x){return /Show as exported/.test(x.textContent)})[0];if(!b)return;b.onclick=function(){var on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);a4.classList.toggle('asexp',on)}})();
 })();</script></body></html>

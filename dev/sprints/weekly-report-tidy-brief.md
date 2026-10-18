@@ -1,39 +1,49 @@
-# Brief: Weekly report tidy (one issue: three defects and one feature)
+# Brief: Weekly report tidy (defects, a free-text section and export fidelity)
 
-Product Manager, 18-10-2026, from Alan's screenshots and requests. Mockup: dev/mockups/weekly-report-tidy-mockup.html (a fresh weekly report built on the real weekly snapshot; hover a section and use its menu, add a risk or action under its table, use Add a text section at the foot). It also carries the approved "Check this report" button from #170 as a button only. Nothing is built; not approved yet. Alan asked for these together in one issue, with the defects in release 2.3.2.
+Product Manager, 18-10-2026, from Alan's screenshots and requests; revised the same day after his comments. Mockup: dev/mockups/weekly-report-tidy-mockup.html (a fresh weekly report built on the real weekly snapshot: hover a section for its menu, "Add from the tracker" under a table, "Add a text section" at the foot, and the toolbar's "Show as exported"). It also carries the approved "Check this report" button from #170 as a button only. Nothing is built; the revised mockup is not approved yet. **Alan's intent: all of this goes into release 2.3.4** (it replaces the earlier 2.3.3 and v2.4.0 placement; Jarvis to confirm). Alan said the free-text section ("add free text action") is cool as drawn.
 
 ## 1. Defect: the section menu is obscured and huge
 
-**Seen:** the menu from a section's chevron opens to the left of the page and is cut off by the side bar ("his section", "of the export", "up", "down"); its text is large.
-**Fix:** a discreet menu inside the window: 13 px text, a small icon before each word, never wider than it needs, opening below the chevron and never under the side bar or off the page. Items: Leave out of the export, Move up, Move down, Add a text section below (and Delete this section for a text section). Opens as a popup above the page, not inside the scaled page, so zoom never clips it. Esc closes it.
-**Done when:** at 80%, 100% and 120% zoom, and at 900 px wide, every item is fully visible and readable; keyboard: Enter opens, arrows move, Esc closes and returns focus to the chevron.
+**Seen:** the menu from a section's chevron opens to the left of the page and is cut off by the side bar; its text is large.
+**Fix:** a discreet menu inside the window: 13 px text, a small icon before each word, as wide as it needs. Items: Leave out of the export, Move up, Move down, Add a text section below (and Delete this section on a text section). It opens as a popup above the page, not inside the scaled page, so zoom never clips it. Esc closes it.
+**Done when:** at 80%, 100% and 120% zoom and at 900 px wide, every item is fully visible; Enter opens, arrows move, Esc closes and returns focus to the chevron.
 
-## 2. Defect: the health row's Change button is huge, and the six-week strip overruns the flag
+## 2. Defect: the health row
 
-**Seen:** the Change button is oversize; the six-week health strip and its dates are wider than the health flag above them.
-**Fix, to the design standard:** Change is the small button (`.btn.sm`, 28 px); the health column has one width (168 px) and the flag, the six-week strip with its two dates and the button all stay inside it; the flag text is 12 px and never wraps. The plain app sparkle (as in the health suggestion item) sits beside the reason, not beside the flag.
-**Done when:** the strip, dates and button never exceed the flag's width at any zoom; light and dark; both palettes.
+**Seen:** the Change button is huge, and the six-week health strip is wider than the health indicator above it.
+**Fix (Alan: the indicator's original width was fine, so the strip follows the indicator):** the indicator keeps its original width (120 px at 100%). The six-week strip and its two dates are the same width as the indicator and never wider. Change is the small button (`.btn.sm`, 28 px). The plain app sparkle sits beside the reason.
+**Done when:** the strip's width equals the indicator's at every zoom; the button is `.btn.sm`; light and dark; both palettes.
 
-## 3. Defect: no way to add a risk, issue or action from the report
+## 3. Defect: the "in the report" switch is a dot
 
-**Seen:** Alan asks "how do I add risks, issues, actions?" and cannot.
-**Fix:** a quiet "+ Add a risk or issue" under the Risks and issues table, and "+ Add an action" under Overdue actions. It opens one row of fields (what, type or owner, priority or due) with Add and Cancel. Add writes the item to the tracker the way the dashboard saves an edit (with Undo); the new row shows at once, marked New. An action that is not overdue shows in the report once it is.
-**Done when:** each adds a real tracker item with the usual ID, a source and Undo; Cancel changes nothing; the report's saved version and exports are unchanged until Alan approves it.
-**For Alan:** the report only lists overdue actions, so a new action due next week will not appear here. Should the report also get a "Next week's actions" list, or is a link to Work enough? I recommend a link to Work.
+**Seen:** every figure, row and milestone has a grey dot to include or leave it out.
+**Fix:** an **eye** icon (16 px, the app's line style): open eye = in the report; eye with a slash = left out, the row dimmed. Same switch, same names, same keyboard use (Space), same tooltip. Everywhere the dot is used today: At a glance, the milestone list, Risks and issues, Overdue actions, Decisions, Asks.
+**Done when:** no "◉" remains in the sheet; screen readers still hear "In the report: on/off".
 
-## 4. Feature: a free-text section, anywhere in the report
+## 4. Change: "Add" means bring in items that are already in the tracker
 
-**What:** an "Add a text section" button at the foot of the report, and "Add a text section below" in every section's menu. The new section has its own heading (Alan names it) and a text box in the one rich editor (the same editor and toolbar as Notes and Current state: bold, italic, lists, link). It moves up and down like any section, can be left out of the export, and can be deleted. It is in the filed report and every export. In the client report it follows the rule for every section: only if Alan chooses to match or write it for the client.
-**Done when:** a text section can be added anywhere, edited, moved, left out, deleted and exported to HTML, Word and PDF; its text is saved and filed with the report; the one editor's gate passes; no pasted style leaks.
+**What I got wrong:** my first mockup made new items inline. Alan meant: add more of the tracker's existing work items to the report.
+**Fix:** under the Risks and issues and Overdue actions tables, "+ Add from the tracker" opens a picker of **open items not yet in the report**: a search box, tick boxes, each row ID, title, owner and priority or due date. "Add to the report" puts the ticked items in the table, marked "Added by you", each with its eye; the count line updates ("Showing 4 of 5"). Nothing in the tracker changes. To make a new item, use Work.
+**Effect on the report:** the Actions table can then hold actions that are not overdue (shown "not due yet"). This also answers the earlier open question about listing non-overdue actions: yes, by this route.
+**Done when:** the picker lists only open, not-yet-included items that Alan may see in this report; Add changes only the report (saved with it); an added item follows the item's later changes in the report; client report: only client-visible items are offered.
+
+## 5. Change: export keeps the structure and format of Health, At a glance, the timeline and the milestone list
+
+**Alan:** on export the health, at a glance, the visible milestone timeline and the milestone list must keep their look.
+**Fix:** HTML, Word and PDF export reproduce: the **health block** (flag colour, six-week strip, dates, reason); **At a glance** as its figures strip with the same cells and colours; the **milestone timeline drawn as a picture** (the same marks, dates and today line as on screen, as it is now when it is visible); and the **milestone list as a table** with the same columns (Milestone, Agreed, Expected, Progress, State), the state colours and the slipped dates in red. The mockup's "Show as exported" shows the target: screen controls (handles, eyes, hints, add links) disappear, the content stays.
+**Done when:** for the demo report, each of the four parts is checked in the HTML, the Word file and the PDF against the on-screen "Show as exported" view; a part Alan has left out stays out.
+
+## 6. Feature: a free-text section, anywhere, with the whole editor
+
+**What:** an "Add a text section" button at the foot of the report, and "Add a text section below" in every section's menu. It has its own heading (Alan names it) and a text box in **the one editor with everything it has in Notes, no exception**: heading menu (levels 1 to 3), bold, italic, strikethrough, code, list menu (bulleted, numbered, checklist), quote, link, Insert (table, picture, code block), undo and redo, the `/` menu, and AI on selected text (the sparkle and the hover bar). It moves up and down like any section, can be left out of the export, and can be deleted.
+**Export:** the text keeps its formatting in HTML, Word and PDF: headings, emphasis, lists, checklists as boxes, quotes, links, tables, pictures, code.
+**Dependency for Team Stark to confirm:** today's report sheet profile has no checklist, code, table or Insert menu because the Current state storage can't hold them and Word shows some of them poorly. This section needs its own storage that can, and an export path for each. If any element cannot be exported faithfully, say which, and Alan decides. **Alan's rule: no exception.**
+**Done when:** every button of the Notes toolbar is present and works in a text section; a document using all of them exports identically (to the eye) in HTML, Word and PDF; the text is saved and filed with the report; the one editor's round-trip gate passes.
 
 ## Client-safe
 
-Added text sections are internal until Alan matches or writes them in the client report. Risks, issues and actions added here follow the usual client-visible flag (off by default).
-
-## Release and size
-
-Alan asked for the defects in 2.3.2, with #172 and #212, and for one issue. The three defects are small; the free-text section is the larger part (size M). If 2.3.2 cannot carry the feature, split it and keep the defects in 2.3.2.
+A text section is internal until Alan matches or writes it in the client report. Tracker items added by the picker follow the client-visible flag (off by default); the client report offers only client-visible items.
 
 ## Test (standing rule)
 
-Automated hand checks for this release's test file (Automation map in the release's sheet): menu fully visible at four zooms (scriptable), the health row's widths (measurable), add-a-row writes a tracker item (scriptable), a text section adds, saves and exports (scriptable); the look is judgement.
+Automation map for the release's sheet: menu fully visible at four zooms (scriptable); the strip equals the indicator's width (measurable); no "◉" in the sheet and the eye toggles (scriptable); the picker lists and adds only existing items and changes nothing in the tracker (scriptable); the exported HTML contains each of the four parts with their classes and colours (scriptable); Word and PDF fidelity (judgement on the screenshot sheet, since Word and a PDF viewer are live only); the text section adds, saves and exports (scriptable).
