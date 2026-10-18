@@ -1257,7 +1257,9 @@ class Handler(BaseHTTPRequestHandler):
         if op == "read":
             if not p.is_file():
                 return self.send(404, {"ok": False, "message": f"not found: {rel}"})
-            return self.send(200, {"ok": True, "text": p.read_text(encoding="utf-8")})
+            with open(p, encoding="utf-8", newline="") as fh:
+                text = fh.read()
+            return self.send(200, {"ok": True, "text": text})
         if op == "remove":
             p.unlink(missing_ok=True)
             return self.send(200, {"ok": True})
