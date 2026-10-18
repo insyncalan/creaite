@@ -56,13 +56,13 @@ function SpaceView({ code }) {
     : st.key === "notdue" ? <a class="btn sm" href={href} data-rpopen-view>Make one anyway</a>
     : isCur ? <a class={`btn sm primary`} href={href} data-rpopen-view>{st.key === "draft" ? "Open and check" : "Open"}</a>
     : <span class="sub">Nothing filed</span>;
-  const wHref = weeklyHref(code, week), cHref = clientReportHref(code, week, c.client);
+  const wHref = weeklyHref(code, week), cHref = c ? clientReportHref(code, week, c.client) : wHref;   // H3 (#221): no client report when the project's is off
   return (
     <div class="wrapmax rp">
       {crumb}
       <div class="hhead"><div style={{ flex: 1 }}>
         <h1>Reporting</h1>
-        <div class="sub">{p.name} · internal weekly, and {c.client} {c.rhythm.toLowerCase()}</div>
+        <div class="sub">{p.name} · internal weekly{c ? `, and ${c.client} ${c.rhythm.toLowerCase()}` : ". This project has no client report"}</div>
       </div></div>
       <div class="rp-space">
         <div class="rp-weeks" role="group" aria-label="Weeks">
@@ -71,7 +71,7 @@ function SpaceView({ code }) {
             return (
               <button type="button" class="rp-wk" key={w} data-week={w} aria-pressed={w === week} onClick={() => pick(w)}>
                 <span class="l">Week ending {weekLabel(w)}</span>
-                <span class="s"><Chip tone={x.internal.tone || "mute"}>Internal: {x.internal.label}</Chip><Chip tone={x.clients[0].state.tone || "mute"}>Client: {x.clients[0].state.label}</Chip></span>
+                <span class="s"><Chip tone={x.internal.tone || "mute"}>Internal: {x.internal.label}</Chip>{x.clients[0] ? <Chip tone={x.clients[0].state.tone || "mute"}>Client: {x.clients[0].state.label}</Chip> : null}</span>
               </button>
             );
           })}
@@ -89,7 +89,7 @@ function SpaceView({ code }) {
                 <button type="button" class="btn sm" disabled data-tip="Approve and Export arrive with the report editor (BL-335)">{internalOk ? "Export" : "Approve"}</button>
               </div>
             </section>
-            <section class="rp-card" aria-label="Client report">
+            {c ? <section class="rp-card" aria-label="Client report">
               <div class="top"><b>Client report</b><Chip tone="mute">{c.client}</Chip><StateChip s={c.state} /></div>
               {c.state.key === "notdue"
                 ? <div class="sub">{c.client} is {c.rhythm.toLowerCase()}; no client report was due this week.</div>
@@ -106,12 +106,12 @@ function SpaceView({ code }) {
                   : <button type="button" class="btn sm" disabled data-tip={!internalOk && isCur ? "Approve the internal report first" : "Approve and Export arrive with the report editor (BL-336)"}>{c.state.path ? "Export" : "Approve"}</button>}
                 {!internalOk && isCur && c.state.key !== "notdue" ? <span class="sub">Approve the internal report first</span> : null}
               </div>
-            </section>
+            </section> : null}
           </div>
-          <div class="rp-both">
+          {c ? <div class="rp-both">
             <span><b>Edit both side by side</b><br /><span class="sub">Opens the client report; choose Side by side there for the internal page beside it, with the differences marked.</span></span>
             <a class="btn primary" href={cHref} data-editboth>Edit both</a>
-          </div>
+          </div> : null}
           <section class="card rp-files" aria-label="Filed for this week">
             <h2>Filed for this week</h2>
             {v.files.length

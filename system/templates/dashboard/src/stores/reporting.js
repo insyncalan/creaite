@@ -15,6 +15,7 @@ import { signal } from "@preact/signals";
 import { FILES, P, REV } from "../core/data.js";
 import { D, nowStamp, S, TODAY } from "../core/page.js";
 import { setRailCount } from "./rail.js";
+import { clientReportOn } from "./reportingSettings.js";
 
 /** @typedef {"ok"|"warn"|"bad"|""} Tone */
 /** @typedef {{key: string, label: string, tone: Tone, path?: string, edited?: string}} RepState */
@@ -101,7 +102,8 @@ export function weekView(code, week = thisWeek()) {
   const w = stateOf(code, "weekly", week);
   const rhythm = p.rhythm || "Weekly", name = (p.client || "").trim() || "Client";
   const c = stateOf(code, "client", week, name, rhythm), rec = reportRecord(code, "client", week, name);
-  const clients = [{ client: name, rhythm, state: c.state, due: c.due, differs: rec && rec.differs ? String(rec.differs) : "" }];
+  // H3 (#221): a project that needs no separate client report lists none: only the internal report, nothing due on the client side
+  const clients = clientReportOn(code) ? [{ client: name, rhythm, state: c.state, due: c.due, differs: rec && rec.differs ? String(rec.differs) : "" }] : [];
   return { week, internal: w.state, clients, files: weekFiles(code, week), needs: !["filed", "approved", "notdue"].includes(w.state.key) || clients.some(x => ["due", "draft"].includes(x.state.key)) };
 }
 

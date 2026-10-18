@@ -390,13 +390,13 @@ def logo_route(handler, req):
         return refuse(handler, "Say which project's logos.")
     known = {x["path"]: x for x in report_doc.logos(code)}
     out = {}
-    for stored in req.get("paths") or []:
+    for stored in req.get("paths") or list(known):                 # H3: no list asked for = all of the project's logos
         if stored not in known:
             continue
         f = paths.resolve(stored)
         if f.suffix.lower() in LOGO_TYPES and f.is_file() and f.stat().st_size <= LOGO_MAX:
             out[stored] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
-    return answer(handler, {"ok": True, "logos": out})
+    return answer(handler, {"ok": True, "logos": out, "list": list(known.values())})
 
 
 LOGO_KIND_NAMES = ("firm", "client", "partner")

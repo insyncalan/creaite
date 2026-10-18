@@ -3652,6 +3652,27 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:24px;width:auto;display:block}
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+/* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
+#crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
+.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - 80px);overflow:auto}
+.hubcfg h3{margin:0 0 10px;font:600 var(--fs-lg)/var(--lh-20) var(--font)}
+.cfgsw{display:flex;gap:10px;align-items:flex-start;padding:0 0 10px;border-bottom:1px solid var(--line);font-size:var(--fs-md)}
+.cfgsw .sub{display:block;font-size:var(--fs-sm)} .cfgsw .switch{flex:none}
+.cfgkeep,.cfgoff{margin:8px 0 0}
+.cfgbody{padding-top:10px;display:grid;gap:10px}
+.cfgrow{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center;font-size:var(--fs-md)}
+.cfgrow.top{align-items:start} .cfgrow>label:first-child{color:var(--muted)}
+.cfgrow select,.cfgrow input.pkdt{min-height:var(--ctl-h)}
+.cfgck{display:flex;gap:8px;align-items:center}
+.cfglogos{display:grid;gap:6px}
+.cfglogo{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;font-size:var(--fs-sm)}
+.cfglogo .sub{display:block;font-size:var(--fs-xs)}
+.cfglogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+.cfglogo .mark img{max-width:100%;max-height:100%;display:block}
+.cfglogo:has(input[data-logo-tick]:disabled) .cfgname,.cfglogo:has(input[data-logo-tick]:disabled) .mark{opacity:.6}
+.cfgact{display:flex;gap:6px;align-items:center}
+.cfgnote{margin:0}
+.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px}
 .wr-health{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px}
 .wr-hcol{display:grid;gap:3px;width:120px}
 .wr-flag{font-weight:700;font-size:var(--fs-sm);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey)}
@@ -4222,6 +4243,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ChasePane: () => ChasePane,
     Chip: () => Chip,
     ClaimMark: () => ClaimMark,
+    ClientReportPanel: () => ClientReportPanel,
     CloseDay: () => CloseDay,
     Combobox: () => Combobox,
     D: () => D,
@@ -4348,6 +4370,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     LINK_REFUSED: () => LINK_REFUSED,
     LINK_REL: () => LINK_REL,
     LLF: () => LLF,
+    LOGO_KINDS: () => LOGO_KINDS,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
     MCLR: () => MCLR,
@@ -5062,11 +5085,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     claimsWrap: () => claimsWrap,
     clampZoom: () => clampZoom,
     clearAllFilters: () => clearAllFilters,
+    clientLogosOn: () => clientLogosOn,
+    clientReminderOn: () => clientReminderOn,
+    clientReportCogLabel: () => clientReportCogLabel,
     clientReportHref: () => clientReportHref,
+    clientReportOn: () => clientReportOn,
+    clientReportsHtml: () => clientReportsHtml,
     clockOf: () => clockOf,
     closeCal: () => closeCal,
     closeCapture: () => closeCapture,
     closeChat: () => closeChat,
+    closeClientReport: () => closeClientReport,
     closeCombobox: () => closeCombobox,
     closeContextMenu: () => closeContextMenu,
     closeDialog: () => closeDialog,
@@ -5098,6 +5127,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     confirmCard: () => confirmCard,
     conflictChoice: () => conflictChoice,
     conflictHtml: () => conflictHtml,
+    contentBox: () => contentBox,
     contextMenuOpen: () => contextMenuOpen,
     convRow: () => convRow,
     copied: () => copied,
@@ -5106,6 +5136,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     countRedraft: () => countRedraft,
     countUp: () => countUp,
     covered: () => covered,
+    crLogoData: () => crLogoData,
+    crLogoNote: () => crLogoNote,
+    crLogoPaths: () => crLogoPaths,
+    crTick: () => crTick,
     creaiteEditor: () => creaiteEditor,
     createNote: () => createNote,
     csClean: () => csClean,
@@ -5670,6 +5704,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     meNames: () => meNames,
     meetingOfFile: () => meetingOfFile,
     meetingRoute: () => meetingRoute,
+    memLineEdit: () => memLineEdit,
     memPath: () => memPath,
     menuGroup: () => menuGroup,
     menuItemsIn: () => menuItemsIn,
@@ -5885,6 +5920,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     openCapture: () => openCapture,
     openChat: () => openChat,
     openCk: () => openCk,
+    openClientReport: () => openClientReport,
     openClose: () => openClose,
     openCloseDay: () => openCloseDay,
     openContextMenu: () => openContextMenu,
@@ -6235,6 +6271,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rbTick: () => rbTick,
     rbUnmark: () => rbUnmark,
     readClaims: () => readClaims,
+    readClientLogos: () => readClientLogos,
     readDate: () => readDate,
     readForm: () => readForm,
     reattach: () => reattach,
@@ -6274,6 +6311,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     remLabel: () => remLabel,
     remMenu: () => remMenu,
     remPick: () => remPick,
+    removeClientLogo: () => removeClientLogo,
     removeInbox: () => removeInbox,
     removeLink: () => removeLink,
     removeLoaded: () => removeLoaded,
@@ -6524,11 +6562,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     setCard: () => setCard,
     setChat: () => setChat,
     setChatWidth: () => setChatWidth,
+    setClientLogos: () => setClientLogos,
+    setClientName: () => setClientName,
+    setClientReminder: () => setClientReminder,
+    setClientReport: () => setClientReport,
+    setClientRhythm: () => setClientRhythm,
     setDecision: () => setDecision,
     setFigureShown: () => setFigureShown,
     setLayout: () => setLayout,
     setLive: () => setLive,
     setMark: () => setMark,
+    setMemLine: () => setMemLine,
     setNotes: () => setNotes,
     setOf: () => setOf,
     setOpen: () => setOpen,
@@ -6651,6 +6695,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toastLayer: () => toastLayer,
     toggleGroup: () => toggleGroup,
     toggleNotesList: () => toggleNotesList,
+    trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
@@ -6671,6 +6716,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     updUndo: () => updUndo,
     updUpload: () => updUpload,
     updateView: () => updateView,
+    uploadClientLogo: () => uploadClientLogo,
     uploadedFiles: () => uploadedFiles,
     useCount: () => useCount,
     vagueWhy: () => vagueWhy,
@@ -26307,6 +26353,296 @@ ${s5}`;
     railCounts.value = { ...railCounts.value, [id2]: { n: n4, label } };
   }
 
+  // stores/exportSave.js
+  var exportClash = y3(
+    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
+    null
+  );
+  var exportSaved = y3(
+    /** @type {ExportAnswer|null} */
+    null
+  );
+  var exportFailed = y3("");
+  async function saveExport(body2) {
+    exportFailed.value = "";
+    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
+    if (r4.ok) {
+      exportClash.value = null;
+      exportSaved.value = r4;
+    } else if (r4.clash) {
+      exportSaved.value = null;
+      exportClash.value = { body: body2, r: r4 };
+    } else {
+      exportClash.value = null;
+      exportSaved.value = null;
+      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
+    }
+    return r4;
+  }
+  async function answerClash(choice, newName) {
+    const c5 = exportClash.value;
+    if (!c5) return null;
+    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
+  }
+  function cancelClash() {
+    exportClash.value = null;
+  }
+  var openFolder = (folder) => api("/api/open", { path: folder });
+  var showInFinder = (path) => api("/api/report/reveal", { path });
+  var openSaved = (path) => api("/api/open", { path });
+
+  // stores/weekly.js
+  var weeklyArg = y3(
+    /** @type {{code: string, week?: string}|null} */
+    null
+  );
+  var weeklyView = y3(
+    /** @type {WeeklyView|null} */
+    null
+  );
+  var weeklyDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var weeklyBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var weeklyBusy = y3("");
+  var weeklyEditing = y3(false);
+  var weeklyLogos = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var wkAsked = 0;
+  async function loadWeekly(arg, fresh = false) {
+    const mine = ++wkAsked;
+    weeklyArg.value = arg;
+    weeklyEditing.value = false;
+    if (!viaServer()) {
+      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
+      return;
+    }
+    weeklyBusy.value = "Opening the weekly report…";
+    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
+    if (mine !== wkAsked) return;
+    weeklyBusy.value = "";
+    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
+    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
+  }
+  function takeWeekly(r4) {
+    weeklyView.value = r4;
+    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function readLogos(code, logos) {
+    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
+    if (!want.length) return;
+    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
+    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
+  }
+  async function saveWeekly(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    const ok2 = !!(r4 && r4.ok);
+    if (ok2) {
+      weeklyBase.value = Number(r4.version) || weeklyBase.value;
+      const v5 = weeklyView.value;
+      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
+    }
+    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
+  }
+  async function approveWeekly(doc, force) {
+    const a5 = weeklyArg.value;
+    const r4 = await api("/api/report/approve", {
+      kind: "weekly",
+      code: doc.project || a5 && a5.code,
+      week_ending: doc.date,
+      doc,
+      base_version: weeklyBase.value,
+      force: force || void 0
+    });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportWeekly(doc, fmt) {
+    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
+  }
+  var weeklyDirty = false;
+  var setWeeklyDirty = (on2) => {
+    weeklyDirty = on2;
+  };
+  function editDoc(d5, _why) {
+    weeklyDoc.value = d5;
+    weeklyDirty = true;
+  }
+
+  // stores/reportingSettings.js
+  var LOGO_KINDS = (
+    /** @type {const} */
+    ["firm", "client", "partner"]
+  );
+  var crTick = y3(0);
+  var project = (code) => (
+    /** @type {any} */
+    P4.find((p6) => p6.code === code)
+  );
+  var clientReportOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.cr !== false;
+  };
+  var clientReportCogLabel = (code) => `Client report settings: ${clientReportOn(code) ? "on" : "off"}`;
+  var clientReminderOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.crrem !== false;
+  };
+  function clientLogosOn(code) {
+    const p6 = project(code), l6 = p6 && Array.isArray(p6.crlogos) ? p6.crlogos : LOGO_KINDS;
+    return LOGO_KINDS.filter((k5) => k5 === "firm" || l6.includes(k5));
+  }
+  function changed() {
+    crTick.value++;
+    repTick.value++;
+  }
+  async function setClientReport(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report", on2 ? "on" : "off", "client_report")) return false;
+    p6.cr = on2;
+    if (!on2) {
+      for (let i5 = REMINDERS.length - 1; i5 >= 0; i5--) if (String(REMINDERS[i5].id).startsWith(`client:${code}:`)) REMINDERS.splice(i5, 1);
+    }
+    changed();
+    return true;
+  }
+  async function setClientReminder(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report reminder", on2 ? "on" : "off", "client_report_reminder")) return false;
+    p6.crrem = on2;
+    changed();
+    return true;
+  }
+  async function setClientLogos(code, kinds) {
+    const p6 = project(code);
+    if (!p6) return false;
+    const list = LOGO_KINDS.filter((k5) => k5 === "firm" || kinds.includes(k5));
+    if (!await setMemLine(code, "Client report logos", list.join(", "), "client_report_logos")) return false;
+    p6.crlogos = list;
+    changed();
+    return true;
+  }
+  async function setClientName(code, name) {
+    const p6 = project(code);
+    const v5 = String(name || "").replace(/\s+/g, " ").trim();
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client / partner", v5, "client_name")) return false;
+    p6.client = v5;
+    changed();
+    return true;
+  }
+  async function setClientRhythm(code, val2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setRhythm(code, val2)) return false;
+    p6.rhythm = val2;
+    changed();
+    return true;
+  }
+  var crLogoPaths = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoData = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoNote = y3("");
+  async function readClientLogos(code) {
+    if (!viaServer()) return;
+    const r4 = await api("/api/report/logo", { code });
+    if (!r4 || !r4.ok) return;
+    crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
+    crLogoData.value = r4.logos || {};
+    weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
+    changed();
+  }
+  function toBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const fr2 = new FileReader();
+      fr2.onload = () => resolve(String(fr2.result).replace(/^data:[^,]*,/, ""));
+      fr2.onerror = () => reject(fr2.error);
+      fr2.readAsDataURL(blob);
+    });
+  }
+  var MARGIN_WHITE = 245, MARGIN_ALPHA = 8, DRAWN_MAX = 540;
+  function contentBox(px2, w6, h5) {
+    let x02 = w6, y02 = h5, x12 = -1, y12 = -1;
+    for (let y5 = 0; y5 < h5; y5++) for (let x5 = 0; x5 < w6; x5++) {
+      const i5 = (y5 * w6 + x5) * 4;
+      if (px2[i5 + 3] <= MARGIN_ALPHA || px2[i5] >= MARGIN_WHITE && px2[i5 + 1] >= MARGIN_WHITE && px2[i5 + 2] >= MARGIN_WHITE) continue;
+      if (x5 < x02) x02 = x5;
+      if (x5 > x12) x12 = x5;
+      if (y5 < y02) y02 = y5;
+      if (y5 > y12) y12 = y5;
+    }
+    if (x12 < 0) return null;
+    const box = { x: x02, y: y02, w: x12 - x02 + 1, h: y12 - y02 + 1 };
+    return box.w === w6 && box.h === h5 ? null : box;
+  }
+  async function trimmedCopy(file) {
+    try {
+      const bmp = await createImageBitmap(file), c5 = document.createElement("canvas");
+      c5.width = bmp.width;
+      c5.height = bmp.height;
+      const g5 = (
+        /** @type {CanvasRenderingContext2D} */
+        c5.getContext("2d", { willReadFrequently: true })
+      );
+      g5.drawImage(bmp, 0, 0);
+      const box = contentBox(g5.getImageData(0, 0, c5.width, c5.height).data, c5.width, c5.height);
+      if (!box) return null;
+      const k5 = Math.min(1, DRAWN_MAX / Math.max(box.w, box.h)), out = document.createElement("canvas");
+      out.width = Math.max(1, Math.round(box.w * k5));
+      out.height = Math.max(1, Math.round(box.h * k5));
+      out.getContext("2d").drawImage(c5, box.x, box.y, box.w, box.h, 0, 0, out.width, out.height);
+      return await new Promise((res) => out.toBlob(res, "image/png"));
+    } catch {
+      return null;
+    }
+  }
+  async function uploadClientLogo(code, kind, file) {
+    crLogoNote.value = "";
+    const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || [, ""])[1].toLowerCase().replace("jpeg", "jpg");
+    if (!ext) {
+      crLogoNote.value = "Choose a PNG, JPEG or SVG picture.";
+      return false;
+    }
+    if (file.size > 4e5) {
+      crLogoNote.value = "That logo is over 400 kB. Choose a smaller file.";
+      return false;
+    }
+    const trimmed = ext === "svg" ? null : await trimmedCopy(file);
+    const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not saved.";
+      return false;
+    }
+    crLogoNote.value = r4.hint || "";
+    await readClientLogos(code);
+    snack(r4.message || "Logo saved");
+    return true;
+  }
+  async function removeClientLogo(code, kind) {
+    crLogoNote.value = "";
+    const r4 = await api("/api/report/logo/remove", { code, kind });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not removed.";
+      return false;
+    }
+    await readClientLogos(code);
+    snack(r4.message || "Logo removed");
+    return true;
+  }
+
   // stores/reporting.js
   var repTick = y3(0);
   var repFilter = y3(
@@ -26368,7 +26704,7 @@ ${s5}`;
     const w6 = stateOf(code, "weekly", week);
     const rhythm = p6.rhythm || "Weekly", name = (p6.client || "").trim() || "Client";
     const c5 = stateOf(code, "client", week, name, rhythm), rec = reportRecord(code, "client", week, name);
-    const clients = [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }];
+    const clients = clientReportOn(code) ? [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }] : [];
     return { week, internal: w6.state, clients, files: weekFiles(code, week), needs: !["filed", "approved", "notdue"].includes(w6.state.key) || clients.some((x5) => ["due", "draft"].includes(x5.state.key)) };
   }
   function spaceWeeks(code) {
@@ -26422,7 +26758,7 @@ ${s5}`;
         /* @__PURE__ */ u2(StateChip, { s: v5.internal }),
         v5.internal.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "internal", "data-openfile": v5.internal.path, "aria-label": "Open the weekly report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "internal", "aria-label": "Open the weekly report", href: weeklyHref(code, week), children: "Open" })
       ] }),
-      /* @__PURE__ */ u2("div", { class: "rp-row", children: [
+      c5 ? /* @__PURE__ */ u2("div", { class: "rp-row", children: [
         /* @__PURE__ */ u2("span", { class: "g", children: [
           /* @__PURE__ */ u2("b", { children: "Client report" }),
           " · ",
@@ -26435,7 +26771,7 @@ ${s5}`;
         ] }),
         /* @__PURE__ */ u2(StateChip, { s: c5.state }),
         c5.state.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "client", "data-openfile": c5.state.path, "aria-label": "Open the client report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "client", "aria-label": "Open the client report", href: clientReportHref(code, week, c5.client), children: "Open" })
-      ] }),
+      ] }) : null,
       /* @__PURE__ */ u2("div", { class: "acts", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary sm", "data-rpcard": "space", onClick: () => openSpace(code), children: "Open reporting" }),
         /* @__PURE__ */ u2("span", { class: "sub", children: lastFiled ? `Last filed: ${fd(lastFiled)}` : "Nothing filed yet" })
@@ -29906,7 +30242,7 @@ ${s5}`;
   // components/settings/SettingRow.jsx
   var N2 = 0;
   var rowId = () => "ss" + ++N2;
-  function SettingRow({ id: id2, label, line, note, changed, keys, resettable = true, fixedWhy = "", saved = false, children }) {
+  function SettingRow({ id: id2, label, line, note, changed: changed2, keys, resettable = true, fixedWhy = "", saved = false, children }) {
     const [busy2, setBusy] = d2(false);
     const reset = async () => {
       setBusy(true);
@@ -29917,7 +30253,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("div", { class: "srow", "data-keys": keys.join(" "), children: [
       /* @__PURE__ */ u2("div", { children: [
         /* @__PURE__ */ u2("span", { id: id2, children: label }),
-        changed && /* @__PURE__ */ u2("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
+        changed2 && /* @__PURE__ */ u2("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
         (line || note) && /* @__PURE__ */ u2("small", { id: id2 + "h", children: [
           line,
           note ? /* @__PURE__ */ u2("span", { class: "setnote", children: [
@@ -29933,7 +30269,7 @@ ${s5}`;
       /* @__PURE__ */ u2("div", { class: "setctl", children: [
         saved && /* @__PURE__ */ u2("span", { class: "saved", role: "status", children: "Saved" }),
         children,
-        changed && resettable && /* @__PURE__ */ u2(
+        changed2 && resettable && /* @__PURE__ */ u2(
           "button",
           {
             type: "button",
@@ -30771,6 +31107,7 @@ ${s5}`;
     const id2 = "sr" + ++SRN;
     return `<div class="srow"><div><span id="${id2}">${l6}</span>${h5 ? `<small id="${id2}h">${h5}</small>` : ""}</div><div>${srName(c5, id2, h5, l6)}</div></div>`;
   };
+  var clientReportsHtml = () => `<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>` + P4.map((p6) => row(`${esc(p6.name)}: this project needs a separate client report`, `<input type="checkbox" class="switch" data-crsw="${p6.code}" ${clientReportOn(p6.code) ? "checked" : ""}>`)).join("") + `</div>`;
   var SETSECTIONS = [
     /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
        whether a search finds anything in it. */
@@ -30868,7 +31205,7 @@ ${s5}`;
       title: "Projects and register",
       wide: true,
       kw: "projects register add close archive restore archived code signals domains matching",
-      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + projArchiveHtml(),
+      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + clientReportsHtml() + projArchiveHtml(),
       after: () => projArchiveBind()
     },
     /* BL-09 */
@@ -31367,6 +31704,14 @@ ${s5}`;
     }, true);
     $("#settingsBody").addEventListener("change", async (e4) => {
       const el2 = e4.target;
+      if (el2.dataset.crsw) {
+        const p6 = P4.find((x5) => x5.code === el2.dataset.crsw), on2 = el2.checked;
+        if (await setClientReport(p6.code, on2)) {
+          snack(`${p6.name}: client report ${on2 ? "on" : "off"}`);
+          savedNow();
+        } else el2.checked = !on2;
+        return;
+      }
       if (el2.dataset.rhythm) {
         const p6 = P4.find((x5) => x5.code === el2.dataset.rhythm), was2 = p6.rhythm;
         if (await setRhythm(p6.code, el2.value)) {
@@ -38465,8 +38810,8 @@ ${s5}`;
       paint2();
       return;
     }
-    const changed = $$("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]").filter((e4) => e4.classList.contains("hl") !== HL.has(e4.dataset.row) || e4.classList.contains("cur") !== (e4.dataset.row === shared.HLC)).length;
-    mNoFade(() => mTick("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]", (e4) => e4.dataset.row, HLTICK, paint2), changed);
+    const changed2 = $$("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]").filter((e4) => e4.classList.contains("hl") !== HL.has(e4.dataset.row) || e4.classList.contains("cur") !== (e4.dataset.row === shared.HLC)).length;
+    mNoFade(() => mTick("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]", (e4) => e4.dataset.row, HLTICK, paint2), changed2);
   }
   function hlClear() {
     shared.HLALL = false;
@@ -38625,8 +38970,8 @@ ${s5}`;
       paint2();
       return;
     }
-    const changed = $$("#reviewBody tr[data-n]").filter((e4) => e4.classList.contains("hl") !== RHL.has(+e4.dataset.n) || e4.classList.contains("sel") !== (+e4.dataset.ri === shared.RSEL)).length;
-    mNoFade(() => mTick("#reviewBody tr[data-n]", (e4) => e4.dataset.n, RVTICK, paint2), changed);
+    const changed2 = $$("#reviewBody tr[data-n]").filter((e4) => e4.classList.contains("hl") !== RHL.has(+e4.dataset.n) || e4.classList.contains("sel") !== (+e4.dataset.ri === shared.RSEL)).length;
+    mNoFade(() => mTick("#reviewBody tr[data-n]", (e4) => e4.dataset.n, RVTICK, paint2), changed2);
   }
   var rvOrder = () => $$("#reviewBody tr[data-n]").map((t47) => +t47.dataset.n);
   function rvTick(n4) {
@@ -45099,8 +45444,8 @@ ${s5}`;
       if (dx2 || dy2) anim(e4, [{ transform: `translate(${dx2}px,${dy2}px)` }, { transform: "none" }], { duration: 160 });
     });
   }
-  function mNoFade(paint2, changed) {
-    const t47 = document.documentElement, off = shared.MKEYHELD || changed > 2 || reduced();
+  function mNoFade(paint2, changed2) {
+    const t47 = document.documentElement, off = shared.MKEYHELD || changed2 > 2 || reduced();
     if (off) t47.classList.add("mnofade");
     paint2();
     if (off) {
@@ -46687,7 +47032,7 @@ ${s5}`;
     };
     const saved = rec && rec.notes || {};
     const flat2 = (L3) => (L3 || []).map((l6) => l6.text.replace(/\s+/g, " ").trim()).join("\n");
-    const changed = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
+    const changed2 = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
     return /* @__PURE__ */ u2("div", { class: "ppshape", children: [
       conf ? /* @__PURE__ */ u2("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents." }) : null,
       /* @__PURE__ */ u2("div", { class: "ppshrow", children: [
@@ -46746,7 +47091,7 @@ ${s5}`;
             /* @__PURE__ */ u2(Icon, { name: "spark" }),
             "Suggestion from creaite"
           ] }),
-          /* @__PURE__ */ u2("span", { class: "sub", children: changed.length ? `${shPlural(changed.length, "section")} changed${changed.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed." }),
+          /* @__PURE__ */ u2("span", { class: "sub", children: changed2.length ? `${shPlural(changed2.length, "section")} changed${changed2.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed." }),
           /* @__PURE__ */ u2("span", { class: "sp" }),
           /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-ppdiscard": "1", onClick: () => discardProposal(rec), children: "Discard" }),
           /* @__PURE__ */ u2(
@@ -46755,7 +47100,7 @@ ${s5}`;
               type: "button",
               class: "btn primary shsm",
               "data-ppuse": "1",
-              disabled: !changed.length || !shapeReading.value,
+              disabled: !changed2.length || !shapeReading.value,
               onClick: async () => {
                 if (await useProposal()) onUsed();
               },
@@ -46767,7 +47112,7 @@ ${s5}`;
           c5.section ? `${c5.section}: ` : "",
           c5.note
         ] }, i5)) }) : null,
-        changed.map(([k5, label]) => /* @__PURE__ */ u2("div", { class: "shsec", children: [
+        changed2.map(([k5, label]) => /* @__PURE__ */ u2("div", { class: "shsec", children: [
           /* @__PURE__ */ u2("div", { class: "shsech", children: /* @__PURE__ */ u2("b", { children: label }) }),
           /* @__PURE__ */ u2("ul", { class: "ppsugl", children: (prop.notes[k5] || []).map((l6, i5) => /* @__PURE__ */ u2("li", { children: [
             l6.text,
@@ -48291,17 +48636,17 @@ ${pre}**Current state title:** ${title}`);
   function claimTrack() {
     const root2 = $("#curEd");
     if (root2 && shared.CURED && shared.CURED.claims) {
-      let changed = false;
+      let changed2 = false;
       for (const [n4, c5] of Object.entries(shared.CURED.claims)) {
         if (c5.edited) continue;
         if (claimText(root2, n4) !== c5.text) {
           c5.edited = true;
           c5.touched = true;
           c5.ids = [];
-          changed = true;
+          changed2 = true;
         }
       }
-      if (changed) {
+      if (changed2) {
         claimPaint("ed");
         evRefresh();
       }
@@ -52533,11 +52878,11 @@ ${pre}**Current state title:** ${title}`);
     const now = noteCur.value;
     if (now && now.path === r4.from) noteCur.value = { ...now, path: r4.note.path, note: r4.note, base: r4.base };
     noteRenamed.value = { from: r4.from, to: r4.note.path };
-    const changed = (r4.relinked || []).length, listed = (
+    const changed2 = (r4.relinked || []).length, listed = (
       /** @type {{title: string, why: string}[]} */
       r4.listed || []
     );
-    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed ? ` ${changed === 1 ? "One link" : `${changed} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
+    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed2 ? ` ${changed2 === 1 ? "One link" : `${changed2} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
     const refresh = async (cc2) => {
       const L3 = await api("/api/notes/list", { code: cc2 });
       if (L3 && L3.ok) {
@@ -52545,7 +52890,7 @@ ${pre}**Current state title:** ${title}`);
         if (notesCode.value === cc2) notesList.value = sortNotes(L3.notes);
       }
     };
-    if (changed) {
+    if (changed2) {
       for (const cc2 of Object.keys(all)) if ((all[cc2] || []).some((x5) => (r4.relinked || []).includes(x5.path))) refresh(cc2);
     }
   }
@@ -59075,11 +59420,11 @@ ${d5.text}`);
       putHTML($("#helpPane"), html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`);
       return;
     }
-    const a5 = helpNorm(arg) || helpNorm(store.get("creaite-help-tab", "start")) || HTABS[0], i5 = a5.indexOf("-"), tab = i5 < 0 ? a5 : a5.slice(0, i5), rest = i5 < 0 ? "" : a5.slice(i5 + 1), changed = !$("#helpPane").dataset.tab || $("#helpPane").dataset.tab !== tab;
+    const a5 = helpNorm(arg) || helpNorm(store.get("creaite-help-tab", "start")) || HTABS[0], i5 = a5.indexOf("-"), tab = i5 < 0 ? a5 : a5.slice(0, i5), rest = i5 < 0 ? "" : a5.slice(i5 + 1), changed2 = !$("#helpPane").dataset.tab || $("#helpPane").dataset.tab !== tab;
     shared.HELPARG = a5;
     store.set("creaite-help-tab", tab);
     drawTabs($("#helpTabsHost"), { items: HD.tabs.map((t47) => ({ id: t47.id, label: t47.title, tabId: "htab-" + t47.id, data: { help: t47.id } })), selected: tab, onSelect: helpGo, label: "Help", className: "tabs", id: "helpTabs", wrap: true });
-    if (changed) {
+    if (changed2) {
       const html2 = HD.tabs.find((t47) => t47.id === tab).html.replace("<p>[start command]</p>", cmdBox());
       putHTML($("#helpPane"), raw(`<div class="hp-wrap hp-${tab}">${html2}</div>`));
       $("#helpPane").dataset.tab = tab;
@@ -59093,7 +59438,7 @@ ${d5.text}`);
       if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => {
         if (shared.HELPARG === a5 && target.isConnected) target.scrollIntoView({ block: "start" });
       });
-    } else if (changed) $("#v-help").scrollTop = 0;
+    } else if (changed2) $("#v-help").scrollTop = 0;
   }
   function helpGo(arg) {
     const a5 = helpNorm(arg);
@@ -67276,44 +67621,6 @@ ${d5.text}`);
     ] });
   }
 
-  // stores/exportSave.js
-  var exportClash = y3(
-    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
-    null
-  );
-  var exportSaved = y3(
-    /** @type {ExportAnswer|null} */
-    null
-  );
-  var exportFailed = y3("");
-  async function saveExport(body2) {
-    exportFailed.value = "";
-    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
-    if (r4.ok) {
-      exportClash.value = null;
-      exportSaved.value = r4;
-    } else if (r4.clash) {
-      exportSaved.value = null;
-      exportClash.value = { body: body2, r: r4 };
-    } else {
-      exportClash.value = null;
-      exportSaved.value = null;
-      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
-    }
-    return r4;
-  }
-  async function answerClash(choice, newName) {
-    const c5 = exportClash.value;
-    if (!c5) return null;
-    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
-  }
-  function cancelClash() {
-    exportClash.value = null;
-  }
-  var openFolder = (folder) => api("/api/open", { path: folder });
-  var showInFinder = (path) => api("/api/report/reveal", { path });
-  var openSaved = (path) => api("/api/open", { path });
-
   // components/report/ExportSave.jsx
   var dismiss = () => {
     exportSaved.value = null;
@@ -68005,90 +68312,6 @@ ${d5.text}`);
         ] }) : null
       ] }) : null
     ] });
-  }
-
-  // stores/weekly.js
-  var weeklyArg = y3(
-    /** @type {{code: string, week?: string}|null} */
-    null
-  );
-  var weeklyView = y3(
-    /** @type {WeeklyView|null} */
-    null
-  );
-  var weeklyDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var weeklyBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var weeklyBusy = y3("");
-  var weeklyEditing = y3(false);
-  var weeklyLogos = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var wkAsked = 0;
-  async function loadWeekly(arg, fresh = false) {
-    const mine = ++wkAsked;
-    weeklyArg.value = arg;
-    weeklyEditing.value = false;
-    if (!viaServer()) {
-      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
-      return;
-    }
-    weeklyBusy.value = "Opening the weekly report…";
-    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
-    if (mine !== wkAsked) return;
-    weeklyBusy.value = "";
-    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
-    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
-  }
-  function takeWeekly(r4) {
-    weeklyView.value = r4;
-    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function readLogos(code, logos) {
-    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
-    if (!want.length) return;
-    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
-    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
-  }
-  async function saveWeekly(req) {
-    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
-    const ok2 = !!(r4 && r4.ok);
-    if (ok2) {
-      weeklyBase.value = Number(r4.version) || weeklyBase.value;
-      const v5 = weeklyView.value;
-      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
-    }
-    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
-  }
-  async function approveWeekly(doc, force) {
-    const a5 = weeklyArg.value;
-    const r4 = await api("/api/report/approve", {
-      kind: "weekly",
-      code: doc.project || a5 && a5.code,
-      week_ending: doc.date,
-      doc,
-      base_version: weeklyBase.value,
-      force: force || void 0
-    });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportWeekly(doc, fmt) {
-    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
-  }
-  var weeklyDirty = false;
-  var setWeeklyDirty = (on2) => {
-    weeklyDirty = on2;
-  };
-  function editDoc(d5, _why) {
-    weeklyDoc.value = d5;
-    weeklyDirty = true;
   }
 
   // components/report/weekly/Top.jsx
@@ -71135,17 +71358,15 @@ ${d5.text}`);
     ] });
     const ask2 = (k5) => `${k5 === "weekly" ? "weekly report" : "client report"} ${code}${k5 === "weekly" ? ` for week ending ${weekLabel(week)}` : ""}`;
     const doOpen = (st2, href) => st2.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-openfile": st2.path, children: "Open" }) : st2.key === "notdue" ? /* @__PURE__ */ u2("a", { class: "btn sm", href, "data-rpopen-view": true, children: "Make one anyway" }) : isCur ? /* @__PURE__ */ u2("a", { class: `btn sm primary`, href, "data-rpopen-view": true, children: st2.key === "draft" ? "Open and check" : "Open" }) : /* @__PURE__ */ u2("span", { class: "sub", children: "Nothing filed" });
-    const wHref = weeklyHref(code, week), cHref = clientReportHref(code, week, c5.client);
+    const wHref = weeklyHref(code, week), cHref = c5 ? clientReportHref(code, week, c5.client) : wHref;
     return /* @__PURE__ */ u2("div", { class: "wrapmax rp", children: [
       crumb,
       /* @__PURE__ */ u2("div", { class: "hhead", children: /* @__PURE__ */ u2("div", { style: { flex: 1 }, children: [
         /* @__PURE__ */ u2("h1", { children: "Reporting" }),
         /* @__PURE__ */ u2("div", { class: "sub", children: [
           p6.name,
-          " · internal weekly, and ",
-          c5.client,
-          " ",
-          c5.rhythm.toLowerCase()
+          " · internal weekly",
+          c5 ? `, and ${c5.client} ${c5.rhythm.toLowerCase()}` : ". This project has no client report"
         ] })
       ] }) }),
       /* @__PURE__ */ u2("div", { class: "rp-space", children: [
@@ -71161,10 +71382,10 @@ ${d5.text}`);
                 "Internal: ",
                 x5.internal.label
               ] }),
-              /* @__PURE__ */ u2(Chip, { tone: x5.clients[0].state.tone || "mute", children: [
+              x5.clients[0] ? /* @__PURE__ */ u2(Chip, { tone: x5.clients[0].state.tone || "mute", children: [
                 "Client: ",
                 x5.clients[0].state.label
-              ] })
+              ] }) : null
             ] })
           ] }, w6);
         }) }),
@@ -71190,7 +71411,7 @@ ${d5.text}`);
                 /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", disabled: true, "data-tip": "Approve and Export arrive with the report editor (BL-335)", children: internalOk ? "Export" : "Approve" })
               ] })
             ] }),
-            /* @__PURE__ */ u2("section", { class: "rp-card", "aria-label": "Client report", children: [
+            c5 ? /* @__PURE__ */ u2("section", { class: "rp-card", "aria-label": "Client report", children: [
               /* @__PURE__ */ u2("div", { class: "top", children: [
                 /* @__PURE__ */ u2("b", { children: "Client report" }),
                 /* @__PURE__ */ u2(Chip, { tone: "mute", children: c5.client }),
@@ -71225,16 +71446,16 @@ ${d5.text}`);
                 c5.state.key === "notdue" ? null : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", disabled: true, "data-tip": !internalOk && isCur ? "Approve the internal report first" : "Approve and Export arrive with the report editor (BL-336)", children: c5.state.path ? "Export" : "Approve" }),
                 !internalOk && isCur && c5.state.key !== "notdue" ? /* @__PURE__ */ u2("span", { class: "sub", children: "Approve the internal report first" }) : null
               ] })
-            ] })
+            ] }) : null
           ] }),
-          /* @__PURE__ */ u2("div", { class: "rp-both", children: [
+          c5 ? /* @__PURE__ */ u2("div", { class: "rp-both", children: [
             /* @__PURE__ */ u2("span", { children: [
               /* @__PURE__ */ u2("b", { children: "Edit both side by side" }),
               /* @__PURE__ */ u2("br", {}),
               /* @__PURE__ */ u2("span", { class: "sub", children: "Opens the client report; choose Side by side there for the internal page beside it, with the differences marked." })
             ] }),
             /* @__PURE__ */ u2("a", { class: "btn primary", href: cHref, "data-editboth": true, children: "Edit both" })
-          ] }),
+          ] }) : null,
           /* @__PURE__ */ u2("section", { class: "card rp-files", "aria-label": "Filed for this week", children: [
             /* @__PURE__ */ u2("h2", { children: "Filed for this week" }),
             v5.files.length ? v5.files.map((f5) => /* @__PURE__ */ u2("div", { children: [
@@ -71327,11 +71548,11 @@ ${d5.text}`);
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("b", { children: p6.name }) }),
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(StatusDot, { health: p6.health }) }),
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(StateChip, { s: v5.internal }) }),
-          /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("div", { class: "rp-cl", children: v5.clients.map((c5) => /* @__PURE__ */ u2("span", { children: [
+          /* @__PURE__ */ u2("td", { children: v5.clients.length ? /* @__PURE__ */ u2("div", { class: "rp-cl", children: v5.clients.map((c5) => /* @__PURE__ */ u2("span", { children: [
             /* @__PURE__ */ u2("span", { class: "sub", children: c5.client }),
             " ",
             /* @__PURE__ */ u2(StateChip, { s: c5.state })
-          ] }, c5.client)) }) }),
+          ] }, c5.client)) }) : /* @__PURE__ */ u2("span", { class: "sub", children: "No client report" }) }),
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("button", { type: "button", class: `btn sm${i5 === 0 ? " primary" : ""}`, "data-rpopen": p6.code, "aria-label": `Open ${p6.name}'s reporting`, onClick: () => openSpace(p6.code, week === cur ? "" : week), children: "Open" }) })
         ] }, p6.code)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { colSpan: 5, children: /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing needs you this week. Choose All projects to see every report." }) }) }) })
       ] }) }),
@@ -72183,6 +72404,32 @@ ${d5.text}`);
       return false;
     }
   }
+  function memLineEdit(text, label, val2) {
+    const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), re2 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$", "m");
+    const m5 = text.match(re2);
+    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val2 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
+    const near = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text) || /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
+    if (!near) return null;
+    const at2 = near.index + near[0].length;
+    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val2 + text.slice(at2), was: "" };
+  }
+  async function setMemLine(code, label, val2, key2) {
+    if (!await needVault()) return false;
+    try {
+      await vq(async () => {
+        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
+        if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
+        if (r4.text === text) return;
+        await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
+        await shared.VW.write(path, r4.text);
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val2 }) + "\n");
+      });
+      return true;
+    } catch (e4) {
+      snack("Not saved: " + e4.message);
+      return false;
+    }
+  }
   shared.LIVE = !!D.live;
   shared.HELD = [];
   shared.DATA_AT = D.data_at || "";
@@ -72726,6 +72973,197 @@ ${d5.text}`);
     setInterval(rollDay, 6e4);
   }
 
+  // components/report/hub/ClientReportPanel.jsx
+  var TILES = (
+    /** @type {{kind: LogoKind, mark: string, name: string, line: string}[]} */
+    [
+      { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports. Always shown." },
+      { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
+      { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" }
+    ]
+  );
+  var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
+  function LogoTile({ code, t: t47, ticked }) {
+    const file = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const path = crLogoPaths.value[t47.kind], pic = path ? crLogoData.value[path] : "";
+    const firm = t47.kind === "firm";
+    const picked = async (e4) => {
+      const input = (
+        /** @type {HTMLInputElement} */
+        e4.target
+      ), f5 = input.files && input.files[0];
+      if (f5) await uploadClientLogo(code, t47.kind, f5);
+      input.value = "";
+    };
+    const toggle = () => {
+      const now = clientLogosOn(code), next = now.includes(t47.kind) ? now.filter((k5) => k5 !== t47.kind) : [...now, t47.kind];
+      setClientLogos(code, next);
+    };
+    return /* @__PURE__ */ u2("div", { class: "cfglogo", "data-kind": t47.kind, children: [
+      /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", children: pic ? /* @__PURE__ */ u2("img", { alt: "", src: pic }) : t47.mark }),
+      /* @__PURE__ */ u2("span", { class: "cfgname", children: [
+        t47.name,
+        /* @__PURE__ */ u2("span", { class: "sub", children: t47.line })
+      ] }),
+      /* @__PURE__ */ u2("span", { class: "cfgact", children: [
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn sm",
+            "data-logo-add": t47.kind,
+            onClick: () => file.current && file.current.click(),
+            "aria-label": `${pic ? "Change" : "Add"} the ${firm ? "firm's" : t47.kind === "client" ? "client's" : "partner's"} logo`,
+            children: pic ? "Change" : "Add logo"
+          }
+        ),
+        pic ? /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn sm",
+            "data-logo-remove": t47.kind,
+            onClick: () => removeClientLogo(code, t47.kind),
+            "aria-label": `Remove the ${t47.kind} logo`,
+            children: "Remove"
+          }
+        ) : null,
+        /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", "data-logo-file": t47.kind, onChange: picked }),
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            checked: firm || ticked,
+            disabled: firm,
+            "data-logo-tick": t47.kind,
+            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.kind}'s logo in the header`,
+            onChange: firm ? void 0 : toggle
+          }
+        )
+      ] })
+    ] });
+  }
+  function ClientReportPanel({ code, onClose }) {
+    crTick.value;
+    const p6 = (
+      /** @type {any} */
+      P4.find((x5) => x5.code === code)
+    );
+    h2(() => {
+      readClientLogos(code);
+    }, [code]);
+    if (!p6) return null;
+    const on2 = clientReportOn(code), ticked = clientLogosOn(code), rhythms = RHYTHMS.includes(p6.rhythm) ? RHYTHMS : [...RHYTHMS, p6.rhythm];
+    return /* @__PURE__ */ u2("div", { class: "hubcfg", id: "hubCfg", role: "dialog", "aria-label": "Client report settings", "data-code": code, "data-on": on2 ? "on" : "off", children: [
+      /* @__PURE__ */ u2("h3", { children: [
+        "Client report for ",
+        p6.name
+      ] }),
+      /* @__PURE__ */ u2("label", { class: "cfgsw", children: [
+        /* @__PURE__ */ u2("input", { type: "checkbox", class: "switch", id: "cfgOn", checked: on2, onChange: (e4) => setClientReport(
+          code,
+          /** @type {HTMLInputElement} */
+          e4.target.checked
+        ) }),
+        /* @__PURE__ */ u2("span", { children: [
+          /* @__PURE__ */ u2("b", { children: "This project needs a separate client report" }),
+          /* @__PURE__ */ u2("span", { class: "sub", children: "Turn off if the client only receives the internal report, or nothing at all." })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("p", { class: "sub cfgkeep", id: "cfgKeep", children: "This applies to every future report of this project until you change it. Reports already written are kept as they are, and turning it off deletes nothing." }),
+      on2 ? /* @__PURE__ */ u2("div", { class: "cfgbody", id: "cfgBody", children: [
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgRh", children: "How often" }),
+          /* @__PURE__ */ u2("select", { id: "cfgRh", value: p6.rhythm, onChange: (e4) => setClientRhythm(
+            code,
+            /** @type {HTMLSelectElement} */
+            e4.target.value
+          ), children: rhythms.map((r4) => /* @__PURE__ */ u2("option", { value: r4, selected: r4 === p6.rhythm, children: r4 }, r4)) })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgNm", children: "Client name on the report" }),
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              id: "cfgNm",
+              class: "pkdt",
+              defaultValue: p6.client || "",
+              onChange: (e4) => setClientName(
+                code,
+                /** @type {HTMLInputElement} */
+                e4.target.value
+              )
+            },
+            p6.client || ""
+          )
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgRem", children: "Reminder" }),
+          /* @__PURE__ */ u2("label", { class: "cfgck", children: [
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                type: "checkbox",
+                id: "cfgRem",
+                checked: clientReminderOn(code),
+                onChange: (e4) => setClientReminder(
+                  code,
+                  /** @type {HTMLInputElement} */
+                  e4.target.checked
+                )
+              }
+            ),
+            " Remind me on the due day"
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow top", children: [
+          /* @__PURE__ */ u2("label", { id: "cfgLogosL", children: "Logos in the report header" }),
+          /* @__PURE__ */ u2("div", { class: "cfglogos", role: "group", "aria-labelledby": "cfgLogosL", children: [
+            TILES.map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
+            crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "sub cfgnote", role: "status", id: "cfgLogoNote", children: crLogoNote.value }) : null,
+            /* @__PURE__ */ u2("p", { class: "sub cfgnote", children: "Ticking a logo changes the header of the internal and the client report. A transparent PNG or SVG sits best; empty margins are trimmed on the copy that is drawn, and the file you choose is kept as it is." })
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects." })
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub cfgoff", id: "cfgOff", children: "This project has no client report." }),
+      /* @__PURE__ */ u2("div", { class: "cfgfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "cfgDone", onClick: onClose, children: "Done" }) })
+    ] });
+  }
+  function openClientReport(code) {
+    let host2 = document.getElementById("crHost");
+    if (host2 && host2.dataset.code === code) {
+      closeClientReport();
+      return;
+    }
+    if (!host2) {
+      host2 = document.createElement("div");
+      host2.id = "crHost";
+      document.body.appendChild(host2);
+    }
+    host2.dataset.code = code;
+    bindEsc();
+    R(/* @__PURE__ */ u2(ClientReportPanel, { code, onClose: closeClientReport }), host2);
+    const first = host2.querySelector("input,select,button");
+    if (first) first.focus();
+  }
+  function closeClientReport() {
+    const host2 = document.getElementById("crHost");
+    if (!host2) return;
+    R(null, host2);
+    host2.remove();
+  }
+  var escBound = false;
+  function bindEsc() {
+    if (escBound) return;
+    escBound = true;
+    document.addEventListener("keydown", (e4) => {
+      if (e4.key === "Escape" && document.getElementById("crHost")) closeClientReport();
+    });
+  }
+
   // core/globals.json
   var globals_default = {
     about: "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and so do dev/tools/build_dashboard_js.py and convert_area.py. Keep each list sorted.",
@@ -72758,6 +73196,7 @@ ${d5.text}`);
         "ChasePane",
         "Checked",
         "Chip",
+        "ClientReportPanel",
         "ClientView",
         "CloseDay",
         "Combobox",
@@ -72949,7 +73388,10 @@ ${d5.text}`);
         "claimState",
         "claimsNote",
         "clearAllFilters",
+        "clientLogosOn",
+        "clientReportCogLabel",
         "clientReportHref",
+        "clientReportOn",
         "closeCapture",
         "closeChat",
         "closeCombobox",
@@ -72966,6 +73408,7 @@ ${d5.text}`);
         "countFor",
         "countUp",
         "covered",
+        "crLogoData",
         "creaiteEditor",
         "createNote",
         "csHead",
@@ -73182,6 +73625,7 @@ ${d5.text}`);
         "openCapture",
         "openChat",
         "openCk",
+        "openClientReport",
         "openContextMenu",
         "openDatePicker",
         "openDialog",
@@ -73406,6 +73850,7 @@ ${d5.text}`);
         "undoWords",
         "unescHtml",
         "updReview",
+        "uploadClientLogo",
         "validate",
         "viaServer",
         "vipBadge",

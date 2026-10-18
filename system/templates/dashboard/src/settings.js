@@ -21,6 +21,7 @@ import { typing } from "./core/keys.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
 import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
+import { clientReportOn, setClientReport } from "./stores/reportingSettings.js";
 import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { catalogue, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
@@ -99,7 +100,10 @@ export async function projArchive(code,action,cancel){ if(!viaServer()){ snack("
 export function projArchiveBind(){ $$("#projArch [data-parch]").forEach(b=>b.onclick=()=>projArchive(b.dataset.pcode,b.dataset.parch,false)); }
 /* ===== end BL-09 ===== */
 export const row=(l,c,h)=>{ const id="sr"+(++SRN); return `<div class="srow"><div><span id="${id}">${l}</span>${h?`<small id="${id}h">${h}</small>`:""}</div><div>${srName(c,id,h,l)}</div></div>`; };
-/* ===== end BL-214 ===== */
+
+/** H3 (#221): "This project needs a separate client report", one switch per project; the hub's Client report settings panel sets the same line. */
+export const clientReportsHtml=()=>`<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>`
+  +P.map(p=>row(`${esc(p.name)}: this project needs a separate client report`,`<input type="checkbox" class="switch" data-crsw="${p.code}" ${clientReportOn(p.code)?"checked":""}>`)).join("")+`</div>`;/* ===== end BL-214 ===== */
 export const SETSECTIONS=[
  /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
     whether a search finds anything in it. */
@@ -140,7 +144,7 @@ export const SETSECTIONS=[
  {id:"people",cat:"people",title:"People",raw:true,kw:"people owners register email aliases organisation role rename merge vip",render:()=>'<div class="card wide" id="peopleMgr" data-sec="people"></div>',after:()=>renderPeopleMgr()},
  {id:"workstreams",cat:"people",title:"Workstreams",raw:true,kw:"workstreams lead keywords rename merge retire project",render:()=>'<div class="card wide" id="wsMgr" data-sec="workstreams"></div>',after:()=>renderMgr("ws")},
  {id:"projects",cat:"people",title:"Projects and register",wide:true,kw:"projects register add close archive restore archived code signals domains matching",
-  render:()=>'<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC\'s domains”</span>).</p>'+projArchiveHtml(),
+  render:()=>'<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC\'s domains”</span>).</p>'+clientReportsHtml()+projArchiveHtml(),
   after:()=>projArchiveBind()},   /* BL-09 */
  {id:"health",cat:"health",title:"Health",kw:"health check problems fix",
   mount:el=>render(h(Health,null),el),match:()=>false},
@@ -352,7 +356,8 @@ $("#setq").oninput=e=>setSearch(e.target.value);
 $("#setq").onkeydown=e=>{ if(e.key==="Escape"&&shared.SQ){ e.stopPropagation(); e.target.value=""; setSearch(""); } };
 $("#settingsBody").addEventListener("change",e=>{ const r=mounted(e.target)?null:e.target.closest(".srow,.igrow"), c=r&&r.closest("[data-sec]");
   shared.SETROW=c?{sec:c.dataset.sec,i:[...c.querySelectorAll(".srow,.igrow")].indexOf(r),at:Date.now()}:null; },true);
-$("#settingsBody").addEventListener("change",async e=>{ const el=e.target; if(el.dataset.rhythm){ const p=P.find(x=>x.code===el.dataset.rhythm), was=p.rhythm; if(await setRhythm(p.code,el.value)){ p.rhythm=el.value; snack(`Saved to ${p.name}'s CLAUDE.md`); savedNow(); } else el.value=was; return; } const k=el.dataset.k; if(!k||!SKEY[k]) return;
+$("#settingsBody").addEventListener("change",async e=>{ const el=e.target; if(el.dataset.crsw){ const p=P.find(x=>x.code===el.dataset.crsw), on=el.checked; if(await setClientReport(p.code,on)){ snack(`${p.name}: client report ${on?"on":"off"}`); savedNow(); } else el.checked=!on; return; }  /* H3 (#221): one setting, here and in the hub's panel */
+  if(el.dataset.rhythm){ const p=P.find(x=>x.code===el.dataset.rhythm), was=p.rhythm; if(await setRhythm(p.code,el.value)){ p.rhythm=el.value; snack(`Saved to ${p.name}'s CLAUDE.md`); savedNow(); } else el.value=was; return; } const k=el.dataset.k; if(!k||!SKEY[k]) return;
   let v=el.type==="checkbox"?el.checked:el.type==="number"?Number(el.value):el.value; if((k==="sweepDue"||k==="weeklyTime")&&!/^\d{2}:\d{2}$/.test(v)){ snack("Use 24-hour HH:MM"); el.value=S[k]; return; }
   const was=S[k]; if(!await writeSettings({[SKEY[k]]:k==="short"?String(v).split(",").map(x=>x.trim()).filter(Boolean):k==="ownDomains"?(v=String(v).split(",").map(x=>x.trim().toLowerCase()).filter(Boolean)):v})){ if(el.type==="checkbox") el.checked=!!was; else el.value=was; return; }
   S[k]=v; if(k==="theme"||k==="palette"){ themeFade(); applyTheme(); } if(k==="motion") applyMotion(); if(k==="palette") renderSettings(); if(k==="autoApply") renderSettings(); if(k==="filesDocs") refreshFiles(true); if(k==="flowWeeks") reloadData(); if(k==="showArchived") reloadData().then(()=>renderSettings());   /* BL-09 */ status(); snack("Saved to settings.json"); });
