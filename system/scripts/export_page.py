@@ -24,6 +24,7 @@ import re
 import sys
 import unicodedata
 from html.parser import HTMLParser
+from urllib.parse import unquote
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -57,9 +58,26 @@ CLIENT_SVG_ATTRS = {"viewbox", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r"
                     "dominant-baseline", "preserveaspectratio", "xmlns", "offset", "stop-color", "stop-opacity", "gradientunits",
                     "gradienttransform", "dx", "dy", "letter-spacing", "text-decoration", "class", "style", "width", "height", "id"}
 ITEM_ID = re.compile(r"[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+")   # no \b: joined IDs are found too
-INVISIBLE = re.compile("[\u200b\u200c\u200d\u200e\u200f\u2060\ufeff\u00ad]")   # zero-width marks, soft hyphen
+
+
+class _Invisible:
+    """Characters that draw as nothing and so hide a word: every Unicode format character (category Cf: zero-width, direction marks and
+    isolates, invisible separators such as U+2063, tags, the soft hyphen), the combining grapheme joiner U+034F, the variation
+    selectors and Mongolian free variation selectors. `.sub(repl, text)` works like a compiled pattern's."""
+    EXTRA = {0x034F, 0x180B, 0x180C, 0x180D, 0x180E, 0x115F, 0x1160, 0x3164, 0xFFA0}
+
+    def hides(self, c):
+        o = ord(c)
+        return unicodedata.category(c) == "Cf" or o in self.EXTRA or 0xFE00 <= o <= 0xFE0F or 0xE0100 <= o <= 0xE01EF
+
+    def sub(self, repl, text):
+        return "".join(repl if self.hides(c) else c for c in str(text or ""))
+
+
+INVISIBLE = _Invisible()
 SVG_URI = re.compile(r"data:image/svg\+xml(?:;charset=[\w-]+)?;base64,([A-Za-z0-9+/=\s]+)", re.I)
 SVG_MAX = 1_000_000
+SVG_ADDR = re.compile(r"data:image/svg\+xml", re.I)
 CSS_CONTENT = re.compile(r"content\s*:\s*([^;}]*)", re.I)
 ID_OK = re.compile(r"^[A-Za-z][\w:.-]{0,60}$")
 DATA_ATTR = re.compile(r"^data-[a-z0-9_.:-]{1,40}$")
@@ -79,16 +97,59 @@ class PageRefused(ValueError):
 
 # ── The allow-list ────────────────────────────────────────────────────────────
 
-def safe_css_value(v):
-    """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address or a
-    fragment of the file itself."""
+def safe_css_value(v, client=False):
+    """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address of a picture
+    or a fragment of the file itself. A CLIENT file takes no SVG picture in its styles at all; an internal file takes one only if its
+    words can be read (css_svg_words), and those are then checked like the page's own."""
     if BAD_STYLE.search(v):
         return False
     for m in URL_IN_CSS.finditer(v):
         a = m.group(2).strip()
-        if not (a.startswith("#") or a.lower().startswith("data:image/")):
+        if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
             return False
+    if SVG_ADDR.search(css_decode(v)) or SVG_ADDR.search(v):
+        return not client and css_svg_words(v) is not None
     return True
+
+
+def svg_payload(addr):
+    """The SVG text of a `data:image/svg+xml…` address written base64 or percent-encoded (or as plain text), or None when a base64 one
+    can't be read."""
+    head, _, body = addr.partition(",")
+    if ";base64" in head.lower():
+        try:
+            return base64.b64decode(re.sub(r"\s+", "", unquote(body)), validate=True).decode("utf-8", "replace")
+        except ValueError:
+            return None
+    return unquote(body)
+
+
+def css_svg_words(css):
+    """The words of every `data:image/svg+xml` picture in style rules (read as the browser reads them: escapes decoded), or None
+    when one can't be read or is too large. Over-inclusive on purpose: the percent-decoded rest of the rule is read as words too,
+    so a match is only ever likelier."""
+    text, words = css_decode(css), []
+    for m in SVG_ADDR.finditer(text):
+        rest = text[m.start():]
+        end = re.search(r"['\")]", rest[len("data:image/svg+xml"):])
+        addr = rest[:len("data:image/svg+xml") + (end.start() if end else len(rest))]
+        head, _, body = addr.partition(",")
+        if len(addr) > SVG_MAX:
+            return None
+        if ";base64" in head.lower():
+            payload = svg_payload(addr)
+            if payload is None:
+                return None
+        else:
+            payload = unquote(body)
+            words.append(unquote(rest.partition(",")[2]))       # an unquoted address cut short by a ")" in it: the rest too
+        payload = html.unescape(payload)
+        if len(unquote(payload)) > SVG_MAX:
+            return None
+        words += [payload, re.sub(r"<[^>]*>", "", payload), unquote(payload)]
+        if SVG_ADDR.search(payload) or re.search(r"data\s*:", payload, re.I):
+            return None     # a picture inside a picture
+    return words
 
 
 def client_attr_ok(svg, name, value):
@@ -99,25 +160,23 @@ def client_attr_ok(svg, name, value):
 
 
 def svg_words(value, depth=0):
-    """The words of a `data:image/svg+xml;base64,…` picture (its text, title, desc and every attribute, and any picture inside it),
-    or None when it can't be read: such a picture is not kept. Read like the page's own words by the leak checks."""
-    m = SVG_URI.fullmatch(value.strip()) if depth == 0 else SVG_URI.search(value)
+    """The words of a `data:image/svg+xml;base64,…` picture (its text, title, desc and every attribute), or None when it can't be
+    read or holds another data address (a picture inside a picture, however it is written): such a picture is not kept. Read like
+    the page's own words by the leak checks."""
+    m = SVG_URI.fullmatch(value.strip())
     if m is None:
         return None
     try:
         raw = base64.b64decode(re.sub(r"\s+", "", m.group(1)), validate=True)
     except ValueError:
         return None
-    if len(raw) > SVG_MAX or depth > 3:
+    if len(raw) > SVG_MAX:
         return None
     text = html.unescape(raw.decode("utf-8", "replace"))
-    words = [text, re.sub(r"<[^>]*>", "", text)]
-    for inner in SVG_URI.finditer(text):
-        found = svg_words(inner.group(0), depth + 1)
-        if found is None:
+    for form in (text, unquote(text), html.unescape(unquote(text))):
+        if re.search(r"data\s*(?::|%3a)", form, re.I):
             return None
-        words += found
-    return words
+    return [text, re.sub(r"<[^>]*>", "", text), unquote(text), re.sub(r"<[^>]*>", "", unquote(text))]
 
 
 def src_ok(tag, value):
@@ -131,7 +190,7 @@ def keep_attr(tag, svg, name, value, client=False):
     if name.startswith("on") or name in NEVER_ATTRS or (client and not client_attr_ok(svg, name, value)):
         return False
     if name == "style":
-        return safe_css_value(value)
+        return safe_css_value(value, client)
     if name == "src":
         return src_ok(tag, value)
     if name == "id":
@@ -168,6 +227,8 @@ class Clean(HTMLParser):
                 keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
                 if name != "src":
                     self.attr_values.append(keep[-1][1])
+                    if name == "style":
+                        self.attr_values.extend(css_svg_words(value) or [])
                 elif SVG_URI.match(value):
                     self.attr_values.extend(svg_words(value) or [])      # an SVG picture is read like the page: its words and attributes
         return "".join(f' {n}="{html.escape(v, quote=True)}"' for n, v in keep)
@@ -264,11 +325,11 @@ def clean_markup(markup, client=False, attr_values=None):
     return "".join(p.out), squash(" ".join(p.text)), p.sections, p.rows
 
 
-def clean_css(css):
+def clean_css(css, client=False):
     """The posted style rules, or raises PageRefused."""
     if not isinstance(css, str) or not css.strip() or len(css) > MAX_CSS:
         raise PageRefused("the style rules were missing or too large")
-    if not safe_css_value(css):
+    if not safe_css_value(css, client):
         raise PageRefused("the style rules held an address or a command")
     return css
 
@@ -416,7 +477,8 @@ def check_page(doc, page, text, sections, rows, attrs=(), css=""):
     if sent != int(doc.get("version") or 0):
         raise PageRefused("the page was drawn from a different version than the saved report")
     check_sections(doc, sections, rows)
-    bare = fold(" ".join([text] + list(attrs) + [css_decode(a) for a in attrs]) + " " + str(css or "") + " " + css_decode(css))
+    bare = fold(" ".join([text] + list(attrs) + [css_decode(a) for a in attrs]) + " " + str(css or "") + " " + css_decode(css)
+                + " " + " ".join(css_svg_words(css) or []))
     if any(fold(n) in bare for n in hidden_needles(doc)):
         raise PageRefused("the page held words the report leaves out")
     if is_client(doc):
@@ -464,7 +526,7 @@ def build(doc, page, title):
         raise PageRefused("no page was sent")
     attrs = []
     markup, text, sections, rows = clean_markup(page.get("html"), is_client(doc), attrs)
-    css = clean_css(page.get("css"))
+    css = clean_css(page.get("css"), is_client(doc))
     check_page(doc, page, text, sections, rows, attrs, css)
     palette = str(page.get("palette") or "")
     attr = f' data-palette="{html.escape(palette, quote=True)}"' if PALETTE.match(palette) else ""

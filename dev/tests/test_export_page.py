@@ -223,6 +223,75 @@ class ResidualLeaks(Base):
             self.assertNotIn(gone, tail, gone)
 
 
+class LeakPass2(Base):
+    """v240-leak2 (Team Cap, 22:28 and 22:42): a CSS background picture, a wider set of invisible characters and a picture inside an
+    SVG picture must not carry a hidden word into any file, and a client file takes no SVG picture in its styles at all."""
+
+    TRACKER = LeakFix.TRACKER
+    build = Server.build
+    client = LeakFix.client
+    wrap = staticmethod(LeakFix.wrap)
+    SVG = '<svg xmlns="http://www.w3.org/2000/svg"><text>Walrus budget cut</text></svg>'
+
+    both = ResidualLeaks.both
+
+    def addresses(self):
+        import base64
+        from urllib.parse import quote
+        return ["data:image/svg+xml;base64," + base64.b64encode(self.SVG.encode()).decode(),
+                "data:image/svg+xml," + quote(self.SVG, safe=""),
+                "data:image/svg+xml;utf8," + self.SVG.replace("<", "%3C").replace(">", "%3E").replace(" ", "%20")]
+
+    def test_a_css_background_svg_is_refused_in_a_style_attribute_and_a_stylesheet(self):
+        for addr in self.addresses():
+            for quote_mark in ("", "'", '"'):
+                url = f"url({quote_mark}{addr}{quote_mark})"
+                for kind, path in self.both():
+                    attr = '<p style="background:%s">x</p>' % url.replace('"', "&quot;")
+                    out, why = self.build(path, page(LeakFix.wrap(attr)))
+                    if kind == "internal":
+                        self.assertIn("leaves out", why or "", f"{kind} style attribute: {url[:60]}")
+                    else:
+                        self.assertTrue(why or "walrus" not in (out or "").lower().replace("%20", " "), f"{kind} attr: {url[:60]}")
+                        self.assertNotIn("svg+xml", (out or "").split("</style>", 2)[-1], kind)
+                    out, why = self.build(path, page(css=f".page{{background:{url}}}"))
+                    if kind == "internal":
+                        self.assertIn("leaves out", why or "", f"{kind} stylesheet: {url[:60]}")
+                    else:
+                        self.assertIsNotNone(why, f"a client file takes no SVG address in its styles: {url[:60]}")
+
+    def test_a_client_file_refuses_any_unreadable_or_odd_data_address_in_styles(self):
+        path = self.client()
+        for css in (".page{background:url(data:text/html;base64,PHA+)}", ".page{background:url(data:image/svg+xml;base64,@@@)}",
+                    ".page{background:url(data:application/x;base64,AAAA)}"):
+            self.assertIsNotNone(self.build(path, page(css=css))[1], css)
+        self.assertIsNone(self.build(path, page(css=".page{background:url(data:image/png;base64,iVBORw0KGgo=)}"))[1])
+
+    def test_an_internal_file_keeps_a_css_svg_with_nothing_hidden_in_it(self):
+        import base64
+        ok = "data:image/svg+xml;base64," + base64.b64encode(b'<svg xmlns="http://www.w3.org/2000/svg"><rect width="3" height="3"/></svg>').decode()
+        self.assertIsNone(self.build(self.both()[0][1], page(css=f".page{{background:url({ok})}}"))[1])
+
+    def test_more_invisible_characters_do_not_hide_a_word(self):
+        for mark in ("⁣", "͏", "︀", "᠎", "⁤", "‪", "\U000e0020", "؜"):
+            word = f"Wal{mark}rus budget cut"
+            for kind, path in self.both():
+                self.assertIn("leaves out", self.build(path, page(self.wrap(f"<p>{word}</p>")))[1] or "", f"{kind}: {mark!r} text")
+                self.assertIn("leaves out", self.build(path, page(css=f'.a::after{{content:"{word}"}}'))[1] or "", f"{kind}: {mark!r} css")
+            self.assertIn("leaves out", self.build(self.both()[0][1], page(self.wrap(f'<p title="{word}">x</p>')))[1] or "", f"{mark!r} attr")
+
+    def test_an_svg_picture_inside_an_svg_picture_is_not_kept(self):
+        import base64
+        from urllib.parse import quote
+        inner = "data:image/svg+xml," + quote(self.SVG, safe="")
+        outer = f'<svg xmlns="http://www.w3.org/2000/svg"><image href="{inner}"/></svg>'
+        src = "data:image/svg+xml;base64," + base64.b64encode(outer.encode()).decode()
+        for kind, path in self.both():
+            out, why = self.build(path, page(self.wrap(f'<img src="{src}">')))
+            self.assertTrue(why or "walrus" not in (out or "").lower(), kind)
+            self.assertNotIn("image/svg", (out or "").split("</style>", 2)[-1], kind)
+
+
 class Fallback(Base):
     """Check 12: with no page, or one that fails the check, the Python renderer still gives a file and says it is plain."""
 
