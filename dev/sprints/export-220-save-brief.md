@@ -10,7 +10,7 @@ Product Manager, 18-10-2026, for Team Stark. Hub mockup (locked, c6f549ed) shows
 2. **A message that says where:** "Saved <file name> in <project> › Reports", where "<project> › Reports" is a **link that opens that folder**, plus two actions: **Show in Finder** and **Open**.
 3. **If a file with that name is already there, the user is asked** (a dialog, as in the mockup): **Add a number** (the default; the next free number, "(2)"), **Rename it** (a field the full width of the dialog that shows the whole name, prefilled), or **Overwrite the existing file** (the earlier file is backed up first, as for any file change). Nothing is overwritten without that choice; Cancel saves nothing.
 4. **A failed save says so plainly** (why, and that nothing was written), not "Not exported".
-5. Same for the internal and the client report, and for each of the three formats. Writes go through the file-change route (`filechange.py`): backed up, logged, undoable. The report's own wording and the 5-row "Saved" message are British English, DD-MM-YYYY where a date shows.
+5. Same for the internal and the client report, and for each of the three formats. Writes go through the file-change route (`filechange.py`): backed up, logged, undoable. Messages are in British English, with dates as DD-MM-YYYY.
 
 ## Acceptance checks
 
