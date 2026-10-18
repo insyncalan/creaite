@@ -7,6 +7,7 @@
 import { render } from "preact";
 import { Menu } from "../../Menu.jsx";
 import { Sheet } from "../Sheet.jsx";
+import { ExportSave } from "../ExportSave.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
 import { Glance } from "./Glance.jsx";
 import { CurrentState, Words } from "./Notes.jsx";
@@ -32,7 +33,8 @@ const WEEKLY_RENDER = { byId: {
 
 /** Save what is on the page; false (and a message) when it didn't save. */
 async function saveFirst() {
-  const d = weeklyDoc.value; if (!d || !weeklyDirty) return true;
+  const d = weeklyDoc.value, v = weeklyView.value;
+  if (!d || !(weeklyDirty || (v && v.where === "new"))) return true;      // a report never saved is saved before it is exported
   const r = await saveWeekly({ doc: d, base_version: weeklyBase.value });
   if (!r.ok) { snack(r.message || "The report wasn't saved"); return false; }
   setWeeklyDirty(false); return true;
@@ -43,8 +45,7 @@ function WeeklyBar({ doc, readOnly }) {
   const approved = doc.state === "approved";
   const exp = async (/** @type {string} */ fmt) => {
     if (!(await saveFirst())) return;
-    const r = await exportWeekly(doc, fmt);
-    snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
+    await exportWeekly(doc, fmt);          // the dialog, the "Saved … in <project> › Reports" message or the failure show themselves (ExportSave)
   };
   const approve = async () => {
     if (!(await saveFirst())) return;
@@ -84,6 +85,7 @@ export function WeeklyView() {
           onEvent={ev => { if (ev.type === "reload") loadWeekly(/** @type {any} */ (weeklyArg.value)); else countRedraft(ev, "report"); }}
           banner={{ title: "Weekly report", sub: `${doc.project_name} · ${fd(doc.date)}` }} toolbar={<WeeklyBar doc={doc} readOnly={readOnly} />} />
       </div>
+      <ExportSave />
     </div>);
 }
 

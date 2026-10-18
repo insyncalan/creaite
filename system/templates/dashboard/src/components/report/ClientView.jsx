@@ -10,6 +10,7 @@ import { render } from "preact";
 import { useState } from "preact/hooks";
 import { CLIENT_RENDERERS, crAskWhy, setClientDoc } from "./ClientParts.jsx";
 import { flagOf, healthDiff, matchClientAll, matchClientSection } from "./clientDoc.js";
+import { ExportSave } from "./ExportSave.jsx";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
 import { countRedraft, redrafter } from "./redraft.js";
 import { Sheet } from "./Sheet.jsx";
@@ -35,8 +36,8 @@ async function openCheck() {
 /** @param {"html"|"docx"|"pdf"} fmt */
 async function doExport(fmt) {
   const r = await exportClientReport(fmt);
-  if (r && r.ok) { crDialog.value = false; snack(`Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}`); }
-  else { await runCheck(); snack(String((r && r.message) || "Not exported").split("\n")[0]); }
+  if (r && (r.ok || r.clash)) crDialog.value = false;       // saved (the message says where) or a taken name (its own dialog asks)
+  else await runCheck();                                      // a refusal: the check shows why, and the message says nothing was written
 }
 
 /** @param {{doc: SheetDoc, note: string, setNote: (s: string) => void}} props */
@@ -110,6 +111,7 @@ export function ClientView() {
           banner={{ title: "Client report", sub: `${doc.project_name || (a && a.code) || ""} · ${fd(doc.date)}` }} toolbar={<ClientBar doc={doc} note={note} setNote={setNote} />} />
       </div>
       <LeftOutDialog client={doc.client || ""} onExport={doExport} />
+      <ExportSave />
     </div>
   );
 }

@@ -4,6 +4,7 @@
    check). The client's report and the week's internal report are two documents; the internal one is only read here (P6 edits it). */
 import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
+import { saveExport } from "./exportSave.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{group: string, ref: string, title: string, why: string, kind: string}} LeftItem */
@@ -89,5 +90,5 @@ export async function exportClientReport(fmt) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
-  return api("/api/report/export", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt });
+  return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt });
 }
