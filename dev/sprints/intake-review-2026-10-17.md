@@ -96,3 +96,6 @@ Alan liked change D (the result on the row, ending in Review them) as mocked up 
 **Alan, final review (17-10-2026):** Upload files stays on the Intake page (files dropped there become rows in the same list, with the same three actions). Auto-load and draft by series must be captured in the backlog. Checked on the board just now: no Intake items exist yet, so Jarvis is asked to create step 1, step 2 and the later item.
 
 **Approved (Alan, 17-10-2026):** the final mockup `dev/mockups/intake-final-mockup.html` is approved for step 1 (#179) and step 2 (#180). #181 stays a later idea for the 13-11-2026 review.
+
+
+**Rebuilt on the real design (18-10-2026):** the combined Intake and Review mockup is redrawn on the Review snapshot with the app's own classes: `dev/mockups/intake-review-combined-v2-mockup.html` (three options: C1 pipeline, C2 one entry with two tabs, C3 the meeting's row follows the work; sample states Mixed and Empty). It replaces `intake-review-combined-mockup.html`, which drew its own styles. Only a row's own Approve is green; Process and Check them are plain row buttons. Nothing is decided or built.
