@@ -67,10 +67,12 @@ class _Invisible:
     EXTRA = {0x034F, 0x180B, 0x180C, 0x180D, 0x180E, 0x115F, 0x1160, 0x3164, 0xFFA0}
 
     def hides(self, c):
+        """Whether the character draws as nothing."""
         o = ord(c)
         return unicodedata.category(c) == "Cf" or o in self.EXTRA or 0xFE00 <= o <= 0xFE0F or 0xE0100 <= o <= 0xE01EF
 
     def sub(self, repl, text):
+        """The text with each invisible character replaced by `repl` (a pattern's `sub`)."""
         return "".join(repl if self.hides(c) else c for c in str(text or ""))
 
 

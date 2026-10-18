@@ -527,7 +527,8 @@ def _image_html(doc, alt, ref):
         return f"<p><em>Picture too large to include: {esc(alt or ref)}</em></p>"
     mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
     cap = f"<figcaption>{esc(alt)}</figcaption>" if alt else ""
-    return f'<figure><img src="data:{mime};base64,{base64.b64encode(docx_tools.strip_image_metadata(f.read_bytes())).decode("ascii")}" alt="{esc(alt)}">{cap}</figure>'
+    data = base64.b64encode(docx_tools.strip_image_metadata(f.read_bytes())).decode("ascii")
+    return f'<figure><img src="data:{mime};base64,{data}" alt="{esc(alt)}">{cap}</figure>'
 
 
 def _list_html(b, doc):

@@ -80,6 +80,52 @@ MAX_WIDTH_EMU = 5486400                       # 6 inches: the text width of an A
 PNG_KEEP = {b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND"}      # every other chunk (tEXt, iTXt, zTXt, eXIf, tIME, gAMA ...) is dropped
 
 
+def _strip_png(data):
+    """A PNG's signature and its kept chunks (PNG_KEEP), or the data as it is when a chunk runs past the end."""
+    import struct
+    out, i = [data[:8]], 8
+    while i + 8 <= len(data):
+        n = struct.unpack(">I", data[i:i + 4])[0]
+        kind, end = data[i + 4:i + 8], i + 12 + n
+        if end > len(data):
+            return data
+        if kind in PNG_KEEP:
+            out.append(data[i:end])
+        i = end
+        if kind == b"IEND":
+            break
+    return b"".join(out)
+
+
+def _jpeg_kept(marker, seg):
+    """Whether a JPEG segment stays: not an APPn or a comment, except the Adobe APP14 colour marker."""
+    return not (0xE0 <= marker <= 0xEF or marker == 0xFE) or (marker == 0xEE and seg[4:9] == b"Adobe")
+
+
+def _strip_jpeg(data):
+    """A JPEG without its APPn and comment segments; the pixels (from the scan on) as they were."""
+    import struct
+    out, i = [data[:2]], 2
+    while i + 4 <= len(data):
+        marker = data[i + 1] if data[i] == 0xFF else None
+        if marker is None:
+            return data
+        if marker == 0xFF:
+            i += 1
+        elif marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+            out.append(data[i:i + 2])
+            i += 2
+        else:
+            end = i + 2 + struct.unpack(">H", data[i + 2:i + 4])[0]
+            if end > len(data):
+                return data
+            if marker == 0xDA:                     # the scan and everything after it: pixels
+                return b"".join(out) + data[i:]
+            out += [data[i:end]] if _jpeg_kept(marker, data[i:end]) else []
+            i = end
+    return data
+
+
 def strip_image_metadata(data):
     """A PNG or JPEG without its own metadata (v240-leak2): a PNG keeps only IHDR, PLTE, tRNS, IDAT and IEND (no text chunks, no EXIF);
     a JPEG loses its APPn segments (EXIF, XMP, ICC, Photoshop; the Adobe APP14 colour marker stays) and comments. The pixels are
@@ -87,43 +133,9 @@ def strip_image_metadata(data):
     import struct
     try:
         if data[:8] == b"\x89PNG\r\n\x1a\n":
-            out, i = [data[:8]], 8
-            while i + 8 <= len(data):
-                n = struct.unpack(">I", data[i:i + 4])[0]
-                kind, end = data[i + 4:i + 8], i + 12 + n
-                if end > len(data):
-                    return data
-                if kind in PNG_KEEP:
-                    out.append(data[i:end])
-                i = end
-                if kind == b"IEND":
-                    break
-            return b"".join(out)
+            return _strip_png(data)
         if data[:2] == b"\xff\xd8":
-            out, i = [data[:2]], 2
-            while i + 4 <= len(data):
-                if data[i] != 0xFF:
-                    return data
-                marker = data[i + 1]
-                if marker == 0xFF:
-                    i += 1
-                    continue
-                if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
-                    out.append(data[i:i + 2])
-                    i += 2
-                    continue
-                n = struct.unpack(">H", data[i + 2:i + 4])[0]
-                end = i + 2 + n
-                if end > len(data):
-                    return data
-                seg = data[i:end]
-                if marker == 0xDA:                     # the scan and everything after it: pixels
-                    out.append(data[i:])
-                    return b"".join(out)
-                if not (0xE0 <= marker <= 0xEF or marker == 0xFE) or (marker == 0xEE and seg[4:9] == b"Adobe"):
-                    out.append(seg)
-                i = end
-            return data
+            return _strip_jpeg(data)
     except (struct.error, IndexError):
         return data
     return data
