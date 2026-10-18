@@ -363,15 +363,18 @@ class WeekCalm(Header):
         base = b.eval("A.filter(a=>!a.id.startsWith('ZZZ-C')&&isMe(a.o)&&(overdue(a)||soon(a))).length")
         total = base + 8
         shown = "[...document.querySelectorAll('#mineList>li')].filter(l=>!l.hidden).length"
+        b.wait(f"{shown}===5 && document.querySelector('#mineMore [data-more=mine]')", 30)    # the list has drawn (a read before it did saw 1 row, #89)
         self.assertEqual(b.eval(shown), 5)
         self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), f"+{total - 5} more")
         self.assertIn(str(total), b.eval("document.getElementById('nMine').textContent"))                      # the count is the total
         b.eval("document.querySelector('#mineMore [data-more=mine]').focus()")
         b.click("#mineMore [data-more=mine]")
+        b.wait(f"{shown}==={total}", 30)
         self.assertEqual(b.eval(shown), total)
         self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').textContent"), "Show fewer")
         self.assertEqual(b.eval("document.querySelector('#mineMore [data-more=mine]').getAttribute('aria-expanded')"), "true")
         b.click("#mineMore [data-more=mine]")
+        b.wait(f"{shown}===5", 30)
         self.assertEqual(b.eval(shown), 5)
         # the order and the row actions after expanding
         b.eval("EXPAND.add('mine'); renderToday()")
