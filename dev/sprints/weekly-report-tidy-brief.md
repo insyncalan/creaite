@@ -27,11 +27,12 @@ Product Manager, 18-10-2026, from Alan's screenshots and requests; revised the s
 **Effect on the report:** the Actions table can then hold actions that are not overdue (shown "not due yet"). This also answers the earlier open question about listing non-overdue actions: yes, by this route.
 **Done when:** the picker lists only open, not-yet-included items that Alan may see in this report; Add changes only the report (saved with it); an added item follows the item's later changes in the report; client report: only client-visible items are offered.
 
-## 5. Change: export keeps the structure and format of Health, At a glance, the timeline and the milestone list
+## 5. Defect: export to HTML loses the report's formatting and structure
 
-**Alan:** on export the health, at a glance, the visible milestone timeline and the milestone list must keep their look.
+**Seen (Alan's screenshot of an HTML export):** the report comes out as a plain document. The health flag, the six-week strip and its dates are gone (only the words "Off track" and the reason remain, as a bare heading and paragraph); a stray second "Weekly report" heading sits under the title block; At a glance is four loose boxes without the figures strip; the Milestones section is a bulleted list of names and dates with no timeline and no table; Summary is a heading with nothing under it; headings look like body text with a rule. The on-screen report and "Show as exported" look right; the exported file does not match them.
+**Alan:** on export the health, at a glance, the visible milestone timeline and the milestone list must keep their look and structure, and the same goes for every other part of the report.
 **Fix:** HTML, Word and PDF export reproduce: the **health block** (flag colour, six-week strip, dates, reason); **At a glance** as its figures strip with the same cells and colours; the **milestone timeline drawn as a picture** (the same marks, dates and today line as on screen, as it is now when it is visible); and the **milestone list as a table** with the same columns (Milestone, Agreed, Expected, Progress, State), the state colours and the slipped dates in red. The mockup's "Show as exported" shows the target: screen controls (handles, eyes, hints, add links) disappear, the content stays.
-**Done when:** for the demo report, each of the four parts is checked in the HTML, the Word file and the PDF against the on-screen "Show as exported" view; a part Alan has left out stays out.
+**Done when:** the exported HTML, opened on its own, looks like "Show as exported" for the whole report (no stray headings, no empty sections that are filled on screen); for the demo report, each of the four parts is checked in the HTML, the Word file and the PDF against the on-screen "Show as exported" view; a part Alan has left out stays out.
 
 ## 6. Feature: a free-text section, anywhere, with the whole editor
 
