@@ -126,7 +126,7 @@ Plain English works. These are the phrases each skill listens for.
 | Say | What happens |
 |---|---|
 | `process new minutes` | Transcripts become draft minutes and proposed items in Review. |
-| `sweep` | Outlook and Teams since the last sweep become proposals. It also runs by itself each morning. |
+| `sweep` | Outlook and Teams since the last sweep become proposals. From 07:00, until it has run that day, Today shows **Sweep due since 07:00** with a **Run sweep** button that does the same (it needs the live server). |
 | `review` · `apply` | Go through what's pending, then write the approved items to the tracker. `undo last apply` reverses it. |
 | `mark ABC-A-003 done` | Any change in plain words, shown before → after, then applied. |
 | `weekly report` | Health with reasons, an update, and a report page for each project, filed when you approve. |

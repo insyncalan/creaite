@@ -1388,6 +1388,18 @@ def help_sections():
     return out
 
 
+def sweep_due_info():
+    """#200: whether the daily sweep is due (sweep.due_info(): the last success before today's sweep.due_from, and now after it),
+    for Today's 'Sweep due since 07:00' banner. {due, due_from, last}; CREAITE_NOW fixes the clock as in sweep.py."""
+    try:
+        import sweep
+        d = sweep.due_info()
+        return {"due": bool(d["due"]), "due_from": d["due_from"], "last": d["last"]}
+    except Exception as e:      # the banner is a convenience; a failure here never stops the build
+        swallowed("sweep_due", e)
+        return {"due": False, "due_from": "07:00", "last": None}
+
+
 def ui_settings(s):
     """settings.json → the dashboard's settings keys."""
     import tracker      # BL-181: the weekend days
@@ -1647,7 +1659,7 @@ def collect(now=None, timings=None):
     out = {
         "built_at": now.strftime("%Y-%m-%d %H:%M"), "data_at": (last_apply or now.strftime("%Y-%m-%d %H:%M"))[:16],
         "records_v": records_version(con),                     # BL-327: what the live server checks before reusing this data
-        "last_sweep": sweep, "live": False, "vault_path": None,
+        "last_sweep": sweep, "sweep_due": sweep_due_info(), "live": False, "vault_path": None,
         "settings": ui_settings(settings), "people": settings.get("people", {"added": [], "hidden": []}),
         "workstreams": settings.get("workstreams", {"added": [], "hidden": []}),
         "projects": projects, "actions": actions, "raid": raid, "decisions": decision_waits(con, decisions),

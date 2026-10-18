@@ -123,6 +123,7 @@ export function renderToday(){
     if(TVIPSEEN&&!reduced()) L.filter(x=>!TVIPSEEN.has(x.dataset.td)).forEach(x=>slideDown(x)); TVIPSEEN=new Set(ids); }
   mDots("today");
   renderSetup();   /* BL-155 */
+  renderSweepDue();   /* #200 */
   { $("#drStale")?.remove(); const host=$("#mineMore"); if(host&&draftOn("update")){
     const st=A.filter(x=>isStale("actions",x)); if(st.length){
     addHTML(host,"afterend",html`<div class="drstale" id="drStale"><span>${raw(plur(st.length,"open action"))} ${st.length===1?"has":"have"} had no update for ${raw(+S.staleDays||7)} days.</span>${raw(draftBtn("update-bulk","Draft updates","Draft an update for each from what has happened since, as proposals in Review",'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`); } } }   /* AI drafts: stale actions */
@@ -381,6 +382,17 @@ export function renderSetup(){ let box=$("#setupList"); const on=setupShown();
     if($("#setupList")&&!$("#suMore")) addHTML($("#setupList"),"beforeend",html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`); }   /* BL-165 */ }
 /* ===== end BL-156 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
+/* #200: "Sweep due since 07:00" with Run sweep, above Today's sections. Shown only when the build says the daily sweep is due, not in the
+   development repository, and not while the first-run checklist (which has its own sweep step) is up. The button sends "sweep" to ask
+   creaite exactly as the checklist's does. The style hides it while the run badge is up (a run is going) and swaps the button for the
+   usual restart hint while the live server isn't reachable. It has no dismiss: it goes when the sweep has run. */
+export function sweepDueShown(){ const sd=D.sweep_due; return !!(sd&&sd.due)&&!D.dev&&!(setupShown()&&!swept()); }
+export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const on=sweepDueShown(); box.hidden=!on;
+  if(!on){ putHTML(box,html``); return; }
+  putHTML(box,html`<b>Sweep due since ${D.sweep_due.due_from||"07:00"}.</b> <span class="sd-last">${D.sweep_due.last?`Last swept ${D.sweep_due.last}.`:"No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span>`); }
+document.addEventListener("click",e=>{ if(!e.target.closest("#sweepRun")) return; e.preventDefault();
+  if(!viaServer()){ snack("Needs the live server"); return; }
+  if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); });
 export function bootToday0159(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-setup]"); if(!b) return; e.preventDefault(); const a=b.dataset.setup;
   if(a==="dismiss"){ const l=dismissedF(); l.push(SETUPID); store.set("creaite-dismiss",l); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...l])]}); renderSetup();
