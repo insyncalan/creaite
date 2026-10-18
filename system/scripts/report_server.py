@@ -12,7 +12,7 @@
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
-  POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items that are not in the report yet
+  POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
                            (a client report: only client-safe facts), each with the row it would add; nothing is written
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?}: P2's export (the contract's call), from the
                            draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
@@ -412,6 +412,7 @@ def routes(lock, run, latest_apply):
     """The report routes for live_server's route table, given its lock, its script runner and its latest_apply."""
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
-            "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route), "/api/report/pick": guarded(pick_route),
+            "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
+            "/api/report/pick": guarded(pick_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
             "/api/report/logo": guarded(logo_route)}
