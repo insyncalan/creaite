@@ -247,7 +247,7 @@ class Report:
 
 
 class WeeklyTop(Report, Common, LiveBrowserCase):
-    VIEW = "#v-weekly"
+    VIEW = "#v-reporting"
 
     @classmethod
     def load(cls, v):
@@ -255,11 +255,11 @@ class WeeklyTop(Report, Common, LiveBrowserCase):
 
     def open_view(self):
         self.b.eval("go('weekly',{code:'ABC'})")
-        self.b.wait("document.querySelector('#v-weekly section[data-id=current_state]')", 20)
+        self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
 
 
 class ClientTop(Report, Common, LiveBrowserCase):
-    VIEW = "#v-clientreport"
+    VIEW = "#v-reporting"
 
     @classmethod
     def load(cls, v):
@@ -267,7 +267,7 @@ class ClientTop(Report, Common, LiveBrowserCase):
 
     def open_view(self):
         self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+        self.b.wait("document.querySelector('#v-reporting .crhealth')", 20)
 
 
 class MinutesTop(Report, Common, LiveBrowserCase):

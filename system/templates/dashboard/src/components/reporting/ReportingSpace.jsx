@@ -1,135 +1,36 @@
 // @ts-check
-/* ReportingSpace (BL-337, v2.1.0 P9): one reporting space per project (#reporting=ABC&w=<week>&e=<view>). Weeks down the left,
-   newest first, each with both reports' state; the week's internal and client reports as two cards (state, who it is for, how the
-   client version differs, Open, Approve, Export); Edit both side by side; the files filed for the week. Opened by the cockpit's
-   Reporting card, the Reports page, Today's reminder and ⌘K: all the same screen. Read only; what Approve and Export do belongs to
-   the report editor (stores/reporting.js says what is stubbed). A client not due that week shows Not due, with Make one anyway. */
+/* ReportingSpace (BL-337, v2.1.0 P9; #221 H1): the door to a project's reporting. The separate reporting space (weeks down the left, two
+   cards, Edit both) is gone: #reporting=<CODE> is the Reporting hub (components/report/hub/ReportingHub.jsx), one page with the
+   Internal, Client and Side by side views and the week Menu. This file keeps what every way in uses: `openSpace` (the Reports page, the
+   cockpit's Reporting card, ⌘K and Today's reminder all come through it), `StateChip` and `renderReporting` (go()'s renderer). */
 import { render } from "preact";
 import { Chip } from "../Chip.jsx";
-import { Icon } from "../Icon.jsx";
 import { $ } from "../../core/dom.js";
-import { go, navWrite } from "../../core/nav.js";
-import { P } from "../../core/data.js";
-import { fd } from "../../core/page.js";
-import { shared } from "../../core/state.js";
-import { clientReportHref, repTick, spaceCode, spaceWeek, spaceWeeks, thisWeek, weekLabel, weekView, weeklyHref } from "../../stores/reporting.js";
+import { go, navWrite, tabTitle } from "../../core/nav.js";
+import { ReportingHub } from "../report/hub/ReportingHub.jsx";
+import { hubKey, hubReady, hubView, loadHub } from "../../stores/hub.js";
+import { spaceCode, spaceWeek } from "../../stores/reporting.js";
 
-/** Open a project's reporting space (the one door every way in uses).
-    @param {string} code @param {string} [week] */
-export function openSpace(code, week = "") {
+/** Open a project's reporting hub (the one door every way in uses).
+    @param {string} code @param {string} [week] YYYY-MM-DD, or none for the latest @param {"internal"|"client"|"side"} [view] */
+export function openSpace(code, week = "", view = "internal") {
   spaceWeek.value = week;
+  hubView.value = view;
   go("reporting", code);
 }
-
 
 /** A report's state as a chip. @param {{s: import("../../stores/reporting.js").RepState}} props */
 export function StateChip({ s }) {
   return <Chip tone={s.tone === "ok" ? "ok" : s.tone === "warn" ? "warn" : "mute"}>{s.label}</Chip>;
 }
 
-/** A page outline in miniature, as the mockup's cards. @param {{c: string}} props */
-function Thumb({ c }) {
-  return <div class="rp-thumb" aria-hidden="true"><i class="w40" /><i class="rp-flag" data-kind={c} /><i /><i class="w80" /><i class="w60" /><i /></div>;
-}
-
-/** @param {{code: string}} props */
-function SpaceView({ code }) {
-  repTick.value;   /* a reload of the data redraws */
-  const p = P.find(x => x.code === code);
-  if (!p) return null;
-  const weeks = spaceWeeks(code), cur = thisWeek();
-  const week = spaceWeek.value || cur;
-  const v = weekView(code, week), c = v.clients[0], isCur = week === cur;
-  const pick = (/** @type {string} */ w) => { spaceWeek.value = w; navWrite(false); };
-  const internalOk = v.internal.key === "filed" || v.internal.key === "approved";
-  const crumb = (
-    <nav class="crumb" aria-label="Breadcrumb">
-      <a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span>
-      <a href="#" data-cock={code}>{p.name}</a><span aria-hidden="true">›</span>
-      <span aria-current="page">Reporting</span>
-    </nav>
-  );
-  const ask = (/** @type {string} */ k) => `${k === "weekly" ? "weekly report" : "client report"} ${code}${k === "weekly" ? ` for week ending ${weekLabel(week)}` : ""}`;
-  /* Open goes to the report's own view: the weekly view (P6) or the client view (P8); a filed report's file opens as a file */
-  const doOpen = (/** @type {any} */ st, /** @type {string} */ href) => st.path
-    ? <a class="btn sm" href="#" data-openfile={st.path}>Open</a>
-    : st.key === "notdue" ? <a class="btn sm" href={href} data-rpopen-view>Make one anyway</a>
-    : isCur ? <a class={`btn sm primary`} href={href} data-rpopen-view>{st.key === "draft" ? "Open and check" : "Open"}</a>
-    : <span class="sub">Nothing filed</span>;
-  const wHref = weeklyHref(code, week), cHref = c ? clientReportHref(code, week, c.client) : wHref;   // H3 (#221): no client report when the project's is off
-  return (
-    <div class="wrapmax rp">
-      {crumb}
-      <div class="hhead"><div style={{ flex: 1 }}>
-        <h1>Reporting</h1>
-        <div class="sub">{p.name} · internal weekly{c ? `, and ${c.client} ${c.rhythm.toLowerCase()}` : ". This project has no client report"}</div>
-      </div></div>
-      <div class="rp-space">
-        <div class="rp-weeks" role="group" aria-label="Weeks">
-          {weeks.map(w => {
-            const x = weekView(code, w);
-            return (
-              <button type="button" class="rp-wk" key={w} data-week={w} aria-pressed={w === week} onClick={() => pick(w)}>
-                <span class="l">Week ending {weekLabel(w)}</span>
-                <span class="s"><Chip tone={x.internal.tone || "mute"}>Internal: {x.internal.label}</Chip>{x.clients[0] ? <Chip tone={x.clients[0].state.tone || "mute"}>Client: {x.clients[0].state.label}</Chip> : null}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div class="rp-main">
-          <div class="rp-pair">
-            <section class="rp-card" aria-label="Weekly report">
-              <div class="top"><b>Weekly report</b><Chip tone="mute">Internal</Chip><StateChip s={v.internal} /></div>
-              <Thumb c="internal" />
-              <div class="rp-kv"><span>Health</span><span>{p.health || "Not set"}</span><span>Edited</span><span>{v.internal.edited || (internalOk ? "filed on the Friday" : "not yet")}</span></div>
-              <div class="acts">
-                {doOpen(v.internal, wHref)}
-                {v.internal.path ? <a class="btn sm" href={wHref} data-weeklyview>Weekly view</a> : null}
-                {!internalOk && isCur ? <button type="button" class="btn sm" data-ask={ask("weekly")} data-tip="Draft the weekly report with ask creaite">Draft it</button> : null}
-                <button type="button" class="btn sm" disabled data-tip="Approve and Export arrive with the report editor (BL-335)">{internalOk ? "Export" : "Approve"}</button>
-              </div>
-            </section>
-            {c ? <section class="rp-card" aria-label="Client report">
-              <div class="top"><b>Client report</b><Chip tone="mute">{c.client}</Chip><StateChip s={c.state} /></div>
-              {c.state.key === "notdue"
-                ? <div class="sub">{c.client} is {c.rhythm.toLowerCase()}; no client report was due this week.</div>
-                : <>
-                    <Thumb c="client" />
-                    <div class="rp-kv"><span>Health</span><span>{p.health || "Not set"}{c.differs ? <> <Chip tone="plan">differs</Chip></> : null}</span>
-                      {c.differs ? <><span>Differs</span><span>{c.differs}</span></> : null}</div>
-                  </>}
-              <div class="acts">
-                {doOpen(c.state, cHref)}
-                {c.state.key !== "notdue" && c.state.path ? <a class="btn sm" href={cHref} data-clientreport>Client view</a> : null}
-                {c.state.key !== "notdue" && !c.state.path && isCur ? <button type="button" class="btn sm" data-ask={ask("client")} data-tip="Draft the client report with ask creaite">Draft it</button> : null}
-                {c.state.key === "notdue" ? null
-                  : <button type="button" class="btn sm" disabled data-tip={!internalOk && isCur ? "Approve the internal report first" : "Approve and Export arrive with the report editor (BL-336)"}>{c.state.path ? "Export" : "Approve"}</button>}
-                {!internalOk && isCur && c.state.key !== "notdue" ? <span class="sub">Approve the internal report first</span> : null}
-              </div>
-            </section> : null}
-          </div>
-          {c ? <div class="rp-both">
-            <span><b>Edit both side by side</b><br /><span class="sub">Opens the client report; choose Side by side there for the internal page beside it, with the differences marked.</span></span>
-            <a class="btn primary" href={cHref} data-editboth>Edit both</a>
-          </div> : null}
-          <section class="card rp-files" aria-label="Filed for this week">
-            <h2>Filed for this week</h2>
-            {v.files.length
-              ? v.files.map(f => <div key={f.path}><span class="ftype">{f.type}</span><a href="#" class="g" data-openfile={f.path}>{f.n}</a><span class="sub">{f.date ? fd(f.date) : ""}</span></div>)
-              : <div class="sub">Nothing filed yet{isCur ? ": approve to file." : "."}</div>}
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-let spaceMounted = false;
-/** go()'s renderer for #reporting=<code>. @param {string} code */
-export function renderReporting(code) {
+let mounted = false;
+/** go()'s renderer for #reporting=<code>: draws the hub and opens the week. `fresh` (a visit) opens it again; a data reload (no `fresh`)
+    leaves an open week, and any edit in it, alone. @param {string} code @param {boolean} [fresh] */
+export function renderReporting(code, fresh = false) {
   const el = $("#v-reporting");
-  if (!el) return;
+  if (!el || !code) return;
   spaceCode.value = code;
-  if (!spaceMounted) { render(<SpaceHost />, el); spaceMounted = true; }
+  if (!mounted) { render(<ReportingHub />, el); mounted = true; }
+  if (fresh || hubReady.value !== hubKey(code, spaceWeek.value)) loadHub(code, spaceWeek.value).then(() => { navWrite(false); tabTitle(); });
 }
-function SpaceHost() { return spaceCode.value ? <SpaceView code={spaceCode.value} /> : null; }

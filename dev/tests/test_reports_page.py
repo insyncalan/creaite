@@ -4,9 +4,9 @@ against the live server.
 - Reports in the left menu, between Projects and People, with a count of the projects that need Alan this week.
 - The Reports page: one row per project (health, the internal report's state, each client's report), Needs me or All projects,
   the week control, Open to that project's reporting space.
-- The reporting space (#reporting=ABC&w=…): weeks down the left, the internal and client reports as cards, Open to the weekly view
-  (#weekly=ABC&week=…, P6) or the client view (#client-report=…, P8), Edit both to the client view, the week's files.
-- The cockpit's Reporting card; Today's Friday reminder points at Reports; ⌘K reaches Reports and each project's space.
+- The Reporting hub (#reporting=ABC&w=…, #221 H1: it replaced the reporting space, the weekly page and the client page; its own tests are
+  test_reporting_hub.py): Open on a project's row goes to it, the week Menu lists the weeks, the older addresses open it.
+- The cockpit's Reporting card; Today's Friday reminder opens the project's week in the hub; ⌘K reaches Reports and each project's hub.
 - The week is the reminder's (Friday from 12:00); a draft waiting in Review and the report records (D.reports, the stub for
   P3's) change a state.
 
@@ -135,68 +135,56 @@ class ReportsPage(LiveBrowserCase):
         b.reload("typeof go==='function' && LIVE")                                     # the address keeps the week
         b.eval("go('reports')")
 
-    def test_open_goes_to_the_projects_reporting_space(self):
+    def test_open_goes_to_the_projects_reporting_hub(self):
         b = self.b
         self.go_reports()
         b.eval("document.querySelector('[data-rpopen=ABC]').click()")
-        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .rp-card')")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
         self.assertEqual(b.eval("location.hash"), "#reporting=ABC")
         self.assertEqual(b.eval("document.title"), "creaite · Example Programme reporting")
         self.assertEqual(b.eval("document.querySelector('.rail [aria-current=page]').dataset.v"), "projects")
 
-    # ----- the reporting space
+    # ----- the reporting hub (the old reporting space is gone)
 
-    def space(self, hash_=""):
-        self.b.eval(f"openSpace('ABC'{hash_})")
-        self.b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .rp-card')")
+    def space(self, week=""):
+        self.b.eval(f"openSpace('ABC'{', ' + repr(week) if week else ''})")
+        self.b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
 
-    def test_the_space_lists_weeks_and_both_reports_as_cards(self):
+    def test_the_hub_week_menu_lists_the_weeks_with_both_reports_states(self):
         b = self.b
         self.space()
-        weeks = self.cells("#v-reporting .rp-wk .l")
-        self.assertEqual(weeks[:2], ["Week ending 16-10-2026", "Week ending 09-10-2026"])
-        self.assertEqual(len(weeks), 4)
-        cards = self.cells("#v-reporting .rp-card .top")
-        self.assertEqual(cards, ["Weekly reportInternalNot drafted", "Client reportExample Client LtdDue"])
-        self.assertTrue(b.eval("[...document.querySelectorAll('#v-reporting .rp-card .btn')].some(x=>x.textContent==='Approve' && x.disabled)"))
-        self.assertIn("Approve the internal report first", b.eval("document.querySelector('#v-reporting .rp-card:nth-child(2)').textContent"))
-        self.assertIn("Nothing filed yet", b.eval("document.querySelector('#v-reporting .rp-files').textContent"))
+        b.click("#hubWeek")
+        b.wait("document.querySelector('.wkpop')")
+        rows = b.eval("[...document.querySelectorAll('.wkpop .wkrow')].map(r=>[r.dataset.w, r.innerText.replace(/\\s+/g,' ')])")
+        self.assertEqual([r[0] for r in rows][:2], ["2026-10-16", "2026-10-09"])
+        self.assertGreaterEqual(len(rows), 4)
+        self.assertIn("Internal:", rows[0][1])
+        self.assertIn("Client:", rows[0][1])
+        self.assertIn("Internal: filed", rows[1][1])                                 # last week's report is filed
+        self.assertIn("Client: not due (fortnightly)", rows[1][1])
 
-    def test_an_earlier_week_shows_its_files_and_a_client_not_due(self):
+    def test_the_hub_opens_an_earlier_week_from_its_address(self):
         b = self.b
-        self.space()
-        b.eval("document.querySelector('[data-week=\"2026-10-09\"]').click()")
-        b.wait("document.querySelector('#v-reporting .rp-files a[data-openfile]')")
-        self.assertIn("Weekly report - Example Programme.docx", b.eval("document.querySelector('#v-reporting .rp-files').textContent"))
-        self.assertIn("is fortnightly; no client report was due this week",
-                      b.eval("document.querySelector('#v-reporting .rp-card:nth-child(2)').textContent"))
+        self.space("2026-10-09")
+        self.assertIn("09-10-2026", b.eval("document.querySelector('#hubWeek').innerText"))
         self.assertIn("w=2026-10-09", b.eval("location.hash"))
 
-    def test_the_cards_and_edit_both_link_to_the_report_views(self):
+    def test_the_old_links_are_hub_addresses(self):
         b = self.b
-        self.space()
-        href = lambda sel: b.eval(f"document.querySelector('{sel}').getAttribute('href')")
-        self.assertEqual(href("#v-reporting .rp-card:nth-child(1) a[data-rpopen-view]"), "#weekly=ABC&week=2026-10-16")
-        self.assertEqual(href("#v-reporting .rp-card:nth-child(2) a[data-rpopen-view]"), "#client-report=ABC/2026-10-16/Example%20Client%20Ltd")
-        # P8's address does not carry the mode: Side by side is chosen in the client view itself
-        self.assertEqual(href("#v-reporting .rp-both a[data-editboth]"), "#client-report=ABC/2026-10-16/Example%20Client%20Ltd")
-        self.assertFalse(b.eval("!!document.querySelector('#v-reporting .rp-ed, #v-reporting .rp-sheet')"))
-        b.eval("document.querySelector('[data-week=\"2026-10-09\"]').click()")
-        b.wait("location.hash.includes('w=2026-10-09')")
-        self.assertEqual(href("#v-reporting .rp-both a[data-editboth]"), "#client-report=ABC/2026-10-09/Example%20Client%20Ltd")
-        self.assertEqual(href("#v-reporting a[data-weeklyview]"), "#weekly=ABC&week=2026-10-09")
+        self.assertEqual(b.eval("weeklyHref('ABC','2026-10-16')"), "#reporting=ABC&w=2026-10-16")
+        self.assertEqual(b.eval("clientReportHref('ABC','2026-10-16','Example Client Ltd')"), "#reporting=ABC&w=2026-10-16&v=client")
 
     def test_the_address_reopens_the_same_place(self):
         b = self.b
-        b.eval("location.hash='#reporting=ABC&w=2026-10-09&e=client'")      # an older address keeps working; the view is dropped
+        b.eval("location.hash='#reporting=ABC&w=2026-10-09&e=client'")      # an older address keeps working; the old view letter is dropped
         b.reload("typeof go==='function' && LIVE")
-        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .rp-card')")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
         self.assertEqual(b.eval("[spaceCode.value, spaceWeek.value]"), ["ABC", "2026-10-09"])
         self.assertEqual(b.eval("location.hash.includes('e=')"), False)
 
     # ----- the other ways in
 
-    def test_the_cockpit_has_a_reporting_card_that_opens_the_space(self):
+    def test_the_cockpit_has_a_reporting_card_that_opens_the_hub(self):
         b = self.b
         b.eval("go('cockpit','ABC')")
         b.wait("!!document.querySelector('#cockRep #repCard')")
@@ -204,12 +192,12 @@ class ReportsPage(LiveBrowserCase):
         for want in ("Reporting", "Weekly report", "Client report", "Example Client Ltd", "Fortnightly"):
             self.assertIn(want, text)
         b.eval("document.querySelector('[data-rpcard=space]').click()")
-        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .rp-card')")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
         b.eval("go('cockpit','ABC')")
         b.wait("!!document.querySelector('#cockRep #repCard')")
-        self.assertEqual(b.eval("document.querySelector('[data-rpcard=internal]').getAttribute('href')"), "#weekly=ABC&week=2026-10-16")
+        self.assertEqual(b.eval("document.querySelector('[data-rpcard=internal]').getAttribute('href')"), "#reporting=ABC&w=2026-10-16")
         self.assertEqual(b.eval("document.querySelector('[data-rpcard=client]').getAttribute('href')"),
-                         "#client-report=ABC/2026-10-16/Example%20Client%20Ltd")
+                         "#reporting=ABC&w=2026-10-16&v=client")
 
     def test_a_filed_report_opens_its_file_from_the_card(self):
         b = self.b
@@ -217,13 +205,16 @@ class ReportsPage(LiveBrowserCase):
         b.wait("!!document.querySelector('#cockRep #repCard')")
         self.assertEqual(b.eval("document.querySelectorAll('#repCard a[data-openfile]').length"), 2)
 
-    def test_the_friday_reminder_points_to_reports(self):
+    def test_the_friday_reminder_opens_the_projects_week_in_the_hub(self):
         b = self.b
         b.eval("go('today')")
         b.wait("!!document.querySelector('#v-today li.rem[data-id^=\"weekly:\"]')")
-        self.assertEqual(b.eval("document.querySelector('#v-today li.rem[data-id^=\"weekly:\"] a.t').dataset.go"), "reports")
+        self.assertEqual(b.eval("document.querySelector('#v-today li.rem[data-id^=\"weekly:\"] a.t').dataset.rphub"), "ABC|2026-10-16")
+        b.eval("document.querySelector('#v-today li.rem[data-id^=\"weekly:\"] a.t').click()")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
+        self.assertIn("16-10-2026", b.eval("document.querySelector('#hubWeek').innerText"))
 
-    def test_command_k_reaches_reports_and_the_space(self):
+    def test_command_k_reaches_reports_and_the_hub(self):
         b = self.b
         items = b.eval("ckItems('').filter(x=>x.g==='Go to').map(x=>[x.l,x.h])")
         self.assertIn(["Reports", "1 needs you"], items)
@@ -233,21 +224,20 @@ class ReportsPage(LiveBrowserCase):
         b.wait("VIEW==='reporting'")
         self.assertEqual(b.eval("spaceCode.value"), "ABC")
 
-    def test_the_client_view_is_linked_by_p8s_address(self):
-        # P8's #client-report=CODE/week/client is not on this base: only the links are checked here
+    def test_command_k_client_report_opens_the_hubs_client_view(self):
         b = self.b
-        self.space()
-        self.assertEqual(b.eval("document.querySelector('#v-reporting .rp-card:nth-child(2) a[data-rpopen-view]').getAttribute('href')"),
-                         "#client-report=ABC/2026-10-16/Example%20Client%20Ltd")
         self.assertEqual(b.eval("ckItems('client report ABC').filter(x=>x.g==='Reporting').map(x=>x.l)"),
                          ["Reporting: Example Programme", "Client report: Example Programme"])
+        b.eval("ckItems('client report ABC').find(x=>x.l==='Client report: Example Programme').fn()")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
+        self.assertEqual(b.eval("document.querySelector('#v-reporting .page').dataset.audience"), "client")
 
     def test_nothing_scrolls_sideways_at_900(self):
         b = self.b
         b.resize(900, 900)
         for js in ("go('reports')", "openSpace('ABC')"):
             b.eval(js)
-            b.pump(0.4)
+            b.pump(1.0)
             self.assertLessEqual(b.eval("document.documentElement.scrollWidth - innerWidth"), 0, js)
 
 

@@ -106,6 +106,8 @@ export * from "./components/notes/DeleteNote.jsx";   /* #124: Delete note, its c
 export * from "./stores/findUpdates.js";
 export * from "./stores/reporting.js";   /* BL-337: Reports and the reporting space */
 export * from "./components/reporting/ReportingSpace.jsx";
+export * from "./stores/reportingSettings.js";   /* #221: clientReportOn, the one function the hub asks */
+export * from "./stores/hub.js";   /* #221: the Reporting hub's state */
 export * from "./components/reporting/ReportsPage.jsx";
 export * from "./components/reporting/ReportingCard.jsx";
 export * from "./stores/reportingSettings.js";   /* H3 (#221): the client report setting, per project */
