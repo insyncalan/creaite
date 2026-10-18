@@ -59,6 +59,12 @@ class Hub(LiveBrowserCase):
         self.b.eval(hash_)
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
         self.b.pump(0.3)
+        # a data refresh (the page re-reading the server) replaces the projects and puts the saved setting back: set it again until it holds
+        for _ in range(4):
+            if self.b.eval("P.find(p=>p.code==='ABC').cr") == client_on:
+                break
+            self.b.eval(f"(()=>{{ P.find(p=>p.code==='ABC').cr={json.dumps(client_on)}; crTick.value++; }})()")
+            self.b.pump(0.4)
 
     def start_at(self, js, ready):
         """Open the page at another screen (not the hub): reload, run `js`, wait for `ready`."""

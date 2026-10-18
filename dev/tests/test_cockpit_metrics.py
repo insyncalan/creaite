@@ -19,12 +19,17 @@ class Metrics(LiveBrowserCase):
 
     def cockpit(self, code="ABC", slip=None):
         b = self.b
-        if slip is not None:
-            b.eval(f"P.find(p=>p.code==={code!r}).slip={slip}")
-        b.eval(f"go('cockpit',{code!r})")
-        b.wait("document.querySelector('#v-cockpit .evrow .evbox')")
-        return b.eval(f"{ROW}.map(e=>({{l:e.querySelector('.l').textContent, v:e.querySelector('.v').textContent, bad:e.querySelector('.v').classList.contains('bad'), "
-                      "icon:!!e.querySelector('.l svg[data-icn=\"alert\"]'), click:e.classList.contains('click'), role:e.getAttribute('role')}))")
+        for _ in range(4):
+            if slip is not None:
+                b.eval(f"P.find(p=>p.code==={code!r}).slip={slip}")
+            b.eval(f"go('cockpit',{code!r})")
+            b.wait("document.querySelector('#v-cockpit .evrow .evbox')")
+            rows = b.eval(f"{ROW}.map(e=>({{l:e.querySelector('.l').textContent, v:e.querySelector('.v').textContent, bad:e.querySelector('.v').classList.contains('bad'), "
+                          "icon:!!e.querySelector('.l svg[data-icn=\"alert\"]'), click:e.classList.contains('click'), role:e.getAttribute('role')}))")
+            # a data refresh (the page re-reading the server on a focus) can replace the project between the set and the draw: set again
+            if slip is None or b.eval(f"P.find(p=>p.code==={code!r}).slip") == slip:
+                break
+        return rows
 
     def test_four_core_metrics_short_labels_and_no_no_due_date(self):
         rows = self.cockpit(slip=21)
