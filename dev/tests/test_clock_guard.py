@@ -47,7 +47,7 @@ ALLOWED = (
 LEGACY_TESTS = {
     "test_archive_items_browser.py": 1, "test_bulk_edit.py": 3, "test_capture_drawer.py": 1, "test_cell_edit.py": 4,
     "test_chat_and_sweep.py": 6, "test_check_py39.py": 1, "test_current_state_live.py": 1, "test_dashboard_editing.py": 2,
-    "test_decisions_dashboard.py": 1, "test_forecast.py": 1, "test_live_updates.py": 2,
+    "test_decisions_dashboard.py": 1, "test_forecast.py": 1, "live_updates_support.py": 2,
     "test_milestone_states.py": 1, "test_new_item_peek.py": 1, "test_notes_175.py": 1, "test_notes_autosave_backups.py": 2, "test_notes_header.py": 2,
     "test_onedrive_projects.py": 1, "test_peek_fixes.py": 1, "test_plain_dates.py": 1, "test_review_triage.py": 1,
     "test_steerco_dashboard.py": 1, "test_transcripts.py": 1, "test_transcripts_ui.py": 1,
