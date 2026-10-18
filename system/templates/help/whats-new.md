@@ -2,6 +2,14 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.3.3
+
+A small clean-up of two buttons that were easy to get wrong, in Review and in Intake.
+
+
+- **Review: approving a meeting's routine items is no longer a lookalike.** The button is now plain, not green, and reads "Approve 3 routine" (the number of routine items under those minutes). Only a row's own Approve stays green. Hover it and it tells you that minutes, new decisions and new risks still need approving one by one.
+- **Intake: "Process selected" says why it is switched off.** With nothing ticked, hover it and it says "Tick a file first" (or "Tick a meeting first"); tick one and it switches on.
+
 ## creaite 2.3.2
 
 A small fix-up to 2.3.1 for three annoyances on Today and the side bar.
