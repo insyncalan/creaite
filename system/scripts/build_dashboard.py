@@ -563,6 +563,7 @@ def queue_block(n, p, key, label, b, aged):
     return {"n": n, "p": (b.get("projects") or [b.get("project")])[0],
             "kind": "draft" if key in ("meeting", "report") else "files",
             "why": f"Draft {label.lower()}" if key in ("meeting", "report") else label, "indiv": True,
+            "hold": "minutes" if key == "meeting" else "report" if key == "report" else "file changes",   # #232: never routine
             "rec": {"t": f"{label}: {b.get('title') or Path(b.get('draft') or '').stem}"},
             "src": b.get("draft") or "", "file": p.name, "ref": key,
             "projects": b.get("projects") or [b.get("project")], **aged,   # a meeting shows under each (BL-41)
@@ -580,6 +581,7 @@ def queue_item(con, n, p, item, aged, overlap):
                if s.get("value")] if item.get("signals") and paths.REGISTER.exists() else []
     dup = duplicate_hint(con, kind, project, rec, overlap) if project and item.get("op") == "new" else None
     return {"n": n, "p": project, "kind": kind, "why": item_why(item, project, flags), "indiv": bool(review.individual_only(item)),
+            "hold": review.hold_reason(item) or "",                                         # #232: "" is routine (cmd_bulk's rule)
             "dup": dup, "signals": signals,
             "rec": rec, "src": v.get("source") or item.get("source") or "", "flags": flags, "file": p.name, "ref": item.get("n"), **({"inferred": review.clean_inferred(item.get("inferred"))} if item.get("inferred") else {}),   # BL-208
             "ws_suggest": item.get("ws_suggest"), **aged,                                   # BL-58
@@ -1733,6 +1735,7 @@ def collect(now=None, timings=None):
         "flow": timed("flow", lambda: flow_data(con, today, flow_weeks(settings), flow_snapshots((today - timedelta(weeks=flow_weeks(settings) + 1)).isoformat()))),   # BL-91
     }
     out["days"] = calendar_days(out, now)                     # BL-293: Today's day line
+    out["intake_review"] = timed("intake_review", lambda: intake_review(out["meetings"], out["inbox"], out["review"], today))   # #232
     return out
 
 
@@ -2451,8 +2454,16 @@ def cleared_save(entries):
     tmp.replace(paths.INTAKE_CLEARED)
 
 
+# #232 (v2.5.0): an entry may also carry kind ("cleared", the default, is Not needed; "later" is Later, a snooze that ends when
+# the meeting's transcript arrives), and for Not needed a reason (NOT_NEEDED_REASONS) and a short note. The live server's clear
+# route passes each item through unchanged, so no guarded file changes; a bad reason or kind is a ValueError (a 400).
+NOT_NEEDED_REASONS = ("Informal chat", "No decisions", "Duplicate of another meeting", "Other")
+SET_ASIDE_KINDS = ("cleared", "later")
+
+
 def clear_meetings(items, today=None):
-    """Set aside the listed meetings ({key, day, start, title}); only those listed. Returns how many were added."""
+    """Set aside the listed meetings ({key, day, start, title[, kind, reason, note]}); only those listed. A meeting already
+    set aside takes the new kind, reason and note (Later, then Not needed). Returns how many were added or changed."""
     today = today or clock().date()
     have = {e["key"]: e for e in cleared_load(today=today)}
     added = 0
@@ -2460,9 +2471,19 @@ def clear_meetings(items, today=None):
         key = str(it.get("key") or "")[:300]
         day = str(it.get("day") or "")
         datetime.strptime(day, "%Y-%m-%d")                       # ValueError for a bad day
+        kind = str(it.get("kind") or "cleared")
+        reason = str(it.get("reason") or "")
+        note = " ".join(str(it.get("note") or "").split())[:200]  # one line, at most 200 characters
+        if kind not in SET_ASIDE_KINDS or (reason and reason not in NOT_NEEDED_REASONS) or (kind == "later" and reason):
+            raise ValueError("not one of the choices")
+        extra = {k: v for k, v in (("kind", kind if kind != "cleared" else ""), ("reason", reason), ("note", note)) if v}
         if key and key not in have:
             have[key] = {"key": key, "day": day, "start": str(it.get("start") or "")[:5],
-                         "title": str(it.get("title") or "")[:200], "cleared": today.isoformat()}
+                         "title": str(it.get("title") or "")[:200], "cleared": today.isoformat(), **extra}
+            added += 1
+        elif key and {k: have[key].get(k) for k in ("kind", "reason", "note")} != {k: extra.get(k) for k in ("kind", "reason", "note")}:
+            base = {k: v for k, v in have[key].items() if k not in ("kind", "reason", "note")}
+            have[key] = {**base, "cleared": today.isoformat(), **extra}
             added += 1
     cleared_save(list(have.values()))
     return added
@@ -2480,14 +2501,17 @@ def restore_meetings(keys=None, day=None, today=None):
 def inbox_meetings(settings, projects, today):
     """{"fetched", "from", "rows": [{day, start, end, title, teams, organiser, private, id, key, p, how, series,
     processed}], "cleared": [...]}, newest day first; all-day entries left out. Cleared meetings (Clear day) are
-    left out of rows and listed in `cleared`. A meeting without an ID (an older calendar) has id null and can't be
-    picked until the calendar is refreshed."""
+    left out of rows and listed in `cleared` (with their reason and note, #232). A meeting set aside with Later (#232) is
+    listed in `later` until its transcript arrives, then is back in rows with later_back. A meeting without an ID (an older
+    calendar) has id null and can't be picked until the calendar is refreshed."""
     start = meetings_start(settings, today)
     try:
         cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {"fetched": None, "from": start.isoformat(), "rows": [], "cleared": []}
-    set_aside = {e["key"] for e in cleared_load(settings, today)}
+        return {"fetched": None, "from": start.isoformat(), "rows": [], "cleared": [], "later": []}
+    entries = cleared_load(settings, today)
+    set_aside = {e["key"]: e for e in entries if e.get("kind") != "later"}      # Not needed (Clear day)
+    snoozed = {e["key"]: e for e in entries if e.get("kind") == "later"}         # #232: Later, until the transcript arrives
     import transcripts                               # BL-42 phase 3: what the sweep found for each meeting, and what is already loaded
     checked, loaded = transcripts.load_state()["checked"], transcripts.inbox_event_ids()
     import minutes                                   # meeting_key and processed_on, read only
@@ -2518,9 +2542,141 @@ def inbox_meetings(settings, projects, today):
     for m in out:
         by_day.setdefault(m["day"], []).append(m)
     ordered = [m for d in sorted(by_day, reverse=True) for m in sorted(by_day[d], key=lambda m: m["start"])]
-    rows = [m for m in ordered if m["key"] not in set_aside]
-    cleared = [m for m in ordered if m["key"] in set_aside]
-    return {"fetched": cal.get("fetched"), "from": start.isoformat(), "rows": rows, "cleared": cleared}
+    back = lambda m: m["transcript"] == "available" or bool(m["loaded"])     # #232: a Later meeting returns with its transcript
+    rows = [dict(m, later_back=True) if m["key"] in snoozed else m for m in ordered
+            if m["key"] not in set_aside and (m["key"] not in snoozed or back(m))]
+    cleared = [dict(m, **{k: set_aside[m["key"]][k] for k in ("reason", "note") if set_aside[m["key"]].get(k)})
+               for m in ordered if m["key"] in set_aside]
+    later = [dict(m, later_since=snoozed[m["key"]].get("cleared")) for m in ordered if m["key"] in snoozed and not back(m)]
+    return {"fetched": cal.get("fetched"), "from": start.isoformat(), "rows": rows, "cleared": cleared, "later": later}
+
+
+# ===== #232 (v2.5.0) Intake and Review on one page: the merged row model =====
+# One list of meetings (calendar rows, uploaded files, and drafts whose meeting is in neither) joined to their pending
+# proposals, which are named by their Review number `n` (the rows of `review`, D.review on the page, stay the truth for each
+# proposal; the page drops the ones it has decided). Each meeting's proposals are split by review.hold_reason, the rule
+# cmd_bulk uses: "needs" (Needs your decision) and "routine" (Approve routine). Proposals from no meeting are "mail" (the
+# sweep) or "other" (cx-edit, reports, weekly updates, file changes). Read only; derived from data built just before it.
+# Shape: dev/proposals/intake-review-232/README.md (the seams for 232-A, 232-B and 232-C).
+IR_MAIL_RUNS = ("cx-sweep",)
+
+
+def proposal_meta():
+    """{proposal file name: {mkey, title, day, transcript, run}} for every staged proposal (the meeting block's key, title,
+    date and transcript, and the proposal's source_run). Read only."""
+    out = {}
+    for p, data in review.proposals():
+        m = data.get("meeting") or {}
+        out[p.name] = {"mkey": m.get("key") or None, "title": str(m.get("title") or ""), "day": str(m.get("date") or ""),
+                       "transcript": m.get("transcript") or None, "run": str(data.get("source_run") or "")}
+    return out
+
+
+def intake_review(meetings, files, queue, today, meta=None, stale_after=None):
+    """The merged row model for Intake and Review (#232), from the built meetings, inbox and review lists."""
+    return intake_review_model(meetings or {}, files or [], queue or [], proposal_meta() if meta is None else meta, today,
+                               review.stale_days() if stale_after is None else stale_after)
+
+
+def _ir_split(rows):
+    """{"needs": [n], "routine": [n]}: routine only when hold_reason found nothing (queue rows carry it as `hold`)."""
+    out, seen = {"needs": [], "routine": []}, set()
+    for r in rows:
+        if r["n"] in seen:
+            continue
+        seen.add(r["n"])
+        hold = r.get("hold") if "hold" in r else ("held" if r.get("indiv") or not r.get("p") else "")
+        out["needs" if hold else "routine"].append(r["n"])
+    return out
+
+
+def _ir_days(day, today):
+    try:
+        return max(0, (today - datetime.strptime(str(day)[:10], "%Y-%m-%d").date()).days)
+    except ValueError:
+        return 0
+
+
+def intake_review_model(meetings, files, queue, meta, today, stale_after):
+    """Pure: the model from its inputs (unit tested in dev/tests/test_intake_review_model.py).
+    {"v": 1, "meetings": [row], "mail": groups, "other": groups, "later": [..], "not_needed": [..], "counts": {..}}
+    row: {id, src (calendar|upload|draft), key, mkey, path, title, day, start, end, p, private, teams, tx, stage (arrived|
+    drafted|approved), state (ready|waiting|proposals|done), age, stale, files, groups {needs, routine}, later_back}."""
+    by_mkey, by_path, mail, other = {}, {}, [], []
+    for r in queue:
+        m = meta.get(r.get("file")) or {}
+        if m.get("mkey"):
+            by_mkey.setdefault(m["mkey"], []).append(r)
+        elif m.get("transcript"):
+            by_path.setdefault(m["transcript"], []).append(r)
+        elif m.get("run") in IR_MAIL_RUNS:
+            mail.append(r)
+        else:
+            other.append(r)
+    used, out = set(), []
+
+    def row(src, key, mkey, path, title, day, start, end, p, rows, base_state, extra=None):
+        prop_age = max([q.get("age") or 0 for q in rows] or [0])
+        if rows:
+            stage, state = "drafted", "proposals"
+        elif base_state == "done":
+            stage, state = "approved", "done"
+        else:
+            stage, state = "arrived", base_state
+        age = prop_age if rows else _ir_days(day, today)
+        return {"id": "m" + hub_token(mkey or key or path or f"{day}|{start}|{title}"), "src": src, "key": key, "mkey": mkey,
+                "path": path, "title": title, "day": day, "start": start, "end": end, "p": p, "stage": stage, "state": state,
+                "age": age, "stale": stage != "approved" and age > stale_after,
+                "files": sorted({q.get("file") for q in rows if q.get("file")}), "groups": _ir_split(rows), **(extra or {})}
+
+    loaded_events = set()
+    for m in meetings.get("rows") or []:
+        mkey = f"calendar:{m['id']}" if m.get("id") else None
+        rows = by_mkey.get(mkey, []) if mkey else []
+        if mkey:
+            used.add(mkey)
+        if m.get("loaded"):
+            loaded_events.add(m.get("id"))
+        ready = m.get("transcript") == "available" or bool(m.get("loaded"))
+        base = "done" if m.get("processed") or m.get("draft") else "ready" if ready else "waiting"
+        p = rows[0].get("p") if rows and not m.get("p") else m.get("p")
+        out.append(row("calendar", m.get("key"), mkey, None, m.get("title") or "Meeting", m.get("day") or "",
+                       m.get("start") or "", m.get("end") or "", p, rows, base,
+                       {"private": bool(m.get("private")), "teams": bool(m.get("teams")), "tx": m.get("transcript"),
+                        "later_back": bool(m.get("later_back"))}))
+    for f in files:
+        if f.get("state") not in ("new", "draft") or (f.get("event") and f.get("event") in loaded_events):
+            continue                                       # a loaded transcript is its calendar row; chats go with them
+        rows = by_path.get(f.get("path"), [])
+        used.add(("path", f.get("path")))
+        out.append(row("upload", f.get("path"), None, f.get("path"), f.get("name") or "", f.get("date") or "", "", "",
+                       f.get("p"), rows, "ready" if f.get("state") == "new" else "done", {"ext": f.get("ext")}))
+    for mkey, rows in by_mkey.items():                    # drafts whose meeting is in neither list (older, or a note)
+        if mkey in used:
+            continue
+        m = meta.get(rows[0].get("file")) or {}
+        out.append(row("draft", None, mkey, m.get("transcript"), m.get("title") or "Meeting", m.get("day") or "", "", "",
+                       rows[0].get("p"), rows, "done"))
+    for path, rows in by_path.items():
+        if ("path", path) in used:
+            continue
+        m = meta.get(rows[0].get("file")) or {}
+        out.append(row("draft", None, None, path, m.get("title") or Path(str(path)).stem, m.get("day") or "", "", "",
+                       rows[0].get("p"), rows, "done"))
+    out.sort(key=lambda r: r["start"])
+    out.sort(key=lambda r: r["day"], reverse=True)       # newest day first, each day in time order (as Intake); stable sorts
+    keep = ("key", "day", "start", "end", "title", "p", "private")
+    later = [{**{k: m.get(k) for k in keep}, "since": m.get("later_since")} for m in meetings.get("later") or []]
+    not_needed = [{**{k: m.get(k) for k in keep}, "reason": m.get("reason") or "", "note": m.get("note") or ""}
+                  for m in meetings.get("cleared") or []]
+    pending = len({r["n"] for r in queue})
+    ready = sum(1 for r in out if r["stage"] == "arrived" and r["state"] == "ready")
+    counts = {"arrived": sum(1 for r in out if r["stage"] == "arrived"), "ready": ready,
+              "drafted": sum(1 for r in out if r["stage"] == "drafted"), "approved": sum(1 for r in out if r["stage"] == "approved"),
+              "to_approve": pending, "badge": ready + pending}
+    return {"v": 1, "meetings": out, "mail": _ir_split(mail), "other": _ir_split(other), "later": later,
+            "not_needed": not_needed, "counts": counts}
+# ===== end #232 =====
 
 
 # ===== BL-293 (sprint-today-days-server) ===== Today moves between the calendar's days. calendar_days gives every working day
