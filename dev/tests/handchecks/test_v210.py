@@ -602,7 +602,16 @@ class WeeklyFiling(WeeklyBase):
         self.b.wait("document.querySelector('[role=menu] [role=menuitem]')", 10)
         label = {"html": "HTML", "pdf": "PDF"}[fmt]
         self.b.eval("[...document.querySelectorAll('[role=menu] [role=menuitem]')].find(x=>x.textContent.includes(%r)).click()" % label)
-        made = wait_for(lambda: [f for f in drafts.glob("*") if f not in before and f.suffix == "." + fmt], 60, f"the {fmt} export")
+        # #220 (merged with #226): the export is filed in the project's Reports folder, and an unfiled report's HTML meets its reserved
+        # filing name, so the clash dialog opens: its default (Add a number) is taken.
+        reports = self.vault / "projects"
+        before |= set(reports.glob("*/reports/*"))
+
+        def found():
+            if self.b.eval("!!document.querySelector('#exportClashDlg[open]')"):
+                self.b.eval("document.querySelector('#exportClashGo').click()")
+            return [f for f in list(drafts.glob("*")) + list(reports.glob("*/reports/*")) if f not in before and f.suffix == "." + fmt]
+        made = wait_for(found, 60, f"the {fmt} export")
         self.b.pump(0.6)
         return {"ok": True, "path": str(made[0]), "filed": False}, made[0]
 
@@ -625,7 +634,8 @@ class WeeklyFiling(WeeklyBase):
         for fmt in ("html", "docx", "pdf"):
             e, path = self.exported(week, fmt)
             self.assertTrue(path.exists(), path)
-            self.assertFalse(e.get("filed"), f"{fmt}: a report export is not filed beside by default ({e.get('path')})")
+            # #220 (changed deliberately): every export is saved first into the project's Reports folder under its own name
+            self.assertEqual(path.parent.name, "reports", f"{fmt}: saved in the project's Reports folder ({e.get('path')})")
             text = export_text(self.vault, path, fmt)
             outputs[fmt] = text
             if fmt == "html":
