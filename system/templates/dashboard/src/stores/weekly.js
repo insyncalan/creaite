@@ -75,9 +75,12 @@ export async function approveWeekly(doc, force) {
 }
 
 /** Export the saved report as html, docx or pdf and save it in the project's Reports folder (#220: a taken name asks, a save says
-    where; see stores/exportSave.js). @param {SheetDoc} doc @param {string} fmt */
-export async function exportWeekly(doc, fmt) {
-  return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
+    where; see stores/exportSave.js). #226: for html and pdf `page` is the report page as it is exported (components/report/exportPage.jsx;
+    posted again with a clash's re-ask); the server checks it against the saved report and falls back to the plain renderer.
+    @param {SheetDoc} doc @param {string} fmt @param {any} [page] */
+export async function exportWeekly(doc, fmt, page) {
+  return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || undefined });
+
 }
 
 /** Unsaved edits on the page (the sheet saves them; Approve and Export save first). */
