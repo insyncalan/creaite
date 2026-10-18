@@ -27,7 +27,7 @@ import { shared } from "./core/state.js";
 import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railIconSize, railItem, railLabelled, railLabelsOn, railSizeNorm, railLoadUser, railMoreOpen, railNarrow, railNorm, railSetUser, railWide, setRailCount, setRailView } from "./stores/rail.js";
 import { row, SETSECTIONS } from "./settings.js";
 import { WTABS, workTabGo } from "./work.js";
-import { healthCount } from "./stores/settings.js";
+import { catalogue, healthCount, loadCatalogue } from "./stores/settings.js";
 
 export { RAIL_DEF, RAIL_ITEMS, healthCount, railIconSize, railItem, railLabelsOn, railNorm, setRailCount };   /* the stores', on the page for the tests and ⌘K */
 
@@ -56,6 +56,7 @@ export async function railSetLabels(on) {
 export async function railSetIconSize(size) {
   const was = railIconSize.value, now = railSizeNorm(size); railIconSize.value = now; S.railIconSize = now;
   if (!await writeSettings({ "dashboard.rail_icon_size": now })) { railIconSize.value = was; S.railIconSize = was; return false; }
+  if (catalogue.value) await loadCatalogue();   /* Settings › Advanced shows the new value without a reload */
   return true;
 }
 /** Done in Customise sidebar: the lists and Icons only (display), then the labels setting. Turning Icons only on, or off, also

@@ -121,6 +121,50 @@ class IconSize(IconSizeBase):
         b.wait("!document.getElementById('railCust').open")
         self.assertEqual(self.icon(), [20, 20])
 
+    ADV = """(()=>{const r=[...document.querySelectorAll('#settingsBody .srow,#settingsBody .igrow,#settingsBody .row')].find(x=>/Icon size/.test(x.textContent)); return r&&r.querySelector('select')})()"""
+
+    def adv_value(self):
+        self.b.wait(f"!!{self.ADV}", 8)
+        return self.b.eval(f"{self.ADV}.value")
+
+    def set_stored(self, value):
+        p = self.v.root / "system/config/settings.json"
+        js = json.loads(p.read_text())
+        if value is None:
+            js["dashboard"].pop("rail_icon_size", None)
+        else:
+            js["dashboard"]["rail_icon_size"] = value
+        p.write_text(json.dumps(js, indent=2) + "\n")
+
+    def test_settings_advanced_and_customise_stay_in_step_without_a_reload(self):
+        b = self.b
+        b.eval("location.hash='#settings/advanced'")
+        self.assertEqual(self.adv_value(), "small")
+        self.assertEqual(b.eval(f"[...{self.ADV}.options].map(o=>o.textContent)"), ["Small", "Medium", "Large"])
+        b.eval(f"(s=>{{s.value='large'; s.dispatchEvent(new Event('change',{{bubbles:true}}))}})({self.ADV})")   # Advanced -> rail and dialog
+        b.wait("railIconSize.value==='large'", 5)
+        self.assertEqual(self.icon(), [28, 28])
+        self.open_customise()
+        self.assertEqual(b.eval("document.querySelector('#railCust .rcsz[data-size=large]').getAttribute('aria-pressed')"), "true")
+        b.click('#railCust .rcsz[data-size="medium"]')                                        # dialog -> Advanced
+        b.click("#railCustDone")
+        b.wait("!document.getElementById('railCust').open")
+        b.wait(f"{self.ADV}.value==='medium'", 8)
+        self.assertEqual(self.icon(), [24, 24])
+
+    def test_a_missing_or_unknown_stored_value_is_small_everywhere(self):
+        b = self.b
+        for value in (None, "huge"):
+            self.set_stored(value)
+            b.reload(wait_for="typeof go==='function' && LIVE")
+            self.assertEqual(self.icon(), [20, 20], value)
+            b.eval("location.hash='#settings/advanced'")
+            self.assertEqual(self.adv_value(), "small", value)                                # Small, not blank
+            self.open_customise()
+            self.assertEqual(b.eval("document.querySelector('#railCust .rcsz[data-size=small]').getAttribute('aria-pressed')"), "true", value)
+            b.click("#railCustCancel")
+            b.wait("!document.getElementById('railCust').open")
+
 
 class IconSize900(IconSizeBase):
     width, height = 900, 800

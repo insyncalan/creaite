@@ -1871,7 +1871,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail .railfly .fcount{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)}
 .rail .railfly .mnote{padding:6px 8px;color:var(--muted)}
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
-/* #182 Icon size: Medium (20px) is what the rail has always had; Small 16px; Large 28px, with taller rows. The widths do not change. */
+/* #182 Icon size: Small (20px, the default) is what the rail has always had; Medium 24px and Large 28px have taller rows. The widths do not change. */
 :root.railsz-medium{--rail-ic:24px} :root.railsz-large{--rail-ic:28px}
 .rail button.rtog .rchev{width:16px;height:16px} .rail .railfly svg,.rail #railMoreMenu svg{width:20px;height:20px} .rail .railfly .health svg{width:14px;height:14px}
 :root.railsz-large .rail button.nv{height:44px} :root.railsz-large .rail.labelled button.nv{height:62px}

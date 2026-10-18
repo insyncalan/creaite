@@ -7,6 +7,7 @@
    rows. */
 import { useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
+import { railSizeNorm } from "../../stores/rail.js";
 import { catalogue, query, saveSettings } from "../../stores/settings.js";
 import { settingHasAll, settingWords } from "./Essentials.jsx";
 import { rowId, SettingRow } from "./SettingRow.jsx";
@@ -44,9 +45,9 @@ function One({ s }) {
   if (!s.resettable) control = <code class="setval">{settingShown(v)}</code>;
   else if (CHOICES[s.key]) {
     control = (
-      <select {...named} value={String(v)} onChange={e => { const el = /** @type {HTMLSelectElement} */ (e.currentTarget);
+      <select {...named} value={s.key === "dashboard.rail_icon_size" ? railSizeNorm(v) : String(v)} onChange={e => { const el = /** @type {HTMLSelectElement} */ (e.currentTarget);
         const nv = typeof d === "number" ? Number(el.value) : el.value; save(nv, () => { el.value = String(v); }); }}>
-        {CHOICES[s.key].map(o => <option value={String(o)}>{String(o)}</option>)}
+        {CHOICES[s.key].map(o => <option value={String(o)}>{s.key === "dashboard.rail_icon_size" ? String(o).replace(/^./, c => c.toUpperCase()) : String(o)}</option>)}
       </select>
     );
   } else if (typeof d === "boolean") {
