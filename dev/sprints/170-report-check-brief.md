@@ -1,6 +1,6 @@
 # Brief: Check this report (#170, release v2.4.0)
 
-Product Manager, 18-10-2026. Mockup: file:///Users/alanmahon/dev.env/pm/dev/mockups/report-check-mockup.html (built on the weekly report snapshot of the v2.2.0 line; press **Check this report**, accept or ignore a card, use the state buttons at the foot). Team Stark's read-only scouts (facts and cost) are to be added below when they arrive. Nothing is built; the mockup is not approved yet.
+Product Manager, 18-10-2026. Mockup: dev/mockups/report-check-mockup.html (built on the weekly report snapshot of the v2.2.0 line; press **Check this report**, accept or ignore a card, use the state buttons at the foot). Team Stark's read-only scouts (facts and cost) are to be added below when they arrive. Nothing is built; the mockup is not approved yet.
 
 ## What the person sees
 
