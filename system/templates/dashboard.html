@@ -52804,7 +52804,7 @@ ${pre}**Current state title:** ${title}`);
         /** @type {HTMLElement[]} */
         [...document.querySelectorAll(".nlist .ni")]
       ), at2 = rows2.findIndex((x5) => x5.dataset.path === row2.path);
-      const next = at2 >= 0 ? (rows2[at2 + 1] || rows2[at2 - 1] || { dataset: {} }).dataset.path : void 0;
+      const near = at2 >= 0 ? rows2[at2 + 1] || rows2[at2 - 1] : void 0, next = near ? near.dataset.path : void 0;
       const g5 = await api("/api/notes/get", { path: row2.path });
       if (!g5 || !g5.ok) {
         snack(oneLine(g5 && g5.message || "That note couldn't be read."));
@@ -53964,7 +53964,7 @@ ${pre}**Current state title:** ${title}`);
           " notes"
         ] })
       ] }),
-      /* @__PURE__ */ u2("div", { id: "notesListBody", tabindex: "-1", hidden: !open2, children: [
+      /* @__PURE__ */ u2("div", { id: "notesListBody", tabindex: -1, hidden: !open2, children: [
         /* @__PURE__ */ u2(
           "input",
           {

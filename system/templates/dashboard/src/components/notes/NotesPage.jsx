@@ -87,7 +87,7 @@ function NotesList({ code, onOpen, onOpenFile }) {
           aria-label={label} data-tip={`${label} (⌘\\)`} onClick={() => toggleNotesList()}><Icon name={open ? "chevsleft" : "chevsright"} /></button>
         <span class="vlabel" aria-hidden="true">{notesList.value.length} notes</span>
       </div>
-      <div id="notesListBody" tabindex="-1" hidden={!open}>
+      <div id="notesListBody" tabindex={-1} hidden={!open}>
         <input class="search nsearch" type="search" placeholder={`Search ${code === "_portfolio" ? "portfolio" : pName(code)} notes`} aria-label="Search notes"
           value={notesQuery.value} onInput={e => { notesQuery.value = /** @type {HTMLInputElement} */ (e.target).value; }} />
         {!L.length ? <p class="sub nnone">{notesList.value.length ? "No note matches." : "No notes yet."}</p> : null}

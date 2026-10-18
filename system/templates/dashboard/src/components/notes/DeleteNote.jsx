@@ -42,7 +42,7 @@ export async function askDeleteNote(row) {
   if (row && !(noteCur.value && noteCur.value.path === row.path)) {      // #194: a note in the list that is not the open one: the open note is left alone
     if (!viaServer()) { snack("Deleting a note needs the live server"); return; }
     const rows = /** @type {HTMLElement[]} */ ([...document.querySelectorAll(".nlist .ni")]), at = rows.findIndex(x => x.dataset.path === row.path);
-    const next = at >= 0 ? (rows[at + 1] || rows[at - 1] || { dataset: {} }).dataset.path : undefined;
+    const near = at >= 0 ? rows[at + 1] || rows[at - 1] : undefined, next = near ? near.dataset.path : undefined;
     const g = await api("/api/notes/get", { path: row.path });         // the version the box is opened on: Delete sends THIS one, so a note changed since is refused
     if (!g || !g.ok) { snack(oneLine((g && g.message) || "That note couldn't be read.")); focusRow(row.path, next); return; }
     noteDeleting.value = { path: row.path, title: row.title, code: row.code, base: g.base, row: true, next };
