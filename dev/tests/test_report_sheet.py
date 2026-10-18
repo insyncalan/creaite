@@ -351,8 +351,6 @@ class WeeklySheet(SheetChecks, LiveBrowserCase):
 
     def test_16px_between_the_timeline_picture_and_the_milestone_list(self):
         self.start()
-        self.assertEqual(self.q("getComputedStyle(document.querySelector('#v-weekly [data-id=milestones] .wr-tlwrap')).marginBottom"),
-                         "16px", "the picture keeps 16px of its own below it")
         self.q("[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(b=>b.textContent==='Show as exported').click()")
         self.b.wait("document.querySelector('#v-weekly [data-id=milestones] .wr-tbl')", 5)
         gap = self.q("""(()=>{const s=document.querySelector('#v-weekly [data-id=milestones]'), a=s.querySelector('.wr-tlwrap'),

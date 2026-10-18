@@ -342,6 +342,8 @@ export function SheetPage(p) {
     if (s.hidden) {
       if (!exported) out.push(<div key={s.id} class="sheet-hidden" data-hidden={s.id}>Hidden: {s.heading}
         {readOnly ? null : <> · <button type="button" class="linkbtn" onClick={() => { onChange(showSection(doc, s.id), "Section shown"); onEvent({ type: "section-shown", id: s.id }); }}>Show</button></>}</div>);
+    } else if (exported && s.type === "text" && !String(s.text || "").trim() && !(s.rows || []).length) {
+      /* #226: a text section with nothing in it is not drawn in the exported page (the exports of the weekly report had an empty heading) */
     } else out.push(<SectionBlock key={s.id} s={s} i={i} p={p} peer={p.peerDoc ? p.peerDoc.sections.find(x => x.id === s.id) || null : null} />);
     if (!exported) for (const x of p.extras.filter(e => e.after === s.id)) out.push(extra(x));
   });

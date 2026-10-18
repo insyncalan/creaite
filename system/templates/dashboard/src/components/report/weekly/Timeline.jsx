@@ -80,7 +80,7 @@ export function Timeline({ ctx }) {
                 <tr key={m.id} class={on ? "" : "hidrow"}>
                   {ctx.editing ? <td class="eyec"><EyeButton on={on} subject={m.title || m.name} onClick={() => toggle(m.id)} /></td> : null}
                   <td><ctx.ItemRef id={m.id} /> {m.title || m.name}</td><td class="num">{wkDmy(m.baseline_date)}</td>
-                  <td class={`num${late ? " late" : ""}`}>{m.actual_date ? `achieved ${wkDm(m.actual_date)}` : `${wkDmy(m.forecast_date || m.baseline_date)}${late ? ` (+${Math.round(dayNo(m.forecast_date) - dayNo(m.baseline_date))})` : ""}`}</td>
+                  <td class={`num${late ? " late" : ""}`}>{m.actual_date ? `achieved ${wkDmy(m.actual_date)}` : `${wkDmy(m.forecast_date || m.baseline_date)}${late ? ` (+${Math.round(dayNo(m.forecast_date) - dayNo(m.baseline_date))})` : ""}`}</td>
                   <td class="num">{m.percent_complete != null ? `${m.percent_complete}%` : ""}</td><td><span class={`wr-st ${st.tone}`}>{st.word}</span></td>
                 </tr>);
             })}</tbody></table>

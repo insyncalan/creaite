@@ -8,6 +8,7 @@ import { render } from "preact";
 import { Menu } from "../../Menu.jsx";
 import { ReportSheet } from "../ReportParts.jsx";
 import { ExportSave } from "../ExportSave.jsx";
+import { reportExportPage, WEEKLY_EXPORT } from "../exportPage.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
 import { Glance } from "./Glance.jsx";
 import { CurrentState, Words } from "./Notes.jsx";
@@ -45,7 +46,9 @@ function WeeklyBar({ doc, readOnly }) {
   const approved = doc.state === "approved";
   const exp = async (/** @type {string} */ fmt) => {
     if (!(await saveFirst())) return;
-    await exportWeekly(doc, fmt);          // the dialog, the "Saved … in <project> › Reports" message or the failure show themselves (ExportSave)
+    const now = weeklyDoc.value || doc;
+    const page = fmt === "docx" ? null : await reportExportPage(now, WEEKLY_RENDER, WEEKLY_EXPORT, weeklyBase.value);   // #226: the exported page itself
+    await exportWeekly(now, fmt, page);          // the dialog, the "Saved … in <project> › Reports" message or the failure show themselves (ExportSave)
   };
   const approve = async () => {
     if (!(await saveFirst())) return;

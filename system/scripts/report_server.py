@@ -14,9 +14,12 @@
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
   POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
                            (a client report: only client-safe facts), each with the row it would add; nothing is written
-  POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?}: P2's export (the contract's call), from the
+  POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
                            draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
-                           a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate);
+                           a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
+                           #226: HTML and PDF are the report page's own exported view, posted as `page: {html, css, palette, version}`
+                           and re-checked against the saved report by export_page.build; with no page, or one that fails, the plain
+                           renderer makes the file and the answer says `plain: true`;
   POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
                            A client report is exported only once its internal week is approved and nothing would leak, and its
                            answer then carries `left_out`: the check of what is left out runs before every client export
@@ -323,6 +326,24 @@ def _settle_name(folder, name, ext, req, label, reserved=None):
                                      else f"{name} is already in {label}.")}
 
 
+def carry_plain(saved, made):
+    """#226: a saved export the plain renderer made says so (plain, plain_why and the message's note)."""
+    if saved.get("ok") and made.get("plain"):
+        saved["plain"] = True
+        if made.get("plain_why"):
+            saved["plain_why"] = made["plain_why"]
+        plain_note(saved)
+
+
+def plain_note(out):
+    """#226: an export the plain renderer made (no page, or one the server's check refused) says so in its message."""
+    if not (out.get("ok") and out.get("plain")):
+        return
+    why = out.get("plain_why")
+    out["message"] = (f"{out.get('message') or 'Exported.'} This is the plain version "
+                      + (f"(the report page was not used: {why})." if why else "(open the report in creaite to export the formatted one)."))
+
+
 def export_route(handler, req):
     """POST /api/report/export: the report exported as HTML, Word or PDF, and saved first into the project's Reports folder (#220).
     Opening is a separate choice (/api/open, /api/report/reveal). The answer: {ok, saved, path, name, folder, folder_label,
@@ -355,10 +376,12 @@ def export_route(handler, req):
     name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name)
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
-    out = fn(path, fmt, file_beside=False, open_after=False)           # made in system/staging/drafts/, filed below
+    out = fn(path, fmt, file_beside=False, open_after=False,
+             page=req.get("page") if isinstance(req.get("page"), dict) else None)           # made in system/staging/drafts/, filed below
     if not out.get("ok"):
         return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
     saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
+    carry_plain(saved, out)
     if left is not None:
         saved["left_out"] = left
     return answer(handler, saved)

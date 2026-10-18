@@ -48,7 +48,7 @@ function SavedToast() {
   if (!r) return null;
   return (
     <div class="snack on" role="status" data-export-saved>
-      <span>{r.replaced ? "Replaced" : "Saved"} {r.name} in <a href="#" class="folderlink" data-export-folder style="color:inherit"
+      <span>{r.replaced ? "Replaced" : "Saved"} {r.name}{r.plain ? " (plain version)" : ""} in <a href="#" class="folderlink" data-export-folder style="color:inherit"
         onClick={(e) => { e.preventDefault(); if (r.folder) openFolder(r.folder); }}>{r.folder_label}</a></span>
       <button type="button" onClick={() => { if (r.path) showInFinder(r.path); }}>Show in Finder</button>
       <button type="button" onClick={() => { if (r.path) openSaved(r.path); }}>Open</button>

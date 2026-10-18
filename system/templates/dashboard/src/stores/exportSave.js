@@ -6,7 +6,7 @@ import { signal } from "@preact/signals";
 import { api } from "../core/server.js";
 
 /** @typedef {{ok: boolean, message?: string, clash?: boolean, saved?: boolean, name?: string, numbered?: string, path?: string,
-    folder?: string, folder_label?: string, replaced?: boolean, reserved?: boolean}} ExportAnswer */
+    folder?: string, folder_label?: string, replaced?: boolean, reserved?: boolean, plain?: boolean}} ExportAnswer */
 
 /** A taken name waiting for Alan's choice: the request to send again, and the server's answer. */
 export const exportClash = signal(/** @type {{body: Record<string, any>, r: ExportAnswer}|null} */ (null));
