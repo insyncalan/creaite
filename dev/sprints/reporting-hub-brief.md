@@ -102,6 +102,12 @@ How the logos keep their transparency and sit well on the page:
 - **Exports keep transparency:** PNG and SVG carry it into HTML and PDF; Word keeps a PNG's transparency; an SVG is converted to a PNG for Word. Check this in the export audit's tests.
 - **Optional later:** a light and a dark variant of each logo (two files), chosen by the theme.
 
+## Round 10: final choices (Alan, 18-10-2026)
+
+- **Week navigation is the Menu**: the week's date with a drop-down list of weeks (health dot, internal and client status, jump to a date); no "<" or ">" arrows. The Stepper and Ribbon options are dropped from the spec.
+- **The toolbar uses icons**, always: zoom (− Fit +), Show as exported, Check this report, Export, Approve, and the cog last. The words appear as tooltips and screen-reader names.
+- The mockup's foot bar keeps only what demonstrates behaviour (client report required or not, settings, the export dialog); there are no design option switches.
+
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
 Discreet section menu; eye icons; "Add from the tracker" (existing open items, client-visible only for the client report); the free-text section with the whole editor (v2.4.0, still subject to the export gaps named in the earlier brief); export fidelity for the health block, the figures, the timeline picture and the milestone list in HTML, Word and PDF; exports that save to the Reports folder and say where, with the **name-clash choice (Add a number, Rename, Overwrite)** as drawn; and the approved Check this report (#170).
