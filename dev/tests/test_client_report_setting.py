@@ -9,6 +9,7 @@ project's CLAUDE.md beside the client report rhythm: `**Client report:** on|off`
 A new project is made with the setting off.
 """
 import base64
+import json
 import re
 import sys
 import tempfile
@@ -263,6 +264,56 @@ class Routes(unittest.TestCase):
         ops = [(e["op"], Path(e["path"]).name) for e in map(json.loads, log.read_text().splitlines()[before:])]
         self.assertLess(ops.index(("create", "ABC-client.png")), ops.index(("delete", "ABC-client.svg")), ops)
         self.assertEqual(self.logos(), {"client": "ABC-client.png"})
+
+    # ── the per-route body cap (ROUTE_BODY_LIMITS): a logo save is at most 1,200,000 bytes, a remove 4 kB ─────────────────
+    def raw_post(self, path, body):
+        """(status, answer) of a POST; a server that refuses before reading may close the line while the body is still being sent."""
+        import urllib.error
+        import urllib.request
+        req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return r.status, json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read().decode() or "{}")
+        except (urllib.error.URLError, ConnectionError):
+            return 0, {}
+
+    def padded_png(self, size):
+        """A real PNG made `size` bytes long by a text chunk before its picture data."""
+        import struct
+        import zlib
+        base = png_of(1, 1)
+        head, rest = base[:33], base[33:]
+        pad = size - len(base) - 12
+        text = b"Comment\x00" + b"x" * (pad - 8)
+        chunk = struct.pack(">I", len(text)) + b"tEXt" + text + struct.pack(">I", zlib.crc32(b"tEXt" + text) & 0xFFFFFFFF)
+        out = head + chunk + rest
+        self.assertEqual(len(out), size)
+        return out
+
+    def test_body_cap_a_save_of_about_1_3_mb_is_refused_and_writes_nothing(self):
+        d = self.v.root / "system/branding/logos"
+        status, ans = self.raw_post("/api/report/logo/save", {"code": "ABC", "kind": "client", "ext": "png", "original": "A" * 1_300_000})
+        self.assertIn(status, (0, 400), (status, ans))
+        if status:
+            self.assertFalse(ans.get("ok"), ans)
+            self.assertTrue(ans.get("message"), ans)
+        self.assertEqual(list(d.glob("*")), [])
+        self.assertEqual(self.post("/api/report/logo", {"code": "ABC", "paths": []}).get("ok"), True, "the server still answers")
+
+    def test_body_cap_a_logo_and_its_trimmed_copy_of_400000_bytes_each_still_save(self):
+        big = self.padded_png(400_000)
+        r = self.save("client", "png", big, drawn=big)
+        self.assertTrue(r["ok"], r)
+        self.assertEqual((self.v.root / "system/branding/logos/ABC-client.png").stat().st_size, 400_000)
+
+    def test_body_cap_a_remove_with_a_5_kb_body_is_refused(self):
+        self.save("client", "png", PNG)
+        status, ans = self.raw_post("/api/report/logo/remove", {"code": "ABC", "kind": "client", "pad": "x" * 5000})
+        self.assertIn(status, (0, 400), (status, ans))
+        self.assertTrue((self.v.root / "system/branding/logos/ABC-client.png").is_file(), "nothing was removed")
 
 
 if __name__ == "__main__":
