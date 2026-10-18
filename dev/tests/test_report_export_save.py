@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import LiveBrowserCase, pin_page_clock  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 from test_reports import ABC, ReportRoutes  # noqa: E402
 
@@ -31,6 +31,7 @@ HAVE_CHROME = bool(launch.find_chrome())
 PROJECT_REPORTS = "Example Programme › Reports"
 WEEKLY_STEM = "2026-10-09 Weekly report - Example Programme"
 PAGE_STEM = "2026-10-16 Weekly report - Example Programme"          # the page opens this week (the clock is pinned)
+NOW = "2026-10-16 10:00"                                            # the clock the page tests run under (server and page), so the names do not depend on the real date
 CLIENT_STEM = "2026-10-09 Client report - Example Programme (Example Client Ltd)"
 
 
@@ -235,10 +236,11 @@ class ExportSavePage(LiveBrowserCase):
 
     @classmethod
     def server_env(cls):
-        return {"CREAITE_NO_LAUNCH": "1"}
+        return {"CREAITE_NO_LAUNCH": "1", "CREAITE_NOW": NOW}
 
     def setUp(self):
         super().setUp()
+        pin_page_clock(self.b, NOW)
         self.reports = self.v.root / ABC / "reports"
         self.b.eval("P.find(p=>p.code==='ABC').cr=false; crTick.value++")             # no client report: Export asks only the format (#221 H1)
         self.b.eval("go('weekly',{code:'ABC'})")
