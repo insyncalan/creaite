@@ -2,6 +2,16 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.3.1
+
+A small fix-up to 2.3.0, mostly for Draft email: a chase email to someone outside your team no longer shows things it shouldn't, and the "I sent it" step understands more of the ways you might type or paste your list.
+
+
+- **A chase email to an outside recipient stays clean.** It no longer prints who else was chased or which reminder it is. The same internal lines are also kept out of the steering and sponsor views.
+- **"I sent it" reads your list more forgivingly.** Lines in lower case, with bullets, or with odd spaces are now recognised.
+- **A person with no items can now get "Add details".**
+- **A few words in Help now say "Draft email"** where they used to say "Chase".
+
 ## creaite 2.3.0
 
 The screens you use every day become calmer and more consistent: one set of sizes everywhere, a top bar that gets out of the way, a quieter Today, a clearer Files page, and a choice of icon size in the side bar.

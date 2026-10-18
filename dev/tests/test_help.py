@@ -52,6 +52,13 @@ class ParseTests(unittest.TestCase):
         cls.h = bd.help_sections()
         cls.tab = {t["id"]: t["html"] for t in cls.h["tabs"]}
 
+    def test_no_chase_button_is_named_where_the_button_is_draft_email_now(self):     # #153/#154: Decisions needed and Prep say Draft email
+        md = (REPO / "system" / "templates" / "help.md").read_text(encoding="utf-8")
+        for line in md.splitlines():
+            if "Decisions needed" in line and ("**Decide**" in line or "Decisions needed:**" in line):
+                self.assertNotRegex(line, r"\*\*Chase\*\*", line[:80])
+        self.assertNotIn("**Decide**, **Chase**", md)
+
     def test_three_parts_in_order(self):
         self.assertEqual([t["title"] for t in self.h["tabs"]], ["Start here", "How do I…", "Reference", "What’s new"])   # #158: What's new is the fourth
         self.assertEqual([t["id"] for t in self.h["tabs"]], ["start", "howto", "reference", "whatsnew"])

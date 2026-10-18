@@ -17,7 +17,7 @@ import { Icon } from "../Icon.jsx";
 import { menuItemsIn, MenuPanel } from "../Menu.jsx";
 
 /** @typedef {{label?: string, icon?: string | null, hint?: string, checked?: boolean, disabled?: boolean,
-    sub?: CxItem[] | (() => CxItem[]), search?: boolean, run?: () => any, head?: string, sep?: boolean}} CxItem */
+    desc?: string, sub?: CxItem[] | (() => CxItem[]), search?: boolean, run?: () => any, head?: string, sep?: boolean}} CxItem */
 /** @typedef {{items: CxItem[], label: string, search: boolean, q: string, key: number, x: number, y: number,
     anchor: HTMLElement | null, pi: number}} CxLevel */
 /** @typedef {{label?: string, search?: boolean, from?: Element | null}} CxOpts */
@@ -181,7 +181,7 @@ function Level({ lv, i }) {
           return (
             <button type="button" class="pkopt" role="menuitem" tabIndex={-1} key={ci} data-ci={String(ci)}
               aria-haspopup={it.sub ? "menu" : undefined} aria-expanded={it.sub ? (next && next.pi === ci ? "true" : "false") : undefined}
-              aria-disabled={it.disabled ? "true" : undefined} aria-current={it.checked ? "true" : undefined}
+              aria-disabled={it.disabled ? "true" : undefined} aria-current={it.checked ? "true" : undefined} aria-description={it.desc || undefined}
               onClick={e => { e.preventDefault(); runItem(i, ci, /** @type {HTMLElement} */ (e.currentTarget)); }}>
               {it.icon ? <Icon name={it.icon} /> : <svg width="18" height="18" aria-hidden="true"></svg>}
               <span>{it.label}{it.hint ? <span class="h">{it.hint}</span> : null}</span>

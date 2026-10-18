@@ -201,6 +201,15 @@ def movement_part(con, p, code, start, end, client):
     return part
 
 
+_STRIP_SENT = False          # #153: set while a steering or sponsor sheet is worked out; a chase log line is Alan's own
+
+
+def _response(r):
+    """A risk's Response as the sheet says it: for a steering or sponsor sheet without the "I sent it" lines (#153)."""
+    text = r["response_action"] or ""
+    return linktext.sent_strip(text) if _STRIP_SENT else text
+
+
 def exposure_part(con, p, code, start, end, client):
     """The Exposure part: the top open risks and issues and the overdue actions; internal only, blockers on milestones and early warnings
     (BL-51)."""
@@ -212,10 +221,10 @@ def exposure_part(con, p, code, start, end, client):
         if client:
             part.add(f"{r['type']}: " + sent(report.client_text(r["client_message"])), r["id"])
             continue
+        resp = _response(r)
         part.add(f"{r['type']}, {r['priority'] or 'priority not set'}: " + sent(r["description"]) + f" {owner_text(r['owner'])}. "
-                 + (f"Response: {linktext.words(r['response_action']).strip().rstrip('.')}" if r["response_action"]
-                    else "No response recorded yet")
-                 + (f" (due {shown(r['due_date'])})" if r["response_action"] and r["due_date"] else "") + ".", r["id"])
+                 + (f"Response: {linktext.words(resp).strip().rstrip('.')}" if resp.strip() else "No response recorded yet")
+                 + (f" (due {shown(r['due_date'])})" if resp.strip() and r["due_date"] else "") + ".", r["id"])
     if len(risks) > cfg["max_risks"]:
         part.add(f"{plural(len(risks) - cfg['max_risks'], 'further open risk or issue', 'further open risks and issues')}, not named here.")
     cut = end
@@ -434,7 +443,12 @@ def facts(code, start=None, end=None, audience="internal"):  # noqa: F811  BL-22
     """The ranked facts sheet; "steering" and "sponsor" are the internal sheet with every sensitive line left out."""
     if audience not in ("steering", "sponsor"):
         return _facts_before_audiences(code, start, end, audience)
-    f = _facts_before_audiences(code, start, end, "internal")
+    global _STRIP_SENT
+    _STRIP_SENT = True
+    try:
+        f = _facts_before_audiences(code, start, end, "internal")
+    finally:
+        _STRIP_SENT = False
     con = tracker.connect()
     try:
         bad = sensitive_ids(con, {i for x in f["parts"] for ln in x["lines"] for i in ln["src"]})

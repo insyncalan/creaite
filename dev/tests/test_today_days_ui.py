@@ -257,7 +257,8 @@ class DayLine(TodayFixture):
         b = self.b
         b.click('#todayDate [data-tab="2026-10-16"]')
         self.assertEqual(self.popup(0)["btns"], ["Open the prep page"])
-        b.eval(f"SA().prep_pages={{...(SA().prep_pages||{{}}),{json.dumps(fx.FRIDAY)}:'projects/ABC Example Programme/agendas/x.html'}}; renderDay(); document.activeElement.blur()")
+        SET = f"SA().prep_pages={{...(SA().prep_pages||{{}}),{json.dumps(fx.FRIDAY)}:'projects/ABC Example Programme/agendas/x.html'}}; renderDay(); document.activeElement.blur()"
+        b.eval(SET)             # a data refresh on a slow runner replaces D.sweep_alerts and drops this: set it again with each read below
         b.key("Escape")                                                 # the first popup must be gone before the second is read: on a slow runner the wait in popup() passed on the stale one
         b.wait("!document.querySelector('#dayMeets .dmpop')")
         for _ in range(4):                                              # a slow runner can still show the first render: close and read again
@@ -266,7 +267,7 @@ class DayLine(TodayFixture):
                 break
             b.key("Escape")
             b.wait("!document.querySelector('#dayMeets .dmpop')")
-            b.eval("renderDay()")
+            b.eval(SET)
         self.assertEqual(got["btns"], ["Open the prep page", "Open the file"])
         self.assertIn("Agenda saved", got["text"])
         self.assertEqual(b.eval("document.querySelector('#dayMeets .dmpop [data-prepgo]').getAttribute('aria-disabled')"), None)   # enabled with the live server
@@ -333,9 +334,8 @@ class DayLine(TodayFixture):
         b.eval("goDay('2026-10-12')")
         self.assertEqual(b.eval("document.querySelectorAll('#todayDate .dypast').length"), 1)
         # a calendar that starts today has nothing to drop down
-        b.eval("D.days.days=D.days.days.filter(d=>d.date>=TODAY); renderDay()")
-        b.wait("document.querySelectorAll('#todayDate .dypast').length===0")
-        self.assertEqual(b.eval("document.querySelectorAll('#todayDate .dypast').length"), 0)
+        # set, draw and count in one call: a data refresh that lands between two calls (a slow runner) puts the days back
+        self.assertEqual(b.eval("(()=>{ D.days.days=D.days.days.filter(d=>d.date>=TODAY); renderDay(); return document.querySelectorAll('#todayDate .dypast').length; })()"), 0)
 
     # ---- small screens ----
     def test_at_320_px_nothing_scrolls_sideways(self):
