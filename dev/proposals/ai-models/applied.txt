@@ -6,3 +6,4 @@ g5-confidential-only-claude
 s1-search-never-reads
 g4-direct-call
 g6-limit-card
+g7-quick-edit-retry
