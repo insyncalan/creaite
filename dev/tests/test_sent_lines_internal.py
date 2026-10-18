@@ -13,6 +13,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 from test_tracker import Vault  # noqa: E402
 
 SRC = "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
@@ -85,6 +86,71 @@ print(json.dumps(client_leak.text_findings(con, 'ABC', {line!r})))""")
 print(json.dumps(report_doc.client_facts('ABC'), default=str))""")
         self.assertNotIn("Chased", json.dumps(facts))
         self.assertNotIn("Waiting on the vendor", json.dumps(facts))
+
+    def test_every_shape_is_recognised_and_stripped(self):
+        import linktext
+        shapes = {
+            "lower case": CHASE.replace("Chased", "chased"), "no-break space": "17-10-2026:\u00a0Chased Sara Example by email (reminder 1).",
+            "bullet": "- " + CHASE, "star bullet": "* " + EMAILED, "iso date": "2026-10-17: Chased Sara Example by email (reminder 1).",
+            "zero-width": "17-10-2026:\u200b Chased Sara Example by email (reminder 1).",
+        }
+        for name, line in shapes.items():
+            self.assertTrue(linktext.sent_has(line), name)
+            self.assertEqual(linktext.sent_strip("Waiting on the vendor\n" + line), "Waiting on the vendor", name)
+        self.assertEqual(linktext.sent_strip("Waiting. " + CHASE), "Waiting.")                    # run into a sentence
+        self.assertEqual(linktext.sent_strip("<p>Waiting</p><p>" + CHASE + "</p>"), "Waiting")    # HTML
+        self.assertEqual(linktext.sent_strip("Waiting\r\n" + CHASE + "\r\nNext"), "Waiting\nNext")   # CRLF leaves no blank line
+        self.assertEqual(linktext.sent_strip("a\n\nb"), "a\n\nb")
+
+    def test_ordinary_text_is_not_a_sent_line(self):
+        import linktext
+        for t in ("We chased the supplier last week", "We chased the supplier last week by email.", "Chased Sara by email yesterday",
+                  "17-10-2026: Supplier answered by email", "Asked for a decision by email", "17-10-2026 Chased Sara by email"):
+            self.assertFalse(linktext.sent_has(t), t)
+            self.assertEqual(linktext.sent_strip(t), t)
+
+    def test_the_client_check_flags_every_shape(self):
+        for line in ("- " + CHASE, CHASE.replace("Chased", "chased"), "Waiting. " + CHASE, "<p>" + CHASE + "</p>",
+                     "2026-10-17: Chased Sara Example by email (reminder 1).", "17-10-2026:\u00a0Chased Sara by email.", "a\r\n" + CHASE):
+            found = self.py(f"""import client_leak
+con = sqlite3.connect('system/tracker.db'); con.row_factory = sqlite3.Row
+print(json.dumps(client_leak.text_findings(con, 'ABC', {line!r})))""")
+            self.assertTrue([f for f in found if "chase" in f.lower()], (line, found))
+
+    def test_a_chase_pane_never_carries_the_log_to_the_recipient(self):
+        f = self.py("""import drafts
+ids = [r[0] for r in sqlite3.connect('system/tracker.db').execute("SELECT id FROM actions WHERE description LIKE 'Share the Northgate%'")]
+print(json.dumps(drafts.chase_facts(ids[0])))""")
+        self.assertNotIn("Chased", json.dumps(f))
+        self.assertIn("Waiting on the vendor", f["update"])
+        d = self.py("""import drafts
+con = sqlite3.connect('system/tracker.db')
+ids = [r[0] for r in con.execute("SELECT id FROM decisions")]
+print(json.dumps(drafts.chase_facts(ids[0])))""")
+        self.assertNotIn("Asked", json.dumps(d))
+        r = self.py("""import drafts
+con = sqlite3.connect('system/tracker.db')
+ids = [r[0] for r in con.execute("SELECT id FROM raid")]
+print(json.dumps(drafts.chase_facts(ids[0])))""")
+        self.assertNotIn("Emailed", r["response"])
+        self.assertIn("Agree dates with the supplier", r["response"])
+        rec = self.py("""import sqlite3
+con = sqlite3.connect('system/tracker.db'); print(json.dumps([r[0] for r in con.execute("SELECT response_action FROM raid")]))""")
+        self.assertIn("Emailed Tom", rec[0])                                                       # the tracker keeps it
+
+    def sheet(self, audience):
+        return self.py(f"""import status_facts, report
+print(json.dumps(status_facts.facts('ABC', '2026-10-01', '2026-10-18', {audience!r})['text']))""")
+
+    def test_steering_and_sponsor_sheets_leave_the_log_out_and_internal_keeps_it(self):
+        for aud in ("steering", "sponsor"):
+            t = self.sheet(aud)
+            self.assertNotIn("Emailed Tom", t, aud)
+            self.assertIn("Agree dates with the supplier", t, aud)
+        self.assertIn("Emailed Tom", self.sheet("internal"))
+        ctx = self.py("""import report
+print(json.dumps(report.current_context('ABC', '2026-10-01', '2026-10-18', audience='steering')))""")
+        self.assertNotIn("Emailed Tom", ctx)
 
 
 if __name__ == "__main__":

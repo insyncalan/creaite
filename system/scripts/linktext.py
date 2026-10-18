@@ -187,17 +187,39 @@ def write(words_, href):
 # reply asked for by 19-10-2026.", "...: Emailed Tom Reid by message asking for an update.", "...: Asked Chris Dunn for a decision by
 # email.". They sit in an action's Latest update, a risk's Response or a decision's Reasoning (drafts.js sentLine writes one fixed
 # shape), so plain code recognises them by that shape and no client path carries them; no schema change is needed.
-SENT_LINE = re.compile(r"^[ \t]*\d{2}-\d{2}-\d{4}: (?:Chased|Emailed|Asked) [^\n]*?\bby (?:email|message)\b[^\n]*$", re.M)
+_SENT_DATE = r"(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2})"
+# The fixed shape: a date, a colon, Chased / Emailed / Asked (any case), a name, "by email" or "by message". It starts a line (after an
+# optional bullet) or follows the end of a sentence; ordinary text such as "We chased the supplier" has no date and never matches.
+SENT_LINE = re.compile(r"(?:^[ \t]*(?:[-*\u2022\u2013][ \t]*)?|(?<=[.!?;])[ \t]+)" + _SENT_DATE
+                       + r":[ \t]+(?i:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?i:email|message)\b[^\n]*$", re.M)
+_TAGS = re.compile(r"</?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>", re.I)
+_BREAKS = re.compile(r"</(?:p|li|div)>|<br\s*/?>", re.I)
+
+
+def _sent_norm(text):
+    """The text as the recognition reads it: no zero-width marks, no-break spaces as spaces, CRLF as LF, simple HTML as plain lines."""
+    t = re.sub("[\u200b\u200c\u200d\u2060\ufeff]", "", str(text or "")).replace("\u00a0", " ").replace("\r\n", "\n").replace("\r", "\n")
+    if _TAGS.search(t):
+        import html
+        t = html.unescape(_TAGS.sub("", _BREAKS.sub("\n", t)))
+        t = t.replace("\u00a0", " ")
+    return t
 
 
 def sent_has(text):
     """Whether a text holds an "I sent it" line."""
-    return bool(SENT_LINE.search(text or ""))
+    return bool(SENT_LINE.search(_sent_norm(text)))
 
 
 def sent_strip(text):
     """The text without its "I sent it" lines (and the blank lines they leave); the rest as it was."""
-    if not text or not SENT_LINE.search(text):
+    if not text or not SENT_LINE.search(_sent_norm(text)):
         return text
-    return SENT_LINE.sub("", text).strip("\n").strip()
+    out = []
+    for line in _sent_norm(text).split("\n"):
+        cut = SENT_LINE.sub("", line)
+        if cut != line and not cut.strip():
+            continue
+        out.append(cut)
+    return "\n".join(out).strip("\n").strip()
 # ===== end #153 =====

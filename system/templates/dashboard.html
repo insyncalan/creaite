@@ -6477,6 +6477,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     sentKindOf: () => sentKindOf,
     sentLine: () => sentLine,
     sentLog: () => sentLog,
+    sentStrip: () => sentStrip,
     sentVia: () => sentVia,
     serverCardFlow: () => serverCardFlow,
     serverSeams: () => serverSeams,
@@ -9560,6 +9561,15 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     if (!a5 || !words) return null;
     const addr = /^(?:[^()\s]|\([^()\s]*\))+$/.test(a5) ? a5 : a5.replace(/\(/g, "%28").replace(/\)/g, "%29");
     return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
+  }
+  var SENT_NORM = (t47) => String(t47 == null ? "" : t47).replace(/[​‌‍⁠﻿]/g, "").replace(/ /g, " ").replace(/\r\n?/g, "\n");
+  var SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
+  var SENT_LINE = /(?:^[ \t]*(?:[-*•–][ \t]*)?|(?<=[.!?;])[ \t]+)(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}):[ \t]+(?:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?:email|message)\b[^\n]*$/im;
+  function sentStrip(text) {
+    let t47 = SENT_NORM(text);
+    if (SENT_TAGS.test(t47)) t47 = t47.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    if (!SENT_LINE.test(t47)) return String(text == null ? "" : text);
+    return t47.split("\n").map((l6) => [l6, l6.replace(SENT_LINE, "")]).filter(([l6, c5]) => c5 === l6 || c5.trim()).map((x5) => x5[1]).join("\n").replace(/^\n+|\n+$/g, "").trim();
   }
 
   // ../../vendor/tiptap/tiptap.module.js
@@ -48997,8 +49007,8 @@ ${pre}**Current state title:** ${title}`);
   var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   function deRowHtml(i5, o5) {
     const C5 = DE_COLOURS, e4 = esc, d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7), colour = d5.level === "over" ? C5.red : d5.level === "soon" ? C5.amber : C5.ink, strong = d5.level === "over" ? "font-weight:bold;" : "";
-    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${String(i5.resp || "").trim() ? deLinks(String(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
-    const upd = o5.includeUpdate && String(i5.upd || "").trim() ? `<br><span style="color:${C5.muted};">Latest update: ${deLinks(i5.upd)}</span>` : "";
+    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${sentStrip(i5.resp).trim() ? deLinks(sentStrip(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
+    const upd = o5.includeUpdate && sentStrip(i5.upd).trim() ? `<br><span style="color:${C5.muted};">Latest update: ${deLinks(sentStrip(i5.upd))}</span>` : "";
     const ch2 = o5.chased && o5.chased[i5.id] ? `<br><span style="color:${C5.muted};">${e4(deChasedWords(o5.chased[i5.id]))}</span>` : "";
     return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
   }
@@ -49010,8 +49020,8 @@ ${pre}**Current state title:** ${title}`);
     list.forEach((i5) => {
       const d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7);
       out.push(`  ${(i5.noid ? "" : i5.id).padEnd(w6)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
-      if (i5.k === "raid") out.push(`  ${pad3}  Response: ${linkWithAddress(String(i5.resp || "").trim()) || "none recorded yet"}`);
-      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad3}  Latest update: ${linkWithAddress(i5.upd)}`);
+      if (i5.k === "raid") out.push(`  ${pad3}  Response: ${linkWithAddress(sentStrip(i5.resp).trim()) || "none recorded yet"}`);
+      if (o5.includeUpdate && sentStrip(i5.upd).trim()) out.push(`  ${pad3}  Latest update: ${linkWithAddress(sentStrip(i5.upd))}`);
       if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad3}  ${deChasedWords(o5.chased[i5.id])}`);
     });
     return out;
