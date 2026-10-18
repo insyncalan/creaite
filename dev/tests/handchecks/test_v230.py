@@ -5,17 +5,20 @@ reason, until that code is in the line.
 Run them all, fill the Results table and make the screenshot sheet:  python3 dev/tools/handcheck.py v2.3.0
 Run this file on its own (it makes the vault itself):                 python3 dev/tests/handchecks/test_v230.py
 
-One method per check, `test_cNN_…`, its docstring quoting the check. One class per group; every class that changes data has a
-vault of its own (`own_vault`):
+One method per check, `test_cNN_…`, its docstring quoting the check. The groups are separate classes; those that change data
+(checks 2, 4, 5, 6, 9, 10, 11 and 14 to 17) are mixins combined into one `Changing` class with a vault of its own, because building
+a vault is the slow step:
   TopBar        1                   the top bar hides on scroll and comes back at the top (shared vault)
-  SideBar       2                   Customise sidebar: Small, Medium, Large (own vault: it saves a setting)
   FilesToday    3, 7, 8, 13         Files, Choose a project, People, the design scale (shared vault, nothing changed)
-  TodayLine     4, 5                Intake and Review as one line; the late-sweep banner (own vault)
-  NotesMenu     6                   right-click a note (own vault: makes notes)
-  ActivityHand  9                   "You, by hand" (own vault: a hand edit is applied)
-  DraftEmail    10, 12              the two Review items and the person menu (shared vault)
-  SentIt        11                  "I sent it" (own vault: it stages updates)
-  Patch231      14 to 17            the 2.3.1 patch (skipped until email-153-fix5 is in the line)
+  SideBar       2                   Customise sidebar: Small, Medium, Large
+  TodayLine     4, 5                Intake and Review as one line; the late-sweep banner
+  NotesMenu     6                   right-click a note
+  ActivityHand  9                   "You, by hand"
+  DraftEmail    10, 12              the two Review items and the person menu
+  SentIt        11                  "I sent it"
+  Patch231      14 to 17            the 2.3.1 patch: they skip, with the reason, until email-153-fix5 is in the line (the vault is
+                                    probed for linktext._sent_norm); run against that branch merged in, all four pass, and against
+                                    2.3.0 as it stands all four fail, so they check something
 Kinds (the Product Manager's map, confirmed as built): 1, 2, 8 and 13 measurable; the rest scriptable; none is judgement or live only
 as a whole. The judgement parts (how the top bar feels, whether icons are sharp, Files against its mockup, the calm of Today, the
 Choose a project page) are on the screenshot sheet (checks 2, 3, 4, 7); a real sweep (5) is live only and is noted on its row.
@@ -584,15 +587,18 @@ class Patch231Checks:
         self.seed([
             {"op": "update", "table": "actions", "id": "FAL-A-003", "changes": {"latest_update": self.CHASE + "\nWaiting on the vendor"}},
             {"op": "update", "table": "raid", "id": "FAL-006", "changes": {"response_action": self.EMAILED + "\nAgree dates with the supplier"}}])
-        # the pane and the popup, for an outside address (Rashid is at an outside organisation)
+        b.reload("typeof go==='function' && LIVE")
+        # the popup, for an outside address (Rashid is at an outside organisation), with the latest update included
         b.eval("go('person','Rashid Al Suwaidi'); openDraftEmail('Rashid Al Suwaidi','chase')")
         b.wait("document.getElementById('deDlg').open&&document.querySelector('#deInc [data-deit]')", 15)
         b.eval("document.querySelectorAll('#deInc [data-deit]').forEach(i=>{ if(!i.checked) i.click(); })")
-        b.pump(0.6)
+        b.eval("(()=>{ const u=document.getElementById('deUpd'); if(u && !u.checked) u.click(); })()")
+        b.pump(0.8)
         mail = b.eval("document.getElementById('dePrev') ? document.getElementById('dePrev').innerText : document.getElementById('deDlg').innerText")
         for bit in ("Chased", "chased", "reminder 1", "reply asked for", "by email", "Emailed"):
             self.assertNotIn(bit, mail, bit)
-        self.assertIn("Waiting on the vendor", mail)
+        self.assertIn("Waiting on the vendor", mail, "the rest of the update is kept")
+        self.assertIn("Agree dates with the supplier", mail, "the rest of the response is kept")
         b.eval("document.getElementById('deDlg').close()")
         facts = self.py("import drafts\nprint(json.dumps([drafts.chase_facts('FAL-A-003'), drafts.chase_facts('FAL-006')]))")
         self.assertNotIn("Chased", json.dumps(facts))
@@ -616,10 +622,21 @@ class Patch231Checks:
             self.assertEqual(stripped, "Waiting on the vendor", name)
         ordinary = self.py("import linktext\nprint(json.dumps([linktext.sent_has(t) for t in ('We chased the supplier last week', 'Chased Sara by email yesterday')]))")
         self.assertEqual(ordinary, [False, False], "ordinary text is not a sent line")
-        # the page does the same (its own copy of the rule)
+        # and in the email the page builds: every shape on an item's update, none of them in the preview of an outside address
         b = self.b
-        got = b.eval("(shapes=>shapes.map(s=>sentStrip('Waiting on the vendor\\n'+s)))(%s)" % json.dumps(list(shapes.values())))
-        self.assertEqual(got, ["Waiting on the vendor"] * len(shapes))
+        self.seed([{"op": "update", "table": "actions", "id": "FAL-A-003",
+                    "changes": {"latest_update": "Waiting on the vendor\n" + "\n".join(shapes.values())}}])
+        b.reload("typeof go==='function' && LIVE")
+        b.eval("go('person','Rashid Al Suwaidi'); openDraftEmail('Rashid Al Suwaidi','update')")
+        b.wait("document.getElementById('deDlg').open&&document.querySelector('#deInc [data-deit]')", 15)
+        b.eval("document.querySelectorAll('#deInc [data-deit]').forEach(i=>{ if(!i.checked) i.click(); })")
+        b.eval("(()=>{ const u=document.getElementById('deUpd'); if(u && !u.checked) u.click(); })()")
+        b.pump(0.8)
+        mail = b.eval("document.getElementById('dePrev').innerText")
+        for bit in ("hased", "mailed", "by email", "reminder", "17-10-2026"):
+            self.assertNotIn(bit, mail, bit)
+        self.assertIn("Waiting on the vendor", mail)
+        b.eval("document.getElementById('deDlg').close()")
 
     def test_c16_add_details_for_a_person_with_no_items(self):
         """16. A person with no items can get "Add details"."""
