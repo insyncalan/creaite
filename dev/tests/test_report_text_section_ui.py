@@ -26,7 +26,7 @@ import test_reports as R  # noqa: E402
 from test_report_text_section import png  # noqa: E402
 
 J = json.dumps
-FT = "#v-weekly section[data-id^=free_]"
+FT = "#v-reporting section[data-id^=free_]"
 BAR = ".sheet-rtebar"
 NOTES_BAR = ["m-heading", "b", "i", "s", "code", "m-list", "quote", "link", "m-insert", "undo", "redo"]
 RICH = ("# Heading one\n\n## Heading two\n\n### Heading three\n\nPlain **bold** *italic* ~~struck~~ `code` and a [link](https://example.com/a).\n\n"
@@ -41,22 +41,22 @@ class Base(LiveBrowserCase):
 
     def setUp(self):
         super().setUp()
-        self.b.eval("go('weekly',{code:'ABC'})")
-        self.b.wait("document.querySelector('#v-weekly section[data-id=current_state]')", 20)
+        self.b.eval("go('reporting','ABC')")
+        self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
 
     def ev(self, js):
         return self.b.eval(js)
 
     def ids(self):
-        return self.ev("[...document.querySelectorAll('#v-weekly .page>section[data-id]')].map(s=>s.dataset.id)")
+        return self.ev("[...document.querySelectorAll('#v-reporting .page>section[data-id]')].map(s=>s.dataset.id)")
 
     def add_foot(self):
-        self.b.click("#v-weekly [data-addtext]")
+        self.b.click("#v-reporting [data-addtext]")
         self.b.wait(f"!!document.querySelector({J(FT + ' .sheet-ft.ProseMirror')})", 10)
         return self.ev(f"document.querySelector({J(FT)}).dataset.id")
 
     def editor(self, sid=None):
-        sel = f"#v-weekly section[data-id={sid}] .sheet-ft" if sid else FT + " .sheet-ft"
+        sel = f"#v-reporting section[data-id={sid}] .sheet-ft" if sid else FT + " .sheet-ft"
         return sel
 
     def put(self, md, sid=None):
@@ -68,7 +68,7 @@ class Base(LiveBrowserCase):
         return self.ev(f"document.querySelector({J(self.editor(sid))}).cxed.value()")
 
     def saved(self):
-        self.b.wait("/Saved · version/.test(document.querySelector('#v-weekly .sheet-status').textContent)", 15)
+        self.b.wait("/Saved · version/.test(document.querySelector('#v-reporting .sheet-status').textContent)", 15)
 
     def draft_data(self):
         draft = next((self.v.root / "system/staging/drafts").glob("*Weekly report*.html"))
@@ -77,7 +77,7 @@ class Base(LiveBrowserCase):
 
 class AddAndEdit(Base):
     def test_the_foot_button_adds_a_text_section_at_the_end_with_the_cursor_in_its_heading(self):
-        self.assertEqual(self.ev("document.querySelectorAll('#v-weekly [data-addtext]').length"), 1)
+        self.assertEqual(self.ev("document.querySelectorAll('#v-reporting [data-addtext]').length"), 1)
         sid = self.add_foot()
         self.assertTrue(sid.startswith("free_"))
         self.assertEqual(self.ids()[-1], sid)
@@ -87,14 +87,14 @@ class AddAndEdit(Base):
 
     def test_the_sections_menu_adds_one_below_it(self):
         b = self.b
-        b.click("#v-weekly section[data-id=summary] .sheet-hbtn")
+        b.click("#v-reporting section[data-id=summary] .sheet-hbtn")
         b.wait("[...document.querySelectorAll('[role=menu] [role^=menuitem]')].some(x=>/Add a text section below/.test(x.textContent))", 5)
         self.ev("[...document.querySelectorAll('[role=menu] [role^=menuitem]')].find(x=>/Add a text section below/.test(x.textContent)).click()")
         b.wait(f"!!document.querySelector({J(FT)})", 10)
         ids = self.ids()
         sid = ids[ids.index("summary") + 1]
         self.assertTrue(sid.startswith("free_"), ids)
-        self.assertEqual(self.ev("document.querySelectorAll('#v-weekly section[data-id^=free_]').length"), 1)
+        self.assertEqual(self.ev("document.querySelectorAll('#v-reporting section[data-id^=free_]').length"), 1)
 
     def test_the_entry_point_other_menus_call(self):
         self.assertTrue(self.ev("addTextSection('summary')"))
@@ -102,7 +102,7 @@ class AddAndEdit(Base):
         ids = self.ids()
         self.assertTrue(ids[ids.index("summary") + 1].startswith("free_"), ids)
         self.assertTrue(self.ev("addTextSection(null)"))
-        self.b.wait("document.querySelectorAll('#v-weekly section[data-id^=free_]').length==2", 10)
+        self.b.wait("document.querySelectorAll('#v-reporting section[data-id^=free_]').length==2", 10)
         self.assertTrue(self.ids()[-1].startswith("free_"))
 
     def test_the_heading_is_named_in_place_and_saved(self):
@@ -189,7 +189,7 @@ class AddAndEdit(Base):
         for want in ("# Heading one", "**bold**", "~~struck~~", "`code`", "https://example.com/a", "- [ ] open", "- [x] done", "> a quote",
                      "```", "| Name", "| Mia"):
             self.assertIn(want, text)
-        b.eval("go('weekly',{code:'ABC'})")
+        b.eval("go('reporting','ABC')")
         b.wait(f"!!document.querySelector({J(FT + ' .sheet-ft.ProseMirror')})", 20)
         self.assertEqual(self.value(sid), text, "the one editor's round trip leaves what was saved as it was")
 
@@ -235,7 +235,7 @@ class Pictures(Base):
         m = re.search(r"!\[[^\]]*\]\((_images/[^)]+\.png)\)", text)
         self.assertIsNotNone(m, text)
         self.assertEqual(next((self.v.root / "projects").glob(f"ABC*/reports/{m.group(1)}")).read_bytes(), shot.read_bytes())
-        b.eval("go('weekly',{code:'ABC'})")
+        b.eval("go('reporting','ABC')")
         b.wait(f"!!document.querySelector({J(FT + ' .sheet-ft figure img')})", 20)
         self.assertTrue(self.ev(f"document.querySelector({J(FT + ' .sheet-ft figure img')}).src.startsWith('data:image/png;base64,')"))
 
@@ -255,7 +255,7 @@ class Pictures(Base):
 class MoveHideDelete(Base):
     def menu_do(self, sid, name):
         b = self.b
-        b.click(f"#v-weekly section[data-id={sid}] .sheet-hbtn")
+        b.click(f"#v-reporting section[data-id={sid}] .sheet-hbtn")
         b.wait(f"[...document.querySelectorAll('[role=menu] [role^=menuitem]')].some(x=>x.textContent.includes({J(name)}))", 5)
         self.ev(f"[...document.querySelectorAll('[role=menu] [role^=menuitem]')].find(x=>x.textContent.includes({J(name)})).click()")
 
@@ -263,9 +263,9 @@ class MoveHideDelete(Base):
         sid = self.add_foot()
         n = len(self.ids())
         self.menu_do(sid, "Move up")
-        self.b.wait(f"[...document.querySelectorAll('#v-weekly .page>section[data-id]')].map(s=>s.dataset.id).indexOf({J(sid)})=={n - 2}", 5)
+        self.b.wait(f"[...document.querySelectorAll('#v-reporting .page>section[data-id]')].map(s=>s.dataset.id).indexOf({J(sid)})=={n - 2}", 5)
         self.menu_do(sid, "Move down")
-        self.b.wait(f"[...document.querySelectorAll('#v-weekly .page>section[data-id]')].map(s=>s.dataset.id).indexOf({J(sid)})=={n - 1}", 5)
+        self.b.wait(f"[...document.querySelectorAll('#v-reporting .page>section[data-id]')].map(s=>s.dataset.id).indexOf({J(sid)})=={n - 1}", 5)
         self.saved()
         data = self.draft_data()
         self.assertEqual(data["layout"]["order"][-1], sid)
@@ -275,15 +275,15 @@ class MoveHideDelete(Base):
         sid = self.add_foot()
         self.put("walrus words")
         self.saved()
-        self.menu_do(sid, "Hide this section")
+        self.menu_do(sid, "Leave out of the export")
         self.b.wait(f"!!document.querySelector('[data-hidden={sid}]')", 5)
         self.saved()
         sec = next(s for s in self.draft_data()["sections"] if s["id"] == sid)
         self.assertTrue(sec["hidden"])
-        self.ev("[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(b=>b.textContent==='Show as exported').click()")
-        self.b.wait("document.querySelector('#v-weekly .sheet-exported')", 5)
-        self.assertNotIn("walrus", self.ev("document.querySelector('#v-weekly .page').innerText"))
-        self.ev("[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(b=>b.textContent==='Show as exported').click()")
+        self.ev("document.querySelector('#v-reporting #hubExp').click()")
+        self.b.wait("document.querySelector('#v-reporting .sheet-exported')", 5)
+        self.assertNotIn("walrus", self.ev("document.querySelector('#v-reporting .page').innerText"))
+        self.ev("document.querySelector('#v-reporting #hubExp').click()")
         self.b.wait(f"!!document.querySelector('[data-hidden={sid}]')", 5)
         self.b.eval(f"document.querySelector('[data-hidden={sid}] .linkbtn').click()")
         self.b.wait(f"!!document.querySelector({J(FT + ' .sheet-ft.ProseMirror')})", 10)
@@ -301,7 +301,7 @@ class MoveHideDelete(Base):
         self.menu_do(sid, "Delete this section")
         self.b.wait("!!document.querySelector('.sheet-delask')", 5)
         self.b.click(".sheet-delask [data-delyes]")
-        self.b.wait(f"!document.querySelector('#v-weekly section[data-id={sid}]')", 5)
+        self.b.wait(f"!document.querySelector('#v-reporting section[data-id={sid}]')", 5)
         self.saved()
         data = self.draft_data()
         self.assertNotIn(sid, [s["id"] for s in data["sections"]])
@@ -311,8 +311,8 @@ class MoveHideDelete(Base):
     def test_an_empty_one_is_deleted_without_asking_and_only_text_sections_can_be_deleted(self):
         sid = self.add_foot()
         self.menu_do(sid, "Delete this section")
-        self.b.wait(f"!document.querySelector('#v-weekly section[data-id={sid}]')", 5)
-        self.b.click("#v-weekly section[data-id=summary] .sheet-hbtn")
+        self.b.wait(f"!document.querySelector('#v-reporting section[data-id={sid}]')", 5)
+        self.b.click("#v-reporting section[data-id=summary] .sheet-hbtn")
         self.b.wait("!!document.querySelector('[role=menu] [role^=menuitem]')", 5)
         self.assertFalse(self.ev("[...document.querySelectorAll('[role=menu] [role^=menuitem]')].some(x=>/Delete this section/.test(x.textContent))"))
         self.b.key("Escape")
@@ -321,13 +321,13 @@ class MoveHideDelete(Base):
         sid = self.add_foot()
         self.ev(f"(()=>{{ const i=document.querySelector({J(FT + ' .sheet-h')}); i.value='Vendor notes'; i.dispatchEvent(new Event('input',{{bubbles:true}})); i.blur(); }})()")
         self.put(RICH)
-        self.ev("[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(b=>b.textContent==='Show as exported').click()")
-        self.b.wait("document.querySelector('#v-weekly .sheet-exported')", 5)
-        sec = f"#v-weekly section[data-id={sid}]"
+        self.ev("document.querySelector('#v-reporting #hubExp').click()")
+        self.b.wait("document.querySelector('#v-reporting .sheet-exported')", 5)
+        sec = f"#v-reporting section[data-id={sid}]"
         self.assertEqual(self.ev(f"document.querySelector({J(sec + ' h2')}).textContent"), "Vendor notes")
         self.assertEqual(self.ev(f"document.querySelectorAll({J(sec + ' .sheet-h, ' + sec + ' .sheet-handle, ' + sec + ' .sheet-rtebar')}).length"), 0)
         self.assertEqual(self.ev(f"document.querySelector({J(sec + ' .sheet-ft')}).getAttribute('contenteditable')"), "false")
-        self.assertEqual(self.ev("document.querySelectorAll('#v-weekly [data-addtext]').length"), 0)
+        self.assertEqual(self.ev("document.querySelectorAll('#v-reporting [data-addtext]').length"), 0)
         for sel in ("h1", "h2", "h3", "strong", "em", "s", "code", "ul ul", "ol", "ul[data-type=taskList]", "blockquote", "pre", "table", "a[href]"):
             self.assertGreaterEqual(self.ev(f"document.querySelectorAll({J(sec + ' .sheet-ft ' + sel)}).length"), 1, sel)
 
@@ -363,20 +363,20 @@ class ClientRuleUI(LiveBrowserCase):
         self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
 
     def open_side(self):
-        self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
-        self.b.click("[data-crmode='side']")
-        self.b.wait("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit').length===2", 10)
+        self.b.eval("go('reporting','ABC'); hubView.value='client'")
+        self.b.wait("document.querySelector('#v-reporting .wr-health')", 20)
+        self.b.click("#hubSeg [data-hv='side']")
+        self.b.wait("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit').length===2", 10)
 
     def pages(self, k):
-        return f"document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit')[{k}]"
+        return f"document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[{k}]"
 
     def test_an_internal_text_section_is_internal_only_until_it_is_added_to_the_client_report(self):
         self.internal_with_text()
-        self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
-        self.assertNotIn("walrus", self.b.eval("document.querySelector('#v-clientreport .page').innerText"), "the client page opens without it")
-        self.assertEqual(self.b.eval("document.querySelectorAll('#v-clientreport section[data-id=free_int]').length"), 0)
+        self.b.eval("go('reporting','ABC'); hubView.value='client'")
+        self.b.wait("document.querySelector('#v-reporting .wr-health')", 20)
+        self.assertNotIn("walrus", self.b.eval("document.querySelector('#v-reporting .page').innerText"), "the client page opens without it")
+        self.assertEqual(self.b.eval("document.querySelectorAll('#v-reporting section[data-id=free_int]').length"), 0)
         self.open_side()
         left = self.pages(0)
         self.assertIn("Internal only", self.b.eval(f"{left}.querySelector('section[data-id=free_int] .sheet-match').textContent"))
@@ -390,14 +390,14 @@ class ClientRuleUI(LiveBrowserCase):
     def test_match_internal_for_every_section_does_not_bring_an_internal_text_section_over(self):
         self.internal_with_text()
         self.open_side()
-        self.b.eval("[...document.querySelectorAll('#v-clientreport .sheet-bar .btn')].find(x=>/Match internal for every section/.test(x.textContent)).click()")
+        self.b.eval("document.querySelector('#v-reporting [data-crmatchall]').click()")
         self.b.pump(0.5)
         self.assertEqual(self.b.eval(f"{self.pages(1)}.querySelectorAll('section[data-id=free_int]').length"), 0)
 
     def test_a_section_written_in_the_client_report_says_so_and_an_added_one_matches_internal(self):
         self.internal_with_text()
         self.open_side()
-        self.b.click("#v-clientreport .sheet-pair > .sheet-fit + .sheet-fit [data-addtext]")
+        self.b.click("#v-reporting .sheet-pair > .sheet-fit + .sheet-fit [data-addtext]")
         self.b.wait(f"{self.pages(1)}.querySelectorAll('section[data-id^=free_]').length===1", 10)
         self.assertIn("Written for the client", self.b.eval(f"{self.pages(1)}.querySelector('section[data-id^=free_] .sheet-match').textContent"))
         self.b.eval(f"{self.pages(0)}.querySelector('section[data-id=free_int] [data-addto]').click()")
