@@ -118,5 +118,12 @@
   "script": "editor.chain().setNode('heading', { level: 3 }).insertContent('Working session').run(); editor.commands.insertContentAt(editor.state.doc.content.size, [{ type: 'paragraph', content: [{ type: 'text', text: 'With Sara and Omar.' }] }, { type: 'table', content: [{ type: 'tableRow', content: [{ type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Topic' }] }] }, { type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Outcome' }] }] }] }, { type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Budget' }] }] }, { type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Agreed' }] }] }] }] }, { type: 'taskList', content: [{ type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Send minutes' }] }] }] }]);",
   "contains": ["### Working session", "| Topic | Outcome |", "| Budget | Agreed |\n\n- [ ] Send minutes"],
   "why": "the Working session template's shape: a heading, a table and actions"
+ },
+ {
+  "name": "report text section: heading, code block, checklist, picture and a link (#218)",
+  "features": "notes",
+  "script": "editor.commands.setContent([{ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Plan' }] }, { type: 'codeBlock', content: [{ type: 'text', text: 'a = 1\\nb = 2' }] }, { type: 'taskList', content: [{ type: 'taskItem', attrs: { checked: true }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'done' }] }] }, { type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'open', marks: [{ type: 'link', attrs: { href: 'https://example.com/a' } }] }] }] }] }, { type: 'image', attrs: { src: '_images/2026-10-18-x.png', alt: 'cap' } }]);",
+  "contains": ["## Plan", "```\na = 1\nb = 2\n```", "- [x] done\n- [ ] [open](https://example.com/a)", "![cap](_images/2026-10-18-x.png)"],
+  "why": "H5: what the report text section's bar and Insert menu make (heading, code block, checklist, a link, a picture) is written the same way twice more"
  }
 ]

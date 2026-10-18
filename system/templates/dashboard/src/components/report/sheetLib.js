@@ -105,11 +105,64 @@ export function shownOf(s) {
 /** True when two sections differ in what they show (the ≠ marker). @param {any} a @param {any} b */
 export const sectionDiffers = (a, b) => JSON.stringify(shownOf(a)) !== JSON.stringify(shownOf(b));
 
+/** The type of a text section (#218): a section Alan adds anywhere, named by him, written in the one editor with the Notes profile.
+    creaite_doc.TEXT_TYPE is the same word. */
+export const TEXT_TYPE = "freetext";
+/** @param {any} s */
+export const isTextSection = s => !!s && s.type === TEXT_TYPE;
+
+/** A fresh id for a text section: `free_` and a short random word, so the internal and the client report never give two different
+    sections the same one. @param {any} doc */
+export function newTextId(doc) {
+  const have = new Set((doc.sections || []).map((/** @type {any} */ s) => s.id));
+  for (;;) {
+    const id = `free_${Math.random().toString(36).slice(2, 8)}`;
+    if (!have.has(id)) return id;
+  }
+}
+
+/** The document with a new, empty text section after the section `afterId` (null or an id the document doesn't hold: at the end). Its
+    heading is empty for Alan to name; it belongs to the report it was made in (`audience`: "internal", or "client" in a client report).
+    @param {any} doc @param {string|null} afterId @param {string} [id] */
+export function withTextSection(doc, afterId, id = newTextId(doc)) {
+  const at = afterId == null ? -1 : doc.sections.findIndex((/** @type {any} */ s) => s.id === afterId);
+  const sec = { id, type: TEXT_TYPE, heading: "", default_heading: "", hidden: false, text: "", audience: (doc.audience || "internal") === "internal" ? "internal" : "client" };
+  const sections = doc.sections.slice();
+  sections.splice(at < 0 ? sections.length : at + 1, 0, sec);
+  return syncLayout({ ...doc, sections });
+}
+
+/** The document without a section (a text section deleted); its heading leaves the layout too. @param {any} doc @param {string} id */
+export function withoutSection(doc, id) {
+  const out = syncLayout({ ...doc, sections: doc.sections.filter((/** @type {any} */ s) => s.id !== id) });
+  const heads = { ...((out.layout || {}).headings || {}) };
+  delete heads[id];
+  return { ...out, layout: { ...out.layout, headings: heads } };
+}
+
+/** The partner document with a copy of the left page's text section added where it stood (after the nearest earlier section the partner
+    has, else at the end), marked as the partner's own (`audience`): Match internal for a text section the client report doesn't have.
+    @param {any} left @param {any} right @param {any} src */
+export function addTextCopy(left, right, src) {
+  const copy = { ...JSON.parse(JSON.stringify(src)), hidden: false, audience: (right.audience || "internal") === "internal" ? "internal" : "client" };
+  delete copy.tags;
+  const order = left.sections.map((/** @type {any} */ s) => s.id), k = order.indexOf(src.id), have = new Set(right.sections.map((/** @type {any} */ s) => s.id));
+  let after = null;
+  for (let j = k - 1; j >= 0; j--) if (have.has(order[j])) { after = order[j]; break; }
+  const at = after == null ? right.sections.length : right.sections.findIndex((/** @type {any} */ s) => s.id === after) + 1;
+  const sections = right.sections.slice();
+  sections.splice(at, 0, copy);
+  return syncLayout({ ...right, sections });
+}
+
 /** Match internal for one section: the left section's content copied to the right page, keeping the right page's hidden state,
-    its row eyes and its figure eyes. Returns the partner document. @param {any} left @param {any} right @param {string} id */
+    its row eyes and its figure eyes. Returns the partner document. A text section the partner doesn't have is added there (that is the
+    one way an internal text section reaches the client report). @param {any} left @param {any} right @param {string} id */
 export function matchSection(left, right, id) {
   const src = left.sections.find((/** @type {any} */ s) => s.id === id), mine = right.sections.find((/** @type {any} */ s) => s.id === id);
+  if (src && !mine && isTextSection(src)) return addTextCopy(left, right, src);
   if (!src || !mine) return right;
+  if (isTextSection(src)) return mapSection(right, id, s => ({ ...s, heading: src.heading, text: src.text || "" }));
   const copy = JSON.parse(JSON.stringify(src));
   copy.hidden = !!mine.hidden;
   if (Array.isArray(copy.rows)) {
@@ -125,7 +178,7 @@ export function matchSection(left, right, id) {
 /** Match internal for every section. @param {any} left @param {any} right */
 export function matchAll(left, right) {
   let out = right;
-  for (const s of left.sections) out = matchSection(left, out, s.id);
+  for (const s of left.sections) if (!isTextSection(s) || out.sections.some((/** @type {any} */ x) => x.id === s.id)) out = matchSection(left, out, s.id);   // a text section the partner lacks is added one at a time
   return out;
 }
 /** "Matching internal" or "Edited for the client", worked out by comparing, not stored. @param {any} left @param {any} right @param {string} id @param {string} label */

@@ -14,8 +14,9 @@ import { Icon } from "../Icon.jsx";
 import { openMenu } from "../Menu.jsx";
 import { EyeButton } from "./EyeButton.jsx";
 import { SheetEditor, mdNodes } from "./SheetText.jsx";
-import { defaultHeading, hideSection, matchLabel, moveBy, moveFigure, moveSection, renameHeading, resetHeading,
-  rowCounts, sectionDiffers, setFigureShown, showSection, syncLayout } from "./sheetLib.js";
+import { defaultHeading, hideSection, isTextSection, matchLabel, moveBy, moveFigure, moveSection, renameHeading, resetHeading,
+  rowCounts, sectionDiffers, setFigureShown, showSection, syncLayout, withTextSection, withoutSection } from "./sheetLib.js";
+import { markNewText, takeNewText } from "../../stores/textSection.js";
 
 /** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./Sheet.jsx").SheetSection} SheetSection */
@@ -94,6 +95,7 @@ const tagsOf = s => /** @type {SheetTag[]} */ ((/** @type {any} */ (s)).tags || 
 function SheetDefault({ ctx, rowFn }) {
   const s = /** @type {any} */ (ctx.section), { Text: T, ItemRef: Ref, Tag: Tg } = ctx;
   const live = ctx.editing;
+  if (isTextSection(s)) return <FreeText ctx={ctx} />;
   if (s.type === "table") return <TableBody ctx={ctx} rowFn={rowFn} />;
   if (s.type === "figures") return <Figures ctx={ctx} />;
   if (s.type === "panes") return <div class="panes">{(s.panes || []).map((/** @type {any} */ p, /** @type {number} */ i) => <div key={i}><h3>{p.title}</h3><T pane={i} /></div>)}</div>;
@@ -102,6 +104,15 @@ function SheetDefault({ ctx, rowFn }) {
   return <div>{extra}<T rich />
     {!ctx.exported && (live || tagsOf(s).length) ? <span class="sheet-tags">{tagsOf(s).map(t => <Tg key={`${t.ref}|${t.text}`} tag={t} />)}</span> : null}
     {miles.length ? <ul>{miles.map((/** @type {any} */ x) => <li key={x.ref}><Ref id={x.ref} /> {x.m ? x.m.title || "" : ""}{x.m && x.m.due_date ? ` · ${x.m.due_date}` : ""}</li>)}</ul> : null}</div>;
+}
+
+/** A text section (#218): its words in the one editor with the Notes bar and `/` menu (SheetEditor's `text`), whole in Show as exported (the
+    same editor, read only). Its heading is the section's own, named by Alan. @param {{ctx: SectionCtx}} props */
+export function FreeText({ ctx }) {
+  const h = /** @type {Here} */ (useContext(SHEET_HERE)), s = /** @type {any} */ (ctx.section);
+  return <SheetEditor value={s.text || ""} rich text={{ code: String(ctx.doc.project || "") }} label={s.heading || "Text section"}
+    onText={t => h.update({ text: t }, "Text edited")} ai={h.ai} editable={h.editing}
+    placeholder="Write here. Anything you add is part of the report and its exports." />;
 }
 
 /** A table section: its shown rows, an eye on each while editing, "Showing 5 of 8". @param {{ctx: SectionCtx, rowFn?: (c: RowCtx) => any}} props */
@@ -220,17 +231,23 @@ function SectionBlock({ s, i, p, peer }) {
   const differs = p.side === "left" && peer ? sectionDiffers(s, peer) : false;
   const tags = tagsOf(s);
   const nowName = (/** @type {string} */ v) => { if (v.trim() && v.trim() !== s.heading) change(renameHeading(doc, s.id, v), "Heading renamed", null); else setName(s.heading); };
+  const isText = isTextSection(s);
+  const [confirmDel, setConfirmDel] = useState(false);          // #218: deleting a text section that holds words asks first
+  const deleteIt = () => { setConfirmDel(false); change(withoutSection(doc, s.id), "Section deleted", { type: "section-deleted", id: s.id }); };
+  const headBox = useRef(/** @type {HTMLInputElement|null} */ (null));
+  useEffect(() => { if (isText && editing && takeNewText(s.id) && headBox.current) headBox.current.focus(); }, []);     // a text section just added: its heading takes the cursor
   const report = !!p.report;
   const menu = [
     { id: "hide", name: report ? "Leave out of the export" : "Hide this section", icon: "eyeoff" },
     ...(i > 0 ? [{ id: "up", name: "Move up", icon: "arrowup" }] : []), ...(i < doc.sections.length - 1 ? [{ id: "down", name: "Move down", icon: "arrowdown" }] : []),
-    ...(report ? [p.report && p.report.addText ? { id: "addtext", name: "Add a text section below", icon: "type" }
-      : { id: "addtext", name: "Add a text section below", icon: "type", disabled: true, tip: "Text sections arrive with the free-text section" }] : []),   // H5's hook: pass `addText(sectionId)` to ReportSheet
-    ...(s.heading !== defaultHeading(s) ? [{ id: "reset", name: "Reset the heading", icon: "undo" }] : [])];
+    ...(report ? [{ id: "addtext", name: "Add a text section below", icon: "type" }] : []),   // ReportSheet's addText(sectionId) is stores/textSection.js addTextSection
+    ...(s.heading !== defaultHeading(s) ? [{ id: "reset", name: "Reset the heading", icon: "undo" }] : []),
+    ...(isText ? [{ id: "delete", name: "Delete this section", icon: "trash" }] : [])];
   const onPick = (/** @type {string} */ id) => {
     if (id === "hide") change(hideSection(doc, s.id), "Section hidden", { type: "section-hidden", id: s.id });
     else if (id === "reset") change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id });
     else if (id === "addtext") p.report?.addText?.(s.id);
+    else if (id === "delete") { if (String(sec.text || "").trim()) setConfirmDel(true); else deleteIt(); }
     else { const d = id === "up" ? -1 : 1; p.refocus.current = s.id; change(moveBy(doc, s.id, d), "Section moved", { type: "section-moved", id: s.id, to: i + d }); }
   };
   /** The section menu is a popup drawn at the end of the page (Menu.jsx openMenu), not inside the scaled page: it keeps 13 px at any
@@ -259,17 +276,24 @@ function SectionBlock({ s, i, p, peer }) {
         <button type="button" class="sheet-hbtn" aria-haspopup="menu" aria-expanded="false" aria-label={`${s.heading}: section options`}
           onClick={e => openSectionMenu(/** @type {HTMLElement} */ (e.currentTarget))}><Icon name="chevdown" /></button>
       </div> : null}
-      {s.type === "header" ? null : <h2>
-        {editing ? <input class="sheet-h" aria-label="Section heading" value={name} style={{ width: `${Math.max(8, name.length + 1)}ch` }} onInput={e => setName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
+      {s.type === "header" || (isText && !editing && !String(s.heading || "").trim()) ? null : <h2>
+        {editing ? <input ref={headBox} class="sheet-h" aria-label="Section heading" placeholder={isText ? "Section heading" : undefined} value={name}
+          style={{ width: `${Math.max(isText ? 18 : 8, name.length + 1)}ch` }} onInput={e => setName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
           onBlur={e => nowName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); /** @type {HTMLInputElement} */ (e.currentTarget).blur(); } if (e.key === "Escape") setName(s.heading); }} /> : s.heading}
         {editing && s.heading !== defaultHeading(s) ? <button type="button" class="sheet-reset" onClick={() => change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id })}>Reset</button> : null}
         {sparkOn && !ownSpark && spark ? <SparkButton on={spark} heading={s.heading} health={s.type === "health"} /> : null}
         {editing && tags.length ? <button type="button" class="sheet-untag" onClick={() => { update({ tags: [] }, "Tags removed"); onEvent({ type: "tag", removed: true, all: true, id: s.id }); }}>Remove all tags</button> : null}
         {differs && peer ? <span class="sheet-diff" tabIndex={0} title={`${p.peerLabel} reads differently here`}>≠ {p.peerLabel}</span> : null}
-        {p.side === "right" && !readOnly && !exported && p.match && !p.match.readOnly ? <span class="sheet-match">{p.match.label(s.id)}
+        {isText && !peer && !exported && p.side === "left" && p.addTo ? <span class="sheet-match" data-textonly>Internal only
+          {!p.addTo.readOnly ? <> · <button type="button" class="linkbtn" data-addto onClick={() => p.addTo?.one(s.id)}>Add to the {p.peerLabel.toLowerCase()} report</button></> : null}</span> : null}
+        {isText && !peer && !exported && p.side === "right" ? <span class="sheet-match" data-textonly>Written for the {p.peerLabel.toLowerCase()}</span> : null}
+        {(!isText || peer) && p.side === "right" && !readOnly && !exported && p.match && !p.match.readOnly ? <span class="sheet-match">{p.match.label(s.id)}
           {p.match.differs(s.id) ? <button type="button" class="linkbtn" onClick={() => p.match?.one(s.id)}>Match internal</button> : null}</span> : null}
       </h2>}
+      {confirmDel ? <div class="sheet-delask" role="alertdialog" aria-label="Delete this section?">Delete “{s.heading || "this text section"}” and what is written in it?
+        <button type="button" class="btn sm" data-delyes onClick={deleteIt}>Delete</button>
+        <button type="button" class="btn sm" onClick={() => setConfirmDel(false)}>Keep</button></div> : null}
       {rd ? <Redraft rd={staleWhy(rd) ? { status: "stale", why: staleWhy(rd) } : rd} s={s} readOnly={!editing} close={() => setRd(null)} onUse={(choice, a) => {
         if (staleWhy(rd)) { setRd({ ...rd, status: "stale", why: staleWhy(rd) }); return; }       // never applied from an earlier version
         if (used.current) return;                                                                          // a double click counts and applies once
@@ -324,7 +348,8 @@ function Redraft({ rd, s, readOnly, close, onUse, onOpen, known }) {
     onOpenItem?: (ref: string) => boolean, onEvent: (e: SheetEvent) => void, onRedraft?: (s: SheetSection) => Promise<any>,
     aiFor: (s: SheetSection, ro: boolean) => any, checks: any[], refocus: {current: string|null},
     match: null | {readOnly: boolean, label: (id: string) => string, differs: (id: string) => boolean, one: (id: string) => void},
-    report?: {audience: string, addText?: (sectionId: string) => void}}} PageProps */
+    report?: {audience: string, addText?: (sectionId: string) => void},
+    addTo?: null | {readOnly: boolean, one: (id: string) => void}}} PageProps */      // #218: the left page's "Add to the client report" for a text section the partner lacks
 
 /** One page: the header, its sections in order, the extras between them. @param {PageProps} p */
 export function SheetPage(p) {
@@ -349,9 +374,14 @@ export function SheetPage(p) {
   });
   if (!exported) for (const x of p.extras.filter(e => e.after == null)) out.push(extra(x));
   const label = { internal: "Internal", client: "Client", distributed: "Distributed" }[/** @type {"internal"} */ (doc.audience || "internal")] || "";
+  const addFoot = () => {
+    const last = doc.sections[doc.sections.length - 1], nd = withTextSection(doc, last ? last.id : null), nid = nd.sections[nd.sections.length - 1].id;
+    markNewText(nid); onChange(nd, "Text section added"); onEvent({ type: "text-added", id: nid });
+  };
   return <div class="page" data-audience={doc.audience || "internal"} data-report={p.report ? "sheet" : undefined}>
     {p.report ? null : <header class="doc"><div><h1>{doc.title}</h1><div class="sub">{(/** @type {any} */ (doc)).project_name || ""}{(/** @type {any} */ (doc)).client ? ` · ${(/** @type {any} */ (doc)).client}` : ""}</div></div><div class="sub">{label}</div></header>}
     {out}
+    {editing ? <div class="sheet-addfoot"><button type="button" class="btn sheet-addtext" data-addtext onClick={addFoot}><Icon name="plus" /> Add a text section</button></div> : null}
   </div>;
 }
 

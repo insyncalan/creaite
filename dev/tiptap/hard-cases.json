@@ -444,5 +444,11 @@
   "features": "current",
   "text": "- [ ] **Chase** the _vendor_ (see [the plan](https://example.com/plan)) ABC-A-003\n- [x] `Run` the check",
   "why": "#134: marks, a link and an item ID inside checklist items in Current state"
+ },
+ {
+  "name": "report text section with every element (#218)",
+  "features": "notes",
+  "text": "# Heading one\n\n## Heading two\n\n### Heading three\n\nPlain **bold** *italic* ~~struck~~ `code` and a [link](https://example.com/a).\n\n- bullet\n  - nested\n\n1. first\n2. second\n\n- [ ] open\n- [x] done\n\n> a quote\n\n```\nlet x = 1;\n```\n\n| Name | Role |\n| --- | --- |\n| Mia | Lead |\n\n![Site photo](_images/2026-10-18-site.png)",
+  "why": "H5: a report's text section is the Notes editor with the Notes writer; headings, emphasis, inline and block code, nested lists, a checklist, a quote, a table and a picture in one document come back byte for byte"
  }
 ]

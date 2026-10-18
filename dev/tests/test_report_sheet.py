@@ -215,13 +215,20 @@ class SheetChecks:
         self.b.wait("!document.querySelector('.pophost [role=menu]')", 5)
         self.assertTrue(self.q(f"document.activeElement===document.querySelector('{btn}')"), "focus returns to the chevron")
 
-    def test_add_text_section_is_disabled_with_a_tip_until_it_lands(self):
+    def test_add_text_section_is_enabled_and_adds_a_section_below(self):
+        """H5 landed: the section menu's item adds an empty text section just after this one (stores/textSection.js addTextSection)."""
         self.start()
-        self.open_menu()
+        self.open_menu("risks")
         m = self.menu_report()
-        i = [n.split("\n")[0].strip() for n in m["names"]].index("Add a text section below")
-        self.assertEqual(m["disabled"][i], "true")
-        self.assertTrue(m["tips"][i], "a tooltip says why")
+        names = [n.split("\n")[0].strip() for n in m["names"]]
+        i = names.index("Add a text section below")
+        self.assertNotEqual(m["disabled"][i], "true", "the item is enabled")
+        before = self.q(f"document.querySelectorAll('{self.VIEW} .page section[data-id]').length")
+        self.q("[...document.querySelectorAll('.pophost [role=menuitem]')].find(i=>/Add a text section below/.test(i.textContent)).click()")
+        self.b.wait(f"document.querySelectorAll('{self.VIEW} .page section[data-id]').length=={before + 1}", 5)
+        after = self.q(f"""(()=>{{const s=[...document.querySelectorAll('{self.VIEW} .page section[data-id]')],
+          k=s.findIndex(x=>x.dataset.id==='risks'); return s[k+1].dataset.id}})()""")
+        self.assertTrue(str(after).startswith("free_"), "the new text section sits directly below Risks")
 
     def test_leave_out_of_the_export_from_the_menu(self):
         self.start()

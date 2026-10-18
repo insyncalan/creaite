@@ -14,6 +14,7 @@
    Text only through JSX. */
 import { useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../../core/server.js";
+import { addTextSection } from "../../stores/textSection.js";
 import { EyeButton } from "./EyeButton.jsx";
 import { Sheet } from "./Sheet.jsx";
 import { wkDm, wkLongDate, wkTone, wkDmy } from "./weekly/weeklyDoc.js";
@@ -24,10 +25,10 @@ import { wkDm, wkLongDate, wkTone, wkDmy } from "./weekly/weeklyDoc.js";
 /** @typedef {{key: string, label: string, w?: string, num?: boolean, cell: (r: Row) => any}} Col */
 /** @typedef {{ctx: SectionCtx, row: SheetRow, i: number, cells: Record<string, string>, item: any}} Row */
 
-/** The sheet of both reports. `audience` is "internal" or "client"; `addText(sectionId)` is the free-text section's hook (H5): until
-    it is given, "Add a text section below" in the section menu is shown disabled with its tip.
+/** The sheet of both reports. `audience` is "internal" or "client"; `addText(sectionId)` is the free-text section's hook (H5): the
+    section menu's "Add a text section below" calls it, and it is stores/textSection.js addTextSection (the sheet binds what it does).
     @param {import("./Sheet.jsx").SheetProps & {audience: "internal"|"client", addText?: (sectionId: string) => void}} props */
-export function ReportSheet({ audience, addText, ...rest }) {
+export function ReportSheet({ audience, addText = addTextSection, ...rest }) {
   return <Sheet {...rest} report={{ audience, addText }} />;
 }
 

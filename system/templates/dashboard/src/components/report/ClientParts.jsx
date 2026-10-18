@@ -21,6 +21,7 @@ import { CurrentState, Words } from "./weekly/Notes.jsx";
 import { Rich } from "./weekly/Rich.jsx";
 import { weeklyLogos } from "../../stores/weekly.js";
 import { crCheck, crDirty, crDoc, crInternal, crLogos, runCheck } from "../../stores/clientReport.js";
+import { FreeText } from "./SheetPage.jsx";
 
 /** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
 /** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
@@ -206,5 +207,6 @@ export const CLIENT_RENDERERS = {
     glance: (/** @type {SectionCtx} */ ctx) => <Glance ctx={ctx} />, milestones: (/** @type {SectionCtx} */ ctx) => <MilestonesSection ctx={ctx} />,
     current_state: (/** @type {SectionCtx} */ ctx) => <PanesSection ctx={ctx} />,
   },
-  byType: { text: (/** @type {SectionCtx} */ ctx) => <TextSection ctx={ctx} />, table: (/** @type {SectionCtx} */ ctx) => <ClientTable ctx={ctx} /> },
+  byType: { text: (/** @type {SectionCtx} */ ctx) => <TextSection ctx={ctx} />, table: (/** @type {SectionCtx} */ ctx) => <ClientTable ctx={ctx} />,
+    freetext: (/** @type {SectionCtx} */ ctx) => <Sec ctx={ctx}><FreeText ctx={ctx} /></Sec> },      // #218: a text section, with its Matching internal line when the internal report has it
 };

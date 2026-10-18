@@ -15,6 +15,8 @@
               sheet never offers an internal item. No checklist until the editor has one (v2.2.0).
    - email:   Draft email's preview (#133): the email as styled HTML on the editor's Email feature set (core/editor.js). No toolbar and no `/` menu.
    - none:    a host that draws no bar (a table cell on a sheet).
+   - textsection: a report's text section (#218): Notes' bar and `/` menu (headings, B I S code, bulleted, numbered and checklist lists, quote, link, Insert
+              with Table and Picture, undo, redo), floating over the active field like the sheet's. Written as Notes writes it (`#` to `###`, no head shift).
 
    The tools a host does itself (it owns the pickers and the file input) are `host: true`: the bar shows one only when the host
    says it can do it, so the capture drawer, which has no pickers yet, shows the shared buttons alone.
@@ -103,6 +105,9 @@ export const ED_SLASH = {
 export const ED_SLASH_ROWS = {
   notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "link", "item", "person", "note",
     "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
+  /* #218: a report's text section has what Notes' `/` menu has that a report can host: not the note, person and work-item pickers
+     (a client report must never offer an internal item) and not Notes' templates */
+  textsection: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "link"],
   current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
   plain: [], email: [], none: [],
 };
@@ -142,6 +147,8 @@ function itemType(e) { return e.isActive("taskItem") ? "taskItem" : "listItem"; 
     @type {Record<string, Profile>} */
 export const ED_PROFILES = {
   notes: { tip: "Notes: one line, grouped into hover menus (Heading, List, Insert)",
+    tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"] },
+  textsection: { tip: "A report's text section (#218): the Notes bar, one line, grouped; Insert has Table and Picture (no note, person or work-item pickers)",
     tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"] },
   capture: { tip: "The capture drawer: the shared buttons, flat (no pickers yet)",
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "code", "|", "ul", "ol", "task", "outdent", "indent", "quote", "|", "link", "unlink", "clear", "|",

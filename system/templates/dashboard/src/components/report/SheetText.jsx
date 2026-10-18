@@ -8,6 +8,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { creaiteEditor, ED_QUIET } from "../../core/editor.js";
 import { HEAD_SHIFT } from "../../core/editorProfiles.js";
 import { EditorBar } from "../EditorBar.jsx";
+import { attachSlash } from "../SlashMenu.jsx";
+import { OWN_JOIN, UNDO_DEPTH, cxUndoSteps, undoHeadEnd } from "../../core/undoSteps.js";
+import { addReportImage, imageRefsIn, loadReportImages, reportImageSrc, textMsg } from "../../stores/textSection.js";
 
 /** @typedef {{id: string, quote: string, note?: string, n?: number}} SheetCheckLike */
 
@@ -198,26 +201,56 @@ function keepCaretInView(/** @type {any} */ view) {
 }
 
 /** @typedef {{value: string, rich: boolean, label: string, onText: (text: string) => void, ai?: any, checks?: SheetCheckLike[],
-    cls?: string, multiline?: boolean, placeholder?: string, editable?: boolean}} EditorProps */
+    cls?: string, multiline?: boolean, placeholder?: string, editable?: boolean, text?: {code: string}|null}} EditorProps */
 /** One field on the one editor. It keeps its editor while it is drawn again; a value set from outside (a redraft used, a reload)
     goes in when the editor isn't being typed in. @param {EditorProps} props */
-export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls = "", multiline = true, placeholder, editable = true }) {
+export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls = "", multiline = true, placeholder, editable = true, text = null }) {
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
   const ed = useRef(/** @type {import("../../core/editor.js").EdHandle|null} */ (null));
+  const fileIn = useRef(/** @type {HTMLInputElement|null} */ (null));
   const on = useRef(onText); on.current = onText;
   const marks = useRef(checks); marks.current = checks;
+  /* #218: a text section (`text`, with its project's code) is the Notes editor (features "notes", written `#` to `###`) with the Notes bar and `/` menu;
+     its pictures are read first so the editor can draw them where they stand */
+  const code = text ? text.code : "";
+  const [ready, setReady] = useState(!text || !imageRefsIn(value).length);       // a text with no picture mounts at once
   useEffect(() => {
+    if (!text || ready) return undefined;
+    let live = true;
+    loadReportImages(code, imageRefsIn(value)).then(() => { if (live) setReady(true); });
+    return () => { live = false; };
+  }, [code]);
+  /** The inserts the host does: a table, and a picture (its file dialog). */
+  const hostRows = () => ({
+    table: () => { const h = ed.current; if (h) h.editor.chain().focus().setMeta(OWN_JOIN, true).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); },
+    image: () => fileIn.current?.click() });
+  /** Pictures, as Notes adds them: each is filed under `_images/` as it is added, put after the block holding the cursor (else at the end), and
+      its caption takes the focus. @param {FileList|null} files */
+  const addImages = async files => {
+    for (const f of [...(files || [])]) {
+      const ref = await addReportImage(code, f), h = ed.current;
+      if (!ref || !h) continue;
+      const st = h.editor.state, end = st.doc.content.size, at = st.doc.resolve(Math.min(st.selection.from, end)), after = at.depth ? at.after(1) : end;
+      h.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...(after >= end ? [{ type: "paragraph" }] : [])]).run();
+      const cap = /** @type {HTMLElement|null} */ (box.current ? box.current.querySelector(`figure[data-ref="${CSS.escape(ref)}"] figcaption`) : null);
+      if (cap) cap.focus();
+    }
+  };
+  useEffect(() => {
+    if (!ready) return undefined;
     const el = /** @type {HTMLDivElement} */ (box.current);
     const editorProps = { handleScrollToSelection: keepCaretInView };
-    const h = creaiteEditor(el, rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...(ai ? { ai } : {}) }
+    const h = creaiteEditor(el, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: ref => reportImageSrc(code, ref), ...(ai ? { ai } : {}) }
+      : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...(ai ? { ai } : {}) }
       : { features: "plain", text: value, multiline, editorProps, ...(ai ? { ai } : {}) });
     ed.current = h;
     h.editor.setEditable(editable);
+    const slashOff = text ? attachSlash(h, { profile: "textsection", host: hostRows() }) : () => {};
     const input = () => on.current(h.value());
     el.addEventListener("input", input);
     paintChecks(h, marks.current);
-    return () => { el.removeEventListener("input", input); h.destroy(); ed.current = null; };
-  }, [rich, !!ai]);
+    return () => { el.removeEventListener("input", input); slashOff(); h.destroy(); ed.current = null; };
+  }, [rich, !!ai, ready]);
   useEffect(() => {
     const h = ed.current;
     if (h && !h.el.contains(document.activeElement) && h.value() !== value) { h.setValue(value); paintChecks(h, marks.current); }
@@ -245,13 +278,18 @@ export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls =
     if (ro) ro.observe(bar);
     return () => { if (ro) ro.disconnect(); };
   }, [showBar]);
-  const field = <div ref={box} class={`sheet-ed${rich ? " sheet-rich" : " sheet-cell"} ${cls}`} role="textbox" aria-multiline={rich || multiline ? "true" : "false"}
+  const field = <div ref={box} class={`sheet-ed${rich ? " sheet-rich" : " sheet-cell"}${text ? " sheet-ft" : ""} ${cls}`} role="textbox" aria-multiline={rich || multiline ? "true" : "false"}
     aria-label={label} data-ph={placeholder} spellcheck />;
   if (!rich) return field;
   return <div ref={wrap} class="sheet-edwrap" data-bar={showBar ? spot : undefined} onFocusIn={() => setActive(true)}
     onFocusOut={e => { const to = /** @type {Node|null} */ (e.relatedTarget); if (!to || !wrap.current || !wrap.current.contains(to)) setActive(false); }}>
-    {showBar ? <EditorBar profile="sheet" handle={() => ed.current} cls="sheet-rtebar" label={`Formatting: ${label}`} /> : null}
+    {showBar ? <EditorBar profile={text ? "textsection" : "sheet"} handle={() => ed.current} cls="sheet-rtebar" label={`Formatting: ${label}`}
+      {...(text ? { host: hostRows() } : {})} /> : null}
     {field}
+    {text ? <input ref={fileIn} type="file" class="sheet-imgfile" accept="image/png,image/jpeg" multiple hidden aria-hidden="true" tabIndex={-1}
+      onCancel={() => { if (ed.current) undoHeadEnd(ed.current.editor); }}
+      onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); try { await addImages(i.files); } finally { if (ed.current) undoHeadEnd(ed.current.editor); } i.value = ""; }} /> : null}
+    {text && textMsg.value ? <div class="sheet-ftmsg" role="alert">{textMsg.value}</div> : null}
   </div>;
 }
 

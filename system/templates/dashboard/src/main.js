@@ -105,6 +105,7 @@ export * from "./components/notes/FindUpdates.jsx";   /* BL-301 E: Find updates,
 export * from "./components/notes/DeleteNote.jsx";   /* #124: Delete note, its confirm box and the card */
 export * from "./stores/findUpdates.js";
 export * from "./stores/reporting.js";   /* BL-337: Reports and the reporting space */
+export * from "./stores/textSection.js";   /* #218: addTextSection(afterId), a text section's pictures */
 export * from "./components/reporting/ReportingSpace.jsx";
 export * from "./stores/reportingSettings.js";   /* #221: clientReportOn, the one function the hub asks */
 export * from "./stores/hub.js";   /* #221: the Reporting hub's state */
