@@ -55,7 +55,7 @@ class Hub(LiveBrowserCase):
     def open_hub(self, w=1400, h=1000, hash_="go('reporting','ABC')", client_on=True):
         self.b.resize(w, h)
         self.b.reload("typeof go==='function' && LIVE")
-        self.b.eval(f"setClientReportOn('ABC', {json.dumps(client_on)})")
+        self.b.eval(f"(()=>{{ P.find(p=>p.code==='ABC').cr={json.dumps(client_on)}; crTick.value++; }})()")
         self.b.eval(hash_)
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
         self.b.pump(0.3)

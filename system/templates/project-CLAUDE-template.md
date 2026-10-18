@@ -10,6 +10,7 @@ _Last reviewed: YYYY-MM-DD_
 - **Scope:** in, and notable outs.
 - **Client / partner:**
 - **Key dates:** go-live, contract end, governance cadence.
+- **Client report:** off   _(on | off; a project needs a separate client report only when it is on; set it in Settings or the Reporting hub)_
 - **Client report rhythm:** weekly   _(weekly | fortnightly | monthly | off; change with cx-edit)_
 
 ## People

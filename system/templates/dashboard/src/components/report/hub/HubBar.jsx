@@ -16,6 +16,7 @@ import { WeekMenu } from "./WeekMenu.jsx";
 import { ClientReportPanel } from "./ClientReportPanel.jsx";
 import { EXPORT_FORMATS, EXPORT_WHICH } from "./hubLib.js";
 import { crDoc, crInfo } from "../../../stores/clientReport.js";
+import { clientReportCogLabel } from "../../../stores/reportingSettings.js";
 import { hubCfg } from "../../../stores/hub.js";
 import { weeklyEditing } from "../../../stores/weekly.js";
 
@@ -52,7 +53,7 @@ export function HubBar({ ctx, code, view, on, doc, week, tone, rows, onWeek, onV
     ...(on ? [{ id: "client", name: "Approve the client report", icon: "check", disabled: !ready || cApproved,
       line: cApproved ? "Already approved and filed" : ready ? "Files it in Reports" : "Available once the internal report is approved" }] : []),
   ];
-  const label = `Client report settings: ${on ? "on" : "off"}`;
+  const label = clientReportCogLabel(code);
   return (
     <>
       {on ? (

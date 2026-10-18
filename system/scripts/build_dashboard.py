@@ -59,6 +59,7 @@ def memory(folder):
     text = p.read_text(encoding="utf-8") if p.exists() else ""
     client = re.search(r"\*\*Client / partner:\*\*[ \t]*([^\n]*)", text)
     rhythm = re.search(r"\*\*Client report rhythm:\*\*[ \t]*([A-Za-z]+)", text)
+    cr = client_report_setting(text)
     current, images = "", []
     m = re.search(r"^## Current state\s*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
     if m:
@@ -70,7 +71,37 @@ def memory(folder):
         current = md_normalise(body)   # Markdown kept: formats, lists (nested), headings, quotes, links, images (BL-63)
     return {"client": (client.group(1).strip() if client else ""),
             "rhythm": (rhythm.group(1).strip().capitalize() if rhythm else "Weekly"),
-            "current": current, "images": [i for i in images if i], "cstitle": cs_title(text)}
+            **cr, "current": current, "images": [i for i in images if i], "cstitle": cs_title(text)}
+
+
+# ===== H3 (#221): "This project needs a separate client report" =====
+# Three lines in the project's CLAUDE.md beside the rhythm, written by the dashboard's settings save: "**Client report:** on|off",
+# "**Client report reminder:** on|off" and "**Client report logos:** firm, client, partner". A missing line is the old behaviour:
+# the client report on (existing projects), its reminder on and every logo. A new project is made with the report off.
+CLIENT_LOGO_KINDS = ("firm", "client", "partner")
+
+
+def _on_off(text, label, default=True):
+    """True or False from a "**<label>:** on|off" line; `default` when there is none."""
+    m = re.search(r"\*\*" + re.escape(label) + r":\*\*[ \t]*([A-Za-z]+)", text or "")
+    return default if not m else m.group(1).strip().lower() != "off"
+
+
+def client_report_setting(text):
+    """{client_report, client_reminder, logos} from a CLAUDE.md text; the firm's logo is always in `logos`."""
+    m = re.search(r"\*\*Client report logos:\*\*[ \t]*([^\n]*)", text or "")
+    chosen = {w.strip().lower() for w in m.group(1).split(",")} if m else set(CLIENT_LOGO_KINDS)
+    return {"client_report": _on_off(text, "Client report"), "client_reminder": _on_off(text, "Client report reminder"),
+            "logos": [k for k in CLIENT_LOGO_KINDS if k == "firm" or k in chosen]}
+
+
+def client_gap(p):
+    """Days between client reports for a project dict ({rhythm, client_report?, client_reminder?}); None when it needs no client
+    reminder: its rhythm is off, it needs no separate client report, or its reminder is off."""
+    if not p.get("client_report", True) or not p.get("client_reminder", True):
+        return None
+    return {"Weekly": 7, "Fortnightly": 14, "Monthly": 30}.get(p["rhythm"])
+# ===== end H3 =====
 
 
 # ===== BL-162 (sprint-rail) ===== the Current state card's title, a label for the dashboard only. A header line in the project's
@@ -874,9 +905,8 @@ def reminders(settings, projects, file_list, today, now):
                     "text": f"{name_of[code]} weekly report for week ending {shown(week_end)} is due",
                     "cmd": f"weekly report {code} for week ending {shown(week_end)}",   # Run report now (BL-34)
                     **({"vip": vip_unseen[code]} if vip_unseen.get(code) else {})})
-    every = {"Weekly": 7, "Fortnightly": 14, "Monthly": 30}
     for p in projects:
-        gap = every.get(p["rhythm"])
+        gap = client_gap(p)
         if not gap:
             continue
         last = max((f["date"] for f in file_list if f["p"] == p["code"] and "Client report" in f["n"] and f["date"]),
@@ -1638,13 +1668,14 @@ def collect(now=None, timings=None):
     projects = []
     for p in project_rows:
         mem = memory(folders[p["code"]]) if p["code"] in folders else {"client": "", "rhythm": "Weekly", "current": "",
-                                                                       "images": [], "cstitle": CS_TITLE_DEFAULT}
+                                                                       "images": [], "cstitle": CS_TITLE_DEFAULT, **client_report_setting("")}
         ms, slip = milestones(con, p, actions)
         tw = trail_weeks(con, p["code"], today)
         projects.append({"code": p["code"], "name": p["name"], "client": mem["client"], "health": p["health"] or "",
                          "reason": p["health_reason"] or "", "trail": [h for h, _ in tw], "trailwhy": [w for _, w in tw],
                          "trailend": trail_dates(today), "slip": slip,
-                         "rhythm": mem["rhythm"], "cstitle": mem["cstitle"], "ms": ms, "current": mem["current"], "images": mem["images"],
+                         "rhythm": mem["rhythm"], "cstitle": mem["cstitle"], "cr": mem["client_report"], "crrem": mem["client_reminder"],
+                         "crlogos": mem["logos"], "ms": ms, "current": mem["current"], "images": mem["images"],
                          "sponsor": p["sponsor"] or "", "phase": p["phase"] or "",
                          "undated": undated_counts(actions, raid, p["code"]),       # BL-95
                          "seq": int(tracker.next_id(con, "promises", p["code"])[-3:]) - 1,   # shared numbering

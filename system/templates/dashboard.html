@@ -3653,6 +3653,27 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:24px;width:auto;display:block}
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+/* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
+#crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
+.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - 80px);overflow:auto}
+.hubcfg h3{margin:0 0 10px;font:600 var(--fs-lg)/var(--lh-20) var(--font)}
+.cfgsw{display:flex;gap:10px;align-items:flex-start;padding:0 0 10px;border-bottom:1px solid var(--line);font-size:var(--fs-md)}
+.cfgsw .sub{display:block;font-size:var(--fs-sm)} .cfgsw .switch{flex:none}
+.cfgkeep,.cfgoff{margin:8px 0 0}
+.cfgbody{padding-top:10px;display:grid;gap:10px}
+.cfgrow{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center;font-size:var(--fs-md)}
+.cfgrow.top{align-items:start} .cfgrow>label:first-child{color:var(--muted)}
+.cfgrow select,.cfgrow input.pkdt{min-height:var(--ctl-h)}
+.cfgck{display:flex;gap:8px;align-items:center}
+.cfglogos{display:grid;gap:6px}
+.cfglogo{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;font-size:var(--fs-sm)}
+.cfglogo .sub{display:block;font-size:var(--fs-xs)}
+.cfglogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+.cfglogo .mark img{max-width:100%;max-height:100%;display:block}
+.cfglogo:has(input[data-logo-tick]:disabled) .cfgname,.cfglogo:has(input[data-logo-tick]:disabled) .mark{opacity:.6}
+.cfgact{display:flex;gap:6px;align-items:center}
+.cfgnote{margin:0}
+.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px}
 .wr-health{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px}
 .wr-hcol{display:grid;gap:3px;width:120px}
 .wr-flag{font-weight:700;font-size:var(--fs-sm);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey)}
@@ -4286,6 +4307,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ChasePane: () => ChasePane,
     Chip: () => Chip,
     ClaimMark: () => ClaimMark,
+    ClientReportPanel: () => ClientReportPanel,
     CloseDay: () => CloseDay,
     Combobox: () => Combobox,
     D: () => D,
@@ -4412,6 +4434,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     LINK_REFUSED: () => LINK_REFUSED,
     LINK_REL: () => LINK_REL,
     LLF: () => LLF,
+    LOGO_KINDS: () => LOGO_KINDS,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
     MCLR: () => MCLR,
@@ -5126,12 +5149,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     claimsWrap: () => claimsWrap,
     clampZoom: () => clampZoom,
     clearAllFilters: () => clearAllFilters,
+    clientLogosOn: () => clientLogosOn,
+    clientReminderOn: () => clientReminderOn,
+    clientReportCogLabel: () => clientReportCogLabel,
     clientReportHref: () => clientReportHref,
     clientReportOn: () => clientReportOn,
+    clientReportsHtml: () => clientReportsHtml,
     clockOf: () => clockOf,
     closeCal: () => closeCal,
     closeCapture: () => closeCapture,
     closeChat: () => closeChat,
+    closeClientReport: () => closeClientReport,
     closeCombobox: () => closeCombobox,
     closeContextMenu: () => closeContextMenu,
     closeDialog: () => closeDialog,
@@ -5163,6 +5191,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     confirmCard: () => confirmCard,
     conflictChoice: () => conflictChoice,
     conflictHtml: () => conflictHtml,
+    contentBox: () => contentBox,
     contextMenuOpen: () => contextMenuOpen,
     convRow: () => convRow,
     copied: () => copied,
@@ -5171,6 +5200,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     countRedraft: () => countRedraft,
     countUp: () => countUp,
     covered: () => covered,
+    crLogoData: () => crLogoData,
+    crLogoNote: () => crLogoNote,
+    crLogoPaths: () => crLogoPaths,
+    crTick: () => crTick,
     creaiteEditor: () => creaiteEditor,
     createNote: () => createNote,
     csClean: () => csClean,
@@ -5744,6 +5777,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     meNames: () => meNames,
     meetingOfFile: () => meetingOfFile,
     meetingRoute: () => meetingRoute,
+    memLineEdit: () => memLineEdit,
     memPath: () => memPath,
     menuGroup: () => menuGroup,
     menuItemsIn: () => menuItemsIn,
@@ -5959,6 +5993,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     openCapture: () => openCapture,
     openChat: () => openChat,
     openCk: () => openCk,
+    openClientReport: () => openClientReport,
     openClose: () => openClose,
     openCloseDay: () => openCloseDay,
     openContextMenu: () => openContextMenu,
@@ -6309,6 +6344,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rbTick: () => rbTick,
     rbUnmark: () => rbUnmark,
     readClaims: () => readClaims,
+    readClientLogos: () => readClientLogos,
     readDate: () => readDate,
     readForm: () => readForm,
     reattach: () => reattach,
@@ -6349,6 +6385,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     remLabel: () => remLabel,
     remMenu: () => remMenu,
     remPick: () => remPick,
+    removeClientLogo: () => removeClientLogo,
     removeInbox: () => removeInbox,
     removeLink: () => removeLink,
     removeLoaded: () => removeLoaded,
@@ -6599,12 +6636,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     setCard: () => setCard,
     setChat: () => setChat,
     setChatWidth: () => setChatWidth,
-    setClientReportOn: () => setClientReportOn,
+    setClientLogos: () => setClientLogos,
+    setClientName: () => setClientName,
+    setClientReminder: () => setClientReminder,
+    setClientReport: () => setClientReport,
+    setClientRhythm: () => setClientRhythm,
     setDecision: () => setDecision,
     setFigureShown: () => setFigureShown,
     setLayout: () => setLayout,
     setLive: () => setLive,
     setMark: () => setMark,
+    setMemLine: () => setMemLine,
     setNotes: () => setNotes,
     setOf: () => setOf,
     setOpen: () => setOpen,
@@ -6727,6 +6769,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toastLayer: () => toastLayer,
     toggleGroup: () => toggleGroup,
     toggleNotesList: () => toggleNotesList,
+    trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
@@ -6747,6 +6790,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     updUndo: () => updUndo,
     updUpload: () => updUpload,
     updateView: () => updateView,
+    uploadClientLogo: () => uploadClientLogo,
     uploadedFiles: () => uploadedFiles,
     useCount: () => useCount,
     vagueWhy: () => vagueWhy,
@@ -25023,8 +25067,8 @@ ${s5}`;
       /** @type {{from: number, to: number}|null} */
       null
     );
-    parent.forEach((child, off2) => {
-      const a5 = base + off2, b5 = a5 + child.nodeSize;
+    parent.forEach((child, off) => {
+      const a5 = base + off, b5 = a5 + child.nodeSize;
       if (child.isText && child.marks.some((x5) => x5.eq(m5))) {
         if (cur && cur.to === a5) cur.to = b5;
         else {
@@ -26383,6 +26427,299 @@ ${s5}`;
     railCounts.value = { ...railCounts.value, [id2]: { n: n4, label } };
   }
 
+  // stores/exportSave.js
+  var exportClash = y3(
+    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
+    null
+  );
+  var exportSaved = y3(
+    /** @type {ExportAnswer|null} */
+    null
+  );
+  var exportFailed = y3("");
+  async function saveExport(body2) {
+    exportFailed.value = "";
+    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
+    if (r4.ok) {
+      exportClash.value = null;
+      exportSaved.value = r4;
+    } else if (r4.clash) {
+      exportSaved.value = null;
+      exportClash.value = { body: body2, r: r4 };
+    } else {
+      exportClash.value = null;
+      exportSaved.value = null;
+      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
+    }
+    return r4;
+  }
+  async function answerClash(choice, newName) {
+    const c5 = exportClash.value;
+    if (!c5) return null;
+    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
+  }
+  function cancelClash() {
+    exportClash.value = null;
+  }
+  var openFolder = (folder) => api("/api/open", { path: folder });
+  var showInFinder = (path) => api("/api/report/reveal", { path });
+  var openSaved = (path) => api("/api/open", { path });
+
+  // stores/weekly.js
+  var weeklyArg = y3(
+    /** @type {{code: string, week?: string}|null} */
+    null
+  );
+  var weeklyView = y3(
+    /** @type {WeeklyView|null} */
+    null
+  );
+  var weeklyDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var weeklyBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var weeklyBusy = y3("");
+  var weeklyEditing = y3(false);
+  var weeklyLogos = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var wkAsked = 0;
+  async function loadWeekly(arg, fresh = false) {
+    const mine = ++wkAsked;
+    weeklyArg.value = arg;
+    weeklyEditing.value = false;
+    if (!viaServer()) {
+      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
+      return;
+    }
+    weeklyBusy.value = "Opening the weekly report…";
+    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
+    if (mine !== wkAsked) return;
+    weeklyBusy.value = "";
+    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
+    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
+  }
+  function takeWeekly(r4) {
+    weeklyView.value = r4;
+    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function readLogos(code, logos) {
+    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
+    if (!want.length) return;
+    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
+    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
+  }
+  async function saveWeekly(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    const ok2 = !!(r4 && r4.ok);
+    if (ok2) {
+      weeklyBase.value = Number(r4.version) || weeklyBase.value;
+      const v5 = weeklyView.value;
+      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
+    }
+    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
+  }
+  async function approveWeekly(doc, force) {
+    const a5 = weeklyArg.value;
+    const r4 = await api("/api/report/approve", {
+      kind: "weekly",
+      code: doc.project || a5 && a5.code,
+      week_ending: doc.date,
+      doc,
+      base_version: weeklyBase.value,
+      force: force || void 0
+    });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportWeekly(doc, fmt, page) {
+    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
+  }
+  var weeklyDirty = false;
+  var setWeeklyDirty = (on2) => {
+    weeklyDirty = on2;
+  };
+  function editDoc(d5, _why) {
+    weeklyDoc.value = d5;
+    weeklyDirty = true;
+  }
+
+  // stores/reportingSettings.js
+  var LOGO_KINDS = (
+    /** @type {const} */
+    ["firm", "client", "partner"]
+  );
+  var crTick = y3(0);
+  var project = (code) => (
+    /** @type {any} */
+    P4.find((p6) => p6.code === code)
+  );
+  var clientReportOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.cr !== false;
+  };
+  var clientReportCogLabel = (code) => `Client report settings: ${clientReportOn(code) ? "on" : "off"}`;
+  var clientReminderOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.crrem !== false;
+  };
+  function clientLogosOn(code) {
+    const p6 = project(code), l6 = p6 && Array.isArray(p6.crlogos) ? p6.crlogos : LOGO_KINDS;
+    return LOGO_KINDS.filter((k5) => k5 === "firm" || l6.includes(k5));
+  }
+  function changed() {
+    crTick.value++;
+    repTick.value++;
+  }
+  async function setClientReport(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report", on2 ? "on" : "off", "client_report")) return false;
+    p6.cr = on2;
+    if (!on2) {
+      for (let i5 = REMINDERS.length - 1; i5 >= 0; i5--) if (String(REMINDERS[i5].id).startsWith(`client:${code}:`)) REMINDERS.splice(i5, 1);
+    }
+    changed();
+    return true;
+  }
+  async function setClientReminder(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report reminder", on2 ? "on" : "off", "client_report_reminder")) return false;
+    p6.crrem = on2;
+    changed();
+    return true;
+  }
+  async function setClientLogos(code, kinds) {
+    const p6 = project(code);
+    if (!p6) return false;
+    const list = LOGO_KINDS.filter((k5) => k5 === "firm" || kinds.includes(k5));
+    if (!await setMemLine(code, "Client report logos", list.join(", "), "client_report_logos")) return false;
+    p6.crlogos = list;
+    changed();
+    return true;
+  }
+  async function setClientName(code, name) {
+    const p6 = project(code);
+    const v5 = String(name || "").replace(/\s+/g, " ").trim();
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client / partner", v5, "client_name")) return false;
+    p6.client = v5;
+    changed();
+    return true;
+  }
+  async function setClientRhythm(code, val2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setRhythm(code, val2)) return false;
+    p6.rhythm = val2;
+    changed();
+    return true;
+  }
+  var crLogoPaths = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoData = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoNote = y3("");
+  async function readClientLogos(code) {
+    if (!viaServer()) return;
+    const r4 = await api("/api/report/logo", { code });
+    if (!r4 || !r4.ok) return;
+    crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
+    crLogoData.value = r4.logos || {};
+    weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
+    changed();
+  }
+  function toBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const fr2 = new FileReader();
+      fr2.onload = () => resolve(String(fr2.result).replace(/^data:[^,]*,/, ""));
+      fr2.onerror = () => reject(fr2.error);
+      fr2.readAsDataURL(blob);
+    });
+  }
+  var MARGIN_WHITE = 245, MARGIN_ALPHA = 8, DRAWN_MAX = 540;
+  function contentBox(px2, w6, h5) {
+    let x02 = w6, y02 = h5, x12 = -1, y12 = -1;
+    for (let y5 = 0; y5 < h5; y5++) for (let x5 = 0; x5 < w6; x5++) {
+      const i5 = (y5 * w6 + x5) * 4;
+      if (px2[i5 + 3] <= MARGIN_ALPHA || px2[i5] >= MARGIN_WHITE && px2[i5 + 1] >= MARGIN_WHITE && px2[i5 + 2] >= MARGIN_WHITE) continue;
+      if (x5 < x02) x02 = x5;
+      if (x5 > x12) x12 = x5;
+      if (y5 < y02) y02 = y5;
+      if (y5 > y12) y12 = y5;
+    }
+    if (x12 < 0) return null;
+    const box = { x: x02, y: y02, w: x12 - x02 + 1, h: y12 - y02 + 1 };
+    return box.w === w6 && box.h === h5 ? null : box;
+  }
+  async function trimmedCopy(file) {
+    try {
+      const bmp = await createImageBitmap(file), c5 = (
+        /** @type {any} */
+        document.createElement("canvas")
+      );
+      c5.width = bmp.width;
+      c5.height = bmp.height;
+      const g5 = (
+        /** @type {CanvasRenderingContext2D} */
+        c5.getContext("2d", { willReadFrequently: true })
+      );
+      g5.drawImage(bmp, 0, 0);
+      const box = contentBox(g5.getImageData(0, 0, c5.width, c5.height).data, c5.width, c5.height);
+      if (!box) return null;
+      const k5 = Math.min(1, DRAWN_MAX / Math.max(box.w, box.h)), out = document.createElement("canvas");
+      out.width = Math.max(1, Math.round(box.w * k5));
+      out.height = Math.max(1, Math.round(box.h * k5));
+      out.getContext("2d").drawImage(c5, box.x, box.y, box.w, box.h, 0, 0, out.width, out.height);
+      return await new Promise((res) => out.toBlob(res, "image/png"));
+    } catch {
+      return null;
+    }
+  }
+  async function uploadClientLogo(code, kind, file) {
+    crLogoNote.value = "";
+    const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || ["", ""])[1].toLowerCase().replace("jpeg", "jpg");
+    if (!ext) {
+      crLogoNote.value = "Choose a PNG, JPEG or SVG picture.";
+      return false;
+    }
+    if (file.size > 4e5) {
+      crLogoNote.value = "That logo is over 400 kB. Choose a smaller file.";
+      return false;
+    }
+    const trimmed = ext === "svg" ? null : await trimmedCopy(file);
+    const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not saved.";
+      return false;
+    }
+    crLogoNote.value = r4.hint || "";
+    await readClientLogos(code);
+    snack(r4.message || "Logo saved");
+    return true;
+  }
+  async function removeClientLogo(code, kind) {
+    crLogoNote.value = "";
+    const r4 = await api("/api/report/logo/remove", { code, kind });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not removed.";
+      return false;
+    }
+    await readClientLogos(code);
+    snack(r4.message || "Logo removed");
+    return true;
+  }
+
   // stores/reporting.js
   var repTick = y3(0);
   var repFilter = y3(
@@ -26444,7 +26781,7 @@ ${s5}`;
     const w6 = stateOf(code, "weekly", week);
     const rhythm = p6.rhythm || "Weekly", name = (p6.client || "").trim() || "Client";
     const c5 = stateOf(code, "client", week, name, rhythm), rec = reportRecord(code, "client", week, name);
-    const clients = [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }];
+    const clients = clientReportOn(code) ? [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }] : [];
     return { week, internal: w6.state, clients, files: weekFiles(code, week), needs: !["filed", "approved", "notdue"].includes(w6.state.key) || clients.some((x5) => ["due", "draft"].includes(x5.state.key)) };
   }
   function spaceWeeks(code) {
@@ -26498,7 +26835,7 @@ ${s5}`;
         /* @__PURE__ */ u2(StateChip, { s: v5.internal }),
         v5.internal.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "internal", "data-openfile": v5.internal.path, "aria-label": "Open the weekly report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "internal", "aria-label": "Open the weekly report", href: weeklyHref(code, week), children: "Open" })
       ] }),
-      /* @__PURE__ */ u2("div", { class: "rp-row", children: [
+      c5 ? /* @__PURE__ */ u2("div", { class: "rp-row", children: [
         /* @__PURE__ */ u2("span", { class: "g", children: [
           /* @__PURE__ */ u2("b", { children: "Client report" }),
           " · ",
@@ -26511,7 +26848,7 @@ ${s5}`;
         ] }),
         /* @__PURE__ */ u2(StateChip, { s: c5.state }),
         c5.state.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "client", "data-openfile": c5.state.path, "aria-label": "Open the client report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "client", "aria-label": "Open the client report", href: clientReportHref(code, week, c5.client), children: "Open" })
-      ] }),
+      ] }) : null,
       /* @__PURE__ */ u2("div", { class: "acts", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary sm", "data-rpcard": "space", onClick: () => openSpace(code), children: "Open reporting" }),
         /* @__PURE__ */ u2("span", { class: "sub", children: lastFiled ? `Last filed: ${fd(lastFiled)}` : "Nothing filed yet" })
@@ -28428,8 +28765,8 @@ ${s5}`;
     el2.addEventListener("keydown", keys, true);
     el2.addEventListener("focusout", blur);
     el2.addEventListener("compositionend", comp);
-    const off2 = () => {
-      editor.off("destroy", off2);
+    const off = () => {
+      editor.off("destroy", off);
       editor.off("selectionUpdate", look2);
       editor.off("update", look2);
       el2.removeEventListener("beforeinput", before, true);
@@ -28441,8 +28778,8 @@ ${s5}`;
       root2.remove();
       if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
     };
-    editor.on("destroy", off2);
-    return off2;
+    editor.on("destroy", off);
+    return off;
   }
 
   // core/itemLink.js
@@ -28715,8 +29052,8 @@ ${s5}`;
     el2.addEventListener("keydown", keys, true);
     el2.addEventListener("focusout", blur);
     el2.addEventListener("compositionend", comp);
-    const off2 = () => {
-      editor.off("destroy", off2);
+    const off = () => {
+      editor.off("destroy", off);
       editor.off("selectionUpdate", look2);
       editor.off("update", look2);
       el2.removeEventListener("beforeinput", before, true);
@@ -28728,8 +29065,8 @@ ${s5}`;
       root2.remove();
       if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
     };
-    editor.on("destroy", off2);
-    return off2;
+    editor.on("destroy", off);
+    return off;
   }
 
   // components/Combobox.jsx
@@ -29662,7 +29999,7 @@ ${s5}`;
       }
     };
     const why = n4.chosen ? "chosen by you" : n4.reason;
-    const off2 = live ? void 0 : "Saving a note needs the live server";
+    const off = live ? void 0 : "Saving a note needs the live server";
     const meeting = n4.template === "working-session";
     const drafts = recent.drafts.filter((d5) => d5.id !== n4.id);
     return /* @__PURE__ */ u2("aside", { id: "capDrawer", class: "capdrawer", role: "dialog", "aria-modal": "false", "aria-labelledby": "capH", hidden: !open2, onKeyDown: keys, children: [
@@ -29766,8 +30103,8 @@ ${s5}`;
             class: "btn ai",
             id: "capFind",
             disabled: capBusy.value,
-            "aria-disabled": off2 ? "true" : void 0,
-            "data-tip": off2 || "Save it, then open it with Find updates",
+            "aria-disabled": off ? "true" : void 0,
+            "data-tip": off || "Save it, then open it with Find updates",
             onClick: () => captureDone(true),
             children: "Done and find updates"
           }
@@ -29779,8 +30116,8 @@ ${s5}`;
             class: "btn primary",
             id: "capDone",
             disabled: capBusy.value,
-            "aria-disabled": off2 ? "true" : void 0,
-            "data-tip": off2,
+            "aria-disabled": off ? "true" : void 0,
+            "data-tip": off,
             "data-key": "⌘↵",
             onClick: () => captureDone(false),
             children: "Done"
@@ -29982,7 +30319,7 @@ ${s5}`;
   // components/settings/SettingRow.jsx
   var N2 = 0;
   var rowId = () => "ss" + ++N2;
-  function SettingRow({ id: id2, label, line, note, changed, keys, resettable = true, fixedWhy = "", saved = false, children }) {
+  function SettingRow({ id: id2, label, line, note, changed: changed2, keys, resettable = true, fixedWhy = "", saved = false, children }) {
     const [busy2, setBusy] = d2(false);
     const reset = async () => {
       setBusy(true);
@@ -29993,7 +30330,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("div", { class: "srow", "data-keys": keys.join(" "), children: [
       /* @__PURE__ */ u2("div", { children: [
         /* @__PURE__ */ u2("span", { id: id2, children: label }),
-        changed && /* @__PURE__ */ u2("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
+        changed2 && /* @__PURE__ */ u2("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
         (line || note) && /* @__PURE__ */ u2("small", { id: id2 + "h", children: [
           line,
           note ? /* @__PURE__ */ u2("span", { class: "setnote", children: [
@@ -30009,7 +30346,7 @@ ${s5}`;
       /* @__PURE__ */ u2("div", { class: "setctl", children: [
         saved && /* @__PURE__ */ u2("span", { class: "saved", role: "status", children: "Saved" }),
         children,
-        changed && resettable && /* @__PURE__ */ u2(
+        changed2 && resettable && /* @__PURE__ */ u2(
           "button",
           {
             type: "button",
@@ -30847,6 +31184,7 @@ ${s5}`;
     const id2 = "sr" + ++SRN;
     return `<div class="srow"><div><span id="${id2}">${l6}</span>${h5 ? `<small id="${id2}h">${h5}</small>` : ""}</div><div>${srName(c5, id2, h5, l6)}</div></div>`;
   };
+  var clientReportsHtml = () => `<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>` + P4.map((p6) => row(`${esc(p6.name)}: this project needs a separate client report`, `<input type="checkbox" class="switch" data-crsw="${p6.code}" ${clientReportOn(p6.code) ? "checked" : ""}>`)).join("") + `</div>`;
   var SETSECTIONS = [
     /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
        whether a search finds anything in it. */
@@ -30944,7 +31282,7 @@ ${s5}`;
       title: "Projects and register",
       wide: true,
       kw: "projects register add close archive restore archived code signals domains matching",
-      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + projArchiveHtml(),
+      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + clientReportsHtml() + projArchiveHtml(),
       after: () => projArchiveBind()
     },
     /* BL-09 */
@@ -31360,12 +31698,12 @@ ${s5}`;
     };
     const active = isP ? peopleAll() : null;
     const cA = (n4) => isP ? A4.filter((a5) => a5.o === n4).length : A4.filter((a5) => on2(a5, n4)).length, cR = (n4) => isP ? R3.filter((r4) => r4.o === n4).length : R3.filter((r4) => on2(r4, n4)).length;
-    const label = (n4) => isP ? esc(n4) : (([pc2, nm3]) => `<span class="pcode">${esc(pc2)}</span> ${esc(nm3)}`)(wsParts(n4)), off2 = (n4) => isP ? L3.hidden.includes(n4) : wsHidden(...wsParts(n4));
+    const label = (n4) => isP ? esc(n4) : (([pc2, nm3]) => `<span class="pcode">${esc(pc2)}</span> ${esc(nm3)}`)(wsParts(n4)), off = (n4) => isP ? L3.hidden.includes(n4) : wsHidden(...wsParts(n4));
     const mergeTo = (n4) => isP ? active.filter((x5) => x5 !== n4) : ((pc2, nm3) => wsFor(pc2).filter((x5) => x5 !== nm3).map((x5) => wsKey(pc2, x5)))(...wsParts(n4));
     putHTML($(isP ? "#peopleMgr" : "#wsMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">${isP ? "People (owners)" : "Workstreams"}</h2>${isP ? "" : html`<select id="wsAddP" aria-label="Project">${P4.map((p6) => html`<option value="${p6.code}">${p6.name}</option>`)}</select>`}<input id="${raw(kind)}Add" type="text" placeholder="${isP ? "Add a person" : "Add a workstream"}" style="height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px"><button class="btn" data-mg="add" data-kind="${raw(kind)}">Add</button></div>
    <p class="sub" style="margin:4px 0 8px">${isP ? "Rename or merge to fix spellings across every item (applied with Undo). Removing hides a name from the owner picker; items keep it." : html`Each project has its own workstreams. Rename or merge changes that project's items only (you'll be offered the same change in other projects using the name). Retiring hides it from that project's picker; items keep it.`}</p>
    <div class="tbl"><table class="mgr"><thead><tr><th>${isP ? "Name" : "Workstream"}</th><th class="num">Actions</th><th class="num">RAID</th><th></th></tr></thead><tbody>${raw(names.sort().map((n4) => {
-      const isOff = off2(n4), me2 = isP && isMe(n4);
+      const isOff = off(n4), me2 = isP && isMe(n4);
       return `<tr class="${isOff ? "off" : ""}"><td>${label(n4)}${me2 ? ' <span class="tag">(you)</span>' : ""}${isOff ? ` <span class="tag warn">${isP ? "removed from list" : "retired"}</span>` : ""}</td><td class="num">${mgrLink(isP, n4, "actions", cA(n4))}</td><td class="num">${mgrLink(isP, n4, "raid", cR(n4))}</td><td class="mgract">${me2 ? '<span class="x">Change in Settings › Essentials › You</span>' : `${ibtn("type", "Rename", `data-mg="ren" data-kind="${kind}" data-n="${esc(n4)}"`, "sm")}<select class="mgsel" data-kind="${kind}" data-n="${esc(n4)}"><option value="">Merge into…</option>${mergeTo(n4).map((x5) => `<option value="${esc(x5)}">${esc(isP ? x5 : wsParts(x5)[1])}</option>`).join("")}</select>${isOff ? ibtn("undo", "Restore", `data-mg="restore" data-kind="${kind}" data-n="${esc(n4)}"`, "sm") : ibtn("trash", isP ? "Remove from list" : "Retire", `data-mg="hide" data-kind="${kind}" data-n="${esc(n4)}"`, "sm no")}`}</td></tr>`;
     }).join(""))}</tbody></table></div>`);
   }
@@ -31443,6 +31781,14 @@ ${s5}`;
     }, true);
     $("#settingsBody").addEventListener("change", async (e4) => {
       const el2 = e4.target;
+      if (el2.dataset.crsw) {
+        const p6 = P4.find((x5) => x5.code === el2.dataset.crsw), on2 = el2.checked;
+        if (await setClientReport(p6.code, on2)) {
+          snack(`${p6.name}: client report ${on2 ? "on" : "off"}`);
+          savedNow();
+        } else el2.checked = !on2;
+        return;
+      }
       if (el2.dataset.rhythm) {
         const p6 = P4.find((x5) => x5.code === el2.dataset.rhythm), was2 = p6.rhythm;
         if (await setRhythm(p6.code, el2.value)) {
@@ -31993,12 +32339,12 @@ ${s5}`;
     return countLink(`${plur(c5, w6)} owned by ${n4} in ${sc2.map(pName).join(", ")}, any status`, c5, `${t47}:open:${sc2.length === 1 ? sc2[0] : ""}`, sc2.length === 1 ? { st: [], o: [n4] } : { st: [], o: [n4], p: sc2 });
   }
   function pfRow(x5, sc2, active) {
-    const { n: n4, p: p6, me: me2, off: off2 } = x5, a5 = sc2 ? sc2.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[0] || 0), 0) : A4.filter((i5) => i5.o === n4).length, r4 = sc2 ? sc2.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[1] || 0), 0) : R3.filter((i5) => i5.o === n4).length;
+    const { n: n4, p: p6, me: me2, off } = x5, a5 = sc2 ? sc2.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[0] || 0), 0) : A4.filter((i5) => i5.o === n4).length, r4 = sc2 ? sc2.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[1] || 0), 0) : R3.filter((i5) => i5.o === n4).length;
     const via = sc2 && !sc2.some((c5) => x5.it[c5]) && sc2.some((c5) => x5.st.includes(c5)), mergeTo = active.filter((y5) => y5 !== n4);
-    return html`<tr class="${off2 ? "off" : ""}" data-pn="${n4}"><td>${pfHl(n4)}${me2 ? raw(' <span class="tag">(you)</span>') : ""}${p6 || me2 ? "" : raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p6 && !p6.email ? raw(' <span class="tag warn" title="Add email">no email</span>') : ""}${off2 ? raw(' <span class="tag warn">removed from list</span>') : ""}${via ? html`<span class="sub pmvia">named in the project’s stakeholders</span>` : ""}</td>
+    return html`<tr class="${off ? "off" : ""}" data-pn="${n4}"><td>${pfHl(n4)}${me2 ? raw(' <span class="tag">(you)</span>') : ""}${p6 || me2 ? "" : raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p6 && !p6.email ? raw(' <span class="tag warn" title="Add email">no email</span>') : ""}${off ? raw(' <span class="tag warn">removed from list</span>') : ""}${via ? html`<span class="sub pmvia">named in the project’s stakeholders</span>` : ""}</td>
      <td>${p6 && p6.email ? pfHl(p6.email) : raw('<span class="sub">—</span>')}</td><td>${p6 && (p6.org || p6.role) ? html`${p6.org || ""}${p6.org && p6.role ? " · " : ""}${pfHl(p6.role)}` : raw('<span class="sub">—</span>')}</td><td class="sub">${p6 && p6.aliases.length ? p6.aliases.map((s5, i5) => html`${i5 ? ", " : ""}${pfHl(s5)}`) : "—"}</td>
      <td class="num">${raw(pfLink(n4, "actions", a5, sc2))}</td><td class="num">${raw(pfLink(n4, "raid", r4, sc2))}</td>
-     <td class="mgract">${me2 ? raw('<span class="x">Change in Settings › Essentials › You</span>') : html`${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", `data-pm="edit" data-n="${esc(n4)}" aria-haspopup="dialog"`, "sm"))}${raw(ibtn("type", "Rename", `data-pm="ren" data-n="${esc(n4)}"`, "sm"))}<select class="mgsel pmsel" data-n="${n4}" aria-label="Merge ${n4} into"><option value="">Merge into…</option>${mergeTo.map((y5) => html`<option value="${y5}">${y5}</option>`)}</select>${raw(off2 ? ibtn("undo", "Restore", `data-pm="restore" data-n="${esc(n4)}"`, "sm") : ibtn("trash", "Remove from list", `data-pm="hide" data-n="${esc(n4)}"`, "sm no"))}`}</td></tr>`;
+     <td class="mgract">${me2 ? raw('<span class="x">Change in Settings › Essentials › You</span>') : html`${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", `data-pm="edit" data-n="${esc(n4)}" aria-haspopup="dialog"`, "sm"))}${raw(ibtn("type", "Rename", `data-pm="ren" data-n="${esc(n4)}"`, "sm"))}<select class="mgsel pmsel" data-n="${n4}" aria-label="Merge ${n4} into"><option value="">Merge into…</option>${mergeTo.map((y5) => html`<option value="${y5}">${y5}</option>`)}</select>${raw(off ? ibtn("undo", "Restore", `data-pm="restore" data-n="${esc(n4)}"`, "sm") : ibtn("trash", "Remove from list", `data-pm="hide" data-n="${esc(n4)}"`, "sm no"))}`}</td></tr>`;
   }
   function pfEmpty(L3, F5) {
     const act = F5.filter((f5) => f5[0] === "rem" ? PF.rem === "only" : pfOn(f5[0])).map((f5) => ({ k: f5[0], label: pfChip(f5) }));
@@ -33282,13 +33628,13 @@ ${s5}`;
     "Errors seen three or more times in the last 7 days. Only one seen in the last day is a warning; older ones have stopped"
   ) : "";
   function diagCardHtml() {
-    const off2 = SERVED ? "" : "disabled";
+    const off = SERVED ? "" : "disabled";
     const h5 = `<div class="card" id="diagCard" data-sec="diag"><h2>Diagnostics</h2>${SERVED ? "" : '<p class="sub">The log is written by the live server: start it to see errors here.</p>'}
-   ${row("Log level", `<select id="diagLevel" ${off2}><option value="info" ${DIAG.level === "info" ? "selected" : ""}>info</option><option value="debug" ${DIAG.level === "debug" ? "selected" : ""}>debug</option></select>`, "info keeps a line for what creaite did and for every error, for the last 7 days; debug adds detail while you chase a fault")}
-   ${row("Log folder", `<button class="btn" id="diagOpen" ${off2}>Open the folder</button>`, `${DIAG.days} day${DIAG.days === 1 ? "" : "s"} of log, in system/logs`)}
-   ${row("Report", `<button class="btn" id="diagCopy" ${off2}>Copy diagnostics</button>`, "The version, the health check, the safe settings and the last 200 log lines, for pasting into a chat: no names, addresses or paths")}
+   ${row("Log level", `<select id="diagLevel" ${off}><option value="info" ${DIAG.level === "info" ? "selected" : ""}>info</option><option value="debug" ${DIAG.level === "debug" ? "selected" : ""}>debug</option></select>`, "info keeps a line for what creaite did and for every error, for the last 7 days; debug adds detail while you chase a fault")}
+   ${row("Log folder", `<button class="btn" id="diagOpen" ${off}>Open the folder</button>`, `${DIAG.days} day${DIAG.days === 1 ? "" : "s"} of log, in system/logs`)}
+   ${row("Report", `<button class="btn" id="diagCopy" ${off}>Copy diagnostics</button>`, "The version, the health check, the safe settings and the last 200 log lines, for pasting into a chat: no names, addresses or paths")}
    ${diagRefusals()}${diagRepeats()}
-   <div class="pph" style="margin-top:10px">Latest errors <span class="sub">· last 7 days</span> <button class="mini" id="diagRefresh" ${off2}>Refresh</button></div>
+   <div class="pph" style="margin-top:10px">Latest errors <span class="sub">· last 7 days</span> <button class="mini" id="diagRefresh" ${off}>Refresh</button></div>
    <div id="diagList">${DIAG.errors.length ? DIAG.errors.map(diagErr).join("") : '<div class="sub">No errors in the last 7 days.</div>'}</div><div id="diagOut"></div></div>`;
     if (shared.VIEW === "settings") {
       ebMarkSeen();
@@ -35200,14 +35546,14 @@ ${s5}`;
     if (refocus && MVCAL && MVCAL.btn.isConnected) MVCAL.btn.focus();
   }
   function mvCalDraw(focus) {
-    const c5 = mvCalEl(), { y: y5, m: m5 } = MVCAL, first = Date.UTC(y5, m5, 1), off2 = (new Date(first).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate(), today = mvT(TODAY);
+    const c5 = mvCalEl(), { y: y5, m: m5 } = MVCAL, first = Date.UTC(y5, m5, 1), off = (new Date(first).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate(), today = mvT(TODAY);
     let h5 = `<div class="mv-calh"><button type="button" data-mvcm="-1" aria-label="Previous month">${ic("chevleft", { bare: true })}</button><b aria-live="polite">${PKMON[m5]} ${y5}</b><button type="button" data-mvcm="1" aria-label="Next month">${ic("chevright", { bare: true })}</button></div><div class="mv-calg" role="grid">`;
     ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].forEach((w6) => {
       h5 += `<div class="wd" aria-hidden="true">${w6}</div>`;
     });
-    for (let i5 = 0; i5 < off2; i5++) h5 += "<span></span>";
+    for (let i5 = 0; i5 < off; i5++) h5 += "<span></span>";
     for (let d5 = 1; d5 <= n4; d5++) {
-      const t47 = Date.UTC(y5, m5, d5), wk2 = (off2 + d5 - 1) % 7 >= 5;
+      const t47 = Date.UTC(y5, m5, d5), wk2 = (off + d5 - 1) % 7 >= 5;
       h5 += `<button type="button" data-mvt="${t47}" tabindex="${t47 === MVCAL.focus ? 0 : -1}" class="${wk2 ? "wk " : ""}${t47 === today ? "td " : ""}${t47 === MVCAL.sel ? "sel" : ""}" aria-label="${d5} ${PKMON[m5]} ${y5}${wk2 ? ", weekend" : ""}"${t47 === MVCAL.sel ? ' aria-pressed="true"' : ""}>${d5}</button>`;
     }
     putHTML(c5, html`${raw(h5)}</div><div class="mv-calf"><span>Weekends are muted</span><button type="button" class="mv-btn sm" data-mvtoday="1">Today</button></div>`);
@@ -38541,8 +38887,8 @@ ${s5}`;
       paint2();
       return;
     }
-    const changed = $$("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]").filter((e4) => e4.classList.contains("hl") !== HL.has(e4.dataset.row) || e4.classList.contains("cur") !== (e4.dataset.row === shared.HLC)).length;
-    mNoFade(() => mTick("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]", (e4) => e4.dataset.row, HLTICK, paint2), changed);
+    const changed2 = $$("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]").filter((e4) => e4.classList.contains("hl") !== HL.has(e4.dataset.row) || e4.classList.contains("cur") !== (e4.dataset.row === shared.HLC)).length;
+    mNoFade(() => mTick("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]", (e4) => e4.dataset.row, HLTICK, paint2), changed2);
   }
   function hlClear() {
     shared.HLALL = false;
@@ -38701,8 +39047,8 @@ ${s5}`;
       paint2();
       return;
     }
-    const changed = $$("#reviewBody tr[data-n]").filter((e4) => e4.classList.contains("hl") !== RHL.has(+e4.dataset.n) || e4.classList.contains("sel") !== (+e4.dataset.ri === shared.RSEL)).length;
-    mNoFade(() => mTick("#reviewBody tr[data-n]", (e4) => e4.dataset.n, RVTICK, paint2), changed);
+    const changed2 = $$("#reviewBody tr[data-n]").filter((e4) => e4.classList.contains("hl") !== RHL.has(+e4.dataset.n) || e4.classList.contains("sel") !== (+e4.dataset.ri === shared.RSEL)).length;
+    mNoFade(() => mTick("#reviewBody tr[data-n]", (e4) => e4.dataset.n, RVTICK, paint2), changed2);
   }
   var rvOrder = () => $$("#reviewBody tr[data-n]").map((t47) => +t47.dataset.n);
   function rvTick(n4) {
@@ -40081,7 +40427,7 @@ ${s5}`;
     h2(() => {
       loadPeek(dated);
     }, [dated]);
-    const pk2 = peeks.value[dated], L3 = pk2 && pk2.lines, off2 = live ? void 0 : "Needs the live server";
+    const pk2 = peeks.value[dated], L3 = pk2 && pk2.lines, off = live ? void 0 : "Needs the live server";
     return /* @__PURE__ */ u2(
       "div",
       {
@@ -40133,7 +40479,7 @@ ${s5}`;
                 "data-prepgoday": day,
                 "aria-label": `Open the prep page for ${title}`,
                 "aria-disabled": live ? void 0 : "true",
-                "data-tip": off2,
+                "data-tip": off,
                 children: "Open the prep page"
               }
             ),
@@ -40143,7 +40489,7 @@ ${s5}`;
                 type: "button",
                 class: "linkbtn",
                 "aria-disabled": live ? void 0 : "true",
-                "data-tip": off2 || "Open the saved agenda in a new tab",
+                "data-tip": off || "Open the saved agenda in a new tab",
                 onClick: () => p6.open(page),
                 children: "Open the file"
               }
@@ -40161,7 +40507,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("span", { class: "pcode plink", "data-proj": code, role: "link", tabIndex: 0, title: `Open ${n4}`, children: n4 });
   }
   function FollowUp({ m: m5, live, acts: acts2 }) {
-    const f5 = m5.follow, off2 = live ? void 0 : "Needs the live server";
+    const f5 = m5.follow, off = live ? void 0 : "Needs the live server";
     if (!f5) return null;
     if (m5.running) return /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: m5.running });
     if (f5.state === "minutes") return f5.draft ? /* @__PURE__ */ u2(S2, { children: [
@@ -40176,7 +40522,7 @@ ${s5}`;
           type: "button",
           class: "lk",
           "aria-label": `Process the transcript of ${m5.title}`,
-          "data-tip": off2 || "Draft minutes and proposed items from it (cx-minutes)",
+          "data-tip": off || "Draft minutes and proposed items from it (cx-minutes)",
           disabled: !live,
           onClick: () => acts2.process(m5),
           children: "Process"
@@ -40191,7 +40537,7 @@ ${s5}`;
           type: "button",
           class: "lk",
           "aria-label": `Check for a transcript of ${m5.title}`,
-          "data-tip": off2 || "Look for its transcript in Teams",
+          "data-tip": off || "Look for its transcript in Teams",
           disabled: !live,
           onClick: () => acts2.check(m5),
           children: "Check"
@@ -40725,8 +41071,8 @@ ${s5}`;
   };
   function renderToday() {
     renderDay();
-    const pend = REV.filter((r4) => !r4.done), mineOver = A4.filter((x5) => isMe(x5.o) && overdue(x5)), mineSoon = A4.filter((x5) => isMe(x5.o) && soon(x5)), off2 = P4.filter((p6) => p6.health === "Off track");
-    putHTML($("#briefText"), html`<b>${pend.length} proposal${pend.length === 1 ? "" : "s"}</b> need${pend.length === 1 ? "s" : ""} your decision, ${raw(countLink(`${plur(mineOver.length, "overdue action")} of yours`, mineOver.length, "actions:overdue:", { o: ["@me"] }, `<b>${mineOver.length} of your actions</b>`))} ${mineOver.length === 1 ? "is" : "are"} overdue${off2.length ? html`, and <b>${andList(off2.map((p6) => p6.name))}</b> ${off2.length === 1 ? "is" : "are"} off track` : ""}.`);
+    const pend = REV.filter((r4) => !r4.done), mineOver = A4.filter((x5) => isMe(x5.o) && overdue(x5)), mineSoon = A4.filter((x5) => isMe(x5.o) && soon(x5)), off = P4.filter((p6) => p6.health === "Off track");
+    putHTML($("#briefText"), html`<b>${pend.length} proposal${pend.length === 1 ? "" : "s"}</b> need${pend.length === 1 ? "s" : ""} your decision, ${raw(countLink(`${plur(mineOver.length, "overdue action")} of yours`, mineOver.length, "actions:overdue:", { o: ["@me"] }, `<b>${mineOver.length} of your actions</b>`))} ${mineOver.length === 1 ? "is" : "are"} overdue${off.length ? html`, and <b>${andList(off.map((p6) => p6.name))}</b> ${off.length === 1 ? "is" : "are"} off track` : ""}.`);
     renderDn();
     const att = attentionItems(), ac2 = capped(att.map((x5, i5) => x5.html(i5 + 1)), 5, "attn");
     $("#nAttn").textContent = att.length ? String(att.length) : "";
@@ -41474,12 +41820,12 @@ ${s5}`;
     return `<div class="sub" role="status">${esc(h5.lines[h5.lines.length - 1] || "")}</div>${bad.length ? `<ul class="sures" aria-label="Needs attention">${bad.map(li2).join("")}</ul>` : ""}<details class="sures"><summary>${ok2.length} passed</summary><ul class="sures">${ok2.map(li2).join("")}</ul></details>`;
   }
   function suCardHtml() {
-    const st2 = SU.status || {}, live = viaServer(), off2 = live ? "" : 'disabled title="Needs the live server"';
+    const st2 = SU.status || {}, live = viaServer(), off = live ? "" : 'disabled title="Needs the live server"';
     const swept2 = st2.swept || (D.last_sweep && D.last_sweep !== "never" ? D.last_sweep : null);
     return `<div class="card" id="suCard" data-sec="setup"><h2>Set-up</h2><p class="sub">The set-up steps the page can do, and the two it can’t. Each runs on your click; nothing here is a new permission.</p>
-   ${row("Health check", `<button type="button" class="btn" id="suHealth" ${off2}>${SU.busy === "health" ? "Checking…" : "Run the health check"}</button>`, "The same checks as “health check” in Claude Code (doctor.py): it only reads")}
+   ${row("Health check", `<button type="button" class="btn" id="suHealth" ${off}>${SU.busy === "health" ? "Checking…" : "Run the health check"}</button>`, "The same checks as “health check” in Claude Code (doctor.py): it only reads")}
    ${suHealthHtml() ? `<div id="suHealthOut">${suHealthHtml()}</div>` : ""}
-   ${row("Rebuild the dashboard and Excel view", `<button type="button" class="btn" id="suRebuild" ${off2}>${SU.busy === "rebuild" ? "Rebuilding…" : "Rebuild…"}</button>`, "From the tracker; nothing in the tracker changes")}
+   ${row("Rebuild the dashboard and Excel view", `<button type="button" class="btn" id="suRebuild" ${off}>${SU.busy === "rebuild" ? "Rebuilding…" : "Rebuild…"}</button>`, "From the tracker; nothing in the tracker changes")}
    ${SU.confirm ? `<div class="sushown" id="suConfirm">This rewrites <code>dashboard.html</code> and <code>tracker-view.xlsx</code> from the tracker. If the workbook has edits you haven’t imported, it is left as it is. <span class="suacts" style="margin-top:6px"><button type="button" class="btn" data-sucancel>Cancel</button><button type="button" class="btn primary" id="suRebuildGo">Rebuild now</button></span></div>` : ""}
    ${row("Microsoft 365", swept2 ? `<span class="h-ok">Connected</span>` : `<span class="sub">Not confirmed yet</span>`, swept2 ? `The sweep last read your mail ${esc(fd(String(swept2).slice(0, 10)))}` : "Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then say this in Claude Code. The first sweep confirms it")}
    ${swept2 ? "" : suCmd(SU_M365, "m365", true)}
@@ -45175,11 +45521,11 @@ ${s5}`;
       if (dx2 || dy2) anim(e4, [{ transform: `translate(${dx2}px,${dy2}px)` }, { transform: "none" }], { duration: 160 });
     });
   }
-  function mNoFade(paint2, changed) {
-    const t47 = document.documentElement, off2 = shared.MKEYHELD || changed > 2 || reduced();
-    if (off2) t47.classList.add("mnofade");
+  function mNoFade(paint2, changed2) {
+    const t47 = document.documentElement, off = shared.MKEYHELD || changed2 > 2 || reduced();
+    if (off) t47.classList.add("mnofade");
     paint2();
-    if (off2) {
+    if (off) {
       void getComputedStyle(document.body).color;
       $$("#workTbl tr,#reviewBody tr,table.ptbl tr").slice(0, 1).forEach((r4) => void getComputedStyle(r4).backgroundColor);
       void document.body.offsetWidth;
@@ -45733,10 +46079,10 @@ ${s5}`;
     const shown2 = mtgShown, nTx = L3.filter(mtgHasTx).length;
     putHTML($("#mtgChips"), html`<button type="button" class="vchip" data-show="all" aria-pressed="${String(MTGSHOW !== "tx")}">All</button><button type="button" class="vchip" data-show="tx" aria-pressed="${String(MTGSHOW === "tx")}">With transcripts · ${nTx}</button>`);
     const days2 = [...new Set(L3.filter(shown2).map((m5) => m5.day))], org = (m5) => m5.organiser === true ? "You" : m5.organiser ? m5.organiser : html`<span class="sub">—</span>`;
-    const sel = (on2) => raw(on2 ? "selected" : ""), off2 = (on2) => raw(on2 ? "disabled" : "");
+    const sel = (on2) => raw(on2 ? "selected" : ""), off = (on2) => raw(on2 ? "disabled" : "");
     const projSel = (m5, i5) => html`<select class="mtgp" data-mi="${i5}" aria-label="Project for ${m5.title}"><option value="" ${sel(!m5.p)}>Not sure</option>${P4.map((p6) => html`<option value="${p6.code}" ${sel(m5.p === p6.code)}>${p6.name}</option>`)}<option value="_portfolio" ${sel(m5.p === "_portfolio")}>Portfolio</option></select>`;
     const noIds = L3.some((m5) => !m5.id);
-    putHTML($("#mtgBody"), html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days2.map((d5) => html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d5).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(d5)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d5}" ${off2(clrOff())} title="${clrOff() ? "Needs the live server" : "Set this day's meetings aside"}">Clear day · ${L3.filter((m5) => m5.day === d5 && shown2(m5)).length}</button></div></td></tr>${L3.map((m5, i5) => [m5, i5]).filter(([m5]) => m5.day === d5 && shown2(m5)).map(([m5, i5]) => html`<tr data-mid="${m5.id || ""}" class="${m5.private ? "mtgpriv" : ""}${mtgLater(m5) ? " mtglater" : ""}${mtgHasTx(m5) ? " mtgtx" : ""}${m5.transcript && m5.transcript !== "available" && !m5.processed ? " mtgmute" : ""}${m5.processed ? " mtgdone" : ""}" ${mtgLater(m5) && html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i5}" aria-label="Select ${m5.title}" ${raw(MSEL.has(m5.id) ? "checked" : "")} ${off2(!mtgCanPick(m5))} ${!m5.id && html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m5.start}–${m5.end}</td><td class="title">${mtgHasTx(m5) && html`<span class="txbadge">Transcript</span> `}${m5.title}${m5.private ? html` <span class="sub">private</span>` : ""}</td><td>${m5.teams ? html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>` : html`<span class="sub">In person</span>`}</td><td>${org(m5)}</td><td>${projSel(m5, i5)}</td><td>${mtgState(m5)}</td><td>${mtgTx(m5, i5)}</td><td><button class="mtgx" data-clr="one" data-mi="${i5}" ${off2(clrOff())} aria-label="Clear ${m5.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds && html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
+    putHTML($("#mtgBody"), html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days2.map((d5) => html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d5).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(d5)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d5}" ${off(clrOff())} title="${clrOff() ? "Needs the live server" : "Set this day's meetings aside"}">Clear day · ${L3.filter((m5) => m5.day === d5 && shown2(m5)).length}</button></div></td></tr>${L3.map((m5, i5) => [m5, i5]).filter(([m5]) => m5.day === d5 && shown2(m5)).map(([m5, i5]) => html`<tr data-mid="${m5.id || ""}" class="${m5.private ? "mtgpriv" : ""}${mtgLater(m5) ? " mtglater" : ""}${mtgHasTx(m5) ? " mtgtx" : ""}${m5.transcript && m5.transcript !== "available" && !m5.processed ? " mtgmute" : ""}${m5.processed ? " mtgdone" : ""}" ${mtgLater(m5) && html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i5}" aria-label="Select ${m5.title}" ${raw(MSEL.has(m5.id) ? "checked" : "")} ${off(!mtgCanPick(m5))} ${!m5.id && html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m5.start}–${m5.end}</td><td class="title">${mtgHasTx(m5) && html`<span class="txbadge">Transcript</span> `}${m5.title}${m5.private ? html` <span class="sub">private</span>` : ""}</td><td>${m5.teams ? html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>` : html`<span class="sub">In person</span>`}</td><td>${org(m5)}</td><td>${projSel(m5, i5)}</td><td>${mtgState(m5)}</td><td>${mtgTx(m5, i5)}</td><td><button class="mtgx" data-clr="one" data-mi="${i5}" ${off(clrOff())} aria-label="Clear ${m5.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds && html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
   }
   var MTGI = ic("video", { size: 14, w: 2 });
   var mtgBusy = () => !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
@@ -46612,9 +46958,9 @@ ${s5}`;
           ] })
         ] }),
         f5.items.length ? f5.items.map((i5) => {
-          const k5 = ["actions", "raid", "decisions"].includes(i5.table) ? i5.table : kOfId(i5.id), off2 = ex2.has(i5.id);
-          return /* @__PURE__ */ u2("div", { class: `shitem${off2 ? " off" : ""}`, children: [
-            /* @__PURE__ */ u2("input", { type: "checkbox", checked: !off2, "aria-label": `Include ${i5.id}`, onChange: () => toggleExcluded(i5.id) }),
+          const k5 = ["actions", "raid", "decisions"].includes(i5.table) ? i5.table : kOfId(i5.id), off = ex2.has(i5.id);
+          return /* @__PURE__ */ u2("div", { class: `shitem${off ? " off" : ""}`, children: [
+            /* @__PURE__ */ u2("input", { type: "checkbox", checked: !off, "aria-label": `Include ${i5.id}`, onChange: () => toggleExcluded(i5.id) }),
             /* @__PURE__ */ u2("div", { class: "t", "data-open": k5 ? `${k5}:${i5.id}` : void 0, tabIndex: k5 ? 0 : void 0, role: k5 ? "button" : void 0, children: [
               /* @__PURE__ */ u2("span", { class: "idc", children: i5.id }),
               i5.text,
@@ -46645,9 +46991,9 @@ ${s5}`;
           ] })
         ] }),
         shapeConfidential.value ? /* @__PURE__ */ u2("p", { class: "sub", children: "A confidential meeting lists no documents." }) : f5.documents.length ? f5.documents.map((d5) => {
-          const off2 = ex2.has(d5.path);
-          return /* @__PURE__ */ u2("div", { class: `shitem${off2 ? " off" : ""}`, children: [
-            /* @__PURE__ */ u2("input", { type: "checkbox", checked: !off2, "aria-label": `Include ${d5.name}`, onChange: () => toggleExcluded(d5.path) }),
+          const off = ex2.has(d5.path);
+          return /* @__PURE__ */ u2("div", { class: `shitem${off ? " off" : ""}`, children: [
+            /* @__PURE__ */ u2("input", { type: "checkbox", checked: !off, "aria-label": `Include ${d5.name}`, onChange: () => toggleExcluded(d5.path) }),
             /* @__PURE__ */ u2(Icon, { name: "filetext" }),
             /* @__PURE__ */ u2("span", { class: "t", children: [
               /* @__PURE__ */ u2("a", { href: "#", "data-dropen": d5.path, "data-tip": `Opens ${d5.path}`, children: d5.name }),
@@ -46763,7 +47109,7 @@ ${s5}`;
     };
     const saved = rec && rec.notes || {};
     const flat2 = (L3) => (L3 || []).map((l6) => l6.text.replace(/\s+/g, " ").trim()).join("\n");
-    const changed = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
+    const changed2 = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
     return /* @__PURE__ */ u2("div", { class: "ppshape", children: [
       conf ? /* @__PURE__ */ u2("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and the tracker only. creaite doesn't read the invite, minutes or documents." }) : null,
       /* @__PURE__ */ u2("div", { class: "ppshrow", children: [
@@ -46822,7 +47168,7 @@ ${s5}`;
             /* @__PURE__ */ u2(Icon, { name: "spark" }),
             "Suggestion from creaite"
           ] }),
-          /* @__PURE__ */ u2("span", { class: "sub", children: changed.length ? `${shPlural(changed.length, "section")} changed${changed.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed." }),
+          /* @__PURE__ */ u2("span", { class: "sub", children: changed2.length ? `${shPlural(changed2.length, "section")} changed${changed2.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed." }),
           /* @__PURE__ */ u2("span", { class: "sp" }),
           /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-ppdiscard": "1", onClick: () => discardProposal(rec), children: "Discard" }),
           /* @__PURE__ */ u2(
@@ -46831,7 +47177,7 @@ ${s5}`;
               type: "button",
               class: "btn primary shsm",
               "data-ppuse": "1",
-              disabled: !changed.length || !shapeReading.value,
+              disabled: !changed2.length || !shapeReading.value,
               onClick: async () => {
                 if (await useProposal()) onUsed();
               },
@@ -46843,7 +47189,7 @@ ${s5}`;
           c5.section ? `${c5.section}: ` : "",
           c5.note
         ] }, i5)) }) : null,
-        changed.map(([k5, label]) => /* @__PURE__ */ u2("div", { class: "shsec", children: [
+        changed2.map(([k5, label]) => /* @__PURE__ */ u2("div", { class: "shsec", children: [
           /* @__PURE__ */ u2("div", { class: "shsech", children: /* @__PURE__ */ u2("b", { children: label }) }),
           /* @__PURE__ */ u2("ul", { class: "ppsugl", children: (prop.notes[k5] || []).map((l6, i5) => /* @__PURE__ */ u2("li", { children: [
             l6.text,
@@ -47055,7 +47401,7 @@ ${s5}`;
       }
     }),
     form: () => {
-      const off2 = !draftOn("forms"), why = off2 ? draftWhyNot("status-form") : "";
+      const off = !draftOn("forms"), why = off ? draftWhyNot("status-form") : "";
       return {
         label: "Form",
         value: shared.GEN.form,
@@ -47461,12 +47807,12 @@ ${s5}`;
     $("#genSrc").hidden = !on2;
   }
   function genSrcLine() {
-    const c5 = shared.GEN.aud === "client", off2 = shared.GEN.aud !== "internal" || shared.GEN.form !== "current";
+    const c5 = shared.GEN.aud === "client", off = shared.GEN.aud !== "internal" || shared.GEN.form !== "current";
     const on2 = [...$$("#genSrc input:checked")].map((i5) => i5.value), names = GEN_SRC.filter((x5) => on2.includes(x5[0])).map((x5) => x5[3]);
     $$("#genSrc input").forEach((i5) => {
-      i5.disabled = off2;
+      i5.disabled = off;
     });
-    $("#genSrc").classList.toggle("off", off2);
+    $("#genSrc").classList.toggle("off", off);
     $("#genOff").hidden = !c5;
     $("#genSrcSum").textContent = c5 ? "Drawing on client-visible items" : on2.length ? `Drawing on ${plur(on2.length, "source")}` : "Drawing on no sources";
     $("#genSrcNames").textContent = c5 || !names.length ? "" : `· ${names.join(", ")}`;
@@ -48367,17 +48713,17 @@ ${pre}**Current state title:** ${title}`);
   function claimTrack() {
     const root2 = $("#curEd");
     if (root2 && shared.CURED && shared.CURED.claims) {
-      let changed = false;
+      let changed2 = false;
       for (const [n4, c5] of Object.entries(shared.CURED.claims)) {
         if (c5.edited) continue;
         if (claimText(root2, n4) !== c5.text) {
           c5.edited = true;
           c5.touched = true;
           c5.ids = [];
-          changed = true;
+          changed2 = true;
         }
       }
-      if (changed) {
+      if (changed2) {
         claimPaint("ed");
         evRefresh();
       }
@@ -49638,8 +49984,8 @@ ${pre}**Current state title:** ${title}`);
     return `${shared.DE.note ? `<div class="denote">${esc(shared.DE.note)}</div>` : ""}${owners.length ? `<div class="deopts"><label>Lead with <select id="deLead"><option value="">Attendees in order</option>${owners.map((n4) => `<option ${shared.DE.lead === n4 ? "selected" : ""}>${esc(n4)}</option>`).join("")}</select></label></div>` : ""}`;
   }
   function dePolishHtml() {
-    const tone = shared.DE.tone || "neutral", off2 = !draftOn("email");
-    return `<div class="detone${off2 ? " off" : ""}"><span class="sub">Polish the wording of the opening paragraph:</span>${["warm", "neutral", "firm"].map((t47) => `<button type="button" class="vchip" data-detone="${t47}" aria-pressed="${tone === t47}"${off2 ? " disabled" : ""}>${t47[0].toUpperCase() + t47.slice(1)}</button>`).join("")}${draftBtn("polish", "Polish", "Reword the opening paragraph only, in this tone; the table, subject and addresses are never touched", 'data-depolish="1"')}</div><div id="dePolish" class="depolish">${shared.DE.polish ? shared.DE.polish.html : ""}</div>`;
+    const tone = shared.DE.tone || "neutral", off = !draftOn("email");
+    return `<div class="detone${off ? " off" : ""}"><span class="sub">Polish the wording of the opening paragraph:</span>${["warm", "neutral", "firm"].map((t47) => `<button type="button" class="vchip" data-detone="${t47}" aria-pressed="${tone === t47}"${off ? " disabled" : ""}>${t47[0].toUpperCase() + t47.slice(1)}</button>`).join("")}${draftBtn("polish", "Polish", "Reword the opening paragraph only, in this tone; the table, subject and addresses are never touched", 'data-depolish="1"')}</div><div id="dePolish" class="depolish">${shared.DE.polish ? shared.DE.polish.html : ""}</div>`;
   }
   function drawDraftEmail(first) {
     const em2 = deBuild(), codes = [...new Set(shared.DE.items.map((i5) => i5.p))].sort();
@@ -50170,9 +50516,9 @@ ${pre}**Current state title:** ${title}`);
   var GENFM = null;
   var GEN_FIXEDLEN = { three: "Three lines, at most 60 words", email: "One paragraph, at most 120 words", teams: "At most 50 words" };
   function genFormOptions() {
-    const off2 = !draftOn("forms");
-    if (off2 && shared.GEN.form !== "current") shared.GEN.form = "current";
-    const cur = shared.GEN.form === "current", why = off2 ? draftWhyNot("status-form") : "", fx2 = GEN_FIXEDLEN[shared.GEN.form] || "", len = $("#genLen");
+    const off = !draftOn("forms");
+    if (off && shared.GEN.form !== "current") shared.GEN.form = "current";
+    const cur = shared.GEN.form === "current", why = off ? draftWhyNot("status-form") : "", fx2 = GEN_FIXEDLEN[shared.GEN.form] || "", len = $("#genLen");
     $("#genHint").textContent = `${cur ? `Into the editor, for you to edit and save.${why ? ` The other forms: ${why[0].toLowerCase() + why.slice(1)}.` : ""}` : "Shown here to copy; never saved."} ${GEN_AUDNOTE[shared.GEN.aud] || ""}`.trim();
     if (fx2) len.setAttribute("aria-disabled", "true");
     else len.removeAttribute("aria-disabled");
@@ -51302,12 +51648,12 @@ ${pre}**Current state title:** ${title}`);
     return DAYS.findIndex((d5) => w6.startsWith(d5) && DAYNAMES.some((n4) => n4.startsWith(w6)));
   }
   function workingDay(day, weekend = [0, 6]) {
-    const off2 = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
-    if (!off2(day)) return day;
+    const off = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
+    if (!off(day)) return day;
     for (let n4 = 1; n4 < 7; n4++) {
       const back2 = shift(day, -n4, "d"), on2 = shift(day, n4, "d");
-      if (!off2(back2)) return back2;
-      if (!off2(on2)) return on2;
+      if (!off(back2)) return back2;
+      if (!off(on2)) return on2;
     }
     return day;
   }
@@ -51460,8 +51806,8 @@ ${pre}**Current state title:** ${title}`);
       const f5 = new Date(y5, m5, 1), st2 = (f5.getDay() + 6) % 7, dn2 = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st2);
       for (let d5 = 1; d5 <= dn2; d5++) {
-        const v5 = `${y5}-${pad3(m5 + 1)}-${pad3(d5)}`, off2 = max && v5 > max || min && v5 < min;
-        g5 += `<button type="button" data-v="${fd(v5)}" tabindex="${v5 === cur ? 0 : -1}" ${off2 ? 'disabled aria-disabled="true"' : ""} aria-label="${fd(v5)}" class="${v5 === TODAY ? "today" : ""} ${v5 === toIso(inp.value) ? "sel" : ""} ${off2 ? "off" : ""}">${d5}</button>`;
+        const v5 = `${y5}-${pad3(m5 + 1)}-${pad3(d5)}`, off = max && v5 > max || min && v5 < min;
+        g5 += `<button type="button" data-v="${fd(v5)}" tabindex="${v5 === cur ? 0 : -1}" ${off ? 'disabled aria-disabled="true"' : ""} aria-label="${fd(v5)}" class="${v5 === TODAY ? "today" : ""} ${v5 === toIso(inp.value) ? "sel" : ""} ${off ? "off" : ""}">${d5}</button>`;
       }
       putHTML(box, html`<div class="ch"><button type="button" data-n="-1" aria-label="Previous month">‹</button><span>${raw(f5.toLocaleString("en-GB", { month: "long" }))} ${raw(y5)}</span><button type="button" data-n="1" aria-label="Next month">›</button></div><div class="cg">${raw(g5)}</div><div class="cf"><button type="button" data-v="${fd(min && TODAY < min ? min : max && TODAY > max ? max : TODAY)}">Today</button>${noclear ? "" : html`<button type="button" data-v="">Clear</button>`}</div>`);
       if (focus) {
@@ -52609,11 +52955,11 @@ ${pre}**Current state title:** ${title}`);
     const now = noteCur.value;
     if (now && now.path === r4.from) noteCur.value = { ...now, path: r4.note.path, note: r4.note, base: r4.base };
     noteRenamed.value = { from: r4.from, to: r4.note.path };
-    const changed = (r4.relinked || []).length, listed = (
+    const changed2 = (r4.relinked || []).length, listed = (
       /** @type {{title: string, why: string}[]} */
       r4.listed || []
     );
-    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed ? ` ${changed === 1 ? "One link" : `${changed} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
+    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed2 ? ` ${changed2 === 1 ? "One link" : `${changed2} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
     const refresh = async (cc2) => {
       const L3 = await api("/api/notes/list", { code: cc2 });
       if (L3 && L3.ok) {
@@ -52621,7 +52967,7 @@ ${pre}**Current state title:** ${title}`);
         if (notesCode.value === cc2) notesList.value = sortNotes(L3.notes);
       }
     };
-    if (changed) {
+    if (changed2) {
       for (const cc2 of Object.keys(all)) if ((all[cc2] || []).some((x5) => (r4.relinked || []).includes(x5.path))) refresh(cc2);
     }
   }
@@ -53814,7 +54160,7 @@ ${pre}**Current state title:** ${title}`);
       }
     };
     doc.forEach((node2, pos) => {
-      if (LISTS.has(node2.type.name)) node2.forEach((item, off2) => take2(item, pos + 1 + off2));
+      if (LISTS.has(node2.type.name)) node2.forEach((item, off) => take2(item, pos + 1 + off));
       else take2(node2, pos);
     });
     return out;
@@ -56575,15 +56921,15 @@ ${d5.text}`);
   }
   var HRANK = { "On track": 0, "At risk": 1, "Off track": 2 };
   function healthEvidence(code) {
-    const p6 = P4.find((x5) => x5.code === code) || {}, off2 = [], risk = [];
+    const p6 = P4.find((x5) => x5.code === code) || {}, off = [], risk = [];
     const overN = A4.filter((a5) => a5.p === code && open(a5) && a5.due && days(a5.due) < -S.overdueDays), urgent = R3.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent"), slip = p6.slip || 0;
     const nm3 = ((p6.ms || []).find((m5) => m5[6] === "Planned" && m5[4] && m5[8] && m5[8] > m5[4]) || [])[0] || "The next milestone";
-    if (slip > S.slipOff * 7) off2.push(`${nm3} moved ${slip} days`);
-    if (urgent.length >= S.urgentOff) off2.push(`${urgent.length} open Urgent risks or issues`);
+    if (slip > S.slipOff * 7) off.push(`${nm3} moved ${slip} days`);
+    if (urgent.length >= S.urgentOff) off.push(`${urgent.length} open Urgent risks or issues`);
     if (overN.length) risk.push(`${overN.length} action${overN.length === 1 ? "" : "s"} overdue by more than ${S.overdueDays} days`);
-    if (urgent.length && !off2.length) risk.push(`an open Urgent risk or issue`);
+    if (urgent.length && !off.length) risk.push(`an open Urgent risk or issue`);
     if (slip > 0 && slip <= S.slipAtRisk * 7) risk.push(`${nm3} moved ${slip} days`);
-    return { suggested: off2.length ? "Off track" : risk.length ? "At risk" : "On track", reasons: off2.length ? off2 : risk };
+    return { suggested: off.length ? "Off track" : risk.length ? "At risk" : "On track", reasons: off.length ? off : risk };
   }
   function showEvidence() {
     const el2 = $("#hEvidence");
@@ -59151,11 +59497,11 @@ ${d5.text}`);
       putHTML($("#helpPane"), html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`);
       return;
     }
-    const a5 = helpNorm(arg) || helpNorm(store.get("creaite-help-tab", "start")) || HTABS[0], i5 = a5.indexOf("-"), tab = i5 < 0 ? a5 : a5.slice(0, i5), rest = i5 < 0 ? "" : a5.slice(i5 + 1), changed = !$("#helpPane").dataset.tab || $("#helpPane").dataset.tab !== tab;
+    const a5 = helpNorm(arg) || helpNorm(store.get("creaite-help-tab", "start")) || HTABS[0], i5 = a5.indexOf("-"), tab = i5 < 0 ? a5 : a5.slice(0, i5), rest = i5 < 0 ? "" : a5.slice(i5 + 1), changed2 = !$("#helpPane").dataset.tab || $("#helpPane").dataset.tab !== tab;
     shared.HELPARG = a5;
     store.set("creaite-help-tab", tab);
     drawTabs($("#helpTabsHost"), { items: HD.tabs.map((t47) => ({ id: t47.id, label: t47.title, tabId: "htab-" + t47.id, data: { help: t47.id } })), selected: tab, onSelect: helpGo, label: "Help", className: "tabs", id: "helpTabs", wrap: true });
-    if (changed) {
+    if (changed2) {
       const html2 = HD.tabs.find((t47) => t47.id === tab).html.replace("<p>[start command]</p>", cmdBox());
       putHTML($("#helpPane"), raw(`<div class="hp-wrap hp-${tab}">${html2}</div>`));
       $("#helpPane").dataset.tab = tab;
@@ -59169,7 +59515,7 @@ ${d5.text}`);
       if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => {
         if (shared.HELPARG === a5 && target.isConnected) target.scrollIntoView({ block: "start" });
       });
-    } else if (changed) $("#v-help").scrollTop = 0;
+    } else if (changed2) $("#v-help").scrollTop = 0;
   }
   function helpGo(arg) {
     const a5 = helpNorm(arg);
@@ -59752,18 +60098,6 @@ ${d5.text}`);
     window.setInterval(helpScreenSync, 300);
   }
 
-  // stores/reportingSettings.js
-  var off = y3(/* @__PURE__ */ new Set());
-  function clientReportOn(code) {
-    return !off.value.has(code);
-  }
-  function setClientReportOn(code, on2) {
-    const next = new Set(off.peek());
-    if (on2) next.delete(code);
-    else next.add(code);
-    off.value = next;
-  }
-
   // components/sidebar/RailIcon.jsx
   var RAIL_ICONS = {
     today: [["circle", { cx: "12", cy: "12", r: "4" }], ["path", { d: "M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" }]],
@@ -59853,11 +60187,11 @@ ${d5.text}`);
     h2(() => {
       if (!drag) return;
       const move = (e4) => {
-        const off2 = (k5) => {
+        const off = (k5) => {
           const r4 = zones.current[k5]?.getBoundingClientRect();
           return r4 ? Math.abs(e4.clientX - (r4.left + r4.width / 2)) : Infinity;
         };
-        const zone = off2("top") <= off2("more") ? "top" : "more";
+        const zone = off("top") <= off("more") ? "top" : "more";
         const rows2 = [...zones.current[zone]?.querySelectorAll("li[data-rid]") || []].filter((li2) => (
           /** @type {HTMLElement} */
           li2.dataset.rid !== drag
@@ -62374,9 +62708,9 @@ ${d5.text}`);
       $("#chLog").focus({ preventScroll: true });
     };
   }
-  var localDay = (off2) => {
+  var localDay = (off) => {
     const d5 = /* @__PURE__ */ new Date();
-    d5.setDate(d5.getDate() + (off2 || 0));
+    d5.setDate(d5.getDate() + (off || 0));
     return `${d5.getFullYear()}-${z22(d5.getMonth() + 1)}-${z22(d5.getDate())}`;
   };
   var nowIso = () => {
@@ -65601,12 +65935,12 @@ ${d5.text}`);
     const list = ctx.editing ? figs : figs.filter((f5) => f5.shown !== false);
     return /* @__PURE__ */ u2("div", { children: [
       /* @__PURE__ */ u2("div", { class: "wr-stats", role: "list", "aria-label": s5.heading, children: list.map((f5, i5) => {
-        const off2 = f5.shown === false, red = f5.key === "overdue" && f5.value !== "0";
+        const off = f5.shown === false, red = f5.key === "overdue" && f5.value !== "0";
         return /* @__PURE__ */ u2(
           "div",
           {
             role: "listitem",
-            class: `wr-stat${off2 ? " off" : ""}${drag === i5 ? " dragging" : ""}`,
+            class: `wr-stat${off ? " off" : ""}${drag === i5 ? " dragging" : ""}`,
             draggable: ctx.editing,
             onDragStart: () => setDrag(i5),
             onDragEnd: () => setDrag(null),
@@ -65630,11 +65964,11 @@ ${d5.text}`);
                 {
                   type: "button",
                   class: "wr-eye wr-seye",
-                  "aria-pressed": off2 ? "false" : "true",
+                  "aria-pressed": off ? "false" : "true",
                   onClick: () => hide(i5),
-                  "aria-label": `${off2 ? "Show" : "Hide"} ${f5.label}`,
-                  "data-tip": off2 ? "Left out of the report: click to show it" : "In the report: click to leave it out",
-                  children: off2 ? "○" : "◉"
+                  "aria-label": `${off ? "Show" : "Hide"} ${f5.label}`,
+                  "data-tip": off ? "Left out of the report: click to show it" : "In the report: click to leave it out",
+                  children: off ? "○" : "◉"
                 }
               ) : null,
               /* @__PURE__ */ u2("span", { class: `n${red ? " r" : ""}`, children: f5.value }),
@@ -65767,20 +66101,20 @@ ${d5.text}`);
           cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key))
         ] }) }),
         /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, i5) => {
-          const off2 = row2.shown === false;
-          if (off2 && !ctx.editing) return null;
+          const off = row2.shown === false;
+          if (off && !ctx.editing) return null;
           const item = (ctx.doc.items || {})[row2.ref || ""] || null, cells = row2.cells || cellsFromItem(s5.id, item, ctx.doc.date);
-          return /* @__PURE__ */ u2("tr", { class: off2 ? "hidrow" : "", children: [
+          return /* @__PURE__ */ u2("tr", { class: off ? "hidrow" : "", children: [
             ctx.editing ? /* @__PURE__ */ u2("td", { class: "eyec", children: /* @__PURE__ */ u2(
               "button",
               {
                 type: "button",
                 class: "wr-eye",
-                "aria-pressed": off2 ? "false" : "true",
+                "aria-pressed": off ? "false" : "true",
                 onClick: () => flip2(i5),
-                "aria-label": `${off2 ? "Put in the report" : "Leave out of the report"}: ${row2.ref || cells[cols[0].key] || "row"}`,
-                "data-tip": off2 ? "Left out of the report: click to show it" : "In the report: click to leave it out",
-                children: off2 ? "○" : "◉"
+                "aria-label": `${off ? "Put in the report" : "Leave out of the report"}: ${row2.ref || cells[cols[0].key] || "row"}`,
+                "data-tip": off ? "Left out of the report: click to show it" : "In the report: click to leave it out",
+                children: off ? "○" : "◉"
               }
             ) }) : null,
             cols.map((c5) => /* @__PURE__ */ u2("td", { class: c5.num ? "num" : "", children: c5.cell({ ctx, row: row2, i: i5, cells, item }) }, c5.key))
@@ -66007,128 +66341,6 @@ ${d5.text}`);
         ] }) : null
       ] }) : null
     ] });
-  }
-
-  // stores/exportSave.js
-  var exportClash = y3(
-    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
-    null
-  );
-  var exportSaved = y3(
-    /** @type {ExportAnswer|null} */
-    null
-  );
-  var exportFailed = y3("");
-  async function saveExport(body2) {
-    exportFailed.value = "";
-    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
-    if (r4.ok) {
-      exportClash.value = null;
-      exportSaved.value = r4;
-    } else if (r4.clash) {
-      exportSaved.value = null;
-      exportClash.value = { body: body2, r: r4 };
-    } else {
-      exportClash.value = null;
-      exportSaved.value = null;
-      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
-    }
-    return r4;
-  }
-  async function answerClash(choice, newName) {
-    const c5 = exportClash.value;
-    if (!c5) return null;
-    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
-  }
-  function cancelClash() {
-    exportClash.value = null;
-  }
-  var openFolder = (folder) => api("/api/open", { path: folder });
-  var showInFinder = (path) => api("/api/report/reveal", { path });
-  var openSaved = (path) => api("/api/open", { path });
-
-  // stores/weekly.js
-  var weeklyArg = y3(
-    /** @type {{code: string, week?: string}|null} */
-    null
-  );
-  var weeklyView = y3(
-    /** @type {WeeklyView|null} */
-    null
-  );
-  var weeklyDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var weeklyBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var weeklyBusy = y3("");
-  var weeklyEditing = y3(false);
-  var weeklyLogos = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var wkAsked = 0;
-  async function loadWeekly(arg, fresh = false) {
-    const mine = ++wkAsked;
-    weeklyArg.value = arg;
-    weeklyEditing.value = false;
-    if (!viaServer()) {
-      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
-      return;
-    }
-    weeklyBusy.value = "Opening the weekly report…";
-    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
-    if (mine !== wkAsked) return;
-    weeklyBusy.value = "";
-    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
-    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
-  }
-  function takeWeekly(r4) {
-    weeklyView.value = r4;
-    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function readLogos(code, logos) {
-    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
-    if (!want.length) return;
-    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
-    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
-  }
-  async function saveWeekly(req) {
-    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
-    const ok2 = !!(r4 && r4.ok);
-    if (ok2) {
-      weeklyBase.value = Number(r4.version) || weeklyBase.value;
-      const v5 = weeklyView.value;
-      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
-    }
-    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
-  }
-  async function approveWeekly(doc, force) {
-    const a5 = weeklyArg.value;
-    const r4 = await api("/api/report/approve", {
-      kind: "weekly",
-      code: doc.project || a5 && a5.code,
-      week_ending: doc.date,
-      doc,
-      base_version: weeklyBase.value,
-      force: force || void 0
-    });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportWeekly(doc, fmt, page) {
-    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
-  }
-  var weeklyDirty = false;
-  var setWeeklyDirty = (on2) => {
-    weeklyDirty = on2;
-  };
-  function editDoc(d5, _why) {
-    weeklyDoc.value = d5;
-    weeklyDirty = true;
   }
 
   // components/report/weekly/Top.jsx
@@ -66971,8 +67183,8 @@ ${d5.text}`);
           cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key))
         ] }) }),
         /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, index) => {
-          const off2 = row2.shown === false;
-          if (off2 && !live) return null;
+          const off = row2.shown === false;
+          if (off && !live) return null;
           const setRow = (p6, why) => {
             const r4 = rows2.slice();
             r4[index] = { ...row2, ...p6 };
@@ -66994,19 +67206,19 @@ ${d5.text}`);
             Tag: Tg2
           };
           if (rowFn) return rowFn(rc2);
-          return /* @__PURE__ */ u2("tr", { class: off2 ? "sheet-rowoff" : "", "data-ref": row2.ref || void 0, children: [
+          return /* @__PURE__ */ u2("tr", { class: off ? "sheet-rowoff" : "", "data-ref": row2.ref || void 0, children: [
             live ? /* @__PURE__ */ u2("td", { class: "eyec", children: /* @__PURE__ */ u2(
               "button",
               {
                 type: "button",
                 class: "eye",
-                "aria-pressed": off2 ? "false" : "true",
-                "aria-label": `${off2 ? "Show" : "Leave out"} ${row2.ref || "this row"}`,
-                onClick: () => setRow({ shown: off2 }, off2 ? "Row shown" : "Row hidden"),
+                "aria-pressed": off ? "false" : "true",
+                "aria-label": `${off ? "Show" : "Leave out"} ${row2.ref || "this row"}`,
+                onClick: () => setRow({ shown: off }, off ? "Row shown" : "Row hidden"),
                 children: /* @__PURE__ */ u2(Icon, { name: "eye" })
               }
             ) }) : null,
-            cols.map((c5) => /* @__PURE__ */ u2("td", { "data-col": c5.key, children: off2 ? /* @__PURE__ */ u2("span", { children: (row2.cells || {})[c5.key] || (c5.key === "id" ? row2.ref : "") }) : /* @__PURE__ */ u2(T6, { row: index, col: c5.key, label: c5.label }) }, c5.key))
+            cols.map((c5) => /* @__PURE__ */ u2("td", { "data-col": c5.key, children: off ? /* @__PURE__ */ u2("span", { children: (row2.cells || {})[c5.key] || (c5.key === "id" ? row2.ref : "") }) : /* @__PURE__ */ u2(T6, { row: index, col: c5.key, label: c5.label }) }, c5.key))
           ] }, row2.ref || index);
         }) })
       ] }),
@@ -67042,12 +67254,12 @@ ${d5.text}`);
     const put2 = (nd2, why) => h5.update({ figures: nd2.sections.find((x5) => x5.id === s5.id).figures }, why);
     const act = (nd2, why) => put2(nd2, why);
     return /* @__PURE__ */ u2("div", { class: "figures", children: figs.map((f5) => {
-      const off2 = f5.shown === false;
-      if (off2 && !live) return null;
+      const off = f5.shown === false;
+      if (off && !live) return null;
       return /* @__PURE__ */ u2(
         "div",
         {
-          class: `figure${off2 ? " sheet-figoff" : ""}${drag === f5.key ? " sheet-dragging" : ""}`,
+          class: `figure${off ? " sheet-figoff" : ""}${drag === f5.key ? " sheet-dragging" : ""}`,
           "data-key": f5.key,
           draggable: live,
           onDragStart: live ? (e4) => {
@@ -67070,9 +67282,9 @@ ${d5.text}`);
               {
                 type: "button",
                 class: "eye sheet-figeye",
-                "aria-pressed": off2 ? "false" : "true",
-                "aria-label": `${off2 ? "Show" : "Leave out"} ${f5.label}`,
-                onClick: () => act(setFigureShown(ctx.doc, s5.id, f5.key, off2), off2 ? "Figure shown" : "Figure hidden"),
+                "aria-pressed": off ? "false" : "true",
+                "aria-label": `${off ? "Show" : "Leave out"} ${f5.label}`,
+                onClick: () => act(setFigureShown(ctx.doc, s5.id, f5.key, off), off ? "Figure shown" : "Figure hidden"),
                 children: /* @__PURE__ */ u2(Icon, { name: "eye" })
               }
             ) : null,
@@ -68492,12 +68704,12 @@ ${d5.text}`);
           cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key))
         ] }) }),
         /* @__PURE__ */ u2("tbody", { children: rows2.map((r4, i5) => {
-          const it2 = items2[String(r4.ref)] || {}, off2 = r4.shown === false;
-          if (off2 && !ctx.editing) return null;
+          const it2 = items2[String(r4.ref)] || {}, off = r4.shown === false;
+          if (off && !ctx.editing) return null;
           const own = s5.id === "overdue" && it2.client_owned === false;
-          return /* @__PURE__ */ u2("tr", { class: off2 ? "crhid" : "", "data-row": String(r4.ref), children: [
-            ctx.editing ? /* @__PURE__ */ u2("td", { class: "creye", children: /* @__PURE__ */ u2("button", { type: "button", class: "creyebtn", "aria-pressed": off2 ? "false" : "true", "aria-label": `${off2 ? "Show" : "Hide"} ${it2.title || r4.ref}`, "data-creye": String(r4.ref), onClick: () => flip2(i5), children: off2 ? "○" : "◉" }) }) : null,
-            off2 ? /* @__PURE__ */ u2("td", { colSpan: cols.length, children: [
+          return /* @__PURE__ */ u2("tr", { class: off ? "crhid" : "", "data-row": String(r4.ref), children: [
+            ctx.editing ? /* @__PURE__ */ u2("td", { class: "creye", children: /* @__PURE__ */ u2("button", { type: "button", class: "creyebtn", "aria-pressed": off ? "false" : "true", "aria-label": `${off ? "Show" : "Hide"} ${it2.title || r4.ref}`, "data-creye": String(r4.ref), onClick: () => flip2(i5), children: off ? "○" : "◉" }) }) : null,
+            off ? /* @__PURE__ */ u2("td", { colSpan: cols.length, children: [
               it2.title || cellsFor(s5.id, it2)[first] || "",
               " ",
               own ? /* @__PURE__ */ u2("span", { class: "crlk", children: "not the client's own" }) : null
@@ -69344,7 +69556,7 @@ ${d5.text}`);
       const d5 = new Date(y5, m5 - 1 + k5, 1, 12);
       setMonth(`${d5.getFullYear()}-${pad2(d5.getMonth() + 1)}`);
     };
-    const off2 = new Set(offDays());
+    const off = new Set(offDays());
     const cells = [];
     for (let i5 = 0; i5 < lead; i5++) cells.push(/* @__PURE__ */ u2("span", {}, `b${i5}`));
     for (let d5 = 1; d5 <= count; d5++) {
@@ -69353,7 +69565,7 @@ ${d5.text}`);
         "button",
         {
           type: "button",
-          class: `pkday${iso2 === due ? " on" : ""}${iso2 === day ? " today" : ""}${off2.has(dow2) ? " wk" : ""}`,
+          class: `pkday${iso2 === due ? " on" : ""}${iso2 === day ? " today" : ""}${off.has(dow2) ? " wk" : ""}`,
           "data-day": iso2,
           "aria-label": deadlineDay(iso2),
           "aria-pressed": iso2 === due ? "true" : "false",
@@ -71278,15 +71490,194 @@ ${d5.text}`);
   }
 
   // components/report/hub/ClientReportPanel.jsx
-  function ClientReportPanel({ code, onClose }) {
-    return /* @__PURE__ */ u2("div", { class: "hubcfg-body", children: [
-      /* @__PURE__ */ u2("p", { class: "sub", children: [
-        "Client report settings for ",
-        code,
-        " arrive in the next step."
+  var TILES = (
+    /** @type {{kind: TileKind, mark: string, name: string, line: string}[]} */
+    [
+      { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports. Always shown." },
+      { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
+      { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" }
+    ]
+  );
+  var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
+  function LogoTile({ code, t: t47, ticked }) {
+    const file = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const path = crLogoPaths.value[t47.kind], pic = path ? crLogoData.value[path] : "";
+    const firm = t47.kind === "firm";
+    const picked = async (e4) => {
+      const input = (
+        /** @type {HTMLInputElement} */
+        e4.target
+      ), f5 = input.files && input.files[0];
+      if (f5) await uploadClientLogo(code, t47.kind, f5);
+      input.value = "";
+    };
+    const toggle = () => {
+      const now = clientLogosOn(code), next = now.includes(t47.kind) ? now.filter((k5) => k5 !== t47.kind) : [...now, t47.kind];
+      setClientLogos(code, next);
+    };
+    return /* @__PURE__ */ u2("div", { class: "cfglogo", "data-kind": t47.kind, children: [
+      /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", children: pic ? /* @__PURE__ */ u2("img", { alt: "", src: pic }) : t47.mark }),
+      /* @__PURE__ */ u2("span", { class: "cfgname", children: [
+        t47.name,
+        /* @__PURE__ */ u2("span", { class: "sub", children: t47.line })
       ] }),
-      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: onClose, children: "Close" })
+      /* @__PURE__ */ u2("span", { class: "cfgact", children: [
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn sm",
+            "data-logo-add": t47.kind,
+            onClick: () => file.current && file.current.click(),
+            "aria-label": `${pic ? "Change" : "Add"} the ${firm ? "firm's" : t47.kind === "client" ? "client's" : "partner's"} logo`,
+            children: pic ? "Change" : "Add logo"
+          }
+        ),
+        pic ? /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn sm",
+            "data-logo-remove": t47.kind,
+            onClick: () => removeClientLogo(code, t47.kind),
+            "aria-label": `Remove the ${t47.kind} logo`,
+            children: "Remove"
+          }
+        ) : null,
+        /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", "data-logo-file": t47.kind, onChange: picked }),
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            checked: firm || ticked,
+            disabled: firm,
+            "data-logo-tick": t47.kind,
+            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.kind}'s logo in the header`,
+            onChange: firm ? void 0 : toggle
+          }
+        )
+      ] })
     ] });
+  }
+  function ClientReportPanel({ code, onClose }) {
+    crTick.value;
+    const p6 = (
+      /** @type {any} */
+      P4.find((x5) => x5.code === code)
+    );
+    h2(() => {
+      readClientLogos(code);
+    }, [code]);
+    if (!p6) return null;
+    const on2 = clientReportOn(code), ticked = clientLogosOn(code), rhythms = RHYTHMS.includes(p6.rhythm) ? RHYTHMS : [...RHYTHMS, p6.rhythm];
+    return /* @__PURE__ */ u2("div", { class: "hubcfg", id: "hubCfg", role: "dialog", "aria-label": "Client report settings", "data-code": code, "data-on": on2 ? "on" : "off", children: [
+      /* @__PURE__ */ u2("h3", { children: [
+        "Client report for ",
+        p6.name
+      ] }),
+      /* @__PURE__ */ u2("label", { class: "cfgsw", children: [
+        /* @__PURE__ */ u2("input", { type: "checkbox", class: "switch", id: "cfgOn", checked: on2, onChange: (e4) => setClientReport(
+          code,
+          /** @type {HTMLInputElement} */
+          e4.target.checked
+        ) }),
+        /* @__PURE__ */ u2("span", { children: [
+          /* @__PURE__ */ u2("b", { children: "This project needs a separate client report" }),
+          /* @__PURE__ */ u2("span", { class: "sub", children: "Turn off if the client only receives the internal report, or nothing at all." })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("p", { class: "sub cfgkeep", id: "cfgKeep", children: "This applies to every future report of this project until you change it. Reports already written are kept as they are, and turning it off deletes nothing." }),
+      on2 ? /* @__PURE__ */ u2("div", { class: "cfgbody", id: "cfgBody", children: [
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgRh", children: "How often" }),
+          /* @__PURE__ */ u2("select", { id: "cfgRh", value: p6.rhythm, onChange: (e4) => setClientRhythm(
+            code,
+            /** @type {HTMLSelectElement} */
+            e4.target.value
+          ), children: rhythms.map((r4) => /* @__PURE__ */ u2("option", { value: r4, selected: r4 === p6.rhythm, children: r4 }, r4)) })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgNm", children: "Client name on the report" }),
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              id: "cfgNm",
+              class: "pkdt",
+              defaultValue: p6.client || "",
+              onChange: (e4) => setClientName(
+                code,
+                /** @type {HTMLInputElement} */
+                e4.target.value
+              )
+            },
+            p6.client || ""
+          )
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgRem", children: "Reminder" }),
+          /* @__PURE__ */ u2("label", { class: "cfgck", children: [
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                type: "checkbox",
+                id: "cfgRem",
+                checked: clientReminderOn(code),
+                onChange: (e4) => setClientReminder(
+                  code,
+                  /** @type {HTMLInputElement} */
+                  e4.target.checked
+                )
+              }
+            ),
+            " Remind me on the due day"
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow top", children: [
+          /* @__PURE__ */ u2("label", { id: "cfgLogosL", children: "Logos in the report header" }),
+          /* @__PURE__ */ u2("div", { class: "cfglogos", role: "group", "aria-labelledby": "cfgLogosL", children: [
+            TILES.map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
+            crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "sub cfgnote", role: "status", id: "cfgLogoNote", children: crLogoNote.value }) : null,
+            /* @__PURE__ */ u2("p", { class: "sub cfgnote", children: "Ticking a logo changes the header of the internal and the client report. A transparent PNG or SVG sits best; empty margins are trimmed on the copy that is drawn, and the file you choose is kept as it is." })
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects." })
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub cfgoff", id: "cfgOff", children: "This project has no client report." }),
+      /* @__PURE__ */ u2("div", { class: "cfgfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "cfgDone", onClick: onClose, children: "Done" }) })
+    ] });
+  }
+  function openClientReport(code) {
+    let host2 = document.getElementById("crHost");
+    if (host2 && host2.dataset.code === code) {
+      closeClientReport();
+      return;
+    }
+    if (!host2) {
+      host2 = document.createElement("div");
+      host2.id = "crHost";
+      document.body.appendChild(host2);
+    }
+    host2.dataset.code = code;
+    bindEsc();
+    R(/* @__PURE__ */ u2(ClientReportPanel, { code, onClose: closeClientReport }), host2);
+    const first = host2.querySelector("input,select,button");
+    if (first) first.focus();
+  }
+  function closeClientReport() {
+    const host2 = document.getElementById("crHost");
+    if (!host2) return;
+    R(null, host2);
+    host2.remove();
+  }
+  var escBound = false;
+  function bindEsc() {
+    if (escBound) return;
+    escBound = true;
+    document.addEventListener("keydown", (e4) => {
+      if (e4.key === "Escape" && document.getElementById("crHost")) closeClientReport();
+    });
   }
 
   // components/report/hub/HubBar.jsx
@@ -71356,7 +71747,7 @@ ${d5.text}`);
         line: cApproved ? "Already approved and filed" : ready ? "Files it in Reports" : "Available once the internal report is approved"
       }] : []
     ];
-    const label = `Client report settings: ${on2 ? "on" : "off"}`;
+    const label = clientReportCogLabel(code);
     return /* @__PURE__ */ u2(S2, { children: [
       on2 ? /* @__PURE__ */ u2("span", { class: "seg", id: "hubSeg", role: "group", "aria-label": "Which report", children: VIEWS.map(([id2, name]) => /* @__PURE__ */ u2("button", { type: "button", "data-hv": id2, "aria-pressed": view === id2 ? "true" : "false", onClick: () => onView(id2), children: name }, id2)) }) : null,
       /* @__PURE__ */ u2(WeekMenu, { week, tone, rows: rows2, clientOn: on2, onPick: onWeek }),
@@ -71659,6 +72050,7 @@ ${d5.text}`);
   }
   function ReportingHub() {
     repTick.value;
+    crTick.value;
     const code = spaceCode.value, p6 = P4.find((x5) => x5.code === code);
     const on2 = code ? clientReportOn(code) : false, asked3 = spaceWeek.value;
     const ready = !!code && hubReady.value === hubKey(code, asked3);
@@ -71797,11 +72189,11 @@ ${d5.text}`);
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("b", { children: p6.name }) }),
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(StatusDot, { health: p6.health }) }),
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(StateChip, { s: v5.internal }) }),
-          /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("div", { class: "rp-cl", children: v5.clients.map((c5) => /* @__PURE__ */ u2("span", { children: [
+          /* @__PURE__ */ u2("td", { children: v5.clients.length ? /* @__PURE__ */ u2("div", { class: "rp-cl", children: v5.clients.map((c5) => /* @__PURE__ */ u2("span", { children: [
             /* @__PURE__ */ u2("span", { class: "sub", children: c5.client }),
             " ",
             /* @__PURE__ */ u2(StateChip, { s: c5.state })
-          ] }, c5.client)) }) }),
+          ] }, c5.client)) }) : /* @__PURE__ */ u2("span", { class: "sub", children: "No client report" }) }),
           /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("button", { type: "button", class: `btn sm${i5 === 0 ? " primary" : ""}`, "data-rpopen": p6.code, "aria-label": `Open ${p6.name}'s reporting`, onClick: () => openSpace(p6.code, week === cur ? "" : week), children: "Open" }) })
         ] }, p6.code)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { colSpan: 5, children: /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing needs you this week. Choose All projects to see every report." }) }) }) })
       ] }) }),
@@ -72653,6 +73045,32 @@ ${d5.text}`);
       return false;
     }
   }
+  function memLineEdit(text, label, val2) {
+    const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), re2 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$", "m");
+    const m5 = text.match(re2);
+    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val2 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
+    const near = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text) || /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
+    if (!near) return null;
+    const at2 = near.index + near[0].length;
+    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val2 + text.slice(at2), was: "" };
+  }
+  async function setMemLine(code, label, val2, key2) {
+    if (!await needVault()) return false;
+    try {
+      await vq(async () => {
+        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
+        if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
+        if (r4.text === text) return;
+        await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
+        await shared.VW.write(path, r4.text);
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val2 }) + "\n");
+      });
+      return true;
+    } catch (e4) {
+      snack("Not saved: " + e4.message);
+      return false;
+    }
+  }
   shared.LIVE = !!D.live;
   shared.HELD = [];
   shared.DATA_AT = D.data_at || "";
@@ -73420,6 +73838,8 @@ ${d5.text}`);
         "claimState",
         "claimsNote",
         "clearAllFilters",
+        "clientLogosOn",
+        "clientReportCogLabel",
         "clientReportHref",
         "clientReportOn",
         "closeCapture",
@@ -73439,6 +73859,8 @@ ${d5.text}`);
         "countUp",
         "covered",
         "crDialog",
+        "crLogoData",
+        "crTick",
         "creaiteEditor",
         "createNote",
         "csHead",
@@ -73658,6 +74080,7 @@ ${d5.text}`);
         "openCapture",
         "openChat",
         "openCk",
+        "openClientReport",
         "openContextMenu",
         "openDatePicker",
         "openDialog",
@@ -73832,7 +74255,6 @@ ${d5.text}`);
         "sensitive",
         "sentLog",
         "setChatWidth",
-        "setClientReportOn",
         "setLayout",
         "setLive",
         "setMark",
@@ -73884,6 +74306,7 @@ ${d5.text}`);
         "undoWords",
         "unescHtml",
         "updReview",
+        "uploadClientLogo",
         "validate",
         "viaServer",
         "vipBadge",
@@ -74146,16 +74569,16 @@ ${d5.text}`);
       ))) hide(false);
     }).observe(content, { attributes: true, attributeFilter: ["hidden"], subtree: true });
     const sync = () => {
-      const off2 = bar.offsetHeight === 0;
+      const off = bar.offsetHeight === 0;
       bar.querySelectorAll(BAR_FOCUSABLE).forEach((n4) => {
         const el2 = (
           /** @type {HTMLElement} */
           n4
         );
-        if (off2 && !el2.hasAttribute("data-tb-ti")) {
+        if (off && !el2.hasAttribute("data-tb-ti")) {
           el2.setAttribute("data-tb-ti", el2.getAttribute("tabindex") ?? "");
           el2.tabIndex = -1;
-        } else if (!off2 && el2.hasAttribute("data-tb-ti")) {
+        } else if (!off && el2.hasAttribute("data-tb-ti")) {
           const o5 = el2.getAttribute("data-tb-ti");
           el2.removeAttribute("data-tb-ti");
           if (o5 === "") el2.removeAttribute("tabindex");

@@ -26,7 +26,7 @@ import { fd } from "../../../core/page.js";
 import { crBase, crDoc, crInfo, crInternal, crOpen, loadClientReport, saveClientPage } from "../../../stores/clientReport.js";
 import { hubAsk, hubCfg, hubExported, hubKey, hubNote, hubReady, hubView, hubZoom, loadHub, reloadHub } from "../../../stores/hub.js";
 import { repTick, spaceCode, spaceWeek, spaceWeeks, weekView } from "../../../stores/reporting.js";
-import { clientReportOn } from "../../../stores/reportingSettings.js";
+import { clientReportOn, crTick } from "../../../stores/reportingSettings.js";
 import { editDoc, saveWeekly, setWeeklyDirty, weeklyBase, weeklyBusy, weeklyDoc, weeklyEditing, weeklyView } from "../../../stores/weekly.js";
 
 /** @typedef {import("../Sheet.jsx").SheetDoc} SheetDoc */
@@ -125,7 +125,7 @@ function HubSheet({ code, view, on, doc }) {
 
 /** The page. */
 export function ReportingHub() {
-  repTick.value;                                        // a reload of the data redraws
+  repTick.value; crTick.value;                          // a reload of the data, or a change to the client report setting, redraws
   const code = spaceCode.value, p = P.find(x => x.code === code);
   const on = code ? clientReportOn(code) : false, asked = spaceWeek.value;
   const ready = !!code && hubReady.value === hubKey(code, asked);

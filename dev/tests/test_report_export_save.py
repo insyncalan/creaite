@@ -240,7 +240,7 @@ class ExportSavePage(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         self.reports = self.v.root / ABC / "reports"
-        self.b.eval("setClientReportOn('ABC', false)")             # no client report: Export asks only the format (#221 H1)
+        self.b.eval("P.find(p=>p.code==='ABC').cr=false; crTick.value++")             # no client report: Export asks only the format (#221 H1)
         self.b.eval("go('weekly',{code:'ABC'})")
         self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
         self.b.eval("window.__calls=[];const f=window.fetch;window.fetch=function(u,o){window.__calls.push([String(u),o&&o.body||'']);return f.apply(this,arguments)}")
