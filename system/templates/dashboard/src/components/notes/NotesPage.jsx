@@ -20,7 +20,7 @@ import { FindUpdates } from "./FindUpdates.jsx";
 import { askDeleteNote, DeleteNoteDialog } from "./DeleteNote.jsx";
 import { Dialog } from "../Dialog.jsx";
 import { Icon } from "../Icon.jsx";
-import { Menu, openMenu } from "../Menu.jsx";
+import { Menu, menuOpenFor, openMenu } from "../Menu.jsx";
 import { noteMenuItems, noteMenuPick } from "./noteMenu.js";
 import { NewTile } from "../work/NewTile.jsx";
 import { NoteDate, NoteTags } from "./NoteHeader.jsx";
@@ -51,6 +51,9 @@ export function noteByTitle(code, title) {
   return pick(all[code]) || Object.values(all).map(pick).find(Boolean) || null;
 }
 
+/** When the keyboard last opened a row menu: the browser then sends its own contextmenu event, which must not open a second one. */
+let kbAt = 0;
+
 /** The list. @param {{code: string, onOpen: (path: string) => Promise<void> | void, onOpenFile: (path: string) => void}} props */
 function NotesList({ code, onOpen, onOpenFile }) {
   const open = notesListOpen.value, q = notesQuery.value.trim().toLowerCase(), cur = noteCur.value;
@@ -68,9 +71,9 @@ function NotesList({ code, onOpen, onOpenFile }) {
   };
   const row = /** @param {NoteSummary} n */ n => (
     <li key={n.path}>
-      <button type="button" class={`ni${cur && cur.path === n.path ? " on" : ""}`} aria-current={cur && cur.path === n.path ? "page" : undefined} onClick={() => onOpen(n.path)}
-        onContextMenu={e => { const r = e.currentTarget.getBoundingClientRect(); rowMenu(e, n, e.clientX || r.left + 24, e.clientY || r.bottom); }}
-        onKeyDown={e => { if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) { const r = e.currentTarget.getBoundingClientRect(); rowMenu(e, n, r.left + 24, r.bottom); } }}>
+      <button type="button" data-path={n.path} class={`ni${cur && cur.path === n.path ? " on" : ""}`} aria-current={cur && cur.path === n.path ? "page" : undefined} onClick={() => onOpen(n.path)}
+        onContextMenu={e => { const r = e.currentTarget.getBoundingClientRect(); if (Date.now() - kbAt < 400 && menuOpenFor(e.currentTarget)) { e.preventDefault(); return; } rowMenu(e, n, e.clientX || r.left + 24, e.clientY || r.bottom); }}
+        onKeyDown={e => { if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) { const r = e.currentTarget.getBoundingClientRect(); kbAt = Date.now(); rowMenu(e, n, r.left + 24, r.bottom); } }}>
         <b>{n.pinned ? <span class="pin" aria-hidden="true">◆ </span> : null}{n.title}</b>
         <small>{when(n)}{n.kind ? ` · ${n.kind}` : ""}{n.confidential ? <span class="conf"> · Confidential</span> : null}</small>
       </button>
@@ -84,7 +87,7 @@ function NotesList({ code, onOpen, onOpenFile }) {
           aria-label={label} data-tip={`${label} (⌘\\)`} onClick={() => toggleNotesList()}><Icon name={open ? "chevsleft" : "chevsright"} /></button>
         <span class="vlabel" aria-hidden="true">{notesList.value.length} notes</span>
       </div>
-      <div id="notesListBody" hidden={!open}>
+      <div id="notesListBody" tabindex="-1" hidden={!open}>
         <input class="search nsearch" type="search" placeholder={`Search ${code === "_portfolio" ? "portfolio" : pName(code)} notes`} aria-label="Search notes"
           value={notesQuery.value} onInput={e => { notesQuery.value = /** @type {HTMLInputElement} */ (e.target).value; }} />
         {!L.length ? <p class="sub nnone">{notesList.value.length ? "No note matches." : "No notes yet."}</p> : null}

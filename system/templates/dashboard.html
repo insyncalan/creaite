@@ -51871,10 +51871,10 @@ ${pre}**Current state title:** ${title}`);
       noteFlush();
     } else noteTyped();
   }
-  async function noteMetaFor(path, changes) {
+  async function noteMetaFor(path, changes, toggle) {
     const c5 = noteCur.value;
     if (c5 && c5.path === path) {
-      noteMeta(changes, true);
+      noteMeta(toggle ? { [toggle]: !(c5.meta && c5.meta[toggle] !== void 0 ? c5.meta[toggle] : c5.note[toggle]) } : changes, true);
       return true;
     }
     if (noteHeld.value === path) {
@@ -51890,6 +51890,7 @@ ${pre}**Current state title:** ${title}`);
       notesMsg.value = oneLine(g5 && g5.message || "That note couldn't be read.");
       return false;
     }
+    if (toggle) changes = { [toggle]: !(g5.note && g5.note[toggle]) };
     const r4 = await api("/api/notes/save", { path, body: null, changes, base: g5.base, session: newSid() }).catch(() => null);
     if (!r4 || !r4.ok) {
       notesMsg.value = oneLine(r4 && r4.message || "Not saved.");
@@ -52774,17 +52775,43 @@ ${pre}**Current state title:** ${title}`);
 
   // components/notes/DeleteNote.jsx
   var noteDeleting = y3(
-    /** @type {{path: string, title: string, code: string} | null} */
+    /** @type {Deleting | null} */
     null
   );
+  function focusRow(path, next) {
+    setTimeout(() => {
+      const rows2 = (
+        /** @type {HTMLElement[]} */
+        [...document.querySelectorAll(".nlist .ni")]
+      );
+      const el2 = rows2.find((x5) => x5.dataset.path === path) || rows2.find((x5) => x5.dataset.path === next) || document.getElementById("notesListBody");
+      if (el2) el2.focus({ preventScroll: true });
+    }, 80);
+  }
+  function closeBox() {
+    const n4 = noteDeleting.value;
+    noteDeleting.value = null;
+    if (n4 && n4.row) focusRow(n4.path, n4.next);
+  }
   var busy = y3(false);
-  function askDeleteNote(row2) {
+  async function askDeleteNote(row2) {
     if (row2 && !(noteCur.value && noteCur.value.path === row2.path)) {
       if (!viaServer()) {
         snack("Deleting a note needs the live server");
         return;
       }
-      noteDeleting.value = { path: row2.path, title: row2.title, code: row2.code };
+      const rows2 = (
+        /** @type {HTMLElement[]} */
+        [...document.querySelectorAll(".nlist .ni")]
+      ), at2 = rows2.findIndex((x5) => x5.dataset.path === row2.path);
+      const next = at2 >= 0 ? (rows2[at2 + 1] || rows2[at2 - 1] || { dataset: {} }).dataset.path : void 0;
+      const g5 = await api("/api/notes/get", { path: row2.path });
+      if (!g5 || !g5.ok) {
+        snack(oneLine(g5 && g5.message || "That note couldn't be read."));
+        focusRow(row2.path, next);
+        return;
+      }
+      noteDeleting.value = { path: row2.path, title: row2.title, code: row2.code, base: g5.base, row: true, next };
       return;
     }
     const c5 = noteCur.value;
@@ -52811,23 +52838,18 @@ ${pre}**Current state title:** ${title}`);
       }
       const cur = noteCur.value;
       let base = cur && cur.path === n4.path ? cur.base : "";
-      if (!open2) {
-        const g5 = await api("/api/notes/get", { path: n4.path });
-        if (!g5 || !g5.ok) {
-          noteDeleting.value = null;
-          snack(oneLine(g5 && g5.message || "Not deleted."));
-          return false;
-        }
-        base = g5.base;
-      }
+      if (!open2) base = n4.base || "";
       const r4 = await api("/api/notes/delete", { path: n4.path, base });
       noteDeleting.value = null;
+      if (n4.row) focusRow(n4.path, n4.next);
       if (!r4 || !r4.ok || !r4.card) {
         snack(oneLine(r4 && r4.message || "Not deleted."));
         return false;
       }
       snack(oneLine(r4.message));
-      return await watchCard(n4, r4.card);
+      const done = await watchCard(n4, r4.card);
+      if (n4.row) focusRow(n4.path, n4.next);
+      return done;
     } finally {
       busy.value = false;
     }
@@ -52914,7 +52936,7 @@ ${pre}**Current state title:** ${title}`);
     const n4 = noteDeleting.value;
     const where2 = n4 && n4.code === "_portfolio" ? "the portfolio's archive" : "this project's archive";
     return /* @__PURE__ */ u2(Dialog, { open: !!n4, onClose: () => {
-      if (!busy.value) noteDeleting.value = null;
+      if (!busy.value) closeBox();
     }, labelledBy: "ndelH", describedBy: "ndelP", id: "noteDelDlg", focus: "#ndelCancel", class: "ndel", children: n4 ? /* @__PURE__ */ u2("div", { class: "ndelbox", children: [
       /* @__PURE__ */ u2("h2", { id: "ndelH", children: [
         "Delete “",
@@ -52928,9 +52950,7 @@ ${pre}**Current state title:** ${title}`);
       ] }),
       /* @__PURE__ */ u2("p", { class: "sub", children: "The move then waits on the approval card in ask creaite: nothing moves until you approve it there." }),
       /* @__PURE__ */ u2("div", { class: "nnfoot", children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "ndelCancel", onClick: () => {
-          noteDeleting.value = null;
-        }, disabled: busy.value, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "ndelCancel", onClick: () => closeBox(), disabled: busy.value, children: "Cancel" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "ndelGo", disabled: busy.value, onClick: () => deleteNote(n4), children: busy.value ? "Working…" : "Delete note" })
       ] })
     ] }) : null });
@@ -52947,8 +52967,8 @@ ${pre}**Current state title:** ${title}`);
     ];
   }
   function noteMenuPick(id2, { pinned, confidential, path, title, code }, onOpenFile) {
-    if (id2 === "pin") noteMetaFor(path, { pinned: !pinned });
-    else if (id2 === "conf") noteMetaFor(path, { confidential: !confidential });
+    if (id2 === "pin") noteMetaFor(path, { pinned: !pinned }, "pinned");
+    else if (id2 === "conf") noteMetaFor(path, { confidential: !confidential }, "confidential");
     else if (id2 === "del") askDeleteNote({ path, title, code });
     else onOpenFile(path);
   }
@@ -53855,6 +53875,7 @@ ${pre}**Current state title:** ${title}`);
     );
     return pick(all[code]) || Object.values(all).map(pick).find(Boolean) || null;
   }
+  var kbAt = 0;
   function NotesList({ code, onOpen, onOpenFile }) {
     const open2 = notesListOpen.value, q5 = notesQuery.value.trim().toLowerCase(), cur = noteCur.value;
     const L3 = notesList.value.filter((n4) => !q5 || n4.title.toLowerCase().includes(q5) || n4.tags.some((t47) => t47.toLowerCase().includes(q5)));
@@ -53886,16 +53907,22 @@ ${pre}**Current state title:** ${title}`);
         "button",
         {
           type: "button",
+          "data-path": n4.path,
           class: `ni${cur && cur.path === n4.path ? " on" : ""}`,
           "aria-current": cur && cur.path === n4.path ? "page" : void 0,
           onClick: () => onOpen(n4.path),
           onContextMenu: (e4) => {
             const r4 = e4.currentTarget.getBoundingClientRect();
+            if (Date.now() - kbAt < 400 && menuOpenFor(e4.currentTarget)) {
+              e4.preventDefault();
+              return;
+            }
             rowMenu(e4, n4, e4.clientX || r4.left + 24, e4.clientY || r4.bottom);
           },
           onKeyDown: (e4) => {
             if (e4.key === "ContextMenu" || e4.key === "F10" && e4.shiftKey) {
               const r4 = e4.currentTarget.getBoundingClientRect();
+              kbAt = Date.now();
               rowMenu(e4, n4, r4.left + 24, r4.bottom);
             }
           },
@@ -53937,7 +53964,7 @@ ${pre}**Current state title:** ${title}`);
           " notes"
         ] })
       ] }),
-      /* @__PURE__ */ u2("div", { id: "notesListBody", hidden: !open2, children: [
+      /* @__PURE__ */ u2("div", { id: "notesListBody", tabindex: "-1", hidden: !open2, children: [
         /* @__PURE__ */ u2(
           "input",
           {

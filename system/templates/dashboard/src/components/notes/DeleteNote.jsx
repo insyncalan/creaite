@@ -16,17 +16,36 @@ import { serverCardFlow } from "../../ask.js";
 import { loadNotes, noteCur, noteFlush, noteGone, noteHeld, notesCode, notesMsg } from "../../stores/notes.js";
 import { Dialog } from "../Dialog.jsx";
 
-/** The note the confirm box asks about, or null when it is closed. @type {import("@preact/signals").Signal<{path: string, title: string, code: string} | null>} */
-export const noteDeleting = signal(/** @type {{path: string, title: string, code: string} | null} */ (null));
+/** The note the confirm box asks about, or null when it is closed. `base` (a row that is not open: the text's version read when the box
+    OPENED, so the server's edit-conflict check covers what happened since) and `next` (the row after it, for focus) are set for a row.
+    @typedef {{path: string, title: string, code: string, base?: string, row?: boolean, next?: string}} Deleting
+    @type {import("@preact/signals").Signal<Deleting | null>} */
+export const noteDeleting = signal(/** @type {Deleting | null} */ (null));
+
+/** Focus goes back to the list row (a row's menu was used, #194), or to the row after it when it has gone, else the list.
+    @param {string} path @param {string} [next] */
+function focusRow(path, next) {
+  setTimeout(() => {
+    const rows = /** @type {HTMLElement[]} */ ([...document.querySelectorAll(".nlist .ni")]);
+    const el = rows.find(x => x.dataset.path === path) || rows.find(x => x.dataset.path === next) || document.getElementById("notesListBody");
+    if (el) el.focus({ preventScroll: true });
+  }, 80);                                          // after the dialog has given up its own focus handling
+}
+/** Close the confirm box without deleting. */
+function closeBox() { const n = noteDeleting.value; noteDeleting.value = null; if (n && n.row) focusRow(n.path, n.next); }
 /** Whether the confirm box's Delete note is working (the card is being made). */
 const busy = signal(false);
 
 /** Open the confirm box for the open note, or (#194) for a note in the list given as `row` (a note that is not open is not touched).
     @param {{path: string, title: string, code: string}} [row] */
-export function askDeleteNote(row) {
+export async function askDeleteNote(row) {
   if (row && !(noteCur.value && noteCur.value.path === row.path)) {      // #194: a note in the list that is not the open one: the open note is left alone
     if (!viaServer()) { snack("Deleting a note needs the live server"); return; }
-    noteDeleting.value = { path: row.path, title: row.title, code: row.code };
+    const rows = /** @type {HTMLElement[]} */ ([...document.querySelectorAll(".nlist .ni")]), at = rows.findIndex(x => x.dataset.path === row.path);
+    const next = at >= 0 ? (rows[at + 1] || rows[at - 1] || { dataset: {} }).dataset.path : undefined;
+    const g = await api("/api/notes/get", { path: row.path });         // the version the box is opened on: Delete sends THIS one, so a note changed since is refused
+    if (!g || !g.ok) { snack(oneLine((g && g.message) || "That note couldn't be read.")); focusRow(row.path, next); return; }
+    noteDeleting.value = { path: row.path, title: row.title, code: row.code, base: g.base, row: true, next };
     return;
   }
   const c = noteCur.value;
@@ -40,7 +59,7 @@ export function askDeleteNote(row) {
 }
 
 /** After Delete note in the confirm box: save the note, ask for the card, and answer it in ask creaite.
-    @param {{path: string, title: string, code: string}} n */
+    @param {Deleting} n */
 export async function deleteNote(n) {
   busy.value = true;
   try {
@@ -48,16 +67,15 @@ export async function deleteNote(n) {
     if (open && !(await noteFlush())) { noteDeleting.value = null; notesMsg.value = "Not deleted: the note isn't saved yet (the line in its header says why)."; return false; }
     const cur = noteCur.value;
     let base = cur && cur.path === n.path ? cur.base : "";
-    if (!open) {                                         // not the open note: its version is read here, the open note is not saved or changed
-      const g = await api("/api/notes/get", { path: n.path });
-      if (!g || !g.ok) { noteDeleting.value = null; snack(oneLine((g && g.message) || "Not deleted.")); return false; }
-      base = g.base;
-    }
+    if (!open) base = n.base || "";                      // not the open note: the version from when the box opened (the server refuses a note changed since)
     const r = await api("/api/notes/delete", { path: n.path, base });
     noteDeleting.value = null;
+    if (n.row) focusRow(n.path, n.next);
     if (!r || !r.ok || !r.card) { snack(oneLine((r && r.message) || "Not deleted.")); return false; }
     snack(oneLine(r.message));
-    return await watchCard(n, r.card);
+    const done = await watchCard(n, r.card);
+    if (n.row) focusRow(n.path, n.next);
+    return done;
   } finally { busy.value = false; }
 }
 
@@ -133,13 +151,13 @@ export function DeleteNoteDialog() {
   const n = noteDeleting.value;
   const where = n && n.code === "_portfolio" ? "the portfolio's archive" : "this project's archive";
   return (
-    <Dialog open={!!n} onClose={() => { if (!busy.value) noteDeleting.value = null; }} labelledBy="ndelH" describedBy="ndelP" id="noteDelDlg" focus="#ndelCancel" class="ndel">
+    <Dialog open={!!n} onClose={() => { if (!busy.value) closeBox(); }} labelledBy="ndelH" describedBy="ndelP" id="noteDelDlg" focus="#ndelCancel" class="ndel">
       {n ? <div class="ndelbox">
         <h2 id="ndelH">Delete “{n.title}”?</h2>
         <p id="ndelP">It moves to {where}, not away for good. Restore it any time from Files › Archived. Anything that links to it shows the link as missing until it is restored.</p>
         <p class="sub">The move then waits on the approval card in ask creaite: nothing moves until you approve it there.</p>
         <div class="nnfoot">
-          <button type="button" class="btn" id="ndelCancel" onClick={() => { noteDeleting.value = null; }} disabled={busy.value}>Cancel</button>
+          <button type="button" class="btn" id="ndelCancel" onClick={() => closeBox()} disabled={busy.value}>Cancel</button>
           <button type="button" class="btn danger" id="ndelGo" disabled={busy.value} onClick={() => deleteNote(n)}>{busy.value ? "Working…" : "Delete note"}</button>
         </div>
       </div> : null}

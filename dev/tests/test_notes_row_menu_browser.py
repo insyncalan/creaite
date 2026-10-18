@@ -6,7 +6,10 @@ Run: python3 dev/tests/test_notes_row_menu_browser.py   (needs Google Chrome; sk
     note, its unsaved typing and its state untouched (Alan, 17-10-2026: it does not open the note);
   - the context-menu key and Shift+F10 on a focused row open it too; Esc closes it with focus back on the row;
   - Mark confidential, Pin and Delete note... from a row act on that row's note only; the confirm box names it; the open note's own row
-    works as before.
+    works as before;
+  - a note changed elsewhere between the menu and the pick: Pin flips the CURRENT state (not the one the menu showed), and Delete note
+    is refused with the edit-conflict message (the version is the one read when the confirm box opened);
+  - focus returns to the row after Cancel, Esc and Delete; one key press (keydown plus the native contextmenu) opens one menu.
 """
 import json
 import sys
@@ -127,6 +130,94 @@ class NotesRowMenuBrowser(LiveBrowserCase):
         self.pick("Delete note")
         b.wait("document.getElementById('noteDelDlg').open")
         self.assertEqual(b.eval("document.getElementById('ndelH').textContent"), "Delete “Beta”?")
+
+
+    def elsewhere(self, title, flag=None, body=None):
+        """Another tab (or an autosave) changes the note's file on disk."""
+        f = self.notes_dir() / f"{title}.md"
+        t = f.read_text()
+        if flag:
+            self.assertIn(f"{flag}: false", t)
+            t = t.replace(f"{flag}: false", f"{flag}: true", 1)
+        if body:
+            t = t.rstrip("\n") + "\n" + body + "\n"
+        f.write_text(t)
+
+    def on_row(self, title):
+        self.b.pump(0.2)
+        return self.b.eval(f"document.activeElement===document.querySelector({json.dumps(self.row(title))})")
+
+    def test_a_flag_changed_elsewhere_is_flipped_from_the_current_state(self):
+        b = self.b
+        self.two_notes()
+        alpha = self.notes_dir() / "Alpha.md"
+        self.menu_on("Alpha")
+        self.assertTrue(b.eval(ITEMS % ".pophost")[0].startswith("Pin"))                     # the menu was built on "not pinned"
+        self.elsewhere("Alpha", flag="pinned")                                         # ... then another tab pinned it
+        self.pick("Pin")
+        for _ in range(100):
+            if "pinned: true" not in alpha.read_text():
+                break
+            b.pump(0.1)
+        self.assertNotIn("pinned: true", alpha.read_text())                                   # it flipped the current (pinned) state to unpinned
+        self.beta_untouched()
+
+    def test_delete_of_a_row_changed_elsewhere_after_the_box_opened_is_refused(self):
+        b = self.b
+        self.two_notes()
+        alpha = self.notes_dir() / "Alpha.md"
+        self.menu_on("Alpha")
+        self.pick("Delete note")
+        b.wait("document.getElementById('noteDelDlg').open")
+        self.elsewhere("Alpha", body="Typed in another tab")
+        b.click("#ndelGo")
+        b.wait("!document.getElementById('noteDelDlg').open", 15)
+        b.wait("document.querySelector('.snack')&&document.querySelector('.snack').textContent.includes('the note changed since it was saved')", 15)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .edcard').length"), 0)   # no card: nothing is moved
+        self.assertTrue(alpha.is_file())
+        self.assertIn("Typed in another tab", alpha.read_text())
+        self.beta_untouched()
+
+    def test_focus_returns_to_the_row_after_cancel_esc_and_delete(self):
+        b = self.b
+        self.two_notes()
+        self.menu_on("Alpha")
+        self.pick("Delete note")
+        b.wait("document.getElementById('noteDelDlg').open")
+        b.click("#ndelCancel")
+        b.wait("!document.getElementById('noteDelDlg').open")
+        self.assertTrue(self.on_row("Alpha"), "Cancel returns focus to the row")
+        self.menu_on("Alpha")
+        self.pick("Delete note")
+        b.wait("document.getElementById('noteDelDlg').open")
+        b.key("Escape")
+        b.wait("!document.getElementById('noteDelDlg').open")
+        self.assertTrue(self.on_row("Alpha"), "Esc returns focus to the row")
+        self.menu_on("Alpha")
+        self.pick("Delete note")
+        b.wait("document.getElementById('noteDelDlg').open")
+        b.click("#ndelGo")
+        b.wait("document.querySelector('#chLog .edcard [data-ed=\"approve\"]')", 15)
+        b.eval("document.querySelectorAll('.nlist .ni').forEach(x=>x.dataset.notetitle=x.querySelector('b').textContent.replace('\\u25c6 ',''))")
+        self.assertTrue(self.on_row("Alpha"), "Delete returns focus to the row")
+        b.click("#chLog .edcard [data-ed=\"approve\"]")                                       # Approve: the row has gone
+        b.wait("!notesList.value.some(n=>n.title==='Alpha')", 20)
+        b.pump(0.3)
+        self.assertTrue(b.eval("document.activeElement.classList.contains('ni')||document.activeElement.id==='notesListBody'"),
+                        b.eval("document.activeElement.tagName"))                              # the next row or the list, never lost to the page
+
+    def test_one_key_press_opens_one_menu(self):
+        b = self.b
+        self.two_notes()
+        b.eval(f"document.querySelector({json.dumps(self.row('Alpha'))}).focus()")
+        b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ContextMenu',bubbles:true,cancelable:true}))")
+        b.eval("document.activeElement.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}))")   # the browser's own event for the same key
+        b.wait("!!document.querySelector('.pophost [role=menu]')", 10)
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.querySelectorAll('.pophost').length"), 1)
+        self.assertEqual(b.eval("document.querySelectorAll('.pophost [role=menu]').length"), 1)
+        b.key("Escape")
+        b.wait("!document.querySelector('.pophost')")
 
 
 class NotesRowMenuBrowser900(NotesRowMenuBrowser):
