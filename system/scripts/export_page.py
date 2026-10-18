@@ -136,6 +136,14 @@ def urls_whole(text):
     return len(re.findall(r"url\(", text, re.I)) == len(URL_IN_CSS.findall(text))
 
 
+def css_closed(v, decoded, squashed, client):
+    """Whether style text is closed (no unclosed url( or string, no unbalanced brackets at its end) and, in a client file, holds no GIF
+    or WebP picture address (their comments can't be cleaned out)."""
+    if not (balanced(v) and urls_whole(v) and urls_whole(decoded) and urls_whole(squashed)):
+        return False
+    return not (client and re.search(r"data:image/(?:gif|webp)", squashed))
+
+
 def safe_css_value(v, client=False):
     """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address of a picture
     or a fragment of the file itself. A CLIENT file takes no SVG picture in its styles at all; an internal file takes one only if its
@@ -146,10 +154,8 @@ def safe_css_value(v, client=False):
         return False
     if NO_FUNCTIONS.search(squashed) or re.search(r"(?<![\w-])src\(", decoded, re.I):
         return False     # a picture or address in a string the url() checks never see (image-set, cross-fade, src())
-    if not (balanced(v) and urls_whole(v) and urls_whole(decoded) and urls_whole(squashed)):
-        return False     # an unclosed url( or string, or unbalanced brackets, at the end of a value or a stylesheet
-    if client and re.search(r"data:image/(?:gif|webp)", squashed):
-        return False     # a GIF or WebP picture isn't cleaned of its metadata, so a client file takes none
+    if not css_closed(v, decoded, squashed, client):
+        return False
     if not urls_ok(v) or not urls_ok(decoded):      # as written and as the browser reads it (u\72l( is url()
         return False
     if client and not metadata_free(v):

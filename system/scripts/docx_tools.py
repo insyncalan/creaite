@@ -168,8 +168,8 @@ def strip_image_metadata(data):
             return _strip_png(data)
         if data[:2] == b"\xff\xd8":
             return _strip_jpeg(data)
-    except (struct.error, IndexError):
-        raise PictureRefused("picture can't be read")
+    except (struct.error, IndexError) as e:
+        raise PictureRefused("picture can't be read") from e
     raise PictureRefused("not a PNG or JPEG")
 
 

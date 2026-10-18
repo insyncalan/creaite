@@ -418,9 +418,9 @@ class Leak4(LeakPass2):
         for css in (".page{color:#123}\n.x{background:url(https://beacon.example/a.png", ".x{background:URL(https://beacon.example/a.png",
                     '.x{background:url("data:image/png;base64,AAAA', ".x{content:'abc}", ".x{width:calc(1px + (2px)}",
                     ".x{background:u\\72l(https://beacon.example/a.png"):
-            for kind, out, why in self.both_out(page(css=css)):
+            for kind, _out, why in self.both_out(page(css=css)):
                 self.assertIsNotNone(why, f"{kind}: {css}")
-        for kind, out, why in self.both_out(page(css=".x{background:url(#a);content:'a(b'}")):
+        for kind, _out, why in self.both_out(page(css=".x{background:url(#a);content:'a(b'}")):
             self.assertIsNone(why, kind)
 
     def seg(self, marker, body):
@@ -456,7 +456,7 @@ class Leak4(LeakPass2):
             if name == "adobe payload":
                 continue
             uri = "data:image/jpeg;base64," + base64.b64encode(jpg).decode()
-            for kind, out, why in self.both_out(page(self.wrap(f'<p>x</p><img src="{uri}" alt="a">'))):
+            for kind, out, _why in self.both_out(page(self.wrap(f'<p>x</p><img src="{uri}" alt="a">'))):
                 self.assertFalse(out is not None and "base64,/9j" in out, f"{kind}: {name}")
 
     def test_gif_and_webp_pictures_are_dropped_from_client_files_and_refused_in_client_css(self):
