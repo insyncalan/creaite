@@ -1431,7 +1431,7 @@ def ui_settings(s):
             "weekendDays": sorted(tracker.weekend_days(s)),                     # BL-181: Monday 0
             "rail": g("dashboard", "rail", d=None),               # BL-163 (sprint-rail): the left rail's order, hidden items and display
             "railLabels": bool(g("dashboard", "rail_labels", d=True)),   # #156: Labels when collapsed
-            "railIconSize": g("dashboard", "rail_icon_size", d="medium"),   # #182: Icon size
+            "railIconSize": g("dashboard", "rail_icon_size", d="small"),   # #182: Icon size
             "listCap": g("dashboard", "project_list_cap", d=10),   # BL-48
             "genDays": g("dashboard", "generate_days", d=7)}       # BL-46    # BL-45: Alan's saved Work views
 

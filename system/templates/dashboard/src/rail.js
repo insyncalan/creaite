@@ -98,7 +98,7 @@ export function bootRail0007() {
   const mw = matchMedia("(min-width:1200px)"); railWide.value = mw.matches; mw.addEventListener("change", e => { railWide.value = e.matches; });
   effect(() => {        /* #182: the icon size is a class on the page (CSS sets the icon box and the row heights) */
     const z = railIconSize.value, root = document.documentElement;
-    root.classList.toggle("railsz-small", z === "small"); root.classList.toggle("railsz-large", z === "large");
+    root.classList.toggle("railsz-medium", z === "medium"); root.classList.toggle("railsz-large", z === "large");
   });
   effect(() => {        /* the shell follows the choice: the rail's width (--rail-w) and its look (collapsed, labels under the icons) */
     const c = railCollapsed.value, lab = railLabelled.value, nav = $(".rail");

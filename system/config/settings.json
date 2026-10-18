@@ -100,7 +100,7 @@
     "files_show_portfolio": true,
     "files_show_documents": false,
     "rail_labels": true,
-    "rail_icon_size": "medium",
+    "rail_icon_size": "small",
     "undated_grace_days": 3,
     "flow_weeks": 8,
     "auto_apply": true,

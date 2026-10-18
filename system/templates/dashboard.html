@@ -1882,11 +1882,11 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail .railfly .mnote{padding:6px 8px;color:var(--muted)}
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
 /* #182 Icon size: Medium (20px) is what the rail has always had; Small 16px; Large 28px, with taller rows. The widths do not change. */
-:root.railsz-small{--rail-ic:16px} :root.railsz-large{--rail-ic:28px}
+:root.railsz-medium{--rail-ic:24px} :root.railsz-large{--rail-ic:28px}
 .rail button.rtog .rchev{width:16px;height:16px} .rail .railfly svg,.rail #railMoreMenu svg{width:20px;height:20px} .rail .railfly .health svg{width:14px;height:14px}
 :root.railsz-large .rail button.nv{height:44px} :root.railsz-large .rail.labelled button.nv{height:62px}
-:root.railsz-small .rail button.nv{height:32px} :root.railsz-small .rail.labelled button.nv{height:46px}
-:root.railsz-large .rail #railMoreMenu button.nv,:root.railsz-small .rail #railMoreMenu button.nv{height:36px}
+:root.railsz-medium .rail button.nv{height:40px} :root.railsz-medium .rail.labelled button.nv{height:56px}
+:root.railsz-large .rail #railMoreMenu button.nv,:root.railsz-medium .rail #railMoreMenu button.nv{height:36px}
 @media (max-width:480px){ :root.railicons,:root.railicons.raillabels{--rail-w:48px} .rail.collapsed{padding:10px 4px} .rail.collapsed button[aria-current="page"]::before{left:-4px} .rail.labelled .rl{display:none} }
 #railCust{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);padding:16px 16px 14px;box-shadow:var(--shadow-lg)}
 #railCust::backdrop{background:var(--scrim)}
@@ -1900,7 +1900,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 #railCust .rcsize{margin-top:12px} #railCust .rcsize h3{margin-bottom:6px}
 #railCust .rcszs{display:flex;gap:8px} #railCust .rcsz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-height:64px;padding:8px 4px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--muted);font:500 var(--fs-sm)/16px var(--font);cursor:pointer}
 #railCust .rcsz[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)} #railCust .rcsz:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
-#railCust .rcszi{display:grid;place-items:center;height:28px} #railCust .rcsz[data-size="small"] svg{width:16px;height:16px} #railCust .rcsz[data-size="medium"] svg{width:20px;height:20px} #railCust .rcsz[data-size="large"] svg{width:28px;height:28px}
+#railCust .rcszi{display:grid;place-items:center;height:28px} #railCust .rcsz[data-size="small"] svg{width:20px;height:20px} #railCust .rcsz[data-size="medium"] svg{width:24px;height:24px} #railCust .rcsz[data-size="large"] svg{width:28px;height:28px}
 #railCust .rcfoot{display:flex;align-items:center;gap:8px;margin-top:14px} #railCust .rcfoot .grow{flex:1}
 .rpi .grip[hidden]{display:grid;visibility:hidden}
 .rpi{display:flex;align-items:center;gap:6px;padding:4px;border-radius:var(--r-md);list-style:none} .rpi:focus-within,.rpi:hover{background:var(--sunk)}
@@ -26022,9 +26022,9 @@ ${s5}`;
   var railLabelsOn = y3(true);
   var railIconSize = y3(
     /** @type {"small"|"medium"|"large"} */
-    "medium"
+    "small"
   );
-  var railSizeNorm = (v5) => v5 === "small" || v5 === "large" ? v5 : "medium";
+  var railSizeNorm = (v5) => v5 === "medium" || v5 === "large" ? v5 : "small";
   var railWide = y3(true);
   var railNarrow = y3(false);
   var RAIL_KEY = "creaite-rail-collapsed";
@@ -59353,7 +59353,7 @@ ${d5.text}`);
                 class: "btn quiet",
                 id: "railCustReset",
                 onClick: () => {
-                  setD({ ...draftOf(RAIL_DEF), labels: true, size: "medium" });
+                  setD({ ...draftOf(RAIL_DEF), labels: true, size: "small" });
                   setSaid("Back to the default sidebar");
                 },
                 children: "Reset to default"
@@ -59798,7 +59798,7 @@ ${d5.text}`);
     });
     j4(() => {
       const z4 = railIconSize.value, root2 = document.documentElement;
-      root2.classList.toggle("railsz-small", z4 === "small");
+      root2.classList.toggle("railsz-medium", z4 === "medium");
       root2.classList.toggle("railsz-large", z4 === "large");
     });
     j4(() => {
