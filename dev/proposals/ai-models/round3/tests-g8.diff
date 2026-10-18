@@ -1,0 +1,468 @@
+#132 G8 tests (fake only: a stand-in key, an in-memory store, a recorder for claude -p, stand-in Claude Code processes; no real
+key, keychain, provider, Claude run or network). Applies to the proposal branch (dev/tests only): a new test file, and
+ai_proposal_support.py's round 3 helpers (ROUND3, R1_ALL, R3_ALL, vault3). Run: python3 dev/tests/test_ai_proposal_g8_claude_key.py
+
+diff --git a/dev/tests/ai_proposal_support.py b/dev/tests/ai_proposal_support.py
+index a819d565..b153d6a3 100644
+--- a/dev/tests/ai_proposal_support.py
++++ b/dev/tests/ai_proposal_support.py
+@@ -32,7 +32,9 @@ R2_ALL = ("g4-direct-call", "g6-limit-card", "g7-quick-edit-retry", "g9-health",
+ 
+ 
+ def diff_path(name):
+-    """The proposal's diff file by its short name (g1-key-store, …; "r2/g4-direct-call" is round 2's)."""
++    """The proposal's diff file by its short name (g1-key-store, …; "r2/g4-direct-call" is round 2's, "r3/…" round 3's)."""
++    if name.startswith("r3/"):
++        return ROUND3 / f"{name[3:]}.diff"
+     return ROUND2 / f"{name[3:]}.diff" if name.startswith("r2/") else ROUND1 / f"{name}.diff"
+ 
+ 
+@@ -62,6 +64,21 @@ def vault2(*names, r1=R1_BASE):
+     return root
+ 
+ 
++# ── Round 3 (#132 G8, Claude by API key): on all of round 1 (G1c included, approved 17-10-2026) and all of round 2 ──────────────
++ROUND3 = Path(os.environ.get("CREAITE_PROPOSAL_DIFFS3") or REPO / "dev" / "proposals" / "ai-models" / "round3")
++R1_ALL = ("g1-key-store", "g1c-never-list-held-runs", "g2-model-list", "g3-chosen-model", "g5-confidential-only-claude")
++R3_ALL = ("g8a-key-helper-and-desk", "g8b-guard-refuses-the-helper", "g8c-claude-runs-on-the-key")
++
++
++def vault3(*names, patched=True):
++    """A throwaway vault with rounds 1 and 2 applied, then the named round 3 diffs (all of them when none are named; none when
++    patched is False or under CREAITE_PROPOSAL_UNPATCHED=1)."""
++    root = make_vault()
++    r3 = [] if (UNPATCHED or not patched) else [f"r3/{n}" for n in (names or R3_ALL)]
++    apply(root, list(R1_ALL) + [f"r2/{n}" for n in R2_ALL] + r3)
++    return root
++
++
+ def populated(root):
+     """The vault with test_dashboard's small fictional portfolio (ABC Example Programme, DEF Digital Enablement) in its tracker."""
+     from test_dashboard import populate
+diff --git a/dev/tests/test_ai_proposal_g8_claude_key.py b/dev/tests/test_ai_proposal_g8_claude_key.py
+new file mode 100644
+index 00000000..ab29c69f
+--- /dev/null
++++ b/dev/tests/test_ai_proposal_g8_claude_key.py
+@@ -0,0 +1,421 @@
++"""#132 round 3, G8 (proposal, not applied): Claude by API key, through Claude Code's apiKeyHelper.
++
++Run: python3 dev/tests/test_ai_proposal_g8_claude_key.py
++
++Fake only: a stand-in key (S.KEY), an in-memory key store, a recorder in place of `claude -p`, and stand-in "Claude Code"
++processes made by the test. No real key, no keychain, no provider, no Claude run, no network (the desk is a Unix socket in a
++temporary folder). Each test builds a throwaway vault with rounds 1 and 2 applied and then round 3's diffs (ai_proposal_support).
++
++Done when:
++- the helper prints the key on stdout only, and only for a live run's ticket asked by the helper itself under that run's Claude
++  Code; every other asker (a revoked ticket, another program with the ticket, the helper outside the run, the helper without
++  -I, too many asks) gets plain words on stderr and exit 1, never the key; a keychain that says no, or no key, says so;
++- the desk's folder is private (0700), it is closed with every ticket on stop, and its log lines hold neither key nor ticket;
++- at the default settings every launch is byte for byte rounds 1 and 2's and the desk is never opened;
++- with a Claude key connected every launch carries apiKeyHelper in its --settings (the guard hook's settings otherwise unchanged)
++  naming this server's Python, -I, keyhelper.py, the desk and a ticket for that run only; the key is in no command, environment,
++  event, vault file or log; the run's environment loses ANTHROPIC_API_KEY and the other variables that would replace or redirect
++  the key; the ticket ends with the run; a direct call gets no helper;
++- a refused or unbillable key ends the run with one card and sets the key aside (later runs on the subscription, with a step,
++  until the key is connected again); a rate limit or a failed helper says so and sets nothing aside; neither touches the
++  subscription's limit; an init event whose key source isn't the helper adds a step;
++- a model run is refused keyhelper.py and keydesk.py in every guard mode and through the wrapper; no permission rule may name them
++  or apiKeyHelper; a settings file change adding apiKeyHelper is refused; the never list and the hook's settings don't move;
++- doctor's "every script imports paths" check still passes.
++"""
++import ast
++import json
++import sys
++import unittest
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++import ai_proposal_support as S  # noqa: E402
++from test_ai_proposal_g3_run_model import CAPTURE  # noqa: E402
++
++# ── The desk and the helper, with real processes (a stand-in "Claude Code" runs the helper through a shell, as Claude Code does) ──
++DESK = r'''
++import os, subprocess, stat, keydesk as K
++a = json.loads(%r)
++logs = []
++state = {"raise": False, "key": a["key"]}
++def read_key():
++    if state["raise"]:
++        raise RuntimeError("keychain says no")
++    return state["key"]
++desk = K.KeyDesk(read_key, log=logs.append)
++path = desk.start()
++CLAUDE = "import subprocess, sys, json; r = subprocess.run(sys.argv[1], shell=True, capture_output=True, text=True); " \
++         "print(json.dumps([r.returncode, r.stdout, r.stderr]))"
++def claude(cmd, bind=None, run="r1"):
++    """A stand-in Claude Code: a child of this process (the 'server') that runs the helper command through /bin/sh."""
++    p = subprocess.Popen([sys.executable, "-c", CLAUDE, cmd], stdout=subprocess.PIPE, text=True)
++    if bind:
++        desk.bind(run, p.pid)
++    out = p.communicate(timeout=30)[0]
++    return json.loads(out.strip().splitlines()[-1])
++out = {}
++t = desk.issue("r1")
++out["ok"] = claude(desk.command(t), bind=True)
++out["again"] = claude(desk.command(t))                                   # the same run's Claude Code asks again: but it's
++#                                                                          another process, so this is "another Claude Code"
++t2 = desk.issue("r2")
++out["unbound_first"] = claude(desk.command(t2))                           # the VIP check's way: bound to the first asker
++out["unbound_other"] = claude(desk.command(t2))                           # a second Claude Code with that ticket: refused
++t3 = desk.issue("r3")
++other = "import socket, sys; s = socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'T ' + sys.argv[2].encode() + b'\\n'); " \
++        "print(s.recv(1024).decode())"
++out["not_helper"] = claude(" ".join(__import__("shlex").quote(x) for x in (sys.executable, "-I", "-c", other, path, t3)))
++out["no_isolation"] = claude(desk.command(t3).replace(" -I ", " "))
++desk.revoke("r3")
++out["revoked"] = claude(desk.command(t3))
++t4 = desk.issue("r4")
++proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])   # r4's Claude Code is some other process
++desk.bind("r4", proc.pid)
++out["outside_run"] = claude(desk.command(t4))
++proc.kill()
++t5 = desk.issue("r5")
++p5 = subprocess.Popen([sys.executable, "-c", CLAUDE + "; import time; [subprocess.run(sys.argv[1], shell=True, capture_output=True) " \
++                       "for _ in range(2)]", desk.command(t5)], stdout=subprocess.PIPE, text=True)
++desk.bind("r5", p5.pid); p5.communicate(timeout=30)
++out["given_r5"] = len(desk.tickets["r5"]["given"])
++t6 = desk.issue("r6")
++state["raise"] = True
++out["keychain"] = claude(desk.command(t6), bind=True, run="r6")
++state["raise"], state["key"] = False, None
++t7 = desk.issue("r7")
++out["nokey"] = claude(desk.command(t7), bind=True, run="r7")
++out["helper_cmd"] = __import__("shlex").split(desk.command(t))
++out["modes"] = [oct(stat.S_IMODE(os.stat(os.path.dirname(path)).st_mode)), oct(stat.S_IMODE(os.stat(path).st_mode))]
++out["tickets"] = [t, t2, t3, t4, t5, t6, t7]
++out["logs"] = logs
++old_cmd = desk.command(t)
++desk.stop()
++out["after_stop"] = [os.path.exists(path), os.path.exists(os.path.dirname(path)), desk.tickets]
++out["stopped"] = claude(old_cmd)
++out["exe"] = sys.executable
++print(json.dumps(out))
++'''
++
++# ── The runs, with claude -p replaced by a recorder (ai_proposal_support's way) ──
++KEYMODE = r'''
++import io, time, shlex, providers as pv, paths, live_server as L
++a = json.loads(%r)
++p = paths.ROOT / "system" / "config" / "settings.json"
++cfg = json.loads(p.read_text())
++store = pv.MemoryStore()
++if a.get("key"):
++    cfg.setdefault("ai", {})["providers"] = pv.connect_changes("claude", [], [], cfg)["ai.providers"]
++    store.put("claude", a["key"])
++p.write_text(json.dumps(cfg))
++pv._BACKEND["pair"] = (store, pv.FakeLister())
++seen, STREAM = [], {"now": a.get("stream") or []}
++class Proc:
++    def __init__(self, cmd, cwd=None, env=None, **kw):
++        seen.append({"cmd": cmd, "env": dict(env or {})})
++        self.stdout = io.StringIO("".join(json.dumps(x) + "\n" for x in STREAM["now"]))
++        self.stderr, self.returncode, self.pid = io.StringIO(""), 0, 4242
++    def wait(self, timeout=None): return 0
++    def poll(self): return 0
++    def kill(self): pass
++    def terminate(self): pass
++L.subprocess.Popen = Proc
++def run(i, stream=None, **kw):
++    seen.clear()
++    STREAM["now"] = stream or []
++    r = L.Run(f"r-g8-{i:04d}", "Fictional request about ABC", None, None, kw.pop("confirmed", None), **kw)
++    end = time.time() + 10
++    while not r.done and time.time() < end:
++        time.sleep(0.02)
++    return r, dict(seen[0])
++def settings_of(cmd):
++    return json.loads(cmd[cmd.index("--settings") + 1]) if "--settings" in cmd else None
++'''
++
++KINDS = [("ask", {}), ("ask-confirmed", {"confirmed": "Close ABC-A-001"}), ("typed-sweep", {"sweep": True}),
++         ("search", {"kind": "search"}), ("prep", {"kind": "prep"}), ("generate", {"kind": "generate"}),
++         ("check", {"kind": "check"}), ("load", {"kind": "load"}), ("edit-ai", {"kind": "edit-ai"}),
++         ("shape-closed", {"kind": "shape-closed"}), ("notes-find", {"kind": "notes-find"}), ("close-day-sweep", {"kind": "sweep"})]
++
++STREAMS = {
++    "refused": [{"type": "system", "subtype": "init", "apiKeySource": "apiKeyHelper"},
++                {"type": "assistant", "error": "authentication_failed", "message": {"content": []}},
++                {"type": "result", "is_error": True, "result": "Invalid API key · Fix external API key"}],
++    "billing": [{"type": "system", "subtype": "init", "apiKeySource": "apiKeyHelper"},
++                {"type": "result", "is_error": True, "result": "Credit balance is too low"}],
++    "rate": [{"type": "system", "subtype": "init", "apiKeySource": "apiKeyHelper"},
++             {"type": "assistant", "error": "rate_limit", "message": {"content": []}},
++             {"type": "result", "is_error": True, "result": "API Error: 429 rate_limit_error"}],
++    "helper": [{"type": "result", "is_error": True, "result": "apiKeyHelper failed: exited 1: The live server didn't answer"}],
++    "elsewhere": [{"type": "system", "subtype": "init", "apiKeySource": "none"}, {"type": "result", "result": "Done."}],
++}
++
++
++def same(text):
++    """Settings text with the vault's folder and the run's id taken out (two vaults, two runs)."""
++    import re
++    return re.sub(r"r-(?:g8|proposal)-?\d{4}", "RUN", re.sub(r"(/private)?/var/[^ \"]*?/creaite-test-[A-Za-z0-9_]+", "<VAULT>", text))
++
++
++def macos():
++    return sys.platform == "darwin"
++
++
++@unittest.skipUnless(macos(), "the desk asks macOS who is asking (libproc, sysctl)")
++class HelperAndDesk(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.root = S.vault3()
++        cls.out = S.run_py(cls.root, DESK % json.dumps({"key": S.KEY}), timeout=300)
++
++    def refused(self, res, words):
++        rc, stdout, stderr = res
++        self.assertEqual((rc, stdout), (1, ""), res)
++        self.assertIn(words, stderr)
++        self.assertNotIn(S.KEY, stderr)
++
++    def test_the_run_s_helper_gets_the_key_on_stdout_only(self):
++        self.assertEqual(self.out["ok"], [0, S.KEY, ""])
++
++    def test_the_helper_command_is_fixed(self):
++        cmd = self.out["helper_cmd"]
++        self.assertEqual(cmd[:2], [self.out["exe"], "-I"])
++        self.assertTrue(cmd[2].endswith("system/scripts/keyhelper.py"))
++        self.assertEqual(len(cmd), 5)
++        self.assertNotIn(S.KEY, " ".join(cmd))
++
++    def test_another_claude_code_with_the_ticket_is_refused(self):
++        self.refused(self.out["again"], "wasn't started by this run's Claude Code")
++        self.assertEqual(self.out["unbound_first"][:2], [0, S.KEY])
++        self.refused(self.out["unbound_other"], "wasn't started by this run's Claude Code")
++        self.refused(self.out["outside_run"], "wasn't started by this run's Claude Code")
++
++    def test_a_program_that_isn_t_the_helper_is_refused_even_with_the_ticket(self):
++        rc, stdout, _ = self.out["not_helper"]
++        self.assertEqual(rc, 0)
++        self.assertTrue(stdout.startswith("NO Only creaite's key helper"), stdout)
++        self.assertNotIn(S.KEY, stdout)
++        self.refused(self.out["no_isolation"], "Only creaite's key helper")
++
++    def test_a_revoked_ticket_too_many_asks_and_no_key_say_so(self):
++        self.refused(self.out["revoked"], "isn't valid")
++        self.assertEqual(self.out["given_r5"], 3, "at most three answers a minute")
++        self.refused(self.out["keychain"], "unlock your Mac")
++        self.refused(self.out["nokey"], "No Claude API key is kept")
++
++    def test_the_desk_is_private_and_closes(self):
++        self.assertEqual(self.out["modes"], ["0o700", "0o600"])
++        self.assertEqual(self.out["after_stop"], [False, False, {}])
++        self.refused(self.out["stopped"], "didn't answer")
++
++    def test_the_log_holds_no_key_and_no_ticket(self):
++        text = "\n".join(self.out["logs"])
++        self.assertIn("r1 key given to its Claude Code", text)
++        self.assertIn("r3 key helper refused: helper", text)
++        self.assertNotIn(S.KEY, text)
++        for t in self.out["tickets"]:
++            self.assertNotIn(t, text)
++
++
++class HelperSource(unittest.TestCase):
++    def test_the_helper_is_standard_library_only_and_writes_nothing(self):
++        root = S.vault3()
++        if S.UNPATCHED:
++            self.assertFalse((root / "system" / "scripts" / "keyhelper.py").exists())
++            self.fail("not applied")
++        src = (root / "system" / "scripts" / "keyhelper.py").read_text(encoding="utf-8")
++        tree = ast.parse(src)
++        imported = {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
++        imported |= {n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
++        self.assertEqual(imported, {"re", "socket", "sys"})
++        for bad in ("os.environ", "import os", "open(", "getenv", "print(", "logging"):
++            self.assertNotIn(bad, src)
++
++
++class Launches(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.root = S.vault3()
++
++    def go(self, code, env=None, root=None):
++        return S.run_py(root or S.vault3(), KEYMODE % json.dumps({"key": S.KEY}) + code, env=env)
++
++    def test_default_launches_are_rounds_one_and_two_s(self):
++        before = S.run_py(S.vault3(patched=False), CAPTURE % json.dumps({}))
++        after = S.run_py(self.root, CAPTURE % json.dumps({}))
++        self.assertEqual(sorted(after), sorted(before))
++        for name in before:
++            self.assertEqual(after[name], before[name], f"{name}: the launch changed at the default settings")
++        opened = S.run_py(self.root, CAPTURE % json.dumps({}) + "\nprint(json.dumps(L.KEY_DESK is None))")
++        self.assertIs(opened, True, "the desk is never opened at the defaults")
++
++    def test_every_launch_on_the_key_names_the_helper_and_nothing_else_moves(self):
++        out = self.go(r'''
++res = {}
++for i, (name, kw) in enumerate(json.loads(%r)):
++    r, s = run(i, **kw)
++    res[name] = {"cmd": s["cmd"], "env": {k: v for k, v in s["env"].items() if k.startswith(("ANTHROPIC", "CLAUDE_CODE_OAUTH"))},
++                 "events": r.events, "ticket_after": f"r-g8-{i:04d}" in L.KEY_DESK.tickets}
++print(json.dumps({"res": res, "exe": sys.executable, "desk": L.KEY_DESK.path}))''' % json.dumps(KINDS),
++                      env={"ANTHROPIC_API_KEY": "sk-ant-not-this-one", "ANTHROPIC_BASE_URL": "https://elsewhere.invalid",
++                           "ANTHROPIC_AUTH_TOKEN": "tok-not-this-one"})
++        base = S.run_py(self.root, CAPTURE % json.dumps({}))
++        tickets = set()
++        for name, run in out["res"].items():
++            cmd = run["cmd"]
++            self.assertNotIn(S.KEY, json.dumps(run), name)
++            self.assertEqual(run["env"], {}, f"{name}: the key variables are dropped")
++            self.assertFalse(run["ticket_after"], f"{name}: the ticket ends with the run")
++            helper = cmd[cmd.index("--settings") + 1]
++            data = json.loads(helper)
++            parts = data["apiKeyHelper"].split(" ")
++            self.assertEqual(parts[1], "-I", name)
++            self.assertTrue(parts[2].endswith("system/scripts/keyhelper.py"), name)
++            self.assertEqual(parts[3], out["desk"], name)
++            tickets.add(parts[4])
++            b = base[name]["cmd"]
++            b = [x.replace("<VAULT>", str(self.root.resolve())) for x in b]
++            if "--settings" in b:                             # the hook's settings: unchanged but for apiKeyHelper
++                data.pop("apiKeyHelper")
++                self.assertEqual(same(json.dumps(data)), same(json.dumps(json.loads(b[b.index("--settings") + 1]))), name)
++            else:                                             # a --settings of its own, just before the prompt
++                i = cmd.index("--settings")
++                self.assertEqual(cmd[i + 2:i + 3], ["--"], name)
++                self.assertEqual(list(data), ["apiKeyHelper"], name)
++        self.assertEqual(len(tickets), len(KINDS), "a ticket per run")
++
++    def test_a_direct_call_gets_no_helper(self):
++        out = self.go(r'''
++import types
++me = types.SimpleNamespace()
++cmd = L.Run._key_setup(me, "r-direct", ["claude", "-p"], object())
++print(json.dumps([cmd, me.helper, L.KEY_DESK is None]))''')
++        self.assertEqual(out, [["claude", "-p"], None, True])
++
++    def outcome(self, what):
++        return self.go(r'''
++import providers as pv
++r, s = run(1, stream=json.loads(%r))
++first = {"events": [e for e in r.events if e["type"] in ("cant", "error", "step")], "set_aside": dict(pv.KEY_REFUSED),
++         "limit": dict(pv.LIMIT)}
++r2, s2 = run(2)
++first["next"] = {"settings": settings_of(s2["cmd"]), "steps": [e["label"] for e in r2.events if e["type"] == "step"],
++                 "card": [c for c in pv.state()["providers"] if c["id"] == "claude"][0]["key_set_aside"]}
++pv.key_fixed()
++r3, s3 = run(3)
++first["after_fix"] = "apiKeyHelper" in json.dumps(settings_of(s3["cmd"]) or {})
++print(json.dumps(first))''' % json.dumps(STREAMS[what]))
++
++    def test_a_refused_key_ends_with_one_card_and_is_set_aside(self):
++        out = self.outcome("refused")
++        cant = [e for e in out["events"] if e["type"] == "cant"]
++        self.assertEqual([c["what"] for c in cant], ["key"])
++        self.assertIn("Anthropic refused your Claude API key", cant[0]["line"])
++        self.assertEqual(out["set_aside"]["why"], "refused")
++        self.assertEqual(out["limit"], {}, "the subscription's limit isn't touched")
++        self.assertNotIn("apiKeyHelper", out["next"]["settings"], "the next run is on the subscription: no helper")
++        self.assertTrue(any("ran on your Claude subscription" in s for s in out["next"]["steps"]))
++        self.assertIn("refused", out["next"]["card"])
++        self.assertTrue(out["after_fix"], "connected again: the key is used again")
++
++    def test_an_unbillable_key_is_set_aside(self):
++        out = self.outcome("billing")
++        self.assertEqual(out["set_aside"]["why"], "billing")
++        self.assertIn("credit balance is too low", [e for e in out["events"] if e["type"] == "cant"][0]["line"])
++
++    def test_a_rate_limit_or_a_failed_helper_says_so_and_sets_nothing_aside(self):
++        for what, words in (("rate", "over Anthropic's rate limit"), ("helper", "couldn't hand your Claude API key")):
++            out = self.outcome(what)
++            self.assertIn(words, [e for e in out["events"] if e["type"] == "cant"][0]["line"], what)
++            self.assertEqual(out["set_aside"], {}, what)
++            self.assertEqual(out["limit"], {}, what)
++            self.assertIn("apiKeyHelper", out["next"]["settings"], f"{what}: the next run is on the key")
++
++    def test_a_key_source_other_than_the_helper_adds_a_step(self):
++        out = self.outcome("elsewhere")
++        self.assertTrue(any("didn't use your API key" in e.get("label", "") for e in out["events"]))
++
++    def test_the_vip_check_on_the_key(self):
++        out = self.go(r'''
++import subprocess, sweep
++sweep.vip_settings = lambda: {"enabled": True}
++sweep.vip_addresses = lambda: ["mia.hale@example.com"]
++L.sweep_running = lambda: False
++calls = []
++def fake_run(cmd, **kw):
++    calls.append({"cmd": cmd, "env": {k: v for k, v in kw["env"].items() if k.startswith("ANTHROPIC")}})
++    return subprocess.CompletedProcess(cmd, 1, json.dumps({"type": "result", "is_error": True,
++                                                           "result": "Invalid API key · Fix external API key"}), "")
++L.subprocess.run = fake_run
++note = L.vip_check()
++import providers as pv
++cmd = calls[0]["cmd"]
++print(json.dumps({"settings": settings_of(cmd), "env": calls[0]["env"], "aside": pv.KEY_REFUSED.get("why"),
++                  "tickets": list(L.KEY_DESK.tickets), "key_seen": S_KEY in json.dumps(calls)}))'''.replace(
++            "S_KEY", json.dumps(S.KEY)), env={"ANTHROPIC_API_KEY": "sk-ant-not-this-one"})
++        self.assertIn("keyhelper.py", out["settings"]["apiKeyHelper"])
++        self.assertEqual(out["env"], {})
++        self.assertEqual(out["aside"], "refused")
++        self.assertEqual(out["tickets"], [], "the VIP check's ticket ends with it")
++        self.assertFalse(out["key_seen"])
++
++    def test_no_key_in_any_vault_file_after_runs_on_the_key(self):
++        root = S.vault3()
++        self.go(r'''
++for i in range(3):
++    run(i, stream=[{"type": "system", "subtype": "init", "apiKeySource": "apiKeyHelper"}, {"type": "result", "result": "Done."}])
++run(9, stream=json.loads(%r))
++print(json.dumps(True))''' % json.dumps(STREAMS["refused"]), root=root)
++        hits = [str(p) for p in root.rglob("*") if p.is_file() and S.KEY.encode() in p.read_bytes()]
++        self.assertEqual(hits, [])
++
++
++class Guard(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.root = S.vault3()
++
++    def test_a_model_run_never_runs_the_helper_or_the_desk(self):
++        out = S.run_py(self.root, r'''
++import reach
++cmds = ["system/scripts/run keyhelper.py desk " + "A" * 43, "python3 system/scripts/keyhelper.py",
++        "python3 -I system/scripts/keyhelper.py desk " + "A" * 43, "system/scripts/run keydesk.py",
++        "python3 system/scripts/keydesk.py"]
++modes = [("ask", False), ("confirmed", False), ("sweep", False), ("sweep", True), ("prep", False), ("held", False)]
++res = {f"{m}{h} {c}": list(reach.decide("Bash", {"command": c}, m, "", h)) for c in cmds for m, h in modes}
++print(json.dumps({"res": res, "wrap": [reach.wrap_problem(["keyhelper.py"]), reach.wrap_problem(["keydesk.py", "x"])]}))''')
++        for k, (allow, why) in out["res"].items():
++            self.assertFalse(allow, k)
++            if " -I " not in k:                                     # refused by name, not because the file is missing
++                self.assertIn("only the live server uses", why, k)
++        self.assertTrue(all("only the live server uses" in w for w in out["wrap"]), out["wrap"])
++
++    def test_no_permission_rule_or_settings_change_reaches_the_helper(self):
++        out = S.run_py(self.root, r'''
++import permissions as P
++rules = ["Bash(system/scripts/run keyhelper.py *)", "Bash(python3 -I system/scripts/keyhelper.py *)",
++         "Bash(system/scripts/run keydesk.py)", "Read(/private/var/folders/**/creaite-kd-*/**)", "Bash(echo apiKeyHelper)"]
++before = {"permissions": {"allow": []}}
++after = {"permissions": {"allow": []}, "apiKeyHelper": "/bin/sh -c 'echo x'"}
++print(json.dumps({"rules": {r: P.rule_refusal(r) for r in rules}, "ok": P.rule_refusal("Bash(system/scripts/run doctor.py)"),
++                  "file": P.settings_problem("claude", before, after)}))''')
++        for r, why in out["rules"].items():
++            self.assertTrue(why, r)
++        self.assertIsNone(out["ok"])
++        self.assertIn("apiKeyHelper", out["file"])
++
++    def test_the_never_list_and_the_hook_settings_do_not_move(self):
++        code = r'''
++import reach, live_server as L
++print(json.dumps({"never": [list(x) for x in reach.NEVER], "hook": L.guard_settings("r-x", "ask"),
++                  "held": L.guard_settings("r-x", "held", True)}).replace(str(__import__("paths").ROOT), "<VAULT>"))'''
++        self.assertEqual(S.run_py(self.root, code), S.run_py(S.vault3(patched=False), code))
++
++    def test_doctor_still_finds_every_script_importing_paths(self):
++        out = S.run_py(self.root, "import doctor\nprint(json.dumps(doctor.scripts_use_paths()))")
++        self.assertNotIn("keyhelper.py", out[1])                 # it runs isolated: doctor knows
++        self.assertNotIn("keydesk.py", out[1])
++
++
++if __name__ == "__main__":
++    unittest.main()

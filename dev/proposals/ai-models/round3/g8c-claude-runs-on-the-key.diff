@@ -1,0 +1,387 @@
+#132 G8c, Claude runs on the API key when one is connected. PROPOSAL, not applied. Needs G8a. 2 files, 16 hunks.
+Touches live_server.py's run launch (Run.__init__, read's ending) and the VIP check: Alan's to review. At the default settings
+(no Claude key) every launch is byte for byte rounds 1 and 2's and the desk is never opened (tested).
+
+live_server.py
+ 1 @@ the G8 block: key_desk, key_log, key_plan (the helper command for a run, or None; a step when the key is set aside or
+      can't be used), with_key (apiKeyHelper merged into the hook's --settings, or a --settings of its own before `--`),
+      key_env (drops ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, ANTHROPIC_BASE_URL,
+      ANTHROPIC_CUSTOM_HEADERS on the key), key_bind, key_revoke, key_close
+ 2 @@ Run.__init__: _key_setup before the prompt
+ 3 @@ Run.__init__: the key's step, if any
+ 4 @@ Run.__init__: the environment without the key variables; the ticket bound to the Popen'd Claude Code; revoked if it
+      can't start
+ 5 @@ Run._key_setup: never for a direct call (G4)
+ 6 @@ Run._end: a failed key ends the run first
+ 7 @@ Run._limit: on the key, the subscription's limit isn't this run's; events go to _key_event
+ 8 @@ Run._key_event (the init event's apiKeySource; a step when it isn't the helper) and Run._end_key (one card;
+      a refused or unbillable key is set aside)
+ 9 @@ Run._done: the ticket ends with the run
+10 @@ vip_check: the helper in its command
+11 @@ vip_check: its environment without the key variables; vip_key; its ticket ends in finally; vip_key itself
+12 @@ ai_connect_route: Claude's key connected again clears a refusal
+13 @@ ai_disconnect_route: Claude back on the subscription clears it too
+14 @@ forget_tested_keys: the desk closes when the server stops or restarts
+providers.py
+15 @@ card: Claude's card says when its key is set aside (key_set_aside)
+16 @@ the G8 section: KEY_REFUSED (memory only), the stream's key errors and words, claude_on_key (settings first: the
+      keychain is never asked at the defaults), key_note, key_problem, key_seen, key_aside, key_fixed
+
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index e24fb05d..0d7ce1e3 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2222,6 +2222,91 @@ def launch_plan(policy, route=None):
+ # ===== end #132 G3 =====
+ 
+ 
++# ===== #132 G8 (proposal): Claude by API key, through Claude Code's apiKeyHelper =====
++# With a Claude key connected (providers.claude_on_key), every claude -p launch gets `apiKeyHelper` in its --settings: added to
++# the guard hook's settings when the run has them (the hook is unchanged), else a --settings of its own. The helper is creaite's
++# keyhelper.py, run by Claude Code itself with this server's key desk and a ticket for this run only (keydesk.py); the key goes
++# from the keychain to Claude Code over the desk's socket and is never in a command line, an environment variable, a file or a
++# log. The run's environment loses the variables that would replace the helper's key or send it elsewhere (KEY_ENV_DROP). With
++# no Claude key, every launch is byte for byte as before and the desk is never opened.
++KEY_DESK = None
++KEY_ENV_DROP = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL",
++                "ANTHROPIC_CUSTOM_HEADERS")
++KEY_UNUSED = "Claude's API key couldn't be used ({why}), so this ran on your subscription."
++KEY_NOT_USED = "Claude Code didn't use your API key for this run (its key came from: {src})."
++VIP_RUN = "vip-check"
++
++
++def key_desk():
++    """The key desk, opened on first use."""
++    global KEY_DESK
++    if KEY_DESK is None:
++        import keydesk
++        import providers
++        KEY_DESK = keydesk.KeyDesk(lambda: providers.backend()[0].peek("claude"), log=key_log)
++    KEY_DESK.start()
++    return KEY_DESK
++
++
++def key_log(line):
++    """One debug log line from the desk: a run's id and what happened, never a key or a ticket."""
++    if globals().get("debuglog") is not None:
++        debuglog.info("ai-models", line)
++
++
++def key_plan(run_id):
++    """(the apiKeyHelper command for this run, or None; the run's step, or ""). None at the default settings, where nothing
++    else is asked; a key that can't be set up runs on the subscription and says so."""
++    import providers
++    try:
++        settings = paths.load_settings()
++        if not providers.claude_on_key(settings):
++            return None, providers.key_note(settings)
++        desk = key_desk()
++        return desk.command(desk.issue(run_id)), ""
++    except Exception as e:  # noqa: BLE001  fail to the subscription, with a step
++        swallowed("key", e)
++        return None, KEY_UNUSED.format(why=type(e).__name__)
++
++
++def with_key(cmd, helper):
++    """cmd with `apiKeyHelper` in its --settings (the guard hook's, when it has them), before the prompt's `--`; unchanged
++    without a helper."""
++    if helper is None:
++        return list(cmd)
++    out = list(cmd)
++    if "--settings" in out:
++        i = out.index("--settings") + 1
++        out[i] = json.dumps(dict(json.loads(out[i]), apiKeyHelper=helper))
++        return out
++    cut = len(out) - 2 if len(out) >= 2 and out[-2] == "--" else len(out)
++    return out[:cut] + ["--settings", json.dumps({"apiKeyHelper": helper})] + out[cut:]
++
++
++def key_env(env, helper):
++    """The run's environment, without KEY_ENV_DROP when it runs on the key."""
++    return {k: v for k, v in env.items() if k not in KEY_ENV_DROP} if helper else env
++
++
++def key_bind(run_id, pid):
++    """The run's Claude Code is process `pid`."""
++    if KEY_DESK is not None:
++        KEY_DESK.bind(run_id, pid)
++
++
++def key_revoke(run_id):
++    """The run has ended: its ticket goes."""
++    if KEY_DESK is not None:
++        KEY_DESK.revoke(run_id)
++
++
++def key_close():
++    """The server stops: the desk closes and every ticket goes."""
++    if KEY_DESK is not None:
++        KEY_DESK.stop()
++# ===== end #132 G8 =====
++
++
+ def run_args(policy, confirmed=None, only=None):
+     """A run's built-in tools (`--tools`, and `--strict-mcp-config` where it has no MCP): its kind's own entry in KIND_ARGS; only
+     ToolSearch for a narrowed run (`only`: Microsoft 365 reading only); none for a kind with no entry (fail closed)."""
+@@ -2346,6 +2431,7 @@ class Run:
+         self.guarded = guarded
+         if session:
+             cmd += ["--resume", session]
++        cmd = self._key_setup(run_id, cmd, opener)              # #132 G8: Claude by API key (none at the defaults)
+         cmd = prompt_last(cmd, said)                            # #91: the prompt last, after `--`
+         self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
+         self.sweep = bool(sweep)                                # BL-309
+@@ -2357,6 +2443,7 @@ class Run:
+         if self.sweep:                                          # BL-309: the chat says what kind of run this is
+             self.events.append({"type": "step", "label": PANEL_SWEEP_STEP})
+         model_step(self.events, run_id, policy, model_note)    # #132 G3: a choice that couldn't be used says so
++        model_step(self.events, run_id, policy, self.key_note)  # #132 G8: a key set aside or unusable says so
+         self.stop = self.deferred = self.done = self.seen = False
+         self.started, self.recorded = time.time(), 0       # BL-262: how many events the chat's history reaches
+         try:
+@@ -2364,8 +2451,10 @@ class Run:
+             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
+             env.update(more_env)                                                       # #126
+             self.proc = opener(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,   # #132 G4
+-                               bufsize=1, env=env)
++                               bufsize=1, env=key_env(env, self.helper))               # #132 G8
++            key_bind(run_id, self.proc.pid)                                            # #132 G8
+         except OSError:
++            key_revoke(run_id)                                                         # #132 G8
+             if guarded:
+                 reach.end_run(run_id)
+             raise
+@@ -2373,6 +2462,12 @@ class Run:
+         threading.Thread(target=self.read, daemon=True).start()
+         threading.Thread(target=self.watchdog, daemon=True).start()
+ 
++    def _key_setup(self, run_id, cmd, opener):
++        """#132 G8: the command with apiKeyHelper when Claude runs on the API key (never for a direct call); keeps the helper
++        and the step to show."""
++        self.helper, self.key_note = key_plan(run_id) if opener is subprocess.Popen else (None, "")
++        return with_key(cmd, self.helper)
++
+     def _listed(self, run_id, route):
+         """Keep only the run in progress and the latest one in RUNS, and list this one; #132 G7: a quick edit's retry (`nested`)
+         runs inside its run and is never listed, so it is never "the run in progress" and never starts a queued message."""
+@@ -2567,6 +2662,8 @@ class Run:
+         instead of an answer and which is never retried."""
+         if self.stop:
+             self._end_stopped()
++        elif getattr(self, "key_failed", None):           # #132 G8: the API key failed
++            self._end_key()
+         elif getattr(self, "limited", None):
+             self._end_limited()
+         elif proc.returncode and not final:
+@@ -2578,6 +2675,8 @@ class Run:
+         """Keep what a stream event says about Claude's limit (providers.limit_seen); a direct call's stream is never Claude's."""
+         if isinstance(self.proc, DirectProcess):
+             return
++        if getattr(self, "helper", None):                # #132 G8: on the API key the subscription's limit isn't this run's
++            return self._key_event(ev)
+         try:
+             import providers
+             sig = providers.limit_seen(ev)
+@@ -2587,6 +2686,32 @@ class Run:
+         if isinstance(sig, dict):
+             self.limited = sig
+ 
++    def _key_event(self, ev):
++        """#132 G8: on the API key, the init event says where Claude Code's key came from (a step when it isn't the helper),
++        and a failed key (refused, unbillable, rate limited, the helper refused) is kept for the ending."""
++        import providers
++        if isinstance(ev, dict) and ev.get("type") == "system" and ev.get("subtype") == "init" \
++                and ev.get("apiKeySource") != "apiKeyHelper":
++            src = re.sub(r"[^A-Za-z_/ ]", "", str(ev.get("apiKeySource") or "none"))[:40]
++            self.emit("step", label=KEY_NOT_USED.format(src=src))
++            key_log(f"{self.id} {self.kind}: Claude Code's key source was {src}, not the helper")
++        what = providers.key_problem(ev)
++        if what and not getattr(self, "key_failed", None):
++            self.key_failed = what
++
++    def _end_key(self):
++        """#132 G8: the API key failed: one card in plain words (KEY_WORDS); a refused or unbillable key is set aside, so later
++        runs use the subscription. Nothing is retried by itself."""
++        import providers
++        what = self.key_failed
++        providers.key_seen(what)
++        line = providers.KEY_WORDS[what]
++        self.failed = True
++        self.emit("cant", what="key", line=line, go=providers.LIMIT_GO, offer=None)
++        self.emit("error", message=line)
++        key_log(f"{self.id} {self.kind}: Claude API key {what}")
++        self.record()
++
+     def _end_limited(self):
+         """The run hit Claude's limit: one card in plain words (the reset time; what ai.on_limit does next; Ask me's other model
+         when there is one for this job), through the chat's existing "cant" card. Nothing is retried by itself."""
+@@ -2758,6 +2883,7 @@ class Run:
+     # ===== end BL-326 =====
+ 
+     def _done(self):
++        key_revoke(self.id)                               # #132 G8: the run's key ticket ends with it
+         release_sweep_lock([self.id], "timed out" if getattr(self, "timed_out", False) else "stopped" if self.stop
+                            else "ended")                  # BL-328: however the run ended (finished, stopped, refused, failed)
+         if self.plain:                                    # BL-326: one plain closure line, for success, failure and Stop
+@@ -3753,10 +3879,14 @@ def vip_check(how="check"):
+         cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
+                            "--disallowedTools", ",".join(vip_deny())] + with_model([], run_model("vip")[0]),   # #132 G3
+                           prompt)                                                         # #91: after `--`; no --tools (#116)
++        helper = key_plan(VIP_RUN)[0]                                                     # #132 G8
++        cmd = with_key(cmd, helper)
+         found, why, cost, began = None, "", None, time.monotonic()
+         try:
+-            r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
++            r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300,
++                               env=key_env(run_env(), helper))                                   # BL-248; #132 G8
+             vip_limited(r.stdout)                                                                # #132 G6
++            vip_key(r.stdout, helper)                                                            # #132 G8
+             found, why, cost = vip_reply(r)
+         except subprocess.TimeoutExpired:
+             why = VIP_TIMED_OUT
+@@ -3782,10 +3912,26 @@ def vip_check(how="check"):
+         print(f"{datetime.now():%H:%M:%S} {note}", flush=True)
+         return note
+     finally:
++        key_revoke(VIP_RUN)                               # #132 G8
+         VIP_STATUS["running"] = False
+         VIP_LOCK.release()
+ 
+ 
++def vip_key(out, helper):
++    """#132 G8: a VIP check on the API key whose reply says the key was refused or can't be billed sets the key aside."""
++    if not helper:
++        return
++    import providers
++    try:
++        reply = json.loads(out or "{}")
++    except (ValueError, RecursionError):
++        return
++    what = providers.key_problem(dict(reply, type="result") if isinstance(reply, dict) else None)
++    if what:
++        providers.key_seen(what)
++        key_log(f"VIP check: Claude API key {what}")
++
++
+ def vip_limited(out=None):
+     """#132 G6: with `out` (a VIP check's JSON reply), keep what it says about Claude's limit; then whether the limit holds."""
+     import providers
+@@ -5645,6 +5791,8 @@ def ai_connect_route(handler, req):
+         if debuglog is not None:
+             debuglog.info("ai-models", f"{held['provider']} key not kept ({getattr(e, 'status', 'refused')})")
+         return handler.send(200, {"ok": False, "reason": "keychain", "message": str(e)})
++    if held["provider"] == "claude":                                 # #132 G8: a key connected again is used again
++        providers.key_fixed()
+     _ai_save(providers.connect_changes(held["provider"], held["ids"], [str(x) for x in offered], paths.load_settings()),
+              f"{held['provider']} connected")
+     return _ai_answer(handler)
+@@ -5687,6 +5835,8 @@ def ai_disconnect_route(handler, req):
+         return handler.send(200, {"ok": False, "reason": "keychain", "message": str(e)})
+     if provider not in providers.saved_providers(settings):
+         changes.pop("ai.providers", None)
++    if provider == "claude":                                          # #132 G8: back to the subscription, nothing kept
++        providers.key_fixed()
+     _ai_save(changes, f"{provider} disconnected")
+     return _ai_answer(handler, {"reset": sorted(k[8:] for k in changes if k.startswith("ai.jobs."))})
+ 
+@@ -7567,6 +7717,7 @@ def forget_tested_keys():
+     try:
+         import providers
+         providers.forget_all()
++        key_close()                                       # #132 G8: the key desk closes, every ticket goes
+     except Exception as e:  # noqa: BLE001  never stops a stop
+         swallowed("stop", e)
+ 
+diff --git a/system/scripts/providers.py b/system/scripts/providers.py
+index 68a17bc9..eb735259 100644
+--- a/system/scripts/providers.py
++++ b/system/scripts/providers.py
+@@ -671,7 +671,8 @@ def card(pid, settings, store, conn):
+             "status": "soon" if not live else "connected" if on else "not", "auth": auth,
+             "models": [m["label"] for m in models_of(pid, settings)] if on else [],
+             "found": [{"id": m["id"], "label": m.get("label") or label_of(pid, m["id"]),
+-                       "offered": m["id"] in p.get("offered", [])} for m in found]}
++                       "offered": m["id"] in p.get("offered", [])} for m in found],
++            "key_set_aside": key_aside(pid, auth)}                                                                  # #132 G8
+ 
+ 
+ def job_view(jid, settings, store, others):
+@@ -1124,6 +1125,78 @@ def _label(model_id, settings):
+ # ── end #132 G6 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 
+ 
++# ── #132 G8 (proposal): Claude by API key ───────────────────────────────────────────────────────────────────────────────
++# Connecting a Claude key (the page's "Use an API key", G1 keeps it in the keychain) makes every Claude run use it, through Claude
++# Code's apiKeyHelper (keyhelper.py and keydesk.py), until Disconnect. Your subscription stays the default: with no Claude key,
++# nothing here changes a launch. A key Anthropic refuses (wrong, revoked) or can't bill sends later runs back to the subscription,
++# with a step saying so, until Alan connects the key again (KEY_REFUSED, in the live server's memory only). An API rate limit
++# says so and changes nothing; nothing is retried by itself.
++KEY_REFUSED = {}
++KEY_ERRORS = {"authentication_failed": "refused", "billing_error": "billing", "rate_limit": "rate"}     # the stream's own words
++KEY_TEXT = (("helper", re.compile(r"(?i)apiKeyHelper (?:failed|script is failing)")),
++            ("refused", re.compile(r"(?i)invalid api key|authentication_error|invalid x-api-key|\b401\b")),
++            ("billing", re.compile(r"(?i)credit balance is too low|api usage limits|billing")),
++            ("rate", re.compile(r"(?i)rate_limit_error|\b429\b")))
++KEY_WORDS = {
++    "refused": "Anthropic refused your Claude API key: it may be wrong, revoked or expired. Nothing was changed. Until you connect "
++               "the key again in Settings › AI models, Claude runs use your subscription.",
++    "billing": "Anthropic won't take more requests on your Claude API key: the credit balance is too low or a spend limit is "
++               "reached. Nothing was changed. Until you sort it out and connect the key again, Claude runs use your subscription.",
++    "rate": "Your Claude API key is over Anthropic's rate limit for now. Nothing was changed: try again in a minute.",
++    "helper": "creaite couldn't hand your Claude API key to Claude Code, so the run stopped. Nothing was changed: try again, "
++              "and if it happens again, check Settings › AI models.",
++}
++
++
++def claude_on_key(settings, store=None):
++    """True when Claude runs should use the Claude API key: settings say Claude was connected with a key (read first, so at the
++    default settings the keychain is never asked), the key store has it, and Anthropic hasn't refused it since."""
++    saved = saved_providers(settings).get("claude")
++    if not isinstance(saved, dict) or saved.get("auth") != "key" or KEY_REFUSED:
++        return False
++    return claude_auth(saved, store or backend()[0]) == "key"
++
++
++def key_note(settings):
++    """A run's step when a connected Claude key is set aside after a refusal, else ""."""
++    from datetime import datetime
++    saved = saved_providers(settings).get("claude")
++    if not KEY_REFUSED or not isinstance(saved, dict) or saved.get("auth") != "key":
++        return ""
++    return (f"This ran on your Claude subscription: Anthropic refused your API key at "
++            f"{datetime.fromtimestamp(KEY_REFUSED['at']):%H:%M}. Connect it again in Settings › AI models.")
++
++
++def key_problem(ev):
++    """"refused", "billing", "rate" or "helper" when one stream event says the Claude API key failed, else None."""
++    if not isinstance(ev, dict):
++        return None
++    if ev.get("type") == "assistant" and ev.get("error") in KEY_ERRORS:
++        return KEY_ERRORS[ev["error"]]
++    if ev.get("type") == "result" and ev.get("is_error"):
++        text = str(ev.get("result") or "")[:2000]
++        return next((what for what, rx in KEY_TEXT if rx.search(text)), None)
++    return None
++
++
++def key_seen(what, now=None):
++    """Keep a key problem: a refused or unbillable key sets the key aside (later runs use the subscription)."""
++    import time
++    if what in ("refused", "billing"):
++        KEY_REFUSED.update(at=time.time() if now is None else now, why=what)
++
++
++def key_aside(pid, auth):
++    """What Claude's card says when its connected key is set aside after a refusal, else ""."""
++    return KEY_WORDS[KEY_REFUSED["why"]] if pid == "claude" and auth == "key" and KEY_REFUSED else ""
++
++
++def key_fixed():
++    """Alan connected or disconnected Claude's key: anything kept about a refusal goes."""
++    KEY_REFUSED.clear()
++# ── end #132 G8 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
++
++
+ # ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
+ # Test and connect asks the provider for its models; the key is kept here, in the live server's memory only, until Alan
+ # presses Done (it then goes to the key store) or Cancel (it is dropped), and for PENDING_SECONDS at most. Only a built key

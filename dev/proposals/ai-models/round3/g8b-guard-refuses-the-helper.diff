@@ -1,0 +1,56 @@
+#132 G8b, the guard refuses the helper and the desk by name. PROPOSAL, not applied. Guarded files: reach.py, permissions.py.
+Applies after G8a (or on its own on rounds 1 and 2). 2 files, 4 hunks. Only narrows: the never list, the hook's settings, the
+approvals and every pinned guard decision are unchanged.
+
+permissions.py
+ 1 @@ NEVER_SCRIPTS gains keyhelper.py and keydesk.py: no permission rule may run them
+ 2 @@ KEYCHAIN_NAMES gains keyhelper.py, keydesk.py, apiKeyHelper and the desk's folder name (creaite-kd-): any rule naming
+      them, for any tool, is refused whatever is approved
+reach.py
+ 3 @@ KEY_SCRIPTS gains keyhelper.py and keydesk.py: the guard hook refuses running them in every mode (confirmed included),
+      and system/scripts/run refuses them
+ 4 @@ SCRIPT_COMMANDS (BL-267) classifies keyhelper.py's command line as record: never in an unconfirmed run, and refused by
+      name in every run anyway
+
+diff --git a/system/scripts/permissions.py b/system/scripts/permissions.py
+index 3e4252f6..9096d4b1 100644
+--- a/system/scripts/permissions.py
++++ b/system/scripts/permissions.py
+@@ -57,6 +57,7 @@ EDIT_NEVER = (".claude", ".git", "system/scripts", "system/templates", "system/t
+               "system/branding")
+ NEVER_SCRIPTS = {"permissions.py"}                     # the panel must not be able to widen its own permissions
+ NEVER_SCRIPTS.add("providers.py")                       # #132 G1: the AI key store is the live server's alone
++NEVER_SCRIPTS.update(("keyhelper.py", "keydesk.py"))  # #132 G8: the Claude key helper and its desk
+ SHELL_CHARS = re.compile(r"[;&|<>`$(){}\\\n\r]")
+ RULE = re.compile(r"^(Bash|Edit|Write)\((.+)\)$")
+ 
+@@ -823,7 +824,8 @@ def rule_refusal(rule):
+ # any tool, whatever is approved. A model run is refused these by the guard hook as well (reach.py); this is the second lock,
+ # and it also keeps such a rule out of Alan's own Claude Code sessions in the vault.
+ KEYCHAIN_PROGRAMS = ("security",)                     # macOS's keychain command
+-KEYCHAIN_NAMES = re.compile(r"Library/Keychains|\bkeychain|creaite\.ai\.|\bproviders\.py\b", re.I)
++KEYCHAIN_NAMES = re.compile(r"Library/Keychains|\bkeychain|creaite\.ai\.|\bproviders\.py\b"
++                            r"|\bkey(?:helper|desk)\.py\b|apiKeyHelper|creaite-kd-", re.I)   # #132 G8: the key helper, its desk
+ 
+ 
+ def keychain_problem(rule):
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index 284ed797..13e1d812 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -744,6 +744,7 @@ WRAPPER = "run"
+ WRAPPED = r"system/scripts/run ([a-z0-9_]+\.py)(?=\s|$)"
+ WRAP_NAME = r"[a-z0-9_]+\.py"
+ KEY_SCRIPTS = ("providers.py",)   # #132 G1: holds the AI key store (the keychain); never run, by the panel or the wrapper
++KEY_SCRIPTS += ("keyhelper.py", "keydesk.py")   # #132 G8: the Claude key helper and its desk: Claude Code and the live server only
+ 
+ 
+ def wrap_problem(argv):
+@@ -908,6 +909,7 @@ SCRIPT_COMMANDS = {
+     "quality.py": {"": READ},
+     "build_dashboard.py": {"": DERIVED},
+     "permissions.py": {"": RECORD},      # also never run by the panel (_script_refused)
++    "keyhelper.py": {"": RECORD},        # #132 G8: Claude Code's key helper; never run by a model run (KEY_SCRIPTS)
+     "live_server.py": {"": RECORD},      # also never run by the panel
+     "launch.py": {"": RECORD},           # also never run by the panel
+ }

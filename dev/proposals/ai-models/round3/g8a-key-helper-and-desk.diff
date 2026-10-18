@@ -1,0 +1,367 @@
+#132 G8a, the key helper and the key desk (Claude by API key). PROPOSAL, not applied.
+Applies on rounds 1 (G1c included) and 2 applied to origin/ai-models-132 36e2b36 (git apply --check). New files only, plus doctor.
+3 files, 3 hunks. Guarded files: none changed here (keyhelper.py and keydesk.py are new and are refused to model runs by G8b).
+
+doctor.py
+ 1 @@ scripts_use_paths: keyhelper.py is skipped (it runs isolated, standard library only, and must not import creaite modules)
+keydesk.py (new)
+ 2 @@ KeyDesk: a Unix socket in a new 0700 folder, opened only when a run starts on the Claude key; tickets per run, in memory
+      only (issue, bind, revoke, stop); answers the key only to the helper itself (this server's Python, exactly
+      -I keyhelper.py <desk> <ticket>) under that run's Claude Code; at most 12 answers a run, 3 a minute; log lines hold the
+      run id and what happened, never a key or a ticket. Peer: who is asking, from macOS (libproc, sysctl, ctypes; no program
+      is started)
+keyhelper.py (new)
+ 3 @@ the helper Claude Code runs: sends the ticket, prints the key on stdout only; stdlib only (re, socket, sys); no file,
+      no log, no environment variable; plain words on stderr and exit 1 when refused
+
+diff --git a/system/scripts/doctor.py b/system/scripts/doctor.py
+index fe6224d0..4c4dd6c4 100644
+--- a/system/scripts/doctor.py
++++ b/system/scripts/doctor.py
+@@ -550,7 +550,7 @@ def scripts_use_paths():
+     """Check every script imports paths.py, the one place locations are defined."""
+     bad = []
+     for s in (paths.ROOT / "system" / "scripts").glob("*.py"):
+-        if s.name == "paths.py":
++        if s.name in ("paths.py", "keyhelper.py"):     # #132 G8: the key helper runs isolated, standard library only
+             continue
+         if not re.search(r"^import paths\b", s.read_text(encoding="utf-8"), re.M):
+             bad.append(s.name)
+diff --git a/system/scripts/keydesk.py b/system/scripts/keydesk.py
+new file mode 100644
+index 00000000..f4a1e028
+--- /dev/null
++++ b/system/scripts/keydesk.py
+@@ -0,0 +1,257 @@
++"""#132 G8 (proposal): Claude by API key, the live server's side. The key desk hands the Claude API key to creaite's key helper
++(keyhelper.py) when, and only when, Claude Code runs that helper for a run the live server started.
++
++How a run gets the key, and nothing else does:
++  - the live server opens the desk (a Unix socket in a private folder made for it, mode 0700) the first time a run starts with
++    Claude on an API key; at the default settings it is never opened;
++  - for each such run it issues a ticket (secrets.token_urlsafe(32)) kept in this process's memory only, and names the helper,
++    with the desk's path and the ticket, in the run's --settings `apiKeyHelper`. The ticket is not the key: it is a run's right
++    to ask, and it ends when the run ends (revoke);
++  - when a connection arrives the desk asks macOS (libproc and sysctl, through ctypes; no program is started) who is asking. It
++    answers the key only when the ticket is a live run's, the asking program is the helper itself (this server's Python, with
++    exactly `-I <keyhelper.py> <desk> <ticket>`), and it runs under that run's Claude Code (the process this server started for
++    the run; a run whose number isn't known yet, the VIP check's, is bound to the first Claude Code under this server that asks).
++    A ticket gives the key at most MAX_GIVEN times, and at most BURST times a minute (Claude Code asks at the start, every five
++    minutes and after a 401);
++  - the key is read from the key store (G1, the keychain) at that moment and sent on the socket only. It is never in an
++    environment variable, a command line, a file, a log line or an answer to anything else. The log gets the run's id and
++    what happened, never a key or a ticket.
++
++A model run can't ask: the guard hook refuses running keyhelper.py and keydesk.py in every mode, the wrapper refuses them, no
++permission rule may name them (reach.py, permissions.py), and a Bash call runs only creaite scripts. A program that isn't the
++helper, or isn't under the run, is refused even with the ticket.
++"""
++import hmac
++import os
++import re
++import secrets
++import shlex
++import socket
++import struct
++import sys
++import tempfile
++import threading
++import time
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++import paths  # noqa: E402,F401  (doctor: every script imports paths)
++
++HELPER = Path(__file__).resolve().parent / "keyhelper.py"
++TICKET = re.compile(rb"T ([A-Za-z0-9_-]{43})\n?")
++MAX_GIVEN = 12                       # answers per run at most (a 30-minute run asks about seven times)
++BURST = 3                            # answers per run within a minute at most
++HOPS = 4                             # helper → (sh) → Claude Code: how far up the desk looks for the run's Claude Code
++WORDS = {                            # what the helper prints on stderr (printable ASCII, never a key); Claude Code shows it
++    "form": "creaite's key helper asked in a way the desk doesn't take.",
++    "ticket": "This run's key ticket isn't valid: the run has ended, or creaite didn't start it.",
++    "helper": "Only creaite's key helper, started by Claude Code, may ask for the key.",
++    "run": "The key helper wasn't started by this run's Claude Code.",
++    "many": "This run has asked for the key too often.",
++    "nokey": "No Claude API key is kept for this vault: connect one in Settings > AI models.",
++    "keychain": "The keychain didn't give creaite the key: unlock your Mac and try again.",
++}
++
++
++class Peer:
++    """Who is on the other end of a desk connection, from macOS itself (ctypes; no program is started): the process number,
++    its parent, its program file and its arguments."""
++
++    _lib = None
++
++    @classmethod
++    def lib(cls):
++        """libSystem, with proc_pidinfo, proc_pidpath and sysctl typed."""
++        if cls._lib is None:
++            import ctypes
++            lib = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
++            vp, ci = ctypes.c_void_p, ctypes.c_int
++            lib.proc_pidinfo.restype, lib.proc_pidinfo.argtypes = ci, [ci, ci, ctypes.c_uint64, vp, ci]
++            lib.proc_pidpath.restype, lib.proc_pidpath.argtypes = ci, [ci, vp, ctypes.c_uint32]
++            lib.sysctl.restype = ci
++            lib.sysctl.argtypes = [ctypes.POINTER(ci), ctypes.c_uint, vp, ctypes.POINTER(ctypes.c_size_t), vp, ctypes.c_size_t]
++            cls._lib = lib
++        return cls._lib
++
++    def pid(self, conn):
++        """The connecting process's number (getsockopt SOL_LOCAL, LOCAL_PEERPID)."""
++        return struct.unpack("i", conn.getsockopt(0, 0x002, 4))[0]
++
++    def parent(self, pid):
++        """The parent's number (proc_pidinfo PROC_PIDTBSDINFO: pbi_ppid), or None."""
++        import ctypes
++        buf = ctypes.create_string_buffer(136)
++        if self.lib().proc_pidinfo(pid, 3, 0, buf, 136) != 136:
++            return None
++        return struct.unpack_from("I", buf.raw, 16)[0]
++
++    def path(self, pid):
++        """The process's program file (proc_pidpath), or None."""
++        import ctypes
++        buf = ctypes.create_string_buffer(4096)
++        return buf.value.decode("utf-8", "replace") if self.lib().proc_pidpath(pid, buf, 4096) > 0 else None
++
++    def argv(self, pid):
++        """The process's arguments (sysctl KERN_PROCARGS2), or []."""
++        import ctypes
++        mib, size = (ctypes.c_int * 3)(1, 49, pid), ctypes.c_size_t(0)
++        if self.lib().sysctl(mib, 3, None, ctypes.byref(size), None, 0) != 0 or not size.value:
++            return []
++        buf = ctypes.create_string_buffer(size.value)
++        if self.lib().sysctl(mib, 3, buf, ctypes.byref(size), None, 0) != 0:
++            return []
++        raw = buf.raw[:size.value]
++        argc, rest = struct.unpack_from("i", raw)[0], raw[4:]
++        i = rest.find(b"\0")                                  # the program's path, then padding
++        while 0 <= i < len(rest) and rest[i] == 0:
++            i += 1
++        return [p.decode("utf-8", "replace") for p in rest[i:].split(b"\0")[:argc]] if i > 0 else []
++
++
++class KeyDesk:
++    """The desk: tickets for runs, and the key for the helper of a live run. `read_key()` answers the Claude key or None (it
++    may raise: a keychain that says no)."""
++
++    def __init__(self, read_key, peer=None, log=None, now=time.monotonic, server_pid=None):
++        self.read_key, self.peer, self.log, self.now = read_key, peer or Peer(), log or (lambda line: None), now
++        self.server_pid = server_pid or os.getpid()
++        self.path, self.sock, self.own, self.tickets, self.lock = None, None, None, {}, threading.Lock()
++
++    # ── Opening and closing ──
++    def start(self):
++        """Open the desk once (a socket in a new private folder) and answer on a thread; its path."""
++        with self.lock:
++            if self.path:
++                return self.path
++            folder = tempfile.mkdtemp(prefix="creaite-kd-")
++            os.chmod(folder, 0o700)
++            path = os.path.join(folder, "desk")
++            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
++            s.bind(path)
++            os.chmod(path, 0o600)
++            s.listen(8)
++            self.sock, self.path, self.own = s, path, self.peer.path(os.getpid())
++        threading.Thread(target=self._serve, daemon=True).start()
++        return path
++
++    def stop(self):
++        """Close the desk and forget every ticket (the server stops)."""
++        with self.lock:
++            self.tickets.clear()
++            sock, path, self.sock, self.path = self.sock, self.path, None, None
++        if sock:
++            sock.close()
++        for p in ((path, os.path.dirname(path)) if path else ()):
++            try:
++                os.remove(p) if p == path else os.rmdir(p)
++            except OSError:
++                pass                                           # already gone: nothing to tidy
++
++    # ── Tickets ──
++    def issue(self, run_id):
++        """A new ticket for a run (replacing any earlier one)."""
++        t = secrets.token_urlsafe(32)
++        with self.lock:
++            self.tickets[run_id] = {"value": t, "pid": None, "given": []}
++        return t
++
++    def bind(self, run_id, pid):
++        """The run's Claude Code is process `pid`. A ticket already used by another process is ended."""
++        with self.lock:
++            t = self.tickets.get(run_id)
++            if t and t["pid"] not in (None, pid):
++                self.tickets.pop(run_id, None)
++                self.log(f"{run_id} key ticket ended: used outside its run")
++            elif t:
++                t["pid"] = pid
++
++    def revoke(self, run_id):
++        """The run has ended: its ticket goes."""
++        with self.lock:
++            self.tickets.pop(run_id, None)
++
++    def command(self, ticket):
++        """The apiKeyHelper command for a run: this server's Python, isolated, the helper, the desk and the ticket."""
++        return " ".join(shlex.quote(x) for x in (sys.executable, "-I", str(HELPER), self.path, ticket))
++
++    # ── Answering ──
++    def _serve(self):
++        sock = self.sock
++        while sock is not None and self.sock is sock:
++            try:
++                conn, _ = sock.accept()
++            except OSError:
++                return                                         # the desk was closed
++            threading.Thread(target=self._one, args=(conn,), daemon=True).start()
++
++    def _one(self, conn):
++        try:
++            conn.settimeout(2)
++            conn.sendall(self.answer(conn.recv(200), conn))
++        except OSError:
++            pass                                               # the helper went away: Claude Code reports it
++        finally:
++            conn.close()
++
++    def answer(self, line, conn):
++        """The bytes the helper gets: b"KEY <key>\\n", or b"NO <words>\\n"."""
++        run_id, why = self.check(line, conn)
++        if not why:
++            try:
++                key = self.read_key()
++                why = "" if key else "nokey"
++            except Exception:  # noqa: BLE001  a keychain that says no (G1's KeychainError): words, never details
++                key, why = None, "keychain"
++        if why:
++            self.log(f"{run_id or '-'} key helper refused: {why}")
++            return b"NO " + WORDS[why].encode("ascii") + b"\n"
++        self.log(f"{run_id} key given to its Claude Code")
++        return b"KEY " + key.encode("ascii") + b"\n"
++
++    def check(self, line, conn):
++        """(run id or None, why not or "") for one request."""
++        m = TICKET.fullmatch(line or b"")
++        if not m:
++            return None, "form"
++        with self.lock:
++            run_id, t = self._find(m.group(1).decode("ascii"))
++            if t is None:
++                return None, "ticket"
++            pid = self.peer.pid(conn)
++            if not self._is_helper(pid, t["value"]):
++                return run_id, "helper"
++            claude = self._under(pid, t["pid"])
++            if claude is None:
++                return run_id, "run"
++            now = self.now()
++            if len(t["given"]) >= MAX_GIVEN or sum(1 for g in t["given"] if now - g < 60) >= BURST:
++                return run_id, "many"
++            t["pid"] = claude
++            t["given"].append(now)
++        return run_id, ""
++
++    def _find(self, value):
++        """(run id, ticket) for a ticket value, compared in constant time; (None, None)."""
++        found = (None, None)
++        for run_id, t in self.tickets.items():
++            if hmac.compare_digest(t["value"], value):
++                found = (run_id, t)
++        return found
++
++    def _is_helper(self, pid, ticket):
++        """Whether process `pid` is the helper itself: this server's Python running exactly `-I keyhelper.py <desk> <ticket>`."""
++        return self.peer.path(pid) == self.own and self.peer.argv(pid)[1:] == ["-I", str(HELPER), self.path, ticket]
++
++    def _under(self, pid, bound):
++        """The run's Claude Code above `pid` (within HOPS): `bound` when the ticket is bound, else the first ancestor this server
++        started; None when there is none."""
++        p = pid
++        for _ in range(HOPS):
++            p = self.peer.parent(p)
++            if not p or p <= 1:
++                return None
++            if bound is not None and p == bound:
++                return p
++            if bound is None and self.peer.parent(p) == self.server_pid:
++                return p
++        return None
+diff --git a/system/scripts/keyhelper.py b/system/scripts/keyhelper.py
+new file mode 100644
+index 00000000..60ebd568
+--- /dev/null
++++ b/system/scripts/keyhelper.py
+@@ -0,0 +1,69 @@
++"""creaite's Claude API key helper (#132 G8): Claude Code runs this to get the Claude API key for one run, and nothing else does.
++
++Claude Code's `apiKeyHelper` setting names a shell command that prints an API key on stdout; Claude Code runs it itself (outside
++any tool call), keeps what it prints in its own memory and sends it to Anthropic. The live server names this script, in the
++--settings of a run it starts with Claude on an API key, with two arguments: the path of the live server's key desk (a Unix socket
++in a private folder) and that run's ticket (random, held in the live server's memory, good only while that run lasts).
++
++This script has no key and can't read the keychain. It sends the ticket to the desk and prints what the desk answers: the key, on
++stdout only, for Claude Code to read. The desk answers only when the ticket is a live run's, the program asking is this script
++(its program and arguments) and it was started under that run's Claude Code (keydesk.py).
++
++It runs isolated (`python -I`): standard library only, no creaite module, no environment variable read. It writes no file and no
++log. When the desk says no, or isn't there, it prints plain words on stderr (never a key) and exits 1: Claude Code then says the
++helper failed and the run stops.
++
++Never run by hand, by a model run or through system/scripts/run: reach.py and permissions.py refuse it by name.
++"""
++import re
++import socket
++import sys
++
++TICKET = re.compile(r"[A-Za-z0-9_-]{43}")                  # secrets.token_urlsafe(32)
++KEY = re.compile(rb"[A-Za-z0-9._~+/=:-]{8,400}")            # providers.KEY_CHARS: what an API key is made of
++WORDS = re.compile(rb"[ -~]{1,200}")                        # the desk's refusal: printable ASCII, one short line
++TIMEOUT = 10                                                # seconds for the desk to answer
++NOT_HERE = "creaite's key helper is run only by Claude Code, in a run the live server started."
++
++
++def say(words):
++    """Plain words on stderr (never a key) and exit status 1."""
++    sys.stderr.write(words + "\n")
++    return 1
++
++
++def ask(path, ticket):
++    """The desk's answer to this ticket: at most 1 KB, or raises OSError."""
++    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
++        s.settimeout(TIMEOUT)
++        s.connect(path)
++        s.sendall(b"T " + ticket.encode("ascii") + b"\n")
++        data = b""
++        while len(data) < 1024:
++            part = s.recv(1024 - len(data))
++            if not part:
++                break
++            data += part
++    return data
++
++
++def main(argv):
++    """Print the run's key on stdout (exit 0), or plain words on stderr (exit 1)."""
++    if len(argv) != 3 or not argv[1].startswith("/") or not TICKET.fullmatch(argv[2]):
++        return say(NOT_HERE)
++    try:
++        data = ask(argv[1], argv[2])
++    except OSError:
++        return say("The live server didn't answer creaite's key helper: is it still running?")
++    head, _, rest = data.strip().partition(b" ")
++    if head == b"KEY" and KEY.fullmatch(rest):
++        sys.stdout.write(rest.decode("ascii"))
++        sys.stdout.flush()
++        return 0
++    if head == b"NO" and WORDS.fullmatch(rest):
++        return say(rest.decode("ascii"))
++    return say("The live server's key desk gave no usable answer.")
++
++
++if __name__ == "__main__":
++    sys.exit(main(sys.argv))
