@@ -126,6 +126,46 @@ def stopped_errors():
             for g in groups if not g["live"]]
 
 
+# ===== #132 G9 (proposal): AI models in Health =====
+AI_FIX = {"kind": "manual", "button": "How to fix", "would_run": "", "waits_for": "",
+          "how": "Settings › Essentials › AI models: Connect again, or Disconnect", "built": False}
+
+
+def ai_models(settings=None, store=None):
+    """(lines, problems) for Settings › Health: each provider's connection as settings and the key store see it, and Claude's
+    limit when it holds. Names, counts and states only: never a key (the store is only asked whether it has one, never for it).
+    Computed in the live server's own process, the only one that uses the key store (#132 G1)."""
+    import providers
+    try:
+        settings = paths.load_settings() if settings is None else settings
+        store = store or providers.backend()[0]
+        saved, lines, problems = providers.saved_providers(settings), [], []
+        lines.append("Claude: " + ("an API key in this Mac's keychain" if providers.claude_auth(saved.get("claude") or {}, store)
+                                   == "key" else "your Claude subscription"))
+        for pid in providers.PROVIDER_ORDER:
+            name, live = providers.PROVIDERS[pid][0], providers.PROVIDERS[pid][4]
+            if pid == "claude" or not live or not isinstance(saved.get(pid), dict):
+                continue
+            n = len(providers.models_of(pid, settings))
+            if store.has(pid):
+                lines.append(f"{name}: connected, {n} model{'' if n == 1 else 's'} offered; the key is in this Mac's keychain")
+            else:
+                problems.append({"id": f"ai_{pid}", "title": f"{name} is set up but this Mac's keychain has no key for it",
+                                 "check": "AI models", "severity": "warn", "fix": AI_FIX,
+                                 "detail": f"Until it is connected again, nothing is sent to {name}: Claude runs those jobs."})
+        if providers.fake_mode():
+            problems.append({"id": "ai_fake", "title": "Test providers are switched on", "check": "AI models", "severity": "warn",
+                             "detail": "CREAITE_FAKE_PROVIDERS is set for the live server: restart it without it.",
+                             "fix": dict(AI_FIX, how="Restart the live server (Settings › Live server)")})
+        if providers.limited_now():
+            when = providers.reset_words(providers.LIMIT.get("resets"))
+            lines.append(f"Claude's limit is reached; it resets {when}." if when else "Claude's limit is reached.")
+        return lines, problems
+    except Exception as e:  # noqa: BLE001  Health still shows doctor's checks
+        return [f"AI models couldn't be checked ({type(e).__name__})"], []
+# ===== end #132 G9 =====
+
+
 def health(result=None):
     """{problems, fine, fine_names, stopped, checked}: doctor's warnings and failures in plain words, each with its fix; the
     rest counted. `result` is a doctor --json result (the tests pass one), else doctor runs now."""
@@ -140,12 +180,14 @@ def health(result=None):
             title = str(c["detail"]).split(":")[0]               # BL-03: "Archive 14 reports and minutes older than 12 months"
         problems.append({"id": c.get("id"), "title": title, "check": c.get("name", ""), "severity": c.get("status"),
                          "detail": home_short(c.get("detail", "")), "fix": fix_for(kind, c.get("id"), c.get("detail", ""))})
+    ai, ai_problems = ai_models()                                 # #132 G9
+    problems += ai_problems
     problems.sort(key=lambda p: p["severity"] != "fail")         # failures first, then warnings, each in doctor's order
     archiving = [home_short(c.get("detail", "")) for c in result.get("checks") or []      # BL-10, BL-03: the last runs
                  if c.get("id") in ARCHIVING and c.get("status") == "pass" and c.get("detail")]
     backups = [f"{c.get('name', '')}: {home_short(c.get('detail', ''))}" for c in result.get("checks") or []   # BL-323
                if c.get("id") in BACKUP_LINES and c.get("status") == "pass"]
     return {"problems": problems, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(), "archiving": archiving,
-            "backups": backups,
+            "backups": backups, "ai": ai,                                                  # #132 G9
             "standalone": [built_fix(f) for f in health_fixes.STANDALONE],
             "read_only": bool(result.get("read_only")), "checked": datetime.now().strftime("%Y-%m-%d %H:%M")}
