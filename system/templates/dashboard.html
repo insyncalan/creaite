@@ -7063,7 +7063,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       close() {
         stopOpen();
         shut();
+        const r4 = released;
+        released = null;
+        if (r4) r4.h.close();
       }
+      // #215: also one the keyboard or a click has taken
     };
   }
   var menuGroup = hoverGroup("menu");
@@ -70677,6 +70681,9 @@ ${d5.text}`);
         arg2 = null;
       }
       shared.FROMPROJ = v6 === "work" && opt2.from || null;
+      cardGroup.close();
+      menuGroup.close();
+      tipHide();
       closePanel(true);
       closeDisp(false);
       shared.VIEW = v6;

@@ -133,7 +133,7 @@ export function hoverGroup(kind, clock = {}) {
       if (cur && cur.key === key) { stopClose(); released = { key, h: cur.h }; cur = null; }
     },
     /** Close at once without the Esc rule (the trigger was removed, or the page changed). */
-    close() { stopOpen(); shut(); },
+    close() { stopOpen(); shut(); const r = released; released = null; if (r) r.h.close(); },       // #215: also one the keyboard or a click has taken
   };
 }
 

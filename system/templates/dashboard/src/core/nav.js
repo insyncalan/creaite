@@ -5,9 +5,10 @@
 import { actKindOf, renderActivity } from "../activity.js";
 import { RBMARK } from "../ask.js";
 import { A, DEC, P, pName, R, REV } from "./data.js";
-import { $, $$, addHTML, esc, html } from "./dom.js";
+import { $, $$, addHTML, esc, html, tipHide } from "./dom.js";
 import { mFirst, mLeave } from "./motion.js";
 import { curDrop } from "./editor.js";
+import { cardGroup, menuGroup } from "./hover.js";
 import { anim, DATE, mScroll, reduced, store } from "./page.js";
 import { snack } from "./server.js";
 import { shared } from "./state.js";
@@ -132,6 +133,7 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
      own address (#work=actions&v=mine) so a refresh, Back and a copied link keep any change made to it */
   if(v==="mine"&&!opt.restore){ clearAllFilters(); shared.WQ=""; SORT.actions=null; shared.WT="actions"; applyView("mine"); v="work"; arg=null; }
   shared.FROMPROJ=(v==="work"&&opt.from)||null;
+  cardGroup.close(); menuGroup.close(); tipHide();   /* #215: a hover card, peek or menu does not outlive its page (Today stays in the DOM, hidden) */
   closePanel(true); closeDisp(false); shared.VIEW=v; $$(".view").forEach(s=>s.hidden=true);
   const id={cockpit:"v-cockpit",mine:"v-work"}[v]||"v-"+v; $("#"+id).hidden=false; $("#"+id).scrollTop=0;
   const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects",reporting:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
