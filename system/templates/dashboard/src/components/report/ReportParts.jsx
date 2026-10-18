@@ -118,7 +118,7 @@ export function EyeTable({ ctx, cols, noun, empty, cellsFor, extra, leftOut = "t
     </div>);
 }
 
-let CLOSE_PICKER = /** @type {null|(() => void)} */ (null);     // the picker that is open: one at a time (a stable closer, not the render's own)
+const CLOSE_PICKER = /** @type {Map<Element|null, () => void>} */ (new Map());   // the picker open on each page: one at a time per page (a stable closer, not the render's own); in Side by side each pane has its own
 /** "+ Add from the tracker": a picker over the open items that are not in this table yet. Cancel changes nothing; Add puts the ticked
     items in the table (marked New, each with its eye) and changes only the report. @param {{ctx: SectionCtx}} props */
 export function AddFromTracker({ ctx }) {
@@ -131,14 +131,18 @@ export function AddFromTracker({ ctx }) {
   const btn = useRef(/** @type {HTMLButtonElement|null} */ (null));
   const search = useRef(/** @type {HTMLInputElement|null} */ (null));
   const me = useRef(/** @type {null|(() => void)} */ (null));
-  const close = () => { if (CLOSE_PICKER === me.current) CLOSE_PICKER = null; setOpen(false); setList(null); setQ(""); setSel([]); setMsg(""); setTimeout(() => btn.current?.focus(), 0); };
+  const pageOf = () => (btn.current && btn.current.closest(".page")) || null;
+  const mine = useRef(/** @type {Element|null} */ (null));
+  const close = () => { if (CLOSE_PICKER.get(mine.current) === me.current) CLOSE_PICKER.delete(mine.current); setOpen(false); setList(null); setQ(""); setSel([]); setMsg(""); setTimeout(() => btn.current?.focus(), 0); };
   const closeNow = useRef(close); closeNow.current = close;
   useEffect(() => { if (open && search.current) search.current.focus(); }, [open]);     // the search box takes the cursor, so Esc works at once
   if (!ctx.editing || !PICKABLE.has(s.id)) return null;
   const start = async () => {
     if (!me.current) me.current = () => closeNow.current();
-    if (CLOSE_PICKER && CLOSE_PICKER !== me.current) CLOSE_PICKER();
-    CLOSE_PICKER = me.current;
+    mine.current = pageOf();
+    const other = CLOSE_PICKER.get(mine.current);
+    if (other && other !== me.current) other();
+    CLOSE_PICKER.set(mine.current, me.current);
     setOpen(true); setList(null); setMsg("");
     const r = await api("/api/report/pick", { doc: ctx.doc });
     if (r && r.ok) setList((r.sections || {})[s.id] || []);

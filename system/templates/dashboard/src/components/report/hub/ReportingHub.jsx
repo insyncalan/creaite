@@ -23,7 +23,7 @@ import { clientStatus, internalStatus, menuWeeks, toneByTrail, toneByWeek } from
 import { P } from "../../../core/data.js";
 import { navWrite, tabTitle } from "../../../core/nav.js";
 import { fd } from "../../../core/page.js";
-import { crBase, crDoc, crInfo, crInternal, crOpen, loadClientReport, saveClientPage } from "../../../stores/clientReport.js";
+import { crBase, crDirty, crDoc, crInfo, crInternal, crOpen, loadClientReport, saveClientPage } from "../../../stores/clientReport.js";
 import { hubAsk, hubCfg, hubExported, hubKey, hubNote, hubReady, hubView, hubZoom, loadHub, reloadHub } from "../../../stores/hub.js";
 import { repTick, spaceCode, spaceWeek, spaceWeeks, weekView } from "../../../stores/reporting.js";
 import { clientReportOn, crTick } from "../../../stores/reportingSettings.js";
@@ -85,6 +85,17 @@ function HubRow({ view, on, doc }) {
     </div>);
 }
 
+/** What the internal report's pane does (the internal view and the left pane of Side by side are the same): an edit is kept on the page and
+    is what Match internal reads; the save is its own. */
+const internalChange = (/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; };
+const internalSave = async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; };
+/** The AI bar's account of the internal report's pane: its own place and no client document. @param {SheetDoc} doc */
+const internalAi = (/** @type {SheetDoc} */ doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
+/** ✦ on the internal report. @param {SheetDoc} doc */
+const internalRedraft = (/** @type {SheetDoc} */ doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
+/** ✦ on the client report. @param {SheetDoc} cd */
+const clientRedraft = (/** @type {SheetDoc} */ cd) => redrafter(() => ({ code: cd.project, document: { kind: "client", code: cd.project, week_ending: cd.date, client: cd.client || "" } }), "report", "client", clientHealthApply);
+
 /** The sheet for what is in view. @param {{code: string, view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
 function HubSheet({ code, view, on, doc }) {
   const cd = crDoc.value, ci = crInternal.value, cinfo = crInfo.value;
@@ -103,23 +114,20 @@ function HubSheet({ code, view, on, doc }) {
   if (view === "client" && cd) {
     return <ReportSheet audience="client" key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}
       readOnly={cFiled} renderers={CLIENT_RENDERERS} onChange={setClientDoc} onSave={saveClientPage} ai={clientAi}
-      onRedraft={redrafter(() => ({ code: cd.project, document: { kind: "client", code: cd.project, week_ending: cd.date, client: cd.client || "" } }), "report", "client", clientHealthApply)}
+      onRedraft={clientRedraft(cd)}
       onEvent={ev => { if (ev.type === "reload") reloadClient(); else countRedraft(ev, "report"); }} />;
   }
   if (side && cd) {
     const key = `side:${cd.project}:${cd.date}:${cd.client || ""}`;
-    return <ReportSheet audience="client" key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={false} leftReadOnly
-      renderers={WEEKLY_RENDER} onChange={() => {}}
+    return <ReportSheet audience="client" key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={iLocked} panesApart
+      renderers={WEEKLY_RENDER} onChange={internalChange} onSave={internalSave} ai={internalAi(doc)} onRedraft={internalRedraft(doc)}
       partner={{ doc: cd, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: cFiled,
-        match: (/** @type {string} */ id) => setClientDoc(matchFor(id)), onChange: setClientDoc, onSave: saveClientPage }}
-      ai={clientAi}
+        match: (/** @type {string} */ id) => setClientDoc(matchFor(id)), onChange: setClientDoc, onSave: saveClientPage, dirty: () => crDirty.value, ai: clientAi, onRedraft: clientRedraft(cd) }}
       onEvent={ev => { if (ev.type === "reload") { if (ev.partner) reloadClient(); else reloadHub(); } else countRedraft(ev, "report"); }} />;
   }
   return <ReportSheet audience="internal" key={`i:${doc.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={iLocked}
-    renderers={WEEKLY_RENDER} onChange={(/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; }}
-    onSave={async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; }}
-    ai={{ place: "report", project: () => doc.project, confidential: () => false }}
-    onRedraft={redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report")}
+    renderers={WEEKLY_RENDER} onChange={internalChange} onSave={internalSave}
+    ai={internalAi(doc)} onRedraft={internalRedraft(doc)}
     onEvent={ev => { if (ev.type === "reload") reloadHub(); else countRedraft(ev, "report"); }} />;
 }
 

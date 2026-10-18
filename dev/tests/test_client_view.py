@@ -267,7 +267,7 @@ class ClientBrowser(LiveBrowserCase):
         self.assertIn("not client-visible", self.b.eval("document.querySelector('[data-crleft=\"ABC-005\"]').innerText").lower())
         self.api("/api/report/check", {"doc": self.api("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]})
 
-    def test_side_by_side_shows_the_internal_page_read_only(self):
+    def test_side_by_side_shows_the_internal_page_beside_it_editable_as_its_own_report(self):   # p241: both panes are editable (Alan, 18-10-2026)
         self.approve_internal()
         self.open_view()
         self.b.click("#hubSeg [data-hv='side']")
@@ -275,7 +275,7 @@ class ClientBrowser(LiveBrowserCase):
         left = "document.querySelector('#v-reporting .sheet-pair > .sheet-fit')"
         self.assertIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit"))                    # the internal page has its own
         self.assertNotIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit + .sheet-fit"))
-        self.assertTrue(self.b.eval(f"{left}.querySelectorAll('.wr-rich').length>0 && {left}.querySelectorAll('[contenteditable=true],textarea,.wr-edit').length===0"), "the internal page is read only")
+        self.assertTrue(self.b.eval(f"{left}.querySelectorAll('.wr-rich').length>0 && {left}.querySelectorAll('.wr-edit').length>0"), "the internal page is editable, as its own report")
         # the sheet's Match internal (partner.match) is the client-safe match: the summary comes over, never an internal row
         self.b.eval("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-match .linkbtn').click()")
         self.b.wait("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .wr-rich')?.innerText.includes('The internal summary')", 10)
