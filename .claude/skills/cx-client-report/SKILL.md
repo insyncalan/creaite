@@ -21,7 +21,7 @@ Read these first:
 ## Triggers
 
 - **Manual:** "client report ABC", "client report ABC since 2026-09-01".
-- **Reminder only** (a session-start rule in `CLAUDE.md`): each project's `CLAUDE.md` holds `Client report rhythm: weekly | fortnightly | monthly | off` (default **weekly**). When the last approved client report (the latest `* Client report.docx` in the project's client-reports folder: `reports/` by default) is older than the rhythm, open with "ABC client report due (last: YYYY-MM-DD) — say client report ABC". Never draft anything without being asked.
+- **Reminder only** (a session-start rule in `CLAUDE.md`): each project's `CLAUDE.md` holds `Client report rhythm: weekly | fortnightly | monthly | off` (default **weekly**). When the last approved client report (the latest `* Client report.docx` in the project's client-reports folder: `reports/` by default) is older than the rhythm, open with "ABC client report due (last: YYYY-MM-DD) — say client report ABC". Never draft anything without being asked. A project whose `CLAUDE.md` says `Client report: off` ("This project needs a separate client report", H3 of the Reporting hub; no line means on) has no client report and no client reminder: say so and make no draft unless Alan switches it on first. Turning it off deletes nothing.
 
 ## Flow
 

@@ -3,6 +3,15 @@
 Usage (from the repository root):
   python3 dev/tools/handcheck.py v1.9.5 [--write] [--out DIR] [--only 1,2,13] [--keep] [--dirty] [--no-sheet]
   just -f dev/justfile handchecks v1.9.5
+  python3 dev/tools/handcheck.py all [--from v2.2.0] [--to v2.3.4] [--only v2.3.2,v2.3.3:1+2] [--sheets-ref origin/pm-intake-briefs]
+  python3 dev/tools/handcheck.py all --list          (nothing runs, no browser: tests per release and the sheet coverage gaps)
+
+`all` (or --from/--to) runs each release's checks in turn (one release, one browser at a time; one zip, built once) and prints a
+one-screen summary per release (pass, fail, judgement-only, live-only, the failing checks with a reason, the coverage gaps), then one
+table. A sheet check with no test that is not tagged judgement or live only is a gap. The sheets are read from dev/handchecks/; with
+--sheets-ref REF (repeatable) they are read with `git show REF:dev/handchecks/<release>.md` first (the Product Manager's has the newest),
+then from dev/handchecks/. Without a sheet, coverage is skipped.
+Slow: the v2.2.0 suite alone takes about 85 minutes. Browser slots (dev/tools/browser_slots.py): CREAITE_BROWSER_SLOTS.
 
 It does the hand-check Setup (dev/handchecks/<version>.md) by itself, in a throwaway folder:
   1. builds the release zip from this checkout (dev/tools/build_release.py; --dirty for uncommitted engine files);
@@ -95,13 +104,14 @@ def last_friday(today):
 class Session:
     """One hand-check environment: the run folder, the zip, the vault and its live server."""
 
-    def __init__(self, out=None, dirty=False, keep=False):
+    def __init__(self, out=None, dirty=False, keep=False, zip_path=None):
         self.dir = Path(out).resolve() if out else Path(tempfile.mkdtemp(prefix="creaite-hc-"))
         self.dir.mkdir(parents=True, exist_ok=True)
         self.dirty, self.keep = dirty, keep
         self.today = date.today()
         self.now = f"{self.today.isoformat()} {NOW_TIME}"
-        self.zip = self.vault = self.proc = self.base = None
+        self.zip = Path(zip_path).resolve() if zip_path else None      # a zip already built (handcheck.py all builds it once)
+        self.vault = self.proc = self.base = None
         self.fake = self.dir / "fake_claude.py"
         self.servers = []                      # every (proc, vault) this session started, stopped at close
 
@@ -263,6 +273,14 @@ def fill_results(text, outcomes):
     return "".join(out)
 
 
+def reason_of(exc):
+    """A failure's note: its first line; when that only introduces a quoted run ('name: ----'), the next lines too."""
+    lines = [x.strip() for x in str(exc).strip().splitlines()]
+    kept = [x for x in lines if x and not re.fullmatch(r"[-=]{4,}", x)]
+    first = re.sub(r"[-=]{4,}\s*$", "", kept[0]).strip() if kept else ""
+    return " ".join([first] + kept[1:3]) if first.endswith(":") else first
+
+
 class Collect(unittest.TextTestResult):
     """Each test's outcome, by check number (test_cNN_…)."""
 
@@ -291,7 +309,7 @@ class Collect(unittest.TextTestResult):
     def addFailure(self, test, err):
         """Failed: the assertion's first line is the note."""
         super().addFailure(test, err)
-        self._put(test, "fail", str(err[1]).strip().splitlines()[0] if str(err[1]).strip() else "failed")
+        self._put(test, "fail", reason_of(err[1]) or "failed")
 
     def addError(self, test, err):
         """An error in the check itself counts as Fail, with the error as the note."""
@@ -328,27 +346,184 @@ def check_texts(text):
     return {int(m.group(1)): m.group(2).strip() for m in re.finditer(r"^(\d+)\. (.+)$", body, re.M)}
 
 
-def main(argv):
-    """Set up, run the checks, fill the Results table and make the sheet. Exit 1 if any check failed."""
-    ap = argparse.ArgumentParser(description="Run a release's hand checks unattended (BL-341).")
-    ap.add_argument("version", help="e.g. v1.9.5")
+def docstring_texts(mod):
+    """{number: the check's text} from the module's test docstrings (when the hand-check file is not in this checkout)."""
+    out = {}
+    for cls in vars(mod).values():
+        if isinstance(cls, type):
+            for name, fn in vars(cls).items():
+                m = re.match(r"test_c(\d+)_", name)
+                if m and fn.__doc__:
+                    out[int(m.group(1))] = " ".join(fn.__doc__.split())
+    return out
+
+
+def results_table(v, outcomes, mod):
+    """A Results table made from the run alone (no hand-check file to fill): Pass, Fail, or the note for any other outcome."""
+    texts = docstring_texts(mod)
+    rows = ["| # | Check | Pass | Fail | Result |", "|---|-------|------|------|--------|"]
+    for n in sorted(outcomes):
+        status, note = outcomes[n]
+        p, f = ("[x]", "[ ]") if status == "pass" else ("[ ]", "[x]") if status == "fail" else ("[ ]", "[ ]")
+        title = " ".join(str(texts.get(n, "")).split(". ", 1)[-1].split())[:60].replace("|", "/")
+        rows.append(f"| {n} | {title} | {p} | {f} | {' '.join(str(note).replace('|', '/').split())[:300]} |")
+    return f"# Hand-check results for {v}\n\n" + "\n".join(rows) + "\n"
+
+
+def write_results(md, v, outcomes, mod, write, run_dir):
+    """Fill the hand-check file's Results table (in a copy in the run folder, or the file itself with --write); with no hand-check
+    file in this checkout, a table made from the run alone. Returns where it was written."""
+    if md.exists():
+        dest = md if write else run_dir / md.name
+        dest.write_text(fill_results(md.read_text(encoding="utf-8"), outcomes), encoding="utf-8")
+    else:
+        dest = run_dir / md.name
+        dest.write_text(results_table(v, outcomes, mod), encoding="utf-8")
+    return dest
+
+
+def sheet_texts(md, mod):
+    """The checks' texts for the screenshot sheet: the hand-check file's, or the tests' docstrings when it is not in the checkout."""
+    return check_texts(md.read_text(encoding="utf-8")) if md.exists() else docstring_texts(mod)
+
+
+
+
+def build_parser():
+    """The command line: one release (as before), or `all` / --from / --to for several, or --list."""
+    ap = argparse.ArgumentParser(description="Run a release's hand checks unattended (BL-341), or all of them (#212).")
+    ap.add_argument("version", nargs="?", help="e.g. v1.9.5, or 'all': every release from --from (default v2.2.0) to --to (newest)")
+    ap.add_argument("--from", dest="first", help="all: the first release (default v2.2.0)")
+    ap.add_argument("--to", dest="last", help="all: the last release (default the newest with a test module)")
+    ap.add_argument("--list", action="store_true", help="run nothing, no browser: the tests per release and the sheet coverage gaps")
+    ap.add_argument("--sheets-ref", action="append",
+                    help="a git ref (e.g. origin/pm-intake-briefs) to read sheets from, before dev/handchecks/")
     ap.add_argument("--out", help="the run folder (default: a new temporary folder)")
     ap.add_argument("--write", action="store_true", help="fill the Results table in dev/handchecks/<version>.md itself")
-    ap.add_argument("--only", help="comma-separated check numbers to run")
+    ap.add_argument("--only", help="one release: comma-separated check numbers; all: releases, e.g. v2.3.2,v2.3.3:1+2")
     ap.add_argument("--keep", action="store_true", help="leave the server running until Enter is pressed")
     ap.add_argument("--dirty", action="store_true", help="build the zip from uncommitted engine files too")
     ap.add_argument("--no-sheet", action="store_true", help="skip the screenshot sheet")
-    a = ap.parse_args(argv)
+    ap.add_argument("--zip", help="use this release zip instead of building one")
+    ap.add_argument("--summary-json", help="write the run's outcomes here (all uses it to read each release's run)")
+    return ap
+
+
+def release_coverage(v, refs=()):
+    """(coverage or None, the sheet it came from, the module's tags, {check: runs}) for a release. Reads the test module as text for
+    its tests, imports it only for KIND and LIVE_ONLY (no browser starts at import), and tolerates a missing sheet."""
+    import handcheck_report as hr
+    tests = hr.scan_tests(TESTS / "handchecks" / f"{hr.module_name(v)}.py")
+    try:
+        import importlib
+        tags = hr.module_tags(importlib.import_module(hr.module_name(v)))
+    except Exception as e:                       # a module that won't import still has its tests listed
+        log(f"note: {hr.module_name(v)} did not import ({type(e).__name__}); its KIND and LIVE_ONLY are not used")
+        tags = {}
+    sheet, src = hr.sheet_checks(v, refs or ())
+    return (hr.coverage(sheet, tests, tags) if sheet else None), src, tags, tests
+
+
+def list_mode(a, avail):
+    """--list: what would run and what the sheets have no test for. Nothing runs."""
+    import handcheck_report as hr
+    rels = [hr.norm(a.version)] if a.version and a.version != "all" else hr.select(avail, a.first or "v2.2.0", a.last)
+    for v in rels:
+        if v not in avail:
+            print(f"No hand checks for {v}", file=sys.stderr)
+            return 2
+        cov, src, tags, tests = release_coverage(v, a.sheets_ref)
+        print("\n".join(hr.list_lines(v, tests, cov, tags, src)))
+    return 0
+
+
+def run_release(v, a, zip_path, run_dir, nums=None):
+    """One release in a process of its own (its own vault, server and Chrome); returns (outcomes, seconds, error)."""
+    d = run_dir / v
+    d.mkdir(parents=True, exist_ok=True)
+    out_json = d / "summary.json"
+    cmd = [sys.executable, str(Path(__file__).resolve()), v, "--out", str(d / "run"), "--zip", str(zip_path),
+           "--summary-json", str(out_json)] + (["--no-sheet"] if a.no_sheet else []) + (
+        ["--only", ",".join(map(str, sorted(nums)))] if nums else [])
+    log(f"{v}: running; log {d / 'handcheck.log'}")
+    with open(d / "handcheck.log", "w", encoding="utf-8") as logf:
+        subprocess.run(cmd, cwd=REPO, stdout=logf, stderr=subprocess.STDOUT)
+    if not out_json.exists():
+        tail = (d / "handcheck.log").read_text(encoding="utf-8", errors="replace").strip().splitlines()[-1:] or ["no output"]
+        return {}, None, f"no result written; last line: {tail[0]}"
+    data = json.loads(out_json.read_text(encoding="utf-8"))
+    return {int(n): tuple(x) for n, x in data["outcomes"].items()}, data.get("seconds"), None
+
+
+def all_mode(a, avail):
+    """`all`: each release in turn, a one-screen summary for each, then one table. Exit 1 if any check failed or a release did not run."""
+    import handcheck_report as hr
+    only, problem = hr.parse_only(a.only, avail)
+    if problem:
+        print(problem, file=sys.stderr)
+        return 2
+    rels = hr.select(avail, a.first or "v2.2.0", a.last, only)
+    if not rels:
+        print("No releases to run", file=sys.stderr)
+        return 2
+    s = Session(a.out, a.dirty)
+    zip_path = Path(a.zip) if a.zip else s.build_zip()
+    rows, bad, md = [], False, []
+    for v in rels:
+        outcomes, secs, err = run_release(v, a, zip_path, s.dir, only.get(v))
+        cov, src, _, _ = release_coverage(v, a.sheets_ref)
+        lines = hr.summary(v, outcomes, cov, secs, err, src)
+        print("\n" + "\n".join(lines), flush=True)
+        md += lines
+        c = None if err else hr.counts_of(outcomes, cov)
+        rows.append((v, c, None if cov is None else cov["gaps"], secs, err))
+        bad = bad or bool(err) or bool(c and c["fail"])
+    tbl = hr.table(rows)
+    print("\n" + "\n".join(tbl))
+    (s.dir / "summary.txt").write_text("\n".join(md + [""] + tbl) + "\n", encoding="utf-8")
+    log(f"Summary: {s.dir / 'summary.txt'}; run folder {s.dir}")
+    return 1 if bad else 0
+
+
+def main(argv):
+    """One release, `all` (or --from/--to), or --list. For one release: set up, run the checks, fill the Results table and make the
+    sheet; exit 1 if any check failed."""
+    import handcheck_report as hr
+    a = build_parser().parse_args(argv)
+    avail = hr.releases(TESTS / "handchecks")
+    if a.list:
+        return list_mode(a, avail)
+    if a.version in (None, "all") or a.first or a.last:
+        return all_mode(a, avail)
+    return run_one(a)
+
+
+def finish(a, v, s, outcomes, seconds):
+    """After a release's run: the outcomes for `all` (--summary-json) and the one line of counts."""
+    counts = {}
+    for st, _ in outcomes.values():
+        counts[st] = counts.get(st, 0) + 1
+    if a.summary_json:
+        Path(a.summary_json).write_text(json.dumps({"version": v, "seconds": seconds, "run_dir": str(s.dir),
+                                                    "outcomes": {str(n): list(x) for n, x in outcomes.items()}}), encoding="utf-8")
+    log(f"done in {seconds:.0f} s: " + ", ".join(f"{k} {n}" for k, n in sorted(counts.items())))
+
+
+def run_one(a):
+    """The hand checks of one release (a.version) in a vault made for them."""
     v = a.version if a.version.startswith("v") else "v" + a.version
     md = REPO / "dev/handchecks" / f"{v}.md"
     modname = "test_v" + v[1:].replace(".", "")
-    if not md.exists() or not (TESTS / "handchecks" / f"{modname}.py").exists():
-        print(f"No hand checks for {v}: need {md.relative_to(REPO)} and dev/tests/handchecks/{modname}.py", file=sys.stderr)
+    if not (TESTS / "handchecks" / f"{modname}.py").exists():
+        print(f"No hand checks for {v}: need dev/tests/handchecks/{modname}.py (and {md.relative_to(REPO)} for its Results table)",
+              file=sys.stderr)
         return 2
+    if not md.exists():
+        log(f"note: {md.relative_to(REPO)} is not in this checkout; the results go in a table of their own")
     version = (REPO / "VERSION").read_text().strip()
     if version != v[1:]:
         log(f"note: VERSION says {version}, not {v[1:]} (Setup step 1 expects the release's own version)")
-    s = Session(a.out, a.dirty, a.keep)
+    s = Session(a.out, a.dirty, a.keep, a.zip)
     os.environ["CREAITE_HC_SHEET"] = "0" if a.no_sheet else "1"
     if a.only:
         os.environ["CREAITE_HC_ONLY"] = a.only
@@ -365,18 +540,13 @@ def main(argv):
             input(f"Server still running at {s.base} (vault {s.vault}). Press Enter to stop it… ")
     finally:
         s.close()
-    filled = fill_results(md.read_text(encoding="utf-8"), outcomes)
-    dest = md if a.write else s.dir / md.name
-    dest.write_text(filled, encoding="utf-8")
+    dest = write_results(md, v, outcomes, mod, a.write, s.dir)
     sheet = None
     if not a.no_sheet:
         import sheet as sheetmod
         sheet = sheetmod.write(s.dir, title=f"creaite {v[1:]} hand checks: the judgement sheet",
-                               checks=check_texts(md.read_text(encoding="utf-8")))
-    counts = {}
-    for st, _ in outcomes.values():
-        counts[st] = counts.get(st, 0) + 1
-    log(f"done in {time.time() - t0:.0f} s: " + ", ".join(f"{k} {n}" for k, n in sorted(counts.items())))
+                               checks=sheet_texts(md, mod))
+    finish(a, v, s, outcomes, time.time() - t0)
     log(f"Results: {dest}")
     if sheet:
         log(f"Screenshot sheet: {sheet}")

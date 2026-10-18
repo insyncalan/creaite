@@ -416,11 +416,6 @@ CATALOGUE = {
                                   "Only sweep before closing when the last sweep is older than this.",
                                   "Half an hour: a recent sweep is enough."),
     # ── Reports and minutes (v2.1.0)
-    "reports.file_exports_beside": ("Reports and minutes", "File report exports beside it",
-                                    "An HTML, Word or PDF export of a weekly or client report is also filed beside the report, "
-                                    "never overwriting.",
-                                    "Off: an export stays in drafts unless you tick it, so the reports folder holds only "
-                                    "what you chose to file (BL-335; Alan, 15-10-2026)."),
     "reports.file_minutes_exports_beside": ("Reports and minutes", "File minutes exports beside them",
                                             "An HTML, Word or PDF export of minutes is also filed beside the minutes, "
                                             "never overwriting.",

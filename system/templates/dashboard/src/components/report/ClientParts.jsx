@@ -1,18 +1,27 @@
 // @ts-check
-/* ClientParts (v2.1.0 P8, BL-336): the client report's own section renderers, on the sheet's slots (dev/sprints/v210-contract.md
-   §4.3; Sheet.jsx). Each is a component (hooks need that), handed the sheet's SectionCtx.
-   - Health: the client's flag (click it to change it, with the reason the internal report keeps) and its headline; Match
+/* ClientParts (v2.1.0 P8, BL-336; #221): what is the client report's OWN. The client report is the same sheet as the internal one
+   (ReportSheet, ReportParts.jsx: the header, the health indicator, the tables with their eyes, "Add from the tracker", At a glance, the
+   words, Current state); only its audience differs, and this file holds exactly that:
+   - Health: the client's flag (Change opens the reason it needs when it differs from the internal one) and its headline; Match
      internal health takes the internal flag and headline.
-   - Tables (risks, overdue, asks, decisions): an eye on each row; rows the client may see show by default; "Not in this report"
-     lists what the tracker holds that the report leaves out, with Make client-visible… (the standard peek) and, for a Sensitive
-     or partner-only item, the plain reason it can never be shown; Add for a row that became client-visible since.
+   - Tables (risks, overdue, asks, decisions): client-visible rows only. "Not in this report" lists what the tracker holds that the
+     report leaves out, with Make client-visible… (the standard peek) and, for a Sensitive or partner-only item, the plain reason it can
+     never be shown; Add for a row that became client-visible since.
+   - Milestones in the client's words (no timeline picture: the client sees the agreed state, not the internal dates).
    - Every section: Matching internal or Edited for the client, and Match internal (clientDoc.matchClientSection: client-safe).
    Everything drawn here is the client document's own content; the internal report is read only. */
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cellsFor, CLIENT_FLAGS, flagOf, healthDiff, matchClientSection, matchState, secOf } from "./clientDoc.js";
+import { EyeButton } from "./EyeButton.jsx";
+import { AddFromTracker, EyeTable, HealthBlock, ReportHeader } from "./ReportParts.jsx";
 import { openRef } from "./Sheet.jsx";
-import { crCheck, crDirty, crDoc, crInternal, runCheck } from "../../stores/clientReport.js";
+import { Glance } from "./weekly/Glance.jsx";
+import { CurrentState, Words } from "./weekly/Notes.jsx";
+import { Rich } from "./weekly/Rich.jsx";
+import { weeklyLogos } from "../../stores/weekly.js";
+import { crCheck, crDirty, crDoc, crInternal, crLogos, runCheck } from "../../stores/clientReport.js";
+import { FreeText } from "./SheetPage.jsx";
 
 /** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
 /** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
@@ -67,14 +76,13 @@ function ClientPop({ label, onClose, anchor, children }) {
 
 /** The client's health: flag, headline, and the popover that changes them (a reason is required when it differs).
     @param {{ctx: SectionCtx}} props */
-export function HealthSection({ ctx }) {
+export function ClientHealth({ ctx }) {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState("");
   const [why, setWhy] = useState("");
   const btn = useRef(/** @type {HTMLButtonElement|null} */ (null));
   const d = crDoc.value, internal = crInternal.value;
   const flag = flagOf(d) || "On track", inFlag = flagOf(internal), diff = (((d || {}).meta || {}).health_diff) || null;
-  const cls = (CLIENT_FLAGS.find(f => f[0] === flag) || CLIENT_FLAGS[0])[1];
   const edit = ctx.editing;
   const begin = () => { setPick(flag); setWhy(diff ? String(diff.reason || "") : ""); setOpen(true); };
   const save = () => {
@@ -97,16 +105,14 @@ export function HealthSection({ ctx }) {
     if (open && focusWhy.current) { focusWhy.current = false; setTimeout(() => /** @type {HTMLElement|null} */ (document.getElementById("crWhy"))?.focus(), 0); }
   }, [open]);
   return (
-    <div class="crhealth" data-crhealth>
-      <div class="crhcol">
-        {edit ? <button type="button" class={`crflag ${cls}`} ref={btn} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} data-crflag onClick={() => open ? setOpen(false) : begin()}>{flag.toUpperCase()}</button>
-          : <span class={`crflag ${cls}`}>{flag.toUpperCase()}</span>}
-        {edit && inFlag && flag !== inFlag ? <span class="crdif" title={`Internal: ${inFlag}. ${diff && diff.reason ? diff.reason : ""}`} data-crdif>≠ internal: {inFlag}</span> : null}
-      </div>
-      <div class="crwhy">
-        <MatchBar ctx={ctx} />
-        <ctx.Text field="text" label="The client's headline" />
-      </div>
+    <>
+      <HealthBlock ctx={ctx} flag={flag} trend={null} flagCls="crflag"
+        change={<button type="button" class="btn sm wr-chg" ref={btn} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} data-crflag onClick={() => open ? setOpen(false) : begin()}>Change</button>}
+        why={<>
+          {edit && inFlag && flag !== inFlag ? <span class="crdif" title={`Internal: ${inFlag}. ${diff && diff.reason ? diff.reason : ""}`} data-crdif>≠ internal: {inFlag}</span> : null}
+          <MatchBar ctx={ctx} />
+          <Rich ctx={ctx} text={ctx.section.text} label="The client's headline" empty="Say how it is going, for the client" />
+        </>} />
       {open ? (
         <ClientPop label="Client health" anchor={btn} onClose={() => setOpen(false)}>
           <b>Client health</b>
@@ -122,32 +128,13 @@ export function HealthSection({ ctx }) {
           </div>
         </ClientPop>
       ) : null}
-    </div>
+    </>
   );
 }
 
-/** The header: the client, the period, the internal week the facts lock to, and which logos show.
-    @param {{ctx: SectionCtx}} props */
-export function HeaderSection({ ctx }) {
-  const d = ctx.doc, h = (ctx.section.data || {}), meta = d.meta || {};
-  const logos = (d.layout || {}).logos || ["firm", "client", "partner"];
-  const toggle = (/** @type {string} */ k) => {
-    const next = logos.includes(k) ? logos.filter((/** @type {string} */ x) => x !== k) : [...logos, k];
-    setClientDoc({ ...d, layout: { ...(d.layout || {}), logos: ["firm", "client", "partner"].filter(x => x === "firm" || next.includes(x)) } });
-  };
-  return (
-    <div class="crheader">
-      <div><b>{h.client || d.client || "Client"}</b></div>
-      <div class="sub">{d.project_name || ""}{h.period_start ? ` · ${h.period_start.slice(8, 10)}-${h.period_start.slice(5, 7)} to ${(h.period_end || "").slice(8, 10)}-${(h.period_end || "").slice(5, 7)}-${(h.period_end || "").slice(0, 4)}` : ""}</div>
-      <div class="sub">{meta.facts_week ? `Facts from the internal report for week ending ${meta.facts_week.slice(8, 10)}-${meta.facts_week.slice(5, 7)}-${meta.facts_week.slice(0, 4)}${meta.locked ? ", locked" : ""}` : "Facts as the tracker stands now: they lock when the internal report is approved"}</div>
-      {ctx.editing ? (
-        <div class="crlogos" role="group" aria-label="Logos on this client's reports">
-          {[["firm", "The firm"], ["client", "The client"], ["partner", "The partner"]].map(([k, l]) =>
-            <label key={k}><input type="checkbox" checked={logos.includes(k)} disabled={k === "firm"} onChange={() => toggle(k)} /> {l}</label>)}
-        </div>
-      ) : null}
-    </div>
-  );
+/** The header: the same title block and logos as the internal report. @param {{ctx: SectionCtx}} props */
+export function ClientHeader({ ctx }) {
+  return <ReportHeader ctx={ctx} logos={crLogos.value} data={weeklyLogos.value} />;
 }
 
 /** The milestones in the client's words, with an eye on each to pick the list. @param {{ctx: SectionCtx}} props */
@@ -159,94 +146,67 @@ export function MilestonesSection({ ctx }) {
   if (!all.length) return <Sec ctx={ctx}><p class="sub">No client-visible milestones yet.</p></Sec>;
   return (
     <Sec ctx={ctx}>
-      <table class="crtable"><thead><tr>{ctx.editing ? <th class="creye" /> : null}<th>Milestone</th><th>Expected</th><th>State</th></tr></thead><tbody>
-        {rows.map(ref => { const it = items[ref] || {}, on = listed.includes(ref);
-          return <tr key={ref} class={on ? "" : "crhid"}>
-            {ctx.editing ? <td class="creye"><button type="button" class="creyebtn" aria-pressed={on ? "true" : "false"} aria-label={`${on ? "Hide" : "Show"} ${it.title || ref} in the list`} data-crmile={ref} onClick={() => flip(ref)}>{on ? "◉" : "○"}</button></td> : null}
-            <td>{it.title || ref}</td><td>{it.shown_date || ""}</td><td><span class="crstate">{it.state || it.status || ""}</span></td></tr>; })}
-      </tbody></table>
+      <div class="wr-tbl">
+        <table class="wr-r"><thead><tr>{ctx.editing ? <th class="eyec"><span class="sr">In the list</span></th> : null}<th>Milestone</th><th>Expected</th><th>State</th></tr></thead><tbody>
+          {rows.map(ref => { const it = items[ref] || {}, on = listed.includes(ref);
+            return <tr key={ref} class={on ? "" : "hidrow"}>
+              {ctx.editing ? <td class="eyec"><EyeButton on={on} subject={it.title || ref} data={{ crmile: ref }} onClick={() => flip(ref)} /></td> : null}
+              <td>{it.title || ref}</td><td class="num">{it.shown_date || ""}</td><td><span class="crstate">{it.state || it.status || ""}</span></td></tr>; })}
+        </tbody></table>
+      </div>
     </Sec>
   );
 }
 
-/** A table section with eyes, the "Not in this report" list and Add. @param {{ctx: SectionCtx}} props */
-export function TableSection({ ctx }) {
-  const s = ctx.section, rows = s.rows || [], cols = s.columns || [], items = ctx.doc.items || {};
+/** A table section, drawn with the shared eye table: client-visible rows, the "Not in this report" list, Add for a row that became
+    client-visible since, and Add from the tracker. @param {{ctx: SectionCtx}} props */
+export function ClientTable({ ctx }) {
+  const s = ctx.section, cols = s.columns || [], items = ctx.doc.items || {};
   const check = crCheck.value, group = s.id;
   const left = ctx.editing && check && check.left_out ? check.left_out.items.filter(x => x.group === group && (x.kind === "blocked" || x.kind === "sensitive")) : [];
   const add = ctx.editing && check && check.addable ? check.addable.filter(a => a.section === group) : [];
-  const setRows = (/** @type {any[]} */ next, /** @type {string} */ why) => ctx.update({ rows: next }, why);
-  const flip = (/** @type {number} */ i) => {
-    const r = rows[i], on = r.shown === false;
-    setRows(rows.map((x, j) => j !== i ? x : on ? { ...x, shown: true, cells: x.cells || cellsFor(s.id, items[String(x.ref)]) } : { ref: x.ref, shown: false }), on ? "Row shown" : "Row hidden");
-  };
-  const hiddenN = rows.filter(r => r.shown === false).length;
-  const first = cols[0] ? cols[0].key : "";
+  const shape = cols.map((c, k) => ({ key: c.key, label: c.label, cell: (/** @type {any} */ r) => <>
+    <Rich ctx={ctx} text={r.cells[c.key]} row={r.i} col={c.key} label={c.label} empty="Click to write" />
+    {k === 0 && !ctx.exported && s.id === "overdue" && (items[String(r.row.ref)] || {}).client_owned === false ? <span class="crlk">not the client's own</span> : null}</> }));
+  const notIn = ctx.editing && (left.length || add.length) ? (
+    <div class="crnot" data-crnot={group}>
+      <div class="crnoth">Not in this report <button type="button" class="linkbtn" data-crrecheck onClick={() => runCheck()}>Check again</button></div>
+      <ul>
+        {add.map(a => <li key={"a" + a.row.ref}><ctx.ItemRef id={String(a.row.ref)} /> {(a.item && a.item.title) || ""} <span class="crlk ok">now client-visible</span>{" "}
+          <button type="button" class="btn sm" data-cradd={String(a.row.ref)} onClick={() => {
+            const d = crDoc.value; if (!d) return;
+            setClientDoc({ ...d, items: { ...(d.items || {}), [String(a.row.ref)]: a.item }, sections: d.sections.map(x => x.id === s.id ? { ...x, rows: [...(x.rows || []), a.row] } : x) });
+          }}>Add</button></li>)}
+        {left.map(x => <li key={x.ref} data-crleft={x.ref}><ctx.ItemRef id={x.ref} /> {x.title} <span class={`crlk${x.kind === "sensitive" ? " lock" : ""}`}>{x.kind === "sensitive" ? "⊘ " : ""}{x.why}</span>{" "}
+          {x.kind === "blocked" ? <button type="button" class="btn sm" data-crvisible={x.ref} onClick={() => openRef(x.ref, undefined)}>Make client-visible…</button> : null}</li>)}
+      </ul>
+    </div>) : null;
   return (
     <Sec ctx={ctx}>
-      {rows.length ? (
-        <table class="crtable" data-crtable={s.id}><thead><tr>{ctx.editing ? <th class="creye" /> : null}{cols.map(c => <th key={c.key}>{c.label}</th>)}</tr></thead><tbody>
-          {rows.map((r, i) => {
-            const it = items[String(r.ref)] || {}, off = r.shown === false;
-            if (off && !ctx.editing) return null;
-            const own = s.id === "overdue" && it.client_owned === false;
-            return (
-              <tr key={String(r.ref) + i} class={off ? "crhid" : ""} data-row={String(r.ref)}>
-                {ctx.editing ? <td class="creye"><button type="button" class="creyebtn" aria-pressed={off ? "false" : "true"} aria-label={`${off ? "Show" : "Hide"} ${it.title || r.ref}`} data-creye={String(r.ref)} onClick={() => flip(i)}>{off ? "○" : "◉"}</button></td> : null}
-                {off ? <td colSpan={cols.length}>{it.title || cellsFor(s.id, it)[first] || ""} {own ? <span class="crlk">not the client's own</span> : null}</td>
-                  : cols.map((c, k) => <td key={c.key}><ctx.Text row={i} col={c.key} label={c.label} />{k === 0 && own ? <span class="crlk">not the client's own</span> : null}</td>)}
-              </tr>);
-          })}
-        </tbody></table>
-      ) : <p class="sub">{ctx.editing ? "Nothing client-visible here yet." : ""}</p>}
-      {ctx.editing && hiddenN ? <div class="crcount">Showing {rows.length - hiddenN} of {rows.length}. Hidden rows are left out of this client's report.</div> : null}
-      {ctx.editing && (left.length || add.length) ? (
-        <div class="crnot" data-crnot={group}>
-          <div class="crnoth">Not in this report <button type="button" class="linkbtn" data-crrecheck onClick={() => runCheck()}>Check again</button></div>
-          <ul>
-            {add.map(a => <li key={"a" + a.row.ref}><ctx.ItemRef id={String(a.row.ref)} /> {(a.item && a.item.title) || ""} <span class="crlk ok">now client-visible</span>{" "}
-              <button type="button" class="btn sm" data-cradd={String(a.row.ref)} onClick={() => {
-                const d = crDoc.value; if (!d) return;
-                setClientDoc({ ...d, items: { ...(d.items || {}), [String(a.row.ref)]: a.item }, sections: d.sections.map(x => x.id === s.id ? { ...x, rows: [...(x.rows || []), a.row] } : x) });
-              }}>Add</button></li>)}
-            {left.map(x => <li key={x.ref} data-crleft={x.ref}><ctx.ItemRef id={x.ref} /> {x.title} <span class={`crlk${x.kind === "sensitive" ? " lock" : ""}`}>{x.kind === "sensitive" ? "⊘ " : ""}{x.why}</span>{" "}
-              {x.kind === "blocked" ? <button type="button" class="btn sm" data-crvisible={x.ref} onClick={() => openRef(x.ref, undefined)}>Make client-visible…</button> : null}</li>)}
-          </ul>
-        </div>
-      ) : null}
+      <EyeTable ctx={ctx} cols={shape} noun={s.heading.toLowerCase()} empty={ctx.editing ? "Nothing client-visible here yet." : ""}
+        cellsFor={(sid, item) => cellsFor(sid, item)} leftOut="this client's report" extra={<>{notIn}<AddFromTracker ctx={ctx} /></>} />
     </Sec>
   );
 }
 
-/** Summary, Progress and Next steps. @param {{ctx: SectionCtx}} props */
+/** Summary, Progress and Next steps: the words, in the one editor, with the section's match line. @param {{ctx: SectionCtx}} props */
 export function TextSection({ ctx }) {
-  return <Sec ctx={ctx}><ctx.Text rich />{ctx.editing ? (ctx.section.tags || []).map(t => <ctx.Tag key={t.ref} tag={t} />) : null}</Sec>;
+  return <Sec ctx={ctx}><Words ctx={ctx} label={ctx.section.heading} empty="Say it for the client" /></Sec>;
 }
 
 /** Current state, for the client: the panes are edited here, never the project's own. @param {{ctx: SectionCtx}} props */
 export function PanesSection({ ctx }) {
-  const panes = ctx.section.panes || [];
-  const set = (/** @type {number} */ i, /** @type {string} */ text) => ctx.update({ panes: panes.map((p, j) => j === i ? { ...p, text } : p) }, "Text edited");
-  return (
-    <Sec ctx={ctx}>
-      {panes.map((p, i) => <div key={i}>{p.title ? <h3>{p.title}</h3> : null}
-        {ctx.editing ? <textarea class="sheet-text" aria-label={p.title || ctx.section.heading} value={p.text || ""} onInput={e => set(i, /** @type {HTMLTextAreaElement} */ (e.currentTarget).value)} /> : <p>{p.text}</p>}</div>)}
-    </Sec>
-  );
+  return <Sec ctx={ctx}><CurrentState ctx={ctx} /></Sec>;
 }
 
-/** At a glance: the client's three figures. @param {{ctx: SectionCtx}} props */
-export function FiguresSection({ ctx }) {
-  return <div class="figures crfigs">{(ctx.section.figures || []).filter(f => f.shown !== false).map(f =>
-    <div key={f.key} class="figure"><b>{f.value}</b>{f.label}{f.note ? <span class="sub"> {f.note}</span> : null}</div>)}</div>;
-}
-
-/** The renderers for the client page, by section id. */
+/** The renderers for the client page, by section id: the shared parts where the internal report has the same section. */
 export const CLIENT_RENDERERS = {
   byId: {
-    header: (/** @type {SectionCtx} */ ctx) => <HeaderSection ctx={ctx} />, health: (/** @type {SectionCtx} */ ctx) => <HealthSection ctx={ctx} />,
-    glance: (/** @type {SectionCtx} */ ctx) => <FiguresSection ctx={ctx} />, milestones: (/** @type {SectionCtx} */ ctx) => <MilestonesSection ctx={ctx} />,
+    header: (/** @type {SectionCtx} */ ctx) => <ClientHeader ctx={ctx} />,
+    health: Object.assign((/** @type {SectionCtx} */ ctx) => <ClientHealth ctx={ctx} />, { ownSpark: true }),
+    glance: (/** @type {SectionCtx} */ ctx) => <Glance ctx={ctx} />, milestones: (/** @type {SectionCtx} */ ctx) => <MilestonesSection ctx={ctx} />,
     current_state: (/** @type {SectionCtx} */ ctx) => <PanesSection ctx={ctx} />,
   },
-  byType: { text: (/** @type {SectionCtx} */ ctx) => <TextSection ctx={ctx} />, table: (/** @type {SectionCtx} */ ctx) => <TableSection ctx={ctx} /> },
+  byType: { text: (/** @type {SectionCtx} */ ctx) => <TextSection ctx={ctx} />, table: (/** @type {SectionCtx} */ ctx) => <ClientTable ctx={ctx} />,
+    freetext: (/** @type {SectionCtx} */ ctx) => <Sec ctx={ctx}><FreeText ctx={ctx} /></Sec> },      // #218: a text section, with its Matching internal line when the internal report has it
 };

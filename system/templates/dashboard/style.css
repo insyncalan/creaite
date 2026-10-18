@@ -593,7 +593,9 @@ button.chip{cursor:pointer} button.chip:hover{background:var(--sunk)}
 .capwhere select,
 .nnew .fl input,
 .mnpane-q input,
-.linkpop input{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:var(--ctl-fs)}
+.linkpop input,
+.cfgrow select,
+.cfgrow input.pkdt{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:var(--ctl-fs)}
 .fgrid textarea,
 .chase textarea,
 .chin textarea,
@@ -895,7 +897,8 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .copt.act,.copt:hover{background:var(--accent-soft)} .copt.new{color:var(--accent);font-weight:500}
 .cdel{border:0;background:none;width:24px;height:24px;border-radius:50%;cursor:pointer;color:var(--muted)} .cdel:hover{background:var(--bad-soft);color:var(--bad)}
 .rgroup{margin:16px 0 6px;display:flex;align-items:center;gap:10px}
-.why{font-size:var(--fs-xs);color:var(--muted)} .indiv{font-size:var(--fs-xs);color:var(--warn)}
+.why{font-size:var(--fs-xs);color:var(--muted)} .why.rvmeta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}   /* #229: one meta line */ .indiv{font-size:var(--fs-xs);color:var(--warn)}
+.rvnote{font-size:var(--fs-xs);color:var(--muted)}
 .cock{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px} .card h2{margin-bottom:8px}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:6px 0 16px}
@@ -3509,7 +3512,6 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
 .sheet-rdnotes{margin:4px 0 6px;padding-left:18px;font-size:var(--fs-sm)} .sheet-rdnotes li{color:var(--warn)}   /* #90 review F5: the reply's checks */
 .sheet-hflag{padding:0 8px;border-radius:var(--r-pill);line-height:var(--lh-20)} .sheet-hflag.ok{background:var(--ok-soft);color:var(--ok)} .sheet-hflag.warn{background:var(--warn-soft);color:var(--warn)} .sheet-hflag.bad{background:var(--bad-soft);color:var(--bad)}   /* #203 */
-.wr-flagrow{display:flex;align-items:center;gap:4px} .wr-flagrow .sheet-spark{flex:none}
 .sheet-hdiff{margin:0 0 4px;font-weight:600} .sheet-hwhy{margin:6px 0;padding:0;list-style:none;color:var(--muted)} .sheet-hwhy li{margin:3px 0}
 .sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
@@ -3630,6 +3632,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wrsheet .page h2{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px;color:var(--rp-grey);font-weight:600;display:flex;gap:8px;align-items:center;border:0;padding:0}
 .wrsheet .page h2::before{content:"";width:7px;height:7px;background:var(--rp-green);flex:none}
 .wrsheet .page section[data-id=header]>h2,.wrsheet .page section[data-id=health]>h2{display:none}
+.wrsheet .page>header.doc{display:none}   /* #226: the weekly report has one title block (the header section); the sheet's plain title band was a second one */
 .wrsheet .page p{margin:0 0 8px} .wrsheet .page ul{margin:0;padding-left:16px} .wrsheet .page li{margin:0 0 4px}
 .wrsheet .sheet-hidden{color:var(--rp-grey);font-size:var(--fs-xs);border:1px dashed var(--rp-rule);padding:6px 10px}
 .wrsheet .linkbtn,.wr-link{border:0;background:none;color:var(--rp-blue);cursor:pointer;padding:0;font:inherit;font-size:var(--fs-xs);min-height:24px}
@@ -3640,16 +3643,36 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-pn{font-size:26px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin:2px 0 1px}
 .wr-wk{font-size:var(--fs-sm);color:var(--rp-grey)}
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:24px;width:auto;display:block}
+.wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:36px;width:auto;max-width:180px;object-fit:contain;display:block;background:none;border:0;box-shadow:none}   /* #221: drawn straight on the page, no box, at most 36 x 180 (Round 9) */
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
-.wr-health{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px}
-.wr-hcol{display:grid;gap:3px;width:120px}
-.wr-flag{font-weight:700;font-size:var(--fs-sm);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey)}
+/* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
+#crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
+.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - var(--cr-top,56px) - 16px);overflow:auto}
+.hubcfg h3{margin:0 0 10px;font:600 var(--fs-lg)/var(--lh-20) var(--font)}
+.cfgsw{display:flex;gap:10px;align-items:flex-start;padding:0 0 10px;border-bottom:1px solid var(--line);font-size:var(--fs-md)}
+.cfgsw .sub{display:block;font-size:var(--fs-sm)} .cfgsw .switch{flex:none}
+.cfgkeep,.cfgoff{margin:8px 0 0}
+.cfgbody{padding-top:10px;display:grid;gap:10px}
+.cfgrow{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center;font-size:var(--fs-md)}
+.cfgrow.top{align-items:start} .cfgrow>label:first-child{color:var(--muted)}
+.cfgrow select,.cfgrow input.pkdt{min-height:var(--ctl-h)}
+.cfgck{display:flex;gap:8px;align-items:center}
+.cfglogos{display:grid;gap:6px}
+.cfglogo{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;font-size:var(--fs-sm)}
+.cfglogo .sub{display:block;font-size:var(--fs-xs)}
+.cfglogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+.cfglogo .mark img{max-width:100%;max-height:100%;display:block}
+.cfgact{display:flex;gap:6px;align-items:center}
+.cfgnote{margin:0}
+.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px;position:sticky;bottom:-14px;padding:8px 0 0;background:var(--surface)}
+.wr-health{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px;position:relative}   /* #221: the indicator is 96 px (was 120) */
+.wr-hcol{display:grid;gap:3px;width:96px;min-width:0}
+.wr-flag{font-weight:700;font-size:var(--fs-xs);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey);white-space:nowrap;overflow:hidden}   /* 12 px, one line */
 .wr-flag.a{background:var(--rp-amber)} .wr-flag.g{background:var(--rp-ok)} .wr-flag.r{background:var(--rp-red)}
 .wr-trend{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;height:9px}
 .wr-trend i{display:block;background:var(--rp-rule)} .wr-trend i.g{background:var(--rp-ok)} .wr-trend i.a{background:var(--rp-amber)} .wr-trend i.r{background:var(--rp-red)}
 .wr-tlbl{font-size:9.5px;color:var(--rp-grey);letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
-.wr-chg{margin-top:6px}
+.wr-chg{margin-top:6px;max-width:100%} .wr-hcol .dd{display:block} .wr-hcol .btn.sm{width:100%;justify-content:center}
 .wrsheet .page .btn{background:var(--rp-white);color:var(--rp-ink);border:1px solid var(--rp-rule)} .wrsheet .page .btn:hover{background:var(--rp-soft)}
 .wr-why .wr-rich>p:first-child>span:first-child>b:first-child{display:block;font-size:var(--fs-lg);line-height:1.35;margin-bottom:6px}
 .wr-last{font-size:var(--fs-xs);color:var(--rp-grey);margin-top:4px}
@@ -3660,8 +3683,9 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-stat .n{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere} .wr-stat .n.r{color:var(--rp-red)}
 .wr-stat .c{font-size:var(--fs-xs);color:var(--rp-grey)}
 .wr-seye{position:absolute;top:2px;right:2px}
-.wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:var(--fs-sm);padding:0;min-width:24px;min-height:24px}
-.wr-eye:hover{color:var(--rp-ink)}
+.wrsheet .wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:var(--fs-sm);padding:0;min-width:24px;min-height:24px;display:inline-grid;place-items:center;border-radius:var(--r-sm)}
+.rs-eye svg{width:16px;height:16px} .wrsheet .wr-eye[aria-pressed="false"]{opacity:.7} .wrsheet .wr-eye:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
+.wrsheet .wr-eye:hover{color:var(--rp-ink)}
 .wr-count{font-size:11px;color:var(--rp-grey);margin-top:6px}
 .wr-rich{min-width:0} .wr-rich.wr-edit{cursor:text;border-radius:var(--r-xs);min-height:20px} .wr-rich.wr-edit:hover{background:rgba(44,111,170,.07)}
 .wr-rich.wr-edit:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
@@ -3676,6 +3700,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-ms .wr-slip{stroke:var(--rp-red);stroke-width:2} .wr-ms circle.wr-slipc{fill:none;stroke:var(--rp-red);stroke-dasharray:3 2}
 .wr-tlgrab{font-size:10.5px;color:var(--rp-grey);text-align:right;margin-top:2px}
 .wr-tbl{min-width:0;margin-top:8px}
+.wr-timeline .wr-tbl{margin-top:16px}   /* #226: 16 px between the timeline picture and its table */
 table.wr-r{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
 table.wr-r th{background:none;font-family:inherit;position:static;text-align:left;font-weight:600;color:var(--rp-grey);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px 6px 0;border-bottom:1px solid var(--rp-ink)}
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
@@ -3706,13 +3731,7 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .crbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
 .crbarr .tag{border:1px solid currentColor;border-radius:var(--r-pill);padding:1px 8px}
 .crnote{font-size:var(--fs-xs);color:var(--warn)}
-.crhealth{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 20px;background:var(--paper-sunk);padding:14px 16px;position:relative}
-.crhcol{display:grid;gap:4px;align-content:start}
-.crflag{font:inherit;font-weight:700;font-size:var(--fs-sm);letter-spacing:.08em;text-align:center;padding:8px 0;border:1px solid currentColor;border-radius:var(--r-sm);background:var(--paper);color:var(--paper-ink);min-height:36px}
-button.crflag{cursor:pointer} button.crflag:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.crflag.g{color:#1E6B3A;background:#E3F4E8} .crflag.a{color:#7A4F00;background:#FBEFD2} .crflag.r{color:#9B1F23;background:#FBE3E3}
 .crdif{font-size:11px;font-weight:600;color:var(--paper-link);border:1px solid currentColor;border-radius:var(--r-pill);padding:0 7px;text-align:center;line-height:var(--lh-18)}
-.crwhy{min-width:0}
 .crpop{position:absolute;z-index:var(--z-crpop);top:56px;left:16px;width:min(340px,calc(100% - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:12px;display:grid;gap:8px;font-size:var(--fs-sm)}
 .cropts{display:flex;gap:6px}
 .cropts button{flex:1;min-height:32px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);cursor:pointer;font:inherit;font-size:var(--fs-xs)}
@@ -3721,18 +3740,8 @@ button.crflag{cursor:pointer} button.crflag:focus-visible{outline:2px solid var(
 .crpopacts{display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap}
 .crmatch{display:flex;gap:8px;align-items:center;font-size:var(--fs-xs);margin:0 0 6px}
 .crmstate{font-weight:600} .crmstate.matching{color:#1E6B3A} .crmstate.edited{color:var(--paper-link)}
-.crheader{display:grid;gap:2px}
-.crlogos{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:var(--fs-xs)}
-.crtable{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:auto}
-.crtable th{text-align:left;color:var(--paper-mute);font-weight:600;border-bottom:1px solid var(--paper-ink);padding:5px 6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
-.crtable td{vertical-align:top;border-bottom:1px solid var(--paper-rule);padding:6px}
-.creye{width:30px;padding-left:0}
-.creyebtn{border:0;background:none;color:var(--paper-mute);cursor:pointer;min-width:24px;min-height:24px;font-size:var(--fs-sm)}
-.creyebtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-tr.crhid td{color:var(--paper-mute)} tr.crhid .creye{color:var(--paper-ink)}
 .crlk{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;color:var(--paper-mute);border:1px solid var(--paper-rule);border-radius:var(--r-sm);padding:0 5px;text-transform:uppercase;letter-spacing:.04em}
 .crlk.lock{color:#9B1F23;border-color:#9B1F23} .crlk.ok{color:#1E6B3A;border-color:#1E6B3A}
-.crcount{font-size:11px;color:var(--paper-mute);margin-top:6px}
 .crstate{font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
 .crnot{margin-top:10px;border:1px dashed var(--paper-rule);border-radius:6px;padding:8px 10px;font-size:12.5px}
 .crnoth{font-weight:600;color:var(--paper-mute);margin-bottom:4px;display:flex;gap:10px;align-items:center}
@@ -3747,11 +3756,93 @@ tr.crhid td{color:var(--paper-mute)} tr.crhid .creye{color:var(--paper-ink)}
 #v-clientreport .sheet-a4 .page .btn:hover:not(:disabled){background:var(--paper-sunk)}
 #v-clientreport .sheet-a4 .page .btn:disabled{opacity:.5}
 #v-clientreport .sheet-a4 .page .crpop textarea{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
-#v-clientreport .sheet-a4 .page .sub,#v-clientreport .sheet-a4 .page .crheader .sub{color:var(--paper-mute)}
+#v-clientreport .sheet-a4 .page .sub{color:var(--paper-mute)}
 #v-clientreport .sheet-a4 .page .crpop{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
 #v-clientreport .sheet-a4 .page .cropts button{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
 #v-clientreport .sheet-a4 .page .cropts button[aria-pressed="true"]{border-color:var(--paper-link);background:var(--paper-sunk)}
 /* ===== end v2.1.0 P8 ===== */
+/* ===== #221 H1: the Reporting hub (components/report/hub/): one page for the internal and the client weekly report. Tokens only.
+   One toolbar on one line, every control --ctl-h (32px), icons always; the week is a Menu (no arrows). The sheet's own slim bar rule
+   (#202, #207) hides the search bar and the title block on a scroll and brings them back only at the top. ===== */
+#v-reporting{padding:0}
+#v-reporting:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.rhub{position:relative}
+.hubwait{padding:24px}
+.sheet-bar.hubline{flex-wrap:nowrap;gap:8px;min-width:0;position:relative}
+.hubline>*{flex:none}
+.hubline>.sp{flex:1 1 0;min-width:0}
+.hubline>.sheet-mini{flex:0 1 auto;min-width:0}
+.hubline .seg{height:var(--ctl-h);box-sizing:border-box}
+.hubline .seg button{height:calc(var(--ctl-h) - 2px);padding:0 14px}
+.hubline .btn.ib{width:var(--ctl-h);padding:0;display:inline-grid;place-items:center;color:var(--ink)}
+.hubline .btn.ib svg.i,.hubline .dd>.btn svg.i{width:16px;height:16px}
+.hubline .dd>.btn{gap:4px;padding:0 10px}
+.hubline .dd>.btn .nch{width:12px;height:12px}
+.hubline .sheet-status{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.sheet-root.rpt-slim>.hubrow:not(:has(.crnote)){display:none}
+.sheet-root.rpt-slim>.hubrow .hubpl{display:none}
+/* the week Menu */
+.hubwkhost{display:inline-flex;align-items:center;position:relative}
+.hubwkb{padding:0 12px;font-weight:500;gap:8px}
+.wkdot,.wkpop .wkrow i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.wkdot.g,.wkpop .wkrow i.g{background:var(--ok)} .wkdot.a,.wkpop .wkrow i.a{background:var(--warn)} .wkdot.r,.wkpop .wkrow i.r{background:var(--bad)}
+.wkpop{position:absolute;top:calc(100% + 6px);left:0;z-index:var(--z-menu);width:480px;max-width:calc(100vw - 32px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:6px}
+.wkpop h4{margin:6px 10px 4px;font:600 var(--fs-xs) var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.wkpop .wkrow{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:center;width:100%;min-height:36px;padding:0 10px;border:0;background:none;border-radius:var(--r-md);font:400 var(--fs-sm) var(--font);color:var(--ink);text-align:left;cursor:pointer}
+.wkpop .wkrow:hover,.wkpop .wkrow:focus-visible{background:var(--accent-soft)} .wkpop .wkrow[aria-current="true"]{font-weight:600;background:var(--sunk)}
+.wkpop .wkrow>span{white-space:nowrap} .wkpop .wkrow .s{font-size:var(--fs-xs);color:var(--muted);font-weight:400}
+.wkjump{display:flex;gap:8px;align-items:center;padding:0 10px 8px;font-size:var(--fs-sm)}
+.wkjump input{flex:1;min-width:0;min-height:var(--ctl-h)}
+/* zoom: − Fit + as one joined control; the percentage returns to Fit */
+.hubzoom{display:inline-flex;align-items:stretch;height:var(--ctl-h);box-sizing:border-box;border:1px solid var(--line);border-radius:var(--ctl-r);background:var(--surface);overflow:hidden}
+.hubzoom button{width:var(--ctl-h);border:0;background:none;color:var(--ink);font:500 var(--fs-lg) var(--font);cursor:pointer;padding:0}
+.hubzoom button:hover:not(:disabled){background:var(--accent-soft)} .hubzoom button:disabled{color:var(--muted);cursor:default}
+.hubzoom .zv{width:auto;min-width:48px;border-left:1px solid var(--line);border-right:1px solid var(--line);font:400 var(--fs-sm) var(--font);color:var(--muted);font-variant-numeric:tabular-nums}
+.hubzoom .zv:hover{color:var(--ink)}
+/* the quiet status label above each report */
+.hubrow{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:6px 16px;border-bottom:1px solid var(--line);background:var(--surface);min-height:var(--ctl-h)}
+.hubrow.two>.hubpl{flex:1 1 0;min-width:0}
+.hubpl{display:flex;gap:4px 8px;align-items:center;flex-wrap:wrap;min-width:0;font-size:var(--fs-sm);color:var(--ink)}
+.hubpl>b,.hubpl>.sub{white-space:nowrap} .hubpl>b{font-weight:600} .hubpl>.sub{font-weight:400;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hubpl .linkbtn{flex:0 1 auto;min-width:0;text-align:left}
+.hubstat{margin-left:auto;font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:var(--lh-22);background:var(--surface);white-space:nowrap}
+.hubedit{font-size:var(--fs-xs)}
+.newmenu.hubm button svg.i{color:var(--muted)}   /* the Export and Approve menus: grey outline icons, as the locked mockup draws them */
+.hubrow .crnote{flex:1 1 100%}
+/* the cog and the panel it opens (H3 fills the slot) */
+.hubcfgwrap{position:relative;display:inline-flex}
+/* the client page keeps the look it had on its own page */
+#v-reporting .crsheet .sheet-a4 .page .btn{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-reporting .crsheet .sheet-a4 .page .btn:hover:not(:disabled){background:var(--paper-sunk)}
+#v-reporting .crsheet .sheet-a4 .page .btn:disabled{opacity:.5}
+#v-reporting .crsheet .sheet-a4 .page .crpop textarea{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-reporting .crsheet .sheet-a4 .page .sub,#v-reporting .crsheet .sheet-a4 .page .crheader .sub{color:var(--paper-mute)}
+#v-reporting .crsheet .sheet-a4 .page .crpop{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-reporting .crsheet .sheet-a4 .page .cropts button{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-reporting .crsheet .sheet-a4 .page .cropts button[aria-pressed="true"]{border-color:var(--paper-link);background:var(--paper-sunk)}
+@media (max-width:1100px){.hubwkb .wkwords{display:none}.hubline .seg button{padding:0 10px}}
+/* ===== end #221 H1 ===== */
+/* ===== #221 + #217 (H2 of the Reporting hub): one sheet for the internal and the client report. Both views carry .wrsheet, so the page,
+   the header, the health indicator, the tables and the eyes are styled once. Tokens only for font sizes and radii. ===== */
+.wr-why{display:flex;gap:8px;align-items:flex-start;min-width:0} .wr-whytext{flex:1;min-width:0}
+.wr-facts{font-size:var(--fs-xs);margin-top:4px}
+:root[data-theme="dark"] .wr-logo img{background:var(--rp-white);padding:3px 6px;border-radius:var(--r-sm);box-sizing:border-box}   /* a small light plate so a dark logo does not vanish */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wr-logo img{background:var(--rp-white);padding:3px 6px;border-radius:var(--r-sm);box-sizing:border-box}}
+.rs-new{display:inline-block;margin-left:6px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--rp-blue);border:1px solid var(--rp-blue);border-radius:var(--r-sm);padding:0 5px;vertical-align:baseline}
+.sheet-hbtn{display:inline-grid;place-items:center} .sheet-hbtn svg{width:14px;height:14px}
+.ddmenu.pop.rsmenu{min-width:0;width:max-content;max-width:min(280px,calc(100vw - 16px));padding:4px;font-size:var(--fs-sm)}
+.rsmenu button{align-items:center;gap:8px;padding:4px 10px;min-height:28px;white-space:nowrap}
+.rsmenu button svg.i{margin-top:0;width:15px;height:15px;color:var(--muted);flex:none} .rsmenu b{font-weight:400}
+.rs-pick{margin-top:6px}
+.rs-picker{border:1px solid var(--rp-rule);background:var(--rp-white);padding:8px;display:grid;gap:6px}
+.rs-pick-search{width:100%;box-sizing:border-box;min-height:28px;border:1px solid var(--rp-rule);border-radius:var(--r-sm);background:var(--rp-white);color:var(--rp-ink);font:inherit;font-size:var(--fs-sm);padding:0 8px}
+.rs-pick-list{max-height:220px;overflow:auto;display:grid;align-content:start}
+.rs-pick-row{display:grid;grid-template-columns:20px 84px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:28px;padding:0 4px;font-size:var(--fs-xs);cursor:pointer}
+.rs-pick-row:hover{background:var(--rp-soft)} .rs-pick-id{font-variant-numeric:tabular-nums;color:var(--rp-grey)} .rs-pick-m{color:var(--rp-grey)}
+.rs-pick-foot{display:flex;gap:6px;align-items:center} .rs-pick-foot .sub{flex:1;font-size:var(--fs-xs)}
+.wr-decs li{display:flex;gap:6px;align-items:flex-start} .wr-decbody{min-width:0;flex:1}
+.wr-decs li.hidrow .wr-decbody{opacity:.38}
+
 /* ===== BL-337 (v2.1.0 P9) ===== Reports, the reporting space and the cockpit's Reporting card (components/reporting/) */
 
 .rp .chip,.rp-cockcard .chip{border:0;padding:0 8px;background:var(--sunk);color:var(--muted);font-weight:500;white-space:nowrap}   /* #193: neutral report chips keep their grey tint, 26px tall */
@@ -3882,6 +3973,27 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
 .sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
 .sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
+/* ===== #218 ===== a report's text section: the Notes editor on the page (headings, lists, checklist, code, table, picture, link). The page's own
+   rules above give it paragraphs, lists, quotes and tables; these add what only a text section has. The filed and exported page draws the same
+   things in creaite_doc.CSS (.ft). The "Add a text section" button at the foot is on screen only. */
+.sheet-a4 .page .sheet-ft{min-height:4.5em;padding:2px 0}
+.sheet-a4 .page .sheet-ft h1{font-size:var(--fs-lg);margin:10px 0 4px} .sheet-a4 .page .sheet-ft h2{font-size:var(--fs-md);display:block;border:0;padding:0;margin:8px 0 4px}
+.sheet-a4 .page .sheet-ft h3{font-size:var(--fs-md);font-style:italic;margin:6px 0 3px}
+.sheet-a4 .page .sheet-ft pre{background:var(--paper-sunk);border:1px solid var(--paper-rule);border-radius:var(--r-sm);padding:8px 10px;margin:0 0 8px;font:12px/1.45 var(--mono,ui-monospace,Menlo,monospace);white-space:pre-wrap;overflow-wrap:anywhere}
+.sheet-a4 .page .sheet-ft code{font:12px var(--mono,ui-monospace,Menlo,monospace);background:var(--paper-sunk);padding:0 3px;border-radius:var(--r-xs)} .sheet-a4 .page .sheet-ft pre code{background:none;padding:0}
+.sheet-a4 .page .sheet-ft table{margin:0 0 8px} .sheet-a4 .page .sheet-ft td,.sheet-a4 .page .sheet-ft th{min-width:48px}
+.sheet-a4 .page .sheet-ft a{color:var(--paper-link);text-decoration:underline}
+.sheet-a4 .page .sheet-ft figure.cimg{margin:6px 0;max-width:100%} .sheet-a4 .page .sheet-ft figure.cimg img{max-width:100%;height:auto;border:1px solid var(--paper-rule)}
+.sheet-a4 .page .sheet-ft ul[data-type=taskList]{padding-left:2px;margin:0 0 8px} .sheet-a4 .page .sheet-ft hr{border:0;border-top:1px solid var(--paper-rule);margin:8px 0}
+.sheet-a4 .page .sheet-ft>:last-child{margin-bottom:0}
+.sheet-exported .sheet-a4 .page .sheet-ft{background:none;box-shadow:none}
+.sheet-ftmsg{font-size:var(--fs-xs);color:var(--bad);margin:2px 0 0}
+.sheet-addfoot{margin:8px 0 0;display:flex;justify-content:flex-start}
+.sheet-a4 .page .sheet-addtext{background:var(--paper);color:var(--paper-link);border-color:var(--paper-rule);display:inline-flex;gap:6px;align-items:center}
+.sheet-a4 .page .sheet-addtext:hover{background:var(--paper-sunk)}
+.sheet-a4 .page .sheet-delask{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;padding:6px 8px;border:1px solid var(--paper-rule);border-radius:var(--r-sm);background:var(--paper-sunk);font-size:var(--fs-sm)}
+.sheet-a4 .page .sheet-delask .btn{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+.sheet-a4 .page .sheet-match[data-textonly]{font-weight:400}
 /* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
 /* #121: the Link button in a plain field's corner, and a link in plain text (a field being edited, a table, the peek, a report preview) */
 .linkcorner{position:fixed;z-index:var(--z-linkcorner);width:22px;height:22px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;opacity:.85}

@@ -107,11 +107,22 @@ class Html(Base):
         r = self.export(path, "html")
         self.assertTrue(r["ok"], r)
         self.assertTrue(r["filed"])
-        self.assertEqual(r["path"], f"{ABC}/reports/2026-10-16 Weekly report - Example Programme (read only).html")
+        self.assertEqual(r["path"], f"{ABC}/reports/2026-10-16 Weekly report - Example Programme (2).html")   # the plain name is the filed report's own; the export is numbered
         page = (self.v.root / r["path"]).read_text(encoding="utf-8")
         self.assertNotIn("creaite-data", page)
         self.assertEqual(re.findall(r"<h2>(.*?)</h2>", page), SHOWN)
         self.hidden_absent(page)
+
+    def test_an_unfiled_report_leaves_the_plain_name_for_the_filing(self):
+        for kind, title in (("weekly", "Weekly report"), ("client", "Client report")):
+            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n"
+                        "print(json.dumps(creaite_doc.save('system/staging/drafts/unfiled.html', doc, 'Saved for a test')))")
+            self.assertTrue(r["ok"], r)
+            out = self.export(r["path"], "html", out_dir=f"{ABC}/reports")
+            self.assertTrue(out["ok"], out)
+            self.assertRegex(out["path"], r"Example Programme\)? \(2\)\.html$", kind)
+            self.assertNotIn("read only", out["path"])
+            self.assertFalse((self.v.root / out["path"].replace(" (2).html", ".html")).exists(), "the filing name is left free")
 
 
 class Word(Base):
@@ -183,18 +194,18 @@ class Filing(Base):
         self.assertTrue((self.v.root / off["path"]).is_file())
         self.assertEqual(self.py(f"print(json.dumps(creaite_doc.read({path!r})['kind']))"), "weekly")
 
-    def test_the_setting_is_off_for_reports_and_on_for_minutes_by_default(self):
+    def test_exports_are_always_filed_beside_for_reports_and_by_default_for_minutes(self):
         got = self.py("print(json.dumps([creaite_doc.file_beside_default(k) for k in ('weekly', 'client', 'minutes')]))")
-        self.assertEqual(got, [False, False, True])
+        self.assertEqual(got, [True, True, True])
 
     def test_the_saved_settings_win_and_an_unknown_kind_is_refused(self):
         cfg = self.v.root / "system/config/settings.json"
         data = json.loads(cfg.read_text(encoding="utf-8")) if cfg.is_file() else {}
-        data["reports"] = {"file_exports_beside": True, "file_minutes_exports_beside": False}
+        data["reports"] = {"file_exports_beside": False, "file_minutes_exports_beside": False}
         cfg.parent.mkdir(parents=True, exist_ok=True)
         cfg.write_text(json.dumps(data), encoding="utf-8")
         got = self.py("print(json.dumps([creaite_doc.file_beside_default(k) for k in ('weekly', 'client', 'minutes')]))")
-        self.assertEqual(got, [True, True, False])
+        self.assertEqual(got, [True, True, False], 'the old reports key is ignored; only minutes follow a setting')
         self.assertEqual(self.py("try:\n    creaite_doc.file_beside_default('memo')\nexcept ValueError:\n    print('true')"), True)
 
     def test_a_client_view_waits_for_the_approved_internal_report(self):

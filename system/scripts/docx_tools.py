@@ -77,6 +77,70 @@ IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
 MAX_WIDTH_EMU = 5486400                       # 6 inches: the text width of an A4 page with the template's margins
 
 
+PNG_KEEP = {b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND"}      # every other chunk (tEXt, iTXt, zTXt, eXIf, tIME, gAMA ...) is dropped
+
+
+def _strip_png(data):
+    """A PNG's signature and its kept chunks (PNG_KEEP), or the data as it is when a chunk runs past the end."""
+    import struct
+    out, i = [data[:8]], 8
+    while i + 8 <= len(data):
+        n = struct.unpack(">I", data[i:i + 4])[0]
+        kind, end = data[i + 4:i + 8], i + 12 + n
+        if end > len(data):
+            return data
+        if kind in PNG_KEEP:
+            out.append(data[i:end])
+        i = end
+        if kind == b"IEND":
+            break
+    return b"".join(out)
+
+
+def _jpeg_kept(marker, seg):
+    """Whether a JPEG segment stays: not an APPn or a comment, except the Adobe APP14 colour marker."""
+    return not (0xE0 <= marker <= 0xEF or marker == 0xFE) or (marker == 0xEE and seg[4:9] == b"Adobe")
+
+
+def _strip_jpeg(data):
+    """A JPEG without its APPn and comment segments; the pixels (from the scan on) as they were."""
+    import struct
+    out, i = [data[:2]], 2
+    while i + 4 <= len(data):
+        marker = data[i + 1] if data[i] == 0xFF else None
+        if marker is None:
+            return data
+        if marker == 0xFF:
+            i += 1
+        elif marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+            out.append(data[i:i + 2])
+            i += 2
+        else:
+            end = i + 2 + struct.unpack(">H", data[i + 2:i + 4])[0]
+            if end > len(data):
+                return data
+            if marker == 0xDA:                     # the scan and everything after it: pixels
+                return b"".join(out) + data[i:]
+            out += [data[i:end]] if _jpeg_kept(marker, data[i:end]) else []
+            i = end
+    return data
+
+
+def strip_image_metadata(data):
+    """A PNG or JPEG without its own metadata (v240-leak2): a PNG keeps only IHDR, PLTE, tRNS, IDAT and IEND (no text chunks, no EXIF);
+    a JPEG loses its APPn segments (EXIF, XMP, ICC, Photoshop; the Adobe APP14 colour marker stays) and comments. The pixels are
+    untouched. Anything else, or a file that can't be walked, is returned as it is (the callers have already checked the size)."""
+    import struct
+    try:
+        if data[:8] == b"\x89PNG\r\n\x1a\n":
+            return _strip_png(data)
+        if data[:2] == b"\xff\xd8":
+            return _strip_jpeg(data)
+    except (struct.error, IndexError):
+        return data
+    return data
+
+
 def image_size(data):
     """(width, height) in pixels of a PNG or JPEG."""
     import struct
@@ -95,9 +159,12 @@ def image_size(data):
     raise ValueError("not a PNG or JPEG image")
 
 
-def drawing(rid, n, w_px, h_px, name):
-    """The Word run for an inline image with relationship `rid`, scaled down to the page width when wider."""
+def drawing(rid, n, w_px, h_px, name, show_w=None):
+    """The Word run for an inline image with relationship `rid`, scaled down to the page width when wider. `show_w` (#227) is the
+    width in pixels to show it at (96 to the inch), the height following; a picture drawn at twice the size stays sharp."""
     w, h = w_px * 9525, h_px * 9525
+    if show_w:
+        w, h = round(show_w * 9525), round(h_px * show_w * 9525 / w_px)
     if w > MAX_WIDTH_EMU:
         w, h = MAX_WIDTH_EMU, round(h * MAX_WIDTH_EMU / w)
     return ('<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
@@ -334,13 +401,18 @@ class _Frame:
 class _Reader:
     """Inline Markdown read as a tree and flattened to runs: [text, bold, italic, strike, url, code] (see md_spans)."""
 
-    def __init__(self, text):
+    def __init__(self, text, escapes=False):
         self.s = str(text or "")
         self.out = []
+        self.escapes = escapes  # H5: a backslash escape is the character
 
     def read(self):
         """The runs of the whole text."""
         self.run(_Frame(0, len(self.s), (False, False, False), None, 0))
+        if self.escapes:
+            for r in self.out:
+                if not r[5]:
+                    r[0] = ESCAPED.sub(r"\1", r[0])
         return [tuple(r) for r in self.out if r[0]]
 
     def add(self, f, text, code=False, marks=None, url=False):
@@ -363,6 +435,11 @@ class _Reader:
                 break
             p = m.start()
             f.buf.append(s[i:p])
+            if self.escapes and p > i and s[p - 1] == "\\" and (len(s[i:p]) - len(s[i:p].rstrip("\\"))) % 2:
+                f.buf[-1] = s[i:p - 1]                 # an escaped mark is the mark itself
+                f.buf.append(m.group())
+                i = p + 1
+                continue
             end = getattr(self, "open_" + {"[": "link", "*": "star", "_": "under", "~": "tilde", "`": "code"}[m.group()])(f, p)
             if end is None:
                 f.buf.append(m.group())
@@ -466,23 +543,27 @@ class _Reader:
         return p + 2
 
 
-def md_spans(text):
+ESCAPED = re.compile(r"\\([\\`*_{}\[\]()#+\-.!~|>])")           # the punctuation a Markdown backslash may escape
+
+
+def md_spans(text, escapes=False):
     """[(text, bold, italic, strike, url, code)]: inline Markdown read as a tree and flattened, so the marks nest (**bold with
     ~~strike~~ inside**, _italic **and bold**_, a link whose words are bold, `code`) and every mark that is paired is gone from the
     text. One reader for Word (md_runs) and for HTML/PDF (prep_page.md_inline), so the two agree. Each opener looks for its closer
     once (a failed search is remembered), and nesting is capped at MAX_NEST, so the work is linear in the text's length times the
-    cap. A mark with no partner stays as typed."""
-    return _Reader(text).read()
+    cap. A mark with no partner stays as typed. With `escapes` (a text section's, written by the Notes editor) a backslash escape is the
+    character it escapes."""
+    return _Reader(text, escapes).read()
 
 
-def md_runs(text):
+def md_runs(text, escapes=False):
     """[(text, bold, italic, strike, url)]: md_spans without the code flag (a code span is its words, plain)."""
-    return [r[:5] for r in md_spans(text)]
+    return [r[:5] for r in md_spans(text, escapes)]
 
 
-def plain(text):
+def plain(text, escapes=False):
     """Inline Markdown as Word shows it: markers removed; a link as "text (url)"."""
-    return "".join(t + (f" ({u})" if u else "") for t, _, _, _, u in md_runs(text))
+    return "".join(t + (f" ({u})" if u else "") for t, _, _, _, u in md_runs(text, escapes))
 
 
 def md_lines(text):
@@ -538,9 +619,17 @@ def with_indent(para, left=360, hanging=360):
     return para[:m.start(1)] + inner + para[m.end(1):]
 
 
-def styled_run(rpr, text, bold, italic, strike=False):
-    """One Word text run in the template's run style `rpr`, with bold, italic and strikethrough as asked."""
+MONO = "Courier New"                                  # H5, #218: the font of inline code and code blocks in Word
+
+
+def styled_run(rpr, text, bold, italic, strike=False, code=False):
+    """One Word text run in the template's run style `rpr`: bold, italic and strikethrough as asked, `code` in a fixed-width font."""
     rpr = re.sub(r"<w:(?:b|i|bCs|iCs|strike)(?: [^>]*)?/>", "", rpr or "<w:rPr></w:rPr>")
+    if code:
+        rpr = re.sub(r"<w:rFonts\b[^>]*/>", "", rpr)
+        at = re.search(r"<w:rStyle\b[^>]*/>", rpr)
+        at = at.end() if at else rpr.index(">") + 1
+        rpr = rpr[:at] + f'<w:rFonts w:ascii="{MONO}" w:hAnsi="{MONO}" w:cs="{MONO}"/>' + rpr[at:]
     marks = ("<w:b/>" if bold else "") + ("<w:i/>" if italic else "") + ("<w:strike/>" if strike else "")
     if marks:
         m = re.search(r"<w:rFonts\b[^>]*/>|<w:rStyle\b[^>]*/>", rpr)
@@ -554,7 +643,7 @@ def styled_run(rpr, text, bold, italic, strike=False):
 STYLES = {}   # style samples taken from {{STYLE_<NAME>}} paragraphs in the template being filled (BL-47)
 
 
-def md_paras(para, name, text):
+def md_paras(para, name, text, code=False):
     """Paragraphs for one Markdown entry, from the template paragraph holding {{NAME}}. A sub-heading uses the
     template's STYLE_TOPIC sample (the minutes' topic heading) when it has one, else bold text."""
     marker = "\ue000MD\ue000"          # private-use characters: esc keeps them (it strips the \x00 this was; #127 round 6)
@@ -569,8 +658,9 @@ def md_paras(para, name, text):
     def one(prefix, body, shape=None, level=0, italic=False, use=None, base=0):
         """One Markdown block as a Word paragraph in the given shell: its runs styled, indented for a list item or a quote."""
         b, rn, rp = use or (base_shell, run, rpr)
-        runs = ([(prefix, False, False, False, None)] if prefix else []) + md_runs(body)
-        xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st) for t, bo, it, st, u in runs)
+        runs = ([(prefix, False, False, False, None, False)] if prefix else []) + md_spans(body, code)
+        xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st, bool(code and cd))
+                      for t, bo, it, st, u, cd in runs)
         p = b[:rn.start()] + xml + b[rn.end():]
         if shape == "list":
             p = with_indent(p, base + 360 * (level + 1), 360)
@@ -606,7 +696,7 @@ def md_paras(para, name, text):
 def item_para(para, name, entry):
     """One paragraph from a template paragraph; entry is text, {"flag": …, "text": …}, {"md": …} or a prepared image."""
     if isinstance(entry, dict) and "md" in entry:
-        return md_paras(para, name, entry["md"])
+        return md_paras(para, name, entry["md"], code=bool(entry.get("code")))
     if isinstance(entry, dict) and "drawing" in entry:
         out = replace_in(para, {name: ""})
         m = re.search(r"</w:pPr>", out)
@@ -885,9 +975,26 @@ def cmd_fill(template, values_file, out):
     values = json.loads(Path(values_file).read_text(encoding="utf-8"))
     media = []                                  # (part name, bytes, rel id) for images
     for key, items in values.items():
-        if isinstance(items, list) and any(isinstance(e, dict) and "image" in e for e in items):
+        if isinstance(items, list) and any(isinstance(e, dict) and ("image" in e or "images" in e) for e in items):
             prepared = []
             for entry in items:
+                if isinstance(entry, dict) and "images" in entry:         # #227: several pictures side by side in one paragraph
+                    runs = ""
+                    for one in entry["images"]:
+                        f = Path(one["image"])
+                        if not f.is_file() or f.suffix.lower() not in IMAGE_TYPES:
+                            print(f"Note: image not found or not PNG/JPEG, left out: {one['image']}")
+                            continue
+                        data = strip_image_metadata(f.read_bytes())
+                        w, h = image_size(data)
+                        n = len(media) + 1
+                        rid = f"rIdCreaiteImg{n}"
+                        media.append((f"word/media/creaite-{n}{f.suffix.lower()}", data, rid))
+                        runs += drawing(rid, n, w, h, f"Picture {n}", one.get("width")) + \
+                            '<w:r><w:t xml:space="preserve">    </w:t></w:r>'
+                    if runs:
+                        prepared.append({"drawing": runs, "caption": ""})
+                    continue
                 if not (isinstance(entry, dict) and "image" in entry):    # Markdown between images (BL-63)
                     prepared.append(entry)
                     continue
@@ -896,12 +1003,12 @@ def cmd_fill(template, values_file, out):
                 if not f.is_file() or f.suffix.lower() not in IMAGE_TYPES:
                     print(f"Note: image not found or not PNG/JPEG, left out: {entry['image']}")
                     continue
-                data = f.read_bytes()
+                data = strip_image_metadata(f.read_bytes())
                 w, h = image_size(data)
                 n = len(media) + 1
                 rid = f"rIdCreaiteImg{n}"
                 media.append((f"word/media/creaite-{n}{f.suffix.lower()}", data, rid))
-                prepared.append({"drawing": drawing(rid, n, w, h, f.name), "caption": entry.get("caption", "")})
+                prepared.append({"drawing": drawing(rid, n, w, h, f"Picture {n}", entry.get("width")), "caption": entry.get("caption", "")})
             values[key] = prepared
     parts = []
     left = set()

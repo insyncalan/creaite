@@ -30,7 +30,7 @@ export function Rich({ ctx, text, field, pane, row, col, label, cls = "", empty 
   if (!ctx.editing) return <div class={`wr-rich ${cls}`}><Md text={text} after={after} /></div>;
   if (on) return (
     <div class={`wr-rich wr-open ${cls}`} ref={box}
-      onFocusOut={e => { const to = /** @type {Node|null} */ (e.relatedTarget); if (!to || !box.current?.contains(to)) setOn(false); }}
+      onFocusOut={e => { const to = /** @type {HTMLElement|null} */ (e.relatedTarget); if (!to || !(box.current?.contains(to) || (to.closest && to.closest("#aiLayer, .linkpop")))) setOn(false); }}   /* the AI bar and the link form are the editor's own, outside its box */
       onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); setOn(false); } }}>
       <Text field={field} pane={pane} row={row} col={col} label={label} rich />
     </div>);

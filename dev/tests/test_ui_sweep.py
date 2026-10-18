@@ -90,12 +90,12 @@ SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.qu
                                "document.querySelector('#v-minutes .mnpop')", "#v-minutes")
 
 # v2.1.0 P6: the weekly report view (the snapshot vault's ABC project; the report is built by /api/report/draft, nothing is written).
-SCREENS["weekly"] = ("go('weekly',{code:'ABC'})", "document.querySelector('#v-weekly section[data-id=current_state]')", "#v-weekly")
+SCREENS["weekly"] = ("go('reporting','ABC')", "document.querySelector('#v-reporting section[data-id=current_state]')", "#v-reporting")
 
 # BL-337 (v2.1.0 P9): Reports, a project's reporting space, and its editor view (Side by side), so the sweep reaches them
 SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.click()",
                       "document.querySelector('#v-reports tbody tr')", "#v-reports")
-SCREENS["reporting"] = ("openSpace('ABC')", "document.querySelector('#v-reporting .rp-card')", "#v-reporting")
+SCREENS["reporting"] = ("openSpace('ABC', '', 'client')", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
 
 # BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
 # ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").
@@ -154,7 +154,7 @@ class TargetSizes(UiSweepCase):
         small visible pair is still flagged, so the skip does not blind the audit."""
         b = self.b
         region = self.goto("weekly")
-        b.eval("""(()=>{ const v=document.querySelector('#v-weekly'), w=document.createElement('div');
+        b.eval("""(()=>{ const v=document.querySelector('#v-reporting'), w=document.createElement('div');
           w.innerHTML='<div id="clipT" style="height:0;overflow:hidden"><button id="cl1" style="width:10px;height:10px">x</button><button id="cl2" style="width:10px;height:10px">y</button></div>'
             +'<div id="visT"><button id="vs1" style="width:10px;height:10px;display:inline-block">a</button><button id="vs2" style="width:10px;height:10px;display:inline-block">b</button></div>';
           v.appendChild(w); })()""")

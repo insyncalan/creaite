@@ -4,6 +4,8 @@
    check). The client's report and the week's internal report are two documents; the internal one is only read here (P6 edits it). */
 import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
+import { saveExport } from "./exportSave.js";
+import { readLogos } from "./weekly.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{group: string, ref: string, title: string, why: string, kind: string}} LeftItem */
@@ -28,6 +30,8 @@ export const crInfo = signal(/** @type {{where: string, filed: boolean, ready: b
 export const crMode = signal(/** @type {"client"|"side"} */ ("client"));
 /** The last left-out check, for the page's "Not in this report" lists and the dialog. */
 export const crCheck = signal(/** @type {Check|null} */ (null));
+/** The project's logo files the page may draw ([{kind, path}]); their pictures are read into stores/weekly.js's weeklyLogos. */
+export const crLogos = signal(/** @type {{kind: string, path: string}[]} */ ([]));
 export const crBusy = signal("");
 export const crDialog = signal(false);
 export const crDirty = signal(false);
@@ -51,6 +55,8 @@ export async function loadClientReport(arg, fresh) {
   if (!c || !c.ok || !c.doc) { crOpen.value = { ok: false, message: oneLine((c && c.message) || "") || "Couldn't open the client report" }; crDoc.value = null; return; }
   crInternal.value = i && i.ok ? i.doc : null;
   crDoc.value = c.doc;
+  crLogos.value = c.logos || [];
+  readLogos(arg.code, c.logos || []);
   crBase.value = Number(c.doc.version) || undefined;
   crInfo.value = { where: c.where, filed: !!c.filed, ready: !!c.ready, not_ready: c.not_ready || "", baseline: c.baseline || null, findings: c.findings || [] };
   crOpen.value = { ok: true };
@@ -83,11 +89,13 @@ export async function approveClientReport(force) {
   return api("/api/report/approve", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, doc: d, base_version: crBase.value, force: !!force });
 }
 
-/** Export the client report (the page saved first); the route runs the left-out check again and answers with it.
-    @param {"html"|"docx"|"pdf"} fmt */
-export async function exportClientReport(fmt) {
+/** Export the client report (the page saved first); the route runs the left-out check again and answers with it. #226: for html and pdf
+    `makePage` draws the saved report as it is exported (components/report/exportPage.jsx), and the server checks it again.
+    @param {"html"|"docx"|"pdf"} fmt @param {(doc: any, version: number) => Promise<any>} [makePage] */
+export async function exportClientReport(fmt, makePage) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
-  return api("/api/report/export", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt });
+  const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
+  return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt, page: page || undefined });
 }

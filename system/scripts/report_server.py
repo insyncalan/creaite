@@ -9,11 +9,27 @@
                            or stage_client), applied at once with tracker.py apply, the one writer, so Undo works as always
                            A weekly approval re-locks the project's client drafts to that week (relock_client_drafts; `relocked`)
   POST /api/report/logo    {code, paths}: the project's logo files as data (read only; v2.1.0 P6): only files report_doc.logos names
+  POST /api/report/logo/save   {code, kind, ext, original, drawn?}: a logo added or changed from the screen (H3, #221; base64): the file
+                           chosen is kept as it was (`<name>-original.<ext>`) and the trimmed copy that is drawn is `<name>.png`; an
+                           SVG, or a file sent without a trimmed copy, is saved as `<name>.<ext>`. Through filechange.py
+  POST /api/report/logo/remove {code, kind}: the logo and its original deleted (Alan's own click: one approval for exactly that change)
+  POST /api/report/image   {code, name, data (base64)}: a PNG or JPEG (2 MB at most) for a text section (H5, #218), created through
+                           filechange.py in the project's Reports folder under `_images/`; answers its `ref` (`_images/<name>`)
+  POST /api/report/images  {code, refs}: those pictures as data addresses ({ref: "data:…"}) for the editor to draw; read only, and
+                           only an `_images/<name>.png|jpg` that is a file in the Reports folder is ever read
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
-  POST /api/report/export  {kind, code, week_ending, client?, fmt, file_beside?}: P2's export (the contract's call), from the draft
-                           or the filed report; a client report only once its internal week is approved and nothing would leak, and its
+  POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
+                           (a client report: only client-safe facts), each with the row it would add; nothing is written
+  POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
+                           draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
+                           a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
+                           #226: HTML and PDF are the report page's own exported view, posted as `page: {html, css, palette, version}`
+                           and re-checked against the saved report by export_page.build; with no page, or one that fails, the plain
+                           renderer makes the file and the answer says `plain: true`;
+  POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
+                           A client report is exported only once its internal week is approved and nothing would leak, and its
                            answer then carries `left_out`: the check of what is left out runs before every client export
 """
 import base64
@@ -58,10 +74,15 @@ def target(req):
     return kind, code, fri, str(req.get("client") or "").strip()[:120] or project_client(code)
 
 
+CLIENT_NAME_MAX = 80
+
+
 def project_client(code):
     """The project's client (its memory's Client / partner line), the client a client report is for when none is named; or None."""
     import build_dashboard
-    return build_dashboard.memory(paths.project_dir(code)).get("client") or None
+    name = str(build_dashboard.memory(paths.project_dir(code)).get("client") or "")
+    name = " ".join(name.split())[:CLIENT_NAME_MAX]                  # one line, 80 characters at most (the panel holds the same cap)
+    return name or None
 
 
 def guarded(fn):
@@ -198,6 +219,14 @@ def check_route(handler, req):
     return answer(handler, client_check.check(req.get("doc")))
 
 
+def pick_route(handler, req):
+    """POST /api/report/pick: what Add from the tracker can offer (see the module's description). Writes nothing."""
+    doc = req.get("doc")
+    if not isinstance(doc, dict):
+        raise report_doc.ReportError("Say which report to add to.")
+    return answer(handler, {"ok": True, "sections": report_doc.pickable(doc)})
+
+
 def export_call():
     """P2's export function (the contract's `export(path, fmt, *, out_dir, file_beside, open_after)`), or None while it isn't
     built: looked for in creaite_doc, then a module of its own."""
@@ -227,8 +256,116 @@ def launch(stored):
     return True
 
 
+def _plain_name(name, ext):
+    """A typed file name made safe: one name (no folder, no leading dot, 150 characters at most) that ends with `ext`; None when it
+    can't be a file name."""
+    name = str(name or "")
+    if any(ord(c) < 32 or ord(c) == 127 for c in name):
+        return None                                            # a control character (NUL, a newline, a tab...) is never in a file name
+    name = " ".join(name.split())
+    if not name or "/" in name or "\\" in name or name.startswith(".") or len(name) > 150:
+        return None
+    return name if name.lower().endswith(ext) else name + ext
+
+
+def _taken(folder, name, reserved=None):
+    """Whether anything of that name is in the folder already, or the name is `reserved` (the name an unfiled report will be filed
+    under: nothing is there yet, but an export in the way would block Approve and file)."""
+    f = folder / name
+    return f.exists() or f.is_symlink() or (reserved is not None and name.lower() == reserved.lower())
+
+
+def _numbered(folder, name, reserved=None):
+    """The next free "Name (2).ext" in the folder (what a create adds by itself), skipping the reserved filing name."""
+    stem, dot, ext = name.rpartition(".")
+    stem, ext = (stem, dot + ext) if dot else (name, "")
+    n, final = 2, name
+    while _taken(folder, final, reserved):
+        final, n = f"{stem} ({n}){ext}", n + 1
+    return final
+
+
+def _not_saved(handler, why, **extra):
+    """The answer when the file was not saved: plainly why, and that nothing was written (#220)."""
+    return refuse(handler, f"Not saved: {why} Nothing was written.", saved=False, **extra)
+
+
+def _file_in_reports(handler, draft, folder, name, overwrite, fmt, label):
+    """File the exported draft in the Reports folder as `name` through filechange.py: a create (never overwriting) or, on Overwrite,
+    an edit that backs the earlier file up first. The draft in system/staging/drafts/ goes in every case."""
+    import re
+    import filechange
+    import reach
+    target = folder / name
+    ch = {"op": "edit" if overwrite else "create", "path": paths.rel(target), "data": draft.read_bytes(), "from": paths.rel(draft),
+          "why": f"{fmt.upper()} export of {target.stem}" + (" (replaced at your choice)" if overwrite else "")}
+    try:
+        token = reach.APPROVALS.issue(filechange.fingerprint(ch)) if overwrite else None   # Alan's own Overwrite: this change, once
+        code, msg = filechange.perform(ch, token, "dashboard")
+    except (OSError, ValueError) as e:
+        for stray in folder.glob(f".{name}.part"):
+            stray.unlink(missing_ok=True)
+        return _not_saved(handler, f"the {label} folder can't be written to ({getattr(e, 'strerror', None) or e.__class__.__name__}).")
+    finally:
+        draft.unlink(missing_ok=True)
+    if code == filechange.NEEDS:
+        filechange.record_request(ch, msg[len("Needs approval: "):].rstrip("."))
+        return _not_saved(handler, msg)
+    if code != 0:
+        return _not_saved(handler, msg)
+    final = re.match(r"(?:Created|Changed) (.+?) \(change (\d+)", msg)
+    stored = final.group(1) if final else ch["path"]
+    return {"ok": True, "saved": True, "format": fmt, "path": stored, "name": Path(stored).name, "folder": paths.rel(folder),
+            "folder_label": label, "replaced": bool(overwrite), "change": int(final.group(2)) if final else None, "filed": True,
+            "message": f"{'Replaced' if overwrite else 'Saved'} {Path(stored).name} in {label}."}
+
+
+def _settle_name(folder, name, ext, req, label, reserved=None):
+    """(name, overwrite, asked): the file name to save as, from the page's choice for a taken name (`on_clash`: number, rename with
+    `new_name`, or overwrite), and `asked`: the answer to give instead when the name is taken and no choice was made (or the typed
+    name can't be used), else None. `reserved` is the filing name of a report not yet filed: taken, but with nothing there, so
+    Overwrite is never offered or accepted for it (`reserved: true` in the answer)."""
+    choice = req.get("on_clash")
+    if choice == "rename":
+        name = _plain_name(req.get("new_name"), ext)
+        if not name:
+            return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
+    if not _taken(folder, name, reserved):
+        return name, False, None
+    if choice == "number":
+        return _numbered(folder, name, reserved), False, None
+    if choice == "overwrite" and (folder / name).is_file():
+        return name, True, None
+    only = not (folder / name).exists()
+    return name, False, {"ok": False, "clash": True, "name": name, "numbered": _numbered(folder, name, reserved), "reserved": only,
+                         "message": (f"{name} is the name this report will be filed under in {label}." if only
+                                     else f"{name} is already in {label}.")}
+
+
+def carry_plain(saved, made):
+    """#226: a saved export the plain renderer made says so (plain, plain_why and the message's note)."""
+    if saved.get("ok") and made.get("plain"):
+        saved["plain"] = True
+        if made.get("plain_why"):
+            saved["plain_why"] = made["plain_why"]
+        plain_note(saved)
+
+
+def plain_note(out):
+    """#226: an export the plain renderer made (no page, or one the server's check refused) says so in its message."""
+    if not (out.get("ok") and out.get("plain")):
+        return
+    why = out.get("plain_why")
+    out["message"] = (f"{out.get('message') or 'Exported.'} This is the plain version "
+                      + (f"(the report page was not used: {why})." if why else "(open the report in creaite to export the formatted one)."))
+
+
 def export_route(handler, req):
-    """POST /api/report/export: the report exported as HTML, Word or PDF (see the module's description). Nothing is ever sent."""
+    """POST /api/report/export: the report exported as HTML, Word or PDF, and saved first into the project's Reports folder (#220).
+    Opening is a separate choice (/api/open, /api/report/reveal). The answer: {ok, saved, path, name, folder, folder_label,
+    replaced, message}; a taken name answers {ok: false, clash: true, name, numbered, folder, folder_label} and writes nothing
+    until the page asks again with on_clash "number", "rename" (and new_name) or "overwrite"; a failed save says why and that
+    nothing was written. Nothing is ever sent."""
     kind, code, fri, client = target(req)
     fmt = req.get("fmt")
     if fmt not in FORMATS:
@@ -247,12 +384,42 @@ def export_route(handler, req):
     fn = export_call()
     if fn is None:
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
-    out = fn(path, fmt, file_beside=bool(req.get("file_beside", creaite_doc.file_beside_default(kind))), open_after=True)
-    if out.get("ok") and out.get("path"):
-        out["launched"] = launch(out["path"])
+    filed = paths.resolve(report_doc.filed_path(kind, code, fri, client))
+    folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
+    name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
+    label = f"{creaite_doc.project_name(code) or code} › Reports"
+    where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
+    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name)
+    if asked:
+        return answer(handler, {"ok": False, **asked, **where})
+    out = fn(path, fmt, file_beside=False, open_after=False,
+             page=req.get("page") if isinstance(req.get("page"), dict) else None)           # made in system/staging/drafts/, filed below
+    if not out.get("ok"):
+        return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
+    saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
+    carry_plain(saved, out)
     if left is not None:
-        out["left_out"] = left
-    return answer(handler, out)
+        saved["left_out"] = left
+    return answer(handler, saved)
+
+
+def reveal_route(handler, req):
+    """POST /api/report/reveal {path}: show a saved file in Finder (Show in Finder), or open the folder when the path is a folder.
+    Only a stored path under projects/. With CREAITE_NO_LAUNCH (the tests) nothing opens and `launched` is false."""
+    import re
+    rel = str(req.get("path") or "")
+    if not re.fullmatch(r"projects/.+", rel) or ".." in Path(rel).parts or not paths.resolve(rel).exists():
+        return refuse(handler, "That file or folder isn't there to show.")
+    real = paths.resolve(rel)
+    if os.environ.get("CREAITE_NO_LAUNCH"):
+        return answer(handler, {"ok": True, "launched": False, "path": str(real)})
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", "-R", str(real)] if real.is_file() else ["open", str(real)])
+    elif os.name == "nt":
+        subprocess.Popen(["explorer", "/select,", str(real)] if real.is_file() else ["explorer", str(real)])
+    else:
+        subprocess.Popen(["xdg-open", str(real.parent if real.is_file() else real)])
+    return answer(handler, {"ok": True, "launched": True})
 
 
 LOGO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml"}
@@ -268,13 +435,197 @@ def logo_route(handler, req):
         return refuse(handler, "Say which project's logos.")
     known = {x["path"]: x for x in report_doc.logos(code)}
     out = {}
-    for stored in req.get("paths") or []:
+    for stored in req.get("paths") or list(known):                 # H3: no list asked for = all of the project's logos
         if stored not in known:
             continue
         f = paths.resolve(stored)
-        if f.suffix.lower() in LOGO_TYPES and f.is_file() and f.stat().st_size <= LOGO_MAX:
+        if f.suffix.lower() in LOGO_TYPES and f.is_file() and not f.is_symlink() and f.stat().st_size <= LOGO_MAX:
             out[stored] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
-    return answer(handler, {"ok": True, "logos": out})
+    return answer(handler, {"ok": True, "logos": out, "list": list(known.values())})
+
+
+LOGO_KIND_NAMES = ("firm", "client", "partner")
+JPEG_HINT = "A transparent PNG or SVG sits better. The picture is kept as it is."
+
+
+def _logo_type(raw):
+    """"png", "jpg" or "svg" from the file's own first bytes, or None when it is not a picture creaite draws."""
+    import logo_check
+    return logo_check.kind_of(raw)
+
+
+def _logo_bytes(value):
+    """The bytes of a base64 field, or None when it is missing or not base64."""
+    try:
+        return base64.b64decode(str(value or ""), validate=True) or None
+    except ValueError:
+        return None
+
+
+def _no_paths(msg):
+    """A message with the vault's and the home folder's absolute paths taken out (LOGO 5: an error never names a place on the disk)."""
+    out = str(msg)
+    for root in (str(paths.ROOT), str(Path.home())):
+        out = out.replace(root, "")
+    return out
+
+
+def _logo_change(handler, ch):
+    """Make one file change for the logos through filechange.py. Alan's own click: a delete or a replace carries a one-time approval
+    for exactly that change. Returns the refusal's answer, or None when it was made."""
+    import filechange
+    import reach
+    token = reach.APPROVALS.issue(filechange.fingerprint(ch)) if ch["op"] in ("edit", "delete") else None
+    code, msg = filechange.perform(ch, token, "dashboard")
+    if code == filechange.NEEDS:
+        filechange.record_request(ch, msg[len("Needs approval: "):].rstrip("."))
+    return None if code == 0 else refuse(handler, f"Logo not saved: {_no_paths(msg)}")
+
+
+def _logo_target(req):
+    """(code, kind, stem) of a logo request; raises ReportError for a project or kind creaite doesn't know."""
+    code, kind = str(req.get("code") or ""), req.get("kind")
+    if not report_doc.CODE.match(code) or kind not in LOGO_KIND_NAMES:
+        raise report_doc.ReportError("Say which project and which logo: firm, client or partner.")
+    try:
+        paths.project_dir(code)
+    except LookupError:
+        raise report_doc.ReportError(f"{code} isn't a project creaite knows.") from None
+    return code, kind, "firm" if kind == "firm" else f"{code}-{kind}"
+
+
+def _logo_files(stem):
+    """Every logo file of that name now in the logos folder: the picture drawn and the original kept."""
+    if not paths.REPORT_LOGOS.is_dir():
+        return []
+    return [f for f in sorted(paths.REPORT_LOGOS.iterdir())
+            if f.is_file() and f.suffix.lower() in report_doc.LOGO_EXT and f.stem in (stem, f"{stem}-original")]
+
+
+def _logo_refusal(req):
+    """(raw, drawn, type, None) for a logo request that can be saved, else (None, None, None, the sentence to refuse with). The
+    picture is looked into, not just its first bytes (logo_check): a sound PNG, JPEG or SVG of a sane size with nothing added."""
+    import logo_check
+    raw, drawn = _logo_bytes(req.get("original")), _logo_bytes(req.get("drawn"))
+    kind_of = _logo_type(raw or b"")
+    ext = str(req.get("ext") or "").lower().lstrip(".").replace("jpeg", "jpg")
+    if not raw or not kind_of or kind_of != ext:
+        return None, None, None, "That isn't a PNG, JPEG or SVG picture. Nothing was saved."
+    if len(raw) > LOGO_MAX or (drawn and len(drawn) > LOGO_MAX):
+        return None, None, None, "That logo is over 400 kB. Choose a smaller file. Nothing was saved."
+    if drawn is not None and _logo_type(drawn) != "png":
+        return None, None, None, "The trimmed copy must be a PNG. Nothing was saved."
+    try:
+        logo_check.inspect(raw)
+        if drawn is not None:
+            logo_check.inspect(drawn)
+    except logo_check.LogoRefused as e:
+        return None, None, None, str(e)
+    return raw, drawn, kind_of, None
+
+
+def _logo_links(stem, names):
+    """Whether the logos folder, or a file in it with this logo's name (or one about to be written), is a symbolic link."""
+    folder = paths.REPORT_LOGOS
+    if folder.is_symlink():
+        return True
+    if not folder.is_dir():
+        return False
+    return any(f.is_symlink() for f in folder.iterdir()
+               if f.stem in (stem, f"{stem}-original") or f.name in names)
+
+
+def logo_save_route(handler, req):
+    """POST /api/report/logo/save (see the module's description): the logo for the firm or a project's client or partner, saved under
+    its name in system/branding/logos/. A file that isn't a PNG, JPEG or SVG picture, or is over 400 kB, is refused and nothing is
+    written."""
+    code, kind, stem = _logo_target(req)
+    raw, drawn, kind_of, why = _logo_refusal(req)
+    if why:
+        return refuse(handler, why)
+    ext = "jpg" if kind_of == "jpg" else kind_of
+    keep = [(f"{stem}-original.{ext}", raw), (f"{stem}.png", drawn)] if drawn and kind_of != "svg" else [(f"{stem}.{ext}", raw)]
+    if _logo_links(stem, {n for n, _d in keep}):
+        return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut and try again. "
+                               "Nothing was saved.")
+    for name, data in keep:                                        # the new files first: a failed write leaves the old logo standing
+        target = paths.REPORT_LOGOS / name
+        ch = {"op": "edit" if target.exists() else "create", "path": paths.rel(target), "data": data,
+              "why": f"{kind.capitalize()} logo added or changed from the report settings"}
+        err = _logo_change(handler, ch)
+        if err:
+            return err
+    for old in _logo_files(stem):                                  # then a stale file of another type must not win
+        if old.name not in dict(keep):
+            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {kind} logo"})
+            if err:
+                return err
+    out = {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is saved."}
+    if kind_of == "jpg":
+        out["hint"] = JPEG_HINT
+    return answer(handler, out)
+
+
+def logo_remove_route(handler, req):
+    """POST /api/report/logo/remove (see the module's description)."""
+    code, kind, stem = _logo_target(req)
+    if _logo_links(stem, set()):
+        return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut yourself. "
+                               "Nothing was removed.")
+    for old in _logo_files(stem):
+        err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Removed the {kind} logo"})
+        if err:
+            return err
+    return answer(handler, {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is removed."})
+
+
+IMAGE_MAX = 2 * 1024 * 1024        # the same cap as a note's picture (live_server.UPLOAD_LIMIT)
+
+
+def image_route(handler, req):
+    """POST /api/report/image: a text section's picture, checked (PNG or JPEG, 2 MB at most, by its first bytes, never its name) and
+    created through filechange.py in the project's Reports folder under `_images/`. A taken name gets a number: nothing is overwritten."""
+    import filechange
+    import notes
+    code = str(req.get("code") or "")
+    if not report_doc.CODE.match(code):
+        return refuse(handler, "Say which project's report the picture is for.")
+    try:
+        raw = base64.b64decode(str(req.get("data") or ""), validate=True)
+    except ValueError:
+        return refuse(handler, "That picture couldn't be read.")
+    if len(raw) > IMAGE_MAX:
+        return refuse(handler, "Pictures can be 2 MB at most.")
+    ext = "png" if raw.startswith(b"\x89PNG\r\n\x1a\n") else "jpg" if raw.startswith(b"\xff\xd8\xff") else None
+    if not ext:
+        return refuse(handler, "Only PNG or JPEG pictures.")
+    folder = creaite_doc.images_dir({"project": code})
+    if folder is None:
+        return refuse(handler, f"{code} isn't a project creaite knows.")
+    label = os.path.splitext(str(req.get("name") or ""))[0]
+    with handler_lock(handler):
+        named = notes.image_name(label, ext)[:-len(ext) - 1]
+        target = paths.free_path(folder / "_images", named, f".{ext}")
+        done, msg = filechange.perform({"op": "create", "path": paths.rel(target), "data": raw,
+                                        "why": "a picture added to a report's text section"}, via="dashboard")
+    if done != 0:
+        return refuse(handler, msg, wait=done == filechange.NEEDS)
+    return answer(handler, {"ok": True, "ref": f"_images/{target.name}"})
+
+
+def images_route(handler, req):
+    """POST /api/report/images: the asked-for pictures as data addresses; an address of any other shape, or a file that isn't there, is
+    left out. Read only."""
+    code = str(req.get("code") or "")
+    if not report_doc.CODE.match(code):
+        return refuse(handler, "Say which project's pictures.")
+    out = {}
+    for ref in list(req.get("refs") or [])[:200]:
+        f = creaite_doc.text_image({"project": code}, str(ref))
+        if f is not None and f.stat().st_size <= IMAGE_MAX:
+            mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
+            out[str(ref)] = f"data:{mime};base64,{base64.b64encode(f.read_bytes()).decode('ascii')}"
+    return answer(handler, {"ok": True, "images": out})
 
 
 HOST = {}       # the live server's own lock, run and latest_apply (live_server registers them; never a second copy of the module)
@@ -285,4 +636,8 @@ def routes(lock, run, latest_apply):
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
-            "/api/report/export": guarded(export_route), "/api/report/logo": guarded(logo_route)}
+            "/api/report/pick": guarded(pick_route),
+            "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
+            "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
+            "/api/report/logo/remove": guarded(logo_remove_route), "/api/report/image": guarded(image_route),
+            "/api/report/images": guarded(images_route)}

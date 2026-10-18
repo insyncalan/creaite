@@ -11,10 +11,12 @@ import { openMilestone, msFind } from "../../milestones.js";
 import { openRecord } from "../../panel.js";
 import { kOfId } from "../../work.js";
 import { Icon } from "../Icon.jsx";
-import { Menu } from "../Menu.jsx";
+import { openMenu } from "../Menu.jsx";
+import { EyeButton } from "./EyeButton.jsx";
 import { SheetEditor, mdNodes } from "./SheetText.jsx";
-import { defaultHeading, hideSection, matchLabel, moveBy, moveFigure, moveSection, renameHeading, resetHeading,
-  rowCounts, sectionDiffers, setFigureShown, showSection, syncLayout } from "./sheetLib.js";
+import { defaultHeading, hideSection, isTextSection, matchLabel, moveBy, moveFigure, moveSection, renameHeading, resetHeading,
+  rowCounts, sectionDiffers, setFigureShown, showSection, syncLayout, withTextSection, withoutSection } from "./sheetLib.js";
+import { markNewText, takeNewText } from "../../stores/textSection.js";
 
 /** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./Sheet.jsx").SheetSection} SheetSection */
@@ -93,6 +95,7 @@ const tagsOf = s => /** @type {SheetTag[]} */ ((/** @type {any} */ (s)).tags || 
 function SheetDefault({ ctx, rowFn }) {
   const s = /** @type {any} */ (ctx.section), { Text: T, ItemRef: Ref, Tag: Tg } = ctx;
   const live = ctx.editing;
+  if (isTextSection(s)) return <FreeText ctx={ctx} />;
   if (s.type === "table") return <TableBody ctx={ctx} rowFn={rowFn} />;
   if (s.type === "figures") return <Figures ctx={ctx} />;
   if (s.type === "panes") return <div class="panes">{(s.panes || []).map((/** @type {any} */ p, /** @type {number} */ i) => <div key={i}><h3>{p.title}</h3><T pane={i} /></div>)}</div>;
@@ -101,6 +104,15 @@ function SheetDefault({ ctx, rowFn }) {
   return <div>{extra}<T rich />
     {!ctx.exported && (live || tagsOf(s).length) ? <span class="sheet-tags">{tagsOf(s).map(t => <Tg key={`${t.ref}|${t.text}`} tag={t} />)}</span> : null}
     {miles.length ? <ul>{miles.map((/** @type {any} */ x) => <li key={x.ref}><Ref id={x.ref} /> {x.m ? x.m.title || "" : ""}{x.m && x.m.due_date ? ` · ${x.m.due_date}` : ""}</li>)}</ul> : null}</div>;
+}
+
+/** A text section (#218): its words in the one editor with the Notes bar and `/` menu (SheetEditor's `text`), whole in Show as exported (the
+    same editor, read only). Its heading is the section's own, named by Alan. @param {{ctx: SectionCtx}} props */
+export function FreeText({ ctx }) {
+  const h = /** @type {Here} */ (useContext(SHEET_HERE)), s = /** @type {any} */ (ctx.section);
+  return <SheetEditor value={s.text || ""} rich text={{ code: String(ctx.doc.project || "") }} label={s.heading || "Text section"}
+    onText={t => h.update({ text: t }, "Text edited")} ai={h.ai} editable={h.editing}
+    placeholder="Write here. Anything you add is part of the report and its exports." />;
 }
 
 /** A table section: its shown rows, an eye on each while editing, "Showing 5 of 8". @param {{ctx: SectionCtx, rowFn?: (c: RowCtx) => any}} props */
@@ -120,8 +132,7 @@ function TableBody({ ctx, rowFn }) {
           readOnly: ctx.readOnly, setRow, removeRow, Text: T, ItemRef: Ref, Tag: Tg };
         if (rowFn) return rowFn(rc);
         return <tr key={row.ref || index} class={off ? "sheet-rowoff" : ""} data-ref={row.ref || undefined}>
-          {live ? <td class="eyec"><button type="button" class="eye" aria-pressed={off ? "false" : "true"} aria-label={`${off ? "Show" : "Leave out"} ${row.ref || "this row"}`}
-            onClick={() => setRow({ shown: off }, off ? "Row shown" : "Row hidden")}><Icon name="eye" /></button></td> : null}
+          {live ? <td class="eyec"><EyeButton on={!off} subject={Object.values(row.cells || {}).map(v => String(v || "").trim()).find(v => v && v !== row.ref && !/^[A-Z][A-Z0-9]{2,6}-[A-Z]-\d+$/.test(v)) || "this row"} cls="eye" onClick={() => setRow({ shown: off }, off ? "Row shown" : "Row hidden")} /></td> : null}
           {cols.map((/** @type {any} */ c) => <td key={c.key} data-col={c.key}>{off ? <span>{(row.cells || {})[c.key] || (c.key === "id" ? row.ref : "")}</span> : <T row={index} col={c.key} label={c.label} />}</td>)}
         </tr>;
       })}
@@ -147,8 +158,7 @@ function Figures({ ctx }) {
       onDragOver={live ? (/** @type {DragEvent} */ e) => { if (FIGDRAG) e.preventDefault(); } : undefined}
       onDrop={live ? (/** @type {DragEvent} */ e) => { e.preventDefault(); const from = FIGDRAG; if (from && from !== f.key) act(moveFigure(ctx.doc, s.id, from, f.key), "Figure moved"); setDrag(null); } : undefined}
       onDragEnd={() => setDrag(null)}>
-      {live ? <button type="button" class="eye sheet-figeye" aria-pressed={off ? "false" : "true"} aria-label={`${off ? "Show" : "Leave out"} ${f.label}`}
-        onClick={() => act(setFigureShown(ctx.doc, s.id, f.key, off), off ? "Figure shown" : "Figure hidden")}><Icon name="eye" /></button> : null}
+      {live ? <EyeButton on={!off} subject={f.label} cls="eye sheet-figeye" onClick={() => act(setFigureShown(ctx.doc, s.id, f.key, off), off ? "Figure shown" : "Figure hidden")} /> : null}
       {f.label}<b>{f.value}</b>{f.note}</div>;
   })}</div>;
 }
@@ -205,13 +215,15 @@ function SectionBlock({ s, i, p, peer }) {
   } : null;
   const ownSpark = sparkOn && !!ownRender && !!(/** @type {any} */ (ownRender)).ownSpark;   // #203: a renderer with no visible heading (the weekly health row) draws the ✦ itself, with <ctx.Spark />
   const fixed = s.type === "header" && ((p.renderers.byId || {}).header || {}).fixed !== false;
+  const headFixed = ((p.renderers.byId || {}).header || {}).fixed !== false;
+  const lo = headFixed ? doc.sections.reduce((n, x, k) => (x.type === "header" && n === k ? n + 1 : n), 0) : 0;   // fixed header sections above this index never move and nothing moves above them
   const grip = (/** @type {KeyboardEvent} */ e) => {
     if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
     e.preventDefault();
-    const d = e.key === "ArrowUp" ? -1 : 1, to = Math.max(0, Math.min(doc.sections.length - 1, i + d));
+    const d = e.key === "ArrowUp" ? -1 : 1, to = Math.max(lo, Math.min(doc.sections.length - 1, i + d));
     if (to === i) return;
     p.refocus.current = s.id;
-    change(moveBy(doc, s.id, d), "Section moved", { type: "section-moved", id: s.id, to });
+    change(moveBy(doc, s.id, d, lo), "Section moved", { type: "section-moved", id: s.id, to });
   };
   /** @type {SectionCtx} */
   const ctx = { section: s, doc, editing, exported, readOnly, update, setDoc: (nd, why) => onChange(nd, why), setMeta: (patch, why) => onChange({ ...doc, meta: { ...(doc.meta || {}), ...patch } }, why),
@@ -221,14 +233,30 @@ function SectionBlock({ s, i, p, peer }) {
   const differs = p.side === "left" && peer ? sectionDiffers(s, peer) : false;
   const tags = tagsOf(s);
   const nowName = (/** @type {string} */ v) => { if (v.trim() && v.trim() !== s.heading) change(renameHeading(doc, s.id, v), "Heading renamed", null); else setName(s.heading); };
+  const isText = isTextSection(s);
+  const [confirmDel, setConfirmDel] = useState(false);          // #218: deleting a text section that holds words asks first
+  const deleteIt = () => { setConfirmDel(false); change(withoutSection(doc, s.id), "Section deleted", { type: "section-deleted", id: s.id }); };
+  const headBox = useRef(/** @type {HTMLInputElement|null} */ (null));
+  useEffect(() => { if (isText && editing && takeNewText(s.id) && headBox.current) headBox.current.focus(); }, []);     // a text section just added: its heading takes the cursor
+  const report = !!p.report;
   const menu = [
-    { id: "hide", name: "Hide this section", line: "Left out of the export" },
-    ...(i > 0 ? [{ id: "up", name: "Move up" }] : []), ...(i < doc.sections.length - 1 ? [{ id: "down", name: "Move down" }] : []),
-    ...(s.heading !== defaultHeading(s) ? [{ id: "reset", name: "Reset the heading", line: defaultHeading(s) }] : [])];
+    { id: "hide", name: report ? "Leave out of the export" : "Hide this section", icon: "eyeoff" },
+    ...(i > lo ? [{ id: "up", name: "Move up", icon: "arrowup" }] : []), ...(i < doc.sections.length - 1 ? [{ id: "down", name: "Move down", icon: "arrowdown" }] : []),
+    ...(report ? [{ id: "addtext", name: "Add a text section below", icon: "type" }] : []),   // ReportSheet's addText(sectionId) is stores/textSection.js addTextSection
+    ...(s.heading !== defaultHeading(s) ? [{ id: "reset", name: "Reset the heading", icon: "undo" }] : []),
+    ...(isText ? [{ id: "delete", name: "Delete this section", icon: "trash" }] : [])];
   const onPick = (/** @type {string} */ id) => {
     if (id === "hide") change(hideSection(doc, s.id), "Section hidden", { type: "section-hidden", id: s.id });
     else if (id === "reset") change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id });
-    else { const d = id === "up" ? -1 : 1; p.refocus.current = s.id; change(moveBy(doc, s.id, d), "Section moved", { type: "section-moved", id: s.id, to: i + d }); }
+    else if (id === "addtext") p.report?.addText?.(s.id);
+    else if (id === "delete") { if (String(sec.text || "").trim()) setConfirmDel(true); else deleteIt(); }
+    else { const d = id === "up" ? -1 : 1; p.refocus.current = s.id; change(moveBy(doc, s.id, d, lo), "Section moved", { type: "section-moved", id: s.id, to: i + d }); }
+  };
+  /** The section menu is a popup drawn at the end of the page (Menu.jsx openMenu), not inside the scaled page: it keeps 13 px at any
+      zoom, opens under the chevron and stays clear of the side bar and the window's edges. */
+  const openSectionMenu = (/** @type {HTMLElement} */ anchor) => {
+    const rail = document.querySelector(".rail"), keep = rail ? rail.getBoundingClientRect().right + 8 : 8;
+    openMenu(anchor, { label: `${s.heading}: section options`, items: menu, onPick, cls: "rsmenu", minLeft: keep });
   };
   const drop = (/** @type {DragEvent} */ e) => {
     e.preventDefault(); setOver("");
@@ -237,7 +265,7 @@ function SectionBlock({ s, i, p, peer }) {
     const rect = /** @type {HTMLElement} */ (box.current).getBoundingClientRect(), below = e.clientY > rect.top + rect.height / 2;
     const fi = doc.sections.findIndex(x => x.id === from);
     let to = i + (below ? 1 : 0); if (fi < to) to -= 1;
-    change(moveSection(doc, from, to), "Section moved", { type: "section-moved", id: from, to });
+    change(moveSection(doc, from, to, lo), "Section moved", { type: "section-moved", id: from, to });
   };
   if (s.type === "header" && ownRender) return <SHEET_HERE.Provider value={here}><section data-id={s.id} ref={box}>{ownRender(ctx)}</section></SHEET_HERE.Provider>;
   return <SHEET_HERE.Provider value={here}>
@@ -247,19 +275,27 @@ function SectionBlock({ s, i, p, peer }) {
       {editing && !fixed ? <div class="sheet-handle">
         <button type="button" class="sheet-grip" draggable aria-label={`Move ${s.heading}. Alt and the arrow keys move it.`} data-tip="Drag to move" data-grip={s.id}
           onKeyDown={grip} onDragStart={(/** @type {DragEvent} */ e) => { DRAGGING = s.id; e.dataTransfer?.setData("text/plain", s.id); }} onDragEnd={() => { DRAGGING = null; setOver(""); }}>⋮⋮</button>
-        <Menu label="" icon="chevdown" chevron={false} ariaLabel={`${s.heading}: section options`} btnCls="sheet-hbtn" items={menu} onPick={onPick} />
+        <button type="button" class="sheet-hbtn" aria-haspopup="menu" aria-expanded="false" aria-label={`${s.heading}: section options`}
+          onClick={e => openSectionMenu(/** @type {HTMLElement} */ (e.currentTarget))}><Icon name="chevdown" /></button>
       </div> : null}
-      {s.type === "header" ? null : <h2>
-        {editing ? <input class="sheet-h" aria-label="Section heading" value={name} style={{ width: `${Math.max(8, name.length + 1)}ch` }} onInput={e => setName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
+      {s.type === "header" || (isText && !editing && !String(s.heading || "").trim()) ? null : <h2>
+        {editing ? <input ref={headBox} class="sheet-h" aria-label="Section heading" placeholder={isText ? "Section heading" : undefined} value={name}
+          style={{ width: `${Math.max(isText ? 18 : 8, name.length + 1)}ch` }} onInput={e => setName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
           onBlur={e => nowName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); /** @type {HTMLInputElement} */ (e.currentTarget).blur(); } if (e.key === "Escape") setName(s.heading); }} /> : s.heading}
         {editing && s.heading !== defaultHeading(s) ? <button type="button" class="sheet-reset" onClick={() => change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id })}>Reset</button> : null}
         {sparkOn && !ownSpark && spark ? <SparkButton on={spark} heading={s.heading} health={s.type === "health"} /> : null}
         {editing && tags.length ? <button type="button" class="sheet-untag" onClick={() => { update({ tags: [] }, "Tags removed"); onEvent({ type: "tag", removed: true, all: true, id: s.id }); }}>Remove all tags</button> : null}
         {differs && peer ? <span class="sheet-diff" tabIndex={0} title={`${p.peerLabel} reads differently here`}>≠ {p.peerLabel}</span> : null}
-        {p.side === "right" && !readOnly && !exported && p.match && !p.match.readOnly ? <span class="sheet-match">{p.match.label(s.id)}
+        {isText && !peer && !exported && p.side === "left" && p.addTo ? <span class="sheet-match" data-textonly>Internal only
+          {!p.addTo.readOnly ? <> · <button type="button" class="linkbtn" data-addto onClick={() => p.addTo?.one(s.id)}>Add to the {p.peerLabel.toLowerCase()} report</button></> : null}</span> : null}
+        {isText && !peer && !exported && p.side === "right" ? <span class="sheet-match" data-textonly>Written for the {p.peerLabel.toLowerCase()}</span> : null}
+        {(!isText || peer) && p.side === "right" && !readOnly && !exported && p.match && !p.match.readOnly ? <span class="sheet-match">{p.match.label(s.id)}
           {p.match.differs(s.id) ? <button type="button" class="linkbtn" onClick={() => p.match?.one(s.id)}>Match internal</button> : null}</span> : null}
       </h2>}
+      {confirmDel ? <div class="sheet-delask" role="alertdialog" aria-label="Delete this section?">Delete “{s.heading || "this text section"}” and what is written in it?
+        <button type="button" class="btn sm" data-delyes onClick={deleteIt}>Delete</button>
+        <button type="button" class="btn sm" onClick={() => setConfirmDel(false)}>Keep</button></div> : null}
       {rd ? <Redraft rd={staleWhy(rd) ? { status: "stale", why: staleWhy(rd) } : rd} s={s} readOnly={!editing} close={() => setRd(null)} onUse={(choice, a) => {
         if (staleWhy(rd)) { setRd({ ...rd, status: "stale", why: staleWhy(rd) }); return; }       // never applied from an earlier version
         if (used.current) return;                                                                          // a double click counts and applies once
@@ -313,7 +349,9 @@ function Redraft({ rd, s, readOnly, close, onUse, onOpen, known }) {
     peerDoc: SheetDoc|null, peerLabel: string, side: ""|"left"|"right", onChange: (d: SheetDoc, why: string) => void,
     onOpenItem?: (ref: string) => boolean, onEvent: (e: SheetEvent) => void, onRedraft?: (s: SheetSection) => Promise<any>,
     aiFor: (s: SheetSection, ro: boolean) => any, checks: any[], refocus: {current: string|null},
-    match: null | {readOnly: boolean, label: (id: string) => string, differs: (id: string) => boolean, one: (id: string) => void}}} PageProps */
+    match: null | {readOnly: boolean, label: (id: string) => string, differs: (id: string) => boolean, one: (id: string) => void},
+    report?: {audience: string, addText?: (sectionId: string) => void},
+    addTo?: null | {readOnly: boolean, one: (id: string) => void}}} PageProps */      // #218: the left page's "Add to the client report" for a text section the partner lacks
 
 /** One page: the header, its sections in order, the extras between them. @param {PageProps} p */
 export function SheetPage(p) {
@@ -331,14 +369,21 @@ export function SheetPage(p) {
     if (s.hidden) {
       if (!exported) out.push(<div key={s.id} class="sheet-hidden" data-hidden={s.id}>Hidden: {s.heading}
         {readOnly ? null : <> · <button type="button" class="linkbtn" onClick={() => { onChange(showSection(doc, s.id), "Section shown"); onEvent({ type: "section-shown", id: s.id }); }}>Show</button></>}</div>);
+    } else if (exported && s.type === "text" && !String(s.text || "").trim() && !(s.rows || []).length) {
+      /* #226: a text section with nothing in it is not drawn in the exported page (the exports of the weekly report had an empty heading) */
     } else out.push(<SectionBlock key={s.id} s={s} i={i} p={p} peer={p.peerDoc ? p.peerDoc.sections.find(x => x.id === s.id) || null : null} />);
     if (!exported) for (const x of p.extras.filter(e => e.after === s.id)) out.push(extra(x));
   });
   if (!exported) for (const x of p.extras.filter(e => e.after == null)) out.push(extra(x));
   const label = { internal: "Internal", client: "Client", distributed: "Distributed" }[/** @type {"internal"} */ (doc.audience || "internal")] || "";
-  return <div class="page" data-audience={doc.audience || "internal"}>
-    <header class="doc"><div><h1>{doc.title}</h1><div class="sub">{(/** @type {any} */ (doc)).project_name || ""}{(/** @type {any} */ (doc)).client ? ` · ${(/** @type {any} */ (doc)).client}` : ""}</div></div><div class="sub">{label}</div></header>
+  const addFoot = () => {
+    const last = doc.sections[doc.sections.length - 1], nd = withTextSection(doc, last ? last.id : null), nid = nd.sections[nd.sections.length - 1].id;
+    markNewText(nid); onChange(nd, "Text section added"); onEvent({ type: "text-added", id: nid });
+  };
+  return <div class="page" data-audience={doc.audience || "internal"} data-report={p.report ? "sheet" : undefined}>
+    {p.report ? null : <header class="doc"><div><h1>{doc.title}</h1><div class="sub">{(/** @type {any} */ (doc)).project_name || ""}{(/** @type {any} */ (doc)).client ? ` · ${(/** @type {any} */ (doc)).client}` : ""}</div></div><div class="sub">{label}</div></header>}
     {out}
+    {editing ? <div class="sheet-addfoot"><button type="button" class="btn sheet-addtext" data-addtext onClick={addFoot}><Icon name="plus" /> Add a text section</button></div> : null}
   </div>;
 }
 

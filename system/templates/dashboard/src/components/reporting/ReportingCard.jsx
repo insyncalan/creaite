@@ -20,11 +20,11 @@ function ReportingCardView({ code }) {
         <StateChip s={v.internal} />
         {v.internal.path ? <a class="btn sm" href="#" data-rpcard="internal" data-openfile={v.internal.path} aria-label="Open the weekly report">Open</a> : <a class="btn sm" data-rpcard="internal" aria-label="Open the weekly report" href={weeklyHref(code, week)}>Open</a>}
       </div>
-      <div class="rp-row">
+      {c ? <div class="rp-row">
         <span class="g"><b>Client report</b> · {c.client}<br /><span class="sub">{c.rhythm}{c.state.key === "due" ? " · due" : c.state.key === "notdue" ? " · not due this week" : ""}</span></span>
         <StateChip s={c.state} />
         {c.state.path ? <a class="btn sm" href="#" data-rpcard="client" data-openfile={c.state.path} aria-label="Open the client report">Open</a> : <a class="btn sm" data-rpcard="client" aria-label="Open the client report" href={clientReportHref(code, week, c.client)}>Open</a>}
-      </div>
+      </div> : null}
       <div class="acts">
         <button type="button" class="btn primary sm" data-rpcard="space" onClick={() => openSpace(code)}>Open reporting</button>
         <span class="sub">{lastFiled ? `Last filed: ${fd(lastFiled)}` : "Nothing filed yet"}</span>

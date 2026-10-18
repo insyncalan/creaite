@@ -105,9 +105,16 @@ export * from "./components/notes/FindUpdates.jsx";   /* BL-301 E: Find updates,
 export * from "./components/notes/DeleteNote.jsx";   /* #124: Delete note, its confirm box and the card */
 export * from "./stores/findUpdates.js";
 export * from "./stores/reporting.js";   /* BL-337: Reports and the reporting space */
+export * from "./stores/textSection.js";   /* #218: addTextSection(afterId), a text section's pictures */
 export * from "./components/reporting/ReportingSpace.jsx";
+export * from "./stores/reportingSettings.js";   /* #221: clientReportOn, the one function the hub asks */
+export * from "./stores/hub.js";   /* #221: the Reporting hub's state */
 export * from "./components/reporting/ReportsPage.jsx";
 export * from "./components/reporting/ReportingCard.jsx";
+export * from "./stores/reportingSettings.js";   /* H3 (#221): the client report setting, per project */
+import { crDialog, runCheck } from "./stores/clientReport.js";
+export { crDialog, runCheck };   /* the client report's left-out dialog and check, which the tests drive by name */
+export * from "./components/report/hub/ClientReportPanel.jsx";   /* H3 (#221): the hub's Client report settings panel */
 
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
 import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAsk0096, bootAsk0098, bootAsk0101, bootAsk0102, bootAsk0105, bootAsk0107, bootAsk0109, bootAsk0113, bootAsk0117, bootAsk0118, bootAsk0119, bootAsk0120, bootAsk0207, bootAsk0208, reattach } from "./ask.js";

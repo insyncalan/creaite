@@ -263,8 +263,8 @@ class HealthSuggest(LiveBrowserCase):
 class ReportRow:
     """What the weekly report's health row and the client sheet's share: the sparkle beside the heading, then the draft under it."""
 
-    section = "#v-weekly section[data-id=health]"
-    spark = "h2 .sheet-spark"                  # the weekly row's heading is hidden: its ✦ sits right of the flag
+    section = "#v-reporting section[data-id=health]"
+    spark = ".wr-why .sheet-spark"             # the health row's heading is hidden: its ✦ sits beside the reason (both reports)
 
     def open_report(self):
         raise NotImplementedError
@@ -351,7 +351,7 @@ class ReportRow:
 
 
 class WeeklyHealthRow(ReportRow, LiveBrowserCase):
-    spark = ".wr-hcol .sheet-spark"
+    spark = ".wr-why .sheet-spark"
 
     @classmethod
     def load(cls, v):
@@ -359,7 +359,7 @@ class WeeklyHealthRow(ReportRow, LiveBrowserCase):
 
     def open_report(self):
         self.b.eval("go('weekly',{code:'ABC'})")
-        self.b.wait("document.querySelector('#v-weekly section[data-id=health] .wr-flag')", 20)
+        self.b.wait("document.querySelector('#v-reporting section[data-id=health] .wr-flag')", 20)
 
     def test_the_request_is_internal_and_use_changes_the_flag_and_reason_in_the_report(self):
         b = self.b
@@ -374,7 +374,7 @@ class WeeklyHealthRow(ReportRow, LiveBrowserCase):
 
 
 class ClientHealthRow(ReportRow, LiveBrowserCase):
-    section = "#v-clientreport section[data-id=health]"
+    section = "#v-reporting section[data-id=health]"
     flag_sel = ".crflag"
 
     @classmethod
@@ -387,7 +387,7 @@ class ClientHealthRow(ReportRow, LiveBrowserCase):
 
     def open_report(self):
         self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+        self.b.wait("document.querySelector('#v-reporting .wr-health')", 20)
 
     def test_the_client_sheet_asks_for_the_client_audience_and_use_sets_the_client_flag(self):
         b = self.b
@@ -397,7 +397,7 @@ class ClientHealthRow(ReportRow, LiveBrowserCase):
         b.click(f"{self.section} .sheet-rdb .primary")
         b.wait(f"!document.querySelector('{self.section} .sheet-redraft')")
         self.assertEqual(b.eval(f"document.querySelector('{self.section} .crflag').textContent"), "OFF TRACK")
-        self.assertTrue(b.eval("!!document.querySelector('#v-clientreport [data-crdif]')"))          # it differs from the internal flag, and says so
+        self.assertTrue(b.eval("!!document.querySelector('#v-reporting [data-crdif]')"))          # it differs from the internal flag, and says so
         # the reason the flag differs is Alan's to write: Use records the difference but does not invent it, and opens the popover on it
         b.wait("document.getElementById('crWhy')")
         self.assertEqual(b.eval("(document.activeElement||{}).id+'/'+(document.activeElement||{}).tagName"), "crWhy/TEXTAREA")

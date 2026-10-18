@@ -144,8 +144,7 @@ class PrepPopup(LiveBrowserCase):
         got = b.eval("[...document.querySelectorAll('#dayMeets .dmpop button')].map(x=>x.textContent)")
         self.assertEqual(got, ["Open the prep page", "Open the file"])
         self.assertIn("Agenda saved", b.eval("document.querySelector('#dayMeets .dmpop .agsaved').textContent"))
-        b.click("#dayMeets .dmpop [data-prepgo]")
-        b.wait("location.hash.startsWith('#prep=')")
+        b.click_until("#dayMeets .dmpop [data-prepgo]", "location.hash.startsWith('#prep=')")   # a redraw between press and release loses a click (#152)
         self.assertFalse(b.eval(f"!!{DLG} && {DLG}.open"))                                           # the old popup never opened
 
     def test_111_the_peek_shows_the_aim_what_to_raise_and_the_ask_from_the_stored_focus(self):

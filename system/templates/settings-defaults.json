@@ -326,7 +326,6 @@
   },
   "reports": {
     "_about": "v2.1.0 (BL-335, BL-338): reports and minutes in creaite's own format; their HTML, Word and PDF exports.",
-    "file_exports_beside": false,
     "file_minutes_exports_beside": true
   }
 }

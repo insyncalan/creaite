@@ -12,12 +12,15 @@
    - ✦ per section (`onRedraft`), the one editor's AI bar (`ai`, places "report", "minutes" and "client"), inline checks, source tags, Find the
      source (`onSelectAction`), the standard peek with Sneak peek on every item ID, Side by side (levelled, ≠ markers, Match internal).
    - Saves 1.5 s after the last change, on ⌘S and on unmount, one at a time; a conflict stops saving and offers Reload.
+   - #221 H1: `renderBar` lets the Reporting hub draw the whole bar (its one toolbar: view switch, week, zoom, Show as exported, Export, Approve, cog) from the
+     sheet's own zoom and exported state; `belowBar` is a strip under it. Without them the bar is as it was (the minutes still use it).
    Text only through JSX. */
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { SheetPage, openSheetRef, labelOf } from "./SheetPage.jsx";
-import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom } from "./sheetLib.js";
+import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom, isTextSection, withTextSection } from "./sheetLib.js";
+import { bindTextSections } from "../../stores/textSection.js";
 import { headerPolicy } from "../../core/scrollPolicy.js";
 
 export { openSheetRef as openRef };
@@ -26,7 +29,7 @@ export { openSheetRef as openRef };
 /** @typedef {{ref?: string, cells?: Record<string, string>, shown?: boolean, source?: any}} SheetRow */
 /** @typedef {{id: string, type: string, heading: string, default_heading?: string, hidden?: boolean, text?: string,
     columns?: {key: string, label: string}[], rows?: SheetRow[], figures?: any[], panes?: {title: string, text: string}[],
-    tags?: SheetTag[], data?: any}} SheetSection */
+    tags?: SheetTag[], data?: any, audience?: string}} SheetSection */
 /** @typedef {{kind: string, audience?: string, project: string, title: string, date: string, version?: number,
     layout?: Record<string, any>, sections: SheetSection[], items?: Record<string, any>, sources?: any[], meta?: Record<string, any>,
     [k: string]: any}} SheetDoc */
@@ -59,7 +62,10 @@ export { openSheetRef as openRef };
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
     onOpenItem?: (ref: string) => boolean, partner?: SheetPartner|null, onChange: (doc: SheetDoc, why: string) => void,
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
-    toolbar?: any, banner?: {title: string, sub?: string}}} SheetProps */
+    toolbar?: any, banner?: {title: string, sub?: string},
+    renderBar?: (c: {zoom: number, setZoom: (z: number) => void, exported: boolean, setExported: (on: boolean) => void, status: string, bad: boolean}) => any,
+    belowBar?: any,
+    report?: {audience: string, addText?: (sectionId: string) => void}}} SheetProps */   // report: set by ReportSheet (the weekly and client reports); the minutes leave it out and keep their title block
 
 /** Where each page was left, by scrollKey (in memory, for the page's life): the zoom, and per pane the section at the top and the
     offset into it in unscaled pixels. @type {Map<string, {id: string, off: number, vy: number}>} */
@@ -390,11 +396,22 @@ export function Sheet(props) {
   };
   const pinch = (/** @type {number} */ dy) => setZoom(pinchZoom(zref.current, dy));
 
+  /* #218: stores/textSection.js addTextSection(afterId): what the sheet does when asked (any menu may ask); returns the new section's id */
+  const addText = useRef(/** @type {(afterId: string|null) => (string|null)} */ (() => null));
+  addText.current = afterId => {
+    if (leftRO) return null;
+    const had = new Set(P.current.doc.sections.map(s => s.id)), nd = withTextSection(P.current.doc, afterId), nid = (nd.sections.find(s => !had.has(s.id)) || {}).id || null;
+    changeMain(nd, "Text section added"); onEvent({ type: "text-added", id: nid });
+    return nid;
+  };
+  useEffect(() => bindTextSections(afterId => addText.current(afterId)), []);
+
   const pageProps = (/** @type {SheetDoc} */ d, /** @type {SheetPartner|null} */ p, /** @type {""|"left"|"right"} */ sd) => ({
     doc: d, renderers: (p ? p.renderers || props.renderers : props.renderers) || {}, extras: p ? [] : props.extras || [], exported,
     readOnly: p ? !!p.readOnly || !!props.readOnly : leftRO, peerDoc: p ? doc : partnerDoc, peerLabel: partner ? partner.label : "",
     side: sd, onChange: p ? changeSide : changeMain, onOpenItem: props.onOpenItem, onEvent, onRedraft: p ? undefined : props.onRedraft,
-    aiFor, checks: p ? [] : checks, refocus, match: p ? match : null });
+    aiFor, checks: p ? [] : checks, refocus, match: p ? match : null, report: props.report,
+    addTo: !p && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (/** @type {string} */ id) => { if (partner.match) partner.match(id); else changeSide(matchSection(doc, partnerDoc, id), "Matched internal"); } } : null });
   const frame = (/** @type {SheetDoc} */ d, /** @type {SheetPartner|null} */ p, /** @type {number} */ scale, /** @type {number} */ k) =>
     <SheetFrame key={p ? "r" : "l"} scale={scale} breaks={breaks[k] || []}><SheetPage {...pageProps(d, p, partner ? (p ? "right" : "left") : "")} /></SheetFrame>;
   const reg = (/** @type {() => void} */ fn) => { restorers.current.add(fn); return () => { restorers.current.delete(fn); }; };
@@ -402,8 +419,9 @@ export function Sheet(props) {
   const openChecks = checks.length;
   const note = main.conflict;
   return (
-    <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick}>
-      <div class="sheet-bar" role="toolbar" aria-label="Report">
+    <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick} data-report-sheet={props.report ? props.report.audience : undefined}>
+      <div class={`sheet-bar${props.renderBar ? " hubline" : ""}`} role="toolbar" aria-label="Report">
+        {props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: main.line, bad: !!main.line && !/^Saved/.test(main.line) }) : <>
         <span class="sheet-mini">{props.banner ? <><b>{props.banner.title}</b>{props.banner.sub ? <span class="sub">{props.banner.sub}</span> : null}</> : <b>{doc.title}</b>}</span>
         <span class="sheet-zoom" role="group" aria-label="Zoom">
           <button type="button" class="btn sm" aria-label="Zoom out" onClick={() => setZoom(stepZoom(zoom, -1))} disabled={zoom <= 0.4}>−</button>
@@ -412,11 +430,12 @@ export function Sheet(props) {
         </span>
         <button type="button" class="btn sheet-exp" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
         {partner && !exported ? <label class="sheet-tog"><input type="checkbox" checked={together} onChange={e => setTogether(/** @type {HTMLInputElement} */ (e.currentTarget).checked)} /> Scroll together</label> : null}
-        {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id)) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
+        {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id) && !(isTextSection(x) && !partner.doc.sections.some(y => y.id === x.id))) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
         <span class="sub sheet-status" role="status" data-bad={main.line && !/^Saved/.test(main.line) ? "1" : undefined}>{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
         {openChecks && !exported ? <span class="sheet-checks" data-checks={openChecks}>{openChecks} {openChecks === 1 ? "check" : "checks"} open</span> : null}
-        <span class="sheet-barr">{props.toolbar || null}</span>
+        <span class="sheet-barr">{props.toolbar || null}</span></>}
       </div>
+      {props.belowBar || null}
       {note ? <div class="sheet-note" role="alert">{note} <button type="button" class="btn sm" onClick={() => { main.reload(); onEvent({ type: "reload" }); }}>Reload</button></div> : null}
       {main.removed ? <div class="sheet-note sheet-removed" role="status">{main.removed}</div> : null}
       {partner && side.conflict ? <div class="sheet-note" role="alert">{partner.label}: {side.conflict} <button type="button" class="btn sm" onClick={() => { side.reload(); onEvent({ type: "reload", partner: true }); }}>Reload</button></div> : null}

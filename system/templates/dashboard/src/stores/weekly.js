@@ -6,6 +6,7 @@
    (the project's logo files, read only). Nothing here sends anything. */
 import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
+import { saveExport } from "./exportSave.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{ok: boolean, message?: string, doc?: SheetDoc, path?: string, where?: string, version?: number, filed?: boolean,
@@ -47,7 +48,7 @@ function takeWeekly(r) {
 }
 
 /** The logo files for the project, as data (once each). @param {string} code @param {{kind: string, path: string}[]} logos */
-async function readLogos(code, logos) {
+export async function readLogos(code, logos) {
   const have = weeklyLogos.value, want = logos.filter(l => !(l.path in have));
   if (!want.length) return;
   const r = await api("/api/report/logo", { code, paths: want.map(l => l.path) });
@@ -73,10 +74,13 @@ export async function approveWeekly(doc, force) {
   return r || { ok: false, message: "The apply didn't run; nothing was changed." };
 }
 
-/** Export the saved report as html, docx or pdf (P2's export, opened once made). @param {SheetDoc} doc @param {string} fmt */
-export async function exportWeekly(doc, fmt) {
-  const r = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
-  return r || { ok: false, message: "Not exported." };
+/** Export the saved report as html, docx or pdf and save it in the project's Reports folder (#220: a taken name asks, a save says
+    where; see stores/exportSave.js). #226: for html and pdf `page` is the report page as it is exported (components/report/exportPage.jsx;
+    posted again with a clash's re-ask); the server checks it against the saved report and falls back to the plain renderer.
+    @param {SheetDoc} doc @param {string} fmt @param {any} [page] */
+export async function exportWeekly(doc, fmt, page) {
+  return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || undefined });
+
 }
 
 /** Unsaved edits on the page (the sheet saves them; Approve and Export save first). */

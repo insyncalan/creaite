@@ -188,7 +188,9 @@ def reminders(t):
             folders[code] = paths.project_dir(code)
         except LookupError:
             continue
-        projects.append({"code": code, "name": name, "rhythm": build_dashboard.memory(folders[code])["rhythm"]})
+        mem = build_dashboard.memory(folders[code])
+        projects.append({"code": code, "name": name, "rhythm": mem["rhythm"], "client_report": mem["client_report"],
+                         "client_reminder": mem["client_reminder"]})        # H3 (#221): none for a project with no client report
     files = build_dashboard.files(folders)
     return build_dashboard.reminders(paths.load_settings(), projects, files, t.date(), t)
 

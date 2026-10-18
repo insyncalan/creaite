@@ -141,8 +141,8 @@ class ClientCheckRoutes(unittest.TestCase):
         c = self.post("/api/report/check", {"doc": doc})
         self.assertTrue(c["left_out"]["ready"], c["left_out"])
         self.assertEqual(c["left_out"]["health"], {"internal": "At risk", "client": "On track", "reason": "INTERNAL-REASON-ZED"})
-        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})
-        self.assertTrue(e["ok"], e)
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html", "on_clash": "number"})
+        self.assertTrue(e["ok"], e)      # #220: the filing name is reserved while the report is unfiled, so the export is numbered
         self.assertIn("left_out", e)                                        # the check ran before the export, and says what it found
         self.assertEqual(e["left_out"]["findings"], [])
         exported = Path(e["path"] if os.path.isabs(e["path"]) else self.v.root / e["path"]).read_text(encoding="utf-8")
@@ -168,7 +168,8 @@ class ClientCheckRoutes(unittest.TestCase):
             self.assertEqual(back["meta"]["health_diff"]["reason"], reason, "the draft keeps it (the internal report shows it from here)")
             a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "force": True})
             self.assertTrue(a["ok"], a)
-            filed = next((self.v.root / "projects").glob("*/reports/2026-10-09 Client report*.html")).read_text(encoding="utf-8")
+            filed = next(f for f in (self.v.root / "projects").glob("*/reports/2026-10-09 Client report*.html")
+                         if "(2)" not in f.name).read_text(encoding="utf-8")          # not test 4's numbered export
             self.assertIn('"state": "approved"', filed)
             for gone in ("health_diff", reason, "DISTINCTIVE-REASON", '"internal": "At risk"'):
                 self.assertNotIn(gone, filed)
@@ -203,8 +204,8 @@ class ClientBrowser(LiveBrowserCase):
         return self.b.eval("D.token")
 
     def open_view(self, week="2026-10-09"):
-        self.b.eval(f"go('clientreport',{{code:'ABC',week:'{week}'}})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+        self.b.eval(f"go('clientreport',{{code:'ABC',week:'{week}'}})")          # #221 H1: opens the hub's Client view
+        self.b.wait("document.querySelector('#v-reporting .wr-health')", 20)
 
     def approve_internal(self, summary="The internal summary, not for the client."):
         doc = self.api("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
@@ -215,16 +216,17 @@ class ClientBrowser(LiveBrowserCase):
 
     def test_opens_with_the_clients_own_words_and_none_of_the_internal_ones(self):
         self.open_view()
-        page = self.words("#v-clientreport .page")
+        page = self.words("#v-reporting .page")
         self.assertIn("Test licences are not yet ordered.", page)
         for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "Confirm tester names"):
             self.assertNotIn(internal, page)
         self.assertEqual(self.b.eval("document.title.startsWith('creaite')"), True)
-        self.assertEqual(self.b.eval("location.hash.startsWith('#client-report=ABC/2026-10-09/')"), True)
+        self.assertEqual(self.b.eval("location.hash"), "#reporting=ABC&w=2026-10-09&v=client")
 
     def test_client_health_needs_a_reason_and_match_internal_health_takes_the_internal_flag(self):
         self.open_view()
-        flag = "document.querySelector('[data-crflag]')"
+        flag = "document.querySelector('.crflag')"
+        change = "document.querySelector('[data-crflag]')"
         self.b.click("[data-crflag]")
         self.b.wait("document.querySelector('.crpop')")
         self.assertTrue(self.b.eval("document.activeElement && document.activeElement.closest('.crpop')!==null"))
@@ -238,7 +240,7 @@ class ClientBrowser(LiveBrowserCase):
         self.b.wait("document.querySelector('.crpop')")
         self.b.key("Escape")                                                           # Esc closes it, focus back on the flag
         self.b.wait("!document.querySelector('.crpop')")
-        self.assertTrue(self.b.eval(f"document.activeElement === {flag}"))
+        self.assertTrue(self.b.eval(f"document.activeElement === {change}"))
         self.b.click("[data-crflag]")
         self.b.click("[data-crmatchhealth]")
         internal = self.b.eval("(()=>{ const m=document.querySelector('[data-crdif]'); return m?m.textContent:'' })()")
@@ -247,15 +249,15 @@ class ClientBrowser(LiveBrowserCase):
     def test_an_eye_hides_a_row_and_match_internal_copies_a_section(self):
         self.approve_internal()
         self.open_view()
-        self.b.click("[data-crtable='risks'] [data-creye]")
-        self.assertTrue(self.b.eval("!!document.querySelector('[data-crtable=\"risks\"] tr.crhid')"))
-        self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('.crcount').textContent"))
-        self.b.click("[data-crtable='risks'] [data-creye]")                           # back: cells rebuilt from the client item
-        self.assertIn("Test licences are not yet ordered.", self.words("[data-crtable='risks']"))
+        self.b.click("#v-reporting section[data-id=risks] .rs-eye")
+        self.assertTrue(self.b.eval("!!document.querySelector('#v-reporting section[data-id=risks] tr.hidrow')"))
+        self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('#v-reporting section[data-id=risks] .wr-count').textContent"))
+        self.b.click("#v-reporting section[data-id=risks] .rs-eye")                           # back: cells rebuilt from the client item
+        self.assertIn("Test licences are not yet ordered.", self.words("#v-reporting section[data-id=risks]"))
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Edited for the client")
         self.b.click("[data-matchone='summary']")
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Matching internal")
-        self.assertEqual(self.b.eval("document.querySelector('section[data-id=\"summary\"] .sheet-rich').innerText.trim()"),
+        self.assertEqual(self.b.eval("document.querySelector('section[data-id=\"summary\"] .wr-rich').innerText.trim()"),
                          "The internal summary, not for the client.")
 
     def test_not_in_this_report_names_what_is_left_out_with_a_way_to_change_it(self):
@@ -268,41 +270,80 @@ class ClientBrowser(LiveBrowserCase):
     def test_side_by_side_shows_the_internal_page_read_only(self):
         self.approve_internal()
         self.open_view()
-        self.b.click("[data-crmode='side']")
-        self.b.wait("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit').length===2")
-        left = "document.querySelector('#v-clientreport .sheet-pair > .sheet-fit')"
-        self.assertIn("ABC-005", self.words("#v-clientreport .sheet-pair > .sheet-fit"))                    # the internal page has its own
-        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .sheet-fit + .sheet-fit"))
-        self.assertTrue(self.b.eval(f"[...{left}.querySelectorAll('.sheet-rich')].length>0 && [...{left}.querySelectorAll('.sheet-rich')].every(e=>e.getAttribute('contenteditable')==='false')"))
+        self.b.click("#hubSeg [data-hv='side']")
+        self.b.wait("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit').length===2")
+        left = "document.querySelector('#v-reporting .sheet-pair > .sheet-fit')"
+        self.assertIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit"))                    # the internal page has its own
+        self.assertNotIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit + .sheet-fit"))
+        self.assertTrue(self.b.eval(f"{left}.querySelectorAll('.wr-rich').length>0 && {left}.querySelectorAll('[contenteditable=true],textarea,.wr-edit').length===0"), "the internal page is read only")
         # the sheet's Match internal (partner.match) is the client-safe match: the summary comes over, never an internal row
-        self.b.eval("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-match .linkbtn').click()")
-        self.b.wait("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-rich')?.innerText.includes('The internal summary')", 10)
-        self.assertEqual(self.b.eval("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-rich').innerText.trim()"),
+        self.b.eval("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-match .linkbtn').click()")
+        self.b.wait("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .wr-rich')?.innerText.includes('The internal summary')", 10)
+        self.assertEqual(self.b.eval("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .wr-rich').innerText.trim()"),
                          "The internal summary, not for the client.")
-        self.b.eval("[...document.querySelectorAll('#v-clientreport .sheet-bar .btn')].find(x=>/Match internal for every section/.test(x.textContent)).click()")
-        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .sheet-fit + .sheet-fit"))
+        self.b.eval("document.querySelector('#v-reporting [data-crmatchall]').click()")
+        self.assertNotIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit + .sheet-fit"))
+
+    def menu_item(self, text):
+        self.b.wait(f"[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].some(e=>e.textContent.includes({json.dumps(text)}))", 10)
+        self.b.eval(f"[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].find(e=>e.textContent.includes({json.dumps(text)})).setAttribute('data-pick','1')")
+        self.b.click("[data-pick='1']")
 
     def test_export_waits_for_the_internal_week_and_the_check_runs_before_every_export(self):
+        """#221 H1: the hub's Approve menu keeps the client report greyed until the internal week is approved, and a client export runs the
+        left-out check (read only) before the export: the dialog stops it when the week isn't approved, and the check comes first when it is."""
         self.approve_internal()
         self.open_view()
-        self.assertTrue(self.b.eval("document.querySelector('[data-crcheck]').disabled"))
-        self.assertTrue(self.b.eval("document.querySelector('[data-crapprove]').disabled"))
+        self.b.click("#hubApprove")
+        self.b.wait("document.querySelector('.ddmenu.on [role^=menuitem]')", 10)
+        self.assertEqual(self.b.eval("[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].find(e=>/client report/.test(e.textContent)).getAttribute('aria-disabled')"), "true")
+        self.b.key("Escape")
         a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
         self.assertTrue(a["ok"], a)
         self.open_view()
-        self.b.wait("document.querySelector('[data-crcheck]:not([disabled])')", 15)     # the reload after the approval has landed
+        self.b.wait("document.querySelector('.hubstat[data-k=client]') && document.querySelector('.hubstat[data-k=client]').dataset.state==='draft'", 15)     # the reload after the approval has landed
         self.b.eval("(()=>{ window.__calls=[]; const f=window.fetch; window.fetch=(u,o)=>{ window.__calls.push(String(u)); return f(u,o); }; })()")
-        self.b.click("[data-crcheck]")
-        self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
-        text = self.b.eval("document.querySelector('#crLeftDlg').innerText")
-        self.assertIn("ABC-005 (not client-visible)", text)
-        self.assertIn("Internal notes and sources", text)
-        self.assertEqual(self.b.eval("window.__calls.filter(u=>u.endsWith('/api/report/check')).length>0"), True)
-        self.b.click("[data-crexport='html']")
-        self.b.wait("!document.querySelector('#crLeftDlg').open", 30)
+        self.b.click("#hubExport")
+        self.menu_item("HTML")
+        self.b.wait("document.querySelector('[data-hubpick=client]')", 10)
+        self.b.click("[data-hubpick='client']")
+        self.b.wait("document.querySelector('[data-export-saved],[data-export-failed],#exportClashDlg[open]')", 40)
         calls = self.b.eval("window.__calls")
+        self.assertTrue(any(u.endswith('/api/report/check') for u in calls))
         self.assertLess([i for i, u in enumerate(calls) if u.endswith('/api/report/check')][0],
                         [i for i, u in enumerate(calls) if u.endswith('/api/report/export')][0], "the check came first")
+
+    def test_c08_the_client_export_is_the_clients_exported_page_and_holds_nothing_internal(self):
+        """#226 check 8: the client report's HTML is the client view's own exported page (the same renderer as the weekly report's),
+        client-visible items only, and the server's re-check let it through."""
+        import time
+        self.approve_internal()
+        a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        self.open_view()
+        self.b.wait("document.querySelector('.hubstat[data-k=client]') && document.querySelector('.hubstat[data-k=client]').dataset.state==='draft'", 15)
+        self.b.click("#hubExport")
+        self.menu_item("HTML")
+        self.b.wait("document.querySelector('[data-hubpick=client]')", 10)
+        self.b.click("[data-hubpick='client']")
+        # #220: the export is filed in the project's Reports folder under the report's plain name (no "(read only)"), and a client
+        # report not yet filed meets its reserved filing name, so the clash dialog opens: its default (Add a number) is taken.
+        reports = list((self.v.root / "projects").glob("ABC*/reports"))[0]
+        before = set(reports.glob("*.html"))
+        end = time.time() + 40
+        files = []
+        while time.time() < end and not files:
+            if self.b.eval("!!document.querySelector('#exportClashDlg[open]')"):
+                self.b.eval("document.querySelector('#exportClashGo').click()")
+            files = [f for f in reports.glob("*lient report*.html") if f not in before]
+            time.sleep(0.3)
+        self.assertTrue(files, "no client export was written")
+        text = files[0].read_text(encoding="utf-8")
+        self.assertIn('data-theme="light"', text, "the page's own file, not the plain renderer's")
+        self.assertIn('id="v-clientreport"', text)
+        self.assertIn("Test licences are not yet ordered.", text)
+        for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "The internal summary", "creaite-data", "<script"):
+            self.assertNotIn(internal, text)
 
     @unittest.skipUnless(os.environ.get("CREAITE_SHOTS"), "set CREAITE_SHOTS=<folder> for screenshots")
     def test_zz_screenshots(self):
@@ -318,13 +359,13 @@ class ClientBrowser(LiveBrowserCase):
                 self.b.eval(f"document.documentElement.setAttribute('data-theme','{theme}')")
                 self.b.pump(0.4)
                 self.b.screenshot(str(out / f"client-{w}-{theme}.png"))
-                self.b.eval("document.querySelector('#v-clientreport .sheet-scroll').scrollTop=0")
+                self.b.eval("document.querySelector('#v-reporting .sheet-scroll').scrollTop=0")
                 if w == 1400:   # the other views once, at the desktop width
-                    self.b.click("[data-crmode='side']")
+                    self.b.click("#hubSeg [data-hv='side']")
                     self.b.pump(0.5)
                     self.b.screenshot(str(out / f"side-{w}-{theme}.png"))
-                    self.b.click("[data-crmode='client']")
-                    self.b.click("[data-crcheck]")
+                    self.b.click("#hubSeg [data-hv='client']")
+                    self.b.eval("crDialog.value=true; runCheck(); true")
                     self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
                     self.b.pump(0.3)
                     self.b.screenshot(str(out / f"leftout-{w}-{theme}.png"))
@@ -411,7 +452,7 @@ class ClientSheetAi(LiveBrowserCase):
 
     def test_the_client_sheet_sends_only_client_safe_facts_and_drops_an_internal_reply(self):
         self.open_view()
-        self.select_in("v-clientreport")
+        self.select_in("v-reporting")
         shown, prompt, body = self.suggest()
         self.assertEqual(body["place"], "client")
         self.assertEqual({k: body["document"][k] for k in ("kind", "code", "week_ending")},

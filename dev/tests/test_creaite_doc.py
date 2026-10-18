@@ -211,5 +211,50 @@ class Search(Base):
         self.assertIn("Overdue actions 3", out[3][2])
 
 
+
+class FixPass240(Base):
+    """The 2.4.0 fix pass (H5): a big picture, empty sections in the plain page."""
+
+    def test_a_picture_over_2_mb_is_left_out_with_a_plain_sentence_in_html_and_word(self):
+        out = self.js("from pathlib import Path\nimport tempfile\n"
+                      "root = Path(tempfile.mkdtemp()); (root / '_images').mkdir()\n"
+                      "(root / '_images' / 'big.png').write_bytes(b'\\x89PNG\\r\\n\\x1a\\n' + b'0' * (3 * 1024 * 1024))\n"
+                      "(root / '_images' / 'ok.png').write_bytes(b'\\x89PNG\\r\\n\\x1a\\n' + b'0' * 1000)\n"
+                      "creaite_doc.images_dir = lambda d: root\n"
+                      "w = creaite_doc._Word({'project': 'ABC'}, root)\n"
+                      "word = w.freetext({'text': '![chart](_images/big.png)'})\n"
+                      "print(json.dumps({'big': creaite_doc._image_html({}, 'chart', '_images/big.png'),\n"
+                      "                  'ok': creaite_doc._image_html({}, 'chart', '_images/ok.png')[:12], 'word': json.dumps(word)}))")
+        self.assertIn("Picture too large to include", out["big"])
+        self.assertNotIn("base64", out["big"])
+        self.assertTrue(out["ok"].startswith("<figure>"), out["ok"])
+        self.assertIn("Picture too large to include", out["word"])
+
+    def test_the_plain_page_leaves_out_a_section_with_nothing_in_it(self):
+        page = self.js("doc = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [\n"
+                       "  {'id': 'summary', 'type': 'text', 'heading': 'Summary', 'default_heading': 'Summary', 'hidden': False, 'text': ''},\n"
+                       "  {'id': 'progress', 'type': 'text', 'heading': 'Progress', 'default_heading': 'Progress', 'hidden': False, 'text': '  '},\n"
+                       "  {'id': 'current_state', 'type': 'panes', 'heading': 'Current state', 'default_heading': 'Current state', 'hidden': False, 'panes': []},\n"
+                       "  {'id': 'next', 'type': 'text', 'heading': 'Next steps', 'default_heading': 'Next steps', 'hidden': False, 'text': 'Plan the cutover.'}])\n"
+                       "print(json.dumps(creaite_doc.render(doc, editing=False)))")
+        for gone in ("Summary", "Progress", "Current state"):
+            self.assertNotIn(f"<h2>{gone}</h2>", page, gone)
+        self.assertIn("<h2>Next steps</h2>", page)
+        self.assertIn("Plan the cutover.", page)
+
+    def test_the_weekly_picker_offers_every_decision_not_sixty(self):
+        from test_tracker import ABC as FOLDER
+        self.v.propose("many", [{"n": i, "op": "new", "table": "decisions", "match": "strong", "flags": [], "decision": "approved",
+                                 "values": {"project": "ABC", "decision": f"Decision number {i}", "date": "2026-10-01",
+                                            "source": f"{FOLDER}/minutes/x.docx - Decisions"}} for i in range(1, 71)])
+        self.v.run("apply")
+        n = self.js("import report_doc\nprint(json.dumps(len(report_doc._pick_weekly('ABC')['decisions'])))")
+        self.assertEqual(n, 70)
+
+    def test_a_project_code_with_a_trailing_newline_is_not_a_code(self):
+        out = self.js("import report_doc\nprint(json.dumps([bool(report_doc.CODE.match('ABC')), bool(report_doc.CODE.match('ABC\\n'))]))")
+        self.assertEqual(out, [True, False])
+
+
 if __name__ == "__main__":
     unittest.main()

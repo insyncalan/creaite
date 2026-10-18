@@ -43,7 +43,7 @@ LOGO_KINDS = ("firm", "client", "partner")          # the firm's always first
 LOGO_EXT = (".png", ".jpg", ".jpeg", ".svg")
 DEFAULT_ROWS = {"risks": {"top": 5}}
 LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")
-CODE = re.compile(r"[A-Z][A-Z0-9]{2,6}$")
+CODE = re.compile(r"[A-Z][A-Z0-9]{2,6}\Z")   # \Z, not $: "ABC\n" is not a code
 TITLE = {"actions": "description", "raid": "description", "decisions": "decision", "milestones": "name", "promises": "description"}
 CLIENT_STATUS = {"Open": "In progress", "Delayed": "Delayed", "Closed": "Complete", "Cancelled": "Cancelled"}
 
@@ -119,7 +119,25 @@ def layout_for(code, kind, client=None):
     """The layout a project's next weekly report (or a client's next client report) starts from."""
     mine = stored_layouts().get(code) or {}
     saved = mine.get("weekly") if kind == "weekly" else (mine.get("clients") or {}).get(client or "")
-    return normal_layout(kind, saved)
+    lay = normal_layout(kind, saved)
+    chosen = project_logos(code)
+    if chosen is not None:                                       # H3 (#221): one choice for both reports' headers
+        lay["logos"] = chosen
+    return lay
+
+
+def project_logos(code):
+    """The logos the project's client report setting ticks (its CLAUDE.md `Client report logos` line), the firm's first; None when
+    the project has no such line, or no folder yet, so a report keeps the layout it remembered."""
+    import re
+    import build_dashboard
+    try:
+        text = (paths.project_dir(code) / "CLAUDE.md").read_text(encoding="utf-8")
+    except (LookupError, OSError):
+        return None
+    if not re.search(r"\*\*Client report logos:\*\*", text):
+        return None
+    return build_dashboard.client_report_setting(text)["logos"]
 
 
 def remember_layout(code, kind, layout, client=None):
@@ -149,7 +167,8 @@ def remember_layout(code, kind, layout, client=None):
 def logo_file(code, kind):
     """The logo file for the firm, or a project's client or partner logo, or None when none is set."""
     stem = "firm" if kind == "firm" else f"{code}-{kind}"
-    return next((paths.REPORT_LOGOS / f"{stem}{e}" for e in LOGO_EXT if (paths.REPORT_LOGOS / f"{stem}{e}").is_file()), None)
+    have = [paths.REPORT_LOGOS / f"{stem}{e}" for e in LOGO_EXT if (paths.REPORT_LOGOS / f"{stem}{e}").is_file()]
+    return max(have, key=lambda f: f.stat().st_mtime) if have else None          # H3: the one added last wins
 
 
 def logos(code, wanted=LOGO_KINDS):
@@ -442,6 +461,77 @@ def approved_weeks(code):
         if doc.get("kind") == "weekly" and doc.get("project") == code and doc.get("state") == "approved":
             out.append((doc["date"], paths.rel(f), int(doc.get("version") or 0)))
     return sorted(out, reverse=True)
+
+
+def _meta(*parts):
+    """Non-empty parts joined with ' · '."""
+    return " · ".join(x for x in parts if x)
+
+
+def _cand(ref, title, meta, item, cells):
+    """One thing Add from the tracker can offer: the row it would add (marked added) and the item the document keeps of it."""
+    return {"ref": ref, "title": title, "meta": meta, "item": item, "row": {"ref": ref, "shown": True, "source": "added", "cells": cells}}
+
+
+def _pick_client(code):
+    """The client report's candidates: only client-safe facts, in the client's words."""
+    facts, out = client_facts(code), {"risks": [], "overdue": [], "decisions": []}
+    for r in facts["raid"]:
+        out["risks"].append(_cand(r["id"], r["title"], r["type"], r, {"type": r["type"], "risk": r["title"]}))
+    for a in facts["actions"]:
+        if a["status"] in ("In progress", "Delayed"):
+            due = shown(a["due_date"])
+            cells = {"action": a["title"], "owner": a["owner"], "due": due}
+            out["overdue"].append(_cand(a["id"], a["title"], _meta(a["owner"], due), a, cells))
+    for d in facts["decisions"]:
+        made = d["status"] == "Made"
+        when = shown(d["date"]) if made else ("Needed by " + shown(d["needed_by"]) if d.get("needed_by") else "Needed")
+        words = d["title"] if made else f"Decision needed: {d['title']}"
+        out["decisions"].append(_cand(d["id"], d["title"], when, d, {"decision": words, "date": when}))
+    return out
+
+
+def _pick_weekly(code):
+    """The weekly report's candidates: any open RAID item or action, and the project's decisions."""
+    import report
+    import tracker
+    out = {"risks": [], "overdue": [], "decisions": []}
+    with tracker.connect() as con:
+        raid = [dict(r) for r in con.execute("SELECT * FROM raid WHERE project = ? AND status = 'Open'", (code,))]
+        raid.sort(key=lambda r: report.ORDER.index(r["priority"] or "Low"))
+        for r in raid:
+            text = f"{r['type']}: {r['description']}"
+            out["risks"].append(_cand(r["id"], text, _meta(r["priority"], r["owner"]), item(con, r["id"]),
+                                      {"id": r["id"], "risk": text, "priority": r["priority"] or "", "owner": r["owner"]}))
+        for a in con.execute("SELECT * FROM actions WHERE project = ? AND status IN ('Open', 'Delayed') "
+                             "ORDER BY COALESCE(due_date, '9999'), id", (code,)):
+            a = dict(a)
+            due = shown(a["due_date"])
+            out["overdue"].append(_cand(a["id"], a["description"], _meta(a["owner"], due), item(con, a["id"]),
+                                        {"id": a["id"], "action": a["description"], "owner": a["owner"], "due": due or "not due yet"}))
+        for d in con.execute("SELECT * FROM decisions WHERE project = ? AND status IN ('Made', 'Pending') "
+                             "ORDER BY COALESCE(date, needed_by, '0') DESC, id DESC", (code,)):
+            d = dict(d)
+            it = item(con, d["id"])
+            cells = {"decision": d["decision"], "by": d["made_by"] or "Not recorded", "date": shown(d["date"]),
+                     "source": source_label((it or {}).get("source"))}
+            out["decisions"].append(_cand(d["id"], d["decision"], _meta(d["made_by"], shown(d["date"])), it, cells))
+    return out
+
+
+def pickable(doc):
+    """Add from the tracker (#217, #221): the open items Alan may add to this report's tables, per section, not already in it.
+    Read only: nothing is written, and the tracker is never changed by adding. Each candidate is {ref, title, meta, row, item}: the
+    row is what the section would hold (marked `source: "added"`), the item what the document keeps of it. A weekly report may
+    take any open RAID item or action (not only overdue ones, which then read 'not due yet') and any decision of the project; a client
+    report only the client-safe facts (client-visible, complete client wording, no label that keeps it out), so a private item is
+    never even offered."""
+    kind, code = doc.get("kind"), str(doc.get("project") or "")
+    if kind not in KINDS or not CODE.match(code):
+        raise ReportError("Say which report: weekly or client, and the project's code.")
+    have = {s["id"]: {r.get("ref") for r in s.get("rows") or []} for s in doc.get("sections") or [] if s.get("type") == "table"}
+    out = _pick_client(code) if kind == "client" else _pick_weekly(code)
+    return {sid: [c for c in found if c["ref"] not in have.get(sid, set())] for sid, found in out.items() if sid in have}
 
 
 def baseline(code, on):
