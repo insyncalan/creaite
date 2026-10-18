@@ -24,6 +24,7 @@ Settings (settings-defaults.json `ai`, each in the catalogue with the reason for
 Every save goes through settings_catalogue.save (a backup and a log line per key), as every setting does.
 """
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -144,6 +145,10 @@ class KeyStore:
         """Delete the provider's key; True when there was one."""
         raise NotImplementedError
 
+    def peek(self, provider):
+        """The provider's key, for the provider call itself only (the live server, just before it calls), or None."""
+        raise NotImplementedError
+
 
 class NotBuiltStore(KeyStore):
     """Until the keychain is built: nothing is connected and no key is taken."""
@@ -159,6 +164,10 @@ class NotBuiltStore(KeyStore):
     def remove(self, provider):
         """Delete the provider's key; True when there was one."""
         return False
+
+    def peek(self, provider):
+        """No key is ever held."""
+        return None
 
 
 class MemoryStore(KeyStore):
@@ -178,6 +187,195 @@ class MemoryStore(KeyStore):
     def remove(self, provider):
         """Delete the provider's key; True when there was one."""
         return self._keys.pop(provider, None) is not None
+
+    def peek(self, provider):
+        """The provider's key, or None."""
+        return self._keys.get(provider)
+
+
+# ── #132 G1 (proposal): the keychain store ──────────────────────────────────────────────────────────────────────────────
+# A provider's key lives in this Mac's login keychain as one generic password: service "creaite.ai.<vault id>.<provider>"
+# (the vault id is a hash of the vault's real path, so two vaults never share a key), account "creaite". It is written,
+# read and deleted through Apple's Security framework, called in this process with ctypes (standard library: nothing is
+# installed). No program is started, so the key is never on a command line (`ps`), in an environment variable, a file, a
+# log line or a backup. Only the live server constructs this store (backend(), below); no creaite script has a command
+# that reads a key, providers.py itself is never run by a model run (reach.py) and no permission rule may name it or the
+# keychain (permissions.py). `has` never reads the secret. Errors carry the keychain's status and plain words, never a key.
+KEY_CHARS = re.compile(r"[A-Za-z0-9._~+/=:-]{8,400}")      # what an API key is made of: no spaces, quotes or new lines
+KEYCHAIN_ACCOUNT = "creaite"
+NOT_FOUND, DUPLICATE = -25300, -25299                       # errSecItemNotFound, errSecDuplicateItem
+KEYCHAIN_WORDS = {
+    -25308: "The keychain is locked or couldn't ask you: unlock your Mac and try again.",          # errSecInteractionNotAllowed
+    -128: "You said no to the keychain's question, so nothing was changed.",                        # errSecUserCanceled
+    -25293: "The keychain didn't accept your Mac's password, so nothing was changed.",              # errSecAuthFailed
+    -25291: "This Mac has no login keychain to keep the key in.",                                  # errSecNotAvailable
+    -25294: "This Mac has no login keychain to keep the key in.",                                  # errSecNoSuchKeychain
+}
+
+
+class KeychainError(RuntimeError):
+    """The keychain said no: plain words and its status, never the key."""
+
+    def __init__(self, status):
+        super().__init__(KEYCHAIN_WORDS.get(status, f"The keychain couldn't do that (status {status}). Nothing was changed."))
+        self.status = status
+
+
+def vault_id(root=None):
+    """A short, stable id for this vault (its real path, hashed): part of each key's keychain service name."""
+    import hashlib
+    import paths
+    real = os.path.realpath(str(root or paths.ROOT))
+    return hashlib.sha256(real.encode("utf-8")).hexdigest()[:12]
+
+
+class SecApi:
+    """The four Security framework calls the store needs, through ctypes: add, exists (no secret read), read and delete. Each
+    takes the service and account names and answers the OSStatus (0 is success). macOS only."""
+
+    _lib = None
+
+    @classmethod
+    def lib(cls):
+        """(Security, CoreFoundation, constants), loaded once."""
+        if cls._lib is None:
+            import ctypes
+            sec = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/Security.framework/Security")
+            cf = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+            vp = ctypes.c_void_p
+            for fn, res, args in ((cf.CFStringCreateWithCString, vp, [vp, ctypes.c_char_p, ctypes.c_uint32]),
+                                  (cf.CFDataCreate, vp, [vp, ctypes.c_char_p, ctypes.c_long]),
+                                  (cf.CFDictionaryCreate, vp, [vp, ctypes.POINTER(vp), ctypes.POINTER(vp), ctypes.c_long, vp, vp]),
+                                  (cf.CFDataGetLength, ctypes.c_long, [vp]), (cf.CFDataGetBytePtr, vp, [vp]),
+                                  (cf.CFRelease, None, [vp]), (sec.SecItemAdd, ctypes.c_int32, [vp, vp]),
+                                  (sec.SecItemCopyMatching, ctypes.c_int32, [vp, ctypes.POINTER(vp)]),
+                                  (sec.SecItemDelete, ctypes.c_int32, [vp])):
+                fn.restype, fn.argtypes = res, args
+            k = {n: vp.in_dll(sec, n).value for n in ("kSecClass", "kSecClassGenericPassword", "kSecAttrService",
+                                                       "kSecAttrAccount", "kSecAttrLabel", "kSecValueData", "kSecReturnData",
+                                                       "kSecMatchLimit", "kSecMatchLimitOne")}
+            k["true"] = vp.in_dll(cf, "kCFBooleanTrue").value
+            k["keys"] = ctypes.addressof(ctypes.c_byte.in_dll(cf, "kCFTypeDictionaryKeyCallBacks"))
+            k["values"] = ctypes.addressof(ctypes.c_byte.in_dll(cf, "kCFTypeDictionaryValueCallBacks"))
+            cls._lib = (sec, cf, k)
+        return cls._lib
+
+    def _query(self, service, account, extra=()):
+        """A CFDictionary for the item, and the CF objects to release after the call."""
+        import ctypes
+        sec, cf, k = self.lib()
+        made = [cf.CFStringCreateWithCString(None, s.encode("utf-8"), 0x08000100) for s in (service, account)]
+        pairs = [(k["kSecClass"], k["kSecClassGenericPassword"]), (k["kSecAttrService"], made[0]),
+                 (k["kSecAttrAccount"], made[1])]
+        for name, value in extra:                  # bytes: data; ("k", name): one of the constants; str: a string
+            if isinstance(value, bytes):
+                value = cf.CFDataCreate(None, value, len(value))
+                made.append(value)
+            elif isinstance(value, tuple):
+                value = k[value[1]]
+            else:
+                value = cf.CFStringCreateWithCString(None, value.encode("utf-8"), 0x08000100)
+                made.append(value)
+            pairs.append((k[name], value))
+        n = len(pairs)
+        vp = ctypes.c_void_p
+        d = cf.CFDictionaryCreate(None, (vp * n)(*[a for a, _ in pairs]), (vp * n)(*[b for _, b in pairs]), n,
+                                  k["keys"], k["values"])
+        return d, made + [d]
+
+    def _release(self, made):
+        cf = self.lib()[1]
+        for x in made:
+            if x:
+                cf.CFRelease(x)
+
+    def add(self, service, account, label, secret):
+        """SecItemAdd of a generic password."""
+        d, made = self._query(service, account, (("kSecAttrLabel", label), ("kSecValueData", secret)))
+        try:
+            return self.lib()[0].SecItemAdd(d, None)
+        finally:
+            self._release(made)
+
+    def exists(self, service, account):
+        """SecItemCopyMatching with no data asked for: whether the item is there, without reading its secret."""
+        d, made = self._query(service, account, (("kSecMatchLimit", ("k", "kSecMatchLimitOne")),))
+        try:
+            return self.lib()[0].SecItemCopyMatching(d, None)
+        finally:
+            self._release(made)
+
+    def read(self, service, account):
+        """(status, the secret's bytes or None)."""
+        import ctypes
+        sec, cf, k = self.lib()
+        d, made = self._query(service, account, (("kSecReturnData", ("k", "true")),
+                                                 ("kSecMatchLimit", ("k", "kSecMatchLimitOne"))))
+        out = ctypes.c_void_p()
+        try:
+            status = sec.SecItemCopyMatching(d, ctypes.byref(out))
+            if status != 0 or not out.value:
+                return status, None
+            return status, ctypes.string_at(cf.CFDataGetBytePtr(out), cf.CFDataGetLength(out))
+        finally:
+            self._release(made + [out.value])
+
+    def delete(self, service, account):
+        """SecItemDelete."""
+        d, made = self._query(service, account)
+        try:
+            return self.lib()[0].SecItemDelete(d)
+        finally:
+            self._release(made)
+
+
+class KeychainStore(KeyStore):
+    """Provider keys in this Mac's login keychain (the live server only)."""
+
+    def __init__(self, api=None, vault=None):
+        self.api = api or SecApi()
+        self.vault = vault or vault_id()
+
+    def service(self, provider):
+        """The keychain service name for a provider's key; ValueError for a provider that takes no key."""
+        if provider not in PROVIDERS or "key" not in PROVIDERS[provider][3] or not PROVIDERS[provider][4]:
+            raise ValueError("That provider can't be connected with a key.")
+        return f"creaite.ai.{self.vault}.{provider}"
+
+    def has(self, provider):
+        """True when the keychain holds the provider's key (its secret is not read). A keychain that can't answer (locked,
+        refused) counts as no key: the provider shows as not connected and nothing is sent to it."""
+        return self.api.exists(self.service(provider), KEYCHAIN_ACCOUNT) == 0
+
+    def put(self, provider, key):
+        """Keep the provider's key, replacing any earlier one."""
+        key = key.strip() if isinstance(key, str) else ""
+        if not KEY_CHARS.fullmatch(key):
+            raise Refused("That doesn't look like a key: check you copied just the key, with no spaces.")
+        svc = self.service(provider)
+        status = self.api.delete(svc, KEYCHAIN_ACCOUNT)
+        if status not in (0, NOT_FOUND):
+            raise KeychainError(status)
+        status = self.api.add(svc, KEYCHAIN_ACCOUNT, f"creaite AI key ({PROVIDERS[provider][0]})", key.encode("utf-8"))
+        if status != 0:
+            raise KeychainError(status)
+
+    def peek(self, provider):
+        """The provider's key, for the provider call itself, or None when there is none."""
+        status, data = self.api.read(self.service(provider), KEYCHAIN_ACCOUNT)
+        if status == NOT_FOUND:
+            return None
+        if status != 0 or data is None:
+            raise KeychainError(status)
+        return data.decode("utf-8")
+
+    def remove(self, provider):
+        """Delete the provider's key; True when there was one."""
+        status = self.api.delete(self.service(provider), KEYCHAIN_ACCOUNT)
+        if status in (0, NOT_FOUND):
+            return status == 0
+        raise KeychainError(status)
+# ── end #132 G1 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
 class Lister:
@@ -227,16 +425,23 @@ _BACKEND = {}
 
 
 def backend():
-    """(the key store, the lister): the fakes under a test, else the not-built stand-ins. The guarded build replaces the
-    not-built pair with the keychain store and the HTTPS lister here, and nowhere else."""
+    """(the key store, the lister): the fakes under a test; on a Mac the keychain store (#132 G1) with the not-built lister
+    until G2; else the not-built stand-ins. Only the live server calls this."""
     if not _BACKEND:
-        _BACKEND["pair"] = (MemoryStore(), FakeLister()) if fake_mode() else (NotBuiltStore(), NotBuiltLister())
+        if fake_mode():
+            _BACKEND["pair"] = (MemoryStore(), FakeLister())
+        elif sys.platform == "darwin":
+            _BACKEND["pair"] = (KeychainStore(), NotBuiltLister())
+        else:
+            _BACKEND["pair"] = (NotBuiltStore(), NotBuiltLister())
     return _BACKEND["pair"]
 
 
 def built():
-    """Whether connecting a provider can work at all (the fake under a test, or the real keychain once it is built)."""
-    return not isinstance(backend()[0], NotBuiltStore)
+    """Whether connecting a provider can work at all: both seams built (the fake under a test, or the keychain and the
+    provider call)."""
+    store, lister = backend()
+    return not isinstance(store, NotBuiltStore) and not isinstance(lister, NotBuiltLister)
 
 
 # ── Reading the settings ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -281,8 +486,8 @@ def connected(settings, store=None):
     key and settings hold its models."""
     store = store or backend()[0]
     saved = saved_providers(settings)
-    return [p for p in PROVIDER_ORDER if PROVIDERS[p][4] and
-            (p == "claude" or (store.has(p) and isinstance(saved.get(p), dict)))]
+    return [p for p in PROVIDER_ORDER if PROVIDERS[p][4] and          # #132 G1: settings first, so the keychain is asked only
+            (p == "claude" or (isinstance(saved.get(p), dict) and store.has(p)))]   # about a provider Alan connected
 
 
 def models_of(provider, settings, offered_only=True):
@@ -336,12 +541,18 @@ def other_connected(settings, store=None):
 
 
 # ── What the page shows ──────────────────────────────────────────────────────────────────────────────────────────────────
+def claude_auth(saved, store):
+    """How Claude signs in: "key" when settings hold a Claude key and the store has it, else "subscription". #132 G1: the
+    keychain is asked only once settings say Claude has a key."""
+    return "key" if isinstance(saved.get("models"), list) and store.has("claude") else "subscription"
+
+
 def card(pid, settings, store, conn):
     """One provider card: its words, status (connected, not, soon), how it signs in, its models and those found."""
     name, blurb, billing, how, live = PROVIDERS[pid]
     p = saved_providers(settings).get(pid) or {}
     on = pid in conn
-    auth = ("key" if store.has("claude") else "subscription") if pid == "claude" else ("key" if on else None)
+    auth = claude_auth(p, store) if pid == "claude" else ("key" if on else None)
     found = [m for m in p.get("models", []) if isinstance(m, dict) and m.get("id")] if on and pid != "claude" else []
     return {"id": pid, "name": name, "blurb": blurb, "billing": billing, "how": list(how),
             "status": "soon" if not live else "connected" if on else "not", "auth": auth,

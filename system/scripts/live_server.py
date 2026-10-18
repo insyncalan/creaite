@@ -5575,6 +5575,10 @@ def ai_connect_route(handler, req):
         store.put(held["provider"], held["key"])
     except providers.NotBuilt:
         return handler.send(200, {"ok": False, "reason": "not_built", "message": providers.NOT_BUILT_WORDS})
+    except (providers.KeychainError, providers.Refused, ValueError) as e:      # #132 G1: plain words and a status, no key
+        if debuglog is not None:
+            debuglog.info("ai-models", f"{held['provider']} key not kept ({getattr(e, 'status', 'refused')})")
+        return handler.send(200, {"ok": False, "reason": "keychain", "message": str(e)})
     _ai_save(providers.connect_changes(held["provider"], held["ids"], [str(x) for x in offered], paths.load_settings()),
              f"{held['provider']} connected")
     return _ai_answer(handler)
@@ -5610,7 +5614,10 @@ def ai_disconnect_route(handler, req):
         return handler.send(400, {"ok": False, "message": "That provider can't be disconnected."})
     settings = paths.load_settings()
     changes = providers.disconnect_changes(provider, settings)
-    providers.backend()[0].remove(provider)
+    try:
+        providers.backend()[0].remove(provider)
+    except providers.KeychainError as e:                      # #132 G1: the key is still there, so nothing else changes
+        return handler.send(200, {"ok": False, "reason": "keychain", "message": str(e)})
     if provider not in providers.saved_providers(settings):
         changes.pop("ai.providers", None)
     _ai_save(changes, f"{provider} disconnected")

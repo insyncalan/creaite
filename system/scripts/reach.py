@@ -743,6 +743,7 @@ SHELL_OUT = set(";&|<>(){}\n\r")
 WRAPPER = "run"
 WRAPPED = r"system/scripts/run ([a-z0-9_]+\.py)(?=\s|$)"
 WRAP_NAME = r"[a-z0-9_]+\.py"
+KEY_SCRIPTS = ("providers.py",)   # #132 G1: holds the AI key store (the keychain); never run, by the panel or the wrapper
 
 
 def wrap_problem(argv):
@@ -756,6 +757,8 @@ def wrap_problem(argv):
         return "runs only a creaite script in system/scripts/, by its bare name: no -c, -m, path or other program"
     if not (Path(__file__).resolve().parent / name).is_file():
         return f"found no system/scripts/{name}"
+    if name in KEY_SCRIPTS:                                    # #132 G1: no command line reaches the key store
+        return f"{name} holds the AI key store, which only the live server uses"
     for a in argv[1:]:
         if ("/" in a or a.startswith(("~", "."))) and not a.startswith("-"):
             kind, why = classify(a, "read")
@@ -804,6 +807,8 @@ def bash_problem(command):
 def _script_refused(script):
     if script == "permissions.py":
         return "permissions.py is never run by the panel"
+    if script in KEY_SCRIPTS:                                  # #132 G1: the AI key store is the live server's alone
+        return f"{script} holds the AI key store, which only the live server uses"
     if script in ("live_server.py", "launch.py"):
         return f"{script} starts the live server or the app, which ask creaite never does"
     if not (paths.ROOT / "system" / "scripts" / script).is_file():

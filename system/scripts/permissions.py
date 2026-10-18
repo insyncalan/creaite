@@ -56,6 +56,7 @@ EDIT_ROOTS = ("projects/", "inbox/", "system/staging/", "system/search/", "syste
 EDIT_NEVER = (".claude", ".git", "system/scripts", "system/templates", "system/tracker.db", "system/config", "system/releases",
               "system/branding")
 NEVER_SCRIPTS = {"permissions.py"}                     # the panel must not be able to widen its own permissions
+NEVER_SCRIPTS.add("providers.py")                       # #132 G1: the AI key store is the live server's alone
 SHELL_CHARS = re.compile(r"[;&|<>`$(){}\\\n\r]")
 RULE = re.compile(r"^(Bash|Edit|Write)\((.+)\)$")
 
@@ -789,6 +790,9 @@ def rule_refusal(rule):
     rule = normalise(str(rule))
     if SKIP_WORDS.search(rule):
         return "it skips permissions"
+    why = keychain_problem(rule)                                                  # #132 G1
+    if why:
+        return why
     why = connector_problem(rule)                                                 # F3: Microsoft 365, other connectors
     if why:
         return why
@@ -811,6 +815,27 @@ def rule_refusal(rule):
         if hit:
             return f"it would let a tool write {hit} (the database, the engine and creaite's rules stay behind their own commands)"
     return None
+
+
+# ===== #132 G1 (proposal): no permission rule reaches the keychain, where creaite keeps AI keys =====
+# The key store is the live server's alone (providers.KeychainStore, through the Security framework, in its own process). So no
+# allow rule may name macOS's keychain command, the keychain folders, creaite's keychain items or the key store's script, for
+# any tool, whatever is approved. A model run is refused these by the guard hook as well (reach.py); this is the second lock,
+# and it also keeps such a rule out of Alan's own Claude Code sessions in the vault.
+KEYCHAIN_PROGRAMS = ("security",)                     # macOS's keychain command
+KEYCHAIN_NAMES = re.compile(r"Library/Keychains|\bkeychain|creaite\.ai\.|\bproviders\.py\b", re.I)
+
+
+def keychain_problem(rule):
+    """Why a permission rule would reach the keychain or the AI key store, or None."""
+    rule = normalise(str(rule))
+    m = re.match(r"^(\w+)(?:\((.*)\))?$", rule)
+    spec = (m.group(2) or "") if m else rule
+    first = spec.strip().split()[0].rsplit("/", 1)[-1] if m and m.group(1) == "Bash" and spec.strip() else ""
+    if first in KEYCHAIN_PROGRAMS or KEYCHAIN_NAMES.search(spec):
+        return "it would reach the keychain or the AI key store, which only the live server uses"
+    return None
+# ===== end #132 G1 =====
 
 
 def settings_problem(kind, before, after):
