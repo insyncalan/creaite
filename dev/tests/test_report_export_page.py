@@ -36,11 +36,11 @@ class ExportPage(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         self.b.eval("go('weekly',{code:'ABC'})")
-        self.b.wait("document.querySelector('#v-weekly section[data-id=current_state]')", 20)
+        self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
         d = self.aeval("api('/api/report/draft',{kind:'weekly',code:'ABC'})")
         self.assertTrue(self.aeval("api('/api/report/save',{doc:%s,base_version:null})" % json.dumps(d["doc"]))["ok"])
         self.b.eval("go('weekly',{code:'ABC'})")
-        self.b.wait("document.querySelector('#v-weekly section[data-id=current_state]')", 20)
+        self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
 
     def ev(self, js):
         return self.b.eval(js)
@@ -58,13 +58,13 @@ class ExportPage(LiveBrowserCase):
 
     def show_exported(self):
         """Press Show as exported and wait for it."""
-        self.ev("[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(b=>b.textContent==='Show as exported').click()")
-        self.b.wait("document.querySelector('#v-weekly .sheet-exported') && !document.querySelector('#v-weekly .wr-eye')", 10)
+        self.ev("document.querySelector('#v-reporting #hubExp').click()")
+        self.b.wait("document.querySelector('#v-reporting .sheet-exported') && !document.querySelector('#v-reporting .wr-eye')", 10)
         time.sleep(0.4)           # the timeline fits itself to its box after the first draw
 
     def screen(self):
         """{section id: text and box} of the exported view on screen."""
-        return self.ev(SECTIONS_JS.replace("document.querySelectorAll('.page", "document.querySelectorAll('#v-weekly .page"))
+        return self.ev(SECTIONS_JS.replace("document.querySelectorAll('.page", "document.querySelectorAll('#v-reporting .page"))
 
     def drafts(self, pattern):
         return sorted((self.v.root / "system/staging/drafts").glob(pattern))
@@ -77,11 +77,13 @@ class ExportPage(LiveBrowserCase):
         """Press Export > fmt as the person does; returns the file the export wrote. #220: an unfiled report's HTML meets its reserved
         filing name, so the clash dialog opens and its default (Add a number) is taken."""
         before = self.saved()
-        self.ev("document.querySelector('#v-weekly [data-wrexport]').click()")
+        self.ev("document.querySelector('#v-reporting #hubExport').click()")
         self.b.wait("document.querySelector('[role=menu] [role=menuitem]')", 5)
         label = {"html": "HTML", "pdf": "PDF", "docx": "Word"}[fmt]
         self.ev("[...document.querySelectorAll('[role=menu] [role=menuitem]')].find(x=>x.textContent.includes(%r)).click()" % label)
         end = time.time() + 40
+        self.b.wait("document.querySelector('[data-hubpick=internal]')", 5)       # #221: the hub asks which report after the format
+        self.ev("document.querySelector('[data-hubpick=internal]').click()")
         while time.time() < end:
             if self.ev("!!document.querySelector('#exportClashDlg[open]')"):
                 self.ev("document.querySelector('#exportClashGo').click()")
@@ -127,8 +129,8 @@ class ExportPage(LiveBrowserCase):
     # ── 2 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_c02_health_block_strip_and_last_week(self):
         self.show_exported()
-        screen_flag = self.ev("document.querySelector('#v-weekly .wr-flag').textContent")
-        screen_weeks = self.ev("document.querySelectorAll('#v-weekly .wr-trend i').length")
+        screen_flag = self.ev("document.querySelector('#v-reporting .wr-flag').textContent")
+        screen_weeks = self.ev("document.querySelectorAll('#v-reporting .wr-trend i').length")
         f = self.export("html")
         b = self.open_file(f)
         self.assertEqual(b.eval("document.querySelector('.wr-flag').textContent"), screen_flag)
@@ -143,8 +145,8 @@ class ExportPage(LiveBrowserCase):
     # ── 3 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_c03_at_a_glance_strip(self):
         self.show_exported()
-        want = self.ev("[...document.querySelectorAll('#v-weekly .wr-stat')].map(s=>s.innerText.replace(/\\s+/g,' ').trim())")
-        red = self.ev("getComputedStyle(document.querySelector('#v-weekly .wr-stat .n.r')).color")
+        want = self.ev("[...document.querySelectorAll('#v-reporting .wr-stat')].map(s=>s.innerText.replace(/\\s+/g,' ').trim())")
+        red = self.ev("getComputedStyle(document.querySelector('#v-reporting .wr-stat .n.r')).color")
         b = self.open_file(self.export("html"))
         self.assertEqual(b.eval("[...document.querySelectorAll('.wr-stat')].map(s=>s.innerText.replace(/\\s+/g,' ').trim())"), want)
         self.assertEqual(b.eval("document.querySelectorAll('.wr-stats').length"), 1, "one strip, not loose boxes")
@@ -183,17 +185,17 @@ class ExportPage(LiveBrowserCase):
                          ["ID", "Action", "Owner", "Due", "Late"])
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('[data-id=overdue] .late')).color"),
                          self.ev("(()=>{const e=document.createElement('span');e.className='late';"
-                                 "document.querySelector('#v-weekly .page').append(e);const c=getComputedStyle(e).color;e.remove();return c})()"))
+                                 "document.querySelector('#v-reporting .page').append(e);const c=getComputedStyle(e).color;e.remove();return c})()"))
         self.assertTrue(re.search(r"\d+ days?", b.eval("document.querySelector('[data-id=overdue] .late').textContent")))
         self.assertEqual(b.eval("document.querySelector('[data-id=decisions]').innerText.replace(/\\s+/g,' ')"),
-                         self.ev("document.querySelector('#v-weekly [data-id=decisions]').innerText.replace(/\\s+/g,' ')"))
+                         self.ev("document.querySelector('#v-reporting [data-id=decisions]').innerText.replace(/\\s+/g,' ')"))
         self.assertIn("Nothing is needed from anyone this week.", b.eval("document.querySelector('[data-id=asks]').textContent"))
         self.assertEqual(b.eval("document.querySelectorAll('[data-id=asks] table').length"), 0, "an empty table is its sentence, not a header row")
 
     # ── 6 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_c06_headings_and_text(self):
         self.show_exported()
-        want = self.ev("(()=>{const h=document.querySelector('#v-weekly [data-id=this_week] h2');return getComputedStyle(h,'::before').width})()")
+        want = self.ev("(()=>{const h=document.querySelector('#v-reporting [data-id=this_week] h2');return getComputedStyle(h,'::before').width})()")
         b = self.open_file(self.export("html"))
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('[data-id=this_week] h2'),'::before').width"), want)
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('[data-id=this_week] h2')).textTransform"), "uppercase")
@@ -217,7 +219,7 @@ class ExportPage(LiveBrowserCase):
         saved = self.aeval("api('/api/report/save',{doc:%s,base_version:%s})" % (json.dumps(doc), d["version"] or "null"))
         self.assertTrue(saved["ok"], saved)
         self.b.eval("go('weekly',{code:'ABC'})")
-        self.b.wait("document.querySelector('#v-weekly section[data-id=current_state]')", 20)
+        self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
         self.show_exported()
         f = self.export("html")
         src = f.read_text(encoding="utf-8")
@@ -229,7 +231,7 @@ class ExportPage(LiveBrowserCase):
         b = self.open_file(f)
         self.assertEqual(b.eval("document.querySelectorAll('[data-id=risks] tbody tr').length"),
                          len(sec["risks"]["rows"]) - 1)
-        self.assertEqual(b.eval("document.querySelectorAll('.wr-stat').length"), self.ev("document.querySelectorAll('#v-weekly .wr-stat').length"))
+        self.assertEqual(b.eval("document.querySelectorAll('.wr-stat').length"), self.ev("document.querySelectorAll('#v-reporting .wr-stat').length"))
         self.assertEqual(b.eval("document.querySelectorAll('[data-id=milestones] tbody tr').length"), len(keep[:1]))
 
     # ── 9 ─────────────────────────────────────────────────────────────────────────────────────────────────────────

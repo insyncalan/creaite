@@ -90,8 +90,11 @@ class Banner:
                     mini:q('{self.VIEW} .sheet-mini').innerText, text:q('{self.VIEW} .sheet-bar').innerText}}}})()""")
                 self.assertEqual((st["bar"], st["head"]), (0, 0), "search bar and title block gone")
                 self.assertIn("·", st["mini"])
-                self.assertIn("Show as exported", st["text"])
-                self.assertIn("%", st["text"])
+                if self.VIEW != "#v-minutes":                                   # the hub's bar is icons: the controls are there, the words are tooltips
+                    self.assertTrue(self.b.eval(f"!!document.querySelector('{self.VIEW} .sheet-bar #hubExp') && !!document.querySelector('{self.VIEW} .sheet-bar #zVal')"))
+                else:
+                    self.assertIn("Show as exported", st["text"])
+                    self.assertIn("%", st["text"])
 
     def test_scrolling_up_never_brings_it_back_only_the_top_does(self):
         for w, h in WIDTHS:
@@ -145,9 +148,10 @@ class Banner:
 
     def menu_click(self):
         """Open the toolbar's Export menu (when the view has one) and pick its HTML item with real clicks."""
-        if not self.b.eval(f"!!document.querySelector('{self.VIEW} .sheet-barr [aria-haspopup]')"):
+        sel = "#hubExport" if self.VIEW == "#v-reporting" else f"{self.VIEW} .sheet-barr [aria-haspopup]"
+        if not self.b.eval(f"!!document.querySelector({json.dumps(sel)})"):
             return
-        self.press(f"{self.VIEW} .sheet-barr [aria-haspopup]")
+        self.press(sel)
         self.b.pump(0.4)
         item = self.b.eval("(()=>{const i=[...document.querySelectorAll('[role^=menuitem]')].find(e=>/HTML/.test(e.textContent)); "
                            "if(!i) return null; i.setAttribute('data-pick','1'); return 1})()")
@@ -181,15 +185,16 @@ class Banner:
 
 
 class WeeklyBanner(Banner, LiveBrowserCase):
-    VIEW, HEAD = "#v-weekly", ".wrhead"
+    """The hub's Internal view (#221 H1: the weekly page is retired; #v-reporting)."""
+    VIEW, HEAD = "#v-reporting", ".wrhead"
 
     @classmethod
     def load(cls, v):
         populate(v)
 
     def open_view(self):
-        self.b.eval("go('weekly',{code:'ABC'})")
-        self.b.wait("document.querySelector('#v-weekly section[data-id=current_state]')", 20)
+        self.b.eval("go('reporting','ABC')")
+        self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
 
     def test_a_save_that_fails_shows_in_the_slim_bar(self):
         """A real failed save (the save route stubbed to refuse) while the bar is slim: 'Not saved.' is visible, and it is a status."""
@@ -198,19 +203,19 @@ class WeeklyBanner(Banner, LiveBrowserCase):
         self.b.eval("""(()=>{ const real=window.fetch.bind(window);
           window.fetch=(u,o)=>String(u).endsWith('/api/report/save')?Promise.resolve(new Response(JSON.stringify({ok:false,message:'Not saved.'}),
             {headers:{'Content-Type':'application/json'}})):real(u,o); })()""")
-        self.b.eval("document.querySelector('#v-weekly [data-id=risks] tbody tr .wr-eye').click()")
-        self.b.eval("document.querySelector('#v-weekly .sheet-root').dispatchEvent(new KeyboardEvent('keydown',{key:'s',metaKey:true,bubbles:true,cancelable:true}))")
-        self.b.wait("/Not saved/.test(document.querySelector('#v-weekly .sheet-status').textContent)", 10)
+        self.b.eval("document.querySelector('#v-reporting [data-id=risks] tbody tr .wr-eye').click()")
+        self.b.eval("document.querySelector('#v-reporting .sheet-root').dispatchEvent(new KeyboardEvent('keydown',{key:'s',metaKey:true,bubbles:true,cancelable:true}))")
+        self.b.wait("/Not saved/.test(document.querySelector('#v-reporting .sheet-status').textContent)", 10)
         self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)), "still the slim bar")
-        self.assertGreater(self.b.eval("document.querySelector('#v-weekly .sheet-status').getBoundingClientRect().width"), 20)
-        self.assertEqual(self.b.eval("document.querySelector('#v-weekly .sheet-status').getAttribute('role')"), "status")
+        self.assertGreater(self.b.eval("document.querySelector('#v-reporting .sheet-status').getBoundingClientRect().width"), 20)
+        self.assertEqual(self.b.eval("document.querySelector('#v-reporting .sheet-status').getAttribute('role')"), "status")
 
     def test_the_slim_bar_has_the_weekly_buttons(self):
         self.start(1400, 1000)
         self.hide()
-        text = self.b.eval("document.querySelector('#v-weekly .sheet-bar').innerText")
-        for word in ("Weekly report", "Export", "Approve and file", "Show as exported"):
-            self.assertIn(word, text)
+        self.assertIn("Weekly reporting", self.b.eval("document.querySelector('#v-reporting .sheet-bar').innerText"))
+        for sel in ("#hubExport", "#hubApprove", "#hubExp", "#zVal", "#hubCfg"):
+            self.assertTrue(self.b.eval(f"document.querySelector('#v-reporting .sheet-bar {sel}').getBoundingClientRect().width>0"), sel)
 
 
 class WeeklyMotion(WeeklyBanner):
@@ -219,7 +224,8 @@ class WeeklyMotion(WeeklyBanner):
 
 
 class ClientBanner(Banner, LiveBrowserCase):
-    VIEW, HEAD = "#v-clientreport", ".crhead"
+    """The hub's Client view."""
+    VIEW, HEAD = "#v-reporting", ".wrhead"
 
     @classmethod
     def load(cls, v):
@@ -230,21 +236,30 @@ class ClientBanner(Banner, LiveBrowserCase):
         return {"CREAITE_NOW": R.NOW, "CREAITE_NO_LAUNCH": "1"}
 
     def open_view(self):
-        self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+        self.b.eval("go('reporting','ABC'); hubView.value='client'")
+        self.b.wait("document.querySelector('#v-reporting .crhealth')", 20)
 
 
 class ClientNote(ClientBanner):
     """A failed Approve client report from the slim bar leaves its message on screen, with Approve anyway."""
 
     def test_a_failed_approve_from_the_slim_bar_is_visible(self):
+        doc = self.b.eval("""fetch('/api/report/draft',{method:'POST',headers:{'Content-Type':'application/json','X-Creaite-Token':D.token},
+          body:JSON.stringify({kind:'weekly',code:'ABC',week_ending:'2026-10-09'})}).then(r=>r.json())""")["doc"]
+        next(x for x in doc["sections"] if x["id"] == "health")["text"] = "UAT start slipped two weeks."        # a health that is not On track needs its reason
+        self.b.eval(f"""fetch('/api/report/save',{{method:'POST',headers:{{'Content-Type':'application/json','X-Creaite-Token':D.token}},
+          body:JSON.stringify({{doc:{json.dumps(doc)},base_version:0}})}}).then(r=>r.json())""")
+        self.b.eval("""fetch('/api/report/approve',{method:'POST',headers:{'Content-Type':'application/json','X-Creaite-Token':D.token},
+          body:JSON.stringify({kind:'weekly',code:'ABC',week_ending:'2026-10-09',force:true})}).then(r=>r.json())""")
         self.start(1400, 1000)
         self.hide()
         self.b.eval("""(()=>{ const real=window.fetch.bind(window);
           window.fetch=(u,o)=>String(u).endsWith('/api/report/approve')&&/"kind":"client"/.test(String(o&&o.body))
             ?Promise.resolve(new Response(JSON.stringify({ok:false,message:'The check is awaiting review'}),{headers:{'Content-Type':'application/json'}})):real(u,o); })()""")
-        self.b.eval("document.querySelector('[data-crapprove]').disabled=false")
-        self.press("[data-crapprove]")
+        self.press("#hubApprove")
+        self.b.wait("[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].some(e=>/client report/.test(e.textContent)&&e.getAttribute('aria-disabled')!=='true')", 10)
+        self.b.eval("[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].find(e=>/client report/.test(e.textContent)).setAttribute('data-pick','1')")
+        self.press("[data-pick='1']")
         self.b.wait("document.querySelector('.crnote')", 10)
         self.b.pump(0.3)
         self.assertTrue(self.b.eval("!!" + SLIM.format(v=self.VIEW)), "still the slim bar")

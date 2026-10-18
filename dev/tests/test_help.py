@@ -27,7 +27,7 @@ from split_dashboard import readable_page  # noqa: E402
 # every ## heading of the old single-page Help, less "Guides" (replaced by a sentence in Reference's lead-in)
 OLD_HEADINGS = [
     "Keyboard shortcuts", "What the icons mean", "Opening the dashboard", "Working with lists", "How saving works", "Updating creaite", "Today",
-    "Project page", "Reports", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "Minutes view", "The report sheet", "The client view", "AI drafts", "Review", "Intake", "Files",
+    "Project page", "Reports", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "Minutes view", "The report sheet", "The Reporting page", "AI drafts", "Review", "Intake", "Files",
     "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
     "Word documents and permissions in ask creaite", "Commands for Claude", "Open creaite as an app", "Live server and backups", "Troubleshooting"]
 GROUPS = ["Every day", "Meetings", "Keeping it right", "Reporting", "Admin"]
