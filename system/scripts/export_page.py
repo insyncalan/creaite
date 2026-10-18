@@ -64,7 +64,7 @@ class _Invisible:
     """Characters that draw as nothing and so hide a word: every Unicode format character (category Cf: zero-width, direction marks and
     isolates, invisible separators such as U+2063, tags, the soft hyphen), the combining grapheme joiner U+034F, the variation
     selectors and Mongolian free variation selectors. `.sub(repl, text)` works like a compiled pattern's."""
-    EXTRA = {0x034F, 0x180B, 0x180C, 0x180D, 0x180E, 0x115F, 0x1160, 0x3164, 0xFFA0}
+    EXTRA = {0x17B4, 0x17B5, 0x2800, 0x034F, 0x180B, 0x180C, 0x180D, 0x180E, 0x115F, 0x1160, 0x3164, 0xFFA0}
 
     def hides(self, c):
         """Whether the character draws as nothing."""
@@ -88,6 +88,8 @@ SIZE = re.compile(r"^[\d.]+(px|%|em|mm)?$")
 DATA_IMAGE = re.compile(r"^data:image/(?:png|jpe?g|gif|webp|svg\+xml)(?:;charset=[\w-]+)?;base64,[A-Za-z0-9+/=\s]+$", re.I)
 BAD_STYLE = re.compile(r"expression\s*\(|javascript:|vbscript:|@import|(?<![-\w])behaviou?r\s*:|-moz-binding|</|<!--", re.I)
 URL_IN_CSS = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.I | re.S)
+NO_FUNCTIONS = re.compile(r"image-set\(|cross-fade\(|(?:-webkit-)?image\(")
+CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'"
 PALETTE = re.compile(r"^[A-Za-z0-9 _-]{1,40}$")
 META_KEYS = ("id", "type", "heading", "default_heading", "hidden", "shown", "ref", "key", "source")
 ITEM_WORDS = ("title", "description", "decision", "name", "response_action", "owner", "made_by")
@@ -103,15 +105,20 @@ def safe_css_value(v, client=False):
     """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address of a picture
     or a fragment of the file itself. A CLIENT file takes no SVG picture in its styles at all; an internal file takes one only if its
     words can be read (css_svg_words), and those are then checked like the page's own."""
-    if BAD_STYLE.search(v):
+    decoded = css_decode(v)
+    squashed = re.sub(r"\s+", "", decoded).lower()
+    if BAD_STYLE.search(v) or BAD_STYLE.search(decoded):
         return False
-    for m in URL_IN_CSS.finditer(v):
-        a = m.group(2).strip()
-        if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
-            return False
+    if NO_FUNCTIONS.search(squashed) or re.search(r"(?<![\w-])src\(", decoded, re.I):
+        return False     # a picture or address in a string the url() checks never see (image-set, cross-fade, src())
+    for text in (v, decoded):       # as written and as the browser reads it (u\72l( is url()
+        for m in URL_IN_CSS.finditer(text):
+            a = m.group(2).strip()
+            if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
+                return False
     if client and not metadata_free(v):
         return False
-    if SVG_ADDR.search(css_decode(v)) or SVG_ADDR.search(v):
+    if SVG_ADDR.search(decoded) or SVG_ADDR.search(v) or SVG_ADDR.search(squashed):
         return not client and css_svg_words(v) is not None
     return True
 
@@ -562,6 +569,7 @@ def build(doc, page, title):
     palette = str(page.get("palette") or "")
     attr = f' data-palette="{html.escape(palette, quote=True)}"' if PALETTE.match(palette) else ""
     return (f'<!doctype html>\n<html lang="en-GB" data-theme="light"{attr}><head><meta charset="utf-8">'
+            f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
             f'<meta name="viewport" content="width=device-width"><meta name="generator" content="creaite export page">'
             f"<title>{creaite_doc.esc(title)}</title><style>{css}</style><style>{PRINT_CSS}</style></head>\n"
             f"<body>{markup}</body></html>\n")

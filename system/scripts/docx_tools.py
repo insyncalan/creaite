@@ -81,14 +81,15 @@ PNG_KEEP = {b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND"}      # every other chun
 
 
 def _strip_png(data):
-    """A PNG's signature and its kept chunks (PNG_KEEP), or the data as it is when a chunk runs past the end."""
+    """A PNG's signature and its kept chunks (PNG_KEEP). A chunk that runs past the end, and whatever follows it, is dropped (fails
+    closed: the metadata never survives); so is everything after IEND."""
     import struct
     out, i = [data[:8]], 8
     while i + 8 <= len(data):
         n = struct.unpack(">I", data[i:i + 4])[0]
         kind, end = data[i + 4:i + 8], i + 12 + n
         if end > len(data):
-            return data
+            break
         if kind in PNG_KEEP:
             out.append(data[i:end])
         i = end
@@ -103,26 +104,34 @@ def _jpeg_kept(marker, seg):
 
 
 def _strip_jpeg(data):
-    """A JPEG without its APPn and comment segments; the pixels (from the scan on) as they were."""
+    """A JPEG without its APPn and comment segments, in every scan, and without any bytes after the end-of-image marker; the pixels
+    (the scans' entropy-coded data) as they were."""
     import struct
     out, i = [data[:2]], 2
-    while i + 4 <= len(data):
+    while i + 2 <= len(data):
         marker = data[i + 1] if data[i] == 0xFF else None
         if marker is None:
             return data
         if marker == 0xFF:
             i += 1
+        elif marker == 0xD9:                       # end of image: nothing after it is kept
+            return b"".join(out) + data[i:i + 2]
         elif marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
             out.append(data[i:i + 2])
             i += 2
         else:
+            if i + 4 > len(data):
+                return data
             end = i + 2 + struct.unpack(">H", data[i + 2:i + 4])[0]
             if end > len(data):
                 return data
-            if marker == 0xDA:                     # the scan and everything after it: pixels
-                return b"".join(out) + data[i:]
-            out += [data[i:end]] if _jpeg_kept(marker, data[i:end]) else []
+            if _jpeg_kept(marker, data[i:end]):
+                out.append(data[i:end])
             i = end
+            if marker == 0xDA:                     # skip the scan's data up to the next real marker
+                while i + 1 < len(data) and not (data[i] == 0xFF and data[i + 1] not in (0x00, 0xFF) and not 0xD0 <= data[i + 1] <= 0xD7):
+                    i += 1
+                out.append(data[end:i])
     return data
 
 
