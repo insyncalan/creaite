@@ -20,7 +20,9 @@
 .chk-res{font-size:13px;color:var(--muted);margin-top:6px}
 .chk-dot{position:absolute;top:6px;right:6px;min-width:22px;height:22px;border-radius:var(--r-pill,999px);background:var(--warn);color:#fff;font:700 12px/22px var(--font);text-align:center;padding:0 6px;cursor:pointer;z-index:2}
 .chk-dot.fix{background:var(--bad)}.chk-dot.done{background:var(--muted)}
-.sheet-a4 section{position:relative}
+.sheet-a4 section{position:relative;margin-top:0!important;width:auto!important;float:none!important}
+.sheet-a4 .sheet-handle{display:none}
+.sheet-a4 .sheet-h{font-weight:600}
 .chk-hl{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
 .chk-ins{background:var(--accent-soft);border-radius:3px}
 .mk-bar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:900;display:flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill,999px);box-shadow:var(--shadow-pop);padding:6px 10px;font:500 12px var(--font);color:var(--muted)}
@@ -277,6 +279,8 @@ var FL=[
  prop:'Add: Two high risks are open (ABC-003, ABC-004).',ins:false,btn:'Edit the reason'}
 ];
 var state='before',res={};
+var HEAD={health:'Health',glance:'At a glance',summary:'Summary',milestones:'Milestones',asks:'What we need from people',this_week:'This week',next_week:'Next week',decisions:'Decisions made this week',risks:'Risks and issues',overdue:'Overdue actions',current_state:'Current state'};
+Array.prototype.forEach.call(document.querySelectorAll('.sheet-a4 section'),function(s){var h=s.querySelector('.sheet-h');if(h&&HEAD[s.dataset.id]){h.value=HEAD[s.dataset.id];h.style.width=(HEAD[s.dataset.id].length+2)+'ch'}});
 var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){return [].slice.call((r||document).querySelectorAll(s))};
 var area=$('#chkArea'),side=$('#chkSide'),list=$('#chkList'),btn=$('#chkBtn'),status=$('.sheet-status');
 function sec(id){return $('.sheet-a4 section[data-id="'+id+'"]')}
