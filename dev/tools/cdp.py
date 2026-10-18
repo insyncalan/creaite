@@ -234,7 +234,7 @@ class Browser:
         try:
             marked = bool(self.eval("(window.__cdpOld=true)", wait=False))
         except RuntimeError:
-            pass
+            pass                                  # no document to mark yet: the reload below still waits for the page itself
         self.call("Page.reload", ignoreCache=True)
         time.sleep(0.3)
         if marked:
