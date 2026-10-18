@@ -1063,27 +1063,38 @@ class _Word:
     # ── the logos ──
     def logos(self, s):
         """The header's chosen logos as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it is."""
-        import docx_tools
         one = []
         for lg in (s.get("data") or {}).get("logos") or []:
             f = Path(str(lg.get("path") or ""))
             f = f if f.is_absolute() else paths.resolve(f.as_posix())
-            if not f.is_file():
+            try:                                    # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
+                if not f.is_file() or f.is_symlink():
+                    continue
+                one += self._logo_entry(f)
+            except Exception:           # a damaged or unreadable logo is left out of the file; the report is still made
                 continue
-            if f.suffix.lower() == ".svg":
-                head = f.read_text(encoding="utf-8", errors="replace")[:2000]
-                box = re.search(r'viewBox="[\d.\-]+[ ,]+[\d.\-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"', head)
-                wh = (re.search(r'\swidth="([\d.]+)', head), re.search(r'\sheight="([\d.]+)', head))
-                w, h = ((float(box[1]), float(box[2])) if box else (float(wh[0][1]), float(wh[1][1])) if all(wh) else (160.0, 48.0))
-                width = max(8, min(160, round(LOGO_HEIGHT * w / h)))
-                made = self.picture(f'<img src="{f.resolve().as_uri()}" style="width:{width}px;height:{LOGO_HEIGHT}px">',
-                                    width, LOGO_HEIGHT, width)
-                if made:
-                    one.append({"image": made[0]["image"], "width": width})
-            elif f.suffix.lower() in IMG_EXT:
-                w, h = docx_tools.image_size(f.read_bytes())
-                one.append({"image": str(f), "width": max(8, min(160, round(LOGO_HEIGHT * w / h)))})
         return [{"images": one}] if one else []
+
+    def _logo_entry(self, f):
+        """[one fill entry] for a logo file, or [] when it isn't a picture that can be drawn (a bad size, a damaged file)."""
+        import docx_tools
+        if f.suffix.lower() == ".svg":
+            head = f.read_text(encoding="utf-8", errors="replace")[:2000]
+            box = re.search(r'viewBox="[\d.\-]+[ ,]+[\d.\-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"', head)
+            wh = (re.search(r'\swidth="([\d.]+)', head), re.search(r'\sheight="([\d.]+)', head))
+            w, h = ((float(box[1]), float(box[2])) if box else (float(wh[0][1]), float(wh[1][1])) if all(wh) else (160.0, 48.0))
+            if not (w > 0 and h > 0):
+                return []
+            width = max(8, min(160, round(LOGO_HEIGHT * w / h)))
+            made = self.picture(f'<img src="{f.resolve().as_uri()}" style="width:{width}px;height:{LOGO_HEIGHT}px">',
+                                width, LOGO_HEIGHT, width)
+            return [{"image": made[0]["image"], "width": width}] if made else []
+        if f.suffix.lower() in IMG_EXT:
+            w, h = docx_tools.image_size(f.read_bytes())
+            if not (0 < w <= 20000 and 0 < h <= 20000):
+                return []
+            return [{"image": str(f), "width": max(8, min(160, round(LOGO_HEIGHT * w / h)))}]
+        return []
 
     # ── sections: each gives parts, ("e", entries) or ("t", columns, rows, styler); none means the section is left out ──
     def parts(self, s):
@@ -1218,10 +1229,15 @@ class _Word:
     def _drawn(self, s, every):
         """The milestones the timeline picture draws: every one the section's timeline names, as the sheet does (leaving one out of
         the list tidies the list only). A client report never draws one that isn't client-safe (not client-visible, or cancelled),
-        even if a document still names it: the gate drops those from the timeline, and this is a second line. Internal reports:
-        flip INTERNAL_TIMELINE_DRAWS_ALL to draw only the listed ones."""
+        even if a document still names it: the gate drops those from the timeline, and this is a second line that FAILS CLOSED
+        (p240-leakfix LEAK 3): the saved items hold no client_visible flag, so a milestone is drawn only when the tracker says it is
+        one of the client-safe set (`tracker.client_milestones`: client-visible, not cancelled, with its client wording, and no
+        label keeping it out); a tracker that can't be read draws none. Internal reports: flip INTERNAL_TIMELINE_DRAWS_ALL to draw
+        only the listed ones."""
         if self._client():
-            return [m for m in every if int(m.get("client_visible", 1) or 0) == 1 and m.get("status") != "Cancelled"]
+            safe = client_safe_ids(self.doc.get("project"))
+            return [m for m in every if m.get("id") in safe and int(m.get("client_visible", 1) or 0) == 1
+                    and m.get("status") != "Cancelled"]
         listed = set((s.get("data") or {}).get("milestones") or [])
         return every if INTERNAL_TIMELINE_DRAWS_ALL else [m for m in every if not listed or m["id"] in listed]
 
@@ -1254,9 +1270,9 @@ class _Word:
                           lambda r, c: TONE_HEX[tone[(r, c)]] if tone.get((r, c)) else None))
         return parts
 
-    @staticmethod
-    def _ms_row(m):
-        """One milestone's table row and the tones of its cells: the screen's Agreed, Expected (+days, or achieved) and State."""
+    def _ms_row(self, m):
+        """One milestone's table row and the tones of its cells: the screen's Agreed, Expected (+days, or achieved) and State. A client
+        file names the milestone by its title only: an item ID never reaches a client (p240-leakfix LEAK 2)."""
         word, t = _ms_state(m)
         base = m.get("baseline_date")
         fc = m.get("forecast_date") or base
@@ -1266,7 +1282,8 @@ class _Word:
         else:
             exp = _dmy(fc) + (f" (+{_day(fc) - _day(base)})" if late else "")
         pc = m.get("percent_complete")
-        row = [_nobraces(f"{m.get('id') or ''} {m.get('title') or m.get('name') or ''}".strip()),
+        name = f"{'' if self._client() else (m.get('id') or '')} {m.get('title') or m.get('name') or ''}".strip()
+        row = [_nobraces(name),
                _dmy(base), _nobraces(exp), f"{pc}%" if pc is not None else "", word]
         return row, {2: "r" if late and not m.get("actual_date") else None, 4: t}
 
@@ -1364,6 +1381,21 @@ def _code_paras(para, text):
         at = re.match(r"<w:p(?: [^>]*)?>", p).end()                 # the paragraph's properties go straight after its opening tag
         out.append(p[:at] + ppr + p[at:])
     return "".join(out)
+
+
+def client_safe_ids(code):
+    """The ids of the project's milestones a client may be shown, read from the tracker now (p240-leakfix LEAK 3); an empty set when
+    the tracker can't be read (fail closed). A test replaces it."""
+    try:
+        import client_leak
+        import report
+        import tracker
+        with tracker.connect() as con:
+            blocking = client_leak.blocking_labels(con)
+            return {m["id"] for m in tracker.client_milestones(report.milestones(con, code))
+                    if not client_leak.item_problem(con, m["id"], blocking)}
+    except Exception:
+        return set()
 
 
 def _colour_table(tbl, styler):

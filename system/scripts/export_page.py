@@ -21,6 +21,7 @@ import html
 import json
 import re
 import sys
+import unicodedata
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -45,6 +46,17 @@ SVG_TAGS = {"svg", "g", "line", "circle", "ellipse", "rect", "path", "polyline",
 GLOBAL_ATTRS = {"class", "role", "title", "lang", "dir", "colspan", "rowspan", "scope", "span", "headers", "datetime",
                 "width", "height", "alt", "aria-label", "aria-hidden", "aria-describedby", "aria-live", "tabindex"}
 NEVER_ATTRS = {"href", "xlink:href", "srcset", "action", "formaction", "srcdoc", "ping", "poster", "background"}
+# LEAK 1 (p240-leakfix): a CLIENT file keeps only these attributes (anything else could carry a hidden item's words or an item ID);
+# the needles still run over every attribute that is kept. `data-id` only as a section's own marker, `data-type` for task lists.
+CLIENT_ATTRS = {"class", "id", "colspan", "rowspan", "scope", "span", "width", "height", "role", "lang", "dir", "style", "src",
+                "data-id", "data-type", "data-checked"}
+CLIENT_SVG_ATTRS = {"viewbox", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke",
+                    "stroke-width", "stroke-dasharray", "stroke-linecap", "stroke-linejoin", "opacity", "fill-opacity",
+                    "stroke-opacity", "fill-rule", "transform", "font-size", "font-weight", "font-family", "text-anchor",
+                    "dominant-baseline", "preserveaspectratio", "xmlns", "offset", "stop-color", "stop-opacity", "gradientunits",
+                    "gradienttransform", "dx", "dy", "letter-spacing", "text-decoration", "class", "style", "width", "height", "id"}
+ITEM_ID = re.compile(r"\b[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+\b")
+CSS_CONTENT = re.compile(r"content\s*:\s*([^;}]*)", re.I)
 ID_OK = re.compile(r"^[A-Za-z][\w:.-]{0,60}$")
 DATA_ATTR = re.compile(r"^data-[a-z0-9_.:-]{1,40}$")
 SVG_ATTR = re.compile(r"^[a-z][a-z0-9:-]{0,30}$")
@@ -75,9 +87,17 @@ def safe_css_value(v):
     return True
 
 
-def keep_attr(tag, svg, name, value):
-    """Whether the attribute `name`="`value`" of an element `tag` (inside an svg when `svg`) is written."""
-    if name.startswith("on") or name in NEVER_ATTRS:
+def client_attr_ok(svg, name, value):
+    """Whether a CLIENT file may keep this attribute: only the short allow-list, and never a value that holds an item ID."""
+    if ITEM_ID.search(value) or not (name in CLIENT_ATTRS or (svg and name in CLIENT_SVG_ATTRS)):
+        return False
+    return name != "data-id" or bool(ID_OK.match(value))
+
+
+def keep_attr(tag, svg, name, value, client=False):
+    """Whether the attribute `name`="`value`" of an element `tag` (inside an svg when `svg`) is written. In a client file only the
+    short allow-list survives, and never a value that holds an item ID."""
+    if name.startswith("on") or name in NEVER_ATTRS or (client and not client_attr_ok(svg, name, value)):
         return False
     if name == "style":
         return safe_css_value(value)
@@ -96,8 +116,10 @@ class Clean(HTMLParser):
     """Rebuild markup from an allow-list. `out` is the clean HTML; `text` the words of it; `sections` the data-id of every
     section; `rows` {section id: body rows}. Nothing outside the lists is written."""
 
-    def __init__(self):
+    def __init__(self, client=False):
         super().__init__(convert_charrefs=True)
+        self.client = client
+        self.attr_values = []   # every attribute value that is written (checked like the text)
         self.out, self.text, self.sections, self.rows = [], [], [], {}
         self.skip = 0           # depth inside a dropped element
         self.svg = 0            # depth inside an svg
@@ -111,8 +133,10 @@ class Clean(HTMLParser):
         keep = []
         for name, value in attrs:
             name, value = name.lower(), "" if value is None else value
-            if keep_attr(tag, svg, name, value):
+            if keep_attr(tag, svg, name, value, self.client):
                 keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
+                if name != "src":
+                    self.attr_values.append(keep[-1][1])
         return "".join(f' {n}="{html.escape(v, quote=True)}"' for n, v in keep)
 
     def note_structure(self, tag, attrs):
@@ -192,15 +216,18 @@ class Clean(HTMLParser):
         self.stack = []
 
 
-def clean_markup(markup):
-    """(clean HTML, its text, section ids, {section id: body rows}) for posted markup."""
+def clean_markup(markup, client=False, attr_values=None):
+    """(clean HTML, its text, section ids, {section id: body rows}) for posted markup. `client`: the short attribute allow-list;
+    `attr_values`, a list, receives every attribute value written."""
     if not isinstance(markup, str) or not markup.strip():
         raise PageRefused("the page was empty")
     if len(markup) > MAX_HTML:
         raise PageRefused("the page was too large")
-    p = Clean()
+    p = Clean(client)
     p.feed(markup)
     p.close()
+    if attr_values is not None:
+        attr_values.extend(p.attr_values)
     return "".join(p.out), squash(" ".join(p.text)), p.sections, p.rows
 
 
@@ -317,18 +344,40 @@ def check_sections(doc, sections, rows):
             raise PageRefused("a table had more rows than the report shows")
 
 
-def check_page(doc, page, text, sections, rows):
-    """Raises PageRefused when the page isn't the saved report as the report may be exported."""
-    if page.get("version") is not None and int(page.get("version") or 0) != int(doc.get("version") or 0):
+def fold(t):
+    """Text for comparing words: Unicode-normalised, lower case, with no whitespace (inline marks split words in the markup)."""
+    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", str(t or "")).casefold())
+
+
+def is_client(doc):
+    """True for a client report."""
+    return doc.get("kind") == "client" or doc.get("audience") == "client"
+
+
+def css_strings(css):
+    """The words a stylesheet can draw with `content:`."""
+    return " ".join(m.group(1) for m in CSS_CONTENT.finditer(css or ""))
+
+
+def check_page(doc, page, text, sections, rows, attrs=(), css=""):
+    """Raises PageRefused when the page isn't the saved report as the report may be exported. `attrs` are the attribute values the
+    file keeps and `css` its style rules: they are read like the text (LEAK 1); the version is required (LEAK 5); words are
+    matched without case or accents-as-written (LEAK 6)."""
+    try:
+        sent = int(page.get("version"))
+    except (TypeError, ValueError):
+        raise PageRefused("the page didn't say which version of the report it was drawn from") from None
+    if sent != int(doc.get("version") or 0):
         raise PageRefused("the page was drawn from a different version than the saved report")
     check_sections(doc, sections, rows)
-    bare = re.sub(r"\s+", "", text)           # inline marks split words in the markup, so compare without any space
-    if any(re.sub(r"\s+", "", n) in bare for n in hidden_needles(doc)):
+    bare = fold(" ".join([text] + list(attrs)) + " " + str(css or ""))
+    if any(fold(n) in bare for n in hidden_needles(doc)):
         raise PageRefused("the page held words the report leaves out")
-    if doc.get("kind") == "client" or doc.get("audience") == "client":
+    if is_client(doc):
         import client_leak
+        everything = "\n".join([text] + list(attrs) + [css_strings(css)])
         with client_leak.connect() as con:
-            if client_leak.plain_findings(con, doc.get("project"), text):
+            if client_leak.plain_findings(con, doc.get("project"), everything):
                 raise PageRefused("the page held content a client report must not show")
 
 
@@ -367,9 +416,10 @@ def build(doc, page, title):
     Raises PageRefused."""
     if not isinstance(page, dict):
         raise PageRefused("no page was sent")
-    markup, text, sections, rows = clean_markup(page.get("html"))
+    attrs = []
+    markup, text, sections, rows = clean_markup(page.get("html"), is_client(doc), attrs)
     css = clean_css(page.get("css"))
-    check_page(doc, page, text, sections, rows)
+    check_page(doc, page, text, sections, rows, attrs, css)
     palette = str(page.get("palette") or "")
     attr = f' data-palette="{html.escape(palette, quote=True)}"' if PALETTE.match(palette) else ""
     return (f'<!doctype html>\n<html lang="en-GB" data-theme="light"{attr}><head><meta charset="utf-8">'

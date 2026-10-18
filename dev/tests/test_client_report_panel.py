@@ -239,7 +239,7 @@ class ClientReportPanel(LiveBrowserCase):
         self.open_panel()
         jpg = Path(self.v.root) / "client.jpg"
         jpg.write_bytes(base64.b64decode(
-            "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="))
+            "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=") + b"\xff\xd9")      # p240-leakfix: a JPEG now has to end with its EOI marker
         b.set_files("[data-logo-file=client]", [jpg])
         b.wait("!!document.querySelector('#cfgLogoNote')")
         self.assertIn("A transparent PNG or SVG sits better", b.eval("document.querySelector('#cfgLogoNote').textContent"))
