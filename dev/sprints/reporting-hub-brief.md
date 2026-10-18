@@ -32,7 +32,7 @@ They choose which **logos print in the header of this client's reports**: the fi
 One page for a project's weekly reporting, replacing the separate weekly and client pages:
 - **Switch: Internal | Client | Side by side.** Side by side shows both sheets at a readable size with their scrolling kept together, so a client section can be compared with the internal section it came from.
 - **Week control** (earlier and later week) and **status chips**: "Internal: draft", "Client: waits for the internal report" (the client facts lock when the internal report is approved, as today).
-- **One shared toolbar:** zoom, Show as exported, Check this report, Export, **Approve** (Approve the internal report; Approve the client report, available once the internal one is approved). Actions apply to the report in view, or both when side by side (Export asks which, or exports both).
+- **One shared toolbar:** zoom, Show as exported, Check this report, Export, **Approve** (Approve the internal report; Approve the client report, available once the internal one is approved). Actions apply to the report in view, or both when side by side. Export asks Internal, Client or Both only when the project's client report is on; with it off it exports the internal report without a question.
 - Reached from the project's reporting space, from Reports, and from the weekly report reminder.
 
 ## 6: client report on or off, per project
@@ -120,9 +120,9 @@ Unchanged: the client report holds only client-visible items; its text sections 
 
 Reporting moves into 2.4 (hub, one sheet component, client switch, text section). The small defects (header, 96 px indicator, eyes, menu, export, save to disk) are patch-sized and can ship in the next patch, but Alan has said no reporting development until his UI review is complete.
 
-## For Alan (open questions)
+## For Alan (open questions): answered 18-10-2026
 
-1. **Default for a new project:** client report on or off? I recommend off.
-2. **Side by side: export both together?** I recommend Export asks "Internal, Client or Both".
-3. **Where the client switch lives:** the hub's settings and Settings › Projects (same setting). OK?
-4. **Retire the separate client report page?** I recommend yes: one hub, reached by the same links.
+1. **Default for a new project: client report OFF.** Decided (as recommended). Existing projects stay on, as today.
+2. **Export and the choice of report:** the Export menu asks **Internal, Client or Both only when the project's client report is ON**. With it OFF, Export just exports the internal report, with no question. (This replaces my recommendation to always ask.) The locked mockup's Export menu shows only the formats, so the visible mockup does not change; this is the rule for the build. With the client report on, the question comes after the format is chosen; "Both" saves two files (each with its own name-clash choice if needed) and one message naming both.
+3. **Where the client switch lives:** in the hub's cog panel and in Settings › Projects, **one setting**, whichever is used. Decided.
+4. **The separate client report page is retired.** One hub, reached by the same links. Decided.
