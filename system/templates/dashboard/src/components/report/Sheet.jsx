@@ -53,7 +53,7 @@ export { openSheetRef as openRef };
 /** @typedef {{id: string, section: string, field?: string, row?: number, pane?: number, quote: string, note?: string, last?: string,
     actions?: {id: string, label: string}[]}} SheetCheck */
 /** @typedef {{doc: SheetDoc, label: string, baseVersion?: number, scrollKey?: string, renderers?: SheetRenderers, readOnly?: boolean,
-    match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
+    match?: (id: string) => void, matchAll?: (ids: string[]) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
     exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
@@ -336,7 +336,7 @@ export function Sheet(props) {
 
   /** The AI bar's account of one section of one pane (p241: each pane has its own: its report, its place, its key). */
   const aiFor = (/** @type {SheetSection} */ s, /** @type {boolean} */ ro, /** @type {boolean} */ right = false) => {
-    const ai = () => (right && P.current.partner && P.current.partner.ai) || P.current.ai, pane = `${sid}${right ? "r" : "l"}`;
+    const ai = () => (right ? P.current.partner && P.current.partner.ai : P.current.ai), pane = `${sid}${right ? "r" : "l"}`;
     const a = ai();
     if (!a) return undefined;
     return { place: ro || eref.current ? "readonly" : a.place, sheetId: pane, project: () => { const x = ai(); return x && x.project ? x.project() : ""; },
@@ -347,7 +347,7 @@ export function Sheet(props) {
     const finder = (/** @type {boolean} */ right) => async (/** @type {any} */ range, /** @type {any} */ h) => {
       const at = h.el.getBoundingClientRect(), sectionId = (h.el.closest("section[data-id]") || {}).dataset?.id;
       const place = { x: Math.max(8, Math.min(at.left, window.innerWidth - 340)), y: Math.min(at.bottom + 6, window.innerHeight - 160) };
-      const find = (right && P.current.partner && P.current.partner.onSelectAction) || P.current.onSelectAction;
+      const find = right ? P.current.partner && P.current.partner.onSelectAction : P.current.onSelectAction;   // each pane its own, no fallback to the other
       if (!find) { setFound({ ...place, message: "Finding the source isn't available here." }); return; }
       setFound({ ...place, message: "Looking…" });
       try { const a = await find("source", { sectionId, text: range.text }); setFound({ ...place, items: (a && a.found) || [], message: a && a.found && a.found.length ? "" : "No source found." }); }
@@ -451,7 +451,7 @@ export function Sheet(props) {
         </span>
         <button type="button" class="btn sheet-exp" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
         {partner && !exported ? <label class="sheet-tog"><input type="checkbox" checked={together} onChange={e => setTogether(/** @type {HTMLInputElement} */ (e.currentTarget).checked)} /> Scroll together</label> : null}
-        {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id) && !(isTextSection(x) && !partner.doc.sections.some(y => y.id === x.id))) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
+        {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { const ids = doc.sections.filter(x => match && match.differs(x.id) && !(isTextSection(x) && !partner.doc.sections.some(y => y.id === x.id))).map(x => x.id); if (partner.matchAll) partner.matchAll(ids); else for (const id of ids) partner.match(id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
         <span class="sub sheet-status" role="status" data-bad={main.line && !/^Saved/.test(main.line) ? "1" : undefined}>{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
         {openChecks && !exported ? <span class="sheet-checks" data-checks={openChecks}>{openChecks} {openChecks === 1 ? "check" : "checks"} open</span> : null}
         <span class="sheet-barr">{props.toolbar || null}</span></>}

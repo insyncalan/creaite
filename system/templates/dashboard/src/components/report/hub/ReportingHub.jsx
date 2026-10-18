@@ -12,8 +12,8 @@ import { useEffect } from "preact/hooks";
 import { LeftOutDialog } from "../LeftOutDialog.jsx";
 import { ExportSave } from "../ExportSave.jsx";
 import { CLIENT_RENDERERS, setClientDoc } from "../ClientParts.jsx";
-import { doExport, clientHealthApply, matchFor } from "../ClientView.jsx";
-import { matchClientAll } from "../clientDoc.js";
+import { doExport, clientHealthApply } from "../ClientView.jsx";
+import { MatchHeldDialog } from "../MatchHeldDialog.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
 import { ReportSheet } from "../ReportParts.jsx";
 import { WEEKLY_RENDER } from "../weekly/WeeklyView.jsx";
@@ -23,7 +23,7 @@ import { clientStatus, internalStatus, menuWeeks, toneByTrail, toneByWeek } from
 import { P } from "../../../core/data.js";
 import { navWrite, tabTitle } from "../../../core/nav.js";
 import { fd } from "../../../core/page.js";
-import { crBase, crDirty, crDoc, crInfo, crInternal, crOpen, loadClientReport, saveClientPage } from "../../../stores/clientReport.js";
+import { crBase, crDirty, crDoc, crInfo, crInternal, crOpen, loadClientReport, matchInternal, saveClientPage } from "../../../stores/clientReport.js";
 import { hubAsk, hubCfg, hubExported, hubKey, hubNote, hubReady, hubView, hubZoom, loadHub, reloadHub } from "../../../stores/hub.js";
 import { repTick, spaceCode, spaceWeek, spaceWeeks, weekView } from "../../../stores/reporting.js";
 import { clientReportOn, crTick } from "../../../stores/reportingSettings.js";
@@ -64,7 +64,7 @@ function ReportLabel({ k, on, doc }) {
       {on ? <><b>{internal ? "Internal report" : "Client report"}</b><span class="sub">{internal ? "for you and the team" : `for ${(cd && cd.client) || "the client"}`}</span></> : null}
       {internal && approved && !weeklyEditing.value ? <button type="button" class="linkbtn hubedit" id="hubEdit" onClick={() => { weeklyEditing.value = true; }}>Edit again</button> : null}
       {!internal && cd && cd.state !== "approved" ? <>
-        <button type="button" class="linkbtn rb-x" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchClientAll(d, i)); }}>Match internal for every section</button>
+        <button type="button" class="linkbtn rb-x" data-crmatchall disabled={!crInternal.value} onClick={() => { matchInternal(null); }}>Match internal for every section</button>
         {info && info.ready && info.baseline && !(cd.based_on && cd.based_on.version === info.baseline.version) ? <button type="button" class="linkbtn rb-x" data-crrefresh
           title="This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save."
           onClick={() => { const a = hubAsk.value; if (a) loadClientReport({ code: a.code, week: doc.date }, true); }}>Refresh from the approved week</button> : null}
@@ -131,7 +131,7 @@ function HubSheet({ code, view, on, doc }) {
     return <ReportSheet audience="client" key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={iLocked} panesApart
       renderers={WEEKLY_RENDER} onChange={internalChange} onSave={internalSave} ai={internalAi(doc)} onRedraft={internalRedraft(doc)}
       partner={{ doc: cd, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: cFiled,
-        match: (/** @type {string} */ id) => setClientDoc(matchFor(id)), onChange: setClientDoc, onSave: saveClientPage, dirty: () => crDirty.value, ai: clientAi, onRedraft: clientRedraft(cd) }}
+        match: (/** @type {string} */ id) => { matchInternal([id]); }, matchAll: (/** @type {string[]} */ ids) => { matchInternal(ids); }, onChange: setClientDoc, onSave: saveClientPage, dirty: () => crDirty.value, ai: clientAi, onRedraft: clientRedraft(cd) }}
       onEvent={ev => { if (ev.type === "reload") { if (ev.partner) reloadClient(); else reloadHub(); } else countRedraft(ev, "report"); }} />;
   }
   return <ReportSheet audience="internal" key={`i:${doc.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={iLocked}
@@ -179,6 +179,7 @@ export function ReportingHub() {
       {head}
       <div class={view === "internal" ? "wrsheet" : "crsheet wrsheet"}>{body}</div>
       {on ? <LeftOutDialog client={(crDoc.value && crDoc.value.client) || ""} onExport={doExport} /> : null}
+      {on ? <MatchHeldDialog /> : null}
       <ExportSave />
     </div>);
 }
