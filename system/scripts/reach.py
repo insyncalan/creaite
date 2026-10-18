@@ -1119,8 +1119,12 @@ def confidential_reason(tool, inp):
 
 
 def prep_decision(tool, inp):
-    """(allow, reason) for one tool call in a Prep page run: refused if it would read a confidential note, or if it is a Bash call
-    that isn't one creaite script on its own; else let through to Prep's allow list, as before."""
+    """(allow, reason) for one tool call in a Prep page run: refused if it names a never place (secrets, the operating system:
+    #132 G1c, as for ask creaite), if it would read a confidential note, or if it is a Bash call that isn't one creaite script
+    on its own; else let through to Prep's allow list, as before."""
+    why = never_reason_for(tool, inp)                       # #132 G1c: the never list, in every mode
+    if why:
+        return False, why
     why = confidential_reason(tool, inp)
     if why:
         return False, why
@@ -1132,6 +1136,23 @@ def prep_decision(tool, inp):
         if why:
             return False, why
     return True, ""
+
+
+def never_reason_for(tool, inp):
+    """#132 G1c: why this call names a never place (a path it reads, or a search folder with one below it), or None: the check
+    ask creaite's hook makes first, now made for the runs creaite starts itself too (modes prep and held). Fails closed."""
+    try:
+        for p in prep_paths(tool, inp):
+            kind, why = classify(p, "read")
+            if kind == "never":
+                return f"{p}: {why}"
+        if tool in ("Grep", "Glob", "LS"):
+            inside = never_inside((inp or {}).get("path") or str(paths.ROOT))
+            if inside:
+                return f"the search folder holds {inside}, which is never read: search a folder below it instead"
+    except Exception as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call ({type(e).__name__})"
+    return None
 
 
 # ===== #116 F1 (17-10-2026): the guard's own wildcard expansion, bounded =====
