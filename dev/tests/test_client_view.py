@@ -321,10 +321,11 @@ class ClientBrowser(LiveBrowserCase):
         a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
         self.assertTrue(a["ok"], a)
         self.open_view()
-        self.b.wait("document.querySelector('[data-crcheck]:not([disabled])')", 15)
-        self.b.click("[data-crcheck]")
-        self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
-        self.b.click("[data-crexport='html']")
+        self.b.wait("document.querySelector('.hubstat[data-k=client]') && document.querySelector('.hubstat[data-k=client]').dataset.state==='draft'", 15)
+        self.b.click("#hubExport")
+        self.menu_item("HTML")
+        self.b.wait("document.querySelector('[data-hubpick=client]')", 10)
+        self.b.click("[data-hubpick='client']")
         # #220: the export is filed in the project's Reports folder under the report's plain name (no "(read only)"), and a client
         # report not yet filed meets its reserved filing name, so the clash dialog opens: its default (Add a number) is taken.
         reports = list((self.v.root / "projects").glob("ABC*/reports"))[0]
