@@ -57,7 +57,7 @@ function bootFilterMenu(){
   function dateIn(e){ const k=e.target.id==="fsFrom"?"from":e.target.id==="fsTo"?"to":""; if(!k) return; const v=e.target.value.trim(), err=$(`#${e.target.id}Err`);
     const flag=m=>{ e.target.setAttribute("aria-invalid",m?"true":"false"); err.textContent=m; };   /* a bad date keeps the previous filter and says why */
     if(!v){ flag(""); if(!FF[k]) return; FF[k]=""; renderFiles(); return; }
-    const real=DDATE.test(v)&&(d=>!isNaN(d)&&d.toISOString().slice(0,10)===toIso(v))(new Date(toIso(v)+"T00:00:00Z"));   /* 32-13-2026 matches the pattern but is no day */
+    const real=DDATE.test(v)&&(d=>!Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===toIso(v))(new Date(toIso(v)+"T00:00:00Z"));   /* 32-13-2026 matches the pattern but is no day */
     if(!real){ if(e.type==="change") flag("Type a date as DD-MM-YYYY"); return; }   /* while typing, wait: the app reads "tomorrow" and the like when the box is left */
     const iso=toIso(v), o=k==="from"?FF.to:FF.from; if(o&&(k==="from"?iso>o:iso<o)){ flag("From is after To"); return; }
     flag(""); if(FF[k]===iso) return; FF[k]=iso; renderFiles(); }   /* a blur's change event must not redraw the tree under the click that caused it */

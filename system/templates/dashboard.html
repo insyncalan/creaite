@@ -45825,7 +45825,7 @@ ${s5}`;
         renderFiles();
         return;
       }
-      const real2 = DDATE.test(v5) && ((d5) => !isNaN(d5) && d5.toISOString().slice(0, 10) === toIso(v5))(/* @__PURE__ */ new Date(toIso(v5) + "T00:00:00Z"));
+      const real2 = DDATE.test(v5) && ((d5) => !Number.isNaN(d5.getTime()) && d5.toISOString().slice(0, 10) === toIso(v5))(/* @__PURE__ */ new Date(toIso(v5) + "T00:00:00Z"));
       if (!real2) {
         if (e4.type === "change") flag("Type a date as DD-MM-YYYY");
         return;
