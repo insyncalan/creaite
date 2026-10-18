@@ -904,6 +904,115 @@ def retry_kind(job, check_notes):
     return KIND_UP.get(job) if check_notes else None
 
 
+# ── #132 G4 (proposal): the direct call, for a quick edit on text the checks found clean ────────────────────────────────
+# Which features may send text to a provider other than Claude: a declared list, a feature and its options at a time. Round 2
+# declares one: AI on selected text (edit-ai), and only the options whose instruction is creaite's own words (not "Or say what
+# you want…", whose instruction is free text, and not "Make it executive", which adds the style guide). The drafts (writing) are
+# built from tracker facts, so none is declared: they stay on Claude. A tools job never leaves Claude (G5).
+CLEAN_FEATURES = {"edit-ai": ("rewrite", "shorter", "longer", "spelling", "polish", "formal", "warmer", "format", "checklist",
+                              "summary")}
+DIRECT_HOSTS = {"openai": "api.openai.com"}       # the only host a direct call goes to (G2's api.openai.com, nothing new)
+DIRECT_PATHS = {"openai": "/v1/chat/completions"}
+DIRECT_TIMEOUT = 30                               # seconds
+DIRECT_SEND = 16_000                              # characters of prompt sent at most (edit_ai's 12k of text, plus its rules)
+DIRECT_CAP = 256_000                              # bytes read back at most
+DIRECT_TOKENS = 2_000                             # the reply's length, in the provider's tokens, at most
+MODEL_ID = re.compile(r"[A-Za-z0-9._:-]{1,80}")
+
+
+def declared(feature, option, problems):
+    """What the server declares to route_for (G5) for one request: False (not confidential: it may go to the chosen provider)
+    only for a declared feature and option whose text the checks passed ([] problems); True otherwise (Claude only)."""
+    return not (option in CLEAN_FEATURES.get(feature, ()) and problems == [])
+
+
+class DirectCaller(HttpsLister):
+    """The direct call: one HTTPS POST of one prompt, no tools, no files, to DIRECT_HOSTS only, with G2's guarantees (TLS 1.2
+    or later verified, no redirect followed, no proxy from the environment, the key in one header). `base` and `context` are for
+    tests only. Errors carry the host and an HTTP status, never the key, the prompt or the reply."""
+
+    def __init__(self, base=None, context=None, timeout=DIRECT_TIMEOUT, cap=DIRECT_CAP):
+        super().__init__(base or {p: f"https://{h}" for p, h in DIRECT_HOSTS.items()}, context, timeout, cap)
+
+    def complete(self, provider, model_id, prompt, key):
+        """(the reply's text, {"in": tokens sent, "out": tokens back}) for one prompt to one of the provider's models."""
+        if provider not in DIRECT_HOSTS or provider not in self.base:
+            raise ValueError("That provider has no direct call.")
+        if not isinstance(model_id, str) or not MODEL_ID.fullmatch(model_id):
+            raise ValueError("That isn't a model id.")
+        if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > DIRECT_SEND:
+            raise ValueError("Nothing to send, or too much.")
+        url = self.base[provider] + DIRECT_PATHS[provider]
+        host = urllib.parse.urlsplit(url).hostname or "?"
+        if not url.startswith("https://"):
+            raise ProviderUnreachable(f"{host}: only https is used")
+        if not isinstance(key, str) or not KEY_CHARS.fullmatch(key):
+            raise KeyRefused(400)
+        import json
+        body = json.dumps({"model": model_id, "messages": [{"role": "user", "content": prompt}],
+                           "max_completion_tokens": DIRECT_TOKENS, "store": False}).encode("utf-8")
+        status, raw = self.post(url, host, body, key_headers(provider, key))
+        if status is not None and 400 <= status < 500:
+            _log(f"{host} direct call: {status}")
+            raise KeyRefused(status)
+        if status != 200:
+            _log(f"{host} direct call: {status}")
+            raise ProviderUnreachable(f"{host}: answered {status}")
+        text, used = self.reply(raw, host)
+        _log(f"{host} direct call: 200, {used['in']} tokens in, {used['out']} out")
+        return text, used
+
+    def post(self, url, host, body, headers):
+        """(HTTP status, at most cap + 1 bytes of the answer) for one POST; ProviderUnreachable when there is no answer."""
+        req = urllib.request.Request(url, data=body, method="POST", headers={
+            **headers, "Content-Type": "application/json", "Accept": "application/json", "User-Agent": "creaite"})
+        try:
+            with self.opener().open(req, timeout=self.timeout) as r:
+                return r.status, r.read(self.cap + 1)
+        except urllib.error.HTTPError as e:
+            e.close()
+            return e.code, b""
+        except Exception as e:  # noqa: BLE001  network, TLS, timeout: never the key, the prompt or the body
+            _log(f"{host} direct call: unreachable ({type(e).__name__})")
+            raise ProviderUnreachable(f"{host}: couldn't be reached ({type(e).__name__})") from None
+
+    def reply(self, raw, host):
+        """The first choice's text and the token counts from a chat answer."""
+        import json
+        if len(raw) > self.cap:
+            raise ProviderUnreachable(f"{host}: the answer was too large")
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            text = data["choices"][0]["message"]["content"]
+            usage = data.get("usage") or {}
+            used = {"in": int(usage.get("prompt_tokens") or 0), "out": int(usage.get("completion_tokens") or 0)}
+        except Exception:  # noqa: BLE001  anything else is not an answer
+            raise ProviderUnreachable(f"{host}: the answer wasn't a reply") from None
+        if not isinstance(text, str) or not text.strip():
+            raise ProviderUnreachable(f"{host}: the answer was empty")
+        return text, used
+
+
+class NotBuiltCaller:
+    """No direct call (off a Mac, or under the test fakes unless a test puts its own caller in): refuses."""
+
+    def complete(self, provider, model_id, prompt, key):
+        """Never called through: the route sees NotBuilt and runs Claude as before."""
+        raise NotBuilt(NOT_BUILT_WORDS)
+
+
+def caller():
+    """The direct call the live server uses: DirectCaller on a Mac, else NotBuiltCaller; NotBuiltCaller under the test fakes
+    (no test reaches a real provider), unless the test put its own in _DIRECT."""
+    if "caller" not in _DIRECT:
+        _DIRECT["caller"] = DirectCaller() if sys.platform == "darwin" and not fake_mode() else NotBuiltCaller()
+    return _DIRECT["caller"]
+
+
+_DIRECT = {}
+# ── end #132 G4 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
 # ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
 # Test and connect asks the provider for its models; the key is kept here, in the live server's memory only, until Alan
 # presses Done (it then goes to the key store) or Cancel (it is dropped), and for PENDING_SECONDS at most. Only a built key

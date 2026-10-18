@@ -2201,6 +2201,15 @@ def with_model(args, alias):
         out[out.index("--model") + 1] = alias
         return out
     return out + ["--model", alias]
+
+
+def launch_plan(policy, route=None):
+    """#132 G4: (alias, note, opener) for a run: run_model's model and note, or, when the server made a plan for this run
+    (direct_plan), its note and, for a direct call, its opener (DirectProcess) in place of subprocess.Popen."""
+    alias, note = run_model(policy)
+    if not route:
+        return alias, note, subprocess.Popen
+    return (None if route.get("direct") else alias), route.get("note", ""), route.get("direct") or subprocess.Popen
 # ===== end #132 G3 =====
 
 
@@ -2306,7 +2315,7 @@ class Run:
     """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
 
     def __init__(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
-                 sweep=False, lines=None, closer=None):
+                 sweep=False, lines=None, closer=None, route=None):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
@@ -2318,7 +2327,7 @@ class Run:
                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
                "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
         more, more_env, cwd = launch_context(policy)            # #126: a tool-less run: no CLAUDE.md, settings or auto-memory
-        alias, model_note = run_model(policy)                   # #132 G3: the model Alan chose; None keeps today's launch
+        alias, model_note, opener = launch_plan(policy, route)  # #132 G3, G4: the model Alan chose, or the server's own plan
         more = with_model(more, alias)
         cmd += more
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
@@ -2344,8 +2353,8 @@ class Run:
             env = run_env(kind if held else None)                                      # BL-248; #60: a held run's kind
             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
             env.update(more_env)                                                       # #126
-            self.proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                         bufsize=1, env=env)
+            self.proc = opener(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,   # #132 G4
+                               bufsize=1, env=env)
         except OSError:
             if guarded:
                 reach.end_run(run_id)
@@ -6242,9 +6251,13 @@ def edit_ai_route(handler, req):
         return handler.send(200, {"ok": False, "message": ctx["refused"]})
     run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
         else f"e-{secrets.token_hex(6)}"
+    plan = direct_plan(ctx)                                     # #132 G4: None at the defaults (today's run)
+    if plan and plan.get("made_by"):
+        ctx = dict(ctx, made_by=plan["made_by"])
     job = EditJob(body, ctx)
     try:
-        r = Run(run_id, ctx["prompt"], None, None, None, kind="edit-ai", job=job, label=f"{ctx['label']}, with Claude")
+        r = Run(run_id, ctx["prompt"], None, None, None, kind="edit-ai", job=job, route=plan,
+                label=f"{ctx['label']}, with {(plan or {}).get('made_by') or 'Claude'}")
     except OSError as e:
         return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
     job.run = r
@@ -6256,6 +6269,149 @@ def edit_ai_route(handler, req):
 
 DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route
 # ===== end BL-301 D =====
+
+
+# ===== #132 G4 (proposal): a suggestion on another provider, after the checks =====
+# When Alan chose another provider's model for quick edits, the server decides per request: the option must be one providers.
+# CLEAN_FEATURES declares, and the selected text must pass edit_ai.outside_problems (no item IDs, people, organisations, project
+# names, health reasons, internal or confidential markers, nothing the client check finds); route_for (G5) then picks the model
+# and send_allowed is checked again just before the call. What is sent is edit_ai.outside_prompt: the option's instruction, the
+# format rule and the selection, nothing else. The reply comes back through the run engine as the same stream a `claude -p`
+# run gives (DirectProcess), so EditJob checks it exactly as before (client_problems in the client place, BL-106's fact check).
+def direct_plan(ctx, settings=None):
+    """The run's plan for a suggestion: None when Alan hasn't chosen another provider for quick edits (today's run); {"note"} when
+    this one stays on Claude, with why; {"direct", "note", "made_by"} when it goes to the chosen model. Fails closed to Claude."""
+    import providers
+    try:
+        settings = paths.load_settings() if settings is None else settings
+        if providers.chosen("quick", settings).startswith("claude:"):
+            return None
+        problems, routed = outside_route(ctx, "quick", settings)
+        pick = str(routed["model"] or "")
+        if routed["confidential"] or not pick or pick.startswith("claude:"):
+            return {"note": outside_note(problems, routed, settings)}
+        opener, made_by, _prompt = direct_call(pick, routed, ctx, settings)
+    except Exception as e:  # noqa: BLE001  fails closed: Claude runs it
+        return {"note": f"The AI model setting couldn't be read ({type(e).__name__}), so Claude ran it."}
+    return {"direct": opener, "made_by": made_by, "note": f"Sent to {made_by}: the selected text and the instruction only."}
+
+
+def outside_route(ctx, job, settings):
+    """(problems, routed) for a suggestion's text: what edit_ai.outside_problems finds in it (or "not declared" for an option
+    providers.CLEAN_FEATURES doesn't list), and route_for's answer for the kind of job given, declared clean only with none."""
+    import edit_ai
+    import providers
+    option, text = ctx.get("option"), ctx.get("original") or ""
+    problems = edit_ai.outside_problems(ctx.get("code") or "", text) if option in providers.CLEAN_FEATURES["edit-ai"] \
+        else ["not declared"]
+    return problems, providers.route_for(job, settings, text=text, declared=providers.declared("edit-ai", option, problems))
+
+
+def direct_call(pick, routed, ctx, settings):
+    """(opener, made_by, prompt) for a direct call of this suggestion to `pick`: G5's gate checked first, the prompt
+    edit_ai.outside_prompt (the instruction, the format rule and the selection), the model's label."""
+    import edit_ai
+    import providers
+    providers.send_allowed(pick, routed["confidential"])
+    provider, _, model_id = pick.partition(":")
+    conf = routed["confidential"]
+    prompt = edit_ai.outside_prompt(ctx.get("option"), ctx.get("place") or "plain", ctx.get("original") or "")
+    return (lambda *_a, **_k: DirectProcess(provider, model_id, prompt, conf)), \
+        (providers.model(pick, settings) or {}).get("label") or pick, prompt
+
+
+def outside_note(problems, routed, settings):
+    """Why a suggestion stayed on Claude when Alan chose another provider, in plain words."""
+    import providers
+    name = providers.PROVIDERS.get(str(providers.chosen("quick", settings)).partition(":")[0], ("That provider",))[0]
+    if problems == ["not declared"]:
+        return f"{name} isn't used for this option, so Claude ran it."
+    if routed.get("confidential_why") == "marked" or problems == ["something private"] or \
+            "a confidential or internal-only marker" in problems:
+        return f"{providers.CONFIDENTIAL_WORDS} So Claude ran it."
+    if problems:
+        return f"This text holds {problems[0]}, so it went to Claude, not {name}."
+    return f"{name} couldn't be used for this, so Claude ran it."
+
+
+class _Lines:
+    """A pipe's readline for DirectProcess: the lines put, then "" once closed."""
+
+    def __init__(self):
+        import queue
+        self.q = queue.Queue()
+
+    def put(self, line):
+        """One line of the stream."""
+        self.q.put(line + "\n")
+
+    def close(self):
+        """The end of the stream."""
+        self.q.put("")
+
+    def readline(self):
+        """The next line, or "" at the end."""
+        return self.q.get()
+
+
+class DirectProcess:
+    """What the run engine reads in place of `claude -p` for a direct call: the same stream-json lines (the reply as one text
+    block, then the result) from one HTTPS POST made in a thread. The key is read from the key store just before the call and
+    dropped after it. A failure ends the run with plain words (the host and a status, never the key, the prompt or the reply).
+    Stop ends it at once; a reply that comes later is dropped."""
+
+    def __init__(self, provider, model_id, prompt, confidential=True):
+        import io
+        self.stdout, self.stderr, self.returncode, self.pid, self.stopped = _Lines(), io.StringIO(""), None, 0, False
+        self.thread = threading.Thread(target=self.call, args=(provider, model_id, prompt, confidential), daemon=True)
+        self.thread.start()
+
+    def call(self, provider, model_id, prompt, confidential):
+        """The call, then the stream's lines (or the failure's words)."""
+        import io
+        import providers
+        name = providers.PROVIDERS[provider][0]
+        try:
+            providers.send_allowed(f"{provider}:{model_id}", confidential)       # G5's gate, again, just before the call
+            key = providers.backend()[0].peek(provider)
+            if not key:
+                raise providers.Refused(f"{name} isn't connected any more: connect it again in Settings › AI models.")
+            text, _used = providers.caller().complete(provider, model_id, prompt, key)
+            del key
+            lines, code, err = [{"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}},
+                                {"type": "result", "result": text}], 0, ""
+        except providers.KeyRefused as e:
+            lines, code, err = [], 1, providers.refused_words(provider, e.status)
+        except (providers.Refused, providers.NotBuilt) as e:
+            lines, code, err = [], 1, str(e)
+        except Exception as e:  # noqa: BLE001  never the key or the text: the provider's name and the kind of failure
+            lines, code, err = [], 1, f"Couldn't get a suggestion from {name} ({type(e).__name__}). Nothing was changed."
+        if not self.stopped:
+            for line in lines:
+                self.stdout.put(json.dumps(line))
+            self.stderr, self.returncode = io.StringIO(err), code
+        self.stdout.close()
+
+    def poll(self):
+        """None while the call runs, then its exit code."""
+        return self.returncode
+
+    def wait(self, timeout=None):
+        """Wait for the call (subprocess.TimeoutExpired after `timeout`); at once after Stop."""
+        if self.stopped:
+            return self.returncode
+        self.thread.join(timeout)
+        if self.thread.is_alive() and timeout is not None:
+            raise subprocess.TimeoutExpired("direct call", timeout)
+        return self.returncode
+
+    def terminate(self):
+        """Stop: the run ends now; the call's answer, if it comes, is dropped."""
+        self.stopped, self.returncode = True, -15 if self.returncode is None else self.returncode
+        self.stdout.close()
+
+    kill = terminate
+# ===== end #132 G4 =====
 
 # ===== BL-223 (sprint-drafts-writing) ===== Draft agenda: the kind "agenda" on /api/draft (the meeting's key and the style), and
 # POST /api/agenda/save {key, parts, agenda, attendees}: the agenda Alan chose to keep, written by the server into the Agendas folder
