@@ -18,7 +18,9 @@ test_archive_projects.py 150
 test_archive_reports.py 58
 test_as_proposed.py 73
 test_ask_access.py 24
-test_ask_bash_arg_forms.py 364
+test_ask_bash_arg_forms.py 129
+test_ask_bash_arg_forms_held.py 129
+test_ask_bash_arg_forms_more.py 106
 test_ask_change_card.py 188
 test_ask_claims.py 10
 test_ask_confirmed_apply.py 58
