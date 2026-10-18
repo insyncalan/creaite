@@ -466,17 +466,19 @@ FRONT_DROP = ("{{HEALTH_LINE}}", "{{ATTENDEES}}")     # the template's health an
 CHROME_SECONDS = 90
 
 
-FILE_BESIDE = {"weekly": ("file_exports_beside", False), "client": ("file_exports_beside", False),
-               "minutes": ("file_minutes_exports_beside", True)}     # kind: (its setting under "reports", its default)
+FILE_BESIDE = {"weekly": (None, True), "client": (None, True),
+               "minutes": ("file_minutes_exports_beside", True)}     # kind: (its setting under "reports" or None, its default)
 
 
 def file_beside_default(kind):
-    """Whether an export of a document of this kind is filed beside it, unless Alan ticks otherwise: the setting "File report
-    exports beside it" (reports.file_exports_beside, off by default, BL-335) for a weekly or client report, and "File minutes
-    exports beside them" (reports.file_minutes_exports_beside, on by default, BL-338) for minutes."""
+    """Whether an export of a document of this kind is filed beside it, unless Alan ticks otherwise: for minutes the setting "File minutes
+    exports beside them" (reports.file_minutes_exports_beside, on by default, BL-338) for minutes. A weekly or client report
+    export is always saved into the report's folder (#220): no setting, so the answer is always True."""
     if kind not in FILE_BESIDE:
         raise ValueError(f"creaite documents are weekly, client or minutes; not {kind!r}.")
     key, default = FILE_BESIDE[kind]
+    if key is None:
+        return default
     try:
         value = (paths.load_settings().get("reports") or {}).get(key)
     except (OSError, ValueError):

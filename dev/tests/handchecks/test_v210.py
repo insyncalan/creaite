@@ -654,22 +654,26 @@ class WeeklyFiling(WeeklyBase):
         self.note(16, "HTML (the exported page), Word and PDF: the same sections in the same order; 'asks' and one risk row in none")
 
     def test_c17_file_beside_defaults(self):
-        """17. Settings › Advanced has two lines, one for reports (off) and one for minutes (on), each with its reason; a report
-        export is not filed beside the report unless that line is ticked."""
+        """17. Settings › Advanced has one line for minutes (on) with its reason, and none for reports; a report export is saved
+        into the project's Reports folder (see 2.4.0 checks). (Changed deliberately with #220: the reports line is gone.)"""
         b = self.b
         self.screen("settings-advanced")
         text = b.eval("document.getElementById('v-settings').innerText")
-        self.assertTrue(re.search(r"(?i)file (report|minutes) exports beside", text), "the two exports lines are in Settings")
+        self.assertTrue(re.search(r"(?i)file minutes exports beside", text), "the minutes line is in Settings")
+        self.assertFalse(re.search(r"(?i)file report exports beside", text), "no reports line in Settings")
         rows = b.eval("""[...document.querySelectorAll('#v-settings .srow')].filter(r=>/exports beside/i.test(r.innerText)).map(r=>({t:r.innerText.replace(/\\s+/g,' ').trim().slice(0,200), on:[...r.querySelectorAll('input[type=checkbox],[role=switch]')].map(x=>x.checked===undefined?x.getAttribute('aria-checked'):String(x.checked))}))""")
-        self.assertGreaterEqual(len(rows), 2, rows)
+        self.assertEqual(len(rows), 1, rows)
+        self.assertTrue(re.search(r"(?i)minutes", rows[0]["t"]), rows)
+        self.assertIn(rows[0]["on"], (["true"], ["True"]), f"the minutes line is on: {rows}")
+        self.assertGreater(len(rows[0]["t"]), 60, "the line carries its reason")
         week = self.wk(4)
         r = self.draft("weekly", week)
         self.assertTrue(self.api("/api/report/save", {"doc": r["doc"], "base_version": r["version"] or None}).get("ok"))
         e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": "docx"})
         self.assertTrue(e.get("ok"), e)
-        self.assertFalse(e.get("filed"), "a report export is not filed beside by default")
-        self.assertEqual(self.filed(f"{week}*.docx"), [], "nothing filed in the reports folder")
-        self.note(17, "two Settings lines (" + " | ".join(x["t"][:70] for x in rows) + "); the report export was not filed beside")
+        self.assertEqual(Path(e["path"]).parent.name, "reports", e)
+        self.assertEqual(len(self.filed(f"{week}*.docx")), 1, "the Word export is in the project's Reports folder")
+        self.note(17, "Settings has the minutes line only (" + rows[0]["t"][:70] + "); the report's Word export landed in " + e.get("path", ""))
 
     def test_c74_export_then_edit_again(self):
         """74. Approve and file a weekly report, export it as HTML (not filed beside, the default), then press Edit again → the
