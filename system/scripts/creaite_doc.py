@@ -559,6 +559,20 @@ def _file_export(out, draft, target, fail):
 
 
 # ── Word: the firm's template, filled by docx_tools.py ───────────────────────
+# #227: the Word writer stays a separate writer (the firm's template, native tables, real pictures) and follows the screen's sheet:
+# one title block, the report's logos, health with its six-week strip, At a glance as a table, the milestone timeline as a picture
+# and its list as a table, tables with every column the screen shows, DD-MM-YYYY dates, an empty section as its sentence or not at all.
+
+TONE_HEX = {"g": "2E7D32", "a": "D68910", "r": "C0392B", "n": "5E6270"}
+EMPTY_SENTENCE = {"asks": "Nothing is needed from anyone this week.", "risks": "No open risks or issues.",
+                  "overdue": "Nothing is overdue.", "decisions": "No decisions were made this week."}
+PRIORITY_TONE = {"urgent": "r", "high": "r", "medium": "a", "low": "g"}
+LOGO_HEIGHT = 40            # px in Word (96 to the inch)
+STRIP = (360, 34)
+TIMELINE_WIDTH = 640
+IMG_EXT = (".png", ".jpg", ".jpeg")
+INTERNAL_TIMELINE_DRAWS_ALL = True       # the sheet's timeline always shows every milestone (Alan may change this for internal reports)
+
 
 def _nobraces(text):
     """Text that can't be read as a {{PLACEHOLDER}} by the fill."""
@@ -571,51 +585,371 @@ def _word_text(el):
     return docx_tools.unesc("".join(WORD_TEXT.findall(el)))
 
 
-def _md(text):
-    """One Markdown fill entry, or none for empty text."""
-    return [{"md": _nobraces(text)}] if str(text or "").strip() else []
+def _dmy(iso):
+    """A stored date as DD-MM-YYYY (anything else as it is)."""
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(iso or ""))
+    return f"{m[3]}-{m[2]}-{m[1]}" if m else str(iso or "")
 
 
-def _health_entries(s, _items):
-    """Health: the flag (a coloured label when Word has one, else bold), then the text."""
-    import docx_tools
-    flag = str((s.get("data") or {}).get("flag") or "")
-    if flag.upper() in docx_tools.FLAGS:
-        return [{"flag": flag.upper(), "text": _nobraces(flag)}] + _md(s.get("text"))
-    return _md(f"**{flag}**" if flag else "") + _md(s.get("text"))
+def _dm(iso):
+    """A stored date as DD-MM."""
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(iso or ""))
+    return f"{m[3]}-{m[2]}" if m else ""
 
 
-def _figure_entries(s, _items):
-    """At a glance: one line per shown figure."""
-    return [e for f in s.get("figures") or [] if f.get("shown", True)
-            for e in _md(f"**{f.get('label') or ''}:** {f.get('value') or ''}" + (f" · {f['note']}" if f.get("note") else ""))]
+def _day(iso):
+    """A stored date as a day number, or None."""
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(iso or ""))
+    return datetime(int(m[1]), int(m[2]), int(m[3])).toordinal() if m else None
 
 
-def _pane_entries(s, _items):
-    """Current state: each pane's title in bold, then its text."""
-    return [e for p in s.get("panes") or [] for e in _md(f"**{p['title']}**" if p.get("title") else "") + _md(p.get("text"))]
+def _tone(flag):
+    """The tone a health flag is drawn in (the sheet's wkTone): g, a, r or n."""
+    f = str(flag or "")
+    for tone, pattern in (("r", "off"), ("a", "risk"), ("g", "on track|achieved")):
+        if re.search(pattern, f, re.I):
+            return tone
+    return "n"
 
 
-def _timeline_entries(s, items):
-    """Milestones: the text, then the chosen milestones as they stood, with their dates."""
-    rows = [items.get(ref) or {"title": ref} for ref in (s.get("data") or {}).get("milestones") or []]
-    return _md(s.get("text")) + [e for m in rows
-                                 for e in _md(f"- {m.get('title') or ''}" + (f" · {m['due_date']}" if m.get("due_date") else ""))]
+def _ms_state(m):
+    """A milestone's state word and tone (the sheet's wkMsState)."""
+    st, base = m.get("state"), m.get("baseline_date") or m.get("due_date")
+    fc = m.get("forecast_date") or base
+    if m.get("status") == "Done" or st == "Achieved":
+        return "ACHIEVED", "g"
+    if m.get("status") == "Cancelled":
+        return "CANCELLED", "n"
+    if st == "Overdue":
+        return "OVERDUE", "r"
+    if st == "Slipped" or (_day(fc) and _day(base) and _day(fc) > _day(base)):
+        return "SLIPPED", "a"
+    if st == "At risk":
+        return "AT RISK", "a"
+    return "ON TRACK", "g"
 
 
-def _word_entries(s, items):
-    """A shown section's content as docx_tools fill entries (Markdown, a coloured flag), in the page's order; a table's rows are
-    added as a Word table, and any other type gives its text, as on the page."""
-    make = {"health": _health_entries, "figures": _figure_entries, "panes": _pane_entries, "timeline": _timeline_entries}
-    return make.get(s.get("type"), lambda sec, _i: _md(sec.get("text")))(s, items)
+def picture_png(markup, width, height, scale=2):
+    """A transparent PNG of the HTML/SVG `markup` drawn in a `width` x `height` pixel window by headless Chrome (`scale` times as many
+    pixels, so it stays sharp in Word). One small drawing, a throwaway profile; raises DocError when Chrome is missing or fails."""
+    import os
+    import shutil
+    import signal
+    import subprocess
+    import tempfile
+    import launch
+    chrome = launch.find_chrome()
+    if not chrome:
+        raise DocError("Chrome wasn't found, so the pictures weren't drawn.")
+    work = tempfile.mkdtemp(prefix="creaite-pic-")
+    try:
+        page, out = Path(work) / "p.html", Path(work) / "p.png"
+        page.write_text('<!doctype html><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:transparent}'
+                        'svg,img{display:block}</style>' + markup, encoding="utf-8")
+        cmd = [chrome, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+               f"--user-data-dir={Path(work) / 'profile'}", "--hide-scrollbars", "--default-background-color=00000000",
+               f"--force-device-scale-factor={scale}", f"--window-size={int(width)},{int(height)}", f"--screenshot={out}",
+               page.resolve().as_uri()]
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                start_new_session=True)
+        try:
+            proc.wait(timeout=CHROME_SECONDS)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.wait()
+        if not (out.is_file() and out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"):
+            raise DocError("Chrome didn't draw a picture.")
+        return out.read_bytes()
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
-def _word_table(s, table, total):
-    """A table section's shown rows as a Word table, from the template's own table."""
-    import docx_tools
-    cols = s.get("columns") or []
-    rows = [[_nobraces((r.get("cells") or {}).get(c.get("key"))) for c in cols] for r in s.get("rows") or [] if r.get("shown", True)]
-    return docx_tools.adhoc_table({"table": table}, [{"header": _nobraces(c.get("label"))} for c in cols], rows, total)
+class _Word:
+    """What one Word export shares: the document, its items, the project's folder and a work folder for the pictures."""
+
+    def __init__(self, doc, work):
+        """The export's state."""
+        self.doc, self.items, self.work, self.n = doc, doc.get("items") or {}, Path(work), 0
+        try:
+            self.folder = paths.project_dir(doc.get("project"))
+        except Exception:                      # an unknown project: pictures then need absolute paths
+            self.folder = Path(".")
+
+    def picture(self, markup, width, height, show_w=None, caption=""):
+        """A fill entry for a picture drawn from `markup`, or [] when it can't be drawn (the text beside it still tells the story)."""
+        try:
+            data = picture_png(markup, width, height)
+        except (DocError, OSError):
+            return []
+        self.n += 1
+        f = self.work / f"pic{self.n}.png"
+        f.write_bytes(data)
+        return [{"image": str(f), "caption": caption, "width": show_w or width}]
+
+    # ── text ──
+    def md(self, text):
+        """Markdown as fill entries: text between pictures, each picture where it was placed; a picture that can't be found is named."""
+        import docx_tools
+        out, chunk = [], []
+
+        def flush():
+            """The text so far as one Markdown entry."""
+            if "\n".join(chunk).strip():
+                out.append({"md": _nobraces("\n".join(chunk))})
+            chunk.clear()
+        for line in str(text or "").splitlines():
+            m = docx_tools.IMAGE_LINE.match(line)
+            if not m:
+                chunk.append(line)
+                continue
+            flush()
+            f = paths.resolve_image(self.folder, m.group(2))
+            if f.is_file() and f.suffix.lower() in IMG_EXT:
+                out.append({"image": str(f), "caption": m.group(1).strip()})
+            else:
+                out.append({"md": _nobraces(f"*Picture not found: {m.group(2)}*")})
+        flush()
+        return out
+
+    # ── the logos ──
+    def logos(self, s):
+        """The header's chosen logos as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it is."""
+        import docx_tools
+        one = []
+        for lg in (s.get("data") or {}).get("logos") or []:
+            f = Path(str(lg.get("path") or ""))
+            f = f if f.is_absolute() else paths.resolve(f.as_posix())
+            if not f.is_file():
+                continue
+            if f.suffix.lower() == ".svg":
+                head = f.read_text(encoding="utf-8", errors="replace")[:2000]
+                box = re.search(r'viewBox="[\d.\-]+[ ,]+[\d.\-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"', head)
+                wh = (re.search(r'\swidth="([\d.]+)', head), re.search(r'\sheight="([\d.]+)', head))
+                w, h = ((float(box[1]), float(box[2])) if box else (float(wh[0][1]), float(wh[1][1])) if all(wh) else (160.0, 48.0))
+                width = max(8, min(160, round(LOGO_HEIGHT * w / h)))
+                made = self.picture(f'<img src="{f.resolve().as_uri()}" style="width:{width}px;height:{LOGO_HEIGHT}px">',
+                                    width, LOGO_HEIGHT, width)
+                if made:
+                    one.append({"image": made[0]["image"], "width": width})
+            elif f.suffix.lower() in IMG_EXT:
+                w, h = docx_tools.image_size(f.read_bytes())
+                one.append({"image": str(f), "width": max(8, min(160, round(LOGO_HEIGHT * w / h)))})
+        return [{"images": one}] if one else []
+
+    # ── sections: each gives parts, ("e", entries) or ("t", columns, rows, styler); none means the section is left out ──
+    def parts(self, s):
+        """A shown section's parts for its type."""
+        make = {"health": self.health, "figures": self.figures, "panes": self.panes, "timeline": self.timeline,
+                "table": self.table}.get(s.get("type"), self.text)
+        return make(s)
+
+    def text(self, s):
+        """A text section: its Markdown, or nothing."""
+        e = self.md(s.get("text"))
+        return [("e", e)] if e else []
+
+    def panes(self, s):
+        """Current state: each pane's title (when it has one), then its text."""
+        e = []
+        for p in s.get("panes") or []:
+            e += (self.md(f"**{p['title']}**") if str(p.get("title") or "").strip() else []) + self.md(p.get("text"))
+        return [("e", e)] if e else []
+
+    def health(self, s):
+        """Health: one coloured label, the six-week strip as a picture, the reason, and last week's flag."""
+        import docx_tools
+        d = s.get("data") or {}
+        flag = str(d.get("flag") or "")
+        e = [{"flag": flag.upper(), "text": ""}] if flag.upper() in docx_tools.FLAGS else self.md(f"**{flag}**" if flag else "")
+        weeks = [t for t in d.get("trend") or [] if t.get("date") != self.doc.get("date")][-5:] + \
+            [{"date": self.doc.get("date"), "flag": flag}]
+        if flag or len(weeks) > 1:
+            w, h = STRIP
+            bw = (w - 2 * (len(weeks) - 1)) / len(weeks)
+            bars = "".join(f'<rect x="{i * (bw + 2):.1f}" y="0" width="{bw:.1f}" height="10" fill="#{TONE_HEX[_tone(k.get("flag"))]}"/>'
+                           for i, k in enumerate(weeks))
+            svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">{bars}'
+                   f'<text x="0" y="26" font-family="Arial,sans-serif" font-size="9.5" fill="#5E6270">{esc(_dm(weeks[0]["date"]))}</text>'
+                   f'<text x="{w}" y="26" text-anchor="end" font-family="Arial,sans-serif" font-size="9.5" fill="#5E6270">'
+                   f'{esc(_dm(weeks[-1]["date"]))}</text></svg>')
+            e += self.picture(svg, w, h)
+        e += self.md(s.get("text"))
+        lw = d.get("last_week") or {}
+        if lw.get("flag"):
+            e += self.md(f"Last week: {lw['flag']}" + (f" ({_dm(lw['date'])})" if lw.get("date") else ""))
+        return [("e", e)] if e else []
+
+    def figures(self, s):
+        """At a glance: the shown figures as one small table, overdue in red."""
+        figs = [f for f in s.get("figures") or [] if f.get("shown", True)]
+        if not figs:
+            return []
+        cols = [{"header": _nobraces(f.get("label")), "width": 1} for f in figs]
+        row = [_nobraces(f"{f.get('value') or ''}" + (f"\n{f['note']}" if f.get("note") else "")) for f in figs]
+        red = {i for i, f in enumerate(figs) if f.get("key") == "overdue" and str(f.get("value")) not in ("0", "")}
+        return [("t", cols, [row], lambda r, c: TONE_HEX["r"] if c in red else None)]
+
+    def _heads(self, s, cols):
+        """The columns shown: the section's own, then the ones the screen works out from the item (Response, Late)."""
+        keys = [c.get("key") for c in cols]
+        extra = [("response", "Response")] if s.get("id") == "risks" and "response" not in keys else \
+            [("late", "Late")] if s.get("id") == "overdue" and "late" not in keys else []
+        return [(c.get("key"), c.get("label")) for c in cols] + extra
+
+    def _cell(self, key, cells, item):
+        """One cell's words and its tone (or None): Response and Late come from the item as the screen draws them."""
+        if key == "response" and key not in cells:
+            return item.get("response_action") or item.get("response") or "", None
+        if key == "late" and key not in cells:
+            a, b = _day(item.get("due_date")), _day(self.doc.get("date"))
+            n = max(0, b - a) if a and b else 0
+            return (f"{n} day{'' if n == 1 else 's'}", "r") if n else ("", None)
+        v = cells.get(key)
+        if key == "priority" and v:
+            return str(v).upper(), PRIORITY_TONE.get(str(v).lower(), "n")
+        return v, None
+
+    def table(self, s):
+        """A table section: its intro text, then the table with every column the screen shows, or the screen's sentence when empty."""
+        cols = list(s.get("columns") or [])
+        rows = [r for r in s.get("rows") or [] if r.get("shown", True)]
+        intro = self.md(s.get("text"))
+        parts = [("e", intro)] if intro else []
+        if not rows or not cols:
+            return parts + [("e", [{"md": EMPTY_SENTENCE.get(s.get("id"), "Nothing to show.")}])]
+        heads = self._heads(s, cols)
+        body, tone = [], {}
+        for ri, r in enumerate(rows, start=1):
+            item, cells, line = self.items.get(r.get("ref") or "") or {}, r.get("cells") or {}, []
+            for ci, (k, _l) in enumerate(heads):
+                v, t = self._cell(k, cells, item)
+                tone[(ri, ci)] = t
+                line.append(_nobraces(v))
+            body.append(line)
+        return parts + [("t", [{"header": _nobraces(lab)} for _k, lab in heads], body,
+                         lambda r, c: TONE_HEX[tone[(r, c)]] if tone.get((r, c)) else None)]
+
+    def _client(self):
+        """True for a client report."""
+        return self.doc.get("audience") == "client" or self.doc.get("kind") == "client"
+
+    def _drawn(self, s, every):
+        """The milestones the timeline picture draws: every one the section's timeline names, as the sheet does (leaving one out of
+        the list tidies the list only). A client report never draws one that isn't client-safe (not client-visible, or cancelled),
+        even if a document still names it: the gate drops those from the timeline, and this is a second line. Internal reports:
+        flip INTERNAL_TIMELINE_DRAWS_ALL to draw only the listed ones."""
+        if self._client():
+            return [m for m in every if int(m.get("client_visible", 1) or 0) == 1 and m.get("status") != "Cancelled"]
+        listed = set((s.get("data") or {}).get("milestones") or [])
+        return every if INTERNAL_TIMELINE_DRAWS_ALL else [m for m in every if not listed or m["id"] in listed]
+
+    def _milestones(self, s):
+        """Every milestone the timeline names, with its id, by agreed date."""
+        d = s.get("data") or {}
+        refs = [r for r in (d.get("timeline") or d.get("milestones") or []) if self.items.get(r)]
+        every = [dict(self.items[r], id=r, baseline_date=self.items[r].get("baseline_date") or self.items[r].get("due_date"))
+                 for r in refs if self.items[r].get("table", "milestones") == "milestones"]
+        every.sort(key=lambda m: _day(m.get("baseline_date") or m.get("forecast_date")) or 0)
+        return every
+
+    def timeline(self, s):
+        """Milestones: the timeline as a picture, then the chosen milestones as a table (Milestone, Agreed, Expected, Progress, State)."""
+        every = self._drawn(s, self._milestones(s))
+        parts = [("e", self.md(s.get("text")))] if str(s.get("text") or "").strip() else []
+        if not every:
+            return parts + [("e", [{"md": "No milestones are set for this project."}])]
+        pic = self.picture(*self._timeline_svg(every))
+        if pic:
+            parts.append(("e", pic))
+        listed = set((s.get("data") or {}).get("milestones") or [])
+        rows, tone = [], {}
+        for m in (m for m in every if not listed or m["id"] in listed):
+            row, tones = self._ms_row(m)
+            tone.update({(len(rows) + 1, c): t for c, t in tones.items()})
+            rows.append(row)
+        if rows:
+            parts.append(("t", [{"header": h} for h in ("Milestone", "Agreed", "Expected", "Progress", "State")], rows,
+                          lambda r, c: TONE_HEX[tone[(r, c)]] if tone.get((r, c)) else None))
+        return parts
+
+    @staticmethod
+    def _ms_row(m):
+        """One milestone's table row and the tones of its cells: the screen's Agreed, Expected (+days, or achieved) and State."""
+        word, t = _ms_state(m)
+        base = m.get("baseline_date")
+        fc = m.get("forecast_date") or base
+        late = bool(_day(fc) and _day(base) and _day(fc) > _day(base))
+        if m.get("actual_date"):
+            exp = f"achieved {_dm(m['actual_date'])}"
+        else:
+            exp = _dmy(fc) + (f" (+{_day(fc) - _day(base)})" if late else "")
+        pc = m.get("percent_complete")
+        row = [_nobraces(f"{m.get('id') or ''} {m.get('title') or m.get('name') or ''}".strip()),
+               _dmy(base), _nobraces(exp), f"{pc}%" if pc is not None else "", word]
+        return row, {2: "r" if late and not m.get("actual_date") else None, 4: t}
+
+    @staticmethod
+    def _tl_ticks(lo, hi, px, width):
+        """The timeline's line and its month ticks."""
+        names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        g = [f'<line x1="10" y1="44" x2="{width - 10}" y2="44" stroke="#D9DCE6" stroke-width="2"/>']
+        for t in range(lo, hi + 1):
+            dt = datetime.fromordinal(t)
+            if dt.day == 1:
+                x = 20 + (t - lo) * px
+                g.append(f'<line x1="{x:.1f}" y1="38" x2="{x:.1f}" y2="50" stroke="#D9DCE6" stroke-width="2"/>'
+                         f'<text x="{x + 3:.1f}" y="86" font-size="10.5" fill="#5E6270">{names[dt.month - 1]}'
+                         f'{(" " + str(dt.year)) if dt.month == 1 else ""}</text>')
+        return g
+
+    @staticmethod
+    def _tl_marker(i, m, X, today):
+        """One milestone on the timeline: its circle, its slip from agreed to expected, its label."""
+        t = _ms_state(m)[1]
+        col = "#" + TONE_HEX[t]
+        base, fc = m.get("baseline_date") or m.get("forecast_date"), m.get("forecast_date")
+        done = (t == "g" and m.get("status") == "Done") or _day(base) < _day(today)
+        x = X(base)
+        slip = bool(fc and fc != base and _day(fc) > _day(base))
+        fx, ly = (X(fc) if slip else x), (28 if i % 2 else 68)
+        g = f'<circle cx="{x:.1f}" cy="44" r="6" fill="{col if done else "#F8F8FF"}" stroke="{col}" stroke-width="2"/>'
+        if slip:
+            g += (f'<line x1="{x + 7:.1f}" y1="44" x2="{fx - 8:.1f}" y2="44" stroke="#C0392B" stroke-width="2"/>'
+                  f'<circle cx="{fx:.1f}" cy="44" r="7" fill="none" stroke="#C0392B" stroke-width="2" stroke-dasharray="3 2"/>')
+        words = (m.get("title") or m.get("name") or "") + " · " + _dm(fc if slip else base)
+        return g + f'<text x="{fx:.1f}" y="{ly}" text-anchor="middle" font-size="10.5" fill="#1E1F1E">{esc(words)}</text>'
+
+    def _timeline_svg(self, ms):
+        """The sheet's timeline drawing (Timeline.jsx Drawing) as SVG sized to the page: the line, month ticks, today, each milestone
+        and its slip. Returns (svg, width, height)."""
+        today = self.doc.get("date") if self.doc.get("state") == "approved" else datetime.now().strftime("%Y-%m-%d")
+        days = [_day(x) for m in ms for x in (m.get("baseline_date"), m.get("forecast_date"), m.get("actual_date")) if _day(x)]
+        days.append(_day(today))
+        lo, hi = min(days) - 14, max(days) + 21
+        px = max(1.5, min(6.0, (TIMELINE_WIDTH - 40) / max(1, hi - lo)))
+        width, height = round(40 + (hi - lo) * px), 92
+        tx = 20 + (_day(today) - lo) * px
+        g = self._tl_ticks(lo, hi, px, width)
+        g.append(f'<line x1="{tx:.1f}" y1="10" x2="{tx:.1f}" y2="56" stroke="#1E1F1E" stroke-dasharray="3 3"/>'
+                 f'<text x="{tx + 4:.1f}" y="14" font-size="10.5" fill="#1E1F1E">Today</text>')
+        g += [self._tl_marker(i, m, lambda iso: 20 + (_day(iso) - lo) * px, today) for i, m in enumerate(ms)]
+        svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+               f'font-family="Arial,sans-serif">{"".join(g)}</svg>')
+        return svg, width, height
+
+
+def _colour_table(tbl, styler):
+    """The table with the text of each body cell the styler names (row, column; row 0 is the header) bold and in its colour."""
+    for r, row in enumerate(re.findall(r"<w:tr>.*?</w:tr>", tbl, re.S)):
+        if r == 0:
+            continue
+        new = row
+        for c, cell in enumerate(re.findall(r"<w:tc>.*?</w:tc>", row, re.S)):
+            hexv = styler(r, c)
+            if hexv:
+                new = new.replace(cell, re.sub(r"<w:rPr>", f'<w:rPr><w:b/><w:color w:val="{hexv}"/>', cell), 1)
+        tbl = tbl.replace(row, new, 1)
+    return tbl
 
 
 def _status_line(doc):
@@ -656,8 +990,37 @@ def _front(els, doc):
     return out
 
 
-def _word_body(doc, els):
-    """The derived template's body (the title block, then each shown section in page order) and the fill's values."""
+def _section_blocks(ctx, n, s, heading, para, table, total):
+    """One section as Word blocks (its heading, then a paragraph per text part and a table per table part) and the fill's values;
+    none when there is nothing to show (no empty heading)."""
+    import docx_tools
+    parts = ctx.parts(s)
+    if not parts:
+        return [], {}
+    out, values = [docx_tools.put_text(heading, _nobraces(s.get("heading")))], {}
+    for k, part in enumerate(parts):
+        if part[0] == "e":
+            out.append(docx_tools.replace_in(para, {"SUMMARY": "{{CX_%d_%d}}" % (n, k)}))
+            values[f"CX_{n}_{k}"] = part[1]
+        else:
+            _, cols, rows, styler = part
+            out += [_colour_table(docx_tools.adhoc_table({"table": table}, cols, rows, total), styler), "<w:p/>"]
+    return out, values
+
+
+def _logos_front(ctx, shown, out, para):
+    """The report's chosen logos as a line under the template's wordmark (added to `out`); the fill's value for it."""
+    import docx_tools
+    header = next((s for s in shown["sections"] if s.get("type") == "header" and not s.get("hidden")), None)
+    logos = ctx.logos(header) if header else []
+    if not (logos and out):
+        return {}
+    out.insert(1, docx_tools.replace_in(para, {"SUMMARY": "{{CX_LOGOS}}"}))
+    return {"CX_LOGOS": logos}
+
+
+def _word_body(doc, els, work):
+    """The derived template's body (the title block, the logos, then each shown section in page order) and the fill's values."""
     import docx_tools
     texts = [_word_text(e) for e in els]
     at = next((i for i, t in enumerate(texts) if "{{SUMMARY}}" in t), None)
@@ -669,16 +1032,13 @@ def _word_body(doc, els):
     out, values = _front(els[:at - 1], doc), {}
     out += [e for e, t in zip(els, texts) if "{{STYLE_" in t]              # the fill's style samples (topic headings)
     shown = clean(doc)
+    ctx = _Word(shown, work)
+    values.update(_logos_front(ctx, shown, out, para))
     for n, s in enumerate(shown["sections"]):
-        if s.get("hidden"):
-            continue
-        out.append(docx_tools.put_text(heading, _nobraces(s.get("heading"))))
-        entries = _word_entries(s, shown.get("items") or {})
-        if entries:
-            out.append(docx_tools.replace_in(para, {"SUMMARY": "{{CX_%d}}" % n}))
-            values[f"CX_{n}"] = entries
-        if s.get("type") == "table" and s.get("columns"):
-            out += [_word_table(s, table, total), "<w:p/>"]
+        if not s.get("hidden") and s.get("type") != "header":
+            blocks, vals = _section_blocks(ctx, n, s, heading, para, table, total)
+            out += blocks
+            values.update(vals)
     return out, values
 
 
@@ -687,6 +1047,7 @@ def word_export(doc, out):
     then each shown section in page order, filled by docx_tools.py fill. Raises DocError."""
     import contextlib
     import io
+    import shutil
     import docx_tools
     tpl = paths.TEMPLATES / TEMPLATES[doc["kind"]]
     if not tpl.is_file():
@@ -695,20 +1056,23 @@ def word_export(doc, out):
     xml = next(raw for info, raw in parts if info.filename == "word/document.xml").decode("utf-8")
     start = xml.index("<w:body>") + len("<w:body>")
     sect = re.findall(r"<w:sectPr.*?</w:sectPr>", xml[start:], re.S)[-1]
-    body, values = _word_body(doc, WORD_EL.findall(xml[start:xml.rindex(sect)]))
-    derived = xml[:start] + "".join(body) + sect + "</w:body></w:document>"
     stamp = f"{out.stem} {datetime.now():%H%M%S}"
+    work = paths.free_path(paths.DRAFTS, f"{stamp} pictures", "")
+    work.mkdir(parents=True, exist_ok=True)
     tmp_tpl = paths.free_path(paths.DRAFTS, f"{stamp} template", ".docx")
     tmp_values = paths.free_path(paths.DRAFTS, f"{stamp} values", ".json")
-    docx_tools.write_parts([(i, derived.encode("utf-8") if i.filename == "word/document.xml" else raw) for i, raw in parts], tmp_tpl)
-    tmp_values.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8")
     said = io.StringIO()
     try:
+        body, values = _word_body(doc, WORD_EL.findall(xml[start:xml.rindex(sect)]), work)
+        derived = xml[:start] + "".join(body) + sect + "</w:body></w:document>"
+        docx_tools.write_parts([(i, derived.encode("utf-8") if i.filename == "word/document.xml" else raw) for i, raw in parts], tmp_tpl)
+        tmp_values.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8")
         with contextlib.redirect_stdout(said):
             code = docx_tools.cmd_fill(str(tmp_tpl), str(tmp_values), str(out))
     finally:
         for f in (tmp_tpl, tmp_values):
             f.unlink(missing_ok=True)
+        shutil.rmtree(work, ignore_errors=True)
     if code != 0:
         raise DocError(f"The Word export couldn't be filled: {said.getvalue().strip()}")
 
