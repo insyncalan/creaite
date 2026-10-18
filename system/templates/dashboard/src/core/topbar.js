@@ -25,7 +25,13 @@ export function bootTopBar() {
   };
   const hide = (/** @type {boolean} */ on) => {
     if (main.classList.contains("tb-off") === on) return;
-    if (on) { const h = bar.offsetHeight; main.classList.add("tb-off"); setPad(true, h); }
+    if (on) {
+      const h = bar.offsetHeight;
+      /* focus inside the bar would drop to body when it turns visibility:hidden: move it to the page's scroll container first */
+      const v = /** @type {HTMLElement|null} */ (content.querySelector(".view:not([hidden])"));
+      if (v && bar.contains(document.activeElement)) { if (!v.hasAttribute("tabindex")) v.tabIndex = -1; v.focus({ preventScroll: true }); }
+      main.classList.add("tb-off"); setPad(true, h);
+    }
     else { setPad(false, 0); main.classList.remove("tb-off"); }
   };
   /** The scrollers that are "the page": a .view, and any big scroller inside the content area (not a report's sheet: that is #202's). */

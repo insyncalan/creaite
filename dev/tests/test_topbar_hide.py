@@ -154,6 +154,20 @@ class Pages(Common, LiveBrowserCase):
         self.b.pump(0.3)
         self.assertEqual(self.b.eval("document.querySelector('.content>.view:not([hidden])').style.paddingTop"), before)
 
+    def test_focus_in_the_bar_moves_to_the_page(self):
+        """A focused search or ask button hides with the bar: focus goes to the page's scroll container, never body."""
+        for ctl in ("searchBtn", "askBtn"):
+            with self.subTest(control=ctl):
+                self.open("go('files')", 1400, 1000)
+                self.b.eval(f"document.getElementById('{ctl}').focus()")
+                self.assertEqual(self.b.eval("document.activeElement.id"), ctl)
+                x, y = self.centre()
+                self.press_wheel(x, y, 2)
+                self.b.pump(0.3)
+                self.assertTrue(self.off())
+                self.assertTrue(self.b.eval("document.activeElement===document.querySelector('.content>.view:not([hidden])')"),
+                                "focus moved to the scroll container, not body")
+
     def test_changing_page_brings_it_back(self):
         self.open("go('files')", 1400, 1000)
         x, y = self.centre()

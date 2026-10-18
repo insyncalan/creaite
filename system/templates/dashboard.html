@@ -72757,6 +72757,14 @@ ${d5.text}`);
       if (main.classList.contains("tb-off") === on2) return;
       if (on2) {
         const h5 = bar.offsetHeight;
+        const v5 = (
+          /** @type {HTMLElement|null} */
+          content.querySelector(".view:not([hidden])")
+        );
+        if (v5 && bar.contains(document.activeElement)) {
+          if (!v5.hasAttribute("tabindex")) v5.tabIndex = -1;
+          v5.focus({ preventScroll: true });
+        }
         main.classList.add("tb-off");
         setPad(true, h5);
       } else {
