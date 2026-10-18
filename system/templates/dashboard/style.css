@@ -4068,3 +4068,5 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
+/* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
+.rail [data-v=review] .rl{letter-spacing:-.02em}

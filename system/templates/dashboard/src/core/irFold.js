@@ -29,17 +29,17 @@ export const IR_FOLDED = ["later", "not_needed"];
 export const irOpenable = m => !!m && m.stage === "drafted";
 
 /** The open meeting after a click on meeting `id`: opens it, closes it if it was open, or leaves things be if it can't open.
-    @param {string|null} open @param {string} id @param {IrModel} model @returns {string|null} */
-export function irToggle(open, id, model) {
-  if (open === id) return null;
+    @param {string|null} cur @param {string} id @param {IrModel} model @returns {string|null} */
+export function irToggle(cur, id, model) {
+  if (cur === id) return null;
   const m = (model.meetings || []).find(x => x.id === id);
-  return irOpenable(m) ? id : open;
+  return irOpenable(m) ? id : cur;
 }
 
 /** The open meeting after new data (an apply, a refresh): kept while the meeting is still in the list, whatever its proposals.
-    @param {string|null} open @param {IrModel} model @returns {string|null} */
-export function irKeepOpen(open, model) {
-  return open && (model.meetings || []).some(x => x.id === open) ? open : null;
+    @param {string|null} cur @param {IrModel} model @returns {string|null} */
+export function irKeepOpen(cur, model) {
+  return cur && (model.meetings || []).some(x => x.id === cur) ? cur : null;
 }
 
 /** A group's proposals still waiting on the page. @param {IrGroups} g @param {(n:number)=>boolean} done @returns {IrGroups} */

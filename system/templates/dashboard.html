@@ -4078,6 +4078,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
+/* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
+.rail [data-v=review] .rl{letter-spacing:-.02em}
 </style>
 </head>
 <body>
@@ -70979,13 +70981,13 @@ ${d5.text}`);
   var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
   var IR_FOLDED = ["later", "not_needed"];
   var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
-  function irToggle(open2, id2, model) {
-    if (open2 === id2) return null;
+  function irToggle(cur, id2, model) {
+    if (cur === id2) return null;
     const m5 = (model.meetings || []).find((x5) => x5.id === id2);
-    return irOpenable(m5) ? id2 : open2;
+    return irOpenable(m5) ? id2 : cur;
   }
-  function irKeepOpen(open2, model) {
-    return open2 && (model.meetings || []).some((x5) => x5.id === open2) ? open2 : null;
+  function irKeepOpen(cur, model) {
+    return cur && (model.meetings || []).some((x5) => x5.id === cur) ? cur : null;
   }
   function irLive(g5, done) {
     const keep2 = (a5) => (a5 || []).filter((n4) => !done(n4));
