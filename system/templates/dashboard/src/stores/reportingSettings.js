@@ -12,7 +12,7 @@
    setting. The logo files are in the live vault's system/branding/logos/, saved by /api/report/logo/save (report_server.py). */
 import { signal } from "@preact/signals";
 import { P, REMINDERS } from "../core/data.js";
-import { api, oneLine, setMemLine, setRhythm, snack, viaServer } from "../core/server.js";
+import { api, oneLine, plainPaths, setMemLine, setRhythm, snack, viaServer } from "../core/server.js";
 import { weeklyLogos } from "./weekly.js";
 import { repTick } from "./reporting.js";
 
@@ -154,7 +154,7 @@ export async function uploadClientLogo(code, kind, file) {
   if (file.size > 400000) { crLogoNote.value = "That logo is over 400 kB. Choose a smaller file."; return false; }
   const trimmed = ext === "svg" ? null : await trimmedCopy(file);
   const r = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : undefined });
-  if (!r || !r.ok) { crLogoNote.value = oneLine(r && r.message) || "The logo was not saved."; return false; }
+  if (!r || !r.ok) { crLogoNote.value = oneLine(plainPaths(r && r.message)) || "The logo was not saved."; return false; }
   crLogoNote.value = r.hint || "";
   await readClientLogos(code); snack(r.message || "Logo saved");
   return true;
@@ -164,7 +164,7 @@ export async function uploadClientLogo(code, kind, file) {
 export async function removeClientLogo(code, kind) {
   crLogoNote.value = "";
   const r = await api("/api/report/logo/remove", { code, kind });
-  if (!r || !r.ok) { crLogoNote.value = oneLine(r && r.message) || "The logo was not removed."; return false; }
+  if (!r || !r.ok) { crLogoNote.value = oneLine(plainPaths(r && r.message)) || "The logo was not removed."; return false; }
   await readClientLogos(code); snack(r.message || "Logo removed");
   return true;
 }

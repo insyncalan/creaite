@@ -73,15 +73,24 @@ function ReportLabel({ k, on, doc }) {
     </div>);
 }
 
-/** The strip under the bar: a label for the report in view, or one for each side by side. The client report's message sits here too.
-    @param {{view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
-function HubRow({ view, on, doc }) {
-  const note = hubNote.value;
+/** The label row inside the report's grey pane (the mockup): a label for the report, or one for each side by side, at the top of
+    the pane and scrolling with it. `slot` says which pane it is in.
+    @param {{slot: "one"|"left"|"right"|"both", view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
+function PaneRow({ slot, view, on, doc }) {
+  const kinds = slot === "both" ? ["internal", "client"] : slot === "left" ? ["internal"] : slot === "right" ? ["client"] : [view === "client" ? "client" : "internal"];
   return (
-    <div class={`hubrow${view === "side" ? " two" : ""}`}>
-      {view !== "client" ? <ReportLabel k="internal" on={on} doc={doc} /> : null}
-      {view !== "internal" && on ? <ReportLabel k="client" on={on} doc={doc} /> : null}
-      {note && view !== "internal" ? <span class="crnote" role="status">{note} {/awaiting review/.test(note) ? <button type="button" class="btn sm" data-crforce onClick={() => hubApproveClient(true)}>Approve anyway</button> : null}</span> : null}
+    <div class={`hubrow inpane${kinds.length > 1 ? " two" : ""}`}>
+      {kinds.map(k => k === "client" && !on ? null : <ReportLabel key={k} k={/** @type {"internal"|"client"} */ (k)} on={on} doc={doc} />)}
+    </div>);
+}
+
+/** The client report's message, a strip under the bar (it stays in view; the labels are in the panes). */
+function HubNote() {
+  const note = hubNote.value;
+  if (!note || hubView.value === "internal") return null;
+  return (
+    <div class="hubrow hubnote">
+      <span class="crnote" role="status">{note} {/awaiting review/.test(note) ? <button type="button" class="btn sm" data-crforce onClick={() => hubApproveClient(true)}>Approve anyway</button> : null}</span>
     </div>);
 }
 
@@ -109,7 +118,7 @@ function HubSheet({ code, view, on, doc }) {
     banner: { title: "Weekly reporting", sub: `${doc.project_name || code} · ${fd(doc.date)}` },
     renderBar: (/** @type {any} */ ctx) => <HubBar ctx={ctx} code={code} view={view} on={on} doc={doc} week={doc.date} tone={toneByWeek(doc)[doc.date] || "n"}
       rows={weekRows(code, doc, on)} onWeek={(/** @type {string} */ w) => pickWeek(code, w)} onView={pickView} />,
-    belowBar: <HubRow view={view} on={on} doc={doc} /> };
+    belowBar: <HubNote />, paneHead: (/** @type {"one"|"left"|"right"|"both"} */ slot) => <PaneRow slot={slot} view={view} on={on} doc={doc} /> };
   const reloadClient = () => { const a = hubAsk.value; if (a) loadClientReport({ code: a.code, week: doc.date }); };
   if (view === "client" && cd) {
     return <ReportSheet audience="client" key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}

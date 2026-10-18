@@ -136,13 +136,57 @@ class SideBySide(Hub):
         self.b.click("#hubSeg [data-hv='side']")
         self.b.wait("document.querySelectorAll('#v-reporting .page').length==2 && document.querySelector('[data-crmatchall]')", 20)
         self.b.pump(0.4)
-        r = self.q("""(()=>{const row=document.querySelector('#v-reporting .hubrow'), W=document.documentElement.clientWidth;
+        r = self.q("""(()=>{const row=document.querySelector('#v-reporting .hubrow.inpane'), W=document.documentElement.clientWidth;
           const els=[...row.querySelectorAll('.hubpl *')].filter(e=>e.getClientRects().length), sub=row.querySelector('.hubpl[data-k=client] .sub');
           return {sw:row.scrollWidth, cw:row.clientWidth, out:els.filter(e=>e.getBoundingClientRect().right>W+0.5).map(e=>e.className||e.tagName),
             subw: sub?sub.getBoundingClientRect().width:-1}})()""")
         self.assertLessEqual(r["sw"], r["cw"], r)
         self.assertEqual(r["out"], [], r)
         self.assertGreater(r["subw"], 0, "the client name keeps some width")
+
+
+class PaneLabels(Hub):
+    """#233 b (Cap's difference #6, the mockup's layout): each report sits in a grey pane and its label row (name, status label,
+    Match internal, Refresh) is inside that pane, at its top, not in a strip above the panes."""
+
+    PROBE = """(()=>{const out=[]; for(const row of document.querySelectorAll('#v-reporting .hubrow.inpane')){
+        const pane=row.closest('.sheet-scroll'), page=pane&&pane.querySelector('.page'); if(!pane) { out.push({orphan:true}); continue; }
+        const r=row.getBoundingClientRect(), p=pane.getBoundingClientRect(), g=page.getBoundingClientRect(), cs=getComputedStyle(pane);
+        out.push({inside: r.left>=p.left-0.5 && r.right<=p.right+0.5 && r.top>=p.top-0.5 && r.bottom<=p.bottom+0.5,
+          above: r.bottom<=g.top+0.5, topGap: Math.round(r.top-p.top), sw: pane.scrollWidth, cw: pane.clientWidth,
+          rowOver: row.scrollWidth>row.clientWidth, bg: cs.backgroundColor, labels: row.querySelectorAll('.hubpl').length,
+          stats: [...row.querySelectorAll('.hubstat')].map(x=>x.textContent.trim()).length,
+          sunk: (()=>{const d=document.createElement('i'); d.style.background='var(--sunk)'; document.body.appendChild(d); const c=getComputedStyle(d).backgroundColor; d.remove(); return c;})()});}
+      return {rows: out, strip: !!document.querySelector('#v-reporting .sheet-root > .hubrow:not(.hubnote)')}})()"""
+
+    def test_the_label_row_is_inside_the_grey_pane_at_1400_and_900(self):
+        for w, h in WIDTHS:
+            for view, rows, labels in (("internal", 1, 1), ("side", 1, 2)):
+                with self.subTest(width=w, view=view):
+                    self.open_hub(w, h)
+                    self.b.click(f"#hubSeg [data-hv='{view}']")
+                    self.b.wait(f"document.querySelectorAll('#v-reporting .page').length=={2 if view == 'side' else 1}", 20)
+                    self.b.pump(0.4)
+                    r = self.q(self.PROBE)
+                    self.assertFalse(r["strip"], "no label strip above the panes")
+                    self.assertEqual(len(r["rows"]), rows, r)
+                    for x in r["rows"]:
+                        self.assertNotIn("orphan", x, "the label row is a descendant of the pane (.sheet-scroll)")
+                        self.assertTrue(x["inside"], f"the label row lies inside the pane box: {x}")
+                        self.assertTrue(x["above"], x)
+                        self.assertLessEqual(x["topGap"], 40, "at the top of the pane")
+                        self.assertEqual(x["labels"], labels, x)
+                        self.assertEqual(x["bg"], x["sunk"], "the pane is grey (the sunk token)")
+                        self.assertLessEqual(x["sw"], x["cw"], f"no horizontal overflow of the pane at {w}: {x}")
+                        self.assertFalse(x["rowOver"], x)
+
+    def test_the_label_row_scrolls_with_the_pane(self):
+        self.open_hub()
+        top = self.q("document.querySelector('#v-reporting .hubrow.inpane').getBoundingClientRect().top")
+        self.q("document.querySelector('#v-reporting .sheet-scroll').scrollTop=300")
+        self.b.pump(0.3)
+        after = self.q("document.querySelector('#v-reporting .hubrow.inpane').getBoundingClientRect().top")
+        self.assertLess(after, top - 100, "the row is inside the scrolling pane, so it moves with the report")
 
 
 class WeekMenu(Hub):

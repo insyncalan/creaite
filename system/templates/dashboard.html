@@ -3817,6 +3817,10 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .hubpl .linkbtn{flex:0 1 auto;min-width:0;text-align:left}
 .hubstat{margin-left:auto;font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:var(--lh-22);background:var(--surface);white-space:nowrap}
 .hubedit{font-size:var(--fs-xs)}
+/* #233 b: the label row sits inside the report's grey pane, at its top, as wide as the page(s) below it (Pane sets the width) */
+.sheet-head{margin:0 auto 8px;max-width:100%;box-sizing:border-box}
+.hubrow.inpane{padding:0;border-bottom:0;background:none;min-height:0;align-items:flex-start;flex-wrap:nowrap;gap:16px}
+.hubrow.inpane>.hubpl{flex:1 1 0}
 .newmenu.hubm button svg.i{color:var(--muted)}   /* the Export and Approve menus: grey outline icons, as the locked mockup draws them */
 .hubrow .crnote{flex:1 1 100%}
 /* the cog and the panel it opens (H3 fills the slot) */
@@ -6287,6 +6291,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkWsPreSync: () => pkWsPreSync,
     pkX: () => pkX,
     placePicker: () => placePicker,
+    plainPaths: () => plainPaths,
     playOf: () => playOf,
     plur: () => plur,
     polishAsk: () => polishAsk,
@@ -26758,7 +26763,7 @@ ${s5}`;
     const trimmed = ext === "svg" ? null : await trimmedCopy(file);
     const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
     if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not saved.";
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not saved.";
       return false;
     }
     crLogoNote.value = r4.hint || "";
@@ -26770,7 +26775,7 @@ ${s5}`;
     crLogoNote.value = "";
     const r4 = await api("/api/report/logo/remove", { code, kind });
     if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not removed.";
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not removed.";
       return false;
     }
     await readClientLogos(code);
@@ -67749,7 +67754,7 @@ ${d5.text}`);
     const list = Array.isArray(r4) ? r4 : [r4];
     return `Left out of this version: ${list.map((x5) => (typeof x5 === "string" ? x5 : x5 && (x5.label || x5.ref || x5.id || x5.heading)) || "an item").join(", ")}`;
   }
-  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, children }) {
+  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, children }) {
     const sc2 = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -67831,7 +67836,10 @@ ${d5.text}`);
         el2.removeEventListener("wheel", wheel);
       };
     }, [pk2]);
-    return /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: sc2, onScroll: capture, "data-pk": pk2, children: /* @__PURE__ */ u2("div", { class: pages > 1 ? "sheet-pair" : "sheet-one", style: { visibility: scale ? "visible" : "hidden" }, children: children(scale) }) });
+    return /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: sc2, onScroll: capture, "data-pk": pk2, children: [
+      head ? /* @__PURE__ */ u2("div", { class: "sheet-head", style: { visibility: scale ? "visible" : "hidden", width: `${A4_W * MM * scale * pages + 16 * (pages - 1)}px` }, children: head }) : null,
+      /* @__PURE__ */ u2("div", { class: pages > 1 ? "sheet-pair" : "sheet-one", style: { visibility: scale ? "visible" : "hidden" }, children: children(scale) })
+    ] });
   }
   function SheetFrame({ scale, breaks, children }) {
     return /* @__PURE__ */ u2("div", { class: "sheet-fit", "data-scale": scale, style: { width: `${A4_W * MM * scale}px` }, children: /* @__PURE__ */ u2("div", { class: "sheet-a4", style: { transform: `scale(${scale})`, "--sc": scale }, children: [
@@ -68335,9 +68343,9 @@ ${d5.text}`);
         }, children: "Reload" })
       ] }) : null,
       /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: partner && !together ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, children: (scale) => frame(doc, null, scale, 0) }),
-        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, children: (scale) => frame(partner.doc, partner, scale, 1) })
-      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
+        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
+      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
         frame(doc, null, scale, 0),
         partner ? frame(partner.doc, partner, scale, 1) : null
       ] }) }) }),
@@ -72469,17 +72477,21 @@ ${d5.text}`);
       /* @__PURE__ */ u2("span", { class: "hubstat", "data-k": k5, "data-state": st2.key, children: st2.label })
     ] });
   }
-  function HubRow({ view, on: on2, doc }) {
+  function PaneRow({ slot, view, on: on2, doc }) {
+    const kinds = slot === "both" ? ["internal", "client"] : slot === "left" ? ["internal"] : slot === "right" ? ["client"] : [view === "client" ? "client" : "internal"];
+    return /* @__PURE__ */ u2("div", { class: `hubrow inpane${kinds.length > 1 ? " two" : ""}`, children: kinds.map((k5) => k5 === "client" && !on2 ? null : /* @__PURE__ */ u2(ReportLabel, { k: (
+      /** @type {"internal"|"client"} */
+      k5
+    ), on: on2, doc }, k5)) });
+  }
+  function HubNote() {
     const note = hubNote.value;
-    return /* @__PURE__ */ u2("div", { class: `hubrow${view === "side" ? " two" : ""}`, children: [
-      view !== "client" ? /* @__PURE__ */ u2(ReportLabel, { k: "internal", on: on2, doc }) : null,
-      view !== "internal" && on2 ? /* @__PURE__ */ u2(ReportLabel, { k: "client", on: on2, doc }) : null,
-      note && view !== "internal" ? /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
-        note,
-        " ",
-        /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => hubApproveClient(true), children: "Approve anyway" }) : null
-      ] }) : null
-    ] });
+    if (!note || hubView.value === "internal") return null;
+    return /* @__PURE__ */ u2("div", { class: "hubrow hubnote", children: /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
+      note,
+      " ",
+      /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => hubApproveClient(true), children: "Approve anyway" }) : null
+    ] }) });
   }
   var internalChange = (d5) => {
     editDoc(d5);
@@ -72529,7 +72541,8 @@ ${d5.text}`);
           onView: pickView
         }
       ),
-      belowBar: /* @__PURE__ */ u2(HubRow, { view, on: on2, doc })
+      belowBar: /* @__PURE__ */ u2(HubNote, {}),
+      paneHead: (slot) => /* @__PURE__ */ u2(PaneRow, { slot, view, on: on2, doc })
     };
     const reloadClient = () => {
       const a5 = hubAsk.value;
@@ -73113,8 +73126,8 @@ ${d5.text}`);
       if (!r4.ok) throw new Error(r4.message);
       return r4.text;
     },
-    async write(p6, t47) {
-      const r4 = await api("/api/fs", { op: "write", path: p6, text: t47 });
+    async write(p6, t47, expect) {
+      const r4 = await api("/api/fs", { op: "write", path: p6, text: t47, ...expect == null ? {} : { expect_text: expect } });
       if (!r4.ok) throw new Error(r4.message);
     },
     async remove(p6) {
@@ -73614,22 +73627,62 @@ ${d5.text}`);
       });
       return true;
     } catch (e4) {
-      snack("Not saved: " + e4.message);
+      snack("Not saved: " + plainPaths(e4.message));
       return false;
     }
   }
   function memLineEdit(text, label, val2) {
-    const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), re2 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$", "m");
-    if (/^(on|off)$/.test(val2)) {
-      const re22 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)(on|off)\\b([^\\n]*)$", "mi"), m22 = text.match(re22);
-      if (m22) return { text: text.replace(re22, (_6, a5, b5, c5) => a5 + val2 + c5), was: m22[2].toLowerCase() };
+    const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), lead = "^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)", reOnOff = new RegExp(lead + "(on|off)\\b([^\\n]*)$", "i"), re2 = new RegExp(lead + "([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$"), reRhythm = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/, rePartner = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/;
+    const lines2 = text.split("\n"), live = liveLines(lines2);
+    const eol = (l6) => /\r$/.test(l6) ? "\r" : "", bare = (l6) => l6.replace(/\r$/, "");
+    let near = -1;
+    for (let i5 = 0; i5 < lines2.length; i5++) {
+      if (!live[i5]) continue;
+      const l6 = bare(lines2[i5]);
+      if (/^(on|off)$/.test(val2)) {
+        const m6 = l6.match(reOnOff);
+        if (m6) {
+          lines2[i5] = m6[1] + val2 + m6[3] + eol(lines2[i5]);
+          return { text: lines2.join("\n"), was: m6[2].toLowerCase() };
+        }
+      }
+      const m5 = l6.match(re2);
+      if (m5) {
+        lines2[i5] = m5[1] + val2 + (m5[3] ? m5[3].replace(/^\s*/, "   ") : "") + eol(lines2[i5]);
+        return { text: lines2.join("\n"), was: m5[2].trim() };
+      }
     }
-    const m5 = text.match(re2);
-    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val2 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
-    const near = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text) || /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
-    if (!near) return null;
-    const at2 = near.index + near[0].length;
-    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val2 + text.slice(at2), was: "" };
+    for (const r4 of [reRhythm, rePartner]) {
+      for (let i5 = 0; i5 < lines2.length && near < 0; i5++) if (live[i5] && r4.test(bare(lines2[i5]))) near = i5;
+      if (near >= 0) break;
+    }
+    if (near < 0) return null;
+    const ind = bare(lines2[near]).match(/^[ \t]*(?:[-*][ \t]+)?/)[0];
+    lines2.splice(near + 1, 0, ind + "**" + label + ":** " + val2 + eol(lines2[near]));
+    return { text: lines2.join("\n"), was: "" };
+  }
+  function liveLines(lines2) {
+    let fence = "";
+    return lines2.map((raw2) => {
+      const l6 = raw2.replace(/\r$/, ""), f5 = l6.match(/^ {0,3}(`{3,}|~{3,})/);
+      if (fence) {
+        if (f5 && f5[1][0] === fence[0] && f5[1].length >= fence.length && /^ {0,3}[`~]+\s*$/.test(l6)) fence = "";
+        return false;
+      }
+      if (f5) {
+        fence = f5[1];
+        return false;
+      }
+      return !/^[ \t]*>/.test(l6);
+    });
+  }
+  function plainPaths(msg) {
+    return String(msg == null ? "" : msg).replace(/(?<![\w.~\-\/])(?:~|\/)[^\s"'“”()<>,;]*/g, (m5) => {
+      const t47 = m5.match(/(?:^|\/)((?:projects|system)\/.*)$/);
+      if (t47) return t47[1];
+      const seg = m5.replace(/\/+$/, "").split("/").pop();
+      return seg || "a file";
+    });
   }
   async function setMemLine(code, label, val2, key2) {
     if (!await needVault()) return false;
@@ -73638,13 +73691,14 @@ ${d5.text}`);
         const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
         if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
         if (r4.text === text) return;
+        if (await shared.VW.read(path) !== text) throw new Error("this project's memory file changed in another window since it was read, so nothing was saved; try again");
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
-        await shared.VW.write(path, r4.text);
+        await shared.VW.write(path, r4.text, text);
         await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val2 }) + "\n");
       });
       return true;
     } catch (e4) {
-      snack("Not saved: " + e4.message);
+      snack("Not saved: " + plainPaths(e4.message));
       return false;
     }
   }
