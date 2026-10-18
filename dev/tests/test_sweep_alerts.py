@@ -367,7 +367,7 @@ class VipPageTests(unittest.TestCase):
         run(v, "build_dashboard.py")
         probe = """const out={}; go("today"); renderToday();
           const msg=document.querySelector('#tdList>li.td-message'), lis=[...document.querySelectorAll('#tdList>li')];   /* BL-319: the message is a row of To decide */
-          out.first=[msg.className, msg.textContent.replace(/\\s+/g,' ').trim()]; out.second=(document.getElementById('tdLine')||{textContent:''}).textContent;
+          out.first=[msg.className, msg.textContent.replace(/\\s+/g,' ').trim()]; out.second=(document.getElementById('tdLine')||{textContent:''}).textContent; out.order=document.getElementById('tdLine').compareDocumentPosition(msg);
           out.badge=document.getElementById('vipBadge').textContent; out.title=document.title;
           go("review"); renderReview(); const rows=[...document.querySelectorAll('#reviewBody tr[data-n]')];
           out.review=rows.map(r=>r.querySelector('td.title').textContent.replace(/\\s+/g,' ').trim().slice(0,40));
@@ -391,6 +391,8 @@ class VipPageTests(unittest.TestCase):
         self.assertIn("no project", o["first"][1])
         self.assertIn("found on start-up, received today 07:12", o["first"][1])
         self.assertIn("Asks to confirm the go-live date.", o["first"][1])
+        self.assertTrue(o["order"] & 4)                                                        # the line comes before the message card
+        self.assertRegex(o["second"], r"^\d+ proposals? in Review")                           # (the proposals' own order is Review's)
         self.assertIn("in Review", o["second"])                                                # #208: the proposals are one line above it
         self.assertEqual(o["badge"], "1")
         self.assertTrue(o["title"].startswith("(1) "), o["title"])                          # BL-288: a plain count

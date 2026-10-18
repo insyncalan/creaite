@@ -6511,13 +6511,9 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     tLink: () => tLink,
     tabId: () => tabId,
     tabTitle: () => tabTitle,
-    tdAct: () => tdAct,
-    tdApprovable: () => tdApprovable,
     tdFocusAfter: () => tdFocusAfter,
     tdFocusMark: () => tdFocusMark,
     tdLine: () => tdLine,
-    tdOpen: () => tdOpen,
-    tdProcess: () => tdProcess,
     tdToReview: () => tdToReview,
     themeFade: () => themeFade,
     themeIcon: () => themeIcon,
@@ -39985,7 +39981,7 @@ ${s5}`;
   function TdLine({ r: r4, hidden, p: p6 }) {
     const open2 = (e4) => {
       e4.preventDefault();
-      p6.onOpen(r4);
+      if (p6.onOpen) p6.onOpen(r4);
     };
     const href = linkUrl(r4.link);
     const acts2 = (list) => list.map((a5) => /* @__PURE__ */ u2(
@@ -39999,12 +39995,14 @@ ${s5}`;
         haspopup: a5.haspopup,
         data: { tdact: a5.id, ...a5.data || {} },
         onBlocked: () => p6.blocked(a5.why || ""),
-        onClick: a5.data && a5.data.alertdo ? void 0 : (e4) => p6.onAct(
-          r4,
-          a5,
-          /** @type {HTMLElement} */
-          e4.currentTarget
-        )
+        onClick: a5.data && a5.data.alertdo ? void 0 : (e4) => {
+          if (p6.onAct) p6.onAct(
+            r4,
+            a5,
+            /** @type {HTMLElement} */
+            e4.currentTarget
+          );
+        }
       },
       a5.id
     ));
@@ -40127,7 +40125,7 @@ ${s5}`;
     return /* @__PURE__ */ u2(S2, { children: [
       line.length ? /* @__PURE__ */ u2("p", { class: "tdline", id: "tdLine", children: line.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
         i5 ? i5 === line.length - 1 ? " and " : ", " : "",
-        /* @__PURE__ */ u2("a", { href: "#", class: "s", "data-tdline": x5.key, onClick: (e4) => go3(x5.go, e4), children: x5.text })
+        /* @__PURE__ */ u2("a", { href: `#${x5.go}`, class: "s", "data-tdline": x5.key, onClick: (e4) => go3(x5.go, e4), children: x5.text })
       ] })) }) : null,
       /* @__PURE__ */ u2("ol", { class: "bl tdlist", id: "tdList", "aria-labelledby": "hTd", children: rows2.map((r4, i5) => /* @__PURE__ */ u2(TdLine, { r: r4, hidden: !open2 && i5 >= cap, p: props }, r4.key)) }),
       /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: [
@@ -40259,39 +40257,6 @@ ${s5}`;
   function drawWeekAhead(host2, props) {
     R(/* @__PURE__ */ u2(WeekAhead, { ...props }), host2);
   }
-
-  // stores/rejects.js
-  var REASONS = ["Not an action", "Duplicate", "Chatter", "Already done", "Wrong project", "Doesn't need tracking", "For another team"];
-  var rjReasons = y3(REASONS);
-  var rjGuesses = y3({});
-  var rjGuessFor = y3("");
-  var rjMenu = y3(null);
-  function rjOpenMenu(m5) {
-    rjMenu.value = m5;
-  }
-  function rjCloseMenu(back2) {
-    const m5 = rjMenu.value;
-    rjMenu.value = null;
-    if (m5 && m5.onClose) m5.onClose();
-    if (back2 && m5 && m5.anchor && m5.anchor.isConnected) m5.anchor.focus({ preventScroll: true });
-  }
-  var rjGone = y3([]);
-  function rjAddGone(L3) {
-    const keys = new Set(L3.map((g5) => g5.key));
-    rjGone.value = [...rjGone.value.filter((g5) => !keys.has(g5.key)), ...L3];
-  }
-  function rjDropGone(keys) {
-    const k5 = new Set(keys);
-    rjGone.value = rjGone.value.filter((g5) => !k5.has(g5.key));
-  }
-  function rjSetGone(keys, f5) {
-    const k5 = new Set(keys);
-    rjGone.value = rjGone.value.map((g5) => k5.has(g5.key) ? { ...g5, ...f5(g5) } : g5);
-  }
-  function rjLeave() {
-    if (rjGone.value.length) rjGone.value = [];
-  }
-  var rjRecent = y3({ state: "idle", items: [] });
 
   // stores/today.js
   var selDay = y3("");
@@ -41239,7 +41204,6 @@ ${s5}`;
     return w6 ? `${w6[1]} ${w6[2]}:${w6[3]}` : "";
   };
   var whenWords = (at2) => !at2 ? "" : at2.slice(0, 10) === TODAY ? at2.slice(11, 16) : `${longDay(at2.slice(0, 10))}${at2.length > 10 ? ", " + at2.slice(11, 16) : ""}`;
-  var tdApprovable = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind) && routineKid(r4);
   var revSrc = (r4) => /-sweep(-\d+)?\.json$/.test(r4.file) ? "sweep" : /-(dashboard|edit)(-\d+)?\.json$/.test(r4.file) ? "your edits" : /-excel(-\d+)?\.json$/.test(r4.file) ? "Excel import" : REV.some((x5) => x5.file === r4.file && x5.kind === "draft" && x5.ref === "meeting") ? "minutes" : "proposal";
   var tdTag = (r4) => r4.kind === "draft" ? r4.ref === "meeting" ? "Minutes" : "Report" : kindLabel(r4) || "Proposal";
   function toDecideRows() {
@@ -41465,50 +41429,6 @@ ${s5}`;
     const tr2 = $(`#reviewBody tr[data-n="${r4.n}"]`);
     if (tr2) tr2.scrollIntoView({ block: "center" });
   }
-  async function tdProcess(id2) {
-    const m5 = MTG().find((x5) => x5.id === id2);
-    if (!m5) return;
-    MSEL.clear();
-    MSEL.add(id2);
-    if (shared.VIEW === "today") renderToday();
-    try {
-      await processMeetings();
-    } finally {
-      if (shared.VIEW === "today") renderToday();
-    }
-  }
-  async function tdAct(row2, act, btn) {
-    tdFocusMark(row2.key, act.id);
-    if (row2.kind === "transcript" && act.id === "process") {
-      await tdProcess(row2.id);
-      return;
-    }
-    if (row2.kind !== "review") return;
-    const r4 = REV.find((x5) => x5.n === row2.n);
-    if (!r4 || r4.done) return;
-    if (act.id === "approve") {
-      if (!tdApprovable(r4)) {
-        tdToReview(r4.n);
-        return;
-      }
-      await decide(r4.n, "approved");
-      return;
-    }
-    if (act.id === "reject") {
-      const menu = () => rjMenuFor([r4], btn, () => {
-        if (shared.VIEW === "today") renderToday();
-      }), was = rjGuesses.value;
-      menu();
-      await rjLoadGuesses();
-      if (rjGuesses.value !== was && rjMenu.value && rjMenu.value.anchor === btn) menu();
-      return;
-    }
-    if (act.id === "review") tdToReview(r4.n);
-  }
-  function tdOpen(row2) {
-    if (row2.kind === "review") tdToReview(row2.n);
-    else if (row2.kind === "transcript") go2("inbox");
-  }
   var TDFOLD = "creaite-intake-review-hidden";
   var tdFoldWired = false;
   function wireTdFold() {
@@ -41539,7 +41459,7 @@ ${s5}`;
       if (nw2) nw2.hidden = !VIPS().length;
     }
     $("#nTd").textContent = n4 ? String(n4) : "";
-    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onAct: tdAct, onOpen: tdOpen, onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
+    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {
@@ -41951,6 +41871,39 @@ ${s5}`;
     });
     if (!MAC) $("#kK").textContent = "Ctrl K";
   }
+
+  // stores/rejects.js
+  var REASONS = ["Not an action", "Duplicate", "Chatter", "Already done", "Wrong project", "Doesn't need tracking", "For another team"];
+  var rjReasons = y3(REASONS);
+  var rjGuesses = y3({});
+  var rjGuessFor = y3("");
+  var rjMenu = y3(null);
+  function rjOpenMenu(m5) {
+    rjMenu.value = m5;
+  }
+  function rjCloseMenu(back2) {
+    const m5 = rjMenu.value;
+    rjMenu.value = null;
+    if (m5 && m5.onClose) m5.onClose();
+    if (back2 && m5 && m5.anchor && m5.anchor.isConnected) m5.anchor.focus({ preventScroll: true });
+  }
+  var rjGone = y3([]);
+  function rjAddGone(L3) {
+    const keys = new Set(L3.map((g5) => g5.key));
+    rjGone.value = [...rjGone.value.filter((g5) => !keys.has(g5.key)), ...L3];
+  }
+  function rjDropGone(keys) {
+    const k5 = new Set(keys);
+    rjGone.value = rjGone.value.filter((g5) => !k5.has(g5.key));
+  }
+  function rjSetGone(keys, f5) {
+    const k5 = new Set(keys);
+    rjGone.value = rjGone.value.map((g5) => k5.has(g5.key) ? { ...g5, ...f5(g5) } : g5);
+  }
+  function rjLeave() {
+    if (rjGone.value.length) rjGone.value = [];
+  }
+  var rjRecent = y3({ state: "idle", items: [] });
 
   // components/review/RejectMenu.jsx
   var ID = /^[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}$/;
@@ -45815,6 +45768,7 @@ ${s5}`;
     inboxBadge();
     if (shared.VIEW === "files") renderFiles();
     else if (shared.VIEW === "inbox") renderInbox();
+    else if (shared.VIEW === "today") renderToday();
     return true;
   }
   function filesOpened() {

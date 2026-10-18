@@ -99,17 +99,36 @@ class ToDecide(Home):
         self.assertNotIn("Open Review", o["foot"])
         self.assertNotIn("VIP", o["text"])
 
-    def test_each_count_links_to_its_page_and_is_keyboard_reachable(self):
+    def test_every_count_is_a_real_link_focusable_and_enter_goes_to_its_page(self):
         b = self.b
         self.today()
-        b.eval("document.querySelector('#tdLine [data-tdline=review]').focus()")
-        self.assertTrue(b.eval("document.activeElement.matches('#tdLine a')"))
-        b.key("Enter")
-        b.wait("VIEW==='review'")
-        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'}]; go('today'); renderToday()")
-        b.wait("document.querySelector('#tdLine [data-tdline=files]')")
-        b.click("#tdLine [data-tdline=files]")
-        b.wait("VIEW==='inbox'")
+        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'}]; D.meetings={rows:[{id:'mx1',title:'Steering',p:'ABC',day:'2026-10-13',start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null}]}; renderToday()")
+        keys = b.eval("[...document.querySelectorAll('#tdLine a')].map(a=>a.dataset.tdline)")
+        self.assertEqual(keys, ["review", "transcripts", "files"])
+        for key, view in (("review", "review"), ("transcripts", "inbox"), ("files", "inbox")):
+            hrefs = b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').getAttribute('href')")
+            self.assertEqual(hrefs, "#" + view)                          # a real target, not "#"
+            b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').focus()")
+            self.assertTrue(b.eval(f"document.activeElement===document.querySelector('#tdLine [data-tdline={key}]')"))
+            b.key("Enter")
+            b.wait(f"VIEW==='{view}'")
+            b.eval("go('today'); renderToday()")
+            b.wait("document.getElementById('tdLine')")
+
+    def test_a_new_file_or_proposal_while_today_is_open_updates_the_line(self):
+        b = self.b
+        self.today()
+        before = b.eval("tdLine().map(x=>x.key+':'+x.n).join()")
+        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'late.docx'}]; inboxBadge(); renderToday()")
+        # the refresh path (files.js refreshFiles) re-renders Today: simulate its last line
+        b.eval("""window.fetch=async()=>({ok:true,json:async()=>({ok:true,files:[],archived:[],inbox:[...(D.inbox||[]),{state:'new',name:'later.docx'}]})}); refreshFiles(true)""")
+        b.wait("/new files? in Intake/.test(document.getElementById('tdLine').textContent)")
+        n = b.eval("tdLine().find(x=>x.key==='files').n")
+        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=files]').textContent"), f"{n} new files in Intake")
+        old = int(b.eval("tdLine().find(x=>x.key==='review').n"))
+        b.eval("REV.push({n:9901,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:1,rec:{t:'Late one'},src:''}); renderBadge(); renderToday()")
+        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=review]').textContent"), f"{old + 1} proposals in Review")
+        self.assertNotEqual(before, b.eval("tdLine().map(x=>x.key+':'+x.n).join()"))
 
     def test_the_intake_part_says_what_the_rail_counts(self):
         b = self.b

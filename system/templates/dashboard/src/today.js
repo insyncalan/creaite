@@ -23,14 +23,13 @@ import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./c
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
-import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
+import { draftOn, RHL } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
@@ -456,10 +455,6 @@ export const TDCAP=5;
 export const revAt=r=>{ const w=String(r.file||"").match(/^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/); return w?`${w[1]} ${w[2]}:${w[3]}`:""; };
 /** "14:02" today, "Monday 12th October, 09:30" before */
 export const whenWords=at=>!at?"":at.slice(0,10)===TODAY?at.slice(11,16):`${longDay(at.slice(0,10))}${at.length>10?", "+at.slice(11,16):""}`;
-/** the bulk rule (FR-81): Approve and save from To decide only for what may be approved on its own row. Never minutes, a report or a
-    file change, never a one-at-a-time item (a new decision, a new risk, a closing update …: indiv), nor one that needs a project or
-    has a conflict. Those go to Review. */
-export const tdApprovable=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind)&&routineKid(r);
 const revSrc=r=>/-sweep(-\d+)?\.json$/.test(r.file)?"sweep":/-(dashboard|edit)(-\d+)?\.json$/.test(r.file)?"your edits":/-excel(-\d+)?\.json$/.test(r.file)?"Excel import"
   :REV.some(x=>x.file===r.file&&x.kind==="draft"&&x.ref==="meeting")?"minutes":"proposal";
 const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Proposal";
@@ -554,19 +549,6 @@ export function tdFocusMark(key,what){ const i=$$("#tdList > li").filter(l=>!l.h
 /** a proposal's row in Review, highlighted (as First thing opens one) */
 export function tdToReview(n){ go("review"); const r=REV.find(x=>x.n===n&&!x.done); if(!r) return; RHL.clear(); RHL.add(r.n); rvPaint();
   const tr=$(`#reviewBody tr[data-n="${r.n}"]`); if(tr) tr.scrollIntoView({block:"center"}); }
-export async function tdProcess(id){ const m=MTG().find(x=>x.id===id); if(!m) return; MSEL.clear(); MSEL.add(id);
-  if(shared.VIEW==="today") renderToday(); try{ await processMeetings(); } finally{ if(shared.VIEW==="today") renderToday(); } }
-/** a row's action (a message's two run through settings.js's [data-alertdo] handler) */
-export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
-  if(row.kind==="transcript"&&act.id==="process"){ await tdProcess(row.id); return; }
-  if(row.kind!=="review") return; const r=REV.find(x=>x.n===row.n); if(!r||r.done) return;
-  if(act.id==="approve"){ if(!tdApprovable(r)){ tdToReview(r.n); return; } await decide(r.n,"approved"); return; }   /* Undo: the apply's (decide) */
-  /* BL-315: the same reasons menu as Review (rjMenuFor: the seven reasons, Use each guess, No reason, Duplicate's item), through
-     /api/review/reject, with its one message and Undo; the guesses are fetched first, so the row's guess is offered */
-  if(act.id==="reject"){ const menu=()=>rjMenuFor([r],btn,()=>{ if(shared.VIEW==="today") renderToday(); }), was=rjGuesses.value;
-    menu(); await rjLoadGuesses(); if(rjGuesses.value!==was&&rjMenu.value&&rjMenu.value.anchor===btn) menu(); return; }   /* BL-316: open at once; again with the guesses when they arrive */
-  if(act.id==="review") tdToReview(r.n); }
-export function tdOpen(row){ if(row.kind==="review") tdToReview(row.n); else if(row.kind==="transcript") go("inbox"); }
 const TDFOLD="creaite-intake-review-hidden";   /* #168: per viewer, this browser only (localStorage), as Week ahead's */
 let tdFoldWired=false;
 function wireTdFold(){ const f=/** @type {HTMLDetailsElement|null} */($("#tdFold")); if(!f||tdFoldWired) return; tdFoldWired=true;
@@ -583,7 +565,7 @@ export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!
   const L=toDecideRows(), line=tdLine(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length+line.reduce((a,x)=>a+x.n,0); sec.hidden=!L.length&&!line.length;
   { const nw=$("#tdNew"); if(nw) nw.hidden=!VIPS().length; }   /* #168: a folded heading still shows an unseen alert (BL-99); never the word that says who is followed (BL-288) */
   $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
-  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onAct:tdAct,onOpen:tdOpen,onReview:()=>go("review"),onGo:pg=>go(pg),blocked:why=>snack(why)});
+  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onReview:()=>go("review"),onGo:pg=>go(pg),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */
