@@ -1321,7 +1321,8 @@ class _Word:
     def _timeline_svg(self, ms):
         """The sheet's timeline drawing (Timeline.jsx Drawing) as SVG sized to the page: the line, month ticks, today, each milestone
         and its slip. Returns (svg, width, height)."""
-        today = self.doc.get("date") if self.doc.get("state") == "approved" else datetime.now().strftime("%Y-%m-%d")
+        import report                                          # today on creaite's clock (CREAITE_NOW fixes it for tests)
+        today = self.doc.get("date") if self.doc.get("state") == "approved" else report.today().isoformat()
         days = [_day(x) for m in ms for x in (m.get("baseline_date"), m.get("forecast_date"), m.get("actual_date")) if _day(x)]
         days.append(_day(today))
         lo, hi = min(days) - 14, max(days) + 21
