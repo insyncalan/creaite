@@ -13,9 +13,9 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import test_dashboard  # noqa: E402
-from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
-from test_tracker import ABC  # noqa: E402
+import test_dashboard
+from live_browser import TEST_PALETTES, LiveBrowserCase
+from test_tracker import ABC
 
 CATS = ["general", "people", "logos", "miles", "rep", "arch"]
 

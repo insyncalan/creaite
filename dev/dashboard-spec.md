@@ -1414,3 +1414,12 @@ Brief: `dev/sprints/reporting-hub-brief.md` (sections 1 to 4, Rounds 4, 8, 9, 10
 - **Milestones.** The timeline picture keeps 16 px below it (`.wr-tlwrap{margin-bottom:16px}`) before the milestone list, also in Show as exported.
 - **Folded into this release.** `Rich` keeps its editor open when focus moves to the AI bar or the link form (they sit outside its box); the client's text and Current state now use the same click-to-edit words as the internal report.
 
+
+## Project settings page (#228 part A, v2.5.0)
+
+- **Address:** `#project-settings=<CODE>[&c=<category>]` (view `psettings`, `components/project/ProjectSettings.jsx`, state in `stores/projectSettings.js`). Doors: the gear at the foot of the project page (after Reports and Browse files, `data-psettings`), a gear beside each project in the Projects list, and Settings > People and projects (now also a thin list with Open settings; Workstreams, the client report switches and Archive stay there).
+- **Layout:** the app's settings layout: search and a vertical category list on the left (Tabs block, arrows move), cards of rows on the right. Categories: General, People and partners, Logos, Milestones, Reporting, Archive. No Workstreams. Search shows every category, hides rows that do not match (a category name that matches shows all its rows).
+- **General:** name (project update through `save`, applied at once, Undo), client (`setClientName`), code (Change code... opens ask creaite with the sentence started), status Active/Closed (project update `active`; there is no On hold in the tracker), folder (Open folder).
+- **People and partners:** people are owners/decision makers of the project's items with organisation and role from the people register (Edit and Add open Settings > People). Partners are one line `- **Partners:** A; B` of the project's CLAUDE.md saved by `setMemLine` (backup, log line, refusal when the file changed). Validation: one line, not empty, max 80 characters, no semicolon, no duplicate in any capitals, line max 400. Add, rename and remove each offer Undo.
+- **Milestones:** list with the existing milestone page's Edit and Add flows. **Archive:** Archive (asks, then the approval card via `/api/project/archive`) and Close/Reopen (asks).
+- **Logos and Reporting:** placeholders that open the reporting hub and its client report cog panel (part B).
