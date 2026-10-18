@@ -26,6 +26,9 @@ Every save goes through settings_catalogue.save (a backup and a log line per key
 import os
 import re
 import sys
+import urllib.error  # #132 G2: the model list (standard library)
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -416,6 +419,108 @@ class FakeLister(Lister):
         return list(self.FOUND.get(provider, []))
 
 
+# ── #132 G2 (proposal): the model list, one HTTPS call to the provider ─────────────────────────────────────────────────
+# Test and connect asks the provider which models the key can use: one GET to a fixed host per provider (no other host is ever
+# called, and a redirect is refused, never followed), the key in one request header only (never the address), TLS verified
+# against the Mac's trusted certificates (TLS 1.2 or later), no proxy taken from the environment, a 10 second limit and at most
+# 1 MB read back. Standard library only (urllib). Errors carry the host and an HTTP status, never the key or the body: 4xx is
+# KeyRefused(status); a 3xx, a 5xx, a timeout, a TLS or network failure or an answer that isn't a model list is
+# ProviderUnreachable. The debug log gets the host and the status only.
+LIST_HOSTS = {"openai": "api.openai.com", "claude": "api.anthropic.com"}
+LIST_PATHS = {"openai": "/v1/models", "claude": "/v1/models?limit=1000"}
+ANTHROPIC_VERSION = "2023-06-01"
+LIST_TIMEOUT = 10                        # seconds
+LIST_CAP = 1_000_000                     # bytes read back at most
+LIST_MAX = 500                           # model ids kept at most
+
+
+class ProviderUnreachable(ConnectionError):
+    """The provider couldn't be asked or gave no model list: the host and plain words only."""
+
+
+def key_headers(provider, key):
+    """The one header that carries the key (and Anthropic's version header)."""
+    if provider == "claude":
+        return {"x-api-key": key, "anthropic-version": ANTHROPIC_VERSION}
+    return {"Authorization": f"Bearer {key}"}
+
+
+def _log(line):
+    """One debug log line (the host and a status, never a key); the log never stops a call."""
+    try:
+        import log as debuglog
+        debuglog.info("ai-models", debuglog.clean(line, 200))
+    except Exception:  # noqa: BLE001  the log never stops a call
+        return
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        """Never follow a redirect: urllib then raises the 3xx as an HTTPError, which the lister refuses."""
+        return None
+
+
+class HttpsLister(Lister):
+    """The real model list. `base` and `context` are for tests only (a local fake server and its certificate); creaite itself
+    always uses LIST_HOSTS over https with the system's trust store."""
+
+    def __init__(self, base=None, context=None, timeout=LIST_TIMEOUT, cap=LIST_CAP):
+        import ssl
+        self.base = dict(base or {p: f"https://{h}" for p, h in LIST_HOSTS.items()})
+        self.context = context or ssl.create_default_context()
+        self.context.minimum_version = max(self.context.minimum_version, ssl.TLSVersion.TLSv1_2)
+        self.timeout, self.cap = timeout, cap
+
+    def opener(self):
+        """urllib with no proxies from the environment, no redirects followed and this TLS context."""
+        return urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect(),
+                                           urllib.request.HTTPSHandler(context=self.context))
+
+    def models(self, provider, key):
+        """The model ids the key can use."""
+        if provider not in LIST_HOSTS or provider not in self.base:
+            raise ValueError("That provider has no model list.")
+        url = self.base[provider] + LIST_PATHS[provider]
+        host = urllib.parse.urlsplit(url).hostname or "?"
+        if not url.startswith("https://"):
+            raise ProviderUnreachable(f"{host}: only https is used")
+        if not isinstance(key, str) or not KEY_CHARS.fullmatch(key):
+            raise KeyRefused(400)
+        status, body = self.fetch(url, host, key_headers(provider, key))
+        _log(f"{host} model list: {status}")
+        if status is not None and 400 <= status < 500:
+            raise KeyRefused(status)
+        if status != 200:
+            raise ProviderUnreachable(f"{host}: answered {status}")
+        return self.ids(body, host)
+
+    def fetch(self, url, host, headers):
+        """(HTTP status, at most cap + 1 bytes of the answer) for one GET; ProviderUnreachable when there is no answer."""
+        req = urllib.request.Request(url, method="GET", headers={**headers, "Accept": "application/json", "User-Agent": "creaite"})
+        try:
+            with self.opener().open(req, timeout=self.timeout) as r:
+                return r.status, r.read(self.cap + 1)
+        except urllib.error.HTTPError as e:
+            e.close()
+            return e.code, b""
+        except Exception as e:  # noqa: BLE001  network, TLS, timeout, a broken answer: never the key, never the body
+            _log(f"{host} model list: unreachable ({type(e).__name__})")
+            raise ProviderUnreachable(f"{host}: couldn't be reached ({type(e).__name__})") from None
+
+    def ids(self, body, host):
+        """The model ids in a provider's answer ({"data": [{"id": …}, …]}), at most LIST_MAX."""
+        import json
+        if len(body) > self.cap:
+            raise ProviderUnreachable(f"{host}: the answer was too large")
+        try:
+            data = json.loads(body.decode("utf-8")).get("data")
+            ids = [m["id"] for m in data if isinstance(m, dict) and isinstance(m.get("id"), str) and 0 < len(m["id"]) <= 200]
+        except Exception:  # noqa: BLE001  anything else is not a model list
+            raise ProviderUnreachable(f"{host}: the answer wasn't a model list") from None
+        return ids[:LIST_MAX]
+# ── end #132 G2 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
 def fake_mode():
     """True when the live server was started by a test with the fake provider (never in a real vault)."""
     return os.environ.get("CREAITE_FAKE_PROVIDERS") == "1"
@@ -425,13 +530,13 @@ _BACKEND = {}
 
 
 def backend():
-    """(the key store, the lister): the fakes under a test; on a Mac the keychain store (#132 G1) with the not-built lister
-    until G2; else the not-built stand-ins. Only the live server calls this."""
+    """(the key store, the lister): the fakes under a test; on a Mac the keychain store (#132 G1) and the HTTPS model list
+    (#132 G2); else the not-built stand-ins. Only the live server calls this."""
     if not _BACKEND:
         if fake_mode():
             _BACKEND["pair"] = (MemoryStore(), FakeLister())
         elif sys.platform == "darwin":
-            _BACKEND["pair"] = (KeychainStore(), NotBuiltLister())
+            _BACKEND["pair"] = (KeychainStore(), HttpsLister())
         else:
             _BACKEND["pair"] = (NotBuiltStore(), NotBuiltLister())
     return _BACKEND["pair"]
