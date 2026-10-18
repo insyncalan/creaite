@@ -30,6 +30,7 @@ class Brewfile(unittest.TestCase):
         self.assertIn("gh", brews)
         self.assertIn("git", brews)
         self.assertTrue(any(b.startswith("python@3.") for b in brews), brews)
+        self.assertIn("libreoffice", re.findall(r'^cask "([^"]+)"', text, re.M))     # development only: renders exported Word files
 
     def test_it_is_development_only_and_never_in_a_release(self):
         self.assertFalse(update.is_engine("dev/Brewfile"))

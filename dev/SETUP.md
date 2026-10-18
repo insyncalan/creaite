@@ -6,7 +6,7 @@
 
 1. **Runtime requirements:** macOS (the only tested platform); Python 3.9 or later; the Claude desktop app and the `claude` command, signed in; Chrome or Edge; Anthropic's docx skill; Microsoft 365 connected in Claude; git (the command line developer tools); FileVault on; the vault in a local folder outside OneDrive and iCloud (and, with projects in the company OneDrive, its Engagements folder set to "Always keep on this device"). Nothing is pip installed: the libraries are bundled in `vendor/`.
 2. **macOS conveniences (optional):** the double-click launcher, the login agent. They live outside the vault, are not copied with it and are made again on a new machine.
-3. **Development tools (optional, never needed to run creaite):** Homebrew, `gh`, `git` and the test Python, from `dev/Brewfile` (`brew bundle --file=dev/Brewfile`). With `gh` signed in, "update creaite" can fetch a release itself.
+3. **Development tools (optional, never needed to run creaite):** Homebrew, `gh`, `git`, the test Python and LibreOffice (to render exported Word files when checking them), from `dev/Brewfile` (`brew bundle --file=dev/Brewfile`). With `gh` signed in, "update creaite" can fetch a release itself.
 
 **Windows is best effort and untested** (Alan, 11-10-2026). The Windows commands below are unsupported hints (run `python system/scripts/<name>.py …`: the `system/scripts/run` wrapper is POSIX `sh`). ask creaite's never list names macOS places only (`Library/Keychains`, browser profiles under `Library/Application Support`) and would not protect `%APPDATA%`.
 
