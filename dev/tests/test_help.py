@@ -418,7 +418,7 @@ class FirstVisitTests(unittest.TestCase):
 
     def test_an_address_is_never_overridden(self):
         o = self.load(False, "#review")
-        self.assertEqual(o["view"][0], "review")
+        self.assertEqual(o["view"][0], "intake-review")                                # #232: #review opens Intake and Review
 
     def test_it_is_marked_seen_with_a_logged_settings_write(self):
         seed = json.dumps((self.v.root / "system/config/settings.json").read_text(encoding="utf-8"))
