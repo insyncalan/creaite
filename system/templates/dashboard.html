@@ -45814,27 +45814,29 @@ ${s5}`;
       const k5 = e4.target.id === "fsFrom" ? "from" : e4.target.id === "fsTo" ? "to" : "";
       if (!k5) return;
       const v5 = e4.target.value.trim(), err = $(`#${e4.target.id}Err`);
-      const say2 = (m5) => {
+      const flag = (m5) => {
         e4.target.setAttribute("aria-invalid", m5 ? "true" : "false");
         err.textContent = m5;
       };
       if (!v5) {
+        flag("");
+        if (!FF[k5]) return;
         FF[k5] = "";
-        say2("");
         renderFiles();
         return;
       }
       const real2 = DDATE.test(v5) && ((d5) => !isNaN(d5) && d5.toISOString().slice(0, 10) === toIso(v5))(/* @__PURE__ */ new Date(toIso(v5) + "T00:00:00Z"));
       if (!real2) {
-        if (e4.type === "change") say2("Type a date as DD-MM-YYYY");
+        if (e4.type === "change") flag("Type a date as DD-MM-YYYY");
         return;
       }
       const iso2 = toIso(v5), o5 = k5 === "from" ? FF.to : FF.from;
       if (o5 && (k5 === "from" ? iso2 > o5 : iso2 < o5)) {
-        say2("From is after To");
+        flag("From is after To");
         return;
       }
-      say2("");
+      flag("");
+      if (FF[k5] === iso2) return;
       FF[k5] = iso2;
       renderFiles();
     }
