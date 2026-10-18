@@ -257,6 +257,9 @@ export async function setRhythm(code,val){ if(!await needVault()) return false;
    "Client / partner". The line's italic note (_(…)_) stays. Returns whether it was saved; `was` is the old value. */
 export function memLineEdit(text,label,val){
   const lab=label.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"), re=new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*"+lab+":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$","m");
+  if(/^(on|off)$/.test(val)){      /* the on/off lines: only the leading on or off is rewritten, anything after it ("on, pending client OK") stays */
+    const re2=new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*"+lab+":\\*\\*[ \\t]*)(on|off)\\b([^\\n]*)$","mi"), m2=text.match(re2);
+    if(m2) return {text:text.replace(re2,(_,a,b,c)=>a+val+c),was:m2[2].toLowerCase()}; }
   const m=text.match(re); if(m) return {text:text.replace(re,(_,a,b,c)=>a+val+(c?c.replace(/^\s*/,"   "):"")),was:m[2].trim()};
   const near=/^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text)||/^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
   if(!near) return null;

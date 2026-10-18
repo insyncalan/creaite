@@ -74,10 +74,15 @@ def target(req):
     return kind, code, fri, str(req.get("client") or "").strip()[:120] or project_client(code)
 
 
+CLIENT_NAME_MAX = 80
+
+
 def project_client(code):
     """The project's client (its memory's Client / partner line), the client a client report is for when none is named; or None."""
     import build_dashboard
-    return build_dashboard.memory(paths.project_dir(code)).get("client") or None
+    name = str(build_dashboard.memory(paths.project_dir(code)).get("client") or "")
+    name = " ".join(name.split())[:CLIENT_NAME_MAX]                  # one line, 80 characters at most (the panel holds the same cap)
+    return name or None
 
 
 def guarded(fn):

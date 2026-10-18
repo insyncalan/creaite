@@ -642,6 +642,7 @@
    "sensitive",
    "sentLog",
    "setChatWidth",
+   "setClientName",
    "setLayout",
    "setLive",
    "setMark",

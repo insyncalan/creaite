@@ -107,11 +107,22 @@ class Html(Base):
         r = self.export(path, "html")
         self.assertTrue(r["ok"], r)
         self.assertTrue(r["filed"])
-        self.assertEqual(r["path"], f"{ABC}/reports/2026-10-16 Weekly report - Example Programme (read only).html")
+        self.assertEqual(r["path"], f"{ABC}/reports/2026-10-16 Weekly report - Example Programme (2).html")   # the plain name is the filed report's own; the export is numbered
         page = (self.v.root / r["path"]).read_text(encoding="utf-8")
         self.assertNotIn("creaite-data", page)
         self.assertEqual(re.findall(r"<h2>(.*?)</h2>", page), SHOWN)
         self.hidden_absent(page)
+
+    def test_an_unfiled_report_leaves_the_plain_name_for_the_filing(self):
+        for kind, title in (("weekly", "Weekly report"), ("client", "Client report")):
+            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n"
+                        "print(json.dumps(creaite_doc.save('system/staging/drafts/unfiled.html', doc, 'Saved for a test')))")
+            self.assertTrue(r["ok"], r)
+            out = self.export(r["path"], "html", out_dir=f"{ABC}/reports")
+            self.assertTrue(out["ok"], out)
+            self.assertRegex(out["path"], r"Example Programme\)? \(2\)\.html$", kind)
+            self.assertNotIn("read only", out["path"])
+            self.assertFalse((self.v.root / out["path"].replace(" (2).html", ".html")).exists(), "the filing name is left free")
 
 
 class Word(Base):

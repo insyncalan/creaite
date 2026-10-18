@@ -315,6 +315,12 @@ class Routes(unittest.TestCase):
         self.assertIn(status, (0, 400), (status, ans))
         self.assertTrue((self.v.root / "system/branding/logos/ABC-client.png").is_file(), "nothing was removed")
 
+    def test_a_client_name_over_80_characters_is_cut_to_80_on_the_report(self):
+        mem = self.v.root / ABC / "CLAUDE.md"
+        mem.write_text(re.sub(r"(\*\*Client / partner:\*\*)[^\n]*", r"\g<1> " + "N" * 120, mem.read_text()))
+        r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertEqual(r["doc"].get("client"), "N" * 80, r["doc"].get("client"))
+
 
 if __name__ == "__main__":
     unittest.main()

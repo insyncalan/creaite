@@ -604,8 +604,8 @@ def section_html(s, items, doc=None):
     if kind == TEXT_TYPE:
         head = f"<h2>{esc(s.get('heading'))}</h2>" if str(s.get("heading") or "").strip() else ""
         return f'<section data-id="{esc(s.get("id"))}">{head}{text_html(s.get("text"), doc)}</section>'
-    if kind in (None, "text", "panes") and not (str(s.get("text") or "").strip()
-                                                or any(str(p.get("title") or "").strip() or str(p.get("text") or "").strip() for p in s.get("panes") or [])):
+    words = [s.get("text")] + [x for p in s.get("panes") or [] for x in (p.get("title"), p.get("text"))]
+    if kind in (None, "text", "panes") and not any(str(w or "").strip() for w in words):
         return ""                                                     # nothing in it: no empty heading, as the Word writer leaves it out
     body = {"table": lambda: md_html(s.get("text")) + _table(s), "figures": lambda: _figures(s), "panes": lambda: _panes(s),
             "health": lambda: _health(s), "timeline": lambda: _timeline(s, items)}.get(kind, lambda: md_html(s.get("text")))()
@@ -869,7 +869,24 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     folder = real(out_dir) if out_dir else real(path).parent if file_beside else None
     if folder is None or folder.resolve() == paths.DRAFTS.resolve():
         return {**out, "message": f"Exported {paths.rel(draft)}."}
-    return _file_export(out, draft, folder / (real(path).stem + (" (read only)" if fmt == "html" else "") + EXPORTS[fmt]), fail)
+    return _file_export(out, draft, folder / _export_name(doc, path, fmt), fail)
+
+
+def _export_name(doc, path, fmt):
+    """The file name an export is filed under. Minutes and other documents: the stem, and ' (read only)' for HTML. A weekly or client
+    report's HTML (Alan, 18-10-2026) takes its plain name, as the dashboard's export does; the plain name belongs to the filed report, so
+    a report not filed yet leaves it free for the filing and its export is numbered (a taken name is numbered by the filing)."""
+    stem = real(path).stem
+    if fmt != "html" or doc.get("kind") not in ("weekly", "client"):
+        return stem + (" (read only)" if fmt == "html" else "") + EXPORTS[fmt]
+    try:
+        filing = real(target(doc["kind"], doc.get("project"), doc.get("date"), client=doc.get("client")))
+    except (DocError, LookupError, OSError, KeyError, TypeError):
+        filing = None
+    name = filing.stem if filing is not None else stem
+    if filing is None or real(path).resolve() != filing.resolve():
+        name += " (2)"
+    return name + EXPORTS[fmt]
 
 
 def _check_baseline(doc):
@@ -1148,14 +1165,16 @@ class _Word:
                 parts.append(("t", [{"header": _nobraces(_plain_inline(c))} for c in head],
                               [[_nobraces(_plain_inline(c)) for c in (r + [""] * width)[:width]] for r in rows], lambda r, c: None))
             elif b.kind == "img":
-                f = text_image(self.doc, b.data[1])
-                if f and _too_big(f):
-                    parts.append(("e", [{"md": _nobraces(f"*Picture too large to include: {b.data[0] or b.data[1]}*")}]))
-                    continue
-                parts.append(("e", [{"image": str(f), "caption": b.data[0]}] if f else
-                                   [{"md": _nobraces(f"*Picture not found: {b.data[0] or b.data[1]}*")}]))
+                parts.append(("e", self.picture_entry(b.data[0], b.data[1])))
         flush()
         return parts
+
+    def picture_entry(self, alt, ref):
+        """A text section's picture as Word entries: the picture, or a sentence saying it is missing or over the 2 MB cap."""
+        f = text_image(self.doc, ref)
+        if f and _too_big(f):
+            return [{"md": _nobraces(f"*Picture too large to include: {alt or ref}*")}]
+        return [{"image": str(f), "caption": alt}] if f else [{"md": _nobraces(f"*Picture not found: {alt or ref}*")}]
 
     def text(self, s):
         """A text section: its Markdown, or nothing."""

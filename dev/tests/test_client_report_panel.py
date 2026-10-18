@@ -231,8 +231,52 @@ class ClientReportPanel(LiveBrowserCase):
         b.wait("!!document.querySelector('.cfglogo[data-kind=partner] .mark img')")
         self.assertTrue((self.v.root / "system/branding/logos/ABC-partner.svg").is_file())
         b.click("[data-logo-remove=partner]")
+        b.click("[data-logo-remove-yes=partner]")
         b.wait("!document.querySelector('.cfglogo[data-kind=partner] .mark img')")
         self.assertEqual(list((self.v.root / "system/branding/logos").glob("ABC-partner*")), [])
+
+    def test_remove_asks_first_and_the_firms_logo_says_it_is_for_all_projects(self):
+        b = self.b
+        self.open_panel()
+        self.assertIn("all projects", b.eval("document.querySelector('.cfglogo[data-kind=firm]').innerText"))
+        svg = Path(self.v.root) / "firm.svg"
+        svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><rect width="20" height="10" fill="#06c"/></svg>')
+        b.set_files("[data-logo-file=firm]", [svg])
+        b.wait("!!document.querySelector('.cfglogo[data-kind=firm] .mark img')")
+        logo = next((self.v.root / "system/branding/logos").glob("firm.*"))
+        b.click("[data-logo-remove=firm]")
+        self.assertIn("for all projects", b.eval("document.querySelector('.cfglogo[data-kind=firm] .cfgask').innerText"))
+        self.assertTrue(logo.is_file(), "nothing is removed by the first click")
+        b.click("[data-logo-remove-no=firm]")
+        self.assertEqual(b.eval("!!document.querySelector('.cfglogo[data-kind=firm] .cfgask')"), False)
+        self.assertTrue(logo.is_file())
+        b.click("[data-logo-remove=firm]")
+        b.click("[data-logo-remove-yes=firm]")
+        b.wait("!document.querySelector('.cfglogo[data-kind=firm] .mark img')")
+        self.assertFalse(logo.exists())
+
+    def test_the_rest_of_a_setting_line_is_kept_when_the_value_is_rewritten(self):
+        b = self.b
+        self.memory.write_text(self.original.replace("- **Client report rhythm:**", "- **Client report:** on, pending client OK\n- **Client report rhythm:**", 1))
+        b.reload("typeof go==='function' && LIVE")
+        self.open_panel()
+        b.click("#cfgOn")
+        b.wait("!!document.querySelector('#cfgOff')")
+        import time
+        end = time.time() + 8
+        while time.time() < end and "**Client report:** off" not in self.text():
+            time.sleep(0.1)
+        self.assertIn("- **Client report:** off, pending client OK\n", self.text())
+
+    def test_the_client_name_is_one_line_of_at_most_80_characters(self):
+        b = self.b
+        self.open_panel()
+        self.assertEqual(b.eval("document.querySelector('#cfgNm').maxLength"), 80)
+        before = self.text()
+        self.assertEqual(b.eval("setClientName('ABC', 'Northwind\\nTraders')"), False)
+        self.assertEqual(b.eval("setClientName('ABC', 'x'.repeat(81))"), False)
+        self.assertEqual(self.text(), before, "nothing was written")
+        self.assertEqual(b.eval("setClientName('ABC', 'x'.repeat(80))"), True)
 
     def test_a_jpeg_is_told_a_transparent_png_or_svg_sits_better(self):
         b = self.b

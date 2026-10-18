@@ -8,16 +8,16 @@
    Every control saves at once (stores/reportingSettings.js). `openClientReport(code)` shows it over the page (the hub's cog calls
    it); `<ClientReportPanel code onClose>` is the panel alone, for a place that positions it itself. */
 import { render } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { P } from "../../../core/data.js";
 import {
-  clientLogosOn, clientReminderOn, clientReportOn, crLogoData, crLogoNote, crLogoPaths, crTick, readClientLogos, removeClientLogo,
+  CLIENT_NAME_MAX, clientLogosOn, clientReminderOn, clientReportOn, crLogoData, crLogoNote, crLogoPaths, crTick, readClientLogos, removeClientLogo,
   setClientLogos, setClientName, setClientReminder, setClientRhythm, setClientReport, uploadClientLogo,
 } from "../../../stores/reportingSettings.js";
 
 /** @typedef {import("../../../stores/reportingSettings.js").LogoKind} TileKind */
 const TILES = /** @type {{kind: TileKind, mark: string, name: string, line: string}[]} */ ([
-  { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports. Always shown." },
+  { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
   { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
   { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" },
 ]);
@@ -28,6 +28,7 @@ function LogoTile({ code, t, ticked }) {
   const file = useRef(/** @type {HTMLInputElement|null} */ (null));
   const path = crLogoPaths.value[t.kind], pic = path ? crLogoData.value[path] : "";
   const firm = t.kind === "firm";
+  const [ask, setAsk] = useState(false);          // Remove asks first; the firm's logo is the same file for every project
   /** @param {Event} e */
   const picked = async e => {
     const input = /** @type {HTMLInputElement} */ (e.target), f = input.files && input.files[0];
@@ -45,8 +46,12 @@ function LogoTile({ code, t, ticked }) {
       <span class="cfgact">
         <button type="button" class="btn sm" data-logo-add={t.kind} onClick={() => file.current && file.current.click()}
           aria-label={`${pic ? "Change" : "Add"} the ${firm ? "firm's" : t.kind === "client" ? "client's" : "partner's"} logo`}>{pic ? "Change" : "Add logo"}</button>
-        {pic ? <button type="button" class="btn sm" data-logo-remove={t.kind} onClick={() => removeClientLogo(code, t.kind)}
+        {pic && !ask ? <button type="button" class="btn sm" data-logo-remove={t.kind} onClick={() => setAsk(true)}
           aria-label={`Remove the ${t.kind} logo`}>Remove</button> : null}
+        {pic && ask ? <span class="cfgask" role="group" aria-label={`Remove the ${t.kind} logo?`}>
+          <span class="sub" role="alert">{firm ? "Remove the firm's logo for all projects?" : `Remove the ${t.kind} logo?`}</span>
+          <button type="button" class="btn sm" data-logo-remove-yes={t.kind} onClick={() => { setAsk(false); removeClientLogo(code, t.kind); }}>Remove</button>
+          <button type="button" class="btn sm" data-logo-remove-no={t.kind} onClick={() => setAsk(false)}>Keep</button></span> : null}
         <input type="file" hidden ref={file} accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg" data-logo-file={t.kind} onChange={picked} />
         <input type="checkbox" checked={firm || ticked} disabled={firm} data-logo-tick={t.kind}
           aria-label={firm ? "The firm's logo is always shown" : `Show the ${t.kind}'s logo in the header`} onChange={firm ? undefined : toggle} />
@@ -78,7 +83,7 @@ export function ClientReportPanel({ code, onClose }) {
               {rhythms.map(r => <option key={r} value={r} selected={r === p.rhythm}>{r}</option>)}
             </select></div>
           <div class="cfgrow"><label for="cfgNm">Client name on the report</label>
-            <input id="cfgNm" class="pkdt" defaultValue={p.client || ""} key={p.client || ""}
+            <input id="cfgNm" class="pkdt" maxLength={CLIENT_NAME_MAX} defaultValue={p.client || ""} key={p.client || ""}
               onChange={e => setClientName(code, /** @type {HTMLInputElement} */ (e.target).value)} /></div>
           <div class="cfgrow"><label for="cfgRem">Reminder</label>
             <label class="cfgck"><input type="checkbox" id="cfgRem" checked={clientReminderOn(code)}

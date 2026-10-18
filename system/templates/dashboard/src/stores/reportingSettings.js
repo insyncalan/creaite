@@ -64,9 +64,13 @@ export async function setClientLogos(code, kinds) {
   p.crlogos = list; changed(); return true;
 }
 
+export const CLIENT_NAME_MAX = 80;
 /** @param {string} code @param {string} name the client's name on the report @returns {Promise<boolean>} */
 export async function setClientName(code, name) {
-  const p = project(code); const v = String(name || "").replace(/\s+/g, " ").trim(); if (!p) return false;
+  const p = project(code); if (!p) return false;
+  if (/[\r\n]/.test(String(name || ""))) { snack("Not saved: the client's name is one line."); return false; }     // a newline would end the line in CLAUDE.md
+  const v = String(name || "").replace(/\s+/g, " ").trim();
+  if (v.length > CLIENT_NAME_MAX) { snack(`Not saved: the client's name is over ${CLIENT_NAME_MAX} characters.`); return false; }
   if (!await setMemLine(code, "Client / partner", v, "client_name")) return false;
   p.client = v; changed(); return true;
 }
