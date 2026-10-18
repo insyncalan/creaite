@@ -3347,6 +3347,8 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
 .sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
 @media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
+/* #207: the top bar hidden by a scroll on any other page: out of the layout at once (no slide); the page grows upward (core/topbar.js) */
+.main.tb-off>.bar{height:0;min-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;overflow:hidden;visibility:hidden;flex:none;transition:none}
 .main:has(.view:not([hidden]) .sheet-root.rpt-slim)>.bar,
 .view:not([hidden]):has(.sheet-root.rpt-slim) :is(.wrhead,.mnhead,.crhead){height:0;min-height:0;padding-top:0;padding-bottom:0;border-width:0;overflow:hidden;flex:none}
 .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}

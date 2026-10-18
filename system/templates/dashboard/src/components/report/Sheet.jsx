@@ -17,7 +17,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { SheetPage, openSheetRef, labelOf } from "./SheetPage.jsx";
-import { A4_W, CONTENT_MM, headerPolicy, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom } from "./sheetLib.js";
+import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom } from "./sheetLib.js";
+import { headerPolicy } from "../../core/scrollPolicy.js";
 
 export { openSheetRef as openRef };
 
@@ -234,7 +235,7 @@ function relayout(root) {
 
 /** #202 (mockup report-banner, option A): the header is part of the layout. The first downward scroll (any distance, no delay) hides the
     search bar and the title block and leaves the toolbar as one slim bar (title, project and date, zoom, Show as exported, the view's
-    buttons). The rule for when it returns is headerPolicy (sheetLib.js); a Tab into a control in a hidden band always brings it back; a
+    buttons). The rule for when it returns is headerPolicy (core/scrollPolicy.js); a Tab into a control in a hidden band always brings it back; a
     click in the slim bar, a menu item included, never does.
     Nothing slides. The state is the class `rpt-slim` on the sheet root (style.css); closing the view clears it.
     @param {{current: HTMLDivElement|null}} root */
@@ -262,7 +263,7 @@ function useBannerHide(root) {
       const y = t.scrollTop, d = y - (last.get(t) || 0);
       last.set(t, y);
       up = d < 0 ? up - d : 0;
-      const act = headerPolicy(y, d, up);     // the rule is in sheetLib.js, in one place
+      const act = headerPolicy(y, d, up);     // the rule is in core/scrollPolicy.js, in one place
       if (act === "hide") { if (canHide(t)) slim(true); } else if (act === "show") slim(false);
     };
     const focus = (/** @type {FocusEvent} */ e) => {       // Tab into a control in a hidden band
