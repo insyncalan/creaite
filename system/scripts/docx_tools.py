@@ -545,7 +545,7 @@ MONO = "Courier New"                                  # H5, #218: the font of in
 
 
 def styled_run(rpr, text, bold, italic, strike=False, code=False):
-    """One Word text run in the template's run style `rpr`, with bold, italic and strikethrough as asked, and (code) in a fixed-width font."""
+    """One Word text run in the template's run style `rpr`: bold, italic and strikethrough as asked, `code` in a fixed-width font."""
     rpr = re.sub(r"<w:(?:b|i|bCs|iCs|strike)(?: [^>]*)?/>", "", rpr or "<w:rPr></w:rPr>")
     if code:
         rpr = re.sub(r"<w:rFonts\b[^>]*/>", "", rpr)
@@ -581,7 +581,8 @@ def md_paras(para, name, text, code=False):
         """One Markdown block as a Word paragraph in the given shell: its runs styled, indented for a list item or a quote."""
         b, rn, rp = use or (base_shell, run, rpr)
         runs = ([(prefix, False, False, False, None, False)] if prefix else []) + md_spans(body)
-        xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st, bool(code and cd)) for t, bo, it, st, u, cd in runs)
+        xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st, bool(code and cd))
+                      for t, bo, it, st, u, cd in runs)
         p = b[:rn.start()] + xml + b[rn.end():]
         if shape == "list":
             p = with_indent(p, base + 360 * (level + 1), 360)

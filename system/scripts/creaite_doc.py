@@ -219,11 +219,16 @@ th{background:#f3f4f7}
 .panes{display:flex;gap:14px}.panes>div{flex:1}
 .flag{font-weight:700}
 blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid #d6d9e0;color:#555}blockquote p{margin:0}
-.ft h3{font-size:14px;margin:10px 0 4px}.ft h4{font-size:13px;margin:8px 0 4px}.ft h5,.ft h6{font-size:12.5px;font-style:italic;margin:6px 0 3px}
-.ft p{margin:0 0 8px}.ft ul,.ft ol{margin:0 0 8px;padding-left:22px}.ft ul.tasks{list-style:none;padding-left:4px}.ft li>ul,.ft li>ol{margin:2px 0}
-pre{background:#f3f4f7;border:1px solid #d6d9e0;border-radius:4px;padding:8px 10px;margin:0 0 8px;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
-code{font:12px ui-monospace,Menlo,Consolas,monospace;background:#f3f4f7;padding:0 3px;border-radius:3px}pre code{background:none;padding:0}
-.ft table{margin:0 0 8px}.ft figure{margin:0 0 8px}.ft figure img{max-width:100%;height:auto}.ft figcaption{font-size:12px;color:#555}
+.ft h3{font-size:14px;margin:10px 0 4px}.ft h4{font-size:13px;margin:8px 0 4px}
+.ft h5,.ft h6{font-size:12.5px;font-style:italic;margin:6px 0 3px}
+.ft p{margin:0 0 8px}.ft ul,.ft ol{margin:0 0 8px;padding-left:22px}.ft ul.tasks{list-style:none;padding-left:4px}
+.ft li>ul,.ft li>ol{margin:2px 0}
+pre{background:#f3f4f7;border:1px solid #d6d9e0;border-radius:4px;padding:8px 10px;margin:0 0 8px;
+font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+code{font:12px ui-monospace,Menlo,Consolas,monospace;background:#f3f4f7;padding:0 3px;border-radius:3px}
+pre code{background:none;padding:0}
+.ft table{margin:0 0 8px}.ft figure{margin:0 0 8px}.ft figure img{max-width:100%;height:auto}
+.ft figcaption{font-size:12px;color:#555}
 .ft a{color:#1a4fa0}.ft hr{border:0;border-top:1px solid #d6d9e0;margin:8px 0}
 @media print{body{background:#fff}.page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0}@page{size:A4;margin:16mm}}
 """
@@ -313,57 +318,83 @@ def _read(lines, lo, hi, depth):
     """The blocks of lines[lo:hi]."""
     out, i = [], lo
     while i < hi:
-        line, nxt = lines[i], (lines[i + 1] if i + 1 < hi else None)
-        if not line.strip():
+        if not lines[i].strip():
             i += 1
             continue
-        m = _FENCE.match(line)
-        if m:
-            j = _fence_end(lines, i, hi, m.group(1))
-            out.append(TextBlock("code", (m.group(2), "\n".join(lines[i + 1:j])), i, min(j + 1, hi)))
-            i = min(j + 1, hi)
-            continue
-        m = _HEAD.match(line)
-        if m:
-            out.append(TextBlock("h", (len(m.group(1)), m.group(2)), i, i + 1))
-            i += 1
-            continue
-        if _RULE.match(line):
-            out.append(TextBlock("hr", None, i, i + 1))
-            i += 1
-            continue
-        m = _IMG_LINE.match(line)
-        if m:
-            out.append(TextBlock("img", (m.group(1).strip(), m.group(2)), i, i + 1))
-            i += 1
-            continue
-        if _table_at(line, nxt):
-            j = i + 2
-            while j < hi and lines[j].strip() and "|" in lines[j]:
-                j += 1
-            out.append(TextBlock("table", (_cells(line), [_cells(x) for x in lines[i + 2:j]]), i, j))
-            i = j
-            continue
-        if line.lstrip().startswith(">"):
-            j = i
-            while j < hi and lines[j].lstrip().startswith(">"):
-                j += 1
-            inner = [re.sub(r"^\s*>[ ]?", "", x) for x in lines[i:j]]
-            kids = _read(inner, 0, len(inner), depth + 1) if depth < MAX_TEXT_DEPTH else [TextBlock("p", " ".join(inner), 0, 1)]
-            out.append(TextBlock("quote", kids, i, j))
-            i = j
-            continue
-        if _ITEM.match(line) or _EMPTY_ITEM.match(line):
-            block, i = _list(lines, i, hi, depth)
-            out.append(block)
-            continue
-        j, parts = i, []
-        while j < hi and lines[j].strip() and (j == i or not _starts_block(lines[j], lines[j + 1] if j + 1 < hi else None)):
-            parts.append(lines[j].strip())
-            j += 1
-        out.append(TextBlock("p", " ".join(parts), i, j))
-        i = j
+        block, i = _next_block(lines, i, hi, depth)
+        out.append(block)
     return out
+
+
+def _next_block(lines, i, hi, depth):
+    """(the block that starts at lines[i], the line after it): the first form that fits, else a paragraph."""
+    for take in (_fenced, _heading, _rule, _picture, _read_table, _quote, _listed):
+        got = take(lines, i, hi, depth)
+        if got:
+            return got
+    return _paragraph(lines, i, hi)
+
+
+def _fenced(lines, i, hi, _depth):
+    """A fenced code block."""
+    m = _FENCE.match(lines[i])
+    if not m:
+        return None
+    j = _fence_end(lines, i, hi, m.group(1))
+    return TextBlock("code", (m.group(2), "\n".join(lines[i + 1:j])), i, min(j + 1, hi)), min(j + 1, hi)
+
+
+def _heading(lines, i, _hi, _depth):
+    """A heading of one to six levels."""
+    m = _HEAD.match(lines[i])
+    return (TextBlock("h", (len(m.group(1)), m.group(2)), i, i + 1), i + 1) if m else None
+
+
+def _rule(lines, i, _hi, _depth):
+    """A horizontal rule."""
+    return (TextBlock("hr", None, i, i + 1), i + 1) if _RULE.match(lines[i]) else None
+
+
+def _picture(lines, i, _hi, _depth):
+    """A picture on a line of its own."""
+    m = _IMG_LINE.match(lines[i])
+    return (TextBlock("img", (m.group(1).strip(), m.group(2)), i, i + 1), i + 1) if m else None
+
+
+def _read_table(lines, i, hi, _depth):
+    """A table: a header row, the separator row, then rows while they hold a bar."""
+    if not _table_at(lines[i], lines[i + 1] if i + 1 < hi else None):
+        return None
+    j = i + 2
+    while j < hi and lines[j].strip() and "|" in lines[j]:
+        j += 1
+    return TextBlock("table", (_cells(lines[i]), [_cells(x) for x in lines[i + 2:j]]), i, j), j
+
+
+def _quote(lines, i, hi, depth):
+    """A quote: its lines with one level of `>` taken off, read again as blocks."""
+    if not lines[i].lstrip().startswith(">"):
+        return None
+    j = i
+    while j < hi and lines[j].lstrip().startswith(">"):
+        j += 1
+    inner = [re.sub(r"^\s*>[ ]?", "", x) for x in lines[i:j]]
+    kids = _read(inner, 0, len(inner), depth + 1) if depth < MAX_TEXT_DEPTH else [TextBlock("p", " ".join(inner), 0, 1)]
+    return TextBlock("quote", kids, i, j), j
+
+
+def _listed(lines, i, hi, depth):
+    """A list."""
+    return _list(lines, i, hi, depth) if (_ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i])) else None
+
+
+def _paragraph(lines, i, hi):
+    """A paragraph: lines up to a blank one or the start of another block, joined by a space."""
+    j, parts = i, []
+    while j < hi and lines[j].strip() and (j == i or not _starts_block(lines[j], lines[j + 1] if j + 1 < hi else None)):
+        parts.append(lines[j].strip())
+        j += 1
+    return TextBlock("p", " ".join(parts), i, j), j
 
 
 def _item_end(lines, i, hi, base):
@@ -378,45 +409,51 @@ def _item_end(lines, i, hi, base):
                 j = k
                 continue
             break
-        if _indent(lines[j]) > base:
-            j += 1
-        elif _starts_block(lines[j], None):
+        if _indent(lines[j]) <= base and _starts_block(lines[j], None):
             break
-        else:
-            j += 1
+        j += 1
     return j
 
 
+def _task_of(text, ordered):
+    """(the checklist state of a bullet's text: " " or "x", else None; its words without the box)."""
+    t = None if ordered else _TASK.match(text)
+    return (t.group(1).lower(), (t.group(2) or "").strip()) if t else (None, text)
+
+
+def _list_item(lines, i, hi, base, ordered, depth):
+    """(the item that starts at lines[i]: (checklist state, text, nested blocks); the line after it)."""
+    m = _ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i])
+    j = _item_end(lines, i, hi, base)
+    rest, lead = lines[i + 1:j], []
+    while rest and rest[0].strip() and _indent(rest[0]) <= base and not _starts_block(rest[0], None):
+        lead.append(rest.pop(0).strip())               # a soft-wrapped line of the item's own text
+    task, text = _task_of(" ".join([(m.group(3) if m.re is _ITEM else "").strip()] + lead).strip(), ordered)
+    deep = min((_indent(x) for x in rest if x.strip()), default=0)
+    under = [x.expandtabs(4)[deep:] if x.strip() else "" for x in rest]
+    kids = _read(under, 0, len(under), depth + 1) if depth < MAX_TEXT_DEPTH and any(x.strip() for x in under) else []
+    return (task, text, kids), j
+
+
+def _same_list(lines, i, hi, base, ordered):
+    """True when lines[i] is an item of the list being read: the same indent and kind."""
+    m = (_ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i])) if i < hi else None
+    return bool(m) and _indent(lines[i]) == base and m.group(2)[0].isdigit() == ordered
+
+
 def _list(lines, i, hi, depth):
-    """(a list block, the next line) for the list that starts at lines[i]: items of one kind (bullets or numbers) at one indent, each
-    as (its checklist state: None, " " or "x"; its text; the blocks nested under it)."""
+    """(a list block, the next line) for the list that starts at lines[i]: items of one kind (bullets or numbers) at one indent."""
     first = _ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i])
     base, ordered = _indent(lines[i]), first.group(2)[0].isdigit()
     items, start = [], i
-    while i < hi:
-        m = _ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i])
-        if not m or _indent(lines[i]) != base or m.group(2)[0].isdigit() != ordered:
-            break
-        j = _item_end(lines, i, hi, base)
-        rest, lead = lines[i + 1:j], []
-        while rest and rest[0].strip() and _indent(rest[0]) <= base and not _starts_block(rest[0], None):
-            lead.append(rest.pop(0).strip())               # a soft-wrapped line of the item's own text
-        text = " ".join([(m.group(3) if m.re is _ITEM else "").strip()] + lead).strip()
-        task = None
-        t = None if ordered else _TASK.match(text)
-        if t:
-            task, text = t.group(1).lower(), (t.group(2) or "").strip()
-        deep = min((_indent(x) for x in rest if x.strip()), default=0)
-        under = [x.expandtabs(4)[deep:] if x.strip() else "" for x in rest]
-        kids = _read(under, 0, len(under), depth + 1) if depth < MAX_TEXT_DEPTH and any(x.strip() for x in under) else []
-        items.append((task, text, kids))
-        i = j
-        while i < hi and not lines[i].strip():
-            i += 1
-        nxt = _ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i]) if i < hi else None
-        if not (nxt and _indent(lines[i]) == base):
-            i = j
-            break
+    while _same_list(lines, i, hi, base, ordered):
+        item, i = _list_item(lines, i, hi, base, ordered, depth)
+        items.append(item)
+        k = i
+        while k < hi and not lines[k].strip():
+            k += 1
+        if _same_list(lines, k, hi, base, ordered):
+            i = k                                      # blank lines between items of one list
     return TextBlock("list", (ordered, items), start, i), i
 
 
@@ -1274,7 +1311,8 @@ def _rpr(para, bold=False, italic=False, mono=False, size=None):
     """The paragraph with its runs' properties set (bold, italic, a fixed-width font, a size in half-points), in the order Word reads."""
     import docx_tools
     fonts = f'<w:rFonts w:ascii="{docx_tools.MONO}" w:hAnsi="{docx_tools.MONO}" w:cs="{docx_tools.MONO}"/>' if mono else ""
-    props = fonts + ("<w:b/>" if bold else "") + ("<w:i/>" if italic else "") + (f'<w:sz w:val="{size}"/><w:szCs w:val="{size}"/>' if size else "")
+    sized = f'<w:sz w:val="{size}"/><w:szCs w:val="{size}"/>' if size else ""
+    props = fonts + ("<w:b/>" if bold else "") + ("<w:i/>" if italic else "") + sized
 
     def run(m):
         """One run with its properties replaced."""
@@ -1304,7 +1342,8 @@ def _code_paras(para, text):
         ppr = ('<w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F3F4F7"/>'
                f'<w:spacing w:before="0" w:after="{after}" w:line="240" w:lineRule="auto"/><w:ind w:left="144" w:right="144"/></w:pPr>')
         p = re.sub(r"<w:pPr>.*?</w:pPr>", "", p, count=1, flags=re.S)
-        out.append(re.sub(r"(<w:p(?: [^>]*)?>)", lambda m: m.group(1) + ppr, p, count=1))
+        at = re.match(r"<w:p(?: [^>]*)?>", p).end()                 # the paragraph's properties go straight after its opening tag
+        out.append(p[:at] + ppr + p[at:])
     return "".join(out)
 
 

@@ -194,7 +194,7 @@ class AddAndEdit(Base):
         self.assertEqual(self.value(sid), text, "the one editor's round trip leaves what was saved as it was")
 
     def test_raw_html_in_the_text_never_becomes_page_markup(self):
-        sid = self.add_foot()
+        self.add_foot()
         self.put('<script>window.__x=1</script> <span style="color:red" onclick="window.__y=1">red</span>')
         self.saved()
         self.assertFalse(self.ev("window.__x||window.__y||false"))
@@ -380,7 +380,7 @@ class ClientRuleUI(LiveBrowserCase):
     def test_a_section_written_in_the_client_report_says_so_and_an_added_one_matches_internal(self):
         self.internal_with_text()
         self.open_side()
-        self.b.click(f"#v-clientreport .sheet-pair > .sheet-fit + .sheet-fit [data-addtext]")
+        self.b.click("#v-clientreport .sheet-pair > .sheet-fit + .sheet-fit [data-addtext]")
         self.b.wait(f"{self.pages(1)}.querySelectorAll('section[data-id^=free_]').length===1", 10)
         self.assertIn("Written for the client", self.b.eval(f"{self.pages(1)}.querySelector('section[data-id^=free_] .sheet-match').textContent"))
         self.b.eval(f"{self.pages(0)}.querySelector('section[data-id=free_int] [data-addto]').click()")

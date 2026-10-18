@@ -27,7 +27,7 @@ export { openSheetRef as openRef };
 /** @typedef {{ref?: string, cells?: Record<string, string>, shown?: boolean, source?: any}} SheetRow */
 /** @typedef {{id: string, type: string, heading: string, default_heading?: string, hidden?: boolean, text?: string,
     columns?: {key: string, label: string}[], rows?: SheetRow[], figures?: any[], panes?: {title: string, text: string}[],
-    tags?: SheetTag[], data?: any}} SheetSection */
+    tags?: SheetTag[], data?: any, audience?: string}} SheetSection */
 /** @typedef {{kind: string, audience?: string, project: string, title: string, date: string, version?: number,
     layout?: Record<string, any>, sections: SheetSection[], items?: Record<string, any>, sources?: any[], meta?: Record<string, any>,
     [k: string]: any}} SheetDoc */
