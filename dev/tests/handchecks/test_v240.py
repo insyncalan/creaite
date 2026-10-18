@@ -22,8 +22,8 @@ exists, and the note says what still has to be added when the rest lands.
 
 Kinds are the sheet's map (KIND below). A part that only a person with the real Finder, Word or trackpad can do is said in NOTES
 (HAND_PARTS), because a LIVE_ONLY entry would replace the scripted Pass.
-  Wrapped     1 to 34, 36, 37  the named tests (no vault, server or Chrome of its own); 28 is struck; 29, 30 and 32 have no test
-                               named by the sheet yet (marked phase 2, so dev/tools/handcheck.py --list shows them as gaps)
+  Wrapped     1 to 34, 36, 37  the named tests (no vault, server or Chrome of its own); 28 is struck; 29, 30 and 32 are
+                               dev/tests/test_hub_always.py (written for these checks: the sheet named no test)
   Always      35               doctor and the page errors on the hand-check vault (shared; nothing changes data)
 Desktop (1400 px) and 900 px only for the sheet (Alan, 15-10-2026).
 """
@@ -37,7 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hcbase
-from hcbase import NOTES, HandcheckCase, phase2
+from hcbase import NOTES, HandcheckCase
 
 HERE = Path(__file__).resolve().parent
 TESTS = HERE.parent
@@ -68,7 +68,7 @@ PARTIAL = {
     7: "no test names 'clicking a button on the line never brings them back'",
     8: "the sheet says the logo sits on a dark plate on dark, the h2 test and note say a light plate on dark: Stark to confirm",
     10: "no test names text sections or Show as exported in the client report under this check (37 covers the text-section rule)",
-    12: "test_add_text_section_is_disabled_with_a_tip_until_it_lands (h2) is stale now that p240-h5 lands and is not wired",
+    12: "the sheet's test_add_text_section_is_disabled_with_a_tip_until_it_lands no longer exists (h5 enabled the item; test_add_text_section_is_enabled_and_adds_a_section_below replaces it, wired under 17)",
     13: "only the 96 px width is tested; 120 px at 100%, the six-week strip's width and Change as the small button are not named",
     15: "the check says 'Added by you', the tests and Stark's note say the row is marked New: PM and Stark to settle the word",
     17: "no test names AI on selected text or undo and redo; the check's items that slip are named by Stark",
@@ -82,6 +82,7 @@ PARTIAL = {
 # ── the named tests, per check: [(file in dev/tests, (test names), branch that brings them)] ─────────────────────────────────
 P4, P3, P220, P226, P227, P229 = "p240-h4", "p240-h3", "p240-220", "p240-226", "p240-227", "p240-229"
 H1, H2, H5 = "p240-h1", "p240-h2", "p240-h5"
+HC = "v240-hc"             # dev/tests/test_hub_always.py: checks 29, 30 and 32 (no test in the sheet; written for the hand checks)
 HUB = "test_reporting_hub"
 SHEET = "test_report_sheet"
 TS = "test_report_text_section"
@@ -157,7 +158,8 @@ NAMED = {
     17: [(TS, ("HtmlRender", "WordWrite"), H5),
          (TS_ROUTES, ("TextSectionRoutes",), H5),
          (TS_UI, ("AddAndEdit", "Pictures", "MoveHideDelete"), H5),
-         (TS_GATE, ("Profile",), H5)],
+         (TS_GATE, ("Profile",), H5),
+         (SHEET, both("test_add_text_section_is_enabled_and_adds_a_section_below"), H2)],
     18: [(SHEET, ("WeeklySheet.test_16px_between_the_timeline_picture_and_the_milestone_list",), H2)],
     19: [("test_review_meta_229", ("test_a_row_has_exactly_one_meta_line", "test_detail_on_hover_and_in_the_peek_and_marks_stay"), P229),
          ("test_activity_kind_229", ("test_no_kind_button_and_the_funnel_filters_by_kind",), P229),
@@ -196,9 +198,13 @@ NAMED = {
     27: [(SHEET, both("test_logos_at_the_right_drawn_straight_on_the_page"), H2),
          (PAGE, ("test_c01_header_logos_one_title",), P226),
          (WORD, ("test_check_01_title_block_once_and_the_reports_logos",), P227)],
+    29: [("test_hub_always", ("Always.test_the_hub_reads_in_both_palettes_light_and_dark_at_900_and_1400",), HC)],
+    30: [("test_hub_always", ("Always.test_the_toolbar_week_menu_section_menu_cog_and_export_work_from_the_keyboard",), HC)],
     31: [(PAGE, ("test_c12_without_a_page_the_python_renderer_still_makes_a_file_and_says_so",
                  "test_c12b_a_page_that_fails_the_server_check_gives_the_plain_file_without_the_leak"), P226),
          (EXPORT_PAGE, ("Fallback",), P226)],
+    32: [("test_hub_always", ("Always.test_left_out_stays_out_when_reopened_and_a_client_export_is_refused_before_approval",), HC),
+         (PAGE, ("test_c07_left_out_stays_out_of_the_file_and_its_source",), P226)],
     33: [(PAGE, ("test_c09_dates_are_dd_mm_yyyy",), P226)],
     34: [("test_no_real_names", ("NoRealNames",), "main")],
     36: [(HUB, ("Actions.test_export_asks_which_report_only_when_the_client_report_is_on",
@@ -495,26 +501,23 @@ class Wrapped(unittest.TestCase):
 
     # ── Always ──
 
-    @phase2('no test found yet (the draft sheet names none): the screenshot sheet shows the hub and report once the hub screens are in hcbase.SCREENS')
     def test_c29_themes_and_widths(self):
         """29. Light and dark, creaite and Cursor palettes, at 1400 px and 900 px: the hub, the report and the dialogs."""
-        pass
+        self.named(29)
 
-    @phase2('no test found yet (the draft sheet names none); h2 has test_section_menu_keyboard for the section menu only')
     def test_c30_keyboard(self):
         """30. Keyboard: the toolbar, the week menu, the section menu, the cog panel and the export dialog work without a mouse; Esc
         closes each."""
-        pass
+        self.named(30)
 
     def test_c31_fallback(self):
         """31. Fallback: with no browser or live server an export still produces a plain file, and says so."""
         self.named(31)
 
-    @phase2('no test found yet (the draft sheet names none); h1 has Actions.test_a_client_export_before_the_internal_week_is_approved_... for the refusal half')
     def test_c32_reopened_and_refused(self):
         """32. Left out items stay out when the report is reopened, and a client export is refused before the internal one is
         approved."""
-        pass
+        self.named(32)
 
     def test_c33_dates(self):
         """33. Dates in DD-MM-YYYY everywhere in the hub and the exports."""

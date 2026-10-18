@@ -439,7 +439,6 @@ def list_mode(a, avail):
 
 def run_release(v, a, zip_path, run_dir, nums=None):
     """One release in a process of its own (its own vault, server and Chrome); returns (outcomes, seconds, error)."""
-    import handcheck_report as hr
     d = run_dir / v
     d.mkdir(parents=True, exist_ok=True)
     out_json = d / "summary.json"
