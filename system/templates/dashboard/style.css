@@ -896,6 +896,7 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .cdel{border:0;background:none;width:24px;height:24px;border-radius:50%;cursor:pointer;color:var(--muted)} .cdel:hover{background:var(--bad-soft);color:var(--bad)}
 .rgroup{margin:16px 0 6px;display:flex;align-items:center;gap:10px}
 .why{font-size:var(--fs-xs);color:var(--muted)} .why.rvmeta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}   /* #229: one meta line */ .indiv{font-size:var(--fs-xs);color:var(--warn)}
+.rvnote{font-size:var(--fs-xs);color:var(--muted)}
 .cock{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px} .card h2{margin-bottom:8px}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:6px 0 16px}
