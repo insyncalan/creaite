@@ -254,8 +254,7 @@ class DayLine(TodayFixture):
         b.call("Input.dispatchMouseEvent", type="mouseMoved", x=c["x"] - 40, y=c["y"] - 40)
         b.call("Input.dispatchMouseEvent", type="mouseMoved", x=c["x"], y=c["y"])
         b.wait("document.querySelector('#dayMeets .dmpop')")
-        b.click("#dayMeets .dmpop .btn.primary")
-        b.wait("location.hash.startsWith('#prep=')||decodeURIComponent(location.hash).startsWith('#prep=')")
+        b.click_until("#dayMeets .dmpop .btn.primary", "location.hash.startsWith('#prep=')", timeout=12)   # a redraw between press and release loses a click (#152)
         b.wait("!document.querySelector('.dmpop')")                     # the peek closes when the page changes
         b.eval("history.back()")
         b.wait("!location.hash.startsWith('#prep=')")
@@ -331,9 +330,9 @@ class DayLine(TodayFixture):
         first = b.eval(f"{items}.indexOf(document.activeElement)")
         self.assertEqual(first, 0)                                                                       # focus lands on the first item
         b.key("ArrowDown")
-        self.assertEqual(b.eval(f"{items}.indexOf(document.activeElement)"), 1)
+        b.wait(f"{items}.indexOf(document.activeElement)===1", 5)                                        # the key is handled a frame later on a slow runner
         b.key("ArrowUp")
-        self.assertEqual(b.eval(f"{items}.indexOf(document.activeElement)"), 0)
+        b.wait(f"{items}.indexOf(document.activeElement)===0", 5)
         b.key("Escape")
         b.wait("!document.querySelector('#todayDate [role=menu]')")
         self.assertTrue(b.eval("document.activeElement.classList.contains('dypastbtn')"))                # focus back on the history icon
