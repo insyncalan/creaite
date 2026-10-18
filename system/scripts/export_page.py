@@ -101,6 +101,15 @@ class PageRefused(ValueError):
 
 # ── The allow-list ────────────────────────────────────────────────────────────
 
+def urls_ok(text):
+    """Whether every url() in the text is a fragment or a data address of a picture."""
+    for m in URL_IN_CSS.finditer(text):
+        a = m.group(2).strip()
+        if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
+            return False
+    return True
+
+
 def safe_css_value(v, client=False):
     """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address of a picture
     or a fragment of the file itself. A CLIENT file takes no SVG picture in its styles at all; an internal file takes one only if its
@@ -111,11 +120,8 @@ def safe_css_value(v, client=False):
         return False
     if NO_FUNCTIONS.search(squashed) or re.search(r"(?<![\w-])src\(", decoded, re.I):
         return False     # a picture or address in a string the url() checks never see (image-set, cross-fade, src())
-    for text in (v, decoded):       # as written and as the browser reads it (u\72l( is url()
-        for m in URL_IN_CSS.finditer(text):
-            a = m.group(2).strip()
-            if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
-                return False
+    if not urls_ok(v) or not urls_ok(decoded):      # as written and as the browser reads it (u\72l( is url()
+        return False
     if client and not metadata_free(v):
         return False
     if SVG_ADDR.search(decoded) or SVG_ADDR.search(v) or SVG_ADDR.search(squashed):

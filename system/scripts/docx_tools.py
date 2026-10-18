@@ -103,6 +103,13 @@ def _jpeg_kept(marker, seg):
     return not (0xE0 <= marker <= 0xEF or marker == 0xFE) or (marker == 0xEE and seg[4:9] == b"Adobe")
 
 
+def _scan_end(data, i):
+    """The index of the next real marker after a scan's entropy-coded data (not a stuffed FF00, a fill FFFF or a restart)."""
+    while i + 1 < len(data) and not (data[i] == 0xFF and data[i + 1] not in (0x00, 0xFF) and not 0xD0 <= data[i + 1] <= 0xD7):
+        i += 1
+    return i
+
+
 def _strip_jpeg(data):
     """A JPEG without its APPn and comment segments, in every scan, and without any bytes after the end-of-image marker; the pixels
     (the scans' entropy-coded data) as they were."""
@@ -129,8 +136,7 @@ def _strip_jpeg(data):
                 out.append(data[i:end])
             i = end
             if marker == 0xDA:                     # skip the scan's data up to the next real marker
-                while i + 1 < len(data) and not (data[i] == 0xFF and data[i + 1] not in (0x00, 0xFF) and not 0xD0 <= data[i + 1] <= 0xD7):
-                    i += 1
+                i = _scan_end(data, i)
                 out.append(data[end:i])
     return data
 
