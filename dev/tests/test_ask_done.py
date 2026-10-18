@@ -163,11 +163,11 @@ class AskDone(LiveBrowserCase):
 
     def test_the_real_timer_clears_it_with_a_short_override(self):
         b = self.b
-        b.eval("ASKDONE.ms=400")
+        b.eval("ASKDONE.ms=3000")
         self.start("hello")
         self.finished("done")
         self.assertEqual(self.s()["st"], "done")
-        b.pump(1.2)
+        b.pump(3.6)
         self.idle()
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#askBtn .asklife')).display"), "none")
 
@@ -195,11 +195,11 @@ class AskDone(LiveBrowserCase):
     def test_failed_looks_different_and_stays_until_the_panel_is_opened(self):
         b = self.b
         self.spy_timeouts()
-        b.eval("ASKDONE.ms=300")                                                               # a short timer would hide done and stopped; failed must ignore it
         self.start("hello")
         self.finished("done")
         done = self.s()
-        b.pump(0.8)
+        self.assertEqual(done["st"], "done")
+        b.eval("TO.length=0; ASKDONE.ms=300")                                                  # a short timer would hide done and stopped; failed must ignore it
         self.start("fail now")
         self.finished("failed")
         s = self.s()

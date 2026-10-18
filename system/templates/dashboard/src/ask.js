@@ -364,7 +364,7 @@ export function greet(){ addEl("msg a",html`${GREET}`); }
 export function openChat(){ closeHelpPanel(true);   /* #158: the ? panel and ask creaite are never open together */
   if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
       CHATFROM=ok?{el:f,key:chatFromKey(f)}:null; }
-  $("#chat").classList.add("on"); rbDismiss();   /* #148: no scroll call on open: Chrome keeps the place a hidden panel was left at, the size observer below pins a follower to the end, and the jump button stays as it was */
+  $("#chat").classList.add("on"); rbDismiss(); askMarkClear();   /* #148: no scroll call on open: Chrome keeps the place a hidden panel was left at, the size observer below pins a follower to the end, and the jump button stays as it was */
   if(!$("#chLog").children.length&&!ATTACHED&&!shared.REATT){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
 /* ===== end BL-262 ===== */
 /* BL-35: the panel's width is dragged from its left edge (← → by keyboard; double-click resets) and remembered in
@@ -663,11 +663,11 @@ export function rbGuess(q){ q=String(q||""); return /weekly report/i.test(q)?"Dr
   /refresh calendar/i.test(q)?"Refreshing the calendar":/^sweep/i.test(q)?"Sweeping mail and Teams":/prep/i.test(q)?"Making the prep page":/^process/i.test(q)?"Processing a meeting":""; }
 export function rbUnmark(){ if(shared.RBMARKED){ shared.RBMARKED=false; if(document.title.startsWith(RBMARK)) document.title=document.title.slice(RBMARK.length); } }
 export function rbStart(label){ if(RB.state==="running"){ if(label) RB.label=label; rbDraw(); return; }       /* a confirmed follow-up of the same run keeps its clock */
-  rbUnmark(); Object.assign(RB,{state:"running",t0:Date.now(),label:label||shared.RUNLABEL||"",took:""}); shared.RUNLABEL=""; clearInterval(RB.timer); RB.timer=setInterval(rbTick,1000); rbDraw(); }
+  askMarkClear(); rbUnmark(); Object.assign(RB,{state:"running",t0:Date.now(),label:label||shared.RUNLABEL||"",took:""}); shared.RUNLABEL=""; clearInterval(RB.timer); RB.timer=setInterval(rbTick,1000); rbDraw(); }
 export function rbStop(){ clearInterval(RB.timer); RB.timer=null; }
 export function rbEnd(state){ if(RB.state!=="running") return; rbStop(); RB.took=rbClock(Date.now()-RB.t0);
   if($("#chat").classList.contains("on")){ RB.state=""; rbDraw(); return; }                                   /* the chat showed it happen */
-  RB.state=state||"done"; rbDraw();
+  RB.state=state||"done"; rbDraw(); askMarkShow(RB.state);
   if(document.hidden){ if(!shared.RBMARKED){ shared.RBMARKED=true; document.title=RBMARK+document.title; }
     if(VIPD().notify===true&&"Notification" in window&&Notification.permission==="granted"){ try{ const n=new Notification(RBWORDS[RB.state],{body:RB.took?`${RB.state==="done"?"took":"after"} ${RB.took}`:"",tag:"creaite-run"}); n.onclick=()=>{ window.focus(); openChat(); n.close(); }; }catch(e){} } } }
 export function rbCancel(){ if(RB.state==="running"){ rbStop(); RB.state=""; rbDraw(); } }
@@ -675,6 +675,22 @@ export function rbDismiss(){ if(RB.state&&RB.state!=="running"){ RB.state=""; rb
 export function askWorking(on){ const b=$("#askBtn"); b.classList.toggle("working",on);
   if(on){ b.setAttribute("aria-label","ask creaite (working)"); b.title="ask creaite (working)"; } else { b.removeAttribute("aria-label"); b.removeAttribute("title"); } }   /* #130: the dot alone is not a name; the plain name returns when the run ends */
 export function askFinished(o){ rbEnd(o||"done"); }
+/* ===== #231 ===== a small "done" indication on the ask creaite button when a run ends with the panel closed (rbEnd calls askMarkShow
+   only then). Done and stopped hide by themselves after ASKDONE.ms (30 s; a test may shorten it); failed stays until the panel is
+   opened. Opening the panel (button, ⌘J, the palette), or the next run starting, clears it at once. The words go to #askLive, a polite
+   live region outside the button. It never touches the run: no stop, no restart. */
+export const ASKDONE={ms:30000,t:null}, ASKMARK={done:["Done","ask creaite has finished","ask creaite has finished. This clears in 30 seconds."],
+  stopped:["Stopped","ask creaite was stopped","The run was stopped. This clears in 30 seconds."],failed:["Failed","ask creaite failed","The run failed. Open ask creaite to see why."]},
+  ASKTICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+export function askMarkSet(st,msg){ const b=$("#askBtn"), m=b.querySelector(".askmark"), l=b.querySelector(".asklab"), k=ASKMARK[st];
+  b.dataset.st=st; m.innerHTML=st==="done"?ASKTICK:st==="failed"?"!":"■"; l.textContent=k[0]; $("#askLive").textContent=msg==null?k[1]:msg;
+  b.style.setProperty("--life",ASKDONE.ms/1000+"s"); b.title=k[2]; }
+export function askMarkClear(){ clearTimeout(ASKDONE.t); ASKDONE.t=null; const b=$("#askBtn"); if(!b) return;
+  delete b.dataset.st; b.style.removeProperty("--life"); b.querySelector(".askmark").textContent=""; b.querySelector(".asklab").textContent=""; $("#askLive").textContent="";
+  if(Object.values(ASKMARK).some(k=>k[2]===b.title)) b.removeAttribute("title"); }   /* only our own title: a run starting has just set "ask creaite (working)" */
+export function askMarkShow(st){ if(!ASKMARK[st]) return; askMarkClear(); askMarkSet(st);
+  if(st!=="failed") ASKDONE.t=setTimeout(askMarkClear,ASKDONE.ms); }
+/* ===== end #231 ===== */
  
 /* the other runs: Generate and Make it executive, the Prep page and a search answer wrap their own functions */
 /* ===== end BL-139 ===== */

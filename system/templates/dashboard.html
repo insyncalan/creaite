@@ -4059,6 +4059,22 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* #213: Today's Portfolio table, the Evidence text follows its resizable column: it wraps to the column's width, never a fixed length */
 #pfTbl .ev{white-space:normal;overflow-wrap:anywhere}
+
+/* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
+   data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
+   failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */
+#askBtn[data-st]{overflow:visible} #askBtn[data-st]::before{display:none}
+.askmark{position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:50%;display:none;place-items:center;color:var(--surface);font:700 11px/1 var(--font);box-shadow:0 0 0 2px var(--surface)}
+.askmark svg{width:11px;height:11px}
+#askBtn[data-st] .askmark{display:grid}
+#askBtn[data-st=done] .askmark{background:var(--ok)} #askBtn[data-st=stopped] .askmark{background:var(--muted)} #askBtn[data-st=failed] .askmark{background:var(--bad)}
+.asklife{position:absolute;left:8px;right:8px;bottom:-1px;height:2px;border-radius:2px;background:var(--ok);transform-origin:left;display:none}
+#askBtn[data-st=done] .asklife,#askBtn[data-st=stopped] .asklife{display:block;animation:asklife var(--life,30s) linear forwards}
+#askBtn[data-st=stopped] .asklife{background:var(--muted)}
+@keyframes asklife{to{transform:scaleX(0)}}
+.asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
+#askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
+:root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
 </style>
 </head>
 <body>
@@ -4077,7 +4093,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       <div class="search" id="searchBtn" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Search or jump to"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>Search or jump to…<kbd id="kK">⌘K</kbd></div>
       <div class="status" id="status"></div>
       <button class="newchip" id="newChip" type="button" aria-live="polite">New items arrived: refresh</button>
-      <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span></button>
+      <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span><span class="askmark" aria-hidden="true"></span><span class="asklab"></span><span class="asklife" aria-hidden="true"></span></button><!-- #231: the finish indication; its words are read from #askLive, which sits outside the button -->
+      <span class="vh" id="askLive" role="status" aria-live="polite"></span>
       <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
     </header>
     <div class="livealert" id="liveAlert" role="alert"><b>Live server isn't running.</b> Saves are held and applied when it's back. Start it in Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> <button class="mini" id="checkLive">Check again</button></div>
@@ -4263,6 +4280,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ALL_TYPES: () => ALL_TYPES,
     APPLYN: () => APPLYN,
     APPLYT: () => APPLYT,
+    ASKDONE: () => ASKDONE,
+    ASKMARK: () => ASKMARK,
+    ASKTICK: () => ASKTICK,
     ASKVK: () => ASKVK,
     ATTACHED: () => ATTACHED,
     AUTOSAVE_MS: () => AUTOSAVE_MS,
@@ -4876,6 +4896,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     askDiscard: () => askDiscard,
     askFinished: () => askFinished,
     askLive: () => askLive,
+    askMarkClear: () => askMarkClear,
+    askMarkSet: () => askMarkSet,
+    askMarkShow: () => askMarkShow,
     askPerson: () => askPerson,
     askSeams: () => askSeams,
     askStream: () => askStream,
@@ -62460,6 +62483,7 @@ ${d5.text}`);
     }
     $("#chat").classList.add("on");
     rbDismiss();
+    askMarkClear();
     if (!$("#chLog").children.length && !ATTACHED && !shared.REATT) {
       if (shared.ASKCHAT && viaServer()) loadChat(shared.ASKCHAT, true);
       else greet();
@@ -63235,6 +63259,7 @@ ${d5.text}`);
       rbDraw();
       return;
     }
+    askMarkClear();
     rbUnmark();
     Object.assign(RB, { state: "running", t0: Date.now(), label: label || shared.RUNLABEL || "", took: "" });
     shared.RUNLABEL = "";
@@ -63257,6 +63282,7 @@ ${d5.text}`);
     }
     RB.state = state || "done";
     rbDraw();
+    askMarkShow(RB.state);
     if (document.hidden) {
       if (!shared.RBMARKED) {
         shared.RBMARKED = true;
@@ -63302,6 +63328,38 @@ ${d5.text}`);
   }
   function askFinished(o5) {
     rbEnd(o5 || "done");
+  }
+  var ASKDONE = { ms: 3e4, t: null }, ASKMARK = {
+    done: ["Done", "ask creaite has finished", "ask creaite has finished. This clears in 30 seconds."],
+    stopped: ["Stopped", "ask creaite was stopped", "The run was stopped. This clears in 30 seconds."],
+    failed: ["Failed", "ask creaite failed", "The run failed. Open ask creaite to see why."]
+  }, ASKTICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+  function askMarkSet(st2, msg) {
+    const b5 = $("#askBtn"), m5 = b5.querySelector(".askmark"), l6 = b5.querySelector(".asklab"), k5 = ASKMARK[st2];
+    b5.dataset.st = st2;
+    m5.innerHTML = st2 === "done" ? ASKTICK : st2 === "failed" ? "!" : "■";
+    l6.textContent = k5[0];
+    $("#askLive").textContent = msg == null ? k5[1] : msg;
+    b5.style.setProperty("--life", ASKDONE.ms / 1e3 + "s");
+    b5.title = k5[2];
+  }
+  function askMarkClear() {
+    clearTimeout(ASKDONE.t);
+    ASKDONE.t = null;
+    const b5 = $("#askBtn");
+    if (!b5) return;
+    delete b5.dataset.st;
+    b5.style.removeProperty("--life");
+    b5.querySelector(".askmark").textContent = "";
+    b5.querySelector(".asklab").textContent = "";
+    $("#askLive").textContent = "";
+    if (Object.values(ASKMARK).some((k5) => k5[2] === b5.title)) b5.removeAttribute("title");
+  }
+  function askMarkShow(st2) {
+    if (!ASKMARK[st2]) return;
+    askMarkClear();
+    askMarkSet(st2);
+    if (st2 !== "failed") ASKDONE.t = setTimeout(askMarkClear, ASKDONE.ms);
   }
   function bootAsk0105() {
     document.addEventListener("visibilitychange", () => {
@@ -74124,6 +74182,7 @@ ${d5.text}`);
         "AI_GROUPS",
         "AI_PLACES",
         "AI_PLACE_TABLE",
+        "ASKDONE",
         "AUTOSAVE_MS",
         "AiBar",
         "AiSuggestion",
@@ -74298,6 +74357,8 @@ ${d5.text}`);
         "askChangesHtml",
         "askDeleteNote",
         "askLive",
+        "askMarkClear",
+        "askMarkSet",
         "askPerson",
         "askWorking",
         "attachRun",
