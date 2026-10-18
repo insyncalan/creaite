@@ -172,6 +172,21 @@ class HtmlRender(Tmp):
         self.assertEqual(base64.b64decode(m.group(1) or m.group(2)), self.photo)
         self.assertNotIn("_images/", s)
 
+    def test_a_picture_in_a_page_carries_none_of_its_own_metadata(self):
+        """v240-leak2 (c): a PNG's text chunks (a hidden word in a file the client opens) are left out of the HTML page."""
+        import struct
+        import zlib
+        needle = b"Walrus budget cut"
+        kind, data = b"tEXt", b"Comment\0" + needle
+        chunk = struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+        i = self.photo.index(b"IDAT") - 4
+        (self.images / "2026-10-18-site.png").write_bytes(self.photo[:i] + chunk + self.photo[i:])
+        for editing in (False, True):
+            page = self.page(editing=editing)
+            blob = base64.b64decode(re.search(r'src="data:image/png;base64,([^"]+)"', page).group(1))
+            self.assertNotIn(needle, blob)
+            self.assertEqual(blob, self.photo, "only the pixels are kept")
+
     def test_a_picture_outside_images_is_never_read(self):
         (self.tmp / "secret.png").write_bytes(png(8, 8))
         for ref in ("../secret.png", "/etc/passwd", "_images/../secret.png", "https://example.com/x.png", "_images/missing.png"):
@@ -202,8 +217,16 @@ class HtmlRender(Tmp):
         self.assertNotIn("walrus", self.page(d, editing=False), "left out of the export")
         filed = self.page(d, editing=True)
         self.assertNotIn("walrus", filed.split('<script type="application/json"')[0], "not drawn on the filed page")
-        self.assertEqual(creaite_doc.loads(filed)["sections"][1]["text"], "walrus words",
-                         "kept in the data so Show brings Alan's words back after a save (a text section can't be refilled)")
+        self.assertNotIn("walrus", filed, "v240-leak2: a filed or exported file never carries a hidden text section's words")
+        self.assertNotIn("text", creaite_doc.loads(filed)["sections"][1])
+        for aud in ("client", "distributed", "internal"):
+            for fn in (lambda x: creaite_doc.dumps(x), lambda x: creaite_doc.render(x, editing=True), lambda x: json.dumps(creaite_doc.clean(x))):
+                x = self.doc(*base_sections(freetext("walrus words", hidden=True, audience="client")), kind="client" if aud == "client" else "weekly",
+                             audience=aud)
+                self.assertNotIn("walrus", fn(x), aud)
+        kept = creaite_doc.dumps(d, keep_text=True)
+        self.assertEqual(creaite_doc.loads(kept)["sections"][1]["text"], "walrus words",
+                         "the working draft keeps it so Show brings Alan's words back after a save (a text section can't be refilled)")
 
     def test_the_section_sits_where_it_was_put_and_moves(self):
         page = self.page()

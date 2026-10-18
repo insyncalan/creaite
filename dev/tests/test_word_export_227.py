@@ -163,6 +163,60 @@ class Base(unittest.TestCase):
         return len(self.root.findall(".//" + W + "drawing"))
 
 
+class MetadataAndNames(Base):
+    """v240-leak2 (c) and (d): a picture's own metadata (PNG text chunks, JPEG EXIF and comments) and its file name never reach a Word
+    file; the picture's name in the file is neutral."""
+    NEEDLE = b"Walrus budget cut"
+
+    @staticmethod
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+    def tagged_png(self, w, h):
+        raw = png(w, h)
+        extra = (self.chunk(b"tEXt", b"Comment\0" + self.NEEDLE) + self.chunk(b"iTXt", b"k\0\0\0\0\0" + self.NEEDLE)
+                 + self.chunk(b"zTXt", b"k\0\0" + zlib.compress(self.NEEDLE)) + self.chunk(b"eXIf", b"Exif" + self.NEEDLE)
+                 + self.chunk(b"tIME", b"\x07\xea\x0a\x12\0\0\0"))
+        i = raw.index(b"IDAT") - 4
+        return raw[:i] + extra + raw[i:]
+
+    def test_word_export_strips_metadata_from_a_logo_and_a_text_section_picture(self):
+        (self.tmp / "firm.png").write_bytes(self.tagged_png(60, 20))
+        (self.tmp / "images" / "site.png").write_bytes(self.tagged_png(40, 20))
+        for kind in ("weekly", "client"):
+            self.build(self.doc(kind))
+            media = [self.parts[n] for n in self.parts if n.startswith("word/media/")]
+            self.assertTrue(media)
+            for blob in media:
+                self.assertNotIn(self.NEEDLE, blob, kind)
+                self.assertNotIn(b"tEXt", blob, kind)
+                self.assertNotIn(b"eXIf", blob, kind)
+            self.assertIn(png(60, 20), media, f"{kind}: the picture itself is kept, as its pixels")
+
+    def test_a_jpeg_loses_its_exif_and_comment_but_keeps_its_picture(self):
+        def seg(marker, body):
+            return bytes([0xFF, marker]) + struct.pack(">H", len(body) + 2) + body
+        jpg = (b"\xff\xd8" + seg(0xE0, b"JFIF\0\x01\x01\0\0\x01\0\x01\0\0") + seg(0xE1, b"Exif\0\0" + self.NEEDLE)
+               + seg(0xED, b"Photoshop 3.0\0" + self.NEEDLE) + seg(0xFE, self.NEEDLE)
+               + seg(0xC0, b"\x08\x00\x14\x00\x28\x01\x01\x11\x00") + seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x12\x34\xff\xd9")
+        out = docx_tools.strip_image_metadata(jpg)
+        self.assertNotIn(self.NEEDLE, out)
+        self.assertEqual(docx_tools.image_size(out), (40, 20))
+        self.assertTrue(out.startswith(b"\xff\xd8") and out.endswith(b"\x12\x34\xff\xd9"))
+
+    def test_the_picture_name_in_the_word_file_is_neutral_never_the_file_name(self):
+        (self.tmp / "firm.png").write_bytes(png(60, 20))
+        for kind in ("weekly", "client"):
+            self.build(self.doc(kind))
+            names = re.findall(r'<(?:wp:docPr|pic:cNvPr)[^>]*?name="([^"]*)"', self.xml) + re.findall(r'descr="([^"]*)"', self.xml)
+            names = [n for n in names if n]
+            self.assertTrue(names, kind)
+            for n in names:
+                self.assertRegex(n, r"^Picture \d+$", kind)
+            self.assertNotIn("firm.png", self.xml)
+            self.assertNotIn("site.png", self.xml)
+
+
 class Checks(Base):
     def test_check_01_title_block_once_and_the_reports_logos(self):
         self.build()

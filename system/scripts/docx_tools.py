@@ -77,6 +77,70 @@ IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
 MAX_WIDTH_EMU = 5486400                       # 6 inches: the text width of an A4 page with the template's margins
 
 
+PNG_KEEP = {b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND"}      # every other chunk (tEXt, iTXt, zTXt, eXIf, tIME, gAMA ...) is dropped
+
+
+def _strip_png(data):
+    """A PNG's signature and its kept chunks (PNG_KEEP), or the data as it is when a chunk runs past the end."""
+    import struct
+    out, i = [data[:8]], 8
+    while i + 8 <= len(data):
+        n = struct.unpack(">I", data[i:i + 4])[0]
+        kind, end = data[i + 4:i + 8], i + 12 + n
+        if end > len(data):
+            return data
+        if kind in PNG_KEEP:
+            out.append(data[i:end])
+        i = end
+        if kind == b"IEND":
+            break
+    return b"".join(out)
+
+
+def _jpeg_kept(marker, seg):
+    """Whether a JPEG segment stays: not an APPn or a comment, except the Adobe APP14 colour marker."""
+    return not (0xE0 <= marker <= 0xEF or marker == 0xFE) or (marker == 0xEE and seg[4:9] == b"Adobe")
+
+
+def _strip_jpeg(data):
+    """A JPEG without its APPn and comment segments; the pixels (from the scan on) as they were."""
+    import struct
+    out, i = [data[:2]], 2
+    while i + 4 <= len(data):
+        marker = data[i + 1] if data[i] == 0xFF else None
+        if marker is None:
+            return data
+        if marker == 0xFF:
+            i += 1
+        elif marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+            out.append(data[i:i + 2])
+            i += 2
+        else:
+            end = i + 2 + struct.unpack(">H", data[i + 2:i + 4])[0]
+            if end > len(data):
+                return data
+            if marker == 0xDA:                     # the scan and everything after it: pixels
+                return b"".join(out) + data[i:]
+            out += [data[i:end]] if _jpeg_kept(marker, data[i:end]) else []
+            i = end
+    return data
+
+
+def strip_image_metadata(data):
+    """A PNG or JPEG without its own metadata (v240-leak2): a PNG keeps only IHDR, PLTE, tRNS, IDAT and IEND (no text chunks, no EXIF);
+    a JPEG loses its APPn segments (EXIF, XMP, ICC, Photoshop; the Adobe APP14 colour marker stays) and comments. The pixels are
+    untouched. Anything else, or a file that can't be walked, is returned as it is (the callers have already checked the size)."""
+    import struct
+    try:
+        if data[:8] == b"\x89PNG\r\n\x1a\n":
+            return _strip_png(data)
+        if data[:2] == b"\xff\xd8":
+            return _strip_jpeg(data)
+    except (struct.error, IndexError):
+        return data
+    return data
+
+
 def image_size(data):
     """(width, height) in pixels of a PNG or JPEG."""
     import struct
@@ -921,12 +985,12 @@ def cmd_fill(template, values_file, out):
                         if not f.is_file() or f.suffix.lower() not in IMAGE_TYPES:
                             print(f"Note: image not found or not PNG/JPEG, left out: {one['image']}")
                             continue
-                        data = f.read_bytes()
+                        data = strip_image_metadata(f.read_bytes())
                         w, h = image_size(data)
                         n = len(media) + 1
                         rid = f"rIdCreaiteImg{n}"
                         media.append((f"word/media/creaite-{n}{f.suffix.lower()}", data, rid))
-                        runs += drawing(rid, n, w, h, one.get("name") or f.name, one.get("width")) + \
+                        runs += drawing(rid, n, w, h, f"Picture {n}", one.get("width")) + \
                             '<w:r><w:t xml:space="preserve">    </w:t></w:r>'
                     if runs:
                         prepared.append({"drawing": runs, "caption": ""})
@@ -939,12 +1003,12 @@ def cmd_fill(template, values_file, out):
                 if not f.is_file() or f.suffix.lower() not in IMAGE_TYPES:
                     print(f"Note: image not found or not PNG/JPEG, left out: {entry['image']}")
                     continue
-                data = f.read_bytes()
+                data = strip_image_metadata(f.read_bytes())
                 w, h = image_size(data)
                 n = len(media) + 1
                 rid = f"rIdCreaiteImg{n}"
                 media.append((f"word/media/creaite-{n}{f.suffix.lower()}", data, rid))
-                prepared.append({"drawing": drawing(rid, n, w, h, f.name, entry.get("width")), "caption": entry.get("caption", "")})
+                prepared.append({"drawing": drawing(rid, n, w, h, f"Picture {n}", entry.get("width")), "caption": entry.get("caption", "")})
             values[key] = prepared
     parts = []
     left = set()

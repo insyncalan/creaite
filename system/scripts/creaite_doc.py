@@ -98,10 +98,12 @@ def _stub_row(row):
     return {"ref": row.get("ref"), "shown": False}
 
 
-def _clean_section(s):
-    """A section with its hidden content dropped (a hidden section keeps only its place and heading)."""
+def _clean_section(s, keep_text=False):
+    """A section with its hidden content dropped (a hidden section keeps only its place and heading). `keep_text` (the saved working
+    draft only: H5, Alan's own words can't be refilled) also keeps a hidden text section's words; a filed, exported or client file
+    never does (v240-leak2)."""
     if s.get("hidden"):
-        keep = HIDDEN_KEEP + (("text", "audience") if s.get("type") == TEXT_TYPE else ())      # H5: Alan's own words can't be refilled
+        keep = HIDDEN_KEEP + (("text", "audience") if keep_text and s.get("type") == TEXT_TYPE else ())
         return {k: s[k] for k in keep if k in s}
     out = dict(s)
     if isinstance(s.get("rows"), list):
@@ -135,14 +137,14 @@ def _internal_text(doc, s):
             and (s.get("audience") or "internal") == "internal")
 
 
-def clean(doc):
+def clean(doc, keep_text=False):
     """A copy with hidden sections, rows and figures emptied, and the items only they named dropped. check()s it first. A text section
     of the internal report that sits in a client document unmatched is dropped (H5, #218)."""
     check(doc)
     out = copy.deepcopy(doc)
     out["sections"] = [s for s in out.get("sections") or [] if not _internal_text(out, s)]
     hidden = _hidden_refs(out.get("sections") or [])
-    out["sections"] = [_clean_section(s) for s in out.get("sections") or []]
+    out["sections"] = [_clean_section(s, keep_text) for s in out.get("sections") or []]
     visible = _visible_text(out["sections"])
     out["items"] = {k: v for k, v in (out.get("items") or {}).items() if k not in hidden or k in visible}
     return out
@@ -155,9 +157,9 @@ def data_json(doc):
     return json.dumps(doc, ensure_ascii=False, indent=1).replace("<", "\\u003c")
 
 
-def dumps(doc):
-    """The whole file: the page with the data block."""
-    return render(doc, editing=True)
+def dumps(doc, keep_text=False):
+    """The whole file: the page with the data block. `keep_text`: see clean (the working draft only)."""
+    return render(doc, editing=True, keep_text=keep_text)
 
 
 def loads(text):
@@ -517,6 +519,7 @@ def _inline(t):
 def _image_html(doc, alt, ref):
     """A picture as a figure with the file inside the page (a data address), or the words saying it wasn't found."""
     import base64
+    import docx_tools
     f = text_image(doc, ref)
     if f is None:
         return f"<p><em>Picture not found: {esc(alt or ref)}</em></p>"
@@ -524,7 +527,8 @@ def _image_html(doc, alt, ref):
         return f"<p><em>Picture too large to include: {esc(alt or ref)}</em></p>"
     mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
     cap = f"<figcaption>{esc(alt)}</figcaption>" if alt else ""
-    return f'<figure><img src="data:{mime};base64,{base64.b64encode(f.read_bytes()).decode("ascii")}" alt="{esc(alt)}">{cap}</figure>'
+    data = base64.b64encode(docx_tools.strip_image_metadata(f.read_bytes())).decode("ascii")
+    return f'<figure><img src="data:{mime};base64,{data}" alt="{esc(alt)}">{cap}</figure>'
 
 
 def _list_html(b, doc):
@@ -621,10 +625,10 @@ def page_title(doc):
     return f"{doc.get('title') or ''}{' - ' + who if who else ''}{extra}, {shown}"
 
 
-def render(doc, editing=True):
+def render(doc, editing=True, keep_text=False):
     """The page for the document; with `editing` the data block is included (the filed file), without it not (the HTML export).
     Hidden content is never rendered; source tags never are."""
-    doc = clean(doc)
+    doc = clean(doc, keep_text)
     items = doc.get("items") or {}
     body = "".join(section_html(s, items, doc) for s in doc["sections"] if not s.get("hidden"))
     label = {"internal": "Internal", "client": "Client", "distributed": "Distributed"}[doc.get("audience") or "internal"]
@@ -727,13 +731,13 @@ def save(path, doc, why, *, base_version=None, approver=None, via="cli"):
     p = real(path)
     try:
         was = _current_version(p)
-        out = clean(doc)
+        out = clean(doc, keep_text=True)         # the working draft keeps a hidden text section's words
     except DocError as e:
         return _refusal(str(e))
     if base_version is not None and int(base_version) != was:
         return _refusal(f"It was saved elsewhere since you opened it (now version {was}).", conflict=True)
     out.update(version=was + 1, saved_at=now())
-    data = dumps(out).encode("utf-8")
+    data = dumps(out, keep_text=True).encode("utf-8")
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
     draft = paths.free_path(paths.DRAFTS, f"creaite-doc {datetime.now():%Y-%m-%d %H%M%S}", ".html")
     draft.write_bytes(data)
