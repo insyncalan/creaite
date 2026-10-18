@@ -675,6 +675,13 @@ def undo_note_move():
 # ===== end #124 =====
 
 
+def existing_project_folder(name):
+    """True when `name`, a folder directly under projects/, is an existing project's own folder: not hidden, not _Archive or
+    _portfolio (a leading underscore), not one the register never indexes, and already there."""
+    never = {str(n) for n in (paths.locations().get("never_index") or [])}
+    return not name.startswith((".", "_")) and name not in never and paths.resolve(f"projects/{name}").is_dir()
+
+
 def allowed(op, rel):
     """Whether /api/fs may do `op` (read, write, append, remove, upload, exists) on the vault-relative path `rel` (FS_RULES)."""
     if not rel or rel.startswith("/") or ".." in Path(rel).parts or "\\" in rel:
@@ -1265,6 +1272,18 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"ok": True})
         if op == "upload":
             return self.fs_upload(p, req)
+        expect = req.get("expect_text")
+        if op == "write" and isinstance(expect, str) and p.is_file():
+            with LOCK:                             # #233 L5: a file that changed since the page read it is never written over
+                with open(p, encoding="utf-8", newline="") as fh:
+                    changed = fh.read() != expect
+                if not changed:
+                    paths.write_text_atomic(p, req.get("text", ""))
+            if changed:
+                return self.send(409, {"ok": False, "message": f"{rel} changed since it was read, so nothing was saved; try again"})
+            return self.send(200, {"ok": True})
+        if op == "write" and not p.exists() and re.fullmatch(r"projects/[^/]+/CLAUDE\.md", rel) and not existing_project_folder(rel.split("/")[1]):
+            return self.send(403, {"ok": False, "message": f"{rel} can be created only in an existing project's folder"})
         clash = settings_notes_clash(p, req.get("text", "")) if op == "write" and p == paths.SETTINGS else None
         if clash:                                  # #128: a notes folder shared with minutes or reports is never saved
             return self.send(200, {"ok": False, "message": clash})
