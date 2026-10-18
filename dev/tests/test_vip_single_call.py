@@ -857,7 +857,8 @@ class MergePinTests(unittest.TestCase):
         body = src[src.index("def vip_check("):src.index("\ndef ", src.index("def vip_check(") + 1)]
         self.assertEqual(body.count("prompt_last("), 1)                                      # one command
         self.assertEqual(body.count("subprocess.run("), 1)                                   # one launch
-        self.assertIn('"--disallowedTools", ",".join(vip_deny())], prompt)', body)
+        self.assertIn('"--disallowedTools", ",".join(vip_deny())] + with_model([], run_model("vip")[0]),', body)   # #132 G3
+        self.assertIn("prompt)", body)
         self.assertNotIn("join(DENY_TOOLS)", body)
         cmd = self.ls.prompt_last(["claude", "-p", "--allowedTools", ",".join(self.ls.VIP_TOOLS),
                                    "--disallowedTools", ",".join(self.ls.vip_deny())], "PROMPT")
