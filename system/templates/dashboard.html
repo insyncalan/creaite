@@ -3198,7 +3198,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .ni b{font-weight:500;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ni small{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
 .ni.on{background:var(--surface);box-shadow:0 0 0 1px var(--line)}
-.ni .pin{color:var(--accent);font-size:11px} .ni .conf{color:var(--warn)}
+.ni .npin{color:var(--accent);font-size:11px} .ni .conf{color:var(--warn)}
 .nnone{margin:8px 4px}
 .ndoc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 24px;min-width:0;position:relative}
 .ndoc.empty h2{font-size:var(--fs-h2);margin:0 0 6px}
@@ -54197,7 +54197,7 @@ ${pre}**Current state title:** ${title}`);
           },
           children: [
             /* @__PURE__ */ u2("b", { children: [
-              n4.pinned ? /* @__PURE__ */ u2("span", { class: "pin", "aria-hidden": "true", children: "◆ " }) : null,
+              n4.pinned ? /* @__PURE__ */ u2("span", { class: "npin", "aria-hidden": "true", children: "◆ " }) : null,
               n4.title
             ] }),
             /* @__PURE__ */ u2("small", { children: [
