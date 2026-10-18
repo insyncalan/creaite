@@ -3,7 +3,6 @@
 Run: python3 dev/tests/test_client_gate_reviews.py      (quick tier: no Chrome, no model)
 """
 from contextlib import closing
-from pathlib import Path
 import sqlite3
 import sys
 import unittest
