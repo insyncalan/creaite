@@ -4063,3 +4063,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* #213: Today's Portfolio table, the Evidence text follows its resizable column: it wraps to the column's width, never a fixed length */
 #pfTbl .ev{white-space:normal;overflow-wrap:anywhere}
+
+/* #228: the full-page project settings (components/project/ProjectSettings.jsx) */
+#v-psettings .setctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#v-psettings .srow[hidden],#v-psettings tr[hidden],#v-psettings .card[hidden],#v-psettings .setnone[hidden]{display:none}
+#v-psettings .pstbl{width:100%} #v-psettings .pstbl td,#v-psettings .pstbl th{padding:8px 12px;text-align:left}
+#v-psettings .pstbl td.mgract{text-align:right}
+#v-psettings .pschip{display:inline-flex;align-items:center;min-height:var(--ctl-h-sm);padding:0 10px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);font-size:var(--fs-xs)}
+#v-psettings .psnote{font-size:var(--fs-xs);color:var(--muted)}
+#v-psettings .psfoot{margin:10px 12px}
+#v-psettings .psadd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings .psadd input,#v-psettings .psedit,#v-psettings input#psName,#v-psettings input#psClient{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:var(--ctl-fs)}
+#v-psettings .psmsg{display:block;color:var(--bad,#b00020);font-size:var(--fs-xs)}
+#v-psettings .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pfname+.pset{margin-left:6px;vertical-align:middle}

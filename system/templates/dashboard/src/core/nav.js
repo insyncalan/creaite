@@ -22,6 +22,8 @@ import { renderPrep } from "../components/prep/PrepPage.jsx";
 import { parseWeekly } from "../components/report/weekly/WeeklyView.jsx";
 import { parseKey } from "../components/report/ClientView.jsx";   /* #221: the old weekly and client addresses; the hub opens them */
 import { renderReports } from "../components/reporting/ReportsPage.jsx";   /* BL-337 */
+import { renderProjectSettings } from "../components/project/ProjectSettings.jsx";   /* #228 */
+import { PS_CATS, psCat, psCode } from "../stores/projectSettings.js";
 import { openSpace, renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { parseReporting, repWeek, reportingHref, spaceCode, spaceWeek } from "../stores/reporting.js";
 import { hubView } from "../stores/hub.js";
@@ -49,12 +51,14 @@ export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?
   if(shared.VIEW==="milestones"){ st.arg=shared.MSCODE; st.mv=shared.MV.view; st.ms=shared.MV.peek||null; }   /* BL-245 */
   if(shared.VIEW==="prep") st.arg=prepViewKey.value;   /* BL-286 D */
   if(shared.VIEW==="reports") st.arg=repWeek.value||null;   /* BL-337 */
+  if(shared.VIEW==="psettings"){ st.arg=psCode.value; st.cat=psCat.value; }   /* #228 */
   if(shared.VIEW==="reporting"){ st.arg=spaceCode.value; st.rw=spaceWeek.value; st.rv=hubView.value; }   /* #221: the hub: project, week, view */
   if(shared.VIEW==="notes"){ st.arg=shared.NOTECODE; const c=noteCur.value; st.note=c&&c.code===shared.NOTECODE?c.note.file:null; st.find=!!(st.note&&noteFind.value); }   /* BL-301 B */
   if(shared.VIEW==="minutes") st.arg=minutesPath();   /* v2.1.0 P7: the minutes record's stored path */
   return st; }
 export function hashOf(st){
   if(st&&st.v==="notes") return `#notes=${st.arg||""}${st.note?`&n=${encodeURIComponent(st.note)}`:""}${st.note&&st.find?"&find=1":""}`;   /* BL-301 B */
+  if(st&&st.v==="psettings") return `#project-settings=${encodeURIComponent(st.arg||"")}${st.cat&&st.cat!=="general"?`&c=${st.cat}`:""}`;   /* #228 */
   if(st&&st.v==="reporting") return reportingHref(st.arg,st.rw,st.rv);   /* BL-337, #221 */
   if(st&&st.v==="reports") return "#reports"+(st.arg?`&w=${st.arg}`:"");
   if(st&&st.v==="prep") return prepHref(st.arg||"");   /* BL-286 D: #prep=<the dated meeting key> */
@@ -68,6 +72,8 @@ export function hashOf(st){
     if(a.from) p.push("from="+a.from); if(a.to) p.push("to="+a.to); if(p.length) h+="&"+p.join("&"); } return h; }
 export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")), a=mm&&parseWeekly(mm[1]); if(a&&P.some(p=>p.code===a.code)) return {v:"reporting",arg:a.code,rw:a.week||"",rv:"internal",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* v2.1.0 P6; #221: the old weekly address opens the hub */
   { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm){ const to=meetingRoute(mm[1]), st=to&&parseHash(to); if(st) return st; snack("That meeting isn't in creaite's records any more"); return {v:"today",arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* v2.1.0 P10: the retired meeting page (BL-233) opens its Prep or its minutes */
+  { const mm=/^#?project-settings=([^&]+)(?:&c=([a-z]+))?$/.exec(String(h||"")); if(mm){ let code=""; try{ code=decodeURIComponent(mm[1]); }catch(e){ return null; }
+    if(!P.some(p=>p.code===code)) return null; return {v:"psettings",arg:code,cat:mm[2]&&PS_CATS.some(c=>c[0]===mm[2])?mm[2]:"general",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* #228: #project-settings=<code>[&c=<category>] */
   { const r=parseReporting(h,c=>P.some(p=>p.code===c)); if(r) return {v:"reporting",arg:r.code,rw:r.week,rv:r.view,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-337 */
   { const k=prepKeyOf(h); if(k) return {v:"prep",arg:k,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-286 D */
   { const mm=/^#?client-report=(.+)$/.exec(String(h||"")); if(mm){ const a=parseKey(mm[1]); return a&&P.some(p=>p.code===a.code)?{v:"reporting",arg:a.code,rw:a.week||"",rv:"client",wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}:null; } }   /* v2.1.0 P8; #221: the old client report address opens the hub's Client view */
@@ -114,6 +120,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
     if(st.lay){ shared.LAYCHOSEN=true; WLAY[shared.WT]=st.lay; if(st.g) WGRP[shared.WT]=st.g; }   /* BL-103: the layout and grouping are in the address */
     if(st.lg) WLGRP[shared.WT]=st.lay==="board"?(WLGRP[shared.WT]||"none"):st.lg; if(st.sg) WSUB[shared.WT+"|"+(st.lay||"list")]=st.sg; }   /* BL-129: the List's grouping and the sub-group too */
   if(st.v==="reports") repWeek.value=st.arg||"";   /* BL-337 */
+  if(st.v==="psettings"){ psCode.value=st.arg||""; psCat.value=st.cat||"general"; }   /* #228 */
   if(st.v==="reporting"){ spaceWeek.value=st.rw||""; hubView.value=st.rv||"internal"; }   /* #221 */
   go(st.v,st.arg,{restore:true,from:st.from});
   if(st.item){ const k=st.item.k; if(st.v==="work"&&shared.WT!==k&&shared.WT!=="all"){ shared.WT=k; renderWork(); }   /* BL-134: All items opens the item where it is */ openRecord(k,st.item.id); }
@@ -121,6 +128,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
 export const mPageOf=v=>v==="work"||v==="mine"||v==="person"?"work":v==="review"?"review":v==="today"?"today":null;   /* declared before go, which runs at load */
 export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   /* BL-206 */
   if(v==="weekly"||v==="clientreport"){ const a=typeof arg==="string"?(v==="weekly"?parseWeekly(arg):parseKey(arg)):arg; if(!a||!a.code||!P.some(p=>p.code===a.code)) return false; spaceWeek.value=a.week||""; hubView.value=v==="clientreport"?"client":"internal"; v="reporting"; arg=a.code; }   /* #221: the weekly and client report pages are retired; their names open the hub */
+  if(v==="psettings"&&(!arg||!P.some(p=>p.code===arg))) return false;   /* #228 */
   if(v==="milestones"){ if(arg&&!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg||null; }   /* #204: no project is the Choose a project page */
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
   const from=shared.VIEW, fromPage=mPageOf(shared.VIEW);
@@ -135,11 +143,11 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   cardGroup.close(); menuGroup.close(); tipHide();   /* #215: a hover card, peek or menu does not outlive its page (Today stays in the DOM, hidden) */
   closePanel(true); closeDisp(false); shared.VIEW=v; $$(".view").forEach(s=>s.hidden=true);
   const id={cockpit:"v-cockpit",mine:"v-work"}[v]||"v-"+v; $("#"+id).hidden=false; $("#"+id).scrollTop=0;
-  const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects",reporting:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
+  const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects",reporting:"projects",psettings:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
   setRailView(railKey);   /* BL-163, BL-319: the sidebar marks the page (through its store) */
   if(v==="mine"){ shared.WT="actions"; applyView("mine"); } if(v==="work"&&!arg) {} if(v==="cockpit") shared.COCK=arg; if(v==="milestones"&&!arg) shared.MSCODE=null; if(v==="person") shared.PERSON=arg; if(v==="notes") shared.NOTECODE=arg;
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
-  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
+  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
   if(r!==false) helpScreenSync();   /* #158: the foot line and the first-visit line are in place with the page, so nothing shifts afterwards */
@@ -206,7 +214,7 @@ export const TABNAME={today:"Today",inbox:"Intake",projects:"Projects",work:"Wor
 export function tabTitle(){ if(shared.VIEW==="prep"){ const v=prepView.value, t=v&&v.ok&&v.model?v.model.meeting.title:""; TABNAME.prep=t?`Prep · ${t}`:"Prep"; }   /* BL-286 D */
   if(shared.VIEW==="minutes") TABNAME.minutes="Minutes";   /* v2.1.0 P7 */
   const n=REV.filter(r=>!r.done).length, vips=VIPS().length;
-  const where=shared.VIEW==="notes"&&shared.NOTECODE?(shared.NOTECODE==="_portfolio"?"Portfolio notes":`${pName(shared.NOTECODE)} notes`):shared.VIEW==="cockpit"&&shared.COCK?pName(shared.COCK):shared.VIEW==="person"&&shared.PERSON?shared.PERSON:shared.VIEW==="reporting"&&spaceCode.value?`${pName(spaceCode.value)} reporting`:TABNAME[shared.VIEW]||"";
+  const where=shared.VIEW==="notes"&&shared.NOTECODE?(shared.NOTECODE==="_portfolio"?"Portfolio notes":`${pName(shared.NOTECODE)} notes`):shared.VIEW==="cockpit"&&shared.COCK?pName(shared.COCK):shared.VIEW==="person"&&shared.PERSON?shared.PERSON:shared.VIEW==="reporting"&&spaceCode.value?`${pName(spaceCode.value)} reporting`:shared.VIEW==="psettings"&&psCode.value?`${pName(psCode.value)} settings`:TABNAME[shared.VIEW]||"";
   const t=(shared.RBMARKED?RBMARK:"")+(vips?`(${vips}) `:"")+BASETITLE+(where?` · ${where}`:"")+(shared.VIEW==="review"&&n?` (${n})`:"");
   if(document.title!==t) document.title=t; 
   if(shared.VIEW==="milestones"&&shared.MSCODE){ const t=document.title.replace(/ · [^·]*$/,"").replace(/ \(\d+\)$/,"")+` · ${pName(shared.MSCODE)} milestones`; if(document.title!==t) document.title=t; } }   /* BL-245 */

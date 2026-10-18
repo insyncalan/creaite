@@ -5,6 +5,7 @@
 import { renderReports } from "../components/reporting/ReportsPage.jsx";
 import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { reportsBadge, spaceCode } from "../stores/reporting.js";
+import { psTick } from "../stores/projectSettings.js";   /* #228 */
 import { renderActivity } from "../activity.js";
 import { drawStatusDot } from "../components/StatusDot.jsx";
 import { drawToast } from "../components/Toast.jsx";
@@ -272,7 +273,7 @@ export function memLineEdit(text,label,val){
   lines.splice(near+1,0,ind+"**"+label+":** "+val+eol(lines[near])); return {text:lines.join("\n"),was:""};
 }
 /** Which lines are the memory's own: not inside a ``` or ~~~ fence and not a quote (">"). @param {string[]} lines @returns {boolean[]} */
-function liveLines(lines){ let fence=""; return lines.map(raw=>{ const l=raw.replace(/\r$/,""), f=l.match(/^ {0,3}(`{3,}|~{3,})/);
+export function liveLines(lines){ let fence=""; return lines.map(raw=>{ const l=raw.replace(/\r$/,""), f=l.match(/^ {0,3}(`{3,}|~{3,})/);
   if(fence){ if(f&&f[1][0]===fence[0]&&f[1].length>=fence.length&&/^ {0,3}[`~]+\s*$/.test(l)) fence=""; return false; }
   if(f){ fence=f[1]; return false; } return !/^[ \t]*>/.test(l); }); }
 /* L6: a message for a toast: an absolute path is shown from the vault ("projects/…", "system/…"), or as the file's name alone. */
@@ -333,6 +334,7 @@ export async function applyPending(){ if(viaServer()){ const r=await applyNow();
   snack("Say “apply” in Claude Code, or start the live server"); }
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */
+  if(shared.VIEW==="psettings") psTick.value++;   /* #228: the project settings page redraws with the fresh data */
   status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
   if(!reduced()&&v===shared.VIEW){
     const hit=[]; if(cells&&wt===shared.WT){ const cols=$$("#workTbl thead th").map(th=>th.dataset.col||""); $$("#workTbl tr[data-row]").slice(0,300).forEach(tr=>[...tr.children].forEach((td,i)=>{ const k=tr.dataset.row+"|"+cols[i]; if(cols[i]&&cells.has(k)&&cells.get(k)!==td.textContent.trim()) hit.push(td); })); }

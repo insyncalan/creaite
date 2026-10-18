@@ -22,6 +22,7 @@ import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
 import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
 import { clientReportOn, setClientReport } from "./stores/reportingSettings.js";
+import { openProjectSettings } from "./stores/projectSettings.js";   /* #228 */
 import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { catalogue, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
@@ -101,6 +102,9 @@ export function projArchiveBind(){ $$("#projArch [data-parch]").forEach(b=>b.onc
 /* ===== end BL-09 ===== */
 export const row=(l,c,h)=>{ const id="sr"+(++SRN); return `<div class="srow"><div><span id="${id}">${l}</span>${h?`<small id="${id}h">${h}</small>`:""}</div><div>${srName(c,id,h,l)}</div></div>`; };
 
+/** #228: Settings › People and projects keeps a thin list: each project opens its own full-page settings (Workstreams stay on this page). */
+export const projSettingsListHtml=()=>`<div class="srows" id="projSetList"><h3 style="margin:12px 0 0">Project settings</h3><p class="sub" style="margin:4px 0 0">Each project's name, client, people and partners, milestones, reporting and archive are on its own page.</p>`
+  +P.map(p=>row(esc(p.name),`<button type="button" class="mini" data-psopen="${esc(p.code)}" aria-label="Open the settings of ${esc(p.name)}">Open settings</button>`)).join("")+`</div>`;
 /** H3 (#221): "This project needs a separate client report", one switch per project; the hub's Client report settings panel sets the same line. */
 export const clientReportsHtml=()=>`<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>`
   +P.map(p=>row(`${esc(p.name)}: this project needs a separate client report`,`<input type="checkbox" class="switch" data-crsw="${p.code}" ${clientReportOn(p.code)?"checked":""}>`)).join("")+`</div>`;/* ===== end BL-214 ===== */
@@ -144,8 +148,8 @@ export const SETSECTIONS=[
  {id:"people",cat:"people",title:"People",raw:true,kw:"people owners register email aliases organisation role rename merge vip",render:()=>'<div class="card wide" id="peopleMgr" data-sec="people"></div>',after:()=>renderPeopleMgr()},
  {id:"workstreams",cat:"people",title:"Workstreams",raw:true,kw:"workstreams lead keywords rename merge retire project",render:()=>'<div class="card wide" id="wsMgr" data-sec="workstreams"></div>',after:()=>renderMgr("ws")},
  {id:"projects",cat:"people",title:"Projects and register",wide:true,kw:"projects register add close archive restore archived code signals domains matching",
-  render:()=>'<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC\'s domains”</span>).</p>'+clientReportsHtml()+projArchiveHtml(),
-  after:()=>projArchiveBind()},   /* BL-09 */
+  render:()=>'<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC\'s domains”</span>).</p>'+projSettingsListHtml()+clientReportsHtml()+projArchiveHtml(),
+  after:()=>{ projArchiveBind(); $$("#projSetList [data-psopen]").forEach(b=>b.onclick=()=>openProjectSettings(b.dataset.psopen)); }},   /* BL-09; #228: each project opens its own settings page */
  {id:"health",cat:"health",title:"Health",kw:"health check problems fix",
   mount:el=>render(h(Health,null),el),match:()=>false},
  {id:"live",cat:"system",title:"Live server and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
