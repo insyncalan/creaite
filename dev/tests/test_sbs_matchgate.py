@@ -14,6 +14,10 @@ Brief item -> test:
                                                                    PaneAi.test_the_right_pane_without_its_own_ai_has_no_ai_bar
                                                                    PaneAi.test_find_the_source_on_the_right_pane_never_calls_the_left_handler
 
+  (3) one Match internal for every section control only (the sheet's own bar button was dead and is gone)
+                                                                   OneMatchAll.test_one_control_in_each_view
+                                                                   OneMatchAllFixture.test_the_sheets_own_bar_never_carries_one
+
 Run: python3 dev/tests/test_sbs_matchgate.py      (Chrome tier; skipped without Chrome)
 """
 import json
@@ -161,6 +165,36 @@ class MatchGate(Base):
         self.b.wait("(()=>{const d=document.getElementById('crHeldDlg'); return !!d && d.open})()", 10)
         self.assertIn("nothing was copied", self.held_dialog().lower())
         self.assertNotIn("Quincebrook", self.text_of(CLI), "failing closed: no copy")
+
+
+COUNT = "[...document.querySelectorAll('#v-reporting button, #v-reporting a')].filter(e=>/Match internal for every section/i.test(e.textContent)).length"
+
+
+class OneMatchAll(Base):
+    def test_one_control_in_each_view(self):
+        self.open_hub()
+        for view, want in (("client", 1), ("side", 1)):          # the hub's button, above the client page, and nothing else
+            self.b.click(f"#hubSeg [data-hv='{view}']")
+            self.b.wait("!!document.querySelector('[data-crmatchall]')", 20)
+            self.b.pump(0.5)
+            self.assertEqual(self.q(COUNT), want, f"{view}: Match internal for every section controls")
+            self.assertEqual(self.q("document.querySelectorAll('[data-crmatchall]').length"), want, view)
+            self.assertEqual(self.q("document.querySelectorAll('.sheet-matchall').length"), 0, view)
+            self.assertEqual(self.q("document.querySelectorAll('.sheet-bar [data-crmatchall]').length"), 0, view)
+
+
+class OneMatchAllFixture(E.SheetCase):
+    def test_the_sheets_own_bar_never_carries_one(self):
+        # the sheet's default bar (no renderBar) with an editable partner: the only way the old button could draw
+        self.b.eval("""(() => { const p = JSON.parse(JSON.stringify(SH.doc)); p.audience = 'client';
+          SH.partner = {doc: p, label: 'Client', baseVersion: 1, scrollKey: 'p', onChange: (d, why) => { SH.partner.doc = d; SH.draw(); }, onSave: async r => ({ok: true, version: 2})};
+          SH.draw = () => { mount(Sheet, {doc: SH.doc, baseVersion: SH.base, scrollKey: SH.key, partner: SH.partner,
+            onChange: (d, why) => { SH.doc = d; SH.draw(); }, onSave: async r => ({ok: true, version: 9}), onEvent: e => {}}, SH.el); return true; };
+          SH.draw(); })()""")
+        self.b.wait("document.querySelectorAll('#shFix .sheet-a4 > .page').length===2")
+        self.assertEqual(self.b.eval("document.querySelectorAll('#shFix .sheet-bar').length"), 1)
+        self.assertEqual(self.b.eval("document.querySelectorAll('#shFix .sheet-matchall').length"), 0)
+        self.assertEqual(self.b.eval("[...document.querySelectorAll('#shFix .sheet-bar button')].filter(e=>/Match internal for every/i.test(e.textContent)).length"), 0)
 
 
 class PaneAi(E.SheetCase):

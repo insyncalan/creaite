@@ -175,12 +175,6 @@ export function matchSection(left, right, id) {
   }
   return mapSection(right, id, () => copy);
 }
-/** Match internal for every section. @param {any} left @param {any} right */
-export function matchAll(left, right) {
-  let out = right;
-  for (const s of left.sections) if (!isTextSection(s) || out.sections.some((/** @type {any} */ x) => x.id === s.id)) out = matchSection(left, out, s.id);   // a text section the partner lacks is added one at a time
-  return out;
-}
 /** "Matching internal" or "Edited for the client", worked out by comparing, not stored. @param {any} left @param {any} right @param {string} id @param {string} label */
 export function matchLabel(left, right, id, label) {
   const a = left.sections.find((/** @type {any} */ s) => s.id === id), b = right.sections.find((/** @type {any} */ s) => s.id === id);
