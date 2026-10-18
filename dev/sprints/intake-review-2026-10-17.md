@@ -99,3 +99,10 @@ Alan liked change D (the result on the row, ending in Review them) as mocked up 
 
 
 **Rebuilt on the real design (18-10-2026):** the combined Intake and Review mockup is redrawn on the Review snapshot with the app's own classes: `dev/mockups/intake-review-combined-v2-mockup.html` (three options: C1 pipeline, C2 one entry with two tabs, C3 the meeting's row follows the work; sample states Mixed and Empty). It replaces `intake-review-combined-mockup.html`, which drew its own styles. Only a row's own Approve is green; Process and Check them are plain row buttons. Nothing is decided or built.
+
+**Alan's decision (18-10-2026): Intake and Review is one pipeline page (Arrived, then Drafted, then Approved) with three views, and the user chooses their preferred one.**
+- **List:** the three stages as clickable counts and one list below (the default for everyone).
+- **Board:** three columns, a card per meeting; Process moves a card across.
+- **Two panes:** the meetings on the left with their stage; the selected one on the right with its track and its proposals or its Process button.
+- The choice is a per-person preference (remembered in the browser, never shared), changed from a List | Board | Two panes switch in the page's toolbar. The stage definitions: **Arrived** = a meeting or file creaite has seen but not turned into proposals (transcript ready, waiting for the transcript, or being drafted); **Drafted** = processed, proposals waiting for the user to check; **Approved** = all its proposals decided this week. Mail and Teams proposals are not part of the stages and sit in their own group.
+- Mockup: `dev/mockups/intake-review-combined-v2-mockup.html` (the switch is in the page; the baseline before the views is `intake-review-baseline-2026-10-18.html`). Two other shapes were explored and dropped (a list with a track on each row, and stacked stages). Nothing is built or on the board yet.
