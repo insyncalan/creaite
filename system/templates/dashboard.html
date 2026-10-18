@@ -71818,6 +71818,17 @@ ${d5.text}`);
     if (doc && h5) out[doc.date] = wkTone(d5.flag);
     return out;
   }
+  function toneByTrail(p6) {
+    const out = {}, M4 = (
+      /** @type {Record<string, string>} */
+      { ok: "g", warn: "a", bad: "r" }
+    );
+    const t47 = p6 && p6.trail || [], e4 = p6 && p6.trailend || [];
+    t47.forEach((x5, i5) => {
+      if (e4[i5] && M4[x5]) out[e4[i5]] = M4[x5];
+    });
+    return out;
+  }
   function menuWeeks(weeks, shown2) {
     return [.../* @__PURE__ */ new Set([...weeks, ...shown2 ? [shown2] : []])].sort().reverse();
   }
@@ -72346,7 +72357,10 @@ ${d5.text}`);
     navWrite(false);
   }
   function weekRows(code, doc, on2) {
-    const tones = toneByWeek(doc), shown2 = doc ? doc.date : "", ci2 = crInfo.value, cd2 = crDoc.value;
+    const tones = { ...toneByTrail(P4.find(
+      /** @param {any} p */
+      (p6) => p6.code === code
+    )), ...toneByWeek(doc) }, shown2 = doc ? doc.date : "", ci2 = crInfo.value, cd2 = crDoc.value;
     return menuWeeks(spaceWeeks(code), shown2).map((w6) => {
       const v5 = weekView(code, w6), isShown = w6 === shown2;
       return {

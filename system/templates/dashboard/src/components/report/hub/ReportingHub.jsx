@@ -19,7 +19,7 @@ import { ReportSheet } from "../ReportParts.jsx";
 import { WEEKLY_RENDER } from "../weekly/WeeklyView.jsx";
 import { HubBar } from "./HubBar.jsx";
 import { hubApproveClient } from "./hubActions.js";
-import { clientStatus, internalStatus, menuWeeks, toneByWeek } from "./hubLib.js";
+import { clientStatus, internalStatus, menuWeeks, toneByTrail, toneByWeek } from "./hubLib.js";
 import { P } from "../../../core/data.js";
 import { navWrite, tabTitle } from "../../../core/nav.js";
 import { fd } from "../../../core/page.js";
@@ -44,7 +44,7 @@ function pickView(v) { hubView.value = v; navWrite(false); }
 
 /** The weeks the menu lists, each with its health tone and both reports' states. @param {string} code @param {SheetDoc|null} doc @param {boolean} on */
 function weekRows(code, doc, on) {
-  const tones = toneByWeek(doc), shown = doc ? doc.date : "", ci = crInfo.value, cd = crDoc.value;
+  const tones = { ...toneByTrail(P.find(/** @param {any} p */ p => p.code === code)), ...toneByWeek(doc) }, shown = doc ? doc.date : "", ci = crInfo.value, cd = crDoc.value;
   return menuWeeks(spaceWeeks(code), shown).map(w => {
     const v = weekView(code, w), isShown = w === shown;
     return { week: w, tone: tones[w] || "n", current: isShown,
