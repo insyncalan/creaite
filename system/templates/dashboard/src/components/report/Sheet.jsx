@@ -137,7 +137,7 @@ function removedLine(r) {
 /** The scroller of one page (or of both, scrolling together): it measures its width, draws what it is given at the scale that width
     and the zoom make, and remembers and restores the section at the top of the view. Nothing else sets scrollTop.
     @param {{pk: string, zoom: number, pages: number, regRestore: (fn: () => void) => () => void, onPinch: (dy: number, y: number, pk: string) => void,
-    children: (scale: number) => any}} props */
+    head?: any, children: (scale: number) => any}} props */
 function Pane({ pk, zoom, pages, regRestore, onPinch, head, children }) {
   const sc = useRef(/** @type {HTMLDivElement|null} */ (null));
   const [w, setW] = useState(0);
