@@ -5,7 +5,8 @@
    reads. Client safety is unchanged: the page only ever holds what the server built from client-visible items (report_doc.client_doc,
    through client_leak.make_safe) and what Alan typed; Match internal copies only what clientDoc.matchClientSection allows; the server
    checks again at save, approve and export. Nothing here sends anything. */
-import { setClientDoc } from "./ClientParts.jsx";
+import { CLIENT_RENDERERS, setClientDoc } from "./ClientParts.jsx";
+import { CLIENT_EXPORT, reportExportPage } from "./exportPage.jsx";
 import { flagOf, healthDiff, matchClientAll, matchClientSection } from "./clientDoc.js";
 import { crAskWhy } from "./ClientParts.jsx";
 import { snack } from "../../core/server.js";
@@ -24,7 +25,7 @@ export async function openCheck() {
 
 /** @param {"html"|"docx"|"pdf"} fmt */
 export async function doExport(fmt) {
-  const r = await exportClientReport(fmt);
+  const r = await exportClientReport(fmt, (d, v) => reportExportPage(d, CLIENT_RENDERERS, CLIENT_EXPORT, v));
   if (r && (r.ok || r.clash)) crDialog.value = false;       // saved (the message says where) or a taken name (its own dialog asks)
   else await runCheck();                                      // a refusal: the check shows why, and the message says nothing was written
 }

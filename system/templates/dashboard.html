@@ -3640,6 +3640,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wrsheet .page h2{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px;color:var(--rp-grey);font-weight:600;display:flex;gap:8px;align-items:center;border:0;padding:0}
 .wrsheet .page h2::before{content:"";width:7px;height:7px;background:var(--rp-green);flex:none}
 .wrsheet .page section[data-id=header]>h2,.wrsheet .page section[data-id=health]>h2{display:none}
+.wrsheet .page>header.doc{display:none}   /* #226: the weekly report has one title block (the header section); the sheet's plain title band was a second one */
 .wrsheet .page p{margin:0 0 8px} .wrsheet .page ul{margin:0;padding-left:16px} .wrsheet .page li{margin:0 0 4px}
 .wrsheet .sheet-hidden{color:var(--rp-grey);font-size:var(--fs-xs);border:1px dashed var(--rp-rule);padding:6px 10px}
 .wrsheet .linkbtn,.wr-link{border:0;background:none;color:var(--rp-blue);cursor:pointer;padding:0;font:inherit;font-size:var(--fs-xs);min-height:24px}
@@ -3686,6 +3687,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-ms .wr-slip{stroke:var(--rp-red);stroke-width:2} .wr-ms circle.wr-slipc{fill:none;stroke:var(--rp-red);stroke-dasharray:3 2}
 .wr-tlgrab{font-size:10.5px;color:var(--rp-grey);text-align:right;margin-top:2px}
 .wr-tbl{min-width:0;margin-top:8px}
+.wr-timeline .wr-tbl{margin-top:16px}   /* #226: 16 px between the timeline picture and its table */
 table.wr-r{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
 table.wr-r th{background:none;font-family:inherit;position:static;text-align:left;font-weight:600;color:var(--rp-grey);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px 6px 0;border-bottom:1px solid var(--rp-ink)}
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
@@ -43239,15 +43241,15 @@ ${s5}`;
     }
     if (RVG === "source") {
       [...new Set(REV.map((r4) => r4.file))].forEach((file) => {
-        const L3 = REV.filter((r4) => r4.file === file), used = /* @__PURE__ */ new Set(), blocks2 = [];
+        const L3 = REV.filter((r4) => r4.file === file), used2 = /* @__PURE__ */ new Set(), blocks2 = [];
         L3.forEach((r4) => {
           if (isMin(r4)) {
-            kidsOf(r4, "*").forEach((k5) => used.add(k5));
+            kidsOf(r4, "*").forEach((k5) => used2.add(k5));
             const b5 = minBlock(r4, "*");
             if (b5) blocks2.push(b5);
             return;
           }
-          if (!used.has(r4) && ok2(r4)) blocks2.push([{ r: r4, g: "*" }]);
+          if (!used2.has(r4) && ok2(r4)) blocks2.push([{ r: r4, g: "*" }]);
         });
         if (blocks2.length) out.push({ key: file, title: revGroupTitle(file, L3), label: revGroupTitle(file, L3).replace(/<[^>]+>/g, ""), blocks: blocks2 });
       });
@@ -43255,16 +43257,16 @@ ${s5}`;
     }
     const gs2 = [...new Set(REV.flatMap((r4) => isMin(r4) ? (r4.projects || [r4.p]).map((p6) => p6 || "?") : [r4.p || "?"]))].sort((a5, b5) => a5 === "?" ? -1 : b5 === "?" ? 1 : 0);
     gs2.forEach((g5) => {
-      const used = /* @__PURE__ */ new Set(), blocks2 = [];
+      const used2 = /* @__PURE__ */ new Set(), blocks2 = [];
       REV.forEach((r4) => {
         if (isMin(r4)) {
           if (!(r4.projects || [r4.p]).map((p6) => p6 || "?").includes(g5)) return;
-          kidsOf(r4, g5).forEach((k5) => used.add(k5));
+          kidsOf(r4, g5).forEach((k5) => used2.add(k5));
           const b5 = minBlock(r4, g5);
           if (b5) blocks2.push(b5);
           return;
         }
-        if ((r4.p || "?") === g5 && !used.has(r4) && ok2(r4)) blocks2.push([{ r: r4, g: g5 }]);
+        if ((r4.p || "?") === g5 && !used2.has(r4) && ok2(r4)) blocks2.push([{ r: r4, g: g5 }]);
       });
       if (blocks2.length) out.push({ key: g5, title: g5 === "?" ? "Needs a project" : `<a href="#" class="hlink" data-proj="${g5}">${esc(pName(g5))}</a>`, label: g5 === "?" ? "Needs a project" : pName(g5), blocks: blocks2 });
     });
@@ -65990,7 +65992,7 @@ ${d5.text}`);
                 m5.title || m5.name
               ] }),
               /* @__PURE__ */ u2("td", { class: "num", children: wkDmy(m5.baseline_date) }),
-              /* @__PURE__ */ u2("td", { class: `num${late ? " late" : ""}`, children: m5.actual_date ? `achieved ${wkDm(m5.actual_date)}` : `${wkDmy(m5.forecast_date || m5.baseline_date)}${late ? ` (+${Math.round(dayNo(m5.forecast_date) - dayNo(m5.baseline_date))})` : ""}` }),
+              /* @__PURE__ */ u2("td", { class: `num${late ? " late" : ""}`, children: m5.actual_date ? `achieved ${wkDmy(m5.actual_date)}` : `${wkDmy(m5.forecast_date || m5.baseline_date)}${late ? ` (+${Math.round(dayNo(m5.forecast_date) - dayNo(m5.baseline_date))})` : ""}` }),
               /* @__PURE__ */ u2("td", { class: "num", children: m5.percent_complete != null ? `${m5.percent_complete}%` : "" }),
               /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("span", { class: `wr-st ${st2.tone}`, children: st2.word }) })
             ] }, m5.id);
@@ -66117,8 +66119,8 @@ ${d5.text}`);
     });
     return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
   }
-  async function exportWeekly(doc, fmt) {
-    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
+  async function exportWeekly(doc, fmt, page) {
+    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
   }
   var weeklyDirty = false;
   var setWeeklyDirty = (on2) => {
@@ -67096,7 +67098,7 @@ ${d5.text}`);
       /** @type {any} */
       null
     );
-    const docNow = docKey(doc), wordsNow = wordsKey(s5), liveKey = A2(docNow), liveWords = A2(wordsNow), used = A2(false);
+    const docNow = docKey(doc), wordsNow = wordsKey(s5), liveKey = A2(docNow), liveWords = A2(wordsNow), used2 = A2(false);
     liveKey.current = docNow;
     liveWords.current = wordsNow;
     const running = A2(false);
@@ -67148,7 +67150,7 @@ ${d5.text}`);
     const spark2 = p6.onRedraft && !exported ? async () => {
       if (running.current) return;
       const from = docNow, words = wordsNow;
-      used.current = false;
+      used2.current = false;
       running.current = true;
       setRd({ status: "running", from, words });
       try {
@@ -67335,8 +67337,8 @@ ${d5.text}`);
                   setRd({ ...rd2, status: "stale", why: staleWhy(rd2) });
                   return;
                 }
-                if (used.current) return;
-                used.current = true;
+                if (used2.current) return;
+                used2.current = true;
                 if (choice === "use") {
                   const patch = {
                     ...a5.text != null ? { text: a5.text } : {},
@@ -67461,6 +67463,7 @@ ${d5.text}`);
             }, children: "Show" })
           ] })
         ] }, s5.id));
+      } else if (exported && s5.type === "text" && !String(s5.text || "").trim() && !(s5.rows || []).length) {
       } else out.push(/* @__PURE__ */ u2(SectionBlock, { s: s5, i: i5, p: p6, peer: p6.peerDoc ? p6.peerDoc.sections.find((x5) => x5.id === s5.id) || null : null }, s5.id));
       if (!exported) for (const x5 of p6.extras.filter((e4) => e4.after === s5.id)) out.push(extra(x5));
     });
@@ -68268,14 +68271,15 @@ ${d5.text}`);
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
   }
-  async function exportClientReport(fmt) {
+  async function exportClientReport(fmt, makePage) {
     const a5 = crArg.value, d5 = crDoc.value;
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
       const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
       if (!s5.ok) return s5;
     }
-    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt });
+    const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
+    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
   }
 
   // components/report/ClientParts.jsx
@@ -68585,6 +68589,123 @@ ${d5.text}`);
     byType: { text: (ctx) => /* @__PURE__ */ u2(TextSection, { ctx }), table: (ctx) => /* @__PURE__ */ u2(TableSection, { ctx }) }
   };
 
+  // components/report/exportPage.jsx
+  var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
+  var CLIENT_EXPORT = { viewId: "v-clientreport", viewClass: "crview", sheetClass: "crsheet" };
+  var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
+  var NOOP = () => {
+  };
+  function used(d5, selector) {
+    try {
+      return !!d5.querySelector(selector.replace(PSEUDO_ELEMENT, ""));
+    } catch (e4) {
+      return true;
+    }
+  }
+  function usedRules(win, d5, from) {
+    const out = [];
+    const walk = (rules) => {
+      for (const r4 of Array.from(rules)) {
+        if (r4.constructor.name === "CSSStyleRule") {
+          if (used(
+            d5,
+            /** @type {CSSStyleRule} */
+            r4.selectorText
+          )) out.push(r4.cssText);
+        } else if (r4.constructor.name === "CSSMediaRule") {
+          const m5 = (
+            /** @type {CSSMediaRule} */
+            r4
+          ), cond = m5.conditionText || m5.media.mediaText;
+          if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m5.cssRules);
+        } else if (r4.constructor.name === "CSSSupportsRule") {
+          const sr2 = (
+            /** @type {CSSSupportsRule} */
+            r4
+          );
+          if (
+            /** @type {any} */
+            win.CSS.supports(sr2.conditionText)
+          ) walk(sr2.cssRules);
+        }
+      }
+    };
+    for (const sheet of Array.from(from.styleSheets)) {
+      const rules = (() => {
+        try {
+          return sheet.cssRules;
+        } catch (e4) {
+          return null;
+        }
+      })();
+      if (rules) walk(rules);
+    }
+    return out.join("\n");
+  }
+  async function reportExportPage(doc, renderers, view, version) {
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;pointer-events:none";
+    document.body.append(frame);
+    try {
+      const w6 = (
+        /** @type {Window} */
+        frame.contentWindow
+      ), d5 = (
+        /** @type {Document} */
+        frame.contentDocument
+      );
+      const palette = document.documentElement.dataset.palette || "";
+      d5.open();
+      d5.write(`<!doctype html><html data-theme="light"${palette ? ` data-palette="${palette.replace(/[^\w -]/g, "")}"` : ""}><head><meta charset="utf-8"></head><body><\/body></html>`);
+      d5.close();
+      for (const st2 of Array.from(document.querySelectorAll("style"))) {
+        const c5 = d5.createElement("style");
+        c5.textContent = st2.textContent;
+        d5.head.append(c5);
+      }
+      const host2 = d5.createElement("div");
+      host2.id = view.viewId;
+      host2.className = "export-view";
+      d5.body.append(host2);
+      const props = {
+        doc,
+        renderers,
+        extras: [],
+        exported: true,
+        readOnly: true,
+        peerDoc: null,
+        peerLabel: "",
+        side: (
+          /** @type {""} */
+          ""
+        ),
+        onChange: NOOP,
+        onOpenItem: void 0,
+        onEvent: NOOP,
+        onRedraft: void 0,
+        aiFor: () => void 0,
+        checks: [],
+        refocus: { current: null },
+        match: null
+      };
+      R(/* @__PURE__ */ u2("div", { class: view.viewClass, children: /* @__PURE__ */ u2("div", { class: view.sheetClass, children: /* @__PURE__ */ u2("div", { class: "sheet-root", children: /* @__PURE__ */ u2("div", { class: "sheet-area sheet-exported", children: /* @__PURE__ */ u2("div", { class: "sheet-scroll", children: /* @__PURE__ */ u2("div", { class: "sheet-one", children: /* @__PURE__ */ u2("div", { class: "sheet-fit", children: /* @__PURE__ */ u2("div", { class: "sheet-a4", children: /* @__PURE__ */ u2(SheetPage, { ...props }) }) }) }) }) }) }) }) }), host2);
+      await new Promise((r4) => setTimeout(r4, 250));
+      await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
+        i5.onload = i5.onerror = () => r4(null);
+      })));
+      const html2 = host2.outerHTML, css = usedRules(w6, d5, document);
+      R(null, host2);
+      return html2 && css ? { html: html2, css, palette, version } : null;
+    } catch (e4) {
+      console.error("export page:", e4);
+      return null;
+    } finally {
+      frame.remove();
+    }
+  }
+
   // components/report/ClientView.jsx
   async function openCheck() {
     const d5 = crDoc.value;
@@ -68600,7 +68721,7 @@ ${d5.text}`);
     await runCheck();
   }
   async function doExport(fmt) {
-    const r4 = await exportClientReport(fmt);
+    const r4 = await exportClientReport(fmt, (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5));
     if (r4 && (r4.ok || r4.clash)) crDialog.value = false;
     else await runCheck();
   }
@@ -70925,6 +71046,7 @@ ${d5.text}`);
         r4.replaced ? "Replaced" : "Saved",
         " ",
         r4.name,
+        r4.plain ? " (plain version)" : "",
         " in ",
         /* @__PURE__ */ u2(
           "a",
@@ -70972,7 +71094,9 @@ ${d5.text}`);
     let first = "";
     if (which !== "client") {
       if (!doc || !await saveFirst()) return;
-      const r4 = await exportWeekly(doc, fmt);
+      const now = weeklyDoc.value || doc;
+      const page = fmt === "docx" ? null : await reportExportPage(now, WEEKLY_RENDER, WEEKLY_EXPORT, weeklyBase.value);
+      const r4 = await exportWeekly(now, fmt, page);
       if (which === "internal") return;
       if (r4 && r4.clash) {
         if (!await clashAnswered()) return;
@@ -70984,7 +71108,8 @@ ${d5.text}`);
       crDialog.value = true;
       return;
     }
-    const c5 = await exportClientReport(fmt);
+    const mk2 = (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5);
+    const c5 = await exportClientReport(fmt, mk2);
     if (c5 && !c5.ok && !c5.clash) {
       crDialog.value = true;
       await runCheck();
@@ -73314,7 +73439,6 @@ ${d5.text}`);
         "countUp",
         "covered",
         "crDialog",
-        "crInfo",
         "creaiteEditor",
         "createNote",
         "csHead",

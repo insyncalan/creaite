@@ -7,8 +7,10 @@ import { snack } from "../../../core/server.js";
 import { approveClientReport, crDialog, exportClientReport, runCheck } from "../../../stores/clientReport.js";
 import { exportClash, exportSaved } from "../../../stores/exportSave.js";
 import { hubNote, reloadHub } from "../../../stores/hub.js";
-import { approveWeekly, exportWeekly, weeklyDoc } from "../../../stores/weekly.js";
-import { saveFirst } from "../weekly/WeeklyView.jsx";
+import { approveWeekly, exportWeekly, weeklyBase, weeklyDoc } from "../../../stores/weekly.js";
+import { WEEKLY_RENDER, saveFirst } from "../weekly/WeeklyView.jsx";
+import { CLIENT_RENDERERS } from "../ClientParts.jsx";
+import { CLIENT_EXPORT, WEEKLY_EXPORT, reportExportPage } from "../exportPage.jsx";
 
 /** Resolves true when the name-clash dialog was answered with a save, false when it was cancelled. */
 function clashAnswered() {
@@ -24,7 +26,9 @@ export async function hubExport(fmt, which) {
   let first = "";
   if (which !== "client") {
     if (!doc || !(await saveFirst())) return;
-    const r = await exportWeekly(doc, fmt);           // the dialog, the "Saved … in <project> › Reports" message or the failure show themselves (ExportSave)
+    const now = weeklyDoc.value || doc;
+    const page = fmt === "docx" ? null : await reportExportPage(now, WEEKLY_RENDER, WEEKLY_EXPORT, weeklyBase.value);   // #226: the exported page itself
+    const r = await exportWeekly(now, fmt, page);           // the dialog, the "Saved … in <project> › Reports" message or the failure show themselves (ExportSave)
     if (which === "internal") return;
     if (r && r.clash) { if (!(await clashAnswered())) return; }
     else if (!r || !r.ok) return;
@@ -34,7 +38,8 @@ export async function hubExport(fmt, which) {
      the dialog says what and nothing is exported. Otherwise the export goes straight on (the server checks again). */
   const chk = await runCheck(), lo = chk && chk.ok ? chk.left_out : null;
   if (!lo || !lo.ready || lo.findings.length) { crDialog.value = true; return; }
-  const c = await exportClientReport(fmt);
+  const mk = (/** @type {any} */ d, /** @type {number} */ v) => reportExportPage(d, CLIENT_RENDERERS, CLIENT_EXPORT, v);
+  const c = await exportClientReport(fmt, mk);
   if (c && !c.ok && !c.clash) { crDialog.value = true; await runCheck(); return; }       // a refusal: the check shows why, and nothing was written
   if (which === "both" && c && c.ok && first && exportSaved.value) exportSaved.value = { ...exportSaved.value, name: `${first} and ${exportSaved.value.name}` };
 }

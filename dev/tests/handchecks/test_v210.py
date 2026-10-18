@@ -588,10 +588,32 @@ class WeeklyFiling(WeeklyBase):
         self.note(15, "the filed file never changed in place; the new version replaced it on approval and Undo put it back")
 
     def exported(self, week, fmt):
-        e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": fmt})
-        self.assertTrue(e.get("ok"), e)
-        p = Path(e["path"])
-        return e, (p if p.is_absolute() else self.vault / p)
+        """The export as the person makes it. #226: HTML and PDF are the report page's own exported view, so they are made from the
+        page (open the report, Export, pick the format); Word has no page and is the API's. Returns (answer, file path)."""
+        if fmt == "docx":
+            e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": fmt})
+            self.assertTrue(e.get("ok"), e)
+            p = Path(e["path"])
+            return e, (p if p.is_absolute() else self.vault / p)
+        drafts = self.vault / "system/staging/drafts"
+        before = set(drafts.glob("*"))
+        self.open_weekly(week)
+        self.b.eval("document.querySelector('#v-weekly [data-wrexport]').click()")
+        self.b.wait("document.querySelector('[role=menu] [role=menuitem]')", 10)
+        label = {"html": "HTML", "pdf": "PDF"}[fmt]
+        self.b.eval("[...document.querySelectorAll('[role=menu] [role=menuitem]')].find(x=>x.textContent.includes(%r)).click()" % label)
+        # #220 (merged with #226): the export is filed in the project's Reports folder, and an unfiled report's HTML meets its reserved
+        # filing name, so the clash dialog opens: its default (Add a number) is taken.
+        reports = self.vault / "projects"
+        before |= set(reports.glob("*/reports/*"))
+
+        def found():
+            if self.b.eval("!!document.querySelector('#exportClashDlg[open]')"):
+                self.b.eval("document.querySelector('#exportClashGo').click()")
+            return [f for f in list(drafts.glob("*")) + list(reports.glob("*/reports/*")) if f not in before and f.suffix == "." + fmt]
+        made = wait_for(found, 60, f"the {fmt} export")
+        self.b.pump(0.6)
+        return {"ok": True, "path": str(made[0]), "filed": False}, made[0]
 
     def test_c16_exports_match(self):
         """16. Export HTML, Word and PDF from one saved report in which a section is hidden and a risk row is left out → the same
@@ -612,47 +634,57 @@ class WeeklyFiling(WeeklyBase):
         for fmt in ("html", "docx", "pdf"):
             e, path = self.exported(week, fmt)
             self.assertTrue(path.exists(), path)
-            self.assertFalse(e.get("filed"), f"{fmt}: a report export is not filed beside by default ({e.get('path')})")
+            # #220 (changed deliberately): every export is saved first into the project's Reports folder under its own name
+            self.assertEqual(path.parent.name, "reports", f"{fmt}: saved in the project's Reports folder ({e.get('path')})")
             text = export_text(self.vault, path, fmt)
             outputs[fmt] = text
-            in_order(self, text, [h for h in shown if h in text or fmt == "html"] if fmt != "pdf" else [h for h in shown if h in text])
-            self.assertNotIn(self.sec(doc, "asks")["heading"], re.findall(r"<h2>(.*?)</h2>", path.read_text(encoding="utf-8")) if fmt == "html" else [],
-                             "the hidden section's heading")
+            if fmt == "html":
+                # #226 (changed deliberately): the HTML is the sheet's own exported page, so its sections are <section data-id>, in the
+                # report's order, and a text section with nothing in it is not drawn (the old export printed an empty heading)
+                ids = re.findall(r'<section[^>]* data-id="([^"]+)"', path.read_text(encoding="utf-8"))
+                want = [x["id"] for x in doc["sections"] if not x["hidden"] and not (x["type"] == "text" and not (x.get("text") or "").strip())]
+                self.assertEqual(ids, want, "the sections of the page, in order")
+                self.assertNotIn("asks", ids, "the hidden section")
+            else:
+                low = text.lower()       # the page prints its headings in capitals
+                in_order(self, low, [h.lower() for h in shown if h.lower() in low])
             self.assertNotIn(left_text, text, f"the left-out row is not in the {fmt}")
             if fmt == "html":
                 self.assertNotIn("creaite-data", path.read_text(encoding="utf-8"), "the exported page carries no editing data")
-        self.assertEqual(len(re.findall(r"<h2>", "")), 0)
-        self.note(16, f"HTML, Word and PDF: {len(shown)} sections in the same order; 'asks' and one risk row in none")
+        self.note(16, "HTML (the exported page), Word and PDF: the same sections in the same order; 'asks' and one risk row in none")
 
     def test_c17_file_beside_defaults(self):
-        """17. Settings › Advanced has two lines, one for reports (off) and one for minutes (on), each with its reason; a report
-        export is not filed beside the report unless that line is ticked."""
+        """17. Settings › Advanced has one line for minutes (on) with its reason, and none for reports; a report export is saved
+        into the project's Reports folder (see 2.4.0 checks). (Changed deliberately with #220: the reports line is gone.)"""
         b = self.b
         self.screen("settings-advanced")
         text = b.eval("document.getElementById('v-settings').innerText")
-        self.assertTrue(re.search(r"(?i)file (report|minutes) exports beside", text), "the two exports lines are in Settings")
+        self.assertTrue(re.search(r"(?i)file minutes exports beside", text), "the minutes line is in Settings")
+        self.assertFalse(re.search(r"(?i)file report exports beside", text), "no reports line in Settings")
         rows = b.eval("""[...document.querySelectorAll('#v-settings .srow')].filter(r=>/exports beside/i.test(r.innerText)).map(r=>({t:r.innerText.replace(/\\s+/g,' ').trim().slice(0,200), on:[...r.querySelectorAll('input[type=checkbox],[role=switch]')].map(x=>x.checked===undefined?x.getAttribute('aria-checked'):String(x.checked))}))""")
-        self.assertGreaterEqual(len(rows), 2, rows)
+        self.assertEqual(len(rows), 1, rows)
+        self.assertTrue(re.search(r"(?i)minutes", rows[0]["t"]), rows)
+        self.assertIn(rows[0]["on"], (["true"], ["True"]), f"the minutes line is on: {rows}")
+        self.assertGreater(len(rows[0]["t"]), 60, "the line carries its reason")
         week = self.wk(4)
         r = self.draft("weekly", week)
         self.assertTrue(self.api("/api/report/save", {"doc": r["doc"], "base_version": r["version"] or None}).get("ok"))
         e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": "docx"})
         self.assertTrue(e.get("ok"), e)
-        self.assertFalse(e.get("filed"), "a report export is not filed beside by default")
-        self.assertEqual(self.filed(f"{week}*.docx"), [], "nothing filed in the reports folder")
-        self.note(17, "two Settings lines (" + " | ".join(x["t"][:70] for x in rows) + "); the report export was not filed beside")
+        self.assertEqual(Path(e["path"]).parent.name, "reports", e)
+        self.assertEqual(len(self.filed(f"{week}*.docx")), 1, "the Word export is in the project's Reports folder")
+        self.note(17, "Settings has the minutes line only (" + rows[0]["t"][:70] + "); the report's Word export landed in " + e.get("path", ""))
 
     def test_c74_export_then_edit_again(self):
         """74. Approve and file a weekly report, export it as HTML (not filed beside, the default), then press Edit again → the
         report opens as a draft again; the export is a separate file and never stands in for the draft."""
         week = self.wk(6)
         self.approve_week(week)
-        e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": "html"})
-        self.assertTrue(e.get("ok"), e)
+        e, _ = self.exported(week, "html")             # #226: made from the report page, as a person does
         r = self.api("/api/report/draft", {"kind": "weekly", "code": "FAL", "week_ending": week})
         self.assertTrue(r.get("ok"), f"Edit again after an export: {r.get('message')}")
         self.assertEqual(r["where"], "filed")
-        self.note(74, f"export went to {e.get('path')}")
+        self.note(74, f"export went to {e.get('path')} (the report page's own export)")
 
     def test_c18_filed_file_opens_outside_creaite(self):
         """18. Open the filed `.html` report in another browser (not creaite) → it reads as the report, with no missing styles,

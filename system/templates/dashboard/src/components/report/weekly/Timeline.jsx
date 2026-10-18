@@ -81,7 +81,7 @@ export function Timeline({ ctx }) {
                     aria-label={`${on ? "Leave out of" : "Put in"} the list: ${m.title || m.name}`}
                     data-tip={on ? "In the list: click to leave it out (the timeline is unchanged)" : "Left out of the list: click to show it"}>{on ? "◉" : "○"}</button></td> : null}
                   <td><ctx.ItemRef id={m.id} /> {m.title || m.name}</td><td class="num">{wkDmy(m.baseline_date)}</td>
-                  <td class={`num${late ? " late" : ""}`}>{m.actual_date ? `achieved ${wkDm(m.actual_date)}` : `${wkDmy(m.forecast_date || m.baseline_date)}${late ? ` (+${Math.round(dayNo(m.forecast_date) - dayNo(m.baseline_date))})` : ""}`}</td>
+                  <td class={`num${late ? " late" : ""}`}>{m.actual_date ? `achieved ${wkDmy(m.actual_date)}` : `${wkDmy(m.forecast_date || m.baseline_date)}${late ? ` (+${Math.round(dayNo(m.forecast_date) - dayNo(m.baseline_date))})` : ""}`}</td>
                   <td class="num">{m.percent_complete != null ? `${m.percent_complete}%` : ""}</td><td><span class={`wr-st ${st.tone}`}>{st.word}</span></td>
                 </tr>);
             })}</tbody></table>

@@ -3630,6 +3630,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wrsheet .page h2{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px;color:var(--rp-grey);font-weight:600;display:flex;gap:8px;align-items:center;border:0;padding:0}
 .wrsheet .page h2::before{content:"";width:7px;height:7px;background:var(--rp-green);flex:none}
 .wrsheet .page section[data-id=header]>h2,.wrsheet .page section[data-id=health]>h2{display:none}
+.wrsheet .page>header.doc{display:none}   /* #226: the weekly report has one title block (the header section); the sheet's plain title band was a second one */
 .wrsheet .page p{margin:0 0 8px} .wrsheet .page ul{margin:0;padding-left:16px} .wrsheet .page li{margin:0 0 4px}
 .wrsheet .sheet-hidden{color:var(--rp-grey);font-size:var(--fs-xs);border:1px dashed var(--rp-rule);padding:6px 10px}
 .wrsheet .linkbtn,.wr-link{border:0;background:none;color:var(--rp-blue);cursor:pointer;padding:0;font:inherit;font-size:var(--fs-xs);min-height:24px}
@@ -3676,6 +3677,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-ms .wr-slip{stroke:var(--rp-red);stroke-width:2} .wr-ms circle.wr-slipc{fill:none;stroke:var(--rp-red);stroke-dasharray:3 2}
 .wr-tlgrab{font-size:10.5px;color:var(--rp-grey);text-align:right;margin-top:2px}
 .wr-tbl{min-width:0;margin-top:8px}
+.wr-timeline .wr-tbl{margin-top:16px}   /* #226: 16 px between the timeline picture and its table */
 table.wr-r{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
 table.wr-r th{background:none;font-family:inherit;position:static;text-align:left;font-weight:600;color:var(--rp-grey);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px 6px 0;border-bottom:1px solid var(--rp-ink)}
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
