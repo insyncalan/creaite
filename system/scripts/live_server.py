@@ -1131,7 +1131,7 @@ class Handler(BaseHTTPRequestHandler):
     def body(self):
         """The request's JSON body ({} when empty); ValueError when it is over BODY_LIMIT."""
         n = int(self.headers.get("Content-Length") or 0)
-        if n > ROUTE_BODY_LIMITS.get(self.path.split("?")[0], BODY_LIMIT):
+        if n < 0 or n > ROUTE_BODY_LIMITS.get(self.path.split("?")[0], BODY_LIMIT):
             raise ValueError("request too large")
         return json.loads(self.rfile.read(n) or b"{}") if n else {}
 
