@@ -634,7 +634,10 @@ shared.MCREATED=null; shared.MCREATEDOF=null;   /* declared before renderPerson,
 shared.PKS=[]; shared.PKDONE=[]; shared.PKSEQ=0; export const PKAPPLIED=new Set();   /* declared before renderPerson, which runs at load */
 export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) shared.HAND=null;   /* BL-58: a hand-over in progress belongs to one person */
   (()=>{ shared.PERSON=name; const el=$("#v-person"), x=PERS().find(y=>y.name===name);
-  if(!x){ putHTML(el,html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav><p class="sub">Nobody called “${name}” owns an item.</p></div>`); return; }
+  if(!x){ putHTML(el,html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav>
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}</h1><p class="sub">Nobody called “${name}” owns an item.</p></div>${raw(ibtn("pencil","Add details",'id="ppEdit" aria-haspopup="dialog"',"bd"))}</div></div>`);
+    /* #154: a name that owns nothing and is not on the register still offers the add-person form, so the menu's Add details is never a dead end */
+    $("#ppEdit").onclick=async()=>{ const reg=shared.REG.find(y=>y.name===name), res=await askPerson(reg?{edit:true,person:reg}:{details:true,person:pBlank(name)}); if(res&&res.person){ const {name:_,...f}=res.person; await regEdit(name,f); renderPerson(name); } }; return; }
   const p=x.p, items=[...x.oa.map(a=>["actions",a]),...x.or.map(r=>["raid",r])], codes=[...new Set(items.map(([,i])=>i.p))].sort(), cutoff=new Date(TODAY); cutoff.setDate(cutoff.getDate()-RECENT_DEC_DAYS);
   const recent=x.D.filter(d=>d.date>=cutoff.toISOString().slice(0,10)).sort((a,b)=>b.date.localeCompare(a.date)), leads=Object.entries(D.leads||{}).filter(([k])=>personOf(k)===name).flatMap(([,v])=>v);
   putHTML(el,html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav>

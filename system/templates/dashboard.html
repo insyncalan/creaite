@@ -32026,7 +32026,16 @@ ${s5}`;
       shared.PERSON = name;
       const el2 = $("#v-person"), x5 = PERS().find((y5) => y5.name === name);
       if (!x5) {
-        putHTML(el2, html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav><p class="sub">Nobody called “${name}” owns an item.</p></div>`);
+        putHTML(el2, html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav>
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}</h1><p class="sub">Nobody called “${name}” owns an item.</p></div>${raw(ibtn("pencil", "Add details", 'id="ppEdit" aria-haspopup="dialog"', "bd"))}</div></div>`);
+        $("#ppEdit").onclick = async () => {
+          const reg = shared.REG.find((y5) => y5.name === name), res = await askPerson(reg ? { edit: true, person: reg } : { details: true, person: pBlank(name) });
+          if (res && res.person) {
+            const { name: _6, ...f5 } = res.person;
+            await regEdit(name, f5);
+            renderPerson(name);
+          }
+        };
         return;
       }
       const p6 = x5.p, items2 = [...x5.oa.map((a5) => ["actions", a5]), ...x5.or.map((r4) => ["raid", r4])], codes = [...new Set(items2.map(([, i5]) => i5.p))].sort(), cutoff = new Date(TODAY);
