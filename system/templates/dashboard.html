@@ -3892,6 +3892,27 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
 .sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
 .sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
+/* ===== #218 ===== a report's text section: the Notes editor on the page (headings, lists, checklist, code, table, picture, link). The page's own
+   rules above give it paragraphs, lists, quotes and tables; these add what only a text section has. The filed and exported page draws the same
+   things in creaite_doc.CSS (.ft). The "Add a text section" button at the foot is on screen only. */
+.sheet-a4 .page .sheet-ft{min-height:4.5em;padding:2px 0}
+.sheet-a4 .page .sheet-ft h1{font-size:var(--fs-lg);margin:10px 0 4px} .sheet-a4 .page .sheet-ft h2{font-size:var(--fs-md);display:block;border:0;padding:0;margin:8px 0 4px}
+.sheet-a4 .page .sheet-ft h3{font-size:var(--fs-md);font-style:italic;margin:6px 0 3px}
+.sheet-a4 .page .sheet-ft pre{background:var(--paper-sunk);border:1px solid var(--paper-rule);border-radius:var(--r-sm);padding:8px 10px;margin:0 0 8px;font:12px/1.45 var(--mono,ui-monospace,Menlo,monospace);white-space:pre-wrap;overflow-wrap:anywhere}
+.sheet-a4 .page .sheet-ft code{font:12px var(--mono,ui-monospace,Menlo,monospace);background:var(--paper-sunk);padding:0 3px;border-radius:3px} .sheet-a4 .page .sheet-ft pre code{background:none;padding:0}
+.sheet-a4 .page .sheet-ft table{margin:0 0 8px} .sheet-a4 .page .sheet-ft td,.sheet-a4 .page .sheet-ft th{min-width:48px}
+.sheet-a4 .page .sheet-ft a{color:var(--paper-link);text-decoration:underline}
+.sheet-a4 .page .sheet-ft figure.cimg{margin:6px 0;max-width:100%} .sheet-a4 .page .sheet-ft figure.cimg img{max-width:100%;height:auto;border:1px solid var(--paper-rule)}
+.sheet-a4 .page .sheet-ft ul[data-type=taskList]{padding-left:2px;margin:0 0 8px} .sheet-a4 .page .sheet-ft hr{border:0;border-top:1px solid var(--paper-rule);margin:8px 0}
+.sheet-a4 .page .sheet-ft>:last-child{margin-bottom:0}
+.sheet-exported .sheet-a4 .page .sheet-ft{background:none;box-shadow:none}
+.sheet-ftmsg{font-size:var(--fs-xs);color:var(--bad);margin:2px 0 0}
+.sheet-addfoot{margin:8px 0 0;display:flex;justify-content:flex-start}
+.sheet-a4 .page .sheet-addtext{background:var(--paper);color:var(--paper-link);border-color:var(--paper-rule);display:inline-flex;gap:6px;align-items:center}
+.sheet-a4 .page .sheet-addtext:hover{background:var(--paper-sunk)}
+.sheet-a4 .page .sheet-delask{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;padding:6px 8px;border:1px solid var(--paper-rule);border-radius:var(--r-sm);background:var(--paper-sunk);font-size:var(--fs-sm)}
+.sheet-a4 .page .sheet-delask .btn{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+.sheet-a4 .page .sheet-match[data-textonly]{font-weight:400}
 /* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
 /* #121: the Link button in a plain field's corner, and a link in plain text (a field being edited, a table, the peek, a report preview) */
 .linkcorner{position:fixed;z-index:var(--z-linkcorner);width:22px;height:22px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;opacity:.85}
@@ -4585,6 +4606,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     TABNAME: () => TABNAME,
     TABSTATE: () => TABSTATE,
     TDCAP: () => TDCAP,
+    TEXT_TYPE: () => TEXT_TYPE,
     THEMES: () => THEMES,
     THEME_OLD: () => THEME_OLD,
     TICK24: () => TICK24,
@@ -4678,6 +4700,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     addImages: () => addImages,
     addInboxFiles: () => addInboxFiles,
     addNoteImage: () => addNoteImage,
+    addReportImage: () => addReportImage,
+    addTextCopy: () => addTextCopy,
+    addTextSection: () => addTextSection,
     agFit: () => agFit,
     agFitAll: () => agFitAll,
     agWhen: () => agWhen,
@@ -4770,6 +4795,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     autoGrow: () => autoGrow,
     batchMove: () => batchMove,
     bcKey: () => bcKey,
+    bindTextSections: () => bindTextSections,
     bkApply: () => bkApply,
     bkChanged: () => bkChanged,
     bkDate: () => bkDate,
@@ -5531,6 +5557,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     igHowOpts: () => igHowOpts,
     igText: () => igText,
     imageRefs: () => imageRefs,
+    imageRefsIn: () => imageRefsIn,
     imgFiles: () => imgFiles,
     imgFlash: () => imgFlash,
     imgSrc: () => imgSrc,
@@ -5557,6 +5584,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     isStale: () => isStale,
     isSteering: () => isSteering,
     isStub: () => isStub,
+    isTextSection: () => isTextSection,
     isVault: () => isVault,
     isoAdd: () => isoAdd,
     isoDow: () => isoDow,
@@ -5612,6 +5640,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     loadMeetings: () => loadMeetings,
     loadNotes: () => loadNotes,
     loadPrep: () => loadPrep,
+    loadReportImages: () => loadReportImages,
     loadTab: () => loadTab,
     localDay: () => localDay,
     longDate: () => longDate,
@@ -5653,6 +5682,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     makePrepDialog: () => makePrepDialog,
     makeUndoDialog: () => makeUndoDialog,
     markHelpSeen: () => markHelpSeen,
+    markNewText: () => markNewText,
     markSel: () => markSel,
     markStagedRows: () => markStagedRows,
     matchAll: () => matchAll,
@@ -5820,6 +5850,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     newChat: () => newChat,
     newItemOf: () => newItemOf,
     newMenuOpen: () => newMenuOpen,
+    newTextId: () => newTextId,
     newTile: () => newTile,
     nextFriday: () => nextFriday,
     nextId: () => nextId,
@@ -6324,6 +6355,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     repWeek: () => repWeek,
     replaceCurrent: () => replaceCurrent,
     repliedRow: () => repliedRow,
+    reportImageSrc: () => reportImageSrc,
     reportRecord: () => reportRecord,
     reportingHref: () => reportingHref,
     reportsBadge: () => reportsBadge,
@@ -6629,10 +6661,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     tLink: () => tLink,
     tabId: () => tabId,
     tabTitle: () => tabTitle,
+    takeNewText: () => takeNewText,
     tdFocusAfter: () => tdFocusAfter,
     tdFocusMark: () => tdFocusMark,
     tdLine: () => tdLine,
     tdToReview: () => tdToReview,
+    textMsg: () => textMsg,
     themeFade: () => themeFade,
     themeIcon: () => themeIcon,
     themeOf: () => themeOf,
@@ -6728,8 +6762,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     who: () => who,
     wireSpark: () => wireSpark,
     withClosed: () => withClosed,
+    withTextSection: () => withTextSection,
     withdrawDecision: () => withdrawDecision,
     within: () => within,
+    withoutSection: () => withoutSection,
     wkAsk: () => wkAsk,
     wkClear: () => wkClear,
     wkDays: () => wkDays,
@@ -27297,6 +27333,9 @@ ${s5}`;
       "tpl:lessons-learned",
       "tpl:working-session"
     ],
+    /* #218: a report's text section has what Notes' `/` menu has that a report can host: not the note, person and work-item pickers
+       (a client report must never offer an internal item) and not Notes' templates */
+    textsection: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "link"],
     current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "link", "item"],
     plain: [],
     email: [],
@@ -27334,6 +27373,10 @@ ${s5}`;
   var ED_PROFILES = {
     notes: {
       tip: "Notes: one line, grouped into hover menus (Heading, List, Insert)",
+      tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"]
+    },
+    textsection: {
+      tip: "A report's text section (#218): the Notes bar, one line, grouped; Insert has Table and Picture (no note, person or work-item pickers)",
       tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"]
     },
     capture: {
@@ -65419,6 +65462,89 @@ ${d5.text}`);
     if (key2) loadPrep(key2).then(() => tabTitle());
   }
 
+  // stores/textSection.js
+  var ADD = null;
+  function bindTextSections(fn2) {
+    ADD = fn2;
+    return () => {
+      if (ADD === fn2) ADD = null;
+    };
+  }
+  function addTextSection(afterId = null) {
+    if (!ADD) return false;
+    const id2 = ADD(afterId == null ? null : afterId);
+    if (id2) NEW.id = id2;
+    return !!id2;
+  }
+  var NEW = { id: (
+    /** @type {string|null} */
+    null
+  ) };
+  var markNewText = (id2) => {
+    NEW.id = id2;
+  };
+  function takeNewText(id2) {
+    if (NEW.id !== id2) return false;
+    NEW.id = null;
+    return true;
+  }
+  var textMsg = y3("");
+  var PICS = /* @__PURE__ */ new Map();
+  var mapOf = (code) => {
+    let m5 = PICS.get(code);
+    if (!m5) {
+      m5 = /* @__PURE__ */ new Map();
+      PICS.set(code, m5);
+    }
+    return m5;
+  };
+  function imageRefsIn(text) {
+    const out = /* @__PURE__ */ new Set();
+    for (const m5 of String(text || "").matchAll(/!\[[^\]\n]*\]\((_images\/[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(?:png|jpe?g))\)/gi)) out.add(m5[1]);
+    return [...out];
+  }
+  var reportImageSrc = (code, ref) => mapOf(code).get(ref) || null;
+  async function loadReportImages(code, refs) {
+    const m5 = mapOf(code), want = refs.filter((r5) => !m5.has(r5));
+    if (!want.length || !viaServer()) return;
+    const r4 = await api("/api/report/images", { code, refs: want });
+    if (r4 && r4.ok && r4.images) for (const [k5, v5] of Object.entries(
+      /** @type {Record<string, string>} */
+      r4.images
+    )) m5.set(k5, v5);
+  }
+  async function addReportImage(code, file) {
+    if (!/^image\/(png|jpeg)$/.test(file.type)) {
+      textMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`;
+      return null;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      textMsg.value = `${file.name} is over 2 MB: pictures can be 2 MB at most.`;
+      return null;
+    }
+    if (!viaServer()) {
+      textMsg.value = "Adding a picture needs the live server.";
+      return null;
+    }
+    const src = await new Promise((res) => {
+      const fr2 = new FileReader();
+      fr2.onload = () => res(String(fr2.result || ""));
+      fr2.onerror = () => res("");
+      fr2.readAsDataURL(file);
+    });
+    const r4 = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1) }) : null;
+    if (!r4 || !r4.ok) {
+      textMsg.value = oneLine(r4 && r4.message || `${file.name} couldn't be added.`);
+      return null;
+    }
+    textMsg.value = "";
+    mapOf(code).set(r4.ref, String(src));
+    return (
+      /** @type {string} */
+      r4.ref
+    );
+  }
+
   // components/report/SheetText.jsx
   var WORD = "[\\p{L}\\p{N}_]";
   var isWord = (c5) => c5 != null && new RegExp(`^${WORD}$`, "u").test(c5);
@@ -65637,7 +65763,7 @@ ${d5.text}`);
     else if (at2.top < box.top + 8) sc2.scrollTop -= box.top - at2.top + 24;
     return true;
   }
-  function SheetEditor({ value, rich, label, onText, ai: ai2, checks = [], cls = "", multiline = true, placeholder, editable = true }) {
+  function SheetEditor({ value, rich, label, onText, ai: ai2, checks = [], cls = "", multiline = true, placeholder, editable = true, text = null }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -65646,28 +65772,68 @@ ${d5.text}`);
       /** @type {import("../../core/editor.js").EdHandle|null} */
       null
     );
+    const fileIn = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
     const on2 = A2(onText);
     on2.current = onText;
     const marks = A2(checks);
     marks.current = checks;
+    const code = text ? text.code : "";
+    const [ready, setReady] = d2(!text || !imageRefsIn(value).length);
     h2(() => {
+      if (!text || ready) return void 0;
+      let live = true;
+      loadReportImages(code, imageRefsIn(value)).then(() => {
+        if (live) setReady(true);
+      });
+      return () => {
+        live = false;
+      };
+    }, [code]);
+    const hostRows = () => ({
+      table: () => {
+        const h5 = ed3.current;
+        if (h5) h5.editor.chain().focus().setMeta(OWN_JOIN, true).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+      },
+      image: () => fileIn.current?.click()
+    });
+    const addImages2 = async (files) => {
+      for (const f5 of [...files || []]) {
+        const ref = await addReportImage(code, f5), h5 = ed3.current;
+        if (!ref || !h5) continue;
+        const st2 = h5.editor.state, end = st2.doc.content.size, at2 = st2.doc.resolve(Math.min(st2.selection.from, end)), after = at2.depth ? at2.after(1) : end;
+        h5.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []]).run();
+        const cap = (
+          /** @type {HTMLElement|null} */
+          box.current ? box.current.querySelector(`figure[data-ref="${CSS.escape(ref)}"] figcaption`) : null
+        );
+        if (cap) cap.focus();
+      }
+    };
+    h2(() => {
+      if (!ready) return void 0;
       const el2 = (
         /** @type {HTMLDivElement} */
         box.current
       );
       const editorProps = { handleScrollToSelection: keepCaretInView };
-      const h5 = creaiteEditor(el2, rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
+      const h5 = creaiteEditor(el2, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: (ref) => reportImageSrc(code, ref), ...ai2 ? { ai: ai2 } : {} } : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
       ed3.current = h5;
       h5.editor.setEditable(editable);
+      const slashOff = text ? attachSlash(h5, { profile: "textsection", host: hostRows() }) : () => {
+      };
       const input = () => on2.current(h5.value());
       el2.addEventListener("input", input);
       paintChecks(h5, marks.current);
       return () => {
         el2.removeEventListener("input", input);
+        slashOff();
         h5.destroy();
         ed3.current = null;
       };
-    }, [rich, !!ai2]);
+    }, [rich, !!ai2, ready]);
     h2(() => {
       const h5 = ed3.current;
       if (h5 && !h5.el.contains(document.activeElement) && h5.value() !== value) {
@@ -65711,7 +65877,7 @@ ${d5.text}`);
       "div",
       {
         ref: box,
-        class: `sheet-ed${rich ? " sheet-rich" : " sheet-cell"} ${cls}`,
+        class: `sheet-ed${rich ? " sheet-rich" : " sheet-cell"}${text ? " sheet-ft" : ""} ${cls}`,
         role: "textbox",
         "aria-multiline": rich || multiline ? "true" : "false",
         "aria-label": label,
@@ -65735,8 +65901,46 @@ ${d5.text}`);
           if (!to2 || !wrap.current || !wrap.current.contains(to2)) setActive(false);
         },
         children: [
-          showBar ? /* @__PURE__ */ u2(EditorBar, { profile: "sheet", handle: () => ed3.current, cls: "sheet-rtebar", label: `Formatting: ${label}` }) : null,
-          field
+          showBar ? /* @__PURE__ */ u2(
+            EditorBar,
+            {
+              profile: text ? "textsection" : "sheet",
+              handle: () => ed3.current,
+              cls: "sheet-rtebar",
+              label: `Formatting: ${label}`,
+              ...text ? { host: hostRows() } : {}
+            }
+          ) : null,
+          field,
+          text ? /* @__PURE__ */ u2(
+            "input",
+            {
+              ref: fileIn,
+              type: "file",
+              class: "sheet-imgfile",
+              accept: "image/png,image/jpeg",
+              multiple: true,
+              hidden: true,
+              "aria-hidden": "true",
+              tabIndex: -1,
+              onCancel: () => {
+                if (ed3.current) undoHeadEnd(ed3.current.editor);
+              },
+              onChange: async (e4) => {
+                const i5 = (
+                  /** @type {HTMLInputElement} */
+                  e4.target
+                );
+                try {
+                  await addImages2(i5.files);
+                } finally {
+                  if (ed3.current) undoHeadEnd(ed3.current.editor);
+                }
+                i5.value = "";
+              }
+            }
+          ) : null,
+          text && textMsg.value ? /* @__PURE__ */ u2("div", { class: "sheet-ftmsg", role: "alert", children: textMsg.value }) : null
         ]
       }
     );
@@ -65854,9 +66058,47 @@ ${d5.text}`);
     };
   }
   var sectionDiffers = (a5, b5) => JSON.stringify(shownOf(a5)) !== JSON.stringify(shownOf(b5));
+  var TEXT_TYPE = "freetext";
+  var isTextSection = (s5) => !!s5 && s5.type === TEXT_TYPE;
+  function newTextId(doc) {
+    const have = new Set((doc.sections || []).map((s5) => s5.id));
+    for (; ; ) {
+      const id2 = `free_${Math.random().toString(36).slice(2, 8)}`;
+      if (!have.has(id2)) return id2;
+    }
+  }
+  function withTextSection(doc, afterId, id2 = newTextId(doc)) {
+    const at2 = afterId == null ? -1 : doc.sections.findIndex((s5) => s5.id === afterId);
+    const sec = { id: id2, type: TEXT_TYPE, heading: "", default_heading: "", hidden: false, text: "", audience: (doc.audience || "internal") === "internal" ? "internal" : "client" };
+    const sections = doc.sections.slice();
+    sections.splice(at2 < 0 ? sections.length : at2 + 1, 0, sec);
+    return syncLayout({ ...doc, sections });
+  }
+  function withoutSection(doc, id2) {
+    const out = syncLayout({ ...doc, sections: doc.sections.filter((s5) => s5.id !== id2) });
+    const heads = { ...(out.layout || {}).headings || {} };
+    delete heads[id2];
+    return { ...out, layout: { ...out.layout, headings: heads } };
+  }
+  function addTextCopy(left, right, src) {
+    const copy = { ...JSON.parse(JSON.stringify(src)), hidden: false, audience: (right.audience || "internal") === "internal" ? "internal" : "client" };
+    delete copy.tags;
+    const order = left.sections.map((s5) => s5.id), k5 = order.indexOf(src.id), have = new Set(right.sections.map((s5) => s5.id));
+    let after = null;
+    for (let j5 = k5 - 1; j5 >= 0; j5--) if (have.has(order[j5])) {
+      after = order[j5];
+      break;
+    }
+    const at2 = after == null ? right.sections.length : right.sections.findIndex((s5) => s5.id === after) + 1;
+    const sections = right.sections.slice();
+    sections.splice(at2, 0, copy);
+    return syncLayout({ ...right, sections });
+  }
   function matchSection(left, right, id2) {
     const src = left.sections.find((s5) => s5.id === id2), mine = right.sections.find((s5) => s5.id === id2);
+    if (src && !mine && isTextSection(src)) return addTextCopy(left, right, src);
     if (!src || !mine) return right;
+    if (isTextSection(src)) return mapSection(right, id2, (s5) => ({ ...s5, heading: src.heading, text: src.text || "" }));
     const copy = JSON.parse(JSON.stringify(src));
     copy.hidden = !!mine.hidden;
     if (Array.isArray(copy.rows)) {
@@ -65871,7 +66113,7 @@ ${d5.text}`);
   }
   function matchAll(left, right) {
     let out = right;
-    for (const s5 of left.sections) out = matchSection(left, out, s5.id);
+    for (const s5 of left.sections) if (!isTextSection(s5) || out.sections.some((x5) => x5.id === s5.id)) out = matchSection(left, out, s5.id);
     return out;
   }
   function matchLabel(left, right, id2, label) {
@@ -66031,6 +66273,7 @@ ${d5.text}`);
       ctx.section
     ), { Text: T6, ItemRef: Ref, Tag: Tg2 } = ctx;
     const live = ctx.editing;
+    if (isTextSection(s5)) return /* @__PURE__ */ u2(FreeText, { ctx });
     if (s5.type === "table") return /* @__PURE__ */ u2(TableBody, { ctx, rowFn });
     if (s5.type === "figures") return /* @__PURE__ */ u2(Figures, { ctx });
     if (s5.type === "panes") return /* @__PURE__ */ u2("div", { class: "panes", children: (s5.panes || []).map((p6, i5) => /* @__PURE__ */ u2("div", { children: [
@@ -66050,6 +66293,28 @@ ${d5.text}`);
         x5.m && x5.m.due_date ? ` · ${x5.m.due_date}` : ""
       ] }, x5.ref)) }) : null
     ] });
+  }
+  function FreeText({ ctx }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(SHEET_HERE)
+    ), s5 = (
+      /** @type {any} */
+      ctx.section
+    );
+    return /* @__PURE__ */ u2(
+      SheetEditor,
+      {
+        value: s5.text || "",
+        rich: true,
+        text: { code: String(ctx.doc.project || "") },
+        label: s5.heading || "Text section",
+        onText: (t47) => h5.update({ text: t47 }, "Text edited"),
+        ai: h5.ai,
+        editable: h5.editing,
+        placeholder: "Write here. Anything you add is part of the report and its exports."
+      }
+    );
   }
   function TableBody({ ctx, rowFn }) {
     const s5 = (
@@ -66305,21 +66570,45 @@ ${d5.text}`);
       if (v5.trim() && v5.trim() !== s5.heading) change2(renameHeading(doc, s5.id, v5), "Heading renamed", null);
       else setName(s5.heading);
     };
+    const isText = isTextSection(s5);
+    const [confirmDel, setConfirmDel] = d2(false);
     const menu = [
       { id: "hide", name: "Hide this section", line: "Left out of the export" },
       ...i5 > 0 ? [{ id: "up", name: "Move up" }] : [],
       ...i5 < doc.sections.length - 1 ? [{ id: "down", name: "Move down" }] : [],
-      ...s5.heading !== defaultHeading(s5) ? [{ id: "reset", name: "Reset the heading", line: defaultHeading(s5) }] : []
+      ...s5.heading !== defaultHeading(s5) ? [{ id: "reset", name: "Reset the heading", line: defaultHeading(s5) }] : [],
+      { id: "addtext", name: "Add a text section below", icon: "plus" },
+      ...isText ? [{ id: "delete", name: "Delete this section", icon: "trash" }] : []
     ];
+    const addBelow = () => {
+      const nd2 = withTextSection(doc, s5.id), nid = nd2.sections[nd2.sections.findIndex((x5) => x5.id === s5.id) + 1].id;
+      markNewText(nid);
+      change2(nd2, "Text section added", { type: "text-added", id: nid });
+    };
+    const deleteIt = () => {
+      setConfirmDel(false);
+      change2(withoutSection(doc, s5.id), "Section deleted", { type: "section-deleted", id: s5.id });
+    };
     const onPick = (id2) => {
       if (id2 === "hide") change2(hideSection(doc, s5.id), "Section hidden", { type: "section-hidden", id: s5.id });
       else if (id2 === "reset") change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id });
-      else {
+      else if (id2 === "addtext") addBelow();
+      else if (id2 === "delete") {
+        if (String(sec.text || "").trim()) setConfirmDel(true);
+        else deleteIt();
+      } else {
         const d5 = id2 === "up" ? -1 : 1;
         p6.refocus.current = s5.id;
         change2(moveBy(doc, s5.id, d5), "Section moved", { type: "section-moved", id: s5.id, to: i5 + d5 });
       }
     };
+    const headBox = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    h2(() => {
+      if (isText && editing && takeNewText(s5.id) && headBox.current) headBox.current.focus();
+    }, []);
     const drop = (e4) => {
       e4.preventDefault();
       setOver("");
@@ -66379,14 +66668,16 @@ ${d5.text}`);
             ),
             /* @__PURE__ */ u2(Menu, { label: "", icon: "chevdown", chevron: false, ariaLabel: `${s5.heading}: section options`, btnCls: "sheet-hbtn", items: menu, onPick })
           ] }) : null,
-          s5.type === "header" ? null : /* @__PURE__ */ u2("h2", { children: [
+          s5.type === "header" || isText && !editing && !String(s5.heading || "").trim() ? null : /* @__PURE__ */ u2("h2", { children: [
             editing ? /* @__PURE__ */ u2(
               "input",
               {
+                ref: headBox,
                 class: "sheet-h",
                 "aria-label": "Section heading",
+                placeholder: isText ? "Section heading" : void 0,
                 value: name,
-                style: { width: `${Math.max(8, name.length + 1)}ch` },
+                style: { width: `${Math.max(isText ? 18 : 8, name.length + 1)}ch` },
                 onInput: (e4) => setName(
                   /** @type {HTMLInputElement} */
                   e4.currentTarget.value
@@ -66414,11 +66705,33 @@ ${d5.text}`);
               "≠ ",
               p6.peerLabel
             ] }) : null,
-            p6.side === "right" && !readOnly && !exported && p6.match && !p6.match.readOnly ? /* @__PURE__ */ u2("span", { class: "sheet-match", children: [
+            isText && !peer && !exported && p6.side === "left" && p6.addTo ? /* @__PURE__ */ u2("span", { class: "sheet-match", "data-textonly": true, children: [
+              "Internal only",
+              !p6.addTo.readOnly ? /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-addto": true, onClick: () => p6.addTo?.one(s5.id), children: [
+                  "Add to the ",
+                  p6.peerLabel.toLowerCase(),
+                  " report"
+                ] })
+              ] }) : null
+            ] }) : null,
+            isText && !peer && !exported && p6.side === "right" ? /* @__PURE__ */ u2("span", { class: "sheet-match", "data-textonly": true, children: [
+              "Written for the ",
+              p6.peerLabel.toLowerCase()
+            ] }) : null,
+            (!isText || peer) && p6.side === "right" && !readOnly && !exported && p6.match && !p6.match.readOnly ? /* @__PURE__ */ u2("span", { class: "sheet-match", children: [
               p6.match.label(s5.id),
               p6.match.differs(s5.id) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => p6.match?.one(s5.id), children: "Match internal" }) : null
             ] }) : null
           ] }),
+          confirmDel ? /* @__PURE__ */ u2("div", { class: "sheet-delask", role: "alertdialog", "aria-label": "Delete this section?", children: [
+            "Delete “",
+            s5.heading || "this text section",
+            "” and what is written in it?",
+            /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-delyes": true, onClick: deleteIt, children: "Delete" }),
+            /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => setConfirmDel(false), children: "Keep" })
+          ] }) : null,
           rd2 ? /* @__PURE__ */ u2(
             Redraft,
             {
@@ -66565,6 +66878,12 @@ ${d5.text}`);
       /** @type {"internal"} */
       doc.audience || "internal"
     ] || "";
+    const addFoot = () => {
+      const last = doc.sections[doc.sections.length - 1], nd2 = withTextSection(doc, last ? last.id : null), nid = nd2.sections[nd2.sections.length - 1].id;
+      markNewText(nid);
+      onChange(nd2, "Text section added");
+      onEvent({ type: "text-added", id: nid });
+    };
     return /* @__PURE__ */ u2("div", { class: "page", "data-audience": doc.audience || "internal", children: [
       /* @__PURE__ */ u2("header", { class: "doc", children: [
         /* @__PURE__ */ u2("div", { children: [
@@ -66582,7 +66901,11 @@ ${d5.text}`);
         ] }),
         /* @__PURE__ */ u2("div", { class: "sub", children: label })
       ] }),
-      out
+      out,
+      editing ? /* @__PURE__ */ u2("div", { class: "sheet-addfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-addtext", "data-addtext": true, onClick: addFoot, children: [
+        /* @__PURE__ */ u2(Icon, { name: "plus" }),
+        " Add a text section"
+      ] }) }) : null
     ] });
   }
   var labelOf = (left, right, id2, label) => matchLabel(left, right, id2, label);
@@ -67154,6 +67477,18 @@ ${d5.text}`);
       if (!t47.closest || !t47.closest(".sheet-found") && found) setFound(null);
     };
     const pinch = (dy2) => setZoom(pinchZoom(zref.current, dy2));
+    const addText = A2(
+      /** @type {(afterId: string|null) => (string|null)} */
+      (() => null)
+    );
+    addText.current = (afterId) => {
+      if (leftRO) return null;
+      const had = new Set(P5.current.doc.sections.map((s5) => s5.id)), nd2 = withTextSection(P5.current.doc, afterId), nid = (nd2.sections.find((s5) => !had.has(s5.id)) || {}).id || null;
+      changeMain(nd2, "Text section added");
+      onEvent({ type: "text-added", id: nid });
+      return nid;
+    };
+    h2(() => bindTextSections((afterId) => addText.current(afterId)), []);
     const pageProps = (d5, p6, sd2) => ({
       doc: d5,
       renderers: (p6 ? p6.renderers || props.renderers : props.renderers) || {},
@@ -67170,7 +67505,11 @@ ${d5.text}`);
       aiFor,
       checks: p6 ? [] : checks,
       refocus,
-      match: p6 ? match : null
+      match: p6 ? match : null,
+      addTo: !p6 && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (id2) => {
+        if (partner.match) partner.match(id2);
+        else changeSide(matchSection(doc, partnerDoc, id2), "Matched internal");
+      } } : null
     });
     const frame = (d5, p6, scale, k5) => /* @__PURE__ */ u2(SheetFrame, { scale, breaks: breaks[k5] || [], children: /* @__PURE__ */ u2(SheetPage, { ...pageProps(d5, p6, partner ? p6 ? "right" : "left" : "") }) }, p6 ? "r" : "l");
     const reg = (fn2) => {
@@ -67205,7 +67544,7 @@ ${d5.text}`);
         ] }) : null,
         partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-matchall", onClick: () => {
           if (partner.match) {
-            for (const x5 of doc.sections) if (match && match.differs(x5.id)) partner.match(x5.id);
+            for (const x5 of doc.sections) if (match && match.differs(x5.id) && !(isTextSection(x5) && !partner.doc.sections.some((y5) => y5.id === x5.id))) partner.match(x5.id);
           } else changeSide(matchAll(doc, partner.doc), "Matched internal");
         }, children: "Match internal for every section" }) : null,
         /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": main.line && !/^Saved/.test(main.line) ? "1" : void 0, children: [
@@ -68366,6 +68705,9 @@ ${d5.text}`);
   }
   function matchClientSection(client, internal, id2) {
     const c5 = secOf(client, id2), i5 = secOf(internal, id2);
+    if (i5 && i5.type === TEXT_TYPE && !i5.hidden) {
+      return c5 ? withClientSection(client, id2, { heading: i5.heading, text: i5.text || "", audience: "client" }) : addTextCopy(internal, client, i5);
+    }
     if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return client;
     if (c5.type === "health") {
       const meta = { ...client.meta || {} };
@@ -68800,7 +69142,12 @@ ${d5.text}`);
       milestones: (ctx) => /* @__PURE__ */ u2(MilestonesSection, { ctx }),
       current_state: (ctx) => /* @__PURE__ */ u2(PanesSection, { ctx })
     },
-    byType: { text: (ctx) => /* @__PURE__ */ u2(TextSection, { ctx }), table: (ctx) => /* @__PURE__ */ u2(TableSection, { ctx }) }
+    byType: {
+      text: (ctx) => /* @__PURE__ */ u2(TextSection, { ctx }),
+      table: (ctx) => /* @__PURE__ */ u2(TableSection, { ctx }),
+      freetext: (ctx) => /* @__PURE__ */ u2(Sec, { ctx, children: /* @__PURE__ */ u2(FreeText, { ctx }) })
+    }
+    // #218: a text section, with its Matching internal line when the internal report has it
   };
 
   // components/report/LeftOutDialog.jsx
@@ -72891,6 +73238,7 @@ ${d5.text}`);
         "actHref",
         "actPaint",
         "addEl",
+        "addTextSection",
         "aiAction",
         "aiBar",
         "aiItems",
@@ -72966,6 +73314,7 @@ ${d5.text}`);
         "countFor",
         "countUp",
         "covered",
+        "crDoc",
         "creaiteEditor",
         "createNote",
         "csHead",

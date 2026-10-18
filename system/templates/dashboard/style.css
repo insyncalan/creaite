@@ -3882,6 +3882,27 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .sheet-edwrap[data-bar^="b"]>.sheet-rtebar{bottom:auto;top:100%;margin:4px 0 0;transform-origin:left top}
 .sheet-edwrap[data-bar="br"]>.sheet-rtebar{transform-origin:right top}
 .sheet-a4 .page blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid var(--paper-rule);color:var(--paper-mute)} .sheet-a4 .page blockquote p{margin:0}
+/* ===== #218 ===== a report's text section: the Notes editor on the page (headings, lists, checklist, code, table, picture, link). The page's own
+   rules above give it paragraphs, lists, quotes and tables; these add what only a text section has. The filed and exported page draws the same
+   things in creaite_doc.CSS (.ft). The "Add a text section" button at the foot is on screen only. */
+.sheet-a4 .page .sheet-ft{min-height:4.5em;padding:2px 0}
+.sheet-a4 .page .sheet-ft h1{font-size:var(--fs-lg);margin:10px 0 4px} .sheet-a4 .page .sheet-ft h2{font-size:var(--fs-md);display:block;border:0;padding:0;margin:8px 0 4px}
+.sheet-a4 .page .sheet-ft h3{font-size:var(--fs-md);font-style:italic;margin:6px 0 3px}
+.sheet-a4 .page .sheet-ft pre{background:var(--paper-sunk);border:1px solid var(--paper-rule);border-radius:var(--r-sm);padding:8px 10px;margin:0 0 8px;font:12px/1.45 var(--mono,ui-monospace,Menlo,monospace);white-space:pre-wrap;overflow-wrap:anywhere}
+.sheet-a4 .page .sheet-ft code{font:12px var(--mono,ui-monospace,Menlo,monospace);background:var(--paper-sunk);padding:0 3px;border-radius:3px} .sheet-a4 .page .sheet-ft pre code{background:none;padding:0}
+.sheet-a4 .page .sheet-ft table{margin:0 0 8px} .sheet-a4 .page .sheet-ft td,.sheet-a4 .page .sheet-ft th{min-width:48px}
+.sheet-a4 .page .sheet-ft a{color:var(--paper-link);text-decoration:underline}
+.sheet-a4 .page .sheet-ft figure.cimg{margin:6px 0;max-width:100%} .sheet-a4 .page .sheet-ft figure.cimg img{max-width:100%;height:auto;border:1px solid var(--paper-rule)}
+.sheet-a4 .page .sheet-ft ul[data-type=taskList]{padding-left:2px;margin:0 0 8px} .sheet-a4 .page .sheet-ft hr{border:0;border-top:1px solid var(--paper-rule);margin:8px 0}
+.sheet-a4 .page .sheet-ft>:last-child{margin-bottom:0}
+.sheet-exported .sheet-a4 .page .sheet-ft{background:none;box-shadow:none}
+.sheet-ftmsg{font-size:var(--fs-xs);color:var(--bad);margin:2px 0 0}
+.sheet-addfoot{margin:8px 0 0;display:flex;justify-content:flex-start}
+.sheet-a4 .page .sheet-addtext{background:var(--paper);color:var(--paper-link);border-color:var(--paper-rule);display:inline-flex;gap:6px;align-items:center}
+.sheet-a4 .page .sheet-addtext:hover{background:var(--paper-sunk)}
+.sheet-a4 .page .sheet-delask{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;padding:6px 8px;border:1px solid var(--paper-rule);border-radius:var(--r-sm);background:var(--paper-sunk);font-size:var(--fs-sm)}
+.sheet-a4 .page .sheet-delask .btn{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+.sheet-a4 .page .sheet-match[data-textonly]{font-weight:400}
 /* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
 /* #121: the Link button in a plain field's corner, and a link in plain text (a field being edited, a table, the peek, a report preview) */
 .linkcorner{position:fixed;z-index:var(--z-linkcorner);width:22px;height:22px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;opacity:.85}

@@ -4,6 +4,8 @@
    text and the choice of which client-visible rows show, never an internal row, never a tag. The server checks again at save,
    approve and export (client_leak.py), so a slip here is caught there, and the left-out check says so. */
 
+import { TEXT_TYPE, addTextCopy } from "./sheetLib.js";
+
 /** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./Sheet.jsx").SheetSection} SheetSection */
 
@@ -57,6 +59,9 @@ export function matchState(client, internal, id) {
     @param {SheetDoc} client @param {SheetDoc} internal @param {string} id @returns {SheetDoc} */
 export function matchClientSection(client, internal, id) {
   const c = secOf(client, id), i = secOf(internal, id);
+  if (i && i.type === TEXT_TYPE && !i.hidden) {      // #218: a text section is internal until Alan matches it: this is the match (a copy, never tags)
+    return c ? withClientSection(client, id, { heading: i.heading, text: i.text || "", audience: "client" }) : addTextCopy(internal, client, i);
+  }
   if (!c || !i || c.hidden || c.type === "header" || c.type === "figures") return client;
   if (c.type === "health") {
     const meta = { ...(client.meta || {}) };

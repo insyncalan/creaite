@@ -12,6 +12,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cellsFor, CLIENT_FLAGS, flagOf, healthDiff, matchClientSection, matchState, secOf } from "./clientDoc.js";
 import { openRef } from "./Sheet.jsx";
+import { FreeText } from "./SheetPage.jsx";
 import { crCheck, crDirty, crDoc, crInternal, runCheck } from "../../stores/clientReport.js";
 
 /** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
@@ -248,5 +249,6 @@ export const CLIENT_RENDERERS = {
     glance: (/** @type {SectionCtx} */ ctx) => <FiguresSection ctx={ctx} />, milestones: (/** @type {SectionCtx} */ ctx) => <MilestonesSection ctx={ctx} />,
     current_state: (/** @type {SectionCtx} */ ctx) => <PanesSection ctx={ctx} />,
   },
-  byType: { text: (/** @type {SectionCtx} */ ctx) => <TextSection ctx={ctx} />, table: (/** @type {SectionCtx} */ ctx) => <TableSection ctx={ctx} /> },
+  byType: { text: (/** @type {SectionCtx} */ ctx) => <TextSection ctx={ctx} />, table: (/** @type {SectionCtx} */ ctx) => <TableSection ctx={ctx} />,
+    freetext: (/** @type {SectionCtx} */ ctx) => <Sec ctx={ctx}><FreeText ctx={ctx} /></Sec> },      // #218: a text section, with its Matching internal line when the internal report has it
 };
