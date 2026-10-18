@@ -127,7 +127,7 @@ class Sidebar(LiveBrowserCase):
         names = b.eval("[...document.querySelectorAll('#railMain button[data-v]')].map(x=>[x.getAttribute('aria-label'),x.dataset.tip||null,x.querySelector('.rl').offsetParent===null])")
         self.assertEqual([n[1] for n in names], ["Today", None, "Intake and Review", None, "Reports", "People"])    # Work and Projects have flyouts instead
         self.assertTrue(all(n[0].split(",")[0] in ("Today", "Work", "Intake and Review", "Projects", "Reports", "People") and n[2] for n in names), names)   # named, words not shown
-        self.assertEqual(names[2][0], f"Review, {pending} waiting")                            # the count in the name too
+        self.assertEqual(names[2][0], f"Intake and Review, {pending} waiting")                            # the count in the name too
         r = b.eval("""(()=>{ const rail=document.querySelector('.rail').getBoundingClientRect(), bd=document.getElementById('revBadge'), x=bd.getBoundingClientRect();
           return {inside:x.left>=rail.left&&x.right<=rail.right+1, shown:getComputedStyle(bd).display!=='none', text:bd.textContent}; })()""")
         self.assertEqual(r, {"inside": True, "shown": True, "text": str(pending)})
@@ -217,7 +217,7 @@ class Sidebar(LiveBrowserCase):
         b.eval("railSave({...RAILCFG,order:[...RAILCFG.order,...RAILCFG.more],more:[]})")
         self.wait_saved("!r.more.length")
         b.wait("!document.getElementById('railMore')")
-        self.assertEqual(len(self.top()), 10)
+        self.assertEqual(len(self.top()), 9)   # #232: Intake is in Intake and Review
 
     # ── Customise ──
     def test_customise_moves_pages_by_button_and_keyboard_and_saves_on_done(self):
