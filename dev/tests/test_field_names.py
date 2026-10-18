@@ -42,11 +42,12 @@ class FieldNames(LiveBrowserCase):
 
     def test_the_files_filters(self):
         self.b.eval("go('files')")
-        self.b.wait("VIEW==='files'&&document.getElementById('fsName')")
-        names = self.b.eval("""['fsName','fsType','fsFrom','fsTo'].map(id=>{ const el=document.getElementById(id);
+        self.b.wait("VIEW==='files'&&document.getElementById('vsInput')")
+        self.b.click("#fmBtn")       # #192: the Filter menu holds Type and the two dates
+        names = self.b.eval("""['vsInput','fmBtn','fsFrom','fsTo'].map(id=>{ const el=document.getElementById(id);
           return el.getAttribute('aria-label')||[...(el.labels||[])].map(l=>l.textContent.trim()).join(' '); })""")
-        self.assertEqual(names, ["Search file names", "File type", "From", "To"])
-        self.assertEqual(self.b.eval("document.getElementById('fsName').placeholder"), "Search file names")   # kept as the example
+        self.assertEqual(names, ["Search the vault", "Filter", "From", "To"])
+        self.assertEqual(self.b.eval("document.querySelector('#fmenu fieldset legend').textContent"), "Type")
         self.assertEqual(self.unnamed("files"), [])
 
     def test_every_settings_category(self):

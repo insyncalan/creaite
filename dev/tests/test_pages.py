@@ -238,7 +238,7 @@ class FilesLiveTests(FilesLiveBase):
             touch(self.v.root / DEFAULT_REPORTS / f"2026-09-{(n % 28) + 1:02d} Bulk {n:02d}.docx")
         self.open_files()
         b = self.b
-        b.eval("document.getElementById('fsName').value='report'; document.getElementById('fsName').dispatchEvent(new Event('input',{bubbles:true}))")
+        b.eval("FF.type='docx'; renderFiles()")
         b.eval("FOPEN.add('ABC'); renderFiles()")
         b.click("#filesTbl tbody tr[data-fp] td:nth-child(2)")
         selected = b.eval("FSELFILE")
@@ -249,7 +249,7 @@ class FilesLiveTests(FilesLiveBase):
         touch(self.v.root / DEFAULT_REPORTS / "2026-10-20 Weekly report.docx")
         b.click("#filesRefresh")
         b.wait("[...document.querySelectorAll('#filesTbl a')].some(a=>a.textContent.startsWith('2026-10-20'))")
-        self.assertEqual(b.eval("document.getElementById('fsName').value"), "report")           # the filter
+        self.assertEqual(b.eval("FF.type"), "docx")                                               # the filter
         self.assertEqual(b.eval("FSELFILE"), selected)                                            # the selected file
         self.assertTrue(b.eval(f"!!document.querySelector('#filesTbl tr.sel[data-fp={json.dumps(selected)}]') || !document.querySelector('#filesTbl tr[data-fp={json.dumps(selected)}]')"))
         self.assertEqual(b.eval("[FSEL.p,FSEL.f,FSEL.sub]"), ["ABC", "reports", "Weekly"])
@@ -314,11 +314,10 @@ class FilesLiveTests(FilesLiveBase):
         self.b.eval("FOPEN.add('ABC'); renderFiles()")
         tree = self.b.eval("[...document.querySelectorAll('#tree .l3')].map(b=>b.textContent.replace(/\\d+$/,''))")
         self.assertEqual(tree, ["Weekly", "Adhoc", "Steerco"])
-        self.assertEqual(self.b.eval("[...document.querySelectorAll('#fquick [data-rep]')].map(b=>b.textContent)"), ["Weekly", "Adhoc", "Steerco"])
         self.assertNotIn("documents", self.b.eval("[...document.querySelectorAll('#tree .l2')].map(b=>b.textContent.replace(/\\d+$/,''))"))
-        self.b.click('#fquick [data-rep="Steerco"]')
+        self.b.click('#tree .l3[data-s="Steerco"]')                                               # #192: the folder is in the tree
         self.assertEqual(self.rows(), ["Steerco pack.pptx"])
-        self.b.click('#fquick [data-rep="Steerco"]')                                              # again: back to all files
+        self.b.click('#fquick [data-q="all"]')                                                    # the All files pill: back to all files
         self.assertGreater(len(self.rows()), 1)
 
     def test_the_documents_switch_in_settings_brings_them_back(self):

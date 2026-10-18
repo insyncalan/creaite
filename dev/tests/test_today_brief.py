@@ -65,7 +65,7 @@ class IntakeNameTests(PageTests):
         self.assertIn("Actions|Add files to Intake", o["names"])
         self.assertTrue(any(f.startswith("Intake|") for f in o["files"]))
         self.assertFalse(any("Inbox" in n.split("|")[1] for n in o["names"] if not n.startswith(("Files|", "Items|"))))
-        self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" in o["chips"])
+        self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" not in o["chips"])   # #192: Intake is in the tree once, not a pill)
         self.assertRegex(o["badge"], r"^\d+ new files? in Intake$")
         self.assertEqual(o["drop"], "Add files to Intake")
 

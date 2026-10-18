@@ -3842,6 +3842,13 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
 .linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 @media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}
+/* ===== #192 Files navigation: the pills' line with Work's funnel Filter, its menu and the applied chips ===== */
+.fbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap} .fmwrap{position:relative;display:inline-block}
+.ddmenu.fmenu.on{display:block;width:300px;max-height:none;overflow:visible;padding:12px 14px;top:calc(var(--ctl-h) + 6px)}
+.fmenu .fmrow{margin:0 0 12px;padding:0;border:0;min-width:0} .fmenu legend{padding:0;margin:0 0 4px;font:500 var(--fs-xs)/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fmenu .fmlab{display:block;padding:0;margin:0 0 4px;font:500 var(--fs-xs)/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:default}
+.fmenu fieldset label{padding:4px 0} .fmenu fieldset label:hover{background:none} .fmenu .dwrap{width:100%} .fmenu .dwrap input{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);font-size:var(--ctl-fs);color:var(--ink)}
+.fmenu .fmfoot{display:flex;justify-content:flex-end;gap:8px}
 </style>
 </head>
 <body>
@@ -3950,12 +3957,8 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
           <div class="vshint sub" id="vsHint" data-codeok>For example: risks ABC last month, or what did Sara say about UAT?</div>
           <div class="vschips" id="vsChips" aria-live="polite"></div><div class="sub" id="vsNote" aria-live="polite"></div><div id="vsAnswer" hidden></div><div id="vsResults" hidden></div></div></div>
         <div class="files" style="margin-top:14px"><div class="tree" id="tree"></div>
-          <div><div class="views" id="fquick" style="margin-bottom:10px"></div>
-            <div class="toolbar" style="margin-top:0"><!-- BL-214 (sprint-ui-audit): each filter has a name --><input id="fsName" type="search" aria-label="Search file names" placeholder="Search file names" style="height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;min-width:220px;background:var(--surface);font-size:var(--ctl-fs)">
-              <select id="fsType" aria-label="File type" style="height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);font-size:var(--ctl-fs)"><option value="All">All types</option><option>docx</option><option>pdf</option><option>vtt</option><option>xlsx</option></select>
-              <label class="sub" for="fsFrom">From</label><span class="dwrap" style="width:150px"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" style="height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;width:100%;background:var(--surface);font-size:var(--ctl-fs)"><button class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span>
-              <label class="sub" for="fsTo">To</label><span class="dwrap" style="width:150px"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" style="height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;width:100%;background:var(--surface);font-size:var(--ctl-fs)"><button class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span>
-              <span style="flex:1"></span><span class="sub" id="filesCount" aria-live="polite"></span><button class="btn" id="filesRefresh">Refresh</button></div>
+          <div><div class="fbar"><div class="views" id="fquick" style="margin:0"></div><span class="dd fmwrap"><button type="button" class="ib bd fbtn" id="fmBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="fmenu" aria-label="Filter" data-tip="Filter"><svg data-ic="funnel" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu left fmenu" id="fmenu" role="dialog" aria-label="Filter files"></div></span><span style="flex:1"></span><span class="sub" id="filesCount" aria-live="polite"></span><button class="btn" id="filesRefresh">Refresh</button></div>
+            <div class="wapplied" id="fchips" hidden></div>
             <div class="tbl" id="filesTbl"></div><p class="sub"><span id="filesAt">File list as of the last build.</span> Word files open in Word; the folder icon (Open folder) shows the file's folder.</p></div></div>
       </div></section>
       <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="tabhost" id="actTabsHost"></div><!-- BL-316: Changes and Quality, the Tabs building block --><!-- BL-233 (sprint-drafts-extraction) -->
@@ -4177,6 +4180,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     FDEFS: () => FDEFS,
     FDTAB: () => FDTAB,
     FERR: () => FERR,
+    FF: () => FF,
     FIELD: () => FIELD,
     FILES: () => FILES,
     FL: () => FL,
@@ -5287,6 +5291,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     feedTab: () => feedTab,
     feedTabItems: () => feedTabItems,
     feedTabsDraw: () => feedTabsDraw,
+    ffCount: () => ffCount,
     fieldCardHtml: () => fieldCardHtml,
     fieldFlow: () => fieldFlow,
     fieldsFor: () => fieldsFor,
@@ -5297,6 +5302,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     filesStatus: () => filesStatus,
     fillThumbs: () => fillThumbs,
     filterBarOpen: () => filterBarOpen,
+    filterChrome: () => filterChrome,
     firstHelp: () => firstHelp,
     firstLineClear: () => firstLineClear,
     fitFilterBar: () => fitFilterBar,
@@ -5309,6 +5315,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     flkOpen: () => flkOpen,
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
+    fmSet: () => fmSet,
     formProject: () => formProject,
     fpName: () => fpName,
     freeBackup: () => freeBackup,
@@ -45738,8 +45745,8 @@ ${s5}`;
       });
     });
     putHTML($("#tree"), html`${h5}`);
-    putHTML($("#fquick"), html`${[["all", "All files"], ["latest", "Latest reports"], ["week", "This week's meetings"], ["inbox", "Intake"], ...farch().length ? [["archived", "Archived"]] : []].map((q6) => html`<button class="vchip" data-q="${q6[0]}" aria-pressed="${String(shared.FSEL.quick === q6[0] && !(shared.FSEL.f === "reports" && shared.FSEL.sub && shared.FSEL.p === "All"))}">${q6[1]}</button>`)}${REPFOLDERS.map((r4) => html`<button class="vchip" data-rep="${r4}" aria-pressed="${String(shared.FSEL.p === "All" && shared.FSEL.f === "reports" && shared.FSEL.sub === r4)}" title="Reports filed in the ${r4} folder">${r4}</button>`)}`);
-    const q5 = $("#fsName").value.toLowerCase(), t47 = $("#fsType").value, fr2 = DDATE.test($("#fsFrom").value) ? toIso($("#fsFrom").value) : "", to2 = DDATE.test($("#fsTo").value) ? toIso($("#fsTo").value) : "";
+    putHTML($("#fquick"), html`${[["all", "All files"], ["latest", "Latest reports"], ["week", "This week's meetings"], ["archived", "Archived"]].map((q5) => html`<button class="vchip" data-q="${q5[0]}" aria-pressed="${String(shared.FSEL.quick === q5[0] && (q5[0] !== "all" || shared.FSEL.p === "All" && shared.FSEL.f === "All" && !shared.FSEL.sub))}">${q5[1]}</button>`)}`);
+    const t47 = FF.type, fr2 = FF.from, to2 = FF.to;
     let L3 = FILES.filter((x5) => (shared.FSEL.p === "All" || x5.p === shared.FSEL.p) && (shared.FSEL.f === "All" || x5.f === shared.FSEL.f) && (!shared.FSEL.sub || x5.sub === shared.FSEL.sub));
     if (shared.FSEL.quick === "latest") {
       L3 = [];
@@ -45749,11 +45756,100 @@ ${s5}`;
       }));
     }
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
-    if (shared.FSEL.quick === "inbox") L3 = FILES.filter((f5) => f5.p === "inbox");
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
-    L3 = L3.filter((f5) => (!q5 || f5.n.toLowerCase().includes(q5)) && (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
+    L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
     putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters. ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
+    filterChrome();
+  }
+  var FF = { type: "All", from: "", to: "" };
+  var fmOpen = false;
+  var FTYPES = () => ["All", .../* @__PURE__ */ new Set(["docx", "pdf", "vtt", "xlsx", ...FILES.map((f5) => f5.type).filter(Boolean)])];
+  var ffCount = () => (FF.type !== "All" ? 1 : 0) + (FF.from ? 1 : 0) + (FF.to ? 1 : 0);
+  var ffChips = () => [...FF.type !== "All" ? [["type", `Type: ${FF.type}`]] : [], ...FF.from ? [["from", `From ${fd(FF.from)}`]] : [], ...FF.to ? [["to", `To ${fd(FF.to)}`]] : []];
+  function filterChrome() {
+    const n4 = ffCount(), c5 = ffChips(), btn = $("#fmBtn"), tip = n4 ? `Filter: ${n4} on` : "Filter";
+    btn.setAttribute("aria-label", tip);
+    btn.setAttribute("data-tip", tip);
+    btn.classList.toggle("on", n4 > 0);
+    btn.querySelector(".fcount")?.remove();
+    if (n4) addHTML(btn, "beforeend", html`<span class="fcount" aria-hidden="true">${n4}</span>`);
+    const h5 = $("#fchips");
+    h5.hidden = !c5.length;
+    putHTML(h5, html`${c5.map((x5) => html`<span class="fchip">${x5[1]}<button type="button" data-fclr="${x5[0]}" aria-label="Remove ${x5[1]}" data-tip="Remove ${x5[1]}">✕</button></span>`)}`);
+  }
+  function fmDraw() {
+    putHTML($("#fmenu"), html`<fieldset class="fmrow"><legend>Type</legend>${FTYPES().map((t47) => html`<label><input type="radio" name="fsType" value="${t47}" ${raw(t47 === FF.type ? "checked" : "")}> ${t47 === "All" ? "All types" : t47}</label>`)}</fieldset>
+    <div class="fmrow"><label class="fmlab" for="fsFrom">From</label><span class="dwrap"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.from ? fd(FF.from) : ""}"><button type="button" class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span></div>
+    <div class="fmrow"><label class="fmlab" for="fsTo">To</label><span class="dwrap"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.to ? fd(FF.to) : ""}"><button type="button" class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span></div>
+    <div class="fmfoot"><button type="button" class="mini" id="fmClear">Clear</button><button type="button" class="btn primary" id="fmDone">Done</button></div>`);
+    paintIcons($("#fmenu"));
+  }
+  function fmSet(show, focusBtn) {
+    fmOpen = show;
+    $("#fmBtn").setAttribute("aria-expanded", String(show));
+    $("#fmenu").classList.toggle("on", show);
+    if (show) {
+      fmDraw();
+      ($("#fmenu input:checked") || $("#fmenu input")).focus();
+    } else if (focusBtn) $("#fmBtn").focus();
+  }
+  function bootFilterMenu() {
+    $("#fmBtn").addEventListener("click", (e4) => {
+      e4.stopPropagation();
+      fmSet(!fmOpen);
+    });
+    const menu = $("#fmenu");
+    menu.addEventListener("change", (e4) => {
+      if (e4.target.name === "fsType") {
+        FF.type = e4.target.value;
+        renderFiles();
+      }
+    });
+    menu.addEventListener("input", (e4) => {
+      const k5 = e4.target.id === "fsFrom" ? "from" : e4.target.id === "fsTo" ? "to" : "";
+      if (!k5) return;
+      const v5 = e4.target.value.trim();
+      if (!v5) FF[k5] = "";
+      else if (DDATE.test(v5)) FF[k5] = toIso(v5);
+      else return;
+      renderFiles();
+    });
+    menu.addEventListener("click", (e4) => {
+      if (e4.target.closest("#fmDone")) fmSet(false, true);
+      if (e4.target.closest("#fmClear")) {
+        Object.assign(FF, { type: "All", from: "", to: "" });
+        fmDraw();
+        renderFiles();
+      }
+    });
+    menu.addEventListener("keydown", (e4) => {
+      if (e4.key === "Escape" && !shared.CAL) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        fmSet(false, true);
+        return;
+      }
+      if ((e4.key === "ArrowDown" || e4.key === "ArrowUp") && !e4.target.matches("input[type=radio],input[type=text]")) {
+        const c5 = [...menu.querySelectorAll("input:checked,input[type=text],button")], i5 = c5.indexOf(e4.target);
+        if (i5 < 0) return;
+        e4.preventDefault();
+        c5[(i5 + (e4.key === "ArrowDown" ? 1 : c5.length - 1)) % c5.length].focus();
+      }
+    });
+    $("#fchips").addEventListener("click", (e4) => {
+      const b5 = e4.target.closest("[data-fclr]");
+      if (!b5) return;
+      const k5 = b5.dataset.fclr;
+      if (k5 === "type") FF.type = "All";
+      else FF[k5] = "";
+      if (fmOpen) fmDraw();
+      renderFiles();
+      $("#fmBtn").focus();
+    });
+    document.addEventListener("click", (e4) => {
+      if (fmOpen && !e4.target.closest("#fmenu,#fmBtn,.cal")) fmSet(false);
+    });
   }
   function bootFiles0068() {
     $("#tree").addEventListener("click", (e4) => {
@@ -45765,22 +45861,16 @@ ${s5}`;
         else FOPEN.add(c5);
         store.set("creaite-files-open", [...FOPEN]);
       }
-      shared.FSEL = { p: b5.dataset.p, f: b5.dataset.f, sub: b5.dataset.s || "", quick: b5.dataset.p === "inbox" ? "inbox" : "all" };
+      shared.FSEL = { p: b5.dataset.p, f: b5.dataset.f, sub: b5.dataset.s || "", quick: "all" };
       renderFiles();
     });
     $("#fquick").addEventListener("click", (e4) => {
-      const r4 = e4.target.closest("[data-rep]");
-      if (r4) {
-        shared.FSEL = shared.FSEL.p === "All" && shared.FSEL.f === "reports" && shared.FSEL.sub === r4.dataset.rep ? { p: "All", f: "All", sub: "", quick: "all" } : { p: "All", f: "reports", sub: r4.dataset.rep, quick: "all" };
-        renderFiles();
-        return;
-      }
       const b5 = e4.target.closest("[data-q]");
       if (!b5) return;
       shared.FSEL = { p: "All", f: "All", sub: "", quick: b5.dataset.q };
       renderFiles();
     });
-    ["#fsName", "#fsType", "#fsFrom", "#fsTo"].forEach((s5) => $(s5).addEventListener("input", renderFiles));
+    bootFilterMenu();
   }
   var REPFOLDERS = ["Weekly", "Adhoc", "Steerco"];
   var FSEEN = null, FNEW = /* @__PURE__ */ new Set(), FAT = null, FERR = "";
@@ -71922,6 +72012,7 @@ ${d5.text}`);
         "EditorBar",
         "Essentials",
         "FDEFS",
+        "FF",
         "FILES",
         "FOPEN",
         "FX",

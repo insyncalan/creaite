@@ -61,6 +61,8 @@ class IconSet(LiveBrowserCase):
             self.assertEqual(seen, [], v)
         b.eval("go('files')")
         b.pump(0.3)
+        b.click("#fmBtn")
+        self.assertEqual(b.eval("document.querySelector('#fmBtn svg').dataset.icn"), "funnel")
         self.assertEqual(b.eval("document.querySelector('[data-cal=fsFrom] svg').dataset.icn"), "calendar")
         b.eval("openChat()")
         self.assertEqual(b.eval("document.querySelector('#chatClose svg').dataset.icn"), "x")

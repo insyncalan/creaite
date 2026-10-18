@@ -716,7 +716,7 @@ class FilesFilters(LiveBrowserCase):
     def test_the_quick_views(self):
         b = self.b
         self.open_files()
-        b.click('#fquick [data-q="inbox"]')
+        b.click('#tree button[data-p="inbox"]')                        # #192: Intake is a folder in the tree, once
         self.assertEqual(self.shown(), self.want(p="inbox"))
         b.click('#fquick [data-q="all"]')
         self.assertEqual(self.shown(), self.want())
@@ -735,14 +735,11 @@ class FilesFilters(LiveBrowserCase):
     def test_name_type_and_dates_filter_alone_and_together_with_the_tree(self):
         b = self.b
         self.open_files()
-        b.click("#fsName")
-        b.type("budget")
-        self.assertEqual(self.shown(), self.want(name="budget"))
-        b.eval("document.getElementById('fsName').value=''; document.getElementById('fsName').dispatchEvent(new Event('input',{bubbles:true}))")
+        b.click("#fmBtn")                              # #192: Type and the dates are in the Filter menu
         for t in ("docx", "pdf", "vtt", "xlsx"):
-            b.eval(f"(()=>{{ const s=document.getElementById('fsType'); s.value={json.dumps(t)}; s.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
+            b.click(f"#fmenu input[name=fsType][value={t}]")
             self.assertEqual(self.shown(), self.want(typ=t), t)
-        b.eval("(()=>{ const s=document.getElementById('fsType'); s.value='All'; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.click("#fmenu input[name=fsType][value=All]")
         lo, hi = W.d(-12), W.d(-1)
         b.click("#fsFrom")
         b.type(W.shown_date(lo))
@@ -752,14 +749,13 @@ class FilesFilters(LiveBrowserCase):
         self.assertEqual(self.shown(), self.want(frm=lo, to=hi))
         b.click('#tree button[data-p="ABC"][data-f="All"]')
         self.assertEqual(self.shown(), self.want(p="ABC", frm=lo, to=hi))
-        b.click('#fquick [data-q="all"]')
-        b.click("#fsName")
-        b.type("steering")
-        self.assertEqual(self.shown(), self.want(name="steering", frm=lo, to=hi))
+        b.click('#fquick [data-q="all"]')              # a pill replaces the folder; the filter stays
+        self.assertEqual(self.shown(), self.want(frm=lo, to=hi))
 
     def test_the_from_and_to_calendars_set_the_range(self):
         b = self.b
         self.open_files()
+        b.click("#fmBtn")
         b.click('[data-cal="fsFrom"]')
         b.wait("document.querySelector('.cal .cg button:not(.off):not([disabled])')", 3)
         pick = b.eval("""(()=>{ const days=[...document.querySelectorAll('.cal .cg button')].filter(x=>x.getAttribute('aria-label')); const d=days.find(x=>!x.disabled&&!x.classList.contains('off')&&x.textContent.trim()==='1'); return d?d.getAttribute('aria-label'):null; })()""")

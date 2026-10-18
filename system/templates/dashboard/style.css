@@ -3832,3 +3832,10 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
 .linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 @media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}
+/* ===== #192 Files navigation: the pills' line with Work's funnel Filter, its menu and the applied chips ===== */
+.fbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap} .fmwrap{position:relative;display:inline-block}
+.ddmenu.fmenu.on{display:block;width:300px;max-height:none;overflow:visible;padding:12px 14px;top:calc(var(--ctl-h) + 6px)}
+.fmenu .fmrow{margin:0 0 12px;padding:0;border:0;min-width:0} .fmenu legend{padding:0;margin:0 0 4px;font:500 var(--fs-xs)/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fmenu .fmlab{display:block;padding:0;margin:0 0 4px;font:500 var(--fs-xs)/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:default}
+.fmenu fieldset label{padding:4px 0} .fmenu fieldset label:hover{background:none} .fmenu .dwrap{width:100%} .fmenu .dwrap input{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);font-size:var(--ctl-fs);color:var(--ink)}
+.fmenu .fmfoot{display:flex;justify-content:flex-end;gap:8px}
