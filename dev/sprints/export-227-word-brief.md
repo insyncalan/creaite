@@ -14,7 +14,7 @@ A Word file that reads as the same report as the screen: the same parts, in the 
 4. **Milestones:** the timeline as a picture, then the table with Milestone, Agreed, Expected (with "+14"), Progress and State; DD-MM-YYYY dates; a done milestone reads "achieved <date>".
 5. **Tables:** Risks and issues with the Response column and the priority labels; Overdue actions with the Late column; headers in the template's style; an empty table becomes the screen's sentence.
 6. **Text:** headings, emphasis, lists and checklists (as boxes) kept; **no empty heading**; images present (placed from the picture files), never dropped silently.
-7. **Left out:** hidden sections, rows and figures absent; a milestone left out of the milestone **list** is absent from the table but, as on screen ("Leaving one out tidies the list only; the timeline always shows every milestone"), still appears in the timeline picture. (Corrected 18-10-2026 after Stark's question.)
+7. **Left out:** hidden sections, rows and figures absent; a milestone left out of the milestone **list** is absent from the table but, as on screen ("Leaving one out tidies the list only; the timeline always shows every milestone"), still appears in the timeline picture. (Corrected 18-10-2026 after Stark's question; Alan ruled 18-10-2026 that this stays as built.)
 8. **Client report:** the same writer and rules, client-visible items only.
 9. **No guarded file changed.**
 10. **Open in Word:** the file opens without a repair prompt; page 1 and a later page checked, not only page 1.

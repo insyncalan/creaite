@@ -12,6 +12,8 @@ Product Manager, 18-10-2026, for Team Stark. Hub mockup (locked, c6f549ed) shows
 4. **A failed save says so plainly** (why, and that nothing was written), not "Not exported".
 5. Same for the internal and the client report, and for each of the three formats. Writes go through the file-change route (`filechange.py`): backed up, logged, undoable. Messages are in British English, with dates as DD-MM-YYYY.
 
+**Alan's ruling (18-10-2026): the HTML export uses the plain name too** (no "(read only)" in it), the same as Word and PDF. No filed reports exist yet, so no migration is needed; if the plain name clashes with the filed report, the clash dialog in item 3 handles it.
+
 ## Acceptance checks
 
 Each of HTML, Word and PDF leaves a real file in the stated folder with the right name; the toast shows the folder link and both actions work (the Finder window itself is live only); a taken name offers the three choices and each does exactly what it says; Rename shows the whole name; Overwrite keeps a backup; Cancel writes nothing; a failed save (for example a read-only folder) says so.
