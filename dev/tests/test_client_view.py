@@ -249,11 +249,11 @@ class ClientBrowser(LiveBrowserCase):
     def test_an_eye_hides_a_row_and_match_internal_copies_a_section(self):
         self.approve_internal()
         self.open_view()
-        self.b.click("#v-clientreport section[data-id=risks] .rs-eye")
-        self.assertTrue(self.b.eval("!!document.querySelector('#v-clientreport section[data-id=risks] tr.hidrow')"))
-        self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('#v-clientreport section[data-id=risks] .wr-count').textContent"))
-        self.b.click("#v-clientreport section[data-id=risks] .rs-eye")                           # back: cells rebuilt from the client item
-        self.assertIn("Test licences are not yet ordered.", self.words("#v-clientreport section[data-id=risks]"))
+        self.b.click("#v-reporting section[data-id=risks] .rs-eye")
+        self.assertTrue(self.b.eval("!!document.querySelector('#v-reporting section[data-id=risks] tr.hidrow')"))
+        self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('#v-reporting section[data-id=risks] .wr-count').textContent"))
+        self.b.click("#v-reporting section[data-id=risks] .rs-eye")                           # back: cells rebuilt from the client item
+        self.assertIn("Test licences are not yet ordered.", self.words("#v-reporting section[data-id=risks]"))
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Edited for the client")
         self.b.click("[data-matchone='summary']")
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Matching internal")
