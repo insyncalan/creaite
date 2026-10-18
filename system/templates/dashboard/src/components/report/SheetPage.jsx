@@ -132,7 +132,7 @@ function TableBody({ ctx, rowFn }) {
           readOnly: ctx.readOnly, setRow, removeRow, Text: T, ItemRef: Ref, Tag: Tg };
         if (rowFn) return rowFn(rc);
         return <tr key={row.ref || index} class={off ? "sheet-rowoff" : ""} data-ref={row.ref || undefined}>
-          {live ? <td class="eyec"><EyeButton on={!off} subject={row.ref || "this row"} cls="eye" onClick={() => setRow({ shown: off }, off ? "Row shown" : "Row hidden")} /></td> : null}
+          {live ? <td class="eyec"><EyeButton on={!off} subject={Object.values(row.cells || {}).map(v => String(v || "").trim()).find(v => v && v !== row.ref && !/^[A-Z][A-Z0-9]{2,6}-[A-Z]-\d+$/.test(v)) || "this row"} cls="eye" onClick={() => setRow({ shown: off }, off ? "Row shown" : "Row hidden")} /></td> : null}
           {cols.map((/** @type {any} */ c) => <td key={c.key} data-col={c.key}>{off ? <span>{(row.cells || {})[c.key] || (c.key === "id" ? row.ref : "")}</span> : <T row={index} col={c.key} label={c.label} />}</td>)}
         </tr>;
       })}
@@ -215,13 +215,15 @@ function SectionBlock({ s, i, p, peer }) {
   } : null;
   const ownSpark = sparkOn && !!ownRender && !!(/** @type {any} */ (ownRender)).ownSpark;   // #203: a renderer with no visible heading (the weekly health row) draws the ✦ itself, with <ctx.Spark />
   const fixed = s.type === "header" && ((p.renderers.byId || {}).header || {}).fixed !== false;
+  const headFixed = ((p.renderers.byId || {}).header || {}).fixed !== false;
+  const lo = headFixed ? doc.sections.reduce((n, x, k) => (x.type === "header" && n === k ? n + 1 : n), 0) : 0;   // fixed header sections above this index never move and nothing moves above them
   const grip = (/** @type {KeyboardEvent} */ e) => {
     if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
     e.preventDefault();
-    const d = e.key === "ArrowUp" ? -1 : 1, to = Math.max(0, Math.min(doc.sections.length - 1, i + d));
+    const d = e.key === "ArrowUp" ? -1 : 1, to = Math.max(lo, Math.min(doc.sections.length - 1, i + d));
     if (to === i) return;
     p.refocus.current = s.id;
-    change(moveBy(doc, s.id, d), "Section moved", { type: "section-moved", id: s.id, to });
+    change(moveBy(doc, s.id, d, lo), "Section moved", { type: "section-moved", id: s.id, to });
   };
   /** @type {SectionCtx} */
   const ctx = { section: s, doc, editing, exported, readOnly, update, setDoc: (nd, why) => onChange(nd, why), setMeta: (patch, why) => onChange({ ...doc, meta: { ...(doc.meta || {}), ...patch } }, why),
@@ -239,7 +241,7 @@ function SectionBlock({ s, i, p, peer }) {
   const report = !!p.report;
   const menu = [
     { id: "hide", name: report ? "Leave out of the export" : "Hide this section", icon: "eyeoff" },
-    ...(i > 0 ? [{ id: "up", name: "Move up", icon: "arrowup" }] : []), ...(i < doc.sections.length - 1 ? [{ id: "down", name: "Move down", icon: "arrowdown" }] : []),
+    ...(i > lo ? [{ id: "up", name: "Move up", icon: "arrowup" }] : []), ...(i < doc.sections.length - 1 ? [{ id: "down", name: "Move down", icon: "arrowdown" }] : []),
     ...(report ? [{ id: "addtext", name: "Add a text section below", icon: "type" }] : []),   // ReportSheet's addText(sectionId) is stores/textSection.js addTextSection
     ...(s.heading !== defaultHeading(s) ? [{ id: "reset", name: "Reset the heading", icon: "undo" }] : []),
     ...(isText ? [{ id: "delete", name: "Delete this section", icon: "trash" }] : [])];
@@ -248,7 +250,7 @@ function SectionBlock({ s, i, p, peer }) {
     else if (id === "reset") change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id });
     else if (id === "addtext") p.report?.addText?.(s.id);
     else if (id === "delete") { if (String(sec.text || "").trim()) setConfirmDel(true); else deleteIt(); }
-    else { const d = id === "up" ? -1 : 1; p.refocus.current = s.id; change(moveBy(doc, s.id, d), "Section moved", { type: "section-moved", id: s.id, to: i + d }); }
+    else { const d = id === "up" ? -1 : 1; p.refocus.current = s.id; change(moveBy(doc, s.id, d, lo), "Section moved", { type: "section-moved", id: s.id, to: i + d }); }
   };
   /** The section menu is a popup drawn at the end of the page (Menu.jsx openMenu), not inside the scaled page: it keeps 13 px at any
       zoom, opens under the chevron and stays clear of the side bar and the window's edges. */
@@ -263,7 +265,7 @@ function SectionBlock({ s, i, p, peer }) {
     const rect = /** @type {HTMLElement} */ (box.current).getBoundingClientRect(), below = e.clientY > rect.top + rect.height / 2;
     const fi = doc.sections.findIndex(x => x.id === from);
     let to = i + (below ? 1 : 0); if (fi < to) to -= 1;
-    change(moveSection(doc, from, to), "Section moved", { type: "section-moved", id: from, to });
+    change(moveSection(doc, from, to, lo), "Section moved", { type: "section-moved", id: from, to });
   };
   if (s.type === "header" && ownRender) return <SHEET_HERE.Provider value={here}><section data-id={s.id} ref={box}>{ownRender(ctx)}</section></SHEET_HERE.Provider>;
   return <SHEET_HERE.Provider value={here}>

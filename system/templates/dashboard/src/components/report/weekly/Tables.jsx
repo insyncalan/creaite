@@ -82,7 +82,7 @@ export function Decisions({ ctx }) {
           ? <Rich ctx={ctx} text={c[key]} row={i} col={key} label={label} cls="wr-inl" empty={label} /> : <span>{c[key]}</span>;
         return (
           <li key={row.ref || i} class={off ? "hidrow" : ""} data-ref={row.ref || undefined}>
-            {ctx.editing ? <EyeButton on={!off} subject={row.ref || c.decision || "decision"} onClick={() => flip(i)} /> : null}
+            {ctx.editing ? <EyeButton on={!off} subject={c.decision || "this decision"} onClick={() => flip(i)} /> : null}
             <div class="wr-decbody">
               <Rich ctx={ctx} text={c.decision} row={i} col="decision" label="Decision" empty="Say what was decided" />
               <div class="wr-meta">Made by {bit("by", "Made by")} on {bit("date", "Date")} · Source: {bit("source", "Source")}{row.ref ? <> · <ctx.ItemRef id={row.ref} /></> : null}

@@ -338,6 +338,66 @@ class SheetChecks:
         self.assertGreater(n, 0)
 
 
+    # ---- the fix pass for 2.4.0 (H2) ---------------------------------------------------------------------------------------
+    def order(self):
+        return self.q(f"[...document.querySelectorAll('{self.VIEW} .page section[data-id]')].map(s=>s.dataset.id)")
+
+    def test_a_section_cannot_move_above_the_fixed_header(self):
+        self.start()
+        ids = self.order()
+        self.assertEqual(ids[0], "header")
+        first = ids[1]
+        self.open_menu(first)
+        self.assertNotIn("Move up", self.menu_report()["names"], "the section under the header has no Move up")
+        self.b.key("Escape")
+        self.q(f"""(()=>{{const g=document.querySelector('{self.VIEW} section[data-id={first}] .sheet-grip'); g.focus();
+          g.dispatchEvent(new KeyboardEvent('keydown',{{key:'ArrowUp',altKey:true,bubbles:true,cancelable:true}}));}})()""")
+        self.b.pump(0.3)
+        self.assertEqual(self.order(), ids, "Alt+Up on it changes nothing")
+
+    def test_the_picker_takes_the_cursor_and_escape_gives_it_back(self):
+        self.start()
+        sid = self.PICK_SECTIONS[0]
+        self.open_picker(sid)
+        self.assertEqual(self.q("document.activeElement && document.activeElement.className"), "rs-pick-search")
+        self.b.key("Escape")
+        self.b.wait(f"!document.querySelector('{self.VIEW} section[data-id={sid}] .rs-picker')", 5)
+        self.b.pump(0.2)
+        self.assertEqual(self.q("document.activeElement && document.activeElement.className.includes('rs-pick-open')"), True)
+
+    def test_only_one_picker_is_open_at_a_time(self):
+        self.start()
+        if len(self.PICK_SECTIONS) < 2:
+            self.skipTest("this report offers one picker section")
+        self.open_picker(self.PICK_SECTIONS[0])
+        self.open_picker(self.PICK_SECTIONS[1])
+        self.assertEqual(self.q(f"document.querySelectorAll('{self.VIEW} .rs-picker').length"), 1)
+
+    def test_the_eye_names_say_the_words_not_the_id(self):
+        self.start()
+        names = self.q(f"[...document.querySelectorAll('{self.VIEW} .page .rs-eye')].map(b=>b.getAttribute('aria-label'))")
+        self.assertTrue(names)
+        for n in names:
+            self.assertTrue(n.startswith("In the report: "), n)
+            self.assertFalse(re.search(r"\b[A-Z][A-Z0-9]{2,6}-[A-Z]-\d+\b", n), f"an id in the name: {n}")
+
+    def test_add_from_the_tracker_never_approves_or_writes(self):
+        import hashlib
+        self.start()
+        sid = self.PICK_SECTIONS[0]
+        snap = lambda: ([(f.name, hashlib.sha256(f.read_bytes()).hexdigest()) for f in sorted(self.filed_reports())],
+                        hashlib.sha256((self.v.root / "system" / "tracker.db").read_bytes()).hexdigest())
+        before = snap()
+        self.q("""window.__calls=[]; (()=>{const real=window.fetch.bind(window); window.fetch=(u,o)=>{ window.__calls.push(String(u)); return real(u,o); };})()""")
+        self.open_picker(sid)
+        self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] .rs-pick-row input[type=checkbox]').click()")
+        self.q(f"document.querySelector('{self.VIEW} section[data-id={sid}] .rs-pick-add').click()")
+        self.b.pump(0.6)
+        calls = self.q("window.__calls")
+        self.assertTrue(any("/api/report/pick" in c for c in calls), calls)
+        self.assertFalse([c for c in calls if "/api/report/approve" in c], calls)
+        self.assertEqual(snap(), before, "the filed report and the tracker are byte-identical")
+
 
 class WeeklySheet(SheetChecks, LiveBrowserCase):
     VIEW, AUDIENCE, TITLE = "#v-reporting", "internal", "Weekly report · Internal"

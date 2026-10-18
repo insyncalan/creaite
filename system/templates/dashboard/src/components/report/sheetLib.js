@@ -41,20 +41,20 @@ function mapSection(doc, id, fn) {
   return syncLayout({ ...doc, sections });
 }
 
-/** Move a section to index `to` (clamped); the list's order and `layout.order` change together. @param {any} doc @param {string} id @param {number} to */
-export function moveSection(doc, id, to) {
+/** Move a section to index `to` (clamped); the list's order and `layout.order` change together. @param {any} doc @param {string} id @param {number} to @param {number} [lo] the first index a section may take (fixed sections above it stay put) */
+export function moveSection(doc, id, to, lo = 0) {
   const from = doc.sections.findIndex((/** @type {any} */ s) => s.id === id);
   if (from < 0) return doc;
-  const at = Math.max(0, Math.min(doc.sections.length - 1, to));
-  if (at === from) return doc;
+  const at = Math.max(lo, Math.min(doc.sections.length - 1, to));
+  if (at === from || from < lo) return doc;
   const sections = doc.sections.slice(), [s] = sections.splice(from, 1);
   sections.splice(at, 0, s);
   return syncLayout({ ...doc, sections });
 }
-/** One place up (−1) or down (+1). @param {any} doc @param {string} id @param {number} delta */
-export function moveBy(doc, id, delta) {
+/** One place up (−1) or down (+1). @param {any} doc @param {string} id @param {number} delta @param {number} [lo] */
+export function moveBy(doc, id, delta, lo = 0) {
   const from = doc.sections.findIndex((/** @type {any} */ s) => s.id === id);
-  return from < 0 ? doc : moveSection(doc, id, from + delta);
+  return from < 0 ? doc : moveSection(doc, id, from + delta, lo);
 }
 /** Hide a section: it becomes a thin bar in place and is left out of the export; its content is dropped when the document is saved
     (creaite_doc.clean), kept here so Show brings it back at once. @param {any} doc @param {string} id */
