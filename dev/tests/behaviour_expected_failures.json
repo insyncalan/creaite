@@ -7,10 +7,6 @@
  "Milestones": [],
  "Peek": [],
  "Projects": [],
- "Shell": [
-  "unreached: dialog Dialog id:boardDlg (src/components/dialogs/PageDialogs.jsx)",
-  "unreached: dialog Dialog id:llDlg (src/components/dialogs/PageDialogs.jsx)",
-  "unreached: dialog Dialog id:searchPrev (src/components/dialogs/PageDialogs.jsx)"
- ],
+ "Shell": [],
  "Work": []
 }

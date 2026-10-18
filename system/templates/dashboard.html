@@ -4815,6 +4815,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     bootKeyboard: () => bootKeyboard,
     bootLinkPopover: () => bootLinkPopover,
     bootLive: () => bootLive,
+    bootLostClick: () => bootLostClick,
     bootMeetings0125: () => bootMeetings0125,
     bootMeetings0126: () => bootMeetings0126,
     bootMeetings0143: () => bootMeetings0143,
@@ -5997,6 +5998,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     pfScope: () => pfScope,
     pfWord: () => pfWord,
     pickImage: () => pickImage,
+    pickedAnchor: () => pickedAnchor,
     pickerOpenFor: () => pickerOpenFor,
     pinchZoom: () => pinchZoom,
     pkAdd: () => pkAdd,
@@ -7304,6 +7306,101 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
       b5.removeAttribute("title");
     });
   }
+  var PRESS = { key: null, el: null, node: null, at: "", sent: false, lost: false, mo: (
+    /** @type {MutationObserver|null} */
+    null
+  ) };
+  var rowPlace = (top, from) => {
+    const out = [];
+    for (let at2 = from; at2 && at2 !== top; at2 = at2.parentNode) out.push([...at2.parentNode.children].indexOf(at2));
+    return out.join(".");
+  };
+  var placeNode = (top, place2) => {
+    let n4 = top;
+    if (place2 === "") return n4;
+    for (const i5 of place2.split(".").reverse()) {
+      const c5 = n4.children[+i5];
+      if (!c5) return top;
+      n4 = c5;
+    }
+    return n4;
+  };
+  var pressRemoved = (ms2) => {
+    for (const m5 of ms2) for (const n4 of m5.removedNodes) if (PRESS.node && n4.contains(PRESS.node)) PRESS.lost = true;
+  };
+  var pressEnd = () => {
+    if (PRESS.mo) {
+      pressRemoved(PRESS.mo.takeRecords());
+      PRESS.mo.disconnect();
+    }
+  };
+  function bootLostClick() {
+    PRESS.mo = new MutationObserver(pressRemoved);
+    const pressClear = () => {
+      pressEnd();
+      PRESS.key = null;
+      PRESS.el = null;
+      PRESS.node = null;
+      PRESS.sent = false;
+      PRESS.lost = false;
+    };
+    document.addEventListener("mousedown", (e4) => {
+      pressClear();
+      if (e4.button !== 0 || !e4.target.closest) return;
+      const r4 = e4.target.closest("[data-row]");
+      if (r4) {
+        PRESS.key = r4.dataset.row;
+        PRESS.el = r4;
+        PRESS.node = e4.target;
+        PRESS.at = rowPlace(r4, e4.target);
+        PRESS.mo.observe(document, { childList: true, subtree: true });
+      }
+    }, true);
+    document.addEventListener("contextmenu", pressClear, true);
+    document.addEventListener("mouseup", (e4) => {
+      pressEnd();
+      const el2 = PRESS.el, node2 = PRESS.node, key2 = PRESS.key;
+      if (!e4.isTrusted || e4.button !== 0 || el2 == null || node2 == null || key2 == null || !e4.target.closest) return;
+      if (!PRESS.lost && el2.isConnected && node2.isConnected) return;
+      const landed = e4.target.closest("[data-row]");
+      if (!landed || landed.dataset.row !== key2) return;
+      PRESS.sent = true;
+      const place2 = rowPlace(landed, e4.target) === PRESS.at ? rowPlace(landed, e4.target) : "";
+      const tgt = (
+        /** @type {Element} */
+        place2 === "" ? landed : e4.target
+      );
+      setTimeout(() => {
+        PRESS.sent = false;
+        let t47 = tgt;
+        if (!t47.isConnected) {
+          const r4 = document.querySelector(`[data-row="${CSS.escape(key2)}"]`);
+          t47 = r4 ? placeNode(r4, place2) : t47;
+        }
+        if (t47.isConnected) t47.dispatchEvent(new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          detail: e4.detail || 1,
+          clientX: e4.clientX,
+          clientY: e4.clientY,
+          screenX: e4.screenX,
+          screenY: e4.screenY,
+          ctrlKey: e4.ctrlKey,
+          shiftKey: e4.shiftKey,
+          altKey: e4.altKey,
+          metaKey: e4.metaKey,
+          button: 0
+        }));
+      }, 0);
+    }, true);
+    document.addEventListener("click", (e4) => {
+      if (PRESS.sent && e4.isTrusted) {
+        PRESS.sent = false;
+        e4.stopImmediatePropagation();
+      }
+    }, true);
+  }
   function bootTooltips() {
     paintIcons();
     document.addEventListener("mouseover", (e4) => {
@@ -8254,6 +8351,380 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     return "function" == typeof t47 ? t47(n4) : t47;
   }
 
+  // components/Menu.jsx
+  var KB_OPEN = null;
+  var menuItemsIn = (box) => box ? (
+    /** @type {HTMLElement[]} */
+    [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
+  ) : [];
+  function menuMove(e4, items2) {
+    const L3 = items2, i5 = L3.indexOf(
+      /** @type {HTMLElement} */
+      document.activeElement
+    );
+    let to2 = null;
+    if (e4.key === "ArrowDown") to2 = L3[(i5 + 1) % L3.length];
+    else if (e4.key === "ArrowUp") to2 = L3[(i5 < 0 ? 0 : i5 + L3.length - 1) % L3.length];
+    else if (e4.key === "Home") to2 = L3[0];
+    else if (e4.key === "End") to2 = L3[L3.length - 1];
+    else return false;
+    e4.preventDefault();
+    e4.stopPropagation();
+    to2?.focus({ preventScroll: true });
+    return true;
+  }
+  var dataAttrs = (
+    /** @param {Record<string, string> | undefined} d */
+    (d5) => Object.fromEntries(Object.entries(d5 || {}).map(([k5, v5]) => [`data-${k5}`, v5]))
+  );
+  function MenuPanel({ label, id: id2, cls, bare, style, hidden, anchor, onClose, onKey, autoFocus = true, focusKey, boxRef, children }) {
+    const own = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), box = boxRef || own;
+    const closeRef = A2(onClose);
+    closeRef.current = onClose;
+    _2(() => {
+      if (hidden || !autoFocus) return;
+      tipHide();
+      (menuItemsIn(box.current)[0] || box.current)?.focus({ preventScroll: true });
+    }, [hidden, focusKey]);
+    h2(() => {
+      if (hidden) return;
+      const away = (e4) => {
+        const t47 = (
+          /** @type {Node} */
+          e4.target
+        );
+        if (!box.current?.contains(t47) && !(anchor && anchor.contains(t47))) closeRef.current("away");
+      };
+      document.addEventListener("pointerdown", away, true);
+      document.addEventListener("click", away, true);
+      return () => {
+        document.removeEventListener("pointerdown", away, true);
+        document.removeEventListener("click", away, true);
+      };
+    }, [hidden, anchor]);
+    const keys = (e4) => {
+      if (onKey) onKey(e4);
+      if (e4.defaultPrevented) return;
+      const field = (
+        /** @type {Element} */
+        e4.target.matches("input,textarea,select")
+      );
+      if (!field && menuMove(e4, menuItemsIn(box.current))) return;
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        onClose("esc");
+      } else if (e4.key === "Tab") onClose("tab");
+    };
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: `${bare ? "" : "ddmenu newmenu on "}${cls || ""}`.trim(),
+        id: id2,
+        role: "menu",
+        "aria-label": label,
+        ref: box,
+        tabIndex: -1,
+        hidden,
+        style,
+        onKeyDown: keys,
+        children
+      }
+    );
+  }
+  function MenuItems({ items: items2, onPick }) {
+    return /* @__PURE__ */ u2(S2, { children: items2.map((it2, i5) => it2.sep ? /* @__PURE__ */ u2("hr", { role: "separator" }, `s${i5}`) : it2.head ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: it2.head }, `h${i5}`) : it2.note ? /* @__PURE__ */ u2("div", { class: "sub mnote", role: "presentation", children: it2.note }, `n${i5}`) : /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
+        tabIndex: -1,
+        class: it2.cls,
+        "data-tip": it2.tip,
+        "aria-checked": it2.checked === void 0 ? void 0 : it2.checked ? "true" : "false",
+        "aria-disabled": it2.disabled ? "true" : void 0,
+        ...dataAttrs(it2.data),
+        onClick: () => onPick(it2),
+        children: [
+          it2.icon || it2.radio && it2.checked ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon || "check" }) : null,
+          it2.icon || it2.line ? /* @__PURE__ */ u2("span", { children: [
+            /* @__PURE__ */ u2("b", { children: [
+              it2.name,
+              it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
+                " · ",
+                it2.mark
+              ] }) : null
+            ] }),
+            it2.line ? /* @__PURE__ */ u2("small", { children: it2.line }) : null
+          ] }) : /* @__PURE__ */ u2(S2, { children: [
+            it2.name,
+            it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
+              " · ",
+              it2.mark
+            ] }) : null
+          ] })
+        ]
+      },
+      it2.id
+    )) });
+  }
+  function Menu({
+    label,
+    items: items2,
+    onPick,
+    icon,
+    tip,
+    why,
+    onBlocked,
+    cls,
+    btnCls,
+    menuLabel,
+    left,
+    data,
+    id: id2,
+    ariaLabel,
+    chevron = true,
+    labelCls,
+    menuId,
+    menuCls,
+    hidden,
+    hover
+  }) {
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    );
+    const back2 = A2(false);
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const byPointer = A2(false);
+    const isOpen = A2(false);
+    isOpen.current = open2;
+    const show = (
+      /** @param {boolean} v */
+      (v5) => {
+        isOpen.current = v5;
+        setOpen2(v5);
+      }
+    );
+    const close = (how) => {
+      back2.current = how === "esc";
+      if (KB_OPEN === fold) KB_OPEN = null;
+      if (back2.current) btn.current?.focus({ preventScroll: true });
+      show(false);
+      if (hover && menuGroup.current === btn.current) menuGroup.close();
+    };
+    const closeRef = A2(close);
+    closeRef.current = close;
+    const fold = A2(() => {
+      if (!isOpen.current) return;
+      const at2 = document.activeElement, inside = !at2 || at2 === document.body || at2 === btn.current || !!box.current?.contains(at2);
+      closeRef.current(inside ? "esc" : "away");
+    }).current;
+    h2(() => {
+      if (KB_OPEN === fold && !isOpen.current) KB_OPEN = null;
+    }, [open2]);
+    h2(() => () => {
+      if (KB_OPEN === fold) KB_OPEN = null;
+    }, []);
+    const claimKb = () => {
+      if (!hover) return;
+      if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
+      if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+      KB_OPEN = fold;
+      menuGroup.release(btn.current);
+    };
+    h2(() => {
+      const b5 = btn.current;
+      if (!hover || !b5) return;
+      return hoverAttach(b5, {
+        group: menuGroup,
+        focusOpens: false,
+        panel: () => box.current,
+        isOpen: () => isOpen.current,
+        open: () => {
+          if (why || isOpen.current) return;
+          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+          KB_OPEN = null;
+          byPointer.current = true;
+          tipHide();
+          show(true);
+        },
+        close: () => show(false)
+      });
+    }, [hover, why]);
+    _2(() => {
+      if (!hover || !open2) return;
+      const b5 = btn.current, m5 = box.current;
+      if (!b5 || !m5) return;
+      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
+      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
+    }, [open2]);
+    h2(() => {
+      if (!open2 && back2.current) {
+        back2.current = false;
+        btn.current?.focus();
+      }
+    }, [open2]);
+    const pick = (it2) => {
+      if (it2.disabled) return;
+      if (it2.checked === void 0 || it2.radio) close("pick");
+      onPick(it2.id);
+    };
+    const onBtnKey = (e4) => {
+      if (e4.key !== "ArrowDown" || why) return;
+      if (!open2) {
+        e4.preventDefault();
+        byPointer.current = false;
+        claimKb();
+        show(true);
+      } else if (byPointer.current) {
+        e4.preventDefault();
+        byPointer.current = false;
+        claimKb();
+        menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
+      }
+    };
+    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: btnCls || "btn",
+          id: id2,
+          ref: btn,
+          hidden,
+          "aria-haspopup": "menu",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": ariaLabel,
+          "aria-disabled": why ? "true" : void 0,
+          "data-tip": why || tip,
+          ...dataAttrs(data),
+          onKeyDown: onBtnKey,
+          onClick: (e4) => {
+            e4.preventDefault();
+            if (why) {
+              onBlocked && onBlocked();
+              return;
+            }
+            if (hover) menuGroup.release(btn.current);
+            if (open2 && byPointer.current) {
+              byPointer.current = false;
+              claimKb();
+              menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
+              return;
+            }
+            byPointer.current = false;
+            if (open2) close("pick");
+            else {
+              claimKb();
+              show(true);
+            }
+          },
+          children: [
+            icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
+            /* @__PURE__ */ u2("span", { class: labelCls, children: label }),
+            chevron ? /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" }) : null
+          ]
+        }
+      ),
+      open2 ? /* @__PURE__ */ u2(
+        MenuPanel,
+        {
+          label: menuLabel || ariaLabel || label,
+          id: menuId,
+          cls: `${left ? "left " : ""}${menuCls || ""}`,
+          anchor: btn.current,
+          onClose: close,
+          boxRef: box,
+          autoFocus: !byPointer.current,
+          children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
+        }
+      ) : null
+    ] });
+  }
+  function mountMenu(box, props) {
+    R(/* @__PURE__ */ u2(Menu, { ...props }), box);
+  }
+  function mountMenuPanel(box, props, items2, field) {
+    R(/* @__PURE__ */ u2(MenuPanel, { ...props, children: [
+      field ? /* @__PURE__ */ u2("input", { type: "text", "aria-label": "Type here" }) : null,
+      /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: () => {
+      } })
+    ] }), box);
+  }
+  var POP = null;
+  var PICKED = null;
+  function PopMenu({ anchor, props }) {
+    const { label, items: items2, onPick, id: id2, cls, align, at: at2, loading: loading2 } = props;
+    const wrap = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      const el2 = (
+        /** @type {HTMLElement | null} */
+        wrap.current?.firstElementChild || null
+      );
+      if (!el2) return;
+      const w6 = el2.offsetWidth, h5 = el2.offsetHeight;
+      const r4 = at2 ? { left: at2.x, right: at2.x, top: at2.y, bottom: at2.y } : anchor && anchor.isConnected ? anchor.getBoundingClientRect() : { left: innerWidth / 2, right: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
+      let top = r4.bottom + (at2 ? 0 : 4);
+      if (top + h5 > innerHeight - 8) top = Math.max(8, r4.top - h5 - 4);
+      const left = align === "right" ? r4.right - w6 : r4.left;
+      el2.style.top = `${Math.max(8, Math.min(top, innerHeight - h5 - 8))}px`;
+      el2.style.left = `${Math.max(8, Math.min(left, innerWidth - w6 - 8))}px`;
+    });
+    const pick = (it2) => {
+      if (it2.disabled) return;
+      if (it2.checked === void 0) closeMenu("pick");
+      onPick(it2.id);
+    };
+    return /* @__PURE__ */ u2("div", { ref: wrap, children: /* @__PURE__ */ u2(MenuPanel, { label, id: id2, cls: `pop${cls ? " " + cls : ""}`, anchor, onClose: closeMenu, focusKey: loading2, children: loading2 ? /* @__PURE__ */ u2("div", { class: "msk", "aria-hidden": "true", children: [
+      /* @__PURE__ */ u2("i", {}),
+      /* @__PURE__ */ u2("i", {}),
+      /* @__PURE__ */ u2("i", {})
+    ] }) : /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick }) }) });
+  }
+  function openMenu(anchor, props) {
+    if (POP && POP.anchor !== anchor) closeMenu("away");
+    if (!POP) {
+      const host2 = document.createElement("div");
+      host2.className = "pophost";
+      document.body.appendChild(host2);
+      POP = { host: host2, anchor, props };
+      if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    }
+    POP.props = props;
+    R(/* @__PURE__ */ u2(PopMenu, { anchor, props }), POP.host);
+  }
+  function closeMenu(how = "away") {
+    const p6 = POP;
+    if (!p6) return;
+    POP = null;
+    if (how === "pick") PICKED = { anchor: p6.anchor, at: Date.now() };
+    R(null, p6.host);
+    p6.host.remove();
+    const a5 = p6.anchor;
+    if (a5 && a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
+    if ((how === "esc" || how === "tab") && a5 && a5.isConnected) a5.focus({ preventScroll: true });
+    if (p6.props.onClose) p6.props.onClose(how);
+  }
+  function pickedAnchor() {
+    const p6 = PICKED;
+    PICKED = null;
+    return p6 && Date.now() - p6.at < 2e3 && p6.anchor && p6.anchor.isConnected ? p6.anchor : null;
+  }
+  function menuOpenFor(anchor) {
+    return !!POP && (anchor === void 0 || POP.anchor === anchor);
+  }
+
   // components/Dialog.jsx
   var FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
   var OPENER = /* @__PURE__ */ new WeakMap();
@@ -8311,7 +8782,9 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     const d5 = dialogEl(target);
     if (!d5 || d5.open) return d5;
     if (!OPENER.has(d5)) {
-      OPENER.set(d5, document.activeElement);
+      const a5 = document.activeElement, picked = pickedAnchor();
+      const from = !a5 || a5 === document.body || !a5.isConnected ? picked : null;
+      OPENER.set(d5, from || a5);
       TYPED.set(d5, false);
     }
     if (modal) d5.showModal();
@@ -8605,352 +9078,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
         ] })
       ] })
     );
-  }
-
-  // components/Menu.jsx
-  var KB_OPEN = null;
-  var menuItemsIn = (box) => box ? (
-    /** @type {HTMLElement[]} */
-    [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
-  ) : [];
-  function menuMove(e4, items2) {
-    const L3 = items2, i5 = L3.indexOf(
-      /** @type {HTMLElement} */
-      document.activeElement
-    );
-    let to2 = null;
-    if (e4.key === "ArrowDown") to2 = L3[(i5 + 1) % L3.length];
-    else if (e4.key === "ArrowUp") to2 = L3[(i5 < 0 ? 0 : i5 + L3.length - 1) % L3.length];
-    else if (e4.key === "Home") to2 = L3[0];
-    else if (e4.key === "End") to2 = L3[L3.length - 1];
-    else return false;
-    e4.preventDefault();
-    e4.stopPropagation();
-    to2?.focus({ preventScroll: true });
-    return true;
-  }
-  var dataAttrs = (
-    /** @param {Record<string, string> | undefined} d */
-    (d5) => Object.fromEntries(Object.entries(d5 || {}).map(([k5, v5]) => [`data-${k5}`, v5]))
-  );
-  function MenuPanel({ label, id: id2, cls, bare, style, hidden, anchor, onClose, onKey, autoFocus = true, focusKey, boxRef, children }) {
-    const own = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), box = boxRef || own;
-    const closeRef = A2(onClose);
-    closeRef.current = onClose;
-    _2(() => {
-      if (hidden || !autoFocus) return;
-      tipHide();
-      (menuItemsIn(box.current)[0] || box.current)?.focus({ preventScroll: true });
-    }, [hidden, focusKey]);
-    h2(() => {
-      if (hidden) return;
-      const away = (e4) => {
-        const t47 = (
-          /** @type {Node} */
-          e4.target
-        );
-        if (!box.current?.contains(t47) && !(anchor && anchor.contains(t47))) closeRef.current("away");
-      };
-      document.addEventListener("pointerdown", away, true);
-      document.addEventListener("click", away, true);
-      return () => {
-        document.removeEventListener("pointerdown", away, true);
-        document.removeEventListener("click", away, true);
-      };
-    }, [hidden, anchor]);
-    const keys = (e4) => {
-      if (onKey) onKey(e4);
-      if (e4.defaultPrevented) return;
-      const field = (
-        /** @type {Element} */
-        e4.target.matches("input,textarea,select")
-      );
-      if (!field && menuMove(e4, menuItemsIn(box.current))) return;
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        onClose("esc");
-      } else if (e4.key === "Tab") onClose("tab");
-    };
-    return /* @__PURE__ */ u2(
-      "div",
-      {
-        class: `${bare ? "" : "ddmenu newmenu on "}${cls || ""}`.trim(),
-        id: id2,
-        role: "menu",
-        "aria-label": label,
-        ref: box,
-        tabIndex: -1,
-        hidden,
-        style,
-        onKeyDown: keys,
-        children
-      }
-    );
-  }
-  function MenuItems({ items: items2, onPick }) {
-    return /* @__PURE__ */ u2(S2, { children: items2.map((it2, i5) => it2.sep ? /* @__PURE__ */ u2("hr", { role: "separator" }, `s${i5}`) : it2.head ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: it2.head }, `h${i5}`) : it2.note ? /* @__PURE__ */ u2("div", { class: "sub mnote", role: "presentation", children: it2.note }, `n${i5}`) : /* @__PURE__ */ u2(
-      "button",
-      {
-        type: "button",
-        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
-        tabIndex: -1,
-        class: it2.cls,
-        "data-tip": it2.tip,
-        "aria-checked": it2.checked === void 0 ? void 0 : it2.checked ? "true" : "false",
-        "aria-disabled": it2.disabled ? "true" : void 0,
-        ...dataAttrs(it2.data),
-        onClick: () => onPick(it2),
-        children: [
-          it2.icon || it2.radio && it2.checked ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon || "check" }) : null,
-          it2.icon || it2.line ? /* @__PURE__ */ u2("span", { children: [
-            /* @__PURE__ */ u2("b", { children: [
-              it2.name,
-              it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
-                " · ",
-                it2.mark
-              ] }) : null
-            ] }),
-            it2.line ? /* @__PURE__ */ u2("small", { children: it2.line }) : null
-          ] }) : /* @__PURE__ */ u2(S2, { children: [
-            it2.name,
-            it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
-              " · ",
-              it2.mark
-            ] }) : null
-          ] })
-        ]
-      },
-      it2.id
-    )) });
-  }
-  function Menu({
-    label,
-    items: items2,
-    onPick,
-    icon,
-    tip,
-    why,
-    onBlocked,
-    cls,
-    btnCls,
-    menuLabel,
-    left,
-    data,
-    id: id2,
-    ariaLabel,
-    chevron = true,
-    labelCls,
-    menuId,
-    menuCls,
-    hidden,
-    hover
-  }) {
-    const [open2, setOpen2] = d2(false);
-    const btn = A2(
-      /** @type {HTMLButtonElement | null} */
-      null
-    );
-    const back2 = A2(false);
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    const byPointer = A2(false);
-    const isOpen = A2(false);
-    isOpen.current = open2;
-    const close = (how) => {
-      back2.current = how === "esc";
-      if (back2.current) btn.current?.focus({ preventScroll: true });
-      setOpen2(false);
-      if (hover && menuGroup.current === btn.current) menuGroup.close();
-    };
-    const closeRef = A2(close);
-    closeRef.current = close;
-    const fold = A2(() => closeRef.current("esc")).current;
-    h2(() => () => {
-      if (KB_OPEN === fold) KB_OPEN = null;
-    }, []);
-    h2(() => {
-      const b5 = btn.current;
-      if (!hover || !b5) return;
-      return hoverAttach(b5, {
-        group: menuGroup,
-        focusOpens: false,
-        panel: () => box.current,
-        isOpen: () => isOpen.current,
-        open: () => {
-          if (why || isOpen.current) return;
-          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
-          KB_OPEN = null;
-          byPointer.current = true;
-          tipHide();
-          setOpen2(true);
-        },
-        close: () => setOpen2(false)
-      });
-    }, [hover, why]);
-    _2(() => {
-      if (!hover || !open2) return;
-      const b5 = btn.current, m5 = box.current;
-      if (!b5 || !m5) return;
-      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
-      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
-    }, [open2]);
-    h2(() => {
-      if (!open2 && back2.current) {
-        back2.current = false;
-        btn.current?.focus();
-      }
-    }, [open2]);
-    const pick = (it2) => {
-      if (it2.disabled) return;
-      if (it2.checked === void 0 || it2.radio) close("pick");
-      onPick(it2.id);
-    };
-    const onBtnKey = (e4) => {
-      if (e4.key !== "ArrowDown" || why) return;
-      if (!open2) {
-        e4.preventDefault();
-        byPointer.current = false;
-        if (hover) {
-          if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
-          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
-          KB_OPEN = fold;
-          menuGroup.release(btn.current);
-        }
-        setOpen2(true);
-      } else if (byPointer.current) {
-        e4.preventDefault();
-        byPointer.current = false;
-        menuGroup.release(btn.current);
-        menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
-      }
-    };
-    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
-      /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: btnCls || "btn",
-          id: id2,
-          ref: btn,
-          hidden,
-          "aria-haspopup": "menu",
-          "aria-expanded": open2 ? "true" : "false",
-          "aria-label": ariaLabel,
-          "aria-disabled": why ? "true" : void 0,
-          "data-tip": why || tip,
-          ...dataAttrs(data),
-          onKeyDown: onBtnKey,
-          onClick: (e4) => {
-            e4.preventDefault();
-            if (why) {
-              onBlocked && onBlocked();
-              return;
-            }
-            if (hover) menuGroup.release(btn.current);
-            if (open2 && byPointer.current) {
-              byPointer.current = false;
-              menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
-              return;
-            }
-            byPointer.current = false;
-            if (open2) close("pick");
-            else setOpen2(true);
-          },
-          children: [
-            icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
-            /* @__PURE__ */ u2("span", { class: labelCls, children: label }),
-            chevron ? /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" }) : null
-          ]
-        }
-      ),
-      open2 ? /* @__PURE__ */ u2(
-        MenuPanel,
-        {
-          label: menuLabel || ariaLabel || label,
-          id: menuId,
-          cls: `${left ? "left " : ""}${menuCls || ""}`,
-          anchor: btn.current,
-          onClose: close,
-          boxRef: box,
-          autoFocus: !byPointer.current,
-          children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
-        }
-      ) : null
-    ] });
-  }
-  function mountMenu(box, props) {
-    R(/* @__PURE__ */ u2(Menu, { ...props }), box);
-  }
-  function mountMenuPanel(box, props, items2, field) {
-    R(/* @__PURE__ */ u2(MenuPanel, { ...props, children: [
-      field ? /* @__PURE__ */ u2("input", { type: "text", "aria-label": "Type here" }) : null,
-      /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: () => {
-      } })
-    ] }), box);
-  }
-  var POP = null;
-  function PopMenu({ anchor, props }) {
-    const { label, items: items2, onPick, id: id2, cls, align, at: at2, loading: loading2 } = props;
-    const wrap = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    _2(() => {
-      const el2 = (
-        /** @type {HTMLElement | null} */
-        wrap.current?.firstElementChild || null
-      );
-      if (!el2) return;
-      const w6 = el2.offsetWidth, h5 = el2.offsetHeight;
-      const r4 = at2 ? { left: at2.x, right: at2.x, top: at2.y, bottom: at2.y } : anchor && anchor.isConnected ? anchor.getBoundingClientRect() : { left: innerWidth / 2, right: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
-      let top = r4.bottom + (at2 ? 0 : 4);
-      if (top + h5 > innerHeight - 8) top = Math.max(8, r4.top - h5 - 4);
-      const left = align === "right" ? r4.right - w6 : r4.left;
-      el2.style.top = `${Math.max(8, Math.min(top, innerHeight - h5 - 8))}px`;
-      el2.style.left = `${Math.max(8, Math.min(left, innerWidth - w6 - 8))}px`;
-    });
-    const pick = (it2) => {
-      if (it2.disabled) return;
-      if (it2.checked === void 0) closeMenu("pick");
-      onPick(it2.id);
-    };
-    return /* @__PURE__ */ u2("div", { ref: wrap, children: /* @__PURE__ */ u2(MenuPanel, { label, id: id2, cls: `pop${cls ? " " + cls : ""}`, anchor, onClose: closeMenu, focusKey: loading2, children: loading2 ? /* @__PURE__ */ u2("div", { class: "msk", "aria-hidden": "true", children: [
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", {})
-    ] }) : /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick }) }) });
-  }
-  function openMenu(anchor, props) {
-    if (POP && POP.anchor !== anchor) closeMenu("away");
-    if (!POP) {
-      const host2 = document.createElement("div");
-      host2.className = "pophost";
-      document.body.appendChild(host2);
-      POP = { host: host2, anchor, props };
-      if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-    }
-    POP.props = props;
-    R(/* @__PURE__ */ u2(PopMenu, { anchor, props }), POP.host);
-  }
-  function closeMenu(how = "away") {
-    const p6 = POP;
-    if (!p6) return;
-    POP = null;
-    R(null, p6.host);
-    p6.host.remove();
-    const a5 = p6.anchor;
-    if (a5 && a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
-    if ((how === "esc" || how === "tab") && a5 && a5.isConnected) a5.focus({ preventScroll: true });
-    if (p6.props.onClose) p6.props.onClose(how);
-  }
-  function menuOpenFor(anchor) {
-    return !!POP && (anchor === void 0 || POP.anchor === anchor);
   }
 
   // components/Tabs.jsx
@@ -41918,11 +42045,11 @@ ${s5}`;
         return;
       }
       if (e4.key === "Escape") {
-        if ($("#cmdk").open || $("#boardDlg").open) return;
         if (shared.CAL) {
           closeCal();
           return;
         }
+        if (document.querySelector("dialog:modal")) return;
         if (helpPanelOpen()) {
           closeHelpPanel();
           return;
@@ -73075,6 +73202,7 @@ ${d5.text}`);
   bootTooltips();
   bootAiSelect();
   bootLinkPopover();
+  bootLostClick();
   bootDevTag();
   bootRail0007();
   bootTheme();
