@@ -67879,7 +67879,15 @@ ${d5.text}`);
       await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
         i5.onload = i5.onerror = () => r4(null);
       })));
-      const html2 = host2.outerHTML, css = usedRules(w6, d5, document);
+      const copy = (
+        /** @type {HTMLElement} */
+        host2.cloneNode(true)
+      );
+      copy.querySelectorAll("[data-ref],[data-row]").forEach((e4) => {
+        e4.removeAttribute("data-ref");
+        e4.removeAttribute("data-row");
+      });
+      const html2 = copy.outerHTML, css = usedRules(w6, d5, document);
       R(null, host2);
       return html2 && css ? { html: html2, css, palette, version } : null;
     } catch (e4) {

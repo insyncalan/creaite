@@ -69,7 +69,9 @@ export async function reportExportPage(doc, renderers, view, version) {
       <div class="sheet-fit"><div class="sheet-a4"><SheetPage {...props} /></div></div></div></div></div></div></div></div>, host);
     await new Promise(r => setTimeout(r, 250));                       // the timeline fits itself to its box after the first draw
     await Promise.all(Array.from(d.images).map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = () => r(null); })));
-    const html = host.outerHTML, css = usedRules(w, d, document);
+    const copy = /** @type {HTMLElement} */ (host.cloneNode(true));       // p240-leakfix LEAK 4: an item's ID is a row marker on screen only
+    copy.querySelectorAll("[data-ref],[data-row]").forEach(e => { e.removeAttribute("data-ref"); e.removeAttribute("data-row"); });
+    const html = copy.outerHTML, css = usedRules(w, d, document);
     render(null, host);
     return html && css ? { html, css, palette, version } : null;
   } catch (e) {
