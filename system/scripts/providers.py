@@ -888,10 +888,11 @@ def send_allowed(model_id, confidential):
         raise Refused(CONFIDENTIAL_WORDS)
 
 
-def route_for(job, settings, text="", declared=None, store=None, limited=False):
+def route_for(job, settings, text="", declared=None, store=None, limited=None):
     """route(), with the job's confidentiality decided here from what the server knows (confidential_job), and the gate checked
     on the answer: the server's only way to pick a model. Adds "confidential" and "confidential_why" to route's answer."""
     conf, why = confidential_job(job, text, declared)
+    limited = limited_now() if limited is None else limited                  # #132 G6: Claude's limit, as last seen
     out = route(job, settings, store, confidential=conf, limited=limited)
     if out["model"]:
         send_allowed(out["model"], conf)
@@ -1011,6 +1012,105 @@ def caller():
 
 _DIRECT = {}
 # ── end #132 G4 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+# ── #132 G6 (proposal): Claude's limit, seen in a run's stream, and what happens next ────────────────────────────────────
+# Claude Code (2.1.288, read from its own message formats; no real limited run was made) says a limit was hit three ways in
+# `--output-format stream-json`: a "rate_limit_event" whose rate_limit_info.status is "rejected" (with resetsAt, epoch seconds,
+# and rateLimitType: five_hour, seven_day, seven_day_opus…), an assistant message whose "error" is "rate_limit", and a result
+# with is_error whose text says so ("You've hit your limit · resets 3pm", "usage limit reached"). The first is the one relied
+# on; the others are the fallback. The server keeps the reset time in memory only (LIMIT): a later run of a text-only job
+# routes with limited=True (route_for: never confidential material to another provider), and nothing is ever retried by itself.
+LIMIT_TEXT = re.compile(r"(?i)you'?ve hit your (?:\w+ )?limit|usage limit reached|rate limit reached|session limit reached")
+LIMIT_UNKNOWN = 15 * 60                   # seconds a limit is assumed to last when Claude doesn't say when it resets
+LIMIT = {}
+LIMIT_GO = {"page": "settings", "arg": "aiModels", "label": "Open AI models"}
+
+
+def limit_signal(ev):
+    """{"resets": epoch seconds or None, "kind": the limit's type} when one stream event says Claude's limit was hit; "clear"
+    when it says Claude answers again (an allowed rate_limit_event, or a result that isn't an error); else None."""
+    if not isinstance(ev, dict):
+        return None
+    kind = ev.get("type")
+    if kind == "rate_limit_event":
+        info = ev.get("rate_limit_info") if isinstance(ev.get("rate_limit_info"), dict) else {}
+        if info.get("status") != "rejected":
+            return "clear"
+        at = info.get("resetsAt")
+        return {"resets": int(at) if isinstance(at, (int, float)) and at > 0 else None,
+                "kind": re.sub(r"[^a-z_]", "", str(info.get("rateLimitType") or ""))[:40]}
+    if kind == "assistant" and ev.get("error") == "rate_limit":
+        return {"resets": None, "kind": ""}
+    if kind == "result":
+        if ev.get("is_error") and LIMIT_TEXT.search(str(ev.get("result") or "")[:2000]):
+            return {"resets": None, "kind": ""}
+        return None if ev.get("is_error") else "clear"
+    return None
+
+
+def limit_seen(ev, now=None):
+    """Keep what one stream event says about Claude's limit (LIMIT); the signal, as limit_signal."""
+    import time
+    now = time.time() if now is None else now
+    sig = limit_signal(ev)
+    if sig == "clear":
+        LIMIT.clear()
+    elif sig:
+        resets = sig["resets"] or LIMIT.get("resets") or 0
+        LIMIT.update(resets=resets if resets > now else None, until=resets if resets > now else now + LIMIT_UNKNOWN,
+                     kind=sig["kind"] or LIMIT.get("kind", ""))
+    return sig
+
+
+def limited_now(now=None):
+    """True while Claude's limit, as last seen, hasn't reset."""
+    import time
+    return bool(LIMIT) and (time.time() if now is None else now) < LIMIT.get("until", 0)
+
+
+def reset_words(resets, now=None):
+    """When the limit resets, as Alan reads it: "at 15:00", or "on 18-10-2026 at 09:00"; "" when unknown."""
+    from datetime import datetime
+    if not resets:
+        return ""
+    at, today = datetime.fromtimestamp(resets), datetime.fromtimestamp(now) if now else datetime.now()
+    return f"at {at:%H:%M}" if at.date() == today.date() else f"on {at:%d-%m-%Y} at {at:%H:%M}"
+
+
+def with_choice(settings, choice):
+    """The settings with ai.on_limit set for one request (the Ask me card's "another model"), the file unchanged."""
+    import copy
+    out = copy.deepcopy(settings)
+    out.setdefault("ai", {})["on_limit"] = choice
+    return out
+
+
+def limit_card(job, settings, feature="", now=None):
+    """What a run that hit Claude's limit says: {line, resets, mode, offer}. `offer` (Ask me only) is "another connected model"
+    for a text-only job a direct call exists for (feature in CLEAN_FEATURES), else None. Nothing is retried by itself."""
+    resets = LIMIT.get("resets")
+    when = reset_words(resets, now)
+    head = f"Claude's limit is reached; it resets {when}." if when else "Claude's limit is reached, and it didn't say when it resets."
+    mode = setting(settings, "ai.on_limit")
+    j = JOBS.get(job) or JOBS["tools"]
+    alt = sorted((m for m in options(job, settings) if m["provider"] != "claude"), key=lambda m: -m["grade"]) \
+        if not j["tools"] and feature in CLEAN_FEATURES else []
+    tail = " Nothing was changed."
+    if mode == "step_down" and job in STEP_DOWN:
+        tail += f" Writing runs as a quick edit until then: try again to run it on {_label(chosen(STEP_DOWN[job], settings), settings)}."
+    elif mode == "other" and alt:
+        tail += f" Try again to run it on {alt[0]['label']}, unless it holds confidential material."
+    elif not (mode == "ask" and alt):
+        tail += " Jobs that use tools wait: try again then." if j["tools"] else " Try again then."
+    offer = {"choice": "other", "label": f"Run this one on {alt[0]['label']}"} if mode == "ask" and alt else None
+    return {"line": head + tail, "resets": resets, "mode": mode, "offer": offer}
+
+
+def _label(model_id, settings):
+    m = model(model_id, settings)
+    return m["label"] if m else str(model_id)
+# ── end #132 G6 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
 # ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
