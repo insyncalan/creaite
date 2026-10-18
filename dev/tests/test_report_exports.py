@@ -183,18 +183,18 @@ class Filing(Base):
         self.assertTrue((self.v.root / off["path"]).is_file())
         self.assertEqual(self.py(f"print(json.dumps(creaite_doc.read({path!r})['kind']))"), "weekly")
 
-    def test_the_setting_is_off_for_reports_and_on_for_minutes_by_default(self):
+    def test_exports_are_always_filed_beside_for_reports_and_by_default_for_minutes(self):
         got = self.py("print(json.dumps([creaite_doc.file_beside_default(k) for k in ('weekly', 'client', 'minutes')]))")
-        self.assertEqual(got, [False, False, True])
+        self.assertEqual(got, [True, True, True])
 
     def test_the_saved_settings_win_and_an_unknown_kind_is_refused(self):
         cfg = self.v.root / "system/config/settings.json"
         data = json.loads(cfg.read_text(encoding="utf-8")) if cfg.is_file() else {}
-        data["reports"] = {"file_exports_beside": True, "file_minutes_exports_beside": False}
+        data["reports"] = {"file_exports_beside": False, "file_minutes_exports_beside": False}
         cfg.parent.mkdir(parents=True, exist_ok=True)
         cfg.write_text(json.dumps(data), encoding="utf-8")
         got = self.py("print(json.dumps([creaite_doc.file_beside_default(k) for k in ('weekly', 'client', 'minutes')]))")
-        self.assertEqual(got, [True, True, False])
+        self.assertEqual(got, [True, True, False], 'the old reports key is ignored; only minutes follow a setting')
         self.assertEqual(self.py("try:\n    creaite_doc.file_beside_default('memo')\nexcept ValueError:\n    print('true')"), True)
 
     def test_a_client_view_waits_for_the_approved_internal_report(self):

@@ -14,6 +14,7 @@ import { ExportSave } from "./ExportSave.jsx";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
 import { countRedraft, redrafter } from "./redraft.js";
 import { Sheet } from "./Sheet.jsx";
+import { CLIENT_EXPORT, reportExportPage } from "./exportPage.jsx";
 import { INTERNAL_RENDERERS } from "./WeeklyPartner.jsx";
 import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
@@ -35,7 +36,7 @@ async function openCheck() {
 
 /** @param {"html"|"docx"|"pdf"} fmt */
 async function doExport(fmt) {
-  const r = await exportClientReport(fmt);
+  const r = await exportClientReport(fmt, (d, v) => reportExportPage(d, CLIENT_RENDERERS, CLIENT_EXPORT, v));
   if (r && (r.ok || r.clash)) crDialog.value = false;       // saved (the message says where) or a taken name (its own dialog asks)
   else await runCheck();                                      // a refusal: the check shows why, and the message says nothing was written
 }
