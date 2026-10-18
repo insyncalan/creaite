@@ -3644,7 +3644,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
 /* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
 #crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
-.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - 80px);overflow:auto}
+.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - var(--cr-top,56px) - 16px);overflow:auto}
 .hubcfg h3{margin:0 0 10px;font:600 var(--fs-lg)/var(--lh-20) var(--font)}
 .cfgsw{display:flex;gap:10px;align-items:flex-start;padding:0 0 10px;border-bottom:1px solid var(--line);font-size:var(--fs-md)}
 .cfgsw .sub{display:block;font-size:var(--fs-sm)} .cfgsw .switch{flex:none}
@@ -3662,7 +3662,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .cfglogo:has(input[data-logo-tick]:disabled) .cfgname,.cfglogo:has(input[data-logo-tick]:disabled) .mark{opacity:.6}
 .cfgact{display:flex;gap:6px;align-items:center}
 .cfgnote{margin:0}
-.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px}
+.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px;position:sticky;bottom:-14px;padding:8px 0 0;background:var(--surface)}
 .wr-health{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px;position:relative}   /* #221: the indicator is 96 px (was 120) */
 .wr-hcol{display:grid;gap:3px;width:96px;min-width:0}
 .wr-flag{font-weight:700;font-size:var(--fs-xs);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey);white-space:nowrap;overflow:hidden}   /* 12 px, one line */
@@ -3808,7 +3808,6 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .hubrow .crnote{flex:1 1 100%}
 /* the cog and the panel it opens (H3 fills the slot) */
 .hubcfgwrap{position:relative;display:inline-flex}
-.hubcfg{position:absolute;right:0;top:calc(100% + 6px);z-index:var(--z-menu);width:min(460px,calc(100vw - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px}
 /* the client page keeps the look it had on its own page */
 #v-reporting .crsheet .sheet-a4 .page .btn{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
 #v-reporting .crsheet .sheet-a4 .page .btn:hover:not(:disabled){background:var(--paper-sunk)}

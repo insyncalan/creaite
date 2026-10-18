@@ -172,7 +172,7 @@ class Toolbar(Hub):
                     r = self.q("""(()=>{const bar=document.querySelector('#v-reporting .sheet-bar'),
                       els=[...bar.querySelectorAll(':scope > .seg, :scope > .hubzoom, :scope button, :scope .hubcfgwrap > button')]
                         .filter(e=>!e.closest('.hubzoom')||e.classList.contains('hubzoom')).filter(e=>!e.closest('.seg')||e.classList.contains('seg'))
-                        .filter(e=>e.getBoundingClientRect().width>0 && !e.closest('.hubcfg'));
+                        .filter(e=>e.getBoundingClientRect().width>0 && !e.closest('#crHost'));
                       const b=bar.getBoundingClientRect(); const rs=els.map(e=>e.getBoundingClientRect());
                       return {barH:b.height, tops:[...new Set(rs.map(r=>Math.round(r.top)))], hs:[...new Set(rs.map(r=>Math.round(r.height)))],
                         ids:els.map(e=>e.id||e.className), last:els[els.length-1].id, over:rs.some(r=>r.right>b.right+1||r.left<b.left-1)}})()""")
@@ -385,6 +385,73 @@ class Panel(Hub):
         self.assertEqual(self.q("document.querySelector('#hubCfg').getAttribute('aria-label')"), "Client report settings: on")
         self.b.key("Escape")
         self.b.wait("!document.querySelector('[data-slot=ClientReportPanel]')", 5)
+
+
+class CogPanel(Hub):
+    """Cap's acceptance walk (21:18, 18-10-2026): the cog opened an empty 30 px strip, clipped by an outer wrapper. The tests
+    above only looked for the slot's node; this one clicks the real cog and measures what a person sees."""
+
+    BOX = ("(()=>{const e=document.querySelector('#crPanel'); if(!e) return null; const r=e.getBoundingClientRect(); "
+           "return {t:r.top,l:r.left,b:r.bottom,r:r.right,h:r.height,sh:e.scrollHeight,ch:e.clientHeight,w:innerWidth,ih:innerHeight}})()")
+
+    def inside(self, sel):
+        return self.q(f"""(()=>{{const p=document.querySelector('#crPanel').getBoundingClientRect(); const out=[];
+          for (const e of document.querySelectorAll({json.dumps(sel)})) {{ e.scrollIntoView({{block:'nearest'}}); const r=e.getBoundingClientRect();
+            if (r.width<=0 || r.height<=0) {{ out.push('hidden '+(e.id||e.className)); continue; }}
+            if (r.left<p.left-1 || r.right>p.right+1 || r.left<0 || r.right>innerWidth) out.push('across '+(e.id||e.className)); }}
+          return out}})()""")
+
+    def check(self, w, h):
+        self.open_hub(w, h)
+        self.b.click("#hubCfg")
+        self.b.wait("document.querySelector('#crPanel')", 5)
+        self.b.pump(0.3)
+        box = self.q(self.BOX)
+        self.assertGreaterEqual(box["h"], 300, f"the panel is a full panel, not a strip: {box}")
+        self.assertGreaterEqual(box["t"], 0); self.assertLessEqual(box["b"], box["ih"], f"inside the window: {box}")
+        self.assertLessEqual(box["r"], box["w"])
+        for sel in ("#cfgOn", "#cfgRh", "#cfgNm", "#cfgRem", ".cfglogo", ".cfglogo input", ".cfglogo button, .cfglogo label.btn", "#cfgDone"):
+            self.assertTrue(self.q(f"document.querySelectorAll({json.dumps('#crPanel ' + sel)}).length>0"), sel)
+        self.assertEqual(self.q("document.querySelectorAll('#crPanel .cfglogo').length"), 3)
+        self.assertEqual(self.inside("#crPanel #cfgOn,#crPanel #cfgRh,#crPanel #cfgNm,#crPanel #cfgRem,#crPanel .cfglogo,#crPanel .cfglogo button"),
+                         [], "every control can be scrolled to and lies fully inside the panel and the window")
+        self.q("document.querySelector('#crPanel').scrollTop=0")
+        ctl = "#crPanel #cfgOn,#crPanel #cfgRh,#crPanel #cfgDone"
+        self.assertEqual(self.q("[...document.querySelectorAll(" + json.dumps(ctl) + """)].filter(e=>{const r=e.getBoundingClientRect();
+          const hit=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2); return !(hit && hit.closest('#crPanel'))}).map(e=>e.id||e.className)"""), [],
+                         "a person can see and click each control: nothing clips it")
+        self.assertEqual(self.q("document.querySelectorAll('#hubCfg').length"), 1)
+        self.assertEqual(self.q("document.querySelectorAll('#crPanel').length"), 1)
+        self.assertEqual(self.q("(()=>{const ids=[...document.querySelectorAll('[id]')].map(e=>e.id); return ids.filter((x,i)=>ids.indexOf(x)!==i)})()"), [],
+                         "no duplicate ids anywhere on the page")
+        return box
+
+    def test_the_cog_opens_a_full_panel_at_1400(self):
+        self.check(1400, 1000)
+
+    def test_the_cog_opens_a_full_panel_at_900(self):
+        self.check(900, 700)
+
+    def test_a_panel_taller_than_the_window_scrolls_inside_itself(self):
+        box = self.check(1400, 560)
+        self.assertGreater(box["sh"], box["ch"], "the content is taller than the panel")
+        self.assertLessEqual(box["b"], box["ih"])
+
+    def test_esc_closes_it_and_focus_returns_to_the_cog(self):
+        self.open_hub()
+        self.b.click("#hubCfg")
+        self.b.wait("document.querySelector('#crPanel')", 5)
+        self.b.key("Escape")
+        self.b.wait("!document.querySelector('#crPanel')", 5)
+        self.assertEqual(self.q("document.activeElement.id"), "hubCfg")
+        self.assertEqual(self.q("document.querySelector('#hubCfg').getAttribute('aria-expanded')"), "false")
+
+    def test_the_cog_and_done_toggle_it(self):
+        self.open_hub()
+        self.b.click("#hubCfg"); self.b.wait("document.querySelector('#crPanel')", 5)
+        self.b.click("#hubCfg"); self.b.wait("!document.querySelector('#crPanel')", 5)
+        self.b.click("#hubCfg"); self.b.wait("document.querySelector('#crPanel')", 5)
+        self.b.click("#cfgDone"); self.b.wait("!document.querySelector('#crPanel')", 5)
 
 
 class EntryPoints(Hub):

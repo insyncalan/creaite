@@ -13,7 +13,7 @@ import { fd } from "../../../core/page.js";
 import { SHEET_ZOOM_DEFAULT, SHEET_ZOOM_MAX, SHEET_ZOOM_MIN, stepZoom } from "../sheetLib.js";
 import { hubApproveClient, hubApproveInternal, hubExport } from "./hubActions.js";
 import { WeekMenu } from "./WeekMenu.jsx";
-import { ClientReportPanel } from "./ClientReportPanel.jsx";
+import { showClientReport, closeClientReport } from "./ClientReportPanel.jsx";
 import { EXPORT_FORMATS, EXPORT_WHICH } from "./hubLib.js";
 import { crDoc, crInfo } from "../../../stores/clientReport.js";
 import { clientReportCogLabel } from "../../../stores/reportingSettings.js";
@@ -34,10 +34,17 @@ export function HubBar({ ctx, code, view, on, doc, week, tone, rows, onWeek, onV
   const open = hubCfg.value;
   useEffect(() => {                                       // a click away closes the cog's panel
     if (!open) return undefined;
-    const away = (/** @type {Event} */ e) => { if (cfgBox.current && !cfgBox.current.contains(/** @type {Node} */ (e.target))) hubCfg.value = false; };
+    const away = (/** @type {Event} */ e) => {
+      const t = /** @type {Element} */ (e.target);
+      if (cfgBox.current && !cfgBox.current.contains(t) && !(t.closest && t.closest("#crHost"))) hubCfg.value = false;
+    };
     document.addEventListener("pointerdown", away, true);
     return () => document.removeEventListener("pointerdown", away, true);
   }, [open]);
+  useEffect(() => {                                       // the panel is H3's one fixed host at the top right; the cog's signal shows and hides it
+    if (open) showClientReport(code); else closeClientReport();
+  }, [open, code]);
+  useEffect(() => closeClientReport, []);                 // leaving the hub takes the panel with it
 
   /** After the format: Internal, Client or Both, only when the project has a client report. @param {string} fmt */
   const pickFormat = (fmt) => {
@@ -80,7 +87,6 @@ export function HubBar({ ctx, code, view, on, doc, week, tone, rows, onWeek, onV
       <span class="hubcfgwrap" ref={cfgBox}>
         <button type="button" class="btn ib" id="hubCfg" ref={cfgBtn} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} aria-label={label} data-tip={label}
           onClick={() => { hubCfg.value = !hubCfg.value; }}><Icon name="gear" /></button>
-        {open ? <div class="hubcfg" data-slot="ClientReportPanel" role="dialog" aria-label="Client report settings"><ClientReportPanel code={code} onClose={() => { hubCfg.value = false; }} /></div> : null}
       </span>
     </>
   );

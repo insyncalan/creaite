@@ -3654,7 +3654,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
 /* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
 #crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
-.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - 80px);overflow:auto}
+.hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - var(--cr-top,56px) - 16px);overflow:auto}
 .hubcfg h3{margin:0 0 10px;font:600 var(--fs-lg)/var(--lh-20) var(--font)}
 .cfgsw{display:flex;gap:10px;align-items:flex-start;padding:0 0 10px;border-bottom:1px solid var(--line);font-size:var(--fs-md)}
 .cfgsw .sub{display:block;font-size:var(--fs-sm)} .cfgsw .switch{flex:none}
@@ -3672,7 +3672,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .cfglogo:has(input[data-logo-tick]:disabled) .cfgname,.cfglogo:has(input[data-logo-tick]:disabled) .mark{opacity:.6}
 .cfgact{display:flex;gap:6px;align-items:center}
 .cfgnote{margin:0}
-.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px}
+.cfgfoot{display:flex;justify-content:flex-end;margin-top:12px;position:sticky;bottom:-14px;padding:8px 0 0;background:var(--surface)}
 .wr-health{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px;position:relative}   /* #221: the indicator is 96 px (was 120) */
 .wr-hcol{display:grid;gap:3px;width:96px;min-width:0}
 .wr-flag{font-weight:700;font-size:var(--fs-xs);letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey);white-space:nowrap;overflow:hidden}   /* 12 px, one line */
@@ -3818,7 +3818,6 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .hubrow .crnote{flex:1 1 100%}
 /* the cog and the panel it opens (H3 fills the slot) */
 .hubcfgwrap{position:relative;display:inline-flex}
-.hubcfg{position:absolute;right:0;top:calc(100% + 6px);z-index:var(--z-menu);width:min(460px,calc(100vw - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px}
 /* the client page keeps the look it had on its own page */
 #v-reporting .crsheet .sheet-a4 .page .btn{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
 #v-reporting .crsheet .sheet-a4 .page .btn:hover:not(:disabled){background:var(--paper-sunk)}
@@ -6706,6 +6705,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     shRvHtml: () => shRvHtml,
     shakeEdit: () => shakeEdit,
     shared: () => shared,
+    showClientReport: () => showClientReport,
     showEvidence: () => showEvidence,
     showHistory: () => showHistory,
     showSaved: () => showSaved,
@@ -71971,7 +71971,7 @@ ${d5.text}`);
     }, [code]);
     if (!p6) return null;
     const on2 = clientReportOn(code), ticked = clientLogosOn(code), rhythms = RHYTHMS.includes(p6.rhythm) ? RHYTHMS : [...RHYTHMS, p6.rhythm];
-    return /* @__PURE__ */ u2("div", { class: "hubcfg", id: "hubCfg", role: "dialog", "aria-label": "Client report settings", "data-code": code, "data-on": on2 ? "on" : "off", children: [
+    return /* @__PURE__ */ u2("div", { class: "hubcfg", id: "crPanel", "data-slot": "ClientReportPanel", role: "dialog", "aria-label": "Client report settings", "data-code": code, "data-on": on2 ? "on" : "off", children: [
       /* @__PURE__ */ u2("h3", { children: [
         "Client report for ",
         p6.name
@@ -72046,12 +72046,9 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "cfgfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "cfgDone", onClick: onClose, children: "Done" }) })
     ] });
   }
-  function openClientReport(code) {
+  function showClientReport(code) {
     let host2 = document.getElementById("crHost");
-    if (host2 && host2.dataset.code === code) {
-      closeClientReport();
-      return;
-    }
+    const fresh = !host2;
     if (!host2) {
       host2 = document.createElement("div");
       host2.id = "crHost";
@@ -72059,11 +72056,30 @@ ${d5.text}`);
     }
     host2.dataset.code = code;
     bindEsc();
+    const cog = document.getElementById("hubCfg");
+    if (cog) {
+      const r4 = cog.getBoundingClientRect();
+      host2.style.top = `${Math.round(r4.bottom + 6)}px`;
+      host2.style.right = `${Math.max(8, Math.round(innerWidth - r4.right))}px`;
+      host2.style.setProperty("--cr-top", host2.style.top);
+    }
     R(/* @__PURE__ */ u2(ClientReportPanel, { code, onClose: closeClientReport }), host2);
-    const first = host2.querySelector("input,select,button");
-    if (first) first.focus();
+    if (fresh) {
+      const first = host2.querySelector("input,select,button");
+      if (first) first.focus();
+    }
+  }
+  function openClientReport(code) {
+    const host2 = document.getElementById("crHost");
+    if (host2 && host2.dataset.code === code) {
+      closeClientReport();
+      return;
+    }
+    hubCfg.value = true;
+    showClientReport(code);
   }
   function closeClientReport() {
+    hubCfg.value = false;
     const host2 = document.getElementById("crHost");
     if (!host2) return;
     R(null, host2);
@@ -72098,14 +72114,20 @@ ${d5.text}`);
     h2(() => {
       if (!open2) return void 0;
       const away = (e4) => {
-        if (cfgBox.current && !cfgBox.current.contains(
-          /** @type {Node} */
+        const t47 = (
+          /** @type {Element} */
           e4.target
-        )) hubCfg.value = false;
+        );
+        if (cfgBox.current && !cfgBox.current.contains(t47) && !(t47.closest && t47.closest("#crHost"))) hubCfg.value = false;
       };
       document.addEventListener("pointerdown", away, true);
       return () => document.removeEventListener("pointerdown", away, true);
     }, [open2]);
+    h2(() => {
+      if (open2) showClientReport(code);
+      else closeClientReport();
+    }, [open2, code]);
+    h2(() => closeClientReport, []);
     const pickFormat = (fmt) => {
       const f5 = (
         /** @type {"html"|"docx"|"pdf"} */
@@ -72221,28 +72243,23 @@ ${d5.text}`);
           }
         }
       ),
-      /* @__PURE__ */ u2("span", { class: "hubcfgwrap", ref: cfgBox, children: [
-        /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "btn ib",
-            id: "hubCfg",
-            ref: cfgBtn,
-            "aria-haspopup": "dialog",
-            "aria-expanded": open2 ? "true" : "false",
-            "aria-label": label,
-            "data-tip": label,
-            onClick: () => {
-              hubCfg.value = !hubCfg.value;
-            },
-            children: /* @__PURE__ */ u2(Icon, { name: "gear" })
-          }
-        ),
-        open2 ? /* @__PURE__ */ u2("div", { class: "hubcfg", "data-slot": "ClientReportPanel", role: "dialog", "aria-label": "Client report settings", children: /* @__PURE__ */ u2(ClientReportPanel, { code, onClose: () => {
-          hubCfg.value = false;
-        } }) }) : null
-      ] })
+      /* @__PURE__ */ u2("span", { class: "hubcfgwrap", ref: cfgBox, children: /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn ib",
+          id: "hubCfg",
+          ref: cfgBtn,
+          "aria-haspopup": "dialog",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": label,
+          "data-tip": label,
+          onClick: () => {
+            hubCfg.value = !hubCfg.value;
+          },
+          children: /* @__PURE__ */ u2(Icon, { name: "gear" })
+        }
+      ) })
     ] });
   }
 

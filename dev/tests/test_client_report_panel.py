@@ -17,7 +17,7 @@ import test_dashboard  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 from test_tracker import ABC  # noqa: E402
 
-PANEL = "#hubCfg"
+PANEL = "#crPanel"
 MAKE_PNG = """(async () => {
   const c = document.createElement('canvas'); c.width = 200; c.height = 100; const g = c.getContext('2d');
   g.fillStyle = '#c00'; g.fillRect(80, 30, 40, 40);                       /* artwork 40 x 40 in a transparent 200 x 100 picture */
@@ -93,7 +93,7 @@ class ClientReportPanel(LiveBrowserCase):
     def test_every_control_is_named(self):
         names = self.b
         self.open_panel()
-        bad = names.eval("[...document.querySelectorAll('#hubCfg input:not([hidden]),#hubCfg select,#hubCfg button')]"
+        bad = names.eval("[...document.querySelectorAll('#crPanel input:not([hidden]),#crPanel select,#crPanel button')]"
                          ".filter(e=>!(e.getAttribute('aria-label')||(e.labels&&e.labels.length)||e.textContent.trim())).length")
         self.assertEqual(bad, 0)
 
