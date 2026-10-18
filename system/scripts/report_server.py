@@ -20,6 +20,9 @@
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
+  POST /api/report/match-check {docs: [doc]}: the leak findings (client_leak.findings) of each client document, one list per
+                           document, in order (read only, nothing is written; at most 60). Match internal asks it before it copies
+                           internal wording into the client page, so internal words never sit on the client draft (v2.5.0)
   POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
                            (a client report: only client-safe facts), each with the row it would add; nothing is written
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
@@ -246,6 +249,22 @@ def check_route(handler, req):
     """POST /api/report/check: a client report's check of what is left out (see the module's description). Writes nothing."""
     import client_check
     return answer(handler, client_check.check(req.get("doc")))
+
+
+def match_check_route(handler, req):
+    """POST /api/report/match-check: the leak findings of each client document sent (see the module's description). Writes nothing."""
+    import client_leak
+    docs = req.get("docs")
+    if not isinstance(docs, list) or len(docs) > 60:
+        raise report_doc.ReportError("Send up to 60 client reports to check.")
+    con = client_leak.connect()
+    out = []
+    for d in docs:
+        creaite_doc.check(d)
+        if d.get("kind") != "client":
+            raise creaite_doc.DocError("Only a client report has this check.")
+        out.append(client_leak.findings(d, con))
+    return answer(handler, {"ok": True, "findings": out})
 
 
 def pick_route(handler, req):
@@ -668,6 +687,7 @@ def routes(lock, run, latest_apply):
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
+            "/api/report/match-check": guarded(match_check_route),
             "/api/report/pick": guarded(pick_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
             "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
