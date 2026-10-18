@@ -3889,7 +3889,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 .sheet-a4 .page .sheet-ft h1{font-size:var(--fs-lg);margin:10px 0 4px} .sheet-a4 .page .sheet-ft h2{font-size:var(--fs-md);display:block;border:0;padding:0;margin:8px 0 4px}
 .sheet-a4 .page .sheet-ft h3{font-size:var(--fs-md);font-style:italic;margin:6px 0 3px}
 .sheet-a4 .page .sheet-ft pre{background:var(--paper-sunk);border:1px solid var(--paper-rule);border-radius:var(--r-sm);padding:8px 10px;margin:0 0 8px;font:12px/1.45 var(--mono,ui-monospace,Menlo,monospace);white-space:pre-wrap;overflow-wrap:anywhere}
-.sheet-a4 .page .sheet-ft code{font:12px var(--mono,ui-monospace,Menlo,monospace);background:var(--paper-sunk);padding:0 3px;border-radius:3px} .sheet-a4 .page .sheet-ft pre code{background:none;padding:0}
+.sheet-a4 .page .sheet-ft code{font:12px var(--mono,ui-monospace,Menlo,monospace);background:var(--paper-sunk);padding:0 3px;border-radius:var(--r-xs)} .sheet-a4 .page .sheet-ft pre code{background:none;padding:0}
 .sheet-a4 .page .sheet-ft table{margin:0 0 8px} .sheet-a4 .page .sheet-ft td,.sheet-a4 .page .sheet-ft th{min-width:48px}
 .sheet-a4 .page .sheet-ft a{color:var(--paper-link);text-decoration:underline}
 .sheet-a4 .page .sheet-ft figure.cimg{margin:6px 0;max-width:100%} .sheet-a4 .page .sheet-ft figure.cimg img{max-width:100%;height:auto;border:1px solid var(--paper-rule)}

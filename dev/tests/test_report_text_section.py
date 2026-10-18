@@ -214,6 +214,14 @@ class HtmlRender(Tmp):
         page = self.page(d)
         self.assertLess(page.index("Vendor notes"), page.index("Before the text section."))
 
+    def test_a_backslash_escape_is_the_character_and_a_hard_break_is_a_break(self):
+        """The Notes writer escapes a typed star, underscore or full stop (`\\*`, `snake\\_case`, `1\\.`) and writes a line break as a backslash or two spaces."""
+        text = "a \\*not italic\\* b, snake\\_case and 1\\. x\n\nline one\\\nline two  \nthree"
+        s = self.section(self.page(self.doc(*base_sections(freetext(text)))))
+        self.assertIn("<p>a *not italic* b, snake_case and 1. x</p>", s)
+        self.assertNotIn("<em>", s)
+        self.assertIn("<p>line one<br>line two<br>three</p>", s)
+
     def test_search_reads_the_section(self):
         words = creaite_doc.search_text(self.doc())
         self.assertIn("Vendor notes", words)
@@ -270,6 +278,13 @@ class WordWrite(Tmp):
         self.assertIn("link text", shown)
         self.assertTrue("https://example.com/page?a=1" in shown or "https://example.com/page?a=1" in rels.replace("&amp;", "&"),
                         "the address is in the text or in a real hyperlink relationship")
+
+    def test_a_backslash_escape_is_the_character_in_word_too(self):
+        self.build(self.doc(*base_sections(freetext("a \\*not italic\\* b and `x\\*y`\n\n| c\\_d | e\\. |\n|---|---|\n| 1\\* | 2 |"))))
+        text = "\n".join(self.paras()) + str(self.tables())
+        self.assertIn("a *not italic* b and x\\*y", text.replace("\\\\", "\\"))
+        self.assertNotIn("<w:i/>", self.para_xml("not italic"))
+        self.assertIn(["c_d", "e."], self.tables()[0])
 
     def test_lists_nested_and_numbered(self):
         self.build()

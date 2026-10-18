@@ -204,6 +204,23 @@ class AddAndEdit(Base):
         self.assertNotIn("<script>window.__x", page)
 
 
+    def test_pasted_rich_text_brings_its_words_and_marks_but_never_its_styles(self):
+        sid = self.add_foot()
+        self.b.click(self.editor())
+        self.ev(f"""(()=>{{ const el=document.querySelector({J(self.editor())}); el.focus(); const dt=new DataTransfer();
+          dt.setData('text/html','<p style="color:red;font-size:40px">Hello <b style="background:yellow">there</b> <span style="position:fixed">span</span></p><div onclick="window.__z=1">next</div>');
+          dt.setData('text/plain','Hello there span next');
+          el.dispatchEvent(new ClipboardEvent('paste',{{clipboardData:dt,bubbles:true,cancelable:true}})); }})()""")
+        self.b.wait(f"/Hello/.test(document.querySelector({J(self.editor())}).textContent)", 5)
+        self.saved()
+        text = next(s for s in self.draft_data()["sections"] if s["id"] == sid)["text"]
+        self.assertIn("Hello **there**", text)
+        for leak in ("style", "color", "position", "onclick", "<span", "<div"):
+            self.assertNotIn(leak, text)
+        page = next((self.v.root / "system/staging/drafts").glob("*Weekly report*.html")).read_text(encoding="utf-8")
+        self.assertNotIn("position:fixed", page)
+
+
 class Pictures(Base):
     def test_a_picture_is_filed_in_the_reports_folder_and_drawn_again_after_a_reload(self):
         b = self.b

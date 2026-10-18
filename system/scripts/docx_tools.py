@@ -337,13 +337,18 @@ class _Frame:
 class _Reader:
     """Inline Markdown read as a tree and flattened to runs: [text, bold, italic, strike, url, code] (see md_spans)."""
 
-    def __init__(self, text):
+    def __init__(self, text, escapes=False):
         self.s = str(text or "")
         self.out = []
+        self.escapes = escapes                     # H5, #218: a backslash escape (as in `\*`) is the character, as the Notes writer means it
 
     def read(self):
         """The runs of the whole text."""
         self.run(_Frame(0, len(self.s), (False, False, False), None, 0))
+        if self.escapes:
+            for r in self.out:
+                if not r[5]:
+                    r[0] = ESCAPED.sub(r"\1", r[0])
         return [tuple(r) for r in self.out if r[0]]
 
     def add(self, f, text, code=False, marks=None, url=False):
@@ -366,6 +371,11 @@ class _Reader:
                 break
             p = m.start()
             f.buf.append(s[i:p])
+            if self.escapes and p > i and s[p - 1] == "\\" and (len(s[i:p]) - len(s[i:p].rstrip("\\"))) % 2:
+                f.buf[-1] = s[i:p - 1]                 # an escaped mark is the mark itself
+                f.buf.append(m.group())
+                i = p + 1
+                continue
             end = getattr(self, "open_" + {"[": "link", "*": "star", "_": "under", "~": "tilde", "`": "code"}[m.group()])(f, p)
             if end is None:
                 f.buf.append(m.group())
@@ -469,23 +479,27 @@ class _Reader:
         return p + 2
 
 
-def md_spans(text):
+ESCAPED = re.compile(r"\\([\\`*_{}\[\]()#+\-.!~|>])")           # the punctuation a Markdown backslash may escape
+
+
+def md_spans(text, escapes=False):
     """[(text, bold, italic, strike, url, code)]: inline Markdown read as a tree and flattened, so the marks nest (**bold with
     ~~strike~~ inside**, _italic **and bold**_, a link whose words are bold, `code`) and every mark that is paired is gone from the
     text. One reader for Word (md_runs) and for HTML/PDF (prep_page.md_inline), so the two agree. Each opener looks for its closer
     once (a failed search is remembered), and nesting is capped at MAX_NEST, so the work is linear in the text's length times the
-    cap. A mark with no partner stays as typed."""
-    return _Reader(text).read()
+    cap. A mark with no partner stays as typed. With `escapes` (a text section's, written by the Notes editor) a backslash escape is the
+    character it escapes."""
+    return _Reader(text, escapes).read()
 
 
-def md_runs(text):
+def md_runs(text, escapes=False):
     """[(text, bold, italic, strike, url)]: md_spans without the code flag (a code span is its words, plain)."""
-    return [r[:5] for r in md_spans(text)]
+    return [r[:5] for r in md_spans(text, escapes)]
 
 
-def plain(text):
+def plain(text, escapes=False):
     """Inline Markdown as Word shows it: markers removed; a link as "text (url)"."""
-    return "".join(t + (f" ({u})" if u else "") for t, _, _, _, u in md_runs(text))
+    return "".join(t + (f" ({u})" if u else "") for t, _, _, _, u in md_runs(text, escapes))
 
 
 def md_lines(text):
@@ -580,7 +594,7 @@ def md_paras(para, name, text, code=False):
     def one(prefix, body, shape=None, level=0, italic=False, use=None, base=0):
         """One Markdown block as a Word paragraph in the given shell: its runs styled, indented for a list item or a quote."""
         b, rn, rp = use or (base_shell, run, rpr)
-        runs = ([(prefix, False, False, False, None, False)] if prefix else []) + md_spans(body)
+        runs = ([(prefix, False, False, False, None, False)] if prefix else []) + md_spans(body, code)
         xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st, bool(code and cd))
                       for t, bo, it, st, u, cd in runs)
         p = b[:rn.start()] + xml + b[rn.end():]

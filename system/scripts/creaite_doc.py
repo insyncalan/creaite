@@ -260,7 +260,6 @@ _ITEM = re.compile(r"^([ \t]*)([-*+]|\d{1,9}[.)])[ \t]+(.*)$")
 _EMPTY_ITEM = re.compile(r"^([ \t]*)([-*+]|\d{1,9}[.)])[ \t]*$")
 _TABLE_SEP = re.compile(r"^[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$")
 _TASK = re.compile(r"^\[([ xX])\](?:[ \t]+(.*))?$")
-_UNESCAPE = re.compile(r"\\([\\`*_{}\[\]()#+\-.!~|>])")
 _IMG_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
 MAX_TEXT_DEPTH = 8                    # quotes in quotes and lists in lists: deeper than this is plain text
 
@@ -390,11 +389,15 @@ def _listed(lines, i, hi, depth):
 
 def _paragraph(lines, i, hi):
     """A paragraph: lines up to a blank one or the start of another block, joined by a space."""
-    j, parts = i, []
-    while j < hi and lines[j].strip() and (j == i or not _starts_block(lines[j], lines[j + 1] if j + 1 < hi else None)):
-        parts.append(lines[j].strip())
+    j = i + 1
+    while j < hi and lines[j].strip() and not _starts_block(lines[j], lines[j + 1] if j + 1 < hi else None):
         j += 1
-    return TextBlock("p", " ".join(parts), i, j), j
+    text = ""
+    for k in range(i, j):
+        line = lines[k]
+        body, hard = line.strip(), k < j - 1 and (line.endswith("  ") or line.strip().endswith("\\"))
+        text += (body[:-1] if hard and body.endswith("\\") else body) + ("\n" if hard else " " if k < j - 1 else "")
+    return TextBlock("p", text, i, j), j
 
 
 def _item_end(lines, i, hi, base):
@@ -487,8 +490,8 @@ def _inline(t):
     as docx_tools.md_spans reads them (the same reading as Word's); a backslash escape is the character."""
     import docx_tools
     out = []
-    for text, bold, italic, strike, url, code in docx_tools.md_spans(str(t or "")):
-        x = esc(text if code else _UNESCAPE.sub(r"\1", text))
+    for text, bold, italic, strike, url, code in docx_tools.md_spans(str(t or ""), True):
+        x = esc(text).replace("\n", "<br>")
         if code:
             x = f"<code>{x}</code>"
         if url:
@@ -1304,7 +1307,7 @@ class _Word:
 def _plain_inline(t):
     """Inline Markdown as the words Word shows (marks gone, a link as 'words (address)'), a backslash escape as its character."""
     import docx_tools
-    return _UNESCAPE.sub(r"\1", docx_tools.plain(str(t or "")))
+    return docx_tools.plain(str(t or ""), True)
 
 
 def _rpr(para, bold=False, italic=False, mono=False, size=None):
