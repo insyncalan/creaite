@@ -110,7 +110,7 @@ How the logos keep their transparency and sit well on the page:
 
 ## Round 11 (Alan, 18-10-2026, via Jarvis): #170 is out of 2.4.0
 
-"Check this report" (#170) stays out of v2.4.0 and its button is removed from the hub toolbar. The current mockup is the dated copy `reporting-hub-mockup-2026-10-18b.html`, identical to the approved one (c6f549ed) except for that button; the approved original stays as history. Alan to re-approve the copy (or the instruction of 18-10 stands as his approval).
+"Check this report" (#170) stays out of v2.4.0 and its button is removed from the hub toolbar. The current mockup is the dated copy `reporting-hub-mockup-2026-10-18b.html`, identical to the approved one (c6f549ed) except for that button; the approved original stays as history. **Approved by Alan on 18-10-2026**: the copy is the current locked mockup.
 
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
