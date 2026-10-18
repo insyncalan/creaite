@@ -49,7 +49,7 @@ NOTES.update({
 })
 
 SCREENS.update({
-    "weekly": ("go('weekly',{code:'FAL'})", "document.querySelector('#v-weekly section[data-id=current_state]')"),
+    "weekly": ("go('weekly',{code:'FAL'})", "document.querySelector('#v-reporting section[data-id=current_state]')"),
     "cockpit-choose": ("go('cockpit')", "!!document.querySelector('#v-cockpit a[data-choose]')"),
     "milestones-choose": ("go('milestones')", "!!document.querySelector('#v-milestones a[data-choose]')"),
 })
@@ -138,25 +138,25 @@ class TopBar(V230Case):
         b.pump(0.4)
 
         def tick(dy):
-            r = b.eval("(()=>{const r=document.querySelector('#v-weekly .sheet-scroll').getBoundingClientRect();"
+            r = b.eval("(()=>{const r=document.querySelector('#v-reporting .sheet-scroll').getBoundingClientRect();"
                        "const t=Math.max(r.top,60), bt=Math.min(r.bottom,innerHeight); return [r.left+r.width/2, t+(bt-t)/2]})()")
             b.call("Input.dispatchMouseEvent", type="mouseWheel", x=r[0], y=r[1], deltaX=0, deltaY=dy)
         self.assertAlmostEqual(self.bar_h(), tbh.BAR, delta=1.5, msg="Weekly report: bar at the top")
         tick(2)
-        b.wait("!!document.querySelector('#v-weekly .sheet-root.rpt-slim')", 5)
+        b.wait("!!document.querySelector('#v-reporting .sheet-root.rpt-slim')", 5)
         b.pump(0.3)
         self.assertTrue(self.off(), "Weekly report: the top bar goes")
-        self.assertAlmostEqual(b.eval("document.querySelector('#v-weekly .sheet-bar').getBoundingClientRect().top"), 0, delta=1.5,
+        self.assertAlmostEqual(b.eval("document.querySelector('#v-reporting .sheet-bar').getBoundingClientRect().top"), 0, delta=1.5,
                                msg="the slim bar sits at the very top of the window")
-        labels = b.eval("[...document.querySelectorAll('#v-weekly .sheet-bar button')].map(x=>x.getAttribute('aria-label')||x.textContent.trim())")
+        labels = b.eval("[...document.querySelectorAll('#v-reporting .sheet-bar button')].map(x=>x.getAttribute('aria-label')||x.textContent.trim())")
         self.assertGreaterEqual(len(labels), 4, labels)
         for lab in ("Zoom out", "Zoom in", "Show as exported"):         # the harmless ones are pressed; Export and Approve are only hovered
-            b.eval(f"[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(x=>(x.getAttribute('aria-label')||x.textContent.trim())==={json.dumps(lab)}).click()")
+            b.eval(f"[...document.querySelectorAll('#v-reporting .sheet-bar button')].find(x=>(x.getAttribute('aria-label')||x.textContent.trim())==={json.dumps(lab)}).click()")
             b.pump(0.3)
             self.assertTrue(self.off(), f"pressing '{lab}' does not bring the header back")
         for lab in ("Zoom in", "Show as exported"):                     # put the zoom and the view back
-            b.eval(f"[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(x=>(x.getAttribute('aria-label')||x.textContent.trim())==={json.dumps(lab)}).click()")
-        for sel in ("#v-weekly .sheet-bar .sheet-exp", "#wrApprove"):
+            b.eval(f"[...document.querySelectorAll('#v-reporting .sheet-bar button')].find(x=>(x.getAttribute('aria-label')||x.textContent.trim())==={json.dumps(lab)}).click()")
+        for sel in ("#hubExp", "#hubApprove"):
             bx = b.box(sel)
             b.call("Input.dispatchMouseEvent", type="mouseMoved", x=bx["x"], y=bx["y"])
             b.pump(0.25)
@@ -441,9 +441,8 @@ class ActivityHandChecks:
         text = b.eval("document.getElementById('actTbl').innerText")
         self.assertIn("You, by hand", text)
         self.assertNotIn("cx-edit", text, "the command's name is not shown as the actor")
-        k, f = b.eval("[...['#actTypeBtn','#actFunnel'].map(s=>{const r=document.querySelector(s).getBoundingClientRect(); return [r.top,r.height];})]")
-        self.assertAlmostEqual(k[1], f[1], delta=0.5, msg=f"Kind {k[1]} px, funnel {f[1]} px")
-        self.assertAlmostEqual(k[0], f[0], delta=0.5, msg="the Kind button and the funnel share a top")
+        # 2.4.0 (#229) removed the Kind button; the funnel carries Kind (2.4.0 check 19), so the old Kind/funnel alignment has nothing to compare
+        self.assertFalse(b.eval("!!document.getElementById('actTypeBtn')"), "the Kind button is gone since 2.4.0")
         rows, boxes = b.eval("[document.querySelectorAll('#actTbl tbody tr').length, document.querySelectorAll('#actTbl tbody tr td.actck input[type=checkbox]').length]")
         self.assertGreater(rows, 1)
         self.assertEqual(rows, boxes, "every row has a tick box")

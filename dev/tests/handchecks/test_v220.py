@@ -198,7 +198,7 @@ class V220Case(Named, HandcheckCase):
 SCREENS.update({
     "reports": ("go('reports')", "!!document.querySelector('#v-reports tbody tr')"),
     "notes": ("go('notes','FAL')", "!!document.getElementById('notesNew')"),
-    "weekly": ("go('weekly',{code:'FAL'})", "document.querySelector('#v-weekly section[data-id=current_state]')"),
+    "weekly": ("go('weekly',{code:'FAL'})", "document.querySelector('#v-reporting section[data-id=current_state]')"),
 })
 
 
@@ -504,7 +504,7 @@ class ReportChecks(V220Case):
         self.named(28, "test_current_headings", "test_a_checklist_edited_in_word_comes_back_as_a_checklist",
                    "test_the_prep_page_shows_a_checklist_item_with_its_glyph")
         self.open_weekly()
-        bar = self.b.eval("(()=>{const e=document.querySelector('#v-weekly .sheet-bar'); return e?[e.getBoundingClientRect().height, "
+        bar = self.b.eval("(()=>{const e=document.querySelector('#v-reporting .sheet-bar'); return e?[e.getBoundingClientRect().height, "
                           "e.querySelectorAll('button').length]:null})()")
         self.assertTrue(bar, "the weekly sheet has a toolbar")
         shots = self.sheet(28, "weekly", palettes=["creaite", "Cursor"], widths=(1400, 900))
@@ -518,13 +518,13 @@ class ReportChecks(V220Case):
         self.open_weekly()
 
         def room():
-            return b.eval("(()=>{const r=document.querySelector('#v-weekly .sheet-scroll').getBoundingClientRect();"
+            return b.eval("(()=>{const r=document.querySelector('#v-reporting .sheet-scroll').getBoundingClientRect();"
                           "return (Math.min(r.bottom,innerHeight)-Math.max(r.top,0))/innerHeight})()")
         top = room()
-        r = b.eval("(()=>{const r=document.querySelector('#v-weekly .sheet-scroll').getBoundingClientRect();"
+        r = b.eval("(()=>{const r=document.querySelector('#v-reporting .sheet-scroll').getBoundingClientRect();"
                    "const t=Math.max(r.top,60), bt=Math.min(r.bottom,innerHeight); return [r.left+r.width/2, t+(bt-t)/2]})()")
         b.call("Input.dispatchMouseEvent", type="mouseWheel", x=r[0], y=r[1], deltaX=0, deltaY=2)
-        b.wait("!!document.querySelector('#v-weekly .sheet-root.rpt-slim')", 8)
+        b.wait("!!document.querySelector('#v-reporting .sheet-root.rpt-slim')", 8)
         b.pump(0.4)
         reading = room()
         self.assertGreater(reading, top + 0.1, "more room once the bands are gone")
