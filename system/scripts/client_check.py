@@ -92,8 +92,10 @@ def left_items(doc, con):
 
 def _unticked_logos(doc):
     """The client or partner logos set for the project that this document's layout leaves out."""
-    have = set((doc.get("layout") or {}).get("logos") or report_doc.LOGO_KINDS)
-    return [k for k in report_doc.LOGO_KINDS if k != "firm" and k not in have and report_doc.logo_file(doc["project"], k)]
+    code = doc["project"]
+    have = set(report_doc.resolve_logos(code, (doc.get("layout") or {}).get("logos") or report_doc.logo_kinds(code)))
+    names = {"partner:" + p["slug"]: "partner " + p["name"] for p in report_doc.partners(code)}
+    return [names.get(k, k) for k in report_doc.logo_kinds(code) if k != "firm" and k not in have and report_doc.logo_file(code, k)]
 
 
 def _health_difference(doc):
