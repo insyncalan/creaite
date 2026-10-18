@@ -110,6 +110,32 @@ def urls_ok(text):
     return True
 
 
+def balanced(css):
+    """Whether quotes and parentheses in style text are closed (a backslash escapes the next character, a string hides its parentheses)."""
+    quote, depth, i = None, 0, 0
+    while i < len(css):
+        c = css[i]
+        if c == "\\":
+            i += 1
+        elif quote:
+            quote = None if c == quote else quote
+        elif c in "'\"":
+            quote = c
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth < 0:
+                return False
+        i += 1
+    return quote is None and depth == 0
+
+
+def urls_whole(text):
+    """Whether every `url(` in the text is one URL_IN_CSS reads in full (an unclosed one at the end is not)."""
+    return len(re.findall(r"url\(", text, re.I)) == len(URL_IN_CSS.findall(text))
+
+
 def safe_css_value(v, client=False):
     """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address of a picture
     or a fragment of the file itself. A CLIENT file takes no SVG picture in its styles at all; an internal file takes one only if its
@@ -120,6 +146,10 @@ def safe_css_value(v, client=False):
         return False
     if NO_FUNCTIONS.search(squashed) or re.search(r"(?<![\w-])src\(", decoded, re.I):
         return False     # a picture or address in a string the url() checks never see (image-set, cross-fade, src())
+    if not (balanced(v) and urls_whole(v) and urls_whole(decoded) and urls_whole(squashed)):
+        return False     # an unclosed url( or string, or unbalanced brackets, at the end of a value or a stylesheet
+    if client and re.search(r"data:image/(?:gif|webp)", squashed):
+        return False     # a GIF or WebP picture isn't cleaned of its metadata, so a client file takes none
     if not urls_ok(v) or not urls_ok(decoded):      # as written and as the browser reads it (u\72l( is url()
         return False
     if client and not metadata_free(v):
@@ -200,31 +230,40 @@ RASTER_ADDR = re.compile(r"^data:image/(?:png|jpe?g)((?:;[\w=-]+)*);base64,([A-Z
 
 
 def clean_picture(value):
-    """A PNG or JPEG data address with the picture's own metadata (text chunks, EXIF, comments) removed; anything else as it was."""
+    """A PNG or JPEG data address with the picture's own metadata (text chunks, EXIF, comments) removed; None when the picture can't
+    be walked and checked (it is then dropped); anything that isn't a PNG or JPEG address as it was."""
     import docx_tools
     m = RASTER_ADDR.match(value.strip())
     if m is None:
         return value
     try:
         raw = base64.b64decode(re.sub(r"\s+", "", m.group(2)), validate=True)
-    except ValueError:
-        return value
+        clean = docx_tools.strip_image_metadata(raw)
+    except ValueError:      # PictureRefused is a ValueError
+        return None
     head = value.strip()[:value.strip().index(";base64,")]
-    return head + ";base64," + base64.b64encode(docx_tools.strip_image_metadata(raw)).decode("ascii")
+    return head + ";base64," + base64.b64encode(clean).decode("ascii")
 
 
 def metadata_free(css):
     """Whether every PNG or JPEG address in style rules is already without metadata (a client file takes no other)."""
     for m in URL_IN_CSS.finditer(css):
         a = m.group(2).strip()
-        if RASTER_ADDR.match(a) and clean_picture(a) != a:
+        if RASTER_ADDR.match(a) and clean_picture(a) != a:      # None (can't be checked) differs too
             return False
     return True
 
 
-def src_ok(tag, value):
-    """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words)."""
-    return tag == "img" and bool(DATA_IMAGE.match(value)) and (not SVG_URI.match(value) or svg_words(value) is not None)
+def src_ok(tag, value, client=False):
+    """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words). A CLIENT file
+    takes no GIF or WebP (their comments can't be cleaned out), and no PNG or JPEG that can't be checked."""
+    if not (tag == "img" and DATA_IMAGE.match(value)):
+        return False
+    if client and re.match(r"data:image/(?:gif|webp)", value.strip(), re.I):
+        return False
+    if RASTER_ADDR.match(value.strip()) and clean_picture(value) is None:
+        return False
+    return not SVG_URI.match(value) or svg_words(value) is not None
 
 
 def keep_attr(tag, svg, name, value, client=False):
@@ -235,7 +274,7 @@ def keep_attr(tag, svg, name, value, client=False):
     if name == "style":
         return safe_css_value(value, client)
     if name == "src":
-        return src_ok(tag, value)
+        return src_ok(tag, value, client)
     if name == "id":
         return bool(ID_OK.match(value))
     if name.startswith("data-"):
