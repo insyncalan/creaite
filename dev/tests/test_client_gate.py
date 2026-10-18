@@ -292,10 +292,18 @@ class WorkItemLinks(Base):
             exp = self.py("import client_check\nd = report_doc.client_doc('ABC')\n" + put
                           + "print(json.dumps(client_check.left_out(d)['findings']))")
             self.assertTrue(any(ITEM in f for f in exp), (pane, exp))
-            got = self.py("d = report_doc.client_doc('ABC')\n" + put + "r = report_doc.save_draft(d)\ntry:\n"
-                          "    report_doc.stage_client(r['path'])\n    print(json.dumps('staged'))\n"
-                          "except BaseException as e:\n    print(json.dumps(str(e)))")
+            # a draft written without save_draft's filter (#123: save_draft takes the link out first): approve still refuses it
+            got = self.py("d = report_doc.client_doc('ABC')\n" + put +
+                          "p = report_doc.draft_path('client', 'ABC', d['date'], d.get('client'))\n"
+                          "creaite_doc.save(p, d, 'test', via='test')\ntry:\n"
+                          "    report_doc.stage_client(p)\n    print(json.dumps('staged'))\n"
+                          "except BaseException as e:\n    print(json.dumps(str(e)))\n"
+                          "report_doc.paths.resolve(p).unlink()")
             self.assertIn(ITEM, got, pane)
+            got = self.py("d = report_doc.client_doc('ABC')\n" + put + "r = report_doc.save_draft(d)\n"
+                          "print(json.dumps([r['removed'], creaite_doc.read(r['path'])['sections']]))")
+            self.assertTrue(any(ITEM in x for x in got[0]), (pane, got[0]))                    # save_draft took it out
+            self.assertNotIn(ITEM, json.dumps(got[1]), pane)
 
     def test_word_shows_a_creaite_links_words_never_its_markdown(self):
         text = "See [the signed paperwork](creaite:item/ABC-A-002) and [Jane](creaite:person/Jane%20Doe); [site](https://example.com/a)."
@@ -326,9 +334,18 @@ class WorkItemLinks(Base):
         self.approve_week()
         stage = "r = report_doc.save_draft(d)\ntry:\n    report_doc.stage_client(r['path'])\n    print(json.dumps('staged'))\n" \
                 "except BaseException as e:\n    print(json.dumps(str(e)))"
-        got = self.with_summary("Progress continues. [the vendor thing](creaite:item/ABC-A-001)", stage)
+        raw = ("p = report_doc.draft_path('client', 'ABC', d['date'], d.get('client'))\n"
+                          "creaite_doc.save(p, d, 'test', via='test')\ntry:\n"
+                          "    report_doc.stage_client(p)\n    print(json.dumps('staged'))\n"
+                          "except BaseException as e:\n    print(json.dumps(str(e)))\n"
+                          "report_doc.paths.resolve(p).unlink()")
+        got = self.with_summary("Progress continues. [the vendor thing](creaite:item/ABC-A-001)", raw)   # no filter in its way
         self.assertNotEqual(got, "staged")
         self.assertIn(ITEM, got)
+        got = self.with_summary("Progress continues. [the vendor thing](creaite:item/ABC-A-001)",           # #123: save_draft
+                                "r = report_doc.save_draft(d)\nprint(json.dumps(creaite_doc.read(r['path'])['sections']))")
+        self.assertNotIn(ITEM, json.dumps(got))
+        self.assertNotIn("vendor thing", json.dumps(got))
         exp = self.with_summary("Progress continues. [the vendor thing](creaite:item/ABC-A-001)",
                                 "import client_check\nprint(json.dumps(client_check.left_out(d)['findings']))")
         self.assertTrue(any(ITEM in f for f in exp), exp)

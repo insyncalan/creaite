@@ -75,7 +75,8 @@ next(s for s in d['sections'] if s['id'] == 'current_state')['panes'][0]['text']
 res = {{'findings': client_leak.findings(d), 'left_out': client_check.left_out(d)['findings'],
         'word': client_leak.text_findings(con, 'ABC', st)}}
 try:
-    drafts.report_request(con, {{'code': 'ABC', 'report': 'client', 'section': 'current_state', 'text': st, 'action': 'polish'}})
+    drafts.report_request(con, {{'code': 'ABC', 'report': 'client', 'section': 'current_state', 'text': st, 'action': 'polish',
+                                 'document': {{'kind': 'client', 'code': 'ABC', 'week_ending': '2026-10-09'}}}})
     res['redraft'] = 'allowed'
 except Exception as e:
     res['redraft'] = str(e)
@@ -154,6 +155,109 @@ print(json.dumps(res))""")
         self.assertIn(IWORDS, got["runs"])
         self.assertEqual(got["dropped"], f"### Position\n\nWaiting on before {SLINK} can close.")
         self.assertEqual(got["kept"], state(ILINK))
+
+    # ---- #123: hostile, and failing closed ----------------------------------------------------------------------------------
+
+    def internal_rows(self):
+        """[(ID, owner, title)] of every item of ABC a client report may not show (the controls: they are real rows)."""
+        return self.py("import tracker, client_leak\ncon = tracker.connect()\nb = client_leak.blocking_labels(con)\nout = []\n"
+                       "for t, o, w in (('actions', 'owner', 'description'), ('raid', 'owner', 'description'), "
+                       "('decisions', 'made_by', 'decision')):\n"
+                       "    for i, ow, tt in con.execute(f'SELECT id, {o}, {w} FROM {t} WHERE project = ?', ('ABC',)):\n"
+                       "        if client_leak.item_problem(con, i, b):\n"
+                       "            out.append([i, ow or '', tt or ''])\n"
+                       "print(json.dumps(out))")
+
+    def test_every_text_of_a_saved_client_draft_loses_an_internal_link_in_any_form(self):
+        rows = self.internal_rows()
+        self.assertIn(INTERNAL, [r[0] for r in rows])
+        forms = [f"[{r[0]} · {r[2]}](creaite:item/{r[0]})" for r in rows] + [
+            f"[the thing](CREAITE:item/{INTERNAL})", f"[the thing](creaite:item/{INTERNAL.lower()})",
+            f"[the thing](creaite%3Aitem/{INTERNAL})", f"<a href=\"creaite:item/{INTERNAL}\">the thing</a>", f"creaite:item/{INTERNAL}"]
+        hostile = "Plan. " + " ".join(forms) + f" Then {SLINK} closes."
+        got = self.py(f"d = report_doc.client_doc('ABC', spec={{'summary': {hostile!r}, 'current_state': {hostile!r}}})\n"
+                      f"for s in d['sections']:\n"
+                      f"    for r in s.get('rows') or []:\n"
+                      f"        r['cells'] = {{k: (v + ' ' + {hostile!r}) for k, v in r['cells'].items()}}\n"
+                      "r = report_doc.save_draft(d)\n"
+                      "print(json.dumps({'removed': r['removed'], 'saved': creaite_doc.read(r['path']), 'found': client_leak.findings("
+                      "creaite_doc.read(r['path']))}))")
+        saved = json.dumps(got["saved"]["sections"], ensure_ascii=False)
+        for i, _owner, title in rows:
+            self.assertNotIn(i, saved)
+            self.assertNotIn(i.lower(), saved.lower())
+            if len(title) > 8:
+                self.assertNotIn(title, saved)
+        self.assertNotIn("the thing", saved)
+        self.assertIn(SWORDS, saved)                                                    # the client-visible link stays
+        self.assertEqual(got["found"], [])                                              # the gate at the end agrees
+        self.assertTrue(any(INTERNAL in x for x in got["removed"]), got["removed"])
+
+    def test_each_form_of_an_internal_link_on_its_own_is_taken_out(self):
+        forms = [f"[the thing](CREAITE:item/{INTERNAL})", f"[the thing](creaite%3Aitem/{INTERNAL})",
+                 f"[the thing](creaite&#58;item/{INTERNAL})", f"[the thing](creaite\u200b:item/{INTERNAL})",
+                 f"[the thing](creaite :item/{INTERNAL})"]
+        got = self.py(f"out = []\nfor f in {forms!r}:\n"
+                      "    d = report_doc.client_doc('ABC', spec={'summary': 'Plan. ' + f + ' Then.'})\n"
+                      "    out.append(next(s for s in d['sections'] if s['id'] == 'summary')['text'])\n"
+                      "print(json.dumps(out))")
+        for f, text in zip(forms, got):
+            self.assertNotIn(INTERNAL.lower(), text.lower(), f)
+            self.assertNotIn("the thing", text, f)
+
+    def test_client_item_links_fails_closed_when_the_tracker_cant_be_read(self):
+        r = self.py("import client_leak\n"
+                    "def boom(*a, **k): raise RuntimeError('tracker unreadable')\n"
+                    "d = report_doc.client_doc('ABC')\n"
+                    f"next(s for s in d['sections'] if s['id'] == 'current_state')['panes'][0]['text'] = {state(EDITED)!r}\n"
+                    "client_leak.drop_item_links = boom\n"
+                    "report_doc.save_draft(d)", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("ReportError", r.stderr)
+        self.assertFalse((self.v.root / DRAFT).exists())                                # nothing saved
+        r = self.py("import client_leak\n"
+                    "def boom(*a, **k): raise RuntimeError('tracker unreadable')\n"
+                    "client_leak.drop_item_links = boom\n"
+                    f"report_doc.client_doc('ABC', spec={{'current_state': {state(EDITED)!r}}})", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("ReportError", r.stderr)
+
+    def test_the_client_place_sends_no_internal_id_owner_or_title_and_none_when_the_items_cant_be_read(self):
+        rows = self.internal_rows()
+        got = self.py("import edit_ai, client_leak\n"
+                      "ok = edit_ai.project_facts('ABC', client=True)\n"
+                      "def boom(*a, **k): raise RuntimeError('tracker unreadable')\n"
+                      "client_leak.item_problem = boom\n"
+                      "print(json.dumps({'ok': ok, 'broken': edit_ai.project_facts('ABC', client=True), "
+                      "'internal': edit_ai.project_facts('ABC')}))")
+        sent = json.dumps(got["ok"])
+        self.assertEqual(got["ok"]["people"], [])
+        self.assertIn(SEEN, got["ok"]["ids"])
+        for i, owner, title in rows:
+            self.assertNotIn(i, sent)
+            if owner and owner != "TBC":
+                self.assertNotIn(owner, sent)
+            self.assertNotIn(title, sent)
+        self.assertEqual(got["broken"]["ids"], [])                                      # fails closed: no IDs, no people
+        self.assertEqual(got["broken"]["people"], [])
+        self.assertIn(INTERNAL, got["internal"]["ids"])                                 # control: the internal place has them
+
+
+class ClientSheetOffersNoItems(unittest.TestCase):
+    """#123 (Alan's decision 8): the client sheet offers no work item, so no internal one: its editor has no `#` picker, no `/` menu
+    (whose Work item row needs that host) and draws no chips."""
+
+    def test_the_sheet_editor_has_no_item_picker_slash_menu_or_chips(self):
+        src = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard" / "src" / "components" / "report"
+        # names written in parts: whole, they would be page names a test uses (dashboard_split's globals list)
+        for name in ("Sheet" + "Text.jsx", "Client" + "View.jsx", "Client" + "Parts.jsx", "Sheet" + "Page.jsx", "Sheet.jsx",
+                     "sheet" + "Lib.js", "client" + "Doc.js"):
+            f = src / name
+            if not f.exists():
+                continue
+            code = f.read_text(encoding="utf-8")
+            for hook in ("attach" + "ItemPick", "insert" + "Hash", "item" + "Chip", "attach" + "Slash", "item" + "Options"):
+                self.assertNotIn(hook, code, f"{name} wires {hook}: a client sheet would offer or draw work items")
 
 
 class DropItemLinks(unittest.TestCase):

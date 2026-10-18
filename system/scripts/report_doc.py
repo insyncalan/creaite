@@ -553,6 +553,49 @@ CLIENT_BUILDERS = {"header": _c_header,
                    "current_state": lambda c, lay: {"panes": [{"title": "", "text": paras(c.spec.get("current_state"))}]}}
 
 
+def _links_in(s):
+    """Whether a stored string may hold a creaite: link (as client_leak reads one: decoded, invisible characters undone)."""
+    import client_leak
+    return "creaite" in client_leak._decoded(s).lower() or client_leak.overencoded(s)
+
+
+def _drop_links(x, code, con):
+    """A section's value with every string's creaite: links a client may not have taken out (client_leak.drop_item_links)."""
+    import client_leak
+    if isinstance(x, str):
+        return client_leak.drop_item_links(code, x, con) if _links_in(x) else x
+    if isinstance(x, list):
+        return [_drop_links(v, code, con) for v in x]
+    if isinstance(x, dict):
+        return {k: _drop_links(v, code, con) for k, v in x.items()}
+    return x
+
+
+def client_item_links(doc, con=None):
+    """#123 (#122 step C, client path): (a copy of a client document with every work-item link a client may not have taken out
+    WHOLE from every section, words and address, [why each went]). A link's words may have been edited so they no longer name the
+    item, and its address would stay in the stored text; client_leak.drop_item_links reads the address. A link to an item a client
+    may see stays as it is. An internal document is returned as it is. Fails closed: when the tracker can't be read, ReportError
+    (nothing is built or saved)."""
+    import client_leak
+    if (doc.get("audience") or "internal") == "internal":
+        return doc, []
+    code = doc.get("project") or ""
+    try:
+        con = con or client_leak.connect()
+        before = client_leak.raw_strings({"sections": doc.get("sections") or []})
+        sections = _drop_links(doc.get("sections") or [], code, con)
+        after = client_leak.raw_strings({"sections": sections})
+        gone = sorted({i for i in client_leak.item_links(before)} - {i for i in client_leak.item_links(after)})
+    except Exception as e:  # noqa: BLE001  fails closed
+        raise ReportError("The work-item links couldn't be checked against the tracker, so nothing was built or saved. "
+                          "Try again; if it keeps happening, run the health check.") from e
+    if after == before:
+        return doc, []
+    return dict(doc, sections=sections), [f"a link to {i}, an item a client report can't show, was taken out" for i in gone] or [
+        "a link a client report can't hold was taken out"]
+
+
 def client_doc(code, week_ending=None, client=None, spec=None, layout=None):
     """A client's view of the week as a creaite document (version 0, a draft; nothing written): client-safe facts only, from the
     latest approved internal week when there is one (its facts locked, `based_on` naming it), else from the tracker as it stands
@@ -572,7 +615,7 @@ def client_doc(code, week_ending=None, client=None, spec=None, layout=None):
                           sources=[{"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending "
                                                                                     f"{shown(c.base['date'])}" if c.base else "")}])
     doc["based_on"] = {"path": c.base["path"], "version": c.base["version"]} if c.base else None
-    return client_leak.make_safe(doc)[0]
+    return client_item_links(client_leak.make_safe(doc)[0])[0]
 
 
 def build(kind, code, week_ending=None, client=None, spec=None, layout=None):
@@ -613,6 +656,8 @@ def save_draft(doc, base_version=None, why=None):
     if kind not in KINDS:
         raise ReportError("Only a weekly or client report is saved here.")
     doc, removed = client_leak.make_safe(doc)
+    doc, dropped = client_item_links(doc)
+    removed = removed + dropped
     draft, filed = draft_path(kind, code, fri, client), filed_path(kind, code, fri, client)
     if not paths.resolve(draft).is_file() and paths.resolve(filed).is_file():
         now = int(creaite_doc.read(filed).get("version") or 0)
