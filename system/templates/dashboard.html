@@ -5922,6 +5922,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     pfScope: () => pfScope,
     pfWord: () => pfWord,
     pickImage: () => pickImage,
+    pickedAnchor: () => pickedAnchor,
     pickerOpenFor: () => pickerOpenFor,
     pinchZoom: () => pinchZoom,
     pkAdd: () => pkAdd,
@@ -8268,359 +8269,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     return "function" == typeof t47 ? t47(n4) : t47;
   }
 
-  // components/Dialog.jsx
-  var FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-  var OPENER = /* @__PURE__ */ new WeakMap();
-  var TYPED = /* @__PURE__ */ new WeakMap();
-  var PICKER = ".combo.open,#mvCal:not([hidden]),#mvPop:not([hidden]),.cal:not([hidden]):not(:empty)";
-  function cmdEnterButton(d5) {
-    const vis = (
-      /** @param {Element} b */
-      (b5) => (
-        /** @type {HTMLButtonElement} */
-        b5.offsetParent !== null || b5.getClientRects().length > 0
-      )
-    );
-    const marked2 = [...d5.querySelectorAll("button[data-cmdenter]")].filter(vis);
-    const all = marked2.length ? marked2 : [...d5.querySelectorAll("button.primary")].filter(vis);
-    return (
-      /** @type {HTMLButtonElement | null} */
-      all.length ? all[all.length - 1] : null
-    );
-  }
-  function cmdEnter(e4, d5) {
-    if (e4.key !== "Enter" || !(e4.metaKey || e4.ctrlKey) || e4.isComposing || e4.keyCode === 229 || e4.defaultPrevented) return;
-    const t47 = (
-      /** @type {HTMLElement} */
-      e4.target
-    ), b5 = cmdEnterButton(d5);
-    if (!b5) return;
-    if (t47 !== b5 && t47.closest && t47.closest("button,a[href]")) return;
-    e4.preventDefault();
-    e4.stopPropagation();
-    if (e4.repeat) return;
-    const go3 = () => {
-      if (b5.isConnected && !b5.disabled && d5.open) b5.click();
-    };
-    if (document.querySelector(PICKER)) setTimeout(go3, 0);
-    else go3();
-  }
-  var dialogEl = (target) => (
-    /** @type {HTMLDialogElement | null} */
-    typeof target === "string" ? document.getElementById(target) : target
-  );
-  function focusIn(d5, focus) {
-    if (focus === false) return;
-    const want = focus ? d5.querySelector(focus) : null;
-    for (
-      const f5 of
-      /** @type {HTMLElement[]} */
-      [...want ? [want] : [], ...d5.querySelectorAll(FOCUSABLE)]
-    ) {
-      f5.focus();
-      if (document.activeElement === f5) return;
-    }
-  }
-  function openDialog(target, { focus, modal = true } = {}) {
-    const d5 = dialogEl(target);
-    if (!d5 || d5.open) return d5;
-    if (!OPENER.has(d5)) {
-      OPENER.set(d5, document.activeElement);
-      TYPED.set(d5, false);
-    }
-    if (modal) d5.showModal();
-    else d5.show();
-    focusIn(d5, focus);
-    return d5;
-  }
-  function closeDialog(target, value) {
-    const d5 = dialogEl(target);
-    if (d5 && d5.open) d5.close(value);
-  }
-  function Dialog({ open: open2, onClose, labelledBy, ariaLabel, describedBy, id: id2, class: cls, focus, cmdEnter: cmdKey = true, dirty: dirty2, children }) {
-    const ref = A2(
-      /** @type {HTMLDialogElement | null} */
-      null
-    );
-    const owned = open2 !== void 0;
-    h2(() => {
-      const d5 = ref.current;
-      if (!d5 || !owned) return;
-      if (open2) openDialog(d5, { focus });
-      else closeDialog(d5);
-    }, [open2]);
-    const cancel = (e4) => {
-      if (owned) {
-        e4.preventDefault();
-        if (onClose) onClose();
-      }
-    };
-    const closed = () => {
-      const d5 = ref.current;
-      if (!d5 || d5.open) return;
-      const o5 = (
-        /** @type {HTMLElement | null | undefined} */
-        OPENER.get(d5)
-      ), a5 = document.activeElement;
-      OPENER.delete(d5);
-      if (o5 && o5.isConnected && typeof o5.focus === "function" && (!a5 || a5 === document.body || d5.contains(a5))) o5.focus();
-      if (onClose && (open2 || !owned)) onClose();
-    };
-    const typed2 = () => {
-      if (ref.current) TYPED.set(ref.current, true);
-    };
-    const scrim = (e4) => {
-      const d5 = ref.current;
-      if (!d5 || e4.target !== d5) return;
-      const busy2 = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
-      if (busy2) return;
-      const r4 = d5.getBoundingClientRect();
-      if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) {
-        if (owned) {
-          if (onClose) onClose();
-        } else d5.close();
-      }
-    };
-    return /* @__PURE__ */ u2(
-      "dialog",
-      {
-        ref,
-        id: id2,
-        class: cls,
-        "aria-label": ariaLabel,
-        "aria-labelledby": labelledBy,
-        "aria-describedby": describedBy,
-        onCancel: cancel,
-        onClose: closed,
-        onKeyDown: cmdKey ? (e4) => {
-          if (ref.current) cmdEnter(e4, ref.current);
-        } : void 0,
-        onClick: scrim,
-        onInput: typed2,
-        children
-      }
-    );
-  }
-
-  // components/dialogs/PageDialogs.jsx
-  var ROW = "display:flex;align-items:center;gap:8px;margin-bottom:8px";
-  var CUT = "Only the start is shown; open it in its app for the rest.";
-  function PageDialogs() {
-    return /* @__PURE__ */ u2(S2, { children: [
-      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "cmdk", ariaLabel: "Search or jump to", dirty: false, children: [
-        /* @__PURE__ */ u2("input", { id: "cmdkIn", placeholder: "Search projects, items, commands…", autocomplete: "off", "aria-label": "Search projects, items and commands" }),
-        /* @__PURE__ */ u2("div", { id: "cmdkList" }),
-        /* @__PURE__ */ u2("div", { id: "ckPrev", hidden: true })
-      ] }),
-      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "inPrev", labelledBy: "inPrevName", children: [
-        /* @__PURE__ */ u2("div", { style: ROW, children: [
-          /* @__PURE__ */ u2("h2", { id: "inPrevName", style: "flex:1;margin:0" }),
-          /* @__PURE__ */ u2("button", { class: "btn", id: "inPrevOpen", type: "button", children: "Open in its app" }),
-          /* @__PURE__ */ u2("form", { method: "dialog", children: /* @__PURE__ */ u2("button", { class: "btn primary", children: "Close" }) })
-        ] }),
-        /* @__PURE__ */ u2("pre", { id: "inPrevText" }),
-        /* @__PURE__ */ u2("div", { id: "inPrevMd", hidden: true }),
-        /* @__PURE__ */ u2("div", { class: "sub", id: "inPrevCut", hidden: true, children: CUT })
-      ] }),
-      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "searchPrev", labelledBy: "spName", children: [
-        /* @__PURE__ */ u2("div", { style: ROW, children: [
-          /* @__PURE__ */ u2("h2", { id: "spName", style: "flex:1;margin:0" }),
-          /* @__PURE__ */ u2("button", { class: "btn", id: "spOpen", type: "button", children: "Open in its app" }),
-          /* @__PURE__ */ u2("form", { method: "dialog", children: /* @__PURE__ */ u2("button", { class: "btn primary", children: "Close" }) })
-        ] }),
-        /* @__PURE__ */ u2("div", { id: "spText" }),
-        /* @__PURE__ */ u2("div", { class: "sub", id: "spCut", hidden: true, children: CUT })
-      ] }),
-      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "llDlg", class: "rvdlg lldlg", labelledBy: "llTitle", children: [
-        /* @__PURE__ */ u2("h2", { id: "llTitle", children: "Compare" }),
-        /* @__PURE__ */ u2("p", { class: "sub", children: "The proposal beside the item it looks like. Nothing changes until you choose." }),
-        /* @__PURE__ */ u2("table", { class: "lltab", children: [
-          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
-            /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Field" }) }),
-            /* @__PURE__ */ u2("th", { scope: "col", id: "llNew", children: "Proposed" }),
-            /* @__PURE__ */ u2("th", { scope: "col", id: "llOld", children: "Existing" })
-          ] }) }),
-          /* @__PURE__ */ u2("tbody", { id: "llRows" })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "row", style: "display:flex;gap:8px;margin-top:12px;flex-wrap:wrap", children: [
-          /* @__PURE__ */ u2("span", { class: "sp", style: "flex:1" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "llClose", children: "Close" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "llKeep", children: "Keep as new" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "llMerge", children: "Merge" })
-        ] })
-      ] }),
-      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "rvDlg", class: "bdlg rvdlg", labelledBy: "rvDlgTitle", children: [
-        /* @__PURE__ */ u2("div", { id: "rvDlgBody" }),
-        /* @__PURE__ */ u2("div", { class: "row", style: "display:flex;gap:8px;margin-top:12px", children: [
-          /* @__PURE__ */ u2("span", { class: "sp", style: "flex:1" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "rvDlgCancel", children: "Cancel" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "rvDlgOk", children: "Approve" })
-        ] })
-      ] }),
-      /* @__PURE__ */ u2(Dialog, { id: "boardDlg", labelledBy: "bdTitle", children: /* @__PURE__ */ u2("div", { id: "bdForm", children: [
-        /* @__PURE__ */ u2("h2", { id: "bdTitle", style: "margin:0 0 4px" }),
-        /* @__PURE__ */ u2("div", { class: "sub", id: "bdHint", style: "margin-bottom:10px" }),
-        /* @__PURE__ */ u2("div", { id: "bdDateRow", children: [
-          /* @__PURE__ */ u2("label", { class: "sub", for: "bdDate", children: "Due date" }),
-          /* @__PURE__ */ u2("span", { class: "dwrap", children: [
-            /* @__PURE__ */ u2("input", { type: "text", id: "bdDate", placeholder: "DD-MM-YYYY", autocomplete: "off", "data-min": "today", "data-noclear": "" }),
-            /* @__PURE__ */ u2("button", { type: "button", class: "dbtn", "data-cal": "bdDate", "aria-label": "Choose date", "data-tip": "Choose a date", children: /* @__PURE__ */ u2(Icon, { name: "calendar" }) })
-          ] }),
-          /* @__PURE__ */ u2("div", { class: "bdquick", id: "bdQuick", children: [
-            /* @__PURE__ */ u2("button", { type: "button", class: "vchip", "data-q": "fri", children: "This Friday" }),
-            /* @__PURE__ */ u2("button", { type: "button", class: "vchip", "data-q": "nfri", children: "Next Friday" }),
-            /* @__PURE__ */ u2("button", { type: "button", class: "vchip", "data-q": "2w", children: "In two weeks" })
-          ] }),
-          /* @__PURE__ */ u2("div", { class: "sub", id: "bdRange" })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "perr", id: "bdErr", role: "alert", style: "color:var(--bad);min-height:18px;font-size:var(--fs-sm)" }),
-        /* @__PURE__ */ u2("div", { class: "curacts", children: [
-          /* @__PURE__ */ u2("span", { class: "sp" }),
-          /* @__PURE__ */ u2("button", { class: "btn", type: "button", id: "bdCancel", children: "Cancel" }),
-          /* @__PURE__ */ u2("button", { class: "btn primary", type: "button", id: "bdOk", children: "Move" })
-        ] })
-      ] }) }),
-      /* @__PURE__ */ u2(Dialog, { id: "genDlg", labelledBy: "genTitle", children: /* @__PURE__ */ u2("form", { method: "dialog", id: "genForm", children: [
-        /* @__PURE__ */ u2("div", { class: "genbody", children: [
-          /* @__PURE__ */ u2("h2", { id: "genTitle", style: "margin:0", children: "Generate current state" }),
-          /* @__PURE__ */ u2("div", { class: "sub", id: "genWho" }),
-          /* @__PURE__ */ u2("div", { id: "genSetup", children: [
-            /* @__PURE__ */ u2("div", { class: "genstrip", role: "group", "aria-label": "Settings", children: [["days", "genDays", "Period"], ["form", "genFormKind", "Form"], ["aud", "genAud", "Audience"], ["len", "genLen", "Length"]].map(([k5, id2, word]) => /* @__PURE__ */ u2("div", { class: "genf", "data-gfield": k5, children: [
-              /* @__PURE__ */ u2("label", { id: `${id2}L`, for: id2, children: word }),
-              /* @__PURE__ */ u2("button", { type: "button", class: "genq", id: id2, "data-gpick": k5, "aria-haspopup": "listbox", "aria-expanded": "false", "aria-labelledby": `${id2}L ${id2}`, children: [
-                /* @__PURE__ */ u2("span", { class: "gv" }),
-                /* @__PURE__ */ u2(Icon, { name: "chevdown" })
-              ] })
-            ] }, k5)) }),
-            /* @__PURE__ */ u2("div", { class: "drange", id: "genCustom", hidden: true, children: [
-              /* @__PURE__ */ u2("input", { type: "text", id: "genFrom", placeholder: "DD-MM-YYYY", "aria-label": "From" }),
-              /* @__PURE__ */ u2("span", { children: "to" }),
-              /* @__PURE__ */ u2("input", { type: "text", id: "genTo", placeholder: "DD-MM-YYYY", "aria-label": "To" })
-            ] }),
-            /* @__PURE__ */ u2("div", { class: "sub genhint", id: "genHint", "aria-live": "polite" }),
-            /* @__PURE__ */ u2("div", { class: "gensteer", children: [
-              /* @__PURE__ */ u2("label", { for: "genNote", children: [
-                "Steer it ",
-                /* @__PURE__ */ u2("span", { class: "sub", children: "Optional. Say what to lead with, what to leave out, or the tone." })
-              ] }),
-              /* @__PURE__ */ u2("textarea", { id: "genNote", rows: 6, placeholder: "For example: focus on the pilot results and the data-sharing delay" }),
-              /* @__PURE__ */ u2("div", { class: "genstart", children: [
-                /* @__PURE__ */ u2("span", { class: "sub", children: "Try:" }),
-                /* @__PURE__ */ u2("span", { id: "genStart" })
-              ] })
-            ] }),
-            /* @__PURE__ */ u2("div", { class: "gendraw", children: [
-              /* @__PURE__ */ u2("button", { type: "button", class: "gendrawb", id: "genSrcBtn", "aria-expanded": "false", "aria-controls": "genSrc", children: [
-                /* @__PURE__ */ u2(Icon, { name: "chevdown" }),
-                /* @__PURE__ */ u2("span", { id: "genSrcSum" })
-              ] }),
-              /* @__PURE__ */ u2("span", { class: "sub", id: "genSrcNames" }),
-              /* @__PURE__ */ u2("div", { id: "genSrc", hidden: true }),
-              /* @__PURE__ */ u2("div", { class: "genoff", id: "genOff", hidden: true, children: "Client-safe uses only client-visible items, in their client wording. The sources are switched off." })
-            ] })
-          ] }),
-          /* @__PURE__ */ u2("div", { class: "gensum", id: "genSum", hidden: true, children: [
-            /* @__PURE__ */ u2("span", { id: "genSumTxt" }),
-            /* @__PURE__ */ u2("span", { class: "sp" }),
-            /* @__PURE__ */ u2("button", { type: "button", class: "genlink", id: "genChange", children: "Change settings" })
-          ] }),
-          /* @__PURE__ */ u2("div", { id: "genOut", class: "fmout" }),
-          /* @__PURE__ */ u2("div", { id: "genRefineHost", hidden: true })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "genfoot", children: [
-          /* @__PURE__ */ u2("span", { class: "sub", id: "genSweep" }),
-          /* @__PURE__ */ u2("button", { class: "btn", id: "genCancel", value: "cancel", formnovalidate: true, children: "Cancel" }),
-          /* @__PURE__ */ u2("button", { class: "btn primary", id: "genGo", value: "go", "data-cmdenter": "", children: [
-            /* @__PURE__ */ u2("span", { id: "genGoT", children: "Generate" }),
-            /* @__PURE__ */ u2("span", { class: "kbd", id: "genKbd", "aria-hidden": "true" })
-          ] })
-        ] })
-      ] }) }),
-      /* @__PURE__ */ u2(Dialog, { id: "personDlg", labelledBy: "pdTitle", children: /* @__PURE__ */ u2("form", { method: "dialog", id: "personForm", children: [
-        /* @__PURE__ */ u2("h2", { id: "pdTitle", style: "margin:0 0 10px", children: "New person" }),
-        /* @__PURE__ */ u2("div", { id: "pdMatch", hidden: true }),
-        /* @__PURE__ */ u2("div", { id: "pdFields", children: [
-          /* @__PURE__ */ u2("label", { for: "pd_name", children: [
-            "Full name ",
-            /* @__PURE__ */ u2("span", { class: "req", children: "required" })
-          ] }),
-          /* @__PURE__ */ u2("input", { id: "pd_name", type: "text", autocomplete: "off" }),
-          /* @__PURE__ */ u2("label", { for: "pd_email", children: "Email" }),
-          /* @__PURE__ */ u2("input", { id: "pd_email", type: "text", autocomplete: "off" }),
-          /* @__PURE__ */ u2("label", { for: "pd_aliases", children: "Aliases" }),
-          /* @__PURE__ */ u2("input", { id: "pd_aliases", type: "text", autocomplete: "off", placeholder: "Sara, Sara K, SK" }),
-          /* @__PURE__ */ u2("label", { for: "pd_org", children: "Organisation" }),
-          /* @__PURE__ */ u2("input", { id: "pd_org", type: "text", autocomplete: "off" }),
-          /* @__PURE__ */ u2("label", { for: "pd_role", children: "Role" }),
-          /* @__PURE__ */ u2("input", { id: "pd_role", type: "text", autocomplete: "off" }),
-          /* @__PURE__ */ u2("label", { for: "pd_vip", class: "pdvip", children: "VIP" }),
-          /* @__PURE__ */ u2("select", { id: "pd_vip", class: "pdvip", children: [
-            /* @__PURE__ */ u2("option", { value: "", children: "No" }),
-            /* @__PURE__ */ u2("option", { value: "management", children: "Management" }),
-            /* @__PURE__ */ u2("option", { value: "client", children: "Client" }),
-            /* @__PURE__ */ u2("option", { value: "yes", children: "Yes" })
-          ] })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "sub", id: "pdErr", role: "alert", style: "color:var(--bad)" }),
-        /* @__PURE__ */ u2("div", { class: "curacts", children: [
-          /* @__PURE__ */ u2("span", { class: "sp" }),
-          /* @__PURE__ */ u2("button", { class: "btn", value: "cancel", formnovalidate: true, children: "Cancel" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "pdSave", children: "Save" })
-        ] })
-      ] }) })
-    ] });
-  }
-  function bootDialogs() {
-    const host2 = document.getElementById("pageDialogs");
-    if (host2 && !host2.firstChild) R(/* @__PURE__ */ u2(PageDialogs, {}), host2);
-  }
-  function later(hostId, dlg) {
-    const host2 = document.createElement("div");
-    host2.id = hostId;
-    document.body.appendChild(host2);
-    R(dlg, host2);
-    return (
-      /** @type {HTMLDialogElement} */
-      host2.firstElementChild
-    );
-  }
-  function makeDraftEmailDialog() {
-    return later(
-      "deDlgHost",
-      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "deDlg", class: "prepdlg", labelledBy: "deTitle", children: [
-        /* @__PURE__ */ u2("div", { class: "prephead", children: [
-          /* @__PURE__ */ u2("div", { style: "flex:1", children: [
-            /* @__PURE__ */ u2("div", { class: "sub", children: "Nothing is sent: copy it and paste it into Outlook" }),
-            /* @__PURE__ */ u2("h2", { id: "deTitle" })
-          ] }),
-          /* @__PURE__ */ u2("button", { class: "iconbtn", id: "deClose", "aria-label": "Close", children: /* @__PURE__ */ u2(Icon, { name: "x" }) })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "prepbody", id: "deBody" })
-      ] })
-    );
-  }
-  function makeUndoDialog() {
-    return later("actDlgHost", /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "actDlg", labelledBy: "actDlgH", children: /* @__PURE__ */ u2("div", { id: "actDlgBody" }) }));
-  }
-  function makeArchiveAskDialog() {
-    return later("parchDlgHost", /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "parchDlg", labelledBy: "parchH", children: /* @__PURE__ */ u2("div", { id: "parchBody" }) }));
-  }
-  function makePrepDialog() {
-    return later(
-      "prepDlgHost",
-      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "prepDlg", labelledBy: "prepTitle", children: [
-        /* @__PURE__ */ u2("div", { id: "prepTop" }),
-        /* @__PURE__ */ u2("div", { class: "prepbody", id: "prepScroll", children: [
-          /* @__PURE__ */ u2("div", { class: "sub", id: "prepPgStat", role: "status" }),
-          /* @__PURE__ */ u2("div", { id: "prepShape" }),
-          /* @__PURE__ */ u2("div", { id: "prepLead" }),
-          /* @__PURE__ */ u2("div", { id: "prepAgenda", class: "pkdrhost" }),
-          /* @__PURE__ */ u2("div", { id: "prepBody" })
-        ] })
-      ] })
-    );
-  }
-
   // components/Menu.jsx
   var KB_OPEN = null;
   var menuItemsIn = (box) => box ? (
@@ -8930,6 +8578,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     ] }), box);
   }
   var POP = null;
+  var PICKED = null;
   function PopMenu({ anchor, props }) {
     const { label, items: items2, onPick, id: id2, cls, align, at: at2, loading: loading2 } = props;
     const wrap = A2(
@@ -8977,6 +8626,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     const p6 = POP;
     if (!p6) return;
     POP = null;
+    if (how === "pick") PICKED = { anchor: p6.anchor, at: Date.now() };
     R(null, p6.host);
     p6.host.remove();
     const a5 = p6.anchor;
@@ -8984,8 +8634,368 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     if ((how === "esc" || how === "tab") && a5 && a5.isConnected) a5.focus({ preventScroll: true });
     if (p6.props.onClose) p6.props.onClose(how);
   }
+  function pickedAnchor() {
+    const p6 = PICKED;
+    PICKED = null;
+    return p6 && Date.now() - p6.at < 2e3 && p6.anchor && p6.anchor.isConnected ? p6.anchor : null;
+  }
   function menuOpenFor(anchor) {
     return !!POP && (anchor === void 0 || POP.anchor === anchor);
+  }
+
+  // components/Dialog.jsx
+  var FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  var OPENER = /* @__PURE__ */ new WeakMap();
+  var TYPED = /* @__PURE__ */ new WeakMap();
+  var PICKER = ".combo.open,#mvCal:not([hidden]),#mvPop:not([hidden]),.cal:not([hidden]):not(:empty)";
+  function cmdEnterButton(d5) {
+    const vis = (
+      /** @param {Element} b */
+      (b5) => (
+        /** @type {HTMLButtonElement} */
+        b5.offsetParent !== null || b5.getClientRects().length > 0
+      )
+    );
+    const marked2 = [...d5.querySelectorAll("button[data-cmdenter]")].filter(vis);
+    const all = marked2.length ? marked2 : [...d5.querySelectorAll("button.primary")].filter(vis);
+    return (
+      /** @type {HTMLButtonElement | null} */
+      all.length ? all[all.length - 1] : null
+    );
+  }
+  function cmdEnter(e4, d5) {
+    if (e4.key !== "Enter" || !(e4.metaKey || e4.ctrlKey) || e4.isComposing || e4.keyCode === 229 || e4.defaultPrevented) return;
+    const t47 = (
+      /** @type {HTMLElement} */
+      e4.target
+    ), b5 = cmdEnterButton(d5);
+    if (!b5) return;
+    if (t47 !== b5 && t47.closest && t47.closest("button,a[href]")) return;
+    e4.preventDefault();
+    e4.stopPropagation();
+    if (e4.repeat) return;
+    const go3 = () => {
+      if (b5.isConnected && !b5.disabled && d5.open) b5.click();
+    };
+    if (document.querySelector(PICKER)) setTimeout(go3, 0);
+    else go3();
+  }
+  var dialogEl = (target) => (
+    /** @type {HTMLDialogElement | null} */
+    typeof target === "string" ? document.getElementById(target) : target
+  );
+  function focusIn(d5, focus) {
+    if (focus === false) return;
+    const want = focus ? d5.querySelector(focus) : null;
+    for (
+      const f5 of
+      /** @type {HTMLElement[]} */
+      [...want ? [want] : [], ...d5.querySelectorAll(FOCUSABLE)]
+    ) {
+      f5.focus();
+      if (document.activeElement === f5) return;
+    }
+  }
+  function openDialog(target, { focus, modal = true } = {}) {
+    const d5 = dialogEl(target);
+    if (!d5 || d5.open) return d5;
+    if (!OPENER.has(d5)) {
+      const a5 = document.activeElement, picked = pickedAnchor();
+      const from = !a5 || a5 === document.body || !a5.isConnected ? picked : null;
+      OPENER.set(d5, from || a5);
+      TYPED.set(d5, false);
+    }
+    if (modal) d5.showModal();
+    else d5.show();
+    focusIn(d5, focus);
+    return d5;
+  }
+  function closeDialog(target, value) {
+    const d5 = dialogEl(target);
+    if (d5 && d5.open) d5.close(value);
+  }
+  function Dialog({ open: open2, onClose, labelledBy, ariaLabel, describedBy, id: id2, class: cls, focus, cmdEnter: cmdKey = true, dirty: dirty2, children }) {
+    const ref = A2(
+      /** @type {HTMLDialogElement | null} */
+      null
+    );
+    const owned = open2 !== void 0;
+    h2(() => {
+      const d5 = ref.current;
+      if (!d5 || !owned) return;
+      if (open2) openDialog(d5, { focus });
+      else closeDialog(d5);
+    }, [open2]);
+    const cancel = (e4) => {
+      if (owned) {
+        e4.preventDefault();
+        if (onClose) onClose();
+      }
+    };
+    const closed = () => {
+      const d5 = ref.current;
+      if (!d5 || d5.open) return;
+      const o5 = (
+        /** @type {HTMLElement | null | undefined} */
+        OPENER.get(d5)
+      ), a5 = document.activeElement;
+      OPENER.delete(d5);
+      if (o5 && o5.isConnected && typeof o5.focus === "function" && (!a5 || a5 === document.body || d5.contains(a5))) o5.focus();
+      if (onClose && (open2 || !owned)) onClose();
+    };
+    const typed2 = () => {
+      if (ref.current) TYPED.set(ref.current, true);
+    };
+    const scrim = (e4) => {
+      const d5 = ref.current;
+      if (!d5 || e4.target !== d5) return;
+      const busy2 = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
+      if (busy2) return;
+      const r4 = d5.getBoundingClientRect();
+      if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) {
+        if (owned) {
+          if (onClose) onClose();
+        } else d5.close();
+      }
+    };
+    return /* @__PURE__ */ u2(
+      "dialog",
+      {
+        ref,
+        id: id2,
+        class: cls,
+        "aria-label": ariaLabel,
+        "aria-labelledby": labelledBy,
+        "aria-describedby": describedBy,
+        onCancel: cancel,
+        onClose: closed,
+        onKeyDown: cmdKey ? (e4) => {
+          if (ref.current) cmdEnter(e4, ref.current);
+        } : void 0,
+        onClick: scrim,
+        onInput: typed2,
+        children
+      }
+    );
+  }
+
+  // components/dialogs/PageDialogs.jsx
+  var ROW = "display:flex;align-items:center;gap:8px;margin-bottom:8px";
+  var CUT = "Only the start is shown; open it in its app for the rest.";
+  function PageDialogs() {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "cmdk", ariaLabel: "Search or jump to", dirty: false, children: [
+        /* @__PURE__ */ u2("input", { id: "cmdkIn", placeholder: "Search projects, items, commands…", autocomplete: "off", "aria-label": "Search projects, items and commands" }),
+        /* @__PURE__ */ u2("div", { id: "cmdkList" }),
+        /* @__PURE__ */ u2("div", { id: "ckPrev", hidden: true })
+      ] }),
+      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "inPrev", labelledBy: "inPrevName", children: [
+        /* @__PURE__ */ u2("div", { style: ROW, children: [
+          /* @__PURE__ */ u2("h2", { id: "inPrevName", style: "flex:1;margin:0" }),
+          /* @__PURE__ */ u2("button", { class: "btn", id: "inPrevOpen", type: "button", children: "Open in its app" }),
+          /* @__PURE__ */ u2("form", { method: "dialog", children: /* @__PURE__ */ u2("button", { class: "btn primary", children: "Close" }) })
+        ] }),
+        /* @__PURE__ */ u2("pre", { id: "inPrevText" }),
+        /* @__PURE__ */ u2("div", { id: "inPrevMd", hidden: true }),
+        /* @__PURE__ */ u2("div", { class: "sub", id: "inPrevCut", hidden: true, children: CUT })
+      ] }),
+      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "searchPrev", labelledBy: "spName", children: [
+        /* @__PURE__ */ u2("div", { style: ROW, children: [
+          /* @__PURE__ */ u2("h2", { id: "spName", style: "flex:1;margin:0" }),
+          /* @__PURE__ */ u2("button", { class: "btn", id: "spOpen", type: "button", children: "Open in its app" }),
+          /* @__PURE__ */ u2("form", { method: "dialog", children: /* @__PURE__ */ u2("button", { class: "btn primary", children: "Close" }) })
+        ] }),
+        /* @__PURE__ */ u2("div", { id: "spText" }),
+        /* @__PURE__ */ u2("div", { class: "sub", id: "spCut", hidden: true, children: CUT })
+      ] }),
+      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "llDlg", class: "rvdlg lldlg", labelledBy: "llTitle", children: [
+        /* @__PURE__ */ u2("h2", { id: "llTitle", children: "Compare" }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "The proposal beside the item it looks like. Nothing changes until you choose." }),
+        /* @__PURE__ */ u2("table", { class: "lltab", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Field" }) }),
+            /* @__PURE__ */ u2("th", { scope: "col", id: "llNew", children: "Proposed" }),
+            /* @__PURE__ */ u2("th", { scope: "col", id: "llOld", children: "Existing" })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { id: "llRows" })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "row", style: "display:flex;gap:8px;margin-top:12px;flex-wrap:wrap", children: [
+          /* @__PURE__ */ u2("span", { class: "sp", style: "flex:1" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "llClose", children: "Close" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "llKeep", children: "Keep as new" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "llMerge", children: "Merge" })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "rvDlg", class: "bdlg rvdlg", labelledBy: "rvDlgTitle", children: [
+        /* @__PURE__ */ u2("div", { id: "rvDlgBody" }),
+        /* @__PURE__ */ u2("div", { class: "row", style: "display:flex;gap:8px;margin-top:12px", children: [
+          /* @__PURE__ */ u2("span", { class: "sp", style: "flex:1" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "rvDlgCancel", children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "rvDlgOk", children: "Approve" })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2(Dialog, { id: "boardDlg", labelledBy: "bdTitle", children: /* @__PURE__ */ u2("div", { id: "bdForm", children: [
+        /* @__PURE__ */ u2("h2", { id: "bdTitle", style: "margin:0 0 4px" }),
+        /* @__PURE__ */ u2("div", { class: "sub", id: "bdHint", style: "margin-bottom:10px" }),
+        /* @__PURE__ */ u2("div", { id: "bdDateRow", children: [
+          /* @__PURE__ */ u2("label", { class: "sub", for: "bdDate", children: "Due date" }),
+          /* @__PURE__ */ u2("span", { class: "dwrap", children: [
+            /* @__PURE__ */ u2("input", { type: "text", id: "bdDate", placeholder: "DD-MM-YYYY", autocomplete: "off", "data-min": "today", "data-noclear": "" }),
+            /* @__PURE__ */ u2("button", { type: "button", class: "dbtn", "data-cal": "bdDate", "aria-label": "Choose date", "data-tip": "Choose a date", children: /* @__PURE__ */ u2(Icon, { name: "calendar" }) })
+          ] }),
+          /* @__PURE__ */ u2("div", { class: "bdquick", id: "bdQuick", children: [
+            /* @__PURE__ */ u2("button", { type: "button", class: "vchip", "data-q": "fri", children: "This Friday" }),
+            /* @__PURE__ */ u2("button", { type: "button", class: "vchip", "data-q": "nfri", children: "Next Friday" }),
+            /* @__PURE__ */ u2("button", { type: "button", class: "vchip", "data-q": "2w", children: "In two weeks" })
+          ] }),
+          /* @__PURE__ */ u2("div", { class: "sub", id: "bdRange" })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "perr", id: "bdErr", role: "alert", style: "color:var(--bad);min-height:18px;font-size:var(--fs-sm)" }),
+        /* @__PURE__ */ u2("div", { class: "curacts", children: [
+          /* @__PURE__ */ u2("span", { class: "sp" }),
+          /* @__PURE__ */ u2("button", { class: "btn", type: "button", id: "bdCancel", children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { class: "btn primary", type: "button", id: "bdOk", children: "Move" })
+        ] })
+      ] }) }),
+      /* @__PURE__ */ u2(Dialog, { id: "genDlg", labelledBy: "genTitle", children: /* @__PURE__ */ u2("form", { method: "dialog", id: "genForm", children: [
+        /* @__PURE__ */ u2("div", { class: "genbody", children: [
+          /* @__PURE__ */ u2("h2", { id: "genTitle", style: "margin:0", children: "Generate current state" }),
+          /* @__PURE__ */ u2("div", { class: "sub", id: "genWho" }),
+          /* @__PURE__ */ u2("div", { id: "genSetup", children: [
+            /* @__PURE__ */ u2("div", { class: "genstrip", role: "group", "aria-label": "Settings", children: [["days", "genDays", "Period"], ["form", "genFormKind", "Form"], ["aud", "genAud", "Audience"], ["len", "genLen", "Length"]].map(([k5, id2, word]) => /* @__PURE__ */ u2("div", { class: "genf", "data-gfield": k5, children: [
+              /* @__PURE__ */ u2("label", { id: `${id2}L`, for: id2, children: word }),
+              /* @__PURE__ */ u2("button", { type: "button", class: "genq", id: id2, "data-gpick": k5, "aria-haspopup": "listbox", "aria-expanded": "false", "aria-labelledby": `${id2}L ${id2}`, children: [
+                /* @__PURE__ */ u2("span", { class: "gv" }),
+                /* @__PURE__ */ u2(Icon, { name: "chevdown" })
+              ] })
+            ] }, k5)) }),
+            /* @__PURE__ */ u2("div", { class: "drange", id: "genCustom", hidden: true, children: [
+              /* @__PURE__ */ u2("input", { type: "text", id: "genFrom", placeholder: "DD-MM-YYYY", "aria-label": "From" }),
+              /* @__PURE__ */ u2("span", { children: "to" }),
+              /* @__PURE__ */ u2("input", { type: "text", id: "genTo", placeholder: "DD-MM-YYYY", "aria-label": "To" })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "sub genhint", id: "genHint", "aria-live": "polite" }),
+            /* @__PURE__ */ u2("div", { class: "gensteer", children: [
+              /* @__PURE__ */ u2("label", { for: "genNote", children: [
+                "Steer it ",
+                /* @__PURE__ */ u2("span", { class: "sub", children: "Optional. Say what to lead with, what to leave out, or the tone." })
+              ] }),
+              /* @__PURE__ */ u2("textarea", { id: "genNote", rows: 6, placeholder: "For example: focus on the pilot results and the data-sharing delay" }),
+              /* @__PURE__ */ u2("div", { class: "genstart", children: [
+                /* @__PURE__ */ u2("span", { class: "sub", children: "Try:" }),
+                /* @__PURE__ */ u2("span", { id: "genStart" })
+              ] })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "gendraw", children: [
+              /* @__PURE__ */ u2("button", { type: "button", class: "gendrawb", id: "genSrcBtn", "aria-expanded": "false", "aria-controls": "genSrc", children: [
+                /* @__PURE__ */ u2(Icon, { name: "chevdown" }),
+                /* @__PURE__ */ u2("span", { id: "genSrcSum" })
+              ] }),
+              /* @__PURE__ */ u2("span", { class: "sub", id: "genSrcNames" }),
+              /* @__PURE__ */ u2("div", { id: "genSrc", hidden: true }),
+              /* @__PURE__ */ u2("div", { class: "genoff", id: "genOff", hidden: true, children: "Client-safe uses only client-visible items, in their client wording. The sources are switched off." })
+            ] })
+          ] }),
+          /* @__PURE__ */ u2("div", { class: "gensum", id: "genSum", hidden: true, children: [
+            /* @__PURE__ */ u2("span", { id: "genSumTxt" }),
+            /* @__PURE__ */ u2("span", { class: "sp" }),
+            /* @__PURE__ */ u2("button", { type: "button", class: "genlink", id: "genChange", children: "Change settings" })
+          ] }),
+          /* @__PURE__ */ u2("div", { id: "genOut", class: "fmout" }),
+          /* @__PURE__ */ u2("div", { id: "genRefineHost", hidden: true })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "genfoot", children: [
+          /* @__PURE__ */ u2("span", { class: "sub", id: "genSweep" }),
+          /* @__PURE__ */ u2("button", { class: "btn", id: "genCancel", value: "cancel", formnovalidate: true, children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { class: "btn primary", id: "genGo", value: "go", "data-cmdenter": "", children: [
+            /* @__PURE__ */ u2("span", { id: "genGoT", children: "Generate" }),
+            /* @__PURE__ */ u2("span", { class: "kbd", id: "genKbd", "aria-hidden": "true" })
+          ] })
+        ] })
+      ] }) }),
+      /* @__PURE__ */ u2(Dialog, { id: "personDlg", labelledBy: "pdTitle", children: /* @__PURE__ */ u2("form", { method: "dialog", id: "personForm", children: [
+        /* @__PURE__ */ u2("h2", { id: "pdTitle", style: "margin:0 0 10px", children: "New person" }),
+        /* @__PURE__ */ u2("div", { id: "pdMatch", hidden: true }),
+        /* @__PURE__ */ u2("div", { id: "pdFields", children: [
+          /* @__PURE__ */ u2("label", { for: "pd_name", children: [
+            "Full name ",
+            /* @__PURE__ */ u2("span", { class: "req", children: "required" })
+          ] }),
+          /* @__PURE__ */ u2("input", { id: "pd_name", type: "text", autocomplete: "off" }),
+          /* @__PURE__ */ u2("label", { for: "pd_email", children: "Email" }),
+          /* @__PURE__ */ u2("input", { id: "pd_email", type: "text", autocomplete: "off" }),
+          /* @__PURE__ */ u2("label", { for: "pd_aliases", children: "Aliases" }),
+          /* @__PURE__ */ u2("input", { id: "pd_aliases", type: "text", autocomplete: "off", placeholder: "Sara, Sara K, SK" }),
+          /* @__PURE__ */ u2("label", { for: "pd_org", children: "Organisation" }),
+          /* @__PURE__ */ u2("input", { id: "pd_org", type: "text", autocomplete: "off" }),
+          /* @__PURE__ */ u2("label", { for: "pd_role", children: "Role" }),
+          /* @__PURE__ */ u2("input", { id: "pd_role", type: "text", autocomplete: "off" }),
+          /* @__PURE__ */ u2("label", { for: "pd_vip", class: "pdvip", children: "VIP" }),
+          /* @__PURE__ */ u2("select", { id: "pd_vip", class: "pdvip", children: [
+            /* @__PURE__ */ u2("option", { value: "", children: "No" }),
+            /* @__PURE__ */ u2("option", { value: "management", children: "Management" }),
+            /* @__PURE__ */ u2("option", { value: "client", children: "Client" }),
+            /* @__PURE__ */ u2("option", { value: "yes", children: "Yes" })
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "sub", id: "pdErr", role: "alert", style: "color:var(--bad)" }),
+        /* @__PURE__ */ u2("div", { class: "curacts", children: [
+          /* @__PURE__ */ u2("span", { class: "sp" }),
+          /* @__PURE__ */ u2("button", { class: "btn", value: "cancel", formnovalidate: true, children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "pdSave", children: "Save" })
+        ] })
+      ] }) })
+    ] });
+  }
+  function bootDialogs() {
+    const host2 = document.getElementById("pageDialogs");
+    if (host2 && !host2.firstChild) R(/* @__PURE__ */ u2(PageDialogs, {}), host2);
+  }
+  function later(hostId, dlg) {
+    const host2 = document.createElement("div");
+    host2.id = hostId;
+    document.body.appendChild(host2);
+    R(dlg, host2);
+    return (
+      /** @type {HTMLDialogElement} */
+      host2.firstElementChild
+    );
+  }
+  function makeDraftEmailDialog() {
+    return later(
+      "deDlgHost",
+      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "deDlg", class: "prepdlg", labelledBy: "deTitle", children: [
+        /* @__PURE__ */ u2("div", { class: "prephead", children: [
+          /* @__PURE__ */ u2("div", { style: "flex:1", children: [
+            /* @__PURE__ */ u2("div", { class: "sub", children: "Nothing is sent: copy it and paste it into Outlook" }),
+            /* @__PURE__ */ u2("h2", { id: "deTitle" })
+          ] }),
+          /* @__PURE__ */ u2("button", { class: "iconbtn", id: "deClose", "aria-label": "Close", children: /* @__PURE__ */ u2(Icon, { name: "x" }) })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "prepbody", id: "deBody" })
+      ] })
+    );
+  }
+  function makeUndoDialog() {
+    return later("actDlgHost", /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "actDlg", labelledBy: "actDlgH", children: /* @__PURE__ */ u2("div", { id: "actDlgBody" }) }));
+  }
+  function makeArchiveAskDialog() {
+    return later("parchDlgHost", /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "parchDlg", labelledBy: "parchH", children: /* @__PURE__ */ u2("div", { id: "parchBody" }) }));
+  }
+  function makePrepDialog() {
+    return later(
+      "prepDlgHost",
+      /* @__PURE__ */ u2(Dialog, { cmdEnter: false, id: "prepDlg", labelledBy: "prepTitle", children: [
+        /* @__PURE__ */ u2("div", { id: "prepTop" }),
+        /* @__PURE__ */ u2("div", { class: "prepbody", id: "prepScroll", children: [
+          /* @__PURE__ */ u2("div", { class: "sub", id: "prepPgStat", role: "status" }),
+          /* @__PURE__ */ u2("div", { id: "prepShape" }),
+          /* @__PURE__ */ u2("div", { id: "prepLead" }),
+          /* @__PURE__ */ u2("div", { id: "prepAgenda", class: "pkdrhost" }),
+          /* @__PURE__ */ u2("div", { id: "prepBody" })
+        ] })
+      ] })
+    );
   }
 
   // components/Tabs.jsx
@@ -41952,11 +41962,11 @@ ${s5}`;
         return;
       }
       if (e4.key === "Escape") {
-        if ($("#cmdk").open || $("#boardDlg").open) return;
         if (shared.CAL) {
           closeCal();
           return;
         }
+        if (document.querySelector("dialog:modal")) return;
         if (helpPanelOpen()) {
           closeHelpPanel();
           return;
