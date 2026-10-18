@@ -6,6 +6,7 @@
 .ictrack{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}.ictrack i{width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);display:inline-block}.ictrack i.done{background:var(--muted)}.ictrack i.now{background:var(--accent);border-color:var(--accent)}.ictrack span.on{color:var(--ink);font-weight:600}
 .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}.iccol h2{font-size:14px;margin:0 0 8px}.iccard{padding:10px 12px;margin:0 0 8px}.iccard .t{font-weight:600}
 .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}.icdet{padding:14px 16px}
+.icchg{font-size:14px;line-height:20px;color:var(--ink)}.icq{font-size:14px;line-height:20px;color:var(--muted)}
 .icpipe{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
 .icpipe .evbox{cursor:pointer;min-width:160px}.icpipe .evbox[aria-pressed=true]{outline:2px solid var(--accent)}
 .icpipe .ar{align-self:center;color:var(--muted)}
@@ -14,7 +15,7 @@
 .icinl .acts{display:flex;gap:6px}
 .icprog{height:6px;border-radius:3px;background:var(--sunk);border:1px solid var(--line);overflow:hidden;width:220px;margin-top:6px}.icprog i{display:block;height:100%;width:30%;background:var(--accent);animation:icp 1.6s linear infinite}
 @keyframes icp{from{margin-left:-30%}to{margin-left:100%}}
-.mk-bar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:9999;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:92vw;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-pop);padding:6px 10px;font:500 12px var(--font);color:var(--muted)}
+.mk-bar{position:fixed;left:244px;bottom:10px;z-index:9999;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:92vw;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-pop);padding:6px 10px;font:500 12px var(--font);color:var(--muted)}
 .mk-bar button{min-height:26px;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-pill,999px);background:var(--surface);color:var(--ink);font:500 12px var(--font);cursor:pointer;white-space:nowrap}
 .mk-bar button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}.mk-bar .sep{width:1px;height:18px;background:var(--line)}
 </style></head>
@@ -198,10 +199,10 @@ var MEET=[{id:1,t:'Example Programme steering',w:'Thu 15:00',st:'ready',d:4},{id
 {k:'Action',t:'Book the vendor demo',o:'Lena Fischer',det:'Due 28-10-2026 \u00b7 Low',src:'00:33:40'}]},
 {id:5,t:'Budget walk-through',w:'Mon 14:00',st:'drafted',d:1,props:[{k:'Decision',t:'Hold the contingency at 8%',q:'“We agree to hold contingency at eight percent.”'},{k:'Action',t:'Send the revised budget',q:'“I’ll send the revised budget Friday.”'}]},
 {id:6,t:'Steering committee prep',w:'Mon 09:00',st:'done',d:5,res:'5 approved, 1 rejected'}];
-var MAIL=[{k:'Action',t:'Reply to the legal query on clause 9',o:'Sara Khan',src:'Mail from Lena Park, 16-10',d:1,chg:'New action \u00b7 owner Sara Khan \u00b7 no due date \u00b7 Medium',ev:'\u201cCan you reply to legal on clause 9 before Friday?\u201d'},
-{k:'Update',t:'Mark done: Draft the comms plan',o:'Lena Park',src:'Mail from Lena Park, 14-10',d:3,chg:'Closes ABC-A-014: Draft the comms plan \u00b7 status <b>Open \u2192 Closed</b> \u00b7 <span class="h-warn">Looks done</span>',ev:'\u201cThe comms plan went out to the steering group on Tuesday.\u201d'},
-{k:'Risk',t:'Supplier lead times growing',o:'Sam Okoro',src:'Teams chat, 15-10',d:2,chg:'New risk \u00b7 High \u00b7 owner Sam Okoro \u00b7 <span class="indiv">approve individually</span>',ev:'\u201cLead times are up from 4 to 7 weeks.\u201d'}];
-var opt='P1',sample='mixed',lane='process',stage='all',rows,open=null,pi=0;
+var MAIL=[{k:'Action',t:'Reply to the legal query on clause 9',o:'Sara Khan',src:'Mail from Lena Park, 16-10',d:1,chg:'New action \u00b7 owner Sara Khan \u00b7 no due date \u00b7 Medium',ev:'\u201cCan you reply to legal on clause 9 before Friday?\u201d',pr:'Medium',due:'',desc:'Reply to the legal team on clause 9 of the SOW.',kind:'new'},
+{k:'Update',t:'Mark done: Draft the comms plan',o:'Lena Park',src:'Mail from Lena Park, 14-10',d:3,chg:'Closes ABC-A-014: Draft the comms plan \u00b7 status <b>Open \u2192 Closed</b> \u00b7 <span class="h-warn">Looks done</span>',ev:'\u201cThe comms plan went out to the steering group on Tuesday.\u201d',pr:'Medium',due:'14-10-2026',desc:'',kind:'upd',item:'ABC-A-014',before:'Open',after:'Closed'},
+{k:'Risk',t:'Supplier lead times growing',o:'Sam Okoro',src:'Teams chat, 15-10',d:2,chg:'New risk \u00b7 High \u00b7 owner Sam Okoro \u00b7 <span class="indiv">approve individually</span>',ev:'\u201cLead times are up from 4 to 7 weeks.\u201d',pr:'High',due:'',desc:'Supplier lead times have grown from 4 to 7 weeks, which puts the test environment date at risk.',kind:'risk',impact:'High',like:'Medium'}];
+var peek=null,opt='P1',sample='mixed',lane='process',stage='all',rows,open=null,pi=0;
 function reset(){rows=JSON.parse(JSON.stringify(sample==='empty'?[]:MEET));open=null;pi=0}
 var age=function(d){return d===0?'today':d===1?'1 day':d+' days'};
 var nProc=function(){return rows.filter(function(r){return r.st==='ready'}).length};
@@ -226,7 +227,7 @@ function mrow(r,mode){var a='',w=[r.w+' · Example Programme'];
  return h}
 function inl(r){var p=r.props[pi];if(!p)return '<div class="icsub" style="color:var(--ok)">All '+r.props.length+' checked. <button class="mini" data-a="close">Done</button></div>';
  return '<div class="icsub">'+(pi+1)+' of '+r.props.length+'</div><div style="font-weight:600"><span class="tag">'+p.k+'</span> '+p.t+'</div><div class="q">'+p.q+'</div><div class="acts"><button class="mini ok" data-a="ap">'+CK+'Approve</button><button class="mini" data-a="x">Edit</button><button class="mini" data-a="ap">Reject…</button><button class="mini" data-a="ap">Later</button></div>'}
-function mail(){return table(MAIL.map(function(m){return tr(m.t+stale(m.d),['<span class="tag">'+m.k+'</span> \u00b7 '+m.chg,'<span class="icsub">'+m.ev+'</span>',m.src+' \u00b7 <a href="#" class="srclink">Open source</a>'],'<button type="button" class="ib sm" aria-label="Edit" data-tip="Edit" data-a="x">'+I('<path d="M4 20h4L19 9l-4-4L4 16z"></path>')+'</button> <button class="mini ok" data-a="x">'+CK+'Approve</button> <button type="button" class="ib sm no" aria-label="Reject, with a reason" data-tip="Reject, with a reason" data-a="x">'+X+'</button>','')}).join(''))}
+function mail(){return table(MAIL.map(function(m,mi){return tr(m.t+stale(m.d),['<span class="icchg"><span class="tag">'+m.k+'</span> \u00b7 '+m.chg+'</span>','<span class="icq">'+m.ev+'</span>',m.src+' \u00b7 <a href="#" class="srclink">Open source</a>'],'<button type="button" class="ib sm" aria-label="Edit" data-tip="Edit" data-a="x">'+I('<path d="M4 20h4L19 9l-4-4L4 16z"></path>')+'</button> <button class="mini ok" data-a="x">'+CK+'Approve</button> <button type="button" class="ib sm no" aria-label="Reject, with a reason" data-tip="Reject, with a reason" data-a="x">'+X+'</button>','').replace('<tr class="click">','<tr class="click'+(peek===mi?' sel':'')+'" data-mi="'+mi+'" tabindex="0">')}).join(''))}
 function grp(t,c){return '<div class="rgroup"><h2>'+t+' <span class="sub rgc">'+c+'</span></h2></div>'}
 function tools(extra){return '<div class="toolbar rvtools"><input id="rvQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off"><span class="sp"></span>'+(extra||'')+'</div>'}
 function empty(t){return '<div class="empty">'+t+'</div>'}
@@ -270,9 +271,43 @@ function P5(){var c=counts();var list=rows.map(function(r){return '<tr class="cl
 
 var VIEWS=[['P1','List',I('<path d="M4 6h16M4 12h16M4 18h16"></path>')],['P2','Board',I('<rect x="3" y="4" width="5" height="16" rx="1"></rect><rect x="10" y="4" width="5" height="10" rx="1"></rect><rect x="17" y="4" width="4" height="13" rx="1"></rect>')],['P5','Two panes',I('<rect x="3" y="4" width="8" height="16" rx="1"></rect><rect x="13" y="4" width="8" height="16" rx="1"></rect>')]];
 function viewbar(){return '<div class="toolbar rvtools"><input id="rvQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off"><span class="sp"></span><button class="btn" data-a="all"'+(nProc()?'':' disabled')+'>Process all ready ('+nProc()+')</button><span class="seg" role="group" aria-label="How you see Intake and Review">'+VIEWS.map(function(v){return '<button type="button" data-o="'+v[0]+'" aria-pressed="'+(opt===v[0])+'" title="'+v[1]+'">'+v[2]+'<span style="margin-left:6px">'+v[1]+'</span></button>'}).join('')+'</span></div>'}
+
+function PM(kind,val){var C={Open:'var(--accent)',Closed:'var(--ok)'},PRC={Urgent:'var(--bad)',High:'var(--warn)',Medium:'var(--accent)',Low:'var(--faint)'},N={Urgent:4,High:3,Medium:2,Low:1};
+ if(kind==='who'){var ini=val.split(/\s+/).map(function(w){return w[0]}).join('').slice(0,2).toUpperCase();return '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--accent-soft)"></circle><text x="12" y="15.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--accent)" font-family="inherit">'+ini+'</text></svg>'}
+ if(kind==='pr'){var n=N[val]||0,c=PRC[val]||'var(--faint)',r='';for(var k=0;k<4;k++)r+='<rect x="'+(3+k*5)+'" y="'+(16-k*4)+'" width="3.4" height="'+(4+k*4)+'" rx="1" fill="'+c+'" opacity="'+(k<n?1:.25)+'"></rect>';return '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'+r+'</svg>'}
+ if(kind==='st'){return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" style="color:'+(C[val]||'var(--muted)')+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle>'+(val==='Closed'?'<path d="M8 12.5l3 3 5-6"></path>':'<path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"></path>')+'</svg>'}
+ return I(val)}
+function pchip(name,mk,words,empty){return '<div class="pk-prop"><button type="button" class="pk-chip'+(empty?' empty':'')+'" aria-label="'+name+': '+(empty?'not set':words)+'" data-tip="'+name+'" aria-haspopup="listbox">'+mk+'<span>'+words+'</span></button></div>'}
+function openPeek(i){var m=MAIL[i];if(!m)return;peek=i;var P=$('#panel');P.classList.add('peek','on','pkprop');
+ $('#pkId').innerHTML='<span>'+m.k+' proposal</span><span>·</span><span>'+m.src+'</span>';
+ var t=$('#pkTitle');t.classList.remove('blank');t.innerHTML='<p>'+m.t+'</p>';
+ var props='';
+ if(m.kind==='upd'){props+=pchip('Status',PM('st','Closed'),'Closed · was Open',false)}
+ props+=pchip('Owner',PM('who',m.o),m.o,false)+pchip('Due date',PM('i','<rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M4 10h16M9 3v4M15 3v4"></path>'),m.due||'No due date',!m.due)+pchip('Priority',PM('pr',m.pr),m.pr,false)+pchip('Project',PM('i','<rect x="3" y="4" width="7" height="7"></rect><rect x="14" y="4" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect>'),'Example Programme',false);
+ $('#pkProps').innerHTML=props;
+ $('#pkProps2').innerHTML=m.kind==='risk'?pchip('Impact',PM('pr','High'),'Impact: High',false)+pchip('Likelihood',PM('pr','Medium'),'Likelihood: Medium',false):'';
+ var note=$('#pkNote');note.hidden=m.kind!=='upd';note.innerHTML=m.kind==='upd'?'<b>What changes</b>: '+m.item+' · Draft the comms plan: status <b>'+m.before+' → '+m.after+'</b>. The rest of the item stays as it is.':'';
+ $('#pkSrcL').hidden=false;var si=$('#pkSrcIn');si.hidden=false;si.classList.remove('blank');si.innerHTML='<p>'+m.ev+'</p><p class="sub">'+m.src+' · <a href="#" class="srclink">Open source</a></p>';
+ $('#pkDescL').textContent='Description';var d=$('#pkDesc');d.classList.toggle('blank',!m.desc);d.innerHTML='<p>'+(m.desc||'<br>')+'</p>';
+ $('#pkPropTop').innerHTML='<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it’s approved</div>';
+ $('#pkSave').textContent=(i+1)+' of '+MAIL.length;
+ draw()}
+function closePeek(){peek=null;var P=$('#panel');P.classList.remove('peek','on','pkprop');draw()}
+function dropMail(i,msg){MAIL.splice(i,1);$('#pkSave').textContent=msg;if(MAIL.length){openPeek(Math.min(i,MAIL.length-1))}else closePeek();draw()}
+document.addEventListener('click',function(e){
+ var row=e.target.closest('tr[data-mi]');if(row&&!e.target.closest('button,a,input')){openPeek(+row.dataset.mi);return}
+ if(e.target.closest('#pkClose')){closePeek();return}
+ if(e.target.closest('#pkPrev')&&peek!==null){openPeek((peek+MAIL.length-1)%MAIL.length);return}
+ if(e.target.closest('#pkNext')&&peek!==null){openPeek((peek+1)%MAIL.length);return}
+ if(e.target.closest('#pkPSaveA')&&peek!==null){dropMail(peek,'Approved');return}
+ if(e.target.closest('#pkReject')&&peek!==null){dropMail(peek,'Rejected');return}
+ if(e.target.closest('#pkCancel')){closePeek();return}
+ if(e.target.closest('#pkPSave')){$('#pkSave').textContent='Saved';return}
+},true);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&peek!==null)closePeek()});
 var CAP={P1:'<b>List.</b> The stages are three counts you can click, and one list below. Check them opens the minutes in place. This is where everyone starts.',P2:'<b>Board.</b> Three columns, a card per meeting; Process moves a card across. The clearest picture of flow. Check them opens the proposals under the board.',P5:'<b>Two panes.</b> The meetings on the left with their stage; the one you select on the right, with its track and its proposals or its Process button. Fastest for working through one meeting at a time.'};
 function draw(){$$('[data-o]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.o===opt)});$$('[data-s]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.s===sample)});
- $('#icSub').textContent=(nProc()+' ready to process · '+nApp()+' proposals to approve');$('#icNote').innerHTML='<b>Choose how you see it:</b> List, Board or Two panes, and creaite remembers your choice (per person, in the browser, never shared). '+CAP[opt]+' <span class="icsub">Nothing is built.</span>';
+ $('#icSub').textContent=(nProc()+' ready to process · '+nApp()+' proposals to approve');$('#icNote').innerHTML='<b>Click a mail or Teams proposal to open it in the peek.</b> <b>Choose how you see it:</b> List, Board or Two panes, and creaite remembers your choice (per person, in the browser, never shared). '+CAP[opt]+' <span class="icsub">Nothing is built.</span>';
  $('#icBody').innerHTML=viewbar()+{P1:P1,P2:P2,P5:P5}[opt]();var b=$('#revBadge');if(b)b.textContent=nProc()+nApp()}
 function proc(ids){ids.forEach(function(i){rows.filter(function(r){return r.id===i})[0].st='running'});draw();setTimeout(function(){ids.forEach(function(i){var r=rows.filter(function(x){return x.id===i})[0];r.st='drafted';r.d=0;r.props=[{k:'Minutes',t:'Draft minutes: '+r.t,q:'Draft minutes of the call: 1 decision, 3 actions, 1 risk.'},{k:'Action',t:'Follow up on the open question',q:'“I’ll follow up this week.”'}]});draw()},1800)}
 document.addEventListener('click',function(e){var o=e.target.closest('[data-o]');if(o){opt=o.dataset.o;draw();return}var sm=e.target.closest('[data-s]');if(sm){sample=sm.dataset.s;reset();draw();return}
