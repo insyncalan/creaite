@@ -69,7 +69,9 @@ test_client_gate.py 168
 test_client_gate_late.py 130
 test_client_gate_reviews.py 173
 test_client_item_links.py 0
-test_client_leak.py 620
+test_client_leak.py 137
+test_client_leak_gate.py 149
+test_client_leak_place.py 334
 test_client_view.py 163
 test_close_day.py 40
 test_close_day_card.py 43
@@ -337,7 +339,9 @@ test_vip_matching.py 133
 test_vip_private.py 72
 test_vip_promises.py 197
 test_vip_screens.py 214
-test_vip_single_call.py 306
+test_vip_single_call.py 75
+test_vip_single_call_close.py 84
+test_vip_single_call_stage.py 147
 test_vip_threads.py 133
 test_vip_tools_pinned.py 4
 test_weekend_dates.py 67
