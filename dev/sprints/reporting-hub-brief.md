@@ -124,7 +124,12 @@ Differences between the build and the locked mockup. None holds the release. **C
 **Added by Stark and Cap:**
 4. **Editable Side by side** (#230, branch p241-sbs): both reports editable at once. Size M, 1 to 1.5 Sonnet days.
 5. **Grey pane and label-row layout** (Cap #6): the report's pane and the label row differ from the mockup. Size M.
-6. **Cap L4 to L7 and L10:** small to medium differences on Cap's list (details with Cap; not seen by me).
+6. **Cap's low findings on the client-report setting (L4 to L7 and L10)**, from Team Cap's comment on #135 (20:25), in plain words. Sizes S to M together; none touches client data; L6 and L7 are older than 2.4.0:
+   - **L4:** the setting line is found by the first match anywhere in a project's CLAUDE.md, including inside a code block or another section. A fenced "Client report: off" gets toggled instead of a real line being added (the Python reader takes the same first hit, so both agree). Fix: read and write only the project's own settings section.
+   - **L5:** no lock or version check, so changing settings in two browser tabs at once can lose one change (within one tab the page keeps them in order). Fix: a version check on save.
+   - **L6:** when a settings save fails, the message shows an absolute file path (the older generic handler). Fix: say what failed without a path.
+   - **L7:** the file-save route accepts `projects/<anything>/CLAUDE.md`, so it can create a CLAUDE.md under `_Archive`, `_portfolio` or a made-up folder (older; token-checked only, no origin check). Fix: accept only a real project's folder. This may touch a guarded file, so Jarvis applies it.
+   - **L10:** the server does not refuse to build a client draft when the setting is OFF; it is hidden on the screen only. Fix: refuse on the server too.
 7. **Neutral week-list dots** for weeks the open report does not hold. Size S.
 8. **Side by side readable at about 310 px a page at 900 px wide:** Alan accepted this (18-10-2026); no action.
 
