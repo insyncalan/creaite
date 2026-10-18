@@ -638,7 +638,7 @@ ACT_CAP = 2000                                              # Activity lists the
 LOG_SQL = ("SELECT c.rowid AS rowid, c.*, a.undone_at FROM change_log c LEFT JOIN applies a ON a.apply_id = c.apply_id "
            "WHERE c.tbl != 'rejected' AND c.field != 'updated_at' {where} ORDER BY c.rowid DESC {limit}")
 LINKED = {"links": "from_item", "item_labels": "item_id"}   # the one logged field that stands for a whole link or label row
-BY = {"dashboard": "You, in the dashboard", "cx-edit": "You, via cx-edit", "excel-import": "Excel import",
+BY = {"dashboard": "You, in the dashboard", "cx-edit": "You, by hand", "excel-import": "Excel import",
       "assistant": "ask creaite", "undo": "Undo", "archive": "Archived for age"}     # BL-10: the daily archiving
 
 
