@@ -40,7 +40,7 @@ SECTIONS = {   # kind: (id, type, creaite's own heading), in the default order
 GLANCE = {"weekly": ("next_milestone", "overdue", "high_risks", "decisions_needed"),
           "client": ("next_milestone", "client_asks", "watch")}
 LOGO_KINDS = ("firm", "client", "partner")          # the static kinds (#228 B: a project's real kinds are logo_kinds(code))
-LOGO_KIND = re.compile(r"(firm|client|partner(:[a-z0-9]+(-[a-z0-9]+)*)?)\Z")     # a kind as a layout may hold it (a slug is checked per project)
+LOGO_KIND = re.compile(r"(firm|client|partner(:[a-z0-9]+(-[a-z0-9]+)*)?)\Z")  # a layout kind; a slug is checked per project
 LOGO_EXT = (".png", ".jpg", ".jpeg", ".svg")
 DEFAULT_ROWS = {"risks": {"top": 5}}
 LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")

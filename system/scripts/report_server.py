@@ -623,7 +623,7 @@ def logo_save_route(handler, req):
         err = _logo_change(handler, ch)
         if err:
             return err
-    for old in _logo_files(stems):                                 # then a stale file of another type (or the old partner file) must not win
+    for old in _logo_files(stems):                                 # a stale file of another type, or the old partner file, must not win
         if old.name not in dict(keep):
             err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {label} logo"})
             if err:
