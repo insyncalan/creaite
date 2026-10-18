@@ -17,7 +17,9 @@ export function WeekMenu({ week, tone, rows, clientOn, onPick }) {
   const [open, setOpen] = useState(false);
   const btn = useRef(/** @type {HTMLButtonElement|null} */ (null));
   const close = (/** @type {string} */ how) => { setOpen(false); if (how === "esc" && btn.current) btn.current.focus({ preventScroll: true }); };
-  const jump = (/** @type {string} */ value) => {
+  const jump = (/** @type {string} */ typed) => {
+    const m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(typed.trim());                        // DD-MM-YYYY as Alan types it; YYYY-MM-DD also works
+    const value = m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : typed.trim();
     const w = weekEndingFor(value, Math.max(0, WEEK_DAYS.indexOf(String(S.weeklyDay || "Friday"))));
     if (!w) return;
     setOpen(false); onPick(w);
@@ -40,10 +42,12 @@ export function WeekMenu({ week, tone, rows, clientOn, onPick }) {
               {clientOn ? <span class="s">Client: {r.client.toLowerCase()}</span> : null}
             </button>
           ))}
+          <h4>Jump to</h4>
           <div class="wkjump">
-            <label for="wkJump">Jump to a date</label>
-            <input type="date" id="wkJump" class="pkdt" onChange={e => jump(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
-              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); jump(/** @type {HTMLInputElement} */ (e.currentTarget).value); } }} />
+            <input type="text" id="wkJump" class="pkdt" inputmode="numeric" placeholder="DD-MM-YYYY" aria-label="Week ending date, DD-MM-YYYY" autocomplete="off"
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); jump(/** @type {HTMLInputElement} */ (e.currentTarget).value); } }}
+              onChange={e => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.currentTarget.value.trim())) jump(e.currentTarget.value); }} />
+            <button type="button" class="btn sm" id="wkGo" onClick={e => { const i = /** @type {HTMLInputElement|null} */ (document.getElementById("wkJump")); if (i) jump(i.value); }}>Go</button>
           </div>
         </MenuPanel>
       ) : null}

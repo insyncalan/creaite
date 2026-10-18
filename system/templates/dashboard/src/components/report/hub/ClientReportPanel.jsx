@@ -88,7 +88,6 @@ export function ClientReportPanel({ code, onClose }) {
             <div class="cfglogos" role="group" aria-labelledby="cfgLogosL">
               {TILES.map(t => <LogoTile key={t.kind} code={code} t={t} ticked={ticked.includes(t.kind)} />)}
               {crLogoNote.value ? <p class="sub cfgnote" role="status" id="cfgLogoNote">{crLogoNote.value}</p> : null}
-              <p class="sub cfgnote">Ticking a logo changes the header of the internal and the client report. A transparent PNG or SVG sits best; empty margins are trimmed on the copy that is drawn, and the file you choose is kept as it is.</p>
             </div></div>
           <p class="sub">The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects.</p>
         </div>

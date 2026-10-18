@@ -3659,7 +3659,6 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .cfglogo .sub{display:block;font-size:var(--fs-xs)}
 .cfglogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
 .cfglogo .mark img{max-width:100%;max-height:100%;display:block}
-.cfglogo:has(input[data-logo-tick]:disabled) .cfgname,.cfglogo:has(input[data-logo-tick]:disabled) .mark{opacity:.6}
 .cfgact{display:flex;gap:6px;align-items:center}
 .cfgnote{margin:0}
 .cfgfoot{display:flex;justify-content:flex-end;margin-top:12px;position:sticky;bottom:-14px;padding:8px 0 0;background:var(--surface)}
@@ -3789,8 +3788,8 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .wkrow{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:center;width:100%;min-height:36px;padding:0 10px;border:0;background:none;border-radius:var(--r-md);font:400 var(--fs-sm) var(--font);color:var(--ink);text-align:left;cursor:pointer}
 .wkrow:hover,.wkrow:focus-visible{background:var(--accent-soft)} .wkrow[aria-current="true"]{font-weight:600;background:var(--sunk)}
 .wkrow>span{white-space:nowrap} .wkrow .s{font-size:var(--fs-xs);color:var(--muted);font-weight:400}
-.wkjump{display:flex;gap:8px;align-items:center;margin-top:4px;padding:8px 10px 4px;border-top:1px solid var(--line);font-size:var(--fs-sm)}
-.wkjump label{color:var(--muted)} .wkjump input{min-height:var(--ctl-h)}
+.wkjump{display:flex;gap:8px;align-items:center;padding:0 10px 8px;font-size:var(--fs-sm)}
+.wkjump input{flex:1;min-width:0;min-height:var(--ctl-h)}
 /* zoom: − Fit + as one joined control; the percentage returns to Fit */
 .hubzoom{display:inline-flex;align-items:stretch;height:var(--ctl-h);box-sizing:border-box;border:1px solid var(--line);border-radius:var(--ctl-r);background:var(--surface);overflow:hidden}
 .hubzoom button{width:var(--ctl-h);border:0;background:none;color:var(--ink);font:500 var(--fs-lg) var(--font);cursor:pointer;padding:0}
@@ -3802,9 +3801,10 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .hubrow.two>.hubpl{flex:1 1 0;min-width:0}
 .hubpl{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;min-width:0;font-size:var(--fs-sm);color:var(--ink)}
 .hubpl>b,.hubpl>.sub,.hubpl .linkbtn{white-space:nowrap} .hubpl>b{font-weight:600} .hubpl>.sub{font-weight:400;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.hubpl .linkbtn{margin-left:auto;flex:none}
-.hubstat{font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:var(--lh-22);background:var(--surface);white-space:nowrap}
+.hubpl .linkbtn{flex:none}
+.hubstat{margin-left:auto;font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:var(--lh-22);background:var(--surface);white-space:nowrap}
 .hubedit{font-size:var(--fs-xs)}
+.newmenu.hubm button svg.i{color:var(--muted)}   /* the Export and Approve menus: grey outline icons, as the locked mockup draws them */
 .hubrow .crnote{flex:1 1 100%}
 /* the cog and the panel it opens (H3 fills the slot) */
 .hubcfgwrap{position:relative;display:inline-flex}

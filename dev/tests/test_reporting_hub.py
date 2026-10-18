@@ -454,6 +454,49 @@ class CogPanel(Hub):
         self.b.click("#cfgDone"); self.b.wait("!document.querySelector('#crPanel')", 5)
 
 
+class Triage(Hub):
+    """The cheap differences from Cap's acceptance walk (21:18, 18-10-2026), each measured."""
+
+    def test_the_firm_tile_is_not_greyed_and_the_panel_has_no_extra_note(self):
+        self.open_hub()
+        self.b.click("#hubCfg"); self.b.wait("document.querySelector('#crPanel .cfglogo')", 5)
+        self.assertEqual(self.q("getComputedStyle(document.querySelector('#crPanel .cfglogo[data-kind=firm] .mark')).opacity"), "1")
+        self.assertEqual(self.q("getComputedStyle(document.querySelector('#crPanel .cfglogo[data-kind=firm] .cfgname')).opacity"), "1")
+        self.assertNotIn("Ticking a logo", self.q("document.querySelector('#crPanel').innerText"))
+
+    def test_jump_to_takes_a_dd_mm_yyyy_date_and_a_go_button(self):
+        self.open_hub()
+        self.b.click("#hubWeek"); self.b.wait("document.querySelector('.wkpop #wkJump')")
+        self.assertEqual(self.q("document.querySelector('#wkJump').placeholder"), "DD-MM-YYYY")
+        self.assertEqual(self.q("document.querySelector('#wkJump').type"), "text")
+        self.assertIn("jump to", self.q("document.querySelector('.wkpop').innerText").lower())
+        self.assertEqual(self.q("document.querySelector('#wkGo').textContent"), "Go")
+        self.q("document.querySelector('#wkJump').focus()")
+        self.b.type("30-09-2026")
+        self.b.click("#wkGo")
+        self.b.wait("location.hash.includes('w=2026-10-02')", 10)
+
+    def test_the_status_pill_sits_at_the_far_right_of_its_label_row(self):
+        for view in ("internal", "side"):
+            with self.subTest(view=view):
+                self.open_hub()
+                self.b.click(f"#hubSeg [data-hv='{view}']")
+                self.b.pump(0.3)
+                gaps = self.q("""[...document.querySelectorAll('.hubpl')].map(l=>{const p=l.querySelector('.hubstat').getBoundingClientRect(), r=l.getBoundingClientRect();
+                  return Math.round(r.right-p.right)})""")
+                self.assertTrue(gaps and all(g <= 2 for g in gaps), gaps)
+
+    def test_show_as_exported_is_a_document_not_an_eye_and_the_menus_have_grey_icons(self):
+        self.open_hub()
+        self.assertIn("M15 2H6", self.q("document.querySelector('#hubExp svg').innerHTML"))
+        for btn in ("#hubExport", "#hubApprove"):
+            with self.subTest(menu=btn):
+                self.b.click(btn); self.b.wait("document.querySelector('.hubm')", 5)
+                self.assertEqual(self.q("getComputedStyle(document.querySelector('.hubm button svg')).color"),
+                                 self.q("getComputedStyle(document.querySelector('.hubstat')).color"), "the icons are the muted grey")
+                self.b.key("Escape"); self.b.wait("!document.querySelector('.hubm')", 5)
+
+
 class EntryPoints(Hub):
     def arrives(self, code_js, week="2026-10-09", audience="internal", pages=1):
         self.open_hub(hash_=code_js)
