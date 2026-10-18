@@ -8776,18 +8776,40 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     const byPointer = A2(false);
     const isOpen = A2(false);
     isOpen.current = open2;
+    const show = (
+      /** @param {boolean} v */
+      (v5) => {
+        isOpen.current = v5;
+        setOpen2(v5);
+      }
+    );
     const close = (how) => {
       back2.current = how === "esc";
+      if (KB_OPEN === fold) KB_OPEN = null;
       if (back2.current) btn.current?.focus({ preventScroll: true });
-      setOpen2(false);
+      show(false);
       if (hover && menuGroup.current === btn.current) menuGroup.close();
     };
     const closeRef = A2(close);
     closeRef.current = close;
-    const fold = A2(() => closeRef.current("esc")).current;
+    const fold = A2(() => {
+      if (!isOpen.current) return;
+      const at2 = document.activeElement, inside = !at2 || at2 === document.body || at2 === btn.current || !!box.current?.contains(at2);
+      closeRef.current(inside ? "esc" : "away");
+    }).current;
+    h2(() => {
+      if (KB_OPEN === fold && !isOpen.current) KB_OPEN = null;
+    }, [open2]);
     h2(() => () => {
       if (KB_OPEN === fold) KB_OPEN = null;
     }, []);
+    const claimKb = () => {
+      if (!hover) return;
+      if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
+      if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+      KB_OPEN = fold;
+      menuGroup.release(btn.current);
+    };
     h2(() => {
       const b5 = btn.current;
       if (!hover || !b5) return;
@@ -8802,9 +8824,9 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
           KB_OPEN = null;
           byPointer.current = true;
           tipHide();
-          setOpen2(true);
+          show(true);
         },
-        close: () => setOpen2(false)
+        close: () => show(false)
       });
     }, [hover, why]);
     _2(() => {
@@ -8830,17 +8852,12 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
       if (!open2) {
         e4.preventDefault();
         byPointer.current = false;
-        if (hover) {
-          if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
-          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
-          KB_OPEN = fold;
-          menuGroup.release(btn.current);
-        }
-        setOpen2(true);
+        claimKb();
+        show(true);
       } else if (byPointer.current) {
         e4.preventDefault();
         byPointer.current = false;
-        menuGroup.release(btn.current);
+        claimKb();
         menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
       }
     };
@@ -8869,12 +8886,16 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
             if (hover) menuGroup.release(btn.current);
             if (open2 && byPointer.current) {
               byPointer.current = false;
+              claimKb();
               menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
               return;
             }
             byPointer.current = false;
             if (open2) close("pick");
-            else setOpen2(true);
+            else {
+              claimKb();
+              show(true);
+            }
           },
           children: [
             icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
