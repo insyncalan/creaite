@@ -2,6 +2,13 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.4.1
+
+A security fix for client exports; nothing else changes.
+
+
+- **Client exports can no longer carry hidden words, or load outside pictures, through stylesheet tricks.** If you exported a client report from 2.4.0 and a hidden item mattered, export it again.
+
 ## creaite 2.4.0
 
 Weekly reporting is rebuilt as one place for the internal and the client report, what you export now looks like what you see and is saved where you can find it, and you can add logos and your own text sections.
