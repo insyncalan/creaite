@@ -143,6 +143,12 @@ tr.mk-out td:not(.eyec),.wr-stat.mk-out>*:not(.wr-eye){opacity:.4}
 .cfgact{display:flex;gap:10px;align-items:center}
 .cfglogo{grid-template-columns:32px minmax(0,1fr) auto}
 .mk-logo{cursor:pointer;font:inherit}.mk-logo.has{border-style:solid;padding:0 8px}.mk-logo:hover{background:var(--accent-soft);color:var(--ink)}.firm-img{height:34px;width:auto;max-width:160px;display:block}
+/* a filled logo sits straight on the page: no box, no border, so transparency shows the page through; the picture keeps its own proportions */
+.mk-logo.has{border:0;background:none;padding:0;height:auto}
+.mk-logo.has:hover{background:none;outline:1px dashed var(--line);outline-offset:4px}
+.firm-img{height:36px;width:auto;max-width:180px;object-fit:contain}
+/* dark theme: a dark logo with a transparent background would vanish, so it sits on a light plate */
+:root[data-theme="dark"] .hubpane .mk-logo.has .firm-img{background:#fff;padding:4px 8px;border-radius:4px;box-sizing:content-box}
 </style></head>
 <body>
 <div class="shell">
