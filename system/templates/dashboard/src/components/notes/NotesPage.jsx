@@ -20,7 +20,8 @@ import { FindUpdates } from "./FindUpdates.jsx";
 import { askDeleteNote, DeleteNoteDialog } from "./DeleteNote.jsx";
 import { Dialog } from "../Dialog.jsx";
 import { Icon } from "../Icon.jsx";
-import { Menu } from "../Menu.jsx";
+import { Menu, openMenu } from "../Menu.jsx";
+import { noteMenuItems, noteMenuPick } from "./noteMenu.js";
 import { NewTile } from "../work/NewTile.jsx";
 import { NoteDate, NoteTags } from "./NoteHeader.jsx";
 import { ProjectTabs } from "../project/ProjectTabs.jsx";
@@ -50,14 +51,26 @@ export function noteByTitle(code, title) {
   return pick(all[code]) || Object.values(all).map(pick).find(Boolean) || null;
 }
 
-/** The list. @param {{code: string, onOpen: (path: string) => void}} props */
-function NotesList({ code, onOpen }) {
+/** The list. @param {{code: string, onOpen: (path: string) => Promise<void> | void, onOpenFile: (path: string) => void}} props */
+function NotesList({ code, onOpen, onOpenFile }) {
   const open = notesListOpen.value, q = notesQuery.value.trim().toLowerCase(), cur = noteCur.value;
   const L = notesList.value.filter(n => !q || n.title.toLowerCase().includes(q) || n.tags.some(t => t.toLowerCase().includes(q)));
   const pinned = L.filter(n => n.pinned), recent = L.filter(n => !n.pinned);
+  /** The note's … menu for a row (#194): the same menu as its … button, for THAT row's note, with nothing opened or switched (the open note, its
+      typing, scroll and focus are not touched). At the pointer, or under the row for the keyboard. Esc closes it with focus back on the row.
+      @param {Event} e @param {NoteSummary} n @param {number} x @param {number} y */
+  const rowMenu = (e, n, x, y) => {
+    e.preventDefault(); e.stopPropagation();
+    const btn = /** @type {HTMLElement} */ (e.currentTarget);
+    const st = { pinned: !!n.pinned, confidential: !!n.confidential, path: n.path, title: n.title, code };
+    openMenu(btn, { label: "Note", cls: "nrowmenu", at: { x, y }, items: noteMenuItems(st),
+      onPick: id => { noteMenuPick(id, st, onOpenFile); if (id === "pin" || id === "conf") setTimeout(() => { if (btn.isConnected) btn.focus({ preventScroll: true }); }, 0); } });
+  };
   const row = /** @param {NoteSummary} n */ n => (
     <li key={n.path}>
-      <button type="button" class={`ni${cur && cur.path === n.path ? " on" : ""}`} aria-current={cur && cur.path === n.path ? "page" : undefined} onClick={() => onOpen(n.path)}>
+      <button type="button" class={`ni${cur && cur.path === n.path ? " on" : ""}`} aria-current={cur && cur.path === n.path ? "page" : undefined} onClick={() => onOpen(n.path)}
+        onContextMenu={e => { const r = e.currentTarget.getBoundingClientRect(); rowMenu(e, n, e.clientX || r.left + 24, e.clientY || r.bottom); }}
+        onKeyDown={e => { if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) { const r = e.currentTarget.getBoundingClientRect(); rowMenu(e, n, r.left + 24, r.bottom); } }}>
         <b>{n.pinned ? <span class="pin" aria-hidden="true">◆ </span> : null}{n.title}</b>
         <small>{when(n)}{n.kind ? ` · ${n.kind}` : ""}{n.confidential ? <span class="conf"> · Confidential</span> : null}</small>
       </button>
@@ -281,11 +294,8 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
             <SaveLine />
             <span class="nslot" id="noteFindSlot" data-slot="find-updates"><FindButton /></span>
             <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
-              items={[{ id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
-                { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
-                { id: "file", name: "Show the file", line: n.path, icon: "folder" },
-                 { id: "sep", sep: true }, { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }]}
-              onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else if (id === "del") askDeleteNote(); else onOpenFile(n.path); }} />
+              items={noteMenuItems({ pinned, confidential: conf, path: n.path })}
+              onPick={id => noteMenuPick(id, { pinned, confidential: conf, path: n.path, title: n.title, code: cur.code }, onOpenFile)} />
           </div>
           <div class="meta props">
             {created ? <span>Created {fd(created)}</span> : null}
@@ -422,7 +432,7 @@ export function NotesPage({ code, onGo, onOpenItem, onOpenFile, onAddressChange 
       {notesMsg.value ? <div class="nmsg" role="status">{notesMsg.value}</div> : null}
       {!viaServer() ? <div class="nmsg" role="status">Notes open and save through the live server. Start it to edit; the list is as of the last build.</div> : null}
       <div class={`nsplit${notesListOpen.value ? "" : " collapsed"}${noteFind.value && noteCur.value ? " finding" : ""}`} id="notesSplit">
-        <NotesList code={code} onOpen={openPath} />
+        <NotesList code={code} onOpen={openPath} onOpenFile={onOpenFile} />
         <NoteDoc code={code} onOpen={openPath} onOpenItem={onOpenItem} onNew={t => setDlg(t)} onOpenFile={onOpenFile} />
         <NoteSide code={code} onOpen={openPath} onOpenItem={onOpenItem} />
       </div>

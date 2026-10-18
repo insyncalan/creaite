@@ -194,6 +194,22 @@ export function noteMeta(changes, now) {
   if (now) { ses.dirty = true; ses.rev++; noteFlush(); } else noteTyped();
 }
 
+/** #194: pin or mark confidential a note that is NOT the open one (the row's menu), by its path: the file is read and written like any save,
+    with nothing from the open note (its typing, cursor, scroll or state) involved. The open note itself goes the usual way.
+    @param {string} path @param {Record<string, any>} changes @returns {Promise<boolean>} */
+export async function noteMetaFor(path, changes) {
+  const c = noteCur.value;
+  if (c && c.path === path) { noteMeta(changes, true); return true; }
+  if (noteHeld.value === path) { notesMsg.value = "This note waits on the approval card to be deleted: answer the card first."; return false; }
+  if (!viaServer()) { notesMsg.value = "Changing a note needs the live server."; return false; }
+  const g = await api("/api/notes/get", { path });
+  if (!g || !g.ok) { notesMsg.value = oneLine((g && g.message) || "That note couldn't be read."); return false; }
+  const r = await api("/api/notes/save", { path, body: null, changes, base: g.base, session: newSid() }).catch(() => null);
+  if (!r || !r.ok) { notesMsg.value = oneLine((r && r.message) || "Not saved."); return false; }
+  keepSummary(g.code, r.note);
+  return true;
+}
+
 const body = () => { try { return ses.getBody ? ses.getBody() : null; } catch (e) { return null; } };
 /** The text Alan sees in the note, as Markdown: what "Copy my text" copies. */
 export function noteText() { const c = noteCur.value, b = body(); return b ?? (c ? c.body : "") ?? ""; }

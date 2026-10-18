@@ -21,8 +21,14 @@ export const noteDeleting = signal(/** @type {{path: string, title: string, code
 /** Whether the confirm box's Delete note is working (the card is being made). */
 const busy = signal(false);
 
-/** Open the confirm box for the open note. */
-export function askDeleteNote() {
+/** Open the confirm box for the open note, or (#194) for a note in the list given as `row` (a note that is not open is not touched).
+    @param {{path: string, title: string, code: string}} [row] */
+export function askDeleteNote(row) {
+  if (row && !(noteCur.value && noteCur.value.path === row.path)) {      // #194: a note in the list that is not the open one: the open note is left alone
+    if (!viaServer()) { snack("Deleting a note needs the live server"); return; }
+    noteDeleting.value = { path: row.path, title: row.title, code: row.code };
+    return;
+  }
   const c = noteCur.value;
   if (!c) return;
   if (!viaServer()) { snack("Deleting a note needs the live server"); return; }
@@ -38,9 +44,16 @@ export function askDeleteNote() {
 export async function deleteNote(n) {
   busy.value = true;
   try {
-    if (!(await noteFlush())) { noteDeleting.value = null; notesMsg.value = "Not deleted: the note isn't saved yet (the line in its header says why)."; return false; }
+    const open = !!(noteCur.value && noteCur.value.path === n.path);
+    if (open && !(await noteFlush())) { noteDeleting.value = null; notesMsg.value = "Not deleted: the note isn't saved yet (the line in its header says why)."; return false; }
     const cur = noteCur.value;
-    const r = await api("/api/notes/delete", { path: n.path, base: cur && cur.path === n.path ? cur.base : "" });
+    let base = cur && cur.path === n.path ? cur.base : "";
+    if (!open) {                                         // not the open note: its version is read here, the open note is not saved or changed
+      const g = await api("/api/notes/get", { path: n.path });
+      if (!g || !g.ok) { noteDeleting.value = null; snack(oneLine((g && g.message) || "Not deleted.")); return false; }
+      base = g.base;
+    }
+    const r = await api("/api/notes/delete", { path: n.path, base });
     noteDeleting.value = null;
     if (!r || !r.ok || !r.card) { snack(oneLine((r && r.message) || "Not deleted.")); return false; }
     snack(oneLine(r.message));
