@@ -367,6 +367,14 @@ class LogEdges(SentCase):
         labels = b.eval(f"cxWork('actions',{self.s_scripts!r}).map(x=>x.label||'')")
         self.assertFalse([x for x in labels if x.startswith("Chase")], labels)
         self.assertEqual(labels.count("Draft email"), 2, labels)
+        b.eval(f"openContextMenu(cxWork('actions',{self.s_scripts!r}),200,200,{{label:'x'}})")     # #153 finding 8: screen readers tell them apart
+        b.wait('!!document.querySelector(".cxmenu")')
+        descs = b.eval("""[...document.querySelectorAll(".cxmenu [role=menuitem]")].filter(x=>x.textContent.trim().startsWith("Draft email")).map(x=>x.getAttribute("aria-description")||"")""")
+        b.key("Escape")
+        self.assertEqual(len(descs), 2, descs)
+        self.assertIn("update", descs[0].lower())
+        self.assertIn("chase", descs[1].lower())
+        self.assertNotEqual(descs[0], descs[1])
         for index, mode in ((0, "update"), (1, "chase")):
             b.eval(f"cxWork('actions',{self.s_scripts!r}).filter(x=>x.label==='Draft email')[{index}].run()")
             b.wait("document.getElementById('deDlg').open")

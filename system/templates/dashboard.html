@@ -42561,6 +42561,7 @@ ${s5}`;
                 "aria-expanded": it2.sub ? next && next.pi === ci2 ? "true" : "false" : void 0,
                 "aria-disabled": it2.disabled ? "true" : void 0,
                 "aria-current": it2.checked ? "true" : void 0,
+                "aria-description": it2.desc || void 0,
                 onClick: (e4) => {
                   e4.preventDefault();
                   runItem(
@@ -44237,8 +44238,8 @@ ${s5}`;
     out.push({ sep: true }, { label: "Copy ID", icon: "copy", run: () => cxCopy(id2, id2) }, { label: "Copy link", icon: "link", run: () => cxCopy(cxLink(id2), `the link to ${id2}`) });
     const who2 = k5 === "decisions" ? null : pkWho(x5.o);
     if (who2 && PERS().some((p6) => p6.name === who2)) {
-      out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2) });
-      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2, "chase") });
+      out.push({ label: "Draft email", icon: "mail", desc: "Asks for an update (update request)", run: () => openDraftEmail(who2) });
+      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: "Draft email", icon: "mail", desc: "Chases this overdue item (chase)", run: () => openDraftEmail(who2, "chase") });
     }
     return out;
   }
