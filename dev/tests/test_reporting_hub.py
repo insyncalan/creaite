@@ -194,6 +194,38 @@ class WeekMenu(Hub):
         self.b.wait("location.hash.includes('w=2026-10-02')", 10)       # the Friday ending the week that holds 30-09
 
 
+class WeekMenuTrail(Hub):
+    """The week dots on the real built page: the demo vault gets approved health updates for two weeks (no patching of the page's data)."""
+
+    @classmethod
+    def load(cls, v):
+        R.populate(v)
+        v.propose("trail", [R.new("updates", 90, week_ending="2026-10-02", project="ABC", health="At risk", summary="Data access late"),
+                            R.new("updates", 91, week_ending="2026-09-25", project="ABC", health="On track", summary="Steady")])
+        v.run("apply")
+
+    def test_week_dots_follow_the_real_built_trail_with_no_patching(self):
+        """On the real built page (the demo vault): the trail carries a Friday for every week, a week with an update gets its colour, a week without one or
+        outside the six weeks stays neutral. (The server side is test_dashboard's trail test; this one is the page's own data into the hub.)"""
+        self.open_hub()
+        d = self.q("(()=>{const p=P.find(p=>p.code==='ABC'); return {t:p.trail, e:p.trailend}})()")
+        self.assertEqual((len(d["t"]), len(d["e"])), (6, 6), d)
+        self.assertEqual([x for x in d["t"] if x], ["ok", "warn"], d)            # the two weeks given above, oldest first
+        self.b.click("#hubWeek")
+        self.b.wait("document.querySelector('.wkpop')")
+        got = self.q("Object.fromEntries([...document.querySelectorAll('.wkpop .wkrow')].map(r=>[r.dataset.w, r.querySelector('i').className]))")
+        cur = self.q("document.querySelector('.wkpop .wkrow[aria-current=true]').dataset.w")
+        colour = {"ok": "g", "warn": "a", "bad": "r"}
+        by_trail = dict(zip(d["e"], d["t"]))
+        for w, cls in got.items():
+            if w == cur:
+                continue                                   # the open report's own flag decides its week
+            self.assertEqual(cls, colour.get(by_trail.get(w, ""), "n"), (w, by_trail.get(w), got))
+        self.assertTrue(any(got[w] in ("g", "a", "r") for w in got if w != cur and by_trail.get(w)),
+                        "at least one other week is coloured from the trail")
+
+
+
 class Toolbar(Hub):
     CONTROLS = "#v-reporting .sheet-bar :is(button, .hubzoom)"
 
