@@ -131,7 +131,7 @@ function HubSheet({ code, view, on, doc }) {
     return <ReportSheet audience="client" key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={iLocked} panesApart
       renderers={WEEKLY_RENDER} onChange={internalChange} onSave={internalSave} ai={internalAi(doc)} onRedraft={internalRedraft(doc)}
       partner={{ doc: cd, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: cFiled,
-        match: (/** @type {string} */ id) => { matchInternal([id]); }, matchAll: (/** @type {string[]} */ ids) => { matchInternal(ids); }, onChange: setClientDoc, onSave: saveClientPage, dirty: () => crDirty.value, ai: clientAi, onRedraft: clientRedraft(cd) }}
+        match: (/** @type {string} */ id) => { matchInternal([id]); }, onChange: setClientDoc, onSave: saveClientPage, dirty: () => crDirty.value, ai: clientAi, onRedraft: clientRedraft(cd) }}
       onEvent={ev => { if (ev.type === "reload") { if (ev.partner) reloadClient(); else reloadHub(); } else countRedraft(ev, "report"); }} />;
   }
   return <ReportSheet audience="internal" key={`i:${doc.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={iLocked}

@@ -6,6 +6,7 @@ Brief: dev/sprints/project-settings-brief.md and the locked mockup dev/mockups/p
 Part A is the shell and four categories (General, People and partners, Milestones, Archive) with Logos and Reporting as marked
 placeholders that open what exists today. No Workstreams category: they stay in Settings > People and projects.
 """
+import base64
 import re
 import sys
 import time
@@ -265,6 +266,7 @@ class ProjectSettings(LiveBrowserCase):
         # remove one, with Undo
         b.click("[data-pspartner-remove][aria-label='Remove Northgate Analytics']")
         self.wait_for(lambda: self.line("Partners") == "Harbour Labs", "a partner is removed")
+        b.wait("/removed from the partners/.test(document.querySelector('#snackT').textContent)")
         b.eval("shared.UNDO && shared.UNDO()")
         self.wait_for(lambda: self.line("Partners") == "Northgate Analytics; Harbour Labs", "Undo puts the partner back")
         # remove all: an empty line, the page says none
@@ -324,6 +326,43 @@ class ProjectSettings(LiveBrowserCase):
         time.sleep(1.0)
         self.assertNotIn("Partners", self.text())
         b.eval("shared.VW.read=window.__real")
+
+    def test_a_save_updates_the_partners_the_logo_tiles_read_without_a_reload(self):
+        b = self.b
+        self.open("people")
+        self.set_partner("Northgate Analytics")
+        self.wait_for(lambda: b.eval("(P.find(p=>p.code==='ABC').partners||[]).map(x=>x.name).join('|')") == "Northgate Analytics",
+                      "P[].partners follows the line, with the slug the server made")
+        self.assertEqual(b.eval("P.find(p=>p.code==='ABC').partners[0].slug"), "northgate-analytics")
+        self.assertEqual(b.eval("logoKindsOf('ABC')"), ["firm", "client", "partner:northgate-analytics"])
+
+    def test_at_most_twelve_partners(self):
+        b = self.b
+        self.open("people")
+        self.memory.write_text(self.text().replace("- **Client report rhythm:** fortnightly",
+                               "- **Client report rhythm:** fortnightly\n- **Partners:** " + "; ".join(f"Org {i}" for i in range(12))))
+        b.eval("loadPartners('ABC')")
+        b.wait("document.querySelectorAll('#psPartners [data-pspartner]').length===12")
+        self.set_partner("One too many")
+        b.wait("!!document.querySelector('#psPartnerErr')")
+        self.assertEqual(b.eval("document.querySelector('#psPartnerErr').textContent"), "A project lists at most 12 partner organisations.")
+
+    def test_a_partner_with_a_logo_offers_removing_it_before_a_rename_or_removal_leaves_it_behind(self):
+        b = self.b
+        logos = self.v.root / "system/branding/logos"
+        logos.mkdir(parents=True, exist_ok=True)
+        for f in logos.glob("*"):
+            f.unlink()
+        self.open("people")
+        self.set_partner("Northgate Analytics")
+        self.wait_for(lambda: b.eval("(P.find(p=>p.code==='ABC').partners||[]).length") == 1, "saved")
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==")
+        (logos / "ABC-partner-northgate-analytics.png").write_bytes(png)
+        b.eval("readClientLogos('ABC')")
+        b.wait("!!document.querySelector('[data-pspartner-logo=\"partner:northgate-analytics\"]')")
+        b.click("[data-pspartner-logo]")
+        self.wait_for(lambda: not list(logos.glob("ABC-partner-northgate-analytics.*")), "the logo file is removed")
+        b.wait("!document.querySelector('[data-pspartner-logo]')")
 
     # ----- the page as a whole
 

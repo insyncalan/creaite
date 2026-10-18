@@ -19,7 +19,7 @@ import { $ } from "../../core/dom.js";
 import { openChat } from "../../ask.js";
 import { MVWORD, mvAll, openMilestone, openNewMilestone } from "../../milestones.js";
 import { projArchive } from "../../settings.js";
-import { CLIENT_NAME_MAX, clientReportOn, crTick, setClientName } from "../../stores/reportingSettings.js";
+import { CLIENT_NAME_MAX, clientReportOn, crLogoPaths, crTick, partnersOf, readClientLogos, removeClientLogo, setClientName } from "../../stores/reportingSettings.js";
 import { pName } from "../../core/data.js";
 import {
   PS_CATS, addPartner, loadPartners, nameProblem, partners, projectPeople, psCat, psCode, psProject, psQ, psTick,
@@ -119,6 +119,8 @@ function General({ code }) {
 /** @param {{code: string, name: string, i: number}} props */
 function PartnerRow({ code, name, i }) {
   const [edit, setEdit] = useState(false), [err, setErr] = useState("");
+  crTick.value;
+  const slug = (partnersOf(code).find(x => x.name === name) || {}).slug, kind = `partner:${slug}`, logo = !!slug && !!crLogoPaths.value[kind];
   const people = projectPeople(code).filter(x => x.org && psNorm(x.org) === psNorm(name)).length;
   const save = async (/** @type {string} */ v) => { const bad = await renamePartner(code, i, v); setErr(bad); if (!bad) setEdit(false); };
   return (
@@ -129,7 +131,9 @@ function PartnerRow({ code, name, i }) {
             <PsProblem msg={err} id={`psPartnerErr${i}`} /></span>
         : <span data-pspartner>{name}</span>}</td>
       <td>{people}</td>
-      <td class="mgract">{edit
+      <td class="mgract">{logo ? <><button type="button" class="mini" data-pspartner-logo={kind} aria-label={`Remove the logo of ${name}`}
+          title="A logo is kept under the partner's name when it is renamed or removed; remove it here first if it is not wanted"
+          onClick={() => removeClientLogo(code, kind)}>Remove logo</button>{" "}</> : null}{edit
         ? <><button type="button" class="mini" data-pspartner-save onClick={e => save(/** @type {HTMLInputElement} */ (/** @type {HTMLElement} */ (e.target).closest("tr")?.querySelector("input")).value)}>Save</button>{" "}
             <button type="button" class="mini" onClick={() => { setEdit(false); setErr(""); }}>Cancel</button></>
         : <><button type="button" class="mini" data-pspartner-rename aria-label={`Rename ${name}`} onClick={() => setEdit(true)}>Rename</button>{" "}
@@ -140,6 +144,7 @@ function PartnerRow({ code, name, i }) {
 
 /** @param {{code: string}} props */
 function PeoplePartners({ code }) {
+  crTick.value;
   const ppl = projectPeople(code), list = partners.value.list, [err, setErr] = useState(""), box = useRef(/** @type {HTMLInputElement|null} */ (null));
   const add = async () => {
     const el = box.current; if (!el) return;
@@ -307,6 +312,7 @@ export function renderProjectSettings(code) {
   psCode.value = code;
   const read = partners.peek();
   if (read.code !== code || !read.loaded) loadPartners(code);
+  readClientLogos(code);               // which logo files exist, to offer removing one a renamed partner left behind
   if (!psMounted) { render(<ProjectSettings />, el); psMounted = true; }
   else psTick.value++;
 }

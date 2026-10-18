@@ -19,7 +19,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { SheetPage, openSheetRef, labelOf } from "./SheetPage.jsx";
-import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom, isTextSection, withTextSection } from "./sheetLib.js";
+import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom, isTextSection, withTextSection } from "./sheetLib.js";
 import { bindTextSections, markNewText } from "../../stores/textSection.js";
 import { headerPolicy } from "../../core/scrollPolicy.js";
 
@@ -53,7 +53,7 @@ export { openSheetRef as openRef };
 /** @typedef {{id: string, section: string, field?: string, row?: number, pane?: number, quote: string, note?: string, last?: string,
     actions?: {id: string, label: string}[]}} SheetCheck */
 /** @typedef {{doc: SheetDoc, label: string, baseVersion?: number, scrollKey?: string, renderers?: SheetRenderers, readOnly?: boolean,
-    match?: (id: string) => void, matchAll?: (ids: string[]) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
+    match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
     exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
@@ -451,7 +451,6 @@ export function Sheet(props) {
         </span>
         <button type="button" class="btn sheet-exp" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
         {partner && !exported ? <label class="sheet-tog"><input type="checkbox" checked={together} onChange={e => setTogether(/** @type {HTMLInputElement} */ (e.currentTarget).checked)} /> Scroll together</label> : null}
-        {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { const ids = doc.sections.filter(x => match && match.differs(x.id) && !(isTextSection(x) && !partner.doc.sections.some(y => y.id === x.id))).map(x => x.id); if (partner.matchAll) partner.matchAll(ids); else for (const id of ids) partner.match(id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
         <span class="sub sheet-status" role="status" data-bad={main.line && !/^Saved/.test(main.line) ? "1" : undefined}>{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
         {openChecks && !exported ? <span class="sheet-checks" data-checks={openChecks}>{openChecks} {openChecks === 1 ? "check" : "checks"} open</span> : null}
         <span class="sheet-barr">{props.toolbar || null}</span></>}

@@ -10,7 +10,7 @@ import { signal } from "@preact/signals";
 import { A, DEC, P, R } from "../core/data.js";
 import { D } from "../core/page.js";
 import { go } from "../core/nav.js";
-import { liveLines, memPath, needVault, save, setMemLine, snack, viaServer, vq } from "../core/server.js";
+import { liveLines, memPath, needVault, reloadData, save, setMemLine, snack, viaServer, vq } from "../core/server.js";
 import { shared } from "../core/state.js";
 import { resolver } from "../settings.js";
 
@@ -88,7 +88,7 @@ export function projectPeople(code) {
 
 // ----- partner organisations
 
-export const PARTNER_MAX = 80, PARTNERS_LINE_MAX = 400;
+export const PARTNER_MAX = 80, PARTNERS_LINE_MAX = 400, PARTNERS_MAX = 12;   // the server keeps at most 12 (build_dashboard.PARTNERS_MAX)
 /** the Partners line of the project last read */
 export const partners = signal({ code: "", list: /** @type {string[]} */ ([]), loaded: false });
 
@@ -133,7 +133,9 @@ async function writePartners(code, list) {
   const v = list.join("; ");
   if (v.length > PARTNERS_LINE_MAX) { snack(`Not saved: the partners' line would be over ${PARTNERS_LINE_MAX} characters.`); return false; }
   if (!await setMemLine(code, "Partners", v, "partners")) return false;
-  partners.value = { code, list: [...list], loaded: true }; psChanged(); return true;
+  partners.value = { code, list: [...list], loaded: true };
+  await reloadData();       // the server re-derives P[].partners (names and slugs) so the logo tiles and report headers follow now; a slug is never made here
+  psChanged(); return true;
 }
 
 /** @param {string} code @param {string[]} list the list as it was; Undo puts it back */
@@ -143,6 +145,7 @@ const undoer = (code, list) => async () => { if (await writePartners(code, list)
 export async function addPartner(code, name) {
   const was = partners.peek().list, bad = partnerProblem(was, name);
   if (bad) return bad;
+  if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
   const v = String(name).replace(/\s+/g, " ").trim();
   if (!await needVault()) return "Not saved: creaite can't reach the vault.";
   if (!await writePartners(code, [...was, v])) return "Not saved.";

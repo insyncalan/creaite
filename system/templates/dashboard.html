@@ -3431,7 +3431,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-root.rpt-slim>.sheet-bar .sheet-status[data-bad]{display:inline;white-space:nowrap}   /* "Unsaved changes", "Not saved." stay visible and announced */
 .sheet-root.rpt-slim>.sheet-bar{position:relative}
 .sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
-.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.rb-x){display:none}
 @media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
 /* #207: the top bar hidden by a scroll on any other page: out of the layout at once (no slide); the page grows upward (core/topbar.js) */
 .main.tb-off>.bar{height:0;min-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;overflow:hidden;visibility:hidden;flex:none;transition:none}
@@ -4562,6 +4562,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PANE: () => PANE,
     PANELF: () => PANELF,
     PARTNERS_LINE_MAX: () => PARTNERS_LINE_MAX,
+    PARTNERS_MAX: () => PARTNERS_MAX,
     PARTNER_MAX: () => PARTNER_MAX,
     PCOLS: () => PCOLS,
     PDAGE: () => PDAGE,
@@ -5796,6 +5797,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     loadReportImages: () => loadReportImages,
     loadTab: () => loadTab,
     localDay: () => localDay,
+    logoKindName: () => logoKindName,
+    logoKindsOf: () => logoKindsOf,
     longDate: () => longDate,
     longDay: () => longDay,
     longText: () => longText,
@@ -5838,7 +5841,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     markNewText: () => markNewText,
     markSel: () => markSel,
     markStagedRows: () => markStagedRows,
-    matchAll: () => matchAll,
     matchLabel: () => matchLabel,
     matchSection: () => matchSection,
     mdBlocks: () => mdBlocks,
@@ -6152,6 +6154,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     partnerProblem: () => partnerProblem,
     partners: () => partners,
     partnersFrom: () => partnersFrom,
+    partnersOf: () => partnersOf,
     passes: () => passes,
     pasteLink: () => pasteLink,
     pdAll: () => pdAll,
@@ -6863,6 +6866,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     thisWeek: () => thisWeek,
     tib: () => tib,
     tickNear: () => tickNear,
+    ticksOf: () => ticksOf,
+    tilesOf: () => tilesOf,
     tipBox: () => tipBox,
     tipHide: () => tipHide,
     tipShow: () => tipShow,
@@ -26678,9 +26683,24 @@ ${s5}`;
     const p6 = project(code);
     return !p6 || p6.crrem !== false;
   };
+  function partnersOf(code) {
+    const p6 = project(code);
+    return p6 && Array.isArray(p6.partners) ? p6.partners : [];
+  }
+  function logoKindsOf(code) {
+    const ps2 = partnersOf(code);
+    return ["firm", "client", ...ps2.length ? ps2.map((x5) => `partner:${x5.slug}`) : ["partner"]];
+  }
+  function logoKindName(code, kind) {
+    if (kind === "firm") return "Firm";
+    if (kind === "client") return "Client";
+    const own = partnersOf(code).find((x5) => `partner:${x5.slug}` === kind);
+    return own ? `Partner: ${own.name}` : "Partner";
+  }
+  var ticksOf = (kinds, chosen) => kinds.filter((k5) => k5 === "firm" || chosen.includes(k5) || chosen.includes("partner") && k5.startsWith("partner"));
   function clientLogosOn(code) {
-    const p6 = project(code), l6 = p6 && Array.isArray(p6.crlogos) ? p6.crlogos : LOGO_KINDS;
-    return LOGO_KINDS.filter((k5) => k5 === "firm" || l6.includes(k5));
+    const p6 = project(code), kinds = logoKindsOf(code);
+    return ticksOf(kinds, p6 && Array.isArray(p6.crlogos) ? p6.crlogos : kinds);
   }
   function changed() {
     crTick.value++;
@@ -26708,8 +26728,10 @@ ${s5}`;
   async function setClientLogos(code, kinds) {
     const p6 = project(code);
     if (!p6) return false;
-    const list = LOGO_KINDS.filter((k5) => k5 === "firm" || kinds.includes(k5));
-    if (!await setMemLine(code, "Client report logos", list.join(", "), "client_report_logos")) return false;
+    const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
+    const everyPartner = parts.every((k5) => list.includes(k5));
+    const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
+    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
     p6.crlogos = list;
     changed();
     return true;
@@ -31318,7 +31340,7 @@ ${s5}`;
       return { name, org: r4.org || "", role: r4.role || "" };
     });
   }
-  var PARTNER_MAX = 80, PARTNERS_LINE_MAX = 400;
+  var PARTNER_MAX = 80, PARTNERS_LINE_MAX = 400, PARTNERS_MAX = 12;
   var partners = y3({ code: "", list: (
     /** @type {string[]} */
     []
@@ -31362,6 +31384,7 @@ ${s5}`;
     }
     if (!await setMemLine(code, "Partners", v5, "partners")) return false;
     partners.value = { code, list: [...list], loaded: true };
+    await reloadData();
     psChanged();
     return true;
   }
@@ -31371,6 +31394,7 @@ ${s5}`;
   async function addPartner(code, name) {
     const was = partners.peek().list, bad = partnerProblem(was, name);
     if (bad) return bad;
+    if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
     const v5 = String(name).replace(/\s+/g, " ").trim();
     if (!await needVault()) return "Not saved: creaite can't reach the vault.";
     if (!await writePartners(code, [...was, v5])) return "Not saved.";
@@ -67067,11 +67091,6 @@ ${d5.text}`);
     }
     return mapSection(right, id2, () => copy);
   }
-  function matchAll(left, right) {
-    let out = right;
-    for (const s5 of left.sections) if (!isTextSection(s5) || out.sections.some((x5) => x5.id === s5.id)) out = matchSection(left, out, s5.id);
-    return out;
-  }
   function matchLabel(left, right, id2, label) {
     const a5 = left.sections.find((s5) => s5.id === id2), b5 = right.sections.find((s5) => s5.id === id2);
     return sectionDiffers(a5, b5) ? `Edited for ${label === "Distributed" ? "distribution" : "the " + label.toLowerCase()}` : "Matching internal";
@@ -68554,13 +68573,6 @@ ${d5.text}`);
           ) }),
           " Scroll together"
         ] }) : null,
-        partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-matchall", onClick: () => {
-          if (partner.match) {
-            const ids = doc.sections.filter((x5) => match && match.differs(x5.id) && !(isTextSection(x5) && !partner.doc.sections.some((y5) => y5.id === x5.id))).map((x5) => x5.id);
-            if (partner.matchAll) partner.matchAll(ids);
-            else for (const id2 of ids) partner.match(id2);
-          } else changeSide(matchAll(doc, partner.doc), "Matched internal");
-        }, children: "Match internal for every section" }) : null,
         /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": main.line && !/^Saved/.test(main.line) ? "1" : void 0, children: [
           main.line,
           partner && side.line ? ` · ${partner.label}: ${side.line}` : ""
@@ -68634,14 +68646,7 @@ ${d5.text}`);
   function ReportSheet({ audience, addText = addTextSection, ...rest }) {
     return /* @__PURE__ */ u2(Sheet, { ...rest, report: { audience, addText } });
   }
-  var KIND = (
-    /** @type {Record<string, string>} */
-    { firm: "Firm", client: "Client", partner: "Partner" }
-  );
-  var ALL_KINDS = (
-    /** @type {const} */
-    ["firm", "client", "partner"]
-  );
+  var nameOf = (code, kind) => logoKindName(code, kind).replace(/^Partner: /, "");
   var LOGO_ACCEPT = "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg";
   function LogoSlot({ code, kind, pic }) {
     const file = A2(
@@ -68652,7 +68657,7 @@ ${d5.text}`);
       null
     );
     const [ask2, setAsk] = d2(false);
-    const name = KIND[kind].toLowerCase(), label = `${pic ? "Change" : "Add"} ${name} logo`;
+    const name = kind.startsWith("partner:") ? nameOf(code, kind) : kind, label = `${pic ? "Change" : "Add"} ${name} logo`;
     const choose = () => file.current && file.current.click();
     const stop = () => {
       setAsk(false);
@@ -68683,7 +68688,7 @@ ${d5.text}`);
           "aria-label": label,
           title: label,
           onClick: () => pic && kind === "firm" ? setAsk(true) : choose(),
-          children: pic ? /* @__PURE__ */ u2("img", { src: pic, alt: `${KIND[kind]} logo` }) : /* @__PURE__ */ u2(S2, { children: [
+          children: pic ? /* @__PURE__ */ u2("img", { src: pic, alt: `${nameOf(code, kind)} logo` }) : /* @__PURE__ */ u2(S2, { children: [
             /* @__PURE__ */ u2("b", { "aria-hidden": "true", children: "+" }),
             /* @__PURE__ */ u2("span", { children: [
               "Add ",
@@ -68710,9 +68715,9 @@ ${d5.text}`);
     h2(() => {
       if (edit) readClientLogos(code);
     }, [edit, code]);
-    const chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : ["firm", "client", "partner"];
-    const shown2 = logos.filter((l6) => l6.kind === "firm" || chosen.includes(l6.kind));
-    const slots = edit ? ALL_KINDS.filter((k5) => k5 === "firm" || chosen.includes(k5)) : [];
+    const every = logoKindsOf(code), chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : every;
+    const shown2 = logos.filter((l6) => ticksOf([l6.kind], chosen).length);
+    const slots = edit ? ticksOf(every, chosen) : [];
     const live = crLogoFor.value === code;
     const pathOf = (k5) => (live ? crLogoPaths.value[k5] : (shown2.find((l6) => l6.kind === k5) || {}).path) || "";
     const meta = doc.meta || {};
@@ -68732,7 +68737,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2(LogoSlot, { code, kind: k5, pic: data[pathOf(k5)] || "" })
       ] }, k5)) : shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
         i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
-        data[l6.path] ? /* @__PURE__ */ u2("img", { src: data[l6.path], alt: `${KIND[l6.kind] || l6.kind} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: KIND[l6.kind] || l6.kind })
+        data[l6.path] ? /* @__PURE__ */ u2("img", { src: data[l6.path], alt: `${nameOf(code, l6.kind)} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: nameOf(code, l6.kind) })
       ] }, l6.kind)) })
     ] });
   }
@@ -69903,14 +69908,14 @@ ${d5.text}`);
   }
 
   // components/report/hub/ClientReportPanel.jsx
-  var TILES = (
-    /** @type {{kind: TileKind, mark: string, name: string, line: string}[]} */
-    [
-      { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
-      { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
-      { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" }
-    ]
-  );
+  function tilesOf(code) {
+    const ps2 = partnersOf(code);
+    return [
+      { kind: "firm", mark: "F", name: "The firm", who: "firm's", noun: "firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
+      { kind: "client", mark: "C", name: "The client", who: "client's", noun: "client", line: "Shown on this project's reports" },
+      ...ps2.length ? ps2.map((p6) => ({ kind: `partner:${p6.slug}`, mark: "P", name: `Partner: ${p6.name}`, who: `${p6.name}'s`, noun: p6.name, line: "Shown on this project's reports" })) : [{ kind: "partner", mark: "P", name: "A partner", who: "partner's", noun: "partner", line: "Only if one is involved" }]
+    ];
+  }
   var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
   function LogoTile({ code, t: t47, ticked }) {
     const file = A2(
@@ -69946,7 +69951,7 @@ ${d5.text}`);
             class: "btn sm",
             "data-logo-add": t47.kind,
             onClick: () => file.current && file.current.click(),
-            "aria-label": `${pic ? "Change" : "Add"} the ${firm ? "firm's" : t47.kind === "client" ? "client's" : "partner's"} logo`,
+            "aria-label": `${pic ? "Change" : "Add"} the ${t47.who} logo`,
             children: pic ? "Change" : "Add logo"
           }
         ),
@@ -69957,12 +69962,12 @@ ${d5.text}`);
             class: "btn sm",
             "data-logo-remove": t47.kind,
             onClick: () => setAsk(true),
-            "aria-label": `Remove the ${t47.kind} logo`,
+            "aria-label": `Remove the ${t47.noun} logo`,
             children: "Remove"
           }
         ) : null,
-        pic && ask2 ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.kind} logo?`, children: [
-          /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.kind} logo?` }),
+        pic && ask2 ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.noun} logo?`, children: [
+          /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.noun} logo?` }),
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-yes": t47.kind, onClick: () => {
             setAsk(false);
             removeClientLogo(code, t47.kind);
@@ -69977,7 +69982,7 @@ ${d5.text}`);
             checked: firm || ticked,
             disabled: firm,
             "data-logo-tick": t47.kind,
-            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.kind}'s logo in the header`,
+            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.who} logo in the header`,
             onChange: firm ? void 0 : toggle
           }
         )
@@ -70061,7 +70066,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2("div", { class: "cfgrow top", children: [
           /* @__PURE__ */ u2("label", { id: "cfgLogosL", children: "Logos in the report header" }),
           /* @__PURE__ */ u2("div", { class: "cfglogos", role: "group", "aria-labelledby": "cfgLogosL", children: [
-            TILES.map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
+            tilesOf(code).map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
             crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "sub cfgnote", role: "status", id: "cfgLogoNote", children: crLogoNote.value }) : null
           ] })
         ] }),
@@ -70245,6 +70250,8 @@ ${d5.text}`);
   }
   function PartnerRow({ code, name, i: i5 }) {
     const [edit, setEdit] = d2(false), [err, setErr] = d2("");
+    crTick.value;
+    const slug = (partnersOf(code).find((x5) => x5.name === name) || {}).slug, kind = `partner:${slug}`, logo = !!slug && !!crLogoPaths.value[kind];
     const people = projectPeople(code).filter((x5) => x5.org && psNorm(x5.org) === psNorm(name)).length;
     const save2 = async (v5) => {
       const bad = await renamePartner(code, i5, v5);
@@ -70280,25 +70287,43 @@ ${d5.text}`);
         /* @__PURE__ */ u2(PsProblem, { msg: err, id: `psPartnerErr${i5}` })
       ] }) : /* @__PURE__ */ u2("span", { "data-pspartner": true, children: name }) }),
       /* @__PURE__ */ u2("td", { children: people }),
-      /* @__PURE__ */ u2("td", { class: "mgract", children: edit ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-save": true, onClick: (e4) => save2(
-          /** @type {HTMLInputElement} */
-          /** @type {HTMLElement} */
-          (e4.target.closest("tr")?.querySelector("input")).value
-        ), children: "Save" }),
-        " ",
-        /* @__PURE__ */ u2("button", { type: "button", class: "mini", onClick: () => {
-          setEdit(false);
-          setErr("");
-        }, children: "Cancel" })
-      ] }) : /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-rename": true, "aria-label": `Rename ${name}`, onClick: () => setEdit(true), children: "Rename" }),
-        " ",
-        /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-remove": true, "aria-label": `Remove ${name}`, onClick: () => removePartner(code, i5), children: "Remove" })
-      ] }) })
+      /* @__PURE__ */ u2("td", { class: "mgract", children: [
+        logo ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "mini",
+              "data-pspartner-logo": kind,
+              "aria-label": `Remove the logo of ${name}`,
+              title: "A logo is kept under the partner's name when it is renamed or removed; remove it here first if it is not wanted",
+              onClick: () => removeClientLogo(code, kind),
+              children: "Remove logo"
+            }
+          ),
+          " "
+        ] }) : null,
+        edit ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-save": true, onClick: (e4) => save2(
+            /** @type {HTMLInputElement} */
+            /** @type {HTMLElement} */
+            (e4.target.closest("tr")?.querySelector("input")).value
+          ), children: "Save" }),
+          " ",
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", onClick: () => {
+            setEdit(false);
+            setErr("");
+          }, children: "Cancel" })
+        ] }) : /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-rename": true, "aria-label": `Rename ${name}`, onClick: () => setEdit(true), children: "Rename" }),
+          " ",
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-remove": true, "aria-label": `Remove ${name}`, onClick: () => removePartner(code, i5), children: "Remove" })
+        ] })
+      ] })
     ] });
   }
   function PeoplePartners({ code }) {
+    crTick.value;
     const ppl = projectPeople(code), list = partners.value.list, [err, setErr] = d2(""), box = A2(
       /** @type {HTMLInputElement|null} */
       null
@@ -70564,6 +70589,7 @@ ${d5.text}`);
     psCode.value = code;
     const read = partners.peek();
     if (read.code !== code || !read.loaded) loadPartners(code);
+    readClientLogos(code);
     if (!psMounted) {
       R(/* @__PURE__ */ u2(ProjectSettings, {}), el2);
       psMounted = true;
@@ -73477,9 +73503,6 @@ ${d5.text}`);
             match: (id2) => {
               matchInternal([id2]);
             },
-            matchAll: (ids) => {
-              matchInternal(ids);
-            },
             onChange: setClientDoc,
             onSave: saveClientPage,
             dirty: () => crDirty.value,
@@ -75225,6 +75248,7 @@ ${d5.text}`);
         "OWN",
         "Overdue",
         "P",
+        "PARTNERS_MAX",
         "PEOPLE",
         "PF",
         "PK",
@@ -75523,8 +75547,10 @@ ${d5.text}`);
         "linkWords",
         "linkWrite",
         "loadChat",
+        "loadPartners",
         "loadPrep",
         "loadTab",
+        "logoKindsOf",
         "longDate",
         "mCreated",
         "mLandRow",
@@ -75532,7 +75558,6 @@ ${d5.text}`);
         "mWords",
         "mailLink",
         "markHelpSeen",
-        "matchAll",
         "mdBlocks",
         "mdChat",
         "mdHtml",
@@ -75709,6 +75734,7 @@ ${d5.text}`);
         "rbStop",
         "rbTick",
         "rbUnmark",
+        "readClientLogos",
         "readDate",
         "readForm",
         "reattach",

@@ -39,7 +39,8 @@ SECTIONS = {   # kind: (id, type, creaite's own heading), in the default order
 }
 GLANCE = {"weekly": ("next_milestone", "overdue", "high_risks", "decisions_needed"),
           "client": ("next_milestone", "client_asks", "watch")}
-LOGO_KINDS = ("firm", "client", "partner")          # the firm's always first
+LOGO_KINDS = ("firm", "client", "partner")          # the static kinds (#228 B: a project's real kinds are logo_kinds(code))
+LOGO_KIND = re.compile(r"(firm|client|partner(:[a-z0-9]+(-[a-z0-9]+)*)?)\Z")  # a layout kind; a slug is checked per project
 LOGO_EXT = (".png", ".jpg", ".jpeg", ".svg")
 DEFAULT_ROWS = {"risks": {"top": 5}}
 LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")
@@ -106,8 +107,15 @@ def _lists(kind, lay, base):
     """At a glance's figures, the logos and the milestone list from a layout; each defaulted when it isn't a list."""
     glance, logos_, miles = lay.get("glance"), lay.get("logos"), lay.get("milestones")
     return {"glance": [g for g in dict.fromkeys(glance) if g in GLANCE[kind]] if isinstance(glance, list) else base["glance"],
-            "logos": [x for x in LOGO_KINDS if x in logos_] if isinstance(logos_, list) else base["logos"],
+            "logos": _logo_list(logos_) if isinstance(logos_, list) else base["logos"],
             "milestones": [str(m) for m in miles] if isinstance(miles, list) else None}
+
+
+def _logo_list(raw):
+    """The kinds of a layout's logos that are well formed, once each: the firm, the client, a bare `partner` (every partner), then each
+    `partner:<slug>` in the order given. Whether a slug is one of the project's partners is for layout_for, which knows the project."""
+    kinds = [x for x in dict.fromkeys(raw) if isinstance(x, str) and LOGO_KIND.match(x)]
+    return sorted(kinds, key=lambda x: {"firm": 0, "client": 1, "partner": 2}.get(x, 3))
 
 
 def stored_layouts():
@@ -121,8 +129,7 @@ def layout_for(code, kind, client=None):
     saved = mine.get("weekly") if kind == "weekly" else (mine.get("clients") or {}).get(client or "")
     lay = normal_layout(kind, saved)
     chosen = project_logos(code)
-    if chosen is not None:                                       # H3 (#221): one choice for both reports' headers
-        lay["logos"] = chosen
+    lay["logos"] = chosen if chosen is not None else resolve_logos(code, lay["logos"])   # H3 (#221): one choice for both reports' headers
     return lay
 
 
@@ -164,17 +171,61 @@ def remember_layout(code, kind, layout, client=None):
 
 # ── Logos (system/branding/logos/, kept out of git) ──────────────────────────
 
-def logo_file(code, kind):
-    """The logo file for the firm, or a project's client or partner logo, or None when none is set."""
-    stem = "firm" if kind == "firm" else f"{code}-{kind}"
+def partners(code):
+    """[{name, slug}] from the project's CLAUDE.md `Partners` line (build_dashboard.partners_of); [] when it has none or no folder."""
+    import build_dashboard
+    try:
+        return build_dashboard.partners_of((paths.project_dir(code) / "CLAUDE.md").read_text(encoding="utf-8"))
+    except (LookupError, OSError):
+        return []
+
+
+def logo_kinds(code):
+    """The project's logo kinds: firm, client, then `partner:<slug>` for each partner in line order (or the one old `partner`)."""
+    import build_dashboard
+    return build_dashboard.logo_kinds_of(partners(code))
+
+
+def resolve_logos(code, wanted):
+    """`wanted` (a layout's logo kinds) made exact for the project: a bare `partner` is every partner, a slug that is not one of its
+    partners is dropped, and the order is firm, client, partners in line order."""
+    wanted = set(wanted)
+    every = "partner" in wanted
+    return [k for k in logo_kinds(code) if k in wanted or (every and k.startswith("partner"))]
+
+
+def logo_stems(code, kind):
+    """The file stems a kind's logo may be saved under, the one it is written as first: the firm's `firm`, `<CODE>-client`, a partner's
+    `<CODE>-partner-<slug>`. The first partner's also has the old `<CODE>-partner` (read as its logo until it has a file of its own)."""
+    if kind == "firm":
+        return ["firm"]
+    if kind.startswith("partner:"):
+        slug = kind[len("partner:"):]
+        first = partners(code)[:1]
+        return [f"{code}-partner-{slug}"] + ([f"{code}-partner"] if first and first[0]["slug"] == slug else [])
+    return [f"{code}-{kind}"]
+
+
+def _newest(stem):
     have = [paths.REPORT_LOGOS / f"{stem}{e}" for e in LOGO_EXT if (paths.REPORT_LOGOS / f"{stem}{e}").is_file()]
     return max(have, key=lambda f: f.stat().st_mtime) if have else None          # H3: the one added last wins
 
 
-def logos(code, wanted=LOGO_KINDS):
-    """[{kind, path}] of the logos set for the project, in `wanted` (the layout's), the firm's first."""
-    found = [(k, logo_file(code, k)) for k in LOGO_KINDS if k in wanted]
-    return [{"kind": k, "path": paths.rel(f)} for k, f in found if f]
+def logo_file(code, kind):
+    """The logo file for the firm, or a project's client or partner logo, or None when none is set. A partner's own file wins; the first
+    partner with none of its own is drawn from the old `<CODE>-partner` file (#228 B: no migration)."""
+    for stem in logo_stems(code, kind):
+        found = _newest(stem)
+        if found:
+            return found
+    return None
+
+
+def logos(code, wanted=None):
+    """[{kind, path}] of the logos set for the project, in `wanted` (a layout's; None is all), in the project's order: the firm's first,
+    the client's, then each partner in line order."""
+    kinds = logo_kinds(code) if wanted is None else resolve_logos(code, wanted)
+    return [{"kind": k, "path": paths.rel(f)} for k in kinds for f in [logo_file(code, k)] if f]
 
 
 # ── Arranging the sections as the layout says ───────────────────────────────

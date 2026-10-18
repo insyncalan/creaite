@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../../core/server.js";
 import { addTextSection } from "../../stores/textSection.js";
-import { crLogoFor, crLogoPaths, readClientLogos, uploadClientLogo } from "../../stores/reportingSettings.js";
+import { crLogoFor, crLogoPaths, logoKindName, logoKindsOf, readClientLogos, ticksOf, uploadClientLogo } from "../../stores/reportingSettings.js";
 import { EyeButton } from "./EyeButton.jsx";
 import { Sheet } from "./Sheet.jsx";
 import { wkDm, wkLongDate, wkTone, wkDmy } from "./weekly/weeklyDoc.js";
@@ -33,18 +33,17 @@ export function ReportSheet({ audience, addText = addTextSection, ...rest }) {
   return <Sheet {...rest} report={{ audience, addText }} />;
 }
 
-const KIND = /** @type {Record<string, string>} */ ({ firm: "Firm", client: "Client", partner: "Partner" });
-
-const ALL_KINDS = /** @type {const} */ (["firm", "client", "partner"]);
+/** A logo's name for the header: Firm, Client, Partner, or a partner's own name (#228 B). @param {string} code @param {string} kind */
+const nameOf = (code, kind) => logoKindName(code, kind).replace(/^Partner: /, "");
 const LOGO_ACCEPT = "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg";
 
 /** One logo's place in the header, in edit mode (#233 a): a dashed "Add <name> logo" tile, or the logo as a button "Change <name> logo".
     Both open the cog panel's chooser (reportingSettings.js uploadClientLogo saves it and both reports redraw at once). The firm's
-    logo is the same file for every project, so replacing one asks first. @param {{code: string, kind: "firm"|"client"|"partner", pic: string}} props */
+    logo is the same file for every project, so replacing one asks first. @param {{code: string, kind: string, pic: string}} props */
 function LogoSlot({ code, kind, pic }) {
   const file = useRef(/** @type {HTMLInputElement|null} */ (null)), btn = useRef(/** @type {HTMLButtonElement|null} */ (null));
   const [ask, setAsk] = useState(false);
-  const name = KIND[kind].toLowerCase(), label = `${pic ? "Change" : "Add"} ${name} logo`;
+  const name = kind.startsWith("partner:") ? nameOf(code, kind) : kind, label = `${pic ? "Change" : "Add"} ${name} logo`;
   const choose = () => file.current && file.current.click();
   const stop = () => { setAsk(false); setTimeout(() => btn.current && btn.current.focus(), 0); };
   /** @param {Event} e */
@@ -57,7 +56,7 @@ function LogoSlot({ code, kind, pic }) {
     <span class="wr-logo-slot" onKeyDown={e => { if (ask && e.key === "Escape") { e.stopPropagation(); e.preventDefault(); stop(); } }}>
       <button type="button" ref={btn} data-hdr-logo={kind} class={pic ? "wr-logo-btn" : "wr-logo-add"} aria-label={label} title={label}
         onClick={() => (pic && kind === "firm" ? setAsk(true) : choose())}>
-        {pic ? <img src={pic} alt={`${KIND[kind]} logo`} /> : <><b aria-hidden="true">+</b><span>Add {name} logo</span></>}</button>
+        {pic ? <img src={pic} alt={`${nameOf(code, kind)} logo`} /> : <><b aria-hidden="true">+</b><span>Add {name} logo</span></>}</button>
       {ask ? <span class="wr-logo-ask" role="group" aria-label="Replace the firm logo?">
         <span class="sub" role="alert">This logo is used by all projects. Replace it?</span>
         <button type="button" class="btn sm" data-hdr-logo-yes={kind} onClick={() => { setAsk(false); choose(); }}>Replace</button>
@@ -73,9 +72,9 @@ export function ReportHeader({ ctx, logos, data }) {
   const { doc, section: s } = ctx, d = s.data || {}, client = doc.kind === "client";
   const code = String(doc.project || ""), edit = ctx.editing && !ctx.exported && !ctx.readOnly && !!code;
   useEffect(() => { if (edit) readClientLogos(code); }, [edit, code]);
-  const chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : ["firm", "client", "partner"];
-  const shown = logos.filter(l => l.kind === "firm" || chosen.includes(l.kind));
-  const slots = edit ? ALL_KINDS.filter(k => k === "firm" || chosen.includes(k)) : [];
+  const every = logoKindsOf(code), chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : every;       // a bare "partner" is every partner
+  const shown = logos.filter(l => ticksOf([l.kind], chosen).length);
+  const slots = edit ? ticksOf(every, chosen) : [];
   const live = crLogoFor.value === code;                        // once read, the files the cog panel changed are the truth
   /** @param {string} k */
   const pathOf = k => (live ? crLogoPaths.value[k] : (shown.find(l => l.kind === k) || {}).path) || "";
@@ -94,7 +93,7 @@ export function ReportHeader({ ctx, logos, data }) {
         {edit ? slots.map((k, i) => <span key={k} class="wr-logo">{i ? <span class="wr-lsep" aria-hidden="true" /> : null}
           <LogoSlot code={code} kind={k} pic={data[pathOf(k)] || ""} /></span>)
           : shown.map((l, i) => <span key={l.kind} class="wr-logo">{i ? <span class="wr-lsep" aria-hidden="true" /> : null}
-            {data[l.path] ? <img src={data[l.path]} alt={`${KIND[l.kind] || l.kind} logo`} /> : <span class="sub">{KIND[l.kind] || l.kind}</span>}</span>)}
+            {data[l.path] ? <img src={data[l.path]} alt={`${nameOf(code, l.kind)} logo`} /> : <span class="sub">{nameOf(code, l.kind)}</span>}</span>)}
       </div>
     </header>);
 }
