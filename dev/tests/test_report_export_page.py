@@ -87,7 +87,7 @@ class ExportPage(LiveBrowserCase):
         while time.time() < end:
             if self.ev("!!document.querySelector('#exportClashDlg[open]')"):
                 self.ev("document.querySelector('#exportClashGo').click()")
-            new = [p for p in self.saved() if p not in before and p.suffix == "." + fmt]
+            new = [p for p in self.saved() if p not in before and p.suffix == "." + fmt and p.parent.name == "reports"]   # not the drafts folder: the server's working copy there is removed once the file is filed (a race)
             if new:
                 time.sleep(0.5)
                 return new[0]
@@ -272,7 +272,8 @@ class ExportPage(LiveBrowserCase):
         h = self.export("html")
         p = self.export("pdf")
         self.assertEqual(p.read_bytes()[:5], b"%PDF-")
-        pdf = "".join(pg.extract_text() for pg in pypdf.PdfReader(str(p)).pages)
+        pages = pypdf.PdfReader(str(p)).pages           # read once: the drafts folder may be cleared once the page has been opened
+        pdf = "".join(pg.extract_text() for pg in pages)
         html = self.open_file(h).eval("document.body.innerText")
         a, c = re.sub(r"\s+", "", html), re.sub(r"\s+", "", pdf)
         from collections import Counter
@@ -280,7 +281,7 @@ class ExportPage(LiveBrowserCase):
         self.assertGreater(difflib.SequenceMatcher(None, a, c, autojunk=False).ratio(), 0.94)
         for word in ("Example Programme", "Off track".upper(), "Risks and issues".upper(), "Milestone"):
             self.assertIn(re.sub(r"\s+", "", word), c)
-        self.assertEqual(len(pypdf.PdfReader(str(p)).pages) >= 1, True)
+        self.assertGreaterEqual(len(pages), 1)
 
     # ── 12 ────────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_c12_without_a_page_the_python_renderer_still_makes_a_file_and_says_so(self):
