@@ -103,6 +103,27 @@ def _css_ok(text):
                for m in URL_USE.finditer(text))
 
 
+def _attr_ok(name, value):
+    """Whether one SVG attribute is plain: no handler, no address outside the file, no script."""
+    n, v = _local(name), str(value)
+    if n.startswith("on") or n in ("src", "action", "formaction", "srcdoc", "ping"):
+        return False
+    if n == "href":
+        return v.strip().startswith("#")
+    if n == "style" and not _css_ok(v):
+        return False
+    return not re.search(r"javascript:|<script", v, re.I)
+
+
+def _element_ok(el):
+    """Whether one SVG element and its attributes are plain (a comment or processing instruction node is not)."""
+    if not isinstance(el.tag, str) or _local(el.tag) in BAD_TAGS:
+        return False
+    if _local(el.tag) == "style" and not _css_ok(el.text or ""):
+        return False
+    return all(_attr_ok(k, v) for k, v in el.attrib.items())
+
+
 def svg_size(raw):
     """(width, height) as declared (0, 0 when it declares none) of a clean SVG, else raises LogoRefused."""
     bad = LogoRefused("That SVG can't be used: it must be a plain picture with no script, link or embedded page. Nothing was saved.")
@@ -110,29 +131,14 @@ def svg_size(raw):
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
         raise bad from None
-    if re.search(r"<!(?!--)|<\?(?!xml\b)|&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);)", text, re.I):
+    if re.search(r"<!(?!--)|<\?(?!xml\s)|&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);)", text, re.I):
         raise bad                                   # a DOCTYPE, entity declaration, processing instruction or unknown entity
     try:
         root = ET.fromstring(text)
     except (ET.ParseError, ValueError):
         raise bad from None
-    if _local(root.tag) != "svg":
+    if _local(root.tag) != "svg" or not all(_element_ok(el) for el in root.iter()):
         raise bad
-    for el in root.iter():
-        if not isinstance(el.tag, str) or _local(el.tag) in BAD_TAGS:
-            raise bad
-        if _local(el.tag) == "style" and not _css_ok(el.text or ""):
-            raise bad
-        for name, value in el.attrib.items():
-            n = _local(name)
-            if n.startswith("on"):
-                raise bad
-            if n == "href" and not str(value).strip().startswith("#"):
-                raise bad
-            if n == "style" and not _css_ok(value):
-                raise bad
-            if n in ("src", "action", "formaction", "srcdoc", "ping") or re.search(r"javascript:|<script", str(value), re.I):
-                raise bad
     dims = []
     for key in ("width", "height"):
         m = re.fullmatch(r"\s*([\d.]+)\s*(px)?\s*", root.get(key) or "")

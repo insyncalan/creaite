@@ -738,7 +738,7 @@ class _Word:
                 if not f.is_file() or f.is_symlink():
                     continue
                 one += self._logo_entry(f)
-            except Exception:
+            except Exception:           # a damaged or unreadable logo is left out of the file; the report is still made
                 continue
         return [{"images": one}] if one else []
 

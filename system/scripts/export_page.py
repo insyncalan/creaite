@@ -87,16 +87,18 @@ def safe_css_value(v):
     return True
 
 
+def client_attr_ok(svg, name, value):
+    """Whether a CLIENT file may keep this attribute: only the short allow-list, and never a value that holds an item ID."""
+    if ITEM_ID.search(value) or not (name in CLIENT_ATTRS or (svg and name in CLIENT_SVG_ATTRS)):
+        return False
+    return name != "data-id" or bool(ID_OK.match(value))
+
+
 def keep_attr(tag, svg, name, value, client=False):
     """Whether the attribute `name`="`value`" of an element `tag` (inside an svg when `svg`) is written. In a client file only the
     short allow-list survives, and never a value that holds an item ID."""
-    if name.startswith("on") or name in NEVER_ATTRS:
+    if name.startswith("on") or name in NEVER_ATTRS or (client and not client_attr_ok(svg, name, value)):
         return False
-    if client:
-        if ITEM_ID.search(value) or not (name in CLIENT_ATTRS or (svg and name in CLIENT_SVG_ATTRS)):
-            return False
-        if name == "data-id" and not ID_OK.match(value):
-            return False
     if name == "style":
         return safe_css_value(value)
     if name == "src":
