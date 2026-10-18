@@ -68470,8 +68470,8 @@ ${d5.text}`);
     ] });
   }
   var CLOSE_PICKER = (
-    /** @type {null|(() => void)} */
-    null
+    /** @type {Map<Element|null, () => void>} */
+    /* @__PURE__ */ new Map()
   );
   function AddFromTracker({ ctx }) {
     const s5 = ctx.section;
@@ -68498,8 +68498,13 @@ ${d5.text}`);
       /** @type {null|(() => void)} */
       null
     );
+    const pageOf = () => btn.current && btn.current.closest(".page") || null;
+    const mine = A2(
+      /** @type {Element|null} */
+      null
+    );
     const close = () => {
-      if (CLOSE_PICKER === me2.current) CLOSE_PICKER = null;
+      if (CLOSE_PICKER.get(mine.current) === me2.current) CLOSE_PICKER.delete(mine.current);
       setOpen2(false);
       setList(null);
       setQ("");
@@ -68515,8 +68520,10 @@ ${d5.text}`);
     if (!ctx.editing || !PICKABLE.has(s5.id)) return null;
     const start = async () => {
       if (!me2.current) me2.current = () => closeNow.current();
-      if (CLOSE_PICKER && CLOSE_PICKER !== me2.current) CLOSE_PICKER();
-      CLOSE_PICKER = me2.current;
+      mine.current = pageOf();
+      const other = CLOSE_PICKER.get(mine.current);
+      if (other && other !== me2.current) other();
+      CLOSE_PICKER.set(mine.current, me2.current);
       setOpen2(true);
       setList(null);
       setMsg("");
