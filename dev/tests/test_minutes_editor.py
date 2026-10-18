@@ -21,7 +21,7 @@ import os
 import subprocess
 import sys
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -31,8 +31,8 @@ from test_tracker import ABC, Vault  # noqa: E402
 
 TITLE = "[ABC] Steering committee"
 DAY = d(-1)
-if date.fromisoformat(DAY).weekday() == 4:      # the minutes say "by Friday": a meeting held ON a Friday has no such check, so on a Saturday run use Thursday
-    DAY = d(-2)
+while date.fromisoformat(DAY).weekday() not in (1, 2, 3):   # the minutes say "by Friday": the meeting is held on a Tuesday to Thursday, whatever day the run is pinned to (#178)
+    DAY = (date.fromisoformat(DAY) - timedelta(days=1)).isoformat()
 TURNS = [(0, 1, "Alan Carter", "Morning all, first the SOW."), (0, 20, "Omar Ali", "I'll send the revised SOW next week."),
          (1, 5, "Jane Doe", "We agreed the pilot stays on the lighthouse site."),
          (2, 10, "Omar Ali", "Data access is still late, that's the risk."),

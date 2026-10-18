@@ -186,6 +186,9 @@ def chrome(v, script, name="probe"):
     from test_dashboard import CHROME
     html = (v.root / "dashboard.html").read_text(encoding="utf-8")
     probe = v.root / f"{name}.html"
+    if os.environ.get("CREAITE_NOW"):               # #178: a pinned run pins the page's clock too, so page and data agree
+        from test_dashboard import page_clock_js
+        html = html.replace("<head>", "<head><script>" + page_clock_js(os.environ["CREAITE_NOW"]) + "</script>", 1)
     probe.write_text(html.replace("</body>", "<script>window.addEventListener('load',async()=>{try{" + script +
                                   "}catch(e){window.OUT={error:String(e&&e.stack||e)}} const p=document.createElement('pre');"
                                   "p.id='out';p.textContent=JSON.stringify(window.OUT);document.body.appendChild(p);});"

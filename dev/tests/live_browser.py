@@ -40,11 +40,8 @@ def theme_names():
 def pin_page_clock(b, now):
     """Pin the page's clock to `now` ("YYYY-MM-DD HH:MM", as CREAITE_NOW pins the server's), from there on running, and
     reload the page under it. Date() and Date.now() read the pinned time; Date with arguments is unchanged."""
-    from datetime import datetime
-    t = datetime.strptime(now, "%Y-%m-%d %H:%M")
-    b.call("Page.addScriptToEvaluateOnNewDocument", source="""(()=>{ const R=Date, off=new R(%d,%d,%d,%d,%d).getTime()-R.now();
-  class D extends R{ constructor(...a){ if(a.length) super(...a); else super(R.now()+off); } static now(){ return R.now()+off; } }
-  window.Date=D; })();""" % (t.year, t.month - 1, t.day, t.hour, t.minute))
+    from test_dashboard import page_clock_js
+    b.call("Page.addScriptToEvaluateOnNewDocument", source=page_clock_js(now))
     b.reload("typeof go==='function' && LIVE")
 
 
@@ -58,6 +55,7 @@ def free_port():
 class LiveBrowserCase(unittest.TestCase):
     shared_server = False      # True: one vault and server for the whole class (tests must not change data)
     width, height = 1400, 1000
+    pin_clock = True           # #178: under CREAITE_NOW the page's clock is pinned too (a class whose server runs on the real clock sets False)
     reduced_motion = True      # BL-136: the page loads with the system's reduced motion on (a motion test sets False)
 
     @classmethod
@@ -149,6 +147,8 @@ class LiveBrowserCase(unittest.TestCase):
                 self.b.goto(self.base + "/")
                 self.b.wait("typeof go==='function' && LIVE")
                 self.b.eval("typeof helpScreenSync==='function' && (S.helpLine=false, helpScreenSync(), true)")      # #158: the first-visit line (38 px) clears on the first click and would shift every layout assertion; test_help_finding sets S.helpLine itself
+                if self.pin_clock and os.environ.get("CREAITE_NOW"):   # #178: a pinned run pins the page too, so page and data agree
+                    pin_page_clock(self.b, os.environ["CREAITE_NOW"])
                 break
             except ConnectionError:
                 self.b.close()

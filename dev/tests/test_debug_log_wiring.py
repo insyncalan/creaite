@@ -453,6 +453,14 @@ from live_browser import LiveBrowserCase  # noqa: E402
 class DashboardDiagnostics(LiveBrowserCase):
     """The page's error hook, the errors banner (BL-180; it replaced the quiet link in the top bar), and Settings › Diagnostics, in a real browser."""
 
+    # #178: these tests read the debug log's own stamps (to the second) and the real clock; a frozen server clock gives every error
+    # the same stamp, so "a new error" never is. The server and the page run on the real clock, whatever the run is pinned to.
+    pin_clock = False
+
+    @classmethod
+    def server_env(cls):
+        return {"CREAITE_NOW": ""}
+
     def log_text(self):
         out = ""
         for p in sorted((self.v.root / "system" / "logs").glob("debug-*.log")):

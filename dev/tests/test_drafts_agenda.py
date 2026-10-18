@@ -8,11 +8,11 @@ import json
 import subprocess
 import sys
 import unittest
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from test_dashboard import today as _cx_today  # noqa: E402
 import drafts_fake  # noqa: E402
 from test_decisions_prep import prep_world  # noqa: E402
 from test_drafts_update import DraftCase  # noqa: E402
@@ -30,7 +30,7 @@ def context(v, body):
 def make_confidential(v):
     p = v.root / "system/staging/calendar.json"
     cal = json.loads(p.read_text())
-    ev = cal["days"][date.today().isoformat()][0]
+    ev = cal["days"][_cx_today().isoformat()][0]
     ev.update({"sensitivity": "confidential", "body": "Board secret: the merger plan", "where": "Room 7"})
     p.write_text(json.dumps(cal))
 
@@ -155,7 +155,7 @@ class AgendaInPrep(AgendaCase):
         self.assertIn("For attendees.", two)
         self.assertIn("- Decide: Extend the pilot by two weeks", one)
         sys.path.insert(0, str(self.v.root / "system/scripts"))
-        r = subprocess.run([sys.executable, "system/scripts/minutes.py", "agenda", "ABC", "--date", date.today().isoformat(),
+        r = subprocess.run([sys.executable, "system/scripts/minutes.py", "agenda", "ABC", "--date", _cx_today().isoformat(),
                             "--title", "ABC weekly"], capture_output=True, text=True, cwd=self.v.root)
         self.assertIn("Extend the pilot by two weeks", r.stdout)                                   # Coverage reads it (BL-209)
 

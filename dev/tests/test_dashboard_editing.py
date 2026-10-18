@@ -286,7 +286,7 @@ class DashboardEditingTests(unittest.TestCase):
         harness = v.root / "harness.html"
         harness.write_text(html.replace("</body>", seed_tag + SCRIPT + "</body>"), encoding="utf-8")
         # dev-test-steadiness: in real time, waiting for the result (a virtual-time budget ran out under load)
-        cls.result = json.loads(page_result(harness.as_uri()))
+        cls.result = json.loads(page_result(harness.as_uri(), pin_clock=False))
         cls.new = {k: v for k, v in cls.result["files"].items() if re.search(r"-dashboard(-\d+)?\.json$", k)}
 
     @classmethod

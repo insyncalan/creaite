@@ -36,6 +36,7 @@ from test_tracker import ABC, Vault, action, make_draft  # noqa: E402
 FIXED = date(2026, 10, 9)                               # a Friday, as in test_snapshots and test_prep_context_pinned
 NOW = f"{FIXED} 11:30"
 test_dashboard.TODAY = FIXED
+os.environ["CREAITE_NOW"] = NOW                       # this file's day is its own, whatever clock the run is pinned to (#178)
 PINNED = Path(__file__).resolve().parent / "pinned" / "dashboard_data.json"
 RECORD = os.environ.get("CREAITE_PIN_RECORD") == "1"
 d = test_dashboard.d

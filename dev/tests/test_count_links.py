@@ -10,16 +10,16 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 from test_dashboard import d, new, populate  # noqa: E402
+from test_dashboard import today as _cx_today  # noqa: E402
 from test_tracker import ABC, action  # noqa: E402
 
-TODAY = date.today()
+TODAY = _cx_today()
 SRC = f"{ABC}/minutes/{d(-5)} Steering.docx — Actions"
 
 

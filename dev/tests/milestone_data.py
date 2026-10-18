@@ -9,13 +9,14 @@ spread over the past reporting weeks, so Movement's chart has weeks to draw. Dat
 import sqlite3
 import sys
 from contextlib import closing
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_dashboard import populate  # noqa: E402
+from test_dashboard import today as _cx_today  # noqa: E402
 
-TODAY = date.today()
+TODAY = _cx_today()  # follows CREAITE_NOW (#178)
 
 
 def d(n):

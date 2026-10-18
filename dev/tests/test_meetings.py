@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_dashboard import today as _cx_today  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 NOW = "2026-10-08 09:30"          # a Thursday: the window starts Monday 05-10-2026
@@ -233,10 +234,9 @@ def page_data(v):
 def week_calendar(v, with_ids=True, today=None):
     """A calendar for one week: Monday, today, the day before Monday and the day after today. `today` defaults to the
     real date (the build then uses the real clock); a test that pins the clock with CREAITE_NOW passes the same day."""
-    from datetime import date, timedelta
+    from datetime import timedelta
     if today is None:
-        fixed = os.environ.get("CREAITE_NOW")             # the build's clock: derive the days from it, else the real date
-        today = date.fromisoformat(fixed[:10]) if fixed else date.today()
+        today = _cx_today()                               # the build's clock: CREAITE_NOW's day, else the real date
     mon = today - timedelta(days=today.weekday())
     d = lambda x: x.isoformat()  # noqa: E731
     ev = lambda i, **k: ({"id": f"ev-{i}"} if with_ids else {}) | k  # noqa: E731
@@ -385,7 +385,7 @@ class InboxPageTests(unittest.TestCase):
             # dev-test-steadiness: in real time, waiting for the result. Under virtual time the page's clock ran on while the
             # server worked (the stand-in claude, the file writes), the budget ran out and the dump had no result.
             from page_result import page_result
-            cls.r = json.loads(page_result(f"http://127.0.0.1:{port}/"))
+            cls.r = json.loads(page_result(f"http://127.0.0.1:{port}/", pin_clock=False))
         finally:
             server.terminate()
             server.wait(timeout=10)

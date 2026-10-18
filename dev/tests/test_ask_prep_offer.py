@@ -17,10 +17,10 @@ import sys
 import unittest
 import urllib.error
 import urllib.request
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_dashboard import today as _cx_today  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
@@ -57,7 +57,7 @@ out({"type": "result", "result": text, "session_id": "sess-prep"})
 def load(v):
     from test_dashboard import populate
     populate(v)
-    day = date.today().isoformat()
+    day = _cx_today().isoformat()
     (v.root / "system/staging/calendar.json").write_text(json.dumps({"fetched": f"{day} 07:00", "days": {day: [
         {"id": "t1", "start": "09:00", "end": "10:00", "title": "ABC weekly", "where": "Teams", "teams": True,
          "organiser": "Jane Doe", "all_day": False, "private": False, "sensitivity": "normal",
@@ -152,7 +152,7 @@ class PrepOfferBrowser(LiveBrowserCase):
         self.assertIn("Go ahead", card)
         b.eval("[...document.querySelectorAll('#chLog .confirm')].pop().querySelector('.primary').click()")
         import time
-        page = self.v.root / f"projects/ABC Example Programme/agendas/{date.today().isoformat()} Prep - ABC weekly.html"
+        page = self.v.root / f"projects/ABC Example Programme/agendas/{_cx_today().isoformat()} Prep - ABC weekly.html"
         for _ in range(400):
             if page.exists():
                 break

@@ -13,18 +13,19 @@ import re
 import subprocess
 import sys
 import unittest
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+from test_dashboard import today as _cx_today  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 from test_decisions_prep import prep_world  # noqa: E402
 from test_tracker import ABC, Vault, action  # noqa: E402
 import build_dashboard as bd  # noqa: E402
 import prep_page  # noqa: E402
 
-TODAY = date.today()
+TODAY = _cx_today()
 
 
 def d(n):
