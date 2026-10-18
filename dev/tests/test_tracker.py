@@ -75,6 +75,7 @@ def make_vault():
               "client_leak.py", "report_doc.py", "report_server.py",   # v2.1.0 P3
               "client_check.py",   # v2.1.0 P8
               "export_page.py",    # #226: the report page as the HTML and PDF export
+              "logo_check.py",     # p240-leakfix: a logo is looked into before it is saved
               "creaite_doc.py",                                    # v2.1.0 P1: creaite's document format
               "minutes_record.py", "date_words.py",                # v2.1.0 P4: the minutes record, dates in words
               "linktext.py",                                       # #121: links in plain text, read by the reports, search and the Excel export

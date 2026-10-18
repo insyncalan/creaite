@@ -287,6 +287,26 @@ class Checks(Base):
         self.build()
         self.assertIn("ABC-M-001 Design sign-off", [r[0] for r in self.table_with("Milestone")])
 
+    def test_logo1_a_bad_logo_file_is_skipped_and_never_fails_the_export(self):
+        """p240-leakfix LOGO 1: a bare PNG header (what the old save accepted) and a zero-height PNG used to fail every export."""
+        (self.tmp / "firm.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        (self.tmp / "client.svg").write_bytes(b"not a picture")
+        self.build()
+        self.assertFalse([n for n in self.parts if n.startswith("word/media/") and self.parts[n][:8] == b"\x89PNG\r\n\x1a\n"
+                          and len(self.parts[n]) == 8], "the bad file is not in the package")
+        (self.tmp / "firm.png").write_bytes(png(60, 20)[:16] + struct.pack(">II", 60, 0) + png(60, 20)[24:])
+        self.build()
+
+    def test_logo7_current_behaviour_an_internal_weekly_export_carries_the_client_and_partner_logos(self):
+        """LOGO 7 is Alan's question, not decided here. This documents what happens now: the weekly layout's logo choice
+        (header section, data.logos) decides, and the fixture's choice (firm and client) puts both in an INTERNAL weekly file.
+        If Alan says internal reports carry no client or partner logo, the change is one line in report_doc.py (the weekly layout's
+        default logos / creaite_doc.Ctx.logos for audience 'internal') and this test then asserts the opposite."""
+        self.build()
+        media = [self.parts[n] for n in self.parts if n.startswith("word/media/")]
+        self.assertIn(png(60, 20), media, "the firm logo")
+        self.assertTrue(any(abs(w / h - 80 / 30) < 0.1 for w, h in self.sizes), "the client logo (an SVG drawn to a PNG)")
+
     def test_check_08c_a_client_timeline_draws_what_the_screen_does_a_left_out_one_stays_in_the_picture_not_the_table(self):
         self.build(self.doc("client", audience="client", client="Harbour Board"))
         self.assertTrue(any("Leftout milestone" in v for v in self.svgs))

@@ -24,8 +24,22 @@ from test_reports import ABC, ReportRoutes  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
-JPG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+JPG = (b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+       b"\xff\xc0\x00\x0b\x08\x00\x01\x00\x01\x01\x01\x11\x00\xff\xd9")        # SOI, JFIF, a 1 by 1 frame header, EOI
 SVG = b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>'
+
+
+def png_of(w, h, trailing=b"", ihdr_only=False):
+    """A PNG whose header says w by h (one real row, so its chunks are sound), with `trailing` bytes after IEND."""
+    import struct
+    import zlib
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    if ihdr_only:
+        return b"\x89PNG\r\n\x1a\n"
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 0, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"\x00\x00")) + chunk(b"IEND", b"") + trailing)
 
 
 def b64(b):
@@ -190,6 +204,65 @@ class Routes(unittest.TestCase):
         path = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})["logos"][0]["path"]
         got = self.post("/api/report/logo", {"code": "ABC", "paths": [path]})["logos"][path]
         self.assertTrue(got.startswith("data:image/png;base64,"))
+
+    # ── p240-leakfix: Team Cap's review of the logo routes ───────────────────────────────────────────────────────
+    def test_logo1_logo3_a_picture_is_looked_into_not_just_its_first_bytes(self):
+        d = self.v.root / "system/branding/logos"
+        bad = {"bare PNG signature": png_of(0, 0, ihdr_only=True), "height 0": png_of(10, 0), "width 0": png_of(0, 10),
+               "65535 square": png_of(65535, 65535), "over the cap": png_of(4001, 10),
+               "html after IEND": png_of(10, 10, b"<script>1</script>"), "zip after IEND": png_of(10, 10, b"PK\x03\x04"),
+               "damaged": png_of(10, 10)[:-3]}
+        for why, raw in bad.items():
+            r = self.save("client", "png", raw)
+            self.assertFalse(r["ok"], why)
+            self.assertNotRegex(r["message"], r"/Users|/var/|/private|Traceback", why)
+        self.assertTrue(self.save("client", "png", png_of(4000, 4000))["ok"], "the cap itself is allowed")
+        for f in d.glob("*"):
+            f.unlink()
+        for why, raw in {"no frame header": b"\xff\xd8\xff\xe0\x00\x04ab\xff\xd9", "html after EOI": JPG + b"<script>",
+                         "no EOI": JPG[:-2], "huge": JPG.replace(b"\x08\x00\x01\x00\x01", b"\x08\xff\xff\xff\xff")}.items():
+            self.assertFalse(self.save("client", "jpg", raw)["ok"], why)
+        self.assertEqual(list(d.glob("*")), [], "nothing was written")
+
+    def test_logo2_an_svg_with_script_handlers_links_or_a_page_inside_is_refused(self):
+        w = 'xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
+        bad = {"script": f'<svg {w}><script>alert(1)</script></svg>', "onload": f'<svg {w} onload="x()"></svg>',
+               "href": f'<svg {w}><a href="http://e.example/"><rect/></a></svg>',
+               "xlink": f'<svg {w}><image xlink:href="http://e.example/x.png"/></svg>',
+               "foreignObject": f'<svg {w}><foreignObject><p>hi</p></foreignObject></svg>',
+               "doctype": f'<!doctype html><svg {w}></svg>', "polyglot": f'<!doctype html><script>1</script><svg {w}></svg>',
+               "entity": f'<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY a "aaaa">]><svg {w}>&a;</svg>',
+               "not xml": f'<svg {w}><rect></svg>', "iframe": f'<svg {w}><iframe/></svg>',
+               "style import": f'<svg {w}><style>@import url(http://e.example/x.css);</style></svg>',
+               "style url": f'<svg {w}><rect style="fill:url(http://e.example/x)"/></svg>',
+               "huge": f'<svg {w} width="90000" height="90000"></svg>'}
+        for why, raw in bad.items():
+            self.assertFalse(self.save("client", "svg", raw.encode())["ok"], why)
+        self.assertEqual(list((self.v.root / "system/branding/logos").glob("*")), [])
+        fine = f'<?xml version="1.0"?><svg {w} viewBox="0 0 9 9"><defs><linearGradient id="g"/></defs><use xlink:href="#g"/></svg>'
+        self.assertTrue(self.save("client", "svg", fine.encode())["ok"], "a link to a part of the same file is fine")
+
+    def test_logo5_a_symbolic_link_is_refused_in_plain_words_and_its_target_is_left_alone(self):
+        d = self.v.root / "system/branding/logos"
+        target = self.v.root / "system/some-system-file.txt"
+        target.write_text("keep me")
+        (d / "ABC-client.png").symlink_to(target)
+        for r in (self.save("client"), self.post("/api/report/logo/remove", {"code": "ABC", "kind": "client"})):
+            self.assertFalse(r["ok"], r)
+            self.assertIn("symbolic link", r["message"])
+            self.assertNotIn(str(self.v.root), r["message"])
+        self.assertEqual(target.read_text(), "keep me")
+        self.assertTrue((d / "ABC-client.png").is_symlink())
+
+    def test_logo6_the_new_file_is_written_before_a_stale_one_of_another_type_goes(self):
+        import json
+        self.save("client", "svg", SVG)
+        log = self.v.root / "system/config/files-log.jsonl"
+        before = len(log.read_text().splitlines()) if log.exists() else 0
+        self.assertTrue(self.save("client", "png", PNG)["ok"])
+        ops = [(e["op"], Path(e["path"]).name) for e in map(json.loads, log.read_text().splitlines()[before:])]
+        self.assertLess(ops.index(("create", "ABC-client.png")), ops.index(("delete", "ABC-client.svg")), ops)
+        self.assertEqual(self.logos(), {"client": "ABC-client.png"})
 
 
 if __name__ == "__main__":

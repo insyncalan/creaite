@@ -417,7 +417,7 @@ def logo_route(handler, req):
         if stored not in known:
             continue
         f = paths.resolve(stored)
-        if f.suffix.lower() in LOGO_TYPES and f.is_file() and f.stat().st_size <= LOGO_MAX:
+        if f.suffix.lower() in LOGO_TYPES and f.is_file() and not f.is_symlink() and f.stat().st_size <= LOGO_MAX:
             out[stored] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
     return answer(handler, {"ok": True, "logos": out, "list": list(known.values())})
 
@@ -428,13 +428,8 @@ JPEG_HINT = "A transparent PNG or SVG sits better. The picture is kept as it is.
 
 def _logo_type(raw):
     """"png", "jpg" or "svg" from the file's own first bytes, or None when it is not a picture creaite draws."""
-    if raw[:8] == b"\x89PNG\r\n\x1a\n":
-        return "png"
-    if raw[:3] == b"\xff\xd8\xff":
-        return "jpg"
-    if b"<svg" in raw[:2000].lower():
-        return "svg"
-    return None
+    import logo_check
+    return logo_check.kind_of(raw)
 
 
 def _logo_bytes(value):
@@ -443,6 +438,14 @@ def _logo_bytes(value):
         return base64.b64decode(str(value or ""), validate=True) or None
     except ValueError:
         return None
+
+
+def _no_paths(msg):
+    """A message with the vault's and the home folder's absolute paths taken out (LOGO 5: an error never names a place on the disk)."""
+    out = str(msg)
+    for root in (str(paths.ROOT), str(Path.home())):
+        out = out.replace(root, "")
+    return out
 
 
 def _logo_change(handler, ch):
@@ -454,7 +457,7 @@ def _logo_change(handler, ch):
     code, msg = filechange.perform(ch, token, "dashboard")
     if code == filechange.NEEDS:
         filechange.record_request(ch, msg[len("Needs approval: "):].rstrip("."))
-    return None if code == 0 else refuse(handler, f"Logo not saved: {msg}")
+    return None if code == 0 else refuse(handler, f"Logo not saved: {_no_paths(msg)}")
 
 
 def _logo_target(req):
@@ -478,7 +481,9 @@ def _logo_files(stem):
 
 
 def _logo_refusal(req):
-    """(raw, drawn, type, None) for a logo request that can be saved, else (None, None, None, the sentence to refuse with)."""
+    """(raw, drawn, type, None) for a logo request that can be saved, else (None, None, None, the sentence to refuse with). The
+    picture is looked into, not just its first bytes (logo_check): a sound PNG, JPEG or SVG of a sane size with nothing added."""
+    import logo_check
     raw, drawn = _logo_bytes(req.get("original")), _logo_bytes(req.get("drawn"))
     kind_of = _logo_type(raw or b"")
     ext = str(req.get("ext") or "").lower().lstrip(".").replace("jpeg", "jpg")
@@ -488,7 +493,24 @@ def _logo_refusal(req):
         return None, None, None, "That logo is over 400 kB. Choose a smaller file. Nothing was saved."
     if drawn is not None and _logo_type(drawn) != "png":
         return None, None, None, "The trimmed copy must be a PNG. Nothing was saved."
+    try:
+        logo_check.inspect(raw)
+        if drawn is not None:
+            logo_check.inspect(drawn)
+    except logo_check.LogoRefused as e:
+        return None, None, None, str(e)
     return raw, drawn, kind_of, None
+
+
+def _logo_links(stem, names):
+    """Whether the logos folder, or a file in it with this logo's name (or one about to be written), is a symbolic link."""
+    folder = paths.REPORT_LOGOS
+    if folder.is_symlink():
+        return True
+    if not folder.is_dir():
+        return False
+    return any(f.is_symlink() for f in folder.iterdir()
+               if f.stem in (stem, f"{stem}-original") or f.name in names)
 
 
 def logo_save_route(handler, req):
@@ -501,18 +523,21 @@ def logo_save_route(handler, req):
         return refuse(handler, why)
     ext = "jpg" if kind_of == "jpg" else kind_of
     keep = [(f"{stem}-original.{ext}", raw), (f"{stem}.png", drawn)] if drawn and kind_of != "svg" else [(f"{stem}.{ext}", raw)]
-    for old in _logo_files(stem):                                  # a stale file of another type must not win
-        if old.name not in dict(keep):
-            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {kind} logo"})
-            if err:
-                return err
-    for name, data in keep:
+    if _logo_links(stem, {n for n, _d in keep}):
+        return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut and try again. "
+                               "Nothing was saved.")
+    for name, data in keep:                                        # the new files first: a failed write leaves the old logo standing
         target = paths.REPORT_LOGOS / name
         ch = {"op": "edit" if target.exists() else "create", "path": paths.rel(target), "data": data,
               "why": f"{kind.capitalize()} logo added or changed from the report settings"}
         err = _logo_change(handler, ch)
         if err:
             return err
+    for old in _logo_files(stem):                                  # then a stale file of another type must not win
+        if old.name not in dict(keep):
+            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {kind} logo"})
+            if err:
+                return err
     out = {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is saved."}
     if kind_of == "jpg":
         out["hint"] = JPEG_HINT
@@ -522,6 +547,9 @@ def logo_save_route(handler, req):
 def logo_remove_route(handler, req):
     """POST /api/report/logo/remove (see the module's description)."""
     code, kind, stem = _logo_target(req)
+    if _logo_links(stem, set()):
+        return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut yourself. "
+                               "Nothing was removed.")
     for old in _logo_files(stem):
         err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Removed the {kind} logo"})
         if err:

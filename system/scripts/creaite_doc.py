@@ -730,27 +730,38 @@ class _Word:
     # ── the logos ──
     def logos(self, s):
         """The header's chosen logos as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it is."""
-        import docx_tools
         one = []
         for lg in (s.get("data") or {}).get("logos") or []:
             f = Path(str(lg.get("path") or ""))
             f = f if f.is_absolute() else paths.resolve(f.as_posix())
-            if not f.is_file():
+            try:                                    # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
+                if not f.is_file() or f.is_symlink():
+                    continue
+                one += self._logo_entry(f)
+            except Exception:
                 continue
-            if f.suffix.lower() == ".svg":
-                head = f.read_text(encoding="utf-8", errors="replace")[:2000]
-                box = re.search(r'viewBox="[\d.\-]+[ ,]+[\d.\-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"', head)
-                wh = (re.search(r'\swidth="([\d.]+)', head), re.search(r'\sheight="([\d.]+)', head))
-                w, h = ((float(box[1]), float(box[2])) if box else (float(wh[0][1]), float(wh[1][1])) if all(wh) else (160.0, 48.0))
-                width = max(8, min(160, round(LOGO_HEIGHT * w / h)))
-                made = self.picture(f'<img src="{f.resolve().as_uri()}" style="width:{width}px;height:{LOGO_HEIGHT}px">',
-                                    width, LOGO_HEIGHT, width)
-                if made:
-                    one.append({"image": made[0]["image"], "width": width})
-            elif f.suffix.lower() in IMG_EXT:
-                w, h = docx_tools.image_size(f.read_bytes())
-                one.append({"image": str(f), "width": max(8, min(160, round(LOGO_HEIGHT * w / h)))})
         return [{"images": one}] if one else []
+
+    def _logo_entry(self, f):
+        """[one fill entry] for a logo file, or [] when it isn't a picture that can be drawn (a bad size, a damaged file)."""
+        import docx_tools
+        if f.suffix.lower() == ".svg":
+            head = f.read_text(encoding="utf-8", errors="replace")[:2000]
+            box = re.search(r'viewBox="[\d.\-]+[ ,]+[\d.\-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"', head)
+            wh = (re.search(r'\swidth="([\d.]+)', head), re.search(r'\sheight="([\d.]+)', head))
+            w, h = ((float(box[1]), float(box[2])) if box else (float(wh[0][1]), float(wh[1][1])) if all(wh) else (160.0, 48.0))
+            if not (w > 0 and h > 0):
+                return []
+            width = max(8, min(160, round(LOGO_HEIGHT * w / h)))
+            made = self.picture(f'<img src="{f.resolve().as_uri()}" style="width:{width}px;height:{LOGO_HEIGHT}px">',
+                                width, LOGO_HEIGHT, width)
+            return [{"image": made[0]["image"], "width": width}] if made else []
+        if f.suffix.lower() in IMG_EXT:
+            w, h = docx_tools.image_size(f.read_bytes())
+            if not (0 < w <= 20000 and 0 < h <= 20000):
+                return []
+            return [{"image": str(f), "width": max(8, min(160, round(LOGO_HEIGHT * w / h)))}]
+        return []
 
     # ── sections: each gives parts, ("e", entries) or ("t", columns, rows, styler); none means the section is left out ──
     def parts(self, s):
