@@ -3930,6 +3930,13 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
 #peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
 #peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
+/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band, never dismissible */
+.sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
+.sweepdue[hidden]{display:none}
+.sweepdue .sd-off{display:none}
+body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
+body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}
+body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 </style>
 </head>
 <body>
@@ -3960,6 +3967,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
           <div class="brief"><div class="dd" id="todayDate"></div><h1 id="dayHead"></h1><p id="briefText"></p></div>
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
         </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270 -->
+        <div class="sweepdue" id="sweepDue" role="status" hidden></div><!-- #200: Sweep due since 07:00, with Run sweep -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
           <section class="tsec" id="dnSec" aria-labelledby="hDn" hidden><h2 class="th" id="hDn">Decisions needed <span class="cnt" id="nDn"></span></h2><ol class="bl" id="dnList"></ol><div class="moreline" id="dnMore"></div></section><!-- BL-210 -->
@@ -6294,6 +6302,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     renderReview: () => renderReview,
     renderSettings: () => renderSettings,
     renderSetup: () => renderSetup,
+    renderSweepDue: () => renderSweepDue,
     renderToDecide: () => renderToDecide,
     renderToday: () => renderToday,
     renderViewBar: () => renderViewBar,
@@ -6598,6 +6607,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     subOf: () => subOf,
     sw: () => sw2,
     swapHTML: () => swapHTML,
+    sweepDueShown: () => sweepDueShown,
     swept: () => swept,
     switchProject: () => switchProject,
     syncLayout: () => syncLayout,
@@ -40644,6 +40654,7 @@ ${s5}`;
       }
       mDots("today");
       renderSetup();
+      renderSweepDue();
       {
         $("#drStale")?.remove();
         const host2 = $("#mineMore");
@@ -41254,6 +41265,35 @@ ${s5}`;
       if ($("#setupList") && !$("#suMore")) addHTML($("#setupList"), "beforeend", html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`);
     }
   }
+  function sweepDueShown() {
+    const sd2 = D.sweep_due;
+    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept());
+  }
+  function renderSweepDue() {
+    const box = $("#sweepDue");
+    if (!box) return;
+    const on2 = sweepDueShown();
+    box.hidden = !on2;
+    if (!on2) {
+      putHTML(box, html``);
+      return;
+    }
+    putHTML(box, html`<b>Sweep due since ${D.sweep_due.due_from || "07:00"}.</b> <span class="sd-last">${D.sweep_due.last ? `Last swept ${D.sweep_due.last}.` : "No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span>`);
+  }
+  document.addEventListener("click", (e4) => {
+    if (!e4.target.closest("#sweepRun")) return;
+    e4.preventDefault();
+    if (!viaServer()) {
+      snack("Needs the live server");
+      return;
+    }
+    if (shared.BUSY) {
+      snack("ask creaite is busy; try again when it's finished");
+      return;
+    }
+    openChat();
+    send("sweep");
+  });
   function bootToday0159() {
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-setup]");
@@ -72907,6 +72947,7 @@ ${d5.text}`);
         "rbDismiss",
         "rbDraw",
         "rbGuess",
+        "rbStart",
         "rbStop",
         "rbTick",
         "rbUnmark",
@@ -72937,6 +72978,7 @@ ${d5.text}`);
         "renderPromises",
         "renderReview",
         "renderSettings",
+        "renderSweepDue",
         "renderToday",
         "renderWork",
         "resolvePerson",
