@@ -67930,10 +67930,10 @@ ${d5.text}`);
         ref: box,
         onFocusOut: (e4) => {
           const to2 = (
-            /** @type {Node|null} */
+            /** @type {HTMLElement|null} */
             e4.relatedTarget
           );
-          if (!to2 || !box.current?.contains(to2)) setOn(false);
+          if (!to2 || !(box.current?.contains(to2) || to2.closest && to2.closest("#aiLayer, .linkpop"))) setOn(false);
         },
         onKeyDown: (e4) => {
           if (e4.key === "Escape") {
