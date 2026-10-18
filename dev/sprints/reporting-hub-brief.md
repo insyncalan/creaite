@@ -1,6 +1,6 @@
 # Brief: one Reporting hub for the internal and the client weekly report
 
-**Status: the mockup is LOCKED, approved by Alan on 18-10-2026 (approved version: commit 88ad88e1; since revised once, for the header logos in Round 8, and awaiting his re-approval). All reporting items are in release 2.4. No reporting development starts until Alan gives the go-ahead.**
+**Status: the mockup is LOCKED, approved by Alan on 18-10-2026 (first approved version: commit 88ad88e1; revised for the header logos, Rounds 8 and 9, and re-approved by Alan on 18-10-2026 at commit d752dbd4). All reporting items are in release 2.4. No reporting development starts until Alan gives the go-ahead.**
 
 Product Manager, 18-10-2026, from Alan's requests and screenshots. Mockup: dev/mockups/reporting-hub-mockup.html (built on the real weekly snapshot; use the Internal, Client and Side by side switch; the week control; "Client report" settings at the top right; Export and Approve menus; the foot bar switches "Client report: required / not required", opens the settings and the export name-clash dialog). **No development on reporting until Alan gives the go-ahead after a complete UI review.** Alan's plan: reporting moves into release 2.4; the defects are for the next patch (he wrote 2.3.1, which is already out, so I read it as the next patch, 2.3.4; Jarvis to confirm). This brief supersedes dev/sprints/weekly-report-tidy-brief.md where they differ; that brief's items stay as the detail for the defects.
 
