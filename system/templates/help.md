@@ -475,6 +475,8 @@ Where: Item panel · Claude Code
 3. Press **Draft client report** on Today's reminder (or **Client report** at the foot of the project page), or ask for the report. Only client-visible items appear. Anything labelled **Sensitive** or **Partner only** stays out whatever else is set, and confidential material is left out.
 4. Approve the draft. creaite checks it for anything internal first and says what it found; if the check finds something, nothing is approved or exported. It files the report in `reports/` as a web page (`… Client report - <Project name> (<Client>).html`, one per client), never sends it, and, like the weekly report, never saves over a filed one. Export it as a web page, Word or PDF, as for the weekly report.
 
+5. **Not every project needs one.** Press the cog in the Reporting hub (**Client report settings**) or use Settings › Projects: **This project needs a separate client report**, on or off. It holds for every future report, there is no weekly question, and turning it off deletes nothing; turning it on again brings the client side back. With it off there are no client reminders, Approve and Export offer only the internal report, and the Reports page lists only internal reports. A new project starts with it off; projects you already have stay on. The panel also holds how often, the client's name, a reminder on the due day and the logos for the report header (the firm's is always shown; **Add logo** takes a PNG, JPEG or SVG, and a transparent PNG or SVG sits best).
+
 Or say: `make ABC-A-002 client-visible` `client report ABC`
 
 ## Draft a steering-committee one-pager
