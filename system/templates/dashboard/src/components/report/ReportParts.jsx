@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../../core/server.js";
 import { addTextSection } from "../../stores/textSection.js";
+import { crLogoFor, crLogoPaths, readClientLogos, uploadClientLogo } from "../../stores/reportingSettings.js";
 import { EyeButton } from "./EyeButton.jsx";
 import { Sheet } from "./Sheet.jsx";
 import { wkDm, wkLongDate, wkTone, wkDmy } from "./weekly/weeklyDoc.js";
@@ -34,12 +35,50 @@ export function ReportSheet({ audience, addText = addTextSection, ...rest }) {
 
 const KIND = /** @type {Record<string, string>} */ ({ firm: "Firm", client: "Client", partner: "Partner" });
 
+const ALL_KINDS = /** @type {const} */ (["firm", "client", "partner"]);
+const LOGO_ACCEPT = "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg";
+
+/** One logo's place in the header, in edit mode (#233 a): a dashed "Add <name> logo" tile, or the logo as a button "Change <name> logo".
+    Both open the cog panel's chooser (reportingSettings.js uploadClientLogo saves it and both reports redraw at once). The firm's
+    logo is the same file for every project, so replacing one asks first. @param {{code: string, kind: "firm"|"client"|"partner", pic: string}} props */
+function LogoSlot({ code, kind, pic }) {
+  const file = useRef(/** @type {HTMLInputElement|null} */ (null)), btn = useRef(/** @type {HTMLButtonElement|null} */ (null));
+  const [ask, setAsk] = useState(false);
+  const name = KIND[kind].toLowerCase(), label = `${pic ? "Change" : "Add"} ${name} logo`;
+  const choose = () => file.current && file.current.click();
+  const stop = () => { setAsk(false); setTimeout(() => btn.current && btn.current.focus(), 0); };
+  /** @param {Event} e */
+  const picked = async e => {
+    const input = /** @type {HTMLInputElement} */ (e.target), f = input.files && input.files[0];
+    if (f) await uploadClientLogo(code, kind, f);
+    input.value = "";
+  };
+  return (
+    <span class="wr-logo-slot" onKeyDown={e => { if (ask && e.key === "Escape") { e.stopPropagation(); e.preventDefault(); stop(); } }}>
+      <button type="button" ref={btn} data-hdr-logo={kind} class={pic ? "wr-logo-btn" : "wr-logo-add"} aria-label={label} title={label}
+        onClick={() => (pic && kind === "firm" ? setAsk(true) : choose())}>
+        {pic ? <img src={pic} alt="" /> : <><b aria-hidden="true">+</b><span>Add {name} logo</span></>}</button>
+      {ask ? <span class="wr-logo-ask" role="group" aria-label="Replace the firm logo?">
+        <span class="sub" role="alert">This logo is used by all projects. Replace it?</span>
+        <button type="button" class="btn sm" data-hdr-logo-yes={kind} onClick={() => { setAsk(false); choose(); }}>Replace</button>
+        <button type="button" class="btn sm" data-hdr-logo-no={kind} onClick={stop}>Cancel</button></span> : null}
+      <input type="file" hidden ref={file} accept={LOGO_ACCEPT} data-hdr-logo-file={kind} tabIndex={-1} onChange={picked} />
+    </span>);
+}
+
 /** The one title block of a report with its logos. Logos are the project's files (system/branding/logos/); which of them show is
-    this report's `layout.logos`, chosen in the cog's Client report settings panel (the tiles), not on the sheet. @param {{ctx: SectionCtx, logos: {kind: string, path: string}[], data: Record<string, string>}} props */
+    this report's `layout.logos`, chosen in the cog's Client report settings panel (the tiles), not on the sheet. In edit mode (never
+    in Show as exported) each slot that is on shows its logo as a button or a dashed Add tile (#233 a). @param {{ctx: SectionCtx, logos: {kind: string, path: string}[], data: Record<string, string>}} props */
 export function ReportHeader({ ctx, logos, data }) {
   const { doc, section: s } = ctx, d = s.data || {}, client = doc.kind === "client";
+  const code = String(doc.project || ""), edit = ctx.editing && !ctx.exported && !ctx.readOnly && !!code;
+  useEffect(() => { if (edit) readClientLogos(code); }, [edit, code]);
   const chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : ["firm", "client", "partner"];
   const shown = logos.filter(l => l.kind === "firm" || chosen.includes(l.kind));
+  const slots = edit ? ALL_KINDS.filter(k => k === "firm" || chosen.includes(k)) : [];
+  const live = crLogoFor.value === code;                        // once read, the files the cog panel changed are the truth
+  /** @param {string} k */
+  const pathOf = k => (live ? crLogoPaths.value[k] : (shown.find(l => l.kind === k) || {}).path) || "";
   const meta = doc.meta || {};
   const period = d.period_start ? `${wkDmy(d.period_start)} to ${wkDmy(d.period_end || doc.date)}` : "";
   return (
@@ -52,8 +91,10 @@ export function ReportHeader({ ctx, logos, data }) {
           : "Facts as the tracker stands now: they lock when the internal report is approved"}</div> : null}
       </div>
       <div class="wr-logos">
-        {shown.map((l, i) => <span key={l.kind} class="wr-logo">{i ? <span class="wr-lsep" aria-hidden="true" /> : null}
-          {data[l.path] ? <img src={data[l.path]} alt={`${KIND[l.kind] || l.kind} logo`} /> : <span class="sub">{KIND[l.kind] || l.kind}</span>}</span>)}
+        {edit ? slots.map((k, i) => <span key={k} class="wr-logo">{i ? <span class="wr-lsep" aria-hidden="true" /> : null}
+          <LogoSlot code={code} kind={k} pic={data[pathOf(k)] || ""} /></span>)
+          : shown.map((l, i) => <span key={l.kind} class="wr-logo">{i ? <span class="wr-lsep" aria-hidden="true" /> : null}
+            {data[l.path] ? <img src={data[l.path]} alt={`${KIND[l.kind] || l.kind} logo`} /> : <span class="sub">{KIND[l.kind] || l.kind}</span>}</span>)}
       </div>
     </header>);
 }
