@@ -129,17 +129,17 @@ async function matchInternalNow(ids) {
   if (!r || !r.ok || !Array.isArray(r.findings) || r.findings.length !== cands.length + 1) { failed(); return; }
   const base = new Set(r.findings[0]);
   let d = crDoc.value || d0;
-  const copied = /** @type {string[]} */ ([]), held = /** @type {{id: string, heading: string, findings: string[]}[]} */ ([]);
+  const done = /** @type {string[]} */ ([]), held = /** @type {{id: string, heading: string, findings: string[]}[]} */ ([]);
   cands.forEach((c, n) => {
     const fresh = r.findings[n + 1].filter((/** @type {string} */ f) => !base.has(f));
     if (fresh.length) held.push({ id: c.id, heading: heading(c.id), findings: fresh });
-    else { d = matchClientSection(d, i, c.id); copied.push(heading(c.id)); }
+    else { d = matchClientSection(d, i, c.id); done.push(heading(c.id)); }
   });
-  if (copied.length) {                    // the clean sections together are checked once more: a finding the parts did not make alone holds all back
+  if (done.length) {                    // the clean sections together are checked once more: a finding the parts did not make alone holds all back
     const last = await api("/api/report/match-check", { docs: [d] });
     const extra = last && last.ok && last.findings && last.findings[0] ? last.findings[0].filter((/** @type {string} */ f) => !base.has(f)) : null;
     if (!extra || extra.length) { failed(); return; }
     crDoc.value = d; crDirty.value = true;
   }
-  crHeld.value = held.length ? { copied, held, message: `Not matched: ${held.map(h => h.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
+  crHeld.value = held.length ? { copied: done, held, message: `Not matched: ${held.map(h => h.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
 }
