@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_dashboard  # noqa: E402
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 from test_tracker import ABC  # noqa: E402
 
 PANEL = "#crPanel"
@@ -89,6 +89,32 @@ class ClientReportPanel(LiveBrowserCase):
         keep = b.eval("document.querySelector('#cfgKeep').textContent")
         self.assertIn("every future report", keep)
         self.assertIn("turning it off deletes nothing", keep)
+
+    def test_the_panels_selects_and_inputs_use_the_field_colours_with_4_5_to_1_contrast(self):
+        """Gate fix (Team Cap's walk): in the dark theme the How often select was pale on white. Every select and text input in the
+        panel takes the app's field ground and ink (tokens), so text meets 4.5:1 in light and dark, in both palettes."""
+        b = self.b
+        self.open_panel()
+        js = """(()=>{ const P=s=>{ const m=s.match(/rgba?\\(([^)]+)\\)/); if(m){ const p=m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return [p[0],p[1],p[2],p.length>3?p[3]:1]; }
+            const c=s.match(/color\\(srgb ([^)]+)\\)/); if(c){ const p=c[1].split(/[ \\/]+/).filter(Boolean).map(Number); return [p[0]*255,p[1]*255,p[2]*255,p.length>3?p[3]:1]; } return [0,0,0,0]; };
+          const lum=c=>{ const f=v=>{ v/=255; return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4); }; return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); };
+          const out=[]; for(const el of document.querySelectorAll('#crPanel select, #crPanel input[type=text], #crPanel input.pkdt')){
+            const cs=getComputedStyle(el), fg=P(cs.color); let bg=[0,0,0,0];
+            for(let e=el;e;e=e.parentElement){ const c=P(getComputedStyle(e).backgroundColor); if(c[3]>0){ bg=c; break; } }
+            const a=lum(fg), l=lum(bg); out.push([el.id||el.tagName, (Math.max(a,l)+0.05)/(Math.min(a,l)+0.05), bg[3]]); }
+          return out; })()"""
+        seen = 0
+        for palette in TEST_PALETTES:
+            for mode in ("light", "dark"):
+                b.eval(f"document.documentElement.dataset.palette='{palette}'; document.documentElement.dataset.theme='{mode}'")
+                b.pump(0.2)
+                rows = b.eval(js)
+                self.assertTrue(any(r[0] == "cfgRh" for r in rows), "the How often select is checked")
+                for name, ratio, alpha in rows:
+                    seen += 1
+                    self.assertEqual(alpha, 1, f"{name} has no opaque field ground ({palette} {mode})")
+                    self.assertGreaterEqual(ratio, 4.5, f"{name} text is {ratio:.2f}:1 ({palette} {mode})")
+        self.assertGreaterEqual(seen, 8)
 
     def test_every_control_is_named(self):
         names = self.b

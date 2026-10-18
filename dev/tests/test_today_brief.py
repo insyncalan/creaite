@@ -397,13 +397,13 @@ class TodayBriefTests(PageTests):
           go("today"); renderToday(); const rem=[...document.querySelectorAll("#attnList .rem")], first=rem[0];
           first.querySelector(".dots").click(); const open=!!document.querySelector("#remMenu[role=menu]")&&first.querySelector(".dots").getAttribute("aria-expanded")==="true";
           window.OUT={n:rem.length,titles:rem.map(r=>r.querySelector("a.t").textContent),open,menu:[...document.querySelectorAll("#remMenu [role=menuitem]")].map(b=>[b.textContent,b.getAttribute("aria-disabled")==="true"]),
-            old:!!document.getElementById("notes"), links:rem.map(r=>r.querySelector("a.t").dataset.cock||r.querySelector("a.t").dataset.go), label:first.querySelector(".dots").getAttribute("aria-label")};""")
+            old:!!document.getElementById("notes"), links:rem.map(r=>r.querySelector("a.t").dataset.cock||r.querySelector("a.t").dataset.go||r.querySelector("a.t").dataset.rphub), label:first.querySelector(".dots").getAttribute("aria-label")};""")
         self.assertEqual(o["n"], 2)
         self.assertEqual(o["menu"][0][0], "Run report now")
         self.assertEqual([m[0] for m in o["menu"]][1:], ["Dismiss for this session", "Dismiss forever"])
         self.assertTrue(o["open"])
         self.assertFalse(o["old"])                                                  # the pill row is gone
-        self.assertEqual(o["links"], ["reports", "ABC"])   # BL-337: the weekly reminder opens Reports
+        self.assertEqual(o["links"], ["reports", "ABC||client"])   # BL-337: a weekly reminder with no project opens Reports; H1: the client reminder opens that project's client report in the hub (data-rphub: code, week, client)
         self.assertTrue(o["label"].startswith("Options: Weekly report"))
 
     def test_needs_attention_lists_work_with_no_owner_or_due_date(self):

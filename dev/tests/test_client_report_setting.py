@@ -112,6 +112,42 @@ class Reminders(unittest.TestCase):
         self.assertFalse([i for i in self.ids(client_reminder=False) if i.startswith("client:")])
 
 
+class DashboardJson(unittest.TestCase):
+    """Gate fix (Team Cap's walk): Today's reminders in the DASHBOARD JSON follow the setting. The dashboard's project dicts carry the
+    switches as `cr` and `crrem`; client_gap() once read only `client_report` and `client_reminder`, so every project defaulted to on."""
+
+    def reminders(self, *lines):
+        v = Vault()
+        self.addCleanup(v.cleanup)
+        populate(v)
+        mem = v.root / ABC / "CLAUDE.md"
+        if lines:
+            mem.write_text(mem.read_text().replace("- **Client report rhythm:**", "\n".join(lines) + "\n- **Client report rhythm:**", 1))
+        v.run(script="build_dashboard.py")
+        html = (v.root / "dashboard.html").read_text(encoding="utf-8")
+        data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', html, re.S).group(1))
+        proj = next(p for p in data["projects"] if p["code"] == "ABC")
+        return [r["id"] for r in data["reminders"]], proj
+
+    def test_client_report_on_still_has_its_reminder(self):
+        ids, proj = self.reminders("- **Client report:** on")
+        self.assertTrue(proj["cr"])
+        self.assertTrue([i for i in ids if i.startswith("client:ABC:")])
+
+    def test_client_report_off_has_no_client_reminder_in_the_json(self):
+        ids, proj = self.reminders("- **Client report:** off")
+        self.assertFalse(proj["cr"])
+        self.assertFalse([i for i in ids if i.startswith("client:ABC:")], ids)
+        self.assertTrue([i for i in ids if i.startswith("weekly:") and i.endswith(":ABC")], ids)     # its weekly reminder stays
+
+    def test_the_reminder_switch_alone_turns_off_the_client_reminder(self):
+        ids, proj = self.reminders("- **Client report:** on", "- **Client report reminder:** off")
+        self.assertTrue(proj["cr"])
+        self.assertFalse(proj["crrem"])
+        self.assertFalse([i for i in ids if i.startswith("client:ABC:")], ids)
+        self.assertTrue([i for i in ids if i.startswith("weekly:")], ids)
+
+
 class SessionStart(unittest.TestCase):
     def test_session_start_follows_the_setting(self):
         v = Vault()

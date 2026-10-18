@@ -98,7 +98,8 @@ def client_report_setting(text):
 def client_gap(p):
     """Days between client reports for a project dict ({rhythm, client_report?, client_reminder?}); None when it needs no client
     reminder: its rhythm is off, it needs no separate client report, or its reminder is off."""
-    if not p.get("client_report", True) or not p.get("client_reminder", True):
+    # the dashboard's own project dicts carry the same two switches as `cr` and `crrem` (the keys of its JSON); read either, default on
+    if not p.get("client_report", p.get("cr", True)) or not p.get("client_reminder", p.get("crrem", True)):
         return None
     return {"Weekly": 7, "Fortnightly": 14, "Monthly": 30}.get(p["rhythm"])
 # ===== end H3 =====
