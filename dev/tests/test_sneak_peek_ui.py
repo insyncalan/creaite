@@ -1,13 +1,13 @@
 """BL-322 (v193-sneak-peek-ui): Sneak peek, the screen, in Chrome against the real live server (POST /api/sneak/read, plain
 code, no model call; dev/sprints/BL-322-contract.md). From the mockup (dev/mockups/sneak-peek-mockup.html):
 - opening: `//` outside a field opens the box over the bottom of the peek; one `/` still opens ask creaite after its short wait;
-  neither inside a field; the sparkle in the peek's top bar (left of Draft chase) and the "// Change this item in words" foot line
+  neither inside a field; the sparkle in the peek's top bar (left of Draft email) and the "// Change this item in words" foot line
   open it too; Esc closes it and leaves the peek open; ↑ in the empty box brings back the last instruction;
 - a plain change on each kind of item (an action, a risk, a decision, a milestone) through the peek's save path, applied at once,
   with Undo straight after;
 - the confirm list (amber) is never made with plain Enter, only ⌘⏎ or a click; closing an action offers a closing update;
 - a name that matches two people asks which; a refusal says where to go and changes nothing;
-- with AI drafts off the Claude part says why and the plain part still works; "chase …, firmer" opens Draft chase in that tone;
+- with AI drafts off the Claude part says why and the plain part still works; "chase …, firmer" opens Draft email in that tone;
 - the box at 320 px has no sideways scroll (BL-217), and says "VIP" nowhere (BL-288).
 
 Run: python3 dev/tests/test_sneak_peek_ui.py   (needs Google Chrome; skipped otherwise)

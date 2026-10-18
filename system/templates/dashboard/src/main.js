@@ -58,7 +58,7 @@ export * from "./components/report/Sheet.jsx";   /* v2.1.0 P5: the A4 sheet */
 export * from "./components/report/sheetLib.js";
 export * from "./components/report/redraft.js";   /* #90: the ✦ (redraftAnswer is what the tests drive) */
 
-export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft chase in the peek */
+export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft email in the peek */
 export * from "./components/Tabs.jsx";
 export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and Settings › People */
 export * from "./components/Toast.jsx";   /* BL-316: the message at the foot of the page */

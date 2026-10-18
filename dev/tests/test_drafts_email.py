@@ -166,14 +166,13 @@ class Popup(EmailCase):
         b.wait("window.__clip.length===2")
         self.assertIsNone(self.chases_file())
         b.click("#deSent")
-        b.wait("/Recorded/.test(document.getElementById('deMsg').textContent)")
+        b.wait("!document.getElementById('deDlg').open")                      # v2.3.0 #153: it logs the items and closes
         data = self.chases_file()
         self.assertEqual(len(data["chases"]), 1)
         rec = data["chases"][0]
         self.assertEqual(set(rec), {"ids", "date", "mode"})
         self.assertIn("ABC-A-006", rec["ids"])
         self.assertEqual(rec["mode"], "chase")
-        b.eval("document.getElementById('deDlg').close()")
         self.open_person("chase")
         self.assertIn("A second reminder", b.eval("document.querySelector('.dechase').textContent"))
         b.eval("document.querySelectorAll('#deInc [data-deit]').forEach(i=>{ if(!i.checked) i.click(); })")

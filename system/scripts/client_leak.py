@@ -223,6 +223,9 @@ def text_findings(con, code, text, skip=()):
         if why:
             found.append(f"{why}, but its ID appears")
     found += _memory_findings(code, low)
+    import linktext                                            # #153: an "I sent it" line is internal
+    if linktext.sent_has(as_shown(text)):
+        found.append("a chase log line (a dated 'Chased/Emailed/Asked … by email') is internal")
     try:                                                       # BL-94's floor
         found += _label_findings(con, code, text, low, ids)
     except Exception as e:  # noqa: BLE001  BL-228: fails closed; skipped only when the tables aren't there

@@ -101,7 +101,7 @@ class DecisionsNeeded(Base):
         mine, sara, omar = rows
         self.assertIn("Yours", mine[1])
         self.assertEqual(mine[2], ["Record the decision", "Open"])                                      # BL-319: icons, named
-        self.assertEqual((sara[2], omar[2]), (["Draft a chase", "Open"], ["Draft a chase", "Open"]))
+        self.assertEqual((sara[2], omar[2]), (["Draft email", "Open"], ["Draft email", "Open"]))
         self.assertIn("from Sara Example", sara[1])
         self.assertIn("Example Programme", sara[1])                                                      # the project by name
         self.assertNotIn("ABC ·", sara[1])
@@ -126,6 +126,15 @@ class DecisionsNeeded(Base):
         b = self.today()
         b.click('#dnList li.dnrow .dnacts [data-open="decisions:ABC-D-006"]')
         b.wait("CUR&&CUR.id==='ABC-D-006'")
+
+    def test_the_button_is_called_draft_email(self):
+        """#153: the old Chase wording is gone from the project page's mini button and from Today's icon button."""
+        b = self.today()
+        html = b.eval("dnBlock(dnList().filter(d=>!isMe(d.by)),{})")
+        self.assertIn(">Draft email</button>", html)
+        self.assertNotRegex(html, r">Chase<|aria-label=\"Chase")
+        tip = b.eval("document.querySelector('#dnList [data-dnchase=\"ABC-D-006\"]').getAttribute('aria-label')")
+        self.assertTrue(tip.startswith("Draft email to "), tip)
 
     def test_chase_drafts_only_and_nothing_leaves_the_laptop(self):
         b = self.today()

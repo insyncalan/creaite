@@ -1,5 +1,5 @@
 // @ts-check
-/* ChasePane (BL-298, dev/COMPONENTS.md): the Draft chase pane inside the work-item peek, as drawn in
+/* ChasePane (BL-298, dev/COMPONENTS.md): the Draft email pane inside the work-item peek, as drawn in
    dev/mockups/draft-chase-mockup.html. The server writes the email (POST /api/chase/pane: drafts.py chase_pane, plain code, no
    model call); this pane shows the controls and the email, and asks the server again as Alan changes them, so the preview follows
    what he types. The email is drawn in its own fixed colours (Calibri, the Draft email's palette, DE_COLOURS) whatever the theme,
@@ -13,13 +13,13 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { fd, TODAY } from "../../core/page.js";
-import { api, viaServer } from "../../core/server.js";
-import { DE_COLOURS, DE_FONT, draftStat, draftWhyNot, POLISH_TONES, polishAsk } from "../../drafts.js";
+import { api, snack, viaServer } from "../../core/server.js";
+import { DE_COLOURS, DE_FONT, draftStat, draftWhyNot, POLISH_TONES, polishAsk, sentKindOf, sentLog, sendState } from "../../drafts.js";
 import { SA } from "../../settings.js";
 
 /** @typedef {[string, Record<string, string>][]} Shapes  an icon as element data (COMPONENTS.md Q2): [tag, attributes] */
 
-/** The Draft chase icon: an envelope with an arrow. @type {Shapes} */
+/** The Draft email icon: an envelope with an arrow. @type {Shapes} */
 export const CHASE_ICON = [["rect", { x: "3", y: "5", width: "14", height: "11", rx: "2" }], ["path", { d: "M3.5 6.5 10 11l6.5-4.5" }],
   ["path", { d: "M15 19h6M18.5 16.5 21 19l-2.5 2.5" }]];
 /** @type {Shapes} */
@@ -104,7 +104,7 @@ function selectAll(el) {
   if (sel) { sel.removeAllRanges(); sel.addRange(range); }
 }
 
-/** The Draft chase pane for one open item.
+/** The Draft email pane for one open item.
     start (BL-322): the first choices, from Sneak peek's "chase Tom, firmer" ({tone, to}).
     @param {{id: string, onBack: () => void, start?: ChaseOpts}} props */
 export function ChasePane({ id, onBack, start }) {
@@ -117,6 +117,9 @@ export function ChasePane({ id, onBack, start }) {
   const [card, setCard] = useState(/** @type {PolishCard | null} */ (null));
   const [anyOpen, setAnyOpen] = useState(false);
   const [anyQ, setAnyQ] = useState("");
+  const sending = useRef(false);
+  const sendId = useRef("pn" + Date.now() + Math.random().toString(36).slice(2, 6));   // one send: a retry never records or logs twice
+  const viaRef = useRef(/** @type {"email"|"message"} */ ("email"));
   const seq = useRef(0), mail = useRef(/** @type {HTMLDivElement | null} */ (null)), back = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const first = useRef(true);
   const polGen = useRef(0), cardRef = useRef(/** @type {PolishCard | null} */ (null)), alive = useRef(true);
@@ -125,7 +128,7 @@ export function ChasePane({ id, onBack, start }) {
 
   useEffect(() => { if (back.current) back.current.focus(); }, []);
   useEffect(() => {
-    if (!viaServer()) { setErr("Draft chase needs the live server: start it, then try again."); return undefined; }
+    if (!viaServer()) { setErr("Draft email needs the live server: start it, then try again."); return undefined; }
     const n = ++seq.current;
     const t = setTimeout(async () => {
       const r = await api("/api/chase/pane", { id, hour: new Date().getHours(), ...opts });
@@ -145,7 +148,7 @@ export function ChasePane({ id, onBack, start }) {
   const head = (
     <h2 class="ch-h">
       <button type="button" class="ib" ref={back} aria-label="Back to the item" data-tip="Back to the item" onClick={onBack}><ShapesIcon shapes={BACK_ICON} /></button>
-      Draft chase · <span class="sub">{id}</span>
+      Draft email · <span class="sub">{id}</span>
     </h2>
   );
   if (!pane) return <div class="chase">{head}<p class="sub" role="status">{err || "Drafting the email…"}</p></div>;
@@ -162,14 +165,14 @@ export function ChasePane({ id, onBack, start }) {
       if (!el || typeof ClipboardItem === "undefined" || !navigator.clipboard || !navigator.clipboard.write) throw new Error("no rich clipboard");
       const markup = new XMLSerializer().serializeToString(el);
       await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([markup], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
-      say("Copied. Paste into a new Outlook email.");
+      viaRef.current = "email"; say("Copied. Paste into a new Outlook email.");
     } catch (e) { selectAll(el); say("The browser didn't allow copying: the email is selected, so copy it with ⌘C.", false); }
   }
   async function copyText() {
     try {
       if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("no clipboard");
       await navigator.clipboard.writeText(`${d.subject}\n\n${d.text}`);
-      say("Copied as plain text.");
+      viaRef.current = "message"; say("Copied as plain text.");
     } catch (e) { selectAll(mail.current); say("The browser didn't allow copying: the email is selected, so copy it with ⌘C.", false); }
   }
   /* Polish (Settings › AI drafts), through the Draft email's machinery (polishAsk). Someone else's item and a decision: the opening
@@ -221,20 +224,31 @@ export function ChasePane({ id, onBack, start }) {
     setOpts(o => { const { cover: _c, ...rest } = o; return { ...rest, [k]: v }; });
     setSaid(had ? { text: "You changed the wording, so the polished version was dropped. Polish again if you want it.", ok: true } : { text: "", ok: true });
   }
+  /* v2.3.0 #153: record the chase (chases.json, as before), stage a dated Latest update on the item through the peek's own
+     staging (one Undo in the toast), and go back to the open item. The button stays disabled once it has gone through, so a second
+     press can't log it twice; the pane closes anyway. */
   async function sentIt() {
-    setBusy(true);
-    const r = await api("/api/chases", { ids: [id], mode });
-    setBusy(false);
-    if (!r || !r.ok) { say((r && r.message) || "Not recorded", false); return; }
-    SA().chases = r.chases || {};
-    const n = ((r.chases || {})[id] || {}).n || 1, when = fd((r.record && r.record.date) || TODAY);
+    if (sending.current) return;                 // a ref, not the state: a second click before the redraw is still caught
+    sending.current = true; setBusy(true);
+    const st = sendState(sendId.current);
+    let r = /** @type {any} */ ({ ok: true, chases: SA().chases || {}, record: null });
+    if (!st.rec.has(id)) {
+      r = await api("/api/chases", { ids: [id], mode });
+      if (!r || !r.ok) { sending.current = false; setBusy(false); say((r && r.message) || "Not recorded", false); return; }
+      st.rec.add(id); SA().chases = r.chases || {};
+    }
+    const k = sentKindOf(id);
+    const who = pane.to.name || pane.to.first || "them";
+    let done = 0;
+    try { done = k ? await sentLog([{ k, id, need: outcome }], { name: who, mode, replyBy, via: viaRef.current, chases: r.chases || {}, sendId: sendId.current }) : 0; }
+    catch (err) { sending.current = false; setBusy(false); snack("The update couldn't be logged: press I sent it to try again"); return; }
+    if (!done) snack(`Recorded: chased ${pane.to.first || who} on ${fd((r.record && r.record.date) || TODAY)}. The update couldn't be staged.`);
     dropPolish();
-    setOpts(o => { const { tone: _t, cover: _c, ...rest } = o; return rest; });       // the tone steps up from the new count; polished wording goes
-    say(`Recorded: chased ${pane.to.first || pane.to.name || "them"} on ${when}. The next one will be a ${n >= 2 ? "firmer" : "second"} reminder.`);
+    onBack();
   }
 
   return (
-    <div class="chase" role="region" aria-label={`Draft chase for ${id}`}>
+    <div class="chase" role="region" aria-label={`Draft email for ${id}`}>
       {head}
       <div class="ch-mode"><span class={`tag ch-tag${help ? " ok" : ""}`}>{pane.mode_tag}</span><ModeWords mode={mode} line={pane.mode_line} /></div>
       <div class="ch-f">
@@ -301,7 +315,7 @@ export function ChasePane({ id, onBack, start }) {
       <div class="ch-acts">
         <span class={`ch-said${said.ok ? "" : " fail"}`} role="status" aria-live="polite">{said.text}</span>
         <button type="button" class="btn" id="chCopyText" onClick={copyText}>Copy as text</button>
-        <button type="button" class="btn" id="chSent" disabled={busy} data-tip="Record that you sent it (the item and today's date only), so the next one steps up" onClick={sentIt}>I sent it</button>
+        <button type="button" class="btn" id="chSent" disabled={busy} data-tip="Log that you sent it: a dated Latest update on the item, and the next one steps up (no email text is kept)" onClick={sentIt}>I sent it</button>
         <button type="button" class="btn primary" id="chCopyHtml" onClick={copyOutlook}>Copy for Outlook</button>
       </div>
     </div>
