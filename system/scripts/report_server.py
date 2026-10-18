@@ -9,6 +9,10 @@
                            or stage_client), applied at once with tracker.py apply, the one writer, so Undo works as always
                            A weekly approval re-locks the project's client drafts to that week (relock_client_drafts; `relocked`)
   POST /api/report/logo    {code, paths}: the project's logo files as data (read only; v2.1.0 P6): only files report_doc.logos names
+  POST /api/report/image   {code, name, data (base64)}: a PNG or JPEG (2 MB at most) for a text section (H5, #218), created through
+                           filechange.py in the project's Reports folder under `_images/`; answers its `ref` (`_images/<name>`)
+  POST /api/report/images  {code, refs}: those pictures as data addresses ({ref: "data:…"}) for the editor to draw; read only, and
+                           only an `_images/<name>.png|jpg` that is a file in the Reports folder is ever read
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
@@ -395,6 +399,55 @@ def logo_route(handler, req):
     return answer(handler, {"ok": True, "logos": out})
 
 
+IMAGE_MAX = 2 * 1024 * 1024        # the same cap as a note's picture (live_server.UPLOAD_LIMIT)
+
+
+def image_route(handler, req):
+    """POST /api/report/image: a text section's picture, checked (PNG or JPEG, 2 MB at most, by its first bytes, never its name) and
+    created through filechange.py in the project's Reports folder under `_images/`. A taken name gets a number: nothing is overwritten."""
+    import filechange
+    import notes
+    code = str(req.get("code") or "")
+    if not report_doc.CODE.match(code):
+        return refuse(handler, "Say which project's report the picture is for.")
+    try:
+        raw = base64.b64decode(str(req.get("data") or ""), validate=True)
+    except ValueError:
+        return refuse(handler, "That picture couldn't be read.")
+    if len(raw) > IMAGE_MAX:
+        return refuse(handler, "Pictures can be 2 MB at most.")
+    ext = "png" if raw.startswith(b"\x89PNG\r\n\x1a\n") else "jpg" if raw.startswith(b"\xff\xd8\xff") else None
+    if not ext:
+        return refuse(handler, "Only PNG or JPEG pictures.")
+    folder = creaite_doc.images_dir({"project": code})
+    if folder is None:
+        return refuse(handler, f"{code} isn't a project creaite knows.")
+    label = os.path.splitext(str(req.get("name") or ""))[0]
+    with handler_lock(handler):
+        named = notes.image_name(label, ext)[:-len(ext) - 1]
+        target = paths.free_path(folder / "_images", named, f".{ext}")
+        done, msg = filechange.perform({"op": "create", "path": paths.rel(target), "data": raw,
+                                        "why": "a picture added to a report's text section"}, via="dashboard")
+    if done != 0:
+        return refuse(handler, msg, wait=done == filechange.NEEDS)
+    return answer(handler, {"ok": True, "ref": f"_images/{target.name}"})
+
+
+def images_route(handler, req):
+    """POST /api/report/images: the asked-for pictures as data addresses; an address of any other shape, or a file that isn't there, is
+    left out. Read only."""
+    code = str(req.get("code") or "")
+    if not report_doc.CODE.match(code):
+        return refuse(handler, "Say which project's pictures.")
+    out = {}
+    for ref in list(req.get("refs") or [])[:200]:
+        f = creaite_doc.text_image({"project": code}, str(ref))
+        if f is not None and f.stat().st_size <= IMAGE_MAX:
+            mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
+            out[str(ref)] = f"data:{mime};base64,{base64.b64encode(f.read_bytes()).decode('ascii')}"
+    return answer(handler, {"ok": True, "images": out})
+
+
 HOST = {}       # the live server's own lock, run and latest_apply (live_server registers them; never a second copy of the module)
 
 
@@ -404,4 +457,5 @@ def routes(lock, run, latest_apply):
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
-            "/api/report/logo": guarded(logo_route)}
+            "/api/report/logo": guarded(logo_route), "/api/report/image": guarded(image_route),
+            "/api/report/images": guarded(images_route)}
