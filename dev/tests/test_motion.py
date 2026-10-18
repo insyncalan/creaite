@@ -97,6 +97,7 @@ class StaticRules(unittest.TestCase):
 
 
 class Motion(LiveBrowserCase):
+    pin_clock = False           # #178: the animations run on the browser's real timing; a pinned Date() adds nothing here and CI timing is tight
     shared_server = True
     reduced_motion = False      # these tests check the motion itself
     width, height = 1400, 900
@@ -447,6 +448,7 @@ RUNNING = "(el=>el?el.getAnimations().filter(a=>a.playState!=='finished').length
 
 class MotionPages(LiveBrowserCase):
     """Stages B and C on a vault with about 60 actions: overlays, lists, numbers, status, ask creaite and ambient."""
+    pin_clock = False           # #178: the animations run on the browser's real timing; a pinned Date() adds nothing here and CI timing is tight
     shared_server = True
     reduced_motion = False
     width, height = 1500, 1000
@@ -746,6 +748,7 @@ class MotionPages(LiveBrowserCase):
 
 class MotionReview(LiveBrowserCase):
     """Approve or reject a row, the cleared queue, and a bulk approval with no motion."""
+    pin_clock = False           # #178: the animations run on the browser's real timing; a pinned Date() adds nothing here and CI timing is tight
     reduced_motion = False
     width, height = 1500, 1100
 
