@@ -171,6 +171,20 @@ class WeekMenu(Hub):
         self.assertEqual(d["op"], "1", d)
         self.assertNotEqual(d["bg"], "rgba(0, 0, 0, 0)", d)
 
+    def test_each_weeks_dot_takes_its_health_from_the_projects_six_week_trail(self):
+        """A week the open report does not hold still gets its colour from the project's health trail (green, amber, red), not a neutral dot."""
+        self.open_hub()
+        self.q("""(()=>{const p=P.find(p=>p.code==='ABC'); p.trail=['ok','bad','warn','ok','warn','bad'];
+          p.trailend=['2026-09-04','2026-09-11','2026-09-18','2026-09-25','2026-10-02','2026-10-09']; })()""")
+        self.q("go('reporting','ABC')")                         # drawn again with the trail in place
+        self.b.pump(0.8)
+        self.b.click("#hubWeek")
+        self.b.wait("document.querySelector('.wkpop')")
+        got = self.q("Object.fromEntries([...document.querySelectorAll('.wkpop .wkrow')].map(r=>[r.dataset.w, r.querySelector('i').className]))")
+        self.assertEqual(got.get("2026-10-02"), "a", got)
+        self.assertEqual(got.get("2026-09-25"), "g", got)
+        self.assertEqual(got.get("2026-09-18"), "a", got)
+
     def test_a_date_in_the_box_jumps_to_that_weeks_friday(self):
         self.open_hub()
         self.b.click("#hubWeek")
