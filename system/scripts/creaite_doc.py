@@ -33,6 +33,7 @@ REPORT_KIND = {"weekly": "Weekly report", "client": "Client report"}
 DATA_ID = "creaite-data"
 BLOCK = re.compile(r'<script type="application/json" id="creaite-data">(.*?)</script>', re.S)
 HIDDEN_KEEP = ("id", "type", "heading", "default_heading", "hidden")
+TEXT_TYPE = "freetext"       # H5, #218: a section Alan adds anywhere, named by him, written in the one editor with the Notes profile
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}$")
 
 
@@ -87,6 +88,9 @@ def check_sections(sections):
     ids = [s.get("id") for s in sections if isinstance(s, dict)]
     if len(ids) != len(sections) or not all(isinstance(i, str) and i for i in ids) or len(set(ids)) != len(ids):
         raise DocError("Every section needs its own id.")
+    for s in sections:
+        if s.get("type") == TEXT_TYPE and (not isinstance(s.get("text", ""), str) or not isinstance(s.get("heading", ""), str)):
+            raise DocError("A text section's heading and text must be text.")
 
 
 def _stub_row(row):
@@ -97,7 +101,8 @@ def _stub_row(row):
 def _clean_section(s):
     """A section with its hidden content dropped (a hidden section keeps only its place and heading)."""
     if s.get("hidden"):
-        return {k: s[k] for k in HIDDEN_KEEP if k in s}
+        keep = HIDDEN_KEEP + (("text", "audience") if s.get("type") == TEXT_TYPE else ())      # H5: Alan's own words can't be refilled
+        return {k: s[k] for k in keep if k in s}
     out = dict(s)
     if isinstance(s.get("rows"), list):
         out["rows"] = [r if r.get("shown", True) else _stub_row(r) for r in s["rows"]]
@@ -123,10 +128,19 @@ def _visible_text(sections):
     return json.dumps(shown, ensure_ascii=False)
 
 
+def _internal_text(doc, s):
+    """True for a text section that belongs to the internal report and is in a client or distributed document: it was never matched
+    or written there (H5, #218), so no output shows it."""
+    return (s.get("type") == TEXT_TYPE and (doc.get("audience") or "internal") != "internal"
+            and (s.get("audience") or "internal") == "internal")
+
+
 def clean(doc):
-    """A copy with hidden sections, rows and figures emptied, and the items only they named dropped. check()s it first."""
+    """A copy with hidden sections, rows and figures emptied, and the items only they named dropped. check()s it first. A text section
+    of the internal report that sits in a client document unmatched is dropped (H5, #218)."""
     check(doc)
     out = copy.deepcopy(doc)
+    out["sections"] = [s for s in out.get("sections") or [] if not _internal_text(out, s)]
     hidden = _hidden_refs(out.get("sections") or [])
     out["sections"] = [_clean_section(s) for s in out.get("sections") or []]
     visible = _visible_text(out["sections"])
@@ -205,6 +219,12 @@ th{background:#f3f4f7}
 .panes{display:flex;gap:14px}.panes>div{flex:1}
 .flag{font-weight:700}
 blockquote{margin:0 0 8px;padding:0 0 0 12px;border-left:3px solid #d6d9e0;color:#555}blockquote p{margin:0}
+.ft h3{font-size:14px;margin:10px 0 4px}.ft h4{font-size:13px;margin:8px 0 4px}.ft h5,.ft h6{font-size:12.5px;font-style:italic;margin:6px 0 3px}
+.ft p{margin:0 0 8px}.ft ul,.ft ol{margin:0 0 8px;padding-left:22px}.ft ul.tasks{list-style:none;padding-left:4px}.ft li>ul,.ft li>ol{margin:2px 0}
+pre{background:#f3f4f7;border:1px solid #d6d9e0;border-radius:4px;padding:8px 10px;margin:0 0 8px;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+code{font:12px ui-monospace,Menlo,Consolas,monospace;background:#f3f4f7;padding:0 3px;border-radius:3px}pre code{background:none;padding:0}
+.ft table{margin:0 0 8px}.ft figure{margin:0 0 8px}.ft figure img{max-width:100%;height:auto}.ft figcaption{font-size:12px;color:#555}
+.ft a{color:#1a4fa0}.ft hr{border:0;border-top:1px solid #d6d9e0;margin:8px 0}
 @media print{body{background:#fff}.page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0}@page{size:A4;margin:16mm}}
 """
 
@@ -218,6 +238,276 @@ def md_html(text):
     """Markdown (as the one editor writes it) as safe HTML: paragraphs, lists and bold; links keep their text only."""
     import prep_page
     return prep_page.blocks_html(prep_page.md_blocks(text))
+
+
+# ── The text section (H5, #218) ──────────────────────────────────────────────
+# A section of type "freetext" holds Markdown as the one editor (Notes profile) writes it: headings, bold, italic, strike, inline and
+# block code, lists, checklists, quotes, links, tables and pictures. This is its reader: a small Markdown parser (text_blocks) whose
+# blocks the HTML renderer (text_html) and the Word writer (_Word.freetext) both read, so the two agree. Everything is escaped: raw
+# HTML in the text is shown as the characters typed, never passed through. A picture is read only from `_images/<name>.png|jpg` in the
+# project's reports folder (images_dir): any other address is never opened.
+
+TEXT_IMAGE = re.compile(r"^_images/[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(?:png|jpe?g)$", re.I)
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})\s*([^`\s]*)[^`]*$")
+_HEAD = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$")
+_RULE = re.compile(r"^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
+_ITEM = re.compile(r"^([ \t]*)([-*+]|\d{1,9}[.)])[ \t]+(.*)$")
+_EMPTY_ITEM = re.compile(r"^([ \t]*)([-*+]|\d{1,9}[.)])[ \t]*$")
+_TABLE_SEP = re.compile(r"^[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$")
+_TASK = re.compile(r"^\[([ xX])\](?:[ \t]+(.*))?$")
+_UNESCAPE = re.compile(r"\\([\\`*_{}\[\]()#+\-.!~|>])")
+_IMG_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
+MAX_TEXT_DEPTH = 8                    # quotes in quotes and lists in lists: deeper than this is plain text
+
+
+class TextBlock:
+    """One block of a text section's Markdown: `kind` (h, p, code, hr, table, img, quote, list), its `data`, and the lines it came from
+    (`lo` up to but not including `hi`, of the lines that were read)."""
+    __slots__ = ("kind", "data", "lo", "hi")
+
+    def __init__(self, kind, data, lo, hi):
+        """A block."""
+        self.kind, self.data, self.lo, self.hi = kind, data, lo, hi
+
+
+def _indent(line):
+    """The width of a line's leading whitespace (a tab counts four)."""
+    return len(line[:len(line) - len(line.lstrip(" \t"))].expandtabs(4))
+
+
+def _table_at(line, nxt):
+    """True when `line` is a table's header row (a line with a bar) and `nxt` its separator row."""
+    return nxt is not None and "|" in line and "|" in nxt and "-" in nxt and bool(_TABLE_SEP.match(nxt))
+
+
+def _starts_block(line, nxt):
+    """True when `line` begins something that is not a paragraph's next line."""
+    return bool(_FENCE.match(line) or _HEAD.match(line) or _RULE.match(line) or _ITEM.match(line) or _IMG_LINE.match(line)
+                or line.lstrip().startswith(">") or _table_at(line, nxt))
+
+
+def _cells(line):
+    """A table row's cells: split on bars not escaped, outer bars dropped, each cell trimmed (an escaped bar is a bar)."""
+    t = line.strip()
+    t = t[1:] if t.startswith("|") else t
+    t = t[:-1] if t.endswith("|") and not t.endswith("\\|") else t
+    return [c.replace("\\|", "|").strip() for c in re.split(r"(?<!\\)\|", t)]
+
+
+def text_blocks(text):
+    """The blocks of a text section's Markdown, in order (see TextBlock). Never raises; an odd line is a paragraph."""
+    lines = str(text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    return _read(lines, 0, len(lines), 0)
+
+
+def _fence_end(lines, i, hi, fence):
+    """The line that closes the fence opened at lines[i] (a line of the same mark, at least as long), or `hi` when none does."""
+    for j in range(i + 1, hi):
+        t = lines[j].strip()
+        if t.startswith(fence[0] * len(fence)) and not t.strip(fence[0]):
+            return j
+    return hi
+
+
+def _read(lines, lo, hi, depth):
+    """The blocks of lines[lo:hi]."""
+    out, i = [], lo
+    while i < hi:
+        line, nxt = lines[i], (lines[i + 1] if i + 1 < hi else None)
+        if not line.strip():
+            i += 1
+            continue
+        m = _FENCE.match(line)
+        if m:
+            j = _fence_end(lines, i, hi, m.group(1))
+            out.append(TextBlock("code", (m.group(2), "\n".join(lines[i + 1:j])), i, min(j + 1, hi)))
+            i = min(j + 1, hi)
+            continue
+        m = _HEAD.match(line)
+        if m:
+            out.append(TextBlock("h", (len(m.group(1)), m.group(2)), i, i + 1))
+            i += 1
+            continue
+        if _RULE.match(line):
+            out.append(TextBlock("hr", None, i, i + 1))
+            i += 1
+            continue
+        m = _IMG_LINE.match(line)
+        if m:
+            out.append(TextBlock("img", (m.group(1).strip(), m.group(2)), i, i + 1))
+            i += 1
+            continue
+        if _table_at(line, nxt):
+            j = i + 2
+            while j < hi and lines[j].strip() and "|" in lines[j]:
+                j += 1
+            out.append(TextBlock("table", (_cells(line), [_cells(x) for x in lines[i + 2:j]]), i, j))
+            i = j
+            continue
+        if line.lstrip().startswith(">"):
+            j = i
+            while j < hi and lines[j].lstrip().startswith(">"):
+                j += 1
+            inner = [re.sub(r"^\s*>[ ]?", "", x) for x in lines[i:j]]
+            kids = _read(inner, 0, len(inner), depth + 1) if depth < MAX_TEXT_DEPTH else [TextBlock("p", " ".join(inner), 0, 1)]
+            out.append(TextBlock("quote", kids, i, j))
+            i = j
+            continue
+        if _ITEM.match(line) or _EMPTY_ITEM.match(line):
+            block, i = _list(lines, i, hi, depth)
+            out.append(block)
+            continue
+        j, parts = i, []
+        while j < hi and lines[j].strip() and (j == i or not _starts_block(lines[j], lines[j + 1] if j + 1 < hi else None)):
+            parts.append(lines[j].strip())
+            j += 1
+        out.append(TextBlock("p", " ".join(parts), i, j))
+        i = j
+    return out
+
+
+def _item_end(lines, i, hi, base):
+    """The line after the item that starts at lines[i]: its deeper lines, a blank between them, and a lazy continuation of its text."""
+    j = i + 1
+    while j < hi:
+        if not lines[j].strip():
+            k = j
+            while k < hi and not lines[k].strip():
+                k += 1
+            if k < hi and _indent(lines[k]) > base:
+                j = k
+                continue
+            break
+        if _indent(lines[j]) > base:
+            j += 1
+        elif _starts_block(lines[j], None):
+            break
+        else:
+            j += 1
+    return j
+
+
+def _list(lines, i, hi, depth):
+    """(a list block, the next line) for the list that starts at lines[i]: items of one kind (bullets or numbers) at one indent, each
+    as (its checklist state: None, " " or "x"; its text; the blocks nested under it)."""
+    first = _ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i])
+    base, ordered = _indent(lines[i]), first.group(2)[0].isdigit()
+    items, start = [], i
+    while i < hi:
+        m = _ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i])
+        if not m or _indent(lines[i]) != base or m.group(2)[0].isdigit() != ordered:
+            break
+        j = _item_end(lines, i, hi, base)
+        rest, lead = lines[i + 1:j], []
+        while rest and rest[0].strip() and _indent(rest[0]) <= base and not _starts_block(rest[0], None):
+            lead.append(rest.pop(0).strip())               # a soft-wrapped line of the item's own text
+        text = " ".join([(m.group(3) if m.re is _ITEM else "").strip()] + lead).strip()
+        task = None
+        t = None if ordered else _TASK.match(text)
+        if t:
+            task, text = t.group(1).lower(), (t.group(2) or "").strip()
+        deep = min((_indent(x) for x in rest if x.strip()), default=0)
+        under = [x.expandtabs(4)[deep:] if x.strip() else "" for x in rest]
+        kids = _read(under, 0, len(under), depth + 1) if depth < MAX_TEXT_DEPTH and any(x.strip() for x in under) else []
+        items.append((task, text, kids))
+        i = j
+        while i < hi and not lines[i].strip():
+            i += 1
+        nxt = _ITEM.match(lines[i]) or _EMPTY_ITEM.match(lines[i]) if i < hi else None
+        if not (nxt and _indent(lines[i]) == base):
+            i = j
+            break
+    return TextBlock("list", (ordered, items), start, i), i
+
+
+def images_dir(doc):
+    """The folder whose `_images/` holds a report's pictures: the project's reports folder. None when the project has no folder."""
+    try:
+        return paths.folder(doc.get("project"), FOLDER["weekly"])
+    except (LookupError, OSError, KeyError, TypeError, AttributeError):
+        return None
+
+
+def text_image(doc, ref):
+    """The picture file a text section's `_images/<name>` address names (PNG or JPEG), or None: only that shape of address is read, and
+    only inside the reports folder."""
+    if not TEXT_IMAGE.match(str(ref or "")):
+        return None
+    root = images_dir(doc or {})
+    if root is None:
+        return None
+    f = Path(root) / ref
+    try:
+        if f.is_symlink() or not f.is_file() or (Path(root).resolve() / "_images") not in f.resolve().parents:
+            return None
+    except OSError:
+        return None
+    return f
+
+
+def _inline(t):
+    """Inline Markdown as escaped HTML: bold, italic, strike, `code` and links with their address (http, https and mailto only), nested
+    as docx_tools.md_spans reads them (the same reading as Word's); a backslash escape is the character."""
+    import docx_tools
+    out = []
+    for text, bold, italic, strike, url, code in docx_tools.md_spans(str(t or "")):
+        x = esc(text if code else _UNESCAPE.sub(r"\1", text))
+        if code:
+            x = f"<code>{x}</code>"
+        if url:
+            x = f'<a href="{esc(url)}">{x}</a>'
+        for on, tag in ((italic, "em"), (strike, "s"), (bold, "strong")):
+            if on:
+                x = f"<{tag}>{x}</{tag}>"
+        out.append(x)
+    return "".join(out)
+
+
+def _image_html(doc, alt, ref):
+    """A picture as a figure with the file inside the page (a data address), or the words saying it wasn't found."""
+    import base64
+    f = text_image(doc, ref)
+    if f is None:
+        return f"<p><em>Picture not found: {esc(alt or ref)}</em></p>"
+    mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
+    cap = f"<figcaption>{esc(alt)}</figcaption>" if alt else ""
+    return f'<figure><img src="data:{mime};base64,{base64.b64encode(f.read_bytes()).decode("ascii")}" alt="{esc(alt)}">{cap}</figure>'
+
+
+def _list_html(b, doc):
+    """A list block as HTML; a checklist item starts with its box."""
+    ordered, items = b.data
+    tag = "ol" if ordered else "ul"
+    cls = ' class="tasks"' if any(t for t, _x, _k in items) else ""
+    lis = "".join("<li>" + (("☑ " if t == "x" else "☐ ") if t else "") + _inline(x)
+                  + "".join(_block_html(y, doc) for y in kids) + "</li>" for t, x, kids in items)
+    return f"<{tag}{cls}>{lis}</{tag}>"
+
+
+def _table_html(b):
+    """A table block as HTML: the first row is the header."""
+    head, rows = b.data
+    width = len(head)
+    body = "".join("<tr>" + "".join(f"<td>{_inline(c)}</td>" for c in (r + [""] * width)[:width]) + "</tr>" for r in rows)
+    return "<table><thead><tr>" + "".join(f"<th>{_inline(c)}</th>" for c in head) + f"</tr></thead><tbody>{body}</tbody></table>"
+
+
+def _block_html(b, doc):
+    """One block as HTML."""
+    k = b.kind
+    if k == "h":
+        n = min(b.data[0] + 2, 6)                 # the page's own headings are h1 (title) and h2 (section): the text starts at h3
+        return f"<h{n}>{_inline(b.data[1])}</h{n}>"
+    return {"p": lambda: f"<p>{_inline(b.data)}</p>", "hr": lambda: "<hr>", "table": lambda: _table_html(b),
+            "code": lambda: f"<pre><code>{esc(b.data[1])}</code></pre>", "img": lambda: _image_html(doc, *b.data),
+            "quote": lambda: "<blockquote>" + "".join(_block_html(x, doc) for x in b.data) + "</blockquote>",
+            "list": lambda: _list_html(b, doc)}[k]()
+
+
+def text_html(text, doc=None):
+    """A text section's Markdown as safe HTML (see the note above): headings, paragraphs, lists, checklists as boxes, quotes, code,
+    tables, pictures inside the page, links with their address."""
+    return '<div class="ft">' + "".join(_block_html(b, doc) for b in text_blocks(text)) + "</div>"
 
 
 def _table(s):
@@ -255,9 +545,12 @@ def _timeline(s, items):
     return md_html(s.get("text")) + (f"<ul>{lis}</ul>" if lis else "")
 
 
-def section_html(s, items):
+def section_html(s, items, doc=None):
     """One shown section's HTML; an unknown type renders its text only."""
     kind = s.get("type")
+    if kind == TEXT_TYPE:
+        head = f"<h2>{esc(s.get('heading'))}</h2>" if str(s.get("heading") or "").strip() else ""
+        return f'<section data-id="{esc(s.get("id"))}">{head}{text_html(s.get("text"), doc)}</section>'
     body = {"table": lambda: md_html(s.get("text")) + _table(s), "figures": lambda: _figures(s), "panes": lambda: _panes(s),
             "health": lambda: _health(s), "timeline": lambda: _timeline(s, items)}.get(kind, lambda: md_html(s.get("text")))()
     return f'<section data-id="{esc(s.get("id"))}"><h2>{esc(s.get("heading"))}</h2>{body}</section>'
@@ -277,7 +570,7 @@ def render(doc, editing=True):
     Hidden content is never rendered; source tags never are."""
     doc = clean(doc)
     items = doc.get("items") or {}
-    body = "".join(section_html(s, items) for s in doc["sections"] if not s.get("hidden"))
+    body = "".join(section_html(s, items, doc) for s in doc["sections"] if not s.get("hidden"))
     label = {"internal": "Internal", "client": "Client", "distributed": "Distributed"}[doc.get("audience") or "internal"]
     head = (f'<header class="doc"><div><h1>{esc(doc.get("title"))}</h1><div class="sub">{esc(doc.get("project_name"))}'
             f'{(" · " + esc(doc["client"])) if doc.get("client") else ""}</div></div><div class="sub">{esc(label)}</div></header>')
