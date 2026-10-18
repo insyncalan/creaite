@@ -98,6 +98,19 @@ class NoProjects(Base):
             b.wait("VIEW==='settings'")
         self.assertEqual(b.errors, [])
 
+    def test_enter_on_the_settings_link_opens_people_and_projects(self):
+        b = self.b
+        b.eval("P.splice(0)")
+        b.eval("go('cockpit')")
+        b.wait("document.querySelector('#v-cockpit .empty a')")
+        b.eval("document.querySelector('#v-cockpit .empty a').focus()")
+        b.key("Enter")
+        b.wait("VIEW==='settings'")
+        b.wait("location.hash==='#settings/people'", 10)                  # the link and its words agree: People and projects
+        self.assertEqual(b.eval("document.querySelector('.view:not([hidden]) .setcat[aria-selected=true], .view:not([hidden]) [role=tab][aria-selected=true]')"
+                                ".textContent.trim()"), "People and projects")
+        self.assertEqual(b.errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

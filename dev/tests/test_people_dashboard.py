@@ -748,6 +748,28 @@ class PeopleTabsTests(LiveBrowserCase):
         self.assertNotIn("Omar Ali", names)
         self.assertNotIn("Jane Doe", names)
 
+    def test_a_count_link_shows_a_focus_outline_when_reached_by_tab(self):
+        """#190: the count links lose their dotted underline in the People table; focus must still be visible (a computed outline)."""
+        b = self.open_people()
+        b.eval("document.querySelector('#ptabs [data-ptab=\"work\"]').focus()")
+        for _ in range(40):
+            b.key("Tab")
+            if b.eval("!!document.activeElement.matches('#peopleTbl a.cntl')"):
+                break
+        self.assertTrue(b.eval("document.activeElement.matches('#peopleTbl a.cntl')"), b.eval("document.activeElement.outerHTML.slice(0,120)"))
+        o = b.eval("(()=>{ const c=getComputedStyle(document.activeElement); return [c.outlineStyle, parseFloat(c.outlineWidth), document.activeElement.matches(':focus-visible')]; })()")
+        self.assertNotEqual(o[0], "none", o)
+        self.assertGreater(o[1], 0, o)
+        self.assertTrue(o[2], o)
+
+    def test_the_person_page_counts_read_zero_not_a_dash(self):
+        b = self.open_people()
+        b.eval("go('person','Priya Waits')")
+        b.wait("VIEW==='person'&&document.querySelector('.ppcounts')")
+        t = b.eval("[...document.querySelectorAll('.ppcounts > *')].map(x=>x.textContent.replace(/\\s+/g,' ').trim())")
+        self.assertTrue(any(x.startswith("0 ") for x in t), t)                                # she owns no risks: 0
+        self.assertFalse(any("—" in x or x.startswith("-") for x in t), t)
+
     def test_sorting_each_tab_and_the_tab_survives_reload_and_the_address(self):
         b = self.open_people()
         b.click('#peopleTbl th[data-psort="name"]')

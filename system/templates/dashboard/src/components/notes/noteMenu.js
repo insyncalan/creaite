@@ -15,8 +15,8 @@ export function noteMenuItems({ pinned, confidential, path }) {
 
 /** Run a pick on the note. @param {string} id @param {{pinned: boolean, confidential: boolean, path: string, title: string, code: string}} n @param {(path: string) => void} onOpenFile */
 export function noteMenuPick(id, { pinned, confidential, path, title, code }, onOpenFile) {
-  if (id === "pin") noteMetaFor(path, { pinned: !pinned });
-  else if (id === "conf") noteMetaFor(path, { confidential: !confidential });
+  if (id === "pin") noteMetaFor(path, { pinned: !pinned }, "pinned");
+  else if (id === "conf") noteMetaFor(path, { confidential: !confidential }, "confidential");
   else if (id === "del") askDeleteNote({ path, title, code });
   else onOpenFile(path);
 }
