@@ -119,7 +119,7 @@ class Triage(LiveBrowserCase):
 
     def test_the_bulk_rule_holds_for_every_excluded_kind(self):
         b = self.open_review()
-        b.click("#reviewBody tr[data-n] td.title")
+        b.click("#reviewBody tr[data-n]:not(.mparent) td:first-child input")      # #229: the row is one line shorter, its centre is now the source link
         b.click("#rvAll")
         b.pump(0.2)
         und = b.eval("REV.filter(r=>!r.done).length")
