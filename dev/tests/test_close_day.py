@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import LiveBrowserCase, pin_page_clock  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 from test_tracker import ABC, Vault  # noqa: E402
 
@@ -166,6 +166,10 @@ class CloseBrowser(LiveBrowserCase):
     @classmethod
     def server_env(cls):
         return {"CREAITE_NOW": NOW}
+
+    def setUp(self):
+        super().setUp()
+        pin_page_clock(self.b, NOW)     # the server is pinned by server_env, not os.environ: pin the page too, so "(the next working day)" does not depend on the real weekday (Sunday 18-10 made it vanish)
 
     def tracker(self):
         with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
