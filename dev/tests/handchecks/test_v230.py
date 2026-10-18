@@ -1,12 +1,10 @@
 """BL-341 (#212): creaite 2.3.0's hand checks (dev/handchecks/v2.3.0.md, the Product Manager's sheet), automated against a vault
-made from the release zip. Checks 14 to 17 are the 2.3.1 patch (Draft email fixes, branch email-153-fix5): they skip, with the
-reason, until that code is in the line.
-
+made from the release zip.
 Run them all, fill the Results table and make the screenshot sheet:  python3 dev/tools/handcheck.py v2.3.0
 Run this file on its own (it makes the vault itself):                 python3 dev/tests/handchecks/test_v230.py
 
 One method per check, `test_cNN_…`, its docstring quoting the check. The groups are separate classes; those that change data
-(checks 2, 4, 5, 6, 9, 10, 11 and 14 to 17) are mixins combined into one `Changing` class with a vault of its own, because building
+(checks 2, 4, 5, 6, 9, 10 and 11) are mixins combined into one `Changing` class with a vault of its own, because building
 a vault is the slow step:
   TopBar        1                   the top bar hides on scroll and comes back at the top (shared vault)
   FilesToday    3, 7, 8, 13         Files, Choose a project, People, the design scale (shared vault, nothing changed)
@@ -16,9 +14,7 @@ a vault is the slow step:
   ActivityHand  9                   "You, by hand"
   DraftEmail    10, 12              the two Review items and the person menu
   SentIt        11                  "I sent it"
-  Patch231      14 to 17            the 2.3.1 patch: they skip, with the reason, until email-153-fix5 is in the line (the vault is
-                                    probed for linktext._sent_norm); run against that branch merged in, all four pass, and against
-                                    2.3.0 as it stands all four fail, so they check something
+The 2.3.1 patch checks (14 to 17 in the sheet) are in test_v231.py.
 Kinds (the Product Manager's map, confirmed as built): 1, 2, 8 and 13 measurable; the rest scriptable; none is judgement or live only
 as a whole. The judgement parts (how the top bar feels, whether icons are sharp, Files against its mockup, the calm of Today, the
 Choose a project page) are on the screenshot sheet (checks 2, 3, 4, 7); a real sweep (5) is live only and is noted on its row.
@@ -32,18 +28,16 @@ import re
 import subprocess
 import sys
 import urllib.request
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import hcbase
 import measure
-from hcbase import NOTES, SCREENS, HandcheckCase, db_rows
-
 import test_rail_icon_size as tris
 import test_topbar_hide as tbh
+from hcbase import NOTES, SCREENS, HandcheckCase, db_rows
 
-KIND = {**{n: "scriptable" for n in (3, 4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 17)},
+KIND = {**{n: "scriptable" for n in (3, 4, 5, 6, 7, 9, 10, 11, 12)},
         **{n: "measurable" for n in (1, 2, 8, 13)}}
 
 # No check is live only as a whole. Parts that are: a real sweep (5), a real recipient's mailbox (11, 14), a real model's wording.
@@ -58,8 +52,6 @@ SCREENS.update({
     "cockpit-choose": ("go('cockpit')", "!!document.querySelector('#v-cockpit a[data-choose]')"),
     "milestones-choose": ("go('milestones')", "!!document.querySelector('#v-milestones a[data-choose]')"),
 })
-
-FIX_PROBE = "_sent_norm"      # in system/scripts/linktext.py once email-153-fix5 is in the line
 
 
 class V230Case(HandcheckCase):
@@ -93,19 +85,10 @@ class V230Case(HandcheckCase):
     def py(self, code):
         """Python in the vault (its system/scripts on the path, the clock pinned); the JSON the code prints."""
         r = subprocess.run([sys.executable, "-I", "-c", "import sys, json, sqlite3\nsys.path.insert(0, 'system/scripts')\n" + code],
-                           cwd=self.vault, capture_output=True, text=True,
+                           cwd=self.vault, capture_output=True, text=True, check=False,
                            env={**__import__("os").environ, "CREAITE_NOW": self.now or ""})
         self.assertEqual(r.returncode, 0, r.stderr[-400:])
         return json.loads(r.stdout)
-
-    @property
-    def fixed(self):
-        """Whether this vault has the 2.3.1 Draft email fixes (email-153-fix5)."""
-        return FIX_PROBE in (self.vault / "system/scripts/linktext.py").read_text(encoding="utf-8")
-
-    def need_fix(self):
-        if not self.fixed:
-            self.skipTest("2.3.1 patch: email-153-fix5 (Draft email fixes) is not in the line yet; this check runs once it is merged")
 
     def staged_updates(self, item_id):
         """Every staged dashboard proposal's update for an item: [changes]."""
@@ -323,7 +306,7 @@ class FilesToday(V230Case):
             for fs in m["h2"]:
                 self.assertEqual(fs, "16px", f"{name}: a section heading is {fs}")
             for k in seen:
-                seen[k] += len(m[k] if k in ("fields", "chips") else m[k])
+                seen[k] += len(m[k])
         self.assertTrue(all(seen.values()), f"each kind was found on the six screens: {seen}")
         self.note(13, f"measured {seen['fields']} fields (32 px; Files' vault search 40 px by design), {seen['chips']} chips (26 px pills), "
                       f"{seen['h1']} page titles (22 px), {seen['h2']} section headings (16 px); Today and Help keep their 34 px display title by design")
@@ -430,7 +413,7 @@ class NotesMenuChecks:
         b.click('[data-notetitle="Alpha"]', button="right")
         b.wait("!!document.querySelector('.pophost [role=menu]')", 10)
         items = b.eval("[...document.querySelectorAll('.pophost [role=menuitem]')].map(x=>x.textContent)")
-        self.assertTrue(any(i.startswith("Pin") or i.startswith("Unpin") for i in items), items)
+        self.assertTrue(any(i.startswith(("Pin", "Unpin")) for i in items), items)
         self.assertTrue(any("onfidential" in i for i in items), items)
         self.assertTrue(items[-1].startswith("Delete note"), items)
         self.assertEqual(b.eval("noteCur.value.note.title"), "Beta", "Alpha was not opened")
@@ -570,109 +553,10 @@ print(json.dumps(client_leak.text_findings(con, 'FAL', {day + ': Emailed Rashid 
         self.note(11, f"{len(picked)} items logged once each, kept in the tracker, absent from the client wording, facts and check")
 
 
-# ── v2.3.1 (patch) ───────────────────────────────────────────────────────────
-
-class Patch231Checks:
-    """Checks 14 to 17: the 2.3.1 patch. Skipped until email-153-fix5 is in the line."""
-
-    CHASE = "17-10-2026: Chased Rashid Al Suwaidi by email (reminder 1); reply asked for by 19-10-2026."
-    EMAILED = "17-10-2026: Emailed Rashid Al Suwaidi by message asking for an update."
-    ASKED = "17-10-2026: Asked Rashid Al Suwaidi for a decision by email; reply asked for by 20-10-2026."
-
-    def test_c14_chase_to_an_outside_recipient(self):
-        """14. A Draft email chase for an outside recipient never prints who else was chased or which reminder it is; the same
-        internal lines are absent from the steering and sponsor views."""
-        self.need_fix()
-        b = self.b
-        self.seed([
-            {"op": "update", "table": "actions", "id": "FAL-A-003", "changes": {"latest_update": self.CHASE + "\nWaiting on the vendor"}},
-            {"op": "update", "table": "raid", "id": "FAL-006", "changes": {"response_action": self.EMAILED + "\nAgree dates with the supplier"}}])
-        b.reload("typeof go==='function' && LIVE")
-        # the popup, for an outside address (Rashid is at an outside organisation), with the latest update included
-        b.eval("go('person','Rashid Al Suwaidi'); openDraftEmail('Rashid Al Suwaidi','chase')")
-        b.wait("document.getElementById('deDlg').open&&document.querySelector('#deInc [data-deit]')", 15)
-        b.eval("document.querySelectorAll('#deInc [data-deit]').forEach(i=>{ if(!i.checked) i.click(); })")
-        b.eval("(()=>{ const u=document.getElementById('deUpd'); if(u && !u.checked) u.click(); })()")
-        b.pump(0.8)
-        mail = b.eval("document.getElementById('dePrev') ? document.getElementById('dePrev').innerText : document.getElementById('deDlg').innerText")
-        for bit in ("Chased", "chased", "reminder 1", "reply asked for", "by email", "Emailed"):
-            self.assertNotIn(bit, mail, bit)
-        self.assertIn("Waiting on the vendor", mail, "the rest of the update is kept")
-        self.assertIn("Agree dates with the supplier", mail, "the rest of the response is kept")
-        b.eval("document.getElementById('deDlg').close()")
-        facts = self.py("import drafts\nprint(json.dumps([drafts.chase_facts('FAL-A-003'), drafts.chase_facts('FAL-006')]))")
-        self.assertNotIn("Chased", json.dumps(facts))
-        self.assertNotIn("Emailed", json.dumps(facts))
-        for aud in ("steering", "sponsor"):
-            t = self.py(f"import status_facts\nprint(json.dumps(status_facts.facts('FAL', None, None, {aud!r})['text']))")
-            self.assertNotIn("Emailed Rashid", t, aud)
-        self.assertIn("Emailed Rashid", self.py("import status_facts\nprint(json.dumps(status_facts.facts('FAL', None, None, 'internal')['text']))"),
-                      "the internal sheet keeps it")
-
-    def test_c15_sent_lines_in_every_shape(self):
-        """15. "I sent it" recognises lines in lower case, with bullets and with odd spaces."""
-        self.need_fix()
-        shapes = {"lower case": self.CHASE.replace("Chased", "chased"), "bullet": "- " + self.CHASE, "star bullet": "* " + self.EMAILED,
-                  "no-break space": "17-10-2026: Chased Rashid Al Suwaidi by email (reminder 1).",
-                  "iso date": "2026-10-17: Chased Rashid Al Suwaidi by email (reminder 1).",
-                  "zero-width": "17-10-2026:​ Chased Rashid Al Suwaidi by email (reminder 1)."}
-        res = self.py("import linktext\nshapes = " + json.dumps(shapes) + "\nprint(json.dumps({k: [linktext.sent_has(v), linktext.sent_strip('Waiting on the vendor\\n' + v)] for k, v in shapes.items()}))")
-        for name, (has, stripped) in res.items():
-            self.assertTrue(has, name)
-            self.assertEqual(stripped, "Waiting on the vendor", name)
-        ordinary = self.py("import linktext\nprint(json.dumps([linktext.sent_has(t) for t in ('We chased the supplier last week', 'Chased Sara by email yesterday')]))")
-        self.assertEqual(ordinary, [False, False], "ordinary text is not a sent line")
-        # and in the email the page builds: every shape on an item's update, none of them in the preview of an outside address
-        b = self.b
-        self.seed([{"op": "update", "table": "actions", "id": "FAL-A-003",
-                    "changes": {"latest_update": "Waiting on the vendor\n" + "\n".join(shapes.values())}}])
-        b.reload("typeof go==='function' && LIVE")
-        b.eval("go('person','Rashid Al Suwaidi'); openDraftEmail('Rashid Al Suwaidi','update')")
-        b.wait("document.getElementById('deDlg').open&&document.querySelector('#deInc [data-deit]')", 15)
-        b.eval("document.querySelectorAll('#deInc [data-deit]').forEach(i=>{ if(!i.checked) i.click(); })")
-        b.eval("(()=>{ const u=document.getElementById('deUpd'); if(u && !u.checked) u.click(); })()")
-        b.pump(0.8)
-        mail = b.eval("document.getElementById('dePrev').innerText")
-        for bit in ("hased", "mailed", "by email", "reminder", "17-10-2026"):
-            self.assertNotIn(bit, mail, bit)
-        self.assertIn("Waiting on the vendor", mail)
-        b.eval("document.getElementById('deDlg').close()")
-
-    def test_c16_add_details_for_a_person_with_no_items(self):
-        """16. A person with no items can get "Add details"."""
-        self.need_fix()
-        b = self.b
-        for who in ("Nobody Known",):
-            b.eval(f"openContextMenu(cxPerson({who!r},''),200,200,{{label:{who!r}}})")
-            b.wait('!!document.querySelector(".cxmenu")', 10)
-            labels = b.eval('[...document.querySelectorAll(".cxmenu [role=menuitem]")].map(x=>x.textContent.trim())')
-            self.assertTrue(any(x.startswith("Add details") for x in labels), labels)
-            b.eval('[...document.querySelectorAll(".cxmenu [role=menuitem]")].find(x=>x.textContent.includes("Add details")).click()')
-            b.wait("document.getElementById('personDlg').open", 10)
-            self.assertEqual(b.eval("VIEW"), "person")
-            b.eval("document.getElementById('personDlg').close()")
-
-    def test_c17_help_says_draft_email(self):
-        """17. Help says "Draft email" where it used to say "Chase"."""
-        self.need_fix()
-        b = self.b
-        self.screen("help")
-        md = (self.vault / "system/templates/help.md").read_text(encoding="utf-8")
-        for line in md.splitlines():
-            if "Decisions needed" in line and ("**Decide**" in line or "Decisions needed:**" in line):
-                self.assertNotRegex(line, r"\*\*Chase\*\*", line[:80])
-        self.assertNotIn("**Decide**, **Chase**", md)
-        b.eval("document.getElementById('helpQ').value='Chase'; document.getElementById('helpQ').dispatchEvent(new Event('input',{bubbles:true}))")
-        b.pump(0.8)
-        hits = b.eval("document.getElementById('helpResults') ? document.getElementById('helpResults').innerText : ''")
-        self.assertNotRegex(hits, r"Decide[^\n]*\bChase\b", "no button called Chase beside Decide")
-
-
 # ── the checks that change data share one vault of their own ────────────────
 
-class Changing(SideBarChecks, TodayLineChecks, NotesMenuChecks, ActivityHandChecks, DraftEmailChecks, SentItChecks, Patch231Checks,
-               V230Case):
-    """Checks 2, 4, 5, 6, 9, 10, 11 and 14 to 17 in one vault of their own (building a vault is the slow step). Each check starts
+class Changing(SideBarChecks, TodayLineChecks, NotesMenuChecks, ActivityHandChecks, DraftEmailChecks, SentItChecks, V230Case):
+    """Checks 2, 4, 5, 6, 9, 10 and 11 in one vault of their own (building a vault is the slow step). Each check starts
     from what it needs and none relies on another; they run in check order."""
     own_vault = True
 

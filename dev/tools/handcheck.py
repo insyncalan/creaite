@@ -328,6 +328,30 @@ def check_texts(text):
     return {int(m.group(1)): m.group(2).strip() for m in re.finditer(r"^(\d+)\. (.+)$", body, re.M)}
 
 
+def docstring_texts(mod):
+    """{number: the check's text} from the module's test docstrings (when the hand-check file is not in this checkout)."""
+    out = {}
+    for cls in vars(mod).values():
+        if isinstance(cls, type):
+            for name, fn in vars(cls).items():
+                m = re.match(r"test_c(\d+)_", name)
+                if m and fn.__doc__:
+                    out[int(m.group(1))] = " ".join(fn.__doc__.split())
+    return out
+
+
+def results_table(v, outcomes, mod):
+    """A Results table made from the run alone (no hand-check file to fill): Pass, Fail, or the note for any other outcome."""
+    texts = docstring_texts(mod)
+    rows = ["| # | Check | Pass | Fail | Result |", "|---|-------|------|------|--------|"]
+    for n in sorted(outcomes):
+        status, note = outcomes[n]
+        p, f = ("[x]", "[ ]") if status == "pass" else ("[ ]", "[x]") if status == "fail" else ("[ ]", "[ ]")
+        title = " ".join(str(texts.get(n, "")).split(". ", 1)[-1].split())[:60].replace("|", "/")
+        rows.append(f"| {n} | {title} | {p} | {f} | {' '.join(str(note).replace('|', '/').split())[:300]} |")
+    return f"# Hand-check results for {v}\n\n" + "\n".join(rows) + "\n"
+
+
 def main(argv):
     """Set up, run the checks, fill the Results table and make the sheet. Exit 1 if any check failed."""
     ap = argparse.ArgumentParser(description="Run a release's hand checks unattended (BL-341).")
@@ -342,9 +366,12 @@ def main(argv):
     v = a.version if a.version.startswith("v") else "v" + a.version
     md = REPO / "dev/handchecks" / f"{v}.md"
     modname = "test_v" + v[1:].replace(".", "")
-    if not md.exists() or not (TESTS / "handchecks" / f"{modname}.py").exists():
-        print(f"No hand checks for {v}: need {md.relative_to(REPO)} and dev/tests/handchecks/{modname}.py", file=sys.stderr)
+    if not (TESTS / "handchecks" / f"{modname}.py").exists():
+        print(f"No hand checks for {v}: need dev/tests/handchecks/{modname}.py (and dev/handchecks/{v}.md for its Results table)", file=sys.stderr)
         return 2
+    have_md = md.exists()
+    if not have_md:
+        log(f"note: {md.relative_to(REPO)} is not in this checkout (the Product Manager's sheet); the results go in a table of their own")
     version = (REPO / "VERSION").read_text().strip()
     if version != v[1:]:
         log(f"note: VERSION says {version}, not {v[1:]} (Setup step 1 expects the release's own version)")
@@ -365,14 +392,18 @@ def main(argv):
             input(f"Server still running at {s.base} (vault {s.vault}). Press Enter to stop it… ")
     finally:
         s.close()
-    filled = fill_results(md.read_text(encoding="utf-8"), outcomes)
-    dest = md if a.write else s.dir / md.name
+    if have_md:
+        filled = fill_results(md.read_text(encoding="utf-8"), outcomes)
+        dest = md if a.write else s.dir / md.name
+    else:
+        filled = results_table(v, outcomes, mod)
+        dest = s.dir / md.name
     dest.write_text(filled, encoding="utf-8")
     sheet = None
     if not a.no_sheet:
         import sheet as sheetmod
         sheet = sheetmod.write(s.dir, title=f"creaite {v[1:]} hand checks: the judgement sheet",
-                               checks=check_texts(md.read_text(encoding="utf-8")))
+                               checks=check_texts(md.read_text(encoding="utf-8")) if have_md else docstring_texts(mod))
     counts = {}
     for st, _ in outcomes.values():
         counts[st] = counts.get(st, 0) + 1
