@@ -580,18 +580,50 @@ def _part_stripped(s, out):
     return any(f"[{lab}]" in low for lab in labels(t) - labels(out))
 
 
+WHOLE_LINK = re.compile(r"!?\[[^\[\]\n]*\]\(.*\)|<a\s[^<>]*>[^<]*</a\s*>|<(?!a\s)[a-z][a-z0-9+.-]*:[^<>\s]+>", re.I | re.S)
+REFUSED = ("A work-item link a client report can't show couldn't be taken out whole (a line break, brackets or formatting in its "
+           "words, a reference link or a bare address), so nothing was saved. Take the link out, then save again.")
+
+
+def _hidden(con, code, addresses, blocking):
+    """The addresses (client_leak.item_links') that name an item a client report can't show, or none creaite can read."""
+    import client_leak
+    return [a for a in addresses if not client_leak._link_ok(con, code, f"creaite:item/{a}", blocking)]
+
+
+def _whole_or_refuse(s, code, con):
+    """#123 delta review: fail closed on the ADDRESS, not on the shape. The hidden-item addresses a string holds (client_leak's
+    decoding, as drop_item_links reads the string), and those inside a link client_leak.LINK_SPAN matches whole, words and address
+    together (an inline link, a whole HTML link with plain words, an <auto> link; never a reference definition, a bare <a> tag or a
+    lone address word). Refuses unless every hidden address is inside such a link. Returns the hidden items' IDs."""
+    import client_leak
+    import edit_ai
+    import html
+    blocking = client_leak.blocking_labels(con)
+    t = edit_ai.unseen(html.unescape(s))                                   # as drop_item_links reads it
+    t = client_leak.LINK_GAP.sub(lambda m: re.sub(r"\s+", "", m.group(0)), t)
+    hidden = _hidden(con, code, client_leak.item_links(t), blocking)
+    whole = [a for m in client_leak.LINK_SPAN.finditer(t) if WHOLE_LINK.fullmatch(m.group(0))
+             for a in _hidden(con, code, client_leak.item_links(m.group(0)), blocking)]
+    if len(whole) < len(hidden) or client_leak.overencoded(s):
+        raise ReportError(REFUSED)
+    return {i for a in hidden for i in edit_ai.loose_ids(con, a)}
+
+
 def _drop_one(s, code, con):
     """One string with the creaite: links a client may not have taken out whole; the string exactly as it was when none went (#123
-    review: drop_item_links rewrites entities in the whole string). Refuses (ReportError) rather than keep part of a link."""
+    review: drop_item_links rewrites entities in the whole string). Refuses (ReportError) rather than keep part of a link: a hidden
+    item's address that isn't inside a whole link (_whole_or_refuse), and, a second check, a hidden item's ID or wording still in
+    what is left (client_leak.text_findings)."""
     import client_leak
     if not _links_in(s):
         return s
+    gone = _whole_or_refuse(s, code, con)
     out = client_leak.drop_item_links(code, s, con)
     if _schemes(out) == _schemes(s):
         return s
-    if _part_stripped(s, out):
-        raise ReportError("A work-item link a client report can't show couldn't be taken out whole (a line break or brackets in its "
-                          "words, or a reference link), so nothing was saved. Take the link out, then save again.")
+    if _part_stripped(s, out) or any(f.split(" ")[0] in gone for f in client_leak.text_findings(con, code, out)):
+        raise ReportError(REFUSED)
     return out
 
 

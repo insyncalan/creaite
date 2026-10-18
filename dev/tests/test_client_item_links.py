@@ -173,7 +173,7 @@ print(json.dumps(res))""")
         self.assertIn(INTERNAL, [r[0] for r in rows])
         forms = [f"[{r[0]} · {r[2]}](creaite:item/{r[0]})" for r in rows] + [
             f"[the thing](CREAITE:item/{INTERNAL})", f"[the thing](creaite:item/{INTERNAL.lower()})",
-            f"[the thing](creaite%3Aitem/{INTERNAL})", f"<a href=\"creaite:item/{INTERNAL}\">the thing</a>", f"creaite:item/{INTERNAL}"]
+            f"[the thing](creaite%3Aitem/{INTERNAL})", f"<a href=\"creaite:item/{INTERNAL}\">the thing</a>"]                  # (a bare address: refused, below)
         hostile = "Plan. " + " ".join(forms) + f" Then {SLINK} closes."
         got = self.py(f"d = report_doc.client_doc('ABC', spec={{'summary': {hostile!r}, 'current_state': {hostile!r}}})\n"
                       f"for s in d['sections']:\n"
@@ -212,7 +212,20 @@ print(json.dumps(res))""")
              "Plan. [Confirm tester\nnames](creaite:item/ABC-A-004) Then.",
              "Plan. [the [x] thing](creaite:item/ABC-A-001) Then.",                                    # nested brackets
              "Plan. [the vendor thing][] Then.\n\n[the vendor thing]: creaite:item/ABC-A-001",      # a collapsed reference
-             "Plan. [the vendor thing] Then.\n\n[the vendor thing]: creaite:item/ABC-A-001"]        # a shortcut reference
+             "Plan. [the vendor thing] Then.\n\n[the vendor thing]: creaite:item/ABC-A-001",        # a shortcut reference
+             # delta re-review of 9908556a: spaces in the parentheses, labels Markdown matches loosely, balanced but wrong, HTML
+             "Plan. [Escalate data access\nto the CIO]( creaite:item/ABC-A-001 ) Then.",
+             "Plan. [Escalate data access\nto the CIO](   creaite:item/abc-a-001\t) Then.",
+             "Plan. [Escalate data access to the\nCIO] Then.\n\n[Escalate data access to the CIO]: creaite:item/ABC-A-001",
+             "Plan. [escalate DATA access  to the cio] Then.\n\n[Escalate data access to the CIO]: creaite:item/ABC-A-001",
+             "Plan. [Escalate data access to the client CIO][r] Then.\n\n[r]:\n  creaite:item/ABC-A-001",
+             "Plan. [Escalate data access to the client CIO][R] Then.\n\n[r]: creaite:item/ABC-A-001",
+             "Plan. [Escalate data access to the\nCIO](creaite:item/ABC-A-001)[ see notes] Then.",
+             "Plan. [Escalate data access to the\r\nCIO](creaite:item/ABC-A-001)[x] Then.",
+             'Plan. <a href="creaite:item/ABC-A-001">Escalate data <b>access</b> to the client CIO</a> Then.',
+             "Plan. <A HREF='creaite:item/ABC-A-001'>Escalate data <i>access</i>\nto the client CIO</a> Then.",
+             "Plan. creaite:item/ABC-A-001 Then.",                                                     # a bare address: no words
+             "Plan. [Escalate data access to the client CIO](creaite%3Aitem/ABC-A-001 ) Then.\n[x](creaite:item/ABC-A-001"]
 
     def test_a_link_that_cant_be_taken_out_whole_is_refused_and_never_filed(self):
         # end to end, as the page's Approve does it (report_server: save_draft, then stage_client): whatever save_draft lets
@@ -233,8 +246,22 @@ print(json.dumps(res))""")
             self.assertNotEqual(r.returncode, 0, text)
             self.assertIn("ReportError", r.stderr)
 
+    def test_the_second_check_refuses_a_hidden_items_wording_left_behind(self):
+        # the first check (every hidden address inside a whole link) taken away: what is left still may not hold the item's words
+        text = 'Plan. <a href="creaite:item/ABC-A-001">Escalate data access to the client CIO<b></b></a> Then.'
+        r = self.py("report_doc._whole_or_refuse = lambda s, code, con: {'ABC-A-001'}\n"
+                    f"d = report_doc.client_doc('ABC')\n"
+                    f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                    "report_doc.save_draft(d)", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("couldn't be taken out whole", r.stderr)
+        self.assertFalse((self.v.root / DRAFT).exists())
+
     def test_a_string_with_no_link_taken_out_is_kept_exactly(self):
-        for text in ("R&amp;D at creaite:item/ABC-A-002 and &lt;b&gt;x&lt;/b&gt;", "We use creaite: notes/ here, &amp; more",
+        for text in ("Plan [phase 1] and (scope) [see](https://example.com/a) done.", "Rates: [a] b] [c (d) e).",
+                     f"Paperwork: {SLINK}; [the plan][p]\n\n[p]: https://example.com/p",
+                     f"Two lines\n[{SWORDS}](creaite:item/{SEEN}) and [x]",
+                     "R&amp;D at creaite:item/ABC-A-002 and &lt;b&gt;x&lt;/b&gt;", "We use creaite: notes/ here, &amp; more",
                      f"Waiting on {SLINK}, R&amp;D &lt;b&gt;"):
             got = self.py(f"d = report_doc.client_doc('ABC')\n"
                           f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
