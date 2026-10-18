@@ -2,6 +2,15 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.3.2
+
+A small fix-up to 2.3.1 for three annoyances on Today and the side bar.
+
+
+- **A hover card no longer sticks.** Choose Prep from a meeting's hover card, then go back to Today: the card is gone, and you don't need to refresh.
+- **The Evidence column on Today's Portfolio table follows when you resize it.** The text wraps to the new width, and the width is kept.
+- **The More menu no longer repeats "Labels when collapsed".** It stays in Customise sidebar.
+
 ## creaite 2.3.1
 
 A small fix-up to 2.3.0, mostly for Draft email: a chase email to someone outside your team no longer shows things it shouldn't, and the "I sent it" step understands more of the ways you might type or paste your list.

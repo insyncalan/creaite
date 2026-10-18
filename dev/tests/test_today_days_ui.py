@@ -246,6 +246,25 @@ class DayLine(TodayFixture):
         b.wait("location.hash.startsWith('#prep=2026-10-16')||decodeURIComponent(location.hash).startsWith('#prep=2026-10-16|10:00|ABC steering')")
         self.assertFalse(b.eval("!!document.getElementById('prepDlg') && document.getElementById('prepDlg').open"))
 
+    def test_215_no_hover_card_is_left_open_after_prep_and_back(self):
+        """#215: hover a meeting, choose Prep, go back to Today: no peek is left showing, with no refresh."""
+        b = self.b
+        b.click('#todayDate [data-tab="2026-10-16"]')
+        c = b.box("#dayMeets .dmti")
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=c["x"] - 40, y=c["y"] - 40)
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=c["x"], y=c["y"])
+        b.wait("document.querySelector('#dayMeets .dmpop')")
+        b.click("#dayMeets .dmpop .btn.primary")
+        b.wait("location.hash.startsWith('#prep=')||decodeURIComponent(location.hash).startsWith('#prep=')")
+        b.wait("!document.querySelector('.dmpop')")                     # the peek closes when the page changes
+        b.eval("history.back()")
+        b.wait("!location.hash.startsWith('#prep=')")
+        b.eval("go('today')")
+        b.wait(f"{TABS}.length>1")
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=5, y=5)
+        b.pump(1.0)
+        self.assertEqual(b.eval("document.querySelectorAll('.dmpop, .prpeek, .tip, [role=dialog][open]').length"), 0)
+
     def test_a_past_day_has_no_popup_and_a_private_meeting_none(self):
         b = self.b
         self.pick_past("2026-10-12")

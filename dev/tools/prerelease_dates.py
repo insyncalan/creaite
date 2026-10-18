@@ -29,7 +29,8 @@ DATE_SENSITIVE = (
     "test_dashboard.py", "test_drafts_email.py", "test_decisions_prep.py", "test_drafts_agenda.py", "test_insight.py",
     "test_meetings.py", "test_prep_reimagined.py", "test_prep_page_content.py", "test_prep_view.py", "test_promises_page.py",
     "test_run_chat.py", "test_sweep_alerts.py", "test_today_brief.py", "test_work_filters_live.py", "test_milestone_ui.py",
-    "test_minutes_editor.py", "test_pages.py", "test_people_dashboard.py", "test_settings_page.py", "test_close_day_card.py",
+    "test_minutes_editor.py", "test_pages.py", "test_pages_panes.py", "test_pages_flow.py",
+    "test_people_dashboard.py", "test_settings_page.py", "test_close_day_card.py",
 )
 
 

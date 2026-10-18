@@ -140,6 +140,44 @@ class Portfolio(ts.Snapshots):
         self.assertIsNone(b.eval("JSON.parse(localStorage.getItem('creaite-colwidths')||'{}')['portfolio|project']??null"))
         self.assertAlmostEqual(self.colw("project"), w0, delta=3)
 
+    def _drag(self, col, dx):
+        b = self.b
+        h = b.box(f'{PF} th[data-col="{col}"] .colrz')
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=h["x"], y=h["y"])
+        b.call("Input.dispatchMouseEvent", type="mousePressed", x=h["x"], y=h["y"], button="left", buttons=1, clickCount=1)
+        step = 10 if dx > 0 else -10
+        for i in range(1, abs(dx) // 10 + 1):
+            b.call("Input.dispatchMouseEvent", type="mouseMoved", x=h["x"] + step * i, y=h["y"], button="left", buttons=1)
+        b.call("Input.dispatchMouseEvent", type="mouseReleased", x=h["x"] + dx, y=h["y"], button="left", buttons=0, clickCount=1)
+        b.pump(0.2)
+
+    def _ev(self):
+        return self.b.eval(f"""(()=>{{ const e=document.querySelector({json.dumps(ABC)}+' .ev'), td=e.closest('td'), th=document.querySelector('{PF} th[data-col="evidence"]');
+          const r=e.getBoundingClientRect(), t=th.getBoundingClientRect();
+          return {{w:th.getBoundingClientRect().width, h:r.height, over:Math.max(e.scrollWidth-td.clientWidth, r.right-t.right), ws:getComputedStyle(e).whiteSpace}}; }})()""")
+
+    def test_213_evidence_text_follows_its_column_width(self):
+        """#213: the Evidence column's text wraps to the column's width, kept after a reload, like the other columns."""
+        b = self.b
+        self._drag("evidence", -250)
+        n = self._ev()
+        self.assertNotEqual(n["ws"], "nowrap", "no fixed length")
+        self.assertLessEqual(n["over"], 1, f"narrow: nothing clipped or overhanging {n}")
+        saved = b.eval("JSON.parse(localStorage.getItem('creaite-colwidths'))['portfolio|evidence']")
+        self.assertAlmostEqual(saved, n["w"], delta=6)   # the header text may stop a very narrow column a few px sooner
+        self._drag("evidence", 500)
+        w = self._ev()
+        self.assertGreater(w["w"], n["w"] + 300)
+        self.assertLess(w["h"], n["h"], "wider: fewer lines")
+        saved = b.eval("JSON.parse(localStorage.getItem('creaite-colwidths'))['portfolio|evidence']")
+        b.reload("typeof go==='function' && LIVE")
+        b.eval("go('today')")
+        b.wait(f"document.querySelector({json.dumps(ABC)})", 15)
+        b.pump(0.3)
+        r = self._ev()
+        self.assertAlmostEqual(r["w"], saved, delta=2)
+        self.assertEqual(r["ws"], "normal")
+
     def test_keyboard_resizes_within_60_to_900(self):
         b = self.b
         b.eval(f"document.querySelector('{PF} th[data-col=\"health\"] .colrz').focus()")

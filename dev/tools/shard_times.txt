@@ -1,6 +1,8 @@
 test_activity_item_links.py 44
 test_activity_search.py 27
-test_activity_undo.py 461
+test_activity_undo.py 198
+test_activity_undo_page.py 125
+test_activity_undo_select.py 138
 test_adhoc_docs.py 74
 test_admin_card.py 92
 test_agendas_files.py 35
@@ -66,7 +68,9 @@ test_chat_suggestions.py 61
 test_check_jsdup.py 11
 test_check_py39.py 0
 test_check_wrappers.py 3
-test_clear_day.py 389
+test_clear_day.py 130
+test_clear_day_sunday.py 129
+test_clear_day_thursday.py 130
 test_client_gate.py 168
 test_client_gate_late.py 130
 test_client_gate_reviews.py 173
@@ -169,7 +173,9 @@ test_link_text.py 104
 test_live_server.py 41
 test_live_server_bind.py 2
 test_live_server_exit_log.py 16
-test_live_updates.py 377
+test_live_updates.py 161
+test_live_updates_events.py 90
+test_live_updates_page.py 126
 test_looks_like.py 70
 test_markdown_views.py 19
 test_meetings.py 28
@@ -212,7 +218,9 @@ test_one_server.py 18
 test_onedrive_projects.py 203
 test_open_write.py 40
 test_outline_wordmark.py 0
-test_pages.py 367
+test_pages.py 131
+test_pages_flow.py 111
+test_pages_panes.py 125
 test_pane_marker.py 10
 test_panel_drafts.py 36
 test_panel_room.py 48

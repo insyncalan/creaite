@@ -2,7 +2,7 @@
 /* RailMore (BL-319 part 6; #156, #139): More, at the bottom of the sidebar, out of the eye line. Its menu opens beside it on hover
    (core/hover.js: MENU_OPEN, MENU_CLOSE, the safe triangle) as well as on a click, upwards (sideways when collapsed), on the pages
    kept there (Intake, Files, Activity, Settings by default), with Health (its problems, amber) before Settings and Help after it,
-   then the Customise sidebar block at its foot: the entry that opens the dialog, and the Labels when collapsed switch. Its badge
+   then the Customise sidebar block at its foot: the entry that opens the dialog (Labels when collapsed is in that dialog only, #214). Its badge
    is amber and means a problem (Health: "More, 1 problem"); Intake's own count shows inside. A menu (dev/COMPONENTS.md's Menu):
    aria-haspopup and aria-expanded on the button; the box is the Menu block's MenuPanel (BL-316): ↑ ↓ Home End move, Enter or
    Space picks, Esc closes and puts focus back on More, Tab or a click away closes; → or ↑ on the button opens it with focus
@@ -12,22 +12,22 @@ import { effect } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { tipHide } from "../../core/dom.js";
 import { hoverAttach, menuGroup } from "../../core/hover.js";
-import { railCfg, railLabelsOn, railMode, railMoreOpen, railView } from "../../stores/rail.js";
+import { railCfg, railMode, railMoreOpen, railView } from "../../stores/rail.js";
 import { healthCount } from "../../stores/settings.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
 import { capCount, RailButton } from "./RailButton.jsx";
 import { RailIcon } from "./RailIcon.jsx";
 
-/** @typedef {{onGo: (id: string) => void, onCustomise: (opener: HTMLElement) => void, onLabels: (on: boolean) => void,
+/** @typedef {{onGo: (id: string) => void, onCustomise: (opener: HTMLElement) => void,
     onHealth: () => void, onHelp: () => void}} RailMoreProps */
 
 /** @param {RailMoreProps} props */
-export function RailMore({ onGo, onCustomise, onLabels, onHealth, onHelp }) {
+export function RailMore({ onGo, onCustomise, onHealth, onHelp }) {
   const btn = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const box = useRef(/** @type {HTMLDivElement | null} */ (null));
   const [at, setAt] = useState(/** @type {Record<string, string>} */ ({}));
   const [ptr, setPtr] = useState(false);                     /* opened by the pointer: focus stays where it was */
-  const open = railMoreOpen.value, mode = railMode.value, more = railCfg.value.more, labels = railLabelsOn.value;
+  const open = railMoreOpen.value, mode = railMode.value, more = railCfg.value.more;
   const bd = useRef(/** @type {HTMLSpanElement | null} */ (null));
   const isOpen = useRef(false); isOpen.current = open;
   /* its name and badge follow the problems at once (a synchronous effect, as RailButton's): amber, "More, 1 problem" */
@@ -99,11 +99,6 @@ export function RailMore({ onGo, onCustomise, onLabels, onHealth, onHelp }) {
           onClick={() => { close(false); onCustomise(btn.current); }}>
           <RailIcon name="sliders" />
           <span class="rl">Customise sidebar…</span>
-        </button>
-        <button type="button" class="nv rsw" role="menuitemcheckbox" id="railLabelsSw" aria-checked={labels ? "true" : "false"}
-          onClick={() => onLabels(!labels)}>
-          <span class="rl">Labels when collapsed</span>
-          <i class={`sw${labels ? " on" : ""}`} aria-hidden="true"></i>
         </button>
       </MenuPanel>
     </div>

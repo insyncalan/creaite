@@ -180,15 +180,15 @@ class Sidebar(LiveBrowserCase):
         self.assertEqual(b.eval("document.activeElement.dataset.v"), "review")               # focus on the first page
         self.assertIn(str(pending), b.eval("document.querySelector('#railMoreMenu [data-v=review]').textContent"))
         self.assertEqual(b.eval("[...document.querySelectorAll('#railMoreMenu [role^=menuitem]')].map(x=>x.id||x.dataset.v)"),
-                         ["review", "inbox", "files", "activity", "railHealth", "settings", "railHelp", "railCustBtn", "railLabelsSw"])
+                         ["review", "inbox", "files", "activity", "railHealth", "settings", "railHelp", "railCustBtn"])
         self.assertIn("1", b.eval("document.getElementById('railHealth').textContent"))
         b.key("ArrowDown")
         self.assertEqual(b.eval("document.activeElement.dataset.v"), "inbox")
         b.key("End")
-        self.assertEqual(b.eval("document.activeElement.id"), "railLabelsSw")
+        self.assertEqual(b.eval("document.activeElement.id"), "railCustBtn")
         b.key("Home")
         b.key("ArrowUp")                                                                       # wraps round
-        self.assertEqual(b.eval("document.activeElement.id"), "railLabelsSw")
+        self.assertEqual(b.eval("document.activeElement.id"), "railCustBtn")
         b.key("Escape")
         b.wait("document.getElementById('railMoreMenu').hidden")
         self.assertEqual(b.eval("document.activeElement.id"), "railMore")

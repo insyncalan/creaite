@@ -7,7 +7,7 @@
 
    #156: three states (expanded 188px; collapsed with labels under the icons 76px; collapsed icons only 56px). The wordmark is the
    toggle (#railTog, in the shell: "creaite_" expanded, "c_" collapsed), as is ⌘\; the choice is this browser's (stores/rail.js).
-   Labels when collapsed is dashboard.rail_labels (Settings › Essentials, More's menu, Customise sidebar).
+   Labels when collapsed is dashboard.rail_labels (Settings › Essentials, Customise sidebar).
 
    The choice is settings.json's dashboard.rail = {order, more, hidden, display}, written through writeSettings (a backup
    and a log line); a write that fails is put back. display "icons" is the collapsed sidebar, the 56px rail of icons; the
@@ -44,7 +44,7 @@ export async function railSave(cfg) {
 }
 /** Collapse or expand the sidebar (the wordmark, ⌘\\ and ⌘K), remembered in this browser. Under 900px it stays collapsed. */
 export function railToggle() { if (!railNarrow.value) railSetUser(!railCollapsed.value); }
-/** Labels when collapsed (More's switch, Customise sidebar and Settings › Essentials), saved to dashboard.rail_labels.
+/** Labels when collapsed (Customise sidebar and Settings › Essentials), saved to dashboard.rail_labels.
     @param {boolean} on */
 export async function railSetLabels(on) {
   const was = railLabelsOn.value; railLabelsOn.value = on; S.railLabels = on;
@@ -131,7 +131,7 @@ export function bootRail0007() {
     else if (id === "work") { if (shared.VIEW !== "work") go("work"); if (shared.WT !== pick) workTabGo(pick); }
   };
   render(h(RailNav, { onGo, flyouts, onFly }), $("#railMain"));
-  render(h(RailMore, { onGo, onCustomise: railCustomise, onLabels: railSetLabels, onHealth: () => go("settings", "health"), onHelp: () => go("help") }), $("#railFoot"));
+  render(h(RailMore, { onGo, onCustomise: railCustomise, onHealth: () => go("settings", "health"), onHelp: () => go("help") }), $("#railFoot"));
   addHTML(document.body, "beforeend", html`<div id="railCustBox"></div>`);
   render(h(CustomiseSidebar, { onSave: railDone, onClose: railCustClosed }), $("#railCustBox"));
   document.addEventListener("click", e => { const t = /** @type {Element} */ (e.target); if (t.closest && t.closest("[data-railcust]")) railCustomise(t.closest("[data-railcust]")); });
