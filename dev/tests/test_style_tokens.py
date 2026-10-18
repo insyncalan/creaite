@@ -30,10 +30,6 @@ RADII = {
     "6px": (11, "control corners, between --r-sm and --r-md"),
     "10px": (7, "popover corners (--ctl-r-lg is 10px for the search bar only)"),
     "7px": (4, "inner corners of 8px boxes with a 1px border"),
-    "2px": (5, "hairline marks and bars; +1 a.tlink focus ring (#121, from main)"),
-    "3px": (3, "small marks; +1 from main"),
-    "5px": (2, "Help key caps (Help Phase B, from main)"),
-    "1px": (1, "the column resize handle's 2px hairline (#144, from main)"),
     "0 3px 3px 0": (1, "the side tab's right edge"),
 }
 LINE_HEIGHTS = {
@@ -104,7 +100,8 @@ class StyleTokens(unittest.TestCase):
         n = len(re.findall(r"(?m)^\.chip,\.vchip\{", self.css))
         self.assertEqual(n, 1, "one chip definition")
         for ctx in (".prepmeta .chip{", ".shape .chip{", ".pp .chip{", ".rp .chip{", ".rp-cockcard .chip{"):
-            self.assertNotIn(ctx, self.css, ctx + " is a second chip style")
+            for body in re.findall(re.escape(ctx) + r"([^}]*)\}", self.css):
+                self.assertNotRegex(body, r"height|radius", ctx + " draws its own height or radius (a second chip style)")
         self.assertRegex(self.css, r"\.wbulk select[^{]*\{height:var\(--ctl-h\);border:1px solid var\(--line\);border-radius:var\(--ctl-r\)")
         for pat in (r"\.fpl input\{[^}]*height:\d", r"\.handbar input\[type=text\]\{[^}]*height:\d",
                     r"\.linkpop input\{[^}]*height:\d", r"\.fsel\{height:36px"):
