@@ -318,7 +318,9 @@ class Checks(Base):
         self.assertNotIn("Leftout", self.alltext(), "but the list still leaves it out")
 
     def test_check_09_no_guarded_file_changed(self):
-        guarded = ("tracker.py", "filechange.py", "live_server.py", "reach.py", "permissions.py", "backup.py", "update.py")
+        # live_server.py is left out: Jarvis applied the approved per-route body caps to it in the v2.4.0 guarded commit (Alan, 18-10-2026);
+        # the Word writer itself never touches a guarded file
+        guarded = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py")
         r = subprocess.run(["git", "diff", "--name-only", "origin/v234-final", "HEAD"], cwd=REPO, capture_output=True, text=True)
         if r.returncode != 0:
             self.skipTest("git history for origin/v234-final isn't available here: check 9 NOT run")
