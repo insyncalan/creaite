@@ -218,6 +218,8 @@ INBOX_LIMIT = 25 * 1024 * 1024
 PREVIEW_CHARS = 200_000               # an inbox file's preview        # a file added to the Inbox (BL-42)
 INBOX_TYPES = (".vtt", ".docx", ".txt", ".md", ".pdf")
 BODY_LIMIT = 40 * 1024 * 1024         # any request (base64 makes a 25 MB file about 34 MB)
+ROUTE_BODY_LIMITS = {"/api/report/logo/save": 1_200_000,      # p240-leakfix LOGO 4: a logo is at most 400 kB, twice (original and
+                     "/api/report/logo/remove": 4_096}        # trimmed copy), as base64 about 1.07 MB; a remove carries two words
 CLIENT_LEFT = (BrokenPipeError, ConnectionResetError)   # the page went mid-reply (BL-263, BL-284): logged at info, never a 500
 RELEASE_LIMIT = 60 * 1024 * 1024     # a release zip (BL-36)
 RELEASE_NAME = r"creaite-\d+\.\d+\.\d+\.zip"
@@ -1129,7 +1131,7 @@ class Handler(BaseHTTPRequestHandler):
     def body(self):
         """The request's JSON body ({} when empty); ValueError when it is over BODY_LIMIT."""
         n = int(self.headers.get("Content-Length") or 0)
-        if n > BODY_LIMIT:
+        if n > ROUTE_BODY_LIMITS.get(self.path.split("?")[0], BODY_LIMIT):
             raise ValueError("request too large")
         return json.loads(self.rfile.read(n) or b"{}") if n else {}
 
