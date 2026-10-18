@@ -252,7 +252,7 @@ status(); renderBadge(); inboxBadge(); vaultInit(); checkLive(); setInterval(che
 shared.HADHASH=!!location.hash&&!/^#openfile=/.test(location.hash);
 openFromAddress();                                                       /* BL-126: clears the address, so what follows is a plain start */
 shared.HASH0=location.hash;   /* BL-186: the address as opened (the Milestones page is restored once its block has run) */
-restoreNav(/^#?milestones=/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
+restoreNav(/^#?milestones(=|&|$)/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
 firstHelp();
 shared.LOADING=false;
 bootDebugLog();

@@ -52,7 +52,14 @@ export function rkClamp(v){ if(!v) return;
     row.classList.toggle("clamped",cut);
     if(cut){ el.title=el.textContent; if(!more) addHTML(el,"afterend",html`<span class="rk-more" aria-hidden="true">More</span>`); }
     else { el.removeAttribute("title"); if(more) more.remove(); } }); }
-export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if(!p) return; queueMicrotask(mountCurEdit);   /* an open editor survives re-renders */
+/* #204: the project pages (Cockpit, Milestones) opened with no project chosen show this, not a blank page: a heading and the projects as links */
+export function chooseProject(el,page){ if(!el) return; const name=page==="milestones"?"Milestones":"The project page";
+  putHTML(el,P.length?html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><p class="sub">${name} shows one project. Pick the one to open.</p>
+    <ul class="chooselist card" aria-labelledby="chooseH">${raw(P.map(p=>`<li><a href="#${page}=${esc(p.code)}" class="chooselink" data-choose="${page}" data-code="${esc(p.code)}"><span class="chname">${esc(p.name)}</span>${health(p.health)}</a></li>`).join(""))}</ul></div></div>`
+    :html`<div class="wrapmax"><div class="choose"><h1 id="chooseH">Choose a project</h1><div class="empty card">No projects yet. Add one in <a href="#settings/people" data-go-settings="people">Settings › People and projects</a>.</div></div></div>`); }
+document.addEventListener("click",e=>{ const a=e.target.closest&&e.target.closest("[data-choose]"); if(a){ e.preventDefault(); go(a.dataset.choose==="milestones"?"milestones":"cockpit",a.dataset.code); return; }
+  const s=e.target.closest&&e.target.closest("[data-go-settings]"); if(s){ e.preventDefault(); go("settings",s.dataset.goSettings); } });
+export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if(!p){ if(!code) chooseProject($("#v-cockpit"),"cockpit"); return; } queueMicrotask(mountCurEdit);   /* an open editor survives re-renders */
   const acts=A.filter(x=>x.p===code&&open(x)&&(overdue(x)||soon(x))).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
   const order=["Urgent","High","Medium","Low"];
   /* BL-15: top risks and issues, by priority */

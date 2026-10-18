@@ -3832,3 +3832,10 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .linkpop.view{flex-direction:row;align-items:center;width:auto;max-width:min(460px,calc(100vw - 16px))}
 .linkaddr{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 @media (forced-colors:active){.linkpop{border-color:CanvasText}.linkpop .linkgo{forced-color-adjust:none;background:Highlight;color:HighlightText}}
+
+/* #204: Choose a project (Cockpit and Milestones with no project) */
+.choose{max-width:640px} .choose h1{margin:0 0 4px} .choose>.sub{margin:0 0 14px;color:var(--muted)}
+.chooselist{list-style:none;margin:0;padding:4px 0}
+.chooselink{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;color:var(--ink);text-decoration:none;border-radius:var(--r-md)}
+.chooselink:hover{background:var(--sunk)} .chooselink:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.chooselink .chname{font-weight:500}
