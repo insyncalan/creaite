@@ -78,10 +78,10 @@ class WeeklyReportView(LiveBrowserCase):
     def test_milestone_list_eye_changes_the_list_only(self):
         self.ev("document.querySelector('#v-weekly [data-id=milestones] .wr-link').click()")
         self.b.wait("document.querySelector('#v-weekly [data-id=milestones] table')", 5)
-        before = self.ev("document.querySelectorAll('#v-weekly [data-id=milestones] circle').length")
+        before = self.ev("document.querySelectorAll('#v-weekly [data-id=milestones] svg.wr-tl circle').length")
         self.ev("document.querySelector('#v-weekly [data-id=milestones] tbody .wr-eye').click()")
         self.b.wait("document.querySelector('#v-weekly [data-id=milestones] tr.hidrow')", 5)
-        self.assertEqual(self.ev("document.querySelectorAll('#v-weekly [data-id=milestones] circle').length"), before)
+        self.assertEqual(self.ev("document.querySelectorAll('#v-weekly [data-id=milestones] svg.wr-tl circle').length"), before)
 
     def test_figure_eye_and_exported_view(self):
         self.ev("document.querySelector('#v-weekly .wr-stat .wr-seye').click()")

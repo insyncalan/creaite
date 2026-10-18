@@ -3660,9 +3660,9 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-stat .n{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere} .wr-stat .n.r{color:var(--rp-red)}
 .wr-stat .c{font-size:var(--fs-xs);color:var(--rp-grey)}
 .wr-seye{position:absolute;top:2px;right:2px}
-.wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:var(--fs-sm);padding:0;min-width:24px;min-height:24px;display:inline-grid;place-items:center;border-radius:var(--r-sm)}
-.wr-eye svg{width:16px;height:16px} .wr-eye[aria-pressed="false"]{color:var(--rp-grey);opacity:.7} .wr-eye:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
-.wr-eye:hover{color:var(--rp-ink)}
+.wrsheet .wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:var(--fs-sm);padding:0;min-width:24px;min-height:24px;display:inline-grid;place-items:center;border-radius:var(--r-sm)}
+.rs-eye svg{width:16px;height:16px} .wrsheet .wr-eye[aria-pressed="false"]{opacity:.7} .wrsheet .wr-eye:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
+.wrsheet .wr-eye:hover{color:var(--rp-ink)}
 .wr-count{font-size:11px;color:var(--rp-grey);margin-top:6px}
 .wr-rich{min-width:0} .wr-rich.wr-edit{cursor:text;border-radius:var(--r-xs);min-height:20px} .wr-rich.wr-edit:hover{background:rgba(44,111,170,.07)}
 .wr-rich.wr-edit:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
