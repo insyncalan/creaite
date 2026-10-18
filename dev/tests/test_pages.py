@@ -247,7 +247,7 @@ class FilesLiveTests(FilesLiveBase):
         b.eval("document.getElementById('v-files').scrollTop=120")
         scroll = b.eval("document.getElementById('v-files').scrollTop")
         touch(self.v.root / DEFAULT_REPORTS / "2026-10-20 Weekly report.docx")
-        b.click("#filesRefresh")
+        b.eval("document.getElementById('filesRefresh').click()")     # #192: Refresh is on the pills' line, so a real click would scroll up to it
         b.wait("[...document.querySelectorAll('#filesTbl a')].some(a=>a.textContent.startsWith('2026-10-20'))")
         self.assertEqual(b.eval("FF.type"), "docx")                                               # the filter
         self.assertEqual(b.eval("FSELFILE"), selected)                                            # the selected file
