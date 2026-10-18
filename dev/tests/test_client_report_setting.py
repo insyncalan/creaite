@@ -9,7 +9,6 @@ project's CLAUDE.md beside the client report rhythm: `**Client report:** on|off`
 A new project is made with the setting off.
 """
 import base64
-import json
 import re
 import sys
 import tempfile

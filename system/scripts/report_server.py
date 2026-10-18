@@ -454,20 +454,29 @@ def _logo_files(stem):
             if f.is_file() and f.suffix.lower() in report_doc.LOGO_EXT and f.stem in (stem, f"{stem}-original")]
 
 
+def _logo_refusal(req):
+    """(raw, drawn, type, None) for a logo request that can be saved, else (None, None, None, the sentence to refuse with)."""
+    raw, drawn = _logo_bytes(req.get("original")), _logo_bytes(req.get("drawn"))
+    kind_of = _logo_type(raw or b"")
+    ext = str(req.get("ext") or "").lower().lstrip(".").replace("jpeg", "jpg")
+    if not raw or not kind_of or kind_of != ext:
+        return None, None, None, "That isn't a PNG, JPEG or SVG picture. Nothing was saved."
+    if len(raw) > LOGO_MAX or (drawn and len(drawn) > LOGO_MAX):
+        return None, None, None, "That logo is over 400 kB. Choose a smaller file. Nothing was saved."
+    if drawn is not None and _logo_type(drawn) != "png":
+        return None, None, None, "The trimmed copy must be a PNG. Nothing was saved."
+    return raw, drawn, kind_of, None
+
+
 def logo_save_route(handler, req):
     """POST /api/report/logo/save (see the module's description): the logo for the firm or a project's client or partner, saved under
     its name in system/branding/logos/. A file that isn't a PNG, JPEG or SVG picture, or is over 400 kB, is refused and nothing is
     written."""
     code, kind, stem = _logo_target(req)
-    raw, drawn = _logo_bytes(req.get("original")), _logo_bytes(req.get("drawn"))
-    kind_of = _logo_type(raw or b"")
-    ext = str(req.get("ext") or "").lower().lstrip(".").replace("jpeg", "jpg")
-    if not raw or not kind_of or kind_of != ext:
-        return refuse(handler, "That isn't a PNG, JPEG or SVG picture. Nothing was saved.")
-    if len(raw) > LOGO_MAX or (drawn and len(drawn) > LOGO_MAX):
-        return refuse(handler, "That logo is over 400 kB. Choose a smaller file. Nothing was saved.")
-    if drawn is not None and _logo_type(drawn) != "png":
-        return refuse(handler, "The trimmed copy must be a PNG. Nothing was saved.")
+    raw, drawn, kind_of, why = _logo_refusal(req)
+    if why:
+        return refuse(handler, why)
+    ext = "jpg" if kind_of == "jpg" else kind_of
     keep = [(f"{stem}-original.{ext}", raw), (f"{stem}.png", drawn)] if drawn and kind_of != "svg" else [(f"{stem}.{ext}", raw)]
     for old in _logo_files(stem):                                  # a stale file of another type must not win
         if old.name not in dict(keep):

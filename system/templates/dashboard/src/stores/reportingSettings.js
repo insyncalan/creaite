@@ -127,7 +127,7 @@ export function contentBox(px, w, h) {
     the browser can't read the picture. The file chosen is not touched. @param {File} file @returns {Promise<Blob|null>} */
 export async function trimmedCopy(file) {
   try {
-    const bmp = await createImageBitmap(file), c = document.createElement("canvas");
+    const bmp = await createImageBitmap(file), c = /** @type {any} */ (document.createElement("canvas"));
     c.width = bmp.width; c.height = bmp.height;
     const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d", { willReadFrequently: true }));
     g.drawImage(bmp, 0, 0);
@@ -145,7 +145,7 @@ export async function trimmedCopy(file) {
     @returns {Promise<boolean>} saved */
 export async function uploadClientLogo(code, kind, file) {
   crLogoNote.value = "";
-  const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || [, ""])[1].toLowerCase().replace("jpeg", "jpg");
+  const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || ["", ""])[1].toLowerCase().replace("jpeg", "jpg");
   if (!ext) { crLogoNote.value = "Choose a PNG, JPEG or SVG picture."; return false; }
   if (file.size > 400000) { crLogoNote.value = "That logo is over 400 kB. Choose a smaller file."; return false; }
   const trimmed = ext === "svg" ? null : await trimmedCopy(file);

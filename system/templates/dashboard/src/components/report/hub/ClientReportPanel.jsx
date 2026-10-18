@@ -15,8 +15,8 @@ import {
   setClientLogos, setClientName, setClientReminder, setClientRhythm, setClientReport, uploadClientLogo,
 } from "../../../stores/reportingSettings.js";
 
-/** @typedef {import("../../../stores/reportingSettings.js").LogoKind} LogoKind */
-const TILES = /** @type {{kind: LogoKind, mark: string, name: string, line: string}[]} */ ([
+/** @typedef {import("../../../stores/reportingSettings.js").LogoKind} TileKind */
+const TILES = /** @type {{kind: TileKind, mark: string, name: string, line: string}[]} */ ([
   { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports. Always shown." },
   { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
   { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" },
