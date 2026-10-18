@@ -38,11 +38,14 @@ function usedRules(win, d, from) {
         if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m.cssRules);
       } else if (r.constructor.name === "CSSSupportsRule") {
         const sr = /** @type {CSSSupportsRule} */ (r);
-        if (win.CSS.supports(sr.conditionText)) walk(sr.cssRules);
+        if (/** @type {any} */ (win).CSS.supports(sr.conditionText)) walk(sr.cssRules);
       }
     }
   };
-  for (const sheet of Array.from(from.styleSheets)) { try { walk(sheet.cssRules); } catch (e) { /* a sheet from elsewhere can't be read: none of ours is */ } }
+  for (const sheet of Array.from(from.styleSheets)) {
+    const rules = (() => { try { return sheet.cssRules; } catch (e) { return null; } })();      // a sheet from elsewhere can't be read: none of ours is
+    if (rules) walk(rules);
+  }
   return out.join("\n");
 }
 

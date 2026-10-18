@@ -67303,15 +67303,22 @@ ${d5.text}`);
             /** @type {CSSSupportsRule} */
             r4
           );
-          if (win.CSS.supports(sr2.conditionText)) walk(sr2.cssRules);
+          if (
+            /** @type {any} */
+            win.CSS.supports(sr2.conditionText)
+          ) walk(sr2.cssRules);
         }
       }
     };
     for (const sheet of Array.from(from.styleSheets)) {
-      try {
-        walk(sheet.cssRules);
-      } catch (e4) {
-      }
+      const rules = (() => {
+        try {
+          return sheet.cssRules;
+        } catch (e4) {
+          return null;
+        }
+      })();
+      if (rules) walk(rules);
     }
     return out.join("\n");
   }

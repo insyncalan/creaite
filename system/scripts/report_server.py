@@ -230,6 +230,15 @@ def launch(stored):
     return True
 
 
+def plain_note(out):
+    """#226: an export the plain renderer made (no page, or one the server's check refused) says so in its message."""
+    if not (out.get("ok") and out.get("plain")):
+        return
+    why = out.get("plain_why")
+    out["message"] = (f"{out.get('message') or 'Exported.'} This is the plain version "
+                      + (f"(the report page was not used: {why})." if why else "(open the report in creaite to export the formatted one)."))
+
+
 def export_route(handler, req):
     """POST /api/report/export: the report exported as HTML, Word or PDF (see the module's description). Nothing is ever sent."""
     kind, code, fri, client = target(req)
@@ -252,9 +261,7 @@ def export_route(handler, req):
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
     out = fn(path, fmt, file_beside=bool(req.get("file_beside", creaite_doc.file_beside_default(kind))), open_after=True,
              page=req.get("page") if isinstance(req.get("page"), dict) else None)
-    if out.get("ok") and out.get("plain"):        # #226: no page, or one the server's check refused: the plain renderer made it
-        out["message"] = f"{out.get('message') or 'Exported.'} This is the plain version" + (
-            f" (the report page was not used: {out['plain_why']})." if out.get("plain_why") else ": open the report in creaite to export the formatted one.")
+    plain_note(out)
     if out.get("ok") and out.get("path"):
         out["launched"] = launch(out["path"])
     if left is not None:

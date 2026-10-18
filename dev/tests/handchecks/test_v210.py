@@ -641,7 +641,7 @@ class WeeklyFiling(WeeklyBase):
             self.assertNotIn(left_text, text, f"the left-out row is not in the {fmt}")
             if fmt == "html":
                 self.assertNotIn("creaite-data", path.read_text(encoding="utf-8"), "the exported page carries no editing data")
-        self.note(16, f"HTML (the exported page), Word and PDF: the same sections in the same order; 'asks' and one risk row in none")
+        self.note(16, "HTML (the exported page), Word and PDF: the same sections in the same order; 'asks' and one risk row in none")
 
     def test_c17_file_beside_defaults(self):
         """17. Settings › Advanced has two lines, one for reports (off) and one for minutes (on), each with its reason; a report
