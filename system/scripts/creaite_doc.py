@@ -516,6 +516,16 @@ def _inline(t):
     return "".join(out)
 
 
+def _picture_ok(f):
+    """Whether a picture file can be walked and checked (docx_tools.strip_image_metadata): one that can't is not included anywhere."""
+    import docx_tools
+    try:
+        docx_tools.strip_image_metadata(Path(f).read_bytes())
+        return True
+    except (docx_tools.PictureRefused, OSError):
+        return False
+
+
 def _image_html(doc, alt, ref):
     """A picture as a figure with the file inside the page (a data address), or the words saying it wasn't found."""
     import base64
@@ -525,6 +535,8 @@ def _image_html(doc, alt, ref):
         return f"<p><em>Picture not found: {esc(alt or ref)}</em></p>"
     if _too_big(f):
         return f"<p><em>Picture too large to include: {esc(alt or ref)}</em></p>"
+    if not _picture_ok(f):
+        return f"<p><em>Picture not included: {esc(alt or ref)}</em></p>"
     mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
     cap = f"<figcaption>{esc(alt)}</figcaption>" if alt else ""
     data = base64.b64encode(docx_tools.strip_image_metadata(f.read_bytes())).decode("ascii")
@@ -1092,6 +1104,8 @@ class _Word:
             f = paths.resolve_image(self.folder, m.group(2))
             if f.is_file() and f.suffix.lower() in IMG_EXT and _too_big(f):
                 out.append({"md": _nobraces(f"*Picture too large to include: {m.group(2)}*")})
+            elif f.is_file() and f.suffix.lower() in IMG_EXT and not _picture_ok(f):
+                out.append({"md": _nobraces(f"*Picture not included: {m.group(2)}*")})
             elif f.is_file() and f.suffix.lower() in IMG_EXT:
                 out.append({"image": str(f), "caption": m.group(1).strip()})
             else:
@@ -1178,6 +1192,8 @@ class _Word:
         f = text_image(self.doc, ref)
         if f and _too_big(f):
             return [{"md": _nobraces(f"*Picture too large to include: {alt or ref}*")}]
+        if f and not _picture_ok(f):
+            return [{"md": _nobraces(f"*Picture not included: {alt or ref}*")}]
         return [{"image": str(f), "caption": alt}] if f else [{"md": _nobraces(f"*Picture not found: {alt or ref}*")}]
 
     def text(self, s):
