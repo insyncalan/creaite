@@ -28,7 +28,7 @@ export const uploadedFiles=()=>(D.inbox||[]).filter(f=>f.uploaded!==false&&!f.ev
 export function renderInbox(){ const L=uploadedFiles(); [...INSEL].forEach(p=>{ if(!L.some(f=>f.path===p&&f.state==="new")) INSEL.delete(p); });
   putHTML($("#inboxTbl"),html`<thead><tr><th style="width:32px"></th><th>File</th><th>Type</th><th>Size</th><th>Added</th><th>Likely project</th><th>State</th><th></th></tr></thead><tbody>${L.length?L.map(f=>{ const st=INRUN.includes(f.path)?"processing":f.state;
     return html`<tr data-inf="${f.path}"><td><input type="checkbox" aria-label="Select ${f.name}" ${raw(INSEL.has(f.path)?"checked":"")} ${raw(st==="new"?"":"disabled")}></td><td class="title">${f.name}</td><td>${f.ext}</td><td>${kb(f.size)}</td><td style="white-space:nowrap">${fd(f.date)}</td><td>${f.p?raw(pLink(f.p)):html`<span class="sub">Not sure</span>`}</td><td><span class="tag ${st==="new"?"":"sub"}">${INSTATE[st]}</span>${st==="draft"&&html` <a href="#" data-go="review" class="sub">Open Review</a>`}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye","Preview",'data-inprev aria-haspopup="dialog"',"sm"))}${raw(ibtn("trash","Remove from Intake",`data-inrm ${st==="processing"?"disabled":""}`,"sm no"))}</td></tr>`; }):html`<tr><td colspan="8"><div class="empty minbox">No uploaded files waiting.</div></td></tr>`}</tbody>`);
-  $("#inboxGo").disabled=!INSEL.size||!!shared.RUN; $("#inboxGo").title=shared.RUN?"ask creaite is busy; try again when it's finished":""; $("#inboxGo").textContent=INSEL.size?`Process ${INSEL.size} selected`:"Process selected"; inboxBadge(); renderMeetings(); }
+  $("#inboxGo").disabled=!INSEL.size||!!shared.RUN; $("#inboxGo").title=shared.RUN?"ask creaite is busy; try again when it's finished":INSEL.size?"":"Tick a file first"; $("#inboxGo").textContent=INSEL.size?`Process ${INSEL.size} selected`:"Process selected"; inboxBadge(); renderMeetings(); }
 export async function addInboxFiles(files){ if(!viaServer()){ snack("Adding files needs the live server"); return; } let added=0;
   for(const f of files){ const ext=(f.name.match(/\.[^.]+$/)||[""])[0].toLowerCase();
     if(![".vtt",".docx",".txt",".md",".pdf"].includes(ext)){ snack(`${f.name}: only .vtt, .docx, .txt, .md or .pdf`); continue; }
@@ -107,7 +107,7 @@ export function renderMeetings(){ const mt=D.meetings||{}, L=MTG(); [...MSEL].fo
   $("#mtgRead").textContent=mt.fetched?`Calendar read ${fdText(mt.fetched)}`:"";
   const busy=!!shared.RUN||(typeof shared.BUSY!=="undefined"&&shared.BUSY);
   $("#mtgGo").disabled=!MSEL.size||busy||!viaServer(); $("#mtgGo").textContent=MSEL.size?`Process ${MSEL.size} selected`:"Process selected";
-  $("#mtgGo").title=!viaServer()?"Needs the live server":busy?"ask creaite is busy; try again when it's finished":"";
+  $("#mtgGo").title=!viaServer()?"Needs the live server":busy?"ask creaite is busy; try again when it's finished":MSEL.size?"":"Tick a meeting first";
   const ld=L.filter(m=>MSEL.has(m.id)&&mtgLoadable(m)).length, offTx=!ld||busy||!viaServer(), why=!viaServer()?"Needs the live server":busy?"ask creaite is busy; try again when it's finished":ld?"":"Tick meetings that have a transcript";
   $("#mtgLoad").disabled=offTx; $("#mtgLoad").title=why;
   $("#mtgLoad").textContent=ld?`Load ${ld} into inbox`:"Load into inbox";
