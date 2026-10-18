@@ -1779,7 +1779,8 @@ def chase_facts(item_id):
         proj = dict(proj) if proj else {"name": x["project"], "sponsor": "", "next_milestone": ""}
         unblocks = decision_unblocks(con, x["id"], proj["next_milestone"]) if table == "decisions" else ""
         return {"id": x["id"], "code": x["project"], "name": proj["name"], "kind": table, "text": text, "owner": owner, "due": due,
-                "priority": x.get("priority") or "", "update": linktext.sent_strip(upd), "type": x.get("type") or "", "response": linktext.sent_strip(resp),   # #153: chase history is never in an email
+                "priority": x.get("priority") or "", "update": linktext.sent_strip(upd),     # #153: chase history is never in an email
+                "type": x.get("type") or "", "response": linktext.sent_strip(resp),
                 "source": src, "sponsor": proj["sponsor"] or "", "status": x.get("status"), "unblocks": unblocks}
     finally:
         con.close()
