@@ -3839,3 +3839,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .chooselink{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;color:var(--ink);text-decoration:none;border-radius:var(--r-md)}
 .chooselink:hover{background:var(--sunk)} .chooselink:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .chooselink .chname{font-weight:500}
+
+/* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
+#peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
+#peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}

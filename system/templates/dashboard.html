@@ -2069,7 +2069,7 @@ body.pkstaged .snack{bottom:68px}
 .pk-bar .ib[hidden]{display:none}
 body:has(#panel.pkprop.on) .snack,body:has(#panel.pkprop.on) .pkstage{bottom:76px} body.pkstaged:has(#panel.pkprop.on) .snack{bottom:128px}   /* clear of the footer */
 /* ===== end BL-177 (CSS) ===== */
-/* ===== BL-298 (v19-draft-chase) ===== Draft chase in the peek (dev/mockups/draft-chase-mockup.html): the theme's tokens for the pane;
+/* ===== BL-298 (v19-draft-chase) ===== Draft email in the peek (dev/mockups/draft-chase-mockup.html): the theme's tokens for the pane;
    the email itself keeps its own fixed colours, inline from DE_COLOURS, as Outlook will show it (like #dePrev) */
 #panel.peek .pk-scroll[hidden]{display:none}
 .chase{display:grid;gap:12px;padding-top:4px}
@@ -3849,6 +3849,10 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .chooselink{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;color:var(--ink);text-decoration:none;border-radius:var(--r-md)}
 .chooselink:hover{background:var(--sunk)} .chooselink:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .chooselink .chname{font-weight:500}
+
+/* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
+#peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
+#peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -4439,6 +4443,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     SEENBUSY: () => SEENBUSY,
     SENDI: () => SENDI,
     SENDIMG: () => SENDIMG,
+    SENT_FIELD: () => SENT_FIELD,
     SERVED: () => SERVED,
     SESSION_IDLE_MS: () => SESSION_IDLE_MS,
     SESSK: () => SESSK,
@@ -5047,6 +5052,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     cxLink: () => cxLink,
     cxList: () => cxList,
     cxPeople: () => cxPeople,
+    cxPerson: () => cxPerson,
     cxPk: () => cxPk,
     cxReview: () => cxReview,
     cxReviewFields: () => cxReviewFields,
@@ -5756,6 +5762,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     noteLoading: () => noteLoading,
     noteMarks: () => noteMarks,
     noteMeta: () => noteMeta,
+    noteMetaFor: () => noteMetaFor,
     noteOpenFileVersion: () => noteOpenFileVersion,
     noteRemoved: () => noteRemoved,
     noteRenamed: () => noteRenamed,
@@ -5963,6 +5970,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     pkFollowable: () => pkFollowable,
     pkFromVault: () => pkFromVault,
     pkHistory: () => pkHistory,
+    pkIdText: () => pkIdText,
     pkImpLik: () => pkImpLik,
     pkIs: () => pkIs,
     pkKeepFocus: () => pkKeepFocus,
@@ -6404,6 +6412,11 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     selDay: () => selDay,
     send: () => send,
     sendQueued: () => sendQueued,
+    sendState: () => sendState,
+    sentKindOf: () => sentKindOf,
+    sentLine: () => sentLine,
+    sentLog: () => sentLog,
+    sentVia: () => sentVia,
     serverCardFlow: () => serverCardFlow,
     serverSeams: () => serverSeams,
     setAgendaInvited: () => setAgendaInvited,
@@ -33079,7 +33092,7 @@ ${s5}`;
     );
   }
   var POINT = {
-    draft_chase: "Open Draft chase",
+    draft_chase: "Open Draft email",
     ask: "Open ask creaite",
     project_page: "Open the project page",
     settings: "Open Settings",
@@ -33665,14 +33678,14 @@ ${s5}`;
     if (t47 && t47.kind === "chase") {
       const tone = t47.pane && t47.pane.tone != null ? ["First", "Second", "Firmer"][t47.pane.tone] : null;
       return /* @__PURE__ */ u2("div", { class: "sp-card", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: [
-        "Opens Draft chase for ",
+        "Opens Draft email for ",
         id2,
         t47.pane && t47.pane.to ? `, to ${t47.pane.to}` : "",
         ", ",
         tone ? `in the ${tone} tone` : "in the tone from how often it was chased",
         ", ready to copy. Nothing is sent.",
         /* @__PURE__ */ u2("div", { class: "sp-acts", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spChase", onClick: () => acts2.chase(t47.pane || {}), children: [
-          "Open Draft chase ",
+          "Open Draft email ",
           /* @__PURE__ */ u2("kbd", { children: "⏎" })
         ] }) })
       ] }) });
@@ -33972,7 +33985,7 @@ ${s5}`;
         if (pane && pane.to) start.to = pane.to;
         sneakClose(false);
         if (at2.where !== "peek") {
-          snack("Draft chase opens from an action, a risk or issue, or a decision");
+          snack("Draft email opens from an action, a risk or issue, or a decision");
           return;
         }
         chaseOpen(start);
@@ -33982,7 +33995,7 @@ ${s5}`;
         if (to2 === "draft_chase") {
           sneakClose(false);
           if (at2.where === "peek") chaseOpen();
-          else snack("Draft chase opens from an action, a risk or issue, or a decision");
+          else snack("Draft email opens from an action, a risk or issue, or a decision");
           return;
         }
         if (to2 === "ask") {
@@ -38899,7 +38912,7 @@ ${s5}`;
     const nameCell = (x5) => `<td class="title"><a href="#" class="plink2" data-person="${esc(x5.name)}">${esc(isMe(x5.name) ? `You (${x5.name})` : x5.name)}</a>${x5.p || isMe(x5.name) ? "" : ` <span class="tag warn" title="${none ? "Seen on items but isn’t in the people register" : "Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x5.p && x5.p.org ? esc(x5.p.org) : '<span class="sub">—</span>'}</td><td>${x5.p && x5.p.role ? esc(x5.p.role) : '<span class="sub">—</span>'}</td><td>${x5.codes.map(pLink).join(" ") || '<span class="sub">—</span>'}</td>`;
     $("#peopleTbl").setAttribute("role", "tabpanel");
-    putHTML($("#peopleTbl"), !L3.length ? html`<div class="empty">${none ? "Everyone creaite knows has something assigned." : "No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>` : none ? html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("cl", "Closed items", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}<td class="num">${raw(countLink(`${plur(x5.cl, "closed item")} of ${x5.name}`, x5.cl, "all:closed:", { st: ["Closed", "Cancelled"], o: ownersOf([...x5.A, ...x5.R, ...x5.D]) }, x5.cl || "—"))}</td></tr>`)}</tbody></table>` : html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("oa", "Open actions", 1))}${raw(th2("or", "Open RAID", 1))}${raw(th2("dw", "Decisions waiting", 1))}${raw(th2("late", "Overdue", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}
+    putHTML($("#peopleTbl"), !L3.length ? html`<div class="empty">${none ? "Everyone creaite knows has something assigned." : "No one has open work or a decision waiting on them."} ${raw(howLink("people"))}</div>` : none ? html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("cl", "Closed items", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}<td class="num">${raw(countLink(`${plur(x5.cl, "closed item")} of ${x5.name}`, x5.cl, "all:closed:", { st: ["Closed", "Cancelled"], o: ownersOf([...x5.A, ...x5.R, ...x5.D]) }, x5.cl))}</td></tr>`)}</tbody></table>` : html`<table><thead><tr>${raw(th2("name", "Name"))}${raw(th2("org", "Organisation"))}${raw(th2("role", "Role"))}<th>Projects</th>${raw(th2("oa", "Open actions", 1))}${raw(th2("or", "Open RAID", 1))}${raw(th2("dw", "Decisions waiting", 1))}${raw(th2("late", "Overdue", 1))}</tr></thead><tbody>${L3.map((x5) => html`<tr class="click" data-pp="${x5.name}">${raw(nameCell(x5))}
     ${raw(personCounts(x5))}</tr>`)}</tbody></table>`);
   }
   function bootWork0148() {
@@ -38910,7 +38923,7 @@ ${s5}`;
   var latesOf = (x5) => [...x5.oa, ...x5.or].filter((i5) => i5.due && i5.due < TODAY);
   function personCounts(x5) {
     const nm3 = isMe(x5.name) ? "you" : x5.name, late = latesOf(x5);
-    return `<td class="num">${countLink(`${plur(x5.oo.length, "open action")} owned by ${nm3}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) })}</td><td class="num">${countLink(`${plur(x5.or.length, "open RAID item")} owned by ${nm3}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) })}</td><td class="num">${countLink(`${plur(x5.dw.length, "decision")} waiting on ${nm3}`, x5.dw.length, "decisions:pending:", { o: ownersOf(x5.dw) }, x5.dw.length || "—")}</td><td class="num ${x5.late ? "late" : ""}">${countLink(`${plur(late.length, "overdue item")} owned by ${nm3}`, late.length, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(late) }, late.length || "—")}</td>`;
+    return `<td class="num">${countLink(`${plur(x5.oo.length, "open action")} owned by ${nm3}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) })}</td><td class="num">${countLink(`${plur(x5.or.length, "open RAID item")} owned by ${nm3}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) })}</td><td class="num">${countLink(`${plur(x5.dw.length, "decision")} waiting on ${nm3}`, x5.dw.length, "decisions:pending:", { o: ownersOf(x5.dw) })}</td><td class="num ${x5.late ? "late" : ""}">${countLink(`${plur(late.length, "overdue item")} owned by ${nm3}`, late.length, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(late) })}</td>`;
   }
   function bootWork0150() {
   }
@@ -41569,14 +41582,14 @@ ${s5}`;
     const mine = isMe(x5.o), owner = !!(x5.o && x5.o !== "TBC"), t47 = x5.t || x5.id, L3 = [];
     if (k5 === "actions") {
       if (mine) L3.push({ id: "done", icon: "done", label: "Mark done", name: `Mark done: ${t47}`, primary: true });
-      else if (owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft a chase", name: `Draft a chase to ${who(x5.o)}: ${t47}`, primary: true });
+      else if (owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}`, primary: true });
       L3.push({ id: "move", icon: "calmove", label: "Move the date", name: `Move the date: ${t47}`, haspopup: "dialog" });
     } else if (k5 === "raid") {
       L3.push({ id: "update", icon: "pencil", label: "Write an update", name: `Write an update: ${t47}`, primary: true });
-      if (!mine && owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft a chase", name: `Draft a chase to ${who(x5.o)}: ${t47}` });
+      if (!mine && owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}` });
     } else if (k5 === "decisions") {
       if (mine) L3.push({ id: "decide", icon: "flag", label: "Record the decision", name: `Record the decision: ${t47}`, primary: true });
-      else if (owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft a chase", name: `Draft a chase to ${who(x5.o)}: ${t47}`, primary: true });
+      else if (owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}`, primary: true });
     } else if (k5 === "milestone") L3.push({ id: "open", icon: "external", label: "Open the project", name: `Open ${pName(x5.p)}, for ${t47}` });
     return L3;
   }
@@ -43987,6 +44000,11 @@ ${s5}`;
   var CXKEYAT = -1e9;
   function cxTarget(t47) {
     if (!t47 || !t47.closest) return null;
+    const pa2 = t47.closest("a[data-person]");
+    if (pa2 && !t47.closest("input,textarea,select,.rail,dialog,.cxmenu") && !isMe(pa2.dataset.person || "") && pa2.dataset.person) {
+      const row3 = pa2.closest("[data-row]"), op2 = pa2.closest("[data-open]"), id2 = row3 ? row3.dataset.row : op2 ? String(op2.dataset.open).split(":")[1] : pa2.closest("#panel") && shared.CUR && shared.CUR.mode === "record" ? pkCid() : "";
+      return { person: pa2.dataset.person, only: id2 || "", el: pa2 };
+    }
     if (t47.closest("input,textarea,select,[contenteditable=true],[contenteditable=plaintext-only],.rail,#panel,#chat,dialog,.cxmenu,.pkpop,td.editing")) return null;
     const a5 = t47.closest("a[href]");
     if (a5 && !/^#/.test(a5.getAttribute("href") || "")) return null;
@@ -44014,6 +44032,10 @@ ${s5}`;
   }
   function cxShow(c5, x5, y5) {
     const from = document.activeElement && document.activeElement !== document.body ? document.activeElement : c5.el;
+    if (c5.person) {
+      openContextMenu(cxPerson(c5.person, c5.only), x5, y5, { label: c5.person, from });
+      return;
+    }
     if (c5.gone) {
       openContextMenu(cxGone(c5.gone, c5.el), x5, y5, { label: "Rejected proposal", from });
       return;
@@ -44040,6 +44062,28 @@ ${s5}`;
       }
     }
     openContextMenu(ids.length > 1 ? cxWorkMany(ids) : cxWork(c5.k, c5.id), x5, y5, { label: ids.length > 1 ? `${ids.length} items` : c5.id, from });
+  }
+  function cxPerson(name, only) {
+    const x5 = PERS().find((y5) => y5.name === name), p6 = x5 && x5.p, email = p6 && p6.email || "", first = String(name).split(/\s+/)[0], starts = only && x5 && deItems(x5).some((i5) => i5.id === only && !deBarred(i5)) ? only : void 0, out = [];
+    out.push(
+      { label: "Draft email", icon: "mail", disabled: !email, hint: email ? "" : "No email on record: add details first", run: () => openDraftEmail(name, "update", starts) },
+      { label: `Open ${first}'s page`, icon: "user", run: () => go2("person", name) }
+    );
+    if (email) out.push({ label: "Copy email address", icon: "copy", run: () => cxCopy(email, "the email address") });
+    if (!email) out.push({ label: "Add details", icon: "pencil", run: () => {
+      go2("person", name);
+      let n4 = 0;
+      const tick = () => {
+        const b5 = $("#ppEdit");
+        if (b5) {
+          b5.click();
+          return;
+        }
+        if (++n4 < 30) requestAnimationFrame(tick);
+      };
+      tick();
+    } });
+    return out;
   }
   function cxCursor() {
     const a5 = document.activeElement;
@@ -44113,8 +44157,8 @@ ${s5}`;
     out.push({ sep: true }, { label: "Copy ID", icon: "copy", run: () => cxCopy(id2, id2) }, { label: "Copy link", icon: "link", run: () => cxCopy(cxLink(id2), `the link to ${id2}`) });
     const who2 = k5 === "decisions" ? null : pkWho(x5.o);
     if (who2 && PERS().some((p6) => p6.name === who2)) {
-      out.push({ label: `Draft email to ${who2}`, icon: "mail", run: () => openDraftEmail(who2) });
-      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: `Chase ${who2}`, icon: "mail", run: () => openDraftEmail(who2, "chase") });
+      out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2) });
+      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2, "chase") });
     }
     return out;
   }
@@ -49007,6 +49051,7 @@ ${pre}**Current state title:** ${title}`);
     openDialog(d5);
   }
   function openDraftEmail(name, mode = "update", only) {
+    shared.SENTVIA = "";
     (() => {
       const x5 = PERS().find((y5) => y5.name === name);
       if (!x5) return;
@@ -49193,7 +49238,7 @@ ${pre}**Current state title:** ${title}`);
       <div class="deopts">${shared.DE.mode === "followup" ? "" : '<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
       ${dePolishHtml()}<div id="deNote" class="denote" hidden></div>
       <div id="dePrev" contenteditable="true" role="textbox" aria-multiline="true" aria-label="The email, editable"></div>
-      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode === "chase" ? `<button class="btn" id="deSent" ${viaServer() ? "" : "disabled"} data-tip="Record that you sent this chase (the items and today's date only), so the next one steps up">I sent it</button>` : ""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
+      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode === "chase" || shared.DE.mode === "update" ? `<button class="btn" id="deSent" ${viaServer() ? "" : "disabled"} data-tip="Log that you sent it: a dated Latest update on each ticked item (the items, names and dates only, never the email)">I sent it</button>` : ""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
       $("#deDone").onclick = () => $("#deDlg").close();
       if (shared.DE.includeUpdate && $("#deUpd")) $("#deUpd").checked = true;
       if (shared.DE.replyBy) $("#deReply").value = fd(shared.DE.replyBy);
@@ -49277,31 +49322,108 @@ ${pre}**Current state title:** ${title}`);
         if (typeof ClipboardItem === "undefined" || !navigator.clipboard.write) throw new Error("no rich clipboard");
         await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html2], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
       } else await navigator.clipboard.writeText(text);
+      shared.SENTVIA = withHtml ? "email" : "message";
       deSay(btn, withHtml ? "Copied: paste it into Outlook" : "Copied as plain text", true);
     } catch (err) {
       deSelect("dePrev");
       deSay(null, `Your browser blocked copying: press ${MOD}C to copy`);
     }
   }
+  var sentKindOf = (id2) => ["actions", "raid", "decisions"].find((k5) => REC(k5, id2));
+  var SENT_FIELD = { actions: "upd", raid: "resp", decisions: "why" };
+  var sentVia = () => shared.SENTVIA === "message" ? "message" : "email";
+  function sentLine(o5) {
+    const d5 = fd(o5.today || TODAY), via = o5.via === "message" ? "message" : "email", whom = o5.name || "them", by2 = o5.replyBy ? `; reply asked for by ${fd(o5.replyBy)}` : "";
+    if (o5.confidential) return `${d5}: ${o5.mode === "update" ? "Emailed" : "Chased"} ${whom} by ${via}.`;
+    if (o5.mode === "update") return `${d5}: Emailed ${whom} by ${via} asking for an update.`;
+    if (o5.mode === "help") {
+      const need = String(o5.need || "").replace(/\s+/g, " ").replace(/\s+done\.?$/i, "").replace(/\.$/, "").trim().slice(0, 80);
+      return `${d5}: Asked ${whom} by ${via} for ${need || "help"}.`;
+    }
+    if (o5.mode === "decision") return `${d5}: Asked ${whom} for a decision by ${via}${by2}.`;
+    return `${d5}: Chased ${whom} by ${via}${o5.n ? ` (reminder ${o5.n})` : ""}${by2}.`;
+  }
+  async function sentLog(entries, o5) {
+    let ok2 = 0;
+    const mine = [];
+    const via = o5.via || sentVia(), ch2 = o5.chases || SA().chases || {}, st2 = o5.sendId ? sendState(o5.sendId) : null, failed = o5.failed || [];
+    for (const e4 of entries) {
+      if (st2 && st2.done.has(e4.id)) continue;
+      const x5 = REC(e4.k, e4.id), f5 = SENT_FIELD[e4.k];
+      if (!x5 || !f5) {
+        failed.push(e4.id);
+        continue;
+      }
+      const conf = deBarred(deItem(e4.k, x5)), line = sentLine({ name: o5.name, via, mode: o5.mode, n: (ch2[e4.id] || {}).n, replyBy: o5.replyBy, need: e4.need, confidential: conf });
+      const was = String(x5[f5] || "").trim();
+      const before = new Set(shared.PKS);
+      let good = false;
+      try {
+        good = await pkCommit(e4.k, e4.id, { [f5]: was ? line + "\n" + was : line }, "Latest update", was ? "…" : "none", line, { logNote: "Draft email: I sent it" });
+      } catch (err) {
+        good = false;
+      }
+      if (good) {
+        ok2++;
+        if (st2) st2.done.add(e4.id);
+        mine.push(...shared.PKS.filter((s5) => !before.has(s5) && s5.k === e4.k && s5.id === e4.id));
+      } else failed.push(e4.id);
+    }
+    const bad = failed.length ? ` Couldn't log ${failed.join(", ")}: press I sent it again to log just those.` : "";
+    if (!ok2) {
+      if (bad) snack(bad.trim());
+      return 0;
+    }
+    snack((ok2 === 1 ? "Logged." : `Logged on ${plur(ok2, "item")}.`) + bad, async () => {
+      for (const s5 of mine.slice().reverse()) await pkUndoLast(s5);
+    });
+    return ok2;
+  }
+  function sendState(id2) {
+    if (!shared.SENT) shared.SENT = {};
+    if (!shared.SENT[id2]) shared.SENT[id2] = { rec: /* @__PURE__ */ new Set(), done: /* @__PURE__ */ new Set() };
+    return shared.SENT[id2];
+  }
   async function deSent(btn) {
     if (!viaServer()) {
       snack("Recording a chase needs the live server");
       return;
     }
-    const ids = shared.DE.items.filter((i5) => shared.DE.picked.has(i5.k + ":" + i5.id)).map((i5) => i5.id);
-    if (!ids.length) {
-      snack("Tick the items you chased");
+    const picked = shared.DE.items.filter((i5) => shared.DE.picked.has(i5.k + ":" + i5.id));
+    if (!picked.length) {
+      snack("Tick the items you sent it about");
       return;
     }
+    if (btn.disabled) return;
+    const ids = picked.map((i5) => i5.id), mode = shared.DE.mode === "update" ? "update" : "chase", name = shared.DE.name, replyBy = shared.DE.replyBy;
+    if (!shared.DE.sendId) shared.DE.sendId = "de" + Date.now() + Math.random().toString(36).slice(2, 6);
+    const sid = shared.DE.sendId, st2 = sendState(sid), fresh = ids.filter((i5) => !st2.rec.has(i5));
     btn.disabled = true;
-    const r4 = await api("/api/chases", { ids, mode: "chase" });
-    btn.disabled = false;
-    if (!r4.ok) {
-      snack(oneLine(r4.message) || "Not recorded");
+    if (fresh.length) {
+      const r4 = await api("/api/chases", { ids: fresh, mode });
+      if (!r4.ok) {
+        btn.disabled = false;
+        snack(oneLine(r4.message) || "Not recorded");
+        return;
+      }
+      fresh.forEach((i5) => st2.rec.add(i5));
+      SA().chases = r4.chases || {};
+    }
+    const chases = SA().chases || {}, failed = [];
+    let n4 = 0;
+    try {
+      n4 = await sentLog(picked.map((i5) => ({ k: i5.k, id: i5.id })), { name, mode, replyBy, chases, sendId: sid, failed });
+    } catch (err) {
+      btn.disabled = false;
+      snack("The update couldn't be logged: press I sent it to try again");
       return;
     }
-    SA().chases = r4.chases || {};
-    deSay(btn, `Recorded: ${plur(ids.length, "item")} chased today`, true);
+    if (failed.length) {
+      btn.disabled = false;
+      return;
+    }
+    if (shared.DE && shared.DE.name === name && $("#deDlg")?.open) $("#deDlg").close();
+    if (!n4 && !st2.done.size) snack(`Recorded on ${plur(ids.length, "item")}`);
     if (shared.VIEW === "person" && shared.PERSON) renderPerson(shared.PERSON);
   }
   function deCover() {
@@ -50515,8 +50637,8 @@ ${pre}**Current state title:** ${title}`);
     const mine = isMe(d5.by), slips = dnSlips(d5), id2 = esc(d5.id);
     const title = tLink(`data-open="decisions:${id2}"`, esc(d5.t));
     const body2 = [mine ? '<span class="dnyours">Yours</span> asked of you' : `from ${esc(d5.by)}`, o5.inProject ? "" : o5.n ? projLink(d5.p) : pLink(d5.p), dnWait(d5), dnNeeded(d5)].filter(Boolean).join(" · ") + (slips.length ? `<span class="dnslip">If it stays open: ${andList(slips)}</span>` : "") + (o5.extra || "");
-    if (o5.n) return tl2(o5.n, title, body2, `<span class="tacts dnacts">${mine ? tib("flag", "Record the decision", `Record the decision: ${d5.t}`, `data-dndecide="${id2}"`, true) : tib("chasemail", "Draft a chase", `Draft a chase to ${d5.by}: ${d5.t}`, `data-dnchase="${id2}" aria-haspopup="dialog"`, true)}${tib("external", "Open", `Open ${d5.id}`, `data-open="decisions:${id2}"`)}</span>`, 'class="dnrow"');
-    const acts2 = `<span class="dnacts">${mine ? `<button type="button" class="mini" data-dndecide="${id2}" aria-label="Decide ${id2}">Decide</button>` : `<button type="button" class="mini" data-dnchase="${id2}" aria-label="Chase ${esc(d5.by)} for ${id2}" data-tip="Draft an email to ${esc(d5.by)}: nothing is sent">Chase</button>`}<button type="button" class="mini" data-open="decisions:${id2}" aria-label="Open ${id2}">Open</button></span>`;
+    if (o5.n) return tl2(o5.n, title, body2, `<span class="tacts dnacts">${mine ? tib("flag", "Record the decision", `Record the decision: ${d5.t}`, `data-dndecide="${id2}"`, true) : tib("chasemail", "Draft email", `Draft email to ${d5.by}: ${d5.t}`, `data-dnchase="${id2}" aria-haspopup="dialog"`, true)}${tib("external", "Open", `Open ${d5.id}`, `data-open="decisions:${id2}"`)}</span>`, 'class="dnrow"');
+    const acts2 = `<span class="dnacts">${mine ? `<button type="button" class="mini" data-dndecide="${id2}" aria-label="Decide ${id2}">Decide</button>` : `<button type="button" class="mini" data-dnchase="${id2}" aria-label="Draft email to ${esc(d5.by)} for ${id2}" data-tip="Draft an email to ${esc(d5.by)}: nothing is sent">Draft email</button>`}<button type="button" class="mini" data-open="decisions:${id2}" aria-label="Open ${id2}">Open</button></span>`;
     return o5.n ? tl2(o5.n, title, body2, acts2, 'class="dnrow"') : `<div class="dnrow"><div class="tb">${title}<p>${body2}</p></div>${acts2}</div>`;
   }
   var dnBlock = (L3, o5) => L3.length ? `<div class="dnlist">${L3.map((d5) => dnDecisionHtml(d5, o5)).join("")}</div>` : "";
@@ -51688,6 +51810,33 @@ ${pre}**Current state title:** ${title}`);
       noteFlush();
     } else noteTyped();
   }
+  async function noteMetaFor(path, changes) {
+    const c5 = noteCur.value;
+    if (c5 && c5.path === path) {
+      noteMeta(changes, true);
+      return true;
+    }
+    if (noteHeld.value === path) {
+      notesMsg.value = "This note waits on the approval card to be deleted: answer the card first.";
+      return false;
+    }
+    if (!viaServer()) {
+      notesMsg.value = "Changing a note needs the live server.";
+      return false;
+    }
+    const g5 = await api("/api/notes/get", { path });
+    if (!g5 || !g5.ok) {
+      notesMsg.value = oneLine(g5 && g5.message || "That note couldn't be read.");
+      return false;
+    }
+    const r4 = await api("/api/notes/save", { path, body: null, changes, base: g5.base, session: newSid() }).catch(() => null);
+    if (!r4 || !r4.ok) {
+      notesMsg.value = oneLine(r4 && r4.message || "Not saved.");
+      return false;
+    }
+    keepSummary(g5.code, r4.note);
+    return true;
+  }
   var body = () => {
     try {
       return ses.getBody ? ses.getBody() : null;
@@ -52568,7 +52717,15 @@ ${pre}**Current state title:** ${title}`);
     null
   );
   var busy = y3(false);
-  function askDeleteNote() {
+  function askDeleteNote(row2) {
+    if (row2 && !(noteCur.value && noteCur.value.path === row2.path)) {
+      if (!viaServer()) {
+        snack("Deleting a note needs the live server");
+        return;
+      }
+      noteDeleting.value = { path: row2.path, title: row2.title, code: row2.code };
+      return;
+    }
     const c5 = noteCur.value;
     if (!c5) return;
     if (!viaServer()) {
@@ -52585,13 +52742,24 @@ ${pre}**Current state title:** ${title}`);
   async function deleteNote(n4) {
     busy.value = true;
     try {
-      if (!await noteFlush()) {
+      const open2 = !!(noteCur.value && noteCur.value.path === n4.path);
+      if (open2 && !await noteFlush()) {
         noteDeleting.value = null;
         notesMsg.value = "Not deleted: the note isn't saved yet (the line in its header says why).";
         return false;
       }
       const cur = noteCur.value;
-      const r4 = await api("/api/notes/delete", { path: n4.path, base: cur && cur.path === n4.path ? cur.base : "" });
+      let base = cur && cur.path === n4.path ? cur.base : "";
+      if (!open2) {
+        const g5 = await api("/api/notes/get", { path: n4.path });
+        if (!g5 || !g5.ok) {
+          noteDeleting.value = null;
+          snack(oneLine(g5 && g5.message || "Not deleted."));
+          return false;
+        }
+        base = g5.base;
+      }
+      const r4 = await api("/api/notes/delete", { path: n4.path, base });
       noteDeleting.value = null;
       if (!r4 || !r4.ok || !r4.card) {
         snack(oneLine(r4 && r4.message || "Not deleted."));
@@ -52705,6 +52873,23 @@ ${pre}**Current state title:** ${title}`);
         /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "ndelGo", disabled: busy.value, onClick: () => deleteNote(n4), children: busy.value ? "Working…" : "Delete note" })
       ] })
     ] }) : null });
+  }
+
+  // components/notes/noteMenu.js
+  function noteMenuItems({ pinned, confidential, path }) {
+    return [
+      { id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
+      { id: "conf", name: confidential ? "Not confidential" : "Mark confidential", line: confidential ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
+      { id: "file", name: "Show the file", line: path, icon: "folder" },
+      { id: "sep", sep: true },
+      { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }
+    ];
+  }
+  function noteMenuPick(id2, { pinned, confidential, path, title, code }, onOpenFile) {
+    if (id2 === "pin") noteMetaFor(path, { pinned: !pinned });
+    else if (id2 === "conf") noteMetaFor(path, { confidential: !confidential });
+    else if (id2 === "del") askDeleteNote({ path, title, code });
+    else onOpenFile(path);
   }
 
   // components/notes/NoteHeader.jsx
@@ -53609,23 +53794,63 @@ ${pre}**Current state title:** ${title}`);
     );
     return pick(all[code]) || Object.values(all).map(pick).find(Boolean) || null;
   }
-  function NotesList({ code, onOpen }) {
+  function NotesList({ code, onOpen, onOpenFile }) {
     const open2 = notesListOpen.value, q5 = notesQuery.value.trim().toLowerCase(), cur = noteCur.value;
     const L3 = notesList.value.filter((n4) => !q5 || n4.title.toLowerCase().includes(q5) || n4.tags.some((t47) => t47.toLowerCase().includes(q5)));
     const pinned = L3.filter((n4) => n4.pinned), recent = L3.filter((n4) => !n4.pinned);
+    const rowMenu = (e4, n4, x5, y5) => {
+      e4.preventDefault();
+      e4.stopPropagation();
+      const btn = (
+        /** @type {HTMLElement} */
+        e4.currentTarget
+      );
+      const st2 = { pinned: !!n4.pinned, confidential: !!n4.confidential, path: n4.path, title: n4.title, code };
+      openMenu(btn, {
+        label: "Note",
+        cls: "nrowmenu",
+        at: { x: x5, y: y5 },
+        items: noteMenuItems(st2),
+        onPick: (id2) => {
+          noteMenuPick(id2, st2, onOpenFile);
+          if (id2 === "pin" || id2 === "conf") setTimeout(() => {
+            if (btn.isConnected) btn.focus({ preventScroll: true });
+          }, 0);
+        }
+      });
+    };
     const row2 = (
       /** @param {NoteSummary} n */
-      (n4) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2("button", { type: "button", class: `ni${cur && cur.path === n4.path ? " on" : ""}`, "aria-current": cur && cur.path === n4.path ? "page" : void 0, onClick: () => onOpen(n4.path), children: [
-        /* @__PURE__ */ u2("b", { children: [
-          n4.pinned ? /* @__PURE__ */ u2("span", { class: "pin", "aria-hidden": "true", children: "◆ " }) : null,
-          n4.title
-        ] }),
-        /* @__PURE__ */ u2("small", { children: [
-          when(n4),
-          n4.kind ? ` · ${n4.kind}` : "",
-          n4.confidential ? /* @__PURE__ */ u2("span", { class: "conf", children: " · Confidential" }) : null
-        ] })
-      ] }) }, n4.path)
+      (n4) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: `ni${cur && cur.path === n4.path ? " on" : ""}`,
+          "aria-current": cur && cur.path === n4.path ? "page" : void 0,
+          onClick: () => onOpen(n4.path),
+          onContextMenu: (e4) => {
+            const r4 = e4.currentTarget.getBoundingClientRect();
+            rowMenu(e4, n4, e4.clientX || r4.left + 24, e4.clientY || r4.bottom);
+          },
+          onKeyDown: (e4) => {
+            if (e4.key === "ContextMenu" || e4.key === "F10" && e4.shiftKey) {
+              const r4 = e4.currentTarget.getBoundingClientRect();
+              rowMenu(e4, n4, r4.left + 24, r4.bottom);
+            }
+          },
+          children: [
+            /* @__PURE__ */ u2("b", { children: [
+              n4.pinned ? /* @__PURE__ */ u2("span", { class: "pin", "aria-hidden": "true", children: "◆ " }) : null,
+              n4.title
+            ] }),
+            /* @__PURE__ */ u2("small", { children: [
+              when(n4),
+              n4.kind ? ` · ${n4.kind}` : "",
+              n4.confidential ? /* @__PURE__ */ u2("span", { class: "conf", children: " · Confidential" }) : null
+            ] })
+          ]
+        }
+      ) }, n4.path)
     );
     const label = open2 ? "Hide the notes list" : "Show the notes list";
     return /* @__PURE__ */ u2("aside", { class: "nlist", "aria-label": "Notes", children: [
@@ -53989,19 +54214,8 @@ ${pre}**Current state title:** ${title}`);
                     menuLabel: "Note",
                     left: false,
                     cls: "nmorewrap",
-                    items: [
-                      { id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
-                      { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
-                      { id: "file", name: "Show the file", line: n4.path, icon: "folder" },
-                      { id: "sep", sep: true },
-                      { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }
-                    ],
-                    onPick: (id2) => {
-                      if (id2 === "pin") noteMeta({ pinned: !pinned }, true);
-                      else if (id2 === "conf") noteMeta({ confidential: !conf }, true);
-                      else if (id2 === "del") askDeleteNote();
-                      else onOpenFile(n4.path);
-                    }
+                    items: noteMenuItems({ pinned, confidential: conf, path: n4.path }),
+                    onPick: (id2) => noteMenuPick(id2, { pinned, confidential: conf, path: n4.path, title: n4.title, code: cur.code }, onOpenFile)
                   }
                 )
               ] }),
@@ -54247,7 +54461,7 @@ ${pre}**Current state title:** ${title}`);
       notesMsg.value ? /* @__PURE__ */ u2("div", { class: "nmsg", role: "status", children: notesMsg.value }) : null,
       !viaServer() ? /* @__PURE__ */ u2("div", { class: "nmsg", role: "status", children: "Notes open and save through the live server. Start it to edit; the list is as of the last build." }) : null,
       /* @__PURE__ */ u2("div", { class: `nsplit${notesListOpen.value ? "" : " collapsed"}${noteFind.value && noteCur.value ? " finding" : ""}`, id: "notesSplit", children: [
-        /* @__PURE__ */ u2(NotesList, { code, onOpen: openPath2 }),
+        /* @__PURE__ */ u2(NotesList, { code, onOpen: openPath2, onOpenFile }),
         /* @__PURE__ */ u2(NoteDoc, { code, onOpen: openPath2, onOpenItem, onNew: (t47) => setDlg(t47), onOpenFile }),
         /* @__PURE__ */ u2(NoteSide, { code, onOpen: openPath2, onOpenItem })
       ] }),
@@ -54525,6 +54739,12 @@ ${pre}**Current state title:** ${title}`);
     );
     const [anyOpen, setAnyOpen] = d2(false);
     const [anyQ, setAnyQ] = d2("");
+    const sending = A2(false);
+    const sendId = A2("pn" + Date.now() + Math.random().toString(36).slice(2, 6));
+    const viaRef = A2(
+      /** @type {"email"|"message"} */
+      "email"
+    );
     const seq2 = A2(0), mail = A2(
       /** @type {HTMLDivElement | null} */
       null
@@ -54547,7 +54767,7 @@ ${pre}**Current state title:** ${title}`);
     }, []);
     h2(() => {
       if (!viaServer()) {
-        setErr("Draft chase needs the live server: start it, then try again.");
+        setErr("Draft email needs the live server: start it, then try again.");
         return void 0;
       }
       const n4 = ++seq2.current;
@@ -54574,7 +54794,7 @@ ${pre}**Current state title:** ${title}`);
     const say2 = (text, ok2 = true) => setSaid({ text, ok: ok2 });
     const head = /* @__PURE__ */ u2("h2", { class: "ch-h", children: [
       /* @__PURE__ */ u2("button", { type: "button", class: "ib", ref: back2, "aria-label": "Back to the item", "data-tip": "Back to the item", onClick: onBack, children: /* @__PURE__ */ u2(ShapesIcon, { shapes: BACK_ICON }) }),
-      "Draft chase · ",
+      "Draft email · ",
       /* @__PURE__ */ u2("span", { class: "sub", children: id2 })
     ] });
     if (!pane) return /* @__PURE__ */ u2("div", { class: "chase", children: [
@@ -54592,6 +54812,7 @@ ${pre}**Current state title:** ${title}`);
         if (!el2 || typeof ClipboardItem === "undefined" || !navigator.clipboard || !navigator.clipboard.write) throw new Error("no rich clipboard");
         const markup = new XMLSerializer().serializeToString(el2);
         await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([markup], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
+        viaRef.current = "email";
         say2("Copied. Paste into a new Outlook email.");
       } catch (e4) {
         selectAll(el2);
@@ -54604,6 +54825,7 @@ ${pre}**Current state title:** ${title}`);
         await navigator.clipboard.writeText(`${d5.subject}
 
 ${d5.text}`);
+        viaRef.current = "message";
         say2("Copied as plain text.");
       } catch (e4) {
         selectAll(mail.current);
@@ -54678,23 +54900,41 @@ ${d5.text}`);
       setSaid(had ? { text: "You changed the wording, so the polished version was dropped. Polish again if you want it.", ok: true } : { text: "", ok: true });
     }
     async function sentIt() {
+      if (sending.current) return;
+      sending.current = true;
       setBusy(true);
-      const r4 = await api("/api/chases", { ids: [id2], mode });
-      setBusy(false);
-      if (!r4 || !r4.ok) {
-        say2(r4 && r4.message || "Not recorded", false);
+      const st2 = sendState(sendId.current);
+      let r4 = (
+        /** @type {any} */
+        { ok: true, chases: SA().chases || {}, record: null }
+      );
+      if (!st2.rec.has(id2)) {
+        r4 = await api("/api/chases", { ids: [id2], mode });
+        if (!r4 || !r4.ok) {
+          sending.current = false;
+          setBusy(false);
+          say2(r4 && r4.message || "Not recorded", false);
+          return;
+        }
+        st2.rec.add(id2);
+        SA().chases = r4.chases || {};
+      }
+      const k5 = sentKindOf(id2);
+      const who2 = pane.to.name || pane.to.first || "them";
+      let done = 0;
+      try {
+        done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {}, sendId: sendId.current }) : 0;
+      } catch (err2) {
+        sending.current = false;
+        setBusy(false);
+        snack("The update couldn't be logged: press I sent it to try again");
         return;
       }
-      SA().chases = r4.chases || {};
-      const n4 = ((r4.chases || {})[id2] || {}).n || 1, when2 = fd(r4.record && r4.record.date || TODAY);
+      if (!done) snack(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be staged.`);
       dropPolish();
-      setOpts((o5) => {
-        const { tone: _t2, cover: _c2, ...rest } = o5;
-        return rest;
-      });
-      say2(`Recorded: chased ${pane.to.first || pane.to.name || "them"} on ${when2}. The next one will be a ${n4 >= 2 ? "firmer" : "second"} reminder.`);
+      onBack();
     }
-    return /* @__PURE__ */ u2("div", { class: "chase", role: "region", "aria-label": `Draft chase for ${id2}`, children: [
+    return /* @__PURE__ */ u2("div", { class: "chase", role: "region", "aria-label": `Draft email for ${id2}`, children: [
       head,
       /* @__PURE__ */ u2("div", { class: "ch-mode", children: [
         /* @__PURE__ */ u2("span", { class: `tag ch-tag${help ? " ok" : ""}`, children: pane.mode_tag }),
@@ -54859,7 +55099,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "ch-acts", children: [
         /* @__PURE__ */ u2("span", { class: `ch-said${said2.ok ? "" : " fail"}`, role: "status", "aria-live": "polite", children: said2.text }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chCopyText", onClick: copyText, children: "Copy as text" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy2, "data-tip": "Record that you sent it (the item and today's date only), so the next one steps up", onClick: sentIt, children: "I sent it" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy2, "data-tip": "Log that you sent it: a dated Latest update on the item, and the next one steps up (no email text is kept)", onClick: sentIt, children: "I sent it" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "chCopyHtml", onClick: copyOutlook, children: "Copy for Outlook" })
       ] })
     ] });
@@ -56329,6 +56569,7 @@ ${d5.text}`);
   }
   var PKMON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   var pkDow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var pkIdText = (id2, x5) => `${id2}  ${String(x5 && x5.t || "").replace(/\s+/g, " ").trim()}`.trimEnd();
   var pkSame = (a5, b5) => typeof b5 === "boolean" ? !!a5 === b5 : String(a5 ?? "").trim() === String(b5 ?? "").trim();
   shared.PKQ = Promise.resolve();
   function pkCommit(k5, id2, patch, label, from, to2, o5 = {}) {
@@ -56418,6 +56659,7 @@ ${d5.text}`);
       if (!await needVault()) return back2("");
       const first = !shared.PKS.some((s5) => s5.k === k5 && s5.id === id2), item = { op: "update", table: k5, id: id2, changes: toDb(k5, P22) };
       if (first && x5.updated_at) item.based_on = x5.updated_at;
+      if (o5.logNote) item.note = o5.logNote;
       pkSaving("busy");
       let name;
       const items2 = [...o5.pre || [], item];
@@ -56644,7 +56886,7 @@ ${d5.text}`);
         label: "More",
         id: "pkMoreMenu",
         align: "right",
-        items: [{ id: "done", name: k5 === "decisions" ? "Mark as made" : "Mark done", icon: "check", disabled: !can, line: can ? "" : "Already complete" }, { id: "ask", name: "ask creaite about this", icon: "chat" }, { id: "id", name: "Copy ID", icon: "copy" }],
+        items: [{ id: "done", name: k5 === "decisions" ? "Mark as made" : "Mark done", icon: "check", disabled: !can, line: can ? "" : "Already complete" }, { id: "ask", name: "ask creaite about this", icon: "chat" }, { id: "id", name: "Copy ID and title", icon: "copy" }],
         onPick: (v5) => {
           if (v5 === "done") pkSetStatus(k5, id2, k5 === "decisions" ? "Made" : "Closed");
           if (v5 === "ask") {
@@ -56659,9 +56901,9 @@ ${d5.text}`);
             }, 60);
           }
           if (v5 === "id") {
-            const done = () => snack(`Copied ${id2}`);
-            if (navigator.clipboard) navigator.clipboard.writeText(id2).then(done, () => prompt("Copy this ID:", id2));
-            else prompt("Copy this ID:", id2);
+            const txt = pkIdText(id2, x5), done = () => snack(`Copied ${id2} and its title`);
+            if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, () => prompt("Copy this ID and title:", txt));
+            else prompt("Copy this ID and title:", txt);
           }
         }
       });
@@ -56804,9 +57046,13 @@ ${d5.text}`);
       $("#pkApply").disabled = false;
     }
   }
-  async function pkUndoLast() {
+  async function pkUndoLast(only) {
     await shared.PKQ;
-    const s5 = shared.PKS[shared.PKS.length - 1];
+    const s5 = only || shared.PKS[shared.PKS.length - 1];
+    if (only && !shared.PKS.includes(only)) {
+      snack("Already applied or undone");
+      return;
+    }
     await (async () => {
       if (!s5) return;
       let ok2 = false;
@@ -56822,7 +57068,10 @@ ${d5.text}`);
       } catch (e4) {
         ok2 = false;
       }
-      shared.PKS.pop();
+      {
+        const i5 = shared.PKS.indexOf(s5);
+        if (i5 >= 0) shared.PKS.splice(i5, 1);
+      }
       if (!ok2) {
         pkPersist();
         refreshAll();
@@ -58409,7 +58658,7 @@ ${d5.text}`);
   }
   function bootPanelChase() {
     ICONS.chase = CHASE_ICON.map(([tag, a5]) => `<${tag}${Object.entries(a5).map(([n4, v5]) => ` ${n4}="${v5}"`).join("")}/>`).join("");
-    addHTML($("#pkLink"), "beforebegin", raw(ibtn("chase", "Draft chase", 'id="pkChaseBtn" aria-pressed="false" hidden', "", "C")));
+    addHTML($("#pkLink"), "beforebegin", raw(ibtn("chase", "Draft email", 'id="pkChaseBtn" aria-pressed="false" hidden', "", "C")));
     addHTML($("#pkScroll"), "afterend", html`<div class="pk-scroll pk-chase" id="pkChase" hidden></div>`);
     $("#pkChaseBtn").onclick = () => chaseIsOpen() ? chaseClose(true) : chaseOpen();
     PKDRAW.push(chaseDraw);
@@ -72147,7 +72396,9 @@ ${d5.text}`);
         "curObj",
         "curRefine",
         "cxPeople",
+        "cxPerson",
         "cxReview",
+        "cxWork",
         "dateHint",
         "dayList",
         "dayShown",
@@ -72166,6 +72417,7 @@ ${d5.text}`);
         "diagHook",
         "dispOpen",
         "dispReset",
+        "dnBlock",
         "dnHtml",
         "dnList",
         "draftBtn",
@@ -72403,6 +72655,7 @@ ${d5.text}`);
         "pkDraw",
         "pkEdMount",
         "pkFeed",
+        "pkIdText",
         "pkLast",
         "pkNote",
         "pkOn",
@@ -72516,6 +72769,7 @@ ${d5.text}`);
         "seeAll",
         "send",
         "sensitive",
+        "sentLog",
         "setChatWidth",
         "setLayout",
         "setLive",
