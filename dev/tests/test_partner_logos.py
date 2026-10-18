@@ -124,11 +124,11 @@ class Kinds(unittest.TestCase):
         for f in self.d.glob("*"):
             f.unlink()
         self.mem = self.v.root / ABC / "CLAUDE.md"
-        self.base = re.sub(r"- \*\*(Partners|Client report logos):\*\*[^\n]*\n", "", self.mem.read_text())
+        self.text0 = re.sub(r"- \*\*(Partners|Client report logos):\*\*[^\n]*\n", "", self.mem.read_text())
         self.partners("")
 
     def partners(self, line, logos=None):
-        text = self.base + (f"- **Partners:** {line}\n" if line else "") + (f"- **Client report logos:** {logos}\n" if logos else "")
+        text = self.text0 + (f"- **Partners:** {line}\n" if line else "") + (f"- **Client report logos:** {logos}\n" if logos else "")
         self.mem.write_text(text)
 
     def put(self, name, data=PNG):
@@ -224,11 +224,11 @@ class Routes(unittest.TestCase):
         for f in self.d.glob("*"):
             f.unlink()
         self.mem = self.v.root / ABC / "CLAUDE.md"
-        self.base = re.sub(r"- \*\*(Partners|Client report logos):\*\*[^\n]*\n", "", self.mem.read_text())
+        self.text0 = re.sub(r"- \*\*(Partners|Client report logos):\*\*[^\n]*\n", "", self.mem.read_text())
         self.partners("Acme Labs; Beta Works")
 
     def partners(self, line):
-        self.mem.write_text(self.base + (f"- **Partners:** {line}\n" if line else ""))
+        self.mem.write_text(self.text0 + (f"- **Partners:** {line}\n" if line else ""))
 
     def save(self, kind, ext="png", original=PNG, drawn=None):
         return self.post("/api/report/logo/save", {"code": "ABC", "kind": kind, "ext": ext, "original": b64(original),

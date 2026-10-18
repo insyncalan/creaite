@@ -78,7 +78,7 @@ def memory(folder):
 # Three lines in the project's CLAUDE.md beside the rhythm, written by the dashboard's settings save: "**Client report:** on|off",
 # "**Client report reminder:** on|off" and "**Client report logos:** firm, client, partner". A missing line is the old behaviour:
 # the client report on (existing projects), its reminder on and every logo. A new project is made with the report off.
-CLIENT_LOGO_KINDS = ("firm", "client", "partner")
+# #228 B: a fourth line, "**Partners:** Org A; Org B", lists the partner organisations; each has its own logo kind `partner:<slug>`.
 
 
 def _live_text(text):
@@ -105,12 +105,61 @@ def _on_off(text, label, default=True):
     return default if not m else m.group(1).strip().lower() != "off"
 
 
+PARTNERS_MAX = 12            # the most partner organisations one project lists (one logo each)
+PARTNER_NAME_MAX = 80
+
+
+def _slug_of(name):
+    """A partner organisation's name as a file-name slug: lower case, letters and digits joined by single hyphens, accents folded,
+    at most 40 characters. A name with no letter or digit in it (another script) gets `x` and six hex digits of its own hash, so the
+    slug is never empty and stays the same. A slug ending in `original` gets `-x`, so no partner's file can be another's `-original`."""
+    import hashlib
+    import unicodedata
+    folded = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-z0-9]+", "-", folded.lower()).strip("-")[:40].strip("-")
+    if not slug:
+        return "x" + hashlib.sha1(str(name).encode("utf-8")).hexdigest()[:6]
+    return slug[:38].strip("-") + "-x" if re.search(r"(^|-)original$", slug) else slug
+
+
+def partners_of(text):
+    """[{name, slug}] from a CLAUDE.md's "- **Partners:** Org A; Org B" line, in line order. Empty items are dropped, spaces collapsed;
+    a repeated slug takes -2, -3 (in line order); at most PARTNERS_MAX. The one place a slug is made: the server sends it to the page."""
+    m = re.search(r"\*\*Partners:\*\*[ \t]*([^\n]*)", _live_text(text))
+    out, seen = [], set()
+    for raw in (m.group(1).split(";") if m else []):
+        name = re.sub(r"\s+", " ", raw).strip()[:PARTNER_NAME_MAX].strip()
+        if not name:
+            continue
+        base = slug = _slug_of(name)
+        n = 1
+        while slug in seen:
+            n += 1
+            slug = f"{base[:40 - len(str(n)) - 1].strip('-')}-{n}"
+        seen.add(slug)
+        out.append({"name": name, "slug": slug})
+        if len(out) >= PARTNERS_MAX:
+            break
+    return out
+
+
+def logo_kinds_of(partners):
+    """The logo kinds a project has, the firm's first: firm, client, then one `partner:<slug>` for each partner in line order, or the
+    one old `partner` when it lists none."""
+    return ["firm", "client"] + ([f"partner:{p['slug']}" for p in partners] or ["partner"])
+
+
 def client_report_setting(text):
-    """{client_report, client_reminder, logos} from a CLAUDE.md text; the firm's logo is always in `logos`."""
+    """{client_report, client_reminder, logos, partners} from a CLAUDE.md text; the firm's logo is always in `logos`. A partner's logo
+    is `partner:<slug>`; a bare `partner` in the line means every partner (no line at all: everything is ticked)."""
     m = re.search(r"\*\*Client report logos:\*\*[ \t]*([^\n]*)", _live_text(text))
-    chosen = {w.strip().lower() for w in m.group(1).split(",")} if m else set(CLIENT_LOGO_KINDS)
+    partners = partners_of(text)
+    kinds = logo_kinds_of(partners)
+    chosen = {w.strip().lower() for w in m.group(1).split(",")} if m else set(kinds)
+    if "partner" in chosen:
+        chosen |= {k for k in kinds if k.startswith("partner")}
     return {"client_report": _on_off(text, "Client report"), "client_reminder": _on_off(text, "Client report reminder"),
-            "logos": [k for k in CLIENT_LOGO_KINDS if k == "firm" or k in chosen]}
+            "logos": [k for k in kinds if k == "firm" or k in chosen], "partners": partners}
 
 
 def client_gap(p):
@@ -1694,7 +1743,7 @@ def collect(now=None, timings=None):
                          "reason": p["health_reason"] or "", "trail": [h for h, _ in tw], "trailwhy": [w for _, w in tw],
                          "trailend": trail_dates(today), "slip": slip,
                          "rhythm": mem["rhythm"], "cstitle": mem["cstitle"], "cr": mem["client_report"], "crrem": mem["client_reminder"],
-                         "crlogos": mem["logos"], "ms": ms, "current": mem["current"], "images": mem["images"],
+                         "crlogos": mem["logos"], "partners": mem["partners"], "ms": ms, "current": mem["current"], "images": mem["images"],
                          "sponsor": p["sponsor"] or "", "phase": p["phase"] or "",
                          "undated": undated_counts(actions, raid, p["code"]),       # BL-95
                          "seq": int(tracker.next_id(con, "promises", p["code"])[-3:]) - 1,   # shared numbering

@@ -492,10 +492,12 @@ def logo_route(handler, req):
         f = paths.resolve(stored)
         if f.suffix.lower() in LOGO_TYPES and f.is_file() and not f.is_symlink() and f.stat().st_size <= LOGO_MAX:
             out[stored] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
-    return answer(handler, {"ok": True, "logos": out, "list": list(known.values())})
+    return answer(handler, {"ok": True, "logos": out, "list": list(known.values()),
+                            "partners": [{"kind": "partner:" + p["slug"], **p} for p in report_doc.partners(code)]})
 
 
-LOGO_KIND_NAMES = ("firm", "client", "partner")
+def _plain_list(names):
+    return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else (names[0] if names else "")
 JPEG_HINT = "A transparent PNG or SVG sits better. The picture is kept as it is."
 
 
@@ -536,21 +538,34 @@ def _logo_change(handler, ch):
 def _logo_target(req):
     """(code, kind, stem) of a logo request; raises ReportError for a project or kind creaite doesn't know."""
     code, kind = str(req.get("code") or ""), req.get("kind")
-    if not report_doc.CODE.match(code) or kind not in LOGO_KIND_NAMES:
-        raise report_doc.ReportError("Say which project and which logo: firm, client or partner.")
+    if not report_doc.CODE.match(code) or not isinstance(kind, str) or not report_doc.LOGO_KIND.match(kind):
+        raise report_doc.ReportError("Say which project and which logo: firm, client or a partner.")
     try:
         paths.project_dir(code)
     except LookupError:
         raise report_doc.ReportError(f"{code} isn't a project creaite knows.") from None
-    return code, kind, "firm" if kind == "firm" else f"{code}-{kind}"
+    names = [p["name"] for p in report_doc.partners(code)]
+    if kind == "partner" and names:
+        raise report_doc.ReportError(f"This project lists its partners ({_plain_list(names)}). Say which partner the logo is for.")
+    if kind.startswith("partner:") and kind not in report_doc.logo_kinds(code):
+        listed = f"Its Partners line has {_plain_list(names)}." if names else "It has no Partners line, so no partner has a logo yet."
+        raise report_doc.ReportError(f"That partner isn't in this project's Partners line. {listed} Nothing was saved.")
+    return code, kind, report_doc.logo_stems(code, kind)[0]
 
 
-def _logo_files(stem):
-    """Every logo file of that name now in the logos folder: the picture drawn and the original kept."""
+def _logo_files(stems):
+    """Every logo file of those names (a stem or a list of them) now in the logos folder: the picture drawn and the original kept."""
+    stems = [stems] if isinstance(stems, str) else list(stems)
+    names = set(stems) | {f"{s}-original" for s in stems}
     if not paths.REPORT_LOGOS.is_dir():
         return []
     return [f for f in sorted(paths.REPORT_LOGOS.iterdir())
-            if f.is_file() and f.suffix.lower() in report_doc.LOGO_EXT and f.stem in (stem, f"{stem}-original")]
+            if f.is_file() and f.suffix.lower() in report_doc.LOGO_EXT and f.stem in names]
+
+
+def _kind_label(code, kind):
+    """What a logo is called to Alan: firm, client, or the partner's own name."""
+    return next((p["name"] for p in report_doc.partners(code) if "partner:" + p["slug"] == kind), kind)
 
 
 def _logo_refusal(req):
@@ -575,15 +590,16 @@ def _logo_refusal(req):
     return raw, drawn, kind_of, None
 
 
-def _logo_links(stem, names):
+def _logo_links(stems, names):
     """Whether the logos folder, or a file in it with this logo's name (or one about to be written), is a symbolic link."""
     folder = paths.REPORT_LOGOS
     if folder.is_symlink():
         return True
     if not folder.is_dir():
         return False
-    return any(f.is_symlink() for f in folder.iterdir()
-               if f.stem in (stem, f"{stem}-original") or f.name in names)
+    stems = [stems] if isinstance(stems, str) else list(stems)
+    mine = set(stems) | {f"{s}-original" for s in stems}
+    return any(f.is_symlink() for f in folder.iterdir() if f.stem in mine or f.name in names)
 
 
 def logo_save_route(handler, req):
@@ -596,22 +612,23 @@ def logo_save_route(handler, req):
         return refuse(handler, why)
     ext = "jpg" if kind_of == "jpg" else kind_of
     keep = [(f"{stem}-original.{ext}", raw), (f"{stem}.png", drawn)] if drawn and kind_of != "svg" else [(f"{stem}.{ext}", raw)]
-    if _logo_links(stem, {n for n, _d in keep}):
+    stems, label = report_doc.logo_stems(code, kind), _kind_label(code, kind)
+    if _logo_links(stems, {n for n, _d in keep}):
         return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut and try again. "
                                "Nothing was saved.")
     for name, data in keep:                                        # the new files first: a failed write leaves the old logo standing
         target = paths.REPORT_LOGOS / name
         ch = {"op": "edit" if target.exists() else "create", "path": paths.rel(target), "data": data,
-              "why": f"{kind.capitalize()} logo added or changed from the report settings"}
+              "why": f"{label.capitalize()} logo added or changed from the report settings"}
         err = _logo_change(handler, ch)
         if err:
             return err
-    for old in _logo_files(stem):                                  # then a stale file of another type must not win
+    for old in _logo_files(stems):                                 # then a stale file of another type (or the old partner file) must not win
         if old.name not in dict(keep):
-            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {kind} logo"})
+            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {label} logo"})
             if err:
                 return err
-    out = {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is saved."}
+    out = {"ok": True, "logos": report_doc.logos(code), "message": f"The {label} logo is saved."}
     if kind_of == "jpg":
         out["hint"] = JPEG_HINT
     return answer(handler, out)
@@ -620,14 +637,15 @@ def logo_save_route(handler, req):
 def logo_remove_route(handler, req):
     """POST /api/report/logo/remove (see the module's description)."""
     code, kind, stem = _logo_target(req)
-    if _logo_links(stem, set()):
+    stems, label = report_doc.logo_stems(code, kind), _kind_label(code, kind)
+    if _logo_links(stems, set()):
         return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut yourself. "
                                "Nothing was removed.")
-    for old in _logo_files(stem):
-        err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Removed the {kind} logo"})
+    for old in _logo_files(stems):
+        err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Removed the {label} logo"})
         if err:
             return err
-    return answer(handler, {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is removed."})
+    return answer(handler, {"ok": True, "logos": report_doc.logos(code), "message": f"The {label} logo is removed."})
 
 
 IMAGE_MAX = 2 * 1024 * 1024        # the same cap as a note's picture (live_server.UPLOAD_LIMIT)
