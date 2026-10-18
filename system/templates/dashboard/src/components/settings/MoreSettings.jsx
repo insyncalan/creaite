@@ -7,6 +7,7 @@
    rows. */
 import { useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
+import { railSizeNorm } from "../../stores/rail.js";
 import { catalogue, query, saveSettings } from "../../stores/settings.js";
 import { settingHasAll, settingWords } from "./Essentials.jsx";
 import { rowId, SettingRow } from "./SettingRow.jsx";
@@ -15,7 +16,8 @@ import { rowId, SettingRow } from "./SettingRow.jsx";
 const LIMITS = { "assistant.run_timeout_minutes": [1, 240], "logging.max_mb": [1, 500], "logging.keep_days": [1, 90],
   "search.debounce_ms": [0, 2000], "search.ask_budget_chars": [1000, 200000], "review.spot_check_every": [0, 100],
   "logging.repeat_window_hours": [1, 168], "live_mode.health_check_seconds": [5, 3600] };
-const CHOICES = { "dashboard.generate_days": [7, 14, 30], "logging.level": ["info", "debug"] };
+const CHOICES = { "dashboard.generate_days": [7, 14, 30], "logging.level": ["info", "debug"],
+  "dashboard.rail_icon_size": ["small", "medium", "large"] };   /* #182 */
 
 /** A value as words. @param {any} v */
 export function settingShown(v) {
@@ -43,9 +45,9 @@ function One({ s }) {
   if (!s.resettable) control = <code class="setval">{settingShown(v)}</code>;
   else if (CHOICES[s.key]) {
     control = (
-      <select {...named} value={String(v)} onChange={e => { const el = /** @type {HTMLSelectElement} */ (e.currentTarget);
+      <select {...named} value={s.key === "dashboard.rail_icon_size" ? railSizeNorm(v) : String(v)} onChange={e => { const el = /** @type {HTMLSelectElement} */ (e.currentTarget);
         const nv = typeof d === "number" ? Number(el.value) : el.value; save(nv, () => { el.value = String(v); }); }}>
-        {CHOICES[s.key].map(o => <option value={String(o)}>{String(o)}</option>)}
+        {CHOICES[s.key].map(o => <option value={String(o)}>{s.key === "dashboard.rail_icon_size" ? String(o).replace(/^./, c => c.toUpperCase()) : String(o)}</option>)}
       </select>
     );
   } else if (typeof d === "boolean") {

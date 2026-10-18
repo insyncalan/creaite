@@ -161,6 +161,8 @@ CATALOGUE = {
     "dashboard.rail_labels": ("Look and help", "Labels when collapsed",
                              "A name under each icon when the left rail is collapsed. Off: icons only.",
                              "On: you can tell the pages apart without pointing at them; the collapsed rail is only 20px wider."),
+    "dashboard.rail_icon_size": ("Look and help", "Icon size", "Small, medium or large icons in the left rail.",
+                                 "Small is the size the rail has always had."),
     "dashboard.files_show_inbox": ("Work and views", "Files: show Intake", "List the files waiting in Intake on Files.",
                                    "On: a waiting transcript should be seen."),
     "dashboard.files_show_portfolio": ("Work and views", "Files: show the portfolio", "List the portfolio's own meetings on Files.",
