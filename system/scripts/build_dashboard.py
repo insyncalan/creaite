@@ -81,15 +81,33 @@ def memory(folder):
 CLIENT_LOGO_KINDS = ("firm", "client", "partner")
 
 
+def _live_text(text):
+    """The memory text without its code fences and quoted lines (#233 L4: a line shown as an example is not the setting)."""
+    out, fence = [], ""
+    for line in (text or "").split("\n"):
+        f = re.match(r" {0,3}(`{3,}|~{3,})", line)
+        if fence:
+            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence) and re.fullmatch(r" {0,3}[`~]+\s*", line.rstrip("\r")):
+                fence = ""
+            continue
+        if f:
+            fence = f.group(1)
+            continue
+        if not line.lstrip(" \t").startswith(">"):
+            out.append(line)
+    return "\n".join(out)
+
+
 def _on_off(text, label, default=True):
     """True or False from a "**<label>:** on|off" line; `default` when there is none."""
+    text = _live_text(text)
     m = re.search(r"\*\*" + re.escape(label) + r":\*\*[ \t]*([A-Za-z]+)", text or "")
     return default if not m else m.group(1).strip().lower() != "off"
 
 
 def client_report_setting(text):
     """{client_report, client_reminder, logos} from a CLAUDE.md text; the firm's logo is always in `logos`."""
-    m = re.search(r"\*\*Client report logos:\*\*[ \t]*([^\n]*)", text or "")
+    m = re.search(r"\*\*Client report logos:\*\*[ \t]*([^\n]*)", _live_text(text))
     chosen = {w.strip().lower() for w in m.group(1).split(",")} if m else set(CLIENT_LOGO_KINDS)
     return {"client_report": _on_off(text, "Client report"), "client_reminder": _on_off(text, "Client report reminder"),
             "logos": [k for k in CLIENT_LOGO_KINDS if k == "firm" or k in chosen]}

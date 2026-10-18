@@ -85,6 +85,26 @@ def project_client(code):
     return name or None
 
 
+CLIENT_OFF = "This project has no separate client report switched on. Turn it on in the Client report settings first."
+
+
+def client_report_off(code):
+    """True when the project's client report setting is off (#233 L10); a project with no such line is on."""
+    import build_dashboard
+    try:
+        return not build_dashboard.memory(paths.project_dir(code)).get("client_report", True)
+    except Exception:                                  # a project folder that can't be read: the setting is not known to be off
+        return False
+
+
+def refuse_client_off(handler, kind, code):
+    """The refusal for a new client draft, a client save, export or approve while the project's setting is off; None otherwise.
+    Reading or opening a client report that already exists is never refused: turning the setting off deletes nothing."""
+    if kind == "client" and client_report_off(code):
+        return refuse(handler, CLIENT_OFF)
+    return None
+
+
 def guarded(fn):
     """A route that answers a ReportError, a DocError or a script's exit as a refusal instead of a fault."""
     def route(handler, req):
@@ -107,6 +127,9 @@ def draft_route(handler, req):
     if state and not (req.get("fresh") and state == "draft"):
         doc = creaite_doc.read(path)
     else:
+        off = refuse_client_off(handler, kind, code)       # a client report is made only while the setting is on
+        if off:
+            return off
         doc, state = report_doc.build(kind, code, fri, client), "new"
         path = report_doc.draft_path(kind, code, fri, client)
     out = {"ok": True, "doc": doc, "path": path, "where": state, "version": int(doc.get("version") or 0),
@@ -126,6 +149,9 @@ def save_route(handler, req):
                                       "client": doc.get("client")})
     if fri != doc["date"]:
         raise report_doc.ReportError("A report's date is its week ending, a Friday.")
+    off = refuse_client_off(handler, kind, code)
+    if off:
+        return off
     with handler_lock(handler):
         out = report_doc.save_draft(doc, req.get("base_version"))
         if out.get("ok"):
@@ -193,6 +219,9 @@ def _held_to(doc, allowed):
 def approve_route(handler, req):
     """POST /api/report/approve: save any edits sent, stage the one proposal and apply it (see the module's description)."""
     kind, code, fri, client = target(req)
+    off = refuse_client_off(handler, kind, code)
+    if off:
+        return off
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
@@ -370,6 +399,9 @@ def export_route(handler, req):
     fmt = req.get("fmt")
     if fmt not in FORMATS:
         return refuse(handler, "Export as html, docx or pdf.")
+    off = refuse_client_off(handler, kind, code)
+    if off:
+        return off
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
