@@ -119,6 +119,7 @@ import { bootCalendar, bootCmdEnter, bootDateWords, bootOwnerCombo, bootSources,
 import { publish } from "./core/globals.js";
 import { bootCopyCommand, bootKeyboard } from "./core/keys.js";
 import { bootMotionHooks } from "./core/motion.js";
+import { bootTopBar } from "./core/topbar.js";   /* #207 */
 import { bootCountLinks, bootGoLinks, bootNav, bootOpenAll, bootTabTitle, navWrite, parseHash, restoreNav } from "./core/nav.js";
 import { bootDevTag, bootMotion, bootTheme, bootThemeButton, S } from "./core/page.js";
 import { bootDebugLog, bootEventStream, bootLive, bootPageRefresh, bootPulse, bootToast, checkLive, renderBadge, status, vaultInit } from "./core/server.js";
@@ -157,6 +158,7 @@ bootData();
 bootToast();
 bootLive();
 bootNav();
+bootTopBar();   /* #207 */
 bootCountLinks();
 bootGoLinks();
 bootToday0026();

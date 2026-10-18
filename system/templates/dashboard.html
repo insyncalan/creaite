@@ -3428,6 +3428,8 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
 .sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
 @media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
+/* #207: the top bar hidden by a scroll on any other page: out of the layout at once (no slide); the page grows upward (core/topbar.js) */
+.main.tb-off>.bar{height:0;min-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;overflow:hidden;visibility:hidden;flex:none;transition:none}
 .main:has(.view:not([hidden]) .sheet-root.rpt-slim)>.bar,
 .view:not([hidden]):has(.sheet-root.rpt-slim) :is(.wrhead,.mnhead,.crhead){height:0;min-height:0;padding-top:0;padding-bottom:0;border-width:0;overflow:hidden;flex:none}
 .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -4287,9 +4289,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     GREET: () => GREET,
     GROUPS: () => GROUPS,
     HD: () => HD,
-    HEADER_HIDE_OVER: () => HEADER_HIDE_OVER,
-    HEADER_SHOW_AT_TOP: () => HEADER_SHOW_AT_TOP,
-    HEADER_SHOW_ON_UP: () => HEADER_SHOW_ON_UP,
     HEAD_SHIFT: () => HEAD_SHIFT,
     HEALTH_SHAPES: () => HEALTH_SHAPES,
     HGROUPS: () => HGROUPS,
@@ -5454,7 +5453,6 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     handle: () => handle,
     hasLink: () => hasLink,
     hashOf: () => hashOf,
-    headerPolicy: () => headerPolicy,
     headsIn: () => headsIn,
     headsOut: () => headsOut,
     headsSafe: () => headsSafe,
@@ -65764,15 +65762,6 @@ ${d5.text}`);
     for (let k5 = 1; k5 * page < end - 1; k5++) marks.push(k5 * page);
     return { pushes, marks };
   }
-  var HEADER_HIDE_OVER = 0;
-  var HEADER_SHOW_ON_UP = Infinity;
-  var HEADER_SHOW_AT_TOP = 0;
-  function headerPolicy(top, delta, up2) {
-    if (top <= HEADER_SHOW_AT_TOP) return "show";
-    if (delta > HEADER_HIDE_OVER) return "hide";
-    if (delta < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
-    return "keep";
-  }
 
   // components/report/SheetPage.jsx
   function openSheetRef(ref, own) {
@@ -66466,6 +66455,17 @@ ${d5.text}`);
     ] });
   }
   var labelOf = (left, right, id2, label) => matchLabel(left, right, id2, label);
+
+  // core/scrollPolicy.js
+  var HEADER_HIDE_OVER = 0;
+  var HEADER_SHOW_ON_UP = Infinity;
+  var HEADER_SHOW_AT_TOP = 0;
+  function headerPolicy(top, delta, up2) {
+    if (top <= HEADER_SHOW_AT_TOP) return "show";
+    if (delta > HEADER_HIDE_OVER) return "hide";
+    if (delta < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
+    return "keep";
+  }
 
   // components/report/Sheet.jsx
   var ANCHORS = /* @__PURE__ */ new Map();
@@ -73278,6 +73278,106 @@ ${d5.text}`);
     for (const n4 of globals_default.names.tests) if (n4 in page && !skip.has(n4)) put(n4, { value: page[n4], writable: true });
   }
 
+  // core/topbar.js
+  var BAR_FOCUSABLE = "a[href],button,input,select,textarea,[tabindex]";
+  function bootTopBar() {
+    const main = document.querySelector(".main"), bar = (
+      /** @type {HTMLElement|null} */
+      document.querySelector(".main>.bar")
+    ), content = (
+      /** @type {HTMLElement|null} */
+      document.querySelector(".content")
+    );
+    if (!main || !bar || !content) return;
+    const last = /* @__PURE__ */ new WeakMap();
+    let up2 = 0, grown = (
+      /** @type {{el: HTMLElement, pad: string}[]} */
+      []
+    );
+    const setPad = (on2, h5) => {
+      if (on2) {
+        const v5 = (
+          /** @type {HTMLElement|null} */
+          content.querySelector(".view:not([hidden])")
+        );
+        if (v5 && !v5.querySelector(".sheet-root")) {
+          grown.push({ el: v5, pad: v5.style.paddingTop });
+          v5.style.paddingTop = `${parseFloat(getComputedStyle(v5).paddingTop) + h5}px`;
+        }
+      } else {
+        grown.forEach((g5) => {
+          g5.el.style.paddingTop = g5.pad;
+        });
+        grown = [];
+      }
+    };
+    const hide = (on2) => {
+      if (main.classList.contains("tb-off") === on2) return;
+      if (on2) {
+        const h5 = bar.offsetHeight;
+        const v5 = (
+          /** @type {HTMLElement|null} */
+          content.querySelector(".view:not([hidden])")
+        );
+        if (v5 && bar.contains(document.activeElement)) {
+          if (!v5.hasAttribute("tabindex")) v5.tabIndex = -1;
+          v5.focus({ preventScroll: true });
+        }
+        main.classList.add("tb-off");
+        setPad(true, h5);
+      } else {
+        setPad(false, 0);
+        main.classList.remove("tb-off");
+      }
+    };
+    const isPage = (t47) => {
+      if (!(t47 instanceof HTMLElement) || !content.contains(t47) || t47.closest(".panel,dialog,.ddmenu,.sheet-root") || t47.querySelector(".sheet-root")) return false;
+      return t47.classList.contains("view") || t47.clientHeight >= content.clientHeight * 0.5;
+    };
+    document.addEventListener("scroll", (e4) => {
+      const t47 = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (!(t47 instanceof HTMLElement) || !isPage(t47)) return;
+      const y5 = t47.scrollTop, d5 = y5 - (last.get(t47) || 0);
+      last.set(t47, y5);
+      up2 = d5 < 0 ? up2 - d5 : 0;
+      const act = headerPolicy(y5, d5, up2);
+      if (act === "hide") hide(true);
+      else if (act === "show") hide(false);
+    }, true);
+    new MutationObserver((ms2) => {
+      if (ms2.some((m5) => (
+        /** @type {Element} */
+        m5.target.classList.contains("view")
+      ))) hide(false);
+    }).observe(content, { attributes: true, attributeFilter: ["hidden"], subtree: true });
+    const sync = () => {
+      const off = bar.offsetHeight === 0;
+      bar.querySelectorAll(BAR_FOCUSABLE).forEach((n4) => {
+        const el2 = (
+          /** @type {HTMLElement} */
+          n4
+        );
+        if (off && !el2.hasAttribute("data-tb-ti")) {
+          el2.setAttribute("data-tb-ti", el2.getAttribute("tabindex") ?? "");
+          el2.tabIndex = -1;
+        } else if (!off && el2.hasAttribute("data-tb-ti")) {
+          const o5 = el2.getAttribute("data-tb-ti");
+          el2.removeAttribute("data-tb-ti");
+          if (o5 === "") el2.removeAttribute("tabindex");
+          else el2.setAttribute(
+            "tabindex",
+            /** @type {string} */
+            o5
+          );
+        }
+      });
+    };
+    new ResizeObserver(sync).observe(bar);
+  }
+
   // main.js
   publish(main_exports);
   bootDialogs();
@@ -73293,6 +73393,7 @@ ${d5.text}`);
   bootToast();
   bootLive();
   bootNav();
+  bootTopBar();
   bootCountLinks();
   bootGoLinks();
   bootToday0026();
