@@ -326,8 +326,7 @@ class WeekCalm(Header):
             self.assertTrue(b.eval("document.activeElement.classList.contains('wkchip')"))
             b.eval("document.activeElement.blur(); document.querySelector('#weekList .wk-meeting .wkchip').focus()")
             b.wait("document.querySelector('#weekList .prpeek')")
-            b.click("#weekList .prpeek .btn.primary")
-            b.wait("location.hash.startsWith('#prep=')")
+            b.click_until("#weekList .prpeek .btn.primary", "location.hash.startsWith('#prep=')")   # a redraw between press and release loses a click (#152)
         finally:                                                      # the browser is shared by the class: leave it as found
             b.eval("document.activeElement && document.activeElement.blur(); location.hash=''; go('today'); renderToday()")
 
