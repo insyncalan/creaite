@@ -2605,9 +2605,9 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after):
     by_mkey, by_path, mail, other = {}, {}, [], []
     for r in queue:
         m = meta.get(r.get("file")) or {}
-        if m.get("mkey"):
-            by_mkey.setdefault(m["mkey"], []).append(r)
-        elif m.get("transcript"):
+        if m.get("mkey") and (str(m["mkey"]).startswith("calendar:") or not m.get("transcript")):
+            by_mkey.setdefault(m["mkey"], []).append(r)          # a calendar meeting (also a loaded transcript), or a note
+        elif m.get("transcript"):                                 # an uploaded file's minutes: joined by the file's path
             by_path.setdefault(m["transcript"], []).append(r)
         elif m.get("run") in IR_MAIL_RUNS:
             mail.append(r)
