@@ -345,7 +345,7 @@ function Redraft({ rd, s, readOnly, close, onUse, onOpen, known }) {
     onOpenItem?: (ref: string) => boolean, onEvent: (e: SheetEvent) => void, onRedraft?: (s: SheetSection) => Promise<any>,
     aiFor: (s: SheetSection, ro: boolean) => any, checks: any[], refocus: {current: string|null},
     match: null | {readOnly: boolean, label: (id: string) => string, differs: (id: string) => boolean, one: (id: string) => void},
-    addTo: null | {readOnly: boolean, one: (id: string) => void}}} PageProps */      // #218: the left page's "Add to the client report" for a text section the partner lacks
+    addTo?: null | {readOnly: boolean, one: (id: string) => void}}} PageProps */      // #218: the left page's "Add to the client report" for a text section the partner lacks
 
 /** One page: the header, its sections in order, the extras between them. @param {PageProps} p */
 export function SheetPage(p) {

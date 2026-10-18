@@ -340,7 +340,7 @@ class _Reader:
     def __init__(self, text, escapes=False):
         self.s = str(text or "")
         self.out = []
-        self.escapes = escapes                     # H5, #218: a backslash escape (as in `\*`) is the character, as the Notes writer means it
+        self.escapes = escapes  # H5: a backslash escape is the character
 
     def read(self):
         """The runs of the whole text."""
