@@ -254,7 +254,10 @@ def launch(stored):
 def _plain_name(name, ext):
     """A typed file name made safe: one name (no folder, no leading dot, 150 characters at most) that ends with `ext`; None when it
     can't be a file name."""
-    name = " ".join(str(name or "").split())
+    name = str(name or "")
+    if any(ord(c) < 32 or ord(c) == 127 for c in name):
+        return None                                            # a control character (NUL, a newline, a tab...) is never in a file name
+    name = " ".join(name.split())
     if not name or "/" in name or "\\" in name or name.startswith(".") or len(name) > 150:
         return None
     return name if name.lower().endswith(ext) else name + ext
@@ -294,10 +297,10 @@ def _file_in_reports(handler, draft, folder, name, overwrite, fmt, label):
     try:
         token = reach.APPROVALS.issue(filechange.fingerprint(ch)) if overwrite else None   # Alan's own Overwrite: this change, once
         code, msg = filechange.perform(ch, token, "dashboard")
-    except OSError as e:
+    except (OSError, ValueError) as e:
         for stray in folder.glob(f".{name}.part"):
             stray.unlink(missing_ok=True)
-        return _not_saved(handler, f"the {label} folder can't be written to ({e.strerror or e.__class__.__name__}).")
+        return _not_saved(handler, f"the {label} folder can't be written to ({getattr(e, 'strerror', None) or e.__class__.__name__}).")
     finally:
         draft.unlink(missing_ok=True)
     if code == filechange.NEEDS:

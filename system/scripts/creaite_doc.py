@@ -468,6 +468,17 @@ def images_dir(doc):
         return None
 
 
+IMAGE_MAX = 2 * 1024 * 1024        # a picture in a text section: the same cap as its upload (report_server.IMAGE_MAX)
+
+
+def _too_big(f):
+    """Whether a picture file is over the cap (a file that can't be read counts as not too big: the caller reports it as missing)."""
+    try:
+        return f.stat().st_size > IMAGE_MAX
+    except OSError:
+        return False
+
+
 def text_image(doc, ref):
     """The picture file a text section's `_images/<name>` address names (PNG or JPEG), or None: only that shape of address is read, and
     only inside the reports folder."""
@@ -509,6 +520,8 @@ def _image_html(doc, alt, ref):
     f = text_image(doc, ref)
     if f is None:
         return f"<p><em>Picture not found: {esc(alt or ref)}</em></p>"
+    if _too_big(f):
+        return f"<p><em>Picture too large to include: {esc(alt or ref)}</em></p>"
     mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
     cap = f"<figcaption>{esc(alt)}</figcaption>" if alt else ""
     return f'<figure><img src="data:{mime};base64,{base64.b64encode(f.read_bytes()).decode("ascii")}" alt="{esc(alt)}">{cap}</figure>'
@@ -591,6 +604,9 @@ def section_html(s, items, doc=None):
     if kind == TEXT_TYPE:
         head = f"<h2>{esc(s.get('heading'))}</h2>" if str(s.get("heading") or "").strip() else ""
         return f'<section data-id="{esc(s.get("id"))}">{head}{text_html(s.get("text"), doc)}</section>'
+    if kind in (None, "text", "panes") and not (str(s.get("text") or "").strip()
+                                                or any(str(p.get("title") or "").strip() or str(p.get("text") or "").strip() for p in s.get("panes") or [])):
+        return ""                                                     # nothing in it: no empty heading, as the Word writer leaves it out
     body = {"table": lambda: md_html(s.get("text")) + _table(s), "figures": lambda: _figures(s), "panes": lambda: _panes(s),
             "health": lambda: _health(s), "timeline": lambda: _timeline(s, items)}.get(kind, lambda: md_html(s.get("text")))()
     return f'<section data-id="{esc(s.get("id"))}"><h2>{esc(s.get("heading"))}</h2>{body}</section>'
@@ -1053,7 +1069,9 @@ class _Word:
                 continue
             flush()
             f = paths.resolve_image(self.folder, m.group(2))
-            if f.is_file() and f.suffix.lower() in IMG_EXT:
+            if f.is_file() and f.suffix.lower() in IMG_EXT and _too_big(f):
+                out.append({"md": _nobraces(f"*Picture too large to include: {m.group(2)}*")})
+            elif f.is_file() and f.suffix.lower() in IMG_EXT:
                 out.append({"image": str(f), "caption": m.group(1).strip()})
             else:
                 out.append({"md": _nobraces(f"*Picture not found: {m.group(2)}*")})
@@ -1131,6 +1149,9 @@ class _Word:
                               [[_nobraces(_plain_inline(c)) for c in (r + [""] * width)[:width]] for r in rows], lambda r, c: None))
             elif b.kind == "img":
                 f = text_image(self.doc, b.data[1])
+                if f and _too_big(f):
+                    parts.append(("e", [{"md": _nobraces(f"*Picture too large to include: {b.data[0] or b.data[1]}*")}]))
+                    continue
                 parts.append(("e", [{"image": str(f), "caption": b.data[0]}] if f else
                                    [{"md": _nobraces(f"*Picture not found: {b.data[0] or b.data[1]}*")}]))
         flush()

@@ -43,7 +43,7 @@ LOGO_KINDS = ("firm", "client", "partner")          # the firm's always first
 LOGO_EXT = (".png", ".jpg", ".jpeg", ".svg")
 DEFAULT_ROWS = {"risks": {"top": 5}}
 LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")
-CODE = re.compile(r"[A-Z][A-Z0-9]{2,6}$")
+CODE = re.compile(r"[A-Z][A-Z0-9]{2,6}\Z")   # \Z, not $: "ABC\n" is not a code
 TITLE = {"actions": "description", "raid": "description", "decisions": "decision", "milestones": "name", "promises": "description"}
 CLIENT_STATUS = {"Open": "In progress", "Delayed": "Delayed", "Closed": "Complete", "Cancelled": "Cancelled"}
 
@@ -510,7 +510,7 @@ def _pick_weekly(code):
             out["overdue"].append(_cand(a["id"], a["description"], _meta(a["owner"], due), item(con, a["id"]),
                                         {"id": a["id"], "action": a["description"], "owner": a["owner"], "due": due or "not due yet"}))
         for d in con.execute("SELECT * FROM decisions WHERE project = ? AND status IN ('Made', 'Pending') "
-                             "ORDER BY COALESCE(date, needed_by, '0') DESC, id DESC LIMIT 60", (code,)):
+                             "ORDER BY COALESCE(date, needed_by, '0') DESC, id DESC", (code,)):
             d = dict(d)
             it = item(con, d["id"])
             cells = {"decision": d["decision"], "by": d["made_by"] or "Not recorded", "date": shown(d["date"]),

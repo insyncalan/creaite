@@ -147,7 +147,7 @@ class ExportSave(unittest.TestCase):
         self.assertTrue((self.reports / "Weekly for the board.docx").is_file())
         taken = self.export("docx", on_clash="rename", new_name="Weekly for the board.docx")  # a taken new name asks again
         self.assertEqual((taken["ok"], taken.get("clash")), (False, True), taken)
-        for bad in ("", "a/b", "../x", ".hidden"):
+        for bad in ("", "a/b", "../x", ".hidden", "x\u0000y", "x\ny", "\n", "x\ty"):
             self.assertFalse(self.export("docx", on_clash="rename", new_name=bad)["ok"], bad)
         self.assertEqual(sorted(p.name for p in self.reports.glob("*.docx")), sorted(["Weekly for the board.docx", WEEKLY_STEM + ".docx"]))
 
@@ -318,7 +318,7 @@ class ExportSavePage(LiveBrowserCase):
         (self.reports / name).write_bytes(b"EARLIER FILE")
         again("overwrite")
         self.b.wait("/^Replaced/.test(document.querySelector('[data-export-saved]').textContent)", 10)
-        self.assertTrue((self.reports / name.replace(".html", " (2).docx")).is_file())
+        self.assertTrue((self.reports / name.replace(".docx", " (2).docx")).is_file())
         self.assertTrue((self.reports / "Board copy.docx").is_file())
         self.assertNotEqual((self.reports / name).read_bytes(), b"EARLIER FILE")
 
