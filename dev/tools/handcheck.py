@@ -396,7 +396,8 @@ def build_parser():
     ap.add_argument("--from", dest="first", help="all: the first release (default v2.2.0)")
     ap.add_argument("--to", dest="last", help="all: the last release (default the newest with a test module)")
     ap.add_argument("--list", action="store_true", help="run nothing, no browser: the tests per release and the sheet coverage gaps")
-    ap.add_argument("--sheets-ref", action="append", help="a git ref (e.g. origin/pm-intake-briefs) to read sheets from first, then dev/handchecks/")
+    ap.add_argument("--sheets-ref", action="append",
+                    help="a git ref (e.g. origin/pm-intake-briefs) to read sheets from, before dev/handchecks/")
     ap.add_argument("--out", help="the run folder (default: a new temporary folder)")
     ap.add_argument("--write", action="store_true", help="fill the Results table in dev/handchecks/<version>.md itself")
     ap.add_argument("--only", help="one release: comma-separated check numbers; all: releases, e.g. v2.3.2,v2.3.3:1+2")
