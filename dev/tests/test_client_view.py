@@ -141,14 +141,13 @@ class ClientCheckRoutes(unittest.TestCase):
         c = self.post("/api/report/check", {"doc": doc})
         self.assertTrue(c["left_out"]["ready"], c["left_out"])
         self.assertEqual(c["left_out"]["health"], {"internal": "At risk", "client": "On track", "reason": "INTERNAL-REASON-ZED"})
-        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})
-        self.assertTrue(e["ok"], e)
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html", "on_clash": "number"})
+        self.assertTrue(e["ok"], e)      # #220: the filing name is reserved while the report is unfiled, so the export is numbered
         self.assertIn("left_out", e)                                        # the check ran before the export, and says what it found
         self.assertEqual(e["left_out"]["findings"], [])
         exported = Path(e["path"] if os.path.isabs(e["path"]) else self.v.root / e["path"]).read_text(encoding="utf-8")
         self.assertNotIn("INTERNAL-REASON-ZED", exported)
         self.assertNotIn("creaite-data", exported)
-        (self.v.root / e["path"]).unlink()      # #220: the HTML export is saved under the filed report's plain name; Approve would refuse to file over it
         section(doc, "summary")["text"] = "Restricted: the overrun is absorbed internally."
         self.assertTrue(self.post("/api/report/save", {"doc": doc})["ok"])
         e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})
@@ -169,7 +168,8 @@ class ClientCheckRoutes(unittest.TestCase):
             self.assertEqual(back["meta"]["health_diff"]["reason"], reason, "the draft keeps it (the internal report shows it from here)")
             a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "force": True})
             self.assertTrue(a["ok"], a)
-            filed = next((self.v.root / "projects").glob("*/reports/2026-10-09 Client report*.html")).read_text(encoding="utf-8")
+            filed = next(f for f in (self.v.root / "projects").glob("*/reports/2026-10-09 Client report*.html")
+                         if "(2)" not in f.name).read_text(encoding="utf-8")          # not test 4's numbered export
             self.assertIn('"state": "approved"', filed)
             for gone in ("health_diff", reason, "DISTINCTIVE-REASON", '"internal": "At risk"'):
                 self.assertNotIn(gone, filed)

@@ -239,16 +239,21 @@ def _plain_name(name, ext):
     return name if name.lower().endswith(ext) else name + ext
 
 
-def _taken(folder, name):
-    """Whether anything of that name is in the folder already."""
+def _taken(folder, name, reserved=None):
+    """Whether anything of that name is in the folder already, or the name is `reserved` (the name an unfiled report will be filed
+    under: nothing is there yet, but an export in the way would block Approve and file)."""
     f = folder / name
-    return f.exists() or f.is_symlink()
+    return f.exists() or f.is_symlink() or (reserved is not None and name.lower() == reserved.lower())
 
 
-def _numbered(folder, name):
-    """The next free "Name (2).ext" in the folder (filechange.free_name: the number a create adds by itself)."""
-    import filechange
-    return filechange.free_name(folder / name).name
+def _numbered(folder, name, reserved=None):
+    """The next free "Name (2).ext" in the folder (what a create adds by itself), skipping the reserved filing name."""
+    stem, dot, ext = name.rpartition(".")
+    stem, ext = (stem, dot + ext) if dot else (name, "")
+    n, final = 2, name
+    while _taken(folder, final, reserved):
+        final, n = f"{stem} ({n}){ext}", n + 1
+    return final
 
 
 def _not_saved(handler, why, **extra):
@@ -286,23 +291,26 @@ def _file_in_reports(handler, draft, folder, name, overwrite, fmt, label):
             "message": f"{'Replaced' if overwrite else 'Saved'} {Path(stored).name} in {label}."}
 
 
-def _settle_name(folder, name, ext, req, label):
+def _settle_name(folder, name, ext, req, label, reserved=None):
     """(name, overwrite, asked): the file name to save as, from the page's choice for a taken name (`on_clash`: number, rename with
     `new_name`, or overwrite), and `asked`: the answer to give instead when the name is taken and no choice was made (or the typed
-    name can't be used), else None."""
+    name can't be used), else None. `reserved` is the filing name of a report not yet filed: taken, but with nothing there, so
+    Overwrite is never offered or accepted for it (`reserved: true` in the answer)."""
     choice = req.get("on_clash")
     if choice == "rename":
         name = _plain_name(req.get("new_name"), ext)
         if not name:
             return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
-    if not _taken(folder, name):
+    if not _taken(folder, name, reserved):
         return name, False, None
     if choice == "number":
-        return _numbered(folder, name), False, None
+        return _numbered(folder, name, reserved), False, None
     if choice == "overwrite" and (folder / name).is_file():
         return name, True, None
-    return name, False, {"ok": False, "clash": True, "name": name, "numbered": _numbered(folder, name),
-                         "message": f"{name} is already in {label}."}
+    only = not (folder / name).exists()
+    return name, False, {"ok": False, "clash": True, "name": name, "numbered": _numbered(folder, name, reserved), "reserved": only,
+                         "message": (f"{name} is the name this report will be filed under in {label}." if only
+                                     else f"{name} is already in {label}.")}
 
 
 def export_route(handler, req):
@@ -334,7 +342,7 @@ def export_route(handler, req):
     name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
     label = f"{creaite_doc.project_name(code) or code} › Reports"
     where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
-    name, overwrite, asked = _settle_name(folder, name, ext, req, label)
+    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name)
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
     out = fn(path, fmt, file_beside=False, open_after=False)           # made in system/staging/drafts/, filed below

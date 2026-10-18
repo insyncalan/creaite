@@ -515,7 +515,7 @@ class RelockRoutes(unittest.TestCase):
         self.assertNotIn("ABC-005", json.dumps(locked))                       # became visible after: never added
         self.assertIn("ABC-A-002", locked["items"])                           # still there
         self.assertTrue(c["ready"], c)
-        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html", "on_clash": "number"})
         self.assertTrue(e["ok"], e)
         # a new approved version of the week re-locks it to that version, adding nothing
         w = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})

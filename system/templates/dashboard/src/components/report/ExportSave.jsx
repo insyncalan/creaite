@@ -22,13 +22,13 @@ function ClashDialog() {
     <Dialog open={!!c} onClose={cancelClash} labelledBy="exportClashH" id="exportClashDlg" class="mnapprove" focus="#exportClashGo">
       <div class="mnap">
         <h2 id="exportClashH">A file with that name is already there</h2>
-        <p class="sub" id="exportClashP">“{name}” is already in <a href="#" class="folderlink" data-export-folder onClick={(e) => { e.preventDefault(); if (r && r.folder) openFolder(r.folder); }}>{r && r.folder_label}</a>.</p>
+        <p class="sub" id="exportClashP">“{name}” {r && r.reserved ? "is the name this report will be filed under in" : "is already in"} <a href="#" class="folderlink" data-export-folder onClick={(e) => { e.preventDefault(); if (r && r.folder) openFolder(r.folder); }}>{r && r.folder_label}</a>{r && r.reserved ? ", so the export needs another name." : "."}</p>
         <fieldset class="mnap-g"><legend>What would you like to do?</legend>
           <label class="mnap-one">{radio("number")} <span>Add a number<span class="sub"> Saves as “{r && r.numbered}”</span></span></label>
           <label class="mnap-one">{radio("rename")} <span style="flex:1;min-width:0">Rename it
             <input class="pkdt" id="exportClashRename" aria-label="New file name" style="display:block;width:100%;margin-top:6px" value={typed}
               onFocus={() => setChoice("rename")} onInput={(e) => { setTyped(/** @type {HTMLInputElement} */ (e.target).value); setChoice("rename"); }} placeholder={`Name${ext}`} /></span></label>
-          <label class="mnap-one">{radio("overwrite")} <span>Overwrite the existing file<span class="sub"> The earlier file is backed up first, as for any file change.</span></span></label>
+          {r && r.reserved ? null : <label class="mnap-one">{radio("overwrite")} <span>Overwrite the existing file<span class="sub"> The earlier file is backed up first, as for any file change.</span></span></label>}
         </fieldset>
         <div class="mnap-foot"><button type="button" class="btn" id="exportClashNo" onClick={cancelClash}>Cancel</button>
           <button type="button" class="btn primary" id="exportClashGo" onClick={go}>Save</button></div>

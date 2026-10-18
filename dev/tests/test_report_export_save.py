@@ -86,8 +86,8 @@ class ExportSave(unittest.TestCase):
     def test_check1_each_format_of_the_weekly_report_is_saved_in_reports(self):
         self.weekly()
         for fmt in self.formats():
-            r = self.export(fmt)
-            name = export_name(WEEKLY_STEM, fmt)
+            r = self.export(fmt, **({"on_clash": "number"} if fmt == "html" else {}))     # HTML meets the reserved filing name
+            name = export_name(WEEKLY_STEM, fmt).replace(".html", " (2).html")
             self.assertTrue(r["ok"] and r["saved"], r)
             self.assertEqual((r["name"], r["path"], r["folder"]), (name, f"{ABC}/reports/{name}", f"{ABC}/reports"), r)
             self.assertTrue((self.reports / name).stat().st_size > 0, fmt)
@@ -98,8 +98,8 @@ class ExportSave(unittest.TestCase):
     def test_check5_each_format_of_the_client_report_is_saved_in_reports(self):
         self.client()
         for fmt in self.formats():
-            r = self.export(fmt, "client")
-            name = export_name(CLIENT_STEM, fmt)
+            r = self.export(fmt, "client", **({"on_clash": "number"} if fmt == "html" else {}))
+            name = export_name(CLIENT_STEM, fmt).replace(".html", " (2).html")
             self.assertTrue(r["ok"] and r["saved"], r)
             self.assertEqual((r["name"], r["folder_label"]), (name, PROJECT_REPORTS), r)
             self.assertTrue((self.reports / name).is_file(), fmt)
@@ -164,6 +164,31 @@ class ExportSave(unittest.TestCase):
         self.assertTrue(backups, "the earlier file is backed up first")
         self.assertEqual(sorted(p.name for p in self.reports.glob("*.docx")), [WEEKLY_STEM + ".docx"])   # nothing else was added
 
+    def test_reserved_html_of_an_unfiled_report_asks_and_approve_still_works(self):
+        for kind, stem in (("weekly", WEEKLY_STEM), ("client", CLIENT_STEM)):
+            if kind == "client":
+                self.client()
+            else:
+                self.weekly()
+            asked = self.export("html", kind)
+            self.assertEqual((asked["ok"], asked.get("clash"), asked.get("reserved"), asked["name"]), (False, True, True, stem + ".html"), asked)
+            self.assertEqual(asked["numbered"], stem + " (2).html")
+            self.assertFalse((self.reports / (stem + ".html")).exists())               # nothing written at the filing name
+            forced = self.export("html", kind, on_clash="overwrite")                    # Overwrite is not accepted for a reserved name
+            self.assertFalse(forced["ok"] or forced.get("saved"), forced)
+            self.assertFalse((self.reports / (stem + ".html")).exists())
+            numbered = self.export("html", kind, on_clash="number")
+            self.assertEqual((numbered["ok"], numbered["name"]), (True, stem + " (2).html"), numbered)
+            renamed = self.export("html", kind, on_clash="rename", new_name=stem + ".HTML")      # the reserved name by rename: asks again
+            self.assertEqual((renamed["ok"], renamed.get("reserved")), (False, True), renamed)
+            again = self.export("html", kind, on_clash="number")
+            self.assertEqual(again["name"], stem + " (3).html")                         # the reserved name is skipped, (2) is taken
+            a = self.post("/api/report/approve", {"kind": kind, "code": "ABC", "week_ending": "2026-10-09", "force": True})
+            self.assertTrue(a["ok"] or "awaiting review" in a["message"], a)           # Approve and file is not blocked
+            self.assertTrue((self.reports / (stem + ".html")).is_file())
+            for f in self.reports.glob("*"):
+                f.unlink()
+
     def test_check3_html_after_the_report_is_filed_asks_and_overwrite_is_undoable(self):
         self.weekly()
         a = self.post("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
@@ -225,13 +250,13 @@ class ExportSavePage(LiveBrowserCase):
         self.b.eval(f"[...document.querySelectorAll('[role=menu] [role=menuitem]')].find(b=>b.textContent.includes({label!r})).click()")
 
     def exported_files(self):
-        return sorted(p.name for p in self.reports.glob("*.html"))
+        return sorted(p.name for p in self.reports.glob("*.docx"))
 
     def test_check2_the_toast_names_the_folder_with_show_in_finder_and_open(self):
-        self.export("HTML")
+        self.export("Word")
         self.b.wait("document.querySelector('[data-export-saved]')", 30)
         text = self.b.eval("document.querySelector('[data-export-saved]').textContent")
-        name = export_name(PAGE_STEM, "html")
+        name = export_name(PAGE_STEM, "docx")
         self.assertIn(f"Saved {name} in {PROJECT_REPORTS}", text)
         self.assertEqual(self.b.eval("document.querySelector('[data-export-saved] a[data-export-folder]').textContent"), PROJECT_REPORTS)
         self.assertEqual(self.b.eval("[...document.querySelectorAll('[data-export-saved] button')].map(b=>b.textContent)"),
@@ -249,16 +274,16 @@ class ExportSavePage(LiveBrowserCase):
         self.assertIn(name, calls[2][1])
 
     def test_check3_a_taken_name_offers_the_three_choices_and_cancel_writes_nothing(self):
-        self.export("HTML")
+        self.export("Word")
         self.b.wait("document.querySelector('[data-export-saved]')", 30)
-        self.export("HTML")
+        self.export("Word")
         self.b.wait("document.querySelector('#exportClashDlg[open]')", 30)
-        name = export_name(PAGE_STEM, "html")
+        name = export_name(PAGE_STEM, "docx")
         self.assertIn(name, self.b.eval("document.querySelector('#exportClashDlg').textContent"))
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#exportClashDlg input[name=clash]')].map(i=>i.value)"),
                          ["number", "rename", "overwrite"])
         self.assertEqual(self.b.eval("document.querySelector('#exportClashDlg input[name=clash]:checked').value"), "number")
-        self.assertIn(PAGE_STEM + " (2).html", self.b.eval("document.querySelector('#exportClashDlg').textContent"))
+        self.assertIn(PAGE_STEM + " (2).docx", self.b.eval("document.querySelector('#exportClashDlg').textContent"))
         field = self.b.eval("(()=>{const i=document.querySelector('#exportClashRename');return {v:i.value,w:i.getBoundingClientRect().width,"
                             "dw:document.querySelector('#exportClashDlg .mnap, #exportClashDlg').getBoundingClientRect().width,"
                             "full:i.scrollWidth<=i.clientWidth+1}})()")
@@ -272,12 +297,12 @@ class ExportSavePage(LiveBrowserCase):
         self.assertFalse(self.b.eval("window.__calls.some(c=>/on_clash/.test(c[1]))"))
 
     def test_check3_each_choice_does_what_it_says(self):
-        name = export_name(PAGE_STEM, "html")
-        self.export("HTML")
+        name = export_name(PAGE_STEM, "docx")
+        self.export("Word")
         self.b.wait("document.querySelector('[data-export-saved]')", 30)
 
         def again(choice, typed=None):
-            self.export("HTML")
+            self.export("Word")
             self.b.wait("document.querySelector('#exportClashDlg[open]')", 30)
             self.b.eval(f"document.querySelector('#exportClashDlg input[value={choice}]').click()")
             if typed:
@@ -286,15 +311,28 @@ class ExportSavePage(LiveBrowserCase):
             self.b.eval("document.querySelector('#exportClashGo').click()")
             self.b.wait("!document.querySelector('#exportClashDlg[open]')", 10)
         again("number")
-        self.b.wait("/\\(2\\)\\.html in/.test(document.querySelector('[data-export-saved]').textContent)", 10)
-        again("rename", "Board copy.html")
-        self.b.wait("/Board copy\\.html in/.test(document.querySelector('[data-export-saved]').textContent)", 10)
-        (self.reports / name).write_text("EARLIER FILE")
+        self.b.wait("/\\(2\\)\\.docx in/.test(document.querySelector('[data-export-saved]').textContent)", 10)
+        again("rename", "Board copy.docx")
+        self.b.wait("/Board copy\\.docx in/.test(document.querySelector('[data-export-saved]').textContent)", 10)
+        (self.reports / name).write_bytes(b"EARLIER FILE")
         again("overwrite")
         self.b.wait("/^Replaced/.test(document.querySelector('[data-export-saved]').textContent)", 10)
-        self.assertTrue((self.reports / name.replace(".html", " (2).html")).is_file())
-        self.assertTrue((self.reports / "Board copy.html").is_file())
-        self.assertNotEqual((self.reports / name).read_text(), "EARLIER FILE")
+        self.assertTrue((self.reports / name.replace(".html", " (2).docx")).is_file())
+        self.assertTrue((self.reports / "Board copy.docx").is_file())
+        self.assertNotEqual((self.reports / name).read_bytes(), b"EARLIER FILE")
+
+    def test_reserved_name_offers_no_overwrite_on_the_page(self):
+        """An HTML export of a report not yet filed meets the name it will be filed under: Add a number and Rename, no Overwrite."""
+        self.export("HTML")
+        self.b.wait("document.querySelector('#exportClashDlg[open]')", 30)
+        self.assertEqual(self.b.eval("[...document.querySelectorAll('#exportClashDlg input[name=clash]')].map(i=>i.value)"),
+                         ["number", "rename"])
+        self.assertIn(PAGE_STEM + " (2).html", self.b.eval("document.querySelector('#exportClashDlg').textContent"))
+        self.assertEqual(self.b.eval("document.querySelector('#exportClashDlg input[name=clash]:checked').value"), "number")
+        self.assertEqual(sorted(p.name for p in self.reports.glob("*.html")), [])          # nothing at the filing name
+        self.b.eval("document.querySelector('#exportClashGo').click()")
+        self.b.wait("/\\(2\\)\\.html in/.test(document.querySelector('[data-export-saved]').textContent)", 10)
+        self.assertEqual(sorted(p.name for p in self.reports.glob("*.html")), [PAGE_STEM + " (2).html"])
 
     def test_check4_a_failed_save_is_said_on_the_page(self):
         self.b.eval("(()=>{const g=window.fetch;window.fetch=function(u,o){return String(u).includes('report/export')?Promise.resolve(new Response("

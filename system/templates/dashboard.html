@@ -67333,12 +67333,14 @@ ${d5.text}`);
       /* @__PURE__ */ u2("p", { class: "sub", id: "exportClashP", children: [
         "“",
         name,
-        "” is already in ",
+        "” ",
+        r4 && r4.reserved ? "is the name this report will be filed under in" : "is already in",
+        " ",
         /* @__PURE__ */ u2("a", { href: "#", class: "folderlink", "data-export-folder": true, onClick: (e4) => {
           e4.preventDefault();
           if (r4 && r4.folder) openFolder(r4.folder);
         }, children: r4 && r4.folder_label }),
-        "."
+        r4 && r4.reserved ? ", so the export needs another name." : "."
       ] }),
       /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
         /* @__PURE__ */ u2("legend", { children: "What would you like to do?" }),
@@ -67380,7 +67382,7 @@ ${d5.text}`);
             )
           ] })
         ] }),
-        /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
+        r4 && r4.reserved ? null : /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
           radio("overwrite"),
           " ",
           /* @__PURE__ */ u2("span", { children: [
