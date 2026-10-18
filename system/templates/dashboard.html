@@ -2661,6 +2661,8 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .linkbtn,a.linkbtn{padding-block:4px;margin-block:-4px}   /* BL-325: 24px high, as a.linkbtn was */
 .preplink{padding:2px 4px;margin:2px -4px -2px}
 .pcode.plink{padding-block:4px;margin-block:-4px}
+/* #224: the Projects column on People reads as links: link colour, the table's text size, weight 500 */
+#peopleTbl td .pcode.plink{color:var(--accent);font-size:inherit;font-weight:500}
 .tbrief .qa{padding-block:2px;margin-block:-2px} .tb a.t,.tb a.s,#chgMore a.s,#hMine a[data-go]{padding-block:2px;margin-block:-2px}
 .fchip button{padding:6px;margin:-6px -2px}
 .bcoll{width:24px;height:24px;margin-block:-1px} .bmv{height:24px;margin-block:-1px}
