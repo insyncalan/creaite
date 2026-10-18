@@ -78,6 +78,10 @@ export const railMoreOpen = signal(false);
 export const railCustOpen = signal(false);
 /** The setting "Labels when collapsed" (dashboard.rail_labels, on by default). */
 export const railLabelsOn = signal(true);
+/** The setting "Icon size" (#182; dashboard.rail_icon_size): "small" (16px), "medium" (20px, today's) or "large" (28px). */
+export const railIconSize = signal(/** @type {"small"|"medium"|"large"} */ ("medium"));
+/** @param {any} v @returns {"small"|"medium"|"large"} */
+export const railSizeNorm = v => (v === "small" || v === "large" ? v : "medium");
 /** The window is 1200px wide or more: with no choice made yet the rail starts expanded. */
 export const railWide = signal(true);
 /** Under 900px the rail is always collapsed (the pinned rail), so the page keeps its room. */

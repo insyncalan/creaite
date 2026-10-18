@@ -520,7 +520,7 @@ a{color:var(--accent)}
 .logo{font:700 var(--fs-lg)/1 var(--font);color:var(--accent);margin:4px 0 14px}
 .devtag{display:block;width:max-content;margin:4px auto 0;padding:1px 4px;border:1px solid var(--line);border-radius:var(--r-sm);font:600 var(--fs-2xs)/1.2 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--muted)}   /* development repository only */
 .rail button{width:100%;height:36px;flex:none;border:0;background:none;border-radius:var(--r-md);padding:0 8px;display:flex;align-items:center;gap:12px;font:500 var(--fs-sm)/18px var(--font);color:var(--muted);cursor:pointer;position:relative;text-align:left}
-.rail button svg{width:20px;height:20px;flex:none}
+.rail button svg{width:var(--rail-ic,20px);height:var(--rail-ic,20px);flex:none}
 .rail button:hover{background:var(--sunk);color:var(--ink)}
 /* #156: the current page is a tonal pill in the accent, a bold label and a thicker icon, and the 3px bar on the rail's edge (never colour alone) */
 .rail button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700} .rail button[aria-current="page"] svg{color:var(--accent);stroke-width:2.2}
@@ -1881,6 +1881,12 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail .railfly .fcount{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)}
 .rail .railfly .mnote{padding:6px 8px;color:var(--muted)}
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
+/* #182 Icon size: Medium (20px) is what the rail has always had; Small 16px; Large 28px, with taller rows. The widths do not change. */
+:root.railsz-small{--rail-ic:16px} :root.railsz-large{--rail-ic:28px}
+.rail button.rtog .rchev{width:16px;height:16px} .rail .railfly svg,.rail #railMoreMenu svg{width:20px;height:20px} .rail .railfly .health svg{width:14px;height:14px}
+:root.railsz-large .rail button.nv{height:44px} :root.railsz-large .rail.labelled button.nv{height:62px}
+:root.railsz-small .rail button.nv{height:32px} :root.railsz-small .rail.labelled button.nv{height:46px}
+:root.railsz-large .rail #railMoreMenu button.nv,:root.railsz-small .rail #railMoreMenu button.nv{height:36px}
 @media (max-width:480px){ :root.railicons,:root.railicons.raillabels{--rail-w:48px} .rail.collapsed{padding:10px 4px} .rail.collapsed button[aria-current="page"]::before{left:-4px} .rail.labelled .rl{display:none} }
 #railCust{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);padding:16px 16px 14px;box-shadow:var(--shadow-lg)}
 #railCust::backdrop{background:var(--scrim)}
@@ -1891,6 +1897,10 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 #railCust ul{margin:0;padding:6px;border:1px dashed var(--line);border-radius:var(--r-md);min-height:120px;display:grid;gap:2px;align-content:start}
 #railCust .rcempty{margin:6px 4px 0}
 #railCust .rcicons{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);margin-top:6px}
+#railCust .rcsize{margin-top:12px} #railCust .rcsize h3{margin-bottom:6px}
+#railCust .rcszs{display:flex;gap:8px} #railCust .rcsz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-height:64px;padding:8px 4px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--muted);font:500 var(--fs-sm)/16px var(--font);cursor:pointer}
+#railCust .rcsz[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)} #railCust .rcsz:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+#railCust .rcszi{display:grid;place-items:center;height:28px} #railCust .rcsz[data-size="small"] svg{width:16px;height:16px} #railCust .rcsz[data-size="medium"] svg{width:20px;height:20px} #railCust .rcsz[data-size="large"] svg{width:28px;height:28px}
 #railCust .rcfoot{display:flex;align-items:center;gap:8px;margin-top:14px} #railCust .rcfoot .grow{flex:1}
 .rpi .grip[hidden]{display:grid;visibility:hidden}
 .rpi{display:flex;align-items:center;gap:6px;padding:4px;border-radius:var(--r-md);list-style:none} .rpi:focus-within,.rpi:hover{background:var(--sunk)}
@@ -6105,11 +6115,13 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
     quipNow: () => quipNow,
     railCustomise: () => railCustomise,
     railDone: () => railDone,
+    railIconSize: () => railIconSize,
     railItem: () => railItem,
     railLabelsOn: () => railLabelsOn,
     railNorm: () => railNorm,
     railPopOpen: () => railPopOpen,
     railSave: () => railSave,
+    railSetIconSize: () => railSetIconSize,
     railSetLabels: () => railSetLabels,
     railToggle: () => railToggle,
     raw: () => raw,
@@ -26008,6 +26020,11 @@ ${s5}`;
   var railMoreOpen = y3(false);
   var railCustOpen = y3(false);
   var railLabelsOn = y3(true);
+  var railIconSize = y3(
+    /** @type {"small"|"medium"|"large"} */
+    "medium"
+  );
+  var railSizeNorm = (v5) => v5 === "small" || v5 === "large" ? v5 : "medium";
   var railWide = y3(true);
   var railNarrow = y3(false);
   var RAIL_KEY = "creaite-rail-collapsed";
@@ -30234,7 +30251,11 @@ ${s5}`;
     "logging.repeat_window_hours": [1, 168],
     "live_mode.health_check_seconds": [5, 3600]
   };
-  var CHOICES = { "dashboard.generate_days": [7, 14, 30], "logging.level": ["info", "debug"] };
+  var CHOICES = {
+    "dashboard.generate_days": [7, 14, 30],
+    "logging.level": ["info", "debug"],
+    "dashboard.rail_icon_size": ["small", "medium", "large"]
+  };
   function settingShown(v5) {
     if (v5 === null || v5 === void 0 || v5 === "") return "none";
     if (typeof v5 === "boolean") return v5 ? "on" : "off";
@@ -30716,7 +30737,10 @@ ${s5}`;
       } else if (k5 === "search.debounce_ms") SEARCHCFG.debounce_ms = v5;
       else if (k5 === "dashboard.generate_days") S.genDays = v5;
       else if (k5 === "dashboard.rail_labels") railLabelsOn.value = v5 !== false;
-      else if (k5 === "logging.level") DIAG.level = v5;
+      else if (k5 === "dashboard.rail_icon_size") {
+        railIconSize.value = railSizeNorm(v5);
+        S.railIconSize = railIconSize.value;
+      } else if (k5 === "logging.level") DIAG.level = v5;
       else if (k5.startsWith("day.") || k5 === "work.weekend_days" || k5 === "dashboard.flow_weeks") reload = true;
     }
     if (look2) {
@@ -59051,8 +59075,8 @@ ${d5.text}`);
   }
 
   // components/sidebar/CustomiseSidebar.jsx
-  var draftOf = (c5) => ({ top: [...c5.order], more: [...c5.more], icons: c5.display === "icons", labels: railLabelsOn.value });
-  var same = (a5, b5) => a5.top.join() === b5.top.join() && a5.more.join() === b5.more.join() && a5.icons === b5.icons && a5.labels === b5.labels;
+  var draftOf = (c5) => ({ top: [...c5.order], more: [...c5.more], icons: c5.display === "icons", labels: railLabelsOn.value, size: railIconSize.value });
+  var same = (a5, b5) => a5.top.join() === b5.top.join() && a5.more.join() === b5.more.join() && a5.icons === b5.icons && a5.labels === b5.labels && a5.size === b5.size;
   function placed(d5, id2, zone, at2) {
     const top = d5.top.filter((x5) => x5 !== id2), more = d5.more.filter((x5) => x5 !== id2), L3 = zone === "top" ? top : more;
     L3.splice(Math.max(zone === "top" ? 1 : 0, Math.min(at2, L3.length)), 0, id2);
@@ -59161,7 +59185,7 @@ ${d5.text}`);
       );
     };
     const done = () => {
-      onSave({ order: d5.top, more: d5.more, hidden: [], display: d5.icons ? "icons" : "titles" }, d5.labels);
+      onSave({ order: d5.top, more: d5.more, hidden: [], display: d5.icons ? "icons" : "titles" }, d5.labels, d5.size);
       closeDialog("railCust");
     };
     const shut = () => {
@@ -59310,6 +59334,16 @@ ${d5.text}`);
             ),
             " Icons only"
           ] }),
+          /* @__PURE__ */ u2("div", { class: "rcsize", role: "group", "aria-labelledby": "railCustSizeH", children: [
+            /* @__PURE__ */ u2("h3", { id: "railCustSizeH", children: "Icon size" }),
+            /* @__PURE__ */ u2("div", { class: "rcszs", children: [["small", "Small"], ["medium", "Medium"], ["large", "Large"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", class: "rcsz", "data-size": k5, "aria-pressed": d5.size === k5 ? "true" : "false", onClick: () => {
+              setD({ ...d5, size: k5 });
+              setSaid(`${l6} icons`);
+            }, children: [
+              /* @__PURE__ */ u2("span", { class: "rcszi", "aria-hidden": "true", children: /* @__PURE__ */ u2(RailIcon, { name: "today" }) }),
+              /* @__PURE__ */ u2("span", { children: l6 })
+            ] })) })
+          ] }),
           /* @__PURE__ */ u2("p", { class: "vh", "aria-live": "polite", children: said2 }),
           /* @__PURE__ */ u2("div", { class: "rcfoot", children: [
             /* @__PURE__ */ u2(
@@ -59319,7 +59353,7 @@ ${d5.text}`);
                 class: "btn quiet",
                 id: "railCustReset",
                 onClick: () => {
-                  setD({ ...draftOf(RAIL_DEF), labels: true });
+                  setD({ ...draftOf(RAIL_DEF), labels: true, size: "medium" });
                   setSaid("Back to the default sidebar");
                 },
                 children: "Reset to default"
@@ -59698,11 +59732,23 @@ ${d5.text}`);
     }
     return true;
   }
-  async function railDone(cfg, labels) {
+  async function railSetIconSize(size) {
+    const was = railIconSize.value, now = railSizeNorm(size);
+    railIconSize.value = now;
+    S.railIconSize = now;
+    if (!await writeSettings({ "dashboard.rail_icon_size": now })) {
+      railIconSize.value = was;
+      S.railIconSize = was;
+      return false;
+    }
+    return true;
+  }
+  async function railDone(cfg, labels, size) {
     const icons = cfg.display === "icons", was = railCfg.value.display === "icons";
     const ok2 = await railSave(cfg);
     if (ok2 && icons !== was && !railNarrow.value) railSetUser(icons);
     if (labels !== railLabelsOn.value) await railSetLabels(labels);
+    if (size && size !== railIconSize.value) await railSetIconSize(size);
     return ok2;
   }
   function railCustomise(opener2) {
@@ -59738,6 +59784,7 @@ ${d5.text}`);
     } });
     railCfg.value = railNorm(S.rail);
     railLabelsOn.value = S.railLabels !== false;
+    railIconSize.value = railSizeNorm(S.railIconSize);
     railLoadUser();
     const mq = matchMedia("(max-width:899px)");
     railNarrow.value = mq.matches;
@@ -59748,6 +59795,11 @@ ${d5.text}`);
     railWide.value = mw2.matches;
     mw2.addEventListener("change", (e4) => {
       railWide.value = e4.matches;
+    });
+    j4(() => {
+      const z4 = railIconSize.value, root2 = document.documentElement;
+      root2.classList.toggle("railsz-small", z4 === "small");
+      root2.classList.toggle("railsz-large", z4 === "large");
     });
     j4(() => {
       const c5 = railCollapsed.value, lab = railLabelled.value, nav = $(".rail");
@@ -72401,6 +72453,7 @@ ${d5.text}`);
         "query",
         "quip",
         "quipNow",
+        "railIconSize",
         "railLabelsOn",
         "railNorm",
         "railSave",

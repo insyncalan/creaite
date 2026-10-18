@@ -24,12 +24,12 @@ import { go } from "./core/nav.js";
 import { MAC, S } from "./core/page.js";
 import { writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railItem, railLabelled, railLabelsOn, railLoadUser, railMoreOpen, railNarrow, railNorm, railSetUser, railWide, setRailCount, setRailView } from "./stores/rail.js";
+import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railIconSize, railItem, railLabelled, railLabelsOn, railSizeNorm, railLoadUser, railMoreOpen, railNarrow, railNorm, railSetUser, railWide, setRailCount, setRailView } from "./stores/rail.js";
 import { row, SETSECTIONS } from "./settings.js";
 import { WTABS, workTabGo } from "./work.js";
 import { healthCount } from "./stores/settings.js";
 
-export { RAIL_DEF, RAIL_ITEMS, healthCount, railItem, railLabelsOn, railNorm, setRailCount };   /* the stores', on the page for the tests and ⌘K */
+export { RAIL_DEF, RAIL_ITEMS, healthCount, railIconSize, railItem, railLabelsOn, railNorm, setRailCount };   /* the stores', on the page for the tests and ⌘K */
 
 /** Where Customise was opened from: focus goes back there when it closes. */
 export let RAILOPENER = /** @type {HTMLElement | null} */ (null);
@@ -51,14 +51,22 @@ export async function railSetLabels(on) {
   if (!await writeSettings({ "dashboard.rail_labels": on })) { railLabelsOn.value = was; S.railLabels = was; return false; }
   return true;
 }
+/** Icon size (Customise sidebar and Settings › Essentials), saved to dashboard.rail_icon_size (#182).
+    @param {string} size */
+export async function railSetIconSize(size) {
+  const was = railIconSize.value, now = railSizeNorm(size); railIconSize.value = now; S.railIconSize = now;
+  if (!await writeSettings({ "dashboard.rail_icon_size": now })) { railIconSize.value = was; S.railIconSize = was; return false; }
+  return true;
+}
 /** Done in Customise sidebar: the lists and Icons only (display), then the labels setting. Turning Icons only on, or off, also
     collapses or expands the sidebar, as it did.
-    @param {any} cfg @param {boolean} labels */
-export async function railDone(cfg, labels) {
+    @param {any} cfg @param {boolean} labels @param {string} [size] */
+export async function railDone(cfg, labels, size) {
   const icons = cfg.display === "icons", was = railCfg.value.display === "icons";
   const ok = await railSave(cfg);
   if (ok && icons !== was && !railNarrow.value) railSetUser(icons);
   if (labels !== railLabelsOn.value) await railSetLabels(labels);
+  if (size && size !== railIconSize.value) await railSetIconSize(size);
   return ok;
 }
 /** Open Customise sidebar; focus goes back to `opener` (or the current page's button) when it closes.
@@ -85,9 +93,13 @@ export function bootRail0007() {
     arrowdown: '<path d="M12 5v14M19 12l-7 7-7-7"/>', more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>' });
   Object.defineProperty(shared, "RAILCFG", { configurable: true, enumerable: true, get: () => railCfg.value, set: v => { railCfg.value = railNorm(v); } });
   railCfg.value = railNorm(S.rail);
-  railLabelsOn.value = S.railLabels !== false; railLoadUser();
+  railLabelsOn.value = S.railLabels !== false; railIconSize.value = railSizeNorm(S.railIconSize); railLoadUser();
   const mq = matchMedia("(max-width:899px)"); railNarrow.value = mq.matches; mq.addEventListener("change", e => { railNarrow.value = e.matches; });
   const mw = matchMedia("(min-width:1200px)"); railWide.value = mw.matches; mw.addEventListener("change", e => { railWide.value = e.matches; });
+  effect(() => {        /* #182: the icon size is a class on the page (CSS sets the icon box and the row heights) */
+    const z = railIconSize.value, root = document.documentElement;
+    root.classList.toggle("railsz-small", z === "small"); root.classList.toggle("railsz-large", z === "large");
+  });
   effect(() => {        /* the shell follows the choice: the rail's width (--rail-w) and its look (collapsed, labels under the icons) */
     const c = railCollapsed.value, lab = railLabelled.value, nav = $(".rail");
     document.documentElement.classList.toggle("railicons", c);
