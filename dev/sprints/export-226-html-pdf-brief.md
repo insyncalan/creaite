@@ -15,7 +15,7 @@ Each is checked on the demo report with every kind of content, in HTML and in th
 4. **Milestones:** the timeline **as a picture** (today marker, slip line, month ticks), then a 16 px gap, then the table with Milestone, Agreed, Expected (with "+14"), Progress and State chips; dates as DD-MM-YYYY; a done milestone reads "achieved <date>".
 5. **Tables:** Risks and issues with the Response column and the priority chips; Overdue actions with the Late column in red; Decisions as on screen; an **empty table shows the screen's sentence** ("Nothing is needed from anyone this week."), not a header row.
 6. **Text:** headings with the accent square and their style; text sections with their formatting; **no empty heading** for an untitled pane; images and pictures present, never dropped silently.
-7. **Left out:** hidden sections, rows, figures and milestones are absent (and not in the file's source either).
+7. **Left out:** hidden sections, rows and figures are absent (and not in the file's source either); a milestone left out of the milestone list is absent from the table but still in the timeline picture, as on screen.
 8. **Client report:** the same renderer, client-visible items only; a client export is possible only from the locked data; the server re-checks hidden and client content before writing (as `creaite_doc.clean` and the leak findings do today).
 9. **Dates everywhere DD-MM-YYYY** (the "Today" style long dates stay as written on screen).
 10. **Light print theme** fixed for the file (no dark theme leaks into an export); A4; sections do not split across pages where avoidable; the picture and its table stay together.
