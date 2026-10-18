@@ -2123,20 +2123,27 @@ KIND_JOB = {"ask": "tools", "sweep": "tools", "search": "tools", "prep": "tools"
             "vip": "tools", "generate": "write", "shape-closed": "write", "edit-ai": "quick", "notes-find": "quick"}
 CLAUDE_ALIASES = ("opus", "sonnet", "haiku")       # the only values --model is ever given
 UNAVAILABLE = "The model chosen for this isn't available now, so this ran on the recommended model."
+CONFIDENTIAL_KINDS = ("shape-closed",)             # #132 G5: a run the server already knows is confidential (a closed meeting)
 
 
-def model_choice(job, settings=None):
-    """What run_model decides from: the model the job routes to now (providers.route), the job's default, that model's entry
-    (None when it isn't on offer) and what the setting asks for."""
+def model_choice(job, settings=None, declared=None, text=""):
+    """What run_model decides from: the model the job routes to now (providers.route_for: G5, never route), the job's default,
+    that model's entry (None when it isn't on offer), what the setting asks for, and `held`: why a job whose chosen model is
+    another provider's stays on Claude (confidential, or not checked yet), else ""."""
     import providers
     settings = paths.load_settings() if settings is None else settings
-    pick = providers.route(job, settings)["model"]
+    routed = providers.route_for(job, settings, text=text, declared=declared)                  # #132 G5
+    pick, wanted = routed["model"], str(providers.chosen(job, settings))
+    held = ""
+    if routed["why"] == "confidential" and not wanted.startswith("claude:"):                     # #132 G5
+        held = providers.CONFIDENTIAL_WORDS if routed["confidential_why"] in ("declared", "marked") else \
+            f"{providers.PROVIDERS.get(wanted.partition(':')[0], ('That provider',))[0]} isn't used for this yet."
     return {"pick": pick, "default": providers.setting({}, f"ai.jobs.{job}"), "asked": providers.setting(settings, f"ai.jobs.{job}"),
             "found": providers.model(pick, settings) if pick else None, "tools": providers.JOBS[job]["tools"],
-            "name": providers.PROVIDERS.get(str(pick).partition(":")[0], (str(pick),))[0]}
+            "name": providers.PROVIDERS.get(str(pick).partition(":")[0], (str(pick),))[0], "held": held}
 
 
-def run_model(kind, settings=None):
+def run_model(kind, settings=None, text="", declared=None):
     """(alias, note): the Claude model to start a run of this kind with, or None to start it exactly as before #132. None while
     the kind's job is at its default, so every launch is byte for byte today's until Alan chooses another model. Fails closed to
     today's launch (with a note in plain words) when the choice isn't a Claude model (`claude` runs only Claude; other
@@ -2146,9 +2153,11 @@ def run_model(kind, settings=None):
     if job is None:
         return None, ""
     try:
-        c = model_choice(job, settings)
+        c = model_choice(job, settings, True if kind in CONFIDENTIAL_KINDS else declared, text)   # #132 G5
     except Exception as e:  # noqa: BLE001  fail closed: today's launch
         return None, f"The AI model setting couldn't be read ({type(e).__name__}), so this ran on Claude's usual model."
+    if c["held"]:                                                                                  # #132 G5
+        return None, f"{c['held']} So Claude ran it."
     pick, found = c["pick"], c["found"]
     if not pick or pick == c["default"]:
         return None, "" if c["asked"] == pick else UNAVAILABLE

@@ -824,6 +824,13 @@ def disconnect_changes(provider, settings, store=None):
 
 
 # ── Routing: which model a job runs on (the policy; wiring it into runs is the guarded part) ────────────────────────────
+def stepped_down(job, settings, store=None, confidential=False):
+    """The model a job steps down to at a limit: the next kind down's choice, or its recommended Claude model when the material
+    is confidential and that choice is another provider's (#132 G5)."""
+    down = chosen(STEP_DOWN[job], settings, store)
+    return JOBS[STEP_DOWN[job]]["recommended"] if confidential and not down.startswith("claude:") else down
+
+
 def route(job, settings, store=None, confidential=False, limited=False):
     """Which model a job runs on now: {model, wait, ask, why}. The rules, in order:
     - confidential material only ever goes to Claude: a non-Claude choice runs on the job's recommended model instead;
@@ -843,10 +850,52 @@ def route(job, settings, store=None, confidential=False, limited=False):
         if alt:
             return {"model": alt[0]["id"], "wait": False, "ask": False, "why": "limit: another connected model"}
     if mode == "step_down" and job in STEP_DOWN:
-        return {"model": chosen(STEP_DOWN[job], settings, store), "wait": False, "ask": False, "why": "limit: stepped down"}
+        return {"model": stepped_down(job, settings, store, confidential), "wait": False, "ask": False,
+                "why": "limit: stepped down"}
     if mode == "ask":
         return {"model": None, "wait": False, "ask": True, "why": "limit: ask"}
     return {"model": None, "wait": True, "ask": False, "why": "limit: waits for the reset"}
+
+
+# ── #132 G5 (proposal): confidential material only to Claude, decided in the server ─────────────────────────────────────
+# route() already keeps a confidential job on Claude. These make that the server's one way to pick a model: the live server
+# calls route_for (never route) for every run, and send_allowed is the gate any call to a provider other than Claude must pass
+# first (G4's direct call; none exists yet). Fail closed: a job is confidential unless the server has shown it isn't.
+SECRET_MARKS = __import__("re").compile(r"(?i)\b(confidential|restricted)\b|client-safe:\s*no")
+CONFIDENTIAL_WORDS = "Confidential material is only ever sent to Claude."
+
+
+def confidential_job(job, text="", declared=None):
+    """(confidential, why) for one job. why: "tools" (a job that uses tools reads files and mail itself, so it is Claude's
+    only), "declared" (the server found a confidential meeting or note, or a client-restricted item), "unchecked" (the call
+    site made no check: counts as confidential), "marked" (the text sent is marked confidential or restricted, or Client-safe:
+    no), or "" (declared not confidential by the server, and the text is clean)."""
+    if JOBS.get(job, {"tools": True})["tools"]:
+        return True, "tools"
+    if declared is True:
+        return True, "declared"
+    if declared is not False:
+        return True, "unchecked"
+    if SECRET_MARKS.search(text or ""):
+        return True, "marked"
+    return False, ""
+
+
+def send_allowed(model_id, confidential):
+    """The gate before any call to a provider: Refused for confidential material (or material not shown to be otherwise) to a
+    provider other than Claude."""
+    if not str(model_id or "").startswith("claude:") and confidential is not False:
+        raise Refused(CONFIDENTIAL_WORDS)
+
+
+def route_for(job, settings, text="", declared=None, store=None, limited=False):
+    """route(), with the job's confidentiality decided here from what the server knows (confidential_job), and the gate checked
+    on the answer: the server's only way to pick a model. Adds "confidential" and "confidential_why" to route's answer."""
+    conf, why = confidential_job(job, text, declared)
+    out = route(job, settings, store, confidential=conf, limited=limited)
+    if out["model"]:
+        send_allowed(out["model"], conf)
+    return dict(out, confidential=conf, confidential_why=why)
 
 
 def retry_kind(job, check_notes):

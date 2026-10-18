@@ -2,3 +2,4 @@ g1-key-store
 g1c-never-list-held-runs
 g2-model-list
 g3-chosen-model
+g5-confidential-only-claude
