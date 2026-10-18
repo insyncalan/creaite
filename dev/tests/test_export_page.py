@@ -294,6 +294,21 @@ class LeakPass2(Base):
             self.assertNotIn("image/svg", (out or "").split("</style>", 2)[-1], kind)
 
 
+class InternalStateLabel(unittest.TestCase):
+    """v240-leak2 (e): the 'not the client's own' label states an internal fact (who owns the item); the exported page never draws it.
+    A source check (the label's element is only built when `ctx.exported` is false, in the source and in the built page); the
+    exported page's own words are covered by the leak checks above."""
+
+    def test_the_label_is_not_drawn_in_exported_mode(self):
+        root = Path(__file__).resolve().parents[2] / "system" / "templates"
+        for f in (root / "dashboard" / "src" / "components" / "report" / "ClientParts.jsx", root / "dashboard.html"):
+            text = f.read_text(encoding="utf-8")
+            hits = [ln for ln in text.splitlines() if "not the client's own" in ln]
+            self.assertTrue(hits, f.name)
+            for ln in hits:
+                self.assertRegex(ln, r"!\s*ctx\.exported\s*&&|!\s*ctx2?\.exported|exported\)?\s*&&", f"{f.name}: {ln[:160]}")
+
+
 class PictureMetadata(LeakPass2):
     """v240-leak2 (c): a picture's own metadata (PNG text chunks) in the posted page is dropped from the file."""
 

@@ -69152,7 +69152,7 @@ ${d5.text}`);
     const add = ctx.editing && check && check.addable ? check.addable.filter((a5) => a5.section === group) : [];
     const shape = cols.map((c5, k5) => ({ key: c5.key, label: c5.label, cell: (r4) => /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2(Rich, { ctx, text: r4.cells[c5.key], row: r4.i, col: c5.key, label: c5.label, empty: "Click to write" }),
-      k5 === 0 && s5.id === "overdue" && (items2[String(r4.row.ref)] || {}).client_owned === false ? /* @__PURE__ */ u2("span", { class: "crlk", children: "not the client's own" }) : null
+      k5 === 0 && !ctx.exported && s5.id === "overdue" && (items2[String(r4.row.ref)] || {}).client_owned === false ? /* @__PURE__ */ u2("span", { class: "crlk", children: "not the client's own" }) : null
     ] }) }));
     const notIn = ctx.editing && (left.length || add.length) ? /* @__PURE__ */ u2("div", { class: "crnot", "data-crnot": group, children: [
       /* @__PURE__ */ u2("div", { class: "crnoth", children: [

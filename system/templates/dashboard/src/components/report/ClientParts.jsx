@@ -167,7 +167,7 @@ export function ClientTable({ ctx }) {
   const add = ctx.editing && check && check.addable ? check.addable.filter(a => a.section === group) : [];
   const shape = cols.map((c, k) => ({ key: c.key, label: c.label, cell: (/** @type {any} */ r) => <>
     <Rich ctx={ctx} text={r.cells[c.key]} row={r.i} col={c.key} label={c.label} empty="Click to write" />
-    {k === 0 && s.id === "overdue" && (items[String(r.row.ref)] || {}).client_owned === false ? <span class="crlk">not the client's own</span> : null}</> }));
+    {k === 0 && !ctx.exported && s.id === "overdue" && (items[String(r.row.ref)] || {}).client_owned === false ? <span class="crlk">not the client's own</span> : null}</> }));
   const notIn = ctx.editing && (left.length || add.length) ? (
     <div class="crnot" data-crnot={group}>
       <div class="crnoth">Not in this report <button type="button" class="linkbtn" data-crrecheck onClick={() => runCheck()}>Check again</button></div>
