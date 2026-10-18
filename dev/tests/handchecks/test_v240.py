@@ -144,8 +144,8 @@ NAMED = {
     10: [(SHEET, ("OneComponent.test_both_views_mount_the_one_report_sheet",
                   "OneComponent.test_the_client_has_no_renderer_of_its_own_for_the_shared_parts",
                   *both("test_one_sheet_same_structure"), "ClientSheet.test_match_internal_is_kept_per_section"), H2)],
-    11: [(HUB, ("Actions.test_approve_menu_internal_first_then_client",
-                "Actions.test_a_client_export_before_the_internal_week_is_approved_opens_the_left_out_dialog_and_exports_nothing"), H1)],
+    11: [(HUB, ("Actions.test_a_client_export_before_the_internal_week_is_approved_opens_the_left_out_dialog_and_exports_nothing",
+                "Actions.test_approve_menu_internal_first_then_client"), H1)],       # this order: the approve test approves the shared server's week
     12: [(SHEET, both("test_section_menu_is_a_discreet_popup_fully_visible_at_every_zoom_and_900",
                       "test_section_menu_at_every_sheet_zoom", "test_section_menu_keyboard"), H2)],
     13: [(SHEET, both("test_health_indicator_is_96_wide_in_both_palettes_light_and_dark"), H2)],
