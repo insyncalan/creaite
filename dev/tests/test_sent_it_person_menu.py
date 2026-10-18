@@ -102,18 +102,41 @@ class PaneISentIt(SentCase):
         self.assertEqual(b.eval(f"REC('actions',{self.theirs!r}).upd"), "Plan in draft, waiting on the test environment dates")
         self.assertEqual(b.errors, [])
 
-    def test_zz_failed_staging_message_survives_the_pane_closing(self):
+    def test_zz_failed_staging_keeps_the_pane_open_and_a_second_press_logs_without_counting_again(self):
+        """#153 finding 7: the log fails after the chase was recorded: the pane stays, says so, and the retry logs the update only."""
         b = self.b
         self.chase(self.theirs)
+        recs0 = self.chase_records()
         b.eval("window.__w=shared.VW.write; shared.VW.write=async()=>{ throw new Error('disk full') }")       # the staging write fails
         try:
             b.click("#chSent")
-            b.wait("document.getElementById('pkChase').hidden")
-            b.pump(0.6)
-            self.assertIn("couldn't be staged", b.eval("document.getElementById('snackT').textContent"))
+            b.pump(0.8)
+            self.assertIn("couldn't be logged", b.eval("document.getElementById('snackT').textContent"))
+            self.assertFalse(b.eval("document.getElementById('pkChase').hidden"), "the pane stays open")
+            self.assertFalse(b.eval("document.getElementById('chSent').disabled"))
         finally:
             b.eval("shared.VW.write=window.__w")
         self.assertEqual(staged(self.v.root, self.theirs), [])
+        b.click("#chSent")
+        b.wait("document.getElementById('pkChase').hidden")
+        self.assertEqual(len(staged(self.v.root, self.theirs)), 1)
+        self.assertEqual(len(self.chase_records()), len(recs0) + 1, "the reminder is counted once")
+
+    def test_zzz_a_pane_reopened_after_a_failed_log_does_not_count_the_reminder_twice(self):
+        b = self.b
+        self.chase(self.theirs)
+        recs0, n0 = self.chase_records(), len(staged(self.v.root, self.theirs))
+        b.eval("window.__w=shared.VW.write; shared.VW.write=async()=>{ throw new Error('disk full') }")
+        try:
+            b.click("#chSent")
+            b.pump(0.8)
+        finally:
+            b.eval("shared.VW.write=window.__w")
+        self.chase(self.theirs)                                                        # the pane is opened afresh
+        b.click("#chSent")
+        b.wait("document.getElementById('pkChase').hidden")
+        self.assertEqual(len(self.chase_records()), len(recs0) + 1, "one record for the one send")
+        self.assertEqual(len(staged(self.v.root, self.theirs)), n0 + 1)
 
     def test_undo_leaves_a_proposal_staged_after_the_press(self):
         b = self.b
@@ -278,15 +301,15 @@ class LogEdges(SentCase):
             b.eval("shared.PKQ=window.__q")
         b.eval("document.getElementById('deDlg').close()")
 
-    def test_a_failure_while_logging_in_the_pane_lets_it_go_back(self):
+    def test_a_failure_while_logging_in_the_pane_lets_it_be_retried(self):
         b = self.b
         self.chase(self.theirs)
         b.eval("window.__q=shared.PKQ; shared.PKQ={then(){ throw new Error('boom') }}; 0")
         try:
             b.click("#chSent")
-            b.wait("document.getElementById('pkChase').hidden")
-            b.pump(0.5)
-            self.assertIn("couldn't be staged", b.eval("document.getElementById('snackT').textContent"))      # recorded once; the pane doesn't hang
+            b.pump(0.8)
+            self.assertIn("couldn't be logged", b.eval("document.getElementById('snackT').textContent"))      # recorded once; the pane stays for a retry
+            self.assertFalse(b.eval("document.getElementById('chSent').disabled"))
         finally:
             b.eval("shared.PKQ=window.__q")
 

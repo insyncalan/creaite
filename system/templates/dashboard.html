@@ -54713,6 +54713,15 @@ ${pre}**Current state title:** ${title}`);
   var BACK_ICON = [["path", { d: "M19 12H5M11 18l-6-6 6-6" }]];
   var SPARK_ICON = [["path", { d: "M12 1Q12 12 23 12Q12 12 12 23Q12 12 1 12Q12 12 12 1Z", fill: "currentColor", stroke: "none" }]];
   var TONES = ["First", "Second", "Firmer"];
+  var PANE_SENDS = /* @__PURE__ */ new Map();
+  var paneSendId = (key2) => {
+    let v5 = PANE_SENDS.get(key2);
+    if (!v5) {
+      v5 = "pn" + Date.now() + Math.random().toString(36).slice(2, 6);
+      PANE_SENDS.set(key2, v5);
+    }
+    return v5;
+  };
   var OLD_TABLE = (
     /** @type {any} */
     { border: "0" }
@@ -54820,7 +54829,6 @@ ${pre}**Current state title:** ${title}`);
     const [anyOpen, setAnyOpen] = d2(false);
     const [anyQ, setAnyQ] = d2("");
     const sending = A2(false);
-    const sendId = A2("pn" + Date.now() + Math.random().toString(36).slice(2, 6));
     const viaRef = A2(
       /** @type {"email"|"message"} */
       "email"
@@ -54983,7 +54991,8 @@ ${d5.text}`);
       if (sending.current) return;
       sending.current = true;
       setBusy(true);
-      const st2 = sendState(sendId.current);
+      const sendKey = `${id2}|${mode}|${pane.to.name}`, sid = paneSendId(sendKey);
+      const st2 = sendState(sid);
       let r4 = (
         /** @type {any} */
         { ok: true, chases: SA().chases || {}, record: null }
@@ -55003,14 +55012,20 @@ ${d5.text}`);
       const who2 = pane.to.name || pane.to.first || "them";
       let done = 0;
       try {
-        done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {}, sendId: sendId.current }) : 0;
+        done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {}, sendId: sid }) : 0;
       } catch (err2) {
         sending.current = false;
         setBusy(false);
         snack("The update couldn't be logged: press I sent it to try again");
         return;
       }
-      if (!done) snack(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be staged.`);
+      if (!done && k5) {
+        sending.current = false;
+        setBusy(false);
+        snack(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be logged: press I sent it to log it.`);
+        return;
+      }
+      PANE_SENDS.delete(sendKey);
       dropPolish();
       onBack();
     }

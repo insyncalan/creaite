@@ -27,6 +27,11 @@ const BACK_ICON = [["path", { d: "M19 12H5M11 18l-6-6 6-6" }]];
 /** Polish's mark, the page's spark (ICONS.spark). @type {Shapes} */
 const SPARK_ICON = [["path", { d: "M12 1Q12 12 23 12Q12 12 12 23Q12 12 1 12Q12 12 12 1Z", fill: "currentColor", stroke: "none" }]];
 const TONES = ["First", "Second", "Firmer"];
+/** #153: one send's id per item, mode and recipient for the session, so a pane closed and reopened after a failed log presses on the same
+    send and the reminder is never counted twice; forgotten once the update is logged. @type {Map<string, string>} */
+const PANE_SENDS = new Map();
+/** @param {string} key */
+const paneSendId = key => { let v = PANE_SENDS.get(key); if (!v) { v = "pn" + Date.now() + Math.random().toString(36).slice(2, 6); PANE_SENDS.set(key, v); } return v; };
 /** border="0", which Outlook reads and Preact's types leave out */
 const OLD_TABLE = /** @type {any} */ ({ border: "0" });
 const DEBOUNCE = 150;          // ms after the last change before the server is asked again (it answers in about 100 ms)
@@ -118,7 +123,6 @@ export function ChasePane({ id, onBack, start }) {
   const [anyOpen, setAnyOpen] = useState(false);
   const [anyQ, setAnyQ] = useState("");
   const sending = useRef(false);
-  const sendId = useRef("pn" + Date.now() + Math.random().toString(36).slice(2, 6));   // one send: a retry never records or logs twice
   const viaRef = useRef(/** @type {"email"|"message"} */ ("email"));
   const seq = useRef(0), mail = useRef(/** @type {HTMLDivElement | null} */ (null)), back = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const first = useRef(true);
@@ -230,7 +234,8 @@ export function ChasePane({ id, onBack, start }) {
   async function sentIt() {
     if (sending.current) return;                 // a ref, not the state: a second click before the redraw is still caught
     sending.current = true; setBusy(true);
-    const st = sendState(sendId.current);
+    const sendKey = `${id}|${mode}|${pane.to.name}`, sid = paneSendId(sendKey);
+    const st = sendState(sid);
     let r = /** @type {any} */ ({ ok: true, chases: SA().chases || {}, record: null });
     if (!st.rec.has(id)) {
       r = await api("/api/chases", { ids: [id], mode });
@@ -240,9 +245,14 @@ export function ChasePane({ id, onBack, start }) {
     const k = sentKindOf(id);
     const who = pane.to.name || pane.to.first || "them";
     let done = 0;
-    try { done = k ? await sentLog([{ k, id, need: outcome }], { name: who, mode, replyBy, via: viaRef.current, chases: r.chases || {}, sendId: sendId.current }) : 0; }
+    try { done = k ? await sentLog([{ k, id, need: outcome }], { name: who, mode, replyBy, via: viaRef.current, chases: r.chases || {}, sendId: sid }) : 0; }
     catch (err) { sending.current = false; setBusy(false); snack("The update couldn't be logged: press I sent it to try again"); return; }
-    if (!done) snack(`Recorded: chased ${pane.to.first || who} on ${fd((r.record && r.record.date) || TODAY)}. The update couldn't be staged.`);
+    if (!done && k) {      // recorded, not logged: stay here so I sent it can log just the update (the reminder is not counted again)
+      sending.current = false; setBusy(false);
+      snack(`Recorded: chased ${pane.to.first || who} on ${fd((r.record && r.record.date) || TODAY)}. The update couldn't be logged: press I sent it to log it.`);
+      return;
+    }
+    PANE_SENDS.delete(sendKey);
     dropPolish();
     onBack();
   }
