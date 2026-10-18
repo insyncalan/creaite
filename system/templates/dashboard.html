@@ -3431,7 +3431,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-root.rpt-slim>.sheet-bar .sheet-status[data-bad]{display:inline;white-space:nowrap}   /* "Unsaved changes", "Not saved." stay visible and announced */
 .sheet-root.rpt-slim>.sheet-bar{position:relative}
 .sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
-.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.rb-x){display:none}
 @media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
 /* #207: the top bar hidden by a scroll on any other page: out of the layout at once (no slide); the page grows upward (core/topbar.js) */
 .main.tb-off>.bar{height:0;min-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;overflow:hidden;visibility:hidden;flex:none;transition:none}
@@ -5815,7 +5815,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     markNewText: () => markNewText,
     markSel: () => markSel,
     markStagedRows: () => markStagedRows,
-    matchAll: () => matchAll,
     matchLabel: () => matchLabel,
     matchSection: () => matchSection,
     mdBlocks: () => mdBlocks,
@@ -66833,11 +66832,6 @@ ${d5.text}`);
     }
     return mapSection(right, id2, () => copy);
   }
-  function matchAll(left, right) {
-    let out = right;
-    for (const s5 of left.sections) if (!isTextSection(s5) || out.sections.some((x5) => x5.id === s5.id)) out = matchSection(left, out, s5.id);
-    return out;
-  }
   function matchLabel(left, right, id2, label) {
     const a5 = left.sections.find((s5) => s5.id === id2), b5 = right.sections.find((s5) => s5.id === id2);
     return sectionDiffers(a5, b5) ? `Edited for ${label === "Distributed" ? "distribution" : "the " + label.toLowerCase()}` : "Matching internal";
@@ -68320,13 +68314,6 @@ ${d5.text}`);
           ) }),
           " Scroll together"
         ] }) : null,
-        partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-matchall", onClick: () => {
-          if (partner.match) {
-            const ids = doc.sections.filter((x5) => match && match.differs(x5.id) && !(isTextSection(x5) && !partner.doc.sections.some((y5) => y5.id === x5.id))).map((x5) => x5.id);
-            if (partner.matchAll) partner.matchAll(ids);
-            else for (const id2 of ids) partner.match(id2);
-          } else changeSide(matchAll(doc, partner.doc), "Matched internal");
-        }, children: "Match internal for every section" }) : null,
         /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": main.line && !/^Saved/.test(main.line) ? "1" : void 0, children: [
           main.line,
           partner && side.line ? ` · ${partner.label}: ${side.line}` : ""
@@ -72768,9 +72755,6 @@ ${d5.text}`);
             match: (id2) => {
               matchInternal([id2]);
             },
-            matchAll: (ids) => {
-              matchInternal(ids);
-            },
             onChange: setClientDoc,
             onSave: saveClientPage,
             dirty: () => crDirty.value,
@@ -74820,7 +74804,6 @@ ${d5.text}`);
         "mWords",
         "mailLink",
         "markHelpSeen",
-        "matchAll",
         "mdBlocks",
         "mdChat",
         "mdHtml",
