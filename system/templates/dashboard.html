@@ -1929,9 +1929,6 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail #railMoreMenu .badge.warn{line-height:var(--lh-16)}
 .rail #railMoreMenu button[aria-current="page"]::before{left:-6px}
 .rail #railMoreMenu .fsec2{padding:6px 8px 2px;font:500 var(--fs-xs)/16px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.rail #railMoreMenu .rsw .sw{margin-left:auto;width:34px;height:20px;border-radius:var(--r-pill);background:var(--line);position:relative;flex:none;border:1px solid var(--muted)}
-.rail #railMoreMenu .rsw .sw::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:transform .12s}
-.rail #railMoreMenu .rsw .sw.on{background:var(--accent);border-color:var(--accent)} .rail #railMoreMenu .rsw .sw.on::after{transform:translateX(14px);background:var(--accent-ink)}
 .railsep{height:1px;background:var(--line);margin:4px 2px}
 /* #139: the hover flyouts of Projects and Work, beside the rail (collapsed or not), above the page and below dialogs and the peek (--z-menu) */
 .rail .railfly{position:fixed;z-index:var(--z-menu);width:max-content;min-width:220px;max-width:320px;max-height:360px;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px;display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-content:start}
@@ -2720,7 +2717,7 @@ a.seeall{margin-top:8px}
   .setcats button{border-left:2px solid Canvas} .setcats button[aria-selected="true"]{border-left-color:Highlight}
   .rail button[aria-current="page"]{forced-color-adjust:none;color:Highlight;border:2px solid Highlight} .rail button[aria-current="page"]::before{forced-color-adjust:none;background:Highlight}
   .rail .railfly,#railMoreMenu{border:1px solid CanvasText} .rail .railfly button:hover,.rail .railfly button:focus-visible,#railMoreMenu button:focus-visible{outline:2px solid Highlight}
-  #railMoreMenu .rsw .sw{forced-color-adjust:none} .rail button.rtog:focus-visible{outline-color:Highlight}
+  .rail button.rtog:focus-visible{outline-color:Highlight}
   #cmdkList button[aria-selected="true"],#cmdkList button:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   #cmdkIn:focus,#cmdkIn:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   .spark i,.chs .dot,.pkstage .dot,.ib .fcount,.rail .badge,.mv-mk.achieved{forced-color-adjust:none}
@@ -60149,7 +60146,7 @@ ${d5.text}`);
   }
 
   // components/sidebar/RailMore.jsx
-  function RailMore({ onGo, onCustomise, onLabels, onHealth, onHelp }) {
+  function RailMore({ onGo, onCustomise, onHealth, onHelp }) {
     const btn = A2(
       /** @type {HTMLButtonElement | null} */
       null
@@ -60163,7 +60160,7 @@ ${d5.text}`);
       {}
     );
     const [ptr, setPtr] = d2(false);
-    const open2 = railMoreOpen.value, mode = railMode.value, more = railCfg.value.more, labels = railLabelsOn.value;
+    const open2 = railMoreOpen.value, mode = railMode.value, more = railCfg.value.more;
     const bd2 = A2(
       /** @type {HTMLSpanElement | null} */
       null
@@ -60304,21 +60301,6 @@ ${d5.text}`);
                 children: [
                   /* @__PURE__ */ u2(RailIcon, { name: "sliders" }),
                   /* @__PURE__ */ u2("span", { class: "rl", children: "Customise sidebar…" })
-                ]
-              }
-            ),
-            /* @__PURE__ */ u2(
-              "button",
-              {
-                type: "button",
-                class: "nv rsw",
-                role: "menuitemcheckbox",
-                id: "railLabelsSw",
-                "aria-checked": labels ? "true" : "false",
-                onClick: () => onLabels(!labels),
-                children: [
-                  /* @__PURE__ */ u2("span", { class: "rl", children: "Labels when collapsed" }),
-                  /* @__PURE__ */ u2("i", { class: `sw${labels ? " on" : ""}`, "aria-hidden": "true" })
                 ]
               }
             )
@@ -60476,7 +60458,7 @@ ${d5.text}`);
       }
     };
     R(k(RailNav, { onGo, flyouts, onFly }), $("#railMain"));
-    R(k(RailMore, { onGo, onCustomise: railCustomise, onLabels: railSetLabels, onHealth: () => go2("settings", "health"), onHelp: () => go2("help") }), $("#railFoot"));
+    R(k(RailMore, { onGo, onCustomise: railCustomise, onHealth: () => go2("settings", "health"), onHelp: () => go2("help") }), $("#railFoot"));
     addHTML(document.body, "beforeend", html`<div id="railCustBox"></div>`);
     R(k(CustomiseSidebar, { onSave: railDone, onClose: railCustClosed }), $("#railCustBox"));
     document.addEventListener("click", (e4) => {
