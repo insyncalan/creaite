@@ -643,6 +643,131 @@ CLIENT_BUILDERS = {"header": _c_header,
                    "current_state": lambda c, lay: {"panes": [{"title": "", "text": paras(c.spec.get("current_state"))}]}}
 
 
+def _links_in(s):
+    """Whether a stored string may hold a creaite: link (as client_leak reads one: decoded, invisible characters undone)."""
+    import client_leak
+    return "creaite" in client_leak._decoded(s).lower() or client_leak.overencoded(s)
+
+
+def _schemes(t):
+    """How many creaite: schemes a text holds, as client_leak reads them (decoded)."""
+    import client_leak
+    return len(client_leak.SCHEME.findall(client_leak._decoded(t)))
+
+
+def _part_stripped(s, out):
+    """Whether drop_item_links' output `out` may hold part of a link it took out of `s` (#123 review): its words' brackets or
+    parentheses no longer balance as they did (a line break or a [bracket] inside a link's words, so only its tail went), or a
+    reference definition went while its [label] stays (a collapsed or shortcut reference link keeps its words)."""
+    import client_leak
+    import edit_ai
+    import html
+    t = html.unescape(edit_ai.unseen(s))
+    if any(t.count(a) - t.count(b) != out.count(a) - out.count(b) for a, b in ("[]", "()")):
+        return True
+    labels = lambda x: {m.group(1).strip().lower() for m in client_leak.REF_DEF.finditer(x)}   # noqa: E731
+    low = out.lower()
+    return any(f"[{lab}]" in low for lab in labels(t) - labels(out))
+
+
+WHOLE_LINK = re.compile(r"!?\[[^\[\]\n]*\]\(.*\)|<a\s[^<>]*>[^<]*</a\s*>|<(?!a\s)[a-z][a-z0-9+.-]*:[^<>\s]+>", re.I | re.S)
+REFUSED = ("A work-item link a client report can't show couldn't be taken out whole (a line break, brackets or formatting in its "
+           "words, a reference link, a bare address or a creaite: address that isn't a work item), so nothing was saved. "
+           "Take the link out, then save again.")
+
+
+def _scheme_count(x):
+    """How many creaite: schemes a text holds, in the larger of its two readings: as written and as client_leak decodes it
+    (%- and entity-encoding undone, NFKC, so a full-width colon too; invisible characters gone)."""
+    import client_leak
+    return max(len(client_leak.SCHEME.findall(x)), len(client_leak.SCHEME.findall(client_leak._decoded(x))))
+
+
+def _whole_or_refuse(s, code, con):
+    """#123 third review: fail closed on EVERY creaite: occurrence, not on a list of shapes. Each one in the string must sit inside
+    a link client_leak.LINK_SPAN matched whole, words and address together (an inline link, a whole HTML link with plain words, an
+    <auto> link), whose every address client_leak.item_links reads as an item the tracker holds: a client-visible one is kept, a
+    hidden one goes whole. Anything else (another noun such as item: item# task/ note/ person/, a bare address, a reference
+    definition, a bare <a> tag, an unknown ID) refuses. Returns the hidden items' IDs (for the second check)."""
+    import client_leak
+    import edit_ai
+    import html
+    blocking = client_leak.blocking_labels(con)
+    t = edit_ai.unseen(html.unescape(s))                                   # as drop_item_links reads it
+    t = client_leak.LINK_GAP.sub(lambda m: re.sub(r"\s+", "", m.group(0)), t)
+    covered, gone = 0, set()
+    for m in client_leak.LINK_SPAN.finditer(t):
+        span = m.group(0)
+        n = _scheme_count(span)
+        if not n or not WHOLE_LINK.fullmatch(span):
+            continue
+        addresses = client_leak.item_links(span)
+        ids = [edit_ai.loose_ids(con, a) for a in addresses]
+        if len(addresses) != n or any(not x or not all(edit_ai.in_tracker(con, i) for i in x) for x in ids):
+            continue
+        covered += n
+        gone |= {i for a, x in zip(addresses, ids) for i in x
+                 if not client_leak._link_ok(con, code, f"creaite:item/{a}", blocking)}
+    if covered < _scheme_count(t) or client_leak.overencoded(s):
+        raise ReportError(REFUSED)
+    return gone
+
+
+def _drop_one(s, code, con):
+    """One string with the creaite: links a client may not have taken out whole; the string exactly as it was when none went (#123
+    review: drop_item_links rewrites entities in the whole string). When any went, refuses (ReportError) rather than keep part of a
+    link: every creaite: occurrence must be inside a whole link to a known item (_whole_or_refuse), and, a second check, what is left
+    may not hold a removed hidden item's ID or wording (client_leak.text_findings)."""
+    import client_leak
+    if not _links_in(s):
+        return s
+    out = client_leak.drop_item_links(code, s, con)
+    if _schemes(out) == _schemes(s):
+        return s
+    gone = _whole_or_refuse(s, code, con)
+    if _part_stripped(s, out) or any(f.split(" ")[0] in gone for f in client_leak.text_findings(con, code, out)):
+        raise ReportError(REFUSED)
+    return out
+
+
+def _drop_links(x, code, con):
+    """A section's value with every string's creaite: links a client may not have taken out (_drop_one)."""
+    if isinstance(x, str):
+        return _drop_one(x, code, con)
+    if isinstance(x, list):
+        return [_drop_links(v, code, con) for v in x]
+    if isinstance(x, dict):
+        return {k: _drop_links(v, code, con) for k, v in x.items()}
+    return x
+
+
+def client_item_links(doc, con=None):
+    """#123 (#122 step C, client path): (a copy of a client document with every work-item link a client may not have taken out
+    WHOLE from every section, words and address, [why each went]). A link's words may have been edited so they no longer name the
+    item, and its address would stay in the stored text; client_leak.drop_item_links reads the address. A link to an item a client
+    may see stays as it is. An internal document is returned as it is. Fails closed: when the tracker can't be read, ReportError
+    (nothing is built or saved)."""
+    import client_leak
+    if (doc.get("audience") or "internal") == "internal":
+        return doc, []
+    code = doc.get("project") or ""
+    try:
+        con = con or client_leak.connect()
+        before = client_leak.raw_strings({"sections": doc.get("sections") or []})
+        sections = _drop_links(doc.get("sections") or [], code, con)
+        after = client_leak.raw_strings({"sections": sections})
+        gone = sorted({i for i in client_leak.item_links(before)} - {i for i in client_leak.item_links(after)})
+    except ReportError:
+        raise
+    except Exception as e:  # noqa: BLE001  fails closed
+        raise ReportError("The work-item links couldn't be checked against the tracker, so nothing was built or saved. "
+                          "Try again; if it keeps happening, run the health check.") from e
+    if after == before:
+        return doc, []
+    return dict(doc, sections=sections), [f"a link to {i}, an item a client report can't show, was taken out" for i in gone] or [
+        "a link a client report can't hold was taken out"]
+
+
 def client_doc(code, week_ending=None, client=None, spec=None, layout=None):
     """A client's view of the week as a creaite document (version 0, a draft; nothing written): client-safe facts only, from the
     latest approved internal week when there is one (its facts locked, `based_on` naming it), else from the tracker as it stands
@@ -662,7 +787,7 @@ def client_doc(code, week_ending=None, client=None, spec=None, layout=None):
                           sources=[{"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending "
                                                                                     f"{shown(c.base['date'])}" if c.base else "")}])
     doc["based_on"] = {"path": c.base["path"], "version": c.base["version"]} if c.base else None
-    return client_leak.make_safe(doc)[0]
+    return client_item_links(client_leak.make_safe(doc)[0])[0]
 
 
 def build(kind, code, week_ending=None, client=None, spec=None, layout=None):
@@ -703,6 +828,8 @@ def save_draft(doc, base_version=None, why=None):
     if kind not in KINDS:
         raise ReportError("Only a weekly or client report is saved here.")
     doc, removed = client_leak.make_safe(doc)
+    doc, dropped = client_item_links(doc)
+    removed = removed + dropped
     draft, filed = draft_path(kind, code, fri, client), filed_path(kind, code, fri, client)
     if not paths.resolve(draft).is_file() and paths.resolve(filed).is_file():
         now = int(creaite_doc.read(filed).get("version") or 0)
