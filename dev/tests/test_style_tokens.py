@@ -100,7 +100,8 @@ class StyleTokens(unittest.TestCase):
         n = len(re.findall(r"(?m)^\.chip,\.vchip\{", self.css))
         self.assertEqual(n, 1, "one chip definition")
         for ctx in (".prepmeta .chip{", ".shape .chip{", ".pp .chip{", ".rp .chip{", ".rp-cockcard .chip{"):
-            self.assertNotIn(ctx, self.css, ctx + " is a second chip style")
+            for body in re.findall(re.escape(ctx) + r"([^}]*)\}", self.css):
+                self.assertNotRegex(body, r"height|radius", ctx + " draws its own height or radius (a second chip style)")
         self.assertRegex(self.css, r"\.wbulk select[^{]*\{height:var\(--ctl-h\);border:1px solid var\(--line\);border-radius:var\(--ctl-r\)")
         for pat in (r"\.fpl input\{[^}]*height:\d", r"\.handbar input\[type=text\]\{[^}]*height:\d",
                     r"\.linkpop input\{[^}]*height:\d", r"\.fsel\{height:36px"):
