@@ -71100,9 +71100,9 @@ ${d5.text}`);
     needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes"],
     routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one"]
   };
-  var KIND2 = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
-  var irKind = (r4) => r4.kind === "raid" ? r4.rec && r4.rec.type || "Risk" : KIND2[
-    /** @type {keyof KIND} */
+  var IR_KIND_WORDS = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
+  var irKind = (r4) => r4.kind === "raid" ? r4.rec && r4.rec.type || "Risk" : IR_KIND_WORDS[
+    /** @type {keyof IR_KIND_WORDS} */
     r4.kind
   ] || "Proposal";
   var ageWords = (d5) => d5 === 0 ? "today" : d5 === 1 ? "1 day" : `${d5} days`;
@@ -71122,7 +71122,7 @@ ${d5.text}`);
         "data-stage": m5.stage,
         "data-state": state,
         tabindex: 0,
-        "aria-expanded": can ? String(open2) : void 0,
+        "aria-expanded": can ? open2 : void 0,
         onClick: (e4) => {
           if (!/** @type {Element} */
           e4.target.closest("button,a,input")) irClickMeeting(m5.id);
@@ -71189,8 +71189,8 @@ ${d5.text}`);
   }
 
   // components/intakeReview/views.jsx
-  var STN = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
-  var EMPTY2 = "Nothing here. Meetings appear when they end.";
+  var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
+  var IR_EMPTY = "Nothing here. Meetings appear when they end.";
   function MailSections({ model }) {
     const mail = irLive(model.mail, irDone), other = irLive(model.other, irDone);
     const nm3 = mail.needs.length + mail.routine.length, no2 = other.needs.length + other.routine.length;
@@ -71222,7 +71222,7 @@ ${d5.text}`);
   }
   function ListView({ model, list }) {
     return /* @__PURE__ */ u2("div", { "data-irv": "list", children: [
-      list.length ? /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: list.map((m5) => /* @__PURE__ */ u2(MeetingBlock, { m: m5 })) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: EMPTY2 }),
+      list.length ? /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: list.map((m5) => /* @__PURE__ */ u2(MeetingBlock, { m: m5 })) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: IR_EMPTY }),
       /* @__PURE__ */ u2(MailSections, { model })
     ] });
   }
@@ -71233,8 +71233,8 @@ ${d5.text}`);
         const l6 = model.meetings.filter((m5) => m5.stage === g5);
         return /* @__PURE__ */ u2("div", { class: "iccol", "data-ircol": g5, children: [
           /* @__PURE__ */ u2("h2", { children: [
-            STN[
-              /** @type {keyof STN} */
+            IR_STAGE_NAMES[
+              /** @type {keyof IR_STAGE_NAMES} */
               g5
             ],
             " ",
@@ -71259,18 +71259,18 @@ ${d5.text}`);
         }, children: /* @__PURE__ */ u2("td", { class: "title", children: [
           m5.title,
           /* @__PURE__ */ u2("div", { class: "why", children: [
-            STN[
-              /** @type {keyof STN} */
+            IR_STAGE_NAMES[
+              /** @type {keyof IR_STAGE_NAMES} */
               m5.stage
             ],
             m5.p ? ` · ${pName(m5.p)}` : ""
           ] })
-        ] }) })) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: EMPTY2 }) }),
+        ] }) })) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: IR_EMPTY }) }),
         /* @__PURE__ */ u2("div", { class: "card icdet", "data-irdet": sel ? sel.id : "", children: sel ? /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("h2", { style: { margin: "0 0 4px" }, children: sel.title }),
           /* @__PURE__ */ u2("div", { class: "why", children: [
-            STN[
-              /** @type {keyof STN} */
+            IR_STAGE_NAMES[
+              /** @type {keyof IR_STAGE_NAMES} */
               sel.stage
             ],
             sel.p ? ` · ${pName(sel.p)}` : ""
@@ -71283,7 +71283,6 @@ ${d5.text}`);
   }
 
   // components/intakeReview/IntakeReviewPage.jsx
-  var STN2 = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
   var VIEWICON = {
     list: /* @__PURE__ */ u2("path", { d: "M4 6h16M4 12h16M4 18h16" }),
     board: /* @__PURE__ */ u2(S2, { children: [
@@ -71296,9 +71295,9 @@ ${d5.text}`);
       /* @__PURE__ */ u2("rect", { x: "13", y: "4", width: "8", height: "16", rx: "1" })
     ] })
   };
-  var plural2 = (n4, w6) => `${n4} ${w6}${n4 === 1 ? "" : "s"}`;
+  var irPlural = (n4, w6) => `${n4} ${w6}${n4 === 1 ? "" : "s"}`;
   function StagePipe({ c: c5 }) {
-    const sub = { arrived: `${c5.ready} ready to process`, drafted: `${plural2(c5.to_approve, "proposal")} to check`, approved: "this week" };
+    const sub = { arrived: `${c5.ready} ready to process`, drafted: `${irPlural(c5.to_approve, "proposal")} to check`, approved: "this week" };
     return /* @__PURE__ */ u2("div", { class: "icpipe", role: "group", "aria-label": "Stages", children: [
       IR_STAGES.map((g5, i5) => /* @__PURE__ */ u2(S2, { children: [
         i5 ? /* @__PURE__ */ u2("span", { class: "ar", "aria-hidden": "true", children: "→" }) : null,
@@ -71309,7 +71308,7 @@ ${d5.text}`);
             role: "button",
             tabindex: 0,
             "data-irstage": g5,
-            "aria-pressed": String(irStage.value === g5),
+            "aria-pressed": irStage.value === g5,
             onClick: () => irClickStage(g5),
             onKeyDown: (e4) => {
               if (e4.key === "Enter" || e4.key === " ") {
@@ -71319,8 +71318,8 @@ ${d5.text}`);
             },
             children: [
               /* @__PURE__ */ u2("div", { class: "v", children: c5[g5] }),
-              /* @__PURE__ */ u2("div", { class: "l", children: STN2[
-                /** @type {keyof STN} */
+              /* @__PURE__ */ u2("div", { class: "l", children: IR_STAGE_NAMES[
+                /** @type {keyof IR_STAGE_NAMES} */
                 g5
               ] }),
               /* @__PURE__ */ u2("div", { class: "icsub", children: sub[
@@ -71342,7 +71341,7 @@ ${d5.text}`);
         " ",
         /* @__PURE__ */ u2("span", { class: "sub rgc", children: n4 }),
         " ",
-        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-irfold": sec, "aria-expanded": String(!folded), onClick: () => irClickFold(sec), children: folded ? "Show" : "Hide" })
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-irfold": sec, "aria-expanded": !folded, onClick: () => irClickFold(sec), children: folded ? "Show" : "Hide" })
       ] }),
       folded ? null : children
     ] });
@@ -71356,12 +71355,12 @@ ${d5.text}`);
       /* @__PURE__ */ u2("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
         c5.ready,
         " ready to process · ",
-        plural2(c5.to_approve, "proposal"),
+        irPlural(c5.to_approve, "proposal"),
         " to approve"
       ] }),
       /* @__PURE__ */ u2("div", { class: "toolbar rvtools", children: [
         /* @__PURE__ */ u2("span", { class: "sp" }),
-        /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "How you see Intake and Review", children: IR_VIEWS.map(([v5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-irview": v5, "aria-pressed": String(view === v5), title: l6, onClick: () => irSetView(v5), children: [
+        /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "How you see Intake and Review", children: IR_VIEWS.map(([v5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-irview": v5, "aria-pressed": view === v5, title: l6, onClick: () => irSetView(v5), children: [
           /* @__PURE__ */ u2("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "aria-hidden": "true", children: VIEWICON[
             /** @type {keyof VIEWICON} */
             v5
@@ -71389,14 +71388,14 @@ ${d5.text}`);
       ] })
     ] });
   }
-  var mounted2 = false;
+  var irMounted = false;
   function renderIntakeReview() {
     const el2 = $("#v-intake-review");
     if (!el2) return;
     irAfterData();
-    if (!mounted2) {
+    if (!irMounted) {
       R(/* @__PURE__ */ u2(IntakeReviewView, {}), el2);
-      mounted2 = true;
+      irMounted = true;
       bootIrKeys();
     }
   }

@@ -13,9 +13,9 @@ export const IR_GROUP_HEAD = {
   needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes"],
   routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one"],
 };
-const KIND = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
+const IR_KIND_WORDS = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
 /** The kind pill's word for a Review row. @param {any} r */
-export const irKind = r => (r.kind === "raid" ? (r.rec && r.rec.type) || "Risk" : KIND[/** @type {keyof KIND} */ (r.kind)] || "Proposal");
+export const irKind = r => (r.kind === "raid" ? (r.rec && r.rec.type) || "Risk" : IR_KIND_WORDS[/** @type {keyof IR_KIND_WORDS} */ (r.kind)] || "Proposal");
 const ageWords = (/** @type {number} */ d) => (d === 0 ? "today" : d === 1 ? "1 day" : `${d} days`);
 
 /** @param {{m: any, live: {needs: number[], routine: number[]}}} props */
@@ -26,7 +26,7 @@ export function MeetingRow({ m, live }) {
   const can = m.stage === "drafted";
   return (
     <tr class={`click irmeet${open ? " icopen" : ""}`} data-irm={m.id} data-stage={m.stage} data-state={state} tabindex={0}
-      aria-expanded={can ? String(open) : undefined}
+      aria-expanded={can ? open : undefined}
       onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
       <td class="title">
         <b class="icmeethd">{m.title}</b>

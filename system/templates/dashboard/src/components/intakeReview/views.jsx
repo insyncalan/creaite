@@ -8,8 +8,8 @@ import { IR_STAGES, irLive } from "../../core/irFold.js";
 import { irClickMeeting, irDone, irOpen, irSel } from "../../stores/intakeReview.js";
 import { MeetingRow, ProposalGroups } from "./rows.jsx";
 
-const STN = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
-const EMPTY = "Nothing here. Meetings appear when they end.";
+export const IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
+const IR_EMPTY = "Nothing here. Meetings appear when they end.";
 
 /** @param {{model: any}} props */
 function MailSections({ model }) {
@@ -37,7 +37,7 @@ function MeetingBlock({ m }) {
 /** @param {{model: any, list: any[]}} props */
 export function ListView({ model, list }) {
   return <div data-irv="list">
-    {list.length ? <div class="tbl"><table><tbody>{list.map(m => <MeetingBlock m={m} />)}</tbody></table></div> : <div class="empty">{EMPTY}</div>}
+    {list.length ? <div class="tbl"><table><tbody>{list.map(m => <MeetingBlock m={m} />)}</tbody></table></div> : <div class="empty">{IR_EMPTY}</div>}
     <MailSections model={model} />
   </div>;
 }
@@ -49,7 +49,7 @@ export function BoardView({ model }) {
     <div class="icboard">{IR_STAGES.map(g => {
       const l = model.meetings.filter((/** @type {any} */ m) => m.stage === g);
       return <div class="iccol" data-ircol={g}>
-        <h2>{STN[/** @type {keyof STN} */ (g)]} <span class="sub rgc">{l.length}</span></h2>
+        <h2>{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (g)]} <span class="sub rgc">{l.length}</span></h2>
         {l.length ? l.map((/** @type {any} */ m) => (
           <div class="card iccard click" data-irm={m.id} tabindex={0} onClick={() => irClickMeeting(m.id)}>
             <div class="t">{m.title}</div><div class="why">{m.p ? pName(m.p) : ""}</div>
@@ -69,13 +69,13 @@ export function TwoPanes({ model, list }) {
     <div class="icsplit">
       <div>{list.length ? <div class="tbl"><table><tbody>{list.map(m => (
         <tr class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={() => { irSel.value = m.id; }}>
-          <td class="title">{m.title}<div class="why">{STN[/** @type {keyof STN} */ (m.stage)]}{m.p ? ` · ${pName(m.p)}` : ""}</div></td>
+          <td class="title">{m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]}{m.p ? ` · ${pName(m.p)}` : ""}</div></td>
         </tr>
-      ))}</tbody></table></div> : <div class="empty">{EMPTY}</div>}</div>
+      ))}</tbody></table></div> : <div class="empty">{IR_EMPTY}</div>}</div>
       <div class="card icdet" data-irdet={sel ? sel.id : ""}>
         {sel ? <>
           <h2 style={{ margin: "0 0 4px" }}>{sel.title}</h2>
-          <div class="why">{STN[/** @type {keyof STN} */ (sel.stage)]}{sel.p ? ` · ${pName(sel.p)}` : ""}</div>
+          <div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (sel.stage)]}{sel.p ? ` · ${pName(sel.p)}` : ""}</div>
           <div class="tbl"><table><tbody><ProposalGroups groups={sel.groups} meet={sel.title} /></tbody></table></div>
         </> : <div class="empty">Select a meeting.</div>}
       </div>
