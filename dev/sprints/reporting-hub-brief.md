@@ -1,5 +1,7 @@
 # Brief: one Reporting hub for the internal and the client weekly report
 
+**Status: the mockup is LOCKED, approved by Alan on 18-10-2026. All reporting items are in release 2.4. No reporting development starts until Alan gives the go-ahead.**
+
 Product Manager, 18-10-2026, from Alan's requests and screenshots. Mockup: dev/mockups/reporting-hub-mockup.html (built on the real weekly snapshot; use the Internal, Client and Side by side switch; the week control; "Client report" settings at the top right; Export and Approve menus; the foot bar switches "Client report: required / not required", opens the settings and the export name-clash dialog). **No development on reporting until Alan gives the go-ahead after a complete UI review.** Alan's plan: reporting moves into release 2.4; the defects are for the next patch (he wrote 2.3.1, which is already out, so I read it as the next patch, 2.3.4; Jarvis to confirm). This brief supersedes dev/sprints/weekly-report-tidy-brief.md where they differ; that brief's items stay as the detail for the defects.
 
 ## What Alan asked for in this round
@@ -68,7 +70,7 @@ One page for a project's weekly reporting, replacing the separate weekly and cli
 ## Round 6 (Alan, 18-10-2026)
 
 - **Approved:** the icon controls on the hub's toolbar (Show as exported, Check this report, the cog) as drawn.
-- **Defect: remove the "Weekly report" and "Client report" buttons from the bottom of the project page.** They are two bare buttons that open the two separate report pages. With one hub they are redundant. Reaching the hub from a project: the project page's Reporting card (one "Open reporting" action), the Reports page, and the weekly report reminder. Done when neither button is on the project page and every link to a report still works. It touches reporting, so it waits for the hold with the rest.
+- **Defect: remove the "Weekly report" and "Client report" buttons from the bottom of the project page.** They are two bare buttons that open the two separate report pages. With one hub they are redundant. **Alan: at the bottom of the project page, beside the Files icon, a Reports icon opens reporting for the project (the hub).** Other ways in: the project page's Reporting card, the Reports page, and the weekly report reminder. Done when neither button is on the project page, the Reports icon sits beside the Files icon (same size and style, a name on hover, opens the hub for that project), and every link to a report still works. It touches reporting, so it waits for the hold with the rest.
 
 ## Round 7: the export audit (Team Stark, read-only, 18-10-2026)
 
