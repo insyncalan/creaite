@@ -41,6 +41,13 @@ Product Manager, 18-10-2026, from Alan's screenshots and requests; revised the s
 **Dependency for Team Stark to confirm:** today's report sheet profile has no checklist, code, table or Insert menu because the Current state storage can't hold them and Word shows some of them poorly. This section needs its own storage that can, and an export path for each. If any element cannot be exported faithfully, say which, and Alan decides. **Alan's rule: no exception.**
 **Done when:** every button of the Notes toolbar is present and works in a text section; a document using all of them exports identically (to the eye) in HTML, Word and PDF; the text is saved and filed with the report; the one editor's round-trip gate passes.
 
+## 7. Defect: an export seems only to open, not to save to disk
+
+**Seen (Alan):** choosing HTML opens the page in the browser, and PDF opens in Adobe. He cannot tell that a file was saved, or where.
+**What the code does today (read, not run):** the Export menu calls `exportWeekly`, and the only message afterwards is a brief toast, "Exported: <file name>", with no folder. The viewer then opens (the live server's open call). I have not run an export, so whether the file reaches the project's Reports folder is for Team Stark to confirm.
+**Fix:** after an export the toast names the folder and has two actions, **Show in Finder** and **Open**; the file is saved first, into the project's Reports folder (as the filed report is), and opening is a separate choice, not the only visible result. Word, HTML and PDF behave the same. A failed save says so plainly.
+**Done when:** each of HTML, Word and PDF leaves a real file in the stated folder with the report's name and date; the toast shows the path and both actions work; nothing is overwritten silently (a taken name gets a number).
+
 ## Client-safe
 
 A text section is internal until Alan matches or writes it in the client report. Tracker items added by the picker follow the client-visible flag (off by default); the client report offers only client-visible items.
