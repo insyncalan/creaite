@@ -27,7 +27,7 @@ export const hubReady = signal("");
 /** The code and week the hub was asked for (week "" = the latest). */
 export const hubAsk = signal(/** @type {{code: string, week: string}|null} */ (null));
 
-let asked = 0;
+let hubAsked = 0;
 
 /** The key a loaded hub carries. @param {string} code @param {string} week */
 export const hubKey = (code, week) => `${code}|${week}|${clientReportOn(code) ? 1 : 0}`;
@@ -35,17 +35,17 @@ export const hubKey = (code, week) => `${code}|${week}|${clientReportOn(code) ? 
 /** Open the week: the internal report, then (the project having one) the client report for the same week.
     @param {string} code @param {string} [week] YYYY-MM-DD, or none for the latest */
 export async function loadHub(code, week = "") {
-  const mine = ++asked;
+  const mine = ++hubAsked;
   hubAsk.value = { code, week };
   hubReady.value = "";
   hubNote.value = "";
   setWeeklyDirty(false);
   await loadWeekly({ code, week: week || undefined });
-  if (mine !== asked) return;
+  if (mine !== hubAsked) return;
   const d = weeklyDoc.value, date = (d && d.date) || week;
   if (clientReportOn(code) && viaServer()) await loadClientReport({ code, week: date || undefined });
   else { crDoc.value = null; crInternal.value = null; crInfo.value = null; crOpen.value = null; }
-  if (mine !== asked) return;
+  if (mine !== hubAsked) return;
   hubReady.value = hubKey(code, week);
 }
 

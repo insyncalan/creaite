@@ -194,9 +194,10 @@ class ClientReportPanel(LiveBrowserCase):
         b.click("#cfgOn")
         self.wait_line("Client report", "off")
         b.eval("location.hash='#reporting=ABC'")
-        b.wait("!!document.querySelector('#v-reporting .rp-card')")
-        self.assertEqual(b.eval("document.querySelectorAll('#v-reporting .rp-card').length"), 1)
-        self.assertIn("no client report", b.eval("document.querySelector('#v-reporting .hhead .sub').textContent").lower())
+        # H1 retired the Reporting space's card: the hub shows only the internal report, with no switch
+        b.wait("!!document.querySelector('#v-reporting .sheet-bar')")
+        self.assertEqual(b.eval("!!document.querySelector('#hubSeg')"), False)
+        self.assertEqual(b.eval("document.querySelectorAll('#v-reporting .page').length"), 1)
         self.assertEqual(b.eval("!!document.querySelector('#v-reporting [data-editboth]')"), False)
 
     # ----- logos from the screen (Round 8 and 9)

@@ -24,13 +24,13 @@ export function StateChip({ s }) {
   return <Chip tone={s.tone === "ok" ? "ok" : s.tone === "warn" ? "warn" : "mute"}>{s.label}</Chip>;
 }
 
-let mounted = false;
+let spaceMounted = false;
 /** go()'s renderer for #reporting=<code>: draws the hub and opens the week. `fresh` (a visit) opens it again; a data reload (no `fresh`)
     leaves an open week, and any edit in it, alone. @param {string} code @param {boolean} [fresh] */
 export function renderReporting(code, fresh = false) {
   const el = $("#v-reporting");
   if (!el || !code) return;
   spaceCode.value = code;
-  if (!mounted) { render(<ReportingHub />, el); mounted = true; }
+  if (!spaceMounted) { render(<ReportingHub />, el); spaceMounted = true; }
   if (fresh || hubReady.value !== hubKey(code, spaceWeek.value)) loadHub(code, spaceWeek.value).then(() => { navWrite(false); tabTitle(); });
 }

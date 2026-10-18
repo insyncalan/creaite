@@ -343,9 +343,9 @@ class Scroll(Hub):
                 self.tick(2)
                 self.b.wait(SLIM, 5)
                 self.b.pump(0.1)
-                st = self.q(f"""(()=>{{const q=s=>document.querySelector(s); return {{bar:q('.main>.bar').getBoundingClientRect().height,
+                st = self.q("""(()=>{const q=s=>document.querySelector(s); return {bar:q('.main>.bar').getBoundingClientRect().height,
                   head:q('#v-reporting .wrhead').getBoundingClientRect().height, mini:q('#v-reporting .sheet-mini').innerText,
-                  mh:q('#v-reporting .sheet-mini').getBoundingClientRect().height}}}})()""")
+                  mh:q('#v-reporting .sheet-mini').getBoundingClientRect().height}})()""")
                 self.assertEqual((st["bar"], st["head"]), (0, 0))
                 self.assertIn("Weekly reporting", st["mini"])
                 self.assertAlmostEqual(self.header_bottom(), 48, delta=1.5)

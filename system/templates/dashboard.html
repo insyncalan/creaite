@@ -51156,12 +51156,12 @@ ${pre}**Current state title:** ${title}`);
         snack("A prep page is already being made");
         return;
       }
-      const asked3 = typeof given === "string" && !!given;
-      if (shared.BUSY && !asked3) {
+      const asked2 = typeof given === "string" && !!given;
+      if (shared.BUSY && !asked2) {
         snack("ask creaite is busy; try again when it's finished");
         return;
       }
-      const key2 = asked3 ? given : prepKey(shared.PREPEV, shared.PREPDAY);
+      const key2 = asked2 ? given : prepKey(shared.PREPEV, shared.PREPDAY);
       if (SA().agendas_shared && !store.get("creaite-prep-shared-ok", false)) {
         if (!confirm("The page is saved in the project's Agendas folder, in OneDrive, where other people may see it if the folder is shared. It's marked Internal. Save it there?")) return;
         store.set("creaite-prep-shared-ok", true);
@@ -62012,10 +62012,10 @@ ${d5.text}`);
     return false;
   }
   function permissionInfoText(ev) {
-    const asked3 = ev.asked && ev.asked !== ev.rule ? ` (asked as ${ev.asked})` : "", shapes = (ev.refused || []).filter(Boolean);
-    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked3} is already allowed by ${ev.covered}. The request was refused for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
-    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked3}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
-    return `ask creaite asked for ${ev.rule}${asked3}, which creaite won't add: ${ev.reason}.`;
+    const asked2 = ev.asked && ev.asked !== ev.rule ? ` (asked as ${ev.asked})` : "", shapes = (ev.refused || []).filter(Boolean);
+    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked2} is already allowed by ${ev.covered}. The request was refused for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
+    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
+    return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}.`;
   }
   function permissionInfo(ev) {
     const d5 = addEl("msg a info", html`${permissionInfoText(ev)}`);
@@ -64985,15 +64985,15 @@ ${d5.text}`);
   function actConfirm(ids, plan) {
     const dlg = $("#actDlg") || makeUndoDialog();
     const done = plan.done || [], skipped = plan.skipped || [], n4 = done.length;
-    let asked3 = false;
+    let asked2 = false;
     putHTML($("#actDlgBody"), html`<h2 id="actDlgH" style="margin:0 0 6px">${n4 ? html`Undo ${raw(n4)} change${n4 === 1 ? "" : "s"}?` : "Nothing here can be undone"}</h2>
     <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n4 ? "Each goes back to what it was before, only where it still holds the value that change gave it. It is one new apply, so you can undo it too." : html`Each of these has changed since, or can't be put back here.`}</p>
     <ul class="actplan">${raw(done.map(actPlanLine).join(""))}${raw(skipped.map(actPlanLine).join(""))}</ul>
     <div class="curacts"><span class="sp"></span><button type="button" class="btn" id="actDlgCancel">${n4 ? "Cancel" : "Close"}</button>${n4 ? html`<button type="button" class="btn primary" id="actDlgGo">Undo ${raw(n4)}</button>` : ""}</div>`);
     $("#actDlgCancel").onclick = () => dlg.close();
     if (n4) $("#actDlgGo").onclick = async () => {
-      if (n4 > ACT_ASK_AGAIN && !asked3) {
-        asked3 = true;
+      if (n4 > ACT_ASK_AGAIN && !asked2) {
+        asked2 = true;
         $("#actDlgAsk").textContent = `This undoes ${n4} changes at once. Are you sure? (It can itself be undone.)`;
         $("#actDlgGo").textContent = `Yes, undo ${n4}`;
         $("#actDlgGo").focus();
@@ -68990,16 +68990,16 @@ ${d5.text}`);
     /** @type {{code: string, week: string}|null} */
     null
   );
-  var asked2 = 0;
+  var hubAsked = 0;
   var hubKey = (code, week) => `${code}|${week}|${clientReportOn(code) ? 1 : 0}`;
   async function loadHub(code, week = "") {
-    const mine = ++asked2;
+    const mine = ++hubAsked;
     hubAsk.value = { code, week };
     hubReady.value = "";
     hubNote.value = "";
     setWeeklyDirty(false);
     await loadWeekly({ code, week: week || void 0 });
-    if (mine !== asked2) return;
+    if (mine !== hubAsked) return;
     const d5 = weeklyDoc.value, date = d5 && d5.date || week;
     if (clientReportOn(code) && viaServer()) await loadClientReport({ code, week: date || void 0 });
     else {
@@ -69008,7 +69008,7 @@ ${d5.text}`);
       crInfo.value = null;
       crOpen.value = null;
     }
-    if (mine !== asked2) return;
+    if (mine !== hubAsked) return;
     hubReady.value = hubKey(code, week);
   }
   function reloadHub() {
@@ -71391,7 +71391,7 @@ ${d5.text}`);
   ];
 
   // components/report/hub/WeekMenu.jsx
-  var DAYS2 = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   function WeekMenu({ week, tone, rows: rows2, clientOn, onPick }) {
     const [open2, setOpen2] = d2(false);
     const btn = A2(
@@ -71403,7 +71403,7 @@ ${d5.text}`);
       if (how === "esc" && btn.current) btn.current.focus({ preventScroll: true });
     };
     const jump2 = (value) => {
-      const w6 = weekEndingFor(value, Math.max(0, DAYS2.indexOf(String(S.weeklyDay || "Friday"))));
+      const w6 = weekEndingFor(value, Math.max(0, WEEK_DAYS.indexOf(String(S.weeklyDay || "Friday"))));
       if (!w6) return;
       setOpen2(false);
       onPick(w6);
@@ -72056,8 +72056,8 @@ ${d5.text}`);
     repTick.value;
     crTick.value;
     const code = spaceCode.value, p6 = P4.find((x5) => x5.code === code);
-    const on2 = code ? clientReportOn(code) : false, asked3 = spaceWeek.value;
-    const ready = !!code && hubReady.value === hubKey(code, asked3);
+    const on2 = code ? clientReportOn(code) : false, asked2 = spaceWeek.value;
+    const ready = !!code && hubReady.value === hubKey(code, asked2);
     h2(() => {
       const a5 = hubAsk.value;
       if (code && a5 && a5.code === code && hubReady.value && hubReady.value !== hubKey(code, a5.week)) loadHub(code, a5.week);
@@ -72077,7 +72077,7 @@ ${d5.text}`);
     if (!p6) return null;
     const v5 = weeklyView.value, doc = weeklyDoc.value;
     const view = on2 ? hubView.value : "internal";
-    const date = doc && doc.date || asked3;
+    const date = doc && doc.date || asked2;
     const head = /* @__PURE__ */ u2("header", { class: "wrhead", children: [
       /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
         /* @__PURE__ */ u2("a", { href: "#", "data-go": "projects", children: "Projects" }),
@@ -72115,14 +72115,14 @@ ${d5.text}`);
   function StateChip({ s: s5 }) {
     return /* @__PURE__ */ u2(Chip, { tone: s5.tone === "ok" ? "ok" : s5.tone === "warn" ? "warn" : "mute", children: s5.label });
   }
-  var mounted2 = false;
+  var spaceMounted = false;
   function renderReporting(code, fresh = false) {
     const el2 = $("#v-reporting");
     if (!el2 || !code) return;
     spaceCode.value = code;
-    if (!mounted2) {
+    if (!spaceMounted) {
       R(/* @__PURE__ */ u2(ReportingHub, {}), el2);
-      mounted2 = true;
+      spaceMounted = true;
     }
     if (fresh || hubReady.value !== hubKey(code, spaceWeek.value)) loadHub(code, spaceWeek.value).then(() => {
       navWrite(false);

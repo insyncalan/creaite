@@ -10,7 +10,7 @@ import { weekEndingFor } from "./hubLib.js";
 
 /** @typedef {import("./hubLib.js").WeekRow} WeekRow */
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 /** @param {{week: string, tone: string, rows: WeekRow[], clientOn: boolean, onPick: (week: string) => void}} props */
 export function WeekMenu({ week, tone, rows, clientOn, onPick }) {
@@ -18,7 +18,7 @@ export function WeekMenu({ week, tone, rows, clientOn, onPick }) {
   const btn = useRef(/** @type {HTMLButtonElement|null} */ (null));
   const close = (/** @type {string} */ how) => { setOpen(false); if (how === "esc" && btn.current) btn.current.focus({ preventScroll: true }); };
   const jump = (/** @type {string} */ value) => {
-    const w = weekEndingFor(value, Math.max(0, DAYS.indexOf(String(S.weeklyDay || "Friday"))));
+    const w = weekEndingFor(value, Math.max(0, WEEK_DAYS.indexOf(String(S.weeklyDay || "Friday"))));
     if (!w) return;
     setOpen(false); onPick(w);
   };
