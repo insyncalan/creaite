@@ -351,7 +351,7 @@ class WeeklyView(WeeklyBase):
         order = b.eval("[...document.querySelectorAll('#v-weekly .page>section[data-id]')].map(s=>s.dataset.id)")
         self.assertLess(order.index("this_week"), order.index("asks"), "Alt+↑ moved This week above What we need from people")
         b.click("#v-weekly section[data-id='next_week'] .sheet-hbtn")
-        b.eval("[...document.querySelectorAll('[role^=menuitem]')].find(x=>/Hide this section/.test(x.textContent)).click()")
+        b.eval("[...document.querySelectorAll('[role^=menuitem]')].find(x=>/Hide this section|Leave out of the export/.test(x.textContent)).click()")
         b.wait("!!document.querySelector('#v-weekly [data-hidden=\"next_week\"]')")
         self.assertIn("Hidden", b.eval("document.querySelector('#v-weekly [data-hidden=\"next_week\"]').textContent"))
         self.assertFalse(b.eval("!!document.querySelector('#v-weekly section[data-id=\"next_week\"]')"))

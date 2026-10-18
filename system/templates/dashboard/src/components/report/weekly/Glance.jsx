@@ -3,6 +3,7 @@
    dragged (or moved with Alt+← and Alt+→) and hidden with its eye; a hidden figure is drawn faded and is left out of the report and
    the exports. The order and what shows go to the layout (`layout.glance`) with the section, as the sheet's contract asks. */
 import { useState } from "preact/hooks";
+import { EyeButton } from "../EyeButton.jsx";
 import { withSection } from "./weeklyDoc.js";
 
 /** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
@@ -29,8 +30,7 @@ export function Glance({ ctx }) {
               onDragStart={() => setDrag(i)} onDragEnd={() => setDrag(null)} onDragOver={e => { if (drag != null) e.preventDefault(); }}
               onDrop={e => { e.preventDefault(); if (drag != null) move(drag, i); setDrag(null); }}
               onKeyDown={e => { if (ctx.editing && e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); move(i, i + (e.key === "ArrowLeft" ? -1 : 1)); } }}>
-              {ctx.editing ? <button type="button" class="wr-eye wr-seye" aria-pressed={off ? "false" : "true"} onClick={() => hide(i)}
-                aria-label={`${off ? "Show" : "Hide"} ${f.label}`} data-tip={off ? "Left out of the report: click to show it" : "In the report: click to leave it out"}>{off ? "○" : "◉"}</button> : null}
+              {ctx.editing ? <EyeButton on={!off} subject={f.label} cls="wr-seye" onClick={() => hide(i)} /> : null}
               <span class={`n${red ? " r" : ""}`}>{f.value}</span>
               <span class="c">{f.label}{f.note ? `, ${f.note}` : ""}</span>
             </div>);

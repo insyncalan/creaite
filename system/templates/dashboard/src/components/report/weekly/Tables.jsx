@@ -4,6 +4,8 @@
    out. Every item ID opens the standard peek (ctx.ItemRef). A row that was hidden and saved keeps only its reference, so showing it
    again makes its cells from the item as it stood (weeklyDoc.cellsFromItem). Hidden rows are faded while editing and are not drawn
    in the exported page. */
+import { AddFromTracker, EyeTable } from "../ReportParts.jsx";
+import { EyeButton } from "../EyeButton.jsx";
 import { Rich } from "./Rich.jsx";
 import { cellsFromItem, daysLate } from "./weeklyDoc.js";
 
@@ -14,35 +16,10 @@ import { cellsFromItem, daysLate } from "./weeklyDoc.js";
 
 const PRIORITY = { Urgent: "r", High: "r", Medium: "a", Low: "g" };
 
-/** A table with the eye column. @param {{ctx: SectionCtx, cols: Col[], noun: string, extra?: any, empty: string}} props */
-function EyeTable({ ctx, cols, noun, extra, empty }) {
-  const s = ctx.section, rows = s.rows || [];
-  const flip = (/** @type {number} */ i) => {
-    const r = rows[i], on = r.shown === false;
-    ctx.update({ rows: rows.map((x, j) => j !== i ? x : { ...x, shown: on, cells: x.cells || cellsFromItem(s.id, (ctx.doc.items || {})[x.ref || ""], ctx.doc.date) }) }, on ? "Row shown" : "Row hidden");
-  };
-  const shown = rows.filter(r => r.shown !== false).length;
-  if (!rows.length) return <p class="sub">{empty}</p>;
-  return (
-    <div class="wr-tbl">
-      <table class="wr-r">
-        <colgroup>{ctx.editing ? <col class="eyec" /> : null}{cols.map(c => <col key={c.key} style={c.w ? { width: c.w } : undefined} />)}</colgroup>
-        <thead><tr>{ctx.editing ? <th class="eyec"><span class="sr">In the report</span></th> : null}{cols.map(c => <th key={c.key}>{c.label}</th>)}</tr></thead>
-        <tbody>{rows.map((row, i) => {
-          const off = row.shown === false; if (off && !ctx.editing) return null;
-          const item = (ctx.doc.items || {})[row.ref || ""] || null, cells = row.cells || cellsFromItem(s.id, item, ctx.doc.date);
-          return (
-            <tr key={row.ref || i} class={off ? "hidrow" : ""}>
-              {ctx.editing ? <td class="eyec"><button type="button" class="wr-eye" aria-pressed={off ? "false" : "true"} onClick={() => flip(i)}
-                aria-label={`${off ? "Put in the report" : "Leave out of the report"}: ${row.ref || cells[cols[0].key] || "row"}`}
-                data-tip={off ? "Left out of the report: click to show it" : "In the report: click to leave it out"}>{off ? "○" : "◉"}</button></td> : null}
-              {cols.map(c => <td key={c.key} class={c.num ? "num" : ""}>{c.cell({ ctx, row, i, cells, item })}</td>)}
-            </tr>);
-        })}</tbody>
-      </table>
-      {ctx.editing ? <div class="wr-count">Showing {shown} of {rows.length} {noun}. Hidden rows are left out of the filed report and the exports.</div> : null}
-      {extra}
-    </div>);
+/** A weekly table: the shared eye table with this report's rebuild of a left-out row's cells, and "Add from the tracker" under it.
+    @param {{ctx: SectionCtx, cols: Col[], noun: string, extra?: any, empty: string}} props */
+function Table({ ctx, cols, noun, extra, empty }) {
+  return <EyeTable ctx={ctx} cols={cols} noun={noun} empty={empty} cellsFor={cellsFromItem} extra={<>{extra}<AddFromTracker ctx={ctx} /></>} />;
 }
 
 /** The ID cell. @param {Row} r */
@@ -61,7 +38,7 @@ export function Asks({ ctx }) {
     { key: "from", label: "From", w: "24%", cell: cellWords("from", "From") },
     { key: "by", label: "By", w: "13%", num: true, cell: cellWords("by", "By") },
     { key: "why", label: "Why it matters", cell: cellWords("why", "Why it matters") }];
-  return <EyeTable ctx={ctx} cols={cols} noun="asks" empty="Nothing is needed from anyone this week."
+  return <Table ctx={ctx} cols={cols} noun="asks" empty="Nothing is needed from anyone this week."
     extra={ctx.editing ? <button type="button" class="wr-link" onClick={add}>+ Add an ask</button> : null} />;
 }
 
@@ -74,7 +51,7 @@ export function Risks({ ctx }) {
       ? <span class={`wr-st ${/** @type {Record<string,string>} */ (PRIORITY)[r.cells.priority] || "n"}`}>{r.cells.priority.toUpperCase()}</span> : null },
     { key: "owner", label: "Owner", w: "15%", cell: cellWords("owner", "Owner") },
     { key: "response", label: "Response", cell: (/** @type {Row} */ r) => <span>{(r.item && r.item.response_action) || ""}</span> }];
-  return <EyeTable ctx={ctx} cols={cols} noun="risks and issues" empty="No open risks or issues." />;
+  return <Table ctx={ctx} cols={cols} noun="risks and issues" empty="No open risks or issues." />;
 }
 
 /** Overdue actions. @param {{ctx: SectionCtx}} props */
@@ -87,22 +64,33 @@ export function Overdue({ ctx }) {
     { key: "late", label: "Late", num: true, cell: (/** @type {Row} */ r) => {
       const n = r.item && r.item.due_date ? daysLate(r.item.due_date, r.ctx.doc.date) : 0;
       return n ? <span class="late">{n} day{n === 1 ? "" : "s"}</span> : null; } }];
-  return <EyeTable ctx={ctx} cols={cols} noun="overdue actions" empty="Nothing is overdue." />;
+  return <Table ctx={ctx} cols={cols} noun="overdue actions" empty="Nothing is overdue." />;
 }
 
-/** The week's decisions written out, one under another. @param {{ctx: SectionCtx}} props */
+/** The week's decisions written out, one under another, each with its eye. @param {{ctx: SectionCtx}} props */
 export function Decisions({ ctx }) {
-  const rows = (ctx.section.rows || []).map((row, i) => ({ row, i })).filter(x => x.row.shown !== false || ctx.editing);
-  if (!rows.length) return <p class="sub">No decisions were made this week.</p>;
+  const all = ctx.section.rows || [];
+  const rows = all.map((row, i) => ({ row, i })).filter(x => x.row.shown !== false || ctx.editing);
+  const flip = (/** @type {number} */ i) => { const on = all[i].shown === false;
+    ctx.update({ rows: all.map((x, j) => j !== i ? x : { ...x, shown: on, cells: x.cells || cellsFromItem("decisions", (ctx.doc.items || {})[x.ref || ""], ctx.doc.date) }) }, on ? "Row shown" : "Row hidden"); };
   return (
-    <ul class="wr-decs">{rows.map(({ row, i }) => {
-      const c = row.cells || cellsFromItem("decisions", (ctx.doc.items || {})[row.ref || ""], ctx.doc.date);
-      const bit = (/** @type {string} */ key, /** @type {string} */ label) => ctx.editing
-        ? <Rich ctx={ctx} text={c[key]} row={i} col={key} label={label} cls="wr-inl" empty={label} /> : <span>{c[key]}</span>;
-      return (
-        <li key={row.ref || i}>
-          <Rich ctx={ctx} text={c.decision} row={i} col="decision" label="Decision" empty="Say what was decided" />
-          <div class="wr-meta">Made by {bit("by", "Made by")} on {bit("date", "Date")} · Source: {bit("source", "Source")}{row.ref ? <> · <ctx.ItemRef id={row.ref} /></> : null}</div>
-        </li>);
-    })}</ul>);
+    <div class="wr-tbl">
+      {!rows.length ? <p class="sub">No decisions were made this week.</p> : null}
+      <ul class="wr-decs">{rows.map(({ row, i }) => {
+        const c = row.cells || cellsFromItem("decisions", (ctx.doc.items || {})[row.ref || ""], ctx.doc.date), off = row.shown === false;
+        const bit = (/** @type {string} */ key, /** @type {string} */ label) => ctx.editing
+          ? <Rich ctx={ctx} text={c[key]} row={i} col={key} label={label} cls="wr-inl" empty={label} /> : <span>{c[key]}</span>;
+        return (
+          <li key={row.ref || i} class={off ? "hidrow" : ""} data-ref={row.ref || undefined}>
+            {ctx.editing ? <EyeButton on={!off} subject={row.ref || c.decision || "decision"} onClick={() => flip(i)} /> : null}
+            <div class="wr-decbody">
+              <Rich ctx={ctx} text={c.decision} row={i} col="decision" label="Decision" empty="Say what was decided" />
+              <div class="wr-meta">Made by {bit("by", "Made by")} on {bit("date", "Date")} · Source: {bit("source", "Source")}{row.ref ? <> · <ctx.ItemRef id={row.ref} /></> : null}
+                {ctx.editing && row.source === "added" ? <span class="rs-new" title="Added from the tracker by you">New</span> : null}</div>
+            </div>
+          </li>);
+      })}</ul>
+      {ctx.editing && all.length ? <div class="wr-count">Showing {all.filter(r => r.shown !== false).length} of {all.length} decisions. Hidden decisions are left out of the filed report and the exports.</div> : null}
+      <AddFromTracker ctx={ctx} />
+    </div>);
 }

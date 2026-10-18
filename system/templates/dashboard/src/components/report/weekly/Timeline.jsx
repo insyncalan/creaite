@@ -4,6 +4,7 @@
    edge, and under it a milestone list with an eye on each row. The eye chooses which milestones are in the list (what the export
    prints, `section.data.milestones`, and `layout.milestones`); the timeline always shows every milestone. */
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { EyeButton } from "../EyeButton.jsx";
 import { dayNo, wkDm, wkDmy, wkMsState, todayIso, withSection } from "./weeklyDoc.js";
 
 /** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
@@ -77,9 +78,7 @@ export function Timeline({ ctx }) {
               const st = wkMsState(m), on = listed.has(m.id), late = m.forecast_date && m.baseline_date && dayNo(m.forecast_date) > dayNo(m.baseline_date);
               return (
                 <tr key={m.id} class={on ? "" : "hidrow"}>
-                  {ctx.editing ? <td class="eyec"><button type="button" class="wr-eye" aria-pressed={on ? "true" : "false"} onClick={() => toggle(m.id)}
-                    aria-label={`${on ? "Leave out of" : "Put in"} the list: ${m.title || m.name}`}
-                    data-tip={on ? "In the list: click to leave it out (the timeline is unchanged)" : "Left out of the list: click to show it"}>{on ? "◉" : "○"}</button></td> : null}
+                  {ctx.editing ? <td class="eyec"><EyeButton on={on} subject={m.title || m.name} onClick={() => toggle(m.id)} /></td> : null}
                   <td><ctx.ItemRef id={m.id} /> {m.title || m.name}</td><td class="num">{wkDmy(m.baseline_date)}</td>
                   <td class={`num${late ? " late" : ""}`}>{m.actual_date ? `achieved ${wkDmy(m.actual_date)}` : `${wkDmy(m.forecast_date || m.baseline_date)}${late ? ` (+${Math.round(dayNo(m.forecast_date) - dayNo(m.baseline_date))})` : ""}`}</td>
                   <td class="num">{m.percent_complete != null ? `${m.percent_complete}%` : ""}</td><td><span class={`wr-st ${st.tone}`}>{st.word}</span></td>

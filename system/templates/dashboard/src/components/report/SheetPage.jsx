@@ -11,7 +11,8 @@ import { openMilestone, msFind } from "../../milestones.js";
 import { openRecord } from "../../panel.js";
 import { kOfId } from "../../work.js";
 import { Icon } from "../Icon.jsx";
-import { Menu } from "../Menu.jsx";
+import { openMenu } from "../Menu.jsx";
+import { EyeButton } from "./EyeButton.jsx";
 import { SheetEditor, mdNodes } from "./SheetText.jsx";
 import { defaultHeading, hideSection, matchLabel, moveBy, moveFigure, moveSection, renameHeading, resetHeading,
   rowCounts, sectionDiffers, setFigureShown, showSection, syncLayout } from "./sheetLib.js";
@@ -120,8 +121,7 @@ function TableBody({ ctx, rowFn }) {
           readOnly: ctx.readOnly, setRow, removeRow, Text: T, ItemRef: Ref, Tag: Tg };
         if (rowFn) return rowFn(rc);
         return <tr key={row.ref || index} class={off ? "sheet-rowoff" : ""} data-ref={row.ref || undefined}>
-          {live ? <td class="eyec"><button type="button" class="eye" aria-pressed={off ? "false" : "true"} aria-label={`${off ? "Show" : "Leave out"} ${row.ref || "this row"}`}
-            onClick={() => setRow({ shown: off }, off ? "Row shown" : "Row hidden")}><Icon name="eye" /></button></td> : null}
+          {live ? <td class="eyec"><EyeButton on={!off} subject={row.ref || "this row"} cls="eye" onClick={() => setRow({ shown: off }, off ? "Row shown" : "Row hidden")} /></td> : null}
           {cols.map((/** @type {any} */ c) => <td key={c.key} data-col={c.key}>{off ? <span>{(row.cells || {})[c.key] || (c.key === "id" ? row.ref : "")}</span> : <T row={index} col={c.key} label={c.label} />}</td>)}
         </tr>;
       })}
@@ -147,8 +147,7 @@ function Figures({ ctx }) {
       onDragOver={live ? (/** @type {DragEvent} */ e) => { if (FIGDRAG) e.preventDefault(); } : undefined}
       onDrop={live ? (/** @type {DragEvent} */ e) => { e.preventDefault(); const from = FIGDRAG; if (from && from !== f.key) act(moveFigure(ctx.doc, s.id, from, f.key), "Figure moved"); setDrag(null); } : undefined}
       onDragEnd={() => setDrag(null)}>
-      {live ? <button type="button" class="eye sheet-figeye" aria-pressed={off ? "false" : "true"} aria-label={`${off ? "Show" : "Leave out"} ${f.label}`}
-        onClick={() => act(setFigureShown(ctx.doc, s.id, f.key, off), off ? "Figure shown" : "Figure hidden")}><Icon name="eye" /></button> : null}
+      {live ? <EyeButton on={!off} subject={f.label} cls="eye sheet-figeye" onClick={() => act(setFigureShown(ctx.doc, s.id, f.key, off), off ? "Figure shown" : "Figure hidden")} /> : null}
       {f.label}<b>{f.value}</b>{f.note}</div>;
   })}</div>;
 }
@@ -221,14 +220,24 @@ function SectionBlock({ s, i, p, peer }) {
   const differs = p.side === "left" && peer ? sectionDiffers(s, peer) : false;
   const tags = tagsOf(s);
   const nowName = (/** @type {string} */ v) => { if (v.trim() && v.trim() !== s.heading) change(renameHeading(doc, s.id, v), "Heading renamed", null); else setName(s.heading); };
+  const report = !!p.report;
   const menu = [
-    { id: "hide", name: "Hide this section", line: "Left out of the export" },
-    ...(i > 0 ? [{ id: "up", name: "Move up" }] : []), ...(i < doc.sections.length - 1 ? [{ id: "down", name: "Move down" }] : []),
-    ...(s.heading !== defaultHeading(s) ? [{ id: "reset", name: "Reset the heading", line: defaultHeading(s) }] : [])];
+    { id: "hide", name: report ? "Leave out of the export" : "Hide this section", icon: "eyeoff" },
+    ...(i > 0 ? [{ id: "up", name: "Move up", icon: "arrowup" }] : []), ...(i < doc.sections.length - 1 ? [{ id: "down", name: "Move down", icon: "arrowdown" }] : []),
+    ...(report ? [p.report && p.report.addText ? { id: "addtext", name: "Add a text section below", icon: "type" }
+      : { id: "addtext", name: "Add a text section below", icon: "type", disabled: true, tip: "Text sections arrive with the free-text section" }] : []),   // H5's hook: pass `addText(sectionId)` to ReportSheet
+    ...(s.heading !== defaultHeading(s) ? [{ id: "reset", name: "Reset the heading", icon: "undo" }] : [])];
   const onPick = (/** @type {string} */ id) => {
     if (id === "hide") change(hideSection(doc, s.id), "Section hidden", { type: "section-hidden", id: s.id });
     else if (id === "reset") change(resetHeading(doc, s.id), "Heading reset", { type: "heading-reset", id: s.id });
+    else if (id === "addtext") p.report?.addText?.(s.id);
     else { const d = id === "up" ? -1 : 1; p.refocus.current = s.id; change(moveBy(doc, s.id, d), "Section moved", { type: "section-moved", id: s.id, to: i + d }); }
+  };
+  /** The section menu is a popup drawn at the end of the page (Menu.jsx openMenu), not inside the scaled page: it keeps 13 px at any
+      zoom, opens under the chevron and stays clear of the side bar and the window's edges. */
+  const openSectionMenu = (/** @type {HTMLElement} */ anchor) => {
+    const rail = document.querySelector(".rail"), keep = rail ? rail.getBoundingClientRect().right + 8 : 8;
+    openMenu(anchor, { label: `${s.heading}: section options`, items: menu, onPick, cls: "rsmenu", minLeft: keep });
   };
   const drop = (/** @type {DragEvent} */ e) => {
     e.preventDefault(); setOver("");
@@ -247,7 +256,8 @@ function SectionBlock({ s, i, p, peer }) {
       {editing && !fixed ? <div class="sheet-handle">
         <button type="button" class="sheet-grip" draggable aria-label={`Move ${s.heading}. Alt and the arrow keys move it.`} data-tip="Drag to move" data-grip={s.id}
           onKeyDown={grip} onDragStart={(/** @type {DragEvent} */ e) => { DRAGGING = s.id; e.dataTransfer?.setData("text/plain", s.id); }} onDragEnd={() => { DRAGGING = null; setOver(""); }}>⋮⋮</button>
-        <Menu label="" icon="chevdown" chevron={false} ariaLabel={`${s.heading}: section options`} btnCls="sheet-hbtn" items={menu} onPick={onPick} />
+        <button type="button" class="sheet-hbtn" aria-haspopup="menu" aria-expanded="false" aria-label={`${s.heading}: section options`}
+          onClick={e => openSectionMenu(/** @type {HTMLElement} */ (e.currentTarget))}><Icon name="chevdown" /></button>
       </div> : null}
       {s.type === "header" ? null : <h2>
         {editing ? <input class="sheet-h" aria-label="Section heading" value={name} style={{ width: `${Math.max(8, name.length + 1)}ch` }} onInput={e => setName(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
@@ -313,7 +323,8 @@ function Redraft({ rd, s, readOnly, close, onUse, onOpen, known }) {
     peerDoc: SheetDoc|null, peerLabel: string, side: ""|"left"|"right", onChange: (d: SheetDoc, why: string) => void,
     onOpenItem?: (ref: string) => boolean, onEvent: (e: SheetEvent) => void, onRedraft?: (s: SheetSection) => Promise<any>,
     aiFor: (s: SheetSection, ro: boolean) => any, checks: any[], refocus: {current: string|null},
-    match: null | {readOnly: boolean, label: (id: string) => string, differs: (id: string) => boolean, one: (id: string) => void}}} PageProps */
+    match: null | {readOnly: boolean, label: (id: string) => string, differs: (id: string) => boolean, one: (id: string) => void},
+    report?: {audience: string, addText?: (sectionId: string) => void}}} PageProps */
 
 /** One page: the header, its sections in order, the extras between them. @param {PageProps} p */
 export function SheetPage(p) {
@@ -338,8 +349,8 @@ export function SheetPage(p) {
   });
   if (!exported) for (const x of p.extras.filter(e => e.after == null)) out.push(extra(x));
   const label = { internal: "Internal", client: "Client", distributed: "Distributed" }[/** @type {"internal"} */ (doc.audience || "internal")] || "";
-  return <div class="page" data-audience={doc.audience || "internal"}>
-    <header class="doc"><div><h1>{doc.title}</h1><div class="sub">{(/** @type {any} */ (doc)).project_name || ""}{(/** @type {any} */ (doc)).client ? ` · ${(/** @type {any} */ (doc)).client}` : ""}</div></div><div class="sub">{label}</div></header>
+  return <div class="page" data-audience={doc.audience || "internal"} data-report={p.report ? "sheet" : undefined}>
+    {p.report ? null : <header class="doc"><div><h1>{doc.title}</h1><div class="sub">{(/** @type {any} */ (doc)).project_name || ""}{(/** @type {any} */ (doc)).client ? ` · ${(/** @type {any} */ (doc)).client}` : ""}</div></div><div class="sub">{label}</div></header>}
     {out}
   </div>;
 }

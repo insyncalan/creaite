@@ -264,7 +264,7 @@ class ReportRow:
     """What the weekly report's health row and the client sheet's share: the sparkle beside the heading, then the draft under it."""
 
     section = "#v-reporting section[data-id=health]"
-    spark = "h2 .sheet-spark"                  # the weekly row's heading is hidden: its ✦ sits right of the flag
+    spark = ".wr-why .sheet-spark"             # the health row's heading is hidden: its ✦ sits beside the reason (both reports)
 
     def open_report(self):
         raise NotImplementedError
@@ -351,7 +351,7 @@ class ReportRow:
 
 
 class WeeklyHealthRow(ReportRow, LiveBrowserCase):
-    spark = ".wr-hcol .sheet-spark"
+    spark = ".wr-why .sheet-spark"
 
     @classmethod
     def load(cls, v):
@@ -387,7 +387,7 @@ class ClientHealthRow(ReportRow, LiveBrowserCase):
 
     def open_report(self):
         self.b.eval("go('clientreport',{code:'ABC',week:'2026-10-09'})")
-        self.b.wait("document.querySelector('#v-reporting .crhealth')", 20)
+        self.b.wait("document.querySelector('#v-reporting .wr-health')", 20)
 
     def test_the_client_sheet_asks_for_the_client_audience_and_use_sets_the_client_flag(self):
         b = self.b

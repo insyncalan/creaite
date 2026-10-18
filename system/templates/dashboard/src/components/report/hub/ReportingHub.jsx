@@ -15,7 +15,7 @@ import { CLIENT_RENDERERS, setClientDoc } from "../ClientParts.jsx";
 import { doExport, clientHealthApply, matchFor } from "../ClientView.jsx";
 import { matchClientAll } from "../clientDoc.js";
 import { countRedraft, redrafter } from "../redraft.js";
-import { Sheet } from "../Sheet.jsx";
+import { ReportSheet } from "../ReportParts.jsx";
 import { WEEKLY_RENDER } from "../weekly/WeeklyView.jsx";
 import { HubBar } from "./HubBar.jsx";
 import { hubApproveClient } from "./hubActions.js";
@@ -101,21 +101,21 @@ function HubSheet({ code, view, on, doc }) {
     belowBar: <HubRow view={view} on={on} doc={doc} /> };
   const reloadClient = () => { const a = hubAsk.value; if (a) loadClientReport({ code: a.code, week: doc.date }); };
   if (view === "client" && cd) {
-    return <Sheet key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}
+    return <ReportSheet audience="client" key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}
       readOnly={cFiled} renderers={CLIENT_RENDERERS} onChange={setClientDoc} onSave={saveClientPage} ai={clientAi}
       onRedraft={redrafter(() => ({ code: cd.project, document: { kind: "client", code: cd.project, week_ending: cd.date, client: cd.client || "" } }), "report", "client", clientHealthApply)}
       onEvent={ev => { if (ev.type === "reload") reloadClient(); else countRedraft(ev, "report"); }} />;
   }
   if (side && cd) {
     const key = `side:${cd.project}:${cd.date}:${cd.client || ""}`;
-    return <Sheet key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={false} leftReadOnly
+    return <ReportSheet audience="client" key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={false} leftReadOnly
       renderers={WEEKLY_RENDER} onChange={() => {}}
       partner={{ doc: cd, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: cFiled,
         match: (/** @type {string} */ id) => setClientDoc(matchFor(id)), onChange: setClientDoc, onSave: saveClientPage }}
       ai={clientAi}
       onEvent={ev => { if (ev.type === "reload") { if (ev.partner) reloadClient(); else reloadHub(); } else countRedraft(ev, "report"); }} />;
   }
-  return <Sheet key={`i:${doc.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={iLocked}
+  return <ReportSheet audience="internal" key={`i:${doc.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={iLocked}
     renderers={WEEKLY_RENDER} onChange={(/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; }}
     onSave={async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; }}
     ai={{ place: "report", project: () => doc.project, confidential: () => false }}
@@ -160,7 +160,7 @@ export function ReportingHub() {
   return (
     <div class="wrview rhub">
       {head}
-      <div class={view === "internal" ? "wrsheet" : "crsheet"}>{body}</div>
+      <div class={view === "internal" ? "wrsheet" : "crsheet wrsheet"}>{body}</div>
       {on ? <LeftOutDialog client={(crDoc.value && crDoc.value.client) || ""} onExport={doExport} /> : null}
       <ExportSave />
     </div>);

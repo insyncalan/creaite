@@ -95,7 +95,7 @@ SCREENS["weekly"] = ("go('reporting','ABC')", "document.querySelector('#v-report
 # BL-337 (v2.1.0 P9): Reports, a project's reporting space, and its editor view (Side by side), so the sweep reaches them
 SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.click()",
                       "document.querySelector('#v-reports tbody tr')", "#v-reports")
-SCREENS["reporting"] = ("openSpace('ABC', '', 'client')", "document.querySelector('#v-reporting .crhealth')", "#v-reporting")
+SCREENS["reporting"] = ("openSpace('ABC', '', 'client')", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
 
 # BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
 # ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").

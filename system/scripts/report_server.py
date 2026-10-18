@@ -16,6 +16,8 @@
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
+  POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
+                           (a client report: only client-safe facts), each with the row it would add; nothing is written
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
                            draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
                            a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
@@ -206,6 +208,14 @@ def check_route(handler, req):
     """POST /api/report/check: a client report's check of what is left out (see the module's description). Writes nothing."""
     import client_check
     return answer(handler, client_check.check(req.get("doc")))
+
+
+def pick_route(handler, req):
+    """POST /api/report/pick: what Add from the tracker can offer (see the module's description). Writes nothing."""
+    doc = req.get("doc")
+    if not isinstance(doc, dict):
+        raise report_doc.ReportError("Say which report to add to.")
+    return answer(handler, {"ok": True, "sections": report_doc.pickable(doc)})
 
 
 def export_call():
@@ -537,6 +547,7 @@ def routes(lock, run, latest_apply):
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
+            "/api/report/pick": guarded(pick_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
             "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
             "/api/report/logo/remove": guarded(logo_remove_route)}

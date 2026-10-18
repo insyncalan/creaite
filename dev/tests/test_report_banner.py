@@ -237,7 +237,7 @@ class ClientBanner(Banner, LiveBrowserCase):
 
     def open_view(self):
         self.b.eval("go('reporting','ABC'); hubView.value='client'")
-        self.b.wait("document.querySelector('#v-reporting .crhealth')", 20)
+        self.b.wait("document.querySelector('#v-reporting .wr-health')", 20)
 
 
 class ClientNote(ClientBanner):

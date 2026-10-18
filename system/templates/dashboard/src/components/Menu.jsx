@@ -32,7 +32,7 @@ import { Icon } from "./Icon.jsx";
     anchor?: HTMLElement | null, onClose: (how: MenuClose) => void, onKey?: (e: KeyboardEvent) => void, autoFocus?: boolean,
     focusKey?: any, boxRef?: {current: HTMLDivElement | null}, children?: any}} MenuPanelProps */
 /** @typedef {{label: string, items: MenuItem[], onPick: (id: string) => void, id?: string, cls?: string,
-    align?: "left" | "right", at?: {x: number, y: number}, loading?: boolean, onClose?: (how: MenuClose) => void}} PopMenuProps */
+    align?: "left" | "right", at?: {x: number, y: number}, loading?: boolean, minLeft?: number, onClose?: (how: MenuClose) => void}} PopMenuProps */
 
 /** The hover Menu the keyboard is in (its fold): the pointer opening another folds it, so one is open at a time (the group has let go of it).
     Set when a key, Enter, Space or a click opens it (or moves into it), and cleared the moment it closes by any route.
@@ -218,7 +218,7 @@ let PICKED = null;
 /** The open menu, placed under its control (or at the pointer), turned to fit the window.
     @param {{anchor: HTMLElement | null, props: PopMenuProps}} p */
 function PopMenu({ anchor, props }) {
-  const { label, items, onPick, id, cls, align, at, loading } = props;
+  const { label, items, onPick, id, cls, align, at, loading, minLeft } = props;
   const wrap = useRef(/** @type {HTMLDivElement | null} */ (null));
   useLayoutEffect(() => {
     const el = /** @type {HTMLElement | null} */ (wrap.current?.firstElementChild || null); if (!el) return;
@@ -228,7 +228,7 @@ function PopMenu({ anchor, props }) {
     let top = r.bottom + (at ? 0 : 4); if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 4);
     const left = align === "right" ? r.right - w : r.left;
     el.style.top = `${Math.max(8, Math.min(top, innerHeight - h - 8))}px`;
-    el.style.left = `${Math.max(8, Math.min(left, innerWidth - w - 8))}px`;
+    el.style.left = `${Math.max(8, minLeft || 0, Math.min(left, innerWidth - w - 8))}px`;      // minLeft: keep clear of the side bar
   });
   /** @param {MenuItem} it */
   const pick = it => {
