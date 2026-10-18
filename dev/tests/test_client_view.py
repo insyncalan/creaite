@@ -148,6 +148,7 @@ class ClientCheckRoutes(unittest.TestCase):
         exported = Path(e["path"] if os.path.isabs(e["path"]) else self.v.root / e["path"]).read_text(encoding="utf-8")
         self.assertNotIn("INTERNAL-REASON-ZED", exported)
         self.assertNotIn("creaite-data", exported)
+        (self.v.root / e["path"]).unlink()      # #220: the HTML export is saved under the filed report's plain name; Approve would refuse to file over it
         section(doc, "summary")["text"] = "Restricted: the overrun is absorbed internally."
         self.assertTrue(self.post("/api/report/save", {"doc": doc})["ok"])
         e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})

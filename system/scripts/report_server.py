@@ -331,7 +331,7 @@ def export_route(handler, req):
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
     filed = paths.resolve(report_doc.filed_path(kind, code, fri, client))
     folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
-    name = filed.stem + (" (read only)" if fmt == "html" else "") + ext      # the filed report is the .html: a page export is told apart
+    name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
     label = f"{creaite_doc.project_name(code) or code} › Reports"
     where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
     name, overwrite, asked = _settle_name(folder, name, ext, req, label)

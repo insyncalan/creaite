@@ -35,7 +35,7 @@ CLIENT_STEM = "2026-10-09 Client report - Example Programme (Example Client Ltd)
 
 
 def export_name(stem, fmt):
-    return stem + (" (read only).html" if fmt == "html" else "." + fmt)
+    return f"{stem}.{fmt}"                      # the plain name for all three formats (Alan, 18-10-2026)
 
 
 class ExportSave(unittest.TestCase):
@@ -52,8 +52,8 @@ class ExportSave(unittest.TestCase):
     def setUp(self):
         self.reports.mkdir(parents=True, exist_ok=True)
         for f in self.reports.glob("*"):
-            if f.is_file() and not f.name.endswith("Example Programme.html") and not f.name.endswith("Ltd).html"):
-                f.unlink()                      # exports of an earlier test; a filed report (.html without "(read only)") stays
+            if f.is_file():
+                f.unlink()                      # exports and filed reports of an earlier test
 
     def weekly(self):
         """A saved weekly draft (the export needs one)."""
@@ -164,6 +164,26 @@ class ExportSave(unittest.TestCase):
         self.assertTrue(backups, "the earlier file is backed up first")
         self.assertEqual(sorted(p.name for p in self.reports.glob("*.docx")), [WEEKLY_STEM + ".docx"])   # nothing else was added
 
+    def test_check3_html_after_the_report_is_filed_asks_and_overwrite_is_undoable(self):
+        self.weekly()
+        a = self.post("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        filed = self.reports / (WEEKLY_STEM + ".html")
+        original = filed.read_bytes()
+        asked = self.export("html")                                              # the plain name is the filed report's name
+        self.assertEqual((asked["ok"], asked.get("clash"), asked["name"]), (False, True, WEEKLY_STEM + ".html"), asked)
+        self.assertEqual(filed.read_bytes(), original)                           # nothing was written before the choice
+        self.assertEqual(self.drafts_left(), [])
+        r = self.export("html", on_clash="overwrite")
+        self.assertEqual((r["ok"], r["replaced"]), (True, True), r)
+        self.assertNotEqual(filed.read_bytes(), original)
+        self.assertTrue([p for p in (self.v.root / "system/backups/files").rglob("*") if p.is_file() and p.read_bytes() == original],
+                        "the filed report is backed up first")
+        import subprocess
+        undo = subprocess.run([sys.executable, "system/scripts/filechange.py", "undo"], cwd=self.v.root, capture_output=True, text=True)
+        self.assertEqual(undo.returncode, 0, undo.stdout + undo.stderr)
+        self.assertEqual(filed.read_bytes(), original)                           # Undo puts the filed report back
+
     # ── Check 4: a failed save ─────────────────────────────────────────────────────────────────────────────────────────
     @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root can write to a read-only folder")
     def test_check4_a_read_only_folder_says_so_and_writes_nothing(self):
@@ -205,7 +225,7 @@ class ExportSavePage(LiveBrowserCase):
         self.b.eval(f"[...document.querySelectorAll('[role=menu] [role=menuitem]')].find(b=>b.textContent.includes({label!r})).click()")
 
     def exported_files(self):
-        return sorted(p.name for p in self.reports.glob("*(read only)*"))
+        return sorted(p.name for p in self.reports.glob("*.html"))
 
     def test_check2_the_toast_names_the_folder_with_show_in_finder_and_open(self):
         self.export("HTML")
@@ -238,7 +258,7 @@ class ExportSavePage(LiveBrowserCase):
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#exportClashDlg input[name=clash]')].map(i=>i.value)"),
                          ["number", "rename", "overwrite"])
         self.assertEqual(self.b.eval("document.querySelector('#exportClashDlg input[name=clash]:checked').value"), "number")
-        self.assertIn(PAGE_STEM + " (read only) (2).html", self.b.eval("document.querySelector('#exportClashDlg').textContent"))
+        self.assertIn(PAGE_STEM + " (2).html", self.b.eval("document.querySelector('#exportClashDlg').textContent"))
         field = self.b.eval("(()=>{const i=document.querySelector('#exportClashRename');return {v:i.value,w:i.getBoundingClientRect().width,"
                             "dw:document.querySelector('#exportClashDlg .mnap, #exportClashDlg').getBoundingClientRect().width,"
                             "full:i.scrollWidth<=i.clientWidth+1}})()")
