@@ -190,6 +190,17 @@ class Toolbar(Hub):
                 self.assertIn(name, self.q(f"(document.querySelector('{sel}').getAttribute('aria-label')||'')"))
                 self.assertIn(name, self.q(f"(document.querySelector('{sel}').getAttribute('data-tip')||document.querySelector('{sel}').title||'')"))
 
+    def test_the_menus_open_inside_the_window(self):
+        for w, h in WIDTHS:
+            for opener, box in (("#hubExport", ".ddmenu.on"), ("#hubApprove", ".ddmenu.on"), ("#hubWeek", ".wkpop")):
+                with self.subTest(width=w, menu=opener):
+                    self.open_hub(w, h)
+                    self.press(opener)
+                    self.b.wait(f"document.querySelector('{box}')", 5)
+                    r = self.q(f"(()=>{{const r=document.querySelector('{box}').getBoundingClientRect(); return [r.left, r.right, innerWidth]}})()")
+                    self.assertGreaterEqual(r[0], 0)
+                    self.assertLessEqual(r[1], r[2], f"{opener} menu runs off the window: {r}")
+
     def test_no_check_this_report_button_yet(self):
         self.open_hub()
         self.assertEqual(self.q("/Check this report|Check and export/.test(document.querySelector('#v-reporting .sheet-bar').innerHTML)"), False)
@@ -241,7 +252,9 @@ class Labels(Hub):
 class Actions(Hub):
     def intercept(self):
         self.q("""window.__calls=[]; (()=>{const real=window.fetch.bind(window);
-          window.fetch=(u,o)=>{ if(String(u).includes('/api/report/export')||String(u).includes('/api/report/approve')) { window.__calls.push([String(u),String(o&&o.body)]);
+          window.fetch=(u,o)=>{ if(String(u).endsWith('/api/report/check')) return Promise.resolve(new Response(JSON.stringify({ok:true,left_out:{items:[],sections:[],logos:[],tags:0,
+            health:null,findings:[],ready:true,not_ready:'',facts_week:'2026-10-09'}}),{headers:{'Content-Type':'application/json'}}));
+            if(String(u).includes('/api/report/export')||String(u).includes('/api/report/approve')) { window.__calls.push([String(u),String(o&&o.body)]);
             return Promise.resolve(new Response(JSON.stringify({ok:true,saved:true,name:'x.html',folder:'',folder_label:'Example Programme › Reports',path:''}),{headers:{'Content-Type':'application/json'}})); }
             return real(u,o); };})()""")
 
@@ -275,6 +288,17 @@ class Actions(Hub):
         self.b.wait("window.__calls.length==2", 10)
         kinds = sorted(json.loads(c[1])["kind"] for c in self.q("window.__calls"))
         self.assertEqual(kinds, ["client", "weekly"])
+
+    def test_a_client_export_before_the_internal_week_is_approved_opens_the_left_out_dialog_and_exports_nothing(self):
+        self.open_hub()
+        self.q("""window.__calls=[]; (()=>{const f=window.fetch.bind(window); window.fetch=(u,o)=>{ if(String(u).includes('/api/report/export')) window.__calls.push(String(u)); return f(u,o); };})()""")
+        self.press("#hubExport")
+        self.pick_item("HTML")
+        self.b.wait("document.querySelector('[data-hubpick=client]')", 10)
+        self.press("[data-hubpick='client']")
+        self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 20)
+        self.assertIn("Approve the internal weekly report", self.q("document.querySelector('#crLeftDlg').innerText"))
+        self.assertEqual(self.q("window.__calls"), [], "nothing was exported")
 
     def test_approve_menu_internal_first_then_client(self):
         self.open_hub()

@@ -3793,8 +3793,9 @@ tr.crhid td{color:var(--paper-mute)} tr.crhid .creye{color:var(--paper-ink)}
 /* the quiet status label above each report */
 .hubrow{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:6px 16px;border-bottom:1px solid var(--line);background:var(--surface);min-height:var(--ctl-h)}
 .hubrow.two>.hubpl{flex:1 1 0;min-width:0}
-.hubpl{display:flex;gap:8px;align-items:baseline;font-size:var(--fs-sm);color:var(--ink)}
-.hubpl b{font-weight:600} .hubpl .sub{font-weight:400}
+.hubpl{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;min-width:0;font-size:var(--fs-sm);color:var(--ink)}
+.hubpl>b,.hubpl>.sub,.hubpl .linkbtn{white-space:nowrap} .hubpl>b{font-weight:600} .hubpl>.sub{font-weight:400;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hubpl .linkbtn{margin-left:auto;flex:none}
 .hubstat{font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:22px;background:var(--surface);white-space:nowrap}
 .hubedit{font-size:var(--fs-xs)}
 .hubrow .crnote{flex:1 1 100%}

@@ -88,7 +88,7 @@ function HubRow({ view, on, doc }) {
 /** The sheet for what is in view. @param {{code: string, view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
 function HubSheet({ code, view, on, doc }) {
   const cd = crDoc.value, ci = crInternal.value, cinfo = crInfo.value;
-  const iApproved = doc.state === "approved", iLocked = iApproved && !weeklyEditing.value;
+  const iLocked = doc.state === "approved" && !weeklyEditing.value;
   const cFiled = !!cd && cd.state === "approved";
   const side = view === "side" && !!cd;
   const clientAi = cd ? { place: "client", project: () => cd.project, confidential: () => false,
@@ -108,9 +108,8 @@ function HubSheet({ code, view, on, doc }) {
   }
   if (side && cd) {
     const key = `side:${cd.project}:${cd.date}:${cd.client || ""}`;
-    return <Sheet key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={false} leftReadOnly={iLocked}
-      renderers={WEEKLY_RENDER} onChange={(/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; }}
-      onSave={async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; }}
+    return <Sheet key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={false} leftReadOnly
+      renderers={WEEKLY_RENDER} onChange={() => {}}
       partner={{ doc: cd, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: cFiled,
         match: (/** @type {string} */ id) => setClientDoc(matchFor(id)), onChange: setClientDoc, onSave: saveClientPage }}
       ai={clientAi}

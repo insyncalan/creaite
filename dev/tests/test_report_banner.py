@@ -246,6 +246,7 @@ class ClientNote(ClientBanner):
     def test_a_failed_approve_from_the_slim_bar_is_visible(self):
         doc = self.b.eval("""fetch('/api/report/draft',{method:'POST',headers:{'Content-Type':'application/json','X-Creaite-Token':D.token},
           body:JSON.stringify({kind:'weekly',code:'ABC',week_ending:'2026-10-09'})}).then(r=>r.json())""")["doc"]
+        next(x for x in doc["sections"] if x["id"] == "health")["text"] = "UAT start slipped two weeks."        # a health that is not On track needs its reason
         self.b.eval(f"""fetch('/api/report/save',{{method:'POST',headers:{{'Content-Type':'application/json','X-Creaite-Token':D.token}},
           body:JSON.stringify({{doc:{json.dumps(doc)},base_version:0}})}}).then(r=>r.json())""")
         self.b.eval("""fetch('/api/report/approve',{method:'POST',headers:{'Content-Type':'application/json','X-Creaite-Token':D.token},

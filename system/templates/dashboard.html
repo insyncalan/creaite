@@ -3803,8 +3803,9 @@ tr.crhid td{color:var(--paper-mute)} tr.crhid .creye{color:var(--paper-ink)}
 /* the quiet status label above each report */
 .hubrow{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:6px 16px;border-bottom:1px solid var(--line);background:var(--surface);min-height:var(--ctl-h)}
 .hubrow.two>.hubpl{flex:1 1 0;min-width:0}
-.hubpl{display:flex;gap:8px;align-items:baseline;font-size:var(--fs-sm);color:var(--ink)}
-.hubpl b{font-weight:600} .hubpl .sub{font-weight:400}
+.hubpl{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;min-width:0;font-size:var(--fs-sm);color:var(--ink)}
+.hubpl>b,.hubpl>.sub,.hubpl .linkbtn{white-space:nowrap} .hubpl>b{font-weight:600} .hubpl>.sub{font-weight:400;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hubpl .linkbtn{margin-left:auto;flex:none}
 .hubstat{font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:22px;background:var(--surface);white-space:nowrap}
 .hubedit{font-size:var(--fs-xs)}
 .hubrow .crnote{flex:1 1 100%}
@@ -70978,6 +70979,11 @@ ${d5.text}`);
       } else if (!r4 || !r4.ok) return;
       first = exportSaved.value && exportSaved.value.name || "";
     }
+    const chk = await runCheck(), lo2 = chk && chk.ok ? chk.left_out : null;
+    if (!lo2 || !lo2.ready || lo2.findings.length) {
+      crDialog.value = true;
+      return;
+    }
     const c5 = await exportClientReport(fmt);
     if (c5 && !c5.ok && !c5.clash) {
       crDialog.value = true;
@@ -71280,7 +71286,6 @@ ${d5.text}`);
           ariaLabel: "Export",
           tip: "Export",
           menuLabel: "Export the report",
-          left: true,
           items: EXPORT_FORMATS.map((f5) => ({ id: f5.id, name: f5.name, line: f5.line, icon: f5.icon })),
           onPick: pickFormat
         }
@@ -71295,7 +71300,6 @@ ${d5.text}`);
           ariaLabel: "Approve",
           tip: "Approve",
           menuLabel: "Approve",
-          left: true,
           items: approveItems,
           onPick: (id2) => {
             if (id2 === "internal") hubApproveInternal();
@@ -71402,7 +71406,7 @@ ${d5.text}`);
   }
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
-    const iApproved = doc.state === "approved", iLocked = iApproved && !weeklyEditing.value;
+    const iLocked = doc.state === "approved" && !weeklyEditing.value;
     const cFiled = !!cd2 && cd2.state === "approved";
     const side = view === "side" && !!cd2;
     const clientAi = cd2 ? {
@@ -71474,16 +71478,9 @@ ${d5.text}`);
           baseVersion: weeklyBase.value,
           scrollKey: key2,
           readOnly: false,
-          leftReadOnly: iLocked,
+          leftReadOnly: true,
           renderers: WEEKLY_RENDER,
-          onChange: (d5) => {
-            editDoc(d5);
-            if (crInternal.value) crInternal.value = d5;
-          },
-          onSave: async (req) => {
-            const r4 = await saveWeekly(req);
-            if (r4.ok) setWeeklyDirty(false);
-            return r4;
+          onChange: () => {
           },
           partner: {
             doc: cd2,
@@ -73316,6 +73313,8 @@ ${d5.text}`);
         "countFor",
         "countUp",
         "covered",
+        "crDialog",
+        "crInfo",
         "creaiteEditor",
         "createNote",
         "csHead",
@@ -73429,6 +73428,7 @@ ${d5.text}`);
         "htmlToMd",
         "hubCfg",
         "hubExport",
+        "hubView",
         "ibtn",
         "ic",
         "iconShapes",
@@ -73674,6 +73674,7 @@ ${d5.text}`);
         "row",
         "rows",
         "rtOK",
+        "runCheck",
         "runClosure",
         "runGen",
         "runHealthFix",

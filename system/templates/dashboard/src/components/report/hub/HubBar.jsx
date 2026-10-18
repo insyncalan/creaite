@@ -72,9 +72,9 @@ export function HubBar({ ctx, code, view, on, doc, week, tone, rows, onWeek, onV
         onClick={() => setExported(!exported)}><Icon name="eye" /></button>
       {/* #170: the "Check this report" icon button goes here (between Show as exported and Export). Not built in this release. */}
       <span class="sub sheet-status" role="status" data-bad={bad ? "1" : undefined}>{status}</span>
-      <Menu label="" icon="upload" id="hubExport" btnCls="btn" ariaLabel="Export" tip="Export" menuLabel="Export the report" left
+      <Menu label="" icon="upload" id="hubExport" btnCls="btn" ariaLabel="Export" tip="Export" menuLabel="Export the report"
         items={EXPORT_FORMATS.map(f => ({ id: f.id, name: f.name, line: f.line, icon: f.icon }))} onPick={pickFormat} />
-      <Menu label="" icon="check" id="hubApprove" btnCls="btn primary" ariaLabel="Approve" tip="Approve" menuLabel="Approve" left
+      <Menu label="" icon="check" id="hubApprove" btnCls="btn primary" ariaLabel="Approve" tip="Approve" menuLabel="Approve"
         items={approveItems} onPick={id => { if (id === "internal") hubApproveInternal(); else hubApproveClient(false); }} />
       <span class="hubcfgwrap" ref={cfgBox}>
         <button type="button" class="btn ib" id="hubCfg" ref={cfgBtn} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} aria-label={label} data-tip={label}

@@ -30,6 +30,10 @@ export async function hubExport(fmt, which) {
     else if (!r || !r.ok) return;
     first = (exportSaved.value && exportSaved.value.name) || "";
   }
+  /* the left-out check runs before every client export (BL-336): read only; when the internal week isn't approved or it finds something internal,
+     the dialog says what and nothing is exported. Otherwise the export goes straight on (the server checks again). */
+  const chk = await runCheck(), lo = chk && chk.ok ? chk.left_out : null;
+  if (!lo || !lo.ready || lo.findings.length) { crDialog.value = true; return; }
   const c = await exportClientReport(fmt);
   if (c && !c.ok && !c.clash) { crDialog.value = true; await runCheck(); return; }       // a refusal: the check shows why, and nothing was written
   if (which === "both" && c && c.ok && first && exportSaved.value) exportSaved.value = { ...exportSaved.value, name: `${first} and ${exportSaved.value.name}` };
