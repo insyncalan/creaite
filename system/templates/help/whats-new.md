@@ -2,6 +2,13 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.3.4
+
+A small fix-up for Notes: a pinned note now shows its title.
+
+
+- **A pinned note shows its title.** In a project's Notes list, a pinned note's card used to show a blank where the title should be, even though the note opened fine. The card now shows the title, a long title ends in "…", and it works for a confidential pinned note too.
+
 ## creaite 2.3.3
 
 A small clean-up of two buttons that were easy to get wrong, in Review and in Intake.
