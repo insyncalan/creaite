@@ -62,7 +62,6 @@ function ReportLabel({ k, on, doc }) {
   return (
     <div class="hubpl" data-k={k}>
       {on ? <><b>{internal ? "Internal report" : "Client report"}</b><span class="sub">{internal ? "for you and the team" : `for ${(cd && cd.client) || "the client"}`}</span></> : null}
-      <span class="hubstat" data-k={k} data-state={st.key}>{st.label}</span>
       {internal && approved && !weeklyEditing.value ? <button type="button" class="linkbtn hubedit" id="hubEdit" onClick={() => { weeklyEditing.value = true; }}>Edit again</button> : null}
       {!internal && cd && cd.state !== "approved" ? <>
         <button type="button" class="linkbtn rb-x" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchClientAll(d, i)); }}>Match internal for every section</button>
@@ -70,6 +69,7 @@ function ReportLabel({ k, on, doc }) {
           title="This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save."
           onClick={() => { const a = hubAsk.value; if (a) loadClientReport({ code: a.code, week: doc.date }, true); }}>Refresh from the approved week</button> : null}
       </> : null}
+      <span class="hubstat" data-k={k} data-state={st.key}>{st.label}</span>
     </div>);
 }
 

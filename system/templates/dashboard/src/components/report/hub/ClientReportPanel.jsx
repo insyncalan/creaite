@@ -10,6 +10,7 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { P } from "../../../core/data.js";
+import { hubCfg } from "../../../stores/hub.js";
 import {
   CLIENT_NAME_MAX, clientLogosOn, clientReminderOn, clientReportOn, crLogoData, crLogoNote, crLogoPaths, crTick, readClientLogos, removeClientLogo,
   setClientLogos, setClientName, setClientReminder, setClientRhythm, setClientReport, uploadClientLogo,
@@ -68,7 +69,7 @@ export function ClientReportPanel({ code, onClose }) {
   if (!p) return null;
   const on = clientReportOn(code), ticked = clientLogosOn(code), rhythms = RHYTHMS.includes(p.rhythm) ? RHYTHMS : [...RHYTHMS, p.rhythm];
   return (
-    <div class="hubcfg" id="hubCfg" role="dialog" aria-label="Client report settings" data-code={code} data-on={on ? "on" : "off"}>
+    <div class="hubcfg" id="crPanel" data-slot="ClientReportPanel" role="dialog" aria-label="Client report settings" data-code={code} data-on={on ? "on" : "off"}>
       <h3>Client report for {p.name}</h3>
       <label class="cfgsw">
         <input type="checkbox" class="switch" id="cfgOn" checked={on} onChange={e => setClientReport(code, /** @type {HTMLInputElement} */ (e.target).checked)} />
@@ -92,7 +93,6 @@ export function ClientReportPanel({ code, onClose }) {
             <div class="cfglogos" role="group" aria-labelledby="cfgLogosL">
               {TILES.map(t => <LogoTile key={t.kind} code={code} t={t} ticked={ticked.includes(t.kind)} />)}
               {crLogoNote.value ? <p class="sub cfgnote" role="status" id="cfgLogoNote">{crLogoNote.value}</p> : null}
-              <p class="sub cfgnote">Ticking a logo changes the header of the internal and the client report. A transparent PNG or SVG sits best; empty margins are trimmed on the copy that is drawn, and the file you choose is kept as it is.</p>
             </div></div>
           <p class="sub">The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects.</p>
         </div>
@@ -102,17 +102,32 @@ export function ClientReportPanel({ code, onClose }) {
   );
 }
 
-/** Show the panel over the page (the hub's cog calls this). Esc, Done or opening it again closes it. @param {string} code */
-export function openClientReport(code) {
+/** Show the panel in the one fixed host at the top right and leave it showing (the hub's cog drives this from its open signal). @param {string} code */
+export function showClientReport(code) {
   let host = document.getElementById("crHost");
-  if (host && host.dataset.code === code) { closeClientReport(); return; }
+  const fresh = !host;
   if (!host) { host = document.createElement("div"); host.id = "crHost"; document.body.appendChild(host); }
   host.dataset.code = code; bindEsc();
+  const cog = document.getElementById("hubCfg");                // hangs just under the cog, at the right edge, so the cog stays clickable
+  if (cog) {
+    const r = cog.getBoundingClientRect();
+    host.style.top = `${Math.round(r.bottom + 6)}px`; host.style.right = `${Math.max(8, Math.round(innerWidth - r.right))}px`;
+    host.style.setProperty("--cr-top", host.style.top);
+  }
   render(<ClientReportPanel code={code} onClose={closeClientReport} />, host);
-  const first = host.querySelector("input,select,button"); if (first) /** @type {HTMLElement} */ (first).focus();
+  if (fresh) { const first = host.querySelector("input,select,button"); if (first) /** @type {HTMLElement} */ (first).focus(); }
+}
+
+/** Show the panel, or close it when it is already showing for this project. Esc, Done or opening it again closes it. @param {string} code */
+export function openClientReport(code) {
+  const host = document.getElementById("crHost");
+  if (host && host.dataset.code === code) { closeClientReport(); return; }
+  hubCfg.value = true;
+  showClientReport(code);
 }
 
 export function closeClientReport() {
+  hubCfg.value = false;
   const host = document.getElementById("crHost"); if (!host) return;
   render(null, host); host.remove();
 }

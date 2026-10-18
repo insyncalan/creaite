@@ -13,7 +13,7 @@ import { fd } from "../../../core/page.js";
 import { SHEET_ZOOM_DEFAULT, SHEET_ZOOM_MAX, SHEET_ZOOM_MIN, stepZoom } from "../sheetLib.js";
 import { hubApproveClient, hubApproveInternal, hubExport } from "./hubActions.js";
 import { WeekMenu } from "./WeekMenu.jsx";
-import { ClientReportPanel } from "./ClientReportPanel.jsx";
+import { showClientReport, closeClientReport } from "./ClientReportPanel.jsx";
 import { EXPORT_FORMATS, EXPORT_WHICH } from "./hubLib.js";
 import { crDoc, crInfo } from "../../../stores/clientReport.js";
 import { clientReportCogLabel } from "../../../stores/reportingSettings.js";
@@ -34,10 +34,17 @@ export function HubBar({ ctx, code, view, on, doc, week, tone, rows, onWeek, onV
   const open = hubCfg.value;
   useEffect(() => {                                       // a click away closes the cog's panel
     if (!open) return undefined;
-    const away = (/** @type {Event} */ e) => { if (cfgBox.current && !cfgBox.current.contains(/** @type {Node} */ (e.target))) hubCfg.value = false; };
+    const away = (/** @type {Event} */ e) => {
+      const t = /** @type {Element} */ (e.target);
+      if (cfgBox.current && !cfgBox.current.contains(t) && !(t.closest && t.closest("#crHost"))) hubCfg.value = false;
+    };
     document.addEventListener("pointerdown", away, true);
     return () => document.removeEventListener("pointerdown", away, true);
   }, [open]);
+  useEffect(() => {                                       // the panel is H3's one fixed host at the top right; the cog's signal shows and hides it
+    if (open) showClientReport(code); else closeClientReport();
+  }, [open, code]);
+  useEffect(() => closeClientReport, []);                 // leaving the hub takes the panel with it
 
   /** After the format: Internal, Client or Both, only when the project has a client report. @param {string} fmt */
   const pickFormat = (fmt) => {
@@ -70,17 +77,16 @@ export function HubBar({ ctx, code, view, on, doc, week, tone, rows, onWeek, onV
         <button type="button" id="zIn" aria-label="Zoom in" data-tip="Zoom in" disabled={zoom >= SHEET_ZOOM_MAX} onClick={() => setZoom(stepZoom(zoom, 1))}>+</button>
       </span>
       <button type="button" class="btn ib sheet-exp" id="hubExp" aria-pressed={exported ? "true" : "false"} aria-label="Show as exported" data-tip="Show as exported"
-        onClick={() => setExported(!exported)}><Icon name="eye" /></button>
+        onClick={() => setExported(!exported)}><Icon name="filetext" /></button>
       {/* #170: the "Check this report" icon button goes here (between Show as exported and Export). Not built in this release. */}
       <span class="sub sheet-status" role="status" data-bad={bad ? "1" : undefined}>{status}</span>
-      <Menu label="" icon="upload" id="hubExport" btnCls="btn" ariaLabel="Export" tip="Export" menuLabel="Export the report"
+      <Menu label="" icon="upload" id="hubExport" btnCls="btn" ariaLabel="Export" tip="Export" menuLabel="Export the report" menuCls="hubm"
         items={EXPORT_FORMATS.map(f => ({ id: f.id, name: f.name, line: f.line, icon: f.icon }))} onPick={pickFormat} />
-      <Menu label="" icon="check" id="hubApprove" btnCls="btn primary" ariaLabel="Approve" tip="Approve" menuLabel="Approve"
+      <Menu label="" icon="check" id="hubApprove" btnCls="btn primary" ariaLabel="Approve" tip="Approve" menuLabel="Approve" menuCls="hubm"
         items={approveItems} onPick={id => { if (id === "internal") hubApproveInternal(); else hubApproveClient(false); }} />
       <span class="hubcfgwrap" ref={cfgBox}>
         <button type="button" class="btn ib" id="hubCfg" ref={cfgBtn} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} aria-label={label} data-tip={label}
           onClick={() => { hubCfg.value = !hubCfg.value; }}><Icon name="gear" /></button>
-        {open ? <div class="hubcfg" data-slot="ClientReportPanel" role="dialog" aria-label="Client report settings"><ClientReportPanel code={code} onClose={() => { hubCfg.value = false; }} /></div> : null}
       </span>
     </>
   );
