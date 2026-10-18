@@ -58,7 +58,11 @@ class FilesNavigation(LiveBrowserCase):
                 self.assertEqual(self.pressed(), [q], (width, q))
             b.click('#fquick [data-q="archived"]')
             self.assertTrue(b.eval("!!document.querySelector('#filesTbl [data-moveback]')"))
-            self.assertTrue(all("/_Archive/" in r or "Archive" in r or r for r in self.rows()))
+            rows = b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].map(t=>!!t.querySelector('[data-moveback]'))")
+            self.assertEqual(len(rows), b.eval("D.files_archived.length"), width)       # exactly the archive's files
+            self.assertTrue(rows and all(rows), width)                                   # every row is an archived one (Move back)
+            b.click('#fquick [data-q="all"]')
+            self.assertFalse(b.eval("!!document.querySelector('#filesTbl [data-moveback]')"), width)   # no archived row in All files
 
     def test_tree_shows_intake_once_and_a_folder_clears_the_pill(self):
         b = self.open()
@@ -125,6 +129,39 @@ class FilesNavigation(LiveBrowserCase):
         b.click("#fmClear")
         self.assertEqual(b.eval("document.getElementById('fchips').hidden"), True)
         self.assertEqual(len(self.rows()), all_n)
+
+    def test_bad_dates_say_why_and_keep_the_previous_filter(self):
+        b = self.open()
+        b.click("#fmBtn")
+        setv = lambda i, v: b.eval(f"(()=>{{ const e=document.getElementById('{i}'); e.value='{v}'; e.dispatchEvent(new Event('input',{{bubbles:true}})); e.dispatchEvent(new Event('change',{{bubbles:true}})); }})()")
+        setv("fsFrom", "01-10-2026")
+        n = len(self.rows())
+        for bad in ("32-13-2026", "zzz", "99-99"):      # (the app reads "01-1" as 1 January, like every date box; it shows in the box and the chip)
+            setv("fsFrom", bad)
+            self.assertEqual(b.eval("document.getElementById('fsFromErr').textContent"), "Type a date as DD-MM-YYYY")
+            self.assertEqual(b.eval("document.getElementById('fsFrom').getAttribute('aria-invalid')"), "true")
+            self.assertEqual(b.eval("FF.from"), "2026-10-01")          # the previous filter stays
+            self.assertEqual(len(self.rows()), n)
+        setv("fsFrom", "01-10-2026")
+        self.assertEqual(b.eval("document.getElementById('fsFromErr').textContent"), "")
+        setv("fsTo", "01-09-2026")
+        self.assertEqual(b.eval("document.getElementById('fsToErr').textContent"), "From is after To")
+        self.assertEqual(b.eval("FF.to"), "")
+        self.assertEqual(len(self.rows()), n)
+
+    def test_empty_states_per_pill(self):
+        b = self.open()
+        b.pump(1)     # the page's own refresh on opening has landed
+        b.eval("D.files_archived=[]; renderFiles()")
+        b.click('#fquick [data-q="archived"]')
+        self.assertIn("Nothing has been archived.", b.eval("document.getElementById('filesTbl').innerText"))
+        b.eval("FILES.splice(0,FILES.length); renderFiles()")
+        b.click('#fquick [data-q="latest"]')
+        self.assertIn("No reports yet.", b.eval("document.getElementById('filesTbl').innerText"))
+        b.click('#fquick [data-q="week"]')
+        self.assertIn("No meetings this week.", b.eval("document.getElementById('filesTbl').innerText"))
+        b.click('#fquick [data-q="all"]')
+        self.assertIn("No files match.", b.eval("document.getElementById('filesTbl').innerText"))
 
     def test_combined_pill_folder_and_filter(self):
         b = self.open()

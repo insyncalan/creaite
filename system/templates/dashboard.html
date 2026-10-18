@@ -3849,6 +3849,7 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .fmenu .fmlab{display:block;padding:0;margin:0 0 4px;font:500 var(--fs-xs)/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:default}
 .fmenu fieldset label{padding:4px 0} .fmenu fieldset label:hover{background:none} .fmenu .dwrap{width:100%} .fmenu .dwrap input{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);font-size:var(--ctl-fs);color:var(--ink)}
 .fmenu .fmfoot{display:flex;justify-content:flex-end;gap:8px}
+.fmerr{display:block;min-height:0;margin-top:4px;color:var(--bad,#b00020);font-size:var(--fs-xs)} .fmerr:empty{display:none} .fmenu input[aria-invalid=true]{border-color:var(--bad,#b00020)}
 </style>
 </head>
 <body>
@@ -45731,6 +45732,7 @@ ${s5}`;
   var FOPEN = new Set(store.get("creaite-files-open", []));
   var farch = () => D.files_archived || [];
   var FNAME = Object.assign({ _portfolio: "projects/_portfolio", inbox: "inbox" }, D.folders);
+  var EMPTY = { archived: "Nothing has been archived.", latest: "No reports yet.", week: "No meetings this week." };
   function renderFiles() {
     const cnt = (f5) => FILES.filter(f5).length;
     const pr2 = (b5) => b5 ? "true" : "false";
@@ -45758,7 +45760,7 @@ ${s5}`;
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters. ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     filterChrome();
   }
@@ -45780,8 +45782,8 @@ ${s5}`;
   }
   function fmDraw() {
     putHTML($("#fmenu"), html`<fieldset class="fmrow"><legend>Type</legend>${FTYPES().map((t47) => html`<label><input type="radio" name="fsType" value="${t47}" ${raw(t47 === FF.type ? "checked" : "")}> ${t47 === "All" ? "All types" : t47}</label>`)}</fieldset>
-    <div class="fmrow"><label class="fmlab" for="fsFrom">From</label><span class="dwrap"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.from ? fd(FF.from) : ""}"><button type="button" class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span></div>
-    <div class="fmrow"><label class="fmlab" for="fsTo">To</label><span class="dwrap"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.to ? fd(FF.to) : ""}"><button type="button" class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span></div>
+    <div class="fmrow"><label class="fmlab" for="fsFrom">From</label><span class="dwrap"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.from ? fd(FF.from) : ""}"><button type="button" class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsFromErr" role="alert"></span></div>
+    <div class="fmrow"><label class="fmlab" for="fsTo">To</label><span class="dwrap"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.to ? fd(FF.to) : ""}"><button type="button" class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsToErr" role="alert"></span></div>
     <div class="fmfoot"><button type="button" class="mini" id="fmClear">Clear</button><button type="button" class="btn primary" id="fmDone">Done</button></div>`);
     paintIcons($("#fmenu"));
   }
@@ -45806,15 +45808,36 @@ ${s5}`;
         renderFiles();
       }
     });
-    menu.addEventListener("input", (e4) => {
+    menu.addEventListener("input", dateIn);
+    menu.addEventListener("change", dateIn);
+    function dateIn(e4) {
       const k5 = e4.target.id === "fsFrom" ? "from" : e4.target.id === "fsTo" ? "to" : "";
       if (!k5) return;
-      const v5 = e4.target.value.trim();
-      if (!v5) FF[k5] = "";
-      else if (DDATE.test(v5)) FF[k5] = toIso(v5);
-      else return;
+      const v5 = e4.target.value.trim(), err = $(`#${e4.target.id}Err`);
+      const say2 = (m5) => {
+        e4.target.setAttribute("aria-invalid", m5 ? "true" : "false");
+        err.textContent = m5;
+      };
+      if (!v5) {
+        FF[k5] = "";
+        say2("");
+        renderFiles();
+        return;
+      }
+      const real2 = DDATE.test(v5) && ((d5) => !isNaN(d5) && d5.toISOString().slice(0, 10) === toIso(v5))(/* @__PURE__ */ new Date(toIso(v5) + "T00:00:00Z"));
+      if (!real2) {
+        if (e4.type === "change") say2("Type a date as DD-MM-YYYY");
+        return;
+      }
+      const iso2 = toIso(v5), o5 = k5 === "from" ? FF.to : FF.from;
+      if (o5 && (k5 === "from" ? iso2 > o5 : iso2 < o5)) {
+        say2("From is after To");
+        return;
+      }
+      say2("");
+      FF[k5] = iso2;
       renderFiles();
-    });
+    }
     menu.addEventListener("click", (e4) => {
       if (e4.target.closest("#fmDone")) fmSet(false, true);
       if (e4.target.closest("#fmClear")) {

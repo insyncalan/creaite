@@ -3839,3 +3839,4 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 .fmenu .fmlab{display:block;padding:0;margin:0 0 4px;font:500 var(--fs-xs)/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:default}
 .fmenu fieldset label{padding:4px 0} .fmenu fieldset label:hover{background:none} .fmenu .dwrap{width:100%} .fmenu .dwrap input{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);font-size:var(--ctl-fs);color:var(--ink)}
 .fmenu .fmfoot{display:flex;justify-content:flex-end;gap:8px}
+.fmerr{display:block;min-height:0;margin-top:4px;color:var(--bad,#b00020);font-size:var(--fs-xs)} .fmerr:empty{display:none} .fmenu input[aria-invalid=true]{border-color:var(--bad,#b00020)}
