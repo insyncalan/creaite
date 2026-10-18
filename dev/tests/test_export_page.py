@@ -172,6 +172,57 @@ class LeakFix(Base):
             self.assertIn("leaves out", self.build(path, page(self.wrap(f"<p>{w}</p>")))[1], w)
 
 
+class ResidualLeaks(Base):
+    """Team Cap's re-review of p240-leakfix: four ways round the needle check that are closed here. The needle is a fictional hidden
+    item's title, 'Walrus budget cut' (the client report hides ABC-005); a client file must never carry it."""
+
+    TRACKER = LeakFix.TRACKER
+    build = Server.build
+    client = LeakFix.client
+    wrap = staticmethod(LeakFix.wrap)
+
+    def both(self):
+        """(kind, stored path) of the internal and the client report; each is saved once per test (a second save of a filed report asks)."""
+        if not hasattr(self, "_both"):
+            self._both = (("internal", self.saved(date="2026-10-09")), ("client", self.client()))
+        return self._both
+
+    def test_a_css_content_written_with_escapes_or_split_strings_is_refused(self):
+        for kind, path in self.both():
+            for css in ('.a::after{content:"\\0057alrus budget cut"}', '.a::after{content:"Wal" "rus budget cut"}',
+                        '.a::after{content:"Wal"/**/"rus bu" \'dget cut\'}', '.a::after{content:"\\57 alrus budget \\63 ut"}'):
+                self.assertIn("leaves out", self.build(path, page(css=css))[1] or "", f"{kind}: {css}")
+            self.assertIn("leaves out", self.build(path, page(self.wrap('<p style="content:\'\\0057alrus budget cut\'">x</p>')))[1] or "", kind)
+
+    def test_a_picture_that_is_an_svg_data_address_is_read_for_the_needle(self):
+        import base64
+        for svg in ('<svg xmlns="http://www.w3.org/2000/svg"><title>Walrus budget cut</title></svg>',
+                    '<svg xmlns="http://www.w3.org/2000/svg"><desc>Walrus budget cut</desc></svg>',
+                    '<svg xmlns="http://www.w3.org/2000/svg"><text>Walrus budget cut</text></svg>',
+                    '<svg xmlns="http://www.w3.org/2000/svg" data-n="Walrus budget cut"><rect/></svg>'):
+            src = "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
+            for kind, path in self.both():
+                self.assertIn("leaves out", self.build(path, page(self.wrap(f'<img src="{src}">')))[1] or "", f"{kind}: {svg}")
+        ok = "data:image/svg+xml;base64," + base64.b64encode(b'<svg xmlns="http://www.w3.org/2000/svg"><rect width="3" height="3"/></svg>').decode()
+        self.assertIsNone(self.build(self.both()[1][1], page(self.wrap(f'<img src="{ok}">')))[1], "an SVG with nothing hidden in it is kept")
+
+    def test_zero_width_characters_and_the_soft_hyphen_do_not_hide_a_word(self):
+        for mark in ("​", "‌", "‍", "⁠", "﻿", "­"):
+            word = f"Wal{mark}rus budget cut"
+            for kind, path in self.both():
+                self.assertIn("leaves out", self.build(path, page(self.wrap(f"<p>{word}</p>")))[1] or "", f"{kind}: {mark!r} in the text")
+                self.assertIn("leaves out", self.build(path, page(css=f'.a::after{{content:"{word}"}}'))[1] or "", f"{kind}: {mark!r} in css")
+            self.assertIn("leaves out", self.build(self.both()[0][1], page(self.wrap(f'<p title="{word}">x</p>')))[1] or "", f"{mark!r} in an attribute")
+
+    def test_ids_joined_to_each_other_are_found_in_a_client_attribute(self):
+        out, why = self.build(self.client(), page(self.wrap('<p class="ABC-A-001ABC-A-002">x</p><p class="a ABC-005,ABC-A-003">y</p>'
+                                                            '<p class="xxABC-A-004yy">z</p>')))
+        self.assertIsNone(why)
+        tail = out.split("</style>", 2)[-1]
+        for gone in ("ABC-A-001", "ABC-A-002", "ABC-005", "ABC-A-003", "ABC-A-004"):
+            self.assertNotIn(gone, tail, gone)
+
+
 class Fallback(Base):
     """Check 12: with no page, or one that fails the check, the Python renderer still gives a file and says it is plain."""
 

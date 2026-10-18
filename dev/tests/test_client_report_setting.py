@@ -321,6 +321,26 @@ class Routes(unittest.TestCase):
         r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
         self.assertEqual(r["doc"].get("client"), "N" * 80, r["doc"].get("client"))
 
+    def test_body_cap_a_negative_content_length_is_refused_and_writes_nothing(self):
+        import http.client
+        import socket
+        from urllib.parse import urlsplit
+        u = urlsplit(self.base)
+        d = self.v.root / "system/branding/logos"
+        for path in ("/api/report/logo/save", "/api/report/logo/remove"):
+            c = http.client.HTTPConnection(u.hostname, u.port, timeout=10)
+            c.putrequest("POST", path)
+            for k, v in (("Content-Type", "application/json"), ("X-Creaite-Token", self.token), ("Content-Length", "-1")):
+                c.putheader(k, v)
+            c.endheaders()
+            try:
+                status = c.getresponse().status
+            except (socket.timeout, ConnectionError):
+                status = 0
+            c.close()
+            self.assertEqual(status, 400, path)
+        self.assertEqual(list(d.glob("*")), [])
+
 
 if __name__ == "__main__":
     unittest.main()

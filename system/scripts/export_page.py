@@ -17,6 +17,7 @@ the saved draft it was drawn from. A library: no command line. This module never
 
 creaite_doc.render stays the fallback for the command line, for minutes and for any export with no page or a page that fails here;
 the route then says it made the plain version (`plain: true`)."""
+import base64
 import html
 import json
 import re
@@ -55,7 +56,10 @@ CLIENT_SVG_ATTRS = {"viewbox", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r"
                     "stroke-opacity", "fill-rule", "transform", "font-size", "font-weight", "font-family", "text-anchor",
                     "dominant-baseline", "preserveaspectratio", "xmlns", "offset", "stop-color", "stop-opacity", "gradientunits",
                     "gradienttransform", "dx", "dy", "letter-spacing", "text-decoration", "class", "style", "width", "height", "id"}
-ITEM_ID = re.compile(r"\b[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+\b")
+ITEM_ID = re.compile(r"[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+")   # no \b: joined IDs are found too
+INVISIBLE = re.compile("[\u200b\u200c\u200d\u200e\u200f\u2060\ufeff\u00ad]")   # zero-width marks, soft hyphen
+SVG_URI = re.compile(r"data:image/svg\+xml(?:;charset=[\w-]+)?;base64,([A-Za-z0-9+/=\s]+)", re.I)
+SVG_MAX = 1_000_000
 CSS_CONTENT = re.compile(r"content\s*:\s*([^;}]*)", re.I)
 ID_OK = re.compile(r"^[A-Za-z][\w:.-]{0,60}$")
 DATA_ATTR = re.compile(r"^data-[a-z0-9_.:-]{1,40}$")
@@ -94,6 +98,33 @@ def client_attr_ok(svg, name, value):
     return name != "data-id" or bool(ID_OK.match(value))
 
 
+def svg_words(value, depth=0):
+    """The words of a `data:image/svg+xml;base64,…` picture (its text, title, desc and every attribute, and any picture inside it),
+    or None when it can't be read: such a picture is not kept. Read like the page's own words by the leak checks."""
+    m = SVG_URI.fullmatch(value.strip()) if depth == 0 else SVG_URI.search(value)
+    if m is None:
+        return None
+    try:
+        raw = base64.b64decode(re.sub(r"\s+", "", m.group(1)), validate=True)
+    except ValueError:
+        return None
+    if len(raw) > SVG_MAX or depth > 3:
+        return None
+    text = html.unescape(raw.decode("utf-8", "replace"))
+    words = [text, re.sub(r"<[^>]*>", "", text)]
+    for inner in SVG_URI.finditer(text):
+        found = svg_words(inner.group(0), depth + 1)
+        if found is None:
+            return None
+        words += found
+    return words
+
+
+def src_ok(tag, value):
+    """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words)."""
+    return tag == "img" and bool(DATA_IMAGE.match(value)) and (not SVG_URI.match(value) or svg_words(value) is not None)
+
+
 def keep_attr(tag, svg, name, value, client=False):
     """Whether the attribute `name`="`value`" of an element `tag` (inside an svg when `svg`) is written. In a client file only the
     short allow-list survives, and never a value that holds an item ID."""
@@ -102,7 +133,7 @@ def keep_attr(tag, svg, name, value, client=False):
     if name == "style":
         return safe_css_value(value)
     if name == "src":
-        return tag == "img" and bool(DATA_IMAGE.match(value))
+        return src_ok(tag, value)
     if name == "id":
         return bool(ID_OK.match(value))
     if name.startswith("data-"):
@@ -137,6 +168,8 @@ class Clean(HTMLParser):
                 keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
                 if name != "src":
                     self.attr_values.append(keep[-1][1])
+                elif SVG_URI.match(value):
+                    self.attr_values.extend(svg_words(value) or [])      # an SVG picture is read like the page: its words and attributes
         return "".join(f' {n}="{html.escape(v, quote=True)}"' for n, v in keep)
 
     def note_structure(self, tag, attrs):
@@ -346,7 +379,7 @@ def check_sections(doc, sections, rows):
 
 def fold(t):
     """Text for comparing words: Unicode-normalised, lower case, with no whitespace (inline marks split words in the markup)."""
-    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", str(t or "")).casefold())
+    return re.sub(r"\s+", "", INVISIBLE.sub("", unicodedata.normalize("NFKC", str(t or ""))).casefold())
 
 
 def is_client(doc):
@@ -354,9 +387,22 @@ def is_client(doc):
     return doc.get("kind") == "client" or doc.get("audience") == "client"
 
 
+def css_decode(css):
+    """Style rules read as the browser reads them: comments gone, escapes decoded (\\0057 and \\57 are W) and quote marks dropped, so
+    "Wal" "rus" and "\\0057alrus" read as the word they draw. An escape followed by more hex letters ("\\0057alrus") is read by the
+    standard as one long number; a hand-written one may mean four or two digits, so those readings are added too (extra words can
+    only make a match likelier, never hide one)."""
+    t = re.sub(r"/\*.*?\*/", "", str(css or ""), flags=re.S)
+    out = []
+    for digits in ("1,6", "4", "2"):
+        d = re.sub(r"\\([0-9a-fA-F]{%s})\s?" % digits, lambda m: chr(int(m.group(1), 16)) if 0 < int(m.group(1), 16) <= 0x10FFFF else "", t)
+        out.append(re.sub(r"\\(.)", r"\1", d, flags=re.S).replace('"', "").replace("'", ""))
+    return "\n".join(out)
+
+
 def css_strings(css):
-    """The words a stylesheet can draw with `content:`."""
-    return " ".join(m.group(1) for m in CSS_CONTENT.finditer(css or ""))
+    """The words a stylesheet can draw with `content:` (read as the browser reads them)."""
+    return " ".join(m.group(1) for m in CSS_CONTENT.finditer(css_decode(css)))
 
 
 def check_page(doc, page, text, sections, rows, attrs=(), css=""):
@@ -370,12 +416,12 @@ def check_page(doc, page, text, sections, rows, attrs=(), css=""):
     if sent != int(doc.get("version") or 0):
         raise PageRefused("the page was drawn from a different version than the saved report")
     check_sections(doc, sections, rows)
-    bare = fold(" ".join([text] + list(attrs)) + " " + str(css or ""))
+    bare = fold(" ".join([text] + list(attrs) + [css_decode(a) for a in attrs]) + " " + str(css or "") + " " + css_decode(css))
     if any(fold(n) in bare for n in hidden_needles(doc)):
         raise PageRefused("the page held words the report leaves out")
     if is_client(doc):
         import client_leak
-        everything = "\n".join([text] + list(attrs) + [css_strings(css)])
+        everything = INVISIBLE.sub("", "\n".join([text] + list(attrs) + [css_decode(a) for a in attrs] + [css_strings(css)]))
         with client_leak.connect() as con:
             if client_leak.plain_findings(con, doc.get("project"), everything):
                 raise PageRefused("the page held content a client report must not show")
