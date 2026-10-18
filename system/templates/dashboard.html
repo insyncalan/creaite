@@ -4059,6 +4059,25 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* #213: Today's Portfolio table, the Evidence text follows its resizable column: it wraps to the column's width, never a fixed length */
 #pfTbl .ev{white-space:normal;overflow-wrap:anywhere}
+/* ===== #232 Intake and Review, one page (v2.5.0; components/intakeReview/). From the locked mockup (18-10-2026b): the app's
+   tokens only, no new colours, so light, dark and both palettes follow. Scoped to #v-intake-review. ===== */
+#v-intake-review .icpipe{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
+#v-intake-review .icpipe .evbox{cursor:pointer;min-width:160px}#v-intake-review .icpipe .evbox[aria-pressed=true]{outline:2px solid var(--accent)}
+#v-intake-review .icpipe .ar{align-self:center;color:var(--muted)}
+#v-intake-review .icsub{font-size:12px;color:var(--muted)}
+#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:14px;margin:0 0 8px}
+#v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
+#v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
+#v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:12px}
+#v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
+#v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
+#v-intake-review .ickind{font-size:12px;font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
+#v-intake-review .icmeethd{font-size:16px;font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
+#v-intake-review tr.icopen td{background:var(--accent-soft)!important;border-top:2px solid var(--accent)}
+#v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
+#v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
+#v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
+@media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -4137,6 +4156,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <div class="kbdhint" id="whintList"></div>
         <div class="kbdhint" id="whintBoard" hidden></div>
       </div></section>
+      <section class="view" id="v-intake-review" hidden aria-labelledby="irTitle"></section><!-- #232: Intake and Review, one page (components/intakeReview/IntakeReviewPage.jsx) -->
       <section class="view" id="v-review" hidden><div class="wrapmax">
         <h1>Review</h1><p class="sub" style="margin:4px 0 0" id="rvSub">Claude's proposals.</p>
         <!-- BL-133 (sprint-work-views): search, filters, Display and Approve all routine; the bar when anything is selected; the result line -->
@@ -4448,6 +4468,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     INRUN: () => INRUN,
     INSEL: () => INSEL,
     INSTATE: () => INSTATE,
+    IR_FOLDED: () => IR_FOLDED,
+    IR_SECTIONS: () => IR_SECTIONS,
+    IR_STAGES: () => IR_STAGES,
+    IR_VIEWS: () => IR_VIEWS,
+    IR_VIEW_KEY: () => IR_VIEW_KEY,
     ITEMCODE: () => ITEMCODE,
     ITEMID: () => ITEMID,
     Icon: () => Icon,
@@ -4695,6 +4720,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     SneakIcon: () => SneakIcon,
     SneakPeek: () => SneakPeek,
     SourceLink: () => SourceLink,
+    StagePipe: () => StagePipe,
     StateChip: () => StateChip,
     StatusDot: () => StatusDot,
     TABNAME: () => TABNAME,
@@ -5684,6 +5710,36 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     insertImage: () => insertImage,
     intakeSeams: () => intakeSeams,
     internalIn: () => internalIn,
+    irAfterData: () => irAfterData,
+    irBulk: () => irBulk,
+    irBusy: () => irBusy,
+    irClickFold: () => irClickFold,
+    irClickMeeting: () => irClickMeeting,
+    irClickStage: () => irClickStage,
+    irCounts: () => irCounts,
+    irDone: () => irDone,
+    irEsc: () => irEsc,
+    irFiltered: () => irFiltered,
+    irFoldClick: () => irFoldClick,
+    irFolded: () => irFolded,
+    irGroupsShown: () => irGroupsShown,
+    irIsFolded: () => irIsFolded,
+    irKeepOpen: () => irKeepOpen,
+    irLive: () => irLive,
+    irLiveCounts: () => irLiveCounts,
+    irModel: () => irModel,
+    irOpen: () => irOpen,
+    irOpenable: () => irOpenable,
+    irPeek: () => irPeek,
+    irRow: () => irRow,
+    irSel: () => irSel,
+    irSetView: () => irSetView,
+    irStage: () => irStage,
+    irStageClick: () => irStageClick,
+    irTick: () => irTick,
+    irToggle: () => irToggle,
+    irView: () => irView,
+    irViewNorm: () => irViewNorm,
     isConflict: () => isConflict,
     isDark: () => isDark,
     isDateField: () => isDateField,
@@ -6361,6 +6417,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     quipNow: () => quipNow,
     railCustomise: () => railCustomise,
     railDone: () => railDone,
+    railGo: () => railGo,
     railIconSize: () => railIconSize,
     railItem: () => railItem,
     railLabelsOn: () => railLabelsOn,
@@ -6444,6 +6501,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderHelp: () => renderHelp,
     renderIgnore: () => renderIgnore,
     renderInbox: () => renderInbox,
+    renderIntakeReview: () => renderIntakeReview,
     renderLayoutBar: () => renderLayoutBar,
     renderMeetings: () => renderMeetings,
     renderMgr: () => renderMgr,
@@ -26393,12 +26451,12 @@ ${s5}`;
   var RAIL_ITEMS = [
     { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
     { id: "work", title: "Work", icon: "work", group: "top" },
-    { id: "review", title: "Review", icon: "review", badge: "revBadge", group: "top" },
+    { id: "review", title: "Intake and Review", icon: "review", badge: "revBadge", group: "top" },
+    /* #232: one entry for both; it opens #intake-review (rail.js railGo) */
     { id: "projects", title: "Projects", icon: "projects", group: "top" },
     { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },
     /* BL-337 */
     { id: "people", title: "People", icon: "people", group: "top" },
-    { id: "inbox", title: "Intake", icon: "inbox", badge: "inboxBadge", group: "more" },
     { id: "files", title: "Files", icon: "folder", group: "more" },
     { id: "activity", title: "Activity", icon: "activity", group: "more" },
     { id: "settings", title: "Settings", icon: "gear", group: "more" }
@@ -60893,10 +60951,11 @@ ${d5.text}`);
     if (o5 && o5.isConnected && o5.getClientRects().length) o5.focus();
     else $("#railMore")?.focus();
   }
+  var railGo = (id2) => id2 === "review" ? "intake-review" : id2;
   function renderRail() {
     let cur = "";
     try {
-      cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today", reporting: "projects" }[shared.VIEW] || shared.VIEW;
+      cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today", reporting: "projects", "intake-review": "review", inbox: "review" }[shared.VIEW] || shared.VIEW;
     } catch (x5) {
     }
     setRailView(cur);
@@ -60953,7 +61012,7 @@ ${d5.text}`);
       });
       tog.addEventListener("click", railToggle);
     }
-    const onGo = (id2) => go2(id2);
+    const onGo = (id2) => go2(railGo(id2));
     const flyouts = {
       projects: () => {
         const a5 = P4.filter((p6) => p6.active !== false && !p6.archived);
@@ -70915,6 +70974,469 @@ ${d5.text}`);
     return v5 && v5.ok && v5.path ? v5.path : null;
   };
 
+  // core/irFold.js
+  var IR_STAGES = ["arrived", "drafted", "approved"];
+  var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
+  var IR_FOLDED = ["later", "not_needed"];
+  var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
+  function irToggle(open2, id2, model) {
+    if (open2 === id2) return null;
+    const m5 = (model.meetings || []).find((x5) => x5.id === id2);
+    return irOpenable(m5) ? id2 : open2;
+  }
+  function irKeepOpen(open2, model) {
+    return open2 && (model.meetings || []).some((x5) => x5.id === open2) ? open2 : null;
+  }
+  function irLive(g5, done) {
+    const keep2 = (a5) => (a5 || []).filter((n4) => !done(n4));
+    return { needs: keep2(g5 && g5.needs), routine: keep2(g5 && g5.routine) };
+  }
+  function irGroupsShown(g5, done) {
+    const l6 = irLive(g5, done);
+    return (
+      /** @type {const} */
+      ["needs", "routine"].filter((k5) => l6[k5].length).map((k5) => ({ kind: k5, ns: l6[k5], open: true }))
+    );
+  }
+  var irBulk = (g5, done) => irLive(g5, done).routine;
+  var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
+  var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
+  function irFoldClick(folded, sec) {
+    return { ...folded, [sec]: !irIsFolded(folded, sec) };
+  }
+  var irIsFolded = (folded, sec) => sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec);
+  function irCounts(model, done) {
+    const ms2 = model.meetings || [], left = (m5) => {
+      const l6 = irLive(m5.groups, done);
+      return l6.needs.length + l6.routine.length;
+    };
+    const stage = (m5) => m5.stage === "drafted" && !left(m5) ? "approved" : m5.stage;
+    const all = [
+      ...ms2.flatMap((m5) => [...m5.groups.needs || [], ...m5.groups.routine || []]),
+      ...["mail", "other"].flatMap((k5) => [.../** @type {any} */
+      (model[k5] || {}).needs || [], .../** @type {any} */
+      (model[k5] || {}).routine || []])
+    ];
+    const toApprove = new Set(all.filter((n4) => !done(n4))).size;
+    const ready = ms2.filter((m5) => m5.stage === "arrived" && m5.state === "ready").length;
+    return {
+      arrived: ms2.filter((m5) => stage(m5) === "arrived").length,
+      ready,
+      drafted: ms2.filter((m5) => stage(m5) === "drafted").length,
+      approved: ms2.filter((m5) => stage(m5) === "approved").length,
+      to_approve: toApprove,
+      badge: ready + toApprove
+    };
+  }
+  var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
+  var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
+  var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
+
+  // stores/intakeReview.js
+  var IR_VIEW_KEY = "creaite-ir-view";
+  var irModel = () => (
+    /** @type {any} */
+    D.intake_review || { meetings: [], mail: { needs: [], routine: [] }, other: { needs: [], routine: [] }, later: [], not_needed: [], counts: {} }
+  );
+  var irRow = (n4) => REV.find((r4) => r4.n === n4) || null;
+  var irDone = (n4) => {
+    const r4 = irRow(n4);
+    return !r4 || !!r4.done;
+  };
+  var irView = y3(irViewNorm((() => {
+    try {
+      return store.get(IR_VIEW_KEY, "list");
+    } catch (x5) {
+      return "list";
+    }
+  })()));
+  function irSetView(v5) {
+    irView.value = irViewNorm(v5);
+    try {
+      store.set(IR_VIEW_KEY, irView.value);
+    } catch (x5) {
+    }
+  }
+  var irOpen = y3(
+    /** @type {string|null} */
+    null
+  );
+  var irStage = y3("all");
+  var irFolded = y3(
+    /** @type {Record<string, boolean>} */
+    {}
+  );
+  var irPeek = y3(
+    /** @type {number|null} */
+    null
+  );
+  var irSel = y3(
+    /** @type {string|null} */
+    null
+  );
+  var irBusy = y3(
+    /** @type {string[]} */
+    []
+  );
+  var irTick = y3(0);
+  function irClickMeeting(id2) {
+    irOpen.value = irToggle(irOpen.value, id2, irModel());
+  }
+  function irClickStage(g5) {
+    irStage.value = irStageClick(irStage.value, g5);
+  }
+  function irClickFold(sec) {
+    irFolded.value = irFoldClick(irFolded.value, sec);
+  }
+  function irAfterData() {
+    irOpen.value = irKeepOpen(irOpen.value, irModel());
+    irTick.value++;
+  }
+  var irLiveCounts = () => irCounts(irModel(), irDone);
+
+  // components/intakeReview/rows.jsx
+  var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
+  var IR_GROUP_HEAD = {
+    needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes"],
+    routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one"]
+  };
+  var KIND2 = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
+  var irKind = (r4) => r4.kind === "raid" ? r4.rec && r4.rec.type || "Risk" : KIND2[
+    /** @type {keyof KIND} */
+    r4.kind
+  ] || "Proposal";
+  var ageWords = (d5) => d5 === 0 ? "today" : d5 === 1 ? "1 day" : `${d5} days`;
+  function MeetingRow({ m: m5, live }) {
+    const open2 = irOpen.value === m5.id, n4 = live.needs.length + live.routine.length;
+    const state = irBusy.value.includes(m5.id) ? "running" : m5.state;
+    const words = state === "proposals" ? `${n4} ${IR_STATE_WORDS.proposals}` : IR_STATE_WORDS[
+      /** @type {keyof IR_STATE_WORDS} */
+      state
+    ] || "";
+    const can = m5.stage === "drafted";
+    return /* @__PURE__ */ u2(
+      "tr",
+      {
+        class: `click irmeet${open2 ? " icopen" : ""}`,
+        "data-irm": m5.id,
+        "data-stage": m5.stage,
+        "data-state": state,
+        tabindex: 0,
+        "aria-expanded": can ? String(open2) : void 0,
+        onClick: (e4) => {
+          if (!/** @type {Element} */
+          e4.target.closest("button,a,input")) irClickMeeting(m5.id);
+        },
+        children: [
+          /* @__PURE__ */ u2("td", { class: "title", children: [
+            /* @__PURE__ */ u2("b", { class: "icmeethd", children: m5.title }),
+            m5.stale ? /* @__PURE__ */ u2(S2, { children: [
+              " ",
+              /* @__PURE__ */ u2("span", { class: "tag stale", children: [
+                "Stale · ",
+                ageWords(m5.age)
+              ] })
+            ] }) : null,
+            /* @__PURE__ */ u2("div", { class: "why", children: [
+              m5.day ? fd(m5.day) : "",
+              m5.start ? ` ${m5.start}` : "",
+              m5.p ? ` · ${pName(m5.p)}` : ""
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "why", children: [
+              words,
+              m5.later_back ? " · back from Later" : ""
+            ] })
+          ] }),
+          /* @__PURE__ */ u2("td", { class: "iracts", children: can ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ira": "open", onClick: () => irClickMeeting(m5.id), children: open2 ? "Close" : "Check them" }) : null })
+        ]
+      }
+    );
+  }
+  function ProposalLine({ n: n4, child }) {
+    const r4 = irRow(n4);
+    if (!r4) return null;
+    return /* @__PURE__ */ u2("tr", { class: `irprop${child ? " mchild" : ""}`, "data-irn": n4, children: [
+      /* @__PURE__ */ u2("td", { class: "title", children: [
+        /* @__PURE__ */ u2("span", { class: "ickind", children: irKind(r4) }),
+        " ",
+        /* @__PURE__ */ u2("b", { class: "icttl", children: r4.rec && r4.rec.t || "" }),
+        r4.p ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " · ",
+          pName(r4.p)
+        ] }) : null
+      ] }),
+      /* @__PURE__ */ u2("td", { class: "iracts" })
+    ] });
+  }
+  function ProposalGroups({ groups, meet, child }) {
+    return /* @__PURE__ */ u2(S2, { children: irGroupsShown(groups, irDone).map((g5) => /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("tr", { class: `icsubhead ${g5.kind}${child ? " child" : ""}`, "data-irg": g5.kind, children: /* @__PURE__ */ u2("td", { colSpan: 2, children: [
+        /* @__PURE__ */ u2("span", { class: "icsh", children: [
+          meet ? `${meet} · ` : "",
+          IR_GROUP_HEAD[g5.kind][0],
+          " · ",
+          g5.ns.length
+        ] }),
+        /* @__PURE__ */ u2("span", { class: "icshs", children: IR_GROUP_HEAD[g5.kind][1] }),
+        g5.kind === "routine" ? /* @__PURE__ */ u2("span", { class: "icshr", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "routine", disabled: true, title: "232-B", children: [
+          "Approve routine (",
+          g5.ns.length,
+          ")"
+        ] }) }) : null
+      ] }) }),
+      g5.ns.map((n4) => /* @__PURE__ */ u2(ProposalLine, { n: n4, child }))
+    ] })) });
+  }
+
+  // components/intakeReview/views.jsx
+  var STN = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
+  var EMPTY2 = "Nothing here. Meetings appear when they end.";
+  function MailSections({ model }) {
+    const mail = irLive(model.mail, irDone), other = irLive(model.other, irDone);
+    const nm3 = mail.needs.length + mail.routine.length, no2 = other.needs.length + other.routine.length;
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: "rgroup irsec", "data-irsec": "mail", children: /* @__PURE__ */ u2("h2", { children: [
+        "From mail and Teams ",
+        /* @__PURE__ */ u2("span", { class: "sub rgc", children: [
+          nm3,
+          " proposal",
+          nm3 === 1 ? "" : "s"
+        ] })
+      ] }) }),
+      nm3 ? /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: /* @__PURE__ */ u2(ProposalGroups, { groups: model.mail }) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing from mail or Teams to approve." }),
+      no2 ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("div", { class: "rgroup irsec", "data-irsec": "other", children: /* @__PURE__ */ u2("h2", { children: [
+          "Other proposals ",
+          /* @__PURE__ */ u2("span", { class: "sub rgc", children: no2 })
+        ] }) }),
+        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: /* @__PURE__ */ u2(ProposalGroups, { groups: model.other }) }) }) })
+      ] }) : null
+    ] });
+  }
+  function MeetingBlock({ m: m5 }) {
+    const live = irLive(m5.groups, irDone);
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(MeetingRow, { m: m5, live }),
+      irOpen.value === m5.id ? /* @__PURE__ */ u2(ProposalGroups, { groups: m5.groups, meet: m5.title, child: true }) : null
+    ] });
+  }
+  function ListView({ model, list }) {
+    return /* @__PURE__ */ u2("div", { "data-irv": "list", children: [
+      list.length ? /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: list.map((m5) => /* @__PURE__ */ u2(MeetingBlock, { m: m5 })) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: EMPTY2 }),
+      /* @__PURE__ */ u2(MailSections, { model })
+    ] });
+  }
+  function BoardView({ model }) {
+    const open2 = model.meetings.find((m5) => m5.id === irOpen.value);
+    return /* @__PURE__ */ u2("div", { "data-irv": "board", children: [
+      /* @__PURE__ */ u2("div", { class: "icboard", children: IR_STAGES.map((g5) => {
+        const l6 = model.meetings.filter((m5) => m5.stage === g5);
+        return /* @__PURE__ */ u2("div", { class: "iccol", "data-ircol": g5, children: [
+          /* @__PURE__ */ u2("h2", { children: [
+            STN[
+              /** @type {keyof STN} */
+              g5
+            ],
+            " ",
+            /* @__PURE__ */ u2("span", { class: "sub rgc", children: l6.length })
+          ] }),
+          l6.length ? l6.map((m5) => /* @__PURE__ */ u2("div", { class: "card iccard click", "data-irm": m5.id, tabindex: 0, onClick: () => irClickMeeting(m5.id), children: [
+            /* @__PURE__ */ u2("div", { class: "t", children: m5.title }),
+            /* @__PURE__ */ u2("div", { class: "why", children: m5.p ? pName(m5.p) : "" })
+          ] })) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing here." })
+        ] });
+      }) }),
+      open2 ? /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: /* @__PURE__ */ u2(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true }) }) }) }) : null,
+      /* @__PURE__ */ u2(MailSections, { model })
+    ] });
+  }
+  function TwoPanes({ model, list }) {
+    const sel = list.find((m5) => m5.id === irSel.value) || list[0];
+    return /* @__PURE__ */ u2("div", { "data-irv": "two", children: [
+      /* @__PURE__ */ u2("div", { class: "icsplit", children: [
+        /* @__PURE__ */ u2("div", { children: list.length ? /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: list.map((m5) => /* @__PURE__ */ u2("tr", { class: `click${sel && sel.id === m5.id ? " sel" : ""}`, "data-irm": m5.id, tabindex: 0, onClick: () => {
+          irSel.value = m5.id;
+        }, children: /* @__PURE__ */ u2("td", { class: "title", children: [
+          m5.title,
+          /* @__PURE__ */ u2("div", { class: "why", children: [
+            STN[
+              /** @type {keyof STN} */
+              m5.stage
+            ],
+            m5.p ? ` · ${pName(m5.p)}` : ""
+          ] })
+        ] }) })) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: EMPTY2 }) }),
+        /* @__PURE__ */ u2("div", { class: "card icdet", "data-irdet": sel ? sel.id : "", children: sel ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("h2", { style: { margin: "0 0 4px" }, children: sel.title }),
+          /* @__PURE__ */ u2("div", { class: "why", children: [
+            STN[
+              /** @type {keyof STN} */
+              sel.stage
+            ],
+            sel.p ? ` · ${pName(sel.p)}` : ""
+          ] }),
+          /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: /* @__PURE__ */ u2(ProposalGroups, { groups: sel.groups, meet: sel.title }) }) }) })
+        ] }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Select a meeting." }) })
+      ] }),
+      /* @__PURE__ */ u2(MailSections, { model })
+    ] });
+  }
+
+  // components/intakeReview/IntakeReviewPage.jsx
+  var STN2 = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
+  var VIEWICON = {
+    list: /* @__PURE__ */ u2("path", { d: "M4 6h16M4 12h16M4 18h16" }),
+    board: /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("rect", { x: "3", y: "4", width: "5", height: "16", rx: "1" }),
+      /* @__PURE__ */ u2("rect", { x: "10", y: "4", width: "5", height: "10", rx: "1" }),
+      /* @__PURE__ */ u2("rect", { x: "17", y: "4", width: "4", height: "13", rx: "1" })
+    ] }),
+    two: /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("rect", { x: "3", y: "4", width: "8", height: "16", rx: "1" }),
+      /* @__PURE__ */ u2("rect", { x: "13", y: "4", width: "8", height: "16", rx: "1" })
+    ] })
+  };
+  var plural2 = (n4, w6) => `${n4} ${w6}${n4 === 1 ? "" : "s"}`;
+  function StagePipe({ c: c5 }) {
+    const sub = { arrived: `${c5.ready} ready to process`, drafted: `${plural2(c5.to_approve, "proposal")} to check`, approved: "this week" };
+    return /* @__PURE__ */ u2("div", { class: "icpipe", role: "group", "aria-label": "Stages", children: [
+      IR_STAGES.map((g5, i5) => /* @__PURE__ */ u2(S2, { children: [
+        i5 ? /* @__PURE__ */ u2("span", { class: "ar", "aria-hidden": "true", children: "→" }) : null,
+        /* @__PURE__ */ u2(
+          "div",
+          {
+            class: "evbox click",
+            role: "button",
+            tabindex: 0,
+            "data-irstage": g5,
+            "aria-pressed": String(irStage.value === g5),
+            onClick: () => irClickStage(g5),
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter" || e4.key === " ") {
+                e4.preventDefault();
+                irClickStage(g5);
+              }
+            },
+            children: [
+              /* @__PURE__ */ u2("div", { class: "v", children: c5[g5] }),
+              /* @__PURE__ */ u2("div", { class: "l", children: STN2[
+                /** @type {keyof STN} */
+                g5
+              ] }),
+              /* @__PURE__ */ u2("div", { class: "icsub", children: sub[
+                /** @type {keyof sub} */
+                g5
+              ] })
+            ]
+          }
+        )
+      ] })),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-irstage": "all", onClick: () => irClickStage("all"), children: "Show all" })
+    ] });
+  }
+  function FoldSection({ sec, title, n: n4, children }) {
+    const folded = irIsFolded(irFolded.value, sec);
+    return /* @__PURE__ */ u2("div", { class: "rgroup irsec", "data-irsec": sec, children: [
+      /* @__PURE__ */ u2("h2", { children: [
+        title,
+        " ",
+        /* @__PURE__ */ u2("span", { class: "sub rgc", children: n4 }),
+        " ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-irfold": sec, "aria-expanded": String(!folded), onClick: () => irClickFold(sec), children: folded ? "Show" : "Hide" })
+      ] }),
+      folded ? null : children
+    ] });
+  }
+  function IntakeReviewView() {
+    irTick.value;
+    const model = irModel(), c5 = irLiveCounts(), view = irView.value;
+    const list = irFiltered(model, irStage.value);
+    return /* @__PURE__ */ u2("div", { class: "wrapmax irpage", children: [
+      /* @__PURE__ */ u2("h1", { id: "irTitle", children: "Intake and Review" }),
+      /* @__PURE__ */ u2("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
+        c5.ready,
+        " ready to process · ",
+        plural2(c5.to_approve, "proposal"),
+        " to approve"
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "toolbar rvtools", children: [
+        /* @__PURE__ */ u2("span", { class: "sp" }),
+        /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "How you see Intake and Review", children: IR_VIEWS.map(([v5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-irview": v5, "aria-pressed": String(view === v5), title: l6, onClick: () => irSetView(v5), children: [
+          /* @__PURE__ */ u2("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "aria-hidden": "true", children: VIEWICON[
+            /** @type {keyof VIEWICON} */
+            v5
+          ] }),
+          /* @__PURE__ */ u2("span", { style: { marginLeft: "6px" }, children: l6 })
+        ] })) })
+      ] }),
+      view === "board" ? /* @__PURE__ */ u2(BoardView, { model }) : view === "two" ? /* @__PURE__ */ u2(TwoPanes, { model, list: model.meetings }) : /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(StagePipe, { c: c5 }),
+        /* @__PURE__ */ u2(ListView, { model, list })
+      ] }),
+      /* @__PURE__ */ u2(FoldSection, { sec: "later", title: "Later", n: model.later.length, children: model.later.length ? /* @__PURE__ */ u2("ul", { class: "irlist", children: model.later.map((x5) => /* @__PURE__ */ u2("li", { "data-irkey": x5.key, children: x5.title })) }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing set aside for later. A meeting comes back here when its transcript arrives." }) }),
+      /* @__PURE__ */ u2(FoldSection, { sec: "not_needed", title: "Not needed", n: model.not_needed.length, children: model.not_needed.length ? /* @__PURE__ */ u2("ul", { class: "irlist", children: model.not_needed.map((x5) => /* @__PURE__ */ u2("li", { "data-irkey": x5.key, children: [
+        x5.title,
+        x5.reason ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " · ",
+          x5.reason
+        ] }) : null
+      ] })) }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing marked Not needed." }) }),
+      /* @__PURE__ */ u2("p", { class: "sub irold", children: [
+        "While this page is being built, the earlier pages are here: ",
+        /* @__PURE__ */ u2("a", { href: "#", "data-go": "inbox", children: "Intake" }),
+        " · ",
+        /* @__PURE__ */ u2("a", { href: "#", "data-go": "review", children: "Review" })
+      ] })
+    ] });
+  }
+  var mounted2 = false;
+  function renderIntakeReview() {
+    const el2 = $("#v-intake-review");
+    if (!el2) return;
+    irAfterData();
+    if (!mounted2) {
+      R(/* @__PURE__ */ u2(IntakeReviewView, {}), el2);
+      mounted2 = true;
+      bootIrKeys();
+    }
+  }
+  function bootIrKeys() {
+    document.addEventListener("keydown", (e4) => {
+      if (shared.VIEW !== "intake-review" || e4.metaKey || e4.ctrlKey || e4.altKey) return;
+      const t47 = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (t47 && t47.closest && t47.closest("input,textarea,select,[contenteditable=true]")) return;
+      const rows2 = (
+        /** @type {HTMLElement[]} */
+        [...document.querySelectorAll("#v-intake-review [data-irm]")]
+      );
+      const at2 = rows2.indexOf(
+        /** @type {HTMLElement} */
+        t47.closest ? t47.closest("[data-irm]") : null
+      );
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        if (!rows2.length) return;
+        e4.preventDefault();
+        const r4 = rows2[Math.max(0, Math.min(rows2.length - 1, at2 < 0 ? 0 : at2 + (e4.key === "ArrowDown" ? 1 : -1)))];
+        r4.focus();
+        irSel.value = r4.dataset.irm || null;
+        return;
+      }
+      if (e4.key === "Enter" && at2 >= 0) {
+        e4.preventDefault();
+        irClickMeeting(rows2[at2].dataset.irm || "");
+        return;
+      }
+      if (e4.key === "Escape" && (irPeek.value != null || irOpen.value)) {
+        const s5 = irEsc({ peek: irPeek.value, open: irOpen.value });
+        irPeek.value = s5.peek;
+        irOpen.value = s5.open;
+      }
+    });
+  }
+
   // core/nav.js
   shared.VIEW = "today";
   shared.COCK = null;
@@ -71112,8 +71634,8 @@ ${d5.text}`);
         const id3 = arg, k5 = A4.some((x6) => x6.id === id3) ? "actions" : R3.some((x6) => x6.id === id3) ? "raid" : DEC.some((x6) => x6.id === id3) ? "decisions" : null;
         if (!k5) return null;
         return { v: "work", arg: null, wt: k5, wv: null, p: [], from: null, item: { k: k5, id: id3 }, scroll: 0 };
-      } else if (!["today", "projects", "reports", "people", "review", "inbox", "intake", "files", "activity", "settings", "help", "mine"].includes(v5)) return null;
-      if (v5 === "intake") st3.v = "inbox";
+      } else if (!["today", "projects", "reports", "people", "review", "inbox", "intake", "intake-review", "files", "activity", "settings", "help", "mine"].includes(v5)) return null;
+      if (v5 === "intake" || v5 === "inbox" || v5 === "review") st3.v = "intake-review";
       const id2 = kv.item;
       if (id2) {
         const k5 = A4.some((x6) => x6.id === id2) ? "actions" : R3.some((x6) => x6.id === id2) ? "raid" : DEC.some((x6) => x6.id === id2) ? "decisions" : null;
@@ -71271,7 +71793,7 @@ ${d5.text}`);
       const id2 = { cockpit: "v-cockpit", mine: "v-work" }[v6] || "v-" + v6;
       $("#" + id2).hidden = false;
       $("#" + id2).scrollTop = 0;
-      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects", minutes: "review", weekly: "projects", clientreport: "projects", reporting: "projects" }[v6] || v6;
+      const railKey = { "intake-review": "review", inbox: "review", cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects", minutes: "review", weekly: "projects", clientreport: "projects", reporting: "projects" }[v6] || v6;
       setRailView(railKey);
       if (v6 === "mine") {
         shared.WT = "actions";
@@ -71284,7 +71806,7 @@ ${d5.text}`);
       if (v6 === "person") shared.PERSON = arg2;
       if (v6 === "notes") shared.NOTECODE = arg2;
       if (v6 === "settings" && arg2) STAB = arg2;
-      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2), reports: () => renderReports(arg2), reporting: () => renderReporting(arg2, true), minutes: () => renderMinutes(arg2) }[v6] || (() => {
+      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, "intake-review": renderIntakeReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2), reports: () => renderReports(arg2), reporting: () => renderReporting(arg2, true), minutes: () => renderMinutes(arg2) }[v6] || (() => {
       }))();
       if (!opt2.restore) navWrite(true);
       return true;
@@ -74478,6 +75000,21 @@ ${d5.text}`);
         "inboxBadge",
         "insertImage",
         "invitees",
+        "irBulk",
+        "irCounts",
+        "irEsc",
+        "irFiltered",
+        "irFoldClick",
+        "irFolded",
+        "irGroupsShown",
+        "irIsFolded",
+        "irKeepOpen",
+        "irOpen",
+        "irSetView",
+        "irStage",
+        "irStageClick",
+        "irToggle",
+        "irViewNorm",
         "isMe",
         "isMin",
         "isNotePath",
