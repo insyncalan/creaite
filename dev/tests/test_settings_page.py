@@ -10,12 +10,12 @@ import os
 import sys
 import time
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import TEST_PALETTES, TEST_PALETTES_JS, LiveBrowserCase  # noqa: E402
-from test_dashboard import populate  # noqa: E402
+from test_dashboard import now, populate  # noqa: E402
 from test_tracker import action  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
@@ -28,8 +28,7 @@ ADVANCED = ["you", "appearance", "drafts", "closeday", "views", "board", "projpa
 
 def server_day():
     """The live server's day: CREAITE_NOW when it is set (the server reads it too), else the machine's."""
-    fixed = os.environ.get("CREAITE_NOW")
-    return (datetime.strptime(fixed, "%Y-%m-%d %H:%M") if fixed else datetime.now()).date().isoformat()
+    return now().date().isoformat()
 
 
 class SettingsPage(LiveBrowserCase):
@@ -40,9 +39,12 @@ class SettingsPage(LiveBrowserCase):
         populate(v)
         # The Week ahead runs from the server's day to a Friday; populate's dates (3 and 5 days on) both miss it on a
         # Wednesday, so "every priority" listed nothing more than "Urgent only" did (14-10-2026). A Medium action due
-        # on the server's own day is always in it: on that day, or on the Monday when the day is a weekend.
+        # on the server's own day is always in it: on that day, or on the Monday when the day is a weekend. It is due the NEXT
+        # day, not the same one: a run that crosses midnight (CI, Saturday 23:59 to Sunday 00:00, 18-10-2026) otherwise
+        # reads the Week ahead a day after the seed, when the action is overdue and not listed (#112): "0 not greater than 0".
         day = server_day()
-        v.propose("week", [action(1, description="Confirm the UAT room", priority="Medium", due_date=day, raised=day)])
+        due = (datetime.fromisoformat(day) + timedelta(days=1)).date().isoformat()
+        v.propose("week", [action(1, description="Confirm the UAT room", priority="Medium", due_date=due, raised=day)])
         v.run("apply")
 
     def setUp(self):
@@ -124,9 +126,11 @@ class SettingsPage(LiveBrowserCase):
         ok = self.b.eval("""(async()=>{ const R=Date, t=R.now(); window.Date=class extends R{ constructor(...a){ super(...(a.length?a:[t])); } static now(){ return t; } };
           try{ return (await writeSettings({"work.board.closed_days":31})) && (await writeSettings({"work.board.closed_days":32})); } finally{ window.Date=R; } })()""")
         self.assertTrue(ok)
-        new = sorted(set(backups.glob("settings-*.json")) - before, key=lambda f: (len(f.name), f.name))
+        new = sorted(set(backups.glob("settings-*.json")) - before, key=lambda f: f.stat().st_mtime_ns)   # written order; a pinned server clock gives other saves the same stamp, so the name does not order them
         self.assertEqual(len(new), 2, [f.name for f in new])
-        self.assertEqual(new[1].name, new[0].name[:-len(".json")] + "-2.json")       # one stamp: the second gets -2
+        if not os.environ.get("CREAITE_NOW"):      # a pinned server clock stamps every save alike and numbers them in its own order
+            self.assertEqual(new[1].name, new[0].name[:-len(".json")] + "-2.json")   # one stamp: the second gets -2
+        self.assertNotEqual(new[0].name, new[1].name)
         self.assertEqual(new[0].read_text(), original)                               # the version before the first save survives
         self.assertEqual(json.loads(new[1].read_text())["work"]["board"]["closed_days"], 31)
         self.assertEqual(self.settings_file()["work"]["board"]["closed_days"], 32)
