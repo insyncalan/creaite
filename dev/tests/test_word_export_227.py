@@ -48,6 +48,8 @@ ITEMS = {
                   "forecast_date": "2026-12-01", "status": "Planned"},
     "ABC-M-004": {"table": "milestones", "id": "ABC-M-004", "title": "Confidential vendor exit", "baseline_date": "2026-12-15",
                   "forecast_date": "2026-12-15", "status": "Planned", "client_visible": 0},
+    "ABC-M-005": {"table": "milestones", "id": "ABC-M-005", "title": "Zanzibar exit plan", "baseline_date": "2027-01-15",
+                  "forecast_date": "2027-01-15", "status": "Planned"},       # no client_visible, as a saved client report's items
     "ABC-002": {"table": "raid", "id": "ABC-002", "title": "Vendor capacity", "response_action": "Book a second crew"},
     "ABC-A-005": {"table": "actions", "id": "ABC-A-005", "title": "Send the plan", "due_date": "2026-10-15"},
 }
@@ -74,7 +76,7 @@ def sections(tmp):
         {"id": "asks", "type": "table", "heading": "What we need from people", "hidden": False,
          "columns": [{"key": "ask", "label": "Ask"}, {"key": "from", "label": "From"}], "rows": []},
         {"id": "milestones", "type": "timeline", "heading": "Milestones", "hidden": False, "text": "",
-         "data": {"timeline": ["ABC-M-001", "ABC-M-002", "ABC-M-003", "ABC-M-004"], "milestones": ["ABC-M-001", "ABC-M-002"]}},
+         "data": {"timeline": ["ABC-M-001", "ABC-M-002", "ABC-M-003", "ABC-M-004", "ABC-M-005"], "milestones": ["ABC-M-001", "ABC-M-002"]}},
         {"id": "this_week", "type": "text", "heading": "This week", "hidden": False,
          "text": "**Done:** the plan.\n\n- [ ] book room\n- [x] order kit\n- plain point\n\n"
                  f"![Site photo]({tmp / 'images' / 'site.png'})\n\n![Lost photo]({tmp / 'images' / 'lost.png'})"},
@@ -109,6 +111,10 @@ class Base(unittest.TestCase):
         self.real_pic = getattr(creaite_doc, "picture_png", None)
 
         self.svgs = []
+        # the tracker's client-safe milestones (M-004 and M-005 are not): the writer re-reads them and fails closed (LEAK 3)
+        real_safe = creaite_doc.client_safe_ids
+        creaite_doc.client_safe_ids = lambda code: {"ABC-M-001", "ABC-M-002", "ABC-M-003"}
+        self.addCleanup(setattr, creaite_doc, "client_safe_ids", real_safe)
 
         def fake(svg, w, h, **kw):
             self.svgs.append(svg)
@@ -251,6 +257,35 @@ class Checks(Base):
         self.assertNotIn("Confidential vendor", every, "text, picture alt text or the picture's drawing")
         self.assertNotIn("ABC-M-004", every)
         self.assertTrue(any("Go-live" in v for v in self.svgs), "the client-safe milestones are still drawn")
+
+    def test_leak3_a_milestone_with_no_client_visible_flag_is_not_drawn_in_a_client_export(self):
+        """p240-leakfix LEAK 3: report_doc._client_item never stores client_visible; the saved items have none, so only the tracker's
+        client-safe set may be drawn (picture and table), and a tracker that can't be read draws none."""
+        self.build(self.doc("client", audience="client", client="Harbour Board"))
+        every = self.xml + " ".join(self.svgs)
+        self.assertNotIn("Zanzibar", every)
+        self.assertTrue(any("Go-live" in v for v in self.svgs))
+        creaite_doc.client_safe_ids = lambda code: set()
+        self.svgs.clear()
+        self.build(self.doc("client", audience="client", client="Harbour Board"))
+        self.assertFalse(any("Go-live" in v for v in self.svgs), "fail closed")
+        self.svgs.clear()
+        self.build()
+        self.assertTrue(any("Zanzibar" in v for v in self.svgs), "an internal export still draws it")
+
+    def test_leak2_a_client_export_names_a_milestone_by_its_title_never_by_its_id(self):
+        """p240-leakfix LEAK 2: no item ID anywhere in a client Word file (every XML part); the internal one keeps it."""
+        secs = [x for x in sections(self.tmp) if x["type"] not in ("table",)]
+        doc = creaite_doc.new("client", "ABC", "Client report", "2026-10-16", secs, items=ITEMS, audience="client",
+                              client="Harbour Board")
+        doc["project_name"] = "Example Programme"
+        self.build(doc)
+        ms = self.table_with("Milestone")
+        self.assertIn("Design sign-off", [r[0] for r in ms])
+        every = " ".join(self.svgs) + " ".join(v.decode("utf-8", "replace") for n, v in self.parts.items() if n.endswith((".xml", ".rels")))
+        self.assertEqual(re.findall(r"[A-Z0-9]{3,7}-[A-Z]-\d+", every), [])
+        self.build()
+        self.assertIn("ABC-M-001 Design sign-off", [r[0] for r in self.table_with("Milestone")])
 
     def test_check_08c_a_client_timeline_draws_what_the_screen_does_a_left_out_one_stays_in_the_picture_not_the_table(self):
         self.build(self.doc("client", audience="client", client="Harbour Board"))

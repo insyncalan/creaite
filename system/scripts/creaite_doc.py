@@ -852,10 +852,15 @@ class _Word:
     def _drawn(self, s, every):
         """The milestones the timeline picture draws: every one the section's timeline names, as the sheet does (leaving one out of
         the list tidies the list only). A client report never draws one that isn't client-safe (not client-visible, or cancelled),
-        even if a document still names it: the gate drops those from the timeline, and this is a second line. Internal reports:
-        flip INTERNAL_TIMELINE_DRAWS_ALL to draw only the listed ones."""
+        even if a document still names it: the gate drops those from the timeline, and this is a second line that FAILS CLOSED
+        (p240-leakfix LEAK 3): the saved items hold no client_visible flag, so a milestone is drawn only when the tracker says it is
+        one of the client-safe set (`tracker.client_milestones`: client-visible, not cancelled, with its client wording, and no
+        label keeping it out); a tracker that can't be read draws none. Internal reports: flip INTERNAL_TIMELINE_DRAWS_ALL to draw
+        only the listed ones."""
         if self._client():
-            return [m for m in every if int(m.get("client_visible", 1) or 0) == 1 and m.get("status") != "Cancelled"]
+            safe = client_safe_ids(self.doc.get("project"))
+            return [m for m in every if m.get("id") in safe and int(m.get("client_visible", 1) or 0) == 1
+                    and m.get("status") != "Cancelled"]
         listed = set((s.get("data") or {}).get("milestones") or [])
         return every if INTERNAL_TIMELINE_DRAWS_ALL else [m for m in every if not listed or m["id"] in listed]
 
@@ -888,9 +893,9 @@ class _Word:
                           lambda r, c: TONE_HEX[tone[(r, c)]] if tone.get((r, c)) else None))
         return parts
 
-    @staticmethod
-    def _ms_row(m):
-        """One milestone's table row and the tones of its cells: the screen's Agreed, Expected (+days, or achieved) and State."""
+    def _ms_row(self, m):
+        """One milestone's table row and the tones of its cells: the screen's Agreed, Expected (+days, or achieved) and State. A client
+        file names the milestone by its title only: an item ID never reaches a client (p240-leakfix LEAK 2)."""
         word, t = _ms_state(m)
         base = m.get("baseline_date")
         fc = m.get("forecast_date") or base
@@ -900,7 +905,8 @@ class _Word:
         else:
             exp = _dmy(fc) + (f" (+{_day(fc) - _day(base)})" if late else "")
         pc = m.get("percent_complete")
-        row = [_nobraces(f"{m.get('id') or ''} {m.get('title') or m.get('name') or ''}".strip()),
+        name = f"{'' if self._client() else (m.get('id') or '')} {m.get('title') or m.get('name') or ''}".strip()
+        row = [_nobraces(name),
                _dmy(base), _nobraces(exp), f"{pc}%" if pc is not None else "", word]
         return row, {2: "r" if late and not m.get("actual_date") else None, 4: t}
 
@@ -952,6 +958,21 @@ class _Word:
         svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
                f'font-family="Arial,sans-serif">{"".join(g)}</svg>')
         return svg, width, height
+
+
+def client_safe_ids(code):
+    """The ids of the project's milestones a client may be shown, read from the tracker now (p240-leakfix LEAK 3); an empty set when
+    the tracker can't be read (fail closed). A test replaces it."""
+    try:
+        import client_leak
+        import report
+        import tracker
+        with tracker.connect() as con:
+            blocking = client_leak.blocking_labels(con)
+            return {m["id"] for m in tracker.client_milestones(report.milestones(con, code))
+                    if not client_leak.item_problem(con, m["id"], blocking)}
+    except Exception:
+        return set()
 
 
 def _colour_table(tbl, styler):

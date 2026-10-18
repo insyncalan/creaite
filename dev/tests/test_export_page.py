@@ -112,6 +112,66 @@ except export_page.PageRefused as e:
         self.assertIn("client report must not show", self.build(path, page(bad))[1])
 
 
+class LeakFix(Base):
+    """p240-leakfix (Team Cap's review): the words and IDs of what a report leaves out must not survive in attributes, style rules,
+    in other letter case, or with no version; a client file keeps only a short allow-list of attributes."""
+    TRACKER = {"ABC-005": {"title": "Walrus budget cut", "description": "Walrus budget cut"}, "ABC-D-009": {"decision": "walrus"}}
+    build = Server.build
+
+    def client(self):
+        approved = self.saved(pre="doc.update(state='approved', approved_at='2026-10-16 15:00:00')")
+        secs = [s for s in SECTIONS if s["id"] in ("health", "summary", "risks")]     # risks holds the hidden row ABC-005
+        return self.saved("client", sections=secs, pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}",
+                          audience="client", client="Harbour Board")
+
+    @staticmethod
+    def wrap(inner):
+        return GOOD.replace("</section></div>", "</section>" + inner + "</div>", 1)
+
+    def test_leak1_hidden_words_in_any_kept_attribute_are_refused_internal(self):
+        path = self.saved()
+        for attr in ('title="Walrus budget cut"', 'aria-label="Walrus budget cut"', 'data-note="Walrus budget cut"'):
+            self.assertIn("leaves out", self.build(path, page(self.wrap(f"<p {attr}>x</p>")))[1], attr)
+        for svg in ('<svg viewBox="0 0 9 9"><rect fill="red" data-x="Walrus budget cut"></rect></svg>',
+                    '<img src="data:image/png;base64,iVBORw0KGgo=" alt="Walrus budget cut">'):
+            self.assertIn("leaves out", self.build(path, page(self.wrap(svg)))[1], svg)
+
+    def test_leak1_a_client_file_drops_every_attribute_off_the_list_and_still_reads_the_rest(self):
+        path = self.client()
+        out, why = self.build(path, page(self.wrap('<p title="Zanzibar" aria-label="Zanzibar" data-row="ABC-005" data-note="q">x</p>'
+                                                   '<img alt="Zanzibar" src="data:image/png;base64,iVBORw0KGgo=">')))
+        self.assertIsNone(why)
+        for gone in ("title=", "aria-label", "data-row", "data-note", "alt=", "ABC-005", "Zanzibar"):
+            self.assertNotIn(gone, out.split("</style>", 2)[-1], gone)
+        self.assertIn('data-id="health"', out)
+        self.assertIn("leaves out", self.build(path, page(self.wrap('<p class="Walrus budget cut">x</p>')))[1])
+        self.assertIn("leaves out", self.build(path, page(self.wrap('<p style="content:\'Walrus budget cut\'">x</p>')))[1])
+
+    def test_leak1_style_rules_with_a_hidden_word_in_content_are_refused(self):
+        for path in (self.saved(date="2026-10-09"), self.client()):
+            why = self.build(path, page(css='.a::after{content:"Walrus budget cut"}'))[1]
+            self.assertIn("leaves out", why)
+
+    def test_leak4_item_ids_never_reach_a_client_file_as_attributes(self):
+        out, why = self.build(self.client(), page(self.wrap(
+            '<table><tbody><tr data-row="ABC-005" data-ref="ABC-A-003"><td>x</td></tr></tbody></table>')))
+        self.assertIsNone(why)
+        self.assertNotRegex(out.split("</style>", 2)[-1], r"[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+")
+
+    def test_leak5_a_page_without_a_version_is_refused(self):
+        pg = page()
+        del pg["version"]
+        path = self.saved()
+        self.assertIn("version", self.build(path, pg)[1])
+        pg["version"] = "x"
+        self.assertIn("version", self.build(path, pg)[1])
+
+    def test_leak6_words_are_matched_without_case(self):
+        path = self.saved()
+        for w in ("WALRUS BUDGET CUT", "walrus Budget cut", "Ｗalrus budget cut"):
+            self.assertIn("leaves out", self.build(path, page(self.wrap(f"<p>{w}</p>")))[1], w)
+
+
 class Fallback(Base):
     """Check 12: with no page, or one that fails the check, the Python renderer still gives a file and says it is plain."""
 
