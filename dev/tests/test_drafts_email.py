@@ -128,6 +128,20 @@ class Builder(EmailCase):
         self.assertIn("Please reply with a firm date", firm["text"])
         self.assertEqual(firm["level"], 2)
 
+    def test_the_chase_log_lines_never_reach_an_email_body_whoever_it_goes_to(self):   # #153
+        line = "17-10-2026: Chased Sara Example by email (reminder 1); reply asked for by 19-10-2026."
+        risk = {"k": "raid", "id": "ABC-R-001", "p": "ABC", "type": "Risk", "t": "Env not ready", "due": "2026-10-01", "pr": "High",
+                "resp": "Agree dates\n" + line, "upd": "Waiting on the vendor\n" + line}
+        only = {**risk, "id": "ABC-R-002", "resp": "- " + line, "upd": line.replace("Chased", "chased")}
+        for mode in ("update", "chase"):
+            em = build(self.b, {"mode": mode, "name": "Sara Example", "includeUpdate": True, "items": [risk, only]})
+            blob = em["text"] + em["html"]
+            for bit in ("Chased", "chased", "reminder 1", "reply asked for", "by email"):
+                self.assertNotIn(bit, blob, (mode, bit))
+            self.assertIn("Agree dates", em["text"])
+            self.assertIn("Waiting on the vendor", em["text"])
+            self.assertIn("Response: none recorded yet", em["text"])
+
     def test_the_update_request_is_unchanged_and_the_cover_replaces_only_the_opening(self):
         o = {"name": "Sara Example", "items": [ITEM(1, "Sara Example", "2026-10-01")]}
         plain = build(self.b, o)

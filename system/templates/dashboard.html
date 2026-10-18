@@ -6510,6 +6510,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     sentKindOf: () => sentKindOf,
     sentLine: () => sentLine,
     sentLog: () => sentLog,
+    sentStrip: () => sentStrip,
     sentVia: () => sentVia,
     serverCardFlow: () => serverCardFlow,
     serverSeams: () => serverSeams,
@@ -9716,6 +9717,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     if (!a5 || !words) return null;
     const addr = /^(?:[^()\s]|\([^()\s]*\))+$/.test(a5) ? a5 : a5.replace(/\(/g, "%28").replace(/\)/g, "%29");
     return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
+  }
+  var SENT_NORM = (t47) => String(t47 == null ? "" : t47).replace(/[​‌‍⁠﻿]/g, "").replace(/ /g, " ").replace(/\r\n?/g, "\n");
+  var SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
+  var SENT_LINE = /(?:^[ \t]*(?:[-*•–][ \t]*)?|(?<=[.!?;])[ \t]+)(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}):[ \t]+(?:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?:email|message)\b[^\n]*$/im;
+  function sentStrip(text) {
+    let t47 = SENT_NORM(text);
+    if (SENT_TAGS.test(t47)) t47 = t47.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    if (!SENT_LINE.test(t47)) return String(text == null ? "" : text);
+    return t47.split("\n").map((l6) => [l6, l6.replace(SENT_LINE, "")]).filter(([l6, c5]) => c5 === l6 || c5.trim()).map((x5) => x5[1]).join("\n").replace(/^\n+|\n+$/g, "").trim();
   }
 
   // ../../vendor/tiptap/tiptap.module.js
@@ -32184,7 +32194,16 @@ ${s5}`;
       shared.PERSON = name;
       const el2 = $("#v-person"), x5 = PERS().find((y5) => y5.name === name);
       if (!x5) {
-        putHTML(el2, html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav><p class="sub">Nobody called “${name}” owns an item.</p></div>`);
+        putHTML(el2, html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="people">People</a><span aria-hidden="true">›</span><span aria-current="page">${name}</span></nav>
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}</h1><p class="sub">Nobody called “${name}” owns an item.</p></div>${raw(ibtn("pencil", "Add details", 'id="ppEdit" aria-haspopup="dialog"', "bd"))}</div></div>`);
+        $("#ppEdit").onclick = async () => {
+          const reg = shared.REG.find((y5) => y5.name === name), res = await askPerson(reg ? { edit: true, person: reg } : { details: true, person: pBlank(name) });
+          if (res && res.person) {
+            const { name: _6, ...f5 } = res.person;
+            await regEdit(name, f5);
+            renderPerson(name);
+          }
+        };
         return;
       }
       const p6 = x5.p, items2 = [...x5.oa.map((a5) => ["actions", a5]), ...x5.or.map((r4) => ["raid", r4])], codes = [...new Set(items2.map(([, i5]) => i5.p))].sort(), cutoff = new Date(TODAY);
@@ -42679,6 +42698,7 @@ ${s5}`;
                 "aria-expanded": it2.sub ? next && next.pi === ci2 ? "true" : "false" : void 0,
                 "aria-disabled": it2.disabled ? "true" : void 0,
                 "aria-current": it2.checked ? "true" : void 0,
+                "aria-description": it2.desc || void 0,
                 onClick: (e4) => {
                   e4.preventDefault();
                   runItem(
@@ -44355,8 +44375,8 @@ ${s5}`;
     out.push({ sep: true }, { label: "Copy ID", icon: "copy", run: () => cxCopy(id2, id2) }, { label: "Copy link", icon: "link", run: () => cxCopy(cxLink(id2), `the link to ${id2}`) });
     const who2 = k5 === "decisions" ? null : pkWho(x5.o);
     if (who2 && PERS().some((p6) => p6.name === who2)) {
-      out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2) });
-      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: "Draft email", icon: "mail", run: () => openDraftEmail(who2, "chase") });
+      out.push({ label: "Draft email", icon: "mail", desc: "Asks for an update (update request)", run: () => openDraftEmail(who2) });
+      if (x5.due && x5.due < TODAY && OPENST(x5.st) && !deMe(who2)) out.push({ label: "Draft email", icon: "mail", desc: "Chases this overdue item (chase)", run: () => openDraftEmail(who2, "chase") });
     }
     return out;
   }
@@ -49242,8 +49262,8 @@ ${pre}**Current state title:** ${title}`);
   var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   function deRowHtml(i5, o5) {
     const C5 = DE_COLOURS, e4 = esc, d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7), colour = d5.level === "over" ? C5.red : d5.level === "soon" ? C5.amber : C5.ink, strong = d5.level === "over" ? "font-weight:bold;" : "";
-    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${String(i5.resp || "").trim() ? deLinks(String(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
-    const upd = o5.includeUpdate && String(i5.upd || "").trim() ? `<br><span style="color:${C5.muted};">Latest update: ${deLinks(i5.upd)}</span>` : "";
+    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${sentStrip(i5.resp).trim() ? deLinks(sentStrip(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
+    const upd = o5.includeUpdate && sentStrip(i5.upd).trim() ? `<br><span style="color:${C5.muted};">Latest update: ${deLinks(sentStrip(i5.upd))}</span>` : "";
     const ch2 = o5.chased && o5.chased[i5.id] ? `<br><span style="color:${C5.muted};">${e4(deChasedWords(o5.chased[i5.id]))}</span>` : "";
     return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
   }
@@ -49255,8 +49275,8 @@ ${pre}**Current state title:** ${title}`);
     list.forEach((i5) => {
       const d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7);
       out.push(`  ${(i5.noid ? "" : i5.id).padEnd(w6)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
-      if (i5.k === "raid") out.push(`  ${pad3}  Response: ${linkWithAddress(String(i5.resp || "").trim()) || "none recorded yet"}`);
-      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad3}  Latest update: ${linkWithAddress(i5.upd)}`);
+      if (i5.k === "raid") out.push(`  ${pad3}  Response: ${linkWithAddress(sentStrip(i5.resp).trim()) || "none recorded yet"}`);
+      if (o5.includeUpdate && sentStrip(i5.upd).trim()) out.push(`  ${pad3}  Latest update: ${linkWithAddress(sentStrip(i5.upd))}`);
       if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad3}  ${deChasedWords(o5.chased[i5.id])}`);
     });
     return out;
@@ -54966,6 +54986,15 @@ ${pre}**Current state title:** ${title}`);
   var BACK_ICON = [["path", { d: "M19 12H5M11 18l-6-6 6-6" }]];
   var SPARK_ICON = [["path", { d: "M12 1Q12 12 23 12Q12 12 12 23Q12 12 1 12Q12 12 12 1Z", fill: "currentColor", stroke: "none" }]];
   var TONES = ["First", "Second", "Firmer"];
+  var PANE_SENDS = /* @__PURE__ */ new Map();
+  var paneSendId = (key2) => {
+    let v5 = PANE_SENDS.get(key2);
+    if (!v5) {
+      v5 = "pn" + Date.now() + Math.random().toString(36).slice(2, 6);
+      PANE_SENDS.set(key2, v5);
+    }
+    return v5;
+  };
   var OLD_TABLE = (
     /** @type {any} */
     { border: "0" }
@@ -55073,7 +55102,6 @@ ${pre}**Current state title:** ${title}`);
     const [anyOpen, setAnyOpen] = d2(false);
     const [anyQ, setAnyQ] = d2("");
     const sending = A2(false);
-    const sendId = A2("pn" + Date.now() + Math.random().toString(36).slice(2, 6));
     const viaRef = A2(
       /** @type {"email"|"message"} */
       "email"
@@ -55236,7 +55264,8 @@ ${d5.text}`);
       if (sending.current) return;
       sending.current = true;
       setBusy(true);
-      const st2 = sendState(sendId.current);
+      const sendKey = `${id2}|${mode}|${pane.to.name}`, sid = paneSendId(sendKey);
+      const st2 = sendState(sid);
       let r4 = (
         /** @type {any} */
         { ok: true, chases: SA().chases || {}, record: null }
@@ -55256,14 +55285,20 @@ ${d5.text}`);
       const who2 = pane.to.name || pane.to.first || "them";
       let done = 0;
       try {
-        done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {}, sendId: sendId.current }) : 0;
+        done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {}, sendId: sid }) : 0;
       } catch (err2) {
         sending.current = false;
         setBusy(false);
         snack("The update couldn't be logged: press I sent it to try again");
         return;
       }
-      if (!done) snack(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be staged.`);
+      if (!done && k5) {
+        sending.current = false;
+        setBusy(false);
+        snack(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be logged: press I sent it to log it.`);
+        return;
+      }
+      PANE_SENDS.delete(sendKey);
       dropPolish();
       onBack();
     }

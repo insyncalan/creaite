@@ -108,6 +108,20 @@ class PersonMenu(SentCase):
         finally:
             b.eval("document.getElementById('personDlg').close(); (REG.find(x=>x.name==='Tom Reid')||{}).email=window.__em")
 
+    def test_add_details_works_for_a_name_that_owns_nothing_and_is_not_on_the_register(self):
+        """#154 finding 4: no dead end: the person page offers the add-person form for an unknown name, and for a hidden register entry."""
+        b = self.b
+        for who, setup, undo in (("Nobody Known", "", ""),
+                                 ("Hidden Person", "REG.push({name:'Hidden Person',email:'',aliases:[],org:'',role:'',hidden:true,extra:{}});", "REG.pop();")):
+            b.eval(f"""{setup} openContextMenu(cxPerson({who!r},''),200,200,{{label:{who!r}}})""")
+            b.wait(f'!!document.querySelector("{MENU}")')
+            b.eval(f"""[...document.querySelectorAll("{MENU} [role=menuitem]")].find(x=>x.textContent.includes("Add details")).click()""")
+            try:
+                b.wait("document.getElementById('personDlg').open")
+                self.assertEqual(b.eval("VIEW"), "person")
+            finally:
+                b.eval(f"document.getElementById('personDlg').close(); {undo}")
+
     def test_a_registered_person_without_an_email_also_gets_add_details(self):
         b = self.b
         b.eval("""REG.push({name:'Quiet Person',email:'',aliases:[],org:'',role:'',extra:{}}); openContextMenu(cxPerson('Quiet Person',''),200,200,{label:'Quiet Person'})""")

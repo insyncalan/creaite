@@ -64,3 +64,17 @@ export function linkWrite(words, href) {
   const addr = /^(?:[^()\s]|\([^()\s]*\))+$/.test(a) ? a : a.replace(/\(/g, "%28").replace(/\)/g, "%29");
   return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
 }
+
+/* ===== #153 ===== the dated "I sent it" lines (17-10-2026: Chased Sara by email (reminder 1); ...) are internal: they never go into an email body.
+   The same recognition as linktext.sent_strip in Python: a date, a colon, Chased / Emailed / Asked, a name, "by email" or "by message", at the start of
+   a line (after an optional bullet) or after the end of a sentence; ordinary text such as "We chased the supplier" never matches. */
+const SENT_NORM = t => String(t == null ? "" : t).replace(/[​‌‍⁠﻿]/g, "").replace(/ /g, " ").replace(/\r\n?/g, "\n");
+const SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
+const SENT_LINE = /(?:^[ \t]*(?:[-*•–][ \t]*)?|(?<=[.!?;])[ \t]+)(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}):[ \t]+(?:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?:email|message)\b[^\n]*$/im;
+/** @param {unknown} text */
+export function sentStrip(text) {
+  let t = SENT_NORM(text);
+  if (SENT_TAGS.test(t)) t = t.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  if (!SENT_LINE.test(t)) return String(text == null ? "" : text);
+  return t.split("\n").map(l => [l, l.replace(SENT_LINE, "")]).filter(([l, c]) => c === l || c.trim()).map(x => x[1]).join("\n").replace(/^\n+|\n+$/g, "").trim();
+}

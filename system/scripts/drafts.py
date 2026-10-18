@@ -40,6 +40,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import linktext  # noqa: E402
 import paths  # noqa: E402
 import tracker  # noqa: E402
 
@@ -1771,13 +1772,15 @@ def chase_facts(item_id):
         table, x = item_row(con, str(item_id or ""))
         text, owner, due = _chase_core(table, x, item_id)
         upd, src = x.get("latest_update") or "", x.get("source") or ""
-        if secret(" ".join([text, upd, x.get("response_action") or "", src])) or re.search(r"(^|/)documents/", src):
+        resp = x.get("response_action") or ""
+        if secret(" ".join([text, upd, resp, src])) or re.search(r"(^|/)documents/", src):
             raise Refused(f"{item_id} is marked confidential or restricted, so it can't go in an email.")
         proj = con.execute("SELECT name, sponsor, next_milestone FROM projects WHERE code = ?", (x["project"],)).fetchone()
         proj = dict(proj) if proj else {"name": x["project"], "sponsor": "", "next_milestone": ""}
         unblocks = decision_unblocks(con, x["id"], proj["next_milestone"]) if table == "decisions" else ""
         return {"id": x["id"], "code": x["project"], "name": proj["name"], "kind": table, "text": text, "owner": owner, "due": due,
-                "priority": x.get("priority") or "", "update": upd, "type": x.get("type") or "", "response": x.get("response_action") or "",
+                "priority": x.get("priority") or "", "update": linktext.sent_strip(upd),     # #153: chase history is never in an email
+                "type": x.get("type") or "", "response": linktext.sent_strip(resp),
                 "source": src, "sponsor": proj["sponsor"] or "", "status": x.get("status"), "unblocks": unblocks}
     finally:
         con.close()
