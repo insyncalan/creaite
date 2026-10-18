@@ -74,7 +74,7 @@ function NotesList({ code, onOpen, onOpenFile }) {
       <button type="button" data-path={n.path} class={`ni${cur && cur.path === n.path ? " on" : ""}`} aria-current={cur && cur.path === n.path ? "page" : undefined} onClick={() => onOpen(n.path)}
         onContextMenu={e => { const r = e.currentTarget.getBoundingClientRect(); if (Date.now() - kbAt < 400 && menuOpenFor(e.currentTarget)) { e.preventDefault(); return; } rowMenu(e, n, e.clientX || r.left + 24, e.clientY || r.bottom); }}
         onKeyDown={e => { if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) { const r = e.currentTarget.getBoundingClientRect(); kbAt = Date.now(); rowMenu(e, n, r.left + 24, r.bottom); } }}>
-        <b>{n.pinned ? <span class="pin" aria-hidden="true">◆ </span> : null}{n.title}</b>
+        <b>{n.pinned ? <span class="npin" aria-hidden="true">◆ </span> : null}{n.title}</b>
         <small>{when(n)}{n.kind ? ` · ${n.kind}` : ""}{n.confidential ? <span class="conf"> · Confidential</span> : null}</small>
       </button>
     </li>);
