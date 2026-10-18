@@ -147,10 +147,9 @@ class SettingsPage(LiveBrowserCase):
     def test_own_email_domains_save_as_a_list(self):
         self.open("advanced")
         self.b.eval("const e=document.querySelector('[data-k=ownDomains]'); e.value=' Example.com, Corp.example '; e.dispatchEvent(new Event('change',{bubbles:true}))")
-        end = time.time() + 8
-        while time.time() < end and self.settings_file()["identity"]["own_domains"] != ["example.com", "corp.example"]:
-            time.sleep(0.1)
+        self.assertTrue(self.wait_file(lambda c: c["identity"]["own_domains"] == ["example.com", "corp.example"]))   # the save has landed (40 s, #89)
         self.assertEqual(self.settings_file()["identity"]["own_domains"], ["example.com", "corp.example"])
+        self.b.wait("JSON.stringify(S.ownDomains)===JSON.stringify(['example.com','corp.example'])", 30)   # and the page has taken it
         self.assertEqual(self.b.eval("S.ownDomains"), ["example.com", "corp.example"])
 
     # ===== BL-235 (fix-small-17): the Week ahead's priorities, as ticks =====
@@ -367,12 +366,13 @@ class SettingsPage(LiveBrowserCase):
         return f"document.querySelector('#set-more .srow[data-keys=\"{key}\"]')"
 
     def adv_change(self, key, value):
+        self.b.wait(f"!!{self.more(key)}", 30)                                   # the row is drawn (a redraw after the last save can be late under load)
         js = (f"(()=>{{ const e={self.more(key)}.querySelector('input,select'); "
               + ("e.checked=%s;" % ("true" if value else "false") if isinstance(value, bool) else f"e.value={str(value)!r};")
               + " e.dispatchEvent(new Event('change',{bubbles:true})); })()")
         self.b.eval(js)
 
-    def wait_file(self, test, timeout=8):
+    def wait_file(self, test, timeout=40):
         end = time.time() + timeout
         while time.time() < end:
             if test(self.settings_file()):
@@ -410,8 +410,14 @@ class SettingsPage(LiveBrowserCase):
         self.assertTrue(self.wait_file(lambda c: c["search"]["include_documents"] is False))
         self.adv_change("dashboard.generate_days", 14)
         self.assertTrue(self.wait_file(lambda c: c["dashboard"]["generate_days"] == 14))
+        logf = self.v.root / "system" / "config" / "settings-log.jsonl"
+        end = time.time() + 30                                                   # the backup and the log entry follow the file: wait for them
+        while time.time() < end and not (len(list((self.v.root / "system" / "backups").glob("settings-*.json"))) > before
+                                         and all(f'"{k}"' in (logf.read_text() if logf.exists() else "")
+                                                 for k in ("logging.keep_days", "search.include_documents", "dashboard.generate_days"))):
+            time.sleep(0.1)
         self.assertGreater(len(list((self.v.root / "system" / "backups").glob("settings-*.json"))), before)
-        log = (self.v.root / "system" / "config" / "settings-log.jsonl").read_text()
+        log = logf.read_text()
         for key in ("logging.keep_days", "search.include_documents", "dashboard.generate_days"):
             self.assertIn(f'"{key}"', log)
         self.b.wait("!!document.querySelector('#set-more .saved')")

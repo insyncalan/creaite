@@ -18,7 +18,9 @@ test_archive_projects.py 150
 test_archive_reports.py 58
 test_as_proposed.py 73
 test_ask_access.py 24
-test_ask_bash_arg_forms.py 364
+test_ask_bash_arg_forms.py 129
+test_ask_bash_arg_forms_held.py 129
+test_ask_bash_arg_forms_more.py 106
 test_ask_change_card.py 188
 test_ask_claims.py 10
 test_ask_confirmed_apply.py 58
@@ -69,7 +71,9 @@ test_client_gate.py 168
 test_client_gate_late.py 130
 test_client_gate_reviews.py 173
 test_client_item_links.py 0
-test_client_leak.py 620
+test_client_leak.py 137
+test_client_leak_gate.py 149
+test_client_leak_place.py 334
 test_client_view.py 163
 test_close_day.py 40
 test_close_day_card.py 43
@@ -337,7 +341,9 @@ test_vip_matching.py 133
 test_vip_private.py 72
 test_vip_promises.py 197
 test_vip_screens.py 214
-test_vip_single_call.py 306
+test_vip_single_call.py 75
+test_vip_single_call_close.py 84
+test_vip_single_call_stage.py 147
 test_vip_threads.py 133
 test_vip_tools_pinned.py 4
 test_weekend_dates.py 67
