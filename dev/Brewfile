@@ -9,3 +9,4 @@
 brew "gh"           # GitHub CLI: releases, and "update creaite" fetching a release (BL-238)
 brew "git"
 brew "python@3.14"  # the Python the tests run on here
+cask "libreoffice"  # development only: renders the exported Word files to PDF/PNG so the export checks can see them (Alan, 18-10-2026); creaite never needs it

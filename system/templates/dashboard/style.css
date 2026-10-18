@@ -2651,6 +2651,8 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .linkbtn,a.linkbtn{padding-block:4px;margin-block:-4px}   /* BL-325: 24px high, as a.linkbtn was */
 .preplink{padding:2px 4px;margin:2px -4px -2px}
 .pcode.plink{padding-block:4px;margin-block:-4px}
+/* #224: the Projects column on People reads as links: link colour, the table's text size, weight 500 */
+#peopleTbl td .pcode.plink{color:var(--accent);font-size:inherit;font-weight:500}
 .tbrief .qa{padding-block:2px;margin-block:-2px} .tb a.t,.tb a.s,#chgMore a.s,#hMine a[data-go]{padding-block:2px;margin-block:-2px}
 .fchip button{padding:6px;margin:-6px -2px}
 .bcoll{width:24px;height:24px;margin-block:-1px} .bmv{height:24px;margin-block:-1px}
@@ -3188,7 +3190,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .ni b{font-weight:500;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ni small{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
 .ni.on{background:var(--surface);box-shadow:0 0 0 1px var(--line)}
-.ni .pin{color:var(--accent);font-size:11px} .ni .conf{color:var(--warn)}
+.ni .npin{color:var(--accent);font-size:11px} .ni .conf{color:var(--warn)}
 .nnone{margin:8px 4px}
 .ndoc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 24px;min-width:0;position:relative}
 .ndoc.empty h2{font-size:var(--fs-h2);margin:0 0 6px}
