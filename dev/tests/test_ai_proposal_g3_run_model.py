@@ -155,7 +155,10 @@ print(json.dumps(res))''')
         self.assertEqual(out["not an alias"][0], None)
         self.assertIn("can't run this job", out["not an alias"][1])
         self.assertEqual(out["other provider"][0], None)
-        self.assertIn("isn't used for this yet", out["other provider"][1])
+        if "g5-confidential-only-claude" in S.applied_here():   # this tree holds G5 too: its send_allowed gate refuses the stub's
+            self.assertIn("couldn't be read (Refused)", out["other provider"][1])   # route, which fails closed the same way
+        else:
+            self.assertIn("isn't used for this yet", out["other provider"][1])
         self.assertEqual(out["no model"][0], None)
         self.assertEqual(out["no tools for a tools job"][0], None)
         self.assertIn("can't run this job", out["no tools for a tools job"][1])

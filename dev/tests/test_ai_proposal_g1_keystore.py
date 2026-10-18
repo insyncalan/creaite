@@ -194,8 +194,11 @@ for plat in ("darwin", "linux", "win32"):
 os.environ["CREAITE_FAKE_PROVIDERS"] = "1"; pv._BACKEND.clear(); sys.platform = "darwin"
 res["fake"] = [type(pv.backend()[0]).__name__, pv.built()]
 print(json.dumps(res))''')
-        self.assertEqual(out["darwin"], ["KeychainStore", "NotBuiltLister", False],
-                         "with G1 alone the page still can't connect: the model list is G2")
+        if "g2-model-list" in S.applied_here():          # this tree holds G2 too (ai-models-132-apply): the real lister
+            self.assertEqual(out["darwin"], ["KeychainStore", "HttpsLister", True])
+        else:
+            self.assertEqual(out["darwin"], ["KeychainStore", "NotBuiltLister", False],
+                             "with G1 alone the page still can't connect: the model list is G2")
         self.assertEqual(out["linux"], ["NotBuiltStore", "NotBuiltLister", False])
         self.assertEqual(out["win32"], ["NotBuiltStore", "NotBuiltLister", False])
         self.assertEqual(out["fake"], ["MemoryStore", True])
