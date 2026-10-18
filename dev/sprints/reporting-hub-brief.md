@@ -39,6 +39,13 @@ One page for a project's weekly reporting, replacing the separate weekly and cli
 - **When it is off:** the hub shows only the internal report; the Client and Side by side switches are disabled with a tooltip; a quiet note says "This project has no client report"; no client reminders; Approve offers only the internal report; the Reports page lists only internal reports. Nothing already written is deleted, and turning it on again restores it.
 - Default for existing projects: on (as today), so nothing changes until Alan switches a project off. Default for a new project: Alan's choice (my recommendation: off, and turn it on when the first client report is wanted).
 
+## Round 2 changes (Alan, 18-10-2026)
+
+- **Rename field:** in the name-clash dialog the Rename box is the full width of the dialog and shows the whole file name.
+- **Folder link:** "Example Programme › Reports" is a link, in the dialog and in the saved message, and opens the Reports folder in Finder on click.
+- **No client report, no selectors:** when the project has no client report the Internal | Client | Side by side switch is not shown at all (not disabled), nor any client status; the page is just the internal report.
+- **Tidier controls:** one control height (32 px) across the bar and the toolbar; the week control is one joined control with real arrows; the zoom is one joined control; the status moves from chips in the bar to a quiet label on each report ("Draft", "Waits for the internal report"); the client settings button reads "Client report: on" or "Client report: off", the detail living in its panel; Export and Approve are full-size buttons and their menus have an icon, a name and one line each, aligned, with the unavailable item greyed and its reason shown.
+
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
 Discreet section menu; eye icons; "Add from the tracker" (existing open items, client-visible only for the client report); the free-text section with the whole editor (v2.4.0, still subject to the export gaps named in the earlier brief); export fidelity for the health block, the figures, the timeline picture and the milestone list in HTML, Word and PDF; exports that save to the Reports folder and say where, with the **name-clash choice (Add a number, Rename, Overwrite)** as drawn; and the approved Check this report (#170).
