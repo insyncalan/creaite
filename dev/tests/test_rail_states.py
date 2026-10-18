@@ -149,22 +149,30 @@ class RailStates(LiveBrowserCase):
         self.wait_w(76)
         self.assertTrue(self.settings()["dashboard"]["rail_labels"])
 
-    def test_more_has_the_labels_switch_and_the_dialog_offers_it_beside_icons_only(self):
+    def test_more_has_no_labels_switch_and_the_dialog_offers_it_beside_icons_only(self):
+        """#214: Labels when collapsed lives only in Customise sidebar; More's menu has no copy of it."""
         b = self.b
         self.collapse()
         self.hover("#railMore")
         b.wait("!document.getElementById('railMoreMenu').hidden", 5)
-        self.assertEqual(b.eval("document.getElementById('railLabelsSw').getAttribute('aria-checked')"), "true")
-        b.click("#railLabelsSw")                                                               # a switch: the menu stays open
-        self.wait_w(56)
-        self.assertEqual(b.eval("document.getElementById('railLabelsSw').getAttribute('aria-checked')"), "false")
-        self.assertFalse(b.eval("document.getElementById('railMoreMenu').hidden"))
-        self.assertFalse(self.settings()["dashboard"]["rail_labels"])
+        self.assertFalse(b.eval("!!document.getElementById('railLabelsSw')"))
+        self.assertNotIn("Labels when collapsed", b.eval("document.getElementById('railMoreMenu').textContent"))
+        self.assertEqual(b.eval("[...document.querySelectorAll('#railMoreMenu [role^=menuitem]')].map(x=>x.id||x.dataset.v).pop()"), "railCustBtn")
         b.click("#railCustBtn")                                                                # Customise sidebar... opens the dialog
         b.wait("document.getElementById('railCust').open")
-        self.assertFalse(b.eval("document.getElementById('railCustLabels').checked"))
+        self.assertTrue(b.eval("document.getElementById('railCustLabels').checked"))          # on by default
         self.assertTrue(b.eval("!!document.getElementById('railCustIcons')"))
-        b.click("#railCustLabels")
+        b.click("#railCustLabels")                                                             # off
+        b.click("#railCustDone")
+        b.wait("!document.getElementById('railCust').open")
+        self.wait_w(56)
+        self.assertFalse(self.settings()["dashboard"]["rail_labels"])
+        b.click("#railMore")
+        b.wait("!document.getElementById('railMoreMenu').hidden", 5)
+        b.click("#railCustBtn")
+        b.wait("document.getElementById('railCust').open")
+        self.assertFalse(b.eval("document.getElementById('railCustLabels').checked"))
+        b.click("#railCustLabels")                                                             # on again
         b.click("#railCustDone")
         b.wait("!document.getElementById('railCust').open")
         self.wait_w(76)
@@ -423,7 +431,7 @@ class RailStates(LiveBrowserCase):
         self.open_by_hover("more")
         self.assertIn("review", b.eval("[...document.querySelectorAll('#railMoreMenu [data-v]')].map(x=>x.dataset.v)"))
         self.assertEqual(b.eval("[...document.querySelectorAll('#railMoreMenu [role^=menuitem] .rl')].map(x=>x.textContent).slice(-3)"),
-                         ["Help", "Customise sidebar…", "Labels when collapsed"])
+                         ["Settings", "Help", "Customise sidebar…"])
 
 
     def test_any_navigation_folds_an_open_flyout_go_or_the_palette(self):

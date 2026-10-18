@@ -133,7 +133,7 @@ class LiveIndicatorTests(PageTests):
         self.assertFalse(o["css"])                                                                # and no style for it
         self.assertEqual(o["fn"], ["undefined", "undefined"])                                     # nor its functions
         self.assertEqual(o["last"], "settings")                                                   # Settings is the last page (in More, BL-319)
-        self.assertEqual(o["rest"], ["railMore", "railHealth", "railHelp", "railCustBtn", "railLabelsSw"])   # then only More and its menu: Health, Help, Customise sidebar… and its switch (BL-319, #156)
+        self.assertEqual(o["rest"], ["railMore", "railHealth", "railHelp", "railCustBtn"])   # then only More and its menu: Health, Help, Customise sidebar… (BL-319; #214)
 
     def test_every_state_the_dot_showed_is_covered_by_the_alert(self):
         o = self.probe("""

@@ -4,7 +4,7 @@
    with Alt and an arrow key on its row (↑ ↓ within the list, ← → across). Today always comes first in the sidebar;
    Settings can live in either. Icons only collapses the sidebar to icons (what older versions saved as display "icons"), and
    Icon size (#182; Small (today's), Medium or Large, saved to dashboard.rail_icon_size) is a three-way choice below the two switches.
-   Labels when collapsed (#156; the same setting as More's switch) puts each label under its icon when it is collapsed; turning one
+   Labels when collapsed (#156; #214: its only switch in the sidebar) puts each label under its icon when it is collapsed; turning one
    on turns the other off. Reset to default puts back the default lists.
    Nothing is saved until Done (Cancel, Esc or a click outside with nothing changed leave it as it was); Done saves to
    dashboard.rail through the page's one settings route. The Dialog building block (dev/COMPONENTS.md §3): named by its
