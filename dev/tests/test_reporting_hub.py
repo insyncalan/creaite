@@ -164,6 +164,13 @@ class WeekMenu(Hub):
         self.b.wait("location.hash.includes('w=2026-09-25')", 10)
         self.b.wait("/25-09-2026/.test(document.querySelector('#hubWeek').innerText)", 20)
 
+    def test_the_week_buttons_dot_is_fully_opaque_and_coloured(self):
+        """Today's .wkdot rules (45% opacity, u/h colours) must not reach the hub's dot in the week button."""
+        self.open_hub()
+        d = self.q("""(()=>{const e=document.querySelector('#hubWeek i.wkdot'),c=getComputedStyle(e);return {op:c.opacity,bg:c.backgroundColor,cls:e.className}})()""")
+        self.assertEqual(d["op"], "1", d)
+        self.assertNotEqual(d["bg"], "rgba(0, 0, 0, 0)", d)
+
     def test_a_date_in_the_box_jumps_to_that_weeks_friday(self):
         self.open_hub()
         self.b.click("#hubWeek")
