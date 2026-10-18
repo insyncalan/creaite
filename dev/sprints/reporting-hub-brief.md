@@ -70,6 +70,22 @@ One page for a project's weekly reporting, replacing the separate weekly and cli
 - **Approved:** the icon controls on the hub's toolbar (Show as exported, Check this report, the cog) as drawn.
 - **Defect: remove the "Weekly report" and "Client report" buttons from the bottom of the project page.** They are two bare buttons that open the two separate report pages. With one hub they are redundant. Reaching the hub from a project: the project page's Reporting card (one "Open reporting" action), the Reports page, and the weekly report reminder. Done when neither button is on the project page and every link to a report still works. It touches reporting, so it waits for the hold with the rest.
 
+## Round 7: the export audit (Team Stark, read-only, 18-10-2026)
+
+Full audit: dev/sprints/weekly-report-export-audit-2026-10-18.md (on branch export-audit-doc, with three screenshots). **Answer: no, the exports are not faithful to the report as edited.**
+
+- **Why:** the screen is drawn by the dashboard's components; all three exports are drawn by a separate Python renderer that knows only five simple section types. **The PDF is the HTML export printed by Chrome**, so HTML and PDF match each other (apart from page breaks); Word is a third rendering through the firm's template.
+- **Lost in HTML and PDF:** the header's logos, title block and client line (and a duplicate "Weekly report" title with an empty heading); the health flag block, the six-week strip and "Last week"; the At a glance boxes' look; the milestone timeline picture and the Agreed, Expected and State table (replaced by a bullet list in ISO dates, which also breaks the DD-MM-YYYY rule); the Response and Late columns and priority chips in the tables; empty tables show a header row instead of the screen's sentence; an empty heading for an untitled pane; images dropped silently. Hidden sections and rows are correctly absent.
+- **Lost in Word:** the same, with the health flag printed twice, the At a glance boxes as "Label: value" lines, and the firm's logo instead of the report's chosen logos. Checked on page 1 only (LibreOffice is not installed here).
+- **Not run:** the client report and minutes exports use the same code and probably lose the same things.
+
+**Recommendation (for Alan's decision):**
+1. **HTML and PDF: one renderer, the sheet's own "Show as exported" view** becomes the export (the page's DOM, cleaned, with its stylesheet inlined and logos embedded; the PDF prints that same page). About **5 to 6 Sonnet days**, no guarded file. The Python renderer stays as the fallback when no browser is available. The alternative, porting the missing drawing into Python, is 3 to 4 days but keeps two renderers that will drift again.
+2. **Word: keep the separate writer and close the gaps** (timeline and health strip as pictures made from the same exported sheet, logos, full tables, one title, DD-MM-YYYY, no empty sections). About **3 to 4 days**. Converting HTML to Word is not recommended (a new library, ignores the firm's styles, a worse result).
+3. **Risks to manage:** re-check hidden and client content on the server before writing a file; a fixed light print theme; the fallback path needs its own tests; hand checks 16 and 74 change. Word can only be checked by XML here; add LibreOffice to the development tools (Brewfile) or accept hand checks on the laptop.
+4. **Order:** the export work is the foundation for the hub, the free-text section (#218) and the HTML export defect (#219); it should come first. Total about **8 to 10 Sonnet days** across HTML, PDF and Word.
+**For Alan:** approve this direction (one renderer for HTML and PDF, a repaired Word writer), and say whether LibreOffice may be added to the development tools.
+
 ## Everything else in the mockup (from the earlier brief, now in both reports)
 
 Discreet section menu; eye icons; "Add from the tracker" (existing open items, client-visible only for the client report); the free-text section with the whole editor (v2.4.0, still subject to the export gaps named in the earlier brief); export fidelity for the health block, the figures, the timeline picture and the milestone list in HTML, Word and PDF; exports that save to the Reports folder and say where, with the **name-clash choice (Add a number, Rename, Overwrite)** as drawn; and the approved Check this report (#170).
