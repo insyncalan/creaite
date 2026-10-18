@@ -157,12 +157,7 @@ class LiveBrowserCase(unittest.TestCase):
                     raise
 
     def settle(self):
-        """BL-327: data older than PAGE_FRESH seconds is shown at once and the page re-reads it straight after its first paint
-        (reloadData splices A, R, REV ... and redraws). On a loaded machine that re-read lands after a test has already changed
-        A or P in the page and silently puts the server's copy back. Wait until no reload is in flight (it is counted before the
-        first paint ends, so zero means the boot refresh is done), then a frame for the redraw it caused."""
-        self.b.wait("typeof PULSE==='undefined' || PULSE.reloads===0", 30)
-        self.b.frames(2)
+        self.b.settle_boot()
 
     def _callTestMethod(self, method):
         """A failing test says where the page was, as a failing wait does (nothing about what passes changes)."""
