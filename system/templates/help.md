@@ -458,7 +458,7 @@ Or say: `close all of Sara's overdue actions` to ask creaite to change several i
 
 Where: Today's reminder · Claude Code
 
-1. From Friday 12:00, Today reminds you, and the reminder opens **Reports**, where you see every project's week. Press **Draft weekly report** on the reminder (or **Weekly report** at the foot of the project page) (it needs the live server), or say the phrase below. **Open** on a project's row goes to its reporting space (also **Open reporting** on the project page's Reporting card, or [[⌘K]] and ``weekly report ABC``).
+1. From Friday 12:00, Today reminds you, and the reminder opens **Reports**, where you see every project's week. Press **Draft weekly report** on the reminder (or the **Reports** icon at the foot of the project page, which opens that project's Reporting) (it needs the live server), or say the phrase below. **Open** on a project's row goes to its reporting space (also **Open reporting** on the project page's Reporting card, or [[⌘K]] and ``weekly report ABC``).
 2. Clear Review first. A project with pending items is held back.
 3. For each project, check the proposed health, its reasons and the current state, then approve. The report is filed in the project's `reports/` folder as a web page (`2026-10-16 Weekly report - <Project name>.html`) that opens in any browser. Approving is one apply, so **Undo** puts the earlier report back.
 4. A filed report is never saved over. To correct one, edit it: that starts a new draft and the filed report stays as it was until you approve the new one.
@@ -472,7 +472,7 @@ Where: Item panel · Claude Code
 
 1. Decide what the client sees. Turn on **Client-visible** on each item, and write its three-part client message: what it is, what it means for you, what is being done.
 2. Approve that week's weekly report first: a client report is drafted from, and approved or exported only after, the internal week, and shows only the facts approved with it. If you approve the internal week again, the client drafts follow it, and only ever lose items.
-3. Press **Draft client report** on Today's reminder (or **Client report** at the foot of the project page), or ask for the report. Only client-visible items appear. Anything labelled **Sensitive** or **Partner only** stays out whatever else is set, and confidential material is left out.
+3. Press **Draft client report** on Today's reminder (or the **Reports** icon at the foot of the project page), or ask for the report. Only client-visible items appear. Anything labelled **Sensitive** or **Partner only** stays out whatever else is set, and confidential material is left out.
 4. Approve the draft. creaite checks it for anything internal first and says what it found; if the check finds something, nothing is approved or exported. It files the report in `reports/` as a web page (`… Client report - <Project name> (<Client>).html`, one per client), never sends it, and, like the weekly report, never saves over a filed one. Export it as a web page, Word or PDF, as for the weekly report.
 
 Or say: `make ABC-A-002 client-visible` `client report ABC`

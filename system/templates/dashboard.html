@@ -46860,7 +46860,7 @@ ${s5}`;
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
    </div></div>
    ${raw(flowCard(code))}
-   <div class="cockfoot"><button class="btn" data-ask="weekly report ${p6.code}" aria-label="Draft weekly report" data-tip="Draft the weekly report with ask creaite">${raw(ic("filetext"))}Weekly report</button><button class="btn" data-ask="client report ${p6.code}" aria-label="Draft client report" data-tip="Draft a client-safe report with ask creaite">${raw(ic("filetext"))}Client report</button>${raw(ibtn("folder", "Browse files", `data-files="${p6.code}"`, "bd"))}</div></div>`);
+   <div class="cockfoot">${raw(ibtn("filetext", "Reports", `data-reports="${p6.code}"`, "bd"))}${raw(ibtn("folder", "Browse files", `data-files="${p6.code}"`, "bd"))}</div></div>`);
     })();
     drawCockpitTabs(code);
     {
@@ -46949,6 +46949,10 @@ ${s5}`;
         shared.FSEL = { p: f5.dataset.files, f: "All", sub: "", quick: "all" };
         FOPEN.add(f5.dataset.files);
         go2("files");
+      }
+      const rp2 = e4.target.closest("[data-reports]");
+      if (rp2) {
+        go2("reporting", rp2.dataset.reports);
       }
       const a5 = e4.target.closest("[data-ask]");
       if (a5) {
