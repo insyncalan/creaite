@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import creaite_doc  # noqa: E402
+import paths  # noqa: E402,F401  (every script takes its locations from paths.py; this one reads and writes no file: its caller does)
 
 MAX_HTML = 4_000_000
 MAX_CSS = 1_500_000

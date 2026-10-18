@@ -588,10 +588,23 @@ class WeeklyFiling(WeeklyBase):
         self.note(15, "the filed file never changed in place; the new version replaced it on approval and Undo put it back")
 
     def exported(self, week, fmt):
-        e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": fmt})
-        self.assertTrue(e.get("ok"), e)
-        p = Path(e["path"])
-        return e, (p if p.is_absolute() else self.vault / p)
+        """The export as the person makes it. #226: HTML and PDF are the report page's own exported view, so they are made from the
+        page (open the report, Export, pick the format); Word has no page and is the API's. Returns (answer, file path)."""
+        if fmt == "docx":
+            e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": fmt})
+            self.assertTrue(e.get("ok"), e)
+            p = Path(e["path"])
+            return e, (p if p.is_absolute() else self.vault / p)
+        drafts = self.vault / "system/staging/drafts"
+        before = set(drafts.glob("*"))
+        self.open_weekly(week)
+        self.b.eval("document.querySelector('#v-weekly [data-wrexport]').click()")
+        self.b.wait("document.querySelector('[role=menu] [role=menuitem]')", 10)
+        label = {"html": "HTML", "pdf": "PDF"}[fmt]
+        self.b.eval("[...document.querySelectorAll('[role=menu] [role=menuitem]')].find(x=>x.textContent.includes(%r)).click()" % label)
+        made = wait_for(lambda: [f for f in drafts.glob("*") if f not in before and f.suffix == "." + fmt], 60, f"the {fmt} export")
+        self.b.pump(0.6)
+        return {"ok": True, "path": str(made[0]), "filed": False}, made[0]
 
     def test_c16_exports_match(self):
         """16. Export HTML, Word and PDF from one saved report in which a section is hidden and a risk row is left out → the same
@@ -615,14 +628,20 @@ class WeeklyFiling(WeeklyBase):
             self.assertFalse(e.get("filed"), f"{fmt}: a report export is not filed beside by default ({e.get('path')})")
             text = export_text(self.vault, path, fmt)
             outputs[fmt] = text
-            in_order(self, text, [h for h in shown if h in text or fmt == "html"] if fmt != "pdf" else [h for h in shown if h in text])
-            self.assertNotIn(self.sec(doc, "asks")["heading"], re.findall(r"<h2>(.*?)</h2>", path.read_text(encoding="utf-8")) if fmt == "html" else [],
-                             "the hidden section's heading")
+            if fmt == "html":
+                # #226 (changed deliberately): the HTML is the sheet's own exported page, so its sections are <section data-id>, in the
+                # report's order, and a text section with nothing in it is not drawn (the old export printed an empty heading)
+                ids = re.findall(r'<section[^>]* data-id="([^"]+)"', path.read_text(encoding="utf-8"))
+                want = [x["id"] for x in doc["sections"] if not x["hidden"] and not (x["type"] == "text" and not (x.get("text") or "").strip())]
+                self.assertEqual(ids, want, "the sections of the page, in order")
+                self.assertNotIn("asks", ids, "the hidden section")
+            else:
+                low = text.lower()       # the page prints its headings in capitals
+                in_order(self, low, [h.lower() for h in shown if h.lower() in low])
             self.assertNotIn(left_text, text, f"the left-out row is not in the {fmt}")
             if fmt == "html":
                 self.assertNotIn("creaite-data", path.read_text(encoding="utf-8"), "the exported page carries no editing data")
-        self.assertEqual(len(re.findall(r"<h2>", "")), 0)
-        self.note(16, f"HTML, Word and PDF: {len(shown)} sections in the same order; 'asks' and one risk row in none")
+        self.note(16, f"HTML (the exported page), Word and PDF: the same sections in the same order; 'asks' and one risk row in none")
 
     def test_c17_file_beside_defaults(self):
         """17. Settings › Advanced has two lines, one for reports (off) and one for minutes (on), each with its reason; a report
@@ -647,12 +666,11 @@ class WeeklyFiling(WeeklyBase):
         report opens as a draft again; the export is a separate file and never stands in for the draft."""
         week = self.wk(6)
         self.approve_week(week)
-        e = self.api("/api/report/export", {"kind": "weekly", "code": "FAL", "week_ending": week, "fmt": "html"})
-        self.assertTrue(e.get("ok"), e)
+        e, _ = self.exported(week, "html")             # #226: made from the report page, as a person does
         r = self.api("/api/report/draft", {"kind": "weekly", "code": "FAL", "week_ending": week})
         self.assertTrue(r.get("ok"), f"Edit again after an export: {r.get('message')}")
         self.assertEqual(r["where"], "filed")
-        self.note(74, f"export went to {e.get('path')}")
+        self.note(74, f"export went to {e.get('path')} (the report page's own export)")
 
     def test_c18_filed_file_opens_outside_creaite(self):
         """18. Open the filed `.html` report in another browser (not creaite) → it reads as the report, with no missing styles,

@@ -304,6 +304,32 @@ class ClientBrowser(LiveBrowserCase):
         self.assertLess([i for i, u in enumerate(calls) if u.endswith('/api/report/check')][0],
                         [i for i, u in enumerate(calls) if u.endswith('/api/report/export')][0], "the check came first")
 
+    def test_c08_the_client_export_is_the_clients_exported_page_and_holds_nothing_internal(self):
+        """#226 check 8: the client report's HTML is the client view's own exported page (the same renderer as the weekly report's),
+        client-visible items only, and the server's re-check let it through."""
+        import time
+        self.approve_internal()
+        a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        self.open_view()
+        self.b.wait("document.querySelector('[data-crcheck]:not([disabled])')", 15)
+        self.b.click("[data-crcheck]")
+        self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
+        self.b.click("[data-crexport='html']")
+        drafts = self.v.root / "system/staging/drafts"
+        end = time.time() + 40
+        files = []
+        while time.time() < end and not files:
+            files = [f for f in drafts.glob("*Client report*(read only).html")]
+            time.sleep(0.3)
+        self.assertTrue(files, "no client export was written")
+        text = files[0].read_text(encoding="utf-8")
+        self.assertIn('data-theme="light"', text, "the page's own file, not the plain renderer's")
+        self.assertIn('id="v-clientreport"', text)
+        self.assertIn("Test licences are not yet ordered.", text)
+        for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "The internal summary", "creaite-data", "<script"):
+            self.assertNotIn(internal, text)
+
     @unittest.skipUnless(os.environ.get("CREAITE_SHOTS"), "set CREAITE_SHOTS=<folder> for screenshots")
     def test_zz_screenshots(self):
         out = Path(os.environ["CREAITE_SHOTS"])
