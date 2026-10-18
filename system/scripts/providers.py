@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402
 import settings_catalogue  # noqa: E402
 
 # ── Providers ────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -372,7 +373,6 @@ def limit_view(settings, two):
 
 def state(settings=None, store=None):
     """The whole AI models section, for /api/ai/state: providers as cards, the four jobs with their lists, the limit."""
-    import paths
     settings = paths.load_settings() if settings is None else settings
     store = store or backend()[0]
     conn = connected(settings, store)
@@ -390,7 +390,6 @@ def state(settings=None, store=None):
 def choose(job, model_id, accept=False, settings=None, store=None):
     """The settings a choice of model for a job writes. Refused: an unknown job, a model not on offer for it (a job that
     needs tools takes only a model that can use them), or a weaker model Alan hasn't accepted (`accept`, Use it anyway)."""
-    import paths
     settings = paths.load_settings() if settings is None else settings
     if job not in JOBS:
         raise Refused("That isn't a kind of job creaite knows.")
@@ -410,7 +409,6 @@ def choose(job, model_id, accept=False, settings=None, store=None):
 
 def set_limit(mode, settings=None, store=None):
     """The settings the limit's choice writes. "other" needs a second connected provider."""
-    import paths
     settings = paths.load_settings() if settings is None else settings
     if mode not in LIMITS:
         raise Refused("That isn't one of the choices.")
