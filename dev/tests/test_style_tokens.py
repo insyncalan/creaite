@@ -30,10 +30,6 @@ RADII = {
     "6px": (11, "control corners, between --r-sm and --r-md"),
     "10px": (7, "popover corners (--ctl-r-lg is 10px for the search bar only)"),
     "7px": (4, "inner corners of 8px boxes with a 1px border"),
-    "2px": (5, "hairline marks and bars; +1 a.tlink focus ring (#121, from main)"),
-    "3px": (3, "small marks; +1 from main"),
-    "5px": (2, "Help key caps (Help Phase B, from main)"),
-    "1px": (1, "the column resize handle's 2px hairline (#144, from main)"),
     "0 3px 3px 0": (1, "the side tab's right edge"),
 }
 LINE_HEIGHTS = {
