@@ -1,10 +1,10 @@
-"""creaite 2.3.5's hand checks (dev/handchecks/v2.3.5.md), automated: each runs the test it names.
+"""creaite 2.3.2's hand checks (dev/handchecks/v2.3.2.md), automated: each runs the test it names.
 
-Run them all, fill the Results table and make the screenshot sheet:  python3 dev/tools/handcheck.py v2.3.5
-Run this file on its own:                                             python3 dev/tests/handchecks/test_v235.py
+Run them all, fill the Results table and make the screenshot sheet:  python3 dev/tools/handcheck.py v2.3.2
+Run this file on its own:                                             python3 dev/tests/handchecks/test_v232.py
 
-One method per check, `test_cNN_…`, its docstring quoting the check. Desktop (1400 px) only. The look is judgement on the screenshot
-sheet; the test asserts colour, size, weight, contrast and the click.
+One method per check, `test_cNN_…`, its docstring quoting the check. Desktop (1400 px) only. Real Chrome tests that already
+exist for these three defects (#215, #213, #214).
 """
 import re
 import subprocess
@@ -18,12 +18,14 @@ from hcbase import NOTES, only  # noqa: E402,F401  (NOTES: read by handcheck.py)
 
 TESTS = Path(__file__).resolve().parents[1]
 
-KIND = {1: "scriptable"}
+KIND = {1: "scriptable", 2: "scriptable", 3: "scriptable"}
 LIVE_ONLY = {}
 
 # Check number: the tests its text names, "file::test" (files in dev/tests/)
 CHECKS = {
-    1: ["test_people_projects_links_browser.py::test_projects_column_links"],
+    1: ["test_today_days_ui.py::test_215_no_hover_card_is_left_open_after_prep_and_back"],
+    2: ["test_portfolio_table.py::test_213_evidence_text_follows_its_column_width"],
+    3: ["test_rail_states.py::test_more_has_no_labels_switch_and_the_dialog_offers_it_beside_icons_only"],
 }
 
 _RESULTS = {}      # "file::test": (ok, note)
@@ -69,9 +71,17 @@ class Wrapped(unittest.TestCase):
             self.fail("; ".join(bad))
         NOTES[n] = f"ran {', '.join(r.split('::')[1] for r in CHECKS[n])}"[:280]
 
-    def test_c01_people_project_names_read_as_links(self):
-        """1. People: the project names in the Projects column are in the link colour, the table's text size and weight 500, and open the project."""
+    def test_c01_hover_card_gone_after_prep(self):
+        """1. Hover a meeting on Today, choose Prep, then go back to Today: no hover card, peek or popup is left open."""
         self.named(1)
+
+    def test_c02_evidence_column_follows(self):
+        """2. Today's Portfolio table: drag the Evidence column wider and narrower: its text wraps to the new width and the width is kept after a reload."""
+        self.named(2)
+
+    def test_c03_more_menu_without_the_duplicate(self):
+        """3. The rail's More menu does not list "Labels when collapsed"; Customise sidebar still has it and it works."""
+        self.named(3)
 
 
 if __name__ == "__main__":

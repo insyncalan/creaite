@@ -4,7 +4,7 @@ Run them all, fill the Results table and make the screenshot sheet:  python3 dev
 Run this file on its own:                                             python3 dev/tests/handchecks/test_v234.py
 
 One method per check, `test_cNN_…`, its docstring quoting the check. Desktop (1400 px) only. The look of the card is judgement on
-the screenshot sheet; the test asserts the title text, widths and the ellipsis.
+the screenshot sheet; the tests assert the title text, widths and ellipsis, and the project links' colour, size, weight and click.
 """
 import re
 import subprocess
@@ -18,12 +18,13 @@ from hcbase import NOTES, only  # noqa: E402,F401  (NOTES: read by handcheck.py)
 
 TESTS = Path(__file__).resolve().parents[1]
 
-KIND = {1: "scriptable"}
+KIND = {1: "scriptable", 2: "scriptable"}
 LIVE_ONLY = {}
 
 # Check number: the tests its text names, "file::test" (files in dev/tests/)
 CHECKS = {
     1: ["test_notes_pinned_title_browser.py::test_pinned_titles"],
+    2: ["test_people_projects_links_browser.py::test_projects_column_links"],
 }
 
 _RESULTS = {}      # "file::test": (ok, note)
@@ -72,6 +73,10 @@ class Wrapped(unittest.TestCase):
     def test_c01_a_pinned_notes_card_shows_its_title(self):
         """1. Notes: a pinned note's card shows its title, a long title ends in an ellipsis, also for a confidential pinned note."""
         self.named(1)
+
+    def test_c02_people_project_names_read_as_links(self):
+        """2. People: the project names in the Projects column are in the link colour, the table's text size and weight 500, and open the project."""
+        self.named(2)
 
 
 if __name__ == "__main__":

@@ -4,10 +4,11 @@ What changed for you in each release of creaite, newest first. Written in plain 
 
 ## creaite 2.3.4
 
-A small fix-up for Notes: a pinned note now shows its title.
+A small fix-up for two places where something was hard to read: a pinned note's title in Notes, and the project names on the People page.
 
 
 - **A pinned note shows its title.** In a project's Notes list, a pinned note's card used to show a blank where the title should be, even though the note opened fine. The card now shows the title, a long title ends in "…", and it works for a confidential pinned note too.
+- **Project names on the People page read as links.** They are now in the link colour, at the table's normal text size and a little bolder, instead of small faint text. Clicking one still opens the project.
 
 ## creaite 2.3.3
 
