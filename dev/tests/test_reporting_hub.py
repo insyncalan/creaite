@@ -131,6 +131,20 @@ class SideBySide(Hub):
                 self.assertEqual(tops[0], tops[1], "scrolled together")
 
 
+    def test_the_label_row_does_not_overflow_at_900_with_a_client_draft(self):
+        self.open_hub(900, 900)
+        self.b.click("#hubSeg [data-hv='side']")
+        self.b.wait("document.querySelectorAll('#v-reporting .page').length==2 && document.querySelector('[data-crmatchall]')", 20)
+        self.b.pump(0.4)
+        r = self.q("""(()=>{const row=document.querySelector('#v-reporting .hubrow'), W=document.documentElement.clientWidth;
+          const els=[...row.querySelectorAll('.hubpl *')].filter(e=>e.getClientRects().length), sub=row.querySelector('.hubpl[data-k=client] .sub');
+          return {sw:row.scrollWidth, cw:row.clientWidth, out:els.filter(e=>e.getBoundingClientRect().right>W+0.5).map(e=>e.className||e.tagName),
+            subw: sub?sub.getBoundingClientRect().width:-1}})()""")
+        self.assertLessEqual(r["sw"], r["cw"], r)
+        self.assertEqual(r["out"], [], r)
+        self.assertGreater(r["subw"], 0, "the client name keeps some width")
+
+
 class WeekMenu(Hub):
     def test_the_date_opens_a_list_of_weeks_and_jumps(self):
         self.open_hub()
@@ -326,6 +340,15 @@ class Actions(Hub):
         self.assertEqual(self.q("document.querySelector('.hubstat[data-k=internal]').innerText.trim()"), "Approved")
 
 
+    def test_approve_menu_lists_only_the_internal_item_with_the_client_report_off(self):
+        self.open_hub(client_on=False)
+        self.press("#hubApprove")
+        items = self.q("[...document.querySelectorAll('.ddmenu.on [role^=menuitem]')].map(e=>e.textContent)")
+        self.assertEqual(len(items), 1, items)
+        self.assertIn("Approve the internal report", items[0])
+        self.assertNotIn("Approve the client report", items[0])
+
+
 class Scroll(Hub):
     def tick(self, dy=2):
         r = self.q("(()=>{const r=document.querySelector('#v-reporting .sheet-scroll').getBoundingClientRect();"
@@ -425,6 +448,29 @@ class EntryPoints(Hub):
         self.b.click("[data-rpopen=ABC]")
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
         self.assertEqual(self.q("shared.VIEW"), "reporting")
+
+    def test_the_cockpit_reports_icon_opens_the_latest_week_internal(self):
+        self.open_hub()
+        others = self.q("P.filter(p=>p.code!=='ABC').map(p=>p.code)")
+        for code in ["ABC"] + others[:1]:
+            with self.subTest(code=code):
+                self.open_hub(hash_="location.hash='#reporting=ABC&w=2026-10-02&v=client'; restoreNav(parseHash(location.hash))")
+                self.assertEqual(self.q("document.querySelector('#v-reporting .page').dataset.audience"), "client")
+                self.q(f"go('cockpit',{json.dumps(code)})")
+                self.b.wait("document.querySelector('#v-cockpit [data-reports]')", 20)
+                self.b.click("#v-cockpit [data-reports]")
+                self.b.wait("document.querySelector('#v-reporting .page')", 25)
+                self.b.pump(0.4)
+                self.assertEqual(self.q("document.querySelector('#v-reporting .page').dataset.audience"), "internal")
+                self.assertEqual(self.q("document.querySelector('#hubWeek').innerText.includes('02-10-2026')"), False, "the latest week, not the last visit's")
+
+    def test_today_week_ahead_rows_do_not_take_the_week_menu_styles(self):
+        self.open_hub()
+        r = self.q("""(()=>{const u=document.createElement('ul'); u.innerHTML='<li class="wkrow"><i></i><span>x</span></li>'; document.body.appendChild(u);
+          const c=getComputedStyle(u.firstChild), i=getComputedStyle(u.querySelector('i')); const o={cursor:c.cursor, display:c.display, dot:i.width}; u.remove(); return o})()""")
+        self.assertNotEqual(r["cursor"], "pointer")
+        self.assertNotEqual(r["display"], "grid")
+        self.assertNotEqual(r["dot"], "8px")
 
     def test_the_projects_reporting_card(self):
         self.start_at("go('cockpit','ABC')", "document.querySelector('[data-rpcard=space]')")
