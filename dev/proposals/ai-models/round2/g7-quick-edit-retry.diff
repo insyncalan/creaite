@@ -1,0 +1,198 @@
+#132 G7: a quick edit whose fact check fails is tried once more, on a stronger model, inside the same run.
+PROPOSAL, not applied. Applies on round 1 (with or without G1c), G4 and G6.
+1 file, 9 hunks, +93 -11. Guarded: live_server.py's run engine (a retry is a Run that isn't listed and never starts a queued
+message; the RUNS lines moved into Run._listed unchanged). The client check and G4's checks are never relaxed.
+
+live_server.py
+ 1 @@ launch_plan: a retry names its Claude model
+ 2 @@ Run.__init__: the run keeps the model it was started with (alias)
+ 3 @@ Run.__init__: _listed; Run._listed (a retry, "nested", is never listed)
+ 4 @@ Run._done: a retry never starts a queued message
+ 5 @@ DraftJob.finish: checked, then again; DraftJob.checked; DraftJob.again (a draft is never retried)
+ 6 @@ EditJob.again (one retry at most, a step says so, the draft says which model made it; a second that is dropped or doesn't
+      come back leaves the first, with its notes), EditJob.second (the retry inside the run; Stop stops it)
+ 7 @@ edit_ai_route: the first try's model id in the context
+ 8 @@ direct_plan: made_by_id
+ 9 @@ retry_plan (only when the writing kind's model is stronger than the first; Claude gets its usual prompt and --model;
+      another provider only outside_prompt, only for clean text; none at the defaults)
+
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 26a44a5..4759d7b 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2202,7 +2202,8 @@ def launch_plan(policy, route=None):
+     alias, note = run_model(policy)
+     if not route:
+         return alias, note, subprocess.Popen
+-    return (None if route.get("direct") else alias), route.get("note", ""), route.get("direct") or subprocess.Popen
++    return (None if route.get("direct") else route.get("alias", alias)), route.get("note", ""), \
++        route.get("direct") or subprocess.Popen                 # #132 G7: a retry names its Claude model ("alias")
+ # ===== end #132 G3 =====
+ 
+ 
+@@ -2322,6 +2323,7 @@ class Run:
+         more, more_env, cwd = launch_context(policy)            # #126: a tool-less run: no CLAUDE.md, settings or auto-memory
+         alias, model_note, opener = launch_plan(policy, route)  # #132 G3, G4: the model Alan chose, or the server's own plan
+         more = with_model(more, alias)
++        self.alias = alias                                      # #132 G7: the model this run was started with (None: today's)
+         cmd += more
+         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
+             cmd += ["--add-dir", d]
+@@ -2352,11 +2354,19 @@ class Run:
+             if guarded:
+                 reach.end_run(run_id)
+             raise
++        self._listed(run_id, route)                             # #132 G7: a retry inside its run is not listed
++        threading.Thread(target=self.read, daemon=True).start()
++        threading.Thread(target=self.watchdog, daemon=True).start()
++
++    def _listed(self, run_id, route):
++        """Keep only the run in progress and the latest one in RUNS, and list this one; #132 G7: a quick edit's retry (`nested`)
++        runs inside its run and is never listed, so it is never "the run in progress" and never starts a queued message."""
++        self.nested = bool((route or {}).get("nested"))
++        if self.nested:
++            return
+         for old in [k for k, r in RUNS.items() if r.done]:   # keep only the run in progress and the latest one
+             RUNS.pop(old, None)
+         RUNS[run_id] = self
+-        threading.Thread(target=self.read, daemon=True).start()
+-        threading.Thread(target=self.watchdog, daemon=True).start()
+ 
+     def _plain_setup(self, label, lines, closer):
+         """The run's label (a chat's is Alan's message; BL-326: a run creaite started has a plain ask, never its prompt), its
+@@ -2738,7 +2748,7 @@ class Run:
+         if self.plain:                                    # BL-326: one plain closure line, for success, failure and Stop
+             self._close(getattr(self, "failed", False))
+         job_run = self.kind in ("check", "load") or self.plain     # BL-326: a run creaite started never becomes the panel's chat
+-        nxt = queue_after(self)                           # BL-257: the next queued message starts before this run is done
++        nxt = None if getattr(self, "nested", False) else queue_after(self)    # BL-257 (#132 G7: never from a retry)
+         with self.cond:
+             self.done = True
+             self.events.append({"type": "done", "session": None if job_run else self.session,
+@@ -6038,17 +6048,25 @@ class DraftJob:
+         reply = "\n\n".join(self.run.said) if self.run else ""
+         got = None
+         if self.run and reply.strip():
+-            rc, out = run_stdin(self.SCRIPT, {"request": self.req, "context": self.ctx, "reply": reply}, "result")
+-            try:
+-                got = json.loads(out) if rc == 0 else None
+-            except ValueError:
+-                got = None
++            got = self.again(self.checked(reply, self.ctx))          # #132 G7: a quick edit's one retry (EditJob)
+             self.run.emit("draft", ok=bool(got), **(got or {"message": "The draft couldn't be read."}))
+         if self.run:                                         # BL-326: the closure ask creaite shows (drafts.run_closure)
+             import drafts
+             self.run.closing = drafts.run_closure(self.ctx, got if isinstance(got, dict) else None)
+         return {"status": None, "files": [], "message": ""}
+ 
++    def checked(self, reply, ctx):
++        """The reply parsed and checked by SCRIPT result, or None."""
++        rc, out = run_stdin(self.SCRIPT, {"request": self.req, "context": ctx, "reply": reply}, "result")
++        try:
++            return json.loads(out) if rc == 0 else None
++        except ValueError:
++            return None
++
++    def again(self, got):
++        """#132 G7: a draft is never retried (EditJob's quick edit is)."""
++        return got
++
+ 
+ def section_request(req):
+     """#90: the keys the ✦ on a report or minutes section sends (kinds "report-section" and "minutes-section"): known keys, short
+@@ -6153,6 +6171,42 @@ class EditJob(DraftJob):
+     SCRIPT = "edit_ai.py"
+     quiet = True                                            # the page shows the suggestion, not the reply as it streams
+ 
++    # ===== #132 G7 (proposal): a quick edit whose check found a changed fact is tried once more, on a stronger model =====
++    def again(self, got):
++        """The suggestion to show: the first one, or, when its check has notes and retry_plan finds a stronger model this text
++        may go to, one more try on it, inside this run (a step says so; the draft says which model made it). Never more than
++        one, and the second goes through the same checks: edit_ai.py result (the client check in the client place) and, for
++        another provider, outside_problems and G5's gate. A second that is dropped or doesn't come back leaves the first."""
++        plan = retry_plan(self.ctx, got, getattr(self.run, "alias", None)) if got and got.get("notes") and self.run and \
++            not self.run.stop else None
++        if not plan:
++            return got
++        self.run.emit("step", label=f"The check found a changed fact, so this was tried once more on {plan['made_by']}.")
++        second = self.second(plan)
++        if not second or not second.get("text"):          # dropped by its checks, or nothing came back: never shown
++            self.run.emit("step", label=("The second try was dropped by the checks" if (second or {}).get("message") else
++                                         "The second try didn't give a suggestion") + ", so the first is shown with its notes.")
++            return got
++        return dict(second, retried=True)
++
++    def second(self, plan):
++        """The retry, run inside this run (Stop stops it too), its reply checked as the first was; None when nothing came back,
++        it was stopped or it hit Claude's limit."""
++        try:
++            retry = Run(f"{self.run.id}-retry", plan["prompt"], None, None, None, kind="edit-ai", route=plan["route"])
++        except OSError:
++            return None
++        while not retry.done:
++            if self.run.stop:
++                retry.request_stop()
++            with retry.cond:
++                retry.cond.wait(timeout=1)
++        reply = "\n\n".join(retry.said)
++        if not reply.strip() or retry.stop or getattr(retry, "limited", None):
++            return None
++        return self.checked(reply, dict(self.ctx, made_by=plan["made_by"]))
++    # ===== end #132 G7 =====
++
+ 
+ EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document", "limit_choice"}   # #132 G6: Ask me
+ EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
+@@ -6196,7 +6250,7 @@ def edit_ai_route(handler, req):
+         else f"e-{secrets.token_hex(6)}"
+     plan = direct_plan(ctx, choice=choice)                      # #132 G4: None at the defaults (today's run)
+     if plan and plan.get("made_by"):
+-        ctx = dict(ctx, made_by=plan["made_by"])
++        ctx = dict(ctx, made_by=plan["made_by"], made_by_id=plan["made_by_id"])      # #132 G7: the first try's model
+     job = EditJob(body, ctx)
+     try:
+         r = Run(run_id, ctx["prompt"], None, None, None, kind="edit-ai", job=job, route=plan,
+@@ -6239,7 +6293,8 @@ def direct_plan(ctx, settings=None, choice=""):
+         opener, made_by, _prompt = direct_call(pick, routed, ctx, settings)
+     except Exception as e:  # noqa: BLE001  fails closed: Claude runs it
+         return {"note": f"The AI model setting couldn't be read ({type(e).__name__}), so Claude ran it."}
+-    return {"direct": opener, "made_by": made_by, "note": f"Sent to {made_by}: the selected text and the instruction only."}
++    return {"direct": opener, "made_by": made_by, "made_by_id": pick,                  # #132 G7: made_by_id
++            "note": f"Sent to {made_by}: the selected text and the instruction only."}
+ 
+ 
+ def outside_route(ctx, job, settings):
+@@ -6266,6 +6321,33 @@ def direct_call(pick, routed, ctx, settings):
+         (providers.model(pick, settings) or {}).get("label") or pick, prompt
+ 
+ 
++def retry_plan(ctx, got, first_alias=None, settings=None):
++    """#132 G7: {"route", "prompt", "made_by"} for a quick edit's one retry, or None. Only when the check found a changed fact
++    (providers.retry_kind), the writing kind routes this text to a model stronger than the one that made the first suggestion,
++    and that model may be sent it: route_for with the same declaration as the first try (outside_route), G5's gate on the
++    answer (direct_call). Claude gets the prompt it always gets; another provider only edit_ai.outside_prompt. At the defaults
++    (quick edits and writing both on Claude Sonnet) there is no stronger model, so nothing is retried, as today."""
++    import providers
++    try:
++        settings = paths.load_settings() if settings is None else settings
++        if providers.retry_kind("quick", (got or {}).get("notes")) != "write" or ctx.get("retried"):
++            return None
++        _problems, routed = outside_route(ctx, "write", settings)
++        pick = str(routed["model"] or "")
++        first = ctx.get("made_by_id") or f"claude:{first_alias or 'sonnet'}"       # None: #126's Sonnet pin (NO_CONTEXT_ARGS)
++        new, old = providers.model(pick, settings), providers.model(first, settings)
++        if not new or not old or new["grade"] <= old["grade"]:
++            return None
++        if pick.startswith("claude:"):
++            alias = pick.partition(":")[2]
++            return {"route": {"alias": alias, "nested": True}, "prompt": ctx["prompt"], "made_by": new["label"]} \
++                if alias in CLAUDE_ALIASES else None
++        opener, made_by, prompt = direct_call(pick, routed, ctx, settings)
++    except Exception:  # noqa: BLE001  fails closed: no retry
++        return None
++    return {"route": {"direct": opener, "nested": True}, "prompt": prompt, "made_by": made_by}
++
++
+ def outside_note(problems, routed, settings):
+     """Why a suggestion stayed on Claude when Alan chose another provider, in plain words."""
+     import providers

@@ -1,0 +1,139 @@
+#132 G10: the builder's two review points: the test-fakes switch, and the tested key held in memory.
+PROPOSAL, not applied. Applies on round 1 (with or without G1c), G4, G6, G7 and G9.
+2 files, 8 hunks, +41 -5. Guarded: live_server.py's stop and restart paths (one call each). Not changed: the run engine.
+
+live_server.py
+ 1 @@ ai_disconnect_route: a key tested but not yet kept goes too
+ 2 @@ restart_when_free: drops held keys before the restart
+ 3 @@ forget_tested_keys
+ 4 @@ stopped_by_signal (SIGTERM): drops held keys
+ 5 @@ main_with_restart: drops held keys when main ends
+providers.py
+ 6 @@ fake_mode: CREAITE_FAKE_PROVIDERS=1 honoured only with .creaite-dev in the vault root or a vault inside the temporary folder
+ 7 @@ backend(): the debug log says when the switch was ignored
+ 8 @@ PENDING_SECONDS 300 (was 600); hold: one per provider, a timer drops it when it runs out; forget_all
+
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 4759d7b..b7925a0 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -5665,6 +5665,7 @@ def ai_disconnect_route(handler, req):
+         return handler.send(400, {"ok": False, "message": "That provider can't be disconnected."})
+     settings = paths.load_settings()
+     changes = providers.disconnect_changes(provider, settings)
++    providers.forget_all(provider)                            # #132 G10: a key tested but not yet kept goes too
+     try:
+         providers.backend()[0].remove(provider)
+     except providers.KeychainError as e:                      # #132 G1: the key is still there, so nothing else changes
+@@ -7538,6 +7539,7 @@ def restart_when_free():
+     if debuglog is not None:
+         debuglog.info("server", "restarting after an update")
+     print("Restarting the live server on the new version…", flush=True)
++    forget_tested_keys()                                  # #132 G10
+     try:
+         EVENTS.close()
+     except Exception as e:  # noqa: BLE001  the restart goes ahead
+@@ -7545,6 +7547,15 @@ def restart_when_free():
+     os.execv(sys.executable, [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
+ 
+ 
++def forget_tested_keys():
++    """#132 G10: drop any key tested but not yet kept (providers.forget_all), as the server stops or restarts."""
++    try:
++        import providers
++        providers.forget_all()
++    except Exception as e:  # noqa: BLE001  never stops a stop
++        swallowed("stop", e)
++
++
+ def restart_asked(signum, frame):
+     """SIGUSR1: restart once free (only the first ask counts)."""
+     if not RESTART_ASKED.is_set():
+@@ -7559,6 +7570,7 @@ def stopped_by_signal(signum, frame):
+     """SIGTERM: release the sweep lock this server's runs hold (BL-328), end the runs, then stop exactly as SIGTERM always
+     did (the default action, so launchd sees the same exit)."""
+     import signal
++    forget_tested_keys()                                  # #132 G10
+     try:
+         for run in list(RUNS.values()):
+             end_process(run.proc)
+@@ -7582,6 +7594,7 @@ def main_with_restart():
+     try:
+         return _main_before_restart()
+     finally:
++        forget_tested_keys()                              # #132 G10
+         try:
+             if json.loads(launcher.SERVER_FILE.read_text(encoding="utf-8")).get("pid") == os.getpid():
+                 launcher.SERVER_FILE.unlink()
+diff --git a/system/scripts/providers.py b/system/scripts/providers.py
+index 162d9a6..68a17bc 100644
+--- a/system/scripts/providers.py
++++ b/system/scripts/providers.py
+@@ -521,8 +521,15 @@ class HttpsLister(Lister):
+ 
+ 
+ def fake_mode():
+-    """True when the live server was started by a test with the fake provider (never in a real vault)."""
+-    return os.environ.get("CREAITE_FAKE_PROVIDERS") == "1"
++    """True when the live server was started by a test with the fake provider. #132 G10: the switch alone isn't enough; it is
++    honoured only in the development repository (.creaite-dev in the vault root) or a test's throwaway vault (inside the
++    system's temporary folder), so a stray CREAITE_FAKE_PROVIDERS=1 can never make a real vault show a fake provider."""
++    if os.environ.get("CREAITE_FAKE_PROVIDERS") != "1":
++        return False
++    import tempfile
++    import paths
++    root = Path(paths.ROOT).resolve()
++    return (root / ".creaite-dev").is_file() or Path(tempfile.gettempdir()).resolve() in root.parents
+ 
+ 
+ _BACKEND = {}
+@@ -532,6 +539,8 @@ def backend():
+     """(the key store, the lister): the fakes under a test; on a Mac the keychain store (#132 G1) and the HTTPS model list
+     (#132 G2); else the not-built stand-ins. Only the live server calls this."""
+     if not _BACKEND:
++        if os.environ.get("CREAITE_FAKE_PROVIDERS") == "1" and not fake_mode():          # #132 G10
++            _log("CREAITE_FAKE_PROVIDERS ignored: this isn't the development repository or a test's vault")
+         if fake_mode():
+             _BACKEND["pair"] = (MemoryStore(), FakeLister())
+         elif sys.platform == "darwin":
+@@ -1118,23 +1127,37 @@ def _label(model_id, settings):
+ # ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
+ # Test and connect asks the provider for its models; the key is kept here, in the live server's memory only, until Alan
+ # presses Done (it then goes to the key store) or Cancel (it is dropped), and for PENDING_SECONDS at most. Only a built key
+-# store (or the test fake) ever reaches this: the not-built lister refuses first.
+-PENDING_SECONDS = 600
++# store (or the test fake) ever reaches this: the not-built lister refuses first. #132 G10: five minutes, not ten; one held key
++# per provider (a new Test drops the last); used once (take); dropped by a timer when it runs out even if nothing else
++# happens, on Disconnect of that provider, and when the server stops or restarts (forget_all); never written anywhere.
++PENDING_SECONDS = 300
+ _PENDING = {}
+ 
+ 
+ def hold(provider, key, ids, now=None):
+     """Keep a tested key and its models until Done; returns the one-time id the page sends back."""
+     import secrets
++    import threading
+     import time
+     now = time.time() if now is None else now
+-    for k in [k for k, v in _PENDING.items() if v["until"] < now]:
++    for k in [k for k, v in _PENDING.items() if v["until"] < now or v["provider"] == provider]:     # G10: one per provider
+         _PENDING.pop(k, None)
+     pid = secrets.token_urlsafe(16)
+     _PENDING[pid] = {"provider": provider, "key": key, "ids": list(ids), "until": now + PENDING_SECONDS}
++    timer = threading.Timer(PENDING_SECONDS, forget, (pid,))       # G10: gone when it runs out (real seconds, from now)
++    timer.daemon = True
++    timer.start()
+     return pid
+ 
+ 
++def forget_all(provider=None):
++    """Drop every held key, or the provider's (#132 G10: Disconnect, server stop and restart); how many were dropped."""
++    gone = [k for k, v in list(_PENDING.items()) if provider is None or v["provider"] == provider]
++    for k in gone:
++        _PENDING.pop(k, None)
++    return len(gone)
++
++
+ def take(pid, now=None):
+     """The held key's {provider, key, ids}, removed; None when there is none or it has run out."""
+     import time
