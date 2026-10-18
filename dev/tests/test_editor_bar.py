@@ -88,7 +88,7 @@ class Bars(LiveBrowserCase):
         b = self.b
         got = b.eval("(()=>{ const f=(p,h)=>profileTools(p,h).filter(t=>t!=='|').map(t=>t.id); "
                      "return { notes:f('notes',['note','person','item','table','image']), notesBare:f('notes',[]), current:f('current',['image','item']), "
-                     "plain:f('plain',['image']), email:f('email',['image']), none:f('none',[]), capture:f('capture',[]), names:Object.keys(ED_PROFILES) }; })()")
+                     "plain:f('plain',['image']), email:f('email',['image']), none:f('none',[]), capture:f('capture',[]), textsection:f('textsection',['image','table']), textsectionBare:f('textsection',[]), names:Object.keys(ED_PROFILES) }; })()")
         self.assertEqual(got["notes"], NOTES)
         self.assertEqual(got["notesBare"], ["m-heading", "b", "i", "s", "code", "m-list", "quote", "link", "undo", "redo"])      # no Insert menu without a host
         self.assertEqual(got["capture"], SHARED)
@@ -96,7 +96,10 @@ class Bars(LiveBrowserCase):
         self.assertEqual(got["plain"], [])            # decision 2: plain fields keep plain text, no toolbar
         self.assertEqual(got["email"], [])            # #133: Draft email's preview is the editor's Email feature set, with no toolbar
         self.assertEqual(got["none"], [])
-        self.assertEqual(sorted(got["names"]), ["capture", "current", "email", "none", "notes", "plain", "sheet"])
+        self.assertEqual(sorted(got["names"]), ["capture", "current", "email", "none", "notes", "plain", "sheet", "textsection"])
+        # #218: a report text section has Notes' bar, its Insert menu only for the pickers its host offers (Table and Picture here, never note, person or item)
+        self.assertEqual(got["textsection"], NOTES)
+        self.assertEqual(got["textsectionBare"], [t for t in NOTES if t != "m-insert"])
         self.assertEqual(sorted(set(NOTES_ALL) - {"unlink"} - set(CURRENT)), sorted(["text", "task", "code", "note", "person", "table"]))
 
     def test_notes_current_and_the_capture_drawer_draw_their_profile(self):
