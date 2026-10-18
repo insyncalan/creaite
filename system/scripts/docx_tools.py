@@ -541,9 +541,17 @@ def with_indent(para, left=360, hanging=360):
     return para[:m.start(1)] + inner + para[m.end(1):]
 
 
-def styled_run(rpr, text, bold, italic, strike=False):
-    """One Word text run in the template's run style `rpr`, with bold, italic and strikethrough as asked."""
+MONO = "Courier New"                                  # H5, #218: the font of inline code and code blocks in Word
+
+
+def styled_run(rpr, text, bold, italic, strike=False, code=False):
+    """One Word text run in the template's run style `rpr`, with bold, italic and strikethrough as asked, and (code) in a fixed-width font."""
     rpr = re.sub(r"<w:(?:b|i|bCs|iCs|strike)(?: [^>]*)?/>", "", rpr or "<w:rPr></w:rPr>")
+    if code:
+        rpr = re.sub(r"<w:rFonts\b[^>]*/>", "", rpr)
+        at = re.search(r"<w:rStyle\b[^>]*/>", rpr)
+        at = at.end() if at else rpr.index(">") + 1
+        rpr = rpr[:at] + f'<w:rFonts w:ascii="{MONO}" w:hAnsi="{MONO}" w:cs="{MONO}"/>' + rpr[at:]
     marks = ("<w:b/>" if bold else "") + ("<w:i/>" if italic else "") + ("<w:strike/>" if strike else "")
     if marks:
         m = re.search(r"<w:rFonts\b[^>]*/>|<w:rStyle\b[^>]*/>", rpr)
@@ -557,7 +565,7 @@ def styled_run(rpr, text, bold, italic, strike=False):
 STYLES = {}   # style samples taken from {{STYLE_<NAME>}} paragraphs in the template being filled (BL-47)
 
 
-def md_paras(para, name, text):
+def md_paras(para, name, text, code=False):
     """Paragraphs for one Markdown entry, from the template paragraph holding {{NAME}}. A sub-heading uses the
     template's STYLE_TOPIC sample (the minutes' topic heading) when it has one, else bold text."""
     marker = "\ue000MD\ue000"          # private-use characters: esc keeps them (it strips the \x00 this was; #127 round 6)
@@ -572,8 +580,8 @@ def md_paras(para, name, text):
     def one(prefix, body, shape=None, level=0, italic=False, use=None, base=0):
         """One Markdown block as a Word paragraph in the given shell: its runs styled, indented for a list item or a quote."""
         b, rn, rp = use or (base_shell, run, rpr)
-        runs = ([(prefix, False, False, False, None)] if prefix else []) + md_runs(body)
-        xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st) for t, bo, it, st, u in runs)
+        runs = ([(prefix, False, False, False, None, False)] if prefix else []) + md_spans(body)
+        xml = "".join(styled_run(rp, t + (f" ({u})" if u else ""), bo, it or italic, st, bool(code and cd)) for t, bo, it, st, u, cd in runs)
         p = b[:rn.start()] + xml + b[rn.end():]
         if shape == "list":
             p = with_indent(p, base + 360 * (level + 1), 360)
@@ -609,7 +617,7 @@ def md_paras(para, name, text):
 def item_para(para, name, entry):
     """One paragraph from a template paragraph; entry is text, {"flag": …, "text": …}, {"md": …} or a prepared image."""
     if isinstance(entry, dict) and "md" in entry:
-        return md_paras(para, name, entry["md"])
+        return md_paras(para, name, entry["md"], code=bool(entry.get("code")))
     if isinstance(entry, dict) and "drawing" in entry:
         out = replace_in(para, {name: ""})
         m = re.search(r"</w:pPr>", out)

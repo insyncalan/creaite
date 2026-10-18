@@ -346,12 +346,12 @@ class WordWrite(Tmp):
                        check=True, capture_output=True, timeout=240)
         from pypdf import PdfReader
         text = "\n".join(p.extract_text() for p in PdfReader(str(self.tmp / "out.pdf")).pages)
-        flat = re.sub(r"\s+", " ", text)
+        flat = re.sub(r"\s+", " ", text).lower()        # the template sets section headings in capitals
         at = -1
         for needle in ("Before the text section.", "Vendor notes", "Heading one", "Heading two", "Heading three", "Plain words",
                        "bullet one", "nested bullet", "1. first", "2. second", "open task", "done task", "A quoted line",
                        "def tidy(x):", "return x # kept as typed", "Name", "Mia Hale", "Sam Patel", "After the text section."):
-            nxt = flat.find(needle, at + 1)
+            nxt = flat.find(needle.lower(), at + 1)
             self.assertGreater(nxt, at, f"{needle!r} missing or out of order in the PDF text")
             at = nxt
 

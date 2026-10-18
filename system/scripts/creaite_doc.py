@@ -1033,8 +1033,41 @@ class _Word:
     def parts(self, s):
         """A shown section's parts for its type."""
         make = {"health": self.health, "figures": self.figures, "panes": self.panes, "timeline": self.timeline,
-                "table": self.table}.get(s.get("type"), self.text)
+                "table": self.table, TEXT_TYPE: self.freetext}.get(s.get("type"), self.text)
         return make(s)
+
+    def freetext(self, s):
+        """A text section (H5, #218) from the blocks text_blocks reads: paragraphs, lists, checklists and quotes as Markdown entries
+        (inline code in a fixed-width font), headings and code blocks as paragraphs of their own, a table as a Word table, a picture
+        placed from its file in `_images/` (any other address is named, never read)."""
+        lines = str(s.get("text") or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        parts, run = [], []
+
+        def flush():
+            """The paragraphs, lists and quotes so far, as one Markdown entry."""
+            if run:
+                parts.append(("e", [{"md": _nobraces("\n\n".join(run)), "code": True}]))
+                run.clear()
+        for b in text_blocks("\n".join(lines)):
+            if b.kind in ("p", "list", "quote"):
+                run.append("\n".join(lines[b.lo:b.hi]))
+                continue
+            flush()
+            if b.kind == "h":
+                parts.append(("h", b.data[0], _nobraces(_plain_inline(b.data[1]))))
+            elif b.kind == "code":
+                parts.append(("c", _nobraces(b.data[1])))
+            elif b.kind == "table":
+                head, rows = b.data
+                width = len(head)
+                parts.append(("t", [{"header": _nobraces(_plain_inline(c))} for c in head],
+                              [[_nobraces(_plain_inline(c)) for c in (r + [""] * width)[:width]] for r in rows], lambda r, c: None))
+            elif b.kind == "img":
+                f = text_image(self.doc, b.data[1])
+                parts.append(("e", [{"image": str(f), "caption": b.data[0]}] if f else
+                                   [{"md": _nobraces(f"*Picture not found: {b.data[0] or b.data[1]}*")}]))
+        flush()
+        return parts
 
     def text(self, s):
         """A text section: its Markdown, or nothing."""
@@ -1231,6 +1264,50 @@ class _Word:
         return svg, width, height
 
 
+def _plain_inline(t):
+    """Inline Markdown as the words Word shows (marks gone, a link as 'words (address)'), a backslash escape as its character."""
+    import docx_tools
+    return _UNESCAPE.sub(r"\1", docx_tools.plain(str(t or "")))
+
+
+def _rpr(para, bold=False, italic=False, mono=False, size=None):
+    """The paragraph with its runs' properties set (bold, italic, a fixed-width font, a size in half-points), in the order Word reads."""
+    import docx_tools
+    fonts = f'<w:rFonts w:ascii="{docx_tools.MONO}" w:hAnsi="{docx_tools.MONO}" w:cs="{docx_tools.MONO}"/>' if mono else ""
+    props = fonts + ("<w:b/>" if bold else "") + ("<w:i/>" if italic else "") + (f'<w:sz w:val="{size}"/><w:szCs w:val="{size}"/>' if size else "")
+
+    def run(m):
+        """One run with its properties replaced."""
+        inner = re.sub(r"<w:(?:rFonts|b|i|sz|szCs)\b[^>]*/>", "", m.group(2) or "")
+        return f"{m.group(1)}<w:rPr>{props}{inner}</w:rPr>"
+    return re.sub(r"(<w:r(?: [^>]*)?>)(?:<w:rPr>(.*?)</w:rPr>)?", run, para, flags=re.S)
+
+
+HEADING_SIZES = {1: 28, 2: 26, 3: 24}                   # half-points: a text section's heading levels 1 to 3 (14, 13 and 12 pt)
+
+
+def _heading_para(para, level, text):
+    """A text section's heading inside its body: the template paragraph, bold, sized by its level, kept with what follows."""
+    import docx_tools
+    p = _rpr(docx_tools.put_text(para, text), bold=True, italic=level >= 3, size=HEADING_SIZES.get(level, 24))
+    return p.replace("<w:pPr>", "<w:pPr><w:keepNext/>", 1)
+
+
+def _code_paras(para, text):
+    """A code block: one paragraph per line in a fixed-width font on a light ground, its indentation kept, close together."""
+    import docx_tools
+    lines = str(text).expandtabs(4).split("\n") or [""]
+    out = []
+    for n, line in enumerate(lines):
+        p = _rpr(docx_tools.put_text(para, line or " "), mono=True, size=18)
+        after = 160 if n == len(lines) - 1 else 0
+        ppr = ('<w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F3F4F7"/>'
+               f'<w:spacing w:before="0" w:after="{after}" w:line="240" w:lineRule="auto"/><w:ind w:left="144" w:right="144"/></w:pPr>')
+        p = re.sub(r"<w:pPr>.*?</w:pPr>", "", p, count=1, flags=re.S)
+        out.append(re.sub(r"(<w:p(?: [^>]*)?>)", lambda m: m.group(1) + ppr, p, count=1))
+    return "".join(out)
+
+
 def _colour_table(tbl, styler):
     """The table with the text of each body cell the styler names (row, column; row 0 is the header) bold and in its colour."""
     for r, row in enumerate(re.findall(r"<w:tr>.*?</w:tr>", tbl, re.S)):
@@ -1290,11 +1367,15 @@ def _section_blocks(ctx, n, s, heading, para, table, total):
     parts = ctx.parts(s)
     if not parts:
         return [], {}
-    out, values = [docx_tools.put_text(heading, _nobraces(s.get("heading")))], {}
+    out, values = [docx_tools.put_text(heading, _nobraces(s.get("heading")))] if str(s.get("heading") or "").strip() else [], {}
     for k, part in enumerate(parts):
         if part[0] == "e":
             out.append(docx_tools.replace_in(para, {"SUMMARY": "{{CX_%d_%d}}" % (n, k)}))
             values[f"CX_{n}_{k}"] = part[1]
+        elif part[0] == "h":
+            out.append(_heading_para(para, part[1], part[2]))
+        elif part[0] == "c":
+            out.append(_code_paras(para, part[1]))
         else:
             _, cols, rows, styler = part
             out += [_colour_table(docx_tools.adhoc_table({"table": table}, cols, rows, total), styler), "<w:p/>"]
