@@ -12,6 +12,8 @@
    - ✦ per section (`onRedraft`), the one editor's AI bar (`ai`, places "report", "minutes" and "client"), inline checks, source tags, Find the
      source (`onSelectAction`), the standard peek with Sneak peek on every item ID, Side by side (levelled, ≠ markers, Match internal).
    - Saves 1.5 s after the last change, on ⌘S and on unmount, one at a time; a conflict stops saving and offers Reload.
+   - #221 H1: `renderBar` lets the Reporting hub draw the whole bar (its one toolbar: view switch, week, zoom, Show as exported, Export, Approve, cog) from the
+     sheet's own zoom and exported state; `belowBar` is a strip under it. Without them the bar is as it was (the minutes still use it).
    Text only through JSX. */
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
