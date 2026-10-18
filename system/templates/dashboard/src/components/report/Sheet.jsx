@@ -64,7 +64,7 @@ export { openSheetRef as openRef };
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
     toolbar?: any, banner?: {title: string, sub?: string},
     renderBar?: (c: {zoom: number, setZoom: (z: number) => void, exported: boolean, setExported: (on: boolean) => void, status: string, bad: boolean}) => any,
-    belowBar?: any,
+    belowBar?: any, paneHead?: (slot: "one"|"left"|"right"|"both") => any,
     report?: {audience: string, addText?: (sectionId: string) => void}}} SheetProps */   // report: set by ReportSheet (the weekly and client reports); the minutes leave it out and keep their title block
 
 /** Where each page was left, by scrollKey (in memory, for the page's life): the zoom, and per pane the section at the top and the
@@ -138,7 +138,7 @@ function removedLine(r) {
     and the zoom make, and remembers and restores the section at the top of the view. Nothing else sets scrollTop.
     @param {{pk: string, zoom: number, pages: number, regRestore: (fn: () => void) => () => void, onPinch: (dy: number, y: number, pk: string) => void,
     children: (scale: number) => any}} props */
-function Pane({ pk, zoom, pages, regRestore, onPinch, children }) {
+function Pane({ pk, zoom, pages, regRestore, onPinch, head, children }) {
   const sc = useRef(/** @type {HTMLDivElement|null} */ (null));
   const [w, setW] = useState(0);
   const avail = Math.max(0, w - 32 - (pages > 1 ? 16 * (pages - 1) : 0)) / pages;
@@ -184,6 +184,7 @@ function Pane({ pk, zoom, pages, regRestore, onPinch, children }) {
     return () => { ro.disconnect(); el.removeEventListener("wheel", wheel); };
   }, [pk]);
   return <div class="sheet-scroll" ref={sc} onScroll={capture} data-pk={pk}>
+    {head ? <div class="sheet-head" style={{ visibility: scale ? "visible" : "hidden", width: `${A4_W * MM * scale * pages + 16 * (pages - 1)}px` }}>{head}</div> : null}
     <div class={pages > 1 ? "sheet-pair" : "sheet-one"} style={{ visibility: scale ? "visible" : "hidden" }}>{children(scale)}</div>
   </div>;
 }
@@ -442,10 +443,10 @@ export function Sheet(props) {
       <div class={`sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`}>
         {partner && !together
           ? <>
-            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch}>{scale => frame(doc, null, scale, 0)}</Pane>
-            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
+            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("left") : null}>{scale => frame(doc, null, scale, 0)}</Pane>
+            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("right") : null}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
           </>
-          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch}>{scale => <>
+          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead(partner ? "both" : "one") : null}>{scale => <>
             {frame(doc, null, scale, 0)}
             {partner ? frame(partner.doc, partner, scale, 1) : null}
           </>}</Pane>}

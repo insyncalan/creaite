@@ -3817,6 +3817,10 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .hubpl .linkbtn{flex:0 1 auto;min-width:0;text-align:left}
 .hubstat{margin-left:auto;font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:var(--lh-22);background:var(--surface);white-space:nowrap}
 .hubedit{font-size:var(--fs-xs)}
+/* #233 b: the label row sits inside the report's grey pane, at its top, as wide as the page(s) below it (Pane sets the width) */
+.sheet-head{margin:0 auto 8px;max-width:100%;box-sizing:border-box}
+.hubrow.inpane{padding:0;border-bottom:0;background:none;min-height:0;align-items:flex-start;flex-wrap:nowrap;gap:16px}
+.hubrow.inpane>.hubpl{flex:1 1 0}
 .newmenu.hubm button svg.i{color:var(--muted)}   /* the Export and Approve menus: grey outline icons, as the locked mockup draws them */
 .hubrow .crnote{flex:1 1 100%}
 /* the cog and the panel it opens (H3 fills the slot) */
@@ -67746,7 +67750,7 @@ ${d5.text}`);
     const list = Array.isArray(r4) ? r4 : [r4];
     return `Left out of this version: ${list.map((x5) => (typeof x5 === "string" ? x5 : x5 && (x5.label || x5.ref || x5.id || x5.heading)) || "an item").join(", ")}`;
   }
-  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, children }) {
+  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, children }) {
     const sc2 = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -67828,7 +67832,10 @@ ${d5.text}`);
         el2.removeEventListener("wheel", wheel);
       };
     }, [pk2]);
-    return /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: sc2, onScroll: capture, "data-pk": pk2, children: /* @__PURE__ */ u2("div", { class: pages > 1 ? "sheet-pair" : "sheet-one", style: { visibility: scale ? "visible" : "hidden" }, children: children(scale) }) });
+    return /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: sc2, onScroll: capture, "data-pk": pk2, children: [
+      head ? /* @__PURE__ */ u2("div", { class: "sheet-head", style: { visibility: scale ? "visible" : "hidden", width: `${A4_W * MM * scale * pages + 16 * (pages - 1)}px` }, children: head }) : null,
+      /* @__PURE__ */ u2("div", { class: pages > 1 ? "sheet-pair" : "sheet-one", style: { visibility: scale ? "visible" : "hidden" }, children: children(scale) })
+    ] });
   }
   function SheetFrame({ scale, breaks, children }) {
     return /* @__PURE__ */ u2("div", { class: "sheet-fit", "data-scale": scale, style: { width: `${A4_W * MM * scale}px` }, children: /* @__PURE__ */ u2("div", { class: "sheet-a4", style: { transform: `scale(${scale})`, "--sc": scale }, children: [
@@ -68282,9 +68289,9 @@ ${d5.text}`);
         }, children: "Reload" })
       ] }) : null,
       /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: partner && !together ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, children: (scale) => frame(doc, null, scale, 0) }),
-        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, children: (scale) => frame(partner.doc, partner, scale, 1) })
-      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
+        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
+      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
         frame(doc, null, scale, 0),
         partner ? frame(partner.doc, partner, scale, 1) : null
       ] }) }) }),
@@ -72395,17 +72402,21 @@ ${d5.text}`);
       /* @__PURE__ */ u2("span", { class: "hubstat", "data-k": k5, "data-state": st2.key, children: st2.label })
     ] });
   }
-  function HubRow({ view, on: on2, doc }) {
+  function PaneRow({ slot, view, on: on2, doc }) {
+    const kinds = slot === "both" ? ["internal", "client"] : slot === "left" ? ["internal"] : slot === "right" ? ["client"] : [view === "client" ? "client" : "internal"];
+    return /* @__PURE__ */ u2("div", { class: `hubrow inpane${kinds.length > 1 ? " two" : ""}`, children: kinds.map((k5) => k5 === "client" && !on2 ? null : /* @__PURE__ */ u2(ReportLabel, { k: (
+      /** @type {"internal"|"client"} */
+      k5
+    ), on: on2, doc }, k5)) });
+  }
+  function HubNote() {
     const note = hubNote.value;
-    return /* @__PURE__ */ u2("div", { class: `hubrow${view === "side" ? " two" : ""}`, children: [
-      view !== "client" ? /* @__PURE__ */ u2(ReportLabel, { k: "internal", on: on2, doc }) : null,
-      view !== "internal" && on2 ? /* @__PURE__ */ u2(ReportLabel, { k: "client", on: on2, doc }) : null,
-      note && view !== "internal" ? /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
-        note,
-        " ",
-        /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => hubApproveClient(true), children: "Approve anyway" }) : null
-      ] }) : null
-    ] });
+    if (!note || hubView.value === "internal") return null;
+    return /* @__PURE__ */ u2("div", { class: "hubrow hubnote", children: /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
+      note,
+      " ",
+      /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => hubApproveClient(true), children: "Approve anyway" }) : null
+    ] }) });
   }
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
@@ -72443,7 +72454,8 @@ ${d5.text}`);
           onView: pickView
         }
       ),
-      belowBar: /* @__PURE__ */ u2(HubRow, { view, on: on2, doc })
+      belowBar: /* @__PURE__ */ u2(HubNote, {}),
+      paneHead: (slot) => /* @__PURE__ */ u2(PaneRow, { slot, view, on: on2, doc })
     };
     const reloadClient = () => {
       const a5 = hubAsk.value;
