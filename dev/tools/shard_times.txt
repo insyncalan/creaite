@@ -65,7 +65,9 @@ test_check_jsdup.py 11
 test_check_py39.py 0
 test_check_wrappers.py 3
 test_clear_day.py 389
-test_client_gate.py 467
+test_client_gate.py 168
+test_client_gate_late.py 130
+test_client_gate_reviews.py 173
 test_client_item_links.py 0
 test_client_leak.py 620
 test_client_view.py 163
