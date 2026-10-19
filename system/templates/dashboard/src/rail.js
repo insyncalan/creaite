@@ -80,10 +80,13 @@ export function railCustomise(opener) {
 /** ⌘K's "Customise the rail" (ask.js, Team 1's) calls this name: the same dialog. */
 export const railPopOpen = railCustomise;
 function railCustClosed() { railCustOpen.value = false; const o = RAILOPENER; RAILOPENER = null; if (o && o.isConnected && o.getClientRects().length) o.focus(); else $("#railMore")?.focus(); }
+/** #232: the sidebar's Intake and Review entry keeps the id "review" (its button's data-v, its badge #revBadge, saved
+    sidebars), and opens the combined page. @param {string} id */
+export const railGo = id => (id === "review" ? "intake-review" : id);
 /** The current page's rail key, from the view (a project page is Projects, a person People, Help Settings). */
 export function renderRail() {
   let cur = "";
-  try { cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today", reporting: "projects" }[shared.VIEW] || shared.VIEW; } catch (x) { /* VIEW not set yet */ }
+  try { cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today", reporting: "projects", "intake-review": "review", inbox: "review" }[shared.VIEW] || shared.VIEW; } catch (x) { /* VIEW not set yet */ }
   setRailView(cur);
 }
 
@@ -117,7 +120,7 @@ export function bootRail0007() {
     });
     tog.addEventListener("click", railToggle);
   }
-  const onGo = (/** @type {string} */ id) => go(id);
+  const onGo = (/** @type {string} */ id) => go(railGo(id));
   /* #139: Projects and Work open a list on hover (the active projects by name with their health, the Work lists with their open counts);
      a pick opens it, the icon alone still goes to the page */
   const flyouts = {

@@ -53,20 +53,19 @@ class IntakeNameTests(PageTests):
 
     def test_the_words_alan_reads(self):
         o = self.probe("""
-          const rail=document.querySelector('.rail button[data-v=inbox]');
+          const rail=document.querySelector('.rail button[data-v=review]');   /* #232: Intake is in the one Intake and Review entry */
           go("inbox"); const h1=document.querySelector("#v-inbox h1").textContent, hint=document.querySelector("#v-inbox > .wrapmax > .sub").textContent;
           const names=ckItems("").map(i=>`${i.g}|${i.l}`), files=ckItems("recording").map(i=>`${i.g}|${i.l}`);
           go("files"); const tree=[...document.querySelectorAll("#tree button")].map(b=>b.textContent), chips=[...document.querySelectorAll("#fquick button")].map(b=>b.textContent);
-          window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, hint, names, files, tree, chips, badge:document.getElementById("inboxBadge").getAttribute("aria-label"),
+          window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, hint, names, files, tree, chips,
             drop:document.getElementById("inboxDrop").getAttribute("aria-label")};""")
-        self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake", "Intake", "Intake"))
+        self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake and Review", "Intake and Review", "Intake"))
         self.assertIn("saved to the inbox folder", o["hint"])
         self.assertIn("Go to|Intake", o["names"])
         self.assertIn("Actions|Add files to Intake", o["names"])
         self.assertTrue(any(f.startswith("Intake|") for f in o["files"]))
         self.assertFalse(any("Inbox" in n.split("|")[1] for n in o["names"] if not n.startswith(("Files|", "Items|"))))
         self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" not in o["chips"])   # #192: Intake is in the tree once, not a pill)
-        self.assertRegex(o["badge"], r"^\d+ new files? in Intake$")
         self.assertEqual(o["drop"], "Add files to Intake")
 
     def test_the_address(self):
@@ -75,7 +74,7 @@ class IntakeNameTests(PageTests):
           go("today"); window.location.hash="#inbox"; await new Promise(r=>setTimeout(r,200));
           window.OUT={written, parsed, hashOfInbox:hashOf({v:"inbox"}), view:VIEW};""")
         self.assertEqual(o["written"], "#intake")                                 # the new address
-        self.assertEqual(o["parsed"], ["inbox", "inbox", None])                   # both open the same view
+        self.assertEqual(o["parsed"], ["intake-review", "intake-review", None])   # #232: both open Intake and Review
         self.assertEqual(o["hashOfInbox"], "#intake")
 
 

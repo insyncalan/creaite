@@ -35,6 +35,7 @@ import { mvAfter, mvEdClose, renderMilestones } from "../milestones.js";
 import { openRecord, pkNewAsk, pkNewTitle } from "../panel.js";
 import { askDiscard, closePanel, curGuard, PKN, renderCockpit, renderProjects } from "../projects.js";
 import { renderReview } from "../review.js";
+import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";   /* #232 */
 import { rjCloseMenu, rjLeave } from "../stores/rejects.js";
 import { BASETITLE, PERS, renderPerson, renderSettings, setResolve, sw, VIPS } from "../settings.js";
 import { renderToday, SETUPK } from "../today.js";
@@ -99,8 +100,8 @@ export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")), 
   else if(v==="reports"){ st.arg=/^\d{4}-\d{2}-\d{2}$/.test(kv.w||"")?kv.w:null; }   /* BL-337 */
   else if(v==="person"){ if(!PERS().some(x=>x.name===arg)) return null; st.arg=arg; }
   else if(v==="item"){ const id=arg, k=A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":DEC.some(x=>x.id===id)?"decisions":null; if(!k) return null; return {v:"work",arg:null,wt:k,wv:null,p:[],from:null,item:{k,id},scroll:0}; }
-  else if(!["today","projects","reports","people","review","inbox","intake","files","activity","settings","help","mine"].includes(v)) return null;
-  if(v==="intake") st.v="inbox";      /* BL-70: #intake is the address; #inbox still opens the screen */
+  else if(!["today","projects","reports","people","review","inbox","intake","intake-review","files","activity","settings","help","mine"].includes(v)) return null;
+  if(v==="intake"||v==="inbox"||v==="review") st.v="intake-review";      /* #232: the old Intake and Review addresses open Intake and Review (go("inbox") and go("review") still draw the old pages until 232-A and 232-B replace them) */
   const id=kv.item; if(id){ const k=A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":DEC.some(x=>x.id===id)?"decisions":null; if(k) st.item={k,id}; }
   return st; })(x);
     if(st&&st.v==="activity"){ const kv=Object.fromEntries(x.replace(/^#/,"").split("&").slice(1).map(y=>{ const i=y.indexOf("="); let v=i<0?"":y.slice(i+1); try{ v=decodeURIComponent(v); }catch(e){} return [i<0?y:y.slice(0,i),v]; }));
@@ -143,11 +144,11 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   cardGroup.close(); menuGroup.close(); tipHide();   /* #215: a hover card, peek or menu does not outlive its page (Today stays in the DOM, hidden) */
   closePanel(true); closeDisp(false); shared.VIEW=v; $$(".view").forEach(s=>s.hidden=true);
   const id={cockpit:"v-cockpit",mine:"v-work"}[v]||"v-"+v; $("#"+id).hidden=false; $("#"+id).scrollTop=0;
-  const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects",reporting:"projects",psettings:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
+  const railKey={"intake-review":"review",inbox:"review",cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects",reporting:"projects",psettings:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
   setRailView(railKey);   /* BL-163, BL-319: the sidebar marks the page (through its store) */
   if(v==="mine"){ shared.WT="actions"; applyView("mine"); } if(v==="work"&&!arg) {} if(v==="cockpit") shared.COCK=arg; if(v==="milestones"&&!arg) shared.MSCODE=null; if(v==="person") shared.PERSON=arg; if(v==="notes") shared.NOTECODE=arg;
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
-  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
+  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,"intake-review":renderIntakeReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
   if(r!==false) helpScreenSync();   /* #158: the foot line and the first-visit line are in place with the page, so nothing shifts afterwards */
