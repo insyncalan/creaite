@@ -47,3 +47,10 @@ The 18-10 mockup lost the file import and the calendar refresh. Draft copy: `dev
 - An uploaded file is a row in Arrived with a file icon, "Likely project", and the same Process, Later and Not needed actions; an already-processed copy is marked, as today.
 - **Refresh the calendar** icon beside the page's counts, with "Calendar read hh:mm".
 - Not brought back: Select new, Select with transcripts, Load into inbox (Process loads and processes together).
+
+### Added 19-10-2026: an update proposal shows the whole work item, the change highlighted
+When a mail or Teams proposal changes an existing work item, the peek shows that item as it is now, not just the change:
+- Title, ID and source in the header; all key fields (Status, Owner, Due, Priority, Project) plus Workstream, Milestone and Client-visible; the latest update and when it was last updated; the item's recent activity.
+- Each field the proposal changes is highlighted with "was → now" (for example Status Open → Closed, Due 20-10-2026 → 23-10-2026). A changed latest update shows the old text struck through and the new text highlighted. The activity list gets an "If approved" line at the top.
+- A "What changes if you approve" note states it in words; the rest of the item is plainly unchanged.
+- Add files is an icon button (upload arrow), with the words in its tooltip and accessible name.
