@@ -189,6 +189,7 @@ def normalise(html, root):
 @unittest.skipIf(sys.platform == "win32", "snapshots are recorded on macOS and Linux")
 class Snapshots(LiveBrowserCase):
     shared_server = True
+    quiet_jobs = False        # the settings screens are goldens: they show the shipped backup and archive settings
     width, height = 1400, 1000
     maxDiff = None
 
