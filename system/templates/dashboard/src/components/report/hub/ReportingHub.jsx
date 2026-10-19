@@ -12,18 +12,18 @@ import { useEffect } from "preact/hooks";
 import { LeftOutDialog } from "../LeftOutDialog.jsx";
 import { ExportSave } from "../ExportSave.jsx";
 import { CLIENT_RENDERERS, setClientDoc } from "../ClientParts.jsx";
-import { doExport, clientHealthApply, matchFor } from "../ClientView.jsx";
-import { matchClientAll } from "../clientDoc.js";
+import { doExport, clientHealthApply } from "../ClientView.jsx";
+import { MatchHeldDialog } from "../MatchHeldDialog.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
 import { ReportSheet } from "../ReportParts.jsx";
 import { WEEKLY_RENDER } from "../weekly/WeeklyView.jsx";
 import { HubBar } from "./HubBar.jsx";
 import { hubApproveClient } from "./hubActions.js";
-import { clientStatus, internalStatus, menuWeeks, toneByWeek } from "./hubLib.js";
+import { clientStatus, internalStatus, menuWeeks, toneByTrail, toneByWeek } from "./hubLib.js";
 import { P } from "../../../core/data.js";
 import { navWrite, tabTitle } from "../../../core/nav.js";
 import { fd } from "../../../core/page.js";
-import { crBase, crDoc, crInfo, crInternal, crOpen, loadClientReport, saveClientPage } from "../../../stores/clientReport.js";
+import { crBase, crDirty, crDoc, crInfo, crInternal, crOpen, loadClientReport, matchInternal, saveClientPage } from "../../../stores/clientReport.js";
 import { hubAsk, hubCfg, hubExported, hubKey, hubNote, hubReady, hubView, hubZoom, loadHub, reloadHub } from "../../../stores/hub.js";
 import { repTick, spaceCode, spaceWeek, spaceWeeks, weekView } from "../../../stores/reporting.js";
 import { clientReportOn, crTick } from "../../../stores/reportingSettings.js";
@@ -44,7 +44,7 @@ function pickView(v) { hubView.value = v; navWrite(false); }
 
 /** The weeks the menu lists, each with its health tone and both reports' states. @param {string} code @param {SheetDoc|null} doc @param {boolean} on */
 function weekRows(code, doc, on) {
-  const tones = toneByWeek(doc), shown = doc ? doc.date : "", ci = crInfo.value, cd = crDoc.value;
+  const tones = { ...toneByTrail(P.find(/** @param {any} p */ p => p.code === code)), ...toneByWeek(doc) }, shown = doc ? doc.date : "", ci = crInfo.value, cd = crDoc.value;
   return menuWeeks(spaceWeeks(code), shown).map(w => {
     const v = weekView(code, w), isShown = w === shown;
     return { week: w, tone: tones[w] || "n", current: isShown,
@@ -64,7 +64,7 @@ function ReportLabel({ k, on, doc }) {
       {on ? <><b>{internal ? "Internal report" : "Client report"}</b><span class="sub">{internal ? "for you and the team" : `for ${(cd && cd.client) || "the client"}`}</span></> : null}
       {internal && approved && !weeklyEditing.value ? <button type="button" class="linkbtn hubedit" id="hubEdit" onClick={() => { weeklyEditing.value = true; }}>Edit again</button> : null}
       {!internal && cd && cd.state !== "approved" ? <>
-        <button type="button" class="linkbtn rb-x" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchClientAll(d, i)); }}>Match internal for every section</button>
+        <button type="button" class="linkbtn rb-x" data-crmatchall disabled={!crInternal.value} onClick={() => { matchInternal(null); }}>Match internal for every section</button>
         {info && info.ready && info.baseline && !(cd.based_on && cd.based_on.version === info.baseline.version) ? <button type="button" class="linkbtn rb-x" data-crrefresh
           title="This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save."
           onClick={() => { const a = hubAsk.value; if (a) loadClientReport({ code: a.code, week: doc.date }, true); }}>Refresh from the approved week</button> : null}
@@ -73,17 +73,37 @@ function ReportLabel({ k, on, doc }) {
     </div>);
 }
 
-/** The strip under the bar: a label for the report in view, or one for each side by side. The client report's message sits here too.
-    @param {{view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
-function HubRow({ view, on, doc }) {
-  const note = hubNote.value;
+/** The label row inside the report's grey pane (the mockup): a label for the report, or one for each side by side, at the top of
+    the pane and scrolling with it. `slot` says which pane it is in.
+    @param {{slot: "one"|"left"|"right"|"both", view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
+function PaneRow({ slot, view, on, doc }) {
+  const kinds = slot === "both" ? ["internal", "client"] : slot === "left" ? ["internal"] : slot === "right" ? ["client"] : [view === "client" ? "client" : "internal"];
   return (
-    <div class={`hubrow${view === "side" ? " two" : ""}`}>
-      {view !== "client" ? <ReportLabel k="internal" on={on} doc={doc} /> : null}
-      {view !== "internal" && on ? <ReportLabel k="client" on={on} doc={doc} /> : null}
-      {note && view !== "internal" ? <span class="crnote" role="status">{note} {/awaiting review/.test(note) ? <button type="button" class="btn sm" data-crforce onClick={() => hubApproveClient(true)}>Approve anyway</button> : null}</span> : null}
+    <div class={`hubrow inpane${kinds.length > 1 ? " two" : ""}`}>
+      {kinds.map(k => k === "client" && !on ? null : <ReportLabel key={k} k={/** @type {"internal"|"client"} */ (k)} on={on} doc={doc} />)}
     </div>);
 }
+
+/** The client report's message, a strip under the bar (it stays in view; the labels are in the panes). */
+function HubNote() {
+  const note = hubNote.value;
+  if (!note || hubView.value === "internal") return null;
+  return (
+    <div class="hubrow hubnote">
+      <span class="crnote" role="status">{note} {/awaiting review/.test(note) ? <button type="button" class="btn sm" data-crforce onClick={() => hubApproveClient(true)}>Approve anyway</button> : null}</span>
+    </div>);
+}
+
+/** What the internal report's pane does (the internal view and the left pane of Side by side are the same): an edit is kept on the page and
+    is what Match internal reads; the save is its own. */
+const internalChange = (/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; };
+const internalSave = async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; };
+/** The AI bar's account of the internal report's pane: its own place and no client document. @param {SheetDoc} doc */
+const internalAi = (/** @type {SheetDoc} */ doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
+/** ✦ on the internal report. @param {SheetDoc} doc */
+const internalRedraft = (/** @type {SheetDoc} */ doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
+/** ✦ on the client report. @param {SheetDoc} cd */
+const clientRedraft = (/** @type {SheetDoc} */ cd) => redrafter(() => ({ code: cd.project, document: { kind: "client", code: cd.project, week_ending: cd.date, client: cd.client || "" } }), "report", "client", clientHealthApply);
 
 /** The sheet for what is in view. @param {{code: string, view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
 function HubSheet({ code, view, on, doc }) {
@@ -98,28 +118,25 @@ function HubSheet({ code, view, on, doc }) {
     banner: { title: "Weekly reporting", sub: `${doc.project_name || code} · ${fd(doc.date)}` },
     renderBar: (/** @type {any} */ ctx) => <HubBar ctx={ctx} code={code} view={view} on={on} doc={doc} week={doc.date} tone={toneByWeek(doc)[doc.date] || "n"}
       rows={weekRows(code, doc, on)} onWeek={(/** @type {string} */ w) => pickWeek(code, w)} onView={pickView} />,
-    belowBar: <HubRow view={view} on={on} doc={doc} /> };
+    belowBar: <HubNote />, paneHead: (/** @type {"one"|"left"|"right"|"both"} */ slot) => <PaneRow slot={slot} view={view} on={on} doc={doc} /> };
   const reloadClient = () => { const a = hubAsk.value; if (a) loadClientReport({ code: a.code, week: doc.date }); };
   if (view === "client" && cd) {
     return <ReportSheet audience="client" key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}
       readOnly={cFiled} renderers={CLIENT_RENDERERS} onChange={setClientDoc} onSave={saveClientPage} ai={clientAi}
-      onRedraft={redrafter(() => ({ code: cd.project, document: { kind: "client", code: cd.project, week_ending: cd.date, client: cd.client || "" } }), "report", "client", clientHealthApply)}
+      onRedraft={clientRedraft(cd)}
       onEvent={ev => { if (ev.type === "reload") reloadClient(); else countRedraft(ev, "report"); }} />;
   }
   if (side && cd) {
     const key = `side:${cd.project}:${cd.date}:${cd.client || ""}`;
-    return <ReportSheet audience="client" key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={false} leftReadOnly
-      renderers={WEEKLY_RENDER} onChange={() => {}}
+    return <ReportSheet audience="client" key={`s:${cd.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={key} readOnly={iLocked} panesApart
+      renderers={WEEKLY_RENDER} onChange={internalChange} onSave={internalSave} ai={internalAi(doc)} onRedraft={internalRedraft(doc)}
       partner={{ doc: cd, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: cFiled,
-        match: (/** @type {string} */ id) => setClientDoc(matchFor(id)), onChange: setClientDoc, onSave: saveClientPage }}
-      ai={clientAi}
+        match: (/** @type {string} */ id) => { matchInternal([id]); }, onChange: setClientDoc, onSave: saveClientPage, dirty: () => crDirty.value, ai: clientAi, onRedraft: clientRedraft(cd) }}
       onEvent={ev => { if (ev.type === "reload") { if (ev.partner) reloadClient(); else reloadHub(); } else countRedraft(ev, "report"); }} />;
   }
   return <ReportSheet audience="internal" key={`i:${doc.date}`} {...common} doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={iLocked}
-    renderers={WEEKLY_RENDER} onChange={(/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; }}
-    onSave={async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; }}
-    ai={{ place: "report", project: () => doc.project, confidential: () => false }}
-    onRedraft={redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report")}
+    renderers={WEEKLY_RENDER} onChange={internalChange} onSave={internalSave}
+    ai={internalAi(doc)} onRedraft={internalRedraft(doc)}
     onEvent={ev => { if (ev.type === "reload") reloadHub(); else countRedraft(ev, "report"); }} />;
 }
 
@@ -162,6 +179,7 @@ export function ReportingHub() {
       {head}
       <div class={view === "internal" ? "wrsheet" : "crsheet wrsheet"}>{body}</div>
       {on ? <LeftOutDialog client={(crDoc.value && crDoc.value.client) || ""} onExport={doExport} /> : null}
+      {on ? <MatchHeldDialog /> : null}
       <ExportSave />
     </div>);
 }

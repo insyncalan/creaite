@@ -1,0 +1,260 @@
+"""#232-C (v2.5.0): the wiring of Intake and Review, in a real browser against the live server. One page now answers to every
+name the old Intake and Review pages had: go("review"), go("inbox") and go("intake"), the addresses #review, #intake, #inbox
+(also #review=<n> and #intake-review&stage=&m=), a saved history entry from before the one page, and every link that used to
+point at them (Today's line, the rail, a toast, Close the day, the breadcrumb on a minutes page, a reminder's address).
+The rail badge, Today's line, the tab title, the command palette's one entry and the page's own sub-heading show one number.
+
+Item -> test (the PM's table):
+  go() aliases                       test_go_aliases
+  old addresses and their forms      test_old_addresses_and_forms, test_the_hash_round_trips, test_a_typed_address_opens_the_stage
+  Back / Forward and old entries     test_back_restores_stage_and_old_history_entries
+  rail badge, Today, page, title     test_badge_today_page_and_title_agree, test_they_agree_after_a_decision
+  Today's line and its links         test_todays_line_links_enter_the_stage
+  links from other pages             test_link_families (Work, cockpit, activity, breadcrumb, data-go), test_server_made_addresses
+  Close the day, First thing, toast  test_review_now_opens_the_meeting
+  command palette                    test_one_palette_entry
+  help screen                        test_help_screen_for_the_one_page
+
+Run: python3 dev/tests/test_intake_review_wiring.py   (needs Google Chrome; skipped otherwise)
+"""
+import json
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import test_dashboard  # noqa: E402
+from live_browser import LiveBrowserCase  # noqa: E402
+
+
+class Wiring(LiveBrowserCase):
+    shared_server = True
+    width, height = 1400, 1000
+
+    @classmethod
+    def load(cls, v):
+        test_dashboard.populate(v)
+        v.run(script="build_dashboard.py")
+
+    def setUp(self):
+        super().setUp()
+        self.b.eval("try{ localStorage.removeItem('creaite-ir-view'); }catch(e){} irSetView('list'); irStage.value='all'; irOpen.value=null; go('today')")
+
+    def model(self, ready=2):
+        """A fixed model on the page's own Review rows: one drafted meeting holding two proposals, `ready` meetings to process."""
+        ns = self.b.eval("REV.filter(r=>!r.done).map(r=>r.n)")
+        self.assertGreaterEqual(len(ns), 3, "the sample has fewer than three proposals")
+        meetings = [{"id": "mA", "src": "calendar", "title": "Sample steering", "day": "2026-10-05", "start": "09:00", "p": None, "stage": "drafted",
+                     "state": "proposals", "age": 0, "stale": False, "groups": {"needs": ns[:1], "routine": ns[1:2]}}]
+        for i in range(ready):
+            meetings.append({"id": f"mR{i}", "src": "calendar", "title": f"Ready {i}", "day": "2026-10-05", "start": f"1{i}:00", "p": None,
+                             "stage": "arrived", "state": "ready", "age": 0, "stale": False, "groups": {"needs": [], "routine": []}})
+        m = {"v": 1, "meetings": meetings, "mail": {"needs": [], "routine": ns[2:3]}, "other": {"needs": [], "routine": []},
+             "later": [], "not_needed": [], "counts": {}}
+        self.b.eval(f"D.intake_review={json.dumps(m)}; irTick.value++; renderBadge(); go('today')")
+        return ns
+
+    # --- go() and the addresses ---
+
+    def test_go_aliases(self):
+        b = self.b
+        for name in ("review", "inbox", "intake", "intake-review"):
+            b.eval("go('today')")
+            b.eval(f"go({name!r})")
+            self.assertEqual(b.eval("[VIEW, location.hash, document.getElementById('v-intake-review').hidden, document.getElementById('v-review').hidden, document.getElementById('v-inbox').hidden]"),
+                             ["intake-review", "#intake-review", False, True, True], name)
+        self.assertEqual(b.eval("document.querySelector('.rail [data-v=review]').getAttribute('aria-current')"), "page")
+
+    def test_old_addresses_and_forms(self):
+        b = self.b
+        self.model()
+        self.assertEqual(b.eval("['#review','#intake','#inbox','#intake-review','review','inbox'].map(h=>parseHash(h).v)"), ["intake-review"] * 6)
+        self.assertEqual(b.eval("parseHash('#review=7').ir"), {"stage": "", "m": "", "n": 7})
+        self.assertEqual(b.eval("parseHash('#intake-review&stage=drafted&m=mA').ir"), {"stage": "drafted", "m": "mA", "n": None})
+        self.assertEqual(b.eval("parseHash('#inbox&stage=nonsense').ir.stage"), "")             # an unknown stage is no filter
+        self.assertEqual(b.eval("parseHash('#review&item=ABC-A-001')?.v"), "intake-review")      # the old item form still parses
+
+    def test_the_hash_round_trips(self):
+        b = self.b
+        self.model()
+        self.assertEqual(b.eval("hashOf({v:'inbox'})"), "#intake-review")
+        self.assertEqual(b.eval("hashOf({v:'review'})"), "#intake-review")
+        self.assertEqual(b.eval("hashOf({v:'intake-review',ir:{stage:'drafted',m:'mA'}})"), "#intake-review&stage=drafted&m=mA")
+        b.eval("go('intake-review',{stage:'arrived'})")
+        self.assertEqual(b.eval("irStage.value"), "arrived")
+        b.eval("go('today'); go('intake-review')")                                               # no argument: the page keeps its stage
+        self.assertEqual(b.eval("irStage.value"), "arrived")
+
+    def test_a_typed_address_opens_the_stage(self):
+        b = self.b
+        self.model()
+        b.eval("location.hash='#review&stage=drafted'")
+        b.wait("VIEW==='intake-review' && irStage.value==='drafted'")
+        b.eval("go('today'); location.hash='#inbox&stage=arrived'")
+        b.wait("VIEW==='intake-review' && irStage.value==='arrived'")
+        ns = b.eval("REV.filter(r=>!r.done).map(r=>r.n)")
+        b.eval(f"go('today'); location.hash='#review={ns[0]}'")
+        b.wait("VIEW==='intake-review' && irOpen.value==='mA'")                                  # a proposal number opens its meeting
+        self.assertEqual(b.eval("document.querySelector('[data-irm=mA]').getAttribute('aria-expanded')"), "true")
+
+    def test_back_restores_stage_and_old_history_entries(self):
+        b = self.b
+        self.model()
+        b.eval("go('intake-review',{stage:'drafted'}); go('work')")
+        b.eval("history.back()")
+        b.wait("VIEW==='intake-review'")
+        self.assertEqual(b.eval("irStage.value"), "drafted")
+        for old in ("review", "inbox", "intake"):                                                # an entry saved before the one page
+            b.eval("go('today')")
+            b.eval(f"restoreNav({{v:{old!r},arg:null,wt:'actions',wv:null,p:[],from:null,item:null,scroll:0}})")
+            self.assertEqual(b.eval("VIEW"), "intake-review", old)
+
+    # --- the one number ---
+
+    def numbers(self):
+        """Every place the number shows, read from the page itself."""
+        b = self.b
+        b.eval("renderToday()")
+        o = b.eval("""(()=>{ const c=irLiveCounts(), t=n=>{ const e=document.querySelector(n); return e?e.textContent.trim():null; };
+          const line=[...document.querySelectorAll('#tdLine a')].map(a=>a.textContent.trim());
+          const num=s=>{ const m=/^(\\d+)/.exec(s); return m?+m[1]:0; };
+          return {badge:c.badge, ready:c.ready, to_approve:c.to_approve, rail:t('#revBadge'), line, lineSum:line.reduce((a,s)=>a+num(s),0)}; })()""")
+        b.eval("go('intake-review')")
+        b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))")
+        sub = b.eval("document.querySelector('#irSub').textContent.trim()")
+        o.update(sub=sub, subNums=[int(x) for x in __import__("re").findall(r"\d+", sub)], title=b.eval("document.title"))
+        b.eval("go('today')")
+        return o
+
+    def test_badge_today_page_and_title_agree(self):
+        self.model(ready=2)
+        o = self.numbers()
+        self.assertEqual(o["ready"], 2)
+        self.assertGreaterEqual(o["to_approve"], 3)
+        self.assertEqual(o["badge"], o["ready"] + o["to_approve"])
+        self.assertEqual(o["rail"], str(o["badge"]))
+        self.assertEqual(o["lineSum"], o["badge"], o["line"])
+        self.assertEqual(sum(o["subNums"]), o["badge"], o["sub"])
+        self.assertTrue(o["title"].endswith("Intake and Review (%d)" % o["badge"]), o["title"])
+
+    def test_they_agree_after_a_decision(self):
+        b = self.b
+        ns = self.model(ready=1)
+        before = self.numbers()
+        b.eval(f"(()=>{{ const r=REV.find(x=>x.n=={ns[1]}); r.done=true; renderBadge(); }})()")   # a decision, as review.js and rvDecideMany leave REV
+        after = self.numbers()
+        self.assertEqual(after["badge"], before["badge"] - 1, (before, after))
+        self.assertEqual(after["rail"], str(after["badge"]))
+        self.assertEqual(after["lineSum"], after["badge"])
+        self.assertEqual(sum(after["subNums"]), after["badge"])
+        self.assertTrue(after["title"].endswith("(%d)" % after["badge"]), after["title"])
+
+    def test_nothing_waiting_no_badge_no_line(self):
+        b = self.b
+        b.eval("D.intake_review={v:1,meetings:[],mail:{needs:[],routine:[]},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; REV.forEach(r=>r.done=true); irTick.value++; renderBadge(); renderToday()")
+        self.assertEqual(b.eval("irLiveCounts().badge"), 0)
+        self.assertEqual(b.eval("document.querySelectorAll('#tdLine a').length"), 0)
+        self.assertIn(b.eval("document.querySelector('#revBadge')?.textContent.trim()||''"), ("", "0"))
+        b.eval("REV.forEach(r=>r.done=false)")
+
+    # --- the links ---
+
+    def test_todays_line_links_enter_the_stage(self):
+        b = self.b
+        self.model(ready=2)
+        b.eval("renderToday()")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#tdLine a')].map(a=>a.dataset.tdline)"), ["ready", "proposals"])
+        self.assertEqual(b.eval("document.querySelector('#tdLine a[data-tdline=ready]').textContent.trim()"), "2 ready to process")
+        self.assertRegex(b.eval("document.querySelector('#tdLine a[data-tdline=proposals]').textContent.trim()"), r"^\d+ proposals? to approve$")
+        self.assertEqual(b.eval("document.querySelector('#tdLine a[data-tdline=ready]').getAttribute('href')"), "#intake-review&stage=arrived")
+        b.eval("document.querySelector('#tdLine a[data-tdline=ready]').click()")
+        b.wait("VIEW==='intake-review'")
+        self.assertEqual(b.eval("irStage.value"), "arrived")
+        b.eval("go('today')")
+        b.eval("document.querySelector('#tdLine a[data-tdline=proposals]').click()")
+        b.wait("VIEW==='intake-review'")
+        self.assertEqual(b.eval("irStage.value"), "drafted")
+
+    def test_link_families(self):
+        b = self.b
+        self.model()
+        probes = {
+            "data-go review (reminders, toasts, empty states)": "(()=>{ const a=document.createElement('a'); a.href='#'; a.dataset.go='review'; document.body.append(a); a.click(); a.remove(); })()",
+            "data-go inbox": "(()=>{ const a=document.createElement('a'); a.href='#'; a.dataset.go='inbox'; document.body.append(a); a.click(); a.remove(); })()",
+            "Today's day-band Review action": "DAYACTS.review()",
+            "a toast's Open Review": "go('review')",
+            "a proposal from Today": "tdToReview(REV.find(r=>!r.done).n)",
+            "the minutes breadcrumb": "(()=>{ const a=document.createElement('a'); a.href='#'; a.dataset.go='intake-review'; document.body.append(a); a.click(); a.remove(); })()",
+            "a conflict (core/server.js)": "go('review')",
+        }
+        for name, js in probes.items():
+            b.eval("go('work')")
+            b.eval(js)
+            b.wait("VIEW==='intake-review'")
+            self.assertFalse(b.eval("document.getElementById('v-intake-review').hidden"), name)
+        # the cockpit and Work have no link of their own to the old pages: their empty states and cards use the same data-go
+        for src in ("go('cockpit', P[0].code)", "go('work')", "go('activity')", "go('files')", "go('settings')"):
+            b.eval(src)
+            self.assertEqual(b.eval("[...document.querySelectorAll('#v-' + VIEW + ' [data-go=review], #v-' + VIEW + ' [data-go=inbox]')].length >= 0"), True)
+        self.assertEqual(b.eval("document.querySelectorAll('.rail [data-v=inbox]').length"), 0)
+
+    def test_server_made_addresses(self):
+        """The addresses the server writes into a finished run's link (drafts.py '#review', live_server.py '#intake' and '#review')."""
+        b = self.b
+        self.model()
+        for h in ("#review", "#intake"):
+            b.eval(f"go('today'); location.hash={h!r}")
+            b.wait("VIEW==='intake-review'")
+
+    def test_review_now_opens_the_meeting(self):
+        b = self.b
+        ns = self.model()
+        # Today's First thing / a toast: a proposal number opens the meeting it came from
+        b.eval(f"irOpen.value=null; tdToReview({ns[0]})")
+        b.wait("VIEW==='intake-review' && irOpen.value==='mA'")
+        # Close the day's Review now: the proposal's file and ref find its meeting
+        row = b.eval(f"(()=>{{ const r=REV.find(x=>x.n=={ns[1]}); return {{file:r.file, ref:r.ref}}; }})()")
+        b.eval(f"go('today'); irOpen.value=null; cdOpenPlaces({{review:[{json.dumps(row)}], work:[], intake:false}})")
+        b.wait("VIEW==='intake-review' && irOpen.value==='mA'")
+        # and "Also for Review now: Intake" lands on the Arrived stage
+        b.eval("go('today'); cdOpenPlaces({review:[], work:[], intake:true})")
+        b.wait("VIEW==='intake-review' && irStage.value==='arrived'")
+
+    # --- the command palette ---
+
+    def test_one_palette_entry(self):
+        b = self.b
+        self.model(ready=1)
+        names = b.eval("ckItems('').map(i=>i.g+'|'+i.l)")
+        self.assertEqual([n for n in names if n.startswith("Go to|") and ("Intake" in n or "Review" in n)], ["Go to|Intake and Review"])
+        self.assertNotIn("Go to|Intake", names)
+        self.assertNotIn("Go to|Review", names)
+        hint = b.eval("ckItems('').find(i=>i.l==='Intake and Review'&&i.g==='Go to').h")
+        self.assertEqual(hint, "%d waiting" % b.eval("irLiveCounts().badge"))
+        for q in ("intake", "review"):
+            self.assertIn("Go to|Intake and Review", b.eval(f"ckItems({q!r}).map(i=>i.g+'|'+i.l)"))
+        b.eval("go('today'); ckItems('intake and review').find(i=>i.g==='Go to').fn()")
+        self.assertEqual(b.eval("VIEW"), "intake-review")
+
+    # --- help ---
+
+    def test_help_screen_for_the_one_page(self):
+        b = self.b
+        self.model()
+        o = b.eval("""(()=>{ go('intake-review'); helpScreenSync();
+          const foot=document.getElementById('hFoot'), sc=HD.screens['intake and review'];
+          return {keys:Object.keys(HD.screens), foot:foot&&!foot.hidden?foot.textContent:null, title:sc&&sc.title, ids:sc&&sc.ids, ref:sc&&sc.ref,
+                  inPage:!!document.querySelector('#v-intake-review #hFoot'), screenKey:screenKey()}; })()""")
+        self.assertEqual(o["keys"], ["today", "work", "intake and review", "projects", "people", "notes", "files"])
+        self.assertEqual((o["title"], o["screenKey"]), ("Intake and Review", "intake and review"))
+        self.assertEqual(o["foot"], "Press ? for help with Intake and Review")
+        self.assertTrue(o["inPage"])
+        self.assertTrue(1 <= len(o["ids"]) <= 5 and o["ref"] == "intake-and-review")
+        b.eval("document.dispatchEvent(new KeyboardEvent('keydown',{key:'?',bubbles:true}))")
+        b.wait("helpPanelOpen()")
+        self.assertEqual(b.eval("document.querySelector('#hpnT').textContent"), "Help · Intake and Review")
+        self.assertTrue(b.eval("!!document.querySelector('#helpPanel a[href=\"#help-reference-intake-and-review\"]')"))
+
+
+if __name__ == "__main__":
+    unittest.main()

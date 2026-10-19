@@ -6,6 +6,7 @@ import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
 import { saveExport } from "./exportSave.js";
 import { readLogos } from "./weekly.js";
+import { matchClientSection, secOf } from "../components/report/clientDoc.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{group: string, ref: string, title: string, why: string, kind: string}} LeftItem */
@@ -35,6 +36,8 @@ export const crLogos = signal(/** @type {{kind: string, path: string}[]} */ ([])
 export const crBusy = signal("");
 export const crDialog = signal(false);
 export const crDirty = signal(false);
+/** What the last Match internal held back: null, or {copied: heading[], held: [{id, heading, findings}], message}. The dialog reads it. */
+export const crHeld = signal(/** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], message: string}|null} */ (null));
 
 let crAsked = 0;
 
@@ -98,4 +101,47 @@ export async function exportClientReport(fmt, makePage) {
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
   const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
   return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt, page: page || undefined });
+}
+
+let matchChain = Promise.resolve();
+
+/** Match internal, behind the client gate (v2.5.0): each section's matched text is checked by the server (client_leak.findings through
+    /api/report/match-check, read only) BEFORE it is copied; a section whose matched text brings a finding the client report did not
+    already have is held (the client section stays as it was) and named in crHeld, the clean ones are copied. Nothing is copied when
+    the check cannot run. The client page therefore never holds unsaved internal words after Match internal. One at a time, so
+    Match internal for every section never races itself. @param {string[]|null} ids the sections, or null for every one */
+export function matchInternal(ids) {
+  matchChain = matchChain.then(() => matchInternalNow(ids)).catch(() => undefined);
+  return matchChain;
+}
+
+/** @param {string[]|null} ids */
+async function matchInternalNow(ids) {
+  const d0 = crDoc.value, i = crInternal.value;
+  if (!d0 || !i) return;
+  const heading = (/** @type {string} */ id) => String((secOf(i, id) || secOf(d0, id) || { heading: id }).heading || id);
+  const want = ids || d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
+  const cands = want.map(id => ({ id, doc: matchClientSection(d0, i, id) })).filter(c => c.doc !== d0);
+  if (!cands.length) return;
+  const failed = () => { crHeld.value = { copied: [], held: cands.map(c => ({ id: c.id, heading: heading(c.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." }; };
+  if (!viaServer()) { failed(); return; }
+  const r = await api("/api/report/match-check", { docs: [d0, ...cands.map(c => c.doc)] });
+  if (!r || !r.ok || !Array.isArray(r.findings) || r.findings.length !== cands.length + 1) { failed(); return; }
+  const codes = (/** @type {{code: string}[]} */ fs) => fs.reduce((m, f) => m.set(f.code, (m.get(f.code) || 0) + 1), /** @type {Map<string, number>} */ (new Map()));
+  const base = codes(r.findings[0]);
+  const fresh_of = (/** @type {{code: string, message: string}[]} */ fs) => { const seen = /** @type {Map<string, number>} */ (new Map()); return fs.filter(f => { const n = (seen.get(f.code) || 0) + 1; seen.set(f.code, n); return n > (base.get(f.code) || 0); }); };   // by stable code (and how many), never by sentence
+  let d = crDoc.value || d0;
+  const done = /** @type {string[]} */ ([]), held = /** @type {{id: string, heading: string, findings: string[]}[]} */ ([]);
+  cands.forEach((c, n) => {
+    const fresh = fresh_of(r.findings[n + 1]).map(f => f.message);
+    if (fresh.length) held.push({ id: c.id, heading: heading(c.id), findings: fresh });
+    else { d = matchClientSection(d, i, c.id); done.push(heading(c.id)); }
+  });
+  if (done.length) {                    // the clean sections together are checked once more: a finding the parts did not make alone holds all back
+    const last = await api("/api/report/match-check", { docs: [d] });
+    const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
+    if (!extra || extra.length) { failed(); return; }
+    crDoc.value = d; crDirty.value = true;
+  }
+  crHeld.value = held.length ? { copied: done, held, message: `Not matched: ${held.map(h => h.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
 }

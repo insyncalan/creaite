@@ -28,7 +28,7 @@ from split_dashboard import readable_page  # noqa: E402
 OLD_HEADINGS = [
     "Keyboard shortcuts", "What the icons mean", "Opening the dashboard", "Working with lists", "How saving works", "Updating creaite", "Today",
     "Project page", "Reports", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "Minutes view", "The report sheet", "The Reporting page", "AI drafts", "Review", "Intake", "Files",
-    "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
+    "Intake and Review", "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
     "Word documents and permissions in ask creaite", "Commands for Claude", "Open creaite as an app", "Live server and backups", "Troubleshooting"]
 GROUPS = ["Every day", "Meetings", "Keeping it right", "Reporting", "Admin"]
 
@@ -70,7 +70,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual([s["title"] for s in o["stages"]], ["Material arrives", "Claude drafts", "Review", "Apply", "See and report"])
         self.assertEqual(len(o["steps"]), 4)                                           # the first hour
         self.assertEqual(len(o["rhythm"]), 4)
-        self.assertEqual(o["views"], ["Today", "Intake", "Projects", "Reports", "Work", "People", "Review", "Files", "Settings"])
+        self.assertEqual(o["views"], ["Today", "Intake and Review", "Projects", "Reports", "Work", "People", "Files", "Settings"])
         self.assertGreaterEqual(len(o["say"]), 9)
         self.assertEqual(len(o["rules"]), 4)
         html = self.tab["start"]
@@ -84,7 +84,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(html.count('class="hp-rule"'), 4)
         self.assertEqual(html.count('class="hp-step"'), 4)
         self.assertEqual(html.count('class="hp-beat"'), 4)
-        self.assertEqual(html.count('class="hp-view"'), 9)
+        self.assertEqual(html.count('class="hp-view"'), 8)
         self.assertIn("<thead>", html)                                                 # the phrasebook has its heading row
         self.assertIn('<span class="hp-say">process new minutes</span>', html)         # phrases are chips
 
@@ -305,7 +305,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["nt"], len(bd.help_sections()["tasks"]))
         self.assertEqual(o["howdo"], ["Help: How do I…", True, "Help: Start the day", "Help: Fix a stopped server and other problems"])   # the tab, then every task
         self.assertEqual(o["help"][0], ["Help: Start here", "Help: How do I…", "Help: Reference"])
-        self.assertEqual(o["help"][1], 4 + o["nt"] + 36)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
+        self.assertEqual(o["help"][1], 4 + o["nt"] + 37)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates; BL-337: Reports; v2.1.0 Stark docs: three)
         self.assertGreater(o["help"][3], 0)
         self.assertLess(o["help"][3], o["help"][2])                                    # tasks come before reference sections
         self.assertTrue(o["hint"])

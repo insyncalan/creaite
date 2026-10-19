@@ -2,6 +2,7 @@
 /* ask.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0080-search-bl-07.js, 0085-ad-hoc-documents-and-permission-requests.js, 0086-bl-140-sprint-admin.js, 0087-bl-141-sprint-admin-what-ask-creaite-cha.js, 0088-bl-141-sprint-admin-the-one-card.js, 0089-bl-258-sprint-ask-flow.js, 0090-bl-194-sprint-ask-creaite-access-the-car.js, 0092-ask-creaite.js, 0093-bl-262-sprint-ask-flow.js, 0094-after-bl-262.js, 0095-bl-211-sprint-ui-audit.js, 0096-chat-and-sweep-markdown-in-the-chat-bl-1.js, 0097-bl-196-sprint-chat-text.js, 0098-bl-120-sprint-polish.js, 0100-chat-and-sweep-a-time-under-each-bubble.js, 0101-after-chat-and-sweep-times.js, 0102-bl-257-sprint-ask-flow.js, 0103-bl-262-sprint-ask-flow.js, 0104-after-bl-262.js, 0105-bl-139-sprint-final.js, 0106-after-bl-139.js, 0107-bl-259-sprint-ask-flow.js, 0108-after-bl-259.js, 0109-images-in-ask-creaite-bl-100.js, 0110-bl-201-sprint-chat-text.js, 0111-after-bl-201.js, 0112-bl-199-sprint-chat-text.js, 0113-after-bl-199.js, 0114-bl-145-fix-chat-box.js, 0117-after-bl-145.js, 0118-bl-148-sprint-ux.js, 0119-after-bl-148.js, 0120-command-palette.js, 0207-bl-205-sprint-insight.js, 0208-bl-206-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { irLiveCounts } from "./stores/intakeReview.js";   /* #232-C */
 import { closeHelpPanel } from "./helpscreen.js";
 import { openSpace } from "./components/reporting/ReportingSpace.jsx";
 import { needsMe, thisWeek } from "./stores/reporting.js";
@@ -365,7 +366,7 @@ export function greet(){ addEl("msg a",html`${GREET}`); }
 export function openChat(){ closeHelpPanel(true);   /* #158: the ? panel and ask creaite are never open together */
   if(!$("#chat").classList.contains("on")){ const f=document.activeElement, ok=f&&f!==document.body&&!$("#chat").contains(f);   /* BL-211 */
       CHATFROM=ok?{el:f,key:chatFromKey(f)}:null; }
-  $("#chat").classList.add("on"); rbDismiss();   /* #148: no scroll call on open: Chrome keeps the place a hidden panel was left at, the size observer below pins a follower to the end, and the jump button stays as it was */
+  $("#chat").classList.add("on"); rbDismiss(); askMarkClear();   /* #148: no scroll call on open: Chrome keeps the place a hidden panel was left at, the size observer below pins a follower to the end, and the jump button stays as it was */
   if(!$("#chLog").children.length&&!ATTACHED&&!shared.REATT){ if(shared.ASKCHAT&&viaServer()) loadChat(shared.ASKCHAT,true); else greet(); } setTimeout(()=>$("#chIn").focus(),40); }
 /* ===== end BL-262 ===== */
 /* BL-35: the panel's width is dragged from its left edge (← → by keyboard; double-click resets) and remembered in
@@ -664,11 +665,11 @@ export function rbGuess(q){ q=String(q||""); return /weekly report/i.test(q)?"Dr
   /refresh calendar/i.test(q)?"Refreshing the calendar":/^sweep/i.test(q)?"Sweeping mail and Teams":/prep/i.test(q)?"Making the prep page":/^process/i.test(q)?"Processing a meeting":""; }
 export function rbUnmark(){ if(shared.RBMARKED){ shared.RBMARKED=false; if(document.title.startsWith(RBMARK)) document.title=document.title.slice(RBMARK.length); } }
 export function rbStart(label){ if(RB.state==="running"){ if(label) RB.label=label; rbDraw(); return; }       /* a confirmed follow-up of the same run keeps its clock */
-  rbUnmark(); Object.assign(RB,{state:"running",t0:Date.now(),label:label||shared.RUNLABEL||"",took:""}); shared.RUNLABEL=""; clearInterval(RB.timer); RB.timer=setInterval(rbTick,1000); rbDraw(); }
+  askMarkClear(); rbUnmark(); Object.assign(RB,{state:"running",t0:Date.now(),label:label||shared.RUNLABEL||"",took:""}); shared.RUNLABEL=""; clearInterval(RB.timer); RB.timer=setInterval(rbTick,1000); rbDraw(); }
 export function rbStop(){ clearInterval(RB.timer); RB.timer=null; }
 export function rbEnd(state){ if(RB.state!=="running") return; rbStop(); RB.took=rbClock(Date.now()-RB.t0);
   if($("#chat").classList.contains("on")){ RB.state=""; rbDraw(); return; }                                   /* the chat showed it happen */
-  RB.state=state||"done"; rbDraw();
+  RB.state=state||"done"; rbDraw(); askMarkShow(RB.state);
   if(document.hidden){ if(!shared.RBMARKED){ shared.RBMARKED=true; document.title=RBMARK+document.title; }
     if(VIPD().notify===true&&"Notification" in window&&Notification.permission==="granted"){ try{ const n=new Notification(RBWORDS[RB.state],{body:RB.took?`${RB.state==="done"?"took":"after"} ${RB.took}`:"",tag:"creaite-run"}); n.onclick=()=>{ window.focus(); openChat(); n.close(); }; }catch(e){} } } }
 export function rbCancel(){ if(RB.state==="running"){ rbStop(); RB.state=""; rbDraw(); } }
@@ -676,6 +677,24 @@ export function rbDismiss(){ if(RB.state&&RB.state!=="running"){ RB.state=""; rb
 export function askWorking(on){ const b=$("#askBtn"); b.classList.toggle("working",on);
   if(on){ b.setAttribute("aria-label","ask creaite (working)"); b.title="ask creaite (working)"; } else { b.removeAttribute("aria-label"); b.removeAttribute("title"); } }   /* #130: the dot alone is not a name; the plain name returns when the run ends */
 export function askFinished(o){ rbEnd(o||"done"); }
+/* ===== #231 ===== a small "done" indication on the ask creaite button when a run ends with the panel closed (rbEnd calls askMarkShow
+   only then). Done and stopped hide by themselves after ASKDONE.ms (30 s; a test may shorten it); failed stays until the panel is
+   opened. Opening the panel (button, ⌘J, the palette), or the next run starting, clears it at once. The words go to #askLive, a polite
+   live region outside the button. It never touches the run: no stop, no restart. */
+export const ASKDONE={ms:30000,t:null}, ASKMARK={done:["Done","ask creaite has finished","ask creaite has finished. This clears in 30 seconds."],
+  stopped:["Stopped","ask creaite was stopped","The run was stopped. This clears in 30 seconds."],failed:["Failed","ask creaite failed","The run failed. Open ask creaite to see why."]},
+  ASKTICK=()=>{ const NS="http://www.w3.org/2000/svg", v=document.createElementNS(NS,"svg"), p=document.createElementNS(NS,"path");   /* built, not parsed: no HTML sink */
+    for(const [k,x] of Object.entries({viewBox:"0 0 24 24",fill:"none",stroke:"currentColor","stroke-width":"3","stroke-linecap":"round","stroke-linejoin":"round"})) v.setAttribute(k,x);
+    p.setAttribute("d","M5 12.5l4.5 4.5L19 7.5"); v.appendChild(p); return v; };
+export function askMarkSet(st,msg){ const b=$("#askBtn"), m=b.querySelector(".askmark"), l=b.querySelector(".asklab"), k=ASKMARK[st];
+  b.dataset.st=st; if(st==="done") m.replaceChildren(ASKTICK()); else m.textContent=st==="failed"?"!":"■"; l.textContent=k[0]; $("#askLive").textContent=msg==null?k[1]:msg;
+  b.style.setProperty("--life",ASKDONE.ms/1000+"s"); b.title=k[2]; }
+export function askMarkClear(){ clearTimeout(ASKDONE.t); ASKDONE.t=null; const b=$("#askBtn"); if(!b) return;
+  delete b.dataset.st; b.style.removeProperty("--life"); b.querySelector(".askmark").textContent=""; b.querySelector(".asklab").textContent=""; $("#askLive").textContent="";
+  if(Object.values(ASKMARK).some(k=>k[2]===b.title)) b.removeAttribute("title"); }   /* only our own title: a run starting has just set "ask creaite (working)" */
+export function askMarkShow(st){ if(!ASKMARK[st]) return; askMarkClear(); askMarkSet(st);
+  if(st!=="failed") ASKDONE.t=setTimeout(askMarkClear,ASKDONE.ms); }
+/* ===== end #231 ===== */
  
 /* the other runs: Generate and Make it executive, the Prep page and a search answer wrap their own functions */
 /* ===== end BL-139 ===== */
@@ -976,8 +995,8 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]")
 /* ======================= command palette ======================= */
 shared.CK=[]; shared.CKI=0;
 export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn,kw)=>{ if(!q||(l+" "+h+" "+(kw||"")).toLowerCase().includes(q)) out.push({g,l,h,fn}); };   /* kw: words that find it without showing (a project's code) */
-  const nNew=(D.inbox||[]).filter(f=>f.state==="new").length, nRep=needsMe().length;   /* BL-337 */
-  [["today","Today",""],["inbox","Intake",nNew?`${nNew} new`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["review","Review",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
+  const nNew=(D.inbox||[]).filter(f=>f.state==="new").length, nRep=needsMe().length, nIr=irLiveCounts().badge;   /* #232-C: one Go to entry, with the rail's number */   /* BL-337 */
+  [["today","Today",""],["intake-review","Intake and Review",nIr?`${nIr} waiting`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
@@ -985,8 +1004,8 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(q) P.forEach(p=>add("Reporting",`Reporting: ${p.name}`,"this week's reports",()=>openSpace(p.code),`weekly report ${p.code} client report ${p.code} reporting ${p.code}`));   /* BL-337: ⌘K reaches the reporting space */
   if(q) P.filter(p=>clientReportOn(p.code)).forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>openSpace(p.code,thisWeek(),"client"),`client report ${p.code}`));   /* #221: the hub's Client view (only for a project that has a client report); P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });
-  add("Actions","Add files to Intake","",()=>{ go("inbox"); $("#inboxFile").click(); });
-  if(nNew) add("Actions","Process new Intake files",`${nNew} new`,()=>{ go("inbox"); $("#inboxNew").click(); });
+  add("Actions","Add files to Intake and Review","",()=>{ go("intake-review"); $("#inboxFile").click(); });
+  if(nNew) add("Actions","Process new files",`${nNew} new`,()=>{ go("intake-review",{stage:"arrived"}); $("#inboxNew").click(); });
   if(shared.VIEW==="cockpit"&&shared.COCK){ const c=shared.COCK;   /* the project page you're on */
     add("Actions",`Generate current state: ${c}`,"",()=>openGen(c)); add("Actions",`Edit current state: ${c}`,"",()=>startCurEdit(c));
     add("Actions",`Add milestone: ${c}`,"",()=>openNewMilestone(c)); add("Actions",`Add image: ${c}`,"",()=>{ go("cockpit",c); startCurEdit(c); pickImage(); }); add("Actions",`Edit health: ${c}`,"",()=>openProject(c,"health")); }
@@ -994,15 +1013,15 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   THEMES.forEach(t=>add("Actions",`Theme: ${t.id}`,themeOf(S.palette)===t?"current":"",()=>setPalette(t.id)));
   add("Actions","Customise the rail","right-click the rail",()=>railPopOpen());   /* BL-191: the rail's control has no button of its own now */
   if(q.length>1){ P.forEach(p=>(p.ms||[]).filter(m=>m[3]).forEach(m=>add("Milestones",`${m[3]} · ${m[0]}`,m[1]?fd(m[1]):"",()=>openMilestone(m[3]))));
-    (D.inbox||[]).forEach(f=>add("Intake",f.name,"preview",()=>{ go("inbox"); previewInbox(f.path); }));
+    (D.inbox||[]).forEach(f=>add("Intake",f.name,"preview",()=>{ go("intake-review"); previewInbox(f.path); }));
     FILES.filter(f=>f.p!=="inbox").forEach(f=>add("Files",f.n,[fpName(f.p),f.f,f.sub].filter(Boolean).join(" › "),()=>openPath(f.path),f.p)); }   /* BL-101: the name shown, the code still finds it */
   if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ shared.WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ shared.WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ shared.WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
   const hk=helpCk(q), hfirst=/^(help|how)/.test(q.trim());   /* BL-84: "help" and "how do I…" list the tasks first */
   const sc=searchCkItems(), askRow=sc.filter(x=>String(x.l).startsWith("ask creaite:")), restSc=sc.filter(x=>!askRow.includes(x));   /* a question's ask row stays first, ahead of the Help rows */
   return [...askRow,...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...restSc]; })(q);
   if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
-  MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
-    if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("inbox"); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
+  MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake and Review: process meeting ${m.title}`;
+    if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("intake-review",{stage:"arrived"}); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
   { const c=ckParse(q); if(c){ const pre=[], ql=String(q||"").trim().toLowerCase();
     if(!(c.ask&&(ql.split(/\s+/).length<3||out.some(x=>String(x.l).toLowerCase().startsWith(ql))))){   /* "New action" is the palette's own entry, not a request */
     if(c.pick) c.pick.forEach(x=>{ const isP=c.what==="person"; pre.push({g:"Change · which one?",l:isP?x:`${x.id} · ${x.t}`,h:isP?"person":pName(x.p),change:c,fn:()=>{ if(isP){ shared.CKPICK.owner=x; shared.CKPICK.ofor=c.phrase; } else { shared.CKPICK.target={k:x.k,id:x.id}; shared.CKPICK.for=c.phrase; } ckRefresh(); },keep:true}); });
@@ -1142,7 +1161,7 @@ export async function ckStage(c,thenReview){ if(c.ask){ ckAsk($("#cmdkIn").value
     ok=await pkCommit(k,c.id,f,c.label,String(x[f0]??""),String(f[f0]??"")); }
   if(!ok) return;
   snack(`Staged: ${ckSummary(c)}. Nothing reaches the tracker until you apply`,()=>pkUndoLast());
-  if(thenReview) go("review"); }
+  if(thenReview) go("intake-review"); }
 export async function ckStageNew(c){ const k=c.k, f={...c.new}; if(f.o&&f.o!=="TBC"){ const o=await ownerFinal(f.o); if(o===null) return false; f.o=o; } if(f.by){ const o=await ownerFinal(f.by); if(o===null) return false; f.by=o; }
   const err=validate(k,f,true,null); if(err){ snack(oneLine(err)); return false; } norm(k,f); const {values}=newItemOf(k,f); if(!await needVault()) return false;
   const meta={k,id:"nw"+Date.now().toString(36),patch:{},prev:{},label:"Created",from:"",to:f.t,at:nowStamp(),note:"⌘K",type:"act",isNew:true,title:f.t,p:f.p,known:pkArr(k).map(r=>r.id),ms:Date.now()};

@@ -3421,7 +3421,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-root.rpt-slim>.sheet-bar .sheet-status[data-bad]{display:inline;white-space:nowrap}   /* "Unsaved changes", "Not saved." stay visible and announced */
 .sheet-root.rpt-slim>.sheet-bar{position:relative}
 .sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
-.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.rb-x){display:none}
 @media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
 /* #207: the top bar hidden by a scroll on any other page: out of the layout at once (no slide); the page grows upward (core/topbar.js) */
 .main.tb-off>.bar{height:0;min-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;overflow:hidden;visibility:hidden;flex:none;transition:none}
@@ -3645,6 +3645,16 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:36px;width:auto;max-width:180px;object-fit:contain;display:block;background:none;border:0;box-shadow:none}   /* #221: drawn straight on the page, no box, at most 36 x 180 (Round 9) */
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+/* #233 a: the logo's place in the header is a button (edit mode only): a dashed Add tile, or the logo itself with a dashed outline on hover and focus */
+.wr-logos:has(.wr-logo-slot){gap:6px} .wr-logos:has(.wr-logo-slot) .wr-lsep{display:none} .wr-logos:has(.wr-logo-slot) .wr-logo{gap:0}
+.wr-logo-slot{position:relative;display:inline-flex;align-items:center}
+.wr-logo-add{display:inline-flex;gap:4px;align-items:center;height:26px;padding:0 6px;white-space:nowrap;border:1px dashed var(--rp-rule);border-radius:var(--r-sm);color:var(--rp-grey);background:var(--rp-paper);font:inherit;font-size:var(--fs-2xs);cursor:pointer}
+.wr-logo-add b{font-weight:700;font-size:var(--fs-sm);color:var(--rp-ink)}
+.wr-logo-add:hover{background:var(--rp-soft);color:var(--rp-ink)}
+.wr-logo-btn{display:inline-flex;border:0;background:none;padding:0;cursor:pointer;border-radius:var(--r-sm)}
+.wr-logo-btn:hover{outline:1px dashed var(--rp-rule);outline-offset:4px}
+.wr-logo-add:focus-visible,.wr-logo-btn:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:3px}
+.wr-logo-ask{position:absolute;top:100%;right:0;z-index:var(--z-pop-over,30);margin-top:6px;display:flex;gap:8px;align-items:center;white-space:nowrap;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md,8px);box-shadow:var(--shadow-pop);padding:8px 10px}
 /* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
 #crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
 .hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - var(--cr-top,56px) - 16px);overflow:auto}
@@ -3807,6 +3817,10 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .hubpl .linkbtn{flex:0 1 auto;min-width:0;text-align:left}
 .hubstat{margin-left:auto;font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:var(--lh-22);background:var(--surface);white-space:nowrap}
 .hubedit{font-size:var(--fs-xs)}
+/* #233 b: the label row sits inside the report's grey pane, at its top, as wide as the page(s) below it (Pane sets the width) */
+.sheet-head{margin:0 auto 8px;max-width:100%;box-sizing:border-box}
+.hubrow.inpane{padding:0;border-bottom:0;background:none;min-height:0;align-items:flex-start;flex-wrap:nowrap;gap:16px}
+.hubrow.inpane>.hubpl{flex:1 1 0}
 .newmenu.hubm button svg.i{color:var(--muted)}   /* the Export and Approve menus: grey outline icons, as the locked mockup draws them */
 .hubrow .crnote{flex:1 1 100%}
 /* the cog and the panel it opens (H3 fills the slot) */
@@ -3942,7 +3956,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkrow .tb .t{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tBrief .wkrow .wkwho{display:block;font-size:var(--fs-xs);line-height:var(--lh-16);color:var(--muted)}
 #tBrief .wkrow .wkwho a.s{color:var(--accent);text-decoration:underline;text-underline-offset:2px;display:inline-block;padding:4px 0;margin:-4px 0}   /* a 24px target */
-.wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} .wkdot.u{background:var(--bad);opacity:1} .wkdot.h{background:var(--warn);opacity:1}
+#tBrief .wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} #tBrief .wkdot.u{background:var(--bad);opacity:1} #tBrief .wkdot.h{background:var(--warn);opacity:1}
 .wkic{flex:none;width:20px;display:inline-grid;place-items:center;color:var(--muted)} .wkic .i{width:14px;height:14px}
 .wktm{flex:none;width:44px;font:500 var(--fs-xs)/16px var(--mono,var(--font));color:var(--muted)}
 .wkwhy{flex:none;align-self:center;font-size:var(--fs-xs);line-height:var(--lh-16);color:var(--muted);white-space:nowrap;border:0;padding:0;margin:0;border-radius:0}
@@ -3953,7 +3967,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkl .tacts{opacity:0;transition:opacity var(--d1);margin-left:0;align-self:center}
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
-@media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
+@media (forced-colors:active){ #tBrief .wkdot{forced-color-adjust:none;background:CanvasText} #tBrief .wkdot.u,#tBrief .wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
 /* #111 piece B: the Prep peek (the title popup's content, and the Week ahead chip's) */
 .prpeek .pkb{margin-top:8px} .prpeek .pkl{font:600 var(--fs-xs)/1.2 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
 .prpeek .pkt{color:var(--ink)} .prpeek .pkul{margin:0;padding-left:18px} .prpeek .pkul li{margin:1px 0}
@@ -4049,6 +4063,26 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* #213: Today's Portfolio table, the Evidence text follows its resizable column: it wraps to the column's width, never a fixed length */
 #pfTbl .ev{white-space:normal;overflow-wrap:anywhere}
+
+/* #228: the full-page project settings (components/project/ProjectSettings.jsx) */
+#v-psettings .setctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#v-psettings .srow[hidden],#v-psettings tr[hidden],#v-psettings .card[hidden],#v-psettings .setnone[hidden]{display:none}
+#v-psettings .pstbl{width:100%} #v-psettings .pstbl td,#v-psettings .pstbl th{padding:8px 12px;text-align:left}
+#v-psettings .pstbl td.mgract{text-align:right}
+#v-psettings .pschip{display:inline-flex;align-items:center;min-height:var(--ctl-h-sm);padding:0 10px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);font-size:var(--fs-xs)}
+#v-psettings .psnote{font-size:var(--fs-xs);color:var(--muted)}
+#v-psettings .psfoot{margin:10px 12px}
+#v-psettings .psadd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings .psadd input,#v-psettings .psedit,#v-psettings input#psName,#v-psettings input#psClient{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:var(--ctl-fs)}
+#v-psettings .psmsg{display:block;color:var(--bad,#b00020);font-size:var(--fs-xs)}
+#v-psettings .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings .pslogo{display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+#v-psettings .pslogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+#v-psettings .pslogo[data-state=empty] .mark{background:transparent;border:1px dashed var(--line)}
+#v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
+#v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
+.pfname+.pset{margin-left:6px;vertical-align:middle}
 /* ===== #232 Intake and Review, one page (v2.5.0; components/intakeReview/). From the locked mockup (18-10-2026b): the app's
    tokens only, no new colours, so light, dark and both palettes follow. Scoped to #v-intake-review. ===== */
 #v-intake-review .icpipe{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
@@ -4062,7 +4096,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
 #v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
-#v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
+#v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:var(--fs-md);font-weight:600}
 #v-intake-review tr.icopen td{background:var(--accent-soft)!important;border-top:2px solid var(--accent)}
 #v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
@@ -4089,3 +4123,24 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
 #v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
 #v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
+/* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
+   data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
+   failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */
+#askBtn[data-st]{overflow:visible} #askBtn[data-st]::before{display:none}
+.askmark{position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:50%;display:none;place-items:center;color:var(--surface);font:700 var(--fs-2xs)/1 var(--font);box-shadow:0 0 0 2px var(--surface)}
+.askmark svg{width:11px;height:11px}
+#askBtn[data-st] .askmark{display:grid}
+#askBtn[data-st=done] .askmark{background:var(--ok)} #askBtn[data-st=stopped] .askmark{background:var(--muted)} #askBtn[data-st=failed] .askmark{background:var(--bad)}
+.asklife{position:absolute;left:8px;right:8px;bottom:-1px;height:2px;border-radius:var(--r-xs);background:var(--ok);transform-origin:left;display:none}
+#askBtn[data-st=done] .asklife,#askBtn[data-st=stopped] .asklife{display:block;animation:asklife var(--life,30s) linear forwards}
+#askBtn[data-st=stopped] .asklife{background:var(--muted)}
+@keyframes asklife{to{transform:scaleX(0)}}
+.asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
+#askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
+:root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+/* #232-C: the longer name still fits beside the icon and its count at the Medium and Large icon sizes (they take 4 and 8px more of the 188px sidebar) */
+.railsz-medium .rail:not(.collapsed) [data-v=review] .rl{letter-spacing:-.035em}
+.railsz-large .rail:not(.collapsed) [data-v=review] .rl{letter-spacing:-.065em}
+/* #232-C: collapsed with labels, the 76px sidebar names the entry in short ("In & Review"); the full name stays in the button text and its name */
+.rail.labelled button.nv .rl[data-short]{font-size:0}
+.rail.labelled button.nv .rl[data-short]::after{content:attr(data-short);font-size:11px}

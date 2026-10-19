@@ -59,6 +59,12 @@ class Hub(LiveBrowserCase):
         self.b.eval(hash_)
         self.b.wait("document.querySelector('#v-reporting .page')", 25)
         self.b.pump(0.3)
+        # a data refresh (the page re-reading the server) replaces the projects and puts the saved setting back: set it again until it holds
+        for _ in range(4):
+            if self.b.eval("P.find(p=>p.code==='ABC').cr") == client_on:
+                break
+            self.b.eval(f"(()=>{{ P.find(p=>p.code==='ABC').cr={json.dumps(client_on)}; crTick.value++; }})()")
+            self.b.pump(0.4)
 
     def start_at(self, js, ready):
         """Open the page at another screen (not the hub): reload, run `js`, wait for `ready`."""
@@ -136,13 +142,57 @@ class SideBySide(Hub):
         self.b.click("#hubSeg [data-hv='side']")
         self.b.wait("document.querySelectorAll('#v-reporting .page').length==2 && document.querySelector('[data-crmatchall]')", 20)
         self.b.pump(0.4)
-        r = self.q("""(()=>{const row=document.querySelector('#v-reporting .hubrow'), W=document.documentElement.clientWidth;
+        r = self.q("""(()=>{const row=document.querySelector('#v-reporting .hubrow.inpane'), W=document.documentElement.clientWidth;
           const els=[...row.querySelectorAll('.hubpl *')].filter(e=>e.getClientRects().length), sub=row.querySelector('.hubpl[data-k=client] .sub');
           return {sw:row.scrollWidth, cw:row.clientWidth, out:els.filter(e=>e.getBoundingClientRect().right>W+0.5).map(e=>e.className||e.tagName),
             subw: sub?sub.getBoundingClientRect().width:-1}})()""")
         self.assertLessEqual(r["sw"], r["cw"], r)
         self.assertEqual(r["out"], [], r)
         self.assertGreater(r["subw"], 0, "the client name keeps some width")
+
+
+class PaneLabels(Hub):
+    """#233 b (Cap's difference #6, the mockup's layout): each report sits in a grey pane and its label row (name, status label,
+    Match internal, Refresh) is inside that pane, at its top, not in a strip above the panes."""
+
+    PROBE = """(()=>{const out=[]; for(const row of document.querySelectorAll('#v-reporting .hubrow.inpane')){
+        const pane=row.closest('.sheet-scroll'), page=pane&&pane.querySelector('.page'); if(!pane) { out.push({orphan:true}); continue; }
+        const r=row.getBoundingClientRect(), p=pane.getBoundingClientRect(), g=page.getBoundingClientRect(), cs=getComputedStyle(pane);
+        out.push({inside: r.left>=p.left-0.5 && r.right<=p.right+0.5 && r.top>=p.top-0.5 && r.bottom<=p.bottom+0.5,
+          above: r.bottom<=g.top+0.5, topGap: Math.round(r.top-p.top), sw: pane.scrollWidth, cw: pane.clientWidth,
+          rowOver: row.scrollWidth>row.clientWidth, bg: cs.backgroundColor, labels: row.querySelectorAll('.hubpl').length,
+          stats: [...row.querySelectorAll('.hubstat')].map(x=>x.textContent.trim()).length,
+          sunk: (()=>{const d=document.createElement('i'); d.style.background='var(--sunk)'; document.body.appendChild(d); const c=getComputedStyle(d).backgroundColor; d.remove(); return c;})()});}
+      return {rows: out, strip: !!document.querySelector('#v-reporting .sheet-root > .hubrow:not(.hubnote)')}})()"""
+
+    def test_the_label_row_is_inside_the_grey_pane_at_1400_and_900(self):
+        for w, h in WIDTHS:
+            for view, rows, labels in (("internal", 1, 1), ("side", 1, 2)):
+                with self.subTest(width=w, view=view):
+                    self.open_hub(w, h)
+                    self.b.click(f"#hubSeg [data-hv='{view}']")
+                    self.b.wait(f"document.querySelectorAll('#v-reporting .page').length=={2 if view == 'side' else 1}", 20)
+                    self.b.pump(0.4)
+                    r = self.q(self.PROBE)
+                    self.assertFalse(r["strip"], "no label strip above the panes")
+                    self.assertEqual(len(r["rows"]), rows, r)
+                    for x in r["rows"]:
+                        self.assertNotIn("orphan", x, "the label row is a descendant of the pane (.sheet-scroll)")
+                        self.assertTrue(x["inside"], f"the label row lies inside the pane box: {x}")
+                        self.assertTrue(x["above"], x)
+                        self.assertLessEqual(x["topGap"], 40, "at the top of the pane")
+                        self.assertEqual(x["labels"], labels, x)
+                        self.assertEqual(x["bg"], x["sunk"], "the pane is grey (the sunk token)")
+                        self.assertLessEqual(x["sw"], x["cw"], f"no horizontal overflow of the pane at {w}: {x}")
+                        self.assertFalse(x["rowOver"], x)
+
+    def test_the_label_row_scrolls_with_the_pane(self):
+        self.open_hub()
+        top = self.q("document.querySelector('#v-reporting .hubrow.inpane').getBoundingClientRect().top")
+        self.q("document.querySelector('#v-reporting .sheet-scroll').scrollTop=300")
+        self.b.pump(0.3)
+        after = self.q("document.querySelector('#v-reporting .hubrow.inpane').getBoundingClientRect().top")
+        self.assertLess(after, top - 100, "the row is inside the scrolling pane, so it moves with the report")
 
 
 class WeekMenu(Hub):
@@ -164,6 +214,27 @@ class WeekMenu(Hub):
         self.b.wait("location.hash.includes('w=2026-09-25')", 10)
         self.b.wait("/25-09-2026/.test(document.querySelector('#hubWeek').innerText)", 20)
 
+    def test_the_week_buttons_dot_is_fully_opaque_and_coloured(self):
+        """Today's .wkdot rules (45% opacity, u/h colours) must not reach the hub's dot in the week button."""
+        self.open_hub()
+        d = self.q("""(()=>{const e=document.querySelector('#hubWeek i.wkdot'),c=getComputedStyle(e);return {op:c.opacity,bg:c.backgroundColor,cls:e.className}})()""")
+        self.assertEqual(d["op"], "1", d)
+        self.assertNotEqual(d["bg"], "rgba(0, 0, 0, 0)", d)
+
+    def test_each_weeks_dot_takes_its_health_from_the_projects_six_week_trail(self):
+        """A week the open report does not hold still gets its colour from the project's health trail (green, amber, red), not a neutral dot."""
+        self.open_hub()
+        self.q("""(()=>{const p=P.find(p=>p.code==='ABC'); p.trail=['ok','bad','warn','ok','warn','bad'];
+          p.trailend=['2026-09-04','2026-09-11','2026-09-18','2026-09-25','2026-10-02','2026-10-09']; })()""")
+        self.q("go('reporting','ABC')")                         # drawn again with the trail in place
+        self.b.pump(0.8)
+        self.b.click("#hubWeek")
+        self.b.wait("document.querySelector('.wkpop')")
+        got = self.q("Object.fromEntries([...document.querySelectorAll('.wkpop .wkrow')].map(r=>[r.dataset.w, r.querySelector('i').className]))")
+        self.assertEqual(got.get("2026-10-02"), "a", got)
+        self.assertEqual(got.get("2026-09-25"), "g", got)
+        self.assertEqual(got.get("2026-09-18"), "a", got)
+
     def test_a_date_in_the_box_jumps_to_that_weeks_friday(self):
         self.open_hub()
         self.b.click("#hubWeek")
@@ -171,6 +242,38 @@ class WeekMenu(Hub):
         self.q("""(()=>{const i=document.querySelector('#wkJump'); i.value='2026-09-30'; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true}));
           i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));})()""")
         self.b.wait("location.hash.includes('w=2026-10-02')", 10)       # the Friday ending the week that holds 30-09
+
+
+class WeekMenuTrail(Hub):
+    """The week dots on the real built page: the demo vault gets approved health updates for two weeks (no patching of the page's data)."""
+
+    @classmethod
+    def load(cls, v):
+        R.populate(v)
+        v.propose("trail", [R.new("updates", 90, week_ending="2026-10-02", project="ABC", health="At risk", summary="Data access late"),
+                            R.new("updates", 91, week_ending="2026-09-25", project="ABC", health="On track", summary="Steady")])
+        v.run("apply")
+
+    def test_week_dots_follow_the_real_built_trail_with_no_patching(self):
+        """On the real built page (the demo vault): the trail carries a Friday for every week, a week with an update gets its colour, a week without one or
+        outside the six weeks stays neutral. (The server side is test_dashboard's trail test; this one is the page's own data into the hub.)"""
+        self.open_hub()
+        d = self.q("(()=>{const p=P.find(p=>p.code==='ABC'); return {t:p.trail, e:p.trailend}})()")
+        self.assertEqual((len(d["t"]), len(d["e"])), (6, 6), d)
+        self.assertEqual([x for x in d["t"] if x], ["ok", "warn"], d)            # the two weeks given above, oldest first
+        self.b.click("#hubWeek")
+        self.b.wait("document.querySelector('.wkpop')")
+        got = self.q("Object.fromEntries([...document.querySelectorAll('.wkpop .wkrow')].map(r=>[r.dataset.w, r.querySelector('i').className]))")
+        cur = self.q("document.querySelector('.wkpop .wkrow[aria-current=true]').dataset.w")
+        colour = {"ok": "g", "warn": "a", "bad": "r"}
+        by_trail = dict(zip(d["e"], d["t"]))
+        for w, cls in got.items():
+            if w == cur:
+                continue                                   # the open report's own flag decides its week
+            self.assertEqual(cls, colour.get(by_trail.get(w, ""), "n"), (w, by_trail.get(w), got))
+        self.assertTrue(any(got[w] in ("g", "a", "r") for w in got if w != cur and by_trail.get(w)),
+                        "at least one other week is coloured from the trail")
+
 
 
 class Toolbar(Hub):

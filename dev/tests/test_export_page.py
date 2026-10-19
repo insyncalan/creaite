@@ -8,6 +8,7 @@ file, whose own tests are test_report_exports.py. Acceptance check 8 (client) an
 import base64
 import json
 import re
+import struct
 import sys
 import unittest
 from pathlib import Path
@@ -267,7 +268,9 @@ class LeakPass2(Base):
         for css in (".page{background:url(data:text/html;base64,PHA+)}", ".page{background:url(data:image/svg+xml;base64,@@@)}",
                     ".page{background:url(data:application/x;base64,AAAA)}"):
             self.assertIsNotNone(self.build(path, page(css=css))[1], css)
-        self.assertIsNone(self.build(path, page(css=".page{background:url(data:image/png;base64,iVBORw0KGgo=)}"))[1])
+        png = b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + bytes(13) + b"\0\0\0\0" + b"\0\0\0\0IEND\0\0\0\0"
+        self.assertIsNone(self.build(path, page(css=".page{background:url(data:image/png;base64," + base64.b64encode(png).decode() + ")}"))[1])
+        self.assertIsNotNone(self.build(path, page(css=".page{background:url(data:image/png;base64,iVBORw0KGgo=)}"))[1])    # can't be checked
 
     def test_an_internal_file_keeps_a_css_svg_with_nothing_hidden_in_it(self):
         import base64
@@ -336,6 +339,137 @@ class PictureMetadata(LeakPass2):
     def test_a_client_file_refuses_a_css_picture_that_still_carries_metadata(self):
         css = f".page{{background:url({self.tagged()})}}"
         self.assertIsNotNone(self.build(self.client(), page(css=css))[1])
+
+
+class Leak3(LeakPass2):
+    """v241 (Team Cap's 00:05 verdict): image-set, spaced and escaped addresses in client CSS, the CSP, invisible blanks, picture tails."""
+    SVG = '<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="9">Walrus budget cut</text></svg>'
+
+    def b64(self):
+        return base64.b64encode(self.SVG.encode()).decode()
+
+    def refused_or_dropped(self, pg):
+        for kind, path in self.both():
+            out, why = self.build(path, pg)
+            leaked = out is not None and (self.b64()[10:50] in out or "beacon.example" in out)
+            self.assertFalse(leaked, f"{kind}: kept")
+
+    def test_image_set_with_hidden_words_or_an_outside_address_is_never_kept(self):
+        sp = "data: image/svg+xml;base64," + self.b64()
+        tab = "data:ima\\9 ge/svg+xml;base64," + self.b64()
+        for css in (f'.page{{background-image:image-set("{sp}" 1x)}}', f'.page{{background-image:image-set("{tab}" 1x)}}',
+                    f'.page{{background-image:-webkit-image-set("{sp}" 1x)}}', '.page{background-image:image-set("https://beacon.example/a.png" 1x)}',
+                    '.page{background:cross-fade(url(#a),url(#b),50%)}', '.page{background:src("https://beacon.example/a.png")}'):
+            self.refused_or_dropped(page(css=css))
+        self.refused_or_dropped(page(self.wrap(f"<p style='background-image:image-set(\"{sp}\" 1x)'>x</p>")))
+
+    def test_escaped_url_and_spaced_or_tab_escaped_svg_addresses_are_refused(self):
+        sp = "data: image/svg+xml;base64," + self.b64()
+        tab = "data:ima\\9 ge/svg+xml;base64," + self.b64()
+        for css in ('.page{background:u\\72l(https://beacon.example/a.png)}', f'.page{{background:url("{tab}")}}', f'.page{{background:url("{sp}")}}',
+                    '.page{background:\\75rl("https://beacon.example/a.png")}'):
+            self.refused_or_dropped(page(css=css))
+            for kind, path in self.both():
+                self.assertIsNotNone(self.build(path, page(css=css))[1], f"{kind}: {css}")
+
+    def test_the_exported_page_carries_a_content_security_policy(self):
+        out, why = self.build(self.saved(), page())
+        self.assertIsNone(why)
+        self.assertIn("Content-Security-Policy", out)
+        self.assertIn("default-src 'none'; img-src data:; style-src 'unsafe-inline'", out)
+
+    def test_blank_characters_are_invisible_to_fold(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import export_page
+        for ch in ("\u17b4", "\u2800"):
+            self.assertEqual(export_page.fold("Wal" + ch + "rus"), "walrus", hex(ord(ch)))
+
+    def test_a_png_chunk_past_the_end_and_jpeg_bytes_after_the_end_are_dropped(self):
+        import struct
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import docx_tools
+        needle = b"Walrus budget cut"
+        png = (b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + bytes(13) + b"\0\0\0\0" + struct.pack(">I", 500) + b"tEXt" + needle)
+        with self.assertRaises(docx_tools.PictureRefused):        # v2.5.0: fails closed, the picture is dropped
+            docx_tools.strip_image_metadata(png)
+
+        def seg(marker, body):
+            return bytes([0xFF, marker]) + struct.pack(">H", len(body) + 2) + body
+        jpg = (b"\xff\xd8" + seg(0xC0, b"\x08\x00\x14\x00\x28\x01\x01\x11\x00") + seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x12\x34\xff\xd9"
+               + needle + seg(0xFE, needle))
+        out = docx_tools.strip_image_metadata(jpg)
+        self.assertNotIn(needle, out)
+        self.assertTrue(out.endswith(b"\x12\x34\xff\xd9"))
+        prog = (b"\xff\xd8" + seg(0xC2, b"\x08\x00\x14\x00\x28\x01\x01\x11\x00") + seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x12\xff\x00\x34"
+                + seg(0xFE, needle) + seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x56\xff\xd9")
+        out = docx_tools.strip_image_metadata(prog)
+        self.assertNotIn(needle, out)
+        self.assertEqual(out.count(b"\xff\xda"), 2)
+
+
+class Leak4(LeakPass2):
+    """v2.5.0 (Team Cap's v2.4.1 verdict): an unclosed url(, malformed JPEGs, GIF and WebP pictures."""
+    NEEDLE = b"Walrus budget cut"
+
+    def both_out(self, pg):
+        return [(k,) + tuple(self.build(p, pg)) for k, p in self.both()]
+
+    def test_an_unclosed_url_or_string_or_bracket_is_refused(self):
+        for css in (".page{color:#123}\n.x{background:url(https://beacon.example/a.png", ".x{background:URL(https://beacon.example/a.png",
+                    '.x{background:url("data:image/png;base64,AAAA', ".x{content:'abc}", ".x{width:calc(1px + (2px)}",
+                    ".x{background:u\\72l(https://beacon.example/a.png"):
+            for kind, _out, why in self.both_out(page(css=css)):
+                self.assertIsNotNone(why, f"{kind}: {css}")
+        for kind, _out, why in self.both_out(page(css=".x{background:url(#a);content:'a(b'}")):
+            self.assertIsNone(why, kind)
+
+    def seg(self, marker, body):
+        return bytes([0xFF, marker]) + struct.pack(">H", len(body) + 2) + body
+
+    def malformed_jpegs(self):
+        sof = self.seg(0xC0, b"\x08\x00\x14\x00\x28\x01\x01\x11\x00")
+        sos = self.seg(0xDA, b"\x01\x01\x00\x00\x3f\x00")
+        n = self.NEEDLE
+        return {"stray byte": b"\xff\xd8" + sof + b"\x41" + self.seg(0xFE, n) + sos + b"\x12\xff\xd9",
+                "no EOI": b"\xff\xd8" + sof + self.seg(0xFE, n) + sos + b"\x12\x34",
+                "length past end": b"\xff\xd8" + sof + b"\xff\xfe\x7f\xff" + n,
+                "adobe payload": b"\xff\xd8" + sof + self.seg(0xEE, b"Adobe\x00\x64\x00\x00\x00\x00\x00" + n) + sos + b"\x12\xff\xd9"}
+
+    def test_a_malformed_jpeg_is_refused_and_an_adobe_payload_never_carries_words(self):
+        import docx_tools
+        for name, jpg in self.malformed_jpegs().items():
+            if name == "adobe payload":      # well formed, but the oversized APP14 segment is dropped
+                self.assertNotIn(self.NEEDLE, docx_tools.strip_image_metadata(jpg))
+                continue
+            with self.assertRaises(docx_tools.PictureRefused, msg=name):
+                docx_tools.strip_image_metadata(jpg)
+        good = (b"\xff\xd8" + self.seg(0xEE, b"Adobe\x00\x64\x00\x00\x00\x00\x01") + self.seg(0xC0, b"\x08\x00\x14\x00\x28\x01\x01\x11\x00")
+                + self.seg(0xDA, b"\x01\x01\x00\x00\x3f\x00") + b"\x12\xff\xd9")
+        self.assertEqual(docx_tools.strip_image_metadata(good), good)
+        with self.assertRaises(docx_tools.PictureRefused):
+            docx_tools.strip_image_metadata(b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 500) + b"tEXt" + self.NEEDLE)
+        with self.assertRaises(docx_tools.PictureRefused):
+            docx_tools.strip_image_metadata(b"not a picture " + self.NEEDLE)
+
+    def test_a_malformed_jpeg_picture_is_dropped_from_the_page(self):
+        for name, jpg in self.malformed_jpegs().items():
+            if name == "adobe payload":
+                continue
+            uri = "data:image/jpeg;base64," + base64.b64encode(jpg).decode()
+            for kind, out, _why in self.both_out(page(self.wrap(f'<p>x</p><img src="{uri}" alt="a">'))):
+                self.assertFalse(out is not None and "base64,/9j" in out, f"{kind}: {name}")
+
+    def test_gif_and_webp_pictures_are_dropped_from_client_files_and_refused_in_client_css(self):
+        gif = b"GIF89a\x01\x00\x01\x00\x00\x00\x00" + b"\x21\xfe" + bytes([len(self.NEEDLE)]) + self.NEEDLE + b"\x00;"
+        webp = b"RIFF" + struct.pack("<I", 4 + 8 + len(self.NEEDLE)) + b"WEBPJUNK" + self.NEEDLE
+        cpath = self.client()
+        for mime, raw in (("gif", gif), ("webp", webp)):
+            b64 = base64.b64encode(raw).decode()
+            uri = f"data:image/{mime};base64,{b64}"
+            client = self.build(cpath, page(self.wrap(f'<p>x</p><img src="{uri}" alt="a">')))
+            self.assertTrue(client[0] is None or b64 not in client[0], mime)
+            css = self.build(cpath, page(css=f'.page{{background:url("{uri}")}}'))
+            self.assertIsNotNone(css[1], mime)
 
 
 class Fallback(Base):

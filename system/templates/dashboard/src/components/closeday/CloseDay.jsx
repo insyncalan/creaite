@@ -20,8 +20,9 @@ import { D, TODAY, fd } from "../../core/page.js";
 import { api, viaServer, snack, oneLine, reloadData } from "../../core/server.js";
 import { go, openWork } from "../../core/nav.js";
 import { DC, longDay, plur } from "../../today.js";
-import { decide, RHL } from "../../review.js";
-import { HL, hlPaint, rvPaint } from "../../work.js";
+import { decide } from "../../review.js";
+import { HL, hlPaint } from "../../work.js";
+import { irReveal } from "../../stores/intakeReview.js";
 import { dcIcon } from "../../ask.js";
 
 /** @typedef {{ref: string, kind: string, type: string, t: string, p?: string|null, project?: string|null, new?: boolean,
@@ -242,12 +243,9 @@ export function cdOpenPlaces(open) {
   const rv = open.review || [], wk = open.work || [];
   const later = [wk.length ? plur(wk.length, "item") + " in Work" : "", open.intake ? "Intake" : ""].filter(Boolean);
   if (rv.length) {
-    go("review");
-    RHL.clear();
-    rv.forEach(x => { const r = REV.find(y => y.file === x.file && y.ref === x.ref && !y.done); if (r) RHL.add(r.n); });
-    rvPaint();
-    const first = document.querySelector("#reviewBody tr.hl");
-    if (first) first.scrollIntoView({ block: "center" });
+    go("intake-review");
+    /* #232-C: the meeting the first of them came from opens on the one page */
+    irReveal(rv.map(x => { const r = REV.find(y => y.file === x.file && y.ref === x.ref && !y.done); return r ? r.n : -1; }).filter(n => n >= 0));
     if (later.length) snack(`Also for Review now: ${later.join(" and ")}`, () => cdOpenPlaces({ review: [], work: wk, intake: open.intake }), "Open");
     return;
   }
@@ -261,10 +259,10 @@ export function cdOpenPlaces(open) {
     hlPaint();
     const first = document.querySelector("#workTbl tr.hl");
     if (first) first.scrollIntoView({ block: "center" });
-    if (open.intake) snack("Also for Review now: Intake", () => go("inbox"), "Open");
+    if (open.intake) snack("Also for Review now: Intake", () => go("intake-review", { stage: "arrived" }), "Open");
     return;
   }
-  if (open.intake) go("inbox");
+  if (open.intake) go("intake-review", { stage: "arrived" });
 }
 
 /** The whole card. Mounted once, by openCloseDay; it keeps its step and choices while the page is open. */

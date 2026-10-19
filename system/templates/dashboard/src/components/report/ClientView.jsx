@@ -1,13 +1,13 @@
 // @ts-check
 /* ClientView (v2.1.0 P8, BL-336; #221 H1): what is left of the client page once the Reporting hub (components/report/hub/) replaced it.
-   The client report's pieces the hub uses: the left-out check before an export (openCheck, doExport), Match internal (matchFor), the
+   The client report's pieces the hub uses: the left-out check before an export (openCheck, doExport), Match internal (stores/clientReport.js matchInternal, behind the client gate), the
    health suggestion's apply (clientHealthApply) and the old #client-report=CODE/week/client address (parseKey), which the hub still
    reads. Client safety is unchanged: the page only ever holds what the server built from client-visible items (report_doc.client_doc,
    through client_leak.make_safe) and what Alan typed; Match internal copies only what clientDoc.matchClientSection allows; the server
    checks again at save, approve and export. Nothing here sends anything. */
 import { CLIENT_RENDERERS, setClientDoc } from "./ClientParts.jsx";
 import { CLIENT_EXPORT, reportExportPage } from "./exportPage.jsx";
-import { flagOf, healthDiff, matchClientAll, matchClientSection } from "./clientDoc.js";
+import { flagOf, healthDiff } from "./clientDoc.js";
 import { crAskWhy } from "./ClientParts.jsx";
 import { snack } from "../../core/server.js";
 import { crBase, crDialog, crDirty, crDoc, crInternal, exportClientReport, runCheck, saveClientPage } from "../../stores/clientReport.js";
@@ -28,14 +28,6 @@ export async function doExport(fmt) {
   const r = await exportClientReport(fmt, (d, v) => reportExportPage(d, CLIENT_RENDERERS, CLIENT_EXPORT, v));
   if (r && (r.ok || r.clash)) crDialog.value = false;       // saved (the message says where) or a taken name (its own dialog asks)
   else await runCheck();                                      // a refusal: the check shows why, and the message says nothing was written
-}
-
-/** The sheet's Match internal for the client page (contract §4.6 `partner.match`): the client-safe match, never a verbatim copy of
-    the internal section. @param {string|null} id the section's id, or null for every section @returns {SheetDoc} */
-export function matchFor(id) {
-  const d = /** @type {SheetDoc} */ (crDoc.value), i = crInternal.value;
-  if (!i) return d;
-  return id == null ? matchClientAll(d, i) : matchClientSection(d, i, id);
 }
 
 /** Ask for the reason (the flag's popover opens on it) when the new flag differs from the internal one. @param {string} health */

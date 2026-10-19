@@ -3,6 +3,7 @@
 `LiveBrowserCase` starts the live server once per test class in a throwaway vault, and opens a fresh headless Chrome
 (dev/tools/cdp.py) for every test. Override `load(v)` to put data in the vault. Skipped when Chrome isn't installed.
 """
+import json
 import os
 import re
 import signal
@@ -62,6 +63,19 @@ class LiveBrowserCase(unittest.TestCase):
     def load(cls, v):
         populate(v)
 
+    quiet_jobs = True        # a test of backups or archiving sets False and keeps the shipped settings
+
+    @classmethod
+    def quiet_periodic_jobs(cls):
+        """The live server's timer runs the daily backup, zip, Tidy up and archiving a minute after start (backup_daily_job),
+        holding the job lock and writing the database while a slow test is saving. A test vault has no use for it: switch off
+        backups.daily and the archiving of each kind (settings only; the server's code is unchanged)."""
+        f = cls.v.root / "system/config/settings.json"
+        cfg = json.loads(f.read_text(encoding="utf-8"))
+        cfg.setdefault("backups", {})["daily"] = False
+        cfg.setdefault("archive", {})["after_months"] = {"actions": 0, "raid": 0, "promises": 0}
+        f.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+
     @classmethod
     def server_env(cls):
         """Extra environment for the live server (a stand-in `claude`, a fixed clock…)."""
@@ -71,6 +85,8 @@ class LiveBrowserCase(unittest.TestCase):
     def start_server(cls):
         cls.v = Vault()
         cls.load(cls.v)
+        if cls.quiet_jobs:
+            cls.quiet_periodic_jobs()
         cls.port = free_port()
         cls.base = f"http://127.0.0.1:{cls.port}"
         # ci-macos-hang: the server's output goes to a file outside the vault (not DEVNULL), and PYTHONFAULTHANDLER lets a
@@ -146,6 +162,7 @@ class LiveBrowserCase(unittest.TestCase):
             try:
                 self.b.goto(self.base + "/")
                 self.b.wait("typeof go==='function' && LIVE")
+                self.settle()
                 self.b.eval("typeof helpScreenSync==='function' && (S.helpLine=false, helpScreenSync(), true)")      # #158: the first-visit line (38 px) clears on the first click and would shift every layout assertion; test_help_finding sets S.helpLine itself
                 if self.pin_clock and os.environ.get("CREAITE_NOW"):   # #178: a pinned run pins the page too, so page and data agree
                     pin_page_clock(self.b, os.environ["CREAITE_NOW"])
@@ -154,6 +171,9 @@ class LiveBrowserCase(unittest.TestCase):
                 self.b.close()
                 if attempt == 2:
                     raise
+
+    def settle(self):
+        self.b.settle_boot()
 
     def _callTestMethod(self, method):
         """A failing test says where the page was, as a failing wait does (nothing about what passes changes)."""

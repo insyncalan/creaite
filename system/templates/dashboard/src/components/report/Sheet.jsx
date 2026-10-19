@@ -19,8 +19,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { SheetPage, openSheetRef, labelOf } from "./SheetPage.jsx";
-import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchAll, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom, isTextSection, withTextSection } from "./sheetLib.js";
-import { bindTextSections } from "../../stores/textSection.js";
+import { A4_W, CONTENT_MM, MM, PAD_MM, SHEET_ZOOM_DEFAULT, clampZoom, matchSection, pageBreaks, pinchZoom, sectionDiffers, stepZoom, isTextSection, withTextSection } from "./sheetLib.js";
+import { bindTextSections, markNewText } from "../../stores/textSection.js";
 import { headerPolicy } from "../../core/scrollPolicy.js";
 
 export { openSheetRef as openRef };
@@ -53,10 +53,10 @@ export { openSheetRef as openRef };
 /** @typedef {{id: string, section: string, field?: string, row?: number, pane?: number, quote: string, note?: string, last?: string,
     actions?: {id: string, label: string}[]}} SheetCheck */
 /** @typedef {{doc: SheetDoc, label: string, baseVersion?: number, scrollKey?: string, renderers?: SheetRenderers, readOnly?: boolean,
-    match?: (id: string) => void,
-    onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */
+    match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
+    onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
-    exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, leftReadOnly?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
+    exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
     checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
       document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
@@ -64,7 +64,7 @@ export { openSheetRef as openRef };
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
     toolbar?: any, banner?: {title: string, sub?: string},
     renderBar?: (c: {zoom: number, setZoom: (z: number) => void, exported: boolean, setExported: (on: boolean) => void, status: string, bad: boolean}) => any,
-    belowBar?: any,
+    belowBar?: any, paneHead?: (slot: "one"|"left"|"right"|"both") => any,
     report?: {audience: string, addText?: (sectionId: string) => void}}} SheetProps */   // report: set by ReportSheet (the weekly and client reports); the minutes leave it out and keep their title block
 
 /** Where each page was left, by scrollKey (in memory, for the page's life): the zoom, and per pane the section at the top and the
@@ -72,7 +72,7 @@ export { openSheetRef as openRef };
 const ANCHORS = new Map();
 /** @type {Map<string, number>} */
 const ZOOMS = new Map();
-/** Find the source, by sheet: set while a Sheet is mounted. @type {Map<number, (range: any, h: any) => void>} */
+/** Find the source, by sheet and pane ("<n>l", "<n>r"): set while a Sheet is mounted. @type {Map<string, (range: any, h: any) => void>} */
 const SHEET_SOURCES = new Map();
 let SHEET_SEQ = 0;
 
@@ -125,7 +125,7 @@ function useSaver(a) {
   };
   const reload = () => { const s = st.current; s.stopped = false; s.dirty = false; clearTimeout(s.timer); setConflict(null); setLine(""); };
   useEffect(() => () => { const s = st.current; if (s.dirty) flush(); }, []);   // unmounting with unsaved changes saves them
-  return { line, conflict, removed, change, flush, reload };
+  return { line, conflict, removed, change, flush, reload, known: () => st.current.latest };
 }
 /** What a save left out of a client document, as a line. @param {any} r */
 function removedLine(r) {
@@ -137,8 +137,8 @@ function removedLine(r) {
 /** The scroller of one page (or of both, scrolling together): it measures its width, draws what it is given at the scale that width
     and the zoom make, and remembers and restores the section at the top of the view. Nothing else sets scrollTop.
     @param {{pk: string, zoom: number, pages: number, regRestore: (fn: () => void) => () => void, onPinch: (dy: number, y: number, pk: string) => void,
-    children: (scale: number) => any}} props */
-function Pane({ pk, zoom, pages, regRestore, onPinch, children }) {
+    head?: any, children: (scale: number) => any}} props */
+function Pane({ pk, zoom, pages, regRestore, onPinch, head, children }) {
   const sc = useRef(/** @type {HTMLDivElement|null} */ (null));
   const [w, setW] = useState(0);
   const avail = Math.max(0, w - 32 - (pages > 1 ? 16 * (pages - 1) : 0)) / pages;
@@ -184,6 +184,7 @@ function Pane({ pk, zoom, pages, regRestore, onPinch, children }) {
     return () => { ro.disconnect(); el.removeEventListener("wheel", wheel); };
   }, [pk]);
   return <div class="sheet-scroll" ref={sc} onScroll={capture} data-pk={pk}>
+    {head ? <div class="sheet-head" style={{ visibility: scale ? "visible" : "hidden", width: `${A4_W * MM * scale * pages + 16 * (pages - 1)}px` }}>{head}</div> : null}
     <div class={pages > 1 ? "sheet-pair" : "sheet-one"} style={{ visibility: scale ? "visible" : "hidden" }}>{children(scale)}</div>
   </div>;
 }
@@ -297,6 +298,8 @@ export function Sheet(props) {
   const root = useRef(/** @type {HTMLDivElement|null} */ (null));
   const restorers = useRef(/** @type {Set<() => void>} */ (new Set()));
   const refocus = useRef(/** @type {string|null} */ (null));
+  const refocusR = useRef(/** @type {string|null} */ (null));   // p241: the right pane's own (the same section id is on both pages)
+  const activeRight = useRef(false);                            // p241: which pane was used last (the global "add a text section" entry follows it)
   const [zl, setZl] = useState(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
   const [xl, setXl] = useState(false);
   const [together, setTogether] = useState(true);
@@ -331,26 +334,33 @@ export function Sheet(props) {
   const changeMain = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (leftRO) return; props.onChange(nd, why); main.change(nd); };
   const changeSide = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (!partner || partner.readOnly) return; partner.onChange(nd, why); side.change(nd); };
 
-  const aiFor = (/** @type {SheetSection} */ s, /** @type {boolean} */ ro) => {
-    const a = P.current.ai;
+  /** The AI bar's account of one section of one pane (p241: each pane has its own: its report, its place, its key). */
+  const aiFor = (/** @type {SheetSection} */ s, /** @type {boolean} */ ro, /** @type {boolean} */ right = false) => {
+    const ai = () => (right ? P.current.partner && P.current.partner.ai : P.current.ai), pane = `${sid}${right ? "r" : "l"}`;
+    const a = ai();
     if (!a) return undefined;
-    return { place: ro || eref.current ? "readonly" : a.place, sheetId: sid, project: () => (P.current.ai && P.current.ai.project ? P.current.ai.project() : ""),
-      confidential: () => !!(P.current.ai && P.current.ai.confidential && P.current.ai.confidential()), key: () => `sheet:${sid}:${s.id}`,
-      document: () => (P.current.ai && P.current.ai.document ? P.current.ai.document() : null) };
+    return { place: ro || eref.current ? "readonly" : a.place, sheetId: pane, project: () => { const x = ai(); return x && x.project ? x.project() : ""; },
+      confidential: () => { const x = ai(); return !!(x && x.confidential && x.confidential()); }, key: () => `sheet:${pane}:${s.id}`,
+      document: () => { const x = ai(); return x && x.document ? x.document() : null; } };
   };
   useEffect(() => {
-    SHEET_SOURCES.set(sid, async (range, h) => {
+    const finder = (/** @type {boolean} */ right) => async (/** @type {any} */ range, /** @type {any} */ h) => {
       const at = h.el.getBoundingClientRect(), sectionId = (h.el.closest("section[data-id]") || {}).dataset?.id;
       const place = { x: Math.max(8, Math.min(at.left, window.innerWidth - 340)), y: Math.min(at.bottom + 6, window.innerHeight - 160) };
-      if (!P.current.onSelectAction) { setFound({ ...place, message: "Finding the source isn't available here." }); return; }
+      const find = right ? P.current.partner && P.current.partner.onSelectAction : P.current.onSelectAction;   // each pane its own, no fallback to the other
+      if (!find) { setFound({ ...place, message: "Finding the source isn't available here." }); return; }
       setFound({ ...place, message: "Looking…" });
-      try { const a = await P.current.onSelectAction("source", { sectionId, text: range.text }); setFound({ ...place, items: (a && a.found) || [], message: a && a.found && a.found.length ? "" : "No source found." }); }
+      try { const a = await find("source", { sectionId, text: range.text }); setFound({ ...place, items: (a && a.found) || [], message: a && a.found && a.found.length ? "" : "No source found." }); }
       catch (e) { setFound({ ...place, message: "Couldn't look for the source." }); }
-    });
-    return () => { SHEET_SOURCES.delete(sid); };
+    };
+    SHEET_SOURCES.set(`${sid}l`, finder(false)); SHEET_SOURCES.set(`${sid}r`, finder(true));
+    return () => { SHEET_SOURCES.delete(`${sid}l`); SHEET_SOURCES.delete(`${sid}r`); };
   }, []);
 
   const partnerDoc = partner ? partner.doc : null;
+  useEffect(() => {          // p241: an edit made to the partner outside the sheet (the hub's "Match internal for every section") is saved like any other
+    if (partner && partnerDoc && !partner.readOnly && partner.dirty && partner.dirty() && side.known() !== partnerDoc) side.change(partnerDoc);
+  }, [partnerDoc]);
   const match = partner && partnerDoc ? { readOnly: !!partner.readOnly, label: (/** @type {string} */ id) => labelOf(doc, partnerDoc, id, partner.label),
     differs: (/** @type {string} */ id) => sectionDiffers(doc.sections.find(s => s.id === id), partnerDoc.sections.find(s => s.id === id)),
     one: (/** @type {string} */ id) => { if (partner.match) partner.match(id); else changeSide(matchSection(doc, partnerDoc, id), "Matched internal"); } } : null;
@@ -380,7 +390,12 @@ export function Sheet(props) {
   const onKey = (/** @type {KeyboardEvent} */ e) => {
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
-    if (e.key === "s" || e.key === "S") { e.preventDefault(); main.flush(); side.flush(); return; }
+    if (e.key === "s" || e.key === "S") {                     // p241: saves the pane the focus is in (both when it is in the bar)
+      e.preventDefault();
+      const pg = /** @type {HTMLElement|null} */ (/** @type {HTMLElement} */ (e.target).closest ? /** @type {HTMLElement} */ (e.target).closest(".page[data-pane]") : null);
+      if (!pg || !partner) { main.flush(); side.flush(); } else if (pg.dataset.pane === "right") side.flush(); else main.flush();
+      return;
+    }
     if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(stepZoom(zref.current, 1)); }
     else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(stepZoom(zref.current, -1)); }
     else if (e.key === "0") { e.preventDefault(); setZoom(SHEET_ZOOM_DEFAULT); }
@@ -397,31 +412,37 @@ export function Sheet(props) {
   const pinch = (/** @type {number} */ dy) => setZoom(pinchZoom(zref.current, dy));
 
   /* #218: stores/textSection.js addTextSection(afterId): what the sheet does when asked (any menu may ask); returns the new section's id */
-  const addText = useRef(/** @type {(afterId: string|null) => (string|null)} */ (() => null));
-  addText.current = afterId => {
-    if (leftRO) return null;
-    const had = new Set(P.current.doc.sections.map(s => s.id)), nd = withTextSection(P.current.doc, afterId), nid = (nd.sections.find(s => !had.has(s.id)) || {}).id || null;
-    changeMain(nd, "Text section added"); onEvent({ type: "text-added", id: nid });
+  /* p241: each pane adds to its own report: the section menus say which pane they are in; the global entry follows the pane used last */
+  const addText = useRef(/** @type {(afterId: string|null, right?: boolean) => (string|null)} */ (() => null));
+  addText.current = (afterId, right = false) => {
+    const pt = P.current.partner;
+    if (right ? !pt || pt.readOnly : leftRO) return null;
+    const base = right && pt ? pt.doc : P.current.doc;
+    const had = new Set(base.sections.map(s => s.id)), nd = withTextSection(base, afterId), nid = (nd.sections.find(s => !had.has(s.id)) || {}).id || null;
+    (right ? changeSide : changeMain)(nd, "Text section added"); onEvent({ type: "text-added", id: nid });
     return nid;
   };
-  useEffect(() => bindTextSections(afterId => addText.current(afterId)), []);
+  useEffect(() => bindTextSections(afterId => addText.current(afterId, activeRight.current)), []);
+  const usePane = (/** @type {Event} */ e) => { const pg = /** @type {HTMLElement|null} */ (/** @type {HTMLElement} */ (e.target).closest ? /** @type {HTMLElement} */ (e.target).closest(".page[data-pane]") : null); if (pg) activeRight.current = pg.dataset.pane === "right"; };
 
   const pageProps = (/** @type {SheetDoc} */ d, /** @type {SheetPartner|null} */ p, /** @type {""|"left"|"right"} */ sd) => ({
     doc: d, renderers: (p ? p.renderers || props.renderers : props.renderers) || {}, extras: p ? [] : props.extras || [], exported,
-    readOnly: p ? !!p.readOnly || !!props.readOnly : leftRO, peerDoc: p ? doc : partnerDoc, peerLabel: partner ? partner.label : "",
-    side: sd, onChange: p ? changeSide : changeMain, onOpenItem: props.onOpenItem, onEvent, onRedraft: p ? undefined : props.onRedraft,
-    aiFor, checks: p ? [] : checks, refocus, match: p ? match : null, report: props.report,
+    readOnly: p ? !!p.readOnly || (!!props.readOnly && !props.panesApart) : leftRO, peerDoc: p ? doc : partnerDoc, peerLabel: partner ? partner.label : "",
+    side: sd, onChange: p ? changeSide : changeMain, onOpenItem: props.onOpenItem, onEvent, onRedraft: p ? p.onRedraft : props.onRedraft,
+    aiFor: (/** @type {SheetSection} */ s, /** @type {boolean} */ ro) => aiFor(s, ro, !!p), checks: p ? [] : checks, refocus: p ? refocusR : refocus, match: p ? match : null,
+    report: props.report && partner ? { ...props.report, addText: (/** @type {string} */ id) => { const nid = addText.current(id, !!p); if (nid) markNewText(nid); } } : props.report,
     addTo: !p && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (/** @type {string} */ id) => { if (partner.match) partner.match(id); else changeSide(matchSection(doc, partnerDoc, id), "Matched internal"); } } : null });
   const frame = (/** @type {SheetDoc} */ d, /** @type {SheetPartner|null} */ p, /** @type {number} */ scale, /** @type {number} */ k) =>
     <SheetFrame key={p ? "r" : "l"} scale={scale} breaks={breaks[k] || []}><SheetPage {...pageProps(d, p, partner ? (p ? "right" : "left") : "")} /></SheetFrame>;
   const reg = (/** @type {() => void} */ fn) => { restorers.current.add(fn); return () => { restorers.current.delete(fn); }; };
 
+  const both = `${main.line}${partner && side.line ? `${main.line ? " · " : ""}${partner.label}: ${side.line}` : ""}`;   // each pane's own save line
   const openChecks = checks.length;
   const note = main.conflict;
   return (
-    <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick} data-report-sheet={props.report ? props.report.audience : undefined}>
+    <div class="sheet-root" ref={root} onKeyDown={onKey} onClick={onClick} onFocusIn={usePane} onPointerDownCapture={usePane} data-report-sheet={props.report ? props.report.audience : undefined}>
       <div class={`sheet-bar${props.renderBar ? " hubline" : ""}`} role="toolbar" aria-label="Report">
-        {props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: main.line, bad: !!main.line && !/^Saved/.test(main.line) }) : <>
+        {props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some(l => !!l && !/^Saved/.test(l)) }) : <>
         <span class="sheet-mini">{props.banner ? <><b>{props.banner.title}</b>{props.banner.sub ? <span class="sub">{props.banner.sub}</span> : null}</> : <b>{doc.title}</b>}</span>
         <span class="sheet-zoom" role="group" aria-label="Zoom">
           <button type="button" class="btn sm" aria-label="Zoom out" onClick={() => setZoom(stepZoom(zoom, -1))} disabled={zoom <= 0.4}>−</button>
@@ -430,7 +451,6 @@ export function Sheet(props) {
         </span>
         <button type="button" class="btn sheet-exp" aria-pressed={exported ? "true" : "false"} onClick={() => setExported(!exported)}>Show as exported</button>
         {partner && !exported ? <label class="sheet-tog"><input type="checkbox" checked={together} onChange={e => setTogether(/** @type {HTMLInputElement} */ (e.currentTarget).checked)} /> Scroll together</label> : null}
-        {partner && !exported && !partner.readOnly ? <button type="button" class="btn sheet-matchall" onClick={() => { if (partner.match) { for (const x of doc.sections) if (match && match.differs(x.id) && !(isTextSection(x) && !partner.doc.sections.some(y => y.id === x.id))) partner.match(x.id); } else changeSide(matchAll(doc, partner.doc), "Matched internal"); }}>Match internal for every section</button> : null}
         <span class="sub sheet-status" role="status" data-bad={main.line && !/^Saved/.test(main.line) ? "1" : undefined}>{main.line}{partner && side.line ? ` · ${partner.label}: ${side.line}` : ""}</span>
         {openChecks && !exported ? <span class="sheet-checks" data-checks={openChecks}>{openChecks} {openChecks === 1 ? "check" : "checks"} open</span> : null}
         <span class="sheet-barr">{props.toolbar || null}</span></>}
@@ -442,10 +462,10 @@ export function Sheet(props) {
       <div class={`sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`}>
         {partner && !together
           ? <>
-            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch}>{scale => frame(doc, null, scale, 0)}</Pane>
-            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
+            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("left") : null}>{scale => frame(doc, null, scale, 0)}</Pane>
+            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("right") : null}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
           </>
-          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch}>{scale => <>
+          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead(partner ? "both" : "one") : null}>{scale => <>
             {frame(doc, null, scale, 0)}
             {partner ? frame(partner.doc, partner, scale, 1) : null}
           </>}</Pane>}

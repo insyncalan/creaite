@@ -20,6 +20,9 @@
   POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
                            items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
                            week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
+  POST /api/report/match-check {docs: [doc]}: the leak findings (client_leak.findings) of each client document, one list per
+                           document, in order (read only, nothing is written; at most 60). Match internal asks it before it copies
+                           internal wording into the client page, so internal words never sit on the client draft (v2.5.0)
   POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
                            (a client report: only client-safe facts), each with the row it would add; nothing is written
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
@@ -33,6 +36,7 @@
                            answer then carries `left_out`: the check of what is left out runs before every client export
 """
 import base64
+import re
 import os
 import subprocess
 import sys
@@ -85,6 +89,26 @@ def project_client(code):
     return name or None
 
 
+CLIENT_OFF = "This project has no separate client report switched on. Turn it on in the Client report settings first."
+
+
+def client_report_off(code):
+    """True when the project's client report setting is off (#233 L10); a project with no such line is on."""
+    import build_dashboard
+    try:
+        return not build_dashboard.memory(paths.project_dir(code)).get("client_report", True)
+    except Exception:                                  # a project folder that can't be read: the setting is not known to be off
+        return False
+
+
+def refuse_client_off(handler, kind, code):
+    """The refusal for a new client draft, a client save, export or approve while the project's setting is off; None otherwise.
+    Reading or opening a client report that already exists is never refused: turning the setting off deletes nothing."""
+    if kind == "client" and client_report_off(code):
+        return refuse(handler, CLIENT_OFF)
+    return None
+
+
 def guarded(fn):
     """A route that answers a ReportError, a DocError or a script's exit as a refusal instead of a fault."""
     def route(handler, req):
@@ -107,6 +131,9 @@ def draft_route(handler, req):
     if state and not (req.get("fresh") and state == "draft"):
         doc = creaite_doc.read(path)
     else:
+        off = refuse_client_off(handler, kind, code)       # a client report is made only while the setting is on
+        if off:
+            return off
         doc, state = report_doc.build(kind, code, fri, client), "new"
         path = report_doc.draft_path(kind, code, fri, client)
     out = {"ok": True, "doc": doc, "path": path, "where": state, "version": int(doc.get("version") or 0),
@@ -126,6 +153,9 @@ def save_route(handler, req):
                                       "client": doc.get("client")})
     if fri != doc["date"]:
         raise report_doc.ReportError("A report's date is its week ending, a Friday.")
+    off = refuse_client_off(handler, kind, code)
+    if off:
+        return off
     with handler_lock(handler):
         out = report_doc.save_draft(doc, req.get("base_version"))
         if out.get("ok"):
@@ -193,6 +223,9 @@ def _held_to(doc, allowed):
 def approve_route(handler, req):
     """POST /api/report/approve: save any edits sent, stage the one proposal and apply it (see the module's description)."""
     kind, code, fri, client = target(req)
+    off = refuse_client_off(handler, kind, code)
+    if off:
+        return off
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
@@ -217,6 +250,32 @@ def check_route(handler, req):
     """POST /api/report/check: a client report's check of what is left out (see the module's description). Writes nothing."""
     import client_check
     return answer(handler, client_check.check(req.get("doc")))
+
+
+MATCH_MAX_DOCS, MATCH_MAX_DOC, MATCH_MAX_TOTAL = 60, 100_000, 1_000_000       # documents, bytes of one document, bytes of all
+
+
+def match_check_route(handler, req):
+    """POST /api/report/match-check: the leak findings of each client document sent, as [{code, message}] (see the module's
+    description). Always the client gate, whatever audience the request names. Capped (60 documents, 100 kB each, 1 MB in all);
+    over the cap it refuses with a sentence (HTTP 400) and checks nothing. Writes nothing."""
+    import json
+    import client_leak
+    docs = req.get("docs")
+    if not isinstance(docs, list) or len(docs) > MATCH_MAX_DOCS:
+        return handler.send(400, {"ok": False, "message": f"Send up to {MATCH_MAX_DOCS} client reports to check."})
+    sizes = [len(json.dumps(d, default=str)) for d in docs]
+    if any(n > MATCH_MAX_DOC for n in sizes) or sum(sizes) > MATCH_MAX_TOTAL:
+        return handler.send(400, {"ok": False, "message": "Those client reports are too large to check together: "
+                                                           "send fewer, or shorter ones."})
+    con = client_leak.connect()
+    out = []
+    for d in docs:
+        creaite_doc.check(d)
+        if d.get("kind") != "client":
+            raise creaite_doc.DocError("Only a client report has this check.")
+        out.append(client_leak.coded_findings(d, con))
+    return answer(handler, {"ok": True, "findings": out})
 
 
 def pick_route(handler, req):
@@ -370,6 +429,9 @@ def export_route(handler, req):
     fmt = req.get("fmt")
     if fmt not in FORMATS:
         return refuse(handler, "Export as html, docx or pdf.")
+    off = refuse_client_off(handler, kind, code)
+    if off:
+        return off
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
@@ -441,10 +503,17 @@ def logo_route(handler, req):
         f = paths.resolve(stored)
         if f.suffix.lower() in LOGO_TYPES and f.is_file() and not f.is_symlink() and f.stat().st_size <= LOGO_MAX:
             out[stored] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
-    return answer(handler, {"ok": True, "logos": out, "list": list(known.values())})
+    orphans = report_doc.orphan_logos(code)
+    for o in orphans:                                               # an unused partner logo is shown with its Remove button (#228 C)
+        f = paths.resolve(o["path"])
+        if f.suffix.lower() in LOGO_TYPES and f.stat().st_size <= LOGO_MAX:
+            out[o["path"]] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
+    return answer(handler, {"ok": True, "logos": out, "list": list(known.values()), "orphans": orphans,
+                            "partners": [{"kind": "partner:" + p["slug"], **p} for p in report_doc.partners(code)]})
 
 
-LOGO_KIND_NAMES = ("firm", "client", "partner")
+def _plain_list(names):
+    return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else (names[0] if names else "")
 JPEG_HINT = "A transparent PNG or SVG sits better. The picture is kept as it is."
 
 
@@ -482,24 +551,47 @@ def _logo_change(handler, ch):
     return None if code == 0 else refuse(handler, f"Logo not saved: {_no_paths(msg)}")
 
 
-def _logo_target(req):
-    """(code, kind, stem) of a logo request; raises ReportError for a project or kind creaite doesn't know."""
+def _kind_ok(kind):
+    """Whether a logo kind is well formed: firm, client, partner or partner:<slug> (a slug of at most 40 characters that does not end in
+    `-original`, which is the name of a kept picture)."""
+    return (isinstance(kind, str) and bool(report_doc.LOGO_KIND.match(kind)) and len(kind) <= len("partner:") + 40
+            and not re.search(r"-original\Z", kind))
+
+
+def _logo_target(req, orphans=False):
+    """(code, kind, stem) of a logo request; raises ReportError for a project or kind creaite doesn't know. `orphans`: a remove may
+    name a partner logo no partner owns now (#228 C); a save may not."""
     code, kind = str(req.get("code") or ""), req.get("kind")
-    if not report_doc.CODE.match(code) or kind not in LOGO_KIND_NAMES:
-        raise report_doc.ReportError("Say which project and which logo: firm, client or partner.")
+    if not report_doc.CODE.match(code) or not _kind_ok(kind):
+        raise report_doc.ReportError("Say which project and which logo: firm, client or a partner.")
     try:
         paths.project_dir(code)
     except LookupError:
         raise report_doc.ReportError(f"{code} isn't a project creaite knows.") from None
-    return code, kind, "firm" if kind == "firm" else f"{code}-{kind}"
+    names = [p["name"] for p in report_doc.partners(code)]
+    if kind == "partner" and names:
+        raise report_doc.ReportError(f"This project lists its partners ({_plain_list(names)}). Say which partner the logo is for.")
+    if orphans and kind in {o["kind"] for o in report_doc.orphan_logos(code)}:
+        return code, kind, f"{code}-partner-{kind[len('partner:'):]}"
+    if kind.startswith("partner:") and kind not in report_doc.logo_kinds(code):
+        listed = f"Its Partners line has {_plain_list(names)}." if names else "It has no Partners line, so no partner has a logo yet."
+        raise report_doc.ReportError(f"That partner isn't in this project's Partners line. {listed} Nothing was saved.")
+    return code, kind, report_doc.logo_stems(code, kind)[0]
 
 
-def _logo_files(stem):
-    """Every logo file of that name now in the logos folder: the picture drawn and the original kept."""
+def _logo_files(stems):
+    """Every logo file of those names (a stem or a list of them) now in the logos folder: the picture drawn and the original kept."""
+    stems = [stems] if isinstance(stems, str) else list(stems)
+    names = set(stems) | {f"{s}-original" for s in stems}
     if not paths.REPORT_LOGOS.is_dir():
         return []
     return [f for f in sorted(paths.REPORT_LOGOS.iterdir())
-            if f.is_file() and f.suffix.lower() in report_doc.LOGO_EXT and f.stem in (stem, f"{stem}-original")]
+            if f.is_file() and f.suffix.lower() in report_doc.LOGO_EXT and f.stem in names]
+
+
+def _kind_label(code, kind):
+    """What a logo is called to Alan: firm, client, or the partner's own name."""
+    return next((p["name"] for p in report_doc.partners(code) if "partner:" + p["slug"] == kind), kind)
 
 
 def _logo_refusal(req):
@@ -524,15 +616,16 @@ def _logo_refusal(req):
     return raw, drawn, kind_of, None
 
 
-def _logo_links(stem, names):
+def _logo_links(stems, names):
     """Whether the logos folder, or a file in it with this logo's name (or one about to be written), is a symbolic link."""
     folder = paths.REPORT_LOGOS
     if folder.is_symlink():
         return True
     if not folder.is_dir():
         return False
-    return any(f.is_symlink() for f in folder.iterdir()
-               if f.stem in (stem, f"{stem}-original") or f.name in names)
+    stems = [stems] if isinstance(stems, str) else list(stems)
+    mine = set(stems) | {f"{s}-original" for s in stems}
+    return any(f.is_symlink() for f in folder.iterdir() if f.stem in mine or f.name in names)
 
 
 def logo_save_route(handler, req):
@@ -545,22 +638,23 @@ def logo_save_route(handler, req):
         return refuse(handler, why)
     ext = "jpg" if kind_of == "jpg" else kind_of
     keep = [(f"{stem}-original.{ext}", raw), (f"{stem}.png", drawn)] if drawn and kind_of != "svg" else [(f"{stem}.{ext}", raw)]
-    if _logo_links(stem, {n for n, _d in keep}):
+    stems, label = report_doc.logo_stems(code, kind), _kind_label(code, kind)
+    if _logo_links(stems, {n for n, _d in keep}):
         return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut and try again. "
                                "Nothing was saved.")
     for name, data in keep:                                        # the new files first: a failed write leaves the old logo standing
         target = paths.REPORT_LOGOS / name
         ch = {"op": "edit" if target.exists() else "create", "path": paths.rel(target), "data": data,
-              "why": f"{kind.capitalize()} logo added or changed from the report settings"}
+              "why": f"{label.capitalize()} logo added or changed from the report settings"}
         err = _logo_change(handler, ch)
         if err:
             return err
-    for old in _logo_files(stem):                                  # then a stale file of another type must not win
+    for old in _logo_files(stems):                                 # a stale file of another type, or the old partner file, must not win
         if old.name not in dict(keep):
-            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {kind} logo"})
+            err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Replaced the {label} logo"})
             if err:
                 return err
-    out = {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is saved."}
+    out = {"ok": True, "logos": report_doc.logos(code), "message": f"The {label} logo is saved."}
     if kind_of == "jpg":
         out["hint"] = JPEG_HINT
     return answer(handler, out)
@@ -568,15 +662,17 @@ def logo_save_route(handler, req):
 
 def logo_remove_route(handler, req):
     """POST /api/report/logo/remove (see the module's description)."""
-    code, kind, stem = _logo_target(req)
-    if _logo_links(stem, set()):
+    code, kind, stem = _logo_target(req, orphans=True)
+    stems = [stem] if kind in {o["kind"] for o in report_doc.orphan_logos(code)} else report_doc.logo_stems(code, kind)
+    label = _kind_label(code, kind)
+    if _logo_links(stems, set()):
         return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut yourself. "
                                "Nothing was removed.")
-    for old in _logo_files(stem):
-        err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Removed the {kind} logo"})
+    for old in _logo_files(stems):
+        err = _logo_change(handler, {"op": "delete", "path": paths.rel(old), "why": f"Removed the {label} logo"})
         if err:
             return err
-    return answer(handler, {"ok": True, "logos": report_doc.logos(code), "message": f"The {kind} logo is removed."})
+    return answer(handler, {"ok": True, "logos": report_doc.logos(code), "message": f"The {label} logo is removed."})
 
 
 IMAGE_MAX = 2 * 1024 * 1024        # the same cap as a note's picture (live_server.UPLOAD_LIMIT)
@@ -636,6 +732,7 @@ def routes(lock, run, latest_apply):
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
+            "/api/report/match-check": guarded(match_check_route),
             "/api/report/pick": guarded(pick_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
             "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),

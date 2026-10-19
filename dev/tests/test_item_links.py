@@ -56,7 +56,7 @@ class ItemLinks(LiveBrowserCase):
         text = mem.read_text(encoding="utf-8")
         mem.write_text(re.sub(r"(## Current state\n).*?(?=\n## |\Z)", lambda m: m.group(1) + f"\n{state}\n", text, flags=re.S), encoding="utf-8")
         self.v.run(script="build_dashboard.py")
-        b.reload("typeof go==='function' && LIVE")
+        b.reload("typeof go==='function' && LIVE && (typeof PULSE==='undefined' || PULSE.reloads===0)")
         b.eval("go('cockpit','ABC')")
         b.wait("document.querySelector('#v-cockpit .curcard [data-edcur]')")
         b.click("#v-cockpit .curcard [data-edcur]")
@@ -286,7 +286,7 @@ class ItemLinks(LiveBrowserCase):
         self.assertTrue(all(r[4] is None for r in runs))
         # the read view shows a link that opens the item
         self.v.run(script="build_dashboard.py")
-        b.reload("typeof go==='function' && LIVE")
+        b.reload("typeof go==='function' && LIVE && (typeof PULSE==='undefined' || PULSE.reloads===0)")
         b.eval("go('cockpit','ABC')")
         b.wait("!!document.querySelector('#v-cockpit a.itemref')", 10)
         self.assertEqual(b.eval("document.querySelector('#v-cockpit a.itemref').textContent"), link.group(1))

@@ -64,7 +64,7 @@ class _Invisible:
     """Characters that draw as nothing and so hide a word: every Unicode format character (category Cf: zero-width, direction marks and
     isolates, invisible separators such as U+2063, tags, the soft hyphen), the combining grapheme joiner U+034F, the variation
     selectors and Mongolian free variation selectors. `.sub(repl, text)` works like a compiled pattern's."""
-    EXTRA = {0x034F, 0x180B, 0x180C, 0x180D, 0x180E, 0x115F, 0x1160, 0x3164, 0xFFA0}
+    EXTRA = {0x17B4, 0x17B5, 0x2800, 0x034F, 0x180B, 0x180C, 0x180D, 0x180E, 0x115F, 0x1160, 0x3164, 0xFFA0}
 
     def hides(self, c):
         """Whether the character draws as nothing."""
@@ -88,6 +88,8 @@ SIZE = re.compile(r"^[\d.]+(px|%|em|mm)?$")
 DATA_IMAGE = re.compile(r"^data:image/(?:png|jpe?g|gif|webp|svg\+xml)(?:;charset=[\w-]+)?;base64,[A-Za-z0-9+/=\s]+$", re.I)
 BAD_STYLE = re.compile(r"expression\s*\(|javascript:|vbscript:|@import|(?<![-\w])behaviou?r\s*:|-moz-binding|</|<!--", re.I)
 URL_IN_CSS = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.I | re.S)
+NO_FUNCTIONS = re.compile(r"image-set\(|cross-fade\(|(?:-webkit-)?image\(")
+CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'"
 PALETTE = re.compile(r"^[A-Za-z0-9 _-]{1,40}$")
 META_KEYS = ("id", "type", "heading", "default_heading", "hidden", "shown", "ref", "key", "source")
 ITEM_WORDS = ("title", "description", "decision", "name", "response_action", "owner", "made_by")
@@ -99,19 +101,66 @@ class PageRefused(ValueError):
 
 # ── The allow-list ────────────────────────────────────────────────────────────
 
+def urls_ok(text):
+    """Whether every url() in the text is a fragment or a data address of a picture."""
+    for m in URL_IN_CSS.finditer(text):
+        a = m.group(2).strip()
+        if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
+            return False
+    return True
+
+
+def balanced(css):
+    """Whether quotes and parentheses in style text are closed (a backslash escapes the next character, a string hides its parentheses)."""
+    quote, depth, i = None, 0, 0
+    while i < len(css):
+        c = css[i]
+        if c == "\\":
+            i += 1
+        elif quote:
+            quote = None if c == quote else quote
+        elif c in "'\"":
+            quote = c
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth < 0:
+                return False
+        i += 1
+    return quote is None and depth == 0
+
+
+def urls_whole(text):
+    """Whether every `url(` in the text is one URL_IN_CSS reads in full (an unclosed one at the end is not)."""
+    return len(re.findall(r"url\(", text, re.I)) == len(URL_IN_CSS.findall(text))
+
+
+def css_closed(v, decoded, squashed, client):
+    """Whether style text is closed (no unclosed url( or string, no unbalanced brackets at its end) and, in a client file, holds no GIF
+    or WebP picture address (their comments can't be cleaned out)."""
+    if not (balanced(v) and urls_whole(v) and urls_whole(decoded) and urls_whole(squashed)):
+        return False
+    return not (client and re.search(r"data:image/(?:gif|webp)", squashed))
+
+
 def safe_css_value(v, client=False):
     """Whether a style value or a whole stylesheet is free of imports, scripts and any address that isn't a data address of a picture
     or a fragment of the file itself. A CLIENT file takes no SVG picture in its styles at all; an internal file takes one only if its
     words can be read (css_svg_words), and those are then checked like the page's own."""
-    if BAD_STYLE.search(v):
+    decoded = css_decode(v)
+    squashed = re.sub(r"\s+", "", decoded).lower()
+    if BAD_STYLE.search(v) or BAD_STYLE.search(decoded):
         return False
-    for m in URL_IN_CSS.finditer(v):
-        a = m.group(2).strip()
-        if not (a.startswith("#") or DATA_IMAGE.match(a) or SVG_ADDR.match(a)):
-            return False
+    if NO_FUNCTIONS.search(squashed) or re.search(r"(?<![\w-])src\(", decoded, re.I):
+        return False     # a picture or address in a string the url() checks never see (image-set, cross-fade, src())
+    if not css_closed(v, decoded, squashed, client):
+        return False
+    if not urls_ok(v) or not urls_ok(decoded):      # as written and as the browser reads it (u\72l( is url()
+        return False
     if client and not metadata_free(v):
         return False
-    if SVG_ADDR.search(css_decode(v)) or SVG_ADDR.search(v):
+    if SVG_ADDR.search(decoded) or SVG_ADDR.search(v) or SVG_ADDR.search(squashed):
         return not client and css_svg_words(v) is not None
     return True
 
@@ -187,31 +236,40 @@ RASTER_ADDR = re.compile(r"^data:image/(?:png|jpe?g)((?:;[\w=-]+)*);base64,([A-Z
 
 
 def clean_picture(value):
-    """A PNG or JPEG data address with the picture's own metadata (text chunks, EXIF, comments) removed; anything else as it was."""
+    """A PNG or JPEG data address with the picture's own metadata (text chunks, EXIF, comments) removed; None when the picture can't
+    be walked and checked (it is then dropped); anything that isn't a PNG or JPEG address as it was."""
     import docx_tools
     m = RASTER_ADDR.match(value.strip())
     if m is None:
         return value
     try:
         raw = base64.b64decode(re.sub(r"\s+", "", m.group(2)), validate=True)
-    except ValueError:
-        return value
+        clean = docx_tools.strip_image_metadata(raw)
+    except ValueError:      # PictureRefused is a ValueError
+        return None
     head = value.strip()[:value.strip().index(";base64,")]
-    return head + ";base64," + base64.b64encode(docx_tools.strip_image_metadata(raw)).decode("ascii")
+    return head + ";base64," + base64.b64encode(clean).decode("ascii")
 
 
 def metadata_free(css):
     """Whether every PNG or JPEG address in style rules is already without metadata (a client file takes no other)."""
     for m in URL_IN_CSS.finditer(css):
         a = m.group(2).strip()
-        if RASTER_ADDR.match(a) and clean_picture(a) != a:
+        if RASTER_ADDR.match(a) and clean_picture(a) != a:      # None (can't be checked) differs too
             return False
     return True
 
 
-def src_ok(tag, value):
-    """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words)."""
-    return tag == "img" and bool(DATA_IMAGE.match(value)) and (not SVG_URI.match(value) or svg_words(value) is not None)
+def src_ok(tag, value, client=False):
+    """Whether an img's src is kept: a data address of a picture, and an SVG one only if it can be read (see svg_words). A CLIENT file
+    takes no GIF or WebP (their comments can't be cleaned out), and no PNG or JPEG that can't be checked."""
+    if not (tag == "img" and DATA_IMAGE.match(value)):
+        return False
+    if client and re.match(r"data:image/(?:gif|webp)", value.strip(), re.I):
+        return False
+    if RASTER_ADDR.match(value.strip()) and clean_picture(value) is None:
+        return False
+    return not SVG_URI.match(value) or svg_words(value) is not None
 
 
 def keep_attr(tag, svg, name, value, client=False):
@@ -222,7 +280,7 @@ def keep_attr(tag, svg, name, value, client=False):
     if name == "style":
         return safe_css_value(value, client)
     if name == "src":
-        return src_ok(tag, value)
+        return src_ok(tag, value, client)
     if name == "id":
         return bool(ID_OK.match(value))
     if name.startswith("data-"):
@@ -562,6 +620,7 @@ def build(doc, page, title):
     palette = str(page.get("palette") or "")
     attr = f' data-palette="{html.escape(palette, quote=True)}"' if PALETTE.match(palette) else ""
     return (f'<!doctype html>\n<html lang="en-GB" data-theme="light"{attr}><head><meta charset="utf-8">'
+            f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
             f'<meta name="viewport" content="width=device-width"><meta name="generator" content="creaite export page">'
             f"<title>{creaite_doc.esc(title)}</title><style>{css}</style><style>{PRINT_CSS}</style></head>\n"
             f"<body>{markup}</body></html>\n")

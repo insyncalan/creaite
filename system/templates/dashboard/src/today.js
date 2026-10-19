@@ -24,6 +24,7 @@ import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S,
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { selDay } from "./stores/today.js";
+import { irLiveCounts, irReveal } from "./stores/intakeReview.js";   /* #232-C */
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
@@ -339,7 +340,7 @@ export function wireSpark(){
 export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","6 weeks"],["next","Next milestone"]];
 /** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots). BL-325: the next milestone's relative date is mid-sentence in brackets, so lower case ("(in 24 days)") */
 export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}${k==="trend"?legBtn():""}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
-  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
+  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}<button type="button" class="ib bd pset" data-psettings="${p.code}" aria-label="Project settings: ${esc(p.name)}" data-tip="Project settings">${ic("gear")}</button></td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
 export function pfResize(box){ if(box) $$("thead th[data-col]",box).forEach(th=>colResizer(th,"portfolio|"+th.dataset.col)); }
 /* BL-316: a reminder's "…" menu is the Menu block's (openMenu): Run report now, Dismiss for this session, Dismiss forever */
 export function remMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=REMINDERS.find(x=>x.id===id); if(!r) return; const why=RUNNING.has(id)?"Already running":viaServer()?"":"Needs the live server";
@@ -354,7 +355,7 @@ wireSpark();
 $("#attnList").addEventListener("click",e=>{ const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
   if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
   if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
-document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
+document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz,[data-psettings]")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
 }
 /* ===== BL-156 (sprint-ux) ===== first run: a short checklist on Today. On a vault that hasn't finished set-up (no project, no
    people in the register, or no sweep yet) Today starts with five steps, each with a button that does it or opens where it is
@@ -559,25 +560,23 @@ export function tdFocusAfter(){ const f=TDFOCUS; if(!f||Date.now()-f.at>8000){ T
   TDFOCUS=null; if(b){ /** @type {HTMLElement} */(b).focus(); return; } const h=$("#hTd")||$("#hAttn"); if(h&&h.offsetParent){ h.tabIndex=-1; h.focus(); } }
 export function tdFocusMark(key,what){ const i=$$("#tdList > li").filter(l=>!l.hidden).findIndex(l=>l.dataset.td===key); TDFOCUS={i:Math.max(0,i),what,at:Date.now()}; }
 /** a proposal's row in Review, highlighted (as First thing opens one) */
-export function tdToReview(n){ go("review"); const r=REV.find(x=>x.n===n&&!x.done); if(!r) return; RHL.clear(); RHL.add(r.n); rvPaint();
-  const tr=$(`#reviewBody tr[data-n="${r.n}"]`); if(tr) tr.scrollIntoView({block:"center"}); }
+export function tdToReview(n){ go("intake-review"); const r=REV.find(x=>x.n===n&&!x.done); if(r) irReveal([r.n]); }   /* #232-C: the meeting it came from opens */
 const TDFOLD="creaite-intake-review-hidden";   /* #168: per viewer, this browser only (localStorage), as Week ahead's */
 let tdFoldWired=false;
 function wireTdFold(){ const f=/** @type {HTMLDetailsElement|null} */($("#tdFold")); if(!f||tdFoldWired) return; tdFoldWired=true;
   f.open=store.get(TDFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(TDFOLD,!f.open)); }
-/** #208: the one line for Review and Intake, each count a link to its page; nothing when all are zero. The counts are the rail's:
-    Review's badge (pending proposals) and Intake's (new files), plus the transcripts ready in Intake's calendar import.
+/** #208, #232-C: the one line for Intake and Review, each count a link to its stage on the one page; nothing when both are zero.
+    The counts are the rail's badge and the page's (irLiveCounts): ready to process plus proposals to approve.
     @returns {{key:string,n:number,text:string,go:string}[]} */
-export function tdLine(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG().filter(mtgHasTx).length, fl=(D.inbox||[]).filter(f=>f.state==="new").length, L=[];
-  if(pr) L.push({key:"review",n:pr,text:`${pr} proposal${pr===1?"":"s"} in Review`,go:"review"});
-  if(nTr) L.push({key:"transcripts",n:nTr,text:`${nTr} transcript${nTr===1?"":"s"} ready in Intake`,go:"inbox"});
-  if(fl) L.push({key:"files",n:fl,text:`${fl} new file${fl===1?"":"s"} in Intake`,go:"inbox"});
+export function tdLine(){ const c=irLiveCounts(), L=[];
+  if(c.ready) L.push({key:"ready",n:c.ready,text:`${c.ready} ready to process`,go:"intake-review&stage=arrived"});
+  if(c.to_approve) L.push({key:"proposals",n:c.to_approve,text:`${plur(c.to_approve,"proposal")} to approve`,go:"intake-review&stage=drafted"});
   return L; }
 export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return; wireTdFold();
   const L=toDecideRows(), line=tdLine(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length+line.reduce((a,x)=>a+x.n,0); sec.hidden=!L.length&&!line.length;
   { const nw=$("#tdNew"); if(nw) nw.hidden=!VIPS().length; }   /* #168: a folded heading still shows an unseen alert (BL-99); never the word that says who is followed (BL-288) */
   $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
-  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onReview:()=>go("review"),onGo:pg=>go(pg),blocked:why=>snack(why)});
+  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onReview:()=>go("intake-review"),onGo:pg=>{ const [v,st]=pg.split("&stage="); go(v,st?{stage:st}:undefined); },blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */

@@ -37,6 +37,7 @@ def close_and_archive(v):
 
 
 class AgeArchivedInThePage(LiveBrowserCase):
+    quiet_jobs = False        # exercises backups or archiving: keeps the shipped settings
 
     @classmethod
     def load(cls, v):

@@ -114,7 +114,11 @@ export * from "./core/irFold.js";   /* #232: Intake and Review, one page */
 export * from "./stores/intakeReview.js";
 export * from "./components/intakeReview/IntakeReviewPage.jsx";
 export * from "./components/reporting/ReportingCard.jsx";
+export * from "./components/project/ProjectSettings.jsx";   /* #228: the full-page project settings */
+export * from "./stores/projectSettings.js";
 export * from "./stores/reportingSettings.js";   /* H3 (#221): the client report setting, per project */
+import { crDialog, runCheck } from "./stores/clientReport.js";
+export { crDialog, runCheck };   /* the client report's left-out dialog and check, which the tests drive by name */
 export * from "./components/report/hub/ClientReportPanel.jsx";   /* H3 (#221): the hub's Client report settings panel */
 
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
