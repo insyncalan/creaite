@@ -147,7 +147,12 @@ class LeakFix(Base):
         for gone in ("title=", "aria-label", "data-row", "data-note", "alt=", "ABC-005", "Zanzibar"):
             self.assertNotIn(gone, out.split("</style>", 2)[-1], gone)
         self.assertIn('data-id="health"', out)
-        self.assertIn("leaves out", self.build(path, page(self.wrap('<p class="Walrus budget cut">x</p>')))[1])
+        # v2.5.0 page subset: a client file keeps only class names the dashboard's stylesheet defines, so these words are dropped
+        # (or the page refused): either way they never reach the file
+        out, why = self.build(path, page(self.wrap('<p class="Walrus budget cut"></p>')))
+        self.assertTrue(why or out, why)
+        if out:
+            self.assertNotIn("walrus", out.split("</style>", 2)[-1].lower())
         self.assertIn("leaves out", self.build(path, page(self.wrap('<p style="content:\'Walrus budget cut\'">x</p>')))[1])
 
     def test_leak1_style_rules_with_a_hidden_word_in_content_are_refused(self):

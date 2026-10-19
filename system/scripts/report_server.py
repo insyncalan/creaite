@@ -320,9 +320,44 @@ def _plain_name(name, ext):
     if any(ord(c) < 32 or ord(c) == 127 for c in name):
         return None                                            # a control character (NUL, a newline, a tab...) is never in a file name
     name = " ".join(name.split())
-    if not name or "/" in name or "\\" in name or name.startswith(".") or len(name) > 150:
+    if not name or "/" in name or "\\" in name or name.startswith(".") or len(name) > 150 or any(c in name for c in '<>:"|?*'):
         return None
+    if _reserved_device(name):
+        return None                                            # CON, NUL, COM1...: a device on Windows, never a file
     return name if name.lower().endswith(ext) else name + ext
+
+
+RESERVED_DEVICES = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} | {f"{d}{n}" for d in ("COM", "LPT") for n in range(10)}
+
+
+def _reserved_device(name):
+    """v2.5.0: whether a name is a Windows device name (CON, NUL, COM1, LPT¹, CONIN$...), with or without an extension, in any case,
+    with trailing dots or spaces."""
+    import unicodedata
+    first = unicodedata.normalize("NFKC", str(name)).split(".")[0].rstrip(" .").upper()
+    return first in RESERVED_DEVICES
+
+
+def _name_key(text):
+    """A typed name as compared with a filing name: Unicode-normalised, invisible characters gone, lower case, every run of
+    punctuation, underscores and spaces one space."""
+    import unicodedata
+    t = "".join(c for c in unicodedata.normalize("NFKC", str(text or "")) if unicodedata.category(c) != "Cf")
+    return " ".join(re.sub(r"[\W_]+", " ", t.casefold()).split())
+
+
+FILING_KEY = re.compile(r"^\d{4} \d{2} \d{2} (?:weekly|client) report\b")
+
+
+def filing_name_not_own(typed, ext, own_stem):
+    """v2.5.0: whether a typed export name reads as a report's filing name ("YYYY-MM-DD Weekly report - ..." or "... Client report
+    - ...") other than this report's own (optionally numbered "(2)"): the route derives filing names; a typed one never claims
+    another report's (another week, project or kind)."""
+    stem = typed[:-len(ext)] if typed.lower().endswith(ext) else typed
+    key, own = _name_key(stem), _name_key(own_stem)
+    if not FILING_KEY.match(key):
+        return False
+    return not (key == own or re.fullmatch(re.escape(own) + r" \d{1,4}", key))
 
 
 def _taken(folder, name, reserved=None):
@@ -386,9 +421,13 @@ def _settle_name(folder, name, ext, req, label, reserved=None, kind=None):
     if choice == "rename":
         name = _plain_name(req.get("new_name"), ext)
         if not name:
-            return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
+            return name, False, {"message": "Type a file name (no folders, not starting with a dot, none of < > : \" | ? *, "
+                                            "not a device name such as CON or NUL).", "clash": True}
         if kind and other_reports_name(kind, name):          # v2.5.0: never under the other report's name
             return name, False, {"message": f"That name is the other report's: a {kind} report is never saved under it. "
+                                            "Choose another name.", "clash": True}
+        if reserved and filing_name_not_own(name, ext, Path(reserved).stem):      # nor another week's or project's filing name
+            return name, False, {"message": "That name is another report's filing name: creaite names filed reports itself. "
                                             "Choose another name.", "clash": True}
     if not _taken(folder, name, reserved):
         return name, False, None
@@ -424,7 +463,7 @@ def other_reports_name(kind, typed):
     """v2.5.0: whether a typed export name names the other report (a weekly export renamed to a client report's name, so internal
     content would sit under a client report's name in Reports; or the other way round). Case and spacing are ignored."""
     other = "client report" if kind == "weekly" else "weekly report"
-    return other in " ".join(str(typed or "").lower().split())
+    return other in _name_key(typed)        # also through underscores, punctuation, wide letters and invisible characters
 
 
 def export_route(handler, req):
