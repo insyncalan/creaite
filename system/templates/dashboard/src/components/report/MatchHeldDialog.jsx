@@ -12,8 +12,9 @@ export function MatchHeldDialog() {
     <Dialog open={!!h} onClose={close} labelledBy="crHeldH" id="crHeldDlg" class="crdlg" focus="[data-crheldok]">
       <h2 id="crHeldH">Match internal held some sections back</h2>
       {h ? <div data-crheld>
-        <p class="crbad" role="alert" data-crheldmsg>{h.message}</p>
+        {h.message ? <p class="crbad" role="alert" data-crheldmsg>{h.message}</p> : null}
         <ul class="crleft">{h.held.map(x => <li key={x.id} data-crheldsec={x.id}><b>Not matched: {x.heading}</b>{x.findings.length ? <> has internal wording: {x.findings.join("; ")}</> : null}</li>)}</ul>
+        {h.skipped && h.skipped.length ? <ul class="crleft">{h.skipped.map(x => <li key={x.id} data-crskipsec={x.id}>{x.heading}: internal only, add it to the client report yourself</li>)}</ul> : null}
         {h.copied.length ? <p class="sub" data-crheldcopied>Matched: {h.copied.join(", ")}.</p> : <p class="sub">Nothing was copied; the client report is as it was.</p>}
       </div> : null}
       <div class="crdacts"><button type="button" class="btn primary" data-crheldok onClick={close}>OK</button></div>

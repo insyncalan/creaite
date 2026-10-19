@@ -69507,7 +69507,7 @@ ${d5.text}`);
   var crDialog = y3(false);
   var crDirty = y3(false);
   var crHeld = y3(
-    /** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], message: string}|null} */
+    /** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */
     null
   );
   var crAsked = 0;
@@ -69582,11 +69582,20 @@ ${d5.text}`);
     const d02 = crDoc.value, i5 = crInternal.value;
     if (!d02 || !i5) return;
     const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
-    const want = ids || d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
+    const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
+    const internalText = (id2) => {
+      const x5 = secOf(i5, id2);
+      return !!x5 && x5.type === "freetext" && x5.audience === "internal";
+    };
+    const want = ids ? all : all.filter((id2) => !internalText(id2));
+    const skipped = ids ? [] : all.filter(internalText).map((id2) => ({ id: id2, heading: heading(id2) }));
     const cands = want.map((id2) => ({ id: id2, doc: matchClientSection(d02, i5, id2) })).filter((c5) => c5.doc !== d02);
-    if (!cands.length) return;
+    if (!cands.length) {
+      crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null;
+      return;
+    }
     const failed = () => {
-      crHeld.value = { copied: [], held: cands.map((c5) => ({ id: c5.id, heading: heading(c5.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." };
+      crHeld.value = { copied: [], skipped, held: cands.map((c5) => ({ id: c5.id, heading: heading(c5.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." };
     };
     if (!viaServer()) {
       failed();
@@ -69640,7 +69649,7 @@ ${d5.text}`);
       crDoc.value = d5;
       crDirty.value = true;
     }
-    crHeld.value = held.length ? { copied: done, held, message: `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
+    crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
   }
 
   // components/report/ClientParts.jsx
@@ -73686,7 +73695,7 @@ ${d5.text}`);
     return /* @__PURE__ */ u2(Dialog, { open: !!h5, onClose: close, labelledBy: "crHeldH", id: "crHeldDlg", class: "crdlg", focus: "[data-crheldok]", children: [
       /* @__PURE__ */ u2("h2", { id: "crHeldH", children: "Match internal held some sections back" }),
       h5 ? /* @__PURE__ */ u2("div", { "data-crheld": true, children: [
-        /* @__PURE__ */ u2("p", { class: "crbad", role: "alert", "data-crheldmsg": true, children: h5.message }),
+        h5.message ? /* @__PURE__ */ u2("p", { class: "crbad", role: "alert", "data-crheldmsg": true, children: h5.message }) : null,
         /* @__PURE__ */ u2("ul", { class: "crleft", children: h5.held.map((x5) => /* @__PURE__ */ u2("li", { "data-crheldsec": x5.id, children: [
           /* @__PURE__ */ u2("b", { children: [
             "Not matched: ",
@@ -73697,6 +73706,10 @@ ${d5.text}`);
             x5.findings.join("; ")
           ] }) : null
         ] }, x5.id)) }),
+        h5.skipped && h5.skipped.length ? /* @__PURE__ */ u2("ul", { class: "crleft", children: h5.skipped.map((x5) => /* @__PURE__ */ u2("li", { "data-crskipsec": x5.id, children: [
+          x5.heading,
+          ": internal only, add it to the client report yourself"
+        ] }, x5.id)) }) : null,
         h5.copied.length ? /* @__PURE__ */ u2("p", { class: "sub", "data-crheldcopied": true, children: [
           "Matched: ",
           h5.copied.join(", "),

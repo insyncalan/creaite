@@ -37,7 +37,7 @@ export const crBusy = signal("");
 export const crDialog = signal(false);
 export const crDirty = signal(false);
 /** What the last Match internal held back: null, or {copied: heading[], held: [{id, heading, findings}], message}. The dialog reads it. */
-export const crHeld = signal(/** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], message: string}|null} */ (null));
+export const crHeld = signal(/** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */ (null));
 
 let crAsked = 0;
 
@@ -120,10 +120,14 @@ async function matchInternalNow(ids) {
   const d0 = crDoc.value, i = crInternal.value;
   if (!d0 || !i) return;
   const heading = (/** @type {string} */ id) => String((secOf(i, id) || secOf(d0, id) || { heading: id }).heading || id);
-  const want = ids || d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
+  const all = ids ? ids : d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
+  // #218: "every section" never brings an internal-audience text section over; it is named instead, and matched only one at a time
+  const internalText = (/** @type {string} */ id) => { const x = secOf(i, id); return !!x && x.type === "freetext" && x.audience === "internal"; };
+  const want = ids ? all : all.filter(id => !internalText(id));
+  const skipped = ids ? [] : all.filter(internalText).map(id => ({ id, heading: heading(id) }));
   const cands = want.map(id => ({ id, doc: matchClientSection(d0, i, id) })).filter(c => c.doc !== d0);
-  if (!cands.length) return;
-  const failed = () => { crHeld.value = { copied: [], held: cands.map(c => ({ id: c.id, heading: heading(c.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." }; };
+  if (!cands.length) { crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null; return; }
+  const failed = () => { crHeld.value = { copied: [], skipped, held: cands.map(c => ({ id: c.id, heading: heading(c.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." }; };
   if (!viaServer()) { failed(); return; }
   const r = await api("/api/report/match-check", { docs: [d0, ...cands.map(c => c.doc)] });
   if (!r || !r.ok || !Array.isArray(r.findings) || r.findings.length !== cands.length + 1) { failed(); return; }
@@ -143,5 +147,5 @@ async function matchInternalNow(ids) {
     if (!extra || extra.length) { failed(); return; }
     crDoc.value = d; crDirty.value = true;
   }
-  crHeld.value = held.length ? { copied: done, held, message: `Not matched: ${held.map(h => h.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
+  crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map(h => h.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
 }
