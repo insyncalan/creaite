@@ -227,9 +227,33 @@ class Browser:
         self.wait(wait_for, timeout)
 
     def reload(self, wait_for="document.readyState==='complete'", timeout=20):
+        # A fixed pause is not "the reload has happened": under load the old document can still answer after it, the wait passes on
+        # the OLD page and the next call meets the new one before it has booted ("go is not defined"). Mark the old document and
+        # wait for the mark to be gone.
+        marked = False
+        try:
+            marked = bool(self.eval("(window.__cdpOld=true)", wait=False))
+        except RuntimeError:
+            pass                                  # no document to mark yet: the reload below still waits for the page itself
         self.call("Page.reload", ignoreCache=True)
         time.sleep(0.3)
+        if marked:
+            self.wait("!window.__cdpOld", timeout)
         self.wait(wait_for, timeout)
+        self.settle_boot()
+
+    def settle_boot(self, timeout=2):
+        """creaite's dashboard re-reads its data straight after its first paint when the server's copy is old (BL-327), which splices
+        A, P, REV ... and redraws. A test that changes page data before that lands has its change silently undone. The re-read is
+        counted in PULSE.reloads from the moment the page boots, so: a no-op (one evaluation) when none is in flight; otherwise wait
+        (at most `timeout` s) for it to finish, then for the frames of its redraw. Pages without PULSE pass at once."""
+        if not self.eval("typeof PULSE!=='undefined' && PULSE.reloads>0"):
+            return
+        try:
+            self.wait("PULSE.reloads===0", timeout)
+        except TimeoutError:
+            return                                # still reading after the cap: carry on, as the test would have
+        self.frames(2)
 
     def wait(self, js, timeout=10, every=0.05):
         """Poll until `js` is truthy; return its value, or raise with the page's last errors.

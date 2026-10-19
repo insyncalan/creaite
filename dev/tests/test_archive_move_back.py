@@ -342,6 +342,7 @@ class MoveBackRoute(unittest.TestCase):
 
 class FilesMoveBack(LiveBrowserCase):
     """In the browser: Files' Archived chip lists them, each with Move back (no other row has it); Move back opens the card."""
+    quiet_jobs = False        # exercises backups or archiving: keeps the shipped settings
 
     @classmethod
     def load(cls, v):
