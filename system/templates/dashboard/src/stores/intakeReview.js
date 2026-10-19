@@ -64,7 +64,7 @@ export const irLiveCounts = () => {
   const extra = (/** @type {any} */ (D).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !known.has(f.path)).length;
   const late = irMissing().length;   /* proposals the quick refresh brought into Review before the model was rebuilt */
   const k = { ...c, to_approve: c.to_approve + late, badge: c.badge + late };
-  return extra ? { ...k, arrived: k.arrived + extra, ready: k.ready + extra, badge: k.badge + extra } : k;
+  return extra ? { ...k, arrived: k.arrived + extra, ready: k.ready + extra, badge: k.badge + extra, all: k.all + extra } : k;
 };
 
 /* ===== #232-A (Intake side) ===== signals for the meeting row's actions; the actions themselves are in

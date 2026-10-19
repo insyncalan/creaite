@@ -4121,6 +4121,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icprog i{display:none}
 #v-intake-review .iccardacts{margin-top:8px}
 #v-intake-review .irnote{color:var(--warn)}
+#v-intake-review .icsep{align-self:stretch;width:1px;background:var(--line);margin:4px 6px}
+#v-intake-review .icbv{display:flex;align-items:center;gap:10px}#v-intake-review .icbi{display:inline-flex;color:var(--accent)}#v-intake-review .icbi svg{width:22px;height:22px}
+#v-intake-review .evbox[data-irstage=drafted] .icbi{color:var(--warn)}#v-intake-review .evbox[data-irstage=approved] .icbi{color:var(--ok)}#v-intake-review .evbox[data-irstage=all] .icbi{color:var(--muted)}
 #v-intake-review .icdrop{position:fixed;inset:0;z-index:var(--z-top);display:none;place-items:center;text-align:center;pointer-events:none;background:color-mix(in srgb,var(--bg) 82%,transparent);border:3px dashed var(--accent);font-size:var(--fs-lg)}
 #v-intake-review .icdrop.on{display:grid}
 #v-intake-review .irlist li{margin:2px 0}
@@ -9366,7 +9369,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       drafted: ms2.filter((m5) => stage(m5) === "drafted").length,
       approved: ms2.filter((m5) => stage(m5) === "approved").length,
       to_approve: toApprove,
-      badge: ready + toApprove
+      badge: ready + toApprove,
+      all: ms2.length
     };
   }
   var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
@@ -9456,7 +9460,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     );
     const late = irMissing().length;
     const k5 = { ...c5, to_approve: c5.to_approve + late, badge: c5.badge + late };
-    return extra ? { ...k5, arrived: k5.arrived + extra, ready: k5.ready + extra, badge: k5.badge + extra } : k5;
+    return extra ? { ...k5, arrived: k5.arrived + extra, ready: k5.ready + extra, badge: k5.badge + extra, all: k5.all + extra } : k5;
   };
   var irNotes = y3(
     /** @type {Record<string, string>} */
@@ -75167,40 +75171,41 @@ ${d5.text}`);
   };
   var irPlural = (n4, w6) => `${n4} ${w6}${n4 === 1 ? "" : "s"}`;
   function StagePipe({ c: c5 }) {
-    const sub = { arrived: `${c5.ready} ready to process`, drafted: `${irPlural(c5.to_approve, "proposal")} to check`, approved: "this week" };
-    return /* @__PURE__ */ u4("div", { class: "icpipe", role: "group", "aria-label": "Stages", children: [
-      IR_STAGES.map((g5, i5) => /* @__PURE__ */ u4(S2, { children: [
-        i5 ? /* @__PURE__ */ u4("span", { class: "ar", "aria-hidden": "true", children: "→" }) : null,
-        /* @__PURE__ */ u4(
-          "div",
-          {
-            class: "evbox click",
-            role: "button",
-            tabindex: 0,
-            "data-irstage": g5,
-            "aria-pressed": irStage.value === g5,
-            onClick: () => irClickStage(g5),
-            onKeyDown: (e4) => {
-              if (e4.key === "Enter" || e4.key === " ") {
-                e4.preventDefault();
-                irClickStage(g5);
-              }
-            },
-            children: [
-              /* @__PURE__ */ u4("div", { class: "v", children: c5[g5] }),
-              /* @__PURE__ */ u4("div", { class: "l", children: IR_STAGE_NAMES[
-                /** @type {keyof IR_STAGE_NAMES} */
-                g5
-              ] }),
-              /* @__PURE__ */ u4("div", { class: "icsub", children: sub[
-                /** @type {keyof sub} */
-                g5
-              ] })
-            ]
+    const sub = { arrived: `${c5.ready} ready to process`, drafted: `${irPlural(c5.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
+    const word = { ...IR_STAGE_NAMES, all: "Show all" };
+    const box = (g5) => /* @__PURE__ */ u4(
+      "div",
+      {
+        class: "evbox click",
+        role: "button",
+        tabindex: 0,
+        "data-irstage": g5,
+        "aria-pressed": irStage.value === g5,
+        onClick: () => irClickStage(g5),
+        onKeyDown: (e4) => {
+          if (e4.key === "Enter" || e4.key === " ") {
+            e4.preventDefault();
+            irClickStage(g5);
           }
-        )
-      ] })),
-      /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-irstage": "all", onClick: () => irClickStage("all"), children: "Show all" })
+        },
+        children: [
+          /* @__PURE__ */ u4("div", { class: "icbv", children: [
+            /* @__PURE__ */ u4("span", { class: "icbi", "aria-hidden": "true", children: /* @__PURE__ */ u4(IrIcon, { name: g5 === "arrived" ? "tray" : g5 }) }),
+            /* @__PURE__ */ u4("div", { class: "v", children: c5[g5] })
+          ] }),
+          /* @__PURE__ */ u4("div", { class: "l", children: word[g5] }),
+          /* @__PURE__ */ u4("div", { class: "icsub", children: sub[g5] })
+        ]
+      }
+    );
+    return /* @__PURE__ */ u4("div", { class: "icpipe", role: "group", "aria-label": "Stages", children: [
+      box("arrived"),
+      /* @__PURE__ */ u4("span", { class: "ar", "aria-hidden": "true", children: "→" }),
+      box("drafted"),
+      /* @__PURE__ */ u4("span", { class: "ar", "aria-hidden": "true", children: "→" }),
+      box("approved"),
+      /* @__PURE__ */ u4("span", { class: "icsep", "aria-hidden": "true" }),
+      box("all")
     ] });
   }
   function FoldSection({ sec, title, n: n4, children }) {

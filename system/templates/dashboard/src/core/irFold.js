@@ -105,7 +105,8 @@ export function irCounts(model, done) {
   const toApprove = new Set(all.filter(n => !done(n))).size;
   const ready = ms.filter(m => m.stage === "arrived" && m.state === "ready").length;
   return { arrived: ms.filter(m => stage(m) === "arrived").length, ready, drafted: ms.filter(m => stage(m) === "drafted").length,
-    approved: ms.filter(m => stage(m) === "approved").length, to_approve: toApprove, badge: ready + toApprove };
+    approved: ms.filter(m => stage(m) === "approved").length, to_approve: toApprove, badge: ready + toApprove,
+    all: ms.length };   /* #232-A4: the fourth box, Show all: every meeting and file on the page */
 }
 
 /** Esc: the peek closes first, then the open meeting. @param {{peek: any, open: string|null}} st */

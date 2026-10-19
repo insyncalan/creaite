@@ -75,8 +75,8 @@ class FoldRulesTests(unittest.TestCase):
         self.assertEqual(self.o["foldClicks"], [False, True, True])
 
     def test_live_counts_follow_decisions_on_the_page(self):
-        self.assertEqual(self.o["counts"], {"arrived": 2, "ready": 1, "drafted": 2, "approved": 1, "to_approve": 7, "badge": 8})
-        self.assertEqual(self.o["countsAfter"], {"arrived": 2, "ready": 1, "drafted": 1, "approved": 2, "to_approve": 5, "badge": 6})
+        self.assertEqual(self.o["counts"], {"arrived": 2, "ready": 1, "drafted": 2, "approved": 1, "to_approve": 7, "badge": 8, "all": 5})
+        self.assertEqual(self.o["countsAfter"], {"arrived": 2, "ready": 1, "drafted": 1, "approved": 2, "to_approve": 5, "badge": 6, "all": 5})        # Show all: every meeting and file, whatever its stage
 
     def test_esc_closes_the_peek_first_then_the_meeting(self):
         self.assertEqual(self.o["esc"], [{"peek": None, "open": "m1"}, {"peek": None, "open": None}])

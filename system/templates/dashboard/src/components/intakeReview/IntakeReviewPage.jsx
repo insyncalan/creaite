@@ -12,7 +12,7 @@
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { $ } from "../../core/dom.js";
-import { IR_STAGES, IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
+import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
@@ -31,19 +31,21 @@ const VIEWICON = {
 };
 const irPlural = (/** @type {number} */ n, /** @type {string} */ w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-/** The stage counts: each a filter (one click shows that stage, a second shows all). @param {{c: Record<string, number>}} props */
+/** The stage counts: each a filter (one click shows that stage, a second shows all), with an icon, and Show all as a fourth box
+    after a thin rule. @param {{c: Record<string, number>}} props */
 export function StagePipe({ c }) {
-  const sub = { arrived: `${c.ready} ready to process`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week" };
+  const sub = { arrived: `${c.ready} ready to process`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
+  const word = { ...IR_STAGE_NAMES, all: "Show all" };
+  const box = (/** @type {"arrived"|"drafted"|"approved"|"all"} */ g) => (
+    <div class="evbox click" role="button" tabindex={0} data-irstage={g} aria-pressed={irStage.value === g}
+      onClick={() => irClickStage(g)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irClickStage(g); } }}>
+      <div class="icbv"><span class="icbi" aria-hidden="true"><IrIcon name={g === "arrived" ? "tray" : g} /></span><div class="v">{c[g]}</div></div>
+      <div class="l">{word[g]}</div><div class="icsub">{sub[g]}</div>
+    </div>);
   return (
     <div class="icpipe" role="group" aria-label="Stages">
-      {IR_STAGES.map((g, i) => <>
-        {i ? <span class="ar" aria-hidden="true">→</span> : null}
-        <div class="evbox click" role="button" tabindex={0} data-irstage={g} aria-pressed={irStage.value === g}
-          onClick={() => irClickStage(g)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irClickStage(g); } }}>
-          <div class="v">{c[g]}</div><div class="l">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (g)]}</div><div class="icsub">{sub[/** @type {keyof sub} */ (g)]}</div>
-        </div>
-      </>)}
-      <button type="button" class="btn" data-irstage="all" onClick={() => irClickStage("all")}>Show all</button>
+      {box("arrived")}<span class="ar" aria-hidden="true">→</span>{box("drafted")}<span class="ar" aria-hidden="true">→</span>{box("approved")}
+      <span class="icsep" aria-hidden="true"></span>{box("all")}
     </div>
   );
 }

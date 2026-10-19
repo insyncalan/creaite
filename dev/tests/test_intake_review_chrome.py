@@ -108,5 +108,35 @@ class AddFiles(IntakeBase):
         (self.v.root / "inbox" / "a.vtt").unlink(missing_ok=True)
 
 
+class StageBoxes(IntakeBase):
+    shared_server = True
+
+    def test_four_boxes_with_icons_and_show_all_after_a_rule(self):
+        b = self.b
+        self.assertEqual(b.eval("[...document.querySelectorAll('.icpipe .evbox')].map(x=>x.dataset.irstage)"), ["arrived", "drafted", "approved", "all"])
+        self.assertEqual(b.eval("[...document.querySelectorAll('.icpipe .evbox')].map(x=>!!x.querySelector('.icbi svg'))"), [True] * 4)
+        self.assertEqual(b.eval("[...document.querySelectorAll('.icpipe > *')].map(x=>x.className.split(' ')[0])"),
+                         ["evbox", "ar", "evbox", "ar", "evbox", "icsep", "evbox"])
+        self.assertEqual(b.eval("document.querySelector('.icpipe .icsep').getAttribute('aria-hidden')"), "true")
+        self.assertFalse(b.eval("!!document.querySelector('.icpipe button.btn')"))                     # Show all is a box, not a button any more
+        self.assertEqual(b.eval("document.querySelector('[data-irstage=all] .l').textContent"), "Show all")
+        self.assertEqual(b.eval("document.querySelector('[data-irstage=all] .icsub').textContent"), "meetings and files")
+
+    def test_show_all_counts_every_meeting_and_file_and_the_boxes_are_filters(self):
+        b = self.b
+        total = b.eval("D.intake_review.meetings.length")
+        self.assertGreater(total, 3)
+        self.assertEqual(b.eval("+document.querySelector('[data-irstage=all] .v').textContent"), total)
+        self.assertEqual(b.eval("irLiveCounts().all"), total)
+        self.assertEqual(b.eval("[...document.querySelectorAll('.icpipe .evbox')].map(x=>x.getAttribute('aria-pressed'))"), ["false", "false", "false", "true"])
+        b.eval("document.querySelector('[data-irstage=arrived]').click()")
+        b.wait("document.querySelector('[data-irstage=arrived]').getAttribute('aria-pressed')==='true'")
+        self.assertEqual(b.eval("document.querySelector('[data-irstage=all]').getAttribute('aria-pressed')"), "false")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#v-intake-review [data-irv=list] tr[data-irm]')].every(r=>r.dataset.stage==='arrived')"), True)
+        b.eval("document.querySelector('[data-irstage=all]').click()")                                 # Show all shows everything again
+        b.wait("document.querySelector('[data-irstage=all]').getAttribute('aria-pressed')==='true'")
+        self.assertEqual(b.eval("document.querySelectorAll('#v-intake-review [data-irv=list] tr[data-irm]').length"), total)
+
+
 if __name__ == "__main__":
     unittest.main()
