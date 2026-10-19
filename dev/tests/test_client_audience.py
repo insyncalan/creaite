@@ -307,6 +307,18 @@ class Audience(unittest.TestCase):
                 self.assertEqual({x.name: h for x in others for h in [self.scan(x, self.needles())] if h
                                   and "Weekly report" not in x.name}, {})
 
+    # ── a typed export name never names the other report ────────────────────────────────────────────────────────────────
+    def test_a_weekly_export_cannot_be_renamed_to_a_client_reports_name(self):
+        self.weekly()
+        for new in (S.CLIENT_STEM, S.CLIENT_STEM + ".html", "x client REPORT - y"):
+            with self.subTest(new=new):
+                before = sorted(x.name for x in self.reports.glob("*"))
+                e = self.export("html", "weekly", on_clash="rename", new_name=new)
+                self.assertFalse(e["ok"], e)
+                self.assertEqual(sorted(x.name for x in self.reports.glob("*")), before)
+        e = self.export("html", "weekly", on_clash="rename", new_name="Board pack")      # an ordinary name still works
+        self.assertTrue(e["ok"], e)
+
     # ── each boundary on its own, with a reader that doesn't normalise ──────────────────────────────────────────────────
     def raw_reader(self):
         return ("import re\n_raw = lambda p: json.loads(creaite_doc.BLOCK.search(creaite_doc.real(p).read_text()).group(1))\n"

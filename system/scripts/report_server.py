@@ -377,7 +377,7 @@ def _file_in_reports(handler, draft, folder, name, overwrite, fmt, label):
             "message": f"{'Replaced' if overwrite else 'Saved'} {Path(stored).name} in {label}."}
 
 
-def _settle_name(folder, name, ext, req, label, reserved=None):
+def _settle_name(folder, name, ext, req, label, reserved=None, kind=None):
     """(name, overwrite, asked): the file name to save as, from the page's choice for a taken name (`on_clash`: number, rename with
     `new_name`, or overwrite), and `asked`: the answer to give instead when the name is taken and no choice was made (or the typed
     name can't be used), else None. `reserved` is the filing name of a report not yet filed: taken, but with nothing there, so
@@ -387,6 +387,9 @@ def _settle_name(folder, name, ext, req, label, reserved=None):
         name = _plain_name(req.get("new_name"), ext)
         if not name:
             return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
+        if kind and other_reports_name(kind, name):          # v2.5.0: never under the other report's name
+            return name, False, {"message": f"That name is the other report's: a {kind} report is never saved under it. "
+                                            "Choose another name.", "clash": True}
     if not _taken(folder, name, reserved):
         return name, False, None
     if choice == "number":
@@ -415,6 +418,13 @@ def plain_note(out):
     why = out.get("plain_why")
     out["message"] = (f"{out.get('message') or 'Exported.'} This is the plain version "
                       + (f"(the report page was not used: {why})." if why else "(open the report in creaite to export the formatted one)."))
+
+
+def other_reports_name(kind, typed):
+    """v2.5.0: whether a typed export name names the other report (a weekly export renamed to a client report's name, so internal
+    content would sit under a client report's name in Reports; or the other way round). Case and spacing are ignored."""
+    other = "client report" if kind == "weekly" else "weekly report"
+    return other in " ".join(str(typed or "").lower().split())
 
 
 def export_route(handler, req):
@@ -450,7 +460,7 @@ def export_route(handler, req):
     name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
     label = f"{creaite_doc.project_name(code) or code} › Reports"
     where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
-    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name)
+    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name, kind=kind)
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
     out = fn(path, fmt, file_beside=False, open_after=False,
