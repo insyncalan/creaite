@@ -4101,6 +4101,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
+/* #232-B: the proposal row. ONE emphasised meta line (#229: one line, detail on hover and in the peek), the evidence quote on a rail, tokens only */
+#v-intake-review .why.icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#v-intake-review .why.icchg .ickind{font-size:var(--fs-xs);vertical-align:1px}
+#v-intake-review .why.icchg .indiv{font-weight:600}#v-intake-review .why.icchg .icroutine{font-weight:500;color:var(--muted)}
+#v-intake-review .why.icchg .srclink{font-weight:500}
+#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
+#v-intake-review tr.irprop.sel td{background:var(--sunk)}
+#v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
+#v-intake-review tr.irprop .tag.drrv{vertical-align:1px}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 /* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
 .rail [data-v=review] .rl{letter-spacing:-.02em}

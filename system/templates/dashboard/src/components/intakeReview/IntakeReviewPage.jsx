@@ -14,6 +14,7 @@ import { $ } from "../../core/dom.js";
 import { IR_STAGES, IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { shared } from "../../core/state.js";
 import { irAfterData, irClickFold, irClickMeeting, irClickStage, irFolded, irLiveCounts, irModel, irOpen, irPeek, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { bootProposalKeys } from "./proposalActions.js";   /* #232-B */
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 
 const VIEWICON = {
@@ -88,7 +89,7 @@ export function renderIntakeReview() {
   const el = $("#v-intake-review");
   if (!el) return;
   irAfterData();
-  if (!irMounted) { render(<IntakeReviewView />, el); irMounted = true; bootIrKeys(); }
+  if (!irMounted) { render(<IntakeReviewView />, el); irMounted = true; bootIrKeys(); bootProposalKeys(); }
 }
 
 /* Keyboard (stubs): up and down move between meetings, Enter opens or closes the one with focus (232-A: Enter processes a ready

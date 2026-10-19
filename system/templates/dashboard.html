@@ -4111,6 +4111,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
+/* #232-B: the proposal row. ONE emphasised meta line (#229: one line, detail on hover and in the peek), the evidence quote on a rail, tokens only */
+#v-intake-review .why.icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#v-intake-review .why.icchg .ickind{font-size:var(--fs-xs);vertical-align:1px}
+#v-intake-review .why.icchg .indiv{font-weight:600}#v-intake-review .why.icchg .icroutine{font-weight:500;color:var(--muted)}
+#v-intake-review .why.icchg .srclink{font-weight:500}
+#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
+#v-intake-review tr.irprop.sel td{background:var(--sunk)}
+#v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
+#v-intake-review tr.irprop .tag.drrv{vertical-align:1px}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 /* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
 .rail [data-v=review] .rl{letter-spacing:-.02em}
@@ -6402,6 +6411,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkSetDate: () => pkSetDate,
     pkSetStatus: () => pkSetStatus,
     pkShort: () => pkShort,
+    pkSrc: () => pkSrc,
     pkStOpt: () => pkStOpt,
     pkStageDraw: () => pkStageDraw,
     pkStagedOf: () => pkStagedOf,
@@ -6774,6 +6784,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rvSyncChk: () => rvSyncChk,
     rvTick: () => rvTick,
     rvTip: () => rvTip,
+    rvTipText: () => rvTipText,
     rvWhyNot: () => rvWhyNot,
     rvfCount: () => rvfCount,
     rwWrap: () => rwWrap,
@@ -9991,8 +10002,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     if (q5 < 0) return true;
     for (const part of rest.slice(q5 + 1).split("&")) {
       if (!part) continue;
-      const eq = part.indexOf("="), key2 = strictDecode(eq < 0 ? part : part.slice(0, eq)), val2 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
-      if (key2 === null || val2 === null || !MAIL_PARTS.includes(key2.toLowerCase())) return false;
+      const eq = part.indexOf("="), key2 = strictDecode(eq < 0 ? part : part.slice(0, eq)), val3 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
+      if (key2 === null || val3 === null || !MAIL_PARTS.includes(key2.toLowerCase())) return false;
     }
     return true;
   }
@@ -26843,11 +26854,11 @@ ${s5}`;
     changed();
     return true;
   }
-  async function setClientRhythm(code, val2) {
+  async function setClientRhythm(code, val3) {
     const p6 = project(code);
     if (!p6) return false;
-    if (!await setRhythm(code, val2)) return false;
-    p6.rhythm = val2;
+    if (!await setRhythm(code, val3)) return false;
+    p6.rhythm = val3;
     changed();
     return true;
   }
@@ -26877,10 +26888,10 @@ ${s5}`;
     changed();
   }
   function toBase64(blob) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject2) => {
       const fr2 = new FileReader();
       fr2.onload = () => resolve(String(fr2.result).replace(/^data:[^,]*,/, ""));
-      fr2.onerror = () => reject(fr2.error);
+      fr2.onerror = () => reject2(fr2.error);
       fr2.readAsDataURL(blob);
     });
   }
@@ -27008,8 +27019,8 @@ ${s5}`;
     if (cur && inReview(code, kind)) return { state: { key: "draft", label: "Draft", tone: "warn" }, due: true };
     if (kind === "weekly") return { state: cur ? { key: "due", label: "Not drafted", tone: "warn" } : { key: "missing", label: "Not filed", tone: "" }, due: cur };
     const gap = GAP[rhythm || "Weekly"] || 7, last = L3.find((f5) => f5.date < from);
-    const due = !last || between(week, last.date) >= gap;
-    if (!due) return { state: { key: "notdue", label: `Not due (${(rhythm || "Weekly").toLowerCase()})`, tone: "" }, due: false };
+    const due2 = !last || between(week, last.date) >= gap;
+    if (!due2) return { state: { key: "notdue", label: `Not due (${(rhythm || "Weekly").toLowerCase()})`, tone: "" }, due: false };
     return cur ? { state: { key: "due", label: "Due", tone: "warn" }, due: true } : { state: { key: "missing", label: "Not filed", tone: "" }, due: false };
   }
   function weekView(code, week = thisWeek()) {
@@ -27575,11 +27586,11 @@ ${s5}`;
     h2(() => {
       if (asking) input.current?.focus();
     }, [asking]);
-    const [, redraw] = d2(0);
+    const [, redraw2] = d2(0);
     h2(() => {
       const ed3 = bar.h.editor;
       if (ed3.isDestroyed) return void 0;
-      const again = () => redraw((n4) => n4 + 1);
+      const again = () => redraw2((n4) => n4 + 1);
       ed3.on("transaction", again);
       return () => {
         if (!ed3.isDestroyed) ed3.off("transaction", again);
@@ -29316,7 +29327,7 @@ ${s5}`;
   // components/Combobox.jsx
   var OPEN = null;
   function Combobox({ id: id2, name, value = "", label, placeholder, empty = "Type a name to add it.", options, onPick, onInput }) {
-    const [open2, setOpen2] = d2(false), [typed2, setTyped] = d2(false), [act, setAct] = d2(0), [, redraw] = d2(0);
+    const [open2, setOpen2] = d2(false), [typed2, setTyped] = d2(false), [act, setAct] = d2(0), [, redraw2] = d2(0);
     const field = A2(
       /** @type {HTMLInputElement | null} */
       null
@@ -29403,7 +29414,7 @@ ${s5}`;
             setTyped(true);
             setAct(0);
             if (!open2) show();
-            else redraw((n4) => n4 + 1);
+            else redraw2((n4) => n4 + 1);
             onInput && onInput(
               /** @type {HTMLInputElement} */
               e4.currentTarget.value
@@ -29438,7 +29449,7 @@ ${s5}`;
                   onMouseDown: (e4) => {
                     e4.preventDefault();
                     e4.stopPropagation();
-                    Promise.resolve(o5.remove && o5.remove()).then(() => redraw((n4) => n4 + 1));
+                    Promise.resolve(o5.remove && o5.remove()).then(() => redraw2((n4) => n4 + 1));
                   },
                   children: /* @__PURE__ */ u2(Icon, { name: "x" })
                 }
@@ -30198,7 +30209,7 @@ ${s5}`;
       /** @type {HTMLDivElement|null} */
       null
     );
-    const [, redraw] = d2(0);
+    const [, redraw2] = d2(0);
     const open2 = capOpen.value, n4 = capNote.value, recent = capRecent.value, live = viaServer();
     h2(() => {
       const el2 = box.current;
@@ -30225,7 +30236,7 @@ ${s5}`;
       };
     }, []);
     h2(() => {
-      const t47 = window.setInterval(() => redraw((x5) => x5 + 1), 3e4);
+      const t47 = window.setInterval(() => redraw2((x5) => x5 + 1), 3e4);
       return () => clearInterval(t47);
     }, []);
     const keys = (e4) => {
@@ -33709,12 +33720,12 @@ ${s5}`;
       snack("That item isn't open any more");
       return;
     }
-    const owner = String(it2.o || "");
-    if (!owner || !PERS().some((y5) => y5.name === owner)) {
-      snack(`${owner || "The owner"} isn't on the People page, so there's no one to draft to`);
+    const owner2 = String(it2.o || "");
+    if (!owner2 || !PERS().some((y5) => y5.name === owner2)) {
+      snack(`${owner2 || "The owner"} isn't on the People page, so there's no one to draft to`);
       return;
     }
-    openDraftEmail(owner, "chase", m5.id);
+    openDraftEmail(owner2, "chase", m5.id);
   }
   async function alertLog(id2) {
     if (!viaServer()) {
@@ -33940,9 +33951,9 @@ ${s5}`;
       snack(d5.message || "No draft came back");
       return;
     }
-    const v5 = d5.prefill.values || {}, x5 = shared.CUR.draft, t47 = String(v5.description ?? v5.decision ?? "").trim(), due = v5.due_date || v5.needed_by || "", f5 = k5 === "actions" ? "upd" : k5 === "raid" ? "resp" : "why";
+    const v5 = d5.prefill.values || {}, x5 = shared.CUR.draft, t47 = String(v5.description ?? v5.decision ?? "").trim(), due2 = v5.due_date || v5.needed_by || "", f5 = k5 === "actions" ? "upd" : k5 === "raid" ? "resp" : "why";
     if (t47) x5.t = t47;
-    if (due) x5.due = due;
+    if (due2) x5.due = due2;
     if (d5.prefill.detail && !String(x5[f5] || "").trim()) x5[f5] = String(d5.prefill.detail);
     pkDraw();
     const tt2 = $("#pkTitle");
@@ -34091,12 +34102,12 @@ ${s5}`;
     $("#settingsBody").addEventListener("change", async (e4) => {
       const el2 = e4.target, k5 = el2.dataset.vipk;
       if (!k5) return;
-      const val2 = el2.type === "checkbox" ? el2.checked : Math.max(5, Number(el2.value) || 30);
+      const val3 = el2.type === "checkbox" ? el2.checked : Math.max(5, Number(el2.value) || 30);
       const was = VIPD()[k5];
-      if (await writeSettings({ ["vip." + k5]: val2 })) {
-        VIPD()[k5] = val2;
+      if (await writeSettings({ ["vip." + k5]: val3 })) {
+        VIPD()[k5] = val3;
         snack("Saved to settings.json");
-        if (k5 === "notify" && val2 && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+        if (k5 === "notify" && val3 && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
       } else if (el2.type === "checkbox") el2.checked = !!was;
       else el2.value = was;
     });
@@ -36003,8 +36014,8 @@ ${s5}`;
   }
   var MVDPH = {};
   var MVCAL = null;
-  function mvDpBtn(id2, val2, label, chg) {
-    return `<button type="button" class="mv-dp${chg ? " chg" : ""}" id="${id2}" data-mvdp="${val2 || ""}" aria-haspopup="dialog" aria-expanded="false" aria-label="${esc(label)}, ${val2 ? fd(val2) : "not set"}"><span>${val2 ? fd(val2) : "Choose a date"}</span>${ic("calendar", { bare: true })}</button>`;
+  function mvDpBtn(id2, val3, label, chg) {
+    return `<button type="button" class="mv-dp${chg ? " chg" : ""}" id="${id2}" data-mvdp="${val3 || ""}" aria-haspopup="dialog" aria-expanded="false" aria-label="${esc(label)}, ${val3 ? fd(val3) : "not set"}"><span>${val3 ? fd(val3) : "Choose a date"}</span>${ic("calendar", { bare: true })}</button>`;
   }
   function mvCalEl() {
     let c5 = $("#mvCal");
@@ -37465,8 +37476,8 @@ ${s5}`;
   function rvfCount() {
     return RVFIELDS.filter((f5) => RVF[f5[0]] && RVF[f5[0]].size).length;
   }
-  function fchipHtml(label, k5, clr, { neg = false, def = false, edit = "", attr: attr2 = "data-clr" } = {}) {
-    return `<span class="fchip${neg ? " neg" : ""}${def ? " def" : ""}">${edit ? `<button type="button" class="cl" data-${edit}="${esc(k5)}" aria-label="Change: ${esc(label)}">${esc(label)}</button>` : esc(label)}<button ${attr2}="${esc(k5)}" aria-label="${esc(clr)}">${ic("x")}</button></span>`;
+  function fchipHtml(label, k5, clr, { neg = false, def = false, edit: edit2 = "", attr: attr2 = "data-clr" } = {}) {
+    return `<span class="fchip${neg ? " neg" : ""}${def ? " def" : ""}">${edit2 ? `<button type="button" class="cl" data-${edit2}="${esc(k5)}" aria-label="Change: ${esc(label)}">${esc(label)}</button>` : esc(label)}<button ${attr2}="${esc(k5)}" aria-label="${esc(clr)}">${ic("x")}</button></span>`;
   }
   function renderApplied(total, shown2) {
     const chips = [];
@@ -37703,18 +37714,18 @@ ${s5}`;
     h5.tabIndex = 0;
     h5.setAttribute("role", "separator");
     h5.setAttribute("aria-label", "Resize " + th2.textContent + " column");
-    const val2 = (w6) => h5.setAttribute("aria-valuenow", String(Math.round(Math.max(60, Math.min(900, w6 || 0)))));
+    const val3 = (w6) => h5.setAttribute("aria-valuenow", String(Math.round(Math.max(60, Math.min(900, w6 || 0)))));
     h5.setAttribute("aria-orientation", "vertical");
     h5.setAttribute("aria-valuemin", "60");
     h5.setAttribute("aria-valuemax", "900");
-    val2(shared.RZ[k5] || th2.getBoundingClientRect().width);
-    h5.addEventListener("focus", () => val2(th2.getBoundingClientRect().width));
+    val3(shared.RZ[k5] || th2.getBoundingClientRect().width);
+    h5.addEventListener("focus", () => val3(th2.getBoundingClientRect().width));
     const put2 = (w6) => {
       w6 = Math.max(60, Math.min(900, w6));
       th2.style.width = w6 + "px";
       th2.style.minWidth = w6 + "px";
       shared.RZ[k5] = Math.round(w6);
-      val2(w6);
+      val3(w6);
     };
     h5.addEventListener("click", (e4) => e4.stopPropagation());
     h5.addEventListener("pointerdown", (e4) => {
@@ -38007,24 +38018,24 @@ ${s5}`;
   var bprop = (k5, x5) => k5 === "ws" ? x5.ws ? esc(x5.ws) : "" : k5 === "ms" ? x5.ms ? esc(msLabel(x5.ms)) : "" : k5 === "src" ? esc(fdText(srcShort(x5.src))) : k5 === "upd" ? x5.upd_at ? "Updated " + fd(x5.upd_at.slice(0, 10)) : "" : k5 === "type" ? esc(x5.type || "") : k5 === "resp" ? x5.resp ? "Response set" : "No response" : k5 === "date" ? x5.date ? fd(x5.date) : "" : k5 === "st" ? esc(x5.st) : "";
   function cardHtml(t47, x5, g5) {
     if (t47 === "decisions") {
-      const pend = x5.st === "Pending", late = decLate(x5), P43 = cardProps("decisions"), due2 = pend ? x5.due ? late ? decLateWords(x5) : rel(x5.due) : "No date needed by" : x5.st === "Made" ? `Made ${x5.date ? fd(x5.date) : ""}`.trim() : "Withdrawn";
+      const pend = x5.st === "Pending", late = decLate(x5), P43 = cardProps("decisions"), due3 = pend ? x5.due ? late ? decLateWords(x5) : rel(x5.due) : "No date needed by" : x5.st === "Made" ? `Made ${x5.date ? fd(x5.date) : ""}`.trim() : "Withdrawn";
       return `<div class="bcard" role="listitem" tabindex="0" data-row="${esc(x5.id)}" aria-label="${esc(x5.id)}: ${esc(x5.t)}">
     <div class="bct">${wflag("decisions", x5.id)}${esc(x5.t)}</div>
     <div class="bcm"><span class="bid">${esc(x5.id)}</span>${ptCode(x5)}${x5.client ? '<span class="bcv" title="Client-visible" aria-label="Client-visible">◐</span>' : ""}<span class="sp"></span>${P43.includes("by") ? `<span class="bown" title="${esc(x5.by ? (pend ? "Asked of " : "Made by ") + x5.by : "No one asked yet")}">${esc(initials(x5.by))}</span>` : ""}</div>
-    <div class="bcm">${P43.includes("due") ? `<span class="bdue ${late ? "late" : ""}">${esc(due2)}</span>` : ""}<span class="sp"></span>${P43.filter((k5) => k5 === "date" || k5 === "src").map((k5) => {
+    <div class="bcm">${P43.includes("due") ? `<span class="bdue ${late ? "late" : ""}">${esc(due3)}</span>` : ""}<span class="sp"></span>${P43.filter((k5) => k5 === "date" || k5 === "src").map((k5) => {
         const v5 = bprop(k5, x5);
         return v5 ? `<span class="bprop" data-p="${k5}">${v5}</span>` : "";
       }).join("")}${P43.includes("st") ? `<span class="bpri ${pend ? "" : "bdecided"}">${esc(x5.st)}</span>` : ""}${pend ? `<button class="bmv" type="button" aria-haspopup="menu" aria-label="Move ${esc(x5.id)} to…" title="Move to…">⋯</button>` : ""}</div></div>`;
     }
     const od2 = t47 === "actions" ? overdue(x5) : x5.st === "Open" && x5.due && x5.due < TODAY, op2 = t47 === "actions" ? open(x5) : x5.st === "Open";
-    const due = !x5.due ? "No date" : !op2 ? `Due ${fd(x5.due)}` : rel(x5.due), P42 = cardProps(t47), extra = P42.filter((k5) => !["o", "due", "pr"].includes(k5)).map((k5) => {
+    const due2 = !x5.due ? "No date" : !op2 ? `Due ${fd(x5.due)}` : rel(x5.due), P42 = cardProps(t47), extra = P42.filter((k5) => !["o", "due", "pr"].includes(k5)).map((k5) => {
       const v5 = bprop(k5, x5);
       return v5 ? `<span class="bprop" data-p="${k5}">${v5}</span>` : "";
     }).join("");
     return `<div class="bcard" role="listitem" tabindex="0" data-row="${esc(x5.id)}" aria-label="${esc(x5.id)}: ${esc(x5.t)}">
     <div class="bct">${wflag(t47, x5.id)}${esc(x5.t)}</div>
     <div class="bcm"><span class="bid">${esc(x5.id)}</span>${ptCode(x5)}${x5.client ? '<span class="bcv" title="Client-visible" aria-label="Client-visible">◐</span>' : ""}<span class="sp"></span>${P42.includes("o") ? `<span class="bown" title="${esc(x5.o && x5.o !== "TBC" ? x5.o : "No owner yet")}">${esc(initials(x5.o))}</span>` : ""}</div>
-    <div class="bcm">${P42.includes("due") ? `<span class="bdue ${od2 ? "late" : ""}">${esc(due)}</span>` : ""}<span class="sp"></span>${extra}${P42.includes("pr") ? `<span class="bpri ${x5.pr === "Urgent" ? "prio-urgent" : ""}">${esc(x5.pr || "")}</span>` : ""}<button class="bmv" type="button" aria-haspopup="menu" aria-label="Move ${esc(x5.id)} to…" title="Move to…">⋯</button></div></div>`;
+    <div class="bcm">${P42.includes("due") ? `<span class="bdue ${od2 ? "late" : ""}">${esc(due2)}</span>` : ""}<span class="sp"></span>${extra}${P42.includes("pr") ? `<span class="bpri ${x5.pr === "Urgent" ? "prio-urgent" : ""}">${esc(x5.pr || "")}</span>` : ""}<button class="bmv" type="button" aria-haspopup="menu" aria-label="Move ${esc(x5.id)} to…" title="Move to…">⋯</button></div></div>`;
   }
   var bcKey = (t47, g5, key2) => `${t47}|${g5}|${key2}`;
   var BW_MIN = 260, BW_MAX = 640, BW_DEF = 270;
@@ -39767,9 +39778,9 @@ ${s5}`;
   var BULK_MAX = 25;
   var BK_STATUS = { actions: ["Open", "Delayed", "Closed", "Cancelled"], raid: ["Open", "Closed", "Cancelled"] };
   var bkItems = () => [...HL.entries()].map(([id2, k5]) => ({ k: k5, id: id2, x: REC(k5, id2) })).filter((o5) => o5.x);
-  function prepMove(k5, x5, patch, owner) {
+  function prepMove(k5, x5, patch, owner2) {
     const f5 = { ...patch };
-    for (const n4 of ["o", "by"]) if (n4 in f5 && f5[n4] && f5[n4] !== "TBC") f5[n4] = owner;
+    for (const n4 of ["o", "by"]) if (n4 in f5 && f5[n4] && f5[n4] !== "TBC") f5[n4] = owner2;
     if ("st" in f5 && k5 !== "decisions") f5.closed = x5.closed || null;
     if (k5 === "raid") {
       if (!("imp" in f5)) f5.imp = x5.imp;
@@ -39808,7 +39819,7 @@ ${s5}`;
         missing.push(id2);
         continue;
       }
-      const owner = owners.get(patch.o) ?? owners.get(patch.by) ?? null, r4 = prepMove(k5, x5, patch, owner);
+      const owner2 = owners.get(patch.o) ?? owners.get(patch.by) ?? null, r4 = prepMove(k5, x5, patch, owner2);
       if (r4.err) {
         left.push(`${id2} (${oneLine(r4.err).replace(/\.$/, "")})`);
         continue;
@@ -42493,7 +42504,7 @@ ${s5}`;
         ]
       })
     );
-    const due = cardDue(a5), name = `${a5.who ?? ""}, ${t47}`, acts2 = [{ id: "handled", icon: "done", label: "Handled", name: `Handled: ${name}`, data: { alertdo: "handled", id: a5.id } }];
+    const due2 = cardDue(a5), name = `${a5.who ?? ""}, ${t47}`, acts2 = [{ id: "handled", icon: "done", label: "Handled", name: `Handled: ${name}`, data: { alertdo: "handled", id: a5.id } }];
     const m5 = a5.match && a5.match.id && a5.match.relation !== "new" ? String(a5.match.id) : "";
     if (m5 && !(a5.match && a5.match.logged)) acts2.push({ id: "log", icon: "filetext", label: `Log on ${m5}`, name: `Log on ${m5}: ${t47}`, data: { alertdo: "log", id: a5.id } });
     const mt2 = a5.match && a5.match.relation ? a5.match : null, rel2 = mt2 ? RELCHIP[mt2.relation] || "" : "", others = mt2 && mt2.id && mt2.count > 1 ? mt2.count - 1 : 0;
@@ -42524,8 +42535,8 @@ ${s5}`;
       count: others ? `also on ${others} other thread${others === 1 ? "" : "s"}` : "",
       ask: String(a5.ask || ""),
       due: a5.due || "",
-      overdue: !!(due && due.over),
-      dueText: due ? due.text : "",
+      overdue: !!(due2 && due2.over),
+      dueText: due2 ? due2.text : "",
       owners: (a5.owners || []).join(", "),
       files,
       closeWhy: cl2 ? `Looks done: ${confMark(a5) ? "the thread shows it finished" : String(cl2.evidence || "").replace(/\.$/, "")}` : "",
@@ -42677,17 +42688,17 @@ ${s5}`;
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {
-    const mine = isMe(x5.o), owner = !!(x5.o && x5.o !== "TBC"), t47 = x5.t || x5.id, L3 = [];
+    const mine = isMe(x5.o), owner2 = !!(x5.o && x5.o !== "TBC"), t47 = x5.t || x5.id, L3 = [];
     if (k5 === "actions") {
       if (mine) L3.push({ id: "done", icon: "done", label: "Mark done", name: `Mark done: ${t47}`, primary: true });
-      else if (owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}`, primary: true });
+      else if (owner2) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}`, primary: true });
       L3.push({ id: "move", icon: "calmove", label: "Move the date", name: `Move the date: ${t47}`, haspopup: "dialog" });
     } else if (k5 === "raid") {
       L3.push({ id: "update", icon: "pencil", label: "Write an update", name: `Write an update: ${t47}`, primary: true });
-      if (!mine && owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}` });
+      if (!mine && owner2) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}` });
     } else if (k5 === "decisions") {
       if (mine) L3.push({ id: "decide", icon: "flag", label: "Record the decision", name: `Record the decision: ${t47}`, primary: true });
-      else if (owner) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}`, primary: true });
+      else if (owner2) L3.push({ id: "chase", icon: "chasemail", label: "Draft email", name: `Draft email to ${who(x5.o)}: ${t47}`, primary: true });
     } else if (k5 === "milestone") L3.push({ id: "open", icon: "external", label: "Open the project", name: `Open ${pName(x5.p)}, for ${t47}` });
     return L3;
   }
@@ -43792,10 +43803,14 @@ ${s5}`;
     return raw((n4 ? `<div class="rvnote">${n4[0]}</div>` : "") + (a5 ? a5[0] : ""));
   };
   var rvTip = (r4) => {
+    const t47 = rvTipText(r4);
+    return t47 ? raw(` data-tip="${esc(t47)}"`) : "";
+  };
+  var rvTipText = (r4) => {
     const d5 = (revDetail(r4) || "").replace(RV_WK, "").replace(RV_DR, "").replace(RV_ND, "").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/, "");
     if (!d5) return "";
     const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
-    return t47 ? raw(` data-tip="${esc(t47)}"`) : "";
+    return t47;
   };
   var WKRVF = { actions: ["due", "due_date"], raid: ["due", "due_date"], decisions: ["due", "needed_by"] };
   var draftOn = (f5) => !(S.drafting && S.drafting[f5] === false);
@@ -44001,7 +44016,7 @@ ${s5}`;
   var RVQ = "", RVG = "project", RVO = "", RVPK = "k", RVLASTUNDO = null;
   shared.RVSTATS = { approved: 0, rejected: 0, edited: 0 };
   shared.RV_MAX = 25;
-  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict");
+  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict") && !(r4.flags || []).includes("invalid") && (typeof r4.hold !== "string" || !r4.hold);
   var rvRejectOK = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
   function rvSyncChk() {
     CHK.clear();
@@ -47250,7 +47265,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("span", { class: "shcite plain", children: text });
   }
   function ReadAs() {
-    const r4 = shapeReading.value, [edit, setEdit] = d2(
+    const r4 = shapeReading.value, [edit2, setEdit] = d2(
       /** @type {import("../../stores/prepShape.js").Reading | null} */
       null
     );
@@ -47260,11 +47275,11 @@ ${s5}`;
       null
     );
     h2(() => {
-      if (edit) first.current?.focus();
-    }, [!!edit]);
+      if (edit2) first.current?.focus();
+    }, [!!edit2]);
     if (!r4) return null;
     const showWords = (s5) => s5 === "focus-only" ? "Only the items and documents linked to the focus" : "The focus first, then everything else";
-    if (!edit) {
+    if (!edit2) {
       return /* @__PURE__ */ u2("div", { class: "readas", role: "group", "aria-labelledby": "shReadH", children: [
         /* @__PURE__ */ u2("div", { class: "sub", id: "shReadH", children: [
           "creaite read this as ",
@@ -47286,9 +47301,9 @@ ${s5}`;
     }
     const push = () => {
       const t47 = add.trim();
-      if (!t47 || edit.focus.length >= 12) return;
+      if (!t47 || edit2.focus.length >= 12) return;
       const id2 = (SHAPE_ID_RE.exec(t47) || [""])[0];
-      setEdit({ ...edit, focus: [...edit.focus, id2 ? { id: id2, text: t47 } : { text: t47 }] });
+      setEdit({ ...edit2, focus: [...edit2.focus, id2 ? { id: id2, text: t47 } : { text: t47 }] });
       setAdd("");
     };
     return /* @__PURE__ */ u2("div", { class: "readas editing", role: "group", "aria-labelledby": "shReadE", children: [
@@ -47296,7 +47311,7 @@ ${s5}`;
       /* @__PURE__ */ u2("div", { class: "rl", children: [
         /* @__PURE__ */ u2("span", { children: "Focus" }),
         /* @__PURE__ */ u2("span", { class: "shfocus", children: [
-          edit.focus.map((f5, i5) => /* @__PURE__ */ u2("span", { class: "chip shrm", children: [
+          edit2.focus.map((f5, i5) => /* @__PURE__ */ u2("span", { class: "chip shrm", children: [
             f5.text,
             /* @__PURE__ */ u2(
               "button",
@@ -47305,7 +47320,7 @@ ${s5}`;
                 class: "ib",
                 "aria-label": `Remove ${f5.text}`,
                 "data-tip": `Remove ${f5.text}`,
-                onClick: () => setEdit({ ...edit, focus: edit.focus.filter((_6, n4) => n4 !== i5) }),
+                onClick: () => setEdit({ ...edit2, focus: edit2.focus.filter((_6, n4) => n4 !== i5) }),
                 children: /* @__PURE__ */ u2(Icon, { name: "x" })
               }
             )
@@ -47335,13 +47350,13 @@ ${s5}`;
           ] })
         ] }),
         /* @__PURE__ */ u2("label", { for: "shAim", children: "Aim" }),
-        /* @__PURE__ */ u2("input", { id: "shAim", type: "text", value: edit.aim, maxLength: 600, onInput: (e4) => setEdit({ ...edit, aim: (
+        /* @__PURE__ */ u2("input", { id: "shAim", type: "text", value: edit2.aim, maxLength: 600, onInput: (e4) => setEdit({ ...edit2, aim: (
           /** @type {HTMLInputElement} */
           e4.currentTarget.value
         ) }) }),
         /* @__PURE__ */ u2("span", { id: "shShowL", children: "Show" }),
         /* @__PURE__ */ u2("span", { role: "radiogroup", "aria-labelledby": "shShowL", class: "shshow", children: ["focus-only", "focus-first"].map((v5) => /* @__PURE__ */ u2("label", { children: [
-          /* @__PURE__ */ u2("input", { type: "radio", name: "shShow", value: v5, checked: edit.show === v5, onChange: () => setEdit({ ...edit, show: v5 }) }),
+          /* @__PURE__ */ u2("input", { type: "radio", name: "shShow", value: v5, checked: edit2.show === v5, onChange: () => setEdit({ ...edit2, show: v5 }) }),
           showWords(v5)
         ] }, v5)) })
       ] }),
@@ -47349,7 +47364,7 @@ ${s5}`;
         /* @__PURE__ */ u2("span", { class: "sp" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", onClick: () => setEdit(null), children: "Cancel" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary shsm", "data-shdone": "1", onClick: () => {
-          setReading({ ...edit, aim: edit.aim.trim() });
+          setReading({ ...edit2, aim: edit2.aim.trim() });
           setEdit(null);
         }, children: "Done" })
       ] })
@@ -49153,7 +49168,7 @@ ${pre}**Current state title:** ${title}`);
   function claimPaint(which) {
     const root2 = evRoot(which), set = claimSet(which);
     if (!root2 || !set) return;
-    const edit = root2.isContentEditable, seen = /* @__PURE__ */ new Set();
+    const edit2 = root2.isContentEditable, seen = /* @__PURE__ */ new Set();
     root2.querySelectorAll(".claim[data-c]").forEach((s5) => {
       const c5 = set[s5.dataset.c];
       if (!c5) return;
@@ -49167,7 +49182,7 @@ ${pre}**Current state title:** ${title}`);
       const tip = claimTip(c5);
       s5.title = tip + (st2 === "edited" ? "" : " · click to see");
       s5.setAttribute("aria-description", tip);
-      if (!edit && first) {
+      if (!edit2 && first) {
         s5.tabIndex = 0;
         s5.setAttribute("role", "button");
       }
@@ -49269,8 +49284,8 @@ ${pre}**Current state title:** ${title}`);
   }
   function evRowHtml(r4) {
     const id2 = esc(r4.id), link = r4.kind === "milestones" ? `<a href="#" class="hlink" data-ms="${id2}">${id2}</a>` : `<a href="#" class="hlink" data-open="${r4.kind}:${id2}">${id2}</a>`;
-    const due = r4.due ? (r4.kind === "decisions" ? "needed by " : r4.kind === "milestones" ? "forecast " : "due ") + fd(r4.due) : "";
-    const bits = [EVWHAT[r4.kind] || "", r4.status, r4.owner && r4.owner !== "TBC" ? r4.owner : "", due, r4.closed ? "closed " + fd(r4.closed) : ""].filter(Boolean).join(" · ");
+    const due2 = r4.due ? (r4.kind === "decisions" ? "needed by " : r4.kind === "milestones" ? "forecast " : "due ") + fd(r4.due) : "";
+    const bits = [EVWHAT[r4.kind] || "", r4.status, r4.owner && r4.owner !== "TBC" ? r4.owner : "", due2, r4.closed ? "closed " + fd(r4.closed) : ""].filter(Boolean).join(" · ");
     return `<div class="evrow">${link} ${esc(r4.title)}<div class="sub">${esc(bits)}</div>${r4.quote && r4.quote.text ? evQuote(r4.quote) : r4.source ? `<div class="evqsrc">Source: ${esc(r4.source)}</div>` : ""}</div>`;
   }
   function evDraw() {
@@ -49649,10 +49664,10 @@ ${pre}**Current state title:** ${title}`);
     return `<div class="card" id="depCard"><h2>Dependencies <span class="sub">· ${countLink(`${plur(L3.length, "open dependency")} in ${pName(code)}`.replace("dependencys", "dependencies"), L3.length, `raid:open:${code}`, { st: ["Open"], ty: ["Dependency"] })}${risk ? ` · ${risk} at risk` : ""}</span></h2>${groups.map((g5) => `<div class="depg" data-g="${esc(g5)}"><div class="depgh">${g5 ? `${ico("milestone")}<a href="#" class="hlink" data-ms="${g5}">${esc(msInfo(g5).name)}</a> <span class="sub">${msInfo(g5).date ? "forecast " + fd(msInfo(g5).date) : ""}</span>` : 'Not attached <span class="tag">attach one to a milestone in its panel</span>'}</div>${by2[g5].map(row2).join("")}</div>`).join("")}</div>`;
   }
   var depHash = (t47) => [...String(t47 || "")].reduce((a5, c5) => a5 * 31 + c5.charCodeAt(0) | 0, 7);
-  function depSuggest(code, due) {
+  function depSuggest(code, due2) {
     const p6 = P4.find((x5) => x5.code === code);
-    if (!p6 || !due) return [];
-    return p6.ms.filter((m5) => m5[3] && m5[6] === "Planned" && (m5[8] || m5[4]) && (m5[8] || m5[4]) > due).sort((a5, b5) => (a5[8] || a5[4]).localeCompare(b5[8] || b5[4])).slice(0, 3);
+    if (!p6 || !due2) return [];
+    return p6.ms.filter((m5) => m5[3] && m5[6] === "Planned" && (m5[8] || m5[4]) && (m5[8] || m5[4]) > due2).sort((a5, b5) => (a5[8] || a5[4]).localeCompare(b5[8] || b5[4])).slice(0, 3);
   }
   function depSugDraw(parent, L3, attr2) {
     const g5 = document.createElement("div");
@@ -49668,9 +49683,9 @@ ${pre}**Current state title:** ${title}`);
     if (!shared.EDITING || !shared.CUR || shared.CUR.k !== "raid" || !["record", "new"].includes(shared.CUR.mode)) return;
     const typ = $("#f_type"), ms2 = $("#f_ms");
     if (!typ || !ms2 || typ.value !== "Dependency" || ms2.value) return;
-    const code = $("#f_p")?.value || formProject(), dueTxt = $("#f_due")?.value || "", due = DDATE.test(dueTxt) ? toIso(dueTxt) : "", key2 = shared.CUR.id || "new";
+    const code = $("#f_p")?.value || formProject(), dueTxt = $("#f_due")?.value || "", due2 = DDATE.test(dueTxt) ? toIso(dueTxt) : "", key2 = shared.CUR.id || "new";
     if (store.get("creaite-dep-none", {})[key2] === depHash($("#f_t")?.value)) return;
-    const L3 = depSuggest(code, due);
+    const L3 = depSuggest(code, due2);
     if (!L3.length) return;
     depSugDraw(ms2.closest("dd"), L3, "depms");
   }
@@ -50172,9 +50187,9 @@ ${pre}**Current state title:** ${title}`);
   var DE_DECIDE = "Where an item is a decision we need from you, could you let me know what you have decided?";
   var deIsoDays = (a5, b5) => Math.round((Date.UTC(+a5.slice(0, 4), +a5.slice(5, 7) - 1, +a5.slice(8, 10)) - Date.UTC(+b5.slice(0, 4), +b5.slice(5, 7) - 1, +b5.slice(8, 10))) / 864e5);
   var deGreeting = (now, first) => `Good ${now.getHours() < 12 ? "morning" : now.getHours() < 18 ? "afternoon" : "evening"}${first ? ", " + first : ""},`;
-  function deDue(due, today, soon2) {
-    if (!due) return { date: "No date", words: "", level: "" };
-    const n4 = deIsoDays(due, today), date = fd(due);
+  function deDue(due2, today, soon2) {
+    if (!due2) return { date: "No date", words: "", level: "" };
+    const n4 = deIsoDays(due2, today), date = fd(due2);
     if (n4 < 0) return { date, words: `${-n4} day${n4 === -1 ? "" : "s"} overdue`, level: "over" };
     if (n4 <= soon2) return { date, words: n4 === 0 ? "due today" : n4 === 1 ? "due tomorrow" : `due in ${n4} days`, level: "soon" };
     return { date, words: "", level: "" };
@@ -51354,8 +51369,8 @@ ${pre}**Current state title:** ${title}`);
     };
     if (!t47 || String(t47).trim().length < 3) return out;
     add("o", chOwner(t47), `Owner: ${chOwner(t47)}`, "named in the words");
-    const due = chDue(t47);
-    add("due", due, `Due: ${fd(due)}`, "from the words");
+    const due2 = chDue(t47);
+    add("due", due2, `Due: ${fd(due2)}`, "from the words");
     if (code) {
       const ws2 = wsFor(code).find((n4) => low.includes(n4.toLowerCase())), ms2 = msChoices(code).find((m5) => m5[1] && low.includes(String(m5[1]).toLowerCase())), sim = chSimilar(t47, code);
       add("ws", ws2 || sim && sim.ws, `Workstream: ${ws2 || sim && sim.ws}`, ws2 ? "named in the words" : `as ${sim && sim.id} was filed`);
@@ -52173,12 +52188,12 @@ ${pre}**Current state title:** ${title}`);
     if (w6 >= 0) return shift(today, monday + (w6 + 6) % 7, "d");
     return null;
   }
-  function dayMonth(s5, today, due) {
+  function dayMonth(s5, today, due2) {
     const dm2 = (d5, m6, y5) => {
       if (y5 != null) return real(+y5, +m6, +d5);
       const yr2 = +today.slice(0, 4);
       let r4 = real(yr2, +m6, +d5);
-      if (r4 && due && r4 < today) r4 = real(yr2 + 1, +m6, +d5);
+      if (r4 && due2 && r4 < today) r4 = real(yr2 + 1, +m6, +d5);
       return r4;
     };
     let m5 = s5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
@@ -52191,12 +52206,12 @@ ${pre}**Current state title:** ${title}`);
     if (m5 && monthOf(m5[1])) return dm2(m5[2], monthOf(m5[1]), m5[3]);
     return null;
   }
-  function parseWords(text, today, due = false, mode = "", weekend = [0, 6]) {
+  function parseWords(text, today, due2 = false, mode = "", weekend = [0, 6]) {
     let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
     if (!s5) return null;
     const deadline = mode === "deadline";
     if (deadline) {
-      due = true;
+      due2 = true;
       s5 = s5.replace(/^(?:by|on) /, "");
       const d5 = deadlineOnly(s5, today, weekend);
       if (d5) return d5;
@@ -52221,7 +52236,7 @@ ${pre}**Current state title:** ${title}`);
     if (m5) return period(shift(today, +m5[1], m5[2][0]));
     m5 = s5.match(/^\+(\d{1,3})$/);
     if (m5) return period(shift(today, +m5[1], "d"));
-    return dayMonth(s5, today, due);
+    return dayMonth(s5, today, due2);
   }
 
   // core/fields.js
@@ -52404,8 +52419,8 @@ ${pre}**Current state title:** ${title}`);
     });
   }
   var DATE_HELP = "Try “fri”, “+3d”, “15-10” or 16-10-2026.";
-  function parseWhen(text, today = TODAY, due = false, mode = "") {
-    return parseWords(text, today, due, mode);
+  function parseWhen(text, today = TODAY, due2 = false, mode = "") {
+    return parseWords(text, today, due2, mode);
   }
   var dateSaid = (iso2) => `${(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso2)}`;
   var isDateField = (el2) => !!(el2 && el2.tagName === "INPUT" && !el2.readOnly && el2.matches('[data-date],[placeholder="DD-MM-YYYY"],#bdDate,[data-und]'));
@@ -54225,7 +54240,7 @@ ${pre}**Current state title:** ${title}`);
       if (refocus) back2(true);
       if (iso2 !== date) noteMeta({ date: iso2 });
     };
-    const settle = () => {
+    const settle2 = () => {
       const v5 = text.trim();
       if (!v5) {
         commit("");
@@ -54279,7 +54294,7 @@ ${pre}**Current state title:** ${title}`);
         /** @type {Node|null} */
         e4.relatedTarget
       );
-      if (open2 && (!to2 || !(box.current && box.current.contains(to2)))) settle();
+      if (open2 && (!to2 || !(box.current && box.current.contains(to2)))) settle2();
     }, children: [
       /* @__PURE__ */ u2("span", { class: "ndwrap", children: [
         /* @__PURE__ */ u2(
@@ -55970,7 +55985,7 @@ ${pre}**Current state title:** ${title}`);
     const P5 = `${DE_FONT}color:${C5.ink};margin:0 0 12px 0;`, B4 = "font-weight:bold;", muted = `color:${C5.muted};`;
     const td2 = (extra = "") => `${DE_FONT}color:${C5.ink};border-bottom:1px solid ${C5.rule};padding:6px 8px;vertical-align:top;${extra}`;
     const th2 = (w6 = "") => `${DE_FONT}color:${C5.ink};background:${C5.head};border-bottom:1px solid ${C5.rule};padding:6px 8px;text-align:left;font-weight:bold;${w6 ? `width:${w6};` : ""}`;
-    const due = `color:${r4.overdue ? C5.red : r4.due_words ? C5.amber : C5.ink};${r4.overdue ? B4 : ""}`;
+    const due2 = `color:${r4.overdue ? C5.red : r4.due_words ? C5.amber : C5.ink};${r4.overdue ? B4 : ""}`;
     return /* @__PURE__ */ u2("div", { ref: mailRef, style: `${DE_FONT}color:${C5.ink};background:${C5.white};`, children: [
       /* @__PURE__ */ u2("p", { style: P5, children: d5.greeting }),
       /* @__PURE__ */ u2("p", { style: P5, children: d5.opening }),
@@ -55998,10 +56013,10 @@ ${pre}**Current state title:** ${title}`);
             ] }))
           ] }),
           /* @__PURE__ */ u2("td", { style: td2("white-space:nowrap;"), children: [
-            /* @__PURE__ */ u2("span", { style: due, children: r4.due }),
+            /* @__PURE__ */ u2("span", { style: due2, children: r4.due }),
             r4.due_words ? /* @__PURE__ */ u2(S2, { children: [
               /* @__PURE__ */ u2("br", {}),
-              /* @__PURE__ */ u2("span", { style: due, children: r4.due_words })
+              /* @__PURE__ */ u2("span", { style: due2, children: r4.due_words })
             ] }) : null
           ] }),
           /* @__PURE__ */ u2("td", { style: td2("white-space:nowrap;"), children: r4.priority === "Urgent" ? /* @__PURE__ */ u2("b", { style: B4, children: "Urgent" }) : r4.priority })
@@ -57540,7 +57555,7 @@ ${d5.text}`);
     if (k5 !== "decisions" && !values.raised) values.raised = TODAY;
     return { id: id2, rec, values };
   }
-  async function savePanel(approve, closeAfter) {
+  async function savePanel(approve2, closeAfter) {
     if (shared.CUR.k === "milestone") return msPanelSave();
     const f5 = readForm(), k5 = shared.CUR.k;
     const err = validate(k5, f5, shared.CUR.mode === "new", shared.CUR.mode === "record" ? REC(k5, shared.CUR.id) : null);
@@ -57615,7 +57630,7 @@ ${d5.text}`);
             }
           }
           it2.edited_in = "dashboard";
-          if (approve) {
+          if (approve2) {
             it2.decision = "approved";
             it2.decided_in = "dashboard";
           }
@@ -57635,7 +57650,7 @@ ${d5.text}`);
       }
       r4.edited = true;
       closePanel();
-      if (approve) decide(r4.n, "approved", true);
+      if (approve2) decide(r4.n, "approved", true);
       else {
         refreshAll();
         snack(`Proposal updated — still waiting for review`);
@@ -57678,8 +57693,9 @@ ${d5.text}`);
   function pkIs() {
     return !!(shared.CUR && shared.CUR.mode === "new" && PKK.includes(shared.CUR.k)) || !!(shared.CUR && (shared.CUR.mode === "record" || shared.CUR.mode === "proposal") && PKK.includes(shared.CUR.k));
   }
+  var pkSrc = () => !!shared.PKSRC && (!shared.PKSRC.view || shared.PKSRC.view === shared.VIEW);
   function pkOrder() {
-    if (shared.PKSRC) return shared.PKSRC.order();
+    if (pkSrc()) return shared.PKSRC.order();
     return shared.VIEW === "work" || shared.VIEW === "mine" || shared.VIEW === "person" ? hlOrder() : [];
   }
   function pkNav() {
@@ -57690,7 +57706,7 @@ ${d5.text}`);
   function pkStep(n4) {
     const L3 = pkOrder(), i5 = L3.findIndex((o6) => o6.id === (shared.CUR && pkCid())), o5 = L3[i5 + n4];
     if (i5 < 0 || !o5) return;
-    if (shared.PKSRC) {
+    if (pkSrc()) {
       shared.PKSRC.step(o5);
       return;
     }
@@ -58083,28 +58099,28 @@ ${d5.text}`);
     }
     const x5 = pkX(k5, id2);
     if (!x5) return;
-    const ml2 = !!el2.dataset.pkml, raw2 = el2.textContent.replace(/ /g, " "), val2 = ml2 ? raw2.replace(/^\s+|\s+$/g, "") : raw2.replace(/\s+/g, " ").trim();
-    if (pkSame(x5[f5], val2)) return;
-    const r4 = pkTextRule(k5, id2, f5, val2, el2, x5);
+    const ml2 = !!el2.dataset.pkml, raw2 = el2.textContent.replace(/ /g, " "), val3 = ml2 ? raw2.replace(/^\s+|\s+$/g, "") : raw2.replace(/\s+/g, " ").trim();
+    if (pkSame(x5[f5], val3)) return;
+    const r4 = pkTextRule(k5, id2, f5, val3, el2, x5);
     if (r4 === false) return;
-    return pkCommit(k5, id2, { [f5]: val2 }, pkLabel(k5, f5, x5), x5[f5] || "", val2, { type: f5 === pkDescF(k5) ? "upd" : "act" });
+    return pkCommit(k5, id2, { [f5]: val3 }, pkLabel(k5, f5, x5), x5[f5] || "", val3, { type: f5 === pkDescF(k5) ? "upd" : "act" });
   }
-  function pkTextRule(k5, id2, f5, val2, el2, x5) {
+  function pkTextRule(k5, id2, f5, val3, el2, x5) {
     if (f5 === "revisit" && !WK.ok) {
-      const iso2 = DDATE.test(val2) ? toIso(val2) : DATE.test(val2) ? val2 : "";
-      if (iso2 && wkAsk(iso2, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val2) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val2) ? fd(v5) : v5))) {
+      const iso2 = DDATE.test(val3) ? toIso(val3) : DATE.test(val3) ? val3 : "";
+      if (iso2 && wkAsk(iso2, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val3) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val3) ? fd(v5) : v5))) {
         el2.textContent = x5.revisit || "";
         return false;
       }
     }
-    if (f5 === "t" && !val2) {
+    if (f5 === "t" && !val3) {
       el2.textContent = x5.t || "";
       pkNote(`${pkTitleL(k5)} is needed, so the old one was kept.`);
       return false;
     }
     if (f5 === "cm" || f5 === "cmd") {
-      const ok2 = pkMsgOK(k5, val2);
-      if (f5 === "cm" && val2 && !cmHeads(val2)) {
+      const ok2 = pkMsgOK(k5, val3);
+      if (f5 === "cm" && val3 && !cmHeads(val3)) {
         el2.textContent = x5.cm || "";
         pkNote("Keep the three client messaging headings, with a few words after each.");
         return false;
@@ -58112,7 +58128,7 @@ ${d5.text}`);
       if (PK.pc && PK.pc.id === id2) {
         if (ok2) {
           PK.pc = null;
-          pkCommit(k5, id2, { client: true, [f5]: val2 }, "Client-visible", "No", "Yes", { note: "Client messaging written first, as the rule requires" });
+          pkCommit(k5, id2, { client: true, [f5]: val3 }, "Client-visible", "No", "Yes", { note: "Client messaging written first, as the rule requires" });
         } else pkNote(k5 === "decisions" ? "Client messaging needs a short plain explanation before this can be client-visible. Nothing saved." : "Client messaging needs a few words after each heading before this can be client-visible. Nothing saved.");
         return false;
       }
@@ -58559,7 +58575,7 @@ ${d5.text}`);
     if (body2.contains(document.activeElement) && document.activeElement.isContentEditable) return;
     if (shared.PKPOP && body2.contains(shared.PKPOP.anchor)) return;
     const af2 = body2.contains(document.activeElement) ? document.activeElement.dataset.pkp || document.activeElement.dataset.pksw : null;
-    const row2 = (icon, label, val2) => `<div class="pk-drow"><div class="lab">${ic(icon)}<span>${label}</span></div><div>${val2}</div></div>`;
+    const row2 = (icon, label, val3) => `<div class="pk-drow"><div class="lab">${ic(icon)}<span>${label}</span></div><div>${val3}</div></div>`;
     const vb2 = (f5, label, txt, empty) => `<button type="button" class="pk-vbtn${empty ? " empty" : ""}" data-pkp="${f5}" aria-haspopup="listbox" aria-label="${esc(label)}: ${esc(empty ? "not set" : txt)}">${esc(txt)}</button>`;
     const tx3 = (f5, ph2, ml2) => `<div class="pk-vtext pked" contenteditable="plaintext-only" role="textbox" data-pkf="${f5}"${ml2 ? ' data-pkml="1" aria-multiline="true"' : ""} data-ph="${esc(ph2)}" aria-label="${esc(pkLabel(k5, f5, x5))}">${esc(x5[f5] || "")}</div>`;
     let h5 = row2("projects", "Project", vb2("p", "Project", pName(x5.p) || "Choose a project", !x5.p));
@@ -58694,7 +58710,7 @@ ${d5.text}`);
     putHTML($("#pkPropEnd"), sig && x5.p ? html`<label class="pk-learn"><input type="checkbox" id="f_learn" data-kind="${sig.kind ?? ""}" data-value="${sig.value ?? ""}"${was ? raw(" checked") : ""}><span>Remember ${sig.value ?? ""} (${KINDL[sig.kind] || sig.kind || ""}) for ${pName(x5.p) ?? ""}, so items like this match on their own. Added to the register when applied.</span></label>` : html``);
     putHTML($("#pkFeed"), html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("filetext"))}</span><div><b>Source</b><div class="pk-src">${raw(srcHTML(r4.src))}</div></div></div>`);
   }
-  async function pkPropSave(approve) {
+  async function pkPropSave(approve2) {
     if (!shared.CUR || shared.CUR.mode !== "proposal" || PK.closing) return;
     PK.closing = true;
     try {
@@ -58714,7 +58730,7 @@ ${d5.text}`);
       readForm = () => ({ ...form });
       $("#pErr").textContent = "";
       try {
-        await savePanel(approve);
+        await savePanel(approve2);
       } finally {
         readForm = rf2;
       }
@@ -60511,8 +60527,8 @@ ${d5.text}`);
     }
     foot.hidden = !host2;
     const title = $(TITLE[key2]);
-    const due = S.helpLine !== false && !lineSeen(key2) && !!title && !blocked();
-    if (!due) {
+    const due2 = S.helpLine !== false && !lineSeen(key2) && !!title && !blocked();
+    if (!due2) {
       line.classList.toggle("ghost", !!title && line.dataset.k === key2 && !line.hidden);
       if (!line.classList.contains("ghost")) line.hidden = true;
       return;
@@ -64970,15 +64986,15 @@ ${d5.text}`);
       const proj = P4.find((p6) => p6.code.toLowerCase() === pw2 || p6.name.toLowerCase() === pw2 || p6.name.toLowerCase().startsWith(pw2) || pw2.split(/\s+/).includes(p6.code.toLowerCase()));
       if (!proj) return { ask: `creaite doesn't know a project called “${m5[2].trim()}”` };
       const parts = m5[3].split(/\s*,\s*/), text = parts.shift().trim();
-      let owner = null, due = null;
+      let owner2 = null, due2 = null;
       parts.forEach((x5) => {
         const d5 = ckDate(x5);
-        if (d5 && !due) due = d5;
-        else if (!owner) owner = x5;
+        if (d5 && !due2) due2 = d5;
+        else if (!owner2) owner2 = x5;
       });
       const k5 = kind === "action" ? "actions" : kind === "decision" ? "decisions" : "raid", f5 = { p: proj.code, t: text[0].toUpperCase() + text.slice(1) };
-      if (owner) {
-        const r4 = ckPerson(owner);
+      if (owner2) {
+        const r4 = ckPerson(owner2);
         if (r4.pick) return { pick: r4.pick, phrase: r4.phrase, what: "person" };
         f5[k5 === "decisions" ? "by" : "o"] = r4.name;
       }
@@ -64986,7 +65002,7 @@ ${d5.text}`);
         f5.o = f5.o || "TBC";
         f5.st = "Open";
         f5.pr = S.defPriority || "Medium";
-        if (due) f5.due = due;
+        if (due2) f5.due = due2;
       }
       if (k5 === "raid") {
         f5.type = kind === "issue" ? "Issue" : "Risk";
@@ -64994,12 +65010,12 @@ ${d5.text}`);
         f5.st = "Open";
         f5.imp = "Medium";
         f5.lik = "Medium";
-        if (due) f5.due = due;
+        if (due2) f5.due = due2;
       }
       if (k5 === "decisions") {
         f5.st = "Pending";
         f5.by = f5.by || "";
-        if (due) f5.due = due;
+        if (due2) f5.due = due2;
         f5.srcIn = "Typed in ⌘K";
       }
       return { verb: "add", k: k5, new: f5, label: `New ${kind}` };
@@ -65516,12 +65532,12 @@ ${d5.text}`);
     actConfirm(ids, plan);
   }
   function actPlanLine(d5) {
-    const val2 = (v5) => v5 == null || v5 === "" ? "—" : DATE.test(String(v5).slice(0, 10)) ? fd(String(v5)) : String(v5), f5 = String(d5.field || "").replace(/_/g, " ");
+    const val3 = (v5) => v5 == null || v5 === "" ? "—" : DATE.test(String(v5).slice(0, 10)) ? fd(String(v5)) : String(v5), f5 = String(d5.field || "").replace(/_/g, " ");
     if (d5.why) return `<li class="skip"><b>${esc(d5.id || "#" + d5.rowid)}</b> · ${esc(f5)} · skipped: ${esc(d5.why)}</li>`;
     if (d5.change === "removed") return `<li><b>${esc(d5.id)}</b> · removed (that change created it)</li>`;
     if (d5.change === "put back") return `<li><b>${esc(d5.id)}</b> · put back</li>`;
     const t47 = itemText(d5.id);
-    return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val2(d5.from))} → ${esc(val2(d5.to))}</li>`;
+    return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val3(d5.from))} → ${esc(val3(d5.to))}</li>`;
   }
   function actConfirm(ids, plan) {
     const dlg = $("#actDlg") || makeUndoDialog();
@@ -66464,7 +66480,7 @@ ${d5.text}`);
     if (st2 === "At risk") return { word: "AT RISK", tone: "a" };
     return { word: "ON TRACK", tone: "g" };
   }
-  var daysLate = (due, on2) => Math.max(0, Math.round(dayNo(on2) - dayNo(due)));
+  var daysLate = (due2, on2) => Math.max(0, Math.round(dayNo(on2) - dayNo(due2)));
   function withSection(doc, id2, patch, layout) {
     const sections = doc.sections.map((s5) => s5.id === id2 ? { ...s5, ...typeof patch === "function" ? patch(s5) : patch } : s5);
     return { ...doc, sections, layout: layout ? { ...doc.layout || {}, ...layout } : doc.layout };
@@ -68900,13 +68916,13 @@ ${d5.text}`);
   }
   function ReportHeader({ ctx, logos, data }) {
     const { doc, section: s5 } = ctx, d5 = s5.data || {}, client = doc.kind === "client";
-    const code = String(doc.project || ""), edit = ctx.editing && !ctx.exported && !ctx.readOnly && !!code;
+    const code = String(doc.project || ""), edit2 = ctx.editing && !ctx.exported && !ctx.readOnly && !!code;
     h2(() => {
-      if (edit) readClientLogos(code);
-    }, [edit, code]);
+      if (edit2) readClientLogos(code);
+    }, [edit2, code]);
     const every = logoKindsOf(code), chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : every;
     const shown2 = logos.filter((l6) => ticksOf([l6.kind], chosen).length);
-    const slots = edit ? ticksOf(every, chosen) : [];
+    const slots = edit2 ? ticksOf(every, chosen) : [];
     const live = crLogoFor.value === code;
     const pathOf = (k5) => (live ? crLogoPaths.value[k5] : (shown2.find((l6) => l6.kind === k5) || {}).path) || "";
     const meta = doc.meta || {};
@@ -68921,7 +68937,7 @@ ${d5.text}`);
         ] }),
         client && ctx.editing ? /* @__PURE__ */ u2("div", { class: "wr-facts sub", children: meta.facts_week ? `Facts from the internal report for week ending ${wkDmy(meta.facts_week)}${meta.locked ? ", locked" : ""}` : "Facts as the tracker stands now: they lock when the internal report is approved" }) : null
       ] }),
-      /* @__PURE__ */ u2("div", { class: "wr-logos", children: edit ? slots.map((k5, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
+      /* @__PURE__ */ u2("div", { class: "wr-logos", children: edit2 ? slots.map((k5, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
         i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
         /* @__PURE__ */ u2(LogoSlot, { code, kind: k5, pic: data[pathOf(k5)] || "" })
       ] }, k5)) : shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
@@ -69710,7 +69726,7 @@ ${d5.text}`);
     );
     const d5 = crDoc.value, internal = crInternal.value;
     const flag = flagOf(d5) || "On track", inFlag = flagOf(internal), diff = ((d5 || {}).meta || {}).health_diff || null;
-    const edit = ctx.editing;
+    const edit2 = ctx.editing;
     const begin = () => {
       setPick(flag);
       setWhy(diff ? String(diff.reason || "") : "");
@@ -69734,7 +69750,7 @@ ${d5.text}`);
     const needWhy = pick !== inFlag && !why.trim();
     const ask2 = crAskWhy.value, focusWhy = A2(false);
     h2(() => {
-      if (!ask2 || !d5 || !edit || !diff) return;
+      if (!ask2 || !d5 || !edit2 || !diff) return;
       crAskWhy.value = false;
       if (!String(diff.reason || "").trim()) {
         focusWhy.current = true;
@@ -69760,7 +69776,7 @@ ${d5.text}`);
           flagCls: "crflag",
           change: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm wr-chg", ref: btn, "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", "data-crflag": true, onClick: () => open2 ? setOpen2(false) : begin(), children: "Change" }),
           why: /* @__PURE__ */ u2(S2, { children: [
-            edit && inFlag && flag !== inFlag ? /* @__PURE__ */ u2("span", { class: "crdif", title: `Internal: ${inFlag}. ${diff && diff.reason ? diff.reason : ""}`, "data-crdif": true, children: [
+            edit2 && inFlag && flag !== inFlag ? /* @__PURE__ */ u2("span", { class: "crdif", title: `Internal: ${inFlag}. ${diff && diff.reason ? diff.reason : ""}`, "data-crdif": true, children: [
               "≠ internal: ",
               inFlag
             ] }) : null,
@@ -70477,7 +70493,7 @@ ${d5.text}`);
     ] });
   }
   function PartnerRow({ code, name, i: i5 }) {
-    const [edit, setEdit] = d2(false), [err, setErr] = d2("");
+    const [edit2, setEdit] = d2(false), [err, setErr] = d2("");
     crTick.value;
     const slug = (partnersOf(code).find((x5) => x5.name === name) || {}).slug, kind = `partner:${slug}`, logo = !!slug && !!crLogoPaths.value[kind];
     const people = projectPeople(code).filter((x5) => x5.org && psNorm(x5.org) === psNorm(name)).length;
@@ -70487,7 +70503,7 @@ ${d5.text}`);
       if (!bad) setEdit(false);
     };
     return /* @__PURE__ */ u2(Item, { text: `${name} partner ${people}`, children: [
-      /* @__PURE__ */ u2("td", { children: edit ? /* @__PURE__ */ u2("span", { children: [
+      /* @__PURE__ */ u2("td", { children: edit2 ? /* @__PURE__ */ u2("span", { children: [
         /* @__PURE__ */ u2(
           "input",
           {
@@ -70531,7 +70547,7 @@ ${d5.text}`);
           ),
           " "
         ] }) : null,
-        edit ? /* @__PURE__ */ u2(S2, { children: [
+        edit2 ? /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-save": true, onClick: (e4) => save2(
             /** @type {HTMLInputElement} */
             /** @type {HTMLElement} */
@@ -71371,13 +71387,13 @@ ${d5.text}`);
   var deadlineOf = (words, day) => parseWords(words, day, true, "deadline", offDays());
   var deadlineDay = (iso2) => `${LONG[(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay()]} ${fd(iso2)}`;
   var pad2 = (n4) => String(n4).padStart(2, "0");
-  function DeadlinePopover({ due, day, label, readOnly, onSet }) {
+  function DeadlinePopover({ due: due2, day, label, readOnly, onSet }) {
     const [open2, setOpen2] = d2(false);
     const btn = A2(
       /** @type {HTMLButtonElement|null} */
       null
     );
-    if (readOnly) return /* @__PURE__ */ u2("span", { class: "mndue", children: due ? fd(due) : "Not set" });
+    if (readOnly) return /* @__PURE__ */ u2("span", { class: "mndue", children: due2 ? fd(due2) : "Not set" });
     return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
       /* @__PURE__ */ u2(
         "button",
@@ -71387,19 +71403,19 @@ ${d5.text}`);
           class: "mndue btn sm",
           "aria-haspopup": "dialog",
           "aria-expanded": open2 ? "true" : "false",
-          "aria-label": `Deadline: ${due ? deadlineDay(due) : "not set"}. Change the deadline of ${label}`,
+          "aria-label": `Deadline: ${due2 ? deadlineDay(due2) : "not set"}. Change the deadline of ${label}`,
           onClick: () => setOpen2(!open2),
-          children: due ? fd(due) : "Not set"
+          children: due2 ? fd(due2) : "Not set"
         }
       ),
-      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Deadline for ${label}`, anchor: btn, focus: "input", cls: "pkcal mndl", children: open2 ? /* @__PURE__ */ u2(DeadlineBody, { due, day, onPick: async (w6) => {
+      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Deadline for ${label}`, anchor: btn, focus: "input", cls: "pkcal mndl", children: open2 ? /* @__PURE__ */ u2(DeadlineBody, { due: due2, day, onPick: async (w6) => {
         if (await onSet(w6)) setOpen2(false);
       } }) : null })
     ] });
   }
-  function DeadlineBody({ due, day, onPick }) {
+  function DeadlineBody({ due: due2, day, onPick }) {
     const [words, setWords] = d2("");
-    const start = due || day;
+    const start = due2 || day;
     const [month, setMonth] = d2(start.slice(0, 7));
     const got = words.trim() ? deadlineOf(words, day) : null;
     const set = () => {
@@ -71445,11 +71461,11 @@ ${d5.text}`);
           /* @__PURE__ */ u2("span", { class: "sub", children: fd(d5).slice(0, 5) })
         ] }, w6) : null;
       }) }),
-      /* @__PURE__ */ u2(Calendar, { month, setMonth, due, day, onPick: (iso2) => onPick(fd(iso2)) }),
+      /* @__PURE__ */ u2(Calendar, { month, setMonth, due: due2, day, onPick: (iso2) => onPick(fd(iso2)) }),
       /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", "data-quick": "not set", onClick: () => onPick("not set"), children: "Not set" })
     ] });
   }
-  function Calendar({ month, setMonth, due, day, onPick }) {
+  function Calendar({ month, setMonth, due: due2, day, onPick }) {
     const y5 = +month.slice(0, 4), m5 = +month.slice(5, 7);
     const first = new Date(y5, m5 - 1, 1, 12), lead = (first.getDay() + 6) % 7, count = new Date(y5, m5, 0, 12).getDate();
     const step2 = (k5) => {
@@ -71465,10 +71481,10 @@ ${d5.text}`);
         "button",
         {
           type: "button",
-          class: `pkday${iso2 === due ? " on" : ""}${iso2 === day ? " today" : ""}${off.has(dow2) ? " wk" : ""}`,
+          class: `pkday${iso2 === due2 ? " on" : ""}${iso2 === day ? " today" : ""}${off.has(dow2) ? " wk" : ""}`,
           "data-day": iso2,
           "aria-label": deadlineDay(iso2),
-          "aria-pressed": iso2 === due ? "true" : "false",
+          "aria-pressed": iso2 === due2 ? "true" : "false",
           onClick: () => onPick(iso2),
           children: d5
         },
@@ -71578,26 +71594,26 @@ ${d5.text}`);
     const out = [], it2 = (doc.items || {})[r4.ref], v5 = it2 && it2.values || {};
     if (!it2 || it2.op !== "new") return out;
     const n4 = it2.n, label = v5.description || v5.decision || "";
-    const owner = s5.id === "decisions" ? "" : String(v5.owner || "").trim();
-    if (s5.id !== "decisions" && owner && owner !== "TBC" && unknown(owner))
+    const owner2 = s5.id === "decisions" ? "" : String(v5.owner || "").trim();
+    if (s5.id !== "decisions" && owner2 && owner2 !== "TBC" && unknown(owner2))
       out.push({
         id: `owner:${r4.ref}`,
         section: s5.id,
         row: i5,
         field: "owner",
-        quote: owner,
+        quote: owner2,
         kind: "owner",
         n: n4,
-        note: `${owner} isn't in the people register.`,
+        note: `${owner2} isn't in the people register.`,
         actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
       });
-    else if (s5.id === "actions" && (!owner || owner === "TBC"))
+    else if (s5.id === "actions" && (!owner2 || owner2 === "TBC"))
       out.push({
         id: `owner:${r4.ref}`,
         section: s5.id,
         row: i5,
         field: "owner",
-        quote: owner || "TBC",
+        quote: owner2 || "TBC",
         kind: "owner",
         n: n4,
         note: "No owner yet.",
@@ -71878,7 +71894,7 @@ ${d5.text}`);
       ] })
     ] });
   }
-  function OwnerPicker({ owner, label, n: n4, field, check, onPick }) {
+  function OwnerPicker({ owner: owner2, label, n: n4, field, check, onPick }) {
     const [open2, setOpen2] = d2(false), [q5, setQ] = d2(""), [remember2, setRemember] = d2(true);
     const btn = A2(
       /** @type {HTMLButtonElement|null} */
@@ -71886,11 +71902,11 @@ ${d5.text}`);
     );
     const people = shared.REG.filter((p6) => !p6.hidden).map((p6) => p6.name).sort();
     const shown2 = people.filter((p6) => !q5 || p6.toLowerCase().includes(q5.toLowerCase())).slice(0, 30);
-    const unknown = !!owner && owner !== "TBC" && unknownOwner(owner);
+    const unknown = !!owner2 && owner2 !== "TBC" && unknownOwner(owner2);
     const pick = async (name) => {
       if (!await onPick(name)) return;
       setOpen2(false);
-      if (unknown && remember2 && name !== owner) regAddAlias(name, owner);
+      if (unknown && remember2 && name !== owner2) regAddAlias(name, owner2);
     };
     return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
       /* @__PURE__ */ u2(
@@ -71902,10 +71918,10 @@ ${d5.text}`);
           "data-owner": n4,
           "aria-haspopup": "dialog",
           "aria-expanded": open2 ? "true" : "false",
-          "aria-label": `${field === "made_by" ? "Made by" : "Owner"}: ${owner || "not set"}. Change it for ${label}`,
+          "aria-label": `${field === "made_by" ? "Made by" : "Owner"}: ${owner2 || "not set"}. Change it for ${label}`,
           "data-tip": check ? check.note : void 0,
           onClick: () => setOpen2(!open2),
-          children: owner || "TBC"
+          children: owner2 || "TBC"
         }
       ),
       /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Owner for ${label}`, anchor: btn, focus: "input", children: [
@@ -71929,14 +71945,14 @@ ${d5.text}`);
             }
           }
         ),
-        /* @__PURE__ */ u2("div", { role: "listbox", "aria-label": "People in the register", children: shown2.length ? shown2.map((p6) => /* @__PURE__ */ u2("button", { type: "button", role: "option", class: "pkopt", "aria-selected": p6 === owner ? "true" : "false", onClick: () => pick(p6), children: p6 }, p6)) : /* @__PURE__ */ u2("p", { class: "sub", children: "No match in the people register." }) }),
+        /* @__PURE__ */ u2("div", { role: "listbox", "aria-label": "People in the register", children: shown2.length ? shown2.map((p6) => /* @__PURE__ */ u2("button", { type: "button", role: "option", class: "pkopt", "aria-selected": p6 === owner2 ? "true" : "false", onClick: () => pick(p6), children: p6 }, p6)) : /* @__PURE__ */ u2("p", { class: "sub", children: "No match in the people register." }) }),
         unknown ? /* @__PURE__ */ u2("label", { class: "mnremember", children: [
           /* @__PURE__ */ u2("input", { type: "checkbox", checked: remember2, onChange: (e4) => setRemember(
             /** @type {HTMLInputElement} */
             e4.currentTarget.checked
           ) }),
           "Remember “",
-          owner,
+          owner2,
           "” as their alias"
         ] }) : null
       ] })
@@ -72054,7 +72070,7 @@ ${d5.text}`);
     if (!live || !m5) return /* @__PURE__ */ u2("tr", { class: "mnrow", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: cells[c5.key] || "" }, c5.key)) });
     const label = (cells[MAIN[sid]] || "").slice(0, 80), checks = m5.checks.filter((c5) => c5.section === s5.id && c5.n === n4);
     const own = checks.find((c5) => c5.field === "owner") || null, internal = isInternal(m5.doc, s5.id, { ref: row2.ref, n: row2.n });
-    const edit = (values) => m5.change({ op: "edit", n: n4, values });
+    const edit2 = (values) => m5.change({ op: "edit", n: n4, values });
     const remove = (how) => m5.change({ op: "remove", n: n4, keep_line: how === "keep" }, { op: "restore", n: n4 });
     const cell2 = (c5) => {
       if (!isNew) return cells[c5.key] || "";
@@ -72066,7 +72082,7 @@ ${d5.text}`);
           n: n4,
           field: c5.key === "by" ? "made_by" : "owner",
           check: own,
-          onPick: (name) => edit({ [c5.key === "by" ? "made_by" : "owner"]: name })
+          onPick: (name) => edit2({ [c5.key === "by" ? "made_by" : "owner"]: name })
         }
       );
       if (c5.key === "due") return /* @__PURE__ */ u2(DeadlinePopover, { due: (item.values || {}).due_date || null, day: m5.day, label, onSet: (words) => m5.change({ op: "deadline", n: n4, words }) });
@@ -72076,14 +72092,14 @@ ${d5.text}`);
           class: "mntype",
           "aria-label": `Type of ${label}`,
           value: (item.values || {}).type || "Risk",
-          onChange: (e4) => edit({ type: (
+          onChange: (e4) => edit2({ type: (
             /** @type {HTMLSelectElement} */
             e4.currentTarget.value
           ) }),
           children: TYPES.map((t47) => /* @__PURE__ */ u2("option", { children: t47 }, t47))
         }
       );
-      if (c5.key === MAIN[sid]) return /* @__PURE__ */ u2(CellText, { value: (item.values || {})[ROW_FIELD[sid]] || "", label: `${s5.heading}: ${label}`, onSave: (t47) => edit({ [ROW_FIELD[sid]]: t47 }) });
+      if (c5.key === MAIN[sid]) return /* @__PURE__ */ u2(CellText, { value: (item.values || {})[ROW_FIELD[sid]] || "", label: `${s5.heading}: ${label}`, onSave: (t47) => edit2({ [ROW_FIELD[sid]]: t47 }) });
       return cells[c5.key] || "";
     };
     return /* @__PURE__ */ u2("tr", { class: `mnrow${internal ? " internal" : ""}`, "data-n": n4, "data-ref": row2.ref, children: cols.map((c5) => /* @__PURE__ */ u2("td", { class: `mncol-${c5.key}`, children: [
@@ -72489,6 +72505,355 @@ ${d5.text}`);
   }
   var irLiveCounts = () => irCounts(irModel(), irDone);
 
+  // components/intakeReview/proposalActions.js
+  var redraw = () => {
+    irTick.value++;
+  };
+  async function approve(n4) {
+    await decide(n4, "approved");
+    redraw();
+  }
+  function reject(n4, anchor) {
+    const r4 = irRow(n4);
+    if (!r4 || r4.done) return;
+    if (rvRejectOK(r4)) rjMenuFor(
+      [r4],
+      /** @type {any} */
+      anchor,
+      redraw
+    );
+    else decide(n4, "rejected").then(redraw);
+  }
+  async function settle(n4, how) {
+    const r4 = irRow(n4);
+    if (r4 && !r4.done) {
+      await reviewViaServer(r4, how, []);
+      redraw();
+    }
+  }
+  function draftResponse(n4) {
+    const why = draftWhyNot("thinking");
+    if (why) {
+      snack(why);
+      return;
+    }
+    openPeek(n4);
+    setTimeout(() => {
+      const t47 = (
+        /** @type {HTMLElement|null} */
+        $('#pkDescDr [data-draft="thinking"][data-drf="resp"]')
+      );
+      if (t47) t47.click();
+    }, 0);
+  }
+  function edit(n4) {
+    const r4 = irRow(n4);
+    if (!r4 || r4.done) return;
+    if (["draft", "files"].includes(r4.kind)) openProposal(n4);
+    else openPeek(n4);
+  }
+  async function approveRoutine(ns2) {
+    const rows2 = ns2.map(irRow).filter((r4) => r4 && !r4.done && rvBulkOK(r4));
+    if (!rows2.length) {
+      snack("Nothing routine to approve");
+      return;
+    }
+    if (rows2.length > shared.RV_MAX && !await boardAsk({ title: `Approve ${rows2.length} routine proposals?`, hint: "Applied at once; Undo reverses the batch", clear: true, okText: `Approve ${rows2.length}` })) return;
+    const res = await rvDecideMany(rows2, "approved");
+    redraw();
+    const text = `Approved ${res.n}${res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : ""}`;
+    if (res.undo) {
+      const undo = res.undo;
+      snack(text, async () => {
+        await undo();
+        redraw();
+      });
+    } else snack(text);
+  }
+  var shownNs = () => (
+    /** @type {HTMLElement[]} */
+    [...document.querySelectorAll("#v-intake-review tr.irprop[data-irn]")].map((t47) => +(t47.dataset.irn || 0))
+  );
+  var peekable = (n4) => {
+    const r4 = irRow(n4);
+    return !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
+  };
+  function openPeek(n4) {
+    const r4 = irRow(n4);
+    if (!r4 || r4.done) return;
+    shared.PKSRC = {
+      view: "intake-review",
+      order: () => shownNs().filter(peekable).map((x5) => ({ id: `rv${x5}`, k: "proposal" })),
+      step: (o5) => {
+        const m5 = +o5.id.slice(2);
+        openProposal(m5);
+        irPeek.value = m5;
+        markRow(m5);
+      }
+    };
+    openProposal(n4);
+    if (shared.CUR && shared.CUR.mode === "proposal") {
+      irPeek.value = n4;
+      markRow(n4);
+    }
+  }
+  function markRow(n4) {
+    document.querySelectorAll("#v-intake-review tr.irprop.sel").forEach((t48) => t48.classList.remove("sel"));
+    const t47 = document.querySelector(`#v-intake-review tr.irprop[data-irn='${n4}']`);
+    if (t47) {
+      t47.classList.add("sel");
+      t47.scrollIntoView({ block: "nearest" });
+    }
+  }
+  var booted = false;
+  function bootProposalKeys() {
+    if (booted) return;
+    booted = true;
+    document.addEventListener("keydown", (e4) => {
+      if (shared.VIEW !== "intake-review" || e4.metaKey || e4.ctrlKey || e4.altKey) return;
+      if (e4.key === "Escape" && irPeek.value != null && !$("#panel").classList.contains("on")) irPeek.value = null;
+      const t47 = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (t47 && t47.closest && t47.closest("input,textarea,select,[contenteditable=true],[role=menu],dialog")) return;
+      const row2 = t47 && t47.closest ? (
+        /** @type {HTMLElement|null} */
+        t47.closest("tr.irprop[data-irn]")
+      ) : null;
+      if (!row2) return;
+      const n4 = +(row2.dataset.irn || 0);
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        const all = (
+          /** @type {HTMLElement[]} */
+          [...document.querySelectorAll("#v-intake-review tr.irprop[data-irn], #v-intake-review tr[data-irm]")]
+        );
+        const next = all[all.indexOf(row2) + (e4.key === "ArrowDown" ? 1 : -1)];
+        e4.preventDefault();
+        e4.stopPropagation();
+        if (next) {
+          next.focus();
+          if (next.dataset.irm) irSel.value = next.dataset.irm || null;
+        }
+        return;
+      }
+      if (t47.closest("button,a")) return;
+      const r4 = irRow(n4);
+      if (!r4 || r4.done) return;
+      if (e4.key === "Enter") {
+        e4.preventDefault();
+        if (peekable(n4)) openPeek(n4);
+        else edit(n4);
+      } else if (e4.key === "a" || e4.key === "A") {
+        e4.preventDefault();
+        approve(n4);
+      } else if (e4.key === "r" || e4.key === "R") {
+        e4.preventDefault();
+        reject(n4, row2.querySelector("[data-ira=reject]"));
+      } else if (e4.key === "e" || e4.key === "E") {
+        e4.preventDefault();
+        edit(n4);
+      }
+    }, true);
+  }
+
+  // components/intakeReview/proposals.jsx
+  var IR_HEADS = {
+    needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes."],
+    routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one."]
+  };
+  var KIND_WORDS = { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" };
+  var irPill = (r4) => r4.kind === "raid" ? r4.rec && r4.rec.type || "Risk" : r4.kind === "draft" ? r4.ref === "meeting" ? "Minutes" : "Report" : KIND_WORDS[
+    /** @type {keyof KIND_WORDS} */
+    r4.kind
+  ] || "Proposal";
+  var lower = (s5) => s5 ? s5.charAt(0).toLowerCase() + s5.slice(1) : s5;
+  var val2 = (x5) => x5 == null || x5 === "" ? "none" : fd(String(x5));
+  var owner = (o5) => !o5 || o5 === "TBC" ? "No owner" : o5;
+  var due = (d5) => d5 ? fd(d5) : "No due date";
+  function irSummary(r4) {
+    const x5 = r4.rec || {};
+    if (r4.kind === "actions") return [owner(x5.o), due(x5.due), x5.pr || "Medium"].join(" · ");
+    if (r4.kind === "raid") return [owner(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${prio(x5.imp, x5.lik)}` : "Impact and likelihood not set"].join(" · ");
+    if (r4.kind === "decisions") return x5.by ? `Made by ${x5.by}` : "Made by not recorded";
+    if (r4.kind === "update") {
+      const ch2 = x5.changes || [], st2 = ch2.find((c5) => String(c5.field).toLowerCase() === "status");
+      const lead = st2 && st2.to && !OPENST(String(st2.to)) ? `Closes ${x5.target || ""}` : `Changes ${x5.target || ""}`;
+      return [lead.trim(), ...ch2.map((c5) => `${lower(String(c5.field))} ${val2(c5.from)} → ${val2(c5.to)}`), r4.dn ? r4.dn.strength : ""].filter(Boolean).join(" · ");
+    }
+    if (r4.kind === "draft") {
+      const n4 = REV.filter((k5) => k5.file === r4.file && !["draft", "files"].includes(k5.kind) && !k5.done).length;
+      return n4 ? `${n4} item${n4 === 1 ? "" : "s"} below come${n4 === 1 ? "s" : ""} from these minutes` : "Draft minutes";
+    }
+    return "File changes";
+  }
+  var stateWords = (r4) => r4.indiv ? "approve individually" : r4.hold && !rvBulkOK(r4) ? String(r4.why || r4.hold).toLowerCase() : "Routine";
+  function OpenSource({ r: r4 }) {
+    if (r4.nodraft && r4.tsrc) return /* @__PURE__ */ u2(S2, { children: [
+      " · ",
+      /* @__PURE__ */ u2("a", { href: "#", class: "srclink", "data-openfile": r4.tsrc, children: "Open source" })
+    ] });
+    const o5 = srcParse(r4.src);
+    if (!o5) return null;
+    if (o5.type === "File") return /* @__PURE__ */ u2(S2, { children: [
+      " · ",
+      /* @__PURE__ */ u2("a", { href: "#", class: "srclink", "data-openfile": o5.path, children: "Open source" })
+    ] });
+    const u5 = o5.Link ? linkUrl(o5.Link) : null;
+    return u5 ? /* @__PURE__ */ u2(S2, { children: [
+      " · ",
+      /* @__PURE__ */ u2("a", { href: u5, class: "srclink", target: "_blank", rel: "noopener noreferrer", children: "Open source" })
+    ] }) : null;
+  }
+  function Conflict({ r: r4 }) {
+    const ch2 = r4.rec.changes && r4.rec.changes.length ? r4.rec.changes : r4.rec.field ? [{ field: r4.rec.field, from: r4.rec.from, to: r4.rec.to }] : [];
+    const v5 = (x5) => x5 == null || x5 === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x5)) ? fd(String(x5)) : String(x5);
+    return /* @__PURE__ */ u2("div", { class: "cfvs", children: ch2.length ? ch2.map((c5) => /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("span", { class: "cff", children: c5.field }),
+      /* @__PURE__ */ u2("span", { class: "cfnow", children: [
+        "Now: ",
+        /* @__PURE__ */ u2("b", { children: v5(c5.from) })
+      ] }),
+      /* @__PURE__ */ u2("span", { class: "cfnew", children: [
+        "This one: ",
+        /* @__PURE__ */ u2("b", { children: v5(c5.to) })
+      ] })
+    ] })) : /* @__PURE__ */ u2("div", { class: "sub", children: "Changed in the tracker after this was proposed." }) });
+  }
+  function WeekendNote({ r: r4 }) {
+    const f5 = WKRVF[
+      /** @type {keyof WKRVF} */
+      r4.kind
+    ], v5 = f5 && r4.rec ? r4.rec[f5[0]] : null, n4 = !shared.LOADING && !r4.done ? weekendNote(v5) : null;
+    if (!n4) return null;
+    return /* @__PURE__ */ u2("div", { class: "wkrv", children: [
+      /* @__PURE__ */ u2("span", { class: "h-warn", children: [
+        r4.kind === "decisions" ? "Needed" : "Due",
+        " on a ",
+        n4.day
+      ] }),
+      " ",
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-wkrv": r4.n, "data-to": n4.prev, children: wkLong(n4.prev) }),
+      " ",
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-wkrv": r4.n, "data-to": n4.next, children: wkLong(n4.next) })
+    ] });
+  }
+  function ProposalLine({ n: n4, child }) {
+    const r4 = irRow(n4);
+    if (!r4) return null;
+    const conflict = isConflict(r4), live = viaServer();
+    const tip = rvTipText(r4);
+    const noDraft = r4.kind === "draft" && r4.nodraft && !r4.done;
+    const respNeeded = !(r4.kind !== "raid" || String(r4.rec.resp || "").trim() || r4.rec.type && r4.rec.type !== "Risk" || !draftOn("thinking"));
+    const dup = rvDup(r4);
+    const o5 = srcParse(r4.src);
+    const pass = (e4) => !/** @type {Element} */
+    e4.target.closest("button,a,input,select,[data-wkrv]");
+    return /* @__PURE__ */ u2(
+      "tr",
+      {
+        class: `click irprop${child ? " mchild" : ""}${irPeek.value === n4 ? " sel" : ""}`,
+        "data-irn": n4,
+        "data-n": n4,
+        tabindex: 0,
+        onClick: (e4) => {
+          if (pass(e4) && !["draft", "files"].includes(r4.kind)) openPeek(n4);
+        },
+        children: [
+          /* @__PURE__ */ u2("td", { class: "title", children: [
+            /* @__PURE__ */ u2("b", { class: "icttl", children: r4.rec.t || "" }),
+            r4.drafted ? /* @__PURE__ */ u2(S2, { children: [
+              " ",
+              /* @__PURE__ */ u2("span", { class: "tag drrv", children: [
+                /* @__PURE__ */ u2(Icon, { name: "spark" }),
+                r4.drafted === "client" ? "Drafted wording" : "Drafted"
+              ] })
+            ] }) : null,
+            r4.edited ? /* @__PURE__ */ u2(S2, { children: [
+              " ",
+              /* @__PURE__ */ u2("span", { class: "tag", children: "· edited" })
+            ] }) : null,
+            dup ? /* @__PURE__ */ u2(S2, { children: [
+              " ",
+              /* @__PURE__ */ u2("span", { class: "tag", children: [
+                "Looks like ",
+                dup.id || "another item"
+              ] })
+            ] }) : null,
+            /* @__PURE__ */ u2("div", { class: "why icchg", "data-tip": tip || void 0, children: [
+              /* @__PURE__ */ u2("span", { class: "ickind", children: irPill(r4) }),
+              " · ",
+              irSummary(r4),
+              " · ",
+              r4.indiv ? /* @__PURE__ */ u2("span", { class: "indiv", children: "approve individually" }) : /* @__PURE__ */ u2("span", { class: r4.hold ? "" : "icroutine", children: stateWords(r4) }),
+              respNeeded ? /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-drrisk": r4.n, onClick: () => draftResponse(n4), children: "Draft a response" })
+              ] }) : null,
+              " · ",
+              o5 ? srcShort(r4.src) : "—",
+              /* @__PURE__ */ u2(OpenSource, { r: r4 })
+            ] }),
+            r4.dn && r4.dn.ev ? /* @__PURE__ */ u2("div", { class: "icq", children: r4.dn.ev }) : r4.rec.why ? /* @__PURE__ */ u2("div", { class: "icq", children: r4.rec.why }) : null,
+            noDraft ? /* @__PURE__ */ u2("div", { class: "rvnote", children: [
+              /* @__PURE__ */ u2("span", { class: "h-warn", children: "No Word draft was made for these minutes" }),
+              " · Reject them and process the meeting again"
+            ] }) : null,
+            /* @__PURE__ */ u2(WeekendNote, { r: r4 }),
+            conflict ? /* @__PURE__ */ u2(Conflict, { r: r4 }) : null
+          ] }),
+          /* @__PURE__ */ u2("td", { class: "iracts", children: [
+            /* @__PURE__ */ u2(IconButton, { icon: "pencil", label: r4.kind === "draft" ? r4.nodraft ? "No Word draft" : "Open draft" : "Edit", data: { ira: "edit" }, onClick: () => edit(n4) }),
+            " ",
+            conflict ? /* @__PURE__ */ u2(S2, { children: [
+              /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-act": "ck", "data-ira": "keep", disabled: !live, title: live ? void 0 : "Needs the live server", onClick: () => settle(n4, "keep"), children: "Keep current" }),
+              " ",
+              /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-act": "co", "data-ira": "override", disabled: !live, title: live ? void 0 : "Needs the live server", onClick: () => settle(n4, "override"), children: "Use this one" })
+            ] }) : /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "approve", disabled: !!r4.nodraft, title: r4.nodraft ? NODRAFT_MSG : void 0, onClick: () => approve(n4), children: [
+              /* @__PURE__ */ u2(Icon, { name: "check" }),
+              "Approve"
+            ] }),
+            " ",
+            /* @__PURE__ */ u2(
+              IconButton,
+              {
+                icon: "x",
+                label: ["draft", "files"].includes(r4.kind) ? "Reject" : "Reject, with a reason",
+                cls: "no",
+                data: { ira: "reject" },
+                haspopup: ["draft", "files"].includes(r4.kind) ? void 0 : "menu",
+                onClick: (e4) => reject(
+                  n4,
+                  /** @type {Element} */
+                  e4.currentTarget
+                )
+              }
+            )
+          ] })
+        ]
+      }
+    );
+  }
+  function ProposalGroups({ groups, meet, child }) {
+    return /* @__PURE__ */ u2(S2, { children: irGroupsShown(groups, irDone).map((g5) => /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("tr", { class: `icsubhead ${g5.kind}${child ? " child" : ""}`, "data-irg": g5.kind, children: /* @__PURE__ */ u2("td", { colSpan: 2, children: [
+        /* @__PURE__ */ u2("span", { class: "icsh", children: [
+          meet ? `${meet} · ` : "",
+          IR_HEADS[g5.kind][0],
+          " · ",
+          g5.ns.length
+        ] }),
+        /* @__PURE__ */ u2("span", { class: "icshs", children: IR_HEADS[g5.kind][1] }),
+        g5.kind === "routine" ? /* @__PURE__ */ u2("span", { class: "icshr", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "routine", title: "Approves every routine item here; the ones above stay for you", onClick: () => approveRoutine(g5.ns), children: [
+          "Approve routine (",
+          g5.ns.length,
+          ")"
+        ] }) }) : null
+      ] }) }),
+      g5.ns.map((n4) => /* @__PURE__ */ u2(ProposalLine, { n: n4, child }))
+    ] })) });
+  }
+
   // components/intakeReview/rows.jsx
   var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
   var IR_GROUP_HEAD = {
@@ -72546,43 +72911,6 @@ ${d5.text}`);
         ]
       }
     );
-  }
-
-  // components/intakeReview/proposals.jsx
-  function ProposalLine({ n: n4, child }) {
-    const r4 = irRow(n4);
-    if (!r4) return null;
-    return /* @__PURE__ */ u2("tr", { class: `irprop${child ? " mchild" : ""}`, "data-irn": n4, children: [
-      /* @__PURE__ */ u2("td", { class: "title", children: [
-        /* @__PURE__ */ u2("span", { class: "ickind", children: irKind(r4) }),
-        " ",
-        /* @__PURE__ */ u2("b", { class: "icttl", children: r4.rec && r4.rec.t || "" }),
-        r4.p ? /* @__PURE__ */ u2("span", { class: "sub", children: [
-          " · ",
-          pName(r4.p)
-        ] }) : null
-      ] }),
-      /* @__PURE__ */ u2("td", { class: "iracts" })
-    ] });
-  }
-  function ProposalGroups({ groups, meet, child }) {
-    return /* @__PURE__ */ u2(S2, { children: irGroupsShown(groups, irDone).map((g5) => /* @__PURE__ */ u2(S2, { children: [
-      /* @__PURE__ */ u2("tr", { class: `icsubhead ${g5.kind}${child ? " child" : ""}`, "data-irg": g5.kind, children: /* @__PURE__ */ u2("td", { colSpan: 2, children: [
-        /* @__PURE__ */ u2("span", { class: "icsh", children: [
-          meet ? `${meet} · ` : "",
-          IR_GROUP_HEAD[g5.kind][0],
-          " · ",
-          g5.ns.length
-        ] }),
-        /* @__PURE__ */ u2("span", { class: "icshs", children: IR_GROUP_HEAD[g5.kind][1] }),
-        g5.kind === "routine" ? /* @__PURE__ */ u2("span", { class: "icshr", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "routine", disabled: true, title: "232-B", children: [
-          "Approve routine (",
-          g5.ns.length,
-          ")"
-        ] }) }) : null
-      ] }) }),
-      g5.ns.map((n4) => /* @__PURE__ */ u2(ProposalLine, { n: n4, child }))
-    ] })) });
   }
 
   // components/intakeReview/views.jsx
@@ -72794,6 +73122,7 @@ ${d5.text}`);
       R(/* @__PURE__ */ u2(IntakeReviewView, {}), el2);
       irMounted = true;
       bootIrKeys();
+      bootProposalKeys();
     }
   }
   function bootIrKeys() {
@@ -72996,8 +73325,8 @@ ${d5.text}`);
       const q5 = (h6 || "").replace(/^#/, "");
       if (!q5) return null;
       const parts = q5.split("&"), [v5, arg] = parts[0].split("=").map(decodeURIComponent), kv = Object.fromEntries(parts.slice(1).map((x6) => {
-        const [k5, val2 = ""] = x6.split("=");
-        return [k5, k5 === "v" || k5 === "q" || k5 === "vb" ? decodeURIComponent(val2) : val2];
+        const [k5, val3 = ""] = x6.split("=");
+        return [k5, k5 === "v" || k5 === "q" || k5 === "vb" ? decodeURIComponent(val3) : val3];
       }));
       const st3 = { v: v5, arg: null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
       {
@@ -75265,7 +75594,7 @@ ${d5.text}`);
         try {
           await vq(async () => {
             const path = "system/config/settings.json", text = await shared.VW.read(path), js2 = JSON.parse(text), at2 = stampFull(), logs = [];
-            for (const [key2, val2] of Object.entries(changes)) {
+            for (const [key2, val3] of Object.entries(changes)) {
               const parts = key2.split(".");
               let o5 = js2;
               parts.slice(0, -1).forEach((q5) => {
@@ -75273,8 +75602,8 @@ ${d5.text}`);
                 o5 = o5[q5];
               });
               const last = parts[parts.length - 1];
-              logs.push(JSON.stringify({ at: at2, key: key2, old: o5[last] === void 0 ? null : o5[last], new: val2 }));
-              o5[last] = val2;
+              logs.push(JSON.stringify({ at: at2, key: key2, old: o5[last] === void 0 ? null : o5[last], new: val3 }));
+              o5[last] = val3;
             }
             await shared.VW.write(await freeBackup("system/backups/settings-", ".json"), text);
             await shared.VW.write(path, JSON.stringify(js2, null, 2) + "\n");
@@ -75302,7 +75631,7 @@ ${d5.text}`);
       return h5 + "\n" + (g5.length ? g5.join("\n") + "\n\n" : "") + text.trim() + "\n" + (im2.length ? "\n" + im2.join("\n") + "\n" : "") + "\n";
     });
   }
-  async function setRhythm(code, val2) {
+  async function setRhythm(code, val3) {
     if (!await needVault()) return false;
     try {
       await vq(async () => {
@@ -75310,8 +75639,8 @@ ${d5.text}`);
         const m5 = text.match(re2);
         if (!m5) throw new Error(`no “Client report rhythm:” line in ${path}; use cx-edit`);
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
-        await shared.VW.write(path, text.replace(re2, "$1" + val2.toLowerCase()));
-        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `client_report_rhythm.${code}`, old: m5[2], new: val2.toLowerCase() }) + "\n");
+        await shared.VW.write(path, text.replace(re2, "$1" + val3.toLowerCase()));
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `client_report_rhythm.${code}`, old: m5[2], new: val3.toLowerCase() }) + "\n");
       });
       return true;
     } catch (e4) {
@@ -75319,8 +75648,8 @@ ${d5.text}`);
       return false;
     }
   }
-  function memLineEdit(text, label, val2) {
-    const bad = memValueProblem(label, val2);
+  function memLineEdit(text, label, val3) {
+    const bad = memValueProblem(label, val3);
     if (bad) throw new Error(bad);
     const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), lead = "^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)", reOnOff = new RegExp(lead + "(on|off)\\b([^\\n]*)$", "i"), re2 = new RegExp(lead + "([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$"), reRhythm = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/, rePartner = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/;
     const lines2 = text.split("\n"), live = liveLines(lines2);
@@ -75329,16 +75658,16 @@ ${d5.text}`);
     for (let i5 = 0; i5 < lines2.length; i5++) {
       if (!live[i5]) continue;
       const l6 = bare(lines2[i5]);
-      if (/^(on|off)$/.test(val2)) {
+      if (/^(on|off)$/.test(val3)) {
         const m6 = l6.match(reOnOff);
         if (m6) {
-          lines2[i5] = m6[1] + val2 + m6[3] + eol(lines2[i5]);
+          lines2[i5] = m6[1] + val3 + m6[3] + eol(lines2[i5]);
           return { text: lines2.join("\n"), was: m6[2].toLowerCase() };
         }
       }
       const m5 = l6.match(re2);
       if (m5) {
-        lines2[i5] = m5[1] + val2 + (m5[3] ? m5[3].replace(/^\s*/, "   ") : "") + eol(lines2[i5]);
+        lines2[i5] = m5[1] + val3 + (m5[3] ? m5[3].replace(/^\s*/, "   ") : "") + eol(lines2[i5]);
         return { text: lines2.join("\n"), was: m5[2].trim() };
       }
     }
@@ -75348,7 +75677,7 @@ ${d5.text}`);
     }
     if (near < 0) return null;
     const ind = bare(lines2[near]).match(/^[ \t]*(?:[-*][ \t]+)?/)[0];
-    lines2.splice(near + 1, 0, ind + "**" + label + ":** " + val2 + eol(lines2[near]));
+    lines2.splice(near + 1, 0, ind + "**" + label + ":** " + val3 + eol(lines2[near]));
     return { text: lines2.join("\n"), was: "" };
   }
   function liveLines(lines2) {
@@ -75374,8 +75703,8 @@ ${d5.text}`);
       return seg || "a file";
     });
   }
-  function memValueProblem(label, val2) {
-    const v5 = String(val2 == null ? "" : val2);
+  function memValueProblem(label, val3) {
+    const v5 = String(val3 == null ? "" : val3);
     if (unsafeLineValue(v5)) return "the value has a line break or another control character";
     if (label === "Partners") {
       if (v5.length > PARTNERS_LINE_MAX) return `the partners' line would be over ${PARTNERS_LINE_MAX} characters`;
@@ -75394,8 +75723,8 @@ ${d5.text}`);
     if (v5.length > 1e3) return "the value is too long";
     return "";
   }
-  async function setMemLine(code, label, val2, key2) {
-    const problem = memValueProblem(label, val2);
+  async function setMemLine(code, label, val3, key2) {
+    const problem = memValueProblem(label, val3);
     if (problem) {
       snack("Not saved: " + problem + ".");
       return false;
@@ -75403,13 +75732,13 @@ ${d5.text}`);
     if (!await needVault()) return false;
     try {
       await vq(async () => {
-        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
+        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val3);
         if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
         if (r4.text === text) return;
         if (await shared.VW.read(path) !== text) throw new Error("this project's memory file changed in another window since it was read, so nothing was saved; try again");
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
         await shared.VW.write(path, r4.text, text);
-        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val2 }) + "\n");
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val3 }) + "\n");
       });
       return true;
     } catch (e4) {
@@ -76154,6 +76483,7 @@ ${d5.text}`);
         "applyTheme",
         "applyView",
         "applyWords",
+        "approve",
         "askChangesHtml",
         "askDeleteNote",
         "askLive",
@@ -76276,6 +76606,7 @@ ${d5.text}`);
         "edSet",
         "edTurnInto",
         "edValue",
+        "edit",
         "editProposal",
         "errBanner",
         "esc",
@@ -76350,9 +76681,11 @@ ${d5.text}`);
         "irIsFolded",
         "irKeepOpen",
         "irOpen",
+        "irPeek",
         "irSetView",
         "irStage",
         "irStageClick",
+        "irTick",
         "irToggle",
         "irViewNorm",
         "isMe",
@@ -76573,6 +76906,7 @@ ${d5.text}`);
         "refreshRecords",
         "regAddAlias",
         "regSetHidden",
+        "reject",
         "rel",
         "reloadData",
         "remMenu",
@@ -76602,6 +76936,7 @@ ${d5.text}`);
         "rfRoutine",
         "rjGone",
         "rjGuesses",
+        "rjMenu",
         "rkText",
         "row",
         "rows",
@@ -76654,6 +76989,7 @@ ${d5.text}`);
         "setRhythm",
         "setRunning",
         "setSearch",
+        "settle",
         "shared",
         "sl",
         "slashRows",

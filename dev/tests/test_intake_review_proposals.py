@@ -239,9 +239,9 @@ class Decide(Base):
         self.assertFalse(any(r["description"].startswith("Scope creep") for r in self.v.rows("raid")))
         self.assertNotEqual(next(r for r in self.v.rows("actions") if r["id"] == "ABC-A-001")["status"], "Closed")
         # one Undo puts everything back
-        b.wait("!!document.querySelector('#snack .undo, #snack button')", 20)
+        b.wait("document.getElementById('snackU') && !document.getElementById('snackU').hidden", 20)
         b.eval("window.__calls.length=0")
-        b.click("#snack button")
+        b.click("#snackU")
         b.wait("REV.filter(r=>!r.done&&!r.hold).length>0", 30)
         self.assertEqual(b.eval("window.__calls.filter(u=>/\\/api\\/undo$/.test(u)).length"), 1, "one Undo for the whole batch")
         self.assertFalse(any(r["description"].startswith("Batch ") for r in self.v.rows("actions")))
