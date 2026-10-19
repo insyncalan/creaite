@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { THEMES } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { applyPending, SERVED, snack } from "../../core/server.js";
+import { api, applyPending, SERVED, snack } from "../../core/server.js";
 import { catalogue, catalogueError, query, saveSettings, settingOf } from "../../stores/settings.js";
 import { rowId, SettingRow } from "./SettingRow.jsx";
 
@@ -115,15 +115,48 @@ function Essential({ row }) {
     case "dashboard.palette": control = select(THEMES.map(x => [x.id, x.id])); break;
     case "dashboard.motion": control = select([["System", "Follow my Mac"], ["Reduce", "Reduce"], ["Full", "Full"]]); break;
     case "drafting.update": control = <AllSwitch keys={keys} named={named} save={save} />; break;
+    case "draft_email.outlook_drafts": control = sw(); break;
     default: control = sw();
   }
   const pending = k === "dashboard.auto_apply" && val(k) === false && shared.PENDING && shared.PENDING.length;
-  return (
+  const settingRow = (
     <SettingRow id={id} label={row.label} line={row.line} changed={row.changed} keys={keys} saved={saved}
       resettable={keys.every(x => { const s = settingOf(x); return !s || s.resettable; })}>
       {control}
       {pending ? <button type="button" class="btn primary" id="applyNow" onClick={() => applyPending()}>Apply {shared.PENDING.length} waiting</button> : null}
     </SettingRow>
+  );
+  return k === "draft_email.outlook_drafts" ? <>{settingRow}<OutlookAccess on={!!val(k)} save={save} /></> : settingRow;
+}
+
+/* #183: the Outlook access row under Create drafts in Outlook (accepted, Alan 19-10-2026). Check asks the live server
+   (POST /api/email/outlook-access, a read: the connector's granted scopes) whether drafts can be created and says so; when Outlook
+   says no, the setting is turned off, so nobody finds out on their first draft. It is not a setting: no data-keys, no Reset. */
+export const ACCESS_OK = at => `You can create drafts in Outlook (checked ${at}).`;
+export const ACCESS_NO = "Outlook says you can't write here, so drafts stay copy and paste.";
+
+/** @param {{on:boolean, save:(c:Record<string,any>)=>Promise<boolean>}} props */
+function OutlookAccess({ on, save }) {
+  const [id] = useState(rowId);
+  const [said, setSaid] = useState("");
+  const [busy, setBusy] = useState(false);
+  const check = async () => {
+    setBusy(true); setSaid("Asking Outlook…");
+    const r = await api("/api/email/outlook-access", {});
+    setBusy(false);
+    if (!r.ok || r.can === null || r.can === undefined) { setSaid(r.message || "Outlook couldn't be asked just now: try again in a minute."); return; }
+    if (r.can) { setSaid(ACCESS_OK(r.at || "")); return; }
+    setSaid(ACCESS_NO);
+    if (on) await save({ "draft_email.outlook_drafts": false });
+  };
+  return (
+    <div class={`srow ddacc${on ? "" : " dim"}`} id="ddAcc">
+      <div><span id={id}>Outlook access</span><small id={id + "h"}>Whether you may create drafts in your own mailbox.</small></div>
+      <div class="setctl">
+        <button type="button" class="btn" id="ddCheck" aria-describedby={id + "h"} disabled={busy} onClick={check}>Check</button>
+        <span class="sub" id="ddRes" aria-live="polite">{said}</span>
+      </div>
+    </div>
   );
 }
 

@@ -120,7 +120,8 @@ export function deFollowup(o){ const e=esc, today=o.today, items=dePicked(o), ac
   lines.push(ask,...endT);
   return {to:att.map(a=>a.email).filter(Boolean).join("; "),subject:`${o.internal?"[Internal] ":""}${codes.join(" / ")}${codes.length?" · ":""}${o.title||"Meeting"}: follow-up and actions`,html,text:lines.join("\n"),items}; }
 /* The popup. Opening, copying and changing it write nothing; the only record is "I sent it" in Chase (system/staging/chases.json,
-   item IDs, the date and the mode, through the live server). Nothing is sent and no Outlook draft is made. */
+   item IDs, the date and the mode, through the live server). Nothing is sent. No Outlook draft is made unless Create drafts in
+   Outlook is on (#183, below), and then only by its button. */
 shared.DE=null;   /* {mode, name, email, items, picked:Set, includeUpdate, replyBy, edited, subjEdited, outside, cover, polish; followup: token, title, day, attendees, lead, summary, note} */
 export const deHost=addr=>String(addr||"").split("@")[1]?.trim().toLowerCase()||"";
 export const deOutside=email=>{ const h=deHost(email); return !h||!(S.ownDomains||[]).includes(h); };   /* no address on record counts as outside */
@@ -178,9 +179,9 @@ export function deBuild(){ return draftEmail({mode:shared.DE.mode,name:shared.DE
 /* the parts of the popup that differ by mode */
 export function deModesHtml(){ if(shared.DE.mode==="followup") return "";
   return `<div class="demodes" role="group" aria-label="Kind of email"><button type="button" class="vchip" data-demode="update" aria-pressed="${shared.DE.mode==="update"}">Update request</button><button type="button" class="vchip" data-demode="chase" aria-pressed="${shared.DE.mode==="chase"}" ${shared.DE.canChase?"":'disabled data-tip="Nothing of theirs is overdue"'}>Chase overdue items</button></div>`; }
-export function deToHtml(){ if(shared.DE.mode!=="followup") return `<span id="deTo">${shared.DE.email?esc(shared.DE.email):'<span class="sub">No email recorded</span>'}</span>${shared.DE.email?'<button class="mini" id="deCopyTo">Copy</button>':""}`;
+export function deToHtml(){ if(shared.DE.mode!=="followup") return `<span id="deTo">${shared.DE.email?esc(shared.DE.email):`<span class="deto-no">${esc(deNoAddress(shared.DE.name))}</span>`}</span>${shared.DE.email?'<button class="mini" id="deCopyTo">Copy</button>':""}`;
   const L=shared.DE.attendees; return `<span id="deTo">${L.length?L.map(a=>`${esc(a.name)}${a.email?` &lt;${esc(a.email)}&gt;`:' <span class="sub">(no address)</span>'}`).join("; "):'<span class="sub">No attendees on record</span>'}</span>${L.some(a=>a.email)?'<button class="mini" id="deCopyTo">Copy</button>':""}`; }
-export const deChaseText=lv=>`${["A first reminder","A second reminder","A firmer reminder"][lv.level]}${lv.n?`: chased ${fd(lv.last)}, ${deTimes(lv.n)}`:": not chased before"}. Press I sent it after you send it, so the next one knows.`;
+export const deChaseText=lv=>`${["A first reminder","A second reminder","A firmer reminder"][lv.level]}${lv.n?`: chased ${fd(lv.last)}, ${deTimes(lv.n)}`:": not chased before"}. ${deOutlookOn()?DD_STEPS:"Press I sent it after you send it, so the next one knows."}`;
 export function deChaseLine(){ const el=$("#deChase"); if(!el) return; const pk=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)); el.textContent=deChaseText(deChaseLevel(pk.length?pk:shared.DE.items,SA().chases)); }
 export function deExtraHtml(){ if(shared.DE.mode==="chase"){ const pk=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)), lv=deChaseLevel(pk.length?pk:shared.DE.items,SA().chases);
     return `<div class="dechase" id="deChase">${esc(deChaseText(lv))}</div>`; }
@@ -202,8 +203,8 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
       <div class="deopts">${shared.DE.mode==="followup"?"":'<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
       ${dePolishHtml()}<div id="deNote" class="denote" hidden></div>
       <div id="dePrev" contenteditable="true" role="textbox" aria-multiline="true" aria-label="The email, editable"></div>
-      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode==="chase"||shared.DE.mode==="update"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Log that you sent it: a dated Latest update on each ticked item (the items, names and dates only, never the email)">I sent it</button>`:""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
-    $("#deDone").onclick=()=>$("#deDlg").close(); if(shared.DE.includeUpdate&&$("#deUpd")) $("#deUpd").checked=true; if(shared.DE.replyBy) $("#deReply").value=fd(shared.DE.replyBy); }
+      <div id="deStat" class="denote ddstat" role="status" hidden></div><div class="deacts" id="deActs">${deActsHtml()}</div>`);
+    deSubDraw(); $("#deDone").onclick=()=>$("#deDlg").close(); if(shared.DE.includeUpdate&&$("#deUpd")) $("#deUpd").checked=true; if(shared.DE.replyBy) $("#deReply").value=fd(shared.DE.replyBy); }
   dePrevPut(em.html); shared.DE.edited=false; $("#deNote").hidden=true; if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; }
 /* ===== #133 ===== the preview is a host of the shared editor (core/editor.js, features "email"): the same selection bar as the other editors
    (Improve: Rewrite, Shorter, Longer; Tone: More formal, Warmer; Ask…), on text inside one paragraph or cell, so the table and the colours
@@ -227,6 +228,55 @@ export function deHtml(){ const el=$("#dePrev");
   if(shared.DE.edited&&el&&el.cxed&&!el.cxed.editor.isDestroyed) return `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${edEmailHtml(el.cxed.editor)}</div>`;
   const t=document.createElement("div"); putHtml(t,shared.DE.built||""); return t.innerHTML; }
 /* ===== end #133 ===== */
+/* ===== #183 (2.6) ===== Draft email delivery. With Settings › Essentials › Draft email › Create drafts in Outlook on
+   (S.outlookDrafts, settings.json draft_email.outlook_drafts, off by default) the popup's primary button is Create draft in Outlook:
+   the live server's token-checked POST /api/email/draft {action:"create", to, subject, html, ids, mode, name} makes one Outlook draft
+   (draft_delivery.py builds and checks the call; it never sends). The html is deHtml(), the very HTML Copy email puts on the
+   clipboard, so what is on screen is what lands in Outlook. Copy email and Copy as plain text stay; I sent it goes: the chase is
+   recorded when the draft is made and marked sent when a sweep sees it in Sent Items ({action:"copied"} after a copy, so the sweep
+   records it then). A refusal keeps the email, records nothing and offers Copy it instead. Off: the popup as before. */
+export const deOutlookOn=()=>S.outlookDrafts===true;
+export const DD_STEPS="The reminder steps up when the draft is created (or when a sweep finds the sent email, if you copy it instead).";
+export const DD_SUB={off:"Nothing is sent: copy it and paste it into Outlook",on:"Nothing is sent: creaite puts a draft in your Outlook Drafts folder, for you to check and send"};
+/** The To line when no address is on record (Alan, 19-10-2026: it never stops the draft). @param {string} name */
+export const deNoAddress=name=>`No email address on record for ${name||"them"}. ${deOutlookOn()?"The draft is still created, with nothing in To: add the address in Outlook.":"Add the address when you paste it into Outlook."}`;
+export function deSubDraw(){ const el=$("#deSub"); if(el) el.textContent=deOutlookOn()?DD_SUB.on:DD_SUB.off; }
+/** The popup's buttons: Off as before; On, Create draft in Outlook first (Draft created once made), the two copies, no I sent it. */
+export function deActsHtml(){ const de=shared.DE, tail='<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button>';
+  if(!deOutlookOn()) return `<button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${de.mode==="chase"||de.mode==="update"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Log that you sent it: a dated Latest update on each ticked item (the items, names and dates only, never the email)">I sent it</button>`:""}${tail}`;
+  const make=de.drafted?`<button class="btn" id="deMade" disabled>${ic("check")}Draft created</button>`:'<button class="btn primary" id="deMake">Create draft in Outlook</button>';
+  return `${make}<button class="btn" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${tail}`; }
+export function deActsDraw(){ const a=$("#deActs"); if(!a) return; putHtml(a,deActsHtml()); $("#deDone").onclick=()=>$("#deDlg").close(); }
+/** The addresses as the To row shows them. */
+export const deToAddr=()=>shared.DE.mode==="followup"?(shared.DE.attendees||[]).map(a=>a.email).filter(Boolean).join("; "):(shared.DE.email||"");
+/** What the route gets: the To, the subject and the email exactly as shown, the ticked items' IDs (references for the chase). */
+export function deDraftBody(){ const de=shared.DE, ids=de.items.filter(i=>de.picked.has(i.k+":"+i.id)&&!i.noid).map(i=>i.id);
+  return {to:deToAddr(),subject:$("#deSubj").value,html:deHtml(),ids,mode:de.mode,name:de.name||""}; }
+/** @param {"ok"|"bad"} kind @param {string} h */
+export function deStatShow(kind,h){ const el=$("#deStat"); if(!el) return; el.hidden=false; el.className=`denote ddstat ${kind}`; putHtml(el,h); }
+/** @param {string} l */
+export const deLink=l=>/^https:\/\/outlook\.(office|office365|live)\.com\//.test(String(l||""))?` <a href="${esc(l)}" target="_blank" rel="noopener">Open in Outlook</a>`:"";
+/** @param {{link:string,noTo:boolean,chased:number}} d */
+export function deMadeHtml(d){ const n=d.chased||0;
+  return `<b>Draft created in Outlook</b> (your Drafts folder). ${d.noTo?"It has no recipient yet: add the address in Outlook. ":""}Open it there to check and send.${deLink(d.link)}`
+    +(n?`<br><span class="sub">Chase recorded: drafted today, ${plur(n,"item")}. It will show as sent once a sweep sees it in Sent Items.</span>`:""); }
+/** @param {string} why */
+export const deRefusedHtml=why=>`<b>Outlook would not create the draft</b> (${esc(why)}). Nothing was sent and nothing was recorded. The email is still here: <button class="mini" id="deFallback">Copy it instead</button> or turn the setting off in Settings › Essentials › Draft email.`;
+/** Create draft in Outlook: one call; the email stays whatever Outlook says. @param {any} btn the button (disabled while it runs) */
+export async function deMakeDraft(btn){ const de=shared.DE; if(!de||btn.disabled) return;
+  if(!viaServer()){ deStatShow("bad",deRefusedHtml("creaite's live server isn't reachable")); return; }
+  btn.disabled=true; $("#deMsg").textContent="Creating the draft in Outlook…";
+  const r=await api("/api/email/draft",{action:"create",...deDraftBody()});
+  if(shared.DE!==de) return;
+  $("#deMsg").textContent="";
+  if(!r.ok){ btn.disabled=false; deStatShow("bad",deRefusedHtml(oneLine(r.reason||r.message||"")||"no reason given")); return; }
+  if(r.chases) SA().chases=r.chases;
+  de.drafted={link:r.web_link||"",noTo:!!r.no_recipient,chased:(r.chased||[]).length}; deActsDraw(); deStatShow("ok",deMadeHtml(de.drafted));
+  if(de.mode==="chase") deChaseLine(); }
+/** With the setting on, a copy instead of a draft: the route keeps the references, so the sweep records the chase on Sent Items. */
+export function deCopiedNote(){ const de=shared.DE; if(!deOutlookOn()||!de||de.drafted||de.copiedNoted||!viaServer()) return;
+  de.copiedNoted=true; api("/api/email/draft",{action:"copied",...deDraftBody()}).then(r=>{ if(!r.ok&&shared.DE===de) de.copiedNoted=false; }); }
+/* ===== end #183 ===== */
 /* an option changed: redraw the email, unless the person has edited it, in which case ask first (their edits would be lost) */
 export function deOptionsChanged(){ if(!shared.DE.edited){ const em=deBuild(); dePrevPut(em.html); if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; return; }
   const n=$("#deNote"); n.hidden=false; putHtml(n,'You\'ve edited the email, so it hasn\'t changed with your last choice. <button class="mini" id="deRedraw">Redraw it (your edits are lost)</button>'); }
@@ -241,6 +291,7 @@ export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=d
     if(withHtml){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); }
     else await navigator.clipboard.writeText(text);
     shared.SENTVIA=withHtml?"email":"message";   /* only once the copy has gone through */
+    deCopiedNote();                               /* #183: with Create drafts in Outlook on, the sweep records it from Sent Items */
     deSay(btn,withHtml?"Copied: paste it into Outlook":"Copied as plain text",true); }
   catch(err){ deSelect("dePrev"); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
 /* ===== v2.3.0 #153 ===== "I sent it" logs the work. In the pane and in this popup it records the chase (chases.json: item IDs, the date and
@@ -336,6 +387,8 @@ document.addEventListener("click",e=>{ if(!shared.DE) return; const t=e.target;
   if(t.closest("[data-depolish]")){ dePolish(); return; }
   const pu=t.closest("[data-depo]"); if(pu&&shared.DE.polish){ dePolishDo(pu.dataset.depo); return; }
   if(t.closest("#deSent")){ deSent(t.closest("#deSent")); return; }
+  if(t.closest("#deMake")){ deMakeDraft(t.closest("#deMake")); return; }                     /* #183 */
+  if(t.closest("#deFallback")){ deCopyEmail(true,t.closest("#deFallback")); return; }
   if(t.closest("#deCopyTo")) deCopyText(shared.DE.mode==="followup"?shared.DE.attendees.map(a=>a.email).filter(Boolean).join("; "):shared.DE.email,$("#deCopyTo"),"deTo");
   else if(t.closest("#deCopySubj")) deCopyText($("#deSubj").value,$("#deCopySubj"),"deSubj");
   else if(t.closest("#deCopyHtml")) deCopyEmail(true,$("#deCopyHtml"));
