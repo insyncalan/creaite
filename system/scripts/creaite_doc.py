@@ -95,11 +95,28 @@ def force_client_audience(doc):
     Changed in place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or
     distributed is already read as client by is_client and by the gate, and its kind decides where it is filed."""
     if isinstance(doc, dict) and doc.get("kind") == "client":
-        doc["audience"] = "client"
-        code = str(doc.get("project") or "")
-        doc["project_name"] = project_name(code) if code else ""
-        doc["client"] = project_client(code) if code else None
+        derive_client(doc)
         drop_other_projects(doc)
+    return doc
+
+
+def derive_client(doc):
+    """v2.5.1 (#239, b): a client report's header, made again from the tracker, the project's memory and its logo files, in place:
+    its audience (always client), `project_name`, `client`, and the header section's label, client and logos
+    (report_doc.client_logos: the project's files the report and the project's setting tick now). Whatever a draft stored there (a
+    picture's path, a logo unticked since, another name) is never kept. Any other document is returned as it is."""
+    if not (isinstance(doc, dict) and doc.get("kind") == "client"):
+        return doc
+    import report_doc
+    code = str(doc.get("project") or "")
+    doc["audience"] = "client"
+    doc["project_name"] = project_name(code) if code else ""
+    doc["client"] = project_client(code) if code else None
+    logos = report_doc.client_logos(code, doc.get("layout")) if report_doc.CODE.match(code) else []
+    for s in doc.get("sections") or []:
+        if isinstance(s, dict) and s.get("type") == "header":
+            data = s.get("data") if isinstance(s.get("data"), dict) else {}
+            s["data"] = {**data, "label": "Client report", "client": doc["client"] or "", "logos": [dict(x) for x in logos]}
     return doc
 
 
@@ -279,9 +296,9 @@ def client_shape(doc):
 def clean(doc, keep_text=False):
     """A copy with hidden sections, rows and figures emptied, and the items only they named dropped. check()s it first. A text section
     of the internal report that sits in a client document unmatched is dropped (H5, #218). v2.5.1: a client report holds only its
-    known keys (client_shape), whatever was stored."""
+    known keys (client_shape) and its header is derived again (derive_client), whatever was stored."""
     check(doc)
-    out = client_shape(doc) if doc.get("kind") == "client" else copy.deepcopy(doc)
+    out = derive_client(client_shape(doc)) if doc.get("kind") == "client" else copy.deepcopy(doc)
     out["sections"] = [s for s in out.get("sections") or [] if not _internal_text(out, s)]
     hidden = _hidden_refs(out.get("sections") or [])
     out["sections"] = [_clean_section(s, keep_text) for s in out.get("sections") or []]
@@ -1321,15 +1338,30 @@ class _Word:
         return (self.doc.get("audience") or "internal") == "internal" and self.doc.get("kind") != "client"
 
     # ── the logos ──
+    def logo_files(self, s):
+        """v2.5.1 (#239, b): the logo files this export may draw, in order. A client report draws the logos the project ticks now
+        (report_doc.client_logos), never a stored list; any report draws only a file that is one of the project's own logos
+        (report_doc.logos, the logos folder), never another path a draft stored."""
+        import report_doc
+        code = str(self.doc.get("project") or "")
+        if not report_doc.CODE.match(code):
+            return []
+        allowed = {paths.resolve(x["path"]).resolve() for x in report_doc.logos(code)}
+        wanted = report_doc.client_logos(code, self.doc.get("layout")) if self._client() else (s.get("data") or {}).get("logos") or []
+        out = []
+        for lg in wanted:
+            raw = str(lg.get("path") or "") if isinstance(lg, dict) else ""
+            f = paths.resolve(Path(raw).as_posix()) if raw else None
+            if f is not None and not f.is_symlink() and f.is_file() and f.resolve() in allowed:
+                out.append(f)
+        return out
+
     def logos(self, s):
-        """The header's chosen logos as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it is."""
+        """The header's chosen logos (logo_files) as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it
+        is."""
         one = []
-        for lg in (s.get("data") or {}).get("logos") or []:
-            f = Path(str(lg.get("path") or ""))
-            f = f if f.is_absolute() else paths.resolve(f.as_posix())
+        for f in self.logo_files(s):
             try:                                    # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
-                if not f.is_file() or f.is_symlink():
-                    continue
                 one += self._logo_entry(f)
             except Exception:           # a damaged or unreadable logo is left out of the file; the report is still made
                 continue

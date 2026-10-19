@@ -257,6 +257,21 @@ def logos(code, wanted=None):
     return [{"kind": k, "path": paths.rel(f)} for k in kinds for f in [logo_file(code, k)] if f]
 
 
+def client_logos(code, layout=None):
+    """v2.5.1 (#239, b): the logos a client report draws NOW, never the list a draft stored: the project's logo files (logos) that the
+    report's layout ticks (`layout.logos`; none listed is all, as the screen reads it) and that the project's Client report logos
+    setting still ticks (the firm's always). [] when anything can't be read (fail closed)."""
+    try:
+        chosen = (layout or {}).get("logos") if isinstance(layout, dict) else None
+        kinds = set(resolve_logos(code, [k for k in chosen if isinstance(k, str)]) if isinstance(chosen, list) else logo_kinds(code))
+        ticked = project_logos(code)
+        if ticked is not None:
+            kinds &= set(resolve_logos(code, ticked)) | {"firm"}
+        return [x for x in logos(code) if x["kind"] in kinds]
+    except Exception:  # noqa: BLE001  a project or setting that can't be read: no logo at all
+        return []
+
+
 # ── Arranging the sections as the layout says ───────────────────────────────
 
 def _figures_in_order(figures, glance):
