@@ -2097,12 +2097,12 @@ def followed_names():
 
 def followed_from(source, vips, names):
     """(name, address) of the followed person a structured source is from, else None. A Teams source may name the sender without
-    an address, so the register name matches too."""
+    an address, so the register name matches too (only when the source has no address: a name beside another address is not followed)."""
     sender = message_of_source(source)["from"]
     addr = address_of(sender)
     if addr in vips:
         return vips[addr], addr
-    who = names.get(_person(sender).lower()) if sender else None
+    who = names.get(_person(sender).lower()) if sender and not addr else None     # a name alone, never beside another address
     return (who, "") if who else None
 
 

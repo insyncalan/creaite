@@ -5,10 +5,8 @@ or chat, and a note about them written into a project's memory, both reach Today
 proposal or note (Review still holds the proposals); a recorded message Today missed is a bug. (2) Dismissed ones stay gone
 unless a follow-up adds a genuine change to an active item or a new item. (3) Private conversations: title and times only.
 
-Where "Needs attention" is on screen: since #168 the followed-people rows are drawn in Today's **Intake and Review** section
-(`toDecideRows`, `#tdList`, badge `#tdNew`, count `#nTd`), not in the `#attnList` reminders list. The new rows join those, so
-every followed-person row is in one place. (Moving that list under the "Needs attention" heading is a one-line change in
-`today.js`; it is an open question for Jarvis.)
+Where the rows are on screen: since 8d2a1344 the `From <person>` rows and the private-conversation row are drawn in Today's
+**Needs attention**; the message cards (Make a work item, Dismiss) stay in **Intake and Review** (`toDecideRows`, `#tdList`).
 
 ## 1. Linking proposals and notes to the followed person (derived, not recorded at stage time)
 
@@ -26,7 +24,10 @@ pending in `system/staging/proposed-*.json`:
 The rows are entries in `vip.json`'s `alerts` (`kind: "proposal" | "note"`, `medium: mail | teams`), so the existing poll
 (`/api/vip`), Dismiss, Handled and Undo routes carry them unchanged (no change to `live_server.py`). They have no `summary`, so
 the check's prompt (`vip_open_cards`) never offers them to the model. They hold references only (file, item number, tag), never
-message text; the page reads each item's words from Review's own data. When every ref is decided or gone, the entry is dropped.
+message text, with one exception: a row's `sigs` and `seen_sig` (in `vip.json`) hold the first 160 normalised characters of each
+staged item's description (or, for an update, the item and its changes), so a repeat can be told from a reword (`sig_similar`).
+They are Claude's wording of the item, not the message's, are never sent to the page build, to the check's prompt or to the
+reports, and stay on the laptop. The page reads each item's words from Review's own data. When every ref is decided or gone, the entry is dropped.
 `vip_open` (reminder counts, weekly report data) ignores them: they are a pointer to Review, not an unseen message.
 
 `followed_sync` runs in memory in `build_dashboard.sweep_alerts` and at the start of each Dismiss / Undo / Handled / Seen, and
@@ -68,3 +69,12 @@ and not replied, so they join `VIPS()` and `#nTd` with no other change.
 ## Guarded files
 
 None needs a change: every route delegates to `sweep.vip_*`. For Jarvis: one sentence for `creaite-rules.md`, in the report.
+
+## Known limits
+
+- **Another wording of an item the card listed.** The card's candidate and the sweep's proposal are compared by words, so an item
+  the card listed but the sweep words differently can still be staged as a second proposal: the card says "Confirm the go-live
+  date" and the sweep stages "Omar to agree the production cut-over date with the client". It still needs Alan's approval, and
+  staging it again is idempotent (the same wording is skipped). The same holds for a dismissed row: "Send the SOW to Mia by
+  Friday" reworded lightly ("on Friday") stays gone; a synonym reword ("Share the statement of work with Mia") comes back as new.
+- Two further low findings from the review (6 and 7) are known and left as they are.

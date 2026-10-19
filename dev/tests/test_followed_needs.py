@@ -109,6 +109,12 @@ class Proposals(unittest.TestCase):
         got = rows(self.v, "proposal")
         self.assertEqual([(r["who"], r["medium"], r["title"]) for r in got], [("Mia Hale", "teams", "Falcon go-live")])
 
+    def test_the_name_alone_does_not_follow_a_sender_with_another_address(self):
+        stage(self.v, [item("Send the SOW", src("[ABC] SOW", "https://x/1", sender="Mia Hale <evil@attacker.example>"))])
+        self.assertEqual(rows(self.v), [])                                   # stage flags by address; so does the row
+        stage(self.v, [item("Confirm go-live", src("Falcon go-live", "https://t/1", sender="Mia Hale", kind="Teams"))])
+        self.assertEqual(len(rows(self.v, "proposal")), 1)                   # no address at all: the name still matches
+
     def test_a_memory_note_about_the_message_is_a_row_linking_to_the_note(self):
         stage_note(self.v, src("[ABC] SOW", "https://x/9"))
         stage_note(self.v, src("Elsewhere", "https://x/10", sender=OMAR))
@@ -128,6 +134,9 @@ class Proposals(unittest.TestCase):
         self.assertEqual(got, [False])                                       # not counted as an unseen message (reminders, weekly data)
         parts = py(self.v, "print(json.dumps(sweep.vip_prompt_parts()['cards']))")
         self.assertEqual(parts, [])                                          # never offered to the model
+        none = py(self.v, "import build_dashboard, report\nprint(json.dumps([build_dashboard.vip_unseen_by_project(),"
+                          " report.weekly_vip('ABC', [])['unseen_alerts']]))")
+        self.assertEqual(none, [{}, []])                                     # nor in the dashboard's VIP counts or the weekly report
 
     def test_a_decided_proposal_takes_its_row_away(self):
         stage(self.v, [item("Send the SOW", src("[ABC] SOW", "https://x/1"))])
@@ -220,6 +229,30 @@ CHAT = {"kind": "teams", "conversation": "19:chat-falcon@thread.v2", "title": "F
         "summary": "Mia's team takes the solution to live; Omar to confirm the date.", "type": "action",
         "ask": "Confirm the go-live date", "due": "2026-10-20", "owners": ["you"],
         "items": [{"type": "action", "text": "Confirm the go-live date", "owner": "Omar Ali", "due": "2026-10-20"}]}
+
+
+class Reworded(unittest.TestCase):
+    """(d) a dismissed From row stays gone for a light reword of its item and comes back for a different wording of the ask."""
+
+    def setUp(self):
+        self.v = vip_vault()
+        stage(self.v, [item("Send the SOW to Mia by Friday", src("[ABC] SOW", "https://x/1"))])
+        rid = rows(self.v, "proposal")[0]["id"]
+        py(self.v, f"print(json.dumps(sweep.vip_dismiss({{{rid!r}}})))")
+        self.assertEqual(rows(self.v), [])
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def test_a_light_reword_stays_gone_and_a_synonym_reword_comes_back(self):
+        stage(self.v, [item("Send the SOW to Mia on Friday", src("RE: [ABC] SOW", "https://x/7", sent="2026-10-09 14:00"))],
+              now="2026-10-09 15:10")
+        self.assertEqual(rows(self.v), [], "a light reword of a dismissed item is the same item")
+        stage(self.v, [item("Share the statement of work with Mia", src("RE: [ABC] SOW", "https://x/8", sent="2026-10-09 14:30"))],
+              now="2026-10-09 15:20")
+        got = rows(self.v, "proposal")
+        self.assertEqual(len(got), 1, "a different wording of the ask is a new item")
+        self.assertIsNone(got[0]["seen"])
 
 
 class Cards(unittest.TestCase):
