@@ -1,0 +1,67 @@
+# id	groups	mode	target	args	env	classifier	variant   ('-' = empty; {CK} = the checkout)
+atk-bg-svg	images,page	script	atk/repro_bg_svg.py	{CK}	-	leakfix	bg-svg-in-css
+atk-other-paths	images,picture	script	atk/repro_other_paths.py	{CK}	-	otherpaths	image-set-escapes-markdown-img
+atk-id-in-css	images	script	atk/test_atk.py	-	-	leakfix	css-content-ids
+rv2b-imageset	images	script	rv2b/atk/repro_imageset.py	{CK}	-	leakfix	image-set-and-data-space
+rv241-atk-css	images	script	rv241/atk_css.py	{CK}	-	keptcss	css-gate-cases
+rv241-v241	images,svg	script	rv241/repro_v241.py	{CK}	-	leakfix	unclosed-url-svg-fill-gif
+rc250-css-fuzz	images	script	rc250/css_fuzz.py	{CK}	-	acceptedcss	css-fuzz
+rc250-jpeg2	images	script	rc250/repro_jpeg2.py	{CK}	-	keptjpeg	jpeg-png-metadata-v2
+rc250-svg-inline	svg,images	script	rc250/svg_inline.py	{CK}	-	beacon	inline-svg-use-style-image
+rc250-svg-logo	svg,logos	script	rc250/svg_logo.py	{CK}	-	svglogo	svg-logo-comment-desc-metadata
+rc250-word-where	picture,images	script	rc250/word_where.py	{CK}	-	wordwhere	beacon-in-word-parts
+csp-check	images	script	csp/csp_check.py	{CK}	-	csp	chrome-beacon-fetch
+rc250-logo-path	logos	script	rc250/logo_path.py	{CK}	-	logopath	header-logo-path-in-word
+rc250-s-probe	logos	script	rc250/s_probe.py	{CK}	-	sprobe	logo-routes-S2-S14
+rvlogofix-cap	logos,svg	script	rv-logofix/cap.py	{CK}	-	cap	big-logo-survives-page
+rvlogofix-svg-fuzz	svg,logos	script	rv-logofix/svg_fuzz.py	{CK}	-	svgfuzz	clean_svg-fuzz
+rvlogofix-md-path	picture	script	rv-logofix/md_path.py	{CK}	-	mdpath	markdown-picture-path
+rvlogofix-route-md	picture,e2e	script	rv-logofix/route_md.py	{CK}	-	routemd_pic	markdown-picture-planted-in-every-section-via-routes
+rvlogofix-route-logo	logos,e2e	script	rv-logofix/route_md.py	{CK}	-	routemd_logo	foreign-logo-path-via-save-then-export
+rvmd-aud	picture,audience	script	rvmd/aud.py	{CK}	-	rvmdaud	own-picture-in-internal-audience-client-draft
+rvmd-fuzz	picture	script	rvmd/fuzz.py	{CK}	-	rvmdfuzz	picture-ref-fuzz
+audbypass-internal	audience,e2e	script	audbypass/route_aud.py	{CK} internal	-	aud	audience=internal
+audbypass-missing	audience,e2e	script	audbypass/route_aud.py	{CK} missing	-	aud	audience=missing
+audbypass-Client	audience,e2e	script	audbypass/route_aud.py	{CK} Client	-	aud	audience=Client
+audbypass-weekly	audience,e2e	script	audbypass/route_aud.py	{CK} weekly	-	aud	audience=weekly
+audbypass-distributed	audience,e2e	script	audbypass/route_aud.py	{CK} distributed	-	aud	audience=distributed
+audbypass-none	audience,e2e	script	audbypass/route_aud.py	{CK} none	-	aud	audience=none
+audbypass-file	audience,e2e	script	audbypass/route_aud.py	{CK} file	-	aud	audience=file
+rvaud-file-internal	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=internal	aud	file-edit:internal
+rvaud-file-missing	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=missing	aud	file-edit:missing
+rvaud-file-list	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=list	aud	file-edit:list
+rvaud-file-dup	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=dup	aud	file-edit:dup
+rvaud-file-kindsp	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=kindsp	aud	file-edit:kindsp
+rvaud-file-kindweekly	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=kindweekly	aud	file-edit:kindweekly
+rvaud-file-kindweeklyc	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=kindweeklyc	aud	file-edit:kindweeklyc
+rvaud-file-kindmin	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=kindmin	aud	file-edit:kindmin
+rvaud-file-kwc	audience,e2e	script	rvaud/route_file.py	{CK} file	AUD=kwc	aud	file-edit:kwc
+sweepclass-header	header,e2e	script	sweepclass/probe.py	{CK} project_name,client,meta,title,heading,health,periodstart	-	sweep	header-fields-via-route
+sweepclass-header-disk	header,e2e	script	sweepclass/probe.py	{CK} file:project_name,file:client,file:meta,file:title,file:heading,file:health,file:periodstart	-	sweep	header-fields-on-disk
+sweepclass-items	e2e	script	sweepclass/probe.py	{CK} xproj,rowshown,itemstore,textflag	-	sweep	other-project,row,items-store,text-flag-via-route
+sweepclass-items-disk	e2e	script	sweepclass/probe.py	{CK} file:xproj,file:rowshown,file:itemstore,file:textflag	-	sweep	other-project,row,items-store,text-flag-on-disk
+sweepclass-pic	picture,e2e	script	sweepclass/probe.py	{CK} pic,file:pic	-	sweep	uploaded-picture-in-client-text
+ms1-kind	audience,e2e	script	msweep1/probe.py	{CK} kind=weekly,kind=minutes,kind=missing,kind=null,kind=Client,kind=sp,kind=zw,kind=list,kind=dict,kind=num,kind=clent,kind=distributed	-	ms1	kind-edited-on-disk
+ms1-aud	audience,e2e	script	msweep1/probe.py	{CK} aud=internal,aud=missing,aud=null,aud=list,aud=distributed,aud=Client,aud=weekly	-	ms1	audience-edited-on-disk
+ms1-header	header,e2e	script	msweep1/probe.py	{CK} client=null+nopay,client=other+nopay,client=hidden+nopay,client=missing+nopay,pname=hidden+nopay,pname=other+nopay,title+nopay,title=plain+nopay,title=desc+nopay,header+nopay,metaplain+nopay	-	ms1	header-fields-on-disk
+ms1-ident	rename,e2e	script	msweep1/probe.py	{CK} project=other,project=missing,project=list,date=other,date=bad,date=future,date=list,mv:otherweek_name,mv:otherweek_content,mv:defname	-	ms1	project-date-and-file-name-identity
+ms1-fields	e2e	script	msweep1/probe.py	{CK} items+nopay,meta+nopay,sources+nopay,layout+nopay,secaud=client,secaud=missing,secaud=internalflag+nopay,secaud=client+intonly,secaud=missing+intonly,secaud=internalflag+intonly	-	ms1	unread-keys-and-section-audience
+ms1-raw	e2e,race	script	msweep1/probe.py	{CK} raw=dupkind_badlast,raw=dupkind_badfirst,raw=dupaud_badlast,raw=dupproj_badlast,raw=bom,raw=crlf,raw=trailing,raw=huge,raw=second,raw=comment_first,raw=rawhtml	-	ms1	raw-file-shapes
+ms1-combo	audience,e2e	script	msweep1/probe.py	{CK} kind=weekly+aud=client,kind=weekly+aud=distributed,kind=missing+aud=internal,aud=internal+client=other+pname=other,raw=bom+raw=dupkind_badfirst+aud=missing,control+withdoc,aud=internal+withdoc,secaud=internalflag+intonly+withdoc,kind=weekly+withdoc,date=other+withdoc	-	ms1	combinations-and-doc-in-request
+ms1-pic	picture,e2e	script	msweep1/probe.py	{CK} picup+nopay,pic=abs+nopay,pic=up+nopay,pic=img+nopay	-	ms1	picture-refs-in-text
+ms1-mv	audience,e2e	script	msweep1/probe.py	{CK} mv:to_weekly,mv:weekly_as_client,mv:symlink	-	ms1	draft-moved-to-weekly-and-symlink
+race-export	race,e2e	script	ex/probe_n.py	{CK} mv:race	RACE_S=60 PDF=0	race	export-while-file-flips
+race-approve	race,e2e	script	ex/probe_n.py	{CK} mv:race_n	RACE_N=40 PDF=0	race	approve-while-file-flips
+ms2-hot	header,rename,e2e	script	msweep2/req.py	{CK} hot	-	ms2hot	client-and-project_name-holes,dirty-other-project-doc
+ms2-fields	header,audience,e2e	script	msweep2/req.py	{CK} fields	-	ms2	saved-field-tampering
+ms2-approve	e2e,race	script	msweep2/req.py	{CK} approve	-	ms2	approve-with-doc-and-concurrent-save
+ms2-export	rename	script	msweep2/req.py	{CK} export	-	ms2	export-parameters-and-typed-names
+ms2-page	page	script	msweep2/req.py	{CK} page	-	ms2	posted-page-subset
+ms2-misc	picture,logos	script	msweep2/req.py	{CK} misc	-	ms2	match-check-pick-logo-image-routes
+minutes-route	audience,e2e	script	minutes-route/minutes_route.py	{CK}	-	minutes	client-report-file-exported-as-minutes
+rv234-reshow-race	race,matchgate	script	rv234/test_rv234_race.py	-	-	reshow	late-reshow-lands-in-other-project
+rcleak-gate	matchgate	module	rcleak/test_rc_leak.py	Probe.test_a_gate_variants Probe.test_b_slash_on_client_sheet	-	rcgate	gate-variants-and-slash-menu
+rcleak-e2e	matchgate,e2e	module	rcleak/test_rc_leak.py	E2E.test_c_end_to_end	-	rce2e	match-all-then-export
+rcleak-race	race,matchgate	module	rcleak/test_rc_leak.py	Race.test_d_match_lands_in_another_project	-	rcrace	match-lands-in-other-project
+hostile-sbs	matchgate	script	t/test_hostile_sbs.py	-	-	hostile	match-internal-hostile-h1-h3
+hostile-sbsfix	matchgate	script	t2/test_hostile_fix.py	-	-	hostile	match-internal-hostile-h2-h5
