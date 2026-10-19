@@ -35,6 +35,10 @@ ESSENTIALS, ADVANCED, DEVELOPER = "essentials", "advanced", "developer"
 ESSENTIAL_ROWS = (
     ("You", "Your name", "Set at first start. creaite uses it to know which items are yours.", ("identity.name",)),
     ("You", "Weekend", "No reminders or \"due\" warnings fall on these days.", ("work.weekend_days",)),
+    ("Draft email", "Create drafts in Outlook",                       # #183 (Alan, 19-10-2026): off by default
+     "Off: creaite builds the email and you copy and paste it into Outlook. On: creaite puts it in your Outlook Drafts folder, "
+     "ready for you to check and send. It never sends anything. Turn it off if you can't write to Outlook.",
+     ("draft_email.outlook_drafts",)),
     ("Your day", "Morning sweep from", "creaite catches up on mail and Teams when you first open it after this time.",
      ("sweep.due_from",)),
     ("Your day", "What the sweep reads", "Inbox, Sent Items, Teams chats and channels, your calendar.",
@@ -113,6 +117,10 @@ CATALOGUE = {
                                     "A weak match you can place is better than a message silently lost."),
     "sweep.ignore": ("Sweep", "Ignore rules", "Mail, Teams and invites the sweep skips (counted, never read into proposals).",
                      "Private items are always skipped; the rest are common noise you can switch off or edit."),
+    # ── Draft email (#183)
+    "draft_email.outlook_drafts": ("Draft email", "Create drafts in Outlook",
+                                   "Create draft in Outlook puts the email in your Drafts folder, for you to check and send.",
+                                   "Off: some people can't write to Outlook; creaite never sends, and copy and paste always works."),
     # ── People I follow
     "vip.enabled": ("People I follow", "Tell me when they write", "Messages from people you follow head Today.",
                     "On: these are the people you can't afford to miss."),
@@ -422,7 +430,7 @@ CATALOGUE = {
                                             "On: the copy you send sits with the minutes it came from (BL-338; Alan, "
                                             "15-10-2026)."),
 }
-GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
+GROUP_ORDER = ("You", "Draft email", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
                "Sweep", "Reminders", "Review", "Health thresholds", "Early warnings", "Current state", "Work and views",
                "Look and layout", "AI drafts", "Close the day", "Reports and minutes", "Meeting prep and Intake", "Search", "Archiving",
                "Folders and OneDrive", "Live server and ask creaite", "Logging", "Help", "Legacy", "Developer")
