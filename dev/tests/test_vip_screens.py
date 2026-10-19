@@ -132,11 +132,11 @@ class Screens(LiveBrowserCase):
           out.rem=[...document.querySelectorAll('#attnList li.rem')].map(l=>l.textContent).join(' | ');
           return out; })()""")
         self.assertEqual(o["head"], "Intake and Review")
-        self.assertEqual(o["rows"], 4)
+        self.assertEqual(o["rows"], 5)                                                   # #236: and the sweep's proposal from the same person
         self.assertNotIn("VIP", o["first"])
         self.assertEqual(o["buttons"], [["Create work item from", "Make a work item"], ["Dismiss", "Dismiss"]])   # icons, named
-        self.assertTrue(re.match(r"^\(4\) creaite", o["title"]), o["title"])
-        self.assertEqual(o["badge"], "4 messages to see first")
+        self.assertTrue(re.match(r"^\(5\) creaite", o["title"]), o["title"])
+        self.assertEqual(o["badge"], "5 messages to see first")
         self.assertEqual(o["note"][0], "Sara Example")
         self.assertEqual(o["filter"], ["People I follow", "Owned by someone I follow", "Not followed"])
         self.assertEqual(o["warn"], "Overdue item owned by someone you follow closely")

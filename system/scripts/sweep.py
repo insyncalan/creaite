@@ -2140,6 +2140,8 @@ def followed_refs(vips, names):
             continue
         for it in data.get("items") or []:
             source = str((it.get("values") or {}).get("source") or it.get("source") or "")
+            if data.get("source_run") == "dashboard":                     # Alan made it himself from a card: he has seen it
+                continue
             if it.get("applied") or it.get("decision") != "pending" or not source.startswith(("Email · ", "Teams · ")):
                 continue
             who = followed_from(source, vips, names)

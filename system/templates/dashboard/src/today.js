@@ -510,7 +510,7 @@ export const refReview=(file,ref)=>REV.find(x=>x.file===file&&String(x.ref)===St
 /** #236 (Alan, 19-10-2026): "From <person>": the proposals the sweep staged from a followed person's mail or chat, or a note about it written
     into a project's memory. Its title and the Open in Review icon go to the proposal or note; each proposal is a line under it; Dismiss
     keeps it gone until the thread adds a new item or changes an active one. Never labelled (BL-288). A private thread is its title and times only. @param {any} a */
-export function followedRow(a){ const refs=/** @type {any[]} */(a.refs||[]), first=refs[0]||{}, to={file:String(first.file||""),ref:first.ref}, when=String(a.updated||a.sent||"").replace("T"," ").slice(0,16);
+export function followedRow(a){ const refs=/** @type {any[]} */(a.refs||[]), first=refs[0]||{}, to={file:String(first.file||""),ref:first.ref}, when=String(a.returned||a.sent||a.updated||"").replace("T"," ").slice(0,16);   /* when the message was sent, as a card is placed; a returned row when it came back */
   const t=String(a.title||a.subject||"Conversation"), dismiss={id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${t}`,data:{alertdo:"dismiss",id:a.id}};
   if(a.marker==="private") return {key:"al"+a.id,kind:"message",id:a.id,at:when,tag:"",tone:"",t,link:"",to,meta:when?`updated ${whenWords(when)}`:"",acts:[dismiss]};
   const note=a.kind==="note", inRev=refs.filter(r=>refReview(r.file,r.ref)), n=refs.length, proj=a.p&&a.p!=="_portfolio"?pName(a.p):"no project";

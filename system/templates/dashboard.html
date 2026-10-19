@@ -42443,7 +42443,7 @@ ${s5}`;
     const refs = (
       /** @type {any[]} */
       a5.refs || []
-    ), first = refs[0] || {}, to2 = { file: String(first.file || ""), ref: first.ref }, when2 = String(a5.updated || a5.sent || "").replace("T", " ").slice(0, 16);
+    ), first = refs[0] || {}, to2 = { file: String(first.file || ""), ref: first.ref }, when2 = String(a5.returned || a5.sent || a5.updated || "").replace("T", " ").slice(0, 16);
     const t47 = String(a5.title || a5.subject || "Conversation"), dismiss2 = { id: "dismiss", icon: "dismiss", label: "Dismiss", name: `Dismiss: ${t47}`, data: { alertdo: "dismiss", id: a5.id } };
     if (a5.marker === "private") return { key: "al" + a5.id, kind: "message", id: a5.id, at: when2, tag: "", tone: "", t: t47, link: "", to: to2, meta: when2 ? `updated ${whenWords(when2)}` : "", acts: [dismiss2] };
     const note = a5.kind === "note", inRev = refs.filter((r4) => refReview(r4.file, r4.ref)), n4 = refs.length, proj = a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project";
