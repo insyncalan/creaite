@@ -5,8 +5,9 @@ Run: python3 dev/tests/test_health_dismiss.py   (the browser part needs Google C
 - health.health() leaves out each problem named in settings.json's health.dismissed (its check id and a hash of its detail), and
   lists it under `dismissed` with the reason and date; the count is the problems left.
 - A changed detail (another file, another count) is a new problem: it comes back by itself.
-- A failure of the engine's own integrity (the database, the bundled libraries, write access…) can't be dismissed: it stays,
-  `dismissable` False with the reason, even when a dismissed entry names it.
+- A failure or warning of the engine's own integrity (the database, the bundled libraries, write access…) or of what protects
+  your data and privacy (vault not synced, assistant permissions, backups, extraction scope), and any crashed check, can't be
+  dismissed: it stays, `dismissable` False with the reason, even when a dismissed entry names it.
 - In the real dashboard (real live server, real doctor): Dismiss with a reason drops More's count by one and lists the problem
   under Dismissed (n) with its reason and date; it survives a reload (saved in settings.json, backed up and logged as every
   settings save); Restore brings it and the count back.
@@ -73,9 +74,69 @@ class Dismissed(unittest.TestCase):
         self.assertIn("can't be dismissed", p["database"]["keep_why"])
         self.assertTrue(p["online_only"]["dismissable"])
         self.assertEqual(p["online_only"]["keep_why"], "")
-        # a warning from the same check is the engine's too, but a warning: it may be dismissed
+        # a warning from the same check is the engine's too: it can't be dismissed either (#242 review)
         warn = {"checks": [{"id": "database", "name": "tracker.db integrity", "status": "warn", "detail": "old schema"}]}
-        self.assertTrue(health.health(warn, dismissed=[])["problems"][0]["dismissable"])
+        self.assertFalse(health.health(warn, dismissed=[])["problems"][0]["dismissable"])
+
+    # ---- #242 review (v2.5.1): what protects data or privacy can never be dismissed, fail or warn, nor a crashed check ----
+    SAFETY = ("vault_not_synced", "assistant_permissions", "backup_check", "offsite_backup", "extraction_scope")
+
+    def _result(self, check_id, status, detail):
+        return {"read_only": True, "checks": [
+            {"id": check_id, "name": check_id, "status": status, "detail": detail},
+            {"id": "tidy_up", "name": "Tidy up", "status": "warn", "detail": "has not run for a week"}]}
+
+    def _assert_kept(self, check_id, status, detail, **extra):
+        res = self._result(check_id, status, detail)
+        res["checks"][0].update(extra)
+        out = health.health(res, dismissed=[entry(check_id, detail, "hand-written")])
+        label = f"{check_id}/{status}"
+        p = {x["id"]: x for x in out["problems"]}
+        self.assertIn(check_id, p, label)
+        self.assertFalse(p[check_id]["dismissable"], label)
+        self.assertIn("can't be dismissed", p[check_id]["keep_why"], label)
+        self.assertEqual([d["id"] for d in out["dismissed"]], [], label)
+        self.assertTrue(p["tidy_up"]["dismissable"], label)          # the control: an ordinary problem still may be
+
+    def test_each_safety_check_can_not_be_dismissed_as_a_failure_or_a_warning(self):
+        for check_id in self.SAFETY:
+            for status in ("fail", "warn"):
+                with self.subTest(check=check_id, status=status):
+                    self._assert_kept(check_id, status, f"{check_id} has a problem")
+
+    def test_a_crashed_check_can_not_be_dismissed_whatever_its_id(self):
+        for check_id in ("online_only", "people_register", "projects_root", "a_check_that_does_not_exist_yet"):
+            with self.subTest(check=check_id):
+                self._assert_kept(check_id, "fail", "TypeError: 'NoneType' object is not subscriptable", crashed=True)
+                self._assert_kept(check_id, "fail", "OSError: [Errno 13] Permission denied")        # an older doctor's result
+
+    def test_doctor_marks_a_crashing_check(self):
+        import doctor
+        n, as_json, doctor.AS_JSON = len(doctor.found), doctor.AS_JSON, True
+
+        def broken():
+            raise TypeError("boom")
+        try:
+            doctor.check("Broken", broken)
+            self.assertTrue(doctor.found[-1].get("crashed"))
+            self.assertEqual(doctor.found[-1]["status"], "fail")
+            doctor.check("Fine", lambda: (False, "an ordinary failure"))
+            self.assertFalse(doctor.found[-1].get("crashed"))
+        finally:
+            doctor.AS_JSON = as_json
+            del doctor.found[n:]
+            del doctor.results[n:]
+
+    def test_an_ordinary_failure_that_mentions_an_error_word_is_still_dismissable(self):
+        res = self._result("online_only", "warn", "Error handling folder is missing")
+        self.assertTrue(health.health(res, dismissed=[])["problems"][0]["dismissable"])
+
+    def test_the_count_includes_the_problems_that_can_not_be_dismissed(self):
+        res = {"read_only": True, "checks": [
+            {"id": c, "name": c, "status": "warn", "detail": "x"} for c in self.SAFETY]}
+        out = health.health(res, dismissed=[entry(c, "x") for c in self.SAFETY])
+        self.assertEqual(len(out["problems"]), 5)          # what More's badge and the headline count (len of problems)
+        self.assertEqual(out["dismissed"], [])
 
     def test_a_damaged_or_odd_list_is_ignored_not_fatal(self):
         for bad in (None, "x", [1, "a", {"id": "online_only"}, {"detail_key": 3}]):
