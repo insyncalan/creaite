@@ -92,8 +92,10 @@ def force_client_audience(doc):
     so the client gate (client_leak.findings, make_safe), which reads the audience, always checks a client report as one; and its
     header fields the gate never reads, `project_name` and `client`, derived again from the tracker (the project's name) and the
     project's memory (its client), whatever was sent or stored: they are shown in the header and the page title and name the files.
-    Changed in place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or
-    distributed is already read as client by is_client and by the gate, and its kind decides where it is filed."""
+    Changed in place and returned. A weekly report's audience is always "internal" (its file can't label it Client or Distributed);
+    minutes are left as they are (distributed minutes are read as client by is_client and by the gate)."""
+    if isinstance(doc, dict) and doc.get("kind") == "weekly":
+        doc["audience"] = "internal"           # a weekly report is the internal report, whatever its file says (v2.5.0)
     if isinstance(doc, dict) and doc.get("kind") == "client":
         doc["audience"] = "client"
         code = str(doc.get("project") or "")
@@ -124,6 +126,9 @@ def check_audience(doc):
     if doc.get("kind") == "client" and doc.get("audience") != "client":
         raise DocError("A client report's audience is always client: this one says "
                        f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
+    if doc.get("kind") == "weekly" and doc.get("audience", "internal") != "internal":
+        raise DocError("A weekly report's audience is always internal: this one says "
+                       f"{doc.get('audience')!r}, so nothing was saved. Open the weekly report again and save it from there.")
 
 
 def read_report(path, kind=None):
@@ -959,22 +964,32 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None):
+def _export_doc(path, kind, doc):
+    """The document an export is made from: `doc` as the caller checked it (never the file read again), or the file read now; a
+    client report read as one, and another kind than `kind` refused (v2.5.0)."""
+    if doc is None:
+        return read_report(path, kind)
+    if kind is not None and doc.get("kind") != kind:
+        raise DocError("That file isn't this report (its kind was changed), so nothing was done.")
+    return force_client_audience(copy.deepcopy(doc))
+
+
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
     #226: for "html" and "pdf", `page` (the report page's own exported view; export_page.build checks it against the report) is
     what is written and printed; with none, or one that fails the check, the plain renderer below is, and the answer says
-    `plain: True` (and `plain_why` when a page was refused)."""
+    `plain: True` (and `plain_why` when a page was refused). `doc`: the document the caller already read and checked (the export
+    route's client gate); it is what is exported, and the file is not read again (v2.5.0: no second read between the check and
+    the output, which a file replaced in between would have changed)."""
     def fail(message, **extra):
         """The answer when nothing was exported."""
         return {"ok": False, "format": fmt, "message": message, **extra}
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however
-        # its file was edited
-        doc = read_report(path, kind)
+        doc = _export_doc(path, kind, doc)
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):
