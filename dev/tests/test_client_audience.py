@@ -277,6 +277,36 @@ class Audience(unittest.TestCase):
                     else:
                         self.assertEqual(self.scan(p, ["Client · Draft", "Distributed · Draft"]), [])
 
+    # ── the minutes routes never open a report ──────────────────────────────────────────────────────────────────────────
+    def as_minutes(self, f):
+        text = f.read_text()
+        m = creaite_doc.BLOCK.search(text)
+        d = self.add_payload(json.loads(m.group(1)))
+        d["kind"], d["audience"] = "minutes", "internal"
+        f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+
+    def test_a_client_report_edited_to_say_minutes_is_never_exported_by_the_minutes_route(self):
+        self.fresh()
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+        self.assertTrue(a["ok"], a)
+        filed = self.v.root / a["path"]
+        filed_text = filed.read_text()
+        self.fresh()                                     # a client draft again
+        filed.write_text(filed_text, encoding="utf-8")   # and the filed report back
+        for f in (self.draft_file(), filed):
+            with self.subTest(file=f.parent.name):
+                self.as_minutes(f)
+                rel = str(f.relative_to(self.v.root))
+                for fmt in ("html", "docx"):
+                    e = self.post("/api/minutes/export", {"path": rel, "format": fmt, "file_beside": True})
+                    self.assertFalse(e["ok"], (fmt, e))
+                d = self.post("/api/minutes/draft", {"path": rel})
+                self.assertFalse(d.get("ok"), d)
+                others = [x for folder in (self.reports, self.v.root / "system/staging/drafts") for x in folder.glob("*")
+                          if x.is_file() and x not in (self.draft_file(), filed) and x.suffix in (".html", ".docx", ".pdf")]
+                self.assertEqual({x.name: h for x in others for h in [self.scan(x, self.needles())] if h
+                                  and "Weekly report" not in x.name}, {})
+
     # ── each boundary on its own, with a reader that doesn't normalise ──────────────────────────────────────────────────
     def raw_reader(self):
         return ("import re\n_raw = lambda p: json.loads(creaite_doc.BLOCK.search(creaite_doc.real(p).read_text()).group(1))\n"
