@@ -63333,11 +63333,18 @@ ${d5.text}`);
     done: ["Done", "ask creaite has finished", "ask creaite has finished. This clears in 30 seconds."],
     stopped: ["Stopped", "ask creaite was stopped", "The run was stopped. This clears in 30 seconds."],
     failed: ["Failed", "ask creaite failed", "The run failed. Open ask creaite to see why."]
-  }, ASKTICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+  }, ASKTICK = () => {
+    const NS = "http://www.w3.org/2000/svg", v5 = document.createElementNS(NS, "svg"), p6 = document.createElementNS(NS, "path");
+    for (const [k5, x5] of Object.entries({ viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" })) v5.setAttribute(k5, x5);
+    p6.setAttribute("d", "M5 12.5l4.5 4.5L19 7.5");
+    v5.appendChild(p6);
+    return v5;
+  };
   function askMarkSet(st2, msg) {
     const b5 = $("#askBtn"), m5 = b5.querySelector(".askmark"), l6 = b5.querySelector(".asklab"), k5 = ASKMARK[st2];
     b5.dataset.st = st2;
-    m5.innerHTML = st2 === "done" ? ASKTICK : st2 === "failed" ? "!" : "■";
+    if (st2 === "done") m5.replaceChildren(ASKTICK());
+    else m5.textContent = st2 === "failed" ? "!" : "■";
     l6.textContent = k5[0];
     $("#askLive").textContent = msg == null ? k5[1] : msg;
     b5.style.setProperty("--life", ASKDONE.ms / 1e3 + "s");

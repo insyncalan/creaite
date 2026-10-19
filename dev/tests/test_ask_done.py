@@ -55,7 +55,7 @@ STATE = """(()=>{ const b=document.getElementById('askBtn'), m=b.querySelector('
     title:b.getAttribute('title')||'', live:live?live.textContent:null, liveRole:live&&live.getAttribute('role'), liveAria:live&&live.getAttribute('aria-live'),
     liveInside:live?b.contains(live):null, markBg:m?getComputedStyle(m).backgroundColor:'', markColor:m?getComputedStyle(m).color:'',
     border:getComputedStyle(b).borderTopColor, overflow:getComputedStyle(b).overflow,
-    markInside: mr?(mr.top>=br.top-4&&mr.right<=br.right+4&&mr.width>0):false, chat:%s}; })()""" % CHAT_ON
+    markInside: mr?(mr.top>=br.top-4&&mr.right<=br.right+4&&mr.width>0):false, chat:CHATON}; })()""".replace("CHATON", CHAT_ON)
 
 
 class AskDone(LiveBrowserCase):
@@ -240,7 +240,6 @@ class AskDone(LiveBrowserCase):
         self.assertEqual(b.eval("STOPS"), 0)
 
     def test_a_second_run_starting_clears_the_previous_indication(self):
-        b = self.b
         self.start("fail now")
         self.finished("failed")
         self.assertEqual(self.s()["st"], "failed")

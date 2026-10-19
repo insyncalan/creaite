@@ -681,9 +681,11 @@ export function askFinished(o){ rbEnd(o||"done"); }
    live region outside the button. It never touches the run: no stop, no restart. */
 export const ASKDONE={ms:30000,t:null}, ASKMARK={done:["Done","ask creaite has finished","ask creaite has finished. This clears in 30 seconds."],
   stopped:["Stopped","ask creaite was stopped","The run was stopped. This clears in 30 seconds."],failed:["Failed","ask creaite failed","The run failed. Open ask creaite to see why."]},
-  ASKTICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+  ASKTICK=()=>{ const NS="http://www.w3.org/2000/svg", v=document.createElementNS(NS,"svg"), p=document.createElementNS(NS,"path");   /* built, not parsed: no HTML sink */
+    for(const [k,x] of Object.entries({viewBox:"0 0 24 24",fill:"none",stroke:"currentColor","stroke-width":"3","stroke-linecap":"round","stroke-linejoin":"round"})) v.setAttribute(k,x);
+    p.setAttribute("d","M5 12.5l4.5 4.5L19 7.5"); v.appendChild(p); return v; };
 export function askMarkSet(st,msg){ const b=$("#askBtn"), m=b.querySelector(".askmark"), l=b.querySelector(".asklab"), k=ASKMARK[st];
-  b.dataset.st=st; m.innerHTML=st==="done"?ASKTICK:st==="failed"?"!":"■"; l.textContent=k[0]; $("#askLive").textContent=msg==null?k[1]:msg;
+  b.dataset.st=st; if(st==="done") m.replaceChildren(ASKTICK()); else m.textContent=st==="failed"?"!":"■"; l.textContent=k[0]; $("#askLive").textContent=msg==null?k[1]:msg;
   b.style.setProperty("--life",ASKDONE.ms/1000+"s"); b.title=k[2]; }
 export function askMarkClear(){ clearTimeout(ASKDONE.t); ASKDONE.t=null; const b=$("#askBtn"); if(!b) return;
   delete b.dataset.st; b.style.removeProperty("--life"); b.querySelector(".askmark").textContent=""; b.querySelector(".asklab").textContent=""; $("#askLive").textContent="";
