@@ -6,7 +6,8 @@
 import { pName } from "../../core/data.js";
 import { IR_STAGES, irLive } from "../../core/irFold.js";
 import { irClickMeeting, irDone, irOpen, irSel } from "../../stores/intakeReview.js";
-import { MeetingRow, ProposalGroups } from "./rows.jsx";
+import { ProposalGroups } from "./proposals.jsx";
+import { MeetingRow } from "./rows.jsx";
 
 export const IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
 const IR_EMPTY = "Nothing here. Meetings appear when they end.";
