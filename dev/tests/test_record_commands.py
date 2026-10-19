@@ -163,7 +163,7 @@ class Hook(unittest.TestCase):
               ("propose.py", "recode", "ABC", "XYZ", "--dry-run"), ("propose.py", "learn", "ABC", "sender", "a@b.com", "--check"),
               ("propose.py", "people", "list"), ("propose.py", "workstreams", "list", "--project", "ABC"),
               ("minutes.py", "stage", "system/staging/drafts/m.json"), ("minutes.py", "baseline", "ABC", "--all", "--dry-run"),
-              ("sweep.py", "stage", "system/staging/drafts/s.json"), ("report.py", "weekly-stage", "system/staging/drafts/w.json"),
+              ("sweep.py", "stage", "system/staging/drafts/s.json"),
               ("excel_sync.py", "export"), ("build_dashboard.py",), ("doctor.py",), ("session.py", "start"),
               ("filechange.py", "list"), ("search.py", "query", "vendor")]
 
@@ -186,6 +186,18 @@ class Hook(unittest.TestCase):
         for c, (ok, why) in got.items():
             with self.subTest(c):
                 self.assertTrue(ok, f"{c}: {why}")
+
+    # v2.5.1 (Alan, 19-10-2026): reports are the user's to edit in the Reporting hub, so report.py weekly-stage is refused in every
+    # ask creaite run, a confirmed one too (reach.report_command_refusal); it was in OTHERS before
+    REPORT_STAGE = ("report.py", "weekly-stage", "system/staging/drafts/w.json")
+
+    def test_report_staging_is_refused_in_a_plain_chat_and_a_confirmed_run(self):
+        c = command(*self.REPORT_STAGE)
+        for mode in ("ask", "confirmed"):
+            with self.subTest(mode):
+                ok, why = self.decide([c], mode)[c]
+                self.assertFalse(ok, mode)
+                self.assertIn("reports are the user's to edit", why)
 
     def test_any_mode_but_confirmed_is_a_plain_chat(self):
         got = self.decide([command("tracker.py", "apply")], "")
