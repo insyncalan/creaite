@@ -71,11 +71,11 @@ Alan wants the original People register view here: the columns **Name, Email, Or
 ## Followed people (Alan, 19-10-2026)
 A person marked as followed is visible **only to Alan, and only on the project settings page** (the star beside the name in People on this project, and the Follow tick in the edit form). The star **never shows anywhere else**: not in work items, not on the People page, Today, Review, Intake, a peek, a report, an export, a draft or a prep page. The existing alerts that depend on following keep working unseen, as before (BL-288). **No "Show stars" switch.**
 
-## Open queries on the Settings clean-up (still to decide)
-1. **Workstreams move into each project's settings.** This reverses Alan's 18-10 "Workstreams stay in Settings". Confirm. (If not, they stay in Settings under Advanced.)
-2. **Merging duplicate people.** Alan dropped merge from the People view. That leaves nowhere to merge two spellings of one person (for example "Aisha Bello" and "Aisha Bello (Northfield)"), which today fixes names across every item, with Undo. Options: keep a merge only on the People page; or leave duplicates to be fixed through ask creaite; or drop it. Needs a decision.
-3. **Where the whole register lives.** The project page shows only the people on that project plus the people on none. Someone needs the full list (everyone, all projects, delete from the register): the People page (the rail) is the proposed home. Confirm, and whether it shows the same columns and the same filter.
-4. **Deleting.** On a project the bin removes the person from that project only. Deleting a person from the register is on the People page. Confirm.
-5. **The Legacy lists** (old People, Hidden people, Workstreams, Hidden workstreams) are removed once Stark confirms nothing reads them: a build question, not Alan's.
-6. **"Meeting series projects"** moves into project settings once Stark says what it does: a build question.
-7. **Advanced regrouped into nine groups** (Work, Review and warnings, Sweep and Intake, AI drafts, Reports and minutes, Current state, Archiving and backups, Folders and OneDrive, Server, search and logging) and the "People and projects" category retired. Confirm the grouping.
+## Decisions on the Settings clean-up (Alan, 19-10-2026)
+1. **Workstreams move into each project's settings:** yes (this reverses 18-10).
+2. **Duplicate people:** leave them to ask creaite; no merge in any People view.
+3. **The People page is the home of the whole register:** yes, with the same columns and the same filter as the project page's People view.
+4. **Delete:** on a project the bin removes the person from that project only; deleting from the register is on the People page: yes.
+5. **Settings is tabs, not one long page** (Alan, 19-10-2026, on seeing the grouping): the old Advanced page becomes tabs of its own. Project settings stays one scrolling page. The Settings tabs: **Essentials, Look and help, Work and views, Review and warnings, Sweep and Intake, AI drafts, Reports and minutes, Archiving and backups, Folders and OneDrive, Server, search and logs, Health.** (Essentials also takes the old "You" extras and the browser notification for people I follow.) "People and projects" and Legacy are gone, and the per-project client report rhythms are removed from Reminders. Mockup: `dev/mockups/settings-v2-mockup.html`, built from the real cards.
+
+Still for Stark to confirm at build: nothing reads the Legacy lists, and what "Meeting series projects" does (it is not in the mockup's tabs yet).
