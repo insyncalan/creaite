@@ -58,3 +58,8 @@ When a mail or Teams proposal changes an existing work item, the peek shows that
 ### Added 19-10-2026: what a file is, and the rail
 - **A file is told apart.** A file you add is a transcript or minutes someone else wrote. creaite says which (a .vtt or "transcript" in the name is a transcript; "minutes" or "notes" is minutes; anything else asks) and the row says what will happen, with a one-click way to change it. A **transcript** is turned into minutes (a draft for approval) and then checked for work items; its button reads **Make minutes**. **Minutes** from another person are only checked for work items and no new minutes are drafted; its button reads **Find work items**. An unsure file waits for Transcript or Minutes and is left out of Process all ready.
 - **The rail entry is called Intake**, with the inbox icon (the tray), and keeps the badge. The page keeps its heading "Intake and Review" (open: whether the heading should match).
+
+### Changed 19-10-2026: the page is called Intake; the stage counts are a quiet flow
+- The page heading and the rail are both **Intake** (inbox icon, badge kept).
+- The three stage boxes and "Show all" are gone. A single line runs through three dots (Arrived, Drafted, Approved), each with its count, label and a plain note ("4 ready to process", "18 proposals to check", "this week"); the note that needs you is darker. Nothing in it is a button or a filter. The list below is one list, as the rows already say their state.
+- Dots take the accent, warning and ok tokens; it reads the same in dark mode. The Board keeps its three columns; Two panes keeps its own track.
