@@ -12,6 +12,7 @@ import { D } from "../core/page.js";
 import { go } from "../core/nav.js";
 import { liveLines, memPath, needVault, reloadData, save, setMemLine, snack, viaServer, vq } from "../core/server.js";
 import { shared } from "../core/state.js";
+import { PARTNERS_MAX, cleanPartnerName, partnerKey, partnerNameProblem } from "../core/partners.js";
 import { resolver } from "../settings.js";
 
 /** The categories, in the order the page lists them. The third is what the search matches besides the words on the page. */
@@ -88,20 +89,28 @@ export function projectPeople(code) {
 
 // ----- partner organisations
 
-export const PARTNER_MAX = 80, PARTNERS_LINE_MAX = 400, PARTNERS_MAX = 12;   // the server keeps at most 12 (build_dashboard.PARTNERS_MAX)
+export { PARTNERS_MAX, PARTNER_NAME_MAX } from "../core/partners.js";
 /** the Partners line of the project last read */
 export const partners = signal({ code: "", list: /** @type {string[]} */ ([]), loaded: false });
 
-/** The partner organisations a project's CLAUDE.md text names (a "**Partners:**" line outside a code fence or a quote).
+/** The partner organisations a project's CLAUDE.md text names (a "**Partners:**" line outside a code fence or a quote). A name that
+    breaks the rules (core/partners.js) or repeats an earlier one is left out, as the server leaves it out (build_dashboard.partners_of).
     @param {string} text @returns {string[]} */
 export function partnersFrom(text) {
-  const lines = String(text || "").split("\n"), live = liveLines(lines);
+  const lines = String(text || "").split("\n"), live = liveLines(lines), out = /** @type {string[]} */ ([]), keys = new Set();
   for (let i = 0; i < lines.length; i++) {
     if (!live[i]) continue;
     const m = lines[i].replace(/\r$/, "").match(/^[ \t]*(?:[-*][ \t]+)?\*\*Partners:\*\*[ \t]*([^\n]*?)[ \t]*(?:_\(.*\)_)?$/);
-    if (m) return m[1].split(";").map(s => s.replace(/\s+/g, " ").trim()).filter(Boolean);
+    if (!m) continue;
+    for (const raw of m[1].slice(0, 5000).split(";")) {
+      const n = cleanPartnerName(raw);
+      if (!n || partnerNameProblem(n) || keys.has(partnerKey(n))) continue;
+      keys.add(partnerKey(n)); out.push(n);
+      if (out.length >= PARTNERS_MAX) return out;
+    }
+    return out;
   }
-  return [];
+  return out;
 }
 
 /** Read the project's Partners line. @param {string} code */
@@ -112,61 +121,71 @@ export async function loadPartners(code) {
   catch (e) { partners.value = { code, list: [], loaded: false }; }
 }
 
-const partnerKey = (/** @type {string} */ s) => String(s).replace(/\s+/g, " ").trim().toLowerCase();
-/** A partner's name checked for the list: one line, not empty, not too long, no semicolon, not already listed (any capitals).
-    @param {string[]} list @param {string} name @param {number} [except] the index being renamed @returns {string} a plain-words problem, or "" */
+/** A partner's name checked for the list: the rules of core/partners.js, and not already listed (capitals, accents and punctuation do
+    not make another). @param {string[]} list @param {string} name @param {number} [except] the index being renamed
+    @returns {string} a plain-words problem, or "" */
 export function partnerProblem(list, name, except = -1) {
-  const t = String(name || "");
-  if (/[\r\n]/.test(t)) return "A partner's name is one line.";
-  const v = t.replace(/\s+/g, " ").trim();
-  if (!v) return "Type the partner organisation's name.";
-  if (v.length > PARTNER_MAX) return `A partner's name is over ${PARTNER_MAX} characters.`;
-  if (v.includes(";")) return "A partner's name can't contain a semicolon; add each partner on its own.";
+  const v = cleanPartnerName(name), bad = partnerNameProblem(v);
+  if (bad) return bad;
   const same = list.find((x, i) => i !== except && partnerKey(x) === partnerKey(v));
-  if (same) return `${same} is already listed.`;
-  return "";
+  return same ? `${same} is already listed.` : "";
+}
+
+/** One change of the line at a time in this window (two quick ones must not each start from the same list), and each starts from the
+    line as the file has it now, not as the page last read it. Another window is caught by setMemLine's read-again check. */
+let partnerQueue = Promise.resolve();
+/** @template T @param {() => Promise<T>} fn @returns {Promise<T>} */
+function inTurn(fn) { const run = partnerQueue.then(fn, fn); partnerQueue = run.then(() => undefined, () => undefined); return run; }
+/** @param {string} code @returns {Promise<string[]>} */
+async function currentList(code) {
+  try { return partnersFrom(await vq(() => shared.VW.read(memPath(code)))); } catch (e) { return partners.peek().list; }
 }
 
 /** Save the whole list (the line's value is the names joined by "; "), then keep it on the page. Returns whether it was saved.
     @param {string} code @param {string[]} list */
 async function writePartners(code, list) {
   const v = list.join("; ");
-  if (v.length > PARTNERS_LINE_MAX) { snack(`Not saved: the partners' line would be over ${PARTNERS_LINE_MAX} characters.`); return false; }
-  if (!await setMemLine(code, "Partners", v, "partners")) return false;
+  if (!await setMemLine(code, "Partners", v, "partners")) return false;       // setMemLine refuses a value that breaks the rules, with a plain sentence
   partners.value = { code, list: [...list], loaded: true };
   await reloadData();       // the server re-derives P[].partners (names and slugs) so the logo tiles and report headers follow now; a slug is never made here
   psChanged(); return true;
 }
 
 /** @param {string} code @param {string[]} list the list as it was; Undo puts it back */
-const undoer = (code, list) => async () => { if (await writePartners(code, list)) snack("Undone"); };
+const undoer = (code, list) => async () => { if (await inTurn(() => writePartners(code, list))) snack("Undone"); };
 
 /** Add a partner organisation. @param {string} code @param {string} name @returns {Promise<string>} "" when saved, otherwise the problem */
-export async function addPartner(code, name) {
-  const was = partners.peek().list, bad = partnerProblem(was, name);
-  if (bad) return bad;
-  if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
-  const v = String(name).replace(/\s+/g, " ").trim();
-  if (!await needVault()) return "Not saved: creaite can't reach the vault.";
-  if (!await writePartners(code, [...was, v])) return "Not saved.";
-  snack(`${v} added as a partner`, undoer(code, was)); return "";
+export function addPartner(code, name) {
+  return inTurn(async () => {
+    const was = await currentList(code), bad = partnerProblem(was, name);
+    if (bad) return bad;
+    if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
+    const v = cleanPartnerName(name);
+    if (!await needVault()) return "Not saved: creaite can't reach the vault.";
+    if (!await writePartners(code, [...was, v])) return "Not saved.";
+    snack(`${v} added as a partner`, undoer(code, was)); return "";
+  });
 }
 
 /** Rename a partner organisation. @param {string} code @param {number} i @param {string} name @returns {Promise<string>} */
-export async function renamePartner(code, i, name) {
-  const was = partners.peek().list, bad = partnerProblem(was, name, i);
-  if (bad) return bad;
-  const v = String(name).replace(/\s+/g, " ").trim();
-  if (v === was[i]) return "";
-  if (!await writePartners(code, was.map((x, j) => j === i ? v : x))) return "Not saved.";
-  snack(`${was[i]} renamed ${v}`, undoer(code, was)); return "";
+export function renamePartner(code, i, name) {
+  return inTurn(async () => {
+    const was = await currentList(code), bad = partnerProblem(was, name, i);
+    if (bad) return bad;
+    const v = cleanPartnerName(name);
+    if (v === was[i]) return "";
+    if (!await writePartners(code, was.map((x, j) => j === i ? v : x))) return "Not saved.";
+    snack(`${was[i]} renamed ${v}`, undoer(code, was)); return "";
+  });
 }
 
 /** Remove a partner organisation. @param {string} code @param {number} i @returns {Promise<boolean>} */
-export async function removePartner(code, i) {
-  const was = partners.peek().list, gone = was[i]; if (gone === undefined) return false;
-  if (!await writePartners(code, was.filter((_, j) => j !== i))) return false;
-  snack(`${gone} removed from the partners`, undoer(code, was)); return true;
+export function removePartner(code, i) {
+  return inTurn(async () => {
+    const was = await currentList(code), gone = was[i]; if (gone === undefined) return false;
+    if (!await writePartners(code, was.filter((_, j) => j !== i))) return false;
+    snack(`${gone} removed from the partners`, undoer(code, was)); return true;
+  });
 }
 
 /** Open the page for a project, at General (the cog, the Projects list and Settings › People and projects all come here).

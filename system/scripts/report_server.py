@@ -36,6 +36,7 @@
                            answer then carries `left_out`: the check of what is left out runs before every client export
 """
 import base64
+import re
 import os
 import subprocess
 import sys
@@ -492,7 +493,12 @@ def logo_route(handler, req):
         f = paths.resolve(stored)
         if f.suffix.lower() in LOGO_TYPES and f.is_file() and not f.is_symlink() and f.stat().st_size <= LOGO_MAX:
             out[stored] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
-    return answer(handler, {"ok": True, "logos": out, "list": list(known.values()),
+    orphans = report_doc.orphan_logos(code)
+    for o in orphans:                                               # an unused partner logo is shown with its Remove button (#228 C)
+        f = paths.resolve(o["path"])
+        if f.suffix.lower() in LOGO_TYPES and f.stat().st_size <= LOGO_MAX:
+            out[o["path"]] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
+    return answer(handler, {"ok": True, "logos": out, "list": list(known.values()), "orphans": orphans,
                             "partners": [{"kind": "partner:" + p["slug"], **p} for p in report_doc.partners(code)]})
 
 
@@ -535,10 +541,18 @@ def _logo_change(handler, ch):
     return None if code == 0 else refuse(handler, f"Logo not saved: {_no_paths(msg)}")
 
 
-def _logo_target(req):
-    """(code, kind, stem) of a logo request; raises ReportError for a project or kind creaite doesn't know."""
+def _kind_ok(kind):
+    """Whether a logo kind is well formed: firm, client, partner or partner:<slug> (a slug of at most 40 characters that does not end in
+    `-original`, which is the name of a kept picture)."""
+    return (isinstance(kind, str) and bool(report_doc.LOGO_KIND.match(kind)) and len(kind) <= len("partner:") + 40
+            and not re.search(r"-original\Z", kind))
+
+
+def _logo_target(req, orphans=False):
+    """(code, kind, stem) of a logo request; raises ReportError for a project or kind creaite doesn't know. `orphans`: a remove may
+    name a partner logo no partner owns now (#228 C); a save may not."""
     code, kind = str(req.get("code") or ""), req.get("kind")
-    if not report_doc.CODE.match(code) or not isinstance(kind, str) or not report_doc.LOGO_KIND.match(kind):
+    if not report_doc.CODE.match(code) or not _kind_ok(kind):
         raise report_doc.ReportError("Say which project and which logo: firm, client or a partner.")
     try:
         paths.project_dir(code)
@@ -547,6 +561,8 @@ def _logo_target(req):
     names = [p["name"] for p in report_doc.partners(code)]
     if kind == "partner" and names:
         raise report_doc.ReportError(f"This project lists its partners ({_plain_list(names)}). Say which partner the logo is for.")
+    if orphans and kind in {o["kind"] for o in report_doc.orphan_logos(code)}:
+        return code, kind, f"{code}-partner-{kind[len('partner:'):]}"
     if kind.startswith("partner:") and kind not in report_doc.logo_kinds(code):
         listed = f"Its Partners line has {_plain_list(names)}." if names else "It has no Partners line, so no partner has a logo yet."
         raise report_doc.ReportError(f"That partner isn't in this project's Partners line. {listed} Nothing was saved.")
@@ -636,8 +652,9 @@ def logo_save_route(handler, req):
 
 def logo_remove_route(handler, req):
     """POST /api/report/logo/remove (see the module's description)."""
-    code, kind, stem = _logo_target(req)
-    stems, label = report_doc.logo_stems(code, kind), _kind_label(code, kind)
+    code, kind, stem = _logo_target(req, orphans=True)
+    stems = [stem] if kind in {o["kind"] for o in report_doc.orphan_logos(code)} else report_doc.logo_stems(code, kind)
+    label = _kind_label(code, kind)
     if _logo_links(stems, set()):
         return refuse(handler, "A file in the logos folder is a shortcut (a symbolic link). Remove the shortcut yourself. "
                                "Nothing was removed.")

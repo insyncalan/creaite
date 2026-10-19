@@ -4076,4 +4076,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-psettings .psadd input,#v-psettings .psedit,#v-psettings input#psName,#v-psettings input#psClient{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:var(--ctl-fs)}
 #v-psettings .psmsg{display:block;color:var(--bad,#b00020);font-size:var(--fs-xs)}
 #v-psettings .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings .pslogo{display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+#v-psettings .pslogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+#v-psettings .pslogo[data-state=empty] .mark{background:transparent;border:1px dashed var(--line)}
+#v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
+#v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
 .pfname+.pset{margin-left:6px;vertical-align:middle}

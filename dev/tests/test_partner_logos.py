@@ -49,11 +49,12 @@ class Naming(unittest.TestCase):
         self.assertEqual(self.slugs("Acme Labs; Beta Works"), ["acme-labs", "beta-works"])
 
     def test_punctuation_and_unicode_fold_to_letters_and_digits(self):
-        self.assertEqual(self.slugs("Müller & Söhne GmbH; Café   Zoë (UK) Ltd.; R&D/3M"),
-                         ["muller-sohne-gmbh", "cafe-zoe-uk-ltd", "r-d-3m"])
+        self.assertEqual(self.slugs("Müller & Söhne GmbH; Café   Zoë (UK) Ltd.; R&D 3M"),
+                         ["muller-sohne-gmbh", "cafe-zoe-uk-ltd", "r-d-3m"])     # #228 C: R&D/3M had a slash, which a name may no longer hold
 
-    def test_duplicates_get_a_number_in_line_order(self):
-        self.assertEqual(self.slugs("Acme; ACME; acme!; Beta"), ["acme", "acme-2", "acme-3", "beta"])
+    def test_a_repeat_or_a_slug_collision_is_left_out_not_renamed(self):      # #228 C: was numbered -2, -3; "acme!" has a name character that is refused
+        self.assertEqual(self.slugs("Acme; ACME; acme!; Beta"), ["acme", "beta"])
+        self.assertEqual(self.slugs("Acme; A.C.M.E; Café; Cafe"), ["acme", "cafe"])
 
     def test_a_name_with_no_letters_gets_a_stable_code_not_an_empty_slug(self):
         a, b = self.slugs("日本語; 中文")
@@ -61,9 +62,10 @@ class Naming(unittest.TestCase):
         self.assertEqual(self.slugs("日本語")[0], a, "stable: the same name, the same slug")
 
     def test_a_slug_is_at_most_40_characters(self):
-        s = self.slugs("A" * 80)[0]
+        s = self.slugs("A" * 60)[0]
         self.assertEqual(len(s), 40)
-        self.assertEqual(len(set(self.slugs("; ".join(["B" * 80] * 3)))), 3, "and still distinct")
+        self.assertEqual(self.slugs("A" * 61), [], "a name over 60 characters is left out")
+        self.assertEqual(self.slugs("B" * 45 + "1; " + "B" * 45 + "2"), ["b" * 40], "the same 40 characters: the second is left out, not renamed")
 
     def test_a_name_can_not_collide_with_another_partners_original_file(self):
         s = self.slugs("Acme; Acme Original; Original")

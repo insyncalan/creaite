@@ -6,6 +6,7 @@ import { renderReports } from "../components/reporting/ReportsPage.jsx";
 import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { reportsBadge, spaceCode } from "../stores/reporting.js";
 import { psTick } from "../stores/projectSettings.js";   /* #228 */
+import { CLIENT_NAME_LIMIT, PARTNERS_LINE_MAX, PARTNERS_MAX, cleanPartnerName, partnerKey, partnerNameProblem, unsafeLineValue } from "./partners.js";   /* #228 C */
 import { renderActivity } from "../activity.js";
 import { drawStatusDot } from "../components/StatusDot.jsx";
 import { drawToast } from "../components/Toast.jsx";
@@ -257,6 +258,7 @@ export async function setRhythm(code,val){ if(!await needVault()) return false;
    file in system/backups/files/, a line in settings-log.jsonl). A line that is missing is added under the rhythm line, or under
    "Client / partner". The line's italic note (_(…)_) stays. Returns whether it was saved; `was` is the old value. */
 export function memLineEdit(text,label,val){
+  const bad=memValueProblem(label,val); if(bad) throw new Error(bad);
   const lab=label.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"), lead="^([ \\t]*(?:[-*][ \\t]+)?\\*\\*"+lab+":\\*\\*[ \\t]*)",
     reOnOff=new RegExp(lead+"(on|off)\\b([^\\n]*)$","i"), re=new RegExp(lead+"([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$"),
     reRhythm=/^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/, rePartner=/^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/;
@@ -279,7 +281,22 @@ export function liveLines(lines){ let fence=""; return lines.map(raw=>{ const l=
 /* L6: a message for a toast: an absolute path is shown from the vault ("projects/…", "system/…"), or as the file's name alone. */
 export function plainPaths(msg){ return String(msg==null?"":msg).replace(/(?<![\w.~\-\/])(?:~|\/)[^\s"'“”()<>,;]*/g,m=>{ const t=m.match(/(?:^|\/)((?:projects|system)\/.*)$/); if(t) return t[1];
   const seg=m.replace(/\/+$/,"").split("/").pop(); return seg||"a file"; }); }
-export async function setMemLine(code,label,val,key){ if(!await needVault()) return false;
+/* #228 C: a value that must never reach the memory file: a line break or other control, separator, bidi or zero-width character in
+   any line; a Partners line's every name checked by the one rule (core/partners.js); the client's name at most 80. Returns a problem or "". */
+export function memValueProblem(label,val){ const v=String(val==null?"":val);
+  if(unsafeLineValue(v)) return "the value has a line break or another control character";
+  if(label==="Partners"){ if(v.length>PARTNERS_LINE_MAX) return `the partners' line would be over ${PARTNERS_LINE_MAX} characters`;
+    const names=v.split(";").map(x=>x.replace(/^ +| +$/g,"")).filter(Boolean);
+    if(names.length>PARTNERS_MAX) return `a project lists at most ${PARTNERS_MAX} partner organisations`;
+    const seen=new Set();
+    for(const n of names){ const bad=partnerNameProblem(n)||(n!==cleanPartnerName(n)?"a partner's name has no double space":""); if(bad) return bad.replace(/\.$/,"");
+      const k=partnerKey(n); if(seen.has(k)) return `${n} is listed twice`; seen.add(k); } }
+  if(label==="Client / partner"&&v.length>CLIENT_NAME_LIMIT) return `the client's name is over ${CLIENT_NAME_LIMIT} characters`;
+  if(v.length>1000) return "the value is too long";
+  return ""; }
+export async function setMemLine(code,label,val,key){ const problem=memValueProblem(label,val);
+  if(problem){ snack("Not saved: "+problem+"."); return false; }
+  if(!await needVault()) return false;
   try{ await vq(async()=>{ const path=memPath(code), text=await shared.VW.read(path), r=memLineEdit(text,label,val);
     if(!r) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
     if(r.text===text) return;

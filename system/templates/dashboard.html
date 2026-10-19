@@ -4086,6 +4086,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-psettings .psadd input,#v-psettings .psedit,#v-psettings input#psName,#v-psettings input#psClient{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:var(--ctl-fs)}
 #v-psettings .psmsg{display:block;color:var(--bad,#b00020);font-size:var(--fs-xs)}
 #v-psettings .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings .pslogo{display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+#v-psettings .pslogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+#v-psettings .pslogo[data-state=empty] .mark{background:transparent;border:1px dashed var(--line)}
+#v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
+#v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
 .pfname+.pset{margin-left:6px;vertical-align:middle}
 </style>
 </head>
@@ -4561,9 +4567,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PAD_MM: () => PAD_MM,
     PANE: () => PANE,
     PANELF: () => PANELF,
-    PARTNERS_LINE_MAX: () => PARTNERS_LINE_MAX,
     PARTNERS_MAX: () => PARTNERS_MAX,
-    PARTNER_MAX: () => PARTNER_MAX,
+    PARTNER_NAME_MAX: () => PARTNER_NAME_MAX,
     PCOLS: () => PCOLS,
     PDAGE: () => PDAGE,
     PDK: () => PDK,
@@ -5273,6 +5278,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     crLogoData: () => crLogoData,
     crLogoFor: () => crLogoFor,
     crLogoNote: () => crLogoNote,
+    crLogoOrphans: () => crLogoOrphans,
     crLogoPaths: () => crLogoPaths,
     crTick: () => crTick,
     creaiteEditor: () => creaiteEditor,
@@ -5857,6 +5863,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     meetingRoute: () => meetingRoute,
     memLineEdit: () => memLineEdit,
     memPath: () => memPath,
+    memValueProblem: () => memValueProblem,
     menuGroup: () => menuGroup,
     menuItemsIn: () => menuItemsIn,
     menuMove: () => menuMove,
@@ -26771,6 +26778,10 @@ ${s5}`;
     {}
   );
   var crLogoNote = y3("");
+  var crLogoOrphans = y3(
+    /** @type {{kind: string, slug: string, path: string}[]} */
+    []
+  );
   var crLogoFor = y3("");
   async function readClientLogos(code) {
     if (!viaServer()) return;
@@ -26779,6 +26790,7 @@ ${s5}`;
     crLogoFor.value = code;
     crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
     crLogoData.value = r4.logos || {};
+    crLogoOrphans.value = Array.isArray(r4.orphans) ? r4.orphans : [];
     weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
     changed();
   }
@@ -31243,6 +31255,39 @@ ${s5}`;
     ] })) });
   }
 
+  // core/partners.js
+  var PARTNER_NAME_MAX = 60;
+  var PARTNERS_MAX = 12;
+  var PARTNERS_LINE_MAX = 800;
+  var CLIENT_NAME_LIMIT = 80;
+  var PUNCT = ".,&'()-";
+  var cleanPartnerName = (raw2) => String(raw2 == null ? "" : raw2).normalize("NFC").replace(/ {2,}/g, " ").replace(/^ +| +$/g, "");
+  function partnerNameProblem(name) {
+    const t47 = String(name == null ? "" : name);
+    if (!t47) return "Type the partner organisation's name.";
+    if (/[\r\n]/.test(t47)) return "A partner's name is one line.";
+    if (t47.includes(";")) return "A partner's name can't contain a semicolon; add each partner on its own.";
+    if (t47.length > PARTNER_NAME_MAX) return `A partner's name is over ${PARTNER_NAME_MAX} characters.`;
+    if (t47 !== t47.replace(/^ +| +$/g, "") || t47.includes("  ")) return "A partner's name has no space at either end and no double space.";
+    if (t47 !== t47.normalize("NFC")) return "A partner's name uses letters and digits only (no separate accent marks).";
+    for (const ch2 of t47) if (!(ch2 === " " || PUNCT.includes(ch2) || /^[\p{L}\p{Nd}]$/u.test(ch2))) return "A partner's name uses letters, digits, spaces and . , & ' - ( ) only.";
+    return "";
+  }
+  function partnerKey(name) {
+    const k5 = String(name).normalize("NFKD").replace(/[^ -~]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    return k5 || String(name).toLowerCase();
+  }
+  function unsafeLineValue(v5) {
+    for (const ch2 of String(v5)) {
+      const c5 = (
+        /** @type {number} */
+        ch2.codePointAt(0)
+      );
+      if (c5 < 32 || c5 >= 127 && c5 <= 159 || c5 === 8232 || c5 === 8233 || c5 >= 8203 && c5 <= 8207 || c5 >= 8234 && c5 <= 8238 || c5 >= 8288 && c5 <= 8297 || c5 === 65279) return true;
+    }
+    return false;
+  }
+
   // stores/projectSettings.js
   var PS_CATS = [
     ["general", "General", "name client code status folder project details"],
@@ -31340,19 +31385,29 @@ ${s5}`;
       return { name, org: r4.org || "", role: r4.role || "" };
     });
   }
-  var PARTNER_MAX = 80, PARTNERS_LINE_MAX = 400, PARTNERS_MAX = 12;
   var partners = y3({ code: "", list: (
     /** @type {string[]} */
     []
   ), loaded: false });
   function partnersFrom(text) {
-    const lines2 = String(text || "").split("\n"), live = liveLines(lines2);
+    const lines2 = String(text || "").split("\n"), live = liveLines(lines2), out = (
+      /** @type {string[]} */
+      []
+    ), keys = /* @__PURE__ */ new Set();
     for (let i5 = 0; i5 < lines2.length; i5++) {
       if (!live[i5]) continue;
       const m5 = lines2[i5].replace(/\r$/, "").match(/^[ \t]*(?:[-*][ \t]+)?\*\*Partners:\*\*[ \t]*([^\n]*?)[ \t]*(?:_\(.*\)_)?$/);
-      if (m5) return m5[1].split(";").map((s5) => s5.replace(/\s+/g, " ").trim()).filter(Boolean);
+      if (!m5) continue;
+      for (const raw2 of m5[1].slice(0, 5e3).split(";")) {
+        const n4 = cleanPartnerName(raw2);
+        if (!n4 || partnerNameProblem(n4) || keys.has(partnerKey(n4))) continue;
+        keys.add(partnerKey(n4));
+        out.push(n4);
+        if (out.length >= PARTNERS_MAX) return out;
+      }
+      return out;
     }
-    return [];
+    return out;
   }
   async function loadPartners(code) {
     partners.value = { code, list: [], loaded: false };
@@ -31364,24 +31419,27 @@ ${s5}`;
       partners.value = { code, list: [], loaded: false };
     }
   }
-  var partnerKey = (s5) => String(s5).replace(/\s+/g, " ").trim().toLowerCase();
   function partnerProblem(list, name, except = -1) {
-    const t47 = String(name || "");
-    if (/[\r\n]/.test(t47)) return "A partner's name is one line.";
-    const v5 = t47.replace(/\s+/g, " ").trim();
-    if (!v5) return "Type the partner organisation's name.";
-    if (v5.length > PARTNER_MAX) return `A partner's name is over ${PARTNER_MAX} characters.`;
-    if (v5.includes(";")) return "A partner's name can't contain a semicolon; add each partner on its own.";
+    const v5 = cleanPartnerName(name), bad = partnerNameProblem(v5);
+    if (bad) return bad;
     const same2 = list.find((x5, i5) => i5 !== except && partnerKey(x5) === partnerKey(v5));
-    if (same2) return `${same2} is already listed.`;
-    return "";
+    return same2 ? `${same2} is already listed.` : "";
+  }
+  var partnerQueue = Promise.resolve();
+  function inTurn(fn2) {
+    const run = partnerQueue.then(fn2, fn2);
+    partnerQueue = run.then(() => void 0, () => void 0);
+    return run;
+  }
+  async function currentList(code) {
+    try {
+      return partnersFrom(await vq(() => shared.VW.read(memPath(code))));
+    } catch (e4) {
+      return partners.peek().list;
+    }
   }
   async function writePartners(code, list) {
     const v5 = list.join("; ");
-    if (v5.length > PARTNERS_LINE_MAX) {
-      snack(`Not saved: the partners' line would be over ${PARTNERS_LINE_MAX} characters.`);
-      return false;
-    }
     if (!await setMemLine(code, "Partners", v5, "partners")) return false;
     partners.value = { code, list: [...list], loaded: true };
     await reloadData();
@@ -31389,33 +31447,39 @@ ${s5}`;
     return true;
   }
   var undoer = (code, list) => async () => {
-    if (await writePartners(code, list)) snack("Undone");
+    if (await inTurn(() => writePartners(code, list))) snack("Undone");
   };
-  async function addPartner(code, name) {
-    const was = partners.peek().list, bad = partnerProblem(was, name);
-    if (bad) return bad;
-    if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
-    const v5 = String(name).replace(/\s+/g, " ").trim();
-    if (!await needVault()) return "Not saved: creaite can't reach the vault.";
-    if (!await writePartners(code, [...was, v5])) return "Not saved.";
-    snack(`${v5} added as a partner`, undoer(code, was));
-    return "";
+  function addPartner(code, name) {
+    return inTurn(async () => {
+      const was = await currentList(code), bad = partnerProblem(was, name);
+      if (bad) return bad;
+      if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
+      const v5 = cleanPartnerName(name);
+      if (!await needVault()) return "Not saved: creaite can't reach the vault.";
+      if (!await writePartners(code, [...was, v5])) return "Not saved.";
+      snack(`${v5} added as a partner`, undoer(code, was));
+      return "";
+    });
   }
-  async function renamePartner(code, i5, name) {
-    const was = partners.peek().list, bad = partnerProblem(was, name, i5);
-    if (bad) return bad;
-    const v5 = String(name).replace(/\s+/g, " ").trim();
-    if (v5 === was[i5]) return "";
-    if (!await writePartners(code, was.map((x5, j5) => j5 === i5 ? v5 : x5))) return "Not saved.";
-    snack(`${was[i5]} renamed ${v5}`, undoer(code, was));
-    return "";
+  function renamePartner(code, i5, name) {
+    return inTurn(async () => {
+      const was = await currentList(code), bad = partnerProblem(was, name, i5);
+      if (bad) return bad;
+      const v5 = cleanPartnerName(name);
+      if (v5 === was[i5]) return "";
+      if (!await writePartners(code, was.map((x5, j5) => j5 === i5 ? v5 : x5))) return "Not saved.";
+      snack(`${was[i5]} renamed ${v5}`, undoer(code, was));
+      return "";
+    });
   }
-  async function removePartner(code, i5) {
-    const was = partners.peek().list, gone = was[i5];
-    if (gone === void 0) return false;
-    if (!await writePartners(code, was.filter((_6, j5) => j5 !== i5))) return false;
-    snack(`${gone} removed from the partners`, undoer(code, was));
-    return true;
+  function removePartner(code, i5) {
+    return inTurn(async () => {
+      const was = await currentList(code), gone = was[i5];
+      if (gone === void 0) return false;
+      if (!await writePartners(code, was.filter((_6, j5) => j5 !== i5))) return false;
+      snack(`${gone} removed from the partners`, undoer(code, was));
+      return true;
+    });
   }
   function openProjectSettings(code) {
     if (!P4.some((p6) => p6.code === code)) {
@@ -69907,7 +69971,7 @@ ${d5.text}`);
     return a5 ? loadHub(a5.code, a5.week) : Promise.resolve();
   }
 
-  // components/report/hub/ClientReportPanel.jsx
+  // components/report/hub/LogoTile.jsx
   function tilesOf(code) {
     const ps2 = partnersOf(code);
     return [
@@ -69916,15 +69980,21 @@ ${d5.text}`);
       ...ps2.length ? ps2.map((p6) => ({ kind: `partner:${p6.slug}`, mark: "P", name: `Partner: ${p6.name}`, who: `${p6.name}'s`, noun: p6.name, line: "Shown on this project's reports" })) : [{ kind: "partner", mark: "P", name: "A partner", who: "partner's", noun: "partner", line: "Only if one is involved" }]
     ];
   }
-  var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
-  function LogoTile({ code, t: t47, ticked }) {
+  function LogoMark({ kind, mark }) {
+    const path = crLogoPaths.value[kind], pic = path ? crLogoData.value[path] : "";
+    return /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", "data-has-logo": pic ? "1" : "0", children: pic ? /* @__PURE__ */ u2("img", { alt: "", src: pic }) : mark });
+  }
+  function LogoActions({ code, t: t47, ticked }) {
     const file = A2(
       /** @type {HTMLInputElement|null} */
       null
     );
     const path = crLogoPaths.value[t47.kind], pic = path ? crLogoData.value[path] : "";
     const firm = t47.kind === "firm";
-    const [ask2, setAsk] = d2(false);
+    const [ask2, setAsk] = d2(
+      /** @type {""|"remove"|"change"} */
+      ""
+    );
     const picked = async (e4) => {
       const input = (
         /** @type {HTMLInputElement} */
@@ -69937,58 +70007,75 @@ ${d5.text}`);
       const now = clientLogosOn(code), next = now.includes(t47.kind) ? now.filter((k5) => k5 !== t47.kind) : [...now, t47.kind];
       setClientLogos(code, next);
     };
+    return /* @__PURE__ */ u2("span", { class: "cfgact", children: [
+      ask2 ? null : /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn sm",
+          "data-logo-add": t47.kind,
+          onClick: () => {
+            if (firm && pic) setAsk("change");
+            else if (file.current) file.current.click();
+          },
+          "aria-label": `${pic ? "Change" : "Add"} the ${t47.who} logo`,
+          children: pic ? "Change" : "Add logo"
+        }
+      ),
+      pic && !ask2 ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn sm",
+          "data-logo-remove": t47.kind,
+          onClick: () => setAsk("remove"),
+          "aria-label": `Remove the ${t47.noun} logo`,
+          children: "Remove"
+        }
+      ) : null,
+      pic && ask2 === "remove" ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.noun} logo?`, children: [
+        /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.noun} logo?` }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-yes": t47.kind, onClick: () => {
+          setAsk("");
+          removeClientLogo(code, t47.kind);
+        }, children: "Remove" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-no": t47.kind, onClick: () => setAsk(""), children: "Keep" })
+      ] }) : null,
+      pic && ask2 === "change" ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": "Change the firm's logo?", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: "Change the firm's logo for all projects?" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-change-yes": t47.kind, onClick: () => {
+          setAsk("");
+          if (file.current) file.current.click();
+        }, children: "Choose a picture" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-change-no": t47.kind, onClick: () => setAsk(""), children: "Keep" })
+      ] }) : null,
+      /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", "data-logo-file": t47.kind, onChange: picked }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "checkbox",
+          checked: firm || ticked,
+          disabled: firm,
+          "data-logo-tick": t47.kind,
+          "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.who} logo in the header`,
+          onChange: firm ? void 0 : toggle
+        }
+      )
+    ] });
+  }
+  function LogoTile({ code, t: t47, ticked }) {
     return /* @__PURE__ */ u2("div", { class: "cfglogo", "data-kind": t47.kind, children: [
-      /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", children: pic ? /* @__PURE__ */ u2("img", { alt: "", src: pic }) : t47.mark }),
+      /* @__PURE__ */ u2(LogoMark, { kind: t47.kind, mark: t47.mark }),
       /* @__PURE__ */ u2("span", { class: "cfgname", children: [
         t47.name,
         /* @__PURE__ */ u2("span", { class: "sub", children: t47.line })
       ] }),
-      /* @__PURE__ */ u2("span", { class: "cfgact", children: [
-        /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "btn sm",
-            "data-logo-add": t47.kind,
-            onClick: () => file.current && file.current.click(),
-            "aria-label": `${pic ? "Change" : "Add"} the ${t47.who} logo`,
-            children: pic ? "Change" : "Add logo"
-          }
-        ),
-        pic && !ask2 ? /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "btn sm",
-            "data-logo-remove": t47.kind,
-            onClick: () => setAsk(true),
-            "aria-label": `Remove the ${t47.noun} logo`,
-            children: "Remove"
-          }
-        ) : null,
-        pic && ask2 ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.noun} logo?`, children: [
-          /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.noun} logo?` }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-yes": t47.kind, onClick: () => {
-            setAsk(false);
-            removeClientLogo(code, t47.kind);
-          }, children: "Remove" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-no": t47.kind, onClick: () => setAsk(false), children: "Keep" })
-        ] }) : null,
-        /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", "data-logo-file": t47.kind, onChange: picked }),
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            type: "checkbox",
-            checked: firm || ticked,
-            disabled: firm,
-            "data-logo-tick": t47.kind,
-            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.who} logo in the header`,
-            onChange: firm ? void 0 : toggle
-          }
-        )
-      ] })
+      /* @__PURE__ */ u2(LogoActions, { code, t: t47, ticked })
     ] });
   }
+
+  // components/report/hub/ClientReportPanel.jsx
+  var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
   function ClientReportPanel({ code, onClose }) {
     crTick.value;
     const p6 = (
@@ -70268,7 +70355,7 @@ ${d5.text}`);
             "data-pspartner-edit": true,
             "aria-label": `Rename ${name}`,
             defaultValue: name,
-            maxLength: 80,
+            maxLength: PARTNER_NAME_MAX,
             ref: (el2) => el2 && el2.focus(),
             onKeyDown: (e4) => {
               if (e4.key === "Enter") {
@@ -70378,7 +70465,7 @@ ${d5.text}`);
               type: "text",
               id: "psPartnerIn",
               placeholder: "Partner organisation",
-              maxLength: 80,
+              maxLength: PARTNER_NAME_MAX,
               ref: box,
               "aria-describedby": "psPartnerErr",
               onInput: () => err && setErr(""),
@@ -70393,7 +70480,7 @@ ${d5.text}`);
           /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "psAddPartner", onClick: add, children: "Add a partner" }),
           /* @__PURE__ */ u2(PsProblem, { msg: err, id: "psPartnerErr" })
         ] }),
-        /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "Saved as one line, “Partners:”, in the project's memory file. One organisation to a name; capitals don't matter." })
+        /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "Saved as one line, “Partners:”, in the project's memory file. Names use letters, digits, spaces and . , & ' - ( ) only, up to 60 characters; one organisation to a name, capitals don't matter." })
       ] })
     ] });
   }
@@ -70409,23 +70496,111 @@ ${d5.text}`);
     }, 100);
   }
   function Logos({ code }) {
-    const list = partners.value.list;
-    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "logos", children: [
-      /* @__PURE__ */ u2("h2", { children: "Logos in the reports' header" }),
-      /* @__PURE__ */ u2(PsRow, { label: "Logos", help: "The firm's logo, the client's and each partner's are added, changed and removed in the reporting hub's client report settings, the same logos. They are moving onto this page.", kw: "firm client partner picture header", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psLogosOpen", onClick: () => openReportSettings(code), children: "Open the logo settings" }) }),
-      /* @__PURE__ */ u2(PsRow, { label: "Partner organisations", help: "One logo for each, once the logos move here.", kw: "partners", children: /* @__PURE__ */ u2("span", { class: "sub", id: "psLogosPartners", children: list.length ? list.join(", ") : "None yet" }) })
+    crTick.value;
+    psTick.value;
+    partners.value;
+    const ticked = clientLogosOn(code), orphans = crLogoOrphans.value, tiles = tilesOf(code);
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "logos", children: [
+        /* @__PURE__ */ u2("h2", { children: "Logos in the reports' header" }),
+        tiles.map((t47) => {
+          const has = !!crLogoPaths.value[t47.kind];
+          return /* @__PURE__ */ u2(PsRow, { id: `psLogo-${t47.kind.replace(":", "-")}`, label: t47.name, help: t47.line, kw: "logo picture header firm client partner", children: /* @__PURE__ */ u2("span", { class: "pslogo", "data-kind": t47.kind, "data-state": has ? "set" : "empty", children: [
+            /* @__PURE__ */ u2(LogoMark, { kind: t47.kind, mark: t47.mark }),
+            has ? null : /* @__PURE__ */ u2("span", { class: "sub", children: "Not added yet" }),
+            /* @__PURE__ */ u2(LogoActions, { code, t: t47, ticked: ticked.includes(t47.kind) })
+          ] }) }, t47.kind);
+        }),
+        crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "psnote psfoot", role: "status", id: "psLogoNote", children: crLogoNote.value }) : null,
+        /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "Partners come from People and partners: add or remove a partner organisation there and its logo row appears or goes here. These are the same logos as in the reporting hub's client report settings. A transparent PNG or SVG sits better than a JPEG; the picture you choose is kept as it is and a trimmed copy is drawn. The tick puts the logo in the header of this project's reports." })
+      ] }),
+      orphans.length ? /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "logos", children: [
+        /* @__PURE__ */ u2("h2", { children: "Logos not used" }),
+        orphans.map((o5) => /* @__PURE__ */ u2(PsRow, { id: `psOrphan-${o5.slug}`, label: o5.slug, help: "A logo kept after its partner was renamed or removed from the list. It is not drawn in any report.", kw: "logos not used unused orphan partner", children: /* @__PURE__ */ u2("span", { class: "pslogo", "data-orphan": o5.kind, children: [
+          /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", children: crLogoData.value[o5.path] ? /* @__PURE__ */ u2("img", { alt: "", src: crLogoData.value[o5.path] }) : "P" }),
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "btn sm",
+              "data-logo-orphan-remove": o5.kind,
+              "aria-label": `Remove the unused logo ${o5.slug}`,
+              onClick: () => removeClientLogo(code, o5.kind),
+              children: "Remove"
+            }
+          )
+        ] }) }, o5.kind))
+      ] }) : null
     ] });
   }
+  var REP_RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
   function Reporting({ code }) {
     crTick.value;
-    const p6 = psProject(code);
+    const p6 = psProject(code), on2 = clientReportOn(code), rhythms = REP_RHYTHMS.includes(p6.rhythm) ? REP_RHYTHMS : [...REP_RHYTHMS, p6.rhythm];
     return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "rep", children: [
       /* @__PURE__ */ u2("h2", { children: "Reporting" }),
-      /* @__PURE__ */ u2(PsRow, { label: "Client report", help: "Whether this project needs a separate client report, how often, the reminder and the logos are set in the reporting hub's cog panel. It is moving onto this page.", kw: "client report how often reminder weekly report day", children: [
-        /* @__PURE__ */ u2("span", { class: "sub", id: "psRepState", children: clientReportOn(code) ? `On, ${String(p6.rhythm || "weekly").toLowerCase()}` : "Off" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psRepOpen", onClick: () => openReportSettings(code), children: "Open the client report settings" })
-      ] }),
-      /* @__PURE__ */ u2(PsRow, { label: "Open reporting", help: "The reporting hub for this project.", kw: "hub weekly", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psRepHub", onClick: () => openSpace(code), children: "Open reporting" }) })
+      /* @__PURE__ */ u2(PsRow, { label: "Client report", help: "Turn off if the client only receives the internal report, or nothing at all. This holds for every future report of this project until you change it; reports already written are kept and turning it off deletes nothing.", kw: "client report needs a separate on off", children: /* @__PURE__ */ u2("label", { class: "settick", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            id: "psRepOn",
+            checked: on2,
+            "aria-label": "This project needs a separate client report",
+            onChange: (e4) => setClientReport(
+              code,
+              /** @type {HTMLInputElement} */
+              e4.target.checked
+            )
+          }
+        ),
+        " Needs a separate client report"
+      ] }) }),
+      on2 ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(PsRow, { label: "How often", help: "How often the client report is due.", kw: "weekly fortnightly monthly rhythm", children: /* @__PURE__ */ u2("select", { id: "psRepRh", "aria-label": "How often", value: p6.rhythm, onChange: (e4) => setClientRhythm(
+          code,
+          /** @type {HTMLSelectElement} */
+          e4.target.value
+        ), children: rhythms.map((r4) => /* @__PURE__ */ u2("option", { value: r4, selected: r4 === p6.rhythm, children: r4 }, r4)) }) }),
+        /* @__PURE__ */ u2(PsRow, { label: "Client name on the report", help: "Printed on the client report.", kw: "client name", children: /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "text",
+            id: "psRepNm",
+            size: 28,
+            "aria-label": "Client name on the report",
+            maxLength: CLIENT_NAME_MAX,
+            defaultValue: p6.client || "",
+            onChange: async (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.target
+              );
+              if (!await setClientName(code, el2.value)) el2.value = p6.client || "";
+            }
+          },
+          p6.client || ""
+        ) }),
+        /* @__PURE__ */ u2(PsRow, { label: "Reminder", help: "A reminder on the day the client report is due.", kw: "remind due day", children: /* @__PURE__ */ u2("label", { class: "settick", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "checkbox",
+              id: "psRepRem",
+              checked: clientReminderOn(code),
+              "aria-label": "Remind me on the due day",
+              onChange: (e4) => setClientReminder(
+                code,
+                /** @type {HTMLInputElement} */
+                e4.target.checked
+              )
+            }
+          ),
+          " Remind me on the due day"
+        ] }) })
+      ] }) : /* @__PURE__ */ u2(PsRow, { label: "This project has no client report", help: "Turn it on above to set how often, the client's name and the reminder.", children: /* @__PURE__ */ u2("span", { class: "sub", id: "psRepOff", children: "Off" }) }),
+      /* @__PURE__ */ u2(PsRow, { label: "Open reporting", help: "The reporting hub for this project.", kw: "hub weekly", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psRepHub", onClick: () => openSpace(code), children: "Open reporting" }) }),
+      /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "The same setting as the cog in the reporting hub: change it in either place and the other follows." })
     ] });
   }
   function Milestones({ code }) {
@@ -74540,6 +74715,8 @@ ${d5.text}`);
     }
   }
   function memLineEdit(text, label, val2) {
+    const bad = memValueProblem(label, val2);
+    if (bad) throw new Error(bad);
     const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), lead = "^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)", reOnOff = new RegExp(lead + "(on|off)\\b([^\\n]*)$", "i"), re2 = new RegExp(lead + "([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$"), reRhythm = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/, rePartner = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/;
     const lines2 = text.split("\n"), live = liveLines(lines2);
     const eol = (l6) => /\r$/.test(l6) ? "\r" : "", bare = (l6) => l6.replace(/\r$/, "");
@@ -74592,7 +74769,32 @@ ${d5.text}`);
       return seg || "a file";
     });
   }
+  function memValueProblem(label, val2) {
+    const v5 = String(val2 == null ? "" : val2);
+    if (unsafeLineValue(v5)) return "the value has a line break or another control character";
+    if (label === "Partners") {
+      if (v5.length > PARTNERS_LINE_MAX) return `the partners' line would be over ${PARTNERS_LINE_MAX} characters`;
+      const names = v5.split(";").map((x5) => x5.replace(/^ +| +$/g, "")).filter(Boolean);
+      if (names.length > PARTNERS_MAX) return `a project lists at most ${PARTNERS_MAX} partner organisations`;
+      const seen = /* @__PURE__ */ new Set();
+      for (const n4 of names) {
+        const bad = partnerNameProblem(n4) || (n4 !== cleanPartnerName(n4) ? "a partner's name has no double space" : "");
+        if (bad) return bad.replace(/\.$/, "");
+        const k5 = partnerKey(n4);
+        if (seen.has(k5)) return `${n4} is listed twice`;
+        seen.add(k5);
+      }
+    }
+    if (label === "Client / partner" && v5.length > CLIENT_NAME_LIMIT) return `the client's name is over ${CLIENT_NAME_LIMIT} characters`;
+    if (v5.length > 1e3) return "the value is too long";
+    return "";
+  }
   async function setMemLine(code, label, val2, key2) {
+    const problem = memValueProblem(label, val2);
+    if (problem) {
+      snack("Not saved: " + problem + ".");
+      return false;
+    }
     if (!await needVault()) return false;
     try {
       await vq(async () => {
@@ -75249,6 +75451,7 @@ ${d5.text}`);
         "Overdue",
         "P",
         "PARTNERS_MAX",
+        "PARTNER_NAME_MAX",
         "PEOPLE",
         "PF",
         "PK",
@@ -75390,6 +75593,7 @@ ${d5.text}`);
         "clientReportOn",
         "closeCapture",
         "closeChat",
+        "closeClientReport",
         "closeCombobox",
         "closeDialog",
         "closeDisp",
@@ -75564,6 +75768,7 @@ ${d5.text}`);
         "mdInline",
         "meetingOfFile",
         "meetingRoute",
+        "memLineEdit",
         "menuOpenFor",
         "mins",
         "mount",
@@ -75748,6 +75953,8 @@ ${d5.text}`);
         "rel",
         "reloadData",
         "remMenu",
+        "removePartner",
+        "renamePartner",
         "renamePerson",
         "renameProject",
         "renderActivity",
