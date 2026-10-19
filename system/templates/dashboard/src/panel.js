@@ -1253,6 +1253,8 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drc
 export const PKDRTHINK={resp:"response_action",why:"reasoning",opts:"options"};
 /* ===== end BL-222 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
+export function draftResponse(n){ const why=draftWhyNot("thinking"); if(why){ snack(why); return; } openProposal(n);   /* #232-B: Intake and Review's rows use it too */
+  setTimeout(()=>{ const t=$('#pkDescDr [data-draft="thinking"][data-drf="resp"]'); if(t) t.click(); },0); }
 export function bootPanel0199(){
 Object.assign(DRAFTKIND,{thinking:"thinking"});
 PKDRBTN.push((x,k,mode)=>{ if(mode!=="record"&&mode!=="proposal") return [];
@@ -1271,8 +1273,7 @@ $("#panel").addEventListener("click",e=>{ const b=e.target.closest(".pkdrhost [d
   pkImpLik(shared.CUR.k,pkCid(),f,v); b.disabled=true; b.textContent=`${PKFL[f]} set to ${v}`; });
 /* Review: a new risk with no response says so on its row, with Draft a response (it opens the proposal and asks) */
 $("#reviewBody").addEventListener("click",e=>{ const b=e.target.closest("[data-drrisk]"); if(!b) return; e.preventDefault(); e.stopPropagation();
-  const why=draftWhyNot("thinking"); if(why){ snack(why); return; } openProposal(+b.dataset.drrisk);
-  setTimeout(()=>{ const t=$('#pkDescDr [data-draft="thinking"][data-drf="resp"]'); if(t) t.click(); },0); },true);
+  draftResponse(+b.dataset.drrisk); },true);
 }
 /* ===== BL-226 (sprint-drafts-fields) ===== Draft the reason for a health or forecast change. Health: in the health form, Draft the
    reason sends the evidence the form already shows (healthEvidence's reasons, then the project's early warnings: no model in that)

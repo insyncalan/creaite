@@ -70,8 +70,8 @@ export const rvDraftBtn=r=>{ const m=/ · <button type="button" class="linkbtn" 
 const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">No Word draft was made for these minutes<\/span> · Reject them and process the meeting again/;
 export const rvDrTag=r=>{ const m=RV_DR.exec(revDetail(r)||""); return m?raw(m[0]):""; };
 export const rvNotes=r=>{ const d=revDetail(r)||"", a=RV_WK.exec(d), n=RV_ND.exec(d); return raw((n?`<div class="rvnote">${n[0]}</div>`:"")+(a?a[0]:"")); };
-export const rvTip=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); if(!d) return ""; const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim();
-  return t?raw(` data-tip="${esc(t)}"`):""; };
+export const rvTipText=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); if(!d) return ""; return d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim(); };   /* #232-B: plain text, for Intake and Review's rows too */
+export const rvTip=r=>{ const t=rvTipText(r); return t?raw(` data-tip="${esc(t)}"`):""; };
 export const WKRVF={actions:["due","due_date"],raid:["due","due_date"],decisions:["due","needed_by"]};   /* BL-180: declared before revDetail, which runs at load (Review) */
 export const draftOn=f=>!(S.drafting&&S.drafting[f]===false);   /* AI drafts: declared before revDetail, which runs at load (Review) */
 /* BL-290: the row's "Looks like" mark, only while Settings › General › AI drafts › Spot repeats is on (BL-133's reject reason keeps r.dup) */
@@ -173,7 +173,7 @@ $("#reviewBody").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.close
 export const RVF={k:new Set(),nd:new Set(),src:new Set(),p:new Set(),age:new Set()}, RVNEG=new Set(); export let RVQ="", RVG="project", RVO="", RVPK="k", RVLASTUNDO=null; shared.RVSTATS={approved:0,rejected:0,edited:0};
 shared.RV_MAX=25;                                     /* a batch over this asks first (a let, so a test can lower it) */
 /* #232-B: the page's rule is the server's (review.hold_reason, carried on each row as `hold`; "" is routine, "invalid" is held back). A row without it (an edit made on the page) keeps the older test */
-export const rvBulkOK=r=>!!r&&!r.done&&("hold" in r?!r.hold:!r.indiv&&!!r.p&&!["draft","files"].includes(r.kind)&&!(r.flags||[]).includes("conflict"));
+export const rvBulkOK=r=>!!r&&!r.done&&!(r.flags||[]).includes("invalid")&&("hold" in r?!r.hold:!r.indiv&&!!r.p&&!["draft","files"].includes(r.kind)&&!(r.flags||[]).includes("conflict"));
 export const rvRejectOK=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind);
 export function rvSyncChk(){ CHK.clear(); RHL.forEach(n=>{ const r=REV.find(x=>x.n===n); if(rvBulkOK(r)) CHK.add(n); }); }
 /* why an item can't be approved in bulk, in words */

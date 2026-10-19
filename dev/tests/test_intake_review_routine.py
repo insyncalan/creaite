@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import intake_review_support as S  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 
-WORDING = "Each has a project and no conflict, and none is a change you approve one by one"
+WORDING = "Each has a project and no conflict, and none is a change you approve one by one."
 
 
 class Routine(LiveBrowserCase):

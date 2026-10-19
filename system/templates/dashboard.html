@@ -4095,6 +4095,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review tr.irprop td.title{padding-top:10px;padding-bottom:10px}
 #v-intake-review .icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);margin:2px 0}
 #v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
+#v-intake-review .icchg .icsrc{font-size:var(--fs-sm);font-weight:400;color:var(--muted)}
 #v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
 #v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
 #v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
@@ -5474,6 +5475,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     draftEmail: () => draftEmail,
     draftKey: () => draftKey,
     draftOn: () => draftOn,
+    draftResponse: () => draftResponse,
     draftRestore: () => draftRestore,
     draftSave: () => draftSave,
     draftSrcHtml: () => draftSrcHtml,
@@ -6729,6 +6731,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rvSyncChk: () => rvSyncChk,
     rvTick: () => rvTick,
     rvTip: () => rvTip,
+    rvTipText: () => rvTipText,
     rvWhyNot: () => rvWhyNot,
     rvfCount: () => rvfCount,
     rwWrap: () => rwWrap,
@@ -43648,10 +43651,13 @@ ${s5}`;
     const d5 = revDetail(r4) || "", a5 = RV_WK.exec(d5), n4 = RV_ND.exec(d5);
     return raw((n4 ? `<div class="rvnote">${n4[0]}</div>` : "") + (a5 ? a5[0] : ""));
   };
-  var rvTip = (r4) => {
+  var rvTipText = (r4) => {
     const d5 = (revDetail(r4) || "").replace(RV_WK, "").replace(RV_DR, "").replace(RV_ND, "").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/, "");
     if (!d5) return "";
-    const t47 = d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
+    return d5.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, " ").trim();
+  };
+  var rvTip = (r4) => {
+    const t47 = rvTipText(r4);
     return t47 ? raw(` data-tip="${esc(t47)}"`) : "";
   };
   var WKRVF = { actions: ["due", "due_date"], raid: ["due", "due_date"], decisions: ["due", "needed_by"] };
@@ -43859,7 +43865,7 @@ ${s5}`;
   var RVQ = "", RVG = "project", RVO = "", RVPK = "k", RVLASTUNDO = null;
   shared.RVSTATS = { approved: 0, rejected: 0, edited: 0 };
   shared.RV_MAX = 25;
-  var rvBulkOK = (r4) => !!r4 && !r4.done && ("hold" in r4 ? !r4.hold : !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict"));
+  var rvBulkOK = (r4) => !!r4 && !r4.done && !(r4.flags || []).includes("invalid") && ("hold" in r4 ? !r4.hold : !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict"));
   var rvRejectOK = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
   function rvSyncChk() {
     CHK.clear();
@@ -59487,6 +59493,18 @@ ${d5.text}`);
     });
   }
   var PKDRTHINK = { resp: "response_action", why: "reasoning", opts: "options" };
+  function draftResponse(n4) {
+    const why = draftWhyNot("thinking");
+    if (why) {
+      snack(why);
+      return;
+    }
+    openProposal(n4);
+    setTimeout(() => {
+      const t47 = $('#pkDescDr [data-draft="thinking"][data-drf="resp"]');
+      if (t47) t47.click();
+    }, 0);
+  }
   function bootPanel0199() {
     Object.assign(DRAFTKIND, { thinking: "thinking" });
     PKDRBTN.push((x5, k5, mode) => {
@@ -59528,16 +59546,7 @@ ${d5.text}`);
       if (!b5) return;
       e4.preventDefault();
       e4.stopPropagation();
-      const why = draftWhyNot("thinking");
-      if (why) {
-        snack(why);
-        return;
-      }
-      openProposal(+b5.dataset.drrisk);
-      setTimeout(() => {
-        const t47 = $('#pkDescDr [data-draft="thinking"][data-drf="resp"]');
-        if (t47) t47.click();
-      }, 0);
+      draftResponse(+b5.dataset.drrisk);
     }, true);
   }
   function healthFacts(code) {
@@ -71389,8 +71398,8 @@ ${d5.text}`);
   var IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
   var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
   var IR_GROUP_HEAD = {
-    needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes"],
-    routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one"]
+    needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes."],
+    routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one."]
   };
   var IR_KIND_WORDS = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
   var irKind = (r4) => r4.kind === "raid" ? r4.rec && r4.rec.type || "Risk" : IR_KIND_WORDS[
@@ -71569,13 +71578,57 @@ ${d5.text}`);
     ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
     const match = r4.p ? null : r4.why;
     where2 = fdText(where2);
-    return /* @__PURE__ */ u2("div", { class: "why icsrc", children: [
+    return /* @__PURE__ */ u2("span", { class: "icsrc", children: [
       where2,
       match ? ` · ${match}` : "",
       link ? /* @__PURE__ */ u2(S2, { children: [
         " · ",
         link
       ] }) : null
+    ] });
+  }
+  function ConflictBlock({ r: r4 }) {
+    const ch2 = r4.rec.changes && r4.rec.changes.length ? r4.rec.changes : r4.rec.field ? [{ field: r4.rec.field, from: r4.rec.from, to: r4.rec.to }] : [];
+    const v5 = (x5) => x5 == null || x5 === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x5)) ? fd(String(x5)) : String(x5);
+    return /* @__PURE__ */ u2("div", { class: "cfvs", children: ch2.length ? ch2.map((c5) => /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("span", { class: "cff", children: c5.field }),
+      /* @__PURE__ */ u2("span", { class: "cfnow", children: [
+        "Now: ",
+        /* @__PURE__ */ u2("b", { children: v5(c5.from) })
+      ] }),
+      /* @__PURE__ */ u2("span", { class: "cfnew", children: [
+        "This one: ",
+        /* @__PURE__ */ u2("b", { children: v5(c5.to) })
+      ] })
+    ] })) : /* @__PURE__ */ u2("div", { class: "sub", children: "Changed in the tracker after this was proposed." }) });
+  }
+  function WeekendNote({ r: r4 }) {
+    const f5 = WKRVF[
+      /** @type {keyof WKRVF} */
+      r4.kind
+    ], n4 = f5 && r4.rec && !r4.done ? weekendNote(r4.rec[f5[0]]) : null;
+    if (!n4) return null;
+    return /* @__PURE__ */ u2("div", { class: "wkrv", children: [
+      /* @__PURE__ */ u2("span", { class: "h-warn", children: [
+        r4.kind === "decisions" ? "Needed" : "Due",
+        " on a ",
+        n4.day
+      ] }),
+      " ",
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-wkrv": r4.n, "data-to": n4.prev, children: wkLong(n4.prev) }),
+      " ",
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-wkrv": r4.n, "data-to": n4.next, children: wkLong(n4.next) })
+    ] });
+  }
+  function ConflictChoices({ r: r4 }) {
+    const live = viaServer(), pick = (e4, how) => {
+      e4.currentTarget.disabled = true;
+      reviewViaServer(r4, how, []);
+    };
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-act": "ck", disabled: !live, title: live ? void 0 : "Needs the live server", onClick: (e4) => pick(e4, "keep"), children: "Keep current" }),
+      " ",
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-act": "co", disabled: !live, title: live ? void 0 : "Needs the live server", onClick: (e4) => pick(e4, "override"), children: "Use this one" })
     ] });
   }
   function irOpenPeek(n4) {
@@ -71610,19 +71663,26 @@ ${d5.text}`);
     const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
     snack(`Approved ${res.n} routine${failed}`, res.undo || null);
   }
+  var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the proposal to see them" };
+  var canDraftResponse = (r4) => !!r4 && !r4.done && r4.kind === "raid" && !String(r4.rec && r4.rec.resp || "").trim() && !(r4.rec.type && r4.rec.type !== "Risk") && draftOn("thinking");
   function ProposalLine({ n: n4, child }) {
+    const tick = irTick.value;
     const r4 = irRow(n4);
     if (!r4) return null;
     const parts = irChange(r4), quote = irQuote(r4), held = r4.hold ? HOLD_WORDS[
       /** @type {keyof HOLD_WORDS} */
       r4.hold
     ] || "approve individually" : "";
-    const rej = !!r4.kind && r4.kind !== "files";
+    const rej = !!r4.kind && r4.kind !== "files", conflict = isConflict(r4), tip = rvTipText(r4) || TIP_FALLBACK[
+      /** @type {keyof TIP_FALLBACK} */
+      r4.kind
+    ] || "Open it to see the detail";
     return /* @__PURE__ */ u2(
       "tr",
       {
         class: `click irprop${child ? " mchild" : ""}`,
         "data-irn": n4,
+        "data-irtick": tick,
         "data-hold": r4.hold || "",
         "data-kind": r4.kind,
         tabindex: 0,
@@ -71643,7 +71703,18 @@ ${d5.text}`);
               " · ",
               pName(r4.p)
             ] }) : null,
-            /* @__PURE__ */ u2("div", { class: "icchg", children: [
+            r4.drafted ? /* @__PURE__ */ u2(S2, { children: [
+              " ",
+              /* @__PURE__ */ u2("span", { class: "tag drrv", children: [
+                /* @__PURE__ */ u2("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", children: [
+                  /* @__PURE__ */ u2("path", { d: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" }),
+                  /* @__PURE__ */ u2("path", { d: "M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" })
+                ] }),
+                r4.drafted === "client" ? "Drafted wording" : "Drafted"
+              ] })
+            ] }) : null,
+            conflict ? /* @__PURE__ */ u2(ConflictBlock, { r: r4 }) : null,
+            /* @__PURE__ */ u2("div", { class: "icchg", "data-tip": tip || void 0, children: [
               /* @__PURE__ */ u2("span", { class: "ickind", children: irPill(r4) }),
               parts.map((p6) => /* @__PURE__ */ u2(S2, { children: [
                 " · ",
@@ -71655,11 +71726,17 @@ ${d5.text}`);
               ] }) : /* @__PURE__ */ u2(S2, { children: [
                 " · ",
                 /* @__PURE__ */ u2("span", { class: "icroutine", children: "Routine" })
-              ] })
+              ] }),
+              canDraftResponse(r4) ? /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-drrisk": r4.n, onClick: () => draftResponse(r4.n), children: "Draft a response" })
+              ] }) : null,
+              " · ",
+              /* @__PURE__ */ u2(SourceLine, { r: r4 })
             ] }),
             quote ? /* @__PURE__ */ u2("div", { class: "icq", children: quote }) : null,
-            /* @__PURE__ */ u2(SourceLine, { r: r4 }),
-            r4.nodraft ? /* @__PURE__ */ u2("div", { class: "why", children: [
+            /* @__PURE__ */ u2(WeekendNote, { r: r4 }),
+            r4.nodraft ? /* @__PURE__ */ u2("div", { class: "rvnote", children: [
               /* @__PURE__ */ u2("span", { class: "h-warn", children: "No Word draft was made for these minutes" }),
               " · Reject them and process the meeting again"
             ] }) : null
@@ -71667,7 +71744,7 @@ ${d5.text}`);
           /* @__PURE__ */ u2("td", { class: "iracts", children: [
             r4.kind !== "files" ? /* @__PURE__ */ u2("button", { type: "button", class: "ib sm", "data-ira": "edit", "aria-label": "Open in the peek", "data-tip": "Open in the peek", onClick: () => irOpenPeek(n4), children: "✎" }) : null,
             " ",
-            /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "approve", disabled: !!r4.nodraft, title: r4.nodraft ? NODRAFT_MSG : void 0, onClick: () => irApprove(n4), children: "Approve" }),
+            conflict ? /* @__PURE__ */ u2(ConflictChoices, { r: r4 }) : /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "approve", disabled: !!r4.nodraft, title: r4.nodraft ? NODRAFT_MSG : void 0, onClick: () => irApprove(n4), children: "Approve" }),
             " ",
             rej ? /* @__PURE__ */ u2(
               "button",

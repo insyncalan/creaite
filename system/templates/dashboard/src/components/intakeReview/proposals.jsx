@@ -8,15 +8,16 @@
    classes only (style.css, "#232-B"). */
 import { REV, pName } from "../../core/data.js";
 import { fd, fdText } from "../../core/page.js";
-import { srcParse } from "../../core/fields.js";
+import { srcParse, weekendNote, wkLong } from "../../core/fields.js";
 import { irBulk, irGroupsShown } from "../../core/irFold.js";
 import { linkUrl } from "../../core/linkUrl.js";
 import { closePanel } from "../../projects.js";
-import { snack } from "../../core/server.js";
+import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { NODRAFT_MSG, openProposal, pkEscBusy } from "../../panel.js";
-import { decide, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK } from "../../review.js";
-import { irDone, irHeld, irPeek, irRow } from "../../stores/intakeReview.js";
+import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy } from "../../panel.js";
+import { decide, draftOn, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
+import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
+import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
 
 /** Why a proposal is not routine, in words (the row's `hold`, from review.hold_reason). */
@@ -70,7 +71,34 @@ function SourceLine({ r }) {
   else if (o && o.Link && linkUrl(o.Link)) link = <a class="srclink" href={/** @type {string} */ (linkUrl(o.Link))} target="_blank" rel="noopener noreferrer">Open source</a>;
   const match = r.p ? null : r.why;
   where = fdText(where);
-  return <div class="why icsrc">{where}{match ? ` · ${match}` : ""}{link ? <> · {link}</> : null}</div>;
+  return <span class="icsrc">{where}{match ? ` · ${match}` : ""}{link ? <> · {link}</> : null}</span>;
+}
+
+/** The before and after of a conflict (the app's .cfvs block). @param {{r: any}} props */
+function ConflictBlock({ r }) {
+  const ch = r.rec.changes && r.rec.changes.length ? r.rec.changes : r.rec.field ? [{ field: r.rec.field, from: r.rec.from, to: r.rec.to }] : [];
+  const v = (/** @type {any} */ x) => (x == null || x === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x)) ? fd(String(x)) : String(x));
+  return <div class="cfvs">{ch.length ? ch.map((/** @type {any} */ c) => (
+    <div><span class="cff">{c.field}</span><span class="cfnow">Now: <b>{v(c.from)}</b></span><span class="cfnew">This one: <b>{v(c.to)}</b></span></div>
+  )) : <div class="sub">Changed in the tracker after this was proposed.</div>}</div>;
+}
+
+/** A due date on a weekend: say so, with the two working days beside it (BL-180); a click edits the proposal (core/fields.js). @param {{r: any}} props */
+function WeekendNote({ r }) {
+  const f = WKRVF[/** @type {keyof WKRVF} */ (r.kind)], n = f && r.rec && !r.done ? weekendNote(r.rec[f[0]]) : null;
+  if (!n) return null;
+  return <div class="wkrv"><span class="h-warn">{r.kind === "decisions" ? "Needed" : "Due"} on a {n.day}</span>
+    {" "}<button type="button" class="mini" data-wkrv={r.n} data-to={n.prev}>{wkLong(n.prev)}</button>
+    {" "}<button type="button" class="mini" data-wkrv={r.n} data-to={n.next}>{wkLong(n.next)}</button></div>;
+}
+
+/** Keep current or Use this one: the two choices a conflict has instead of Approve (the live server settles it). @param {{r: any}} props */
+function ConflictChoices({ r }) {
+  const live = viaServer(), pick = (/** @type {Event} */ e, /** @type {"keep"|"override"} */ how) => { /** @type {HTMLButtonElement} */ (e.currentTarget).disabled = true; reviewViaServer(r, how, []); };
+  return <>
+    <button type="button" class="mini" data-act="ck" disabled={!live} title={live ? undefined : "Needs the live server"} onClick={e => pick(e, "keep")}>Keep current</button>
+    {" "}<button type="button" class="mini ok" data-act="co" disabled={!live} title={live ? undefined : "Needs the live server"} onClick={e => pick(e, "override")}>Use this one</button>
+  </>;
 }
 
 /** Open the proposal in the peek, with previous and next over the proposals on this page. @param {number} n */
@@ -106,28 +134,42 @@ export async function irApproveRoutine(groups) {
   snack(`Approved ${res.n} routine${failed}`, res.undo || null);
 }
 
-/** One proposal as the full row. @param {{n: number, child?: boolean}} props */
+/** The meta line's hover when a proposal has no owner, date or priority to show (minutes, reports, file changes). */
+const TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the proposal to see them" };
+
+/** Whether a new risk with no response offers Draft a response (BL-225). @param {any} r */
+const canDraftResponse = r => !!r && !r.done && r.kind === "raid" && !String((r.rec && r.rec.resp) || "").trim() && !(r.rec.type && r.rec.type !== "Risk") && draftOn("thinking");
+
+/** One proposal as the full row: the title, ONE meta line (the pill, the emphasised change, whether it is routine, the source; its
+    detail is that line's tooltip, #229), and beside it what a person acts on: the quote, a conflict's before and after, the weekend
+    note, the no-Word-draft notice. @param {{n: number, child?: boolean}} props */
 export function ProposalLine({ n, child }) {
+  const tick = irTick.value;       /* a row reads REV, which is not a signal: the tick redraws it when REV changed (an edit, a draft) and its props did not */
   const r = irRow(n);
   if (!r) return null;
   const parts = irChange(r), quote = irQuote(r), held = r.hold ? (HOLD_WORDS[/** @type {keyof HOLD_WORDS} */ (r.hold)] || "approve individually") : "";
-  const rej = !!r.kind && r.kind !== "files";
+  const rej = !!r.kind && r.kind !== "files", conflict = isConflict(r), tip = rvTipText(r) || TIP_FALLBACK[/** @type {keyof TIP_FALLBACK} */ (r.kind)] || "Open it to see the detail";
   return (
-    <tr class={`click irprop${child ? " mchild" : ""}`} data-irn={n} data-hold={r.hold || ""} data-kind={r.kind} tabindex={0}
+    <tr class={`click irprop${child ? " mchild" : ""}`} data-irn={n} data-irtick={tick} data-hold={r.hold || ""} data-kind={r.kind} tabindex={0}
       onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input,select")) irOpenPeek(n); }}
       onKeyDown={e => { if (e.target === e.currentTarget && e.key === "Enter") { e.preventDefault(); irOpenPeek(n); } }}>
       <td class="title">
         <b class="icttl">{(r.rec && r.rec.t) || ""}</b>{r.p ? <span class="sub"> · {pName(r.p)}</span> : null}
-        <div class="icchg"><span class="ickind">{irPill(r)}</span>
+        {r.drafted ? <>{" "}<span class="tag drrv"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>{r.drafted === "client" ? "Drafted wording" : "Drafted"}</span></> : null}
+        {conflict ? <ConflictBlock r={r} /> : null}
+        <div class="icchg" data-tip={tip || undefined}><span class="ickind">{irPill(r)}</span>
           {parts.map(p => <> · <span class={p.warn ? "h-warn" : ""}>{p.t}</span></>)}
-          {held ? <> · <span class="indiv">{held}</span></> : <> · <span class="icroutine">Routine</span></>}</div>
+          {held ? <> · <span class="indiv">{held}</span></> : <> · <span class="icroutine">Routine</span></>}
+          {canDraftResponse(r) ? <> · <button type="button" class="linkbtn" data-drrisk={r.n} onClick={() => draftResponse(r.n)}>Draft a response</button></> : null}
+          {" · "}<SourceLine r={r} /></div>
         {quote ? <div class="icq">{quote}</div> : null}
-        <SourceLine r={r} />
-        {r.nodraft ? <div class="why"><span class="h-warn">No Word draft was made for these minutes</span> · Reject them and process the meeting again</div> : null}
+        <WeekendNote r={r} />
+        {r.nodraft ? <div class="rvnote"><span class="h-warn">No Word draft was made for these minutes</span> · Reject them and process the meeting again</div> : null}
       </td>
       <td class="iracts">
         {r.kind !== "files" ? <button type="button" class="ib sm" data-ira="edit" aria-label="Open in the peek" data-tip="Open in the peek" onClick={() => irOpenPeek(n)}>✎</button> : null}
-        {" "}<button type="button" class="mini ok" data-ira="approve" disabled={!!r.nodraft} title={r.nodraft ? NODRAFT_MSG : undefined} onClick={() => irApprove(n)}>Approve</button>
+        {" "}{conflict ? <ConflictChoices r={r} /> : <button type="button" class="mini ok" data-ira="approve" disabled={!!r.nodraft} title={r.nodraft ? NODRAFT_MSG : undefined} onClick={() => irApprove(n)}>Approve</button>}
         {" "}{rej ? <button type="button" class="ib sm no" data-ira="reject" aria-haspopup={rvRejectOK(r) ? "menu" : undefined} aria-label={rvRejectOK(r) ? "Reject, with a reason" : "Reject"}
           data-tip={rvRejectOK(r) ? "Reject, with a reason" : "Reject"} onClick={e => irReject(n, /** @type {Element} */ (e.currentTarget))}>✕</button> : null}
       </td>

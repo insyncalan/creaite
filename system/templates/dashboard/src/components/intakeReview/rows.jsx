@@ -12,8 +12,8 @@ import { irAskReason, irCanCheck, irCanProcess, irCanSetAside, irCheck, irLater,
 export const IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
 export const IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
 export const IR_GROUP_HEAD = {
-  needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes"],
-  routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one"],
+  needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes."],
+  routine: ["Routine", "Each has a project and no conflict, and none is a change you approve one by one."],
 };
 const IR_KIND_WORDS = { actions: "Action", decisions: "Decision", update: "Update", draft: "Minutes", files: "File changes" };
 /** The kind pill's word for a Review row. @param {any} r */
