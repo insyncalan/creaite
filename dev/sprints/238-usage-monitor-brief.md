@@ -1,4 +1,4 @@
-# #195 Usage and context monitor (for 2.5.1) — brief
+# #238 Usage and context monitor (for 2.5.1) — brief
 
 Mockup: `dev/mockups/usage-monitor-mockup.html` (a third Activity tab, **Usage**). Fictional numbers. Approved by Alan 19-10-2026.
 
@@ -17,7 +17,7 @@ Read-only view over data creaite already records. Counts only, never text of mai
 
 ## Rules
 - Internal only; nothing leaves the laptop; never in the development repo's data.
-- One writer: the live server's daily job writes `context-size.jsonl`; the page only reads. No new guarded file without Jarvis agreeing.
+- **New file, terms agreed by Jarvis (19-10-2026):** `system/staging/context-size.jsonl`: counts only (file name, bytes, estimated tokens, date; never text). Appended once a day by the live server's daily job through a plain module like `usage_log.py`; never by an ask creaite run, never by the page (the page only reads). Never in the development repo's real data. Kept in the daily backup zip with the rest of staging. Jarvis adds its line to `creaite-rules.md` (folder map) in a guarded pass; Stark does not edit that file.
 - Tokens are estimates (bytes ÷ 4); say so on the page.
 - Desktop and 900 px only.
 
