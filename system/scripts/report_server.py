@@ -148,7 +148,8 @@ def draft_route(handler, req):
 def save_route(handler, req):
     """POST /api/report/save: save the edits as the draft and remember the layout (see the module's description)."""
     doc = req.get("doc")
-    creaite_doc.check(doc)
+    creaite_doc.check(doc)                     # v2.5.0 audience bypass: refuses a client report whose audience isn't client
+    doc = creaite_doc.force_client_audience(doc)
     kind, code, fri, client = target({"kind": doc.get("kind"), "code": doc.get("project"), "week_ending": doc.get("date"),
                                       "client": doc.get("client")})
     if fri != doc["date"]:
@@ -229,7 +230,8 @@ def approve_route(handler, req):
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
-            saved = report_doc.save_draft(req["doc"], req.get("base_version"))
+            creaite_doc.check(req["doc"])      # v2.5.0 audience bypass: refuses a client report whose audience isn't client
+            saved = report_doc.save_draft(creaite_doc.force_client_audience(req["doc"]), req.get("base_version"))
             if not saved.get("ok"):
                 return answer(handler, saved)
         if not paths.resolve(draft).is_file():
@@ -435,7 +437,7 @@ def export_route(handler, req):
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
-    doc = creaite_doc.read(path)
+    doc = creaite_doc.force_client_audience(creaite_doc.read(path))     # v2.5.0 audience bypass: a draft edited on disk too
     left = None
     if kind == "client":
         import client_check

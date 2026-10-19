@@ -58,9 +58,10 @@ def project_name(code):
 
 # ── The document ─────────────────────────────────────────────────────────────
 
-def new(kind, project, title, date, sections=(), *, audience="internal", client=None, layout=None, items=None, sources=None,
+def new(kind, project, title, date, sections=(), *, audience=None, client=None, layout=None, items=None, sources=None,
         meta=None):
     """A schema-1 document, version 0 and a draft; nothing is written. Raises DocError for a kind, audience or date it can't hold."""
+    audience = audience or ("client" if kind == "client" else "internal")
     doc = {"format": FORMAT, "schema": SCHEMA, "kind": kind, "audience": audience, "project": project,
            "project_name": project_name(project) if project != "_portfolio" else "", "title": title, "date": date,
            "client": client, "version": 0, "saved_at": None, "state": "draft", "approved_at": None, "based_on": None,
@@ -70,14 +71,34 @@ def new(kind, project, title, date, sections=(), *, audience="internal", client=
     return doc
 
 
+def is_client(doc):
+    """v2.5.0 audience bypass: whether a document is read as one a client may see. A client report is one whatever its audience says
+    (or with none), and a document whose audience is client or distributed is one whatever its kind."""
+    return doc.get("kind") == "client" or doc.get("audience") in ("client", "distributed")
+
+
+def force_client_audience(doc):
+    """v2.5.0 audience bypass: the document with a client report's audience set to "client" (whatever it was, or when it is missing),
+    so the client gate (client_leak.findings, make_safe), which reads the audience, always checks a client report as one. Changed in
+    place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or distributed is
+    already read as client by is_client and by the gate, and its kind decides where it is filed, so it is never changed here."""
+    if isinstance(doc, dict) and doc.get("kind") == "client" and doc.get("audience") != "client":
+        doc["audience"] = "client"
+    return doc
+
+
 def check(doc):
-    """Raise DocError when the document's shape is wrong: the kind, audience, state, date and the sections' ids."""
+    """Raise DocError when the document's shape is wrong: the kind, audience, state, date and the sections' ids. A client report
+    whose audience isn't "client" (or is missing) is refused (v2.5.0 audience bypass): its audience is never anything else."""
     if not isinstance(doc, dict) or doc.get("format") != FORMAT:
         raise DocError("That isn't a creaite document.")
     if doc.get("kind") not in KINDS:
         raise DocError(f"A creaite document is a {', '.join(KINDS)}; not {doc.get('kind')!r}.")
     if doc.get("audience", "internal") not in AUDIENCES or doc.get("state", "draft") not in STATES:
         raise DocError("Its audience or state isn't one creaite knows.")
+    if doc.get("kind") == "client" and doc.get("audience") != "client":
+        raise DocError("A client report's audience is always client: this one says "
+                       f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
     if not DATE.match(str(doc.get("date") or "")):
         raise DocError("Its date must be YYYY-MM-DD.")
     check_sections(doc.get("sections") or [])
@@ -133,7 +154,7 @@ def _visible_text(sections):
 def _internal_text(doc, s):
     """True for a text section that belongs to the internal report and is in a client or distributed document: it was never matched
     or written there (H5, #218), so no output shows it."""
-    return (s.get("type") == TEXT_TYPE and (doc.get("audience") or "internal") != "internal"
+    return (s.get("type") == TEXT_TYPE and is_client(doc)
             and (s.get("audience") or "internal") == "internal")
 
 
@@ -175,7 +196,7 @@ def loads(text):
         raise DocError("That isn't a creaite document (no creaite-data block).")
     if not isinstance(doc.get("schema"), int) or doc["schema"] > SCHEMA:
         raise DocError(f"It was saved by a newer creaite (schema {doc.get('schema')}); update creaite to open it.")
-    return doc        # schema 1 is the first: nothing to upgrade yet
+    return force_client_audience(doc)        # schema 1 is the first: nothing to upgrade yet; a client report is read as client
 
 
 def real(path):
@@ -948,7 +969,7 @@ def _export_name(doc, path, fmt):
 
 def _check_baseline(doc):
     """A client view or distributed minutes is exported only once the internal document it is based on is approved."""
-    if (doc.get("audience") or "internal") == "internal":
+    if not is_client(doc):
         return
     base = doc.get("based_on") or {}
     try:

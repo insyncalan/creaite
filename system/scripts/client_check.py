@@ -107,6 +107,7 @@ def _health_difference(doc):
 def left_out(doc, con=None):
     """What a client document leaves out, for the check before an export (see the module's description)."""
     import client_leak
+    doc = creaite_doc.force_client_audience(dict(doc))      # v2.5.0 audience bypass: the gate sees a client report as one
     con = con or client_leak.connect()
     meta = doc.get("meta") or {}
     ready, why = report_doc.client_ready(doc)

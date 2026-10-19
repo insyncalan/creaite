@@ -828,7 +828,7 @@ def client_item_links(doc, con=None):
     may see stays as it is. An internal document is returned as it is. Fails closed: when the tracker can't be read, ReportError
     (nothing is built or saved)."""
     import client_leak
-    if (doc.get("audience") or "internal") == "internal":
+    if not creaite_doc.is_client(doc):
         return doc, []
     code = doc.get("project") or ""
     try:
@@ -907,6 +907,8 @@ def save_draft(doc, base_version=None, why=None):
     kind, code, fri, client = doc.get("kind"), doc.get("project"), doc.get("date"), doc.get("client")
     if kind not in KINDS:
         raise ReportError("Only a weekly or client report is saved here.")
+    creaite_doc.check(doc)                          # v2.5.0 audience bypass: a client report whose audience isn't client is refused
+    doc = creaite_doc.force_client_audience(dict(doc))
     doc, removed = client_leak.make_safe(doc)
     doc, dropped = client_item_links(doc)
     doc, pictures = creaite_doc.drop_outside_pictures(doc)     # v2.5.0 leak fix: no picture line naming an outside file
@@ -1013,7 +1015,7 @@ def stage_client(draft, force=False):
     import client_leak
     import report
     import sweep
-    doc = creaite_doc.read(draft)
+    doc = creaite_doc.force_client_audience(creaite_doc.read(draft))      # v2.5.0 audience bypass: the gate sees a client report
     code, fri = doc["project"], doc["date"]
     ok, why = client_ready(doc)
     if not ok:
