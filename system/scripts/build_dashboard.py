@@ -3370,6 +3370,32 @@ collect = _collect_with_quality
 # ===== end BL-233 =====
 
 
+# ===== #238 Activity › Usage: what each Claude run costs and what every run loads before it starts (usage_report.page, read
+# only), the always-loaded files now with their 30-day change (context_size.table, read only: the record is appended by the live
+# server's daily job, never here) and Alan's own review notes. Counts, dates and his notes only; internal; no report reads it.
+_collect_before_usage = collect
+
+
+def _collect_with_usage(now=None, timings=None):
+    """The dashboard's data, with D.usage."""
+    data = _collect_before_usage(now, timings)
+    t0 = time.monotonic()
+    try:
+        import context_size
+        import usage_report
+        import usage_reviews
+        data["usage"] = {**usage_report.page(), "context": context_size.table(), "reviews": usage_reviews.load()}
+    except (ImportError, OSError, ValueError, KeyError, TypeError) as e:     # the tab says it couldn't count; the page is unaffected
+        data["usage"] = {"error": type(e).__name__}
+    if timings is not None:
+        timings["usage"] = time.monotonic() - t0
+    return data
+
+
+collect = _collect_with_usage
+# ===== end #238 =====
+
+
 # ===== BL-209 (sprint-insight) ===== the meeting hub: one record per meeting, from invite to follow-up, gathered from what
 # creaite already keeps (calendar.json, prep-pages.json, transcripts.json, the staged and applied proposals' meeting block,
 # processed.txt, carried.json) and the tracker rows the meeting produced. Read only: nothing here writes or extracts.

@@ -1,6 +1,7 @@
 """Run usage report (#197), read only: per day and per kind, runs, tokens, start load, cost.
 
     system/scripts/run usage_report.py --days 7
+    system/scripts/run usage_report.py --json          the Usage tab's figures (#238), as page() gives them
 
 Reads system/staging/run-usage.jsonl (written only by usage_log.py). CREAITE_NOW fixes today in tests.
 """
@@ -103,13 +104,116 @@ def print_skills(all_rows, days) -> None:
         print(f"{s['skill']:<28}{s['runs']:>6}{s['ever']:>6}{since:>12}")
 
 
+# ===== #238 the Usage tab (Activity › Usage): page() gives the figures, counts only, from the lines above. =====
+PAGE_DAYS = 14
+
+
+def _tokens(r) -> int:
+    """All the tokens of one run."""
+    return sum(int(r.get(k) or 0) for k in ("input", "output", "cache_read", "cache_create"))
+
+
+def _median(values):
+    """The median of the non-zero values, rounded; None when there are none (a stopped run loads nothing)."""
+    v = [x for x in values if x]
+    return round(statistics.median(v)) if v else None
+
+
+def _in(rows, first, last) -> list:
+    """The rows whose day is in [first, last] (dates)."""
+    a, b = first.isoformat(), last.isoformat()
+    return [r for r in rows if a <= str(r["at"])[:10] <= b]
+
+
+def _pct(now, before):
+    """The change in per cent, rounded; None when there is nothing to compare with."""
+    return round((now - before) * 100 / before) if before else None
+
+
+def _week(rows) -> dict:
+    """One week's card figures."""
+    cost = round(sum(float(r.get("cost_usd") or 0) for r in rows), 4)
+    return {"cost_usd": cost, "runs": len(rows), "start_median": _median([r.get("start_tokens", 0) for r in rows]),
+            "avg_cost_usd": round(cost / len(rows), 4) if rows else 0.0}
+
+
+def cards(rows, today) -> dict:
+    """This week (the last 7 days) and the 7 before, with the change: per cent for cost, runs and the average run, tokens for
+    the start load."""
+    now = _week(_in(rows, today - timedelta(days=6), today))
+    before = _week(_in(rows, today - timedelta(days=13), today - timedelta(days=7)))
+    start = None if now["start_median"] is None or before["start_median"] is None else now["start_median"] - before["start_median"]
+    return {"week": now, "previous": before, "change": {"cost_pct": _pct(now["cost_usd"], before["cost_usd"]),
+                                                        "runs_pct": _pct(now["runs"], before["runs"]),
+                                                        "start_tokens": start,
+                                                        "avg_cost_pct": _pct(now["avg_cost_usd"], before["avg_cost_usd"])}}
+
+
+def daily(rows, today, days=PAGE_DAYS) -> list:
+    """One entry a day, oldest first: cost, runs and the median start load (None on a day with no runs)."""
+    out = []
+    for i in range(days - 1, -1, -1):
+        d = today - timedelta(days=i)
+        g = _in(rows, d, d)
+        out.append({"day": d.isoformat(), "runs": len(g), "cost_usd": round(sum(float(r.get("cost_usd") or 0) for r in g), 4),
+                    "start_median": _median([r.get("start_tokens", 0) for r in g])})
+    return out
+
+
+def kinds(rows) -> list:
+    """Per kind of run: runs, average tokens, median start load, cost and share of the cost; the costliest first."""
+    total = sum(float(r.get("cost_usd") or 0) for r in rows)
+    groups = {}
+    for r in rows:
+        groups.setdefault(str(r.get("kind") or "ask"), []).append(r)
+    out = []
+    for k, g in groups.items():
+        cost = sum(float(r.get("cost_usd") or 0) for r in g)
+        out.append({"kind": k, "runs": len(g), "avg_tokens": round(sum(_tokens(r) for r in g) / len(g)),
+                    "start_median": _median([r.get("start_tokens", 0) for r in g]), "cost_usd": round(cost, 4),
+                    "share": round(cost / total, 4) if total else 0.0})
+    out.sort(key=lambda x: (-x["cost_usd"], -x["runs"], x["kind"]))
+    return out
+
+
+def skills_page(all_rows, period_rows, today, skills_dir=None) -> list:
+    """Per skill: runs and the cost of the runs that used it in the period, and the day it was last used (the whole file).
+    A skill not used in the period is flagged never_in_period; days_since is None when it was never used at all."""
+    cost = {}
+    for r in period_rows:
+        for name in r.get("skills") or []:
+            cost[name] = cost.get(name, 0.0) + float(r.get("cost_usd") or 0)
+    out = []
+    for s in skills_table(all_rows, PAGE_DAYS, today, skills_dir):
+        last = (today - timedelta(days=s["days_since"])).isoformat() if s["days_since"] is not None else None
+        out.append({"skill": s["skill"], "runs": s["runs"], "cost_usd": round(cost.get(s["skill"], 0.0), 4), "last": last,
+                    "days_since": s["days_since"], "never_in_period": s["runs"] == 0})
+    out.sort(key=lambda x: (x["never_in_period"], -x["runs"], x["skill"]))
+    return out
+
+
+def page(rows=None, today=None, skills_dir=None) -> dict:
+    """The Usage tab's figures over the last 14 days. Counts, dates and fixed words only: never a label, a model or any text."""
+    every = load() if rows is None else rows
+    today = today or _today()
+    period = _in(every, today - timedelta(days=PAGE_DAYS - 1), today)
+    return {"period": {"from": (today - timedelta(days=PAGE_DAYS - 1)).isoformat(), "to": today.isoformat(), "days": PAGE_DAYS},
+            "empty": not every, "runs": len(period), "cards": cards(every, today), "daily": daily(every, today),
+            "kinds": kinds(period), "skills": skills_page(every, period, today, skills_dir)}
+# ===== end #238 =====
+
+
 def main(argv=None) -> int:
     """Print the report."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--file")
+    ap.add_argument("--json", action="store_true", help="the Usage tab's figures (#238)")
     a = ap.parse_args(argv)
     every = load(a.file)
+    if a.json:
+        print(json.dumps(page(every), indent=1))
+        return 0
     rows = summarise(every, a.days)
     if not rows:
         print("No runs recorded in that time.")
