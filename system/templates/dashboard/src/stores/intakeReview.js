@@ -47,3 +47,14 @@ export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, 
 export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel()); irTick.value++; }
 /** The live counts, the badge among them (232-C wires the rail badge and Today to this). */
 export const irLiveCounts = () => irCounts(irModel(), irDone);
+
+/* ===== #232-A (Intake side) ===== signals for the meeting row's actions; the actions themselves are in
+   components/intakeReview/actions.js (re-exported by IntakeReviewPage.jsx). Keep this section 232-A's. */
+/** A row's note after a Process that did not draft anything (Skipped: …, Couldn't: …), by meeting id. */
+export const irNotes = signal(/** @type {Record<string, string>} */ ({}));
+/** The Not needed reasons menu: the meeting it is for and what opened it, or null. */
+export const irAside = signal(/** @type {{id: string, anchor: HTMLElement | null} | null} */ (null));
+/** A note on a meeting's row, or "" to clear it. @param {string} id @param {string} text */
+export function irNote(id, text) { const n = { ...irNotes.value }; if (text) n[id] = text; else delete n[id]; irNotes.value = n; }
+/** Mark a meeting as being processed (or not). @param {string} id @param {boolean} on */
+export function irSetBusy(id, on) { irBusy.value = on ? [...irBusy.value.filter(x => x !== id), id] : irBusy.value.filter(x => x !== id); }

@@ -4070,3 +4070,13 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 /* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
 .rail [data-v=review] .rl{letter-spacing:-.02em}
+
+/* ===== #232-A Intake side: the meeting row's actions, progress, notes, the drop target (scoped to #v-intake-review) ===== */
+#v-intake-review .icprog{height:6px;border-radius:3px;background:var(--sunk);border:1px solid var(--line);overflow:hidden;width:220px;max-width:100%;margin-top:6px}
+#v-intake-review .icprog i{display:block;height:100%;width:30%;background:var(--accent);animation:icp232 1.6s linear infinite}
+@keyframes icp232{0%{margin-left:-30%}100%{margin-left:100%}}
+@media (prefers-reduced-motion:reduce){#v-intake-review .icprog i{animation:none;width:60%}}
+#v-intake-review .iccardacts{margin-top:8px}
+#v-intake-review .irnote{color:var(--warn)}
+#v-intake-review.irdrop{outline:2px dashed var(--accent);outline-offset:-4px;border-radius:var(--r,8px)}
+#v-intake-review .irlist li{margin:2px 0}

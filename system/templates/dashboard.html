@@ -4080,6 +4080,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 /* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
 .rail [data-v=review] .rl{letter-spacing:-.02em}
+
+/* ===== #232-A Intake side: the meeting row's actions, progress, notes, the drop target (scoped to #v-intake-review) ===== */
+#v-intake-review .icprog{height:6px;border-radius:3px;background:var(--sunk);border:1px solid var(--line);overflow:hidden;width:220px;max-width:100%;margin-top:6px}
+#v-intake-review .icprog i{display:block;height:100%;width:30%;background:var(--accent);animation:icp232 1.6s linear infinite}
+@keyframes icp232{0%{margin-left:-30%}100%{margin-left:100%}}
+@media (prefers-reduced-motion:reduce){#v-intake-review .icprog i{animation:none;width:60%}}
+#v-intake-review .iccardacts{margin-top:8px}
+#v-intake-review .irnote{color:var(--warn)}
+#v-intake-review.irdrop{outline:2px dashed var(--accent);outline-offset:-4px;border-radius:var(--r,8px)}
+#v-intake-review .irlist li{margin:2px 0}
 </style>
 </head>
 <body>
@@ -4471,8 +4481,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     INSEL: () => INSEL,
     INSTATE: () => INSTATE,
     IR_FOLDED: () => IR_FOLDED,
+    IR_REASONS: () => IR_REASONS,
     IR_SECTIONS: () => IR_SECTIONS,
     IR_STAGES: () => IR_STAGES,
+    IR_UPLOAD_TYPES: () => IR_UPLOAD_TYPES,
     IR_VIEWS: () => IR_VIEWS,
     IR_VIEW_KEY: () => IR_VIEW_KEY,
     ITEMCODE: () => ITEMCODE,
@@ -5712,9 +5724,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     insertImage: () => insertImage,
     intakeSeams: () => intakeSeams,
     internalIn: () => internalIn,
+    irAddFiles: () => irAddFiles,
     irAfterData: () => irAfterData,
+    irAside: () => irAside,
+    irAskReason: () => irAskReason,
     irBulk: () => irBulk,
     irBusy: () => irBusy,
+    irCanProcess: () => irCanProcess,
+    irCanSetAside: () => irCanSetAside,
     irClickFold: () => irClickFold,
     irClickMeeting: () => irClickMeeting,
     irClickStage: () => irClickStage,
@@ -5727,14 +5744,23 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irGroupsShown: () => irGroupsShown,
     irIsFolded: () => irIsFolded,
     irKeepOpen: () => irKeepOpen,
+    irLater: () => irLater,
     irLive: () => irLive,
     irLiveCounts: () => irLiveCounts,
     irModel: () => irModel,
+    irNotNeeded: () => irNotNeeded,
+    irNote: () => irNote,
+    irNotes: () => irNotes,
     irOpen: () => irOpen,
     irOpenable: () => irOpenable,
     irPeek: () => irPeek,
+    irProcess: () => irProcess,
+    irProcessAll: () => irProcessAll,
+    irReady: () => irReady,
+    irRestore: () => irRestore,
     irRow: () => irRow,
     irSel: () => irSel,
+    irSetBusy: () => irSetBusy,
     irSetView: () => irSetView,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
@@ -33554,11 +33580,11 @@ ${s5}`;
       else addHTML($("#pkScroll"), "afterbegin", html`<div class="pk-alert" id="pkAlert" role="group" aria-label="Made from a message"></div>`);
       el2 = $("#pkAlert");
     }
-    const cur = alertTypeOf(k5, x5), why = alertDraftWhy(al2), when2 = vipWhen({ sent: al2.sent }), alOpen = al2.link ? linkAnchor(al2.link, "Open the message", "hlink") : null, key2 = [al2.id, cur, why].join("|");
+    const cur = alertTypeOf(k5, x5), why = alertDraftWhy(al2), when3 = vipWhen({ sent: al2.sent }), alOpen = al2.link ? linkAnchor(al2.link, "Open the message", "hlink") : null, key2 = [al2.id, cur, why].join("|");
     el2.hidden = false;
     if (el2.dataset.key === key2) return;
     el2.dataset.key = key2;
-    putHTML(el2, html`<div class="pk-alert-from">From ${al2.who}’s ${ALERTWORD[al2.kind] || "message"}${when2 ? `, ${when2}` : ""}${alOpen ? html` · ${raw(alOpen)}` : ""}</div>
+    putHTML(el2, html`<div class="pk-alert-from">From ${al2.who}’s ${ALERTWORD[al2.kind] || "message"}${when3 ? `, ${when3}` : ""}${alOpen ? html` · ${raw(alOpen)}` : ""}</div>
     <div class="pk-alert-row"><span class="pk-alert-types" role="group" aria-label="Make it">${ALERTTYPES.map(([t47, w6]) => html`<button type="button" class="mini" data-alerttype="${t47}" aria-pressed="${t47 === cur ? "true" : "false"}">${w6}</button>`)}</span>
     <button type="button" class="drbtn" data-alertdraft="1" aria-label="Draft from the message" data-tip="${why || "Reads the message (read only) and suggests a sharper title and any date it states. Nothing is saved until you save"}"${why ? raw(' aria-disabled="true"') : ""}>${raw(ic("spark"))}<span>Draft from the message</span></button>
     <span class="pk-alert-st" role="status" id="pkAlertSt"></span><span class="sp"></span>
@@ -40674,9 +40700,9 @@ ${s5}`;
   function Title({ m: m5, day, dow: dow2, isToday, live, acts: acts2 }) {
     const p6 = m5.prep, pk2 = usePeek(!m5.private && !!p6);
     if (m5.private || !p6) return /* @__PURE__ */ u2(S2, { children: m5.title ?? "" });
-    const id2 = `dmpop-${day}-${m5.start}`.replace(/[^\w-]/g, ""), when2 = isToday ? "Today" : dow2;
+    const id2 = `dmpop-${day}-${m5.start}`.replace(/[^\w-]/g, ""), when3 = isToday ? "Today" : dow2;
     const bits = [
-      `${when2} ${m5.start}`,
+      `${when3} ${m5.start}`,
       m5.attendees ? `${m5.attendees} attending` : "",
       !m5.confidential && m5.p ? m5.p === "_portfolio" ? "Portfolio" : acts2.name(m5.p) : "",
       "Internal"
@@ -41108,15 +41134,15 @@ ${s5}`;
     };
   }
   function revGroupTitle(file, items2) {
-    const w6 = file.match(/^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/), when2 = w6 ? `${longDay(w6[1])}, ${w6[2]}:${w6[3]}` : esc(file), d5 = items2.find((r4) => r4.kind === "draft");
+    const w6 = file.match(/^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/), when3 = w6 ? `${longDay(w6[1])}, ${w6[2]}:${w6[3]}` : esc(file), d5 = items2.find((r4) => r4.kind === "draft");
     if (d5) {
       const nm3 = esc(d5.rec.t.replace(/^[^:]*:\s*/, ""));
       return d5.ref === "meeting" ? `Review the ${nm3} minutes` : `Review the ${esc(d5.rec.t.split(":")[0].toLowerCase())}: ${nm3}`;
     }
-    if (/-sweep(-\d+)?\.json$/.test(file)) return `Review the sweep of ${when2}`;
+    if (/-sweep(-\d+)?\.json$/.test(file)) return `Review the sweep of ${when3}`;
     if (/-(dashboard|edit)(-\d+)?\.json$/.test(file)) return "Review your pending edits";
     if (/-excel(-\d+)?\.json$/.test(file)) return "Review the Excel import";
-    return `Review the proposals from ${when2}`;
+    return `Review the proposals from ${when3}`;
   }
   function attentionItems() {
     const out = (
@@ -41215,8 +41241,8 @@ ${s5}`;
     renderPromises();
     const seen = /* @__PURE__ */ new Set(), done = shared.ACT.filter((a5) => a5.at > LASTVISIT && !a5.undone && (a5.tbl === "actions" || a5.tbl === "raid") && /^status: .*→ Closed$/i.test(a5.change) && !seen.has(a5.id) && seen.add(a5.id));
     const rc2 = capped(done.map((a5, i5) => {
-      const x5 = (a5.tbl === "actions" ? A4 : R3).find((y5) => y5.id === a5.id), when2 = a5.at.slice(0, 10) === TODAY ? `at ${a5.at.slice(11)} today` : `on ${longDay(a5.at.slice(0, 10))}`;
-      return tl2(i5 + 1, tLink(html`data-open="${a5.tbl}:${a5.id}"`, html`${a5.item || a5.id}`), html`${x5 && x5.p ? html`${plur(1, a5.tbl === "actions" ? "action" : (x5.type || "risk").toLowerCase())} on ${raw(projLink(x5.p))}, ` : ""}closed ${when2} — ${a5.by.replace(/^You, /, "you, ")}.`);
+      const x5 = (a5.tbl === "actions" ? A4 : R3).find((y5) => y5.id === a5.id), when3 = a5.at.slice(0, 10) === TODAY ? `at ${a5.at.slice(11)} today` : `on ${longDay(a5.at.slice(0, 10))}`;
+      return tl2(i5 + 1, tLink(html`data-open="${a5.tbl}:${a5.id}"`, html`${a5.item || a5.id}`), html`${x5 && x5.p ? html`${plur(1, a5.tbl === "actions" ? "action" : (x5.type || "risk").toLowerCase())} on ${raw(projLink(x5.p))}, ` : ""}closed ${when3} — ${a5.by.replace(/^You, /, "you, ")}.`);
     }), 5, "res");
     $("#chgTitle").textContent = `${done.length} since ${longDate(LASTVISIT.slice(0, 10))}`;
     putHTML($("#chgList"), rc2.html ? raw(rc2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0, 10))}.</span></div></li>`);
@@ -46250,12 +46276,12 @@ ${s5}`;
         openChat();
         chat = true;
       }
-      const when2 = `${fd(m5.day)} at ${m5.start}`;
+      const when3 = `${fd(m5.day)} at ${m5.start}`;
       let now = m5;
       if (!m5.loaded) {
         MRUN[m5.id] = "loading";
         renderMeetings();
-        runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when2})`}`));
+        runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when3})`}`));
         shared.RUNLABEL = PL;
         try {
           await jobLive("/api/transcripts/load", { id: m5.id });
@@ -46272,11 +46298,11 @@ ${s5}`;
       }
       MRUN[m5.id] = "processing";
       renderMeetings();
-      addEl("msg u", html`${`Process the meeting “${m5.title}” (${when2})`}`);
+      addEl("msg u", html`${`Process the meeting “${m5.title}” (${when3})`}`);
       const before = $$("#chLog .msg.a").length;
       shared.RUNLABEL = PL;
       try {
-        await askLive(`process ${now.loaded}`, `Process “${m5.title}” (${when2}) into draft minutes and proposed items`);
+        await askLive(`process ${now.loaded}`, `Process “${m5.title}” (${when3}) into draft minutes and proposed items`);
       } catch (e4) {
       }
       await reloadData();
@@ -46420,10 +46446,10 @@ ${s5}`;
     MSEL.clear();
     openChat();
     for (const m5 of L3) {
-      const when2 = `${fd(m5.day)} at ${m5.start}`;
+      const when3 = `${fd(m5.day)} at ${m5.start}`;
       MRUN[m5.id] = "loading";
       renderMeetings();
-      runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when2})`}`));
+      runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when3})`}`));
       try {
         await jobLive("/api/transcripts/load", { id: m5.id });
       } catch (e4) {
@@ -49903,8 +49929,8 @@ ${pre}**Current state title:** ${title}`);
   function deFollowup(o5) {
     const e4 = esc, today = o5.today, items2 = dePicked(o5), acts2 = items2.filter((i5) => i5.k === "actions"), decs = items2.filter((i5) => i5.k === "decisions"), codes = [...new Set(items2.map((i5) => i5.p).concat(o5.codes || []))].sort();
     const att = o5.attendees || [], first = att.length === 1 ? String(att[0].name).split(/\s+/)[0] : "all";
-    const when2 = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
-    const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when2}. Here is a short summary, the decisions we made and the actions we agreed.`;
+    const when3 = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
+    const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when3}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask2 = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
     const lines2 = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
@@ -52193,8 +52219,8 @@ ${pre}**Current state title:** ${title}`);
   function bootOwnerCombo() {
   }
   var CMDENTER = [];
-  function onCmdEnter(name, when2, save2) {
-    CMDENTER.push({ name, when: when2, save: save2 });
+  function onCmdEnter(name, when3, save2) {
+    CMDENTER.push({ name, when: when3, save: save2 });
   }
   var cmdEnterPicker = () => !!document.querySelector(".combo.open,#mvCal:not([hidden]),#mvPop:not([hidden]),.cal:not([hidden]):not(:empty)");
   function bootCmdEnter() {
@@ -56817,16 +56843,16 @@ ${d5.text}`);
     if (!shared.CUR || shared.CUR.mode !== "new" || shared.CUR.k !== k5) return;
     const key2 = pkNewKey(), d5 = pdAll()[key2];
     if (!d5 || !d5.fields) return;
-    const when2 = pdWhen(d5.at), w6 = pkNewWord(k5);
+    const when3 = pdWhen(d5.at), w6 = pkNewWord(k5);
     if (Date.now() - d5.at > PDAGE) {
       pdDrop(key2);
       PKN.offer = null;
-      pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when2} was dropped: it was more than 7 days old.</span><button type="button" class="btn" data-pknd="ok">OK</button>`);
+      pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when3} was dropped: it was more than 7 days old.</span><button type="button" class="btn" data-pknd="ok">OK</button>`);
       return;
     }
     const t47 = d5.fields.t || "";
     PKN.offer = { key: key2 };
-    pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when2}${t47 ? `, “${esc(pkShort(t47, 50))}”` : ""}, kept in this browser.</span><button type="button" class="btn primary" data-pknd="restore">Restore</button><button type="button" class="btn" data-pknd="discard">Discard</button>`);
+    pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when3}${t47 ? `, “${esc(pkShort(t47, 50))}”` : ""}, kept in this browser.</span><button type="button" class="btn primary" data-pknd="restore">Restore</button><button type="button" class="btn" data-pknd="discard">Discard</button>`);
   }
   var NODRAFT_MSG = "No Word draft was made for these minutes: Reject them and process the meeting again";
   function openProposal(n4) {
@@ -59994,13 +60020,13 @@ ${d5.text}`);
       shared.PDOFFER = null;
       return;
     }
-    const what = shared.CUR.mode === "record" ? shared.CUR.id : "this new item", when2 = pdWhen(d5.at), n4 = Object.keys(d5.fields).length;
+    const what = shared.CUR.mode === "record" ? shared.CUR.id : "this new item", when3 = pdWhen(d5.at), n4 = Object.keys(d5.fields).length;
     const why = Date.now() - d5.at > PDAGE ? "they are more than 7 days old" : shared.CUR.mode === "record" && d5.base !== pdStamp() ? `${shared.CUR.id} has changed since` : "";
     let html2;
     if (why) {
       pdDrop(key2);
-      html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when2} were dropped: ${esc(why)}.</span><button type="button" class="btn" data-pd="ok">OK</button>`;
-    } else html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when2} (${n4} field${n4 === 1 ? "" : "s"}), kept in this browser.</span><button type="button" class="btn primary" data-pd="restore">Restore unsaved changes</button><button type="button" class="btn" data-pd="discard">Discard</button>`;
+      html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when3} were dropped: ${esc(why)}.</span><button type="button" class="btn" data-pd="ok">OK</button>`;
+    } else html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when3} (${n4} field${n4 === 1 ? "" : "s"}), kept in this browser.</span><button type="button" class="btn primary" data-pd="restore">Restore unsaved changes</button><button type="button" class="btn" data-pd="discard">Discard</button>`;
     shared.PDOFFER = { key: key2, html: html2, note: !!why };
     pdBar(html2);
   }
@@ -64614,11 +64640,11 @@ ${d5.text}`);
       return one(m5[1], (t47) => t47.k === "milestones" ? { ask: "A milestone's state is set in its editor" } : pkStatuses(t47.k).includes(st2) ? t47.k === "decisions" && st2 !== "Pending" ? { ask: "Record or withdraw a decision from its peek or the right-click menu" } : { verb: "status", ...t47, patch: { st: st2 }, label: "Status" } : { ask: `${st2} isn't a status for this item: ${pkStatuses(t47.k).join(", ")}` }, { ms: false });
     }
     if ((m5 = s5.match(/^(?:move|push|pull|bring|reschedule|delay)\s+(.+?)\s+((?:to|by|until|on)\s+.+|[+-]\s*\d+\s*[a-z]*)$/i)) || (m5 = s5.match(/^(?:set\s+)?(.+?)\s+(?:due|due date|needed by|forecast)\s+(?:to\s+|on\s+|by\s+)?(.+)$/i))) {
-      const what = m5[1].replace(/\s+(?:due|due date)$/i, ""), when2 = m5[2];
+      const what = m5[1].replace(/\s+(?:due|due date)$/i, ""), when3 = m5[2];
       return one(what, (t47) => {
         const cur = t47.k === "milestones" ? ckMs(t47.id).due : REC(t47.k, t47.id).due;
-        const iso2 = ckDate(when2, cur || TODAY);
-        if (!iso2) return { ask: `“${when2}” isn't a date creaite knows. ${DATE_HELP}` };
+        const iso2 = ckDate(when3, cur || TODAY);
+        if (!iso2) return { ask: `“${when3}” isn't a date creaite knows. ${DATE_HELP}` };
         if (t47.k === "milestones") return { verb: "date", ...t47, patch: { fc: iso2 }, label: "Forecast" };
         if (t47.k === "decisions" && REC(t47.k, t47.id).st !== "Pending") return { ask: "Only a pending decision has a needed-by date" };
         return { verb: "date", ...t47, patch: { due: iso2 }, label: t47.k === "decisions" ? "Needed by" : "Due date" };
@@ -64846,7 +64872,7 @@ ${d5.text}`);
   } };
 
   // components/review/RejectsList.jsx
-  function RejectsList({ onReason, onApprove, onUndo, name, when: when2 }) {
+  function RejectsList({ onReason, onApprove, onUndo, name, when: when3 }) {
     const { state, items: items2, message } = rjRecent.value;
     if (state === "idle") return null;
     if (state === "off") return /* @__PURE__ */ u2("p", { class: "sub", id: "rjListMsg", children: "What you rejected needs the live server." });
@@ -64858,7 +64884,7 @@ ${d5.text}`);
       const chip = `Rejected · ${reason}${r4.duplicate_of ? ` (${r4.duplicate_of})` : ""}`;
       return /* @__PURE__ */ u2("li", { "data-rjkey": r4.key, children: [
         /* @__PURE__ */ u2("span", { class: "rjt", title: text, children: text.length > 90 ? text.slice(0, 89) + "…" : text }),
-        /* @__PURE__ */ u2("span", { class: "sub rjm", children: [r4.project ? name(r4.project) : "", r4.kind || "", r4.at ? when2(r4.at) : ""].filter(Boolean).join(" · ") }),
+        /* @__PURE__ */ u2("span", { class: "sub rjm", children: [r4.project ? name(r4.project) : "", r4.kind || "", r4.at ? when3(r4.at) : ""].filter(Boolean).join(" · ") }),
         /* @__PURE__ */ u2("span", { class: "rjacts", children: [
           /* @__PURE__ */ u2(
             "button",
@@ -71095,6 +71121,182 @@ ${d5.text}`);
     irTick.value++;
   }
   var irLiveCounts = () => irCounts(irModel(), irDone);
+  var irNotes = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var irAside = y3(
+    /** @type {{id: string, anchor: HTMLElement | null} | null} */
+    null
+  );
+  function irNote(id2, text) {
+    const n4 = { ...irNotes.value };
+    if (text) n4[id2] = text;
+    else delete n4[id2];
+    irNotes.value = n4;
+  }
+  function irSetBusy(id2, on2) {
+    irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
+  }
+
+  // components/intakeReview/actions.js
+  var IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
+  var IR_UPLOAD_TYPES = [".vtt", ".docx", ".txt", ".md", ".pdf"];
+  var BUSY = "ask creaite is busy; try again when it's finished";
+  var irCanProcess = (m5) => !!m5 && m5.stage === "arrived" && m5.state === "ready" && m5.src !== "draft";
+  var irCanSetAside = (m5) => !!m5 && m5.stage === "arrived" && m5.src !== "draft";
+  var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irBusy.value.includes(m5.id));
+  var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
+  var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
+  var when2 = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
+  async function irProcess(m5) {
+    if (!irCanProcess(m5)) return false;
+    if (!viaServer()) {
+      snack("Processing needs the live server");
+      return false;
+    }
+    if (mtgBusy() || irBusy.value.length) {
+      snack(BUSY);
+      return false;
+    }
+    irNote(m5.id, "");
+    irSetBusy(m5.id, true);
+    const label = `Processing “${m5.title}”`;
+    try {
+      let file = m5.path;
+      if (m5.src === "calendar") {
+        const x5 = calOf(m5);
+        if (!x5) {
+          irNote(m5.id, "Skipped: refresh the calendar to pick this meeting");
+          return false;
+        }
+        const why = mtgSkip(x5);
+        if (why) {
+          irNote(m5.id, `Skipped: ${why}`);
+          return false;
+        }
+        file = x5.loaded;
+        if (!file) {
+          shared.RUNLABEL = label;
+          try {
+            await jobLive("/api/transcripts/load", { id: x5.id });
+          } catch (e4) {
+          }
+          await reloadData();
+          const now = calOf(m5);
+          file = now && now.loaded;
+          if (!file) {
+            irNote(m5.id, `Skipped: ${TXWHY[
+              /** @type {keyof TXWHY} */
+              now && now.transcript
+            ] || "No transcript could be loaded"}`);
+            return false;
+          }
+        }
+      }
+      shared.RUNLABEL = label;
+      try {
+        await askLive(`process ${file}`, `Process “${m5.title}” (${when2(m5)}) into draft minutes and proposed items`);
+      } catch (e4) {
+      }
+      await reloadData();
+      const after = rowOf(m5.id);
+      const done = !!after && after.stage !== "arrived";
+      if (!done) irNote(m5.id, "Couldn't: no draft came back");
+      return done;
+    } finally {
+      irSetBusy(m5.id, false);
+    }
+  }
+  async function irProcessAll() {
+    if (!viaServer()) {
+      snack("Processing needs the live server");
+      return;
+    }
+    if (mtgBusy() || irBusy.value.length) {
+      snack(BUSY);
+      return;
+    }
+    const ids = irReady().map((m5) => m5.id);
+    for (const id2 of ids) {
+      const m5 = rowOf(id2);
+      if (m5) await irProcess(m5);
+    }
+  }
+  var asideItem = (m5, extra) => ({ key: m5.key || m5.path, day: m5.src === "upload" ? TODAY : m5.day, start: m5.start || "", title: m5.title, ...extra });
+  async function setAside(ms2, extra, what) {
+    if (!viaServer()) {
+      snack("This needs the live server");
+      return false;
+    }
+    const r4 = await api("/api/intake/clear", { op: "clear", items: ms2.map((m5) => asideItem(m5, extra)) });
+    if (!r4.ok) {
+      snack(oneLine(r4.message === OLDSERVER ? OLDSERVER : r4.message || "Couldn't do that"));
+      return false;
+    }
+    const keys = ms2.map((m5) => m5.key || m5.path);
+    await reloadData();
+    snack(`${what}: ${ms2.length === 1 ? ms2[0].title : `${ms2.length} meetings`}`, () => irRestore(keys));
+    return true;
+  }
+  function irLater(m5) {
+    return irCanSetAside(m5) ? setAside([m5], { kind: "later", seen: m5.state === "ready" }, "Later") : Promise.resolve(false);
+  }
+  function irNotNeeded(m5, reason, note) {
+    return irCanSetAside(m5) && IR_REASONS.includes(reason) ? setAside([m5], { reason, note: note || "" }, "Not needed") : Promise.resolve(false);
+  }
+  async function irRestore(keys) {
+    const r4 = await api("/api/intake/clear", { op: "restore", keys });
+    if (!r4.ok) {
+      snack(oneLine(r4.message || "Couldn't restore"));
+      return false;
+    }
+    await reloadData();
+    snack(`Restored ${r4.count} meeting${r4.count === 1 ? "" : "s"}`);
+    return true;
+  }
+  function irAskReason(m5, anchor) {
+    if (irCanSetAside(m5)) irAside.value = { id: m5.id, anchor };
+  }
+  async function irAddFiles(files) {
+    if (!files.length) return;
+    if (!viaServer()) {
+      snack("Adding files needs the live server");
+      return;
+    }
+    let added = 0;
+    for (const f5 of files) {
+      const ext = (f5.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
+      if (!IR_UPLOAD_TYPES.includes(ext)) {
+        snack(`${f5.name}: only .vtt, .docx, .txt, .md or .pdf`);
+        continue;
+      }
+      if (f5.size > 25 * 1048576) {
+        snack(`${f5.name} is over 25 MB`);
+        continue;
+      }
+      const data = await new Promise((res, rej) => {
+        const fr2 = new FileReader();
+        fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
+        fr2.onerror = () => rej(fr2.error);
+        fr2.readAsDataURL(f5);
+      });
+      const r4 = await api("/api/inbox/upload", { name: f5.name, data });
+      if (!r4.ok) {
+        if (r4.message === OLDSERVER) {
+          snack(OLDSERVER);
+          return;
+        }
+        snack(`${f5.name}: ${oneLine(r4.message)}`);
+        continue;
+      }
+      added++;
+    }
+    if (added) {
+      await reloadData();
+      snack(`${added} file${added === 1 ? "" : "s"} added`);
+    }
+  }
 
   // components/intakeReview/rows.jsx
   var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
@@ -71108,14 +71310,62 @@ ${d5.text}`);
     r4.kind
   ] || "Proposal";
   var ageWords = (d5) => d5 === 0 ? "today" : d5 === 1 ? "1 day" : `${d5} days`;
-  function MeetingRow({ m: m5, live }) {
-    const open2 = irOpen.value === m5.id, n4 = live.needs.length + live.routine.length;
+  function irStateWords(m5, n4) {
     const state = irBusy.value.includes(m5.id) ? "running" : m5.state;
-    const words = state === "proposals" ? `${n4} ${IR_STATE_WORDS.proposals}` : IR_STATE_WORDS[
+    const base = state === "proposals" ? `${n4} ${IR_STATE_WORDS.proposals}` : IR_STATE_WORDS[
       /** @type {keyof IR_STATE_WORDS} */
       state
     ] || "";
+    const age = state === "ready" || state === "proposals" ? ` · ${ageWords(m5.age)}` : "";
+    return `${base}${age}${m5.later_back ? " · back from Later" : ""}`;
+  }
+  function Progress() {
+    return /* @__PURE__ */ u2("div", { class: "icprog", role: "progressbar", "aria-label": "Drafting in the background", children: /* @__PURE__ */ u2("i", {}) });
+  }
+  function RowActions({ m: m5, live, mini }) {
+    const running = irBusy.value.includes(m5.id), blocked2 = irBusy.value.length > 0 || mtgBusy();
+    const open2 = irOpen.value === m5.id;
+    if (running) return /* @__PURE__ */ u2("button", { type: "button", class: "mini", disabled: true, "data-ira": "processing", children: "Processing" });
+    if (m5.stage === "drafted") return mini ? null : /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ira": "open", onClick: () => irClickMeeting(m5.id), children: open2 ? "Close" : "Check them" });
+    if (!irCanSetAside(m5)) return m5.stage === "approved" ? /* @__PURE__ */ u2("span", { class: "icsub", children: "Done" }) : null;
+    return /* @__PURE__ */ u2(S2, { children: [
+      irCanProcess(m5) ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "mini",
+          "data-ira": "process",
+          disabled: blocked2,
+          title: blocked2 ? "ask creaite is busy; try again when it's finished" : "",
+          onClick: () => irProcess(m5),
+          children: "Process"
+        }
+      ) : null,
+      " ",
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ira": "later", title: "Hide it until its transcript arrives", onClick: () => irLater(m5), children: "Later" }),
+      " ",
+      /* @__PURE__ */ u2(
+        IconButton,
+        {
+          icon: "x",
+          label: "Not needed, with a reason",
+          cls: "no",
+          data: { ira: "notneeded" },
+          haspopup: "menu",
+          onClick: (e4) => irAskReason(
+            m5,
+            /** @type {HTMLElement} */
+            e4.currentTarget
+          )
+        }
+      )
+    ] });
+  }
+  function MeetingRow({ m: m5, live }) {
+    const open2 = irOpen.value === m5.id, n4 = live.needs.length + live.routine.length;
+    const state = irBusy.value.includes(m5.id) ? "running" : m5.state;
     const can = m5.stage === "drafted";
+    const note = irNotes.value[m5.id];
     return /* @__PURE__ */ u2(
       "tr",
       {
@@ -71141,15 +71391,17 @@ ${d5.text}`);
             ] }) : null,
             /* @__PURE__ */ u2("div", { class: "why", children: [
               m5.day ? fd(m5.day) : "",
-              m5.start ? ` ${m5.start}` : "",
-              m5.p ? ` · ${pName(m5.p)}` : ""
+              m5.start ? ` ${m5.start}${m5.end ? `–${m5.end}` : ""}` : "",
+              m5.p && !m5.private ? ` · ${pName(m5.p)}` : ""
             ] }),
-            /* @__PURE__ */ u2("div", { class: "why", children: [
-              words,
-              m5.later_back ? " · back from Later" : ""
-            ] })
+            /* @__PURE__ */ u2("div", { class: "why", children: irStateWords(m5, n4) }),
+            state === "running" ? /* @__PURE__ */ u2(S2, { children: [
+              /* @__PURE__ */ u2("div", { class: "why", children: "ask creaite stays free" }),
+              /* @__PURE__ */ u2(Progress, {})
+            ] }) : null,
+            note ? /* @__PURE__ */ u2("div", { class: "why irnote", role: "status", children: note }) : null
           ] }),
-          /* @__PURE__ */ u2("td", { class: "iracts", children: can ? /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ira": "open", onClick: () => irClickMeeting(m5.id), children: open2 ? "Close" : "Check them" }) : null })
+          /* @__PURE__ */ u2("td", { class: "iracts", children: /* @__PURE__ */ u2(RowActions, { m: m5, live: n4 }) })
         ]
       }
     );
@@ -71244,10 +71496,28 @@ ${d5.text}`);
             " ",
             /* @__PURE__ */ u2("span", { class: "sub rgc", children: l6.length })
           ] }),
-          l6.length ? l6.map((m5) => /* @__PURE__ */ u2("div", { class: "card iccard click", "data-irm": m5.id, tabindex: 0, onClick: () => irClickMeeting(m5.id), children: [
-            /* @__PURE__ */ u2("div", { class: "t", children: m5.title }),
-            /* @__PURE__ */ u2("div", { class: "why", children: m5.p ? pName(m5.p) : "" })
-          ] })) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing here." })
+          l6.length ? l6.map((m5) => /* @__PURE__ */ u2(
+            "div",
+            {
+              class: "card iccard click",
+              "data-irm": m5.id,
+              "data-stage": m5.stage,
+              "data-state": irBusy.value.includes(m5.id) ? "running" : m5.state,
+              tabindex: 0,
+              onClick: (e4) => {
+                if (!/** @type {Element} */
+                e4.target.closest("button,a,input")) irClickMeeting(m5.id);
+              },
+              children: [
+                /* @__PURE__ */ u2("div", { class: "t", children: m5.title }),
+                /* @__PURE__ */ u2("div", { class: "why", children: m5.p && !m5.private ? pName(m5.p) : "" }),
+                /* @__PURE__ */ u2("div", { class: "why", children: irStateWords(m5, m5.groups.needs.length + m5.groups.routine.length) }),
+                irBusy.value.includes(m5.id) ? /* @__PURE__ */ u2(Progress, {}) : null,
+                irNotes.value[m5.id] ? /* @__PURE__ */ u2("div", { class: "why irnote", role: "status", children: irNotes.value[m5.id] }) : null,
+                /* @__PURE__ */ u2("div", { class: "iccardacts", children: /* @__PURE__ */ u2(RowActions, { m: m5 }) })
+              ]
+            }
+          )) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing here." })
         ] });
       }) }),
       open2 ? /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: /* @__PURE__ */ u2(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true }) }) }) }) : null,
@@ -71277,8 +71547,12 @@ ${d5.text}`);
               /** @type {keyof IR_STAGE_NAMES} */
               sel.stage
             ],
-            sel.p ? ` · ${pName(sel.p)}` : ""
+            sel.p && !sel.private ? ` · ${pName(sel.p)}` : ""
           ] }),
+          /* @__PURE__ */ u2("div", { class: "why", children: irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length) }),
+          irBusy.value.includes(sel.id) ? /* @__PURE__ */ u2(Progress, {}) : null,
+          irNotes.value[sel.id] ? /* @__PURE__ */ u2("div", { class: "why irnote", role: "status", children: irNotes.value[sel.id] }) : null,
+          /* @__PURE__ */ u2("div", { class: "iccardacts", children: /* @__PURE__ */ u2(RowActions, { m: sel, mini: true }) }),
           /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { children: /* @__PURE__ */ u2("tbody", { children: /* @__PURE__ */ u2(ProposalGroups, { groups: sel.groups, meet: sel.title }) }) }) })
         ] }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Select a meeting." }) })
       ] }),
@@ -71350,6 +71624,95 @@ ${d5.text}`);
       folded ? null : children
     ] });
   }
+  function ProcessAll() {
+    const n4 = irReady().length, blocked2 = irBusy.value.length > 0 || mtgBusy();
+    return /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: "btn",
+        "data-ira": "processall",
+        disabled: !n4 || blocked2,
+        title: blocked2 ? "ask creaite is busy; try again when it's finished" : n4 ? "" : "Nothing is ready to process",
+        onClick: () => irProcessAll(),
+        children: [
+          "Process all ready (",
+          n4,
+          ")"
+        ]
+      }
+    );
+  }
+  function UploadFiles() {
+    const pick = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-irpick": "1", title: `Drop files anywhere on this page: ${IR_UPLOAD_TYPES.join(" ")}, up to 25 MB each`, onClick: () => pick.current && pick.current.click(), children: "Upload files" }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "file",
+          ref: pick,
+          multiple: true,
+          hidden: true,
+          accept: IR_UPLOAD_TYPES.join(","),
+          "aria-label": "Choose transcripts or minutes to add",
+          onChange: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget
+            );
+            irAddFiles([...el2.files || []]);
+            el2.value = "";
+          }
+        }
+      )
+    ] });
+  }
+  function AsideMenu() {
+    const a5 = irAside.value, box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const close = (back2) => {
+      const was = irAside.value;
+      irAside.value = null;
+      if (back2 && was && was.anchor && was.anchor.isConnected) was.anchor.focus({ preventScroll: true });
+    };
+    _2(() => {
+      const el2 = box.current;
+      if (!a5 || !el2) return;
+      const r4 = a5.anchor && a5.anchor.isConnected ? a5.anchor.getBoundingClientRect() : { left: innerWidth / 2, right: innerWidth / 2, bottom: innerHeight / 3, top: innerHeight / 3 };
+      const w6 = el2.offsetWidth, h5 = el2.offsetHeight;
+      let top = r4.bottom + 4;
+      if (top + h5 > innerHeight - 8) top = Math.max(8, r4.top - h5 - 4);
+      el2.style.top = `${Math.max(8, Math.min(top, innerHeight - h5 - 8))}px`;
+      el2.style.left = `${Math.max(8, Math.min(r4.right - w6, innerWidth - w6 - 8))}px`;
+      menuItemsIn(el2)[0]?.focus({ preventScroll: true });
+    }, [a5]);
+    if (!a5) return null;
+    const m5 = irModel().meetings.find((x5) => x5.id === a5.id);
+    if (!m5) return null;
+    const pick = (reason) => {
+      close(false);
+      irNotNeeded(m5, reason);
+    };
+    return /* @__PURE__ */ u2(MenuPanel, { bare: true, cls: "rvreason rjmenu", id: "irAside", label: "Not needed because", boxRef: box, anchor: a5.anchor, onClose: (how) => close(how === "esc"), onKey: (e4) => {
+      if (/^[1-4]$/.test(e4.key) && !e4.metaKey && !e4.ctrlKey && !e4.altKey) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        pick(IR_REASONS[+e4.key - 1]);
+      }
+    }, autoFocus: false, children: [
+      /* @__PURE__ */ u2("div", { class: "rjh", "aria-hidden": "true", children: "Not needed because" }),
+      IR_REASONS.map((r4, i5) => /* @__PURE__ */ u2("button", { type: "button", role: "menuitem", "data-reason": r4, onClick: () => pick(r4), children: [
+        /* @__PURE__ */ u2("span", { children: r4 }),
+        /* @__PURE__ */ u2("span", { class: "kbd", "aria-hidden": "true", children: i5 + 1 })
+      ] }))
+    ] });
+  }
   function IntakeReviewView() {
     irTick.value;
     const model = irModel(), c5 = irLiveCounts(), view = irView.value;
@@ -71363,6 +71726,8 @@ ${d5.text}`);
         " to approve"
       ] }),
       /* @__PURE__ */ u2("div", { class: "toolbar rvtools", children: [
+        /* @__PURE__ */ u2(ProcessAll, {}),
+        /* @__PURE__ */ u2(UploadFiles, {}),
         /* @__PURE__ */ u2("span", { class: "sp" }),
         /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "How you see Intake and Review", children: IR_VIEWS.map(([v5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-irview": v5, "aria-pressed": view === v5, title: l6, onClick: () => irSetView(v5), children: [
           /* @__PURE__ */ u2("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "aria-hidden": "true", children: VIEWICON[
@@ -71376,14 +71741,35 @@ ${d5.text}`);
         /* @__PURE__ */ u2(StagePipe, { c: c5 }),
         /* @__PURE__ */ u2(ListView, { model, list })
       ] }),
-      /* @__PURE__ */ u2(FoldSection, { sec: "later", title: "Later", n: model.later.length, children: model.later.length ? /* @__PURE__ */ u2("ul", { class: "irlist", children: model.later.map((x5) => /* @__PURE__ */ u2("li", { "data-irkey": x5.key, children: x5.title })) }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing set aside for later. A meeting comes back here when its transcript arrives." }) }),
+      /* @__PURE__ */ u2(FoldSection, { sec: "later", title: "Later", n: model.later.length, children: model.later.length ? /* @__PURE__ */ u2("ul", { class: "irlist", children: model.later.map((x5) => /* @__PURE__ */ u2("li", { "data-irkey": x5.key, children: [
+        x5.title,
+        x5.day ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " · ",
+          fd(x5.day),
+          x5.start ? ` ${x5.start}` : ""
+        ] }) : null,
+        " ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-ira": "restore", onClick: () => irRestore([x5.key]), children: "Restore" })
+      ] })) }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing set aside for later. A meeting comes back here when its transcript arrives." }) }),
       /* @__PURE__ */ u2(FoldSection, { sec: "not_needed", title: "Not needed", n: model.not_needed.length, children: model.not_needed.length ? /* @__PURE__ */ u2("ul", { class: "irlist", children: model.not_needed.map((x5) => /* @__PURE__ */ u2("li", { "data-irkey": x5.key, children: [
         x5.title,
+        x5.day ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " · ",
+          fd(x5.day),
+          x5.start ? ` ${x5.start}` : ""
+        ] }) : null,
         x5.reason ? /* @__PURE__ */ u2("span", { class: "sub", children: [
           " · ",
           x5.reason
-        ] }) : null
+        ] }) : null,
+        x5.note ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " · ",
+          x5.note
+        ] }) : null,
+        " ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-ira": "restore", onClick: () => irRestore([x5.key]), children: "Restore" })
       ] })) }) : /* @__PURE__ */ u2("div", { class: "empty", children: "Nothing marked Not needed." }) }),
+      /* @__PURE__ */ u2(AsideMenu, {}),
       /* @__PURE__ */ u2("p", { class: "sub irold", children: [
         "While this page is being built, the earlier pages are here: ",
         /* @__PURE__ */ u2("a", { href: "#", "data-go": "inbox", children: "Intake" }),
@@ -71401,6 +71787,7 @@ ${d5.text}`);
       R(/* @__PURE__ */ u2(IntakeReviewView, {}), el2);
       irMounted = true;
       bootIrKeys();
+      bootIrDrop();
     }
   }
   function bootIrKeys() {
@@ -71410,15 +71797,19 @@ ${d5.text}`);
         /** @type {HTMLElement} */
         e4.target
       );
-      if (t47 && t47.closest && t47.closest("input,textarea,select,[contenteditable=true]")) return;
+      if (t47 && t47.closest && t47.closest("input,textarea,select,[contenteditable=true],[role=menu]")) return;
       const rows2 = (
         /** @type {HTMLElement[]} */
         [...document.querySelectorAll("#v-intake-review [data-irm]")]
       );
-      const at2 = rows2.indexOf(
-        /** @type {HTMLElement} */
+      const rowEl = (
+        /** @type {HTMLElement | null} */
         t47.closest ? t47.closest("[data-irm]") : null
+      ), at2 = rows2.indexOf(
+        /** @type {HTMLElement} */
+        rowEl
       );
+      const m5 = at2 >= 0 ? irModel().meetings.find((x5) => x5.id === rows2[at2].dataset.irm) : null;
       if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
         if (!rows2.length) return;
         e4.preventDefault();
@@ -71427,9 +71818,20 @@ ${d5.text}`);
         irSel.value = r4.dataset.irm || null;
         return;
       }
-      if (e4.key === "Enter" && at2 >= 0) {
+      if (e4.key === "Enter" && m5 && !(t47.closest && t47.closest("button,a"))) {
         e4.preventDefault();
-        irClickMeeting(rows2[at2].dataset.irm || "");
+        if (irCanProcess(m5)) irProcess(m5);
+        else irClickMeeting(m5.id);
+        return;
+      }
+      if ((e4.key === "n" || e4.key === "N") && m5 && irCanSetAside(m5)) {
+        e4.preventDefault();
+        irAskReason(m5, rowEl);
+        return;
+      }
+      if ((e4.key === "h" || e4.key === "H") && m5 && irCanSetAside(m5)) {
+        e4.preventDefault();
+        irLater(m5);
         return;
       }
       if (e4.key === "Escape" && (irPeek.value != null || irOpen.value)) {
@@ -71437,6 +71839,30 @@ ${d5.text}`);
         irPeek.value = s5.peek;
         irOpen.value = s5.open;
       }
+    });
+  }
+  function bootIrDrop() {
+    const over = (on2) => {
+      const el2 = $("#v-intake-review");
+      if (el2) el2.classList.toggle("irdrop", on2);
+    };
+    const files = (e4) => e4.dataTransfer && [...e4.dataTransfer.types].includes("Files");
+    document.addEventListener("dragover", (e4) => {
+      if (shared.VIEW === "intake-review" && files(e4)) {
+        e4.preventDefault();
+        over(true);
+      }
+    });
+    document.addEventListener("dragleave", (e4) => {
+      if (shared.VIEW === "intake-review" && !e4.relatedTarget) over(false);
+    });
+    document.addEventListener("drop", (e4) => {
+      if (shared.VIEW !== "intake-review") return;
+      over(false);
+      const list = e4.dataTransfer ? [...e4.dataTransfer.files] : [];
+      if (!list.length) return;
+      e4.preventDefault();
+      irAddFiles(list);
     });
   }
 
@@ -74739,6 +75165,7 @@ ${d5.text}`);
         "PrepPage",
         "PrepPopup",
         "PrepShape",
+        "Progress",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -75003,7 +75430,9 @@ ${d5.text}`);
         "inboxBadge",
         "insertImage",
         "invitees",
+        "irAside",
         "irBulk",
+        "irBusy",
         "irCounts",
         "irEsc",
         "irFiltered",
@@ -75016,6 +75445,7 @@ ${d5.text}`);
         "irSetView",
         "irStage",
         "irStageClick",
+        "irTick",
         "irToggle",
         "irViewNorm",
         "isMe",

@@ -2469,12 +2469,13 @@ def set_aside_entry(it, today):
     note = " ".join(str(it.get("note") or "").split())[:200]      # one line, at most 200 characters
     if kind not in SET_ASIDE_KINDS or (reason and reason not in NOT_NEEDED_REASONS) or (kind == "later" and reason):
         raise ValueError("not one of the choices")
-    extra = {k: v for k, v in (("kind", "" if kind == "cleared" else kind), ("reason", reason), ("note", note)) if v}
+    seen = bool(it.get("seen")) and kind == "later"               # #232-A: its transcript was already here when it was set aside
+    extra = {k: v for k, v in (("kind", "" if kind == "cleared" else kind), ("reason", reason), ("note", note), ("seen", seen)) if v}
     return key, {"key": key, "day": day, "start": str(it.get("start") or "")[:5], "title": str(it.get("title") or "")[:200],
                  "cleared": today.isoformat(), **extra}
 
 
-SET_ASIDE_EXTRA = ("kind", "reason", "note")
+SET_ASIDE_EXTRA = ("kind", "reason", "note", "seen")
 
 
 def clear_meetings(items, today=None):
@@ -2553,7 +2554,8 @@ def inbox_meetings(settings, projects, today):
 def split_set_aside(ordered, set_aside, snoozed):
     """{"rows", "cleared", "later"}: Not needed meetings (with their reason and note) and Later ones leave the rows; a Later
     meeting comes back (later_back) once its transcript is available or loaded (#232)."""
-    back = lambda m: m["transcript"] == "available" or bool(m["loaded"])  # noqa: E731
+    # a Later meeting whose transcript was already here when it was set aside ("seen") never comes back by itself: Restore does
+    back = lambda m: (m["transcript"] == "available" or bool(m["loaded"])) and not snoozed[m["key"]].get("seen")  # noqa: E731
     rows = [dict(m, later_back=True) if m["key"] in snoozed else m for m in ordered
             if m["key"] not in set_aside and (m["key"] not in snoozed or back(m))]
     cleared = [dict(m, **{k: set_aside[m["key"]][k] for k in ("reason", "note") if set_aside[m["key"]].get(k)})
@@ -2583,10 +2585,12 @@ def proposal_meta():
     return out
 
 
-def intake_review(meetings, files, queue, today, meta=None, stale_after=None):
-    """The merged row model for Intake and Review (#232), from the built meetings, inbox and review lists."""
+def intake_review(meetings, files, queue, today, meta=None, stale_after=None, aside=None):
+    """The merged row model for Intake and Review (#232), from the built meetings, inbox and review lists. `aside` is
+    intake-cleared.json's entries (Not needed and Later), which also keep an uploaded file away from the rows (#232-A)."""
     return intake_review_model(meetings or {}, files or [], queue or [], proposal_meta() if meta is None else meta, today,
-                               review.stale_days() if stale_after is None else stale_after)
+                               review.stale_days() if stale_after is None else stale_after,
+                               cleared_load(today=today) if aside is None else aside)
 
 
 def _ir_split(rows):
@@ -2647,10 +2651,13 @@ def _ir_calendar(m, by_mkey, today, stale_after):
                    teams=bool(m.get("teams")), tx=m.get("transcript"), later_back=bool(m.get("later_back")))
 
 
-def _ir_uploads(files, by_path, loaded_events, today, stale_after):
-    """Rows for uploaded files waiting (new) or drafted; a loaded transcript is its calendar row, chats go with them."""
+def _ir_uploads(files, by_path, loaded_events, today, stale_after, aside=()):
+    """Rows for uploaded files waiting (new) or drafted; a loaded transcript is its calendar row, chats go with them. A file set
+    aside (Not needed or Later, by its path) is not a row (#232-A: it is listed with its reason in not_needed or later)."""
     out = []
     for f in files:
+        if f.get("path") in aside:
+            continue
         if f.get("state") in ("new", "draft") and not (f.get("event") and f.get("event") in loaded_events):
             out.append(_ir_row("upload", f.get("path"), by_path.get(f.get("path"), []), "ready" if f.get("state") == "new" else "done",
                                today, stale_after, key=f.get("path"), path=f.get("path"), title=f.get("name") or "",
@@ -2681,7 +2688,24 @@ def _ir_counts(out, queue):
             "approved": n(lambda r: r["stage"] == "approved"), "to_approve": pending, "badge": ready + pending}
 
 
-def intake_review_model(meetings, files, queue, meta, today, stale_after):
+def _ir_aside_files(files, aside):
+    """(later, not_needed) lists for uploaded files set aside: an entry whose key is a waiting or drafted upload's path."""
+    by_path = {f.get("path"): f for f in files if f.get("state") in ("new", "draft") and not f.get("event")}
+    later, gone = [], []
+    for e in aside or []:
+        f = by_path.get(e.get("key"))
+        if f is None:
+            continue
+        base = {"key": e["key"], "day": f.get("date") or e.get("day"), "start": "", "end": "", "title": f.get("name") or e.get("title"),
+                "p": f.get("p"), "private": False}
+        if e.get("kind") == "later":
+            later.append({**base, "since": e.get("cleared")})
+        else:
+            gone.append({**base, "reason": e.get("reason") or "", "note": e.get("note") or ""})
+    return later, gone
+
+
+def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None):
     """Pure: the model from its inputs (unit tested in dev/tests/test_intake_review_model.py).
     {"v": 1, "meetings": [row], "mail": groups, "other": groups, "later": [..], "not_needed": [..], "counts": {..}}
     row: {id, src (calendar|upload|draft), key, mkey, path, title, day, start, end, p, stage (arrived|drafted|approved),
@@ -2691,7 +2715,8 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after):
     cal = meetings.get("rows") or []
     out = [_ir_calendar(m, by_mkey, today, stale_after) for m in cal]
     loaded = {m.get("id") for m in cal if m.get("loaded")}
-    out += _ir_uploads(files, by_path, loaded, today, stale_after)
+    aside_keys = {e.get("key") for e in aside or []}
+    out += _ir_uploads(files, by_path, loaded, today, stale_after, aside_keys)
     used = {r["mkey"] for r in out if r["mkey"]} | {r["path"] for r in out if r["path"]}
     out += _ir_drafts(by_mkey, by_path, used, meta, today, stale_after)
     out.sort(key=lambda r: r["start"])
@@ -2700,8 +2725,9 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after):
     later = [{**{k: m.get(k) for k in keep}, "since": m.get("later_since")} for m in meetings.get("later") or []]
     not_needed = [{**{k: m.get(k) for k in keep}, "reason": m.get("reason") or "", "note": m.get("note") or ""}
                   for m in meetings.get("cleared") or []]
-    return {"v": 1, "meetings": out, "mail": _ir_split(mail), "other": _ir_split(other), "later": later,
-            "not_needed": not_needed, "counts": _ir_counts(out, queue)}
+    later_files, gone_files = _ir_aside_files(files, aside)
+    return {"v": 1, "meetings": out, "mail": _ir_split(mail), "other": _ir_split(other), "later": later + later_files,
+            "not_needed": not_needed + gone_files, "counts": _ir_counts(out, queue)}
 # ===== end #232 =====
 
 

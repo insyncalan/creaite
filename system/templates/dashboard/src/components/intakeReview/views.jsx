@@ -5,9 +5,9 @@
    From mail and Teams, and Other proposals when there are any. */
 import { pName } from "../../core/data.js";
 import { IR_STAGES, irLive } from "../../core/irFold.js";
-import { irClickMeeting, irDone, irOpen, irSel } from "../../stores/intakeReview.js";
+import { irBusy, irClickMeeting, irDone, irNotes, irOpen, irSel } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
-import { MeetingRow } from "./rows.jsx";
+import { MeetingRow, Progress, RowActions, irStateWords } from "./rows.jsx";
 
 export const IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
 const IR_EMPTY = "Nothing here. Meetings appear when they end.";
@@ -52,8 +52,13 @@ export function BoardView({ model }) {
       return <div class="iccol" data-ircol={g}>
         <h2>{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (g)]} <span class="sub rgc">{l.length}</span></h2>
         {l.length ? l.map((/** @type {any} */ m) => (
-          <div class="card iccard click" data-irm={m.id} tabindex={0} onClick={() => irClickMeeting(m.id)}>
-            <div class="t">{m.title}</div><div class="why">{m.p ? pName(m.p) : ""}</div>
+          <div class="card iccard click" data-irm={m.id} data-stage={m.stage} data-state={irBusy.value.includes(m.id) ? "running" : m.state} tabindex={0}
+            onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
+            <div class="t">{m.title}</div><div class="why">{m.p && !m.private ? pName(m.p) : ""}</div>
+            <div class="why">{irStateWords(m, m.groups.needs.length + m.groups.routine.length)}</div>
+            {irBusy.value.includes(m.id) ? <Progress /> : null}
+            {irNotes.value[m.id] ? <div class="why irnote" role="status">{irNotes.value[m.id]}</div> : null}
+            <div class="iccardacts"><RowActions m={m} /></div>
           </div>
         )) : <div class="empty">Nothing here.</div>}
       </div>;
@@ -76,7 +81,11 @@ export function TwoPanes({ model, list }) {
       <div class="card icdet" data-irdet={sel ? sel.id : ""}>
         {sel ? <>
           <h2 style={{ margin: "0 0 4px" }}>{sel.title}</h2>
-          <div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (sel.stage)]}{sel.p ? ` · ${pName(sel.p)}` : ""}</div>
+          <div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (sel.stage)]}{sel.p && !sel.private ? ` · ${pName(sel.p)}` : ""}</div>
+          <div class="why">{irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length)}</div>
+          {irBusy.value.includes(sel.id) ? <Progress /> : null}
+          {irNotes.value[sel.id] ? <div class="why irnote" role="status">{irNotes.value[sel.id]}</div> : null}
+          <div class="iccardacts"><RowActions m={sel} mini /></div>
           <div class="tbl"><table><tbody><ProposalGroups groups={sel.groups} meet={sel.title} /></tbody></table></div>
         </> : <div class="empty">Select a meeting.</div>}
       </div>
