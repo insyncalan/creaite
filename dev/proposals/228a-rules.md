@@ -1,4 +1,0 @@
-# 228 proposed wording for system/creaite-rules.md (for Jarvis to apply; not edited here)
-
-- Folder map, project `CLAUDE.md`: add the memory line `- **Partners:** Org A; Org B` (partner organisations, one line, items split on `;`, at most 12, 80 characters each). The dashboard saves it with the same backup, log line and changed-file refusal as the client report lines; the server derives each partner's slug (`build_dashboard.partners_of`).
-- Dashboard editing: **Project settings page (#228):** `#project-settings=<CODE>[&c=<category>]`, opened from the project page's gear, the Projects list and Settings › People and projects. Categories General, People and partners, Logos, Milestones, Reporting, Archive (no Workstreams: they stay in Settings › People and projects). A name or status is a project update applied at once with Undo; the code is changed only in ask creaite (`recode`); archive goes on the approval card. The page writes no file of its own.

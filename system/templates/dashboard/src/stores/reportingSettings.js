@@ -118,6 +118,8 @@ export const crLogoPaths = signal(/** @type {Record<string, string>} */ ({}));
 export const crLogoData = signal(/** @type {Record<string, string>} */ ({}));
 /** the last thing the logo controls have to say (a JPEG hint, a refusal) */
 export const crLogoNote = signal("");
+/** partner logo files no partner of the Partners line owns now ("Logos not used" on the project settings page, #228 C) */
+export const crLogoOrphans = signal(/** @type {{kind: string, slug: string, path: string}[]} */ ([]));
 /** the project whose logo files crLogoPaths holds (the report header trusts the paths only for its own project) */
 export const crLogoFor = signal("");
 
@@ -129,6 +131,7 @@ export async function readClientLogos(code) {
   crLogoFor.value = code;
   crLogoPaths.value = Object.fromEntries((r.list || []).map((/** @type {{kind: string, path: string}} */ x) => [x.kind, x.path]));
   crLogoData.value = r.logos || {};
+  crLogoOrphans.value = Array.isArray(r.orphans) ? r.orphans : [];
   weeklyLogos.value = { ...weeklyLogos.peek(), ...(r.logos || {}) };      // the report headers draw the new picture too
   changed();
 }

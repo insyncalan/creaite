@@ -1,8 +1,8 @@
 // @ts-check
 /* ProjectSettings (#228 part A): the project's settings as a full page, #project-settings=<CODE>. The app's own settings layout:
    a search box and the categories on the left, cards of labelled rows on the right (a label, a line of help, the control).
-   Categories: General, People and partners, Logos and Reporting (placeholders that open what exists today: the reporting hub's
-   cog panel, which part B moves in), Milestones and Archive. No Workstreams: they stay in Settings › People and projects.
+   Categories: General, People and partners, Logos, Milestones, Reporting and Archive. Logos and Reporting are the reporting hub's
+   cog panel in rows (#228 C): the same stores and the same logo controls (components/report/hub/LogoTile.jsx). No Workstreams: they stay in Settings › People and projects.
    Every change saves on its own with Undo, through the flow that already saves it (stores/projectSettings.js, stores/reportingSettings.js,
    the milestones page, the archive card); this page holds no write of its own. */
 import { render } from "preact";
@@ -19,10 +19,14 @@ import { $ } from "../../core/dom.js";
 import { openChat } from "../../ask.js";
 import { MVWORD, mvAll, openMilestone, openNewMilestone } from "../../milestones.js";
 import { projArchive } from "../../settings.js";
-import { CLIENT_NAME_MAX, clientReportOn, crLogoPaths, crTick, partnersOf, readClientLogos, removeClientLogo, setClientName } from "../../stores/reportingSettings.js";
+import { LogoActions, LogoMark, tilesOf } from "../report/hub/LogoTile.jsx";
+import {
+  CLIENT_NAME_MAX, clientLogosOn, clientReminderOn, clientReportOn, crLogoData, crLogoNote, crLogoOrphans, crLogoPaths, crTick, partnersOf, readClientLogos,
+  removeClientLogo, setClientName, setClientReminder, setClientRhythm, setClientReport,
+} from "../../stores/reportingSettings.js";
 import { pName } from "../../core/data.js";
 import {
-  PS_CATS, addPartner, loadPartners, nameProblem, partners, projectPeople, psCat, psCode, psProject, psQ, psTick,
+  PARTNER_NAME_MAX, PS_CATS, addPartner, loadPartners, nameProblem, partners, projectPeople, psCat, psCode, psProject, psQ, psTick,
   removePartner, renamePartner, renameProject, setProjectActive, projectState,
 } from "../../stores/projectSettings.js";
 
@@ -126,7 +130,7 @@ function PartnerRow({ code, name, i }) {
   return (
     <Item text={`${name} partner ${people}`}>
       <td>{edit
-        ? <span><input type="text" class="psedit" data-pspartner-edit aria-label={`Rename ${name}`} defaultValue={name} maxLength={80} ref={el => el && el.focus()}
+        ? <span><input type="text" class="psedit" data-pspartner-edit aria-label={`Rename ${name}`} defaultValue={name} maxLength={PARTNER_NAME_MAX} ref={el => el && el.focus()}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); save(/** @type {HTMLInputElement} */ (e.target).value); } else if (e.key === "Escape") { setEdit(false); setErr(""); } }} />
             <PsProblem msg={err} id={`psPartnerErr${i}`} /></span>
         : <span data-pspartner>{name}</span>}</td>
@@ -166,17 +170,17 @@ function PeoplePartners({ code }) {
         <div class="tbl"><table class="pstbl" id="psPartners" aria-label="Partner organisations"><thead><tr><th scope="col">Organisation</th><th scope="col">People</th><th scope="col"><span class="vh">Actions</span></th></tr></thead>
           <tbody>{list.length ? list.map((n, i) => <PartnerRow key={n} code={code} name={n} i={i} />) : <tr><td class="sub" colSpan={3}>No partner organisations.</td></tr>}</tbody></table></div>
         <div class="psfoot psadd"><label for="psPartnerIn" class="vh">Partner organisation</label>
-          <input type="text" id="psPartnerIn" placeholder="Partner organisation" maxLength={80} ref={box} aria-describedby="psPartnerErr"
+          <input type="text" id="psPartnerIn" placeholder="Partner organisation" maxLength={PARTNER_NAME_MAX} ref={box} aria-describedby="psPartnerErr"
             onInput={() => err && setErr("")} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
           <button type="button" class="btn sm" id="psAddPartner" onClick={add}>Add a partner</button>
           <PsProblem msg={err} id="psPartnerErr" /></div>
-        <p class="psnote psfoot">Saved as one line, “Partners:”, in the project's memory file. One organisation to a name; capitals don't matter.</p>
+        <p class="psnote psfoot">Saved as one line, “Partners:”, in the project's memory file. Names use letters, digits, spaces and . , &amp; ' - ( ) only, up to 60 characters; one organisation to a name, capitals don't matter.</p>
       </div>
     </>
   );
 }
 
-// ----- Logos and Reporting: placeholders that open what exists today (part B moves them in)
+// ----- Logos and Reporting (#228 C): the same settings and the same controls as the reporting hub's cog panel, in rows
 
 /** Open the reporting hub and its cog panel for the project: the panel is the hub's, so the hub opens first. @param {string} code */
 export function openReportSettings(code) {
@@ -187,32 +191,74 @@ export function openReportSettings(code) {
 
 /** @param {{code: string}} props */
 function Logos({ code }) {
-  const list = partners.value.list;
+  crTick.value; psTick.value; partners.value;       // the rows follow the Partners line: this component reads the signals itself (a parent's re-render does not reach it)
+  const ticked = clientLogosOn(code), orphans = crLogoOrphans.value, tiles = tilesOf(code);
   return (
-    <div class="card" data-pscard data-cat="logos"><h2>Logos in the reports' header</h2>
-      <PsRow label="Logos" help="The firm's logo, the client's and each partner's are added, changed and removed in the reporting hub's client report settings, the same logos. They are moving onto this page." kw="firm client partner picture header">
-        <button type="button" class="btn" id="psLogosOpen" onClick={() => openReportSettings(code)}>Open the logo settings</button>
-      </PsRow>
-      <PsRow label="Partner organisations" help="One logo for each, once the logos move here." kw="partners">
-        <span class="sub" id="psLogosPartners">{list.length ? list.join(", ") : "None yet"}</span>
-      </PsRow>
-    </div>
+    <>
+      <div class="card" data-pscard data-cat="logos"><h2>Logos in the reports' header</h2>
+        {tiles.map(t => {
+          const has = !!crLogoPaths.value[t.kind];
+          return (
+            <PsRow key={t.kind} id={`psLogo-${t.kind.replace(":", "-")}`} label={t.name} help={t.line} kw="logo picture header firm client partner">
+              <span class="pslogo" data-kind={t.kind} data-state={has ? "set" : "empty"}>
+                <LogoMark kind={t.kind} mark={t.mark} />
+                {has ? null : <span class="sub">Not added yet</span>}
+                <LogoActions code={code} t={t} ticked={ticked.includes(t.kind)} />
+              </span>
+            </PsRow>
+          );
+        })}
+        {crLogoNote.value ? <p class="psnote psfoot" role="status" id="psLogoNote">{crLogoNote.value}</p> : null}
+        <p class="psnote psfoot">Partners come from People and partners: add or remove a partner organisation there and its logo row appears or goes here. These are the same logos as in the reporting hub's client report settings. A transparent PNG or SVG sits better than a JPEG; the picture you choose is kept as it is and a trimmed copy is drawn. The tick puts the logo in the header of this project's reports.</p>
+      </div>
+      {orphans.length ? (
+        <div class="card" data-pscard data-cat="logos"><h2>Logos not used</h2>
+          {orphans.map(o => (
+            <PsRow key={o.kind} id={`psOrphan-${o.slug}`} label={o.slug} help="A logo kept after its partner was renamed or removed from the list. It is not drawn in any report." kw="logos not used unused orphan partner">
+              <span class="pslogo" data-orphan={o.kind}>
+                <span class="mark" aria-hidden="true">{crLogoData.value[o.path] ? <img alt="" src={crLogoData.value[o.path]} /> : "P"}</span>
+                <button type="button" class="btn sm" data-logo-orphan-remove={o.kind} aria-label={`Remove the unused logo ${o.slug}`}
+                  onClick={() => removeClientLogo(code, o.kind)}>Remove</button>
+              </span>
+            </PsRow>))}
+        </div>
+      ) : null}
+    </>
   );
 }
 
+const REP_RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
 /** @param {{code: string}} props */
 function Reporting({ code }) {
   crTick.value;
-  const p = psProject(code);
+  const p = psProject(code), on = clientReportOn(code), rhythms = REP_RHYTHMS.includes(p.rhythm) ? REP_RHYTHMS : [...REP_RHYTHMS, p.rhythm];
   return (
     <div class="card" data-pscard data-cat="rep"><h2>Reporting</h2>
-      <PsRow label="Client report" help="Whether this project needs a separate client report, how often, the reminder and the logos are set in the reporting hub's cog panel. It is moving onto this page." kw="client report how often reminder weekly report day">
-        <span class="sub" id="psRepState">{clientReportOn(code) ? `On, ${String(p.rhythm || "weekly").toLowerCase()}` : "Off"}</span>
-        <button type="button" class="btn" id="psRepOpen" onClick={() => openReportSettings(code)}>Open the client report settings</button>
+      <PsRow label="Client report" help="Turn off if the client only receives the internal report, or nothing at all. This holds for every future report of this project until you change it; reports already written are kept and turning it off deletes nothing." kw="client report needs a separate on off">
+        <label class="settick"><input type="checkbox" id="psRepOn" checked={on} aria-label="This project needs a separate client report"
+          onChange={e => setClientReport(code, /** @type {HTMLInputElement} */ (e.target).checked)} /> Needs a separate client report</label>
       </PsRow>
+      {on ? (
+        <>
+          <PsRow label="How often" help="How often the client report is due." kw="weekly fortnightly monthly rhythm">
+            <select id="psRepRh" aria-label="How often" value={p.rhythm} onChange={e => setClientRhythm(code, /** @type {HTMLSelectElement} */ (e.target).value)}>
+              {rhythms.map(r => <option key={r} value={r} selected={r === p.rhythm}>{r}</option>)}
+            </select>
+          </PsRow>
+          <PsRow label="Client name on the report" help="Printed on the client report." kw="client name">
+            <input type="text" id="psRepNm" size={28} aria-label="Client name on the report" maxLength={CLIENT_NAME_MAX} key={p.client || ""} defaultValue={p.client || ""}
+              onChange={async e => { const el = /** @type {HTMLInputElement} */ (e.target); if (!await setClientName(code, el.value)) el.value = p.client || ""; }} />
+          </PsRow>
+          <PsRow label="Reminder" help="A reminder on the day the client report is due." kw="remind due day">
+            <label class="settick"><input type="checkbox" id="psRepRem" checked={clientReminderOn(code)} aria-label="Remind me on the due day"
+              onChange={e => setClientReminder(code, /** @type {HTMLInputElement} */ (e.target).checked)} /> Remind me on the due day</label>
+          </PsRow>
+        </>
+      ) : <PsRow label="This project has no client report" help="Turn it on above to set how often, the client's name and the reminder."><span class="sub" id="psRepOff">Off</span></PsRow>}
       <PsRow label="Open reporting" help="The reporting hub for this project." kw="hub weekly">
         <button type="button" class="btn" id="psRepHub" onClick={() => openSpace(code)}>Open reporting</button>
       </PsRow>
+      <p class="psnote psfoot">The same setting as the cog in the reporting hub: change it in either place and the other follows.</p>
     </div>
   );
 }

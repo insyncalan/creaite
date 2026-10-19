@@ -150,21 +150,17 @@ class ProjectSettings(LiveBrowserCase):
         self.assertRegex(b.eval("document.querySelector('#psMiles tbody tr').textContent"), r"\d\d-\d\d-\d{4}")      # DD-MM-YYYY
         self.open("arch")
         self.assertTrue(b.eval("!!document.querySelector('#psArchive') && !!document.querySelector('#psClose')"))
-        self.open("logos")
-        self.assertTrue(b.eval("!!document.querySelector('#psLogosOpen')"))
+        self.open("logos")        # #228 C: the placeholders are real rows now (was: a button that opened the cog panel)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#psBody .pslogo')].map(x=>x.dataset.kind)"), ["firm", "client", "partner"])
         self.open("rep")
-        self.assertTrue(b.eval("!!document.querySelector('#psRepOpen') && !!document.querySelector('#psRepHub')"))
+        self.assertTrue(b.eval("!!document.querySelector('#psRepOn') && !!document.querySelector('#psRepHub')"))
 
-    def test_the_logos_and_reporting_placeholders_open_the_existing_cog_panel(self):
+    def test_the_placeholders_are_gone_and_open_reporting_still_opens_the_hub(self):       # #228 C: was test_the_logos_and_reporting_placeholders_open_the_existing_cog_panel
         b = self.b
         self.open("rep")
-        b.click("#psRepOpen")
+        self.assertFalse(b.eval("!!document.querySelector('#psRepOpen') || !!document.querySelector('#psLogosOpen')"))
+        b.click("#psRepHub")
         b.wait("VIEW==='reporting'")
-        b.wait("!!document.querySelector('#crPanel')", timeout=12)
-        self.assertEqual(b.eval("document.querySelector('#crPanel').dataset.code"), "ABC")
-        self.open("logos")
-        b.click("#psLogosOpen")
-        b.wait("VIEW==='reporting' && !!document.querySelector('#crPanel')", timeout=12)
 
     def test_milestones_use_the_existing_add_and_edit_flows(self):
         b = self.b
@@ -291,13 +287,13 @@ class ProjectSettings(LiveBrowserCase):
         self.open("people")
         for name, said in (("   ", "Type the partner organisation's name."),
                            ("A;B", "A partner's name can't contain a semicolon; add each partner on its own."),
-                           ("x" * 81, None)):
+                           ("x" * 61, "A partner's name is over 60 characters.")):
             self.set_partner(name)
             if said:
                 b.wait("!!document.querySelector('#psPartnerErr')")
                 self.assertEqual(b.eval("document.querySelector('#psPartnerErr').textContent"), said)
         self.assertEqual(b.eval("partnerProblem([],'a\\nb')"), "A partner's name is one line.")
-        self.assertEqual(b.eval("partnerProblem([],'x'.repeat(81))"), "A partner's name is over 80 characters.")
+        self.assertEqual(b.eval("partnerProblem([],'x'.repeat(61))"), "A partner's name is over 60 characters.")      # #228 C: 60, was 80
         self.assertIsNone(self.line("Partners"), "nothing was written")
 
     def test_a_newline_never_reaches_the_file(self):
@@ -416,7 +412,7 @@ class ProjectSettings(LiveBrowserCase):
             for palette in TEST_PALETTES:
                 for mode in ("light", "dark"):
                     b.eval(f"document.documentElement.dataset.palette='{palette}'; document.documentElement.dataset.theme='{mode}'")
-                    for cat in ("general", "people", "miles"):
+                    for cat in ("general", "people", "logos", "miles", "rep"):
                         self.open(cat)
                         over = b.eval("document.documentElement.scrollWidth-document.documentElement.clientWidth")
                         self.assertLessEqual(over, 0, f"{cat} overflows at {width} ({palette} {mode})")
