@@ -104,6 +104,61 @@ class MatchCheckRoute(Base):
         internal = self.api("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": WEEK})["doc"]
         self.assertFalse(self.api("/api/report/match-check", {"docs": [internal]})["ok"], "only a client report has this check")
 
+    def check(self, *texts, **extra):
+        """The route's answer for the client draft with each text in its summary."""
+        base = self.client_draft()
+        docs = []
+        for t in texts:
+            d = json.loads(json.dumps(base))
+            next(s for s in d["sections"] if s["id"] == "summary")["text"] = t
+            docs.append({**d, **extra})
+        return self.api("/api/report/match-check", {"docs": docs})
+
+    def codes(self, text):
+        r = self.check(text)
+        self.assertTrue(r["ok"], r)
+        return {f["code"] for f in r["findings"][0]}
+
+    def test_every_finding_carries_a_stable_code_and_its_message(self):
+        self.open_hub()
+        for text, code in (("Words with Omar Ali in them.", "owner"), ("This is confidential.", "confidential"),
+                           ("Confirm tester names", "not-client-visible"),
+                           ("Budget overrun on phase one is being absorbed", "client-safe-no"),
+                           ("Internal only: keep from the client.", "marker")):
+            r = self.check(text)
+            got = {f["code"] for f in r["findings"][0]}
+            self.assertIn(code, got, f"{text!r} -> {got}")
+            self.assertTrue(all(isinstance(f["message"], str) and f["message"] for f in r["findings"][0]))
+
+    def test_item_ref_and_chase_log_and_unknown_codes(self):
+        import client_leak
+        self.assertEqual(client_leak.code_of("ABC-A-001 isn't an item a client report can show"), "item-ref")
+        self.assertEqual(client_leak.code_of("ABC-M-001 belongs to another project, but its ID appears"), "item-ref")
+        self.assertEqual(client_leak.code_of("a chase log line (a dated 'Chased') is internal"), "chase-log")
+        self.assertEqual(client_leak.code_of("it holds the internal health reason"), "health-reason")
+        self.assertEqual(client_leak.code_of("something new"), "other")
+
+    def test_the_audience_in_the_request_is_ignored(self):
+        self.open_hub()
+        r = self.check("This is confidential.", audience="internal")
+        self.assertTrue(r["ok"], r)
+        self.assertIn("confidential", {f["code"] for f in r["findings"][0]}, "an internal audience does not switch the gate off")
+
+    def test_the_route_is_capped(self):
+        self.open_hub()
+        before = self.staging_files_text()
+        big = self.check("x " * 60_000)                              # one document over 100 kB
+        self.assertFalse(big["ok"], "a document over the per-document cap is refused")
+        self.assertIn("too large", big["message"])
+        d = self.client_draft()
+        many = [json.loads(json.dumps(d)) for _ in range(60)]
+        for m in many:
+            next(s for s in m["sections"] if s["id"] == "summary")["text"] = "y " * 8_000     # 60 x ~16 kB: over 1 MB in all
+        r = self.api("/api/report/match-check", {"docs": many})
+        self.assertFalse(r["ok"], r)
+        self.assertIn("too large", r["message"])
+        self.assertEqual(self.staging_files_text(), before, "a refusal writes nothing")
+
 
 class MatchGate(Base):
     def type_internal(self, text, sec="summary"):
@@ -123,6 +178,18 @@ class MatchGate(Base):
         self.assertRegex(shown.lower(), r"confidential|omar ali|tester names|budget overrun", "the findings are listed")
         self.assertEqual(self.text_of(CLI), before, "the client section is as it was")
         self.assert_client_clean("Match internal on one section")
+
+    def test_a_finding_the_client_draft_already_has_does_not_hide_another_of_the_same_code(self):
+        """The page compares by stable code and count: the draft already holds "confidential"; internal text with two such words is still held."""
+        self.open_side()
+        self.write(CLI, " It is confidential.")
+        self.type_internal("Zanzibarinternal is confidential and restricted.")
+        self.b.wait(f"!!document.querySelector({json.dumps(self.match_btn('summary'))})", 10)
+        before = self.text_of(CLI)
+        self.press(self.match_btn("summary"))
+        self.b.wait("(()=>{const d=document.getElementById('crHeldDlg'); return !!d && d.open})()", 10)
+        self.assertIn("Not matched: Summary", self.held_dialog())
+        self.assertEqual(self.text_of(CLI), before, "nothing was copied")
 
     def test_a_clean_section_matches(self):
         self.open_side()
