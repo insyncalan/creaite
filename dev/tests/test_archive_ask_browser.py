@@ -26,6 +26,7 @@ OPEN = "document.getElementById('parchDlg')?.open"
 
 class ArchiveAsk(LiveBrowserCase):
     """One vault and server per test: Cancel them all and archive puts a change on the card."""
+    quiet_jobs = False        # exercises backups or archiving: keeps the shipped settings
 
     def post(self, path, body):
         html = urllib.request.urlopen(self.base + "/").read().decode()

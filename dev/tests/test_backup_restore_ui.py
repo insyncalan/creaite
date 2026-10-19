@@ -27,6 +27,7 @@ ROUTES = ("/api/backup/list", "/api/backup/preview", "/api/backup/restore")
 
 class RestoreFromBackup(LiveBrowserCase):
     """One vault and server per test: a restore changes data."""
+    quiet_jobs = False        # exercises backups or archiving: keeps the shipped settings
 
     @classmethod
     def load(cls, v):
