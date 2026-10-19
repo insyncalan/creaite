@@ -149,6 +149,8 @@ def _health_words(doc):
     """The words of a client report's shown health sections (the internal health reason may stand there, as the gate allows)."""
     import creaite_doc
     ids = {s.get("id") for s in doc.get("sections") or [] if isinstance(s, dict) and s.get("type") == "health"}
+    if not ids:
+        return ""               # no health section (a Word file's other parts, review.word_output_findings): nothing is allowed
     return "\n".join(t for i, _h, t in creaite_doc.sections_text(doc) if i in ids)
 
 

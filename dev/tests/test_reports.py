@@ -25,6 +25,37 @@ def new(table, n, **values):
     return {"n": n, "op": "new", "table": table, "values": values, "match": "strong", "flags": [], "decision": "approved"}
 
 
+LEGACY = Path(__file__).resolve().parent / "fixtures" / "client-migration"     # v2.5.1 (#239 step 3): v2.5.0's own output
+
+
+def legacy_word_proposal(v, name="word-client-report"):
+    """(proposal path, draft path) of an older Word client proposal (v2.5.0's report.py client-stage or steerco-stage, from
+    dev/tests/fixtures/client-migration), put in the vault as that version left it: since v2.5.1 creaite makes no client Word file
+    that way, but a proposal staged before the update is still in Review."""
+    data = json.loads((LEGACY / f"{name}.proposal.json").read_text(encoding="utf-8"))
+    draft = v.root / data["report"]["draft"]
+    draft.parent.mkdir(parents=True, exist_ok=True)
+    draft.write_bytes((LEGACY / f"{name}.docx").read_bytes())
+    prop = v.root / "system/staging" / f"proposed-2026-10-09-1300-{'client' if 'client-report' in name else 'steerco'}-ABC" \
+        f"{'' if 'client-report' in name else '-client'}.json"
+    prop.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return prop, draft
+
+
+def client_draft_text(case, v):
+    """The client draft report.py client-stage saved (v2.5.1: the Reporting hub's own), as its rendered page reads (the shown
+    report)."""
+    drafts = list((v.root / "system/staging/drafts").glob("*Client report*.html"))
+    case.assertEqual(len(drafts), 1, drafts)
+    r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts')\nimport creaite_doc, re, html\n"
+                        f"d = creaite_doc.read_report({str(drafts[0].relative_to(v.root))!r}, 'client')\n"
+                        "t = re.sub(r'<script.*?</script>|<style.*?</style>', ' ', creaite_doc.render(d, editing=False), flags=re.S)\n"
+                        "print(html.unescape(re.sub(r'<[^>]+>', ' ', t)))"], cwd=v.root, capture_output=True, text=True,
+                       env={**os.environ, "CREAITE_NOW": NOW})
+    case.assertEqual(r.returncode, 0, r.stderr)
+    return re.sub(r"\s+", " ", r.stdout)
+
+
 def edit_docx(path, old, new_text):
     with zipfile.ZipFile(path) as z:
         parts = {i: z.read(i.filename) for i in z.infolist()}
@@ -329,27 +360,48 @@ class ClientTests(unittest.TestCase):
         r = self.v.at("client-stage", self.spec(), script="report.py", ok=False)
         self.assertIn("first client report", r.stdout)
 
+    def client_draft_text(self):
+        return client_draft_text(self, self.v)
+
     def test_client_report_and_internal_content_check(self):
+        # v2.5.1 (#239 step 3): client-stage saves the Reporting hub's own client draft: no Word file, no proposal (its files are
+        # made from its checked copy, client_snapshot.client_export, and it is filed by Approve in the hub); the client-safe filter
+        # and the inclusion list are as before
         out = self.v.at("client-stage", self.spec(period_start="2026-10-01"), script="report.py").stdout
         self.assertIn("Not client-visible, so left out: ABC-005", out)
-        prop = next((self.v.root / "system/staging").glob("proposed-*-client-ABC.json"))
-        draft = self.v.root / json.loads(prop.read_text())["report"]["draft"]
-        text = self.v.run("text", str(draft), script="docx_tools.py").stdout
-        self.assertIn("Example Client Ltd · 1 October 2026 to 9 October 2026", text)
-        self.assertIn("The signed statement of work. | Jane Doe (Example Client Ltd) | 16-10-2026", text)
-        self.assertIn("Issue: Test licences are not yet ordered. Testing could start late. Purchase order raised this week.",
-                      text)
-        self.assertIn("Go-live remains on 20 November.", text)
+        self.assertIn("Included (client-visible): ABC-A-002, ABC-A-003, ABC-D-007, ABC-006", out)
+        self.assertIn("Approve the internal weekly report for week ending 09-10-2026 first", out)    # the snapshot's check, said now
+        self.assertEqual(list((self.v.root / "system/staging").glob("proposed-*-client-ABC.json")), [])
+        self.assertEqual(list((self.v.root / "system/staging/drafts").glob("*.docx")), [])
+        text = self.client_draft_text()
+        for shown in ("Phase two is being prepared.", "Plan revised", "Sign the statement of work",
+                      "Needed from you: Signature by 16-10", "The signed statement of work.", "Jane Doe (Example Client Ltd)",
+                      "Test licences are not yet ordered."):
+            self.assertIn(shown, text)
         for internal in ("Vendor exits the market", "Absorb the phase one overrun", "ABC-A-", "Confirm tester names"):
             self.assertNotIn(internal, text)
-        # Alan pastes something internal into the draft: the check stops it
+        again = self.v.at("client-stage", self.spec(period_start="2026-10-01"), script="report.py", ok=False)
+        self.assertEqual(again.returncode, 3)                                   # a draft open already is never overwritten
+        self.assertIn("already has a client report draft", again.stdout)
+
+    def test_an_older_word_client_report_in_review_is_checked_and_never_filed_with_a_finding(self):
+        # a Word client report staged before the update (v2.5.0's own output): Review's check stops what it finds, and since
+        # v2.5.1 (#239 step 3) --as-staged no longer files it anyway: client output is never filed with a finding
+        prop, draft = legacy_word_proposal(self.v)
         edit_docx(draft, "Phase two is being prepared.", "Phase two is being prepared. Vendor exits the market before go-live.")
         listed = json.loads(self.v.run("list", "--json", script="review.py").stdout)
         n = next(r["n"] for r in listed if r["ref"] == "report")
         out = self.v.run("approve", str(n), script="review.py").stdout
         self.assertIn("possible internal content", out)
         self.assertIn("ABC-005 isn't client-visible but its wording appears", out)
-        self.assertIn("Approved 1.", self.v.run("approve", str(n), "--as-staged", script="review.py").stdout)
+        out = self.v.run("approve", str(n), "--as-staged", script="review.py").stdout
+        self.assertIn("not approved", out)
+        self.assertIn("ABC-005 isn't client-visible but its wording appears", out)
+        self.assertEqual(json.loads(prop.read_text())["report"]["report_decision"], "pending")
+        edit_docx(draft, " Vendor exits the market before go-live.", "")                    # control: the clean one is approved
+        self.assertIn("Approved 1.", self.v.run("approve", str(n), script="review.py").stdout)
+        block = json.loads(prop.read_text())["report"]
+        self.assertEqual(block["checked_sha256"], __import__("hashlib").sha256(draft.read_bytes()).hexdigest())
 
 
 # ===== v2.1.0 P3 (BL-335, BL-336): the reports in creaite, through the live server's routes =====

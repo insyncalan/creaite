@@ -19,7 +19,8 @@ Commands:
         the client-safe facts as JSON: period, health, milestones, client-visible actions (theirs and ours), decisions
         and risks/issues with their client messaging, plus what's excluded or missing messaging
   client-stage <spec.json>
-        fill the client report and stage it (filed to reports/YYYY-MM-DD Client report - <Project name>.docx on approval)
+        save the week's client report draft, the Reporting hub's own (v2.5.1: no Word file, nothing staged; its files are made
+        from its checked copy and it is filed by Approve in the Reporting hub)
   current-context <CODE> [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--sources tracker,minutes,reports,updates,swept,documents]
                          [--audience internal|client] [--length short|standard|fuller]
         the material for drafting a project's Current state (BL-46), as plain text for the prompt: tracker changes
@@ -41,8 +42,8 @@ Commands:
 
 weekly spec: {"code", "week_ending", "health", "health_reason", "summary": [..], "key_changes", "current_state",
               "progress": [..], "next_week": [..], "help_needed": [..], "force": false}
-client spec: {"code", "period_start", "summary": [..], "progress": [..], "next_steps": [..], "input_needed": [..],
-              "force": false}
+client spec: {"code", "period_start", "week_ending"?, "summary": [..], "progress": [..], "next_steps": [..], "input_needed": [..],
+              "health"?, "health_reason"? (client wording), "force": false, "replace": false}
 steerco spec: {"code", "version": "internal" | "client", "steerco_date", "since", "summary": [..], "include_labelled": [ids],
                "force": false}
 The tables (milestones, overdue actions, risks, client actions) come from the tracker, never from Claude.
@@ -163,7 +164,7 @@ def fill(template, values, out):
     can't be filled."""
     f = write_values(values, out.stem)
     try:
-        code = docx_tools.cmd_fill(str(template), str(f), str(out))
+        code = docx_tools.fill_command(str(template), str(f), str(out))
     finally:
         f.unlink(missing_ok=True)
     if code:
@@ -890,10 +891,35 @@ def _client_risks(con, code, needs):
             needs.append(f"{r['id']} {r['description']}")
     return out
 # ===== end BL-229 (client_data) =====
+CLIENT_SPEC = ("code", "period_start", "week_ending", "summary", "progress", "next_steps", "input_needed", "health", "health_reason",
+               "force", "replace")
+
+
+def client_spec(spec):
+    """cx-client-report's spec as the Reporting hub's client report takes it (report_doc.CLIENT_BUILDERS): the summary, this period's
+    progress and the next steps as written; what the client is asked for (input_needed) joins the next steps as "Needed from you"."""
+    nxt = [str(x).strip() for x in spec.get("next_steps") or [] if str(x).strip()]
+    nxt += [f"Needed from you: {str(x).strip()}" for x in spec.get("input_needed") or [] if str(x).strip()]
+    return {"period_start": spec.get("period_start"), "summary": spec.get("summary") or ["No significant change in this period."],
+            "progress": spec.get("progress") or [], "next_steps": nxt, "health": spec.get("health"),
+            "health_reason": spec.get("health_reason") or ""}
+
+
 def client_stage(spec):
-    """Stage a client report from cx-client-report's spec: the Word draft in system/staging/drafts/ and a proposal that files it in the
-    project's reports folder on approval. Never sends. Returns 3 when it needs a start date or items await review."""
+    """cx-client-report's draft (v2.5.1, #239 step 3): the Reporting hub's own client report (report_doc.build, the client-safe facts
+    from the tracker; the summary, progress and next steps from the spec), saved as the week's client draft in
+    system/staging/drafts/ through filechange.py. No Word file is made here and nothing is staged: a client report's Word, HTML and PDF
+    files are made only from its checked copy (client_snapshot.client_export) and it is filed only by Approve in the Reporting hub
+    (report_doc.stage_client), so this path can't make or file a client file the snapshot gate hasn't checked. The check is run
+    once here too, so what would stop Approve is said now. Never sends. Returns 3 when it needs a start date, items await review
+    or a draft for the week is open already (unless `replace`)."""
+    import client_snapshot
+    import report_doc
     code = spec["code"]
+    unknown = sorted(set(spec) - set(CLIENT_SPEC))
+    if unknown:
+        print("The client report spec has keys creaite doesn't know (" + ", ".join(unknown) + "); nothing was saved.")
+        return 3
     data = client_data(code, spec.get("period_start"))
     if data["needs_start_date"]:
         print(f"This is {data['name']}'s first client report: give the period's start date (period_start).")
@@ -902,42 +928,23 @@ def client_stage(spec):
         print(f"{data['name']} has {data['blocked']} item{'s' if data['blocked'] > 1 else ''} awaiting review — review first, "
               f"or go ahead anyway (force).")
         return 3
-    con = tracker.connect()
-    p, folder, _ = project(con, code)
-    end = data["period_end"]
-    values = {
-        "PROJECT_NAME": p["name"], "CLIENT_NAME": data["client"] or "Client",
-        "STATUS_LINE": f"Draft, generated by creaite on {long_date(today().isoformat())}. Not yet reviewed.",
-        "PERIOD_START": long_date(data["period_start"]), "PERIOD_END": long_date(end),
-        "REPORT_DATE": f"Report date: {long_date(end)}",
-        "HEALTH_LINE": [{"flag": (data["health"] or "On track").upper(), "text": data["health_reason"] or ""}],
-        "SUMMARY": spec.get("summary") or ["No significant change in this period."],
-        "PROGRESS": spec.get("progress", []),
-        "MILESTONES": [{"M_TEXT": m["name"], "M_DATE": m["shown_date"], "M_PCT": pct(m),
-                        "M_STATUS": m["state"]}                  # BL-186: the client's words for the five states
-                       for m in data["milestones"]],
-        "C_ROWS": [{"C_TEXT": a["text"], "C_OWNER": a["owner"], "C_DUE": tracker.shown(a["due"]) or "Not set"}
-                   for a in data["client_actions"]],
-        "U_ROWS": [{"U_TEXT": a["text"], "U_OWNER": a["owner"], "U_DUE": tracker.shown(a["due"]) or "Not set"}
-                   for a in data["our_commitments"]],
-        "DECISIONS": [f"{d['text']} ({tracker.shown(d['date'])})" if d.get("status", "Made") == "Made" else
-                      f"Decision needed: {d['text']}" + (f" (by {tracker.shown(d['needed_by'])})" if d.get("needed_by") else "")
-                      for d in data["decisions"]],
-        "CLIENT_RISKS": [f"{r['type']}: {r['text']}" for r in data["risks"]],
-        "NEXT_STEPS": spec.get("next_steps", []), "INPUT_NEEDED": spec.get("input_needed", []),
-    }
-    draft = paths.DRAFTS / report_file(end, "Client report", p["name"])
-    fill(paths.CLIENT_TEMPLATE, values, draft)
-    out = stage(f"client-{code}", {
-        "created": sweep.now().strftime("%Y-%m-%dT%H:%M:00"), "source_run": "cx-client-report", "files": [], "items": [],
-        "report": {"kind": "client", "title": f"{p['name']} client report, {tracker.shown(data['period_start'])} to "
-                                              f"{tracker.shown(end)}", "project": code, "projects": [code],
-                   "draft": paths.rel(draft), "report_decision": "pending",
-                   "file_ops": [{"op": "copy", "from": "draft",
-                                 "to": paths.rel(paths.folder(code, "client_reports") / report_file(end, "Client report", p["name"]))},
-                                {"op": "remove", "path": paths.rel(draft)}]}})
-    print(f"Staged {paths.rel(out)}: {p['name']} client report, {tracker.shown(data['period_start'])} to {tracker.shown(end)}")
-    print(f"Draft: {paths.rel(draft)}")
+    fri = report_doc.friday(spec.get("week_ending") or data["period_end"])
+    client = data["client"] or None
+    state, where = report_doc.where("client", code, fri, client)
+    base_version = None
+    if state == "draft":
+        if not spec.get("replace"):
+            print(f"{data['name']} already has a client report draft for week ending {tracker.shown(fri)} ({where}). Change it in "
+                  "the Reporting hub, or say to replace it (replace); nothing was saved.")
+            return 3
+        base_version = int(creaite_doc_version(where))
+    doc = report_doc.build("client", code, fri, client, spec=client_spec(spec))
+    saved = report_doc.save_draft(doc, base_version=base_version, why="Client report drafted (cx-client-report)")
+    if not saved.get("ok"):
+        print(f"The client report draft wasn't saved: {saved.get('message')}")
+        return 1
+    print(f"Saved the client report draft: {saved['path']} ({data['name']}, week ending {tracker.shown(fri)}, "
+          f"{tracker.shown(data['period_start'])} to {tracker.shown(fri)})")
     print("Included (client-visible): " + (", ".join([a["id"] for a in data["client_actions"] + data["our_commitments"]]
                                                        + [d["id"] for d in data["decisions"]] + [r["id"] for r in data["risks"]])
                                            or "none"))
@@ -945,7 +952,29 @@ def client_stage(spec):
         print(f"Needs your client messaging (left out): {n}")
     for x in data["excluded_high_risks"]:
         print(f"Not client-visible, so left out: {x}")
+    for r in saved.get("removed") or []:
+        print(f"Taken out: {r}")
+    _snap, left, found = client_snapshot.build(report_doc_read(saved["path"]))
+    if not left["ready"]:
+        print(f"Before it can be approved or exported: {left['not_ready']}")
+    for f in found:
+        if f != left.get("not_ready"):
+            print(f"Possible internal content (Approve and every export stop at it): {f}")
+    print("Check it and approve it in the Reporting hub (Client report, week ending "
+          f"{tracker.shown(fri)}): its Word, HTML and PDF files are made there, from its checked copy.")
     return 0
+
+
+def creaite_doc_version(stored):
+    """The saved version of a creaite document."""
+    import creaite_doc
+    return int(creaite_doc.read(stored).get("version") or 0)
+
+
+def report_doc_read(stored):
+    """A saved client report, read as one (creaite_doc.read_report)."""
+    import creaite_doc
+    return creaite_doc.read_report(stored, "client")
 
 
 CONTEXT_SOURCES = ("tracker", "minutes", "reports", "updates", "swept")   # documents: only when asked (passive)
@@ -1513,6 +1542,36 @@ def free_name(folder_, stem_, suffix, ext=".docx"):
     return name
 
 
+def steerco_draft(code, version, data, spec, values, drop):
+    """The one-pager's Word draft in system/staging/drafts/ (BL-101: the project's name, never its code); the client-safe one is
+    checked as client output is first (v2.5.1, #239 step 3) and, with a finding, deleted and None returned (nothing is staged)."""
+    suffix = " (client)" if version == "client" else ""
+    paths.DRAFTS.mkdir(parents=True, exist_ok=True)
+    draft = paths.DRAFTS / free_name(paths.DRAFTS, f"{data['steerco_date']} {doc_stem(data['name'])} Steerco one-pager", suffix)
+    tmp = paths.DRAFTS / f"{draft.stem}.template.docx"
+    try:
+        trim_template(paths.STEERCO_TEMPLATE, drop, tmp)
+        fill(tmp, values, draft)
+    finally:
+        tmp.unlink(missing_ok=True)
+    found = steerco_client_findings(code, draft, spec.get("include_labelled") or ()) if version == "client" else []
+    if found:
+        draft.unlink(missing_ok=True)
+        print("The client-safe one-pager wasn't staged: the file made held possible internal content (it was deleted):")
+        print("\n".join(f"  {f}" for f in found))
+        return None
+    return draft
+
+
+def steerco_client_findings(code, draft, include_labelled=()):
+    """v2.5.1 (#239 step 3): the client-safe one-pager's made Word file checked as client output is (review.client_findings: the
+    client gate on its text, and the output check on every part and picture), before it is staged; a label finding on an item Alan
+    chose to keep although labelled (include_labelled) stands, as at approval."""
+    block = {"draft": paths.rel(draft), "project": code, "kind": "steerco", "version": "client",
+             "included_labelled": list(include_labelled)}
+    return review.as_staged_findings(review.client_findings(block), block)
+
+
 def steerco_stage(spec):
     """Stage a steering one-pager (BL-92) from cx-steerco's spec: the Word draft in system/staging/drafts/ and a proposal that files it in
     the Steerco folder on approval, never overwriting. Returns 3 when items await review."""
@@ -1525,14 +1584,9 @@ def steerco_stage(spec):
     values, drop = steerco_values(data, spec)
     suffix = " (client)" if version == "client" else ""
     on = data["steerco_date"]
-    paths.DRAFTS.mkdir(parents=True, exist_ok=True)
-    draft = paths.DRAFTS / free_name(paths.DRAFTS, f"{on} {doc_stem(data['name'])} Steerco one-pager", suffix)     # BL-101: the name, never the code
-    tmp = paths.DRAFTS / f"{draft.stem}.template.docx"
-    try:
-        trim_template(paths.STEERCO_TEMPLATE, drop, tmp)
-        fill(tmp, values, draft)
-    finally:
-        tmp.unlink(missing_ok=True)
+    draft = steerco_draft(code, version, data, spec, values, drop)
+    if draft is None:
+        return 3
     target_dir = paths.folder(code, "steerco")
     target = target_dir / free_name(target_dir, f"{on} {doc_stem(data['name'])} Steerco one-pager", suffix)     # YYYY-MM-DD <Project name> Steerco one-pager[ (client)].docx
     ops = ([] if target_dir.is_dir() else [{"op": "mkdir", "path": paths.rel(target_dir)}]) + \
@@ -1547,6 +1601,12 @@ def steerco_stage(spec):
     print(f"Staged {paths.rel(out)}: {title}")
     print(f"Draft: {paths.rel(draft)}")
     print(f"On approval it is filed as: {paths.rel(target)}")
+    steerco_said(data, spec, drop)
+    return 0
+
+
+def steerco_said(data, spec, drop):
+    """What steerco-stage says after staging: what was left out and why, the sensitive items, Alan's labelled choices."""
     if drop:
         print("Left out (nothing to say): " + ", ".join(drop))
     if data["sensitive"]:
@@ -1556,7 +1616,6 @@ def steerco_stage(spec):
     kept = sorted(set(spec.get("include_labelled") or []) & set(data["labelled_but_excluded"]))
     if kept:
         print(f"Included at your request although labelled: {', '.join(kept)}. Review stops at these; approve with --as-staged to file it.")
-    return 0
 
 
 def main(argv):
