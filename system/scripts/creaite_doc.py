@@ -77,13 +77,28 @@ def is_client(doc):
     return doc.get("kind") == "client" or doc.get("audience") in ("client", "distributed")
 
 
+def project_client(code):
+    """The project's client (its memory's Client / partner line, one line, 80 characters at most), or None. Never raises."""
+    try:
+        import build_dashboard
+        name = str(build_dashboard.memory(paths.project_dir(code)).get("client") or "")
+    except Exception:  # noqa: BLE001  an unknown project or a memory that can't be read: no client name
+        return None
+    return " ".join(name.split())[:80] or None
+
+
 def force_client_audience(doc):
     """v2.5.0 audience bypass: the document with a client report's audience set to "client" (whatever it was, or when it is missing),
-    so the client gate (client_leak.findings, make_safe), which reads the audience, always checks a client report as one. Changed in
-    place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or distributed is
-    already read as client by is_client and by the gate, and its kind decides where it is filed, so it is never changed here."""
-    if isinstance(doc, dict) and doc.get("kind") == "client" and doc.get("audience") != "client":
+    so the client gate (client_leak.findings, make_safe), which reads the audience, always checks a client report as one; and its
+    header fields the gate never reads, `project_name` and `client`, derived again from the tracker (the project's name) and the
+    project's memory (its client), whatever was sent or stored: they are shown in the header and the page title and name the files.
+    Changed in place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or
+    distributed is already read as client by is_client and by the gate, and its kind decides where it is filed."""
+    if isinstance(doc, dict) and doc.get("kind") == "client":
         doc["audience"] = "client"
+        code = str(doc.get("project") or "")
+        doc["project_name"] = project_name(code) if code else ""
+        doc["client"] = project_client(code) if code else None
     return doc
 
 

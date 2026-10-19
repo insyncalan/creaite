@@ -197,6 +197,77 @@ class Audience(unittest.TestCase):
                       "print(json.dumps(client_check.left_out(d)['findings']))")
         self.assertTrue(out)
 
+    # ── the header fields the gate never reads: project_name and client ─────────────────────────────────────────────────
+    def header_payload(self):
+        hid, title, owner = self.hidden_item()
+        return f"{owner} {hid} {title} confidential Internal only: keep"
+
+    def assert_clean_files(self):
+        needles = self.needles()
+        self.assertEqual(self.reports_hold(needles), {})
+        names = " ".join(f.name for f in self.reports.glob("*")).lower()
+        self.assertEqual([n for n in needles if n.lower() in names], [])
+
+    def approve_and_export(self):
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+        self.assertTrue(a["ok"], a)
+        filed = self.v.root / a["path"]
+        self.assertTrue(filed.is_file(), a)
+        raw = json.loads(creaite_doc.BLOCK.search(filed.read_text()).group(1))
+        self.assertEqual((raw["project_name"], raw["client"]), ("Example Programme", "Example Client Ltd"))
+        for fmt in self.formats():
+            e = self.export(fmt, "client", on_clash="number")
+            self.assertTrue(e["ok"], (fmt, e))
+        self.assert_clean_files()
+
+    def test_header_fields_sent_to_save_are_derived_again(self):
+        for field in ("project_name", "client"):
+            with self.subTest(field=field):
+                r = self.fresh()
+                doc = dict(r["doc"], **{field: self.header_payload()})
+                sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+                self.assertTrue(sv["ok"], sv)
+                self.assertEqual(sv["path"], f"system/staging/drafts/{S.CLIENT_STEM}.html")
+                raw = json.loads(creaite_doc.BLOCK.search(self.draft_file().read_text()).group(1))
+                self.assertEqual(raw[field], {"project_name": "Example Programme", "client": "Example Client Ltd"}[field])
+                self.approve_and_export()
+
+    def test_header_fields_edited_on_disk_are_derived_again(self):
+        for field in ("project_name", "client"):
+            with self.subTest(field=field):
+                self.fresh()
+                f = self.draft_file()
+                text = f.read_text()
+                raw = json.loads(creaite_doc.BLOCK.search(text).group(1))
+                old = f'"{field}": {json.dumps(raw[field], ensure_ascii=False)}'
+                self.assertIn(old, text)
+                f.write_text(text.replace(old, f'"{field}": {json.dumps(self.header_payload())}', 1), encoding="utf-8")
+                self.assertIn(self.hidden_item()[0], f.read_text())
+                self.approve_and_export()
+
+    def test_header_fields_sent_with_approve_are_derived_again(self):
+        for field in ("project_name", "client"):
+            with self.subTest(field=field):
+                r = self.fresh()
+                doc = dict(r["doc"], **{field: self.header_payload()})
+                a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True,
+                                                       "doc": doc, "base_version": r["version"]})
+                self.assertTrue(a["ok"], a)
+                self.assertEqual(list((self.v.root / "system/staging/drafts").glob("*confidential*")), [])
+                filed = json.loads(creaite_doc.BLOCK.search((self.v.root / a["path"]).read_text()).group(1))
+                self.assertEqual((filed["project_name"], filed["client"]), ("Example Programme", "Example Client Ltd"))
+                self.assert_clean_files()
+
+    def test_a_client_named_in_the_request_is_ignored(self):
+        self.fresh()
+        r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": WEEK, "client": self.header_payload()})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["doc"]["client"], "Example Client Ltd")
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": WEEK, "fmt": "docx",
+                                             "client": self.header_payload()})
+        self.assertTrue(e["ok"], e)
+        self.assert_clean_files()
+
     # ── the helpers ─────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_is_client_and_force_client_audience(self):
         self.assertTrue(creaite_doc.is_client({"kind": "client", "audience": "internal"}))

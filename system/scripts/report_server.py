@@ -75,7 +75,7 @@ def target(req):
         raise report_doc.ReportError("The week ending must be YYYY-MM-DD.") from None
     if kind == "weekly":
         return kind, code, fri, None
-    return kind, code, fri, str(req.get("client") or "").strip()[:120] or project_client(code)
+    return kind, code, fri, project_client(code)      # v2.5.0: the project's client always; a client named in the request is ignored
 
 
 CLIENT_NAME_MAX = 80
@@ -83,10 +83,7 @@ CLIENT_NAME_MAX = 80
 
 def project_client(code):
     """The project's client (its memory's Client / partner line), the client a client report is for when none is named; or None."""
-    import build_dashboard
-    name = str(build_dashboard.memory(paths.project_dir(code)).get("client") or "")
-    name = " ".join(name.split())[:CLIENT_NAME_MAX]                  # one line, 80 characters at most (the panel holds the same cap)
-    return name or None
+    return creaite_doc.project_client(code)          # one line, 80 characters at most (the panel holds the same cap)
 
 
 CLIENT_OFF = "This project has no separate client report switched on. Turn it on in the Client report settings first."
@@ -230,8 +227,7 @@ def approve_route(handler, req):
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
-            creaite_doc.check(req["doc"])      # v2.5.0 audience bypass: refuses a client report whose audience isn't client
-            saved = report_doc.save_draft(creaite_doc.force_client_audience(req["doc"]), req.get("base_version"))
+            saved = report_doc.save_draft(req["doc"], req.get("base_version"))     # checks it first (v2.5.0 audience bypass)
             if not saved.get("ok"):
                 return answer(handler, saved)
         if not paths.resolve(draft).is_file():
@@ -438,6 +434,7 @@ def export_route(handler, req):
     if not state:
         return refuse(handler, "Save the report before exporting it.")
     doc = creaite_doc.force_client_audience(creaite_doc.read(path))     # v2.5.0 audience bypass: a draft edited on disk too
+    report_doc.same_report(doc, kind, code, fri)
     left = None
     if kind == "client":
         import client_check

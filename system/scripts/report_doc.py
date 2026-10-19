@@ -898,17 +898,25 @@ def where(kind, code, week_ending, client=None):
     return None, draft_path(kind, code, week_ending, client)
 
 
+def same_report(doc, kind, code, fri):
+    """v2.5.0: raise ReportError unless a stored report is the one the route names (its kind, project and week ending): a draft edited
+    on disk to name another project or week is never approved, exported or filed as this one."""
+    if (doc.get("kind"), doc.get("project"), doc.get("date")) != (kind, code, fri):
+        raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was done. "
+                          "Open the report again from creaite.")
+
+
 def save_draft(doc, base_version=None, why=None):
     """Save a report's edits as its draft (system/staging/drafts/, an ordinary change through creaite_doc.save and filechange.py).
     A filed report is never changed in place (Alan, 15-10-2026: option C): Save on a filed report starts a new draft from it, and the
     filed file stays exactly as it is until that draft is approved (stage_weekly or stage_client, one apply with Undo).
     `base_version` is the version the editor opened: the draft's, or the filed report's when there is no draft yet."""
     import client_leak
+    creaite_doc.check(doc)                          # v2.5.0 audience bypass: a client report whose audience isn't client is refused
+    doc = creaite_doc.force_client_audience(dict(doc))      # and its project name and client derived again, before the file's name
     kind, code, fri, client = doc.get("kind"), doc.get("project"), doc.get("date"), doc.get("client")
     if kind not in KINDS:
         raise ReportError("Only a weekly or client report is saved here.")
-    creaite_doc.check(doc)                          # v2.5.0 audience bypass: a client report whose audience isn't client is refused
-    doc = creaite_doc.force_client_audience(dict(doc))
     doc, removed = client_leak.make_safe(doc)
     doc, dropped = client_item_links(doc)
     doc, pictures = creaite_doc.drop_outside_pictures(doc)     # v2.5.0 leak fix: no picture line naming an outside file
@@ -1017,6 +1025,8 @@ def stage_client(draft, force=False):
     import sweep
     doc = creaite_doc.force_client_audience(creaite_doc.read(draft))      # v2.5.0 audience bypass: the gate sees a client report
     code, fri = doc["project"], doc["date"]
+    if paths.rel(paths.resolve(draft_path("client", code, fri, doc.get("client")))) != paths.rel(paths.resolve(str(draft))):
+        raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was approved.")
     ok, why = client_ready(doc)
     if not ok:
         raise ReportError(why)
