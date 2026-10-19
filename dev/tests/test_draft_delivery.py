@@ -24,7 +24,9 @@ from test_tracker import Vault  # noqa: E402
 
 ON = {"draft_email": {"outlook_drafts": True}}
 HTML = ('<div style="font-family:Arial;color:#1a1a1a;background:#ffffff;"><p style="margin:0 0 12px 0;">Hi Sara,</p>'
-        '<table><tbody><tr><td><span style="color:#b42318;">05-10-2026</span></td></tr></tbody></table></div>')
+        '<table cellpadding="6" cellspacing="0" border="0"><tbody><tr><td style="color:#B3261E;font-weight:bold;">05-10-2026</td>'
+        '<td>Data<br><i style="font-style:normal;color:#5C5D60;">Response: <a href="https://example.com/plan" style="color:#0b5cad;">the plan</a>'
+        '</i></td></tr></tbody></table></div>')
 PAYLOAD = {"to": "sara@example.com", "subject": "ABC-A-006 · Overdue: a quick reminder", "html": HTML,
            "ids": ["ABC-A-006", "not an id"], "mode": "chase", "name": "Sara Example"}
 
@@ -88,6 +90,41 @@ class SettingAndRequest(Isolated):
                   {**PAYLOAD, "html": ""}, {**PAYLOAD, "html": "x" * (dd.BODY_MAX + 1)}):
             with self.assertRaises(dd.Refused):
                 dd.request(p, ON)
+
+
+class Markup(unittest.TestCase):
+    """#183 (Alan, 19-10-2026): a draft's body is only the markup Outlook's create-draft takes; anything else is refused before any run."""
+
+    def test_the_builders_markup_passes(self):
+        self.assertIsNone(dd.markup_problem(HTML))
+        self.assertEqual(dd.request(PAYLOAD, ON)["args"]["body"], HTML)          # passed through byte for byte, never rewritten
+
+    def test_a_body_with_a_refused_construct_is_refused_with_fixed_words(self):
+        cases = {
+            '<p><span style="color:#B3261E;">late</span></p>': "a <span> element",
+            '<p><font color="#B3261E">late</font></p>': "a <font> element",
+            '<p class="x">Hi</p>': "a class attribute",
+            '<p id="x">Hi</p>': "an id attribute",
+            '<p data-cx-style="color:red">Hi</p>': "a data- attribute",
+            '<p onclick="x()">Hi</p>': "an event handler",
+            '<style>p{color:red}</style><p>Hi</p>': "a <style> element",
+            '<script>x()</script><p>Hi</p>': "a <script> element",
+            '<!-- note --><p>Hi</p>': "a comment",
+            '<p style="color:var(--red)">Hi</p>': "a style Outlook won't take",
+            '<img src="https://example.com/x.png">': "a <img> element",
+            '<blockquote>Hi</blockquote>': "a <blockquote> element",
+            '<a href="javascript:alert(1)">x</a>': "a link that isn't a web or mail address",
+        }
+        for body, what in cases.items():
+            with self.subTest(body=body):
+                self.assertEqual(dd.markup_problem(body), what)
+                with self.assertRaises(dd.Refused) as e:
+                    dd.request({**PAYLOAD, "html": body}, ON)
+                self.assertEqual(str(e.exception), f"The email has formatting Outlook won't take ({what}): copy it instead.")
+
+    def test_a_copy_is_never_refused_for_its_markup(self):
+        req = dd.request({**PAYLOAD, "action": "copied", "html": '<p><span style="color:red">x</span></p>'}, ON)
+        self.assertEqual(req["mode"], "chase")                                     # the copy's references are still kept for the sweep
 
 
 class NeverSends(unittest.TestCase):
