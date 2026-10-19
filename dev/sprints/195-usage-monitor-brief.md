@@ -1,6 +1,6 @@
 # #195 Usage and context monitor (for 2.5.1) — brief
 
-Mockup: `dev/mockups/usage-monitor-mockup.html` (a third Activity tab, **Usage**). Fictional numbers. Awaiting Alan's approval.
+Mockup: `dev/mockups/usage-monitor-mockup.html` (a third Activity tab, **Usage**). Fictional numbers. Approved by Alan 19-10-2026.
 
 ## Why
 Alan wants to watch his production instance over time: what each Claude run costs, and what every run loads before it starts (the rules file is about 53 KB). Builds on #197 (landed 2.2.0) and overlaps #87.
