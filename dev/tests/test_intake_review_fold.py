@@ -31,6 +31,10 @@ out.fold = [f.irIsFolded({}, "later"), f.irIsFolded({}, "not_needed"), f.irIsFol
 const f1 = f.irFoldClick({}, "later"), f2 = f.irFoldClick(f1, "later"), f3 = f.irFoldClick({}, "mail");
 out.foldClicks = [f.irIsFolded(f1, "later"), f.irIsFolded(f2, "later"), f.irIsFolded(f3, "mail")];
 out.counts = f.irCounts(M, none); out.countsAfter = f.irCounts(M, d([5, 6]));
+const up = (path, ft) => ({ id: "u" + path, src: "upload", path, ft, stage: "arrived", state: "ready", groups: { needs: [], routine: [] } });
+const U = { ...M, meetings: [...M.meetings, up("inbox/a.docx", "")] };
+out.unsureCounts = f.irCounts(U, none); out.chosenCounts = f.irCounts(U, none, { "inbox/a.docx": "minutes" });
+out.kinds = [f.irKindOf(up("p", "transcript")), f.irKindOf(up("p", "transcript"), { p: "minutes" }), f.irKindOf(up("p", "")), f.irKindOf({ src: "calendar" })];
 out.esc = [f.irEsc({peek: 3, open: "m1"}), f.irEsc({peek: null, open: "m1"})];
 out.views = [f.irViewNorm("board"), f.irViewNorm("two"), f.irViewNorm("nonsense"), f.irViewNorm(null)];
 console.log(JSON.stringify(out));
@@ -75,8 +79,14 @@ class FoldRulesTests(unittest.TestCase):
         self.assertEqual(self.o["foldClicks"], [False, True, True])
 
     def test_live_counts_follow_decisions_on_the_page(self):
-        self.assertEqual(self.o["counts"], {"arrived": 2, "ready": 1, "drafted": 2, "approved": 1, "to_approve": 7, "badge": 8, "all": 5})
-        self.assertEqual(self.o["countsAfter"], {"arrived": 2, "ready": 1, "drafted": 1, "approved": 2, "to_approve": 5, "badge": 6, "all": 5})        # Show all: every meeting and file, whatever its stage
+        self.assertEqual(self.o["counts"], {"arrived": 2, "ready": 1, "drafted": 2, "approved": 1, "to_approve": 7, "badge": 8, "all": 5, "need_type": 0})
+        self.assertEqual(self.o["countsAfter"], {"arrived": 2, "ready": 1, "drafted": 1, "approved": 2, "to_approve": 5, "badge": 6, "all": 5, "need_type": 0})        # Show all: every meeting and file, whatever its stage
+
+    def test_a_file_that_is_not_sure_is_not_ready(self):
+        o = self.o
+        self.assertEqual((o["unsureCounts"]["ready"], o["unsureCounts"]["need_type"], o["unsureCounts"]["badge"]), (1, 1, 8))      # m3 is a file of unknown kind
+        self.assertEqual((o["chosenCounts"]["ready"], o["chosenCounts"]["need_type"]), (2, 0))                              # its chosen kind makes it ready
+        self.assertEqual(o["kinds"], ["transcript", "minutes", "", "transcript"])
 
     def test_esc_closes_the_peek_first_then_the_meeting(self):
         self.assertEqual(self.o["esc"], [{"peek": None, "open": "m1"}, {"peek": None, "open": None}])
