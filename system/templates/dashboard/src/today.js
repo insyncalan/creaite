@@ -384,11 +384,23 @@ export function renderSetup(){ let box=$("#setupList"); const on=setupShown();
 /* #200: "Sweep due since 07:00" with Run sweep, above Today's sections. Shown only when the build says the daily sweep is due, not in the
    development repository, and not while the first-run checklist (which has its own sweep step) is up. The button sends "sweep" to ask
    creaite exactly as the checklist's does. The style hides it while the run badge is up (a run is going) and swaps the button for the
-   usual restart hint while the live server isn't reachable. It has no dismiss: it goes when the sweep has run. */
-export function sweepDueShown(){ const sd=D.sweep_due; return !!(sd&&sd.due)&&!D.dev&&!(setupShown()&&!swept()); }
+   usual restart hint while the live server isn't reachable. It goes when the sweep has run.
+   #243: a quiet x (Dismiss until the next sweep is due) hides it for the rest of the day. This browser keeps the day and the
+   last-swept time it was dismissed for (localStorage creaite-sweepdue-dismissed; kept in memory too, so a blocked store still
+   hides it for this page load); it comes back the next day, or when the last-swept time changes and the sweep is due again. */
+const SDKEY="creaite-sweepdue-dismissed"; let SDMEM=null;
+const sdLast=()=>String((D.sweep_due&&D.sweep_due.last)||"");
+function sweepDueDismissed(){ const d=SDMEM||store.get(SDKEY,null); return !!(d&&d.day===TODAY&&d.last===sdLast()); }
+export function sweepDueShown(){ const sd=D.sweep_due; return !!(sd&&sd.due)&&!D.dev&&!(setupShown()&&!swept())&&!sweepDueDismissed(); }
 export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const on=sweepDueShown(); box.hidden=!on;
   if(!on){ putHTML(box,html``); return; }
-  putHTML(box,html`<b>Sweep due since ${D.sweep_due.due_from||"07:00"}.</b> <span class="sd-last">${D.sweep_due.last?`Last swept ${D.sweep_due.last}.`:"No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span>`); }
+  putHTML(box,html`<b>Sweep due since ${D.sweep_due.due_from||"07:00"}.</b> <span class="sd-last">${D.sweep_due.last?`Last swept ${D.sweep_due.last}.`:"No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next sweep is due" data-tip="Dismiss until the next sweep is due">${raw(ic("x"))}</button>`); }
+document.addEventListener("click",e=>{ if(!e.target.closest("#sweepX")) return; e.preventDefault();   /* #243 */
+  const box=$("#sweepDue"), had=box&&box.contains(document.activeElement);
+  SDMEM={day:TODAY,last:sdLast()}; store.set(SDKEY,SDMEM); renderSweepDue();
+  if(had||document.activeElement===document.body){ const v=$("#v-today"), nxt=v&&[...v.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")]
+      .find(n=>!!(box.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)&&n.offsetParent!==null);
+    if(nxt) nxt.focus(); else if(v){ if(!v.hasAttribute("tabindex")) v.setAttribute("tabindex","-1"); v.focus(); } } });
 document.addEventListener("click",e=>{ if(!e.target.closest("#sweepRun")) return; e.preventDefault();
   if(!viaServer()){ snack("Needs the live server"); return; }
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); });
