@@ -120,7 +120,7 @@ async function saveDismissed(problems, gone) {
   if (!res || !await saveSettings({ "health.dismissed": gone.map(entryOf) })) return false;
   healthResult.value = { ...res, problems, dismissed: gone };
   healthCount.value = problems.length;
-  store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() || Date.now() });
+  store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() });   /* a dismissal is not a check: the last check's time stays (#178: no new clock read) */
   return true;
 }
 /** Dismiss one problem, with an optional one-line reason and today's date. @param {Problem} p @param {string} reason */

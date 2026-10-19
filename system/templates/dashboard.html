@@ -30548,7 +30548,7 @@ ${s5}`;
     if (!res || !await saveSettings({ "health.dismissed": gone.map(entryOf) })) return false;
     healthResult.value = { ...res, problems, dismissed: gone };
     healthCount.value = problems.length;
-    store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() || Date.now() });
+    store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() });
     return true;
   }
   function dismissProblem(p6, reason) {
