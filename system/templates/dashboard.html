@@ -9904,8 +9904,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     if (q5 < 0) return true;
     for (const part of rest.slice(q5 + 1).split("&")) {
       if (!part) continue;
-      const eq = part.indexOf("="), key2 = strictDecode(eq < 0 ? part : part.slice(0, eq)), val3 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
-      if (key2 === null || val3 === null || !MAIL_PARTS.includes(key2.toLowerCase())) return false;
+      const eq = part.indexOf("="), key2 = strictDecode(eq < 0 ? part : part.slice(0, eq)), val2 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
+      if (key2 === null || val2 === null || !MAIL_PARTS.includes(key2.toLowerCase())) return false;
     }
     return true;
   }
@@ -26739,11 +26739,11 @@ ${s5}`;
     changed();
     return true;
   }
-  async function setClientRhythm(code, val3) {
+  async function setClientRhythm(code, val2) {
     const p6 = project(code);
     if (!p6) return false;
-    if (!await setRhythm(code, val3)) return false;
-    p6.rhythm = val3;
+    if (!await setRhythm(code, val2)) return false;
+    p6.rhythm = val2;
     changed();
     return true;
   }
@@ -33740,12 +33740,12 @@ ${s5}`;
     $("#settingsBody").addEventListener("change", async (e4) => {
       const el2 = e4.target, k5 = el2.dataset.vipk;
       if (!k5) return;
-      const val3 = el2.type === "checkbox" ? el2.checked : Math.max(5, Number(el2.value) || 30);
+      const val2 = el2.type === "checkbox" ? el2.checked : Math.max(5, Number(el2.value) || 30);
       const was = VIPD()[k5];
-      if (await writeSettings({ ["vip." + k5]: val3 })) {
-        VIPD()[k5] = val3;
+      if (await writeSettings({ ["vip." + k5]: val2 })) {
+        VIPD()[k5] = val2;
         snack("Saved to settings.json");
-        if (k5 === "notify" && val3 && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+        if (k5 === "notify" && val2 && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
       } else if (el2.type === "checkbox") el2.checked = !!was;
       else el2.value = was;
     });
@@ -35652,8 +35652,8 @@ ${s5}`;
   }
   var MVDPH = {};
   var MVCAL = null;
-  function mvDpBtn(id2, val3, label, chg) {
-    return `<button type="button" class="mv-dp${chg ? " chg" : ""}" id="${id2}" data-mvdp="${val3 || ""}" aria-haspopup="dialog" aria-expanded="false" aria-label="${esc(label)}, ${val3 ? fd(val3) : "not set"}"><span>${val3 ? fd(val3) : "Choose a date"}</span>${ic("calendar", { bare: true })}</button>`;
+  function mvDpBtn(id2, val2, label, chg) {
+    return `<button type="button" class="mv-dp${chg ? " chg" : ""}" id="${id2}" data-mvdp="${val2 || ""}" aria-haspopup="dialog" aria-expanded="false" aria-label="${esc(label)}, ${val2 ? fd(val2) : "not set"}"><span>${val2 ? fd(val2) : "Choose a date"}</span>${ic("calendar", { bare: true })}</button>`;
   }
   function mvCalEl() {
     let c5 = $("#mvCal");
@@ -37352,18 +37352,18 @@ ${s5}`;
     h5.tabIndex = 0;
     h5.setAttribute("role", "separator");
     h5.setAttribute("aria-label", "Resize " + th2.textContent + " column");
-    const val3 = (w6) => h5.setAttribute("aria-valuenow", String(Math.round(Math.max(60, Math.min(900, w6 || 0)))));
+    const val2 = (w6) => h5.setAttribute("aria-valuenow", String(Math.round(Math.max(60, Math.min(900, w6 || 0)))));
     h5.setAttribute("aria-orientation", "vertical");
     h5.setAttribute("aria-valuemin", "60");
     h5.setAttribute("aria-valuemax", "900");
-    val3(shared.RZ[k5] || th2.getBoundingClientRect().width);
-    h5.addEventListener("focus", () => val3(th2.getBoundingClientRect().width));
+    val2(shared.RZ[k5] || th2.getBoundingClientRect().width);
+    h5.addEventListener("focus", () => val2(th2.getBoundingClientRect().width));
     const put2 = (w6) => {
       w6 = Math.max(60, Math.min(900, w6));
       th2.style.width = w6 + "px";
       th2.style.minWidth = w6 + "px";
       shared.RZ[k5] = Math.round(w6);
-      val3(w6);
+      val2(w6);
     };
     h5.addEventListener("click", (e4) => e4.stopPropagation());
     h5.addEventListener("pointerdown", (e4) => {
@@ -57849,28 +57849,28 @@ ${d5.text}`);
     }
     const x5 = pkX(k5, id2);
     if (!x5) return;
-    const ml2 = !!el2.dataset.pkml, raw2 = el2.textContent.replace(/ /g, " "), val3 = ml2 ? raw2.replace(/^\s+|\s+$/g, "") : raw2.replace(/\s+/g, " ").trim();
-    if (pkSame(x5[f5], val3)) return;
-    const r4 = pkTextRule(k5, id2, f5, val3, el2, x5);
+    const ml2 = !!el2.dataset.pkml, raw2 = el2.textContent.replace(/ /g, " "), val2 = ml2 ? raw2.replace(/^\s+|\s+$/g, "") : raw2.replace(/\s+/g, " ").trim();
+    if (pkSame(x5[f5], val2)) return;
+    const r4 = pkTextRule(k5, id2, f5, val2, el2, x5);
     if (r4 === false) return;
-    return pkCommit(k5, id2, { [f5]: val3 }, pkLabel(k5, f5, x5), x5[f5] || "", val3, { type: f5 === pkDescF(k5) ? "upd" : "act" });
+    return pkCommit(k5, id2, { [f5]: val2 }, pkLabel(k5, f5, x5), x5[f5] || "", val2, { type: f5 === pkDescF(k5) ? "upd" : "act" });
   }
-  function pkTextRule(k5, id2, f5, val3, el2, x5) {
+  function pkTextRule(k5, id2, f5, val2, el2, x5) {
     if (f5 === "revisit" && !WK.ok) {
-      const iso2 = DDATE.test(val3) ? toIso(val3) : DATE.test(val3) ? val3 : "";
-      if (iso2 && wkAsk(iso2, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val3) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val3) ? fd(v5) : v5))) {
+      const iso2 = DDATE.test(val2) ? toIso(val2) : DATE.test(val2) ? val2 : "";
+      if (iso2 && wkAsk(iso2, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val2) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val2) ? fd(v5) : v5))) {
         el2.textContent = x5.revisit || "";
         return false;
       }
     }
-    if (f5 === "t" && !val3) {
+    if (f5 === "t" && !val2) {
       el2.textContent = x5.t || "";
       pkNote(`${pkTitleL(k5)} is needed, so the old one was kept.`);
       return false;
     }
     if (f5 === "cm" || f5 === "cmd") {
-      const ok2 = pkMsgOK(k5, val3);
-      if (f5 === "cm" && val3 && !cmHeads(val3)) {
+      const ok2 = pkMsgOK(k5, val2);
+      if (f5 === "cm" && val2 && !cmHeads(val2)) {
         el2.textContent = x5.cm || "";
         pkNote("Keep the three client messaging headings, with a few words after each.");
         return false;
@@ -57878,7 +57878,7 @@ ${d5.text}`);
       if (PK.pc && PK.pc.id === id2) {
         if (ok2) {
           PK.pc = null;
-          pkCommit(k5, id2, { client: true, [f5]: val3 }, "Client-visible", "No", "Yes", { note: "Client messaging written first, as the rule requires" });
+          pkCommit(k5, id2, { client: true, [f5]: val2 }, "Client-visible", "No", "Yes", { note: "Client messaging written first, as the rule requires" });
         } else pkNote(k5 === "decisions" ? "Client messaging needs a short plain explanation before this can be client-visible. Nothing saved." : "Client messaging needs a few words after each heading before this can be client-visible. Nothing saved.");
         return false;
       }
@@ -58325,7 +58325,7 @@ ${d5.text}`);
     if (body2.contains(document.activeElement) && document.activeElement.isContentEditable) return;
     if (shared.PKPOP && body2.contains(shared.PKPOP.anchor)) return;
     const af2 = body2.contains(document.activeElement) ? document.activeElement.dataset.pkp || document.activeElement.dataset.pksw : null;
-    const row2 = (icon, label, val3) => `<div class="pk-drow"><div class="lab">${ic(icon)}<span>${label}</span></div><div>${val3}</div></div>`;
+    const row2 = (icon, label, val2) => `<div class="pk-drow"><div class="lab">${ic(icon)}<span>${label}</span></div><div>${val2}</div></div>`;
     const vb2 = (f5, label, txt, empty) => `<button type="button" class="pk-vbtn${empty ? " empty" : ""}" data-pkp="${f5}" aria-haspopup="listbox" aria-label="${esc(label)}: ${esc(empty ? "not set" : txt)}">${esc(txt)}</button>`;
     const tx3 = (f5, ph2, ml2) => `<div class="pk-vtext pked" contenteditable="plaintext-only" role="textbox" data-pkf="${f5}"${ml2 ? ' data-pkml="1" aria-multiline="true"' : ""} data-ph="${esc(ph2)}" aria-label="${esc(pkLabel(k5, f5, x5))}">${esc(x5[f5] || "")}</div>`;
     let h5 = row2("projects", "Project", vb2("p", "Project", pName(x5.p) || "Choose a project", !x5.p));
@@ -65241,12 +65241,12 @@ ${d5.text}`);
     actConfirm(ids, plan);
   }
   function actPlanLine(d5) {
-    const val3 = (v5) => v5 == null || v5 === "" ? "—" : DATE.test(String(v5).slice(0, 10)) ? fd(String(v5)) : String(v5), f5 = String(d5.field || "").replace(/_/g, " ");
+    const val2 = (v5) => v5 == null || v5 === "" ? "—" : DATE.test(String(v5).slice(0, 10)) ? fd(String(v5)) : String(v5), f5 = String(d5.field || "").replace(/_/g, " ");
     if (d5.why) return `<li class="skip"><b>${esc(d5.id || "#" + d5.rowid)}</b> · ${esc(f5)} · skipped: ${esc(d5.why)}</li>`;
     if (d5.change === "removed") return `<li><b>${esc(d5.id)}</b> · removed (that change created it)</li>`;
     if (d5.change === "put back") return `<li><b>${esc(d5.id)}</b> · put back</li>`;
     const t47 = itemText(d5.id);
-    return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val3(d5.from))} → ${esc(val3(d5.to))}</li>`;
+    return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val2(d5.from))} → ${esc(val2(d5.to))}</li>`;
   }
   function actConfirm(ids, plan) {
     const dlg = $("#actDlg") || makeUndoDialog();
@@ -71177,20 +71177,20 @@ ${d5.text}`);
       r4.kind
     ] || "Proposal";
   }
-  var dueWords2 = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
+  var irDueWords = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
   var noTime = (s5) => String(s5 || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
-  var val2 = (v5) => v5 == null || v5 === "" ? "—" : fd(String(v5));
+  var irVal = (v5) => v5 == null || v5 === "" ? "—" : fd(String(v5));
   function irChange(r4) {
     const x5 = r4.rec || {}, owner = (o5) => !o5 || o5 === "TBC" ? { t: "No owner", warn: true } : { t: o5 };
-    if (r4.kind === "actions") return [owner(x5.o), { t: dueWords2(x5.due), warn: !x5.due }, { t: `${x5.pr || "Medium"} priority` }];
-    if (r4.kind === "raid") return [owner(x5.o), { t: x5.imp && x5.lik ? `Impact ${x5.imp} · Likelihood ${x5.lik}` : "Impact and likelihood not set", warn: !(x5.imp && x5.lik) }, ...x5.due ? [{ t: dueWords2(x5.due) }] : []];
+    if (r4.kind === "actions") return [owner(x5.o), { t: irDueWords(x5.due), warn: !x5.due }, { t: `${x5.pr || "Medium"} priority` }];
+    if (r4.kind === "raid") return [owner(x5.o), { t: x5.imp && x5.lik ? `Impact ${x5.imp} · Likelihood ${x5.lik}` : "Impact and likelihood not set", warn: !(x5.imp && x5.lik) }, ...x5.due ? [{ t: irDueWords(x5.due) }] : []];
     if (r4.kind === "decisions") return [{ t: x5.by ? `Made by ${x5.by}` : "Made by not recorded", warn: !x5.by }, ...x5.date ? [{ t: fd(x5.date) }] : []];
     if (r4.kind === "update") {
       const closing = x5.field === "status" && ["Closed", "Cancelled"].includes(String(x5.to)), verb = closing ? x5.to === "Cancelled" ? "Cancels" : "Closes" : "Updates";
       const ch2 = (x5.changes && x5.changes.length ? x5.changes : [{ field: x5.field, from: x5.from, to: x5.to }]).filter((c5) => c5.field);
       return [
         { t: `${verb} ${x5.target || ""}`.trim() },
-        ...ch2.map((c5) => ({ t: `${String(c5.field).toLowerCase()} ${val2(c5.from)} → ${val2(c5.to)}` })),
+        ...ch2.map((c5) => ({ t: `${String(c5.field).toLowerCase()} ${irVal(c5.from)} → ${irVal(c5.to)}` })),
         ...r4.dn && r4.dn.strength ? [{ t: r4.dn.strength }] : []
       ];
     }
@@ -71198,7 +71198,11 @@ ${d5.text}`);
   }
   var irQuote = (r4) => noTime(r4.dn && r4.dn.ev || r4.kind === "update" && r4.rec && r4.rec.why || "");
   function SourceLine({ r: r4 }) {
-    const o5 = srcParse(r4.src);
+    let o5 = srcParse(r4.src);
+    if (o5 && o5.type === "Text") {
+      const m5 = /^((?:projects|system)\/.+?\.html)(?: — (.+))?$/.exec(String(o5.text));
+      if (m5) o5 = { type: "File", path: m5[1], section: m5[2] || "", name: m5[1].split("/").pop() };
+    }
     let where2 = "", link = null;
     if (r4.kind === "draft" || r4.kind === "files") where2 = r4.kind === "draft" ? r4.ref === "report" ? "Draft report" : "Draft minutes" : "File changes";
     else if (o5 && o5.type === "File") where2 = String(o5.name || "").replace(/\.[a-z]+$/i, "");
@@ -71212,6 +71216,7 @@ ${d5.text}`);
       linkUrl(o5.Link)
     ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
     const match = r4.p ? null : r4.why;
+    where2 = fdText(where2);
     return /* @__PURE__ */ u2("div", { class: "why icsrc", children: [
       where2,
       match ? ` · ${match}` : "",
@@ -71804,8 +71809,8 @@ ${d5.text}`);
       const q5 = (h6 || "").replace(/^#/, "");
       if (!q5) return null;
       const parts = q5.split("&"), [v5, arg] = parts[0].split("=").map(decodeURIComponent), kv = Object.fromEntries(parts.slice(1).map((x6) => {
-        const [k5, val3 = ""] = x6.split("=");
-        return [k5, k5 === "v" || k5 === "q" || k5 === "vb" ? decodeURIComponent(val3) : val3];
+        const [k5, val2 = ""] = x6.split("=");
+        return [k5, k5 === "v" || k5 === "q" || k5 === "vb" ? decodeURIComponent(val2) : val2];
       }));
       const st3 = { v: v5, arg: null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
       {
@@ -74224,7 +74229,7 @@ ${d5.text}`);
         try {
           await vq(async () => {
             const path = "system/config/settings.json", text = await shared.VW.read(path), js2 = JSON.parse(text), at2 = stampFull(), logs = [];
-            for (const [key2, val3] of Object.entries(changes)) {
+            for (const [key2, val2] of Object.entries(changes)) {
               const parts = key2.split(".");
               let o5 = js2;
               parts.slice(0, -1).forEach((q5) => {
@@ -74232,8 +74237,8 @@ ${d5.text}`);
                 o5 = o5[q5];
               });
               const last = parts[parts.length - 1];
-              logs.push(JSON.stringify({ at: at2, key: key2, old: o5[last] === void 0 ? null : o5[last], new: val3 }));
-              o5[last] = val3;
+              logs.push(JSON.stringify({ at: at2, key: key2, old: o5[last] === void 0 ? null : o5[last], new: val2 }));
+              o5[last] = val2;
             }
             await shared.VW.write(await freeBackup("system/backups/settings-", ".json"), text);
             await shared.VW.write(path, JSON.stringify(js2, null, 2) + "\n");
@@ -74261,7 +74266,7 @@ ${d5.text}`);
       return h5 + "\n" + (g5.length ? g5.join("\n") + "\n\n" : "") + text.trim() + "\n" + (im2.length ? "\n" + im2.join("\n") + "\n" : "") + "\n";
     });
   }
-  async function setRhythm(code, val3) {
+  async function setRhythm(code, val2) {
     if (!await needVault()) return false;
     try {
       await vq(async () => {
@@ -74269,8 +74274,8 @@ ${d5.text}`);
         const m5 = text.match(re2);
         if (!m5) throw new Error(`no “Client report rhythm:” line in ${path}; use cx-edit`);
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
-        await shared.VW.write(path, text.replace(re2, "$1" + val3.toLowerCase()));
-        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `client_report_rhythm.${code}`, old: m5[2], new: val3.toLowerCase() }) + "\n");
+        await shared.VW.write(path, text.replace(re2, "$1" + val2.toLowerCase()));
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `client_report_rhythm.${code}`, old: m5[2], new: val2.toLowerCase() }) + "\n");
       });
       return true;
     } catch (e4) {
@@ -74278,29 +74283,29 @@ ${d5.text}`);
       return false;
     }
   }
-  function memLineEdit(text, label, val3) {
+  function memLineEdit(text, label, val2) {
     const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), re2 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$", "m");
-    if (/^(on|off)$/.test(val3)) {
+    if (/^(on|off)$/.test(val2)) {
       const re22 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)(on|off)\\b([^\\n]*)$", "mi"), m22 = text.match(re22);
-      if (m22) return { text: text.replace(re22, (_6, a5, b5, c5) => a5 + val3 + c5), was: m22[2].toLowerCase() };
+      if (m22) return { text: text.replace(re22, (_6, a5, b5, c5) => a5 + val2 + c5), was: m22[2].toLowerCase() };
     }
     const m5 = text.match(re2);
-    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val3 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
+    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val2 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
     const near = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text) || /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
     if (!near) return null;
     const at2 = near.index + near[0].length;
-    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val3 + text.slice(at2), was: "" };
+    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val2 + text.slice(at2), was: "" };
   }
-  async function setMemLine(code, label, val3, key2) {
+  async function setMemLine(code, label, val2, key2) {
     if (!await needVault()) return false;
     try {
       await vq(async () => {
-        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val3);
+        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
         if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
         if (r4.text === text) return;
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
         await shared.VW.write(path, r4.text);
-        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val3 }) + "\n");
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val2 }) + "\n");
       });
       return true;
     } catch (e4) {

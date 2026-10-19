@@ -7,7 +7,7 @@
    The rule for "routine" is the server's (review.hold_reason, the row's `hold`); rvBulkOK reads it. Tokens and the app's own
    classes only (style.css, "#232-B"). */
 import { REV, pName } from "../../core/data.js";
-import { fd } from "../../core/page.js";
+import { fd, fdText } from "../../core/page.js";
 import { srcParse } from "../../core/fields.js";
 import { irBulk, irGroupsShown } from "../../core/irFold.js";
 import { linkUrl } from "../../core/linkUrl.js";
@@ -30,20 +30,20 @@ export function irPill(r) {
   return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[/** @type {"actions"} */ (r.kind)] || "Proposal";
 }
 
-const dueWords = (/** @type {string|null|undefined} */ d) => (d ? `due ${fd(d)}` : "No due date");
+const irDueWords = (/** @type {string|null|undefined} */ d) => (d ? `due ${fd(d)}` : "No due date");
 const noTime = (/** @type {string} */ s) => String(s || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
-const val = (/** @type {any} */ v) => (v == null || v === "" ? "—" : fd(String(v)));
+const irVal = (/** @type {any} */ v) => (v == null || v === "" ? "—" : fd(String(v)));
 
 /** The emphasised line's parts: what the proposal is, owner and date or priority first. @param {any} r @returns {{t: string, warn?: boolean}[]} */
 export function irChange(r) {
   const x = r.rec || {}, owner = (/** @type {string} */ o) => (!o || o === "TBC" ? { t: "No owner", warn: true } : { t: o });
-  if (r.kind === "actions") return [owner(x.o), { t: dueWords(x.due), warn: !x.due }, { t: `${x.pr || "Medium"} priority` }];
-  if (r.kind === "raid") return [owner(x.o), { t: x.imp && x.lik ? `Impact ${x.imp} · Likelihood ${x.lik}` : "Impact and likelihood not set", warn: !(x.imp && x.lik) }, ...(x.due ? [{ t: dueWords(x.due) }] : [])];
+  if (r.kind === "actions") return [owner(x.o), { t: irDueWords(x.due), warn: !x.due }, { t: `${x.pr || "Medium"} priority` }];
+  if (r.kind === "raid") return [owner(x.o), { t: x.imp && x.lik ? `Impact ${x.imp} · Likelihood ${x.lik}` : "Impact and likelihood not set", warn: !(x.imp && x.lik) }, ...(x.due ? [{ t: irDueWords(x.due) }] : [])];
   if (r.kind === "decisions") return [{ t: x.by ? `Made by ${x.by}` : "Made by not recorded", warn: !x.by }, ...(x.date ? [{ t: fd(x.date) }] : [])];
   if (r.kind === "update") {
     const closing = x.field === "status" && ["Closed", "Cancelled"].includes(String(x.to)), verb = closing ? (x.to === "Cancelled" ? "Cancels" : "Closes") : "Updates";
     const ch = (x.changes && x.changes.length ? x.changes : [{ field: x.field, from: x.from, to: x.to }]).filter((/** @type {any} */ c) => c.field);
-    return [{ t: `${verb} ${x.target || ""}`.trim() }, ...ch.map((/** @type {any} */ c) => ({ t: `${String(c.field).toLowerCase()} ${val(c.from)} → ${val(c.to)}` })),
+    return [{ t: `${verb} ${x.target || ""}`.trim() }, ...ch.map((/** @type {any} */ c) => ({ t: `${String(c.field).toLowerCase()} ${irVal(c.from)} → ${irVal(c.to)}` })),
       ...(r.dn && r.dn.strength ? [{ t: r.dn.strength }] : [])];
   }
   return [];
@@ -54,7 +54,11 @@ export const irQuote = r => noTime((r.dn && r.dn.ev) || (r.kind === "update" && 
 
 /** The source line, without times: where it came from, the match, Open source. @param {any} r */
 function SourceLine({ r }) {
-  const o = srcParse(r.src);
+  let o = srcParse(r.src);
+  if (o && o.type === "Text") {                                    /* a minutes copy is HTML: a file all the same */
+    const m = /^((?:projects|system)\/.+?\.html)(?: — (.+))?$/.exec(String(o.text));
+    if (m) o = { type: "File", path: m[1], section: m[2] || "", name: m[1].split("/").pop() };
+  }
   let where = "", link = null;
   if (r.kind === "draft" || r.kind === "files") where = r.kind === "draft" ? (r.ref === "report" ? "Draft report" : "Draft minutes") : "File changes";
   else if (o && o.type === "File") where = String(o.name || "").replace(/\.[a-z]+$/i, "");
@@ -65,6 +69,7 @@ function SourceLine({ r }) {
   else if (o && o.type === "File") link = <a href="#" class="srclink" data-openfile={o.path}>Open source</a>;
   else if (o && o.Link && linkUrl(o.Link)) link = <a class="srclink" href={/** @type {string} */ (linkUrl(o.Link))} target="_blank" rel="noopener noreferrer">Open source</a>;
   const match = r.p ? null : r.why;
+  where = fdText(where);
   return <div class="why icsrc">{where}{match ? ` · ${match}` : ""}{link ? <> · {link}</> : null}</div>;
 }
 

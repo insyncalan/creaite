@@ -5,7 +5,6 @@ first group and keeps the meeting open.
 
 Run: python3 dev/tests/test_intake_review_routine.py   (needs Google Chrome; skipped otherwise)
 """
-import json
 import sys
 import unittest
 from pathlib import Path
