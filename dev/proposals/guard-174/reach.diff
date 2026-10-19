@@ -1,15 +1,18 @@
 --- system/scripts/reach.py
 +++ system/scripts/reach.py
-@@ -798,7 +798,7 @@
+@@ -798,7 +798,10 @@
      if not m:
          return ("ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; "
                  "file changes go through filechange.py")
 -    return _script_refused(m.group(1)) or _shell_refused(cmd) or _settings_refused(m.group(1), cmd.split())
-+    return _script_refused(m.group(1)) or _shell_refused(cmd) or _settings_refused(m.group(1), _unquoted_words(cmd))
++    # #174 F5: the settings rule reads the command twice, as the shell hands it over (quotes removed) and as str.split cuts it
++    # (the old reading, which also cuts at a non-breaking space or a form feed the shell doesn't), so it only ever refuses more
++    return (_script_refused(m.group(1)) or _shell_refused(cmd) or _settings_refused(m.group(1), _unquoted_words(cmd))
++            or _settings_refused(m.group(1), cmd.split()))
  
  
  def _script_refused(script):
-@@ -833,11 +833,25 @@
+@@ -833,11 +836,36 @@
                      "To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it "
                      "printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp")
      return "the command has an unclosed quote" if quote else None
@@ -18,22 +21,33 @@
 +def _unquoted_words(cmd):
 +    """The command's words as the shell hands them to the program, quotes removed (#174 F5: `'setting'`, `se""tting` and
 +    `"retire-settings"` are the words setting and retire-settings). Called after _shell_refused, so a quote always opens and closes
-+    as the shell reads it and shlex agrees with the shell; None if it still can't be split (the settings rule then refuses)."""
++    as the shell reads it and shlex agrees with the shell; None if it still can't be split (defence in depth: the strings that pass
++    _shell_refused always split, so the settings rule's refusal of None is not reached today)."""
 +    import shlex
 +    try:
 +        return shlex.split(cmd)
 +    except ValueError:
 +        return None
++
  
++def _has_glob(word):
++    """True if the word has a character the shell turns into a file-name pattern (* ? [)."""
++    return any(c in word for c in "*?[")
  
++
  def _settings_refused(script, words):
 -    if script == "propose.py" and len(words) > 2 and words[2] == "setting" or \
 -            script == "propose.py" and "retire-settings" in words:
-+    """Why a propose.py call is refused as a settings change, or None. `words` are the unquoted words (_unquoted_words), the
-+    script's own arguments from the third on. propose.py's main() takes argv[0] as the command, so `setting` is refused as that
-+    first argument; `retire-settings` (workstreams' subcommand, which clears settings.json lists through cmd_setting) in any place."""
++    """Why a propose.py call is refused as a settings change, or None. `words` are the command's words, the script's own arguments
++    from the third on. propose.py's main() takes argv[0] as the command, so `setting` is refused as that first argument;
++    `retire-settings` (workstreams' subcommand, which clears settings.json lists through cmd_setting) in any place. #174 F5: a
++    wildcard in the first argument, or in any argument after `workstreams`, is refused too: the shell expands `setti?g` to a file
++    named `setting` in the folder the run starts in (the vault), and the guard, which never expands a pattern here, would not see
++    the word. propose.py's commands are fixed words, so no real call has one."""
 +    args = (words or [])[2:]
-+    if script == "propose.py" and (words is None or args[:1] == ["setting"] or "retire-settings" in args):
++    if script == "propose.py" and (words is None or args[:1] == ["setting"] or "retire-settings" in args
++                                   or (args and _has_glob(args[0]))
++                                   or (args[:1] == ["workstreams"] and any(_has_glob(a) for a in args[1:]))):
          return ("settings are changed on the approval card: put the new settings.json in system/staging/drafts/ and run "
                  "python3 system/scripts/filechange.py edit system/config/settings.json --from <that file> --why \"…\"")
      return None

@@ -1,6 +1,8 @@
 """#174 F5 (guard hardening): `_settings_refused` is defeated by quoting. PROPOSAL tests: they run against a patched scratch copy.
 
 Run: python3 dev/tests/test_guard_174.py                      (quick tier: no Chrome)
+Older diff:  GUARD_174_DIFF=<file> python3 dev/tests/test_guard_174.py   (the first version of the diff, 5b20e38c, fails the glob and
+            space tests: they were added after the independent review found those holes)
 Fail-first: GUARD_174_UNPATCHED=1 python3 dev/tests/test_guard_174.py   (the scratch copy is left without the proposal's patch:
             the F5 tests go red, the "normal commands" tests stay green)
 
@@ -15,6 +17,10 @@ What it proves:
 - every quoted, concatenated, escaped, `$'..'`, `$(..)`, back-quote, env-prefixed, `./`, absolute-path, `python`, `python3 …/propose.py`
   and `system/scripts/run propose.py` form of `propose.py setting …` and of `propose.py workstreams retire-settings` is refused in
   every mode; the quoted ones with the settings reason, from the check every mode shares (`bash_problem`);
+- the glob bypass (review of 5b20e38c): `propose.py setti?g`, `[s]etting`, `s*ting`, `workstreams retire-*` … would be expanded by the
+  shell to a file named `setting` (made first with `filechange.py create`, an ordinary change) in the vault, where the run starts, and
+  the guard, which doesn't expand a pattern, never saw the word: refused now in every mode (a pre-existing hole, not from the patch);
+  and the forms `propose.py\xa0setting` / `setting\xa0k` the old `str.split` cut apart but `shlex` doesn't stay refused;
 - the defect is real: in a confirmed run the unpatched file lets the quoted forms through (F5);
 - the normal creaite script runs the skills and the server make are decided exactly as before, in every mode, and the commands a
   confirmed run needs still pass; every command span in the skills, rules and draft prompts has the same decision with and without
@@ -36,7 +42,7 @@ sys.path.insert(0, str(HERE))
 from test_tracker import Vault  # noqa: E402
 
 REPO = HERE.parents[1]
-DIFF = REPO / "dev" / "proposals" / "guard-174" / "reach.diff"
+DIFF = Path(os.environ.get("GUARD_174_DIFF") or REPO / "dev" / "proposals" / "guard-174" / "reach.diff")   # GUARD_174_DIFF: try an older diff
 UNPATCHED = os.environ.get("GUARD_174_UNPATCHED") == "1"
 MUTATE = os.environ.get("GUARD_174_MUTATE", "")
 MARKER = "def _unquoted_words"
@@ -45,8 +51,11 @@ SETTINGS_WHY = "settings are changed on the approval card"
 
 # One text change per mutation, made on the patched copy: (what it reverts, old text, new text)
 MUTATIONS = {
-    "call-site": ("hunk 1: the call site passes cmd.split() again", "_settings_refused(m.group(1), _unquoted_words(cmd))",
-                  "_settings_refused(m.group(1), cmd.split())"),
+    "no-unquoted": ("hunk 1: the unquoted words are not read (only str.split is)", "_settings_refused(m.group(1), _unquoted_words(cmd))",
+                    "None"),
+    "no-split": ("hunk 1: the old str.split reading is dropped", "\n            or _settings_refused(m.group(1), cmd.split()))", ")"),
+    "no-glob-first": ("hunk 2: a wildcard in the first argument is let through", "(args and _has_glob(args[0]))", "False"),
+    "no-glob-workstreams": ("hunk 2: a wildcard after workstreams is let through", "any(_has_glob(a) for a in args[1:])", "False"),
     "no-shlex": ("hunk 2: the words are split without reading the quotes", "return shlex.split(cmd)", "return cmd.split()"),
     "no-setting": ("hunk 2: `setting` is no longer refused", 'args[:1] == ["setting"]', "False"),
     "no-retire": ("hunk 2: `retire-settings` is no longer refused", '"retire-settings" in args', "False"),
@@ -125,6 +134,33 @@ RETIRE_ARGS = {
     "without workstreams": "retire-settings", "after a bare --": "workstreams -- 'retire-settings'",
     "after an option": 'workstreams -h "retire-settings"',
 }
+# F5 review: the shell turns these into `setting` / `retire-settings` when a file of that name is in the run's folder (the vault root)
+GLOB_SETTING_WORDS = {
+    "? for t": "setti?g", "[s]": "[s]etting", "star after": "setting*", "star inside": "s*ting", "star first": "*etting",
+    "quoted piece and ?": "'sett'?ng", "? for e": "s?tting", "bracket in the middle": "s[e]tting", "question mark last": "setting?",
+    "range": "[a-z]etting", "negated bracket": "[^x]etting", "all": "*", "a quoted pattern (the shell leaves it)": "'setti?g'",
+}
+GLOB_RETIRE_ARGS = {
+    "? last": "workstreams retire-setting?", "star": "workstreams retire-*", "[r]": "workstreams [r]etire-settings",
+    "star in the middle": "workstreams re*", "? first": "workstreams ?etire-settings", "star on workstreams": "workst*ms retire-settings",
+    "after an option": "workstreams -h retire-*", "after a bare --": "workstreams -- retire-*",
+    "a name with a bracket": "workstreams add ABC 'Data [Migration]'",
+}
+# the characters str.split cuts at and the shell doesn't (a non-breaking space, a vertical tab, a form feed, …): the old rule saw
+# `setting` in these; the unquoted words alone would not
+SPACE_FORMS = {
+    "nbsp before setting": "python3 system/scripts/propose.py\xa0setting sweep.due_from 06:30",
+    "vertical tab before setting": "python3 system/scripts/propose.py\vsetting sweep.due_from 06:30",
+    "form feed before setting": "python3 system/scripts/propose.py\fsetting sweep.due_from 06:30",
+    "nbsp after setting": "python3 system/scripts/propose.py setting\xa0sweep.due_from 06:30",
+    "em space after setting": "python3 system/scripts/propose.py setting\u2003sweep.due_from 06:30",
+    "ideographic space": "python3 system/scripts/propose.py\u3000setting sweep.due_from 06:30",
+    "next line": "python3 system/scripts/propose.py setting\x85sweep.due_from 06:30",
+    "file separator": "python3 system/scripts/propose.py\x1csetting sweep.due_from 06:30",
+    "nbsp after retire-settings": "python3 system/scripts/propose.py workstreams retire-settings\xa0x",
+    "run launcher, nbsp": "system/scripts/run propose.py\xa0setting sweep.due_from 06:30",
+}
+
 # forms the shell-character check or the script check refuses before the settings rule is reached
 OTHER_FORMS = {
     "$'..'": "python3 system/scripts/propose.py $'setting' a b",
@@ -193,12 +229,17 @@ NORMAL = {
     "filechange create": "system/scripts/run filechange.py create 'projects/ABC Example Programme/notes.md' "
                          "--from system/staging/drafts/n.md --why 'note'",
     "build dashboard": "system/scripts/run build_dashboard.py",
+    "stage a quoted file name with a bracket": "system/scripts/run propose.py stage 'system/staging/drafts/x [1].json'",
+    "preview a quoted file name": "system/scripts/run propose.py preview 'system/staging/drafts/x y.json'",
+    "a name with a non-breaking space": "system/scripts/run propose.py people add 'Sara\xa0Khan' --email s.khan@example.com",
+    "a name with a question mark outside workstreams": "system/scripts/run propose.py learn ABC alias 'Why? Programme'",
 }
 # of those, the ones a confirmed run may run (nothing in them is refused by any rule: the filechange paths are Alan's own files)
 CONFIRMED_OK = ("tracker apply", "tracker apply, python3", "tracker read", "tracker undo", "propose stage", "propose preview",
                 "propose fields", "propose new-project", "propose close-project", "propose recode dry run", "propose learn",
                 "propose people list", "propose people add", "propose workstreams list", "propose workstreams add",
-                "workstream named setting", "learn with setting as a value", "sweep stage", "sweep due", "minutes transcript",
+                "workstream named setting", "learn with setting as a value", "stage a quoted file name with a bracket",
+                "preview a quoted file name", "a name with a non-breaking space", "a name with a question mark outside workstreams", "sweep stage", "sweep due", "minutes transcript",
                 "review approve", "search query", "doctor", "filechange edit of the settings", "filechange create", "build dashboard")
 
 
@@ -208,6 +249,14 @@ def setting_commands(root):
         for wname, word in SETTING_WORDS.items():
             out[f"{lname} | {wname}"] = launcher.format(ROOT=root) + f" {word} sweep.due_from 06:30"
         out[f"{lname} | setting with no value"] = launcher.format(ROOT=root) + " 'setting'"
+    return out
+
+
+def glob_commands(root):
+    out = {f"{lname} | {wname}": launcher.format(ROOT=root) + f" {word} sweep.due_from 05:55"
+           for lname, launcher in LAUNCHERS.items() for wname, word in GLOB_SETTING_WORDS.items()}
+    out.update({f"{lname} | {aname}": launcher.format(ROOT=root) + f" {args}"
+                for lname, launcher in LAUNCHERS.items() for aname, args in GLOB_RETIRE_ARGS.items()})
     return out
 
 
@@ -241,7 +290,10 @@ class Attacks(Scratch):
         cls.setting = setting_commands(cls.root)
         cls.retire = retire_commands(cls.root)
         cls.other = {k: v for k, v in OTHER_FORMS.items()}
-        cls.got = decisions(cls.patched, list(cls.setting.values()) + list(cls.retire.values()) + list(cls.other.values()))
+        cls.glob = glob_commands(cls.root)
+        cls.space = dict(SPACE_FORMS)
+        cls.got = decisions(cls.patched, list(cls.setting.values()) + list(cls.retire.values()) + list(cls.other.values())
+                            + list(cls.glob.values()) + list(cls.space.values()))
 
     def refused_everywhere(self, cmd, shared=True):
         """Refused by every mode's decision and, with `shared`, by bash_problem, the check all modes make first."""
@@ -272,6 +324,37 @@ class Attacks(Scratch):
                 if not name.startswith("abs-"):
                     self.assertIn(SETTINGS_WHY, self.got["problem"][cmd], cmd)
                 self.assertIn(SETTINGS_WHY, self.got["decide"]["confirmed"][cmd][1], cmd)
+
+    def test_a_wildcard_in_the_command_word_is_refused_in_every_mode(self):
+        """The shell expands `setti?g` to a file named `setting` in the vault (made first by `filechange.py create`, an ordinary
+        change): the guard never expands it, so it refuses any * ? [ in propose.py's first argument and after `workstreams`."""
+        for name, cmd in self.glob.items():
+            with self.subTest(name):
+                self.refused_everywhere(cmd)
+                if not name.startswith("abs-"):
+                    self.assertIn(SETTINGS_WHY, self.got["problem"][cmd], cmd)
+                self.assertIn(SETTINGS_WHY, self.got["decide"]["confirmed"][cmd][1], cmd)
+
+    def test_a_space_the_shell_does_not_cut_at_never_hides_the_word(self):
+        """str.split cuts at a non-breaking space or a vertical tab, shlex and the shell don't: the old rule refused these
+        forms (it saw `setting`), so the new one must too (the settings rule reads the command both ways)."""
+        for name, cmd in self.space.items():
+            with self.subTest(name):
+                self.refused_everywhere(cmd)
+                self.assertIn(SETTINGS_WHY, self.got["decide"]["confirmed"][cmd][1], cmd)
+
+    def test_the_shell_really_expands_the_pattern(self):
+        """The premise, checked with the shell itself (zsh, if installed; the Bash tool's shell): a file named `setting` in the
+        run's folder is what `setti?g` and `retire-*` become."""
+        zsh = shutil.which("zsh")
+        if not zsh:
+            self.skipTest("zsh is not installed")
+        d = Path(self.root)
+        (d / "setting").write_text("x", encoding="utf-8")
+        (d / "retire-settings").write_text("x", encoding="utf-8")
+        for pattern, word in (("setti?g", "setting"), ("[s]etting", "setting"), ("s*ting", "setting"), ("retire-*", "retire-settings")):
+            r = subprocess.run([zsh, "-c", f"printf '%s' {pattern}"], cwd=d, capture_output=True, text=True)
+            self.assertEqual(r.stdout, word, pattern)
 
     def test_the_other_forms_are_refused_in_every_mode(self):
         for name, cmd in self.other.items():
@@ -312,6 +395,16 @@ class Defect(Scratch):
                 self.assertEqual(got["decide"]["confirmed"][cmd], [True, ""])        # F5: a confirmed run goes through
         plain = decisions(self.base, ["python3 system/scripts/propose.py setting sweep.due_from 06:30"])
         self.assertIn(SETTINGS_WHY, plain["problem"]["python3 system/scripts/propose.py setting sweep.due_from 06:30"])
+
+    def test_unpatched_lets_the_glob_forms_through_a_confirmed_run(self):
+        """Pre-existing (the review of 5b20e38c): neither the old rule nor the first diff saw a pattern."""
+        cmds = ["python3 system/scripts/propose.py setti?g sweep.due_from 05:55", "python3 system/scripts/propose.py workstreams retire-*",
+                "python3 system/scripts/propose.py [s]etting sweep.due_from 05:55"]
+        got = decisions(self.base, cmds)
+        for cmd in cmds:
+            with self.subTest(cmd):
+                self.assertIsNone(got["problem"][cmd])
+                self.assertEqual(got["decide"]["confirmed"][cmd], [True, ""])
 
     def test_the_other_modes_were_only_held_by_the_record_gate(self):
         """In ask, sweep, prep and held the unpatched file still refuses `'setting'`, by the record gate (a different rule, not the
@@ -373,6 +466,13 @@ class Normal(Scratch):
         span = re.compile(r"`((?:python3? system/scripts/|system/scripts/run )[^`\n]+)`")
         spans = sorted({m.group(1) for f in docs for m in span.finditer(f.read_text(encoding="utf-8"))})
         self.assertGreater(len(spans), 50, "the docs show many commands")
+        import shlex
+        for c in spans:           # no command the docs show has a wildcard in propose.py's first argument, or after workstreams
+            if re.match(r"(?:python3? system/scripts/|system/scripts/run )propose\.py\b", c):
+                words = shlex.split(c.replace("<", "x").replace(">", "x"))[2:]
+                self.assertFalse(words and any(ch in words[0] for ch in "*?["), c)
+                if words[:1] == ["workstreams"]:
+                    self.assertFalse(any(ch in w for w in words[1:] for ch in "*?["), c)
         p, b = decisions(self.patched, spans), decisions(self.base, spans)
         self.assertEqual(p["problem"], b["problem"])
         for mode in MODES:
