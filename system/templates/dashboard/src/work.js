@@ -24,7 +24,7 @@ import { draftBtn } from "./drafts.js";
 import { kb } from "./intake.js";
 import { decLate, decLateWords, withdrawDecision } from "./meetings.js";
 import { ceListPlace } from "./milestones.js";
-import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCid, pkCommit, markStagedRows, pkFollowable, pkKeepFocus, pkSetStatus, REC, validate } from "./panel.js";
+import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCid, pkClient, pkCommit, markStagedRows, pkFollowable, pkKeepFocus, pkMsgF, pkMsgOK, pkSetStatus, REC, validate } from "./panel.js";
 import { closePanel, pkOn, wflag } from "./projects.js";
 import { CHK, cxCursor, cxShow, cxWork, cxWorkMany, isMin, RHL, rvBar, rvBulkOK, RVF, RVFIELDS, rvSyncChk } from "./review.js";
 import { contextMenuOpen, openContextMenu } from "./components/review/ContextMenu.jsx";
@@ -544,7 +544,7 @@ export const SORTOPTS=t=>t==="decisions"?[["","Default order"],["due","Needed by
 /* the key-hint line for each layout, built from the controls that exist (BL-114, BL-122, BL-123, BL-128) */
 /** @type {[string[] | "", string, string, boolean?][]} the keys (or none), what they do, the layout they belong to, and whether they change an item (not on All items) */
 export const HINTS=[[["↑","↓","J","K"],"move","list"],[["J","K"],"step through the cards","board"],[["Space"],"select","both"],["","click a value to change it","list"],[["Enter"],"or the ID opens","both"],
-  [["→"],"opens, ← closes (or the menu)","both"],[["S","O","P","T"],"status, owner, priority, due","both",true],[["C"],"close","both",true],   /* #241 B */
+  [["→"],"opens, ← closes (or the menu)","both"],[["S","O","P","T"],"status, owner, priority, due","both",true],[["C"],"close","both",true],[["V"],"client-visible","both",true],   /* #241 B, C */
   ["","drag a card, or use its <b>Move to…</b> menu, to change it","board"],[["D"],"display","both"],[["F"],"filters","both"],[["Esc"],"clear","both"],["","click a heading to sort","list"],["","drag a column edge to resize","list"]];
 export function workHint(lay){ return HINTS.filter(h=>(h[2]==="both"||h[2]===lay)&&!(h[3]&&shared.WT==="all")).map(([k,t])=>(k?k.map(x=>`<span class="kbd">${x}</span>`).join(" ")+" ":"")+t).join(" · "); }
 export function drawDisp(){ const m=$("#dispMenu"), t=shared.WT, bd=layoutOf(t)==="board", s=SORT[t], cur=s?(s.col==="_def"?"":s.col):"", opts=SORTOPTS(t), focusKey=document.activeElement&&m.contains(document.activeElement)?(document.activeElement.id||document.activeElement.dataset.mv+"|"+document.activeElement.dataset.d):null;
@@ -916,7 +916,7 @@ export function hlRowClick(e,k,el){ const follow=pkFollowable(e), was=document.a
     pkKeepFocus(was,()=>openRecord(k,id)); return; }
 export function hlRowOpen(e,k,el,field=true){ if(e.target.closest("a:not(.rowid),button,input,select,textarea,label,[data-proj],[data-person],[role=link]")) return; const id=el.dataset.row, td=e.target.closest("td[data-f]");
   hlOnly(k,id); openRecord(k,id,field&&td?td.dataset.f:undefined); }
-export function hlKey(e){ if(shared.VIEW==="work"&&wkKey(e)) return true;   /* #241 B: arrows, S O P T C */
+export function hlKey(e){ if(shared.VIEW==="work"&&wkKey(e)) return true;   /* #241 B: arrows, S O P T C V */
   if(e.shiftKey&&!/^[JK]$/.test(e.key)||e.altKey) return false;
   const a=document.activeElement; if(a&&a!==document.body&&/^(A|BUTTON|SUMMARY)$/.test(a.tagName)&&(e.key==="Enter"||e.key===" ")) return false;
   const order=hlOrder(); if(!order.length) return false; const i=order.findIndex(o=>o.id===(shared.HLC??shared.SEL)), key=e.key.toLowerCase();
@@ -932,7 +932,7 @@ export function hlKey(e){ if(shared.VIEW==="work"&&wkKey(e)) return true;   /* #
    → or Enter opens the peek; ← closes it, or opens the row's menu when no peek is open. S, O, P and T change the status, owner,
    priority and due date: the cell's own editor in the List, the peek's own picker while the peek shows the row, the menu's list on
    the Board or for a hidden column, and the bulk change (the menu for all of them) when two or more are selected. C closes, with
-   Undo. The All items tab is read-only: its rows move and open only. */
+   Undo; V turns Client-visible on or off (#241 C). The All items tab is read-only: its rows move and open only. */
 export const WKF={s:"st",o:"o",p:"pr",t:"due"};
 const WKSKIP="[role=tab],[role=tablist],[role=separator],[role=menu],[role=menuitem],[role=listbox],[role=option],[role=slider],[role=switch],dialog";
 export function wkArrowOK(e){ if(e.defaultPrevented||contextMenuOpen()||document.querySelector("dialog[open]")) return false; const a=document.activeElement;
@@ -944,6 +944,7 @@ export function wkKey(e){ if(e.metaKey||e.ctrlKey||e.altKey) return false; const
   if(e.shiftKey||shared.WT==="all") return false; const c=k.toLowerCase();
   if(WKF[c]){ const o=wkCursor(); if(!o) return false; e.preventDefault(); wkPropKey(WKF[c],o); return true; }
   if(c==="c"){ const o=wkCursor(); if(!o) return false; e.preventDefault(); wkClose(o); return true; }
+  if(c==="v"){ const o=wkCursor(); if(!o&&!(pkOn()&&shared.CUR&&shared.CUR.mode==="record")) return false; e.preventDefault(); const t=o||{k:shared.CUR.k,id:shared.CUR.id}; wkClientToggle(t.k,t.id); return true; }
   return false; }
 export function wkOpen(e){ const o=wkCursor(); if(!o||pkOn()) return false; e.preventDefault(); hlOnly(o.k,o.id); openRecord(o.k,o.id); return true; }
 export function wkLeft(e){ if(pkOn()){ e.preventDefault(); closePanel(); return true; } const c=cxCursor(); if(!c) return false;
@@ -966,7 +967,15 @@ export async function wkClose(o){ const k=o.k;
   const x=REC(k,o.id); if(!x) return; if(!OPENST(x.st)){ snack(`${o.id} is already ${x.st.toLowerCase()}`); return; }
   if(pkOn()&&shared.CUR&&shared.CUR.mode==="record"&&pkCid()===o.id){ pkSetStatus(k,o.id,"Closed"); return; }
   await boardMove(k,o.id,{st:"Closed"},`${o.id} closed: ${x.t.length>60?x.t.slice(0,57)+"…":x.t}`); }
-/* ===== end #241 B (keys) ===== */
+/* ===== #241 C ===== one switch for Client-visible: the eye in the peek bar (V), the row's menu and V on the cursor row. On means
+   the item can appear in client reports. Turning it on needs complete client messaging (the peek's rule, BL-176): when it isn't
+   written yet the peek opens at the messaging and nothing is saved until it is. In the peek it is staged like any peek change
+   (Undo last in the pill); from the list it is one change with Undo in the message. */
+export function wkClientToggle(k,id){ const x=REC(k,id); if(!x||k==="all") return; const on=!x.client, inPeek=pkOn()&&shared.CUR&&shared.CUR.mode==="record"&&pkCid()===id;
+  if(inPeek){ pkClient(k,id,on); return; }
+  if(on&&!pkMsgOK(k,x[pkMsgF(k)])){ hlOnly(k,id); openRecord(k,id); pkClient(k,id,true); return; }
+  boardMove(k,id,{client:on},`Client-visible ${on?"on":"off"} for ${id}${on?": it can appear in client reports":""}`); }
+/* ===== end #241 B and C (keys) ===== */
 /* Review (BL-122): the same rules over the rows of #reviewBody. A highlighted row that may be ticked (not individual-approval) is ticked too. */
 export const RVTICK=new Set();   /* BL-263: the rows whose tick was drawn */
 export function rvPaint(){ const paint=()=>{ $$("#reviewBody tr[data-n]").forEach(tr=>{ const n=+tr.dataset.n, on=RHL.has(n), r=REV.find(x=>x.n===n); tr.classList.toggle("hl",on); tr.setAttribute("aria-selected",String(on));

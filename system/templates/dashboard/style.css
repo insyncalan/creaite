@@ -4101,7 +4101,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
 /* ===== NEW (#241 Work items v2, dev/sprints/work-items-v2-brief.md; mockup dev/mockups/work-items-v2-mockup.html): the .tg tag chip,
    the row densities .cmp (40 px) and .cmf (57 px, today's two lines), the density switch (a .seg.ico), the row's status and priority
-   marks (.wkm). Tokens and the app's own classes only. Row height only: no width. ===== */
+   marks (.wkm) and the peek's client-visible switch and badge. Tokens and the app's own classes only. Row height only: no width. ===== */
 #workTbl td.title .wkm{display:inline-flex;align-items:center;gap:2px;margin-right:6px;vertical-align:-3px}
 #workTbl td.title .wkm svg{width:16px;height:16px;flex:none}
 .tg{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;margin-left:6px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500;white-space:nowrap;vertical-align:1px}
@@ -4111,4 +4111,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* the same two lines, closer: putting the ID on the title's line would change the widths */
 #workWrap.cmf tbody tr[data-row]>td{height:57px}
 .seg.ico.wdens[hidden]{display:none}
+#pkCv[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+#pkId .cv{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-xs);font-weight:500}
+#pkId .cv svg{width:12px;height:12px}
 /* ===== end NEW (#241) ===== */

@@ -1,7 +1,8 @@
-"""#241 B: Work items v2, the keyboard. ↑ ↓ move, → or Enter opens the peek, ← closes it or
+"""#241 B and C: Work items v2, the keyboard and the client-visible switch. ↑ ↓ move, → or Enter opens the peek, ← closes it or
 opens the row's menu; a click selects, and opens another row in the peek only while the peek is open; the peek runs over the
 page. S, O, P and T change the status, owner, priority and due date of the cursor row (its cell's editor, the peek's picker, the
-menu's list, or the bulk change for a selection); C closes with Undo.
+menu's list, or the bulk change for a selection); C closes with Undo. V, the eye in the peek bar and the row's menu turn
+Client-visible on or off (a badge beside the ID, a tag in the list, Undo), and never without client messaging.
 A real browser against the real live server.
 
 Run: python3 dev/tests/test_work_items_v2_keys.py   (needs Google Chrome; skipped otherwise)
@@ -76,6 +77,9 @@ class KeysV2(LiveBrowserCase):
 
     def pick(self, label, level=0):
         self.b.eval(f"""[...document.querySelectorAll("{MENU}")[{level}].querySelectorAll("[role=menuitem]")].find(b=>b.querySelector("span").firstChild.textContent==={json.dumps(label)}).click()""")
+
+    def client_with_messaging(self):
+        return self.b.eval("A.filter(x=>x.client&&x.st==='Open'&&cmOK(x.cm)).map(x=>x.id)")[0]
 
     # ── B: moving, opening, closing ──
     def test_arrows_move_open_and_close_and_left_opens_the_menu(self):
@@ -196,6 +200,64 @@ class KeysV2(LiveBrowserCase):
         b.wait("/no priority/.test(document.getElementById('snackT').textContent)")
         b.key("c")
         b.wait("/not closed/.test(document.getElementById('snackT').textContent)")
+
+    # ── C: the client-visible switch ──
+    def test_the_peek_eye_shows_and_switches_client_visible(self):
+        b = self.open_work()
+        id_ = self.client_with_messaging()
+        b.eval(f"openRecord('actions',{id_!r})")
+        b.wait(f"pkOn()&&CUR&&CUR.id==={id_!r}")
+        self.assertEqual(b.eval("document.getElementById('pkCv').getAttribute('aria-pressed')"), "true")
+        self.assertEqual(b.eval("document.getElementById('pkCv').dataset.key"), "V")
+        self.assertTrue(b.eval("!!document.querySelector('#pkId .cv')"))                        # the badge beside the ID
+        self.assertNotEqual(b.eval("getComputedStyle(document.getElementById('pkCv')).backgroundColor"),
+                            b.eval("getComputedStyle(document.getElementById('pkLink')).backgroundColor"))   # tinted when on
+        self.blur()
+        b.key("v")                                                                             # V turns it off (staged, as every peek change)
+        b.wait("document.getElementById('pkCv').getAttribute('aria-pressed')==='false'")
+        self.assertFalse(b.eval("!!document.querySelector('#pkId .cv')"))
+        b.wait("!document.getElementById('pkStage').hidden")
+        b.click("#pkUndo")                                                                     # Undo last puts it back
+        b.wait("document.getElementById('pkCv').getAttribute('aria-pressed')==='true'")
+        b.click("#pkCv")                                                                       # and the eye itself switches it
+        b.wait("document.getElementById('pkCv').getAttribute('aria-pressed')==='false'")
+
+    def test_v_and_the_menu_switch_a_row_with_undo_and_the_tag_follows(self):
+        b = self.open_work()
+        id_ = self.client_with_messaging()
+        self.assertTrue(b.eval(f"!!document.querySelector('{self.row(id_)} td.title .tg[data-tg=cv]')"))
+        b.click(self.row(id_) + " td.title .wkm")
+        self.blur()
+        self.arm()
+        b.key("v")
+        self.saved()
+        self.assertIn(f"Client-visible off for {id_}", b.eval("document.getElementById('snackT').textContent"))
+        self.assertEqual(self.rec("actions", id_)["client_visible"], 0)
+        b.wait(f"!document.querySelector('{self.row(id_)} td.title .tg[data-tg=cv]')")
+        self.arm()
+        b.click("#snackU")
+        self.saved("^Undone")
+        self.assertEqual(self.rec("actions", id_)["client_visible"], 1)
+        b.wait(f"!!document.querySelector('{self.row(id_)} td.title .tg[data-tg=cv]')")
+        b.click(self.row(id_) + " td.title .wkm", button="right")                                     # the row's menu
+        b.wait(f'!!document.querySelector("{MENU}")')
+        self.assertIn("Client-visible", self.menu_labels())
+        self.assertEqual(b.eval(f"""[...document.querySelectorAll("{MENU} [role=menuitem]")].find(x=>x.querySelector("span").firstChild.textContent==="Client-visible").getAttribute("aria-current")"""), "true")
+        self.arm()
+        self.pick("Client-visible")
+        self.saved()
+        self.assertEqual(self.rec("actions", id_)["client_visible"], 0)
+
+    def test_turning_on_without_messaging_opens_the_peek_and_saves_nothing(self):
+        b = self.open_work()
+        id_ = b.eval("A.filter(x=>!x.client&&x.st==='Open').map(x=>x.id)")[0]
+        b.click(self.row(id_) + " td.title .wkm")
+        self.blur()
+        b.key("v")
+        b.wait(f"pkOn()&&CUR&&CUR.id==={id_!r}")
+        b.wait("/client messaging/.test(document.getElementById('pkNote').textContent)")
+        self.assertEqual(self.rec("actions", id_)["client_visible"], 0)
+        self.assertEqual(b.eval("document.getElementById('pkCv').getAttribute('aria-pressed')"), "false")
 
 
 if __name__ == "__main__":

@@ -4111,7 +4111,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
 /* ===== NEW (#241 Work items v2, dev/sprints/work-items-v2-brief.md; mockup dev/mockups/work-items-v2-mockup.html): the .tg tag chip,
    the row densities .cmp (40 px) and .cmf (57 px, today's two lines), the density switch (a .seg.ico), the row's status and priority
-   marks (.wkm). Tokens and the app's own classes only. Row height only: no width. ===== */
+   marks (.wkm) and the peek's client-visible switch and badge. Tokens and the app's own classes only. Row height only: no width. ===== */
 #workTbl td.title .wkm{display:inline-flex;align-items:center;gap:2px;margin-right:6px;vertical-align:-3px}
 #workTbl td.title .wkm svg{width:16px;height:16px;flex:none}
 .tg{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;margin-left:6px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500;white-space:nowrap;vertical-align:1px}
@@ -4121,6 +4121,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* the same two lines, closer: putting the ID on the title's line would change the widths */
 #workWrap.cmf tbody tr[data-row]>td{height:57px}
 .seg.ico.wdens[hidden]{display:none}
+#pkCv[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+#pkId .cv{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-xs);font-weight:500}
+#pkId .cv svg{width:12px;height:12px}
 /* ===== end NEW (#241) ===== */
 </style>
 </head>
@@ -6285,6 +6288,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkClient: () => pkClient,
     pkCommit: () => pkCommit,
     pkCommit1: () => pkCommit1,
+    pkCvDraw: () => pkCvDraw,
     pkDepDraw: () => pkDepDraw,
     pkDescF: () => pkDescF,
     pkDescL: () => pkDescL,
@@ -7017,6 +7021,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     wkArrowOK: () => wkArrowOK,
     wkAsk: () => wkAsk,
     wkClear: () => wkClear,
+    wkClientToggle: () => wkClientToggle,
     wkClose: () => wkClose,
     wkCursor: () => wkCursor,
     wkDays: () => wkDays,
@@ -38965,7 +38970,8 @@ ${s5}`;
     [["→"], "opens, ← closes (or the menu)", "both"],
     [["S", "O", "P", "T"], "status, owner, priority, due", "both", true],
     [["C"], "close", "both", true],
-    /* #241 B */
+    [["V"], "client-visible", "both", true],
+    /* #241 B, C */
     ["", "drag a card, or use its <b>Move to…</b> menu, to change it", "board"],
     [["D"], "display", "both"],
     [["F"], "filters", "both"],
@@ -40009,6 +40015,14 @@ ${s5}`;
       wkClose(o5);
       return true;
     }
+    if (c5 === "v") {
+      const o5 = wkCursor();
+      if (!o5 && !(pkOn() && shared.CUR && shared.CUR.mode === "record")) return false;
+      e4.preventDefault();
+      const t47 = o5 || { k: shared.CUR.k, id: shared.CUR.id };
+      wkClientToggle(t47.k, t47.id);
+      return true;
+    }
     return false;
   }
   function wkOpen(e4) {
@@ -40085,6 +40099,22 @@ ${s5}`;
       return;
     }
     await boardMove(k5, o5.id, { st: "Closed" }, `${o5.id} closed: ${x5.t.length > 60 ? x5.t.slice(0, 57) + "…" : x5.t}`);
+  }
+  function wkClientToggle(k5, id2) {
+    const x5 = REC(k5, id2);
+    if (!x5 || k5 === "all") return;
+    const on2 = !x5.client, inPeek = pkOn() && shared.CUR && shared.CUR.mode === "record" && pkCid() === id2;
+    if (inPeek) {
+      pkClient(k5, id2, on2);
+      return;
+    }
+    if (on2 && !pkMsgOK(k5, x5[pkMsgF(k5)])) {
+      hlOnly(k5, id2);
+      openRecord(k5, id2);
+      pkClient(k5, id2, true);
+      return;
+    }
+    boardMove(k5, id2, { client: on2 }, `Client-visible ${on2 ? "on" : "off"} for ${id2}${on2 ? ": it can appear in client reports" : ""}`);
   }
   var RVTICK = /* @__PURE__ */ new Set();
   function rvPaint() {
@@ -45579,6 +45609,7 @@ ${s5}`;
         { label: "Milestone", icon: "flag", sub: () => cxList(msChoices(x5.p, x5.ms), x5.ms || "", (v5) => one({ ms: v5 }), "flag") }
       );
     }
+    out.push({ label: "Client-visible", icon: "eye", checked: !!x5.client, hint: x5.client ? "On: it can appear in client reports" : "Off", desc: x5.client ? "Turn off" : "Turn on", run: () => wkClientToggle(k5, id2) });
     out.push({ sep: true }, { label: "Copy ID", icon: "copy", run: () => cxCopy(id2, id2) }, { label: "Copy link", icon: "link", run: () => cxCopy(cxLink(id2), `the link to ${id2}`) });
     const who2 = k5 === "decisions" ? null : pkWho(x5.o);
     if (who2 && PERS().some((p6) => p6.name === who2)) {
@@ -57877,7 +57908,10 @@ ${d5.text}`);
       chevup: '<path d="M6 15l6-6 6 6"/>',
       link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
     });
-    addHTML($("#panel .pin"), "afterbegin", html`<div class="pk-bar" id="pkBar">${raw(ibtn("arrowright", "Close", 'id="pkClose"', "", "Esc"))}${raw(ibtn("expand", "Expand to full width", 'id="pkExpand"'))}<span class="pk-sep" aria-hidden="true"></span>${raw(ibtn("chevup", "Previous item", 'id="pkPrev"', "", "K"))}${raw(ibtn("chevdown", "Next item", 'id="pkNext"', "", "J"))}<span class="sp"></span><span class="pk-save" id="pkSave" role="status" aria-live="polite"></span>${raw(ibtn("link", "Copy link", 'id="pkLink"'))}</div>`);
+    addHTML($("#panel .pin"), "afterbegin", html`<div class="pk-bar" id="pkBar">${raw(ibtn("arrowright", "Close", 'id="pkClose"', "", "Esc"))}${raw(ibtn("expand", "Expand to full width", 'id="pkExpand"'))}<span class="pk-sep" aria-hidden="true"></span>${raw(ibtn("chevup", "Previous item", 'id="pkPrev"', "", "K"))}${raw(ibtn("chevdown", "Next item", 'id="pkNext"', "", "J"))}<span class="sp"></span><span class="pk-save" id="pkSave" role="status" aria-live="polite"></span>${raw(ibtn("eye", "Client-visible: off", 'id="pkCv" aria-pressed="false"', "", "V"))}${raw(ibtn("link", "Copy link", 'id="pkLink"'))}</div>`);
+    $("#pkCv").onclick = () => {
+      if (shared.CUR && shared.CUR.mode === "record") wkClientToggle(shared.CUR.k, shared.CUR.id);
+    };
     $("#pkClose").onclick = () => closePanel();
     $("#pkExpand").onclick = () => pkWide(!PK.wide);
     $("#pkPrev").onclick = () => pkStep(-1);
@@ -57957,8 +57991,20 @@ ${d5.text}`);
     n4.hidden = !msg;
     n4.textContent = msg || "";
   }
+  function pkCvDraw(x5) {
+    const b5 = $("#pkCv");
+    if (!b5) return;
+    const rec = shared.CUR && shared.CUR.mode === "record", on2 = !!(rec && x5.client);
+    b5.hidden = !rec || chaseIsOpen();
+    b5.setAttribute("aria-pressed", String(on2));
+    const t47 = on2 ? "Client-visible: on, it can appear in client reports" : "Client-visible: off";
+    b5.setAttribute("aria-label", t47);
+    b5.dataset.tip = t47;
+    if (on2 && !$("#pkId .cv")) addHTML($("#pkId"), "beforeend", html`<span class="cv" title="It can appear in client reports">${raw(ic("eye"))}Client-visible</span>`);
+  }
   function pkDrawId(x5, k5) {
     putHTML($("#pkId"), html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x5.p ? html`<a href="#" class="hlink" data-proj="${x5.p}" data-tip="Open the project page">${pName(x5.p)}</a>` : html`<span>needs a project</span>`}${k5 === "raid" ? html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x5.type}" data-tip="Type">${x5.type}${raw(ic("chevdown"))}</button>` : ""}`);
+    pkCvDraw(x5);
     const w6 = shared.CUR.mode === "record" ? warnsOf(k5, pkCid()) : [];
     putHTML($("#pkWarn"), w6.map((z4) => html`<div class="pk-warn">${raw(WICO.replace("<svg", '<svg width="14" height="14"'))}<span>${z4.text}</span></div>`));
     drawPeekNotes(shared.CUR.mode === "record" ? pkCid() : "");
@@ -58832,7 +58878,7 @@ ${d5.text}`);
   function pkPropDraw(x5, k5) {
     const on2 = shared.CUR.mode === "proposal";
     $("#panel").classList.toggle("pkprop", on2);
-    ["pkLink", "pkMore", "pkPrev", "pkNext", "pkExpand"].forEach((id2) => {
+    ["pkLink", "pkMore", "pkPrev", "pkNext", "pkExpand", "pkCv"].forEach((id2) => {
       const b5 = $("#" + id2);
       if (b5) b5.hidden = on2 && id2 !== "pkExpand";
     });
@@ -75947,6 +75993,7 @@ ${d5.text}`);
         "closeNote",
         "closePanel",
         "closePicker",
+        "cmOK",
         "comboboxOpen",
         "confirmCard",
         "copied",

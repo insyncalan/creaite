@@ -35,7 +35,7 @@ import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRA
 import { decide, isMin, llNoteHtml, rejectMinutes, rjMenuFor, rtNoteHtml, rvDup, rvRejectOK } from "./review.js";
 import { alertStage, alertStaged, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
 import { pkAdd, plur, renderToday } from "./today.js";
-import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF, rvPaint } from "./work.js";
+import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF, rvPaint, wkClientToggle } from "./work.js";
 /* ======================= detail panel ======================= */
 shared.CUR=null; shared.EDITING=false;
 export const REC=(k,id)=>(k==="actions"?A:k==="raid"?R:DEC).find(x=>x.id===id);
@@ -381,7 +381,8 @@ export function pkWide(on){ PK.wide=on; $("#panel").classList.toggle("pkwide",on
 export function bootPanel0165(){
 Object.assign(ICONS,{arrowright:'<path d="M5 12h14M13 6l6 6-6 6"/>',expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',shrink:'<path d="M21 9h-6V3M3 15h6v6M15 9l6-6M9 15l-6 6"/>',
   chevup:'<path d="M6 15l6-6 6 6"/>',link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'});
-addHTML($("#panel .pin"),"afterbegin",html`<div class="pk-bar" id="pkBar">${raw(ibtn("arrowright","Close",'id="pkClose"',"","Esc"))}${raw(ibtn("expand","Expand to full width",'id="pkExpand"'))}<span class="pk-sep" aria-hidden="true"></span>${raw(ibtn("chevup","Previous item",'id="pkPrev"',"","K"))}${raw(ibtn("chevdown","Next item",'id="pkNext"',"","J"))}<span class="sp"></span><span class="pk-save" id="pkSave" role="status" aria-live="polite"></span>${raw(ibtn("link","Copy link",'id="pkLink"'))}</div>`);
+addHTML($("#panel .pin"),"afterbegin",html`<div class="pk-bar" id="pkBar">${raw(ibtn("arrowright","Close",'id="pkClose"',"","Esc"))}${raw(ibtn("expand","Expand to full width",'id="pkExpand"'))}<span class="pk-sep" aria-hidden="true"></span>${raw(ibtn("chevup","Previous item",'id="pkPrev"',"","K"))}${raw(ibtn("chevdown","Next item",'id="pkNext"',"","J"))}<span class="sp"></span><span class="pk-save" id="pkSave" role="status" aria-live="polite"></span>${raw(ibtn("eye","Client-visible: off",'id="pkCv" aria-pressed="false"',"","V"))}${raw(ibtn("link","Copy link",'id="pkLink"'))}</div>`);
+$("#pkCv").onclick=()=>{ if(shared.CUR&&shared.CUR.mode==="record") wkClientToggle(shared.CUR.k,shared.CUR.id); };   /* #241 C */
 $("#pkClose").onclick=()=>closePanel();
 $("#pkExpand").onclick=()=>pkWide(!PK.wide);
 $("#pkPrev").onclick=()=>pkStep(-1);
@@ -421,7 +422,13 @@ export const pkLabel=(k,f,x)=>f==="t"?pkTitleL(k):f==="resp"?RESPL(x.type):f==="
 /* the marks (a status ring, priority bars, initials) are PeekProps.jsx's (peekMark) */
 export const PKDRAW=[];                                   /* later blocks add what they draw (staging, details, activity) */
 export function pkNote(msg){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||""; }
+/* #241 C: the eye in the peek bar says whether the item is client-visible (pressed and tinted when on), with a badge beside the ID */
+export function pkCvDraw(x){ const b=$("#pkCv"); if(!b) return; const rec=shared.CUR&&shared.CUR.mode==="record", on=!!(rec&&x.client);
+  b.hidden=!rec||chaseIsOpen(); b.setAttribute("aria-pressed",String(on)); const t=on?"Client-visible: on, it can appear in client reports":"Client-visible: off";
+  b.setAttribute("aria-label",t); b.dataset.tip=t;
+  if(on&&!$("#pkId .cv")) addHTML($("#pkId"),"beforeend",html`<span class="cv" title="It can appear in client reports">${raw(ic("eye"))}Client-visible</span>`); }
 export function pkDrawId(x,k){ putHTML($("#pkId"),html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type}" data-tip="Type">${x.type}${raw(ic("chevdown"))}</button>`:""}`);
+  pkCvDraw(x);   /* #241 C */
   const w=shared.CUR.mode==="record"?warnsOf(k,pkCid()):[]; putHTML($("#pkWarn"),w.map(z=>html`<div class="pk-warn">${raw(WICO.replace("<svg",'<svg width="14" height="14"'))}<span>${z.text}</span></div>`));
   drawPeekNotes(shared.CUR.mode==="record"?pkCid():"");   /* BL-301 B: "2 notes mention this" */ }
 export function pkDrawProps(x,k){ (()=>{ if(shared.PKPOP&&($("#pkProps").contains(shared.PKPOP.anchor)||$("#pkProps2").contains(shared.PKPOP.anchor)||$("#pkId").contains(shared.PKPOP.anchor))) return;
@@ -783,7 +790,7 @@ export function pkCid(){ return shared.CUR&&shared.CUR.mode==="new"?shared.CUR.n
 export function pkX(k,id){ if(String(id).startsWith("nw")) return shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===id?shared.CUR.draft:null; if(String(id).startsWith("rv")) return shared.CUR&&shared.CUR.mode==="proposal"&&"rv"+shared.CUR.n===id?shared.CUR.draft:null; return REC(k,id); }
 export const pkRev=()=>shared.CUR&&shared.CUR.mode==="proposal"?REV.find(r=>r.n===shared.CUR.n):null;
 export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#panel").classList.toggle("pkprop",on);
-  ["pkLink","pkMore","pkPrev","pkNext","pkExpand"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"; }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */
+  ["pkLink","pkMore","pkPrev","pkNext","pkExpand","pkCv"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"; }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */
   if(!on){ $("#pkPropTop").textContent=""; $("#pkPropEnd").textContent=""; return; }
   const r=pkRev(); if(!r) return;
   putHTML($("#pkId"),html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type??""}" data-tip="Type">${x.type??""}${raw(ic("chevdown"))}</button>`:""}`);
