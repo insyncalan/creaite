@@ -240,14 +240,20 @@ class Browser:
         if marked:
             self.wait("!window.__cdpOld", timeout)
         self.wait(wait_for, timeout)
-        self.settle_boot(timeout)
+        self.settle_boot()
 
-    def settle_boot(self, timeout=30):
+    def settle_boot(self, timeout=2):
         """creaite's dashboard re-reads its data straight after its first paint when the server's copy is old (BL-327), which splices
-        A, P, REV ... and redraws. A test that changes page data before that lands has its change silently undone. Wait until no
-        reload is in flight, and for the frames of its redraw. Pages without PULSE (other apps, the mockups) pass at once."""
-        if self.wait("typeof PULSE==='undefined' || PULSE.reloads===0", timeout) and self.eval("typeof PULSE!=='undefined'"):
-            self.frames(2)
+        A, P, REV ... and redraws. A test that changes page data before that lands has its change silently undone. The re-read is
+        counted in PULSE.reloads from the moment the page boots, so: a no-op (one evaluation) when none is in flight; otherwise wait
+        (at most `timeout` s) for it to finish, then for the frames of its redraw. Pages without PULSE pass at once."""
+        if not self.eval("typeof PULSE!=='undefined' && PULSE.reloads>0"):
+            return
+        try:
+            self.wait("PULSE.reloads===0", timeout)
+        except TimeoutError:
+            return                                # still reading after the cap: carry on, as the test would have
+        self.frames(2)
 
     def wait(self, js, timeout=10, every=0.05):
         """Poll until `js` is truthy; return its value, or raise with the page's last errors.
