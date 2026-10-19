@@ -3,8 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { howLink } from "./helpscreen.js";
-import { openDialog } from "./components/Dialog.jsx";
-import { askLive, askStream, mdView, openChat, runAsk, setRunning } from "./ask.js";
+import { askLive, openChat, runAsk } from "./ask.js";
 import { P } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, putHTML, raw } from "./core/dom.js";
 import { addEl } from "./core/fields.js";
@@ -15,6 +14,9 @@ import { api, OLDSERVER, oneLine, reloadData, snack, viaServer, writeSettings } 
 import { shared } from "./core/state.js";
 import { setRailCount } from "./stores/rail.js";
 import { cell } from "./work.js";
+import { apiSeams, intakeHooks, jobLive, MRUN, MTG, mtgBusy, mtgCheckable, mtgLater, mtgSkip, nowHM, previewInbox, removeInbox, TXWHY, UPLOAD_MAX, UPLOAD_TYPES, uploadInboxFile, checkMeeting, refreshCalendar } from "./core/intakeApi.js";
+/* #232-C (v2.6.0): the parts of this file that do not draw the old pages live in core/intakeApi.js; every name is still exported here, so nothing that imported it breaks. */
+export { jobLive, MRUN, MTG, mtgBusy, mtgCheckable, mtgLater, mtgSkip, nowHM, previewInbox, removeInbox, TXWHY, UPLOAD_MAX, UPLOAD_TYPES, uploadInboxFile, checkMeeting, refreshCalendar };
 /* ======================= Inbox (BL-42 phase 1): add meeting files, then process them ======================= */
 export const INSEL=new Set(); export let INRUN=[];
 export const INSTATE={new:"New",draft:"Draft ready — in Review",processed:"Already processed",processing:"Processing…",chat:"Goes with its transcript"};
@@ -29,15 +31,6 @@ export function renderInbox(){ const L=uploadedFiles(); [...INSEL].forEach(p=>{ 
   putHTML($("#inboxTbl"),html`<thead><tr><th style="width:32px"></th><th>File</th><th>Type</th><th>Size</th><th>Added</th><th>Likely project</th><th>State</th><th></th></tr></thead><tbody>${L.length?L.map(f=>{ const st=INRUN.includes(f.path)?"processing":f.state;
     return html`<tr data-inf="${f.path}"><td><input type="checkbox" aria-label="Select ${f.name}" ${raw(INSEL.has(f.path)?"checked":"")} ${raw(st==="new"?"":"disabled")}></td><td class="title">${f.name}</td><td>${f.ext}</td><td>${kb(f.size)}</td><td style="white-space:nowrap">${fd(f.date)}</td><td>${f.p?raw(pLink(f.p)):html`<span class="sub">Not sure</span>`}</td><td><span class="tag ${st==="new"?"":"sub"}">${INSTATE[st]}</span>${st==="draft"&&html` <a href="#" data-go="review" class="sub">Open Review</a>`}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye","Preview",'data-inprev aria-haspopup="dialog"',"sm"))}${raw(ibtn("trash","Remove from Intake",`data-inrm ${st==="processing"?"disabled":""}`,"sm no"))}</td></tr>`; }):html`<tr><td colspan="8"><div class="empty minbox">No uploaded files waiting.</div></td></tr>`}</tbody>`);
   $("#inboxGo").disabled=!INSEL.size||!!shared.RUN; $("#inboxGo").title=shared.RUN?"ask creaite is busy; try again when it's finished":INSEL.size?"":"Tick a file first"; $("#inboxGo").textContent=INSEL.size?`Process ${INSEL.size} selected`:"Process selected"; inboxBadge(); renderMeetings(); }
-/* One place for the upload rules (types, 25 MB, the upload call): the old Upload files section and Intake and Review (#232-A) both use it.
-   Returns {r, ext} for a file added; null for one skipped (a snack says why); false when the server is too old to go on. */
-export const UPLOAD_TYPES=[".vtt",".docx",".txt",".md",".pdf"], UPLOAD_MAX=25*1048576;
-export async function uploadInboxFile(f){ const ext=(f.name.match(/\.[^.]+$/)||[""])[0].toLowerCase();
-  if(!UPLOAD_TYPES.includes(ext)){ snack(`${f.name}: only .vtt, .docx, .txt, .md or .pdf`); return null; }
-  if(f.size>UPLOAD_MAX){ snack(`${f.name} is over 25 MB`); return null; }
-  const data=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]||""); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(f); });
-  const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return false; } snack(`${f.name}: ${oneLine(r.message)}`); return null; }
-  return {r,ext}; }
 export async function addInboxFiles(files){ if(!viaServer()){ snack("Adding files needs the live server"); return; } let added=0;
   for(const f of files){ const u=await uploadInboxFile(f); if(u===false) return; if(!u) continue; const {r,ext}=u;
     added++; (D.inbox=D.inbox||[]).push({name:r.name,path:r.path,ext:ext.slice(1),size:f.size,date:TODAY,p:null,state:"new",uploaded:true}); INSEL.add(r.path); }
@@ -46,16 +39,6 @@ export async function processInbox(){ const paths=[...INSEL]; if(!paths.length||
   INRUN=paths; INSEL.clear(); renderInbox(); openChat(); addEl("msg u",html`${`Process ${paths.length} file${paths.length===1?"":"s"} from Intake`}`);
   try{ await askLive(`process ${paths.join("; ")}`,`Process ${paths.length===1?paths[0]:paths.length+" Intake files"} into draft minutes and proposed items`); }
   finally{ INRUN=[]; await reloadData(); renderInbox(); } }
-/* preview before processing; remove moves the file to backups (Undo puts it back) */
-export async function previewInbox(path){ if(!viaServer()){ snack("Previewing needs the live server"); return; } const r=await api("/api/inbox/preview",{path});
-  if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
-  if(r.open){ const o=await api("/api/open",{path}); snack(o.ok?"Opened in its own app":oneLine(o.message)); return; }
-  $("#inPrevName").textContent=r.name; $("#inPrevText").textContent=r.text||"(empty)";
-  { const md=/\.(md|markdown)$/i.test(r.name||path)&&!!r.text; $("#inPrevText").hidden=md; $("#inPrevMd").hidden=!md; putHTML($("#inPrevMd"),raw(md?mdView(r.text,{hBase:2}):"")); }   /* BL-196: a Markdown file is shown formatted */ $("#inPrevCut").hidden=!r.cut; $("#inPrev").dataset.path=path; openDialog("inPrev"); }
-export async function removeInbox(path){ if(!viaServer()){ snack("Removing needs the live server"); return; } const f=(D.inbox||[]).find(x=>x.path===path), r=await api("/api/inbox/remove",{path});
-  if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
-  INSEL.delete(path); D.inbox=(D.inbox||[]).filter(x=>x.path!==path); renderInbox();
-  snack(`Removed ${f?f.name:path} from Intake (kept in backups)`,async()=>{ const b=await api("/api/inbox/restore",{kept:r.kept}); if(b.ok){ await reloadData(); renderInbox(); snack("Back in Intake"); } else snack(oneLine(b.message)); }); }
      /* BL-137: uploaded files only */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootIntake0053(){
@@ -77,11 +60,7 @@ $("#inboxGo").onclick=processInbox;
    likely project (changeable; remembered for the series, as meeting prep does) and whether each was processed (by its
    calendar event ID). Process selected (BL-119) loads each transcript and then sends the saved file to cx-minutes through the
    run engine, one meeting after another. The Transcript column is the sweep's lookup (phase 3). */
-export const MTG=()=>(D.meetings&&D.meetings.rows)||[], MSEL=new Set(), MRUN={};
-/* A meeting that hasn't ended can't have a transcript yet: greyed and not selectable until it ends (Alan, 2026-10-09).
-   Worked out in the page, so a meeting becomes selectable on its own once its end time passes. */
-export let nowHM = function(){ const n=new Date(); return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`; };   /* a function, so tests can set the clock */
-export const mtgLater=m=>m.day>TODAY||(m.day===TODAY&&(m.end||m.start||"")>nowHM());
+export const MSEL=new Set();
 export const mtgCanPick=m=>!!m.id&&!m.processed&&!m.draft&&!mtgLater(m)&&MRUN[m.id]!=="processing";
      /* BL-73: inside the Calendar import section */
 export function mtgState(m){ const r=MRUN[m.id];
@@ -99,7 +78,6 @@ export function mtgState(m){ const r=MRUN[m.id];
 export const TXLABEL={available:"Transcript available",not_transcribed:"Not transcribed",none:"No transcript",no_access:"No access"};
 export const mtgHasTx=m=>m.transcript==="available"&&!m.processed&&!m.draft;
 export const mtgLoadable=m=>!!m.id&&!m.processed&&!m.draft&&!m.loaded&&!mtgLater(m)&&MRUN[m.id]!=="processing"&&(m.transcript==="available"||(!m.transcript&&m.teams));
-export const mtgCheckable=m=>!!m.id&&m.teams&&!mtgLater(m)&&!m.processed&&m.transcript!=="none";
 export let MTGSHOW="all"; export const mtgShown=m=>MTGSHOW!=="tx"||mtgHasTx(m);
 export function mtgTx(m,i){ const r=MRUN[m.id], spin=html`<span class="spin" aria-hidden="true"></span> `;
   if(r==="checking") return html`${spin}Checking…`; if(r==="loading") return html`${spin}Loading…`;
@@ -130,7 +108,6 @@ export function renderMeetings(){ const mt=D.meetings||{}, L=MTG(); [...MSEL].fo
   putHTML($("#mtgBody"),html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days.map(d=>html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d).toLocaleDateString("en-GB",{weekday:"long"})} ${fd(d)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d}" ${off(clrOff())} title="${clrOff()?"Needs the live server":"Set this day's meetings aside"}">Clear day · ${L.filter(m=>m.day===d&&shown(m)).length}</button></div></td></tr>${L.map((m,i)=>[m,i]).filter(([m])=>m.day===d&&shown(m)).map(([m,i])=>html`<tr data-mid="${m.id||""}" class="${m.private?"mtgpriv":""}${mtgLater(m)?" mtglater":""}${mtgHasTx(m)?" mtgtx":""}${m.transcript&&m.transcript!=="available"&&!m.processed?" mtgmute":""}${m.processed?" mtgdone":""}" ${mtgLater(m)&&html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i}" aria-label="Select ${m.title}" ${raw(MSEL.has(m.id)?"checked":"")} ${off(!mtgCanPick(m))} ${!m.id&&html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m.start}–${m.end}</td><td class="title">${mtgHasTx(m)&&html`<span class="txbadge">Transcript</span> `}${m.title}${m.private?html` <span class="sub">private</span>`:""}</td><td>${m.teams?html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>`:html`<span class="sub">In person</span>`}</td><td>${org(m)}</td><td>${projSel(m,i)}</td><td>${mtgState(m)}</td><td>${mtgTx(m,i)}</td><td><button class="mtgx" data-clr="one" data-mi="${i}" ${off(clrOff())} aria-label="Clear ${m.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds&&html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
 }
 export const MTGI=ic("video",{size:14,w:2});   /* BL-158 */
-export const mtgBusy=()=>!!shared.RUN||(typeof shared.BUSY!=="undefined"&&shared.BUSY);
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootIntake0134(){
 putHTML($("#isecCalBody"),html`<div class="mtgsec" id="mtgSec"><div class="mtghead"><span class="sub" id="mtgRead"></span><span class="sp"></span><button class="btn" id="mtgRefresh">Refresh</button><button class="btn" id="mtgNew">Select new</button><button class="btn" id="mtgTx">Select with transcripts</button><button class="btn" id="mtgLoad" disabled>Load into inbox</button><button class="btn primary" id="mtgGo" disabled>Process selected</button></div><div class="mtgchips" id="mtgChips" role="group" aria-label="Show"></div><div id="mtgBody"></div></div>`);
@@ -140,8 +117,6 @@ putHTML($("#isecCalBody"),html`<div class="mtgsec" id="mtgSec"><div class="mtghe
    into inbox does (written by the server, with the calendar event ID), then run cx-minutes on the saved file. A row that has no
    transcript to load (No transcript, Not transcribed, No access, or not a Teams meeting) is skipped with the reason on its row, and
    the others carry on. A meeting already loaded is processed from its file. Claude never searches Teams for a missing transcript. */
-export const TXWHY={none:"No transcript for this meeting",not_transcribed:"Not transcribed yet",no_access:"No access to the transcript"};
-export const mtgSkip=m=>m.loaded?"":TXWHY[m.transcript]||(!m.transcript&&!m.teams?"Not a Teams meeting, so there is no transcript to load":"");
 export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id)); if(!L.length) return;
   if(!viaServer()){ snack("Processing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   MSEL.clear(); let chat=false; const PL=L.length>1?`Processing ${L.length} meetings`:`Processing “${L[0].title}”`;     /* BL-139: what the badge says */
@@ -154,11 +129,6 @@ export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id))
     shared.RUNLABEL=PL; try{ await askLive(`process ${now.loaded}`,`Process “${m.title}” (${when}) into draft minutes and proposed items`); }catch(e){} await reloadData();
     const after=MTG().find(x=>x.id===m.id), said=[...$$("#chLog .msg.a")].slice(before).map(e=>e.textContent.trim()).filter(Boolean).pop()||"";
     MRUN[m.id]=after&&(after.draft||after.processed)?"draft":`failed:${oneLine(said).split(/(?<=[.!?])\s/)[0].slice(0,140)||"no draft came back"}`; renderMeetings(); } }
-export async function refreshCalendar(){ const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
-  try{ if(!viaServer()){ snack("Refreshing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
-  $("#mtgRead").textContent="Refreshing…"; openChat(); addEl("msg u","Refresh calendar");
-  try{ await askLive("refresh calendar","Refresh the calendar for Intake and Today"); }catch(e){} await reloadData(); renderMeetings(); }
-  finally{ clearTimeout(t); if(sk){ sk.remove(); anim($("#mtgBody"),[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } } }
 export async function mtgProject(i,code){ const m=MTG()[i]; if(!m) return; const was=m.p; m.p=code||null; m.how=code?"remembered":"unsure";
   if(m.private||!code){ renderMeetings(); return; }             /* a private "Busy" has no series to remember */
   const map={...((D.prep||{}).series||{}),[m.series]:code};
@@ -178,11 +148,6 @@ $("#mtgRefresh").onclick=refreshCalendar;
 }
 /* ===== Transcripts (BL-42 phase 3): Select with transcripts, Load into inbox, Load and process, Check again ===== */
 /* a transcript job (a check or a load) goes through the run engine like a question, but isn't a chat; the server writes the status and the files */
-export let jobLive = async function(url,body){ if(!shared.RUNLABEL) shared.RUNLABEL=/load/.test(url)?"Loading a transcript":"Checking a transcript"; const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
-  try{ await askStream(url,{...body,run:id},true,ctl,undefined,true); } finally{ shared.RUN=null; setRunning(false); } };   /* BL-326: drawn plainly (steps and the closure) */
-export async function checkMeeting(m){ if(!viaServer()){ snack("Checking needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
-  MRUN[m.id]="checking"; renderMeetings(); openChat(); runAsk(addEl("msg u",html`${`Check the transcript of “${m.title}” (${fd(m.day)} at ${m.start})`}`));
-  try{ await jobLive("/api/transcripts/check",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); renderMeetings(); }
 export async function loadMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id)&&mtgLoadable(m)); if(!L.length) return;
   if(!viaServer()){ snack("Loading needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   MSEL.clear(); openChat();
@@ -234,4 +199,9 @@ $("#mtgSec").addEventListener("click",e=>{ const b=e.target.closest("[data-clr]"
   else if(k==="restore") mtgRestore({op:"restore",keys:[b.dataset.key]});
   else if(k==="restoreday") mtgRestore({op:"restore_day",day:b.dataset.day}); });
 }
-export const intakeSeams = { jobLive: v => { jobLive = v; }, nowHM: v => { nowHM = v; } };
+export const intakeSeams = apiSeams;
+/* the old page redraws after the shared calls (core/intakeApi.js); with the page retired these go too */
+intakeHooks.meetings=()=>renderMeetings(); intakeHooks.inbox=()=>renderInbox();
+intakeHooks.refreshing=()=>{ const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
+  const rd=$("#mtgRead"); if(rd) rd.textContent="Refreshing…";
+  return ()=>{ clearTimeout(t); if(sk){ sk.remove(); anim($("#mtgBody"),[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } }; };
