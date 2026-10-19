@@ -389,6 +389,7 @@
    "irIsFolded",
    "irKeepOpen",
    "irLiveCounts",
+   "irModel",
    "irOpen",
    "irSetView",
    "irStage",
