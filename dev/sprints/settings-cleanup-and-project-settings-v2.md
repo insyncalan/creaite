@@ -54,7 +54,7 @@ Settings: tests for the removed sections' pages and the settings search; a migra
 ## People on the project page (Alan, 19-10-2026)
 Alan wants the original People register view here: the columns **Name, Email, Organisation · role, Aliases, Actions, RAID**; edit and delete; search and the filter; a name opens that person's work page; right-click drafts an email to them with their work items. **No merge or rename** (Fix spellings is dropped for people).
 
-**Who is shown.** A person is on a project when they own an item there or are named on it (as today's project memory does). Counts are for this project. A small project code beside a name shows they are also on another project. Email and aliases belong to the person and are the same everywhere; organisation and role are for this project.
+**Who is shown.** A person is on a project when they own an item there or are named on it (as today's project memory does). Counts are for this project. A small project code beside a name shows they are also on another project. Email, aliases, organisation and role are one entry for the person, the same on every project (Alan, 19-10-2026: "save confusion"). Only the Actions and RAID counts are for the project.
 
 **People on no project.** They are shown in a quiet group under the table, "Not on any project yet", on every project's page, each with **Add to this project**, until they are added to one. This keeps Alan's idea (nobody is missed) without mixing them into every project's table. Once a person is on a project they leave that group everywhere.
 
@@ -64,6 +64,6 @@ Alan wants the original People register view here: the columns **Name, Email, Or
 
 ## More on the People view (Alan, 19-10-2026)
 - **Richer filter:** today's two-pane panel: WHO (Project, How they're involved, Organisation, Followed) and TIDY UP (In the register, Needs attention), each with options, counts and a live "Showing x of y", Clear all and Done.
-- **Edit a person** opens a form: Full name, Email, Aliases, Organisation and Role (for this project), On projects (tick the projects), and Follow this person (VIP alerts). Buttons: Remove from this project, Cancel, Save. A person with no email can still be saved and still gets a drafted email, with nothing in To.
+- **Edit a person** opens a form: Full name, Email, Aliases, Organisation and Role (one entry, the same on every project), On projects (tick the projects), and Follow this person (VIP alerts). Buttons: Remove from this project, Cancel, Save. A person with no email can still be saved and still gets a drafted email, with nothing in To.
 - **A star beside the name** in the People list for a followed person, on Alan's screen only. Its accessible name is "Followed" (never "VIP"), and it never appears in a report, export, draft or shared page (BL-288). Caution: it does show on screen, so a screen share would reveal it; if Alan wants, a "Show stars" switch hides it.
 - Workstreams: "Fix spellings: rename or merge" and "Show retired" are removed from the footer.
