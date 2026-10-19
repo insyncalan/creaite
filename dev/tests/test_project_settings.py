@@ -72,7 +72,7 @@ class ProjectSettings(LiveBrowserCase):
         self.b.eval(f"(()=>{{ const e=document.querySelector('#psPartnerIn'); e.value={name!r}; e.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         self.b.click("#psAddPartner")
 
-    # ----- the three doors
+    # ----- the doors (the project page cog, Settings; the Projects list rows have none)
 
     def test_the_page_opens_from_the_cog_at_the_foot_of_the_project_page(self):
         b = self.b
@@ -88,13 +88,12 @@ class ProjectSettings(LiveBrowserCase):
         self.assertIn("Each change saves on its own, with Undo.", b.eval("document.querySelector('#psSub').textContent"))
         self.assertEqual(b.eval("document.querySelector('#v-psettings .crumb').textContent"), "Projects›Example Programme›Settings")
 
-    def test_the_page_opens_from_the_projects_list(self):
+    def test_the_projects_list_has_no_cog_in_its_rows(self):
+        """Alan, 19-10-2026: the cog is on the project page (the cockpit) and in Settings; the Projects list rows carry none."""
         b = self.b
         b.eval("go('projects')")
-        b.wait("VIEW==='projects' && !!document.querySelector('#projTbl [data-psettings=ABC]')")
-        b.click("#projTbl [data-psettings=ABC]")
-        b.wait("VIEW==='psettings'")                                  # the row's own click (the project page) did not fire
-        self.assertEqual(b.eval("psCode.value"), "ABC")
+        b.wait("VIEW==='projects' && !!document.querySelector('#projTbl tbody tr')")
+        self.assertEqual(b.eval("document.querySelectorAll('#projTbl [data-psettings], #pfTbl [data-psettings]').length"), 0)
 
     def test_the_page_opens_from_settings_people_and_projects_which_stays_a_list(self):
         b = self.b
