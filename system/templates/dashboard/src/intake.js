@@ -2,7 +2,6 @@
 /* intake.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0052-inbox-bl-42-phase-1-add-meeting-files-th.js, 0053-bl-137-sprint-final.js, 0134-meetings-in-the-inbox-bl-42-phase-2.js, 0135-bl-119-sprint-polish.js, 0136-transcripts-bl-42-phase-3-select-with-tr.js, 0137-clear-day-bl-104-set-meetings-aside-now.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
-import { howLink } from "./helpscreen.js";
 import { askLive, openChat, runAsk } from "./ask.js";
 import { P } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, putHTML, raw } from "./core/dom.js";
@@ -96,8 +95,8 @@ export function renderMeetings(){ const mt=D.meetings||{}, L=MTG(); [...MSEL].fo
   $("#mtgLoad").textContent=ld?`Load ${ld} into inbox`:"Load into inbox";
   $("#mtgTx").disabled=!L.some(m=>mtgHasTx(m)&&mtgCanPick(m));
   $("#mtgRefresh").disabled=busy||!viaServer(); $("#mtgRefresh").title=!viaServer()?"Needs the live server":"";
-  if(!mt.fetched){ putHTML($("#mtgBody"),html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now. ${raw(howLink("intake"))}</div>`); $("#mtgNew").disabled=true; return; }
-  if(!L.length){ putHTML($("#mtgBody"),html`<div class="empty">${(mt.cleared||[]).length?`Every meeting since ${fd(mt.from)} is cleared.`:`No meetings since ${fd(mt.from)}.`} ${raw(howLink("intake"))}</div>${clrList()}`); $("#mtgNew").disabled=true; return; }
+  if(!mt.fetched){ putHTML($("#mtgBody"),html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now. </div>`); $("#mtgNew").disabled=true; return; }
+  if(!L.length){ putHTML($("#mtgBody"),html`<div class="empty">${(mt.cleared||[]).length?`Every meeting since ${fd(mt.from)} is cleared.`:`No meetings since ${fd(mt.from)}.`}</div>${clrList()}`); $("#mtgNew").disabled=true; return; }
   $("#mtgNew").disabled=!L.some(m=>mtgCanPick(m)&&!m.private);
   const shown=mtgShown, nTx=L.filter(mtgHasTx).length;
   putHTML($("#mtgChips"),html`<button type="button" class="vchip" data-show="all" aria-pressed="${String(MTGSHOW!=="tx")}">All</button><button type="button" class="vchip" data-show="tx" aria-pressed="${String(MTGSHOW==="tx")}">With transcripts · ${nTx}</button>`);
