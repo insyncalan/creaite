@@ -117,6 +117,45 @@ class WeeklyReportView(LiveBrowserCase):
         self.ev("document.querySelector('#v-reporting [data-id=current_state] .wr-edit').click()")
         self.b.wait("document.querySelector('#v-reporting [data-id=current_state] .sheet-rich.ProseMirror')", 5)
 
+    def test_a_row_left_out_saved_and_reopened_says_so_and_its_eye_brings_the_trackers_words_back(self):
+        """#234: a row left out and saved keeps only its reference; reopened it says it is left out (never "Click to write"), and
+        its eye fills it again from the tracker, so the export never holds an empty row."""
+        rows = "document.querySelectorAll('#v-reporting [data-id=overdue] tbody tr')"
+        ref = self.ev(f"{rows}[0].dataset.ref")
+        self.assertTrue(ref, "the sample has an overdue action")
+        a = next(r for r in self.v.rows("actions") if r["id"] == ref)
+        due = "-".join(reversed(a["due_date"].split("-")))
+        save = ("document.querySelector('#v-reporting .sheet-root').dispatchEvent(new KeyboardEvent('keydown',"
+                "{key:'s',metaKey:true,bubbles:true,cancelable:true}))")
+        self.ev(f"{rows}[0].querySelector('.wr-eye').click()")
+        self.b.wait("document.querySelector('#v-reporting [data-id=overdue] tr.hidrow')", 5)
+        self.ev(save)
+        self.b.wait("/Saved · version/.test(document.querySelector('#v-reporting .sheet-status').textContent)", 10)
+        self.b.reload("typeof go==='function' && LIVE")
+        self.b.eval("go('weekly',{code:'ABC'})")
+        self.b.wait("document.querySelector('#v-reporting section[data-id=current_state]')", 20)
+        row = f"document.querySelector('#v-reporting [data-id=overdue] tbody tr[data-ref=\"{ref}\"]')"
+        self.b.wait(row, 10)
+        text = self.ev(f"{row}.textContent.replace(/\\s+/g,' ')")
+        self.assertNotIn("Click to write", text)
+        self.assertIn("Left out", text)
+        self.assertIn(ref, text)
+        self.ev(f"{row}.querySelector('.wr-eye').click()")
+        self.b.wait(f"!{row}.classList.contains('hidrow')", 10)
+        cells = self.ev(f"[...{row}.querySelectorAll('td:not(.eyec)')].map(td=>td.innerText.trim())")
+        self.assertEqual(cells[:4], [ref, a["description"], a["owner"], due])
+        self.ev(save)
+        self.b.wait("/Saved · version/.test(document.querySelector('#v-reporting .sheet-status').textContent)", 10)
+        self.b.eval("window.__r=undefined;api('/api/report/export',{kind:'weekly',code:'ABC',"
+                    "fmt:'html',on_clash:'number'}).then(v=>{window.__r=v})")
+        self.b.wait("window.__r!==undefined", 30)
+        out = self.ev("window.__r")
+        self.assertTrue(out.get("ok"), out)
+        html = (self.v.root / out["path"]).read_text(encoding="utf-8")
+        self.assertIn(a["description"], html)
+        self.assertNotRegex(html, r"<tr>(<td>\s*</td>)+</tr>", "no empty row in the exported page")
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,7 @@
    text and the choice of which client-visible rows show, never an internal row, never a tag. The server checks again at save,
    approve and export (client_leak.py), so a slip here is caught there, and the left-out check says so. */
 
-import { TEXT_TYPE, addTextCopy } from "./sheetLib.js";
+import { TEXT_TYPE, addTextCopy, blankCells } from "./sheetLib.js";
 
 /** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./Sheet.jsx").SheetSection} SheetSection */
@@ -70,7 +70,8 @@ export function matchClientSection(client, internal, id) {
   }
   if (c.type === "table") {
     const on = shownRefs(i);
-    return withClientSection(client, id, { rows: (c.rows || []).map(r => on.includes(String(r.ref)) ? { ...r, shown: true, cells: r.cells || cellsFor(id, (client.items || {})[String(r.ref)]) } : { ref: r.ref, shown: false }) });
+    const held = client.items || {}, bare = (/** @type {any} */ r) => r.cells ? blankCells(r.cells, String(r.ref)) : !held[String(r.ref)];   // #234: a row saved left out whose item the draft no longer holds: its eye fills it from the client-safe facts, never this copy
+    return withClientSection(client, id, { rows: (c.rows || []).map(r => on.includes(String(r.ref)) && !bare(r) ? { ...r, shown: true, cells: r.cells || cellsFor(id, held[String(r.ref)]) } : { ref: r.ref, shown: false }) });
   }
   if (c.type === "timeline") {
     const all = (c.data || {}).timeline || [], listed = (((i.data || {}).milestones || (i.data || {}).timeline) || []).filter((/** @type {string} */ m) => all.includes(m));

@@ -3719,6 +3719,7 @@ table.wr-r th{background:none;font-family:inherit;position:static;text-align:lef
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
 table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;padding-right:0}
 table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
+.wr-leftwhy{margin-left:8px;font-size:11px;color:var(--rp-grey)}
 .wr-st{font-weight:700;font-size:var(--fs-2xs);letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
 .wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
 .sheet-a4 .late{color:var(--rp-red);font-weight:600}   /* on the fixed light sheet only: unscoped it overrode Today's .late (var(--bad)) and failed contrast in dark themes */

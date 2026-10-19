@@ -185,6 +185,29 @@ def _clean_section(s, keep_text=False):
     return out
 
 
+BLANK_MARKUP = re.compile(r"<[^<>]{0,200}>|&nbsp;|&#160;|\u00a0")
+
+
+def _blank_cell(v, ref):
+    """True for a cell with nothing in it: empty, only markup or spaces (an editor's '<p></p>'), or only the row's own reference."""
+    return v is None or v == ref or not BLANK_MARKUP.sub("", str(v)).strip()
+
+
+def blank_row(r):
+    """True for a row with nothing to show: every cell empty, or holding only the row's own reference (#234: a row shown again whose
+    cells couldn't be made, or saved that way before the fix)."""
+    return all(_blank_cell(v, r.get("ref")) for v in (r.get("cells") or {}).values())
+
+
+def without_blank_rows(doc):
+    """A copy with every shown row that has nothing to show left out (kept as its reference): an export never holds an empty row."""
+    out = copy.deepcopy(doc)
+    for s in out.get("sections") or []:
+        if isinstance(s.get("rows"), list):
+            s["rows"] = [_stub_row(r) if r.get("shown", True) and blank_row(r) else r for r in s["rows"]]
+    return out
+
+
 def _hidden_refs(sections):
     """Every item reference in hidden sections and hidden rows."""
     refs = set()
@@ -755,7 +778,7 @@ def render(doc, editing=True, keep_text=False):
     Hidden content is never rendered; source tags never are."""
     doc = clean(doc, keep_text)
     items = doc.get("items") or {}
-    body = "".join(section_html(s, items, doc) for s in doc["sections"] if not s.get("hidden"))
+    body = "".join(section_html(s, items, doc) for s in without_blank_rows(doc)["sections"] if not s.get("hidden"))
     label = {"internal": "Internal", "client": "Client", "distributed": "Distributed"}[doc.get("audience") or "internal"]
     head = (f'<header class="doc"><div><h1>{esc(doc.get("title"))}</h1><div class="sub">{esc(doc.get("project_name"))}'
             f'{(" · " + esc(doc["client"])) if doc.get("client") else ""}</div></div><div class="sub">{esc(label)}</div></header>')
@@ -989,7 +1012,7 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        doc = _export_doc(path, kind, doc)
+        doc = without_blank_rows(_export_doc(path, kind, doc))
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):
