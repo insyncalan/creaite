@@ -2,6 +2,23 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.5.1
+
+A release of fixes: you can clear health items and dismiss the Sweep banner, the filter panel is no longer cut off, weekly report rows left out by mistake are fixed, and ask creaite no longer writes reports. Client exports are safer.
+
+
+- **Clear health items.** In Settings › Health each problem has a Dismiss button (with an optional reason). A dismissed problem stops counting in the number in your menu; it comes back by itself if its detail changes, and "Dismissed" lists them with Restore. Problems that mean creaite itself is not safe to use cannot be dismissed.
+- **Dismiss the Sweep banner.** A small close icon on the "Sweep due" banner on Today hides it for the day without running a sweep. It returns the next day, or when the last-swept time changes.
+- **The Work filter panel is never cut off.** On a short list the filter panel used to be clipped near the bottom; it now stays fully visible.
+- **Weekly report rows left out.** A work item that showed blank with "Click to write" and the left-out eye now keeps its text; a row you leave out and save says it is left out, and its eye refills it from the tracker.
+- **Today.** The permanent "How Today works" box under an empty Needs attention is gone.
+- **ask creaite no longer writes reports.** Reports are yours to edit in the Reporting hub; ask creaite can read them and answer questions about them, but cannot create or change a weekly or client report or its draft.
+- **Safer client exports.** A client export is checked on exactly the report it was made from, a client report is always treated as a client report whatever its file says, weekly reports stay internal, the minutes export no longer accepts a client report, a page posted with a client export is used only when its words are the saved report's own, typed export names can no longer claim another report's filing name, and client logos come only from the project's own logo files.
+
+
+- Some client-export hardening is still to come in the next release (a single checked snapshot that every client export reads from).
+- The usage monitor and the Intake and Review pages are not in this release.
+
 ## creaite 2.5.0
 
 Project settings get a page of their own, both reports can be edited side by side, and the report logos can be added by clicking their place in the header.
