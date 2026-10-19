@@ -69450,6 +69450,14 @@ ${d5.text}`);
     null
   );
   var crAsked = 0;
+  function crIdentity(d5) {
+    const x5 = d5 === void 0 ? crDoc.value : d5;
+    return x5 ? `${crAsked}|${JSON.stringify(crArg.value)}|${x5.project}|${x5.date}|${x5.client || ""}` : "";
+  }
+  var sameReport = (d5) => {
+    const c5 = crDoc.value;
+    return !!c5 && !!d5 && c5.project === d5.project && c5.date === d5.date && (c5.client || "") === (d5.client || "");
+  };
   async function loadClientReport(arg, fresh) {
     const mine = ++crAsked;
     crArg.value = arg;
@@ -69479,12 +69487,13 @@ ${d5.text}`);
     runCheck();
   }
   async function runCheck() {
-    const d5 = crDoc.value;
+    const d5 = crDoc.value, who2 = crIdentity(d5);
     if (!d5 || !viaServer()) return null;
     const r4 = (
       /** @type {Check} */
       await api("/api/report/check", { doc: d5 })
     );
+    if (crIdentity() !== who2) return null;
     crCheck.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "The check didn't run" };
     return crCheck.value;
   }
@@ -69505,10 +69514,12 @@ ${d5.text}`);
   async function exportClientReport(fmt, makePage) {
     const a5 = crArg.value, d5 = crDoc.value;
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    const who2 = crIdentity(d5);
     if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
       const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
       if (!s5.ok) return s5;
     }
+    if (crIdentity() !== who2) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
     const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
     return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
   }
@@ -69518,8 +69529,9 @@ ${d5.text}`);
     return matchChain;
   }
   async function matchInternalNow(ids) {
-    const d02 = crDoc.value, i5 = crInternal.value;
+    const d02 = crDoc.value, i5 = crInternal.value, who2 = crIdentity(d02);
     if (!d02 || !i5) return;
+    const moved = () => crIdentity() !== who2;
     const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
     const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
     const internalText = (id2) => {
@@ -69541,6 +69553,7 @@ ${d5.text}`);
       return;
     }
     const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
+    if (moved()) return;
     if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
       failed();
       return;
@@ -69562,31 +69575,46 @@ ${d5.text}`);
         return n4 > (base.get(f5.code) || 0);
       });
     };
-    let d5 = crDoc.value || d02;
     const done = (
       /** @type {string[]} */
       []
     ), held = (
       /** @type {{id: string, heading: string, findings: string[]}[]} */
       []
+    ), clean = (
+      /** @type {string[]} */
+      []
     );
     cands.forEach((c5, n4) => {
       const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
       if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
-      else {
-        d5 = matchClientSection(d5, i5, c5.id);
-        done.push(heading(c5.id));
-      }
+      else clean.push(c5.id);
     });
-    if (done.length) {
-      const last = await api("/api/report/match-check", { docs: [d5] });
-      const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
-      if (!extra || extra.length) {
-        failed();
-        return;
+    const kept = (on2) => clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2));
+    const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
+    if (clean.length) {
+      for (let tries = 0; ; tries++) {
+        const now = crDoc.value;
+        if (!now || now.project !== d02.project || now.date !== d02.date || (now.client || "") !== (d02.client || "")) return;
+        const d5 = onto(now);
+        const last = await api("/api/report/match-check", { docs: [d5] });
+        if (moved()) return;
+        const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
+        if (!extra || extra.length) {
+          failed();
+          return;
+        }
+        if (crDoc.value === now) {
+          kept(now).forEach((id2) => done.push(heading(id2)));
+          crDoc.value = d5;
+          crDirty.value = true;
+          break;
+        }
+        if (tries >= 2) {
+          crHeld.value = { copied: [], skipped, held: [], message: "Not matched: the report kept changing while its wording was checked, so nothing was copied. Try again." };
+          return;
+        }
       }
-      crDoc.value = d5;
-      crDirty.value = true;
     }
     crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
   }
@@ -69594,6 +69622,7 @@ ${d5.text}`);
   // components/report/ClientParts.jsx
   var crAskWhy = y3(false);
   function setClientDoc(next) {
+    if (crDoc.value && !sameReport(next)) return;
     crDoc.value = next;
     crDirty.value = true;
   }

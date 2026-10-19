@@ -20,7 +20,7 @@ import { Glance } from "./weekly/Glance.jsx";
 import { CurrentState, Words } from "./weekly/Notes.jsx";
 import { Rich } from "./weekly/Rich.jsx";
 import { weeklyLogos } from "../../stores/weekly.js";
-import { crCheck, crDirty, crDoc, crInternal, crLogos, matchInternal, runCheck } from "../../stores/clientReport.js";
+import { crCheck, crDirty, crDoc, crInternal, crLogos, matchInternal, runCheck, sameReport } from "../../stores/clientReport.js";
 import { FreeText } from "./SheetPage.jsx";
 
 /** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
@@ -30,8 +30,9 @@ import { FreeText } from "./SheetPage.jsx";
     on its reason, so Alan writes why (nothing else forces it). */
 export const crAskWhy = signal(false);
 
-/** Take a new client document onto the page. @param {SheetDoc} next */
-export function setClientDoc(next) { crDoc.value = next; crDirty.value = true; }
+/** Take a new client document onto the page: only one of the report that is open (a late answer for another project, week or client,
+    from a sheet that awaited the server before another report opened, is dropped). @param {SheetDoc} next */
+export function setClientDoc(next) { if (crDoc.value && !sameReport(next)) return; crDoc.value = next; crDirty.value = true; }
 
 /** Match one section to the internal report. @param {string} id */
 export function matchOne(id) {
