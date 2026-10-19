@@ -3729,6 +3729,7 @@ table.wr-r th{background:none;font-family:inherit;position:static;text-align:lef
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
 table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;padding-right:0}
 table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
+.wr-leftwhy{margin-left:8px;font-size:11px;color:var(--rp-grey)}
 .wr-st{font-weight:700;font-size:var(--fs-2xs);letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
 .wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
 .sheet-a4 .late{color:var(--rp-red);font-weight:600}   /* on the fixed light sheet only: unscoped it overrode Today's .late (var(--bad)) and failed contrast in dark themes */
@@ -4967,6 +4968,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bkWhat: () => bkWhat,
     bl175Clamp: () => bl175Clamp,
     bl185Row: () => bl185Row,
+    blankCells: () => blankCells,
     boardAsk: () => boardAsk,
     boardCols: () => boardCols,
     boardDragEnd: () => boardDragEnd,
@@ -5302,6 +5304,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     countUp: () => countUp,
     covered: () => covered,
     crDialog: () => crDialog,
+    crDoc: () => crDoc,
+    crInternal: () => crInternal,
     crLogoData: () => crLogoData,
     crLogoFor: () => crLogoFor,
     crLogoNote: () => crLogoNote,
@@ -6982,6 +6986,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     weekView: () => weekView,
     weekendHtml: () => weekendHtml,
     weekendNote: () => weekendNote,
+    weeklyDoc: () => weeklyDoc,
     weeklyHref: () => weeklyHref,
     wfCount: () => wfCount,
     wflag: () => wflag,
@@ -26638,6 +26643,10 @@ ${s5}`;
     {}
   );
   var wkAsked = 0;
+  function wkIdentity(d5) {
+    const x5 = d5 === void 0 ? weeklyDoc.value : d5;
+    return x5 ? `${wkAsked}|${JSON.stringify(weeklyArg.value)}|${x5.project}|${x5.date}` : "";
+  }
   async function loadWeekly(arg, fresh = false) {
     const mine = ++wkAsked;
     weeklyArg.value = arg;
@@ -26694,8 +26703,11 @@ ${s5}`;
     weeklyDirty = on2;
   };
   function editDoc(d5, _why) {
+    const c5 = weeklyDoc.value;
+    if (c5 && d5 && (c5.project !== d5.project || c5.date !== d5.date || (c5.kind || "weekly") !== (d5.kind || "weekly"))) return false;
     weeklyDoc.value = d5;
     weeklyDirty = true;
+    return true;
   }
 
   // stores/reportingSettings.js
@@ -66749,6 +66761,448 @@ ${d5.text}`);
     ] });
   }
 
+  // components/report/sheetLib.js
+  var SHEET_ZOOM_MIN = 0.4, SHEET_ZOOM_MAX = 0.8, SHEET_ZOOM_STEP = 0.05, SHEET_ZOOM_DEFAULT = 0.8;
+  var MM = 96 / 25.4;
+  var A4_W = 210, A4_H = 297, PAD_MM = 16, CONTENT_MM = 265;
+  var clampZoom = (z4) => Math.round(Math.min(SHEET_ZOOM_MAX, Math.max(SHEET_ZOOM_MIN, Number.isFinite(z4) ? z4 : SHEET_ZOOM_DEFAULT)) * 1e3) / 1e3;
+  var stepZoom = (z4, dir) => clampZoom(Math.round((z4 + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP);
+  var pinchZoom = (z4, deltaY) => clampZoom(z4 * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01));
+  var defaultHeading = (s5) => s5.default_heading == null ? s5.heading : s5.default_heading;
+  function syncLayout(doc) {
+    const d5 = (
+      /** @type {any} */
+      doc
+    ), lay = { ...d5.layout || {} }, secs = d5.sections || [];
+    lay.order = secs.map((s5) => s5.id);
+    lay.hidden = secs.filter((s5) => s5.hidden).map((s5) => s5.id);
+    const heads = { ...lay.headings || {} };
+    for (const s5 of secs) {
+      if (s5.heading !== defaultHeading(s5)) heads[s5.id] = s5.heading;
+      else delete heads[s5.id];
+    }
+    lay.headings = heads;
+    const fig = secs.find((s5) => s5.type === "figures" && !s5.hidden);
+    if (fig) lay.glance = (fig.figures || []).filter((f5) => f5.shown !== false).map((f5) => f5.key);
+    return (
+      /** @type {D} */
+      { ...d5, layout: lay }
+    );
+  }
+  function mapSection(doc, id2, fn2) {
+    const sections = doc.sections.map((s5, i5) => s5.id === id2 ? fn2(s5, i5) : s5);
+    return syncLayout({ ...doc, sections });
+  }
+  function moveSection(doc, id2, to2, lo2 = 0) {
+    const from = doc.sections.findIndex((s6) => s6.id === id2);
+    if (from < 0) return doc;
+    const at2 = Math.max(lo2, Math.min(doc.sections.length - 1, to2));
+    if (at2 === from || from < lo2) return doc;
+    const sections = doc.sections.slice(), [s5] = sections.splice(from, 1);
+    sections.splice(at2, 0, s5);
+    return syncLayout({ ...doc, sections });
+  }
+  function moveBy(doc, id2, delta, lo2 = 0) {
+    const from = doc.sections.findIndex((s5) => s5.id === id2);
+    return from < 0 ? doc : moveSection(doc, id2, from + delta, lo2);
+  }
+  var hideSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: true }));
+  var showSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: false }));
+  var isStub = (s5) => s5.type === "table" ? !Array.isArray(s5.rows) && !s5.text : s5.type === "figures" ? !Array.isArray(s5.figures) : s5.type === "panes" ? !Array.isArray(s5.panes) : !("text" in s5) || s5.text == null;
+  function renameHeading(doc, id2, text) {
+    const t47 = String(text || "").replace(/\s+/g, " ").trim();
+    return t47 ? mapSection(doc, id2, (s5) => ({ ...s5, heading: t47 })) : doc;
+  }
+  var resetHeading = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, heading: defaultHeading(s5) }));
+  function moveFigure(doc, id2, key2, before) {
+    return mapSection(doc, id2, (s5) => {
+      const figs = (s5.figures || []).slice(), from = figs.findIndex((f6) => f6.key === key2);
+      if (from < 0 || key2 === before) return s5;
+      const [f5] = figs.splice(from, 1), at2 = before == null ? -1 : figs.findIndex((x5) => x5.key === before);
+      figs.splice(at2 < 0 ? figs.length : at2, 0, f5);
+      return { ...s5, figures: figs };
+    });
+  }
+  var setFigureShown = (doc, id2, key2, shown2) => mapSection(doc, id2, (s5) => ({
+    ...s5,
+    figures: (s5.figures || []).map((f5) => f5.key === key2 ? { ...f5, shown: shown2 } : f5)
+  }));
+  var setRowShown = (doc, id2, index, shown2) => mapSection(doc, id2, (s5) => ({
+    ...s5,
+    rows: (s5.rows || []).map((r4, i5) => i5 === index ? { ...r4, shown: shown2 } : r4)
+  }));
+  var rowCounts = (s5) => [(s5.rows || []).filter((r4) => r4.shown !== false).length, (s5.rows || []).length];
+  function shownOf(s5) {
+    if (!s5) return null;
+    if (s5.hidden) return { hidden: true };
+    return {
+      heading: s5.heading,
+      text: s5.text || "",
+      flag: (s5.data || {}).flag || "",
+      rows: (s5.rows || []).filter((r4) => r4.shown !== false).map((r4) => [r4.ref || "", r4.cells || {}]),
+      figures: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => [f5.key, f5.value, f5.label, f5.note || ""]),
+      panes: (s5.panes || []).map((p6) => [p6.title, p6.text])
+    };
+  }
+  var sectionDiffers = (a5, b5) => JSON.stringify(shownOf(a5)) !== JSON.stringify(shownOf(b5));
+  var TEXT_TYPE = "freetext";
+  var isTextSection = (s5) => !!s5 && s5.type === TEXT_TYPE;
+  function newTextId(doc) {
+    const have = new Set((doc.sections || []).map((s5) => s5.id));
+    for (; ; ) {
+      const id2 = `free_${Math.random().toString(36).slice(2, 8)}`;
+      if (!have.has(id2)) return id2;
+    }
+  }
+  function withTextSection(doc, afterId, id2 = newTextId(doc)) {
+    const at2 = afterId == null ? -1 : doc.sections.findIndex((s5) => s5.id === afterId);
+    const sec = { id: id2, type: TEXT_TYPE, heading: "", default_heading: "", hidden: false, text: "", audience: (doc.audience || "internal") === "internal" ? "internal" : "client" };
+    const sections = doc.sections.slice();
+    sections.splice(at2 < 0 ? sections.length : at2 + 1, 0, sec);
+    return syncLayout({ ...doc, sections });
+  }
+  function withoutSection(doc, id2) {
+    const out = syncLayout({ ...doc, sections: doc.sections.filter((s5) => s5.id !== id2) });
+    const heads = { ...(out.layout || {}).headings || {} };
+    delete heads[id2];
+    return { ...out, layout: { ...out.layout, headings: heads } };
+  }
+  function addTextCopy(left, right, src) {
+    const copy = { ...JSON.parse(JSON.stringify(src)), hidden: false, audience: (right.audience || "internal") === "internal" ? "internal" : "client" };
+    delete copy.tags;
+    const order = left.sections.map((s5) => s5.id), k5 = order.indexOf(src.id), have = new Set(right.sections.map((s5) => s5.id));
+    let after = null;
+    for (let j5 = k5 - 1; j5 >= 0; j5--) if (have.has(order[j5])) {
+      after = order[j5];
+      break;
+    }
+    const at2 = after == null ? right.sections.length : right.sections.findIndex((s5) => s5.id === after) + 1;
+    const sections = right.sections.slice();
+    sections.splice(at2, 0, copy);
+    return syncLayout({ ...right, sections });
+  }
+  function matchSection(left, right, id2) {
+    const src = left.sections.find((s5) => s5.id === id2), mine = right.sections.find((s5) => s5.id === id2);
+    if (src && !mine && isTextSection(src)) return addTextCopy(left, right, src);
+    if (!src || !mine) return right;
+    if (isTextSection(src)) return mapSection(right, id2, (s5) => ({ ...s5, heading: src.heading, text: src.text || "" }));
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.hidden = !!mine.hidden;
+    if (Array.isArray(copy.rows)) {
+      const eyes = new Map((mine.rows || []).filter((r4) => r4.ref).map((r4) => [r4.ref, r4.shown !== false]));
+      copy.rows = copy.rows.map((r4) => r4.ref && eyes.has(r4.ref) ? { ...r4, shown: eyes.get(r4.ref) } : r4);
+    }
+    if (Array.isArray(copy.figures)) {
+      const eyes = new Map((mine.figures || []).map((f5) => [f5.key, f5.shown !== false]));
+      copy.figures = copy.figures.map((f5) => eyes.has(f5.key) ? { ...f5, shown: eyes.get(f5.key) } : f5);
+    }
+    return mapSection(right, id2, () => copy);
+  }
+  function matchLabel(left, right, id2, label) {
+    const a5 = left.sections.find((s5) => s5.id === id2), b5 = right.sections.find((s5) => s5.id === id2);
+    return sectionDiffers(a5, b5) ? `Edited for ${label === "Distributed" ? "distribution" : "the " + label.toLowerCase()}` : "Matching internal";
+  }
+  function pageBreaks(sections, page, total) {
+    let cum = 0;
+    const pushes = sections.map(([t47, h5]) => {
+      const top = t47 + cum, p6 = Math.floor(top / page);
+      if (h5 <= page && h5 > 0 && top > p6 * page && top + h5 > (p6 + 1) * page) {
+        const push = (p6 + 1) * page - top;
+        cum += push;
+        return push;
+      }
+      return 0;
+    });
+    const end = total + cum, marks = [];
+    for (let k5 = 1; k5 * page < end - 1; k5++) marks.push(k5 * page);
+    return { pushes, marks };
+  }
+  var NOTHING = /<[^<>]{0,200}>|&nbsp;|&#160;|\u00a0/g;
+  var blankCells = (cells, ref) => Object.values(cells || {}).every((v5) => v5 == null || v5 === ref || !String(v5).replace(NOTHING, "").trim());
+
+  // components/report/clientDoc.js
+  var CLIENT_FLAGS = (
+    /** @type {const} */
+    [["On track", "g"], ["At risk", "a"], ["Off track", "r"]]
+  );
+  var secOf = (doc, id2) => doc ? doc.sections.find((s5) => s5.id === id2) : void 0;
+  var flagOf = (doc) => String(((secOf(doc, "health") || {}).data || {}).flag || "");
+  var withClientSection = (doc, id2, patch) => ({ ...doc, sections: doc.sections.map((s5) => s5.id === id2 ? { ...s5, ...patch } : s5) });
+  function cellsFor(sectionId, item) {
+    const it2 = item || {};
+    const day = (iso2) => iso2 && /^\d{4}-\d{2}-\d{2}/.test(iso2) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}` : "";
+    if (sectionId === "risks") return { type: it2.type || "", risk: it2.title || "" };
+    if (sectionId === "overdue") return { action: it2.title || "", owner: it2.owner || "", due: day(it2.due_date) };
+    if (sectionId === "asks") return { ask: it2.title || "", from: it2.owner || "", by: day(it2.due_date), why: "" };
+    if (sectionId === "decisions") return { decision: it2.title || "", date: day(it2.date) };
+    return {};
+  }
+  var shownRefs = (s5) => s5 && !s5.hidden ? (s5.rows || []).filter((r4) => r4.shown !== false && r4.ref).map((r4) => String(r4.ref)) : [];
+  function matchState(client, internal, id2) {
+    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
+    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return null;
+    if (c5.type === "health") return flagOf(client) === flagOf(internal) && (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
+    if (c5.type === "table") {
+      const want = shownRefs(i5).filter((r4) => (c5.rows || []).some((x5) => x5.ref === r4)).sort().join(), have = shownRefs(c5).sort().join();
+      return want === have ? "matching" : "edited";
+    }
+    if (c5.type === "timeline") return JSON.stringify(((c5.data || {}).milestones || []).slice().sort()) === JSON.stringify(((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => ((c5.data || {}).timeline || []).includes(m5)).sort()) ? "matching" : "edited";
+    if (c5.type === "panes") return JSON.stringify((c5.panes || []).map((p6) => (p6.text || "").trim())) === JSON.stringify((i5.panes || []).map((p6) => (p6.text || "").trim())) ? "matching" : "edited";
+    return (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
+  }
+  function matchClientSection(client, internal, id2) {
+    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
+    if (i5 && i5.type === TEXT_TYPE && !i5.hidden) {
+      return c5 ? withClientSection(client, id2, { heading: i5.heading, text: i5.text || "", audience: "client" }) : addTextCopy(internal, client, i5);
+    }
+    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return client;
+    if (c5.type === "health") {
+      const meta = { ...client.meta || {} };
+      delete meta.health_diff;
+      return { ...withClientSection(client, id2, { text: i5.text || "", data: { ...c5.data || {}, flag: flagOf(internal) } }), meta };
+    }
+    if (c5.type === "table") {
+      const on2 = shownRefs(i5);
+      const held = client.items || {}, bare = (r4) => r4.cells ? blankCells(r4.cells, String(r4.ref)) : !held[String(r4.ref)];
+      return withClientSection(client, id2, { rows: (c5.rows || []).map((r4) => on2.includes(String(r4.ref)) && !bare(r4) ? { ...r4, shown: true, cells: r4.cells || cellsFor(id2, held[String(r4.ref)]) } : { ref: r4.ref, shown: false }) });
+    }
+    if (c5.type === "timeline") {
+      const all = (c5.data || {}).timeline || [], listed = ((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => all.includes(m5));
+      return withClientSection(client, id2, { data: { ...c5.data || {}, milestones: listed } });
+    }
+    if (c5.type === "panes") return withClientSection(client, id2, { panes: (i5.panes || []).map((p6) => ({ title: p6.title, text: p6.text })) });
+    return withClientSection(client, id2, { text: i5.text || "", tags: [] });
+  }
+  var matchClientAll = (client, internal) => client.sections.reduce((d5, s5) => matchClientSection(d5, internal, s5.id), client);
+  function healthDiff(client, internalFlag, clientFlag, reason) {
+    const meta = { ...client.meta || {} };
+    if (clientFlag === internalFlag) delete meta.health_diff;
+    else meta.health_diff = { internal: internalFlag, client: clientFlag, reason: reason.trim() };
+    return meta;
+  }
+  function leftLine(list) {
+    const shown2 = list.slice(0, 4).map((x5) => `${x5.ref} (${x5.why})`).join(", ");
+    return `${shown2}${list.length > 4 ? ` and ${list.length - 4} more` : ""}`;
+  }
+  var GROUP_LABEL = (
+    /** @type {Record<string, string>} */
+    { risks: "risks and issues", overdue: "overdue actions", decisions: "decisions", milestones: "milestones" }
+  );
+
+  // stores/clientReport.js
+  var crArg = y3(
+    /** @type {{code: string, week?: string, client?: string}|null} */
+    null
+  );
+  var crOpen = y3(
+    /** @type {{ok: boolean, message?: string}|null} */
+    null
+  );
+  var crDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var crInternal = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var crBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var crInfo = y3(
+    /** @type {{where: string, filed: boolean, ready: boolean, not_ready: string, baseline: {date: string, path: string, version: number}|null, findings: string[]}|null} */
+    null
+  );
+  var crMode = y3(
+    /** @type {"client"|"side"} */
+    "client"
+  );
+  var crCheck = y3(
+    /** @type {Check|null} */
+    null
+  );
+  var crLogos = y3(
+    /** @type {{kind: string, path: string}[]} */
+    []
+  );
+  var crBusy = y3("");
+  var crDialog = y3(false);
+  var crDirty = y3(false);
+  var crHeld = y3(
+    /** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */
+    null
+  );
+  var crAsked = 0;
+  function crIdentity(d5) {
+    const x5 = d5 === void 0 ? crDoc.value : d5;
+    return x5 ? `${crAsked}|${JSON.stringify(crArg.value)}|${x5.project}|${x5.date}|${x5.client || ""}` : "";
+  }
+  var sameDoc = (a5, b5) => !!a5 && !!b5 && a5.project === b5.project && a5.date === b5.date && (a5.client || "") === (b5.client || "");
+  var sameReport = (d5) => sameDoc(crDoc.value, d5);
+  async function loadClientReport(arg, fresh) {
+    const mine = ++crAsked;
+    crArg.value = arg;
+    crCheck.value = null;
+    crDirty.value = false;
+    if (!viaServer()) {
+      crOpen.value = { ok: false, message: "The client view needs the live server." };
+      return;
+    }
+    crBusy.value = "Opening the client report…";
+    const base = { code: arg.code, week_ending: arg.week || void 0 };
+    const [i5, c5] = await Promise.all([api("/api/report/draft", { kind: "weekly", ...base }), api("/api/report/draft", { kind: "client", ...base, client: arg.client || void 0, fresh: fresh || void 0 })]);
+    if (mine !== crAsked) return;
+    crBusy.value = "";
+    if (!c5 || !c5.ok || !c5.doc) {
+      crOpen.value = { ok: false, message: oneLine(c5 && c5.message || "") || "Couldn't open the client report" };
+      crDoc.value = null;
+      return;
+    }
+    crInternal.value = i5 && i5.ok ? i5.doc : null;
+    crDoc.value = c5.doc;
+    crLogos.value = c5.logos || [];
+    readLogos(arg.code, c5.logos || []);
+    crBase.value = Number(c5.doc.version) || void 0;
+    crInfo.value = { where: c5.where, filed: !!c5.filed, ready: !!c5.ready, not_ready: c5.not_ready || "", baseline: c5.baseline || null, findings: c5.findings || [] };
+    crOpen.value = { ok: true };
+    runCheck();
+  }
+  async function runCheck() {
+    const d5 = crDoc.value, opened = crIdentity(d5);
+    if (!d5 || !viaServer()) return null;
+    const r4 = (
+      /** @type {Check} */
+      await api("/api/report/check", { doc: d5 })
+    );
+    if (crIdentity() !== opened) return null;
+    crCheck.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "The check didn't run" };
+    return crCheck.value;
+  }
+  async function saveClientPage(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      crBase.value = Number(r4.version) || crBase.value;
+      crDirty.value = false;
+      if (crInfo.value && crInfo.value.where === "new") crInfo.value = { ...crInfo.value, where: "draft" };
+    }
+    return r4;
+  }
+  async function approveClientReport(force) {
+    const a5 = crArg.value, d5 = crDoc.value;
+    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
+  }
+  async function exportClientReport(fmt, makePage) {
+    const a5 = crArg.value, d5 = crDoc.value;
+    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    const opened = crIdentity(d5);
+    if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
+      const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
+      if (!s5.ok) return s5;
+    }
+    if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
+    const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
+    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
+  }
+  var matchChain = Promise.resolve();
+  var sameWeek = (i5, c5) => !!i5 && !!c5 && i5.project === c5.project && i5.date === c5.date;
+  function matchInternal(ids) {
+    const asked2 = crIdentity();
+    matchChain = matchChain.then(() => crIdentity() === asked2 ? matchInternalNow(ids) : void 0).catch(() => void 0);
+    return matchChain;
+  }
+  async function matchInternalNow(ids) {
+    const d02 = crDoc.value, i5 = crInternal.value, opened = crIdentity(d02);
+    if (!d02 || !i5 || !sameWeek(i5, d02)) return;
+    const moved = () => crIdentity() !== opened || !sameReport(d02) || !sameWeek(crInternal.value, d02);
+    const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
+    const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
+    const internalText = (id2) => {
+      const x5 = secOf(i5, id2);
+      return !!x5 && x5.type === "freetext" && x5.audience === "internal";
+    };
+    const want = ids ? all : all.filter((id2) => !internalText(id2));
+    const skipped = ids ? [] : all.filter(internalText).map((id2) => ({ id: id2, heading: heading(id2) }));
+    const cands = want.map((id2) => ({ id: id2, doc: matchClientSection(d02, i5, id2) })).filter((c5) => c5.doc !== d02);
+    if (!cands.length) {
+      crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null;
+      return;
+    }
+    const failed = () => {
+      crHeld.value = { copied: [], skipped, held: cands.map((c5) => ({ id: c5.id, heading: heading(c5.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." };
+    };
+    if (!viaServer()) {
+      failed();
+      return;
+    }
+    const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
+    if (moved()) return;
+    if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
+      failed();
+      return;
+    }
+    const codes = (fs2) => fs2.reduce(
+      (m5, f5) => m5.set(f5.code, (m5.get(f5.code) || 0) + 1),
+      /** @type {Map<string, number>} */
+      /* @__PURE__ */ new Map()
+    );
+    const base = codes(r4.findings[0]);
+    const fresh_of = (fs2) => {
+      const seen = (
+        /** @type {Map<string, number>} */
+        /* @__PURE__ */ new Map()
+      );
+      return fs2.filter((f5) => {
+        const n4 = (seen.get(f5.code) || 0) + 1;
+        seen.set(f5.code, n4);
+        return n4 > (base.get(f5.code) || 0);
+      });
+    };
+    const done = (
+      /** @type {string[]} */
+      []
+    ), held = (
+      /** @type {{id: string, heading: string, findings: string[]}[]} */
+      []
+    ), clean = (
+      /** @type {string[]} */
+      []
+    );
+    cands.forEach((c5, n4) => {
+      const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
+      if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
+      else clean.push(c5.id);
+    });
+    const kept = (on2) => sameDoc(on2, d02) ? clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
+    const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
+    if (clean.length) {
+      for (let tries = 0; ; tries++) {
+        const now = crDoc.value;
+        if (!now || moved()) return;
+        const d5 = onto(now);
+        const last = await api("/api/report/match-check", { docs: [d5] });
+        if (moved()) return;
+        const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
+        if (!extra || extra.length) {
+          failed();
+          return;
+        }
+        if (crDoc.value === now) {
+          kept(now).forEach((id2) => done.push(heading(id2)));
+          crDoc.value = d5;
+          crDirty.value = true;
+          break;
+        }
+        if (tries >= 2) {
+          crHeld.value = { copied: [], skipped, held: [], message: "Not matched: the report kept changing while its wording was checked, so nothing was copied. Try again." };
+          return;
+        }
+      }
+    }
+    crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
+  }
+
   // stores/textSection.js
   var ADD = null;
   function bindTextSections(fn2) {
@@ -67259,163 +67713,6 @@ ${d5.text}`);
       if (!least) break;
     }
     return best;
-  }
-
-  // components/report/sheetLib.js
-  var SHEET_ZOOM_MIN = 0.4, SHEET_ZOOM_MAX = 0.8, SHEET_ZOOM_STEP = 0.05, SHEET_ZOOM_DEFAULT = 0.8;
-  var MM = 96 / 25.4;
-  var A4_W = 210, A4_H = 297, PAD_MM = 16, CONTENT_MM = 265;
-  var clampZoom = (z4) => Math.round(Math.min(SHEET_ZOOM_MAX, Math.max(SHEET_ZOOM_MIN, Number.isFinite(z4) ? z4 : SHEET_ZOOM_DEFAULT)) * 1e3) / 1e3;
-  var stepZoom = (z4, dir) => clampZoom(Math.round((z4 + dir * SHEET_ZOOM_STEP) / SHEET_ZOOM_STEP) * SHEET_ZOOM_STEP);
-  var pinchZoom = (z4, deltaY) => clampZoom(z4 * Math.exp(-Math.max(-60, Math.min(60, deltaY)) * 0.01));
-  var defaultHeading = (s5) => s5.default_heading == null ? s5.heading : s5.default_heading;
-  function syncLayout(doc) {
-    const d5 = (
-      /** @type {any} */
-      doc
-    ), lay = { ...d5.layout || {} }, secs = d5.sections || [];
-    lay.order = secs.map((s5) => s5.id);
-    lay.hidden = secs.filter((s5) => s5.hidden).map((s5) => s5.id);
-    const heads = { ...lay.headings || {} };
-    for (const s5 of secs) {
-      if (s5.heading !== defaultHeading(s5)) heads[s5.id] = s5.heading;
-      else delete heads[s5.id];
-    }
-    lay.headings = heads;
-    const fig = secs.find((s5) => s5.type === "figures" && !s5.hidden);
-    if (fig) lay.glance = (fig.figures || []).filter((f5) => f5.shown !== false).map((f5) => f5.key);
-    return (
-      /** @type {D} */
-      { ...d5, layout: lay }
-    );
-  }
-  function mapSection(doc, id2, fn2) {
-    const sections = doc.sections.map((s5, i5) => s5.id === id2 ? fn2(s5, i5) : s5);
-    return syncLayout({ ...doc, sections });
-  }
-  function moveSection(doc, id2, to2, lo2 = 0) {
-    const from = doc.sections.findIndex((s6) => s6.id === id2);
-    if (from < 0) return doc;
-    const at2 = Math.max(lo2, Math.min(doc.sections.length - 1, to2));
-    if (at2 === from || from < lo2) return doc;
-    const sections = doc.sections.slice(), [s5] = sections.splice(from, 1);
-    sections.splice(at2, 0, s5);
-    return syncLayout({ ...doc, sections });
-  }
-  function moveBy(doc, id2, delta, lo2 = 0) {
-    const from = doc.sections.findIndex((s5) => s5.id === id2);
-    return from < 0 ? doc : moveSection(doc, id2, from + delta, lo2);
-  }
-  var hideSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: true }));
-  var showSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: false }));
-  var isStub = (s5) => s5.type === "table" ? !Array.isArray(s5.rows) && !s5.text : s5.type === "figures" ? !Array.isArray(s5.figures) : s5.type === "panes" ? !Array.isArray(s5.panes) : !("text" in s5) || s5.text == null;
-  function renameHeading(doc, id2, text) {
-    const t47 = String(text || "").replace(/\s+/g, " ").trim();
-    return t47 ? mapSection(doc, id2, (s5) => ({ ...s5, heading: t47 })) : doc;
-  }
-  var resetHeading = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, heading: defaultHeading(s5) }));
-  function moveFigure(doc, id2, key2, before) {
-    return mapSection(doc, id2, (s5) => {
-      const figs = (s5.figures || []).slice(), from = figs.findIndex((f6) => f6.key === key2);
-      if (from < 0 || key2 === before) return s5;
-      const [f5] = figs.splice(from, 1), at2 = before == null ? -1 : figs.findIndex((x5) => x5.key === before);
-      figs.splice(at2 < 0 ? figs.length : at2, 0, f5);
-      return { ...s5, figures: figs };
-    });
-  }
-  var setFigureShown = (doc, id2, key2, shown2) => mapSection(doc, id2, (s5) => ({
-    ...s5,
-    figures: (s5.figures || []).map((f5) => f5.key === key2 ? { ...f5, shown: shown2 } : f5)
-  }));
-  var setRowShown = (doc, id2, index, shown2) => mapSection(doc, id2, (s5) => ({
-    ...s5,
-    rows: (s5.rows || []).map((r4, i5) => i5 === index ? { ...r4, shown: shown2 } : r4)
-  }));
-  var rowCounts = (s5) => [(s5.rows || []).filter((r4) => r4.shown !== false).length, (s5.rows || []).length];
-  function shownOf(s5) {
-    if (!s5) return null;
-    if (s5.hidden) return { hidden: true };
-    return {
-      heading: s5.heading,
-      text: s5.text || "",
-      flag: (s5.data || {}).flag || "",
-      rows: (s5.rows || []).filter((r4) => r4.shown !== false).map((r4) => [r4.ref || "", r4.cells || {}]),
-      figures: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => [f5.key, f5.value, f5.label, f5.note || ""]),
-      panes: (s5.panes || []).map((p6) => [p6.title, p6.text])
-    };
-  }
-  var sectionDiffers = (a5, b5) => JSON.stringify(shownOf(a5)) !== JSON.stringify(shownOf(b5));
-  var TEXT_TYPE = "freetext";
-  var isTextSection = (s5) => !!s5 && s5.type === TEXT_TYPE;
-  function newTextId(doc) {
-    const have = new Set((doc.sections || []).map((s5) => s5.id));
-    for (; ; ) {
-      const id2 = `free_${Math.random().toString(36).slice(2, 8)}`;
-      if (!have.has(id2)) return id2;
-    }
-  }
-  function withTextSection(doc, afterId, id2 = newTextId(doc)) {
-    const at2 = afterId == null ? -1 : doc.sections.findIndex((s5) => s5.id === afterId);
-    const sec = { id: id2, type: TEXT_TYPE, heading: "", default_heading: "", hidden: false, text: "", audience: (doc.audience || "internal") === "internal" ? "internal" : "client" };
-    const sections = doc.sections.slice();
-    sections.splice(at2 < 0 ? sections.length : at2 + 1, 0, sec);
-    return syncLayout({ ...doc, sections });
-  }
-  function withoutSection(doc, id2) {
-    const out = syncLayout({ ...doc, sections: doc.sections.filter((s5) => s5.id !== id2) });
-    const heads = { ...(out.layout || {}).headings || {} };
-    delete heads[id2];
-    return { ...out, layout: { ...out.layout, headings: heads } };
-  }
-  function addTextCopy(left, right, src) {
-    const copy = { ...JSON.parse(JSON.stringify(src)), hidden: false, audience: (right.audience || "internal") === "internal" ? "internal" : "client" };
-    delete copy.tags;
-    const order = left.sections.map((s5) => s5.id), k5 = order.indexOf(src.id), have = new Set(right.sections.map((s5) => s5.id));
-    let after = null;
-    for (let j5 = k5 - 1; j5 >= 0; j5--) if (have.has(order[j5])) {
-      after = order[j5];
-      break;
-    }
-    const at2 = after == null ? right.sections.length : right.sections.findIndex((s5) => s5.id === after) + 1;
-    const sections = right.sections.slice();
-    sections.splice(at2, 0, copy);
-    return syncLayout({ ...right, sections });
-  }
-  function matchSection(left, right, id2) {
-    const src = left.sections.find((s5) => s5.id === id2), mine = right.sections.find((s5) => s5.id === id2);
-    if (src && !mine && isTextSection(src)) return addTextCopy(left, right, src);
-    if (!src || !mine) return right;
-    if (isTextSection(src)) return mapSection(right, id2, (s5) => ({ ...s5, heading: src.heading, text: src.text || "" }));
-    const copy = JSON.parse(JSON.stringify(src));
-    copy.hidden = !!mine.hidden;
-    if (Array.isArray(copy.rows)) {
-      const eyes = new Map((mine.rows || []).filter((r4) => r4.ref).map((r4) => [r4.ref, r4.shown !== false]));
-      copy.rows = copy.rows.map((r4) => r4.ref && eyes.has(r4.ref) ? { ...r4, shown: eyes.get(r4.ref) } : r4);
-    }
-    if (Array.isArray(copy.figures)) {
-      const eyes = new Map((mine.figures || []).map((f5) => [f5.key, f5.shown !== false]));
-      copy.figures = copy.figures.map((f5) => eyes.has(f5.key) ? { ...f5, shown: eyes.get(f5.key) } : f5);
-    }
-    return mapSection(right, id2, () => copy);
-  }
-  function matchLabel(left, right, id2, label) {
-    const a5 = left.sections.find((s5) => s5.id === id2), b5 = right.sections.find((s5) => s5.id === id2);
-    return sectionDiffers(a5, b5) ? `Edited for ${label === "Distributed" ? "distribution" : "the " + label.toLowerCase()}` : "Matching internal";
-  }
-  function pageBreaks(sections, page, total) {
-    let cum = 0;
-    const pushes = sections.map(([t47, h5]) => {
-      const top = t47 + cum, p6 = Math.floor(top / page);
-      if (h5 <= page && h5 > 0 && top > p6 * page && top + h5 > (p6 + 1) * page) {
-        const push = (p6 + 1) * page - top;
-        cum += push;
-        return push;
-      }
-      return 0;
-    });
-    const end = total + cum, marks = [];
-    for (let k5 = 1; k5 * page < end - 1; k5++) marks.push(k5 * page);
-    return { pushes, marks };
   }
 
   // components/report/SheetPage.jsx
@@ -68579,6 +68876,7 @@ ${d5.text}`);
       };
     }, []);
   }
+  var sameSheetDoc = (nd2, cur) => !cur || !nd2 || nd2.kind === cur.kind && nd2.project === cur.project && nd2.date === cur.date && (nd2.client || "") === (cur.client || "");
   function Sheet(props) {
     const { doc, partner = null, scrollKey = "", checks = [], onEvent = () => {
     } } = props;
@@ -68651,13 +68949,14 @@ ${d5.text}`);
       if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
     }, [scrollKey]);
     const changeMain = (nd2, why) => {
-      if (leftRO) return;
+      if (leftRO || !sameSheetDoc(nd2, P5.current.doc)) return;
       props.onChange(nd2, why);
       main.change(nd2);
     };
     const changeSide = (nd2, why) => {
-      if (!partner || partner.readOnly) return;
-      partner.onChange(nd2, why);
+      const pt2 = P5.current.partner;
+      if (!pt2 || pt2.readOnly || !sameSheetDoc(nd2, pt2.doc)) return;
+      pt2.onChange(nd2, why);
       side.change(nd2);
     };
     const aiFor = (s5, ro2, right = false) => {
@@ -69069,13 +69368,52 @@ ${d5.text}`);
     ] });
   }
   var PICKABLE = /* @__PURE__ */ new Set(["risks", "overdue", "decisions"]);
+  var bareRow = (row2, doc) => !!row2.ref && (row2.cells ? blankCells(row2.cells, row2.ref) : !(doc.items || {})[row2.ref]);
+  async function reshowRow(live, ref) {
+    const sid = live.current.section.id, asked2 = live.current.doc;
+    const ident = (d5) => asked2.kind === "client" ? crIdentity(d5) : wkIdentity(d5);
+    const opened = ident();
+    if (!opened || opened !== ident(asked2)) return "";
+    const r4 = await api("/api/report/reshow", { doc: asked2, section: sid, refs: [ref] });
+    if (ident() !== opened) return "";
+    const got = r4 && r4.ok ? (r4.rows || {})[ref] : null;
+    if (!got || !got.row || !got.row.cells) return String((r4 && r4.ok ? (r4.missing || {})[ref] : r4 && r4.message) || "the tracker couldn't be read").split("\n")[0];
+    const ctx = live.current, doc = ctx.doc, sec = doc.sections.find((x5) => x5.id === sid);
+    if (ident(doc) !== opened || !sec || !(sec.rows || []).some((x5) => x5.ref === ref && bareRow(x5, doc))) return "";
+    ctx.setDoc({
+      ...doc,
+      items: { ...doc.items || {}, [ref]: got.item },
+      sections: doc.sections.map((x5) => x5.id !== sid ? x5 : { ...x5, rows: (x5.rows || []).map((y5) => y5.ref === ref && bareRow(y5, doc) ? { ...y5, shown: true, cells: got.row.cells } : y5) })
+    }, "Row shown");
+    return "";
+  }
+  function LeftOutNote({ ctx, row: row2, why }) {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(ctx.ItemRef, { id: String(row2.ref) }),
+      " ",
+      /* @__PURE__ */ u2("span", { class: "crlk wr-leftout", children: "Left out" }),
+      /* @__PURE__ */ u2("span", { class: "wr-leftwhy", children: why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from the tracker." })
+    ] });
+  }
+  function flipRow(live, cellsFor2, i5, setWhy) {
+    const ctx = live.current, s5 = ctx.section, rows2 = s5.rows || [], r4 = rows2[i5], on2 = r4.shown === false;
+    if (bareRow(r4, ctx.doc)) {
+      reshowRow(live, String(r4.ref)).then((why) => setWhy(String(r4.ref), why));
+      return;
+    }
+    ctx.update({ rows: rows2.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFor2(s5.id, (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
+  }
   function EyeTable({ ctx, cols, noun, empty, cellsFor: cellsFor2, extra, leftOut: leftOut2 = "the filed report and the exports" }) {
     const s5 = ctx.section, rows2 = s5.rows || [];
-    const flip2 = (i5) => {
-      const r4 = rows2[i5], on2 = r4.shown === false;
-      ctx.update({ rows: rows2.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFor2(s5.id, (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
-    };
-    const shown2 = rows2.filter((r4) => r4.shown !== false).length;
+    const live = A2(ctx);
+    live.current = ctx;
+    const [whys, setWhys] = d2(
+      /** @type {Record<string, string>} */
+      {}
+    );
+    const setWhy = (ref, why) => setWhys((w6) => ({ ...w6, [ref]: why }));
+    const flip2 = (i5) => flipRow(live, cellsFor2, i5, setWhy);
+    const shown2 = rows2.filter((r4) => r4.shown !== false && !bareRow(r4, ctx.doc)).length;
     return /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
       rows2.length ? /* @__PURE__ */ u2("table", { class: "wr-r", children: [
         /* @__PURE__ */ u2("colgroup", { children: [
@@ -69087,8 +69425,12 @@ ${d5.text}`);
           cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key))
         ] }) }),
         /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, i5) => {
-          const off = row2.shown === false;
+          const bare = bareRow(row2, ctx.doc), off = row2.shown === false || bare;
           if (off && !ctx.editing) return null;
+          if (bare) return /* @__PURE__ */ u2("tr", { class: "hidrow wr-bare", "data-ref": row2.ref || void 0, children: [
+            /* @__PURE__ */ u2("td", { class: "eyec", children: /* @__PURE__ */ u2(EyeButton, { on: false, subject: String(row2.ref), onClick: () => flip2(i5) }) }),
+            /* @__PURE__ */ u2("td", { colSpan: cols.length, children: /* @__PURE__ */ u2(LeftOutNote, { ctx, row: row2, why: whys[String(row2.ref)] }) })
+          ] }, row2.ref || i5);
           const item = (ctx.doc.items || {})[row2.ref || ""] || null, cells = row2.cells || cellsFor2(s5.id, item, ctx.doc.date);
           const isNew = ctx.editing && row2.source === "added" && PICKABLE.has(s5.id);
           const idLike = (v5) => v5 === row2.ref || /^[A-Z][A-Z0-9]{2,6}-[A-Z]-\d+$/.test(v5);
@@ -69295,14 +69637,21 @@ ${d5.text}`);
   }
   function Decisions({ ctx }) {
     const all = ctx.section.rows || [];
-    const rows2 = all.map((row2, i5) => ({ row: row2, i: i5 })).filter((x5) => x5.row.shown !== false || ctx.editing);
-    const flip2 = (i5) => {
-      const on2 = all[i5].shown === false;
-      ctx.update({ rows: all.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFromItem("decisions", (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
-    };
+    const rows2 = all.map((row2, i5) => ({ row: row2, i: i5 })).filter((x5) => x5.row.shown !== false && !bareRow(x5.row, ctx.doc) || ctx.editing);
+    const live = A2(ctx);
+    live.current = ctx;
+    const [whys, setWhys] = d2(
+      /** @type {Record<string, string>} */
+      {}
+    );
+    const flip2 = (i5) => flipRow(live, cellsFromItem, i5, (ref, why) => setWhys((w6) => ({ ...w6, [ref]: why })));
     return /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
       !rows2.length ? /* @__PURE__ */ u2("p", { class: "sub", children: "No decisions were made this week." }) : null,
       /* @__PURE__ */ u2("ul", { class: "wr-decs", children: rows2.map(({ row: row2, i: i5 }) => {
+        if (bareRow(row2, ctx.doc)) return /* @__PURE__ */ u2("li", { class: "hidrow wr-bare", "data-ref": row2.ref || void 0, children: [
+          /* @__PURE__ */ u2(EyeButton, { on: false, subject: String(row2.ref), onClick: () => flip2(i5) }),
+          /* @__PURE__ */ u2("div", { class: "wr-decbody", children: /* @__PURE__ */ u2(LeftOutNote, { ctx, row: row2, why: whys[String(row2.ref)] }) })
+        ] }, row2.ref || i5);
         const c5 = row2.cells || cellsFromItem("decisions", (ctx.doc.items || {})[row2.ref || ""], ctx.doc.date), off = row2.shown === false;
         const bit = (key2, label) => ctx.editing ? /* @__PURE__ */ u2(Rich, { ctx, text: c5[key2], row: i5, col: key2, label, cls: "wr-inl", empty: label }) : /* @__PURE__ */ u2("span", { children: c5[key2] });
         return /* @__PURE__ */ u2("li", { class: off ? "hidrow" : "", "data-ref": row2.ref || void 0, children: [
@@ -69327,7 +69676,7 @@ ${d5.text}`);
       }) }),
       ctx.editing && all.length ? /* @__PURE__ */ u2("div", { class: "wr-count", children: [
         "Showing ",
-        all.filter((r4) => r4.shown !== false).length,
+        all.filter((r4) => r4.shown !== false && !bareRow(r4, ctx.doc)).length,
         " of ",
         all.length,
         " decisions. Hidden decisions are left out of the filed report and the exports."
@@ -69514,287 +69863,6 @@ ${d5.text}`);
   function parseWeekly(s5) {
     const m5 = /^([A-Z][A-Z0-9]{2,6})(?:&week=(\d{4}-\d{2}-\d{2}))?$/.exec(String(s5 || ""));
     return m5 ? { code: m5[1], week: m5[2] } : null;
-  }
-
-  // components/report/clientDoc.js
-  var CLIENT_FLAGS = (
-    /** @type {const} */
-    [["On track", "g"], ["At risk", "a"], ["Off track", "r"]]
-  );
-  var secOf = (doc, id2) => doc ? doc.sections.find((s5) => s5.id === id2) : void 0;
-  var flagOf = (doc) => String(((secOf(doc, "health") || {}).data || {}).flag || "");
-  var withClientSection = (doc, id2, patch) => ({ ...doc, sections: doc.sections.map((s5) => s5.id === id2 ? { ...s5, ...patch } : s5) });
-  function cellsFor(sectionId, item) {
-    const it2 = item || {};
-    const day = (iso2) => iso2 && /^\d{4}-\d{2}-\d{2}/.test(iso2) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}` : "";
-    if (sectionId === "risks") return { type: it2.type || "", risk: it2.title || "" };
-    if (sectionId === "overdue") return { action: it2.title || "", owner: it2.owner || "", due: day(it2.due_date) };
-    if (sectionId === "asks") return { ask: it2.title || "", from: it2.owner || "", by: day(it2.due_date), why: "" };
-    if (sectionId === "decisions") return { decision: it2.title || "", date: day(it2.date) };
-    return {};
-  }
-  var shownRefs = (s5) => s5 && !s5.hidden ? (s5.rows || []).filter((r4) => r4.shown !== false && r4.ref).map((r4) => String(r4.ref)) : [];
-  function matchState(client, internal, id2) {
-    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
-    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return null;
-    if (c5.type === "health") return flagOf(client) === flagOf(internal) && (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
-    if (c5.type === "table") {
-      const want = shownRefs(i5).filter((r4) => (c5.rows || []).some((x5) => x5.ref === r4)).sort().join(), have = shownRefs(c5).sort().join();
-      return want === have ? "matching" : "edited";
-    }
-    if (c5.type === "timeline") return JSON.stringify(((c5.data || {}).milestones || []).slice().sort()) === JSON.stringify(((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => ((c5.data || {}).timeline || []).includes(m5)).sort()) ? "matching" : "edited";
-    if (c5.type === "panes") return JSON.stringify((c5.panes || []).map((p6) => (p6.text || "").trim())) === JSON.stringify((i5.panes || []).map((p6) => (p6.text || "").trim())) ? "matching" : "edited";
-    return (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
-  }
-  function matchClientSection(client, internal, id2) {
-    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
-    if (i5 && i5.type === TEXT_TYPE && !i5.hidden) {
-      return c5 ? withClientSection(client, id2, { heading: i5.heading, text: i5.text || "", audience: "client" }) : addTextCopy(internal, client, i5);
-    }
-    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return client;
-    if (c5.type === "health") {
-      const meta = { ...client.meta || {} };
-      delete meta.health_diff;
-      return { ...withClientSection(client, id2, { text: i5.text || "", data: { ...c5.data || {}, flag: flagOf(internal) } }), meta };
-    }
-    if (c5.type === "table") {
-      const on2 = shownRefs(i5);
-      return withClientSection(client, id2, { rows: (c5.rows || []).map((r4) => on2.includes(String(r4.ref)) ? { ...r4, shown: true, cells: r4.cells || cellsFor(id2, (client.items || {})[String(r4.ref)]) } : { ref: r4.ref, shown: false }) });
-    }
-    if (c5.type === "timeline") {
-      const all = (c5.data || {}).timeline || [], listed = ((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => all.includes(m5));
-      return withClientSection(client, id2, { data: { ...c5.data || {}, milestones: listed } });
-    }
-    if (c5.type === "panes") return withClientSection(client, id2, { panes: (i5.panes || []).map((p6) => ({ title: p6.title, text: p6.text })) });
-    return withClientSection(client, id2, { text: i5.text || "", tags: [] });
-  }
-  var matchClientAll = (client, internal) => client.sections.reduce((d5, s5) => matchClientSection(d5, internal, s5.id), client);
-  function healthDiff(client, internalFlag, clientFlag, reason) {
-    const meta = { ...client.meta || {} };
-    if (clientFlag === internalFlag) delete meta.health_diff;
-    else meta.health_diff = { internal: internalFlag, client: clientFlag, reason: reason.trim() };
-    return meta;
-  }
-  function leftLine(list) {
-    const shown2 = list.slice(0, 4).map((x5) => `${x5.ref} (${x5.why})`).join(", ");
-    return `${shown2}${list.length > 4 ? ` and ${list.length - 4} more` : ""}`;
-  }
-  var GROUP_LABEL = (
-    /** @type {Record<string, string>} */
-    { risks: "risks and issues", overdue: "overdue actions", decisions: "decisions", milestones: "milestones" }
-  );
-
-  // stores/clientReport.js
-  var crArg = y3(
-    /** @type {{code: string, week?: string, client?: string}|null} */
-    null
-  );
-  var crOpen = y3(
-    /** @type {{ok: boolean, message?: string}|null} */
-    null
-  );
-  var crDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var crInternal = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var crBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var crInfo = y3(
-    /** @type {{where: string, filed: boolean, ready: boolean, not_ready: string, baseline: {date: string, path: string, version: number}|null, findings: string[]}|null} */
-    null
-  );
-  var crMode = y3(
-    /** @type {"client"|"side"} */
-    "client"
-  );
-  var crCheck = y3(
-    /** @type {Check|null} */
-    null
-  );
-  var crLogos = y3(
-    /** @type {{kind: string, path: string}[]} */
-    []
-  );
-  var crBusy = y3("");
-  var crDialog = y3(false);
-  var crDirty = y3(false);
-  var crHeld = y3(
-    /** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */
-    null
-  );
-  var crAsked = 0;
-  function crIdentity(d5) {
-    const x5 = d5 === void 0 ? crDoc.value : d5;
-    return x5 ? `${crAsked}|${JSON.stringify(crArg.value)}|${x5.project}|${x5.date}|${x5.client || ""}` : "";
-  }
-  var sameDoc = (a5, b5) => !!a5 && !!b5 && a5.project === b5.project && a5.date === b5.date && (a5.client || "") === (b5.client || "");
-  var sameReport = (d5) => sameDoc(crDoc.value, d5);
-  async function loadClientReport(arg, fresh) {
-    const mine = ++crAsked;
-    crArg.value = arg;
-    crCheck.value = null;
-    crDirty.value = false;
-    if (!viaServer()) {
-      crOpen.value = { ok: false, message: "The client view needs the live server." };
-      return;
-    }
-    crBusy.value = "Opening the client report…";
-    const base = { code: arg.code, week_ending: arg.week || void 0 };
-    const [i5, c5] = await Promise.all([api("/api/report/draft", { kind: "weekly", ...base }), api("/api/report/draft", { kind: "client", ...base, client: arg.client || void 0, fresh: fresh || void 0 })]);
-    if (mine !== crAsked) return;
-    crBusy.value = "";
-    if (!c5 || !c5.ok || !c5.doc) {
-      crOpen.value = { ok: false, message: oneLine(c5 && c5.message || "") || "Couldn't open the client report" };
-      crDoc.value = null;
-      return;
-    }
-    crInternal.value = i5 && i5.ok ? i5.doc : null;
-    crDoc.value = c5.doc;
-    crLogos.value = c5.logos || [];
-    readLogos(arg.code, c5.logos || []);
-    crBase.value = Number(c5.doc.version) || void 0;
-    crInfo.value = { where: c5.where, filed: !!c5.filed, ready: !!c5.ready, not_ready: c5.not_ready || "", baseline: c5.baseline || null, findings: c5.findings || [] };
-    crOpen.value = { ok: true };
-    runCheck();
-  }
-  async function runCheck() {
-    const d5 = crDoc.value, opened = crIdentity(d5);
-    if (!d5 || !viaServer()) return null;
-    const r4 = (
-      /** @type {Check} */
-      await api("/api/report/check", { doc: d5 })
-    );
-    if (crIdentity() !== opened) return null;
-    crCheck.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "The check didn't run" };
-    return crCheck.value;
-  }
-  async function saveClientPage(req) {
-    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
-    if (r4 && r4.ok) {
-      crBase.value = Number(r4.version) || crBase.value;
-      crDirty.value = false;
-      if (crInfo.value && crInfo.value.where === "new") crInfo.value = { ...crInfo.value, where: "draft" };
-    }
-    return r4;
-  }
-  async function approveClientReport(force) {
-    const a5 = crArg.value, d5 = crDoc.value;
-    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
-    return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
-  }
-  async function exportClientReport(fmt, makePage) {
-    const a5 = crArg.value, d5 = crDoc.value;
-    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
-    const opened = crIdentity(d5);
-    if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
-      const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
-      if (!s5.ok) return s5;
-    }
-    if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
-    const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
-    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
-  }
-  var matchChain = Promise.resolve();
-  function matchInternal(ids) {
-    const asked2 = crIdentity();
-    matchChain = matchChain.then(() => crIdentity() === asked2 ? matchInternalNow(ids) : void 0).catch(() => void 0);
-    return matchChain;
-  }
-  async function matchInternalNow(ids) {
-    const d02 = crDoc.value, i5 = crInternal.value, opened = crIdentity(d02);
-    if (!d02 || !i5) return;
-    const moved = () => crIdentity() !== opened || !sameReport(d02);
-    const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
-    const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
-    const internalText = (id2) => {
-      const x5 = secOf(i5, id2);
-      return !!x5 && x5.type === "freetext" && x5.audience === "internal";
-    };
-    const want = ids ? all : all.filter((id2) => !internalText(id2));
-    const skipped = ids ? [] : all.filter(internalText).map((id2) => ({ id: id2, heading: heading(id2) }));
-    const cands = want.map((id2) => ({ id: id2, doc: matchClientSection(d02, i5, id2) })).filter((c5) => c5.doc !== d02);
-    if (!cands.length) {
-      crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null;
-      return;
-    }
-    const failed = () => {
-      crHeld.value = { copied: [], skipped, held: cands.map((c5) => ({ id: c5.id, heading: heading(c5.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." };
-    };
-    if (!viaServer()) {
-      failed();
-      return;
-    }
-    const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
-    if (moved()) return;
-    if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
-      failed();
-      return;
-    }
-    const codes = (fs2) => fs2.reduce(
-      (m5, f5) => m5.set(f5.code, (m5.get(f5.code) || 0) + 1),
-      /** @type {Map<string, number>} */
-      /* @__PURE__ */ new Map()
-    );
-    const base = codes(r4.findings[0]);
-    const fresh_of = (fs2) => {
-      const seen = (
-        /** @type {Map<string, number>} */
-        /* @__PURE__ */ new Map()
-      );
-      return fs2.filter((f5) => {
-        const n4 = (seen.get(f5.code) || 0) + 1;
-        seen.set(f5.code, n4);
-        return n4 > (base.get(f5.code) || 0);
-      });
-    };
-    const done = (
-      /** @type {string[]} */
-      []
-    ), held = (
-      /** @type {{id: string, heading: string, findings: string[]}[]} */
-      []
-    ), clean = (
-      /** @type {string[]} */
-      []
-    );
-    cands.forEach((c5, n4) => {
-      const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
-      if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
-      else clean.push(c5.id);
-    });
-    const kept = (on2) => sameDoc(on2, d02) ? clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
-    const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
-    if (clean.length) {
-      for (let tries = 0; ; tries++) {
-        const now = crDoc.value;
-        if (!now || moved()) return;
-        const d5 = onto(now);
-        const last = await api("/api/report/match-check", { docs: [d5] });
-        if (moved()) return;
-        const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
-        if (!extra || extra.length) {
-          failed();
-          return;
-        }
-        if (crDoc.value === now) {
-          kept(now).forEach((id2) => done.push(heading(id2)));
-          crDoc.value = d5;
-          crDirty.value = true;
-          break;
-        }
-        if (tries >= 2) {
-          crHeld.value = { copied: [], skipped, held: [], message: "Not matched: the report kept changing while its wording was checked, so nothing was copied. Try again." };
-          return;
-        }
-      }
-    }
-    crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
   }
 
   // components/report/ClientParts.jsx
@@ -73874,8 +73942,9 @@ ${d5.text}`);
     ] }) });
   }
   var internalChange = (d5) => {
-    editDoc(d5);
-    if (crInternal.value) crInternal.value = d5;
+    if (!editDoc(d5)) return;
+    const ci2 = crInternal.value;
+    if (ci2 && ci2.project === d5.project && ci2.date === d5.date) crInternal.value = d5;
   };
   var internalSave = async (req) => {
     const r4 = await saveWeekly(req);
@@ -75914,6 +75983,8 @@ ${d5.text}`);
         "countUp",
         "covered",
         "crDialog",
+        "crDoc",
+        "crInternal",
         "crLogoData",
         "crTick",
         "creaiteEditor",
@@ -76056,6 +76127,7 @@ ${d5.text}`);
         "linkWords",
         "linkWrite",
         "loadChat",
+        "loadHub",
         "loadPartners",
         "loadPrep",
         "loadTab",
