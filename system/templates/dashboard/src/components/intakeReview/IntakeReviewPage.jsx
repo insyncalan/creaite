@@ -16,7 +16,7 @@ import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irCanSetAside, IR_REASONS, irLater, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irCanSetAside, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
@@ -34,7 +34,7 @@ const irPlural = (/** @type {number} */ n, /** @type {string} */ w) => `${n} ${w
 /** The stage counts: each a filter (one click shows that stage, a second shows all), with an icon, and Show all as a fourth box
     after a thin rule. @param {{c: Record<string, number>}} props */
 export function StagePipe({ c }) {
-  const sub = { arrived: `${c.ready} ready to process`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
+  const sub = { arrived: `${c.ready} ready to process${c.need_type ? ` · ${c.need_type} need a type` : ""}`, drafted: `${irPlural(c.to_approve, "proposal")} to check`, approved: "this week", all: "meetings and files" };
   const word = { ...IR_STAGE_NAMES, all: "Show all" };
   const box = (/** @type {"arrived"|"drafted"|"approved"|"all"} */ g) => (
     <div class="evbox click" role="button" tabindex={0} data-irstage={g} aria-pressed={irStage.value === g}
@@ -62,11 +62,14 @@ function FoldSection({ sec, title, n, children }) {
 }
 
 
-/** Process all ready (n): the meetings and files whose transcript is ready, one after another. */
-function ProcessAll() {
-  const n = irReady().length, blocked = irBlocked();
-  return <button type="button" class="btn" data-ira="processall" disabled={!n || blocked}
-    title={blocked ? "ask creaite is busy; try again when it's finished" : n ? "" : "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
+/** Process all ready (n): the meetings and files whose transcript is ready, one after another. A private or confidential meeting and a
+    file that is not sure what it is are left out, and the page says how many (counts only). `n` and `left` are passed in, so the button
+    redraws when they change (a component whose props are the same is left as it was). @param {{n: number, left: number}} props */
+function ProcessAll({ n, left }) {
+  const blocked = irBlocked();
+  const lefts = left ? `${left} left out: private, confidential or not sure what it is` : "";
+  return <button type="button" class="btn" data-ira="processall" disabled={!n || blocked} data-left={left || undefined}
+    title={blocked ? "ask creaite is busy; try again when it's finished" : n ? lefts : lefts || "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
 }
 
 /** Add files: an icon button (choose them here), or drop them anywhere on the page. */
@@ -137,7 +140,7 @@ function IntakeReviewView() {
       <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
         <span class="sp"></span>
-        <ProcessAll />
+        <ProcessAll n={irReady().length} left={irLeftOut().length} />
         <UploadFiles />
         <span class="seg" role="group" aria-label="How you see Intake">
           {IR_VIEWS.map(([v, l]) => (
@@ -148,6 +151,7 @@ function IntakeReviewView() {
           ))}
         </span>
       </div>
+      {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: private, confidential or not sure what it is.</p> : null}
       {view === "board" ? <BoardView model={model} /> : view === "two" ? <TwoPanes model={model} list={model.meetings} /> : <><StagePipe c={c} /><ListView model={model} list={list} /></>}
       <FoldSection sec="later" title="Later" n={model.later.length}>
         {model.later.length ? <ul class="irlist">{model.later.map(x => <li data-irkey={x.key}>{x.title}{x.day ? <span class="sub"> · {fd(x.day)}{x.start ? ` ${x.start}` : ""}</span> : null} <button type="button" class="linkbtn" data-ira="restore" onClick={() => irRestore([x.key])}>Restore</button></li>)}</ul> : <div class="empty">Nothing set aside for later. A meeting comes back here when its transcript arrives.</div>}

@@ -95,16 +95,25 @@ export function irFoldClick(folded, sec) { return { ...folded, [sec]: !irIsFolde
 /** Whether a section is folded (its default until clicked). @param {Record<string, boolean>} folded @param {string} sec */
 export const irIsFolded = (folded, sec) => (sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec));
 
+/** The kinds a file can be (#232-A5). */
+export const IR_KINDS = ["transcript", "minutes"];
+/** A file's kind: the person's choice for that file (`kinds`, by path), else the server's guess (`ft`, "" when it could not tell).
+    Everything that is not an uploaded file is a transcript. @param {{src?: string, path?: string|null, ft?: string}|null|undefined} m @param {Record<string, string>} [kinds] */
+export const irKindOf = (m, kinds) => (!m || m.src !== "upload" ? "transcript" : kinds && m.path && IR_KINDS.includes(kinds[m.path]) ? kinds[m.path] : m.ft || "");
+/** Whether a file row's kind is not known yet: it is not ready to process, and not in the badge. */
+export const irUnsure = (/** @type {any} */ m, /** @type {Record<string, string>} */ kinds) => !!m && m.src === "upload" && !irKindOf(m, kinds);
+
 /** The live counts: the server's, less what the page has decided since. A meeting whose proposals are all decided counts as
     approved. @param {IrModel} model @param {(n:number)=>boolean} done */
-export function irCounts(model, done) {
+export function irCounts(model, done, kinds) {
   const ms = model.meetings || [], left = (/** @type {IrMeeting} */ m) => { const l = irLive(m.groups, done); return l.needs.length + l.routine.length; };
   const stage = (/** @type {IrMeeting} */ m) => (m.stage === "drafted" && !left(m) ? "approved" : m.stage);
   const all = [...ms.flatMap(m => [...(m.groups.needs || []), ...(m.groups.routine || [])]),
     ...["mail", "other"].flatMap(k => [...((/** @type {any} */ (model)[k] || {}).needs || []), ...((/** @type {any} */ (model)[k] || {}).routine || [])])];
   const toApprove = new Set(all.filter(n => !done(n))).size;
-  const ready = ms.filter(m => m.stage === "arrived" && m.state === "ready").length;
-  return { arrived: ms.filter(m => stage(m) === "arrived").length, ready, drafted: ms.filter(m => stage(m) === "drafted").length,
+  const arrivedReady = ms.filter(m => m.stage === "arrived" && m.state === "ready"), needType = arrivedReady.filter(m => irUnsure(m, kinds)).length;
+  const ready = arrivedReady.length - needType;       /* a file whose kind is not known is not ready (the mockup's nProc) and not in the badge */
+  return { need_type: needType, arrived: ms.filter(m => stage(m) === "arrived").length, ready, drafted: ms.filter(m => stage(m) === "drafted").length,
     approved: ms.filter(m => stage(m) === "approved").length, to_approve: toApprove, badge: ready + toApprove,
     all: ms.length };   /* #232-A4: the fourth box, Show all: every meeting and file on the page */
 }

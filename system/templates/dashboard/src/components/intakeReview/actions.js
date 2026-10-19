@@ -10,7 +10,8 @@ import { jobLive, mtgBusy, mtgCheckable, mtgSkip, TXWHY, UPLOAD_TYPES, uploadInb
 import { D, fd, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { irAside, irBlocked, irBusy, irChecking, irModel, irNote, irRefreshing, irSetBusy, irSetChecking, irTick } from "../../stores/intakeReview.js";
+import { irKindOf, irUnsure } from "../../core/irFold.js";
+import { irAside, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRefreshing, irSetBusy, irSetChecking, irSetFileKind, irTick } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
 export const IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
@@ -21,8 +22,20 @@ const BUSY = "ask creaite is busy; try again when it's finished";
 export const irCanProcess = m => !!m && m.stage === "arrived" && m.state === "ready" && m.src !== "draft";
 /** Whether Later and Not needed apply: anything that has arrived, is not yet drafted and is not being processed now. @param {any} m */
 export const irCanSetAside = m => !!m && m.stage === "arrived" && m.src !== "draft" && !irBusy.value.includes(m.id);
-/** The meetings Process all ready would run: a private meeting ("Busy") is left out (Alan, via Jarvis, 19-10-2026). */
-export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !m.private && !irBusy.value.includes(m.id));
+/** A row's kind with this browser's choice applied: "transcript", "minutes", or "" for a file that is not sure (a meeting is a transcript). @param {any} m */
+export const irFileKind = m => irKindOf(m, irFileKinds.value);
+/** Why Process all ready leaves a row out, or "": a private or confidential meeting, or a file that is not sure what it is. An explicit
+    Process on the row itself is "naming it", as cx-minutes allows (Alan, via Jarvis, 19-10-2026). @param {any} m */
+export const irLeaveOut = m => (m.private || m.confidential ? "private" : irUnsure(m, irFileKinds.value) ? "type" : "");
+/** The rows Process all ready would run. */
+export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && !irBusy.value.includes(m.id));
+/** The ready rows it leaves out (counts only: a confidential meeting is never named). */
+export const irLeftOut = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !!irLeaveOut(m) && !irBusy.value.includes(m.id));
+/** What a row's main button says: a transcript file is made into minutes, a minutes file is checked for work items, a meeting is processed.
+    @param {any} m */
+export const irProcessWord = m => (m.src !== "upload" ? "Process" : irFileKind(m) === "transcript" ? "Make minutes" : irFileKind(m) === "minutes" ? "Find work items" : "Process");
+/** Choose what a file is (transcript or minutes); remembered in this browser. @param {any} m @param {string} kind */
+export function irChooseKind(m, kind) { if (m && m.src === "upload") irSetFileKind(m.path, kind); }
 
 /** The calendar import row (D.meetings.rows) a model row came from. @param {any} m */
 const calOf = m => (m.src === "calendar" ? ((D.meetings && D.meetings.rows) || []).find((/** @type {any} */ x) => x.key === m.key) || null : null);
@@ -33,6 +46,7 @@ const whenOf = (/** @type {any} */ m) => (m.start ? `${fd(m.day)} at ${m.start}`
     @param {any} m @returns {Promise<boolean>} whether a draft came back */
 export async function irProcess(m) {
   if (!irCanProcess(m)) return false;
+  if (irUnsure(m, irFileKinds.value)) { irNote(m.id, "Say whether it is a transcript or minutes first"); return false; }
   if (!viaServer()) { snack("Processing needs the live server"); return false; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return false; }
   irNote(m.id, ""); irSetBusy(m.id, true);
@@ -55,7 +69,11 @@ export async function irProcess(m) {
       }
     }
     shared.RUNLABEL = label;
-    try { await askLive(`process ${file}`, `Process “${m.title}” (${whenOf(m)}) into draft minutes and proposed items`); } catch (e) { /* checked below */ }
+    const minutes = irFileKind(m) === "minutes";           /* #232-E1: someone else's minutes are read for work items; no new minutes are drafted */
+    try {
+      await askLive(minutes ? `process ${file} as minutes by someone else` : `process ${file}`,
+        minutes ? `Check “${m.title}” (${whenOf(m)}) for proposed items: minutes by someone else, no new minutes drafted` : `Process “${m.title}” (${whenOf(m)}) into draft minutes and proposed items`);
+    } catch (e) { /* checked below */ }
     await reloadData();
     const after = rowOf(m.id);
     const done = !after || after.stage !== "arrived";      /* a file that was filed away has left the inbox: that is done, not failed */
@@ -68,8 +86,9 @@ export async function irProcess(m) {
 export async function irProcessAll() {
   if (!viaServer()) { snack("Processing needs the live server"); return; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return; }
-  const ids = irReady().map((/** @type {any} */ m) => m.id);
+  const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length;
   for (const id of ids) { const m = rowOf(id); if (m) await irProcess(m); }
+  if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: private, confidential or not sure what it is`);   /* counts only: a confidential meeting is never named */
 }
 
 /** The clear route's item for a row. @param {any} m @param {Record<string, any>} [extra] */
@@ -169,4 +188,19 @@ export function irCalendarRead(fetched, today) {
   if (!/^\d{4}-\d{2}-\d{2}/.test(f)) return "No calendar yet";
   const day = f.slice(0, 10), t = /^.{10}[ T](\d{2}:\d{2})/.exec(f);
   return `Calendar read ${[day === today ? "" : fd(day), t ? t[1] : ""].filter(Boolean).join(" ")}`;
+}
+
+/** Take an uploaded file out of Intake (kept in backups); an Undo puts it back. Used for a file that was already processed.
+    @param {any} m @returns {Promise<boolean>} */
+export async function irRemoveFile(m) {
+  if (!m || m.src !== "upload" || !m.path) return false;
+  if (!viaServer()) { snack("Removing needs the live server"); return false; }
+  const r = await api("/api/inbox/remove", { path: m.path });
+  if (!r.ok) { snack(oneLine(r.message === OLDSERVER ? OLDSERVER : r.message || "Couldn't remove it")); return false; }
+  await reloadData();
+  snack(`Removed ${m.title} from Intake (kept in backups)`, async () => {
+    const b = await api("/api/inbox/restore", { kept: r.kept });
+    if (b.ok) { await reloadData(); snack("Back in Intake"); } else snack(oneLine(b.message));
+  });
+  return true;
 }

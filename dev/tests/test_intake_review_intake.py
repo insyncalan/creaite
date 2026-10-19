@@ -150,7 +150,7 @@ class IntakeSide(IntakeBase):
         b.wait("D.intake_review.meetings.some(m=>m.title==='Dropped notes.vtt' && m.src==='upload')", 30)
         self.assertTrue((self.v.root / "inbox" / "Dropped notes.vtt").exists())
         b.wait(f"!!{self.row('Dropped notes.vtt')}")
-        self.assertEqual(b.eval(f"[...{self.row('Dropped notes.vtt')}.querySelectorAll('[data-ira]')].map(x=>x.dataset.ira)"), ["process", "later", "notneeded"])
+        self.assertEqual(b.eval(f"[...{self.row('Dropped notes.vtt')}.querySelectorAll('.iracts [data-ira]')].map(x=>x.dataset.ira)"), ["process", "later", "notneeded"])
         self.assertTrue(b.eval("!!document.querySelector('#v-intake-review [data-irpick]')"))        # and a button to choose files
 
     # -- age and stale (from test_review_age)

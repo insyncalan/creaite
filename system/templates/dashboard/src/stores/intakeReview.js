@@ -14,7 +14,7 @@
 import { signal } from "@preact/signals";
 import { D, store } from "../core/page.js";
 import { REV } from "../core/data.js";
-import { IR_STAGES, irCounts, irFoldClick, irKeepOpen, irStageClick, irToggle, irViewNorm } from "../core/irFold.js";
+import { IR_KINDS, IR_STAGES, irCounts, irFoldClick, irKeepOpen, irKindOf, irStageClick, irToggle, irViewNorm } from "../core/irFold.js";
 
 export const IR_VIEW_KEY = "creaite-ir-view";
 /** @returns {import("../core/irFold.js").IrModel} */
@@ -58,13 +58,14 @@ export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, 
 export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel()); irTick.value++; }
 /** The live counts, the badge among them (232-C wires the rail badge and Today to this). */
 export const irLiveCounts = () => {
-  const c = irCounts(irModel(), irDone), known = new Set((irModel().meetings || []).map(m => m.path).filter(Boolean));
+  const kinds = irFileKinds.value, c = irCounts(irModel(), irDone, kinds), known = new Set((irModel().meetings || []).map(m => m.path).filter(Boolean));
   /* #232-C: a file that arrived since the model was built (the quicker file refresh does not rebuild it) counts at once, as the
      Intake badge did; a transcript Calendar import loaded belongs to its meeting's row */
-  const extra = (/** @type {any} */ (D).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !known.has(f.path)).length;
+  const fresh = (/** @type {any} */ (D).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !known.has(f.path));
+  const extra = fresh.length, sure = fresh.filter((/** @type {any} */ f) => irKindOf({ src: "upload", path: f.path, ft: f.ft }, kinds)).length;   /* a file of unknown kind is not ready */
   const late = irMissing().length;   /* proposals the quick refresh brought into Review before the model was rebuilt */
   const k = { ...c, to_approve: c.to_approve + late, badge: c.badge + late };
-  return extra ? { ...k, arrived: k.arrived + extra, ready: k.ready + extra, badge: k.badge + extra, all: k.all + extra } : k;
+  return extra ? { ...k, arrived: k.arrived + extra, ready: k.ready + sure, need_type: k.need_type + extra - sure, badge: k.badge + sure, all: k.all + extra } : k;
 };
 
 /* ===== #232-A (Intake side) ===== signals for the meeting row's actions; the actions themselves are in
@@ -84,6 +85,18 @@ export const irChecking = signal(/** @type {string[]} */ ([]));
 export const irBlocked = () => irBusy.value.length > 0 || irChecking.value.length > 0 || irAsk.value;
 /** @param {string} id @param {boolean} on */
 export function irSetChecking(id, on) { irChecking.value = on ? [...irChecking.value.filter(x => x !== id), id] : irChecking.value.filter(x => x !== id); }
+/** The kind (transcript or minutes) chosen for a file, by its path: this browser's, kept in localStorage (never shared, never in
+    settings.json); another browser derives it again from the file's name. */
+export const IR_KIND_KEY = "creaite-ir-filekind";
+export const irFileKinds = signal(/** @type {Record<string, string>} */ ((() => {
+  try { const v = store.get(IR_KIND_KEY, {}); return v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([, k]) => IR_KINDS.includes(/** @type {string} */ (k)))) : {}; } catch (x) { return {}; }
+})()));
+/** Choose a file's kind. @param {string} path @param {string} kind */
+export function irSetFileKind(path, kind) {
+  if (!path || !IR_KINDS.includes(kind)) return;
+  irFileKinds.value = { ...irFileKinds.value, [path]: kind };
+  try { store.set(IR_KIND_KEY, irFileKinds.value); } catch (x) { /* storage blocked: this page only */ }
+}
 /** Whether files are being dragged over the page: the full-page "Drop to add files" overlay shows (pointer-events none, so ask creaite's panel still gets its images). */
 export const irDropOn = signal(false);
 /** Whether the calendar is being read again (the refresh icon under the heading): the sub-line says "Refreshing…" meanwhile. */

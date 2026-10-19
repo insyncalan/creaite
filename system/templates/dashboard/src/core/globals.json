@@ -388,6 +388,7 @@
    "irCounts",
    "irDone",
    "irEsc",
+   "irFileKinds",
    "irFiltered",
    "irFoldClick",
    "irFolded",
