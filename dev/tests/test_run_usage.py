@@ -162,5 +162,135 @@ class UsageReport(Base):
         self.assertEqual(a["start_share"], round(120 / 282, 2))
 
 
+class UsageReportJson(Base):
+    """#238: usage_report --json, the figures the Usage tab shows. Counts only. The fixture's sums are worked in usage_fixture.py."""
+
+    def setUp(self):
+        super().setUp()
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import usage_fixture as fx
+        self.fx = fx
+        self.skills = self.root / ".claude" / "skills"
+        for n in ("cx-minutes", "cx-sweep", "cx-steerco"):
+            (self.skills / n).mkdir(parents=True)
+        os.environ["CREAITE_NOW"] = fx.NOW
+
+    def report(self, rows=None, ctx=None, **kw):
+        rows = self.fx.RUNS if rows is None else rows
+        return usage_report.report(rows, self.fx.CONTEXT if ctx is None else ctx, days=14, skills_dir=self.skills, **kw)
+
+    def test_cards_compare_the_last_seven_days_with_the_seven_before(self):
+        c = self.report()["cards"]
+        self.assertEqual((c["cost"]["now"], c["cost"]["before"], c["cost"]["change_pct"]), (6.5, 3.0, 117))
+        self.assertEqual((c["runs"]["now"], c["runs"]["before"], c["runs"]["change_pct"]), (4, 2, 100))
+        self.assertEqual((c["start"]["now"], c["start"]["before"], c["start"]["change"]), (21000, 20000, 1000))
+        self.assertEqual((c["avg_cost"]["now"], c["avg_cost"]["before"], c["avg_cost"]["change_pct"]), (1.625, 1.5, 8))
+
+    def test_a_card_with_nothing_before_has_no_percentage(self):
+        rows = [r for r in self.fx.RUNS if r["at"] >= "2026-10-13"]
+        c = self.report(rows)["cards"]
+        self.assertEqual((c["cost"]["now"], c["cost"]["before"]), (6.5, 0))
+        self.assertIsNone(c["cost"]["change_pct"])
+        self.assertIsNone(c["start"]["change"])
+
+    def test_by_day_is_fourteen_days_oldest_first_with_empty_days_kept(self):
+        d = self.report()["by_day"]
+        self.assertEqual((len(d), d[0]["day"], d[-1]["day"]), (14, "2026-10-06", "2026-10-19"))
+        last = d[-1]
+        self.assertEqual((last["runs"], last["cost_usd"], last["start_median"]), (2, 3.0, 21000))
+        quiet = next(x for x in d if x["day"] == "2026-10-09")
+        self.assertEqual((quiet["runs"], quiet["cost_usd"], quiet["start_median"]), (0, 0, None))
+
+    def test_by_kind_over_the_period_by_cost_with_the_share(self):
+        k = {x["kind"]: x for x in self.report()["by_kind"]}
+        self.assertEqual([x["kind"] for x in self.report()["by_kind"]], ["ask", "sweep", "vip"])
+        self.assertEqual((k["ask"]["runs"], k["ask"]["avg_tokens"], k["ask"]["start_median"], k["ask"]["cost_usd"], k["ask"]["share_pct"]),
+                         (3, 20667, 20000, 5.0, 53))
+        self.assertEqual((k["sweep"]["runs"], k["sweep"]["share_pct"], k["vip"]["share_pct"]), (2, 42, 5))
+
+    def test_skills_have_runs_cost_and_last_used_and_never_run_ones_are_listed(self):
+        s = {x["skill"]: x for x in self.report()["skills"]}
+        self.assertEqual((s["cx-minutes"]["runs"], s["cx-minutes"]["cost_usd"], s["cx-minutes"]["last"], s["cx-minutes"]["days_since"]),
+                         (1, 2.0, "2026-10-19", 0))
+        self.assertEqual((s["cx-sweep"]["runs"], s["cx-sweep"]["cost_usd"], s["cx-sweep"]["days_since"]), (2, 4.0, 2))
+        self.assertEqual((s["cx-steerco"]["runs"], s["cx-steerco"]["last"], s["cx-steerco"]["days_since"]), (0, None, None))
+
+    def test_a_stopped_run_with_no_start_load_does_not_drag_the_median_down(self):
+        rows = self.fx.RUNS + [self.fx.run("2026-10-18T10:00:00", "ask", 0.0, 0)]
+        self.assertEqual(self.report(rows)["cards"]["start"]["now"], 21000)
+        self.assertEqual(self.report(rows)["cards"]["runs"]["now"], 5)
+
+    def test_context_carries_the_thirty_day_change(self):
+        c = {x["file"]: x for x in self.report()["context"]}
+        self.assertEqual((c["rules"]["bytes"], c["rules"]["change_bytes"], c["rules"]["since"]), (53000, 3000, "2026-09-19"))
+        self.assertIsNone(c["memory"]["change_bytes"])
+
+    def test_an_empty_record_says_so(self):
+        r = self.report([], [])
+        self.assertTrue(r["empty"])
+        self.assertEqual((r["cards"]["runs"]["now"], r["by_kind"], r["context"]), (0, [], []))
+        self.assertEqual(len(r["by_day"]), 14)
+        self.assertFalse(self.report()["empty"])
+
+    def test_no_text_in_the_figures_whatever_the_file_holds(self):
+        fx = self.fx
+        poisoned = dict(fx.RUNS[0], kind=fx.POISON, label=fx.POISON, model=fx.POISON, note=fx.POISON, skills=[fx.POISON, "cx-minutes"])
+        out = json.dumps(self.report(fx.RUNS + [poisoned], fx.CONTEXT + [dict(fx.CONTEXT[0], file=fx.POISON, note=fx.POISON)]))
+        self.assertNotIn("POISONED", out)
+        self.assertNotIn("Jane", out)
+        self.assertIn('"other"', out)        # the unknown kind is counted as other
+        r = self.report(fx.RUNS + [poisoned])
+        self.assertEqual({x["kind"] for x in r["by_kind"]}, {"ask", "sweep", "vip", "other"})
+
+    def test_only_known_keys_come_out(self):
+        allowed = {"as_of", "days", "empty", "cards", "cost", "runs", "start", "avg_cost", "now", "before", "change_pct", "change",
+                   "by_day", "day", "cost_usd", "start_median", "by_kind", "kind", "avg_tokens", "share_pct", "skills", "skill",
+                   "last", "days_since", "context", "file", "date", "bytes", "tokens", "since", "change_bytes", "change_tokens",
+                   "estimate"}
+
+        def keys(o):
+            if isinstance(o, dict):
+                for k, v in o.items():
+                    yield k
+                    yield from keys(v)
+            elif isinstance(o, list):
+                for v in o:
+                    yield from keys(v)
+        self.assertEqual(set(keys(self.report())) - allowed, set())
+
+    def test_the_json_flag_prints_the_report(self):
+        import contextlib
+        import io
+        self.fx.write_jsonl(self.file, self.fx.RUNS)
+        self.fx.write_jsonl(self.root / "system" / "staging" / "context-size.jsonl", self.fx.CONTEXT)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = usage_report.main(["--json", "--file", str(self.file), "--context-file",
+                                      str(self.root / "system" / "staging" / "context-size.jsonl")])
+        self.assertEqual(code, 0)
+        got = json.loads(buf.getvalue())
+        self.assertEqual((got["as_of"], got["days"], got["cards"]["cost"]["now"]), ("2026-10-19", 14, 6.5))
+        self.assertEqual(got["context"][0]["file"], "rules")
+
+    def test_the_json_flag_with_no_files_is_the_empty_report(self):
+        import contextlib
+        import io
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            usage_report.main(["--json", "--file", str(self.file), "--context-file", str(self.root / "none.jsonl")])
+        got = json.loads(buf.getvalue())
+        self.assertTrue(got["empty"])
+        self.assertEqual(got["context"], [])
+
+    def test_the_text_report_is_unchanged(self):
+        import contextlib
+        import io
+        self.fx.write_jsonl(self.file, self.fx.RUNS)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            usage_report.main(["--days", "7", "--file", str(self.file)])
+        self.assertIn("Total: 4 runs, $6.50", buf.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

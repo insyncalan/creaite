@@ -103,12 +103,107 @@ def print_skills(all_rows, days) -> None:
         print(f"{s['skill']:<28}{s['runs']:>6}{s['ever']:>6}{since:>12}")
 
 
+# ===== #238 (v2.5.1): --json, the figures the Activity › Usage tab shows (and GET /api/usage serves) =====
+# Counts only. A line's kind is one of usage_log.KINDS or "other"; a skill is a known name or "other" (usage_log.clean_skills); the
+# label, model and any other field a line holds are never read. Tokens loaded at start are estimates the run reported; the context
+# rows (usage_log.read) estimate bytes / 4. A run with no start load (a stopped one) is left out of the start-load medians.
+JSON_DAYS = 14
+WEEK = 7
+
+
+def _median(values):
+    return round(statistics.median(values)) if values else None
+
+
+def _change_pct(now, before):
+    return round((now - before) / before * 100) if before else None
+
+
+def _cards(rows, today):
+    """The four cards: the last seven days against the seven before."""
+    def window(first_back, last_back):
+        a, b = (today - timedelta(days=first_back)).isoformat(), (today - timedelta(days=last_back)).isoformat()
+        return [r for r in rows if a <= str(r["at"])[:10] <= b]
+    now, before = window(WEEK - 1, 0), window(2 * WEEK - 1, WEEK)
+
+    def figs(g):
+        cost = round(sum(float(r.get("cost_usd") or 0) for r in g), 4)
+        return {"cost": cost, "runs": len(g), "start": _median([r.get("start_tokens", 0) for r in g if r.get("start_tokens")]),
+                "avg_cost": round(cost / len(g), 4) if g else 0}
+    n, b = figs(now), figs(before)
+    out = {k: {"now": n[k], "before": b[k], "change_pct": _change_pct(n[k], b[k])} for k in ("cost", "runs", "avg_cost")}
+    out["start"] = {"now": n["start"], "before": b["start"],
+                    "change": n["start"] - b["start"] if n["start"] is not None and b["start"] is not None else None}
+    return out
+
+
+def report(rows, context_rows=None, days=JSON_DAYS, today=None, skills_dir=None) -> dict:
+    """The Usage tab's figures as one dict: cards, by_day (oldest first, empty days kept), by_kind (by cost), skills and context."""
+    import usage_log
+    today = today or _today()
+    first = (today - timedelta(days=days - 1)).isoformat()
+    last = today.isoformat()
+    clean = []
+    for r in rows:
+        kind = r.get("kind") if r.get("kind") in usage_log.KINDS else "other"
+        clean.append({"at": r["at"], "kind": kind, "cost_usd": r.get("cost_usd", 0), "start_tokens": r.get("start_tokens", 0),
+                      "tokens": sum(usage_log._int(r.get(k)) for k in ("input", "output", "cache_read", "cache_create")),
+                      "skills": usage_log.clean_skills([x for x in r.get("skills") or [] if isinstance(x, str)], skills_dir)})
+    window = [r for r in clean if first <= str(r["at"])[:10] <= last]
+
+    def cost_of(g):
+        total = 0.0
+        for r in g:
+            try:
+                total += max(0.0, float(r["cost_usd"] or 0))
+            except (TypeError, ValueError):
+                pass
+        return round(total, 4)
+
+    by_day = []
+    for i in range(days):
+        day = (today - timedelta(days=days - 1 - i)).isoformat()
+        g = [r for r in window if str(r["at"])[:10] == day]
+        by_day.append({"day": day, "runs": len(g), "cost_usd": cost_of(g),
+                       "start_median": _median([r["start_tokens"] for r in g if r["start_tokens"]])})
+    total_cost = cost_of(window)
+    by_kind = []
+    for kind in sorted({r["kind"] for r in window}):
+        g = [r for r in window if r["kind"] == kind]
+        by_kind.append({"kind": kind, "runs": len(g), "avg_tokens": round(sum(r["tokens"] for r in g) / len(g)),
+                        "start_median": _median([r["start_tokens"] for r in g if r["start_tokens"]]), "cost_usd": cost_of(g),
+                        "share_pct": round(cost_of(g) / total_cost * 100) if total_cost else 0})
+    by_kind.sort(key=lambda k: (-k["cost_usd"], k["kind"]))
+    skills = []
+    for t in skills_table(clean, days, today, skills_dir):
+        g = [r for r in window if t["skill"] in r["skills"]]
+        skills.append({"skill": t["skill"], "runs": t["runs"], "cost_usd": cost_of(g), "days_since": t["days_since"],
+                       "last": (today - timedelta(days=t["days_since"])).isoformat() if t["days_since"] is not None else None})
+    skills = [s for s in skills if s["skill"] != "other"]
+    return {"as_of": last, "days": days, "empty": not window, "estimate": "tokens at start are what the run reported; context tokens are bytes / 4",
+            "cards": _cards(clean, today), "by_day": by_day, "by_kind": by_kind, "skills": skills,
+            "context": usage_log.changes(context_rows or [], today=last)}
+
+
+def json_report(days=JSON_DAYS, usage_file=None, context_file=None, skills_dir=None) -> dict:
+    """report() over the two files in the vault's staging folder (or the paths given); a missing or broken file is empty."""
+    import usage_log
+    return report(load(usage_file), usage_log.read(context_file), days=days, skills_dir=skills_dir)
+# ===== end #238 =====
+
+
 def main(argv=None) -> int:
     """Print the report."""
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=7)
+    ap.add_argument("--days", type=int)
     ap.add_argument("--file")
+    ap.add_argument("--json", action="store_true", help="print the Usage tab's figures as JSON (counts only; 14 days unless --days)")
+    ap.add_argument("--context-file", help="with --json: the context-size record (default system/staging/context-size.jsonl)")
     a = ap.parse_args(argv)
+    if a.json:
+        print(json.dumps(json_report(a.days or JSON_DAYS, a.file, a.context_file), separators=(",", ":")))
+        return 0
+    a.days = a.days or 7
     every = load(a.file)
     rows = summarise(every, a.days)
     if not rows:
