@@ -1,0 +1,94 @@
+# #183 Draft email delivery: the guarded half (proposal for Jarvis)
+
+**Status: a proposal. `live_server.py`, `system/creaite-rules.md` are guarded; nothing here is applied.** Both diffs pass
+`git apply --check` against `v26-draft-delivery` (main at f92f440a plus this branch). Brief: `origin/pm-intake-briefs:dev/sprints/183-draft-delivery-brief.md`
+(locked by Alan, 19-10-2026).
+
+## What is in this folder
+
+| File | What |
+|---|---|
+| `live_server.diff` | The two routes: `POST /api/email/draft` (create, copied) and `POST /api/email/outlook-access` (the Settings Check). One block, after `/api/chase/pane`. |
+| `rules-and-skill.diff` | `system/creaite-rules.md` ("Microsoft 365 actions stay off" gets its one exception; cx-client-report's row; the Assistant paragraph; a new Draft email delivery bullet; `drafted.json` and `draft_delivery.py` in the folder map) and `.claude/skills/cx-client-report/SKILL.md` ("never creates email drafts" rewritten: the skill still never does; the popup may, with the setting on). |
+| `test_draft_route.py` | The route's tests, to move to `dev/tests/` with the diff. Verified: **5 pass with the diff applied** (in a scratch copy of the branch), **5 fail without it** (404). |
+
+## What the branch already has (unguarded, committed)
+
+- `draft_email.outlook_drafts` (off) in `settings-defaults.json`, the catalogue and Settings › Essentials › **Draft email** (label, help
+  text and the **Outlook access** Check row word for word from the brief).
+- `system/scripts/draft_delivery.py`: plain code, no Microsoft 365 call, no `subprocess`, no send tool named anywhere (a test walks its
+  AST). `request` (payload → the one create-draft call, refused while the setting is off), `prompt`, `check` (the run's stream-json
+  events), `record_created`, `record_copied`, `match_sent`, `access`, a JSON-on-stdin command line.
+- The popup (drafts.js): Off unchanged; On as the brief's table. It calls `/api/email/draft`; until this diff is applied the old
+  server answers 404 and the popup shows the refusal ("Outlook would not create the draft (The live server is older than this dashboard…)")
+  with Copy it instead, so nothing breaks while the setting is off (the default).
+- `sweep.py stage` reads `sent_items` and calls `draft_delivery.match_sent`; cx-sweep's skill says what to pass (subject, To, time).
+
+## The guard inputs
+
+**The write tool.** `mcp__claude_ai_Microsoft_365__outlook_create_draft` (`draft_delivery.CREATE_TOOL`). Arguments, exactly:
+`{"subject": str (1 line, ≤255), "body": str (the preview's HTML, ≤500,000), "bodyType": "html", "to": [address, …] (omitted when
+there is no address; ≤50)}`. Never `cc` or `bcc`. It answers the draft's `id` and `webLink`; `check` keeps a link only on
+`outlook.office.com`, `outlook.office365.com` or `outlook.live.com`.
+
+**The only caller.** `email_draft_route` → `draft_run(prompt, draft_delivery.allowed_tools())`, a `claude -p --output-format stream-json
+--verbose --no-session-persistence` run whose `--allowedTools` is exactly `[outlook_create_draft, ToolSearch]` and whose
+`--disallowedTools` is `draft_run_deny(allowed)`: `DENY_TOOLS` + every Microsoft 365 action (`draft_delivery.denied_tools()`,
+`outlook_send_draft`, `outlook_send_mail`, `outlook_update_draft`, `outlook_delete_draft` among them) + `run_deny_extras()` +
+`VIP_BUILTIN_DENIES` (every built-in but ToolSearch: no Bash, Read, Write or Edit), minus the two allowed. No `--add-dir`, no guard
+hook needed: the run can touch nothing in the vault. `check` then requires exactly one create-draft call, with arguments equal to the
+request, and no other tool but ToolSearch, before anything is recorded. The route is token-checked (`authorised()` in `do_POST`), refuses in
+the development repository, holds one run at a time (`DRAFT_RUN_LOCK`) and writes `chases.json` and `drafted.json` only through
+`draft_delivery.py created|copied` under `LOCK`.
+
+**permissions.py: keep as it is.** `outlook_create_draft` stays in `M365_ACTIONS`, so `m365_problem` still refuses an allow rule for
+it in any settings file and `DENY_TOOLS` still denies it to every other run (ask creaite, the VIP check, Prep, Shape, drafts, the sweep).
+The allow lives only in code, in the route's own run. Optional, for the reader: a comment beside `M365_ACTIONS` naming the route as the
+one exception.
+
+**reach.py: keep refusing.** `draft_delivery.py` must stay out of `SCRIPT_COMMANDS`, so an ask creaite chat, a held run or a confirmed
+request is refused it (fails closed today: unknown script). `system/staging/drafted.json` is already a never-write for ask creaite
+(`system/staging/*.json`). The `sweep` mode's `sweep.py stage` now also marks drafted chases sent from the spec's `sent_items`: that
+writes only `drafted.json` and `chases.json` through the script, never text; a run that invents a Sent Items row could at worst mark a
+chase sent or record one (references only, undoable by hand), which is within what a staging run may already do.
+
+**The doctor check (suggested, `draft_delivery` in doctor.py).** Fail when any of these is false:
+1. `draft_delivery.allowed_tools() == [CREATE_TOOL, "ToolSearch"]`;
+2. `set(draft_delivery.denied_tools()) == set(permissions.m365_action_tools()) - {CREATE_TOOL}`;
+3. `CREATE_TOOL` is still in `permissions.m365_action_tools()` and in `live_server.DENY_TOOLS`;
+4. no settings file allows `outlook_create_draft` or the whole Microsoft 365 server (`m365_problem`, as today);
+5. `"draft_delivery.py" not in reach.SCRIPT_COMMANDS`;
+6. the string `outlook_create_draft` (or `CREATE_TOOL`) appears in `live_server.py` only inside the `#183` block;
+7. `draft_email.outlook_drafts` is a boolean (warn otherwise; `draft_delivery.enabled` treats anything but `true` as off).
+
+## Why
+
+Alan, 19-10-2026: some people can write to Outlook and some cannot; the setting switches between a draft in Outlook and copy and paste,
+off where they cannot. A draft only: creaite never sends.
+
+## Risk
+
+- **Outlook's HTML allowlist (needs a decision).** The tool's description says an HTML body with anything outside its allowlist
+  (it names `span`, `font`, comments) is **rejected, not stripped**. The preview's HTML uses `<span style="color:…">` for overdue dates
+  and the chased line. The brief says the body is the preview's HTML exactly, so nothing is rewritten: if Outlook rejects it, the
+  popup says "Outlook would not create the draft (Outlook rejected part of the email's formatting)" with Copy it instead, and nothing
+  is recorded. If live testing confirms the rejection, the choice is Alan's: swap the builder's `span`s for an allowed tag (`b`, `strong`)
+  in both the copy and the draft, or accept copy and paste for those emails.
+- The run is a model call carrying the email; `check` compares the tool call's arguments to the request, so a changed body is never
+  reported as success (the popup says to check the Drafts folder, since a draft may exist).
+- Graph drafts carry no Outlook signature, and the tool stamps an X-AI-Generated header.
+- Refusal reasons are fixed words (permission, formatting, rate limit, not connected, or "n characters held back"); the tool's own
+  text is never shown or logged. The debug log gets counts only.
+
+## How to test
+
+1. `git apply dev/proposals/draft-delivery/live_server.diff && git apply dev/proposals/draft-delivery/rules-and-skill.diff`
+2. `git mv dev/proposals/draft-delivery/test_draft_route.py dev/tests/` and run `python3 dev/tests/test_draft_route.py` (5 tests:
+   a draft made with create-draft only and the chase recorded; a refusal records nothing; off refuses before any run, no token 403;
+   a copy keeps references only; the access Check reads the granted scopes only).
+3. Also `python3 dev/tests/test_draft_delivery.py`, `test_draft_delivery_popup.py`, `test_drafts_email.py`, `test_ask_access.py`,
+   `test_vip_tools_pinned.py`, `test_permissions_mcp.py`, and `python3 dev/tools/check.py` (verified: `check: OK` with the diff applied in a
+   scratch copy).
+4. By hand, in a live vault with Microsoft 365 connected: Settings › Essentials › Draft email › Check; turn it on; Draft email for a
+   person with an overdue item › Create draft in Outlook; the draft is in Outlook's Drafts folder, unsent; the next sweep marks it sent
+   after you send it.
