@@ -46,9 +46,11 @@ class HelpDismiss(LiveBrowserCase):
         self.b.pump(0.1)
 
     def click_outside(self):
-        """A real click on plain page text to the left of the panel (nothing there acts on a click)."""
+        """A real click on plain page text left of the panel: the page's title (Today: the day band's date), which acts on no click."""
         x, y = self.b.eval("""(()=>{ const p=document.getElementById('helpPanel').getBoundingClientRect();
-          return [Math.max(8,p.left-200), 12]; })()""")
+          const t=[...document.querySelectorAll('.view h1, #v-today .dayband h1, #v-today .dayband .dtitle, #v-today .dayband')]
+            .find(e=>{ const r=e.getBoundingClientRect(); return r.width&&r.height&&r.left<p.left-20; });
+          const r=t.getBoundingClientRect(); return [r.left+Math.min(20,r.width/2), r.top+r.height/2]; })()""")
         self.assertFalse(self.b.eval(f"!!document.elementFromPoint({x},{y}).closest('#helpPanel')"))
         self.click_at(x, y)
 
