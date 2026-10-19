@@ -610,7 +610,7 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 | Cmd/Ctrl + Shift + N | A new note, from any page (the note drawer; Esc closes it and keeps the draft, Cmd/Ctrl + Enter is Done) |
 | N | A new note too, when you aren't typing in a box: the same drawer. Use it in an ordinary Chrome tab, where Cmd/Ctrl + Shift + N opens an incognito window |
 | / / | With an item open (outside a text field): **Sneak peek**, change it in words (Esc closes it; ↑ brings back the last instruction) |
-| ? | A panel on the right with the jobs for this screen (Today, Work, Review, Projects, People, Notes, Intake, Files); Esc closes it. On any other screen, Help on the tab you used last |
+| ? | A panel on the right with the jobs for this screen (Today, Work, Review, Projects, People, Notes, Intake, Files); Esc or a click outside it closes it (on Today, the header's ? opens and closes it too). On any other screen, Help on the tab you used last |
 | Esc | Close the top thing: picker or calendar, an open item, ask creaite, palette. In a text field of an open item, puts the text back. In ask creaite's input, closes the chat (leaving the item as it was); a running request carries on, and only its Stop button stops it; focus goes back to where you were before you opened it. The message at the foot of the page: hides it when you are on it, or when nothing else is open |
 | J / K | Next or previous row in Work and Review; on a Work board, the next or previous card, column by column. With an item open, the next or previous item |
 | C | With an open action, risk, issue or pending decision: **Draft email** (Esc goes back to the item) |

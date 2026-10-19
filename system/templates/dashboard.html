@@ -5695,6 +5695,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     helpMark: () => helpMark,
     helpNorm: () => helpNorm,
     helpOpenHit: () => helpOpenHit,
+    helpOutsidePress: () => helpOutsidePress,
     helpPanelOpen: () => helpPanelOpen,
     helpScreenSync: () => helpScreenSync,
     helpSearchClear: () => helpSearchClear,
@@ -6914,6 +6915,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     toIso: () => toIso,
     toastLayer: () => toastLayer,
     toggleGroup: () => toggleGroup,
+    toggleHelpPanel: () => toggleHelpPanel,
     toggleNotesList: () => toggleNotesList,
     trimmedCopy: () => trimmedCopy,
     tx: () => tx2,
@@ -37067,7 +37069,7 @@ ${s5}`;
         ({ mvFlWhy: () => mvAct("flok"), mvFcWhy: () => mvAct("fcok"), mvRbWhy: mvRebaseline, mvAdjWhy: mvAdjust })[t47.id]();
         return;
       }
-      if (e4.key === "Escape" && (shared.MV.peek || shared.MV.add) && !($("#mvCal") && !$("#mvCal").hidden) && !($("#mvPop") && !$("#mvPop").hidden) && !document.querySelector("#personDlg[open]")) {
+      if (e4.key === "Escape" && (shared.MV.peek || shared.MV.add) && !helpPanelOpen() && !($("#mvCal") && !$("#mvCal").hidden) && !($("#mvPop") && !$("#mvPop").hidden) && !document.querySelector("#personDlg[open]")) {
         if (shared.MV.flow || shared.MV.pend) {
           e4.preventDefault();
           shared.MV.flow = null;
@@ -42022,7 +42024,7 @@ ${s5}`;
     }
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("[data-refcal]")) refreshCalendar();
-      if (e4.target.closest("[data-thelp]")) openHelpPanel("today");
+      if (e4.target.closest("[data-thelp]")) toggleHelpPanel("today");
     });
   }
   var PEOPLE_MOVE = "setup: move the people still listed in settings.json into the people register";
@@ -43049,6 +43051,7 @@ ${s5}`;
     });
     $("#alertCmd").textContent = START_CMD;
     document.addEventListener("mousedown", (e4) => {
+      helpOutsidePress(e4);
       if (e4.target.closest(".snack,.cal,dialog")) return;
       if (HL.size && (shared.VIEW === "work" || shared.VIEW === "person") && !e4.target.closest(OPENERS) && !e4.target.closest("#wbulk,#panel,#workTbl tr,#v-person tr,.bcard,button,a,input,select,textarea,label,[role=menu],[role=option],[role=dialog],.ddmenu,.ms-menu")) hlClear();
       if ($("#chat").classList.contains("on") && !e4.target.closest("#chat") && !e4.target.closest("#askBtn,[data-ask],#panel.peek,.pkpop,#pkStage,#errBanner,#mvPeek,#mvCal,#mvPop")) closeChat();
@@ -57866,7 +57869,7 @@ ${d5.text}`);
       else prompt("Copy this link:", u5);
     };
     window.addEventListener("keydown", (e4) => {
-      if (e4.key !== "Escape" || !pkOn() || shared.EDITING) return;
+      if (e4.key !== "Escape" || !pkOn() || shared.EDITING || helpPanelOpen()) return;
       const a5 = document.activeElement;
       if (document.querySelector("dialog:modal") || shared.CAL || comboboxOpen() || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop")) return;
       if (a5 && a5.closest && a5.closest("#chat")) {
@@ -60569,7 +60572,7 @@ ${d5.text}`);
     closeChat();
     const task = (id2) => HD.tasks.find((t47) => t47.id === id2), ref = HD.sections.find((x5) => x5.id === sc2.ref);
     putHTML(p6, raw(`<div class="hpn-h"><h2 id="hpnT">Help · ${esc(sc2.title)}</h2><button type="button" class="iconbtn" id="hpnX" aria-label="Close Help">×</button></div>
-    <p class="sub">Esc closes it and you are back where you were.</p>
+    <p class="sub">Esc or a click outside closes it, and you are back where you were.</p>
     <ul class="hpn-jobs">${sc2.ids.map((id2) => task(id2)).filter(Boolean).map((t47) => `<li><a href="#help-howto-${esc(t47.id)}" data-hpn="howto-${esc(t47.id)}"><b>${esc(t47.title)}</b>${t47.where ? `<span>${esc(t47.where)}</span>` : ""}</a></li>`).join("")}</ul>
     <div class="hpn-f">${ref ? `<a href="#help-reference-${esc(ref.id)}" data-hpn="reference-${esc(ref.id)}">How ${esc(sc2.title)} works</a>` : ""}<button type="button" class="linkbtn" id="hpnFind">Search all of Help</button></div>`));
     p6.setAttribute("aria-labelledby", "hpnT");
@@ -60587,6 +60590,29 @@ ${d5.text}`);
     PANELFROM = null;
     if (p6.contains(document.activeElement)) document.activeElement.blur();
     if (!noReturn && t47 && t47.isConnected) t47.focus();
+  }
+  function toggleHelpPanel(key2) {
+    if (helpPanelOpen()) {
+      closeHelpPanel();
+      return true;
+    }
+    return openHelpPanel(key2);
+  }
+  var HELP_KEEP = "#helpPanel,[data-thelp],dialog,.snack,.cal,#tip,[role=menu],[role=listbox],.ddmenu,.combo-list,.pkpop,.linkpop,.linkcorner";
+  var CONTROL = "a[href],button,input,select,textarea,[contenteditable=true],[contenteditable=''],[tabindex]:not([tabindex='-1'])";
+  function helpOutsidePress(e4) {
+    const t47 = (
+      /** @type {HTMLElement} */
+      e4.target
+    );
+    if (!helpPanelOpen() || !t47 || !t47.closest || t47.closest(HELP_KEEP)) return;
+    const back2 = PANELFROM;
+    closeHelpPanel(true);
+    if (t47.closest(CONTROL) || !back2) return;
+    setTimeout(() => {
+      const a5 = document.activeElement;
+      if (back2.isConnected && (!a5 || a5 === document.body || !a5.closest(CONTROL))) back2.focus();
+    }, 0);
   }
   var MEM = /* @__PURE__ */ new Set();
   var lkey = (k5) => "creaite-help-line-" + k5;
@@ -65740,7 +65766,7 @@ ${d5.text}`);
         $("#actQ")?.select();
         return;
       }
-      if (e4.key === "Escape" && actSel().length && !filterBarOpen($("#actFbar")) && !document.querySelector("dialog[open]") && !$("#panel").classList.contains("on") && !actTyping()) {
+      if (e4.key === "Escape" && actSel().length && !helpPanelOpen() && !filterBarOpen($("#actFbar")) && !document.querySelector("dialog[open]") && !$("#panel").classList.contains("on") && !actTyping()) {
         e4.preventDefault();
         e4.stopImmediatePropagation();
         hlClear();

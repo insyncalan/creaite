@@ -29,6 +29,7 @@ import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
 import { hsAsk, hsCardHtml, hsSparkHtml, hsStat, hsUse } from "./healthSuggest.js";
 import { draftAsk, draftBtn, draftCardHtml, draftStat, draftWhyNot } from "./drafts.js";
 import { pdDrop, pdKeyOf, pdOffer, pdRaw, pdWhen, pKeysShow } from "./help.js";
+import { helpPanelOpen } from "./helpscreen.js";
 import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js";
 import { feedBlock, feedLines, feedListHtml, feedTabItems, mountFeedTabs, msLinked, msPanelSave, msRemove, msSave, projFeedItems } from "./milestones.js";
 import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
@@ -389,7 +390,7 @@ $("#pkNext").onclick=()=>pkStep(1);
 $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+location.pathname+actHref(shared.CUR.k,pkCid()), b=$("#pkLink");
   const done=()=>{ copied(b); snack(`Link to ${shared.CUR?pkCid():"the item"} copied`); };
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
-window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
+window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING||helpPanelOpen()) return;   /* #249: the ? panel over the peek takes Esc first (core/keys.js); the peek stays */
   const a=document.activeElement;
   if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))) return;   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
