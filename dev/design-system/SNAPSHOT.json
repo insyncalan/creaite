@@ -1,9 +1,9 @@
 {
- "commit": "c237a088",
- "branch": "origin/v220-int-gate",
- "version_file": "2.1.0",
- "subject": "cdp.py and test_current_state_live: the JS probes on short lines and the re-raise chained (check.py ",
- "taken": "2026-10-17",
+ "commit": "19d6b1d1",
+ "branch": "origin/v252-intake-line",
+ "version_file": "2.5.0",
+ "subject": "#245 update the tests and docs that asserted Intake and Review; Today golden regenerated, folded gol",
+ "taken": "2026-10-20",
  "palette": "creaite",
  "mode": "light",
  "viewport": "1400x1000"
