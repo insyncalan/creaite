@@ -219,7 +219,7 @@ class FixPass240(Base):
         out = self.js("from pathlib import Path\nimport tempfile\n"
                       "root = Path(tempfile.mkdtemp()); (root / '_images').mkdir()\n"
                       "(root / '_images' / 'big.png').write_bytes(b'\\x89PNG\\r\\n\\x1a\\n' + b'0' * (3 * 1024 * 1024))\n"
-                      "(root / '_images' / 'ok.png').write_bytes(b'\\x89PNG\\r\\n\\x1a\\n' + b'0' * 1000)\n"
+                      "(root / '_images' / 'ok.png').write_bytes(b'\\x89PNG\\r\\n\\x1a\\n' + bytes(4) + b'IEND' + bytes(4))\n"
                       "creaite_doc.images_dir = lambda d: root\n"
                       "w = creaite_doc._Word({'project': 'ABC'}, root)\n"
                       "word = w.freetext({'text': '![chart](_images/big.png)'})\n"
@@ -229,6 +229,18 @@ class FixPass240(Base):
         self.assertNotIn("base64", out["big"])
         self.assertTrue(out["ok"].startswith("<figure>"), out["ok"])
         self.assertIn("Picture too large to include", out["word"])
+
+    def test_a_picture_that_cannot_be_checked_is_left_out_with_a_plain_sentence_in_html_and_word(self):
+        out = self.js("from pathlib import Path\nimport tempfile\n"
+                      "root = Path(tempfile.mkdtemp()); (root / '_images').mkdir()\n"
+                      "(root / '_images' / 'bad.jpg').write_bytes(b'\\xff\\xd8\\xff\\xfe\\x7f\\xffWalrus budget cut')\n"
+                      "creaite_doc.images_dir = lambda d: root\n"
+                      "w = creaite_doc._Word({'project': 'ABC'}, root)\n"
+                      "word = w.freetext({'text': '![chart](_images/bad.jpg)'})\n"
+                      "print(json.dumps({'html': creaite_doc._image_html({}, 'chart', '_images/bad.jpg'), 'word': json.dumps(word)}))")
+        self.assertIn("Picture not included", out["html"])
+        self.assertNotIn("base64", out["html"])
+        self.assertIn("Picture not included", out["word"])
 
     def test_the_plain_page_leaves_out_a_section_with_nothing_in_it(self):
         page = self.js("doc = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [\n"

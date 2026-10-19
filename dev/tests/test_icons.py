@@ -251,13 +251,15 @@ class TheRest(LiveBrowserCase):
         # #223: no Weekly report / Client report buttons; #225: a Reports icon beside Files, same size and style
         self.assertEqual(self.named(".cockfoot button"), [
             ["Reports", "Reports", "", "filetext"],
-            ["Browse files", "Browse files", "", "folder"]])
+            ["Browse files", "Browse files", "", "folder"],
+            ["Project settings", "Project settings", "", "gear"]])      # #228: the page's gear beside Files
         self.assertEqual(b.eval("document.querySelectorAll('.cockfoot [data-ask]').length"), 0)
         self.assertEqual(b.eval("[...document.querySelectorAll('.cockfoot button')].some(x=>/Weekly report|Client report/.test(x.textContent))"), False)
         box = b.eval("[...document.querySelectorAll('.cockfoot button')].map(x=>{const r=x.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height),x.className,getComputedStyle(x).borderRadius]})")
         self.assertEqual(box[0][:2], box[1][:2])
         self.assertEqual(box[0][3], box[1][3])
         self.assertEqual(box[0][2].replace("bd", "").strip(), box[1][2].replace("bd", "").strip())
+        self.assertEqual(box[2][3], box[1][3])
         # keyboard reachable: a real button, in tab order, opens the hub on Enter/click
         self.assertEqual(b.eval("document.querySelector('.cockfoot [data-reports]').tabIndex"), 0)
         b.eval("document.querySelector('.cockfoot [data-reports]').click()")

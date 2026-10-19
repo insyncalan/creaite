@@ -36,6 +36,7 @@ import { mountPrepPopup } from "./components/prep/PrepPopup.jsx";
 import { drawCockpitTabs } from "./notes.js";
 import { mountPrepShape } from "./components/prep/PrepShape.jsx";
 import { loadBrief, popupRev } from "./stores/prepPopup.js";
+import { openProjectSettings } from "./stores/projectSettings.js";   /* #228 */
 import { draftOn, pencil, SPARKI } from "./review.js";
 import { nm, renderSettings, row } from "./settings.js";
 import { legBtn, pfResize, plur, portfolioTable, spark, tl } from "./today.js";
@@ -93,7 +94,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
      ${cv?html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv)} client-visible item${cv===1?"":"s"} still need client messaging before the next client report.</div></div>`:""}
    </div></div>
    ${raw(flowCard(code))}
-   <div class="cockfoot">${raw(ibtn("filetext","Reports",`data-reports="${p.code}"`,"bd"))}${raw(ibtn("folder","Browse files",`data-files="${p.code}"`,"bd"))}</div></div>`); })();
+   <div class="cockfoot">${raw(ibtn("filetext","Reports",`data-reports="${p.code}"`,"bd"))}${raw(ibtn("folder","Browse files",`data-files="${p.code}"`,"bd"))}${raw(ibtn("gear","Project settings",`data-psettings="${p.code}"`,"bd"))}</div></div>`); })();
   drawCockpitTabs(code);   /* BL-301 B: Overview and Notes */
   { const rc=$("#cockRep"); if(rc) mountReportingCard(rc,code); }   /* BL-337 */
   csHead(code);   /* BL-274 */
@@ -128,7 +129,7 @@ const slashOn=t=>!!t&&/** @type {Element} */(t).getAttribute?.("aria-expanded")=
 export function bootProjects0029(){
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches(".rkrow[data-open]")) e.target.click(); });   /* BL-300 */
 window.addEventListener("resize",()=>{ if(shared.VIEW==="cockpit") rkClamp($("#v-cockpit")); });
-document.addEventListener("click",e=>{ const b=e.target.closest("[data-edcur]"); if(b){ startCurEdit(b.dataset.edcur); } const h=e.target.closest("[data-edproj]"); if(h) openProject(h.dataset.edproj,"health"); const f=e.target.closest("[data-files]"); if(f){ shared.FSEL={p:f.dataset.files,f:"All",sub:"",quick:"all"}; FOPEN.add(f.dataset.files); go("files"); } const rp=e.target.closest("[data-reports]"); if(rp){ openSpace(rp.dataset.reports); } const a=e.target.closest("[data-ask]"); if(a){ openChat(); send(a.dataset.ask); } });
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-edcur]"); if(b){ startCurEdit(b.dataset.edcur); } const h=e.target.closest("[data-edproj]"); if(h) openProject(h.dataset.edproj,"health"); const f=e.target.closest("[data-files]"); if(f){ shared.FSEL={p:f.dataset.files,f:"All",sub:"",quick:"all"}; FOPEN.add(f.dataset.files); go("files"); } const rp=e.target.closest("[data-reports]"); if(rp){ openSpace(rp.dataset.reports); } const ps=e.target.closest("[data-psettings]"); if(ps){ e.preventDefault(); openProjectSettings(ps.dataset.psettings); } const a=e.target.closest("[data-ask]"); if(a){ openChat(); send(a.dataset.ask); } });
 }
 /* ======================= Generate current state with Claude (BL-46) ======================= */
 export const GEN_SRC=[["tracker","Tracker changes and open items",1,"tracker"],["minutes","Minutes and transcripts",1,"minutes and transcripts"],["reports","Weekly and client reports",1,"reports"],["updates","Weekly updates",1,"weekly updates"],["swept","Mail and Teams items already swept",1,"swept mail and Teams"],["documents","Project documents (internal; off by default)",0,"project documents"]];   /* #110: the fourth is the short name for the Draw on line */

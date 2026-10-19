@@ -58,9 +58,10 @@ def project_name(code):
 
 # ── The document ─────────────────────────────────────────────────────────────
 
-def new(kind, project, title, date, sections=(), *, audience="internal", client=None, layout=None, items=None, sources=None,
+def new(kind, project, title, date, sections=(), *, audience=None, client=None, layout=None, items=None, sources=None,
         meta=None):
     """A schema-1 document, version 0 and a draft; nothing is written. Raises DocError for a kind, audience or date it can't hold."""
+    audience = audience or ("client" if kind == "client" else "internal")
     doc = {"format": FORMAT, "schema": SCHEMA, "kind": kind, "audience": audience, "project": project,
            "project_name": project_name(project) if project != "_portfolio" else "", "title": title, "date": date,
            "client": client, "version": 0, "saved_at": None, "state": "draft", "approved_at": None, "based_on": None,
@@ -68,6 +69,72 @@ def new(kind, project, title, date, sections=(), *, audience="internal", client=
            "sources": list(sources or []), "meta": dict(meta or {})}
     check(doc)
     return doc
+
+
+def is_client(doc):
+    """v2.5.0 audience bypass: whether a document is read as one a client may see. A client report is one whatever its audience says
+    (or with none), and a document whose audience is client or distributed is one whatever its kind."""
+    return doc.get("kind") == "client" or doc.get("audience") in ("client", "distributed")
+
+
+def project_client(code):
+    """The project's client (its memory's Client / partner line, one line, 80 characters at most), or None. Never raises."""
+    try:
+        import build_dashboard
+        name = str(build_dashboard.memory(paths.project_dir(code)).get("client") or "")
+    except Exception:  # noqa: BLE001  an unknown project or a memory that can't be read: no client name
+        return None
+    return " ".join(name.split())[:80] or None
+
+
+def force_client_audience(doc):
+    """v2.5.0 audience bypass: the document with a client report's audience set to "client" (whatever it was, or when it is missing),
+    so the client gate (client_leak.findings, make_safe), which reads the audience, always checks a client report as one; and its
+    header fields the gate never reads, `project_name` and `client`, derived again from the tracker (the project's name) and the
+    project's memory (its client), whatever was sent or stored: they are shown in the header and the page title and name the files.
+    Changed in place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or
+    distributed is already read as client by is_client and by the gate, and its kind decides where it is filed."""
+    if isinstance(doc, dict) and doc.get("kind") == "client":
+        doc["audience"] = "client"
+        code = str(doc.get("project") or "")
+        doc["project_name"] = project_name(code) if code else ""
+        doc["client"] = project_client(code) if code else None
+        drop_other_projects(doc)
+    return doc
+
+
+def drop_other_projects(doc):
+    """v2.5.0 (B): a client report's rows, source tags, milestone lists and items that name another project's item are dropped, in
+    place: a client report shows its own project's items only, whatever another project lets a client see."""
+    import client_leak
+    import tracker
+    code = str(doc.get("project") or "").upper()
+    bad = {r for r in client_leak.refs(doc) if tracker.item_table(r) is not None and not str(r).upper().startswith(code + "-")}
+    if bad:
+        doc["sections"] = [client_leak._drop_section_refs(s, bad) if isinstance(s, dict) else s for s in doc.get("sections") or []]
+        doc["items"] = {k: v for k, v in (doc.get("items") or {}).items() if k not in bad}
+    return doc
+
+
+def check_audience(doc):
+    """v2.5.0 audience bypass: raise DocError for a client report whose audience isn't "client" (or is missing), with check()'s
+    other refusals first. Saving (the save and approve routes, report_doc.save_draft) calls it: a client report is never saved as
+    anything else."""
+    check(doc)
+    if doc.get("kind") == "client" and doc.get("audience") != "client":
+        raise DocError("A client report's audience is always client: this one says "
+                       f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
+
+
+def read_report(path, kind=None):
+    """read(path), with a client report read as one (force_client_audience): its audience client and its header fields derived
+    again, however the file was edited on disk. Every place that approves, files, exports or checks a stored report reads it so.
+    `kind`: the kind the caller's route or path expects; a file whose own kind is anything else (edited on disk) is refused
+    (DocError), never read as another kind (v2.5.0: a client draft edited to say weekly or minutes escaped the client gate)."""
+    doc = read(path)
+    if kind is not None and doc.get("kind") != kind:
+        raise DocError("That file isn't this report (its kind was changed), so nothing was done. Open the report again from creaite.")
+    return force_client_audience(doc)
 
 
 def check(doc):
@@ -133,7 +200,7 @@ def _visible_text(sections):
 def _internal_text(doc, s):
     """True for a text section that belongs to the internal report and is in a client or distributed document: it was never matched
     or written there (H5, #218), so no output shows it."""
-    return (s.get("type") == TEXT_TYPE and (doc.get("audience") or "internal") != "internal"
+    return (s.get("type") == TEXT_TYPE and is_client(doc)
             and (s.get("audience") or "internal") == "internal")
 
 
@@ -498,6 +565,47 @@ def text_image(doc, ref):
     return f
 
 
+def picture_ref_ok(ref):
+    """Whether a Markdown picture line may stay in a document: the document's own picture (`_images/<name>`) or a plain relative
+    `images/<name>` (paths.safe_image_ref); never an absolute path, `..`, a URL or a drive letter (v2.5.0 leak fix)."""
+    ref = str(ref or "")
+    return bool(TEXT_IMAGE.match(ref)) or (ref.startswith("images/") and paths.safe_image_ref(ref))
+
+
+def drop_outside_pictures(doc):
+    """(a copy of the document, what was dropped): every Markdown picture line in a section's or a pane's text whose target
+    picture_ref_ok refuses is taken out, so a hand-written draft can't carry one to an export (v2.5.0 leak fix)."""
+    import docx_tools
+    gone = []
+
+    def clean(text):
+        """The text without the picture lines it may not carry."""
+        if not isinstance(text, str) or "![" not in text:
+            return text
+        keep, fence = [], None
+        for line in text.split("\n"):
+            f = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+            if f and (fence is None or (f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence))):
+                fence = f.group(1) if fence is None else None       # a fenced code block's lines are code, kept as written
+            m = None if fence is not None or f else docx_tools.IMAGE_LINE.match(line)
+            if m and not picture_ref_ok(m.group(2)):
+                gone.append(m.group(1).strip() or "a picture")
+                continue
+            keep.append(line)
+        return "\n".join(keep)
+    sections = []
+    for s in doc.get("sections") or []:
+        if isinstance(s, dict):
+            s = dict(s, text=clean(s["text"])) if "text" in s else dict(s)
+            if isinstance(s.get("panes"), list):
+                s["panes"] = [dict(p, text=clean(p["text"])) if isinstance(p, dict) and "text" in p else p for p in s["panes"]]
+        sections.append(s)
+    if not gone:
+        return doc, []
+    return dict(doc, sections=sections), [f"a picture line ({g}) naming a file outside the report's own pictures was taken out"
+                                          for g in gone]
+
+
 def _inline(t):
     """Inline Markdown as escaped HTML: bold, italic, strike, `code` and links with their address (http, https and mailto only), nested
     as docx_tools.md_spans reads them (the same reading as Word's); a backslash escape is the character."""
@@ -516,6 +624,16 @@ def _inline(t):
     return "".join(out)
 
 
+def _picture_ok(f):
+    """Whether a picture file can be walked and checked (docx_tools.strip_image_metadata): one that can't is not included anywhere."""
+    import docx_tools
+    try:
+        docx_tools.strip_image_metadata(Path(f).read_bytes())
+        return True
+    except (docx_tools.PictureRefused, OSError):
+        return False
+
+
 def _image_html(doc, alt, ref):
     """A picture as a figure with the file inside the page (a data address), or the words saying it wasn't found."""
     import base64
@@ -525,6 +643,8 @@ def _image_html(doc, alt, ref):
         return f"<p><em>Picture not found: {esc(alt or ref)}</em></p>"
     if _too_big(f):
         return f"<p><em>Picture too large to include: {esc(alt or ref)}</em></p>"
+    if not _picture_ok(f):
+        return f"<p><em>Picture not included: {esc(alt or ref)}</em></p>"
     mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
     cap = f"<figcaption>{esc(alt)}</figcaption>" if alt else ""
     data = base64.b64encode(docx_tools.strip_image_metadata(f.read_bytes())).decode("ascii")
@@ -839,7 +959,7 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None):
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
@@ -852,7 +972,9 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        doc = read(path)
+        # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however
+        # its file was edited
+        doc = read_report(path, kind)
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):
@@ -895,7 +1017,7 @@ def _export_name(doc, path, fmt):
 
 def _check_baseline(doc):
     """A client view or distributed minutes is exported only once the internal document it is based on is approved."""
-    if (doc.get("audience") or "internal") == "internal":
+    if not is_client(doc):
         return
     base = doc.get("based_on") or {}
     try:
@@ -1089,15 +1211,41 @@ class _Word:
                 chunk.append(line)
                 continue
             flush()
-            f = paths.resolve_image(self.folder, m.group(2))
-            if f.is_file() and f.suffix.lower() in IMG_EXT and _too_big(f):
+            f = self.picture_file(m.group(2))
+            if f is None:                       # v2.5.0 leak fix: a reference it won't follow is never named, only its words
+                out += self.refused(m.group(1).strip(), m.group(2))
+            elif f.is_file() and f.suffix.lower() in IMG_EXT and _too_big(f):
                 out.append({"md": _nobraces(f"*Picture too large to include: {m.group(2)}*")})
+            elif f.is_file() and f.suffix.lower() in IMG_EXT and not _picture_ok(f):
+                out.append({"md": _nobraces(f"*Picture not included: {m.group(2)}*")})
             elif f.is_file() and f.suffix.lower() in IMG_EXT:
                 out.append({"image": str(f), "caption": m.group(1).strip()})
             else:
                 out.append({"md": _nobraces(f"*Picture not found: {m.group(2)}*")})
         flush()
         return out
+
+    def refused(self, alt, ref):
+        """The words for a picture line md won't draw: "not found" for a safe internal reference, else only its alt text."""
+        if self.internal() and paths.safe_image_ref(ref):
+            return [{"md": _nobraces(f"*Picture not found: {ref}*")}]
+        return [{"md": _nobraces(f"*Picture not included: {alt}*")}] if alt else []
+
+    def picture_file(self, ref):
+        """The file a Markdown picture line may draw, or None (v2.5.0 leak fix): the document's own picture store
+        (`_images/<name>`, text_image) for every document; an internal one also reads `images/<name>` from the project's own images
+        folder (paths.image_file: relative, no `..`, no symlink). An absolute path, `..`, a URL or a drive letter is never read."""
+        f = text_image(self.doc, ref)
+        if f is not None:
+            return f
+        if not self.internal():
+            return None
+        return paths.image_file(self.folder, ref)
+
+    def internal(self):
+        """Whether project pictures may be read: an internal audience and not a client report (a client kind is client whatever its
+        audience says, as for_client reads it)."""
+        return (self.doc.get("audience") or "internal") == "internal" and self.doc.get("kind") != "client"
 
     # ── the logos ──
     def logos(self, s):
@@ -1178,6 +1326,8 @@ class _Word:
         f = text_image(self.doc, ref)
         if f and _too_big(f):
             return [{"md": _nobraces(f"*Picture too large to include: {alt or ref}*")}]
+        if f and not _picture_ok(f):
+            return [{"md": _nobraces(f"*Picture not included: {alt or ref}*")}]
         return [{"image": str(f), "caption": alt}] if f else [{"md": _nobraces(f"*Picture not found: {alt or ref}*")}]
 
     def text(self, s):

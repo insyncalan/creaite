@@ -13,6 +13,7 @@ redraft request (drafts.report_request), what a client draft is shown (report.cu
 status_facts) and Word (docx_tools).
 """
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -39,6 +40,32 @@ ILINK = f"[{IWORDS}](creaite:item/{INTERNAL})"
 SLINK = f"[{SWORDS}](creaite:item/{SEEN})"
 EDITED = f"[the vendor thing we discussed](creaite:item/{INTERNAL})"      # the words no longer name the item
 DRAFT = "system/staging/drafts/2026-10-09 Client report - Example Programme (Example Client Ltd).html"
+
+
+SWEEP = r"""import itertools
+schemes = ['creaite:', 'CREAITE:', 'creaite%3A', 'creaite&#58;', 'creaite：', 'creaite :', 'cre​aite:', 'creaite%253A',
+           'creaite\t:']
+nouns = ['item/', 'item:', 'item#', 'items/', 'task/', 'note/', 'person/', 'item?id=', 'ITEM/', 'item /', 'item\\', 'thing/', '//item/']
+ids = ['ABC-A-001', 'abc-a-001', 'ABC-D-008']
+wraps = ['[the vendor thing]({a})', '[the vendor\nthing]( {a} )', '[the vendor\tthing](\t{a}\n)', '[the [x] vendor thing]({a})',
+         '<a href="{a}">the vendor thing</a>', "<a href='{a}'>the vendor <b>thing</b></a>", 'vendor <{a}>',
+         'the vendor thing {a}', '[the vendor thing][r]\n\n[r]: {a}', '[the vendor thing]\n\n[the  Vendor thing]:\n {a}',
+         '[x]({a}) [the vendor\nthing]({a})']
+bad, n = [], 0
+d0 = report_doc.client_doc('ABC')
+for sc, no, i, w in itertools.product(schemes, nouns, ids, wraps):
+    text = 'Plan. ' + w.format(a=sc + no + i) + ' Then.'
+    d = json.loads(json.dumps(d0))
+    next(s for s in d['sections'] if s['id'] == 'summary')['text'] = text
+    n += 1
+    try:
+        out, _ = report_doc.client_item_links(d)
+    except report_doc.ReportError:
+        continue
+    kept = next(s for s in out['sections'] if s['id'] == 'summary')['text']
+    if ('vendor' in kept.lower() and not w.startswith('vendor <') or 'creaite' in kept.lower()) and not client_leak.findings(out):
+        bad.append(text)
+print(json.dumps([n, bad[:10], len(bad)]))"""
 
 
 def state(link):
@@ -75,7 +102,8 @@ next(s for s in d['sections'] if s['id'] == 'current_state')['panes'][0]['text']
 res = {{'findings': client_leak.findings(d), 'left_out': client_check.left_out(d)['findings'],
         'word': client_leak.text_findings(con, 'ABC', st)}}
 try:
-    drafts.report_request(con, {{'code': 'ABC', 'report': 'client', 'section': 'current_state', 'text': st, 'action': 'polish'}})
+    drafts.report_request(con, {{'code': 'ABC', 'report': 'client', 'section': 'current_state', 'text': st, 'action': 'polish',
+                                 'document': {{'kind': 'client', 'code': 'ABC', 'week_ending': '2026-10-09'}}}})
     res['redraft'] = 'allowed'
 except Exception as e:
     res['redraft'] = str(e)
@@ -154,6 +182,219 @@ print(json.dumps(res))""")
         self.assertIn(IWORDS, got["runs"])
         self.assertEqual(got["dropped"], f"### Position\n\nWaiting on before {SLINK} can close.")
         self.assertEqual(got["kept"], state(ILINK))
+
+    # ---- #123: hostile, and failing closed ----------------------------------------------------------------------------------
+
+    def internal_rows(self):
+        """[(ID, owner, title)] of every item of ABC a client report may not show (the controls: they are real rows)."""
+        return self.py("import tracker, client_leak\ncon = tracker.connect()\nb = client_leak.blocking_labels(con)\nout = []\n"
+                       "for t, o, w in (('actions', 'owner', 'description'), ('raid', 'owner', 'description'), "
+                       "('decisions', 'made_by', 'decision')):\n"
+                       "    for i, ow, tt in con.execute(f'SELECT id, {o}, {w} FROM {t} WHERE project = ?', ('ABC',)):\n"
+                       "        if client_leak.item_problem(con, i, b):\n"
+                       "            out.append([i, ow or '', tt or ''])\n"
+                       "print(json.dumps(out))")
+
+    def test_every_text_of_a_saved_client_draft_loses_an_internal_link_in_any_form(self):
+        rows = self.internal_rows()
+        self.assertIn(INTERNAL, [r[0] for r in rows])
+        forms = [f"[{r[0]} · {r[2]}](creaite:item/{r[0]})" for r in rows] + [
+            f"[the thing](CREAITE:item/{INTERNAL})", f"[the thing](creaite:item/{INTERNAL.lower()})",
+            f"[the thing](creaite%3Aitem/{INTERNAL})", f"<a href=\"creaite:item/{INTERNAL}\">the thing</a>"]                  # (a bare address: refused, below)
+        hostile = "Plan. " + " ".join(forms) + f" Then {SLINK} closes."
+        got = self.py(f"d = report_doc.client_doc('ABC', spec={{'summary': {hostile!r}, 'current_state': {hostile!r}}})\n"
+                      f"for s in d['sections']:\n"
+                      f"    for r in s.get('rows') or []:\n"
+                      f"        r['cells'] = {{k: (v + ' ' + {hostile!r}) for k, v in r['cells'].items()}}\n"
+                      "r = report_doc.save_draft(d)\n"
+                      "print(json.dumps({'removed': r['removed'], 'saved': creaite_doc.read(r['path']), 'found': client_leak.findings("
+                      "creaite_doc.read(r['path']))}))")
+        saved = json.dumps(got["saved"]["sections"], ensure_ascii=False)
+        for i, _owner, title in rows:
+            self.assertNotIn(i, saved)
+            self.assertNotIn(i.lower(), saved.lower())
+            if len(title) > 8:
+                self.assertNotIn(title, saved)
+        self.assertNotIn("the thing", saved)
+        self.assertIn(SWORDS, saved)                                                    # the client-visible link stays
+        self.assertEqual(got["found"], [])                                              # the gate at the end agrees
+        self.assertTrue(any(INTERNAL in x for x in got["removed"]), got["removed"])
+
+    def test_each_form_of_an_internal_link_on_its_own_is_taken_out(self):
+        forms = [f"[the thing](CREAITE:item/{INTERNAL})", f"[the thing](creaite%3Aitem/{INTERNAL})",
+                 f"[the thing](creaite&#58;item/{INTERNAL})", f"[the thing](creaite\u200b:item/{INTERNAL})",
+                 f"[the thing](creaite :item/{INTERNAL})"]
+        got = self.py(f"out = []\nfor f in {forms!r}:\n"
+                      "    d = report_doc.client_doc('ABC', spec={'summary': 'Plan. ' + f + ' Then.'})\n"
+                      "    out.append(next(s for s in d['sections'] if s['id'] == 'summary')['text'])\n"
+                      "print(json.dumps(out))")
+        for f, text in zip(forms, got):
+            self.assertNotIn(INTERNAL.lower(), text.lower(), f)
+            self.assertNotIn("the thing", text, f)
+
+    # ---- review of 6e5de819: never part-strip a link; leave a string with nothing taken out exactly as it was -----------------
+
+    PARTS = ["Plan. [Absorb the phase one overrun\ninternally](creaite:item/ABC-D-008) Then.",
+             "Plan. [Escalate data access to the client\nCIO](creaite:item/ABC-A-001) Then.",
+             "Plan. [Confirm tester\nnames](creaite:item/ABC-A-004) Then.",
+             "Plan. [the [x] thing](creaite:item/ABC-A-001) Then.",                                    # nested brackets
+             "Plan. [the vendor thing][] Then.\n\n[the vendor thing]: creaite:item/ABC-A-001",      # a collapsed reference
+             "Plan. [the vendor thing] Then.\n\n[the vendor thing]: creaite:item/ABC-A-001",        # a shortcut reference
+             # delta re-review of 9908556a: spaces in the parentheses, labels Markdown matches loosely, balanced but wrong, HTML
+             "Plan. [Escalate data access\nto the CIO]( creaite:item/ABC-A-001 ) Then.",
+             "Plan. [Escalate data access\nto the CIO](   creaite:item/abc-a-001\t) Then.",
+             "Plan. [Escalate data access to the\nCIO] Then.\n\n[Escalate data access to the CIO]: creaite:item/ABC-A-001",
+             "Plan. [escalate DATA access  to the cio] Then.\n\n[Escalate data access to the CIO]: creaite:item/ABC-A-001",
+             "Plan. [Escalate data access to the client CIO][r] Then.\n\n[r]:\n  creaite:item/ABC-A-001",
+             "Plan. [Escalate data access to the client CIO][R] Then.\n\n[r]: creaite:item/ABC-A-001",
+             "Plan. [Escalate data access to the\nCIO](creaite:item/ABC-A-001)[ see notes] Then.",
+             "Plan. [Escalate data access to the\r\nCIO](creaite:item/ABC-A-001)[x] Then.",
+             'Plan. <a href="creaite:item/ABC-A-001">Escalate data <b>access</b> to the client CIO</a> Then.',
+             "Plan. <A HREF='creaite:item/ABC-A-001'>Escalate data <i>access</i>\nto the client CIO</a> Then.",
+             "Plan. creaite:item/ABC-A-001 Then.",                                                     # a bare address: no words
+             "Plan. [Escalate data access to the client CIO](creaite%3Aitem/ABC-A-001 ) Then.\n[x](creaite:item/ABC-A-001",
+             # third review of f467b175: other address shapes and nouns, mixed links, note and person links
+             "Plan. [Escalate data access to the client\nteam]( creaite:item:ABC-A-001 ) Then.",
+             "Plan. [the vendor thing\nwe discussed]( creaite:item#ABC-A-001 ) Then.",
+             "Plan. [the vendor thing\nwe discussed]( creaite:task/ABC-A-001 ) Then.",
+             'Plan. <a href="creaite:item#ABC-A-001">the vendor <b>thing</b> we discussed</a> Then.',
+             'Plan. <a href="creaite:note/ABC-A-001">the vendor <b>thing</b> we discussed</a> Then.',
+             "Plan. [a](creaite:item/ABC-A-004 creaite:item/ABC-A-001) [the vendor\nthing]( creaite:item#ABC-D-008 ) Then.",
+             "Plan. [Internal pricing\nnotes]( creaite:note/2026-10-01-pricing ) Then.",
+             "Plan. [the vendor\tthing]( CREAITE:ITEM#abc-a-001 ) Then.",
+             "Plan. [the vendor\nthing](creaite%3Aitem:ABC-A-001) Then.",
+             "Plan. [the vendor\nthing](creaite\uff1aitem/ABC-A-001) Then.",
+             "Plan. [the vendor\nthing](creaite:widget/ABC-A-001) Then.",
+             "Plan. [the vendor\nthing](creaite:person/Omar%20Ali) Then."]
+
+    def test_a_link_that_cant_be_taken_out_whole_is_refused_and_never_filed(self):
+        # end to end, as the page's Approve does it (report_server: save_draft, then stage_client): whatever save_draft lets
+        # through, approve still refuses; nothing part-stripped is ever saved
+        for text in self.PARTS:
+            got = self.py(f"d = report_doc.client_doc('ABC')\n"
+                          f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                          "try:\n    r = report_doc.save_draft(d)\nexcept report_doc.ReportError as e:\n"
+                          "    print(json.dumps(['save refused', str(e)]))\n    raise SystemExit\n"
+                          "saved = next(s for s in creaite_doc.read(r['path'])['sections'] if s['id'] == 'summary')['text']\n"
+                          "try:\n    report_doc.stage_client(r['path'])\n    print(json.dumps(['staged', saved]))\n"
+                          "except report_doc.ReportError as e:\n    print(json.dumps(['approve refused', saved]))")
+            self.assertNotEqual(got[0], "staged", (text, got))
+            if got[0] == "save refused":
+                self.assertFalse((self.v.root / DRAFT).exists(), text)
+                self.assertIn("couldn't be taken out whole", got[1])
+            r = self.py(f"report_doc.client_doc('ABC', spec={{'current_state': {text!r}}})", ok=False)   # the spec route too
+            self.assertNotEqual(r.returncode, 0, text)
+            self.assertIn("ReportError", r.stderr)
+
+    def test_a_sweep_of_link_shapes_never_keeps_a_hidden_items_words_unrefused(self):
+        # property-style: schemes x nouns x IDs x wrappers for a hidden item (words "the vendor thing"). For each, client_item_links
+        # refuses, or what it keeps holds no "vendor", or the gate approve runs (client_leak.findings) refuses it
+        got = self.py(SWEEP)
+        self.assertGreater(got[0], 2000)
+        self.assertEqual(got[2], 0, got[1])
+
+    def test_a_whole_link_whose_target_isnt_a_known_item_is_refused_when_a_link_goes(self):
+        # every creaite: occurrence must be inside a whole link to an item the tracker holds; a whole link to anything else
+        # (another noun, an unknown ID, a second address) refuses the save rather than be taken out or kept on a guess
+        for text in (f"[w](creaite:task/{SEEN}) and {ILINK}.", f"[w](creaite:note/2026-10-01-pricing) and {ILINK}.",
+                     f"[w](creaite:item/{SEEN} creaite:note/x) and {ILINK}.", f"[w](creaite:item/ABC-A-999) and {ILINK}."):
+            r = self.py("d = report_doc.client_doc('ABC')\n"
+                        f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                        "report_doc.client_item_links(d)", ok=False)
+            self.assertNotEqual(r.returncode, 0, text)
+            self.assertIn("couldn't be taken out whole", r.stderr, text)
+        got = self.py("d = report_doc.client_doc('ABC')\n"                                 # control: whole links to items
+                      f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {'Paperwork: ' + SLINK + ' and ' + ILINK + '.'!r}\n"
+                      "print(json.dumps(next(s for s in report_doc.client_item_links(d)[0]['sections'] if s['id'] == 'summary')['text']))")
+        self.assertEqual(got, f"Paperwork: {SLINK} and .")
+
+    def test_the_second_check_refuses_a_hidden_items_wording_left_behind(self):
+        # the first check (every hidden address inside a whole link) taken away: what is left still may not hold the item's words
+        text = 'Plan. <a href="creaite:item/ABC-A-001">Escalate data access to the client CIO<b></b></a> Then.'
+        r = self.py("report_doc._whole_or_refuse = lambda s, code, con: {'ABC-A-001'}\n"
+                    f"d = report_doc.client_doc('ABC')\n"
+                    f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                    "report_doc.save_draft(d)", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("couldn't be taken out whole", r.stderr)
+        self.assertFalse((self.v.root / DRAFT).exists())
+
+    def test_a_string_with_no_link_taken_out_is_kept_exactly(self):
+        for text in ("Plan [phase 1] and (scope) [see](https://example.com/a) done.", "Rates: [a] b] [c (d) e).",
+                     f"Paperwork: {SLINK}; [the plan][p]\n\n[p]: https://example.com/p",
+                     f"Two lines\n[{SWORDS}](creaite:item/{SEEN}) and [x]",
+                     "R&amp;D at creaite:item/ABC-A-002 and &lt;b&gt;x&lt;/b&gt;", "We use creaite: notes/ here, &amp; more",
+                     f"Waiting on {SLINK}, R&amp;D &lt;b&gt;"):
+            got = self.py(f"d = report_doc.client_doc('ABC')\n"
+                          f"next(s for s in d['sections'] if s['id'] == 'summary')['text'] = {text!r}\n"
+                          "r = report_doc.save_draft(d)\n"
+                          "print(json.dumps([r['removed'], next(s for s in creaite_doc.read(r['path'])['sections'] "
+                          "if s['id'] == 'summary')['text']]))")
+            self.assertEqual(got, [[], text], text)
+            (self.v.root / DRAFT).unlink()
+
+    def test_client_item_links_fails_closed_when_the_tracker_cant_be_read(self):
+        r = self.py("import client_leak\n"
+                    "def boom(*a, **k): raise RuntimeError('tracker unreadable')\n"
+                    "d = report_doc.client_doc('ABC')\n"
+                    f"next(s for s in d['sections'] if s['id'] == 'current_state')['panes'][0]['text'] = {state(EDITED)!r}\n"
+                    "client_leak.drop_item_links = boom\n"
+                    "report_doc.save_draft(d)", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("ReportError", r.stderr)
+        self.assertFalse((self.v.root / DRAFT).exists())                                # nothing saved
+        r = self.py("import client_leak\n"
+                    "def boom(*a, **k): raise RuntimeError('tracker unreadable')\n"
+                    "client_leak.drop_item_links = boom\n"
+                    f"report_doc.client_doc('ABC', spec={{'current_state': {state(EDITED)!r}}})", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("ReportError", r.stderr)
+
+    def test_the_client_place_sends_no_internal_id_owner_or_title_and_none_when_the_items_cant_be_read(self):
+        rows = self.internal_rows()
+        got = self.py("import edit_ai, client_leak\n"
+                      "ok = edit_ai.project_facts('ABC', client=True)\n"
+                      "def boom(*a, **k): raise RuntimeError('tracker unreadable')\n"
+                      "client_leak.item_problem = boom\n"
+                      "print(json.dumps({'ok': ok, 'broken': edit_ai.project_facts('ABC', client=True), "
+                      "'internal': edit_ai.project_facts('ABC')}))")
+        sent = json.dumps(got["ok"])
+        self.assertEqual(got["ok"]["people"], [])
+        self.assertIn(SEEN, got["ok"]["ids"])
+        for i, owner, title in rows:
+            self.assertNotIn(i, sent)
+            if owner and owner != "TBC":
+                self.assertNotIn(owner, sent)
+            self.assertNotIn(title, sent)
+        self.assertEqual(got["broken"]["ids"], [])                                      # fails closed: no IDs, no people
+        self.assertEqual(got["broken"]["people"], [])
+        self.assertIn(INTERNAL, got["internal"]["ids"])                                 # control: the internal place has them
+
+
+class ClientSheetOffersNoItems(unittest.TestCase):
+    """#123 (Alan's decision 8, narrowed by Alan on 19-10-2026): the client sheet offers no work item, so no internal one: its editor has
+    no `#` picker, no note, person or work-item row in its `/` menu and draws no chips. The text section's `/` menu itself stays."""
+
+    def test_the_sheet_editor_has_no_item_picker_slash_menu_or_chips(self):
+        src = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard" / "src" / "components" / "report"
+        # names written in parts: whole, they would be page names a test uses (dashboard_split's globals list)
+        for name in ("Sheet" + "Text.jsx", "Client" + "View.jsx", "Client" + "Parts.jsx", "Sheet" + "Page.jsx", "Sheet.jsx",
+                     "sheet" + "Lib.js", "client" + "Doc.js"):
+            f = src / name
+            if not f.exists():
+                continue
+            code = f.read_text(encoding="utf-8")
+            for hook in ("attach" + "ItemPick", "insert" + "Hash", "item" + "Chip", "item" + "Options"):         # "attachSlash" is no longer banned
+                self.assertNotIn(hook, code, f"{name} wires {hook}: a client sheet would offer or draw work items")
+        # Alan, 19-10-2026: the text section keeps its `/` menu (the Notes menu with the "textsection" profile: text, headings, lists,
+        # task, quote, code block, table, image, link); what must hold is that its rows offer no note, person or work item
+        prof = (src.parent.parent / "core" / "editorProfiles.js").read_text(encoding="utf-8")
+        m = re.search(r"^\s*textsection: \[([^\]]*)\]", prof, re.M)
+        self.assertIsNotNone(m, "ED_SLASH_ROWS.textsection not found")
+        row = m.group(1)
+        self.assertIn('"text"', row, "the textsection row list was read empty: the check would pass vacuously")
+        for bad in ("item", "note", "person", "mention", "hash", "wiki"):
+            self.assertNotIn(bad, row, f"the textsection menu rows offer {bad}: a client sheet could insert an internal item")
 
 
 class DropItemLinks(unittest.TestCase):

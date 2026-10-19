@@ -3431,7 +3431,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .sheet-root.rpt-slim>.sheet-bar .sheet-status[data-bad]{display:inline;white-space:nowrap}   /* "Unsaved changes", "Not saved." stay visible and announced */
 .sheet-root.rpt-slim>.sheet-bar{position:relative}
 .sheet-root.rpt-slim>.sheet-bar .crnote{position:absolute;top:100%;left:0;right:0;z-index:var(--z-sticky-2);padding:6px 16px;background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm)}   /* the client report's message, below the slim bar */
-.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.sheet-matchall,.rb-x){display:none}
+.sheet-root.rpt-slim>.sheet-bar :is(.sheet-status:not([data-bad]),.sheet-checks,.sheet-tog,.rb-x){display:none}
 @media (max-width:900px){#v-minutes .sheet-root.rpt-slim>.sheet-bar{position:sticky;top:0;z-index:var(--z-sticky-2)}}   /* the minutes scroll as a whole here */
 /* #207: the top bar hidden by a scroll on any other page: out of the layout at once (no slide); the page grows upward (core/topbar.js) */
 .main.tb-off>.bar{height:0;min-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;overflow:hidden;visibility:hidden;flex:none;transition:none}
@@ -3655,6 +3655,16 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:36px;width:auto;max-width:180px;object-fit:contain;display:block;background:none;border:0;box-shadow:none}   /* #221: drawn straight on the page, no box, at most 36 x 180 (Round 9) */
 .wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+/* #233 a: the logo's place in the header is a button (edit mode only): a dashed Add tile, or the logo itself with a dashed outline on hover and focus */
+.wr-logos:has(.wr-logo-slot){gap:6px} .wr-logos:has(.wr-logo-slot) .wr-lsep{display:none} .wr-logos:has(.wr-logo-slot) .wr-logo{gap:0}
+.wr-logo-slot{position:relative;display:inline-flex;align-items:center}
+.wr-logo-add{display:inline-flex;gap:4px;align-items:center;height:26px;padding:0 6px;white-space:nowrap;border:1px dashed var(--rp-rule);border-radius:var(--r-sm);color:var(--rp-grey);background:var(--rp-paper);font:inherit;font-size:var(--fs-2xs);cursor:pointer}
+.wr-logo-add b{font-weight:700;font-size:var(--fs-sm);color:var(--rp-ink)}
+.wr-logo-add:hover{background:var(--rp-soft);color:var(--rp-ink)}
+.wr-logo-btn{display:inline-flex;border:0;background:none;padding:0;cursor:pointer;border-radius:var(--r-sm)}
+.wr-logo-btn:hover{outline:1px dashed var(--rp-rule);outline-offset:4px}
+.wr-logo-add:focus-visible,.wr-logo-btn:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:3px}
+.wr-logo-ask{position:absolute;top:100%;right:0;z-index:var(--z-pop-over,30);margin-top:6px;display:flex;gap:8px;align-items:center;white-space:nowrap;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md,8px);box-shadow:var(--shadow-pop);padding:8px 10px}
 /* H3 (#221): the hub's Client report settings panel (the locked mockup's .hubcfg), over the page at the top right */
 #crHost{position:fixed;top:56px;right:16px;z-index:var(--z-pop-over,30);width:460px;max-width:calc(100% - 32px)}
 .hubcfg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:14px 16px;max-height:calc(100vh - var(--cr-top,56px) - 16px);overflow:auto}
@@ -3817,6 +3827,10 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .hubpl .linkbtn{flex:0 1 auto;min-width:0;text-align:left}
 .hubstat{margin-left:auto;font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;line-height:var(--lh-22);background:var(--surface);white-space:nowrap}
 .hubedit{font-size:var(--fs-xs)}
+/* #233 b: the label row sits inside the report's grey pane, at its top, as wide as the page(s) below it (Pane sets the width) */
+.sheet-head{margin:0 auto 8px;max-width:100%;box-sizing:border-box}
+.hubrow.inpane{padding:0;border-bottom:0;background:none;min-height:0;align-items:flex-start;flex-wrap:nowrap;gap:16px}
+.hubrow.inpane>.hubpl{flex:1 1 0}
 .newmenu.hubm button svg.i{color:var(--muted)}   /* the Export and Approve menus: grey outline icons, as the locked mockup draws them */
 .hubrow .crnote{flex:1 1 100%}
 /* the cog and the panel it opens (H3 fills the slot) */
@@ -3846,8 +3860,8 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .rs-pick{margin-top:6px}
 .rs-picker{border:1px solid var(--rp-rule);background:var(--rp-white);padding:8px;display:grid;gap:6px}
 .rs-pick-search{width:100%;box-sizing:border-box;min-height:28px;border:1px solid var(--rp-rule);border-radius:var(--r-sm);background:var(--rp-white);color:var(--rp-ink);font:inherit;font-size:var(--fs-sm);padding:0 8px}
-.rs-pick-list{max-height:220px;overflow:auto;display:grid;align-content:start}
-.rs-pick-row{display:grid;grid-template-columns:20px 84px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:28px;padding:0 4px;font-size:var(--fs-xs);cursor:pointer}
+.rs-pick-list{max-height:220px;overflow:auto;display:grid;grid-auto-rows:max-content;align-content:start}   /* #235: a row is as tall as its wrapped title, never squeezed to the box */
+.rs-pick-row{display:grid;grid-template-columns:20px 84px minmax(0,1fr) auto;gap:8px;align-items:baseline;min-height:28px;padding:4px;font-size:var(--fs-xs);cursor:pointer}
 .rs-pick-row:hover{background:var(--rp-soft)} .rs-pick-id{font-variant-numeric:tabular-nums;color:var(--rp-grey)} .rs-pick-m{color:var(--rp-grey)}
 .rs-pick-foot{display:flex;gap:6px;align-items:center} .rs-pick-foot .sub{flex:1;font-size:var(--fs-xs)}
 .wr-decs li{display:flex;gap:6px;align-items:flex-start} .wr-decbody{min-width:0;flex:1}
@@ -3952,7 +3966,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkrow .tb .t{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tBrief .wkrow .wkwho{display:block;font-size:var(--fs-xs);line-height:var(--lh-16);color:var(--muted)}
 #tBrief .wkrow .wkwho a.s{color:var(--accent);text-decoration:underline;text-underline-offset:2px;display:inline-block;padding:4px 0;margin:-4px 0}   /* a 24px target */
-.wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} .wkdot.u{background:var(--bad);opacity:1} .wkdot.h{background:var(--warn);opacity:1}
+#tBrief .wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} #tBrief .wkdot.u{background:var(--bad);opacity:1} #tBrief .wkdot.h{background:var(--warn);opacity:1}
 .wkic{flex:none;width:20px;display:inline-grid;place-items:center;color:var(--muted)} .wkic .i{width:14px;height:14px}
 .wktm{flex:none;width:44px;font:500 var(--fs-xs)/16px var(--mono,var(--font));color:var(--muted)}
 .wkwhy{flex:none;align-self:center;font-size:var(--fs-xs);line-height:var(--lh-16);color:var(--muted);white-space:nowrap;border:0;padding:0;margin:0;border-radius:0}
@@ -3963,7 +3977,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkl .tacts{opacity:0;transition:opacity var(--d1);margin-left:0;align-self:center}
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
-@media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
+@media (forced-colors:active){ #tBrief .wkdot{forced-color-adjust:none;background:CanvasText} #tBrief .wkdot.u,#tBrief .wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
 /* #111 piece B: the Prep peek (the title popup's content, and the Week ahead chip's) */
 .prpeek .pkb{margin-top:8px} .prpeek .pkl{font:600 var(--fs-xs)/1.2 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
 .prpeek .pkt{color:var(--ink)} .prpeek .pkul{margin:0;padding-left:18px} .prpeek .pkul li{margin:1px 0}
@@ -4059,6 +4073,42 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* #213: Today's Portfolio table, the Evidence text follows its resizable column: it wraps to the column's width, never a fixed length */
 #pfTbl .ev{white-space:normal;overflow-wrap:anywhere}
+
+/* #228: the full-page project settings (components/project/ProjectSettings.jsx) */
+#v-psettings .setctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#v-psettings .srow[hidden],#v-psettings tr[hidden],#v-psettings .card[hidden],#v-psettings .setnone[hidden]{display:none}
+#v-psettings .pstbl{width:100%} #v-psettings .pstbl td,#v-psettings .pstbl th{padding:8px 12px;text-align:left}
+#v-psettings .pstbl td.mgract{text-align:right}
+#v-psettings .pschip{display:inline-flex;align-items:center;min-height:var(--ctl-h-sm);padding:0 10px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);font-size:var(--fs-xs)}
+#v-psettings .psnote{font-size:var(--fs-xs);color:var(--muted)}
+#v-psettings .psfoot{margin:10px 12px}
+#v-psettings .psadd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings .psadd input,#v-psettings .psedit,#v-psettings input#psName,#v-psettings input#psClient{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:var(--ctl-fs)}
+#v-psettings .psmsg{display:block;color:var(--bad,#b00020);font-size:var(--fs-xs)}
+#v-psettings .psask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings .pslogo{display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+#v-psettings .pslogo .mark{width:32px;height:32px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 var(--fs-md) var(--font);overflow:hidden}
+#v-psettings .pslogo[data-state=empty] .mark{background:transparent;border:1px dashed var(--line)}
+#v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
+#v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+#v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
+/* the Today table's cog takes no width (the columns, Evidence's resize included, are laid out as before): it shows on row hover or focus */
+#pfTbl td:first-child{position:relative} #pfTbl .pset{position:absolute;right:2px;top:6px;opacity:0} #pfTbl tr:hover .pset,#pfTbl .pset:focus-visible{opacity:1}
+/* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
+   data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
+   failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */
+#askBtn[data-st]{overflow:visible} #askBtn[data-st]::before{display:none}
+.askmark{position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:50%;display:none;place-items:center;color:var(--surface);font:700 var(--fs-2xs)/1 var(--font);box-shadow:0 0 0 2px var(--surface)}
+.askmark svg{width:11px;height:11px}
+#askBtn[data-st] .askmark{display:grid}
+#askBtn[data-st=done] .askmark{background:var(--ok)} #askBtn[data-st=stopped] .askmark{background:var(--muted)} #askBtn[data-st=failed] .askmark{background:var(--bad)}
+.asklife{position:absolute;left:8px;right:8px;bottom:-1px;height:2px;border-radius:var(--r-xs);background:var(--ok);transform-origin:left;display:none}
+#askBtn[data-st=done] .asklife,#askBtn[data-st=stopped] .asklife{display:block;animation:asklife var(--life,30s) linear forwards}
+#askBtn[data-st=stopped] .asklife{background:var(--muted)}
+@keyframes asklife{to{transform:scaleX(0)}}
+.asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
+#askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
+:root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
 </style>
 </head>
 <body>
@@ -4077,7 +4127,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       <div class="search" id="searchBtn" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Search or jump to"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>Search or jump to…<kbd id="kK">⌘K</kbd></div>
       <div class="status" id="status"></div>
       <button class="newchip" id="newChip" type="button" aria-live="polite">New items arrived: refresh</button>
-      <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span></button>
+      <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span><span class="askmark" aria-hidden="true"></span><span class="asklab"></span><span class="asklife" aria-hidden="true"></span></button><!-- #231: the finish indication; its words are read from #askLive, which sits outside the button -->
+      <span class="vh" id="askLive" role="status" aria-live="polite"></span>
       <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
     </header>
     <div class="livealert" id="liveAlert" role="alert"><b>Live server isn't running.</b> Saves are held and applied when it's back. Start it in Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> <button class="mini" id="checkLive">Check again</button></div>
@@ -4109,6 +4160,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       <section class="view" id="v-cockpit" hidden></section>
       <section class="view" id="v-reports" hidden aria-label="Reports"></section><!-- BL-337: Reports, every project's week (components/reporting/ReportsPage.jsx) -->
       <section class="view" id="v-reporting" hidden aria-label="Reporting"></section><!-- BL-337: one project's reporting space (components/reporting/ReportingSpace.jsx) -->
+      <section class="view" id="v-psettings" hidden aria-labelledby="psTitle"></section><!-- #228: the full-page project settings (components/project/ProjectSettings.jsx) -->
       <section class="view" id="v-notes" hidden></section><!-- BL-301 B: a project's Notes tab, and the portfolio's notes -->
       <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
             <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
@@ -4263,6 +4315,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ALL_TYPES: () => ALL_TYPES,
     APPLYN: () => APPLYN,
     APPLYT: () => APPLYT,
+    ASKDONE: () => ASKDONE,
+    ASKMARK: () => ASKMARK,
+    ASKTICK: () => ASKTICK,
     ASKVK: () => ASKVK,
     ATTACHED: () => ATTACHED,
     AUTOSAVE_MS: () => AUTOSAVE_MS,
@@ -4514,6 +4569,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     MVWORD: () => MVWORD,
     Menu: () => Menu,
     MenuPanel: () => MenuPanel,
+    NAME_MAX: () => NAME_MAX,
     NEG: () => NEG,
     NODRAFT_MSG: () => NODRAFT_MSG,
     NOTE_KEYS: () => NOTE_KEYS,
@@ -4531,6 +4587,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PAD_MM: () => PAD_MM,
     PANE: () => PANE,
     PANELF: () => PANELF,
+    PARTNERS_MAX: () => PARTNERS_MAX,
+    PARTNER_NAME_MAX: () => PARTNER_NAME_MAX,
     PCOLS: () => PCOLS,
     PDAGE: () => PDAGE,
     PDK: () => PDK,
@@ -4575,6 +4633,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PRS: () => PRS,
     PSORTS: () => PSORTS,
     PSORTT: () => PSORTT,
+    PS_CATS: () => PS_CATS,
     PULSE: () => PULSE,
     PageDialogs: () => PageDialogs,
     PageShape: () => PageShape,
@@ -4582,6 +4641,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     PeekBar: () => PeekBar,
     PrepPage: () => PrepPage,
     PrepShape: () => PrepShape,
+    ProjectSettings: () => ProjectSettings,
     QUEUE: () => QUEUE,
     QUIPMAX: () => QUIPMAX,
     QUIPMIN: () => QUIPMIN,
@@ -4794,6 +4854,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     addImages: () => addImages,
     addInboxFiles: () => addInboxFiles,
     addNoteImage: () => addNoteImage,
+    addPartner: () => addPartner,
     addReportImage: () => addReportImage,
     addTextCopy: () => addTextCopy,
     addTextSection: () => addTextSection,
@@ -4876,6 +4937,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     askDiscard: () => askDiscard,
     askFinished: () => askFinished,
     askLive: () => askLive,
+    askMarkClear: () => askMarkClear,
+    askMarkSet: () => askMarkSet,
+    askMarkShow: () => askMarkShow,
     askPerson: () => askPerson,
     askSeams: () => askSeams,
     askStream: () => askStream,
@@ -5235,7 +5299,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     covered: () => covered,
     crDialog: () => crDialog,
     crLogoData: () => crLogoData,
+    crLogoFor: () => crLogoFor,
     crLogoNote: () => crLogoNote,
+    crLogoOrphans: () => crLogoOrphans,
     crLogoPaths: () => crLogoPaths,
     crTick: () => crTick,
     creaiteEditor: () => creaiteEditor,
@@ -5745,6 +5811,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     listBody: () => listBody,
     listGroupOf: () => listGroupOf,
     listHtml: () => listHtml,
+    liveLines: () => liveLines,
     llAct: () => llAct,
     llCompare: () => llCompare,
     llNoteHtml: () => llNoteHtml,
@@ -5754,10 +5821,13 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     loadHub: () => loadHub,
     loadMeetings: () => loadMeetings,
     loadNotes: () => loadNotes,
+    loadPartners: () => loadPartners,
     loadPrep: () => loadPrep,
     loadReportImages: () => loadReportImages,
     loadTab: () => loadTab,
     localDay: () => localDay,
+    logoKindName: () => logoKindName,
+    logoKindsOf: () => logoKindsOf,
     longDate: () => longDate,
     longDay: () => longDay,
     longText: () => longText,
@@ -5800,7 +5870,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     markNewText: () => markNewText,
     markSel: () => markSel,
     markStagedRows: () => markStagedRows,
-    matchAll: () => matchAll,
     matchLabel: () => matchLabel,
     matchSection: () => matchSection,
     mdBlocks: () => mdBlocks,
@@ -5817,6 +5886,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     meetingRoute: () => meetingRoute,
     memLineEdit: () => memLineEdit,
     memPath: () => memPath,
+    memValueProblem: () => memValueProblem,
     menuGroup: () => menuGroup,
     menuItemsIn: () => menuItemsIn,
     menuMove: () => menuMove,
@@ -5955,6 +6025,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mvVis: () => mvVis,
     mvWhen: () => mvWhen,
     myOwnerNames: () => myOwnerNames,
+    nameProblem: () => nameProblem,
     navBlocked: () => navBlocked,
     navEnc: () => navEnc,
     navOf: () => navOf,
@@ -6063,9 +6134,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     openPopover: () => openPopover,
     openPrep: () => openPrep,
     openProject: () => openProject,
+    openProjectSettings: () => openProjectSettings,
     openProposal: () => openProposal,
     openRecord: () => openRecord,
     openRef: () => openSheetRef,
+    openReportSettings: () => openReportSettings,
     openResult: () => openResult,
     openSearch: () => openSearch,
     openSpace: () => openSpace,
@@ -6108,6 +6181,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     parseHash: () => parseHash,
     parseReporting: () => parseReporting,
     parseWhen: () => parseWhen,
+    partnerProblem: () => partnerProblem,
+    partners: () => partners,
+    partnersFrom: () => partnersFrom,
+    partnersOf: () => partnersOf,
     passes: () => passes,
     pasteLink: () => pasteLink,
     pdAll: () => pdAll,
@@ -6288,6 +6365,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkWsPreSync: () => pkWsPreSync,
     pkX: () => pkX,
     placePicker: () => placePicker,
+    plainPaths: () => plainPaths,
     playOf: () => playOf,
     plur: () => plur,
     polishAsk: () => polishAsk,
@@ -6332,12 +6410,21 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     projHistory: () => projHistory,
     projLink: () => projLink,
     projPeople: () => projPeople,
+    projSettingsListHtml: () => projSettingsListHtml,
+    projectPeople: () => projectPeople,
+    projectState: () => projectState,
     promDue: () => promDue,
     promLi: () => promLi,
     promOwe: () => promOwe,
     promQuiet: () => promQuiet,
     promWaiting: () => promWaiting,
     promWho: () => promWho,
+    psCat: () => psCat,
+    psChanged: () => psChanged,
+    psCode: () => psCode,
+    psProject: () => psProject,
+    psQ: () => psQ,
+    psTick: () => psTick,
     ptCode: () => ptCode,
     pulseCheck: () => pulseCheck,
     pulseEditing: () => pulseEditing,
@@ -6428,9 +6515,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     removeInbox: () => removeInbox,
     removeLink: () => removeLink,
     removeLoaded: () => removeLoaded,
+    removePartner: () => removePartner,
     renameAll: () => renameAll,
     renameHeading: () => renameHeading,
+    renamePartner: () => renamePartner,
     renamePerson: () => renamePerson,
+    renameProject: () => renameProject,
     renameView: () => renameView,
     renameWs: () => renameWs,
     renderActivity: () => renderActivity,
@@ -6454,6 +6544,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderPeopleMgr: () => renderPeopleMgr,
     renderPerson: () => renderPerson,
     renderPrep: () => renderPrep,
+    renderProjectSettings: () => renderProjectSettings,
     renderProjects: () => renderProjects,
     renderPromises: () => renderPromises,
     renderQuality: () => renderQuality,
@@ -6696,6 +6787,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     setPTab: () => setPTab,
     setPalette: () => setPalette,
     setPlay: () => setPlay,
+    setProjectActive: () => setProjectActive,
     setRailCount: () => setRailCount,
     setResolve: () => setResolve,
     setRewrite: () => setRewrite,
@@ -6804,6 +6896,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     thisWeek: () => thisWeek,
     tib: () => tib,
     tickNear: () => tickNear,
+    ticksOf: () => ticksOf,
+    tilesOf: () => tilesOf,
     tipBox: () => tipBox,
     tipHide: () => tipHide,
     tipShow: () => tipShow,
@@ -26619,9 +26713,24 @@ ${s5}`;
     const p6 = project(code);
     return !p6 || p6.crrem !== false;
   };
+  function partnersOf(code) {
+    const p6 = project(code);
+    return p6 && Array.isArray(p6.partners) ? p6.partners : [];
+  }
+  function logoKindsOf(code) {
+    const ps2 = partnersOf(code);
+    return ["firm", "client", ...ps2.length ? ps2.map((x5) => `partner:${x5.slug}`) : ["partner"]];
+  }
+  function logoKindName(code, kind) {
+    if (kind === "firm") return "Firm";
+    if (kind === "client") return "Client";
+    const own = partnersOf(code).find((x5) => `partner:${x5.slug}` === kind);
+    return own ? `Partner: ${own.name}` : "Partner";
+  }
+  var ticksOf = (kinds, chosen) => kinds.filter((k5) => k5 === "firm" || chosen.includes(k5) || chosen.includes("partner") && k5.startsWith("partner"));
   function clientLogosOn(code) {
-    const p6 = project(code), l6 = p6 && Array.isArray(p6.crlogos) ? p6.crlogos : LOGO_KINDS;
-    return LOGO_KINDS.filter((k5) => k5 === "firm" || l6.includes(k5));
+    const p6 = project(code), kinds = logoKindsOf(code);
+    return ticksOf(kinds, p6 && Array.isArray(p6.crlogos) ? p6.crlogos : kinds);
   }
   function changed() {
     crTick.value++;
@@ -26649,8 +26758,10 @@ ${s5}`;
   async function setClientLogos(code, kinds) {
     const p6 = project(code);
     if (!p6) return false;
-    const list = LOGO_KINDS.filter((k5) => k5 === "firm" || kinds.includes(k5));
-    if (!await setMemLine(code, "Client report logos", list.join(", "), "client_report_logos")) return false;
+    const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
+    const everyPartner = parts.every((k5) => list.includes(k5));
+    const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
+    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
     p6.crlogos = list;
     changed();
     return true;
@@ -26690,12 +26801,19 @@ ${s5}`;
     {}
   );
   var crLogoNote = y3("");
+  var crLogoOrphans = y3(
+    /** @type {{kind: string, slug: string, path: string}[]} */
+    []
+  );
+  var crLogoFor = y3("");
   async function readClientLogos(code) {
     if (!viaServer()) return;
     const r4 = await api("/api/report/logo", { code });
     if (!r4 || !r4.ok) return;
+    crLogoFor.value = code;
     crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
     crLogoData.value = r4.logos || {};
+    crLogoOrphans.value = Array.isArray(r4.orphans) ? r4.orphans : [];
     weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
     changed();
   }
@@ -26760,7 +26878,7 @@ ${s5}`;
     const trimmed = ext === "svg" ? null : await trimmedCopy(file);
     const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
     if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not saved.";
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not saved.";
       return false;
     }
     crLogoNote.value = r4.hint || "";
@@ -26772,7 +26890,7 @@ ${s5}`;
     crLogoNote.value = "";
     const r4 = await api("/api/report/logo/remove", { code, kind });
     if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(r4 && r4.message) || "The logo was not removed.";
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not removed.";
       return false;
     }
     await readClientLogos(code);
@@ -31160,6 +31278,242 @@ ${s5}`;
     ] })) });
   }
 
+  // core/partners.js
+  var PARTNER_NAME_MAX = 60;
+  var PARTNERS_MAX = 12;
+  var PARTNERS_LINE_MAX = 800;
+  var CLIENT_NAME_LIMIT = 80;
+  var PUNCT = ".,&'()-";
+  var cleanPartnerName = (text) => String(text == null ? "" : text).normalize("NFC").replace(/ {2,}/g, " ").replace(/^ +| +$/g, "");
+  function partnerNameProblem(name) {
+    const t47 = String(name == null ? "" : name);
+    if (!t47) return "Type the partner organisation's name.";
+    if (/[\r\n]/.test(t47)) return "A partner's name is one line.";
+    if (t47.includes(";")) return "A partner's name can't contain a semicolon; add each partner on its own.";
+    if (t47.length > PARTNER_NAME_MAX) return `A partner's name is over ${PARTNER_NAME_MAX} characters.`;
+    if (t47 !== t47.replace(/^ +| +$/g, "") || t47.includes("  ")) return "A partner's name has no space at either end and no double space.";
+    if (t47 !== t47.normalize("NFC")) return "A partner's name uses letters and digits only (no separate accent marks).";
+    for (const ch2 of t47) if (!(ch2 === " " || PUNCT.includes(ch2) || /^[\p{L}\p{Nd}]$/u.test(ch2))) return "A partner's name uses letters, digits, spaces and . , & ' - ( ) only.";
+    return "";
+  }
+  function partnerKey(name) {
+    const k5 = String(name).normalize("NFKD").replace(/[^ -~]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    return k5 || String(name).toLowerCase();
+  }
+  function unsafeLineValue(v5) {
+    for (const ch2 of String(v5)) {
+      const c5 = (
+        /** @type {number} */
+        ch2.codePointAt(0)
+      );
+      if (c5 < 32 || c5 >= 127 && c5 <= 159 || c5 === 8232 || c5 === 8233 || c5 >= 8203 && c5 <= 8207 || c5 >= 8234 && c5 <= 8238 || c5 >= 8288 && c5 <= 8297 || c5 === 65279) return true;
+    }
+    return false;
+  }
+
+  // stores/projectSettings.js
+  var PS_CATS = [
+    ["general", "General", "name client code status folder project details"],
+    ["people", "People and partners", "people partners partner organisations organisation role register"],
+    ["logos", "Logos", "logos firm client partner header picture"],
+    ["miles", "Milestones", "milestones plan agreed expected dates add edit"],
+    ["rep", "Reporting", "reporting client report how often reminder weekly report day"],
+    ["arch", "Archive", "archive close restore project nothing is deleted"]
+  ];
+  var psCode = y3("");
+  var psCat = y3("general");
+  var psQ = y3("");
+  var psTick = y3(0);
+  var psChanged = () => {
+    psTick.value++;
+  };
+  var psProject = (code) => (
+    /** @type {any} */
+    P4.find((p6) => p6.code === code)
+  );
+  var NAME_MAX = 80;
+  function nameProblem(v5) {
+    const t47 = String(v5 || "");
+    if (/[\r\n]/.test(t47)) return "The name is one line.";
+    if (!t47.replace(/\s+/g, " ").trim()) return "Type the project's name.";
+    if (t47.replace(/\s+/g, " ").trim().length > NAME_MAX) return `The name is over ${NAME_MAX} characters.`;
+    return "";
+  }
+  async function renameProject(code, name) {
+    const p6 = psProject(code);
+    if (!p6) return false;
+    const bad = nameProblem(name);
+    if (bad) {
+      snack("Not saved: " + bad);
+      return false;
+    }
+    const v5 = String(name).replace(/\s+/g, " ").trim(), old = p6.name;
+    if (v5 === old) return true;
+    const ok2 = await save(
+      `${old}: name → ${v5}`,
+      [{ op: "update", table: "projects", id: code, changes: { name: v5 } }],
+      null,
+      () => {
+        p6.name = v5;
+        psChanged();
+      },
+      () => {
+        p6.name = old;
+        psChanged();
+      }
+    );
+    return ok2 !== false;
+  }
+  async function setProjectActive(code, active) {
+    const p6 = psProject(code);
+    if (!p6) return false;
+    const was = projectState(code), now = active ? "active" : "closed";
+    const ok2 = await save(
+      `${p6.name}: ${active ? "active again" : "closed"}`,
+      [{ op: "update", table: "projects", id: code, changes: { active: active ? 1 : 0 } }],
+      null,
+      () => {
+        markState(code, now);
+        psChanged();
+      },
+      () => {
+        markState(code, was);
+        psChanged();
+      }
+    );
+    return ok2 !== false;
+  }
+  function markState(code, state) {
+    const s5 = (D.project_states || []).find((x5) => x5.code === code);
+    if (s5) s5.state = state;
+  }
+  function projectState(code) {
+    const s5 = (D.project_states || []).find((x5) => x5.code === code);
+    return s5 ? s5.state : "active";
+  }
+  function projectPeople(code) {
+    const rs2 = resolver(), names = /* @__PURE__ */ new Set();
+    const add = (n4) => {
+      if (n4 && n4 !== "TBC") names.add((rs2(n4) || {}).name || n4);
+    };
+    A4.forEach((x5) => x5.p === code && add(x5.o));
+    R3.forEach((x5) => x5.p === code && add(x5.o));
+    DEC.forEach((x5) => x5.p === code && add(x5.by));
+    const reg = (
+      /** @type {any[]} */
+      shared.REG || []
+    );
+    return [...names].sort((a5, b5) => a5.localeCompare(b5)).map((name) => {
+      const r4 = reg.find((x5) => x5.name === name) || {};
+      return { name, org: r4.org || "", role: r4.role || "" };
+    });
+  }
+  var partners = y3({ code: "", list: (
+    /** @type {string[]} */
+    []
+  ), loaded: false });
+  function partnersFrom(text) {
+    const lines2 = String(text || "").split("\n"), live = liveLines(lines2), out = (
+      /** @type {string[]} */
+      []
+    ), keys = /* @__PURE__ */ new Set();
+    for (let i5 = 0; i5 < lines2.length; i5++) {
+      if (!live[i5]) continue;
+      const m5 = lines2[i5].replace(/\r$/, "").match(/^[ \t]*(?:[-*][ \t]+)?\*\*Partners:\*\*[ \t]*([^\n]*?)[ \t]*(?:_\(.*\)_)?$/);
+      if (!m5) continue;
+      for (const piece of m5[1].slice(0, 5e3).split(";")) {
+        const n4 = cleanPartnerName(piece);
+        if (!n4 || partnerNameProblem(n4) || keys.has(partnerKey(n4))) continue;
+        keys.add(partnerKey(n4));
+        out.push(n4);
+        if (out.length >= PARTNERS_MAX) return out;
+      }
+      return out;
+    }
+    return out;
+  }
+  async function loadPartners(code) {
+    partners.value = { code, list: [], loaded: false };
+    if (!viaServer() && shared.VSTATE !== "ok") return;
+    try {
+      const text = await vq(() => shared.VW.read(memPath(code)));
+      partners.value = { code, list: partnersFrom(text), loaded: true };
+    } catch (e4) {
+      partners.value = { code, list: [], loaded: false };
+    }
+  }
+  function partnerProblem(list, name, except = -1) {
+    const v5 = cleanPartnerName(name), bad = partnerNameProblem(v5);
+    if (bad) return bad;
+    const same2 = list.find((x5, i5) => i5 !== except && partnerKey(x5) === partnerKey(v5));
+    return same2 ? `${same2} is already listed.` : "";
+  }
+  var partnerQueue = Promise.resolve();
+  function inTurn(fn2) {
+    const run = partnerQueue.then(fn2, fn2);
+    partnerQueue = run.then(() => void 0, () => void 0);
+    return run;
+  }
+  async function currentList(code) {
+    try {
+      return partnersFrom(await vq(() => shared.VW.read(memPath(code))));
+    } catch (e4) {
+      return partners.peek().list;
+    }
+  }
+  async function writePartners(code, list) {
+    const v5 = list.join("; ");
+    if (!await setMemLine(code, "Partners", v5, "partners")) return false;
+    partners.value = { code, list: [...list], loaded: true };
+    await reloadData();
+    psChanged();
+    return true;
+  }
+  var undoer = (code, list) => async () => {
+    if (await inTurn(() => writePartners(code, list))) snack("Undone");
+  };
+  function addPartner(code, name) {
+    return inTurn(async () => {
+      const was = await currentList(code), bad = partnerProblem(was, name);
+      if (bad) return bad;
+      if (was.length >= PARTNERS_MAX) return `A project lists at most ${PARTNERS_MAX} partner organisations.`;
+      const v5 = cleanPartnerName(name);
+      if (!await needVault()) return "Not saved: creaite can't reach the vault.";
+      if (!await writePartners(code, [...was, v5])) return "Not saved.";
+      snack(`${v5} added as a partner`, undoer(code, was));
+      return "";
+    });
+  }
+  function renamePartner(code, i5, name) {
+    return inTurn(async () => {
+      const was = await currentList(code), bad = partnerProblem(was, name, i5);
+      if (bad) return bad;
+      const v5 = cleanPartnerName(name);
+      if (v5 === was[i5]) return "";
+      if (!await writePartners(code, was.map((x5, j5) => j5 === i5 ? v5 : x5))) return "Not saved.";
+      snack(`${was[i5]} renamed ${v5}`, undoer(code, was));
+      return "";
+    });
+  }
+  function removePartner(code, i5) {
+    return inTurn(async () => {
+      const was = await currentList(code), gone = was[i5];
+      if (gone === void 0) return false;
+      if (!await writePartners(code, was.filter((_6, j5) => j5 !== i5))) return false;
+      snack(`${gone} removed from the partners`, undoer(code, was));
+      return true;
+    });
+  }
+  function openProjectSettings(code) {
+    if (!P4.some((p6) => p6.code === code)) {
+      snack("That project isn't open here");
+      return false;
+    }
+    psCat.value = "general";
+    psQ.value = "";
+    return go2("psettings", code);
+  }
+
   // settings.js
   var SETCATS = [["essentials", "Essentials"], ["people", "People and projects"], ["advanced", "Advanced"], ["health", "Health"]];
   var CATOF = { general: "advanced", work: "advanced", review: "advanced", capture: "advanced", system: "health" };
@@ -31251,6 +31605,7 @@ ${s5}`;
     const id2 = "sr" + ++SRN;
     return `<div class="srow"><div><span id="${id2}">${l6}</span>${h5 ? `<small id="${id2}h">${h5}</small>` : ""}</div><div>${srName(c5, id2, h5, l6)}</div></div>`;
   };
+  var projSettingsListHtml = () => `<div class="srows" id="projSetList"><h3 style="margin:12px 0 0">Project settings</h3><p class="sub" style="margin:4px 0 0">Each project's name, client, people and partners, milestones, reporting and archive are on its own page.</p>` + P4.map((p6) => row(esc(p6.name), `<button type="button" class="mini" data-psopen="${esc(p6.code)}" aria-label="Open the settings of ${esc(p6.name)}">Open settings</button>`)).join("") + `</div>`;
   var clientReportsHtml = () => `<div class="srows" id="crSet"><h3 style="margin:12px 0 0">Client reports</h3><p class="sub" style="margin:4px 0 0">A project needs a separate client report only when this is on. It holds for every future report; turning it off deletes nothing.</p>` + P4.map((p6) => row(`${esc(p6.name)}: this project needs a separate client report`, `<input type="checkbox" class="switch" data-crsw="${p6.code}" ${clientReportOn(p6.code) ? "checked" : ""}>`)).join("") + `</div>`;
   var SETSECTIONS = [
     /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
@@ -31349,10 +31704,13 @@ ${s5}`;
       title: "Projects and register",
       wide: true,
       kw: "projects register add close archive restore archived code signals domains matching",
-      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + clientReportsHtml() + projArchiveHtml(),
-      after: () => projArchiveBind()
+      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + projSettingsListHtml() + clientReportsHtml() + projArchiveHtml(),
+      after: () => {
+        projArchiveBind();
+        $$("#projSetList [data-psopen]").forEach((b5) => b5.onclick = () => openProjectSettings(b5.dataset.psopen));
+      }
     },
-    /* BL-09 */
+    /* BL-09; #228: each project opens its own settings page */
     {
       id: "health",
       cat: "health",
@@ -41680,7 +42038,7 @@ ${s5}`;
   function portfolioTable(id2 = "pf", dots = false) {
     return `<table><thead><tr>${PFCOLS.map(([k5, l6]) => `<th data-col="${k5}">${l6}${k5 === "trend" ? legBtn() : ""}</th>`).join("")}</tr></thead><tbody>${P4.map((p6) => {
       const nm3 = p6.ms.find((m5) => m5[2] !== "done") || p6.ms[p6.ms.length - 1] || ["No milestones yet", "", ""], ds2 = (p6.client || "").trim(), did = `${id2}d-${p6.code}`;
-      return `<tr class="click" data-cock="${p6.code}"><td><button type="button" class="pfname"${ds2 ? ` data-tip="${esc(ds2)}" aria-describedby="${did}"` : ""}>${esc(p6.name)}</button>${ds2 ? `<span class="vh" id="${did}">${esc(ds2)}</span>` : ""}</td><td>${dots ? `<span data-statusdot="${esc(p6.health || "")}"></span>` : health(p6.health)}<div class="sub" style="max-width:36ch">${esc(p6.reason)}</div></td><td>${evidence(p6)}</td><td>${spark(p6)}</td><td>${esc(nm3[0])}${nm3[1] ? `<div class="sub ${nm3[2] === "slip" ? "late" : ""}">${longDay(nm3[1])} (${rel(nm3[1]).replace(/^./, (c5) => c5.toLowerCase())})</div>` : ""}</td></tr>`;
+      return `<tr class="click" data-cock="${p6.code}"><td><button type="button" class="pfname"${ds2 ? ` data-tip="${esc(ds2)}" aria-describedby="${did}"` : ""}>${esc(p6.name)}</button>${ds2 ? `<span class="vh" id="${did}">${esc(ds2)}</span>` : ""}<button type="button" class="ib bd pset" data-psettings="${p6.code}" aria-label="Project settings: ${esc(p6.name)}" data-tip="Project settings">${ic("gear")}</button></td><td>${dots ? `<span data-statusdot="${esc(p6.health || "")}"></span>` : health(p6.health)}<div class="sub" style="max-width:36ch">${esc(p6.reason)}</div></td><td>${evidence(p6)}</td><td>${spark(p6)}</td><td>${esc(nm3[0])}${nm3[1] ? `<div class="sub ${nm3[2] === "slip" ? "late" : ""}">${longDay(nm3[1])} (${rel(nm3[1]).replace(/^./, (c5) => c5.toLowerCase())})</div>` : ""}</td></tr>`;
     }).join("")}</tbody></table>`;
   }
   function pfResize(box) {
@@ -41739,7 +42097,7 @@ ${s5}`;
       if (b5.dataset.d) remPick(n4.dataset.id, b5.dataset.d);
     });
     document.addEventListener("click", (e4) => {
-      if (e4.target.closest && e4.target.closest(".colrz")) return;
+      if (e4.target.closest && e4.target.closest(".colrz,[data-psettings]")) return;
       const r4 = e4.target.closest("[data-cock]");
       if (r4) go2("cockpit", r4.dataset.cock);
     });
@@ -47358,7 +47716,7 @@ ${s5}`;
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
    </div></div>
    ${raw(flowCard(code))}
-   <div class="cockfoot">${raw(ibtn("filetext", "Reports", `data-reports="${p6.code}"`, "bd"))}${raw(ibtn("folder", "Browse files", `data-files="${p6.code}"`, "bd"))}</div></div>`);
+   <div class="cockfoot">${raw(ibtn("filetext", "Reports", `data-reports="${p6.code}"`, "bd"))}${raw(ibtn("folder", "Browse files", `data-files="${p6.code}"`, "bd"))}${raw(ibtn("gear", "Project settings", `data-psettings="${p6.code}"`, "bd"))}</div></div>`);
     })();
     drawCockpitTabs(code);
     {
@@ -47451,6 +47809,11 @@ ${s5}`;
       const rp2 = e4.target.closest("[data-reports]");
       if (rp2) {
         openSpace(rp2.dataset.reports);
+      }
+      const ps2 = e4.target.closest("[data-psettings]");
+      if (ps2) {
+        e4.preventDefault();
+        openProjectSettings(ps2.dataset.psettings);
       }
       const a5 = e4.target.closest("[data-ask]");
       if (a5) {
@@ -62462,6 +62825,7 @@ ${d5.text}`);
     }
     $("#chat").classList.add("on");
     rbDismiss();
+    askMarkClear();
     if (!$("#chLog").children.length && !ATTACHED && !shared.REATT) {
       if (shared.ASKCHAT && viaServer()) loadChat(shared.ASKCHAT, true);
       else greet();
@@ -63237,6 +63601,7 @@ ${d5.text}`);
       rbDraw();
       return;
     }
+    askMarkClear();
     rbUnmark();
     Object.assign(RB, { state: "running", t0: Date.now(), label: label || shared.RUNLABEL || "", took: "" });
     shared.RUNLABEL = "";
@@ -63259,6 +63624,7 @@ ${d5.text}`);
     }
     RB.state = state || "done";
     rbDraw();
+    askMarkShow(RB.state);
     if (document.hidden) {
       if (!shared.RBMARKED) {
         shared.RBMARKED = true;
@@ -63304,6 +63670,45 @@ ${d5.text}`);
   }
   function askFinished(o5) {
     rbEnd(o5 || "done");
+  }
+  var ASKDONE = { ms: 3e4, t: null }, ASKMARK = {
+    done: ["Done", "ask creaite has finished", "ask creaite has finished. This clears in 30 seconds."],
+    stopped: ["Stopped", "ask creaite was stopped", "The run was stopped. This clears in 30 seconds."],
+    failed: ["Failed", "ask creaite failed", "The run failed. Open ask creaite to see why."]
+  }, ASKTICK = () => {
+    const NS = "http://www.w3.org/2000/svg", v5 = document.createElementNS(NS, "svg"), p6 = document.createElementNS(NS, "path");
+    for (const [k5, x5] of Object.entries({ viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" })) v5.setAttribute(k5, x5);
+    p6.setAttribute("d", "M5 12.5l4.5 4.5L19 7.5");
+    v5.appendChild(p6);
+    return v5;
+  };
+  function askMarkSet(st2, msg) {
+    const b5 = $("#askBtn"), m5 = b5.querySelector(".askmark"), l6 = b5.querySelector(".asklab"), k5 = ASKMARK[st2];
+    b5.dataset.st = st2;
+    if (st2 === "done") m5.replaceChildren(ASKTICK());
+    else m5.textContent = st2 === "failed" ? "!" : "■";
+    l6.textContent = k5[0];
+    $("#askLive").textContent = msg == null ? k5[1] : msg;
+    b5.style.setProperty("--life", ASKDONE.ms / 1e3 + "s");
+    b5.title = k5[2];
+  }
+  function askMarkClear() {
+    clearTimeout(ASKDONE.t);
+    ASKDONE.t = null;
+    const b5 = $("#askBtn");
+    if (!b5) return;
+    delete b5.dataset.st;
+    b5.style.removeProperty("--life");
+    b5.querySelector(".askmark").textContent = "";
+    b5.querySelector(".asklab").textContent = "";
+    $("#askLive").textContent = "";
+    if (Object.values(ASKMARK).some((k5) => k5[2] === b5.title)) b5.removeAttribute("title");
+  }
+  function askMarkShow(st2) {
+    if (!ASKMARK[st2]) return;
+    askMarkClear();
+    askMarkSet(st2);
+    if (st2 !== "failed") ASKDONE.t = setTimeout(askMarkClear, ASKDONE.ms);
   }
   function bootAsk0105() {
     document.addEventListener("visibilitychange", () => {
@@ -66815,11 +67220,6 @@ ${d5.text}`);
     }
     return mapSection(right, id2, () => copy);
   }
-  function matchAll(left, right) {
-    let out = right;
-    for (const s5 of left.sections) if (!isTextSection(s5) || out.sections.some((x5) => x5.id === s5.id)) out = matchSection(left, out, s5.id);
-    return out;
-  }
   function matchLabel(left, right, id2, label) {
     const a5 = left.sections.find((s5) => s5.id === id2), b5 = right.sections.find((s5) => s5.id === id2);
     return sectionDiffers(a5, b5) ? `Edited for ${label === "Distributed" ? "distribution" : "the " + label.toLowerCase()}` : "Matching internal";
@@ -67545,11 +67945,15 @@ ${d5.text}`);
   function SheetPage(p6) {
     const { doc, exported, readOnly, onChange, onEvent } = p6;
     const editing = !exported && !readOnly;
+    const page = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
     _2(() => {
       const id2 = p6.refocus.current;
       if (id2) {
         p6.refocus.current = null;
-        document.querySelector(`[data-grip="${CSS.escape(id2)}"]`)?.focus();
+        (page.current && page.current.querySelector(`[data-grip="${CSS.escape(id2)}"]`))?.focus();
       }
     });
     const setMeta = (patch, why) => onChange({ ...doc, meta: { ...doc.meta || {}, ...patch } }, why);
@@ -67586,7 +67990,7 @@ ${d5.text}`);
       onChange(nd2, "Text section added");
       onEvent({ type: "text-added", id: nid });
     };
-    return /* @__PURE__ */ u2("div", { class: "page", "data-audience": doc.audience || "internal", "data-report": p6.report ? "sheet" : void 0, children: [
+    return /* @__PURE__ */ u2("div", { class: "page", ref: page, "data-audience": doc.audience || "internal", "data-report": p6.report ? "sheet" : void 0, "data-pane": p6.side || void 0, children: [
       p6.report ? null : /* @__PURE__ */ u2("header", { class: "doc", children: [
         /* @__PURE__ */ u2("div", { children: [
           /* @__PURE__ */ u2("h1", { children: doc.title }),
@@ -67740,14 +68144,14 @@ ${d5.text}`);
       const s5 = st2.current;
       if (s5.dirty) flush();
     }, []);
-    return { line, conflict, removed, change: change2, flush, reload };
+    return { line, conflict, removed, change: change2, flush, reload, known: () => st2.current.latest };
   }
   function removedLine(r4) {
     if (!r4 || Array.isArray(r4) && !r4.length) return "";
     const list = Array.isArray(r4) ? r4 : [r4];
     return `Left out of this version: ${list.map((x5) => (typeof x5 === "string" ? x5 : x5 && (x5.label || x5.ref || x5.id || x5.heading)) || "an item").join(", ")}`;
   }
-  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, children }) {
+  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, children }) {
     const sc2 = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -67829,7 +68233,10 @@ ${d5.text}`);
         el2.removeEventListener("wheel", wheel);
       };
     }, [pk2]);
-    return /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: sc2, onScroll: capture, "data-pk": pk2, children: /* @__PURE__ */ u2("div", { class: pages > 1 ? "sheet-pair" : "sheet-one", style: { visibility: scale ? "visible" : "hidden" }, children: children(scale) }) });
+    return /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: sc2, onScroll: capture, "data-pk": pk2, children: [
+      head ? /* @__PURE__ */ u2("div", { class: "sheet-head", style: { visibility: scale ? "visible" : "hidden", width: `${A4_W * MM * scale * pages + 16 * (pages - 1)}px` }, children: head }) : null,
+      /* @__PURE__ */ u2("div", { class: pages > 1 ? "sheet-pair" : "sheet-one", style: { visibility: scale ? "visible" : "hidden" }, children: children(scale) })
+    ] });
   }
   function SheetFrame({ scale, breaks, children }) {
     return /* @__PURE__ */ u2("div", { class: "sheet-fit", "data-scale": scale, style: { width: `${A4_W * MM * scale}px` }, children: /* @__PURE__ */ u2("div", { class: "sheet-a4", style: { transform: `scale(${scale})`, "--sc": scale }, children: [
@@ -68012,6 +68419,11 @@ ${d5.text}`);
       /** @type {string|null} */
       null
     );
+    const refocusR = A2(
+      /** @type {string|null} */
+      null
+    );
+    const activeRight = A2(false);
     const [zl2, setZl] = d2(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT));
     const [xl2, setXl] = d2(false);
     const [together, setTogether] = d2(true);
@@ -68070,39 +68482,56 @@ ${d5.text}`);
       partner.onChange(nd2, why);
       side.change(nd2);
     };
-    const aiFor = (s5, ro2) => {
-      const a5 = P5.current.ai;
+    const aiFor = (s5, ro2, right = false) => {
+      const ai2 = () => right ? P5.current.partner && P5.current.partner.ai : P5.current.ai, pane = `${sid}${right ? "r" : "l"}`;
+      const a5 = ai2();
       if (!a5) return void 0;
       return {
         place: ro2 || eref.current ? "readonly" : a5.place,
-        sheetId: sid,
-        project: () => P5.current.ai && P5.current.ai.project ? P5.current.ai.project() : "",
-        confidential: () => !!(P5.current.ai && P5.current.ai.confidential && P5.current.ai.confidential()),
-        key: () => `sheet:${sid}:${s5.id}`,
-        document: () => P5.current.ai && P5.current.ai.document ? P5.current.ai.document() : null
+        sheetId: pane,
+        project: () => {
+          const x5 = ai2();
+          return x5 && x5.project ? x5.project() : "";
+        },
+        confidential: () => {
+          const x5 = ai2();
+          return !!(x5 && x5.confidential && x5.confidential());
+        },
+        key: () => `sheet:${pane}:${s5.id}`,
+        document: () => {
+          const x5 = ai2();
+          return x5 && x5.document ? x5.document() : null;
+        }
       };
     };
     h2(() => {
-      SHEET_SOURCES.set(sid, async (range, h5) => {
+      const finder = (right) => async (range, h5) => {
         const at2 = h5.el.getBoundingClientRect(), sectionId = (h5.el.closest("section[data-id]") || {}).dataset?.id;
         const place2 = { x: Math.max(8, Math.min(at2.left, window.innerWidth - 340)), y: Math.min(at2.bottom + 6, window.innerHeight - 160) };
-        if (!P5.current.onSelectAction) {
+        const find = right ? P5.current.partner && P5.current.partner.onSelectAction : P5.current.onSelectAction;
+        if (!find) {
           setFound({ ...place2, message: "Finding the source isn't available here." });
           return;
         }
         setFound({ ...place2, message: "Looking…" });
         try {
-          const a5 = await P5.current.onSelectAction("source", { sectionId, text: range.text });
+          const a5 = await find("source", { sectionId, text: range.text });
           setFound({ ...place2, items: a5 && a5.found || [], message: a5 && a5.found && a5.found.length ? "" : "No source found." });
         } catch (e4) {
           setFound({ ...place2, message: "Couldn't look for the source." });
         }
-      });
+      };
+      SHEET_SOURCES.set(`${sid}l`, finder(false));
+      SHEET_SOURCES.set(`${sid}r`, finder(true));
       return () => {
-        SHEET_SOURCES.delete(sid);
+        SHEET_SOURCES.delete(`${sid}l`);
+        SHEET_SOURCES.delete(`${sid}r`);
       };
     }, []);
     const partnerDoc = partner ? partner.doc : null;
+    h2(() => {
+      if (partner && partnerDoc && !partner.readOnly && partner.dirty && partner.dirty() && side.known() !== partnerDoc) side.change(partnerDoc);
+    }, [partnerDoc]);
     const match = partner && partnerDoc ? {
       readOnly: !!partner.readOnly,
       label: (id2) => labelOf(doc, partnerDoc, id2, partner.label),
@@ -68144,8 +68573,19 @@ ${d5.text}`);
       if (!mod) return;
       if (e4.key === "s" || e4.key === "S") {
         e4.preventDefault();
-        main.flush();
-        side.flush();
+        const pg2 = (
+          /** @type {HTMLElement|null} */
+          /** @type {HTMLElement} */
+          e4.target.closest ? (
+            /** @type {HTMLElement} */
+            e4.target.closest(".page[data-pane]")
+          ) : null
+        );
+        if (!pg2 || !partner) {
+          main.flush();
+          side.flush();
+        } else if (pg2.dataset.pane === "right") side.flush();
+        else main.flush();
         return;
       }
       if (e4.key === "+" || e4.key === "=") {
@@ -68180,35 +68620,51 @@ ${d5.text}`);
     };
     const pinch = (dy2) => setZoom(pinchZoom(zref.current, dy2));
     const addText = A2(
-      /** @type {(afterId: string|null) => (string|null)} */
+      /** @type {(afterId: string|null, right?: boolean) => (string|null)} */
       (() => null)
     );
-    addText.current = (afterId) => {
-      if (leftRO) return null;
-      const had = new Set(P5.current.doc.sections.map((s5) => s5.id)), nd2 = withTextSection(P5.current.doc, afterId), nid = (nd2.sections.find((s5) => !had.has(s5.id)) || {}).id || null;
-      changeMain(nd2, "Text section added");
+    addText.current = (afterId, right = false) => {
+      const pt2 = P5.current.partner;
+      if (right ? !pt2 || pt2.readOnly : leftRO) return null;
+      const base = right && pt2 ? pt2.doc : P5.current.doc;
+      const had = new Set(base.sections.map((s5) => s5.id)), nd2 = withTextSection(base, afterId), nid = (nd2.sections.find((s5) => !had.has(s5.id)) || {}).id || null;
+      (right ? changeSide : changeMain)(nd2, "Text section added");
       onEvent({ type: "text-added", id: nid });
       return nid;
     };
-    h2(() => bindTextSections((afterId) => addText.current(afterId)), []);
+    h2(() => bindTextSections((afterId) => addText.current(afterId, activeRight.current)), []);
+    const usePane = (e4) => {
+      const pg2 = (
+        /** @type {HTMLElement|null} */
+        /** @type {HTMLElement} */
+        e4.target.closest ? (
+          /** @type {HTMLElement} */
+          e4.target.closest(".page[data-pane]")
+        ) : null
+      );
+      if (pg2) activeRight.current = pg2.dataset.pane === "right";
+    };
     const pageProps = (d5, p6, sd2) => ({
       doc: d5,
       renderers: (p6 ? p6.renderers || props.renderers : props.renderers) || {},
       extras: p6 ? [] : props.extras || [],
       exported,
-      readOnly: p6 ? !!p6.readOnly || !!props.readOnly : leftRO,
+      readOnly: p6 ? !!p6.readOnly || !!props.readOnly && !props.panesApart : leftRO,
       peerDoc: p6 ? doc : partnerDoc,
       peerLabel: partner ? partner.label : "",
       side: sd2,
       onChange: p6 ? changeSide : changeMain,
       onOpenItem: props.onOpenItem,
       onEvent,
-      onRedraft: p6 ? void 0 : props.onRedraft,
-      aiFor,
+      onRedraft: p6 ? p6.onRedraft : props.onRedraft,
+      aiFor: (s5, ro2) => aiFor(s5, ro2, !!p6),
       checks: p6 ? [] : checks,
-      refocus,
+      refocus: p6 ? refocusR : refocus,
       match: p6 ? match : null,
-      report: props.report,
+      report: props.report && partner ? { ...props.report, addText: (id2) => {
+        const nid = addText.current(id2, !!p6);
+        if (nid) markNewText(nid);
+      } } : props.report,
       addTo: !p6 && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (id2) => {
         if (partner.match) partner.match(id2);
         else changeSide(matchSection(doc, partnerDoc, id2), "Matched internal");
@@ -68221,10 +68677,11 @@ ${d5.text}`);
         restorers.current.delete(fn2);
       };
     };
+    const both = `${main.line}${partner && side.line ? `${main.line ? " · " : ""}${partner.label}: ${side.line}` : ""}`;
     const openChecks = checks.length;
     const note = main.conflict;
-    return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, "data-report-sheet": props.report ? props.report.audience : void 0, children: [
-      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: main.line, bad: !!main.line && !/^Saved/.test(main.line) }) : /* @__PURE__ */ u2(S2, { children: [
+    return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, onFocusIn: usePane, onPointerDownCapture: usePane, "data-report-sheet": props.report ? props.report.audience : void 0, children: [
+      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some((l6) => !!l6 && !/^Saved/.test(l6)) }) : /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("span", { class: "sheet-mini", children: props.banner ? /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("b", { children: props.banner.title }),
           props.banner.sub ? /* @__PURE__ */ u2("span", { class: "sub", children: props.banner.sub }) : null
@@ -68245,11 +68702,6 @@ ${d5.text}`);
           ) }),
           " Scroll together"
         ] }) : null,
-        partner && !exported && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sheet-matchall", onClick: () => {
-          if (partner.match) {
-            for (const x5 of doc.sections) if (match && match.differs(x5.id) && !(isTextSection(x5) && !partner.doc.sections.some((y5) => y5.id === x5.id))) partner.match(x5.id);
-          } else changeSide(matchAll(doc, partner.doc), "Matched internal");
-        }, children: "Match internal for every section" }) : null,
         /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": main.line && !/^Saved/.test(main.line) ? "1" : void 0, children: [
           main.line,
           partner && side.line ? ` · ${partner.label}: ${side.line}` : ""
@@ -68283,9 +68735,9 @@ ${d5.text}`);
         }, children: "Reload" })
       ] }) : null,
       /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: partner && !together ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, children: (scale) => frame(doc, null, scale, 0) }),
-        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, children: (scale) => frame(partner.doc, partner, scale, 1) })
-      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
+        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
+      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
         frame(doc, null, scale, 0),
         partner ? frame(partner.doc, partner, scale, 1) : null
       ] }) }) }),
@@ -68323,14 +68775,80 @@ ${d5.text}`);
   function ReportSheet({ audience, addText = addTextSection, ...rest }) {
     return /* @__PURE__ */ u2(Sheet, { ...rest, report: { audience, addText } });
   }
-  var KIND = (
-    /** @type {Record<string, string>} */
-    { firm: "Firm", client: "Client", partner: "Partner" }
-  );
+  var nameOf = (code, kind) => logoKindName(code, kind).replace(/^Partner: /, "");
+  var LOGO_ACCEPT = "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg";
+  function LogoSlot({ code, kind, pic }) {
+    const file = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    ), btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    const [ask2, setAsk] = d2(false);
+    const name = kind.startsWith("partner:") ? nameOf(code, kind) : kind, label = `${pic ? "Change" : "Add"} ${name} logo`;
+    const choose = () => file.current && file.current.click();
+    const stop = () => {
+      setAsk(false);
+      setTimeout(() => btn.current && btn.current.focus(), 0);
+    };
+    const picked = async (e4) => {
+      const input = (
+        /** @type {HTMLInputElement} */
+        e4.target
+      ), f5 = input.files && input.files[0];
+      if (f5) await uploadClientLogo(code, kind, f5);
+      input.value = "";
+    };
+    return /* @__PURE__ */ u2("span", { class: "wr-logo-slot", onKeyDown: (e4) => {
+      if (ask2 && e4.key === "Escape") {
+        e4.stopPropagation();
+        e4.preventDefault();
+        stop();
+      }
+    }, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          "data-hdr-logo": kind,
+          class: pic ? "wr-logo-btn" : "wr-logo-add",
+          "aria-label": label,
+          title: label,
+          onClick: () => pic && kind === "firm" ? setAsk(true) : choose(),
+          children: pic ? /* @__PURE__ */ u2("img", { src: pic, alt: `${nameOf(code, kind)} logo` }) : /* @__PURE__ */ u2(S2, { children: [
+            /* @__PURE__ */ u2("b", { "aria-hidden": "true", children: "+" }),
+            /* @__PURE__ */ u2("span", { children: [
+              "Add ",
+              name,
+              " logo"
+            ] })
+          ] })
+        }
+      ),
+      ask2 ? /* @__PURE__ */ u2("span", { class: "wr-logo-ask", role: "group", "aria-label": "Replace the firm logo?", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: "This logo is used by all projects. Replace it?" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-hdr-logo-yes": kind, onClick: () => {
+          setAsk(false);
+          choose();
+        }, children: "Replace" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-hdr-logo-no": kind, onClick: stop, children: "Cancel" })
+      ] }) : null,
+      /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: LOGO_ACCEPT, "data-hdr-logo-file": kind, tabIndex: -1, onChange: picked })
+    ] });
+  }
   function ReportHeader({ ctx, logos, data }) {
     const { doc, section: s5 } = ctx, d5 = s5.data || {}, client = doc.kind === "client";
-    const chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : ["firm", "client", "partner"];
-    const shown2 = logos.filter((l6) => l6.kind === "firm" || chosen.includes(l6.kind));
+    const code = String(doc.project || ""), edit = ctx.editing && !ctx.exported && !ctx.readOnly && !!code;
+    h2(() => {
+      if (edit) readClientLogos(code);
+    }, [edit, code]);
+    const every = logoKindsOf(code), chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : every;
+    const shown2 = logos.filter((l6) => ticksOf([l6.kind], chosen).length);
+    const slots = edit ? ticksOf(every, chosen) : [];
+    const live = crLogoFor.value === code;
+    const pathOf = (k5) => (live ? crLogoPaths.value[k5] : (shown2.find((l6) => l6.kind === k5) || {}).path) || "";
     const meta = doc.meta || {};
     const period = d5.period_start ? `${wkDmy(d5.period_start)} to ${wkDmy(d5.period_end || doc.date)}` : "";
     return /* @__PURE__ */ u2("header", { class: "wr-hd", children: [
@@ -68343,9 +68861,12 @@ ${d5.text}`);
         ] }),
         client && ctx.editing ? /* @__PURE__ */ u2("div", { class: "wr-facts sub", children: meta.facts_week ? `Facts from the internal report for week ending ${wkDmy(meta.facts_week)}${meta.locked ? ", locked" : ""}` : "Facts as the tracker stands now: they lock when the internal report is approved" }) : null
       ] }),
-      /* @__PURE__ */ u2("div", { class: "wr-logos", children: shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
+      /* @__PURE__ */ u2("div", { class: "wr-logos", children: edit ? slots.map((k5, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
         i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
-        data[l6.path] ? /* @__PURE__ */ u2("img", { src: data[l6.path], alt: `${KIND[l6.kind] || l6.kind} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: KIND[l6.kind] || l6.kind })
+        /* @__PURE__ */ u2(LogoSlot, { code, kind: k5, pic: data[pathOf(k5)] || "" })
+      ] }, k5)) : shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
+        i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
+        data[l6.path] ? /* @__PURE__ */ u2("img", { src: data[l6.path], alt: `${nameOf(code, l6.kind)} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: nameOf(code, l6.kind) })
       ] }, l6.kind)) })
     ] });
   }
@@ -68418,8 +68939,8 @@ ${d5.text}`);
     ] });
   }
   var CLOSE_PICKER = (
-    /** @type {null|(() => void)} */
-    null
+    /** @type {Map<Element|null, () => void>} */
+    /* @__PURE__ */ new Map()
   );
   function AddFromTracker({ ctx }) {
     const s5 = ctx.section;
@@ -68446,8 +68967,13 @@ ${d5.text}`);
       /** @type {null|(() => void)} */
       null
     );
+    const pageOf = () => btn.current && btn.current.closest(".page") || null;
+    const mine = A2(
+      /** @type {Element|null} */
+      null
+    );
     const close = () => {
-      if (CLOSE_PICKER === me2.current) CLOSE_PICKER = null;
+      if (CLOSE_PICKER.get(mine.current) === me2.current) CLOSE_PICKER.delete(mine.current);
       setOpen2(false);
       setList(null);
       setQ("");
@@ -68463,8 +68989,10 @@ ${d5.text}`);
     if (!ctx.editing || !PICKABLE.has(s5.id)) return null;
     const start = async () => {
       if (!me2.current) me2.current = () => closeNow.current();
-      if (CLOSE_PICKER && CLOSE_PICKER !== me2.current) CLOSE_PICKER();
-      CLOSE_PICKER = me2.current;
+      mine.current = pageOf();
+      const other = CLOSE_PICKER.get(mine.current);
+      if (other && other !== me2.current) other();
+      CLOSE_PICKER.set(mine.current, me2.current);
       setOpen2(true);
       setList(null);
       setMsg("");
@@ -68918,7 +69446,17 @@ ${d5.text}`);
   var crBusy = y3("");
   var crDialog = y3(false);
   var crDirty = y3(false);
+  var crHeld = y3(
+    /** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */
+    null
+  );
   var crAsked = 0;
+  function crIdentity(d5) {
+    const x5 = d5 === void 0 ? crDoc.value : d5;
+    return x5 ? `${crAsked}|${JSON.stringify(crArg.value)}|${x5.project}|${x5.date}|${x5.client || ""}` : "";
+  }
+  var sameDoc = (a5, b5) => !!a5 && !!b5 && a5.project === b5.project && a5.date === b5.date && (a5.client || "") === (b5.client || "");
+  var sameReport = (d5) => sameDoc(crDoc.value, d5);
   async function loadClientReport(arg, fresh) {
     const mine = ++crAsked;
     crArg.value = arg;
@@ -68948,12 +69486,13 @@ ${d5.text}`);
     runCheck();
   }
   async function runCheck() {
-    const d5 = crDoc.value;
+    const d5 = crDoc.value, opened = crIdentity(d5);
     if (!d5 || !viaServer()) return null;
     const r4 = (
       /** @type {Check} */
       await api("/api/report/check", { doc: d5 })
     );
+    if (crIdentity() !== opened) return null;
     crCheck.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "The check didn't run" };
     return crCheck.value;
   }
@@ -68974,23 +69513,121 @@ ${d5.text}`);
   async function exportClientReport(fmt, makePage) {
     const a5 = crArg.value, d5 = crDoc.value;
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    const opened = crIdentity(d5);
     if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
       const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
       if (!s5.ok) return s5;
     }
+    if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
     const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
     return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
+  }
+  var matchChain = Promise.resolve();
+  function matchInternal(ids) {
+    const asked2 = crIdentity();
+    matchChain = matchChain.then(() => crIdentity() === asked2 ? matchInternalNow(ids) : void 0).catch(() => void 0);
+    return matchChain;
+  }
+  async function matchInternalNow(ids) {
+    const d02 = crDoc.value, i5 = crInternal.value, opened = crIdentity(d02);
+    if (!d02 || !i5) return;
+    const moved = () => crIdentity() !== opened || !sameReport(d02);
+    const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
+    const all = ids ? ids : d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
+    const internalText = (id2) => {
+      const x5 = secOf(i5, id2);
+      return !!x5 && x5.type === "freetext" && x5.audience === "internal";
+    };
+    const want = ids ? all : all.filter((id2) => !internalText(id2));
+    const skipped = ids ? [] : all.filter(internalText).map((id2) => ({ id: id2, heading: heading(id2) }));
+    const cands = want.map((id2) => ({ id: id2, doc: matchClientSection(d02, i5, id2) })).filter((c5) => c5.doc !== d02);
+    if (!cands.length) {
+      crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null;
+      return;
+    }
+    const failed = () => {
+      crHeld.value = { copied: [], skipped, held: cands.map((c5) => ({ id: c5.id, heading: heading(c5.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." };
+    };
+    if (!viaServer()) {
+      failed();
+      return;
+    }
+    const r4 = await api("/api/report/match-check", { docs: [d02, ...cands.map((c5) => c5.doc)] });
+    if (moved()) return;
+    if (!r4 || !r4.ok || !Array.isArray(r4.findings) || r4.findings.length !== cands.length + 1) {
+      failed();
+      return;
+    }
+    const codes = (fs2) => fs2.reduce(
+      (m5, f5) => m5.set(f5.code, (m5.get(f5.code) || 0) + 1),
+      /** @type {Map<string, number>} */
+      /* @__PURE__ */ new Map()
+    );
+    const base = codes(r4.findings[0]);
+    const fresh_of = (fs2) => {
+      const seen = (
+        /** @type {Map<string, number>} */
+        /* @__PURE__ */ new Map()
+      );
+      return fs2.filter((f5) => {
+        const n4 = (seen.get(f5.code) || 0) + 1;
+        seen.set(f5.code, n4);
+        return n4 > (base.get(f5.code) || 0);
+      });
+    };
+    const done = (
+      /** @type {string[]} */
+      []
+    ), held = (
+      /** @type {{id: string, heading: string, findings: string[]}[]} */
+      []
+    ), clean = (
+      /** @type {string[]} */
+      []
+    );
+    cands.forEach((c5, n4) => {
+      const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
+      if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
+      else clean.push(c5.id);
+    });
+    const kept = (on2) => sameDoc(on2, d02) ? clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
+    const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
+    if (clean.length) {
+      for (let tries = 0; ; tries++) {
+        const now = crDoc.value;
+        if (!now || moved()) return;
+        const d5 = onto(now);
+        const last = await api("/api/report/match-check", { docs: [d5] });
+        if (moved()) return;
+        const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
+        if (!extra || extra.length) {
+          failed();
+          return;
+        }
+        if (crDoc.value === now) {
+          kept(now).forEach((id2) => done.push(heading(id2)));
+          crDoc.value = d5;
+          crDirty.value = true;
+          break;
+        }
+        if (tries >= 2) {
+          crHeld.value = { copied: [], skipped, held: [], message: "Not matched: the report kept changing while its wording was checked, so nothing was copied. Try again." };
+          return;
+        }
+      }
+    }
+    crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map((h5) => h5.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
   }
 
   // components/report/ClientParts.jsx
   var crAskWhy = y3(false);
   function setClientDoc(next) {
+    if (!sameReport(next)) return;
     crDoc.value = next;
     crDirty.value = true;
   }
   function matchOne(id2) {
-    const d5 = crDoc.value, i5 = crInternal.value;
-    if (d5 && i5) setClientDoc(matchClientSection(d5, i5, id2));
+    matchInternal([id2]);
   }
   function MatchBar({ ctx }) {
     const d5 = crDoc.value, i5 = crInternal.value;
@@ -69385,14 +70022,6 @@ ${d5.text}`);
     if (r4 && (r4.ok || r4.clash)) crDialog.value = false;
     else await runCheck();
   }
-  function matchFor(id2) {
-    const d5 = (
-      /** @type {SheetDoc} */
-      crDoc.value
-    ), i5 = crInternal.value;
-    if (!i5) return d5;
-    return id2 == null ? matchClientAll(d5, i5) : matchClientSection(d5, i5, id2);
-  }
   var askWhy = (health2) => {
     if (crInternal.value && flagOf(
       /** @type {SheetDoc} */
@@ -69458,6 +70087,806 @@ ${d5.text}`);
   function reloadHub() {
     const a5 = hubAsk.value;
     return a5 ? loadHub(a5.code, a5.week) : Promise.resolve();
+  }
+
+  // components/report/hub/LogoTile.jsx
+  function tilesOf(code) {
+    const ps2 = partnersOf(code);
+    return [
+      { kind: "firm", mark: "F", name: "The firm", who: "firm's", noun: "firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
+      { kind: "client", mark: "C", name: "The client", who: "client's", noun: "client", line: "Shown on this project's reports" },
+      ...ps2.length ? ps2.map((p6) => ({ kind: `partner:${p6.slug}`, mark: "P", name: `Partner: ${p6.name}`, who: `${p6.name}'s`, noun: p6.name, line: "Shown on this project's reports" })) : [{ kind: "partner", mark: "P", name: "A partner", who: "partner's", noun: "partner", line: "Only if one is involved" }]
+    ];
+  }
+  function LogoMark({ kind, mark }) {
+    const path = crLogoPaths.value[kind], pic = path ? crLogoData.value[path] : "";
+    return /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", "data-has-logo": pic ? "1" : "0", children: pic ? /* @__PURE__ */ u2("img", { alt: "", src: pic }) : mark });
+  }
+  function LogoActions({ code, t: t47, ticked }) {
+    const file = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const path = crLogoPaths.value[t47.kind], pic = path ? crLogoData.value[path] : "";
+    const firm = t47.kind === "firm";
+    const [ask2, setAsk] = d2(
+      /** @type {""|"remove"|"change"} */
+      ""
+    );
+    const picked = async (e4) => {
+      const input = (
+        /** @type {HTMLInputElement} */
+        e4.target
+      ), f5 = input.files && input.files[0];
+      if (f5) await uploadClientLogo(code, t47.kind, f5);
+      input.value = "";
+    };
+    const toggle = () => {
+      const now = clientLogosOn(code), next = now.includes(t47.kind) ? now.filter((k5) => k5 !== t47.kind) : [...now, t47.kind];
+      setClientLogos(code, next);
+    };
+    return /* @__PURE__ */ u2("span", { class: "cfgact", children: [
+      ask2 ? null : /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn sm",
+          "data-logo-add": t47.kind,
+          onClick: () => {
+            if (firm && pic) setAsk("change");
+            else if (file.current) file.current.click();
+          },
+          "aria-label": `${pic ? "Change" : "Add"} the ${t47.who} logo`,
+          children: pic ? "Change" : "Add logo"
+        }
+      ),
+      pic && !ask2 ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn sm",
+          "data-logo-remove": t47.kind,
+          onClick: () => setAsk("remove"),
+          "aria-label": `Remove the ${t47.noun} logo`,
+          children: "Remove"
+        }
+      ) : null,
+      pic && ask2 === "remove" ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.noun} logo?`, children: [
+        /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.noun} logo?` }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-yes": t47.kind, onClick: () => {
+          setAsk("");
+          removeClientLogo(code, t47.kind);
+        }, children: "Remove" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-no": t47.kind, onClick: () => setAsk(""), children: "Keep" })
+      ] }) : null,
+      pic && ask2 === "change" ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": "Change the firm's logo?", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: "Change the firm's logo for all projects?" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-change-yes": t47.kind, onClick: () => {
+          setAsk("");
+          if (file.current) file.current.click();
+        }, children: "Choose a picture" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-change-no": t47.kind, onClick: () => setAsk(""), children: "Keep" })
+      ] }) : null,
+      /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", "data-logo-file": t47.kind, onChange: picked }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "checkbox",
+          checked: firm || ticked,
+          disabled: firm,
+          "data-logo-tick": t47.kind,
+          "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.who} logo in the header`,
+          onChange: firm ? void 0 : toggle
+        }
+      )
+    ] });
+  }
+  function LogoTile({ code, t: t47, ticked }) {
+    return /* @__PURE__ */ u2("div", { class: "cfglogo", "data-kind": t47.kind, children: [
+      /* @__PURE__ */ u2(LogoMark, { kind: t47.kind, mark: t47.mark }),
+      /* @__PURE__ */ u2("span", { class: "cfgname", children: [
+        t47.name,
+        /* @__PURE__ */ u2("span", { class: "sub", children: t47.line })
+      ] }),
+      /* @__PURE__ */ u2(LogoActions, { code, t: t47, ticked })
+    ] });
+  }
+
+  // components/report/hub/ClientReportPanel.jsx
+  var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
+  function ClientReportPanel({ code, onClose }) {
+    crTick.value;
+    const p6 = (
+      /** @type {any} */
+      P4.find((x5) => x5.code === code)
+    );
+    h2(() => {
+      readClientLogos(code);
+    }, [code]);
+    if (!p6) return null;
+    const on2 = clientReportOn(code), ticked = clientLogosOn(code), rhythms = RHYTHMS.includes(p6.rhythm) ? RHYTHMS : [...RHYTHMS, p6.rhythm];
+    return /* @__PURE__ */ u2("div", { class: "hubcfg", id: "crPanel", "data-slot": "ClientReportPanel", role: "dialog", "aria-label": "Client report settings", "data-code": code, "data-on": on2 ? "on" : "off", children: [
+      /* @__PURE__ */ u2("h3", { children: [
+        "Client report for ",
+        p6.name
+      ] }),
+      /* @__PURE__ */ u2("label", { class: "cfgsw", children: [
+        /* @__PURE__ */ u2("input", { type: "checkbox", class: "switch", id: "cfgOn", checked: on2, onChange: (e4) => setClientReport(
+          code,
+          /** @type {HTMLInputElement} */
+          e4.target.checked
+        ) }),
+        /* @__PURE__ */ u2("span", { children: [
+          /* @__PURE__ */ u2("b", { children: "This project needs a separate client report" }),
+          /* @__PURE__ */ u2("span", { class: "sub", children: "Turn off if the client only receives the internal report, or nothing at all." })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("p", { class: "sub cfgkeep", id: "cfgKeep", children: "This applies to every future report of this project until you change it. Reports already written are kept as they are, and turning it off deletes nothing." }),
+      on2 ? /* @__PURE__ */ u2("div", { class: "cfgbody", id: "cfgBody", children: [
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgRh", children: "How often" }),
+          /* @__PURE__ */ u2("select", { id: "cfgRh", value: p6.rhythm, onChange: (e4) => setClientRhythm(
+            code,
+            /** @type {HTMLSelectElement} */
+            e4.target.value
+          ), children: rhythms.map((r4) => /* @__PURE__ */ u2("option", { value: r4, selected: r4 === p6.rhythm, children: r4 }, r4)) })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgNm", children: "Client name on the report" }),
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              id: "cfgNm",
+              class: "pkdt",
+              maxLength: CLIENT_NAME_MAX,
+              defaultValue: p6.client || "",
+              onChange: (e4) => setClientName(
+                code,
+                /** @type {HTMLInputElement} */
+                e4.target.value
+              )
+            },
+            p6.client || ""
+          )
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
+          /* @__PURE__ */ u2("label", { for: "cfgRem", children: "Reminder" }),
+          /* @__PURE__ */ u2("label", { class: "cfgck", children: [
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                type: "checkbox",
+                id: "cfgRem",
+                checked: clientReminderOn(code),
+                onChange: (e4) => setClientReminder(
+                  code,
+                  /** @type {HTMLInputElement} */
+                  e4.target.checked
+                )
+              }
+            ),
+            " Remind me on the due day"
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "cfgrow top", children: [
+          /* @__PURE__ */ u2("label", { id: "cfgLogosL", children: "Logos in the report header" }),
+          /* @__PURE__ */ u2("div", { class: "cfglogos", role: "group", "aria-labelledby": "cfgLogosL", children: [
+            tilesOf(code).map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
+            crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "sub cfgnote", role: "status", id: "cfgLogoNote", children: crLogoNote.value }) : null
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects." })
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub cfgoff", id: "cfgOff", children: "This project has no client report." }),
+      /* @__PURE__ */ u2("div", { class: "cfgfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "cfgDone", onClick: onClose, children: "Done" }) })
+    ] });
+  }
+  function showClientReport(code) {
+    let host2 = document.getElementById("crHost");
+    const fresh = !host2;
+    if (!host2) {
+      host2 = document.createElement("div");
+      host2.id = "crHost";
+      document.body.appendChild(host2);
+    }
+    host2.dataset.code = code;
+    bindEsc();
+    const cog = document.getElementById("hubCfg");
+    if (cog) {
+      const r4 = cog.getBoundingClientRect();
+      host2.style.top = `${Math.round(r4.bottom + 6)}px`;
+      host2.style.right = `${Math.max(8, Math.round(innerWidth - r4.right))}px`;
+      host2.style.setProperty("--cr-top", host2.style.top);
+    }
+    R(/* @__PURE__ */ u2(ClientReportPanel, { code, onClose: closeClientReport }), host2);
+    if (fresh) {
+      const first = host2.querySelector("input,select,button");
+      if (first) first.focus();
+    }
+  }
+  function openClientReport(code) {
+    const host2 = document.getElementById("crHost");
+    if (host2 && host2.dataset.code === code) {
+      closeClientReport();
+      return;
+    }
+    hubCfg.value = true;
+    showClientReport(code);
+  }
+  function closeClientReport() {
+    hubCfg.value = false;
+    const host2 = document.getElementById("crHost");
+    if (!host2) return;
+    R(null, host2);
+    host2.remove();
+  }
+  var escBound = false;
+  function bindEsc() {
+    if (escBound) return;
+    escBound = true;
+    document.addEventListener("keydown", (e4) => {
+      if (e4.key === "Escape" && document.getElementById("crHost")) closeClientReport();
+    });
+  }
+
+  // components/project/ProjectSettings.jsx
+  var Find = X({ q: "", all: false });
+  var psN = 0;
+  var psNorm = (t47) => String(t47 || "").toLowerCase().replace(/\s+/g, " ");
+  function PsRow({ label, help, kw: kw2, children, id: id2 }) {
+    const f5 = x2(Find), [rid] = d2(() => id2 || "psr" + ++psN);
+    const hit2 = !f5.q || f5.all || psNorm(`${label} ${help || ""} ${kw2 || ""}`).includes(f5.q);
+    return /* @__PURE__ */ u2("div", { class: "srow", "data-psrow": true, hidden: !hit2, children: [
+      /* @__PURE__ */ u2("div", { children: [
+        /* @__PURE__ */ u2("span", { id: rid, children: label }),
+        help ? /* @__PURE__ */ u2("small", { id: rid + "h", children: help }) : null
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "setctl", role: "group", "aria-labelledby": rid, children })
+    ] });
+  }
+  function Item({ text, children }) {
+    const f5 = x2(Find);
+    return /* @__PURE__ */ u2("tr", { "data-psrow": true, hidden: !!f5.q && !f5.all && !psNorm(text).includes(f5.q), children });
+  }
+  function AskButton({ label, ask: ask2, yes, onYes, id: id2, danger }) {
+    const [on2, setOn] = d2(false);
+    if (!on2) return /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2, onClick: () => setOn(true), children: label });
+    return /* @__PURE__ */ u2("span", { class: "psask", role: "group", "aria-label": ask2, children: [
+      /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: ask2 }),
+      /* @__PURE__ */ u2("button", { type: "button", class: `btn${danger ? " danger" : ""}`, id: id2 + "Yes", onClick: () => {
+        setOn(false);
+        onYes();
+      }, children: yes }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: id2 + "No", onClick: () => setOn(false), children: "Keep it" })
+    ] });
+  }
+  var PsProblem = ({ msg, id: id2 }) => msg ? /* @__PURE__ */ u2("span", { class: "psmsg", role: "alert", id: id2, children: msg }) : null;
+  function General({ code }) {
+    const p6 = psProject(code), [err, setErr] = d2(""), folder = (D.folders || {})[code];
+    const state = projectState(code);
+    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "general", children: [
+      /* @__PURE__ */ u2("h2", { children: "Project" }),
+      /* @__PURE__ */ u2(PsRow, { label: "Name", help: "Shown everywhere in full.", kw: "rename project", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "text",
+            id: "psName",
+            size: 28,
+            "aria-label": "Name",
+            "aria-describedby": "psNameErr",
+            defaultValue: p6.name,
+            onInput: () => err && setErr(""),
+            onChange: async (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.target
+              ), bad = nameProblem(el2.value);
+              if (bad) {
+                setErr(bad);
+                return;
+              }
+              setErr("");
+              if (!await renameProject(code, el2.value)) el2.value = p6.name;
+            }
+          },
+          p6.name
+        ),
+        /* @__PURE__ */ u2(PsProblem, { msg: err, id: "psNameErr" })
+      ] }),
+      /* @__PURE__ */ u2(PsRow, { label: "Client", help: "Printed on the client report.", kw: "client name partner", children: /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          id: "psClient",
+          size: 28,
+          "aria-label": "Client",
+          maxLength: CLIENT_NAME_MAX,
+          defaultValue: p6.client || "",
+          onChange: async (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.target
+            );
+            if (!await setClientName(code, el2.value)) el2.value = p6.client || "";
+          }
+        },
+        p6.client || ""
+      ) }),
+      /* @__PURE__ */ u2(PsRow, { label: "Code", help: "Three to seven capital letters or digits; the prefix of every item ID. Changing it renames every item, so ask creaite does it and asks first.", kw: "recode rename", children: [
+        /* @__PURE__ */ u2("span", { class: "pschip", id: "psCode", children: code }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "mini", id: "psRecode", onClick: () => {
+          openChat();
+          const box = (
+            /** @type {HTMLTextAreaElement|null} */
+            $("#chIn")
+          );
+          if (box) {
+            box.value = `change the code ${code} to `;
+            box.focus();
+            box.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }, children: "Change code…" })
+      ] }),
+      /* @__PURE__ */ u2(PsRow, { label: "Status", help: "Active projects are swept and reported. A closed project is kept, with everything in it.", kw: "active closed on hold", children: /* @__PURE__ */ u2(
+        "select",
+        {
+          id: "psStatus",
+          "aria-label": "Status",
+          value: state === "closed" ? "closed" : "active",
+          disabled: state === "archived" || !viaServer(),
+          onChange: async (e4) => {
+            const el2 = (
+              /** @type {HTMLSelectElement} */
+              e4.target
+            ), to2 = el2.value;
+            if (!await setProjectActive(code, to2 === "active")) el2.value = state === "closed" ? "closed" : "active";
+          },
+          children: [
+            /* @__PURE__ */ u2("option", { value: "active", selected: state !== "closed", children: "Active" }),
+            /* @__PURE__ */ u2("option", { value: "closed", selected: state === "closed", children: "Closed" })
+          ]
+        }
+      ) }),
+      /* @__PURE__ */ u2(PsRow, { label: "Folder", help: "Where its minutes, transcripts and reports live.", kw: "files location", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", id: "psFolder", children: folder ? `projects/${folder}` : "No folder yet" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "mini", id: "psOpenFolder", disabled: !folder, onClick: () => openPath(`projects/${folder}`), children: "Open folder" })
+      ] })
+    ] });
+  }
+  function PartnerRow({ code, name, i: i5 }) {
+    const [edit, setEdit] = d2(false), [err, setErr] = d2("");
+    crTick.value;
+    const slug = (partnersOf(code).find((x5) => x5.name === name) || {}).slug, kind = `partner:${slug}`, logo = !!slug && !!crLogoPaths.value[kind];
+    const people = projectPeople(code).filter((x5) => x5.org && psNorm(x5.org) === psNorm(name)).length;
+    const save2 = async (v5) => {
+      const bad = await renamePartner(code, i5, v5);
+      setErr(bad);
+      if (!bad) setEdit(false);
+    };
+    return /* @__PURE__ */ u2(Item, { text: `${name} partner ${people}`, children: [
+      /* @__PURE__ */ u2("td", { children: edit ? /* @__PURE__ */ u2("span", { children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "text",
+            class: "psedit",
+            "data-pspartner-edit": true,
+            "aria-label": `Rename ${name}`,
+            defaultValue: name,
+            maxLength: PARTNER_NAME_MAX,
+            ref: (el2) => el2 && el2.focus(),
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                save2(
+                  /** @type {HTMLInputElement} */
+                  e4.target.value
+                );
+              } else if (e4.key === "Escape") {
+                setEdit(false);
+                setErr("");
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2(PsProblem, { msg: err, id: `psPartnerErr${i5}` })
+      ] }) : /* @__PURE__ */ u2("span", { "data-pspartner": true, children: name }) }),
+      /* @__PURE__ */ u2("td", { children: people }),
+      /* @__PURE__ */ u2("td", { class: "mgract", children: [
+        logo ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "mini",
+              "data-pspartner-logo": kind,
+              "aria-label": `Remove the logo of ${name}`,
+              title: "A logo is kept under the partner's name when it is renamed or removed; remove it here first if it is not wanted",
+              onClick: () => removeClientLogo(code, kind),
+              children: "Remove logo"
+            }
+          ),
+          " "
+        ] }) : null,
+        edit ? /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-save": true, onClick: (e4) => save2(
+            /** @type {HTMLInputElement} */
+            /** @type {HTMLElement} */
+            (e4.target.closest("tr")?.querySelector("input")).value
+          ), children: "Save" }),
+          " ",
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", onClick: () => {
+            setEdit(false);
+            setErr("");
+          }, children: "Cancel" })
+        ] }) : /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-rename": true, "aria-label": `Rename ${name}`, onClick: () => setEdit(true), children: "Rename" }),
+          " ",
+          /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspartner-remove": true, "aria-label": `Remove ${name}`, onClick: () => removePartner(code, i5), children: "Remove" })
+        ] })
+      ] })
+    ] });
+  }
+  function PeoplePartners({ code }) {
+    crTick.value;
+    const ppl = projectPeople(code), list = partners.value.list, [err, setErr] = d2(""), box = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const add = async () => {
+      const el2 = box.current;
+      if (!el2) return;
+      const bad = await addPartner(code, el2.value);
+      setErr(bad);
+      if (!bad) {
+        el2.value = "";
+        el2.focus();
+      }
+    };
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "people", children: [
+        /* @__PURE__ */ u2("h2", { children: "People on this project" }),
+        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "pstbl", id: "psPeople", "aria-label": "People on this project", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Name" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Role" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Organisation" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Actions" }) })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { children: ppl.length ? ppl.map((x5) => /* @__PURE__ */ u2(Item, { text: `${x5.name} ${x5.role} ${x5.org} people`, children: [
+            /* @__PURE__ */ u2("td", { children: x5.name }),
+            /* @__PURE__ */ u2("td", { children: x5.role || /* @__PURE__ */ u2("span", { class: "sub", children: "Not set" }) }),
+            /* @__PURE__ */ u2("td", { children: x5.org || /* @__PURE__ */ u2("span", { class: "sub", children: "Not set" }) }),
+            /* @__PURE__ */ u2("td", { class: "mgract", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-pspeople-edit": true, "aria-label": `Edit ${x5.name} in the people register`, onClick: () => go2("settings", "people"), children: "Edit" }) })
+          ] }, x5.name)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { class: "sub", colSpan: 4, children: "Nobody owns an item of this project yet." }) }) })
+        ] }) }),
+        /* @__PURE__ */ u2("p", { class: "psfoot", children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "psAddPerson", onClick: () => go2("settings", "people"), children: "Add a person" }),
+          /* @__PURE__ */ u2("span", { class: "psnote", children: " People come from the people register: who owns an item or made a decision here. Adding or editing one opens the register in Settings." })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "people", children: [
+        /* @__PURE__ */ u2("h2", { children: "Partner organisations" }),
+        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "pstbl", id: "psPartners", "aria-label": "Partner organisations", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Organisation" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "People" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Actions" }) })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { children: list.length ? list.map((n4, i5) => /* @__PURE__ */ u2(PartnerRow, { code, name: n4, i: i5 }, n4)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { class: "sub", colSpan: 3, children: "No partner organisations." }) }) })
+        ] }) }),
+        /* @__PURE__ */ u2("div", { class: "psfoot psadd", children: [
+          /* @__PURE__ */ u2("label", { for: "psPartnerIn", class: "vh", children: "Partner organisation" }),
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "text",
+              id: "psPartnerIn",
+              placeholder: "Partner organisation",
+              maxLength: PARTNER_NAME_MAX,
+              ref: box,
+              "aria-describedby": "psPartnerErr",
+              onInput: () => err && setErr(""),
+              onKeyDown: (e4) => {
+                if (e4.key === "Enter") {
+                  e4.preventDefault();
+                  add();
+                }
+              }
+            }
+          ),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "psAddPartner", onClick: add, children: "Add a partner" }),
+          /* @__PURE__ */ u2(PsProblem, { msg: err, id: "psPartnerErr" })
+        ] }),
+        /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "Saved as one line, “Partners:”, in the project's memory file. Names use letters, digits, spaces and . , & ' - ( ) only, up to 60 characters; one organisation to a name, capitals don't matter." })
+      ] })
+    ] });
+  }
+  function openReportSettings(code) {
+    openSpace(code);
+    let n4 = 0;
+    const t47 = setInterval(() => {
+      n4++;
+      if (document.getElementById("hubCfg")) {
+        clearInterval(t47);
+        openClientReport(code);
+      } else if (n4 > 40) clearInterval(t47);
+    }, 100);
+  }
+  function Logos({ code }) {
+    crTick.value;
+    psTick.value;
+    partners.value;
+    const ticked = clientLogosOn(code), orphans = crLogoOrphans.value, tiles = tilesOf(code);
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "logos", children: [
+        /* @__PURE__ */ u2("h2", { children: "Logos in the reports' header" }),
+        tiles.map((t47) => {
+          const has = !!crLogoPaths.value[t47.kind];
+          return /* @__PURE__ */ u2(PsRow, { id: `psLogo-${t47.kind.replace(":", "-")}`, label: t47.name, help: t47.line, kw: "logo picture header firm client partner", children: /* @__PURE__ */ u2("span", { class: "pslogo", "data-kind": t47.kind, "data-state": has ? "set" : "empty", children: [
+            /* @__PURE__ */ u2(LogoMark, { kind: t47.kind, mark: t47.mark }),
+            has ? null : /* @__PURE__ */ u2("span", { class: "sub", children: "Not added yet" }),
+            /* @__PURE__ */ u2(LogoActions, { code, t: t47, ticked: ticked.includes(t47.kind) })
+          ] }) }, t47.kind);
+        }),
+        crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "psnote psfoot", role: "status", id: "psLogoNote", children: crLogoNote.value }) : null,
+        /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "Partners come from People and partners: add or remove a partner organisation there and its logo row appears or goes here. These are the same logos as in the reporting hub's client report settings. A transparent PNG or SVG sits better than a JPEG; the picture you choose is kept as it is and a trimmed copy is drawn. The tick puts the logo in the header of this project's reports." })
+      ] }),
+      orphans.length ? /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "logos", children: [
+        /* @__PURE__ */ u2("h2", { children: "Logos not used" }),
+        orphans.map((o5) => /* @__PURE__ */ u2(PsRow, { id: `psOrphan-${o5.slug}`, label: o5.slug, help: "A logo kept after its partner was renamed or removed from the list. It is not drawn in any report.", kw: "logos not used unused orphan partner", children: /* @__PURE__ */ u2("span", { class: "pslogo", "data-orphan": o5.kind, children: [
+          /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", children: crLogoData.value[o5.path] ? /* @__PURE__ */ u2("img", { alt: "", src: crLogoData.value[o5.path] }) : "P" }),
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "btn sm",
+              "data-logo-orphan-remove": o5.kind,
+              "aria-label": `Remove the unused logo ${o5.slug}`,
+              onClick: () => removeClientLogo(code, o5.kind),
+              children: "Remove"
+            }
+          )
+        ] }) }, o5.kind))
+      ] }) : null
+    ] });
+  }
+  var REP_RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
+  function Reporting({ code }) {
+    crTick.value;
+    const p6 = psProject(code), on2 = clientReportOn(code), rhythms = REP_RHYTHMS.includes(p6.rhythm) ? REP_RHYTHMS : [...REP_RHYTHMS, p6.rhythm];
+    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "rep", children: [
+      /* @__PURE__ */ u2("h2", { children: "Reporting" }),
+      /* @__PURE__ */ u2(PsRow, { label: "Client report", help: "Turn off if the client only receives the internal report, or nothing at all. This holds for every future report of this project until you change it; reports already written are kept and turning it off deletes nothing.", kw: "client report needs a separate on off", children: /* @__PURE__ */ u2("label", { class: "settick", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            id: "psRepOn",
+            checked: on2,
+            "aria-label": "This project needs a separate client report",
+            onChange: (e4) => setClientReport(
+              code,
+              /** @type {HTMLInputElement} */
+              e4.target.checked
+            )
+          }
+        ),
+        " Needs a separate client report"
+      ] }) }),
+      on2 ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(PsRow, { label: "How often", help: "How often the client report is due.", kw: "weekly fortnightly monthly rhythm", children: /* @__PURE__ */ u2("select", { id: "psRepRh", "aria-label": "How often", value: p6.rhythm, onChange: (e4) => setClientRhythm(
+          code,
+          /** @type {HTMLSelectElement} */
+          e4.target.value
+        ), children: rhythms.map((r4) => /* @__PURE__ */ u2("option", { value: r4, selected: r4 === p6.rhythm, children: r4 }, r4)) }) }),
+        /* @__PURE__ */ u2(PsRow, { label: "Client name on the report", help: "Printed on the client report.", kw: "client name", children: /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "text",
+            id: "psRepNm",
+            size: 28,
+            "aria-label": "Client name on the report",
+            maxLength: CLIENT_NAME_MAX,
+            defaultValue: p6.client || "",
+            onChange: async (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.target
+              );
+              if (!await setClientName(code, el2.value)) el2.value = p6.client || "";
+            }
+          },
+          p6.client || ""
+        ) }),
+        /* @__PURE__ */ u2(PsRow, { label: "Reminder", help: "A reminder on the day the client report is due.", kw: "remind due day", children: /* @__PURE__ */ u2("label", { class: "settick", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "checkbox",
+              id: "psRepRem",
+              checked: clientReminderOn(code),
+              "aria-label": "Remind me on the due day",
+              onChange: (e4) => setClientReminder(
+                code,
+                /** @type {HTMLInputElement} */
+                e4.target.checked
+              )
+            }
+          ),
+          " Remind me on the due day"
+        ] }) })
+      ] }) : /* @__PURE__ */ u2(PsRow, { label: "This project has no client report", help: "Turn it on above to set how often, the client's name and the reminder.", children: /* @__PURE__ */ u2("span", { class: "sub", id: "psRepOff", children: "Off" }) }),
+      /* @__PURE__ */ u2(PsRow, { label: "Open reporting", help: "The reporting hub for this project.", kw: "hub weekly", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psRepHub", onClick: () => openSpace(code), children: "Open reporting" }) }),
+      /* @__PURE__ */ u2("p", { class: "psnote psfoot", children: "The same setting as the cog in the reporting hub: change it in either place and the other follows." })
+    ] });
+  }
+  function Milestones({ code }) {
+    const list = mvAll(code).slice().sort((a5, b5) => a5.id.localeCompare(b5.id));
+    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "miles", children: [
+      /* @__PURE__ */ u2("h2", { children: "Milestones" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "pstbl", id: "psMiles", "aria-label": "Milestones", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "ID" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Milestone" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Agreed" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Expected" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "State" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: /* @__PURE__ */ u2("span", { class: "vh", children: "Actions" }) })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: list.length ? list.map((m5) => /* @__PURE__ */ u2(Item, { text: `${m5.id} ${m5.n} ${MVWORD[m5.state] || m5.state}`, children: [
+          /* @__PURE__ */ u2("td", { children: m5.id }),
+          /* @__PURE__ */ u2("td", { children: m5.n }),
+          /* @__PURE__ */ u2("td", { children: m5.agr ? fd(m5.agr) : /* @__PURE__ */ u2("span", { class: "sub", children: "No date" }) }),
+          /* @__PURE__ */ u2("td", { children: m5.fc ? fd(m5.fc) : /* @__PURE__ */ u2("span", { class: "sub", children: "No date" }) }),
+          /* @__PURE__ */ u2("td", { children: MVWORD[m5.state] || m5.state }),
+          /* @__PURE__ */ u2("td", { class: "mgract", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-psms-edit": m5.id, "aria-label": `Edit ${m5.n}`, onClick: () => openMilestone(m5.id), children: "Edit" }) })
+        ] }, m5.id)) : /* @__PURE__ */ u2("tr", { children: /* @__PURE__ */ u2("td", { class: "sub", colSpan: 6, children: "No milestones yet." }) }) })
+      ] }) }),
+      /* @__PURE__ */ u2("p", { class: "psfoot", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "psAddMs", onClick: () => openNewMilestone(code), children: "Add a milestone" }),
+        " ",
+        /* @__PURE__ */ u2("a", { href: "#", class: "srclink", id: "psMsPage", onClick: (e4) => {
+          e4.preventDefault();
+          go2("milestones", code);
+        }, children: "Open the milestones page" })
+      ] })
+    ] });
+  }
+  function Archive({ code }) {
+    const state = projectState(code), name = pName(code);
+    return /* @__PURE__ */ u2("div", { class: "card", "data-pscard": true, "data-cat": "arch", children: [
+      /* @__PURE__ */ u2("h2", { children: "Archive" }),
+      /* @__PURE__ */ u2(PsRow, { label: "Archive this project", help: "Moves its folder to the archive and keeps everything; it can be restored. It goes on the approval card in ask creaite first.", kw: "archive restore", children: /* @__PURE__ */ u2(AskButton, { id: "psArchive", label: "Archive…", ask: `Archive ${name}?`, yes: "Archive", onYes: () => projArchive(code, "archive", false) }) }),
+      state === "closed" ? /* @__PURE__ */ u2(PsRow, { label: "Reopen this project", help: "Makes it active again: it is swept and reported again.", kw: "active", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "psReopen", onClick: () => setProjectActive(code, true), children: "Reopen" }) }) : /* @__PURE__ */ u2(PsRow, { label: "Close this project", help: "Marks it closed in the tracker; nothing is deleted.", kw: "close closed", children: /* @__PURE__ */ u2(AskButton, { id: "psClose", label: "Close…", ask: `Close ${name}?`, yes: "Close it", danger: true, onYes: () => setProjectActive(code, false) }) })
+    ] });
+  }
+  var BODY = { general: General, people: PeoplePartners, logos: Logos, miles: Milestones, rep: Reporting, arch: Archive };
+  function ProjectSettings() {
+    psTick.value;
+    partners.value;
+    const code = psCode.value, p6 = psProject(code), root2 = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const q5 = psNorm(psQ.value).trim(), cat = psCat.value;
+    _2(() => {
+      const apply2 = () => {
+        const el2 = root2.current;
+        if (!el2) return;
+        el2.querySelectorAll("[data-pscard]").forEach((c5) => {
+          c5.hidden = !!q5 && !c5.querySelector("[data-psrow]:not([hidden])");
+        });
+        const any = [...el2.querySelectorAll("[data-pscard]")].some((c5) => !/** @type {HTMLElement} */
+        c5.hidden);
+        const none = el2.querySelector("#psNone");
+        if (none) none.hidden = !q5 || any;
+      };
+      apply2();
+      const t47 = setTimeout(apply2, 0);
+      return () => clearTimeout(t47);
+    });
+    if (!p6) return /* @__PURE__ */ u2("div", { class: "wrapmax", children: [
+      /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
+        /* @__PURE__ */ u2("a", { href: "#", onClick: (e4) => {
+          e4.preventDefault();
+          go2("projects");
+        }, children: "Projects" }),
+        /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: "›" }),
+        /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Settings" })
+      ] }),
+      /* @__PURE__ */ u2("h1", { id: "psTitle", children: "Project settings" }),
+      /* @__PURE__ */ u2("p", { class: "sub", id: "psMissing", children: "That project isn't open here. It may be closed or archived." })
+    ] });
+    const cats = PS_CATS.map(([id2, label]) => ({ id: id2, label, data: { pscat: id2 } }));
+    const shown2 = q5 ? PS_CATS : PS_CATS.filter((c5) => c5[0] === cat);
+    return /* @__PURE__ */ u2("div", { class: "wrapmax", ref: root2, children: [
+      /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
+        /* @__PURE__ */ u2("a", { href: "#", id: "psBackP", onClick: (e4) => {
+          e4.preventDefault();
+          go2("projects");
+        }, children: "Projects" }),
+        /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: "›" }),
+        /* @__PURE__ */ u2("a", { href: "#", id: "psBack", onClick: (e4) => {
+          e4.preventDefault();
+          go2("cockpit", code);
+        }, children: p6.name }),
+        /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: "›" }),
+        /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Settings" })
+      ] }),
+      /* @__PURE__ */ u2("h1", { id: "psTitle", children: "Project settings" }),
+      /* @__PURE__ */ u2("p", { class: "sub", style: { margin: "4px 0 14px" }, id: "psSub", children: [
+        p6.name,
+        " · ",
+        code,
+        ". Each change saves on its own, with Undo."
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "setlayout", children: [
+        /* @__PURE__ */ u2("div", { class: "setside", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "search",
+              id: "psq",
+              class: "setq",
+              placeholder: "Search these settings",
+              "aria-label": "Search these settings",
+              autocomplete: "off",
+              value: psQ.value,
+              onInput: (e4) => {
+                psQ.value = /** @type {HTMLInputElement} */
+                e4.target.value;
+              }
+            }
+          ),
+          /* @__PURE__ */ u2("div", { class: "tabhost", children: /* @__PURE__ */ u2(
+            Tabs,
+            {
+              id: "pscats",
+              className: "setcats",
+              label: "Project settings categories",
+              vertical: true,
+              controls: "psBody",
+              items: cats,
+              selected: q5 ? "" : cat,
+              onSelect: (id2) => {
+                psQ.value = "";
+                psCat.value = id2;
+                navWrite(false);
+              }
+            }
+          ) })
+        ] }),
+        /* @__PURE__ */ u2("div", { id: "psBody", role: "tabpanel", children: [
+          /* @__PURE__ */ u2("div", { class: "setstack", children: shown2.map(([id2, label]) => {
+            const Body = BODY[
+              /** @type {keyof typeof BODY} */
+              id2
+            ];
+            return /* @__PURE__ */ u2(Find.Provider, { value: { q: q5, all: !!q5 && psNorm(label).includes(q5) }, children: /* @__PURE__ */ u2(Body, { code }) }, id2);
+          }) }),
+          /* @__PURE__ */ u2("p", { class: "sub setnone", id: "psNone", role: "status", hidden: true, children: [
+            "No settings match “",
+            psQ.value.trim(),
+            "”."
+          ] })
+        ] })
+      ] })
+    ] });
+  }
+  var psMounted = false;
+  function renderProjectSettings(code) {
+    const el2 = $("#v-psettings");
+    if (!el2) return;
+    closeClientReport();
+    psCode.value = code;
+    const read = partners.peek();
+    if (read.code !== code || !read.loaded) loadPartners(code);
+    readClientLogos(code);
+    if (!psMounted) {
+      R(/* @__PURE__ */ u2(ProjectSettings, {}), el2);
+      psMounted = true;
+    } else psTick.value++;
   }
 
   // components/report/redraft.js
@@ -70952,6 +72381,10 @@ ${d5.text}`);
     }
     if (shared.VIEW === "prep") st2.arg = prepViewKey.value;
     if (shared.VIEW === "reports") st2.arg = repWeek.value || null;
+    if (shared.VIEW === "psettings") {
+      st2.arg = psCode.value;
+      st2.cat = psCat.value;
+    }
     if (shared.VIEW === "reporting") {
       st2.arg = spaceCode.value;
       st2.rw = spaceWeek.value;
@@ -70968,6 +72401,7 @@ ${d5.text}`);
   }
   function hashOf(st2) {
     if (st2 && st2.v === "notes") return `#notes=${st2.arg || ""}${st2.note ? `&n=${encodeURIComponent(st2.note)}` : ""}${st2.note && st2.find ? "&find=1" : ""}`;
+    if (st2 && st2.v === "psettings") return `#project-settings=${encodeURIComponent(st2.arg || "")}${st2.cat && st2.cat !== "general" ? `&c=${st2.cat}` : ""}`;
     if (st2 && st2.v === "reporting") return reportingHref(st2.arg, st2.rw, st2.rv);
     if (st2 && st2.v === "reports") return "#reports" + (st2.arg ? `&w=${st2.arg}` : "");
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
@@ -71000,6 +72434,19 @@ ${d5.text}`);
         if (st3) return st3;
         snack("That meeting isn't in creaite's records any more");
         return { v: "today", arg: null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+      }
+    }
+    {
+      const mm2 = /^#?project-settings=([^&]+)(?:&c=([a-z]+))?$/.exec(String(h5 || ""));
+      if (mm2) {
+        let code = "";
+        try {
+          code = decodeURIComponent(mm2[1]);
+        } catch (e4) {
+          return null;
+        }
+        if (!P4.some((p6) => p6.code === code)) return null;
+        return { v: "psettings", arg: code, cat: mm2[2] && PS_CATS.some((c5) => c5[0] === mm2[2]) ? mm2[2] : "general", wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
       }
     }
     {
@@ -71201,6 +72648,10 @@ ${d5.text}`);
       if (st2.sg) WSUB[shared.WT + "|" + (st2.lay || "list")] = st2.sg;
     }
     if (st2.v === "reports") repWeek.value = st2.arg || "";
+    if (st2.v === "psettings") {
+      psCode.value = st2.arg || "";
+      psCat.value = st2.cat || "general";
+    }
     if (st2.v === "reporting") {
       spaceWeek.value = st2.rw || "";
       hubView.value = st2.rv || "internal";
@@ -71235,6 +72686,7 @@ ${d5.text}`);
       v5 = "reporting";
       arg = a5.code;
     }
+    if (v5 === "psettings" && (!arg || !P4.some((p6) => p6.code === arg))) return false;
     if (v5 === "milestones") {
       if (arg && !P4.some((p6) => p6.code === arg)) return false;
       shared.MSNEXT = arg || null;
@@ -71273,7 +72725,7 @@ ${d5.text}`);
       const id2 = { cockpit: "v-cockpit", mine: "v-work" }[v6] || "v-" + v6;
       $("#" + id2).hidden = false;
       $("#" + id2).scrollTop = 0;
-      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects", minutes: "review", weekly: "projects", clientreport: "projects", reporting: "projects" }[v6] || v6;
+      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects", minutes: "review", weekly: "projects", clientreport: "projects", reporting: "projects", psettings: "projects" }[v6] || v6;
       setRailView(railKey);
       if (v6 === "mine") {
         shared.WT = "actions";
@@ -71286,7 +72738,7 @@ ${d5.text}`);
       if (v6 === "person") shared.PERSON = arg2;
       if (v6 === "notes") shared.NOTECODE = arg2;
       if (v6 === "settings" && arg2) STAB = arg2;
-      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2), reports: () => renderReports(arg2), reporting: () => renderReporting(arg2, true), minutes: () => renderMinutes(arg2) }[v6] || (() => {
+      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2), reports: () => renderReports(arg2), reporting: () => renderReporting(arg2, true), psettings: () => renderProjectSettings(arg2), minutes: () => renderMinutes(arg2) }[v6] || (() => {
       }))();
       if (!opt2.restore) navWrite(true);
       return true;
@@ -71476,7 +72928,7 @@ ${d5.text}`);
     }
     if (shared.VIEW === "minutes") TABNAME.minutes = "Minutes";
     const n4 = REV.filter((r4) => !r4.done).length, vips = VIPS().length;
-    const where2 = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : shared.VIEW === "reporting" && spaceCode.value ? `${pName(spaceCode.value)} reporting` : TABNAME[shared.VIEW] || "";
+    const where2 = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : shared.VIEW === "reporting" && spaceCode.value ? `${pName(spaceCode.value)} reporting` : shared.VIEW === "psettings" && psCode.value ? `${pName(psCode.value)} settings` : TABNAME[shared.VIEW] || "";
     const t47 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where2 ? ` · ${where2}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
     if (document.title !== t47) document.title = t47;
     if (shared.VIEW === "milestones" && shared.MSCODE) {
@@ -71738,6 +73190,40 @@ ${d5.text}`);
     ] });
   }
 
+  // components/report/MatchHeldDialog.jsx
+  function MatchHeldDialog() {
+    const h5 = crHeld.value;
+    const close = () => {
+      crHeld.value = null;
+    };
+    return /* @__PURE__ */ u2(Dialog, { open: !!h5, onClose: close, labelledBy: "crHeldH", id: "crHeldDlg", class: "crdlg", focus: "[data-crheldok]", children: [
+      /* @__PURE__ */ u2("h2", { id: "crHeldH", children: "Match internal held some sections back" }),
+      h5 ? /* @__PURE__ */ u2("div", { "data-crheld": true, children: [
+        h5.message ? /* @__PURE__ */ u2("p", { class: "crbad", role: "alert", "data-crheldmsg": true, children: h5.message }) : null,
+        /* @__PURE__ */ u2("ul", { class: "crleft", children: h5.held.map((x5) => /* @__PURE__ */ u2("li", { "data-crheldsec": x5.id, children: [
+          /* @__PURE__ */ u2("b", { children: [
+            "Not matched: ",
+            x5.heading
+          ] }),
+          x5.findings.length ? /* @__PURE__ */ u2(S2, { children: [
+            " has internal wording: ",
+            x5.findings.join("; ")
+          ] }) : null
+        ] }, x5.id)) }),
+        h5.skipped && h5.skipped.length ? /* @__PURE__ */ u2("ul", { class: "crleft", children: h5.skipped.map((x5) => /* @__PURE__ */ u2("li", { "data-crskipsec": x5.id, children: [
+          x5.heading,
+          ": internal only, add it to the client report yourself"
+        ] }, x5.id)) }) : null,
+        h5.copied.length ? /* @__PURE__ */ u2("p", { class: "sub", "data-crheldcopied": true, children: [
+          "Matched: ",
+          h5.copied.join(", "),
+          "."
+        ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Nothing was copied; the client report is as it was." })
+      ] }) : null,
+      /* @__PURE__ */ u2("div", { class: "crdacts", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-crheldok": true, onClick: close, children: "OK" }) })
+    ] });
+  }
+
   // components/report/hub/hubActions.js
   function clashAnswered() {
     return new Promise((resolve) => {
@@ -71818,6 +73304,17 @@ ${d5.text}`);
     const d5 = h5 && h5.data || {};
     for (const t47 of d5.trend || []) if (t47 && t47.date) out[t47.date] = wkTone(t47.flag);
     if (doc && h5) out[doc.date] = wkTone(d5.flag);
+    return out;
+  }
+  function toneByTrail(p6) {
+    const out = {}, M4 = (
+      /** @type {Record<string, string>} */
+      { ok: "g", warn: "a", bad: "r" }
+    );
+    const t47 = p6 && p6.trail || [], e4 = p6 && p6.trailend || [];
+    t47.forEach((x5, i5) => {
+      if (e4[i5] && M4[x5]) out[e4[i5]] = M4[x5];
+    });
     return out;
   }
   function menuWeeks(weeks, shown2) {
@@ -71947,222 +73444,6 @@ ${d5.text}`);
         ] })
       ] }) : null
     ] });
-  }
-
-  // components/report/hub/ClientReportPanel.jsx
-  var TILES = (
-    /** @type {{kind: TileKind, mark: string, name: string, line: string}[]} */
-    [
-      { kind: "firm", mark: "F", name: "The firm", line: "Used by every project's reports, so changing or removing it changes it for all projects. Always shown." },
-      { kind: "client", mark: "C", name: "The client", line: "Shown on this project's reports" },
-      { kind: "partner", mark: "P", name: "A partner", line: "Only if one is involved" }
-    ]
-  );
-  var RHYTHMS = ["Weekly", "Fortnightly", "Monthly"];
-  function LogoTile({ code, t: t47, ticked }) {
-    const file = A2(
-      /** @type {HTMLInputElement|null} */
-      null
-    );
-    const path = crLogoPaths.value[t47.kind], pic = path ? crLogoData.value[path] : "";
-    const firm = t47.kind === "firm";
-    const [ask2, setAsk] = d2(false);
-    const picked = async (e4) => {
-      const input = (
-        /** @type {HTMLInputElement} */
-        e4.target
-      ), f5 = input.files && input.files[0];
-      if (f5) await uploadClientLogo(code, t47.kind, f5);
-      input.value = "";
-    };
-    const toggle = () => {
-      const now = clientLogosOn(code), next = now.includes(t47.kind) ? now.filter((k5) => k5 !== t47.kind) : [...now, t47.kind];
-      setClientLogos(code, next);
-    };
-    return /* @__PURE__ */ u2("div", { class: "cfglogo", "data-kind": t47.kind, children: [
-      /* @__PURE__ */ u2("span", { class: "mark", "aria-hidden": "true", children: pic ? /* @__PURE__ */ u2("img", { alt: "", src: pic }) : t47.mark }),
-      /* @__PURE__ */ u2("span", { class: "cfgname", children: [
-        t47.name,
-        /* @__PURE__ */ u2("span", { class: "sub", children: t47.line })
-      ] }),
-      /* @__PURE__ */ u2("span", { class: "cfgact", children: [
-        /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "btn sm",
-            "data-logo-add": t47.kind,
-            onClick: () => file.current && file.current.click(),
-            "aria-label": `${pic ? "Change" : "Add"} the ${firm ? "firm's" : t47.kind === "client" ? "client's" : "partner's"} logo`,
-            children: pic ? "Change" : "Add logo"
-          }
-        ),
-        pic && !ask2 ? /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "btn sm",
-            "data-logo-remove": t47.kind,
-            onClick: () => setAsk(true),
-            "aria-label": `Remove the ${t47.kind} logo`,
-            children: "Remove"
-          }
-        ) : null,
-        pic && ask2 ? /* @__PURE__ */ u2("span", { class: "cfgask", role: "group", "aria-label": `Remove the ${t47.kind} logo?`, children: [
-          /* @__PURE__ */ u2("span", { class: "sub", role: "alert", children: firm ? "Remove the firm's logo for all projects?" : `Remove the ${t47.kind} logo?` }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-yes": t47.kind, onClick: () => {
-            setAsk(false);
-            removeClientLogo(code, t47.kind);
-          }, children: "Remove" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-logo-remove-no": t47.kind, onClick: () => setAsk(false), children: "Keep" })
-        ] }) : null,
-        /* @__PURE__ */ u2("input", { type: "file", hidden: true, ref: file, accept: "image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", "data-logo-file": t47.kind, onChange: picked }),
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            type: "checkbox",
-            checked: firm || ticked,
-            disabled: firm,
-            "data-logo-tick": t47.kind,
-            "aria-label": firm ? "The firm's logo is always shown" : `Show the ${t47.kind}'s logo in the header`,
-            onChange: firm ? void 0 : toggle
-          }
-        )
-      ] })
-    ] });
-  }
-  function ClientReportPanel({ code, onClose }) {
-    crTick.value;
-    const p6 = (
-      /** @type {any} */
-      P4.find((x5) => x5.code === code)
-    );
-    h2(() => {
-      readClientLogos(code);
-    }, [code]);
-    if (!p6) return null;
-    const on2 = clientReportOn(code), ticked = clientLogosOn(code), rhythms = RHYTHMS.includes(p6.rhythm) ? RHYTHMS : [...RHYTHMS, p6.rhythm];
-    return /* @__PURE__ */ u2("div", { class: "hubcfg", id: "crPanel", "data-slot": "ClientReportPanel", role: "dialog", "aria-label": "Client report settings", "data-code": code, "data-on": on2 ? "on" : "off", children: [
-      /* @__PURE__ */ u2("h3", { children: [
-        "Client report for ",
-        p6.name
-      ] }),
-      /* @__PURE__ */ u2("label", { class: "cfgsw", children: [
-        /* @__PURE__ */ u2("input", { type: "checkbox", class: "switch", id: "cfgOn", checked: on2, onChange: (e4) => setClientReport(
-          code,
-          /** @type {HTMLInputElement} */
-          e4.target.checked
-        ) }),
-        /* @__PURE__ */ u2("span", { children: [
-          /* @__PURE__ */ u2("b", { children: "This project needs a separate client report" }),
-          /* @__PURE__ */ u2("span", { class: "sub", children: "Turn off if the client only receives the internal report, or nothing at all." })
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("p", { class: "sub cfgkeep", id: "cfgKeep", children: "This applies to every future report of this project until you change it. Reports already written are kept as they are, and turning it off deletes nothing." }),
-      on2 ? /* @__PURE__ */ u2("div", { class: "cfgbody", id: "cfgBody", children: [
-        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
-          /* @__PURE__ */ u2("label", { for: "cfgRh", children: "How often" }),
-          /* @__PURE__ */ u2("select", { id: "cfgRh", value: p6.rhythm, onChange: (e4) => setClientRhythm(
-            code,
-            /** @type {HTMLSelectElement} */
-            e4.target.value
-          ), children: rhythms.map((r4) => /* @__PURE__ */ u2("option", { value: r4, selected: r4 === p6.rhythm, children: r4 }, r4)) })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
-          /* @__PURE__ */ u2("label", { for: "cfgNm", children: "Client name on the report" }),
-          /* @__PURE__ */ u2(
-            "input",
-            {
-              id: "cfgNm",
-              class: "pkdt",
-              maxLength: CLIENT_NAME_MAX,
-              defaultValue: p6.client || "",
-              onChange: (e4) => setClientName(
-                code,
-                /** @type {HTMLInputElement} */
-                e4.target.value
-              )
-            },
-            p6.client || ""
-          )
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "cfgrow", children: [
-          /* @__PURE__ */ u2("label", { for: "cfgRem", children: "Reminder" }),
-          /* @__PURE__ */ u2("label", { class: "cfgck", children: [
-            /* @__PURE__ */ u2(
-              "input",
-              {
-                type: "checkbox",
-                id: "cfgRem",
-                checked: clientReminderOn(code),
-                onChange: (e4) => setClientReminder(
-                  code,
-                  /** @type {HTMLInputElement} */
-                  e4.target.checked
-                )
-              }
-            ),
-            " Remind me on the due day"
-          ] })
-        ] }),
-        /* @__PURE__ */ u2("div", { class: "cfgrow top", children: [
-          /* @__PURE__ */ u2("label", { id: "cfgLogosL", children: "Logos in the report header" }),
-          /* @__PURE__ */ u2("div", { class: "cfglogos", role: "group", "aria-labelledby": "cfgLogosL", children: [
-            TILES.map((t47) => /* @__PURE__ */ u2(LogoTile, { code, t: t47, ticked: ticked.includes(t47.kind) }, t47.kind)),
-            crLogoNote.value ? /* @__PURE__ */ u2("p", { class: "sub cfgnote", role: "status", id: "cfgLogoNote", children: crLogoNote.value }) : null
-          ] })
-        ] }),
-        /* @__PURE__ */ u2("p", { class: "sub", children: "The client report takes its facts from the internal report once that is approved. This is the same setting as Settings › Projects." })
-      ] }) : /* @__PURE__ */ u2("p", { class: "sub cfgoff", id: "cfgOff", children: "This project has no client report." }),
-      /* @__PURE__ */ u2("div", { class: "cfgfoot", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "cfgDone", onClick: onClose, children: "Done" }) })
-    ] });
-  }
-  function showClientReport(code) {
-    let host2 = document.getElementById("crHost");
-    const fresh = !host2;
-    if (!host2) {
-      host2 = document.createElement("div");
-      host2.id = "crHost";
-      document.body.appendChild(host2);
-    }
-    host2.dataset.code = code;
-    bindEsc();
-    const cog = document.getElementById("hubCfg");
-    if (cog) {
-      const r4 = cog.getBoundingClientRect();
-      host2.style.top = `${Math.round(r4.bottom + 6)}px`;
-      host2.style.right = `${Math.max(8, Math.round(innerWidth - r4.right))}px`;
-      host2.style.setProperty("--cr-top", host2.style.top);
-    }
-    R(/* @__PURE__ */ u2(ClientReportPanel, { code, onClose: closeClientReport }), host2);
-    if (fresh) {
-      const first = host2.querySelector("input,select,button");
-      if (first) first.focus();
-    }
-  }
-  function openClientReport(code) {
-    const host2 = document.getElementById("crHost");
-    if (host2 && host2.dataset.code === code) {
-      closeClientReport();
-      return;
-    }
-    hubCfg.value = true;
-    showClientReport(code);
-  }
-  function closeClientReport() {
-    hubCfg.value = false;
-    const host2 = document.getElementById("crHost");
-    if (!host2) return;
-    R(null, host2);
-    host2.remove();
-  }
-  var escBound = false;
-  function bindEsc() {
-    if (escBound) return;
-    escBound = true;
-    document.addEventListener("keydown", (e4) => {
-      if (e4.key === "Escape" && document.getElementById("crHost")) closeClientReport();
-    });
   }
 
   // components/report/hub/HubBar.jsx
@@ -72348,7 +73629,10 @@ ${d5.text}`);
     navWrite(false);
   }
   function weekRows(code, doc, on2) {
-    const tones = toneByWeek(doc), shown2 = doc ? doc.date : "", ci2 = crInfo.value, cd2 = crDoc.value;
+    const tones = { ...toneByTrail(P4.find(
+      /** @param {any} p */
+      (p6) => p6.code === code
+    )), ...toneByWeek(doc) }, shown2 = doc ? doc.date : "", ci2 = crInfo.value, cd2 = crDoc.value;
     return menuWeeks(spaceWeeks(code), shown2).map((w6) => {
       const v5 = weekView(code, w6), isShown = w6 === shown2;
       return {
@@ -72375,8 +73659,7 @@ ${d5.text}`);
       }, children: "Edit again" }) : null,
       !internal && cd2 && cd2.state !== "approved" ? /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn rb-x", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
-          const d5 = crDoc.value, i5 = crInternal.value;
-          if (d5 && i5) setClientDoc(matchClientAll(d5, i5));
+          matchInternal(null);
         }, children: "Match internal for every section" }),
         info && info.ready && info.baseline && !(cd2.based_on && cd2.based_on.version === info.baseline.version) ? /* @__PURE__ */ u2(
           "button",
@@ -72396,18 +73679,34 @@ ${d5.text}`);
       /* @__PURE__ */ u2("span", { class: "hubstat", "data-k": k5, "data-state": st2.key, children: st2.label })
     ] });
   }
-  function HubRow({ view, on: on2, doc }) {
-    const note = hubNote.value;
-    return /* @__PURE__ */ u2("div", { class: `hubrow${view === "side" ? " two" : ""}`, children: [
-      view !== "client" ? /* @__PURE__ */ u2(ReportLabel, { k: "internal", on: on2, doc }) : null,
-      view !== "internal" && on2 ? /* @__PURE__ */ u2(ReportLabel, { k: "client", on: on2, doc }) : null,
-      note && view !== "internal" ? /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
-        note,
-        " ",
-        /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => hubApproveClient(true), children: "Approve anyway" }) : null
-      ] }) : null
-    ] });
+  function PaneRow({ slot, view, on: on2, doc }) {
+    const kinds = slot === "both" ? ["internal", "client"] : slot === "left" ? ["internal"] : slot === "right" ? ["client"] : [view === "client" ? "client" : "internal"];
+    return /* @__PURE__ */ u2("div", { class: `hubrow inpane${kinds.length > 1 ? " two" : ""}`, children: kinds.map((k5) => k5 === "client" && !on2 ? null : /* @__PURE__ */ u2(ReportLabel, { k: (
+      /** @type {"internal"|"client"} */
+      k5
+    ), on: on2, doc }, k5)) });
   }
+  function HubNote() {
+    const note = hubNote.value;
+    if (!note || hubView.value === "internal") return null;
+    return /* @__PURE__ */ u2("div", { class: "hubrow hubnote", children: /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
+      note,
+      " ",
+      /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => hubApproveClient(true), children: "Approve anyway" }) : null
+    ] }) });
+  }
+  var internalChange = (d5) => {
+    editDoc(d5);
+    if (crInternal.value) crInternal.value = d5;
+  };
+  var internalSave = async (req) => {
+    const r4 = await saveWeekly(req);
+    if (r4.ok) setWeeklyDirty(false);
+    return r4;
+  };
+  var internalAi = (doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
+  var internalRedraft = (doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
+  var clientRedraft = (cd2) => redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply);
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
     const iLocked = doc.state === "approved" && !weeklyEditing.value;
@@ -72444,7 +73743,8 @@ ${d5.text}`);
           onView: pickView
         }
       ),
-      belowBar: /* @__PURE__ */ u2(HubRow, { view, on: on2, doc })
+      belowBar: /* @__PURE__ */ u2(HubNote, {}),
+      paneHead: (slot) => /* @__PURE__ */ u2(PaneRow, { slot, view, on: on2, doc })
     };
     const reloadClient = () => {
       const a5 = hubAsk.value;
@@ -72464,7 +73764,7 @@ ${d5.text}`);
           onChange: setClientDoc,
           onSave: saveClientPage,
           ai: clientAi,
-          onRedraft: redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply),
+          onRedraft: clientRedraft(cd2),
           onEvent: (ev) => {
             if (ev.type === "reload") reloadClient();
             else countRedraft(ev, "report");
@@ -72483,11 +73783,13 @@ ${d5.text}`);
           doc,
           baseVersion: weeklyBase.value,
           scrollKey: key2,
-          readOnly: false,
-          leftReadOnly: true,
+          readOnly: iLocked,
+          panesApart: true,
           renderers: WEEKLY_RENDER,
-          onChange: () => {
-          },
+          onChange: internalChange,
+          onSave: internalSave,
+          ai: internalAi(doc),
+          onRedraft: internalRedraft(doc),
           partner: {
             doc: cd2,
             label: "Client",
@@ -72495,11 +73797,15 @@ ${d5.text}`);
             scrollKey: key2,
             renderers: CLIENT_RENDERERS,
             readOnly: cFiled,
-            match: (id2) => setClientDoc(matchFor(id2)),
+            match: (id2) => {
+              matchInternal([id2]);
+            },
             onChange: setClientDoc,
-            onSave: saveClientPage
+            onSave: saveClientPage,
+            dirty: () => crDirty.value,
+            ai: clientAi,
+            onRedraft: clientRedraft(cd2)
           },
-          ai: clientAi,
           onEvent: (ev) => {
             if (ev.type === "reload") {
               if (ev.partner) reloadClient();
@@ -72520,17 +73826,10 @@ ${d5.text}`);
         scrollKey: `weekly:${doc.project}:${doc.date}`,
         readOnly: iLocked,
         renderers: WEEKLY_RENDER,
-        onChange: (d5) => {
-          editDoc(d5);
-          if (crInternal.value) crInternal.value = d5;
-        },
-        onSave: async (req) => {
-          const r4 = await saveWeekly(req);
-          if (r4.ok) setWeeklyDirty(false);
-          return r4;
-        },
-        ai: { place: "report", project: () => doc.project, confidential: () => false },
-        onRedraft: redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report"),
+        onChange: internalChange,
+        onSave: internalSave,
+        ai: internalAi(doc),
+        onRedraft: internalRedraft(doc),
         onEvent: (ev) => {
           if (ev.type === "reload") reloadHub();
           else countRedraft(ev, "report");
@@ -72589,6 +73888,7 @@ ${d5.text}`);
       head,
       /* @__PURE__ */ u2("div", { class: view === "internal" ? "wrsheet" : "crsheet wrsheet", children: body2 }),
       on2 ? /* @__PURE__ */ u2(LeftOutDialog, { client: crDoc.value && crDoc.value.client || "", onExport: doExport }) : null,
+      on2 ? /* @__PURE__ */ u2(MatchHeldDialog, {}) : null,
       /* @__PURE__ */ u2(ExportSave, {})
     ] });
   }
@@ -73031,8 +74331,8 @@ ${d5.text}`);
       if (!r4.ok) throw new Error(r4.message);
       return r4.text;
     },
-    async write(p6, t47) {
-      const r4 = await api("/api/fs", { op: "write", path: p6, text: t47 });
+    async write(p6, t47, expect) {
+      const r4 = await api("/api/fs", { op: "write", path: p6, text: t47, ...expect == null ? {} : { expect_text: expect } });
       if (!r4.ok) throw new Error(r4.message);
     },
     async remove(p6) {
@@ -73532,37 +74832,105 @@ ${d5.text}`);
       });
       return true;
     } catch (e4) {
-      snack("Not saved: " + e4.message);
+      snack("Not saved: " + plainPaths(e4.message));
       return false;
     }
   }
   function memLineEdit(text, label, val2) {
-    const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), re2 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$", "m");
-    if (/^(on|off)$/.test(val2)) {
-      const re22 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)(on|off)\\b([^\\n]*)$", "mi"), m22 = text.match(re22);
-      if (m22) return { text: text.replace(re22, (_6, a5, b5, c5) => a5 + val2 + c5), was: m22[2].toLowerCase() };
+    const bad = memValueProblem(label, val2);
+    if (bad) throw new Error(bad);
+    const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), lead = "^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)", reOnOff = new RegExp(lead + "(on|off)\\b([^\\n]*)$", "i"), re2 = new RegExp(lead + "([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$"), reRhythm = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/, rePartner = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/;
+    const lines2 = text.split("\n"), live = liveLines(lines2);
+    const eol = (l6) => /\r$/.test(l6) ? "\r" : "", bare = (l6) => l6.replace(/\r$/, "");
+    let near = -1;
+    for (let i5 = 0; i5 < lines2.length; i5++) {
+      if (!live[i5]) continue;
+      const l6 = bare(lines2[i5]);
+      if (/^(on|off)$/.test(val2)) {
+        const m6 = l6.match(reOnOff);
+        if (m6) {
+          lines2[i5] = m6[1] + val2 + m6[3] + eol(lines2[i5]);
+          return { text: lines2.join("\n"), was: m6[2].toLowerCase() };
+        }
+      }
+      const m5 = l6.match(re2);
+      if (m5) {
+        lines2[i5] = m5[1] + val2 + (m5[3] ? m5[3].replace(/^\s*/, "   ") : "") + eol(lines2[i5]);
+        return { text: lines2.join("\n"), was: m5[2].trim() };
+      }
     }
-    const m5 = text.match(re2);
-    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val2 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
-    const near = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text) || /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
-    if (!near) return null;
-    const at2 = near.index + near[0].length;
-    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val2 + text.slice(at2), was: "" };
+    for (const r4 of [reRhythm, rePartner]) {
+      for (let i5 = 0; i5 < lines2.length && near < 0; i5++) if (live[i5] && r4.test(bare(lines2[i5]))) near = i5;
+      if (near >= 0) break;
+    }
+    if (near < 0) return null;
+    const ind = bare(lines2[near]).match(/^[ \t]*(?:[-*][ \t]+)?/)[0];
+    lines2.splice(near + 1, 0, ind + "**" + label + ":** " + val2 + eol(lines2[near]));
+    return { text: lines2.join("\n"), was: "" };
+  }
+  function liveLines(lines2) {
+    let fence = "";
+    return lines2.map((raw2) => {
+      const l6 = raw2.replace(/\r$/, ""), f5 = l6.match(/^ {0,3}(`{3,}|~{3,})/);
+      if (fence) {
+        if (f5 && f5[1][0] === fence[0] && f5[1].length >= fence.length && /^ {0,3}[`~]+\s*$/.test(l6)) fence = "";
+        return false;
+      }
+      if (f5) {
+        fence = f5[1];
+        return false;
+      }
+      return !/^[ \t]*>/.test(l6);
+    });
+  }
+  function plainPaths(msg) {
+    return String(msg == null ? "" : msg).replace(/(?<![\w.~\-\/])(?:~|\/)[^\s"'“”()<>,;]*/g, (m5) => {
+      const t47 = m5.match(/(?:^|\/)((?:projects|system)\/.*)$/);
+      if (t47) return t47[1];
+      const seg = m5.replace(/\/+$/, "").split("/").pop();
+      return seg || "a file";
+    });
+  }
+  function memValueProblem(label, val2) {
+    const v5 = String(val2 == null ? "" : val2);
+    if (unsafeLineValue(v5)) return "the value has a line break or another control character";
+    if (label === "Partners") {
+      if (v5.length > PARTNERS_LINE_MAX) return `the partners' line would be over ${PARTNERS_LINE_MAX} characters`;
+      const names = v5.split(";").map((x5) => x5.replace(/^ +| +$/g, "")).filter(Boolean);
+      if (names.length > PARTNERS_MAX) return `a project lists at most ${PARTNERS_MAX} partner organisations`;
+      const seen = /* @__PURE__ */ new Set();
+      for (const n4 of names) {
+        const bad = partnerNameProblem(n4) || (n4 !== cleanPartnerName(n4) ? "a partner's name has no double space" : "");
+        if (bad) return bad.replace(/\.$/, "");
+        const k5 = partnerKey(n4);
+        if (seen.has(k5)) return `${n4} is listed twice`;
+        seen.add(k5);
+      }
+    }
+    if (label === "Client / partner" && v5.length > CLIENT_NAME_LIMIT) return `the client's name is over ${CLIENT_NAME_LIMIT} characters`;
+    if (v5.length > 1e3) return "the value is too long";
+    return "";
   }
   async function setMemLine(code, label, val2, key2) {
+    const problem = memValueProblem(label, val2);
+    if (problem) {
+      snack("Not saved: " + problem + ".");
+      return false;
+    }
     if (!await needVault()) return false;
     try {
       await vq(async () => {
         const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
         if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
         if (r4.text === text) return;
+        if (await shared.VW.read(path) !== text) throw new Error("this project's memory file changed in another window since it was read, so nothing was saved; try again");
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
-        await shared.VW.write(path, r4.text);
+        await shared.VW.write(path, r4.text, text);
         await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val2 }) + "\n");
       });
       return true;
     } catch (e4) {
-      snack("Not saved: " + e4.message);
+      snack("Not saved: " + plainPaths(e4.message));
       return false;
     }
   }
@@ -73676,6 +75044,7 @@ ${d5.text}`);
     const cells = mCells(), cnts = mCounts(), hp2 = new Map(P4.map((p6) => [p6.code, p6.health])), wt2 = typeof shared.WT === "undefined" ? "" : shared.WT, v5 = shared.VIEW;
     if (shared.VIEW === "reports") renderReports();
     if (shared.VIEW === "reporting") renderReporting(spaceCode.value);
+    if (shared.VIEW === "psettings") psTick.value++;
     status();
     renderBadge();
     inboxBadge();
@@ -74126,6 +75495,7 @@ ${d5.text}`);
         "AI_GROUPS",
         "AI_PLACES",
         "AI_PLACE_TABLE",
+        "ASKDONE",
         "AUTOSAVE_MS",
         "AiBar",
         "AiSuggestion",
@@ -74160,6 +75530,7 @@ ${d5.text}`);
         "Dialog",
         "ED_PROFILES",
         "ED_SLASH",
+        "ED_SLASH_ROWS",
         "EVS",
         "EXPAND",
         "EditorBar",
@@ -74203,6 +75574,8 @@ ${d5.text}`);
         "OWN",
         "Overdue",
         "P",
+        "PARTNERS_MAX",
+        "PARTNER_NAME_MAX",
         "PEOPLE",
         "PF",
         "PK",
@@ -74216,6 +75589,7 @@ ${d5.text}`);
         "PrepPage",
         "PrepPopup",
         "PrepShape",
+        "ProjectSettings",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -74277,6 +75651,7 @@ ${d5.text}`);
         "actHref",
         "actPaint",
         "addEl",
+        "addPartner",
         "addTextSection",
         "aiAction",
         "aiBar",
@@ -74300,9 +75675,12 @@ ${d5.text}`);
         "askChangesHtml",
         "askDeleteNote",
         "askLive",
+        "askMarkClear",
+        "askMarkSet",
         "askPerson",
         "askWorking",
         "attachRun",
+        "attachSlash",
         "autoGrow",
         "batchMove",
         "bkDate",
@@ -74342,6 +75720,7 @@ ${d5.text}`);
         "clientReportOn",
         "closeCapture",
         "closeChat",
+        "closeClientReport",
         "closeCombobox",
         "closeDialog",
         "closeDisp",
@@ -74499,8 +75878,10 @@ ${d5.text}`);
         "linkWords",
         "linkWrite",
         "loadChat",
+        "loadPartners",
         "loadPrep",
         "loadTab",
+        "logoKindsOf",
         "longDate",
         "mCreated",
         "mLandRow",
@@ -74508,13 +75889,14 @@ ${d5.text}`);
         "mWords",
         "mailLink",
         "markHelpSeen",
-        "matchAll",
+        "matchInternal",
         "mdBlocks",
         "mdChat",
         "mdHtml",
         "mdInline",
         "meetingOfFile",
         "meetingRoute",
+        "memLineEdit",
         "menuOpenFor",
         "mins",
         "mount",
@@ -74613,6 +75995,8 @@ ${d5.text}`);
         "parseHash",
         "parseWhen",
         "parseWords",
+        "partnerProblem",
+        "partners",
         "passes",
         "peekFrame",
         "peekPropNodes",
@@ -74660,6 +76044,9 @@ ${d5.text}`);
         "prio",
         "profileTools",
         "projPeople",
+        "projectState",
+        "psCat",
+        "psCode",
         "publish",
         "pulseCheck",
         "putHTML",
@@ -74680,6 +76067,7 @@ ${d5.text}`);
         "rbStop",
         "rbTick",
         "rbUnmark",
+        "readClientLogos",
         "readDate",
         "readForm",
         "reattach",
@@ -74693,7 +76081,10 @@ ${d5.text}`);
         "rel",
         "reloadData",
         "remMenu",
+        "removePartner",
+        "renamePartner",
         "renamePerson",
+        "renameProject",
         "renderActivity",
         "renderBadge",
         "renderCockpit",
@@ -74754,13 +76145,16 @@ ${d5.text}`);
         "sensitive",
         "sentLog",
         "setChatWidth",
+        "setClientLogos",
         "setClientName",
         "setLayout",
         "setLive",
         "setMark",
+        "setMemLine",
         "setOf",
         "setPTab",
         "setPalette",
+        "setProjectActive",
         "setRailCount",
         "setRhythm",
         "setRunning",

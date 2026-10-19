@@ -43,6 +43,16 @@ export function toneByWeek(doc) {
   return out;
 }
 
+/** The health tone of each week in the project's six-week trail (the bars on the Portfolio): ok, warn and bad become g, a and r; a week
+    with no update is left out, so its dot stays neutral. @param {any} p the project, or undefined @returns {Record<string, string>} week -> g|a|r */
+export function toneByTrail(p) {
+  /** @type {Record<string, string>} */
+  const out = {}, M = /** @type {Record<string, string>} */ ({ ok: "g", warn: "a", bad: "r" });
+  const t = (p && p.trail) || [], e = (p && p.trailend) || [];
+  t.forEach((/** @type {string} */ x, /** @type {number} */ i) => { if (e[i] && M[x]) out[e[i]] = M[x]; });
+  return out;
+}
+
 /** The weeks the menu lists, newest first: the project's weeks (this week, the three before, any with a filed report) and the one
     on screen. @param {string[]} weeks @param {string} shown @returns {string[]} */
 export function menuWeeks(weeks, shown) {

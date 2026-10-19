@@ -12,7 +12,7 @@
    Everything drawn here is the client document's own content; the internal report is read only. */
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { cellsFor, CLIENT_FLAGS, flagOf, healthDiff, matchClientSection, matchState, secOf } from "./clientDoc.js";
+import { cellsFor, CLIENT_FLAGS, flagOf, healthDiff, matchState, secOf } from "./clientDoc.js";
 import { EyeButton } from "./EyeButton.jsx";
 import { AddFromTracker, EyeTable, HealthBlock, ReportHeader } from "./ReportParts.jsx";
 import { openRef } from "./Sheet.jsx";
@@ -20,7 +20,7 @@ import { Glance } from "./weekly/Glance.jsx";
 import { CurrentState, Words } from "./weekly/Notes.jsx";
 import { Rich } from "./weekly/Rich.jsx";
 import { weeklyLogos } from "../../stores/weekly.js";
-import { crCheck, crDirty, crDoc, crInternal, crLogos, runCheck } from "../../stores/clientReport.js";
+import { crCheck, crDirty, crDoc, crInternal, crLogos, matchInternal, runCheck, sameReport } from "../../stores/clientReport.js";
 import { FreeText } from "./SheetPage.jsx";
 
 /** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
@@ -30,13 +30,13 @@ import { FreeText } from "./SheetPage.jsx";
     on its reason, so Alan writes why (nothing else forces it). */
 export const crAskWhy = signal(false);
 
-/** Take a new client document onto the page. @param {SheetDoc} next */
-export function setClientDoc(next) { crDoc.value = next; crDirty.value = true; }
+/** Take a new client document onto the page: only one of the report that is open (a late answer for another project, week or client,
+    from a sheet that awaited the server before another report opened, is dropped). @param {SheetDoc} next */
+export function setClientDoc(next) { if (!sameReport(next)) return; crDoc.value = next; crDirty.value = true; }
 
 /** Match one section to the internal report. @param {string} id */
 export function matchOne(id) {
-  const d = crDoc.value, i = crInternal.value;
-  if (d && i) setClientDoc(matchClientSection(d, i, id));
+  matchInternal([id]);        // behind the client gate: a section with internal wording is held back (stores/clientReport.js)
 }
 
 /** The line above a section's body: Matching internal or Edited for the client, and Match internal. Only while editing.

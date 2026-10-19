@@ -6,6 +6,7 @@ import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
 import { saveExport } from "./exportSave.js";
 import { readLogos } from "./weekly.js";
+import { matchClientSection, secOf } from "../components/report/clientDoc.js";
 
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{group: string, ref: string, title: string, why: string, kind: string}} LeftItem */
@@ -35,8 +36,23 @@ export const crLogos = signal(/** @type {{kind: string, path: string}[]} */ ([])
 export const crBusy = signal("");
 export const crDialog = signal(false);
 export const crDirty = signal(false);
+/** What the last Match internal held back: null, or {copied: heading[], held: [{id, heading, findings}], message}. The dialog reads it. */
+export const crHeld = signal(/** @type {{copied: string[], held: {id: string, heading: string, findings: string[]}[], skipped: {id: string, heading: string}[], message: string}|null} */ (null));
 
 let crAsked = 0;
+
+/** Which report is open: the open's number, what it was opened with, and the document's project, week and client. Anything that awaits
+    the server and then writes the client page compares this before and after, so a late answer never lands in another report.
+    @param {SheetDoc|null} [d] */
+export function crIdentity(d) {
+  const x = d === undefined ? crDoc.value : d;
+  return x ? `${crAsked}|${JSON.stringify(crArg.value)}|${x.project}|${x.date}|${x.client || ""}` : "";
+}
+
+/** Two versions of the same report: the same project, week and client. @param {SheetDoc|null|undefined} a @param {SheetDoc|null|undefined} b */
+const sameDoc = (a, b) => !!a && !!b && a.project === b.project && a.date === b.date && (a.client || "") === (b.client || "");
+/** The same report (project, week and client) as the one open now, whichever version of it. @param {SheetDoc} d */
+export const sameReport = d => sameDoc(crDoc.value, d);
 
 /** Open (or reload) the client report: the week's internal report (read only; built from the tracker when none is saved) and the
     client's. `fresh` rebuilds the client's report from the tracker (the approved week's locked facts when there is one),
@@ -65,9 +81,10 @@ export async function loadClientReport(arg, fresh) {
 
 /** The left-out check of the document on screen (read only; nothing is written). Keeps the answer for the page's lists. */
 export async function runCheck() {
-  const d = crDoc.value;
+  const d = crDoc.value, opened = crIdentity(d);
   if (!d || !viaServer()) return null;
   const r = /** @type {Check} */ (await api("/api/report/check", { doc: d }));
+  if (crIdentity() !== opened) return null;            // another report opened meanwhile: its lists (and their Add buttons) are never this one's
   crCheck.value = r && r.ok ? r : { ok: false, message: oneLine((r && r.message) || "") || "The check didn't run" };
   return crCheck.value;
 }
@@ -95,7 +112,71 @@ export async function approveClientReport(force) {
 export async function exportClientReport(fmt, makePage) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
+  const opened = crIdentity(d);
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
+  if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
   const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
   return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt, page: page || undefined });
+}
+
+let matchChain = Promise.resolve();
+
+/** Match internal, behind the client gate (v2.5.0): each section's matched text is checked by the server (client_leak.findings through
+    /api/report/match-check, read only) BEFORE it is copied; a section whose matched text brings a finding the client report did not
+    already have is held (the client section stays as it was) and named in crHeld, the clean ones are copied. Nothing is copied when
+    the check cannot run. The client page therefore never holds unsaved internal words after Match internal. One at a time, so
+    Match internal for every section never races itself. @param {string[]|null} ids the sections, or null for every one */
+export function matchInternal(ids) {
+  const asked = crIdentity();            // a match queued behind another runs only if the report it was asked on is still the one open
+  matchChain = matchChain.then(() => crIdentity() === asked ? matchInternalNow(ids) : undefined).catch(() => undefined);
+  return matchChain;
+}
+
+/** @param {string[]|null} ids */
+async function matchInternalNow(ids) {
+  const d0 = crDoc.value, i = crInternal.value, opened = crIdentity(d0);
+  if (!d0 || !i) return;
+  // the race fix (v2.5.0): after every await, a different open report (another project, week or client, or a reload) drops the match
+  // silently: nothing is copied, nothing is said on the other report's page
+  const moved = () => crIdentity() !== opened || !sameReport(d0);          // the same open, and the same project, week and client
+  const heading = (/** @type {string} */ id) => String((secOf(i, id) || secOf(d0, id) || { heading: id }).heading || id);
+  const all = ids ? ids : d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
+  // #218: "every section" never brings an internal-audience text section over; it is named instead, and matched only one at a time
+  const internalText = (/** @type {string} */ id) => { const x = secOf(i, id); return !!x && x.type === "freetext" && x.audience === "internal"; };
+  const want = ids ? all : all.filter(id => !internalText(id));
+  const skipped = ids ? [] : all.filter(internalText).map(id => ({ id, heading: heading(id) }));
+  const cands = want.map(id => ({ id, doc: matchClientSection(d0, i, id) })).filter(c => c.doc !== d0);
+  if (!cands.length) { crHeld.value = skipped.length ? { copied: [], held: [], skipped, message: "" } : null; return; }
+  const failed = () => { crHeld.value = { copied: [], skipped, held: cands.map(c => ({ id: c.id, heading: heading(c.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." }; };
+  if (!viaServer()) { failed(); return; }
+  const r = await api("/api/report/match-check", { docs: [d0, ...cands.map(c => c.doc)] });
+  if (moved()) return;
+  if (!r || !r.ok || !Array.isArray(r.findings) || r.findings.length !== cands.length + 1) { failed(); return; }
+  const codes = (/** @type {{code: string}[]} */ fs) => fs.reduce((m, f) => m.set(f.code, (m.get(f.code) || 0) + 1), /** @type {Map<string, number>} */ (new Map()));
+  const base = codes(r.findings[0]);
+  const fresh_of = (/** @type {{code: string, message: string}[]} */ fs) => { const seen = /** @type {Map<string, number>} */ (new Map()); return fs.filter(f => { const n = (seen.get(f.code) || 0) + 1; seen.set(f.code, n); return n > (base.get(f.code) || 0); }); };   // by stable code (and how many), never by sentence
+  const done = /** @type {string[]} */ ([]), held = /** @type {{id: string, heading: string, findings: string[]}[]} */ ([]), clean = /** @type {string[]} */ ([]);
+  cands.forEach((c, n) => {
+    const fresh = fresh_of(r.findings[n + 1]).map(f => f.message);
+    if (fresh.length) held.push({ id: c.id, heading: heading(c.id), findings: fresh });
+    else clean.push(c.id);
+  });
+  /** the clean sections copied onto the page as it is now; a section Alan changed while the check ran keeps his edit
+      (the sheet replaces only the section it edits, so an untouched one is the same object as before) @param {SheetDoc} on */
+  const kept = (/** @type {SheetDoc} */ on) => sameDoc(on, d0) ? clean.filter(id => secOf(on, id) === secOf(d0, id)) : [];   // never onto another report (a section neither has is "unchanged" only on this one)
+  const onto = (/** @type {SheetDoc} */ on) => kept(on).reduce((x, id) => matchClientSection(x, i, id), on);
+  if (clean.length) {                   // the clean sections together are checked once more: a finding the parts did not make alone holds all back
+    for (let tries = 0; ; tries++) {
+      const now = crDoc.value;
+      if (!now || moved()) return;
+      const d = onto(now);
+      const last = await api("/api/report/match-check", { docs: [d] });
+      if (moved()) return;
+      const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
+      if (!extra || extra.length) { failed(); return; }
+      if (crDoc.value === now) { kept(now).forEach(id => done.push(heading(id))); crDoc.value = d; crDirty.value = true; break; }
+      if (tries >= 2) { crHeld.value = { copied: [], skipped, held: [], message: "Not matched: the report kept changing while its wording was checked, so nothing was copied. Try again." }; return; }
+    }                                   // the page changed while the check ran: copy onto the page as it is now and check that once more
+  }
+  crHeld.value = held.length || skipped.length ? { copied: done, held, skipped, message: !held.length ? "" : `Not matched: ${held.map(h => h.heading).join(", ")} ${held.length === 1 ? "has" : "have"} internal wording.` } : null;
 }

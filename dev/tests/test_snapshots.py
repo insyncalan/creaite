@@ -65,7 +65,7 @@ def open_health(b):
 
 
 SETTINGS_READY = {"essentials": "!!document.querySelector('#set-essentials .srow')",
-                  "advanced": "!!document.querySelector('#set-more .srow')",
+                  "advanced": "!!document.querySelector('#set-more .srow') && !!document.querySelector('#drStats') && document.querySelector('#drStats').textContent.trim() !== ''",   # AI drafts' counts arrive from /api/drafts after the page draws; a slow reply must not be captured empty
                   "health": "!!document.querySelector('#healthCard .hsum')",
                   "people": "!!document.querySelector('#settingsBody [data-sec=people]')"}
 
@@ -189,6 +189,7 @@ def normalise(html, root):
 @unittest.skipIf(sys.platform == "win32", "snapshots are recorded on macOS and Linux")
 class Snapshots(LiveBrowserCase):
     shared_server = True
+    quiet_jobs = False        # the settings screens are goldens: they show the shipped backup and archive settings
     width, height = 1400, 1000
     maxDiff = None
 

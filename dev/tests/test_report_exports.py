@@ -115,7 +115,11 @@ class Html(Base):
 
     def test_an_unfiled_report_leaves_the_plain_name_for_the_filing(self):
         for kind, title in (("weekly", "Weekly report"), ("client", "Client report")):
-            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n"
+            # v2.5.0 audience bypass: a client report is exported only after its internal week is approved, so it is based on one
+            base = ("b = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [])\nb['state'] = 'approved'\n"
+                    "rb = creaite_doc.save('system/staging/drafts/approved-base.html', b, 'Saved for a test')\n"
+                    "doc['based_on'] = {'path': rb['path'], 'version': rb['version']}\n") if kind == "client" else ""
+            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n" + base +
                         "print(json.dumps(creaite_doc.save('system/staging/drafts/unfiled.html', doc, 'Saved for a test')))")
             self.assertTrue(r["ok"], r)
             out = self.export(r["path"], "html", out_dir=f"{ABC}/reports")
@@ -221,7 +225,10 @@ class Filing(Base):
         r = self.export(ready, "docx")
         self.assertTrue(r["ok"], r)
         self.assertTrue(r["path"].startswith(f"{ABC}/reports/2026-10-16 Client report - Example Programme (Harbour Board)"), r)
-        self.in_order(self.word_text(r["path"]), ["Example Programme", "Client · Draft", "Harbour Board", "Health", "Executive summary"])
+        # v2.5.0: a client report's client is the project's own (its memory's Client line; this vault's names none), whatever the
+        # document says
+        self.in_order(self.word_text(r["path"]), ["Example Programme", "Client · Draft", "Health", "Executive summary"])
+        self.assertNotIn("Harbour Board", self.word_text(r["path"]))
 
     def test_an_unknown_format_and_a_missing_file_say_why(self):
         self.assertIn("HTML, Word or PDF", self.export(self.saved(), "odt")["message"])

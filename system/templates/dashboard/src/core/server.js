@@ -5,6 +5,8 @@
 import { renderReports } from "../components/reporting/ReportsPage.jsx";
 import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { reportsBadge, spaceCode } from "../stores/reporting.js";
+import { psTick } from "../stores/projectSettings.js";   /* #228 */
+import { CLIENT_NAME_LIMIT, PARTNERS_LINE_MAX, PARTNERS_MAX, cleanPartnerName, partnerKey, partnerNameProblem, unsafeLineValue } from "./partners.js";   /* #228 C */
 import { renderActivity } from "../activity.js";
 import { drawStatusDot } from "../components/StatusDot.jsx";
 import { drawToast } from "../components/Toast.jsx";
@@ -69,7 +71,7 @@ export let api = async function(path,body){ if(!/^\/api\/(here|pulse|vip|files|a
     return j; }
   catch(e){ setLive(false); return {ok:false,message:"The live server isn't reachable"}; } };
 export const SVW={ async read(p){ const r=await api("/api/fs",{op:"read",path:p}); if(!r.ok) throw new Error(r.message); return r.text; },
-  async write(p,t){ const r=await api("/api/fs",{op:"write",path:p,text:t}); if(!r.ok) throw new Error(r.message); },
+  async write(p,t,expect){ const r=await api("/api/fs",{op:"write",path:p,text:t,...(expect==null?{}:{expect_text:expect})});   /* expect_text: what the file held when read; a server that knows it refuses a changed file (dev/proposals/233b-fs-check.md) */ if(!r.ok) throw new Error(r.message); },
   async remove(p){ const r=await api("/api/fs",{op:"remove",path:p}); if(!r.ok) throw new Error(r.message); },
   async exists(p){ const r=await api("/api/fs",{op:"exists",path:p}); return !!r.exists; },
   async append(p,t){ const r=await api("/api/fs",{op:"append",path:p,text:t}); if(!r.ok) throw new Error(r.message); },
@@ -250,28 +252,59 @@ export async function setRhythm(code,val){ if(!await needVault()) return false;
     const m=text.match(re); if(!m) throw new Error(`no “Client report rhythm:” line in ${path}; use cx-edit`);
     await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`,".md"),text); await shared.VW.write(path,text.replace(re,"$1"+val.toLowerCase()));
     await shared.VW.append("system/config/settings-log.jsonl",JSON.stringify({at:stampFull(),key:`client_report_rhythm.${code}`,old:m[2],new:val.toLowerCase()})+"\n"); }); return true;
-  }catch(e){ snack("Not saved: "+e.message); return false; } }
+  }catch(e){ snack("Not saved: "+plainPaths(e.message)); return false; } }
 
 /* H3 (#221): one "- **<label>:** <value>" line of a project's CLAUDE.md, the way the rhythm is saved (needs the vault, a copy of the
    file in system/backups/files/, a line in settings-log.jsonl). A line that is missing is added under the rhythm line, or under
    "Client / partner". The line's italic note (_(…)_) stays. Returns whether it was saved; `was` is the old value. */
 export function memLineEdit(text,label,val){
-  const lab=label.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"), re=new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*"+lab+":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$","m");
-  if(/^(on|off)$/.test(val)){      /* the on/off lines: only the leading on or off is rewritten, anything after it ("on, pending client OK") stays */
-    const re2=new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*"+lab+":\\*\\*[ \\t]*)(on|off)\\b([^\\n]*)$","mi"), m2=text.match(re2);
-    if(m2) return {text:text.replace(re2,(_,a,b,c)=>a+val+c),was:m2[2].toLowerCase()}; }
-  const m=text.match(re); if(m) return {text:text.replace(re,(_,a,b,c)=>a+val+(c?c.replace(/^\s*/,"   "):"")),was:m[2].trim()};
-  const near=/^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text)||/^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
-  if(!near) return null;
-  const at=near.index+near[0].length; return {text:text.slice(0,at)+"\n"+near[1]+"**"+label+":** "+val+text.slice(at),was:""};
+  const bad=memValueProblem(label,val); if(bad) throw new Error(bad);
+  const lab=label.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"), lead="^([ \\t]*(?:[-*][ \\t]+)?\\*\\*"+lab+":\\*\\*[ \\t]*)",
+    reOnOff=new RegExp(lead+"(on|off)\\b([^\\n]*)$","i"), re=new RegExp(lead+"([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$"),
+    reRhythm=/^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/, rePartner=/^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/;
+  const lines=text.split("\n"), live=liveLines(lines);          /* L4: a line in a code fence or a quote is text, never the setting */
+  const eol=l=>/\r$/.test(l)?"\r":"", bare=l=>l.replace(/\r$/,"");
+  let near=-1;
+  for(let i=0;i<lines.length;i++){ if(!live[i]) continue; const l=bare(lines[i]);
+    if(/^(on|off)$/.test(val)){ const m=l.match(reOnOff);   /* the on/off lines: only the leading on or off is rewritten, anything after it ("on, pending client OK") stays */
+      if(m){ lines[i]=m[1]+val+m[3]+eol(lines[i]); return {text:lines.join("\n"),was:m[2].toLowerCase()}; } }
+    const m=l.match(re); if(m){ lines[i]=m[1]+val+(m[3]?m[3].replace(/^\s*/,"   "):"")+eol(lines[i]); return {text:lines.join("\n"),was:m[2].trim()}; } }
+  for(const r of [reRhythm,rePartner]){ for(let i=0;i<lines.length&&near<0;i++) if(live[i]&&r.test(bare(lines[i]))) near=i; if(near>=0) break; }
+  if(near<0) return null;
+  const ind=bare(lines[near]).match(/^[ \t]*(?:[-*][ \t]+)?/)[0];
+  lines.splice(near+1,0,ind+"**"+label+":** "+val+eol(lines[near])); return {text:lines.join("\n"),was:""};
 }
-export async function setMemLine(code,label,val,key){ if(!await needVault()) return false;
+/** Which lines are the memory's own: not inside a ``` or ~~~ fence and not a quote (">"). @param {string[]} lines @returns {boolean[]} */
+export function liveLines(lines){ let fence=""; return lines.map(raw=>{ const l=raw.replace(/\r$/,""), f=l.match(/^ {0,3}(`{3,}|~{3,})/);
+  if(fence){ if(f&&f[1][0]===fence[0]&&f[1].length>=fence.length&&/^ {0,3}[`~]+\s*$/.test(l)) fence=""; return false; }
+  if(f){ fence=f[1]; return false; } return !/^[ \t]*>/.test(l); }); }
+/* L6: a message for a toast: an absolute path is shown from the vault ("projects/…", "system/…"), or as the file's name alone. */
+export function plainPaths(msg){ return String(msg==null?"":msg).replace(/(?<![\w.~\-\/])(?:~|\/)[^\s"'“”()<>,;]*/g,m=>{ const t=m.match(/(?:^|\/)((?:projects|system)\/.*)$/); if(t) return t[1];
+  const seg=m.replace(/\/+$/,"").split("/").pop(); return seg||"a file"; }); }
+/* #228 C: a value that must never reach the memory file: a line break or other control, separator, bidi or zero-width character in
+   any line; a Partners line's every name checked by the one rule (core/partners.js); the client's name at most 80. Returns a problem or "". */
+export function memValueProblem(label,val){ const v=String(val==null?"":val);
+  if(unsafeLineValue(v)) return "the value has a line break or another control character";
+  if(label==="Partners"){ if(v.length>PARTNERS_LINE_MAX) return `the partners' line would be over ${PARTNERS_LINE_MAX} characters`;
+    const names=v.split(";").map(x=>x.replace(/^ +| +$/g,"")).filter(Boolean);
+    if(names.length>PARTNERS_MAX) return `a project lists at most ${PARTNERS_MAX} partner organisations`;
+    const seen=new Set();
+    for(const n of names){ const bad=partnerNameProblem(n)||(n!==cleanPartnerName(n)?"a partner's name has no double space":""); if(bad) return bad.replace(/\.$/,"");
+      const k=partnerKey(n); if(seen.has(k)) return `${n} is listed twice`; seen.add(k); } }
+  if(label==="Client / partner"&&v.length>CLIENT_NAME_LIMIT) return `the client's name is over ${CLIENT_NAME_LIMIT} characters`;
+  if(v.length>1000) return "the value is too long";
+  return ""; }
+export async function setMemLine(code,label,val,key){ const problem=memValueProblem(label,val);
+  if(problem){ snack("Not saved: "+problem+"."); return false; }
+  if(!await needVault()) return false;
   try{ await vq(async()=>{ const path=memPath(code), text=await shared.VW.read(path), r=memLineEdit(text,label,val);
     if(!r) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
     if(r.text===text) return;
-    await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`,".md"),text); await shared.VW.write(path,r.text);
+    /* L5: the file is read again just before it is written; a file that changed since (another tab or window) is never written over. */
+    if(await shared.VW.read(path)!==text) throw new Error("this project's memory file changed in another window since it was read, so nothing was saved; try again");
+    await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`,".md"),text); await shared.VW.write(path,r.text,text);
     await shared.VW.append("system/config/settings-log.jsonl",JSON.stringify({at:stampFull(),key:`${key}.${code}`,old:r.was,new:val})+"\n"); }); return true;
-  }catch(e){ snack("Not saved: "+e.message); return false; } }
+  }catch(e){ snack("Not saved: "+plainPaths(e.message)); return false; } }
 
 /* ======================= live, apply, undo, the toast ======================= */
 shared.LIVE=!!D.live; shared.HELD=[]; shared.DATA_AT=D.data_at||"";
@@ -318,6 +351,7 @@ export async function applyPending(){ if(viaServer()){ const r=await applyNow();
   snack("Say “apply” in Claude Code, or start the live server"); }
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */
+  if(shared.VIEW==="psettings") psTick.value++;   /* #228: the project settings page redraws with the fresh data */
   status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
   if(!reduced()&&v===shared.VIEW){
     const hit=[]; if(cells&&wt===shared.WT){ const cols=$$("#workTbl thead th").map(th=>th.dataset.col||""); $$("#workTbl tr[data-row]").slice(0,300).forEach(tr=>[...tr.children].forEach((td,i)=>{ const k=tr.dataset.row+"|"+cols[i]; if(cols[i]&&cells.has(k)&&cells.get(k)!==td.textContent.trim()) hit.push(td); })); }

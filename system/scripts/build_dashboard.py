@@ -56,10 +56,11 @@ def rows(con, sql, *args):
 def memory(folder):
     """Client, client-report rhythm and current state from a project's CLAUDE.md."""
     p = folder / "CLAUDE.md"
-    text = p.read_text(encoding="utf-8") if p.exists() else ""
-    client = re.search(r"\*\*Client / partner:\*\*[ \t]*([^\n]*)", text)
+    raw = p.read_bytes().decode("utf-8") if p.exists() else ""      # a lone CR stays a character: the page reads the file the same way
+    text = raw.replace("\r\n", "\n").replace("\r", "\n")
+    client = re.search(_LEAD + r"Client / partner:\*\*[ \t]*([^\n]*)", _live_text(raw), re.M)
     rhythm = re.search(r"\*\*Client report rhythm:\*\*[ \t]*([A-Za-z]+)", text)
-    cr = client_report_setting(text)
+    cr = client_report_setting(raw)
     current, images = "", []
     m = re.search(r"^## Current state\s*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
     if m:
@@ -69,7 +70,7 @@ def memory(folder):
         body = "\n".join(ln for ln in body.splitlines()
                          if not (ln.strip().startswith("_") and ln.strip().endswith("_") and len(ln.strip()) > 1))  # guidance
         current = md_normalise(body)   # Markdown kept: formats, lists (nested), headings, quotes, links, images (BL-63)
-    return {"client": (client.group(1).strip() if client else ""),
+    return {"client": (client.group(1).strip()[:CLIENT_NAME_MAX] if client else ""),
             "rhythm": (rhythm.group(1).strip().capitalize() if rhythm else "Weekly"),
             **cr, "current": current, "images": [i for i in images if i], "cstitle": cs_title(text)}
 
@@ -78,21 +79,133 @@ def memory(folder):
 # Three lines in the project's CLAUDE.md beside the rhythm, written by the dashboard's settings save: "**Client report:** on|off",
 # "**Client report reminder:** on|off" and "**Client report logos:** firm, client, partner". A missing line is the old behaviour:
 # the client report on (existing projects), its reminder on and every logo. A new project is made with the report off.
-CLIENT_LOGO_KINDS = ("firm", "client", "partner")
+# #228 B: a fourth line, "**Partners:** Org A; Org B", lists the partner organisations; each has its own logo kind `partner:<slug>`.
+
+
+_LEAD = r"^[ \t]*(?:[-*][ \t]+)?\*\*"       # a setting line starts at the line's start (the way the page's memLineEdit reads it)
+CLIENT_NAME_MAX = 80
+
+
+def _live_text(text):
+    """The memory text without its code fences and quoted lines (#233 L4: a line shown as an example is not the setting)."""
+    out, fence = [], ""
+    for line in (text or "").split("\n"):
+        f = re.match(r" {0,3}(`{3,}|~{3,})", line)
+        if fence:
+            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence) and re.fullmatch(r" {0,3}[`~]+\s*", line.rstrip("\r")):
+                fence = ""
+            continue
+        if f:
+            fence = f.group(1)
+            continue
+        if not line.lstrip(" \t").startswith(">"):
+            out.append(line)
+    return "\n".join(out)
 
 
 def _on_off(text, label, default=True):
     """True or False from a "**<label>:** on|off" line; `default` when there is none."""
-    m = re.search(r"\*\*" + re.escape(label) + r":\*\*[ \t]*([A-Za-z]+)", text or "")
+    text = _live_text(text)
+    m = re.search(_LEAD + re.escape(label) + r":\*\*[ \t]*([A-Za-z]+)", text or "", re.M)
     return default if not m else m.group(1).strip().lower() != "off"
 
 
+PARTNERS_MAX = 12            # the most partner organisations one project lists (one logo each)
+PARTNER_NAME_MAX = 60
+PARTNER_PUNCT = ".,&'()-"    # besides letters, digits and the space (#228 C; the page's core/partners.js says the same)
+PARTNER_LINE_SCAN = 5000     # a longer value is not read past this
+
+
+def partner_name_problem(name):
+    """A plain-words problem with a partner organisation's name, or "" when it is allowed: 1 to 60 characters, Unicode letters and
+    digits, spaces and . , & ' - ( ) only; no control, separator, bidi or zero-width character, no leading or trailing space, no
+    double space. `name` is taken as given (clean_partner_name makes the usual tidy-up first)."""
+    import unicodedata
+    t = str(name)
+    if not t:
+        return "Type the partner organisation's name."
+    if "\n" in t or "\r" in t:
+        return "A partner's name is one line."
+    if ";" in t:
+        return "A partner's name can't contain a semicolon; add each partner on its own."
+    if len(t) > PARTNER_NAME_MAX:
+        return f"A partner's name is over {PARTNER_NAME_MAX} characters."
+    if t != t.strip(" ") or "  " in t:
+        return "A partner's name has no space at either end and no double space."
+    if t != unicodedata.normalize("NFC", t):
+        return "A partner's name uses letters and digits only (no separate accent marks)."
+    for ch in t:
+        cat = unicodedata.category(ch)
+        if ch == " " or ch in PARTNER_PUNCT or cat[0] == "L" or cat == "Nd":
+            continue
+        return "A partner's name uses letters, digits, spaces and . , & ' - ( ) only."
+    return ""
+
+
+def clean_partner_name(raw):
+    """The usual tidy-up of a typed name: Unicode NFC, and runs of spaces made one, none at either end. Nothing else is changed."""
+    import unicodedata
+    return re.sub(r" {2,}", " ", unicodedata.normalize("NFC", str(raw))).strip(" ")
+
+
+def partner_key(name):
+    """What makes two names the same organisation: letters and digits only, accents and capitals folded."""
+    import unicodedata
+    folded = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "", folded) or str(name).casefold()
+
+
+def _slug_of(name):
+    """A partner organisation's name as a file-name slug: lower case, letters and digits joined by single hyphens, accents folded,
+    at most 40 characters. A name with no letter or digit in it (another script) gets `x` and six hex digits of its own hash, so the
+    slug is never empty and stays the same. A slug ending in `original` gets `-x`, so no partner's file can be another's `-original`."""
+    import hashlib
+    import unicodedata
+    folded = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-z0-9]+", "-", folded.lower()).strip("-")[:40].strip("-")
+    if not slug:
+        return "x" + hashlib.sha1(str(name).encode("utf-8")).hexdigest()[:6]
+    return slug[:38].strip("-") + "-x" if re.search(r"(^|-)original$", slug) else slug
+
+
+def partners_of(text):
+    """[{name, slug}] from a CLAUDE.md's "- **Partners:** Org A; Org B" line, in line order. A name that breaks partner_name_problem
+    is skipped (never an error), as is a repeat of an earlier one (any capitals, accents or punctuation) and one whose slug an
+    earlier name already has; at most PARTNERS_MAX. The one place a slug is made: the server sends it to the page."""
+    m = re.search(_LEAD + r"Partners:\*\*[ \t]*([^\n]*)", _live_text(text), re.M)
+    out, seen, keys = [], set(), set()
+    for raw in (m.group(1)[:PARTNER_LINE_SCAN].rstrip("\r").split(";") if m else []):
+        name = clean_partner_name(raw)
+        if not name or partner_name_problem(name) or partner_key(name) in keys:
+            continue
+        slug = _slug_of(name)
+        if slug in seen:
+            continue
+        seen.add(slug)
+        keys.add(partner_key(name))
+        out.append({"name": name, "slug": slug})
+        if len(out) >= PARTNERS_MAX:
+            break
+    return out
+
+
+def logo_kinds_of(partners):
+    """The logo kinds a project has, the firm's first: firm, client, then one `partner:<slug>` for each partner in line order, or the
+    one old `partner` when it lists none."""
+    return ["firm", "client"] + ([f"partner:{p['slug']}" for p in partners] or ["partner"])
+
+
 def client_report_setting(text):
-    """{client_report, client_reminder, logos} from a CLAUDE.md text; the firm's logo is always in `logos`."""
-    m = re.search(r"\*\*Client report logos:\*\*[ \t]*([^\n]*)", text or "")
-    chosen = {w.strip().lower() for w in m.group(1).split(",")} if m else set(CLIENT_LOGO_KINDS)
+    """{client_report, client_reminder, logos, partners} from a CLAUDE.md text; the firm's logo is always in `logos`. A partner's logo
+    is `partner:<slug>`; a bare `partner` in the line means every partner (no line at all: everything is ticked)."""
+    m = re.search(_LEAD + r"Client report logos:\*\*[ \t]*([^\n]*)", _live_text(text), re.M)
+    partners = partners_of(text)
+    kinds = logo_kinds_of(partners)
+    chosen = {w.strip().lower() for w in m.group(1).split(",")} if m else set(kinds)
+    if "partner" in chosen:
+        chosen |= {k for k in kinds if k.startswith("partner")}
     return {"client_report": _on_off(text, "Client report"), "client_reminder": _on_off(text, "Client report reminder"),
-            "logos": [k for k in CLIENT_LOGO_KINDS if k == "firm" or k in chosen]}
+            "logos": [k for k in kinds if k == "firm" or k in chosen], "partners": partners}
 
 
 def client_gap(p):
@@ -1676,7 +1789,7 @@ def collect(now=None, timings=None):
                          "reason": p["health_reason"] or "", "trail": [h for h, _ in tw], "trailwhy": [w for _, w in tw],
                          "trailend": trail_dates(today), "slip": slip,
                          "rhythm": mem["rhythm"], "cstitle": mem["cstitle"], "cr": mem["client_report"], "crrem": mem["client_reminder"],
-                         "crlogos": mem["logos"], "ms": ms, "current": mem["current"], "images": mem["images"],
+                         "crlogos": mem["logos"], "partners": mem["partners"], "ms": ms, "current": mem["current"], "images": mem["images"],
                          "sponsor": p["sponsor"] or "", "phase": p["phase"] or "",
                          "undated": undated_counts(actions, raid, p["code"]),       # BL-95
                          "seq": int(tracker.next_id(con, "promises", p["code"])[-3:]) - 1,   # shared numbering

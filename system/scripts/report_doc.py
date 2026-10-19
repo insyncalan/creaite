@@ -39,7 +39,8 @@ SECTIONS = {   # kind: (id, type, creaite's own heading), in the default order
 }
 GLANCE = {"weekly": ("next_milestone", "overdue", "high_risks", "decisions_needed"),
           "client": ("next_milestone", "client_asks", "watch")}
-LOGO_KINDS = ("firm", "client", "partner")          # the firm's always first
+LOGO_KINDS = ("firm", "client", "partner")          # the static kinds (#228 B: a project's real kinds are logo_kinds(code))
+LOGO_KIND = re.compile(r"(firm|client|partner(:[a-z0-9]+(-[a-z0-9]+)*)?)\Z")  # a layout kind; a slug is checked per project
 LOGO_EXT = (".png", ".jpg", ".jpeg", ".svg")
 DEFAULT_ROWS = {"risks": {"top": 5}}
 LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")
@@ -106,8 +107,15 @@ def _lists(kind, lay, base):
     """At a glance's figures, the logos and the milestone list from a layout; each defaulted when it isn't a list."""
     glance, logos_, miles = lay.get("glance"), lay.get("logos"), lay.get("milestones")
     return {"glance": [g for g in dict.fromkeys(glance) if g in GLANCE[kind]] if isinstance(glance, list) else base["glance"],
-            "logos": [x for x in LOGO_KINDS if x in logos_] if isinstance(logos_, list) else base["logos"],
+            "logos": _logo_list(logos_) if isinstance(logos_, list) else base["logos"],
             "milestones": [str(m) for m in miles] if isinstance(miles, list) else None}
+
+
+def _logo_list(raw):
+    """The kinds of a layout's logos that are well formed, once each: the firm, the client, a bare `partner` (every partner), then each
+    `partner:<slug>` in the order given. Whether a slug is one of the project's partners is for layout_for, which knows the project."""
+    kinds = [x for x in dict.fromkeys(raw) if isinstance(x, str) and LOGO_KIND.match(x)]
+    return sorted(kinds, key=lambda x: {"firm": 0, "client": 1, "partner": 2}.get(x, 3))
 
 
 def stored_layouts():
@@ -121,8 +129,7 @@ def layout_for(code, kind, client=None):
     saved = mine.get("weekly") if kind == "weekly" else (mine.get("clients") or {}).get(client or "")
     lay = normal_layout(kind, saved)
     chosen = project_logos(code)
-    if chosen is not None:                                       # H3 (#221): one choice for both reports' headers
-        lay["logos"] = chosen
+    lay["logos"] = chosen if chosen is not None else resolve_logos(code, lay["logos"])   # H3 (#221): one choice for both reports' headers
     return lay
 
 
@@ -164,17 +171,90 @@ def remember_layout(code, kind, layout, client=None):
 
 # ── Logos (system/branding/logos/, kept out of git) ──────────────────────────
 
-def logo_file(code, kind):
-    """The logo file for the firm, or a project's client or partner logo, or None when none is set."""
-    stem = "firm" if kind == "firm" else f"{code}-{kind}"
+def partners(code):
+    """[{name, slug}] from the project's CLAUDE.md `Partners` line (build_dashboard.partners_of); [] when it has none or no folder."""
+    import build_dashboard
+    try:
+        return build_dashboard.partners_of((paths.project_dir(code) / "CLAUDE.md").read_bytes().decode("utf-8"))
+    except (LookupError, OSError):
+        return []
+
+
+def logo_kinds(code):
+    """The project's logo kinds: firm, client, then `partner:<slug>` for each partner in line order (or the one old `partner`)."""
+    import build_dashboard
+    return build_dashboard.logo_kinds_of(partners(code))
+
+
+def resolve_logos(code, wanted):
+    """`wanted` (a layout's logo kinds) made exact for the project: a bare `partner` is every partner, a slug that is not one of its
+    partners is dropped, and the order is firm, client, partners in line order."""
+    wanted = set(wanted)
+    every = "partner" in wanted
+    return [k for k in logo_kinds(code) if k in wanted or (every and k.startswith("partner"))]
+
+
+def logo_stems(code, kind):
+    """The file stems a kind's logo may be saved under, the one it is written as first: the firm's `firm`, `<CODE>-client`, a partner's
+    `<CODE>-partner-<slug>`. The first partner's also has the old `<CODE>-partner` (read as its logo until it has a file of its own)."""
+    if kind == "firm":
+        return ["firm"]
+    if kind.startswith("partner:"):
+        slug = kind[len("partner:"):]
+        first = partners(code)[:1]
+        return [f"{code}-partner-{slug}"] + ([f"{code}-partner"] if first and first[0]["slug"] == slug else [])
+    return [f"{code}-{kind}"]
+
+
+def _newest(stem):
     have = [paths.REPORT_LOGOS / f"{stem}{e}" for e in LOGO_EXT if (paths.REPORT_LOGOS / f"{stem}{e}").is_file()]
     return max(have, key=lambda f: f.stat().st_mtime) if have else None          # H3: the one added last wins
 
 
-def logos(code, wanted=LOGO_KINDS):
-    """[{kind, path}] of the logos set for the project, in `wanted` (the layout's), the firm's first."""
-    found = [(k, logo_file(code, k)) for k in LOGO_KINDS if k in wanted]
-    return [{"kind": k, "path": paths.rel(f)} for k, f in found if f]
+def logo_file(code, kind):
+    """The logo file for the firm, or a project's client or partner logo, or None when none is set. A partner's own file wins; the first
+    partner with none of its own is drawn from the old `<CODE>-partner` file (#228 B: no migration)."""
+    for stem in logo_stems(code, kind):
+        found = _newest(stem)
+        if found:
+            return found
+    return None
+
+
+def _orphan_slug(f, prefix):
+    """The slug of a partner logo file named `<prefix><slug>[-original].<ext>`, or None for a file that is not one (a link, a folder, a file
+    of another type, a name that is not a slug)."""
+    if not f.name.startswith(prefix) or f.suffix.lower() not in LOGO_EXT or f.is_symlink() or not f.is_file():
+        return None
+    slug = f.stem[len(prefix):]
+    if slug.endswith("-original") and len(slug) > len("-original"):
+        slug = slug[:-len("-original")]
+    return slug if re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug) and len(slug) <= 40 else None
+
+
+def orphan_logos(code):
+    """[{kind, slug, path}] of partner logo files this project has that no partner of its Partners line owns (a partner renamed or
+    removed leaves `<CODE>-partner-<slug>.<ext>` behind), by slug. A `-original` file belongs to its slug; a link, a folder and a file of
+    another type are skipped; the old `<CODE>-partner` file is not one."""
+    if not paths.REPORT_LOGOS.is_dir() or paths.REPORT_LOGOS.is_symlink():
+        return []
+    mine, prefix, found = {p["slug"] for p in partners(code)}, f"{code}-partner-", {}
+    for f in sorted(paths.REPORT_LOGOS.iterdir()):
+        slug = _orphan_slug(f, prefix)
+        if slug and slug not in mine:
+            found.setdefault(slug, []).append(f)
+    out = []
+    for slug, files in sorted(found.items()):
+        shown = [f for f in files if not f.stem.endswith("-original")] or files
+        out.append({"kind": "partner:" + slug, "slug": slug, "path": paths.rel(max(shown, key=lambda f: f.stat().st_mtime))})
+    return out
+
+
+def logos(code, wanted=None):
+    """[{kind, path}] of the logos set for the project, in `wanted` (a layout's; None is all), in the project's order: the firm's first,
+    the client's, then each partner in line order."""
+    kinds = logo_kinds(code) if wanted is None else resolve_logos(code, wanted)
+    return [{"kind": k, "path": paths.rel(f)} for k in kinds for f in [logo_file(code, k)] if f]
 
 
 # ── Arranging the sections as the layout says ───────────────────────────────
@@ -643,6 +723,131 @@ CLIENT_BUILDERS = {"header": _c_header,
                    "current_state": lambda c, lay: {"panes": [{"title": "", "text": paras(c.spec.get("current_state"))}]}}
 
 
+def _links_in(s):
+    """Whether a stored string may hold a creaite: link (as client_leak reads one: decoded, invisible characters undone)."""
+    import client_leak
+    return "creaite" in client_leak._decoded(s).lower() or client_leak.overencoded(s)
+
+
+def _schemes(t):
+    """How many creaite: schemes a text holds, as client_leak reads them (decoded)."""
+    import client_leak
+    return len(client_leak.SCHEME.findall(client_leak._decoded(t)))
+
+
+def _part_stripped(s, out):
+    """Whether drop_item_links' output `out` may hold part of a link it took out of `s` (#123 review): its words' brackets or
+    parentheses no longer balance as they did (a line break or a [bracket] inside a link's words, so only its tail went), or a
+    reference definition went while its [label] stays (a collapsed or shortcut reference link keeps its words)."""
+    import client_leak
+    import edit_ai
+    import html
+    t = html.unescape(edit_ai.unseen(s))
+    if any(t.count(a) - t.count(b) != out.count(a) - out.count(b) for a, b in ("[]", "()")):
+        return True
+    labels = lambda x: {m.group(1).strip().lower() for m in client_leak.REF_DEF.finditer(x)}   # noqa: E731
+    low = out.lower()
+    return any(f"[{lab}]" in low for lab in labels(t) - labels(out))
+
+
+WHOLE_LINK = re.compile(r"!?\[[^\[\]\n]*\]\(.*\)|<a\s[^<>]*>[^<]*</a\s*>|<(?!a\s)[a-z][a-z0-9+.-]*:[^<>\s]+>", re.I | re.S)
+REFUSED = ("A work-item link a client report can't show couldn't be taken out whole (a line break, brackets or formatting in its "
+           "words, a reference link, a bare address or a creaite: address that isn't a work item), so nothing was saved. "
+           "Take the link out, then save again.")
+
+
+def _scheme_count(x):
+    """How many creaite: schemes a text holds, in the larger of its two readings: as written and as client_leak decodes it
+    (%- and entity-encoding undone, NFKC, so a full-width colon too; invisible characters gone)."""
+    import client_leak
+    return max(len(client_leak.SCHEME.findall(x)), len(client_leak.SCHEME.findall(client_leak._decoded(x))))
+
+
+def _whole_or_refuse(s, code, con):
+    """#123 third review: fail closed on EVERY creaite: occurrence, not on a list of shapes. Each one in the string must sit inside
+    a link client_leak.LINK_SPAN matched whole, words and address together (an inline link, a whole HTML link with plain words, an
+    <auto> link), whose every address client_leak.item_links reads as an item the tracker holds: a client-visible one is kept, a
+    hidden one goes whole. Anything else (another noun such as item: item# task/ note/ person/, a bare address, a reference
+    definition, a bare <a> tag, an unknown ID) refuses. Returns the hidden items' IDs (for the second check)."""
+    import client_leak
+    import edit_ai
+    import html
+    blocking = client_leak.blocking_labels(con)
+    t = edit_ai.unseen(html.unescape(s))                                   # as drop_item_links reads it
+    t = client_leak.LINK_GAP.sub(lambda m: re.sub(r"\s+", "", m.group(0)), t)
+    covered, gone = 0, set()
+    for m in client_leak.LINK_SPAN.finditer(t):
+        span = m.group(0)
+        n = _scheme_count(span)
+        if not n or not WHOLE_LINK.fullmatch(span):
+            continue
+        addresses = client_leak.item_links(span)
+        ids = [edit_ai.loose_ids(con, a) for a in addresses]
+        if len(addresses) != n or any(not x or not all(edit_ai.in_tracker(con, i) for i in x) for x in ids):
+            continue
+        covered += n
+        gone |= {i for a, x in zip(addresses, ids) for i in x
+                 if not client_leak._link_ok(con, code, f"creaite:item/{a}", blocking)}
+    if covered < _scheme_count(t) or client_leak.overencoded(s):
+        raise ReportError(REFUSED)
+    return gone
+
+
+def _drop_one(s, code, con):
+    """One string with the creaite: links a client may not have taken out whole; the string exactly as it was when none went (#123
+    review: drop_item_links rewrites entities in the whole string). When any went, refuses (ReportError) rather than keep part of a
+    link: every creaite: occurrence must be inside a whole link to a known item (_whole_or_refuse), and, a second check, what is left
+    may not hold a removed hidden item's ID or wording (client_leak.text_findings)."""
+    import client_leak
+    if not _links_in(s):
+        return s
+    out = client_leak.drop_item_links(code, s, con)
+    if _schemes(out) == _schemes(s):
+        return s
+    gone = _whole_or_refuse(s, code, con)
+    if _part_stripped(s, out) or any(f.split(" ")[0] in gone for f in client_leak.text_findings(con, code, out)):
+        raise ReportError(REFUSED)
+    return out
+
+
+def _drop_links(x, code, con):
+    """A section's value with every string's creaite: links a client may not have taken out (_drop_one)."""
+    if isinstance(x, str):
+        return _drop_one(x, code, con)
+    if isinstance(x, list):
+        return [_drop_links(v, code, con) for v in x]
+    if isinstance(x, dict):
+        return {k: _drop_links(v, code, con) for k, v in x.items()}
+    return x
+
+
+def client_item_links(doc, con=None):
+    """#123 (#122 step C, client path): (a copy of a client document with every work-item link a client may not have taken out
+    WHOLE from every section, words and address, [why each went]). A link's words may have been edited so they no longer name the
+    item, and its address would stay in the stored text; client_leak.drop_item_links reads the address. A link to an item a client
+    may see stays as it is. An internal document is returned as it is. Fails closed: when the tracker can't be read, ReportError
+    (nothing is built or saved)."""
+    import client_leak
+    if not creaite_doc.is_client(doc):
+        return doc, []
+    code = doc.get("project") or ""
+    try:
+        con = con or client_leak.connect()
+        before = client_leak.raw_strings({"sections": doc.get("sections") or []})
+        sections = _drop_links(doc.get("sections") or [], code, con)
+        after = client_leak.raw_strings({"sections": sections})
+        gone = sorted({i for i in client_leak.item_links(before)} - {i for i in client_leak.item_links(after)})
+    except ReportError:
+        raise
+    except Exception as e:  # noqa: BLE001  fails closed
+        raise ReportError("The work-item links couldn't be checked against the tracker, so nothing was built or saved. "
+                          "Try again; if it keeps happening, run the health check.") from e
+    if after == before:
+        return doc, []
+    return dict(doc, sections=sections), [f"a link to {i}, an item a client report can't show, was taken out" for i in gone] or [
+        "a link a client report can't hold was taken out"]
+
+
 def client_doc(code, week_ending=None, client=None, spec=None, layout=None):
     """A client's view of the week as a creaite document (version 0, a draft; nothing written): client-safe facts only, from the
     latest approved internal week when there is one (its facts locked, `based_on` naming it), else from the tracker as it stands
@@ -662,7 +867,7 @@ def client_doc(code, week_ending=None, client=None, spec=None, layout=None):
                           sources=[{"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending "
                                                                                     f"{shown(c.base['date'])}" if c.base else "")}])
     doc["based_on"] = {"path": c.base["path"], "version": c.base["version"]} if c.base else None
-    return client_leak.make_safe(doc)[0]
+    return client_item_links(client_leak.make_safe(doc)[0])[0]
 
 
 def build(kind, code, week_ending=None, client=None, spec=None, layout=None):
@@ -693,16 +898,29 @@ def where(kind, code, week_ending, client=None):
     return None, draft_path(kind, code, week_ending, client)
 
 
+def same_report(doc, kind, code, fri):
+    """v2.5.0: raise ReportError unless a stored report is the one the route names (its kind, project and week ending): a draft edited
+    on disk to name another project or week is never approved, exported or filed as this one."""
+    if (doc.get("kind"), doc.get("project"), doc.get("date")) != (kind, code, fri):
+        raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was done. "
+                          "Open the report again from creaite.")
+
+
 def save_draft(doc, base_version=None, why=None):
     """Save a report's edits as its draft (system/staging/drafts/, an ordinary change through creaite_doc.save and filechange.py).
     A filed report is never changed in place (Alan, 15-10-2026: option C): Save on a filed report starts a new draft from it, and the
     filed file stays exactly as it is until that draft is approved (stage_weekly or stage_client, one apply with Undo).
     `base_version` is the version the editor opened: the draft's, or the filed report's when there is no draft yet."""
     import client_leak
+    creaite_doc.check_audience(doc)                 # v2.5.0 audience bypass: a client report whose audience isn't client is refused
+    doc = creaite_doc.force_client_audience(dict(doc))      # and its project name and client derived again, before the file's name
     kind, code, fri, client = doc.get("kind"), doc.get("project"), doc.get("date"), doc.get("client")
     if kind not in KINDS:
         raise ReportError("Only a weekly or client report is saved here.")
     doc, removed = client_leak.make_safe(doc)
+    doc, dropped = client_item_links(doc)
+    doc, pictures = creaite_doc.drop_outside_pictures(doc)     # v2.5.0 leak fix: no picture line naming an outside file
+    removed = removed + dropped + pictures
     draft, filed = draft_path(kind, code, fri, client), filed_path(kind, code, fri, client)
     if not paths.resolve(draft).is_file() and paths.resolve(filed).is_file():
         now = int(creaite_doc.read(filed).get("version") or 0)
@@ -744,7 +962,7 @@ def _file_ops(kind, code, fri, client, draft):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(creaite_doc.read(draft))
+    doc = creaite_doc.clean(creaite_doc.read_report(draft, kind))          # v2.5.0: filed as a client report, header derived
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -752,7 +970,26 @@ def _file_ops(kind, code, fri, client, draft):
         # Alan, 15-10-2026: the client health difference and its reason live only in the draft. The filed client file, its data
         # block included, never holds them (the internal flag would be in them): the whole key goes, not just the reason.
         doc["meta"] = {k: v for k, v in (doc.get("meta") or {}).items() if k != "health_diff"}
+        filed_client_data(doc)
     return [{"op": "write", "path": filed, "content": creaite_doc.dumps(doc), "previous": old}, {"op": "remove", "path": draft}]
+
+
+CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
+
+
+def filed_client_data(doc):
+    """v2.5.0 (D): the filed client file's data block holds only what creaite puts there, in place: meta's dates (YYYY-MM-DD) and its
+    locked flag, the one tracker source (its label made again here), and the layout's own keys. Anything else a draft carried goes."""
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    out = {k: meta[k] for k in CLIENT_META_DATES if isinstance(meta.get(k), str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta[k])}
+    if isinstance(meta.get("locked"), bool):
+        out["locked"] = meta["locked"]
+    doc["meta"] = out
+    week = out.get("facts_week")
+    doc["sources"] = [{"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending {shown(week)}" if week else "")}]
+    lay = doc.get("layout") if isinstance(doc.get("layout"), dict) else {}
+    doc["layout"] = {k: v for k, v in lay.items() if k in default_layout("client")}
+    return doc
 
 
 def _section(doc, sid):
@@ -760,7 +997,7 @@ def _section(doc, sid):
     return next((s for s in doc["sections"] if s["id"] == sid and not s.get("hidden")), {})
 
 
-def stage_weekly(draft, force=False):
+def stage_weekly(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a weekly report draft: the week's update row and any health change (approved), the Current state
     written to the project's memory, and the draft filed as the creaite report (its state set to approved by tracker.py apply).
     The client facts are kept in it first (meta.client_facts), so the week's client reports lock to them. Returns the proposal's
@@ -769,7 +1006,8 @@ def stage_weekly(draft, force=False):
     import report
     import sweep
     import tracker
-    doc = creaite_doc.read(draft)
+    doc = creaite_doc.read_report(draft, "weekly")          # v2.5.0: a draft whose kind was edited on disk is refused
+    same_report(doc, "weekly", code or doc["project"], fri or doc["date"])
     code, fri = doc["project"], doc["date"]
     data = report.weekly_data(code, fri)
     health_s = _section(doc, "health")
@@ -799,14 +1037,17 @@ def stage_weekly(draft, force=False):
                    "file_ops": ops, "health": health, "health_reason": reason, "summary": summary}})
 
 
-def stage_client(draft, force=False):
+def stage_client(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a client report draft: filed as the creaite report beside the internal one. Raises ReportError
     before the internal week is approved, while items await review (unless forced), or when the leak check finds anything."""
     import client_leak
     import report
     import sweep
-    doc = creaite_doc.read(draft)
+    doc = creaite_doc.read_report(draft, "client")  # v2.5.0 audience bypass: the gate sees a client report as one; another kind refused
+    same_report(doc, "client", code or doc["project"], fri or doc["date"])      # the route's project and week
     code, fri = doc["project"], doc["date"]
+    if paths.rel(paths.resolve(draft_path("client", code, fri, doc.get("client")))) != paths.rel(paths.resolve(str(draft))):
+        raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was approved.")
     ok, why = client_ready(doc)
     if not ok:
         raise ReportError(why)

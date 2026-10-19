@@ -243,11 +243,12 @@ class ClientBrowser(LiveBrowserCase):
         self.assertTrue(self.b.eval(f"document.activeElement === {change}"))
         self.b.click("[data-crflag]")
         self.b.click("[data-crmatchhealth]")
+        self.b.wait("!document.querySelector('[data-crdif]')", 10)                 # Match internal is checked by the server first (v2.5.0), so it lands a moment later
         internal = self.b.eval("(()=>{ const m=document.querySelector('[data-crdif]'); return m?m.textContent:'' })()")
         self.assertEqual(internal, "", "matching internal health clears the difference")
 
     def test_an_eye_hides_a_row_and_match_internal_copies_a_section(self):
-        self.approve_internal()
+        self.approve_internal("Quincebrook is on plan for the week.")   # v2.5.0: Match internal checks first; words like 'not for the client' are held
         self.open_view()
         self.b.click("#v-reporting section[data-id=risks] .rs-eye")
         self.assertTrue(self.b.eval("!!document.querySelector('#v-reporting section[data-id=risks] tr.hidrow')"))
@@ -256,9 +257,10 @@ class ClientBrowser(LiveBrowserCase):
         self.assertIn("Test licences are not yet ordered.", self.words("#v-reporting section[data-id=risks]"))
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Edited for the client")
         self.b.click("[data-matchone='summary']")
+        self.b.wait("document.querySelector('[data-match=\"summary\"] .crmstate').textContent==='Matching internal'", 10)   # v2.5.0: checked by the server first
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Matching internal")
         self.assertEqual(self.b.eval("document.querySelector('section[data-id=\"summary\"] .wr-rich').innerText.trim()"),
-                         "The internal summary, not for the client.")
+                         "Quincebrook is on plan for the week.")
 
     def test_not_in_this_report_names_what_is_left_out_with_a_way_to_change_it(self):
         self.open_view()
@@ -267,20 +269,20 @@ class ClientBrowser(LiveBrowserCase):
         self.assertIn("not client-visible", self.b.eval("document.querySelector('[data-crleft=\"ABC-005\"]').innerText").lower())
         self.api("/api/report/check", {"doc": self.api("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]})
 
-    def test_side_by_side_shows_the_internal_page_read_only(self):
-        self.approve_internal()
+    def test_side_by_side_shows_the_internal_page_beside_it_editable_as_its_own_report(self):   # p241: both panes are editable (Alan, 18-10-2026)
+        self.approve_internal("Quincebrook is on plan for the week.")   # v2.5.0: Match internal checks first; words like 'not for the client' are held
         self.open_view()
         self.b.click("#hubSeg [data-hv='side']")
         self.b.wait("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit').length===2")
         left = "document.querySelector('#v-reporting .sheet-pair > .sheet-fit')"
         self.assertIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit"))                    # the internal page has its own
         self.assertNotIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit + .sheet-fit"))
-        self.assertTrue(self.b.eval(f"{left}.querySelectorAll('.wr-rich').length>0 && {left}.querySelectorAll('[contenteditable=true],textarea,.wr-edit').length===0"), "the internal page is read only")
+        self.assertTrue(self.b.eval(f"{left}.querySelectorAll('.wr-rich').length>0 && {left}.querySelectorAll('.wr-edit').length>0"), "the internal page is editable, as its own report")
         # the sheet's Match internal (partner.match) is the client-safe match: the summary comes over, never an internal row
         self.b.eval("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-match .linkbtn').click()")
-        self.b.wait("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .wr-rich')?.innerText.includes('The internal summary')", 10)
+        self.b.wait("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .wr-rich')?.innerText.includes('Quincebrook')", 10)
         self.assertEqual(self.b.eval("document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .wr-rich').innerText.trim()"),
-                         "The internal summary, not for the client.")
+                         "Quincebrook is on plan for the week.")
         self.b.eval("document.querySelector('#v-reporting [data-crmatchall]').click()")
         self.assertNotIn("ABC-005", self.words("#v-reporting .sheet-pair > .sheet-fit + .sheet-fit"))
 
