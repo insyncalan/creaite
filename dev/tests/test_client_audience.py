@@ -319,6 +319,23 @@ class Audience(unittest.TestCase):
         e = self.export("html", "weekly", on_clash="rename", new_name="Board pack")      # an ordinary name still works
         self.assertTrue(e["ok"], e)
 
+    # ── a draft edited on disk to name another week or project ──────────────────────────────────────────────────────────
+    def test_a_draft_whose_week_or_project_was_edited_on_disk_is_refused_at_export(self):
+        for key, value in (("date", "2026-10-02"), ("project", "DEF")):
+            with self.subTest(key=key):
+                self.fresh()
+                f = self.draft_file()
+                text = f.read_text()
+                m = creaite_doc.BLOCK.search(text)
+                d = json.loads(m.group(1))
+                d[key] = value
+                f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+                for fmt in ("html", "docx"):
+                    e = self.export(fmt, "client", on_clash="number")
+                    self.assertFalse(e["ok"], (fmt, e))
+                    self.assertIn("isn't this report", e["message"])
+                self.assertEqual(list(self.reports.glob("*Client report*")), [])
+
     # ── each boundary on its own, with a reader that doesn't normalise ──────────────────────────────────────────────────
     def raw_reader(self):
         return ("import re\n_raw = lambda p: json.loads(creaite_doc.BLOCK.search(creaite_doc.real(p).read_text()).group(1))\n"

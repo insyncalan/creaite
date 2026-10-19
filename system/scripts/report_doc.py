@@ -899,10 +899,11 @@ def where(kind, code, week_ending, client=None):
 
 
 def same_report(doc, kind, code, fri):
-    """v2.5.0: raise ReportError unless a stored report is the one the route names (its kind, project and week ending): a draft edited
-    on disk to name another project or week is never approved, exported or filed as this one."""
-    if (doc.get("kind"), doc.get("project"), doc.get("date")) != (kind, code, fri):
-        raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was done. "
+    """v2.5.0: raise ReportError unless a stored report is the one the route names (its project and week ending): a draft edited on
+    disk to name another project or week is never approved, exported or filed as this one. Its kind is creaite_doc.read_report's
+    check (each check fails its own test when removed); `kind` only words the refusal."""
+    if (doc.get("project"), doc.get("date")) != (code, fri):
+        raise ReportError(f"That {kind} draft isn't this report (its project or week was changed), so nothing was done. "
                           "Open the report again from creaite.")
 
 
