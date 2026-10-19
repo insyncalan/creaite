@@ -1,5 +1,7 @@
 # Work items v2: mockup and build rules
 
+Status: **approved by Alan 19-10-2026, for 2.6.** The mockup is locked.
+
 Mockup (for Alan): `dev/mockups/work-items-v2-mockup.html`, built on `dev/design-system/pages/work.html` (commit c237a088, VERSION 2.1.0) with the app's own classes. Research: `dev/sprints/work-items-ux-research.md`. Fictional data.
 
 ## Alan's decisions (19-10-2026)
