@@ -2477,7 +2477,9 @@ def _aside_extra(it, kind, reason):
     """The optional fields of an entry: kind (Later), reason, a one-line note of at most 200 characters, and `seen` (#232-A: a
     Later meeting whose transcript was already here when it was set aside)."""
     note = " ".join(str(it.get("note") or "").split())[:200]
-    seen = bool(it.get("seen")) and kind == "later"
+    raw = it.get("seen")
+    # only a real boolean or the word "true": bool("false") is True
+    seen = (raw is True or (isinstance(raw, str) and raw.strip().lower() == "true")) and kind == "later"
     return {k: v for k, v in (("kind", "" if kind == "cleared" else kind), ("reason", reason), ("note", note), ("seen", seen)) if v}
 
 

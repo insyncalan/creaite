@@ -71653,15 +71653,22 @@ ${d5.text}`);
     else if (r4.kind === "draft" && r4.ref === "meeting") rejectMinutes(r4);
     else decide(n4, "rejected");
   }
+  var routineBusy = false;
   async function irApproveRoutine(groups) {
-    const list = irBulk(groups, irDone, irHeld).map(irRow).filter((r4) => rvBulkOK(r4));
-    if (!list.length) {
-      snack("Nothing routine to approve");
-      return;
+    if (routineBusy) return;
+    routineBusy = true;
+    try {
+      const list = irBulk(groups, irDone, irHeld).map(irRow).filter((r4) => rvBulkOK(r4));
+      if (!list.length) {
+        snack("Nothing routine to approve");
+        return;
+      }
+      const res = await rvDecideMany(list, "approved");
+      const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
+      snack(`Approved ${res.n} routine${failed}`, res.undo || null);
+    } finally {
+      routineBusy = false;
     }
-    const res = await rvDecideMany(list, "approved");
-    const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
-    snack(`Approved ${res.n} routine${failed}`, res.undo || null);
   }
   var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the proposal to see them" };
   var canDraftResponse = (r4) => !!r4 && !r4.done && r4.kind === "raid" && !String(r4.rec && r4.rec.resp || "").trim() && !(r4.rec.type && r4.rec.type !== "Risk") && draftOn("thinking");
@@ -75848,6 +75855,7 @@ ${d5.text}`);
         "inboxBadge",
         "insertImage",
         "invitees",
+        "irApproveRoutine",
         "irAside",
         "irBulk",
         "irBusy",

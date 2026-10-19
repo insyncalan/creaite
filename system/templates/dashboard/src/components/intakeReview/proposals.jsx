@@ -124,14 +124,21 @@ export function irReject(n, anchor) {
   if (rvRejectOK(r)) rjMenuFor([r], anchor); else if (r.kind === "draft" && r.ref === "meeting") rejectMinutes(r); else decide(n, "rejected");
 }
 
+/** Whether an Approve routine run is in flight (a double click is one run). */
+let routineBusy = false;
+
 /** Approve routine: the routine group only, in one apply with one Undo (rvDecideMany); never the first group.
     @param {{needs: number[], routine: number[]}} groups */
 export async function irApproveRoutine(groups) {
-  const list = irBulk(groups, irDone, irHeld).map(irRow).filter(r => rvBulkOK(r));
-  if (!list.length) { snack("Nothing routine to approve"); return; }
-  const res = await rvDecideMany(list, "approved");
-  const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
-  snack(`Approved ${res.n} routine${failed}`, res.undo || null);
+  if (routineBusy) return;   /* a second click before the first run has saved would queue a second run: two applies, two Undo snacks */
+  routineBusy = true;
+  try {
+    const list = irBulk(groups, irDone, irHeld).map(irRow).filter(r => rvBulkOK(r));
+    if (!list.length) { snack("Nothing routine to approve"); return; }
+    const res = await rvDecideMany(list, "approved");
+    const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
+    snack(`Approved ${res.n} routine${failed}`, res.undo || null);
+  } finally { routineBusy = false; }
 }
 
 /** The meta line's hover when a proposal has no owner, date or priority to show (minutes, reports, file changes). */

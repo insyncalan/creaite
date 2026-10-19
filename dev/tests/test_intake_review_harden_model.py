@@ -63,6 +63,15 @@ class Store(unittest.TestCase):
         _, e = bd.set_aside_entry({"key": "k", "day": "2026-10-08", "reason": "Other", "seen": True}, TODAY)
         self.assertNotIn("seen", e)
 
+    def test_seen_accepts_only_real_booleans_and_the_words_true_and_false(self):
+        """A string "false" must not count as seen (bool("false") is True); anything that is not a boolean or true/false is not seen."""
+        def seen(v):
+            return bd.set_aside_entry({"key": "k", "day": "2026-10-08", "kind": "later", "seen": v}, TODAY)[1].get("seen", False)
+        for v in (True, "true", "True", " TRUE ", "TRUE"):
+            self.assertIs(seen(v), True, repr(v))
+        for v in (False, "false", "False", "FALSE", "", None, 0, 1, "yes", "1", ["x"], {"a": 1}, "no"):
+            self.assertIs(seen(v), False, repr(v))
+
     def test_bad_input_is_refused(self):
         for bad in ({"key": "k", "day": "nonsense"}, {"key": "k", "day": "2026-10-08", "reason": "Because"},
                     {"key": "k", "day": "2026-10-08", "kind": "later", "reason": "Other"}, {"key": "k", "day": "2026-10-08", "kind": "forever"}):

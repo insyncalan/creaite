@@ -62,6 +62,20 @@ class Routine(LiveBrowserCase):
         self.assertEqual(len([r for r in self.v.rows("actions") if r["description"].startswith("Steering action")]), 0)
         self.assertEqual(b.eval("window.__calls.filter(u=>/\\/api\\/undo/.test(u)).length"), 1)
 
+    def test_a_double_click_on_approve_routine_is_one_apply_and_one_undo(self):
+        """Two clicks before the first save resolves must not queue a second run (irApproveRoutine's in-flight guard)."""
+        b = self.b
+        S.open_meeting(b)
+        b.eval("window.__calls=[]; const f=window.fetch; window.fetch=function(u,o){ window.__calls.push(String(u)); return f.apply(this,arguments); }")
+        b.eval("""window.__snacks=[]; new MutationObserver(()=>{ const t=document.getElementById('snackT'); if(t && t.textContent && window.__snacks[window.__snacks.length-1]!==t.textContent) window.__snacks.push(t.textContent); })
+          .observe(document.getElementById('snack'),{childList:true,subtree:true,characterData:true})""")
+        b.eval("const bt=document.querySelector('[data-irg=routine] [data-ira=routine]'); bt.click(); bt.click()")
+        b.wait("document.querySelector('#snackT') && /Approved 4/.test(document.getElementById('snackT').textContent)", 25)
+        b.pump(1.5)                                                                       # a second run, if one was queued, would have applied by now
+        self.assertEqual(len([r for r in self.v.rows("actions") if r["description"].startswith("Steering action")]), 4)
+        self.assertEqual(b.eval("window.__calls.filter(u=>/\\/api\\/apply/.test(u)).length"), 1)
+        self.assertEqual(b.eval("window.__snacks"), ["Approved 4 routine"])               # one Undo snack, and no second message after it
+
 
 if __name__ == "__main__":
     unittest.main()
