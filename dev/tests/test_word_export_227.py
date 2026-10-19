@@ -79,7 +79,7 @@ def sections(tmp):
          "data": {"timeline": ["ABC-M-001", "ABC-M-002", "ABC-M-003", "ABC-M-004", "ABC-M-005"], "milestones": ["ABC-M-001", "ABC-M-002"]}},
         {"id": "this_week", "type": "text", "heading": "This week", "hidden": False,
          "text": "**Done:** the plan.\n\n- [ ] book room\n- [x] order kit\n- plain point\n\n"
-                 f"![Site photo]({tmp / 'images' / 'site.png'})\n\n![Lost photo]({tmp / 'images' / 'lost.png'})"},
+                 "![Site photo](images/site.png)\n\n![Lost photo](images/lost.png)"},
         {"id": "risks", "type": "table", "heading": "Risks and issues", "hidden": False,
          "columns": [{"key": "id", "label": "ID"}, {"key": "risk", "label": "Risk or issue"},
                      {"key": "priority", "label": "Priority"}, {"key": "owner", "label": "Owner"}],
@@ -110,6 +110,11 @@ class Base(unittest.TestCase):
         self.sizes = []
         self.real_pic = getattr(creaite_doc, "picture_png", None)
 
+        # v2.5.0 leak fix: a picture is read only as `images/<name>` under the project's own folder (never an absolute path), so the
+        # test's project folder is its temp folder
+        real_dir = paths.project_dir
+        paths.project_dir = lambda code, _t=self.tmp: _t
+        self.addCleanup(setattr, paths, "project_dir", real_dir)
         self.svgs = []
         # the tracker's client-safe milestones (M-004 and M-005 are not): the writer re-reads them and fails closed (LEAK 3)
         real_safe = creaite_doc.client_safe_ids

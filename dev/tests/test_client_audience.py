@@ -364,9 +364,12 @@ class Audience(unittest.TestCase):
 
     # ── (D) the filed client file's data block ──────────────────────────────────────────────────────────────────────────
     def test_the_filed_client_file_holds_only_creaites_own_meta_sources_and_layout(self):
+        """The filed data block keeps only creaite's own keys. Since the gate reads the header fields (meta, sources, layout) as client
+        text, a foreign key carrying internal words is now refused outright (see the next test); this one puts in foreign keys with
+        harmless values, which the gate passes, and still demands that none of them reach the filed file."""
         r = self.fresh()
         doc = r["doc"]
-        p = self.header_payload()
+        p = "foreign-key-marker"
         doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
         doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
         doc["layout"] = {**doc["layout"], "zzz": p}
@@ -379,7 +382,22 @@ class Audience(unittest.TestCase):
         self.assertEqual(set(raw["meta"]) - {"period_start", "period_end", "locked", "facts_on", "facts_week"}, set())
         self.assertEqual([x["ref"] for x in raw["sources"]], ["tracker"])
         self.assertNotIn("zzz", raw["layout"])
+        self.assertEqual(self.scan(filed, [p]), [])
         self.assertEqual(self.scan(filed, self.needles()), [])
+
+    def test_internal_words_in_the_header_fields_are_refused_and_never_filed(self):
+        """What the old test of the filed block put in (internal words in meta, sources and layout): the client gate reads those fields,
+        so approving is refused whatever 'force' says and no file carries the words."""
+        r = self.fresh()
+        doc = r["doc"]
+        p = self.header_payload()
+        doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
+        doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
+        doc["layout"] = {**doc["layout"], "zzz": p}
+        self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+        self.assertFalse(a.get("ok"), a)
+        self.assertEqual(self.reports_hold(self.needles()), {})
 
     # ── the helpers ─────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_is_client_and_force_client_audience(self):

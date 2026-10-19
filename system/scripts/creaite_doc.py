@@ -972,7 +972,9 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        doc = read_report(path, kind)    # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however its file was edited
+        # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however
+        # its file was edited
+        doc = read_report(path, kind)
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):
