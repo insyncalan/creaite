@@ -62,9 +62,13 @@ class Base(LiveBrowserCase):
         b.eval(script)
         b.wait(f"!!document.querySelector('{ROW}')")
 
-    def redraw(self, js):
+    def redraw(self, js, until=None):
+        """Change REV and redraw; wait for `until` (a JS condition) rather than a fixed pause, which a loaded machine overruns."""
         self.b.eval(f"{js}; go('intake-review')")
-        self.b.pump(0.2)
+        if until:
+            self.b.wait(until, 15)
+        else:
+            self.b.pump(0.2)
 
     def row(self, text):
         return f"(()=>{{ const r=[...document.querySelectorAll('{ROW}')].find(t=>t.querySelector('.icttl').textContent.includes({text!r})); return r; }})()"
@@ -128,26 +132,26 @@ class Row(Base):
 
     def test_hook_drafted_tag(self):
         a = self.hook_row()
-        self.redraw(f"REV.find(x=>x.n=={a}).drafted='done'")
+        self.redraw(f"REV.find(x=>x.n=={a}).drafted='done'", f"!!document.querySelector(\"{ROW}[data-irn='{a}'] .tag.drrv\")")
         self.assertIn("Drafted", self.b.eval(f"document.querySelector(\"{ROW}[data-irn='{a}'] .tag.drrv\").textContent"))
 
     def test_hook_weekend_note_buttons(self):
         a = self.hook_row()
-        self.redraw(f"REV.find(x=>x.n=={a}).rec.due='2026-10-10'")                              # a Saturday
+        self.redraw(f"REV.find(x=>x.n=={a}).rec.due='2026-10-10'", f"document.querySelectorAll(\"{ROW}[data-irn='{a}'] [data-wkrv]\").length===2")   # a Saturday
         self.assertEqual(self.b.eval(f"document.querySelectorAll(\"{ROW}[data-irn='{a}'] [data-wkrv]\").length"), 2)
 
     def test_hook_approve_individually_and_draft_a_response(self):
         b = self.b
         self.show()
         risk = b.eval("REV.find(r=>!r.done&&r.kind==='raid').n")
-        self.redraw(f"REV.find(x=>x.n=={risk}).rec.resp=''")
+        self.redraw(f"REV.find(x=>x.n=={risk}).rec.resp=''", f"!!document.querySelector(\"{ROW}[data-irn='{risk}'] [data-drrisk]\")")
         self.assertIn("approve individually", b.eval(f"document.querySelector(\"{ROW}[data-irn='{risk}']\").textContent"))
         self.assertTrue(b.eval(f"!!document.querySelector(\"{ROW}[data-irn='{risk}'] [data-drrisk]\")"), "Draft a response")
 
     def test_hook_no_word_draft_notice(self):
         self.hook_row()
         m = self.b.eval("REV.find(r=>!r.done&&r.kind==='draft').n")
-        self.redraw(f"REV.find(x=>x.n=={m}).nodraft=true")
+        self.redraw(f"REV.find(x=>x.n=={m}).nodraft=true", f"document.querySelector(\"{ROW}[data-irn='{m}']\").textContent.includes('No Word draft was made')")
         self.assertIn("No Word draft was made for these minutes", self.b.eval(f"document.querySelector(\"{ROW}[data-irn='{m}']\").textContent"))
 
     def test_a_conflict_shows_its_block_and_keeps_the_two_choices(self):
@@ -171,7 +175,8 @@ class Row(Base):
         b = self.b
         self.show()
         a = b.eval("REV.find(r=>!r.done&&!r.hold).n")
-        self.redraw(f"(()=>{{ const r=REV.find(x=>x.n=={a}); r.rec.t='<img src=x onerror=window.__pwn=1>'; r.src='Email · From: <b>x</b> · Subject: <i>s</i> · Link: javascript:window.__pwn=2'; }})()")
+        self.redraw(f"(()=>{{ const r=REV.find(x=>x.n=={a}); r.rec.t='<img src=x onerror=window.__pwn=1>'; r.src='Email · From: <b>x</b> · Subject: <i>s</i> · Link: javascript:window.__pwn=2'; }})()",
+                    f"document.querySelector(\"{ROW}[data-irn='{a}'] .icttl\").textContent.includes('<img src=x')")
         self.assertIsNone(b.eval("window.__pwn"))
         self.assertEqual(b.eval(f"document.querySelectorAll(\"{ROW}[data-irn='{a}'] img, {ROW}[data-irn='{a}'] b:not(.icttl), {ROW}[data-irn='{a}'] i\").length"), 0)
         self.assertEqual(b.eval(f"document.querySelectorAll(\"{ROW}[data-irn='{a}'] a[href^='javascript']\").length"), 0)
@@ -219,7 +224,7 @@ class Decide(Base):
         b.wait("!!document.getElementById('rvReason')")
         b.key("1")
         b.wait(f"!document.querySelector(\"{ROW}[data-irn='{n}']\")", 20)
-        b.wait("document.getElementById('snackU') && !document.getElementById('snackU').hidden", 20)
+        b.wait("document.getElementById('snackU') && !document.getElementById('snackU').hidden && document.getElementById('snackU').offsetWidth>0", 20)
         b.click("#snackU")
         b.wait(f"REV.some(r=>r.n=={n}&&!r.done)", 20)       # the reload brings the server's own model, so the check is on the rows
 
