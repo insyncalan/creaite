@@ -175,7 +175,7 @@ def partners(code):
     """[{name, slug}] from the project's CLAUDE.md `Partners` line (build_dashboard.partners_of); [] when it has none or no folder."""
     import build_dashboard
     try:
-        return build_dashboard.partners_of((paths.project_dir(code) / "CLAUDE.md").read_text(encoding="utf-8"))
+        return build_dashboard.partners_of((paths.project_dir(code) / "CLAUDE.md").read_bytes().decode("utf-8"))
     except (LookupError, OSError):
         return []
 
@@ -219,6 +219,35 @@ def logo_file(code, kind):
         if found:
             return found
     return None
+
+
+def _orphan_slug(f, prefix):
+    """The slug of a partner logo file named `<prefix><slug>[-original].<ext>`, or None for a file that is not one (a link, a folder, a file
+    of another type, a name that is not a slug)."""
+    if not f.name.startswith(prefix) or f.suffix.lower() not in LOGO_EXT or f.is_symlink() or not f.is_file():
+        return None
+    slug = f.stem[len(prefix):]
+    if slug.endswith("-original") and len(slug) > len("-original"):
+        slug = slug[:-len("-original")]
+    return slug if re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug) and len(slug) <= 40 else None
+
+
+def orphan_logos(code):
+    """[{kind, slug, path}] of partner logo files this project has that no partner of its Partners line owns (a partner renamed or
+    removed leaves `<CODE>-partner-<slug>.<ext>` behind), by slug. A `-original` file belongs to its slug; a link, a folder and a file of
+    another type are skipped; the old `<CODE>-partner` file is not one."""
+    if not paths.REPORT_LOGOS.is_dir() or paths.REPORT_LOGOS.is_symlink():
+        return []
+    mine, prefix, found = {p["slug"] for p in partners(code)}, f"{code}-partner-", {}
+    for f in sorted(paths.REPORT_LOGOS.iterdir()):
+        slug = _orphan_slug(f, prefix)
+        if slug and slug not in mine:
+            found.setdefault(slug, []).append(f)
+    out = []
+    for slug, files in sorted(found.items()):
+        shown = [f for f in files if not f.stem.endswith("-original")] or files
+        out.append({"kind": "partner:" + slug, "slug": slug, "path": paths.rel(max(shown, key=lambda f: f.stat().st_mtime))})
+    return out
 
 
 def logos(code, wanted=None):
