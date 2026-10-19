@@ -6,7 +6,8 @@ code behind that route; it never calls Microsoft 365 itself and has no way to se
 
   - `request(payload)`  the popup's payload checked and turned into the one create-draft call: the To addresses as shown
                         (none is allowed: Alan, 19-10-2026, the draft is still made with nothing in To), the subject as shown, and
-                        the body exactly as the preview's HTML (bodyType html). Refused when the setting is off.
+                        the body exactly as the preview's HTML (bodyType html). Refused when the setting is off, and (for a
+                        draft, not a copy) when the body has markup Outlook's create-draft refuses (`markup_problem`).
   - `prompt(req)`       the words for the server's headless run, whose only Microsoft 365 tool is CREATE_TOOL.
   - `check(events,req)` the run's stream-json events: exactly one CREATE_TOOL call, with exactly the request's arguments,
                         and no other tool but ToolSearch; Outlook's answer (the draft's id and web link) or a fixed reason.
@@ -23,6 +24,7 @@ recipient address. Never the subject, an address or any of the email's text. Lib
 `check`, `created`, `copied`, `access`, `sent`: JSON on stdin, JSON out), for the live server's route.
 """
 import hashlib
+import html.parser
 import json
 import re
 import sys
@@ -53,6 +55,72 @@ REASONS = (  # Outlook's error, as fixed words (never the tool's or the model's 
     (re.compile(r"rate|429|throttl|too many", re.I), "Outlook is busy: try again in a minute"),
     (re.compile(r"connect|token|sign.?in|AADSTS|auth", re.I), "Microsoft 365 isn't connected"),
 )
+
+
+# Outlook's create-draft takes an HTML body only inside its outbound allowlist (headings, paragraphs, links, lists, b/i/strong/em/strike,
+# code, tables, br/hr, div, pre) and rejects, never strips, anything else: span, font, blockquote, images, scripts, event handlers,
+# comments and other <!...>/<?...?> markup. Alan, 19-10-2026: the builder writes only that subset, in the copy and the draft alike
+# (drafts.js draftEmail), and a body outside it is refused here, before any run, with fixed words.
+ALLOWED_TAGS = frozenset("p div h1 h2 h3 h4 h5 h6 a ul ol li b i strong em strike s code pre table thead tbody tfoot tr td th "
+                         "caption br hr".split())
+ALLOWED_ATTRS = frozenset("style href align valign width cellpadding cellspacing border colspan rowspan bgcolor".split())
+BAD_STYLE = re.compile(r"var\(|url\(|expression\(|@import|javascript:|behavior\s*:", re.I)
+HREF_OK = re.compile(r"^(https?:|mailto:)", re.I)
+MARKUP_REFUSED = "The email has formatting Outlook won't take ({what}): copy it instead."
+
+
+class _Markup(html.parser.HTMLParser):
+    """Collects the first construct outside the allowlist (as fixed words naming it)."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.problem = None
+
+    def _say(self, what):
+        if self.problem is None:
+            self.problem = what
+
+    def handle_starttag(self, tag, attrs):
+        if tag not in ALLOWED_TAGS:
+            self._say(f"a <{tag}> element" if re.fullmatch(r"[a-z][a-z0-9-]{0,20}", tag) else "an element")
+            return
+        for name, value in attrs:
+            if name.startswith("data-"):
+                self._say("a data- attribute")
+            elif name.startswith("on"):
+                self._say("an event handler")
+            elif name not in ALLOWED_ATTRS:
+                self._say(f"{'an' if name[:1] in 'aeiou' else 'a'} {name} attribute" if re.fullmatch(r"[a-z][a-z0-9-]{0,20}", name) else "an attribute")
+            elif name == "style" and BAD_STYLE.search(value or ""):
+                self._say("a style Outlook won't take")
+            elif name == "href" and not HREF_OK.match((value or "").strip()):
+                self._say("a link that isn't a web or mail address")
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+    def handle_comment(self, data):
+        self._say("a comment")
+
+    def handle_decl(self, decl):
+        self._say("a <!...> declaration")
+
+    def unknown_decl(self, data):
+        self._say("a <!...> declaration")
+
+    def handle_pi(self, data):
+        self._say("a <?...?> instruction")
+
+
+def markup_problem(body):
+    """None when every element and attribute of the HTML body is one Outlook's create-draft takes; else what isn't, in fixed words."""
+    m = _Markup()
+    try:
+        m.feed(str(body or ""))
+        m.close()
+    except Exception:  # noqa: BLE001 - malformed markup is refused, never guessed at
+        return "markup creaite can't read"
+    return m.problem
 
 
 class Refused(ValueError):
@@ -110,6 +178,9 @@ def request(payload, settings=None):
     p = payload if isinstance(payload, dict) else {}
     to = _addresses(p.get("to"))
     args = {"subject": _subject(p.get("subject")), "body": _body(p.get("html")), "bodyType": "html"}
+    bad = None if p.get("action") == "copied" else markup_problem(args["body"])   # a copy is pasted by Alan, never sent to the tool
+    if bad:
+        raise Refused(MARKUP_REFUSED.format(what=bad))
     if to:
         args["to"] = to                                  # no address on record: the draft is made with nothing in To
     ids = list(dict.fromkeys(i for i in p.get("ids") or [] if isinstance(i, str) and ID_RE.match(i)))[:50]
