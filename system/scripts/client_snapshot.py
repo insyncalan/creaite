@@ -201,7 +201,7 @@ def logo_table(code, layout):
     for lg in report_doc.client_logos(code, layout):
         f = paths.resolve(lg["path"])
         try:
-            if f.is_symlink() or not f.is_file() or f.parent.resolve() != paths.REPORT_LOGOS.resolve():
+            if f.is_symlink() or not f.is_file() or f.stat().st_nlink > 1 or f.parent.resolve() != paths.REPORT_LOGOS.resolve():
                 continue
             raw, stripped = _hashes(f.read_bytes())
         except OSError:

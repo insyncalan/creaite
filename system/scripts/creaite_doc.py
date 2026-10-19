@@ -689,17 +689,15 @@ def text_image(doc, ref):
     """The picture file a text section's `_images/<name>` address names (PNG or JPEG), or None: only that shape of address is read, and
     only inside the reports folder. v2.5.1 (#239, gap C): a client report reads only its own pictures (`_images/client-<name>`,
     added from the client report), and while its snapshot renders only the ones in the snapshot's picture table, with the same
-    bytes."""
+    bytes. v2.5.1 step 3 (the review's L1): paths.image_file's file checks too: never a hard link (it may name an outside file), never
+    through a symlinked `_images` folder."""
     if not TEXT_IMAGE.match(str(ref or "")):
         return None
     root = images_dir(doc or {})
     if root is None:
         return None
     f = Path(root) / ref
-    try:
-        if f.is_symlink() or not f.is_file() or (Path(root).resolve() / "_images") not in f.resolve().parents:
-            return None
-    except OSError:
+    if not _own_picture(Path(root), f):
         return None
     if (doc or {}).get("kind") == "client":
         if not Path(ref).name.lower().startswith(CLIENT_PICTURE):
@@ -708,6 +706,16 @@ def text_image(doc, ref):
         if tables is not None and not _same_bytes(f, (tables.get("pictures") or {}).get(ref)):
             return None
     return f
+
+
+def _own_picture(root, f):
+    """Whether `f` is a real picture file in `root`'s own `_images/` folder: not a symlink, not reached through a symlinked folder,
+    not a hard link (paths.image_file's rules, v2.5.1 step 3: a hard link may name an outside file)."""
+    try:
+        return not (f.is_symlink() or (root / "_images").is_symlink() or not f.is_file() or f.stat().st_nlink > 1
+                    or (root.resolve() / "_images") not in f.resolve().parents)
+    except OSError:
+        return False
 
 
 def picture_ref_ok(ref):
@@ -1447,8 +1455,8 @@ def picture_png(markup, width, height, scale=2):
 
 def _logo_ok(f, allowed, table):
     """Whether a logo file may be drawn: a real file (no symlink) that is one of the project's own (`allowed`), and while a client
-    snapshot renders, the snapshot's logo of that name with the same bytes (`table`, v2.5.1 step 2)."""
-    if f.is_symlink() or not f.is_file() or f.resolve() not in allowed:
+    snapshot renders, the snapshot's logo of that name with the same bytes (`table`, v2.5.1 step 2); never a hard link (step 3)."""
+    if f.is_symlink() or not f.is_file() or f.stat().st_nlink > 1 or f.resolve() not in allowed:
         return False
     return table is None or _same_bytes(f, table.get(f.name))
 
