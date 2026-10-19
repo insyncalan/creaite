@@ -119,7 +119,7 @@ class Sidebar(LiveBrowserCase):
 
     def test_collapsed_icons_are_named_with_tooltips_badges_and_the_accent_bar(self):
         b = self.b
-        pending = b.eval("REV.filter(r=>!r.done).length")
+        pending = b.eval("irLiveCounts().badge")   # #232-C: ready to process plus proposals to approve
         self.assertGreater(pending, 0)
         b.eval("railSave({...RAILCFG,display:'icons'})")                                       # a saved "icons": icons only, collapsed
         self.wait_saved("r.display==='icons'")
@@ -166,7 +166,7 @@ class Sidebar(LiveBrowserCase):
         b = self.b
         b.eval("railSave({...RAILCFG,order:['today','work','projects','people'],more:['review','inbox','files','activity','settings']})")
         self.wait_saved("r.more[0]==='review'")
-        pending = b.eval("REV.filter(r=>!r.done).length")
+        pending = b.eval("irLiveCounts().badge")   # #232-C: ready to process plus proposals to approve
         b.eval("healthCount.value=1")                                                          # one problem from Settings > Health
         b.wait("document.getElementById('railMoreBadge').textContent==='1'")
         m = b.eval("(()=>{ const m=document.getElementById('railMore'); return {label:m.getAttribute('aria-label'), shown:getComputedStyle(document.getElementById('railMoreBadge')).display}; })()")
