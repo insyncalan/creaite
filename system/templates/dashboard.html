@@ -2919,6 +2919,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .hhow{margin-top:6px;font-size:var(--fs-xs);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--sunk);border-radius:var(--r-md);padding:6px 8px}
 .hbad{color:var(--bad)}
 .hdoes{margin-top:4px;font-size:var(--fs-xs);color:var(--ink)}
+.hrow .hact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end} .hdismissform .hreason{flex:1;min-width:12em}   /* #242 */
 .hsub{font-size:var(--fs-xs);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:14px 0 2px}
 .hsteps{margin:4px 0 0;padding-left:16px;font-size:var(--fs-sm);color:var(--muted)} .hsteps li{margin:2px 0}
 .hfine{border-top:1px solid var(--line);padding:10px 0 0} .hfine summary{cursor:pointer;color:var(--muted);font-size:var(--fs-sm)}
@@ -30492,6 +30493,30 @@ ${s5}`;
     const c5 = store.get(COUNT_KEY, null);
     return c5 && typeof c5.at === "number" ? c5.at : 0;
   };
+  var entryOf = (p6) => ({ id: p6.id, detail_key: p6.key, reason: p6.reason || "", date: p6.date || "" });
+  async function saveDismissed(problems, gone) {
+    const res = healthResult.value;
+    if (!res || !await saveSettings({ "health.dismissed": gone.map(entryOf) })) return false;
+    healthResult.value = { ...res, problems, dismissed: gone };
+    healthCount.value = problems.length;
+    store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() || Date.now() });
+    return true;
+  }
+  function dismissProblem(p6, reason) {
+    const res = healthResult.value;
+    if (!res || !p6.dismissable) return Promise.resolve(false);
+    const why = String(reason || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    return saveDismissed(res.problems.filter((x5) => x5.key !== p6.key), [...res.dismissed || [], { ...p6, reason: why, date: TODAY }]);
+  }
+  function restoreProblem(p6) {
+    const res = healthResult.value;
+    if (!res) return Promise.resolve(false);
+    const back2 = { ...p6 };
+    delete back2.reason;
+    delete back2.date;
+    const problems = [...res.problems, back2].sort((a5, b5) => Number(a5.severity !== "fail") - Number(b5.severity !== "fail"));
+    return saveDismissed(problems, (res.dismissed || []).filter((x5) => x5.key !== p6.key));
+  }
   function showHealthCount(n4) {
     void n4;
   }
@@ -30968,8 +30993,53 @@ ${s5}`;
       done.length > 0 && /* @__PURE__ */ u2("ul", { class: "hsteps", "aria-label": "What was restored", children: done.map((d5) => /* @__PURE__ */ u2("li", { children: d5 })) })
     ] });
   }
+  function DismissForm({ p: p6, onClose }) {
+    const [why, setWhy] = d2(""), [busy2, setBusy] = d2(false);
+    const go3 = async () => {
+      setBusy(true);
+      const ok2 = await dismissProblem(p6, why);
+      setBusy(false);
+      if (ok2) snack(`Dismissed: ${p6.title}. It's under Dismissed until you restore it or it changes.`);
+      else onClose();
+    };
+    return /* @__PURE__ */ u2("div", { class: "hhow hdismissform", role: "group", "aria-label": `Dismiss: ${p6.title}`, children: [
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          class: "hreason",
+          maxLength: 200,
+          size: 28,
+          value: why,
+          placeholder: "Why (optional)",
+          "aria-label": "Why you're dismissing it (optional)",
+          ref: (el2) => {
+            if (el2 && !el2.dataset.focused) {
+              el2.dataset.focused = "1";
+              el2.focus();
+            }
+          },
+          onInput: (e4) => setWhy(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          ),
+          onKeyDown: (e4) => {
+            if (e4.key === "Enter") {
+              e4.preventDefault();
+              go3();
+            } else if (e4.key === "Escape") {
+              e4.stopPropagation();
+              onClose();
+            }
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn hdismissgo", disabled: busy2, onClick: go3, children: busy2 ? "Saving…" : "Dismiss" }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: onClose, children: "Cancel" })
+    ] });
+  }
   function Problem({ p: p6 }) {
-    const [open2, setOpen2] = d2(false);
+    const [open2, setOpen2] = d2(false), [asking, setAsking] = d2(false);
     const bad = p6.severity === "fail", hid = `hhow-${p6.id}`, cmd = commandIn(p6.fix.how);
     const copy = (e4) => {
       const b5 = (
@@ -30998,9 +31068,53 @@ ${s5}`;
         !p6.fix.built && open2 && /* @__PURE__ */ u2("div", { class: "hhow", id: hid, children: [
           p6.fix.how ? /* @__PURE__ */ u2("span", { children: p6.fix.how }) : /* @__PURE__ */ u2("span", { children: "Only you can take this step: the line above says what is wrong." }),
           cmd && /* @__PURE__ */ u2("button", { type: "button", class: "mini", "aria-label": `Copy the command: ${cmd}`, onClick: copy, children: "Copy" })
-        ] })
+        ] }),
+        !p6.dismissable && p6.keep_why && /* @__PURE__ */ u2("div", { class: "d hkeep", children: p6.keep_why }),
+        asking && /* @__PURE__ */ u2(DismissForm, { p: p6, onClose: () => setAsking(false) })
       ] }),
-      /* @__PURE__ */ u2("div", { class: "hact", children: p6.fix.built ? /* @__PURE__ */ u2(FixButton, { f: p6.fix, label: p6.title }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-expanded": open2 ? "true" : "false", "aria-controls": open2 ? hid : void 0, onClick: () => setOpen2(!open2), children: "How to fix" }) })
+      /* @__PURE__ */ u2("div", { class: "hact", children: [
+        p6.fix.built ? /* @__PURE__ */ u2(FixButton, { f: p6.fix, label: p6.title }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-expanded": open2 ? "true" : "false", "aria-controls": open2 ? hid : void 0, onClick: () => setOpen2(!open2), children: "How to fix" }),
+        p6.dismissable && !asking && viaServer() && /* @__PURE__ */ u2("button", { type: "button", class: "btn quiet hdismiss", "aria-label": `Dismiss: ${p6.title}`, onClick: () => setAsking(true), children: "Dismiss" })
+      ] })
+    ] });
+  }
+  function Dismissed({ list }) {
+    const [busy2, setBusy] = d2("");
+    const back2 = async (p6) => {
+      setBusy(p6.key);
+      const ok2 = await restoreProblem(p6);
+      setBusy("");
+      if (ok2) snack(`Restored: ${p6.title}`);
+    };
+    return /* @__PURE__ */ u2("details", { class: "hfine", id: "healthDismissed", children: [
+      /* @__PURE__ */ u2("summary", { children: [
+        "Dismissed (",
+        list.length,
+        ")"
+      ] }),
+      /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Dismissed problems", children: list.map((p6) => /* @__PURE__ */ u2("li", { class: "hrow", "data-check": p6.id, children: [
+        /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
+        /* @__PURE__ */ u2("div", { class: "hbody", children: [
+          /* @__PURE__ */ u2("div", { class: "t", children: p6.title }),
+          p6.detail && /* @__PURE__ */ u2("div", { class: "d", children: p6.detail }),
+          /* @__PURE__ */ u2("div", { class: "d", children: [
+            "Dismissed ",
+            fd(p6.date || ""),
+            p6.reason ? `: ${p6.reason}` : ""
+          ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn hrestorebtn",
+            disabled: !!busy2 || !viaServer(),
+            "aria-label": `Restore: ${p6.title}`,
+            onClick: () => back2(p6),
+            children: busy2 === p6.key ? "Restoring…" : "Restore"
+          }
+        ) })
+      ] }, p6.key)) })
     ] });
   }
   function Health() {
@@ -31019,7 +31133,7 @@ ${s5}`;
       err && /* @__PURE__ */ u2("p", { class: "sub hbad", role: "alert", children: err }),
       res && /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("p", { class: "sub hsum", children: n4 ? `${n4} thing${n4 === 1 ? "" : "s"} need${n4 === 1 ? "s" : ""} you.` : "Nothing needs you." }),
-        n4 > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "What needs you", children: res.problems.map((p6) => /* @__PURE__ */ u2(Problem, { p: p6 }, p6.id)) }),
+        n4 > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "What needs you", children: res.problems.map((p6) => /* @__PURE__ */ u2(Problem, { p: p6 }, p6.key || p6.id)) }),
         res.stopped.length > 0 && /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Errors that have stopped", children: res.stopped.map((s5) => /* @__PURE__ */ u2("li", { class: "hrow stopped", children: [
           /* @__PURE__ */ u2("span", { class: "hico ok", "aria-hidden": "true", children: "✓" }),
           /* @__PURE__ */ u2("div", { class: "hbody", children: [
@@ -31041,6 +31155,7 @@ ${s5}`;
           ] }),
           /* @__PURE__ */ u2("div", { class: "hact" })
         ] })) }),
+        (res.dismissed || []).length > 0 && /* @__PURE__ */ u2(Dismissed, { list: res.dismissed || [] }),
         /* @__PURE__ */ u2("details", { class: "hfine", children: [
           /* @__PURE__ */ u2("summary", { children: [
             res.fine,

@@ -2909,6 +2909,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .hhow{margin-top:6px;font-size:var(--fs-xs);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--sunk);border-radius:var(--r-md);padding:6px 8px}
 .hbad{color:var(--bad)}
 .hdoes{margin-top:4px;font-size:var(--fs-xs);color:var(--ink)}
+.hrow .hact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end} .hdismissform .hreason{flex:1;min-width:12em}   /* #242 */
 .hsub{font-size:var(--fs-xs);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:14px 0 2px}
 .hsteps{margin:4px 0 0;padding-left:16px;font-size:var(--fs-sm);color:var(--muted)} .hsteps li{margin:2px 0}
 .hfine{border-top:1px solid var(--line);padding:10px 0 0} .hfine summary{cursor:pointer;color:var(--muted);font-size:var(--fs-sm)}

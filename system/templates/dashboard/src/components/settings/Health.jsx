@@ -7,13 +7,16 @@
    - every other fix is a disclosure, "How to fix", with the manual step and Copy when the step is a command.
    The fixes no check can see (Chrome's icon, Microsoft 365) are offered on their own, under "If you need them". The checks that
    passed fold into one line; errors that kept coming back and have stopped are listed as stopped (BL-263); the last archiving
-   runs (BL-10, BL-03) are listed under Archiving. The check runs when
+   runs (BL-10, BL-03) are listed under Archiving. A problem can be dismissed (#242), with an optional one-line reason: it stops
+   counting and is listed under a quiet "Dismissed (n)", with Restore; a failure of the engine's own integrity says why it
+   can't be. The check runs when
    Health opens (if it hasn't this visit) and on Check again; it takes a few seconds, shown as it runs. */
 import { useEffect, useState } from "preact/hooks";
 import { linkUrl } from "../../core/linkUrl.js";
 import { copied, fd } from "../../core/page.js";
 import { api, snack, viaServer } from "../../core/server.js";
-import { checkHealth, healthResult, healthBusy, healthError, healthCardWaiting, markCardWaiting } from "../../stores/settings.js";
+import { checkHealth, dismissProblem, healthResult, healthBusy, healthError, healthCardWaiting, markCardWaiting, restoreProblem }
+  from "../../stores/settings.js";
 import { pendingEdit } from "../../ask.js";
 
 const CMD = /system\/scripts\/run [^,;"]+/;
@@ -98,9 +101,26 @@ function RestoreBackup() {
 
 /** @typedef {{p: import("../../stores/settings.js").Problem}} ProblemProps */
 
+/** #242: Dismiss, then its one-line reason (optional) and Dismiss or Cancel. @param {ProblemProps & {onClose:()=>void}} props */
+function DismissForm({ p, onClose }) {
+  const [why, setWhy] = useState(""), [busy, setBusy] = useState(false);
+  const go = async () => { setBusy(true); const ok = await dismissProblem(p, why); setBusy(false);
+    if (ok) snack(`Dismissed: ${p.title}. It's under Dismissed until you restore it or it changes.`); else onClose(); };
+  return (
+    <div class="hhow hdismissform" role="group" aria-label={`Dismiss: ${p.title}`}>
+      <input type="text" class="hreason" maxLength={200} size={28} value={why} placeholder="Why (optional)" aria-label="Why you're dismissing it (optional)"
+        ref={el => { if (el && !el.dataset.focused) { el.dataset.focused = "1"; el.focus(); } }}
+        onInput={e => setWhy(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
+        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); go(); } else if (e.key === "Escape") { e.stopPropagation(); onClose(); } }} />
+      <button type="button" class="btn hdismissgo" disabled={busy} onClick={go}>{busy ? "Saving…" : "Dismiss"}</button>
+      <button type="button" class="btn" disabled={busy} onClick={onClose}>Cancel</button>
+    </div>
+  );
+}
+
 /** One problem. @param {ProblemProps} props */
 function Problem({ p }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false), [asking, setAsking] = useState(false);
   const bad = p.severity === "fail", hid = `hhow-${p.id}`, cmd = commandIn(p.fix.how);
   const copy = (/** @type {Event} */ e) => {
     const b = /** @type {HTMLElement} */ (e.currentTarget);
@@ -120,13 +140,42 @@ function Problem({ p }) {
             {cmd && <button type="button" class="mini" aria-label={`Copy the command: ${cmd}`} onClick={copy}>Copy</button>}
           </div>
         )}
+        {!p.dismissable && p.keep_why && <div class="d hkeep">{p.keep_why}</div>}
+        {asking && <DismissForm p={p} onClose={() => setAsking(false)} />}
       </div>
       <div class="hact">
         {p.fix.built
           ? <FixButton f={p.fix} label={p.title} />
           : <button type="button" class="btn" aria-expanded={open ? "true" : "false"} aria-controls={open ? hid : undefined} onClick={() => setOpen(!open)}>How to fix</button>}
+        {p.dismissable && !asking && viaServer() &&
+          <button type="button" class="btn quiet hdismiss" aria-label={`Dismiss: ${p.title}`} onClick={() => setAsking(true)}>Dismiss</button>}
       </div>
     </li>
+  );
+}
+
+/** #242: the dismissed problems, folded, each with its reason, date and Restore. @param {{list: import("../../stores/settings.js").Problem[]}} props */
+function Dismissed({ list }) {
+  const [busy, setBusy] = useState("");
+  const back = async (/** @type {import("../../stores/settings.js").Problem} */ p) => {
+    setBusy(p.key); const ok = await restoreProblem(p); setBusy(""); if (ok) snack(`Restored: ${p.title}`); };
+  return (
+    <details class="hfine" id="healthDismissed">
+      <summary>Dismissed ({list.length})</summary>
+      <ul class="hlist" aria-label="Dismissed problems">
+        {list.map(p => (
+          <li class="hrow" data-check={p.id} key={p.key}>
+            <span class="hico" aria-hidden="true"></span>
+            <div class="hbody">
+              <div class="t">{p.title}</div>
+              {p.detail && <div class="d">{p.detail}</div>}
+              <div class="d">Dismissed {fd(p.date || "")}{p.reason ? `: ${p.reason}` : ""}</div>
+            </div>
+            <div class="hact"><button type="button" class="btn hrestorebtn" disabled={!!busy || !viaServer()} aria-label={`Restore: ${p.title}`}
+              onClick={() => back(p)}>{busy === p.key ? "Restoring…" : "Restore"}</button></div>
+          </li>))}
+      </ul>
+    </details>
   );
 }
 
@@ -147,7 +196,7 @@ export function Health() {
       {res && (
         <>
           <p class="sub hsum">{n ? `${n} thing${n === 1 ? "" : "s"} need${n === 1 ? "s" : ""} you.` : "Nothing needs you."}</p>
-          {n > 0 && <ul class="hlist" aria-label="What needs you">{res.problems.map(p => <Problem key={p.id} p={p} />)}</ul>}
+          {n > 0 && <ul class="hlist" aria-label="What needs you">{res.problems.map(p => <Problem key={p.key || p.id} p={p} />)}</ul>}
           {res.stopped.length > 0 && (
             <ul class="hlist" aria-label="Errors that have stopped">
               {res.stopped.map(s => (
@@ -159,6 +208,7 @@ export function Health() {
               ))}
             </ul>
           )}
+          {(res.dismissed || []).length > 0 && <Dismissed list={res.dismissed || []} />}
           <details class="hfine">
             <summary>{res.fine} check{res.fine === 1 ? "" : "s"} fine</summary>
             <p class="sub">{res.fine_names.join(", ")}</p>

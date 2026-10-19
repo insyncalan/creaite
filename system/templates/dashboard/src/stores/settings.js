@@ -10,7 +10,7 @@
    Saving is the page's own: writeSettings (a backup and a log line). After a save or a Reset each listener in SAVED is told
    the dotted keys and their new values, so settings.js can bring the page's copies (S, the VIP and draft settings) up to date. */
 import { computed, effect, signal } from "@preact/signals";
-import { store } from "../core/page.js";
+import { store, TODAY } from "../core/page.js";
 import { api, writeSettings } from "../core/server.js";
 
 /** @typedef {{key:string, tier:string, group:string, label:string, line:string, reason:string, default:any, value:any,
@@ -21,9 +21,12 @@ import { api, writeSettings } from "../core/server.js";
 /** A problem's fix. A built one (health_fixes.py) also has its id, title, what it does, and its command or the page it opens.
     @typedef {{kind:string, button:string, would_run:string, waits_for:string, how:string, built:boolean, id?:string,
      title?:string, does?:string, command?:string, url?:string}} Fix */
-/** @typedef {{id:string, title:string, check:string, severity:string, detail:string, fix:Fix}} Problem */
+/** A problem. `key` is its check id and a hash of its detail; `dismissable` is false for the engine's own integrity (#242),
+    with `keep_why`; a dismissed one also has its `reason` and `date` (YYYY-MM-DD).
+    @typedef {{id:string, title:string, check:string, severity:string, detail:string, fix:Fix, key:string, dismissable:boolean,
+     keep_why:string, reason?:string, date?:string}} Problem */
 /** @typedef {{area:string, count:number, span:string, message:string}} Stopped */
-/** @typedef {{problems:Problem[], fine:number, fine_names:string[], stopped:Stopped[], checked:string, standalone?:Fix[], archiving?:string[], backups?:string[]}} HealthResult */
+/** @typedef {{problems:Problem[], fine:number, fine_names:string[], stopped:Stopped[], checked:string, standalone?:Fix[], archiving?:string[], backups?:string[], dismissed?:Problem[]}} HealthResult */
 
 /** @type {import("@preact/signals").Signal<Catalogue|null>} */
 export const catalogue = signal(null);
@@ -103,6 +106,39 @@ export async function checkHealth() {
 
 /** When this browser last checked (ms), or 0. */
 export const lastCheckAt = () => { const c = store.get(COUNT_KEY, null); return c && typeof c.at === "number" ? c.at : 0; };
+
+/* ===== #242 (Alan, 19-10-2026): dismiss a problem so it stops counting =====
+   settings.json's health.dismissed holds {id, detail_key, reason, date} for each dismissed problem, saved through saveSettings
+   (writeSettings: a backup and a log line). The list saved is the problems dismissed now, so an entry whose problem has gone or
+   changed is dropped at the next save; the server leaves the listed ones out of `problems` (health.py). The page's copy and the
+   rail's count follow at once, without running the check again. */
+/** @param {Problem} p */
+const entryOf = p => ({ id: p.id, detail_key: p.key, reason: p.reason || "", date: p.date || "" });
+/** Save the dismissed list, then show `problems` and `dismissed` with the count. @param {Problem[]} problems @param {Problem[]} gone */
+async function saveDismissed(problems, gone) {
+  const res = healthResult.value;
+  if (!res || !await saveSettings({ "health.dismissed": gone.map(entryOf) })) return false;
+  healthResult.value = { ...res, problems, dismissed: gone };
+  healthCount.value = problems.length;
+  store.set(COUNT_KEY, { n: problems.length, at: lastCheckAt() || Date.now() });
+  return true;
+}
+/** Dismiss one problem, with an optional one-line reason and today's date. @param {Problem} p @param {string} reason */
+export function dismissProblem(p, reason) {
+  const res = healthResult.value;
+  if (!res || !p.dismissable) return Promise.resolve(false);
+  const why = String(reason || "").replace(/\s+/g, " ").trim().slice(0, 200);
+  return saveDismissed(res.problems.filter(x => x.key !== p.key), [...(res.dismissed || []), { ...p, reason: why, date: TODAY }]);
+}
+/** Bring a dismissed problem back: it counts again (failures first, as the check lists them). @param {Problem} p */
+export function restoreProblem(p) {
+  const res = healthResult.value;
+  if (!res) return Promise.resolve(false);
+  const back = { ...p }; delete back.reason; delete back.date;
+  const problems = [...res.problems, back].sort((a, b) => Number(a.severity !== "fail") - Number(b.severity !== "fail"));
+  return saveDismissed(problems, (res.dismissed || []).filter(x => x.key !== p.key));
+}
+/* ===== end #242 ===== */
 
 /* ===== The rail's count on Settings (BL-320 §4): the hook =====
    v192-sidebar's setRailCount (stores/rail.js) isn't on this branch's base. When both are merged, the body of showHealthCount

@@ -9,7 +9,13 @@ launcher, Rosetta, the OneDrive copy) the fix is built: `fix.built` is True, wit
 page runs it through POST /api/health/fix/<id>. Every other fix stays `built: False` with the manual step (`fix.how`). The
 fixes no doctor check can see (Chrome's icon, Microsoft 365) are offered on their own (`standalone`). Library only; the live
 server's /api/health uses it.
+
+#242 (Alan, 19-10-2026): a problem Alan dismisses stops counting. settings.json's health.dismissed lists each one as {id,
+detail_key, reason, date} (saved by the page's own settings save: a backup and a log line); `detail_key` is the check id and a
+hash of the detail, so a problem whose detail changes (another file, another count) comes back by itself. A dismissed problem
+is listed under `dismissed`, not `problems`. A failure of the engine's own integrity (KEEP) can't be dismissed.
 """
+import hashlib
 import json
 import subprocess
 import sys
@@ -83,6 +89,41 @@ BACKUP_LINES = ("offsite_backup", "backup_check", "tidy_up")      # BL-323: show
 
 ARCHIVING = ("archive_items", "archive_reports")      # BL-10, BL-03: their last runs are listed under Archiving when fine
 
+# #242: failures of the engine's own integrity, never dismissed (creaite isn't safe to use until they are fixed); a warning from
+# one of these checks, and every other problem, may be dismissed
+KEEP = ("python_version", "fts5", "vendored", "vendor_manifest", "database", "writable", "assistant_guard", "search_index",
+        "version", "rules_imported", "scripts_use_paths")
+KEEP_WHY = "This can't be dismissed: creaite isn't safe to use until it is fixed."
+
+
+def problem_key(check_id, detail):
+    """A dismissed problem's key: its check id and a short hash of its detail as shown (#242)."""
+    return f"{check_id}:{hashlib.sha256(str(detail).encode('utf-8')).hexdigest()[:12]}"
+
+
+def dismissed_entries(dismissed=None):
+    """health.dismissed from settings.json (or `dismissed`), only the well-formed entries, by detail_key."""
+    if dismissed is None:
+        try:
+            dismissed = (paths.load_settings().get("health") or {}).get("dismissed")
+        except (OSError, ValueError):
+            dismissed = None
+    if not isinstance(dismissed, list):
+        return {}
+    return {d["detail_key"]: d for d in dismissed if isinstance(d, dict) and isinstance(d.get("detail_key"), str)}
+
+
+def split_dismissed(problems, dismissed=None):
+    """(problems still counted, dismissed problems with their reason and date): a problem that may not be dismissed stays."""
+    entries, shown, gone = dismissed_entries(dismissed), [], []
+    for p in problems:
+        e = entries.get(p["key"]) if p["dismissable"] else None
+        if e:
+            gone.append({**p, "reason": str(e.get("reason") or ""), "date": str(e.get("date") or "")})
+        else:
+            shown.append(p)
+    return shown, gone
+
 
 def doctor_checks():
     """doctor.py --read-only --json, run in its own process: {checks: [{id, name, status, detail}], passed, failed}."""
@@ -126,26 +167,35 @@ def stopped_errors():
             for g in groups if not g["live"]]
 
 
-def health(result=None):
-    """{problems, fine, fine_names, stopped, checked}: doctor's warnings and failures in plain words, each with its fix; the
-    rest counted. `result` is a doctor --json result (the tests pass one), else doctor runs now."""
+def problem(c):
+    """One doctor warning or failure as Health lists it: plain words, its fix, its key and whether it may be dismissed."""
+    title, kind = PLAIN.get(c.get("id"), (c.get("name", "A check"), "manual"))
+    if c.get("id") == "archive_reports" and str(c.get("detail", "")).startswith("Archive "):
+        title = str(c["detail"]).split(":")[0]               # BL-03: "Archive 14 reports and minutes older than 12 months"
+    detail, keep = home_short(c.get("detail", "")), c.get("status") == "fail" and c.get("id") in KEEP
+    return {"id": c.get("id"), "title": title, "check": c.get("name", ""), "severity": c.get("status"), "detail": detail,
+            "fix": fix_for(kind, c.get("id"), c.get("detail", "")), "key": problem_key(c.get("id"), detail),
+            "dismissable": not keep, "keep_why": KEEP_WHY if keep else ""}
+
+
+def health(result=None, dismissed=None):
+    """{problems, dismissed, fine, fine_names, stopped, checked}: doctor's warnings and failures in plain words, each with its
+    fix; the rest counted. `result` is a doctor --json result (the tests pass one), else doctor runs now; `dismissed` is a
+    health.dismissed list (the tests pass one), else settings.json's (#242)."""
     result = doctor_checks() if result is None else result
     problems, fine = [], []
     for c in result.get("checks") or []:
         if c.get("status") == "pass":
             fine.append(c.get("name", ""))
             continue
-        title, kind = PLAIN.get(c.get("id"), (c.get("name", "A check"), "manual"))
-        if c.get("id") == "archive_reports" and str(c.get("detail", "")).startswith("Archive "):
-            title = str(c["detail"]).split(":")[0]               # BL-03: "Archive 14 reports and minutes older than 12 months"
-        problems.append({"id": c.get("id"), "title": title, "check": c.get("name", ""), "severity": c.get("status"),
-                         "detail": home_short(c.get("detail", "")), "fix": fix_for(kind, c.get("id"), c.get("detail", ""))})
+        problems.append(problem(c))
     problems.sort(key=lambda p: p["severity"] != "fail")         # failures first, then warnings, each in doctor's order
+    problems, gone = split_dismissed(problems, dismissed)
     archiving = [home_short(c.get("detail", "")) for c in result.get("checks") or []      # BL-10, BL-03: the last runs
                  if c.get("id") in ARCHIVING and c.get("status") == "pass" and c.get("detail")]
     backups = [f"{c.get('name', '')}: {home_short(c.get('detail', ''))}" for c in result.get("checks") or []   # BL-323
                if c.get("id") in BACKUP_LINES and c.get("status") == "pass"]
-    return {"problems": problems, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(), "archiving": archiving,
-            "backups": backups,
+    return {"problems": problems, "dismissed": gone, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(),
+            "archiving": archiving, "backups": backups,
             "standalone": [built_fix(f) for f in health_fixes.STANDALONE],
             "read_only": bool(result.get("read_only")), "checked": datetime.now().strftime("%Y-%m-%d %H:%M")}
