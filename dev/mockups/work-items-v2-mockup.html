@@ -11,7 +11,8 @@
 .wkm svg{width:16px;height:16px;vertical-align:-3px;margin-right:4px}
 .wk td.title .ttl{font-weight:500}
 .wk td.title .x{color:var(--muted);font-size:var(--fs-xs)}
-.wkc .tg{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);margin-right:4px;white-space:nowrap}
+.wkc .tgs{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
+.wkc .tg{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:20px;padding:0 8px;line-height:1;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);white-space:nowrap;flex:none}
 .wkc .tg svg{width:12px;height:12px}
 .wkc .tg.warn{background:var(--warn-soft);color:var(--warn)}
 .wko .av{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
@@ -57,6 +58,7 @@ body.pkopen .pk-ob{display:none}
 .wk .wkdens{margin-right:0}
 .wk td.title .x{color:var(--muted)}
 #v-work .toolbar>.wkdens{order:4}
+.wko .av{vertical-align:middle;line-height:20px} .wko .av svg{flex:none}
 </style></head>
 <body>
 <div class="shell">
@@ -284,7 +286,7 @@ I.forEach(function(it){it.h=[];var cr=it.k==='A'?'10-10-2026 23:13':'10-10-2026 
  if(it.cv)it.h.push({k:'cv',who:'You',via:'the dashboard',txt:'turned <b>Client-visible</b> on (it can appear in client reports)',when:'12-10-2026 11:05'});
  if(it.up)it.h.push({k:'update',who:'You',via:'the dashboard',txt:'<b>Update</b> '+it.up,when:'16-10-2026 09:40'});
  it.h.sort(function(a,b){var f=function(s){var p=s.split(' ');return p[0].split('-').reverse().join('')+(p[1]||'')};return f(a.when)<f(b.when)?-1:1})});
-function tags(it){var h='';if(tab==='raid'||tab==='all')h+='<span class="tg">'+KN[it.k]+'</span>';if(it.ew)h+='<span class="tg warn" title="Raised again by a later meeting">'+flag+'Raised again</span>';if(it.cv)h+='<span class="tg" title="Client-visible">'+eye+'Client</span>';return h+'<span class="tg">'+it.ws+'</span>'}
+function tags(it){var h='';if(tab==='raid'||tab==='all')h+='<span class="tg">'+KN[it.k]+'</span>';if(it.ew)h+='<span class="tg warn" title="Raised again by a later meeting">'+flag+'Raised again</span>';if(it.cv)h+='<span class="tg" title="Client-visible">'+eye+'Client</span>';return '<span class="tgs">'+h+'<span class="tg">'+it.ws+'</span></span>'}
 function row(it){var n=it.due?days(it.due):null,late=!isClosed(it)&&n!==null&&n<0,done=isClosed(it);
  return '<tr class="click'+(done?' done':'')+'" data-row="'+it.id+'" aria-selected="false"><td class="wkm" data-f="st">'+ring(it.st)+bars(it.pr)+'<span class="vh">'+it.st+(it.pr?', '+it.pr+' priority':'')+'</span></td>'+
  '<td class="title" data-f="t"><span class="ttl">'+it.t+'</span><span class="x"><a href="#" class="rowid" data-rid="'+it.id+'" title="Open '+it.id+'">'+it.id+'</a> · <span class="pcode plink">'+P[it.p]+'</span></span></td><td class="wkc">'+tags(it)+'</td>'+
