@@ -36,6 +36,7 @@ A stopped or failed run passes result_event=None (or what it has) and still reco
 import json
 import os
 import re
+import stat
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -46,11 +47,24 @@ import paths  # noqa: E402
 KINDS = ("ask", "sweep", "generate", "prep", "check", "load", "draft", "vip")
 
 
+MAX_COUNT = 10 ** 12            # no count the monitor keeps is larger: an odd line can't overflow or bend a median
+
+
 def _int(v) -> int:
+    """A count: a whole number from 0 to MAX_COUNT. Anything else (text, NaN, infinity, a huge number, a negative) is 0 or the bound."""
     try:
-        return max(0, int(v))
-    except (TypeError, ValueError):
+        return min(max(0, int(v)), MAX_COUNT)
+    except (TypeError, ValueError, OverflowError):
         return 0
+
+
+def _money(v) -> float:
+    """Dollars: a finite number from 0 to MAX_COUNT, else 0."""
+    try:
+        x = float(v)
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
+    return min(max(x, 0.0), float(MAX_COUNT)) if x == x and abs(x) != float("inf") else 0.0
 
 
 def _now() -> datetime:
@@ -154,10 +168,7 @@ def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0,
     if not model:
         mu = r.get("modelUsage")
         model = next(iter(mu), "") if isinstance(mu, dict) else ""
-    try:
-        cost = round(max(0.0, float(r.get("total_cost_usd") or 0)), 6)
-    except (TypeError, ValueError):
-        cost = 0.0
+    cost = round(_money(r.get("total_cost_usd") or 0), 6)
     secs = seconds or (_int(r.get("duration_ms")) / 1000.0)
     return {"at": (at or _now()).strftime("%Y-%m-%dT%H:%M:%S"),
             "kind": kind if kind in KINDS else "ask",
@@ -199,7 +210,8 @@ CONTEXT_FILES = ("rules", "claude_md", "memory", "skills")       # the fixed wor
 CONTEXT_KEYS = ("date", "file", "bytes", "tokens")
 CONTEXT_DAYS = 30                                                 # the change shown beside each file
 PORTFOLIO_FILES = ("PORTFOLIO.md", "project-register.md", "people-register.md")     # read every run (the rules' memory section)
-_DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+_DAY = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")        # ASCII digits only (\d would take other scripts' digits)
+FRONT_MAX = 8192                                             # a skill's front matter is read to here and no further
 
 
 def estimate_tokens(n_bytes) -> int:
@@ -207,20 +219,46 @@ def estimate_tokens(n_bytes) -> int:
     return (_int(n_bytes) + 2) // 4
 
 
-def _size(path) -> int:
+def _regular(path, vault=None):
+    """The stat of `path` when it is a regular file, else None: a folder, a FIFO, a device, a socket, a broken or looping link, or a
+    link whose target is not a regular file inside the vault all give None. Never opens the path, so nothing can hang."""
     try:
-        return Path(path).stat().st_size
-    except OSError:
-        return 0
+        p = Path(path)
+        if p.is_symlink():
+            target = p.resolve(strict=True)
+            if vault is None or not target.is_relative_to(Path(vault).resolve()):
+                return None
+            st = target.stat()
+        else:
+            st = p.lstat()
+    except (OSError, RuntimeError, ValueError):       # a missing file, a link loop or an odd name: counted as nothing
+        return None
+    return st if stat.S_ISREG(st.st_mode) else None
 
 
-def _front_matter_size(path) -> int:
+def _size(path, vault=None) -> int:
+    """The size in bytes of a regular file (by stat, never read), else 0."""
+    st = _regular(path, vault)
+    return st.st_size if st else 0
+
+
+def _front_matter_size(path, vault=None) -> int:
     """Bytes of a skill's front matter (its name and description, between the first two --- lines): what is loaded before the skill
-    is called. 0 when the file can't be read or has none. The text is measured, never kept."""
-    try:
-        text = Path(path).read_text(encoding="utf-8", errors="replace")
-    except OSError:
+    is called. 0 when it isn't a regular file, can't be read, has none, or doesn't close within FRONT_MAX bytes. At most FRONT_MAX
+    bytes are read, without blocking. The text is measured, never kept."""
+    if not _regular(path, vault):
         return 0
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)      # a regular file (checked above); never waits
+    except OSError:
+        return 0                # unreadable: counted as nothing
+    try:
+        head = os.read(fd, FRONT_MAX)
+    except OSError:
+        return 0                # unreadable: counted as nothing
+    finally:
+        os.close(fd)
+    text = head.decode("utf-8", errors="replace")
     if not text.startswith("---"):
         return 0
     end = text.find("\n---", 3)
@@ -257,11 +295,20 @@ def measure(vault=None, today=None) -> list:
         skill_files = sorted(skills.glob("*/SKILL.md"))
     except OSError:
         skill_files = []
-    sizes = {"rules": _size(vault / "system" / "creaite-rules.md"),
-             "claude_md": _size(vault / "CLAUDE.md"),
-             "memory": sum(_size(f) for f in _memory_files(vault)),
-             "skills": sum(_front_matter_size(f) for f in skill_files)}
+    sizes = {"rules": _size(vault / "system" / "creaite-rules.md", vault),
+             "claude_md": _size(vault / "CLAUDE.md", vault),
+             "memory": sum(_size(f, vault) for f in _memory_files(vault)),
+             "skills": sum(_front_matter_size(f, vault) for f in skill_files)}
     return [{"date": day, "file": f, "bytes": sizes[f], "tokens": estimate_tokens(sizes[f])} for f in CONTEXT_FILES]
+
+
+def _real_day(day) -> bool:
+    """Whether `day` (already YYYY-MM-DD in ASCII digits) is a date that exists."""
+    try:
+        datetime.strptime(day, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
 
 
 def _clean_row(r):
@@ -270,9 +317,9 @@ def _clean_row(r):
         return None
     day = r.get("date")
     b, t = r.get("bytes"), r.get("tokens")
-    if not (isinstance(day, str) and _DAY.fullmatch(day)):
+    if not (isinstance(day, str) and _DAY.fullmatch(day) and _real_day(day)):
         return None
-    if not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0 for x in (b, t)):
+    if not all(isinstance(x, int) and not isinstance(x, bool) and 0 <= x <= MAX_COUNT for x in (b, t)):
         return None
     return {"date": day, "file": r["file"], "bytes": b, "tokens": t}
 
@@ -295,6 +342,19 @@ def read(path=None) -> list:
     return rows
 
 
+def _lacks_final_newline(f) -> bool:
+    """Whether the file has content and does not end with a newline (a write that was cut short)."""
+    try:
+        with open(f, "rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            if fh.tell() == 0:
+                return False
+            fh.seek(-1, os.SEEK_END)
+            return fh.read(1) != b"\n"
+    except OSError:
+        return False
+
+
 def append(rows, root=None) -> int:
     """Append the rows not already recorded for their day and file; returns how many were written. Nothing is written in the
     development repository (.creaite-dev) or on any failure. Rows are cleaned first: only the four keys, only the fixed words."""
@@ -313,8 +373,10 @@ def append(rows, root=None) -> int:
         if not new:
             return 0
         f.parent.mkdir(parents=True, exist_ok=True)
-        with open(f, "a", encoding="utf-8") as fh:
-            fh.write("".join(json.dumps(c, separators=(",", ":")) + "\n" for c in new))
+        lead = "\n" if _lacks_final_newline(f) else ""        # a torn last line must not absorb the next row
+        fd = os.open(f, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)       # private: counts about the vault, for Alan only
+        with os.fdopen(fd, "a", encoding="utf-8") as fh:
+            fh.write(lead + "".join(json.dumps(c, separators=(",", ":")) + "\n" for c in new))
         return len(new)
     except Exception:       # the monitor must never break the daily job
         return 0
@@ -327,7 +389,11 @@ def daily(root=None, today=None) -> list:
         base = Path(root) if root else paths.ROOT
         if not ((base / "system" / "creaite-rules.md").exists() or (base / "CLAUDE.md").exists()):
             return []           # not a vault (a folder that has gone): four zeros would read as a trim
-        rows = measure(base, today)
+        day = str(today or _now().strftime("%Y-%m-%d"))
+        f = base / "system" / "staging" / "context-size.jsonl" if root else paths.CONTEXT_SIZE
+        if any(r["date"] == day for r in read(f)):
+            return []           # today's rows are there: nothing to measure or read
+        rows = measure(base, day)
         return rows if append(rows, root=root) else []
     except Exception:
         return []

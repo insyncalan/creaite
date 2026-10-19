@@ -5,9 +5,13 @@ Counts only, never text: a row is {date, file, bytes, tokens}, `file` one of fou
 Run: python3 dev/tests/test_usage_log.py     (quick tier: no Chrome, no vault)
 """
 import json
+import os
+import signal
+import stat
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
@@ -184,6 +188,150 @@ class Change(unittest.TestCase):
         rows = [{"date": "2026-10-01", "file": "rules", "bytes": 53000, "tokens": 13250},
                 {"date": "2026-10-19", "file": "rules", "bytes": 40000, "tokens": 10000}]
         self.assertEqual(self.by(rows)["rules"]["change_bytes"], -13000)
+
+
+class Alarm(unittest.TestCase):
+    """A hang fails the test (SIGALRM) instead of blocking the run."""
+
+    def setUp(self):
+        def boom(*_):
+            raise AssertionError("measure hung: it opened something that never answers")
+        self._old = signal.signal(signal.SIGALRM, boom)
+        signal.alarm(15)
+        self.addCleanup(lambda: (signal.alarm(0), signal.signal(signal.SIGALRM, self._old)))
+        self.t = tempfile.TemporaryDirectory()
+        self.addCleanup(self.t.cleanup)
+        self.root = make_vault(Path(self.t.name))
+
+    def rows(self):
+        return {r["file"]: r for r in usage_log.measure(self.root, today="2026-10-19")}
+
+
+class Hardened(Alarm):
+    """Every file measure reads is a regular file, sized by stat, never read whole; anything else counts 0."""
+
+    def test_a_fifo_named_skill_md_does_not_hang(self):
+        d = self.root / ".claude" / "skills" / "cx-fifo"
+        d.mkdir(parents=True)
+        os.mkfifo(d / "SKILL.md")
+        self.assertGreater(self.rows()["skills"]["bytes"], 100)        # the three real skills still count
+
+    def test_a_fifo_named_like_a_counted_file_counts_zero(self):
+        (self.root / "CLAUDE.md").unlink()
+        os.mkfifo(self.root / "CLAUDE.md")
+        (self.root / "system" / "creaite-rules.md").unlink()
+        os.mkfifo(self.root / "system" / "creaite-rules.md")
+        r = self.rows()
+        self.assertEqual((r["claude_md"]["bytes"], r["rules"]["bytes"]), (0, 0))
+
+    def test_a_sparse_gigabyte_skill_md_is_read_only_up_to_the_bound(self):
+        d = self.root / ".claude" / "skills" / "cx-big"
+        d.mkdir(parents=True)
+        with open(d / "SKILL.md", "wb") as f:
+            f.write(b"---\nname: cx-big\n")
+            f.truncate(10 ** 9)                                         # sparse: no closing line within the bound
+        read, real = [], os.read
+
+        def counting(fd, n):
+            data = real(fd, n)
+            read.append(len(data))
+            return data
+        with mock.patch.object(usage_log.os, "read", counting):
+            self.rows()
+        self.assertLessEqual(sum(read), usage_log.FRONT_MAX * 4)       # the three real skills and this one: a few KB each at most
+        self.assertLessEqual(max(read), usage_log.FRONT_MAX)
+        self.assertEqual(usage_log._front_matter_size(d / "SKILL.md"), 0)
+
+    def test_a_symlink_loop_counts_zero(self):
+        a, b = self.root / "CLAUDE.md", self.root / "loop"
+        a.unlink()
+        os.symlink(b, a)
+        os.symlink(a, b)
+        d = self.root / ".claude" / "skills" / "cx-loop"
+        d.mkdir(parents=True)
+        os.symlink(d / "SKILL.md", d / "SKILL.md")
+        self.assertEqual(self.rows()["claude_md"]["bytes"], 0)
+
+    def test_a_symlink_is_followed_only_to_a_regular_file_inside_the_vault(self):
+        inside = self.root / "real-rules.md"
+        inside.write_text("R" * 1234)
+        outside = Path(self.t.name + "-outside.md")
+        outside.write_text("O" * 999)
+        self.addCleanup(outside.unlink)
+        rules = self.root / "system" / "creaite-rules.md"
+        rules.unlink()
+        os.symlink(inside, rules)
+        self.assertEqual(self.rows()["rules"]["bytes"], 1234)
+        rules.unlink()
+        os.symlink(outside, rules)
+        self.assertEqual(self.rows()["rules"]["bytes"], 0)
+        rules.unlink()
+        os.symlink(self.root / "projects", rules)                         # a folder
+        self.assertEqual(self.rows()["rules"]["bytes"], 0)
+
+    def test_a_directory_named_like_a_file_counts_zero(self):
+        (self.root / "CLAUDE.md").unlink()
+        (self.root / "CLAUDE.md").mkdir()
+        self.assertEqual(self.rows()["claude_md"]["bytes"], 0)
+
+    def test_the_front_matter_is_still_measured(self):
+        d = self.root / ".claude" / "skills" / "cx-one"
+        d.mkdir(parents=True)
+        text = "---\nname: cx-one\ndescription: Short.\n---\n\nbody"
+        (d / "SKILL.md").write_text(text)
+        self.assertEqual(usage_log._front_matter_size(d / "SKILL.md"), len("---\nname: cx-one\ndescription: Short.\n---"))
+
+
+class Rows(unittest.TestCase):
+    """Rows read back are real: ASCII dates that exist, finite bounded integers."""
+
+    def clean(self, **kw):
+        return usage_log._clean_row(dict({"date": "2026-10-19", "file": "rules", "bytes": 5, "tokens": 1}, **kw))
+
+    def test_dates_must_be_real_ascii_iso_dates(self):
+        for bad in ("9999-99-99", "2026-13-01", "2026-02-30", "\u0662\u0660\u0662\u0666-\u0661\u0660-\u0661\u0669", "2026-10-19 ", "2026-1-9", "", None, 20261019):
+            self.assertIsNone(self.clean(date=bad), repr(bad))
+        self.assertIsNotNone(self.clean(date="2026-02-28"))
+
+    def test_numbers_must_be_bounded_integers(self):
+        for bad in (10 ** 30, -1, 1.5, float("inf"), float("nan"), True, "5", None, usage_log.MAX_COUNT + 1):
+            self.assertIsNone(self.clean(bytes=bad), repr(bad))
+            self.assertIsNone(self.clean(tokens=bad), repr(bad))
+        self.assertIsNotNone(self.clean(bytes=usage_log.MAX_COUNT))
+
+    def test_a_file_with_such_rows_reads_the_good_ones(self):
+        t = tempfile.TemporaryDirectory()
+        self.addCleanup(t.cleanup)
+        f = Path(t.name) / "c.jsonl"
+        f.write_text('{"date":"2026-10-19","file":"rules","bytes":1e999,"tokens":1}\n'
+                     '{"date":"9999-99-99","file":"rules","bytes":5,"tokens":1}\n'
+                     '{"date":"2026-10-19","file":"rules","bytes":NaN,"tokens":1}\n'
+                     '{"date":"2026-10-19","file":"rules","bytes":5,"tokens":1}\n')
+        self.assertEqual(usage_log.read(f), [{"date": "2026-10-19", "file": "rules", "bytes": 5, "tokens": 1}])
+
+
+class Daily(unittest.TestCase):
+    def setUp(self):
+        self.t = tempfile.TemporaryDirectory()
+        self.addCleanup(self.t.cleanup)
+        self.root = make_vault(Path(self.t.name))
+        self.file = self.root / "system" / "staging" / "context-size.jsonl"
+
+    def test_the_file_is_created_private(self):
+        usage_log.daily(root=self.root, today="2026-10-19")
+        self.assertEqual(stat.S_IMODE(self.file.stat().st_mode), 0o600)
+
+    def test_when_todays_rows_exist_nothing_is_measured_or_read(self):
+        usage_log.daily(root=self.root, today="2026-10-19")
+        with mock.patch.object(usage_log, "measure", wraps=usage_log.measure) as m, mock.patch.object(usage_log, "_size", wraps=usage_log._size) as sz:
+            self.assertEqual(usage_log.daily(root=self.root, today="2026-10-19"), [])
+        self.assertEqual((m.call_count, sz.call_count), (0, 0))         # not measured, no file touched
+
+    def test_a_truncated_last_line_does_not_swallow_the_next_row(self):
+        self.file.write_text('{"date":"2026-10-18","file":"rules","bytes":5,"tokens":1}\n{"date":"2026-10-18","file":"cla')
+        usage_log.append([{"date": "2026-10-19", "file": "rules", "bytes": 7, "tokens": 2}], root=self.root)
+        got = usage_log.read(self.file)
+        self.assertEqual([(r["date"], r["bytes"]) for r in got], [("2026-10-18", 5), ("2026-10-19", 7)])
 
 
 if __name__ == "__main__":

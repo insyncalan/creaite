@@ -154,14 +154,23 @@ def _cards(rows, today) -> dict:
     return out
 
 
+def _valid_at(at) -> bool:
+    """Whether a line's `at` starts with a real date in ASCII digits (YYYY-MM-DD, then anything or nothing)."""
+    import usage_log
+    day = str(at)[:10]
+    return usage_log._DAY.fullmatch(day) is not None and usage_log._real_day(day)
+
+
 def _clean_rows(rows, skills_dir) -> list:
-    """The lines reduced to what the figures use: the day, a kind from the fixed list (else "other"), numbers and known skill names."""
+    """The lines reduced to what the figures use: a real day, a kind from the fixed list (else "other"), bounded numbers (an odd one
+    counts as 0) and known skill names. A line without a real date is dropped."""
     import usage_log
     known = usage_log.shipped_skills(skills_dir)           # once: the folder is not listed again for every line
     return [{"at": r["at"], "kind": r.get("kind") if r.get("kind") in usage_log.KINDS else "other",
-             "cost_usd": r.get("cost_usd", 0), "start_tokens": r.get("start_tokens", 0),
+             "cost_usd": usage_log._money(r.get("cost_usd", 0)), "start_tokens": usage_log._int(r.get("start_tokens", 0)),
              "tokens": sum(usage_log._int(r.get(k)) for k in ("input", "output", "cache_read", "cache_create")),
-             "skills": usage_log.clean_skills([x for x in r.get("skills") or [] if isinstance(x, str)], known=known)} for r in rows]
+             "skills": usage_log.clean_skills([x for x in r.get("skills") or [] if isinstance(x, str)], known=known)}
+            for r in rows if _valid_at(r["at"])]
 
 
 def _by_day(window, today, days) -> list:

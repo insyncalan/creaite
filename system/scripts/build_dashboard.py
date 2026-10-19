@@ -3383,7 +3383,7 @@ def _collect_with_usage(now=None, timings=None):
     try:
         import usage_report
         data["usage"] = usage_report.json_report()
-    except (ImportError, OSError, ValueError, TypeError, KeyError) as e:
+    except Exception as e:  # noqa: BLE001  whatever an odd line does, the build goes on and the tab says it couldn't be read
         data["usage"] = {"error": type(e).__name__}
     if timings is not None:
         timings["usage"] = time.monotonic() - t0

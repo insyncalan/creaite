@@ -258,6 +258,19 @@ class UsageReportJson(Base):
                     yield from keys(v)
         self.assertEqual(set(keys(self.report())) - allowed, set())
 
+    def test_odd_numbers_and_dates_in_a_line_never_break_the_report(self):
+        fx = self.fx
+        odd = [dict(fx.RUNS[0], start_tokens=1e999), dict(fx.RUNS[0], start_tokens=-1e999), dict(fx.RUNS[0], start_tokens=float("nan")),
+               dict(fx.RUNS[0], cost_usd=float("inf")), dict(fx.RUNS[0], cost_usd="lots"), dict(fx.RUNS[0], output=10 ** 400),
+               dict(fx.RUNS[0], input=float("nan"), cache_read=-5), dict(fx.RUNS[0], at="9999-99-99T10:00:00"),
+               dict(fx.RUNS[0], at="\u0662\u0660\u0662\u0666-\u0661\u0660-\u0661\u0669T10:00:00"), dict(fx.RUNS[0], at="2026-10-19")]
+        r = self.report(fx.RUNS + odd)
+        json.dumps(r, allow_nan=False)                      # nothing in it is infinite or NaN
+        c = r["cards"]
+        self.assertEqual(c["runs"]["now"], 12)               # the two lines with an impossible date are dropped, the eight others count
+        self.assertEqual(c["cost"]["now"], 12.5)             # an infinite or non-numeric cost counts nothing
+        self.assertEqual(c["start"]["now"], 20000)           # an odd start load counts as none (the median of the rest)
+
     def test_the_json_flag_prints_the_report(self):
         import contextlib
         import io

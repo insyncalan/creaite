@@ -8,6 +8,7 @@ import json
 import subprocess
 import sys
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -59,6 +60,29 @@ class Wiring(unittest.TestCase):
         src = self.target.read_text()
         self.assertIn('"/api/usage": self.usage_get', src)
         self.assertNotIn('"/api/usage"', src.split("def do_POST")[1].split("\n    def ")[0])     # not a POST route
+
+
+class BuildNeverBreaks(unittest.TestCase):
+    """One odd line in run-usage.jsonl must never stop the dashboard build (a reviewer's 1e999 start load did)."""
+
+    def test_any_fault_in_the_figures_becomes_the_tabs_error_not_a_failed_build(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import build_dashboard as bd
+        for exc in (OverflowError, RuntimeError, ZeroDivisionError, AttributeError, MemoryError):
+            with mock.patch.object(bd, "_collect_before_usage", lambda now=None, timings=None: {"x": 1}), \
+                    mock.patch("usage_report.json_report", side_effect=exc):
+                self.assertEqual(bd._collect_with_usage()["usage"], {"error": exc.__name__}, exc)
+
+    def test_a_vault_with_odd_lines_still_builds(self):
+        v = Vault()
+        self.addCleanup(v.cleanup)
+        lines = ['{"at":"2026-10-19T08:00:00","kind":"ask","start_tokens":1e999,"cost_usd":1}',
+                 '{"at":"2026-10-19T08:00:00","kind":"ask","start_tokens":-1e999,"cost_usd":NaN,"output":1e400}',
+                 '{"at":"9999-99-99","kind":"ask"}', '{"at":"\u0662\u0660\u0662\u0666-10-19","kind":"ask"}']
+        (v.root / "system" / "staging" / "run-usage.jsonl").write_text("\n".join(lines) + "\n")
+        v.run("init")
+        r = v.run("build_dashboard.py", script="build_dashboard.py", ok=False)
+        self.assertEqual(r.returncode, 0, r.stderr[-400:])
 
 
 if __name__ == "__main__":
