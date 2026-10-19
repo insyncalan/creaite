@@ -69625,7 +69625,7 @@ ${d5.text}`);
   }
 
   // components/report/ClientParts.jsx
-  function ServerExported({ doc, version }) {
+  function ServerExported({ doc, version, save: save2 }) {
     const [got, setGot] = d2(
       /** @type {any} */
       null
@@ -69638,10 +69638,17 @@ ${d5.text}`);
         setGot({ ok: false, message: "Show as exported needs the live server." });
         return void 0;
       }
-      api("/api/report/exported-view", { kind: "client", code: doc.project, week_ending: doc.date }).then((r4) => {
-        const id2 = r4 && r4.identity || {};
-        if (live && r4 && id2.code === doc.project && id2.week_ending === doc.date) setGot(r4);
-      });
+      (async () => {
+        const s5 = save2 ? await save2() : null;
+        if (!live) return;
+        if (s5 && !s5.ok) {
+          setGot({ ok: false, message: s5.message || "The report wasn't saved." });
+          return;
+        }
+        const r4 = await api("/api/report/exported-view", { kind: "client", code: doc.project, week_ending: doc.date });
+        const id2 = r4 && r4.identity || null;
+        if (live && r4 && (id2 ? id2.code === doc.project && id2.week_ending === doc.date : !r4.ok)) setGot(r4);
+      })();
       return () => {
         live = false;
       };
@@ -73745,6 +73752,11 @@ ${d5.text}`);
   var internalAi = (doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
   var internalRedraft = (doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
   var clientRedraft = (cd2) => redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply);
+  var saveForShow = async () => {
+    const d5 = crDoc.value;
+    if (!d5 || !(crDirty.value || crInfo.value && crInfo.value.where === "new")) return { ok: true };
+    return saveClientPage({ doc: d5, base_version: crBase.value });
+  };
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
     const iLocked = doc.state === "approved" && !weeklyEditing.value;
@@ -73803,7 +73815,7 @@ ${d5.text}`);
           onSave: saveClientPage,
           ai: clientAi,
           onRedraft: clientRedraft(cd2),
-          exportedView: /* @__PURE__ */ u2(ServerExported, { doc: cd2, version: crBase.value }),
+          exportedView: /* @__PURE__ */ u2(ServerExported, { doc: cd2, version: crBase.value, save: saveForShow }),
           onEvent: (ev) => {
             if (ev.type === "reload") reloadClient();
             else countRedraft(ev, "report");

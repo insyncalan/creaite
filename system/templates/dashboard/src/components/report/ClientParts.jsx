@@ -29,18 +29,23 @@ import { api, viaServer } from "../../core/server.js";
 
 /** v2.5.1 (#239): Show as exported for the client report is the server's own render (POST /api/report/exported-view): a preview snapshot
     of the report as last saved, built, checked and rendered as the export is, marked Preview; never a page drawn here. An answer is
-    used only for the report shown (its project and week, and the version asked for: P12). @param {{doc: SheetDoc, version: number}} props */
-export function ServerExported({ doc, version }) {
+    used only for the report shown (its project and week, and the version asked for: P12). `save` saves the page first when it has
+    edits or was never saved, as Export does. @param {{doc: SheetDoc, version: number, save?: () => Promise<any>}} props */
+export function ServerExported({ doc, version, save }) {
   const [got, setGot] = useState(/** @type {any} */ (null));
   const asked = `${doc.project}|${doc.date}|${version}`;
   useEffect(() => {
     let live = true;
     setGot(null);
     if (!viaServer()) { setGot({ ok: false, message: "Show as exported needs the live server." }); return undefined; }
-    api("/api/report/exported-view", { kind: "client", code: doc.project, week_ending: doc.date }).then(r => {
-      const id = (r && r.identity) || {};
-      if (live && r && id.code === doc.project && id.week_ending === doc.date) setGot(r);
-    });
+    (async () => {
+      const s = save ? await save() : null;
+      if (!live) return;
+      if (s && !s.ok) { setGot({ ok: false, message: s.message || "The report wasn't saved." }); return; }
+      const r = await api("/api/report/exported-view", { kind: "client", code: doc.project, week_ending: doc.date });
+      const id = (r && r.identity) || null;
+      if (live && r && (id ? id.code === doc.project && id.week_ending === doc.date : !r.ok)) setGot(r);   // a refusal names none
+    })();
     return () => { live = false; };
   }, [asked]);
   if (!got) return <p class="sub crx-wait" role="status">Making the page as it is exported…</p>;

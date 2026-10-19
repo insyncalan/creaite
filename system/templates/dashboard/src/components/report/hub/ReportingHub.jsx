@@ -105,6 +105,13 @@ const internalRedraft = (/** @type {SheetDoc} */ doc) => redrafter(() => ({ code
 /** ✦ on the client report. @param {SheetDoc} cd */
 const clientRedraft = (/** @type {SheetDoc} */ cd) => redrafter(() => ({ code: cd.project, document: { kind: "client", code: cd.project, week_ending: cd.date, client: cd.client || "" } }), "report", "client", clientHealthApply);
 
+/** Show as exported for the client report: the page saved first when it has edits or was never saved (as Export does). */
+const saveForShow = async () => {
+  const d = crDoc.value;
+  if (!d || !(crDirty.value || (crInfo.value && crInfo.value.where === "new"))) return { ok: true };
+  return saveClientPage({ doc: d, base_version: crBase.value });
+};
+
 /** The sheet for what is in view. @param {{code: string, view: "internal"|"client"|"side", on: boolean, doc: SheetDoc}} props */
 function HubSheet({ code, view, on, doc }) {
   const cd = crDoc.value, ci = crInternal.value, cinfo = crInfo.value;
@@ -123,7 +130,7 @@ function HubSheet({ code, view, on, doc }) {
   if (view === "client" && cd) {
     return <ReportSheet audience="client" key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}
       readOnly={cFiled} renderers={CLIENT_RENDERERS} onChange={setClientDoc} onSave={saveClientPage} ai={clientAi}
-      onRedraft={clientRedraft(cd)} exportedView={<ServerExported doc={cd} version={crBase.value} />}
+      onRedraft={clientRedraft(cd)} exportedView={<ServerExported doc={cd} version={crBase.value} save={saveForShow} />}
       onEvent={ev => { if (ev.type === "reload") reloadClient(); else countRedraft(ev, "report"); }} />;
   }
   if (side && cd) {
