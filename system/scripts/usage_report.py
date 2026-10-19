@@ -143,12 +143,13 @@ def report(rows, context_rows=None, days=JSON_DAYS, today=None, skills_dir=None)
     today = today or _today()
     first = (today - timedelta(days=days - 1)).isoformat()
     last = today.isoformat()
+    known = usage_log.shipped_skills(skills_dir)           # once: the folder is not listed again for every line
     clean = []
     for r in rows:
         kind = r.get("kind") if r.get("kind") in usage_log.KINDS else "other"
         clean.append({"at": r["at"], "kind": kind, "cost_usd": r.get("cost_usd", 0), "start_tokens": r.get("start_tokens", 0),
                       "tokens": sum(usage_log._int(r.get(k)) for k in ("input", "output", "cache_read", "cache_create")),
-                      "skills": usage_log.clean_skills([x for x in r.get("skills") or [] if isinstance(x, str)], skills_dir)})
+                      "skills": usage_log.clean_skills([x for x in r.get("skills") or [] if isinstance(x, str)], known=known)})
     window = [r for r in clean if first <= str(r["at"])[:10] <= last]
 
     def cost_of(g):

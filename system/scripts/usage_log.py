@@ -111,9 +111,10 @@ def plain_skill(name, known=None) -> str:
     return OTHER
 
 
-def clean_skills(names, skills_dir=None) -> list:
-    """Raw names -> known names (deduped, in order), unknown ones as one "other", at most MAX_SKILLS entries in all."""
-    known = shipped_skills(skills_dir)
+def clean_skills(names, skills_dir=None, known=None) -> list:
+    """Raw names -> known names (deduped, in order), unknown ones as one "other", at most MAX_SKILLS entries in all.
+    `known` (the folder names, from shipped_skills) saves reading the folder again when many lines are cleaned (#238)."""
+    known = shipped_skills(skills_dir) if known is None else known
     kept, other = [], False
     for n in names or []:
         p = plain_skill(n, known)
