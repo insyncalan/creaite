@@ -1,6 +1,6 @@
 # #183 Draft email delivery: put the draft in Outlook (2.6)
 
-Mockup (for Alan): `dev/mockups/draft-delivery-mockup.html`, built on the Settings snapshot with the app's real popup classes. Fictional data. The guard design is Jarvis's; this brief is the setting, its wording and what the user sees.
+**Approved and locked by Alan, 19-10-2026.** Mockup: `dev/mockups/draft-delivery-mockup.html`, built on the Settings snapshot with the app's real popup classes. Fictional data. The guard design is Jarvis's; this brief is the setting, its wording and what the user sees.
 
 ## The decision (Alan, 19-10-2026, relayed by Jarvis)
 "Never creates email drafts" is retired. Creating an Outlook draft is allowed when a setting says so, because some people can write to Outlook and some cannot; the setting switches between the two, off where they cannot write. It is a draft only: creaite never sends.
@@ -21,6 +21,10 @@ Mockup (for Alan): `dev/mockups/draft-delivery-mockup.html`, built on the Settin
 | If Outlook refuses | n/a | "Outlook would not create the draft (reason). Nothing was sent and nothing was recorded." with **Copy it instead** and a pointer to the setting; the email is kept |
 
 The draft's body is the preview as edited, so what is on screen is what lands in Outlook (same HTML as the copy). Subject and addresses as shown.
+
+## Two rules from Alan (19-10-2026)
+- **No stored address does not stop the draft.** If the person has no email address on record, the draft is still created in Outlook, with nothing in To. The popup says so before ("No email address on record for <name>. The draft is still created, with nothing in To: add the address in Outlook.") and after ("It has no recipient yet: add the address in Outlook."). With the setting off, the popup says to add the address when pasting. The chase is still recorded.
+- **Keep today's rich email.** The draft's body is the preview's own HTML exactly as built today (its colours, the table, the project name heading, overdue dates in red, the greeting and sign-off); nothing is simplified or turned into plain text. The Outlook draft carries that HTML, and the subject and the To as shown. A test compares the draft's body to the preview's HTML.
 
 ## Rules (Jarvis's guard design, for the build)
 Default off; drafts only, never send; ask creaite stays read-only; the live server's token-checked route makes the draft; the chase is logged without "I sent it". Also: the Microsoft 365 write tool is allowed only for create-draft and only from that route; `permissions.py` and `reach.py` still refuse every other M365 action; the rules file's "Microsoft 365 actions stay off" and cx-client-report's "never creates email drafts" are rewritten to say so (Jarvis's guarded pass).
