@@ -21,7 +21,7 @@ VIEWS = [("today", "go('today')", None), ("work", "go('work')", None), ("review"
          ("cockpit", None, "#cockpit=ABC"), ("milestones", None, "#milestones=ABC"), ("intake", "go('inbox')", None), ("files", "go('files')", None),
          ("people", "go('people')", None), ("person", None, "#person=Alan%20Carter"), ("activity", "go('activity')", None),
          ("settings", "go('settings')", None), ("help", "go('help')", None), ("reports", None, "#reports"),
-         ("reporting", None, "#reporting=ABC"), ("weekly", None, "#weekly=ABC&week=2026-10-16"), ("notes", None, "#notes=ABC")]
+         ("reporting", None, "#reporting=ABC"), ("psettings", None, "#project-settings=ABC"), ("weekly", None, "#weekly=ABC&week=2026-10-16"), ("notes", None, "#notes=ABC")]
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:'
          'wght@700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">')
 TOGGLE = "<script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script>"
