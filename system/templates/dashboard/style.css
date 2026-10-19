@@ -2748,8 +2748,10 @@ a.seeall{margin-top:8px}
 .dcbtn.closed{color:var(--accent);border-color:var(--accent)}
 .dcbtn .dcdot{display:none;position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--warn);border:2px solid var(--surface)}
 .dcbtn.nudge .dcdot{display:block}
+.dhelp{position:absolute;right:64px;bottom:14px;width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--day-muted);font:500 var(--fs-md)/1 var(--font);display:grid;place-items:center;padding:0;cursor:pointer;opacity:.7}   /* #237 (Alan, 19-10-2026): Today's help, quiet, beside Close the day; no box under Needs attention */
+.dhelp:hover,.dhelp:focus-visible{opacity:1;color:var(--day-ink)} .dhelp:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .calfoot{text-align:right;font-size:var(--fs-xs);color:var(--faint);margin:24px 0 0} .calfoot .calold{color:var(--warn)}
-@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} }
+@media (max-width:640px){ #v-today .dayband{padding-bottom:56px} .dcbtn{right:16px} .dhelp{right:56px} }
 @media (forced-colors: active){ .dcbtn .dcdot,.dcbtn.closed{forced-color-adjust:none} .dcbtn.closed{color:Highlight;border-color:Highlight} }
 /* ===== end BL-270 ===== */
 /* ===== BL-255: Settings › Diagnostics' error rows (was a <style> the page added at run time) ===== */
@@ -2909,6 +2911,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .hhow{margin-top:6px;font-size:var(--fs-xs);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--sunk);border-radius:var(--r-md);padding:6px 8px}
 .hbad{color:var(--bad)}
 .hdoes{margin-top:4px;font-size:var(--fs-xs);color:var(--ink)}
+.hrow .hact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end} .hdismissform .hreason{flex:1;min-width:12em}   /* #242 */
 .hsub{font-size:var(--fs-xs);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:14px 0 2px}
 .hsteps{margin:4px 0 0;padding-left:16px;font-size:var(--fs-sm);color:var(--muted)} .hsteps li{margin:2px 0}
 .hfine{border-top:1px solid var(--line);padding:10px 0 0} .hfine summary{cursor:pointer;color:var(--muted);font-size:var(--fs-sm)}
@@ -3716,6 +3719,7 @@ table.wr-r th{background:none;font-family:inherit;position:static;text-align:lef
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
 table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;padding-right:0}
 table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
+.wr-leftwhy{margin-left:8px;font-size:11px;color:var(--rp-grey)}
 .wr-st{font-weight:700;font-size:var(--fs-2xs);letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
 .wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
 .sheet-a4 .late{color:var(--rp-red);font-weight:600}   /* on the fixed light sheet only: unscoped it overrode Today's .late (var(--bad)) and failed contrast in dark themes */
@@ -4045,13 +4049,14 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
 #peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
 #peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
-/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band, never dismissible */
+/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
 .sweepdue .sd-off{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}
 body:has(#runBadge:not([hidden])) .sweepdue{display:none}
+.sweepdue .sd-x{margin-left:auto} .sweepdue .sd-x:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 /* ===== #192 Files navigation: the pills' line with Work's funnel Filter, its menu and the applied chips ===== */
 .fbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap} .fmwrap{position:relative;display:inline-block}
 .ddmenu.fmenu.on{display:block;width:300px;max-height:none;overflow:visible;padding:12px 14px;top:calc(var(--ctl-h) + 6px)}
@@ -4082,8 +4087,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
 #v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
 #v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
-/* the Today table's cog takes no width (the columns, Evidence's resize included, are laid out as before): it shows on row hover or focus */
-#pfTbl td:first-child{position:relative} #pfTbl .pset{position:absolute;right:2px;top:6px;opacity:0} #pfTbl tr:hover .pset,#pfTbl .pset:focus-visible{opacity:1}
 /* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
    data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
    failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */

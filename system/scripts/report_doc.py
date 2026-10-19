@@ -614,6 +614,52 @@ def pickable(doc):
     return {sid: [c for c in found if c["ref"] not in have.get(sid, set())] for sid, found in out.items() if sid in have}
 
 
+RESHOW_MAX = 50       # rows asked for in one call
+
+
+def reshow(doc, sid, refs):
+    """A row left out and saved, shown again (#234). A saved report keeps a left-out row as its reference only and drops its item (the
+    leak guard, creaite_doc.clean), so the page can't make its cells; this makes them from the tracker as it stands, the way Add from
+    the tracker would. Read only: nothing is written. Only a row of that table that is left out (or saved with nothing in its cells,
+    creaite_doc.blank_row) is filled; a client report only from its client-safe facts (_pick_client: client-visible, complete client
+    wording, no label that keeps it out), never the tracker's own words. Those are the live facts, as Add from the tracker offers them,
+    not the approved week's locked ones: the save, approve and export checks (client_leak) still run on whatever is filled.
+    {rows: {ref: {row, item}}, missing: {ref: why}}: a row the tracker can't give (closed, archived, gone, or not client-safe)
+    is missing, and stays left out."""
+    import tracker
+    kind, code, left_out = _reshow_table(doc, sid, refs)
+    found = {c["ref"]: c for c in ((_pick_client(code) if kind == "client" else _pick_weekly(code)).get(sid) or [])}
+    why = "it is no longer client-visible and open in the tracker" if kind == "client" else "it is no longer open in the tracker"
+    rows, missing = {}, {}
+    with tracker.connect() as con:
+        for ref in dict.fromkeys(refs):
+            c = found.get(ref) if ref in left_out and not (item(con, ref) or {}).get("archived") else None
+            if c is None:
+                missing[ref] = why if ref in left_out else "it isn't a row left out of this table"
+            else:
+                rows[ref] = {"row": {"ref": ref, "shown": True, "cells": dict(c["row"]["cells"])}, "item": c["item"]}
+    return {"rows": rows, "missing": missing}
+
+
+def _reshow_table(doc, sid, refs):
+    """(kind, code, the refs of the table's left-out rows) for reshow; raises ReportError for a request it can't answer."""
+    kind, code = doc.get("kind"), str(doc.get("project") or "")
+    if kind not in KINDS or not CODE.match(code):
+        raise ReportError("Say which report: weekly or client, and the project's code.")
+    if not _ref_list(refs):
+        raise ReportError("Say which rows to show again.")
+    sec = next((s for s in doc.get("sections") or [] if isinstance(s, dict) and s.get("id") == sid and s.get("type") == "table"), None)
+    if sec is None:
+        raise ReportError("That table isn't in the report.")
+    return kind, code, {r.get("ref") for r in sec.get("rows") or [] if isinstance(r, dict) and r.get("ref")
+                        and (not r.get("shown", True) or creaite_doc.blank_row(r))}
+
+
+def _ref_list(refs):
+    """Whether `refs` is a list of 1 to RESHOW_MAX item references."""
+    return isinstance(refs, list) and 0 < len(refs) <= RESHOW_MAX and all(isinstance(r, str) and r for r in refs)
+
+
 def baseline(code, on):
     """The approved internal week a client report dated `on` locks to: the latest approved week ending on or before it, as
     {date, path, version}, or None (BL-336: a fortnightly or monthly client uses the latest approved week)."""
@@ -899,10 +945,11 @@ def where(kind, code, week_ending, client=None):
 
 
 def same_report(doc, kind, code, fri):
-    """v2.5.0: raise ReportError unless a stored report is the one the route names (its kind, project and week ending): a draft edited
-    on disk to name another project or week is never approved, exported or filed as this one."""
-    if (doc.get("kind"), doc.get("project"), doc.get("date")) != (kind, code, fri):
-        raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was done. "
+    """v2.5.0: raise ReportError unless a stored report is the one the route names (its project and week ending): a draft edited on
+    disk to name another project or week is never approved, exported or filed as this one. Its kind is creaite_doc.read_report's
+    check (each check fails its own test when removed); `kind` only words the refusal."""
+    if (doc.get("project"), doc.get("date")) != (code, fri):
+        raise ReportError(f"That {kind} draft isn't this report (its project or week was changed), so nothing was done. "
                           "Open the report again from creaite.")
 
 
@@ -951,7 +998,7 @@ def _current_ops(doc, folder):
     return [{"op": "write", "path": paths.rel(memory), "content": new, "previous": old}] if new != old else []
 
 
-def _file_ops(kind, code, fri, client, draft):
+def _file_ops(kind, code, fri, client, draft, doc=None):
     """How Approve files the draft: a first filing of a weekly report copies it; a filed report is replaced whole by the approved new
     version (a write whose earlier text tracker.py keeps, so Undo puts the filed report back exactly as it was). A client report is
     always written whole, without meta.health_diff (the health difference and its reason stay in the draft, Alan 15-10-2026). The
@@ -962,7 +1009,7 @@ def _file_ops(kind, code, fri, client, draft):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(creaite_doc.read_report(draft, kind))          # v2.5.0: filed as a client report, header derived
+    doc = creaite_doc.clean(doc if doc is not None else creaite_doc.read_report(draft, kind))     # v2.5.0: the doc already checked
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -1070,4 +1117,4 @@ def stage_client(draft, force=False, code=None, fri=None):
         "report": {"kind": "client", "format": "creaite", "title": f"{doc.get('project_name') or code} client report, week ending "
                                                                     f"{shown(fri)}" + (f" ({client})" if client else ""),
                    "project": code, "projects": [code], "week_ending": fri, "draft": draft, "report_decision": "approved",
-                   "file_ops": _file_ops("client", code, fri, client, draft)}})
+                   "file_ops": _file_ops("client", code, fri, client, draft, doc)}})      # filed from the doc the gate checked

@@ -261,5 +261,74 @@ class Pdf(Base):
         self.in_order(self.word_text(word["path"]), SHOWN)
 
 
+def tiny_png(w, h):
+    """A sound w x h PNG (one colour); its size tells the logos apart in word/media."""
+    import struct
+    import zlib
+
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body) & 0xFFFFFFFF)
+    rows = b"".join(b"\x00" + b"\x10\x60\xc0\xff" * w for _ in range(h))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
+
+
+class WordLogos(Base):
+    """2.5.1 M1: the Word export draws only the project's own logo files (report_doc.logos), never a path the saved document names."""
+
+    def setUp(self):
+        super().setUp()
+        import tempfile
+        logos = self.v.root / "system" / "branding" / "logos"
+        logos.mkdir(parents=True, exist_ok=True)
+        (logos / "firm.png").write_bytes(tiny_png(30, 12))                       # the firm's own logo
+        (logos / "ABC-partner-acme.png").write_bytes(tiny_png(31, 12))           # the project's own Acme logo
+        memory = self.v.root / ABC / "CLAUDE.md"
+        memory.write_text(memory.read_text(encoding="utf-8") + "\n- **Partners:** Acme\n", encoding="utf-8")
+        (self.v.root / ABC / "documents").mkdir(parents=True, exist_ok=True)
+        (self.v.root / ABC / "documents" / "internal-screenshot.png").write_bytes(tiny_png(66, 14))   # a vault file, not a logo
+        self.outside = Path(tempfile.mkdtemp(prefix="logo-out-"))
+        self.addCleanup(__import__("shutil").rmtree, self.outside, True)
+        (self.outside / "internal-screenshot.png").write_bytes(tiny_png(77, 13))                       # a file outside the vault
+
+    def media_sizes(self, logos):
+        hdr = {"id": "header", "type": "header", "heading": "", "default_heading": "Client report", "hidden": False, "text": "",
+               "data": {"label": "Client report", "week_ending": "2026-10-16", "client": "Northwind", "logos": logos}}
+        r = self.py(f"from pathlib import Path\nimport paths, docx_tools, zipfile\n"
+                    f"doc = creaite_doc.new('client', 'ABC', 'Client report', '2026-10-16', {[hdr] + SECTIONS!r}, items={ITEMS!r},"
+                    " audience='client')\n"
+                    "out = Path(paths.DRAFTS) / 'logo-test.docx'\ncreaite_doc.word_export(doc, out)\n"
+                    "z = zipfile.ZipFile(out)\n"
+                    "print(json.dumps(sorted(list(docx_tools.image_size(z.read(n))) for n in z.namelist() if n.startswith('word/media/'))))")
+        return [tuple(x) for x in r]
+
+    def test_a_stray_absolute_or_vault_path_never_reaches_word_media(self):
+        sizes = self.media_sizes([
+            {"kind": "firm", "path": "system/branding/logos/firm.png"},
+            {"kind": "partner:acme", "path": str(self.outside / "internal-screenshot.png")},
+            {"kind": "client", "path": f"{ABC}/documents/internal-screenshot.png"}])
+        self.assertNotIn((77, 13), sizes, "a file outside the vault reached the client's Word file")
+        self.assertNotIn((66, 14), sizes, "a vault file that isn't the project's logo reached the client's Word file")
+        self.assertIn((30, 12), sizes, "the firm's own logo is drawn")
+        self.assertIn((31, 12), sizes, "the partner's own logo is drawn from its kind, not the stored path")
+
+    def test_a_logo_path_to_an_outside_file_alone_embeds_nothing_of_it(self):
+        sizes = self.media_sizes([{"kind": "partner:nobody", "path": str(self.outside / "internal-screenshot.png")},
+                                  {"kind": "firm", "path": str(self.outside / "internal-screenshot.png")}])
+        self.assertNotIn((77, 13), sizes)
+        self.assertIn((30, 12), sizes, "the firm kind draws the firm's own file whatever path was stored")
+
+    def test_the_save_route_stores_only_the_projects_own_logo_paths(self):
+        hdr = {"id": "header", "type": "header", "heading": "", "hidden": False, "text": "",
+               "data": {"label": "Client report", "logos": [
+                   {"kind": "partner:acme", "path": str(self.outside / "internal-screenshot.png")},
+                   {"kind": "client", "path": f"{ABC}/documents/internal-screenshot.png"},
+                   {"kind": "partner:nobody", "path": "system/branding/logos/firm.png"}, "junk"]}}
+        r = self.py("import report_server\n"
+                    f"doc = {{'project': 'ABC', 'kind': 'client', 'sections': [{hdr!r}]}}\n"
+                    "print(json.dumps(report_server.own_header_logos(doc)['sections'][0]['data']['logos']))")
+        self.assertEqual(r, [{"kind": "partner:acme", "path": "system/branding/logos/ABC-partner-acme.png"}])
+
+
 if __name__ == "__main__":
     unittest.main()

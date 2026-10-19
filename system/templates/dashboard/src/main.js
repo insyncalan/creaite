@@ -116,6 +116,9 @@ export * from "./stores/projectSettings.js";
 export * from "./stores/reportingSettings.js";   /* H3 (#221): the client report setting, per project */
 import { crDialog, runCheck } from "./stores/clientReport.js";
 export { crDialog, runCheck };   /* the client report's left-out dialog and check, which the tests drive by name */
+import { crDoc, crInternal } from "./stores/clientReport.js";
+import { weeklyDoc } from "./stores/weekly.js";
+export { crDoc, crInternal, weeklyDoc };   /* #234: the tests read which report the stores hold */
 export * from "./components/report/hub/ClientReportPanel.jsx";   /* H3 (#221): the hub's Client report settings panel */
 
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";

@@ -25,6 +25,9 @@
                            internal wording into the client page, so internal words never sit on the client draft (v2.5.0)
   POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
                            (a client report: only client-safe facts), each with the row it would add; nothing is written
+  POST /api/report/reshow  {doc, section, refs}: rows left out and saved (kept as their reference only), shown again (read only;
+                           #234): {rows: {ref: {row, item}}, missing: {ref: why}} from the tracker, a client report only from
+                           its client-safe facts; a row it can't give stays left out
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
                            draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
                            a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
@@ -40,6 +43,7 @@ import re
 import os
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -155,10 +159,24 @@ def save_route(handler, req):
     if off:
         return off
     with handler_lock(handler):
-        out = report_doc.save_draft(doc, req.get("base_version"))
+        out = report_doc.save_draft(own_header_logos(doc), req.get("base_version"))
         if out.get("ok"):
             report_doc.remember_layout(code, kind, doc.get("layout"), client)
     return answer(handler, out)
+
+
+def own_header_logos(doc):
+    """2.5.1 M1: `doc` with each header's logos re-derived from the project's own files (creaite_doc.own_logos): a posted path is
+    dropped, never stored, so a saved report names only logo files report_doc.logos knows. Which are ticked is left to the layout."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("sections"), list):
+        return doc                          # left for save_draft's own checks to refuse
+    out, secs = dict(doc), []
+    for s in doc["sections"]:
+        if isinstance(s, dict) and s.get("type") == "header" and isinstance(s.get("data"), dict) and "logos" in s["data"]:
+            s = {**s, "data": {**s["data"], "logos": creaite_doc.own_logos(doc, s, ticked=False)}}
+        secs.append(s)
+    out["sections"] = secs
+    return out
 
 
 def handler_lock(handler):
@@ -227,7 +245,8 @@ def approve_route(handler, req):
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
-            saved = report_doc.save_draft(req["doc"], req.get("base_version"))     # checks it first (v2.5.0 audience bypass)
+            # checks it first (v2.5.0 audience bypass)
+            saved = report_doc.save_draft(own_header_logos(req["doc"]), req.get("base_version"))
             if not saved.get("ok"):
                 return answer(handler, saved)
         if not paths.resolve(draft).is_file():
@@ -282,6 +301,14 @@ def pick_route(handler, req):
     if not isinstance(doc, dict):
         raise report_doc.ReportError("Say which report to add to.")
     return answer(handler, {"ok": True, "sections": report_doc.pickable(doc)})
+
+
+def reshow_route(handler, req):
+    """POST /api/report/reshow: a row left out and saved, shown again from the tracker (see the module's description). Writes nothing."""
+    doc = req.get("doc")
+    if not isinstance(doc, dict) or not isinstance(req.get("section"), str):
+        raise report_doc.ReportError("Say which report and which table.")
+    return answer(handler, {"ok": True, **report_doc.reshow(doc, req["section"], req.get("refs"))})
 
 
 def export_call():
@@ -377,7 +404,7 @@ def _file_in_reports(handler, draft, folder, name, overwrite, fmt, label):
             "message": f"{'Replaced' if overwrite else 'Saved'} {Path(stored).name} in {label}."}
 
 
-def _settle_name(folder, name, ext, req, label, reserved=None):
+def _settle_name(folder, name, ext, req, label, reserved=None, kind=None):
     """(name, overwrite, asked): the file name to save as, from the page's choice for a taken name (`on_clash`: number, rename with
     `new_name`, or overwrite), and `asked`: the answer to give instead when the name is taken and no choice was made (or the typed
     name can't be used), else None. `reserved` is the filing name of a report not yet filed: taken, but with nothing there, so
@@ -387,6 +414,12 @@ def _settle_name(folder, name, ext, req, label, reserved=None):
         name = _plain_name(req.get("new_name"), ext)
         if not name:
             return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
+        if kind and other_reports_name(kind, name):          # v2.5.0: never under the other report's name
+            return name, False, {"message": f"That name is the other report's: a {kind} report is never saved under it. "
+                                            "Choose another name.", "clash": True}
+        problem = name_problem(name, reserved)
+        if problem:
+            return name, False, {"message": problem + " Choose another name.", "clash": True}
     if not _taken(folder, name, reserved):
         return name, False, None
     if choice == "number":
@@ -415,6 +448,46 @@ def plain_note(out):
     why = out.get("plain_why")
     out["message"] = (f"{out.get('message') or 'Exported.'} This is the plain version "
                       + (f"(the report page was not used: {why})." if why else "(open the report in creaite to export the formatted one)."))
+
+
+RESERVED_NAME = re.compile(r"(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)")
+FORBIDDEN_CHARS = re.compile(r'[<>:"|?*]')
+INVISIBLE_CHARS = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
+FILING_WORDS = re.compile(r"(?:weekly|client) ?report")
+EXPORT_EXTS = re.compile(r"(?:\.(?:html?|docx|pdf))+$")
+
+
+def read_as(name):
+    """v2.5.1: a file name as it reads, for matching: NFKC, invisible characters removed, case-folded, and _ - . and runs of spaces
+    read alike (as one space); export extensions left off."""
+    t = INVISIBLE_CHARS.sub("", unicodedata.normalize("NFKC", str(name or ""))).casefold()
+    t = EXPORT_EXTS.sub("", t)
+    return " ".join(re.sub(r"[\s_\-\u2010-\u2015.]+", " ", t).split())
+
+
+def name_problem(name, own=None):
+    """v2.5.1: why a typed export name can't be used, or None. A name Windows reserves (CON, NUL, COM1, CONIN$... before the first
+    dot, trailing dots and spaces ignored), a character Windows forbids (< > : " | ? *), a stem ending in a dot or a space, or a
+    name that reads as a weekly or client report's filing name (any date, case, spacing or separator, with or without an
+    extension): such a name belongs to a filing, and an export under it could pass for a filed report or block an Approve. This
+    report's own filing name (`own`) is let through, as it is or numbered "(2)": the clash question then asks, as before."""
+    base = unicodedata.normalize("NFKC", name.split(".", 1)[0]).rstrip(". ").casefold()
+    if RESERVED_NAME.fullmatch(base) or RESERVED_NAME.fullmatch(INVISIBLE_CHARS.sub("", base)):
+        return "That name is reserved on Windows, so a file can't be saved under it."
+    if FORBIDDEN_CHARS.search(name) or name.rsplit(".", 1)[0] != name.rsplit(".", 1)[0].rstrip(". "):
+        return "A file name can't hold < > : \" | ? * or end in a dot or a space."
+    plain = read_as(name)
+    mine = own and re.fullmatch(re.escape(read_as(own)) + r"(?: \(\d+\))?", plain)
+    if FILING_WORDS.search(plain) and not mine:
+        return "That name reads as a report's filing name, so an export is never saved under it."
+    return None
+
+
+def other_reports_name(kind, typed):
+    """v2.5.0: whether a typed export name names the other report (a weekly export renamed to a client report's name, so internal
+    content would sit under a client report's name in Reports; or the other way round). Case and spacing are ignored."""
+    other = "client report" if kind == "weekly" else "weekly report"
+    return other in " ".join(str(typed or "").lower().split())
 
 
 def export_route(handler, req):
@@ -450,11 +523,11 @@ def export_route(handler, req):
     name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
     label = f"{creaite_doc.project_name(code) or code} › Reports"
     where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
-    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name)
+    name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name, kind=kind)
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
     out = fn(path, fmt, file_beside=False, open_after=False,
-             page=req.get("page") if isinstance(req.get("page"), dict) else None, kind=kind)       # made in drafts/, filed below
+             page=req.get("page") if isinstance(req.get("page"), dict) else None, kind=kind, doc=doc)   # the doc checked; filed below
     if not out.get("ok"):
         return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
     saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
@@ -732,7 +805,7 @@ def routes(lock, run, latest_apply):
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
             "/api/report/match-check": guarded(match_check_route),
-            "/api/report/pick": guarded(pick_route),
+            "/api/report/pick": guarded(pick_route), "/api/report/reshow": guarded(reshow_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
             "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
             "/api/report/logo/remove": guarded(logo_remove_route), "/api/report/image": guarded(image_route),

@@ -290,6 +290,10 @@ function useBannerHide(root) {
   }, []);
 }
 
+/** Whether a changed document is the one this pane shows (its kind, project, week and client): a late answer for another report is
+    never taken as an edit of this one (#234). @param {SheetDoc} nd @param {SheetDoc|undefined} cur */
+const sameSheetDoc = (nd, cur) => !cur || !nd || (nd.kind === cur.kind && nd.project === cur.project && nd.date === cur.date && (nd.client || "") === (cur.client || ""));
+
 /** The A4 sheet. @param {SheetProps} props */
 export function Sheet(props) {
   const { doc, partner = null, scrollKey = "", checks = [], onEvent = () => {} } = props;
@@ -331,8 +335,8 @@ export function Sheet(props) {
   };
   useEffect(() => { if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT)); }, [scrollKey]);
 
-  const changeMain = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (leftRO) return; props.onChange(nd, why); main.change(nd); };
-  const changeSide = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (!partner || partner.readOnly) return; partner.onChange(nd, why); side.change(nd); };
+  const changeMain = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { if (leftRO || !sameSheetDoc(nd, P.current.doc)) return; props.onChange(nd, why); main.change(nd); };
+  const changeSide = (/** @type {SheetDoc} */ nd, /** @type {string} */ why) => { const pt = P.current.partner; if (!pt || pt.readOnly || !sameSheetDoc(nd, pt.doc)) return; pt.onChange(nd, why); side.change(nd); };
 
   /** The AI bar's account of one section of one pane (p241: each pane has its own: its report, its place, its key). */
   const aiFor = (/** @type {SheetSection} */ s, /** @type {boolean} */ ro, /** @type {boolean} */ right = false) => {

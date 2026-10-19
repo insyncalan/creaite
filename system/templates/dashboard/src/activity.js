@@ -12,6 +12,7 @@ import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core
 import { parseWhen } from "./core/fields.js";
 import { typing } from "./core/keys.js";
 import { go, navWrite } from "./core/nav.js";
+import { helpPanelOpen } from "./helpscreen.js";
 import { D, DATE, fd, KI, nowStamp } from "./core/page.js";
 import { api, oneLine, refreshAll, reloadData, snack, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -149,7 +150,7 @@ $("#actTbl").addEventListener("click",e=>{ const tr=e.target.closest("tr[data-ro
 $("#actTbl").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.closest("tr[data-row]")) e.preventDefault(); });
 document.addEventListener("keydown",e=>{ if(shared.VIEW!=="activity") return;
   if(e.key==="/"&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!actTyping()&&!document.querySelector("dialog[open]")&&!$("#chat").classList.contains("on")){ e.preventDefault(); e.stopImmediatePropagation(); $("#actQ")?.focus(); $("#actQ")?.select(); return; }
-  if(e.key==="Escape"&&actSel().length&&!filterBarOpen($("#actFbar"))&&!document.querySelector("dialog[open]")&&!$("#panel").classList.contains("on")&&!actTyping()){ e.preventDefault(); e.stopImmediatePropagation(); hlClear(); actPaint(); } },true);
+  if(e.key==="Escape"&&actSel().length&&!helpPanelOpen()&&!filterBarOpen($("#actFbar"))&&!document.querySelector("dialog[open]")&&!$("#panel").classList.contains("on")&&!actTyping()){ e.preventDefault(); e.stopImmediatePropagation(); hlClear(); actPaint(); } },true);
 }
 
 /* BL-231: what this block did at load, run in today's order by src/main.js */

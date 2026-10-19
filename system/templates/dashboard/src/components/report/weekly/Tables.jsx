@@ -2,9 +2,11 @@
 /* Tables (v2.1.0 P6, BL-335): the report's tables as the mockup draws them: What we need from people (with + Add an ask), Risks and
    issues and Overdue actions (an eye on each row; the first rows shown, "Showing 5 of 8" under the table), and the decisions written
    out. Every item ID opens the standard peek (ctx.ItemRef). A row that was hidden and saved keeps only its reference, so showing it
-   again makes its cells from the item as it stood (weeklyDoc.cellsFromItem). Hidden rows are faded while editing and are not drawn
+   again makes its cells from the item as it stood (weeklyDoc.cellsFromItem), or, when the saved report no longer holds the item, from
+   the tracker (ReportParts.flipRow, #234); until then it says it is left out, never "Click to write". Hidden rows are faded while editing and are not drawn
    in the exported page. */
-import { AddFromTracker, EyeTable } from "../ReportParts.jsx";
+import { useRef, useState } from "preact/hooks";
+import { AddFromTracker, EyeTable, LeftOutNote, bareRow, flipRow } from "../ReportParts.jsx";
 import { EyeButton } from "../EyeButton.jsx";
 import { Rich } from "./Rich.jsx";
 import { cellsFromItem, daysLate } from "./weeklyDoc.js";
@@ -70,13 +72,19 @@ export function Overdue({ ctx }) {
 /** The week's decisions written out, one under another, each with its eye. @param {{ctx: SectionCtx}} props */
 export function Decisions({ ctx }) {
   const all = ctx.section.rows || [];
-  const rows = all.map((row, i) => ({ row, i })).filter(x => x.row.shown !== false || ctx.editing);
-  const flip = (/** @type {number} */ i) => { const on = all[i].shown === false;
-    ctx.update({ rows: all.map((x, j) => j !== i ? x : { ...x, shown: on, cells: x.cells || cellsFromItem("decisions", (ctx.doc.items || {})[x.ref || ""], ctx.doc.date) }) }, on ? "Row shown" : "Row hidden"); };
+  const rows = all.map((row, i) => ({ row, i })).filter(x => (x.row.shown !== false && !bareRow(x.row, ctx.doc)) || ctx.editing);
+  const live = useRef(ctx); live.current = ctx;
+  const [whys, setWhys] = useState(/** @type {Record<string, string>} */ ({}));
+  const flip = (/** @type {number} */ i) => flipRow(live, cellsFromItem, i, (ref, why) => setWhys(w => ({ ...w, [ref]: why })));
   return (
     <div class="wr-tbl">
       {!rows.length ? <p class="sub">No decisions were made this week.</p> : null}
       <ul class="wr-decs">{rows.map(({ row, i }) => {
+        if (bareRow(row, ctx.doc)) return (
+          <li key={row.ref || i} class="hidrow wr-bare" data-ref={row.ref || undefined}>
+            <EyeButton on={false} subject={String(row.ref)} onClick={() => flip(i)} />
+            <div class="wr-decbody"><LeftOutNote ctx={ctx} row={row} why={whys[String(row.ref)]} /></div>
+          </li>);
         const c = row.cells || cellsFromItem("decisions", (ctx.doc.items || {})[row.ref || ""], ctx.doc.date), off = row.shown === false;
         const bit = (/** @type {string} */ key, /** @type {string} */ label) => ctx.editing
           ? <Rich ctx={ctx} text={c[key]} row={i} col={key} label={label} cls="wr-inl" empty={label} /> : <span>{c[key]}</span>;
@@ -90,7 +98,7 @@ export function Decisions({ ctx }) {
             </div>
           </li>);
       })}</ul>
-      {ctx.editing && all.length ? <div class="wr-count">Showing {all.filter(r => r.shown !== false).length} of {all.length} decisions. Hidden decisions are left out of the filed report and the exports.</div> : null}
+      {ctx.editing && all.length ? <div class="wr-count">Showing {all.filter(r => r.shown !== false && !bareRow(r, ctx.doc)).length} of {all.length} decisions. Hidden decisions are left out of the filed report and the exports.</div> : null}
       <AddFromTracker ctx={ctx} />
     </div>);
 }
