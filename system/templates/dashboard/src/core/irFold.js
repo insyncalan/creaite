@@ -42,21 +42,47 @@ export function irKeepOpen(cur, model) {
   return cur && (model.meetings || []).some(x => x.id === cur) ? cur : null;
 }
 
-/** A group's proposals still waiting on the page. @param {IrGroups} g @param {(n:number)=>boolean} done @returns {IrGroups} */
-export function irLive(g, done) {
+/** A group's proposals still waiting on the page. `held(n)` (optional) says a proposal now has a hold that the server's group did not
+    know (a peek edit made an Issue a Risk): it moves from Routine to Needs, never the other way (clearing a hold leaves it where it is).
+    @param {IrGroups} g @param {(n:number)=>boolean} done @param {(n:number)=>boolean} [held] @returns {IrGroups} */
+export function irLive(g, done, held) {
   const keep = (/** @type {number[]} */ a) => (a || []).filter(n => !done(n));
-  return { needs: keep(g && g.needs), routine: keep(g && g.routine) };
+  const needs = keep(g && g.needs), routine = keep(g && g.routine);
+  if (!held) return { needs, routine };
+  return { needs: [...needs, ...routine.filter(held)], routine: routine.filter(n => !held(n)) };
 }
 
 /** The groups drawn inside an open meeting (or the mail and other sections), in order, empty ones left out.
-    @param {IrGroups} g @param {(n:number)=>boolean} done @returns {{kind: "needs"|"routine", ns: number[], open: boolean}[]} */
-export function irGroupsShown(g, done) {
-  const l = irLive(g, done);
+    @param {IrGroups} g @param {(n:number)=>boolean} done @param {(n:number)=>boolean} [held] @returns {{kind: "needs"|"routine", ns: number[], open: boolean}[]} */
+export function irGroupsShown(g, done, held) {
+  const l = irLive(g, done, held);
   return /** @type {const} */ (["needs", "routine"]).filter(k => l[k].length).map(k => ({ kind: k, ns: l[k], open: true }));
 }
 
-/** What "Approve routine (n)" approves: the routine group only, never the first. @param {IrGroups} g @param {(n:number)=>boolean} done */
-export const irBulk = (g, done) => irLive(g, done).routine;
+/** What "Approve routine (n)" approves: the routine group only, never the first. @param {IrGroups} g @param {(n:number)=>boolean} done @param {(n:number)=>boolean} [held] */
+export const irBulk = (g, done, held) => irLive(g, done, held).routine;
+
+/* The hold, recomputed after a peek edit: the page's mirror of review.hold_reason (the server's one rule). The server sends each row's
+   `hold`; an edit in the peek can change only what the peek edits: the project, a RAID item's type and an update's status. So these are
+   recomputed here, and every other hold (client wording, a drafted update, minutes, a change to an owner...) is kept as the server sent
+   it. dev/tests/test_intake_review_peek_fix.py compares this with review.hold_reason on the same cases. */
+const IR_CLOSING = ["Closed", "Cancelled", "Done", "Dropped"];
+const IR_EDITED_HOLDS = ["need a project", "new risk", "new decision", "closing update", "decision made", "status change"];
+/** @param {{p?: string|null, kind?: string, op?: string, rec?: any, flags?: string[], hold?: string}} r @returns {string} "" is routine */
+export function irHold(r) {
+  const flags = r.flags || [], rec = r.rec || {};
+  if (!r.p) return "need a project";
+  if (flags.includes("conflict")) return "conflict";
+  if (flags.includes("invalid")) return "invalid";
+  if (r.op === "new" && r.kind === "decisions") return "new decision";
+  if (r.op === "new" && r.kind === "raid" && rec.type === "Risk") return "new risk";
+  if (r.op === "update" && rec.field === "status") {
+    const t = String(rec.target || ""), letter = (/-([A-Z])-/.exec(t) || [])[1] || "R";          /* a RAID item's ID has no letter */
+    if (letter === "D") return ["Made", "Withdrawn"].includes(rec.to) ? "decision made" : "status change";
+    if (letter === "A" || letter === "R") return IR_CLOSING.includes(rec.to) ? "closing update" : "status change";
+  }
+  return IR_EDITED_HOLDS.includes(r.hold || "") ? "" : r.hold || "";
+}
 
 /** The stage filter after a click on a stage's count ("all" is Show all). @param {string} cur @param {string} g */
 export const irStageClick = (cur, g) => (g === "all" || cur === g ? "all" : IR_STAGES.includes(g) ? g : cur);

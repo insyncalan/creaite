@@ -5,7 +5,7 @@
    From mail and Teams, and Other proposals when there are any. */
 import { pName } from "../../core/data.js";
 import { IR_STAGES, irLive } from "../../core/irFold.js";
-import { irBusy, irClickMeeting, irDone, irNotes, irOpen, irSel } from "../../stores/intakeReview.js";
+import { irBusy, irClickMeeting, irDone, irHeld, irNotes, irOpen, irSel } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
 import { MeetingRow, Progress, RowActions, irStateWords } from "./rows.jsx";
 
@@ -14,7 +14,7 @@ const IR_EMPTY = "Nothing here. Meetings appear when they end.";
 
 /** @param {{model: any}} props */
 function MailSections({ model }) {
-  const mail = irLive(model.mail, irDone), other = irLive(model.other, irDone);
+  const mail = irLive(model.mail, irDone, irHeld), other = irLive(model.other, irDone, irHeld);
   const nm = mail.needs.length + mail.routine.length, no = other.needs.length + other.routine.length;
   return <>
     <div class="rgroup irsec" data-irsec="mail"><h2>From mail and Teams <span class="sub rgc">{nm} proposal{nm === 1 ? "" : "s"}</span></h2></div>
@@ -28,7 +28,7 @@ function MailSections({ model }) {
 
 /** One meeting's rows: the meeting, and when it is open its groups hanging under it on the rail. @param {{m: any}} props */
 function MeetingBlock({ m }) {
-  const live = irLive(m.groups, irDone);
+  const live = irLive(m.groups, irDone, irHeld);
   return <>
     <MeetingRow m={m} live={live} />
     {irOpen.value === m.id ? <ProposalGroups groups={m.groups} meet={m.title} child /> : null}

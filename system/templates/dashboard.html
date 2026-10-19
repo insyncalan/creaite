@@ -5750,6 +5750,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irFoldClick: () => irFoldClick,
     irFolded: () => irFolded,
     irGroupsShown: () => irGroupsShown,
+    irHeld: () => irHeld,
+    irHold: () => irHold,
     irIsFolded: () => irIsFolded,
     irKeepOpen: () => irKeepOpen,
     irLater: () => irLater,
@@ -6295,6 +6297,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkDrawProps: () => pkDrawProps,
     pkDrawText: () => pkDrawText,
     pkEdMount: () => pkEdMount,
+    pkEscBusy: () => pkEscBusy,
+    pkEscMenu: () => pkEscMenu,
     pkFeed: () => pkFeed,
     pkFeedItems: () => pkFeedItems,
     pkFile: () => pkFile,
@@ -42774,18 +42778,36 @@ ${s5}`;
   function irKeepOpen(cur, model) {
     return cur && (model.meetings || []).some((x5) => x5.id === cur) ? cur : null;
   }
-  function irLive(g5, done) {
+  function irLive(g5, done, held) {
     const keep2 = (a5) => (a5 || []).filter((n4) => !done(n4));
-    return { needs: keep2(g5 && g5.needs), routine: keep2(g5 && g5.routine) };
+    const needs = keep2(g5 && g5.needs), routine = keep2(g5 && g5.routine);
+    if (!held) return { needs, routine };
+    return { needs: [...needs, ...routine.filter(held)], routine: routine.filter((n4) => !held(n4)) };
   }
-  function irGroupsShown(g5, done) {
-    const l6 = irLive(g5, done);
+  function irGroupsShown(g5, done, held) {
+    const l6 = irLive(g5, done, held);
     return (
       /** @type {const} */
       ["needs", "routine"].filter((k5) => l6[k5].length).map((k5) => ({ kind: k5, ns: l6[k5], open: true }))
     );
   }
-  var irBulk = (g5, done) => irLive(g5, done).routine;
+  var irBulk = (g5, done, held) => irLive(g5, done, held).routine;
+  var IR_CLOSING = ["Closed", "Cancelled", "Done", "Dropped"];
+  var IR_EDITED_HOLDS = ["need a project", "new risk", "new decision", "closing update", "decision made", "status change"];
+  function irHold(r4) {
+    const flags = r4.flags || [], rec = r4.rec || {};
+    if (!r4.p) return "need a project";
+    if (flags.includes("conflict")) return "conflict";
+    if (flags.includes("invalid")) return "invalid";
+    if (r4.op === "new" && r4.kind === "decisions") return "new decision";
+    if (r4.op === "new" && r4.kind === "raid" && rec.type === "Risk") return "new risk";
+    if (r4.op === "update" && rec.field === "status") {
+      const t47 = String(rec.target || ""), letter = (/-([A-Z])-/.exec(t47) || [])[1] || "R";
+      if (letter === "D") return ["Made", "Withdrawn"].includes(rec.to) ? "decision made" : "status change";
+      if (letter === "A" || letter === "R") return IR_CLOSING.includes(rec.to) ? "closing update" : "status change";
+    }
+    return IR_EDITED_HOLDS.includes(r4.hold || "") ? "" : r4.hold || "";
+  }
   var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
   var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
   function irFoldClick(folded, sec) {
@@ -42829,6 +42851,10 @@ ${s5}`;
   var irDone = (n4) => {
     const r4 = irRow(n4);
     return !r4 || !!r4.done;
+  };
+  var irHeld = (n4) => {
+    const r4 = irRow(n4);
+    return !!(r4 && r4.hold);
   };
   var irView = y3(irViewNorm((() => {
     try {
@@ -57443,6 +57469,7 @@ ${d5.text}`);
         }
       }
       r4.edited = true;
+      if ("hold" in r4) r4.hold = irHold(r4);
       closePanel();
       if (approve) decide(r4.n, "approved", true);
       else {
@@ -57522,6 +57549,12 @@ ${d5.text}`);
     b5.dataset.tip = t47;
     b5.setAttribute("aria-pressed", String(on2));
   }
+  function pkEscMenu(a5) {
+    return !!(document.querySelector("dialog:modal") || shared.CAL || comboboxOpen() || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"));
+  }
+  function pkEscBusy(a5) {
+    return pkEscMenu(a5) || !!(a5 && a5.closest && a5.closest("#chat")) || !!(a5 && a5.isContentEditable) || chaseIsOpen();
+  }
   function bootPanel0165() {
     Object.assign(ICONS, {
       arrowright: '<path d="M5 12h14M13 6l6 6-6 6"/>',
@@ -57548,7 +57581,7 @@ ${d5.text}`);
     window.addEventListener("keydown", (e4) => {
       if (e4.key !== "Escape" || !pkOn() || shared.EDITING) return;
       const a5 = document.activeElement;
-      if (document.querySelector("dialog:modal") || shared.CAL || comboboxOpen() || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop")) return;
+      if (pkEscMenu(a5)) return;
       if (a5 && a5.closest && a5.closest("#chat")) {
         if (shared.RUN) return;
         e4.preventDefault();
@@ -71501,7 +71534,7 @@ ${d5.text}`);
     else decide(n4, "rejected");
   }
   async function irApproveRoutine(groups) {
-    const list = irBulk(groups, irDone).map(irRow).filter((r4) => rvBulkOK(r4));
+    const list = irBulk(groups, irDone, irHeld).map(irRow).filter((r4) => rvBulkOK(r4));
     if (!list.length) {
       snack("Nothing routine to approve");
       return;
@@ -71592,7 +71625,7 @@ ${d5.text}`);
     );
   }
   function ProposalGroups({ groups, meet, child }) {
-    return /* @__PURE__ */ u2(S2, { children: irGroupsShown(groups, irDone).map((g5) => /* @__PURE__ */ u2(S2, { children: [
+    return /* @__PURE__ */ u2(S2, { children: irGroupsShown(groups, irDone, irHeld).map((g5) => /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2("tr", { class: `icsubhead ${g5.kind}${child ? " child" : ""}`, "data-irg": g5.kind, children: /* @__PURE__ */ u2("td", { colSpan: 2, children: [
         /* @__PURE__ */ u2("span", { class: "icsh", children: [
           meet ? `${meet} · ` : "",
@@ -71632,7 +71665,10 @@ ${d5.text}`);
       ), panel = document.getElementById("panel");
       if (e4.key === "Escape") {
         if (irPeek.value == null) return;
-        if (document.querySelector("dialog:modal")) return;
+        if (pkEscBusy(
+          /** @type {HTMLElement|null} */
+          document.activeElement
+        )) return;
         if (panel && panel.classList.contains("on")) {
           e4.stopImmediatePropagation();
           closePanel();
@@ -71672,7 +71708,7 @@ ${d5.text}`);
   var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
   var IR_EMPTY = "Nothing here. Meetings appear when they end.";
   function MailSections({ model }) {
-    const mail = irLive(model.mail, irDone), other = irLive(model.other, irDone);
+    const mail = irLive(model.mail, irDone, irHeld), other = irLive(model.other, irDone, irHeld);
     const nm3 = mail.needs.length + mail.routine.length, no2 = other.needs.length + other.routine.length;
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2("div", { class: "rgroup irsec", "data-irsec": "mail", children: /* @__PURE__ */ u2("h2", { children: [
@@ -71694,7 +71730,7 @@ ${d5.text}`);
     ] });
   }
   function MeetingBlock({ m: m5 }) {
-    const live = irLive(m5.groups, irDone);
+    const live = irLive(m5.groups, irDone, irHeld);
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2(MeetingRow, { m: m5, live }),
       irOpen.value === m5.id ? /* @__PURE__ */ u2(ProposalGroups, { groups: m5.groups, meet: m5.title, child: true }) : null
@@ -75668,9 +75704,12 @@ ${d5.text}`);
         "irFoldClick",
         "irFolded",
         "irGroupsShown",
+        "irHold",
         "irIsFolded",
         "irKeepOpen",
+        "irLive",
         "irOpen",
+        "irPeek",
         "irSetView",
         "irStage",
         "irStageClick",
@@ -75830,6 +75869,8 @@ ${d5.text}`);
         "pkDescL",
         "pkDraw",
         "pkEdMount",
+        "pkEscBusy",
+        "pkEscMenu",
         "pkFeed",
         "pkIdText",
         "pkLast",
