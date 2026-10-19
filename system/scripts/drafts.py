@@ -1242,7 +1242,8 @@ def chase_record(ids, mode="chase", day=None):
 
 def chase_counts():
     """{item ID: {"n": how often chased, "last": YYYY-MM-DD}} from the log: chase records, and BL-298's help and decision requests
-    (each is a chase of one item, so the next one steps up)."""
+    (each is a chase of one item, so the next one steps up). #183: "sent": YYYY-MM-DD once a sweep has seen a drafted email about
+    the item in Sent Items."""
     out = {}
     for c in chases_load():
         if c.get("mode") not in CHASE_MODES:
@@ -1251,6 +1252,13 @@ def chase_counts():
             row = out.setdefault(i, {"n": 0, "last": ""})
             row["n"] += 1
             row["last"] = max(row["last"], str(c.get("date") or ""))
+    try:
+        import draft_delivery                            # #183: a drafted email a sweep has seen in Sent Items
+    except ImportError:
+        return out                                       # an engine without #183: the counts as before
+    for i, day in draft_delivery.sent_days().items():
+        if i in out:
+            out[i]["sent"] = day
     return out
 
 
