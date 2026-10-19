@@ -58442,9 +58442,10 @@ ${d5.text}`);
   function pkPropDraw(x5, k5) {
     const on2 = shared.CUR.mode === "proposal";
     $("#panel").classList.toggle("pkprop", on2);
+    const nav = !!(shared.PKSRC && shared.PKSRC.view && shared.PKSRC.view === shared.VIEW);
     ["pkLink", "pkMore", "pkPrev", "pkNext", "pkExpand"].forEach((id2) => {
       const b5 = $("#" + id2);
-      if (b5) b5.hidden = on2 && id2 !== "pkExpand";
+      if (b5) b5.hidden = on2 && id2 !== "pkExpand" && !(nav && (id2 === "pkPrev" || id2 === "pkNext"));
     });
     if (on2 && $("#pkChaseBtn")) $("#pkChaseBtn").hidden = true;
     if (!on2) {
@@ -71225,7 +71226,7 @@ ${d5.text}`);
     if (!r4 || r4.done || !PEEKABLE.includes(r4.kind) && r4.kind !== "draft") return;
     shared.PKSRC = {
       view: "intake-review",
-      order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
+      order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter((t47) => ["actions", "raid", "decisions"].includes(t47.getAttribute("data-kind") || "")).map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
       step: (o5) => {
         irPeek.value = o5.n;
         openProposal(o5.n);

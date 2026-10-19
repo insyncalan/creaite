@@ -42,7 +42,7 @@ class Mail(LiveBrowserCase):
         S.open_page(self.b)
         act = self.line("Confirm data residency")
         self.assertEqual(act["pill"], "Action")
-        self.assertIn("Mia Hale", act["chg"])
+        self.assertIn("Sara Example", act["chg"])
         self.assertIn("due 02-11-2026", act["chg"])
         self.assertIn("Routine", act["chg"])
         risk = self.line("Supplier may miss")

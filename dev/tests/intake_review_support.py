@@ -30,7 +30,7 @@ def meeting_items():
 
 def mail_items():
     return [
-        pending({**action(1, description="Confirm data residency with legal", owner="Mia Hale", due_date="2026-11-02", source=MAIL), "match": "strong"}),
+        pending({**action(1, description="Confirm data residency with legal", owner="Sara Example", due_date="2026-11-02", source=MAIL), "match": "strong"}),
         pending({"n": 2, "op": "new", "table": "raid", "match": "strong", "flags": [], "values": {"project": "ABC", "type": "Risk",
                  "description": "Supplier may miss the November delivery", "owner": "Omar", "impact": "High", "likelihood": "Medium", "source": TEAMS}}),
         pending({"n": 3, "op": "update", "table": "actions", "id": "ABC-A-001", "match": "strong", "flags": [], "changes": {"status": "Closed"},

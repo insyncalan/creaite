@@ -74,7 +74,7 @@ export function irOpenPeek(n) {
   if (!r || r.done || !PEEKABLE.includes(r.kind) && r.kind !== "draft") return;
   shared.PKSRC = {
     view: "intake-review",
-    order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),
+    order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter(t => ["actions", "raid", "decisions"].includes(t.getAttribute("data-kind") || "")).map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),
     step: (/** @type {any} */ o) => { irPeek.value = o.n; openProposal(o.n); },
   };
   irPeek.value = n;

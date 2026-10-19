@@ -52,14 +52,14 @@ class Routine(LiveBrowserCase):
         b.eval("window.__calls=[]; const f=window.fetch; window.fetch=function(u,o){ window.__calls.push(String(u)); return f.apply(this,arguments); }")
         b.eval("document.querySelector('[data-irg=routine] [data-ira=routine]').click()")
         b.wait("document.querySelector('#snackT') && /Approved 4/.test(document.getElementById('snackT').textContent)", 25)
-        b.wait("document.querySelectorAll('#v-intake-review tr.irprop').length===4", 25)
+        b.wait("document.querySelectorAll('#v-intake-review tr.irprop.mchild').length===4", 25)
         made = [r["description"] for r in self.v.rows("actions") if r["description"].startswith("Steering action")]
         self.assertEqual(len(made), 4)
         self.assertEqual(b.eval("window.__calls.filter(u=>/\\/api\\/apply/.test(u)).length"), 1)
         self.assertEqual(b.eval("irOpen.value"), mid)                                     # an apply keeps the meeting open
         self.assertFalse(any(r["description"].startswith("Scope creep") for r in self.v.rows("raid")))   # the first group is untouched
         b.click("#snackU")
-        b.wait("document.querySelectorAll('#v-intake-review tr.irprop').length===8", 25)
+        b.wait("document.querySelectorAll('#v-intake-review tr.irprop.mchild').length===8", 25)
         self.assertEqual(len([r for r in self.v.rows("actions") if r["description"].startswith("Steering action")]), 0)
         self.assertEqual(b.eval("window.__calls.filter(u=>/\\/api\\/undo/.test(u)).length"), 1)
 

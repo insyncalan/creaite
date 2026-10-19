@@ -783,7 +783,8 @@ export function pkCid(){ return shared.CUR&&shared.CUR.mode==="new"?shared.CUR.n
 export function pkX(k,id){ if(String(id).startsWith("nw")) return shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.nid===id?shared.CUR.draft:null; if(String(id).startsWith("rv")) return shared.CUR&&shared.CUR.mode==="proposal"&&"rv"+shared.CUR.n===id?shared.CUR.draft:null; return REC(k,id); }
 export const pkRev=()=>shared.CUR&&shared.CUR.mode==="proposal"?REV.find(r=>r.n===shared.CUR.n):null;
 export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#panel").classList.toggle("pkprop",on);
-  ["pkLink","pkMore","pkPrev","pkNext","pkExpand"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"; }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */
+  const nav=!!(shared.PKSRC&&shared.PKSRC.view&&shared.PKSRC.view===shared.VIEW);   /* #232-B: Intake and Review's proposals step with Previous and Next */
+  ["pkLink","pkMore","pkPrev","pkNext","pkExpand"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden=on&&id!=="pkExpand"&&!(nav&&(id==="pkPrev"||id==="pkNext")); }); if(on&&$("#pkChaseBtn")) $("#pkChaseBtn").hidden=true;   /* BL-298 */
   if(!on){ $("#pkPropTop").textContent=""; $("#pkPropEnd").textContent=""; return; }
   const r=pkRev(); if(!r) return;
   putHTML($("#pkId"),html`<span>Review #${shared.CUR.n}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type??""}" data-tip="Type">${x.type??""}${raw(ic("chevdown"))}</button>`:""}`);
