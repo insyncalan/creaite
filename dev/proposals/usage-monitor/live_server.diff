@@ -1,0 +1,31 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index ded1d52c..5a9faa77 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -6901,6 +6901,8 @@ def sneak_read_route(handler, req):
+ DRAFT_ROUTES["/api/sneak/read"] = sneak_read_route
+ import report_server  # noqa: E402  v2.1.0 P3 (BL-335, BL-336): the report routes, given this server's own lock and runner
+ DRAFT_ROUTES.update(report_server.routes(LOCK, run, latest_apply))   # /api/report/draft, save, approve, export, logo
++import usage_reviews  # noqa: E402
++DRAFT_ROUTES.update(usage_reviews.routes(LOCK))      # #238: POST /api/usage/review, Alan's own review note on Activity › Usage
+ # ===== end BL-322 =====
+ 
+ # ===== BL-227 (sprint-drafts-writing) ===== one set of facts, many forms. /api/current/generate takes `form`: "current" (or none) is
+@@ -7030,6 +7032,7 @@ Handler.do_POST = post_or_health(Handler.do_POST)
+ # current database and every replaced file are kept first (backup.restore). ask creaite never holds the page's token, and
+ # backup.py restore stays a record command for it.
+ import backup  # noqa: E402
++import context_size  # noqa: E402  #238: the daily context-size line (plain code, like usage_log)
+ BACKUP_ROUTES = ("/api/backup/list", "/api/backup/preview", "/api/backup/restore")
+ BACKUP_EVERY = 3600
+ 
+@@ -7048,7 +7051,8 @@ def backup_daily_job():
+         said = []
+         made = session.backup_today(sweep.now(), said.append)
+         archived = archive_after_backup()                # BL-10: after Tidy up (backup.after_daily_backup), once a day
+-        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else [])
++        sized = context_size.daily_line()                # #238: what every run loads, counts only, once a day; never raises
++        return ([f"daily backup made: {made}"] if made else []) + said + [x for x in (archived, sized) if x]
+     finally:
+         LOCK.release()
+ 

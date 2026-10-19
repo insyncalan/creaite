@@ -208,6 +208,37 @@ class DashboardData(unittest.TestCase):
         self.assertEqual(u["reviews"], [])
 
 
+LIVE = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
+ROUTE_APPLIED = "usage_reviews.routes(LOCK)" in LIVE          # dev/proposals/usage-monitor, applied by Jarvis
+
+
+class LiveServerHook(unittest.TestCase):
+    @unittest.skipUnless("context_size.daily_line()" in LIVE, "dev/proposals/usage-monitor not applied yet")
+    def test_daily_job_records_the_context_size_once_a_day(self):
+        import ast
+        tree = ast.parse(LIVE)
+        job = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "backup_daily_job")
+        src = ast.get_source_segment(LIVE, job)
+        self.assertLess(src.index(".creaite-dev"), src.index("context_size.daily_line()"))     # never in the development repository
+        self.assertLess(src.index("backup.ask_run()"), src.index("context_size.daily_line()"))  # never from an ask creaite run
+
+    @unittest.skipUnless("context_size.daily_line()" in LIVE, "dev/proposals/usage-monitor not applied yet")
+    def test_daily_job_appends_counts_only_lines(self):
+        from test_tracker import Vault
+        v = Vault()
+        self.addCleanup(v.cleanup)
+        v.run("init")
+        code = ("import sys, json; sys.path.insert(0, 'system/scripts'); import live_server as L; "
+                "print(json.dumps([L.backup_daily_job(), L.backup_daily_job()]))")
+        r = subprocess.run([sys.executable, "-c", code], cwd=v.root, capture_output=True, text=True, env={**os.environ, "CREAITE_NOW": NOW})
+        first, second = json.loads(r.stdout.strip().splitlines()[-1])
+        self.assertTrue(any(x.startswith("context size recorded") for x in first), first)
+        self.assertFalse(any(x.startswith("context size") for x in second), second)
+        lines = [json.loads(x) for x in (v.root / "system/staging/context-size.jsonl").read_text().splitlines()]
+        self.assertEqual({x["date"] for x in lines}, {"2026-10-19"})
+        self.assertTrue(all(sorted(x) == ["bytes", "date", "file", "files", "tokens"] for x in lines))
+
+
 class UsageTab(LiveBrowserCase):
     shared_server = True
 
@@ -261,10 +292,15 @@ class UsageTab(LiveBrowserCase):
         b.click("#uRevSave")
         b.wait("document.getElementById('uRevMsg').textContent!=='' || document.querySelectorAll('#uRev td.empty').length===0")
         saved = b.eval("document.querySelectorAll('#uRev td.empty').length===0")
-        if not saved:                       # without the live server's route (dev/proposals/usage-monitor) it says so
+        if not ROUTE_APPLIED:               # without the live server's route (dev/proposals/usage-monitor) it says so
+            self.assertFalse(saved)
             self.assertIn("live server", b.eval("document.getElementById('uRevMsg').textContent"))
         else:
+            self.assertTrue(saved)
             self.assertIn("Start load up", b.eval("document.getElementById('uRev').innerText"))
+            self.assertTrue(b.eval("document.getElementById('uRevForm').offsetParent===null"))
+            line = json.loads((self.v.root / "system/staging/usage-reviews.jsonl").read_text().splitlines()[-1])
+            self.assertEqual(line, {"date": "2026-10-19", "saw": "Start load up", "decided": ""})
 
     def test_fits_at_900(self):
         b = self.open_usage()
