@@ -912,7 +912,7 @@ def save_draft(doc, base_version=None, why=None):
     filed file stays exactly as it is until that draft is approved (stage_weekly or stage_client, one apply with Undo).
     `base_version` is the version the editor opened: the draft's, or the filed report's when there is no draft yet."""
     import client_leak
-    creaite_doc.check(doc)                          # v2.5.0 audience bypass: a client report whose audience isn't client is refused
+    creaite_doc.check_audience(doc)                 # v2.5.0 audience bypass: a client report whose audience isn't client is refused
     doc = creaite_doc.force_client_audience(dict(doc))      # and its project name and client derived again, before the file's name
     kind, code, fri, client = doc.get("kind"), doc.get("project"), doc.get("date"), doc.get("client")
     if kind not in KINDS:
@@ -962,7 +962,7 @@ def _file_ops(kind, code, fri, client, draft):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(creaite_doc.read(draft))
+    doc = creaite_doc.clean(creaite_doc.read_report(draft))          # v2.5.0: filed as a client report, header derived
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -1023,7 +1023,7 @@ def stage_client(draft, force=False):
     import client_leak
     import report
     import sweep
-    doc = creaite_doc.force_client_audience(creaite_doc.read(draft))      # v2.5.0 audience bypass: the gate sees a client report
+    doc = creaite_doc.read_report(draft)            # v2.5.0 audience bypass: the gate sees a client report as one
     code, fri = doc["project"], doc["date"]
     if paths.rel(paths.resolve(draft_path("client", code, fri, doc.get("client")))) != paths.rel(paths.resolve(str(draft))):
         raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was approved.")

@@ -5,9 +5,10 @@ Run: python3 dev/tests/test_client_audience.py        (the PDF checks need Chrom
 A client report (kind "client") saved with audience "internal" (or the key left out), or a draft file edited on disk to say so, used
 to be saved, approved and exported with hidden item IDs, titles and owners, "confidential", "Internal only:", a creaite:item/ link
 and an internal-audience text section, the gate finding nothing. Now:
-  - the save route (and Approve with a document sent) refuses a client-kind document whose audience isn't "client" (creaite_doc.check);
-  - a draft read from disk is read as a client document (creaite_doc.loads normalises the audience), so Approve and every export
-    are refused with the gate's findings and nothing reaches the Reports folder;
+  - the save route (and Approve with a document sent) refuses a client-kind document whose audience isn't "client"
+    (creaite_doc.check_audience);
+  - a stored report is read for the draft route, Approve, filing and every export with creaite_doc.read_report, which reads a
+    client report as one (its audience client, its project name and client derived again), so Approve and every export are refused with the gate's findings and nothing reaches the Reports folder;
   - stage_client and client_check.left_out normalise on their own too (each checked here with a reader that doesn't normalise).
 The control (a normal client draft, audience "client") saves, approves and exports as before.
 """
@@ -173,14 +174,14 @@ class Audience(unittest.TestCase):
         return ("import re\n_raw = lambda p: json.loads(creaite_doc.BLOCK.search(creaite_doc.real(p).read_text()).group(1))\n"
                 "creaite_doc.read = _raw\n")
 
-    def test_loads_reads_a_client_kind_as_client(self):
+    def test_read_report_reads_a_client_kind_as_client(self):
         self.fresh()
         self.tamper_on_disk("internal")
-        out = self.py(f"print(json.dumps(creaite_doc.read({str(self.draft_file())!r}).get('audience')))")
+        out = self.py(f"print(json.dumps(creaite_doc.read_report({str(self.draft_file())!r}).get('audience')))")
         self.assertEqual(out, "client")
         self.fresh()
         self.tamper_on_disk(MISSING)
-        self.assertEqual(self.py(f"print(json.dumps(creaite_doc.read({str(self.draft_file())!r}).get('audience')))"), "client")
+        self.assertEqual(self.py(f"print(json.dumps(creaite_doc.read_report({str(self.draft_file())!r}).get('audience')))"), "client")
 
     def test_stage_client_normalises_on_its_own(self):
         self.fresh()

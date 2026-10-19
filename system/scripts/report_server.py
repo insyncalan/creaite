@@ -126,7 +126,7 @@ def draft_route(handler, req):
     kind, code, fri, client = target(req)
     state, path = report_doc.where(kind, code, fri, client)
     if state and not (req.get("fresh") and state == "draft"):
-        doc = creaite_doc.read(path)
+        doc = creaite_doc.read_report(path)             # v2.5.0 audience bypass: a draft edited on disk is read as a client report
     else:
         off = refuse_client_off(handler, kind, code)       # a client report is made only while the setting is on
         if off:
@@ -145,7 +145,7 @@ def draft_route(handler, req):
 def save_route(handler, req):
     """POST /api/report/save: save the edits as the draft and remember the layout (see the module's description)."""
     doc = req.get("doc")
-    creaite_doc.check(doc)                     # v2.5.0 audience bypass: refuses a client report whose audience isn't client
+    creaite_doc.check_audience(doc)            # v2.5.0 audience bypass: refuses a client report whose audience isn't client
     doc = creaite_doc.force_client_audience(doc)
     kind, code, fri, client = target({"kind": doc.get("kind"), "code": doc.get("project"), "week_ending": doc.get("date"),
                                       "client": doc.get("client")})
@@ -185,7 +185,7 @@ def relock_client_drafts(code, fri):
 
 def _relock_one(f, code, fri):
     """Re-lock one client draft file (see relock_client_drafts); whether it was saved."""
-    doc = creaite_doc.read(f)
+    doc = creaite_doc.read_report(f)
     if doc.get("kind") != "client" or doc.get("project") != code or doc["date"] < fri or doc.get("state") == "approved":
         return False
     base = report_doc.baseline(code, doc["date"])
@@ -433,7 +433,7 @@ def export_route(handler, req):
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
-    doc = creaite_doc.force_client_audience(creaite_doc.read(path))     # v2.5.0 audience bypass: a draft edited on disk too
+    doc = creaite_doc.read_report(path)                 # v2.5.0 audience bypass: a draft edited on disk too
     report_doc.same_report(doc, kind, code, fri)
     left = None
     if kind == "client":

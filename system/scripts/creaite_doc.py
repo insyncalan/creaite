@@ -102,18 +102,30 @@ def force_client_audience(doc):
     return doc
 
 
+def check_audience(doc):
+    """v2.5.0 audience bypass: raise DocError for a client report whose audience isn't "client" (or is missing), with check()'s
+    other refusals first. Saving (the save and approve routes, report_doc.save_draft) calls it: a client report is never saved as
+    anything else."""
+    check(doc)
+    if doc.get("kind") == "client" and doc.get("audience") != "client":
+        raise DocError("A client report's audience is always client: this one says "
+                       f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
+
+
+def read_report(path):
+    """read(path), with a client report read as one (force_client_audience): its audience client and its header fields derived
+    again, however the file was edited on disk. Every place that approves, files, exports or checks a stored report reads it so."""
+    return force_client_audience(read(path))
+
+
 def check(doc):
-    """Raise DocError when the document's shape is wrong: the kind, audience, state, date and the sections' ids. A client report
-    whose audience isn't "client" (or is missing) is refused (v2.5.0 audience bypass): its audience is never anything else."""
+    """Raise DocError when the document's shape is wrong: the kind, audience, state, date and the sections' ids."""
     if not isinstance(doc, dict) or doc.get("format") != FORMAT:
         raise DocError("That isn't a creaite document.")
     if doc.get("kind") not in KINDS:
         raise DocError(f"A creaite document is a {', '.join(KINDS)}; not {doc.get('kind')!r}.")
     if doc.get("audience", "internal") not in AUDIENCES or doc.get("state", "draft") not in STATES:
         raise DocError("Its audience or state isn't one creaite knows.")
-    if doc.get("kind") == "client" and doc.get("audience") != "client":
-        raise DocError("A client report's audience is always client: this one says "
-                       f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
     if not DATE.match(str(doc.get("date") or "")):
         raise DocError("Its date must be YYYY-MM-DD.")
     check_sections(doc.get("sections") or [])
@@ -211,7 +223,7 @@ def loads(text):
         raise DocError("That isn't a creaite document (no creaite-data block).")
     if not isinstance(doc.get("schema"), int) or doc["schema"] > SCHEMA:
         raise DocError(f"It was saved by a newer creaite (schema {doc.get('schema')}); update creaite to open it.")
-    return force_client_audience(doc)        # schema 1 is the first: nothing to upgrade yet; a client report is read as client
+    return doc        # schema 1 is the first: nothing to upgrade yet
 
 
 def real(path):
@@ -941,7 +953,7 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        doc = read(path)
+        doc = read_report(path)          # v2.5.0 audience bypass: a client report exported as one, however its file was edited
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):

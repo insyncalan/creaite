@@ -12,9 +12,11 @@ which are shown in the header, the page title, the Word fields and the file name
 
 - `creaite_doc.is_client(doc)`: kind client, or audience client or distributed.
 - `creaite_doc.force_client_audience(doc)`: a client report's audience is set to "client" and its `project_name` (tracker) and
-  `client` (project memory) derived again; called by `loads` (every read, so a draft edited on disk), the save, approve and export
-  routes, `save_draft`, `stage_client` and `client_check.left_out`.
-- `creaite_doc.check` refuses a client report whose audience isn't "client" (the save and approve routes answer it).
+  `client` (project memory) derived again; called by `creaite_doc.read_report`, which the draft route, `stage_client`, filing
+  (`_file_ops`), the relock, `creaite_doc.export`, the export route and review's client check read a stored report with (so a draft
+  edited on disk), and by the save route, `save_draft` and `client_check.left_out`. (`loads` itself is left as it was: edit_ai's
+  check of a saved report still refuses one whose file reads as internal, test_client_gate.)
+- `creaite_doc.check_audience` refuses a client report whose audience isn't "client" (the save and approve routes answer it).
 - `_internal_text`, `_check_baseline` and `report_doc.client_item_links` use `is_client`.
 
 So today every route hands the gate a client report with audience "client" and derived header fields. This proposal makes the gate

@@ -115,7 +115,11 @@ class Html(Base):
 
     def test_an_unfiled_report_leaves_the_plain_name_for_the_filing(self):
         for kind, title in (("weekly", "Weekly report"), ("client", "Client report")):
-            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n"
+            # v2.5.0 audience bypass: a client report is exported only after its internal week is approved, so it is based on one
+            base = ("b = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [])\nb['state'] = 'approved'\n"
+                    "rb = creaite_doc.save('system/staging/drafts/approved-base.html', b, 'Saved for a test')\n"
+                    "doc['based_on'] = {'path': rb['path'], 'version': rb['version']}\n") if kind == "client" else ""
+            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n" + base +
                         "print(json.dumps(creaite_doc.save('system/staging/drafts/unfiled.html', doc, 'Saved for a test')))")
             self.assertTrue(r["ok"], r)
             out = self.export(r["path"], "html", out_dir=f"{ABC}/reports")
