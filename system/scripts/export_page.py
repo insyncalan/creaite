@@ -677,7 +677,7 @@ def check_page(doc, page, text, sections, rows, attrs=(), css="", info=None):
 
 CLIENT_UI = ("Client report · Client", "Client report", "Client", "Period", "to", "for", "Where we are", "What happens next",
              "No client-visible milestones yet.", "Milestone", "Expected", "State", "Not set", "New", "On track", "At risk",
-             "Off track", "·", ",", ".", ":", ";", "-", "–", "—", "(", ")", "/")
+             "Off track", "Firm", "Partner", "·", ",", ".", ":", ";", "-", "–", "—", "(", ")", "/")
 VIEW_IDS = {"v-clientreport", "v-weekly"}
 CLIENT_VALUES = {"role": re.compile(r"^(?:list|listitem|img|group|status|note|region|presentation|none|table|row|cell|rowheader|"
                                     r"columnheader|heading)$"),
@@ -763,6 +763,16 @@ def item_units(shown, refs):
     return units
 
 
+def logo_names(code):
+    """The names the header draws for a logo whose picture is missing: the project's partners' names (from its memory, as the
+    dashboard reads them). Fails closed to none."""
+    try:
+        import report_doc
+        return [p.get("name") for p in report_doc.partners(code) if isinstance(p.get("name"), str)]
+    except Exception:
+        return []
+
+
 def tiled(text, units):
     """Whether the folded text is wholly made of the units, one after another."""
     t = fold(text)
@@ -811,8 +821,12 @@ def check_client_subset(doc, info, css):
     texts = {}
     for sid, t in info["parts"]:
         texts.setdefault(sid, []).append(t)
+    hdr = set()
+    if "header" in ok_ids:                # a logo with no picture is drawn as its name: the firm, the client or a partner
+        for name in logo_names(shown.get("project")):
+            hdr |= unit_forms(name)
     for sid, ts in texts.items():
-        units = common | (section_units(shown, ok_ids[sid]) if sid in ok_ids else set())
+        units = common | (section_units(shown, ok_ids[sid]) if sid in ok_ids else set()) | (hdr if sid == "header" else set())
         if sid is not None and sid not in ok_ids:
             raise PageRefused("the page held a section the report leaves out")
         if not tiled("".join(ts), units):
