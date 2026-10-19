@@ -3860,8 +3860,8 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .rs-pick{margin-top:6px}
 .rs-picker{border:1px solid var(--rp-rule);background:var(--rp-white);padding:8px;display:grid;gap:6px}
 .rs-pick-search{width:100%;box-sizing:border-box;min-height:28px;border:1px solid var(--rp-rule);border-radius:var(--r-sm);background:var(--rp-white);color:var(--rp-ink);font:inherit;font-size:var(--fs-sm);padding:0 8px}
-.rs-pick-list{max-height:220px;overflow:auto;display:grid;align-content:start}
-.rs-pick-row{display:grid;grid-template-columns:20px 84px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:28px;padding:0 4px;font-size:var(--fs-xs);cursor:pointer}
+.rs-pick-list{max-height:220px;overflow:auto;display:grid;grid-auto-rows:max-content;align-content:start}   /* #235: a row is as tall as its wrapped title, never squeezed to the box */
+.rs-pick-row{display:grid;grid-template-columns:20px 84px minmax(0,1fr) auto;gap:8px;align-items:baseline;min-height:28px;padding:4px;font-size:var(--fs-xs);cursor:pointer}
 .rs-pick-row:hover{background:var(--rp-soft)} .rs-pick-id{font-variant-numeric:tabular-nums;color:var(--rp-grey)} .rs-pick-m{color:var(--rp-grey)}
 .rs-pick-foot{display:flex;gap:6px;align-items:center} .rs-pick-foot .sub{flex:1;font-size:var(--fs-xs)}
 .wr-decs li{display:flex;gap:6px;align-items:flex-start} .wr-decbody{min-width:0;flex:1}
