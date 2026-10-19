@@ -274,6 +274,8 @@ class NotesMapping(OneDriveCase):
             "import types, live_server as ls\n"
             "out = []\n"
             "h = types.SimpleNamespace(send=lambda code, body, *a, **k: out.append([code, body]))\n"
+            "for name in ('fs_read', 'fs_write_if_unchanged', 'fs_save', 'fs_upload'):\n"      # fs delegates to these (2607e3f2)
+            "    setattr(h, name, types.MethodType(getattr(ls.Handler, name), h))\n"
             f"ls.Handler.fs(h, {{'op': 'write', 'path': 'system/config/settings.json', 'text': {json.dumps(data)!r}}})\n"
             "print(json.dumps(out[0]))")
 
