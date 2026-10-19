@@ -69154,7 +69154,7 @@ ${d5.text}`);
     const d02 = crDoc.value, i5 = crInternal.value;
     if (!d02 || !i5) return;
     const heading = (id2) => String((secOf(i5, id2) || secOf(d02, id2) || { heading: id2 }).heading || id2);
-    const want = ids || d02.sections.map((s5) => s5.id).concat(i5.sections.filter((s5) => !secOf(d02, s5.id)).map((s5) => s5.id));
+    const want = ids || d02.sections.map((s5) => s5.id);
     const cands = want.map((id2) => ({ id: id2, doc: matchClientSection(d02, i5, id2) })).filter((c5) => c5.doc !== d02);
     if (!cands.length) return;
     const failed = () => {

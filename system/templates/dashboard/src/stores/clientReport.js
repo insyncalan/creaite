@@ -120,7 +120,7 @@ async function matchInternalNow(ids) {
   const d0 = crDoc.value, i = crInternal.value;
   if (!d0 || !i) return;
   const heading = (/** @type {string} */ id) => String((secOf(i, id) || secOf(d0, id) || { heading: id }).heading || id);
-  const want = ids || d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
+  const want = ids || d0.sections.map(s => s.id);
   const cands = want.map(id => ({ id, doc: matchClientSection(d0, i, id) })).filter(c => c.doc !== d0);
   if (!cands.length) return;
   const failed = () => { crHeld.value = { copied: [], held: cands.map(c => ({ id: c.id, heading: heading(c.id), findings: [] })), message: "Not matched: the check of internal wording didn't run, so nothing was copied." }; };
