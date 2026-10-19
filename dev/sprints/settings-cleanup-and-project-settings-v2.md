@@ -1,4 +1,6 @@
-# Settings clean-up, and Project settings v2 (for Alan to decide)
+# Settings clean-up, and Project settings v2
+
+**Approved and locked by Alan, 19-10-2026, for 2.6** (both mockups: `settings-v2-mockup.html` and `project-settings-v2-mockup.html`). The decisions below are final. Still to mock up: the People page as the home of the whole register (same columns and filter as the project page's People view, plus delete from the register; no merge).
 
 Written 19-10-2026 from the 2.5.0 build (a throwaway vault, fictional data), after Alan: "we've moved on from #103 by creating the project settings pages"; clean up Settings, then improve the project settings page. #103 is superseded by this. Mockup: `dev/mockups/project-settings-v2-mockup.html` (on the 2.5.0 snapshot; the older mockups keep the 2.1.0 look).
 
