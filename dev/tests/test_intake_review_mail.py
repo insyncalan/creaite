@@ -1,5 +1,5 @@
 """#232-B (v2.5.0): the mail and Teams proposals on Intake and Review say what changes, in the same rows as a meeting's:
-an update in words ("Closes ABC-A-014 · status Open → Closed · Looks done") with its evidence and source; a new action or risk with
+an update in words ("Closes ABC-A-014: Draft the comms plan · status Open → Closed · Looks done"; a changed latest update as "and the latest update") with its evidence and source; a new action or risk with
 owner, date or impact; the same two groups; and the source line shows no times.
 
 Run: python3 dev/tests/test_intake_review_mail.py   (needs Google Chrome; skipped otherwise)
@@ -32,7 +32,7 @@ class Mail(LiveBrowserCase):
         S.open_page(self.b)
         row = self.b.eval(f"(()=>{{ const r=[...document.querySelectorAll('{ROW}')].find(t=>t.querySelector('.ickind').textContent==='Update'); "
                           "return {chg:r.querySelector('.icchg').textContent, q:(r.querySelector('.icq')||{}).textContent||''}; })()")
-        self.assertIn("Closes ABC-A-001", row["chg"])
+        self.assertIn("Closes ABC-A-001: Escalate data access to the client CIO", row["chg"])      # B4: the item's title after its ID
         self.assertIn("status Open → Closed", row["chg"])
         self.assertIn("Looks done", row["chg"])
         self.assertIn("attached the SOW", row["q"])

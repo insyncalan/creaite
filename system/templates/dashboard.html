@@ -75144,20 +75144,15 @@ ${d5.text}`);
   }
   var irDueWords = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
   var noTime = (s5) => String(s5 || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
-  var irVal = (v5) => v5 == null || v5 === "" ? "—" : fd(String(v5));
+  var colOf = (field) => String(field || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/^due$/, "due_date").replace(/^response$/, "response_action");
   function irChange(r4) {
     const x5 = r4.rec || {}, owner = (o5) => !o5 || o5 === "TBC" ? { t: "No owner", warn: true } : { t: o5 };
     if (r4.kind === "actions") return [owner(x5.o), { t: irDueWords(x5.due), warn: !x5.due }, { t: `${x5.pr || "Medium"} priority` }];
     if (r4.kind === "raid") return [owner(x5.o), { t: x5.imp && x5.lik ? `Impact ${x5.imp} · Likelihood ${x5.lik}` : "Impact and likelihood not set", warn: !(x5.imp && x5.lik) }, ...x5.due ? [{ t: irDueWords(x5.due) }] : []];
     if (r4.kind === "decisions") return [{ t: x5.by ? `Made by ${x5.by}` : "Made by not recorded", warn: !x5.by }, ...x5.date ? [{ t: fd(x5.date) }] : []];
     if (r4.kind === "update") {
-      const closing = x5.field === "status" && ["Closed", "Cancelled"].includes(String(x5.to)), verb = closing ? x5.to === "Cancelled" ? "Cancels" : "Closes" : "Updates";
-      const ch2 = (x5.changes && x5.changes.length ? x5.changes : [{ field: x5.field, from: x5.from, to: x5.to }]).filter((c5) => c5.field);
-      return [
-        { t: `${verb} ${x5.target || ""}`.trim() },
-        ...ch2.map((c5) => ({ t: `${String(c5.field).toLowerCase()} ${irVal(c5.from)} → ${irVal(c5.to)}` })),
-        ...r4.dn && r4.dn.strength ? [{ t: r4.dn.strength }] : []
-      ];
+      const ch2 = (x5.changes && x5.changes.length ? x5.changes : [{ col: x5.col || x5.field, field: x5.field, from: x5.from, to: x5.to }]).filter((c5) => c5.field || c5.col).map((c5) => ({ col: c5.col || colOf(c5.field), from: c5.from, to: c5.to }));
+      return [{ t: irLineHead(irVerb(ch2), x5.table === "projects" ? "" : x5.target || "", x5.title || "") }, ...irLineParts(ch2).map((t47) => ({ t: t47 })), ...r4.dn && r4.dn.strength ? [{ t: r4.dn.strength }] : []];
     }
     return [];
   }
@@ -78122,6 +78117,7 @@ ${d5.text}`);
         "undoWords",
         "unescHtml",
         "updReview",
+        "updSave",
         "uploadClientLogo",
         "validate",
         "viaServer",

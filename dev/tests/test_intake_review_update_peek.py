@@ -149,6 +149,14 @@ class UpdatePeek(LiveBrowserCase, Fixture):
         b.wait(f"irPeek.value==={first!r}")
         self.assertIn(self.uat, b.eval("document.getElementById('pkId').textContent"))
 
+    def test_the_rows_line_names_the_item_and_says_the_latest_update_in_words(self):
+        b = self.b
+        S.open_page(b)
+        line = b.eval(f"[...document.querySelectorAll('{ROW}')].find(t=>t.querySelector('.icchg').textContent.includes({self.uat!r})).querySelector('.icchg').textContent")
+        old = self.live[self.uat]["due_date"]
+        self.assertIn(f"Updates {self.uat}: {UAT} · due {old[8:10]}-{old[5:7]}-{old[:4]} → 01-12-2026 and the latest update", line)
+        self.assertNotIn("The supplier confirmed", line)                                    # the long text is not in the line
+
 
 class UpdatePeekSaves(LiveBrowserCase, Fixture):
     """Saving in the peek: the edited columns are written, the rest of the proposal is left as it was."""

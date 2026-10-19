@@ -10,6 +10,7 @@ import { REV, pName } from "../../core/data.js";
 import { fd, fdText } from "../../core/page.js";
 import { srcParse, weekendNote, wkLong } from "../../core/fields.js";
 import { irBulk, irGroupsShown } from "../../core/irFold.js";
+import { irLineHead, irLineParts, irVerb } from "../../core/irUpdate.js";
 import { linkUrl } from "../../core/linkUrl.js";
 import { closePanel } from "../../projects.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
@@ -34,7 +35,8 @@ export function irPill(r) {
 
 const irDueWords = (/** @type {string|null|undefined} */ d) => (d ? `due ${fd(d)}` : "No due date");
 const noTime = (/** @type {string} */ s) => String(s || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
-const irVal = (/** @type {any} */ v) => (v == null || v === "" ? "—" : fd(String(v)));
+/** A change's column from its words, for a row built before the server named it ("due date" -> due_date). @param {string} field */
+const colOf = field => String(field || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/^due$/, "due_date").replace(/^response$/, "response_action");
 
 /** The emphasised line's parts: what the proposal is, owner and date or priority first. @param {any} r @returns {{t: string, warn?: boolean}[]} */
 export function irChange(r) {
@@ -43,10 +45,11 @@ export function irChange(r) {
   if (r.kind === "raid") return [owner(x.o), { t: x.imp && x.lik ? `Impact ${x.imp} · Likelihood ${x.lik}` : "Impact and likelihood not set", warn: !(x.imp && x.lik) }, ...(x.due ? [{ t: irDueWords(x.due) }] : [])];
   if (r.kind === "decisions") return [{ t: x.by ? `Made by ${x.by}` : "Made by not recorded", warn: !x.by }, ...(x.date ? [{ t: fd(x.date) }] : [])];
   if (r.kind === "update") {
-    const closing = x.field === "status" && ["Closed", "Cancelled"].includes(String(x.to)), verb = closing ? (x.to === "Cancelled" ? "Cancels" : "Closes") : "Updates";
-    const ch = (x.changes && x.changes.length ? x.changes : [{ field: x.field, from: x.from, to: x.to }]).filter((/** @type {any} */ c) => c.field);
-    return [{ t: `${verb} ${x.target || ""}`.trim() }, ...ch.map((/** @type {any} */ c) => ({ t: `${String(c.field).toLowerCase()} ${irVal(c.from)} → ${irVal(c.to)}` })),
-      ...(r.dn && r.dn.strength ? [{ t: r.dn.strength }] : [])];
+    /* B4: "Closes ABC-A-014: Draft the comms plan · status Open → Closed", "Updates ABC-A-002: Book UAT environment · due 20-10-2026 → 23-10-2026 and the latest update":
+       the item's title after its ID, and a change to the latest update in words, not as its long text (core/irUpdate.js: the peek's note says the same) */
+    const ch = (x.changes && x.changes.length ? x.changes : [{ col: x.col || x.field, field: x.field, from: x.from, to: x.to }]).filter((/** @type {any} */ c) => c.field || c.col)
+      .map((/** @type {any} */ c) => ({ col: c.col || colOf(c.field), from: c.from, to: c.to }));
+    return [{ t: irLineHead(irVerb(ch), x.table === "projects" ? "" : x.target || "", x.title || "") }, ...irLineParts(ch).map(t => ({ t })), ...(r.dn && r.dn.strength ? [{ t: r.dn.strength }] : [])];
   }
   return [];
 }
