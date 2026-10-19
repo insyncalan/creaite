@@ -81,6 +81,7 @@ class _Markup(html.parser.HTMLParser):
             self.problem = what
 
     def handle_starttag(self, tag, attrs):
+        """An element: its tag and each attribute must be on the allowlist."""
         if tag not in ALLOWED_TAGS:
             self._say(f"a <{tag}> element" if re.fullmatch(r"[a-z][a-z0-9-]{0,20}", tag) else "an element")
             return
@@ -90,25 +91,31 @@ class _Markup(html.parser.HTMLParser):
             elif name.startswith("on"):
                 self._say("an event handler")
             elif name not in ALLOWED_ATTRS:
-                self._say(f"{'an' if name[:1] in 'aeiou' else 'a'} {name} attribute" if re.fullmatch(r"[a-z][a-z0-9-]{0,20}", name) else "an attribute")
+                word = f"{'an' if name[:1] in 'aeiou' else 'a'} {name} attribute"
+                self._say(word if re.fullmatch(r"[a-z][a-z0-9-]{0,20}", name) else "an attribute")
             elif name == "style" and BAD_STYLE.search(value or ""):
                 self._say("a style Outlook won't take")
             elif name == "href" and not HREF_OK.match((value or "").strip()):
                 self._say("a link that isn't a web or mail address")
 
     def handle_startendtag(self, tag, attrs):
+        """A self-closed element (<br/>): checked as any other."""
         self.handle_starttag(tag, attrs)
 
     def handle_comment(self, data):
+        """A comment: refused."""
         self._say("a comment")
 
     def handle_decl(self, decl):
+        """A <!DOCTYPE ...>: refused."""
         self._say("a <!...> declaration")
 
     def unknown_decl(self, data):
+        """A <![CDATA[...]]> or other <!...>: refused."""
         self._say("a <!...> declaration")
 
     def handle_pi(self, data):
+        """A <?...?>: refused."""
         self._say("a <?...?> instruction")
 
 
