@@ -112,7 +112,29 @@ export function fitFilterBar(host) {
 }
 
 /** @param {FilterBarState} s */
-function fbPaint(s) { render(<FilterBar {...s.props} ui={s.ui} host={s.host} />, s.host); }
+function fbPaint(s) { render(<FilterBar {...s.props} ui={s.ui} host={s.host} />, s.host); fbPlace(s); }
+
+/* #240: the funnel's picker is drawn position:fixed, so a short page that scrolls (Work's .view, overflow:auto) never cuts it
+   off. It starts where it would sit in its .dd (each bar's own left or right alignment; offsets, so the opening animation's
+   transform is left out), is kept inside the window, and its height is what the window has room for (it scrolls inside);
+   with little room below and more above, it opens upward. Placed again on every redraw, scroll and resize. */
+const FB_GAP = 8;
+/** @param {FilterBarState} s */
+function fbPlace(s) {
+  const m = s.props.more && document.getElementById(s.props.more.menuId); if (!m || !s.host.contains(m)) return;
+  const st = m.style;
+  st.position = st.top = st.left = st.right = st.bottom = st.maxHeight = "";
+  if (s.ui.open !== FB_MORE || !m.classList.contains("on")) return;
+  const dd = /** @type {HTMLElement} */ (m.parentElement), d = dd.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  const w = m.offsetWidth, cap = parseFloat(getComputedStyle(m).maxHeight) || vh;
+  let top = d.top + m.offsetTop, room = vh - FB_GAP - top;
+  const above = d.top - FB_GAP - (top - d.bottom);
+  if (room < Math.min(cap, m.scrollHeight) && above > room) { room = above; top = Math.max(FB_GAP, d.top - (top - d.bottom) - Math.min(cap, room, m.scrollHeight)); }
+  const left = Math.max(FB_GAP, Math.min(d.left + m.offsetLeft, vw - FB_GAP - w));
+  Object.assign(st, { position: "fixed", top: `${Math.round(top)}px`, left: `${Math.round(left)}px`, right: "auto", bottom: "auto",
+    maxHeight: `${Math.max(0, Math.floor(Math.min(cap, room)))}px` });
+}
 
 /** The .dd of field `id` (or of the funnel) in the bar.
     @param {FilterBarState} s @param {string} id @returns {HTMLElement | null} */
@@ -167,6 +189,11 @@ if (typeof document !== "undefined") {
   document.addEventListener("pointerdown", fbAway, true);
   document.addEventListener("click", fbAway, true);     /* a click from a script too */
   document.addEventListener("focusin", fbAway);
+  /** @param {Event} e */
+  const replace = e => FB_OPEN.forEach(s => { const m = s.props.more && document.getElementById(s.props.more.menuId);
+    if (s.ui.open === FB_MORE && !(m && e.target instanceof Node && m.contains(e.target))) fbPlace(s); });   /* not the picker's own lists scrolling */
+  window.addEventListener("resize", replace);
+  document.addEventListener("scroll", replace, { capture: true, passive: true });   /* any scroller: the page or a view */
 }
 
 /* ---- BL-150: folding ---- */
