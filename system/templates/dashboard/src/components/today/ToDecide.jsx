@@ -134,7 +134,7 @@ export function ToDecide(props) {
       </ol>
       <div class="moreline tdfoot">
         {more > 0 ? <><button type="button" class="qa" aria-expanded={open ? "true" : "false"} data-more="td">{open ? "Show fewer" : `+${more} more`}</button>{" · "}</> : null}
-        {line.length || !rows.length ? null : <span class="none">Nothing waits in Intake and Review.</span>}
+        {line.length || !rows.length ? null : <span class="none">Nothing waits in Intake.</span>}
       </div>
     </>
   );

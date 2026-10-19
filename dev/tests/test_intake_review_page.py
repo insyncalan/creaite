@@ -1,4 +1,4 @@
-"""#232-0 (v2.5.0): Intake and Review on one page, the skeleton, in a real browser against the live server. The page opens at
+"""#232-0 (v2.5.0): Intake on one page, the skeleton, in a real browser against the live server. The page opens at
 #intake-review and from the sidebar's one entry; the old #review, #intake and #inbox addresses open it; the List, Board and
 Two panes switch draws each view and is remembered in this browser; a meeting with proposals opens with one click and closes
 with a second, its groups (Needs your decision, then Routine) hanging under it; Esc closes it; Later and Not needed start folded.
@@ -46,8 +46,8 @@ class IntakeReviewPage(LiveBrowserCase):
     def test_the_address_and_the_old_ones(self):
         b = self.b
         b.eval("go('intake-review')")
-        self.assertEqual(b.eval("[VIEW, location.hash, document.querySelector('#irTitle').textContent]"),
-                         ["intake-review", "#intake-review", "Intake and Review"])
+        self.assertEqual(b.eval("[VIEW, location.hash, document.querySelector('#v-intake-review h1').textContent]"),
+                         ["intake-review", "#intake-review", "Intake"])
         self.assertEqual(b.eval("['#review','#intake','#inbox','#intake-review'].map(h=>parseHash(h).v)"), ["intake-review"] * 4)
         b.eval("go('today'); location.hash='#review'")
         b.wait("VIEW==='intake-review'")
@@ -59,7 +59,7 @@ class IntakeReviewPage(LiveBrowserCase):
         b.eval("document.querySelector('.rail [data-v=review]').click()")
         b.wait("VIEW==='intake-review'")
         self.assertEqual(b.eval("document.querySelector('.rail [data-v=review]').getAttribute('aria-current')"), "page")
-        self.assertIn("Intake and Review", b.eval("document.querySelector('.rail [data-v=review]').textContent"))
+        self.assertIn("Intake", b.eval("document.querySelector('.rail [data-v=review]').textContent"))
 
     def test_the_three_views_and_the_choice_is_remembered(self):
         b = self.b

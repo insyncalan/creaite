@@ -1,4 +1,4 @@
-"""#232-B review fixes (v2.5.0), against the peek on Intake and Review.
+"""#232-B review fixes (v2.5.0), against the peek on Intake.
 1. Esc with a menu open in the peek (the Type list) closes only the menu; a second Esc closes the peek. The peek's Esc listener
    uses the same exemptions as the panel's own (panel.js pkEscMenu / pkEscBusy), so it no longer closes the peek over an open popup.
 2. Saving in the peek recomputes the row's `hold` by the server's rule (review.hold_reason; the page's mirror is core/irFold.js

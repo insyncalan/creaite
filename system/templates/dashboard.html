@@ -4113,9 +4113,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
-/* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
-.rail [data-v=review] .rl{letter-spacing:-.02em}
-
 /* ===== #232-A Intake side: the meeting row's actions, progress, notes, the drop target (scoped to #v-intake-review) ===== */
 #v-intake-review .icprog{height:6px;border-radius:var(--r-sm);background:linear-gradient(90deg,transparent,var(--accent),transparent) no-repeat var(--sunk);background-size:35% 100%;border:1px solid var(--line);overflow:hidden;width:220px;max-width:100%;margin-top:6px;animation:mhair calc(1600ms*var(--k)) var(--inout) infinite}   /* the run hairline's loop (mhair), on the track itself */
 #v-intake-review .icprog i{display:none}
@@ -4147,12 +4144,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
-/* #232-C: the longer name still fits beside the icon and its count at the Medium and Large icon sizes (they take 4 and 8px more of the 188px sidebar) */
-.railsz-medium .rail:not(.collapsed) [data-v=review] .rl{letter-spacing:-.035em}
-.railsz-large .rail:not(.collapsed) [data-v=review] .rl{letter-spacing:-.065em}
-/* #232-C: collapsed with labels, the 76px sidebar names the entry in short ("In & Review"); the full name stays in the button text and its name */
-.rail.labelled button.nv .rl[data-short]{font-size:0}
-.rail.labelled button.nv .rl[data-short]::after{content:attr(data-short);font-size:11px}
 </style>
 </head>
 <body>
@@ -4193,7 +4184,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
             <div class="tsub" id="tOwe" hidden><h3 class="th th3" id="hOwe">You owe <span class="cnt" id="nOwe"></span></h3><ol class="bl" id="oweList"></ol><div class="moreline" id="oweMore"></div></div>
             <div class="tsub" id="tWait" hidden><h3 class="th th3" id="hWait">Waiting on <span class="cnt" id="nWait"></span><a href="#" data-nav="all:chase:">Chase view</a></h3><ol class="bl" id="waitList"></ol><div class="moreline" id="waitMore"></div></div>
           </section><!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
-          <section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd" hidden><details id="tdFold" open><summary><h2 class="th" id="hTd">Intake and Review <span class="cnt" id="nTd"></span><span class="tdnew" id="tdNew" hidden>new</span></h2></summary><div id="tdBody"></div></details></section><!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
+          <section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd" hidden><details id="tdFold" open><summary><h2 class="th" id="hTd">Intake <span class="cnt" id="nTd"></span><span class="tdnew" id="tdNew" hidden>new</span></h2></summary><div id="tdBody"></div></details></section><!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
           <section class="tsec tres" id="weekSec" aria-labelledby="hWeek"><details id="weekFold" open><summary><h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo"></span></h2></summary><div id="weekList"></div></details></section><!-- #105: folds like Resolved; open unless hidden, and remembered in this browser -->
           <section class="tsec tres" id="resSec" aria-labelledby="hRes"><details id="resFold"><summary><h2 class="th" id="hRes">Resolved <span class="cnt" id="chgTitle"></span></h2></summary><ol class="bl" id="chgList"></ol><div class="moreline" id="chgMore"></div></details></section><!-- BL-319: folded to one line -->
           <section class="tsec" id="pfSec" aria-labelledby="hPort"><h2 class="th" id="hPort">Portfolio</h2><div class="tbl" id="pfTbl"></div></section>
@@ -4233,7 +4224,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         <div class="kbdhint" id="whintList"></div>
         <div class="kbdhint" id="whintBoard" hidden></div>
       </div></section>
-      <section class="view" id="v-intake-review" hidden aria-labelledby="irTitle"></section><!-- #232: Intake and Review, one page (components/intakeReview/IntakeReviewPage.jsx) -->
+      <section class="view" id="v-intake-review" hidden aria-labelledby="irTitle"></section><!-- #232: Intake, one page (components/intakeReview/IntakeReviewPage.jsx) -->
       <section class="view" id="v-review" hidden><div class="wrapmax">
         <h1>Review</h1><p class="sub" style="margin:4px 0 0" id="rvSub">Claude's proposals.</p>
         <!-- BL-133 (sprint-work-views): search, filters, Display and Approve all routine; the bar when anything is selected; the result line -->
@@ -7577,7 +7568,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var ICONS = {
     /* the rail, the header and the section headers (unchanged shapes) */
     today: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',
-    inbox: '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13L21 13v6H3v-6z"/>',
+    inbox: '<path d="M4 13l2.5-8h11L20 13v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>',
+    /* #232 Q8: the locked mockup's tray, in the rail and on the page */
     projects: '<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z"/>',
     work: '<path d="M8 6h12M8 12h12M8 18h12"/><path d="m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2"/>',
     people: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19v-1a4.5 4.5 0 0 1 4.5-4.5h2a4.5 4.5 0 0 1 4.5 4.5v1"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18.5 13.8a4.5 4.5 0 0 1 2 3.7V19"/>',
@@ -33031,8 +33023,8 @@ ${s5}`;
   var RAIL_ITEMS = [
     { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
     { id: "work", title: "Work", icon: "work", group: "top" },
-    { id: "review", title: "Intake and Review", short: "In & Review", icon: "review", badge: "revBadge", group: "top" },
-    /* #232: one entry for both; it opens #intake-review (rail.js railGo) */
+    { id: "review", title: "Intake", icon: "inbox", badge: "revBadge", group: "top" },
+    /* #232: one entry for both; it keeps the id "review" and opens #intake-review (rail.js railGo) */
     { id: "projects", title: "Projects", icon: "projects", group: "top" },
     { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },
     /* BL-337 */
@@ -44510,7 +44502,7 @@ ${s5}`;
           /* @__PURE__ */ u4("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }),
           " · "
         ] }) : null,
-        line.length || !rows2.length ? null : /* @__PURE__ */ u4("span", { class: "none", children: "Nothing waits in Intake and Review." })
+        line.length || !rows2.length ? null : /* @__PURE__ */ u4("span", { class: "none", children: "Nothing waits in Intake." })
       ] })
     ] });
   }
@@ -45056,7 +45048,7 @@ ${s5}`;
       RUNNING.delete(r4.id);
       renderToday();
     }
-    if (r4.id.startsWith("weekly:") && REV.some((x5) => !x5.done && x5.p && (!r4.id.split(":")[2] || x5.p === r4.id.split(":")[2]))) await say("A project with items awaiting review is skipped until they're reviewed.", `<button class="mini" data-go="review">Open Review</button>`);
+    if (r4.id.startsWith("weekly:") && REV.some((x5) => !x5.done && x5.p && (!r4.id.split(":")[2] || x5.p === r4.id.split(":")[2]))) await say("A project with items awaiting review is skipped until they're reviewed.", `<button class="mini" data-go="review">Open Intake</button>`);
   }
   function bootToday0026() {
     $("#tBrief").addEventListener("click", async (e4) => {
@@ -45361,7 +45353,7 @@ ${s5}`;
       ["proj", "Add a project", P4.length > 0, "Add a project", "proj", `${P4.length} project${P4.length === 1 ? "" : "s"}`],
       ["people", "Add people", shared.REG.length > 0, "Add people", "people", `${shared.REG.length} in the people register`],
       ["sweep", "Run the first sweep", swept(), "Run the first sweep", "sweep", swept() ? `Last swept ${esc(String(D.last_sweep))}` : "Reads mail, Teams and the calendar since the look-back days"],
-      ["review", "Open Review", !!seen.review, "Open Review", "review", "Approve what's right; nothing reaches the tracker until you do"]
+      ["review", "Open Intake", !!seen.review, "Open Intake", "review", "Approve what's right; nothing reaches the tracker until you do"]
     ];
   }
   function setupShown() {
@@ -58402,7 +58394,7 @@ ${pre}**Current state title:** ${title}`);
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Intake");
     });
   }
   async function alertHandled(id2) {
@@ -58438,7 +58430,7 @@ ${pre}**Current state title:** ${title}`);
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Intake");
     });
   }
   function alertChase(id2) {
@@ -58633,7 +58625,7 @@ ${pre}**Current state title:** ${title}`);
     vipBadge();
     await reloadData();
     renderToday();
-    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Intake and Review` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
+    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Intake` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
   }
   function alertDraftWhy(al2) {
     return /^(private|confidential)$/i.test(al2.marker || "") ? `Not for a ${al2.marker.toLowerCase()} message` : !draftOn("sharpen") ? "Sharpen a vague action is off in Settings › Advanced › AI drafts" : !viaServer() ? "Drafting needs the live server" : "";
@@ -65906,7 +65898,7 @@ ${d5.text}`);
     if (shared.HLC != null && !vis.has(shared.HLC)) shared.HLC = null;
     actPaint();
     renderAskChanges();
-    if (!shared.LOADING && !shared.ACT.length) putHTML($("#actTbl"), html`<div class="empty">Nothing has changed yet. What you approve, edit or apply shows here, newest first, with Undo. <a href="#" data-go="review">Open Review</a></div>`);
+    if (!shared.LOADING && !shared.ACT.length) putHTML($("#actTbl"), html`<div class="empty">Nothing has changed yet. What you approve, edit or apply shows here, newest first, with Undo. <a href="#" data-go="review">Open Intake</a></div>`);
   }
   var actSel = () => [...HL].filter(([, k5]) => k5 === "act").map(([id2]) => +id2.slice(1));
   function actPaint() {
@@ -68796,7 +68788,7 @@ ${d5.text}`);
     return /* @__PURE__ */ u4("div", { class: "mnview", children: [
       /* @__PURE__ */ u4("header", { class: "mnhead", children: [
         /* @__PURE__ */ u4("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
-          /* @__PURE__ */ u4("a", { href: "#", "data-go": "intake-review", children: "Intake and Review" }),
+          /* @__PURE__ */ u4("a", { href: "#", "data-go": "intake-review", children: "Intake" }),
           " › ",
           /* @__PURE__ */ u4("span", { "aria-current": "page", children: "Minutes" })
         ] }),
@@ -69460,7 +69452,7 @@ ${d5.text}`);
       }
     });
   }
-  var TABNAME = { today: "Today", inbox: "Intake", projects: "Projects", work: "Work", mine: "Work", reports: "Reports", people: "People", review: "Review", "intake-review": "Intake and Review", files: "Files", activity: "Activity", settings: "Settings", help: "Help" };
+  var TABNAME = { today: "Today", inbox: "Intake", projects: "Projects", work: "Work", mine: "Work", reports: "Reports", people: "People", review: "Intake", "intake-review": "Intake", files: "Files", activity: "Activity", settings: "Settings", help: "Help" };
   function tabTitle() {
     if (shared.VIEW === "prep") {
       const v5 = prepView.value, t48 = v5 && v5.ok && v5.model ? v5.model.meeting.title : "";
@@ -69506,10 +69498,10 @@ ${d5.text}`);
   }
 
   // helpscreen.js
-  var SCREEN_OF = { today: "today", work: "work", mine: "work", review: "intake and review", "intake-review": "intake and review", inbox: "intake and review", projects: "projects", cockpit: "projects", people: "people", person: "people", notes: "notes", files: "files" };
-  var LINE_OF = { today: "today", work: "work", mine: "work", "intake-review": "intake and review", projects: "projects", people: "people", notes: "notes", files: "files" };
-  var TITLE = { today: "#v-today .dayband", work: "#v-work h1", "intake and review": "#irTitle", projects: "#v-projects .hhead", people: "#v-people h1", notes: "#v-notes h1", files: "#v-files h1" };
-  var FOOT = { today: "#v-today", work: "#v-work .wrapmax", "intake and review": "#v-intake-review .wrapmax", projects: "#v-projects .wrapmax", people: "#v-people .wrapmax", notes: "#v-notes", files: "#v-files .wrapmax" };
+  var SCREEN_OF = { today: "today", work: "work", mine: "work", review: "intake", "intake-review": "intake", inbox: "intake", projects: "projects", cockpit: "projects", people: "people", person: "people", notes: "notes", files: "files" };
+  var LINE_OF = { today: "today", work: "work", mine: "work", "intake-review": "intake", projects: "projects", people: "people", notes: "notes", files: "files" };
+  var TITLE = { today: "#v-today .dayband", work: "#v-work h1", "intake": "#v-intake-review h1", projects: "#v-projects .hhead", people: "#v-people h1", notes: "#v-notes h1", files: "#v-files h1" };
+  var FOOT = { today: "#v-today", work: "#v-work .wrapmax", "intake": "#v-intake-review .wrapmax", projects: "#v-projects .wrapmax", people: "#v-people .wrapmax", notes: "#v-notes", files: "#v-files .wrapmax" };
   var screenKey = () => SCREEN_OF[shared.VIEW] || "";
   var screenInfo = (k5) => HD.screens[k5] || null;
   function howLink(k5) {
@@ -69688,7 +69680,8 @@ ${d5.text}`);
   // components/sidebar/RailIcon.jsx
   var RAIL_ICONS = {
     today: [["circle", { cx: "12", cy: "12", r: "4" }], ["path", { d: "M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" }]],
-    inbox: [["path", { d: "M4 13h4l2 3h4l2-3h4" }], ["path", { d: "M5.5 5h13L21 13v6H3v-6z" }]],
+    inbox: [["path", { d: "M4 13l2.5-8h11L20 13v6H4z" }], ["path", { d: "M4 13h5l1 2h4l1-2h5" }]],
+    /* #232 Q8: the locked mockup's tray */
     projects: [["path", { d: "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z" }]],
     work: [["path", { d: "M8 6h12M8 12h12M8 18h12" }], ["path", { d: "m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2" }]],
     people: [["circle", { cx: "9", cy: "8", r: "3.2" }], ["path", { d: "M3.5 19v-1a4.5 4.5 0 0 1 4.5-4.5h2a4.5 4.5 0 0 1 4.5 4.5v1" }], ["path", { d: "M16 5.2a3.2 3.2 0 0 1 0 5.6M18.5 13.8a4.5 4.5 0 0 1 2 3.7V19" }]],
@@ -70120,7 +70113,7 @@ ${d5.text}`);
           },
           children: [
             /* @__PURE__ */ u4(RailIcon, { name: it2.icon }),
-            /* @__PURE__ */ u4("span", { class: "rl", "data-short": it2.short, children: it2.title }),
+            /* @__PURE__ */ u4("span", { class: "rl", children: it2.title }),
             it2.badge ? /* @__PURE__ */ u4("span", { class: "badge", id: it2.badge, ref: bd2, style: "display:none" }) : null
           ]
         }
@@ -70706,7 +70699,7 @@ ${d5.text}`);
         ] }) : null
       ] }),
       /* @__PURE__ */ u4("p", { class: "sub", children: [
-        "Nothing is approved here. Review now opens Review (or Work, or Intake) after you close; First thing tomorrow puts it at the top of tomorrow's Today.",
+        "Nothing is approved here. Review now opens Intake (or Work) after you close; First thing tomorrow puts it at the top of tomorrow's Today.",
         sweeping ? " The sweep's finds are added as it ends." : ""
       ] })
     ] });
@@ -73763,7 +73756,7 @@ ${d5.text}`);
         if (!q6 || (l6 + " " + h5 + " " + (kw2 || "")).toLowerCase().includes(q6)) out2.push({ g: g5, l: l6, h: h5, fn: fn2 });
       };
       const nNew = (D.inbox || []).filter((f5) => f5.state === "new").length, nRep = needsMe().length, nIr = irLiveCounts().badge;
-      [["today", "Today", ""], ["intake-review", "Intake and Review", nIr ? `${nIr} waiting` : ""], ["projects", "Projects", ""], ["reports", "Reports", nRep ? `${nRep} need${nRep === 1 ? "s" : ""} you` : ""], ["work", "Work", ""], ["people", "People", ""], ["mine", "Your commitments", ""], ["files", "Files", ""], ["activity", "Activity", ""], ["settings", "Settings", ""], ["help", "Help", ""]].forEach(([v5, l6, h5]) => add("Go to", l6, h5, () => go2(v5)));
+      [["today", "Today", ""], ["intake-review", "Intake", nIr ? `${nIr} waiting` : ""], ["projects", "Projects", ""], ["reports", "Reports", nRep ? `${nRep} need${nRep === 1 ? "s" : ""} you` : ""], ["work", "Work", ""], ["people", "People", ""], ["mine", "Your commitments", ""], ["files", "Files", ""], ["activity", "Activity", ""], ["settings", "Settings", ""], ["help", "Help", ""]].forEach(([v5, l6, h5]) => add("Go to", l6, h5, () => go2(v5)));
       [["actions", "Actions"], ["raid", "RAID"], ["decisions", "Decisions"]].forEach(([t47, tl3]) => allViews(t47).forEach((v5) => add("Views", `${tl3}: ${v5.label}`, v5.builtin ? "" : "saved view", () => {
         if (navBlocked()) return;
         saveTab();
@@ -73791,7 +73784,7 @@ ${d5.text}`);
         go2("work");
         openNew("decisions");
       });
-      add("Actions", "Add files to Intake and Review", "", () => {
+      add("Actions", "Add files to Intake", "", () => {
         go2("intake-review");
         $("#inboxFile").click();
       });
@@ -73846,7 +73839,7 @@ ${d5.text}`);
     })(q5);
     if (!q5 || "new note quick capture".includes(q5.toLowerCase())) out.splice(out.findIndex((x5) => x5.g === "Actions") + 1 || out.length, 0, { g: "Actions", l: "New note", h: "⌘⇧N", fn: () => openCapture() });
     MTG().filter((m5) => mtgCanPick(m5)).forEach((m5) => {
-      const l6 = `Intake and Review: process meeting ${m5.title}`;
+      const l6 = `Intake: process meeting ${m5.title}`;
       if (!q5 || l6.toLowerCase().includes(q5.toLowerCase())) out.push({ g: "Actions", l: l6, h: fd(m5.day), fn: () => {
         go2("intake-review", { stage: "arrived" });
         MSEL.clear();
@@ -76493,7 +76486,7 @@ ${d5.text}`);
   }
   function renderBadge() {
     const c5 = irLiveCounts(), n4 = c5.badge;
-    setRailCount("review", n4, n4 ? `${n4} for Intake and Review: ${c5.ready} ready to process, ${c5.to_approve} to approve` : "");
+    setRailCount("review", n4, n4 ? `${n4} for Intake: ${c5.ready} ready to process, ${c5.to_approve} to approve` : "");
     reportsBadge();
     tabTitle();
   }

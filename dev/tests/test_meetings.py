@@ -325,7 +325,7 @@ PAGE_SCRIPT = r"""
     nowHM=()=>"23:59"; renderMeetings();
     document.getElementById("mtgNew").click(); await wait(10);
     out.picked=[...MSEL];
-    out.ck=ckItems("process meeting").map(i=>i.l).filter(l=>l.startsWith("Intake and Review:"));
+    out.ck=ckItems("process meeting").map(i=>i.l).filter(l=>l.startsWith("Intake:"));
     document.getElementById("mtgGo").click(); await wait(10); out.during=rows().map(r=>r[2]);
     /* dev-test-steadiness: the page now runs in real time, so wait for the run to end and both rows to show their outcome
        (the draft from the server, the skip), not for fixed times that assumed virtual time */
@@ -411,8 +411,8 @@ class InboxPageTests(unittest.TestCase):
                                       "state": "In progress: a transcript comes after it ends"})   # not ended yet
         self.assertEqual(r["before0800"], "Not happened yet")
         self.assertEqual(sorted(r["picked"]), ["ev-1", "ev-2"])                                # Select new leaves the private one
-        self.assertEqual(sorted(r["ck"]), sorted(["Intake and Review: process meeting ABC Steering", "Intake and Review: process meeting Weekly sync 12",
-                                                  "Intake and Review: process meeting Busy"]))
+        self.assertEqual(sorted(r["ck"]), sorted(["Intake: process meeting ABC Steering", "Intake: process meeting Weekly sync 12",
+                                                  "Intake: process meeting Busy"]))
 
     def test_process_selected_one_by_one_then_refresh(self):
         r = self.r

@@ -11,7 +11,7 @@ sheet is about the hand-check vault itself (doctor, the Today headings, the rail
 check drives that vault. Classes:
   StartUp        1           doctor and the page errors (shared vault)
   HelpChecks     2 to 7      Help: search, ? panel, twelve jobs, What's new, the cards, the word count (7 is measured)
-  TodayChecks    8 to 17     Today: the day band, popups, past days, weekends, commitments, Intake and Review, day roll, health bars
+  TodayChecks    8 to 17     Today: the day band, popups, past days, weekends, commitments, Intake, day roll, health bars
   RailChecks     18 to 21    the left side bar and the hover standard (19 is measured)
   EditorChecks   22 to 27, 29   Notes and the editors
   ReportChecks   28, 30, 31, 32   the report sheet, the banner (30 is measured), Health, Prep (own vault)
@@ -324,17 +324,17 @@ class TodayChecks(V220Case):
                    "test_150_control_is_a_button_at_900px_and_keeps_focus")
 
     def test_c13_intake_and_review(self):
-        """13. "To decide" is now Intake and Review: new name, new position just above Week ahead, it folds like the others, new
+        """13. "To decide" is now Intake: new name, new position just above Week ahead, it folds like the others, new
         items are marked, and its buttons take the keyboard. (Since #208 in 2.3.0 it is one quiet line with real links; the old
         buttons became links, so the keyboard half is the links'.)"""
         b = self.b
         self.screen("today")
         heads = b.eval("[...document.querySelectorAll('#v-today h2')].map(h=>h.textContent.trim())")
         at = lambda name: next((i for i, h in enumerate(heads) if h.startswith(name)), None)      # a heading carries its count
-        self.assertIsNotNone(at("Intake and Review"), heads)
+        self.assertIsNotNone(at("Intake"), heads)
         self.assertIsNone(at("To decide"), heads)
         if at("Week ahead") is not None:
-            self.assertEqual(at("Intake and Review") + 1, at("Week ahead"), "just above Week ahead")
+            self.assertEqual(at("Intake") + 1, at("Week ahead"), "just above Week ahead")
         self.named_many(13, ("test_today_home", ("test_every_section_in_order_unboxed_resolved_folded",
                                                   "test_it_is_one_line_it_folds_like_before_and_goes_at_zero",
                                                   "test_every_count_is_a_real_link_focusable_and_enter_goes_to_its_page",

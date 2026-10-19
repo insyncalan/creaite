@@ -3,7 +3,7 @@
 Run: python3 dev/tests/test_today_home.py   (Chrome tier; skipped without Chrome)
 One class per Done-when point:
   Header      the header is BL-293's day band, exactly, at full width, with its arrows fixed at the top right;
-  ToDecide    Intake and Review (was To decide), just above Week ahead: #208, one line ("4 proposals in Review and 2 transcripts ready
+  ToDecide    Intake (was To decide), just above Week ahead: #208, one line ("4 proposals in Review and 2 transcripts ready
               in Intake", each count a link, gone at zero); messages keep their cards under it;
   Sections    every current section present, in order, unboxed; Resolved folded to one line; the Week ahead to next Monday
               with why each row is there, following dashboard.week_ahead_priorities; the Portfolio as it was;
@@ -79,7 +79,7 @@ class Home(LiveBrowserCase):
 
 
 class ToDecide(Home):
-    """#208 (v2.3.0): Intake and Review is one quiet line, not a list. Messages (BL-334) keep their cards under it."""
+    """#208 (v2.3.0): Intake is one quiet line, not a list. Messages (BL-334) keep their cards under it."""
     shared_server = False
 
     def test_one_line_with_the_rails_counts_and_links_and_no_rows(self):

@@ -1,4 +1,4 @@
-"""#232-A (v2.5.0): the Intake keys on Intake and Review, in a real browser: Enter processes the meeting with focus when its
+"""#232-A (v2.5.0): the Intake keys on the Intake page, in a real browser: Enter processes the meeting with focus when its
 transcript is ready (and opens or closes one with proposals), N asks why it is Not needed (a number picks the reason), H sets it
 aside for Later. They are bound by the page (IntakeReviewPage.jsx), not core/keys.js, and stay out of a text field, a menu, a
 modified key and a meeting with nothing to set aside. The Review side's keys (arrows, Esc) are test_intake_review_keys_review.py.

@@ -78,7 +78,7 @@ def open_first_item(b):
 
 
 def fold_intake_and_review(b):
-    """#168: Today with Intake and Review folded by a real click on its heading, as a person folds it: the count (and the
+    """#168: Today with Intake folded by a real click on its heading, as a person folds it: the count (and the
     "new" mark while a message is unseen) stay on the one line."""
     b.wait("document.getElementById('tdFold') && !document.getElementById('tdSec').hidden")
     b.click("#tdFold>summary")

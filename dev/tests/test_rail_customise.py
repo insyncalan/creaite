@@ -22,7 +22,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 
 ALT, META, SHIFT = 1, 4, 8
 TOP = ["today", "work", "review", "projects", "reports", "people"]
-MORE = ["files", "activity", "settings"]   # #232: Intake is part of Intake and Review
+MORE = ["files", "activity", "settings"]   # #232: Intake is the one entry for both pages
 RECT = "(s=>{ const r=document.querySelector(s).getBoundingClientRect(); return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width)}; })"
 
 
@@ -125,9 +125,9 @@ class Sidebar(LiveBrowserCase):
         self.wait_saved("r.display==='icons'")
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='56px'")
         names = b.eval("[...document.querySelectorAll('#railMain button[data-v]')].map(x=>[x.getAttribute('aria-label'),x.dataset.tip||null,x.querySelector('.rl').offsetParent===null])")
-        self.assertEqual([n[1] for n in names], ["Today", None, "Intake and Review", None, "Reports", "People"])    # Work and Projects have flyouts instead
-        self.assertTrue(all(n[0].split(",")[0] in ("Today", "Work", "Intake and Review", "Projects", "Reports", "People") and n[2] for n in names), names)   # named, words not shown
-        self.assertEqual(names[2][0], f"Intake and Review, {pending} waiting")                            # the count in the name too
+        self.assertEqual([n[1] for n in names], ["Today", None, "Intake", None, "Reports", "People"])    # Work and Projects have flyouts instead
+        self.assertTrue(all(n[0].split(",")[0] in ("Today", "Work", "Intake", "Projects", "Reports", "People") and n[2] for n in names), names)   # named, words not shown
+        self.assertEqual(names[2][0], f"Intake, {pending} waiting")                            # the count in the name too
         r = b.eval("""(()=>{ const rail=document.querySelector('.rail').getBoundingClientRect(), bd=document.getElementById('revBadge'), x=bd.getBoundingClientRect();
           return {inside:x.left>=rail.left&&x.right<=rail.right+1, shown:getComputedStyle(bd).display!=='none', text:bd.textContent}; })()""")
         self.assertEqual(r, {"inside": True, "shown": True, "text": str(pending)})
@@ -217,7 +217,7 @@ class Sidebar(LiveBrowserCase):
         b.eval("railSave({...RAILCFG,order:[...RAILCFG.order,...RAILCFG.more],more:[]})")
         self.wait_saved("!r.more.length")
         b.wait("!document.getElementById('railMore')")
-        self.assertEqual(len(self.top()), 9)   # #232: Intake is in Intake and Review
+        self.assertEqual(len(self.top()), 9)   # #232: Intake is the one entry for both pages
 
     # ── Customise ──
     def test_customise_moves_pages_by_button_and_keyboard_and_saves_on_done(self):

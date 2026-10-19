@@ -136,7 +136,7 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
                            "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
-# #232-A: Intake and Review with a meeting row whose Not needed button (aria-haspopup=menu, opens #irAside) shows. The sample's calendar has
+# #232-A: Intake with a meeting row whose Not needed button (aria-haspopup=menu, opens #irAside) shows. The sample's calendar has
 # no ended meeting, so the page is given one in the page only (the model's own shape; nothing is saved).
 SCREENS["intake-review"] = ("go('intake-review')", "VIEW==='intake-review' && !!document.querySelector('#v-intake-review [data-ira=notneeded]')", "#v-intake-review")
 EXTRA = ("clientreport", "today-days", "intake-review")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them

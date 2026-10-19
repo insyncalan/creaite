@@ -194,7 +194,7 @@ function LooseEnds({ loose, places, all, onPick, onAll, onMore, sweeping }) {
           <Place label={`Place for ${x.type}: ${x.t}`} value={places[x.ref]} onPick={v => onPick(x.ref, v)} /></li>)}</ul>
         {loose.length > shown.length ? <button type="button" class="linkbtn" data-cdmore="1" onClick={onMore}>and {loose.length - shown.length} more</button> : null}
       </section>
-      <p class="sub">Nothing is approved here. Review now opens Review (or Work, or Intake) after you close; First thing tomorrow puts
+      <p class="sub">Nothing is approved here. Review now opens Intake (or Work) after you close; First thing tomorrow puts
         it at the top of tomorrow's Today.{sweeping ? " The sweep's finds are added as it ends." : ""}</p>
     </>
   );

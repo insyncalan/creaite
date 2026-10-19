@@ -1,5 +1,5 @@
 """BL-156: first run. On a vault that hasn't finished set-up, Today shows a short checklist (Connect Microsoft 365, Add a
-project, Add people, Run the first sweep, Open Review), each with a button that does it or opens where it is done, ticked as it
+project, Add people, Run the first sweep, Open Intake), each with a button that does it or opens where it is done, ticked as it
 is done; it goes when all are ticked or when dismissed (Settings › Reminders › Restore brings it back). Help and the first-day
 guide offer the launcher first. A real browser against the real live server.
 
@@ -23,7 +23,7 @@ class FirstRun(LiveBrowserCase):
         b.eval("go('today')")
         b.pump(0.3)
         steps = json.loads(b.eval(STEPS))
-        self.assertEqual([s[0] for s in steps], ["Connect Microsoft 365", "Add a project", "Add people", "Run the first sweep", "Open Review"])
+        self.assertEqual([s[0] for s in steps], ["Connect Microsoft 365", "Add a project", "Add people", "Run the first sweep", "Open Intake"])
         done = {s[0]: s[1] for s in steps}
         self.assertFalse(done["Run the first sweep"])                          # no sweep yet in a new vault
         self.assertFalse(done["Connect Microsoft 365"])
@@ -39,7 +39,7 @@ class FirstRun(LiveBrowserCase):
         self.assertEqual(b.eval("VIEW"), "review")
         b.eval("go('today')")
         b.pump(0.2)
-        self.assertTrue({s[0]: s[1] for s in json.loads(b.eval(STEPS))}["Open Review"])   # ticked as it is done
+        self.assertTrue({s[0]: s[1] for s in json.loads(b.eval(STEPS))}["Open Intake"])   # ticked as it is done
         b.eval("send=((orig)=>function(t){ window.SENT=t; })(send)")
         b.click('#setupList [data-setup="sweep"]')
         b.pump(0.2)

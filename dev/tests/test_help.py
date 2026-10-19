@@ -28,7 +28,7 @@ from split_dashboard import readable_page  # noqa: E402
 OLD_HEADINGS = [
     "Keyboard shortcuts", "What the icons mean", "Opening the dashboard", "Working with lists", "How saving works", "Updating creaite", "Today",
     "Project page", "Reports", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "Minutes view", "The report sheet", "The Reporting page", "AI drafts", "Review", "Intake", "Files",
-    "Intake and Review", "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
+    "Intake", "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
     "Word documents and permissions in ask creaite", "Commands for Claude", "Open creaite as an app", "Live server and backups", "Troubleshooting"]
 GROUPS = ["Every day", "Meetings", "Keeping it right", "Reporting", "Admin"]
 
@@ -70,7 +70,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual([s["title"] for s in o["stages"]], ["Material arrives", "Claude drafts", "Review", "Apply", "See and report"])
         self.assertEqual(len(o["steps"]), 4)                                           # the first hour
         self.assertEqual(len(o["rhythm"]), 4)
-        self.assertEqual(o["views"], ["Today", "Intake and Review", "Projects", "Reports", "Work", "People", "Files", "Settings"])
+        self.assertEqual(o["views"], ["Today", "Intake", "Projects", "Reports", "Work", "People", "Files", "Settings"])
         self.assertGreaterEqual(len(o["say"]), 9)
         self.assertEqual(len(o["rules"]), 4)
         html = self.tab["start"]
@@ -418,7 +418,7 @@ class FirstVisitTests(unittest.TestCase):
 
     def test_an_address_is_never_overridden(self):
         o = self.load(False, "#review")
-        self.assertEqual(o["view"][0], "intake-review")                                # #232: #review opens Intake and Review
+        self.assertEqual(o["view"][0], "intake-review")                                # #232: #review opens Intake
 
     def test_it_is_marked_seen_with_a_logged_settings_write(self):
         seed = json.dumps((self.v.root / "system/config/settings.json").read_text(encoding="utf-8"))

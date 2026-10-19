@@ -366,7 +366,7 @@ export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P
       if(shared.MV.peek&&!shared.MV.add&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#mvPeek input[type=text],#mvPeek textarea"))) mvEdDraw(); } }   /* BL-245: once the Milestones block has run (a reload with staged peek changes refreshes before it) */
   if(shared.PREPEV&&$("#prepDlg")&&$("#prepDlg").open) drawPrep(); }   /* BL-286 E: an applied edit shows in the Prep popup */
 export function renderBadge(){ const c=irLiveCounts(), n=c.badge;   /* #232-C: ready meetings and files plus proposals to approve: the same number Today's line and the page show */
-  setRailCount("review",n,n?`${n} for Intake and Review: ${c.ready} ready to process, ${c.to_approve} to approve`:"");
+  setRailCount("review",n,n?`${n} for Intake: ${c.ready} ready to process, ${c.to_approve} to approve`:"");
   reportsBadge(); tabTitle(); }   /* BL-337: Reports' count */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0021's place) */
 export function bootLive(){

@@ -1,4 +1,4 @@
-"""#232-A (v2.5.0): creaite's rules on the Intake side of Intake and Review (the meetings part; 232-B adds the proposals part). In a real
+"""#232-A (v2.5.0): creaite's rules on the Intake side of the Intake page (the meetings part; 232-B adds the proposals part). In a real
 browser, in all three views: a confidential meeting shows its title and times only (no project, organiser, place or Teams mark);
 nobody is labelled a VIP; a project is named, never shown by its code; the Not needed and Later lists show a reason, not a code.
 
