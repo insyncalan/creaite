@@ -241,7 +241,8 @@ class ClearDayPage:
         self.assertNotIn("ev-1", picked)
         self.assertIn("ev-2", picked)
         # the rail's one Intake and Review entry (#232; the Intake entry and #inboxBadge went with it) counts proposals, never a cleared meeting
-        self.assertEqual(b.eval("document.getElementById('revBadge').textContent"), str(b.eval("REV.filter(r=>!r.done).length")))
+        self.assertEqual(b.eval("document.getElementById('revBadge').textContent"),      # proposals to approve plus the meetings and files ready to process: the cleared meeting is neither
+                         str(b.eval("REV.filter(r=>!r.done).length + D.intake_review.meetings.filter(m=>m.stage==='arrived'&&m.state==='ready').length")))
         self.assertFalse(b.eval("D.intake_review.meetings.some(m=>m.key==='ev-1')"))                   # and the new page's model has no row for it either
 
     def test_safeguard_asks_before_clearing_an_unprocessed_transcript(self):
