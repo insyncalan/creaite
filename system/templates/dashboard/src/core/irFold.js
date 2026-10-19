@@ -17,7 +17,7 @@
    `done(n)` says whether proposal n has been decided on the page (REV's done flag); the server's lists are not changed. */
 
 /** @typedef {{needs: number[], routine: number[]}} IrGroups */
-/** @typedef {{id: string, stage: string, state: string, groups: IrGroups}} IrMeeting */
+/** @typedef {{id: string, stage: string, state: string, groups: IrGroups, path?: string|null}} IrMeeting */
 /** @typedef {{meetings: IrMeeting[], mail: IrGroups, other: IrGroups, later: any[], not_needed: any[], counts: Record<string, number>}} IrModel */
 
 export const IR_STAGES = ["arrived", "drafted", "approved"];

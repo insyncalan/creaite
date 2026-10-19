@@ -85,18 +85,18 @@ export function irMeetingOf(n) { const m = (irModel().meetings || []).find(x => 
 export function irTarget(t) {
   if (t == null || t === "") return false;
   if (typeof t === "number" || typeof t === "string") t = /^\d+$/.test(String(t)) ? { n: +t } : { m: String(t) };
-  let hit = false;
-  if (t.stage) { irStage.value = IR_STAGES.includes(t.stage) ? t.stage : "all"; hit = true; }
+  let found = false;
+  if (t.stage) { irStage.value = IR_STAGES.includes(t.stage) ? t.stage : "all"; found = true; }
   const id = t.m && (irModel().meetings || []).some(x => x.id === t.m) ? t.m : t.n != null ? irMeetingOf(+t.n) : null;
-  if (id) { irOpen.value = id; irSel.value = id; hit = true; }
+  if (id) { irOpen.value = id; irSel.value = id; found = true; }
   irTick.value++;
-  return hit;
+  return found;
 }
 /** Open the meeting of the first of these proposals and bring it into view (Close the day's Review now, First thing, a toast). @param {number[]} ns */
 export function irReveal(ns) {
-  const hit = ns.some(n => irTarget({ n }));
-  if (hit) requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.querySelector(`#v-intake-review [data-irm="${irOpen.value}"]`); if (el && el.scrollIntoView) el.scrollIntoView({ block: "center" }); }));
-  return hit;
+  const found = ns.some(n => irTarget({ n }));
+  if (found) requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.querySelector(`#v-intake-review [data-irm="${irOpen.value}"]`); if (el && el.scrollIntoView) el.scrollIntoView({ block: "center" }); }));
+  return found;
 }
 /** The address's part of the page's place: the stage when filtered and the open meeting. */
 export const irPlace = () => ({ stage: irStage.value === "all" ? "" : irStage.value, m: irOpen.value || "" });
