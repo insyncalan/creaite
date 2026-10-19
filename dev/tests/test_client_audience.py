@@ -317,6 +317,25 @@ class Audience(unittest.TestCase):
             self.assertTrue(self.export(fmt, "client", on_clash="number")["ok"], fmt)
         self.assertEqual(self.reports_hold([oid, "zephyr", "quokka"]), {})
 
+    # ── (D) the filed client file's data block ──────────────────────────────────────────────────────────────────────────
+    def test_the_filed_client_file_holds_only_creaites_own_meta_sources_and_layout(self):
+        r = self.fresh()
+        doc = r["doc"]
+        p = self.header_payload()
+        doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
+        doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
+        doc["layout"] = {**doc["layout"], "zzz": p}
+        sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+        self.assertTrue(sv["ok"], sv)
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+        self.assertTrue(a["ok"], a)
+        filed = self.v.root / a["path"]
+        raw = json.loads(creaite_doc.BLOCK.search(filed.read_text()).group(1))
+        self.assertEqual(set(raw["meta"]) - {"period_start", "period_end", "locked", "facts_on", "facts_week"}, set())
+        self.assertEqual([x["ref"] for x in raw["sources"]], ["tracker"])
+        self.assertNotIn("zzz", raw["layout"])
+        self.assertEqual(self.scan(filed, self.needles()), [])
+
     # ── the helpers ─────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_is_client_and_force_client_audience(self):
         self.assertTrue(creaite_doc.is_client({"kind": "client", "audience": "internal"}))

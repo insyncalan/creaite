@@ -35,3 +35,14 @@ safe on its own, for any future caller that skips the normalising.
   name: such a client report would then be refused until the project memory's Client line is changed. Wanted, but say so.
 - Checked only with `git apply --check` and a compile; run `test_client_gate`, `test_client_audience`, `test_report_export_save`
   and `test_client_view` after applying.
+
+## Further proposal lines (no diff yet)
+
+3. (B) `text_findings` and `name_findings` read only the report's own project's hidden wording and owners. Another project's hidden
+   item wording or owner, written in a client report's text without its ID, passes. Proposal: check every project's hidden item
+   wording and owners (the tracker's items with `client_visible = 0`, any project), as the ID check already does across projects.
+   Rows and items naming another project's item are already dropped outside this file (`creaite_doc.drop_other_projects`).
+4. (C, not fixed yet: needs the dashboard to say which report a picture is for) a text section's `_images/<name>` is one store per
+   project, so a client report can draw a picture uploaded for the internal report. Proposal for 2.5.1: `/api/report/image` takes
+   the report kind and names a client report's pictures `client-<name>`; `creaite_doc.text_image` reads only `client-` pictures for
+   a client report. Outside this file, but it changes the dashboard.

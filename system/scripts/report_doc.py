@@ -970,7 +970,26 @@ def _file_ops(kind, code, fri, client, draft):
         # Alan, 15-10-2026: the client health difference and its reason live only in the draft. The filed client file, its data
         # block included, never holds them (the internal flag would be in them): the whole key goes, not just the reason.
         doc["meta"] = {k: v for k, v in (doc.get("meta") or {}).items() if k != "health_diff"}
+        filed_client_data(doc)
     return [{"op": "write", "path": filed, "content": creaite_doc.dumps(doc), "previous": old}, {"op": "remove", "path": draft}]
+
+
+CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
+
+
+def filed_client_data(doc):
+    """v2.5.0 (D): the filed client file's data block holds only what creaite puts there, in place: meta's dates (YYYY-MM-DD) and its
+    locked flag, the one tracker source (its label made again here), and the layout's own keys. Anything else a draft carried goes."""
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    out = {k: meta[k] for k in CLIENT_META_DATES if isinstance(meta.get(k), str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta[k])}
+    if isinstance(meta.get("locked"), bool):
+        out["locked"] = meta["locked"]
+    doc["meta"] = out
+    week = out.get("facts_week")
+    doc["sources"] = [{"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending {shown(week)}" if week else "")}]
+    lay = doc.get("layout") if isinstance(doc.get("layout"), dict) else {}
+    doc["layout"] = {k: v for k, v in lay.items() if k in default_layout("client")}
+    return doc
 
 
 def _section(doc, sid):
