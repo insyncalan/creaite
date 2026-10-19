@@ -1,0 +1,126 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index ded1d52..a6adfe4 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -6724,6 +6724,121 @@ def chase_pane_route(handler, req):
+ DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
+ 
+ 
++# ===== #183 (2.6) ===== Draft email delivery: the email in Alan's Outlook Drafts folder, never sent (Alan, 19-10-2026).
++# POST /api/email/draft {action: "create"|"copied", to, subject, html, ids, mode, name}, token-checked like every POST (authorised()).
++# draft_delivery.py (plain code) checks the payload and the setting (draft_email.outlook_drafts, off by default) and builds the one
++# call; this route is the ONLY caller of the Microsoft 365 write tool, in a headless run whose allow list is exactly
++# draft_delivery.allowed_tools() (outlook_create_draft and ToolSearch) and whose deny list names every other Microsoft 365 action
++# (send_draft and send_mail among them), the other connectors and every built-in but ToolSearch: no Bash, no file tool, no guard
++# hook needed because nothing in it can read or write the vault. The run's stream-json events are checked by draft_delivery.check
++# (exactly one create-draft call, with exactly the arguments shown, no other tool) before anything is recorded; the chase is
++# recorded only then. "copied" (Copy email with the setting on) keeps the references only, for the sweep's Sent Items match.
++# POST /api/email/outlook-access {}: Settings' Check, a run whose only Microsoft 365 tool is the reading tool get_granted_scopes.
++# Never in the development repository; never from ask creaite (draft_delivery.py is not in reach.SCRIPT_COMMANDS: fails closed).
++DRAFT_RUN_LOCK = threading.Lock()
++DRAFT_RUN_SECONDS = 120
++
++
++def draft_run_deny(allowed):
++    """A draft or access run's deny list: DENY_TOOLS and every Microsoft 365 action (draft_delivery.denied_tools), F3's
++    run_deny_extras() and every built-in but ToolSearch, once each; never a tool in `allowed` (a deny beats an allow)."""
++    import draft_delivery
++    out = []
++    for t in list(DENY_TOOLS) + draft_delivery.denied_tools() + vault_permissions.run_deny_extras() + VIP_BUILTIN_DENIES:
++        if t not in out and t not in allowed:
++            out.append(t)
++    return out
++
++
++def draft_run(prompt, allowed):
++    """One headless run with only `allowed`; its stream-json events ([] when it couldn't start or timed out)."""
++    cmd = prompt_last([claude_path(), "-p", "--output-format", "stream-json", "--verbose", "--no-session-persistence",
++                       "--allowedTools", ",".join(allowed),
++                       "--disallowedTools", ",".join(draft_run_deny(allowed))], prompt)
++    try:
++        r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=DRAFT_RUN_SECONDS, env=run_env())
++    except (subprocess.TimeoutExpired, OSError):
++        return []
++    events = []
++    for ln in (r.stdout or "").splitlines():
++        try:
++            e = json.loads(ln)
++        except ValueError:
++            continue                                      # a line that isn't an event: nothing to check in it
++        if isinstance(e, dict):
++            events.append(e)
++    return events
++
++
++def _draft_request(body):
++    """(the checked create-draft request, None) or (None, the reason it was refused), from draft_delivery.py request."""
++    rc, out = run_stdin("draft_delivery.py", body, "request")
++    try:
++        got = json.loads(out)
++    except ValueError:
++        return None, "creaite couldn't check the email"
++    if rc or not got.get("ok"):
++        return None, str(got.get("message") or "creaite couldn't check the email")[:300]
++    return {k: v for k, v in got.items() if k != "ok"}, None
++
++
++def email_draft_route(handler, req):
++    """Create draft in Outlook (action create) or note a copy (action copied). Answers {ok, web_link, no_recipient, chased,
++    chases} or {ok: False, reason, made}; never sends."""
++    import draft_delivery
++    if (paths.ROOT / ".creaite-dev").exists():
++        return handler.send(200, {"ok": False, "reason": "this is the development repository"})
++    body = {k: req.get(k) for k in ("to", "subject", "html", "ids", "mode", "name")}
++    dreq, why = _draft_request(body)
++    if why:
++        return handler.send(200, {"ok": False, "reason": why})
++    if req.get("action") == "copied":
++        with LOCK:
++            rc, _ = run_stdin("draft_delivery.py", body, "copied")
++        return handler.send(200, {"ok": rc == 0})
++    if req.get("action") != "create":
++        return handler.send(400, {"ok": False, "message": "Bad request"})
++    if not DRAFT_RUN_LOCK.acquire(blocking=False):
++        return handler.send(200, {"ok": False, "reason": "a draft is being made: wait a moment"})
++    try:
++        res = draft_delivery.check(draft_run(draft_delivery.prompt(dreq), draft_delivery.allowed_tools()), dreq)
++        if debuglog is not None:
++            debuglog.info("drafts", f"outlook draft: {'made' if res['ok'] else 'refused'}, {len(dreq['ids'])} item(s), "
++                                    f"{len(dreq['args'].get('to') or [])} recipient(s), {len(dreq['args']['body'])} characters")
++        if not res["ok"]:
++            return handler.send(200, {"ok": False, "reason": res["reason"], "made": res["made"]})
++        with LOCK:
++            rc, out = run_stdin("draft_delivery.py", dreq, "created")
++        rec = json.loads(out) if rc == 0 else {}
++        _, counts = run("drafts.py", "chases")
++        return handler.send(200, {"ok": True, "web_link": res.get("web_link", ""), "no_recipient": dreq["no_recipient"],
++                                  "chased": rec.get("chased") or [], "chases": json.loads(counts or "{}")})
++    finally:
++        DRAFT_RUN_LOCK.release()
++
++
++ACCESS_PROMPT = ("creaite Outlook access check. Read-only: change nothing, write nothing, send nothing. Call get_granted_scopes once "
++                 "(load its schema with ToolSearch if it is deferred) and reply with only {\"ok\": true}. No other words.")
++
++
++def outlook_access_route(handler, req):
++    """Settings' Outlook access Check: {ok, can: true|false|null, at: HH:MM} from the granted scopes (a reading tool only)."""
++    import draft_delivery
++    if (paths.ROOT / ".creaite-dev").exists():
++        return handler.send(200, {"ok": False, "message": "Not in the development repository."})
++    if not DRAFT_RUN_LOCK.acquire(blocking=False):
++        return handler.send(200, {"ok": False, "message": "Outlook is busy with a draft: try again in a moment."})
++    try:
++        got = draft_delivery.access(draft_run(ACCESS_PROMPT, [draft_delivery.ACCESS_TOOL, "ToolSearch"]))
++    finally:
++        DRAFT_RUN_LOCK.release()
++    return handler.send(200, {"ok": True, **got})
++
++
++DRAFT_ROUTES.update({"/api/email/draft": email_draft_route, "/api/email/outlook-access": outlook_access_route})
++# ===== end #183 =====
++
++
+ # ===== BL-301 C (v20-capture): the capture drawer (⌘⇧N) =====
+ # The drawer's server side (capture.py): the project guessed from the register's signals with its reason, the text kept as a
+ # draft in system/staging/drafts/notes/ as Alan types, and the note written through filechange.py on Done (backed up, logged,
