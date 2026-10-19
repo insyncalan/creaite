@@ -199,16 +199,89 @@ def _visible_text(sections):
 
 def _internal_text(doc, s):
     """True for a text section that belongs to the internal report and is in a client or distributed document: it was never matched
-    or written there (H5, #218), so no output shows it."""
-    return (s.get("type") == TEXT_TYPE and is_client(doc)
-            and (s.get("audience") or "internal") == "internal")
+    or written there (H5, #218), so no output shows it. v2.5.1: only a section whose audience is exactly "client" was matched; any
+    other spelling ("Internal", " internal", "weekly", none) is the internal report's."""
+    return s.get("type") == TEXT_TYPE and is_client(doc) and s.get("audience") != "client"
+
+
+# ── v2.5.1 (#239, a): the keys a client report may hold ──────────────────────
+# A client report holds only these keys, at every level; anything else (a key the gate never reads, a section's `ref` or
+# `milestones`) is dropped by client_shape, which clean (so every render, export, save and the gate's own reading, client_leak.doc_text)
+# and filing (report_doc.filed_client_data) use. Values are kept as they are: the gate reads every one that is left.
+TOP_KEYS = ("format", "schema", "kind", "audience", "project", "project_name", "title", "date", "client", "version", "saved_at",
+            "state", "approved_at", "based_on", "layout", "sections", "items", "sources", "meta")
+SECTION_KEYS = ("id", "type", "heading", "default_heading", "hidden", "text", "audience", "data", "rows", "columns", "figures",
+                "panes", "tags")
+DATA_KEYS = ("label", "client", "period_start", "period_end", "facts_week", "week_ending", "logos", "flag", "timeline", "milestones")
+ROW_KEYS, COLUMN_KEYS, FIGURE_KEYS = ("ref", "cells", "shown", "source"), ("key", "label"), ("key", "label", "value", "note", "shown")
+PANE_KEYS, TAG_KEYS, SOURCE_KEYS, BASED_KEYS = ("title", "text"), ("ref", "text"), ("ref", "label"), ("path", "version")
+META_KEYS = ("period_start", "period_end", "locked", "facts_on", "facts_week", "health_diff")
+LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")
+REF_LISTS = ("timeline", "milestones")
+
+
+def _only(x, keys):
+    """A dict with only `keys` (a non-dict is dropped: None)."""
+    return {k: x[k] for k in keys if k in x} if isinstance(x, dict) else None
+
+
+def _list_of(x, keys):
+    """A list of dicts, each with only `keys` (anything not a dict is dropped)."""
+    return [d for d in (_only(v, keys) for v in x) if d is not None] if isinstance(x, list) else []
+
+
+def _shape_data(d):
+    """A section's data with only DATA_KEYS; its milestone lists hold item references (strings) only."""
+    out = _only(d, DATA_KEYS) or {}
+    for k in REF_LISTS:
+        if k in out:
+            out[k] = [r for r in out[k] if isinstance(r, str)] if isinstance(out[k], list) else []
+    if "logos" in out:
+        out["logos"] = _list_of(out["logos"], ("kind", "path"))
+    return out
+
+
+SECTION_LISTS = {"rows": ROW_KEYS, "columns": COLUMN_KEYS, "figures": FIGURE_KEYS, "panes": PANE_KEYS, "tags": TAG_KEYS}
+
+
+def _shape_section(s):
+    """One section with only SECTION_KEYS, its rows, columns, figures, panes and tags each with only their own keys."""
+    out = _only(s, SECTION_KEYS)
+    if out is None:
+        return None
+    for k, keys in SECTION_LISTS.items():
+        if k in out:
+            out[k] = _list_of(out[k], keys)
+    if "data" in out:
+        out["data"] = _shape_data(out["data"])
+    return out
+
+
+def client_shape(doc):
+    """v2.5.1 (#239, a): a copy of a client report holding only the keys creaite writes (TOP_KEYS, SECTION_KEYS and the rest above):
+    whatever else a draft carries (sent, or edited on disk) is never read by the gate, so it never reaches a file or an export. A
+    document that isn't a client report is returned as it is."""
+    if not (isinstance(doc, dict) and doc.get("kind") == "client"):
+        return doc
+    out = _only(copy.deepcopy(doc), TOP_KEYS)
+    if "sections" in out:
+        out["sections"] = [x for x in (_shape_section(s) for s in out["sections"] or []) if x is not None]
+    for k, keys in (("meta", META_KEYS), ("layout", LAYOUT_KEYS), ("based_on", BASED_KEYS)):
+        if isinstance(out.get(k), dict):
+            out[k] = _only(out[k], keys)
+    if "sources" in out:
+        out["sources"] = _list_of(out["sources"], SOURCE_KEYS)
+    if "items" in out:
+        out["items"] = {k: v for k, v in out["items"].items() if isinstance(v, dict)} if isinstance(out["items"], dict) else {}
+    return out
 
 
 def clean(doc, keep_text=False):
     """A copy with hidden sections, rows and figures emptied, and the items only they named dropped. check()s it first. A text section
-    of the internal report that sits in a client document unmatched is dropped (H5, #218)."""
+    of the internal report that sits in a client document unmatched is dropped (H5, #218). v2.5.1: a client report holds only its
+    known keys (client_shape), whatever was stored."""
     check(doc)
-    out = copy.deepcopy(doc)
+    out = client_shape(doc) if doc.get("kind") == "client" else copy.deepcopy(doc)
     out["sections"] = [s for s in out.get("sections") or [] if not _internal_text(out, s)]
     hidden = _hidden_refs(out.get("sections") or [])
     out["sections"] = [_clean_section(s, keep_text) for s in out.get("sections") or []]

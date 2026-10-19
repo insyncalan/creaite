@@ -979,7 +979,11 @@ CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
 
 def filed_client_data(doc):
     """v2.5.0 (D): the filed client file's data block holds only what creaite puts there, in place: meta's dates (YYYY-MM-DD) and its
-    locked flag, the one tracker source (its label made again here), and the layout's own keys. Anything else a draft carried goes."""
+    locked flag, the one tracker source (its label made again here), and the layout's own keys. Anything else a draft carried goes.
+    v2.5.1 (#239, a): every other level too (creaite_doc.client_shape: top-level, section, row and data keys)."""
+    shaped = creaite_doc.client_shape(doc)
+    doc.clear()
+    doc.update(shaped)
     meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
     out = {k: meta[k] for k in CLIENT_META_DATES if isinstance(meta.get(k), str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta[k])}
     if isinstance(meta.get("locked"), bool):
