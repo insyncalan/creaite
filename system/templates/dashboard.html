@@ -71818,19 +71818,23 @@ ${d5.text}`);
         irSel.value = r4.dataset.irm || null;
         return;
       }
-      if (e4.key === "Enter" && m5 && !(t47.closest && t47.closest("button,a"))) {
+      const mine = () => {
         e4.preventDefault();
+        e4.stopImmediatePropagation();
+      };
+      if (e4.key === "Enter" && m5 && !(t47.closest && t47.closest("button,a"))) {
+        mine();
         if (irCanProcess(m5)) irProcess(m5);
         else irClickMeeting(m5.id);
         return;
       }
-      if ((e4.key === "n" || e4.key === "N") && m5 && irCanSetAside(m5)) {
-        e4.preventDefault();
+      if ((e4.key === "n" || e4.key === "N") && !e4.shiftKey && m5 && irCanSetAside(m5)) {
+        mine();
         irAskReason(m5, rowEl);
         return;
       }
-      if ((e4.key === "h" || e4.key === "H") && m5 && irCanSetAside(m5)) {
-        e4.preventDefault();
+      if ((e4.key === "h" || e4.key === "H") && !e4.shiftKey && m5 && irCanSetAside(m5)) {
+        mine();
         irLater(m5);
         return;
       }
@@ -71839,7 +71843,7 @@ ${d5.text}`);
         irPeek.value = s5.peek;
         irOpen.value = s5.open;
       }
-    });
+    }, true);
   }
   function bootIrDrop() {
     const over = (on2) => {

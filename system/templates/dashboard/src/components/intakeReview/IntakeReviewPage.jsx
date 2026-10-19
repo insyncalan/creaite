@@ -163,11 +163,13 @@ function bootIrKeys() {
       const r = rows[Math.max(0, Math.min(rows.length - 1, at < 0 ? 0 : at + (e.key === "ArrowDown" ? 1 : -1)))];
       r.focus(); irSel.value = r.dataset.irm || null; return;
     }
-    if (e.key === "Enter" && m && !(t.closest && t.closest("button,a"))) { e.preventDefault(); if (irCanProcess(m)) irProcess(m); else irClickMeeting(m.id); return; }
-    if ((e.key === "n" || e.key === "N") && m && irCanSetAside(m)) { e.preventDefault(); irAskReason(m, rowEl); return; }
-    if ((e.key === "h" || e.key === "H") && m && irCanSetAside(m)) { e.preventDefault(); irLater(m); return; }
+    /* N is also the page's note key (core/keys.js): on a meeting this listener runs first (capture) and keeps it */
+    const mine = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+    if (e.key === "Enter" && m && !(t.closest && t.closest("button,a"))) { mine(); if (irCanProcess(m)) irProcess(m); else irClickMeeting(m.id); return; }
+    if ((e.key === "n" || e.key === "N") && !e.shiftKey && m && irCanSetAside(m)) { mine(); irAskReason(m, rowEl); return; }
+    if ((e.key === "h" || e.key === "H") && !e.shiftKey && m && irCanSetAside(m)) { mine(); irLater(m); return; }
     if (e.key === "Escape" && (irPeek.value != null || irOpen.value)) { const s = irEsc({ peek: irPeek.value, open: irOpen.value }); irPeek.value = s.peek; irOpen.value = s.open; }
-  });
+  }, true);
 }
 
 /* Upload files: a file dropped anywhere on the page becomes a row (the drop target is the whole view, not a zone). */
