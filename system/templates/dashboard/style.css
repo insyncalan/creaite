@@ -4055,14 +4055,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icpipe .evbox{cursor:pointer;min-width:160px}#v-intake-review .icpipe .evbox[aria-pressed=true]{outline:2px solid var(--accent)}
 #v-intake-review .icpipe .ar{align-self:center;color:var(--muted)}
 #v-intake-review .icsub{font-size:var(--fs-xs);color:var(--muted)}
-#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:14px;margin:0 0 8px}
+#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
 #v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
 #v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
-#v-intake-review .icmeethd{font-size:16px;font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
+#v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
 #v-intake-review tr.icopen td{background:var(--accent-soft)!important;border-top:2px solid var(--accent)}
 #v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
