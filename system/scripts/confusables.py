@@ -61,6 +61,7 @@ DASHES = "‐‑‒–—―−﹘﹣－"
 def skeleton(text):
     """The text as every restricted-text scan reads it (see the module's description). Never raises on a string."""
     import edit_ai
-    t = unicodedata.normalize("NFKC", edit_ai.unmarked(edit_ai.unseen(str(text or ""))))
+    t = edit_ai.unseen(str(text or "")).translate(TABLE)        # first too: NFKD and NFKC make a look-alike (Ϲ) another letter (Σ)
+    t = unicodedata.normalize("NFKC", edit_ai.unmarked(t).translate(TABLE))
     t = edit_ai.unseen(t).translate(TABLE).translate({ord(c): "-" for c in DASHES})
     return unicodedata.normalize("NFKC", t)

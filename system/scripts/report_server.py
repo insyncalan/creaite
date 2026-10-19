@@ -37,6 +37,7 @@
                            answer then carries `left_out`: the check of what is left out runs before every client export
 """
 import base64
+import copy
 import re
 import os
 import subprocess
@@ -117,6 +118,9 @@ def guarded(fn):
             return refuse(handler, str(e))
         except SystemExit as e:              # report.py exits with a sentence when a project isn't there
             return refuse(handler, str(e.code) if e.code not in (None, 0) else "That report can't be made.")
+        except (LookupError, ValueError, TypeError, AttributeError):     # v2.5.1 (#239): a document edited into a shape creaite
+            return refuse(handler, "That report can't be read as it is (it was changed outside creaite), so nothing was done. "
+                                   "Open the report again from creaite.")         # can't read is refused, never a fault
     route.__doc__ = fn.__doc__
     return route
 
@@ -273,7 +277,9 @@ def match_check_route(handler, req):
         creaite_doc.check(d)
         if d.get("kind") != "client":
             raise creaite_doc.DocError("Only a client report has this check.")
-        out.append(client_leak.coded_findings(d, con))
+        # v2.5.1 (#239): read as the export reads a client report (its header derived, another project's rows dropped), so Match
+        # internal is held exactly when the export would refuse the same document on its content
+        out.append(client_leak.coded_findings(creaite_doc.force_client_audience(copy.deepcopy(d)), con))
     return answer(handler, {"ok": True, "findings": out})
 
 
@@ -314,16 +320,37 @@ def launch(stored):
     return True
 
 
-def _plain_name(name, ext):
+def _plain_name(name, ext, own=None):
     """A typed file name made safe: one name (no folder, no leading dot, 150 characters at most) that ends with `ext`; None when it
-    can't be a file name."""
+    can't be a file name (or _name_problem refuses it). `own`: this report's filing name, which a typed name may start with."""
     name = str(name or "")
     if any(ord(c) < 32 or ord(c) == 127 for c in name):
         return None                                            # a control character (NUL, a newline, a tab...) is never in a file name
     name = " ".join(name.split())
     if not name or "/" in name or "\\" in name or name.startswith(".") or len(name) > 150:
         return None
-    return name if name.lower().endswith(ext) else name + ext
+    name = name if name.lower().endswith(ext) else name + ext
+    return None if _name_problem(name, own) else name
+
+
+RESERVED_NAME = re.compile(r"(?i)^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)(?:\..*)?$")
+REPORT_WORDS = re.compile(r"(?i)(?:weekly|client)\s*report")
+
+
+def _name_problem(name, own=None):
+    """v2.5.1 (#239): why a typed export name can't be used, or None: a name Windows reserves (CON, NUL, COM1...), a character a
+    file name can't hold there (< > : " | ? *), a stem ending in a dot or a space, or a name that reads as a report's filing name
+    (weekly report, client report: in any case or spacing) other than this report's own (`own`, its filing name, which the name
+    may start with: the clash question then says it is reserved), which belongs to a filing and could block an Approve."""
+    stem = name.rsplit(".", 1)[0]
+    if RESERVED_NAME.match(stem) or RESERVED_NAME.match(name) or re.search(r'[<>:"|?*]', name) or stem != stem.rstrip(". "):
+        return "reserved"
+    import unicodedata
+    plain = " ".join(unicodedata.normalize("NFKC", name).split())
+    mine = own and plain.lower().startswith(" ".join(Path(own).stem.split()).lower())
+    if REPORT_WORDS.search(plain) and not mine:
+        return "a report's name"
+    return None
 
 
 def _taken(folder, name, reserved=None):
@@ -385,7 +412,7 @@ def _settle_name(folder, name, ext, req, label, reserved=None):
     Overwrite is never offered or accepted for it (`reserved: true` in the answer)."""
     choice = req.get("on_clash")
     if choice == "rename":
-        name = _plain_name(req.get("new_name"), ext)
+        name = _plain_name(req.get("new_name"), ext, reserved)
         if not name:
             return name, False, {"message": "Type a file name (no folders, not starting with a dot).", "clash": True}
     if not _taken(folder, name, reserved):

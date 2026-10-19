@@ -1,6 +1,7 @@
 """v2.5.1 (#239, c): the check of a client report's OUTPUT, after it is made and before it is kept. A library: no command line.
 
-creaite_doc.export calls check() on every client export it makes (HTML, Word, PDF). It reads what the file actually holds:
+creaite_doc.export calls check() on every client export it makes (HTML, Word, PDF), and report_doc.stage_client calls
+filed_findings() on the file Approve files. It reads what the file actually holds:
   - the text: a Word file's XML text (every paragraph's runs, in every part, and its properties), the HTML's markup text (and its
     attribute values: alt, title, href), a PDF's extracted text (tracker.pdf_text, the bundled pypdf) and the HTML page it was
     printed from;
@@ -27,7 +28,7 @@ import paths  # noqa: E402,F401
 WORD_PARA = re.compile(r"<w:p(?: [^>]*)?>.*?</w:p>", re.S)
 WORD_TEXT = re.compile(r"<w:t(?: [^>]*)?>([^<]*)</w:t>")
 TAGS = re.compile(r"<[^>]+>")
-ATTRS = re.compile(r"""\s(?:alt|title|href|aria-label|content|value)\s*=\s*("[^"]*"|'[^']*')""", re.I)
+ATTRS = re.compile(r"""\s[\w:-]+\s*=\s*("[^"]*"|'[^']*')""", re.I)          # every attribute's value (data-id, alt, title, href...)
 DATA_IMG = re.compile(r"""<img\b[^>]*?\ssrc\s*=\s*["']data:image/(?:png|jpeg);base64,([A-Za-z0-9+/=\s]+)["']""", re.I)
 IMG_SRC = re.compile(r"""<(?:img|image|source|video|audio|iframe|object|embed)\b[^>]*?\s(?:src|href|data)\s*=""", re.I)
 URL_IN_CSS = re.compile(r"url\s*\(|@import", re.I)
@@ -68,8 +69,8 @@ def docx_text(path):
 
 
 def html_text(markup):
-    """An HTML page's text as a reader sees it (its markup without the tags, the style and the data block), and the attribute values
-    a browser shows or follows (alt, title, href)."""
+    """An HTML page's text as a reader sees it (its markup without the tags, the style and the data block), and every attribute's
+    value (alt, title, href, a section's data-id...), but a picture's data address."""
     body = re.sub(r"<style\b.*?</style>", " ", markup or "", flags=re.S | re.I)
     body = re.sub(r"<script\b.*?</script>", " ", body, flags=re.S | re.I)
     attrs = [html.unescape(m.group(1)[1:-1]) for m in ATTRS.finditer(body) if not m.group(1)[1:].startswith("data:")]
@@ -139,11 +140,41 @@ def html_pictures(markup):
 
 # ── the checks ───────────────────────────────────────────────────────────────
 
+def unescaped(text):
+    """The text with JSON's \\uXXXX escapes read as the characters they stand for (the gate reads %- and entity-encoding itself)."""
+    return re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), text or "")
+
+
 def _health_words(doc):
     """The words of a client report's shown health sections (the internal health reason may stand there, as the gate allows)."""
     import creaite_doc
     ids = {s.get("id") for s in doc.get("sections") or [] if isinstance(s, dict) and s.get("type") == "health"}
     return "\n".join(t for i, _h, t in creaite_doc.sections_text(doc) if i in ids)
+
+
+OTHER_TEXT = (("raid", "description"), ("decisions", "decision"), ("actions", "description"))
+
+
+def other_project_findings(con, code, text):
+    """Another project's hidden item wording, or a person who owns only another project's items a client report can't show (and
+    none this project's report may name), in a client text (the gate's own checks read this project only: known gap B)."""
+    import client_leak
+    import edit_ai
+    low = client_leak.squash(edit_ai.normal(text)).lower()
+    found = []
+    try:
+        mine = {n.lower() for n in client_leak.people(con, code)[0] | client_leak.alans_names() if n}
+        for (other,) in con.execute("SELECT code FROM projects WHERE code != ?", (code,)).fetchall():
+            for table, col in OTHER_TEXT:
+                for i, words in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (other,)):
+                    if len(words or "") >= 15 and client_leak.squash(edit_ai.normal(words)).lower() in low:
+                        found.append(f"{i} (another project's, not client-visible) has its wording in the file")
+            names = {n for n in client_leak.people(con, other)[1] if n.lower() not in mine}
+            found += [f"{n} is named but owns only another project's items a client report can't show"
+                      for n in sorted(client_leak.named(text, names, every=True))]
+    except client_leak.RegisterUnreadable:
+        found.append(client_leak.REGISTER_UNREAD)
+    return found
 
 
 def text_findings(doc, text, con=None):
@@ -153,11 +184,12 @@ def text_findings(doc, text, con=None):
     import drafts
     con = con or client_leak.connect()
     code = str(doc.get("project") or "")
-    t = client_leak.joined(text, confusables.skeleton(text))
+    t = client_leak.joined(text, confusables.skeleton(text), unescaped(text))
     found = client_leak.text_findings(con, code, t)
     found += [f"it holds {w}" for w in drafts.internal_findings(con, code, client_leak.with_addresses(t), _health_words(doc))]
     if client_leak.marked(t) and "it holds an internal-only marker" not in found:
         found.append("it holds an internal-only marker")
+    found += other_project_findings(con, code, t)
     return found + client_leak.name_findings(con, code, t, client_leak.blocking_labels(con))
 
 
@@ -174,3 +206,24 @@ def check(doc, fmt, out, page=None, drawn=()):
         found += bad + picture_findings(pics, allowed)
         text = html_text(markup) + ("\n" + pdf_text(out) if fmt == "pdf" else "")
     return list(dict.fromkeys(text_findings(doc, text) + found))
+
+
+def _strings(x):
+    """Every string value in decoded JSON (keys aside)."""
+    if isinstance(x, str):
+        return [x]
+    if isinstance(x, dict):
+        return [s for v in x.values() for s in _strings(v)]
+    return [s for v in x for s in _strings(v)] if isinstance(x, list) else []
+
+
+def filed_findings(doc, content):
+    """[finding] for the file Approve is about to file for a client report (`content`: the page with its data block): the page's
+    text and every string of its data block, and the page's pictures, checked as an export's are. [] when it is safe."""
+    import creaite_doc
+    m = creaite_doc.BLOCK.search(content or "")
+    block = "\n".join(_strings(json.loads(m.group(1)))) if m else ""
+    page = creaite_doc.BLOCK.sub("", content or "")
+    pics, found = html_pictures(page)
+    found += picture_findings(pics, allowed_pictures(doc))
+    return list(dict.fromkeys(text_findings(doc, html_text(page) + "\n" + block) + found))

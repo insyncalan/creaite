@@ -102,7 +102,8 @@ def force_client_audience(doc):
 
 def derive_client(doc):
     """v2.5.1 (#239, b): a client report's header, made again from the tracker, the project's memory and its logo files, in place:
-    its audience (always client), `project_name`, `client`, and the header section's label, client and logos
+    its audience (always client), its title, `project_name`, `client`, its one source (the tracker), and the header section's
+    label, client and logos
     (report_doc.client_logos: the project's files the report and the project's setting tick now). Whatever a draft stored there (a
     picture's path, a logo unticked since, another name) is never kept. Any other document is returned as it is."""
     if not (isinstance(doc, dict) and doc.get("kind") == "client"):
@@ -110,14 +111,23 @@ def derive_client(doc):
     import report_doc
     code = str(doc.get("project") or "")
     doc["audience"] = "client"
+    doc["title"] = "Client report"
     doc["project_name"] = project_name(code) if code else ""
     doc["client"] = project_client(code) if code else None
     logos = report_doc.client_logos(code, doc.get("layout")) if report_doc.CODE.match(code) else []
+    doc["sources"] = [_tracker_source(doc.get("meta"))]
     for s in doc.get("sections") or []:
         if isinstance(s, dict) and s.get("type") == "header":
             data = s.get("data") if isinstance(s.get("data"), dict) else {}
             s["data"] = {**data, "label": "Client report", "client": doc["client"] or "", "logos": [dict(x) for x in logos]}
     return doc
+
+
+def _tracker_source(meta):
+    """A client report's one source, the tracker, its label made from the facts week (as report_doc.filed_client_data makes it)."""
+    week = meta.get("facts_week") if isinstance(meta, dict) else None
+    week = week if isinstance(week, str) and DATE.match(week) else None
+    return {"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending {_dmy(week)}" if week else "")}
 
 
 def drop_other_projects(doc):
@@ -215,10 +225,13 @@ def _visible_text(sections):
 
 
 def _internal_text(doc, s):
-    """True for a text section that belongs to the internal report and is in a client or distributed document: it was never matched
-    or written there (H5, #218), so no output shows it. v2.5.1: only a section whose audience is exactly "client" was matched; any
-    other spelling ("Internal", " internal", "weekly", none) is the internal report's."""
-    return s.get("type") == TEXT_TYPE and is_client(doc) and s.get("audience") != "client"
+    """True for a section that belongs to the internal report and is in a client or distributed document: it was never matched or
+    written there (H5, #218), so no output shows it. v2.5.1 (#239): a text section shows only when its audience is exactly "client"
+    (any other spelling, "Internal", " internal", "weekly", or none, is the internal report's); a section of any other type that
+    carries an audience at all shows only when it is exactly "client" too (creaite's own client sections carry none)."""
+    if not is_client(doc):
+        return False
+    return (s.get("type") == TEXT_TYPE or "audience" in s) and s.get("audience") != "client"
 
 
 # ── v2.5.1 (#239, a): the keys a client report may hold ──────────────────────
@@ -266,6 +279,8 @@ def _shape_section(s):
     out = _only(s, SECTION_KEYS)
     if out is None:
         return None
+    if s.get("internal"):
+        out["audience"] = "internal"        # an `internal` flag is read as the internal report's audience before the flag goes
     for k, keys in SECTION_LISTS.items():
         if k in out:
             out[k] = _list_of(out[k], keys)
@@ -1161,7 +1176,7 @@ def _export_doc(path, kind, doc=None):
     (read_report). Raises DocError for a kind the route doesn't expect."""
     if doc is None:
         doc = read_report(path, kind)
-        if kind in (None, "minutes") and report_signs(path, doc):
+        if kind == "minutes" and report_signs(path, doc):
             raise DocError("That file is a report, not minutes (" + "; ".join(report_signs(path, doc)) + "), so it isn't exported "
                            "here. Export a report from the Reporting hub.")
         return doc
@@ -1200,10 +1215,10 @@ def _check_baseline(doc):
     """A client view or distributed minutes is exported only once the internal document it is based on is approved."""
     if not is_client(doc):
         return
-    base = doc.get("based_on") or {}
+    base = doc.get("based_on") if isinstance(doc.get("based_on"), dict) else {}
     try:
-        approved = bool(base.get("path")) and read(base["path"]).get("state") == "approved"
-    except DocError:
+        approved = isinstance(base.get("path"), str) and bool(base["path"]) and read(base["path"]).get("state") == "approved"
+    except (DocError, OSError, ValueError):
         approved = False
     if not approved:
         what = "Distributed minutes are" if doc.get("kind") == "minutes" else "A client report is"

@@ -44,9 +44,11 @@ class TheSectionAudienceIsBoundOnTheServer(Base):
             self.assertIn(why, got.get("refused", ""), (req, got))
 
     def test_a_saved_client_report_that_reads_as_internal_is_refused(self):
+        # v2.5.1 (#239): dumps derives a client report's audience again, so the file is edited by hand (its data block written as is)
         got = self.py("d = report_doc.client_doc('ABC')\nr = report_doc.save_draft(d)\n"
-                      "doc = creaite_doc.read(r['path'])\ndoc['audience'] = 'internal'\n"
-                      "open(report_doc.paths.resolve(r['path']), 'w', encoding='utf-8').write(creaite_doc.dumps(doc))\n"
+                      "f = report_doc.paths.resolve(r['path'])\ntext = f.read_text(encoding='utf-8')\n"
+                      "m = creaite_doc.BLOCK.search(text)\ndoc = json.loads(m.group(1))\ndoc['audience'] = 'internal'\n"
+                      "f.write_text(text[:m.start(1)] + creaite_doc.data_json(doc) + text[m.end(1):], encoding='utf-8')\n"
                       f"print(json.dumps(drafts.context({{**{SECTION!r}, 'document': {DOC!r}}})))")
         self.assertIn("isn't a report", got.get("refused", ""), got)
 

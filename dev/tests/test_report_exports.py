@@ -44,6 +44,9 @@ ITEMS = {"ABC-002": {"table": "raid", "title": "Vendor capacity"}, "ABC-005": {"
          "ABC-D-009": {"table": "decisions", "title": "walrus"}, "ABC-M-001": {"table": "milestones", "title": "Go-live",
                                                                                 "due_date": "2026-11-20"}}
 SHOWN = [s["heading"] for s in SECTIONS if not s["hidden"]]
+# v2.5.1 (#239): creaite_doc.export gates every client report (client_leak.findings on the document it renders), so a client report
+# here names no item this vault's tracker doesn't hold: the same sections without their item rows, tags and milestone list
+CLIENT_SECTIONS = [{k: v for k, v in s.items() if k not in ("rows", "tags", "data")} for s in SECTIONS]
 
 
 def chrome_path():
@@ -67,11 +70,11 @@ class Base(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout.strip().splitlines()[-1])
 
-    def saved(self, kind="weekly", sections=SECTIONS, pre="", date="2026-10-16", **kw):
+    def saved(self, kind="weekly", sections=SECTIONS, pre="", date="2026-10-16", items=ITEMS, **kw):
         """Save a document of `kind` (after running `pre` on it) and return its stored path."""
         args = ", ".join(f"{k}={v!r}" for k, v in kw.items())
         title = "Steering" if kind == "minutes" else "Weekly report" if kind == "weekly" else "Client report"
-        r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, {date!r}, {sections!r}, items={ITEMS!r}"
+        r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, {date!r}, {sections!r}, items={items!r}"
                     f"{', ' + args if args else ''})\n{pre}\n"
                     f"t = creaite_doc.target({kind!r}, 'ABC', {date!r}, name={title!r}, client={kw.get('client')!r})\n"
                     "print(json.dumps(creaite_doc.save(t, doc, 'Saved for a test')))")
@@ -119,7 +122,8 @@ class Html(Base):
             base = ("b = creaite_doc.new('weekly', 'ABC', 'Weekly report', '2026-10-16', [])\nb['state'] = 'approved'\n"
                     "rb = creaite_doc.save('system/staging/drafts/approved-base.html', b, 'Saved for a test')\n"
                     "doc['based_on'] = {'path': rb['path'], 'version': rb['version']}\n") if kind == "client" else ""
-            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {SECTIONS!r}, items={ITEMS!r})\n" + base +
+            secs, items = (CLIENT_SECTIONS, {}) if kind == "client" else (SECTIONS, ITEMS)      # v2.5.1: see CLIENT_SECTIONS
+            r = self.py(f"doc = creaite_doc.new({kind!r}, 'ABC', {title!r}, '2026-10-16', {secs!r}, items={items!r})\n" + base +
                         "print(json.dumps(creaite_doc.save('system/staging/drafts/unfiled.html', doc, 'Saved for a test')))")
             self.assertTrue(r["ok"], r)
             out = self.export(r["path"], "html", out_dir=f"{ABC}/reports")
@@ -215,13 +219,13 @@ class Filing(Base):
     def test_a_client_view_waits_for_the_approved_internal_report(self):
         draft = self.saved(date="2026-10-09")
         approved = self.saved(pre="doc.update(state='approved', approved_at='2026-10-16 15:00:00')")
-        waiting = self.saved("client", date="2026-10-09", pre=f"doc['based_on'] = {{'path': {draft!r}, 'version': 1}}",
-                             audience="client", client="Harbour Board")
+        waiting = self.saved("client", CLIENT_SECTIONS, date="2026-10-09", pre=f"doc['based_on'] = {{'path': {draft!r}, 'version': 1}}",
+                             items={}, audience="client", client="Harbour Board")
         r = self.export(waiting, "docx")
         self.assertFalse(r["ok"])
         self.assertEqual(r["message"], "A client report is exported only after the internal report is approved.")
-        ready = self.saved("client", pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}", audience="client",
-                           client="Harbour Board")
+        ready = self.saved("client", CLIENT_SECTIONS, pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}", items={},
+                           audience="client", client="Harbour Board")
         r = self.export(ready, "docx")
         self.assertTrue(r["ok"], r)
         self.assertTrue(r["path"].startswith(f"{ABC}/reports/2026-10-16 Client report - Example Programme (Harbour Board)"), r)
@@ -229,6 +233,11 @@ class Filing(Base):
         # document says
         self.in_order(self.word_text(r["path"]), ["Example Programme", "Client · Draft", "Health", "Executive summary"])
         self.assertNotIn("Harbour Board", self.word_text(r["path"]))
+        # v2.5.1 (#239): the export gates a client report itself: one naming items the tracker doesn't hold is refused, nothing made
+        unknown = self.saved("client", pre=f"doc['based_on'] = {{'path': {approved!r}, 'version': 1}}", audience="client")
+        r = self.export(unknown, "docx")
+        self.assertFalse(r["ok"], r)
+        self.assertTrue(r.get("findings"), r)
 
     def test_an_unknown_format_and_a_missing_file_say_why(self):
         self.assertIn("HTML, Word or PDF", self.export(self.saved(), "odt")["message"])

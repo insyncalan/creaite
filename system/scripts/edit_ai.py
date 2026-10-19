@@ -279,7 +279,8 @@ def normal(text):
     """Text as the client check matches it: NFKC, invisible characters gone (unseen, before and after NFKC, which can make a
     filler of a compatibility one), combining marks gone (unmarked), dashes and look-alike letters made plain."""
     import unicodedata
-    t = unseen(unicodedata.normalize("NFKC", unmarked(unseen(text)))).translate(LOOK_ALIKE)
+    t = unmarked(unseen(text).translate(LOOK_ALIKE)).translate(LOOK_ALIKE)      # v2.5.1: before NFKD/NFKC too (Ϲ would be Σ)
+    t = unseen(unicodedata.normalize("NFKC", t)).translate(LOOK_ALIKE)
     return re.sub(r"\d", lambda m: str(unicodedata.decimal(m.group(), 0)), t)      # #127 review: any script's digits, as 0-9
 
 

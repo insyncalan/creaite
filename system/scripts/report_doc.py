@@ -966,7 +966,7 @@ def _current_ops(doc, folder):
     return [{"op": "write", "path": paths.rel(memory), "content": new, "previous": old}] if new != old else []
 
 
-def _file_ops(kind, code, fri, client, draft):
+def _file_ops(kind, code, fri, client, draft, checked=None):
     """How Approve files the draft: a first filing of a weekly report copies it; a filed report is replaced whole by the approved new
     version (a write whose earlier text tracker.py keeps, so Undo puts the filed report back exactly as it was). A client report is
     always written whole, without meta.health_diff (the health difference and its reason stay in the draft, Alan 15-10-2026). The
@@ -977,7 +977,10 @@ def _file_ops(kind, code, fri, client, draft):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(creaite_doc.read_report(draft, kind))          # v2.5.0: filed as a client report, header derived
+    # v2.5.0: filed as a client report, header derived; v2.5.1 (#239): `checked`, the document Approve read once and checked, is the
+    # one filed (never the file read again)
+    doc = creaite_doc.clean(creaite_doc.force_client_audience(copy.deepcopy(checked)) if checked is not None
+                            else creaite_doc.read_report(draft, kind))
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -986,7 +989,13 @@ def _file_ops(kind, code, fri, client, draft):
         # block included, never holds them (the internal flag would be in them): the whole key goes, not just the reason.
         doc["meta"] = {k: v for k, v in (doc.get("meta") or {}).items() if k != "health_diff"}
         filed_client_data(doc)
-    return [{"op": "write", "path": filed, "content": creaite_doc.dumps(doc), "previous": old}, {"op": "remove", "path": draft}]
+    content = creaite_doc.dumps(doc)
+    if kind == "client":
+        import client_output                                     # v2.5.1 (#239, c): what is filed is checked as an export is
+        found = client_output.filed_findings(doc, content)
+        if found:
+            raise ReportError("Not approved: the file to be filed held possible internal content: " + "; ".join(found))
+    return [{"op": "write", "path": filed, "content": content, "previous": old}, {"op": "remove", "path": draft}]
 
 
 CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
@@ -1089,4 +1098,4 @@ def stage_client(draft, force=False, code=None, fri=None):
         "report": {"kind": "client", "format": "creaite", "title": f"{doc.get('project_name') or code} client report, week ending "
                                                                     f"{shown(fri)}" + (f" ({client})" if client else ""),
                    "project": code, "projects": [code], "week_ending": fri, "draft": draft, "report_decision": "approved",
-                   "file_ops": _file_ops("client", code, fri, client, draft)}})
+                   "file_ops": _file_ops("client", code, fri, client, draft, checked=doc)}})
