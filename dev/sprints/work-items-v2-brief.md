@@ -41,3 +41,8 @@ Nothing here may change how these behave today (`work.js`: the column resizer, B
 
 ## Not shown
 Board layout, Display, column sorting and resizing, bulk selection, cell editing, the funnel's extra fields (Milestone, Raised, Closed, Source, Type, Label: unchanged), the Chase step-through, split view, slice panel.
+
+## Decisions on the build's deviations (Alan, 19-10-2026)
+- **a. Compact row:** one line with the ID beside the title, as approved. The tests that pin the old column widths are updated deliberately; saved widths, resizing and the Board must be proved untouched.
+- **b. Closed folded by default:** built (only where nothing is saved); the same deliberate test update.
+- **c. Sub-group and Empty groups under the default grouping:** not built; the Display menu stays as it is today.
