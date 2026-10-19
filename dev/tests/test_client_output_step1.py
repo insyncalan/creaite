@@ -268,7 +268,9 @@ print(json.dumps({{'answer': h.body, 'gate_on_saved_draft': gate, 'held': held}}
         f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
         r = self.minutes_export(a["path"])
         self.assertFalse(r.get("ok"), r)
-        self.assertEqual(self.reports_hold(needles), {})
+        held = self.reports_hold(needles)
+        held.pop(f.name, None)                          # the file this test edited holds them; nothing else may
+        self.assertEqual(held, {})
 
     def test_e_a_client_report_renamed_out_of_its_pattern_is_refused_by_its_data(self):
         self.fresh()

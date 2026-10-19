@@ -1108,11 +1108,63 @@ def _posted_page(doc, page, fmt):
         return None, str(e)
 
 
+REPORT_NAME = re.compile(r"\b(?:client|weekly)\s+report\b", re.I)
+REPORT_META = ("period_start", "period_end", "facts_week", "facts_on", "locked", "client_facts", "health_diff")
+REPORT_HEADER = ("logos", "facts_week", "period_start", "period_end", "week_ending")
+
+
+def _in_reports_folder(p):
+    """Whether a file sits in any project's weekly or client reports folder (where only reports are filed)."""
+    import tracker
+    try:
+        with tracker.connect() as con:
+            codes = [r[0] for r in con.execute("SELECT code FROM projects")]
+    except BaseException:  # noqa: BLE001  no tracker: fail closed, every folder named Reports counts
+        return Path(p).parent.name.lower() == "reports"
+    here = Path(p).resolve().parent
+    for code in codes:
+        for kind in ("weekly_reports", "client_reports"):
+            try:
+                if paths.folder(code, kind).resolve() == here:
+                    return True
+            except (LookupError, OSError, KeyError, ValueError):
+                continue        # a project with no folder has no reports folder
+    return False
+
+
+def _report_data(doc):
+    """Whether a document holds a report's data: its period, facts week or lock in meta, or logos or a period in its header."""
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    header = [s.get("data") for s in doc.get("sections") or [] if isinstance(s, dict) and isinstance(s.get("data"), dict)
+              and s.get("type") == "header"]
+    return any(k in meta for k in REPORT_META) or any(k in d for d in header for k in REPORT_HEADER)
+
+
+def report_signs(path, doc):
+    """v2.5.1 (#239, e): why a file opened as minutes is a report (a client report edited to say minutes most of all): [] when none.
+    Any sign counts: a report's kind, a client audience, a report's file name or title, a reports folder, or a report's data (its
+    period, facts week or lock in meta, logos or a period in its header)."""
+    signs = []
+    if doc.get("kind") in ("weekly", "client") or doc.get("audience") == "client":
+        signs.append("its data says it is a report")
+    if REPORT_NAME.search(real(path).name) or REPORT_NAME.search(str(doc.get("title") or "")):
+        signs.append("its name is a report's")
+    if _report_data(doc):
+        signs.append("it holds a report's period, facts or logos")
+    if _in_reports_folder(real(path)):
+        signs.append("it is in a Reports folder")
+    return signs
+
+
 def _export_doc(path, kind, doc=None):
     """The document an export renders: `doc` as the caller checked it (a client report read again as one), else the file at `path`
     (read_report). Raises DocError for a kind the route doesn't expect."""
     if doc is None:
-        return read_report(path, kind)
+        doc = read_report(path, kind)
+        if kind in (None, "minutes") and report_signs(path, doc):
+            raise DocError("That file is a report, not minutes (" + "; ".join(report_signs(path, doc)) + "), so it isn't exported "
+                           "here. Export a report from the Reporting hub.")
+        return doc
     check(doc)
     if kind is not None and doc.get("kind") != kind:
         raise DocError("That file isn't this report (its kind was changed), so nothing was done. Open the report again from creaite.")
