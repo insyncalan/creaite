@@ -79,6 +79,7 @@ def make_vault():
               "creaite_doc.py",                                    # v2.1.0 P1: creaite's document format
               "minutes_record.py", "date_words.py",                # v2.1.0 P4: the minutes record, dates in words
               "linktext.py",                                       # #121: links in plain text, read by the reports, search and the Excel export
+              "confusables.py",                                    # v2.5.1 (#239): the look-alike skeleton
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
     shutil.copytree(REPO / "system" / "scripts" / "vendor", scripts / "vendor", ignore=NO_CACHE)
