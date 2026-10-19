@@ -202,5 +202,83 @@ class PureRules(unittest.TestCase):
             self.assertTrue(set(cols) <= set(self.o["ui"][table]), table)
 
 
+class ApplyPath(unittest.TestCase):
+    """B3: what a proposal edited in the peek carries (panel.js updSave: `it.changes` from core/irUpdate.js irSaveChanges), applied
+    by tracker.py, the one writer. Every column the peek can now write is validated by tracker.py's own rules; a value it refuses
+    makes the apply fail and writes nothing (the proposal stays for a fix)."""
+
+    def setUp(self):
+        self.v = Vault()
+        test_dashboard.populate(self.v)
+        self.aid = next(r["id"] for r in self.v.rows("actions") if r["description"] == "Book UAT environment")
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def apply(self, items, ok=True):
+        self.v.propose("peek", items)
+        return self.v.run("apply", ok=ok)
+
+    def edited(self, table, ident, changes, **extra):
+        """A proposal item as the peek leaves it after an edit: approved, `edited_in` dashboard, the changes it saved."""
+        return {"n": 1, "op": "update", "table": table, "id": ident, "changes": changes, "decision": "approved", "match": "strong",
+                "flags": [], "edited_in": "dashboard", "decided_in": "dashboard", "source": SRC, **extra}
+
+    def row(self, table, ident):
+        return next(r for r in self.v.rows(table) if r["id"] == ident)
+
+    def test_due_date_and_latest_update_together_the_other_columns_untouched(self):
+        before = self.row("actions", self.aid)
+        self.apply([self.edited("actions", self.aid, {"due_date": "2026-12-04", "latest_update": "The supplier confirmed a slot."})])
+        after = self.row("actions", self.aid)
+        self.assertEqual((after["due_date"], after["latest_update"]), ("2026-12-04", "The supplier confirmed a slot."))
+        changed = {k for k in after if after[k] != before[k]}
+        self.assertEqual(changed, {"due_date", "latest_update", "updated_at"})          # owner, priority, status, workstream... as they were
+
+    def test_status_closed_sets_the_closed_date_itself(self):
+        self.apply([self.edited("actions", self.aid, {"status": "Closed", "due_date": "2026-12-04"})])
+        after = self.row("actions", self.aid)
+        self.assertEqual((after["status"], after["due_date"]), ("Closed", "2026-12-04"))
+        self.assertTrue(after["closed"])                                                  # the peek never writes `closed`: the tracker does
+
+    def test_the_change_log_records_each_column_written(self):
+        self.apply([self.edited("actions", self.aid, {"due_date": "2026-12-04", "latest_update": "x"})])
+        import sqlite3
+        from contextlib import closing
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            fields = {r[0] for r in con.execute("SELECT field FROM change_log WHERE item_id = ? AND op = 'update'", (self.aid,))}
+        self.assertEqual(fields, {"due_date", "latest_update", "updated_at"})
+
+    def test_a_bad_status_a_bad_date_and_an_unknown_column_are_refused_and_nothing_is_written(self):
+        before = self.row("actions", self.aid)
+        for bad in ({"status": "Made"}, {"due_date": "27-10-2026"}, {"due_date": "2026-02-30"}, {"deadline": "2026-12-04"}):
+            r = self.apply([self.edited("actions", self.aid, bad)], ok=False)
+            self.assertNotEqual(r.returncode, 0, bad)
+            self.assertEqual(self.row("actions", self.aid), before, bad)
+            for f in (self.v.root / "system/staging").glob("proposed-peek.json"):
+                f.unlink()
+
+    def test_a_column_the_peek_never_writes_is_still_a_normal_column_to_the_tracker(self):
+        """The peek's save only touches Status, Due, Latest update (and a made decision's date): a proposal's other columns pass
+        through as the proposal had them, validated by the same rules (an unchanged proposal is applied as it was)."""
+        self.apply([self.edited("actions", self.aid, {"owner": "Omar Ali", "due_date": "2026-12-04"})])
+        after = self.row("actions", self.aid)
+        self.assertEqual((after["owner"], after["due_date"]), ("Omar Ali", "2026-12-04"))
+
+    def test_a_decision_made_in_the_peek_carries_its_date(self):
+        """A pending decision made through the peek: the status and the date it was made travel together (the schema needs the date)."""
+        self.apply([{"n": 1, "op": "new", "table": "decisions", "decision": "approved", "match": "strong", "flags": [],
+                     "values": {"project": "ABC", "decision": "Pick the venue", "status": "Pending", "needed_by": "2026-12-01", "source": SRC}}])
+        pend = next(r["id"] for r in self.v.rows("decisions") if r["decision"] == "Pick the venue")
+        self.v.propose("made-no-date", [self.edited("decisions", pend, {"status": "Made"})])
+        self.assertNotEqual(self.v.run("apply", ok=False).returncode, 0)                    # Made with no date: refused, as before the peek
+        self.assertEqual(self.row("decisions", pend)["status"], "Pending")
+        (self.v.root / "system/staging/proposed-made-no-date.json").unlink()
+        self.v.propose("made", [self.edited("decisions", pend, {"status": "Made", "date": "2026-10-12"})])
+        self.v.run("apply")
+        row = self.row("decisions", pend)
+        self.assertEqual((row["status"], row["date"]), ("Made", "2026-10-12"))
+
+
 if __name__ == "__main__":
     unittest.main()

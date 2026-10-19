@@ -150,5 +150,85 @@ class UpdatePeek(LiveBrowserCase, Fixture):
         self.assertIn(self.uat, b.eval("document.getElementById('pkId').textContent"))
 
 
+class UpdatePeekSaves(LiveBrowserCase, Fixture):
+    """Saving in the peek: the edited columns are written, the rest of the proposal is left as it was."""
+    width, height = 1400, 1100
+
+    @classmethod
+    def load(cls, v):
+        Fixture.load.__func__(cls, v)
+
+    def staged(self, ident):
+        for f in sorted((self.v.root / "system/staging").glob("proposed-*.json")):
+            data = json.loads(f.read_text())
+            for it in data.get("items", []):
+                if it.get("id") == ident and it.get("op") == "update":
+                    return f, it
+        raise AssertionError(f"no staged update for {ident}")
+
+    def n_of(self, ident):
+        return self.b.eval(f"(D.review||REV).find(r=>r.kind==='update'&&r.rec.target==={ident!r}).n")
+
+    def test_editing_the_due_date_saves_it_and_leaves_the_latest_update(self):
+        b = self.b
+        open_update(b, self.uat)
+        n = self.n_of(self.uat)
+        b.wait("!!document.querySelector('#pkUpdNote')")
+        b.eval(f"pkCommit('actions','rv{n}',{{due:'2026-12-04'}},'Due date','x','y')")
+        b.wait("document.querySelector('#pkProps [data-pkp=due]').textContent.includes('04-12-2026')")
+        b.click("#pkPSave")
+        b.wait("!document.getElementById('panel').classList.contains('on')")
+        f, it = self.staged(self.uat)
+        self.assertEqual(it["changes"], {"due_date": "2026-12-04", "latest_update": "The supplier confirmed a slot."})
+        self.assertNotEqual(it.get("decision"), "approved")                                  # Save alone does not approve
+        self.assertEqual(it.get("edited_in"), "dashboard")
+        self.assertEqual(self.v.rows("actions")[0]["due_date"], self.live[self.v.rows("actions")[0]["id"]]["due_date"])   # nothing in the tracker yet
+
+    def test_editing_the_status_and_approving_writes_it_with_the_other_columns(self):
+        b = self.b
+        open_update(b, self.uat)
+        n = self.n_of(self.uat)
+        b.wait("!!document.querySelector('#pkUpdNote')")
+        b.eval(f"pkSetStatus('actions','rv{n}','Delayed')")
+        b.wait("document.querySelector('#pkProps [data-pkp=st]').getAttribute('aria-label').includes('was Open, now Delayed')")
+        b.click("#pkPSaveA")
+        end = time.time() + 25
+        row = None
+        while time.time() < end:
+            row = next(r for r in self.v.rows("actions") if r["id"] == self.uat)
+            if row["status"] == "Delayed":
+                break
+            time.sleep(0.3)
+        self.assertEqual((row["status"], row["due_date"], row["latest_update"]), ("Delayed", "2026-12-01", "The supplier confirmed a slot."))
+
+    def test_a_status_edit_holds_the_row_again_and_the_line_follows(self):
+        """Due and latest update are routine; add a status change in the peek and the row is held (irHold) and says so."""
+        b = self.b
+        open_update(b, self.uat)
+        n = self.n_of(self.uat)
+        b.wait("!!document.querySelector('#pkUpdNote')")
+        self.assertEqual(b.eval(f"REV.find(r=>r.n==={n}).hold"), "")                          # routine before
+        b.eval(f"pkSetStatus('actions','rv{n}','Delayed')")
+        b.wait("document.querySelector('#pkProps [data-pkp=st]').getAttribute('aria-label').includes('now Delayed')")
+        b.click("#pkPSave")
+        b.wait("!document.getElementById('panel').classList.contains('on')")
+        b.wait(f"REV.find(r=>r.n==={n}).hold==='status change'")
+        line = b.eval(f"[...document.querySelectorAll('{ROW}')].find(t=>t.querySelector('.icchg').textContent.includes({self.uat!r})).querySelector('.icchg').textContent")
+        self.assertIn("status Open → Delayed", line)
+        self.assertIn("due ", line)
+
+    def test_a_conflict_hides_save_and_approve_and_shows_the_two_values(self):
+        b = self.b
+        S.open_page(b)
+        b.eval("[...document.querySelectorAll('#v-intake-review tr.irprop[data-kind=update]')].find(t=>t.querySelector('.cfvs')).querySelector('.icttl').click()")
+        b.wait("document.getElementById('panel').classList.contains('pkprop')")
+        b.wait("!!document.querySelector('#pkUpd .cfvs')")
+        self.assertTrue(b.eval("document.getElementById('pkPSaveA').hidden"))
+        self.assertFalse(b.eval("document.getElementById('pkPSave').hidden"))
+        b.eval("closePanel()")
+        open_update(b, self.uat)
+        b.wait("document.getElementById('panel').classList.contains('pkprop')")
+        self.assertFalse(b.eval("document.getElementById('pkPSaveA').hidden"))                        # the next peek has it again
+
 if __name__ == "__main__":
     unittest.main()
