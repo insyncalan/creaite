@@ -123,7 +123,7 @@ class Screens(LiveBrowserCase):
           out.head=document.getElementById('hTd').firstChild.textContent.trim(); out.rows=msgs.length;
           out.first=msgs[0].textContent.replace(/\\s+/g,' ')+' '+msgs[0].querySelector('.tdtag').textContent;
           out.buttons=[...msgs[0].querySelectorAll('button')].map(x=>[x.getAttribute('aria-label').split(':')[0],x.dataset.tip]);
-          out.title=document.title; out.badge=document.getElementById('vipBadge').getAttribute('aria-label');
+          out.attn=[...document.querySelectorAll('#attnList > li.alrow')].map(l=>l.textContent.replace(/\\s+/g,' ').trim().replace(/^\\d+/,'')); out.title=document.title; out.badge=document.getElementById('vipBadge').getAttribute('aria-label');
           const seen=[]; window.Notification=class{ constructor(t,o){ seen.push([t,o.body]); } static get permission(){ return 'granted'; } };
           vipNotify(VIPS().map(a=>({...a,id:a.id+'-again'}))); out.note=seen[0];
           out.filter=FDEFS.actions.find(d=>d[0]==='vip'); out.filter=[out.filter[1],...out.filter[2]().map(x=>x[1])];
@@ -132,7 +132,10 @@ class Screens(LiveBrowserCase):
           out.rem=[...document.querySelectorAll('#attnList li.rem')].map(l=>l.textContent).join(' | ');
           return out; })()""")
         self.assertEqual(o["head"], "Intake and Review")
-        self.assertEqual(o["rows"], 5)                                                   # #236: and the sweep's proposal from the same person
+        self.assertEqual(o["rows"], 4)                                                   # the four message cards (the sweep's proposal from the same person is a Needs attention row, #236)
+        self.assertEqual(len(o["attn"]), 1)
+        self.assertTrue(o["attn"][0].startswith("From Sara Example: [ABC] UAT"), o["attn"])
+        self.assertNotIn("VIP", o["attn"][0])
         self.assertNotIn("VIP", o["first"])
         self.assertEqual(o["buttons"], [["Create work item from", "Make a work item"], ["Dismiss", "Dismiss"]])   # icons, named
         self.assertTrue(re.match(r"^\(5\) creaite", o["title"]), o["title"])

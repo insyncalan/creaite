@@ -840,7 +840,7 @@ export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`
    the proposals and transcripts; their two icons keep the data-alertdo buttons this file's handler runs. */
 export const ALERTWORD={mail:"email",teams:"Teams message",calendar:"invite"};
 /* after a row goes: focus to the same button on the row now in its place in Intake and Review (or its first action), else its heading */
-export function alertFocus(id,what){ const vis=()=>$$("#tdList > li").filter(l=>!l.hidden), i=vis().findIndex(r=>r.dataset.td==="al"+id); return ()=>{
+export function alertFocus(id,what){ const vis=()=>$$("#attnList > li.alrow, #tdList > li").filter(l=>!l.hidden), i=vis().findIndex(r=>r.dataset.td==="al"+id||r.dataset.al===id); return ()=>{   /* #236: a Needs attention row too */
   const L=vis(), next=L[Math.min(Math.max(0,i),L.length-1)];
   const b=next&&(next.querySelector(`[data-alertdo="${what}"]`)||next.querySelector("[data-tdact]")); if(b){ /** @type {HTMLElement} */(b).focus(); return; }
   const h=$("#hTd"); if(h&&h.offsetParent){ h.tabIndex=-1; h.focus(); return; } const h2=$("#hAttn"); if(h2){ h2.tabIndex=-1; h2.focus(); } }; }

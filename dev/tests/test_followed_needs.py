@@ -371,28 +371,31 @@ class Page(LiveBrowserCase):
 
     def setUp(self):
         super().setUp()
-        self.b.eval("go('today'); EXPAND.add('td'); renderToday()")
-        self.b.wait("document.querySelector('#tdList li')")
+        self.b.eval("go('today'); EXPAND.add('td'); EXPAND.add('attn'); renderToday()")
+        self.b.wait("document.querySelector('#tdList li') && document.querySelector('#attnList li.alrow')")
 
     def rows(self):
-        return self.b.eval(r"""[...document.querySelectorAll('#tdList > li')].map(l=>({key:l.dataset.td, kind:l.className,
-          text:l.textContent.replace(/\s+/g,' ').trim(), btns:[...l.querySelectorAll('button')].map(x=>x.getAttribute('aria-label')||''),
+        """Today's followed-person rows in both places: Needs attention (where: attn; #236) and Intake and Review (where: td)."""
+        return self.b.eval(r"""[...document.querySelectorAll('#attnList > li.alrow, #tdList > li')].map(l=>({where:l.closest('#attnList')?'attn':'td',
+          key:l.dataset.td||'al'+l.dataset.al, kind:l.className, text:l.textContent.replace(/\s+/g,' ').trim().replace(/^\d+(?=\D)/,''),
+          btns:[...l.querySelectorAll('button')].map(x=>x.getAttribute('aria-label')||''),
           title:(l.querySelector('a.t')||l.querySelector('.t')||{}).textContent||''}))""")
 
     def test_a_the_proposal_and_b_the_note_are_from_rows_that_go_to_review(self):
         b = self.b
         got = {r["key"]: r for r in self.rows()}
-        prop = next(r for r in got.values() if r["text"].startswith("ProposalFrom Mia Hale: [ABC] SOW"))
-        note = next(r for r in got.values() if r["text"].startswith("NoteFrom Mia Hale: [ABC] SOW"))
+        prop = next(r for r in got.values() if r["text"].startswith("From Mia Hale: [ABC] SOW") and "proposals" in r["text"])
+        note = next(r for r in got.values() if r["text"].startswith("From Mia Hale: [ABC] SOW") and "memory" in r["text"])
         self.assertIn("2 proposals in Review", prop["text"])
         self.assertIn("Send the SOW", prop["text"])
         self.assertIn("Risk", prop["text"])
         self.assertIn("A note for", note["text"])
         self.assertIn("memory", note["text"])
         for r in (prop, note):
+            self.assertEqual(r["where"], "attn")                                      # Needs attention, not Intake and Review
             self.assertTrue(any(x.startswith("Open in Review") for x in r["btns"]), r["btns"])
             self.assertTrue(any(x.startswith("Dismiss") for x in r["btns"]), r["btns"])
-        b.click(f'#tdList li[data-td="{prop["key"]}"] a.t')                        # the title goes to the proposal, highlighted
+        b.click(f'#attnList li[data-al="{prop["key"][2:]}"] a.t')                        # the title goes to the proposal, highlighted
         b.wait("!document.getElementById('v-review').hidden")
         self.assertTrue(b.eval("RHL.size>0"))
         self.assertTrue(b.eval("REV.filter(r=>RHL.has(r.n)).every(r=>!r.done)"))
@@ -421,19 +424,26 @@ class Page(LiveBrowserCase):
 
     def test_f_the_counts_and_the_badge_include_the_new_rows(self):
         b = self.b
-        o = b.eval("""({rows:VIPS().length, followed:VIPS().filter(a=>a.kind==='proposal'||a.kind==='note').length,
-          nTd:document.getElementById('nTd').textContent, badge:document.getElementById('vipBadge')?document.getElementById('vipBadge').getAttribute('aria-label'):null,
+        o = b.eval("""(()=>{ const attn=a=>a.kind==='proposal'||a.kind==='note'||a.marker==='private'; return {vips:VIPS().length, moved:VIPS().filter(attn).length, cards:VIPS().filter(a=>!attn(a)).length,
+          nAttn:document.getElementById('nAttn').textContent, attn:document.querySelectorAll('#attnList > li:not(:has(.none))').length,
+          alrows:document.querySelectorAll('#attnList > li.alrow').length, nTd:document.getElementById('nTd').textContent,
+          badge:document.getElementById('vipBadge')?document.getElementById('vipBadge').getAttribute('aria-label'):null,
           tdNew:!document.getElementById('tdNew').hidden, quiet:document.querySelectorAll('#tdList > li.td-quiet').length,
-          all:document.querySelectorAll('#tdList > li').length})""")
-        self.assertEqual(o["followed"], 2)
-        self.assertEqual(o["nTd"], str(o["all"] - o["quiet"] + 2 * 0 + b.eval("tdLine().reduce((a,x)=>a+x.n,0)")))
-        self.assertTrue(o["tdNew"])
-        self.assertEqual(o["badge"], f"{o['rows']} messages to see first")
+          all:document.querySelectorAll('#tdList > li').length, tdMoved:document.querySelectorAll('#tdList > li[data-td^="alfp"]').length,
+          line:tdLine().reduce((a,x)=>a+x.n,0)}; })()""")
+        self.assertEqual(o["moved"], 3)                                          # the proposal row, the note row and the private conversation
+        self.assertEqual(o["alrows"], 3)
+        self.assertEqual(o["nAttn"], str(o["attn"]))                             # the heading's count includes them
+        self.assertEqual(o["tdMoved"], 0)                                        # and none is also in Intake and Review
+        self.assertEqual(o["nTd"], str(o["all"] - o["quiet"] + o["line"]))      # Intake and Review counts only its cards
+        self.assertGreaterEqual(o["all"], o["cards"])
+        self.assertTrue(o["tdNew"])                                              # its "new" mark is for the cards
+        self.assertEqual(o["badge"], f"{o['vips']} messages to see first")       # the left bar counts everything unseen
 
     def test_g_no_label_anywhere_in_the_section(self):
-        html = self.b.eval("document.getElementById('tdSec').outerHTML")
+        html = self.b.eval("document.getElementById('tdSec').outerHTML+document.getElementById('attnSec').outerHTML")
         self.assertIsNone(says_vip(html))
-        self.assertIsNone(WORD.search(self.b.eval("[...document.querySelectorAll('#tdSec [aria-label],#tdSec [data-tip]')].map(e=>(e.getAttribute('aria-label')||'')+' '+(e.dataset.tip||'')).join(' ')")))
+        self.assertIsNone(WORD.search(self.b.eval("[...document.querySelectorAll('#tdSec [aria-label],#tdSec [data-tip],#attnSec [aria-label],#attnSec [data-tip]')].map(e=>(e.getAttribute('aria-label')||'')+' '+(e.dataset.tip||'')).join(' ')")))
 
 
 class Dismiss(LiveBrowserCase):
@@ -445,34 +455,34 @@ class Dismiss(LiveBrowserCase):
         fixture(v)
 
     def row(self, text):
-        return self.b.eval(f"""(()=>{{ const l=[...document.querySelectorAll('#tdList > li')].find(x=>x.textContent.includes({json.dumps(text)}));
-          return l?l.dataset.td.slice(2):null; }})()""")
+        return self.b.eval(f"""(()=>{{ const l=[...document.querySelectorAll('#attnList > li.alrow')].find(x=>x.textContent.includes({json.dumps(text)}));
+          return l?l.dataset.al:null; }})()""")
 
     def refresh(self):
         run(self.v, "build_dashboard.py", now=STAMP)
-        self.b.eval("EXPAND.add('td'); reloadData().then(()=>renderToday())")
+        self.b.eval("EXPAND.add('td'); EXPAND.add('attn'); reloadData().then(()=>renderToday())")
         self.b.pump(1.5)
 
     def test_dismiss_stay_gone_come_back(self):
         b = self.b
-        b.eval("go('today'); EXPAND.add('td'); renderToday()")
+        b.eval("go('today'); EXPAND.add('td'); EXPAND.add('attn'); renderToday()")
         rid = self.row("2 proposals in Review")
         self.assertTrue(rid)
-        b.click(f'#tdList [data-alertdo="dismiss"][data-id="{rid}"]')
-        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{rid}\"]')")
+        b.click(f'#attnList [data-alertdo="dismiss"][data-id="{rid}"]')
+        b.wait(f"!document.querySelector('#attnList li[data-al=\"{rid}\"]')")
         self.assertTrue(next(a for a in vip_file(self.v)["alerts"] if a["id"] == rid)["seen"])
         b.click("#snackU")                                                                   # Undo puts it back
-        b.wait(f"document.querySelector('#tdList li[data-td=\"al{rid}\"]')")
-        b.click(f'#tdList [data-alertdo="dismiss"][data-id="{rid}"]')
-        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{rid}\"]')")
+        b.wait(f"document.querySelector('#attnList li[data-al=\"{rid}\"]')")
+        b.click(f'#attnList [data-alertdo="dismiss"][data-id="{rid}"]')
+        b.wait(f"!document.querySelector('#attnList li[data-al=\"{rid}\"]')")
         stage(self.v, [item("Send the SOW", src("RE: [ABC] SOW", "https://x/4", sent=f"{TODAY} 11:00"))], now=STAMP)   # asked again
         self.refresh()
         self.assertIsNone(self.row("2 proposals in Review"))
         self.assertIsNone(self.row("proposals in Review"))
         stage(self.v, [item("Book the UAT environment", src("RE: [ABC] SOW", "https://x/5", sent=f"{TODAY} 11:30"))], now=STAMP)   # a new action
         self.refresh()
-        self.assertTrue(self.row("new since you dismissed it"), self.b.eval("[...document.querySelectorAll('#tdList > li')].map(l=>l.textContent)"))
-        self.assertIn("proposals in Review", self.b.eval("document.querySelector('#tdList li[data-td=\"al" + rid + "\"]').textContent"))
+        self.assertTrue(self.row("new since you dismissed it"), self.b.eval("[...document.querySelectorAll('#attnList > li')].map(l=>l.textContent)"))
+        self.assertIn("proposals in Review", self.b.eval("document.querySelector('#attnList li[data-al=\"" + rid + "\"]').textContent"))
 
 
 if __name__ == "__main__":

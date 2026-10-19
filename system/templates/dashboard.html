@@ -4783,6 +4783,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     VAULT_PATH: () => VAULT_PATH,
     VDB: () => VDB,
     VH: () => VH,
+    VIPCARDS: () => VIPCARDS,
     VIPD: () => VIPD,
     VIPKIND: () => VIPKIND,
     VIPNOTED: () => VIPNOTED,
@@ -4950,6 +4951,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     attachLink: () => attachLink,
     attachRun: () => attachRun,
     attentionItems: () => attentionItems,
+    attnAlert: () => attnAlert,
+    attnAlertHtml: () => attnAlertHtml,
+    attnAlertItems: () => attnAlertItems,
     autoGrow: () => autoGrow,
     batchMove: () => batchMove,
     bcKey: () => bcKey,
@@ -5614,7 +5618,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
     fmSet: () => fmSet,
-    followedRow: () => followedRow,
     formProject: () => formProject,
     fpName: () => fpName,
     freeBackup: () => freeBackup,
@@ -6400,7 +6403,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     prepViewKey: () => prepViewKey,
     previewInbox: () => previewInbox,
     prio: () => prio,
-    privateRow: () => privateRow,
     processInbox: () => processInbox,
     processMeetings: () => processMeetings,
     profileTools: () => profileTools,
@@ -33546,7 +33548,7 @@ ${s5}`;
   }
   var ALERTWORD = { mail: "email", teams: "Teams message", calendar: "invite" };
   function alertFocus(id2, what) {
-    const vis = () => $$("#tdList > li").filter((l6) => !l6.hidden), i5 = vis().findIndex((r4) => r4.dataset.td === "al" + id2);
+    const vis = () => $$("#attnList > li.alrow, #tdList > li").filter((l6) => !l6.hidden), i5 = vis().findIndex((r4) => r4.dataset.td === "al" + id2 || r4.dataset.al === id2);
     return () => {
       const L3 = vis(), next = L3[Math.min(Math.max(0, i5), L3.length - 1)];
       const b5 = next && (next.querySelector(`[data-alertdo="${what}"]`) || next.querySelector("[data-tdact]"));
@@ -41427,6 +41429,7 @@ ${s5}`;
       /** @type {any[]} */
       []
     );
+    out.push(...attnAlertItems());
     if (S.remindersOn) {
       const hide = [...dismissedF(), ...dismissedS()];
       REMINDERS.filter((r4) => !hide.includes(r4.id)).forEach((r4) => out.push({ reminder: r4.id, html: (n4) => tl2(
@@ -42182,6 +42185,16 @@ ${s5}`;
   });
   function bootToday0159() {
     document.addEventListener("click", (e4) => {
+      const b5 = e4.target.closest("[data-tdrev]");
+      if (!b5) return;
+      e4.preventDefault();
+      const [f5, r4] = (
+        /** @type {HTMLElement} */
+        b5.dataset.tdrev.split("|")
+      );
+      tdToReviewRef(f5, r4);
+    });
+    document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-setup]");
       if (!b5) return;
       e4.preventDefault();
@@ -42371,15 +42384,7 @@ ${s5}`;
       []
     );
     void live;
-    VIPS().forEach((a5) => {
-      if (a5.kind === "proposal" || a5.kind === "note") {
-        tdl.push(followedRow(a5));
-        return;
-      }
-      if (a5.marker === "private") {
-        tdl.push(privateRow(a5));
-        return;
-      }
+    VIPCARDS().forEach((a5) => {
       if ("summary" in a5) {
         tdl.push(convRow(a5));
         return;
@@ -42423,56 +42428,48 @@ ${s5}`;
     a5.found === "start-up" ? "found on start-up" : "",
     a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", staged for Review"}` : ""
   ].filter(Boolean).join(" · ");
-  function privateRow(a5) {
-    const t47 = String(a5.title || a5.subject || "Conversation"), when2 = convWhen(a5) || String(a5.updated || "").replace("T", " ").slice(0, 16);
-    return {
-      key: "al" + a5.id,
-      kind: "message",
-      id: a5.id,
-      at: when2,
-      tag: "",
-      tone: "",
-      t: t47,
-      link: a5.link || "",
-      meta: when2 ? `updated ${whenWords(when2)}` : "",
-      acts: [{ id: "dismiss", icon: "dismiss", label: "Dismiss", name: `Dismiss: ${t47}`, data: { alertdo: "dismiss", id: a5.id } }]
-    };
-  }
+  var attnAlert = (a5) => a5.kind === "proposal" || a5.kind === "note" || a5.marker === "private";
+  var VIPCARDS = () => VIPS().filter((a5) => !attnAlert(a5));
   var refReview = (file, ref) => REV.find((x5) => x5.file === file && String(x5.ref) === String(ref) && !x5.done);
-  function followedRow(a5) {
+  var rvAttr = (
+    /** @param {any} r */
+    (r4) => `data-tdrev="${esc(String(r4.file || ""))}|${esc(String(r4.ref))}"`
+  );
+  var alWhen = (
+    /** @param {any} a */
+    (a5) => String(a5.returned || a5.sent || a5.updated || "").replace("T", " ").slice(0, 16)
+  );
+  function attnAlertItems() {
+    return VIPS().filter(attnAlert).sort((a5, b5) => alWhen(b5).localeCompare(alWhen(a5))).map((a5) => ({ alert: a5.id, html: (
+      /** @param {number} n */
+      (n4) => attnAlertHtml(n4, a5)
+    ) }));
+  }
+  function attnAlertHtml(n4, a5) {
     const refs = (
       /** @type {any[]} */
       a5.refs || []
-    ), first = refs[0] || {}, to2 = { file: String(first.file || ""), ref: first.ref }, when2 = String(a5.returned || a5.sent || a5.updated || "").replace("T", " ").slice(0, 16);
-    const t47 = String(a5.title || a5.subject || "Conversation"), dismiss2 = { id: "dismiss", icon: "dismiss", label: "Dismiss", name: `Dismiss: ${t47}`, data: { alertdo: "dismiss", id: a5.id } };
-    if (a5.marker === "private") return { key: "al" + a5.id, kind: "message", id: a5.id, at: when2, tag: "", tone: "", t: t47, link: "", to: to2, meta: when2 ? `updated ${whenWords(when2)}` : "", acts: [dismiss2] };
-    const note = a5.kind === "note", inRev = refs.filter((r4) => refReview(r4.file, r4.ref)), n4 = refs.length, proj = a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project";
-    const what = note ? inRev.length ? `A note for ${proj}'s memory, in Review` : `A note for ${proj}'s memory, staged: written at the next apply` : `${n4} proposal${n4 === 1 ? "" : "s"} in Review`;
-    const name = `From ${a5.who ?? ""}, ${t47}`, cands = refs.map((r4, i5) => {
+    ), first = refs[0] || {}, t47 = String(a5.title || a5.subject || "Conversation"), when2 = alWhen(a5);
+    const attrs = `class="alrow" data-al="${esc(a5.id)}"`, dis = (name2) => tib("dismiss", "Dismiss", name2, `data-alertdo="dismiss" data-id="${esc(a5.id)}"`);
+    if (a5.marker === "private") {
+      const ext = a5.link ? linkAnchor(a5.link, esc(t47), "t") : null;
+      return tl2(n4, ext || (first.file ? tLink(rvAttr(first), esc(t47)) : `<span class="t">${esc(t47)}</span>`), when2 ? `updated ${esc(whenWords(when2))}` : "", `<span class="tacts">${dis(`Dismiss: ${t47}`)}</span>`, attrs);
+    }
+    const note = a5.kind === "note", inRev = refs.filter((r4) => refReview(r4.file, r4.ref)), cnt = refs.length, proj = a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project";
+    const what = note ? inRev.length ? `A note for ${proj}'s memory, in Review` : `A note for ${proj}'s memory, staged: written at the next apply` : `${cnt} proposal${cnt === 1 ? "" : "s"} in Review`;
+    const lines2 = refs.map((r4) => {
       const x5 = refReview(r4.file, r4.ref);
-      return x5 ? {
-        key: `r${i5}`,
-        tag: r4.tag ? r4.tag[0].toUpperCase() + r4.tag.slice(1) : "Item",
-        t: String(x5.rec && x5.rec.t || ""),
-        sub: "",
-        acts: [{ id: "review", icon: "external", label: "Open in Review", name: `Open in Review: ${x5.rec && x5.rec.t || t47}`, data: { tdfile: String(r4.file), tdref: String(r4.ref) } }]
-      } : null;
+      return x5 ? `${esc(r4.tag ? r4.tag[0].toUpperCase() + r4.tag.slice(1) : "Item")}: ${sLink(rvAttr(r4), esc(String(x5.rec && x5.rec.t || "")))}` : "";
     }).filter(Boolean);
-    return {
-      key: "al" + a5.id,
-      kind: "message",
-      id: a5.id,
-      at: when2,
-      tag: note ? "Note" : "Proposal",
-      tone: "warn",
-      t: `From ${a5.who ?? ""}: ${t47}`,
-      link: "",
-      to: to2,
-      mark: confMark(a5),
-      meta: [what, note ? "" : proj, a5.sent ? `sent ${whenWords(String(a5.sent).replace("T", " ").slice(0, 16))}` : "", a5.returned ? "new since you dismissed it" : ""].filter(Boolean).join(" · "),
-      cands,
-      acts: [{ id: "review", icon: "external", label: "Open in Review", name: `Open in Review: ${name}`, data: { tdfile: to2.file, tdref: String(to2.ref) } }, { ...dismiss2, name: `Dismiss: ${name}` }]
-    };
+    const meta = [what, note ? "" : proj, a5.sent ? `sent ${whenWords(String(a5.sent).replace("T", " ").slice(0, 16))}` : "", confMark(a5), a5.returned ? "new since you dismissed it" : ""].filter(Boolean).map(esc).join(" · ");
+    const name = `From ${a5.who ?? ""}, ${t47}`;
+    return tl2(
+      n4,
+      tLink(rvAttr(first), esc(`From ${a5.who ?? ""}: ${t47}`)),
+      meta + (lines2.length ? `. ${lines2.join("; ")}` : ""),
+      `<span class="tacts">${tib("external", "Open in Review", `Open in Review: ${name}`, rvAttr(first))}${dis(`Dismiss: ${name}`)}</span>`,
+      attrs
+    );
   }
   function tdToReviewRef(file, ref) {
     const r4 = refReview(file, ref) || REV.find((x5) => x5.file === file && !x5.done);
@@ -42679,25 +42676,10 @@ ${s5}`;
     sec.hidden = !L3.length && !line.length;
     {
       const nw2 = $("#tdNew");
-      if (nw2) nw2.hidden = !VIPS().length;
+      if (nw2) nw2.hidden = !VIPCARDS().length;
     }
     $("#nTd").textContent = n4 ? String(n4) : "";
-    drawToDecide(body2, {
-      rows: L3,
-      line,
-      total,
-      cap: TDCAP,
-      open: EXPAND.has("td"),
-      onReview: () => go2("review"),
-      onGo: (pg2) => go2(pg2),
-      blocked: (why) => snack(why),
-      onAct: (r4, a5) => {
-        if (a5.id === "review" && a5.data) tdToReviewRef(a5.data.tdfile, a5.data.tdref);
-      },
-      onOpen: (r4) => {
-        if (r4.to) tdToReviewRef(r4.to.file, r4.to.ref);
-      }
-    });
+    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {
