@@ -99,6 +99,20 @@ def force_client_audience(doc):
         code = str(doc.get("project") or "")
         doc["project_name"] = project_name(code) if code else ""
         doc["client"] = project_client(code) if code else None
+        drop_other_projects(doc)
+    return doc
+
+
+def drop_other_projects(doc):
+    """v2.5.0 (B): a client report's rows, source tags, milestone lists and items that name another project's item are dropped, in
+    place: a client report shows its own project's items only, whatever another project lets a client see."""
+    import client_leak
+    import tracker
+    code = str(doc.get("project") or "").upper()
+    bad = {r for r in client_leak.refs(doc) if tracker.item_table(r) is not None and not str(r).upper().startswith(code + "-")}
+    if bad:
+        doc["sections"] = [client_leak._drop_section_refs(s, bad) if isinstance(s, dict) else s for s in doc.get("sections") or []]
+        doc["items"] = {k: v for k, v in (doc.get("items") or {}).items() if k not in bad}
     return doc
 
 

@@ -269,6 +269,54 @@ class Audience(unittest.TestCase):
         self.assertTrue(e["ok"], e)
         self.assert_clean_files()
 
+    # ── (B) another project's item in a client report ───────────────────────────────────────────────────────────────────
+    def other_item(self):
+        import sqlite3
+        from contextlib import closing
+        import test_reports as R
+        db = self.v.root / "system/tracker.db"
+        q = "SELECT id FROM actions WHERE project = 'DEF' AND description = 'Migrate the zephyr ledger'"
+        with closing(sqlite3.connect(db)) as con:
+            hit = con.execute(q).fetchone()
+        if not hit:
+            self.v.propose("def", [{"n": 1, "op": "new", "table": "projects", "match": "strong", "flags": [], "decision": "approved",
+                                    "values": {"code": "DEF", "name": "Other Programme"}}])
+            self.v.run("apply")
+            self.v.propose("other", [R.new("actions", 1, project="DEF", description="Migrate the zephyr ledger", owner="Omar Ali",
+                                           raised="2026-10-01", client_visible=1,
+                                           client_message=R.CLIENT_MSG.replace("statement of work", "quokka sheet"), source="s")])
+            self.v.run("apply")
+            with closing(sqlite3.connect(db)) as con:
+                hit = con.execute(q).fetchone()
+        return hit[0]
+
+    def test_another_projects_item_is_dropped_from_a_client_report(self):
+        oid = self.other_item()
+        r = self.fresh()
+        doc = r["doc"]
+        sec = next(x for x in doc["sections"] if x.get("rows"))
+        row = dict(sec["rows"][0], ref=oid, shown=True)
+        sec["rows"].append(row)
+        doc["items"][oid] = {**(doc["items"].get(sec["rows"][0]["ref"]) or {}), "id": oid, "title": "zephyr quokka",
+                             "client_message": "quokka sheet"}
+        sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+        self.assertTrue(sv["ok"], sv)
+        self.assertNotIn(oid, self.draft_file().read_text())
+        # and a draft edited on disk to hold it again
+        f = self.draft_file()
+        d = json.loads(creaite_doc.BLOCK.search(f.read_text()).group(1))
+        next(x for x in d["sections"] if x["id"] == sec["id"])["rows"].append(row)
+        d["items"][oid] = {"id": oid, "title": "zephyr quokka", "client_message": "quokka sheet"}
+        text = f.read_text()
+        m = creaite_doc.BLOCK.search(text)
+        f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+        self.assertIn(oid, f.read_text())
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+        self.assertTrue(a["ok"], a)
+        for fmt in self.formats():
+            self.assertTrue(self.export(fmt, "client", on_clash="number")["ok"], fmt)
+        self.assertEqual(self.reports_hold([oid, "zephyr", "quokka"]), {})
+
     # ── the helpers ─────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_is_client_and_force_client_audience(self):
         self.assertTrue(creaite_doc.is_client({"kind": "client", "audience": "internal"}))
