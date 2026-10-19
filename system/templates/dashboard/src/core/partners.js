@@ -11,8 +11,8 @@ export const PARTNERS_LINE_MAX = 800;         // 12 names of 60 and the separato
 export const CLIENT_NAME_LIMIT = 80;
 const PUNCT = ".,&'()-";
 
-/** The usual tidy-up of a typed name: NFC, runs of spaces made one, none at either end. Nothing else changes. @param {string} raw */
-export const cleanPartnerName = raw => String(raw == null ? "" : raw).normalize("NFC").replace(/ {2,}/g, " ").replace(/^ +| +$/g, "");
+/** The usual tidy-up of a typed name: NFC, runs of spaces made one, none at either end. Nothing else changes. @param {string} text */
+export const cleanPartnerName = text => String(text == null ? "" : text).normalize("NFC").replace(/ {2,}/g, " ").replace(/^ +| +$/g, "");
 
 /** A name's problem in plain words, or "". The name is checked as given (clean it first). @param {string} name @returns {string} */
 export function partnerNameProblem(name) {

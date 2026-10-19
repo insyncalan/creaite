@@ -12,7 +12,7 @@ import { D } from "../core/page.js";
 import { go } from "../core/nav.js";
 import { liveLines, memPath, needVault, reloadData, save, setMemLine, snack, viaServer, vq } from "../core/server.js";
 import { shared } from "../core/state.js";
-import { PARTNERS_MAX, cleanPartnerName, partnerKey, partnerNameProblem } from "../core/partners.js";
+import { PARTNERS_MAX, PARTNER_NAME_MAX, cleanPartnerName, partnerKey, partnerNameProblem } from "../core/partners.js";
 import { resolver } from "../settings.js";
 
 /** The categories, in the order the page lists them. The third is what the search matches besides the words on the page. */
@@ -89,7 +89,7 @@ export function projectPeople(code) {
 
 // ----- partner organisations
 
-export { PARTNERS_MAX, PARTNER_NAME_MAX } from "../core/partners.js";
+export { PARTNERS_MAX, PARTNER_NAME_MAX };
 /** the Partners line of the project last read */
 export const partners = signal({ code: "", list: /** @type {string[]} */ ([]), loaded: false });
 
@@ -102,8 +102,8 @@ export function partnersFrom(text) {
     if (!live[i]) continue;
     const m = lines[i].replace(/\r$/, "").match(/^[ \t]*(?:[-*][ \t]+)?\*\*Partners:\*\*[ \t]*([^\n]*?)[ \t]*(?:_\(.*\)_)?$/);
     if (!m) continue;
-    for (const raw of m[1].slice(0, 5000).split(";")) {
-      const n = cleanPartnerName(raw);
+    for (const piece of m[1].slice(0, 5000).split(";")) {
+      const n = cleanPartnerName(piece);
       if (!n || partnerNameProblem(n) || keys.has(partnerKey(n))) continue;
       keys.add(partnerKey(n)); out.push(n);
       if (out.length >= PARTNERS_MAX) return out;

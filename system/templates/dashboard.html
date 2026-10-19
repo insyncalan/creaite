@@ -31261,7 +31261,7 @@ ${s5}`;
   var PARTNERS_LINE_MAX = 800;
   var CLIENT_NAME_LIMIT = 80;
   var PUNCT = ".,&'()-";
-  var cleanPartnerName = (raw2) => String(raw2 == null ? "" : raw2).normalize("NFC").replace(/ {2,}/g, " ").replace(/^ +| +$/g, "");
+  var cleanPartnerName = (text) => String(text == null ? "" : text).normalize("NFC").replace(/ {2,}/g, " ").replace(/^ +| +$/g, "");
   function partnerNameProblem(name) {
     const t47 = String(name == null ? "" : name);
     if (!t47) return "Type the partner organisation's name.";
@@ -31398,8 +31398,8 @@ ${s5}`;
       if (!live[i5]) continue;
       const m5 = lines2[i5].replace(/\r$/, "").match(/^[ \t]*(?:[-*][ \t]+)?\*\*Partners:\*\*[ \t]*([^\n]*?)[ \t]*(?:_\(.*\)_)?$/);
       if (!m5) continue;
-      for (const raw2 of m5[1].slice(0, 5e3).split(";")) {
-        const n4 = cleanPartnerName(raw2);
+      for (const piece of m5[1].slice(0, 5e3).split(";")) {
+        const n4 = cleanPartnerName(piece);
         if (!n4 || partnerNameProblem(n4) || keys.has(partnerKey(n4))) continue;
         keys.add(partnerKey(n4));
         out.push(n4);
