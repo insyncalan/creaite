@@ -157,10 +157,24 @@ def save_route(handler, req):
     if off:
         return off
     with handler_lock(handler):
-        out = report_doc.save_draft(doc, req.get("base_version"))
+        out = report_doc.save_draft(own_header_logos(doc), req.get("base_version"))
         if out.get("ok"):
             report_doc.remember_layout(code, kind, doc.get("layout"), client)
     return answer(handler, out)
+
+
+def own_header_logos(doc):
+    """2.5.1 M1: `doc` with each header's logos re-derived from the project's own files (creaite_doc.own_logos): a posted path is
+    dropped, never stored, so a saved report names only logo files report_doc.logos knows. Which are ticked is left to the layout."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("sections"), list):
+        return doc                          # left for save_draft's own checks to refuse
+    out, secs = dict(doc), []
+    for s in doc["sections"]:
+        if isinstance(s, dict) and s.get("type") == "header" and isinstance(s.get("data"), dict) and "logos" in s["data"]:
+            s = {**s, "data": {**s["data"], "logos": creaite_doc.own_logos(doc, s, ticked=False)}}
+        secs.append(s)
+    out["sections"] = secs
+    return out
 
 
 def handler_lock(handler):
@@ -229,7 +243,7 @@ def approve_route(handler, req):
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
-            saved = report_doc.save_draft(req["doc"], req.get("base_version"))
+            saved = report_doc.save_draft(own_header_logos(req["doc"]), req.get("base_version"))
             if not saved.get("ok"):
                 return answer(handler, saved)
         if not paths.resolve(draft).is_file():

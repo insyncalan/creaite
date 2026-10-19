@@ -1062,6 +1062,28 @@ def picture_png(markup, width, height, scale=2):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def own_logos(doc, header, ticked=True):
+    """2.5.1 M1: [{kind, path}] of the logos a report's header may draw: the kinds it lists (well formed, and, when `ticked`,
+    ticked in the document's `layout.logos` if it has one), each re-derived from the project's own files by report_doc.logos. A path
+    stored in the document is never read: a hand-made or altered one can't bring any other file into an export. [] when the
+    project is unknown."""
+    import report_doc
+    code = str(doc.get("project") or "")
+    data = (header or {}).get("data") if isinstance(header, dict) else None
+    stored = data.get("logos") if isinstance(data, dict) else None
+    if not (report_doc.CODE.match(code) and isinstance(stored, list)):
+        return []
+    kinds = report_doc._logo_list([lg.get("kind") for lg in stored if isinstance(lg, dict)])
+    chosen = (doc.get("layout") or {}).get("logos") if isinstance(doc.get("layout"), dict) else None
+    try:
+        if ticked and isinstance(chosen, list):
+            on = set(report_doc.resolve_logos(code, report_doc._logo_list(chosen)))
+            kinds = [k for k in report_doc.resolve_logos(code, kinds) if k in on]
+        return report_doc.logos(code, kinds)
+    except (LookupError, OSError, ValueError):     # an unknown project or an unreadable logos folder: no logo, never a failure
+        return []
+
+
 class _Word:
     """What one Word export shares: the document, its items, the project's folder and a work folder for the pictures."""
 
@@ -1117,10 +1139,9 @@ class _Word:
     def logos(self, s):
         """The header's chosen logos as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it is."""
         one = []
-        for lg in (s.get("data") or {}).get("logos") or []:
-            f = Path(str(lg.get("path") or ""))
-            f = f if f.is_absolute() else paths.resolve(f.as_posix())
-            try:                                    # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
+        for lg in own_logos(self.doc, s):           # 2.5.1 M1: the project's own files only, never a path the document names
+            f = paths.resolve(lg["path"])
+            try:                                  # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
                 if not f.is_file() or f.is_symlink():
                     continue
                 one += self._logo_entry(f)

@@ -472,6 +472,79 @@ class Leak4(LeakPass2):
             self.assertIsNotNone(css[1], mime)
 
 
+DIRTY_SVG = ('<?xml version="1.0"?><!-- Created for Harbour pitch -->'
+             '<svg xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" '
+             'xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" '
+             'sodipodi:docname="/Users/pat/Clients/Harbour/DROP-HARBOUR-Q3-pitch.svg" width="40" height="20" viewBox="0 0 40 20">'
+             '<!-- internal: pricing uplift 30 percent next renewal -->'
+             '<title>Harbour exit plan draft</title><desc>Not for Harbour Board: renewal at risk</desc>'
+             '<metadata><rdf>Author Pat Example, internal</rdf></metadata>'
+             '<sodipodi:namedview inkscape:label="Gannet layer notes"/>'
+             '<g inkscape:label="Osprey markup" id="Layer_quokka_notes">'
+             '<text x="0" y="10" opacity="0">margin squeeze</text>'
+             '<text x="0" y="10" style="display:none">lamprey memo</text>'
+             '<g visibility="hidden"><text x="0" y="10">heron aside</text></g>'
+             '<text x="0" y="10" fill="none">plover hint</text>'
+             '<text x="0" y="10" font-size="0">ibis remark</text>'
+             '<a xlink:href="https://example.invalid/track"><rect width="4" height="4"/></a>'
+             '<defs><text>kestrel draft</text></defs><text x="-90000" y="10">puffin sum</text><script>alert(1)</script>'
+             '<image href="https://example.invalid/x.png" width="4" height="4"/><path d="M0 0 Lark 4" data-note="wren"/>'
+             '<rect width="40" height="20" fill="#06c"/></g></svg>')
+PLAIN_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20" viewBox="0 0 40 20">'
+             '<defs><linearGradient id="g1"><stop offset="0" stop-color="#06c"/><stop offset="1" stop-color="#0c6"/></linearGradient>'
+             '</defs><style>.cls-1{fill:url(#g1);}</style><rect class="cls-1" width="40" height="20"/>'
+             '<circle cx="10" cy="10" r="5" fill="#fff" stroke="#000" stroke-width="1"/>'
+             '<text x="20" y="14" font-size="9" fill="#123">Acme</text></svg>')
+SVG_SECRETS = ("Harbour", "pricing uplift", "exit plan", "renewal at risk", "Pat Example", "margin squeeze", "lamprey", "heron",
+               "plover", "ibis", "DROP-HARBOUR", "/Users/pat", "sodipodi", "inkscape", "Gannet", "Osprey", "quokka", "metadata",
+               "example.invalid", "<!--", "<title", "<desc", "kestrel", "puffin",
+               "alert", "<image", "<script", "Lark", "wren")
+
+
+class SvgLogoClean(Base):
+    """2.5.1 M2: an SVG logo in a CLIENT file is rebuilt from shapes: its comments, title, desc, metadata, editor paths, foreign
+    namespaces, text that isn't drawn, links and scripts never reach the client, while a logo of plain shapes still draws the same."""
+    TRACKER, build, client, wrap = LeakFix.TRACKER, Server.build, LeakFix.client, staticmethod(LeakFix.wrap)
+
+    def export_logo(self, svg):
+        uri = "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
+        out, why = self.build(self.client(), page(self.wrap(f'<div class="wr-logos"><span class="wr-logo"><img src="{uri}"></span></div>')))
+        self.assertIsNone(why, why)
+        body = out.split("</style>", 2)[-1]
+        pics = [base64.b64decode(m).decode("utf-8") for m in re.findall(r'data:image/svg\+xml;base64,([A-Za-z0-9+/=]+)', body)]
+        return body, pics
+
+    def test_hidden_words_in_an_svg_logo_never_reach_a_client_file(self):
+        body, pics = self.export_logo(DIRTY_SVG)
+        self.assertEqual(len(pics), 1, "the logo is still shown")
+        for gone in SVG_SECRETS:
+            self.assertNotIn(gone, pics[0], gone)
+            self.assertNotIn(gone, body, gone)
+        self.assertIn('fill="#06c"', pics[0], "its drawn shape is kept")
+
+    def test_a_plain_shape_svg_logo_is_kept_drawing_the_same(self):
+        _body, pics = self.export_logo(PLAIN_SVG)
+        self.assertEqual(len(pics), 1)
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(pics[0])
+        ns = "{http://www.w3.org/2000/svg}"
+        self.assertEqual((root.get("width"), root.get("height"), root.get("viewBox")), ("40", "20", "0 0 40 20"))
+        rect, circle, text = root.find(f"{ns}rect"), root.find(f"{ns}circle"), root.find(f"{ns}text")
+        grad = root.find(f"{ns}defs/{ns}linearGradient")
+        self.assertEqual([s.get("stop-color") for s in grad.findall(f"{ns}stop")], ["#06c", "#0c6"])
+        style = root.find(f"{ns}style").text
+        self.assertIn(f"fill:url(#{grad.get('id')})", style.replace(" ", ""), "the gradient is still referenced")
+        self.assertIn("." + rect.get("class"), style, "the class rule still styles the rectangle")
+        self.assertEqual((circle.get("r"), circle.get("fill"), circle.get("stroke")), ("5", "#fff", "#000"))
+        self.assertEqual((text.text, text.get("fill")), ("Acme", "#123"), "drawn text stays")
+
+    def test_an_internal_file_keeps_the_logo_as_it_was(self):
+        uri = "data:image/svg+xml;base64," + base64.b64encode(PLAIN_SVG.encode()).decode()
+        out, why = self.build(self.saved(), page(self.wrap(f'<div class="wr-logos"><span class="wr-logo"><img src="{uri}"></span></div>')))
+        self.assertIsNone(why, why)
+        self.assertIn(uri, out)
+
+
 class Fallback(Base):
     """Check 12: with no page, or one that fails the check, the Python renderer still gives a file and says it is plain."""
 
