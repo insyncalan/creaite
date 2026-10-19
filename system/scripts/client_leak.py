@@ -129,8 +129,9 @@ def _drop_section_refs(s, bad):
 
 def make_safe(doc, con=None):
     """(a copy of the document with every reference to an item a client may not see dropped, [why each was dropped]). An internal
-    document is returned as it is."""
-    if (doc.get("audience") or "internal") == "internal":
+    document is returned as it is; a client report is never internal, whatever its audience says (creaite_doc.is_client)."""
+    import creaite_doc
+    if not creaite_doc.is_client(doc):
         return doc, []
     con = con or connect()
     blocking = blocking_labels(con)
@@ -544,7 +545,17 @@ def doc_text(doc):
     clean = creaite_doc.clean(doc)
     raw = raw_strings(clean)
     return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) \
-        + "\n" + raw_text(raw) + _addresses(raw)
+        + "\n" + raw_text(raw) + _addresses(raw) + "\n" + header_text(clean)
+
+
+HEADER_KEYS = ("title", "project_name", "client")      # shown in the header, the page title, the Word fields and the file names
+
+
+def header_text(clean):
+    """The document's own strings that reach its file or an export outside the sections: the header fields, and the strings of
+    its meta, sources and layout (the filed file's data block holds them), one text."""
+    return "\n".join([str(clean.get(k) or "") for k in HEADER_KEYS]
+                     + _strings({k: clean.get(k) for k in ("meta", "sources", "layout") if clean.get(k)}))
 
 
 def raw_strings(clean):
@@ -816,9 +827,11 @@ def drop_item_links(code, text, con=None):
 
 def findings(doc, con=None):
     """What would leak if this client document were approved or exported: [sentence]; [] when it is safe. An internal document has
-    none."""
-    if (doc.get("audience") or "internal") == "internal":
+    none; a client report is never internal, whatever its audience says (creaite_doc.is_client)."""
+    import creaite_doc
+    if not creaite_doc.is_client(doc):
         return []
+    doc = {**doc, "audience": "client"} if doc.get("kind") == "client" else doc
     con = con or connect()
     blocking = blocking_labels(con)
     code, text = doc.get("project") or "", with_decoded(doc_text(doc))     # #127 round 4: encoded words read too
