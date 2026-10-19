@@ -341,7 +341,7 @@ class TodayBriefTests(PageTests):
         o = self.probe(self.SETUP + """
           const meet={n:1,p:"ABC",kind:"draft",why:"Draft minutes",indiv:true,file:"proposed-2026-10-05-0900.json",ref:"meeting",projects:["ABC"],rec:{t:"Draft minutes: ABC Steering"}};
           setRev([meet,...grp("proposed-2026-10-05-0900.json",2,[{}]),...grp("proposed-0000-00-01-demo.json",10,[{},{}])]);
-           D.intake_review={v:1,meetings:[],mail:{needs:[],routine:REV.map(r=>r.n)},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; go("today"); renderToday();
+           D.inbox=[]; D.intake_review={v:1,meetings:[],mail:{needs:[],routine:REV.map(r=>r.n)},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; go("today"); renderToday();
           window.OUT={attn:document.getElementById("attnList").textContent, qa:document.querySelectorAll("#attnList [data-qa]").length,
             td:(document.getElementById("tdLine")||{textContent:""}).textContent};""")
         self.assertNotIn("Review the", o["attn"])

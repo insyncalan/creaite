@@ -120,9 +120,9 @@ SCREENS = {
     "work-panel": (open_first_item, "document.getElementById('panel').classList.contains('on')", "#panel"),
     # BL-315's guesses come from /api/review/guesses, fetched when Review opens (two scripts under the server's lock): under load
     # they landed after the reads below agreed, and the "Possible match" row lost its guess. Wait for them (the sample has one).
-    "review": ("go('review')", "!document.getElementById('v-review').hidden && Object.keys(rjGuesses.value).length > 0",
+    "review": ("go('review',null,{legacy:true})", "!document.getElementById('v-review').hidden && Object.keys(rjGuesses.value).length > 0",
                "#v-review"),
-    "intake": ("go('inbox')", "!document.getElementById('v-inbox').hidden", "#v-inbox"),
+    "intake": ("go('inbox',null,{legacy:true})", "!document.getElementById('v-inbox').hidden", "#v-inbox"),
     "files": ("go('files')", "!document.getElementById('v-files').hidden", "#v-files"),
     "activity": ("go('activity')", "!document.getElementById('v-activity').hidden", "#v-activity"),
     "projects": ("go('projects')", "!document.getElementById('v-projects').hidden", "#v-projects"),

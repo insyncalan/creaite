@@ -313,7 +313,7 @@ PAGE_SCRIPT = r"""
     else addEl("msg a","No transcript was found for this meeting. Download it from Teams and drop it in the inbox."); };
   try{
     nowHM=()=>"23:59";                                          // late in the day: today's meetings have all ended
-    await checkLive(); go("inbox"); await wait(50);
+    await checkLive(); go("inbox",null,{legacy:true}); await wait(50);
     const rows=()=>[...document.querySelectorAll("#mtgBody tr[data-mid]")].map(tr=>[tr.querySelector("td.title").innerText,
       tr.querySelector("input").disabled, tr.cells[6].innerText.trim(), tr.cells[3].innerText.trim(), tr.cells[4].innerText.trim()]);
     out.read=document.getElementById("mtgRead").textContent; out.days=[...document.querySelectorAll("#mtgBody .mtgday")].map(r=>r.innerText);

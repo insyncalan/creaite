@@ -2,7 +2,7 @@
 /* core/server.js (BL-231 step 2b): vault access, the live server (`api`, `reloadData`, `applyNow`), proposals (`writeProposal`, `save`), the snackbar and undo, status, the pulse, the event stream and the debug log's error hook.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0011-vault-access-step-4b-file-system-access.js, 0012-live-server-step-4c.js, 0013-bl-253-sprint-live-updates.js, 0014-after-bl-253.js, 0015-bl-266-fix-backup-names.js, 0016-after-bl-266.js, 0017-bl-232-fix-as-proposed-capture-edits-eve.js, 0018-after-bl-232.js, 0019-live-apply-undo-snackbar.js, 0020-bl-215-sprint-ui-audit.js, 0021-after-bl-215.js, 0141-chat-and-sweep-the-open-page-refreshes-i.js, 0142-bl-253-sprint-live-updates.js, 0152-debug-log-bl-102-part-2.js */
-import { irLiveCounts } from "../stores/intakeReview.js";   /* #232-C */
+import { irLiveCounts, irModelBehind } from "../stores/intakeReview.js";   /* #232-C */
 import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";
 import { renderReports } from "../components/reporting/ReportsPage.jsx";
 import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
@@ -451,6 +451,7 @@ export async function evFlush(){ EVS.timer=null;
     $("#newChip").classList.add("on"); return; }   /* typing: after, as the pulse waits, with the chip showing that something waits */
   const prev=PULSE.pending;
   if(!await refreshRecords(ids)){ pulseCheck(); return; }
+  if(shared.VIEW==="intake-review"&&irModelBehind()) await reloadData();   /* #232-C: the quick refresh brought proposals the Intake model lacks (the counts already include them): the page being shown needs the whole data */
   if(!PULSE.stale) $("#newChip").classList.remove("on");   /* the pulse's own wait (a full reload still to come) keeps it */
   if(prev!=null&&PULSE.pending!=null&&PULSE.pending>prev){ const n=PULSE.pending-prev; snack(`${n} new item${n===1?"":"s"} in Review`); } }   /* as pulseReload says it */
 /* ===== end BL-253 ===== */

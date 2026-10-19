@@ -391,7 +391,7 @@ class CommandEnter(PeekCase):
 class Review(PeekCase):
     def test_a_proposal_opens_in_the_same_layout_with_its_footer_and_notes(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("REV.find(r=>!r.done&&r.kind==='actions'&&!r.p).n")
         b.eval(f"openProposal({n})")
@@ -448,7 +448,7 @@ class Toolbar(PeekCase):
                 self.assertLessEqual(r["right"], width, (width, menu))
                 b.key("Escape")
                 b.eval("closeDisp&&closeDisp(); document.querySelectorAll('#wfilters .ddmenu.on').forEach(m=>m.classList.remove('on'))")
-            b.eval("go('review')")
+            b.eval("go('review',null,{legacy:true})")
             b.wait("document.querySelector('#reviewBody tr[data-n]')")
             self.assertEqual(b.eval("document.querySelectorAll('.keyschip').length"), 0)
             b.click("#rvMore")

@@ -5839,7 +5839,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irLive: () => irLive,
     irLiveCounts: () => irLiveCounts,
     irMeetingOf: () => irMeetingOf,
+    irMissing: () => irMissing,
     irModel: () => irModel,
+    irModelBehind: () => irModelBehind,
     irNotNeeded: () => irNotNeeded,
     irNote: () => irNote,
     irNotes: () => irNotes,
@@ -9378,6 +9380,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     const r4 = irRow(n4);
     return !r4 || !!r4.done;
   };
+  var irMissing = () => {
+    const m5 = (
+      /** @type {any} */
+      irModel()
+    ), have = /* @__PURE__ */ new Set([
+      ...(m5.meetings || []).flatMap((x5) => [...x5.groups.needs, ...x5.groups.routine]),
+      ...["mail", "other"].flatMap((k5) => [...m5[k5].needs || [], ...m5[k5].routine || []])
+    ]);
+    return REV.filter((r4) => !r4.done && !have.has(r4.n)).map((r4) => r4.n);
+  };
+  var irModelBehind = () => irMissing().length > 0;
   var irHeld = (n4) => {
     const r4 = irRow(n4);
     return !!(r4 && r4.hold);
@@ -9437,7 +9450,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       /** @type {any} */
       (D.inbox || []).filter((f5) => f5.state === "new" && f5.uploaded !== false && !f5.event && !known2.has(f5.path)).length
     );
-    return extra ? { ...c5, arrived: c5.arrived + extra, ready: c5.ready + extra, badge: c5.badge + extra } : c5;
+    const late = irMissing().length;
+    const k5 = { ...c5, to_approve: c5.to_approve + late, badge: c5.badge + late };
+    return extra ? { ...k5, arrived: k5.arrived + extra, ready: k5.ready + extra, badge: k5.badge + extra } : k5;
   };
   var irNotes = y3(
     /** @type {Record<string, string>} */
@@ -69195,7 +69210,7 @@ ${d5.text}`);
   }
   var mPageOf = (v5) => v5 === "work" || v5 === "mine" || v5 === "person" ? "work" : v5 === "review" ? "review" : v5 === "today" ? "today" : null;
   function go2(v5, arg, opt) {
-    if (v5 === "review" || v5 === "inbox" || v5 === "intake") v5 = "intake-review";
+    if ((v5 === "review" || v5 === "inbox" || v5 === "intake") && !opt?.legacy) v5 = "intake-review";
     if (shared.RF && v5 !== "review") {
       shared.RF = null;
     }
@@ -69269,6 +69284,7 @@ ${d5.text}`);
       return true;
     })(v5, arg, opt);
     if (r4 !== false && (v5 === "files" || v5 === "inbox")) filesOpened();
+    if (r4 !== false && v5 === "intake-review" && !shared.LOADING && irModelBehind()) setTimeout(reloadData, 0);
     if (r4 !== false) helpScreenSync();
     tabTitle();
     if (!shared.LOADING) {
@@ -76685,6 +76701,7 @@ ${d5.text}`);
       pulseCheck();
       return;
     }
+    if (shared.VIEW === "intake-review" && irModelBehind()) await reloadData();
     if (!PULSE.stale) $("#newChip").classList.remove("on");
     if (prev != null && PULSE.pending != null && PULSE.pending > prev) {
       const n4 = PULSE.pending - prev;
@@ -77245,6 +77262,7 @@ ${d5.text}`);
         "irBusy",
         "irChecking",
         "irCounts",
+        "irDone",
         "irEsc",
         "irFiltered",
         "irFoldClick",
@@ -77255,6 +77273,7 @@ ${d5.text}`);
         "irKeepOpen",
         "irLive",
         "irLiveCounts",
+        "irMissing",
         "irModel",
         "irNotNeeded",
         "irNotes",

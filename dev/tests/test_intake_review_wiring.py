@@ -51,7 +51,8 @@ class Wiring(LiveBrowserCase):
                              "stage": "arrived", "state": "ready", "age": 0, "stale": False, "groups": {"needs": [], "routine": []}})
         m = {"v": 1, "meetings": meetings, "mail": {"needs": [], "routine": ns[2:3]}, "other": {"needs": [], "routine": []},
              "later": [], "not_needed": [], "counts": {}}
-        self.b.eval(f"D.intake_review={json.dumps(m)}; irTick.value++; renderBadge(); go('today')")
+        # the fixed model stands for the whole page: the sample's two inbox files (rows of the real model) go with the rows they replace
+        self.b.eval(f"D.inbox=[]; D.intake_review={json.dumps(m)}; irTick.value++; renderBadge(); go('today')")
         return ns
 
     # --- go() and the addresses ---
@@ -137,6 +138,15 @@ class Wiring(LiveBrowserCase):
         self.assertEqual(sum(o["subNums"]), o["badge"], o["sub"])
         self.assertTrue(o["title"].endswith("Intake and Review (%d)" % o["badge"]), o["title"])
 
+    def test_the_real_model_counts_each_file_once(self):
+        """p250-d puts a waiting upload in the model as a row; 232-C's extra-file count must not add it a second time."""
+        o = self.b.eval("""(()=>{ const m=irModel(), rows=m.meetings.filter(x=>x.src==='upload').length,
+          files=(D.inbox||[]).filter(f=>f.state==='new'&&f.uploaded!==false&&!f.event).length;
+          return {rows, files, arrived:irLiveCounts().arrived, fromModel:irCounts(m, irDone).arrived}; })()""")
+        self.assertGreaterEqual(o["files"], 1, "the sample has a waiting file")
+        self.assertEqual(o["rows"], o["files"], o)
+        self.assertEqual(o["arrived"], o["fromModel"], o)
+
     def test_they_agree_after_a_decision(self):
         b = self.b
         ns = self.model(ready=1)
@@ -151,7 +161,7 @@ class Wiring(LiveBrowserCase):
 
     def test_nothing_waiting_no_badge_no_line(self):
         b = self.b
-        b.eval("D.intake_review={v:1,meetings:[],mail:{needs:[],routine:[]},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; REV.forEach(r=>r.done=true); irTick.value++; renderBadge(); renderToday()")
+        b.eval("D.inbox=[]; D.intake_review={v:1,meetings:[],mail:{needs:[],routine:[]},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; REV.forEach(r=>r.done=true); irTick.value++; renderBadge(); renderToday()")
         self.assertEqual(b.eval("irLiveCounts().badge"), 0)
         self.assertEqual(b.eval("document.querySelectorAll('#tdLine a').length"), 0)
         self.assertIn(b.eval("document.querySelector('#revBadge')?.textContent.trim()||''"), ("", "0"))

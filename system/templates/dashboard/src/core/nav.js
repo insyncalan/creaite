@@ -10,7 +10,7 @@ import { mFirst, mLeave } from "./motion.js";
 import { curDrop } from "./editor.js";
 import { cardGroup, menuGroup } from "./hover.js";
 import { anim, DATE, mScroll, reduced, store } from "./page.js";
-import { snack } from "./server.js";
+import { reloadData, snack } from "./server.js";
 import { shared } from "./state.js";
 import { setRailView } from "../stores/rail.js";
 import { filesOpened, renderFiles } from "../files.js";
@@ -36,7 +36,7 @@ import { openRecord, pkNewAsk, pkNewTitle } from "../panel.js";
 import { askDiscard, closePanel, curGuard, PKN, renderCockpit, renderProjects } from "../projects.js";
 import { renderReview } from "../review.js";
 import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";   /* #232 */
-import { irLiveCounts, irPlace, irStage, irOpen, irTarget } from "../stores/intakeReview.js";   /* #232-C: the badge, the address and the links */
+import { irLiveCounts, irModelBehind, irPlace, irStage, irOpen, irTarget } from "../stores/intakeReview.js";   /* #232-C: the badge, the address and the links */
 import { rjCloseMenu, rjLeave } from "../stores/rejects.js";
 import { BASETITLE, PERS, renderPerson, renderSettings, setResolve, sw, VIPS } from "../settings.js";
 import { renderToday, SETUPK } from "../today.js";
@@ -131,7 +131,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
   if(st.item){ const k=st.item.k; if(st.v==="work"&&shared.WT!==k&&shared.WT!=="all"){ shared.WT=k; renderWork(); }   /* BL-134: All items opens the item where it is */ openRecord(k,st.item.id); }
   const sc=st.scroll||0; requestAnimationFrame(()=>{ const el=viewEl(); if(el) el.scrollTop=sc; }); shared.NAVSTATE=navState(); shared.NAVSTATE.scroll=sc; }
 export const mPageOf=v=>v==="work"||v==="mine"||v==="person"?"work":v==="review"?"review":v==="today"?"today":null;   /* declared before go, which runs at load */
-export function go(v,arg,opt){ if(v==="review"||v==="inbox"||v==="intake") v="intake-review";   /* #232-C: the old pages are gone; their names still work */
+export function go(v,arg,opt){ if((v==="review"||v==="inbox"||v==="intake")&&!opt?.legacy) v="intake-review";   /* #232-C: their names open the one page; {legacy:true} (Z0) still draws the old page until the old pages are retired (C2), so the tests that read them keep running */
   if(shared.RF&&v!=="review"){ shared.RF=null; }   /* BL-206 */
   if(v==="weekly"||v==="clientreport"){ const a=typeof arg==="string"?(v==="weekly"?parseWeekly(arg):parseKey(arg)):arg; if(!a||!a.code||!P.some(p=>p.code===a.code)) return false; spaceWeek.value=a.week||""; hubView.value=v==="clientreport"?"client":"internal"; v="reporting"; arg=a.code; }   /* #221: the weekly and client report pages are retired; their names open the hub */
   if(v==="psettings"&&(!arg||!P.some(p=>p.code===arg))) return false;   /* #228 */
@@ -157,6 +157,7 @@ export function go(v,arg,opt){ if(v==="review"||v==="inbox"||v==="intake") v="in
   ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,"intake-review":renderIntakeReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg,true),psettings:()=>renderProjectSettings(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
+  if(r!==false&&v==="intake-review"&&!shared.LOADING&&irModelBehind()) setTimeout(reloadData,0);   /* #232-C: proposals the quick refresh brought in since the model was built */
   if(r!==false) helpScreenSync();   /* #158: the foot line and the first-visit line are in place with the page, so nothing shifts afterwards */
   tabTitle();
   if(!shared.LOADING){ if(r!==false&&shared.VIEW!==from&&!reduced()){ const el=$$(".view").find(x=>!x.hidden); if(el) anim(el,[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:200}); mFirst(shared.VIEW); }   /* BL-263: the page fades in */

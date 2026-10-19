@@ -124,7 +124,7 @@ class ClearDayPage:
 
     def go_intake(self):
         b = self.b
-        b.eval("go('inbox')")
+        b.eval("go('inbox',null,{legacy:true})")
         b.wait("document.querySelector('#mtgBody tr[data-mid]')")
         return b
 
@@ -177,7 +177,7 @@ class ClearDayPage:
         self.assertEqual(before, processed.read_text() if processed.exists() else None)            # not processed
         # after a refresh of the page and after the sweep re-reads the calendar, they are still gone
         b.reload("typeof go==='function' && LIVE")
-        b.eval("go('inbox')")
+        b.eval("go('inbox',null,{legacy:true})")
         b.wait("document.getElementById('mtgBody').textContent.length>0")
         self.assertNotIn("ABC Steering", self.titles())
         cal = json.loads((self.v.root / "system/staging/calendar.json").read_text())

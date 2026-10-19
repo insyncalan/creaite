@@ -396,12 +396,21 @@ class SelfRefresh(LiveBrowserCase):
         self.b.wait("PULSE.v!=null")
         self.snacks()
         before = self.b.eval("REV.length")
+        badge = int(self.b.eval("document.getElementById('revBadge').textContent"))      # #232-C: files ready plus proposals to approve
         stage_sweep(self.v.root, "Chase the signed approval", "Book the workshop room", "Send the revised plan")
         self.b.wait(self.review_has("Chase the signed approval"), timeout=15)
         self.assertEqual(self.b.eval("REV.length"), before + 3)
-        self.assertEqual(self.b.eval("document.getElementById('revBadge').textContent"), str(before + 3))
+        self.assertEqual(self.b.eval("document.getElementById('revBadge').textContent"), str(badge + 3))   # the three new proposals, at once
         self.b.wait("SNACKS.includes('3 new items in Review')", timeout=5)
         self.assertFalse(self.b.eval("document.getElementById('newChip').classList.contains('on')"))
+
+    def test_intake_shows_a_sweep_staged_while_it_is_open(self):
+        """#232-C: the quick refresh brings Review's new proposals but not the Intake model; the page being shown reloads the data."""
+        self.b.wait("PULSE.v!=null")
+        self.b.eval("go('intake-review')")
+        stage_sweep(self.v.root, "Chase the signed approval")
+        self.b.wait("document.querySelector('#v-intake-review').textContent.includes('Chase the signed approval')", timeout=15)
+        self.assertEqual(self.b.eval("irMissing().length"), 0)
 
     def test_an_open_form_is_not_disturbed_and_a_chip_waits(self):
         self.b.wait("PULSE.v!=null")

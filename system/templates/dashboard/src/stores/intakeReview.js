@@ -23,6 +23,15 @@ export const irModel = () => /** @type {any} */ (D).intake_review || { meetings:
 export const irRow = n => REV.find(r => r.n === n) || null;
 /** @param {number} n */
 export const irDone = n => { const r = irRow(n); return !r || !!r.done; };   /* gone from D.review: decided elsewhere */
+/** The open proposals Review holds that the model does not (a sweep staged them since the model was built: the quick refresh after
+    a tracker or Review event brings D.review but not D.intake_review). The counts include them at once; the page, when it is
+    shown, reloads the data to draw them (core/server.js evFlush, core/nav.js go). @returns {number[]} */
+export const irMissing = () => {
+  const m = /** @type {any} */ (irModel()), have = new Set([...(m.meetings || []).flatMap((/** @type {any} */ x) => [...x.groups.needs, ...x.groups.routine]),
+    ...["mail", "other"].flatMap(k => [...(m[k].needs || []), ...(m[k].routine || [])])]);
+  return REV.filter(r => !r.done && !have.has(r.n)).map(r => r.n);
+};
+export const irModelBehind = () => irMissing().length > 0;
 /** Whether proposal n now has a hold (a peek edit made it a new risk, say): the groups move it from Routine to Needs. @param {number} n */
 export const irHeld = n => { const r = irRow(n); return !!(r && r.hold); };
 
@@ -53,7 +62,9 @@ export const irLiveCounts = () => {
   /* #232-C: a file that arrived since the model was built (the quicker file refresh does not rebuild it) counts at once, as the
      Intake badge did; a transcript Calendar import loaded belongs to its meeting's row */
   const extra = (/** @type {any} */ (D).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !known.has(f.path)).length;
-  return extra ? { ...c, arrived: c.arrived + extra, ready: c.ready + extra, badge: c.badge + extra } : c;
+  const late = irMissing().length;   /* proposals the quick refresh brought into Review before the model was rebuilt */
+  const k = { ...c, to_approve: c.to_approve + late, badge: c.badge + late };
+  return extra ? { ...k, arrived: k.arrived + extra, ready: k.ready + extra, badge: k.badge + extra } : k;
 };
 
 /* ===== #232-A (Intake side) ===== signals for the meeting row's actions; the actions themselves are in
