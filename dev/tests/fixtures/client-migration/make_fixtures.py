@@ -13,6 +13,8 @@ It starts that tree's live server in a throwaway vault (its own test harness), m
   client-filed-edited.html      the same file hand-edited on disk (one shown section names a hidden action, its owner, "confidential")
   word-client-report.docx       report.py client-stage's Word draft, and its proposal (word-client-report.proposal.json)
   steerco-client.docx           report.py steerco-stage --version client's Word draft, and its proposal (steerco-client.proposal.json)
+  gate-word-client-report.docx  report.py client-stage's Word draft (and gate-word-client-report.proposal.json) in the vault of
+                                test_client_gate's fixture (client_gate_support.Base: the internal health reason, project DEF)
   MANIFEST.json                 the source tree's VERSION, the commit given, each file's SHA-256
 """
 import hashlib
@@ -33,6 +35,29 @@ CLIENT_STEM = "2026-10-09 Client report - Example Programme (Example Client Ltd)
 class Make(T.ReportRoutes):
     def runTest(self):
         pass
+
+
+def gate_fixture():
+    """The older Word client report as 2.5.0's client-stage made it in test_client_gate's vault (client_gate_support.Base)."""
+    import client_gate_support as G
+
+    class B(G.Base):
+        def runTest(self):
+            pass
+    b = B()
+    b.setUp()
+    try:
+        spec = b.v.root / "system/staging/drafts/client.json"
+        spec.write_text(json.dumps({"code": "ABC", "summary": ["Phase two is being prepared."], "progress": ["Plan revised"],
+                                    "next_steps": ["Sign the statement of work"], "input_needed": ["Signature by 16-10"],
+                                    "period_start": "2026-10-01"}), encoding="utf-8")
+        b.v.at("client-stage", str(spec), script="report.py")
+        prop = next((b.v.root / "system/staging").glob("proposed-*-client-ABC.json"))
+        data = json.loads(prop.read_text(encoding="utf-8"))
+        return {"gate-word-client-report.docx": (b.v.root / data["report"]["draft"]).read_bytes(),
+                "gate-word-client-report.proposal.json": prop.read_bytes()}
+    finally:
+        b.tearDown()
 
 
 def main():
@@ -76,6 +101,7 @@ def main():
             data = json.loads(prop.read_text(encoding="utf-8"))
             out[f"{name}.docx"] = (v.root / data["report"]["draft"]).read_bytes()
             out[f"{name}.proposal.json"] = prop.read_bytes()
+        out.update(gate_fixture())
         version = (OLD / "VERSION").read_text().strip()
         for n, b in out.items():
             (HERE / n).write_bytes(b)
