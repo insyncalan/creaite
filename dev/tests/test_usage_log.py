@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import usage_log  # noqa: E402
+import usage_report  # noqa: E402
 from usage_fixture import CONTEXT, POISON  # noqa: E402
 
 ALLOWED = {"date", "file", "bytes", "tokens"}
@@ -197,8 +198,8 @@ class Alarm(unittest.TestCase):
         def boom(*_):
             raise AssertionError("measure hung: it opened something that never answers")
         self._old = signal.signal(signal.SIGALRM, boom)
-        signal.alarm(15)
-        self.addCleanup(lambda: (signal.alarm(0), signal.signal(signal.SIGALRM, self._old)))
+        signal.setitimer(signal.ITIMER_REAL, 15, 3)        # repeats: code that swallows the first alarm (daily) can't hang the suite
+        self.addCleanup(lambda: (signal.setitimer(signal.ITIMER_REAL, 0), signal.signal(signal.SIGALRM, self._old)))
         self.t = tempfile.TemporaryDirectory()
         self.addCleanup(self.t.cleanup)
         self.root = make_vault(Path(self.t.name))
@@ -280,6 +281,127 @@ class Hardened(Alarm):
         text = "---\nname: cx-one\ndescription: Short.\n---\n\nbody"
         (d / "SKILL.md").write_text(text)
         self.assertEqual(usage_log._front_matter_size(d / "SKILL.md"), len("---\nname: cx-one\ndescription: Short.\n---"))
+
+
+class RecordFiles(Alarm):
+    """#238 review: the two record files (run-usage.jsonl, context-size.jsonl) are read bounded, as regular files only, per line."""
+
+    GOOD = '{"date":"2026-10-19","file":"%s","bytes":5,"tokens":1}\n'
+    RUN = '{"at":"2026-10-19T09:00:00","kind":"ask","cost_usd":0.5}\n'
+
+    def setUp(self):
+        super().setUp()
+        self.ctx = self.root / "system" / "staging" / "context-size.jsonl"
+        self.run = self.root / "system" / "staging" / "run-usage.jsonl"
+
+    def test_a_fifo_reads_as_empty_and_never_hangs(self):
+        os.mkfifo(self.ctx)
+        os.mkfifo(self.run)
+        self.assertEqual(usage_log.read(self.ctx), [])
+        self.assertEqual(usage_report.load(self.run), [])
+        self.assertEqual(usage_log.read_lines(self.ctx), [])
+
+    def test_daily_and_append_leave_a_fifo_alone(self):
+        import time
+        os.mkfifo(self.ctx)
+        t0 = time.monotonic()
+        self.addCleanup(lambda: self.assertLess(time.monotonic() - t0, 5, "append or daily waited on the FIFO"))      # the alarm is swallowed inside
+        self.assertEqual(usage_log.append([{"date": "2026-10-19", "file": "rules", "bytes": 5, "tokens": 1}], root=self.root), 0)
+        self.assertEqual(usage_log.daily(root=self.root, today="2026-10-19"), [])
+
+    def test_a_directory_or_a_link_reads_as_empty(self):
+        self.ctx.mkdir()
+        self.assertEqual(usage_log.read(self.ctx), [])
+        real = self.root / "real.jsonl"
+        real.write_text(self.RUN)
+        os.symlink(real, self.run)
+        self.assertEqual(usage_report.load(self.run), [])
+
+    def _sparse(self, f, head, tail, size):
+        with open(f, "wb") as fh:
+            fh.write(head)
+            fh.truncate(size)                       # sparse: the middle is nothing but zeros
+        with open(f, "ab") as fh:
+            fh.write(b"\n" + tail)                  # the zeros end the way a cut line would; the recent lines follow
+
+    def test_a_huge_sparse_file_is_read_only_up_to_the_cap_and_keeps_the_recent_lines(self):
+        import tracemalloc
+        cap = 1024 * 1024
+        self._sparse(self.run, self.RUN.encode(), (self.RUN.replace("0.5", "0.7") * 3).encode(), 300 * 10 ** 6)
+        self._sparse(self.ctx, (self.GOOD % "rules").encode(), (self.GOOD % "memory").encode(), 300 * 10 ** 6)
+        read, real = [], os.pread
+
+        def counting(fd, n, off):
+            data = real(fd, n, off)
+            read.append(len(data))
+            return data
+        tracemalloc.start()
+        try:
+            with mock.patch.object(usage_log, "MAX_READ", cap), mock.patch.object(usage_log.os, "pread", counting):
+                runs, ctx = usage_report.load(self.run), usage_log.read(self.ctx)
+            peak = tracemalloc.get_traced_memory()[1]
+        finally:
+            tracemalloc.stop()
+        self.assertEqual([r["cost_usd"] for r in runs], [0.7] * 3)          # the old line is beyond the cap, the recent ones survive
+        self.assertEqual([r["file"] for r in ctx], ["memory"])
+        self.assertLessEqual(sum(read), 2 * cap)
+        self.assertLess(peak, 20 * cap)
+
+    def test_the_cap_is_documented_and_sane(self):
+        self.assertTrue(1024 * 1024 <= usage_log.MAX_READ <= 64 * 1024 * 1024)
+
+    def test_one_bad_byte_loses_only_its_own_line(self):
+        self.ctx.write_bytes(b"\xff\n" + (self.GOOD % "rules").encode() + b'{"date":"2026-10-19","file":"memory","bytes":5,"tokens":1,"x":"\xff"}\n')
+        self.run.write_bytes(b"\xff\n" + self.RUN.encode() + b"\xfe\xfd\n" + self.RUN.encode())
+        self.assertEqual([r["file"] for r in usage_log.read(self.ctx)], ["rules", "memory"])
+        self.assertEqual(len(usage_report.load(self.run)), 2)
+
+    def test_daily_does_not_append_again_when_the_file_holds_a_bad_byte(self):
+        body = b"\xff\n" + "".join(self.GOOD % f for f in ("rules", "claude_md", "memory", "skills")).encode()
+        self.ctx.write_bytes(body)
+        for _ in range(2):
+            self.assertEqual(usage_log.daily(root=self.root, today="2026-10-19"), [])
+        self.assertEqual(self.ctx.read_bytes(), body)
+
+
+class Review(Alarm):
+    """#238 review: a link to the outside, a link as a skill folder, a huge cost and a future date."""
+
+    def skills_bytes(self):
+        return self.rows()["skills"]["bytes"]
+
+    def test_a_skill_md_that_links_outside_the_vault_counts_zero(self):
+        base = self.skills_bytes()
+        outside = Path(self.t.name + "-outside.md")
+        outside.write_text("---\nname: cx-out\ndescription: " + "x" * 200 + "\n---\n")
+        self.addCleanup(outside.unlink)
+        d = self.root / ".claude" / "skills" / "cx-link"
+        d.mkdir(parents=True)
+        os.symlink(outside, d / "SKILL.md")
+        self.assertEqual(usage_log._front_matter_size(d / "SKILL.md", self.root), 0)
+        self.assertEqual(self.skills_bytes(), base)
+
+    def test_a_skill_folder_that_is_a_link_is_not_followed(self):
+        base = self.skills_bytes()
+        out = Path(self.t.name + "-outdir")
+        out.mkdir()
+        self.addCleanup(lambda: [p.unlink() for p in out.iterdir()] and out.rmdir() or (out.exists() and out.rmdir()))
+        (out / "SKILL.md").write_text("---\nname: cx-out\ndescription: " + "x" * 200 + "\n---\n")
+        skills = self.root / ".claude" / "skills"
+        os.symlink(out, skills / "outdir")                         # leaves the vault
+        os.symlink(skills / "cx-edit", skills / "cx-inside")       # stays in the vault, still a link
+        self.assertEqual(self.skills_bytes(), base)
+
+    def test_a_huge_finite_cost_is_clamped(self):
+        self.assertEqual(usage_log._money(1e300), float(usage_log.MAX_COUNT))
+        self.assertEqual(usage_log._money(-1e300), 0.0)
+        line = usage_log.line_for("ask", {"total_cost_usd": 1e300})
+        self.assertEqual(line["cost_usd"], float(usage_log.MAX_COUNT))
+
+    def test_days_since_is_never_negative_for_a_future_line(self):
+        rows = [{"at": "2026-10-25T09:00:00", "kind": "ask", "skills": ["cx-edit"]}]
+        t = usage_report.skills_table(rows, days=7, today=__import__("datetime").date(2026, 10, 19), skills_dir=self.root / ".claude" / "skills")
+        self.assertEqual({s["skill"]: s["days_since"] for s in t}["cx-edit"], 0)
 
 
 class Rows(unittest.TestCase):

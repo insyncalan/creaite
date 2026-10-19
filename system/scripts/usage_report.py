@@ -17,17 +17,18 @@ import paths  # noqa: E402
 
 
 def load(path=None) -> list:
-    """The lines of the file; a broken line is skipped."""
+    """The lines of the file; a broken line (or one with a bad byte) is skipped. Only the file's last 8 MB are read, and a file that
+    isn't a regular file reads as empty (usage_log.read_lines)."""
+    import usage_log
     f = Path(path) if path else paths.RUN_USAGE
     rows = []
-    if f.exists():
-        for ln in f.read_text(encoding="utf-8").splitlines():
-            try:
-                r = json.loads(ln)
-                if isinstance(r, dict) and r.get("at"):
-                    rows.append(r)
-            except ValueError:      # a broken line is skipped
-                continue
+    for ln in usage_log.read_lines(f):
+        try:
+            r = json.loads(ln)
+            if isinstance(r, dict) and r.get("at"):
+                rows.append(r)
+        except ValueError:      # a broken line is skipped
+            continue
     return rows
 
 
@@ -88,7 +89,7 @@ def skills_table(all_rows, days=7, today=None, skills_dir=None) -> list:
     for name in skill_names(skills_dir):
         seen.setdefault(name, {"runs": 0, "ever": 0, "last": ""})
     out = [{"skill": n, "runs": s["runs"], "ever": s["ever"],
-            "days_since": (today - datetime.strptime(s["last"], "%Y-%m-%d").date()).days if s["last"] else None}
+            "days_since": max(0, (today - datetime.strptime(s["last"], "%Y-%m-%d").date()).days) if s["last"] else None}
            for n, s in seen.items()]
     out.sort(key=lambda s: (s["days_since"] is None,s["days_since"] or 0, s["skill"]))
     return out

@@ -242,6 +242,41 @@ def _size(path, vault=None) -> int:
     return st.st_size if st else 0
 
 
+MAX_READ = 8 * 1024 * 1024      # the most of a record file read: its last 8 MB (the recent lines; about 40,000 usage lines), never more
+
+
+def read_lines(path, cap=None) -> list:
+    """The text lines of a record file (run-usage.jsonl, context-size.jsonl), safe against an odd file. A file that is not a regular
+    file (a FIFO, a device, a folder, a link of any kind) or can't be read is empty, and nothing blocks (checked first, opened
+    non-blocking). At most `cap` bytes (MAX_READ) are read, from the END, so the recent lines survive a huge file; a cut first
+    line is dropped. Each line is decoded on its own (errors="replace"), so one bad byte spoils only its own line."""
+    cap = MAX_READ if cap is None else cap
+    st = _regular(path)
+    if not st:
+        return []
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        return []
+    try:
+        start = max(0, st.st_size - cap)
+        chunks, got = [], 0
+        while got < min(cap, st.st_size):
+            b = os.pread(fd, min(cap, st.st_size) - got, start + got)
+            if not b:
+                break
+            chunks.append(b)
+            got += len(b)
+    except OSError:
+        return []
+    finally:
+        os.close(fd)
+    parts = b"".join(chunks).split(b"\n")
+    if start:
+        parts = parts[1:]           # the first line is probably cut in half
+    return [x.decode("utf-8", errors="replace") for x in parts if x.strip()]
+
+
 def _front_matter_size(path, vault=None) -> int:
     """Bytes of a skill's front matter (its name and description, between the first two --- lines): what is loaded before the skill
     is called. 0 when it isn't a regular file, can't be read, has none, or doesn't close within FRONT_MAX bytes. At most FRONT_MAX
@@ -292,8 +327,11 @@ def measure(vault=None, today=None) -> list:
     day = str(today or _now().strftime("%Y-%m-%d"))
     skills = vault / ".claude" / "skills"
     try:
-        skill_files = sorted(skills.glob("*/SKILL.md"))
-    except OSError:
+        root = vault.resolve()
+        # a skill folder that is a link (or resolves outside the vault) is skipped, not followed
+        skill_files = sorted(f for f in skills.glob("*/SKILL.md")
+                             if not f.parent.is_symlink() and f.parent.resolve().is_relative_to(root))
+    except (OSError, RuntimeError):
         skill_files = []
     sizes = {"rules": _size(vault / "system" / "creaite-rules.md", vault),
              "claude_md": _size(vault / "CLAUDE.md", vault),
@@ -328,11 +366,7 @@ def read(path=None) -> list:
     """The rows of the file, cleaned (see _clean_row). A missing file is empty; a line that isn't JSON, or isn't a valid row, is skipped."""
     f = Path(path) if path else paths.CONTEXT_SIZE
     rows = []
-    try:
-        lines = f.read_text(encoding="utf-8").splitlines()
-    except (OSError, UnicodeDecodeError):
-        return rows
-    for ln in lines:
+    for ln in read_lines(f):
         try:
             row = _clean_row(json.loads(ln))
         except ValueError:
@@ -372,6 +406,8 @@ def append(rows, root=None) -> int:
                 new.append(c)
         if not new:
             return 0
+        if os.path.lexists(f) and not _regular(f):
+            return 0            # a FIFO or other odd file: opening it for writing could wait for ever
         f.parent.mkdir(parents=True, exist_ok=True)
         lead = "\n" if _lacks_final_newline(f) else ""        # a torn last line must not absorb the next row
         fd = os.open(f, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)       # private: counts about the vault, for Alan only
