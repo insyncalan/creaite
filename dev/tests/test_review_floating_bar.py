@@ -29,7 +29,7 @@ class FloatingBar(LiveBrowserCase):
     def open_review(self, width):
         b = self.b
         b.resize(width, 640)
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         return b
 
@@ -79,26 +79,26 @@ class FloatingBar(LiveBrowserCase):
         return b.eval("(()=>{ const v=document.getElementById('v-review'), r=v.getBoundingClientRect(), a=document.getElementById('rvbar').getBoundingClientRect();"
                       " return Math.abs((a.left+a.right)/2-(r.left+v.clientWidth/2)) })()")
 
-    def settle(self, b):
+    def settle_bar(self, b):
         b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,150))))")
 
     def redock(self, width):
         b = self.open_review(width)
         ns = b.eval("REV.filter(r=>!r.done&&rvBulkOK(r)).map(r=>r.n)")
         self.select(ns[:3])
-        self.settle(b)
+        self.settle_bar(b)
         self.assertLessEqual(self.centred(b), 1)
         w0 = b.eval("document.getElementById('v-review').clientWidth")
         b.eval("document.getElementById('railTog').click()")                    # collapse (or widen) the sidebar: the column changes
-        self.settle(b)
+        self.settle_bar(b)
         if width > 1000:                          # at 900 the rail is already narrow and the toggle does nothing
             self.assertNotEqual(w0, b.eval("document.getElementById('v-review').clientWidth"))   # the column really moved
         self.assertLessEqual(self.centred(b), 1)
         b.eval("document.getElementById('railTog').click()")
-        self.settle(b)
+        self.settle_bar(b)
         self.assertLessEqual(self.centred(b), 1)
         b.eval("document.getElementById('askBtn').click()")                      # the ask creaite panel shifts the shell
-        self.settle(b)
+        self.settle_bar(b)
         self.assertLessEqual(self.centred(b), 1)
         b.eval("document.getElementById('chat').classList.remove('on')")
         self.select([])
@@ -114,14 +114,14 @@ class FloatingBar(LiveBrowserCase):
         b = self.open_review(width)
         ns = b.eval("REV.filter(r=>!r.done&&rvBulkOK(r)).map(r=>r.n)")
         snack = "document.querySelector('.snack').getBoundingClientRect().bottom"
-        b.eval("snack('Probe toast')"); self.settle(b)
+        b.eval("snack('Probe toast')"); self.settle_bar(b)
         base = b.eval(snack)
         self.assertEqual(base, b.eval("innerHeight") - 20)                      # no selection: where it was
-        self.select(ns[:3]); self.settle(b)
-        b.eval("(()=>{ const i=document.getElementById('rvDate'); i.value='31-02-2026'; i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); })()"); self.settle(b)
+        self.select(ns[:3]); self.settle_bar(b)
+        b.eval("(()=>{ const i=document.getElementById('rvDate'); i.value='31-02-2026'; i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); })()"); self.settle_bar(b)
         self.assertTrue(b.eval("document.querySelector('.snack').classList.contains('on')"))
         self.assertLessEqual(b.eval(snack), b.eval(BAR)["top"])                 # clear of the bar
-        self.select([]); b.eval("snack('Probe toast')"); self.settle(b)
+        self.select([]); b.eval("snack('Probe toast')"); self.settle_bar(b)
         self.assertEqual(b.eval(snack), base)
         self.assertEqual(b.errors, [])
 
@@ -134,7 +134,7 @@ class FloatingBar(LiveBrowserCase):
     def test_clear_x_on_first_row_900(self):
         b = self.open_review(900)
         ns = b.eval("REV.filter(r=>!r.done&&rvBulkOK(r)).map(r=>r.n)")
-        self.select(ns[:3]); self.settle(b)
+        self.select(ns[:3]); self.settle_bar(b)
         x = b.eval("document.getElementById('rvClear').getBoundingClientRect().top")
         bar = b.eval(BAR)
         self.assertLess(x, bar["top"] + 50)

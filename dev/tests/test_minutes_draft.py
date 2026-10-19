@@ -173,7 +173,7 @@ SCRIPT = r"""
   const wait=ms=>new Promise(r=>setTimeout(r,ms)), out={errors:[],opened:[],snacks:[]};
   try{
     await wait(300); openPath=p=>out.opened.push(p); snack=m=>out.snacks.push(m);
-    go("review"); await wait(100);
+    go("review",null,{legacy:true}); await wait(100);
     const r=REV.find(x=>x.kind==="draft"&&x.ref==="meeting"), tr=document.querySelector(`#reviewBody tr[data-n="${r.n}"]`);
     const b=tr.querySelector('[data-act="e"]'); out.button=(b.getAttribute("title")||"")+" "+(b.getAttribute("aria-label")||"")+" "+b.textContent;
     out.row=tr.textContent.replace(/\s+/g," "); const src=tr.querySelector("[data-openfile]"); out.source=src?src.dataset.openfile:null;
@@ -301,7 +301,7 @@ APPROVE_SCRIPT = r"""
   const wait=ms=>new Promise(r=>setTimeout(r,ms)), out={errors:[],snacks:[],edits:0};
   try{
     await wait(300); snack=m=>out.snacks.push(m); editProposal=async()=>{ out.edits++; };
-    go("review"); await wait(100);
+    go("review",null,{legacy:true}); await wait(100);
     const r=REV.find(x=>x.kind==="draft"&&x.ref==="meeting"), tr=document.querySelector(`#reviewBody tr[data-n="${r.n}"]`);
     const b=tr.querySelector('[data-act="a"]'); out.disabled=b.disabled; out.title=b.getAttribute("title")||"";
     out.rejectOn=!tr.querySelector('[data-act="r"]').disabled;

@@ -77,7 +77,7 @@ SCRIPT = r"""
       out.gen=[htmlToMd(document.getElementById("curEd")),document.querySelector("#v-cockpit .gensrc")?.textContent||"",CURED&&CURED.dirty];
       document.querySelector("[data-cure=cancel]").click(); document.querySelector('[data-dis="go"]').click(); }
     // BL-42: the Inbox lists files with state; Select new picks only new ones
-    go("inbox"); out.inboxRows=[...document.querySelectorAll("#inboxTbl tbody tr[data-inf]")].length; document.getElementById("inboxNew").click();
+    go("inbox",null,{legacy:true}); out.inboxRows=[...document.querySelectorAll("#inboxTbl tbody tr[data-inf]")].length; document.getElementById("inboxNew").click();
     out.inboxBtns=[...document.querySelectorAll("#inboxTbl tbody tr[data-inf] button")].map(b=>b.getAttribute("aria-label")).slice(0,2);   /* BL-161: icons, named */
     out.inboxSel=[INSEL.size,(D.inbox||[]).filter(f=>f.state==="new").length,document.getElementById("inboxGo").textContent,location.hash]; INSEL.clear();
     // BL-62: Work filters behave
@@ -416,7 +416,7 @@ class DashboardEditingTests(unittest.TestCase):
         self.assertGreaterEqual(rows, 1)
         self.assertEqual(sel, new)
         self.assertEqual(label, f"Process {new} selected")
-        self.assertEqual(hash_, "#intake")          # BL-70: the new address; #inbox still opens it (test_today_brief.py)
+        self.assertEqual(hash_, "#intake-review")   # #232-C: the one page's address; #intake and #inbox still open it (test_intake_review_wiring.py)
         self.assertEqual(self.result["inboxBtns"], ["Preview", "Remove from Intake"])
 
     def test_work_filters_fixed(self):
@@ -431,7 +431,7 @@ class DashboardEditingTests(unittest.TestCase):
 
     def test_command_palette_reaches_everything(self):
         go, views, acts, ms, files, inbox = self.result["ck"]
-        self.assertIn("Go to|Intake", go)
+        self.assertIn("Go to|Intake and Review", go)   # #232-C: one entry for the one page
         self.assertIn("Go to|Your commitments", go)
         self.assertIn("Views|Actions: Overdue", views)
         self.assertEqual(sorted(acts), ["Actions|Edit current state: ABC", "Actions|Generate current state: ABC"])

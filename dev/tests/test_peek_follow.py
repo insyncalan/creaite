@@ -85,7 +85,7 @@ class PeekFollowTests(LiveBrowserCase):
 
     def test_review_rows(self):
         b = self.b
-        b.eval('closePanel(); go("review")')
+        b.eval('closePanel(); go("review",null,{legacy:true})')
         b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
         n1 = b.eval('REV.find(r=>r.rec&&r.rec.t==="Send the joint plan").n')
         n2 = b.eval('REV.find(r=>r.rec&&r.rec.t==="Joint risk").n')

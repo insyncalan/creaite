@@ -53,7 +53,7 @@ class Case(LiveBrowserCase):
 
     def open_intake(self):
         b = self.b
-        b.eval("go('inbox')")
+        b.eval("go('inbox',null,{legacy:true})")
         b.wait("document.querySelector('#mtgBody tr[data-mid]')")
         return b
 
@@ -255,8 +255,9 @@ class UploadList(Case):
 
     def test_the_badge_still_counts_a_waiting_loaded_transcript_but_select_new_and_process_never_include_it(self):
         b = self.stage()
-        before = b.eval("[...(D.inbox||[])].filter(f=>f.state==='new').length")
-        self.assertEqual(b.eval("document.getElementById('inboxBadge').textContent"), str(before))   # the loaded transcript waits too
+        # #232-C: the rail's one badge (ready meetings and files, plus proposals to approve) replaces #inboxBadge; the loaded transcript waits as its meeting's ready row
+        self.assertEqual(b.eval("document.getElementById('revBadge').textContent"), str(b.eval("irLiveCounts().badge")))
+        self.assertTrue(b.eval("irModel().meetings.some(m=>m.src==='calendar'&&m.state==='ready')"))      # the loaded transcript waits too
         self.assertTrue(b.eval("(D.inbox||[]).some(f=>f.event&&f.state==='new')"))
         b.click("#inboxNew")
         picked = b.eval("[...INSEL]")

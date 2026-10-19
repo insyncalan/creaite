@@ -223,7 +223,7 @@ class WeekendInThePage(LiveBrowserCase):
 
     def test_review_notes_it_and_the_buttons_edit_the_proposal(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody [data-wkrv]')")
         self.assertIn("Due on a Sunday", b.eval("document.querySelector('#reviewBody .wkrv').textContent"))
         b.click(f'#reviewBody [data-wkrv][data-to="{MON_AFTER(SUN - timedelta(days=1)).isoformat()}"]')

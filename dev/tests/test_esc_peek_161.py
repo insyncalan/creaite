@@ -106,7 +106,7 @@ class EscClosesThePeek(LiveBrowserCase):
 
     def test_review_one_esc(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("+document.querySelector('#reviewBody tr[data-n]').dataset.n")
         b.click(f'#reviewBody tr[data-n="{n}"] td.title', count=2)

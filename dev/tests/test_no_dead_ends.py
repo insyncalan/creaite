@@ -82,7 +82,7 @@ class NoDeadEnds(LiveBrowserCase):
 
     def test_approve_on_a_draft_goes_through_review_py_and_routine_skips_minutes(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.pump(0.3)
         b.eval("""window.CALLS=[]; { const a=api; api=function(u,body){ if(u==='/api/review'){ CALLS.push(body); return Promise.resolve({ok:true,message:'Approved 1.'}); } return a.apply(this,arguments); }; }""")
         n = b.eval("REV.find(r=>r.kind==='draft').n")
@@ -98,7 +98,7 @@ class NoDeadEnds(LiveBrowserCase):
 
     def test_a_conflict_shows_both_versions_and_two_buttons(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.pump(0.3)
         n = b.eval("REV.find(r=>(r.flags||[]).includes('conflict')).n")
         row = f'#reviewBody tr[data-n="{n}"]'
@@ -128,7 +128,7 @@ class KeepCurrent(LiveBrowserCase):
 
     def test_keep_current_rejects_the_edit(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.pump(0.3)
         n = b.eval("REV.find(r=>(r.flags||[]).includes('conflict')).n")
         b.click(f'#reviewBody tr[data-n="{n}"] [data-act="ck"]')

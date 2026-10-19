@@ -29,7 +29,7 @@ class KeysChip(LiveBrowserCase):
         b.eval("document.activeElement&&document.activeElement.blur()")
         b.key("j")
         b.wait("HLC!=null", 5)                                                 # J still moves the cursor
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         self.assertEqual(b.eval("document.querySelectorAll('.keyschip').length"), 0)
         self.assertFalse(self.shown("#rvHint"))

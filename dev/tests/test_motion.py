@@ -121,7 +121,7 @@ class Motion(LiveBrowserCase):
         self.b.eval(f"S.motion={m!r}; applyMotion()")
 
     def page(self, v):
-        self.b.eval(f"go({v!r})")
+        self.b.eval(f"go({v!r},null,{{legacy:true}})")        # legacy: review and inbox still draw their old pages until they are retired
         self.b.wait(f"VIEW==={v!r}")
 
     def chips_measured(self, key=None):
@@ -758,7 +758,7 @@ class MotionReview(LiveBrowserCase):
         load_queue(v)
 
     def open(self):
-        self.b.eval("go('review')")
+        self.b.eval("go('review',null,{legacy:true})")
         self.b.wait("document.querySelector('#reviewBody tr[data-n]')")
 
     def test_one_row_tints_three_fast_are_all_right_and_bulk_has_no_motion(self):
@@ -790,7 +790,7 @@ class MotionReview(LiveBrowserCase):
         self.assertTrue(b.eval("!!document.querySelector('.rvdone.mcleared .mclear')"))
         b.eval("renderReview()")                                                                   # a re-render keeps it, drawn, without drawing again
         self.assertEqual(b.eval("[$$('.mclear').length, document.querySelector('.rvdone').classList.contains('mstill')]"), [1, True])
-        b.eval("go('today'); go('review')")
+        b.eval("go('today'); go('review',null,{legacy:true})")
         self.assertFalse(b.eval("!!document.querySelector('.rvdone.mcleared')"))                 # opened already empty: no tick
 
 

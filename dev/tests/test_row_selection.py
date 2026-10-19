@@ -205,7 +205,7 @@ class Selecting(LiveBrowserCase):
 
     def test_review_rows_highlight_open_on_double_click_and_keep_the_bulk_rule(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         info = b.eval("REV.filter(r=>!r.done).map(r=>({n:r.n,kind:r.kind,indiv:!!r.indiv}))")
         routine = next(r for r in info if not r["indiv"] and r["kind"] == "actions")

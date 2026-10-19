@@ -61,7 +61,7 @@ class RejectsUI(LiveBrowserCase):
     # ── helpers ──
     def open_review(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         b.wait("Object.keys(rjGuesses.value).length>=4", 15)                 # the guesses have come
 
@@ -360,7 +360,7 @@ class RejectsUI(LiveBrowserCase):
         b.wait("!document.getElementById('rvReason')")
         # leaving Review: the greyed rows go
         b.eval("go('today')")
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelectorAll('#reviewBody tr[data-gone]').length===0 && rjGone.value.length===0")
 
     # ── 7. Approve instead: one step; a new risk goes back to Review and opens ──
@@ -464,7 +464,7 @@ class RejectsNarrow(LiveBrowserCase):
 
     def test_320_px_no_sideways_scroll(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval(f"REV.find(r=>r.rec.t==={THANKS!r}).n")
         b.eval(f"RHL.clear(); RHL.add({n}); rvSyncChk(); renderReview()")

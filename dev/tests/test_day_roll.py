@@ -55,7 +55,7 @@ class DayRollTests(LiveBrowserCase):
 
     def open_intake(self):
         b = self.b
-        b.eval("go('inbox')")
+        b.eval("go('inbox',null,{legacy:true})")
         b.wait("document.querySelector('#mtgBody tr[data-mid]')")
 
     def test_the_new_day_makes_yesterdays_meeting_happened_and_moves_today(self):
@@ -114,7 +114,7 @@ class ZoneTests(LiveBrowserCase):
         b.call("Emulation.setTimezoneOverride", timezoneId=zone)
         b.call("Page.addScriptToEvaluateOnNewDocument", source=SHIM.replace("new R(2026,9,8,9,30)", "new R(2026,9,16,23,39)"))
         b.reload("typeof go==='function' && LIVE")
-        b.eval("go('inbox')")
+        b.eval("go('inbox',null,{legacy:true})")
         b.wait("document.querySelector('#mtgBody tr[data-mid]')")
         return b.eval("""[...document.querySelectorAll('#mtgBody tr[data-mid]')].map(t=>({t:t.textContent,
           off:(t.querySelector('input[type=checkbox]')||{}).disabled}))""")

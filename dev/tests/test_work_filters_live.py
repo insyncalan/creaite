@@ -813,7 +813,7 @@ class ReviewList(LiveBrowserCase):
 
     def test_ticking_enables_the_buttons_and_individual_only_items_refuse_a_tick(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         groups = b.eval("[...document.querySelectorAll('#reviewBody .rgroup h2')].map(h=>h.textContent.trim())")
         self.assertTrue(groups)

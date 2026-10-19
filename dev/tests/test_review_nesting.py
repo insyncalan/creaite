@@ -29,7 +29,7 @@ SCRIPT = r"""
   out.snacks=[]; { const sn=snack; snack=function(m,u,l){ out.snacks.push(m+(u?" ["+(l||"Undo")+"]":"")); return sn(m,u,l); }; }   /* the record, if CI fails */
   const rowsNow=()=>[...document.querySelectorAll("#reviewBody tr[data-n]")].map(tr=>[tr.className.includes("mparent")?"parent":tr.className.includes("mchild")?"child":"row",tr.querySelector("td.title").textContent.replace(/\s+/g," ").trim().slice(0,40)]);
   try{
-    go("review"); out.layout=rowsNow();
+    go("review",null,{legacy:true}); out.layout=rowsNow();
     const m=REV.find(r=>r.kind==="draft"&&r.ref==="meeting");
     out.toggle=document.querySelector("tr.mparent [data-act=t]").textContent; out.togOpen=document.querySelector("tr.mparent [data-act=t]").getAttribute("aria-expanded");
     document.querySelector("tr.mparent [data-act=t]").click(); out.collapsed=rowsNow().length;

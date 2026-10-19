@@ -205,7 +205,7 @@ class InThePage(DraftCase):
         b.eval("HL.clear(); hlPaint(); hlBar(); A.forEach(x=>x.upd_at='2026-01-01'); go('today'); renderToday()")
         b.wait("document.querySelector('#drStale [data-drstale]')")
         self.assertIn("had no update for 7 days", b.eval("document.getElementById('drStale').textContent"))
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody .drrv')")
         for f in self.staged():
             f.unlink()

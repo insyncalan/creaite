@@ -196,7 +196,7 @@ class ReasonMenu(LiveBrowserCase):
     def test_a_spot_repeats_off_shows_no_looks_like(self):
         """BL-290: with Settings › General › AI drafts › Spot repeats off, neither the row nor the panel says Looks like."""
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n1 = b.eval(f"(REV.find(r=>r.dup&&r.dup.id==={self.dup!r}&&!r.done)||{{}}).n")
         if not n1:
@@ -219,7 +219,7 @@ class ReasonMenu(LiveBrowserCase):
     def test_the_menu_by_mouse_and_keyboard_and_r_alone(self):
         """BL-315 replaced BL-133's four-item menu with the seven reasons, Use each guess and No reason; R alone opens it too."""
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n1 = self.n(b.eval(f"REV.find(r=>r.dup&&r.dup.id==={self.dup!r}).rec.t"))
         self.assertIn(f"Looks like {self.dup} (same project, open)", b.eval(f"document.querySelector('#reviewBody tr[data-n=\"{n1}\"]').textContent"))
@@ -272,7 +272,7 @@ class ReasonMenu(LiveBrowserCase):
 
     def test_the_panel_offers_reject_as_duplicate(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n1 = b.eval(f"(REV.find(r=>r.dup&&r.dup.id==={self.dup!r}&&!r.done)||{{}}).n")
         if not n1:

@@ -153,7 +153,7 @@ class PageEditTests(LiveBrowserCase):
 
     def test_review_row_edit_and_undo(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("REV.find(r=>r.rec&&r.rec.t==='Second row').n")
         b.eval(f"RHL.clear(); RHL.add({n}); rvSyncChk(); renderReview()")

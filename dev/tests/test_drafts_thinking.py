@@ -115,7 +115,7 @@ class Thinking(DraftCase):
 
     def test_review_offers_draft_a_response_for_a_new_risk(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody [data-drrisk]')")
         b.click("#reviewBody [data-drrisk]")
         b.wait("document.querySelector('#pkAiDraft .drcard')", 30)

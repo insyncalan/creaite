@@ -319,7 +319,7 @@ class FilesLiveTests(FilesLiveBase):
 
     def test_intake_reloads_its_files_too(self):
         touch(self.v.root / "inbox" / "Late arrival.vtt", "WEBVTT")
-        self.b.eval("go('inbox')")
+        self.b.eval("go('inbox',null,{legacy:true})")
         self.b.wait("document.body.textContent.includes('Late arrival.vtt')")
         self.assertIn("Late arrival.vtt", self.b.eval("document.getElementById('inboxTbl').textContent"))
 

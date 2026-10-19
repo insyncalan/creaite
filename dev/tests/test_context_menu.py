@@ -159,7 +159,7 @@ class ContextMenuTests(LiveBrowserCase):
     def test_review_menu_edits_the_proposal_and_keeps_the_bulk_rule(self):
         b = self.b
         before = self.v.snapshot()[0]
-        b.eval('go("review")')
+        b.eval('go("review",null,{legacy:true})')
         b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
         n = b.eval('REV.find(r=>r.rec&&r.rec.t==="Send the joint plan").n')
         b.click(f'#reviewBody tr[data-n="{n}"] td.title', button="right")

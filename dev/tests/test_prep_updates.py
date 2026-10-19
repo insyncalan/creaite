@@ -276,7 +276,7 @@ SCRIPT = r"""
   VSTATE="ok"; needVault=async()=>true;   /* the page's own vault check can finish late and reset the fake vault (slow CI) */ S.autoApply=false;
   const rowsNow=()=>[...document.querySelectorAll("#reviewBody tr[data-n]")].map(tr=>[tr.className.includes("mparent")?"parent":tr.className.includes("mchild")?"child":"row",tr.querySelector("td.title").textContent.replace(/\s+/g," ").trim()]);
   try{
-    go("review"); out.layout=rowsNow();
+    go("review",null,{legacy:true}); out.layout=rowsNow();
     const ups=REV.filter(r=>r.kind==="update");
     out.updates=ups.map(r=>({t:r.rec.t,why:r.rec.why,src:r.src,indiv:r.indiv,whyCol:r.why,label:kindLabel(r),detail:revDetail(r).replace(/<[^>]+>/g,"")}));
     const m=REV.find(r=>r.kind==="draft"&&r.ref==="meeting");

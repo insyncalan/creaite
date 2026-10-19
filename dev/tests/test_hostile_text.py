@@ -90,7 +90,7 @@ class HostileText(LiveBrowserCase):
         self.assertIn(text, got, f"{where}: the hostile text is not shown literally")
 
     def view(self, v, arg=None):
-        self.b.eval(f"go({json.dumps(v)},{json.dumps(arg)})")
+        self.b.eval(f"go({json.dumps(v)},{json.dumps(arg)},{{legacy:true}})")   # legacy: review and inbox still draw their old pages until they are retired
         self.b.pump(0.4)
         self.assert_clean(f"view {v}{' ' + str(arg) if arg else ''}")
 
@@ -173,7 +173,7 @@ class HostileText(LiveBrowserCase):
                 self.assert_clean(f"the panel's {f} picker")
                 b.key("Escape")
                 b.pump(0.2)
-        b.eval("closePanel(true); go('review')")
+        b.eval("closePanel(true); go('review',null,{legacy:true})")
         b.pump(0.3)
         b.click("#rvDispBtn")
         b.pump(0.3)

@@ -225,7 +225,7 @@ class ReviewProjectBrowserTests(LiveBrowserCase):
         return json.loads(self.prop.read_text())
 
     def open_review(self):
-        self.b.eval('go("review")')
+        self.b.eval('go("review",null,{legacy:true})')
         self.b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
 
     def row_of(self, text):

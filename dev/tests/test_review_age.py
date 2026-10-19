@@ -48,7 +48,7 @@ class AgeBase(LiveBrowserCase):
 
     def open_review(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         return b
 

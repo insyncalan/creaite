@@ -218,7 +218,7 @@ class SaveAndClose(PanelCase):
 
     def test_a_proposal_in_review_is_saved_never_approved(self):
         b = self.b
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("REV.find(r=>!r.done&&r.kind==='actions').n")
         b.click(f'#reviewBody tr[data-n="{n}"] td.title', count=2)
@@ -320,7 +320,7 @@ class WidePanel(PanelCase):
         b.click("#pCancel")
         self.wait_closed()
         # a proposal in Review: the peek (BL-177), the same half
-        b.eval("go('review')")
+        b.eval("go('review',null,{legacy:true})")
         b.wait("document.querySelector('#reviewBody tr[data-n]')")
         n = b.eval("REV.find(r=>!r.done&&r.kind==='actions').n")
         b.click(f'#reviewBody tr[data-n="{n}"] td.title', count=2)

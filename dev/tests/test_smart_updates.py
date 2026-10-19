@@ -426,13 +426,13 @@ class PickerBrowserTests(LiveBrowserCase):
         return next(i for i in json.loads(self.prop.read_text())["items"] if i["n"] == ref)
 
     def open_new(self):
-        self.b.eval('go("review")')
+        self.b.eval('go("review",null,{legacy:true})')
         self.b.wait(f'!!{NEW_ROW}')
         self.b.eval(f'openProposal({NEW_ROW}.n)')
         self.b.wait(f'!!document.querySelector({json.dumps(PICKED)})')
 
     def test_the_review_list_itself_is_unchanged(self):
-        self.b.eval('go("review")')
+        self.b.eval('go("review",null,{legacy:true})')
         self.b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
         self.assertFalse(self.b.eval('!!document.querySelector("#reviewBody [data-rvrt]")'))   # only the peek and the menu have it
 
@@ -477,7 +477,7 @@ class PickerBrowserTests(LiveBrowserCase):
 
     def test_the_right_click_menu_offers_it_on_a_new_item_only(self):
         b = self.b
-        b.eval('go("review")')
+        b.eval('go("review",null,{legacy:true})')
         b.wait('!!document.querySelector("#reviewBody tr[data-n]")')
         label = "Update an existing item instead…"
         menu = '[...document.querySelectorAll(".cxmenu [role=menuitem]")].map(x=>x.querySelector("span").firstChild.textContent)'
@@ -501,7 +501,7 @@ class PickerBrowserTests(LiveBrowserCase):
     def test_the_picker_still_opens_when_review_is_drawn_again_while_the_server_answers(self):
         """The candidates come from the server; if Review is redrawn meanwhile (a refresh, slow CI), the picker opens on the new row."""
         b = self.b
-        b.eval('go("review")')
+        b.eval('go("review",null,{legacy:true})')
         b.wait(f'!!{NEW_ROW}')
         b.eval("""{ const a=api; api=function(u,body){ const p=a.apply(this,arguments); return u==='/api/review/candidates'?p.then(r=>{ renderReview(); return r; }):p; }; }""")
         n = b.eval(f'{NEW_ROW}.n')
