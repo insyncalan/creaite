@@ -28,11 +28,12 @@
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
                            draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
                            a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
-                           #226: HTML and PDF are the report page's own exported view, posted as `page: {html, css, palette, version}`
-                           and re-checked against the saved report by export_page.build; with no page, or one that fails, the plain
-                           renderer makes the file and the answer says `plain: true`; a client report never uses a posted page
-                           (v2.5.1, #239): it is made by client_snapshot.client_export alone, from its checked snapshot, under the
-                           lock, and its output checked;
+                           #226: a weekly report's HTML and PDF are the report page's own exported view, posted as `page: {html,
+                           css, palette, version}` and re-checked against the saved report by export_page.build; with no page, or
+                           one that fails, the plain renderer makes the file and the answer says `plain: true`. A client report
+                           takes no page (v2.5.1, #239): it is made by client_snapshot.client_export alone, from its checked
+                           snapshot, under the lock, and its output checked; a `page` sent with one is not used and the answer
+                           says so (`page_ignored: true`);
   POST /api/report/exported-view {kind: client, code, week_ending}: Show as exported for a client report, rendered by the server
                            from a preview snapshot (marked Preview, never written); the page never posts its own;
   POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
@@ -491,9 +492,8 @@ def _client_export(handler, req, which, fmt):
         name, overwrite, asked = _settle_name(folder, filed.stem + ext, ext, req, label, filed.name)
         settled.update(name=name, overwrite=overwrite)
         return asked
-    page = req.get("page") if isinstance(req.get("page"), dict) else None          # kept in the request for one release: never used
-    with client_snapshot.locked():
-        out = client_snapshot.client_export(code, fri, fmt, client=client, page=page, settle=settle)
+    with client_snapshot.locked():          # v2.5.1 step 3: a posted `page` is not taken for a client report (PAGE_IGNORED)
+        out = client_snapshot.client_export(code, fri, fmt, client=client, settle=settle)
         if out.get("asked"):
             return answer(handler, {"ok": False, **out["asked"], **where})
         if not out.get("ok") and out.get("stage") == "check":
@@ -504,10 +504,21 @@ def _client_export(handler, req, which, fmt):
             extra = {"findings": out["findings"]} if out.get("findings") else {}
             return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where, **extra)
         saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, settled["name"], settled["overwrite"], fmt, label)
-    carry_plain(saved, out)
     if out.get("left_out") is not None:
         saved["left_out"] = out["left_out"]
-    return answer(handler, saved)
+    return answer(handler, page_ignored(saved, req))
+
+
+PAGE_IGNORED = ("The page sent with it wasn't used: a client report's file is always made by creaite from its checked copy.")
+
+
+def page_ignored(out, req):
+    """v2.5.1 (#239 step 3): a client export's answer when the request posted a `page` (an older dashboard): it was not taken, and the
+    answer says so (`page_ignored`, and a sentence in its message)."""
+    if "page" in req and req.get("page") is not None:
+        out["page_ignored"] = True
+        out["message"] = f"{out.get('message') or 'Exported.'} {PAGE_IGNORED}".strip()
+    return out
 
 
 def exported_view_route(handler, req):

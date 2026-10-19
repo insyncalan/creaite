@@ -69516,7 +69516,7 @@ ${d5.text}`);
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
   }
-  async function exportClientReport(fmt, _makePage) {
+  async function exportClientReport(fmt) {
     const a5 = crArg.value, d5 = crDoc.value;
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     const opened = crIdentity(d5);
@@ -73147,7 +73147,6 @@ ${d5.text}`);
 
   // components/report/exportPage.jsx
   var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
-  var CLIENT_EXPORT = { viewId: "v-clientreport", viewClass: "crview", sheetClass: "crsheet" };
   var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
   var NOOP = () => {
   };

@@ -392,10 +392,10 @@ def _fail(fmt, message, **extra):
     return {"ok": False, "format": fmt, "message": message, **extra}
 
 
-def client_export(code, fri, fmt, *, client=None, page=None, preview=False, settle=None):
+def client_export(code, fri, fmt, *, client=None, preview=False, settle=None):
     """THE client export (see the module's description): the report's snapshot rendered as `fmt` (html, docx or pdf) into
-    system/staging/drafts/, its output checked. `page`: a page the browser posted (kept for one release; creaite_doc._posted_page
-    never uses one for a client report). `preview`: the snapshot is built in memory and marked Preview (Show as exported).
+    system/staging/drafts/, its output checked; never from a page the browser drew (v2.5.1 step 3: there is no `page`). `preview`:
+    the snapshot is built in memory and marked Preview (Show as exported).
     `settle`: called once the snapshot passed its check and before anything is rendered; an answer from it (a taken file name)
     is passed back as {ok: false, asked}. Returns {ok, path, format, snapshot, sha256, preview, left_out} or {ok: false, message,
     findings, left_out, stage}; `stage` is "check" when the snapshot's check refused it, "output" when the made file's did."""
@@ -413,7 +413,7 @@ def client_export(code, fri, fmt, *, client=None, page=None, preview=False, sett
         doc = render_doc(snap)
         stem = Path(report_doc.filed_path("client", code, fri, client)).stem
         with creaite_doc.client_tables(tables(snap)):
-            out = creaite_doc.export(f"system/staging/drafts/{stem}.html", fmt, file_beside=False, open_after=False, page=page,
+            out = creaite_doc.export(f"system/staging/drafts/{stem}.html", fmt, file_beside=False, open_after=False,
                                      kind="client", doc=doc, token=TOKEN)
     out.update(snapshot=stored, preview=bool(preview), left_out=left)
     if stored:

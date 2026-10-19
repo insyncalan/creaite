@@ -310,7 +310,10 @@ print(json.dumps({{'answer': h.body, 'gate_on_saved_draft': gate, 'held': held}}
             e = self.export(fmt, "client", on_clash="number", page=page)
             self.assertTrue(e.get("ok"), e)
             self.assertEqual(self.scan(self.v.root / e["path"], ["walrus", "Priya Okafor", "Vendor shortlist"]), [], fmt)
-            self.assertTrue(e.get("plain"), e)
+            # v2.5.1 step 3: the answer says the page wasn't used (page_ignored), not "plain": a client file is never anything else
+            self.assertTrue(e.get("page_ignored"), e)
+            self.assertIn("wasn't used", e["message"])
+            self.assertFalse(e.get("plain"), e)
 
     # ── a text section's audience, and look-alike letters ───────────────────────────────────────────────────────────────
     def test_text_section_shows_only_when_its_audience_is_exactly_client(self):

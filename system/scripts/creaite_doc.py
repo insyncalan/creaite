@@ -1153,7 +1153,7 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
         return fail("Not exported: the file made held possible internal content: " + "; ".join(found), findings=found)
     out = {"ok": True, "format": fmt, "path": paths.rel(draft), "draft": paths.rel(draft), "filed": False,
            "open_after": bool(open_after)}
-    if fmt in ("html", "pdf") and built is None and (doc.get("kind") != "client" or why):     # a client report: always the server's
+    if fmt in ("html", "pdf") and built is None and doc.get("kind") != "client":     # a client report: always the server's own render
         out["plain"] = True
         if why:
             out["plain_why"] = why
@@ -1165,11 +1165,10 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
 
 def _posted_page(doc, page, fmt):
     """(the posted page as export_page.build checked it, or None; why it wasn't used, or None). #226: an HTML or PDF export of a
-    weekly report or minutes may be the page posted. v2.5.1 (#239, f): a client report's never is: it is made from the report."""
-    if page is None:
+    weekly report or minutes may be the page posted. v2.5.1 (#239, f; step 3): a client report's never is, and none is looked at: it
+    is made from its checked copy (client_snapshot.client_export, which sends none; the export route says a posted one was ignored)."""
+    if page is None or doc.get("kind") == "client" or doc.get("audience") == "client":    # (distributed minutes: their own gate)
         return None, None
-    if doc.get("kind") == "client":
-        return None, "a client report is always made from the saved report, never from the page on the screen"
     if fmt not in ("html", "pdf"):
         return None, None
     import export_page

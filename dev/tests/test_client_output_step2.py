@@ -358,6 +358,9 @@ print(json.dumps({{'answer': h.body, 'seen': seen, 'after': lock.locked()}}))
         e = self.export("html", "client", on_clash="number", page=page)
         self.assertTrue(e["ok"], e)
         self.assertEqual(self.scan(self.v.root / e["path"], [NEVER]), [])
+        self.assertTrue(e.get("page_ignored"), e)                         # v2.5.1 step 3: and the answer says so
+        e = self.export("html", "client", on_clash="number")
+        self.assertNotIn("page_ignored", e)                               # control: no page sent, nothing said
 
     # ── real HTTP: saves racing exports ─────────────────────────────────────────────────────────────────────────────────
     def test_race_saves_racing_exports_never_put_a_needle_in_a_filed_client_file(self):

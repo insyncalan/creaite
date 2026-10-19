@@ -108,9 +108,8 @@ export async function approveClientReport(force) {
 
 /** Export the client report (the page saved first); the route runs the left-out check again and answers with it. v2.5.1 (#239): the
     server makes every client file from the report's checked snapshot (client_snapshot.client_export), so no page is ever posted for
-    one; `makePage` is kept in the signature for the callers and not used.
-    @param {"html"|"docx"|"pdf"} fmt @param {(doc: any, version: number) => Promise<any>} [_makePage] */
-export async function exportClientReport(fmt, _makePage) {
+    one. @param {"html"|"docx"|"pdf"} fmt */
+export async function exportClientReport(fmt) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
   const opened = crIdentity(d);
