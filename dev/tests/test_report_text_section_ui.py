@@ -391,9 +391,8 @@ class ClientRuleUI(LiveBrowserCase):
         self.internal_with_text()
         self.open_side()
         self.b.eval("document.querySelector('#v-reporting [data-crmatchall]').click()")
-        self.b.pump(0.5)
+        self.b.wait("!!document.querySelector('[data-crskipsec=free_int]')", 10)     # the match has finished (it names the skipped section)
         self.assertEqual(self.b.eval(f"{self.pages(1)}.querySelectorAll('section[data-id=free_int]').length"), 0)
-        self.b.wait("!!document.querySelector('[data-crskipsec=free_int]')", 10)
         self.assertEqual(self.b.eval("document.querySelector('[data-crskipsec=free_int]').textContent"),
                          "Vendor notes: internal only, add it to the client report yourself")
 
