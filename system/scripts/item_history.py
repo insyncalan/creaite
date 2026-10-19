@@ -420,17 +420,36 @@ def same_change(x, e):
 
 def rejections(con, item_id, props, stored):
     """A rejected update to the item, one event each: from item_events once the diff is in, else from the apply's proposal."""
-    out = [reject_event(r["event_id"], r["at"], r["apply_id"], r) for r in stored.get("rejects") or []]
+    out = stored_rejections(con, stored)
     covered = {e["apply_id"] for e in out}
     for a in con.execute("SELECT c.apply_id, min(c.at) AS at FROM change_log c WHERE c.tbl = 'rejected' "
                          "GROUP BY c.apply_id ORDER BY c.apply_id"):
-        if a["apply_id"] in covered:
-            continue
-        for rel, data in props.listed(a["apply_id"]):
-            for i in (data or {}).get("items") or []:
-                if isinstance(i, dict) and i.get("decision") == "rejected" and i.get("id") == item_id \
-                        and i.get("applied") == a["apply_id"]:
-                    out.append(reject_event(f"{a['apply_id']}-{i.get('n')}", a["at"], a["apply_id"], None, i, data, rel))
+        if a["apply_id"] not in covered:
+            out += derived_rejections(item_id, a["apply_id"], a["at"], props)
+    return out
+
+
+def stored_rejections(con, stored):
+    """The rejection events item_events holds, with the reason from `rejected` (only the seven are shown) and struck when
+    the apply was undone (the item went back to Review)."""
+    undone = {r[0] for r in con.execute("SELECT apply_id FROM applies WHERE undone_at IS NOT NULL")}
+    out = []
+    for r in stored.get("rejects") or []:
+        got = con.execute("SELECT j.reason FROM change_log c JOIN rejected j ON j.fingerprint = c.item_id WHERE c.rowid = ?",
+                          (r["change"],)).fetchone()
+        e = reject_event(r["event_id"], r["at"], r["apply_id"], {**r, "reason": got[0] if got else None})
+        e["struck"] = r["apply_id"] in undone
+        out.append(e)
+    return out
+
+
+def derived_rejections(item_id, apply_id, at, props):
+    """The rejections of an update to the item in one apply, from its proposals (only while they are still applied)."""
+    out = []
+    for rel, data in props.listed(apply_id):
+        for i in (data or {}).get("items") or []:
+            if isinstance(i, dict) and i.get("decision") == "rejected" and i.get("id") == item_id and i.get("applied") == apply_id:
+                out.append(reject_event(f"{apply_id}-{i.get('n')}", at, apply_id, None, i, data, rel))
     return out
 
 
@@ -438,7 +457,7 @@ def reject_event(ident, at, apply_id, row, item=None, data=None, rel=None):
     """One rejection event: Review, the reason when it is one of the seven, the source reference; never the item's text."""
     if row is not None:
         route, place, origin, src, exact = row["route"], row["place"], row.get("origin"), row["src_ref"], True
-        reason = None
+        reason = row.get("reason")
     else:
         route, place, origin, _ = derive(Path(rel or "").name, data, item)
         src, exact, reason = source_of(item, data, rel), False, item.get("reject_reason")
