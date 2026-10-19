@@ -1049,13 +1049,17 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None):
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
     #226: for "html" and "pdf", `page` (the report page's own exported view; export_page.build checks it against the report) is
     what is written and printed; with none, or one that fails the check, the plain renderer below is, and the answer says
-    `plain: True` (and `plain_why` when a page was refused)."""
+    `plain: True` (and `plain_why` when a page was refused).
+    v2.5.1 (#239): `doc` is the document the caller has already read and checked (the client export route, under its lock): it is
+    the one rendered, the file is not read again. A client report is gated here too (client_leak.findings on the document
+    rendered), a posted page is never used for one (the server renders it from the report), and the made file is checked again
+    (client_output_findings): any finding and nothing is kept."""
     def fail(message, **extra):
         """The answer when nothing was exported."""
         return {"ok": False, "format": fmt, "message": message, **extra}
@@ -1064,18 +1068,18 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     try:
         # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however
         # its file was edited
-        doc = read_report(path, kind)
+        doc = _export_doc(path, kind, doc)
         _check_baseline(doc)
-        built, why = None, None
-        if page is not None and fmt in ("html", "pdf"):
-            import export_page
-            try:
-                built = export_page.build(doc, page, page_title(doc))
-            except export_page.PageRefused as e:
-                why = str(e)
-        draft = _make_export(doc, fmt, real(path).stem, built)
+        gate = _client_gate(doc)
+        if gate:
+            return fail("Not exported: possible internal content in the client report: " + "; ".join(gate), findings=gate)
+        built, why = _posted_page(doc, page, fmt)
+        draft, made = _make_export(doc, fmt, real(path).stem, built)
     except DocError as e:
         return fail(str(e))
+    found = client_output_findings(doc, fmt, draft, made)
+    if found:
+        return fail("Not exported: the file made held possible internal content: " + "; ".join(found), findings=found)
     out = {"ok": True, "format": fmt, "path": paths.rel(draft), "draft": paths.rel(draft), "filed": False,
            "open_after": bool(open_after)}
     if fmt in ("html", "pdf") and built is None:
@@ -1086,6 +1090,41 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if folder is None or folder.resolve() == paths.DRAFTS.resolve():
         return {**out, "message": f"Exported {paths.rel(draft)}."}
     return _file_export(out, draft, folder / _export_name(doc, path, fmt), fail)
+
+
+def _posted_page(doc, page, fmt):
+    """(the posted page as export_page.build checked it, or None; why it wasn't used, or None). #226: an HTML or PDF export of a
+    weekly report or minutes may be the page posted. v2.5.1 (#239, f): a client report's never is: it is made from the report."""
+    if page is None:
+        return None, None
+    if doc.get("kind") == "client":
+        return None, "a client report is always made from the saved report, never from the page on the screen"
+    if fmt not in ("html", "pdf"):
+        return None, None
+    import export_page
+    try:
+        return export_page.build(doc, page, page_title(doc)), None
+    except export_page.PageRefused as e:
+        return None, str(e)
+
+
+def _export_doc(path, kind, doc=None):
+    """The document an export renders: `doc` as the caller checked it (a client report read again as one), else the file at `path`
+    (read_report). Raises DocError for a kind the route doesn't expect."""
+    if doc is None:
+        return read_report(path, kind)
+    check(doc)
+    if kind is not None and doc.get("kind") != kind:
+        raise DocError("That file isn't this report (its kind was changed), so nothing was done. Open the report again from creaite.")
+    return force_client_audience(copy.deepcopy(doc))
+
+
+def _client_gate(doc):
+    """v2.5.1 (#239): the client gate's findings on the document an export renders ([] for any other kind)."""
+    if doc.get("kind") != "client":
+        return []
+    import client_leak
+    return client_leak.findings(doc)
 
 
 def _export_name(doc, path, fmt):
@@ -1121,22 +1160,40 @@ def _check_baseline(doc):
 
 
 def _make_export(doc, fmt, stem, built=None):
-    """Write the export into system/staging/drafts/ and return its path. Raises DocError."""
+    """Write the export into system/staging/drafts/: (its path, {page: the HTML a PDF was printed from, drawn: the hashes of the
+    pictures a Word export drew}). Raises DocError."""
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
     # An HTML export never takes the document's own draft path (drafts/<name>.html): a plain page there would stand in for the draft.
     draft = paths.free_path(paths.DRAFTS, stem + (" (read only)" if fmt == "html" else ""), EXPORTS[fmt])
+    made = {"page": None, "drawn": set()}
     if fmt == "html":
         draft.write_text(built or render(doc, editing=False), encoding="utf-8")
     elif fmt == "docx":
-        word_export(doc, draft)
+        made["drawn"] = word_export(doc, draft) or set()
     else:
+        made["page"] = built or render(doc, editing=False)
         page = paths.free_path(paths.DRAFTS, f"{stem} print", ".html")
-        page.write_text(built or render(doc, editing=False), encoding="utf-8")
+        page.write_text(made["page"], encoding="utf-8")
         try:
             print_pdf(page, draft)
         finally:
             page.unlink()
-    return draft
+    return draft, made
+
+
+def client_output_findings(doc, fmt, draft, made):
+    """v2.5.1 (#239, c): the check of a client report's made file (client_output.check); any finding (or a check that can't run)
+    deletes the file. [] for a document that isn't a client report."""
+    if doc.get("kind") != "client":
+        return []
+    import client_output
+    try:
+        found = client_output.check(doc, fmt, draft, page=made.get("page"), drawn=made.get("drawn") or ())
+    except Exception as e:  # noqa: BLE001  fails closed: an output that can't be checked is never kept
+        found = [f"the made file couldn't be checked ({type(e).__name__})"]
+    if found:
+        Path(draft).unlink(missing_ok=True)
+    return found
 
 
 def _file_export(out, draft, target, fail):
@@ -1268,6 +1325,7 @@ class _Word:
     def __init__(self, doc, work):
         """The export's state."""
         self.doc, self.items, self.work, self.n = doc, doc.get("items") or {}, Path(work), 0
+        self.drawn = set()          # v2.5.1 (#239, c): the hashes of the pictures this export drew itself (client_output.check)
         try:
             self.folder = paths.project_dir(doc.get("project"))
         except Exception:                      # an unknown project: pictures then need absolute paths
@@ -1282,6 +1340,8 @@ class _Word:
         self.n += 1
         f = self.work / f"pic{self.n}.png"
         f.write_bytes(data)
+        import client_output
+        self.drawn.add(client_output.pic_hash(data))
         return [{"image": str(f), "caption": caption, "width": show_w or width}]
 
     # ── text ──
@@ -1803,12 +1863,13 @@ def _word_body(doc, els, work):
             blocks, vals = _section_blocks(ctx, n, s, heading, para, table, total)
             out += blocks
             values.update(vals)
-    return out, values
+    return out, values, ctx.drawn
 
 
 def word_export(doc, out):
     """Write the Word export of `doc` at `out` (inside system/staging/drafts/): the firm's template for its kind, its title block,
-    then each shown section in page order, filled by docx_tools.py fill. Raises DocError."""
+    then each shown section in page order, filled by docx_tools.py fill. Returns the hashes of the pictures it drew itself (v2.5.1,
+    client_output.check). Raises DocError."""
     import contextlib
     import io
     import shutil
@@ -1827,7 +1888,7 @@ def word_export(doc, out):
     tmp_values = paths.free_path(paths.DRAFTS, f"{stamp} values", ".json")
     said = io.StringIO()
     try:
-        body, values = _word_body(doc, WORD_EL.findall(xml[start:xml.rindex(sect)]), work)
+        body, values, drawn = _word_body(doc, WORD_EL.findall(xml[start:xml.rindex(sect)]), work)
         derived = xml[:start] + "".join(body) + sect + "</w:body></w:document>"
         docx_tools.write_parts([(i, derived.encode("utf-8") if i.filename == "word/document.xml" else raw) for i, raw in parts], tmp_tpl)
         tmp_values.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8")
@@ -1839,6 +1900,7 @@ def word_export(doc, out):
         shutil.rmtree(work, ignore_errors=True)
     if code != 0:
         raise DocError(f"The Word export couldn't be filled: {said.getvalue().strip()}")
+    return {h for h in drawn if h}
 
 
 # ── PDF: Chrome's print to PDF of the HTML export ────────────────────────────
