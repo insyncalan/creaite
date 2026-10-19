@@ -259,6 +259,19 @@ class Audience(unittest.TestCase):
                 self.assertEqual((filed["project_name"], filed["client"]), ("Example Programme", "Example Client Ltd"))
                 self.assert_clean_files()
 
+    def test_header_fields_edited_on_disk_are_derived_again_in_an_export_of_the_draft(self):
+        for field in ("project_name", "client"):
+            with self.subTest(field=field):
+                self.fresh()
+                f = self.draft_file()
+                text = f.read_text()
+                raw = json.loads(creaite_doc.BLOCK.search(text).group(1))
+                f.write_text(text.replace(f'"{field}": {json.dumps(raw[field], ensure_ascii=False)}',
+                                          f'"{field}": {json.dumps(self.header_payload())}', 1), encoding="utf-8")
+                for fmt in self.formats():
+                    self.assertTrue(self.export(fmt, "client", on_clash="number")["ok"], fmt)     # no approve: the draft itself
+                self.assert_clean_files()
+
     def test_a_client_named_in_the_request_is_ignored(self):
         self.fresh()
         r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": WEEK, "client": self.header_payload()})
