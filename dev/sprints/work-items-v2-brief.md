@@ -10,7 +10,7 @@ Mockup (draft, for Alan): `dev/mockups/work-items-v2-mockup.html`. Built on `dev
 5. Quieter text: no dotted underlines, no leading check icon, tags as quiet chips.
 6. One key per property on the cursor row (S O P T), C closes with Undo and moves the cursor on.
 7. Peek v2: source link, client badge and workstream in the header; properties as a label/value list; one activity timeline with routine events folded.
-8. With the peek open the list steps aside so the open row stays readable.
+8. The peek runs over the page (no squashing). Click selects; double-click or the ID opens; arrows move, right opens, left closes. A switch compares Today’s peek with v2 (open for discussion).
 
 ## Design-system additions this needs (all in one `/* NEW */` block)
 - `.tg`: a small neutral tag chip (workstream, client, raised again); today these are plain text.

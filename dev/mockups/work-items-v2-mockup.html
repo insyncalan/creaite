@@ -32,10 +32,6 @@
 body.pkopen .wk2 .seg,body.pkopen .wk2 .ddisp,body.pkopen .wkpills,body.pkopen .wkdens,body.pkopen #wcount{display:none}
 .wkdens{margin-left:4px}
 .wknew{outline:1px dashed var(--accent);outline-offset:1px}
-/* the peek's open row stays readable: the list steps aside */
-body.pkopen #v-work .wrapmax{margin-right:min(max(520px,50vw),calc(100vw - var(--rail-w,72px)));max-width:none}
-body.pkopen .wk .wkc,body.pkopen .wk .wko,body.pkopen .wk td.title .x{display:none}
-body.pkopen .wk th.wkc,body.pkopen .wk th.wko{display:none}
 /* peek v2: properties as a list; source and client flag in the header; one timeline */
 .pkv .pk-id{gap:6px}
 .pkv .pk-id .srcl{color:var(--accent);text-decoration:none} .pkv .pk-id .srcl:hover{text-decoration:underline}
@@ -54,6 +50,12 @@ body.pkopen .wk th.wkc,body.pkopen .wk th.wko{display:none}
 .pk-foot2{display:flex;align-items:center;gap:6px;padding:12px 24px;border-top:1px solid var(--line);flex:none}
 .pk-ob{position:fixed;left:244px;bottom:10px;max-width:440px;z-index:9998;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;font-size:var(--fs-xs);color:var(--muted);box-shadow:var(--shadow-md)}
 body.pkopen .pk-ob{display:none}
+.pkmode{position:fixed;right:16px;bottom:10px;z-index:9998;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;font-size:var(--fs-xs);color:var(--muted);box-shadow:var(--shadow-md);display:flex;gap:8px;align-items:center}
+.pkmode .seg button{font-size:var(--fs-xs)}
+body.pkopen .pkmode{right:calc(min(max(520px,50vw),calc(100vw - var(--rail-w,72px))) + 16px)}
+.wk2 .seg.ico button svg{width:16px;height:16px}
+#wkFm label input{margin:0}
+.wk2 .dd{position:relative}
 </style></head>
 <body>
 <div class="shell">
@@ -112,15 +114,15 @@ body.pkopen .pk-ob{display:none}
       <section class="view" id="v-clientreport" hidden="" aria-labelledby="crTitle"></section><!-- v2.1.0 P8: a client's report as a Client view of the week (components/report/ClientView.jsx) -->
       <section class="view" id="v-work"><div class="wrapmax">
 <h1>Work</h1>
-<div class="tabhost"><div class="tabs" id="wtabs" role="tablist" aria-label="Work"><button type="button" role="tab" aria-selected="true" tabindex="0">Actions</button><button type="button" role="tab" aria-selected="false" tabindex="-1">RAID</button><button type="button" role="tab" aria-selected="false" tabindex="-1">Decisions</button><button type="button" role="tab" aria-selected="false" tabindex="-1">All items</button></div></div>
+<div class="tabhost"><div class="tabs" id="wtabs" role="tablist" aria-label="Work"><button type="button" role="tab" aria-selected="true" tabindex="0" data-tab="actions">Actions</button><button type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="raid">RAID</button><button type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="decisions">Decisions</button><button type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="all">All items</button></div></div>
 <div class="toolbar wk2">
  <input id="workQ" type="search" placeholder="Search this list" aria-label="Search this list" autocomplete="off">
- <span class="dd"><button type="button" class="btn fbtn on wkview" id="wkView" aria-haspopup="listbox" aria-expanded="false"><span class="sub">View</span> All open <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button></span>
+ <span class="dd"><button type="button" class="btn fbtn on wkview" id="wkView" aria-haspopup="listbox" aria-expanded="false"><span class="sub">View</span> All open <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button><div class="ddmenu left" id="wkVm" role="listbox" aria-label="View"></div></span>
  <span class="views wkpills" id="wviews" aria-label="Views"><button class="vchip" data-v="mine" aria-pressed="false">Mine</button><button class="vchip" data-v="soon" aria-pressed="false">Due soon</button><button class="vchip" data-v="chase" aria-pressed="false">Chase</button></span>
  <span class="sp"></span>
  <span class="sub" id="wcount">Showing 11 of 11</span>
- <span class="dd"><button type="button" class="ib bd fbtn" id="moreBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="moreMenu" data-key="F" aria-label="Add a filter: 1 on" data-tip="Add a filter: 1 on"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"></path></svg></button></span>
- <span class="seg wkdens" id="wkDens" role="group" aria-label="Row density"><button type="button" data-dens="cmp" aria-pressed="true">Compact</button><button type="button" data-dens="cmf" aria-pressed="false">Comfortable</button></span>
+ <span class="dd"><button type="button" class="ib bd fbtn" id="wkF" aria-haspopup="dialog" aria-expanded="false" aria-controls="wkFm" data-key="F" aria-label="Add a filter: 1 on" data-tip="Add a filter: 1 on"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"></path></svg><span class="fcount" id="wkFc" aria-hidden="true" hidden></span></button><div class="ddmenu left fpmenu" id="wkFm" role="dialog" aria-label="Add a filter"></div></span>
+ <span class="seg ico wkdens" id="wkDens" role="group" aria-label="Row density"><button type="button" data-dens="cmp" aria-pressed="true" aria-label="Compact rows" data-tip="Compact rows"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 9.7h16M4 14.3h16M4 19h16"></path></svg></button><button type="button" data-dens="cmf" aria-pressed="false" aria-label="Comfortable rows" data-tip="Comfortable rows"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 8.5h9M4 15.5h16M4 19h9"></path></svg></button></span>
  <span class="seg ico" id="wlay" role="group" aria-label="Layout"><button type="button" data-lay="list" aria-pressed="true" aria-label="List" data-tip="List"><svg data-ic="list" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="list" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg></button><button type="button" data-lay="board" aria-pressed="false" aria-label="Board" data-tip="Board"><svg data-ic="board" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="board" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 7v7M12 7v4M16 7v9"></path></svg></button></span><!-- BL-159 (sprint-icons): List and Board as a two-icon switch -->
           <span class="dd ddisp"><button class="ib bd" id="dispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="dispMenu" aria-label="Display: grouping, order and properties" data-tip="Display: grouping, order and properties" data-key="D"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="sliders" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"></path></svg></button><div class="ddmenu dispmenu" id="dispMenu" role="dialog" aria-label="Display" hidden=""><div><h3><label for="wgrp">Group by</label></h3><div class="dline"><select id="wgrp"><option value="none" selected="">None</option><option value="due">Due</option><option value="status">Status</option><option value="owner">Owner</option><option value="milestone">Milestone</option><option value="project">Project</option><option value="priority">Priority</option><option value="workstream">Workstream</option></select></div></div>
     <div hidden=""><h3><label for="wsub">Sub-group</label></h3><div class="dline"><select id="wsub"><option value="none">None</option><option value="due">Due</option><option value="status">Status</option><option value="owner">Owner</option><option value="milestone">Milestone</option><option value="project">Project</option><option value="priority">Priority</option><option value="workstream">Workstream</option></select></div></div>
@@ -132,8 +134,8 @@ body.pkopen .pk-ob{display:none}
           <span class="newdd" id="newHost"><span class="dd"><button type="button" class="newb" id="newBtn" aria-label="New action" data-tip="New action"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="plus"><path d="M12 5v14M5 12h14"></path></svg><span class="w">New action</span><svg class="i nch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown"><path d="m6 9 6 6 6-6"></path></svg></button></span></span>
 </div>
 <div class="wapplied" id="wapplied" hidden></div>
-<div class="tbl list wk cmp" id="workWrap"><table id="workTbl" role="grid" aria-multiselectable="true"><thead><tr><th class="wkm"><span class="vh">Status and priority</span></th><th>Action</th><th class="wkc"><span class="vh">Tags</span></th><th class="wko">Owner</th><th class="wkd">Due</th></tr></thead><tbody id="wkBody"></tbody></table></div>
-<div class="kbdhint" id="whintList"><span class="kbd">J</span> <span class="kbd">K</span> move · <span class="kbd">Enter</span> open · <span class="kbd wknew">S</span> status · <span class="kbd wknew">O</span> owner · <span class="kbd wknew">P</span> priority · <span class="kbd wknew">T</span> due date · <span class="kbd wknew">C</span> close · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear</div>
+<div class="tbl list wk cmp" id="workWrap"><table id="workTbl" role="grid" aria-multiselectable="true"><thead><tr><th class="wkm"><span class="vh">Status and priority</span></th><th id="wkTh1">Action</th><th class="wkc"><span class="vh">Tags</span></th><th class="wko">Owner</th><th class="wkd" id="wkThD">Due</th></tr></thead><tbody id="wkBody"></tbody></table></div>
+<div class="kbdhint" id="whintList"><span class="kbd">↑</span> <span class="kbd">↓</span> or <span class="kbd">J</span> <span class="kbd">K</span> move · <span class="kbd">→</span> or <span class="kbd">Enter</span> peek · <span class="kbd">←</span> or <span class="kbd">Esc</span> close the peek · double-click or the ID also opens it · <span class="kbd wknew">S</span> status · <span class="kbd wknew">O</span> owner · <span class="kbd wknew">P</span> priority · <span class="kbd wknew">T</span> due date · <span class="kbd wknew">C</span> close · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear</div>
 </div></section>
 <section class="view" id="v-review" hidden=""><div class="wrapmax">
         <h1>Review</h1><p class="sub" style="margin:4px 0 0" id="rvSub">Claude's proposals.</p>
@@ -213,83 +215,173 @@ body.pkopen .pk-ob{display:none}
 
 <script>document.addEventListener('keydown',e=>{if(e.key==='d'&&e.altKey){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}})</script><script>(function(){
 var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){return [].slice.call((r||document).querySelectorAll(s))};
-var TODAY=new Date(2026,9,19);
-var ST={Open:'M12 4a8 8 0 0 1 0 16z',Delayed:'M12 8v4l2.5 1.5',Closed:'M8 12.5l3 3 5-6'},SC={Open:'var(--accent)',Delayed:'var(--warn)',Closed:'var(--ok)'};
+var TODAY=new Date(2026,9,19),ME='Alan Carter';
+var SV={Open:'M12 4a8 8 0 0 1 0 16z',Delayed:'M12 8v4l2.5 1.5',Closed:'M8 12.5l3 3 5-6',Made:'M8 12.5l3 3 5-6',Pending:''},SC={Open:'var(--accent)',Delayed:'var(--warn)',Closed:'var(--ok)',Made:'var(--ok)',Pending:'var(--muted)'};
 var PN={Urgent:4,High:3,Medium:2,Low:1},PC={Urgent:'var(--bad)',High:'var(--warn)',Medium:'var(--accent)',Low:'var(--faint)'};
-function ring(st,sz){var d=ST[st];return '<svg viewBox="0 0 24 24" width="'+(sz||16)+'" height="'+(sz||16)+'" fill="none" stroke="currentColor" style="color:'+SC[st]+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="'+d+'"'+(st==='Open'?' fill="currentColor" stroke="none"':'')+'/></svg>'}
-function bars(p,sz){var n=PN[p],c=PC[p],h='';for(var i=0;i<4;i++)h+='<rect x="'+(3+i*5)+'" y="'+(16-i*4)+'" width="3.4" height="'+(4+i*4)+'" rx="1" fill="'+c+'" opacity="'+(i<n?1:.25)+'"/>';return '<svg viewBox="0 0 24 24" width="'+(sz||16)+'" height="'+(sz||16)+'" aria-hidden="true">'+h+'</svg>'}
+function ring(st,sz){var d=SV[st];return '<svg viewBox="0 0 24 24" width="'+(sz||16)+'" height="'+(sz||16)+'" fill="none" stroke="currentColor" style="color:'+SC[st]+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"'+(st==='Pending'?' stroke-dasharray="3 3"':'')+'/>'+(d?'<path d="'+d+'"'+(st==='Open'?' fill="currentColor" stroke="none"':'')+'/>':'')+'</svg>'}
+function bars(p,sz){if(!p)return '<svg width="'+(sz||16)+'" height="'+(sz||16)+'" aria-hidden="true"></svg>';var n=PN[p],c=PC[p],h='';for(var i=0;i<4;i++)h+='<rect x="'+(3+i*5)+'" y="'+(16-i*4)+'" width="3.4" height="'+(4+i*4)+'" rx="1" fill="'+c+'" opacity="'+(i<n?1:.25)+'"/>';return '<svg viewBox="0 0 24 24" width="'+(sz||16)+'" height="'+(sz||16)+'" aria-hidden="true">'+h+'</svg>'}
 function av(w,sz){var i=w.split(' ').map(function(x){return x[0]}).join('').slice(0,2);return '<svg viewBox="0 0 24 24" width="'+(sz||18)+'" height="'+(sz||18)+'" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--accent-soft)"/><text x="12" y="15.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--accent)" font-family="inherit">'+i+'</text></svg>'}
-var eye='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-var flag='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
+var S1='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+var eye=S1+'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',flag=S1+'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',cal=S1+'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
 var P={ABC:'Example Programme',DEF:'Digital Enablement'};
-var I=[
-['ABC-A-001','Escalate data access to the client CIO','Urgent','Open','Alan Carter','2026-10-14','Integration','2026-10-12 Steering.docx',0,1,'Waiting on the CIO’s office. A call is booked for Thursday.'],
-['DEF-A-003','Confirm licence count with procurement','High','Delayed','Omar Ali','2026-10-16','Licensing','2026-10-13 Pilot call.docx',0,0,'Procurement asked for the final seat numbers. Chased on 16-10-2026.'],
-['ABC-A-002','Book UAT environment','Medium','Open','Sara Example','2026-10-20','Testing','2026-10-12 Steering.docx',0,0,''],
-['DEF-A-001','Agree pilot success criteria','Medium','Open','Omar Ali','2026-10-22','Pilot','2026-10-13 Pilot call.docx',0,0,''],
-['ABC-A-007','Send revised plan to steering','High','Open','Alan Carter','2026-10-23','Planning','2026-10-12 Steering.docx',1,0,''],
-['ABC-A-004','Draft the data migration runbook','Medium','Open','Sara Example','2026-10-27','Integration','2026-10-12 Steering.docx',0,0,''],
-['DEF-A-002','Schedule training sessions','Low','Open','Priya Nair','2026-10-28','Pilot','2026-10-13 Pilot call.docx',0,0,''],
-['ABC-A-006','Review vendor security answers','High','Open','Omar Ali','2026-10-30','Security','2026-10-12 Steering.docx',0,0,''],
-['DEF-A-005','Plan the post-pilot review','Low','Open','Alan Carter','2026-11-12','Pilot','2026-10-13 Pilot call.docx',0,0,''],
-['ABC-A-009','Prepare the go-live readiness checklist','Medium','Open','Sara Example','2026-11-20','Planning','2026-10-12 Steering.docx',0,0,''],
-['DEF-A-004','Collect the pilot feedback template','Low','Open','Priya Nair','','Pilot','2026-10-13 Pilot call.docx',0,0,''],
-['ABC-A-003','Share the test plan with the client','Medium','Closed','Sara Example','2026-10-09','Testing','2026-10-05 Steering.docx',0,0,''],
-['DEF-A-000','Kick off the pilot working group','Medium','Closed','Omar Ali','2026-10-06','Pilot','2026-10-05 Kick-off.docx',0,0,''],
-['ABC-A-005','Agree the support rota','Low','Closed','Priya Nair','2026-10-08','Planning','2026-10-05 Steering.docx',0,0,'']
-].map(function(r){return {id:r[0],t:r[1],pr:r[2],st:r[3],o:r[4],due:r[5],ws:r[6],src:r[7],cv:r[8],ew:r[9],up:r[10],p:r[0].slice(0,3)}});
+// kind, id, title, pr, st, owner, due, ws, source, clientVisible, raisedAgain, chase, update
+var RAW=[
+['A','ABC-A-001','Escalate data access to the client CIO','Urgent','Open','Alan Carter','2026-10-14','Integration','2026-10-12 Steering',0,1,1,'Waiting on the CIO’s office. A call is booked for Thursday.'],
+['A','DEF-A-003','Confirm licence count with procurement','High','Delayed','Omar Ali','2026-10-16','Licensing','2026-10-13 Pilot call',0,0,1,'Procurement asked for the final seat numbers. Chased on 16-10-2026.'],
+['A','ABC-A-002','Book UAT environment','Medium','Open','Sara Example','2026-10-20','Testing','2026-10-12 Steering',0,0,0,''],
+['A','DEF-A-001','Agree pilot success criteria','Medium','Open','Omar Ali','2026-10-22','Pilot','2026-10-13 Pilot call',0,0,0,''],
+['A','ABC-A-007','Send revised plan to steering','High','Open','Alan Carter','2026-10-23','Planning','2026-10-12 Steering',1,0,0,''],
+['A','ABC-A-004','Draft the data migration runbook','Medium','Open','Sara Example','2026-10-27','Integration','2026-10-12 Steering',0,0,0,''],
+['A','DEF-A-002','Schedule training sessions','Low','Open','Priya Nair','2026-10-28','Pilot','2026-10-13 Pilot call',0,0,0,''],
+['A','ABC-A-006','Review vendor security answers','High','Open','Omar Ali','2026-10-30','Security','2026-10-12 Steering',0,0,0,''],
+['A','DEF-A-005','Plan the post-pilot review','Low','Open','Alan Carter','2026-11-12','Pilot','2026-10-13 Pilot call',0,0,0,''],
+['A','ABC-A-009','Prepare the go-live readiness checklist','Medium','Open','Sara Example','2026-11-20','Planning','2026-10-12 Steering',0,0,0,''],
+['A','DEF-A-004','Collect the pilot feedback template','Low','Open','Priya Nair','','Pilot','2026-10-13 Pilot call',0,0,0,''],
+['A','ABC-A-003','Share the test plan with the client','Medium','Closed','Sara Example','2026-10-09','Testing','2026-10-05 Steering',0,0,0,''],
+['A','DEF-A-000','Kick off the pilot working group','Medium','Closed','Omar Ali','2026-10-06','Pilot','2026-10-05 Kick-off',0,0,0,''],
+['A','ABC-A-005','Agree the support rota','Low','Closed','Priya Nair','2026-10-08','Planning','2026-10-05 Steering',0,0,0,''],
+['Risk','ABC-R-001','Client data access delayed beyond the UAT start','Urgent','Open','Alan Carter','2026-10-23','Integration','2026-10-12 Steering',0,1,1,'Escalated to the client CIO; a decision on access is due Thursday.'],
+['Risk','ABC-R-002','Key tester unavailable during UAT','High','Open','Sara Example','2026-10-28','Testing','2026-10-12 Steering',0,0,0,''],
+['Issue','DEF-R-001','Licence count disputed by the vendor','High','Open','Omar Ali','2026-10-21','Licensing','2026-10-13 Pilot call',1,0,1,'Vendor quotes 120 seats; we expect 90. Procurement is checking.'],
+['Risk','DEF-R-002','Pilot users change part-way through','Medium','Open','Priya Nair','2026-11-05','Pilot','2026-10-13 Pilot call',0,0,0,''],
+['Risk','DEF-R-003','Training budget not confirmed','Low','Open','Omar Ali','','Pilot','2026-10-13 Pilot call',0,0,0,''],
+['Issue','ABC-R-003','Test environment build failing','Medium','Closed','Sara Example','2026-10-10','Testing','2026-10-05 Steering',0,0,0,''],
+['D','ABC-D-001','Approve the phased go-live approach','','Pending','Alan Carter','2026-10-23','Planning','2026-10-12 Steering',1,0,1,'Options paper circulated; steering meets on Thursday.'],
+['D','DEF-D-001','Choose the pilot user group','','Pending','Omar Ali','2026-10-26','Pilot','2026-10-13 Pilot call',0,0,0,''],
+['D','ABC-D-002','Use the shared test environment','','Made','Sara Example','2026-10-08','Testing','2026-10-05 Steering',0,0,0,'Cheaper and quicker; isolation risk accepted.'],
+['D','DEF-D-002','Defer the reporting module to phase two','','Made','Alan Carter','2026-10-05','Planning','2026-10-05 Kick-off',1,0,0,'Keeps the pilot scope small.']
+];
+var I=RAW.map(function(r){return {k:r[0],id:r[1],t:r[2],pr:r[3],st:r[4],o:r[5],due:r[6],ws:r[7],src:r[8],cv:r[9],ew:r[10],ch:r[11],up:r[12],p:r[1].slice(0,3)}});
+var KN={A:'Action',Risk:'Risk',Issue:'Issue',D:'Decision'};
 function dd(s){var a=s.split('-');return new Date(+a[0],a[1]-1,+a[2])}
 function fmt(s){return s.split('-').reverse().join('-')}
 function days(s){return Math.round((dd(s)-TODAY)/864e5)}
 function rel(n){return n<0?(-n)+' day'+(n==-1?'':'s')+' late':n===0?'Today':n===1?'Tomorrow':'In '+n+' days'}
-function bucket(it){if(it.st==='Closed')return 'Closed';if(!it.due)return 'No date';var n=days(it.due);return n<0?'Overdue':n<=6?'This week':n<=13?'Next week':'Later'}
-var ORDER=['Overdue','This week','Next week','Later','No date','Closed'],COLL={Closed:1};
-function me(o){return o==='Alan Carter'}
-function row(it){var n=it.due?days(it.due):null,late=it.st!=='Closed'&&n!==null&&n<0,done=it.st==='Closed';
- return '<tr class="click'+(done?' done':'')+'" data-row="'+it.id+'" aria-selected="false"><td class="wkm" data-f="st">'+ring(it.st)+bars(it.pr)+'<span class="vh">'+it.st+', '+it.pr+' priority</span></td>'+
- '<td class="title" data-f="t"><span class="ttl">'+it.t+'</span><span class="x"><a href="#" class="rowid">'+it.id+'</a> · '+P[it.p]+'</span></td>'+
- '<td class="wkc">'+(it.ew?'<span class="tg warn" title="Raised again by a later meeting">'+flag+'Raised again</span>':'')+(it.cv?'<span class="tg" title="Client-visible">'+eye+'Client</span>':'')+'<span class="tg">'+it.ws+'</span></td>'+
- '<td class="wko" data-f="o"><span class="av">'+av(it.o)+'<a href="#" class="plink2">'+(me(it.o)?'You':it.o)+'</a></span></td>'+
- '<td class="wkd'+(late?' late':'')+'" data-f="due">'+(it.due?'<span class="'+(late?'late':'')+'">'+fmt(it.due)+(late?'<span class="rel">'+rel(n)+'</span>':'')+'</span>':'<span class="sub">No date</span>')+'</td></tr>'}
-function gh(g,n,late){var c=!!COLL[g];return '<tr class="wgh lv1'+(c?' coll':'')+'" data-gk="'+g+'"><td colspan="5"><button type="button" class="wgtog" data-gtog="'+g+'" aria-expanded="'+!c+'" aria-label="'+(c?'Expand':'Collapse')+' '+g+'"><svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button> <b class="wgn">'+g+'</b> <span class="sub">'+n+' action'+(n==1?'':'s')+(late?' · <span class="late">'+late+' overdue</span>':'')+(c?' · collapsed':'')+'</span></td></tr>'}
+function isClosed(it){return it.st==='Closed'||it.st==='Made'}
+function dueB(it){if(isClosed(it))return 'Closed';if(!it.due)return 'No date';var n=days(it.due);return n<0?'Overdue':n<=6?'This week':n<=13?'Next week':'Later'}
+var TABS={
+ actions:{label:'actions',th:'Action',due:'Due',kinds:['A'],grp:function(it){return dueB(it)},order:['Overdue','This week','Next week','Later','No date','Closed'],st:['Open','Delayed','Closed'],pr:1,views:['open','mine','soon','chase','delayed','closed']},
+ raid:{label:'items',th:'Risk or issue',due:'Review',kinds:['Risk','Issue'],grp:function(it){return isClosed(it)?'Closed':it.pr},order:['Urgent','High','Medium','Low','Closed'],st:['Open','Closed'],pr:1,views:['open','mine','soon','chase','closed']},
+ decisions:{label:'decisions',th:'Decision',due:'Needed by',kinds:['D'],grp:function(it){return it.st},order:['Pending','Made'],st:['Pending','Made'],pr:0,views:['open','mine','soon','chase','closed']},
+ all:{label:'items',th:'Item',due:'Due',kinds:['A','Risk','Issue','D'],grp:function(it){return dueB(it)},order:['Overdue','This week','Next week','Later','No date','Closed'],st:['Open','Delayed','Pending','Closed','Made'],pr:1,views:['open','mine','soon','chase','delayed','closed']}};
+var VN={open:'All open',mine:'Mine',soon:'Due soon',chase:'Chase',delayed:'Delayed',closed:'Closed'};
+var tab='actions',view='open',F={st:[],due:[],o:[],p:[],pr:[]},Q='',COLL={Closed:1},CUR=null,OPEN=false;
+function items(){return I.filter(function(x){return TABS[tab].kinds.indexOf(x.k)>-1})}
+function viewOK(it,ign){var v=view;
+ if(v==='open')return ign||!isClosed(it);
+ if(v==='mine')return it.o===ME&&(ign||!isClosed(it));
+ if(v==='soon')return !isClosed(it)&&it.due&&days(it.due)<=7;
+ if(v==='chase')return !isClosed(it)&&it.ch;
+ if(v==='delayed')return it.st==='Delayed';
+ if(v==='closed')return isClosed(it);return true}
+function pass(it,skip){
+ if(!(F.st.length&&skip!=='st')?true:true){}
+ var okv=F.st.length&&skip!=='st'?true:(skip==='st'?true:viewOK(it,false));
+ if(F.st.length&&skip!=='st'){ if(view==='mine'&&it.o!==ME)okv=false; if(view==='soon'&&!(it.due&&days(it.due)<=7))okv=false; if(view==='chase'&&!it.ch)okv=false; if(view==='delayed'&&it.st!=='Delayed')okv=false; }
+ if(skip==='st'){okv=viewOK(it,true)&&(view!=='open'||true)}
+ if(!okv)return false;
+ if(F.st.length&&skip!=='st'&&F.st.indexOf(it.st)<0)return false;
+ if(F.due.length&&skip!=='due'&&F.due.indexOf(dueB(it))<0)return false;
+ if(F.o.length&&skip!=='o'&&F.o.indexOf(it.o)<0)return false;
+ if(F.p.length&&skip!=='p'&&F.p.indexOf(it.p)<0)return false;
+ if(F.pr.length&&skip!=='pr'&&F.pr.indexOf(it.pr)<0)return false;
+ if(Q&&(it.t+' '+it.id+' '+it.o).toLowerCase().indexOf(Q.toLowerCase())<0)return false;
+ return true}
+function tags(it){var h='';if(tab==='raid'||tab==='all')h+='<span class="tg">'+KN[it.k]+'</span>';if(it.ew)h+='<span class="tg warn" title="Raised again by a later meeting">'+flag+'Raised again</span>';if(it.cv)h+='<span class="tg" title="Client-visible">'+eye+'Client</span>';return h+'<span class="tg">'+it.ws+'</span>'}
+function row(it){var n=it.due?days(it.due):null,late=!isClosed(it)&&n!==null&&n<0,done=isClosed(it);
+ return '<tr class="click'+(done?' done':'')+'" data-row="'+it.id+'" aria-selected="false"><td class="wkm" data-f="st">'+ring(it.st)+bars(it.pr)+'<span class="vh">'+it.st+(it.pr?', '+it.pr+' priority':'')+'</span></td>'+
+ '<td class="title" data-f="t"><span class="ttl">'+it.t+'</span><span class="x"><a href="#" class="rowid">'+it.id+'</a> · '+P[it.p]+'</span></td><td class="wkc">'+tags(it)+'</td>'+
+ '<td class="wko" data-f="o"><span class="av">'+av(it.o)+'<a href="#" class="plink2">'+(it.o===ME?'You':it.o)+'</a></span></td>'+
+ '<td class="wkd" data-f="due">'+(it.due?'<span class="'+(late?'late':'')+'">'+fmt(it.due)+(late?'<span class="rel">'+rel(n)+'</span>':'')+'</span>':'<span class="sub">No date</span>')+'</td></tr>'}
+function gh(g,n,late,c){return '<tr class="wgh lv1'+(c?' coll':'')+'" data-gk="'+g+'"><td colspan="5"><button type="button" class="wgtog" data-gtog="'+g+'" aria-expanded="'+!c+'" aria-label="'+(c?'Expand':'Collapse')+' '+g+'"><svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button> <b class="wgn">'+g+'</b> <span class="sub">'+n+' '+(n==1?TABS[tab].label.replace(/s$/,''):TABS[tab].label)+(late?' · <span class="late">'+late+' overdue</span>':'')+(c?' · collapsed':'')+'</span></td></tr>'}
 var VIS=[];
-function render(){var h='';VIS=[];ORDER.forEach(function(g){var L=I.filter(function(x){return bucket(x)===g});if(!L.length)return;
- L.sort(function(a,b){return (a.due||'9')<(b.due||'9')?-1:1});h+=gh(g,L.length,g==='Overdue'?L.length:0);
- if(!COLL[g])L.forEach(function(x){h+=row(x);VIS.push(x.id)})});
- $('#wkBody').innerHTML=h;mark()}
-var CUR=null,OPEN=false;
+function render(){var T=TABS[tab],list=items().filter(function(x){return pass(x)}),h='',showC=view==='closed'||F.st.some(function(s){return s==='Closed'||s==='Made'});VIS=[];
+ T.order.forEach(function(g){var L=list.filter(function(x){return T.grp(x)===g});if(!L.length)return;
+  L.sort(function(a,b){return (a.due||'9')<(b.due||'9')?-1:1});var late=L.filter(function(x){return !isClosed(x)&&x.due&&days(x.due)<0}).length,c=!!COLL[g]&&!showC;
+  h+=gh(g,L.length,tab==='raid'?late:g==='Overdue'?L.length:0,c);if(!c)L.forEach(function(x){h+=row(x);VIS.push(x.id)})});
+ if(!list.length)h='<tr><td colspan="5" style="padding:28px 16px;text-align:center" class="sub">Nothing matches. Try removing a filter, or <button class="linkbtn" data-clr="all">clear all</button>.</td></tr>';
+ $('#wkBody').innerHTML=h;$('#wkTh1').textContent=T.th;$('#wkThD').textContent=T.due;
+ $('#wcount').textContent='Showing '+list.length+' of '+items().length;
+ $$('#wtabs button').forEach(function(b){var on=b.dataset.tab===tab;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1});
+ $('#wkView').innerHTML='<span class="sub">View</span> '+VN[view]+' <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>';
+ $$('#wviews .vchip').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.v===view)});
+ var n=F.st.length+F.due.length+F.o.length+F.p.length+F.pr.length,fc=$('#wkFc');fc.hidden=!n;fc.textContent=n;
+ var ch='',NM={st:'Status',due:'Due',o:'Owner',p:'Project',pr:'Priority'};
+ ['st','due','o','p','pr'].forEach(function(k){if(F[k].length)ch+='<span class="fchip">'+NM[k]+': '+F[k].map(function(v){return k==='p'?P[v]:v===ME?'You':v}).join(', ')+'<button data-clr="'+k+'" aria-label="Remove the '+NM[k].toLowerCase()+' filter"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></span>'});
+ if(ch)ch+='<button class="linkbtn" data-clr="all">Clear all</button>';var w=$('#wapplied');w.innerHTML=ch;w.hidden=!ch;
+ mark()}
 function mark(){$$('#wkBody tr.click').forEach(function(r){var on=r.dataset.row===CUR;r.classList.toggle('cur',on);r.setAttribute('aria-selected',on&&OPEN)})}
+function opts(k){var L=items(),vals=[];
+ if(k==='st')vals=TABS[tab].st;else if(k==='due')vals=['Overdue','This week','Next week','Later','No date'];
+ else if(k==='o')vals=Object.keys(L.reduce(function(a,x){a[x.o]=1;return a},{})).sort(function(a,b){return a===ME?-1:b===ME?1:a<b?-1:1});
+ else if(k==='p')vals=['ABC','DEF'];else vals=['Urgent','High','Medium','Low'];
+ return vals.map(function(v){var n=L.filter(function(x){return pass(x,k)&&(k==='st'?x.st===v:k==='due'?dueB(x)===v:k==='o'?x.o===v:k==='p'?x.p===v:x.pr===v)}).length;return [v,n]})}
+function fmenu(){var NM=[['st','Status'],['due','Due'],['o','Owner'],['p','Project'],['pr','Priority']],h='';
+ NM.forEach(function(a){if(a[0]==='pr'&&!TABS[tab].pr)return;h+='<div class="fsec2">'+a[1]+'</div>'+opts(a[0]).map(function(o){var lab=a[0]==='p'?P[o[0]]:o[0]===ME?'You':o[0];return '<label><input type="checkbox" data-fk="'+a[0]+'" value="'+o[0]+'"'+(F[a[0]].indexOf(o[0])>-1?' checked':'')+'> '+lab+' <small>'+o[1]+'</small></label>'}).join('')});
+ $('#wkFm').innerHTML=h}
+function vmenu(){$('#wkVm').innerHTML=TABS[tab].views.map(function(v){var n=items().filter(function(x){var o=view;view=v;var r=viewOK(x,false);view=o;return r}).length;return '<label><input type="radio" name="wkv" data-vw="'+v+'"'+(v===view?' checked':'')+'> '+(tab==='decisions'&&v==='closed'?'Made':VN[v])+' <small>'+n+'</small></label>'}).join('')}
 function pv(k,v){return '<div class="k">'+k+'</div><div class="v">'+v+'</div>'}
 function chip(m,w,x){return '<button type="button" class="pk-chip" aria-haspopup="listbox">'+m+'<span>'+w+(x||'')+'</span></button>'}
-function peek(it){var n=it.due?days(it.due):null,late=it.st!=='Closed'&&n!==null&&n<0;
- var cal='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
- var h='<div class="pkv"><div class="pk-id"><span>'+it.id+'</span><span>·</span><span>'+P[it.p]+' › '+it.ws+'</span><span>·</span><a href="#" class="srcl">From '+fmt(it.src.slice(0,10).replace(/\//g,'-')) .replace(/^(\d\d)-(\d\d)-(\d{4})$/,'$1-$2-$3')+' '+it.src.slice(11).replace('.docx','').replace(/^(.*)$/,'$1')+'</a>'+(it.cv?'<span class="cv">'+eye+'Client-visible</span>':'')+'</div>'+
- '<h2 class="pk-title" style="margin-bottom:6px">'+it.t+'</h2>'+
- '<div class="pkl">'+pv('Status',chip(ring(it.st,16),it.st))+pv('Priority',chip(bars(it.pr,16),it.pr))+pv('Owner',chip(av(it.o,16),it.o,me(it.o)?' <small class="sub">(you)</small>':''))+pv('Due',chip(cal,it.due?fmt(it.due):'No date',late?' <em>overdue</em>':''))+pv('Milestone',chip(cal,'Not set'))+'</div>'+
- '<div class="pk-dlrow"><div class="pk-dl">Latest update</div><span class="pk-dldr"><button class="drbtn" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1Q12 12 23 12Q12 12 12 23Q12 12 1 12Q12 12 12 1Z" fill="currentColor" stroke="none"/></svg><span>Draft</span></button></span></div>'+
- '<div class="pk-desc" style="color:'+(it.up?'var(--ink)':'var(--faint)')+'">'+(it.up||'Add the latest update…')+'</div><div class="sub" style="text-align:right;margin:-2px 0 6px">Last updated 16-10-2026 09:40</div>'+
+function peek(it){var n=it.due?days(it.due):null,late=!isClosed(it)&&n!==null&&n<0,dec=it.k==='D',raid=it.k==='Risk'||it.k==='Issue';
+ var dl=dec?'Needed by':raid?'Review':'Due',ul=dec?'Reasoning':raid?'Response':'Latest update',ol=dec?'Decider':'Owner',sd=it.src.slice(0,10),sn=it.src.slice(11);
+ var h='<div class="pkv"><div class="pk-id"><span>'+it.id+'</span><span>·</span><span>'+KN[it.k]+' · '+P[it.p]+' › '+it.ws+'</span><span>·</span><a href="#" class="srcl">From '+fmt(sd)+' '+sn+'</a>'+(it.cv?'<span class="cv">'+eye+'Client-visible</span>':'')+'</div>'+
+ '<h2 class="pk-title" style="margin-bottom:6px">'+it.t+'</h2><div class="pkl">'+pv('Status',chip(ring(it.st,16),it.st))+(it.pr?pv(raid?'Priority (calculated)':'Priority',chip(bars(it.pr,16),it.pr)):'')+pv(ol,chip(av(it.o,16),it.o,it.o===ME?' <small class="sub">(you)</small>':''))+pv(dl,chip(cal,it.due?fmt(it.due):'No date',late?' <em>overdue</em>':''))+pv('Milestone',chip(cal,'Not set'))+'</div>'+
+ '<div class="pk-dlrow"><div class="pk-dl">'+ul+'</div><span class="pk-dldr"><button class="drbtn" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1Q12 12 23 12Q12 12 12 23Q12 12 1 12Q12 12 12 1Z" fill="currentColor" stroke="none"/></svg><span>Draft</span></button></span></div>'+
+ '<div class="pk-desc" style="color:'+(it.up?'var(--ink)':'var(--faint)')+'">'+(it.up||'Add the '+ul.toLowerCase()+'…')+'</div>'+(it.up?'<div class="sub" style="text-align:right;margin:-2px 0 6px">Last updated 16-10-2026 09:40</div>':'')+
  '<button class="pk-dethead" type="button" aria-expanded="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>More details</button>'+
  '<div class="pk-dl" style="margin-top:12px">Activity</div><div class="pk-feed" style="margin-top:8px">'+
- (it.up?'<div class="pk-fe"><span class="pk-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg></span><div><b>Update</b> '+it.up+' <span class="when">16-10-2026 09:40</span></div></div>':'')+
- '<div class="pk-fe"><span class="pk-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div><b>Raised again</b> in the '+fmt(it.src.slice(0,10))+' minutes <span class="when">'+fmt(it.src.slice(0,10))+'</span></div></div></div>'+
+ (it.up?'<div class="pk-fe"><span class="pk-fi">'+S1+'<path d="M4 5h16v11H8l-4 4z"/></svg></span><div><b>Update</b> '+it.up+' <span class="when">16-10-2026 09:40</span></div></div>':'')+
+ (it.ew?'<div class="pk-fe"><span class="pk-fi">'+S1+'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div><b>Raised again</b> in the '+fmt(sd)+' minutes <span class="when">'+fmt(sd)+'</span></div></div>':'<div class="pk-fe"><span class="pk-fi">'+S1+'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div><b>Source</b> '+sn+' <span class="when">'+fmt(sd)+'</span></div></div>')+'</div>'+
  '<button class="pk-fold" type="button"><svg class="i" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>2 routine events (created, applied)</button></div>';
  $('#pkBody').innerHTML=h}
-function open(id){var it=I.filter(function(x){return x.id===id})[0];if(!it)return;CUR=id;OPEN=true;peek(it);$('#panel').classList.add('on');document.body.classList.add('pkopen');mark();var r=$('tr[data-row="'+id+'"]');if(r)r.scrollIntoView({block:'nearest'})}
+function peekClassic(it){var n=it.due?days(it.due):null,late=!isClosed(it)&&n!==null&&n<0,dec=it.k==='D',raid=it.k==='Risk'||it.k==='Issue';
+ var dl=dec?'Needed by':raid?'Review':'Due',ul=dec?'Reasoning':raid?'Response':'Latest update',ol=dec?'Decider':'Owner',sd=it.src.slice(0,10),sn=it.src.slice(11);
+ function pr(k,m,w,x){return '<div class="pk-prop"><button type="button" class="pk-chip" aria-haspopup="listbox" data-tip="'+k+'">'+m+'<span>'+w+(x||'')+'</span></button></div>'}
+ var h='<div class="pkc"><div class="pk-id"><span>'+it.id+'</span><span>\u00b7</span><span>'+P[it.p]+'</span></div><h2 class="pk-title" style="margin-bottom:6px">'+it.t+'</h2>'+
+ '<div class="pk-props">'+pr('Status',ring(it.st,18),it.st)+(it.pr?pr('Priority',bars(it.pr,18),it.pr):'')+pr(ol,av(it.o,18),it.o,it.o===ME?' <small class="sub">(you)</small>':'')+pr(dl,cal,it.due?fmt(it.due):'No date',late?' <em>overdue</em>':'')+'</div>'+
+ '<div class="pk-dlrow"><div class="pk-dl">'+ul+'</div><span class="pk-dldr"><button class="drbtn" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1Q12 12 23 12Q12 12 12 23Q12 12 1 12Q12 12 12 1Z" fill="currentColor" stroke="none"/></svg><span>Draft</span></button></span></div>'+
+ '<div class="pk-desc" style="color:'+(it.up?'var(--ink)':'var(--faint)')+'">'+(it.up||'Add the '+ul.toLowerCase()+'\u2026')+'</div><div class="sub" style="text-align:right;margin:-2px 0 6px">Last updated 16-10-2026 09:40</div>'+
+ '<button class="pk-dethead" type="button" aria-expanded="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>Details</button>'+
+ '<div class="tabhost"><div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="true">All</button><button type="button" role="tab" aria-selected="false">Activity</button><button type="button" role="tab" aria-selected="false">Updates</button><button type="button" role="tab" aria-selected="false">Source</button></div></div>'+
+ '<div class="pk-feed" style="margin-top:12px"><div class="pk-fe"><span class="pk-fi">'+S1+'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div><b>You, via cx-edit</b> created <span class="when">10-10-2026 23:13</span></div></div>'+
+ (it.up?'<div class="pk-fe"><span class="pk-fi">'+S1+'<path d="M4 5h16v11H8l-4 4z"/></svg></span><div><b>Update</b> '+it.up+' <span class="when">16-10-2026 09:40</span></div></div>':'')+
+ '<div class="pk-fe"><span class="pk-fi">'+S1+'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div><b>Source</b><br><a href="#" class="srcl">'+sn+'.docx</a> \u00b7 minutes</div></div></div></div>';
+ return h}
+var PKM='v2';
+function open(id){var it=I.filter(function(x){return x.id===id})[0];if(!it)return;CUR=id;OPEN=true;if(PKM==='v2')peek(it);else $('#pkBody').innerHTML=peekClassic(it);$('#panel').classList.add('on');document.body.classList.add('pkopen');mark();var r=$('tr[data-row="'+id+'"]');if(r)r.scrollIntoView({block:'nearest'})}
 function close(){OPEN=false;$('#panel').classList.remove('on');document.body.classList.remove('pkopen');mark()}
 function step(d){var i=VIS.indexOf(CUR);if(i<0)i=d>0?-1:0;i=Math.max(0,Math.min(VIS.length-1,i+d));CUR=VIS[i];if(OPEN)open(CUR);else mark()}
 function toast(t,u){var o=$('.pkstage');if(o)o.remove();var d=document.createElement('div');d.className='pkstage';d.setAttribute('role','status');d.innerHTML='<span>'+t+'</span>'+(u?'<button class="btn" type="button" style="height:28px">Undo</button>':'');document.body.appendChild(d);if(u)d.querySelector('button').onclick=function(){u();d.remove()};setTimeout(function(){d.remove()},5000)}
-document.addEventListener('click',function(e){var g=e.target.closest('[data-gtog]');if(g){COLL[g.dataset.gtog]=!COLL[g.dataset.gtog];render();return}
- var r=e.target.closest('#wkBody tr.click');if(r&&!e.target.closest('a')){open(r.dataset.row);return}
- var a=e.target.closest('#wkBody a.rowid');if(a){e.preventDefault();open(a.closest('tr').dataset.row);return}
- var d=e.target.closest('[data-dens]');if(d){$$('[data-dens]').forEach(function(b){b.setAttribute('aria-pressed',b===d)});$('#workWrap').classList.toggle('cmp',d.dataset.dens==='cmp');$('#workWrap').classList.toggle('cmf',d.dataset.dens==='cmf');return}
- if(e.target.closest('#pkClose'))close();if(e.target.closest('#pkNext'))step(1);if(e.target.closest('#pkPrev'))step(-1);
- var h=e.target.closest('.pk-dethead');if(h){var x=h.getAttribute('aria-expanded')==='true';h.setAttribute('aria-expanded',!x);var nx=h.nextElementSibling;if(!x){var f=document.createElement('div');f.className='pk-det';f.innerHTML='<div class="pkl" style="margin-top:0"><div class="k">Raised</div><div class="v">10-10-2026</div><div class="k">Client messaging</div><div class="v sub">None</div></div>';h.after(f)}else if(h.nextElementSibling.classList.contains('pk-det'))h.nextElementSibling.remove()}
- var v=e.target.closest('[data-v]');if(v){v.setAttribute('aria-pressed',v.getAttribute('aria-pressed')!=='true')}});
+function menus(except){$$('.ddmenu.on').forEach(function(m){if(m.id!==except){m.classList.remove('on');var b=m.parentNode.querySelector('button[aria-expanded]');if(b)b.setAttribute('aria-expanded','false')}})}
+function toggleMenu(id,btn,build){var m=$('#'+id),on=!m.classList.contains('on');menus(on?id:null);if(on)build();m.classList.toggle('on',on);btn.setAttribute('aria-expanded',on)}
+function setTab(t){tab=t;view='open';F={st:[],due:[],o:[],p:[],pr:[]};Q='';$('#workQ').value='';CUR=null;close();menus();render();CUR=VIS[0];mark()}
+document.addEventListener('click',function(e){var T=e.target;
+ var tb=T.closest('#wtabs button');if(tb){setTab(tb.dataset.tab);return}
+ var g=T.closest('[data-gtog]');if(g){COLL[g.dataset.gtog]=!COLL[g.dataset.gtog];render();return}
+ var cl=T.closest('[data-clr]');if(cl){var k=cl.dataset.clr;if(k==='all')F={st:[],due:[],o:[],p:[],pr:[]};else F[k]=[];render();if($('#wkFm').classList.contains('on'))fmenu();return}
+ if(T.closest('#wkView')){toggleMenu('wkVm',$('#wkView'),vmenu);return}
+ if(T.closest('#wkF')){toggleMenu('wkFm',$('#wkF'),fmenu);return}
+ var vw=T.closest('[data-vw]');if(vw){view=vw.dataset.vw;render();menus();return}
+ var vc=T.closest('#wviews .vchip');if(vc){view=view===vc.dataset.v?'open':vc.dataset.v;render();return}
+ var fk=T.closest('[data-fk]');if(fk){var a=F[fk.dataset.fk],i=a.indexOf(fk.value);if(fk.checked&&i<0)a.push(fk.value);if(!fk.checked&&i>-1)a.splice(i,1);render();var st=$('#wkFm').scrollTop;fmenu();$('#wkFm').scrollTop=st;return}
+ var d=T.closest('[data-dens]');if(d){$$('[data-dens]').forEach(function(b){b.setAttribute('aria-pressed',b===d)});$('#workWrap').classList.toggle('cmp',d.dataset.dens==='cmp');$('#workWrap').classList.toggle('cmf',d.dataset.dens==='cmf');return}
+ if(T.closest('#wlay button[data-lay="board"]')){toast('Board layout is not in this mockup.');return}
+ if(T.closest('.ddisp>button')){toast('Display (grouping, order, columns) is unchanged and not shown here.');return}
+ var a2=T.closest('#wkBody a.rowid');if(a2){e.preventDefault();open(a2.closest('tr').dataset.row);return}
+ var r=T.closest('#wkBody tr.click');if(r&&!T.closest('a')){CUR=r.dataset.row;mark();return}
+ if(T.closest('#pkClose'))close();if(T.closest('#pkNext'))step(1);if(T.closest('#pkPrev'))step(-1);
+ var h=T.closest('.pk-dethead');if(h){var x=h.getAttribute('aria-expanded')==='true';h.setAttribute('aria-expanded',!x);if(!x){var f=document.createElement('div');f.className='pk-det';f.innerHTML='<div class="pkl" style="margin-top:0"><div class="k">Raised</div><div class="v">10-10-2026</div><div class="k">Client messaging</div><div class="v sub">None</div></div>';h.after(f)}else if(h.nextElementSibling.classList.contains('pk-det'))h.nextElementSibling.remove()}
+ if(!T.closest('.dd'))menus()});
+document.addEventListener('dblclick',function(e){var r=e.target.closest('#wkBody tr.click');if(r)open(r.dataset.row)});
+document.addEventListener('input',function(e){if(e.target.id==='workQ'){Q=e.target.value;render()}});
 document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))||e.target.isContentEditable||e.metaKey||e.ctrlKey)return;var k=e.key;
- if(k==='j'||k==='ArrowDown'){step(1);e.preventDefault()}else if(k==='k'||k==='ArrowUp'){step(-1);e.preventDefault()}else if(k==='Enter'&&CUR){open(CUR)}else if(k==='Escape'){close()}
+ if(k==='j'||k==='ArrowDown'){step(1);e.preventDefault()}else if(k==='k'||k==='ArrowUp'){step(-1);e.preventDefault()}else if((k==='Enter'||k==='ArrowRight')&&CUR){open(CUR);e.preventDefault()}else if(k==='ArrowLeft'&&OPEN){close();e.preventDefault()}else if(k==='Escape'){menus();close()}
+ else if(k==='f'){toggleMenu('wkFm',$('#wkF'),fmenu);e.preventDefault()}
  else if(CUR&&'sopt'.indexOf(k)>-1&&k.length===1){var nm={s:'status',o:'owner',p:'priority',t:'due date'}[k];toast('The '+nm+' picker opens here on '+CUR+' (the existing inline editor).')}
- else if(CUR&&k==='c'){var it=I.filter(function(x){return x.id===CUR})[0];if(it.st==='Closed')return;var old=it.st;it.st='Closed';var nxt=VIS[VIS.indexOf(CUR)+1]||VIS[VIS.indexOf(CUR)-1];render();CUR=nxt&&nxt!==CUR?nxt:null;if(OPEN&&CUR)open(CUR);else if(OPEN)close();mark();toast('Closed '+it.id+' · Closed group','undo');$('.pkstage button').onclick=function(){it.st=old;render();CUR=it.id;mark();$('.pkstage').remove()}}});
+ else if(CUR&&k==='c'){var it=I.filter(function(x){return x.id===CUR})[0];if(isClosed(it))return;var old=it.st;it.st=it.k==='D'?'Made':'Closed';var nxt=VIS[VIS.indexOf(CUR)+1]||VIS[VIS.indexOf(CUR)-1];render();CUR=nxt&&nxt!==CUR?nxt:null;if(OPEN&&CUR)open(CUR);else if(OPEN)close();mark();toast((it.k==='D'?'Made ':'Closed ')+it.id,1);$('.pkstage button').onclick=function(){it.st=old;render();CUR=it.id;mark();$('.pkstage').remove()}}});
 render();CUR=VIS[0];mark();
-var n=document.createElement('div');n.className='pk-ob';n.innerHTML='Try: click a row (peek), <b>J</b>/<b>K</b>, <b>C</b> closes the cursor row, the density switch, a group arrow. Fictional data; dashed keys are new.';document.body.appendChild(n);
+var pm=document.createElement('div');pm.className='pkmode';pm.innerHTML='Peek design <span class="seg" id="pkMode"><button type="button" data-pkm="classic" aria-pressed="false">Today\u2019s</button><button type="button" data-pkm="v2" aria-pressed="true">v2 (new)</button></span>';document.body.appendChild(pm);
+pm.addEventListener('click',function(e){var b=e.target.closest('[data-pkm]');if(!b)return;PKM=b.dataset.pkm;$$('[data-pkm]').forEach(function(x){x.setAttribute('aria-pressed',x===b)});if(OPEN)open(CUR)});
+var n=document.createElement('div');n.className='pk-ob';n.innerHTML='Try: the tabs, the filter button (or <b>F</b>), the View menu and pills, search; click selects a row, double-click or its ID opens the peek; <b>J</b>/<b>K</b>, <b>C</b> to close with Undo, the two density icons. Fictional data.';document.body.appendChild(n);
 })();
 </script></body></html>
