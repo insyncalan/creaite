@@ -240,8 +240,9 @@ class ClearDayPage:
         picked = b.eval("[...MSEL]")
         self.assertNotIn("ev-1", picked)
         self.assertIn("ev-2", picked)
-        self.assertEqual(b.eval("document.getElementById('inboxBadge').textContent"),
-                         str(b.eval("(D.inbox||[]).filter(f=>f.state==='new').length")))                # the rail badge counts files only
+        # the rail's one Intake and Review entry (#232; the Intake entry and #inboxBadge went with it) counts proposals, never a cleared meeting
+        self.assertEqual(b.eval("document.getElementById('revBadge').textContent"), str(b.eval("REV.filter(r=>!r.done).length")))
+        self.assertFalse(b.eval("D.intake_review.meetings.some(m=>m.key==='ev-1')"))                   # and the new page's model has no row for it either
 
     def test_safeguard_asks_before_clearing_an_unprocessed_transcript(self):
         b = self.go_intake()

@@ -130,6 +130,22 @@ class Finish(IrHardenCase):
             b.eval("irSetChecking('x', false); 0")
 
     # ---- the confidential meeting on every view
+    def test_a_row_flagged_confidential_names_no_project_whatever_the_model_carries(self):
+        """Defence in depth: the server sends no project for a confidential meeting, and the page does not show one if a model has it."""
+        b = self.b
+        b.eval("""(()=>{ D.intake_review={...D.intake_review, meetings: D.intake_review.meetings.map(m=>m.title==='ABC Steering'?{...m,p:'ABC',confidential:true}:m)}; irSel.value=null; irTick.value++; })()""")
+        for view in ("list", "board", "two"):
+            b.eval("irSetView(%s)" % json.dumps(view))
+            b.wait("!!document.querySelector('[data-irv=%s]')" % view)
+            if view == "two":
+                b.eval("irSel.value=D.intake_review.meetings.find(m=>m.title==='ABC Steering').id")
+            b.wait("document.getElementById('v-intake-review').innerText.includes('ABC Steering')")
+            shown = b.eval("[...document.querySelectorAll('#v-intake-review [data-irm],#v-intake-review [data-irdet]')].filter(x=>x.innerText.includes('ABC Steering')).map(x=>x.innerText).join(' ')")
+            self.assertNotIn("Example Programme", shown, view)
+        b.eval("irSetView('list'); irSel.value=null; 0")
+        b.eval("""(()=>{ D.intake_review={...D.intake_review, meetings: D.intake_review.meetings.map(m=>m.title==='ABC Steering'?{...m,confidential:false}:m)}; irTick.value++; })()""")
+        b.wait("document.getElementById('v-intake-review').innerText.includes('Example Programme')")      # and the same row names it when it is not
+
     def test_a_confidential_meeting_keeps_only_title_and_times_after_a_run_too(self):
         b = self.b
         b.click(self.sel("ABC Board matters", " [data-ira=process]"))
