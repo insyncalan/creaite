@@ -25,6 +25,7 @@ import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_M
 import { closePanel, pkOn } from "./projects.js";
 import { nm, PERS, personLink, row, unknownOwner } from "./settings.js";
 import { conflictHtml, isConflict, kindLabel, pkAdd, plur, revGroupTitle } from "./today.js";
+import { irTick } from "./stores/intakeReview.js";
 import { mountRejectMenu } from "./components/review/RejectMenu.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { contextMenuOpen, openContextMenu, openContextMenuAt } from "./components/review/ContextMenu.jsx";
@@ -118,7 +119,7 @@ export const mFileAt=f=>{ const m=/(\d{4}-\d{2}-\d{2})[-T_ ]?(\d{2})(\d{2})/.exe
 shared.MNEWIO=null;   /* declared before renderReview, which runs at load */
 export function renderReview(){ { const v=r=>(r.flags||[]).includes("vip")?0:1; REV.sort((a,b)=>v(a)-v(b)); }   /* BL-152: a followed person's proposals first, unlabelled (BL-288) */
  CHK.forEach(n=>RHL.add(n)); [...RHL].forEach(n=>{ const r=REV.find(x=>x.n===n); if(!r||r.done) RHL.delete(n); }); rvSyncChk(); if(!shared.LOADING) rjLoadGuesses();   /* BL-315 */
-  rvRender(); renderBadge(); 
+  rvRender(); renderBadge(); irTick.value++;   /* #232-B: Intake and Review draws from the same rows */
   REV.filter(r=>r.ws_suggest&&!r.done&&(r.flags||[]).includes("new-workstream")).forEach(r=>{ const cell=$(`#reviewBody tr[data-n="${r.n}"] td.title`); if(!cell||cell.querySelector(".wsq")) return;
     addHTML(cell,"beforeend",html`<div class="wsq">New workstream “${r.ws_suggest}” for ${(r.p||"?")}? <button class="mini" data-wsq="add" data-n="${r.n}">Add workstream</button><button class="mini" data-wsq="skip" data-n="${r.n}">Leave blank</button></div>`); });   /* BL-58 */
   if(!shared.LOADING){
@@ -171,7 +172,8 @@ $("#reviewBody").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.close
    Open source, auto-advance (review.auto_advance) and the empty-queue summary. Cmd/Ctrl+Z undoes the last decision or batch. */
 export const RVF={k:new Set(),nd:new Set(),src:new Set(),p:new Set(),age:new Set()}, RVNEG=new Set(); export let RVQ="", RVG="project", RVO="", RVPK="k", RVLASTUNDO=null; shared.RVSTATS={approved:0,rejected:0,edited:0};
 shared.RV_MAX=25;                                     /* a batch over this asks first (a let, so a test can lower it) */
-export const rvBulkOK=r=>!!r&&!r.done&&!r.indiv&&!!r.p&&!["draft","files"].includes(r.kind)&&!(r.flags||[]).includes("conflict");
+/* #232-B: the page's rule is the server's (review.hold_reason, carried on each row as `hold`; "" is routine, "invalid" is held back). A row without it (an edit made on the page) keeps the older test */
+export const rvBulkOK=r=>!!r&&!r.done&&("hold" in r?!r.hold:!r.indiv&&!!r.p&&!["draft","files"].includes(r.kind)&&!(r.flags||[]).includes("conflict"));
 export const rvRejectOK=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind);
 export function rvSyncChk(){ CHK.clear(); RHL.forEach(n=>{ const r=REV.find(x=>x.n===n); if(rvBulkOK(r)) CHK.add(n); }); }
 /* why an item can't be approved in bulk, in words */
@@ -346,7 +348,7 @@ export async function rvSet(f,v){ const L=rvSel().filter(r=>["actions","raid","d
       const vals=toDb(r.kind,{[fld]:v}); if(f==="p"){ const was=it.values&&it.values.project; it.values=Object.assign(it.values||{},{project:v}); it.match="strong"; if(it.values.milestone&&!String(it.values.milestone).startsWith(v+"-M-")) it.values.milestone=null;
         if(it.values.workstream&&!wsFor(v).some(w=>w.toLowerCase()===String(it.values.workstream).toLowerCase())) it.values.workstream=null; if(was&&was!==v){ if(it.moved_from===v) delete it.moved_from; else it.moved_from=it.moved_from||was; } }   /* BL-200: as review.py assign */
       else it.values=Object.assign(it.values||{},vals); it.edited_in="dashboard"; })); }catch(e){ snack("Not saved: "+e.message); return; }
-  ok.forEach(({r,fld})=>{ if(f==="p"){ r.p=v; r.why="Project set in Review"; if(r.rec.ms&&!String(r.rec.ms).startsWith(v+"-M-")) r.rec.ms=null; if(r.rec.ws&&!wsFor(v).some(w=>w.toLowerCase()===String(r.rec.ws).toLowerCase())) r.rec.ws=""; } else r.rec[fld]=v; r.edited=true; }); shared.RVSTATS.edited+=ok.length;
+  ok.forEach(({r,fld})=>{ if(f==="p"){ r.p=v; if(r.hold==="need a project") r.hold=""; r.why="Project set in Review"; if(r.rec.ms&&!String(r.rec.ms).startsWith(v+"-M-")) r.rec.ms=null; if(r.rec.ws&&!wsFor(v).some(w=>w.toLowerCase()===String(r.rec.ws).toLowerCase())) r.rec.ws=""; } else r.rec[fld]=v; r.edited=true; }); shared.RVSTATS.edited+=ok.length;
   const undo=async()=>{ for(const [file,os] of byFile) try{ await editProposal(file,data=>os.forEach(({r})=>{ const it=(data.items||[]).find(i=>i.n===r.ref), p=prev[file+"|"+r.ref]; if(it&&p&&!it.applied){ it.values=p.values; it.match=p.match; if(p.edited_in===undefined) delete it.edited_in; else it.edited_in=p.edited_in; if(p.ap===undefined) delete it.as_proposed; else it.as_proposed=p.ap; /* BL-232 */ } })); }catch(e){}
     before.forEach(b=>{ b.r.p=b.p; b.r.rec=b.rec; b.r.why=b.why; b.r.edited=b.edited; }); renderReview(); };
   const lab={p:"Project",o:"Owner",due:"Due date",ws:"Workstream",ms:"Milestone",pr:"Priority",st:"Status",imp:"Impact",lik:"Likelihood"}[f], shown=f==="p"?pName(v):f==="due"?(v?fd(v):"none"):f==="ms"?(v?msLabel(v):"none"):(v||"none");

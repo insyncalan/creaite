@@ -4064,15 +4064,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icpipe{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
 #v-intake-review .icpipe .evbox{cursor:pointer;min-width:160px}#v-intake-review .icpipe .evbox[aria-pressed=true]{outline:2px solid var(--accent)}
 #v-intake-review .icpipe .ar{align-self:center;color:var(--muted)}
-#v-intake-review .icsub{font-size:12px;color:var(--muted)}
-#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:14px;margin:0 0 8px}
+#v-intake-review .icsub{font-size:var(--fs-xs);color:var(--muted)}
+#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
-#v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:12px}
+#v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
-#v-intake-review .ickind{font-size:12px;font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
-#v-intake-review .icmeethd{font-size:16px;font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
+#v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
+#v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
 #v-intake-review tr.icopen td{background:var(--accent-soft)!important;border-top:2px solid var(--accent)}
 #v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
@@ -4080,6 +4080,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 /* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
 .rail [data-v=review] .rl{letter-spacing:-.02em}
+
+/* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
+#v-intake-review tr.irprop td.title{padding-top:10px;padding-bottom:10px}
+#v-intake-review .icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);margin:2px 0}
+#v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
+#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
+#v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
+#v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -9896,8 +9904,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     if (q5 < 0) return true;
     for (const part of rest.slice(q5 + 1).split("&")) {
       if (!part) continue;
-      const eq = part.indexOf("="), key2 = strictDecode(eq < 0 ? part : part.slice(0, eq)), val2 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
-      if (key2 === null || val2 === null || !MAIL_PARTS.includes(key2.toLowerCase())) return false;
+      const eq = part.indexOf("="), key2 = strictDecode(eq < 0 ? part : part.slice(0, eq)), val3 = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
+      if (key2 === null || val3 === null || !MAIL_PARTS.includes(key2.toLowerCase())) return false;
     }
     return true;
   }
@@ -26731,11 +26739,11 @@ ${s5}`;
     changed();
     return true;
   }
-  async function setClientRhythm(code, val2) {
+  async function setClientRhythm(code, val3) {
     const p6 = project(code);
     if (!p6) return false;
-    if (!await setRhythm(code, val2)) return false;
-    p6.rhythm = val2;
+    if (!await setRhythm(code, val3)) return false;
+    p6.rhythm = val3;
     changed();
     return true;
   }
@@ -33732,12 +33740,12 @@ ${s5}`;
     $("#settingsBody").addEventListener("change", async (e4) => {
       const el2 = e4.target, k5 = el2.dataset.vipk;
       if (!k5) return;
-      const val2 = el2.type === "checkbox" ? el2.checked : Math.max(5, Number(el2.value) || 30);
+      const val3 = el2.type === "checkbox" ? el2.checked : Math.max(5, Number(el2.value) || 30);
       const was = VIPD()[k5];
-      if (await writeSettings({ ["vip." + k5]: val2 })) {
-        VIPD()[k5] = val2;
+      if (await writeSettings({ ["vip." + k5]: val3 })) {
+        VIPD()[k5] = val3;
         snack("Saved to settings.json");
-        if (k5 === "notify" && val2 && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+        if (k5 === "notify" && val3 && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
       } else if (el2.type === "checkbox") el2.checked = !!was;
       else el2.value = was;
     });
@@ -35644,8 +35652,8 @@ ${s5}`;
   }
   var MVDPH = {};
   var MVCAL = null;
-  function mvDpBtn(id2, val2, label, chg) {
-    return `<button type="button" class="mv-dp${chg ? " chg" : ""}" id="${id2}" data-mvdp="${val2 || ""}" aria-haspopup="dialog" aria-expanded="false" aria-label="${esc(label)}, ${val2 ? fd(val2) : "not set"}"><span>${val2 ? fd(val2) : "Choose a date"}</span>${ic("calendar", { bare: true })}</button>`;
+  function mvDpBtn(id2, val3, label, chg) {
+    return `<button type="button" class="mv-dp${chg ? " chg" : ""}" id="${id2}" data-mvdp="${val3 || ""}" aria-haspopup="dialog" aria-expanded="false" aria-label="${esc(label)}, ${val3 ? fd(val3) : "not set"}"><span>${val3 ? fd(val3) : "Choose a date"}</span>${ic("calendar", { bare: true })}</button>`;
   }
   function mvCalEl() {
     let c5 = $("#mvCal");
@@ -37344,18 +37352,18 @@ ${s5}`;
     h5.tabIndex = 0;
     h5.setAttribute("role", "separator");
     h5.setAttribute("aria-label", "Resize " + th2.textContent + " column");
-    const val2 = (w6) => h5.setAttribute("aria-valuenow", String(Math.round(Math.max(60, Math.min(900, w6 || 0)))));
+    const val3 = (w6) => h5.setAttribute("aria-valuenow", String(Math.round(Math.max(60, Math.min(900, w6 || 0)))));
     h5.setAttribute("aria-orientation", "vertical");
     h5.setAttribute("aria-valuemin", "60");
     h5.setAttribute("aria-valuemax", "900");
-    val2(shared.RZ[k5] || th2.getBoundingClientRect().width);
-    h5.addEventListener("focus", () => val2(th2.getBoundingClientRect().width));
+    val3(shared.RZ[k5] || th2.getBoundingClientRect().width);
+    h5.addEventListener("focus", () => val3(th2.getBoundingClientRect().width));
     const put2 = (w6) => {
       w6 = Math.max(60, Math.min(900, w6));
       th2.style.width = w6 + "px";
       th2.style.minWidth = w6 + "px";
       shared.RZ[k5] = Math.round(w6);
-      val2(w6);
+      val3(w6);
     };
     h5.addEventListener("click", (e4) => e4.stopPropagation());
     h5.addEventListener("pointerdown", (e4) => {
@@ -42727,6 +42735,126 @@ ${s5}`;
     if (!MAC) $("#kK").textContent = "Ctrl K";
   }
 
+  // core/irFold.js
+  var IR_STAGES = ["arrived", "drafted", "approved"];
+  var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
+  var IR_FOLDED = ["later", "not_needed"];
+  var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
+  function irToggle(cur, id2, model) {
+    if (cur === id2) return null;
+    const m5 = (model.meetings || []).find((x5) => x5.id === id2);
+    return irOpenable(m5) ? id2 : cur;
+  }
+  function irKeepOpen(cur, model) {
+    return cur && (model.meetings || []).some((x5) => x5.id === cur) ? cur : null;
+  }
+  function irLive(g5, done) {
+    const keep2 = (a5) => (a5 || []).filter((n4) => !done(n4));
+    return { needs: keep2(g5 && g5.needs), routine: keep2(g5 && g5.routine) };
+  }
+  function irGroupsShown(g5, done) {
+    const l6 = irLive(g5, done);
+    return (
+      /** @type {const} */
+      ["needs", "routine"].filter((k5) => l6[k5].length).map((k5) => ({ kind: k5, ns: l6[k5], open: true }))
+    );
+  }
+  var irBulk = (g5, done) => irLive(g5, done).routine;
+  var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
+  var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
+  function irFoldClick(folded, sec) {
+    return { ...folded, [sec]: !irIsFolded(folded, sec) };
+  }
+  var irIsFolded = (folded, sec) => sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec);
+  function irCounts(model, done) {
+    const ms2 = model.meetings || [], left = (m5) => {
+      const l6 = irLive(m5.groups, done);
+      return l6.needs.length + l6.routine.length;
+    };
+    const stage = (m5) => m5.stage === "drafted" && !left(m5) ? "approved" : m5.stage;
+    const all = [
+      ...ms2.flatMap((m5) => [...m5.groups.needs || [], ...m5.groups.routine || []]),
+      ...["mail", "other"].flatMap((k5) => [.../** @type {any} */
+      (model[k5] || {}).needs || [], .../** @type {any} */
+      (model[k5] || {}).routine || []])
+    ];
+    const toApprove = new Set(all.filter((n4) => !done(n4))).size;
+    const ready = ms2.filter((m5) => m5.stage === "arrived" && m5.state === "ready").length;
+    return {
+      arrived: ms2.filter((m5) => stage(m5) === "arrived").length,
+      ready,
+      drafted: ms2.filter((m5) => stage(m5) === "drafted").length,
+      approved: ms2.filter((m5) => stage(m5) === "approved").length,
+      to_approve: toApprove,
+      badge: ready + toApprove
+    };
+  }
+  var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
+  var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
+  var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
+
+  // stores/intakeReview.js
+  var IR_VIEW_KEY = "creaite-ir-view";
+  var irModel = () => (
+    /** @type {any} */
+    D.intake_review || { meetings: [], mail: { needs: [], routine: [] }, other: { needs: [], routine: [] }, later: [], not_needed: [], counts: {} }
+  );
+  var irRow = (n4) => REV.find((r4) => r4.n === n4) || null;
+  var irDone = (n4) => {
+    const r4 = irRow(n4);
+    return !r4 || !!r4.done;
+  };
+  var irView = y3(irViewNorm((() => {
+    try {
+      return store.get(IR_VIEW_KEY, "list");
+    } catch (x5) {
+      return "list";
+    }
+  })()));
+  function irSetView(v5) {
+    irView.value = irViewNorm(v5);
+    try {
+      store.set(IR_VIEW_KEY, irView.value);
+    } catch (x5) {
+    }
+  }
+  var irOpen = y3(
+    /** @type {string|null} */
+    null
+  );
+  var irStage = y3("all");
+  var irFolded = y3(
+    /** @type {Record<string, boolean>} */
+    {}
+  );
+  var irPeek = y3(
+    /** @type {number|null} */
+    null
+  );
+  var irSel = y3(
+    /** @type {string|null} */
+    null
+  );
+  var irBusy = y3(
+    /** @type {string[]} */
+    []
+  );
+  var irTick = y3(0);
+  function irClickMeeting(id2) {
+    irOpen.value = irToggle(irOpen.value, id2, irModel());
+  }
+  function irClickStage(g5) {
+    irStage.value = irStageClick(irStage.value, g5);
+  }
+  function irClickFold(sec) {
+    irFolded.value = irFoldClick(irFolded.value, sec);
+  }
+  function irAfterData() {
+    irOpen.value = irKeepOpen(irOpen.value, irModel());
+    irTick.value++;
+  }
+  var irLiveCounts = () => irCounts(irModel(), irDone);
+
   // stores/rejects.js
   var REASONS = ["Not an action", "Duplicate", "Chatter", "Already done", "Wrong project", "Doesn't need tracking", "For another team"];
   var rjReasons = y3(REASONS);
@@ -43502,6 +43630,7 @@ ${s5}`;
     if (!shared.LOADING) rjLoadGuesses();
     rvRender();
     renderBadge();
+    irTick.value++;
     REV.filter((r4) => r4.ws_suggest && !r4.done && (r4.flags || []).includes("new-workstream")).forEach((r4) => {
       const cell2 = $(`#reviewBody tr[data-n="${r4.n}"] td.title`);
       if (!cell2 || cell2.querySelector(".wsq")) return;
@@ -43642,7 +43771,7 @@ ${s5}`;
   var RVQ = "", RVG = "project", RVO = "", RVPK = "k", RVLASTUNDO = null;
   shared.RVSTATS = { approved: 0, rejected: 0, edited: 0 };
   shared.RV_MAX = 25;
-  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict");
+  var rvBulkOK = (r4) => !!r4 && !r4.done && ("hold" in r4 ? !r4.hold : !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict"));
   var rvRejectOK = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
   function rvSyncChk() {
     CHK.clear();
@@ -44177,6 +44306,7 @@ ${s5}`;
     ok2.forEach(({ r: r4, fld }) => {
       if (f5 === "p") {
         r4.p = v5;
+        if (r4.hold === "need a project") r4.hold = "";
         r4.why = "Project set in Review";
         if (r4.rec.ms && !String(r4.rec.ms).startsWith(v5 + "-M-")) r4.rec.ms = null;
         if (r4.rec.ws && !wsFor(v5).some((w6) => w6.toLowerCase() === String(r4.rec.ws).toLowerCase())) r4.rec.ws = "";
@@ -56465,7 +56595,7 @@ ${d5.text}`);
       if (k5 === "actions") return [["t", "Action", "area"], ["p", "Project", "sel", projOpts], ["ws", "Workstream", "ws"], ["o", "Owner", "owner"], ["pr", "Priority", "sel", ["Urgent", "High", "Medium", "Low"]], ["due", "Due date", "date"], ["st", "Status", "sel", ["Open", "Delayed", "Closed", "Cancelled"]], ["raised", "Raised", "date"], ["closed", "Closed", "date"], ["upd", "Latest update", "area"], ["ms", "Milestone", "sel", msOpts2], ["#", "Client messaging"], ["client", "Client-visible", "check"], ["cm", "Client messaging", "cm"]];
       if (k5 === "raid") return [["t", "Description", "area"], ["type", "Type", "sel", ["Risk", "Issue", "Assumption", "Dependency"]], ["p", "Project", "sel", projOpts], ["ws", "Workstream", "ws"], ["o", "Owner", "owner"], ["resp", RESPL(x5.type), "area"], ["imp", "Impact", "sel", ["High", "Medium", "Low"]], ["lik", "Likelihood", "sel", ["High", "Medium", "Low"]], ["pr", "Priority", "calc"], ["due", "Due date", "date"], ["st", "Status", "sel", ["Open", "Closed", "Cancelled"]], ["raised", "Raised", "date"], ["closed", "Date closed", "date"], ["ms", "Milestone", "sel", msOpts2], ["#", "Client messaging"], ["client", "Client-visible", "check"], ["cm", "Client messaging", "cm"]];
       if (k5 === "decisions") return decisionFields(x5, projOpts);
-      if (k5 === "update") return [["target", "Item", "ro"], ["from", "Current value", "ro"], ["to", "Proposed value", x5.field === "status" ? "sel" : "text", ["Open", "Delayed", "Closed", "Cancelled"]]];
+      if (k5 === "update") return [["target", "Item", "ro"], ["from", "Current value", "ro"], ["to", x5.field === "status" ? "Status" : "Proposed value", x5.field === "status" ? "sel" : "text", ["Open", "Delayed", "Closed", "Cancelled"]]];
       if (k5 === "project") return [["health", "Health", "sel", ["On track", "At risk", "Off track"]], ["reason", "Health reason", "area"]];
       if (k5 === "milestone") return shared.CUR.mode === "rebase" ? [["fc", "New baseline (and forecast)", "date"], ["with", "Agreed with (full names, separated by commas)", "text"], ["reason", "Reason for rebaselining", "area"]] : [["name", "Milestone", "text"], ["desc", "Description", "area"], ["fc", shared.CUR.mode === "msnew" ? "Date (baseline and forecast)" : "Forecast date", "date"], ["st", "Status", "sel", ["Planned", "Done"]], ["pc", "% complete", "pct"], ["ord", "Order", "text"], ...shared.CUR.mode === "msnew" ? [] : [["base", "Baseline", "ro"]]];
       return [];
@@ -57315,7 +57445,7 @@ ${d5.text}`);
     return !!(shared.CUR && shared.CUR.mode === "new" && PKK.includes(shared.CUR.k)) || !!(shared.CUR && (shared.CUR.mode === "record" || shared.CUR.mode === "proposal") && PKK.includes(shared.CUR.k));
   }
   function pkOrder() {
-    if (shared.PKSRC) return shared.PKSRC.order();
+    if (shared.PKSRC && (!shared.PKSRC.view || shared.PKSRC.view === shared.VIEW)) return shared.PKSRC.order();
     return shared.VIEW === "work" || shared.VIEW === "mine" || shared.VIEW === "person" ? hlOrder() : [];
   }
   function pkNav() {
@@ -57326,7 +57456,7 @@ ${d5.text}`);
   function pkStep(n4) {
     const L3 = pkOrder(), i5 = L3.findIndex((o6) => o6.id === (shared.CUR && pkCid())), o5 = L3[i5 + n4];
     if (i5 < 0 || !o5) return;
-    if (shared.PKSRC) {
+    if (shared.PKSRC && (!shared.PKSRC.view || shared.PKSRC.view === shared.VIEW)) {
       shared.PKSRC.step(o5);
       return;
     }
@@ -57719,28 +57849,28 @@ ${d5.text}`);
     }
     const x5 = pkX(k5, id2);
     if (!x5) return;
-    const ml2 = !!el2.dataset.pkml, raw2 = el2.textContent.replace(/ /g, " "), val2 = ml2 ? raw2.replace(/^\s+|\s+$/g, "") : raw2.replace(/\s+/g, " ").trim();
-    if (pkSame(x5[f5], val2)) return;
-    const r4 = pkTextRule(k5, id2, f5, val2, el2, x5);
+    const ml2 = !!el2.dataset.pkml, raw2 = el2.textContent.replace(/ /g, " "), val3 = ml2 ? raw2.replace(/^\s+|\s+$/g, "") : raw2.replace(/\s+/g, " ").trim();
+    if (pkSame(x5[f5], val3)) return;
+    const r4 = pkTextRule(k5, id2, f5, val3, el2, x5);
     if (r4 === false) return;
-    return pkCommit(k5, id2, { [f5]: val2 }, pkLabel(k5, f5, x5), x5[f5] || "", val2, { type: f5 === pkDescF(k5) ? "upd" : "act" });
+    return pkCommit(k5, id2, { [f5]: val3 }, pkLabel(k5, f5, x5), x5[f5] || "", val3, { type: f5 === pkDescF(k5) ? "upd" : "act" });
   }
-  function pkTextRule(k5, id2, f5, val2, el2, x5) {
+  function pkTextRule(k5, id2, f5, val3, el2, x5) {
     if (f5 === "revisit" && !WK.ok) {
-      const iso2 = DDATE.test(val2) ? toIso(val2) : DATE.test(val2) ? val2 : "";
-      if (iso2 && wkAsk(iso2, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val2) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val2) ? fd(v5) : v5))) {
+      const iso2 = DDATE.test(val3) ? toIso(val3) : DATE.test(val3) ? val3 : "";
+      if (iso2 && wkAsk(iso2, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val3) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val3) ? fd(v5) : v5))) {
         el2.textContent = x5.revisit || "";
         return false;
       }
     }
-    if (f5 === "t" && !val2) {
+    if (f5 === "t" && !val3) {
       el2.textContent = x5.t || "";
       pkNote(`${pkTitleL(k5)} is needed, so the old one was kept.`);
       return false;
     }
     if (f5 === "cm" || f5 === "cmd") {
-      const ok2 = pkMsgOK(k5, val2);
-      if (f5 === "cm" && val2 && !cmHeads(val2)) {
+      const ok2 = pkMsgOK(k5, val3);
+      if (f5 === "cm" && val3 && !cmHeads(val3)) {
         el2.textContent = x5.cm || "";
         pkNote("Keep the three client messaging headings, with a few words after each.");
         return false;
@@ -57748,7 +57878,7 @@ ${d5.text}`);
       if (PK.pc && PK.pc.id === id2) {
         if (ok2) {
           PK.pc = null;
-          pkCommit(k5, id2, { client: true, [f5]: val2 }, "Client-visible", "No", "Yes", { note: "Client messaging written first, as the rule requires" });
+          pkCommit(k5, id2, { client: true, [f5]: val3 }, "Client-visible", "No", "Yes", { note: "Client messaging written first, as the rule requires" });
         } else pkNote(k5 === "decisions" ? "Client messaging needs a short plain explanation before this can be client-visible. Nothing saved." : "Client messaging needs a few words after each heading before this can be client-visible. Nothing saved.");
         return false;
       }
@@ -58195,7 +58325,7 @@ ${d5.text}`);
     if (body2.contains(document.activeElement) && document.activeElement.isContentEditable) return;
     if (shared.PKPOP && body2.contains(shared.PKPOP.anchor)) return;
     const af2 = body2.contains(document.activeElement) ? document.activeElement.dataset.pkp || document.activeElement.dataset.pksw : null;
-    const row2 = (icon, label, val2) => `<div class="pk-drow"><div class="lab">${ic(icon)}<span>${label}</span></div><div>${val2}</div></div>`;
+    const row2 = (icon, label, val3) => `<div class="pk-drow"><div class="lab">${ic(icon)}<span>${label}</span></div><div>${val3}</div></div>`;
     const vb2 = (f5, label, txt, empty) => `<button type="button" class="pk-vbtn${empty ? " empty" : ""}" data-pkp="${f5}" aria-haspopup="listbox" aria-label="${esc(label)}: ${esc(empty ? "not set" : txt)}">${esc(txt)}</button>`;
     const tx3 = (f5, ph2, ml2) => `<div class="pk-vtext pked" contenteditable="plaintext-only" role="textbox" data-pkf="${f5}"${ml2 ? ' data-pkml="1" aria-multiline="true"' : ""} data-ph="${esc(ph2)}" aria-label="${esc(pkLabel(k5, f5, x5))}">${esc(x5[f5] || "")}</div>`;
     let h5 = row2("projects", "Project", vb2("p", "Project", pName(x5.p) || "Choose a project", !x5.p));
@@ -65110,12 +65240,12 @@ ${d5.text}`);
     actConfirm(ids, plan);
   }
   function actPlanLine(d5) {
-    const val2 = (v5) => v5 == null || v5 === "" ? "—" : DATE.test(String(v5).slice(0, 10)) ? fd(String(v5)) : String(v5), f5 = String(d5.field || "").replace(/_/g, " ");
+    const val3 = (v5) => v5 == null || v5 === "" ? "—" : DATE.test(String(v5).slice(0, 10)) ? fd(String(v5)) : String(v5), f5 = String(d5.field || "").replace(/_/g, " ");
     if (d5.why) return `<li class="skip"><b>${esc(d5.id || "#" + d5.rowid)}</b> · ${esc(f5)} · skipped: ${esc(d5.why)}</li>`;
     if (d5.change === "removed") return `<li><b>${esc(d5.id)}</b> · removed (that change created it)</li>`;
     if (d5.change === "put back") return `<li><b>${esc(d5.id)}</b> · put back</li>`;
     const t47 = itemText(d5.id);
-    return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val2(d5.from))} → ${esc(val2(d5.to))}</li>`;
+    return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val3(d5.from))} → ${esc(val3(d5.to))}</li>`;
   }
   function actConfirm(ids, plan) {
     const dlg = $("#actDlg") || makeUndoDialog();
@@ -70976,126 +71106,6 @@ ${d5.text}`);
     return v5 && v5.ok && v5.path ? v5.path : null;
   };
 
-  // core/irFold.js
-  var IR_STAGES = ["arrived", "drafted", "approved"];
-  var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
-  var IR_FOLDED = ["later", "not_needed"];
-  var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
-  function irToggle(cur, id2, model) {
-    if (cur === id2) return null;
-    const m5 = (model.meetings || []).find((x5) => x5.id === id2);
-    return irOpenable(m5) ? id2 : cur;
-  }
-  function irKeepOpen(cur, model) {
-    return cur && (model.meetings || []).some((x5) => x5.id === cur) ? cur : null;
-  }
-  function irLive(g5, done) {
-    const keep2 = (a5) => (a5 || []).filter((n4) => !done(n4));
-    return { needs: keep2(g5 && g5.needs), routine: keep2(g5 && g5.routine) };
-  }
-  function irGroupsShown(g5, done) {
-    const l6 = irLive(g5, done);
-    return (
-      /** @type {const} */
-      ["needs", "routine"].filter((k5) => l6[k5].length).map((k5) => ({ kind: k5, ns: l6[k5], open: true }))
-    );
-  }
-  var irBulk = (g5, done) => irLive(g5, done).routine;
-  var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
-  var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
-  function irFoldClick(folded, sec) {
-    return { ...folded, [sec]: !irIsFolded(folded, sec) };
-  }
-  var irIsFolded = (folded, sec) => sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec);
-  function irCounts(model, done) {
-    const ms2 = model.meetings || [], left = (m5) => {
-      const l6 = irLive(m5.groups, done);
-      return l6.needs.length + l6.routine.length;
-    };
-    const stage = (m5) => m5.stage === "drafted" && !left(m5) ? "approved" : m5.stage;
-    const all = [
-      ...ms2.flatMap((m5) => [...m5.groups.needs || [], ...m5.groups.routine || []]),
-      ...["mail", "other"].flatMap((k5) => [.../** @type {any} */
-      (model[k5] || {}).needs || [], .../** @type {any} */
-      (model[k5] || {}).routine || []])
-    ];
-    const toApprove = new Set(all.filter((n4) => !done(n4))).size;
-    const ready = ms2.filter((m5) => m5.stage === "arrived" && m5.state === "ready").length;
-    return {
-      arrived: ms2.filter((m5) => stage(m5) === "arrived").length,
-      ready,
-      drafted: ms2.filter((m5) => stage(m5) === "drafted").length,
-      approved: ms2.filter((m5) => stage(m5) === "approved").length,
-      to_approve: toApprove,
-      badge: ready + toApprove
-    };
-  }
-  var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
-  var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
-  var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
-
-  // stores/intakeReview.js
-  var IR_VIEW_KEY = "creaite-ir-view";
-  var irModel = () => (
-    /** @type {any} */
-    D.intake_review || { meetings: [], mail: { needs: [], routine: [] }, other: { needs: [], routine: [] }, later: [], not_needed: [], counts: {} }
-  );
-  var irRow = (n4) => REV.find((r4) => r4.n === n4) || null;
-  var irDone = (n4) => {
-    const r4 = irRow(n4);
-    return !r4 || !!r4.done;
-  };
-  var irView = y3(irViewNorm((() => {
-    try {
-      return store.get(IR_VIEW_KEY, "list");
-    } catch (x5) {
-      return "list";
-    }
-  })()));
-  function irSetView(v5) {
-    irView.value = irViewNorm(v5);
-    try {
-      store.set(IR_VIEW_KEY, irView.value);
-    } catch (x5) {
-    }
-  }
-  var irOpen = y3(
-    /** @type {string|null} */
-    null
-  );
-  var irStage = y3("all");
-  var irFolded = y3(
-    /** @type {Record<string, boolean>} */
-    {}
-  );
-  var irPeek = y3(
-    /** @type {number|null} */
-    null
-  );
-  var irSel = y3(
-    /** @type {string|null} */
-    null
-  );
-  var irBusy = y3(
-    /** @type {string[]} */
-    []
-  );
-  var irTick = y3(0);
-  function irClickMeeting(id2) {
-    irOpen.value = irToggle(irOpen.value, id2, irModel());
-  }
-  function irClickStage(g5) {
-    irStage.value = irStageClick(irStage.value, g5);
-  }
-  function irClickFold(sec) {
-    irFolded.value = irFoldClick(irFolded.value, sec);
-  }
-  function irAfterData() {
-    irOpen.value = irKeepOpen(irOpen.value, irModel());
-    irTick.value++;
-  }
-  var irLiveCounts = () => irCounts(irModel(), irDone);
-
   // components/intakeReview/rows.jsx
   var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
   var IR_GROUP_HEAD = {
@@ -71156,21 +71166,172 @@ ${d5.text}`);
   }
 
   // components/intakeReview/proposals.jsx
+  var HOLD_WORDS = { "need a project": "Needs a project", conflict: "Has a conflict to settle", invalid: "Held back: not valid" };
+  var PEEKABLE = ["actions", "raid", "decisions", "update"];
+  function irPill(r4) {
+    if (r4.kind === "raid") return r4.rec && r4.rec.type || "Risk";
+    if (r4.kind === "draft") return r4.ref === "report" ? "Report" : "Minutes";
+    return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[
+      /** @type {"actions"} */
+      r4.kind
+    ] || "Proposal";
+  }
+  var dueWords2 = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
+  var noTime = (s5) => String(s5 || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
+  var val2 = (v5) => v5 == null || v5 === "" ? "—" : fd(String(v5));
+  function irChange(r4) {
+    const x5 = r4.rec || {}, owner = (o5) => !o5 || o5 === "TBC" ? { t: "No owner", warn: true } : { t: o5 };
+    if (r4.kind === "actions") return [owner(x5.o), { t: dueWords2(x5.due), warn: !x5.due }, { t: `${x5.pr || "Medium"} priority` }];
+    if (r4.kind === "raid") return [owner(x5.o), { t: x5.imp && x5.lik ? `Impact ${x5.imp} · Likelihood ${x5.lik}` : "Impact and likelihood not set", warn: !(x5.imp && x5.lik) }, ...x5.due ? [{ t: dueWords2(x5.due) }] : []];
+    if (r4.kind === "decisions") return [{ t: x5.by ? `Made by ${x5.by}` : "Made by not recorded", warn: !x5.by }, ...x5.date ? [{ t: fd(x5.date) }] : []];
+    if (r4.kind === "update") {
+      const closing = x5.field === "status" && ["Closed", "Cancelled"].includes(String(x5.to)), verb = closing ? x5.to === "Cancelled" ? "Cancels" : "Closes" : "Updates";
+      const ch2 = (x5.changes && x5.changes.length ? x5.changes : [{ field: x5.field, from: x5.from, to: x5.to }]).filter((c5) => c5.field);
+      return [
+        { t: `${verb} ${x5.target || ""}`.trim() },
+        ...ch2.map((c5) => ({ t: `${String(c5.field).toLowerCase()} ${val2(c5.from)} → ${val2(c5.to)}` })),
+        ...r4.dn && r4.dn.strength ? [{ t: r4.dn.strength }] : []
+      ];
+    }
+    return [];
+  }
+  var irQuote = (r4) => noTime(r4.dn && r4.dn.ev || r4.kind === "update" && r4.rec && r4.rec.why || "");
+  function SourceLine({ r: r4 }) {
+    const o5 = srcParse(r4.src);
+    let where2 = "", link = null;
+    if (r4.kind === "draft" || r4.kind === "files") where2 = r4.kind === "draft" ? r4.ref === "report" ? "Draft report" : "Draft minutes" : "File changes";
+    else if (o5 && o5.type === "File") where2 = String(o5.name || "").replace(/\.[a-z]+$/i, "");
+    else if (o5 && o5.type === "Email") where2 = `Mail${o5.From ? ` from ${String(o5.From).replace(/\s*<[^>]*>/, "")}` : ""}${o5.Subject ? ` · ${o5.Subject}` : ""}`;
+    else if (o5 && o5.type === "Teams") where2 = `Teams · ${o5.Channel || o5.Chat || ""}${o5.From ? ` · ${o5.From}` : ""}`;
+    else where2 = noTime(String(o5 && o5.text || ""));
+    if (r4.nodraft && r4.tsrc) link = /* @__PURE__ */ u2("a", { href: "#", class: "srclink", "data-openfile": r4.tsrc, children: "Open source" });
+    else if (o5 && o5.type === "File") link = /* @__PURE__ */ u2("a", { href: "#", class: "srclink", "data-openfile": o5.path, children: "Open source" });
+    else if (o5 && o5.Link && linkUrl(o5.Link)) link = /* @__PURE__ */ u2("a", { class: "srclink", href: (
+      /** @type {string} */
+      linkUrl(o5.Link)
+    ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
+    const match = r4.p ? null : r4.why;
+    return /* @__PURE__ */ u2("div", { class: "why icsrc", children: [
+      where2,
+      match ? ` · ${match}` : "",
+      link ? /* @__PURE__ */ u2(S2, { children: [
+        " · ",
+        link
+      ] }) : null
+    ] });
+  }
+  function irOpenPeek(n4) {
+    const r4 = irRow(n4);
+    if (!r4 || r4.done || !PEEKABLE.includes(r4.kind) && r4.kind !== "draft") return;
+    shared.PKSRC = {
+      view: "intake-review",
+      order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
+      step: (o5) => {
+        irPeek.value = o5.n;
+        openProposal(o5.n);
+      }
+    };
+    irPeek.value = n4;
+    openProposal(n4);
+  }
+  var irApprove = (n4) => decide(n4, "approved");
+  function irReject(n4, anchor) {
+    const r4 = irRow(n4);
+    if (!r4 || r4.done) return;
+    if (rvRejectOK(r4)) rjMenuFor([r4], anchor);
+    else if (r4.kind === "draft" && r4.ref === "meeting") rejectMinutes(r4);
+    else decide(n4, "rejected");
+  }
+  async function irApproveRoutine(groups) {
+    const list = irBulk(groups, irDone).map(irRow).filter((r4) => rvBulkOK(r4));
+    if (!list.length) {
+      snack("Nothing routine to approve");
+      return;
+    }
+    const res = await rvDecideMany(list, "approved");
+    const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
+    snack(`Approved ${res.n} routine${failed}`, res.undo || null);
+  }
   function ProposalLine({ n: n4, child }) {
     const r4 = irRow(n4);
     if (!r4) return null;
-    return /* @__PURE__ */ u2("tr", { class: `irprop${child ? " mchild" : ""}`, "data-irn": n4, children: [
-      /* @__PURE__ */ u2("td", { class: "title", children: [
-        /* @__PURE__ */ u2("span", { class: "ickind", children: irKind(r4) }),
-        " ",
-        /* @__PURE__ */ u2("b", { class: "icttl", children: r4.rec && r4.rec.t || "" }),
-        r4.p ? /* @__PURE__ */ u2("span", { class: "sub", children: [
-          " · ",
-          pName(r4.p)
-        ] }) : null
-      ] }),
-      /* @__PURE__ */ u2("td", { class: "iracts" })
-    ] });
+    const parts = irChange(r4), quote = irQuote(r4), held = r4.hold ? HOLD_WORDS[
+      /** @type {keyof HOLD_WORDS} */
+      r4.hold
+    ] || "approve individually" : "";
+    const rej = !!r4.kind && r4.kind !== "files";
+    return /* @__PURE__ */ u2(
+      "tr",
+      {
+        class: `click irprop${child ? " mchild" : ""}`,
+        "data-irn": n4,
+        "data-hold": r4.hold || "",
+        "data-kind": r4.kind,
+        tabindex: 0,
+        onClick: (e4) => {
+          if (!/** @type {Element} */
+          e4.target.closest("button,a,input,select")) irOpenPeek(n4);
+        },
+        onKeyDown: (e4) => {
+          if (e4.target === e4.currentTarget && e4.key === "Enter") {
+            e4.preventDefault();
+            irOpenPeek(n4);
+          }
+        },
+        children: [
+          /* @__PURE__ */ u2("td", { class: "title", children: [
+            /* @__PURE__ */ u2("b", { class: "icttl", children: r4.rec && r4.rec.t || "" }),
+            r4.p ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+              " · ",
+              pName(r4.p)
+            ] }) : null,
+            /* @__PURE__ */ u2("div", { class: "icchg", children: [
+              /* @__PURE__ */ u2("span", { class: "ickind", children: irPill(r4) }),
+              parts.map((p6) => /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("span", { class: p6.warn ? "h-warn" : "", children: p6.t })
+              ] })),
+              held ? /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("span", { class: "indiv", children: held })
+              ] }) : /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("span", { class: "icroutine", children: "Routine" })
+              ] })
+            ] }),
+            quote ? /* @__PURE__ */ u2("div", { class: "icq", children: quote }) : null,
+            /* @__PURE__ */ u2(SourceLine, { r: r4 }),
+            r4.nodraft ? /* @__PURE__ */ u2("div", { class: "why", children: [
+              /* @__PURE__ */ u2("span", { class: "h-warn", children: "No Word draft was made for these minutes" }),
+              " · Reject them and process the meeting again"
+            ] }) : null
+          ] }),
+          /* @__PURE__ */ u2("td", { class: "iracts", children: [
+            r4.kind !== "files" ? /* @__PURE__ */ u2("button", { type: "button", class: "ib sm", "data-ira": "edit", "aria-label": "Open in the peek", "data-tip": "Open in the peek", onClick: () => irOpenPeek(n4), children: "✎" }) : null,
+            " ",
+            /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "approve", disabled: !!r4.nodraft, title: r4.nodraft ? NODRAFT_MSG : void 0, onClick: () => irApprove(n4), children: "Approve" }),
+            " ",
+            rej ? /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "ib sm no",
+                "data-ira": "reject",
+                "aria-haspopup": rvRejectOK(r4) ? "menu" : void 0,
+                "aria-label": rvRejectOK(r4) ? "Reject, with a reason" : "Reject",
+                "data-tip": rvRejectOK(r4) ? "Reject, with a reason" : "Reject",
+                onClick: (e4) => irReject(
+                  n4,
+                  /** @type {Element} */
+                  e4.currentTarget
+                ),
+                children: "✕"
+              }
+            ) : null
+          ] })
+        ]
+      }
+    );
   }
   function ProposalGroups({ groups, meet, child }) {
     return /* @__PURE__ */ u2(S2, { children: irGroupsShown(groups, irDone).map((g5) => /* @__PURE__ */ u2(S2, { children: [
@@ -71182,15 +71343,72 @@ ${d5.text}`);
           g5.ns.length
         ] }),
         /* @__PURE__ */ u2("span", { class: "icshs", children: IR_GROUP_HEAD[g5.kind][1] }),
-        g5.kind === "routine" ? /* @__PURE__ */ u2("span", { class: "icshr", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "routine", disabled: true, title: "232-B", children: [
-          "Approve routine (",
-          g5.ns.length,
-          ")"
-        ] }) }) : null
+        g5.kind === "routine" ? /* @__PURE__ */ u2("span", { class: "icshr", children: /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "mini ok",
+            "data-ira": "routine",
+            title: "Approves every routine proposal here; the ones above stay for you",
+            onClick: () => irApproveRoutine(groups),
+            children: [
+              "Approve routine (",
+              g5.ns.length,
+              ")"
+            ]
+          }
+        ) }) : null
       ] }) }),
       g5.ns.map((n4) => /* @__PURE__ */ u2(ProposalLine, { n: n4, child }))
     ] })) });
   }
+  var keysBooted = false;
+  function bootIrReviewKeys() {
+    if (keysBooted) return;
+    keysBooted = true;
+    document.addEventListener("keydown", (e4) => {
+      if (shared.VIEW !== "intake-review" || e4.metaKey || e4.ctrlKey || e4.altKey) return;
+      const t47 = (
+        /** @type {HTMLElement} */
+        e4.target
+      ), panel = document.getElementById("panel");
+      if (e4.key === "Escape") {
+        if (irPeek.value == null) return;
+        if (document.querySelector("dialog:modal")) return;
+        if (panel && panel.classList.contains("on")) {
+          e4.stopImmediatePropagation();
+          closePanel();
+        }
+        irPeek.value = null;
+        return;
+      }
+      if (!t47 || !t47.closest || t47.closest("input,textarea,select,[contenteditable=true],[role=menu]")) return;
+      const row2 = (
+        /** @type {HTMLElement|null} */
+        t47.closest("tr.irprop")
+      );
+      if (!row2 || t47.closest("button,a") && !t47.matches("tr")) return;
+      const rows2 = (
+        /** @type {HTMLElement[]} */
+        [...document.querySelectorAll("#v-intake-review tr.irprop")]
+      ), at2 = rows2.indexOf(row2), n4 = +(row2.getAttribute("data-irn") || 0);
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        e4.preventDefault();
+        e4.stopImmediatePropagation();
+        const to2 = rows2[Math.max(0, Math.min(rows2.length - 1, at2 + (e4.key === "ArrowDown" ? 1 : -1)))];
+        if (to2) to2.focus();
+      } else if (e4.key === "a" || e4.key === "A") {
+        e4.preventDefault();
+        e4.stopImmediatePropagation();
+        irApprove(n4);
+      } else if (e4.key === "r" || e4.key === "R") {
+        e4.preventDefault();
+        e4.stopImmediatePropagation();
+        irReject(n4, row2.querySelector("[data-ira=reject]"));
+      }
+    }, true);
+  }
+  bootIrReviewKeys();
 
   // components/intakeReview/views.jsx
   var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
@@ -71585,8 +71803,8 @@ ${d5.text}`);
       const q5 = (h6 || "").replace(/^#/, "");
       if (!q5) return null;
       const parts = q5.split("&"), [v5, arg] = parts[0].split("=").map(decodeURIComponent), kv = Object.fromEntries(parts.slice(1).map((x6) => {
-        const [k5, val2 = ""] = x6.split("=");
-        return [k5, k5 === "v" || k5 === "q" || k5 === "vb" ? decodeURIComponent(val2) : val2];
+        const [k5, val3 = ""] = x6.split("=");
+        return [k5, k5 === "v" || k5 === "q" || k5 === "vb" ? decodeURIComponent(val3) : val3];
       }));
       const st3 = { v: v5, arg: null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
       {
@@ -74005,7 +74223,7 @@ ${d5.text}`);
         try {
           await vq(async () => {
             const path = "system/config/settings.json", text = await shared.VW.read(path), js2 = JSON.parse(text), at2 = stampFull(), logs = [];
-            for (const [key2, val2] of Object.entries(changes)) {
+            for (const [key2, val3] of Object.entries(changes)) {
               const parts = key2.split(".");
               let o5 = js2;
               parts.slice(0, -1).forEach((q5) => {
@@ -74013,8 +74231,8 @@ ${d5.text}`);
                 o5 = o5[q5];
               });
               const last = parts[parts.length - 1];
-              logs.push(JSON.stringify({ at: at2, key: key2, old: o5[last] === void 0 ? null : o5[last], new: val2 }));
-              o5[last] = val2;
+              logs.push(JSON.stringify({ at: at2, key: key2, old: o5[last] === void 0 ? null : o5[last], new: val3 }));
+              o5[last] = val3;
             }
             await shared.VW.write(await freeBackup("system/backups/settings-", ".json"), text);
             await shared.VW.write(path, JSON.stringify(js2, null, 2) + "\n");
@@ -74042,7 +74260,7 @@ ${d5.text}`);
       return h5 + "\n" + (g5.length ? g5.join("\n") + "\n\n" : "") + text.trim() + "\n" + (im2.length ? "\n" + im2.join("\n") + "\n" : "") + "\n";
     });
   }
-  async function setRhythm(code, val2) {
+  async function setRhythm(code, val3) {
     if (!await needVault()) return false;
     try {
       await vq(async () => {
@@ -74050,8 +74268,8 @@ ${d5.text}`);
         const m5 = text.match(re2);
         if (!m5) throw new Error(`no “Client report rhythm:” line in ${path}; use cx-edit`);
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
-        await shared.VW.write(path, text.replace(re2, "$1" + val2.toLowerCase()));
-        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `client_report_rhythm.${code}`, old: m5[2], new: val2.toLowerCase() }) + "\n");
+        await shared.VW.write(path, text.replace(re2, "$1" + val3.toLowerCase()));
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `client_report_rhythm.${code}`, old: m5[2], new: val3.toLowerCase() }) + "\n");
       });
       return true;
     } catch (e4) {
@@ -74059,29 +74277,29 @@ ${d5.text}`);
       return false;
     }
   }
-  function memLineEdit(text, label, val2) {
+  function memLineEdit(text, label, val3) {
     const lab = label.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"), re2 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)([^\\n]*?)([ \\t]*(?:_\\(.*\\)_)?)$", "m");
-    if (/^(on|off)$/.test(val2)) {
+    if (/^(on|off)$/.test(val3)) {
       const re22 = new RegExp("^([ \\t]*(?:[-*][ \\t]+)?\\*\\*" + lab + ":\\*\\*[ \\t]*)(on|off)\\b([^\\n]*)$", "mi"), m22 = text.match(re22);
-      if (m22) return { text: text.replace(re22, (_6, a5, b5, c5) => a5 + val2 + c5), was: m22[2].toLowerCase() };
+      if (m22) return { text: text.replace(re22, (_6, a5, b5, c5) => a5 + val3 + c5), was: m22[2].toLowerCase() };
     }
     const m5 = text.match(re2);
-    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val2 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
+    if (m5) return { text: text.replace(re2, (_6, a5, b5, c5) => a5 + val3 + (c5 ? c5.replace(/^\s*/, "   ") : "")), was: m5[2].trim() };
     const near = /^([ \t]*(?:[-*][ \t]+)?)\*\*Client report rhythm:\*\*[^\n]*$/m.exec(text) || /^([ \t]*(?:[-*][ \t]+)?)\*\*Client \/ partner:\*\*[^\n]*$/m.exec(text);
     if (!near) return null;
     const at2 = near.index + near[0].length;
-    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val2 + text.slice(at2), was: "" };
+    return { text: text.slice(0, at2) + "\n" + near[1] + "**" + label + ":** " + val3 + text.slice(at2), was: "" };
   }
-  async function setMemLine(code, label, val2, key2) {
+  async function setMemLine(code, label, val3, key2) {
     if (!await needVault()) return false;
     try {
       await vq(async () => {
-        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val2);
+        const path = memPath(code), text = await shared.VW.read(path), r4 = memLineEdit(text, label, val3);
         if (!r4) throw new Error(`no “${label}:” line, and no “Client report rhythm:” line to put it under, in ${path}; use cx-edit`);
         if (r4.text === text) return;
         await shared.VW.write(await freeBackup(`system/backups/files/${code}-CLAUDE-`, ".md"), text);
         await shared.VW.write(path, r4.text);
-        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val2 }) + "\n");
+        await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `${key2}.${code}`, old: r4.was, new: val3 }) + "\n");
       });
       return true;
     } catch (e4) {
@@ -74202,6 +74420,7 @@ ${d5.text}`);
     status();
     renderBadge();
     inboxBadge();
+    if (shared.VIEW === "intake-review") irAfterData();
     if (shared.VIEW === "inbox") renderInbox();
     if (shared.VIEW === "today") renderToday();
     if (shared.VIEW === "work" || shared.VIEW === "mine") renderWork();

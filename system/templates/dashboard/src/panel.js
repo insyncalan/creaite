@@ -46,7 +46,7 @@ export function fieldsFor(k,x){ const F=(()=>{ const projOpts=P.map(p=>[p.code,p
   if(k==="actions") return [["t","Action","area"],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["pr","Priority","sel",["Urgent","High","Medium","Low"]],["due","Due date","date"],["st","Status","sel",["Open","Delayed","Closed","Cancelled"]],["raised","Raised","date"],["closed","Closed","date"],["upd","Latest update","area"],["ms","Milestone","sel",msOpts],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
   if(k==="raid") return [["t","Description","area"],["type","Type","sel",["Risk","Issue","Assumption","Dependency"]],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["resp",RESPL(x.type),"area"],["imp","Impact","sel",["High","Medium","Low"]],["lik","Likelihood","sel",["High","Medium","Low"]],["pr","Priority","calc"],["due","Due date","date"],["st","Status","sel",["Open","Closed","Cancelled"]],["raised","Raised","date"],["closed","Date closed","date"],["ms","Milestone","sel",msOpts],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
   if(k==="decisions") return decisionFields(x,projOpts);   /* BL-53: status, needed by, reasoning, options, revisit, replaces */
-  if(k==="update") return [["target","Item","ro"],["from","Current value","ro"],["to","Proposed value",x.field==="status"?"sel":"text",["Open","Delayed","Closed","Cancelled"]]];
+  if(k==="update") return [["target","Item","ro"],["from","Current value","ro"],["to",x.field==="status"?"Status":"Proposed value",x.field==="status"?"sel":"text",["Open","Delayed","Closed","Cancelled"]]];
   if(k==="project") return [["health","Health","sel",["On track","At risk","Off track"]],["reason","Health reason","area"]];
   if(k==="milestone") return shared.CUR.mode==="rebase"?[["fc","New baseline (and forecast)","date"],["with","Agreed with (full names, separated by commas)","text"],["reason","Reason for rebaselining","area"]]
     :[["name","Milestone","text"],["desc","Description","area"],["fc",shared.CUR.mode==="msnew"?"Date (baseline and forecast)":"Forecast date","date"],["st","Status","sel",["Planned","Done"]],["pc","% complete","pct"],["ord","Order","text"],...(shared.CUR.mode==="msnew"?[]:[["base","Baseline","ro"]])];
@@ -364,11 +364,11 @@ document.addEventListener("change",e=>{ if(e.target.id==="f_p") learnLabel(); })
    project health, new item and Review panels keep theirs. */
 export function pkIs(){ return !!(shared.CUR&&shared.CUR.mode==="new"&&PKK.includes(shared.CUR.k))||!!(shared.CUR&&(shared.CUR.mode==="record"||shared.CUR.mode==="proposal")&&PKK.includes(shared.CUR.k)); }
 /* the list the arrows step through: the same order J and K use (BL-122), on Work, Mine and a person's page */
-export function pkOrder(){ if(shared.PKSRC) return shared.PKSRC.order();   /* BL-286 E: the list of the screen the peek was opened from */
+export function pkOrder(){ if(shared.PKSRC&&(!shared.PKSRC.view||shared.PKSRC.view===shared.VIEW)) return shared.PKSRC.order();   /* #232-B: Intake and Review's peek steps through its own proposals */   /* BL-286 E: the list of the screen the peek was opened from */
   return shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person"?hlOrder():[]; }
 export function pkNav(){ const L=pkOrder(), i=shared.CUR?L.findIndex(o=>o.id===pkCid()):-1; $("#pkPrev").disabled=i<=0; $("#pkNext").disabled=i<0||i>=L.length-1; }
 export function pkStep(n){ const L=pkOrder(), i=L.findIndex(o=>o.id===(shared.CUR&&pkCid())), o=L[i+n]; if(i<0||!o) return;
-  if(shared.PKSRC){ shared.PKSRC.step(o); return; }
+  if(shared.PKSRC&&(!shared.PKSRC.view||shared.PKSRC.view===shared.VIEW)){ shared.PKSRC.step(o); return; }
   HL.clear(); HL.set(o.id,o.k); shared.HLA=shared.HLC=o.id; openRecord(o.k,o.id); hlPaint();
   const el=$$(layoutOf(shared.WT)==="board"&&shared.VIEW==="work"?"#workBoard .bcard[data-row]":shared.VIEW==="person"?"#v-person table.ptbl tr[data-row]":"#workTbl tr[data-row]").find(e=>e.dataset.row===o.id); el&&el.scrollIntoView({block:"nearest"}); }
 export function pkWide(on){ PK.wide=on; $("#panel").classList.toggle("pkwide",on); const b=$("#pkExpand"); if(!b) return; const t=on?"Back to half width":"Expand to full width";

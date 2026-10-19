@@ -4054,15 +4054,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icpipe{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
 #v-intake-review .icpipe .evbox{cursor:pointer;min-width:160px}#v-intake-review .icpipe .evbox[aria-pressed=true]{outline:2px solid var(--accent)}
 #v-intake-review .icpipe .ar{align-self:center;color:var(--muted)}
-#v-intake-review .icsub{font-size:12px;color:var(--muted)}
-#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:14px;margin:0 0 8px}
+#v-intake-review .icsub{font-size:var(--fs-xs);color:var(--muted)}
+#v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
-#v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:12px}
+#v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
-#v-intake-review .ickind{font-size:12px;font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
-#v-intake-review .icmeethd{font-size:16px;font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
+#v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
+#v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:15px;font-weight:600}
 #v-intake-review tr.icopen td{background:var(--accent-soft)!important;border-top:2px solid var(--accent)}
 #v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
@@ -4070,3 +4070,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 @media (max-width:899px){#v-intake-review .icboard,#v-intake-review .icsplit{grid-template-columns:minmax(0,1fr)}}
 /* #232: "Intake and Review" (the locked mockup's name) is 3px too wide for the 188px sidebar beside its count; tightened, not cut */
 .rail [data-v=review] .rl{letter-spacing:-.02em}
+
+/* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
+#v-intake-review tr.irprop td.title{padding-top:10px;padding-bottom:10px}
+#v-intake-review .icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);margin:2px 0}
+#v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
+#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
+#v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
+#v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
