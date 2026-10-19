@@ -4119,3 +4119,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+/* #232-C: the longer name still fits beside the icon and its count at the Medium and Large icon sizes (they take 4 and 8px more of the 188px sidebar) */
+.railsz-medium .rail:not(.collapsed) [data-v=review] .rl{letter-spacing:-.035em}
+.railsz-large .rail:not(.collapsed) [data-v=review] .rl{letter-spacing:-.065em}
+/* #232-C: collapsed with labels, the 76px sidebar names the entry in short ("In & Review"); the full name stays in the button text and its name */
+.rail.labelled button.nv .rl[data-short]{font-size:0}
+.rail.labelled button.nv .rl[data-short]::after{content:attr(data-short);font-size:11px}

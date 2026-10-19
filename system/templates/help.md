@@ -108,7 +108,6 @@ Every edit you make on the dashboard is written as a proposal and applied at onc
 - **Reports**: Every project's week at once: its internal report and each client's report, with a count of what needs you
 - **Work**: Every action, risk, issue and decision, with filters and saved views
 - **People**: Each person's open work, Draft email, and handover
-- **Review**: Proposals grouped by project, nested under their minutes
 - **Files**: Minutes, transcripts, documents and reports, with search that answers with sources
 - **Settings** (the gear): Sweep time, reminders, health rules, registers, themes
 

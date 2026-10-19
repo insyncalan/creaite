@@ -70,7 +70,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual([s["title"] for s in o["stages"]], ["Material arrives", "Claude drafts", "Review", "Apply", "See and report"])
         self.assertEqual(len(o["steps"]), 4)                                           # the first hour
         self.assertEqual(len(o["rhythm"]), 4)
-        self.assertEqual(o["views"], ["Today", "Intake", "Projects", "Reports", "Work", "People", "Review", "Files", "Settings"])
+        self.assertEqual(o["views"], ["Today", "Intake and Review", "Projects", "Reports", "Work", "People", "Files", "Settings"])
         self.assertGreaterEqual(len(o["say"]), 9)
         self.assertEqual(len(o["rules"]), 4)
         html = self.tab["start"]

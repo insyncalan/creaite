@@ -19,7 +19,7 @@
 import { computed, signal } from "@preact/signals";
 import { store } from "../core/page.js";
 
-/** @typedef {{id: string, title: string, icon: string, badge?: string, group: "top"|"more", fixed?: boolean}} RailItem */
+/** @typedef {{id: string, title: string, icon: string, badge?: string, group: "top"|"more", fixed?: boolean, short?: string}} RailItem */
 /** @typedef {{order: string[], more: string[], hidden: string[], display: "titles"|"icons"}} RailCfg */
 /** @typedef {{n: number, label?: string}} RailCount */
 
@@ -29,7 +29,7 @@ import { store } from "../core/page.js";
 export const RAIL_ITEMS = [
   { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
   { id: "work", title: "Work", icon: "work", group: "top" },
-  { id: "review", title: "Intake and Review", icon: "review", badge: "revBadge", group: "top" },   /* #232: one entry for both; it opens #intake-review (rail.js railGo) */
+  { id: "review", title: "Intake and Review", short: "In & Review", icon: "review", badge: "revBadge", group: "top" },   /* #232: one entry for both; it opens #intake-review (rail.js railGo) */
   { id: "projects", title: "Projects", icon: "projects", group: "top" },
   { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },   /* BL-337 */
   { id: "people", title: "People", icon: "people", group: "top" },
