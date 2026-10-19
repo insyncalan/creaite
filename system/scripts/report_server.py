@@ -31,7 +31,10 @@
                            #226: HTML and PDF are the report page's own exported view, posted as `page: {html, css, palette, version}`
                            and re-checked against the saved report by export_page.build; with no page, or one that fails, the plain
                            renderer makes the file and the answer says `plain: true`; a client report never uses a posted page
-                           (v2.5.1, #239): it is always rendered from the saved report, under the lock, and its output checked;
+                           (v2.5.1, #239): it is made by client_snapshot.client_export alone, from its checked snapshot, under the
+                           lock, and its output checked;
+  POST /api/report/exported-view {kind: client, code, week_ending}: Show as exported for a client report, rendered by the server
+                           from a preview snapshot (marked Preview, never written); the page never posts its own;
   POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
                            A client report is exported only once its internal week is approved and nothing would leak, and its
                            answer then carries `left_out`: the check of what is left out runs before every client export
@@ -462,6 +465,8 @@ def export_route(handler, req):
     off = refuse_client_off(handler, kind, code)
     if off:
         return off
+    if kind == "client":
+        return _client_export(handler, req, (code, fri, client), fmt)
     fn = export_call()
     if fn is None:
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
@@ -469,21 +474,63 @@ def export_route(handler, req):
         return _export_locked(handler, req, (kind, code, fri, client), fmt, fn)
 
 
+def _client_export(handler, req, which, fmt):
+    """v2.5.1 (#239, step 2): a client report's export: client_snapshot.client_export, the one way a client file is made (its checked
+    snapshot rendered under the lock, the output checked), then filed in the Reports folder as any export is. A refusal of the
+    snapshot's check answers with its findings and what is left out, as before; a page posted is never what is written."""
+    import client_snapshot
+    code, fri, client = which
+    filed = paths.resolve(report_doc.filed_path("client", code, fri, client))
+    folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
+    label = f"{creaite_doc.project_name(code) or code} › Reports"
+    where = {"folder": paths.rel(folder), "folder_label": label, "format": fmt}
+    settled = {}
+
+    def settle():
+        """The file name, once the snapshot passed its check (a taken name asks first)."""
+        name, overwrite, asked = _settle_name(folder, filed.stem + ext, ext, req, label, filed.name)
+        settled.update(name=name, overwrite=overwrite)
+        return asked
+    page = req.get("page") if isinstance(req.get("page"), dict) else None          # kept in the request for one release: never used
+    with client_snapshot.locked():
+        out = client_snapshot.client_export(code, fri, fmt, client=client, page=page, settle=settle)
+        if out.get("asked"):
+            return answer(handler, {"ok": False, **out["asked"], **where})
+        if not out.get("ok") and out.get("stage") == "check":
+            left = out.get("left_out")
+            return refuse(handler, (left or {}).get("not_ready") or out.get("message") or "Not exported.",
+                          findings=out.get("findings") or [], **({"left_out": left} if left is not None else {}))
+        if not out.get("ok"):
+            extra = {"findings": out["findings"]} if out.get("findings") else {}
+            return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where, **extra)
+        saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, settled["name"], settled["overwrite"], fmt, label)
+    carry_plain(saved, out)
+    if out.get("left_out") is not None:
+        saved["left_out"] = out["left_out"]
+    return answer(handler, saved)
+
+
+def exported_view_route(handler, req):
+    """POST /api/report/exported-view {kind: client, code, week_ending}: Show as exported for a client report, rendered by the server
+    from a preview snapshot of the saved report (client_snapshot.preview_html: built, checked and rendered as an export is, marked
+    Preview, never written). {ok, html, preview, identity} or {ok: false, message, findings, identity}. The page never posts its
+    own (v2.5.1, #239)."""
+    import client_snapshot
+    kind, code, fri, client = target(req)
+    if kind != "client":
+        raise report_doc.ReportError("Only a client report is shown as exported by the server.")
+    return answer(handler, client_snapshot.preview_html(code, fri, client))
+
+
 def _export_locked(handler, req, which, fmt, fn):
-    """export_route's work, under the lock: read once, check, render that document, file it."""
+    """export_route's work for a weekly report, under the lock: read once, render that document, file it (a client report:
+    _client_export)."""
     kind, code, fri, client = which
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
     doc = creaite_doc.read_report(path, kind)           # v2.5.0 audience bypass: a draft edited on disk too; another kind refused
     report_doc.same_report(doc, kind, code, fri)
-    left = None
-    if kind == "client":
-        import client_check
-        left = client_check.left_out(doc)          # the check runs before every client export, whoever asks
-        if not left["ready"] or left["findings"]:
-            return refuse(handler, left["not_ready"] or "Not exported: possible internal content in the client report.",
-                          findings=left["findings"], left_out=left)
     filed = paths.resolve(report_doc.filed_path(kind, code, fri, client))
     folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
     name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
@@ -499,8 +546,6 @@ def _export_locked(handler, req, which, fmt, fn):
         return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where, **extra)
     saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
     carry_plain(saved, out)
-    if left is not None:
-        saved["left_out"] = left
     return answer(handler, saved)
 
 
@@ -740,6 +785,8 @@ def image_route(handler, req):
     label = os.path.splitext(str(req.get("name") or ""))[0]
     with handler_lock(handler):
         named = notes.image_name(label, ext)[:-len(ext) - 1]
+        if req.get("kind") == "client":                   # v2.5.1 (#239, gap C): a client report's own picture, never the internal one's
+            named = creaite_doc.CLIENT_PICTURE + named
         target = paths.free_path(folder / "_images", named, f".{ext}")
         done, msg = filechange.perform({"op": "create", "path": paths.rel(target), "data": raw,
                                         "why": "a picture added to a report's text section"}, via="dashboard")
@@ -755,8 +802,9 @@ def images_route(handler, req):
     if not report_doc.CODE.match(code):
         return refuse(handler, "Say which project's pictures.")
     out = {}
+    kind = "client" if req.get("kind") == "client" else None          # a client report's editor draws its own pictures only (gap C)
     for ref in list(req.get("refs") or [])[:200]:
-        f = creaite_doc.text_image({"project": code}, str(ref))
+        f = creaite_doc.text_image({"project": code, "kind": kind}, str(ref))
         if f is not None and f.stat().st_size <= IMAGE_MAX:
             mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
             out[str(ref)] = f"data:{mime};base64,{base64.b64encode(f.read_bytes()).decode('ascii')}"
@@ -774,6 +822,7 @@ def routes(lock, run, latest_apply):
             "/api/report/match-check": guarded(match_check_route),
             "/api/report/pick": guarded(pick_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
+            "/api/report/exported-view": guarded(exported_view_route),
             "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
             "/api/report/logo/remove": guarded(logo_remove_route), "/api/report/image": guarded(image_route),
             "/api/report/images": guarded(images_route)}

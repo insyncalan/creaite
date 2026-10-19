@@ -104,6 +104,16 @@ def _health_difference(doc):
     return diff if diff and diff.get("client") != diff.get("internal") else None
 
 
+def _picture_findings(doc):
+    """v2.5.1 (#239, gap C): a picture added for the internal report named in the client report's text, a finding the check shows
+    before any export (client_snapshot.picture_table, the snapshot's own rule)."""
+    import client_snapshot
+    try:
+        return client_snapshot.picture_table(creaite_doc.clean(doc))[1]
+    except creaite_doc.DocError:
+        return []                       # a document creaite can't read is refused by the check itself
+
+
 def left_out(doc, con=None):
     """What a client document leaves out, for the check before an export (see the module's description)."""
     import client_leak
@@ -117,7 +127,8 @@ def left_out(doc, con=None):
     return {"items": left_items(doc, con),
             "sections": [{"id": s["id"], "heading": s.get("heading") or s["id"]} for s in doc.get("sections") or [] if s.get("hidden")],
             "logos": _unticked_logos(doc), "tags": sum(len(s.get("tags") or []) for s in doc.get("sections") or [] if not s.get("hidden")),
-            "health": _health_difference(doc), "findings": client_leak.findings(doc, con), "ready": ready, "not_ready": why,
+            "health": _health_difference(doc), "findings": client_leak.findings(doc, con) + _picture_findings(doc), "ready": ready,
+            "not_ready": why,
             "facts_week": meta.get("facts_week")}
 
 

@@ -12,7 +12,10 @@ undoable). Hidden sections, rows and figures never reach the page, an export or 
 Exports (P2, `export`): HTML (the page without the data block), Word (the kind's firm template, filled by docx_tools.py) and PDF
 (Chrome's print to PDF of the HTML export), each made from the data and filed beside the document through filechange.py.
 """
+import contextlib
+import contextvars
 import copy
+import hashlib
 import html
 import json
 import re
@@ -653,9 +656,40 @@ def _too_big(f):
         return False
 
 
+# v2.5.1 (#239, step 2): while a client snapshot renders (client_snapshot.client_export), its tables are in force: a picture or a logo
+# is drawn only when its name and its bytes (SHA-256) are the snapshot's. Outside a render there are none (None).
+_TABLES = contextvars.ContextVar("client_tables", default=None)
+CLIENT_PICTURE = "client-"          # known gap C: a client report's own pictures are named so (report_server.image_route, kind client)
+
+
+@contextlib.contextmanager
+def client_tables(tables):
+    """Put a snapshot's tables ({pictures: {name: sha256}, logos: {file name: sha256}, allowed: {hash}}) in force while rendering."""
+    token = _TABLES.set(tables)
+    try:
+        yield
+    finally:
+        _TABLES.reset(token)
+
+
+def tables_in_force():
+    """The client snapshot's tables while one renders, else None."""
+    return _TABLES.get()
+
+
+def _same_bytes(f, want):
+    """Whether a file's bytes have the SHA-256 `want`."""
+    try:
+        return isinstance(want, str) and hashlib.sha256(Path(f).read_bytes()).hexdigest() == want
+    except OSError:
+        return False
+
+
 def text_image(doc, ref):
     """The picture file a text section's `_images/<name>` address names (PNG or JPEG), or None: only that shape of address is read, and
-    only inside the reports folder."""
+    only inside the reports folder. v2.5.1 (#239, gap C): a client report reads only its own pictures (`_images/client-<name>`,
+    added from the client report), and while its snapshot renders only the ones in the snapshot's picture table, with the same
+    bytes."""
     if not TEXT_IMAGE.match(str(ref or "")):
         return None
     root = images_dir(doc or {})
@@ -667,6 +701,12 @@ def text_image(doc, ref):
             return None
     except OSError:
         return None
+    if (doc or {}).get("kind") == "client":
+        if not Path(ref).name.lower().startswith(CLIENT_PICTURE):
+            return None
+        tables = tables_in_force()
+        if tables is not None and not _same_bytes(f, (tables.get("pictures") or {}).get(ref)):
+            return None
     return f
 
 
@@ -1064,7 +1104,20 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None):
+def client_token_ok(doc, token):
+    """v2.5.1 (#239, step 2): whether a document may be rendered as an export here: any document but a client report, and a client
+    report only from client_snapshot.client_export (its TOKEN), the one way a client file is made."""
+    if not (isinstance(doc, dict) and doc.get("kind") == "client"):
+        return True
+    import client_snapshot
+    return token is client_snapshot.TOKEN
+
+
+CLIENT_ONLY_THERE = ("A client report is exported only from its checked copy (the Reporting hub's Export, client_snapshot."
+                     "client_export), so nothing was exported.")
+
+
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None, token=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
@@ -1074,7 +1127,8 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     v2.5.1 (#239): `doc` is the document the caller has already read and checked (the client export route, under its lock): it is
     the one rendered, the file is not read again. A client report is gated here too (client_leak.findings on the document
     rendered), a posted page is never used for one (the server renders it from the report), and the made file is checked again
-    (client_output_findings): any finding and nothing is kept."""
+    (client_output_findings): any finding and nothing is kept.
+    v2.5.1 step 2: a client report is exported only by client_snapshot.client_export (`token`), from its checked snapshot."""
     def fail(message, **extra):
         """The answer when nothing was exported."""
         return {"ok": False, "format": fmt, "message": message, **extra}
@@ -1084,12 +1138,14 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
         # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however
         # its file was edited
         doc = _export_doc(path, kind, doc)
+        if not client_token_ok(doc, token):
+            return fail(CLIENT_ONLY_THERE)
         _check_baseline(doc)
         gate = _client_gate(doc)
         if gate:
             return fail("Not exported: possible internal content in the client report: " + "; ".join(gate), findings=gate)
         built, why = _posted_page(doc, page, fmt)
-        draft, made = _make_export(doc, fmt, real(path).stem, built)
+        draft, made = _make_export(doc, fmt, real(path).stem, built, token=token)
     except DocError as e:
         return fail(str(e))
     found = client_output_findings(doc, fmt, draft, made)
@@ -1097,7 +1153,7 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
         return fail("Not exported: the file made held possible internal content: " + "; ".join(found), findings=found)
     out = {"ok": True, "format": fmt, "path": paths.rel(draft), "draft": paths.rel(draft), "filed": False,
            "open_after": bool(open_after)}
-    if fmt in ("html", "pdf") and built is None:
+    if fmt in ("html", "pdf") and built is None and (doc.get("kind") != "client" or why):     # a client report: always the server's
         out["plain"] = True
         if why:
             out["plain_why"] = why
@@ -1226,9 +1282,11 @@ def _check_baseline(doc):
                        "approved.")
 
 
-def _make_export(doc, fmt, stem, built=None):
+def _make_export(doc, fmt, stem, built=None, token=None):
     """Write the export into system/staging/drafts/: (its path, {page: the HTML a PDF was printed from, drawn: the hashes of the
-    pictures a Word export drew}). Raises DocError."""
+    pictures a Word export drew}). Raises DocError (also for a client report not from client_export: `token`)."""
+    if not client_token_ok(doc, token):
+        raise DocError(CLIENT_ONLY_THERE)
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
     # An HTML export never takes the document's own draft path (drafts/<name>.html): a plain page there would stand in for the draft.
     draft = paths.free_path(paths.DRAFTS, stem + (" (read only)" if fmt == "html" else ""), EXPORTS[fmt])
@@ -1236,7 +1294,7 @@ def _make_export(doc, fmt, stem, built=None):
     if fmt == "html":
         draft.write_text(built or render(doc, editing=False), encoding="utf-8")
     elif fmt == "docx":
-        made["drawn"] = word_export(doc, draft) or set()
+        made["drawn"] = word_export(doc, draft, token=token) or set()
     else:
         made["page"] = built or render(doc, editing=False)
         page = paths.free_path(paths.DRAFTS, f"{stem} print", ".html")
@@ -1254,8 +1312,10 @@ def client_output_findings(doc, fmt, draft, made):
     if doc.get("kind") != "client":
         return []
     import client_output
+    tables = tables_in_force()
     try:
-        found = client_output.check(doc, fmt, draft, page=made.get("page"), drawn=made.get("drawn") or ())
+        found = client_output.check(doc, fmt, draft, page=made.get("page"), drawn=made.get("drawn") or (),
+                                    allowed=tables.get("allowed") if tables else None)
     except Exception as e:  # noqa: BLE001  fails closed: an output that can't be checked is never kept
         found = [f"the made file couldn't be checked ({type(e).__name__})"]
     if found:
@@ -1386,6 +1446,14 @@ def picture_png(markup, width, height, scale=2):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def _logo_ok(f, allowed, table):
+    """Whether a logo file may be drawn: a real file (no symlink) that is one of the project's own (`allowed`), and while a client
+    snapshot renders, the snapshot's logo of that name with the same bytes (`table`, v2.5.1 step 2)."""
+    if f.is_symlink() or not f.is_file() or f.resolve() not in allowed:
+        return False
+    return table is None or _same_bytes(f, table.get(f.name))
+
+
 class _Word:
     """What one Word export shares: the document, its items, the project's folder and a work folder for the pictures."""
 
@@ -1475,13 +1543,9 @@ class _Word:
             return []
         allowed = {paths.resolve(x["path"]).resolve() for x in report_doc.logos(code)}
         wanted = report_doc.client_logos(code, self.doc.get("layout")) if self._client() else (s.get("data") or {}).get("logos") or []
-        out = []
-        for lg in wanted:
-            raw = str(lg.get("path") or "") if isinstance(lg, dict) else ""
-            f = paths.resolve(Path(raw).as_posix()) if raw else None
-            if f is not None and not f.is_symlink() and f.is_file() and f.resolve() in allowed:
-                out.append(f)
-        return out
+        table = (tables_in_force() or {}).get("logos") if self._client() else None
+        files = [paths.resolve(Path(str(lg.get("path"))).as_posix()) for lg in wanted if isinstance(lg, dict) and lg.get("path")]
+        return [f for f in files if _logo_ok(f, allowed, table)]
 
     def logos(self, s):
         """The header's chosen logos (logo_files) as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it
@@ -1933,11 +1997,12 @@ def _word_body(doc, els, work):
     return out, values, ctx.drawn
 
 
-def word_export(doc, out):
+def word_export(doc, out, token=None):
     """Write the Word export of `doc` at `out` (inside system/staging/drafts/): the firm's template for its kind, its title block,
     then each shown section in page order, filled by docx_tools.py fill. Returns the hashes of the pictures it drew itself (v2.5.1,
-    client_output.check). Raises DocError."""
-    import contextlib
+    client_output.check). Raises DocError (a client report: only from client_snapshot.client_export, `token`)."""
+    if not client_token_ok(doc, token):
+        raise DocError(CLIENT_ONLY_THERE)
     import io
     import shutil
     import docx_tools

@@ -990,12 +990,28 @@ def _file_ops(kind, code, fri, client, draft, checked=None):
         doc["meta"] = {k: v for k, v in (doc.get("meta") or {}).items() if k != "health_diff"}
         filed_client_data(doc)
     content = creaite_doc.dumps(doc)
+    snap = []
     if kind == "client":
         import client_output                                     # v2.5.1 (#239, c): what is filed is checked as an export is
         found = client_output.filed_findings(doc, content)
         if found:
             raise ReportError("Not approved: the file to be filed held possible internal content: " + "; ".join(found))
-    return [{"op": "write", "path": filed, "content": content, "previous": old}, {"op": "remove", "path": draft}]
+        snap = _snapshot_ops(doc, content, filed)
+    return [{"op": "write", "path": filed, "content": content, "previous": old}, *snap, {"op": "remove", "path": draft}]
+
+
+def _snapshot_ops(doc, content, filed):
+    """v2.5.1 (#239, step 2): the write of the client report's checked snapshot beside the filed report (`<name>.client.json`, made
+    from exactly the document filed, its hash recorded now: client_snapshot.for_filing), so Undo takes it back with the filing.
+    Raises ReportError when the snapshot's check finds anything."""
+    import client_snapshot
+    try:
+        stored, text = client_snapshot.for_filing(doc, content, filed)
+    except client_snapshot.SnapshotError as e:
+        raise ReportError(str(e)) from None
+    p = paths.resolve(stored)
+    prev = p.read_text(encoding="utf-8") if p.is_file() else None
+    return [{"op": "write", "path": stored, "content": text, "previous": prev}]
 
 
 CLIENT_META_DATES = ("period_start", "period_end", "facts_on", "facts_week")
@@ -1068,7 +1084,7 @@ def stage_weekly(draft, force=False, code=None, fri=None):
 def stage_client(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a client report draft: filed as the creaite report beside the internal one. Raises ReportError
     before the internal week is approved, while items await review (unless forced), or when the leak check finds anything."""
-    import client_leak
+    import client_snapshot
     import report
     import sweep
     doc = creaite_doc.read_report(draft, "client")  # v2.5.0 audience bypass: the gate sees a client report as one; another kind refused
@@ -1076,10 +1092,9 @@ def stage_client(draft, force=False, code=None, fri=None):
     code, fri = doc["project"], doc["date"]
     if paths.rel(paths.resolve(draft_path("client", code, fri, doc.get("client")))) != paths.rel(paths.resolve(str(draft))):
         raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was approved.")
-    ok, why = client_ready(doc)
-    if not ok:
-        raise ReportError(why)
-    found = client_leak.findings(doc)
+    _snap, left, found = client_snapshot.build(doc)       # v2.5.1 step 2: the snapshot's one check (left_out and the gate) is Approve's
+    if not left["ready"]:
+        raise ReportError(left["not_ready"] or "The client report isn't ready to approve.")
     if found:
         raise ReportError("Not approved: possible internal content in the client report: " + "; ".join(found))
     blocked = report.pending_for(code)

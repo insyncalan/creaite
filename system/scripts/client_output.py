@@ -193,10 +193,13 @@ def text_findings(doc, text, con=None):
     return found + client_leak.name_findings(con, code, t, client_leak.blocking_labels(con))
 
 
-def check(doc, fmt, out, page=None, drawn=()):
+def check(doc, fmt, out, page=None, drawn=(), allowed=None):
     """[finding] for a client export made at `out` (fmt html, docx or pdf; `page`: the HTML a PDF was printed from; `drawn`: the
-    hashes of the pictures this export drew itself). [] when what the file holds is safe."""
-    found, allowed = [], allowed_pictures(doc, drawn)
+    hashes of the pictures this export drew itself). [] when what the file holds is safe. v2.5.1 step 2: `allowed`, the hashes of
+    the snapshot's picture and logo tables (client_snapshot.tables), are then the only pictures of the report's own an output may
+    hold (with the ones it drew and the template's), in place of what the folders hold now."""
+    found = []
+    allowed = set(allowed) | set(drawn) if allowed is not None else allowed_pictures(doc, drawn)
     if fmt == "docx":
         text = docx_text(out)
         found += picture_findings(docx_pictures(out), allowed | template_pictures(doc))
