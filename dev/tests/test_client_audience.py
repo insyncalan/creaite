@@ -364,22 +364,30 @@ class Audience(unittest.TestCase):
 
     # ── (D) the filed client file's data block ──────────────────────────────────────────────────────────────────────────
     def test_the_filed_client_file_holds_only_creaites_own_meta_sources_and_layout(self):
-        r = self.fresh()
-        doc = r["doc"]
-        p = self.header_payload()
-        doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
-        doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
-        doc["layout"] = {**doc["layout"], "zzz": p}
-        sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
-        self.assertTrue(sv["ok"], sv)
-        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
-        self.assertTrue(a["ok"], a)
-        filed = self.v.root / a["path"]
-        raw = json.loads(creaite_doc.BLOCK.search(filed.read_text()).group(1))
-        self.assertEqual(set(raw["meta"]) - {"period_start", "period_end", "locked", "facts_on", "facts_week"}, set())
-        self.assertEqual([x["ref"] for x in raw["sources"]], ["tracker"])
-        self.assertNotIn("zzz", raw["layout"])
-        self.assertEqual(self.scan(filed, self.needles()), [])
+        """Words the gate doesn't flag never reach the filed data block; protected words are refused by the gate (rc-a5's
+        client_leak reads meta, sources and layout) and nothing is filed."""
+        for p, gated in (("Quokkameta tidings", False), (self.header_payload(), True)):
+            with self.subTest(gated=gated):
+                r = self.fresh()
+                doc = r["doc"]
+                doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
+                doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
+                doc["layout"] = {**doc["layout"], "zzz": p}
+                sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+                self.assertTrue(sv["ok"], sv)
+                a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+                if gated:
+                    self.assertFalse(a["ok"], a)
+                    self.assertIn("possible internal content", a["message"])
+                    self.assertEqual(list(self.reports.glob("*Client report*")), [])
+                    continue
+                self.assertTrue(a["ok"], a)
+                filed = self.v.root / a["path"]
+                raw = json.loads(creaite_doc.BLOCK.search(filed.read_text()).group(1))
+                self.assertEqual(set(raw["meta"]) - {"period_start", "period_end", "locked", "facts_on", "facts_week"}, set())
+                self.assertEqual([x["ref"] for x in raw["sources"]], ["tracker"])
+                self.assertNotIn("zzz", raw["layout"])
+                self.assertEqual(self.scan(filed, ["quokkameta"] + self.needles()), [])
 
     # ── the helpers ─────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_is_client_and_force_client_audience(self):
