@@ -381,12 +381,45 @@ class LeftOutRowShownAgain(Base):
             "assert r['ok'], r\n"
             "html = creaite_doc.real(r['path']).read_text(encoding='utf-8')\n"
             "import re\nsec = html.split('data-id=\"overdue\"', 1)[1].split('</section>', 1)[0]\n"
-            "print(json.dumps({'html': sec}))")
+            "w = creaite_doc.export(p, 'docx', file_beside=False, open_after=False)\nassert w['ok'], w\n"
+            "import zipfile\nword = zipfile.ZipFile(creaite_doc.real(w['path'])).read('word/document.xml').decode('utf-8')\n"
+            "print(json.dumps({'html': sec, 'word': word}))")
         self.assertIn("Order the harbour cranes", out["html"])
         self.assertNotRegex(out["html"], r"<tr>(<td>\s*(ABC-A-00[89])?\s*</td>)+</tr>", "no empty row in the export")
         self.assertNotIn("ABC-A-009", out["html"])
         self.assertNotIn("ABC-A-008", out["html"])
+        self.assertIn("Order the harbour cranes", out["word"])
+        self.assertNotIn("ABC-A-008", out["word"], "the Word export leaves the empty row out too")
 
+
+    def test_a_row_saved_shown_with_empty_cells_is_shown_again_from_the_tracker(self):
+        """Review (b): a row saved as shown with no cells (turned back on before the fix) is re-shown from the tracker too."""
+        back = self.run_py(
+            f"doc = report_doc.weekly_doc('ABC', {self.WEEK!r})\n"
+            "for s in doc['sections']:\n    for r in s.get('rows') or []:\n"
+            "        if r.get('ref') == 'ABC-A-001': r['cells'] = {}\n"
+            f"p = report_doc.draft_path('weekly', 'ABC', {self.WEEK!r})\n"
+            "assert creaite_doc.save(p, doc, 'Saved for a test')['ok']\nprint(json.dumps(creaite_doc.read(p)))")
+        row = next(r for s in back["sections"] if s["id"] == "overdue" for r in s["rows"] if r["ref"] == "ABC-A-001")
+        self.assertEqual((row["shown"], row["cells"]), (True, {}), "the damaged row as Alan has it")
+        ans = self.run_py(f"print(json.dumps(reshow(json.loads({json.dumps(json.dumps(back))}), 'overdue', ['ABC-A-001'])))")
+        self.assertEqual(ans["rows"]["ABC-A-001"]["row"]["cells"]["action"], "Order the harbour cranes", ans)
+
+    def test_the_saved_reports_own_page_never_holds_an_empty_row_even_with_editor_markup(self):
+        """Review (c), (e): the report's own HTML (the saved or filed file, and the plain page) leaves out a row with nothing in it,
+        including cells that hold only an editor's empty paragraph or a space."""
+        out = self.run_py(
+            f"doc = report_doc.weekly_doc('ABC', {self.WEEK!r})\n"
+            "for s in doc['sections']:\n    if s['id'] == 'overdue':\n"
+            "        s['rows'].append({'ref': 'ABC-A-009', 'shown': True, 'cells': {}})\n"
+            "        s['rows'].append({'ref': 'ABC-A-008', 'shown': True, 'cells': {'id': 'ABC-A-008', 'action': '<p></p>', 'owner': '&nbsp;', 'due': ' '}})\n"
+            "def sec(h):\n    return h.split('data-id=\"overdue\"', 1)[1].split('</section>', 1)[0]\n"
+            "print(json.dumps({'file': sec(creaite_doc.dumps(doc, keep_text=True)), 'page': sec(creaite_doc.render(doc, editing=False))}))")
+        for k in ("file", "page"):
+            self.assertIn("Order the harbour cranes", out[k])
+            self.assertNotIn("ABC-A-009", out[k], k)
+            self.assertNotIn("ABC-A-008", out[k], k)
+            self.assertNotRegex(out[k], r"<tr>(<td>[^<]*</td>)*<td></td>(<td>[^<]*</td>)*</tr>", k)
 
 if __name__ == "__main__":
     unittest.main()

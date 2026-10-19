@@ -14,10 +14,13 @@
    Text only through JSX. */
 import { useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../../core/server.js";
+import { crIdentity } from "../../stores/clientReport.js";
 import { addTextSection } from "../../stores/textSection.js";
+import { wkIdentity } from "../../stores/weekly.js";
 import { crLogoFor, crLogoPaths, logoKindName, logoKindsOf, readClientLogos, ticksOf, uploadClientLogo } from "../../stores/reportingSettings.js";
 import { EyeButton } from "./EyeButton.jsx";
 import { Sheet } from "./Sheet.jsx";
+import { blankCells } from "./sheetLib.js";
 import { wkDm, wkLongDate, wkTone, wkDmy } from "./weekly/weeklyDoc.js";
 
 /** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
@@ -124,21 +127,26 @@ export function HealthBlock({ ctx, flag, trend, change, why, below, flagCls = ""
 /** The sections whose tables take items from the tracker. */
 export const PICKABLE = new Set(["risks", "overdue", "decisions"]);
 
-/** Whether a row was left out and saved, so it holds only its reference and the document no longer has its item: the page can't
-    make its cells (#234). @param {SheetRow} row @param {SheetDoc} doc */
-export const bareRow = (row, doc) => row.shown === false && !row.cells && !!row.ref && !(doc.items || {})[row.ref];
+/** Whether a row has nothing the page can show (#234): it was left out and saved, so it holds only its reference and the document
+    no longer has its item, or its cells are all empty (a row turned back on before the fix). It is drawn as left out, an export leaves
+    it out, and its eye fills it from the tracker. @param {SheetRow} row @param {SheetDoc} doc */
+export const bareRow = (row, doc) => !!row.ref && (row.cells ? blankCells(row.cells, row.ref) : !(doc.items || {})[row.ref]);
 
 /** Show a bare row again (#234): its cells come from the tracker through the server (/api/report/reshow, read only; a client report
     gets only its client-safe facts there), never from the page. `live` holds the section's latest ctx, so an edit made while the
     tracker is read is kept. Answers "" when the row is back in the report, else the reason it stays left out.
     @param {{current: SectionCtx}} live @param {string} ref @returns {Promise<string>} */
 export async function reshowRow(live, ref) {
-  const sid = live.current.section.id;
-  const r = await api("/api/report/reshow", { doc: live.current.doc, section: sid, refs: [ref] });
+  const sid = live.current.section.id, asked = live.current.doc;
+  const ident = (/** @type {SheetDoc|undefined} */ d) => asked.kind === "client" ? crIdentity(d) : wkIdentity(d);
+  const opened = ident();
+  if (!opened || opened !== ident(asked)) return "";       // #234: only the report that is open now is ever filled
+  const r = await api("/api/report/reshow", { doc: asked, section: sid, refs: [ref] });
+  if (ident() !== opened) return "";                       // another report (or this one again) opened while the tracker was read: dropped
   const got = r && r.ok ? (r.rows || {})[ref] : null;
   if (!got || !got.row || !got.row.cells) return String((r && r.ok ? (r.missing || {})[ref] : r && r.message) || "the tracker couldn't be read").split("\n")[0];
   const ctx = live.current, doc = ctx.doc, sec = doc.sections.find(x => x.id === sid);
-  if (!sec || !(sec.rows || []).some(x => x.ref === ref && bareRow(x, doc))) return "";       // changed meanwhile: nothing to fill
+  if (ident(doc) !== opened || !sec || !(sec.rows || []).some(x => x.ref === ref && bareRow(x, doc))) return "";       // changed meanwhile: nothing to fill
   ctx.setDoc({ ...doc, items: { ...(doc.items || {}), [ref]: got.item },
     sections: doc.sections.map(x => x.id !== sid ? x : { ...x, rows: (x.rows || []).map(y => y.ref === ref && bareRow(y, doc) ? { ...y, shown: true, cells: got.row.cells } : y) }) }, "Row shown");
   return "";
@@ -156,7 +164,7 @@ export function LeftOutNote({ ctx, row, why }) {
     @param {number} i @param {(ref: string, why: string) => void} setWhy */
 export function flipRow(live, cellsFor, i, setWhy) {
   const ctx = live.current, s = ctx.section, rows = s.rows || [], r = rows[i], on = r.shown === false;
-  if (on && bareRow(r, ctx.doc)) { reshowRow(live, String(r.ref)).then(why => setWhy(String(r.ref), why)); return; }
+  if (bareRow(r, ctx.doc)) { reshowRow(live, String(r.ref)).then(why => setWhy(String(r.ref), why)); return; }   // drawn left out: its eye puts it back
   ctx.update({ rows: rows.map((x, j) => j !== i ? x : { ...x, shown: on, cells: x.cells || cellsFor(s.id, (ctx.doc.items || {})[x.ref || ""], ctx.doc.date) }) }, on ? "Row shown" : "Row hidden");
 }
 
@@ -169,7 +177,7 @@ export function EyeTable({ ctx, cols, noun, empty, cellsFor, extra, leftOut = "t
   const [whys, setWhys] = useState(/** @type {Record<string, string>} */ ({}));
   const setWhy = (/** @type {string} */ ref, /** @type {string} */ why) => setWhys(w => ({ ...w, [ref]: why }));
   const flip = (/** @type {number} */ i) => flipRow(live, cellsFor, i, setWhy);
-  const shown = rows.filter(r => r.shown !== false).length;
+  const shown = rows.filter(r => r.shown !== false && !bareRow(r, ctx.doc)).length;
   return (
     <div class="wr-tbl">
       {rows.length ? (
@@ -177,8 +185,8 @@ export function EyeTable({ ctx, cols, noun, empty, cellsFor, extra, leftOut = "t
           <colgroup>{ctx.editing ? <col class="eyec" /> : null}{cols.map(c => <col key={c.key} style={c.w ? { width: c.w } : undefined} />)}</colgroup>
           <thead><tr>{ctx.editing ? <th class="eyec"><span class="sr">In the report</span></th> : null}{cols.map(c => <th key={c.key}>{c.label}</th>)}</tr></thead>
           <tbody>{rows.map((row, i) => {
-            const off = row.shown === false; if (off && !ctx.editing) return null;
-            if (bareRow(row, ctx.doc)) return (
+            const bare = bareRow(row, ctx.doc), off = row.shown === false || bare; if (off && !ctx.editing) return null;
+            if (bare) return (
               <tr key={row.ref || i} class="hidrow wr-bare" data-ref={row.ref || undefined}>
                 <td class="eyec"><EyeButton on={false} subject={String(row.ref)} onClick={() => flip(i)} /></td>
                 <td colSpan={cols.length}><LeftOutNote ctx={ctx} row={row} why={whys[String(row.ref)]} /></td>

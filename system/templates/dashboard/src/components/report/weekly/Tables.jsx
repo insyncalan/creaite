@@ -72,7 +72,7 @@ export function Overdue({ ctx }) {
 /** The week's decisions written out, one under another, each with its eye. @param {{ctx: SectionCtx}} props */
 export function Decisions({ ctx }) {
   const all = ctx.section.rows || [];
-  const rows = all.map((row, i) => ({ row, i })).filter(x => x.row.shown !== false || ctx.editing);
+  const rows = all.map((row, i) => ({ row, i })).filter(x => (x.row.shown !== false && !bareRow(x.row, ctx.doc)) || ctx.editing);
   const live = useRef(ctx); live.current = ctx;
   const [whys, setWhys] = useState(/** @type {Record<string, string>} */ ({}));
   const flip = (/** @type {number} */ i) => flipRow(live, cellsFromItem, i, (ref, why) => setWhys(w => ({ ...w, [ref]: why })));
@@ -98,7 +98,7 @@ export function Decisions({ ctx }) {
             </div>
           </li>);
       })}</ul>
-      {ctx.editing && all.length ? <div class="wr-count">Showing {all.filter(r => r.shown !== false).length} of {all.length} decisions. Hidden decisions are left out of the filed report and the exports.</div> : null}
+      {ctx.editing && all.length ? <div class="wr-count">Showing {all.filter(r => r.shown !== false && !bareRow(r, ctx.doc)).length} of {all.length} decisions. Hidden decisions are left out of the filed report and the exports.</div> : null}
       <AddFromTracker ctx={ctx} />
     </div>);
 }

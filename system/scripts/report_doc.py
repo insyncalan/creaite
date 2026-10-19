@@ -620,9 +620,11 @@ RESHOW_MAX = 50       # rows asked for in one call
 def reshow(doc, sid, refs):
     """A row left out and saved, shown again (#234). A saved report keeps a left-out row as its reference only and drops its item (the
     leak guard, creaite_doc.clean), so the page can't make its cells; this makes them from the tracker as it stands, the way Add from
-    the tracker would. Read only: nothing is written. Only a row of that table that is left out is filled; a client report only from
-    its client-safe facts (_pick_client: client-visible, complete client wording, no label that keeps it out), never the tracker's own
-    words. {rows: {ref: {row, item}}, missing: {ref: why}}: a row the tracker can't give (closed, archived, gone, or not client-safe)
+    the tracker would. Read only: nothing is written. Only a row of that table that is left out (or saved with nothing in its cells,
+    creaite_doc.blank_row) is filled; a client report only from its client-safe facts (_pick_client: client-visible, complete client
+    wording, no label that keeps it out), never the tracker's own words. Those are the live facts, as Add from the tracker offers them,
+    not the approved week's locked ones: the save, approve and export checks (client_leak) still run on whatever is filled.
+    {rows: {ref: {row, item}}, missing: {ref: why}}: a row the tracker can't give (closed, archived, gone, or not client-safe)
     is missing, and stays left out."""
     import tracker
     kind, code, left_out = _reshow_table(doc, sid, refs)
@@ -649,7 +651,8 @@ def _reshow_table(doc, sid, refs):
     sec = next((s for s in doc.get("sections") or [] if isinstance(s, dict) and s.get("id") == sid and s.get("type") == "table"), None)
     if sec is None:
         raise ReportError("That table isn't in the report.")
-    return kind, code, {r.get("ref") for r in sec.get("rows") or [] if isinstance(r, dict) and r.get("ref") and not r.get("shown", True)}
+    return kind, code, {r.get("ref") for r in sec.get("rows") or [] if isinstance(r, dict) and r.get("ref")
+                        and (not r.get("shown", True) or creaite_doc.blank_row(r))}
 
 
 def _ref_list(refs):

@@ -27,6 +27,14 @@ export const weeklyEditing = signal(false);
 export const weeklyLogos = signal(/** @type {Record<string, string>} */ ({}));
 
 let wkAsked = 0;
+
+/** Which weekly report is open: the open's number, what it was opened with, and the document's project and week. Anything that awaits
+    the server and then writes the page compares this before and after, so a late answer never lands in another report (#234).
+    @param {SheetDoc|null} [d] */
+export function wkIdentity(d) {
+  const x = d === undefined ? weeklyDoc.value : d;
+  return x ? `${wkAsked}|${JSON.stringify(weeklyArg.value)}|${x.project}|${x.date}` : "";
+}
 /** Open (or reload) the weekly report. @param {{code: string, week?: string}} arg @param {boolean} [fresh] build it again from the tracker */
 export async function loadWeekly(arg, fresh = false) {
   const mine = ++wkAsked;
@@ -87,5 +95,10 @@ export async function exportWeekly(doc, fmt, page) {
 export let weeklyDirty = false;
 export const setWeeklyDirty = (/** @type {boolean} */ on) => { weeklyDirty = on; };
 
-/** Every edit from the sheet or a section: the whole new document, kept on the page. @param {SheetDoc} d @param {string} [_why] */
-export function editDoc(d, _why) { weeklyDoc.value = d; weeklyDirty = true; }
+/** Every edit from the sheet or a section: the whole new document, kept on the page. A document of another project or week (a late
+    answer for a report no longer open) is refused: false (#234). @param {SheetDoc} d @param {string} [_why] */
+export function editDoc(d, _why) {
+  const c = weeklyDoc.value;
+  if (c && d && (c.project !== d.project || c.date !== d.date || (c.kind || "weekly") !== (d.kind || "weekly"))) return false;
+  weeklyDoc.value = d; weeklyDirty = true; return true;
+}
