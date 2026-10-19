@@ -14,7 +14,7 @@ import { render } from "preact";
 /** @typedef {{as_of?: string, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[]}} Usage */
 
 const KIND = { ask: "ask creaite", sweep: "Sweep", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
-  check: "Transcript check", load: "Transcript load", vip: "VIP check", other: "Other" };
+  check: "Transcript check", load: "Transcript load", vip: "Alert check", other: "Other" };
 const FILE = { rules: "Rules (creaite-rules.md)", claude_md: "Your CLAUDE.md", memory: "Project memory and registers",
   skills: "Skill names and descriptions" };
 

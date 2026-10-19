@@ -114,7 +114,7 @@ class UsageTab(UsageBase):
                                       ".map(tr=>[...tr.children].map(c=>c.textContent))")
         self.assertEqual(rows, [["ask creaite", "3", "20,667", "20,000", "$5.00", "53%"],
                                 ["Sweep", "2", "23,000", "20,500", "$4.00", "42%"],
-                                ["VIP check", "1", "21,000", "21,000", "$0.50", "5%"]])
+                                ["Alert check", "1", "21,000", "21,000", "$0.50", "5%"]])
 
     def test_what_every_run_loads_with_the_thirty_day_change(self):
         rows = self.open_usage().eval("[...document.querySelectorAll('#actUsage table[aria-label=\"What every run loads\"] tbody tr')]"
@@ -147,6 +147,13 @@ class UsageTab(UsageBase):
         d = json.dumps(b.eval("D.usage"))                    # nor into the data the page holds
         self.assertNotIn("POISONED", d)
         self.assertNotIn("Jane", d)
+
+    def test_the_word_vip_is_nowhere_in_the_tab(self):
+        """BL-288: nothing creaite shows says VIP (text, aria-labels, titles); the internal kind key stays `vip` in the jsonl."""
+        b = self.open_usage()
+        shown = b.eval(f"{PANEL}.innerText + ' ' + [...{PANEL}.querySelectorAll('[aria-label],[title]')].map(e=>(e.getAttribute('aria-label')||'')+' '+(e.getAttribute('title')||'')+' '+e.textContent).join(' ')")
+        self.assertNotIn("vip", shown.lower())
+        self.assertIn("Alert check", shown)
 
     def test_the_tab_is_read_only(self):
         b = self.b
