@@ -96,6 +96,42 @@ class WordPictures(Base):
         self.assertNotIn(list(OWN_SIZE), sizes)
         self.assertNotIn(list(OUT_SIZE), sizes)
 
+    def word_kind(self, kind, audience, secs):
+        r = self.py("from pathlib import Path\nimport paths\n"
+                    f"doc = creaite_doc.new({kind!r}, 'ABC', 'Report', '2026-10-16', {secs!r}, items={ITEMS!r}, audience={audience!r})\n"
+                    "o = Path(paths.DRAFTS) / 'pic.docx'\ncreaite_doc.word_export(doc, o)\nprint(json.dumps(str(o)))")
+        return media_sizes(r)
+
+    def test_a_client_kind_is_client_whatever_its_audience_says(self):
+        """Review MEDIUM 1: a hand-written client draft marked audience internal still reads no project picture."""
+        own = sections_with([], current="Booked.\n\n![Our site](images/own.png)")
+        self.assertNotIn(list(OWN_SIZE), self.word_kind("client", "internal", own))
+        self.assertIn(list(OWN_SIZE), self.word_kind("weekly", "internal", own))
+
+    def test_a_hard_link_to_an_outside_file_is_refused(self):
+        """Review LOW 1: a hard link in the images folder can name a file outside the project."""
+        os.link(self.v.root / "outside.png", self.images / "hard.png")
+        sizes = self.word("internal", sections_with(["images/hard.png"], current="![Our site](images/own.png)"))
+        self.assertNotIn(list(OUT_SIZE), sizes)
+        self.assertIn(list(OWN_SIZE), sizes)
+
+    def test_a_mapped_images_folder_outside_the_project_is_refused(self):
+        """Review LOW 2: locations.folders.images set to `../..` or an absolute path never reads outside the project."""
+        r = self.py("import paths\nf = paths.project_dir('ABC')\npaths.external = lambda: True\nout = []\n"
+                    f"for m in ('../..', {str(self.out)!r}, 'images'):\n"
+                    "    paths.folder_name = lambda k, m=m: m\n"
+                    "    out.append([bool(paths.image_file(f, 'images/outside.png')), bool(paths.image_file(f, 'images/own.png'))])\n"
+                    "print(json.dumps(out))")
+        self.assertEqual(r, [[False, False], [False, False], [False, True]])
+
+    def test_a_picture_line_in_a_fenced_code_block_is_kept(self):
+        """Review LOW 3: the save drop leaves fenced code as written; a picture line outside the fence still goes."""
+        text = "```\n![a](/abs/one.png)\n```\n~~~md\n![b](../two.png)\n~~~\n![c](/abs/three.png)\nEnd."
+        secs = [{"id": "summary", "type": "text", "heading": "S", "default_heading": "S", "hidden": False, "text": text}]
+        r = self.py(f"doc = creaite_doc.new('client', 'ABC', 'R', '2026-10-16', {secs!r}, audience='client')\n"
+                    "d, gone = creaite_doc.drop_outside_pictures(doc)\nprint(json.dumps([d['sections'][0]['text'], len(gone)]))")
+        self.assertEqual(r, [text.replace("![c](/abs/three.png)\n", ""), 1])
+
     def test_resolve_image_never_leaves_the_project_folder(self):
         refs = bad_refs(self.outside) + ["images/own.png"]
         r = self.py("import paths\nf = paths.project_dir('ABC')\n"

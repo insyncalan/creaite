@@ -437,7 +437,8 @@ def safe_image_ref(ref) -> bool:
 
 def image_file(project_folder: Path, ref: str):
     """The real picture file an `images/<name>` reference names, or None: only a safe relative reference under `images/`, a regular
-    file (never a symlink, nor reached through one) whose real path sits in the project's own images folder (v2.5.0 leak fix)."""
+    file (never a symlink, nor reached through one, never a hard link) whose real path sits in the project's own images folder, itself
+    inside the project folder (v2.5.0 leak fix)."""
     ref = str(ref or "")
     if not (ref.startswith("images/") and safe_image_ref(ref)):
         return None
@@ -445,7 +446,9 @@ def image_file(project_folder: Path, ref: str):
     f = root / ref[len("images/"):]
     try:
         real_root = root.resolve()
-        if root.is_symlink() or not f.is_file():
+        if Path(project_folder).resolve() not in real_root.parents:     # a mapped images folder outside the project (`../..`)
+            return None
+        if root.is_symlink() or not f.is_file() or f.stat().st_nlink > 1:     # a hard link may name an outside file
             return None
         p = f
         while p != root:                        # no symlink anywhere between the images folder and the file

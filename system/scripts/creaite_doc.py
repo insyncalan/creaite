@@ -515,9 +515,12 @@ def drop_outside_pictures(doc):
         """The text without the picture lines it may not carry."""
         if not isinstance(text, str) or "![" not in text:
             return text
-        keep = []
+        keep, fence = [], None
         for line in text.split("\n"):
-            m = docx_tools.IMAGE_LINE.match(line)
+            f = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+            if f and (fence is None or (f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence))):
+                fence = f.group(1) if fence is None else None       # a fenced code block's lines are code, kept as written
+            m = None if fence is not None or f else docx_tools.IMAGE_LINE.match(line)
             if m and not picture_ref_ok(m.group(2)):
                 gone.append(m.group(1).strip() or "a picture")
                 continue
@@ -1155,7 +1158,7 @@ class _Word:
 
     def refused(self, alt, ref):
         """The words for a picture line md won't draw: "not found" for a safe internal reference, else only its alt text."""
-        if (self.doc.get("audience") or "internal") == "internal" and paths.safe_image_ref(ref):
+        if self.internal() and paths.safe_image_ref(ref):
             return [{"md": _nobraces(f"*Picture not found: {ref}*")}]
         return [{"md": _nobraces(f"*Picture not included: {alt}*")}] if alt else []
 
@@ -1166,9 +1169,14 @@ class _Word:
         f = text_image(self.doc, ref)
         if f is not None:
             return f
-        if (self.doc.get("audience") or "internal") != "internal":
+        if not self.internal():
             return None
         return paths.image_file(self.folder, ref)
+
+    def internal(self):
+        """Whether project pictures may be read: an internal audience and not a client report (a client kind is client whatever its
+        audience says, as for_client reads it)."""
+        return (self.doc.get("audience") or "internal") == "internal" and self.doc.get("kind") != "client"
 
     # ── the logos ──
     def logos(self, s):
