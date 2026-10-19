@@ -7,11 +7,13 @@
    Progress is the row's (irBusy); the ask panel is never opened, so ask creaite stays free (one run at a time is the engine's). */
 import { askLive } from "../../ask.js";
 import { jobLive, mtgBusy, mtgCheckable, mtgSkip, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../intake.js";
-import { D, fd, TODAY } from "../../core/page.js";
+import { D, fd, fdText, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { irKindOf, irUnsure } from "../../core/irFold.js";
-import { irAside, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRefreshing, irSetBusy, irSetChecking, irSetFileKind, irTick } from "../../stores/intakeReview.js";
+import { pName } from "../../core/data.js";
+import { srcShort } from "../../core/fields.js";
+import { irKindOf, irMatches, irUnsure } from "../../core/irFold.js";
+import { irAside, irBlocked, irBusy, irChecking, irFileKinds, irModel, irNote, irRow, irRefreshing, irSetBusy, irSetChecking, irSetFileKind, irTick } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
 export const IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
@@ -203,4 +205,20 @@ export async function irRemoveFile(m) {
     if (b.ok) { await reloadData(); snack("Back in Intake"); } else snack(oneLine(b.message));
   });
   return true;
+}
+
+/* ---- the Search box (#232-A6) ---- */
+/** What a meeting or file row is searched on: its title and its project's name. A private or confidential meeting is title only
+    (the same words its row shows). @param {any} m */
+export const irMeetingFields = m => (m.private || m.confidential ? [m.title] : [m.title, m.p ? pName(m.p) : ""]);
+/** What a mail, Teams or other proposal is searched on: its title, its project's name and its source. @param {number} n */
+export function irRowFields(n) {
+  const r = irRow(n);
+  return r ? [r.rec && r.rec.t, r.p ? pName(r.p) : "", fdText(srcShort(r.src))] : [];
+}
+/** The model with only the rows the search finds (the stage counts stay the page's whole). @param {any} model @param {string} q */
+export function irFilterModel(model, q) {
+  if (!String(q || "").trim()) return model;
+  const keep = (/** @type {{needs: number[], routine: number[]}} */ g) => ({ needs: g.needs.filter(n => irMatches(q, irRowFields(n))), routine: g.routine.filter(n => irMatches(q, irRowFields(n))) });
+  return { ...model, meetings: model.meetings.filter((/** @type {any} */ m) => irMatches(q, irMeetingFields(m))), mail: keep(model.mail), other: keep(model.other) };
 }

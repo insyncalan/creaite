@@ -5,12 +5,13 @@
    From mail and Teams, and Other proposals when there are any. */
 import { pName } from "../../core/data.js";
 import { IR_STAGES, irLive } from "../../core/irFold.js";
-import { irBusy, irClickMeeting, irDone, irHeld, irNotes, irOpen, irSel } from "../../stores/intakeReview.js";
+import { irBusy, irClickMeeting, irDone, irHeld, irNotes, irOpen, irQuery, irSel } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
 import { FileFacts, MeetingRow, Progress, RowActions, irRunningWords, irStateWords } from "./rows.jsx";
 
 export const IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
 const IR_EMPTY = "Nothing here. Meetings appear when they end.";
+const irNone = () => (irQuery.value.trim() ? "Nothing matches your search." : IR_EMPTY);
 
 /** @param {{model: any}} props */
 function MailSections({ model }) {
@@ -18,7 +19,7 @@ function MailSections({ model }) {
   const nm = mail.needs.length + mail.routine.length, no = other.needs.length + other.routine.length;
   return <>
     <div class="rgroup irsec" data-irsec="mail"><h2>From mail and Teams <span class="sub rgc">{nm} proposal{nm === 1 ? "" : "s"}</span></h2></div>
-    {nm ? <div class="tbl"><table><tbody><ProposalGroups groups={model.mail} /></tbody></table></div> : <div class="empty">Nothing from mail or Teams to approve.</div>}
+    {nm ? <div class="tbl"><table><tbody><ProposalGroups groups={model.mail} /></tbody></table></div> : <div class="empty">{irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve."}</div>}
     {no ? <>
       <div class="rgroup irsec" data-irsec="other"><h2>Other proposals <span class="sub rgc">{no}</span></h2></div>
       <div class="tbl"><table><tbody><ProposalGroups groups={model.other} /></tbody></table></div>
@@ -38,7 +39,7 @@ function MeetingBlock({ m }) {
 /** @param {{model: any, list: any[]}} props */
 export function ListView({ model, list }) {
   return <div data-irv="list">
-    {list.length ? <div class="tbl"><table><tbody>{list.map(m => <MeetingBlock m={m} />)}</tbody></table></div> : <div class="empty">{IR_EMPTY}</div>}
+    {list.length ? <div class="tbl"><table><tbody>{list.map(m => <MeetingBlock m={m} />)}</tbody></table></div> : <div class="empty">{irNone()}</div>}
     <MailSections model={model} />
   </div>;
 }
@@ -80,7 +81,7 @@ export function TwoPanes({ model, list }) {
         <tr class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={() => { irSel.value = m.id; }}>
           <td class="title">{m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div></td>
         </tr>
-      ))}</tbody></table></div> : <div class="empty">{IR_EMPTY}</div>}</div>
+      ))}</tbody></table></div> : <div class="empty">{irNone()}</div>}</div>
       <div class="card icdet" data-irdet={sel ? sel.id : ""}>
         {sel ? <>
           <h2 style={{ margin: "0 0 4px" }}>{sel.title}</h2>

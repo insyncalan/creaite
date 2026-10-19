@@ -97,6 +97,8 @@ export function irSetFileKind(path, kind) {
   irFileKinds.value = { ...irFileKinds.value, [path]: kind };
   try { store.set(IR_KIND_KEY, irFileKinds.value); } catch (x) { /* storage blocked: this page only */ }
 }
+/** The Search box's text: filters the meetings, files and mail rows on this page (client side; never saved). */
+export const irQuery = signal("");
 /** Whether files are being dragged over the page: the full-page "Drop to add files" overlay shows (pointer-events none, so ask creaite's panel still gets its images). */
 export const irDropOn = signal(false);
 /** Whether the calendar is being read again (the refresh icon under the heading): the sub-line says "Refreshing…" meanwhile. */

@@ -125,3 +125,14 @@ export const irEsc = st => (st.peek != null ? { ...st, peek: null } : { ...st, o
 export const IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
 /** A remembered view made safe. @param {any} v */
 export const irViewNorm = v => (IR_VIEWS.some(x => x[0] === v) ? v : "list");
+
+/* The Search box (#232-A6): a client-side filter. Every word typed must be found (any case) somewhere in the row's fields. */
+/** @param {string} q */
+export const irQueryWords = q => String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+/** Whether a row matches the search `q`: an empty search matches everything. @param {string} q @param {(string|null|undefined)[]} fields */
+export function irMatches(q, fields) {
+  const w = irQueryWords(q);
+  if (!w.length) return true;
+  const hay = (fields || []).filter(Boolean).join("\n").toLowerCase();
+  return w.every(x => hay.includes(x));
+}

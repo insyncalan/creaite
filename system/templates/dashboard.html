@@ -4121,6 +4121,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icprog i{display:none}
 #v-intake-review .iccardacts{margin-top:8px}
 #v-intake-review .irnote{color:var(--warn)}
+#v-intake-review #irQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);min-width:200px;font-size:var(--ctl-fs)}   /* the Search box (#rvQ is the earlier Review page's) */
 #v-intake-review .icsep{align-self:stretch;width:1px;background:var(--line);margin:4px 6px}
 #v-intake-review .icbv{display:flex;align-items:center;gap:10px}#v-intake-review .icbi{display:inline-flex;color:var(--accent)}#v-intake-review .icbi svg{width:22px;height:22px}
 #v-intake-review .evbox[data-irstage=drafted] .icbi{color:var(--warn)}#v-intake-review .evbox[data-irstage=approved] .icbi{color:var(--ok)}#v-intake-review .evbox[data-irstage=all] .icbi{color:var(--muted)}
@@ -5837,6 +5838,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irEsc: () => irEsc,
     irFileKind: () => irFileKind,
     irFileKinds: () => irFileKinds,
+    irFilterModel: () => irFilterModel,
     irFiltered: () => irFiltered,
     irFoldClick: () => irFoldClick,
     irFolded: () => irFolded,
@@ -5851,6 +5853,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irLeftOut: () => irLeftOut,
     irLive: () => irLive,
     irLiveCounts: () => irLiveCounts,
+    irMatches: () => irMatches,
+    irMeetingFields: () => irMeetingFields,
     irMeetingOf: () => irMeetingOf,
     irMissing: () => irMissing,
     irModel: () => irModel,
@@ -5865,6 +5869,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irProcess: () => irProcess,
     irProcessAll: () => irProcessAll,
     irProcessWord: () => irProcessWord,
+    irQuery: () => irQuery,
+    irQueryWords: () => irQueryWords,
     irReady: () => irReady,
     irRefreshCalendar: () => irRefreshCalendar,
     irRefreshing: () => irRefreshing,
@@ -5873,6 +5879,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irRestoredWords: () => irRestoredWords,
     irReveal: () => irReveal,
     irRow: () => irRow,
+    irRowFields: () => irRowFields,
     irSel: () => irSel,
     irSetBusy: () => irSetBusy,
     irSetChecking: () => irSetChecking,
@@ -9393,6 +9400,13 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
   var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
   var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
+  var irQueryWords = (q5) => String(q5 || "").toLowerCase().split(/\s+/).filter(Boolean);
+  function irMatches(q5, fields) {
+    const w6 = irQueryWords(q5);
+    if (!w6.length) return true;
+    const hay = (fields || []).filter(Boolean).join("\n").toLowerCase();
+    return w6.every((x5) => hay.includes(x5));
+  }
 
   // stores/intakeReview.js
   var IR_VIEW_KEY = "creaite-ir-view";
@@ -9526,6 +9540,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     } catch (x5) {
     }
   }
+  var irQuery = y3("");
   var irDropOn = y3(false);
   var irRefreshing = y3(false);
   function irSetBusy(id2, on2) {
@@ -74624,6 +74639,16 @@ ${d5.text}`);
     });
     return true;
   }
+  var irMeetingFields = (m5) => m5.private || m5.confidential ? [m5.title] : [m5.title, m5.p ? pName(m5.p) : ""];
+  function irRowFields(n4) {
+    const r4 = irRow(n4);
+    return r4 ? [r4.rec && r4.rec.t, r4.p ? pName(r4.p) : "", fdText(srcShort(r4.src))] : [];
+  }
+  function irFilterModel(model, q5) {
+    if (!String(q5 || "").trim()) return model;
+    const keep2 = (g5) => ({ needs: g5.needs.filter((n4) => irMatches(q5, irRowFields(n4))), routine: g5.routine.filter((n4) => irMatches(q5, irRowFields(n4))) });
+    return { ...model, meetings: model.meetings.filter((m5) => irMatches(q5, irMeetingFields(m5))), mail: keep2(model.mail), other: keep2(model.other) };
+  }
 
   // components/intakeReview/icons.js
   var IR_ICONS = {
@@ -75169,6 +75194,7 @@ ${d5.text}`);
   // components/intakeReview/views.jsx
   var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
   var IR_EMPTY = "Nothing here. Meetings appear when they end.";
+  var irNone = () => irQuery.value.trim() ? "Nothing matches your search." : IR_EMPTY;
   function MailSections({ model }) {
     const mail = irLive(model.mail, irDone, irHeld), other = irLive(model.other, irDone, irHeld);
     const nm3 = mail.needs.length + mail.routine.length, no2 = other.needs.length + other.routine.length;
@@ -75181,7 +75207,7 @@ ${d5.text}`);
           nm3 === 1 ? "" : "s"
         ] })
       ] }) }),
-      nm3 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: model.mail }) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing from mail or Teams to approve." }),
+      nm3 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: model.mail }) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve." }),
       no2 ? /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "other", children: /* @__PURE__ */ u4("h2", { children: [
           "Other proposals ",
@@ -75200,7 +75226,7 @@ ${d5.text}`);
   }
   function ListView({ model, list }) {
     return /* @__PURE__ */ u4("div", { "data-irv": "list", children: [
-      list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: list.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: IR_EMPTY }),
+      list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: list.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }),
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
   }
@@ -75263,7 +75289,7 @@ ${d5.text}`);
             ],
             m5.p && !m5.private && !m5.confidential ? ` · ${pName(m5.p)}` : ""
           ] })
-        ] }) })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: IR_EMPTY }) }),
+        ] }) })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }) }),
         /* @__PURE__ */ u4("div", { class: "card icdet", "data-irdet": sel ? sel.id : "", children: sel ? /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("h2", { style: { margin: "0 0 4px" }, children: sel.title }),
           /* @__PURE__ */ u4("div", { class: "why", children: [
@@ -75477,7 +75503,8 @@ ${d5.text}`);
   }
   function IntakeReviewView() {
     const tick = irTick.value;
-    const model = irModel(), c5 = irLiveCounts(), view = irView.value;
+    const c5 = irLiveCounts(), view = irView.value, q5 = irQuery.value;
+    const model = irFilterModel(irModel(), q5);
     const list = irFiltered(model, irStage.value);
     return /* @__PURE__ */ u4("div", { class: "wrapmax irpage", "data-irtick": tick, children: [
       /* @__PURE__ */ u4("h1", { id: "irTitle", children: "Intake" }),
@@ -75489,6 +75516,28 @@ ${d5.text}`);
         /* @__PURE__ */ u4(CalendarRead, { text: irCalendarRead(D.meetings && D.meetings.fetched, TODAY) })
       ] }),
       /* @__PURE__ */ u4("div", { class: "toolbar rvtools", children: [
+        /* @__PURE__ */ u4(
+          "input",
+          {
+            id: "irQ",
+            type: "search",
+            placeholder: "Search",
+            "aria-label": "Search",
+            autocomplete: "off",
+            value: q5,
+            onInput: (e4) => {
+              irQuery.value = /** @type {HTMLInputElement} */
+              e4.currentTarget.value;
+            },
+            onKeyDown: (e4) => {
+              if (e4.key === "Escape" && irQuery.value) {
+                e4.preventDefault();
+                e4.stopPropagation();
+                irQuery.value = "";
+              }
+            }
+          }
+        ),
         /* @__PURE__ */ u4("span", { class: "sp" }),
         /* @__PURE__ */ u4(ProcessAll, { n: irReady().length, left: irLeftOut().length }),
         /* @__PURE__ */ u4(UploadFiles, {}),
@@ -77516,6 +77565,7 @@ ${d5.text}`);
         "irHold",
         "irIsFolded",
         "irKeepOpen",
+        "irKindOf",
         "irLive",
         "irLiveCounts",
         "irMissing",
@@ -77525,6 +77575,7 @@ ${d5.text}`);
         "irOpen",
         "irPeek",
         "irProcess",
+        "irQuery",
         "irRefreshing",
         "irSel",
         "irSetChecking",

@@ -15,8 +15,8 @@ import { $ } from "../../core/dom.js";
 import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irCanSetAside, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_REASONS, irLater, irLeftOut, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
@@ -132,13 +132,17 @@ function AsideMenu() {
 
 function IntakeReviewView() {
   const tick = irTick.value;   /* read for real: a bare `irTick.value;` is dropped by the bundler and nothing would redraw */
-  const model = irModel(), c = irLiveCounts(), view = irView.value;
+  const c = irLiveCounts(), view = irView.value, q = irQuery.value;
+  const model = irFilterModel(irModel(), q);          /* the search: the meetings, files and mail rows it finds (the counts above stay whole) */
   const list = irFiltered(model, irStage.value);
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake</h1>
       <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
+        <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
+          onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}
+          onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; } }} />
         <span class="sp"></span>
         <ProcessAll n={irReady().length} left={irLeftOut().length} />
         <UploadFiles />
