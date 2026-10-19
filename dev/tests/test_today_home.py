@@ -85,33 +85,36 @@ class ToDecide(Home):
     def test_one_line_with_the_rails_counts_and_links_and_no_rows(self):
         b = self.b
         self.today()
-        o = b.eval(f"""(()=>{{ const l=document.getElementById('tdLine'); return {{first:document.getElementById('tdSec').nextElementSibling.id,
+        o = b.eval(f"""(()=>{{ const l=document.getElementById('tdLine'); const c=irLiveCounts(); return {{first:document.getElementById('tdSec').nextElementSibling.id,
           text:l.textContent, rows:document.querySelectorAll('#tdList>li.td-review,#tdList>li.td-transcript').length,
-          pending:REV.filter(r=>!r.done).length, count:document.getElementById('nTd').textContent, tx:MTG().filter(mtgHasTx).length,
+          c:{{ready:c.ready,to_approve:c.to_approve,badge:c.badge}}, count:document.getElementById('nTd').textContent, rail:document.getElementById('revBadge').textContent.trim(),
           line:tdLine().map(x=>x.key+':'+x.n), links:[...l.querySelectorAll('a')].map(a=>[a.dataset.tdline,a.textContent]),
           foot:document.querySelector('#tBrief .tdfoot').textContent}}; }})()""")
         self.assertEqual(o["first"], "weekSec")                         # #168: still just above Week ahead
         self.assertEqual(o["rows"], 0)                                  # the per-item rows are off Today
-        self.assertEqual(o["links"][0], ["review", f"{o['pending']} proposal{'' if o['pending'] == 1 else 's'} in Review"])
-        self.assertTrue(o["text"].startswith(f"{o['pending']} proposal"))
-        self.assertIn(f"review:{o['pending']}", o["line"])              # Review's count is the rail badge's (renderBadge)
+        self.assertEqual(o["links"][-1], ["proposals", f"{o['c']['to_approve']} proposal{'' if o['c']['to_approve'] == 1 else 's'} to approve"])
+        self.assertIn(f"proposals:{o['c']['to_approve']}", o["line"])   # #232-C: the page's and the rail badge's count
         self.assertEqual(o["count"], str(sum(int(x.split(":")[1]) for x in o["line"])))
+        self.assertEqual(o["count"], str(o["c"]["badge"]))
+        self.assertEqual(o["rail"], str(o["c"]["badge"]))               # the rail badge, Today's line and the page are one number
         self.assertNotIn("Open Review", o["foot"])
         self.assertNotIn("VIP", o["text"])
 
     def test_every_count_is_a_real_link_focusable_and_enter_goes_to_its_page(self):
         b = self.b
         self.today()
-        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'}]; D.meetings={rows:[{id:'mx1',title:'Steering',p:'ABC',day:'2026-10-13',start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null}]}; renderToday()")
+        b.eval("""D.intake_review={v:1,meetings:[{id:'mR',src:'calendar',title:'Steering',day:'2026-10-13',start:'09:00',p:null,stage:'arrived',state:'ready',age:0,stale:false,groups:{needs:[],routine:[]}}],
+          mail:{needs:[],routine:REV.filter(r=>!r.done).map(r=>r.n).slice(0,2)},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; irTick.value++; renderBadge(); renderToday()""")
         keys = b.eval("[...document.querySelectorAll('#tdLine a')].map(a=>a.dataset.tdline)")
-        self.assertEqual(keys, ["review", "transcripts", "files"])
-        for key, view in (("review", "review"), ("transcripts", "inbox"), ("files", "inbox")):
+        self.assertEqual(keys, ["ready", "proposals"])
+        for key, stage in (("ready", "arrived"), ("proposals", "drafted")):
             hrefs = b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').getAttribute('href')")
-            self.assertEqual(hrefs, "#" + view)                          # a real target, not "#"
+            self.assertEqual(hrefs, "#intake-review&stage=" + stage)     # a real target, not "#"
             b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').focus()")
             self.assertTrue(b.eval(f"document.activeElement===document.querySelector('#tdLine [data-tdline={key}]')"))
             b.key("Enter")
-            b.wait(f"VIEW==='{view}'")
+            b.wait("VIEW==='intake-review'")
+            self.assertEqual(b.eval("irStage.value"), stage)
             b.eval("go('today'); renderToday()")
             b.wait("document.getElementById('tdLine')")
 
@@ -119,24 +122,25 @@ class ToDecide(Home):
         b = self.b
         self.today()
         before = b.eval("tdLine().map(x=>x.key+':'+x.n).join()")
-        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'late.docx'}]; inboxBadge(); renderToday()")
+        n0 = b.eval("irLiveCounts().ready")
         # the refresh path (files.js refreshFiles) re-renders Today: simulate its last line
-        b.eval("""window.fetch=async()=>({ok:true,json:async()=>({ok:true,files:[],archived:[],inbox:[...(D.inbox||[]),{state:'new',name:'later.docx'}]})}); refreshFiles(true)""")
-        b.wait("/new files? in Intake/.test(document.getElementById('tdLine').textContent)")
-        n = b.eval("tdLine().find(x=>x.key==='files').n")
-        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=files]').textContent"), f"{n} new files in Intake")
-        old = int(b.eval("tdLine().find(x=>x.key==='review').n"))
-        b.eval("REV.push({n:9901,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:1,rec:{t:'Late one'},src:''}); renderBadge(); renderToday()")
-        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=review]').textContent"), f"{old + 1} proposals in Review")
+        b.eval("""window.fetch=async()=>({ok:true,json:async()=>({ok:true,files:[],archived:[],inbox:[...(D.inbox||[]),{state:'new',name:'later.docx',path:'inbox/later.docx'}]})}); refreshFiles(true)""")
+        b.wait(f"/{n0 + 1} ready to process/.test(document.getElementById('tdLine').textContent)")
+        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=ready]').textContent"), f"{n0 + 1} ready to process")
+        self.assertEqual(b.eval("document.getElementById('revBadge').textContent.trim()"), b.eval("String(irLiveCounts().badge)"))
+        old = int(b.eval("tdLine().find(x=>x.key==='proposals').n"))
+        b.eval("REV.push({n:9901,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:1,rec:{t:'Late one'},src:''}); D.intake_review.mail.routine.push(9901); renderBadge(); renderToday()")
+        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=proposals]').textContent"), f"{old + 1} proposals to approve")
         self.assertNotEqual(before, b.eval("tdLine().map(x=>x.key+':'+x.n).join()"))
 
-    def test_the_intake_part_says_what_the_rail_counts(self):
+    def test_the_ready_part_says_what_the_rail_counts(self):
         b = self.b
         self.today()
-        o = b.eval("""(()=>{ const f=(D.inbox||[]).filter(x=>x.state==='new').length; D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'},{state:'new',name:'b.docx'}];
-          const n=f+2; renderToday(); const a=document.querySelector('#tdLine [data-tdline=files]');
-          return {text:a&&a.textContent, n}; })()""")
-        self.assertEqual(o["text"], f"{o['n']} new files in Intake")
+        o = b.eval("""(()=>{ const f=irLiveCounts().ready; D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx',path:'inbox/a.docx'},{state:'new',name:'b.docx',path:'inbox/b.docx'}];
+          const n=f+2; renderBadge(); renderToday(); const a=document.querySelector('#tdLine [data-tdline=ready]');
+          return {text:a&&a.textContent, n, rail:document.getElementById('revBadge').textContent.trim(), badge:irLiveCounts().badge}; })()""")
+        self.assertEqual(o["text"], f"{o['n']} ready to process")
+        self.assertEqual(o["rail"], str(o["badge"]))
 
     def test_it_is_one_line_it_folds_like_before_and_goes_at_zero(self):
         b = self.b
@@ -151,7 +155,7 @@ class ToDecide(Home):
         self.assertEqual(b.eval("document.getElementById('tdLine').checkVisibility()"), False)
         b.eval("document.querySelector('#tdFold > summary').click()")
         self.assertEqual(b.eval("document.getElementById('tdLine').checkVisibility()"), True)
-        b.eval("REV.forEach(r=>{r.done='approved'}); D.inbox=[]; MTG().forEach(m=>{m.processed=true}); renderToday()")
+        b.eval("REV.forEach(r=>{r.done='approved'}); D.inbox=[]; D.intake_review.meetings.forEach(m=>{ if(m.stage==='arrived') m.stage='approved'; }); renderToday()")
         self.assertTrue(b.eval("document.getElementById('tdSec').hidden"))
         self.assertTrue(b.eval("!document.getElementById('tdLine')"))
 
@@ -427,7 +431,7 @@ class NoFileNames(Home):
         self.today()
         b.eval("EXPAND.add('td'); EXPAND.add('attn'); renderToday(); document.getElementById('resFold').open=true")
         text = b.eval("document.getElementById('v-today').innerText")
-        self.assertIn("proposals in Review", text)                    # #208: a count, never a title or a file name
+        self.assertIn("to approve", text)                    # #208: a count, never a title or a file name
         self.assertNotIn("proposed-", text)
         self.assertNotIn(".json", text)
 

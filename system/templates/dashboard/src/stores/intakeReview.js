@@ -46,7 +46,13 @@ export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, 
 /** After new data: the open meeting stays open while it is in the list. */
 export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel()); irTick.value++; }
 /** The live counts, the badge among them (232-C wires the rail badge and Today to this). */
-export const irLiveCounts = () => irCounts(irModel(), irDone);
+export const irLiveCounts = () => {
+  const c = irCounts(irModel(), irDone), known = new Set((irModel().meetings || []).map(m => m.path).filter(Boolean));
+  /* #232-C: a file that arrived since the model was built (the quicker file refresh does not rebuild it) counts at once, as the
+     Intake badge did; a transcript Calendar import loaded belongs to its meeting's row */
+  const extra = (/** @type {any} */ (D).inbox || []).filter((/** @type {any} */ f) => f.state === "new" && f.uploaded !== false && !f.event && !known.has(f.path)).length;
+  return extra ? { ...c, arrived: c.arrived + extra, ready: c.ready + extra, badge: c.badge + extra } : c;
+};
 
 /* ---- #232-C: addresses and links (232-A and 232-B leave this section alone) ----
    An address or a link names a place on the page: a stage (#intake-review&stage=drafted), a meeting (&m=<meeting id>) or a

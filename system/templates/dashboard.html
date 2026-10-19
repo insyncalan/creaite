@@ -9352,7 +9352,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irOpen.value = irKeepOpen(irOpen.value, irModel());
     irTick.value++;
   }
-  var irLiveCounts = () => irCounts(irModel(), irDone);
+  var irLiveCounts = () => {
+    const c5 = irCounts(irModel(), irDone), known2 = new Set((irModel().meetings || []).map((m5) => m5.path).filter(Boolean));
+    const extra = (
+      /** @type {any} */
+      (D.inbox || []).filter((f5) => f5.state === "new" && f5.uploaded !== false && !f5.event && !known2.has(f5.path)).length
+    );
+    return extra ? { ...c5, arrived: c5.arrived + extra, ready: c5.ready + extra, badge: c5.badge + extra } : c5;
+  };
   function irMeetingOf(n4) {
     const m5 = (irModel().meetings || []).find((x5) => x5.groups && [...x5.groups.needs || [], ...x5.groups.routine || []].includes(n4));
     return m5 ? m5.id : null;
@@ -47628,6 +47635,8 @@ ${s5}`;
       shared.FBUSY = false;
     }
     inboxBadge();
+    renderBadge();
+    irTick.value++;
     if (shared.VIEW === "files") renderFiles();
     else if (shared.VIEW === "inbox") renderInbox();
     else if (shared.VIEW === "today") renderToday();
@@ -76447,7 +76456,6 @@ ${d5.text}`);
         "mounted",
         "moveCol",
         "msOpts",
-        "mtgHasTx",
         "mtgTx",
         "mvAct",
         "mvAddCommit",
