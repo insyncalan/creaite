@@ -150,8 +150,8 @@ class Matrix(unittest.TestCase):
             apply_id, changes = self.applied[name]
             for (item, field), (was, to) in changes.items():
                 with self.subTest(route=name, item=item, field=field):
-                    got = of_apply(self.after[item]["events"], apply_id, field)
-                    self.assertEqual(len(got), 1, got)
+                    got = [e for e in of_apply(self.after[item]["events"], apply_id, field) if e["k"] != "undo"]
+                    self.assertEqual(len(got), 1, got)            # the undo's own event is checked below
                     e = got[0]
                     self.assertEqual((e["before"], e["after"]), (was, to))
                     self.assertEqual((e["route"], e["place"], e["who"]), (route, place, who))
@@ -193,7 +193,7 @@ class Matrix(unittest.TestCase):
         self.assertNotIn(SECRET, text)
         self.assertNotIn("Looks done", text)
         allowed = {"id", "k", "who", "route", "place", "via", "field", "label", "before", "after", "at", "apply_id", "src",
-                   "struck", "struck_by", "undoes", "exact", "note", "closed", "made", "mode"}
+                   "struck", "struck_by", "undoes", "exact", "note", "closed", "made", "mode", "origin"}
         for e in self.after[A]["events"]:
             self.assertLessEqual(set(e), allowed, e)
 
@@ -321,8 +321,8 @@ class Single(unittest.TestCase):
                          "AND c.field = 'owner'", n)
         self.assertEqual([(r["route"], r["place"], r["actor"]) for r in rows], [("review", "dashboard", "you")])
         cols = {r["name"] for r in q(self.v, "PRAGMA table_info(item_events)")}
-        self.assertEqual(cols, {"event_id", "at", "apply_id", "item_id", "change", "kind", "route", "place", "actor", "src_ref",
-                                "undoes"})
+        self.assertEqual(cols, {"event_id", "at", "apply_id", "item_id", "change", "kind", "route", "place", "origin", "actor",
+                                "src_ref", "undoes"})
         self.assertNotIn(SECRET, json.dumps(q(self.v, "SELECT * FROM item_events")))
 
     @unittest.expectedFailure
