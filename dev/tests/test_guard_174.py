@@ -17,9 +17,11 @@ What it proves:
 - every quoted, concatenated, escaped, `$'..'`, `$(..)`, back-quote, env-prefixed, `./`, absolute-path, `python`, `python3 …/propose.py`
   and `system/scripts/run propose.py` form of `propose.py setting …` and of `propose.py workstreams retire-settings` is refused in
   every mode; the quoted ones with the settings reason, from the check every mode shares (`bash_problem`);
-- the glob bypass (review of 5b20e38c): `propose.py setti?g`, `[s]etting`, `s*ting`, `workstreams retire-*` … would be expanded by the
-  shell to a file named `setting` (made first with `filechange.py create`, an ordinary change) in the vault, where the run starts, and
-  the guard, which doesn't expand a pattern, never saw the word: refused now in every mode (a pre-existing hole, not from the patch);
+- the glob bypass (reviews of 5b20e38c and 3f186de5): `propose.py setti?g`, `workstreams retire-*`, `people migrat?`, `tracker.py
+  validat?`, `reach.py wra?` … are expanded by the shell to a file of that name (made first with `filechange.py create`, an ordinary
+  change) in the vault, where the run starts, and the guard, which doesn't expand a pattern, never saw the word: an unquoted `* ? [ ^ #`
+  (and a `~` inside a word) in a script call is refused in every mode, a quoted one still runs (a pre-existing hole, not from the patch);
+  `people migrate` is refused as a settings change; a first word with commands of its own (`people`, `workstreams`) fails closed;
   and the forms `propose.py\xa0setting` / `setting\xa0k` the old `str.split` cut apart but `shlex` doesn't stay refused;
 - the defect is real: in a confirmed run the unpatched file lets the quoted forms through (F5);
 - the normal creaite script runs the skills and the server make are decided exactly as before, in every mode, and the commands a
@@ -45,21 +47,30 @@ REPO = HERE.parents[1]
 DIFF = Path(os.environ.get("GUARD_174_DIFF") or REPO / "dev" / "proposals" / "guard-174" / "reach.diff")   # GUARD_174_DIFF: try an older diff
 UNPATCHED = os.environ.get("GUARD_174_UNPATCHED") == "1"
 MUTATE = os.environ.get("GUARD_174_MUTATE", "")
-MARKER = "def _unquoted_words"
+MARKER = "def _glob_refused"
 MODES = ("ask", "confirmed", "sweep", "prep", "held")
 SETTINGS_WHY = "settings are changed on the approval card"
+GLOB_WHY = "wildcard or pattern character"
 
 # One text change per mutation, made on the patched copy: (what it reverts, old text, new text)
 MUTATIONS = {
     "no-unquoted": ("hunk 1: the unquoted words are not read (only str.split is)", "_settings_refused(m.group(1), _unquoted_words(cmd))",
                     "None"),
-    "no-split": ("hunk 1: the old str.split reading is dropped", "\n            or _settings_refused(m.group(1), cmd.split()))", ")"),
-    "no-glob-first": ("hunk 2: a wildcard in the first argument is let through", "(args and _has_glob(args[0]))", "False"),
-    "no-glob-workstreams": ("hunk 2: a wildcard after workstreams is let through", "any(_has_glob(a) for a in args[1:])", "False"),
+    "no-split": ("hunk 1: the old str.split reading is dropped", " or _settings_refused(m.group(1), cmd.split()))", ")"),
+    "no-glob-call": ("hunk 1: the pattern check is not called", "or _glob_refused(cmd)", "or None"),
+    "no-glob-bracket": ("hunk 2: `[` is dropped from the pattern characters", '"*?[^#"', '"*?^#"'),
+    "no-glob-star": ("hunk 2: `*` is dropped", '"*?[^#"', '"?[^#"'),
+    "no-glob-question": ("hunk 2: `?` is dropped", '"*?[^#"', '"*[^#"'),
+    "no-glob-caret": ("hunk 2: `^` is dropped", '"*?[^#"', '"*?[#"'),
+    "no-glob-hash": ("hunk 2: `#` is dropped", '"*?[^#"', '"*?[^"'),
+    "no-glob-tilde": ("hunk 2: a ~ inside a word is let through", '(ch == "~" and prev not in " \\t=:,")', "False"),
     "no-shlex": ("hunk 2: the words are split without reading the quotes", "return shlex.split(cmd)", "return cmd.split()"),
     "no-setting": ("hunk 2: `setting` is no longer refused", 'args[:1] == ["setting"]', "False"),
     "no-retire": ("hunk 2: `retire-settings` is no longer refused", '"retire-settings" in args', "False"),
+    "no-people-migrate": ("hunk 2: `people migrate` is no longer refused", '(args[:1] == ["people"] and "migrate" in args[1:])', "False"),
     "fail-open": ("hunk 2: a command that can't be split is let through", "words is None or ", ""),
+    "no-failclosed-kind": ("hunk 3: command_kind falls back to the first word again",
+                           'any(k.startswith(pos[0] + " ") for k in table)', "False"),
 }
 
 HARNESS = r'''
@@ -70,7 +81,11 @@ cmds, modes = json.loads(sys.stdin.read())
 out = {"problem": {c: reach.bash_problem(c) for c in cmds},
        "decide": {m: {c: list(reach.decide("Bash", {"command": c}, m, "r-1")) for c in cmds} for m in modes}}
 out["direct"] = {"none_words": reach._settings_refused("propose.py", None) if hasattr(reach, "_unquoted_words") else None,
-                 "unclosed": reach._unquoted_words('x "y') if hasattr(reach, "_unquoted_words") else "n/a"}
+                 "unclosed": reach._unquoted_words('x "y') if hasattr(reach, "_unquoted_words") else "n/a",
+                 "kinds": {k: list(reach.command_kind("propose.py", v)) for k, v in
+                           {"migrat?": ["people", "migrat?"], "ad?": ["people", "ad?"], "zzz": ["people", "zzz"], "list": ["people", "list"],
+                            "people": ["people"], "ws": ["workstreams", "lis?"], "wslist": ["workstreams", "list", "--project", "ABC"],
+                            "flag": ["people", "list", "--json"]}.items()}}
 print(json.dumps(out))
 '''
 
@@ -138,13 +153,31 @@ RETIRE_ARGS = {
 GLOB_SETTING_WORDS = {
     "? for t": "setti?g", "[s]": "[s]etting", "star after": "setting*", "star inside": "s*ting", "star first": "*etting",
     "quoted piece and ?": "'sett'?ng", "? for e": "s?tting", "bracket in the middle": "s[e]tting", "question mark last": "setting?",
-    "range": "[a-z]etting", "negated bracket": "[^x]etting", "all": "*", "a quoted pattern (the shell leaves it)": "'setti?g'",
+    "range": "[a-z]etting", "negated bracket": "[^x]etting", "all": "*",
+    "zsh extended: x#": "settingx#", "zsh extended: ^": "^zzz", "zsh extended: ~": "setting~zzz", "~ after a quote": "'setting'~zzz",
 }
 GLOB_RETIRE_ARGS = {
     "? last": "workstreams retire-setting?", "star": "workstreams retire-*", "[r]": "workstreams [r]etire-settings",
     "star in the middle": "workstreams re*", "? first": "workstreams ?etire-settings", "star on workstreams": "workst*ms retire-settings",
     "after an option": "workstreams -h retire-*", "after a bare --": "workstreams -- retire-*",
-    "a name with a bracket": "workstreams add ABC 'Data [Migration]'",
+    "name with a bracket, unquoted": "workstreams add ABC Data[Migration]", "zsh extended": "workstreams retire-settingsx#",
+    "zsh extended ~": "workstreams retire-settings~zzz",
+}
+# the same trick on the other fixed words the guard compares: every record, read-that-writes and hand-over command, and `people migrate`
+# (decoy files with these names are made in the vault root first, as `filechange.py create` would)
+DECOYS = ("setting", "retire-settings", "migrate", "add", "edit", "rename", "merge", "map", "validate", "wrap", "hook", "apply")
+OTHER_GLOB_CALLS = {
+    "people migrat?": ("propose.py", "people migrat?"), "people ad?": ("propose.py", "people ad? 'Sara Khan'"),
+    "people edi?": ("propose.py", "people edi? 'Sara Khan' --role PM"), "people renam?": ("propose.py", "people renam? a b"),
+    "people merg?": ("propose.py", "people merg? a b"), "people ma?": ("propose.py", "people ma? system/staging/drafts/x.json"),
+    "people [m]igrate": ("propose.py", "people [m]igrate"), "people migrat*": ("propose.py", "people migrat*"),
+    "people migrate~": ("propose.py", "people migrate~zzz"), "people ?": ("propose.py", "people ?"),
+    "tracker validat?": ("tracker.py", "validat? system/config/settings.json"),
+    "tracker [v]alidate": ("tracker.py", "[v]alidate system/config/settings.json"),
+    "tracker validate*": ("tracker.py", "validate* system/config/settings.json"),
+    "tracker appl?": ("tracker.py", "appl?"),
+    "reach wra?": ("reach.py", "wra? permissions.py edit x"), "reach w*p": ("reach.py", "w*p tracker.py apply"),
+    "reach hoo?": ("reach.py", "hoo? --run x --mode ask"),
 }
 # the characters str.split cuts at and the shell doesn't (a non-breaking space, a vertical tab, a form feed, …): the old rule saw
 # `setting` in these; the unquoted words alone would not
@@ -229,6 +262,13 @@ NORMAL = {
     "filechange create": "system/scripts/run filechange.py create 'projects/ABC Example Programme/notes.md' "
                          "--from system/staging/drafts/n.md --why 'note'",
     "build dashboard": "system/scripts/run build_dashboard.py",
+    "quoted wildcard in a transcript name": "system/scripts/run minutes.py transcript 'inbox/x [1].vtt'",
+    "quoted wildcard in a document name": "system/scripts/run search.py query 'SOW [signed].docx'",
+    "workstream name with a bracket, quoted": "system/scripts/run propose.py workstreams add ABC 'Data [Migration]'",
+    "workstream name with a question mark, quoted": "system/scripts/run propose.py workstreams add ABC 'Why?'",
+    "a quoted pattern is only text": "system/scripts/run propose.py 'setti?g' a b",
+    "a quoted hash": 'system/scripts/run search.py query "#12 and ~-5 days"',
+    "a tilde path": "system/scripts/run minutes.py transcript ~/Documents/x.vtt",
     "stage a quoted file name with a bracket": "system/scripts/run propose.py stage 'system/staging/drafts/x [1].json'",
     "preview a quoted file name": "system/scripts/run propose.py preview 'system/staging/drafts/x y.json'",
     "a name with a non-breaking space": "system/scripts/run propose.py people add 'Sara\xa0Khan' --email s.khan@example.com",
@@ -239,7 +279,9 @@ CONFIRMED_OK = ("tracker apply", "tracker apply, python3", "tracker read", "trac
                 "propose fields", "propose new-project", "propose close-project", "propose recode dry run", "propose learn",
                 "propose people list", "propose people add", "propose workstreams list", "propose workstreams add",
                 "workstream named setting", "learn with setting as a value", "stage a quoted file name with a bracket",
-                "preview a quoted file name", "a name with a non-breaking space", "a name with a question mark outside workstreams", "sweep stage", "sweep due", "minutes transcript",
+                "preview a quoted file name", "a name with a non-breaking space", "quoted wildcard in a transcript name",
+                "quoted wildcard in a document name", "workstream name with a bracket, quoted", "workstream name with a question mark, quoted",
+                "a quoted pattern is only text", "a quoted hash", "a name with a question mark outside workstreams", "sweep stage", "sweep due", "minutes transcript",
                 "review approve", "search query", "doctor", "filechange edit of the settings", "filechange create", "build dashboard")
 
 
@@ -260,6 +302,11 @@ def glob_commands(root):
     return out
 
 
+def other_glob_commands(root):
+    return {f"{lname} | {name}": launcher.replace("propose.py", script).format(ROOT=root) + f" {rest}"
+            for lname, launcher in LAUNCHERS.items() for name, (script, rest) in OTHER_GLOB_CALLS.items()}
+
+
 def retire_commands(root):
     return {f"{lname} | {aname}": launcher.format(ROOT=root) + f" {args}"
             for lname, launcher in LAUNCHERS.items() for aname, args in RETIRE_ARGS.items()}
@@ -274,6 +321,9 @@ class Scratch(unittest.TestCase):
         cls.base = scratch(patched=False)
         cls.root = str(cls.patched.root)
         cls.base_root = str(cls.base.root)
+        for v in (cls.patched, cls.base):          # what `filechange.py create <name>` would leave in the folder the run starts in
+            for name in DECOYS:
+                (v.root / name).write_text("x", encoding="utf-8")
 
     @classmethod
     def tearDownClass(cls):
@@ -291,9 +341,17 @@ class Attacks(Scratch):
         cls.retire = retire_commands(cls.root)
         cls.other = {k: v for k, v in OTHER_FORMS.items()}
         cls.glob = glob_commands(cls.root)
+        cls.other_glob = other_glob_commands(cls.root)
+        cls.plain_migrate = {"plain": "python3 system/scripts/propose.py people migrate",
+                             "run": "system/scripts/run propose.py people migrate",
+                             "quoted": "python3 system/scripts/propose.py people 'migrate'",
+                             "concatenated": 'python3 system/scripts/propose.py people mi""grate',
+                             "after an option": "python3 system/scripts/propose.py people --help migrate",
+                             "quoted people": "python3 system/scripts/propose.py 'people' migrate"}
         cls.space = dict(SPACE_FORMS)
         cls.got = decisions(cls.patched, list(cls.setting.values()) + list(cls.retire.values()) + list(cls.other.values())
-                            + list(cls.glob.values()) + list(cls.space.values()))
+                            + list(cls.glob.values()) + list(cls.space.values()) + list(cls.other_glob.values())
+                            + list(cls.plain_migrate.values()))
 
     def refused_everywhere(self, cmd, shared=True):
         """Refused by every mode's decision and, with `shared`, by bash_problem, the check all modes make first."""
@@ -307,7 +365,7 @@ class Attacks(Scratch):
         text = DIFF.read_text(encoding="utf-8")
         files = re.findall(r"^\+\+\+ (\S+)", text, re.M)
         self.assertEqual(files, ["system/scripts/reach.py"], "the proposal changes reach.py only")
-        self.assertEqual(len(re.findall(r"^@@ ", text, re.M)), 2)
+        self.assertEqual(len(re.findall(r"^@@ ", text, re.M)), 3)
 
     def test_every_spelling_of_setting_is_refused_with_the_settings_reason(self):
         for name, cmd in self.setting.items():
@@ -332,8 +390,37 @@ class Attacks(Scratch):
             with self.subTest(name):
                 self.refused_everywhere(cmd)
                 if not name.startswith("abs-"):
-                    self.assertIn(SETTINGS_WHY, self.got["problem"][cmd], cmd)
+                    self.assertIn(GLOB_WHY, self.got["problem"][cmd], cmd)
+                self.assertIn(GLOB_WHY, self.got["decide"]["confirmed"][cmd][1], cmd)
+
+    def test_the_same_trick_on_the_other_fixed_words_is_refused_in_every_mode(self):
+        """`people migrat?`, `people ad?`, `tracker.py validat?`, `reach.py wra?` … with a file of that name in the vault root: the
+        record gate, read_write_refusal and handover_refusal compare fixed words, so a pattern must never reach them."""
+        for name, cmd in self.other_glob.items():
+            with self.subTest(name):
+                self.refused_everywhere(cmd)
+                if not name.startswith("abs-"):
+                    self.assertIn(GLOB_WHY, self.got["problem"][cmd], cmd)
+                self.assertIn(GLOB_WHY, self.got["decide"]["confirmed"][cmd][1], cmd)
+
+    def test_people_migrate_is_refused_as_a_settings_change_in_every_mode(self):
+        """It clears people.added / people.hidden through cmd_setting, so a confirmed run may not run it (stage a register change)."""
+        for name, cmd in self.plain_migrate.items():
+            with self.subTest(name):
+                self.refused_everywhere(cmd)
+                self.assertIn(SETTINGS_WHY, self.got["problem"][cmd], cmd)
                 self.assertIn(SETTINGS_WHY, self.got["decide"]["confirmed"][cmd][1], cmd)
+
+    def test_a_first_word_with_commands_of_its_own_fails_closed(self):
+        """command_kind: `people` alone is read, `people list` is read, but `people migrat?` / `people zzz` is not `people`."""
+        k = self.got["direct"]["kinds"]
+        for name in ("migrat?", "ad?", "zzz", "ws"):
+            self.assertEqual(k[name][0], "unknown", name)
+        self.assertNotIn("migrat", k["migrat?"][1])                # the log line never carries the argument
+        self.assertEqual(k["list"], ["read", "propose.py people list"])
+        self.assertEqual(k["people"][0], "read")
+        self.assertEqual(k["wslist"], ["read", "propose.py workstreams list"])
+        self.assertEqual(k["flag"], ["read", "propose.py people list"])
 
     def test_a_space_the_shell_does_not_cut_at_never_hides_the_word(self):
         """str.split cuts at a non-breaking space or a vertical tab, shlex and the shell don't: the old rule refused these
@@ -345,14 +432,13 @@ class Attacks(Scratch):
 
     def test_the_shell_really_expands_the_pattern(self):
         """The premise, checked with the shell itself (zsh, if installed; the Bash tool's shell): a file named `setting` in the
-        run's folder is what `setti?g` and `retire-*` become."""
+        run's folder is what `setti?g`, `retire-*`, `people migrat?` and `wra?` become."""
         zsh = shutil.which("zsh")
         if not zsh:
             self.skipTest("zsh is not installed")
         d = Path(self.root)
-        (d / "setting").write_text("x", encoding="utf-8")
-        (d / "retire-settings").write_text("x", encoding="utf-8")
-        for pattern, word in (("setti?g", "setting"), ("[s]etting", "setting"), ("s*ting", "setting"), ("retire-*", "retire-settings")):
+        for pattern, word in (("setti?g", "setting"), ("[s]etting", "setting"), ("s*ting", "setting"), ("retire-*", "retire-settings"),
+                              ("migrat?", "migrate"), ("wra?", "wrap"), ("validat?", "validate"), ("[a]ppl?", "apply")):
             r = subprocess.run([zsh, "-c", f"printf '%s' {pattern}"], cwd=d, capture_output=True, text=True)
             self.assertEqual(r.stdout, word, pattern)
 
@@ -404,6 +490,26 @@ class Defect(Scratch):
         for cmd in cmds:
             with self.subTest(cmd):
                 self.assertIsNone(got["problem"][cmd])
+                self.assertEqual(got["decide"]["confirmed"][cmd], [True, ""])
+
+    def test_unpatched_lets_the_pattern_and_people_migrate_forms_through(self):
+        """Pre-existing (the review of 3f186de5): `people migrat?` takes `people`'s kind (read) when the second word is unknown, so a
+        plain chat runs it too; `tracker.py validat?` and `reach.py wra?` skip read_write_refusal and handover_refusal; and
+        `people migrate` itself reaches cmd_setting in a confirmed run."""
+        P = "python3 system/scripts/"
+        ask_too = [P + "propose.py people migrat?", P + "propose.py people ad? 'Sara Khan'", P + "propose.py people edi? x",
+                   P + "propose.py people renam? a b", P + "propose.py people merg? a b", P + "propose.py people ma? x",
+                   P + "propose.py people zzz"]
+        confirmed_only = [P + "tracker.py validat? system/config/settings.json", P + "reach.py wra? permissions.py edit x",
+                          "system/scripts/run tracker.py validat? system/config/settings.json", P + "propose.py people migrate",
+                          P + "propose.py settingx# a b", P + "propose.py ^zzz a b"]
+        got = decisions(self.base, ask_too + confirmed_only)
+        for cmd in ask_too:
+            for mode in ("ask", "confirmed", "sweep"):
+                with self.subTest(cmd=cmd, mode=mode):
+                    self.assertEqual(got["decide"][mode][cmd], [True, ""])
+        for cmd in confirmed_only:
+            with self.subTest(cmd=cmd):
                 self.assertEqual(got["decide"]["confirmed"][cmd], [True, ""])
 
     def test_the_other_modes_were_only_held_by_the_record_gate(self):
@@ -460,23 +566,36 @@ class Normal(Scratch):
         cmd = self.cmds["filechange edit of the settings"]
         self.assertEqual(self.p["decide"]["ask"][cmd], [True, ""])               # the refusal text sends the model here
 
-    def test_every_command_in_the_skills_rules_and_prompts_is_decided_as_before(self):
+    @staticmethod
+    def doc_spans():
         docs = (sorted((REPO / ".claude/skills").glob("*/SKILL.md")) + sorted((REPO / ".claude/skills").glob("*/references/*.md"))
                 + [REPO / "system/creaite-rules.md"] + sorted((REPO / "system/templates/drafts").glob("*.md")))
         span = re.compile(r"`((?:python3? system/scripts/|system/scripts/run )[^`\n]+)`")
-        spans = sorted({m.group(1) for f in docs for m in span.finditer(f.read_text(encoding="utf-8"))})
+        return sorted({m.group(1) for f in docs for m in span.finditer(f.read_text(encoding="utf-8"))})
+
+    def test_no_doc_command_has_a_pattern_character_in_propose_py_command_words(self):
+        spans = self.doc_spans()
         self.assertGreater(len(spans), 50, "the docs show many commands")
         import shlex
-        for c in spans:           # no command the docs show has a wildcard in propose.py's first argument, or after workstreams
+        for c in spans:
             if re.match(r"(?:python3? system/scripts/|system/scripts/run )propose\.py\b", c):
                 words = shlex.split(c.replace("<", "x").replace(">", "x"))[2:]
-                self.assertFalse(words and any(ch in words[0] for ch in "*?["), c)
+                self.assertFalse(words and any(ch in words[0] for ch in "*?[^#"), c)       # (a quoted value later may have them)
                 if words[:1] == ["workstreams"]:
-                    self.assertFalse(any(ch in w for w in words[1:] for ch in "*?["), c)
+                    self.assertFalse(any(ch in w for w in words[1:2] for ch in "*?[^#"), c)
+
+    def test_every_command_in_the_skills_rules_and_prompts_is_decided_as_before(self):
+        spans = self.doc_spans()
         p, b = decisions(self.patched, spans), decisions(self.base, spans)
-        self.assertEqual(p["problem"], b["problem"])
+        # the two accepted differences: the usage placeholder `[CODE]` (an optional argument, written with brackets; the model puts the
+        # project's code there) is a pattern character outside quotes, and `people migrate` is now a settings change
+        changed = {"system/scripts/run minutes.py new [CODE]": GLOB_WHY, "system/scripts/run propose.py people migrate": SETTINGS_WHY}
+        for cmd, why in changed.items():
+            self.assertIn(why, p["problem"][cmd] or "", cmd)
+        keep = [c for c in spans if c not in changed]
+        self.assertEqual({c: p["problem"][c] for c in keep}, {c: b["problem"][c] for c in keep})
         for mode in MODES:
-            self.assertEqual(p["decide"][mode], b["decide"][mode], mode)
+            self.assertEqual({c: p["decide"][mode][c] for c in keep}, {c: b["decide"][mode][c] for c in keep}, mode)
 
 
 class Mutations(unittest.TestCase):

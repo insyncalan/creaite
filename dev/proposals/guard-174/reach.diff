@@ -7,15 +7,37 @@
 -    return _script_refused(m.group(1)) or _shell_refused(cmd) or _settings_refused(m.group(1), cmd.split())
 +    # #174 F5: the settings rule reads the command twice, as the shell hands it over (quotes removed) and as str.split cuts it
 +    # (the old reading, which also cuts at a non-breaking space or a form feed the shell doesn't), so it only ever refuses more
-+    return (_script_refused(m.group(1)) or _shell_refused(cmd) or _settings_refused(m.group(1), _unquoted_words(cmd))
-+            or _settings_refused(m.group(1), cmd.split()))
++    return (_script_refused(m.group(1)) or _shell_refused(cmd) or _glob_refused(cmd)
++            or _settings_refused(m.group(1), _unquoted_words(cmd)) or _settings_refused(m.group(1), cmd.split()))
  
  
  def _script_refused(script):
-@@ -833,11 +836,36 @@
+@@ -833,11 +836,50 @@
                      "To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it "
                      "printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp")
      return "the command has an unclosed quote" if quote else None
++
++
++def _glob_refused(cmd):
++    """Why the command has a character outside quotes that the shell could turn into another word, or None (#174 F5, review of
++    5b20e38c and 3f186de5). The guard reads a script call as the words it sees, but the shell expands a pattern against the folder
++    the run starts in (the vault), where `filechange.py create setting` can make a file of any name: `propose.py setti?g`,
++    `people migrat?`, `tracker.py validat?` and `reach.py wra?` then become the commands a fixed-word rule refuses. So an unquoted
++    `*`, `?`, `[` is refused in every word, and so are `^`, `#` and a `~` that doesn't start a word (zsh's extended patterns
++    `x#`, `^x` and `x~y`, when that option is on). In quotes the shell leaves them as text: `'SOW [signed].docx'`, `'inbox/x [1].vtt'`
++    and a name with a `?` still run (the bounded expansion check, held_arg_paths, still looks at what a script might do with them)."""
++    quote, prev = None, " "
++    for ch in cmd:
++        if quote:
++            if ch == quote:
++                quote = None
++        elif ch in "'\"":
++            quote = ch
++        elif ch in "*?[^#" or (ch == "~" and prev not in " \t=:,"):
++            return ("the command has a wildcard or pattern character (* ? [ ^ # ~) outside quotes, which the shell would expand into "
++                    "another word: name the file or word itself, and put a name that has one of them in quotes")
++        prev = ch
++    return None
 +
 +
 +def _unquoted_words(cmd):
@@ -28,26 +50,27 @@
 +        return shlex.split(cmd)
 +    except ValueError:
 +        return None
-+
  
-+def _has_glob(word):
-+    """True if the word has a character the shell turns into a file-name pattern (* ? [)."""
-+    return any(c in word for c in "*?[")
  
-+
  def _settings_refused(script, words):
 -    if script == "propose.py" and len(words) > 2 and words[2] == "setting" or \
 -            script == "propose.py" and "retire-settings" in words:
 +    """Why a propose.py call is refused as a settings change, or None. `words` are the command's words, the script's own arguments
 +    from the third on. propose.py's main() takes argv[0] as the command, so `setting` is refused as that first argument;
-+    `retire-settings` (workstreams' subcommand, which clears settings.json lists through cmd_setting) in any place. #174 F5: a
-+    wildcard in the first argument, or in any argument after `workstreams`, is refused too: the shell expands `setti?g` to a file
-+    named `setting` in the folder the run starts in (the vault), and the guard, which never expands a pattern here, would not see
-+    the word. propose.py's commands are fixed words, so no real call has one."""
++    `retire-settings` (workstreams' subcommand) and `people migrate` clear settings.json lists through cmd_setting: refused in any
++    place (`migrate` after `people`)."""
 +    args = (words or [])[2:]
 +    if script == "propose.py" and (words is None or args[:1] == ["setting"] or "retire-settings" in args
-+                                   or (args and _has_glob(args[0]))
-+                                   or (args[:1] == ["workstreams"] and any(_has_glob(a) for a in args[1:]))):
++                                   or (args[:1] == ["people"] and "migrate" in args[1:])):
          return ("settings are changed on the approval card: put the new settings.json in system/staging/drafts/ and run "
                  "python3 system/scripts/filechange.py edit system/config/settings.json --from <that file> --why \"…\"")
      return None
+@@ -926,6 +968,8 @@
+     pos = [w for w in words if not w.startswith("-")]
+     if not pos:
+         return READ, script
++    if len(pos) > 1 and f"{pos[0]} {pos[1]}" not in table and any(k.startswith(pos[0] + " ") for k in table):
++        return "unknown", f"{script} {pos[0]}"    # #174: `people migrat?` is not `people`: a first word with commands of its own fails closed
+     name = f"{pos[0]} {pos[1]}" if len(pos) > 1 and f"{pos[0]} {pos[1]}" in table else pos[0]
+     kind = table.get(name, "unknown")
+     if isinstance(kind, tuple):
