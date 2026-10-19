@@ -3648,7 +3648,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 /* #233 a: the logo's place in the header is a button (edit mode only): a dashed Add tile, or the logo itself with a dashed outline on hover and focus */
 .wr-logos:has(.wr-logo-slot){gap:6px} .wr-logos:has(.wr-logo-slot) .wr-lsep{display:none} .wr-logos:has(.wr-logo-slot) .wr-logo{gap:0}
 .wr-logo-slot{position:relative;display:inline-flex;align-items:center}
-.wr-logo-add{display:inline-flex;gap:4px;align-items:center;height:26px;padding:0 6px;white-space:nowrap;border:1px dashed var(--rp-rule);border-radius:var(--r-sm);color:var(--rp-grey);background:var(--rp-paper);font:inherit;font-size:10px;cursor:pointer}
+.wr-logo-add{display:inline-flex;gap:4px;align-items:center;height:26px;padding:0 6px;white-space:nowrap;border:1px dashed var(--rp-rule);border-radius:var(--r-sm);color:var(--rp-grey);background:var(--rp-paper);font:inherit;font-size:var(--fs-2xs);cursor:pointer}
 .wr-logo-add b{font-weight:700;font-size:var(--fs-sm);color:var(--rp-ink)}
 .wr-logo-add:hover{background:var(--rp-soft);color:var(--rp-ink)}
 .wr-logo-btn{display:inline-flex;border:0;background:none;padding:0;cursor:pointer;border-radius:var(--r-sm)}

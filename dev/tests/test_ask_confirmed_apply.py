@@ -83,6 +83,8 @@ class ConfirmedApplyServer(unittest.TestCase):
     server_env = classmethod(lambda cls: {"CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")})
     start_server = classmethod(LiveBrowserCase.start_server.__func__)
     stop_server = classmethod(LiveBrowserCase.stop_server.__func__)
+    quiet_jobs = True
+    quiet_periodic_jobs = classmethod(LiveBrowserCase.quiet_periodic_jobs.__func__)
 
     def token(self):
         html = urllib.request.urlopen(self.base + "/").read().decode()
