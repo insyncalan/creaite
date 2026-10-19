@@ -77,5 +77,130 @@ class RowModel(unittest.TestCase):
         self.assertEqual(self.rows["ABC"]["title"], "Example Programme")
 
 
+SERVER = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/core/server.js"
+
+SCRIPT = """
+const f = await import(%s); const out = {};
+const live = {status: "Open", due_date: "2026-10-20", owner: "Sara Example", latest_update: "Waiting on the supplier.", client_visible: 0};
+const changes = {due_date: "2026-10-23", latest_update: "The supplier confirmed a slot for 23 October."};
+const now = f.irNowRow("actions", live, changes, {});
+out.list = f.irUpdateList(live, now, Object.keys(changes));
+out.changed = f.irChanged(out.list).map(c => c.col);
+out.note = f.irNoteText("ABC-A-002", "Book UAT environment", f.irChanged(out.list));
+out.if = f.irIfApproved(f.irChanged(out.list));
+out.line = [f.irVerb([{col: "due_date", to: "x"}]), f.irLineHead("Updates", "ABC-A-002", "Book UAT environment"), ...f.irLineParts(out.list)];
+// a stale `from` in the proposal makes no difference: only the live row counts
+const same = f.irUpdateList(live, f.irNowRow("actions", live, {status: "Open", due_date: "2026-10-23"}, {}), ["status", "due_date"]);
+out.same = same.map(c => [c.col, c.same]);
+out.sameNote = f.irNoteText("ABC-A-002", "Book UAT environment", f.irChanged(same));
+out.none = f.irNoteText("ABC-A-002", "Book UAT environment", f.irChanged(f.irUpdateList(live, live, [])));
+// the closing line
+const close = [{col: "status", from: "Open", to: "Closed"}];
+out.close = [f.irVerb(close), f.irLineHead(f.irVerb(close), "ABC-A-014", "Draft the comms plan"), ...f.irLineParts(close)];
+out.cancel = f.irVerb([{col: "status", from: "Open", to: "Cancelled"}]);
+out.only = f.irLineParts([{col: "latest_update", from: "a", to: "b"}]);
+out.three = f.irLineParts([{col: "status", from: "Open", to: "Delayed"}, {col: "due_date", from: "2026-10-01", to: "2026-10-09"}, {col: "latest_update", from: "", to: "x"}]);
+// the client message text is never shown
+out.cm = [f.irPhrase({col: "client_message", was: "secret", now: "secret two"}), f.irIfApproved([{col: "client_message", label: "Client messaging", was: "secret", now: "x"}])];
+out.words = [f.irWord("due_date", "2026-10-23"), f.irWord("due_date", null), f.irWord("client_visible", 1), f.irWord("client_visible", 0), f.irWord("owner", "")];
+// the save
+const opened = {status: "Open", due_date: "2026-10-23", latest_update: changes.latest_update};
+const save = (draft, ch = changes) => f.irSaveChanges("actions", ch, live, opened, draft);
+out.untouched = save({status: "Open", due_date: "2026-10-23", latest_update: changes.latest_update});
+out.dueEdited = save({status: "Open", due_date: "2026-10-27", latest_update: changes.latest_update});
+out.dueBack = save({status: "Open", due_date: "2026-10-20", latest_update: changes.latest_update});
+out.statusAdded = save({status: "Closed", due_date: "2026-10-23", latest_update: changes.latest_update});
+out.updEmpty = save({status: "Open", due_date: "2026-10-23", latest_update: ""});
+out.badDate = save({status: "Open", due_date: "27-10-2026", latest_update: changes.latest_update});
+out.badStatus = save({status: "Made", due_date: "2026-10-23", latest_update: changes.latest_update});
+out.nothing = f.irSaveChanges("actions", {due_date: "2026-10-23"}, live, {due_date: "2026-10-23"}, {due_date: "2026-10-20"});
+out.owner = f.irSaveChanges("actions", {owner: "Omar Ali"}, live, {status: "Open"}, {status: "Open", owner: "Someone Else"});
+out.raid = f.irSaveChanges("raid", {status: "Closed", impact: "Low"}, {status: "Open", impact: "High"}, {status: "Closed"}, {status: "Closed", impact: "High"});
+out.raidUpd = f.irSaveChanges("raid", {status: "Closed"}, {status: "Open"}, {status: "Closed"}, {status: "Closed", latest_update: "x"});
+out.raidDue = f.irSaveChanges("raid", {status: "Closed"}, {status: "Open", due_date: null}, {status: "Closed", due_date: null}, {status: "Closed", due_date: "2026-11-02"});
+out.dec = f.irSaveChanges("decisions", {client_message: "x"}, {status: "Pending", date: null}, {status: "Pending"}, {status: "Made", date: "2026-10-12"});
+out.decNoDate = f.irSaveChanges("decisions", {client_message: "x"}, {status: "Pending", date: null}, {status: "Pending"}, {status: "Made", date: ""});
+out.ui = f.UI; out.editable = f.EDITABLE;
+console.log(JSON.stringify(out));
+"""
+
+
+def node_run(script):
+    r = subprocess.run(["node", "--input-type=module", "-e", script], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class PureRules(unittest.TestCase):
+    """B2 and B4: core/irUpdate.js."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.o = node_run(SCRIPT % json.dumps(IRU.as_uri()))
+
+    def test_changed_is_against_the_live_row(self):
+        o = self.o
+        self.assertEqual(o["changed"], ["due_date", "latest_update"])
+        self.assertEqual([c["was"] for c in o["list"]], ["2026-10-20", "Waiting on the supplier."])
+        self.assertEqual(o["same"], [["status", True], ["due_date", False]])              # status already Open: plain, not a change
+        self.assertIn("due date 20-10-2026 → 23-10-2026 and the latest update.", o["note"])
+        self.assertNotIn("status", o["sameNote"])
+        self.assertIn("Nothing changes", o["none"])
+
+    def test_the_note_the_if_approved_line_and_the_row_line_come_from_the_one_list(self):
+        o = self.o
+        self.assertEqual(o["note"], "What changes if you approve: ABC-A-002 · Book UAT environment: due date 20-10-2026 → 23-10-2026 and the latest update. The rest of the item stays as it is.")
+        self.assertEqual(o["if"], "Due date 20-10-2026 → 23-10-2026 · Latest update replaced")
+        self.assertEqual(o["line"][1:], ["Updates ABC-A-002: Book UAT environment", "due 20-10-2026 → 23-10-2026 and the latest update"])
+
+    def test_the_row_line_wording(self):
+        o = self.o
+        self.assertEqual(o["close"], ["Closes", "Closes ABC-A-014: Draft the comms plan", "status Open → Closed"])
+        self.assertEqual(o["cancel"], "Cancels")
+        self.assertEqual(o["only"], ["the latest update"])
+        self.assertEqual(o["three"], ["status Open → Delayed", "due 01-10-2026 → 09-10-2026 and the latest update"])
+
+    def test_client_message_text_is_never_shown(self):
+        o = self.o
+        self.assertEqual(o["cm"][0], {"label": "the client messaging", "delta": "", "text": True})
+        self.assertNotIn("secret", json.dumps(o["cm"]))
+        self.assertEqual(o["words"], ["23-10-2026", "—", "on", "off", "—"])
+
+    def test_a_save_writes_only_the_columns_edited_and_leaves_the_rest(self):
+        o = self.o
+        self.assertEqual(o["untouched"]["changes"], {"due_date": "2026-10-23", "latest_update": "The supplier confirmed a slot for 23 October."})
+        self.assertEqual(o["untouched"]["edited"], [])
+        self.assertEqual(o["dueEdited"]["changes"]["due_date"], "2026-10-27")
+        self.assertEqual(o["dueEdited"]["changes"]["latest_update"], "The supplier confirmed a slot for 23 October.")   # the other column unchanged
+        self.assertNotIn("due_date", o["dueBack"]["changes"])                                  # back to the live value: left out
+        self.assertEqual(o["statusAdded"]["changes"]["status"], "Closed")
+        self.assertIsNone(o["updEmpty"]["changes"]["latest_update"])
+        self.assertIn("not a date", o["badDate"]["error"])
+        self.assertIn("Status must be", o["badStatus"]["error"])
+        self.assertIn("Nothing would change", o["nothing"]["error"])
+
+    def test_a_read_only_column_is_never_written_whatever_the_draft_says(self):
+        o = self.o
+        self.assertEqual(o["owner"]["changes"], {"owner": "Omar Ali"})                          # the draft's other owner is ignored
+        self.assertEqual(o["raid"]["changes"], {"status": "Closed", "impact": "Low"})           # impact stays the proposal's
+        self.assertEqual(o["raidUpd"]["changes"], {"status": "Closed"})                          # a RAID item has no latest update here
+        self.assertEqual(o["raidDue"]["changes"], {"status": "Closed", "due_date": "2026-11-02"})
+        self.assertEqual(o["dec"]["changes"], {"client_message": "x", "status": "Made", "date": "2026-10-12"})
+        self.assertEqual(o["dec"]["edited"], ["status", "date"])
+        self.assertEqual(o["decNoDate"]["changes"], {"client_message": "x", "status": "Made"})   # no date: the tracker will say so
+
+    def test_the_editable_columns_exist_and_the_ui_keys_are_the_servers(self):
+        """UI is the inverse of FIELD in core/server.js; EDITABLE names real columns of that table."""
+        src = SERVER.read_text(encoding="utf-8")
+        start = src.index("export const FIELD=")
+        end = src.index("/** @returns", start)
+        field = node_run("const FIELD=" + src[start + len("export const FIELD="):end].strip().rstrip(";").split("/*")[0].strip().rstrip(";") + ";console.log(JSON.stringify(FIELD))")
+        for table, cols in field.items():
+            self.assertEqual(self.o["ui"][table], {db: ui for ui, db in cols.items()}, table)
+        for table, cols in self.o["editable"].items():
+            self.assertTrue(set(cols) <= set(self.o["ui"][table]), table)
+
+
 if __name__ == "__main__":
     unittest.main()

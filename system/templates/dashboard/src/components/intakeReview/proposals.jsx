@@ -14,11 +14,12 @@ import { linkUrl } from "../../core/linkUrl.js";
 import { closePanel } from "../../projects.js";
 import { reviewViaServer, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy } from "../../panel.js";
+import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, updPeekable } from "../../panel.js";
 import { decide, draftOn, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
 import { irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
+import { ConflictBlock } from "./UpdatePeek.jsx";
 
 /** Why a proposal is not routine, in words (the row's `hold`, from review.hold_reason). */
 const HOLD_WORDS = { "need a project": "Needs a project", conflict: "Has a conflict to settle", invalid: "Held back: not valid" };
@@ -74,15 +75,6 @@ function SourceLine({ r }) {
   return <span class="icsrc">{where}{match ? ` · ${match}` : ""}{link ? <> · {link}</> : null}</span>;
 }
 
-/** The before and after of a conflict (the app's .cfvs block). @param {{r: any}} props */
-function ConflictBlock({ r }) {
-  const ch = r.rec.changes && r.rec.changes.length ? r.rec.changes : r.rec.field ? [{ field: r.rec.field, from: r.rec.from, to: r.rec.to }] : [];
-  const v = (/** @type {any} */ x) => (x == null || x === "" ? "(empty)" : /^\d{4}-\d{2}-\d{2}$/.test(String(x)) ? fd(String(x)) : String(x));
-  return <div class="cfvs">{ch.length ? ch.map((/** @type {any} */ c) => (
-    <div><span class="cff">{c.field}</span><span class="cfnow">Now: <b>{v(c.from)}</b></span><span class="cfnew">This one: <b>{v(c.to)}</b></span></div>
-  )) : <div class="sub">Changed in the tracker after this was proposed.</div>}</div>;
-}
-
 /** A due date on a weekend: say so, with the two working days beside it (BL-180); a click edits the proposal (core/fields.js). @param {{r: any}} props */
 function WeekendNote({ r }) {
   const f = WKRVF[/** @type {keyof WKRVF} */ (r.kind)], n = f && r.rec && !r.done ? weekendNote(r.rec[f[0]]) : null;
@@ -107,7 +99,7 @@ export function irOpenPeek(n) {
   if (!r || r.done || !PEEKABLE.includes(r.kind) && r.kind !== "draft") return;
   shared.PKSRC = {
     view: "intake-review",
-    order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter(t => ["actions", "raid", "decisions"].includes(t.getAttribute("data-kind") || "")).map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),
+    order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter(t => ["actions", "raid", "decisions"].includes(t.getAttribute("data-kind") || "") || t.getAttribute("data-kind") === "update" && updPeekable(irRow(+(t.getAttribute("data-irn") || 0)))).map(t => ({ id: "rv" + t.getAttribute("data-irn"), n: +(t.getAttribute("data-irn") || 0) })),
     step: (/** @type {any} */ o) => { irPeek.value = o.n; openProposal(o.n); },
   };
   irPeek.value = n;
@@ -157,7 +149,7 @@ export function ProposalLine({ n, child }) {
         <b class="icttl">{(r.rec && r.rec.t) || ""}</b>{r.p ? <span class="sub"> · {pName(r.p)}</span> : null}
         {r.drafted ? <>{" "}<span class="tag drrv"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>{r.drafted === "client" ? "Drafted wording" : "Drafted"}</span></> : null}
-        {conflict ? <ConflictBlock r={r} /> : null}
+        {conflict ? <ConflictBlock rec={r.rec} /> : null}
         <div class="icchg" data-tip={tip || undefined}><span class="ickind">{irPill(r)}</span>
           {parts.map(p => <> · <span class={p.warn ? "h-warn" : ""}>{p.t}</span></>)}
           {held ? <> · <span class="indiv">{held}</span></> : <> · <span class="icroutine">Routine</span></>}
