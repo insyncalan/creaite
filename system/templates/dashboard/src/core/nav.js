@@ -38,13 +38,13 @@ import { renderReview } from "../review.js";
 import { rjCloseMenu, rjLeave } from "../stores/rejects.js";
 import { BASETITLE, PERS, renderPerson, renderSettings, setResolve, sw, VIPS } from "../settings.js";
 import { renderToday, SETUPK } from "../today.js";
-import { allViews, applyFilters, applyView, clearAllFilters, closeDisp, FDEFS, groupOf, groupsOf, layoutOf, listGroupOf, PROJF, renderPeople, renderWork, setPTab, snapshot, SORT, subOf, syncView, WB, WGRP, WINIT, WLAY, WLGRP, workChanged, WSUB } from "../work.js";
+import { allViews, applyFilters, applyView, clearAllFilters, closeDisp, FDEFS, groupOf, groupsOf, layoutOf, LDEFG, listGroupBack, listGroupOf, PROJF, renderPeople, renderWork, setPTab, snapshot, SORT, subOf, syncView, WB, WGRP, WINIT, WLAY, WLGRP, workChanged, WSUB } from "../work.js";
 /* ======================= navigation ======================= */
 shared.VIEW="today"; shared.COCK=null; shared.FROMPROJ=null; shared.NAVSTATE=null; shared.PERSON=null;
 /* BL-38: every view writes its place to the address, so Back, Forward, reload and bookmarks work:
    #cockpit=ABC · #work=raid&v=open&p=ABC&from=ABC · …&item=ABC-003 (the open item). An open edit blocks leaving. */
 export const viewEl=()=>$("#"+({cockpit:"v-cockpit",mine:"v-work"}[shared.VIEW]||"v-"+shared.VIEW));
-export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?shared.COCK:shared.VIEW==="person"?shared.PERSON:shared.VIEW==="help"?shared.HELPARG:shared.VIEW==="settings"?shared.SCAT:null,wt:shared.WT,wv:shared.WVIEW,p:[...PROJF],q:shared.WQ,from:shared.FROMPROJ,fx:shared.VIEW==="work"?snapshot():null,sort:SORT[shared.WT]||null,vb:shared.VIEW==="work"&&!shared.WVIEW?WB[shared.WT]||null:null,lay:shared.VIEW==="work"&&layoutOf(shared.WT)==="board"?"board":"list",g:shared.VIEW==="work"?groupOf(shared.WT):null,lg:shared.VIEW==="work"?listGroupOf(shared.WT):null,sg:shared.VIEW==="work"?subOf(shared.WT,layoutOf(shared.WT)):null,
+export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?shared.COCK:shared.VIEW==="person"?shared.PERSON:shared.VIEW==="help"?shared.HELPARG:shared.VIEW==="settings"?shared.SCAT:null,wt:shared.WT,wv:shared.WVIEW,p:[...PROJF],q:shared.WQ,from:shared.FROMPROJ,fx:shared.VIEW==="work"?snapshot():null,sort:SORT[shared.WT]||null,vb:shared.VIEW==="work"&&!shared.WVIEW?WB[shared.WT]||null:null,lay:shared.VIEW==="work"&&layoutOf(shared.WT)==="board"?"board":"list",g:shared.VIEW==="work"?groupOf(shared.WT):null,lg:shared.VIEW==="work"&&shared.WT in WLGRP?listGroupOf(shared.WT):null,sg:shared.VIEW==="work"?subOf(shared.WT,layoutOf(shared.WT)):null,
   item:shared.CUR&&shared.CUR.mode==="record"?{k:shared.CUR.k,id:shared.CUR.id}:null,scroll:viewEl()?viewEl().scrollTop:0}; 
   if(shared.VIEW==="activity") st.aq={...shared.ACTF,types:[...(shared.ACTF.types||[])]};
   if(st.v==="people") st.arg=shared.PTAB;   /* BL-190 */
@@ -65,7 +65,7 @@ export function hashOf(st){
   if(st&&st.v==="minutes") return `#minutes=${encodeURIComponent(typeof st.arg==="string"?st.arg:"")}`;   /* v2.1.0 P7 */
   if(st&&st.v==="milestones") return `#milestones${st.arg?`=${st.arg}`:""}&v=${st.mv==="move"?"movement":"plan"}${st.ms?`&ms=${st.ms}`:""}`;   /* BL-245 */
   if(st&&st.v==="people") return "#people"+(st.arg==="none"?"/none":"");   /* BL-190 */
-  let h=st.v==="help"?`help-${st.arg||"start"}`:st.v==="settings"?`settings/${st.arg||"general"}`:st.v==="cockpit"?(st.arg?`cockpit=${st.arg}`:"cockpit"):st.v==="person"?`person=${encodeURIComponent(st.arg)}`:st.v==="work"?`work=${st.wt}${st.wv?`&v=${encodeURIComponent(st.wv)}`:""}${st.p&&st.p.length?`&p=${st.p.join(",")}`:""}${!st.wv&&st.fx?(Object.keys(st.fx).length?Object.entries(st.fx).map(([k,v])=>`&${k}=${v.map(encodeURIComponent).join(",")}`).join(""):"&f=none"):""}${st.lay==="board"?`&lay=board&g=${st.g}`:st.lg&&st.lg!=="none"?`&lg=${st.lg}`:""}${st.sg&&st.sg!=="none"?`&sg=${st.sg}`:""}${st.sort?`&s=${st.sort.col}.${st.sort.dir}`:""}${st.q&&st.q.trim()?`&q=${encodeURIComponent(st.q.trim().replace(/[&=#]/g," "))}`:""}${st.from?`&from=${st.from}`:""}${!st.wv&&st.vb?`&vb=${encodeURIComponent(st.vb)}`:""}`:st.v==="inbox"?"intake":st.v;
+  let h=st.v==="help"?`help-${st.arg||"start"}`:st.v==="settings"?`settings/${st.arg||"general"}`:st.v==="cockpit"?(st.arg?`cockpit=${st.arg}`:"cockpit"):st.v==="person"?`person=${encodeURIComponent(st.arg)}`:st.v==="work"?`work=${st.wt}${st.wv?`&v=${encodeURIComponent(st.wv)}`:""}${st.p&&st.p.length?`&p=${st.p.join(",")}`:""}${!st.wv&&st.fx?(Object.keys(st.fx).length?Object.entries(st.fx).map(([k,v])=>`&${k}=${v.map(encodeURIComponent).join(",")}`).join(""):"&f=none"):""}${st.lay==="board"?`&lay=board&g=${st.g}`:st.lg&&(st.lg!=="none"||LDEFG[st.wt])?`&lg=${st.lg}`:""}${st.sg&&st.sg!=="none"?`&sg=${st.sg}`:""}${st.sort?`&s=${st.sort.col}.${st.sort.dir}`:""}${st.q&&st.q.trim()?`&q=${encodeURIComponent(st.q.trim().replace(/[&=#]/g," "))}`:""}${st.from?`&from=${st.from}`:""}${!st.wv&&st.vb?`&vb=${encodeURIComponent(st.vb)}`:""}`:st.v==="inbox"?"intake":st.v;
   if(st.item) h+=`&item=${st.item.id}`; h="#"+h;
   if(st&&st.v==="activity"&&st.aq){ const a=st.aq, p=[];
     if((a.q||"").trim()) p.push("q="+encodeURIComponent(a.q.trim())); if((a.types||[]).length) p.push("type="+a.types.map(encodeURIComponent).join(","));
@@ -95,7 +95,7 @@ export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")), 
     const fx={}; [...new Set(["st","due","o","pr","ws","ty","rs","src","cv","dt","dr","rr","cr","vip","ms",...FDEFS[st.wt].map(d=>d[0])])].filter(k=>k!=="p").flatMap(k=>[k,"!"+k]).forEach(k=>{ if(kv[k]!==undefined) fx[k]=kv[k].split(",").map(decodeURIComponent); });   /* BL-130: "!key" is "is not"; BL-318: the project filter is st.p, never a filter set, or a reload with a view and a project lost the view */ st.fx=Object.keys(fx).length?fx:kv.f==="none"?{}:null;   /* BL-77: "&f=none" is a list with no filters on (e.g. closed items shown too) */
     if(kv.s){ const [col,dir]=kv.s.split("."); st.sort={col,dir:dir==="desc"?"desc":"asc"}; }
     st.lay=kv.lay==="board"?"board":"list"; if(groupsOf(st.wt).some(g=>g[0]===kv.g)) st.g=kv.g;
-    st.lg=groupsOf(st.wt).some(g=>g[0]===kv.lg)?kv.lg:"none"; st.sg=groupsOf(st.wt).some(g=>g[0]===kv.sg)?kv.sg:"none"; }   /* BL-129 */
+    st.lg=groupsOf(st.wt).some(g=>g[0]===kv.lg)||kv.lg==="none"?kv.lg:null;   /* #241 A: no lg is the tab's own grouping (saved, or the default) */ st.sg=groupsOf(st.wt).some(g=>g[0]===kv.sg)?kv.sg:"none"; }   /* BL-129 */
   else if(v==="reports"){ st.arg=/^\d{4}-\d{2}-\d{2}$/.test(kv.w||"")?kv.w:null; }   /* BL-337 */
   else if(v==="person"){ if(!PERS().some(x=>x.name===arg)) return null; st.arg=arg; }
   else if(v==="item"){ const id=arg, k=A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":DEC.some(x=>x.id===id)?"decisions":null; if(!k) return null; return {v:"work",arg:null,wt:k,wv:null,p:[],from:null,item:{k,id},scroll:0}; }
@@ -118,7 +118,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
   shared.WT=st.wt||shared.WT; if(st.v==="work"){ if(st.fx){ applyFilters(st.fx); WINIT[shared.WT]=true; if(st.vb&&allViews(shared.WT).some(v=>v.id===st.vb)) WB[shared.WT]=st.vb; syncView(); } else if(st.wv) applyView(st.wv);
     PROJF.clear(); (st.p||[]).forEach(c=>PROJF.add(c)); shared.WQ=st.q||""; SORT[shared.WT]=st.sort||null;
     if(st.lay){ shared.LAYCHOSEN=true; WLAY[shared.WT]=st.lay; if(st.g) WGRP[shared.WT]=st.g; }   /* BL-103: the layout and grouping are in the address */
-    if(st.lg) WLGRP[shared.WT]=st.lay==="board"?(WLGRP[shared.WT]||"none"):st.lg; if(st.sg) WSUB[shared.WT+"|"+(st.lay||"list")]=st.sg; }   /* BL-129: the List's grouping and the sub-group too */
+    if(st.lay!=="board"){ if(st.lg) WLGRP[shared.WT]=st.lg; else listGroupBack(shared.WT); }   /* #241 A: a board address leaves the List's grouping alone */ if(st.sg) WSUB[shared.WT+"|"+(st.lay||"list")]=st.sg; }   /* BL-129: the List's grouping and the sub-group too */
   if(st.v==="reports") repWeek.value=st.arg||"";   /* BL-337 */
   if(st.v==="psettings"){ psCode.value=st.arg||""; psCat.value=st.cat||"general"; }   /* #228 */
   if(st.v==="reporting"){ spaceWeek.value=st.rw||""; hubView.value=st.rv||"internal"; }   /* #221 */

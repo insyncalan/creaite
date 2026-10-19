@@ -10,6 +10,7 @@ import { drawFilterBar, fitFilterBar } from "./components/FilterBar.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { drawNewTile } from "./components/work/NewTile.jsx";
+import { peekMarkHtml } from "./components/peek/PeekProps.jsx";
 import { A, DEC, open, overdue, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
 import { CALI, closeCal, DATE_HELP, srcShort, WK, wkAsk, wkClear } from "./core/fields.js";
@@ -166,6 +167,7 @@ export function renderApplied(total,shown){ const chips=[];
   if(shared.WQ.trim()) chips.push(fchipHtml(`Search: “${shared.WQ.trim()}”`,"q","Clear the search"));
   putHTML($("#wapplied"),html`${raw(chips.join(""))}${chips.length?html`<button class="linkbtn" id="clearF">Clear all</button>`:""}${!shared.WVIEW&&chips.length||!shared.WVIEW&&WB[shared.WT]?raw(viewSaveBtns()):""}<span class="sp"></span><span class="sub"><span id="wcount">Showing ${raw(shown)} of ${raw(total)}</span><span id="whidden"></span></span>`); }   /* BL-132: #whidden says what is hidden */
 export const COLS={actions:[["id","ID"],["t","Action"],["o","Owner"],["due","Due"],["pr","Priority"],["st","Status"],["ws","Workstream"],["ms","Milestone"],["src","Source"],["upd","Last updated"]],raid:[["id","ID"],["t","Risk or issue"],["type","Type"],["o","Owner"],["due","Due"],["pr","Priority"],["resp","Response"],["st","Status"],["ws","Workstream"],["ms","Milestone"],["src","Source"],["upd","Last updated"]],   /* BL-128: Milestone and Last updated can be shown */decisions:[["id","ID"],["t","Decision"],["st","Status"],["by","Made by"],["due","Needed by"],["date","Date"],["src","Source"]]};
+shared.DENS=store.get("creaite-density",null);   /* #241 A: null until a density is chosen */
 shared.COLVIS=store.get("creaite-cols",{actions:["t","o","due","pr","st"],raid:["t","o","due","pr","resp"],decisions:["t","st","by","due","date","src"]});
 export const cmTag=x=>x.client&&!("cmd" in x?cmdOK(x.cmd):cmOK(x.cm))?' <span class="tag warn">· client messaging to complete</span>':"";
 export function cell(k,x,t=shared.WT){ if(t==="all") return allCell(k,x);
@@ -185,6 +187,23 @@ export function cell(k,x,t=shared.WT){ if(t==="all") return allCell(k,x);
   if(k==="ms") return `<td data-f="ms">${x.ms?esc(msLabel(x.ms)):"—"}</td>`;                                   /* BL-128 */
   if(k==="upd") return `<td class="x" style="white-space:nowrap">${x.upd_at?fd(x.upd_at.slice(0,10)):"—"}</td>`; return "<td></td>"; })();
     return h; }   /* BL-288: who Alan follows is never labelled */
+/* ===== #241 A (Work items v2) ===== the List's rows: a status mark and a priority mark (the peek's own ring and bars) at the
+   start of the title, with the words for screen readers; the Status and Priority columns stay as they are (Display keeps them).
+   A .tg tag says an item is client-visible. Row density: Compact (40px, the ID on the title's line; the default where nothing is
+   saved) or Comfortable (57px, today's two lines), per browser in creaite-density, written only when chosen. Row height only:
+   no column width, order or visibility changes, and the Board is untouched. */
+export const densOf=()=>shared.DENS==="cmf"?"cmf":"cmp";
+export function densPaint(){ const w=$("#workWrap"), d=densOf(); if(w){ w.classList.toggle("cmp",d==="cmp"); w.classList.toggle("cmf",d==="cmf"); }
+  const seg=$("#wdens"); if(!seg) return; seg.hidden=layoutOf(shared.WT)==="board"; $$("#wdens [data-dens]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.dens===d))); }
+export function setDensity(d){ if(d!=="cmp"&&d!=="cmf") return; shared.DENS=d; store.set("creaite-density",d); densPaint(); sizeList(); }
+export function wkMarksHtml(t,x){ const k=t==="all"?x.k:t, st=t==="all"?x.nst:x.st, pr=k==="decisions"?"":x.pr||"";
+  return `<span class="wkm">${peekMarkHtml({st})}${pr?peekMarkHtml({pr}):""}<span class="vh">${esc(st)}${pr?`, ${esc(pr)} priority`:""}: </span></span>`; }
+export const CVTAG=`<span class="tg" data-tg="cv" title="Client-visible: it can appear in client reports">${ic("eye")}Client</span>`;
+export function wkDecorate(){ const t=shared.WT;
+  $$("#workTbl tr[data-row]").forEach(tr=>{ const td=tr.querySelector("td.title"), x=t==="all"?allRows().find(y=>y.id===tr.dataset.row):REC(t,tr.dataset.row); if(!td||!x||td.querySelector(".wkm")) return;
+    addHTML(td,"afterbegin",raw(wkMarksHtml(t,x)));
+    if(x.client){ const sub=td.querySelector(":scope > .x"); addHTML(sub||td,sub?"beforebegin":"beforeend",raw(CVTAG)); } }); }
+/* ===== end #241 A (rows) ===== */
 export const msLabel=id=>{ for(const p of P){ const m=(p.ms||[]).find(m=>m[3]===id); if(m) return m[0]; } return ((D.milestone_names||{})[id]||[id])[0]; };   /* BL-128: the name alone */
 /* BL-68: the heading row and a row of any list of one item type; Work and a person's page both draw theirs here.
    o.fixed: no drag to reorder; o.rz: remembered widths; o.pick: a Set of "type:id" adds a tick column (hand over);
@@ -213,6 +232,7 @@ export function renderWork(){ const fresh=!WINIT[shared.WT], dv=fresh?defaultVie
     const e=$(layoutOf(shared.WT)==="board"?"#workBoard .empty":"#workTbl .empty");
     if(!shown&&e){ putHTML(e,raw(emptyHtml())); const F=activeFilters(); workAnnounce(F.length?e.querySelector("h2").textContent+". "+[...e.querySelectorAll(".relax > div")].map(d=>d.querySelector("span").textContent+": "+d.querySelector(".sub").textContent).join("; "):"Nothing here yet"); }
     else workAnnounce(`Showing ${shown} of ${total}${ht}`); }   /* BL-130 */
+  if(layoutOf(shared.WT)!=="board") wkDecorate();   /* #241 A */
   $$("#v-work tr[data-row], #v-mine tr[data-row]").forEach(tr=>{ const td=tr.querySelector("td.title"); if(td&&!td.querySelector(".wflag")) addHTML(td,"afterbegin",raw(wflag(shared.WT,tr.dataset.row))); });   /* BL-51 */
   hlPrune();   /* BL-68 */
   ceDecorate();   /* BL-251 */
@@ -417,6 +437,7 @@ export function renderLayoutBar(){ const t=shared.WT, bd=layoutOf(t)==="board";
   $("#workWrap").style.display=bd?"none":""; $("#workBoard").hidden=!bd;
   $("#whintList").hidden=bd; $("#whintBoard").hidden=!bd;      /* BL-114 (sprint-polish): the hint line is written for the layout in use */
   putHTML($("#whintList"),raw(workHint("list"))); putHTML($("#whintBoard"),raw(workHint("board")));   /* BL-128: one function builds both */
+  densPaint();   /* #241 A */
   drawDisp(); }   /* always drawn (hidden until opened), so its controls exist for the address and the tests */
 export function setLayout(t,lay){ if(t==="all") return; shared.LAYCHOSEN=true; WLAY[t]=lay; store.set("creaite-worklay",WLAY); renderWork(); navWrite(false); }
 /* what a move to a column changes. Due asks for a date (never a past one); the others set the field. Returns false if cancelled. */
@@ -475,6 +496,7 @@ export function boardDragEnd(){ const d=BDRAG; BDRAG=null; if(!d) return null; i
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0035(){
 $("#wlay").addEventListener("click",e=>{ const b=e.target.closest("[data-lay]"); if(b) setLayout(shared.WT,b.dataset.lay); });
+$("#wdens").addEventListener("click",e=>{ const b=e.target.closest("[data-dens]"); if(b) setDensity(b.dataset.dens); });   /* #241 A */
 $("#workBoard").addEventListener("click",e=>{ if(performance.now()-BNOCLICK<30) return;
   const mv=e.target.closest(".bmv"); if(mv){ e.stopPropagation(); boardMoveMenu(mv,mv.closest(".bcard").dataset.row); return; }
   const cl=e.target.closest("[data-bcoll]"); if(cl){ const k=cl.dataset.bcoll; BCOLL[k]=!BCOLL[k]; store.set("creaite-boardcoll",BCOLL); renderWork(); return; }
@@ -526,10 +548,10 @@ export function workHint(lay){ return HINTS.filter(h=>h[2]==="both"||h[2]===lay)
 export function drawDisp(){ const m=$("#dispMenu"), t=shared.WT, bd=layoutOf(t)==="board", s=SORT[t], cur=s?(s.col==="_def"?"":s.col):"", opts=SORTOPTS(t), focusKey=document.activeElement&&m.contains(document.activeElement)?(document.activeElement.id||document.activeElement.dataset.mv+"|"+document.activeElement.dataset.d):null;
   const gopts=bd?groupsOf(t):[["none","None"],...groupsOf(t)], gcur=bd?groupOf(t):listGroupOf(t), sub=subOf(t,bd?"board":"list");   /* BL-129: the List groups too */
   putHTML(m,html`<div><h3><label for="wgrp">${bd?"Group by (columns)":"Group by"}</label></h3><div class="dline"><select id="wgrp">${gopts.map(g=>html`<option value="${g[0]}" ${g[0]===gcur?"selected":""}>${g[1]}</option>`)}</select></div></div>
-    <div ${!bd&&gcur==="none"?"hidden":""}><h3><label for="wsub">${bd?"Sub-group (swimlanes)":"Sub-group"}</label></h3><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t).filter(g=>g[0]!==gcur).map(g=>html`<option value="${g[0]}" ${g[0]===sub?"selected":""}>${g[1]}</option>`)}</select></div></div>
+    <div ${!bd&&(gcur==="none"||listGroupDefault(t))?"hidden":""}><h3><label for="wsub">${bd?"Sub-group (swimlanes)":"Sub-group"}</label></h3><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t).filter(g=>g[0]!==gcur).map(g=>html`<option value="${g[0]}" ${g[0]===sub?"selected":""}>${g[1]}</option>`)}</select></div></div>
     <h3><label for="wbsort">Order by</label></h3><div class="dline"><select id="wbsort">${opts.map(o=>html`<option value="${o[0]}" ${o[0]===cur?"selected":""}>${o[1]}</option>`)}${cur&&!opts.some(o=>o[0]===cur)?html`<option value="${cur}" selected>Sorted by ${cur}</option>`:""}</select><button type="button" class="btn" id="wordRev" aria-pressed="${raw(!!(s&&s.dir==="desc"))}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>
     <h3>Properties${bd?html` <span class="sub">· a card shows the first four</span>`:""}</h3><div class="dprops">${raw(dispProps())}</div>
-    <h3>Show</h3><div class="dline" ${!bd&&gcur==="none"?"hidden":""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t]?"":"checked"}> Empty groups</label></div>${bd?html`
+    <h3>Show</h3><div class="dline" ${!bd&&(gcur==="none"||listGroupDefault(t))?"hidden":""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t]?"":"checked"}> Empty groups</label></div>${bd?html`
     <div class="dline"><label for="wclosed">${t==="decisions"?"Decided":"Closed"} column</label><select id="wclosed"><option value="recent" ${BCLALL.has(t)?"":"selected"}>Last ${raw(+S.boardClosedDays||14)} days</option><option value="all" ${BCLALL.has(t)?"selected":""}>All</option></select></div>`:html`<div class="dline sub">Closed items: use the Status filter.</div>`}
     <div class="dfoot"><button type="button" class="linkbtn" id="dispReset">Reset to this tab’s default</button><span class="sp"></span><button type="button" class="btn primary" id="dispDone">Done</button></div>`);
   if(focusKey){ const f=m.querySelector("#"+CSS.escape(focusKey))||(focusKey.includes("|")?m.querySelector(`[data-mv="${focusKey.split("|")[0]}"][data-d="${focusKey.split("|")[1]}"]`):null); if(f&&!f.disabled) f.focus(); else m.querySelector("button,select,input")?.focus(); }
@@ -614,8 +636,14 @@ export async function decBoardDrop(id,key){ const t="decisions", x=REC(t,id), g=
 export const LCOLL=store.get("creaite-listcoll",{});
 export let HLNOTE=""; shared.HLALL=false;                       /* HLALL: "Select all N matching" is in force; HLNOTE: what the bar says after a collapse */
 export const grpOK=(t,g)=>groupsOf(t).some(x=>x[0]===g);
-export function listGroupOf(t){ return grpOK(t,WLGRP[t])?WLGRP[t]:"none"; }
-export function subOf(t,lay){ const s=WSUB[t+"|"+lay], g=lay==="board"?groupOf(t):listGroupOf(t); return g!=="none"&&grpOK(t,s)&&s!==g?s:"none"; }
+/* #241 A: where nothing is saved for a tab, the List groups by its plan (LDEFG: Actions by due, RAID by priority, Decisions
+   by status) while the default order is in use; a stored "none" is a choice and stays none; an order picked from a heading or
+   Display shows the list in that order, ungrouped, unless a grouping was chosen */
+export const LDEFG={actions:"due",raid:"priority",decisions:"status"};
+export const listGroupDefault=t=>!(t in WLGRP)&&!!LDEFG[t]&&!SORT[t];
+export function listGroupBack(t){ const s=store.get("creaite-listgrp",{}); if(s&&typeof s==="object"&&t in s) WLGRP[t]=s[t]; else delete WLGRP[t]; }   /* the stored choice, or none */
+export function listGroupOf(t){ return grpOK(t,WLGRP[t])?WLGRP[t]:listGroupDefault(t)?LDEFG[t]:"none"; }
+export function subOf(t,lay){ const s=WSUB[t+"|"+lay], g=lay==="board"?groupOf(t):listGroupOf(t); return g!=="none"&&!(lay==="list"&&listGroupDefault(t))&&grpOK(t,s)&&s!==g?s:"none"; }   /* #241 A: a sub-group goes under a chosen grouping */
 export const grpLabel=(t,g)=>(groupsOf(t).find(x=>x[0]===g)||[g,g])[1];
 export const grpNoun=(t,n)=>t==="actions"?`${n} action${n===1?"":"s"}`:t==="raid"?`${n} item${n===1?"":"s"}`:`${n} decision${n===1?"":"s"}`;
 export const itemLate=(t,x)=>t==="actions"?overdue(x):t==="raid"?x.st==="Open"&&!!x.due&&x.due<TODAY:decLate(x);
