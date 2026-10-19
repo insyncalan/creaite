@@ -251,6 +251,21 @@ def clean_picture(value):
     return head + ";base64," + base64.b64encode(clean).decode("ascii")
 
 
+def clean_svg_addr(value):
+    """2.5.1 M2: an SVG picture's data address rebuilt for a CLIENT file by logo_check.clean_svg (its comments, title, desc, metadata,
+    editor names, links and text that isn't drawn left out; its shapes as they were), or None when it can't be read (it is dropped)."""
+    import logo_check
+    m = SVG_URI.fullmatch(value.strip())
+    if m is None:
+        return None
+    try:
+        raw = base64.b64decode(re.sub(r"\s+", "", m.group(1)), validate=True)
+    except ValueError:
+        return None
+    clean = logo_check.clean_svg(raw) if len(raw) <= SVG_MAX else None
+    return None if clean is None else "data:image/svg+xml;base64," + base64.b64encode(clean).decode("ascii")
+
+
 def metadata_free(css):
     """Whether every PNG or JPEG address in style rules is already without metadata (a client file takes no other)."""
     for m in URL_IN_CSS.finditer(css):
@@ -317,7 +332,9 @@ class Clean(HTMLParser):
         for name, value in attrs:
             name, value = name.lower(), "" if value is None else value
             if keep_attr(tag, svg, name, value, self.client):
-                value = clean_picture(value) if name == "src" else value
+                value = self.picture(value) if name == "src" else value
+                if value is None:
+                    continue
                 if self.client and name != "src":
                     value = self.client_value(tag, svg, name, value)
                     if value is None:
@@ -355,6 +372,15 @@ class Clean(HTMLParser):
         if svg:                           # an svg attribute: numbers, and words the stylesheet or the svg list holds
             return v if all(w in own_styles()["words"] or w in SVG_WORDS for w in css_words(v)) else None
         return None
+
+    def picture(self, value):
+        """An img's kept src as it is written: metadata cleaned out of a PNG or JPEG, and in a CLIENT file an SVG picture rebuilt
+        from its shapes (2.5.1 M2; what it held is still read for the leak checks, as before); None when it is dropped."""
+        value = clean_picture(value)
+        if value is not None and self.client and SVG_URI.match(value):
+            self.attr_values.extend(svg_words(value) or [])
+            value = clean_svg_addr(value)
+        return value
 
     def note_structure(self, tag, attrs):
         """Count a section and the body rows of a table in it."""

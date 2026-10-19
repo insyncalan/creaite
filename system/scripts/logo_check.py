@@ -9,6 +9,7 @@ sentence (never a path or a byte of the file):
     animation element, no web address (an `href` may point only at a part of the same file, `#name`), no `url()` or `@import` to
     anywhere but the same file or a data image, and no declared width or height above MAX_SIDE.
 Pixel size is capped so a header that declares a huge picture can't stall a browser or Word."""
+import html
 import re
 import struct
 import sys
@@ -146,6 +147,269 @@ def svg_size(raw):
     if any(d > MAX_SIDE for d in dims):
         raise LogoRefused(f"That SVG declares a size over {MAX_SIDE} pixels. Nothing was saved.")
     return int(dims[0]), int(dims[1])
+
+
+# ── 2.5.1 M2: an SVG logo rebuilt for a client file ──────────────────────────
+SVG_NS = "http://www.w3.org/2000/svg"
+DRAWN_TAGS = {"svg", "g", "a", "defs", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "lineargradient",
+              "radialgradient", "stop", "clippath", "mask", "style", "text", "tspan"}
+PAINT = {"fill", "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity", "stroke-linecap", "stroke-linejoin",
+         "stroke-miterlimit", "stroke-dasharray", "stroke-dashoffset", "opacity", "stop-color", "stop-opacity", "clip-path",
+         "clip-rule", "mask", "font-family", "font-size", "font-weight", "font-style", "font-stretch", "text-anchor",
+         "letter-spacing", "word-spacing", "dominant-baseline", "alignment-baseline", "baseline-shift", "visibility", "display",
+         "color", "paint-order", "vector-effect", "shape-rendering", "text-rendering", "mix-blend-mode", "isolation",
+         "transform", "transform-origin"}
+SHAPE_ATTRS = PAINT | {"width", "height", "viewbox", "preserveaspectratio", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx",
+                       "ry", "fx", "fy", "fr", "d", "points", "offset", "gradientunits", "gradienttransform", "spreadmethod",
+                       "clippathunits", "maskunits", "maskcontentunits", "dx", "dy", "rotate", "textlength", "lengthadjust",
+                       "id", "class", "style"}
+NOT_DRAWN_INSIDE = {"defs", "clippath", "mask", "lineargradient", "radialgradient"}
+PLAIN_VALUE = re.compile(r"[\w\s#.,%()+\-:;'\"/]*\Z")
+FONT_VALUE = re.compile(r"[\w\s,'\"-]{0,100}\Z")
+URL_REF = re.compile(r"url\(\s*(['\"]?)#([\w.:-]+)\1\s*\)", re.I)
+PATH_VALUE = re.compile(r"[MmLlHhVvCcSsQqTtAaZz\d\s.,+\-]*\Z")
+POINTS_VALUE = re.compile(r"[\d\s.,+\-]*\Z")
+NUMBER = re.compile(r"\s*(-?[\d.]+(?:e-?\d+)?)", re.I)
+
+
+class _Names:
+    """Each id and class of the picture given a plain new name (i1, c1, …), so no word of the old ones reaches the client."""
+
+    def __init__(self):
+        self.ids, self.classes = {}, {}
+
+    def id(self, old):
+        """The new name of an id."""
+        return self.ids.setdefault(old, f"i{len(self.ids) + 1}")
+
+    def cls(self, old):
+        """The new name of a class."""
+        return self.classes.setdefault(old, f"c{len(self.classes) + 1}")
+
+
+COLOURS = ("aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue "
+           "chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey "
+           "darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray "
+           "darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen "
+           "fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki "
+           "lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen "
+           "lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime "
+           "limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue "
+           "mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive "
+           "olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum "
+           "powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver "
+           "skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white "
+           "whitesmoke yellow yellowgreen")
+KEYWORDS = ("none currentcolor inherit initial unset transparent butt round square miter bevel arcs clip nonzero evenodd normal bold "
+            "bolder lighter italic oblique start middle end auto hidden visible collapse inline block url rgb rgba hsl hsla matrix "
+            "translate translatex translatey scale scalex scaley rotate skewx skewy userspaceonuse objectboundingbox pad reflect "
+            "repeat xmidymid xminymin xmaxymax xmidymin xmidymax xminymid xmaxymid xminymax xmaxymin meet slice spacing "
+            "spacingandglyphs alphabetic central mathematical hanging ideographic baseline sub super stroke fill markers "
+            "non-scaling-stroke crispedges geometricprecision optimizespeed optimizelegibility multiply screen overlay darken lighten "
+            "isolate px em ex pt pc cm mm in rem deg rad grad turn ch vw vh condensed expanded semi-condensed semi-expanded")
+FONTS = ("serif sans-serif monospace cursive fantasy system-ui arial helvetica neue verdana tahoma trebuchet ms georgia times new "
+         "roman courier garamond palatino segoe ui roboto open sans lato montserrat inter source pro calibri cambria gill futura "
+         "avenir next frutiger myriad univers din condensed light medium regular semibold bold black heavy thin")
+PLAIN_WORDS = set(COLOURS.split()) | set(KEYWORDS.split())
+FONT_WORDS = set(FONTS.split()) | PLAIN_WORDS
+
+
+def _words_ok(prop, v):
+    """Whether a value holds no word: a path's or a point list's numbers and one command letter at a time; anything else only
+    colours, keywords, units and numbers (font names for font-family)."""
+    if prop in ("d", "points"):
+        bare = re.sub(r"(?<=[\d.])[eE](?=[-+]?\d)", "", v)          # an exponent is not a command
+        return bool((PATH_VALUE if prop == "d" else POINTS_VALUE).match(bare)) and not re.search(r"[A-Ya-y][A-Za-z]", bare)
+    if prop == "font-family" and not FONT_VALUE.match(v):
+        return False
+    words = FONT_WORDS if prop == "font-family" else PLAIN_WORDS
+    rest = re.sub(r"#[0-9a-fA-F]{3,8}\b|\d*\.?\d+(?:e[-+]?\d+)?", " ", URL_REF.sub("url()", v))
+    return all(w.lower() in words for w in re.findall(r"[A-Za-z]+(?:-[A-Za-z]+)*", rest))
+
+
+def _value(prop, value, names):
+    """A presentation value made safe, or None: plain characters only, every word a colour, keyword or unit (a font name for
+    font-family), `url(#id)` pointing into the file (renamed), nothing else."""
+    v = str(value).strip()
+    if len(v) > (200_000 if prop in ("d", "points") else 2000) or not PLAIN_VALUE.match(v):
+        return None
+    if prop in ("id", "class") or not _words_ok(prop, v):
+        return None
+    if "url" in v.lower():
+        if re.sub(URL_REF, "", v).lower().count("url"):
+            return None
+        v = URL_REF.sub(lambda m: f"url(#{names.id(m.group(2))})", v)
+    return v
+
+
+def _declarations(css, names):
+    """Style declarations kept from the presentation list, each value made safe, as `prop:value;…`."""
+    out = []
+    for decl in css.split(";"):
+        prop, sep, val = decl.partition(":")
+        prop = prop.strip().lower()
+        if sep and prop in PAINT:
+            v = _value(prop, val, names)
+            if v is not None and v:
+                out.append(f"{prop}:{v}")
+    return ";".join(out)
+
+
+def _rules(css, names):
+    """A <style> element's rules rebuilt: comments and at-rules gone, only element, class and id selectors (renamed), each
+    declaration from the presentation list."""
+    css = re.sub(r"/\*.*?(\*/|\Z)", "", css, flags=re.S)
+    out = []
+    for sel, body in re.findall(r"([^{}@;]+)\{([^{}]*)\}", css):
+        parts = [_selector(one, names) for one in sel.split(",")]
+        decls = _declarations(body, names)
+        if parts and None not in parts and decls:
+            out.append(f"{','.join(parts)}{{{decls}}}")
+    return "".join(out)
+
+
+def _selector(one, names):
+    """One selector of drawn element names, classes and ids (renamed) and combinators, or None for anything else."""
+    toks = re.findall(r"([.#]?)([A-Za-z_][\w-]*)|([\s>*+~]+)|(.)", one.strip())
+    if not toks or any(t[3] or (not t[0] and t[1] and t[1].lower() not in DRAWN_TAGS) for t in toks):
+        return None
+    rename = {".": lambda n: "." + names.cls(n), "#": lambda n: "#" + names.id(n), "": lambda n: n}
+    return "".join(t[2] or rename[t[0]](t[1]) for t in toks)
+
+
+def _props(el):
+    """{presentation property: value} of one element, its attributes then its style (which wins), lower case."""
+    out = {_local(k): str(v).strip().lower() for k, v in el.attrib.items() if "}" not in k}
+    for decl in (el.get("style") or "").split(";"):
+        prop, sep, val = decl.partition(":")
+        if sep:
+            out[prop.strip().lower()] = val.strip().lower()
+    return out
+
+
+def _num(v):
+    """The leading number of a value, or None."""
+    m = NUMBER.match(v or "")
+    try:
+        return float(m.group(1)) if m else None
+    except ValueError:
+        return None
+
+
+def _paints(v):
+    """Whether a fill or stroke value draws anything."""
+    return v not in ("none", "transparent") and not re.fullmatch(r"(rgba|hsla)\(.*,\s*0(\.0*)?\s*\)", v or "")
+
+
+def _state(parent, el, scale):
+    """The drawing state an element passes to its children: (hidden, fill drawn, stroke drawn, font size)."""
+    hidden, fill, stroke, size = parent
+    p = _props(el)
+    if p.get("display") == "none" or p.get("visibility") in ("hidden", "collapse") or _num(p.get("opacity")) == 0:
+        hidden = True
+    if "fill" in p:
+        fill = _paints(p["fill"])
+    if _num(p.get("fill-opacity")) == 0:
+        fill = False
+    if "stroke" in p:
+        stroke = _paints(p["stroke"])
+    if _num(p.get("stroke-opacity")) == 0 or _num(p.get("stroke-width")) == 0:
+        stroke = False
+    if "font-size" in p and _num(p["font-size"]) is not None:
+        size = _num(p["font-size"])
+    if size is not None and size < scale / 1000:
+        hidden = True
+    return hidden, fill, stroke, size
+
+
+def _text_drawn(el, state, box):
+    """Whether a text or tspan with this state is drawn where it can be seen."""
+    hidden, fill, stroke, _size = state
+    if hidden or not (fill or stroke):
+        return False
+    x0, y0, w, h = box
+    for key, lo, span in (("x", x0, w), ("y", y0, h)):
+        n = _num(el.get(key))
+        if n is not None and not (lo - 10 * span <= n <= lo + 11 * span):
+            return False
+    return True
+
+
+def _attr(n, v, names):
+    """One kept attribute's value (ids and classes renamed, style declarations filtered), or None when it is left out."""
+    if n == "id":
+        return names.id(v) if re.fullmatch(r"[\w.:-]{1,80}", v) else None
+    if n == "class":
+        return " ".join(names.cls(c) for c in v.split() if re.fullmatch(r"[A-Za-z_][\w-]{0,80}", c)) or None
+    if n == "style":
+        return _declarations(v, names) or None
+    return _value(n, v, names)
+
+
+def _attrs(el, names):
+    """An element's attributes from the allow-list (none in another namespace), written out."""
+    out = []
+    for k, v in el.attrib.items():
+        val = None if "}" in k or _local(k) not in SHAPE_ATTRS else _attr(_local(k), v, names)
+        if val is not None:
+            out.append(f' {k}="{html.escape(val, quote=True)}"')
+    return "".join(out)
+
+
+def _own_text(el, tag, names):
+    """What an element holds as its own text in the rebuilt picture: a style's rules, a text's or tspan's words, nothing else."""
+    if tag == "style":
+        return html.escape(_rules(el.text or "", names), quote=False)
+    return html.escape(el.text or "", quote=False) if tag in ("text", "tspan") else ""
+
+
+def _rebuild(el, names, state, box, scale, inside, out):
+    """Write `el` (and what is under it) from the allow-lists into `out`."""
+    tag = _local(el.tag)
+    ns = el.tag[1:].split("}", 1)[0] if el.tag.startswith("{") else SVG_NS
+    if ns != SVG_NS or tag not in DRAWN_TAGS:
+        return
+    state = _state(state, el, scale)
+    tail = html.escape(el.tail or "", quote=False) if tag == "tspan" else ""     # a tspan's tail is its text's words
+    if tag in ("text", "tspan") and (inside or not _text_drawn(el, state, box)):
+        out.append(tail)
+        return
+    name = el.tag.rsplit("}", 1)[-1] if tag != "a" else "g"
+    out.append(f"<{name}{_attrs(el, names)}>{_own_text(el, tag, names)}")
+    for child in el:
+        _rebuild(child, names, state, box, scale, inside or tag in NOT_DRAWN_INSIDE, out)
+    out.append(f"</{name}>{tail}")
+
+
+def clean_svg(raw):
+    """2.5.1 M2: the SVG logo `raw` (bytes) rebuilt for a client file from an allow-list of drawn shapes, or None when it can't be
+    read. Comments, processing instructions, title, desc, metadata, editor elements and attributes (any namespace but SVG's), links,
+    scripts, pictures, text that isn't drawn (hidden, transparent, of no size, far off the picture, or inside defs, a clip or a mask)
+    and every word in an id or class name are left out; shapes, gradients, styles and drawn text keep their values, so a logo of
+    plain shapes draws the same."""
+    try:
+        text = raw.decode("utf-8")
+    except (UnicodeDecodeError, AttributeError):
+        return None
+    if len(text) > 1_000_000 or re.search(r"<!(?!--)|<\?(?!xml\s)|&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);)", text, re.I):
+        return None
+    try:
+        root = ET.fromstring(text)                  # comments and processing instructions are not kept by the parser
+    except (ET.ParseError, ValueError):
+        return None
+    if _local(root.tag) != "svg":
+        return None
+    vb = [_num(x) for x in re.split(r"[\s,]+", (root.get("viewBox") or "").strip()) if x]
+    if len(vb) == 4 and None not in vb and vb[2] > 0 and vb[3] > 0:
+        box = tuple(vb)
+    else:
+        box = (0.0, 0.0, _num(root.get("width")) or 300.0, _num(root.get("height")) or 150.0)
+    out = []
+    _rebuild(root, _Names(), (False, True, False, None), box, max(box[2], box[3]), False, out)
+    if not out:
+        return None
+    out[0] = out[0].replace("<svg", f'<svg xmlns="{SVG_NS}"', 1)
+    return "".join(out).encode("utf-8")
 
 
 def kind_of(raw):
