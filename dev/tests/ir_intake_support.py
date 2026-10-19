@@ -58,7 +58,7 @@ class IntakeBase(LiveBrowserCase):
 
     # -- helpers
     def row(self, title):
-        return f"document.querySelector('#v-intake-review [data-irm=\"' + D.intake_review.meetings.find(m=>m.src!=='draft'&&m.title===" + json.dumps(title) + ").id + '\"]')"
+        return "document.querySelector('#v-intake-review [data-irm=\"' + D.intake_review.meetings.find(m=>m.src!=='draft'&&m.title===" + json.dumps(title) + ").id + '\"]')"
 
     def sel(self, title, suffix=""):
         mid = self.b.eval("D.intake_review.meetings.find(m=>m.src!=='draft'&&m.title===" + json.dumps(title) + ").id")

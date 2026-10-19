@@ -2466,13 +2466,19 @@ def set_aside_entry(it, today):
     day = str(it.get("day") or "")
     datetime.strptime(day, "%Y-%m-%d")                           # ValueError for a bad day
     kind, reason = str(it.get("kind") or "cleared"), str(it.get("reason") or "")
-    note = " ".join(str(it.get("note") or "").split())[:200]      # one line, at most 200 characters
     if kind not in SET_ASIDE_KINDS or (reason and reason not in NOT_NEEDED_REASONS) or (kind == "later" and reason):
         raise ValueError("not one of the choices")
-    seen = bool(it.get("seen")) and kind == "later"               # #232-A: its transcript was already here when it was set aside
-    extra = {k: v for k, v in (("kind", "" if kind == "cleared" else kind), ("reason", reason), ("note", note), ("seen", seen)) if v}
+    extra = _aside_extra(it, kind, reason)
     return key, {"key": key, "day": day, "start": str(it.get("start") or "")[:5], "title": str(it.get("title") or "")[:200],
                  "cleared": today.isoformat(), **extra}
+
+
+def _aside_extra(it, kind, reason):
+    """The optional fields of an entry: kind (Later), reason, a one-line note of at most 200 characters, and `seen` (#232-A: a
+    Later meeting whose transcript was already here when it was set aside)."""
+    note = " ".join(str(it.get("note") or "").split())[:200]
+    seen = bool(it.get("seen")) and kind == "later"
+    return {k: v for k, v in (("kind", "" if kind == "cleared" else kind), ("reason", reason), ("note", note), ("seen", seen)) if v}
 
 
 SET_ASIDE_EXTRA = ("kind", "reason", "note", "seen")
@@ -2705,6 +2711,16 @@ def _ir_aside_files(files, aside):
     return later, gone
 
 
+def _ir_aside_lists(meetings, files, aside):
+    """(later, not_needed): the meetings and uploaded files set aside, with their reason and note."""
+    keep = ("key", "day", "start", "end", "title", "p", "private")
+    later = [{**{k: m.get(k) for k in keep}, "since": m.get("later_since")} for m in meetings.get("later") or []]
+    not_needed = [{**{k: m.get(k) for k in keep}, "reason": m.get("reason") or "", "note": m.get("note") or ""}
+                  for m in meetings.get("cleared") or []]
+    later_files, gone_files = _ir_aside_files(files, aside)
+    return later + later_files, not_needed + gone_files
+
+
 def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None):
     """Pure: the model from its inputs (unit tested in dev/tests/test_intake_review_model.py).
     {"v": 1, "meetings": [row], "mail": groups, "other": groups, "later": [..], "not_needed": [..], "counts": {..}}
@@ -2721,13 +2737,9 @@ def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=
     out += _ir_drafts(by_mkey, by_path, used, meta, today, stale_after)
     out.sort(key=lambda r: r["start"])
     out.sort(key=lambda r: r["day"], reverse=True)       # newest day first, each day in time order (as Intake); stable sorts
-    keep = ("key", "day", "start", "end", "title", "p", "private")
-    later = [{**{k: m.get(k) for k in keep}, "since": m.get("later_since")} for m in meetings.get("later") or []]
-    not_needed = [{**{k: m.get(k) for k in keep}, "reason": m.get("reason") or "", "note": m.get("note") or ""}
-                  for m in meetings.get("cleared") or []]
-    later_files, gone_files = _ir_aside_files(files, aside)
-    return {"v": 1, "meetings": out, "mail": _ir_split(mail), "other": _ir_split(other), "later": later + later_files,
-            "not_needed": not_needed + gone_files, "counts": _ir_counts(out, queue)}
+    later, not_needed = _ir_aside_lists(meetings, files, aside)
+    return {"v": 1, "meetings": out, "mail": _ir_split(mail), "other": _ir_split(other), "later": later,
+            "not_needed": not_needed, "counts": _ir_counts(out, queue)}
 # ===== end #232 =====
 
 

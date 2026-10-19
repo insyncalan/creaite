@@ -10,10 +10,15 @@ Run: python3 dev/tests/test_intake_review_intake.py   (needs Google Chrome; skip
 import json
 import sys
 import unittest
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+import build_dashboard  # noqa: E402
+from clear_day_support import ClearData, MONDAY  # noqa: E402
 from ir_intake_support import DAY, IntakeBase  # noqa: E402
+from test_meetings import page_data  # noqa: E402
 
 class IntakeSide(IntakeBase):
     shared_server = True
@@ -165,6 +170,42 @@ class IntakeSide(IntakeBase):
         self.assertIn("08:30", text)
         for hidden in ("Organiser", "Where", "Teams", "Example Programme"):
             self.assertNotIn(hidden, text)
+
+
+class IntakeModelA(ClearData, unittest.TestCase):
+    """The server side of the Intake actions (no browser): Later, Not needed and uploads, on the pinned Monday."""
+    NOW = MONDAY
+
+    def test_later_with_the_transcript_already_here_stays_until_restored(self):
+        tx = {"ev-1": {"status": "available", "checked": f"{self.mon} 07:00"}}
+        (self.v.root / "system/staging/transcripts.json").write_text(json.dumps({"version": 1, "checked": tx}))
+        self.py(f"b.clear_meetings([{{'key':'ev-1','day':'{self.mon}','start':'09:00','title':'ABC Steering','kind':'later','seen':True}}])")
+        self.v.run(script="build_dashboard.py")
+        ir = page_data(self.v)["intake_review"]
+        self.assertIn("ABC Steering", [x["title"] for x in ir["later"]])
+        self.assertNotIn("ev-1", [m["key"] for m in ir["meetings"]])
+        self.assertTrue(self.cleared_file()["cleared"][0]["seen"])
+        self.py(f"b.clear_meetings([{{'key':'ev-1','day':'{self.mon}','start':'09:00','title':'ABC Steering','kind':'later'}}])")   # not seen: it comes back
+        self.v.run(script="build_dashboard.py")
+        row = next(m for m in page_data(self.v)["intake_review"]["meetings"] if m["key"] == "ev-1")
+        self.assertTrue(row["later_back"])
+
+    def test_an_uploaded_file_set_aside_keeps_its_reason_and_leaves_the_rows(self):
+        files = [{"name": "notes.vtt", "path": "inbox/notes.vtt", "state": "new", "event": None, "p": None, "date": "2026-10-05", "ext": "vtt"}]
+        m = build_dashboard.intake_review_model({}, files, [], {}, date(2026, 10, 5), 14,
+                                                [{"key": "inbox/notes.vtt", "day": "2026-10-05", "reason": "No decisions", "note": "n"}])
+        self.assertEqual(m["meetings"], [])
+        self.assertEqual([(x["title"], x["reason"], x["note"]) for x in m["not_needed"]], [("notes.vtt", "No decisions", "n")])
+        m = build_dashboard.intake_review_model({}, files, [], {}, date(2026, 10, 5), 14, [{"key": "inbox/notes.vtt", "day": "2026-10-05", "kind": "later"}])
+        self.assertEqual(([x["title"] for x in m["later"]], m["meetings"]), (["notes.vtt"], []))
+        m = build_dashboard.intake_review_model({}, files, [], {}, date(2026, 10, 5), 14, [])
+        self.assertEqual([r["title"] for r in m["meetings"]], ["notes.vtt"])                    # and Restore brings it back
+
+    def test_approved_is_this_week_only(self):
+        (self.v.root / "system/processed.txt").write_text(f"{self.mon} | calendar:ev-1 | projects/x | 1\n2026-09-28 | calendar:ev-0 | projects/x | 1\n")
+        self.v.run(script="build_dashboard.py")
+        ir = page_data(self.v)["intake_review"]
+        self.assertEqual([m["title"] for m in ir["meetings"] if m["stage"] == "approved"], ["ABC Steering"])   # last Sunday is before the window
 
 
 if __name__ == "__main__":

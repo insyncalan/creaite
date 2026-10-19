@@ -27,7 +27,7 @@ export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) =>
 /** The calendar import row (D.meetings.rows) a model row came from. @param {any} m */
 const calOf = m => (m.src === "calendar" ? ((D.meetings && D.meetings.rows) || []).find((/** @type {any} */ x) => x.key === m.key) || null : null);
 const rowOf = (/** @type {string} */ id) => irModel().meetings.find((/** @type {any} */ x) => x.id === id) || null;
-const when = (/** @type {any} */ m) => (m.start ? `${fd(m.day)} at ${m.start}` : fd(m.day));
+const whenOf = (/** @type {any} */ m) => (m.start ? `${fd(m.day)} at ${m.start}` : fd(m.day));
 
 /** Process one meeting or file. The row shows progress; a reason it could not be done is its note.
     @param {any} m @returns {Promise<boolean>} whether a draft came back */
@@ -55,7 +55,7 @@ export async function irProcess(m) {
       }
     }
     shared.RUNLABEL = label;
-    try { await askLive(`process ${file}`, `Process “${m.title}” (${when(m)}) into draft minutes and proposed items`); } catch (e) { /* checked below */ }
+    try { await askLive(`process ${file}`, `Process “${m.title}” (${whenOf(m)}) into draft minutes and proposed items`); } catch (e) { /* checked below */ }
     await reloadData();
     const after = rowOf(m.id);
     const done = !!after && after.stage !== "arrived";

@@ -33580,11 +33580,11 @@ ${s5}`;
       else addHTML($("#pkScroll"), "afterbegin", html`<div class="pk-alert" id="pkAlert" role="group" aria-label="Made from a message"></div>`);
       el2 = $("#pkAlert");
     }
-    const cur = alertTypeOf(k5, x5), why = alertDraftWhy(al2), when3 = vipWhen({ sent: al2.sent }), alOpen = al2.link ? linkAnchor(al2.link, "Open the message", "hlink") : null, key2 = [al2.id, cur, why].join("|");
+    const cur = alertTypeOf(k5, x5), why = alertDraftWhy(al2), when2 = vipWhen({ sent: al2.sent }), alOpen = al2.link ? linkAnchor(al2.link, "Open the message", "hlink") : null, key2 = [al2.id, cur, why].join("|");
     el2.hidden = false;
     if (el2.dataset.key === key2) return;
     el2.dataset.key = key2;
-    putHTML(el2, html`<div class="pk-alert-from">From ${al2.who}’s ${ALERTWORD[al2.kind] || "message"}${when3 ? `, ${when3}` : ""}${alOpen ? html` · ${raw(alOpen)}` : ""}</div>
+    putHTML(el2, html`<div class="pk-alert-from">From ${al2.who}’s ${ALERTWORD[al2.kind] || "message"}${when2 ? `, ${when2}` : ""}${alOpen ? html` · ${raw(alOpen)}` : ""}</div>
     <div class="pk-alert-row"><span class="pk-alert-types" role="group" aria-label="Make it">${ALERTTYPES.map(([t47, w6]) => html`<button type="button" class="mini" data-alerttype="${t47}" aria-pressed="${t47 === cur ? "true" : "false"}">${w6}</button>`)}</span>
     <button type="button" class="drbtn" data-alertdraft="1" aria-label="Draft from the message" data-tip="${why || "Reads the message (read only) and suggests a sharper title and any date it states. Nothing is saved until you save"}"${why ? raw(' aria-disabled="true"') : ""}>${raw(ic("spark"))}<span>Draft from the message</span></button>
     <span class="pk-alert-st" role="status" id="pkAlertSt"></span><span class="sp"></span>
@@ -40700,9 +40700,9 @@ ${s5}`;
   function Title({ m: m5, day, dow: dow2, isToday, live, acts: acts2 }) {
     const p6 = m5.prep, pk2 = usePeek(!m5.private && !!p6);
     if (m5.private || !p6) return /* @__PURE__ */ u2(S2, { children: m5.title ?? "" });
-    const id2 = `dmpop-${day}-${m5.start}`.replace(/[^\w-]/g, ""), when3 = isToday ? "Today" : dow2;
+    const id2 = `dmpop-${day}-${m5.start}`.replace(/[^\w-]/g, ""), when2 = isToday ? "Today" : dow2;
     const bits = [
-      `${when3} ${m5.start}`,
+      `${when2} ${m5.start}`,
       m5.attendees ? `${m5.attendees} attending` : "",
       !m5.confidential && m5.p ? m5.p === "_portfolio" ? "Portfolio" : acts2.name(m5.p) : "",
       "Internal"
@@ -41134,15 +41134,15 @@ ${s5}`;
     };
   }
   function revGroupTitle(file, items2) {
-    const w6 = file.match(/^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/), when3 = w6 ? `${longDay(w6[1])}, ${w6[2]}:${w6[3]}` : esc(file), d5 = items2.find((r4) => r4.kind === "draft");
+    const w6 = file.match(/^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/), when2 = w6 ? `${longDay(w6[1])}, ${w6[2]}:${w6[3]}` : esc(file), d5 = items2.find((r4) => r4.kind === "draft");
     if (d5) {
       const nm3 = esc(d5.rec.t.replace(/^[^:]*:\s*/, ""));
       return d5.ref === "meeting" ? `Review the ${nm3} minutes` : `Review the ${esc(d5.rec.t.split(":")[0].toLowerCase())}: ${nm3}`;
     }
-    if (/-sweep(-\d+)?\.json$/.test(file)) return `Review the sweep of ${when3}`;
+    if (/-sweep(-\d+)?\.json$/.test(file)) return `Review the sweep of ${when2}`;
     if (/-(dashboard|edit)(-\d+)?\.json$/.test(file)) return "Review your pending edits";
     if (/-excel(-\d+)?\.json$/.test(file)) return "Review the Excel import";
-    return `Review the proposals from ${when3}`;
+    return `Review the proposals from ${when2}`;
   }
   function attentionItems() {
     const out = (
@@ -41241,8 +41241,8 @@ ${s5}`;
     renderPromises();
     const seen = /* @__PURE__ */ new Set(), done = shared.ACT.filter((a5) => a5.at > LASTVISIT && !a5.undone && (a5.tbl === "actions" || a5.tbl === "raid") && /^status: .*→ Closed$/i.test(a5.change) && !seen.has(a5.id) && seen.add(a5.id));
     const rc2 = capped(done.map((a5, i5) => {
-      const x5 = (a5.tbl === "actions" ? A4 : R3).find((y5) => y5.id === a5.id), when3 = a5.at.slice(0, 10) === TODAY ? `at ${a5.at.slice(11)} today` : `on ${longDay(a5.at.slice(0, 10))}`;
-      return tl2(i5 + 1, tLink(html`data-open="${a5.tbl}:${a5.id}"`, html`${a5.item || a5.id}`), html`${x5 && x5.p ? html`${plur(1, a5.tbl === "actions" ? "action" : (x5.type || "risk").toLowerCase())} on ${raw(projLink(x5.p))}, ` : ""}closed ${when3} — ${a5.by.replace(/^You, /, "you, ")}.`);
+      const x5 = (a5.tbl === "actions" ? A4 : R3).find((y5) => y5.id === a5.id), when2 = a5.at.slice(0, 10) === TODAY ? `at ${a5.at.slice(11)} today` : `on ${longDay(a5.at.slice(0, 10))}`;
+      return tl2(i5 + 1, tLink(html`data-open="${a5.tbl}:${a5.id}"`, html`${a5.item || a5.id}`), html`${x5 && x5.p ? html`${plur(1, a5.tbl === "actions" ? "action" : (x5.type || "risk").toLowerCase())} on ${raw(projLink(x5.p))}, ` : ""}closed ${when2} — ${a5.by.replace(/^You, /, "you, ")}.`);
     }), 5, "res");
     $("#chgTitle").textContent = `${done.length} since ${longDate(LASTVISIT.slice(0, 10))}`;
     putHTML($("#chgList"), rc2.html ? raw(rc2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0, 10))}.</span></div></li>`);
@@ -46276,12 +46276,12 @@ ${s5}`;
         openChat();
         chat = true;
       }
-      const when3 = `${fd(m5.day)} at ${m5.start}`;
+      const when2 = `${fd(m5.day)} at ${m5.start}`;
       let now = m5;
       if (!m5.loaded) {
         MRUN[m5.id] = "loading";
         renderMeetings();
-        runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when3})`}`));
+        runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when2})`}`));
         shared.RUNLABEL = PL;
         try {
           await jobLive("/api/transcripts/load", { id: m5.id });
@@ -46298,11 +46298,11 @@ ${s5}`;
       }
       MRUN[m5.id] = "processing";
       renderMeetings();
-      addEl("msg u", html`${`Process the meeting “${m5.title}” (${when3})`}`);
+      addEl("msg u", html`${`Process the meeting “${m5.title}” (${when2})`}`);
       const before = $$("#chLog .msg.a").length;
       shared.RUNLABEL = PL;
       try {
-        await askLive(`process ${now.loaded}`, `Process “${m5.title}” (${when3}) into draft minutes and proposed items`);
+        await askLive(`process ${now.loaded}`, `Process “${m5.title}” (${when2}) into draft minutes and proposed items`);
       } catch (e4) {
       }
       await reloadData();
@@ -46446,10 +46446,10 @@ ${s5}`;
     MSEL.clear();
     openChat();
     for (const m5 of L3) {
-      const when3 = `${fd(m5.day)} at ${m5.start}`;
+      const when2 = `${fd(m5.day)} at ${m5.start}`;
       MRUN[m5.id] = "loading";
       renderMeetings();
-      runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when3})`}`));
+      runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when2})`}`));
       try {
         await jobLive("/api/transcripts/load", { id: m5.id });
       } catch (e4) {
@@ -49929,8 +49929,8 @@ ${pre}**Current state title:** ${title}`);
   function deFollowup(o5) {
     const e4 = esc, today = o5.today, items2 = dePicked(o5), acts2 = items2.filter((i5) => i5.k === "actions"), decs = items2.filter((i5) => i5.k === "decisions"), codes = [...new Set(items2.map((i5) => i5.p).concat(o5.codes || []))].sort();
     const att = o5.attendees || [], first = att.length === 1 ? String(att[0].name).split(/\s+/)[0] : "all";
-    const when3 = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
-    const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when3}. Here is a short summary, the decisions we made and the actions we agreed.`;
+    const when2 = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
+    const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when2}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask2 = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
     const lines2 = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
@@ -52219,8 +52219,8 @@ ${pre}**Current state title:** ${title}`);
   function bootOwnerCombo() {
   }
   var CMDENTER = [];
-  function onCmdEnter(name, when3, save2) {
-    CMDENTER.push({ name, when: when3, save: save2 });
+  function onCmdEnter(name, when2, save2) {
+    CMDENTER.push({ name, when: when2, save: save2 });
   }
   var cmdEnterPicker = () => !!document.querySelector(".combo.open,#mvCal:not([hidden]),#mvPop:not([hidden]),.cal:not([hidden]):not(:empty)");
   function bootCmdEnter() {
@@ -56843,16 +56843,16 @@ ${d5.text}`);
     if (!shared.CUR || shared.CUR.mode !== "new" || shared.CUR.k !== k5) return;
     const key2 = pkNewKey(), d5 = pdAll()[key2];
     if (!d5 || !d5.fields) return;
-    const when3 = pdWhen(d5.at), w6 = pkNewWord(k5);
+    const when2 = pdWhen(d5.at), w6 = pkNewWord(k5);
     if (Date.now() - d5.at > PDAGE) {
       pdDrop(key2);
       PKN.offer = null;
-      pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when3} was dropped: it was more than 7 days old.</span><button type="button" class="btn" data-pknd="ok">OK</button>`);
+      pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when2} was dropped: it was more than 7 days old.</span><button type="button" class="btn" data-pknd="ok">OK</button>`);
       return;
     }
     const t47 = d5.fields.t || "";
     PKN.offer = { key: key2 };
-    pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when3}${t47 ? `, “${esc(pkShort(t47, 50))}”` : ""}, kept in this browser.</span><button type="button" class="btn primary" data-pknd="restore">Restore</button><button type="button" class="btn" data-pknd="discard">Discard</button>`);
+    pkNewOffer(`<span class="t">An unsaved new ${esc(w6)} from ${when2}${t47 ? `, “${esc(pkShort(t47, 50))}”` : ""}, kept in this browser.</span><button type="button" class="btn primary" data-pknd="restore">Restore</button><button type="button" class="btn" data-pknd="discard">Discard</button>`);
   }
   var NODRAFT_MSG = "No Word draft was made for these minutes: Reject them and process the meeting again";
   function openProposal(n4) {
@@ -60020,13 +60020,13 @@ ${d5.text}`);
       shared.PDOFFER = null;
       return;
     }
-    const what = shared.CUR.mode === "record" ? shared.CUR.id : "this new item", when3 = pdWhen(d5.at), n4 = Object.keys(d5.fields).length;
+    const what = shared.CUR.mode === "record" ? shared.CUR.id : "this new item", when2 = pdWhen(d5.at), n4 = Object.keys(d5.fields).length;
     const why = Date.now() - d5.at > PDAGE ? "they are more than 7 days old" : shared.CUR.mode === "record" && d5.base !== pdStamp() ? `${shared.CUR.id} has changed since` : "";
     let html2;
     if (why) {
       pdDrop(key2);
-      html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when3} were dropped: ${esc(why)}.</span><button type="button" class="btn" data-pd="ok">OK</button>`;
-    } else html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when3} (${n4} field${n4 === 1 ? "" : "s"}), kept in this browser.</span><button type="button" class="btn primary" data-pd="restore">Restore unsaved changes</button><button type="button" class="btn" data-pd="discard">Discard</button>`;
+      html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when2} were dropped: ${esc(why)}.</span><button type="button" class="btn" data-pd="ok">OK</button>`;
+    } else html2 = `<span class="t">Unsaved changes to ${esc(what)} from ${when2} (${n4} field${n4 === 1 ? "" : "s"}), kept in this browser.</span><button type="button" class="btn primary" data-pd="restore">Restore unsaved changes</button><button type="button" class="btn" data-pd="discard">Discard</button>`;
     shared.PDOFFER = { key: key2, html: html2, note: !!why };
     pdBar(html2);
   }
@@ -64640,11 +64640,11 @@ ${d5.text}`);
       return one(m5[1], (t47) => t47.k === "milestones" ? { ask: "A milestone's state is set in its editor" } : pkStatuses(t47.k).includes(st2) ? t47.k === "decisions" && st2 !== "Pending" ? { ask: "Record or withdraw a decision from its peek or the right-click menu" } : { verb: "status", ...t47, patch: { st: st2 }, label: "Status" } : { ask: `${st2} isn't a status for this item: ${pkStatuses(t47.k).join(", ")}` }, { ms: false });
     }
     if ((m5 = s5.match(/^(?:move|push|pull|bring|reschedule|delay)\s+(.+?)\s+((?:to|by|until|on)\s+.+|[+-]\s*\d+\s*[a-z]*)$/i)) || (m5 = s5.match(/^(?:set\s+)?(.+?)\s+(?:due|due date|needed by|forecast)\s+(?:to\s+|on\s+|by\s+)?(.+)$/i))) {
-      const what = m5[1].replace(/\s+(?:due|due date)$/i, ""), when3 = m5[2];
+      const what = m5[1].replace(/\s+(?:due|due date)$/i, ""), when2 = m5[2];
       return one(what, (t47) => {
         const cur = t47.k === "milestones" ? ckMs(t47.id).due : REC(t47.k, t47.id).due;
-        const iso2 = ckDate(when3, cur || TODAY);
-        if (!iso2) return { ask: `“${when3}” isn't a date creaite knows. ${DATE_HELP}` };
+        const iso2 = ckDate(when2, cur || TODAY);
+        if (!iso2) return { ask: `“${when2}” isn't a date creaite knows. ${DATE_HELP}` };
         if (t47.k === "milestones") return { verb: "date", ...t47, patch: { fc: iso2 }, label: "Forecast" };
         if (t47.k === "decisions" && REC(t47.k, t47.id).st !== "Pending") return { ask: "Only a pending decision has a needed-by date" };
         return { verb: "date", ...t47, patch: { due: iso2 }, label: t47.k === "decisions" ? "Needed by" : "Due date" };
@@ -64872,7 +64872,7 @@ ${d5.text}`);
   } };
 
   // components/review/RejectsList.jsx
-  function RejectsList({ onReason, onApprove, onUndo, name, when: when3 }) {
+  function RejectsList({ onReason, onApprove, onUndo, name, when: when2 }) {
     const { state, items: items2, message } = rjRecent.value;
     if (state === "idle") return null;
     if (state === "off") return /* @__PURE__ */ u2("p", { class: "sub", id: "rjListMsg", children: "What you rejected needs the live server." });
@@ -64884,7 +64884,7 @@ ${d5.text}`);
       const chip = `Rejected · ${reason}${r4.duplicate_of ? ` (${r4.duplicate_of})` : ""}`;
       return /* @__PURE__ */ u2("li", { "data-rjkey": r4.key, children: [
         /* @__PURE__ */ u2("span", { class: "rjt", title: text, children: text.length > 90 ? text.slice(0, 89) + "…" : text }),
-        /* @__PURE__ */ u2("span", { class: "sub rjm", children: [r4.project ? name(r4.project) : "", r4.kind || "", r4.at ? when3(r4.at) : ""].filter(Boolean).join(" · ") }),
+        /* @__PURE__ */ u2("span", { class: "sub rjm", children: [r4.project ? name(r4.project) : "", r4.kind || "", r4.at ? when2(r4.at) : ""].filter(Boolean).join(" · ") }),
         /* @__PURE__ */ u2("span", { class: "rjacts", children: [
           /* @__PURE__ */ u2(
             "button",
@@ -71148,7 +71148,7 @@ ${d5.text}`);
   var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irBusy.value.includes(m5.id));
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
   var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
-  var when2 = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
+  var whenOf = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
   async function irProcess(m5) {
     if (!irCanProcess(m5)) return false;
     if (!viaServer()) {
@@ -71196,7 +71196,7 @@ ${d5.text}`);
       }
       shared.RUNLABEL = label;
       try {
-        await askLive(`process ${file}`, `Process “${m5.title}” (${when2(m5)}) into draft minutes and proposed items`);
+        await askLive(`process ${file}`, `Process “${m5.title}” (${whenOf(m5)}) into draft minutes and proposed items`);
       } catch (e4) {
       }
       await reloadData();
