@@ -24,9 +24,10 @@ import { draftBtn } from "./drafts.js";
 import { kb } from "./intake.js";
 import { decLate, decLateWords, withdrawDecision } from "./meetings.js";
 import { ceListPlace } from "./milestones.js";
-import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCommit, markStagedRows, pkFollowable, pkKeepFocus, pkSetStatus, REC, validate } from "./panel.js";
-import { closePanel, wflag } from "./projects.js";
-import { CHK, isMin, RHL, rvBar, rvBulkOK, RVF, RVFIELDS, rvSyncChk } from "./review.js";
+import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCid, pkCommit, markStagedRows, pkFollowable, pkKeepFocus, pkSetStatus, REC, validate } from "./panel.js";
+import { closePanel, pkOn, wflag } from "./projects.js";
+import { CHK, cxCursor, cxShow, cxWork, cxWorkMany, isMin, RHL, rvBar, rvBulkOK, RVF, RVFIELDS, rvSyncChk } from "./review.js";
+import { contextMenuOpen, openContextMenu } from "./components/review/ContextMenu.jsx";
 import { dueSort, isHiddenPerson, nm, ownerFinal, PERS, personLink, PSORTS, renderPerson, row, xcueAll } from "./settings.js";
 import { plur } from "./today.js";
 /* ======================= Work ======================= */
@@ -541,10 +542,11 @@ export const dispOpen=()=>$("#dispMenu").classList.contains("on");
 export const SORTOPTS=t=>t==="decisions"?[["","Default order"],["due","Needed by"],["date","Date"],["st","Status"],["by","Made by"],["t","Title"],["upd","Last updated"],["id","ID"]]
   :[["","Default order"],["due","Due date"],["pr","Priority"],["st","Status"],["o","Owner"],["t","Title"],["upd","Last updated"],["raised","Raised"],["id","ID"]];
 /* the key-hint line for each layout, built from the controls that exist (BL-114, BL-122, BL-123, BL-128) */
-/** @type {[string[] | "", string, string][]} the keys (or none), what they do, and the layout they belong to */
-export const HINTS=[[["J","K"],"move","list"],[["J","K"],"step through the cards","board"],[["Space"],"select","both"],["","click a value to change it","list"],[["Enter"],"or the ID opens","both"],
+/** @type {[string[] | "", string, string, boolean?][]} the keys (or none), what they do, the layout they belong to, and whether they change an item (not on All items) */
+export const HINTS=[[["↑","↓","J","K"],"move","list"],[["J","K"],"step through the cards","board"],[["Space"],"select","both"],["","click a value to change it","list"],[["Enter"],"or the ID opens","both"],
+  [["→"],"opens, ← closes (or the menu)","both"],[["S","O","P","T"],"status, owner, priority, due","both",true],[["C"],"close","both",true],   /* #241 B */
   ["","drag a card, or use its <b>Move to…</b> menu, to change it","board"],[["D"],"display","both"],[["F"],"filters","both"],[["Esc"],"clear","both"],["","click a heading to sort","list"],["","drag a column edge to resize","list"]];
-export function workHint(lay){ return HINTS.filter(h=>h[2]==="both"||h[2]===lay).map(([k,t])=>(k?k.map(x=>`<span class="kbd">${x}</span>`).join(" ")+" ":"")+t).join(" · "); }
+export function workHint(lay){ return HINTS.filter(h=>(h[2]==="both"||h[2]===lay)&&!(h[3]&&shared.WT==="all")).map(([k,t])=>(k?k.map(x=>`<span class="kbd">${x}</span>`).join(" ")+" ":"")+t).join(" · "); }
 export function drawDisp(){ const m=$("#dispMenu"), t=shared.WT, bd=layoutOf(t)==="board", s=SORT[t], cur=s?(s.col==="_def"?"":s.col):"", opts=SORTOPTS(t), focusKey=document.activeElement&&m.contains(document.activeElement)?(document.activeElement.id||document.activeElement.dataset.mv+"|"+document.activeElement.dataset.d):null;
   const gopts=bd?groupsOf(t):[["none","None"],...groupsOf(t)], gcur=bd?groupOf(t):listGroupOf(t), sub=subOf(t,bd?"board":"list");   /* BL-129: the List groups too */
   putHTML(m,html`<div><h3><label for="wgrp">${bd?"Group by (columns)":"Group by"}</label></h3><div class="dline"><select id="wgrp">${gopts.map(g=>html`<option value="${g[0]}" ${g[0]===gcur?"selected":""}>${g[1]}</option>`)}</select></div></div>
@@ -914,7 +916,8 @@ export function hlRowClick(e,k,el){ const follow=pkFollowable(e), was=document.a
     pkKeepFocus(was,()=>openRecord(k,id)); return; }
 export function hlRowOpen(e,k,el,field=true){ if(e.target.closest("a:not(.rowid),button,input,select,textarea,label,[data-proj],[data-person],[role=link]")) return; const id=el.dataset.row, td=e.target.closest("td[data-f]");
   hlOnly(k,id); openRecord(k,id,field&&td?td.dataset.f:undefined); }
-export function hlKey(e){ if(e.shiftKey&&!/^[JK]$/.test(e.key)||e.altKey) return false;
+export function hlKey(e){ if(shared.VIEW==="work"&&wkKey(e)) return true;   /* #241 B: arrows, S O P T C */
+  if(e.shiftKey&&!/^[JK]$/.test(e.key)||e.altKey) return false;
   const a=document.activeElement; if(a&&a!==document.body&&/^(A|BUTTON|SUMMARY)$/.test(a.tagName)&&(e.key==="Enter"||e.key===" ")) return false;
   const order=hlOrder(); if(!order.length) return false; const i=order.findIndex(o=>o.id===(shared.HLC??shared.SEL)), key=e.key.toLowerCase();
   const onBoard=layoutOf(shared.WT)==="board"&&shared.VIEW==="work";
@@ -925,6 +928,45 @@ export function hlKey(e){ if(e.shiftKey&&!/^[JK]$/.test(e.key)||e.altKey) return
   if(e.key===" "&&i>=0&&!onBoard){ e.preventDefault(); hlToggle(order[i].k,order[i].id); return true; }
   if(e.key==="Enter"&&i>=0&&!(shared.CUR&&$("#panel").classList.contains("on"))){ e.preventDefault(); const o=order[i]; hlOnly(o.k,o.id); openRecord(o.k,o.id); return true; }   /* BL-176: E retired with the Edit button */
   return false; }
+/* ===== #241 B (Work items v2) ===== the keyboard on the cursor row. ↑ and ↓ move as J and K do (the peek follows when open);
+   → or Enter opens the peek; ← closes it, or opens the row's menu when no peek is open. S, O, P and T change the status, owner,
+   priority and due date: the cell's own editor in the List, the peek's own picker while the peek shows the row, the menu's list on
+   the Board or for a hidden column, and the bulk change (the menu for all of them) when two or more are selected. C closes, with
+   Undo. The All items tab is read-only: its rows move and open only. */
+export const WKF={s:"st",o:"o",p:"pr",t:"due"};
+const WKSKIP="[role=tab],[role=tablist],[role=separator],[role=menu],[role=menuitem],[role=listbox],[role=option],[role=slider],[role=switch],dialog";
+export function wkArrowOK(e){ if(e.defaultPrevented||contextMenuOpen()||document.querySelector("dialog[open]")) return false; const a=document.activeElement;
+  return !a||a===document.body||!(a.closest&&a.closest(WKSKIP)); }
+export function wkCursor(){ const order=hlOrder(), id=shared.HLC??shared.SEL, o=order.find(x=>x.id===id); return o||null; }
+export function wkKey(e){ if(e.metaKey||e.ctrlKey||e.altKey) return false; const k=e.key;
+  if(k==="ArrowDown"||k==="ArrowUp") return wkArrowOK(e)&&hlKey({key:k==="ArrowDown"?(e.shiftKey?"J":"j"):(e.shiftKey?"K":"k"),shiftKey:e.shiftKey,altKey:false,preventDefault:()=>e.preventDefault()});
+  if(k==="ArrowRight"||k==="ArrowLeft"){ if(e.shiftKey||!wkArrowOK(e)) return false; return k==="ArrowRight"?wkOpen(e):wkLeft(e); }
+  if(e.shiftKey||shared.WT==="all") return false; const c=k.toLowerCase();
+  if(WKF[c]){ const o=wkCursor(); if(!o) return false; e.preventDefault(); wkPropKey(WKF[c],o); return true; }
+  if(c==="c"){ const o=wkCursor(); if(!o) return false; e.preventDefault(); wkClose(o); return true; }
+  return false; }
+export function wkOpen(e){ const o=wkCursor(); if(!o||pkOn()) return false; e.preventDefault(); hlOnly(o.k,o.id); openRecord(o.k,o.id); return true; }
+export function wkLeft(e){ if(pkOn()){ e.preventDefault(); closePanel(); return true; } const c=cxCursor(); if(!c) return false;
+  e.preventDefault(); const r=c.el.getBoundingClientRect(); cxShow(c,r.left+Math.min(48,r.width/3),r.top+Math.min(r.height,28)); return true; }
+/* the menu entry for a field: its label in cxWork's and cxWorkMany's lists */
+export const wkMenuLabel=(f,k)=>f==="st"?"Status":f==="o"?(k==="decisions"?"Decision maker":"Owner"):f==="pr"?(k==="raid"?"Impact":"Priority"):k==="decisions"?"Needed by":"Due";
+export function wkPropKey(f,o){ const many=HL.size>=2&&HL.has(o.id), k=o.k;
+  if(f==="pr"&&k==="decisions"){ snack("A decision has no priority"); return; }
+  if(!many&&pkOn()&&shared.CUR&&shared.CUR.mode==="record"&&pkCid()===o.id){ const pf=f==="o"&&k==="decisions"?"by":f==="pr"&&k==="raid"?"imp":f==="due"&&k==="decisions"&&REC(k,o.id).st==="Made"?"date":f;
+    const chip=$(`#panel [data-pkp="${pf}"]`); if(chip){ chip.click(); return; } }
+  const cf=f==="o"&&k==="decisions"?"by":f==="pr"&&k==="raid"?"imp":f, tr=!many&&layoutOf(shared.WT)!=="board"?$$("#workTbl tr[data-row]").find(r=>r.dataset.row===o.id):null, td=tr&&tr.querySelector(`td[data-f="${cf}"]`);
+  if(td&&ceEditable(k,REC(k,o.id),cf)){ ceOpen(td); return; }
+  const L=many?cxWorkMany([...HL.keys()].map(id=>[HL.get(id),id])):cxWork(k,o.id), it=L.find(x=>x.label===wkMenuLabel(f,k)&&x.sub);
+  if(!it){ snack("That can't be changed here"); return; } if(it.disabled){ snack(it.hint||`${it.label} can't be changed now`); return; }
+  const el=$$("#workTbl tr[data-row],#workBoard .bcard[data-row]").find(r=>r.dataset.row===o.id), r=el?el.getBoundingClientRect():{left:200,top:200,width:0,height:0};
+  openContextMenu(it.sub(),r.left+Math.min(48,r.width/3),r.top+Math.min(r.height,28),{label:many?`${it.label} of ${HL.size} items`:`${it.label} of ${o.id}`,from:el||undefined}); }
+export async function wkClose(o){ const k=o.k;
+  if(k==="decisions"){ snack("A decision is made or withdrawn, not closed: press S for its status"); return; }
+  if(HL.size>=2&&HL.has(o.id)){ await batchMove(k,[...HL.keys()],{st:"Closed"},"Closed {n}"); return; }
+  const x=REC(k,o.id); if(!x) return; if(!OPENST(x.st)){ snack(`${o.id} is already ${x.st.toLowerCase()}`); return; }
+  if(pkOn()&&shared.CUR&&shared.CUR.mode==="record"&&pkCid()===o.id){ pkSetStatus(k,o.id,"Closed"); return; }
+  await boardMove(k,o.id,{st:"Closed"},`${o.id} closed: ${x.t.length>60?x.t.slice(0,57)+"…":x.t}`); }
+/* ===== end #241 B (keys) ===== */
 /* Review (BL-122): the same rules over the rows of #reviewBody. A highlighted row that may be ticked (not individual-approval) is ticked too. */
 export const RVTICK=new Set();   /* BL-263: the rows whose tick was drawn */
 export function rvPaint(){ const paint=()=>{ $$("#reviewBody tr[data-n]").forEach(tr=>{ const n=+tr.dataset.n, on=RHL.has(n), r=REV.find(x=>x.n===n); tr.classList.toggle("hl",on); tr.setAttribute("aria-selected",String(on));

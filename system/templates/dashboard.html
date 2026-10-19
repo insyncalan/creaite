@@ -4813,6 +4813,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     WICO: () => WICO,
     WINIT: () => WINIT,
     WK: () => WK,
+    WKF: () => WKF,
     WKNAME: () => WKNAME,
     WKRVF: () => WKRVF,
     WLAY: () => WLAY,
@@ -7013,15 +7014,23 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     withdrawDecision: () => withdrawDecision,
     within: () => within,
     withoutSection: () => withoutSection,
+    wkArrowOK: () => wkArrowOK,
     wkAsk: () => wkAsk,
     wkClear: () => wkClear,
+    wkClose: () => wkClose,
+    wkCursor: () => wkCursor,
     wkDays: () => wkDays,
     wkDecorate: () => wkDecorate,
     wkDow: () => wkDow,
     wkField: () => wkField,
+    wkKey: () => wkKey,
+    wkLeft: () => wkLeft,
     wkLong: () => wkLong,
     wkMark: () => wkMark,
     wkMarksHtml: () => wkMarksHtml,
+    wkMenuLabel: () => wkMenuLabel,
+    wkOpen: () => wkOpen,
+    wkPropKey: () => wkPropKey,
     workAct: () => workAct,
     workActs: () => workActs,
     workAnnounce: () => workAnnounce,
@@ -37258,6 +37267,305 @@ ${s5}`;
     } else if (shared.VIEW === "cockpit" && shared.COCK) renderCockpit(shared.COCK);
   }
 
+  // components/review/ContextMenu.jsx
+  var LV = (
+    /** @type {CxLevel[]} */
+    []
+  );
+  var FROM = (
+    /** @type {Element | null} */
+    null
+  );
+  var OWNER = (
+    /** @type {HTMLElement | null} */
+    null
+  );
+  var HOST = (
+    /** @type {HTMLDivElement | null} */
+    null
+  );
+  var SEQ = 0;
+  var draw = () => {
+    if (HOST) R(/* @__PURE__ */ u2(ContextMenus, {}), HOST);
+  };
+  var shown = (items2, q5) => {
+    const t47 = q5.trim().toLowerCase();
+    return items2.filter((it2) => !t47 || it2.head || it2.sep || (it2.label || "").toLowerCase().includes(t47));
+  };
+  function closeFrom(i5) {
+    if (LV.length > i5) {
+      LV = LV.slice(0, i5);
+      draw();
+    }
+  }
+  function closeContextMenu(ret = false) {
+    if (!LV.length) return;
+    LV = [];
+    draw();
+    const f5 = FROM, o5 = OWNER;
+    FROM = null;
+    OWNER = null;
+    if (o5 && o5.hasAttribute("aria-haspopup")) o5.setAttribute("aria-expanded", "false");
+    if (ret && f5 && f5.isConnected) f5.focus({ preventScroll: true });
+  }
+  function contextMenuOpen(anchor) {
+    return !!LV.length && (anchor === void 0 || OWNER === anchor);
+  }
+  var LISTENING = false;
+  function listen() {
+    if (LISTENING) return;
+    LISTENING = true;
+    addEventListener("resize", () => closeContextMenu(false));
+    addEventListener("blur", () => closeContextMenu(false));
+    document.addEventListener("wheel", (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      if (LV.length && !(t47.closest && t47.closest(".cxmenu"))) closeContextMenu(false);
+    }, { capture: true, passive: true });
+  }
+  function open0(items2, x5, y5, anchor, { label, search, from }) {
+    closeContextMenu(false);
+    if (!HOST || !HOST.isConnected) {
+      HOST = document.createElement("div");
+      HOST.className = "pophost";
+      document.body.appendChild(HOST);
+    }
+    listen();
+    const a5 = from === void 0 ? document.activeElement : from;
+    FROM = a5 && a5 !== document.body ? a5 : null;
+    OWNER = anchor;
+    if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    LV = [{ items: items2, label: label || "Actions", search: !!search, q: "", key: ++SEQ, x: x5, y: y5, anchor, pi: -1 }];
+    draw();
+  }
+  function openContextMenu(items2, x5, y5, o5 = {}) {
+    open0(items2, x5, y5, null, o5);
+  }
+  function openContextMenuAt(anchor, items2, o5 = {}) {
+    open0(items2, 0, 0, anchor, { ...o5, from: anchor });
+  }
+  function runItem(i5, ci2, btn) {
+    const lv = LV[i5], it2 = lv && lv.items[ci2];
+    if (!it2 || it2.disabled) return;
+    if (it2.sub) {
+      const sub = typeof it2.sub === "function" ? it2.sub() : it2.sub;
+      LV = [...LV.slice(0, i5 + 1), { items: sub, label: it2.label || "", search: !!it2.search, q: "", key: ++SEQ, x: 0, y: 0, anchor: null, pi: ci2 }];
+      draw();
+      btn?.focus({ preventScroll: true });
+      focusLevel(i5 + 1);
+      return;
+    }
+    closeContextMenu(true);
+    Promise.resolve().then(() => it2.run && it2.run()).catch((e4) => snack("Not saved: " + (e4 && e4.message || e4)));
+  }
+  function focusLevel(i5) {
+    const el2 = HOST && HOST.querySelectorAll(".cxmenu")[i5];
+    if (!el2) return;
+    const q5 = (
+      /** @type {HTMLElement | null} */
+      el2.querySelector(".pkq")
+    );
+    (q5 || menuItemsIn(el2)[0] || /** @type {HTMLElement | null} */
+    el2.querySelector("[role=menu]"))?.focus({ preventScroll: true });
+  }
+  function back(i5) {
+    if (i5 === 0) {
+      closeContextMenu(true);
+      return;
+    }
+    const el2 = HOST && HOST.querySelectorAll(".cxmenu")[i5 - 1], pi2 = LV[i5].pi;
+    closeFrom(i5);
+    (el2 && el2.querySelector(`[data-ci="${pi2}"]`))?.focus({ preventScroll: true });
+  }
+  function place(el2, i5) {
+    const lv = LV[i5], w6 = el2.offsetWidth, h5 = el2.offsetHeight;
+    let x5 = lv.x, y5 = lv.y;
+    if (i5 > 0) {
+      const pm2 = HOST && /** @type {HTMLElement | undefined} */
+      HOST.querySelectorAll(".cxmenu")[i5 - 1];
+      const pb2 = pm2 && pm2.querySelector(`[data-ci="${lv.pi}"]`);
+      if (pm2 && pb2) {
+        const pr2 = pb2.getBoundingClientRect(), m5 = pm2.getBoundingClientRect();
+        x5 = m5.right - 2;
+        if (x5 + w6 > innerWidth - 8) x5 = Math.max(8, m5.left - w6 + 2);
+        y5 = pr2.top - 6;
+      }
+    } else if (lv.anchor) {
+      const r4 = lv.anchor.isConnected ? lv.anchor.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
+      x5 = r4.left;
+      y5 = r4.bottom + 4;
+      if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
+    }
+    x5 = Math.max(8, Math.min(x5, innerWidth - w6 - 8));
+    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, innerHeight - h5 - 8);
+    el2.style.left = `${x5}px`;
+    el2.style.top = `${y5}px`;
+  }
+  function Level({ lv, i: i5 }) {
+    const wrap = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      if (wrap.current) place(wrap.current, i5);
+    }, [lv.key, lv.q]);
+    _2(() => {
+      if (i5 === 0) focusLevel(0);
+    }, [lv.key]);
+    const next = LV[i5 + 1];
+    const L3 = shown(lv.items, lv.q);
+    const keys = (e4) => {
+      const t47 = (
+        /** @type {HTMLElement} */
+        e4.target
+      ), items2 = menuItemsIn(box.current), at2 = items2.indexOf(t47);
+      const stop = () => {
+        e4.preventDefault();
+        e4.stopPropagation();
+      };
+      const q5 = (
+        /** @type {HTMLElement | null} */
+        wrap.current && wrap.current.querySelector(".pkq")
+      );
+      if (e4.key === "ArrowUp" && at2 <= 0 && q5) {
+        stop();
+        q5.focus();
+      } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e4.key)) return;
+      else if (e4.key === "ArrowRight") {
+        stop();
+        if (t47.getAttribute("aria-haspopup") === "menu") runItem(i5, +(t47.dataset.ci || -1), t47);
+      } else if (e4.key === "ArrowLeft") {
+        stop();
+        if (i5 > 0) back(i5);
+      } else if (e4.key === "Escape") {
+        stop();
+        back(i5);
+      } else if (e4.key === "Enter" || e4.key === " ") {
+        stop();
+        if (at2 >= 0) runItem(i5, +(t47.dataset.ci || -1), t47);
+      } else if (e4.key === "Tab") {
+        stop();
+        closeContextMenu(true);
+      } else e4.stopPropagation();
+    };
+    const fieldKeys = (e4) => {
+      const items2 = menuItemsIn(box.current), stop = () => {
+        e4.preventDefault();
+        e4.stopPropagation();
+      };
+      if (e4.key === "ArrowDown") {
+        stop();
+        items2[0]?.focus({ preventScroll: true });
+      } else if (e4.key === "ArrowUp") stop();
+      else if (e4.key === "Enter") {
+        stop();
+        const f5 = items2[0];
+        if (f5) runItem(i5, +(f5.dataset.ci || -1), f5);
+      } else if (e4.key === "Escape") {
+        stop();
+        back(i5);
+      } else if (e4.key === "Tab") {
+        stop();
+        closeContextMenu(true);
+      }
+    };
+    const over = (e4) => {
+      const b5 = (
+        /** @type {HTMLElement | null} */
+        /** @type {Element} */
+        e4.target.closest("[role=menuitem]")
+      );
+      if (!b5) return;
+      const ci2 = +(b5.dataset.ci || -1), it2 = lv.items[ci2];
+      if (document.activeElement !== b5 && !(wrap.current && wrap.current.querySelector(".pkq:focus"))) b5.focus({ preventScroll: true });
+      if (it2 && it2.sub && !it2.disabled) {
+        if (!(LV[i5 + 1] && LV[i5 + 1].pi === ci2)) runItem(i5, ci2, b5);
+        b5.focus({ preventScroll: true });
+      } else closeFrom(i5 + 1);
+    };
+    return /* @__PURE__ */ u2("div", { class: "pkpop cxmenu", ref: wrap, onMouseOver: over, children: [
+      lv.search ? /* @__PURE__ */ u2(
+        "input",
+        {
+          class: "pkq",
+          type: "search",
+          placeholder: "Search",
+          "aria-label": `Search: ${lv.label}`,
+          autocomplete: "off",
+          value: lv.q,
+          onInput: (e4) => {
+            lv.q = /** @type {HTMLInputElement} */
+            e4.target.value;
+            closeFrom(i5 + 1);
+            draw();
+          },
+          onKeyDown: fieldKeys
+        }
+      ) : null,
+      /* @__PURE__ */ u2(
+        MenuPanel,
+        {
+          bare: true,
+          label: lv.label,
+          boxRef: box,
+          anchor: HOST,
+          autoFocus: false,
+          onKey: keys,
+          onClose: (how) => {
+            if (how === "away") closeContextMenu(false);
+          },
+          children: L3.length ? L3.map((it2, n4) => {
+            if (it2.sep) return /* @__PURE__ */ u2("div", { class: "cxsep", role: "separator" }, `s${n4}`);
+            if (it2.head) return /* @__PURE__ */ u2("div", { class: "cxhead", role: "presentation", children: it2.head }, `h${n4}`);
+            const ci2 = lv.items.indexOf(it2);
+            return /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "pkopt",
+                role: "menuitem",
+                tabIndex: -1,
+                "data-ci": String(ci2),
+                "aria-haspopup": it2.sub ? "menu" : void 0,
+                "aria-expanded": it2.sub ? next && next.pi === ci2 ? "true" : "false" : void 0,
+                "aria-disabled": it2.disabled ? "true" : void 0,
+                "aria-current": it2.checked ? "true" : void 0,
+                "aria-description": it2.desc || void 0,
+                onClick: (e4) => {
+                  e4.preventDefault();
+                  runItem(
+                    i5,
+                    ci2,
+                    /** @type {HTMLElement} */
+                    e4.currentTarget
+                  );
+                },
+                children: [
+                  it2.icon ? /* @__PURE__ */ u2(Icon, { name: it2.icon }) : /* @__PURE__ */ u2("svg", { width: "18", height: "18", "aria-hidden": "true" }),
+                  /* @__PURE__ */ u2("span", { children: [
+                    it2.label,
+                    it2.hint ? /* @__PURE__ */ u2("span", { class: "h", children: it2.hint }) : null
+                  ] }),
+                  it2.checked ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : it2.sub ? /* @__PURE__ */ u2(Icon, { name: "chevright", cls: "ck cxsub" }) : null
+                ]
+              },
+              ci2
+            );
+          }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" })
+        }
+      )
+    ] });
+  }
+  function ContextMenus() {
+    return /* @__PURE__ */ u2(S2, { children: LV.map((lv, i5) => /* @__PURE__ */ u2(Level, { lv, i: i5 }, lv.key)) });
+  }
+
   // work.js
   shared.WT = "actions";
   shared.WVIEW = null;
@@ -38649,11 +38957,15 @@ ${s5}`;
   var dispOpen = () => $("#dispMenu").classList.contains("on");
   var SORTOPTS = (t47) => t47 === "decisions" ? [["", "Default order"], ["due", "Needed by"], ["date", "Date"], ["st", "Status"], ["by", "Made by"], ["t", "Title"], ["upd", "Last updated"], ["id", "ID"]] : [["", "Default order"], ["due", "Due date"], ["pr", "Priority"], ["st", "Status"], ["o", "Owner"], ["t", "Title"], ["upd", "Last updated"], ["raised", "Raised"], ["id", "ID"]];
   var HINTS = [
-    [["J", "K"], "move", "list"],
+    [["↑", "↓", "J", "K"], "move", "list"],
     [["J", "K"], "step through the cards", "board"],
     [["Space"], "select", "both"],
     ["", "click a value to change it", "list"],
     [["Enter"], "or the ID opens", "both"],
+    [["→"], "opens, ← closes (or the menu)", "both"],
+    [["S", "O", "P", "T"], "status, owner, priority, due", "both", true],
+    [["C"], "close", "both", true],
+    /* #241 B */
     ["", "drag a card, or use its <b>Move to…</b> menu, to change it", "board"],
     [["D"], "display", "both"],
     [["F"], "filters", "both"],
@@ -38662,7 +38974,7 @@ ${s5}`;
     ["", "drag a column edge to resize", "list"]
   ];
   function workHint(lay) {
-    return HINTS.filter((h5) => h5[2] === "both" || h5[2] === lay).map(([k5, t47]) => (k5 ? k5.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47).join(" · ");
+    return HINTS.filter((h5) => (h5[2] === "both" || h5[2] === lay) && !(h5[3] && shared.WT === "all")).map(([k5, t47]) => (k5 ? k5.map((x5) => `<span class="kbd">${x5}</span>`).join(" ") + " " : "") + t47).join(" · ");
   }
   function drawDisp() {
     const m5 = $("#dispMenu"), t47 = shared.WT, bd2 = layoutOf(t47) === "board", s5 = SORT[t47], cur = s5 ? s5.col === "_def" ? "" : s5.col : "", opts = SORTOPTS(t47), focusKey = document.activeElement && m5.contains(document.activeElement) ? document.activeElement.id || document.activeElement.dataset.mv + "|" + document.activeElement.dataset.d : null;
@@ -39619,6 +39931,7 @@ ${s5}`;
     openRecord(k5, id2, field && td2 ? td2.dataset.f : void 0);
   }
   function hlKey(e4) {
+    if (shared.VIEW === "work" && wkKey(e4)) return true;
     if (e4.shiftKey && !/^[JK]$/.test(e4.key) || e4.altKey) return false;
     const a5 = document.activeElement;
     if (a5 && a5 !== document.body && /^(A|BUTTON|SUMMARY)$/.test(a5.tagName) && (e4.key === "Enter" || e4.key === " ")) return false;
@@ -39660,6 +39973,118 @@ ${s5}`;
       return true;
     }
     return false;
+  }
+  var WKF = { s: "st", o: "o", p: "pr", t: "due" };
+  var WKSKIP = "[role=tab],[role=tablist],[role=separator],[role=menu],[role=menuitem],[role=listbox],[role=option],[role=slider],[role=switch],dialog";
+  function wkArrowOK(e4) {
+    if (e4.defaultPrevented || contextMenuOpen() || document.querySelector("dialog[open]")) return false;
+    const a5 = document.activeElement;
+    return !a5 || a5 === document.body || !(a5.closest && a5.closest(WKSKIP));
+  }
+  function wkCursor() {
+    const order = hlOrder(), id2 = shared.HLC ?? shared.SEL, o5 = order.find((x5) => x5.id === id2);
+    return o5 || null;
+  }
+  function wkKey(e4) {
+    if (e4.metaKey || e4.ctrlKey || e4.altKey) return false;
+    const k5 = e4.key;
+    if (k5 === "ArrowDown" || k5 === "ArrowUp") return wkArrowOK(e4) && hlKey({ key: k5 === "ArrowDown" ? e4.shiftKey ? "J" : "j" : e4.shiftKey ? "K" : "k", shiftKey: e4.shiftKey, altKey: false, preventDefault: () => e4.preventDefault() });
+    if (k5 === "ArrowRight" || k5 === "ArrowLeft") {
+      if (e4.shiftKey || !wkArrowOK(e4)) return false;
+      return k5 === "ArrowRight" ? wkOpen(e4) : wkLeft(e4);
+    }
+    if (e4.shiftKey || shared.WT === "all") return false;
+    const c5 = k5.toLowerCase();
+    if (WKF[c5]) {
+      const o5 = wkCursor();
+      if (!o5) return false;
+      e4.preventDefault();
+      wkPropKey(WKF[c5], o5);
+      return true;
+    }
+    if (c5 === "c") {
+      const o5 = wkCursor();
+      if (!o5) return false;
+      e4.preventDefault();
+      wkClose(o5);
+      return true;
+    }
+    return false;
+  }
+  function wkOpen(e4) {
+    const o5 = wkCursor();
+    if (!o5 || pkOn()) return false;
+    e4.preventDefault();
+    hlOnly(o5.k, o5.id);
+    openRecord(o5.k, o5.id);
+    return true;
+  }
+  function wkLeft(e4) {
+    if (pkOn()) {
+      e4.preventDefault();
+      closePanel();
+      return true;
+    }
+    const c5 = cxCursor();
+    if (!c5) return false;
+    e4.preventDefault();
+    const r4 = c5.el.getBoundingClientRect();
+    cxShow(c5, r4.left + Math.min(48, r4.width / 3), r4.top + Math.min(r4.height, 28));
+    return true;
+  }
+  var wkMenuLabel = (f5, k5) => f5 === "st" ? "Status" : f5 === "o" ? k5 === "decisions" ? "Decision maker" : "Owner" : f5 === "pr" ? k5 === "raid" ? "Impact" : "Priority" : k5 === "decisions" ? "Needed by" : "Due";
+  function wkPropKey(f5, o5) {
+    const many = HL.size >= 2 && HL.has(o5.id), k5 = o5.k;
+    if (f5 === "pr" && k5 === "decisions") {
+      snack("A decision has no priority");
+      return;
+    }
+    if (!many && pkOn() && shared.CUR && shared.CUR.mode === "record" && pkCid() === o5.id) {
+      const pf2 = f5 === "o" && k5 === "decisions" ? "by" : f5 === "pr" && k5 === "raid" ? "imp" : f5 === "due" && k5 === "decisions" && REC(k5, o5.id).st === "Made" ? "date" : f5;
+      const chip = $(`#panel [data-pkp="${pf2}"]`);
+      if (chip) {
+        chip.click();
+        return;
+      }
+    }
+    const cf2 = f5 === "o" && k5 === "decisions" ? "by" : f5 === "pr" && k5 === "raid" ? "imp" : f5, tr2 = !many && layoutOf(shared.WT) !== "board" ? $$("#workTbl tr[data-row]").find((r5) => r5.dataset.row === o5.id) : null, td2 = tr2 && tr2.querySelector(`td[data-f="${cf2}"]`);
+    if (td2 && ceEditable(k5, REC(k5, o5.id), cf2)) {
+      ceOpen(td2);
+      return;
+    }
+    const L3 = many ? cxWorkMany([...HL.keys()].map((id2) => [HL.get(id2), id2])) : cxWork(k5, o5.id), it2 = L3.find((x5) => x5.label === wkMenuLabel(f5, k5) && x5.sub);
+    if (!it2) {
+      snack("That can't be changed here");
+      return;
+    }
+    if (it2.disabled) {
+      snack(it2.hint || `${it2.label} can't be changed now`);
+      return;
+    }
+    const el2 = $$("#workTbl tr[data-row],#workBoard .bcard[data-row]").find((r5) => r5.dataset.row === o5.id), r4 = el2 ? el2.getBoundingClientRect() : { left: 200, top: 200, width: 0, height: 0 };
+    openContextMenu(it2.sub(), r4.left + Math.min(48, r4.width / 3), r4.top + Math.min(r4.height, 28), { label: many ? `${it2.label} of ${HL.size} items` : `${it2.label} of ${o5.id}`, from: el2 || void 0 });
+  }
+  async function wkClose(o5) {
+    const k5 = o5.k;
+    if (k5 === "decisions") {
+      snack("A decision is made or withdrawn, not closed: press S for its status");
+      return;
+    }
+    if (HL.size >= 2 && HL.has(o5.id)) {
+      await batchMove(k5, [...HL.keys()], { st: "Closed" }, "Closed {n}");
+      return;
+    }
+    const x5 = REC(k5, o5.id);
+    if (!x5) return;
+    if (!OPENST(x5.st)) {
+      snack(`${o5.id} is already ${x5.st.toLowerCase()}`);
+      return;
+    }
+    if (pkOn() && shared.CUR && shared.CUR.mode === "record" && pkCid() === o5.id) {
+      pkSetStatus(k5, o5.id, "Closed");
+      return;
+    }
+    await boardMove(k5, o5.id, { st: "Closed" }, `${o5.id} closed: ${x5.t.length > 60 ? x5.t.slice(0, 57) + "…" : x5.t}`);
   }
   var RVTICK = /* @__PURE__ */ new Set();
   function rvPaint() {
@@ -43489,305 +43914,6 @@ ${s5}`;
     host2.id = "rjMenuHost";
     document.body.appendChild(host2);
     R(/* @__PURE__ */ u2(RejectMenu, {}), host2);
-  }
-
-  // components/review/ContextMenu.jsx
-  var LV = (
-    /** @type {CxLevel[]} */
-    []
-  );
-  var FROM = (
-    /** @type {Element | null} */
-    null
-  );
-  var OWNER = (
-    /** @type {HTMLElement | null} */
-    null
-  );
-  var HOST = (
-    /** @type {HTMLDivElement | null} */
-    null
-  );
-  var SEQ = 0;
-  var draw = () => {
-    if (HOST) R(/* @__PURE__ */ u2(ContextMenus, {}), HOST);
-  };
-  var shown = (items2, q5) => {
-    const t47 = q5.trim().toLowerCase();
-    return items2.filter((it2) => !t47 || it2.head || it2.sep || (it2.label || "").toLowerCase().includes(t47));
-  };
-  function closeFrom(i5) {
-    if (LV.length > i5) {
-      LV = LV.slice(0, i5);
-      draw();
-    }
-  }
-  function closeContextMenu(ret = false) {
-    if (!LV.length) return;
-    LV = [];
-    draw();
-    const f5 = FROM, o5 = OWNER;
-    FROM = null;
-    OWNER = null;
-    if (o5 && o5.hasAttribute("aria-haspopup")) o5.setAttribute("aria-expanded", "false");
-    if (ret && f5 && f5.isConnected) f5.focus({ preventScroll: true });
-  }
-  function contextMenuOpen(anchor) {
-    return !!LV.length && (anchor === void 0 || OWNER === anchor);
-  }
-  var LISTENING = false;
-  function listen() {
-    if (LISTENING) return;
-    LISTENING = true;
-    addEventListener("resize", () => closeContextMenu(false));
-    addEventListener("blur", () => closeContextMenu(false));
-    document.addEventListener("wheel", (e4) => {
-      const t47 = (
-        /** @type {Element} */
-        e4.target
-      );
-      if (LV.length && !(t47.closest && t47.closest(".cxmenu"))) closeContextMenu(false);
-    }, { capture: true, passive: true });
-  }
-  function open0(items2, x5, y5, anchor, { label, search, from }) {
-    closeContextMenu(false);
-    if (!HOST || !HOST.isConnected) {
-      HOST = document.createElement("div");
-      HOST.className = "pophost";
-      document.body.appendChild(HOST);
-    }
-    listen();
-    const a5 = from === void 0 ? document.activeElement : from;
-    FROM = a5 && a5 !== document.body ? a5 : null;
-    OWNER = anchor;
-    if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-    LV = [{ items: items2, label: label || "Actions", search: !!search, q: "", key: ++SEQ, x: x5, y: y5, anchor, pi: -1 }];
-    draw();
-  }
-  function openContextMenu(items2, x5, y5, o5 = {}) {
-    open0(items2, x5, y5, null, o5);
-  }
-  function openContextMenuAt(anchor, items2, o5 = {}) {
-    open0(items2, 0, 0, anchor, { ...o5, from: anchor });
-  }
-  function runItem(i5, ci2, btn) {
-    const lv = LV[i5], it2 = lv && lv.items[ci2];
-    if (!it2 || it2.disabled) return;
-    if (it2.sub) {
-      const sub = typeof it2.sub === "function" ? it2.sub() : it2.sub;
-      LV = [...LV.slice(0, i5 + 1), { items: sub, label: it2.label || "", search: !!it2.search, q: "", key: ++SEQ, x: 0, y: 0, anchor: null, pi: ci2 }];
-      draw();
-      btn?.focus({ preventScroll: true });
-      focusLevel(i5 + 1);
-      return;
-    }
-    closeContextMenu(true);
-    Promise.resolve().then(() => it2.run && it2.run()).catch((e4) => snack("Not saved: " + (e4 && e4.message || e4)));
-  }
-  function focusLevel(i5) {
-    const el2 = HOST && HOST.querySelectorAll(".cxmenu")[i5];
-    if (!el2) return;
-    const q5 = (
-      /** @type {HTMLElement | null} */
-      el2.querySelector(".pkq")
-    );
-    (q5 || menuItemsIn(el2)[0] || /** @type {HTMLElement | null} */
-    el2.querySelector("[role=menu]"))?.focus({ preventScroll: true });
-  }
-  function back(i5) {
-    if (i5 === 0) {
-      closeContextMenu(true);
-      return;
-    }
-    const el2 = HOST && HOST.querySelectorAll(".cxmenu")[i5 - 1], pi2 = LV[i5].pi;
-    closeFrom(i5);
-    (el2 && el2.querySelector(`[data-ci="${pi2}"]`))?.focus({ preventScroll: true });
-  }
-  function place(el2, i5) {
-    const lv = LV[i5], w6 = el2.offsetWidth, h5 = el2.offsetHeight;
-    let x5 = lv.x, y5 = lv.y;
-    if (i5 > 0) {
-      const pm2 = HOST && /** @type {HTMLElement | undefined} */
-      HOST.querySelectorAll(".cxmenu")[i5 - 1];
-      const pb2 = pm2 && pm2.querySelector(`[data-ci="${lv.pi}"]`);
-      if (pm2 && pb2) {
-        const pr2 = pb2.getBoundingClientRect(), m5 = pm2.getBoundingClientRect();
-        x5 = m5.right - 2;
-        if (x5 + w6 > innerWidth - 8) x5 = Math.max(8, m5.left - w6 + 2);
-        y5 = pr2.top - 6;
-      }
-    } else if (lv.anchor) {
-      const r4 = lv.anchor.isConnected ? lv.anchor.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
-      x5 = r4.left;
-      y5 = r4.bottom + 4;
-      if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
-    }
-    x5 = Math.max(8, Math.min(x5, innerWidth - w6 - 8));
-    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, innerHeight - h5 - 8);
-    el2.style.left = `${x5}px`;
-    el2.style.top = `${y5}px`;
-  }
-  function Level({ lv, i: i5 }) {
-    const wrap = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    _2(() => {
-      if (wrap.current) place(wrap.current, i5);
-    }, [lv.key, lv.q]);
-    _2(() => {
-      if (i5 === 0) focusLevel(0);
-    }, [lv.key]);
-    const next = LV[i5 + 1];
-    const L3 = shown(lv.items, lv.q);
-    const keys = (e4) => {
-      const t47 = (
-        /** @type {HTMLElement} */
-        e4.target
-      ), items2 = menuItemsIn(box.current), at2 = items2.indexOf(t47);
-      const stop = () => {
-        e4.preventDefault();
-        e4.stopPropagation();
-      };
-      const q5 = (
-        /** @type {HTMLElement | null} */
-        wrap.current && wrap.current.querySelector(".pkq")
-      );
-      if (e4.key === "ArrowUp" && at2 <= 0 && q5) {
-        stop();
-        q5.focus();
-      } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e4.key)) return;
-      else if (e4.key === "ArrowRight") {
-        stop();
-        if (t47.getAttribute("aria-haspopup") === "menu") runItem(i5, +(t47.dataset.ci || -1), t47);
-      } else if (e4.key === "ArrowLeft") {
-        stop();
-        if (i5 > 0) back(i5);
-      } else if (e4.key === "Escape") {
-        stop();
-        back(i5);
-      } else if (e4.key === "Enter" || e4.key === " ") {
-        stop();
-        if (at2 >= 0) runItem(i5, +(t47.dataset.ci || -1), t47);
-      } else if (e4.key === "Tab") {
-        stop();
-        closeContextMenu(true);
-      } else e4.stopPropagation();
-    };
-    const fieldKeys = (e4) => {
-      const items2 = menuItemsIn(box.current), stop = () => {
-        e4.preventDefault();
-        e4.stopPropagation();
-      };
-      if (e4.key === "ArrowDown") {
-        stop();
-        items2[0]?.focus({ preventScroll: true });
-      } else if (e4.key === "ArrowUp") stop();
-      else if (e4.key === "Enter") {
-        stop();
-        const f5 = items2[0];
-        if (f5) runItem(i5, +(f5.dataset.ci || -1), f5);
-      } else if (e4.key === "Escape") {
-        stop();
-        back(i5);
-      } else if (e4.key === "Tab") {
-        stop();
-        closeContextMenu(true);
-      }
-    };
-    const over = (e4) => {
-      const b5 = (
-        /** @type {HTMLElement | null} */
-        /** @type {Element} */
-        e4.target.closest("[role=menuitem]")
-      );
-      if (!b5) return;
-      const ci2 = +(b5.dataset.ci || -1), it2 = lv.items[ci2];
-      if (document.activeElement !== b5 && !(wrap.current && wrap.current.querySelector(".pkq:focus"))) b5.focus({ preventScroll: true });
-      if (it2 && it2.sub && !it2.disabled) {
-        if (!(LV[i5 + 1] && LV[i5 + 1].pi === ci2)) runItem(i5, ci2, b5);
-        b5.focus({ preventScroll: true });
-      } else closeFrom(i5 + 1);
-    };
-    return /* @__PURE__ */ u2("div", { class: "pkpop cxmenu", ref: wrap, onMouseOver: over, children: [
-      lv.search ? /* @__PURE__ */ u2(
-        "input",
-        {
-          class: "pkq",
-          type: "search",
-          placeholder: "Search",
-          "aria-label": `Search: ${lv.label}`,
-          autocomplete: "off",
-          value: lv.q,
-          onInput: (e4) => {
-            lv.q = /** @type {HTMLInputElement} */
-            e4.target.value;
-            closeFrom(i5 + 1);
-            draw();
-          },
-          onKeyDown: fieldKeys
-        }
-      ) : null,
-      /* @__PURE__ */ u2(
-        MenuPanel,
-        {
-          bare: true,
-          label: lv.label,
-          boxRef: box,
-          anchor: HOST,
-          autoFocus: false,
-          onKey: keys,
-          onClose: (how) => {
-            if (how === "away") closeContextMenu(false);
-          },
-          children: L3.length ? L3.map((it2, n4) => {
-            if (it2.sep) return /* @__PURE__ */ u2("div", { class: "cxsep", role: "separator" }, `s${n4}`);
-            if (it2.head) return /* @__PURE__ */ u2("div", { class: "cxhead", role: "presentation", children: it2.head }, `h${n4}`);
-            const ci2 = lv.items.indexOf(it2);
-            return /* @__PURE__ */ u2(
-              "button",
-              {
-                type: "button",
-                class: "pkopt",
-                role: "menuitem",
-                tabIndex: -1,
-                "data-ci": String(ci2),
-                "aria-haspopup": it2.sub ? "menu" : void 0,
-                "aria-expanded": it2.sub ? next && next.pi === ci2 ? "true" : "false" : void 0,
-                "aria-disabled": it2.disabled ? "true" : void 0,
-                "aria-current": it2.checked ? "true" : void 0,
-                "aria-description": it2.desc || void 0,
-                onClick: (e4) => {
-                  e4.preventDefault();
-                  runItem(
-                    i5,
-                    ci2,
-                    /** @type {HTMLElement} */
-                    e4.currentTarget
-                  );
-                },
-                children: [
-                  it2.icon ? /* @__PURE__ */ u2(Icon, { name: it2.icon }) : /* @__PURE__ */ u2("svg", { width: "18", height: "18", "aria-hidden": "true" }),
-                  /* @__PURE__ */ u2("span", { children: [
-                    it2.label,
-                    it2.hint ? /* @__PURE__ */ u2("span", { class: "h", children: it2.hint }) : null
-                  ] }),
-                  it2.checked ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : it2.sub ? /* @__PURE__ */ u2(Icon, { name: "chevright", cls: "ck cxsub" }) : null
-                ]
-              },
-              ci2
-            );
-          }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" })
-        }
-      )
-    ] });
-  }
-  function ContextMenus() {
-    return /* @__PURE__ */ u2(S2, { children: LV.map((lv, i5) => /* @__PURE__ */ u2(Level, { lv, i: i5 }, lv.key)) });
   }
 
   // review.js
