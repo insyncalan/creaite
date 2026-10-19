@@ -2,6 +2,8 @@
 /* core/server.js (BL-231 step 2b): vault access, the live server (`api`, `reloadData`, `applyNow`), proposals (`writeProposal`, `save`), the snackbar and undo, status, the pulse, the event stream and the debug log's error hook.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0011-vault-access-step-4b-file-system-access.js, 0012-live-server-step-4c.js, 0013-bl-253-sprint-live-updates.js, 0014-after-bl-253.js, 0015-bl-266-fix-backup-names.js, 0016-after-bl-266.js, 0017-bl-232-fix-as-proposed-capture-edits-eve.js, 0018-after-bl-232.js, 0019-live-apply-undo-snackbar.js, 0020-bl-215-sprint-ui-audit.js, 0021-after-bl-215.js, 0141-chat-and-sweep-the-open-page-refreshes-i.js, 0142-bl-253-sprint-live-updates.js, 0152-debug-log-bl-102-part-2.js */
+import { irLiveCounts } from "../stores/intakeReview.js";   /* #232-C */
+import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";
 import { renderReports } from "../components/reporting/ReportsPage.jsx";
 import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
 import { reportsBadge, spaceCode } from "../stores/reporting.js";
@@ -352,7 +354,7 @@ export async function applyPending(){ if(viaServer()){ const r=await applyNow();
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */
   if(shared.VIEW==="psettings") psTick.value++;   /* #228: the project settings page redraws with the fresh data */
-  status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
+  status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="intake-review") renderIntakeReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
   if(!reduced()&&v===shared.VIEW){
     const hit=[]; if(cells&&wt===shared.WT){ const cols=$$("#workTbl thead th").map(th=>th.dataset.col||""); $$("#workTbl tr[data-row]").slice(0,300).forEach(tr=>[...tr.children].forEach((td,i)=>{ const k=tr.dataset.row+"|"+cols[i]; if(cols[i]&&cells.has(k)&&cells.get(k)!==td.textContent.trim()) hit.push(td); })); }
     if(cnts) $$("#v-today .th .cnt").forEach(e=>{ const k=e.id||e.parentElement.id; if(cnts.has(k)&&cnts.get(k)!==e.textContent.trim()) hit.push(e); });
@@ -363,7 +365,9 @@ export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P
       if(shared.VIEW==="milestones"&&!(document.activeElement&&["mvNote","mvRbWhy","mvAdjWhy"].includes(document.activeElement.id))) renderMilestones();
       if(shared.MV.peek&&!shared.MV.add&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#mvPeek input[type=text],#mvPeek textarea"))) mvEdDraw(); } }   /* BL-245: once the Milestones block has run (a reload with staged peek changes refreshes before it) */
   if(shared.PREPEV&&$("#prepDlg")&&$("#prepDlg").open) drawPrep(); }   /* BL-286 E: an applied edit shows in the Prep popup */
-export function renderBadge(){ const n=REV.filter(r=>!r.done).length; setRailCount("review",n); reportsBadge(); tabTitle(); }   /* BL-337: Reports' count */
+export function renderBadge(){ const c=irLiveCounts(), n=c.badge;   /* #232-C: ready meetings and files plus proposals to approve: the same number Today's line and the page show */
+  setRailCount("review",n,n?`${n} for Intake and Review: ${c.ready} ready to process, ${c.to_approve} to approve`:"");
+  reportsBadge(); tabTitle(); }   /* BL-337: Reports' count */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0021's place) */
 export function bootLive(){
 if(SERVED){ if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});

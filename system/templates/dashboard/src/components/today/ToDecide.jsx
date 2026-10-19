@@ -1,7 +1,7 @@
 // @ts-check
 /* ToDecide (BL-319 v1.9.2, #168, #208 v2.3.0): Intake and Review, just above Week ahead. It is one quiet line (#tdLine), such as
-   "4 proposals in Review and 2 transcripts ready in Intake", each count a link (a real href, so Tab and Enter work) to its page:
-   proposals to Review, transcripts and new files to Intake. The counts are the rail's. Nothing is listed: no proposal or
+   "2 ready to process and 4 proposals to approve", each count a link (a real href, so Tab and Enter work) to its stage on
+   Intake and Review (#232-C). The counts are the rail's badge and the page's. Nothing is listed: no proposal or
    transcript rows, no Approve, Reject or Process icons (Review and Intake have them). Under the line, messages from people
    Alan follows (BL-288: never labelled; "Message") keep their cards, newest first, the top five with "+n more" (a
    [data-more] button, today.js's handler); a message opens in Outlook or Teams from its link.
@@ -134,7 +134,7 @@ export function ToDecide(props) {
       </ol>
       <div class="moreline tdfoot">
         {more > 0 ? <><button type="button" class="qa" aria-expanded={open ? "true" : "false"} data-more="td">{open ? "Show fewer" : `+${more} more`}</button>{" · "}</> : null}
-        {line.length || !rows.length ? null : <span class="none">Nothing waits in Review.</span>}
+        {line.length || !rows.length ? null : <span class="none">Nothing waits in Intake and Review.</span>}
       </div>
     </>
   );
