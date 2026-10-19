@@ -2641,9 +2641,18 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .ckchips,.qcchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px} .qcchips:empty{display:none} .ckvague{margin-top:4px}
 .acttabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 14px} .acttabs [role=tab]{border:0;background:none;padding:8px 12px;font:500 var(--fs-md)/20px var(--font);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
 .acttabs [role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)} .acttabs [role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
-#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg{display:none!important}
+#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg,#v-activity.u #actTools,#v-activity.u #actBar,#v-activity.u #actTbl,#v-activity.u #achg{display:none!important}
 #actQuality h2{margin:20px 0 6px} .qmoved{font-weight:500;margin:4px 0} .qtab{width:100%;border-collapse:collapse;font-size:var(--fs-sm)} .qtab th,.qtab td{text-align:left;padding:6px 10px;border-top:1px solid var(--line)}
 .qtab thead th{border-top:0;color:var(--muted);font-weight:500} #actQuality .qtab tbody th{font:500 var(--fs-sm)/18px var(--font);text-transform:none;letter-spacing:0;color:var(--ink);background:none} .qnr{display:block;font-weight:400;font-size:var(--fs-xs);color:var(--muted)}
+/* ===== #238 (v2.5.1) Activity › Usage: cards, a cost-and-load chart and the tables (Quality's .qtab); tokens only ===== */
+#actUsage h2{margin:20px 0 6px} .usum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.ucard{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px} .ucard .v{font:700 var(--fs-2xl)/var(--lh-1-25) var(--display,var(--font))}
+.ucard .l{font-size:var(--fs-sm);color:var(--muted)} .ucard .d{font-size:var(--fs-xs);margin-top:4px;color:var(--muted)} .ucard .d.up{color:var(--warn)} .ucard .d.dn{color:var(--ok)}
+.uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0} .uchart h2{margin:0 0 6px!important} .uchart .sub{margin:6px 0 0}
+.uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
+.ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
+#actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+/* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is
    smaller, padding grows the hit area and an equal negative margin gives the space back, so nothing moves and no row grows. */
