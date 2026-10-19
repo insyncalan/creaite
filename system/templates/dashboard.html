@@ -4118,7 +4118,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .tg svg{width:12px;height:12px;flex:none}
 .tg[data-tg=cv]{background:var(--accent-soft);color:var(--accent)}
 #workWrap.cmp tbody tr[data-row]>td{height:40px;padding-top:0;padding-bottom:0;vertical-align:middle}
-#workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* the same two lines, closer: putting the ID on the title's line would change the widths */
+#workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* a second line that has to stay (no room beside the title) still fits the 40 px */
+#workWrap.cmp td.title>.x.xup{height:0;translate:var(--wkx,0) var(--wky,0);pointer-events:none}   /* #241 a: one line, the ID beside the title; a translate never changes a width (wkPlace) */
+#workWrap.cmp td.title>.x.xup :is(a,[role=link],button){pointer-events:auto}
 #workWrap.cmf tbody tr[data-row]>td{height:57px}
 .seg.ico.wdens[hidden]{display:none}
 #pkCv[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
@@ -7035,6 +7037,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     wkMarksHtml: () => wkMarksHtml,
     wkMenuLabel: () => wkMenuLabel,
     wkOpen: () => wkOpen,
+    wkPlace: () => wkPlace,
+    wkPlaceSoon: () => wkPlaceSoon,
     wkPropKey: () => wkPropKey,
     workAct: () => workAct,
     workActs: () => workActs,
@@ -37939,6 +37943,7 @@ ${s5}`;
     if (!seg) return;
     seg.hidden = layoutOf(shared.WT) === "board";
     $$("#wdens [data-dens]").forEach((b5) => b5.setAttribute("aria-pressed", String(b5.dataset.dens === d5)));
+    wkPlaceSoon();
   }
   function setDensity(d5) {
     if (d5 !== "cmp" && d5 !== "cmf") return;
@@ -37961,6 +37966,79 @@ ${s5}`;
       if (x5.client) {
         const sub = td2.querySelector(":scope > .x");
         addHTML(sub || td2, sub ? "beforebegin" : "beforeend", raw(CVTAG));
+      }
+    });
+  }
+  var WKPQ = 0, WKMO = null, WKRO = null;
+  var WKOBS = /* @__PURE__ */ new WeakSet();
+  function wkPlaceSoon() {
+    if (!WKPQ) WKPQ = requestAnimationFrame(wkPlace);
+  }
+  var wkRects = (n4, a5, b5) => {
+    const r4 = document.createRange();
+    if (b5) {
+      r4.setStart(n4, 0);
+      r4.setEndBefore(b5);
+    } else r4.selectNodeContents(n4);
+    return [...r4.getClientRects()].filter((c5) => c5.width > 0 && c5.height > 0);
+  };
+  function wkLine(td2, x5) {
+    const q5 = wkRects(td2, null, x5);
+    if (!q5.length) return null;
+    const end = q5.reduce((a5, c5) => c5.bottom > a5.bottom + 1 || Math.abs(c5.bottom - a5.bottom) <= 1 && c5.right > a5.right ? c5 : a5), on2 = q5.filter((c5) => c5.top < end.bottom - 1 && c5.bottom > end.top + 1);
+    const txt = [...td2.childNodes].filter((n4) => n4.nodeType === 3 && n4.textContent.trim() && n4.compareDocumentPosition(x5) & Node.DOCUMENT_POSITION_FOLLOWING).pop(), tq = txt ? wkRects(txt).filter((c5) => c5.top < end.bottom - 1 && c5.bottom > end.top + 1) : [];
+    return { right: Math.max(...on2.map((c5) => c5.right)), bottom: tq.length ? tq[tq.length - 1].bottom : null, mid: (Math.min(...on2.map((c5) => c5.top)) + Math.max(...on2.map((c5) => c5.bottom))) / 2 };
+  }
+  var WKX = ["--wkx", "--wky"];
+  function wkPlace() {
+    WKPQ = 0;
+    const w6 = $("#workWrap");
+    if (!w6) return;
+    wkWatch();
+    const xs2 = $$("#workTbl tbody tr[data-row] > td.title > .x");
+    xs2.forEach((x5) => {
+      if (x5.classList.contains("xup")) {
+        x5.classList.remove("xup");
+        WKX.forEach((v5) => x5.style.removeProperty(v5));
+        x5.style.clipPath = "";
+      }
+    });
+    if (!w6.classList.contains("cmp") || !w6.offsetParent) return;
+    const fit = xs2.map((x5) => {
+      const td2 = x5.parentElement, l6 = wkLine(td2, x5), id2 = x5.querySelector(".rowid");
+      if (!l6 || !id2) return null;
+      const cs2 = getComputedStyle(td2), room = td2.getBoundingClientRect().right - (parseFloat(cs2.paddingRight) || 0) - (parseFloat(cs2.borderRightWidth) || 0) - (l6.right + 10), left = x5.getBoundingClientRect().left, all = wkRects(x5), full = all.length ? Math.max(...all.map((c5) => c5.right)) - left : 0, stops = [full, ...[...x5.querySelectorAll(":scope > .pcode, :scope > .rowid")].map((e4) => e4.getBoundingClientRect().right - left).sort((p6, q5) => q5 - p6)], keep2 = stops.find((v5) => v5 > 0 && v5 <= room + 0.5);
+      return keep2 == null ? null : { dx: l6.right + 10 - left, clip: keep2 < full - 0.5 ? x5.getBoundingClientRect().width - keep2 : 0 };
+    });
+    xs2.forEach((x5, i5) => {
+      const f5 = fit[i5];
+      if (!f5) return;
+      x5.classList.add("xup");
+      x5.style.setProperty("--wkx", f5.dx.toFixed(2) + "px");
+      if (f5.clip) x5.style.clipPath = `inset(-40px ${f5.clip.toFixed(2)}px -40px -8px)`;
+    });
+    const dy2 = xs2.map((x5, i5) => {
+      if (!fit[i5]) return 0;
+      const l6 = wkLine(x5.parentElement, x5), t47 = [...x5.querySelector(".rowid").childNodes].find((n4) => n4.nodeType === 3), q5 = t47 ? wkRects(t47) : [];
+      if (!l6 || !q5.length) return 0;
+      return l6.bottom != null ? l6.bottom - q5[0].bottom : l6.mid - (q5[0].top + q5[0].bottom) / 2;
+    });
+    xs2.forEach((x5, i5) => {
+      if (fit[i5]) x5.style.setProperty("--wky", dy2[i5].toFixed(2) + "px");
+    });
+  }
+  function wkWatch() {
+    const t47 = $("#workTbl");
+    if (!t47 || typeof MutationObserver === "undefined") return;
+    if (!WKMO) {
+      WKMO = new MutationObserver(wkPlaceSoon);
+      WKMO.observe(t47, { childList: true, subtree: true, characterData: true });
+    }
+    if (!WKRO && typeof ResizeObserver !== "undefined") WKRO = new ResizeObserver(wkPlaceSoon);
+    if (WKRO) [$("#workWrap"), t47, ...$$("#workTbl thead th")].forEach((el2) => {
+      if (el2 && !WKOBS.has(el2)) {
+        WKOBS.add(el2);
+        WKRO.observe(el2);
       }
     });
   }

@@ -1,5 +1,5 @@
-"""#241 A: Work items v2, the list. Row density (Compact by default where nothing is saved, Comfortable on request, row height
-only, the Board untouched), the status and priority marks beside the existing columns (words for screen readers; the Status and
+"""#241 A: Work items v2, the list. Row density (Compact, one line with the ID beside the title, by default where nothing
+is saved, Comfortable on request, row height only, the Board untouched), the status and priority marks beside the existing columns (words for screen readers; the Status and
 Priority columns stay, in Display too), the client-visible tag, and the List's default grouping (Actions by due with Closed
 last, RAID by priority, Decisions by status) only where nothing is saved, with an explicit "no grouping" kept as a choice.
 A real browser against the real live server.
@@ -52,6 +52,14 @@ class ListV2(LiveBrowserCase):
     def widths(self):
         return self.b.eval("[...document.querySelectorAll('#workTbl thead th[data-col]')].map(t=>[t.dataset.col,Math.round(t.getBoundingClientRect().width)])")
 
+    def one_line(self):
+        # for each of the first rows: is the ID on the title's line, after the title (its middle inside the title line, to the right)
+        return self.b.eval("""[...document.querySelectorAll('#workTbl tbody tr[data-row]')].slice(0,12).map(r=>{
+          const td=r.querySelector('td.title'), id=td.querySelector(':scope > .x .rowid').getBoundingClientRect(), rg=document.createRange();
+          rg.setStart(td,0); rg.setEndBefore(td.querySelector(':scope > .x'));
+          const q=[...rg.getClientRects()].filter(c=>c.width>0&&c.height>0), last=q.reduce((a,c)=>c.bottom>a.bottom?c:a,q[0]), mid=(id.top+id.bottom)/2;
+          return mid>last.top&&mid<last.bottom&&id.left>=last.right; })""")
+
     def stored(self, k):
         v = self.b.eval(f"localStorage.getItem({k!r})")
         return None if v is None else json.loads(v)
@@ -67,13 +75,18 @@ class ListV2(LiveBrowserCase):
         self.assertEqual(b.eval("document.getElementById('workWrap').classList.contains('cmp')"), True)
         self.assertEqual(b.eval("document.querySelector('#wdens [data-dens=cmp]').getAttribute('aria-pressed')"), "true")
         self.assertIsNone(self.stored("creaite-density"))                                             # nothing written unasked
-        # 40 px rows (a row whose title wraps grows), the ID's line closer under the title: the same content, so the same widths
+        # 40 px rows (a row whose title wraps grows), one line: the ID beside the title, as in the approved mockup (Alan's decision
+        # a, 19-10-2026; it was two tighter lines). The cells keep the same content and sizing CSS, so the same widths
         self.assertTrue(all(h <= 41 for h in self.heights()), self.heights())
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('#workTbl tr[data-row] td.title > .x')).lineHeight"), "16px")
+        b.wait("document.querySelector('#workTbl tr[data-row] td.title > .x.xup')")
+        lines = self.one_line()
+        self.assertTrue(lines and all(lines), lines)                                                  # beside the title, on its line
         compact = self.widths()
         b.click('#wdens [data-dens="cmf"]')
         b.wait("document.getElementById('workWrap').classList.contains('cmf')")
         self.assertTrue(all(h >= 57 for h in self.heights()), self.heights())
+        b.wait("!document.querySelector('#workTbl .x.xup')")                                         # two lines again
+        self.assertFalse(any(self.one_line()))
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#workTbl tr[data-row] td.title > .x')).lineHeight"), "20px")
         self.assertEqual(self.widths(), compact)                                                     # row height only, never a width
         self.assertEqual(self.stored("creaite-density"), "cmf")

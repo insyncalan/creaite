@@ -195,7 +195,7 @@ export function cell(k,x,t=shared.WT){ if(t==="all") return allCell(k,x);
    no column width, order or visibility changes, and the Board is untouched. */
 export const densOf=()=>shared.DENS==="cmf"?"cmf":"cmp";
 export function densPaint(){ const w=$("#workWrap"), d=densOf(); if(w){ w.classList.toggle("cmp",d==="cmp"); w.classList.toggle("cmf",d==="cmf"); }
-  const seg=$("#wdens"); if(!seg) return; seg.hidden=layoutOf(shared.WT)==="board"; $$("#wdens [data-dens]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.dens===d))); }
+  const seg=$("#wdens"); if(!seg) return; seg.hidden=layoutOf(shared.WT)==="board"; $$("#wdens [data-dens]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.dens===d))); wkPlaceSoon(); }
 export function setDensity(d){ if(d!=="cmp"&&d!=="cmf") return; shared.DENS=d; store.set("creaite-density",d); densPaint(); sizeList(); }
 export function wkMarksHtml(t,x){ const k=t==="all"?x.k:t, st=t==="all"?x.nst:x.st, pr=k==="decisions"?"":x.pr||"";
   return `<span class="wkm">${peekMarkHtml({st})}${pr?peekMarkHtml({pr}):""}<span class="vh">${esc(st)}${pr?`, ${esc(pr)} priority`:""}: </span></span>`; }
@@ -204,6 +204,40 @@ export function wkDecorate(){ const t=shared.WT;
   $$("#workTbl tr[data-row]").forEach(tr=>{ const td=tr.querySelector("td.title"), x=t==="all"?allRows().find(y=>y.id===tr.dataset.row):REC(t,tr.dataset.row); if(!td||!x||td.querySelector(".wkm")) return;
     addHTML(td,"afterbegin",raw(wkMarksHtml(t,x)));
     if(x.client){ const sub=td.querySelector(":scope > .x"); addHTML(sub||td,sub?"beforebegin":"beforeend",raw(CVTAG)); } }); }
+/* #241 a (Alan, 19-10-2026): a Compact row is one line, the ID beside the title, as in the approved mockup. The cells keep the
+   Comfortable content and every CSS rule that sizes a column, so no column width (saved or not) depends on the density: the
+   ID's line (.x) is only moved onto the title's line with a translate (which never changes layout), its text on the title's
+   baseline. Where the whole line doesn't fit beside the title's last line, what follows the ID is clipped (clip-path: paint only;
+   the words stay for screen readers); where even the ID doesn't fit, it stays the second line inside the same 40 px row.
+   Placed again after any change to the rows and whenever a column or the window changes width; nothing is stored. */
+let WKPQ=0, WKMO=null, WKRO=null; const WKOBS=new WeakSet();
+export function wkPlaceSoon(){ if(!WKPQ) WKPQ=requestAnimationFrame(wkPlace); }
+const wkRects=(n,a,b)=>{ const r=document.createRange(); if(b){ r.setStart(n,0); r.setEndBefore(b); } else r.selectNodeContents(n); return [...r.getClientRects()].filter(c=>c.width>0&&c.height>0); };
+/* the title's last line: where it ends, and the bottom of the title's own text on it (to put the ID's text on its baseline) */
+function wkLine(td,x){ const q=wkRects(td,null,x); if(!q.length) return null;
+  const end=q.reduce((a,c)=>c.bottom>a.bottom+1||(Math.abs(c.bottom-a.bottom)<=1&&c.right>a.right)?c:a), on=q.filter(c=>c.top<end.bottom-1&&c.bottom>end.top+1);
+  const txt=[...td.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim()&&n.compareDocumentPosition(x)&Node.DOCUMENT_POSITION_FOLLOWING).pop(),
+    tq=txt?wkRects(txt).filter(c=>c.top<end.bottom-1&&c.bottom>end.top+1):[];
+  return {right:Math.max(...on.map(c=>c.right)),bottom:tq.length?tq[tq.length-1].bottom:null,mid:(Math.min(...on.map(c=>c.top))+Math.max(...on.map(c=>c.bottom)))/2}; }
+const WKX=["--wkx","--wky"];
+export function wkPlace(){ WKPQ=0; const w=$("#workWrap"); if(!w) return; wkWatch();
+  const xs=$$("#workTbl tbody tr[data-row] > td.title > .x");
+  xs.forEach(x=>{ if(x.classList.contains("xup")){ x.classList.remove("xup"); WKX.forEach(v=>x.style.removeProperty(v)); x.style.clipPath=""; } });
+  if(!w.classList.contains("cmp")||!w.offsetParent) return;
+  const fit=xs.map(x=>{ const td=x.parentElement, l=wkLine(td,x), id=x.querySelector(".rowid"); if(!l||!id) return null;
+    const cs=getComputedStyle(td), room=td.getBoundingClientRect().right-(parseFloat(cs.paddingRight)||0)-(parseFloat(cs.borderRightWidth)||0)-(l.right+10),
+      left=x.getBoundingClientRect().left, all=wkRects(x), full=all.length?Math.max(...all.map(c=>c.right))-left:0,
+      stops=[full,...[...x.querySelectorAll(":scope > .pcode, :scope > .rowid")].map(e=>e.getBoundingClientRect().right-left).sort((p,q)=>q-p)],
+      keep=stops.find(v=>v>0&&v<=room+0.5);
+    return keep==null?null:{dx:l.right+10-left,clip:keep<full-0.5?x.getBoundingClientRect().width-keep:0}; });
+  xs.forEach((x,i)=>{ const f=fit[i]; if(!f) return; x.classList.add("xup"); x.style.setProperty("--wkx",f.dx.toFixed(2)+"px"); if(f.clip) x.style.clipPath=`inset(-40px ${f.clip.toFixed(2)}px -40px -8px)`; });
+  const dy=xs.map((x,i)=>{ if(!fit[i]) return 0; const l=wkLine(x.parentElement,x), t=[...x.querySelector(".rowid").childNodes].find(n=>n.nodeType===3), q=t?wkRects(t):[];
+    if(!l||!q.length) return 0; return l.bottom!=null?l.bottom-q[0].bottom:l.mid-(q[0].top+q[0].bottom)/2; });
+  xs.forEach((x,i)=>{ if(fit[i]) x.style.setProperty("--wky",dy[i].toFixed(2)+"px"); }); }
+function wkWatch(){ const t=$("#workTbl"); if(!t||typeof MutationObserver==="undefined") return;
+  if(!WKMO){ WKMO=new MutationObserver(wkPlaceSoon); WKMO.observe(t,{childList:true,subtree:true,characterData:true}); }   /* class and style writes (these) are not watched */
+  if(!WKRO&&typeof ResizeObserver!=="undefined") WKRO=new ResizeObserver(wkPlaceSoon);
+  if(WKRO) [$("#workWrap"),t,...$$("#workTbl thead th")].forEach(el=>{ if(el&&!WKOBS.has(el)){ WKOBS.add(el); WKRO.observe(el); } }); }
 /* ===== end #241 A (rows) ===== */
 export const msLabel=id=>{ for(const p of P){ const m=(p.ms||[]).find(m=>m[3]===id); if(m) return m[0]; } return ((D.milestone_names||{})[id]||[id])[0]; };   /* BL-128: the name alone */
 /* BL-68: the heading row and a row of any list of one item type; Work and a person's page both draw theirs here.

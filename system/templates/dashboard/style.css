@@ -4108,7 +4108,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .tg svg{width:12px;height:12px;flex:none}
 .tg[data-tg=cv]{background:var(--accent-soft);color:var(--accent)}
 #workWrap.cmp tbody tr[data-row]>td{height:40px;padding-top:0;padding-bottom:0;vertical-align:middle}
-#workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* the same two lines, closer: putting the ID on the title's line would change the widths */
+#workWrap.cmp tbody tr[data-row]>td .x{line-height:var(--lh-16)}   /* a second line that has to stay (no room beside the title) still fits the 40 px */
+#workWrap.cmp td.title>.x.xup{height:0;translate:var(--wkx,0) var(--wky,0);pointer-events:none}   /* #241 a: one line, the ID beside the title; a translate never changes a width (wkPlace) */
+#workWrap.cmp td.title>.x.xup :is(a,[role=link],button){pointer-events:auto}
 #workWrap.cmf tbody tr[data-row]>td{height:57px}
 .seg.ico.wdens[hidden]{display:none}
 #pkCv[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
