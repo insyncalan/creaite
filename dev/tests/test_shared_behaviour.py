@@ -136,7 +136,10 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
                            "if(!String(u).endsWith('/api/report/draft')||!o||!String(o.body).includes('\"client\"')||String(o.body).includes('\"weekly\"')) return r; "
                            "return r.then(x=>x.json()).then(j=>new Response(JSON.stringify({...j,ready:true}),{headers:{'Content-Type':'application/json'}})); }; } "
                            "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-reporting .wr-health')", "#v-reporting")
-EXTRA = ("clientreport", "today-days")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
+# #232-A: Intake and Review with a meeting row whose Not needed button (aria-haspopup=menu, opens #irAside) shows. The sample's calendar has
+# no ended meeting, so the page is given one in the page only (the model's own shape; nothing is saved).
+SCREENS["intake-review"] = ("go('intake-review')", "VIEW==='intake-review' && !!document.querySelector('#v-intake-review [data-ira=notneeded]')", "#v-intake-review")
+EXTRA = ("clientreport", "today-days", "intake-review")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
 # is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
 ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
@@ -410,7 +413,7 @@ class Driver:
             if name in EXTRA:
                 us.SCREENS.pop(name, None)
 
-    def settle(self, name):
+    def settle_screen(self, name):
         """Close whatever the last control left open; go back to the screen when something is still open."""
         b = self.b
         for _ in range(2):
@@ -435,7 +438,7 @@ class Driver:
             if not match:
                 continue
             out.append((o, drive(match[0]["i"], o)))
-            self.settle(name)
+            self.settle_screen(name)
         return out
 
 
@@ -490,6 +493,11 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         """Opened again, Tab closes a menu or a list."""
         self.b.eval(f"SB.focus({i})")
         self.press("Enter", 0.4)
+        for _ in range(16):          # as opened() does: a list that asks the live server first (aria-busy) opens when it answers; leaving it would let it open later, over the next control
+            s = self.state(i)
+            if s["open"] or not s["busy"]:
+                break
+            self.b.pump(0.25)
         if not self.state(i)["open"]:
             return []
         self.press("Tab", 0.3)

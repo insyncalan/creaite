@@ -1711,6 +1711,7 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
   :root:not([data-motion="full"]) #askBtn.working::after,:root:not([data-motion="full"]) .askbtn[data-state=answering] .spark{animation:none}
   :root:not([data-motion="full"]) .sp-flash{animation:none;background-color:var(--warn-soft)}   /* BL-322: Sneak peek's flash holds still */
   :root:not([data-motion="full"]) .aispark{animation:none}                                          /* #117: the AI sparkle's slide-in */
+  :root:not([data-motion="full"]) #v-intake-review .icprog{animation:none;background-size:60% 100%}   /* #232-A: the drafting bar holds still */
 }
 :root[data-motion="reduce"] #askBtn.working::after,:root[data-motion="reduce"] .askbtn[data-state=answering] .spark{animation:none}   /* the ask pulses are removed, not just stopped */
 :root[data-motion="reduce"] *,:root[data-motion="reduce"] *::before,:root[data-motion="reduce"] *::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:0s!important;transition-delay:0s!important;scroll-behavior:auto!important}
@@ -4116,10 +4117,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .rail [data-v=review] .rl{letter-spacing:-.02em}
 
 /* ===== #232-A Intake side: the meeting row's actions, progress, notes, the drop target (scoped to #v-intake-review) ===== */
-#v-intake-review .icprog{height:6px;border-radius:var(--r-sm);background:var(--sunk);border:1px solid var(--line);overflow:hidden;width:220px;max-width:100%;margin-top:6px}
-#v-intake-review .icprog i{display:block;height:100%;width:30%;background:var(--accent);animation:icp232 1.6s linear infinite}
-@keyframes icp232{0%{margin-left:-30%}100%{margin-left:100%}}
-@media (prefers-reduced-motion:reduce){#v-intake-review .icprog i{animation:none;width:60%}}
+#v-intake-review .icprog{height:6px;border-radius:var(--r-sm);background:linear-gradient(90deg,transparent,var(--accent),transparent) no-repeat var(--sunk);background-size:35% 100%;border:1px solid var(--line);overflow:hidden;width:220px;max-width:100%;margin-top:6px;animation:mhair calc(1600ms*var(--k)) var(--inout) infinite}   /* the run hairline's loop (mhair), on the track itself */
+#v-intake-review .icprog i{display:none}
 #v-intake-review .iccardacts{margin-top:8px}
 #v-intake-review .irnote{color:var(--warn)}
 #v-intake-review.irdrop{outline:2px dashed var(--accent);outline-offset:-4px;border-radius:var(--r-md)}

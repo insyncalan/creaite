@@ -100,7 +100,7 @@ class StaleTests(SheetCase):
         b.click(f"#shFix section[data-id='{sid}'] .sheet-spark")
         b.wait(f"SH.asked.includes('{sid}')")
 
-    def settle(self, sid="summary"):
+    def settle_draft(self, sid="summary"):
         self.sh(f"settle('{sid}')")
         self.b.wait(f"document.querySelector('#shFix section[data-id=\"{sid}\"] .sheet-redraft')?.textContent.length>0")
 
@@ -115,13 +115,13 @@ class StaleTests(SheetCase):
         b = self.b
         self.ready()
         b.eval("SH.doc = {...SH.doc, version: SH.doc.version + 1, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Newer words.'} : s)}; SH.draw();")
-        self.settle()
+        self.settle_draft()
         self.assert_stale_and_unapplied("summary", "Newer words.")
 
     def test_it_goes_stale_when_the_version_changes_after_the_draft_is_shown(self):
         b = self.b
         self.ready()
-        self.settle()
+        self.settle_draft()
         b.wait("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft button.primary')")
         b.eval("SH.doc = {...SH.doc, version: SH.doc.version + 1, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Newer words.'} : s)}; SH.draw();")
         self.assert_stale_and_unapplied("summary", "Newer words.")
@@ -129,14 +129,14 @@ class StaleTests(SheetCase):
     def test_another_report_shown_without_a_remount_keeps_no_suggestion_for_the_same_section_id(self):
         b = self.b
         self.ready()
-        self.settle()
+        self.settle_draft()
         b.eval("SH.doc = {...SH.doc, project: 'DEF', project_name: 'Other', date: '2026-10-23', sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Another report.'} : s)}; SH.draw();")
         self.assert_stale_and_unapplied("summary", "Another report.")
 
     def test_a_double_click_on_use_this_applies_and_counts_once(self):
         b = self.b
         self.ready()
-        self.settle()
+        self.settle_draft()
         b.eval("""(() => { const u = [...document.querySelectorAll('#shFix section[data-id="summary"] .sheet-redraft button')].find(x => x.textContent === 'Use this');
           u.click(); u.click(); return true; })()""")
         b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
@@ -147,7 +147,7 @@ class StaleTests(SheetCase):
         b = self.b
         self.ready()
         b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Typed since.'} : s)}; SH.draw();")
-        self.settle()
+        self.settle_draft()
         b.wait("/changed this section since/.test(document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft')?.textContent||'')")
         self.assertEqual(b.eval("document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button').length"), 1)
         self.assertEqual(b.eval("SH.doc.sections[0].text"), "Typed since.")
@@ -155,7 +155,7 @@ class StaleTests(SheetCase):
         # edited after the draft was shown: Use this is refused too
         self.b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Close').click()")
         self.ready("this_week")
-        self.settle("this_week")
+        self.settle_draft("this_week")
         b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'this_week' ? {...s, text: 'Typed after.'} : s)}; SH.draw();")
         b.wait("/changed this section since/.test(document.querySelector('#shFix section[data-id=\"this_week\"] .sheet-redraft')?.textContent||'')")
         self.assertEqual(b.eval("SH.doc.sections.find(s=>s.id==='this_week').text"), "Typed after.")
@@ -164,7 +164,7 @@ class StaleTests(SheetCase):
     def test_no_edit_and_use_this_applies_as_before(self):
         b = self.b
         self.ready()
-        self.settle()
+        self.settle_draft()
         b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
         b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
         self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').map(e=>e.choice)"), ["use"])
@@ -175,7 +175,7 @@ class StaleTests(SheetCase):
         orig = b.eval("SH.doc.sections[0].text")
         b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Typed.'} : s)}; SH.draw();")
         b.eval(f"SH.doc = {{...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {{...s, text: {json.dumps(orig)}}} : s)}}; SH.draw();")
-        self.settle()
+        self.settle_draft()
         self.assertFalse(b.eval("/changed this section|earlier version/.test(document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft').textContent)"))
         b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
         b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
@@ -184,13 +184,13 @@ class StaleTests(SheetCase):
 class ReviewTests(SheetCase):
     """#90 review (Team Cap): K3 a second ✦ while one is writing, K2 a mode switch or another minutes of the same day mid-write,
     K5 the "edited" wiring, F5 the reply's checks on the page."""
-    ready, settle, assert_stale_and_unapplied = StaleTests.ready, StaleTests.settle, StaleTests.assert_stale_and_unapplied
+    ready, settle_draft, assert_stale_and_unapplied = StaleTests.ready, StaleTests.settle_draft, StaleTests.assert_stale_and_unapplied
 
     def stale_after(self, js):
         b = self.b
         self.ready()
         b.eval(js + "; SH.draw();")
-        self.settle()
+        self.settle_draft()
         self.assert_stale_and_unapplied("summary", self.b.eval("SH.doc.sections[0].text"))
 
     def test_a_second_spark_while_one_is_writing_is_ignored(self):
@@ -200,7 +200,7 @@ class ReviewTests(SheetCase):
         b.pump(0.2)
         self.assertEqual(self.sh("asked"), ["summary"])
         self.assertIn("Drafting", b.eval("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft').textContent"))
-        self.settle()
+        self.settle_draft()
         b.wait("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft button.primary')")
         self.assertIn("Fresh draft for summary", b.eval("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft').textContent"))
 
@@ -216,7 +216,7 @@ class ReviewTests(SheetCase):
     def test_a_used_draft_then_changed_counts_edited_once(self):
         b = self.b
         self.ready()
-        self.settle()
+        self.settle_draft()
         b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
         b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
         b.pump(0.2)
@@ -230,7 +230,7 @@ class ReviewTests(SheetCase):
     def test_a_used_draft_on_another_document_is_never_counted_edited(self):
         b = self.b
         self.ready()
-        self.settle()
+        self.settle_draft()
         b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
         b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
         b.eval("SH.doc = {...SH.doc, project: 'DEF', sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Another report.'} : s)}; SH.draw();")
