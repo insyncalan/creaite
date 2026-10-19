@@ -4118,7 +4118,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
    data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
    failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */
 #askBtn[data-st]{overflow:visible} #askBtn[data-st]::before{display:none}
-.askmark{position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:50%;display:none;place-items:center;color:var(--surface);font:700 11px/1 var(--font);box-shadow:0 0 0 2px var(--surface)}
+.askmark{position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:50%;display:none;place-items:center;color:var(--surface);font:700 var(--fs-2xs)/1 var(--font);box-shadow:0 0 0 2px var(--surface)}
 .askmark svg{width:11px;height:11px}
 #askBtn[data-st] .askmark{display:grid}
 #askBtn[data-st=done] .askmark{background:var(--ok)} #askBtn[data-st=stopped] .askmark{background:var(--muted)} #askBtn[data-st=failed] .askmark{background:var(--bad)}
