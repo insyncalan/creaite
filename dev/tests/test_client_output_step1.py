@@ -168,7 +168,8 @@ class Step1(A.Audience):
     def export_in_process(self, fmt, patch):
         hid, title, owner = self.hidden_item()
         code = (f"PAYLOAD = {json.dumps(f'{owner} owns {hid} {title}. This is confidential.')}\n" + patch +
-                f"out = creaite_doc.export({DRAFT!r}, {fmt!r}, file_beside=False, open_after=False, kind='client')\n"
+                # v2.5.1 step 2: the one client export (creaite_doc.export refuses a client report on its own)
+                f"import client_snapshot\nout = client_snapshot.client_export('ABC', {WEEK!r}, {fmt!r})\n"
                 "print(json.dumps(out))")
         return self.py(code)
 

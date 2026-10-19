@@ -84,7 +84,9 @@ class Base(unittest.TestCase):
     def export(self, path, fmt, env=None, **kw):
         """creaite_doc.export's answer."""
         args = "".join(f", {k}={v!r}" for k, v in kw.items())
-        return self.py(f"print(json.dumps(creaite_doc.export({path!r}, {fmt!r}{args})))", env=env)
+        # v2.5.1 step 2: creaite_doc.export renders a client report only as client_snapshot.client_export calls it (its token)
+        return self.py(f"import client_snapshot\nprint(json.dumps(creaite_doc.export({path!r}, {fmt!r}{args}, "
+                       "token=client_snapshot.TOKEN)))", env=env)
 
     def in_order(self, text, headings):
         """Assert every heading appears in `text`, in this order."""
