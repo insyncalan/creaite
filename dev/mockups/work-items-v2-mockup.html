@@ -368,6 +368,7 @@ document.addEventListener('click',function(e){var T=e.target;if(!T.closest('.dd'
  if(T.closest('#pkClose'))close();if(T.closest('#pkNext'))step(1);if(T.closest('#pkPrev'))step(-1);
  var h=T.closest('.pk-dethead');if(h){var x=h.getAttribute('aria-expanded')==='true';h.setAttribute('aria-expanded',!x);if(!x){var it=find(CUR),f=document.createElement('div');f.className='pk-det';f.innerHTML='<div class="sub" style="padding:4px 0 8px">Project '+P[it.p]+' · Workstream '+it.ws+' · Milestone not set · Raised 10-10-2026</div>';h.after(f)}else if(h.nextElementSibling.classList.contains('pk-det'))h.nextElementSibling.remove()}
  if(!T.closest('.dd'))menus()});
+document.addEventListener('click',function(e){if(!OPEN)return;var T=e.target;if(!T.isConnected||T.closest('#panel,#wkBody tr.click,.cxpop,.pkstage,.pkpop,.pk-ob'))return;close()});
 document.addEventListener('dblclick',function(e){var r=e.target.closest('#wkBody tr.click');if(r&&!e.target.closest('a'))open(r.dataset.row)});
 document.addEventListener('input',function(e){if(e.target.id==='workQ'){Q=e.target.value;render()}if(e.target.id==='fpq'){FQ=e.target.value;moremenu();var q=$('#fpq');q.focus();q.setSelectionRange(FQ.length,FQ.length)}});
 document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))||e.target.isContentEditable||e.metaKey||e.ctrlKey)return;var k=e.key;
