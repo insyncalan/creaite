@@ -43,6 +43,7 @@ import re
 import os
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -416,6 +417,9 @@ def _settle_name(folder, name, ext, req, label, reserved=None, kind=None):
         if kind and other_reports_name(kind, name):          # v2.5.0: never under the other report's name
             return name, False, {"message": f"That name is the other report's: a {kind} report is never saved under it. "
                                             "Choose another name.", "clash": True}
+        problem = name_problem(name, reserved)
+        if problem:
+            return name, False, {"message": problem + " Choose another name.", "clash": True}
     if not _taken(folder, name, reserved):
         return name, False, None
     if choice == "number":
@@ -444,6 +448,39 @@ def plain_note(out):
     why = out.get("plain_why")
     out["message"] = (f"{out.get('message') or 'Exported.'} This is the plain version "
                       + (f"(the report page was not used: {why})." if why else "(open the report in creaite to export the formatted one)."))
+
+
+RESERVED_NAME = re.compile(r"(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)")
+FORBIDDEN_CHARS = re.compile(r'[<>:"|?*]')
+INVISIBLE_CHARS = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
+FILING_WORDS = re.compile(r"(?:weekly|client) ?report")
+EXPORT_EXTS = re.compile(r"(?:\.(?:html?|docx|pdf))+$")
+
+
+def read_as(name):
+    """v2.5.1: a file name as it reads, for matching: NFKC, invisible characters removed, case-folded, and _ - . and runs of spaces
+    read alike (as one space); export extensions left off."""
+    t = INVISIBLE_CHARS.sub("", unicodedata.normalize("NFKC", str(name or ""))).casefold()
+    t = EXPORT_EXTS.sub("", t)
+    return " ".join(re.sub(r"[\s_\-\u2010-\u2015.]+", " ", t).split())
+
+
+def name_problem(name, own=None):
+    """v2.5.1: why a typed export name can't be used, or None. A name Windows reserves (CON, NUL, COM1, CONIN$... before the first
+    dot, trailing dots and spaces ignored), a character Windows forbids (< > : " | ? *), a stem ending in a dot or a space, or a
+    name that reads as a weekly or client report's filing name (any date, case, spacing or separator, with or without an
+    extension): such a name belongs to a filing, and an export under it could pass for a filed report or block an Approve. This
+    report's own filing name (`own`) is let through, as it is or numbered "(2)": the clash question then asks, as before."""
+    base = unicodedata.normalize("NFKC", name.split(".", 1)[0]).rstrip(". ").casefold()
+    if RESERVED_NAME.fullmatch(base) or RESERVED_NAME.fullmatch(INVISIBLE_CHARS.sub("", base)):
+        return "That name is reserved on Windows, so a file can't be saved under it."
+    if FORBIDDEN_CHARS.search(name) or name.rsplit(".", 1)[0] != name.rsplit(".", 1)[0].rstrip(". "):
+        return "A file name can't hold < > : \" | ? * or end in a dot or a space."
+    plain = read_as(name)
+    mine = own and re.fullmatch(re.escape(read_as(own)) + r"(?: \(\d+\))?", plain)
+    if FILING_WORDS.search(plain) and not mine:
+        return "That name reads as a report's filing name, so an export is never saved under it."
+    return None
 
 
 def other_reports_name(kind, typed):
