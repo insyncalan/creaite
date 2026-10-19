@@ -507,6 +507,20 @@ class Audience(unittest.TestCase):
                 self.assertNotIn("zzz", raw["layout"])
                 self.assertEqual(self.scan(filed, ["quokkameta"] + self.needles()), [])
 
+    def test_internal_words_in_the_header_fields_are_refused_and_never_filed(self):
+        """What the old test of the filed block put in (internal words in meta, sources and layout): the client gate reads those fields,
+        so approving is refused whatever 'force' says and no file carries the words."""
+        r = self.fresh()
+        doc = r["doc"]
+        p = self.header_payload()
+        doc["meta"] = {**doc["meta"], "note": p, "period_start": p}
+        doc["sources"] = [{"ref": "tracker", "label": p}, {"ref": "x", "label": p}]
+        doc["layout"] = {**doc["layout"], "zzz": p}
+        self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+        self.assertFalse(a.get("ok"), a)
+        self.assertEqual(self.reports_hold(self.needles()), {})
+
     # ── the helpers ─────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_is_client_and_force_client_audience(self):
         self.assertTrue(creaite_doc.is_client({"kind": "client", "audience": "internal"}))
