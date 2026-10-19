@@ -92,8 +92,10 @@ def force_client_audience(doc):
     so the client gate (client_leak.findings, make_safe), which reads the audience, always checks a client report as one; and its
     header fields the gate never reads, `project_name` and `client`, derived again from the tracker (the project's name) and the
     project's memory (its client), whatever was sent or stored: they are shown in the header and the page title and name the files.
-    Changed in place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or
-    distributed is already read as client by is_client and by the gate, and its kind decides where it is filed."""
+    Changed in place and returned. A weekly report's audience is always "internal" (its file can't label it Client or Distributed);
+    minutes are left as they are (distributed minutes are read as client by is_client and by the gate)."""
+    if isinstance(doc, dict) and doc.get("kind") == "weekly":
+        doc["audience"] = "internal"           # a weekly report is the internal report, whatever its file says (v2.5.0)
     if isinstance(doc, dict) and doc.get("kind") == "client":
         doc["audience"] = "client"
         code = str(doc.get("project") or "")
@@ -124,6 +126,9 @@ def check_audience(doc):
     if doc.get("kind") == "client" and doc.get("audience") != "client":
         raise DocError("A client report's audience is always client: this one says "
                        f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
+    if doc.get("kind") == "weekly" and doc.get("audience", "internal") != "internal":
+        raise DocError("A weekly report's audience is always internal: this one says "
+                       f"{doc.get('audience')!r}, so nothing was saved. Open the weekly report again and save it from there.")
 
 
 def read_report(path, kind=None):

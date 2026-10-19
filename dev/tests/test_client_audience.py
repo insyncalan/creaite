@@ -238,6 +238,45 @@ class Audience(unittest.TestCase):
         low = out[0].lower()
         self.assertEqual([n for n in self.needles() if n.lower() in low], [])
 
+    # ── a weekly report is always internal ──────────────────────────────────────────────────────────────────────────────
+    def weekly_file(self):
+        return self.v.root / "system/staging/drafts" / f"{S.WEEKLY_STEM}.html"
+
+    def test_a_weekly_report_saved_with_a_client_audience_is_refused(self):
+        for audience in ("client", "distributed"):
+            with self.subTest(audience=audience):
+                r = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": WEEK})
+                self.assertTrue(r["ok"], r)
+                doc = dict(r["doc"], audience=audience)
+                sv = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+                self.assertFalse(sv["ok"], sv)
+                self.assertRegex(sv["message"], r"(?i)audience")
+
+    def test_a_weekly_draft_edited_on_disk_to_a_client_audience_is_exported_as_internal(self):
+        for audience in ("client", "distributed"):
+            with self.subTest(audience=audience):
+                for f in self.reports.glob("*Weekly report*"):
+                    f.unlink()
+                self.weekly_file().unlink(missing_ok=True)
+                self.weekly()
+                f = self.weekly_file()
+                text = f.read_text()
+                self.assertIn('"audience": "internal"', text)
+                f.write_text(text.replace('"audience": "internal"', f'"audience": "{audience}"', 1), encoding="utf-8")
+                d = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": WEEK})
+                self.assertEqual(d["doc"]["audience"], "internal")
+                for fmt in ("html", "docx"):
+                    e = self.export(fmt, "weekly", on_clash="number")
+                    self.assertTrue(e["ok"], (fmt, e))
+                    p = self.v.root / e["path"]
+                    if fmt == "html":
+                        page = p.read_text()
+                        self.assertIn('<div class="sub">Internal</div>', page)
+                        self.assertNotIn('<div class="sub">Client</div>', page)
+                        self.assertNotIn('<div class="sub">Distributed</div>', page)
+                    else:
+                        self.assertEqual(self.scan(p, ["Client · Draft", "Distributed · Draft"]), [])
+
     # ── each boundary on its own, with a reader that doesn't normalise ──────────────────────────────────────────────────
     def raw_reader(self):
         return ("import re\n_raw = lambda p: json.loads(creaite_doc.BLOCK.search(creaite_doc.real(p).read_text()).group(1))\n"
