@@ -123,7 +123,7 @@
             <div class="wapplied" id="fchips" hidden></div>
             <div class="tbl" id="filesTbl"></div><p class="sub"><span id="filesAt">File list as of the last build.</span> Word files open in Word; the folder icon (Open folder) shows the file's folder.</p></div></div>
       </div></section>
-      <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="tabhost" id="actTabsHost"></div><!-- BL-316: Changes and Quality, the Tabs building block --><!-- BL-233 (sprint-drafts-extraction) -->
+      <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="tabhost" id="actTabsHost"></div><!-- BL-316: Changes, Quality and (#238) Usage, the Tabs building block --><!-- BL-233 (sprint-drafts-extraction) -->
 <div id="actQuality" role="tabpanel" aria-labelledby="actTabQ" hidden><p class="sub" id="qPeriod"></p><p class="qmoved" id="qMoved"></p><p class="sub qnote">Each figure is a count out of its total. Nothing is rated until a group has 10. These count extraction and drafts only, never a person, and stay internal: no report or export reads them.</p>
 <h2>By source</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Source</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qSrc"></tbody></table></div>
 <h2>By type</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Type</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qType"></tbody></table></div>
@@ -131,6 +131,20 @@
 <h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
 <h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
 <h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
+<!-- #238: Activity › Usage, read only (D.usage); the review notes save through POST /api/usage/review -->
+<div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden><p class="sub" id="uPeriod">Last 14 days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name. Internal; nothing leaves this laptop. Tokens are estimates.</p>
+<p class="uerr" id="uErr" hidden></p><div class="empty uempty" id="uEmpty" hidden>No runs yet. Each Claude run the live server makes is counted here once it ends.</div>
+<div class="uruns" id="uRuns"><div class="usum" id="uSum"></div>
+<div class="uchart"><h2>Cost and what each run loads before it starts, by day</h2><div id="uChart"></div><p class="sub">Top: cost in dollars. Bottom: the median tokens a run loaded before doing anything (the rules file, CLAUDE.md, memory and skill names). Point at a bar or a dot for its figure.</p></div>
+<h2>By kind of run</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Kind</th><th scope="col">Runs</th><th scope="col">Average tokens</th><th scope="col">Loaded at start (median)</th><th scope="col">Cost</th><th scope="col">Share of cost</th></tr></thead><tbody id="uKind"></tbody></table></div></div>
+<h2>What every run loads</h2><p class="sub">The always-loaded files, measured each day. About tokens is an estimate: bytes divided by 4.</p>
+<div class="tbl"><table class="qtab"><thead><tr><th scope="col">File</th><th scope="col">Now</th><th scope="col">About tokens</th><th scope="col">Change in 30 days</th></tr></thead><tbody id="uCtx"></tbody></table></div>
+<div class="unote" id="uCtxNote" hidden></div>
+<div class="uruns" id="uRuns2"><h2>Skills</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Skill</th><th scope="col">Runs</th><th scope="col">Cost</th><th scope="col">Last used</th></tr></thead><tbody id="uSkill"></tbody></table></div></div>
+<h2>Your reviews</h2><p class="sub">Write down what you decided after looking, so the trend has a story. Counts and your own note only.</p>
+<div class="tbl"><table class="qtab"><thead><tr><th scope="col">Date</th><th scope="col">What you saw</th><th scope="col">What you decided</th></tr></thead><tbody id="uRev"></tbody></table></div>
+<div class="urform" id="uRevForm" hidden><label>Date <input type="date" id="uRevDate"></label><label>What you saw <input type="text" id="uRevSaw" maxlength="200" autocomplete="off"></label><label>What you decided <input type="text" id="uRevDec" maxlength="200" autocomplete="off"></label><span class="urbtns"><button type="button" class="btn primary" id="uRevSave">Save note</button><button type="button" class="btn quiet" id="uRevCancel">Cancel</button></span><span class="sub" id="uRevMsg" role="status"></span></div>
+<p class="urbar"><button class="btn" type="button" id="uRevAdd">Add a review note</button> <button class="btn" type="button" id="uRevCsv">Download as CSV</button></p></div>
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>

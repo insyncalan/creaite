@@ -13,13 +13,16 @@ from datetime import date
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+NOW = "2026-10-19 09:00"
+os.environ.setdefault("CREAITE_NOW", NOW)      # the live server and the page share the fixed day
 sys.path.insert(0, str(REPO / "system" / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import context_size  # noqa: E402
 import usage_report  # noqa: E402
 import usage_reviews  # noqa: E402
+from live_browser import LiveBrowserCase  # noqa: E402
+from test_dashboard import populate  # noqa: E402
 
-NOW = "2026-10-19 09:00"
 TODAY = date(2026, 10, 19)
 
 
@@ -203,6 +206,87 @@ class DashboardData(unittest.TestCase):
         self.assertEqual(u["cards"]["week"]["runs"], 4)
         self.assertEqual({r["file"]: r["change_bytes"] for r in u["context"]}["rules"], 2048)
         self.assertEqual(u["reviews"], [])
+
+
+class UsageTab(LiveBrowserCase):
+    shared_server = True
+
+    @classmethod
+    def load(cls, v):
+        populate(v)
+        write_usage(v.root)
+        write_context(v.root, (v.root / "system/creaite-rules.md").stat().st_size)
+
+    @classmethod
+    def server_env(cls):
+        return {"CREAITE_NOW": NOW}
+
+    def open_usage(self):
+        b = self.b
+        b.eval("go('activity')")
+        b.click("#actTabU")
+        b.wait("document.querySelectorAll('#uKind tr').length>=2")
+        return b
+
+    def test_cards_rows_and_thirty_day_change(self):
+        b = self.open_usage()
+        cards = b.eval("[...document.querySelectorAll('#uSum .ucard')].map(c=>c.innerText.replace(/\\s+/g,' '))")
+        self.assertEqual(cards, ["$1.00 Cost this week +100% on last week", "4 Runs this week +100% on last week",
+                                 "21,500 Tokens a run loads before it starts (about) +1,500 on last week",
+                                 "$0.25 Cost of an average run 0% on last week"])
+        rows = b.eval("[...document.querySelectorAll('#uKind tr')].map(r=>[...r.cells].map(c=>c.textContent))")
+        self.assertEqual(rows, [["ask creaite", "5", "21,100", "21,000", "$1.10", "73%"], ["Sweep", "1", "21,100", "20,000", "$0.40", "27%"]])
+        ctx = b.eval("[...document.querySelectorAll('#uCtx tr')].map(r=>r.cells[0].textContent+' | '+r.cells[3].textContent)")
+        self.assertIn("Rules (creaite-rules.md) | +2.0 KB since 12-10-2026", ctx)
+        self.assertIn("Your CLAUDE.md | no earlier measure yet", ctx)
+        steer = b.eval("[...document.querySelectorAll('#uSkill tr')].find(r=>r.cells[0].textContent==='cx-steerco').innerText")
+        self.assertIn("never in this period (last 48 days ago)", steer)
+        self.assertIn("estimates", b.eval("document.getElementById('actUsage').innerText"))
+        self.assertEqual(b.eval("document.querySelectorAll('#uChart .ubar').length"), 14)
+        self.assertEqual(b.eval("document.querySelectorAll('#uChart .udot').length"), 3)      # three days with runs
+        self.assertTrue(b.eval("document.getElementById('actTbl').offsetParent===null"))     # the change list is behind its tab
+        b.click("#actTabCh")
+        self.assertTrue(b.eval("document.getElementById('actUsage').hidden"))
+        self.assertEqual(b.errors, [])
+
+    def test_review_note_form_and_csv(self):
+        b = self.open_usage()
+        self.assertIn("No review notes yet", b.eval("document.getElementById('uRev').innerText"))
+        self.assertTrue(b.eval("document.getElementById('uRevForm').offsetParent===null"))      # the form shows only when asked for
+        csv = b.eval("uCsv([{date:'2026-10-12',saw:'Start load \"21k\"',decided:'Trim, first'}])")
+        self.assertEqual(csv, 'Date,What you saw,What you decided\r\n"12-10-2026","Start load ""21k""","Trim, first"\r\n')
+        b.click("#uRevAdd")
+        self.assertEqual(b.eval("document.getElementById('uRevDate').value"), "2026-10-19")
+        b.eval("document.getElementById('uRevSaw').value='Start load up'")
+        b.click("#uRevSave")
+        b.wait("document.getElementById('uRevMsg').textContent!=='' || document.querySelectorAll('#uRev td.empty').length===0")
+        saved = b.eval("document.querySelectorAll('#uRev td.empty').length===0")
+        if not saved:                       # without the live server's route (dev/proposals/usage-monitor) it says so
+            self.assertIn("live server", b.eval("document.getElementById('uRevMsg').textContent"))
+        else:
+            self.assertIn("Start load up", b.eval("document.getElementById('uRev').innerText"))
+
+    def test_fits_at_900(self):
+        b = self.open_usage()
+        b.resize(900, 900)
+        b.frames()
+        self.assertLessEqual(b.eval("document.documentElement.scrollWidth-document.documentElement.clientWidth"), 0)
+        self.assertLessEqual(b.eval("(()=>{const p=document.getElementById('actUsage');return p.scrollWidth-p.clientWidth})()"), 1)
+        self.assertEqual(b.eval("getComputedStyle(document.getElementById('uSum')).gridTemplateColumns.split(' ').length"), 2)
+
+
+class UsageTabEmpty(LiveBrowserCase):
+    shared_server = True
+
+    def test_no_runs_yet(self):
+        b = self.b
+        b.eval("go('activity')")
+        b.click("#actTabU")
+        b.wait("!document.getElementById('uEmpty').hidden")
+        self.assertIn("No runs yet", b.eval("document.getElementById('uEmpty').textContent"))
+        self.assertTrue(b.eval("document.getElementById('uRuns').offsetParent===null && document.getElementById('uRuns2').offsetParent===null"))
+        self.assertTrue(b.eval("document.getElementById('uEmpty').offsetParent!==null"))
+        self.assertEqual(b.errors, [])
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ import { msFind } from "./milestones.js";
 import { REC } from "./panel.js";
 import { HL, hlClear, hlPick, hlToggle } from "./work.js";
 import { mountRejectsList } from "./components/review/RejectsList.jsx";
+import { renderUsage } from "./usage.js";
 import { rjApproveInstead, rjLoadRecent, rjReasonFor, rjUnreject } from "./review.js";
 /* ======================= Activity ======================= */
 /* BL-43: each line names the item: the ID (a link to it), its text cut to about 80 characters (full text on hover),
@@ -177,10 +178,16 @@ export function renderQuality(){ const q=D.quality||{}; if(q.error){ $("#qPeriod
   (q.fields||[]).forEach(r=>qRow(fl,r.field,[r.text,Object.entries(r.by_source||{}).map(([k,n])=>`${lab[k]||k} ${n}`).join(" · ")])); if(!(q.fields||[]).length) qEmpty(fl,3,"No edits with a known field in this period.");
   const u=q.unknown||{}; $("#qUnknown").textContent=u.n?`${u.n} of ${u.of} edited proposals were edited before creaite kept what was first proposed: field unknown.`:"";
   const dr=$("#qDrafts"); dr.replaceChildren(); (q.drafts||[]).forEach(r=>qRow(dr,r.label,r.offered?[String(r.offered),r.used.text,r.edited.text,r.rejected.text]:["0","—","—","—"],qNR(r.rated,r.offered,"offered"))); }
-/* BL-316: Activity's two tabs, Changes and Quality, are the Tabs building block (drawn into #actTabsHost) */
-export function actTabsDraw(q){ drawTabs($("#actTabsHost"),{items:[{id:"ch",label:"Changes",tabId:"actTabCh",controls:"actTbl"},{id:"q",label:"Quality",tabId:"actTabQ",controls:"actQuality"}],
-  selected:q?"q":"ch",onSelect:id=>actShowQuality(id==="q"),label:"Activity",className:"acttabs",wrap:true}); }
-export function actShowQuality(q){ $("#v-activity").classList.toggle("q",q); $("#actQuality").hidden=!q; actTabsDraw(q); if(q){ renderQuality(); rjLoadRecent(); } }   /* BL-315: What you rejected, fresh each time */
+/* BL-316: Activity's tabs, Changes, Quality and (#238) Usage, are the Tabs building block (drawn into #actTabsHost).
+   actTabsDraw and actShowQuality keep their old boolean form (true: Quality); a tab's id ("ch", "q", "u") works too. */
+const actTabOf=t=>t===true?"q":t==="q"||t==="u"?t:"ch";
+export function actTabsDraw(t){ drawTabs($("#actTabsHost"),{items:[{id:"ch",label:"Changes",tabId:"actTabCh",controls:"actTbl"},{id:"q",label:"Quality",tabId:"actTabQ",controls:"actQuality"},
+  {id:"u",label:"Usage",tabId:"actTabU",controls:"actUsage"}],selected:actTabOf(t),onSelect:id=>actShowTab(id),label:"Activity",className:"acttabs",wrap:true}); }
+export function actShowTab(t){ const id=actTabOf(t), v=$("#v-activity"); v.classList.toggle("q",id==="q"); v.classList.toggle("u",id==="u");
+  $("#actQuality").hidden=id!=="q"; $("#actUsage").hidden=id!=="u"; actTabsDraw(id);
+  if(id==="q"){ renderQuality(); rjLoadRecent(); }   /* BL-315: What you rejected, fresh each time */
+  if(id==="u") renderUsage(); }
+export function actShowQuality(q){ actShowTab(q?"q":"ch"); }
  
 /* ===== end BL-233 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */

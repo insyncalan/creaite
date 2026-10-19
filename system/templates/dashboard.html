@@ -2652,6 +2652,21 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .acttabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 14px} .acttabs [role=tab]{border:0;background:none;padding:8px 12px;font:500 var(--fs-md)/20px var(--font);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
 .acttabs [role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)} .acttabs [role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 #v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg{display:none!important}
+/* #238 Activity › Usage: the summary cards, the two day charts (cost, start load: one axis each), and the review form */
+#v-activity.u #actTools,#v-activity.u #actBar,#v-activity.u #actTbl,#v-activity.u #achg{display:none!important}
+#actUsage h2{margin:20px 0 6px} .usum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.ucard{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px}
+.ucard .v{font:700 var(--fs-2xl) var(--display)} .ucard .l{font-size:var(--fs-sm);color:var(--muted)} .ucard .d{font-size:var(--fs-xs);margin-top:4px;color:var(--muted)}
+.uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0}
+#actUsage .uchart h2{margin:0 0 6px} .uchart svg{width:100%;display:block} .uchart .ax{font-size:var(--fs-xs);fill:var(--muted)}
+.uchart .uglab{font-size:var(--fs-xs);fill:var(--ink);font-weight:500} .uchart .ubar{fill:var(--accent)} .uchart .ubar:hover{opacity:.8}
+.uchart .uline{fill:none;stroke:var(--accent);stroke-width:2} .uchart .udot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.uchart .uhit{fill:transparent} .uchart .ugrid{stroke:var(--line)} .uchart .sub{margin:6px 0 0}
+.unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-md);font-size:var(--fs-sm)}
+.uerr{color:var(--bad)} .uempty{margin:12px 0} .unever{color:var(--warn);font-weight:500}
+.urform{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:10px 0} .urform label{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-sm);color:var(--muted)}
+.urform input[type=text]{width:240px} .urbtns{display:flex;gap:8px} .urbar{margin:10px 0} #actUsage [hidden]{display:none!important}
+@media (max-width:1000px){.usum{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #actQuality h2{margin:20px 0 6px} .qmoved{font-weight:500;margin:4px 0} .qtab{width:100%;border-collapse:collapse;font-size:var(--fs-sm)} .qtab th,.qtab td{text-align:left;padding:6px 10px;border-top:1px solid var(--line)}
 .qtab thead th{border-top:0;color:var(--muted);font-weight:500} #actQuality .qtab tbody th{font:500 var(--fs-sm)/18px var(--font);text-transform:none;letter-spacing:0;color:var(--ink);background:none} .qnr{display:block;font-weight:400;font-size:var(--fs-xs);color:var(--muted)}
 /* ===== end sprint-drafts-extraction (CSS) ===== */
@@ -4224,7 +4239,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
             <div class="wapplied" id="fchips" hidden></div>
             <div class="tbl" id="filesTbl"></div><p class="sub"><span id="filesAt">File list as of the last build.</span> Word files open in Word; the folder icon (Open folder) shows the file's folder.</p></div></div>
       </div></section>
-      <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="tabhost" id="actTabsHost"></div><!-- BL-316: Changes and Quality, the Tabs building block --><!-- BL-233 (sprint-drafts-extraction) -->
+      <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="tabhost" id="actTabsHost"></div><!-- BL-316: Changes, Quality and (#238) Usage, the Tabs building block --><!-- BL-233 (sprint-drafts-extraction) -->
 <div id="actQuality" role="tabpanel" aria-labelledby="actTabQ" hidden><p class="sub" id="qPeriod"></p><p class="qmoved" id="qMoved"></p><p class="sub qnote">Each figure is a count out of its total. Nothing is rated until a group has 10. These count extraction and drafts only, never a person, and stay internal: no report or export reads them.</p>
 <h2>By source</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Source</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qSrc"></tbody></table></div>
 <h2>By type</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Type</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qType"></tbody></table></div>
@@ -4232,6 +4247,20 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
 <h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
 <h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
+<!-- #238: Activity › Usage, read only (D.usage); the review notes save through POST /api/usage/review -->
+<div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden><p class="sub" id="uPeriod">Last 14 days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name. Internal; nothing leaves this laptop. Tokens are estimates.</p>
+<p class="uerr" id="uErr" hidden></p><div class="empty uempty" id="uEmpty" hidden>No runs yet. Each Claude run the live server makes is counted here once it ends.</div>
+<div class="uruns" id="uRuns"><div class="usum" id="uSum"></div>
+<div class="uchart"><h2>Cost and what each run loads before it starts, by day</h2><div id="uChart"></div><p class="sub">Top: cost in dollars. Bottom: the median tokens a run loaded before doing anything (the rules file, CLAUDE.md, memory and skill names). Point at a bar or a dot for its figure.</p></div>
+<h2>By kind of run</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Kind</th><th scope="col">Runs</th><th scope="col">Average tokens</th><th scope="col">Loaded at start (median)</th><th scope="col">Cost</th><th scope="col">Share of cost</th></tr></thead><tbody id="uKind"></tbody></table></div></div>
+<h2>What every run loads</h2><p class="sub">The always-loaded files, measured each day. About tokens is an estimate: bytes divided by 4.</p>
+<div class="tbl"><table class="qtab"><thead><tr><th scope="col">File</th><th scope="col">Now</th><th scope="col">About tokens</th><th scope="col">Change in 30 days</th></tr></thead><tbody id="uCtx"></tbody></table></div>
+<div class="unote" id="uCtxNote" hidden></div>
+<div class="uruns" id="uRuns2"><h2>Skills</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Skill</th><th scope="col">Runs</th><th scope="col">Cost</th><th scope="col">Last used</th></tr></thead><tbody id="uSkill"></tbody></table></div></div>
+<h2>Your reviews</h2><p class="sub">Write down what you decided after looking, so the trend has a story. Counts and your own note only.</p>
+<div class="tbl"><table class="qtab"><thead><tr><th scope="col">Date</th><th scope="col">What you saw</th><th scope="col">What you decided</th></tr></thead><tbody id="uRev"></tbody></table></div>
+<div class="urform" id="uRevForm" hidden><label>Date <input type="date" id="uRevDate"></label><label>What you saw <input type="text" id="uRevSaw" maxlength="200" autocomplete="off"></label><label>What you decided <input type="text" id="uRevDec" maxlength="200" autocomplete="off"></label><span class="urbtns"><button type="button" class="btn primary" id="uRevSave">Save note</button><button type="button" class="btn quiet" id="uRevCancel">Cancel</button></span><span class="sub" id="uRevMsg" role="status"></span></div>
+<p class="urbar"><button class="btn" type="button" id="uRevAdd">Add a review note</button> <button class="btn" type="button" id="uRevCsv">Download as CSV</button></p></div>
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
@@ -4780,6 +4809,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     TextEditor: () => TextEditor,
     ToDecide: () => ToDecide,
     Toast: () => Toast,
+    U_FILES: () => U_FILES,
+    U_KINDS: () => U_KINDS,
     VAULT_PATH: () => VAULT_PATH,
     VDB: () => VDB,
     VH: () => VH,
@@ -4844,6 +4875,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     actSel: () => actSel,
     actSetFilters: () => actSetFilters,
     actShowQuality: () => actShowQuality,
+    actShowTab: () => actShowTab,
     actTabsDraw: () => actTabsDraw,
     actTools: () => actTools,
     actTyping: () => actTyping,
@@ -5117,6 +5149,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bootToday0164: () => bootToday0164,
     bootToday319: () => bootToday319,
     bootTooltips: () => bootTooltips,
+    bootUsage: () => bootUsage,
     bootWeekendNote: () => bootWeekendNote,
     bootWork0031: () => bootWork0031,
     bootWork0034: () => bootWork0034,
@@ -5514,6 +5547,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     drawPeekNotes: () => drawPeekNotes,
     drawPrep: () => drawPrep,
     drawReviewFilters: () => drawReviewFilters,
+    drawReviews: () => drawReviews,
     drawStatusDot: () => drawStatusDot,
     drawTabs: () => drawTabs,
     drawThumbs: () => drawThumbs,
@@ -6557,6 +6591,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderSweepDue: () => renderSweepDue,
     renderToDecide: () => renderToDecide,
     renderToday: () => renderToday,
+    renderUsage: () => renderUsage,
     renderViewBar: () => renderViewBar,
     renderWeek: () => renderWeek,
     renderWork: () => renderWork,
@@ -6913,6 +6948,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     tx: () => tx2,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
+    uCards: () => uCards,
+    uChange: () => uChange,
+    uCsv: () => uCsv,
+    uKB: () => uKB,
+    uKindRow: () => uKindRow,
+    uLast: () => uLast,
+    uMoney: () => uMoney,
+    uNum: () => uNum,
+    uPct: () => uPct,
+    uTop: () => uTop,
     undCommit: () => undCommit,
     undatedCard: () => undatedCard,
     undatedRecount: () => undatedRecount,
@@ -7340,12 +7385,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var cardGroup = hoverGroup("card");
   var canHover = () => typeof matchMedia !== "function" || matchMedia("(hover: hover)").matches;
   function hoverAttach(trigger, o5) {
-    const { group, panel } = o5, focusOpens = o5.focusOpens !== false;
+    const { group, panel: panel2 } = o5, focusOpens = o5.focusOpens !== false;
     const h5 = { isOpen: o5.isOpen, open: o5.open, close: () => {
       document.removeEventListener("pointermove", track, true);
       o5.close();
     }, rect: () => {
-      const p6 = panel();
+      const p6 = panel2();
       return p6 ? p6.getBoundingClientRect() : null;
     } };
     let at2 = "";
@@ -7357,7 +7402,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       );
       if (!n4) return "";
       if (trigger.contains(n4)) return "trigger";
-      const p6 = panel();
+      const p6 = panel2();
       return p6 && p6.contains(n4) ? "panel" : "";
     };
     const track = (e4) => group.move({ x: e4.clientX, y: e4.clientY });
@@ -7389,11 +7434,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
       const to2 = (
         /** @type {Node | null} */
         e4.relatedTarget
-      ), p6 = panel();
+      ), p6 = panel2();
       if (!to2 || !trigger.contains(to2) && !(p6 && p6.contains(to2))) group.blur(trigger);
     };
     const taken2 = (e4) => {
-      const p6 = panel();
+      const p6 = panel2();
       if (group.current === trigger && p6 && e4.target instanceof Node && p6.contains(e4.target)) group.release(trigger);
     };
     const key2 = (e4) => {
@@ -40816,7 +40861,7 @@ ${s5}`;
     const [open2, setOpen2] = d2(false), trigger = A2(
       /** @type {HTMLElement | null} */
       null
-    ), panel = A2(
+    ), panel2 = A2(
       /** @type {HTMLElement | null} */
       null
     );
@@ -40825,7 +40870,7 @@ ${s5}`;
     h2(() => {
       const t47 = trigger.current;
       if (!on2 || !t47) return void 0;
-      return hoverAttach(t47, { group: cardGroup, open: () => setOpen2(true), close: () => setOpen2(false), panel: () => panel.current, isOpen: () => shown2.current });
+      return hoverAttach(t47, { group: cardGroup, open: () => setOpen2(true), close: () => setOpen2(false), panel: () => panel2.current, isOpen: () => shown2.current });
     }, [on2]);
     const shut = (refocus) => {
       cardGroup.close();
@@ -40837,10 +40882,10 @@ ${s5}`;
         /** @type {Node | null} */
         e4.relatedTarget
       );
-      if (to2 && (trigger.current && trigger.current.contains(to2) || panel.current && panel.current.contains(to2))) return;
+      if (to2 && (trigger.current && trigger.current.contains(to2) || panel2.current && panel2.current.contains(to2))) return;
       if (to2) setOpen2(false);
     };
-    return { open: open2, trigger, panel, shut, onFocusOut };
+    return { open: open2, trigger, panel: panel2, shut, onFocusOut };
   }
   var Block = ({ label, children }) => /* @__PURE__ */ u2("div", { class: "pkb", children: [
     /* @__PURE__ */ u2("div", { class: "pkl", children: label }),
@@ -58201,9 +58246,9 @@ ${d5.text}`);
     pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Saved to staging" : d5.length ? "Applied" : "");
   }
   function markStagedRows() {
-    const ids = /* @__PURE__ */ new Set([...shared.PKS.map((s5) => s5.id), ...(shared.PENDING || []).flatMap((p6) => p6.ids || [])]), sv = savingIds();
+    const ids = /* @__PURE__ */ new Set([...shared.PKS.map((s5) => s5.id), ...(shared.PENDING || []).flatMap((p6) => p6.ids || [])]), sv2 = savingIds();
     $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach((r4) => {
-      const id2 = r4.dataset.row, st2 = sv.has(id2) ? "saving" : ids.has(id2) ? "staged" : "", d5 = (
+      const id2 = r4.dataset.row, st2 = sv2.has(id2) ? "saving" : ids.has(id2) ? "staged" : "", d5 = (
         /** @type {HTMLElement|null} */
         r4.querySelector(".pkdot")
       );
@@ -65233,6 +65278,260 @@ ${d5.text}`);
     if (box) R(/* @__PURE__ */ u2(RejectsList, { ...props }), box);
   }
 
+  // usage.js
+  var U_KINDS = {
+    ask: "ask creaite",
+    sweep: "Sweep",
+    generate: "Generate current state",
+    prep: "Prep page",
+    check: "Transcript check",
+    load: "Transcript load",
+    draft: "Drafts",
+    vip: "VIP check"
+  };
+  var U_FILES = {
+    rules: "Rules (creaite-rules.md)",
+    claude_md: "Your CLAUDE.md",
+    memory: "Project memory and registers",
+    skills: "Skill names and descriptions"
+  };
+  var SVG = "http://www.w3.org/2000/svg";
+  var uNum = (n4) => Math.round(n4 || 0).toLocaleString("en-GB");
+  var uMoney = (n4) => `$${(n4 || 0).toFixed(2)}`;
+  var uKB = (b5) => `${(b5 / 1024).toFixed(1)} KB`;
+  var uPct = (p6) => p6 === null || p6 === void 0 ? "nothing last week to compare" : `${p6 > 0 ? "+" : p6 < 0 ? "−" : ""}${Math.abs(p6)}% on last week`;
+  function uCell(tr2, text, cls) {
+    const td2 = document.createElement("td");
+    td2.textContent = text;
+    if (cls) td2.className = cls;
+    tr2.append(td2);
+    return td2;
+  }
+  function rowsInto(id2, tableRows, cols, none) {
+    const body2 = $(id2);
+    body2.replaceChildren();
+    if (!tableRows.length) {
+      const tr2 = document.createElement("tr");
+      const td2 = uCell(tr2, none, "empty");
+      td2.colSpan = cols;
+      body2.append(tr2);
+      return;
+    }
+    tableRows.forEach((r4) => {
+      const tr2 = document.createElement("tr");
+      r4.forEach((c5) => uCell(tr2, c5));
+      body2.append(tr2);
+    });
+  }
+  function uCards(c5) {
+    const w6 = c5.week || {}, ch2 = c5.change || {};
+    const st2 = ch2.start_tokens === null || ch2.start_tokens === void 0 ? "nothing last week to compare" : `${ch2.start_tokens > 0 ? "+" : ch2.start_tokens < 0 ? "−" : ""}${uNum(Math.abs(ch2.start_tokens))} on last week`;
+    return [
+      [uMoney(w6.cost_usd), "Cost this week", uPct(ch2.cost_pct)],
+      [uNum(w6.runs), "Runs this week", uPct(ch2.runs_pct)],
+      [w6.start_median ? uNum(w6.start_median) : "—", "Tokens a run loads before it starts (about)", st2],
+      [uMoney(w6.avg_cost_usd), "Cost of an average run", uPct(ch2.avg_cost_pct)]
+    ];
+  }
+  function drawCards(c5) {
+    const host2 = $("#uSum");
+    host2.replaceChildren();
+    uCards(c5).forEach(([v5, l6, d5]) => {
+      const box = document.createElement("div");
+      box.className = "ucard";
+      [["v", v5], ["l", l6], ["d", d5]].forEach(([k5, t47]) => {
+        const e4 = document.createElement("div");
+        e4.className = k5;
+        e4.textContent = t47;
+        box.append(e4);
+      });
+      host2.append(box);
+    });
+  }
+  function sv(tag, at2, title) {
+    const e4 = document.createElementNS(SVG, tag);
+    Object.entries(at2).forEach(([k5, v5]) => e4.setAttribute(k5, String(v5)));
+    if (title) {
+      const t47 = document.createElementNS(SVG, "title");
+      t47.textContent = title;
+      e4.append(t47);
+    }
+    return e4;
+  }
+  function uTop(v5) {
+    if (!(v5 > 0)) return 1;
+    const p6 = 10 ** Math.floor(Math.log10(v5));
+    return [1, 2, 5, 10].map((m5) => m5 * p6).find((t47) => t47 >= v5) || 10 * p6;
+  }
+  var U_L = 54, U_R = 8;
+  function panel(perDay, key2, opts) {
+    const W3 = opts.w, H4 = opts.h, B4 = opts.labels ? 22 : 6, T6 = 26, n4 = perDay.length, bw2 = (W3 - U_L - U_R) / n4;
+    const vals = perDay.map((d5) => d5[key2]), top = uTop(Math.max(0, ...vals.filter((v5) => v5 !== null)));
+    const y5 = (v5) => H4 - B4 - (H4 - B4 - T6) * v5 / top, svg = sv("svg", { viewBox: `0 0 ${W3} ${H4}`, width: W3, height: H4, role: "img", "aria-label": opts.aria });
+    const head = sv("text", { class: "uglab", x: 0, y: 12 });
+    head.textContent = opts.title;
+    svg.append(head);
+    [0, top / 2, top].forEach((g5) => {
+      svg.append(sv("line", { class: "ugrid", x1: U_L, x2: W3 - U_R, y1: y5(g5), y2: y5(g5) }));
+      const t47 = sv("text", { class: "ax", x: U_L - 6, y: y5(g5) + 4, "text-anchor": "end" });
+      t47.textContent = opts.tick(g5);
+      svg.append(t47);
+    });
+    const pts = [];
+    perDay.forEach((d5, i5) => {
+      const cx2 = U_L + i5 * bw2 + bw2 / 2, v5 = d5[key2], tip = `${fd(d5.day)}: ${v5 === null ? "no runs" : opts.tip(v5)}`;
+      if (opts.bars) {
+        const h5 = Math.max(0, H4 - B4 - y5(v5 || 0));
+        svg.append(sv("rect", { class: "ubar", x: cx2 - bw2 * 0.3, y: H4 - B4 - h5, width: bw2 * 0.6, height: h5, rx: 2 }, tip));
+      } else if (v5 !== null) pts.push([cx2, y5(v5), tip]);
+      svg.append(sv("rect", { class: "uhit", x: cx2 - bw2 / 2, y: T6, width: bw2, height: H4 - B4 - T6 }, tip));
+      if (opts.labels && i5 % 2 === n4 % 2) {
+        const t47 = sv("text", { class: "ax", x: cx2, y: H4 - 6, "text-anchor": "middle" });
+        t47.textContent = fd(d5.day).slice(0, 5);
+        svg.append(t47);
+      }
+    });
+    if (pts.length) {
+      svg.append(sv("polyline", { class: "uline", points: pts.map((p6) => `${p6[0]},${p6[1]}`).join(" ") }));
+      pts.forEach((p6) => svg.append(sv("circle", { class: "udot", cx: p6[0], cy: p6[1], r: 4 }, p6[2])));
+    }
+    return svg;
+  }
+  function drawChart(perDay) {
+    const host2 = $("#uChart"), w6 = Math.max(360, Math.floor(host2.clientWidth || 760));
+    host2.replaceChildren(
+      panel(perDay, "cost_usd", { w: w6, h: 140, bars: true, title: "Cost per day", aria: "Cost per day, last 14 days", tick: (g5) => `$${g5.toFixed(g5 < 1 && g5 > 0 ? 2 : 0)}`, tip: uMoney }),
+      panel(perDay, "start_median", {
+        w: w6,
+        h: 120,
+        labels: true,
+        title: "Median tokens loaded at start (about)",
+        aria: "Median start load per run, last 14 days",
+        tick: (g5) => g5 >= 1e3 ? `${Math.round(g5 / 1e3)}k` : String(Math.round(g5)),
+        tip: (v5) => `about ${uNum(v5)} tokens`
+      })
+    );
+  }
+  var uKindRow = (k5) => [
+    U_KINDS[k5.kind] || k5.kind,
+    uNum(k5.runs),
+    uNum(k5.avg_tokens),
+    k5.start_median ? uNum(k5.start_median) : "—",
+    uMoney(k5.cost_usd),
+    `${Math.round((k5.share || 0) * 100)}%`
+  ];
+  function uChange(c5) {
+    if (c5.change_bytes === null || c5.change_bytes === void 0) return "no earlier measure yet";
+    if (!c5.change_bytes) return "no change";
+    return `${c5.change_bytes > 0 ? "+" : "−"}${uKB(Math.abs(c5.change_bytes))}${c5.changed_on ? ` since ${fd(c5.changed_on)}` : ""}`;
+  }
+  function uLast(s5) {
+    if (s5.days_since === null || s5.days_since === void 0) return "never used";
+    const ago = s5.days_since === 0 ? "today" : s5.days_since === 1 ? "yesterday" : `${s5.days_since} days ago`;
+    return s5.never_in_period ? `never in this period (last ${ago})` : ago;
+  }
+  function drawSkills(list) {
+    rowsInto("#uSkill", list.map((s5) => [s5.skill, uNum(s5.runs), uMoney(s5.cost_usd), uLast(s5)]), 4, "No skills found.");
+    $("#uSkill").querySelectorAll("tr").forEach((tr2, i5) => {
+      if (list[i5] && list[i5].never_in_period) tr2.lastElementChild?.classList.add("unever");
+    });
+  }
+  function drawContext(ctx, cards) {
+    rowsInto("#uCtx", ctx.map((c5) => [U_FILES[c5.file] || c5.file, uKB(c5.bytes), uNum(c5.tokens), uChange(c5)]), 4, "Nothing measured yet.");
+    const total = ctx.reduce((a5, c5) => a5 + (c5.tokens || 0), 0), note = $("#uCtxNote"), start = (cards.week || {}).start_median;
+    note.hidden = !total;
+    note.replaceChildren();
+    const b5 = document.createElement("b");
+    b5.textContent = "Why this matters: ";
+    note.append(b5, `these files come to about ${uNum(total)} tokens${start ? `, and a run this week loaded about ${uNum(start)} before doing anything` : ""}. Trimming the rules file, or loading its detail only when a skill needs it, would lower the cost of every run.`);
+  }
+  function drawReviews(list) {
+    rowsInto("#uRev", list.slice().reverse().map((r4) => [fd(r4.date), r4.saw, r4.decided]), 3, "No review notes yet.");
+  }
+  function renderUsage() {
+    const u5 = D.usage || {}, err = $("#uErr");
+    err.hidden = !u5.error;
+    err.textContent = u5.error ? `Usage couldn't be counted (${u5.error}).` : "";
+    if (u5.error) return;
+    const empty = !!u5.empty || !u5.runs && !(u5.daily || []).some((d5) => d5.runs);
+    $("#uEmpty").hidden = !empty;
+    $("#uRuns").hidden = empty;
+    $("#uRuns2").hidden = empty;
+    if (!empty) {
+      drawCards(u5.cards || {});
+      drawChart(u5.daily || []);
+      rowsInto("#uKind", (u5.kinds || []).map(uKindRow), 6, "No runs in this period.");
+      drawSkills(u5.skills || []);
+    }
+    drawContext(u5.context || [], u5.cards || {});
+    drawReviews(u5.reviews || []);
+  }
+  function uCsv(list) {
+    const q5 = (s5) => `"${String(s5 ?? "").replace(/"/g, '""')}"`;
+    return ["Date,What you saw,What you decided", ...list.map((r4) => [fd(r4.date), r4.saw, r4.decided].map(q5).join(","))].join("\r\n") + "\r\n";
+  }
+  function downloadCsv() {
+    const a5 = document.createElement("a"), u5 = URL.createObjectURL(new Blob([uCsv((D.usage || {}).reviews || [])], { type: "text/csv" }));
+    a5.href = u5;
+    a5.download = "creaite usage reviews.csv";
+    document.body.append(a5);
+    a5.click();
+    a5.remove();
+    setTimeout(() => URL.revokeObjectURL(u5), 1e3);
+  }
+  function formOpen(on2) {
+    $("#uRevForm").hidden = !on2;
+    $("#uRevAdd").hidden = on2;
+    $("#uRevMsg").textContent = "";
+    if (on2) {
+      $("#uRevDate").value = TODAY;
+      $("#uRevSaw").value = "";
+      $("#uRevDec").value = "";
+      $("#uRevSaw").focus();
+    }
+  }
+  async function saveReview() {
+    const r4 = await api("/api/usage/review", { date: $("#uRevDate").value, saw: $("#uRevSaw").value, decided: $("#uRevDec").value });
+    if (!r4 || !r4.ok) {
+      $("#uRevMsg").textContent = r4 && /not found/i.test(r4.message || "") ? "Saving a review note needs the live server's next update." : r4 && r4.message || "Not saved.";
+      return;
+    }
+    D.usage = { ...D.usage || {}, reviews: r4.reviews || [] };
+    drawReviews(D.usage.reviews);
+    formOpen(false);
+    $("#uRevAdd").focus();
+  }
+  function bootUsage() {
+    $("#uRevAdd").addEventListener("click", () => formOpen(true));
+    $("#uRevCancel").addEventListener("click", () => {
+      formOpen(false);
+      $("#uRevAdd").focus();
+    });
+    $("#uRevSave").addEventListener("click", () => {
+      saveReview();
+    });
+    $("#uRevForm").addEventListener("keydown", (e4) => {
+      if (e4.key === "Enter" && e4.target instanceof HTMLInputElement) {
+        e4.preventDefault();
+        saveReview();
+      }
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        formOpen(false);
+        $("#uRevAdd").focus();
+      }
+    });
+    $("#uRevCsv").addEventListener("click", downloadCsv);
+    let wait = 0;
+    window.addEventListener("resize", () => {
+      clearTimeout(wait);
+      wait = window.setTimeout(() => {
+        if (!$("#actUsage").hidden && !$("#uRuns").hidden) drawChart((D.usage || {}).daily || []);
+      }, 150);
+    });
+  }
+
   // activity.js
   var ID_RE = /^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
   function itemText(id2) {
@@ -65644,24 +65943,29 @@ ${d5.text}`);
     dr2.replaceChildren();
     (q5.drafts || []).forEach((r4) => qRow(dr2, r4.label, r4.offered ? [String(r4.offered), r4.used.text, r4.edited.text, r4.rejected.text] : ["0", "—", "—", "—"], qNR(r4.rated, r4.offered, "offered")));
   }
-  function actTabsDraw(q5) {
-    drawTabs($("#actTabsHost"), {
-      items: [{ id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" }, { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" }],
-      selected: q5 ? "q" : "ch",
-      onSelect: (id2) => actShowQuality(id2 === "q"),
-      label: "Activity",
-      className: "acttabs",
-      wrap: true
-    });
+  var actTabOf = (t47) => t47 === true ? "q" : t47 === "q" || t47 === "u" ? t47 : "ch";
+  function actTabsDraw(t47) {
+    drawTabs($("#actTabsHost"), { items: [
+      { id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" },
+      { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" },
+      { id: "u", label: "Usage", tabId: "actTabU", controls: "actUsage" }
+    ], selected: actTabOf(t47), onSelect: (id2) => actShowTab(id2), label: "Activity", className: "acttabs", wrap: true });
   }
-  function actShowQuality(q5) {
-    $("#v-activity").classList.toggle("q", q5);
-    $("#actQuality").hidden = !q5;
-    actTabsDraw(q5);
-    if (q5) {
+  function actShowTab(t47) {
+    const id2 = actTabOf(t47), v5 = $("#v-activity");
+    v5.classList.toggle("q", id2 === "q");
+    v5.classList.toggle("u", id2 === "u");
+    $("#actQuality").hidden = id2 !== "q";
+    $("#actUsage").hidden = id2 !== "u";
+    actTabsDraw(id2);
+    if (id2 === "q") {
       renderQuality();
       rjLoadRecent();
     }
+    if (id2 === "u") renderUsage();
+  }
+  function actShowQuality(q5) {
+    actShowTab(q5 ? "q" : "ch");
   }
   function bootActivity0205() {
     mountRejectsList($("#qRejects"), {
@@ -76195,6 +76499,7 @@ ${d5.text}`);
         "tx",
         "typedLinkUrl",
         "typing",
+        "uCsv",
         "undatedCard",
         "undoApply",
         "undoWords",
@@ -76659,6 +76964,7 @@ ${d5.text}`);
   bootDrafts0203();
   bootDrafts0204();
   bootActivity0205();
+  bootUsage();
   bootAsk0207();
   bootAsk0208();
   bootReview0209();

@@ -2642,6 +2642,21 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .acttabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 14px} .acttabs [role=tab]{border:0;background:none;padding:8px 12px;font:500 var(--fs-md)/20px var(--font);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
 .acttabs [role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)} .acttabs [role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 #v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg{display:none!important}
+/* #238 Activity › Usage: the summary cards, the two day charts (cost, start load: one axis each), and the review form */
+#v-activity.u #actTools,#v-activity.u #actBar,#v-activity.u #actTbl,#v-activity.u #achg{display:none!important}
+#actUsage h2{margin:20px 0 6px} .usum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.ucard{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px}
+.ucard .v{font:700 var(--fs-2xl) var(--display)} .ucard .l{font-size:var(--fs-sm);color:var(--muted)} .ucard .d{font-size:var(--fs-xs);margin-top:4px;color:var(--muted)}
+.uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0}
+#actUsage .uchart h2{margin:0 0 6px} .uchart svg{width:100%;display:block} .uchart .ax{font-size:var(--fs-xs);fill:var(--muted)}
+.uchart .uglab{font-size:var(--fs-xs);fill:var(--ink);font-weight:500} .uchart .ubar{fill:var(--accent)} .uchart .ubar:hover{opacity:.8}
+.uchart .uline{fill:none;stroke:var(--accent);stroke-width:2} .uchart .udot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.uchart .uhit{fill:transparent} .uchart .ugrid{stroke:var(--line)} .uchart .sub{margin:6px 0 0}
+.unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-md);font-size:var(--fs-sm)}
+.uerr{color:var(--bad)} .uempty{margin:12px 0} .unever{color:var(--warn);font-weight:500}
+.urform{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:10px 0} .urform label{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-sm);color:var(--muted)}
+.urform input[type=text]{width:240px} .urbtns{display:flex;gap:8px} .urbar{margin:10px 0} #actUsage [hidden]{display:none!important}
+@media (max-width:1000px){.usum{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #actQuality h2{margin:20px 0 6px} .qmoved{font-weight:500;margin:4px 0} .qtab{width:100%;border-collapse:collapse;font-size:var(--fs-sm)} .qtab th,.qtab td{text-align:left;padding:6px 10px;border-top:1px solid var(--line)}
 .qtab thead th{border-top:0;color:var(--muted);font-weight:500} #actQuality .qtab tbody th{font:500 var(--fs-sm)/18px var(--font);text-transform:none;letter-spacing:0;color:var(--ink);background:none} .qnr{display:block;font-weight:400;font-size:var(--fs-xs);color:var(--muted)}
 /* ===== end sprint-drafts-extraction (CSS) ===== */
