@@ -29443,6 +29443,36 @@ ${s5}`;
   }
   function fbPaint(s5) {
     R(/* @__PURE__ */ u2(FilterBar, { ...s5.props, ui: s5.ui, host: s5.host }), s5.host);
+    fbPlace(s5);
+  }
+  var FB_GAP = 8;
+  function fbPlace(s5) {
+    const m5 = s5.props.more && document.getElementById(s5.props.more.menuId);
+    if (!m5 || !s5.host.contains(m5)) return;
+    const st2 = m5.style;
+    st2.position = st2.top = st2.left = st2.right = st2.bottom = st2.maxHeight = "";
+    if (s5.ui.open !== FB_MORE || !m5.classList.contains("on")) return;
+    const dd2 = (
+      /** @type {HTMLElement} */
+      m5.parentElement
+    ), d5 = dd2.getBoundingClientRect();
+    const vw2 = document.documentElement.clientWidth, vh2 = document.documentElement.clientHeight;
+    const w6 = m5.offsetWidth, cap = parseFloat(getComputedStyle(m5).maxHeight) || vh2;
+    let top = d5.top + m5.offsetTop, room = vh2 - FB_GAP - top;
+    const above = d5.top - FB_GAP - (top - d5.bottom);
+    if (room < Math.min(cap, m5.scrollHeight) && above > room) {
+      room = above;
+      top = Math.max(FB_GAP, d5.top - (top - d5.bottom) - Math.min(cap, room, m5.scrollHeight));
+    }
+    const left = Math.max(FB_GAP, Math.min(d5.left + m5.offsetLeft, vw2 - FB_GAP - w6));
+    Object.assign(st2, {
+      position: "fixed",
+      top: `${Math.round(top)}px`,
+      left: `${Math.round(left)}px`,
+      right: "auto",
+      bottom: "auto",
+      maxHeight: `${Math.max(0, Math.floor(Math.min(cap, room)))}px`
+    });
   }
   function fbDd(s5, id2) {
     const f5 = id2 === FB_MORE ? null : s5.props.fields.find((x5) => x5.id === id2);
@@ -29505,6 +29535,12 @@ ${s5}`;
     document.addEventListener("pointerdown", fbAway, true);
     document.addEventListener("click", fbAway, true);
     document.addEventListener("focusin", fbAway);
+    const replace = (e4) => FB_OPEN.forEach((s5) => {
+      const m5 = s5.props.more && document.getElementById(s5.props.more.menuId);
+      if (s5.ui.open === FB_MORE && !(m5 && e4.target instanceof Node && m5.contains(e4.target))) fbPlace(s5);
+    });
+    window.addEventListener("resize", replace);
+    document.addEventListener("scroll", replace, { capture: true, passive: true });
   }
   function fbFit(s5) {
     const fold = s5.props.fold;
