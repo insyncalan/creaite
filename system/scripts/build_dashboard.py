@@ -766,9 +766,11 @@ def update_record(con, item):
     current = before.get(field) if field else None
     if item.get("op") == "update" and item.get("table") in ("actions", "raid", "decisions") and "why" in item:   # BL-65
         text = review.update_parts(item)[0]          # the item; its changes are listed as before → after
+    # ===== #232-B (B1): the peek of an update proposal reads the target's table and each change's database column ("col") =====
     return {"t": text if item.get("op") != "new" else f"{what}: {text}", "target": item.get("id"),
+            "table": table, "title": before.get(TEXT_FIELD.get(table, "")) or "",
             "field": field, "from": current, "to": changes.get(field),
-            "changes": [{"field": FIELD_LABELS.get(k, k.replace("_", " ")), "from": before.get(k), "to": v}
+            "changes": [{"field": FIELD_LABELS.get(k, k.replace("_", " ")), "col": k, "from": before.get(k), "to": v}
                         for k, v in changes.items()] if item.get("op") != "new" else [],
             **({"why": item.get("why") or ""} if "why" in item else {})}
 
