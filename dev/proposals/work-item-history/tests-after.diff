@@ -1,0 +1,47 @@
+diff --git a/dev/tests/test_item_history.py b/dev/tests/test_item_history.py
+index 793539f4..6844a7cb 100644
+--- a/dev/tests/test_item_history.py
++++ b/dev/tests/test_item_history.py
+@@ -303,7 +303,6 @@ class Single(unittest.TestCase):
+         (self.v.root / "system/tracker.db").unlink()
+         self.assertEqual(history(self.v, A)["events"], [])
+ 
+-    @unittest.expectedFailure
+     def test_the_route_survives_losing_the_proposal(self):
+         """NEEDS the diff: tracker.py stores the route, place and source on the event, so the applied proposal is not needed."""
+         n = self.apply("s1", [upd(1, "actions", A, owner="Omar Ali")], source_run="dashboard", place="cell")
+@@ -312,7 +311,6 @@ class Single(unittest.TestCase):
+         e = of_apply(history(self.v, A)["events"], n, "owner")[0]
+         self.assertEqual((e["route"], e["place"], e["exact"]), ("dashboard", "cell", True), NEEDS_DIFF.format("tracker.py"))
+ 
+-    @unittest.expectedFailure
+     def test_events_are_stored_one_per_change_with_references_only(self):
+         """NEEDS the diff: the item_events table (schema.sql) and tracker.py writing a row for every change_log row."""
+         n = self.apply("e1-sweep", [{**upd(1, "actions", A, owner="Omar Ali"), "decided_in": "dashboard",
+@@ -325,7 +323,6 @@ class Single(unittest.TestCase):
+                                 "src_ref", "undoes"})
+         self.assertNotIn(SECRET, json.dumps(q(self.v, "SELECT * FROM item_events")))
+ 
+-    @unittest.expectedFailure
+     def test_an_undo_event_points_at_the_one_it_undoes(self):
+         """NEEDS the diff: cmd_undo passes the original change_log rowid, stored as item_events.undoes."""
+         n = self.apply("d1", [upd(1, "actions", A, owner="Omar Ali")], source_run="dashboard", place="peek")
+diff --git a/dev/tests/test_item_history_route.py b/dev/tests/test_item_history_route.py
+index 21623b67..f917d436 100644
+--- a/dev/tests/test_item_history_route.py
++++ b/dev/tests/test_item_history_route.py
+@@ -59,14 +59,12 @@ class HistoryRoute(unittest.TestCase):
+         except urllib.error.HTTPError as e:
+             return e.code, None
+ 
+-    @unittest.expectedFailure
+     def test_the_route_gives_the_items_events(self):
+         st, body = self.get("?id=ABC-A-001")
+         self.assertEqual(st, 200, NEEDS_DIFF)
+         owner = [e for e in body["events"] if e.get("field") == "owner"]
+         self.assertEqual([(e["before"], e["after"], e["place"]) for e in owner], [("Alan Carter", "Omar Ali", "peek")])
+ 
+-    @unittest.expectedFailure
+     def test_bad_ids_are_refused(self):
+         for q in ("", "?id=../tracker.db", "?id=ABC-A-001&id=ABC-A-002"):
+             self.assertEqual(self.get(q)[0], 400, (q, NEEDS_DIFF))
