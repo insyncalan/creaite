@@ -26,7 +26,8 @@
       <div class="search" id="searchBtn" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Search or jump to"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>Search or jump to…<kbd id="kK">⌘K</kbd></div>
       <div class="status" id="status"></div>
       <button class="newchip" id="newChip" type="button" aria-live="polite">New items arrived: refresh</button>
-      <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span></button>
+      <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span><span class="askmark" aria-hidden="true"></span><span class="asklab"></span><span class="asklife" aria-hidden="true"></span></button><!-- #231: the finish indication; its words are read from #askLive, which sits outside the button -->
+      <span class="vh" id="askLive" role="status" aria-live="polite"></span>
       <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
     </header>
     <div class="livealert" id="liveAlert" role="alert"><b>Live server isn't running.</b> Saves are held and applied when it's back. Start it in Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> <button class="mini" id="checkLive">Check again</button></div>
