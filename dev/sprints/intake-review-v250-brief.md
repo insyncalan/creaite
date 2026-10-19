@@ -61,4 +61,4 @@ When a mail or Teams proposal changes an existing work item, the peek shows that
 
 ### Changed 19-10-2026: the page is called Intake; each stage box gets an icon
 - The page heading and the rail are both **Intake** (inbox icon, badge kept).
-- The three stage boxes and "Show all" stay as approved on 18-10-2026 (clickable counts; the "quiet flow" strip was tried and rejected by Alan). Each box now has an icon beside its count: **Arrived** the inbox tray, **Drafted** a document, **Approved** a ticked circle, in the accent, warning and ok colours.
+- The three stage boxes stay as approved on 18-10-2026, and "Show all" becomes a fourth box like them (a layers icon, the total count, "meetings and files"), separated by a thin rule, instead of a button (clickable counts; the "quiet flow" strip was tried and rejected by Alan). Each box now has an icon beside its count: **Arrived** the inbox tray, **Drafted** a document, **Approved** a ticked circle, in the accent, warning and ok colours.
