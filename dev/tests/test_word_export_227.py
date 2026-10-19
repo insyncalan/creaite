@@ -59,7 +59,7 @@ def sections(tmp):
     return [
         {"id": "header", "type": "header", "heading": "Weekly report", "hidden": False, "text": "",
          "data": {"label": "Weekly report · Internal",
-                  "logos": [{"kind": "firm", "path": str(tmp / "firm.png")}, {"kind": "client", "path": str(tmp / "client.svg")}]}},
+                  "logos": [{"kind": "firm", "path": str(tmp / "firm.png")}, {"kind": "client", "path": str(tmp / "ABC-client.svg")}]}},
         {"id": "health", "type": "health", "heading": "Health", "hidden": False, "text": "The harbour migration slipped.",
          "data": {"flag": "Off track", "trend": [{"date": d, "flag": f}
                                                  for d, f in (("2026-09-11", "On track"), ("2026-09-18", "On track"),
@@ -115,6 +115,12 @@ class Base(unittest.TestCase):
         real_dir = paths.project_dir
         paths.project_dir = lambda code, _t=self.tmp: _t
         self.addCleanup(setattr, paths, "project_dir", real_dir)
+        # 2.5.1 M1 (v251-logofix): a header logo is drawn only from the project's own logo files (report_doc.logos: firm.<ext> and
+        # <CODE>-client.<ext> in paths.REPORT_LOGOS, stored relative to the vault root), never from a path the document names; so the
+        # test's vault root and logos folder are its temp folder, and the logos are written there under those names
+        for name, value in (("ROOT", self.tmp.resolve()), ("REPORT_LOGOS", self.tmp)):
+            self.addCleanup(setattr, paths, name, getattr(paths, name))
+            setattr(paths, name, value)
         self.svgs = []
         # the tracker's client-safe milestones (M-004 and M-005 are not): the writer re-reads them and fails closed (LEAK 3)
         real_safe = creaite_doc.client_safe_ids
@@ -130,7 +136,7 @@ class Base(unittest.TestCase):
         (self.tmp / "images").mkdir()
         (self.tmp / "images" / "site.png").write_bytes(png(40, 20, (0, 150, 0, 255)))
         (self.tmp / "firm.png").write_bytes(png(60, 20))
-        (self.tmp / "client.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="30" viewBox="0 0 80 30">'
+        (self.tmp / "ABC-client.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="30" viewBox="0 0 80 30">'
                                              '<rect width="80" height="30" fill="red"/></svg>')
 
     def doc(self, kind="weekly", **kw):
@@ -349,7 +355,7 @@ class Checks(Base):
     def test_logo1_a_bad_logo_file_is_skipped_and_never_fails_the_export(self):
         """p240-leakfix LOGO 1: a bare PNG header (what the old save accepted) and a zero-height PNG used to fail every export."""
         (self.tmp / "firm.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        (self.tmp / "client.svg").write_bytes(b"not a picture")
+        (self.tmp / "ABC-client.svg").write_bytes(b"not a picture")
         self.build()
         self.assertFalse([n for n in self.parts if n.startswith("word/media/") and self.parts[n][:8] == b"\x89PNG\r\n\x1a\n"
                           and len(self.parts[n]) == 8], "the bad file is not in the package")
