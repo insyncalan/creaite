@@ -68,12 +68,16 @@ off where they cannot. A draft only: creaite never sends.
 
 ## Risk
 
-- **Outlook's HTML allowlist (needs a decision).** The tool's description says an HTML body with anything outside its allowlist
-  (it names `span`, `font`, comments) is **rejected, not stripped**. The preview's HTML uses `<span style="color:…">` for overdue dates
-  and the chased line. The brief says the body is the preview's HTML exactly, so nothing is rewritten: if Outlook rejects it, the
-  popup says "Outlook would not create the draft (Outlook rejected part of the email's formatting)" with Copy it instead, and nothing
-  is recorded. If live testing confirms the rejection, the choice is Alan's: swap the builder's `span`s for an allowed tag (`b`, `strong`)
-  in both the copy and the draft, or accept copy and paste for those emails.
+- **Outlook's HTML allowlist (decided: Alan, 19-10-2026).** The tool's description says an HTML body with anything outside its allowlist
+  (headings, paragraphs, links, lists, b/i/strong/em/strike, code, tables, br/hr, div, pre; it names span, font, blockquote, images,
+  scripts, event handlers and comments) is **rejected, not stripped**. The builder (drafts.js `draftEmail`) now writes only that subset,
+  in the preview, Copy email and the draft alike: a due date's red or amber (and bold when overdue) is on its own `<td>`; a muted line
+  (Response, Latest update, Chased, a decision's owner) is `<i style="font-style:normal;color:…">` (`deMuted`); anchors carry `href`
+  and `style` only. Never span, font, class, id, data- attributes, comments, style or script blocks, CSS variables or images. The editor's
+  email run (core/editor.js `emailSpan`) reads and writes the same `<i>`, so an edited email stays in the subset. `draft_delivery.request`
+  refuses a draft body outside it before any run (`markup_problem`: "The email has formatting Outlook won't take (a <span> element):
+  copy it instead."); a copy is never refused. Still a live check: whether Outlook keeps the inline `style` attributes and the table's
+  `cellpadding`, `cellspacing`, `border` and `align` (the description lists tags only).
 - The run is a model call carrying the email; `check` compares the tool call's arguments to the request, so a changed body is never
   reported as success (the popup says to check the Drafts folder, since a draft may exist).
 - Graph drafts carry no Outlook signature, and the tool stamps an X-AI-Generated header.
