@@ -79,10 +79,10 @@ export async function loadClientReport(arg, fresh) {
 
 /** The left-out check of the document on screen (read only; nothing is written). Keeps the answer for the page's lists. */
 export async function runCheck() {
-  const d = crDoc.value, who = crIdentity(d);
+  const d = crDoc.value, opened = crIdentity(d);
   if (!d || !viaServer()) return null;
   const r = /** @type {Check} */ (await api("/api/report/check", { doc: d }));
-  if (crIdentity() !== who) return null;            // another report opened meanwhile: its lists (and their Add buttons) are never this one's
+  if (crIdentity() !== opened) return null;            // another report opened meanwhile: its lists (and their Add buttons) are never this one's
   crCheck.value = r && r.ok ? r : { ok: false, message: oneLine((r && r.message) || "") || "The check didn't run" };
   return crCheck.value;
 }
@@ -110,9 +110,9 @@ export async function approveClientReport(force) {
 export async function exportClientReport(fmt, makePage) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
-  const who = crIdentity(d);
+  const opened = crIdentity(d);
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
-  if (crIdentity() !== who) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
+  if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
   const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
   return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt, page: page || undefined });
 }
@@ -131,11 +131,11 @@ export function matchInternal(ids) {
 
 /** @param {string[]|null} ids */
 async function matchInternalNow(ids) {
-  const d0 = crDoc.value, i = crInternal.value, who = crIdentity(d0);
+  const d0 = crDoc.value, i = crInternal.value, opened = crIdentity(d0);
   if (!d0 || !i) return;
   // the race fix (v2.5.0): after every await, a different open report (another project, week or client, or a reload) drops the match
   // silently: nothing is copied, nothing is said on the other report's page
-  const moved = () => crIdentity() !== who;
+  const moved = () => crIdentity() !== opened || !sameReport(d0);          // the same open, and the same project, week and client
   const heading = (/** @type {string} */ id) => String((secOf(i, id) || secOf(d0, id) || { heading: id }).heading || id);
   const all = ids ? ids : d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
   // #218: "every section" never brings an internal-audience text section over; it is named instead, and matched only one at a time
@@ -165,7 +165,7 @@ async function matchInternalNow(ids) {
   if (clean.length) {                   // the clean sections together are checked once more: a finding the parts did not make alone holds all back
     for (let tries = 0; ; tries++) {
       const now = crDoc.value;
-      if (!now || now.project !== d0.project || now.date !== d0.date || (now.client || "") !== (d0.client || "")) return;
+      if (!now || moved()) return;
       const d = onto(now);
       const last = await api("/api/report/match-check", { docs: [d] });
       if (moved()) return;
