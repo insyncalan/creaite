@@ -4092,7 +4092,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-psettings .pslogo .mark img{max-width:100%;max-height:100%;display:block}
 #v-psettings .pslogo .cfgask{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
 #v-psettings input#psRepNm,#v-psettings select#psRepRh{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font:inherit}
-.pfname+.pset{margin-left:6px;vertical-align:middle}
+/* the Today table's cog takes no width (the columns, Evidence's resize included, are laid out as before): it shows on row hover or focus */
+#pfTbl td:first-child{position:relative} #pfTbl .pset{position:absolute;right:2px;top:6px;opacity:0} #pfTbl tr:hover .pset,#pfTbl .pset:focus-visible{opacity:1}
 /* #231: a small "done" indication on the ask creaite button when a run ends with the panel closed (mockup ask-done, approved 18-10-2026).
    data-st is done, stopped or failed; idle has no attribute. Done and stopped hide after 30 s (the line runs out over the same time);
    failed stays until the panel is opened. The button clips its hover sheen, so while a mark shows it lets the mark sit on its corner. */
