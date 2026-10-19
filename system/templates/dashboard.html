@@ -37402,8 +37402,8 @@ ${s5}`;
     return f5;
   }
   var sameF = (a5, b5) => {
-    const ka2 = Object.keys(a5).sort(), kb4 = Object.keys(b5).sort();
-    return ka2.join() === kb4.join() && ka2.every((k5) => [...a5[k5]].sort().join("|") === [...b5[k5]].sort().join("|"));
+    const ka2 = Object.keys(a5).sort(), kb3 = Object.keys(b5).sort();
+    return ka2.join() === kb3.join() && ka2.every((k5) => [...a5[k5]].sort().join("|") === [...b5[k5]].sort().join("|"));
   };
   function applyFilters(f5) {
     defs().forEach((d5) => {
@@ -45528,13 +45528,13 @@ ${s5}`;
         e4.preventDefault();
         return;
       }
-      const kb4 = !e4.clientX && !e4.clientY;
+      const kb3 = !e4.clientX && !e4.clientY;
       let c5 = cxTarget(e4.target);
-      if (!c5 && kb4) c5 = cxCursor();
+      if (!c5 && kb3) c5 = cxCursor();
       if (!c5) return;
       e4.preventDefault();
       const r4 = c5.el.getBoundingClientRect();
-      cxShow(c5, kb4 ? r4.left + Math.min(48, r4.width / 3) : e4.clientX, kb4 ? r4.top + Math.min(r4.height, 28) : e4.clientY);
+      cxShow(c5, kb3 ? r4.left + Math.min(48, r4.width / 3) : e4.clientX, kb3 ? r4.top + Math.min(r4.height, 28) : e4.clientY);
     });
     window.addEventListener("keydown", (e4) => {
       if (!(e4.key === "ContextMenu" || e4.key === "F10" && e4.shiftKey) || contextMenuOpen()) return;
@@ -58772,7 +58772,7 @@ ${d5.text}`);
   function pkHistory(id2) {
     const own = (a5) => actId(a5) === id2 || !!(a5.sides && Object.prototype.hasOwnProperty.call(a5.sides, id2));
     const O4 = D.activity_older || {}, by2 = O4.by || [];
-    return shared.ACT.filter(own).map((a5) => a5.sides ? { ...a5, change: a5.sides[id2] } : a5).concat(((O4.items || {})[id2] || []).map(([at2, change3, b5, apply_id, un2]) => ({ at: at2, change: change3, by: by2[b5] || "", apply_id, undone: !!un2 })));
+    return shared.ACT.filter(own).map((a5) => a5.sides ? { ...a5, change: a5.sides[id2] } : a5).concat(((O4.items || {})[id2] || []).map(([at2, change2, b5, apply_id, un2]) => ({ at: at2, change: change2, by: by2[b5] || "", apply_id, undone: !!un2 })));
   }
   function pkFeedItems(x5, k5) {
     const id2 = pkCid(), out = [], ul2 = pkUpdLabel(k5);
@@ -65456,7 +65456,7 @@ ${d5.text}`);
   var num = (n4) => n4 == null ? "–" : Math.round(n4).toLocaleString("en-GB");
   var usd = (n4) => `$${(n4 || 0).toFixed(2)}`;
   var signed = (n4, f5 = num) => (n4 > 0 ? "+" : n4 < 0 ? "−" : "") + f5(Math.abs(n4));
-  var kb3 = (b5) => {
+  var usageKb = (b5) => {
     const k5 = b5 / 1e3;
     return `${k5 >= 10 ? Math.round(k5) : Number(k5.toFixed(1))} KB`;
   };
@@ -65575,9 +65575,9 @@ ${d5.text}`);
           ] }) }),
           /* @__PURE__ */ u2("tbody", { children: rows2.map((r4) => /* @__PURE__ */ u2("tr", { children: [
             /* @__PURE__ */ u2("td", { children: FILE[r4.file] || r4.file }),
-            /* @__PURE__ */ u2("td", { children: kb3(r4.bytes) }),
+            /* @__PURE__ */ u2("td", { children: usageKb(r4.bytes) }),
             /* @__PURE__ */ u2("td", { children: num(r4.tokens) }),
-            /* @__PURE__ */ u2("td", { children: change(r4, fd3) })
+            /* @__PURE__ */ u2("td", { children: ctxChange(r4, fd3) })
           ] }, r4.file)) })
         ] }) }),
         /* @__PURE__ */ u2("div", { class: "unote", children: [
@@ -65588,7 +65588,7 @@ ${d5.text}`);
       ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Not measured yet. The live server measures these files once a day." })
     ] });
   }
-  function change(r4, fd3) {
+  function ctxChange(r4, fd3) {
     if (r4.change_bytes == null || !r4.since) return "no earlier measure yet";
     if (r4.change_bytes === 0) return "no change";
     const k5 = Math.abs(r4.change_bytes) / 1e3;
@@ -65631,17 +65631,17 @@ ${d5.text}`);
     return x5 ? `#work=${kind}${x5.p ? `&p=${x5.p}` : ""}&item=${id2}` : "#";
   }
   function actLine(a5) {
-    let id2 = a5.id, text = a5.item, change3 = a5.change;
+    let id2 = a5.id, text = a5.item, change2 = a5.change;
     if (!id2) {
       const m5 = String(a5.what).match(ID_RE);
       if (!m5) return html`${String(a5.what ?? "")}`;
       id2 = m5[1];
       text = itemText(id2);
-      change3 = a5.what.slice(id2.length).replace(/^[\s·:]+/, "");
+      change2 = a5.what.slice(id2.length).replace(/^[\s·:]+/, "");
     }
     if (!text) return html`${String(a5.what ?? "")}`;
     const short = text.length > 80 ? text.slice(0, 79) + "…" : text, kind = /-A-/.test(id2) ? "actions" : /-D-/.test(id2) ? "decisions" : /-M-/.test(id2) ? "ms" : /-\d{3}$/.test(id2) ? "raid" : /^[A-Z][A-Z0-9]{2,6}$/.test(id2) ? "proj" : "";
-    const ch2 = String(change3 ?? "");
+    const ch2 = String(change2 ?? "");
     if (kind === "proj") return html`<a href="#" class="hlink" data-proj="${id2}">${pName(id2)}</a> — ${ch2}`;
     const upd = id2.match(/^(\d{4}-\d{2}-\d{2})\|([A-Z][A-Z0-9]{2,6})$/);
     if (upd) return html`<a href="#" class="hlink" data-proj="${upd[2]}">${pName(upd[2])}</a> · weekly update, week ending ${fd(upd[1])} — ${ch2}`;
@@ -66063,6 +66063,7 @@ ${d5.text}`);
         if (ACTTAB === "u") usageDraw();
       }
     } catch (e4) {
+      USAGE_ROUTE = true;
     }
   }
   function bootActivity0205() {
@@ -68265,7 +68266,7 @@ ${d5.text}`);
       /** @type {any} */
       s5
     );
-    const change3 = (nd2, why, ev) => {
+    const change2 = (nd2, why, ev) => {
       onChange(nd2, why);
       if (ev) onEvent(ev);
     };
@@ -68305,7 +68306,7 @@ ${d5.text}`);
       const d5 = e4.key === "ArrowUp" ? -1 : 1, to2 = Math.max(lo2, Math.min(doc.sections.length - 1, i5 + d5));
       if (to2 === i5) return;
       p6.refocus.current = s5.id;
-      change3(moveBy(doc, s5.id, d5, lo2), "Section moved", { type: "section-moved", id: s5.id, to: to2 });
+      change2(moveBy(doc, s5.id, d5, lo2), "Section moved", { type: "section-moved", id: s5.id, to: to2 });
     };
     const ctx = {
       section: s5,
@@ -68340,14 +68341,14 @@ ${d5.text}`);
     const differs = p6.side === "left" && peer ? sectionDiffers(s5, peer) : false;
     const tags = tagsOf(s5);
     const nowName = (v5) => {
-      if (v5.trim() && v5.trim() !== s5.heading) change3(renameHeading(doc, s5.id, v5), "Heading renamed", null);
+      if (v5.trim() && v5.trim() !== s5.heading) change2(renameHeading(doc, s5.id, v5), "Heading renamed", null);
       else setName(s5.heading);
     };
     const isText = isTextSection(s5);
     const [confirmDel, setConfirmDel] = d2(false);
     const deleteIt = () => {
       setConfirmDel(false);
-      change3(withoutSection(doc, s5.id), "Section deleted", { type: "section-deleted", id: s5.id });
+      change2(withoutSection(doc, s5.id), "Section deleted", { type: "section-deleted", id: s5.id });
     };
     const headBox = A2(
       /** @type {HTMLInputElement|null} */
@@ -68367,8 +68368,8 @@ ${d5.text}`);
       ...isText ? [{ id: "delete", name: "Delete this section", icon: "trash" }] : []
     ];
     const onPick = (id2) => {
-      if (id2 === "hide") change3(hideSection(doc, s5.id), "Section hidden", { type: "section-hidden", id: s5.id });
-      else if (id2 === "reset") change3(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id });
+      if (id2 === "hide") change2(hideSection(doc, s5.id), "Section hidden", { type: "section-hidden", id: s5.id });
+      else if (id2 === "reset") change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id });
       else if (id2 === "addtext") p6.report?.addText?.(s5.id);
       else if (id2 === "delete") {
         if (String(sec.text || "").trim()) setConfirmDel(true);
@@ -68376,7 +68377,7 @@ ${d5.text}`);
       } else {
         const d5 = id2 === "up" ? -1 : 1;
         p6.refocus.current = s5.id;
-        change3(moveBy(doc, s5.id, d5, lo2), "Section moved", { type: "section-moved", id: s5.id, to: i5 + d5 });
+        change2(moveBy(doc, s5.id, d5, lo2), "Section moved", { type: "section-moved", id: s5.id, to: i5 + d5 });
       }
     };
     const openSectionMenu = (anchor) => {
@@ -68396,7 +68397,7 @@ ${d5.text}`);
       const fi2 = doc.sections.findIndex((x5) => x5.id === from);
       let to2 = i5 + (below ? 1 : 0);
       if (fi2 < to2) to2 -= 1;
-      change3(moveSection(doc, from, to2, lo2), "Section moved", { type: "section-moved", id: from, to: to2 });
+      change2(moveSection(doc, from, to2, lo2), "Section moved", { type: "section-moved", id: from, to: to2 });
     };
     if (s5.type === "header" && ownRender) return /* @__PURE__ */ u2(SHEET_HERE.Provider, { value: here, children: /* @__PURE__ */ u2("section", { "data-id": s5.id, ref: box, children: ownRender(ctx) }) });
     return /* @__PURE__ */ u2(SHEET_HERE.Provider, { value: here, children: /* @__PURE__ */ u2(
@@ -68483,7 +68484,7 @@ ${d5.text}`);
                 }
               }
             ) : s5.heading,
-            editing && s5.heading !== defaultHeading(s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-reset", onClick: () => change3(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id }), children: "Reset" }) : null,
+            editing && s5.heading !== defaultHeading(s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-reset", onClick: () => change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id }), children: "Reset" }) : null,
             sparkOn && !ownSpark && spark2 ? /* @__PURE__ */ u2(SparkButton, { on: spark2, heading: s5.heading, health: s5.type === "health" }) : null,
             editing && tags.length ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-untag", onClick: () => {
               update({ tags: [] }, "Tags removed");
@@ -68541,7 +68542,7 @@ ${d5.text}`);
                     ...a5.health ? { data: { ...sec.data || {}, flag: a5.health } } : {}
                   };
                   afterUse.current = { doc: docNow, put: wordsKey({ ...s5, ...patch }), before: wordsNow };
-                  if (a5.apply) change3(a5.apply(doc, s5), "Redraft used", null);
+                  if (a5.apply) change2(a5.apply(doc, s5), "Redraft used", null);
                   else update(patch, "Redraft used");
                 } else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a5.lines || []).map((l6) => `- ${l6}`).join("\n")}` }, "New lines added");
                 onEvent({ type: "redraft", id: s5.id, choice, ...s5.type === "health" ? { section: "health" } : {} });
@@ -68808,7 +68809,7 @@ ${d5.text}`);
         if (s5.dirty) flush();
       }
     };
-    const change3 = (doc) => {
+    const change2 = (doc) => {
       const s5 = st2.current;
       if (s5.a.readOnly || !s5.a.onSave) return;
       s5.latest = doc;
@@ -68831,7 +68832,7 @@ ${d5.text}`);
       const s5 = st2.current;
       if (s5.dirty) flush();
     }, []);
-    return { line, conflict, removed, change: change3, flush, reload, known: () => st2.current.latest };
+    return { line, conflict, removed, change: change2, flush, reload, known: () => st2.current.latest };
   }
   function removedLine(r4) {
     if (!r4 || Array.isArray(r4) && !r4.length) return "";
@@ -69559,7 +69560,7 @@ ${d5.text}`);
       ] }, l6.kind)) })
     ] });
   }
-  function HealthBlock({ ctx, flag, trend, change: change3, why, below, flagCls = "" }) {
+  function HealthBlock({ ctx, flag, trend, change: change2, why, below, flagCls = "" }) {
     const t47 = wkTone(flag), weeks = trend && trend.length ? trend : null;
     const aria = weeks ? `Health over ${weeks.length} weeks: ${weeks.map((w6) => `${w6.flag || "not set"}`).join(", ")}` : "";
     return /* @__PURE__ */ u2("div", { class: "wr-health", "data-wkTone": t47, children: [
@@ -69570,7 +69571,7 @@ ${d5.text}`);
           /* @__PURE__ */ u2("span", { children: wkDm(weeks[0].date) }),
           /* @__PURE__ */ u2("span", { children: wkDm(ctx.doc.date) })
         ] }) : null,
-        ctx.editing ? change3 : null,
+        ctx.editing ? change2 : null,
         below
       ] }),
       /* @__PURE__ */ u2("div", { class: "wr-why", children: [
@@ -72684,7 +72685,7 @@ ${d5.text}`);
     minutesDoc.value = d5;
     dirty = true;
   }
-  async function change2(op2, undo) {
+  async function change(op2, undo) {
     const d5 = minutesDoc.value;
     if (dirty && d5) {
       const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
@@ -72700,14 +72701,14 @@ ${d5.text}`);
       return false;
     }
     snack(r4.message || "Changed", undo ? () => {
-      change2(undo);
+      change(undo);
     } : null);
     return true;
   }
   function onCheck(c5, action) {
     if (action === "keep") keptChecks.value = [...keptChecks.value, c5.id];
     else if (action === "show" && c5.turn) jumpTo(c5.turn);
-    else if (action === "use" && c5.kind === "due" && c5.n && c5.words) change2({ op: "deadline", n: c5.n, words: c5.words });
+    else if (action === "use" && c5.kind === "due" && c5.n && c5.words) change({ op: "deadline", n: c5.n, words: c5.words });
     else if (action === "pick") document.querySelector(`[data-owner="${c5.n}"]`)?.click();
   }
   var RENDER = {
@@ -72726,7 +72727,7 @@ ${d5.text}`);
     const draft = doc.state === "draft", turns = (v5.turns || { turns: [] }).turns;
     const checks = checksOf(doc, turns, unknownOwner, keptChecks.value);
     const held = v5.withheld || {}, shown2 = dist && mode === "distributed" ? distributedOf(doc, held) : doc;
-    const ctx = { checks, onCheck, change: change2, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
+    const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
     return /* @__PURE__ */ u2("div", { class: "mnview", children: [
       /* @__PURE__ */ u2("header", { class: "mnhead", children: [
         /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [

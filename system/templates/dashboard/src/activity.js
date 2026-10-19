@@ -195,7 +195,7 @@ export async function usageOpen(){ usageDraw();
   if(!USAGE_ROUTE||!viaServer()) return;
   try{ const r=await fetch("/api/usage",{headers:{"X-Creaite-Token":D.token||""}});
     if(r.status===404||r.status===405){ USAGE_ROUTE=false; return; }
-    const j=r.ok?await r.json():null; if(j&&j.cards&&Array.isArray(j.by_day)){ D.usage=j; if(ACTTAB==="u") usageDraw(); } }catch(e){} }
+    const j=r.ok?await r.json():null; if(j&&j.cards&&Array.isArray(j.by_day)){ D.usage=j; if(ACTTAB==="u") usageDraw(); } }catch(e){ USAGE_ROUTE=true; /* a failed read keeps the page's own figures */ } }
  
 /* ===== end BL-233 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */

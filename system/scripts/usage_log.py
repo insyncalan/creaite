@@ -243,7 +243,7 @@ def _memory_files(vault: Path) -> list:
     try:
         out = [d / "CLAUDE.md" for d in sorted(base.iterdir()) if d.is_dir() and not d.name.startswith("_")]
     except OSError:
-        pass
+        pass        # no projects folder: only the portfolio files are counted
     return out + [base / "_portfolio" / n for n in PORTFOLIO_FILES]
 
 
@@ -289,7 +289,7 @@ def read(path=None) -> list:
         try:
             row = _clean_row(json.loads(ln))
         except ValueError:
-            continue
+            continue        # a broken line is skipped
         if row:
             rows.append(row)
     return rows

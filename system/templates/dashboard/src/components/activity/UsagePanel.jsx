@@ -22,7 +22,7 @@ const num = (/** @type {number | null | undefined} */ n) => (n == null ? "–" :
 const usd = (/** @type {number | null | undefined} */ n) => `$${(n || 0).toFixed(2)}`;
 const signed = (/** @type {number} */ n, f = num) => (n > 0 ? "+" : n < 0 ? "−" : "") + f(Math.abs(n));
 /** 53 KB, 0.7 KB: one decimal under 10 KB, none above. @param {number} b */
-const kb = b => { const k = b / 1000; return `${k >= 10 ? Math.round(k) : Number(k.toFixed(1))} KB`; };
+const usageKb = b => { const k = b / 1000; return `${k >= 10 ? Math.round(k) : Number(k.toFixed(1))} KB`; };
 
 /** A card's change on the week before, in words, and whether it is up, down or none.
     @param {Card} c @param {boolean} pct */
@@ -114,7 +114,7 @@ function Loads({ rows, start, fd }) {
         <>
           <div class="tbl"><table class="qtab" aria-label="What every run loads">
             <thead><tr><th scope="col">File</th><th scope="col">Now</th><th scope="col">About tokens</th><th scope="col">Change in 30 days</th></tr></thead>
-            <tbody>{rows.map(r => <tr key={r.file}><td>{FILE[r.file] || r.file}</td><td>{kb(r.bytes)}</td><td>{num(r.tokens)}</td><td>{change(r, fd)}</td></tr>)}</tbody>
+            <tbody>{rows.map(r => <tr key={r.file}><td>{FILE[r.file] || r.file}</td><td>{usageKb(r.bytes)}</td><td>{num(r.tokens)}</td><td>{ctxChange(r, fd)}</td></tr>)}</tbody>
           </table></div>
           <div class="unote"><b>Why this matters:</b>{" "}
             {`Every run starts by loading about ${num(start || total)} tokens${rules && total ? `, and the rules file is about ${Math.round((rules.tokens / total) * 100)}% of the always-loaded files` : ""}. A smaller rules file lowers the cost of every run.`}</div>
@@ -125,7 +125,7 @@ function Loads({ rows, start, fd }) {
 }
 
 /** @param {Ctx} r @param {(s: string) => string} fd */
-function change(r, fd) {
+function ctxChange(r, fd) {
   if (r.change_bytes == null || !r.since) return "no earlier measure yet";
   if (r.change_bytes === 0) return "no change";
   const k = Math.abs(r.change_bytes) / 1000;
