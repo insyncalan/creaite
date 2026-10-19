@@ -84,6 +84,10 @@ export const irChecking = signal(/** @type {string[]} */ ([]));
 export const irBlocked = () => irBusy.value.length > 0 || irChecking.value.length > 0 || irAsk.value;
 /** @param {string} id @param {boolean} on */
 export function irSetChecking(id, on) { irChecking.value = on ? [...irChecking.value.filter(x => x !== id), id] : irChecking.value.filter(x => x !== id); }
+/** Whether files are being dragged over the page: the full-page "Drop to add files" overlay shows (pointer-events none, so ask creaite's panel still gets its images). */
+export const irDropOn = signal(false);
+/** Whether the calendar is being read again (the refresh icon under the heading): the sub-line says "Refreshing…" meanwhile. */
+export const irRefreshing = signal(false);
 /** Mark a meeting as being processed (or not). @param {string} id @param {boolean} on */
 export function irSetBusy(id, on) { irBusy.value = on ? [...irBusy.value.filter(x => x !== id), id] : irBusy.value.filter(x => x !== id); }
 

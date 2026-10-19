@@ -4121,7 +4121,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icprog i{display:none}
 #v-intake-review .iccardacts{margin-top:8px}
 #v-intake-review .irnote{color:var(--warn)}
-#v-intake-review.irdrop{outline:2px dashed var(--accent);outline-offset:-4px;border-radius:var(--r-md)}
+#v-intake-review .icdrop{position:fixed;inset:0;z-index:var(--z-top);display:none;place-items:center;text-align:center;pointer-events:none;background:color-mix(in srgb,var(--bg) 82%,transparent);border:3px dashed var(--accent);font-size:var(--fs-lg)}
+#v-intake-review .icdrop.on{display:grid}
 #v-intake-review .irlist li{margin:2px 0}
 
 /* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
@@ -5815,6 +5816,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irBlocked: () => irBlocked,
     irBulk: () => irBulk,
     irBusy: () => irBusy,
+    irCalendarRead: () => irCalendarRead,
     irCanCheck: () => irCanCheck,
     irCanProcess: () => irCanProcess,
     irCanSetAside: () => irCanSetAside,
@@ -5825,6 +5827,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irClickStage: () => irClickStage,
     irCounts: () => irCounts,
     irDone: () => irDone,
+    irDropOn: () => irDropOn,
     irEsc: () => irEsc,
     irFiltered: () => irFiltered,
     irFoldClick: () => irFoldClick,
@@ -5851,6 +5854,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irProcess: () => irProcess,
     irProcessAll: () => irProcessAll,
     irReady: () => irReady,
+    irRefreshCalendar: () => irRefreshCalendar,
+    irRefreshing: () => irRefreshing,
     irRestore: () => irRestore,
     irRestoredWords: () => irRestoredWords,
     irReveal: () => irReveal,
@@ -9476,6 +9481,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   function irSetChecking(id2, on2) {
     irChecking.value = on2 ? [...irChecking.value.filter((x5) => x5 !== id2), id2] : irChecking.value.filter((x5) => x5 !== id2);
   }
+  var irDropOn = y3(false);
+  var irRefreshing = y3(false);
   function irSetBusy(id2, on2) {
     irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
   }
@@ -74506,6 +74513,74 @@ ${d5.text}`);
       snack(`${added} file${added === 1 ? "" : "s"} added`);
     }
   }
+  async function irRefreshCalendar() {
+    if (!viaServer()) {
+      snack("Refreshing needs the live server");
+      return false;
+    }
+    if (mtgBusy() || irBlocked() || irRefreshing.value) {
+      snack(BUSY);
+      return false;
+    }
+    irRefreshing.value = true;
+    try {
+      shared.RUNLABEL = "Refreshing the calendar";
+      try {
+        await askLive("refresh calendar", "Refresh the calendar for Intake and Today");
+      } catch (e4) {
+      }
+      await reloadData();
+      return true;
+    } finally {
+      irRefreshing.value = false;
+      irTick.value++;
+    }
+  }
+  function irCalendarRead(fetched, today) {
+    const f5 = String(fetched || "");
+    if (!/^\d{4}-\d{2}-\d{2}/.test(f5)) return "No calendar yet";
+    const day = f5.slice(0, 10), t47 = /^.{10}[ T](\d{2}:\d{2})/.exec(f5);
+    return `Calendar read ${[day === today ? "" : fd(day), t47 ? t47[1] : ""].filter(Boolean).join(" ")}`;
+  }
+
+  // components/intakeReview/icons.js
+  var IR_ICONS = {
+    /* the stages: Arrived (a tray), Drafted (a document with lines), Approved (a ticked circle), Show all (layers) */
+    tray: [["path", { d: "M4 13l2.5-8h11L20 13v6H4z" }], ["path", { d: "M4 13h5l1 2h4l1-2h5" }]],
+    drafted: [["path", { d: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" }], ["path", { d: "M14 3v5h5M9 13h6M9 17h4" }]],
+    approved: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M8 12.5l3 3 5-6" }]],
+    all: [["path", { d: "M12 3l9 5-9 5-9-5z" }], ["path", { d: "M3 13l9 5 9-5" }]],
+    /* the page's controls */
+    upload: [["path", { d: "M12 16V4M7 9l5-5 5 5M4 20h16" }]],
+    refresh: [["path", { d: "M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" }]],
+    /* a row's kind: a calendar meeting or a file */
+    meeting: [["rect", { x: "4", y: "5", width: "16", height: "15", rx: "2" }], ["path", { d: "M4 10h16M9 3v4M15 3v4" }]],
+    file: [["path", { d: "M6 3h8l4 4v14H6z" }], ["path", { d: "M14 3v4h4" }]],
+    /* the kinds of proposal (the mockup's KI), for the proposal rows */
+    Action: [["path", { d: "M9 11l3 3 8-8" }], ["path", { d: "M5 12v7h14v-7" }]],
+    Risk: [["path", { d: "M12 3l10 18H2z" }], ["path", { d: "M12 10v5M12 18v.4" }]],
+    Issue: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M12 7.5v5.5M12 16.2v.4" }]],
+    Dependency: [["path", { d: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" }], ["path", { d: "M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" }]],
+    Decision: [["path", { d: "M5 21V4M5 4h13l-3 4 3 4H5" }]],
+    Minutes: [["path", { d: "M6 3h8l4 4v14H6z" }], ["path", { d: "M14 3v4h4" }]]
+  };
+  function IrIcon({ name, cls }) {
+    return k(
+      "svg",
+      {
+        class: `i${cls ? " " + cls : ""}`,
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "1.8",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "aria-hidden": "true",
+        "data-iric": name
+      },
+      (IR_ICONS[name] || []).map(([tag, attrs], i5) => k(tag, { key: i5, ...attrs }))
+    );
+  }
 
   // components/intakeReview/rows.jsx
   var IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
@@ -75165,8 +75240,9 @@ ${d5.text}`);
       /** @type {HTMLInputElement | null} */
       null
     );
+    const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
     return /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-irpick": "1", title: `Drop files anywhere on this page: ${IR_UPLOAD_TYPES.join(" ")}, up to 25 MB each`, onClick: () => pick.current && pick.current.click(), children: "Upload files" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "ib", "data-irpick": "1", "aria-label": "Add files", "data-tip": tip, onClick: () => pick.current && pick.current.click(), children: /* @__PURE__ */ u4(IrIcon, { name: "upload" }) }),
       /* @__PURE__ */ u4(
         "input",
         {
@@ -75184,6 +75260,40 @@ ${d5.text}`);
             irAddFiles([...el2.files || []]);
             el2.value = "";
           }
+        }
+      )
+    ] });
+  }
+  function DropOverlay() {
+    const types = IR_UPLOAD_TYPES.slice(0, -1).join(", ") + " or " + IR_UPLOAD_TYPES[IR_UPLOAD_TYPES.length - 1];
+    return /* @__PURE__ */ u4("div", { class: `icdrop${irDropOn.value ? " on" : ""}`, "data-irdrop": "1", "aria-hidden": "true", children: /* @__PURE__ */ u4("div", { children: [
+      /* @__PURE__ */ u4("b", { children: "Drop to add files" }),
+      /* @__PURE__ */ u4("br", {}),
+      /* @__PURE__ */ u4("span", { class: "sub", children: [
+        "Transcripts or minutes: ",
+        types,
+        ", up to 25 MB each"
+      ] })
+    ] }) });
+  }
+  function CalendarRead({ text }) {
+    const busy2 = irBlocked() || irRefreshing.value;
+    const why = irRefreshing.value ? "Reading the calendar" : busy2 ? "ask creaite is busy; try again when it's finished" : "Refresh the calendar";
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4("span", { class: "sub", "data-ircalread": "1", children: irRefreshing.value ? "Refreshing…" : text }),
+      " ",
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "ib sm",
+          id: "icRef",
+          "data-ira": "refreshcal",
+          "aria-label": "Refresh the calendar",
+          "data-tip": why,
+          disabled: busy2,
+          onClick: () => irRefreshCalendar(),
+          children: /* @__PURE__ */ u4(IrIcon, { name: "refresh" })
         }
       )
     ] });
@@ -75235,18 +75345,19 @@ ${d5.text}`);
     const model = irModel(), c5 = irLiveCounts(), view = irView.value;
     const list = irFiltered(model, irStage.value);
     return /* @__PURE__ */ u4("div", { class: "wrapmax irpage", "data-irtick": tick, children: [
-      /* @__PURE__ */ u4("h1", { id: "irTitle", children: "Intake and Review" }),
+      /* @__PURE__ */ u4("h1", { id: "irTitle", children: "Intake" }),
       /* @__PURE__ */ u4("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
         c5.ready,
         " ready to process · ",
         irPlural(c5.to_approve, "proposal"),
-        " to approve"
+        " to approve · ",
+        /* @__PURE__ */ u4(CalendarRead, { text: irCalendarRead(D.meetings && D.meetings.fetched, TODAY) })
       ] }),
       /* @__PURE__ */ u4("div", { class: "toolbar rvtools", children: [
+        /* @__PURE__ */ u4("span", { class: "sp" }),
         /* @__PURE__ */ u4(ProcessAll, {}),
         /* @__PURE__ */ u4(UploadFiles, {}),
-        /* @__PURE__ */ u4("span", { class: "sp" }),
-        /* @__PURE__ */ u4("span", { class: "seg", role: "group", "aria-label": "How you see Intake and Review", children: IR_VIEWS.map(([v5, l6]) => /* @__PURE__ */ u4("button", { type: "button", "data-irview": v5, "aria-pressed": view === v5, title: l6, onClick: () => irSetView(v5), children: [
+        /* @__PURE__ */ u4("span", { class: "seg", role: "group", "aria-label": "How you see Intake", children: IR_VIEWS.map(([v5, l6]) => /* @__PURE__ */ u4("button", { type: "button", "data-irview": v5, "aria-pressed": view === v5, title: l6, onClick: () => irSetView(v5), children: [
           /* @__PURE__ */ u4("svg", { class: "i", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "aria-hidden": "true", children: VIEWICON[
             /** @type {keyof VIEWICON} */
             v5
@@ -75287,12 +75398,7 @@ ${d5.text}`);
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "restore", onClick: () => irRestore([x5.key]), children: "Restore" })
       ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing marked Not needed." }) }),
       /* @__PURE__ */ u4(AsideMenu, {}),
-      /* @__PURE__ */ u4("p", { class: "sub irold", children: [
-        "While this page is being built, the earlier pages are here: ",
-        /* @__PURE__ */ u4("a", { href: "#", "data-go": "inbox", children: "Intake" }),
-        " · ",
-        /* @__PURE__ */ u4("a", { href: "#", "data-go": "review", children: "Review" })
-      ] })
+      /* @__PURE__ */ u4(DropOverlay, {})
     ] });
   }
   var irMounted = false;
@@ -75368,8 +75474,7 @@ ${d5.text}`);
   }
   function bootIrDrop() {
     const over = (on2) => {
-      const el2 = $("#v-intake-review");
-      if (el2) el2.classList.toggle("irdrop", on2);
+      irDropOn.value = on2;
     };
     const files = (e4) => e4.dataTransfer && [...e4.dataTransfer.types].includes("Files");
     const inChat = (e4) => e4.target instanceof Element && !!e4.target.closest("#chat");
@@ -77257,6 +77362,7 @@ ${d5.text}`);
         "insertImage",
         "invitees",
         "irAside",
+        "irAsk",
         "irBulk",
         "irBusy",
         "irChecking",
@@ -77279,6 +77385,7 @@ ${d5.text}`);
         "irOpen",
         "irPeek",
         "irProcess",
+        "irRefreshing",
         "irSel",
         "irSetChecking",
         "irSetView",

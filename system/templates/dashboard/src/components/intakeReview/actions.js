@@ -10,7 +10,7 @@ import { jobLive, mtgBusy, mtgCheckable, mtgSkip, TXWHY, UPLOAD_TYPES, uploadInb
 import { D, fd, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { irAside, irBusy, irChecking, irModel, irNote, irSetBusy, irSetChecking } from "../../stores/intakeReview.js";
+import { irAside, irBlocked, irBusy, irChecking, irModel, irNote, irRefreshing, irSetBusy, irSetChecking, irTick } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
 export const IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
@@ -146,4 +146,27 @@ export async function irAddFiles(files) {
     if (u) added++;
   }
   if (added) { await reloadData(); snack(`${added} file${added === 1 ? "" : "s"} added`); }
+}
+
+/** Refresh the calendar (the icon beside "Calendar read" under the heading): read it again through the run engine. ask creaite's
+    panel stays closed; the sub-line says Refreshing… and then shows the new time. @returns {Promise<boolean>} whether it ran */
+export async function irRefreshCalendar() {
+  if (!viaServer()) { snack("Refreshing needs the live server"); return false; }
+  if (mtgBusy() || irBlocked() || irRefreshing.value) { snack(BUSY); return false; }
+  irRefreshing.value = true;
+  try {
+    shared.RUNLABEL = "Refreshing the calendar";
+    try { await askLive("refresh calendar", "Refresh the calendar for Intake and Today"); } catch (e) { /* the sub-line shows the time it has */ }
+    await reloadData();
+    return true;
+  } finally { irRefreshing.value = false; irTick.value++; }
+}
+
+/** The words after "Calendar read": the time the calendar was last read (hh:mm), with the date when it was not today, or "No calendar
+    yet". @param {string|null|undefined} fetched calendar.json's `fetched` ("YYYY-MM-DD HH:MM") @param {string} today YYYY-MM-DD */
+export function irCalendarRead(fetched, today) {
+  const f = String(fetched || "");
+  if (!/^\d{4}-\d{2}-\d{2}/.test(f)) return "No calendar yet";
+  const day = f.slice(0, 10), t = /^.{10}[ T](\d{2}:\d{2})/.exec(f);
+  return `Calendar read ${[day === today ? "" : fd(day), t ? t[1] : ""].filter(Boolean).join(" ")}`;
 }

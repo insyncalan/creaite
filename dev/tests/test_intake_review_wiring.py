@@ -140,7 +140,7 @@ class Wiring(LiveBrowserCase):
 
     def test_the_real_model_counts_each_file_once(self):
         """p250-d puts a waiting upload in the model as a row; 232-C's extra-file count must not add it a second time."""
-        o = self.b.eval("""(()=>{ const m=irModel(), rows=m.meetings.filter(x=>x.src==='upload').length,
+        o = self.b.eval("""(()=>{ const m=irModel(), rows=m.meetings.filter(x=>x.src==='upload'&&!x.already).length,
           files=(D.inbox||[]).filter(f=>f.state==='new'&&f.uploaded!==false&&!f.event).length;
           return {rows, files, arrived:irLiveCounts().arrived, fromModel:irCounts(m, irDone).arrived}; })()""")
         self.assertGreaterEqual(o["files"], 1, "the sample has a waiting file")

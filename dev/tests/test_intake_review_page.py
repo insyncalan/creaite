@@ -47,7 +47,7 @@ class IntakeReviewPage(LiveBrowserCase):
         b = self.b
         b.eval("go('intake-review')")
         self.assertEqual(b.eval("[VIEW, location.hash, document.querySelector('#irTitle').textContent]"),
-                         ["intake-review", "#intake-review", "Intake and Review"])
+                         ["intake-review", "#intake-review", "Intake"])
         self.assertEqual(b.eval("['#review','#intake','#inbox','#intake-review'].map(h=>parseHash(h).v)"), ["intake-review"] * 4)
         b.eval("go('today'); location.hash='#review'")
         b.wait("VIEW==='intake-review'")

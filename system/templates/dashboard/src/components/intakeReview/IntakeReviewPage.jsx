@@ -13,10 +13,11 @@ import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { $ } from "../../core/dom.js";
 import { IR_STAGES, IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
-import { fd } from "../../core/page.js";
+import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irFolded, irLiveCounts, irModel, irOpen, irPeek, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCanProcess, irCanSetAside, IR_REASONS, irLater, irNotNeeded, irProcess, irProcessAll, irReady, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irRefreshing, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irCanSetAside, IR_REASONS, irLater, irNotNeeded, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { IrIcon } from "./icons.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
@@ -66,13 +67,33 @@ function ProcessAll() {
     title={blocked ? "ask creaite is busy; try again when it's finished" : n ? "" : "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
 }
 
-/** Upload files: choose them here, or drop them anywhere on the page. */
+/** Add files: an icon button (choose them here), or drop them anywhere on the page. */
 function UploadFiles() {
   const pick = useRef(/** @type {HTMLInputElement | null} */ (null));
+  const tip = "Add files: transcripts or minutes you already have (or drop them anywhere on this page)";
   return <>
-    <button type="button" class="btn" data-irpick="1" title={`Drop files anywhere on this page: ${IR_UPLOAD_TYPES.join(" ")}, up to 25 MB each`} onClick={() => pick.current && pick.current.click()}>Upload files</button>
+    <button type="button" class="ib" data-irpick="1" aria-label="Add files" data-tip={tip} onClick={() => pick.current && pick.current.click()}><IrIcon name="upload" /></button>
     <input type="file" ref={pick} multiple hidden accept={IR_UPLOAD_TYPES.join(",")} aria-label="Choose transcripts or minutes to add"
       onChange={e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget); irAddFiles([...(el.files || [])]); el.value = ""; }} />
+  </>;
+}
+
+/** The overlay while files are dragged over the page. It takes no pointer events, so a drop on ask creaite's panel still reaches it. */
+function DropOverlay() {
+  const types = IR_UPLOAD_TYPES.slice(0, -1).join(", ") + " or " + IR_UPLOAD_TYPES[IR_UPLOAD_TYPES.length - 1];
+  return <div class={`icdrop${irDropOn.value ? " on" : ""}`} data-irdrop="1" aria-hidden="true"><div><b>Drop to add files</b><br /><span class="sub">Transcripts or minutes: {types}, up to 25 MB each</span></div></div>;
+}
+
+/** "Calendar read hh:mm" and the icon that reads it again (the run engine; ask creaite's panel stays closed). `text` is passed in
+    (not read here) so the line redraws when the time changes: a component whose props are the same is left as it was.
+    @param {{text: string}} props */
+function CalendarRead({ text }) {
+  const busy = irBlocked() || irRefreshing.value;
+  const why = irRefreshing.value ? "Reading the calendar" : busy ? "ask creaite is busy; try again when it's finished" : "Refresh the calendar";
+  return <>
+    <span class="sub" data-ircalread="1">{irRefreshing.value ? "Refreshing…" : text}</span>{" "}
+    <button type="button" class="ib sm" id="icRef" data-ira="refreshcal" aria-label="Refresh the calendar" data-tip={why} disabled={busy}
+      onClick={() => irRefreshCalendar()}><IrIcon name="refresh" /></button>
   </>;
 }
 
@@ -110,13 +131,13 @@ function IntakeReviewView() {
   const list = irFiltered(model, irStage.value);
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
-      <h1 id="irTitle">Intake and Review</h1>
-      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve</p>
+      <h1 id="irTitle">Intake</h1>
+      <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
+        <span class="sp"></span>
         <ProcessAll />
         <UploadFiles />
-        <span class="sp"></span>
-        <span class="seg" role="group" aria-label="How you see Intake and Review">
+        <span class="seg" role="group" aria-label="How you see Intake">
           {IR_VIEWS.map(([v, l]) => (
             <button type="button" data-irview={v} aria-pressed={view === v} title={l} onClick={() => irSetView(v)}>
               <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">{VIEWICON[/** @type {keyof VIEWICON} */ (v)]}</svg>
@@ -133,7 +154,7 @@ function IntakeReviewView() {
         {model.not_needed.length ? <ul class="irlist">{model.not_needed.map(x => <li data-irkey={x.key}>{x.title}{x.day ? <span class="sub"> · {fd(x.day)}{x.start ? ` ${x.start}` : ""}</span> : null}{x.reason ? <span class="sub"> · {x.reason}</span> : null}{x.note ? <span class="sub"> · {x.note}</span> : null} <button type="button" class="linkbtn" data-ira="restore" onClick={() => irRestore([x.key])}>Restore</button></li>)}</ul> : <div class="empty">Nothing marked Not needed.</div>}
       </FoldSection>
       <AsideMenu />
-      <p class="sub irold">While this page is being built, the earlier pages are here: <a href="#" data-go="inbox">Intake</a> · <a href="#" data-go="review">Review</a></p>
+      <DropOverlay />
     </div>
   );
 }
@@ -177,7 +198,7 @@ function bootIrKeys() {
 
 /* Upload files: a file dropped anywhere on the page becomes a row (the drop target is the whole view, not a zone). */
 function bootIrDrop() {
-  const over = (/** @type {boolean} */ on) => { const el = $("#v-intake-review"); if (el) el.classList.toggle("irdrop", on); };
+  const over = (/** @type {boolean} */ on) => { irDropOn.value = on; };
   const files = (/** @type {DragEvent} */ e) => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
   const inChat = (/** @type {Event} */ e) => e.target instanceof Element && !!e.target.closest("#chat");
   document.addEventListener("dragover", e => { if (shared.VIEW === "intake-review" && files(e)) { if (inChat(e)) over(false); else { e.preventDefault(); over(true); } } });

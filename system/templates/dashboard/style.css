@@ -4111,7 +4111,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icprog i{display:none}
 #v-intake-review .iccardacts{margin-top:8px}
 #v-intake-review .irnote{color:var(--warn)}
-#v-intake-review.irdrop{outline:2px dashed var(--accent);outline-offset:-4px;border-radius:var(--r-md)}
+#v-intake-review .icdrop{position:fixed;inset:0;z-index:var(--z-top);display:none;place-items:center;text-align:center;pointer-events:none;background:color-mix(in srgb,var(--bg) 82%,transparent);border:3px dashed var(--accent);font-size:var(--fs-lg)}
+#v-intake-review .icdrop.on{display:grid}
 #v-intake-review .irlist li{margin:2px 0}
 
 /* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
