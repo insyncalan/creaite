@@ -657,7 +657,7 @@ def client_findings(block):
     def check(con):
         """The client check on the draft, with the connection `con`."""
         if creaite_doc.is_doc(draft):
-            return client_leak.findings(creaite_doc.read_report(draft), con)
+            return client_leak.findings(creaite_doc.read_report(draft, "client" if block.get("kind") == "client" else None), con)
         return client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
     con = tracker.connect()
     try:

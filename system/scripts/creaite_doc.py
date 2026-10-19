@@ -126,10 +126,15 @@ def check_audience(doc):
                        f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
 
 
-def read_report(path):
+def read_report(path, kind=None):
     """read(path), with a client report read as one (force_client_audience): its audience client and its header fields derived
-    again, however the file was edited on disk. Every place that approves, files, exports or checks a stored report reads it so."""
-    return force_client_audience(read(path))
+    again, however the file was edited on disk. Every place that approves, files, exports or checks a stored report reads it so.
+    `kind`: the kind the caller's route or path expects; a file whose own kind is anything else (edited on disk) is refused
+    (DocError), never read as another kind (v2.5.0: a client draft edited to say weekly or minutes escaped the client gate)."""
+    doc = read(path)
+    if kind is not None and doc.get("kind") != kind:
+        raise DocError("That file isn't this report (its kind was changed), so nothing was done. Open the report again from creaite.")
+    return force_client_audience(doc)
 
 
 def check(doc):
@@ -954,7 +959,7 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None):
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
@@ -967,7 +972,7 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        doc = read_report(path)          # v2.5.0 audience bypass: a client report exported as one, however its file was edited
+        doc = read_report(path, kind)    # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however its file was edited
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):

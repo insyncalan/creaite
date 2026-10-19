@@ -962,7 +962,7 @@ def _file_ops(kind, code, fri, client, draft):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(creaite_doc.read_report(draft))          # v2.5.0: filed as a client report, header derived
+    doc = creaite_doc.clean(creaite_doc.read_report(draft, kind))          # v2.5.0: filed as a client report, header derived
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -997,7 +997,7 @@ def _section(doc, sid):
     return next((s for s in doc["sections"] if s["id"] == sid and not s.get("hidden")), {})
 
 
-def stage_weekly(draft, force=False):
+def stage_weekly(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a weekly report draft: the week's update row and any health change (approved), the Current state
     written to the project's memory, and the draft filed as the creaite report (its state set to approved by tracker.py apply).
     The client facts are kept in it first (meta.client_facts), so the week's client reports lock to them. Returns the proposal's
@@ -1006,7 +1006,8 @@ def stage_weekly(draft, force=False):
     import report
     import sweep
     import tracker
-    doc = creaite_doc.read(draft)
+    doc = creaite_doc.read_report(draft, "weekly")          # v2.5.0: a draft whose kind was edited on disk is refused
+    same_report(doc, "weekly", code or doc["project"], fri or doc["date"])
     code, fri = doc["project"], doc["date"]
     data = report.weekly_data(code, fri)
     health_s = _section(doc, "health")
@@ -1036,13 +1037,14 @@ def stage_weekly(draft, force=False):
                    "file_ops": ops, "health": health, "health_reason": reason, "summary": summary}})
 
 
-def stage_client(draft, force=False):
+def stage_client(draft, force=False, code=None, fri=None):
     """Stage Approve's proposal for a client report draft: filed as the creaite report beside the internal one. Raises ReportError
     before the internal week is approved, while items await review (unless forced), or when the leak check finds anything."""
     import client_leak
     import report
     import sweep
-    doc = creaite_doc.read_report(draft)            # v2.5.0 audience bypass: the gate sees a client report as one
+    doc = creaite_doc.read_report(draft, "client")  # v2.5.0 audience bypass: the gate sees a client report as one; another kind refused
+    same_report(doc, "client", code or doc["project"], fri or doc["date"])      # the route's project and week
     code, fri = doc["project"], doc["date"]
     if paths.rel(paths.resolve(draft_path("client", code, fri, doc.get("client")))) != paths.rel(paths.resolve(str(draft))):
         raise ReportError("That draft isn't this report (its project, kind or week was changed), so nothing was approved.")

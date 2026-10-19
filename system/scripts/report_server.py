@@ -126,7 +126,7 @@ def draft_route(handler, req):
     kind, code, fri, client = target(req)
     state, path = report_doc.where(kind, code, fri, client)
     if state and not (req.get("fresh") and state == "draft"):
-        doc = creaite_doc.read_report(path)             # v2.5.0 audience bypass: a draft edited on disk is read as a client report
+        doc = creaite_doc.read_report(path, kind)       # v2.5.0 audience bypass: a draft edited on disk is read as a client report
     else:
         off = refuse_client_off(handler, kind, code)       # a client report is made only while the setting is on
         if off:
@@ -185,7 +185,7 @@ def relock_client_drafts(code, fri):
 
 def _relock_one(f, code, fri):
     """Re-lock one client draft file (see relock_client_drafts); whether it was saved."""
-    doc = creaite_doc.read_report(f)
+    doc = creaite_doc.read_report(f, "client")
     if doc.get("kind") != "client" or doc.get("project") != code or doc["date"] < fri or doc.get("state") == "approved":
         return False
     base = report_doc.baseline(code, doc["date"])
@@ -233,7 +233,7 @@ def approve_route(handler, req):
         if not paths.resolve(draft).is_file():
             return refuse(handler, "There is no draft to approve: save the report first (a filed report is approved already).")
         stage = report_doc.stage_weekly if kind == "weekly" else report_doc.stage_client
-        prop = stage(draft, force=bool(req.get("force")))
+        prop = stage(draft, force=bool(req.get("force")), code=code, fri=fri)
         code_, out = HOST["run"]("tracker.py", "apply", prop.name)
         if code_ != 0 and prop.exists():
             prop.unlink()                    # nothing was written: the proposal this Approve staged goes, the draft stays
@@ -433,7 +433,7 @@ def export_route(handler, req):
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
-    doc = creaite_doc.read_report(path)                 # v2.5.0 audience bypass: a draft edited on disk too
+    doc = creaite_doc.read_report(path, kind)           # v2.5.0 audience bypass: a draft edited on disk too; another kind refused
     report_doc.same_report(doc, kind, code, fri)
     left = None
     if kind == "client":
@@ -454,7 +454,7 @@ def export_route(handler, req):
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
     out = fn(path, fmt, file_beside=False, open_after=False,
-             page=req.get("page") if isinstance(req.get("page"), dict) else None)           # made in system/staging/drafts/, filed below
+             page=req.get("page") if isinstance(req.get("page"), dict) else None, kind=kind)           # made in system/staging/drafts/, filed below
     if not out.get("ok"):
         return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
     saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)

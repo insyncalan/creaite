@@ -225,7 +225,10 @@ class Filing(Base):
         r = self.export(ready, "docx")
         self.assertTrue(r["ok"], r)
         self.assertTrue(r["path"].startswith(f"{ABC}/reports/2026-10-16 Client report - Example Programme (Harbour Board)"), r)
-        self.in_order(self.word_text(r["path"]), ["Example Programme", "Client · Draft", "Harbour Board", "Health", "Executive summary"])
+        # v2.5.0: a client report's client is the project's own (its memory's Client line; this vault's names none), whatever the
+        # document says
+        self.in_order(self.word_text(r["path"]), ["Example Programme", "Client · Draft", "Health", "Executive summary"])
+        self.assertNotIn("Harbour Board", self.word_text(r["path"]))
 
     def test_an_unknown_format_and_a_missing_file_say_why(self):
         self.assertIn("HTML, Word or PDF", self.export(self.saved(), "odt")["message"])

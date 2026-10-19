@@ -106,6 +106,8 @@ class Audience(unittest.TestCase):
     def fresh(self):
         """A clean client draft (the internal week approved); the draft route's answer."""
         self.draft_file().unlink(missing_ok=True)          # an earlier subtest's draft
+        for f in self.reports.glob("*Client report*"):          # and its filed or exported client report
+            f.unlink()
         self.client()
         r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": WEEK})
         self.assertTrue(r["ok"], r)
@@ -168,6 +170,36 @@ class Audience(unittest.TestCase):
                     self.assertFalse(e["ok"], (fmt, e))
                     self.assertTrue(e.get("findings"), (fmt, e))
                 self.assertEqual(self.reports_hold(needles), {})
+
+    # ── a draft whose kind was edited on disk ───────────────────────────────────────────────────────────────────────────
+    def tamper_kind(self, kind, audience):
+        f = self.draft_file()
+        text = f.read_text()
+        m = creaite_doc.BLOCK.search(text)
+        d = self.add_payload(json.loads(m.group(1)))
+        for key, value in (("kind", kind), ("audience", audience)):
+            if value is MISSING:
+                d.pop(key, None)
+            else:
+                d[key] = value
+        f.write_text(text[:m.start(1)] + creaite_doc.data_json(d) + text[m.end(1):], encoding="utf-8")
+        self.assertIn(self.hidden_item()[0], f.read_text())
+
+    def test_a_draft_whose_kind_was_edited_on_disk_is_refused_at_approve_and_every_export(self):
+        needles = self.needles()
+        for kind in ("weekly", "minutes", MISSING, ["client"], "Client"):
+            for audience in ("internal", MISSING):
+                with self.subTest(kind=kind, audience=audience):
+                    self.fresh()
+                    self.tamper_kind(kind, audience)
+                    a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True})
+                    self.assertFalse(a["ok"], a)
+                    self.assertRegex(a["message"], r"(?i)isn't this report|isn't a creaite|kind")
+                    for fmt in self.formats():
+                        e = self.export(fmt, "client", on_clash="number")
+                        self.assertFalse(e["ok"], (fmt, e))
+                    self.assertEqual(list(self.reports.glob("*Client report*")), [])     # nothing filed or exported
+                    self.assertEqual(self.reports_hold(needles), {})
 
     # ── each boundary on its own, with a reader that doesn't normalise ──────────────────────────────────────────────────
     def raw_reader(self):
