@@ -42,7 +42,8 @@ def model(**over):
                 "cleared": [cal(5, "2026-10-06", "12:00", "Chat", reason="Informal chat", note="just a catch-up")],
                 "later": [cal(6, "2026-10-07", "16:00", "Snoozed", later_since="2026-10-07")]}
     files = [{"name": "notes.vtt", "path": "inbox/notes.vtt", "state": "draft", "event": None, "p": "ABC", "date": "2026-10-06", "ext": "vtt"},
-             {"name": "fresh.docx", "path": "inbox/fresh.docx", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "docx"},
+             {"name": "fresh.docx", "path": "inbox/fresh.docx", "state": "new", "event": None, "p": None, "date": "2026-10-08", "ext": "docx",
+              "ft": "transcript"},
              {"name": "gone.vtt", "path": "inbox/gone.vtt", "state": "processed", "event": None, "p": None, "date": "2026-10-01", "ext": "vtt"}]
     queue = [q(1, "proposed-steer.json", "minutes", kind="draft", age=3), q(2, "proposed-steer.json", "new decision"),
              q(3, "proposed-steer.json"), q(4, "proposed-steer.json"), q(5, "proposed-steer.json", "need a project", p=None),
@@ -96,9 +97,9 @@ class RowModelTests(unittest.TestCase):
 
     def test_counts_and_badge(self):
         c = self.m["counts"]
-        self.assertEqual((c["arrived"], c["ready"], c["drafted"], c["approved"]), (3, 1, 3, 1))
-        self.assertEqual((c["to_approve"], c["need_type"]), (10, 1))                         # fresh.docx: transcript or minutes not known yet
-        self.assertEqual(c["badge"], 11)                                                    # ready meetings and files + proposals
+        self.assertEqual((c["arrived"], c["ready"], c["drafted"], c["approved"]), (3, 2, 3, 1))
+        self.assertEqual((c["to_approve"], c["need_type"]), (10, 0))
+        self.assertEqual(c["badge"], 12)                                                    # ready meetings and files + proposals
 
     def test_empty(self):
         m = build_dashboard.intake_review_model({}, [], [], {}, TODAY, 14)
