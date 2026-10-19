@@ -2655,7 +2655,8 @@ def _ir_calendar(m, by_mkey, today, stale_after):
     return _ir_row("calendar", mkey or m.get("key"), rows, base, today, stale_after, key=m.get("key"), mkey=mkey,
                    title=m.get("title") or "Meeting", day=m.get("day") or "", start=m.get("start") or "", end=m.get("end") or "",
                    p=None if m.get("confidential") else m.get("p") or (rows[0].get("p") if rows else None),
-                   private=bool(m.get("private")), confidential=bool(m.get("confidential")), teams=bool(m.get("teams")), tx=m.get("transcript"), later_back=bool(m.get("later_back")))
+                   private=bool(m.get("private")), confidential=bool(m.get("confidential")), teams=bool(m.get("teams")),
+                   tx=m.get("transcript"), later_back=bool(m.get("later_back")))
 
 
 def _ir_uploads(files, by_path, loaded_events, today, stale_after, aside=()):

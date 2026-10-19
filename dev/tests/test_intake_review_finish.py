@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 from clear_day_support import ClearData, MONDAY  # noqa: E402
-from ir_harden_support import DAY, IrHardenCase  # noqa: E402
+from ir_harden_support import IrHardenCase  # noqa: E402
 from test_meetings import page_data  # noqa: E402
 
 
