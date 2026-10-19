@@ -54,7 +54,7 @@ export function BoardView({ model }) {
         {l.length ? l.map((/** @type {any} */ m) => (
           <div class="card iccard click" data-irm={m.id} data-stage={m.stage} data-state={irBusy.value.includes(m.id) ? "running" : m.state} tabindex={0}
             onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
-            <div class="t">{m.title}</div><div class="why">{m.p && !m.private ? pName(m.p) : ""}</div>
+            <div class="t">{m.title}</div><div class="why">{m.p && !m.private && !m.confidential ? pName(m.p) : ""}</div>
             <div class="why">{irStateWords(m, m.groups.needs.length + m.groups.routine.length)}</div>
             {irBusy.value.includes(m.id) ? <Progress /> : null}
             {irNotes.value[m.id] ? <div class="why irnote" role="status">{irNotes.value[m.id]}</div> : null}
@@ -75,13 +75,13 @@ export function TwoPanes({ model, list }) {
     <div class="icsplit">
       <div>{list.length ? <div class="tbl"><table><tbody>{list.map(m => (
         <tr class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={() => { irSel.value = m.id; }}>
-          <td class="title">{m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]}{m.p ? ` · ${pName(m.p)}` : ""}</div></td>
+          <td class="title">{m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div></td>
         </tr>
       ))}</tbody></table></div> : <div class="empty">{IR_EMPTY}</div>}</div>
       <div class="card icdet" data-irdet={sel ? sel.id : ""}>
         {sel ? <>
           <h2 style={{ margin: "0 0 4px" }}>{sel.title}</h2>
-          <div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (sel.stage)]}{sel.p && !sel.private ? ` · ${pName(sel.p)}` : ""}</div>
+          <div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (sel.stage)]}{sel.p && !sel.private && !sel.confidential ? ` · ${pName(sel.p)}` : ""}</div>
           <div class="why">{irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length)}</div>
           {irBusy.value.includes(sel.id) ? <Progress /> : null}
           {irNotes.value[sel.id] ? <div class="why irnote" role="status">{irNotes.value[sel.id]}</div> : null}

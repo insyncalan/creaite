@@ -2511,7 +2511,7 @@ def restore_meetings(keys=None, day=None, today=None):
 
 
 def inbox_meetings(settings, projects, today):
-    """{"fetched", "from", "rows": [{day, start, end, title, teams, organiser, private, id, key, p, how, series,
+    """{"fetched", "from", "rows": [{day, start, end, title, teams, organiser, private, confidential, id, key, p, how, series,
     processed}], "cleared": [...]}, newest day first; all-day entries left out. Cleared meetings (Clear day) are
     left out of rows and listed in `cleared` (with their reason and note, #232). A meeting set aside with Later (#232) is
     listed in `later` until its transcript arrives, then is back in rows with later_back. A meeting without an ID (an older
@@ -2539,12 +2539,13 @@ def inbox_meetings(settings, projects, today):
                 continue
             title = str(ev.get("title") or "Meeting")
             private = bool(ev.get("private")) or ("private" not in ev and title == "Busy" and not ev.get("where"))
+            conf = str(ev.get("sensitivity") or "").lower() == "confidential"        # #232: title and times only
             code, how = (None, "private") if private else prep_match(title, projects, remembered)
             eid = str(ev.get("id") or "") or None
             done = minutes.processed_on(minutes.meeting_key(day, title, event_id=eid)) if eid else None
             out.append({"day": day, "start": ev.get("start") or "", "end": ev.get("end") or "", "title": title,
                         "teams": bool(ev.get("teams")), "organiser": ev.get("organiser") or False, "private": private,
-                        "id": eid, "key": meeting_clear_key(day, ev.get("start") or "", title, eid),
+                        "confidential": conf, "id": eid, "key": meeting_clear_key(day, ev.get("start") or "", title, eid),
                         "p": code, "how": how, "series": series_of(title), "processed": done,
                         "draft": bool(eid) and f"calendar:{eid}" in drafts,
                         "transcript": (checked.get(eid) or {}).get("status") if eid else None,     # available, not_transcribed, none, no_access; None: not checked yet
@@ -2653,8 +2654,8 @@ def _ir_calendar(m, by_mkey, today, stale_after):
     base = "done" if m.get("processed") or m.get("draft") else "ready" if ready else "waiting"
     return _ir_row("calendar", mkey or m.get("key"), rows, base, today, stale_after, key=m.get("key"), mkey=mkey,
                    title=m.get("title") or "Meeting", day=m.get("day") or "", start=m.get("start") or "", end=m.get("end") or "",
-                   p=m.get("p") or (rows[0].get("p") if rows else None), private=bool(m.get("private")),
-                   teams=bool(m.get("teams")), tx=m.get("transcript"), later_back=bool(m.get("later_back")))
+                   p=None if m.get("confidential") else m.get("p") or (rows[0].get("p") if rows else None),
+                   private=bool(m.get("private")), confidential=bool(m.get("confidential")), teams=bool(m.get("teams")), tx=m.get("transcript"), later_back=bool(m.get("later_back")))
 
 
 def _ir_uploads(files, by_path, loaded_events, today, stale_after, aside=()):

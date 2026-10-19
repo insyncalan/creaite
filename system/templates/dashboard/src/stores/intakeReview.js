@@ -58,5 +58,14 @@ export const irNotes = signal(/** @type {Record<string, string>} */ ({}));
 export const irAside = signal(/** @type {{id: string, anchor: HTMLElement | null} | null} */ (null));
 /** A note on a meeting's row, or "" to clear it. @param {string} id @param {string} text */
 export function irNote(id, text) { const n = { ...irNotes.value }; if (text) n[id] = text; else delete n[id]; irNotes.value = n; }
+/** Whether ask creaite (or a transcript job) is running: mirrors shared.RUN and shared.BUSY, which are not signals, so a button
+    that reads this redraws when the run ends (ask.js setRunning and the BUSY flag set it). */
+export const irAsk = signal(false);
+/** Meeting ids whose transcript is being looked up again (Check again). */
+export const irChecking = signal(/** @type {string[]} */ ([]));
+/** Whether a row's Process must wait: this page is drafting or checking, or ask creaite is working. A signal read, so it redraws. */
+export const irBlocked = () => irBusy.value.length > 0 || irChecking.value.length > 0 || irAsk.value;
+/** @param {string} id @param {boolean} on */
+export function irSetChecking(id, on) { irChecking.value = on ? [...irChecking.value.filter(x => x !== id), id] : irChecking.value.filter(x => x !== id); }
 /** Mark a meeting as being processed (or not). @param {string} id @param {boolean} on */
 export function irSetBusy(id, on) { irBusy.value = on ? [...irBusy.value.filter(x => x !== id), id] : irBusy.value.filter(x => x !== id); }

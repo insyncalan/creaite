@@ -4768,6 +4768,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     TextEditor: () => TextEditor,
     ToDecide: () => ToDecide,
     Toast: () => Toast,
+    UPLOAD_MAX: () => UPLOAD_MAX,
+    UPLOAD_TYPES: () => UPLOAD_TYPES,
     VAULT_PATH: () => VAULT_PATH,
     VDB: () => VDB,
     VH: () => VH,
@@ -5735,11 +5737,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irAddFiles: () => irAddFiles,
     irAfterData: () => irAfterData,
     irAside: () => irAside,
+    irAsk: () => irAsk,
     irAskReason: () => irAskReason,
+    irBlocked: () => irBlocked,
     irBulk: () => irBulk,
     irBusy: () => irBusy,
+    irCanCheck: () => irCanCheck,
     irCanProcess: () => irCanProcess,
     irCanSetAside: () => irCanSetAside,
+    irCheck: () => irCheck,
+    irChecking: () => irChecking,
     irClickFold: () => irClickFold,
     irClickMeeting: () => irClickMeeting,
     irClickStage: () => irClickStage,
@@ -5768,9 +5775,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irProcessAll: () => irProcessAll,
     irReady: () => irReady,
     irRestore: () => irRestore,
+    irRestoredWords: () => irRestoredWords,
     irRow: () => irRow,
     irSel: () => irSel,
     irSetBusy: () => irSetBusy,
+    irSetChecking: () => irSetChecking,
     irSetView: () => irSetView,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
@@ -6933,6 +6942,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     updUpload: () => updUpload,
     updateView: () => updateView,
     uploadClientLogo: () => uploadClientLogo,
+    uploadInboxFile: () => uploadInboxFile,
     uploadedFiles: () => uploadedFiles,
     useCount: () => useCount,
     vagueWhy: () => vagueWhy,
@@ -42920,6 +42930,15 @@ ${s5}`;
     else delete n4[id2];
     irNotes.value = n4;
   }
+  var irAsk = y3(false);
+  var irChecking = y3(
+    /** @type {string[]} */
+    []
+  );
+  var irBlocked = () => irBusy.value.length > 0 || irChecking.value.length > 0 || irAsk.value;
+  function irSetChecking(id2, on2) {
+    irChecking.value = on2 ? [...irChecking.value.filter((x5) => x5 !== id2), id2] : irChecking.value.filter((x5) => x5 !== id2);
+  }
   function irSetBusy(id2, on2) {
     irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
   }
@@ -46188,6 +46207,34 @@ ${s5}`;
     inboxBadge();
     renderMeetings();
   }
+  var UPLOAD_TYPES = [".vtt", ".docx", ".txt", ".md", ".pdf"], UPLOAD_MAX = 25 * 1048576;
+  async function uploadInboxFile(f5) {
+    const ext = (f5.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
+    if (!UPLOAD_TYPES.includes(ext)) {
+      snack(`${f5.name}: only .vtt, .docx, .txt, .md or .pdf`);
+      return null;
+    }
+    if (f5.size > UPLOAD_MAX) {
+      snack(`${f5.name} is over 25 MB`);
+      return null;
+    }
+    const data = await new Promise((res, rej) => {
+      const fr2 = new FileReader();
+      fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
+      fr2.onerror = () => rej(fr2.error);
+      fr2.readAsDataURL(f5);
+    });
+    const r4 = await api("/api/inbox/upload", { name: f5.name, data });
+    if (!r4.ok) {
+      if (r4.message === OLDSERVER) {
+        snack(OLDSERVER);
+        return false;
+      }
+      snack(`${f5.name}: ${oneLine(r4.message)}`);
+      return null;
+    }
+    return { r: r4, ext };
+  }
   async function addInboxFiles(files) {
     if (!viaServer()) {
       snack("Adding files needs the live server");
@@ -46195,30 +46242,10 @@ ${s5}`;
     }
     let added = 0;
     for (const f5 of files) {
-      const ext = (f5.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
-      if (![".vtt", ".docx", ".txt", ".md", ".pdf"].includes(ext)) {
-        snack(`${f5.name}: only .vtt, .docx, .txt, .md or .pdf`);
-        continue;
-      }
-      if (f5.size > 25 * 1048576) {
-        snack(`${f5.name} is over 25 MB`);
-        continue;
-      }
-      const data = await new Promise((res, rej) => {
-        const fr2 = new FileReader();
-        fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
-        fr2.onerror = () => rej(fr2.error);
-        fr2.readAsDataURL(f5);
-      });
-      const r4 = await api("/api/inbox/upload", { name: f5.name, data });
-      if (!r4.ok) {
-        if (r4.message === OLDSERVER) {
-          snack(OLDSERVER);
-          return;
-        }
-        snack(`${f5.name}: ${oneLine(r4.message)}`);
-        continue;
-      }
+      const u5 = await uploadInboxFile(f5);
+      if (u5 === false) return;
+      if (!u5) continue;
+      const { r: r4, ext } = u5;
       added++;
       (D.inbox = D.inbox || []).push({ name: r4.name, path: r4.path, ext: ext.slice(1), size: f5.size, date: TODAY, p: null, state: "new", uploaded: true });
       INSEL.add(r4.path);
@@ -63275,6 +63302,7 @@ ${d5.text}`);
   shared.RUN = null;
   var SENDI = ic("arrowup"), STOPI = ic("stop");
   function setRunning(on2) {
+    irAsk.value = !!on2 || !!shared.BUSY;
     const b5 = $("#chSend");
     putHTML(b5, raw(on2 ? STOPI : SENDI));
     b5.dataset.tip = on2 ? "Stop" : "Send";
@@ -64072,6 +64100,7 @@ ${d5.text}`);
       }
       if (!text2) text2 = imgs.length > 1 ? "Please look at these images." : "Please look at this image.";
       shared.BUSY = true;
+      irAsk.value = true;
       $("#chIn").value = "";
       acClose();
       SENDIMG = imgs;
@@ -64083,6 +64112,7 @@ ${d5.text}`);
         await handle(text2);
       } finally {
         shared.BUSY = false;
+        irAsk.value = !!shared.RUN;
         SENDIMG = [];
       }
     })(text);
@@ -71185,11 +71215,11 @@ ${d5.text}`);
 
   // components/intakeReview/actions.js
   var IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
-  var IR_UPLOAD_TYPES = [".vtt", ".docx", ".txt", ".md", ".pdf"];
+  var IR_UPLOAD_TYPES = UPLOAD_TYPES;
   var BUSY = "ask creaite is busy; try again when it's finished";
   var irCanProcess = (m5) => !!m5 && m5.stage === "arrived" && m5.state === "ready" && m5.src !== "draft";
-  var irCanSetAside = (m5) => !!m5 && m5.stage === "arrived" && m5.src !== "draft";
-  var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irBusy.value.includes(m5.id));
+  var irCanSetAside = (m5) => !!m5 && m5.stage === "arrived" && m5.src !== "draft" && !irBusy.value.includes(m5.id);
+  var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !m5.private && !irBusy.value.includes(m5.id));
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
   var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
   var whenOf = (m5) => m5.start ? `${fd(m5.day)} at ${m5.start}` : fd(m5.day);
@@ -71199,7 +71229,7 @@ ${d5.text}`);
       snack("Processing needs the live server");
       return false;
     }
-    if (mtgBusy() || irBusy.value.length) {
+    if (mtgBusy() || irBusy.value.length || irChecking.value.length) {
       snack(BUSY);
       return false;
     }
@@ -71245,7 +71275,7 @@ ${d5.text}`);
       }
       await reloadData();
       const after = rowOf(m5.id);
-      const done = !!after && after.stage !== "arrived";
+      const done = !after || after.stage !== "arrived";
       if (!done) irNote(m5.id, "Couldn't: no draft came back");
       return done;
     } finally {
@@ -71257,7 +71287,7 @@ ${d5.text}`);
       snack("Processing needs the live server");
       return;
     }
-    if (mtgBusy() || irBusy.value.length) {
+    if (mtgBusy() || irBusy.value.length || irChecking.value.length) {
       snack(BUSY);
       return;
     }
@@ -71289,6 +71319,11 @@ ${d5.text}`);
   function irNotNeeded(m5, reason, note) {
     return irCanSetAside(m5) && IR_REASONS.includes(reason) ? setAside([m5], { reason, note: note || "" }, "Not needed") : Promise.resolve(false);
   }
+  function irRestoredWords(keys, n4) {
+    const files = keys.filter((k5) => (D.inbox || []).some((f5) => f5.path === k5)).length;
+    const noun = files === 0 ? "meeting" : files === keys.length ? "file" : "item";
+    return `Restored ${n4} ${noun}${n4 === 1 ? "" : "s"}`;
+  }
   async function irRestore(keys) {
     const r4 = await api("/api/intake/clear", { op: "restore", keys });
     if (!r4.ok) {
@@ -71296,8 +71331,38 @@ ${d5.text}`);
       return false;
     }
     await reloadData();
-    snack(`Restored ${r4.count} meeting${r4.count === 1 ? "" : "s"}`);
+    snack(irRestoredWords(keys, r4.count));
     return true;
+  }
+  function irCanCheck(m5) {
+    const x5 = m5 && m5.state === "waiting" && m5.stage === "arrived" ? calOf(m5) : null;
+    return !!x5 && !m5.private && mtgCheckable(x5) && !irChecking.value.includes(m5.id);
+  }
+  async function irCheck(m5) {
+    if (!irCanCheck(m5)) return false;
+    if (!viaServer()) {
+      snack("Checking needs the live server");
+      return false;
+    }
+    if (mtgBusy() || irBusy.value.length || irChecking.value.length) {
+      snack(BUSY);
+      return false;
+    }
+    irSetChecking(m5.id, true);
+    try {
+      shared.RUNLABEL = `Checking “${m5.title}”`;
+      try {
+        await jobLive("/api/transcripts/check", { id: (
+          /** @type {any} */
+          calOf(m5).id
+        ) });
+      } catch (e4) {
+      }
+      await reloadData();
+      return true;
+    } finally {
+      irSetChecking(m5.id, false);
+    }
   }
   function irAskReason(m5, anchor) {
     if (irCanSetAside(m5)) irAside.value = { id: m5.id, anchor };
@@ -71310,31 +71375,9 @@ ${d5.text}`);
     }
     let added = 0;
     for (const f5 of files) {
-      const ext = (f5.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
-      if (!IR_UPLOAD_TYPES.includes(ext)) {
-        snack(`${f5.name}: only .vtt, .docx, .txt, .md or .pdf`);
-        continue;
-      }
-      if (f5.size > 25 * 1048576) {
-        snack(`${f5.name} is over 25 MB`);
-        continue;
-      }
-      const data = await new Promise((res, rej) => {
-        const fr2 = new FileReader();
-        fr2.onload = () => res(String(fr2.result).split(",")[1] || "");
-        fr2.onerror = () => rej(fr2.error);
-        fr2.readAsDataURL(f5);
-      });
-      const r4 = await api("/api/inbox/upload", { name: f5.name, data });
-      if (!r4.ok) {
-        if (r4.message === OLDSERVER) {
-          snack(OLDSERVER);
-          return;
-        }
-        snack(`${f5.name}: ${oneLine(r4.message)}`);
-        continue;
-      }
-      added++;
+      const u5 = await uploadInboxFile(f5);
+      if (u5 === false) return;
+      if (u5) added++;
     }
     if (added) {
       await reloadData();
@@ -71343,6 +71386,7 @@ ${d5.text}`);
   }
 
   // components/intakeReview/rows.jsx
+  var IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
   var IR_STATE_WORDS = { ready: "Transcript ready", waiting: "Waiting for the transcript", proposals: "proposals to check", done: "Done", running: "Drafting in the background" };
   var IR_GROUP_HEAD = {
     needs: ["Needs your decision", "Approved one by one: minutes, new decisions, new risks, closing updates and other bigger changes"],
@@ -71356,18 +71400,26 @@ ${d5.text}`);
   var ageWords = (d5) => d5 === 0 ? "today" : d5 === 1 ? "1 day" : `${d5} days`;
   function irStateWords(m5, n4) {
     const state = irBusy.value.includes(m5.id) ? "running" : m5.state;
-    const base = state === "proposals" ? `${n4} ${IR_STATE_WORDS.proposals}` : IR_STATE_WORDS[
+    const tx3 = state === "waiting" && IR_TX_WORDS[
+      /** @type {keyof IR_TX_WORDS} */
+      m5.tx
+    ] ? ` · ${IR_TX_WORDS[
+      /** @type {keyof IR_TX_WORDS} */
+      m5.tx
+    ]}` : "";
+    const base = state === "proposals" ? `${n4} ${IR_STATE_WORDS.proposals}` : `${IR_STATE_WORDS[
       /** @type {keyof IR_STATE_WORDS} */
       state
-    ] || "";
+    ] || ""}${tx3}`;
     const age = state === "ready" || state === "proposals" ? ` · ${ageWords(m5.age)}` : "";
     return `${base}${age}${m5.later_back ? " · back from Later" : ""}`;
   }
   function Progress() {
     return /* @__PURE__ */ u2("div", { class: "icprog", role: "progressbar", "aria-label": "Drafting in the background", children: /* @__PURE__ */ u2("i", {}) });
   }
-  function RowActions({ m: m5, live, mini }) {
-    const running = irBusy.value.includes(m5.id), blocked2 = irBusy.value.length > 0 || mtgBusy();
+  var laterWords = (m5) => m5.state === "waiting" ? "Hide it until its transcript arrives" : "Hide it; it stays in Later until you restore it";
+  function RowActions({ m: m5, mini }) {
+    const running = irBusy.value.includes(m5.id), blocked2 = irBlocked(), checking = irChecking.value.includes(m5.id);
     const open2 = irOpen.value === m5.id;
     if (running) return /* @__PURE__ */ u2("button", { type: "button", class: "mini", disabled: true, "data-ira": "processing", children: "Processing" });
     if (m5.stage === "drafted") return mini ? null : /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ira": "open", onClick: () => irClickMeeting(m5.id), children: open2 ? "Close" : "Check them" });
@@ -71386,7 +71438,22 @@ ${d5.text}`);
         }
       ) : null,
       " ",
-      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ira": "later", title: "Hide it until its transcript arrives", onClick: () => irLater(m5), children: "Later" }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-ira": "later", title: laterWords(m5), onClick: () => irLater(m5), children: "Later" }),
+      irCanCheck(m5) || checking ? /* @__PURE__ */ u2(S2, { children: [
+        " ",
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "mini",
+            "data-ira": "check",
+            disabled: checking || blocked2,
+            title: checking ? "" : blocked2 ? "ask creaite is busy; try again when it's finished" : "Look the transcript up again",
+            onClick: () => irCheck(m5),
+            children: checking ? "Checking…" : "Check again"
+          }
+        )
+      ] }) : null,
       " ",
       /* @__PURE__ */ u2(
         IconButton,
@@ -71436,7 +71503,7 @@ ${d5.text}`);
             /* @__PURE__ */ u2("div", { class: "why", children: [
               m5.day ? fd(m5.day) : "",
               m5.start ? ` ${m5.start}${m5.end ? `–${m5.end}` : ""}` : "",
-              m5.p && !m5.private ? ` · ${pName(m5.p)}` : ""
+              m5.p && !m5.private && !m5.confidential ? ` · ${pName(m5.p)}` : ""
             ] }),
             /* @__PURE__ */ u2("div", { class: "why", children: irStateWords(m5, n4) }),
             state === "running" ? /* @__PURE__ */ u2(S2, { children: [
@@ -71445,7 +71512,7 @@ ${d5.text}`);
             ] }) : null,
             note ? /* @__PURE__ */ u2("div", { class: "why irnote", role: "status", children: note }) : null
           ] }),
-          /* @__PURE__ */ u2("td", { class: "iracts", children: /* @__PURE__ */ u2(RowActions, { m: m5, live: n4 }) })
+          /* @__PURE__ */ u2("td", { class: "iracts", children: /* @__PURE__ */ u2(RowActions, { m: m5 }) })
         ]
       }
     );
@@ -71770,7 +71837,7 @@ ${d5.text}`);
               },
               children: [
                 /* @__PURE__ */ u2("div", { class: "t", children: m5.title }),
-                /* @__PURE__ */ u2("div", { class: "why", children: m5.p && !m5.private ? pName(m5.p) : "" }),
+                /* @__PURE__ */ u2("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
                 /* @__PURE__ */ u2("div", { class: "why", children: irStateWords(m5, m5.groups.needs.length + m5.groups.routine.length) }),
                 irBusy.value.includes(m5.id) ? /* @__PURE__ */ u2(Progress, {}) : null,
                 irNotes.value[m5.id] ? /* @__PURE__ */ u2("div", { class: "why irnote", role: "status", children: irNotes.value[m5.id] }) : null,
@@ -71797,7 +71864,7 @@ ${d5.text}`);
               /** @type {keyof IR_STAGE_NAMES} */
               m5.stage
             ],
-            m5.p ? ` · ${pName(m5.p)}` : ""
+            m5.p && !m5.private && !m5.confidential ? ` · ${pName(m5.p)}` : ""
           ] })
         ] }) })) }) }) }) : /* @__PURE__ */ u2("div", { class: "empty", children: IR_EMPTY }) }),
         /* @__PURE__ */ u2("div", { class: "card icdet", "data-irdet": sel ? sel.id : "", children: sel ? /* @__PURE__ */ u2(S2, { children: [
@@ -71807,7 +71874,7 @@ ${d5.text}`);
               /** @type {keyof IR_STAGE_NAMES} */
               sel.stage
             ],
-            sel.p && !sel.private ? ` · ${pName(sel.p)}` : ""
+            sel.p && !sel.private && !sel.confidential ? ` · ${pName(sel.p)}` : ""
           ] }),
           /* @__PURE__ */ u2("div", { class: "why", children: irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length) }),
           irBusy.value.includes(sel.id) ? /* @__PURE__ */ u2(Progress, {}) : null,
@@ -71885,7 +71952,7 @@ ${d5.text}`);
     ] });
   }
   function ProcessAll() {
-    const n4 = irReady().length, blocked2 = irBusy.value.length > 0 || mtgBusy();
+    const n4 = irReady().length, blocked2 = irBlocked();
     return /* @__PURE__ */ u2(
       "button",
       {
@@ -72111,10 +72178,14 @@ ${d5.text}`);
       if (el2) el2.classList.toggle("irdrop", on2);
     };
     const files = (e4) => e4.dataTransfer && [...e4.dataTransfer.types].includes("Files");
+    const inChat = (e4) => e4.target instanceof Element && !!e4.target.closest("#chat");
     document.addEventListener("dragover", (e4) => {
       if (shared.VIEW === "intake-review" && files(e4)) {
-        e4.preventDefault();
-        over(true);
+        if (inChat(e4)) over(false);
+        else {
+          e4.preventDefault();
+          over(true);
+        }
       }
     });
     document.addEventListener("dragleave", (e4) => {
@@ -72123,6 +72194,7 @@ ${d5.text}`);
     document.addEventListener("drop", (e4) => {
       if (shared.VIEW !== "intake-review") return;
       over(false);
+      if (e4.defaultPrevented || inChat(e4)) return;
       const list = e4.dataTransfer ? [...e4.dataTransfer.files] : [];
       if (!list.length) return;
       e4.preventDefault();
@@ -75708,8 +75780,11 @@ ${d5.text}`);
         "irIsFolded",
         "irKeepOpen",
         "irLive",
+        "irNotNeeded",
+        "irNotes",
         "irOpen",
         "irPeek",
+        "irSel",
         "irSetView",
         "irStage",
         "irStageClick",

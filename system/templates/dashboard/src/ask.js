@@ -9,6 +9,7 @@ import { clientReportOn } from "./stores/reportingSettings.js";
 import { resumeDeleteNote } from "./components/notes/DeleteNote.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
+import { irAsk } from "./stores/intakeReview.js";
 import { noteCur, noteFlush, openNote } from "./stores/notes.js";
 import { A, DEC, FILES, fpName, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
@@ -578,7 +579,7 @@ export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "no
    at once; a confirmed write stops once the step running now has finished. What's shown so far is kept. */
 export let ATTACHED=null; shared.RUN=null;
 export const SENDI=ic("arrowup"), STOPI=ic("stop");   /* BL-161 */
-export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
+export function setRunning(on){ irAsk.value=!!on||!!shared.BUSY; const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
 export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; shared.RUN.stopping=true; const res=await api("/api/ask/stop",{run:shared.RUN.id});
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
@@ -817,8 +818,8 @@ export async function fillThumbs(root){ for(const t of root.querySelectorAll("[d
 export const imgFiles=dt=>dt?[...dt.files].filter(f=>f.type.startsWith("image/")):[];
 export let SENDIMG=[];
 export let send = function(text){ const sent=(async text=>{ text=(text??$("#chIn").value).trim(); const imgs=shared.PIMG.filter(p=>p.id).map(p=>p.id); if(shared.RUN&&(text||imgs.length)&&viaServer()&&await sendQueued(text,imgs)) return; if(shared.BUSY||(!text&&!imgs.length)) return; if(shared.PIMG.some(p=>!p.id)){ imgFlash("Wait for the image to finish uploading"); return; }
-  if(!text) text=imgs.length>1?"Please look at these images.":"Please look at this image."; shared.BUSY=true; $("#chIn").value=""; acClose(); SENDIMG=imgs; shared.PIMG=[]; drawThumbs();
-  const d=addEl("msg u",html`${text}${raw(imgThumbsHtml(imgs))}`); fillThumbs(d); try{ await handle(text); } finally{ shared.BUSY=false; SENDIMG=[]; } })(text);
+  if(!text) text=imgs.length>1?"Please look at these images.":"Please look at this image."; shared.BUSY=true; irAsk.value=true; $("#chIn").value=""; acClose(); SENDIMG=imgs; shared.PIMG=[]; drawThumbs();
+  const d=addEl("msg u",html`${text}${raw(imgThumbsHtml(imgs))}`); fillThumbs(d); try{ await handle(text); } finally{ shared.BUSY=false; irAsk.value=!!shared.RUN; SENDIMG=[]; } })(text);
   if(text==null&&!$("#chIn").value){ clearTimeout(DRAFTT); draftClear(); CHREC.i=-1; } return sent; };   /* the draft is cleared once a typed message has gone */
 /* BL-257: sent while a run works: queued with the server (true), or false when the run has just ended (sent as usual) */
 export async function sendQueued(text,imgs){ if(shared.PIMG.some(p=>!p.id)){ imgFlash("Wait for the image to finish uploading"); return true; }

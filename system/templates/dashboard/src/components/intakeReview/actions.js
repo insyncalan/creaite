@@ -6,23 +6,23 @@
    /api/inbox/upload, /api/intake/clear), and ask creaite's own run (askLive) makes the draft.
    Progress is the row's (irBusy); the ask panel is never opened, so ask creaite stays free (one run at a time is the engine's). */
 import { askLive } from "../../ask.js";
-import { jobLive, mtgBusy, mtgSkip, TXWHY } from "../../intake.js";
+import { jobLive, mtgBusy, mtgCheckable, mtgSkip, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../intake.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { irAside, irBusy, irModel, irNote, irSetBusy } from "../../stores/intakeReview.js";
+import { irAside, irBusy, irChecking, irModel, irNote, irSetBusy, irSetChecking } from "../../stores/intakeReview.js";
 
 /** The reasons Not needed asks for (build_dashboard.NOT_NEEDED_REASONS). */
 export const IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
-export const IR_UPLOAD_TYPES = [".vtt", ".docx", ".txt", ".md", ".pdf"];
+export const IR_UPLOAD_TYPES = UPLOAD_TYPES;
 const BUSY = "ask creaite is busy; try again when it's finished";
 
 /** Whether Process applies: a meeting or file whose transcript is ready (not waiting, drafted or done). @param {any} m */
 export const irCanProcess = m => !!m && m.stage === "arrived" && m.state === "ready" && m.src !== "draft";
-/** Whether Later and Not needed apply: anything that has arrived and is not yet drafted. @param {any} m */
-export const irCanSetAside = m => !!m && m.stage === "arrived" && m.src !== "draft";
-/** The meetings Process all ready would run. */
-export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irBusy.value.includes(m.id));
+/** Whether Later and Not needed apply: anything that has arrived, is not yet drafted and is not being processed now. @param {any} m */
+export const irCanSetAside = m => !!m && m.stage === "arrived" && m.src !== "draft" && !irBusy.value.includes(m.id);
+/** The meetings Process all ready would run: a private meeting ("Busy") is left out (Alan, via Jarvis, 19-10-2026). */
+export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !m.private && !irBusy.value.includes(m.id));
 
 /** The calendar import row (D.meetings.rows) a model row came from. @param {any} m */
 const calOf = m => (m.src === "calendar" ? ((D.meetings && D.meetings.rows) || []).find((/** @type {any} */ x) => x.key === m.key) || null : null);
@@ -34,7 +34,7 @@ const whenOf = (/** @type {any} */ m) => (m.start ? `${fd(m.day)} at ${m.start}`
 export async function irProcess(m) {
   if (!irCanProcess(m)) return false;
   if (!viaServer()) { snack("Processing needs the live server"); return false; }
-  if (mtgBusy() || irBusy.value.length) { snack(BUSY); return false; }
+  if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return false; }
   irNote(m.id, ""); irSetBusy(m.id, true);
   const label = `Processing “${m.title}”`;
   try {
@@ -58,7 +58,7 @@ export async function irProcess(m) {
     try { await askLive(`process ${file}`, `Process “${m.title}” (${whenOf(m)}) into draft minutes and proposed items`); } catch (e) { /* checked below */ }
     await reloadData();
     const after = rowOf(m.id);
-    const done = !!after && after.stage !== "arrived";
+    const done = !after || after.stage !== "arrived";      /* a file that was filed away has left the inbox: that is done, not failed */
     if (!done) irNote(m.id, "Couldn't: no draft came back");
     return done;
   } finally { irSetBusy(m.id, false); }
@@ -67,7 +67,7 @@ export async function irProcess(m) {
 /** Process every meeting and file whose transcript is ready, one after another. */
 export async function irProcessAll() {
   if (!viaServer()) { snack("Processing needs the live server"); return; }
-  if (mtgBusy() || irBusy.value.length) { snack(BUSY); return; }
+  if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return; }
   const ids = irReady().map((/** @type {any} */ m) => m.id);
   for (const id of ids) { const m = rowOf(id); if (m) await irProcess(m); }
 }
@@ -86,8 +86,8 @@ async function setAside(ms, extra, what) {
   return true;
 }
 
-/** Later: the meeting leaves the ready list and comes back when its transcript arrives (a transcript already here: Restore).
-    @param {any} m */
+/** Later: a waiting meeting leaves the list and comes back when its transcript arrives; a ready one or a file (its transcript is
+    already here) stays in Later until it is restored. @param {any} m */
 export function irLater(m) { return irCanSetAside(m) ? setAside([m], { kind: "later", seen: m.state === "ready" }, "Later") : Promise.resolve(false); }
 
 /** Not needed, with a reason (and a one-line note); an Undo is offered. @param {any} m @param {string} reason @param {string} [note] */
@@ -95,13 +95,41 @@ export function irNotNeeded(m, reason, note) {
   return irCanSetAside(m) && IR_REASONS.includes(reason) ? setAside([m], { reason, note: note || "" }, "Not needed") : Promise.resolve(false);
 }
 
+/** What "Restored n …" calls the things restored: files (keys that are inbox paths), meetings, or both. @param {string[]} keys @param {number} n */
+export function irRestoredWords(keys, n) {
+  const files = keys.filter(k => ((D.inbox || []).some((/** @type {any} */ f) => f.path === k))).length;
+  const noun = files === 0 ? "meeting" : files === keys.length ? "file" : "item";
+  return `Restored ${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
 /** Bring meetings back from Later or Not needed, by key. @param {string[]} keys */
 export async function irRestore(keys) {
   const r = await api("/api/intake/clear", { op: "restore", keys });
   if (!r.ok) { snack(oneLine(r.message || "Couldn't restore")); return false; }
   await reloadData();
-  snack(`Restored ${r.count} meeting${r.count === 1 ? "" : "s"}`);
+  snack(irRestoredWords(keys, r.count));
   return true;
+}
+
+/** Whether Check again applies: a Teams meeting that is still waiting for its transcript and has ended. @param {any} m */
+export function irCanCheck(m) {
+  const x = m && m.state === "waiting" && m.stage === "arrived" ? calOf(m) : null;
+  return !!x && !m.private && mtgCheckable(x) && !irChecking.value.includes(m.id);
+}
+
+/** Check again: look the transcript up through the run engine (no chat is opened); the row shows what the sweep finds.
+    @param {any} m @returns {Promise<boolean>} whether a check ran */
+export async function irCheck(m) {
+  if (!irCanCheck(m)) return false;
+  if (!viaServer()) { snack("Checking needs the live server"); return false; }
+  if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return false; }
+  irSetChecking(m.id, true);
+  try {
+    shared.RUNLABEL = `Checking “${m.title}”`;
+    try { await jobLive("/api/transcripts/check", { id: /** @type {any} */ (calOf(m)).id }); } catch (e) { /* the row shows what was found */ }
+    await reloadData();
+    return true;
+  } finally { irSetChecking(m.id, false); }
 }
 
 /** Open the Not needed reasons menu for a row. @param {any} m @param {HTMLElement | null} anchor */
@@ -113,15 +141,9 @@ export async function irAddFiles(files) {
   if (!viaServer()) { snack("Adding files needs the live server"); return; }
   let added = 0;
   for (const f of files) {
-    const ext = (f.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
-    if (!IR_UPLOAD_TYPES.includes(ext)) { snack(`${f.name}: only .vtt, .docx, .txt, .md or .pdf`); continue; }
-    if (f.size > 25 * 1048576) { snack(`${f.name} is over 25 MB`); continue; }
-    const data = await new Promise((res, rej) => {
-      const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1] || ""); fr.onerror = () => rej(fr.error); fr.readAsDataURL(f);
-    });
-    const r = await api("/api/inbox/upload", { name: f.name, data });
-    if (!r.ok) { if (r.message === OLDSERVER) { snack(OLDSERVER); return; } snack(`${f.name}: ${oneLine(r.message)}`); continue; }
-    added++;
+    const u = await uploadInboxFile(f);
+    if (u === false) return;
+    if (u) added++;
   }
   if (added) { await reloadData(); snack(`${added} file${added === 1 ? "" : "s"} added`); }
 }

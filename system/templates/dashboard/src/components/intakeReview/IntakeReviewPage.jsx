@@ -11,12 +11,11 @@
    - 232-C: the rail badge and Today's Intake and Review count from irLiveCounts(); the old pages' tests and the snapshots. */
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
-import { mtgBusy } from "../../intake.js";
 import { $ } from "../../core/dom.js";
 import { IR_STAGES, IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
 import { fd } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAfterData, irAside, irBusy, irClickFold, irClickMeeting, irClickStage, irFolded, irLiveCounts, irModel, irOpen, irPeek, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irFolded, irLiveCounts, irModel, irOpen, irPeek, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCanProcess, irCanSetAside, IR_REASONS, irLater, irNotNeeded, irProcess, irProcessAll, irReady, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
@@ -61,7 +60,7 @@ function FoldSection({ sec, title, n, children }) {
 
 /** Process all ready (n): the meetings and files whose transcript is ready, one after another. */
 function ProcessAll() {
-  const n = irReady().length, blocked = irBusy.value.length > 0 || mtgBusy();
+  const n = irReady().length, blocked = irBlocked();
   return <button type="button" class="btn" data-ira="processall" disabled={!n || blocked}
     title={blocked ? "ask creaite is busy; try again when it's finished" : n ? "" : "Nothing is ready to process"} onClick={() => irProcessAll()}>Process all ready ({n})</button>;
 }
@@ -176,11 +175,14 @@ function bootIrKeys() {
 function bootIrDrop() {
   const over = (/** @type {boolean} */ on) => { const el = $("#v-intake-review"); if (el) el.classList.toggle("irdrop", on); };
   const files = (/** @type {DragEvent} */ e) => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
-  document.addEventListener("dragover", e => { if (shared.VIEW === "intake-review" && files(e)) { e.preventDefault(); over(true); } });
+  const inChat = (/** @type {Event} */ e) => e.target instanceof Element && !!e.target.closest("#chat");
+  document.addEventListener("dragover", e => { if (shared.VIEW === "intake-review" && files(e)) { if (inChat(e)) over(false); else { e.preventDefault(); over(true); } } });
   document.addEventListener("dragleave", e => { if (shared.VIEW === "intake-review" && !e.relatedTarget) over(false); });
   document.addEventListener("drop", e => {
     if (shared.VIEW !== "intake-review") return;
     over(false);
+    /* a drop the ask panel (or anything else) already took is not ours: the panel attaches its own images */
+    if (e.defaultPrevented || inChat(e)) return;
     const list = e.dataTransfer ? [...e.dataTransfer.files] : [];
     if (!list.length) return;
     e.preventDefault(); irAddFiles(list);

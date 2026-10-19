@@ -29,12 +29,17 @@ export function renderInbox(){ const L=uploadedFiles(); [...INSEL].forEach(p=>{ 
   putHTML($("#inboxTbl"),html`<thead><tr><th style="width:32px"></th><th>File</th><th>Type</th><th>Size</th><th>Added</th><th>Likely project</th><th>State</th><th></th></tr></thead><tbody>${L.length?L.map(f=>{ const st=INRUN.includes(f.path)?"processing":f.state;
     return html`<tr data-inf="${f.path}"><td><input type="checkbox" aria-label="Select ${f.name}" ${raw(INSEL.has(f.path)?"checked":"")} ${raw(st==="new"?"":"disabled")}></td><td class="title">${f.name}</td><td>${f.ext}</td><td>${kb(f.size)}</td><td style="white-space:nowrap">${fd(f.date)}</td><td>${f.p?raw(pLink(f.p)):html`<span class="sub">Not sure</span>`}</td><td><span class="tag ${st==="new"?"":"sub"}">${INSTATE[st]}</span>${st==="draft"&&html` <a href="#" data-go="review" class="sub">Open Review</a>`}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye","Preview",'data-inprev aria-haspopup="dialog"',"sm"))}${raw(ibtn("trash","Remove from Intake",`data-inrm ${st==="processing"?"disabled":""}`,"sm no"))}</td></tr>`; }):html`<tr><td colspan="8"><div class="empty minbox">No uploaded files waiting.</div></td></tr>`}</tbody>`);
   $("#inboxGo").disabled=!INSEL.size||!!shared.RUN; $("#inboxGo").title=shared.RUN?"ask creaite is busy; try again when it's finished":INSEL.size?"":"Tick a file first"; $("#inboxGo").textContent=INSEL.size?`Process ${INSEL.size} selected`:"Process selected"; inboxBadge(); renderMeetings(); }
+/* One place for the upload rules (types, 25 MB, the upload call): the old Upload files section and Intake and Review (#232-A) both use it.
+   Returns {r, ext} for a file added; null for one skipped (a snack says why); false when the server is too old to go on. */
+export const UPLOAD_TYPES=[".vtt",".docx",".txt",".md",".pdf"], UPLOAD_MAX=25*1048576;
+export async function uploadInboxFile(f){ const ext=(f.name.match(/\.[^.]+$/)||[""])[0].toLowerCase();
+  if(!UPLOAD_TYPES.includes(ext)){ snack(`${f.name}: only .vtt, .docx, .txt, .md or .pdf`); return null; }
+  if(f.size>UPLOAD_MAX){ snack(`${f.name} is over 25 MB`); return null; }
+  const data=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]||""); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(f); });
+  const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return false; } snack(`${f.name}: ${oneLine(r.message)}`); return null; }
+  return {r,ext}; }
 export async function addInboxFiles(files){ if(!viaServer()){ snack("Adding files needs the live server"); return; } let added=0;
-  for(const f of files){ const ext=(f.name.match(/\.[^.]+$/)||[""])[0].toLowerCase();
-    if(![".vtt",".docx",".txt",".md",".pdf"].includes(ext)){ snack(`${f.name}: only .vtt, .docx, .txt, .md or .pdf`); continue; }
-    if(f.size>25*1048576){ snack(`${f.name} is over 25 MB`); continue; }
-    const data=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]||""); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(f); });
-    const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return; } snack(`${f.name}: ${oneLine(r.message)}`); continue; }
+  for(const f of files){ const u=await uploadInboxFile(f); if(u===false) return; if(!u) continue; const {r,ext}=u;
     added++; (D.inbox=D.inbox||[]).push({name:r.name,path:r.path,ext:ext.slice(1),size:f.size,date:TODAY,p:null,state:"new",uploaded:true}); INSEL.add(r.path); }
   if(added){ snack(`${added} file${added===1?"":"s"} added to Intake`); await reloadData(); renderInbox(); } }
 export async function processInbox(){ const paths=[...INSEL]; if(!paths.length||shared.RUN) return; if(!viaServer()){ snack("Processing needs the live server"); return; }
