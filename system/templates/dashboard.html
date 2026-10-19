@@ -4090,6 +4090,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .irnote{color:var(--warn)}
 #v-intake-review.irdrop{outline:2px dashed var(--accent);outline-offset:-4px;border-radius:var(--r-md)}
 #v-intake-review .irlist li{margin:2px 0}
+
+/* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
+#v-intake-review tr.irprop td.title{padding-top:10px;padding-bottom:10px}
+#v-intake-review .icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);margin:2px 0}
+#v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
+#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
+#v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
+#v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -42753,6 +42761,143 @@ ${s5}`;
     if (!MAC) $("#kK").textContent = "Ctrl K";
   }
 
+  // core/irFold.js
+  var IR_STAGES = ["arrived", "drafted", "approved"];
+  var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
+  var IR_FOLDED = ["later", "not_needed"];
+  var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
+  function irToggle(cur, id2, model) {
+    if (cur === id2) return null;
+    const m5 = (model.meetings || []).find((x5) => x5.id === id2);
+    return irOpenable(m5) ? id2 : cur;
+  }
+  function irKeepOpen(cur, model) {
+    return cur && (model.meetings || []).some((x5) => x5.id === cur) ? cur : null;
+  }
+  function irLive(g5, done) {
+    const keep2 = (a5) => (a5 || []).filter((n4) => !done(n4));
+    return { needs: keep2(g5 && g5.needs), routine: keep2(g5 && g5.routine) };
+  }
+  function irGroupsShown(g5, done) {
+    const l6 = irLive(g5, done);
+    return (
+      /** @type {const} */
+      ["needs", "routine"].filter((k5) => l6[k5].length).map((k5) => ({ kind: k5, ns: l6[k5], open: true }))
+    );
+  }
+  var irBulk = (g5, done) => irLive(g5, done).routine;
+  var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
+  var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
+  function irFoldClick(folded, sec) {
+    return { ...folded, [sec]: !irIsFolded(folded, sec) };
+  }
+  var irIsFolded = (folded, sec) => sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec);
+  function irCounts(model, done) {
+    const ms2 = model.meetings || [], left = (m5) => {
+      const l6 = irLive(m5.groups, done);
+      return l6.needs.length + l6.routine.length;
+    };
+    const stage = (m5) => m5.stage === "drafted" && !left(m5) ? "approved" : m5.stage;
+    const all = [
+      ...ms2.flatMap((m5) => [...m5.groups.needs || [], ...m5.groups.routine || []]),
+      ...["mail", "other"].flatMap((k5) => [.../** @type {any} */
+      (model[k5] || {}).needs || [], .../** @type {any} */
+      (model[k5] || {}).routine || []])
+    ];
+    const toApprove = new Set(all.filter((n4) => !done(n4))).size;
+    const ready = ms2.filter((m5) => m5.stage === "arrived" && m5.state === "ready").length;
+    return {
+      arrived: ms2.filter((m5) => stage(m5) === "arrived").length,
+      ready,
+      drafted: ms2.filter((m5) => stage(m5) === "drafted").length,
+      approved: ms2.filter((m5) => stage(m5) === "approved").length,
+      to_approve: toApprove,
+      badge: ready + toApprove
+    };
+  }
+  var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
+  var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
+  var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
+
+  // stores/intakeReview.js
+  var IR_VIEW_KEY = "creaite-ir-view";
+  var irModel = () => (
+    /** @type {any} */
+    D.intake_review || { meetings: [], mail: { needs: [], routine: [] }, other: { needs: [], routine: [] }, later: [], not_needed: [], counts: {} }
+  );
+  var irRow = (n4) => REV.find((r4) => r4.n === n4) || null;
+  var irDone = (n4) => {
+    const r4 = irRow(n4);
+    return !r4 || !!r4.done;
+  };
+  var irView = y3(irViewNorm((() => {
+    try {
+      return store.get(IR_VIEW_KEY, "list");
+    } catch (x5) {
+      return "list";
+    }
+  })()));
+  function irSetView(v5) {
+    irView.value = irViewNorm(v5);
+    try {
+      store.set(IR_VIEW_KEY, irView.value);
+    } catch (x5) {
+    }
+  }
+  var irOpen = y3(
+    /** @type {string|null} */
+    null
+  );
+  var irStage = y3("all");
+  var irFolded = y3(
+    /** @type {Record<string, boolean>} */
+    {}
+  );
+  var irPeek = y3(
+    /** @type {number|null} */
+    null
+  );
+  var irSel = y3(
+    /** @type {string|null} */
+    null
+  );
+  var irBusy = y3(
+    /** @type {string[]} */
+    []
+  );
+  var irTick = y3(0);
+  function irClickMeeting(id2) {
+    irOpen.value = irToggle(irOpen.value, id2, irModel());
+  }
+  function irClickStage(g5) {
+    irStage.value = irStageClick(irStage.value, g5);
+  }
+  function irClickFold(sec) {
+    irFolded.value = irFoldClick(irFolded.value, sec);
+  }
+  function irAfterData() {
+    irOpen.value = irKeepOpen(irOpen.value, irModel());
+    irTick.value++;
+  }
+  var irLiveCounts = () => irCounts(irModel(), irDone);
+  var irNotes = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var irAside = y3(
+    /** @type {{id: string, anchor: HTMLElement | null} | null} */
+    null
+  );
+  function irNote(id2, text) {
+    const n4 = { ...irNotes.value };
+    if (text) n4[id2] = text;
+    else delete n4[id2];
+    irNotes.value = n4;
+  }
+  function irSetBusy(id2, on2) {
+    irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
+  }
+
   // stores/rejects.js
   var REASONS = ["Not an action", "Duplicate", "Chatter", "Already done", "Wrong project", "Doesn't need tracking", "For another team"];
   var rjReasons = y3(REASONS);
@@ -43528,6 +43673,7 @@ ${s5}`;
     if (!shared.LOADING) rjLoadGuesses();
     rvRender();
     renderBadge();
+    irTick.value++;
     REV.filter((r4) => r4.ws_suggest && !r4.done && (r4.flags || []).includes("new-workstream")).forEach((r4) => {
       const cell2 = $(`#reviewBody tr[data-n="${r4.n}"] td.title`);
       if (!cell2 || cell2.querySelector(".wsq")) return;
@@ -43668,7 +43814,7 @@ ${s5}`;
   var RVQ = "", RVG = "project", RVO = "", RVPK = "k", RVLASTUNDO = null;
   shared.RVSTATS = { approved: 0, rejected: 0, edited: 0 };
   shared.RV_MAX = 25;
-  var rvBulkOK = (r4) => !!r4 && !r4.done && !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict");
+  var rvBulkOK = (r4) => !!r4 && !r4.done && ("hold" in r4 ? !r4.hold : !r4.indiv && !!r4.p && !["draft", "files"].includes(r4.kind) && !(r4.flags || []).includes("conflict"));
   var rvRejectOK = (r4) => !!r4 && !r4.done && !["draft", "files"].includes(r4.kind);
   function rvSyncChk() {
     CHK.clear();
@@ -44203,6 +44349,7 @@ ${s5}`;
     ok2.forEach(({ r: r4, fld }) => {
       if (f5 === "p") {
         r4.p = v5;
+        if (r4.hold === "need a project") r4.hold = "";
         r4.why = "Project set in Review";
         if (r4.rec.ms && !String(r4.rec.ms).startsWith(v5 + "-M-")) r4.rec.ms = null;
         if (r4.rec.ws && !wsFor(v5).some((w6) => w6.toLowerCase() === String(r4.rec.ws).toLowerCase())) r4.rec.ws = "";
@@ -56491,7 +56638,7 @@ ${d5.text}`);
       if (k5 === "actions") return [["t", "Action", "area"], ["p", "Project", "sel", projOpts], ["ws", "Workstream", "ws"], ["o", "Owner", "owner"], ["pr", "Priority", "sel", ["Urgent", "High", "Medium", "Low"]], ["due", "Due date", "date"], ["st", "Status", "sel", ["Open", "Delayed", "Closed", "Cancelled"]], ["raised", "Raised", "date"], ["closed", "Closed", "date"], ["upd", "Latest update", "area"], ["ms", "Milestone", "sel", msOpts2], ["#", "Client messaging"], ["client", "Client-visible", "check"], ["cm", "Client messaging", "cm"]];
       if (k5 === "raid") return [["t", "Description", "area"], ["type", "Type", "sel", ["Risk", "Issue", "Assumption", "Dependency"]], ["p", "Project", "sel", projOpts], ["ws", "Workstream", "ws"], ["o", "Owner", "owner"], ["resp", RESPL(x5.type), "area"], ["imp", "Impact", "sel", ["High", "Medium", "Low"]], ["lik", "Likelihood", "sel", ["High", "Medium", "Low"]], ["pr", "Priority", "calc"], ["due", "Due date", "date"], ["st", "Status", "sel", ["Open", "Closed", "Cancelled"]], ["raised", "Raised", "date"], ["closed", "Date closed", "date"], ["ms", "Milestone", "sel", msOpts2], ["#", "Client messaging"], ["client", "Client-visible", "check"], ["cm", "Client messaging", "cm"]];
       if (k5 === "decisions") return decisionFields(x5, projOpts);
-      if (k5 === "update") return [["target", "Item", "ro"], ["from", "Current value", "ro"], ["to", "Proposed value", x5.field === "status" ? "sel" : "text", ["Open", "Delayed", "Closed", "Cancelled"]]];
+      if (k5 === "update") return [["target", "Item", "ro"], ["from", "Current value", "ro"], ["to", x5.field === "status" ? "Status" : "Proposed value", x5.field === "status" ? "sel" : "text", ["Open", "Delayed", "Closed", "Cancelled"]]];
       if (k5 === "project") return [["health", "Health", "sel", ["On track", "At risk", "Off track"]], ["reason", "Health reason", "area"]];
       if (k5 === "milestone") return shared.CUR.mode === "rebase" ? [["fc", "New baseline (and forecast)", "date"], ["with", "Agreed with (full names, separated by commas)", "text"], ["reason", "Reason for rebaselining", "area"]] : [["name", "Milestone", "text"], ["desc", "Description", "area"], ["fc", shared.CUR.mode === "msnew" ? "Date (baseline and forecast)" : "Forecast date", "date"], ["st", "Status", "sel", ["Planned", "Done"]], ["pc", "% complete", "pct"], ["ord", "Order", "text"], ...shared.CUR.mode === "msnew" ? [] : [["base", "Baseline", "ro"]]];
       return [];
@@ -57341,7 +57488,7 @@ ${d5.text}`);
     return !!(shared.CUR && shared.CUR.mode === "new" && PKK.includes(shared.CUR.k)) || !!(shared.CUR && (shared.CUR.mode === "record" || shared.CUR.mode === "proposal") && PKK.includes(shared.CUR.k));
   }
   function pkOrder() {
-    if (shared.PKSRC) return shared.PKSRC.order();
+    if (shared.PKSRC && (!shared.PKSRC.view || shared.PKSRC.view === shared.VIEW)) return shared.PKSRC.order();
     return shared.VIEW === "work" || shared.VIEW === "mine" || shared.VIEW === "person" ? hlOrder() : [];
   }
   function pkNav() {
@@ -57352,7 +57499,7 @@ ${d5.text}`);
   function pkStep(n4) {
     const L3 = pkOrder(), i5 = L3.findIndex((o6) => o6.id === (shared.CUR && pkCid())), o5 = L3[i5 + n4];
     if (i5 < 0 || !o5) return;
-    if (shared.PKSRC) {
+    if (shared.PKSRC && (!shared.PKSRC.view || shared.PKSRC.view === shared.VIEW)) {
       shared.PKSRC.step(o5);
       return;
     }
@@ -58338,9 +58485,10 @@ ${d5.text}`);
   function pkPropDraw(x5, k5) {
     const on2 = shared.CUR.mode === "proposal";
     $("#panel").classList.toggle("pkprop", on2);
+    const nav = !!(shared.PKSRC && shared.PKSRC.view && shared.PKSRC.view === shared.VIEW);
     ["pkLink", "pkMore", "pkPrev", "pkNext", "pkExpand"].forEach((id2) => {
       const b5 = $("#" + id2);
-      if (b5) b5.hidden = on2 && id2 !== "pkExpand";
+      if (b5) b5.hidden = on2 && id2 !== "pkExpand" && !(nav && (id2 === "pkPrev" || id2 === "pkNext"));
     });
     if (on2 && $("#pkChaseBtn")) $("#pkChaseBtn").hidden = true;
     if (!on2) {
@@ -71002,143 +71150,6 @@ ${d5.text}`);
     return v5 && v5.ok && v5.path ? v5.path : null;
   };
 
-  // core/irFold.js
-  var IR_STAGES = ["arrived", "drafted", "approved"];
-  var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
-  var IR_FOLDED = ["later", "not_needed"];
-  var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
-  function irToggle(cur, id2, model) {
-    if (cur === id2) return null;
-    const m5 = (model.meetings || []).find((x5) => x5.id === id2);
-    return irOpenable(m5) ? id2 : cur;
-  }
-  function irKeepOpen(cur, model) {
-    return cur && (model.meetings || []).some((x5) => x5.id === cur) ? cur : null;
-  }
-  function irLive(g5, done) {
-    const keep2 = (a5) => (a5 || []).filter((n4) => !done(n4));
-    return { needs: keep2(g5 && g5.needs), routine: keep2(g5 && g5.routine) };
-  }
-  function irGroupsShown(g5, done) {
-    const l6 = irLive(g5, done);
-    return (
-      /** @type {const} */
-      ["needs", "routine"].filter((k5) => l6[k5].length).map((k5) => ({ kind: k5, ns: l6[k5], open: true }))
-    );
-  }
-  var irBulk = (g5, done) => irLive(g5, done).routine;
-  var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
-  var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
-  function irFoldClick(folded, sec) {
-    return { ...folded, [sec]: !irIsFolded(folded, sec) };
-  }
-  var irIsFolded = (folded, sec) => sec in (folded || {}) ? !!folded[sec] : IR_FOLDED.includes(sec);
-  function irCounts(model, done) {
-    const ms2 = model.meetings || [], left = (m5) => {
-      const l6 = irLive(m5.groups, done);
-      return l6.needs.length + l6.routine.length;
-    };
-    const stage = (m5) => m5.stage === "drafted" && !left(m5) ? "approved" : m5.stage;
-    const all = [
-      ...ms2.flatMap((m5) => [...m5.groups.needs || [], ...m5.groups.routine || []]),
-      ...["mail", "other"].flatMap((k5) => [.../** @type {any} */
-      (model[k5] || {}).needs || [], .../** @type {any} */
-      (model[k5] || {}).routine || []])
-    ];
-    const toApprove = new Set(all.filter((n4) => !done(n4))).size;
-    const ready = ms2.filter((m5) => m5.stage === "arrived" && m5.state === "ready").length;
-    return {
-      arrived: ms2.filter((m5) => stage(m5) === "arrived").length,
-      ready,
-      drafted: ms2.filter((m5) => stage(m5) === "drafted").length,
-      approved: ms2.filter((m5) => stage(m5) === "approved").length,
-      to_approve: toApprove,
-      badge: ready + toApprove
-    };
-  }
-  var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
-  var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
-  var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
-
-  // stores/intakeReview.js
-  var IR_VIEW_KEY = "creaite-ir-view";
-  var irModel = () => (
-    /** @type {any} */
-    D.intake_review || { meetings: [], mail: { needs: [], routine: [] }, other: { needs: [], routine: [] }, later: [], not_needed: [], counts: {} }
-  );
-  var irRow = (n4) => REV.find((r4) => r4.n === n4) || null;
-  var irDone = (n4) => {
-    const r4 = irRow(n4);
-    return !r4 || !!r4.done;
-  };
-  var irView = y3(irViewNorm((() => {
-    try {
-      return store.get(IR_VIEW_KEY, "list");
-    } catch (x5) {
-      return "list";
-    }
-  })()));
-  function irSetView(v5) {
-    irView.value = irViewNorm(v5);
-    try {
-      store.set(IR_VIEW_KEY, irView.value);
-    } catch (x5) {
-    }
-  }
-  var irOpen = y3(
-    /** @type {string|null} */
-    null
-  );
-  var irStage = y3("all");
-  var irFolded = y3(
-    /** @type {Record<string, boolean>} */
-    {}
-  );
-  var irPeek = y3(
-    /** @type {number|null} */
-    null
-  );
-  var irSel = y3(
-    /** @type {string|null} */
-    null
-  );
-  var irBusy = y3(
-    /** @type {string[]} */
-    []
-  );
-  var irTick = y3(0);
-  function irClickMeeting(id2) {
-    irOpen.value = irToggle(irOpen.value, id2, irModel());
-  }
-  function irClickStage(g5) {
-    irStage.value = irStageClick(irStage.value, g5);
-  }
-  function irClickFold(sec) {
-    irFolded.value = irFoldClick(irFolded.value, sec);
-  }
-  function irAfterData() {
-    irOpen.value = irKeepOpen(irOpen.value, irModel());
-    irTick.value++;
-  }
-  var irLiveCounts = () => irCounts(irModel(), irDone);
-  var irNotes = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var irAside = y3(
-    /** @type {{id: string, anchor: HTMLElement | null} | null} */
-    null
-  );
-  function irNote(id2, text) {
-    const n4 = { ...irNotes.value };
-    if (text) n4[id2] = text;
-    else delete n4[id2];
-    irNotes.value = n4;
-  }
-  function irSetBusy(id2, on2) {
-    irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
-  }
-
   // components/intakeReview/actions.js
   var IR_REASONS = ["Informal chat", "No decisions", "Duplicate of another meeting", "Other"];
   var IR_UPLOAD_TYPES = [".vtt", ".docx", ".txt", ".md", ".pdf"];
@@ -71408,21 +71419,177 @@ ${d5.text}`);
   }
 
   // components/intakeReview/proposals.jsx
+  var HOLD_WORDS = { "need a project": "Needs a project", conflict: "Has a conflict to settle", invalid: "Held back: not valid" };
+  var PEEKABLE = ["actions", "raid", "decisions", "update"];
+  function irPill(r4) {
+    if (r4.kind === "raid") return r4.rec && r4.rec.type || "Risk";
+    if (r4.kind === "draft") return r4.ref === "report" ? "Report" : "Minutes";
+    return { actions: "Action", decisions: "Decision", update: "Update", files: "File changes" }[
+      /** @type {"actions"} */
+      r4.kind
+    ] || "Proposal";
+  }
+  var irDueWords = (d5) => d5 ? `due ${fd(d5)}` : "No due date";
+  var noTime = (s5) => String(s5 || "").replace(/(\d{2}-\d{2}-\d{4}) \d{2}:\d{2}/g, "$1").replace(/(\d{4}-\d{2}-\d{2})[ T]\d{2}:\d{2}/g, "$1");
+  var irVal = (v5) => v5 == null || v5 === "" ? "—" : fd(String(v5));
+  function irChange(r4) {
+    const x5 = r4.rec || {}, owner = (o5) => !o5 || o5 === "TBC" ? { t: "No owner", warn: true } : { t: o5 };
+    if (r4.kind === "actions") return [owner(x5.o), { t: irDueWords(x5.due), warn: !x5.due }, { t: `${x5.pr || "Medium"} priority` }];
+    if (r4.kind === "raid") return [owner(x5.o), { t: x5.imp && x5.lik ? `Impact ${x5.imp} · Likelihood ${x5.lik}` : "Impact and likelihood not set", warn: !(x5.imp && x5.lik) }, ...x5.due ? [{ t: irDueWords(x5.due) }] : []];
+    if (r4.kind === "decisions") return [{ t: x5.by ? `Made by ${x5.by}` : "Made by not recorded", warn: !x5.by }, ...x5.date ? [{ t: fd(x5.date) }] : []];
+    if (r4.kind === "update") {
+      const closing = x5.field === "status" && ["Closed", "Cancelled"].includes(String(x5.to)), verb = closing ? x5.to === "Cancelled" ? "Cancels" : "Closes" : "Updates";
+      const ch2 = (x5.changes && x5.changes.length ? x5.changes : [{ field: x5.field, from: x5.from, to: x5.to }]).filter((c5) => c5.field);
+      return [
+        { t: `${verb} ${x5.target || ""}`.trim() },
+        ...ch2.map((c5) => ({ t: `${String(c5.field).toLowerCase()} ${irVal(c5.from)} → ${irVal(c5.to)}` })),
+        ...r4.dn && r4.dn.strength ? [{ t: r4.dn.strength }] : []
+      ];
+    }
+    return [];
+  }
+  var irQuote = (r4) => noTime(r4.dn && r4.dn.ev || r4.kind === "update" && r4.rec && r4.rec.why || "");
+  function SourceLine({ r: r4 }) {
+    let o5 = srcParse(r4.src);
+    if (o5 && o5.type === "Text") {
+      const m5 = /^((?:projects|system)\/.+?\.html)(?: — (.+))?$/.exec(String(o5.text));
+      if (m5) o5 = { type: "File", path: m5[1], section: m5[2] || "", name: m5[1].split("/").pop() };
+    }
+    let where2 = "", link = null;
+    if (r4.kind === "draft" || r4.kind === "files") where2 = r4.kind === "draft" ? r4.ref === "report" ? "Draft report" : "Draft minutes" : "File changes";
+    else if (o5 && o5.type === "File") where2 = String(o5.name || "").replace(/\.[a-z]+$/i, "");
+    else if (o5 && o5.type === "Email") where2 = `Mail${o5.From ? ` from ${String(o5.From).replace(/\s*<[^>]*>/, "")}` : ""}${o5.Subject ? ` · ${o5.Subject}` : ""}`;
+    else if (o5 && o5.type === "Teams") where2 = `Teams · ${o5.Channel || o5.Chat || ""}${o5.From ? ` · ${o5.From}` : ""}`;
+    else where2 = noTime(String(o5 && o5.text || ""));
+    if (r4.nodraft && r4.tsrc) link = /* @__PURE__ */ u2("a", { href: "#", class: "srclink", "data-openfile": r4.tsrc, children: "Open source" });
+    else if (o5 && o5.type === "File") link = /* @__PURE__ */ u2("a", { href: "#", class: "srclink", "data-openfile": o5.path, children: "Open source" });
+    else if (o5 && o5.Link && linkUrl(o5.Link)) link = /* @__PURE__ */ u2("a", { class: "srclink", href: (
+      /** @type {string} */
+      linkUrl(o5.Link)
+    ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
+    const match = r4.p ? null : r4.why;
+    where2 = fdText(where2);
+    return /* @__PURE__ */ u2("div", { class: "why icsrc", children: [
+      where2,
+      match ? ` · ${match}` : "",
+      link ? /* @__PURE__ */ u2(S2, { children: [
+        " · ",
+        link
+      ] }) : null
+    ] });
+  }
+  function irOpenPeek(n4) {
+    const r4 = irRow(n4);
+    if (!r4 || r4.done || !PEEKABLE.includes(r4.kind) && r4.kind !== "draft") return;
+    shared.PKSRC = {
+      view: "intake-review",
+      order: () => [...document.querySelectorAll("#v-intake-review tr.irprop")].filter((t47) => ["actions", "raid", "decisions"].includes(t47.getAttribute("data-kind") || "")).map((t47) => ({ id: "rv" + t47.getAttribute("data-irn"), n: +(t47.getAttribute("data-irn") || 0) })),
+      step: (o5) => {
+        irPeek.value = o5.n;
+        openProposal(o5.n);
+      }
+    };
+    irPeek.value = n4;
+    openProposal(n4);
+  }
+  var irApprove = (n4) => decide(n4, "approved");
+  function irReject(n4, anchor) {
+    const r4 = irRow(n4);
+    if (!r4 || r4.done) return;
+    if (rvRejectOK(r4)) rjMenuFor([r4], anchor);
+    else if (r4.kind === "draft" && r4.ref === "meeting") rejectMinutes(r4);
+    else decide(n4, "rejected");
+  }
+  async function irApproveRoutine(groups) {
+    const list = irBulk(groups, irDone).map(irRow).filter((r4) => rvBulkOK(r4));
+    if (!list.length) {
+      snack("Nothing routine to approve");
+      return;
+    }
+    const res = await rvDecideMany(list, "approved");
+    const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
+    snack(`Approved ${res.n} routine${failed}`, res.undo || null);
+  }
   function ProposalLine({ n: n4, child }) {
     const r4 = irRow(n4);
     if (!r4) return null;
-    return /* @__PURE__ */ u2("tr", { class: `irprop${child ? " mchild" : ""}`, "data-irn": n4, children: [
-      /* @__PURE__ */ u2("td", { class: "title", children: [
-        /* @__PURE__ */ u2("span", { class: "ickind", children: irKind(r4) }),
-        " ",
-        /* @__PURE__ */ u2("b", { class: "icttl", children: r4.rec && r4.rec.t || "" }),
-        r4.p ? /* @__PURE__ */ u2("span", { class: "sub", children: [
-          " · ",
-          pName(r4.p)
-        ] }) : null
-      ] }),
-      /* @__PURE__ */ u2("td", { class: "iracts" })
-    ] });
+    const parts = irChange(r4), quote = irQuote(r4), held = r4.hold ? HOLD_WORDS[
+      /** @type {keyof HOLD_WORDS} */
+      r4.hold
+    ] || "approve individually" : "";
+    const rej = !!r4.kind && r4.kind !== "files";
+    return /* @__PURE__ */ u2(
+      "tr",
+      {
+        class: `click irprop${child ? " mchild" : ""}`,
+        "data-irn": n4,
+        "data-hold": r4.hold || "",
+        "data-kind": r4.kind,
+        tabindex: 0,
+        onClick: (e4) => {
+          if (!/** @type {Element} */
+          e4.target.closest("button,a,input,select")) irOpenPeek(n4);
+        },
+        onKeyDown: (e4) => {
+          if (e4.target === e4.currentTarget && e4.key === "Enter") {
+            e4.preventDefault();
+            irOpenPeek(n4);
+          }
+        },
+        children: [
+          /* @__PURE__ */ u2("td", { class: "title", children: [
+            /* @__PURE__ */ u2("b", { class: "icttl", children: r4.rec && r4.rec.t || "" }),
+            r4.p ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+              " · ",
+              pName(r4.p)
+            ] }) : null,
+            /* @__PURE__ */ u2("div", { class: "icchg", children: [
+              /* @__PURE__ */ u2("span", { class: "ickind", children: irPill(r4) }),
+              parts.map((p6) => /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("span", { class: p6.warn ? "h-warn" : "", children: p6.t })
+              ] })),
+              held ? /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("span", { class: "indiv", children: held })
+              ] }) : /* @__PURE__ */ u2(S2, { children: [
+                " · ",
+                /* @__PURE__ */ u2("span", { class: "icroutine", children: "Routine" })
+              ] })
+            ] }),
+            quote ? /* @__PURE__ */ u2("div", { class: "icq", children: quote }) : null,
+            /* @__PURE__ */ u2(SourceLine, { r: r4 }),
+            r4.nodraft ? /* @__PURE__ */ u2("div", { class: "why", children: [
+              /* @__PURE__ */ u2("span", { class: "h-warn", children: "No Word draft was made for these minutes" }),
+              " · Reject them and process the meeting again"
+            ] }) : null
+          ] }),
+          /* @__PURE__ */ u2("td", { class: "iracts", children: [
+            r4.kind !== "files" ? /* @__PURE__ */ u2("button", { type: "button", class: "ib sm", "data-ira": "edit", "aria-label": "Open in the peek", "data-tip": "Open in the peek", onClick: () => irOpenPeek(n4), children: "✎" }) : null,
+            " ",
+            /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "approve", disabled: !!r4.nodraft, title: r4.nodraft ? NODRAFT_MSG : void 0, onClick: () => irApprove(n4), children: "Approve" }),
+            " ",
+            rej ? /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "ib sm no",
+                "data-ira": "reject",
+                "aria-haspopup": rvRejectOK(r4) ? "menu" : void 0,
+                "aria-label": rvRejectOK(r4) ? "Reject, with a reason" : "Reject",
+                "data-tip": rvRejectOK(r4) ? "Reject, with a reason" : "Reject",
+                onClick: (e4) => irReject(
+                  n4,
+                  /** @type {Element} */
+                  e4.currentTarget
+                ),
+                children: "✕"
+              }
+            ) : null
+          ] })
+        ]
+      }
+    );
   }
   function ProposalGroups({ groups, meet, child }) {
     return /* @__PURE__ */ u2(S2, { children: irGroupsShown(groups, irDone).map((g5) => /* @__PURE__ */ u2(S2, { children: [
@@ -71434,15 +71601,72 @@ ${d5.text}`);
           g5.ns.length
         ] }),
         /* @__PURE__ */ u2("span", { class: "icshs", children: IR_GROUP_HEAD[g5.kind][1] }),
-        g5.kind === "routine" ? /* @__PURE__ */ u2("span", { class: "icshr", children: /* @__PURE__ */ u2("button", { type: "button", class: "mini ok", "data-ira": "routine", disabled: true, title: "232-B", children: [
-          "Approve routine (",
-          g5.ns.length,
-          ")"
-        ] }) }) : null
+        g5.kind === "routine" ? /* @__PURE__ */ u2("span", { class: "icshr", children: /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "mini ok",
+            "data-ira": "routine",
+            title: "Approves every routine proposal here; the ones above stay for you",
+            onClick: () => irApproveRoutine(groups),
+            children: [
+              "Approve routine (",
+              g5.ns.length,
+              ")"
+            ]
+          }
+        ) }) : null
       ] }) }),
       g5.ns.map((n4) => /* @__PURE__ */ u2(ProposalLine, { n: n4, child }))
     ] })) });
   }
+  var keysBooted = false;
+  function bootIrReviewKeys() {
+    if (keysBooted) return;
+    keysBooted = true;
+    document.addEventListener("keydown", (e4) => {
+      if (shared.VIEW !== "intake-review" || e4.metaKey || e4.ctrlKey || e4.altKey) return;
+      const t47 = (
+        /** @type {HTMLElement} */
+        e4.target
+      ), panel = document.getElementById("panel");
+      if (e4.key === "Escape") {
+        if (irPeek.value == null) return;
+        if (document.querySelector("dialog:modal")) return;
+        if (panel && panel.classList.contains("on")) {
+          e4.stopImmediatePropagation();
+          closePanel();
+        }
+        irPeek.value = null;
+        return;
+      }
+      if (!t47 || !t47.closest || t47.closest("input,textarea,select,[contenteditable=true],[role=menu]")) return;
+      const row2 = (
+        /** @type {HTMLElement|null} */
+        t47.closest("tr.irprop")
+      );
+      if (!row2 || t47.closest("button,a") && !t47.matches("tr")) return;
+      const rows2 = (
+        /** @type {HTMLElement[]} */
+        [...document.querySelectorAll("#v-intake-review tr.irprop")]
+      ), at2 = rows2.indexOf(row2), n4 = +(row2.getAttribute("data-irn") || 0);
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        e4.preventDefault();
+        e4.stopImmediatePropagation();
+        const to2 = rows2[Math.max(0, Math.min(rows2.length - 1, at2 + (e4.key === "ArrowDown" ? 1 : -1)))];
+        if (to2) to2.focus();
+      } else if (e4.key === "a" || e4.key === "A") {
+        e4.preventDefault();
+        e4.stopImmediatePropagation();
+        irApprove(n4);
+      } else if (e4.key === "r" || e4.key === "R") {
+        e4.preventDefault();
+        e4.stopImmediatePropagation();
+        irReject(n4, row2.querySelector("[data-ira=reject]"));
+      }
+    }, true);
+  }
+  bootIrReviewKeys();
 
   // components/intakeReview/views.jsx
   var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
