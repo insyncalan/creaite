@@ -27,6 +27,7 @@ import { renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
 import { ownerFinal, renderPerson, row, savedNow, vipPoll, WSD, wsNewOf } from "../settings.js";
 import { renderToday } from "../today.js";
 import { hit, items, renderPeople, renderWork, rvPaint } from "../work.js";
+import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";   /* #232-A: an open Intake and Review redraws with new data */
 /* ======================= vault access (Step 4b): File System Access API, Chrome or Edge ======================= */
 /* The browser remembers the vault folder (IndexedDB). Every write goes through one queue (vq) so concurrent saves
    can't overwrite each other. Edits become proposals in system/staging/; settings go to settings.json. */
@@ -319,6 +320,7 @@ export async function applyPending(){ if(viaServer()){ const r=await applyNow();
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
   if(shared.VIEW==="reports") renderReports(); if(shared.VIEW==="reporting") renderReporting(spaceCode.value);   /* BL-337 */
   status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
+  if(shared.VIEW==="intake-review") renderIntakeReview();   /* #232-A */
   if(!reduced()&&v===shared.VIEW){
     const hit=[]; if(cells&&wt===shared.WT){ const cols=$$("#workTbl thead th").map(th=>th.dataset.col||""); $$("#workTbl tr[data-row]").slice(0,300).forEach(tr=>[...tr.children].forEach((td,i)=>{ const k=tr.dataset.row+"|"+cols[i]; if(cols[i]&&cells.has(k)&&cells.get(k)!==td.textContent.trim()) hit.push(td); })); }
     if(cnts) $$("#v-today .th .cnt").forEach(e=>{ const k=e.id||e.parentElement.id; if(cnts.has(k)&&cnts.get(k)!==e.textContent.trim()) hit.push(e); });

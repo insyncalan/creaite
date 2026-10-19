@@ -71714,10 +71714,10 @@ ${d5.text}`);
     ] });
   }
   function IntakeReviewView() {
-    irTick.value;
+    const tick = irTick.value;
     const model = irModel(), c5 = irLiveCounts(), view = irView.value;
     const list = irFiltered(model, irStage.value);
-    return /* @__PURE__ */ u2("div", { class: "wrapmax irpage", children: [
+    return /* @__PURE__ */ u2("div", { class: "wrapmax irpage", "data-irtick": tick, children: [
       /* @__PURE__ */ u2("h1", { id: "irTitle", children: "Intake and Review" }),
       /* @__PURE__ */ u2("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
         c5.ready,
@@ -74638,6 +74638,7 @@ ${d5.text}`);
     if (shared.VIEW === "people") renderPeople();
     if (shared.VIEW === "person") renderPerson(shared.PERSON);
     if (shared.CUR && !shared.EDITING) drawPanel();
+    if (shared.VIEW === "intake-review") renderIntakeReview();
     if (!reduced() && v5 === shared.VIEW) {
       const hit2 = [];
       if (cells && wt2 === shared.WT) {

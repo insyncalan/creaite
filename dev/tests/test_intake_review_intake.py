@@ -22,10 +22,10 @@ DAY = "2026-10-05"
 GATE = r"""window.ASKED=[]; window.LOADED=[]; window.GATE=null; window.OPENED=[];
 jobLive=async(url,body)=>{ window.LOADED.push([url,body.id]);
   const f=D.meetings.rows.find(m=>m.id===body.id);
-  await api('/api/fs',{op:'write',path:'inbox/'+f.day+' '+f.title+'.vtt',text:'WEBVTT\n\nNOTE\nEvent ID: '+body.id+'\n\n00:00:01.000 --> 00:00:05.000\nHello\n'}); };
+  await api('/api/inbox/upload',{name:f.day+' '+f.title+'.vtt',data:btoa('WEBVTT\n\nNOTE\nEvent ID: '+body.id+'\n\n00:00:01.000 --> 00:00:05.000\nHello\n')}); };
 askLive=async(q,c)=>{ window.ASKED.push([q,c]); if(window.GATE) await window.GATE;
   const m=D.meetings.rows.find(x=>q.includes(x.title));
-  if(m) await api('/api/fs',{op:'write',path:'system/staging/proposed-test-'+m.id+'.json',text:JSON.stringify({created:'2026-10-05T18:00:00',source_run:'cx-minutes',files:[],items:[],meeting:{key:'calendar:'+m.id,title:m.title,date:m.day,projects:['ABC'],draft:null,transcript:null,minutes_decision:'pending',file_ops:[]}})}); };"""
+  if(m) await api('/api/fs',{op:'write',path:'system/staging/proposed-test-'+m.id+'.json',text:JSON.stringify({created:'2026-10-05T18:00:00',source_run:'cx-minutes',files:[],items:[{n:1,op:'new',table:'actions',values:{project:'ABC',description:'Send the revised plan',owner:'Alan Carter',priority:'Medium',raised:'2026-10-05',source:'x'},match:'strong',flags:[],decision:'pending'}],meeting:{key:'calendar:'+m.id,title:m.title,date:m.day,projects:['ABC'],draft:null,transcript:null,minutes_decision:'pending',file_ops:[]}})}); };"""
 
 
 class IntakeSide(LiveBrowserCase):
@@ -35,6 +35,8 @@ class IntakeSide(LiveBrowserCase):
     @classmethod
     def load(cls, v):
         populate(v)
+        for f in (v.root / "inbox").glob("*"):
+            f.unlink()                       # the sample's uploads would be ready rows too
         week_calendar(v, today=__import__("datetime").date(2026, 10, 5))
         # ev-1 has its transcript in the inbox (loaded); ev-2's transcript exists but is not loaded; ev-3 (Busy) has none yet
         (v.root / "inbox" / f"{DAY} ABC Steering.vtt").write_text("WEBVTT\n\nNOTE\nEvent ID: ev-1\n\n00:00:01.000 --> 00:00:05.000\nHello\n")
@@ -52,6 +54,9 @@ class IntakeSide(LiveBrowserCase):
         for p in (root / "system/staging/intake-cleared.json", *root.glob("system/staging/proposed-test-*.json"),
                   root / "inbox" / f"{DAY} Weekly sync 12.vtt", root / "inbox" / "Dropped notes.vtt"):
             p.unlink(missing_ok=True)
+        (root / "system/staging/transcripts.json").write_text(json.dumps({"version": 1, "checked": {
+            "ev-1": {"status": "available", "uri": "meeting-transcript:///a", "count": 1, "checked": f"{DAY} 07:00"},
+            "ev-2": {"status": "available", "uri": "meeting-transcript:///b", "count": 1, "checked": f"{DAY} 07:00"}}}))
         pin_page_clock(self.b, NOW)
         self.b.eval("irSetView('list'); irStage.value='all'; irOpen.value=null; irBusy.value=[]")
         self.b.eval("reloadData().then(()=>go('intake-review'))")
@@ -59,15 +64,26 @@ class IntakeSide(LiveBrowserCase):
 
     # -- helpers
     def row(self, title):
-        return f"document.querySelector('#v-intake-review [data-irm=\"' + D.intake_review.meetings.find(m=>m.title===" + json.dumps(title) + ").id + '\"]')"
+        return f"document.querySelector('#v-intake-review [data-irm=\"' + D.intake_review.meetings.find(m=>m.src!=='draft'&&m.title===" + json.dumps(title) + ").id + '\"]')"
 
     def sel(self, title, suffix=""):
-        mid = self.b.eval("D.intake_review.meetings.find(m=>m.title===" + json.dumps(title) + ").id")
+        mid = self.b.eval("D.intake_review.meetings.find(m=>m.src!=='draft'&&m.title===" + json.dumps(title) + ").id")
         return f'#v-intake-review [data-irm="{mid}"]{suffix}'
 
     def cleared(self):
         p = self.v.root / "system/staging/intake-cleared.json"
         return json.loads(p.read_text())["cleared"] if p.exists() else []
+
+    def patch(self, title, **fields):
+        """Change one row of the model the page was given (new objects, so the page redraws) and redraw."""
+        self.b.eval("(()=>{ const T=%s, P=%s; D.intake_review={...D.intake_review, meetings: D.intake_review.meetings.map(m=>m.src!=='draft'&&m.title===T?{...m,...P}:m)}; irTick.value++; })()"
+                    % (json.dumps(title), json.dumps(fields)))
+
+    def unfold(self, sec):
+        """Show a folded section (Later, Not needed start folded)."""
+        self.b.wait(f"!!document.querySelector('[data-irfold={sec}]')")
+        if self.b.eval(f"document.querySelector('[data-irfold={sec}]').getAttribute('aria-expanded')") == "false":
+            self.b.click(f"[data-irfold={sec}]")
 
     def stage_stub(self):
         self.b.eval(GATE)
@@ -91,7 +107,7 @@ class IntakeSide(LiveBrowserCase):
     def test_process_shows_progress_and_ask_stays_free(self):
         b = self.b
         self.stage_stub()
-        b.eval("GATE=new Promise(r=>{ window.RELEASE=r; })")
+        b.eval("GATE=new Promise(r=>{ window.RELEASE=r; }); 0")
         b.click(self.sel("ABC Steering", ' [data-ira="process"]'))
         b.wait(f"{self.row('ABC Steering')}.dataset.state==='running'")
         self.assertEqual(b.eval(f"{self.row('ABC Steering')}.querySelectorAll('.icprog').length"), 1)
@@ -112,31 +128,30 @@ class IntakeSide(LiveBrowserCase):
         b.wait(f"{self.row('Weekly sync 12')}.dataset.stage==='drafted'", 30)
         self.assertEqual([i for _, i in b.eval("LOADED")], ["ev-2"])
         self.assertEqual([q for q, _ in b.eval("ASKED")], [f"process inbox/{DAY} Weekly sync 12.vtt"])
-        b.eval("D.intake_review.meetings.find(m=>m.title==='Busy').state='ready'; D.intake_review.meetings.find(m=>m.title==='Busy').stage='arrived'; irTick.value++")
+        self.patch('Busy', state='ready', stage='arrived')
         b.click(self.sel("Busy", ' [data-ira="process"]'))
         b.wait(f"/Not a Teams meeting/.test({self.row('Busy')}.innerText)")              # the sweep's reason, on its row
 
     def test_board_process_moves_the_card(self):
         b = self.b
         self.stage_stub()
+        mid = b.eval("D.intake_review.meetings.find(m=>m.src!=='draft'&&m.title==='ABC Steering').id")
         b.eval("document.querySelector('[data-irview=board]').click()")
-        b.wait("!!document.querySelector('[data-ircol=arrived] [data-irm]')")
-        card = lambda col: b.eval(f"[...document.querySelectorAll('[data-ircol={col}] .t')].map(x=>x.textContent)")  # noqa: E731
-        self.assertIn("ABC Steering", card("arrived"))
-        b.eval("GATE=new Promise(r=>{ window.RELEASE=r; })")
-        b.click(self.sel("ABC Steering", ' [data-ira="process"]'))
-        b.wait("!!document.querySelector('[data-ircol=arrived] .icprog')")               # progress on the card, still in Arrived
+        b.wait(f"!!document.querySelector('[data-ircol=arrived] [data-irm=\"{mid}\"]')")
+        b.eval("GATE=new Promise(r=>{ window.RELEASE=r; }); 0")
+        b.click(f'[data-ircol=arrived] [data-irm="{mid}"] [data-ira="process"]')
+        b.wait(f"!!document.querySelector('[data-ircol=arrived] [data-irm=\"{mid}\"] .icprog')")     # progress on the card, still in Arrived
         b.eval("RELEASE()")
-        b.wait("[...document.querySelectorAll('[data-ircol=drafted] .t')].some(x=>x.textContent==='ABC Steering')", 30)
-        self.assertNotIn("ABC Steering", card("arrived"))
+        b.wait(f"!!document.querySelector('[data-ircol=drafted] [data-irm=\"{mid}\"]')", 30)
+        self.assertFalse(b.eval(f"!!document.querySelector('[data-ircol=arrived] [data-irm=\"{mid}\"]')"))
 
     def test_process_all_ready_goes_one_after_another(self):
         b = self.b
         self.stage_stub()
         label = b.eval("document.querySelector('[data-ira=processall]').textContent")
-        self.assertEqual(label, "Process all ready (2)")
+        self.assertEqual(label, "Process all ready (2)")             # ABC Steering and Weekly sync 12
         b.click('[data-ira="processall"]')
-        b.wait("document.querySelector('[data-ira=processall]').textContent==='Process all ready (0)'", 40)
+        b.wait("ASKED.length===2 && irBusy.value.length===0 && document.querySelector('[data-ira=processall]').textContent==='Process all ready (0)'", 40)
         self.assertEqual(sorted(q for q, _ in b.eval("ASKED")), sorted([f"process inbox/{DAY} ABC Steering.vtt", f"process inbox/{DAY} Weekly sync 12.vtt"]))
         self.assertTrue(b.eval("document.querySelector('[data-ira=processall]').disabled"))
 
@@ -144,12 +159,13 @@ class IntakeSide(LiveBrowserCase):
     def test_h_hides_and_transcript_brings_back(self):
         b = self.b
         self.key("ABC Steering", "h")                                                    # its transcript is already here: Later keeps it away
-        b.wait("!D.intake_review.meetings.some(m=>m.title==='ABC Steering')", 20)
+        b.wait("!D.intake_review.meetings.some(m=>m.src!=='draft'&&m.title==='ABC Steering')", 20)
         self.assertEqual([(e["key"], e.get("kind"), e.get("seen")) for e in self.cleared()], [("ev-1", "later", True)])
-        b.eval("document.querySelector('[data-irfold=later]').click()")
+        b.wait("D.intake_review.later.some(x=>x.title==='ABC Steering')", 20)
+        self.unfold("later")
         b.wait("document.querySelector('[data-irsec=later]').textContent.includes('ABC Steering')")
         b.click('[data-irsec=later] [data-ira="restore"]')                              # Restore brings it back by hand
-        b.wait("D.intake_review.meetings.some(m=>m.title==='ABC Steering')", 20)
+        b.wait("D.intake_review.meetings.some(m=>m.src!=='draft'&&m.title==='ABC Steering')", 20)
         self.assertEqual(self.cleared(), [])
         self.key("Busy", "h")                                                            # no transcript yet: it comes back when one arrives
         b.wait("D.intake_review.later.some(x=>x.title==='Busy')", 20)
@@ -170,12 +186,12 @@ class IntakeSide(LiveBrowserCase):
         b.click('#irAside [data-reason="Informal chat"]')
         b.wait("D.intake_review.not_needed.some(x=>x.title==='ABC Steering' && x.reason==='Informal chat')", 20)
         self.assertEqual([(e["key"], e["reason"]) for e in self.cleared()], [("ev-1", "Informal chat")])
-        self.assertFalse(b.eval("D.intake_review.meetings.some(m=>m.title==='ABC Steering')"))
-        b.eval("document.querySelector('[data-irfold=not_needed]').click()")
+        self.assertFalse(b.eval("D.intake_review.meetings.some(m=>m.src!=='draft'&&m.title==='ABC Steering')"))
+        self.unfold("not_needed")
         b.wait("document.querySelector('[data-irsec=not_needed]').textContent.includes('Informal chat')")
         b.wait("/Not needed/.test(document.getElementById('snackT').textContent)")
         b.click("#snackU")                                                                 # Undo
-        b.wait("D.intake_review.meetings.some(m=>m.title==='ABC Steering')", 20)
+        b.wait("D.intake_review.meetings.some(m=>m.src!=='draft'&&m.title==='ABC Steering')", 20)
         self.assertEqual(self.cleared(), [])
 
     def test_uploaded_file_keeps_reason(self):
@@ -190,6 +206,7 @@ class IntakeSide(LiveBrowserCase):
         b.reload("typeof go==='function' && LIVE")
         b.eval("go('intake-review')")
         b.wait("D.intake_review.not_needed.some(x=>x.title==='Dropped notes.vtt' && x.reason==='No decisions')")   # kept across a reload
+        self.unfold("not_needed")
         b.click('[data-irsec=not_needed] [data-ira="restore"]')
         b.wait("D.intake_review.meetings.some(m=>m.title==='Dropped notes.vtt')", 20)
 
@@ -200,14 +217,15 @@ class IntakeSide(LiveBrowserCase):
           document.querySelector('#v-intake-review h1').dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true})); })()""")
         b.wait("D.intake_review.meetings.some(m=>m.title==='Dropped notes.vtt' && m.src==='upload')", 30)
         self.assertTrue((self.v.root / "inbox" / "Dropped notes.vtt").exists())
+        b.wait(f"!!{self.row('Dropped notes.vtt')}")
         self.assertEqual(b.eval(f"[...{self.row('Dropped notes.vtt')}.querySelectorAll('[data-ira]')].map(x=>x.dataset.ira)"), ["process", "later", "notneeded"])
         self.assertTrue(b.eval("!!document.querySelector('#v-intake-review [data-irpick]')"))        # and a button to choose files
 
     # -- age and stale (from test_review_age)
     def test_age_and_stale_are_on_the_meeting_row(self):
         b = self.b
-        b.eval("D.intake_review.meetings.find(m=>m.title==='ABC Steering').age=3; D.intake_review.meetings.find(m=>m.title==='ABC Steering').stale=false; "
-               "D.intake_review.meetings.find(m=>m.title==='Weekly sync 12').age=20; D.intake_review.meetings.find(m=>m.title==='Weekly sync 12').stale=true; irTick.value++")
+        self.patch('ABC Steering', age=3, stale=False)
+        self.patch('Weekly sync 12', age=20, stale=True)
         b.wait(f"/Transcript ready · 3 days/.test({self.row('ABC Steering')}.innerText)")
         self.assertEqual(b.eval(f"{self.row('ABC Steering')}.querySelectorAll('.tag.stale').length"), 0)
         self.assertEqual(b.eval(f"{self.row('Weekly sync 12')}.querySelector('.tag.stale').textContent"), "Stale · 20 days")

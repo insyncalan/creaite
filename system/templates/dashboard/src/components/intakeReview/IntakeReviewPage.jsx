@@ -105,11 +105,11 @@ function AsideMenu() {
 }
 
 function IntakeReviewView() {
-  irTick.value;
+  const tick = irTick.value;   /* read for real: a bare `irTick.value;` is dropped by the bundler and nothing would redraw */
   const model = irModel(), c = irLiveCounts(), view = irView.value;
   const list = irFiltered(model, irStage.value);
   return (
-    <div class="wrapmax irpage">
+    <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake and Review</h1>
       <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "proposal")} to approve</p>
       <div class="toolbar rvtools">
