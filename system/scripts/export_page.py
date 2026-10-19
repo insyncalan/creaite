@@ -331,22 +331,29 @@ class Clean(HTMLParser):
         keep = []
         for name, value in attrs:
             name, value = name.lower(), "" if value is None else value
-            if keep_attr(tag, svg, name, value, self.client):
-                value = self.picture(value) if name == "src" else value
-                if value is None:
-                    continue
-                if self.client and name != "src":
-                    value = self.client_value(tag, svg, name, value)
-                    if value is None:
-                        continue
-                keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
-                if name != "src":
-                    self.attr_values.append(keep[-1][1])
-                    if name == "style":
-                        self.attr_values.extend(css_svg_words(value) or [])
-                elif SVG_URI.match(value):
-                    self.attr_values.extend(svg_words(value) or [])      # an SVG picture is read like the page: its words and attributes
+            value = self.kept_value(tag, svg, name, value)
+            if value is None:
+                continue
+            keep.append((name, value[:300] if name.startswith("data-") else value[:2000]))
+            self.note_value(name, value, keep[-1][1])
         return "".join(f' {n}="{html.escape(v, quote=True)}"' for n, v in keep)
+
+    def kept_value(self, tag, svg, name, value):
+        """One attribute's value as it is written, or None when it is dropped."""
+        if not keep_attr(tag, svg, name, value, self.client):
+            return None
+        if name == "src":
+            return self.picture(value)
+        return self.client_value(tag, svg, name, value) if self.client else value
+
+    def note_value(self, name, value, written):
+        """Record what a kept attribute holds, for the leak checks (an SVG picture is read like the page: its words and attributes)."""
+        if name != "src":
+            self.attr_values.append(written)
+            if name == "style":
+                self.attr_values.extend(css_svg_words(value) or [])
+        elif SVG_URI.match(value):
+            self.attr_values.extend(svg_words(value) or [])
 
     def client_value(self, tag, svg, name, value):
         """v2.5.0 page subset: a CLIENT file's attribute value as written, or None when it isn't written. A class keeps only the class
@@ -354,6 +361,17 @@ class Clean(HTMLParser):
         the file); an id, a role and the small set-valued attributes only a value from their list; a style attribute only words the
         dashboard's stylesheet uses (anything else refuses the page: `self.bad`)."""
         v = str(value).strip()
+        if name in ("class", "id", "style", "data-id"):
+            return self.client_named(name, v)
+        rule = CLIENT_VALUES.get(name)
+        if rule is not None:
+            return v if rule.match(v) else None
+        if svg:                           # an svg attribute: numbers, and words the stylesheet or the svg list holds
+            return v if all(w in own_styles()["words"] or w in SVG_WORDS for w in css_words(v)) else None
+        return None
+
+    def client_named(self, name, v):
+        """client_value for a class, an id, a style and a data-id."""
         if name == "class":
             keep = [c for c in v.split() if c in own_styles()["classes"]]
             return " ".join(keep) or None
@@ -363,15 +381,8 @@ class Clean(HTMLParser):
             if not css_words_ok(v):
                 self.bad = "the page's style held words the dashboard's stylesheet doesn't"
             return v
-        if name == "data-id":
-            self.data_ids.append(v)
-            return v
-        rule = CLIENT_VALUES.get(name)
-        if rule is not None:
-            return v if rule.match(v) else None
-        if svg:                           # an svg attribute: numbers, and words the stylesheet or the svg list holds
-            return v if all(w in own_styles()["words"] or w in SVG_WORDS for w in css_words(v)) else None
-        return None
+        self.data_ids.append(v)
+        return v
 
     def picture(self, value):
         """An img's kept src as it is written: metadata cleaned out of a PNG or JPEG, and in a CLIENT file an SVG picture rebuilt
@@ -738,6 +749,12 @@ def section_units(shown, s):
         units |= unit_forms(x)
     data = s.get("data") or {}
     refs = [r.get("ref") for r in sec["rows"]] + list(data.get("milestones") or data.get("timeline") or [])
+    return units | item_units(shown, refs)
+
+
+def item_units(shown, refs):
+    """The folded strings the items `refs` draw: their title, date, state and status."""
+    units = set()
     for ref in refs:
         it = (shown.get("items") or {}).get(ref) if isinstance(ref, str) else None
         for k in ("title", "shown_date", "state", "status"):
@@ -761,9 +778,8 @@ def tiled(text, units):
     return n in reach
 
 
-def check_client_subset(doc, info, css):
-    """Raises PageRefused unless the client page's words are the saved report's own (see above). Fails closed: no record of the
-    page's text is a refusal."""
+def check_page_record(info, css):
+    """The first checks of check_client_subset: a record of the page's text, nothing dropped, no foreign style words."""
     if not isinstance(info, dict) or "parts" not in info:
         raise PageRefused("the page's words couldn't be matched with the report")
     if info.get("dropped"):
@@ -772,14 +788,26 @@ def check_client_subset(doc, info, css):
         raise PageRefused(info["bad"])
     if not css_words_ok(css):
         raise PageRefused("the style rules held words the dashboard's stylesheet doesn't")
-    shown = creaite_doc.clean(doc)
-    ok_ids = {s["id"]: s for s in shown["sections"] if not s.get("hidden")}
-    if any(v not in ok_ids for v in info.get("data_ids") or []):
-        raise PageRefused("the page named a section the report leaves out")
+
+
+def common_units(shown):
+    """The folded strings any part of the page may draw: the title, the project and client names, and the client view's own words."""
     common = set()
     for x in [shown.get("title"), shown.get("project_name"), shown.get("client")] + list(CLIENT_UI):
         if isinstance(x, str):
             common |= unit_forms(x)
+    return common
+
+
+def check_client_subset(doc, info, css):
+    """Raises PageRefused unless the client page's words are the saved report's own (see above). Fails closed: no record of the
+    page's text is a refusal."""
+    check_page_record(info, css)
+    shown = creaite_doc.clean(doc)
+    ok_ids = {s["id"]: s for s in shown["sections"] if not s.get("hidden")}
+    if any(v not in ok_ids for v in info.get("data_ids") or []):
+        raise PageRefused("the page named a section the report leaves out")
+    common = common_units(shown)
     texts = {}
     for sid, t in info["parts"]:
         texts.setdefault(sid, []).append(t)

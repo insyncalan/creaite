@@ -244,7 +244,8 @@ def approve_route(handler, req):
     draft = report_doc.draft_path(kind, code, fri, client)
     with handler_lock(handler):
         if isinstance(req.get("doc"), dict):
-            saved = report_doc.save_draft(own_header_logos(req["doc"]), req.get("base_version"))   # checks it first (v2.5.0 audience bypass)
+            # checks it first (v2.5.0 audience bypass)
+            saved = report_doc.save_draft(own_header_logos(req["doc"]), req.get("base_version"))
             if not saved.get("ok"):
                 return answer(handler, saved)
         if not paths.resolve(draft).is_file():
