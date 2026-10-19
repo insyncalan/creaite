@@ -1,25 +1,34 @@
-# Work items v2: mockup and design-system notes
+# Work items v2: mockup and build rules
 
-Mockup (draft, for Alan): `dev/mockups/work-items-v2-mockup.html`. Built on `dev/design-system/pages/work.html` (commit c237a088, VERSION 2.1.0) with the app's own classes. Research: `dev/sprints/work-items-ux-research.md`. Fictional data.
+Mockup (for Alan): `dev/mockups/work-items-v2-mockup.html`, built on `dev/design-system/pages/work.html` (commit c237a088, VERSION 2.1.0) with the app's own classes. Research: `dev/sprints/work-items-ux-research.md`. Fictional data.
 
-## What the mockup shows (research items 1 to 13)
-1. Status and priority as marks, reusing the peek's own ring and bars (`PeekProps.jsx`), words kept for screen readers.
-2. Two rows of chrome: search, a View menu with three pills, the filter button, density, layout, Display, New. Chips row appears only when a filter differs from the view.
-3. Compact single-line row (ID on the title's line) and Comfortable (today's two lines), switched in the toolbar (it belongs in Display).
-4. Actions grouped by due: Overdue, This week, Next week, Later, No date, Closed collapsed.
-5. Quieter text: no dotted underlines, no leading check icon, tags as quiet chips.
-6. One key per property on the cursor row (S O P T), C closes with Undo and moves the cursor on.
-7. Peek v2: source link, client badge and workstream in the header; properties as a label/value list; one activity timeline with routine events folded.
-8. The peek runs over the page (no squashing). Click selects; double-click or the ID opens; arrows move, right opens, left closes. A switch compares Today’s peek with v2 (open for discussion).
+## Alan's decisions (19-10-2026)
+- **Keep today's peek** (four property chips, Details, tabs All/Activity/Updates/Source). The v2 peek is dropped.
+- **Keep today's filters**: the five filter buttons, the funnel, the view pills, the chips row and its count. The "two rows of chrome" idea is dropped.
+- **Keep the underlines** on the owner and the ID: the owner opens their page and workload (and the right-click menu offers Draft email and Chase); the ID opens the peek.
+- **Keep the context menu** (right-click, Menu key, Shift+F10).
+- **The peek runs over the page** (never squashes it). A single click opens another row in the peek only while the peek is already open; otherwise a click selects, and double-click, the ID, Enter or Right opens it. Left closes the peek, or opens the context menu when no peek is open. Up and Down move.
+- **Density icons** (compact, comfortable) sit beside the list and board icons, on the right.
 
-## Design-system additions this needs (all in one `/* NEW */` block)
-- `.tg`: a small neutral tag chip (workstream, client, raised again); today these are plain text.
-- `.pkl`: a label/value property list for the peek (replaces `.pk-props` columns).
-- Row density classes `.cmp` and `.cmf` on the list table (40 px and 57 px rows).
-- The app's existing marks, group heading `.wgh`, `.pk-fe` feed, `.pkstage` toast, `.kbd` and tokens are reused unchanged.
+## What changes in the list
+1. Status and priority as marks (the peek's own ring and bars); words stay for screen readers.
+2. A compact single-line row as the default, today's two-line row as Comfortable.
+3. Actions grouped by due (Overdue, This week, Next week, Later, No date, Closed folded); RAID by priority; Decisions Pending then Made.
+4. One key per property on the cursor row: S, O, P, T, and C to close with Undo. V toggles Client-visible.
 
-## Corrections to the research
-- The peek title is already `--fs-2xl` (22 px); the research called it very large from a scaled screenshot. No change needed.
+## New in the peek
+- **One-click Client-visible switch**: an eye button in the peek bar (key V), also in the right-click menu. It is on or off at a glance (tinted when on), with a badge beside the ID, a tag in the list, and an Undo toast. Turning it on means the item can appear in client reports.
+- **A complete history in Activity.** Every change to a record becomes an event, newest first, in the form "who, via where, what, when": created; every field changed with its before and after (status, owner, due, priority, workstream, milestone, project, title, impact, likelihood, response, client-visible, labels, links); updates; chases drafted; raised again by a later meeting; source added; approvals and rejections from Review; Find updates from a note; bulk changes; and every undo, which strikes the original event through and adds its own. Each event carries the route it came by (the dashboard, Review, cx-edit, a note, the sweep, ask creaite) and a source reference where there is one. The tabs filter the same list: Activity (everything about the record), Updates, Source.
+  - Acceptance: a test that changes each field through each route (peek, cell, bulk bar, context menu, Review, cx-edit, undo) and checks one event with the right before and after; and that no event stores message text.
+
+## Must not undo anyone's layout (acceptance rule for every change here)
+Today's saved settings are kept exactly as they are: `creaite-colwidths` (resizing), `creaite-colorder`, `creaite-cols`, `creaite-worklay`, `creaite-workgrp`, `creaite-listgrp`, `creaite-worksub`, `creaite-boardhide`, `creaite-boardcoll`, `creaite-boardclosedall`, `creaite-listcoll`, and saved views.
+- New defaults (compact density, grouping by due) apply only where nothing is saved. An explicit "no grouping" must be stored as a choice, so it is not mistaken for unset.
+- No migration rewrites a saved value; an update adds keys, never resets them.
+- Test: a fixture with every key above set, run through the update and a reload, must come back identical, and a board resize must survive it.
+
+## Design-system additions (one `/* NEW */` block)
+`.tg` tag chip; row density classes `.cmp` and `.cmf` (40 px and 57 px rows); the density switch (a `.seg.ico`). Everything else is existing: marks, `.wgh`, `.pk-*`, `.pkpop.cxmenu`, `.pkstage`, `.kbd`, tokens.
 
 ## Not shown
-Board layout, RAID and Decisions tabs, the Chase step-through, a split view at 1440 px and wider, the slice panel.
+Board layout, Display, column sorting and resizing, bulk selection, cell editing, the funnel's extra fields (Milestone, Raised, Closed, Source, Type, Label: unchanged), the Chase step-through, split view, slice panel.
