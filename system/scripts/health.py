@@ -13,10 +13,11 @@ server's /api/health uses it.
 #242 (Alan, 19-10-2026): a problem Alan dismisses stops counting. settings.json's health.dismissed lists each one as {id,
 detail_key, reason, date} (saved by the page's own settings save: a backup and a log line); `detail_key` is the check id and a
 hash of the detail, so a problem whose detail changes (another file, another count) comes back by itself. A dismissed problem
-is listed under `dismissed`, not `problems`. A failure of the engine's own integrity (KEEP) can't be dismissed.
+is listed under `dismissed`, not `problems`. A problem in KEEP (engine integrity, data and privacy) or a crashed check can't be dismissed.
 """
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -89,11 +90,19 @@ BACKUP_LINES = ("offsite_backup", "backup_check", "tidy_up")      # BL-323: show
 
 ARCHIVING = ("archive_items", "archive_reports")      # BL-10, BL-03: their last runs are listed under Archiving when fine
 
-# #242: failures of the engine's own integrity, never dismissed (creaite isn't safe to use until they are fixed); a warning from
-# one of these checks, and every other problem, may be dismissed
+# #242: what can never be dismissed, a failure or a warning: the engine's own integrity, and what protects your data and privacy
+# (vault not synced, the assistant's permissions, backups, extraction scope); a check that crashed is never dismissable either
+# (`crashed()`); every other problem may be dismissed
 KEEP = ("python_version", "fts5", "vendored", "vendor_manifest", "database", "writable", "assistant_guard", "search_index",
-        "version", "rules_imported", "scripts_use_paths")
-KEEP_WHY = "This can't be dismissed: creaite isn't safe to use until it is fixed."
+        "version", "rules_imported", "scripts_use_paths",
+        "vault_not_synced", "assistant_permissions", "backup_check", "offsite_backup", "extraction_scope")
+KEEP_WHY = "This can't be dismissed: it protects your data, your privacy or creaite's own integrity."
+CRASHED = re.compile(r"^[A-Za-z_.]*(Error|Exception):")        # an older doctor result without the `crashed` flag
+
+
+def crashed(c):
+    """True for a check that raised (doctor.check marks it; the detail's `TypeError: …` shape covers an older result)."""
+    return bool(c.get("crashed")) or (c.get("status") == "fail" and bool(CRASHED.match(str(c.get("detail", "")))))
 
 
 def problem_key(check_id, detail):
@@ -172,7 +181,7 @@ def problem(c):
     title, kind = PLAIN.get(c.get("id"), (c.get("name", "A check"), "manual"))
     if c.get("id") == "archive_reports" and str(c.get("detail", "")).startswith("Archive "):
         title = str(c["detail"]).split(":")[0]               # BL-03: "Archive 14 reports and minutes older than 12 months"
-    detail, keep = home_short(c.get("detail", "")), c.get("status") == "fail" and c.get("id") in KEEP
+    detail, keep = home_short(c.get("detail", "")), c.get("id") in KEEP or crashed(c)
     return {"id": c.get("id"), "title": title, "check": c.get("name", ""), "severity": c.get("status"), "detail": detail,
             "fix": fix_for(kind, c.get("id"), c.get("detail", "")), "key": problem_key(c.get("id"), detail),
             "dismissable": not keep, "keep_why": KEEP_WHY if keep else ""}
