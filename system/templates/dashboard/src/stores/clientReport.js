@@ -121,6 +121,9 @@ export async function exportClientReport(fmt, makePage) {
 
 let matchChain = Promise.resolve();
 
+/** Whether an internal report is the client report's own week of its own project (#234). @param {SheetDoc|null} i @param {SheetDoc} c */
+const sameWeek = (i, c) => !!i && !!c && i.project === c.project && i.date === c.date;
+
 /** Match internal, behind the client gate (v2.5.0): each section's matched text is checked by the server (client_leak.findings through
     /api/report/match-check, read only) BEFORE it is copied; a section whose matched text brings a finding the client report did not
     already have is held (the client section stays as it was) and named in crHeld, the clean ones are copied. Nothing is copied when
@@ -135,10 +138,10 @@ export function matchInternal(ids) {
 /** @param {string[]|null} ids */
 async function matchInternalNow(ids) {
   const d0 = crDoc.value, i = crInternal.value, opened = crIdentity(d0);
-  if (!d0 || !i) return;
+  if (!d0 || !i || !sameWeek(i, d0)) return;                             // #234: never another project's or week's internal report
   // the race fix (v2.5.0): after every await, a different open report (another project, week or client, or a reload) drops the match
   // silently: nothing is copied, nothing is said on the other report's page
-  const moved = () => crIdentity() !== opened || !sameReport(d0);          // the same open, and the same project, week and client
+  const moved = () => crIdentity() !== opened || !sameReport(d0) || !sameWeek(crInternal.value, d0);   // the same open, project, week and client, and its own internal report
   const heading = (/** @type {string} */ id) => String((secOf(i, id) || secOf(d0, id) || { heading: id }).heading || id);
   const all = ids ? ids : d0.sections.map(s => s.id).concat(i.sections.filter(s => !secOf(d0, s.id)).map(s => s.id));
   // #218: "every section" never brings an internal-audience text section over; it is named instead, and matched only one at a time

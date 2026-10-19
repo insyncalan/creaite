@@ -96,7 +96,11 @@ function HubNote() {
 
 /** What the internal report's pane does (the internal view and the left pane of Side by side are the same): an edit is kept on the page and
     is what Match internal reads; the save is its own. */
-const internalChange = (/** @type {SheetDoc} */ d) => { editDoc(d); if (crInternal.value) crInternal.value = d; };
+const internalChange = (/** @type {SheetDoc} */ d) => {
+  if (!editDoc(d)) return;                         // #234: another report's late edit lands nowhere
+  const ci = crInternal.value;
+  if (ci && ci.project === d.project && ci.date === d.date) crInternal.value = d;
+};
 const internalSave = async (/** @type {any} */ req) => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; };
 /** The AI bar's account of the internal report's pane: its own place and no client document. @param {SheetDoc} doc */
 const internalAi = (/** @type {SheetDoc} */ doc) => ({ place: "report", project: () => doc.project, confidential: () => false });

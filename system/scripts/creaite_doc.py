@@ -92,8 +92,10 @@ def force_client_audience(doc):
     so the client gate (client_leak.findings, make_safe), which reads the audience, always checks a client report as one; and its
     header fields the gate never reads, `project_name` and `client`, derived again from the tracker (the project's name) and the
     project's memory (its client), whatever was sent or stored: they are shown in the header and the page title and name the files.
-    Changed in place and returned. Any other kind is left as it is: a weekly report or minutes whose audience is client or
-    distributed is already read as client by is_client and by the gate, and its kind decides where it is filed."""
+    Changed in place and returned. A weekly report's audience is always "internal" (its file can't label it Client or Distributed);
+    minutes are left as they are (distributed minutes are read as client by is_client and by the gate)."""
+    if isinstance(doc, dict) and doc.get("kind") == "weekly":
+        doc["audience"] = "internal"           # a weekly report is the internal report, whatever its file says (v2.5.0)
     if isinstance(doc, dict) and doc.get("kind") == "client":
         doc["audience"] = "client"
         code = str(doc.get("project") or "")
@@ -124,6 +126,9 @@ def check_audience(doc):
     if doc.get("kind") == "client" and doc.get("audience") != "client":
         raise DocError("A client report's audience is always client: this one says "
                        f"{doc.get('audience', 'nothing')!r}, so nothing was saved. Open the client report again and save it from there.")
+    if doc.get("kind") == "weekly" and doc.get("audience", "internal") != "internal":
+        raise DocError("A weekly report's audience is always internal: this one says "
+                       f"{doc.get('audience')!r}, so nothing was saved. Open the weekly report again and save it from there.")
 
 
 def read_report(path, kind=None):
@@ -177,6 +182,29 @@ def _clean_section(s, keep_text=False):
         out["rows"] = [r if r.get("shown", True) else _stub_row(r) for r in s["rows"]]
     if isinstance(s.get("figures"), list):
         out["figures"] = [f if f.get("shown", True) else {"key": f.get("key"), "shown": False} for f in s["figures"]]
+    return out
+
+
+BLANK_MARKUP = re.compile(r"<[^<>]{0,200}>|&nbsp;|&#160;|\u00a0")
+
+
+def _blank_cell(v, ref):
+    """True for a cell with nothing in it: empty, only markup or spaces (an editor's '<p></p>'), or only the row's own reference."""
+    return v is None or v == ref or not BLANK_MARKUP.sub("", str(v)).strip()
+
+
+def blank_row(r):
+    """True for a row with nothing to show: every cell empty, or holding only the row's own reference (#234: a row shown again whose
+    cells couldn't be made, or saved that way before the fix)."""
+    return all(_blank_cell(v, r.get("ref")) for v in (r.get("cells") or {}).values())
+
+
+def without_blank_rows(doc):
+    """A copy with every shown row that has nothing to show left out (kept as its reference): an export never holds an empty row."""
+    out = copy.deepcopy(doc)
+    for s in out.get("sections") or []:
+        if isinstance(s.get("rows"), list):
+            s["rows"] = [_stub_row(r) if r.get("shown", True) and blank_row(r) else r for r in s["rows"]]
     return out
 
 
@@ -750,7 +778,7 @@ def render(doc, editing=True, keep_text=False):
     Hidden content is never rendered; source tags never are."""
     doc = clean(doc, keep_text)
     items = doc.get("items") or {}
-    body = "".join(section_html(s, items, doc) for s in doc["sections"] if not s.get("hidden"))
+    body = "".join(section_html(s, items, doc) for s in without_blank_rows(doc)["sections"] if not s.get("hidden"))
     label = {"internal": "Internal", "client": "Client", "distributed": "Distributed"}[doc.get("audience") or "internal"]
     head = (f'<header class="doc"><div><h1>{esc(doc.get("title"))}</h1><div class="sub">{esc(doc.get("project_name"))}'
             f'{(" · " + esc(doc["client"])) if doc.get("client") else ""}</div></div><div class="sub">{esc(label)}</div></header>')
@@ -959,22 +987,32 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None):
+def _export_doc(path, kind, doc):
+    """The document an export is made from: `doc` as the caller checked it (never the file read again), or the file read now; a
+    client report read as one, and another kind than `kind` refused (v2.5.0)."""
+    if doc is None:
+        return read_report(path, kind)
+    if kind is not None and doc.get("kind") != kind:
+        raise DocError("That file isn't this report (its kind was changed), so nothing was done.")
+    return force_client_audience(copy.deepcopy(doc))
+
+
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
     #226: for "html" and "pdf", `page` (the report page's own exported view; export_page.build checks it against the report) is
     what is written and printed; with none, or one that fails the check, the plain renderer below is, and the answer says
-    `plain: True` (and `plain_why` when a page was refused)."""
+    `plain: True` (and `plain_why` when a page was refused). `doc`: the document the caller already read and checked (the export
+    route's client gate); it is what is exported, and the file is not read again (v2.5.0: no second read between the check and
+    the output, which a file replaced in between would have changed)."""
     def fail(message, **extra):
         """The answer when nothing was exported."""
         return {"ok": False, "format": fmt, "message": message, **extra}
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however
-        # its file was edited
-        doc = read_report(path, kind)
+        doc = without_blank_rows(_export_doc(path, kind, doc))
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):
@@ -1172,6 +1210,28 @@ def picture_png(markup, width, height, scale=2):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def own_logos(doc, header, ticked=True):
+    """2.5.1 M1: [{kind, path}] of the logos a report's header may draw: the kinds it lists (well formed, and, when `ticked`,
+    ticked in the document's `layout.logos` if it has one), each re-derived from the project's own files by report_doc.logos. A path
+    stored in the document is never read: a hand-made or altered one can't bring any other file into an export. [] when the
+    project is unknown."""
+    import report_doc
+    code = str(doc.get("project") or "")
+    data = (header or {}).get("data") if isinstance(header, dict) else None
+    stored = data.get("logos") if isinstance(data, dict) else None
+    if not (report_doc.CODE.match(code) and isinstance(stored, list)):
+        return []
+    kinds = report_doc._logo_list([lg.get("kind") for lg in stored if isinstance(lg, dict)])
+    chosen = (doc.get("layout") or {}).get("logos") if isinstance(doc.get("layout"), dict) else None
+    try:
+        if ticked and isinstance(chosen, list):
+            on = set(report_doc.resolve_logos(code, report_doc._logo_list(chosen)))
+            kinds = [k for k in report_doc.resolve_logos(code, kinds) if k in on]
+        return report_doc.logos(code, kinds)
+    except (LookupError, OSError, ValueError):     # an unknown project or an unreadable logos folder: no logo, never a failure
+        return []
+
+
 class _Word:
     """What one Word export shares: the document, its items, the project's folder and a work folder for the pictures."""
 
@@ -1251,10 +1311,9 @@ class _Word:
     def logos(self, s):
         """The header's chosen logos as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it is."""
         one = []
-        for lg in (s.get("data") or {}).get("logos") or []:
-            f = Path(str(lg.get("path") or ""))
-            f = f if f.is_absolute() else paths.resolve(f.as_posix())
-            try:                                    # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
+        for lg in own_logos(self.doc, s):           # 2.5.1 M1: the project's own files only, never a path the document names
+            f = paths.resolve(lg["path"])
+            try:                                  # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
                 if not f.is_file() or f.is_symlink():
                     continue
                 one += self._logo_entry(f)

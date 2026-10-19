@@ -823,9 +823,24 @@ def record_at(path):
         doc = creaite_doc.read(rel)
     except creaite_doc.DocError as e:
         raise RecordError(str(e)) from None
-    if doc.get("kind") != "minutes":
+    if doc.get("kind") != "minutes" or _report_place(rel, doc):
         raise RecordError("That creaite document isn't a meeting's minutes.")
     return rel, doc
+
+
+REPORT_NAME = re.compile(r" (?:Client|Weekly) report - ")
+
+
+def _report_place(rel, doc):
+    """v2.5.0: whether a path is a report's (a weekly or client report's file name, or a file in the project's reports folders),
+    so a report edited on disk to say minutes is never opened or exported as minutes, beside itself and ungated."""
+    if REPORT_NAME.search(Path(rel).name):
+        return True
+    try:
+        here = creaite_doc.real(rel).resolve().parent
+        return any(here == Path(paths.folder(doc.get("project"), creaite_doc.FOLDER[k])).resolve() for k in ("weekly", "client"))
+    except (LookupError, OSError, KeyError, TypeError, AttributeError, ValueError):
+        return False                  # no reports folder to be in (the portfolio's minutes); the name check above still ran
 
 
 def view(file=None, path=None):
@@ -885,7 +900,7 @@ def export(path, fmt, file_beside=True, version="internal"):
         return distributed_export(rel, doc, fmt, file_beside)
     if version not in (None, "", "internal"):
         raise RecordError("Export the internal or the distributed version.")
-    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False)
+    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False, kind="minutes", doc=doc)    # v2.5.0: one read
 
 
 def _followup_rows(use, doc, sid):
@@ -1093,7 +1108,7 @@ def distributed_export(rel, doc, fmt, file_beside=True):
     work.write_text(creaite_doc.dumps(dist), encoding="utf-8")
     try:
         folder = str(Path(rel).parent) if file_beside else None
-        out = creaite_doc.export(paths.rel(work), fmt, out_dir=folder, file_beside=False, open_after=False)
+        out = creaite_doc.export(paths.rel(work), fmt, out_dir=folder, file_beside=False, open_after=False, kind="minutes")
     finally:
         work.unlink(missing_ok=True)
     return {**out, "version": "distributed"}

@@ -152,6 +152,9 @@ CATALOGUE = {
     "health.off_track_urgent_risks_min": ("Health thresholds", "Off track: urgent risks from",
                                           "This many open Urgent risks suggests Off track.",
                                           "One urgent risk is managed; two at once is a project in trouble."),
+    "health.dismissed": ("Health check", "Dismissed health problems",
+                         "Problems you dismissed in Settings › Health: they stop counting until their detail changes.",
+                         "None: every problem counts until you dismiss it. Reset brings them all back."),     # #242
     # ── Look and layout, Work and views
     "dashboard.default_tab": ("Work and views", "Opening page", "The page creaite opens on.", "Portfolio: the whole picture first."),
     "dashboard.theme": ("Look and help", "Theme", "Light, dark, or follow the Mac.", "Follows your Mac, so it matches your other apps."),
@@ -423,7 +426,7 @@ CATALOGUE = {
                                             "15-10-2026)."),
 }
 GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
-               "Sweep", "Reminders", "Review", "Health thresholds", "Early warnings", "Current state", "Work and views",
+               "Sweep", "Reminders", "Review", "Health thresholds", "Health check", "Early warnings", "Current state", "Work and views",
                "Look and layout", "AI drafts", "Close the day", "Reports and minutes", "Meeting prep and Intake", "Search", "Archiving",
                "Folders and OneDrive", "Live server and ask creaite", "Logging", "Help", "Legacy", "Developer")
 DEVELOPER_KEYS = ()       # development-only settings (library fetches, hand checks, the second laptop) when they exist
