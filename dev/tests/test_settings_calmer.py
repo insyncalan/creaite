@@ -20,7 +20,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "system" / "scripts"))
 import settings_catalogue  # noqa: E402
 
-ESS_SECTIONS = ["You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety"]
+ESS_SECTIONS = ["You", "Draft email", "Your day", "Saving and review", "People I follow", "Look and help", "Safety"]
 
 # A health answer as /api/health gives it: one failure with a command to copy, one warning a person fixes, a stopped error.
 HEALTH = {"ok": True, "checked": "2026-10-09 09:00", "fine": 22, "fine_names": ["Database", "Backups"], "read_only": True,
@@ -74,7 +74,7 @@ class SettingsReading(LiveBrowserCase):
         self.assertEqual(self.b.eval("document.querySelector('#setcats [aria-selected=true]').dataset.scat"), "essentials")
         self.b.wait("document.querySelectorAll('#set-essentials .srow').length>0")
         self.assertEqual(self.b.eval("[...document.querySelectorAll('#set-essentials [data-ess] h2')].map(h=>h.textContent)"), ESS_SECTIONS)
-        labels = self.b.eval("[...document.querySelectorAll('#set-essentials .srow')].map(r=>r.querySelector('span[id]').textContent)")
+        labels = self.b.eval("[...document.querySelectorAll('#set-essentials .srow[data-keys]')].map(r=>r.querySelector('span[id]').textContent)")
         self.assertEqual(labels, [r[1] for r in settings_catalogue.ESSENTIAL_ROWS])
         self.assertTrue(14 <= len(labels) <= 24)                                     # #97: two quiet-hours rows
         lines = self.b.eval("[...document.querySelectorAll('#set-essentials .srow small')].map(s=>s.textContent)")

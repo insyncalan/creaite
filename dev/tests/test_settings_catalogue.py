@@ -66,7 +66,7 @@ class Catalogue(unittest.TestCase):
             self.assertLessEqual(len(line), 140, key)
 
     def test_the_essentials_are_about_sixteen_rows_of_real_settings(self):
-        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 24, len(sc.ESSENTIAL_ROWS))      # #97: two quiet-hours rows
+        self.assertTrue(14 <= len(sc.ESSENTIAL_ROWS) <= 25, len(sc.ESSENTIAL_ROWS))      # #97: two quiet-hours rows
         sections = []
         for section, label, line, keys in sc.ESSENTIAL_ROWS:
             sections.append(section)
@@ -77,7 +77,7 @@ class Catalogue(unittest.TestCase):
                 want = "AI drafts" if k.startswith(sc.SHORTCUT_PREFIX) else section
                 self.assertEqual(sc.CATALOGUE[k][0], want, f"{k} sits in its Essentials row's section")
                 self.assertNotIn(k, sc.FIXED, k)
-        self.assertEqual(list(dict.fromkeys(sections)), ["You", "Your day", "Saving and review", "People I follow",
+        self.assertEqual(list(dict.fromkeys(sections)), ["You", "Draft email", "Your day", "Saving and review", "People I follow",
                                                          "Look and help", "Safety"])
         self.assertTrue({"sweep.due_from", "dashboard.theme", "backups.daily", "vip.check_minutes"} <=
                         {k for r in sc.ESSENTIAL_ROWS for k in r[3]})
