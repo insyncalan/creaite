@@ -31,7 +31,7 @@ jobLive=async(url,body)=>{ LOADED.push([url,body.id]);
     await api("/api/inbox/upload",{name:"2026-10-05 "+body.id+".vtt",data:btoa(t)}); } };
 askLive=async(q,c)=>{ ASKED.push([q,c]); if(window.GATE) await window.GATE;
   const id=(q.match(/ev-\d+/)||[])[0]||(/Steering/.test(q)?"ev-1":"");
-  if(id) await api("/api/fs",{op:"write",path:"system/staging/proposed-test-"+id+".json",text:JSON.stringify({created:"2026-10-05T09:00:00",source_run:"cx-minutes",files:[],items:[item("Do the thing for "+id)],
+  if(id) await api("/api/fs",{op:"write",path:"system/staging/proposed-test-"+id+".json",text:JSON.stringify({created:"2026-10-05T09:00:00",source_run:"cx-minutes",files:[],items:[],
     meeting:{key:"calendar:"+id,title:"Stub",date:"2026-10-05",projects:["ABC"],draft:null,transcript:null,minutes_decision:"pending",file_ops:[]}})}); };
 """
 

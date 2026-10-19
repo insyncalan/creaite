@@ -115,8 +115,12 @@ class Findings(Base):
     def test_n_on_a_drafted_or_waiting_less_row_offers_nothing_it_should_not(self):
         b = self.b
         b.eval("window.GATE=null")
-        b.click(self.sel("ABC Steering", " [data-ira=process]"))
-        b.wait("document.querySelector(%s).dataset.stage==='drafted'" % json.dumps(self.sel("ABC Steering")), 30)
+        sel = self.sel("ABC Steering", " [data-ira=process]")
+        self.assertTrue(b.eval("(x=>{ const r=x.getBoundingClientRect(); return x.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)); })(document.querySelector(%s))" % json.dumps(sel)),
+                        "something sits over the Process button")
+        b.click(sel)
+        b.wait("ASKED.length===1", 20)
+        b.wait("document.querySelector(%s).dataset.stage!=='arrived'" % json.dumps(self.sel("ABC Steering")), 30)
         self.key("ABC Steering", "n")
         self.key("ABC Steering", "h")
         time.sleep(0.4)
@@ -128,9 +132,13 @@ class Findings(Base):
         self.upload("2026-10-05 Snooze me.txt")
         b.click(self.sel("2026-10-05 Snooze me.txt", " [data-ira=later]"))
         b.wait("!D.intake_review.meetings.some(m=>m.title==='2026-10-05 Snooze me.txt')", 20)
-        b.click("[data-irfold=later]")
-        b.wait("document.querySelector('[data-irsec=later]').innerText.includes('Snooze me')")
-        b.click("[data-irsec=later] [data-ira=restore]")
+        self.assertTrue(b.eval("D.intake_review.later.some(x=>x.title.includes('Snooze me'))"), "the model does not list the file under Later: " + b.eval("JSON.stringify(D.intake_review.later)+JSON.stringify(D.intake_review.not_needed)"))
+        b.eval("document.querySelector('[data-irfold=later]').click()")             # (the snack bar sits over it at the foot of the page)
+        try:
+            b.wait("document.querySelector('[data-irsec=later]').innerText.includes('Snooze me')", 5)
+        except TimeoutError:
+            self.fail("cleared file: " + json.dumps(self.cleared()) + " | Later section shows: " + b.eval("document.querySelector('[data-irsec=later]').innerText.replace(/\\n/g,' / ') + ' | folded=' + JSON.stringify(irFolded.value) + ' | later=' + JSON.stringify(D.intake_review.later)"))
+        b.eval("document.querySelector('[data-irsec=later] [data-ira=restore]').click()")
         b.wait("D.intake_review.meetings.some(m=>m.title==='2026-10-05 Snooze me.txt')", 20)
         self.assertEqual(self.cleared(), [])
 
