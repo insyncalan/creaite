@@ -72243,6 +72243,10 @@ ${d5.text}`);
         return;
       }
       if (e4.key === "Escape" && (irPeek.value != null || irOpen.value)) {
+        if (pkEscBusy(
+          /** @type {HTMLElement | null} */
+          document.activeElement
+        )) return;
         const s5 = irEsc({ peek: irPeek.value, open: irOpen.value });
         irPeek.value = s5.peek;
         irOpen.value = s5.open;

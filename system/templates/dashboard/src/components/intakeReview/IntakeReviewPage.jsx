@@ -18,6 +18,7 @@ import { shared } from "../../core/state.js";
 import { irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irFolded, irLiveCounts, irModel, irOpen, irPeek, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCanProcess, irCanSetAside, IR_REASONS, irLater, irNotNeeded, irProcess, irProcessAll, irReady, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
+import { pkEscBusy } from "../../panel.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
 
 export * from "./actions.js";   /* #232-A: the Intake actions are on window for the tests, as the page's other exports are */
@@ -167,7 +168,10 @@ function bootIrKeys() {
     if (e.key === "Enter" && m && !(t.closest && t.closest("button,a"))) { mine(); if (irCanProcess(m)) irProcess(m); else irClickMeeting(m.id); return; }
     if ((e.key === "n" || e.key === "N") && !e.shiftKey && m && irCanSetAside(m)) { mine(); irAskReason(m, rowEl); return; }
     if ((e.key === "h" || e.key === "H") && !e.shiftKey && m && irCanSetAside(m)) { mine(); irLater(m); return; }
-    if (e.key === "Escape" && (irPeek.value != null || irOpen.value)) { const s = irEsc({ peek: irPeek.value, open: irOpen.value }); irPeek.value = s.peek; irOpen.value = s.open; }
+    if (e.key === "Escape" && (irPeek.value != null || irOpen.value)) {
+      if (pkEscBusy(/** @type {HTMLElement | null} */ (document.activeElement))) return;   /* an open menu, calendar, chat or text field keeps its own Esc */
+      const s = irEsc({ peek: irPeek.value, open: irOpen.value }); irPeek.value = s.peek; irOpen.value = s.open;
+    }
   }, true);
 }
 
