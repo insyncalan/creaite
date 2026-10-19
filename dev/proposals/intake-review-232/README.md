@@ -82,3 +82,16 @@ the new page. The Intake entry is gone from the sidebar (a saved sidebar that na
 - Later: shown on ready and waiting rows. A Later entry now carries `seen` (its transcript was already here): it stays in Later until Restore; without it, it returns when a transcript arrives. A file set aside (Not needed or Later) is listed with its reason and leaves the rows (`aside` in `intake_review_model`).
 - `core/server.js refreshAll` redraws an open Intake and Review (one line); 232-C needs nothing more there.
 - Tests: `test_intake_review_intake.py` (browser and model), `_keys_intake.py`, `_rules.py` (meetings part), shared set-up `ir_intake_support.py`. The old pages and their tests are untouched (232-C retires them).
+
+## Finishing p250-d (v2.5.1: A, B and bfix together, Stark's hardening folded in)
+
+- A confidential meeting: `build_dashboard.inbox_meetings` reads the calendar's `sensitivity` (`confidential` on the row); the merged row carries
+  `confidential` and no project; rows, cards and panes also hide the project when the flag is set. N and H leave a row that is being processed;
+  a processed file that has left the inbox is done, not "Couldn't"; Process all ready skips private meetings; Check again on a waiting Teams
+  meeting runs the transcript check through the run engine (the row shows "Checking…" and the sweep's words: No transcript, No access, Not transcribed).
+- Busy state: `irAsk` (stores/intakeReview.js) mirrors "ask creaite is working" (ask.js `setRunning` and the BUSY flag), so a Process button
+  follows it; the rows and Process all ready read `irBlocked()`, a signal read. The upload rules are `intake.js uploadInboxFile` (one copy).
+- B: a proposal row has one meta line (`.icchg`: pill, change, routine or why not, source) whose tooltip is the detail (`review.js rvTipText`);
+  the Drafted tag, weekend note, Draft a response and a conflict's before and after with Keep current and Use this one are back; a row reads
+  `irTick` because REV is not a signal. `rvBulkOK` respects `invalid`. The page's Esc asks `pkEscBusy` (an open menu keeps its Esc).
+- Not done here (232-C owns it): the rail, aliases, the retirement of the old pages and the badge's meaning.
