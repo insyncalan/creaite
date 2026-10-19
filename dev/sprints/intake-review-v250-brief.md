@@ -54,3 +54,7 @@ When a mail or Teams proposal changes an existing work item, the peek shows that
 - Each field the proposal changes is highlighted with "was → now" (for example Status Open → Closed, Due 20-10-2026 → 23-10-2026). A changed latest update shows the old text struck through and the new text highlighted. The activity list gets an "If approved" line at the top.
 - A "What changes if you approve" note states it in words; the rest of the item is plainly unchanged.
 - Add files is an icon button (upload arrow), with the words in its tooltip and accessible name.
+
+### Added 19-10-2026: what a file is, and the rail
+- **A file is told apart.** A file you add is a transcript or minutes someone else wrote. creaite says which (a .vtt or "transcript" in the name is a transcript; "minutes" or "notes" is minutes; anything else asks) and the row says what will happen, with a one-click way to change it. A **transcript** is turned into minutes (a draft for approval) and then checked for work items; its button reads **Make minutes**. **Minutes** from another person are only checked for work items and no new minutes are drafted; its button reads **Find work items**. An unsure file waits for Transcript or Minutes and is left out of Process all ready.
+- **The rail entry is called Intake**, with the inbox icon (the tray), and keeps the badge. The page keeps its heading "Intake and Review" (open: whether the heading should match).
