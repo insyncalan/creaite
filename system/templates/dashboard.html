@@ -4056,13 +4056,14 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
 #peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
 #peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
-/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band, never dismissible */
+/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
 .sweepdue .sd-off{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}
 body:has(#runBadge:not([hidden])) .sweepdue{display:none}
+.sweepdue .sd-x{margin-left:auto} .sweepdue .sd-x:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 /* ===== #192 Files navigation: the pills' line with Work's funnel Filter, its menu and the applied chips ===== */
 .fbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap} .fmwrap{position:relative;display:inline-block}
 .ddmenu.fmenu.on{display:block;width:300px;max-height:none;overflow:visible;padding:12px 14px;top:calc(var(--ctl-h) + 6px)}
@@ -42298,9 +42299,16 @@ ${s5}`;
       if ($("#setupList") && !$("#suMore")) addHTML($("#setupList"), "beforeend", html`<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>`);
     }
   }
+  var SDKEY = "creaite-sweepdue-dismissed";
+  var SDMEM = null;
+  var sdLast = () => String(D.sweep_due && D.sweep_due.last || "");
+  function sweepDueDismissed() {
+    const d5 = SDMEM || store.get(SDKEY, null);
+    return !!(d5 && d5.day === TODAY && d5.last === sdLast());
+  }
   function sweepDueShown() {
     const sd2 = D.sweep_due;
-    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept());
+    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept()) && !sweepDueDismissed();
   }
   function renderSweepDue() {
     const box = $("#sweepDue");
@@ -42311,8 +42319,24 @@ ${s5}`;
       putHTML(box, html``);
       return;
     }
-    putHTML(box, html`<b>Sweep due since ${D.sweep_due.due_from || "07:00"}.</b> <span class="sd-last">${D.sweep_due.last ? `Last swept ${D.sweep_due.last}.` : "No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span>`);
+    putHTML(box, html`<b>Sweep due since ${D.sweep_due.due_from || "07:00"}.</b> <span class="sd-last">${D.sweep_due.last ? `Last swept ${D.sweep_due.last}.` : "No sweep yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Run sweep</button><span class="sd-off">Needs the live server: start it in Terminal, then run the sweep.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next sweep is due" data-tip="Dismiss until the next sweep is due">${raw(ic("x"))}</button>`);
   }
+  document.addEventListener("click", (e4) => {
+    if (!e4.target.closest("#sweepX")) return;
+    e4.preventDefault();
+    const box = $("#sweepDue"), had = box && box.contains(document.activeElement);
+    SDMEM = { day: TODAY, last: sdLast() };
+    store.set(SDKEY, SDMEM);
+    renderSweepDue();
+    if (had || document.activeElement === document.body) {
+      const v5 = $("#v-today"), nxt = v5 && [...v5.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")].find((n4) => !!(box.compareDocumentPosition(n4) & Node.DOCUMENT_POSITION_FOLLOWING) && n4.offsetParent !== null);
+      if (nxt) nxt.focus();
+      else if (v5) {
+        if (!v5.hasAttribute("tabindex")) v5.setAttribute("tabindex", "-1");
+        v5.focus();
+      }
+    }
+  });
   document.addEventListener("click", (e4) => {
     if (!e4.target.closest("#sweepRun")) return;
     e4.preventDefault();

@@ -4046,13 +4046,14 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #190: People's counts are right-aligned (header and figure), zero is written 0, and a figure is not drawn as a dotted-underline link until hovered */
 #peopleTbl th.num,#peopleTbl td.num{text-align:right;font-variant-numeric:tabular-nums} #peopleTbl th.num .thsort{text-align:right}
 #peopleTbl td.num a.cntl{text-decoration:none} #peopleTbl td.num a.cntl:hover,#peopleTbl td.num a.cntl:focus-visible{text-decoration:underline}
-/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band, never dismissible */
+/* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
 .sweepdue .sd-off{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}
 body:has(#runBadge:not([hidden])) .sweepdue{display:none}
+.sweepdue .sd-x{margin-left:auto} .sweepdue .sd-x:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 /* ===== #192 Files navigation: the pills' line with Work's funnel Filter, its menu and the applied chips ===== */
 .fbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap} .fmwrap{position:relative;display:inline-block}
 .ddmenu.fmenu.on{display:block;width:300px;max-height:none;overflow:visible;padding:12px 14px;top:calc(var(--ctl-h) + 6px)}
