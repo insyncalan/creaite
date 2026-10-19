@@ -40,3 +40,10 @@ The one page replaces Intake and Review; the three stages and counts match the d
 ## Test (standing rule)
 
 Automation map: the counts and stage membership, the view switch and its memory, the open and close by click, the groups and the bulk button's reach, the pills and lines, the peek's fields and buttons, the badge and the old addresses are scriptable; the look (rail, emphasis, indent), dark theme and the Board and Two panes layouts are judgement on the screenshot sheet. Test file named by Team Stark for the release.
+
+## Change for #232 (19-10-2026, draft for Alan): files and calendar refresh
+The 18-10 mockup lost the file import and the calendar refresh. Draft copy: `dev/mockups/intake-review-combined-v2-mockup-2026-10-19.html`.
+- **Add files** button in the toolbar (all three views), plus a full-page "Drop to add files" target (.vtt, .docx, .txt, .md, .pdf, up to 25 MB each).
+- An uploaded file is a row in Arrived with a file icon, "Likely project", and the same Process, Later and Not needed actions; an already-processed copy is marked, as today.
+- **Refresh the calendar** icon beside the page's counts, with "Calendar read hh:mm".
+- Not brought back: Select new, Select with transcripts, Load into inbox (Process loads and processes together).
