@@ -7,6 +7,9 @@ description: creaite client report. Drafts a client-safe Word status report for 
 
 A client-safe status report for one project, drafted for review. Claude **never sends it and never creates an email draft**. Alan distributes it himself.
 
+**Not from ask creaite (Alan, 19-10-2026).** Reports are the user's to edit in the Reporting hub. In an ask creaite chat (and in any run the live server starts) this skill never drafts, stages or writes a report or its draft: `reach.py`'s guard hook refuses `report.py client-stage`, an Edit or Write of a report file or draft, and a Bash call that names one. If asked there, say the report is made and edited in the Reporting hub (Generate, then edit) and offer to read it or answer questions about it. The steps below are for Alan's own Claude Code session only.
+
+
 **Projects by name (BL-101):** refer to a project by its full name in everything Alan reads (summaries, tables, messages, file names, drafts). The short code appears only inside a work item's ID (`ABC-A-003`) and in a command he can type; `tracker.project_label(code)` gives the name.
 
 Read these first:

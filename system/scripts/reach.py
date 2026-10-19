@@ -1435,6 +1435,64 @@ def decide(tool, inp, mode, run, held=False):
 # ===== end #60 option (a) =====
 
 
+# ===== v2.5.1 (Alan, 19-10-2026): ask creaite never writes reports =====
+# Reports (weekly and client) are the user's to edit in the Reporting hub: ask creaite may read them (Read, search) but a direct
+# Edit or Write of a report file or draft, a report.py weekly-stage or client-stage run, and a Bash call that names a report file are
+# refused in every ask creaite run. It closes the writer behind several client-leak findings (a draft written on disk).
+REPORT_NAME = re.compile(r"(?:weekly|client)[ _-]*report", re.I)
+REPORT_FILE_SUFFIXES = (".docx", ".html", ".json", ".md", ".pdf", ".txt")
+REPORTS_ARE_THE_USERS = ("reports are the user's to edit (in the Reporting hub): ask creaite reads them but does not write or change "
+                         "a weekly or client report or its draft")
+
+
+def is_report_file(path):
+    """True when `path` is a weekly or client report file or draft: a file in a project's weekly or client report folder, or a file
+    in system/staging/drafts/ whose name says weekly report or client report."""
+    try:
+        p = real(path)
+    except (OSError, ValueError, RuntimeError):
+        return False
+    if p.suffix.lower() not in REPORT_FILE_SUFFIXES:
+        return False
+    if parts_under(p, Path(os.path.realpath(paths.DRAFTS))) is not None and REPORT_NAME.search(p.name):
+        return True
+    area = project_kind(p)
+    return bool(area and area[1] in ("weekly_reports", "client_reports")) and bool(REPORT_NAME.search(p.name))
+
+
+def report_command_refusal(command):
+    """Why an ask creaite Bash call is refused for reports, or None: report.py weekly-stage or client-stage, or a path argument
+    that is a report file."""
+    cmd = vault_relative(command or "")
+    if re.search(r"report\.py\s+(?:weekly|client)-stage\b", cmd):
+        return REPORTS_ARE_THE_USERS
+    try:
+        for p in ask_arg_paths(command, expand=False):
+            if is_report_file(p):
+                return f"{p}: {REPORTS_ARE_THE_USERS}"
+    except Exception:  # noqa: BLE001  fail closed
+        return None if not REPORT_NAME.search(command or "") else REPORTS_ARE_THE_USERS
+    return None
+# ===== end reports =====
+
+
+def _direct_write_refusal(inp, mode):
+    """Why a direct Edit or Write is refused in an ask creaite run, or None: a never place, a report file (v2.5.1), or a place
+    outside the run's direct-write folder."""
+    p = (inp or {}).get("file_path") or (inp or {}).get("notebook_path") or ""
+    rp = real(p)
+    kind, why = classify(p, "change" if rp.exists() else "create")
+    if kind == "never":
+        return f"{p}: {why}"
+    if is_report_file(p):
+        return f"{p}: {REPORTS_ARE_THE_USERS}"
+    area = Path(os.path.realpath(direct_write_area(mode)))
+    if parts_under(rp, area) is None:
+        return (f"{p}: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the "
+                f"new content in {paths.rel(area)}/ and run python3 system/scripts/filechange.py")
+    return None
+
+
 def hook_decision(tool, inp, mode, run):
     """(allow, reason) for one tool call in an ask creaite run. Marks the run first when the call reads outside content."""
     data = guard_run()
@@ -1451,15 +1509,9 @@ def hook_decision(tool, inp, mode, run):
         if inside:
             return False, f"the search folder holds {inside}, which is never read: search a folder below it instead"
     if tool in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
-        p = (inp or {}).get("file_path") or (inp or {}).get("notebook_path") or ""
-        rp = real(p)
-        kind, why = classify(p, "change" if rp.exists() else "create")
-        if kind == "never":
-            return False, f"{p}: {why}"
-        area = Path(os.path.realpath(direct_write_area(mode)))
-        if parts_under(rp, area) is None:
-            return False, (f"{p}: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the "
-                           f"new content in {paths.rel(area)}/ and run python3 system/scripts/filechange.py")
+        refused = _direct_write_refusal(inp, mode)
+        if refused:
+            return False, refused
     if tool == "Bash":
         why = ask_bash_refusal(str((inp or {}).get("command") or ""), mode)    # ask-hook-fix: bash_refusal, then the rest
         if why:
@@ -1473,7 +1525,8 @@ def ask_bash_refusal(command, mode):
     form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
     # #116 F1: every check that doesn't expand a wildcard first, so a slow expansion never skips them; the expansion last
     return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command, expand=False)
-            or handover_refusal(command) or read_write_refusal(command) or ask_glob_reason(command))
+            or report_command_refusal(command) or handover_refusal(command) or read_write_refusal(command)
+            or ask_glob_reason(command))
 
 
 # ===== ask-hook-fix (15-10-2026): ask creaite's never list on every argument form =====
