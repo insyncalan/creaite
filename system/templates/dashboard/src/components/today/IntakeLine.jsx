@@ -14,7 +14,7 @@ import { IconButton } from "../IconButton.jsx";
 /** @param {{parts: IntakePart[], onGo: (page: string) => void}} props */
 export function IntakeLine({ parts, onGo }) {
   return (
-    <p class="tdquiet" id="tdQuiet" role="status">
+    <p class="tdquiet" id="tdQuiet">
       <Icon name="inbox" />
       <span class="tdq">
         {"Intake: "}
@@ -31,8 +31,21 @@ export function IntakeLine({ parts, onGo }) {
   );
 }
 
+/** The polite announcement: a small visually-hidden live region that stays in the page, so a change in what waits is spoken as the
+    count alone ("5 waiting in Intake") and a redraw with the same count says nothing (the text node is left as it is). Empty when
+    the line is hidden or nothing waits. The visible line carries no live role of its own: a role on the whole sentence made a
+    reader repeat all of it on every redraw. @param {{text: string}} props */
+export function IntakeLive({ text }) {
+  return <span class="vh" id="tdQuietLive" role="status" aria-live="polite" aria-atomic="true">{text}</span>;
+}
+
 /** Draw the line into `host`, or clear it when there are no parts. The x is handled page-wide in today.js (it needs the counts).
+    The announcement says the total waiting while the line shows.
     @param {Element} host @param {IntakePart[]} parts @param {(page: string) => void} onGo */
 export function drawIntakeLine(host, parts, onGo) {
-  render(parts.length ? <IntakeLine parts={parts} onGo={onGo} /> : null, host);
+  const n = parts.reduce((t, x) => t + x.n, 0);
+  render(<>
+    <IntakeLive text={n ? `${n} waiting in Intake` : ""} />
+    {parts.length ? <IntakeLine parts={parts} onGo={onGo} /> : null}
+  </>, host);
 }

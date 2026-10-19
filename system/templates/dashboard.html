@@ -41113,7 +41113,7 @@ ${s5}`;
 
   // components/today/IntakeLine.jsx
   function IntakeLine({ parts, onGo }) {
-    return /* @__PURE__ */ u2("p", { class: "tdquiet", id: "tdQuiet", role: "status", children: [
+    return /* @__PURE__ */ u2("p", { class: "tdquiet", id: "tdQuiet", children: [
       /* @__PURE__ */ u2(Icon, { name: "inbox" }),
       /* @__PURE__ */ u2("span", { class: "tdq", children: [
         "Intake: ",
@@ -41129,8 +41129,15 @@ ${s5}`;
       /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Dismiss until something new arrives", id: "tdQx" })
     ] });
   }
+  function IntakeLive({ text }) {
+    return /* @__PURE__ */ u2("span", { class: "vh", id: "tdQuietLive", role: "status", "aria-live": "polite", "aria-atomic": "true", children: text });
+  }
   function drawIntakeLine(host2, parts, onGo) {
-    R(parts.length ? /* @__PURE__ */ u2(IntakeLine, { parts, onGo }) : null, host2);
+    const n4 = parts.reduce((t47, x5) => t47 + x5.n, 0);
+    R(/* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(IntakeLive, { text: n4 ? `${n4} waiting in Intake` : "" }),
+      parts.length ? /* @__PURE__ */ u2(IntakeLine, { parts, onGo }) : null
+    ] }), host2);
   }
 
   // components/today/ToDecide.jsx
@@ -42620,16 +42627,30 @@ ${s5}`;
     /** @param {{key:string,n:number}[]} parts */
     (parts) => Object.fromEntries(["meetings", "proposals", "files"].map((k5) => [k5, (parts.find((x5) => x5.key === k5) || { n: 0 }).n]))
   );
+  function tqRead() {
+    try {
+      const v5 = localStorage.getItem(TQKEY);
+      return v5 ? JSON.parse(v5) : null;
+    } catch (e4) {
+      return TQMEM;
+    }
+  }
+  function tqWrite(d5) {
+    TQMEM = d5;
+    try {
+      localStorage.setItem(TQKEY, JSON.stringify(d5));
+      return true;
+    } catch (e4) {
+      return false;
+    }
+  }
   function intakeDismissed(parts) {
-    const d5 = TQMEM || store.get(TQKEY, null);
+    const d5 = tqRead();
     if (!d5 || d5.day !== TODAY || !d5.c) return false;
     const c5 = tqCounts(parts);
     if (Object.keys(c5).some((k5) => c5[k5] > (d5.c[k5] || 0))) return false;
     const low = { day: d5.day, c: Object.fromEntries(Object.keys(c5).map((k5) => [k5, Math.min(c5[k5], d5.c[k5] || 0)])) };
-    if (Object.keys(c5).some((k5) => low.c[k5] !== d5.c[k5])) {
-      TQMEM = low;
-      store.set(TQKEY, low);
-    }
+    if (Object.keys(c5).some((k5) => low.c[k5] !== d5.c[k5])) tqWrite(low);
     return true;
   }
   function renderIntakeLine() {
@@ -42643,8 +42664,7 @@ ${s5}`;
     if (!x5) return;
     e4.preventDefault();
     const host2 = $("#tdQuietHost"), had = host2 && host2.contains(document.activeElement);
-    TQMEM = { day: TODAY, c: tqCounts(intakeParts()) };
-    store.set(TQKEY, TQMEM);
+    tqWrite({ day: TODAY, c: tqCounts(intakeParts()) });
     renderIntakeLine();
     if (had || document.activeElement === document.body) {
       const v5 = $("#v-today"), nxt = v5 && host2 && [...v5.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")].find((n4) => !!(host2.compareDocumentPosition(n4) & Node.DOCUMENT_POSITION_FOLLOWING) && n4.offsetParent !== null);
@@ -42654,6 +42674,9 @@ ${s5}`;
         v5.focus();
       }
     }
+  });
+  window.addEventListener("storage", (e4) => {
+    if (e4.key === TQKEY || e4.key === null) renderIntakeLine();
   });
   function renderToDecide() {
     const sec = $("#tdSec"), body2 = $("#tdBody");

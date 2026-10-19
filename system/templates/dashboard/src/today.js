@@ -580,20 +580,26 @@ export function intakeParts(){ const pr=REV.filter(r=>!r.done).length, nTr=MTG()
    the kept one, so what arrives later than a clear-out is new too. */
 const TQKEY="creaite-intakeline-dismissed"; let TQMEM=/** @type {{day:string,c:Record<string,number>}|null} */(null);
 const tqCounts=/** @param {{key:string,n:number}[]} parts */parts=>Object.fromEntries(["meetings","proposals","files"].map(k=>[k,(parts.find(x=>x.key===k)||{n:0}).n]));
-function intakeDismissed(parts){ const d=TQMEM||store.get(TQKEY,null); if(!d||d.day!==TODAY||!d.c) return false;
+/* localStorage is the truth on every read, so two tabs agree (what one dismisses the other reads at its next redraw, and at once on a
+   storage event); TQMEM is the fallback only when the store can't be read, and is written alongside it. All storage in try/catch. */
+function tqRead(){ try{ const v=localStorage.getItem(TQKEY); return v?JSON.parse(v):null; }catch(e){ return TQMEM; } }
+/** @returns {boolean} whether the store took it (the memory has it either way) */
+function tqWrite(d){ TQMEM=d; try{ localStorage.setItem(TQKEY,JSON.stringify(d)); return true; }catch(e){ return false; } }
+function intakeDismissed(parts){ const d=tqRead(); if(!d||d.day!==TODAY||!d.c) return false;
   const c=tqCounts(parts); if(Object.keys(c).some(k=>c[k]>(d.c[k]||0))) return false;
   const low={day:d.day,c:Object.fromEntries(Object.keys(c).map(k=>[k,Math.min(c[k],d.c[k]||0)]))};
-  if(Object.keys(c).some(k=>low.c[k]!==d.c[k])){ TQMEM=low; store.set(TQKEY,low); }
+  if(Object.keys(c).some(k=>low.c[k]!==d.c[k])) tqWrite(low);
   return true; }
 export function renderIntakeLine(){ const host=$("#tdQuietHost"); if(!host) return;
   const parts=intakeParts(), hid=intakeDismissed(parts);   /* asked even at zero, so a clear-out lowers the kept counts */
   drawIntakeLine(host,hid?[]:parts,pg=>go(pg)); }
 document.addEventListener("click",e=>{ const x=e.target.closest&&e.target.closest("#tdQx"); if(!x) return; e.preventDefault();
   const host=$("#tdQuietHost"), had=host&&host.contains(document.activeElement);
-  TQMEM={day:TODAY,c:tqCounts(intakeParts())}; store.set(TQKEY,TQMEM); renderIntakeLine();
+  tqWrite({day:TODAY,c:tqCounts(intakeParts())}); renderIntakeLine();
   if(had||document.activeElement===document.body){ const v=$("#v-today"), nxt=v&&host&&[...v.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")]
       .find(n=>!!(host.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)&&n.offsetParent!==null);
     if(nxt) nxt.focus(); else if(v){ if(!v.hasAttribute("tabindex")) v.setAttribute("tabindex","-1"); v.focus(); } } });
+window.addEventListener("storage",e=>{ if(e.key===TQKEY||e.key===null) renderIntakeLine(); });   /* another tab dismissed it (or cleared the store) */
 /** the Messages section (BL-334's cards of messages from people Alan follows); it was Intake and Review's list (#245) */
 export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return;
   const L=toDecideRows(), n=L.filter(r=>r.kind!=="quiet").length; sec.hidden=!L.length;

@@ -6,6 +6,7 @@ of Your commitments: "Intake: 1 meeting ready to process and 4 proposals to appr
 waiting, no line. The x hides it until something new arrives (a count rises) or the next morning, kept in this browser. Today's
 rows have no quick Approve or Reject. Messages from people Alan follows (BL-334) keep their cards, now in a section of their own.
 """
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -71,6 +72,32 @@ class Shows(Line):
         self.assertEqual(self.text(), "Intake: 1 meeting ready to process, 4 proposals to approve and 2 new files to process.")
         self.assertEqual(self.b.eval("document.querySelector('#tdQuiet [data-tdq=files]').getAttribute('href')"), "#inbox")
 
+    def test_the_line_has_no_live_role_and_a_small_hidden_region_announces_the_count_politely(self):
+        b = self.b
+        self.waiting(4, 1, 2)
+        o = b.eval("""(()=>{ const l=document.getElementById('tdQuiet'), r=document.getElementById('tdQuietLive'), rc=r.getBoundingClientRect(); return {
+          lineRole:l.getAttribute('role'), lineLive:l.getAttribute('aria-live'), inLine:l.contains(r), role:r.getAttribute('role'),
+          live:r.getAttribute('aria-live'), atomic:r.getAttribute('aria-atomic'), text:r.textContent, small:rc.width<=2&&rc.height<=2,
+          visible:l.textContent.replace(/\\s+/g,' ').trim()}; })()""")
+        self.assertEqual((o["lineRole"], o["lineLive"], o["inLine"]), (None, None, False))
+        self.assertEqual((o["role"], o["live"], o["atomic"]), ("status", "polite", "true"))
+        self.assertEqual(o["text"], "7 waiting in Intake")                       # the count alone, not the sentence
+        self.assertTrue(o["small"])                                              # visually hidden
+        self.assertEqual(o["visible"], "Intake: 1 meeting ready to process, 4 proposals to approve and 2 new files to process.")
+
+    def test_a_redraw_with_the_same_count_leaves_the_region_alone_and_a_dismiss_silences_it(self):
+        b = self.b
+        self.waiting(4, 1)
+        b.eval("window.__live=document.getElementById('tdQuietLive'); window.__node=__live.firstChild; true")
+        b.eval("renderToday()")
+        self.assertTrue(b.eval("document.getElementById('tdQuietLive')===__live && __live.firstChild===__node"))   # same node: nothing re-read
+        self.waiting(5, 1)
+        self.assertEqual(b.eval("document.getElementById('tdQuietLive').textContent"), "6 waiting in Intake")
+        b.click("#tdQx")
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.getElementById('tdQuietLive').textContent"), "")
+        self.assertTrue(b.eval("document.getElementById('tdQuietLive')===__live"))
+
     def test_it_is_the_last_thing_in_your_commitments(self):
         b = self.b
         self.waiting(4, 1)
@@ -81,7 +108,8 @@ class Shows(Line):
         b = self.b
         self.waiting(0, 0, 0)
         self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
-        self.assertEqual(b.eval("document.getElementById('tdQuietHost').children.length"), 0)
+        self.assertEqual(b.eval("document.getElementById('tdQuietHost').children.length"), 1)       # only the (silent) live region stays
+        self.assertEqual(b.eval("document.getElementById('tdQuietLive').textContent"), "")
         self.assertEqual(b.eval("document.getElementById('mineSec').textContent.includes('Intake:')"), False)
 
     def test_the_section_and_its_fold_are_gone_and_the_page_never_says_intake_and_review(self):
@@ -275,6 +303,62 @@ class Dismiss(Line):
         self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
         b.eval("renderToday()")
         self.assertFalse(b.eval("!!document.getElementById('tdQuiet')"))
+
+
+class TwoTabs(Line):
+    """Two tabs of one browser share localStorage: what one dismisses, the other must read as dismissed (the store is the truth, the page's
+    own memory only a fallback). The second tab is a second page of the same Chrome profile, driven by its own connection."""
+
+    def other_tab(self):
+        import json
+        import urllib.request
+        from cdp import Browser, WebSocket
+        t = json.load(urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{self.b.port}/json/new?{self.base}/", method="PUT")))
+        c = Browser.__new__(Browser)                    # the same Chrome (so the same storage); only the connection is new
+        c.ws, c.n, c.events, c.errors = WebSocket(t["webSocketDebuggerUrl"]), 0, [], []
+        for domain in ("Page", "Runtime"):
+            c.call(f"{domain}.enable")
+        self.addCleanup(c.ws.close)
+        c.wait("typeof go==='function' && LIVE")
+        if os.environ.get("CREAITE_NOW"):               # the same pinned clock as the first tab, so both say the same TODAY
+            from live_browser import pin_page_clock
+            pin_page_clock(c, os.environ["CREAITE_NOW"])
+        c.settle_boot()
+        c.eval("go('today')")
+        c.eval(SET)
+        return c
+
+    def test_a_dismiss_in_one_tab_is_read_as_dismissed_by_the_other(self):
+        a = self.b
+        self.waiting(4, 1)
+        c = self.other_tab()
+        c.eval("setWaiting(4,1,0,false)")
+        self.assertTrue(c.eval(VISIBLE))
+        a.eval("document.getElementById('tdQx').click()")      # a click event: the first tab is in the background now, so no animation frames
+        a.pump(0.2)
+        self.assertFalse(a.eval("!!document.getElementById('tdQuiet')"))
+        c.eval("renderToday()")                                                 # its next redraw reads the store, not its own memory
+        self.assertFalse(c.eval("!!document.getElementById('tdQuiet')"))
+
+    def test_the_other_tab_hides_at_once_on_the_storage_event(self):
+        a = self.b
+        self.waiting(4, 1)
+        c = self.other_tab()
+        c.eval("setWaiting(4,1,0,false)")
+        self.assertTrue(c.eval(VISIBLE))
+        a.eval("document.getElementById('tdQx').click()")      # a click event: the first tab is in the background now, so no animation frames
+        c.wait("!document.getElementById('tdQuiet')", 10)                      # no redraw asked for: the storage event does it
+
+    def test_clearing_the_store_in_one_tab_shows_it_again_in_the_other_even_after_it_dismissed_there(self):
+        a = self.b
+        self.waiting(4, 1)
+        c = self.other_tab()
+        c.eval("setWaiting(4,1,0,false)")
+        c.eval("document.getElementById('tdQx').click()")                      # this tab's own memory now holds a dismissal too
+        self.assertFalse(c.eval("!!document.getElementById('tdQuiet')"))
+        a.eval(f"localStorage.removeItem('{KEY}')")                             # the store (the truth) says: not dismissed
+        c.eval("renderToday()")
+        self.assertTrue(c.eval(VISIBLE))
 
 
 class Messages(Line):

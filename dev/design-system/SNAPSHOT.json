@@ -1,8 +1,8 @@
 {
- "commit": "19d6b1d1",
- "branch": "origin/v252-intake-line",
+ "commit": "8f278df4",
+ "branch": "v252-intake-line",
  "version_file": "2.5.0",
- "subject": "#245 update the tests and docs that asserted Intake and Review; Today golden regenerated, folded gol",
+ "subject": "#245 LOWs: dashboard-spec describes the Intake line and Messages section; design-system snapshots an",
  "taken": "2026-10-20",
  "palette": "creaite",
  "mode": "light",
