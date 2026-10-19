@@ -375,7 +375,7 @@ class Page(LiveBrowserCase):
         self.b.wait("document.querySelector('#tdList li')")
 
     def rows(self):
-        return self.b.eval("""[...document.querySelectorAll('#tdList > li')].map(l=>({key:l.dataset.td, kind:l.className,
+        return self.b.eval(r"""[...document.querySelectorAll('#tdList > li')].map(l=>({key:l.dataset.td, kind:l.className,
           text:l.textContent.replace(/\s+/g,' ').trim(), btns:[...l.querySelectorAll('button')].map(x=>x.getAttribute('aria-label')||''),
           title:(l.querySelector('a.t')||l.querySelector('.t')||{}).textContent||''}))""")
 

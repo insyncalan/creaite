@@ -1366,13 +1366,18 @@ def conv_finish(a, last, link):
     asks = bool(a.get("ask")) and a.get("type") in ("action", "decision", "risk")
     a.update({"quiet": not private and not fresh and not a.get("ask"), "sent": last, "last": last,
               "updated": now().strftime("%Y-%m-%d %H:%M"), "link": str(link or a.get("link") or "")[:1000] or None})
-    if a.get("seen") and "seen_sig" not in a and (fresh or private or asks):
+    if legacy_back(a, fresh, private, asks):
         a["seen"] = None                                               # carried on with something new: back on Today (an older record)
     if not a.get("seen"):
         a["state"] = "open"
         a.pop("replied_at", None)
         a.pop("handled_at", None)
     return a
+
+
+def legacy_back(a, fresh, private, asks):
+    """Whether a card settled before signatures were kept (#236) comes back on carrying on with something new (the earlier rule)."""
+    return bool(a.get("seen")) and "seen_sig" not in a and bool(fresh or private or asks)
 
 
 def still_talking(held, key, last):
@@ -2129,50 +2134,53 @@ def followed_sig(item):
     return "c:" + norm(v.get("description") or v.get("decision") or v.get("name") or "")[:160]
 
 
+def followed_item_refs(p, data, vips, names):
+    """The pending items of one proposal file that are from a followed person: [(row fields, ref, sig)]. Not one Alan made himself
+    from a card (source_run dashboard): he has seen it."""
+    out = []
+    for it in [] if data.get("source_run") == "dashboard" else data.get("items") or []:
+        v = it.get("values") or {}
+        source = str(v.get("source") or it.get("source") or "")
+        who = followed_from(source, vips, names) if source.startswith(("Email · ", "Teams · ")) else None
+        if who and not it.get("applied") and it.get("decision") == "pending":
+            project = v.get("project") or (str(it["id"]).split("-")[0] if "-" in str(it.get("id") or "") else None)
+            out.append((followed_row(source, "proposal", who[0], who[1], it.get("n"), project or None, None),
+                        {"file": p.name, "ref": it.get("n"), "tag": followed_tag(it)}, followed_sig(it)))
+    return out
+
+
+def followed_note_refs(p, data, vips, names):
+    """The memory note of one proposal file when it is about a followed person's message and not yet applied (cx-edit stages
+    one approved, a sweep could stage one pending): [(row fields, ref, sig)]."""
+    fc = data.get("file_changes") or {}
+    source = str(fc.get("source") or "")
+    who = followed_from(source, vips, names) if source.startswith(("Email · ", "Teams · ")) else None
+    if not who or fc.get("applied") or fc.get("file_changes_decision", "pending") not in ("pending", "approved"):
+        return []
+    return [(followed_row(source, "note", who[0], who[1], "file_changes", fc.get("project"), None),
+             {"file": p.name, "ref": "file_changes", "tag": "note"}, "n:" + p.name)]
+
+
 def followed_refs(vips, names):
-    """The pending refs, each with the row fields of its thread: [(row fields, ref {file, ref, tag}, sig)]. Items pending in Review, and a
-    memory note not yet applied (cx-edit stages one approved, a sweep could stage one pending)."""
+    """The pending refs, each with the row fields of its thread: [(row fields, ref {file, ref, tag}, sig)]."""
     out = []
     for p in sorted(paths.STAGING.glob("proposed-*.json")):
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+        except (OSError, ValueError):                                  # a file being written or not a proposal: the next look finds it
             continue
-        for it in data.get("items") or []:
-            source = str((it.get("values") or {}).get("source") or it.get("source") or "")
-            if data.get("source_run") == "dashboard":                     # Alan made it himself from a card: he has seen it
-                continue
-            if it.get("applied") or it.get("decision") != "pending" or not source.startswith(("Email · ", "Teams · ")):
-                continue
-            who = followed_from(source, vips, names)
-            if who:
-                project = (it.get("values") or {}).get("project") or ("" if "-" not in str(it.get("id") or "") else str(it["id"]).split("-")[0])
-                out.append((followed_row(source, "proposal", who[0], who[1], it.get("n"), project or None, None),
-                            {"file": p.name, "ref": it.get("n"), "tag": followed_tag(it)}, followed_sig(it)))
-        fc = data.get("file_changes")
-        source = str((fc or {}).get("source") or "")
-        if fc and not fc.get("applied") and fc.get("file_changes_decision", "pending") in ("pending", "approved") \
-                and source.startswith(("Email · ", "Teams · ")):
-            who = followed_from(source, vips, names)
-            if who:
-                out.append((followed_row(source, "note", who[0], who[1], "file_changes", fc.get("project"), None),
-                            {"file": p.name, "ref": "file_changes", "tag": "note"}, "n:" + p.name))
+        out += followed_item_refs(p, data, vips, names) + followed_note_refs(p, data, vips, names)
     return out
 
 
-def followed_rows(alerts):
-    """The rows the pending proposals and notes give now, by ID: {id: row}. A thread whose card is private is shown by the card's
-    own neutral title, with no project; a confidential one is marked (the page draws it with its mark)."""
-    vips, names = followed_names()
+def followed_join(refs):
+    """The refs grouped into rows by thread and type, by ID: {id: row}."""
     rows = {}
-    for fields, ref, sig in followed_refs(vips, names):
+    for fields, ref, sig in refs:
         rid = "fp" + __import__("hashlib").sha1(f"followed:{fields['typ']}:{fields['thread']}".encode("utf-8")).hexdigest()[:10]
-        row = rows.get(rid)
-        if row is None:
-            row = rows[rid] = {"id": rid, "kind": fields["typ"], "medium": fields["medium"], "who": fields["who"],
-                               "address": fields["address"], "title": fields["title"], "subject": fields["title"],
-                               "link": fields["link"], "sent": fields["sent"], "p": fields["p"], "refs": [], "sigs": [],
-                               "marker": None}
+        row = rows.setdefault(rid, {"id": rid, "kind": fields["typ"], "medium": fields["medium"], "who": fields["who"],
+                                    "address": fields["address"], "title": fields["title"], "subject": fields["title"],
+                                    "link": None, "sent": None, "p": None, "refs": [], "sigs": [], "marker": None})
         row["refs"].append(ref)
         row["sigs"].append(sig)
         row["sent"] = max(row["sent"] or "", fields["sent"] or "") or None
@@ -2180,8 +2188,16 @@ def followed_rows(alerts):
         row["link"] = row["link"] or fields["link"]
     for row in rows.values():
         row["last"] = row["sent"]
-        card = next((a for a in alerts if "summary" in a and same_conv(a, {"conv": None, "link": row["link"],
-                    "title": row["title"].strip().lower(), "kind": row["medium"]})), None)
+    return rows
+
+
+def followed_rows(alerts):
+    """The rows the pending proposals and notes give now, by ID: {id: row}. A thread whose card is private is shown by the card's
+    own neutral title, with no project; a confidential one is marked (the page draws it with its mark)."""
+    rows = followed_join(followed_refs(*followed_names()))
+    for row in rows.values():
+        ref = {"conv": None, "link": row["link"], "title": row["title"].strip().lower(), "kind": row["medium"]}
+        card = next((a for a in alerts if "summary" in a and same_conv(a, ref)), None)
         if card and card.get("marker") in ("private", "confidential"):
             row["marker"] = card["marker"]
             if card["marker"] == "private":
@@ -2189,10 +2205,28 @@ def followed_rows(alerts):
     return rows
 
 
+FOLLOWED_FIELDS = ("medium", "who", "address", "title", "subject", "link", "sent", "last", "p", "refs", "sigs", "marker")
+
+
+def followed_update(a, row, stamp):
+    """Bring one existing row up to date with what is pending; a dismissed proposal row returns, as new, for an item it was not
+    dismissed with (a note never does: it is not an item)."""
+    if a.get("seen") and "seen_sig" not in a:
+        a["seen_sig"] = list(a.get("sigs") or [])                  # seen by an older path: what it showed then is what it saw
+    old = list(a.get("seen_sig") or [])
+    new = [x for x in row["sigs"] if not any(sig_similar(x, y) for y in old)]
+    a.update({k: row[k] for k in FOLLOWED_FIELDS})
+    if a.get("seen") and a["kind"] == "proposal" and new:
+        a.update({"seen": None, "state": "open", "returned": stamp, "updated": stamp})
+        a.pop("handled_at", None)
+        a.pop("seen_sig", None)
+    elif new and not a.get("seen"):
+        a["updated"] = stamp
+
+
 def followed_sync(st):
     """Bring st's followed rows (kind proposal or note) in line with what is pending; True when st changed. A row new to vip.json
-    is added open; one whose refs are all decided or gone is dropped; a dismissed one returns (unseen, `returned` set, as new) only
-    for a proposal row that has a ref it had not been dismissed with."""
+    is added open; one whose refs are all decided or gone is dropped."""
     stamp = now().strftime("%Y-%m-%d %H:%M")
     have = {a.get("id"): a for a in st["alerts"] if a.get("kind") in FOLLOWED_KINDS}
     want, changed = followed_rows(st["alerts"]), False
@@ -2202,18 +2236,8 @@ def followed_sync(st):
             st["alerts"].append({**row, "found": "sweep", "at": stamp, "updated": stamp, "seen": None, "state": "open", "quiet": False})
             changed = True
             continue
-        if a.get("seen") and "seen_sig" not in a:
-            a["seen_sig"] = list(a.get("sigs") or [])              # seen by an older path: what it showed then is what it saw
         before = json.dumps(a, sort_keys=True)
-        old = list(a.get("seen_sig") or [])
-        new = [x for x in row["sigs"] if not any(sig_similar(x, y) for y in old)]
-        a.update({k: row[k] for k in ("medium", "who", "address", "title", "subject", "link", "sent", "last", "p", "refs", "sigs", "marker")})
-        if a.get("seen") and a["kind"] == "proposal" and new:
-            a.update({"seen": None, "state": "open", "returned": stamp, "updated": stamp})
-            a.pop("handled_at", None)
-            a.pop("seen_sig", None)
-        elif new and not a.get("seen"):
-            a["updated"] = stamp
+        followed_update(a, row, stamp)
         changed = changed or json.dumps(a, sort_keys=True) != before
     for gone in have.values():
         st["alerts"].remove(gone)
