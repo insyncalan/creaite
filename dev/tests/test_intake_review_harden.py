@@ -6,6 +6,7 @@ Run: CREAITE_BROWSER_SLOTS=6 python3 dev/tests/test_intake_review_harden.py
 """
 import json
 import sys
+import time
 import unittest
 from pathlib import Path
 
@@ -38,7 +39,7 @@ class Base(IrHardenCase):
 class Findings(Base):
     def test_a_confidential_meeting_shows_title_and_times_only(self):
         """The brief and the standing rule: sensitivity=confidential in the calendar -> no project on the row (Busy covers private only)."""
-        txt = self.text("Board matters")
+        txt = self.text("ABC Board matters")
         self.assertIn("12:00", txt)
         self.assertNotIn("Example Programme", txt)
         self.assertNotIn("Teams", txt)
@@ -48,22 +49,22 @@ class Findings(Base):
             self.b.eval("irSetView(%s)" % json.dumps(view))
             self.b.wait("!!document.querySelector('[data-irv=%s]')" % view)
             if view == "two":
-                self.b.eval("irSel.value=D.intake_review.meetings.find(m=>m.title==='Board matters').id")
-            self.b.wait("document.getElementById('v-intake-review').innerText.includes('Board matters')")
-            cards = self.b.eval("[...document.querySelectorAll('#v-intake-review [data-irm],#v-intake-review [data-irdet]')].filter(x=>x.innerText.includes('Board matters')).map(x=>x.innerText).join(' ')")
+                self.b.eval("irSel.value=D.intake_review.meetings.find(m=>m.title==='ABC Board matters').id")
+            self.b.wait("document.getElementById('v-intake-review').innerText.includes('ABC Board matters')")
+            cards = self.b.eval("[...document.querySelectorAll('#v-intake-review [data-irm],#v-intake-review [data-irdet]')].filter(x=>x.innerText.includes('ABC Board matters')).map(x=>x.innerText).join(' ')")
             self.assertNotIn("Example Programme", cards, view)
 
     def test_n_and_h_do_nothing_on_a_row_that_is_being_processed(self):
         b = self.b
-        b.eval("window.GATE=new Promise(r=>{window.OPEN=r})")
+        b.eval("window.GATE=new Promise(r=>{window.OPEN=r}); 0")
         b.click(self.sel("ABC Steering", " [data-ira=process]"))
         b.wait("document.querySelector(%s).dataset.state==='running'" % json.dumps(self.sel("ABC Steering")))
         self.key("ABC Steering", "h")
         self.key("ABC Steering", "n")
-        b.eval("new Promise(r=>setTimeout(r,300))")
+        time.sleep(0.4)
         self.assertEqual(self.cleared(), [], "a meeting being drafted was set aside")
         self.assertFalse(b.eval("!!document.querySelector('#irAside')"))
-        b.eval("window.OPEN()")
+        b.eval("window.OPEN(); 0")
         b.wait("document.querySelector(%s).dataset.stage==='drafted'" % json.dumps(self.sel("ABC Steering")), 30)
 
     def test_process_all_ready_leaves_a_private_meeting_alone(self):
@@ -90,16 +91,16 @@ class Findings(Base):
           const f=D.inbox.find(x=>x.name==='2026-10-05 Gone after.txt'); await api('/api/inbox/remove',{path:f.path}); }""")
         b.click(self.sel("2026-10-05 Gone after.txt", " [data-ira=process]"))
         b.wait("ASKED.length===1 && irBusy.value.length===0", 30)
-        b.eval("new Promise(r=>setTimeout(r,300))")
+        time.sleep(0.4)
         self.assertEqual(b.eval("JSON.stringify(irNotes.value)"), "{}", "a file that was filed away got a failure note")
 
     def test_a_double_click_on_process_starts_one_run(self):
         b = self.b
-        b.eval("window.GATE=new Promise(r=>{window.OPEN=r})")
+        b.eval("window.GATE=new Promise(r=>{window.OPEN=r}); 0")
         b.eval("(()=>{ const x=document.querySelector(%s); x.click(); x.click(); })()" % json.dumps(self.sel("ABC Steering", " [data-ira=process]")))
-        b.eval("new Promise(r=>setTimeout(r,300))")
+        time.sleep(0.4)
         self.assertEqual(b.eval("ASKED.length"), 1)
-        b.eval("window.OPEN()")
+        b.eval("window.OPEN(); 0")
         b.wait("irBusy.value.length===0", 30)
 
     def test_esc_closes_the_reasons_menu_and_sets_nothing_aside(self):
@@ -118,7 +119,7 @@ class Findings(Base):
         b.wait("document.querySelector(%s).dataset.stage==='drafted'" % json.dumps(self.sel("ABC Steering")), 30)
         self.key("ABC Steering", "n")
         self.key("ABC Steering", "h")
-        b.eval("new Promise(r=>setTimeout(r,200))")
+        time.sleep(0.4)
         self.assertFalse(b.eval("!!document.querySelector('#irAside')"))
         self.assertEqual(self.cleared(), [])
 
@@ -182,14 +183,14 @@ class Hostile(Base):
         b.eval("go('today')")
         b.eval("""(()=>{ const dt=new DataTransfer(); dt.items.add(new File(["WEBVTT"],"stray.vtt"));
           document.body.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true})); })()""")
-        b.eval("new Promise(r=>setTimeout(r,500))")
+        time.sleep(0.4)
         self.assertFalse((self.v.root / "inbox" / "stray.vtt").exists())
 
     def test_a_path_like_file_name_cannot_leave_the_inbox(self):
         b = self.b
         b.eval("""(()=>{ const dt=new DataTransfer(); dt.items.add(new File(["WEBVTT"],"../../escape.vtt"));
           document.querySelector('#v-intake-review h1').dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true})); })()""")
-        b.eval("new Promise(r=>setTimeout(r,800))")
+        time.sleep(0.4)
         self.assertFalse((self.v.root.parent / "escape.vtt").exists())
         self.assertFalse((self.v.root / "escape.vtt").exists())
 

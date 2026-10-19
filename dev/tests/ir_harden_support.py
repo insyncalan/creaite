@@ -7,7 +7,7 @@ The meetings (Monday 05-10-2026, the pinned day, 18:00 so all have ended):
   ev-2 Weekly sync 12 15:00      sweep says Not transcribed                          -> waiting
   ev-3 Busy 08:30                private                                             -> waiting
   ev-6 Vendor check-in 16:00     transcript available, not loaded yet                -> ready (Process loads it first)
-  ev-7 Board matters 12:00       confidential, transcript available                  -> ready
+  ev-7 ABC Board matters 12:00       confidential, transcript available                  -> ready
 """
 import base64
 import json
@@ -50,7 +50,7 @@ class IrHardenCase(LiveBrowserCase):
         f = v.root / "system/staging/calendar.json"
         cal = json.loads(f.read_text())
         cal["days"][DAY] += [{"id": "ev-6", "start": "16:00", "end": "16:30", "title": "Vendor check-in", "teams": True},
-                             {"id": "ev-7", "start": "12:00", "end": "12:30", "title": "Board matters", "teams": True,
+                             {"id": "ev-7", "start": "12:00", "end": "12:30", "title": "ABC Board matters", "teams": True,
                               "sensitivity": "confidential"}]
         f.write_text(json.dumps(cal))
         cls.set_transcripts(v, {"ev-1": "available", "ev-6": "available", "ev-7": "available", "ev-2": "not_transcribed"})
