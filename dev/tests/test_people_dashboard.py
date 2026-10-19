@@ -431,10 +431,11 @@ class DraftEmailBuilderTests(_EmailBase):
         o = self.probe(self.SETUP + """
           const d=parse(mk({}).html), row=id=>[...d.querySelectorAll("tr")].find(r=>r.cells[0]&&r.cells[0].textContent===id), due=id=>row(id).cells[2], pr=id=>row(id).cells[3];
           const st=(el)=>({colour:el.style.color,bold:el.style.fontWeight==="bold"});
-          const dueOf=id=>{ const c=due(id), span=c.querySelector("span"); return {text:c.textContent, ...st(span)}; };
+          const dueOf=id=>{ const c=due(id); return {text:c.textContent, ...st(c), span:!!c.querySelector("span")}; };   /* #183: the colour is on the cell, never a span */
           window.OUT={over:dueOf("ORX-A-003"), overRisk:dueOf("ORX-001"), today:dueOf("ORX-A-006"), tomorrow:dueOf("ORX-A-005"), inDays:dueOf("FAL-A-009"), later:dueOf("ORX-A-004"), none:dueOf("FAL-A-010"),
             urgent:pr("ORX-A-003").innerHTML, high:pr("ORX-001").textContent, colours:DE_COLOURS};""")
         self.assertEqual((o["over"]["text"], o["over"]["colour"], o["over"]["bold"]), ("02-10-2026" + "6 days overdue", "rgb(179, 38, 30)", True))
+        self.assertFalse(any(o[k]["span"] for k in ("over", "overRisk", "today", "tomorrow", "inDays", "later", "none")))
         self.assertEqual(o["overRisk"]["text"], "07-10-20261 day overdue")                           # singular
         self.assertEqual((o["today"]["text"], o["tomorrow"]["text"], o["inDays"]["text"]), ("08-10-2026due today", "09-10-2026due tomorrow", "11-10-2026due in 3 days"))
         self.assertEqual((o["inDays"]["colour"], o["inDays"]["bold"]), ("rgb(138, 90, 0)", False))    # amber, in words as well
@@ -471,7 +472,7 @@ class DraftEmailBuilderTests(_EmailBase):
         self.assertGreater(o["n"], 30)
         self.assertEqual(o["noStyle"], [])                                                          # every element carries its own style
         self.assertEqual((o["classes"], o["vars"], o["font"]), (0, False, 0))                       # no classes, ids, variables, flexbox or images
-        self.assertEqual(o["tags"], ["B", "BR", "DIV", "P", "SPAN", "TABLE", "TD", "TH", "TR"])
+        self.assertEqual(o["tags"], ["B", "BR", "DIV", "I", "P", "TABLE", "TD", "TH", "TR"])          # #183: what Outlook's create-draft takes; no span
         self.assertTrue(all(t == ["6", "0", True] for t in o["table"]))
         self.assertTrue(o["cellRules"])                                                             # a bottom border on every cell
 

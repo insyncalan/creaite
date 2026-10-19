@@ -27,7 +27,11 @@ import { hit, items, rows } from "./work.js";
 /* The email to a person asking where their open items stand. A pure builder: it reads nothing from the page, so it is tested on its own.
    It writes for Outlook's Word engine: every element has its own inline style, a table with cellpadding and a bottom border on each cell,
    Calibri then Arial, no classes, variables, flexbox or images. The email is always drawn on white, whichever theme is on. Colour is never
-   the only signal: the words say overdue and due soon too. */
+   the only signal: the words say overdue and due soon too.
+   #183 (Alan, 19-10-2026): the markup is what Outlook's create-draft takes, the same in the preview, Copy email and the draft: p, div,
+   b, i, br, a (href and style only), table, tr, th, td (tbody as the browser adds it), each with an inline style; never span, font,
+   class, id, data- attributes, comments, style or script blocks, CSS variables or images (draft_delivery.markup_problem refuses them).
+   A due date's colour is on its own cell; a muted line is an <i> with font-style:normal (deMuted). */
 export const DE_COLOURS={red:"#B3261E",amber:"#8A5A00",ink:"#1E1F1E",muted:"#5C5D60",head:"#F1F3F4",rule:"#D9D9E0",white:"#FFFFFF",askBg:"#F7F3E3",askRule:"#C9A227"};   /* askBg, askRule: BL-298's "What I need from you" line */
 export const DE_FONT="font-family:Calibri,Arial,sans-serif;font-size:11pt;";
 export const DE_OPEN="I hope you're well. I'm pulling together where things stand on the items below and would be grateful for a brief update on each when you have a moment.";
@@ -50,21 +54,23 @@ export function deSubject(items,today){ if(!items.length) return "Update request
    mode "update" (BL-83's update request, unchanged), "followup" (after a meeting: the minutes' own summary paragraph, the decisions and
    the actions grouped by owner, the lead recipient's first) and "chase" (overdue items, the tone stepping up with how often they have
    been chased, from system/staging/chases.json). The row, the table and the plain-text lines are shared by every mode. */
-export const deTd=(inner,extra="")=>`<td style="${DE_FONT}color:${DE_COLOURS.ink};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;vertical-align:top;${extra}">${inner}</td>`;
+export const deTd=(inner,extra="",colour=DE_COLOURS.ink)=>`<td style="${DE_FONT}color:${colour};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;vertical-align:top;${extra}">${inner}</td>`;
 export const deTh=(t,w)=>`<th align="left" style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.head};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;text-align:left;font-weight:bold;${w?`width:${w};`:""}">${t}</th>`;
 export const deP=(inner,extra="")=>`<p style="${DE_FONT}color:${DE_COLOURS.ink};margin:0 0 12px 0;${extra}">${inner}</p>`;
 export const deHead=t=>`<p style="${DE_FONT}color:${DE_COLOURS.ink};margin:16px 0 6px 0;"><b style="font-weight:bold;">${esc(t)}</b></p>`;
+/** A muted run (Response, Latest update, Chased, a decision's owner): an <i> drawn upright, as Outlook takes no span. @param {string} inner */
+export const deMuted=inner=>`<i style="font-style:normal;color:${DE_COLOURS.muted};">${inner}</i>`;
 export const deTimes=n=>n===1?"once":n===2?"twice":`${n} times`;
 export const deChasedWords=c=>`Chased ${fd(c.last)}, ${deTimes(c.n)}`;
 export const deReplyBy=r=>r?` It would be helpful to hear back by ${new Date(r+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(r)}.`:"";
 /** #121: plain text with links as the email's HTML: the words escaped, a link as an anchor with its colour written in (a mail program drops classes). The rich copy keeps the
     link; the plain copy (deTextRows) shows "words (address)". Only an address core/linkUrl.js accepts is ever an anchor. @param {unknown} t */
-export const deLinks=t=>linkSegments(t).map(x=>x.href?`<a href="${esc(linkUrl(x.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link||"#0b5cad"};text-decoration:underline;">${esc(x.t)}</a>`:esc(x.t)).join("");
+export const deLinks=t=>linkSegments(t).map(x=>x.href?`<a href="${esc(linkUrl(x.href))}" style="color:${DE_COLOURS.link||"#0b5cad"};text-decoration:underline;">${esc(x.t)}</a>`:esc(x.t)).join("");
 export function deRowHtml(i,o){ const C=DE_COLOURS, e=esc, d=deDue(i.due,o.today,o.dueSoon??7), colour=d.level==="over"?C.red:d.level==="soon"?C.amber:C.ink, strong=d.level==="over"?"font-weight:bold;":"";
-  const what=i.k==="raid"?`<b style="font-weight:bold;">${e(i.type||"Risk")}:</b> ${e(i.t)}<br><span style="color:${C.muted};">Response: ${sentStrip(i.resp).trim()?deLinks(sentStrip(i.resp).trim()):"none recorded yet"}</span>`:i.k==="decisions"?`<b style="font-weight:bold;">Decision needed:</b> ${e(i.t)}`:e(i.t);
-  const upd=o.includeUpdate&&sentStrip(i.upd).trim()?`<br><span style="color:${C.muted};">Latest update: ${deLinks(sentStrip(i.upd))}</span>`:"";
-  const ch=o.chased&&o.chased[i.id]?`<br><span style="color:${C.muted};">${e(deChasedWords(o.chased[i.id]))}</span>`:"";
-  return `<tr style="vertical-align:top;">${deTd(e(i.noid?"":i.id),"white-space:nowrap;")}${deTd(what+upd+ch)}${deTd(`<span style="color:${colour};${strong}">${e(d.date)}</span>${d.words?`<br><span style="color:${colour};${strong}">${e(d.words)}</span>`:""}`,"white-space:nowrap;")}${deTd(i.pr==="Urgent"?`<b style="font-weight:bold;">Urgent</b>`:e(i.pr||""),"white-space:nowrap;")}</tr>`; }
+  const what=i.k==="raid"?`<b style="font-weight:bold;">${e(i.type||"Risk")}:</b> ${e(i.t)}<br>${deMuted(`Response: ${sentStrip(i.resp).trim()?deLinks(sentStrip(i.resp).trim()):"none recorded yet"}`)}`:i.k==="decisions"?`<b style="font-weight:bold;">Decision needed:</b> ${e(i.t)}`:e(i.t);
+  const upd=o.includeUpdate&&sentStrip(i.upd).trim()?`<br>${deMuted(`Latest update: ${deLinks(sentStrip(i.upd))}`)}`:"";
+  const ch=o.chased&&o.chased[i.id]?`<br>${deMuted(e(deChasedWords(o.chased[i.id])))}`:"";
+  return `<tr style="vertical-align:top;">${deTd(e(i.noid?"":i.id),"white-space:nowrap;")}${deTd(what+upd+ch)}${deTd(`${e(d.date)}${d.words?`<br>${e(d.words)}`:""}`,`white-space:nowrap;${strong}`,colour)}${deTd(i.pr==="Urgent"?`<b style="font-weight:bold;">Urgent</b>`:e(i.pr||""),"white-space:nowrap;")}</tr>`; }
 export function deTableHtml(list,o){ return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID","9%")}${deTh("Item")}${deTh("Due","18%")}${deTh("Priority","10%")}</tr>${list.map(i=>deRowHtml(i,o)).join("")}</table>`; }
 export function deTextRows(list,o){ const w=Math.max(...list.map(i=>(i.noid?"":i.id).length)), out=[], pad="".padEnd(w);
   list.forEach(i=>{ const d=deDue(i.due,o.today,o.dueSoon??7); out.push(`  ${(i.noid?"":i.id).padEnd(w)}  ${i.k==="raid"?`${i.type||"Risk"}: `:i.k==="decisions"?"Decision needed: ":""}${i.t}  |  ${d.date}${d.words?` (${d.words})`:""}  |  ${i.pr||""}`);
@@ -111,7 +117,7 @@ export function deFollowup(o){ const e=esc, today=o.today, items=dePicked(o), ac
   const open=o.cover||`Thank you for your time at the ${o.title||"meeting"}${when}. Here is a short summary, the decisions we made and the actions we agreed.`;
   const ask=`Please let me know if I have missed or misrecorded anything.${deReplyBy(o.replyBy)} ${DE_THANKS}`, [endH,endT]=deClose(o), owners=deOwners(acts,o), mine=n=>acts.filter(i=>(i.o||"No owner")===n).sort((a,b)=>deSort(a,b,today));
   const html=`<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o.internal?deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`):""}${deP(e(deGreeting(o.now,first)))}${deP(e(open))}`
-    +(o.summary?deHead("Summary")+deP(e(o.summary)):"")+(decs.length?deHead("Decisions")+decs.map(d=>deP(`• ${e(d.t)}${d.by?` <span style="color:${DE_COLOURS.muted};">(${e(d.by)})</span>`:""}`,"margin:0 0 4px 0;")).join(""):"")
+    +(o.summary?deHead("Summary")+deP(e(o.summary)):"")+(decs.length?deHead("Decisions")+decs.map(d=>deP(`• ${e(d.t)}${d.by?` ${deMuted(`(${e(d.by)})`)}`:""}`,"margin:0 0 4px 0;")).join(""):"")
     +(acts.length?deHead("Actions")+owners.map(n=>deP(`<b style="font-weight:bold;">${e(n)}</b>`,"margin:10px 0 4px 0;")+deTableHtml(mine(n),o)).join(""):"")+`${deP(e(ask),"margin-top:16px;")}${endH}</div>`;
   const lines=[...(o.internal?[DE_INTERNAL,""]:[]),deGreeting(o.now,first),"",open,""];
   if(o.summary) lines.push("Summary",o.summary,"");

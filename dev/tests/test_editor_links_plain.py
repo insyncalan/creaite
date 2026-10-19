@@ -364,8 +364,10 @@ class Places(Base):
         self.assertNotIn("[the plan]", got["text"])
         self.assertEqual(got["attrs"], [])
         self.assertIn("style=", rich, "the colour is written in: a mail program drops classes")
-        self.assertEqual(got["targets"], ["_blank"] * 4)
-        self.assertEqual([sorted((r or "").split()) for r in got["rels"]], [["noopener", "noreferrer"]] * 4)
+        # #183: an email's anchor is href and style only (Outlook's create-draft takes no more); a mail program opens it in a new window anyway
+        self.assertEqual(got["targets"], [None] * 4)
+        self.assertEqual(got["rels"], [None] * 4)
+        self.assertNotIn("<span", rich)
         plain = b.eval("deTextRows([%s],{today:TODAY,includeUpdate:true})" % item)
         plain = "\n".join(plain) if isinstance(plain, list) else plain
         self.assertIn("the plan (https://example.com/plan)", plain)

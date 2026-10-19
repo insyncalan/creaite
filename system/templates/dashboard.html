@@ -5410,6 +5410,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     deMakeDraft: () => deMakeDraft,
     deMe: () => deMe,
     deModesHtml: () => deModesHtml,
+    deMuted: () => deMuted,
     deNoAddress: () => deNoAddress,
     deOptionsChanged: () => deOptionsChanged,
     deOutlookOn: () => deOutlookOn,
@@ -25462,17 +25463,21 @@ ${s5}`;
       }];
     }
   });
+  var emailRunStyle = (s5) => /font-style\s*:/i.test(s5) ? s5 : `font-style:normal;${s5}`;
   var EmailSpan = de.create({
     name: "emailSpan",
     inclusive: false,
     addAttributes() {
-      return { style: { default: null, parseHTML: (el2) => el2.getAttribute("style"), renderHTML: (a5) => a5.style ? { style: a5.style, "data-cx-style": a5.style } : {} } };
+      return { style: { default: null, parseHTML: (el2) => el2.getAttribute("style"), renderHTML: (a5) => a5.style ? { style: emailRunStyle(a5.style), "data-cx-style": emailRunStyle(a5.style) } : {} } };
     },
     parseHTML() {
-      return [{ tag: "span[style]" }];
+      return [{ tag: "i[style]", getAttrs: (el2) => (
+        /** @type {HTMLElement} */
+        el2.style.fontStyle === "normal" ? null : false
+      ) }, { tag: "span[style]" }];
     },
     renderHTML({ HTMLAttributes }) {
-      return ["span", HTMLAttributes, 0];
+      return ["i", HTMLAttributes, 0];
     }
   });
   var emailSet = (list) => list.filter((x5) => x5 && ["starterKit", "bold", "italic", "hardBreak", "tableKit", "table"].includes(x5.name)).map((x5) => x5.name === "starterKit" ? x5.configure({
@@ -50194,20 +50199,21 @@ ${pre}**Current state title:** ${title}`);
     const over = items2.filter((i5) => i5.due && i5.due < today).length;
     return `${codes.join(" / ")} · Update request: ${items2.length} open items${over ? ` (${over} overdue)` : ""}`;
   }
-  var deTd = (inner, extra = "") => `<td style="${DE_FONT}color:${DE_COLOURS.ink};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;vertical-align:top;${extra}">${inner}</td>`;
+  var deTd = (inner, extra = "", colour = DE_COLOURS.ink) => `<td style="${DE_FONT}color:${colour};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;vertical-align:top;${extra}">${inner}</td>`;
   var deTh = (t47, w6) => `<th align="left" style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.head};border-bottom:1px solid ${DE_COLOURS.rule};padding:6px 8px;text-align:left;font-weight:bold;${w6 ? `width:${w6};` : ""}">${t47}</th>`;
   var deP = (inner, extra = "") => `<p style="${DE_FONT}color:${DE_COLOURS.ink};margin:0 0 12px 0;${extra}">${inner}</p>`;
   var deHead = (t47) => `<p style="${DE_FONT}color:${DE_COLOURS.ink};margin:16px 0 6px 0;"><b style="font-weight:bold;">${esc(t47)}</b></p>`;
+  var deMuted = (inner) => `<i style="font-style:normal;color:${DE_COLOURS.muted};">${inner}</i>`;
   var deTimes = (n4) => n4 === 1 ? "once" : n4 === 2 ? "twice" : `${n4} times`;
   var deChasedWords = (c5) => `Chased ${fd(c5.last)}, ${deTimes(c5.n)}`;
   var deReplyBy = (r4) => r4 ? ` It would be helpful to hear back by ${(/* @__PURE__ */ new Date(r4 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(r4)}.` : "";
-  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
+  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(linkUrl(x5.href))}" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   function deRowHtml(i5, o5) {
     const C5 = DE_COLOURS, e4 = esc, d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7), colour = d5.level === "over" ? C5.red : d5.level === "soon" ? C5.amber : C5.ink, strong = d5.level === "over" ? "font-weight:bold;" : "";
-    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${sentStrip(i5.resp).trim() ? deLinks(sentStrip(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
-    const upd = o5.includeUpdate && sentStrip(i5.upd).trim() ? `<br><span style="color:${C5.muted};">Latest update: ${deLinks(sentStrip(i5.upd))}</span>` : "";
-    const ch2 = o5.chased && o5.chased[i5.id] ? `<br><span style="color:${C5.muted};">${e4(deChasedWords(o5.chased[i5.id]))}</span>` : "";
-    return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
+    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br>${deMuted(`Response: ${sentStrip(i5.resp).trim() ? deLinks(sentStrip(i5.resp).trim()) : "none recorded yet"}`)}` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
+    const upd = o5.includeUpdate && sentStrip(i5.upd).trim() ? `<br>${deMuted(`Latest update: ${deLinks(sentStrip(i5.upd))}`)}` : "";
+    const ch2 = o5.chased && o5.chased[i5.id] ? `<br>${deMuted(e4(deChasedWords(o5.chased[i5.id])))}` : "";
+    return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`${e4(d5.date)}${d5.words ? `<br>${e4(d5.words)}` : ""}`, `white-space:nowrap;${strong}`, colour)}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
   }
   function deTableHtml(list, o5) {
     return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID", "9%")}${deTh("Item")}${deTh("Due", "18%")}${deTh("Priority", "10%")}</tr>${list.map((i5) => deRowHtml(i5, o5)).join("")}</table>`;
@@ -50270,7 +50276,7 @@ ${pre}**Current state title:** ${title}`);
     const when2 = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
     const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when2}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask2 = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` ${deMuted(`(${e4(d5.by)})`)}` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
     const lines2 = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
     if (o5.summary) lines2.push("Summary", o5.summary, "");
     if (decs.length) lines2.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");

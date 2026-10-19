@@ -109,7 +109,7 @@ const PlainLink=Mark.create({ name:"link", inclusive:false, excludes:"link",
   parseHTML(){ return [{ tag:"a[href]", getAttrs:el=>{ const h=/** @type {HTMLElement} */ (el).getAttribute("href"); return isLinkUrl(h)?{ href:linkUrl(h) }:false; } }]; },
   renderHTML({ HTMLAttributes }){ const h=HTMLAttributes.href; return ["a", isLinkUrl(h)?{ class:"tlink", href:linkUrl(h), target:"_blank", rel:"noopener noreferrer" }:{ class:"tlink" }, 0]; } });
 /* ===== #133 ===== the Email feature set: Draft email's preview (drafts.js #dePrev) as a host of the one editor. The email is HTML for Outlook
-   (inline styles, a table of actions, coloured spans). The document keeps what the builder wrote beside the content, so an edit
+   (inline styles, a table of actions, coloured cells and upright <i> runs, never a span: #183). The document keeps what the builder wrote beside the content, so an edit
    brings the styles along: every block carries its `style` (and the table's align, cellpadding, cellspacing, border and width) as
    attributes, and a coloured run is the `emailSpan` mark. Nothing here is Markdown: the builder (drafts.js draftEmail) stays the source,
    an unedited email is copied from the builder and only an edited one is written from this document (drafts.js deHtml). */
@@ -119,11 +119,14 @@ const EmailStyles = Extension.create({ name: "emailStyles",
   addGlobalAttributes(){ return [{ types:["paragraph","table","tableRow","tableCell","tableHeader"],
     attributes:Object.fromEntries(EMAIL_ATTRS.map(a=>[a,{ default:null, parseHTML:el=>el.getAttribute(a),
       renderHTML:v=>v[a]==null?{}:a==="style"?{ style:v.style, "data-cx-style":v.style }:{ [a]:v[a] } }])) }]; } });   /* Tiptap rewrites a style through the CSSOM (rgb(), spaces): the text as written rides in data-cx-style and is put back on copy */
-/** A run with its own inline style (the muted grey and the red or amber of a due date): <span style="color:…">. */
+/** A run with its own inline style (the muted grey: drafts.js deMuted): <i style="font-style:normal;color:…">. #183: Outlook's create-draft
+    refuses a span, so the run is written as an upright <i> (italic's own rule leaves an <i> with font-style:normal alone); a pasted
+    <span style> becomes the same <i>. */
+const emailRunStyle = s => /font-style\s*:/i.test(s) ? s : `font-style:normal;${s}`;
 const EmailSpan = Mark.create({ name:"emailSpan", inclusive:false,
-  addAttributes(){ return { style:{ default:null, parseHTML:el=>el.getAttribute("style"), renderHTML:a=>a.style?{ style:a.style, "data-cx-style":a.style }:{} } }; },
-  parseHTML(){ return [{ tag:"span[style]" }]; },
-  renderHTML({ HTMLAttributes }){ return ["span", HTMLAttributes, 0]; } });
+  addAttributes(){ return { style:{ default:null, parseHTML:el=>el.getAttribute("style"), renderHTML:a=>a.style?{ style:emailRunStyle(a.style), "data-cx-style":emailRunStyle(a.style) }:{} } }; },
+  parseHTML(){ return [{ tag:"i[style]", getAttrs:el=>/** @type {HTMLElement} */ (el).style.fontStyle==="normal"?null:false }, { tag:"span[style]" }]; },
+  renderHTML({ HTMLAttributes }){ return ["i", HTMLAttributes, 0]; } });
 /** The extensions an email keeps from the notes set (everything else, Markdown included, is left out: typing `# ` or `- ` in an email
     must not start a heading or a list; a pasted list or heading is flattened to paragraphs). @param {any[]} list @returns {any[]} */
 const emailSet = list => list.filter(x => x && ["starterKit","bold","italic","hardBreak","tableKit","table"].includes(x.name))

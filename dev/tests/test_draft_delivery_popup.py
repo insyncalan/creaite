@@ -7,12 +7,17 @@ Jarvis's guarded live_server.py change (dev/proposals/draft-delivery/), so the p
 nothing reaches Microsoft 365 and nothing is ever sent.
 """
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+import draft_delivery  # noqa: E402
 from test_drafts_email import EmailCase  # noqa: E402
+
+REFUSED = re.compile(r"<span\b|<font\b|\sclass=|\sid=|<style|<script|\sdata-|<!--|var\(|<img\b", re.I)
 
 LINK = "https://outlook.office365.com/owa/?ItemID=AAMk1"
 OFF_SUB = "Nothing is sent: copy it and paste it into Outlook"
@@ -90,9 +95,45 @@ class Popup(PopupCase):
         self.assertEqual(sent["html"], b.eval("deHtml()"))
         self.assertEqual(sent["html"], b.eval("__clip[0]"))                 # what is on screen is what lands in Outlook
         self.assertIn("<table", sent["html"])
+        self.assert_outlook_markup(sent["html"])
         self.assertEqual(sent["subject"], b.eval("document.getElementById('deSubj').value"))
         self.assertEqual((sent["to"], sent["mode"]), ("sara.example@client.com", "chase"))
         self.assertIn("ABC-A-006", sent["ids"])
+
+    def assert_outlook_markup(self, html, muted=False):
+        """#183 (Alan, 19-10-2026): only what Outlook's create-draft takes, with the colours, the table and the project heading kept."""
+        self.assertIsNone(REFUSED.search(html), REFUSED.search(html) and REFUSED.search(html).group(0))
+        self.assertIsNone(draft_delivery.markup_problem(html))
+        self.assertIn("<table", html)
+        self.assertIn("color:#B3261E", html)                                 # an overdue date in red, on its own cell
+        self.assertIn(self.b.eval("pName('ABC')"), html)                     # the project name heading
+        self.assertRegex(html, r"^<div style=\"font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1E1F1E;background:#FFFFFF;\">")
+        self.assertIn("Good ", html)                                         # the greeting
+        self.assertIn("Kind regards,", html)                                 # and the sign-off
+        if muted:
+            self.assertIn('<i style="font-style:normal;color:#5C5D60;">', html)   # a muted line: an upright <i>, never a span
+
+    def test_the_email_is_markup_outlook_takes_in_the_copy_and_the_draft_edited_or_not(self):
+        b = self.b
+        self.outlook(True)
+        self.open_chase()
+        b.eval("DE.items.forEach(i=>{ i.upd='Waiting on the vendor quote'; })")                       # fictional: a muted Latest update line
+        b.eval("(()=>{ const u=document.getElementById('deUpd'); if(u&&!u.checked) u.click(); })()")
+        b.wait("document.getElementById('dePrev').textContent.includes('Latest update:')")
+        stub_routes(b, {"ok": True, "web_link": LINK, "chased": ["ABC-A-006"], "no_recipient": False})
+        b.click("#deCopyHtml")
+        b.wait("__clip.length===1")
+        self.assert_outlook_markup(b.eval("__clip[0]"), muted=True)
+        self.assertIn('<td style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#B3261E;', b.eval("__clip[0]"))
+        # an edited email (the editor's document) is the same subset, its colours kept
+        b.eval("""(()=>{ const h=edOf(document.getElementById('dePrev')); h.focus('start'); h.editor.commands.insertContent('Edited. '); })()""")
+        b.wait("DE.edited===true")
+        edited = b.eval("deHtml()")
+        self.assertIn("Edited.", edited)
+        self.assert_outlook_markup(edited, muted=True)
+        b.click("#deMake")
+        b.wait("!!document.getElementById('deMade')")
+        self.assertEqual(b.eval("__dd.find(x=>x.action==='create').html"), edited)
 
     def test_after_the_draft_is_made_the_button_reads_draft_created_and_the_chase_is_recorded(self):
         b = self.b
