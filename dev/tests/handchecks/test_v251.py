@@ -13,8 +13,13 @@ Run a check with its fix absent, to see it red:                       CREAITE_HC
                           to the issue's intent questions (it is skipped until a recorded conversation reaches Needs attention)
   Today237     15 to 17   #237 Today's empty Needs attention and the header "?" (own, empty vault; skipped until the vault holds data-thelp)
   Usage238     18 to 22   #238 Activity › Usage (shared vault; skipped until Activity has a Usage tab; 20 and 21 are not written yet)
+  Filter240    23 to 26   #240 the Work filter panel is never cut off (shared vault; skipped until the vault holds fbPlace)
+  Health242    27 to 31   #242 dismiss a Health problem (own vault; skipped until the vault holds #healthDismissed). 30 is the INTENDED
+                          rule (a safety-relevant problem is never dismissable): an expected fail on v251-healthclear b61ab409, shown as
+                          a skip that says so, and red (a real failure) once any of the five ids is protected but not all, or with FORCE
+  Sweep243     32 to 35   #243 dismiss Today's Sweep due banner (own vault; skipped until the vault holds creaite-sweepdue-dismissed)
 
-Kinds (the sheet's map): 6, 9, 14, 17 and 22 are judgement (screenshots on the sheet, never Pass or Fail); the rest scriptable.
+Kinds (the sheet's map): 6, 9, 14, 17, 22, 26, 31 and 35 are judgement (screenshots on the sheet, never Pass or Fail); the rest scriptable.
 Held-reply technique: dev/tests/test_reshow_switch.py (the reply to /api/report/reshow is held 6 s while another project is opened).
 Never Microsoft 365, never a real model: Claude is the hand-check vault's stand-in. Fictional data only (the demo's people).
 """
@@ -33,8 +38,8 @@ import measure
 from hcbase import NOTES, SCREENS, db_rows, phase2, shown
 from test_v230 import V230Case
 
-KIND = {**{n: "scriptable" for n in (1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 15, 16, 18, 19, 20, 21)},
-        **{n: "judgement" for n in (6, 9, 14, 17, 22)}}
+KIND = {**{n: "scriptable" for n in (1, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 15, 16, 18, 19, 20, 21, 23, 24, 25, 27, 28, 29, 30, 32, 33, 34)},
+        **{n: "judgement" for n in (6, 9, 14, 17, 22, 26, 31, 35)}}
 LIVE_ONLY = {}
 
 NOTES.clear()          # test_v230 (imported for its helpers) put its own notes for checks 5 and 11 here
@@ -43,6 +48,7 @@ NOTES.update({
     14: "open questions on #236: private conversations, proposals from a followed person's messages, seen and dismissed history",
     20: "no test yet: needs #238's cards and rows (no DOM to read until it is built)",
     21: "no test yet: needs #238's daily record of the always-loaded files",
+    30: "EXPECTED FAIL on v251-healthclear b61ab409 until its KEEP list protects the safety-relevant ids (review, #242); not a defect in this check",
 })
 
 SCREENS.setdefault("weekly", ("go('weekly',{code:'FAL'})", "document.querySelector('#v-reporting section[data-id=current_state]')"))
@@ -93,6 +99,21 @@ class V251Case(V230Case):
     def fix237(self):
         """#237 (v251-todayhelp): the quiet "?" button in the Today header."""
         return "data-thelp" in self.vtext("dashboard.html")
+
+    @property
+    def fix240(self):
+        """#240 (v251-fpmenu): the funnel's panel is placed by fbPlace (fixed, kept in the window)."""
+        return "fbPlace" in self.vtext("dashboard.html")
+
+    @property
+    def fix242(self):
+        """#242 (v251-healthclear): Settings › Health can dismiss a problem (the folded "Dismissed (n)")."""
+        return "healthDismissed" in self.vtext("dashboard.html")
+
+    @property
+    def fix243(self):
+        """#243 (v251-sweepdismiss): the quiet x on Today's Sweep due banner."""
+        return "creaite-sweepdue-dismissed" in self.vtext("dashboard.html")
 
     def need(self, present, what):
         if not present and not FORCE:
@@ -676,6 +697,461 @@ class Usage238(V251Case):
             b.eval("[...document.querySelectorAll('#v-activity [role=tab]')].find(x=>x.textContent.trim()==='Usage').click()")
         n = self.sheet(22, "activity", palettes=["creaite"], widths=(1400, 900), prepare=prepare)
         self.note(22, f"judgement: {n} screenshots on the sheet" if n else "judgement: no sheet in this run")
+
+
+# ══ #240 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# The funnel's panel: where it is against the window and its button, and whether its Done button and Result line can be reached.
+PANEL_JS = r"""((menuId, btnId) => {
+  const m = document.getElementById(menuId), f = document.getElementById(btnId);
+  if (!m || !f) return {missing: !m ? menuId : btnId};
+  const R = e => { const r = e.getBoundingClientRect(); return {top: r.top, bottom: r.bottom, left: r.left, right: r.right, h: r.height}; };
+  const shown = getComputedStyle(m).display !== 'none' && m.getBoundingClientRect().height > 0;
+  const cs = getComputedStyle(m), out = {shown, panel: R(m), btn: R(f), vw: document.documentElement.clientWidth,
+    vh: document.documentElement.clientHeight, position: cs.position, overflowY: cs.overflowY, sh: m.scrollHeight, ch: m.clientHeight, parts: {}};
+  const inside = (e, x, y) => { const t = document.elementFromPoint(x, y); return !!t && e.contains(t); };
+  out.centre = inside(m, (out.panel.left + out.panel.right) / 2, Math.min(out.panel.bottom, out.vh) - 4);
+  for (const [name, sel] of [['Done', '.fpfoot .btn.primary'], ['Result', '.fpfoot .sub']]) {
+    const e = m.querySelector(sel); if (!e) { out.parts[name] = null; continue; }
+    e.scrollIntoView({block: 'nearest'});
+    const r = R(e); out.parts[name] = {top: r.top, bottom: r.bottom, h: r.h, hit: inside(e, (r.left + r.right) / 2, (r.top + r.bottom) / 2)};
+  }
+  return out; })"""
+
+
+class Filter240(V251Case):
+    """Checks 23 to 26. The shared vault; only the Work filters change (and they are cleared). 1400 px wide; the window is made
+    1000 and 420 px high, with a list of one row (short) and the whole list (long)."""
+    TALL, LOW = 1000, 420
+
+    def open_work(self, h, short, w=1400):
+        b = self.b
+        measure.width(b, w, h)
+        b.reload("typeof go==='function' && LIVE")
+        b.eval("go('work')")
+        b.wait("document.querySelector('#workTbl tbody tr[data-row]')", 25)
+        b.eval("clearAllFilters(); WQ=''; workChanged()")
+        if short:
+            first = b.eval("document.querySelector('#workTbl tbody tr[data-row]').dataset.row")
+            b.eval(f"WQ={first!r}; workChanged()")
+            b.wait("document.querySelectorAll('#workTbl tbody tr[data-row]').length===1", 10)
+        else:
+            self.assertGreater(b.eval("document.querySelectorAll('#workTbl tbody tr[data-row]').length"), 8, "premise: a long list")
+        b.pump(0.3)
+
+    def open_panel(self, menu="moreMenu", btn="moreBtn", due=True):
+        b = self.b
+        b.click(f"#{btn}")
+        b.wait(f"document.getElementById('{menu}').classList.contains('on')", 10)
+        if due and b.eval("!!document.querySelector('#moreMenu [data-fpk=\"due\"]')"):       # Due selected, as in Alan's screenshot
+            b.click('#moreMenu [data-fpk="due"]')
+        b.pump(0.5)
+
+    def measure(self, menu="moreMenu", btn="moreBtn"):
+        return self.b.eval(f"({PANEL_JS})({json.dumps(menu)}, {json.dumps(btn)})")
+
+    def problems(self, m, label):
+        """What is wrong with the open panel `m` (measure()): not shown, outside the window, not by its button, a part out of reach."""
+        if m.get("missing"):
+            return [f"{label}: {m['missing']} is not on the page"]
+        if not m["shown"]:
+            return [f"{label}: the panel is not open"]
+        p, f, bad = m["panel"], m["btn"], []
+        if p["top"] < -0.5 or p["left"] < -0.5 or p["bottom"] > m["vh"] + 0.5 or p["right"] > m["vw"] + 0.5:
+            bad.append(f"{label}: the panel is outside the window ({p['top']:.0f}..{p['bottom']:.0f} of {m['vh']})")
+        below = -0.5 <= p["top"] - f["bottom"] <= 16
+        above = -0.5 <= f["top"] - p["bottom"] <= 16
+        if not (below or above):
+            bad.append(f"{label}: the panel is not attached to its button (panel {p['top']:.0f}..{p['bottom']:.0f}, button {f['top']:.0f}..{f['bottom']:.0f})")
+        if p["left"] > f["right"] + 1 or p["right"] < f["left"] - 1:
+            bad.append(f"{label}: the panel is off to the side of its button")
+        if m["sh"] > m["ch"] + 1 and m["overflowY"] not in ("auto", "scroll"):
+            bad.append(f"{label}: the panel is taller than its box and does not scroll ({m['sh']} in {m['ch']}, {m['overflowY']})")
+        if not m["centre"]:
+            bad.append(f"{label}: something else is drawn over the panel's visible part (it is cut off)")
+        for name, r in m["parts"].items():
+            if r is None:
+                bad.append(f"{label}: no {name} in the panel")
+            elif r["top"] < p["top"] - 1 or r["bottom"] > p["bottom"] + 1 or r["bottom"] > m["vh"] + 1 or r["top"] < -1 or not r["hit"]:
+                bad.append(f"{label}: {name} cannot be reached ({r['top']:.0f}..{r['bottom']:.0f} in {p['top']:.0f}..{p['bottom']:.0f}, hit {r['hit']})")
+        return bad
+
+    def test_c23_the_panel_is_in_the_window_and_by_its_button(self):
+        """23. Work › the funnel's filter panel, opened at two window heights (1000 and 420 px) with a short list (one row) and a
+        long one → the panel is inside the window and next to the funnel (below it, or above it when there is no room), and if it is
+        taller than the room it scrolls inside, so its Done button and Result line can be reached; nothing is drawn over it."""
+        self.need(self.fix240, "#240 (v251-fpmenu)")
+        bad, seen = [], []
+        for h in (self.TALL, self.LOW):
+            for short in (True, False):
+                label = f"{h} px high, {'short' if short else 'long'} list"
+                self.open_work(h, short)
+                self.open_panel()
+                m = self.measure()
+                bad += self.problems(m, label)
+                if not m.get("missing"):
+                    seen.append(f"{h}/{'1' if short else 'n'}: {'below' if m['panel']['top'] >= m['btn']['bottom'] - 0.5 else 'above'}, {m['panel']['h']:.0f} high, {m['position']}")
+        if bad:
+            self.fail("; ".join(bad))
+        self.note(23, "; ".join(seen))
+
+    def test_c24_esc_and_an_outside_click_close_it(self):
+        """24. The open panel closes on Esc, and focus goes back to the funnel; a click outside it closes it too, at both window heights."""
+        self.need(self.fix240, "#240 (v251-fpmenu)")
+        b = self.b
+        for h in (self.TALL, self.LOW):
+            self.open_work(h, False)
+            self.open_panel(due=False)
+            b.key("Escape")
+            b.wait("!document.getElementById('moreMenu').classList.contains('on')", 10)
+            self.assertEqual(b.eval("document.activeElement.id"), "moreBtn", f"{h} px high: Esc returns focus to the funnel")
+            self.assertFalse(self.measure()["shown"], f"{h} px high: the panel is gone after Esc")
+            self.open_panel(due=False)
+            b.click("#v-work h1")
+            b.wait("!document.getElementById('moreMenu').classList.contains('on')", 10)
+            self.assertFalse(self.measure()["shown"], f"{h} px high: the panel is gone after a click outside it")
+        self.note(24, "Esc closed it and focus went back to the funnel; a click on the heading closed it; at 1000 and 420 px high")
+
+    def test_c25_the_other_filter_screens_too(self):
+        """25. The same panel on the other screens that use it (Review, Activity, Settings › People), at 900 and 420 px high → inside the window
+        and next to its button, its parts reachable, and Esc closes it."""
+        self.need(self.fix240, "#240 (v251-fpmenu)")
+        b = self.b
+        bad, done = [], []
+        for screen, btn, menu in (("review", "rvMore", "rvPick"), ("activity", "actFunnel", "actPick"), ("settings-people", "pmFBtn", "pmFMenu")):
+            for h in (900, self.LOW):
+                measure.width(b, 1400, h)
+                b.reload("typeof go==='function' && LIVE")
+                self.screen(screen)
+                if not b.eval(f"(()=>{{ const e=document.getElementById('{btn}'); return !!e && e.offsetParent!==null; }})()"):
+                    continue                                   # this screen has no filter button in this vault
+                b.click(f"#{btn}")
+                b.pump(0.6)
+                label = f"{screen} at {h} px high"
+                m = self.measure(menu, btn)
+                bad += self.problems(m, label)
+                b.key("Escape")
+                b.pump(0.3)
+                if self.measure(menu, btn).get("shown"):
+                    bad.append(f"{label}: Esc leaves the panel open")
+                done.append(f"{screen}/{h}")
+        if not done:
+            self.skipTest("none of Review, Activity and Settings › People draws a filter button in this vault")
+        if bad:
+            self.fail("; ".join(bad))
+        self.note(25, "checked: " + ", ".join(done))
+
+    def test_c26_panel_look(self):
+        """26. (judgement) The Work filter panel at a low window (420 px high) on a short list, light and dark, at 1400 and 900 px
+        wide: it reads as one panel under the funnel, with its edge, shadow and scroll showing and nothing cut by a straight line."""
+        self.need(self.fix240, "#240 (v251-fpmenu)")
+
+        def prepare(b):
+            b.eval("clearAllFilters(); WQ=''; workChanged()")
+            first = b.eval("document.querySelector('#workTbl tbody tr[data-row]').dataset.row")
+            b.eval(f"WQ={first!r}; workChanged()")
+            b.wait("document.querySelectorAll('#workTbl tbody tr[data-row]').length===1", 10)
+            measure.width(b, b.eval("innerWidth"), self.LOW)
+            if b.eval("document.getElementById('moreMenu').classList.contains('on')"):           # still open from the last shot
+                b.key("Escape")
+                b.pump(0.3)
+            b.click("#moreBtn")
+            b.wait("document.getElementById('moreMenu').classList.contains('on')", 10)
+            if b.eval("!!document.querySelector('#moreMenu [data-fpk=\"due\"]')"):
+                b.click('#moreMenu [data-fpk="due"]')
+            b.pump(0.5)
+        n = self.sheet(26, "work", palettes=["creaite"], widths=(1400, 900), prepare=prepare)
+        self.b.eval("clearAllFilters(); WQ=''; workChanged(); true")
+        self.note(26, f"judgement: {n} screenshots on the sheet" if n else "judgement: no sheet in this run")
+
+
+# ══ #242 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# The problems that touch the safety of the vault or of its data: never dismissable, whatever their status (Alan, 19-10-2026; the
+# independent review of v251-healthclear b61ab409 found the KEEP list protects none of them).
+SAFETY = ("vault_not_synced", "assistant_permissions", "backup_check", "offsite_backup", "extraction_scope")
+
+
+class Health242(V251Case):
+    """Checks 27 to 31. One vault of their own, with an old `zz Archive` folder so Health has a warning that may be dismissed
+    (Settings › Health is read through the real doctor, which takes a few seconds). Each check starts with nothing dismissed."""
+    own_vault = True
+    TARGET = "old_archive_folders"
+    ROWS = "#healthCard .hlist[aria-label=\"What needs you\"] .hrow"
+
+    def setUp(self):
+        super().setUp()
+        (self.vault / "projects/zz Archive").mkdir(parents=True, exist_ok=True)
+        for extra in (self.vault / "projects").glob("*/zz Archive"):          # check 29's second folder
+            extra.rmdir()
+        cfg = self.vault / "system/config/settings.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        if (data.get("health") or {}).get("dismissed"):
+            data["health"]["dismissed"] = []
+            cfg.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    def open_health(self):
+        b = self.b
+        b.reload("typeof go==='function' && LIVE")
+        b.eval("go('settings','health')")
+        b.wait("!!document.querySelector('#healthCard .hsum')", 180)
+        b.pump(0.4)
+
+    def rows(self):
+        return self.b.eval(f"[...document.querySelectorAll('{self.ROWS}')].map(r=>r.dataset.check)")
+
+    def more_badge(self):
+        """The problem count on the sidebar's More button, as its name says it ("More, 2 problems"); 0 when it has none."""
+        label = self.b.eval("(()=>{ const x=[...document.querySelectorAll('button')].find(e=>/^More\\b/.test(e.getAttribute('aria-label')||'')); return x?x.getAttribute('aria-label'):null; })()")
+        self.assertIsNotNone(label, "the sidebar has a More button")
+        m = re.search(r",\s*(\d+) problems?", label)
+        return int(m.group(1)) if m else 0
+
+    def dismiss(self, check, reason="Known, and fine for now"):
+        b = self.b
+        row = f"document.querySelector('#healthCard .hrow[data-check={check}]')"
+        b.eval(f"{row}.querySelector('.hdismiss').click()")
+        b.wait(f"!!{row}.querySelector('input.hreason')", 10)
+        b.eval(f"(()=>{{ const i={row}.querySelector('input.hreason'); i.value={json.dumps(reason)}; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
+        b.eval(f"{row}.querySelector('.hdismissgo').click()")
+
+    def need_target(self):
+        self.need(self.fix242, "#242 (v251-healthclear)")
+        self.open_health()
+        self.assertIn(self.TARGET, self.rows(), "premise: the old zz Archive folder is a Health warning")
+        self.assertTrue(self.b.eval(f"!!document.querySelector('#healthCard .hrow[data-check={self.TARGET}] .hdismiss')"),
+                        "the warning offers Dismiss")
+
+    def test_c27_dismiss_drops_the_badge_and_lists_it(self):
+        """27. Settings › Health: Dismiss a problem that is not about safety (with a reason) → the count on the sidebar's More button
+        goes down by one, the problem leaves the list, and it is under a folded "Dismissed (1)" with its reason and the date; it is
+        still dismissed after a reload."""
+        self.need_target()
+        b = self.b
+        before, n = self.rows(), self.more_badge()
+        self.assertEqual(n, len(before), "the badge counts the listed problems")
+        self.dismiss(self.TARGET)
+        wait_for(lambda: self.more_badge() == n - 1, 15, "the badge to drop by one")
+        self.assertNotIn(self.TARGET, self.rows())
+        b.wait("!!document.querySelector('#healthDismissed')", 10)
+        self.assertIn("Dismissed (1)", b.eval("document.querySelector('#healthDismissed summary').textContent"))
+        self.assertFalse(b.eval("document.querySelector('#healthDismissed').open"), "the Dismissed list is folded")
+        b.eval("document.querySelector('#healthDismissed').open = true")
+        text = b.eval(f"document.querySelector('#healthDismissed [data-check={self.TARGET}]').textContent")
+        self.assertIn("Known, and fine for now", text)
+        self.assertRegex(text, r"\b\d{2}-\d{2}-\d{4}\b", "the date, shown DD-MM-YYYY")
+        saved = json.loads((self.vault / "system/config/settings.json").read_text(encoding="utf-8"))["health"]["dismissed"]
+        self.assertEqual([d["id"] for d in saved], [self.TARGET], "stored in settings.json health.dismissed")
+        self.open_health()
+        self.assertNotIn(self.TARGET, self.rows(), "still dismissed after a reload")
+        self.assertEqual(self.more_badge(), n - 1)
+        self.note(27, f"badge {n} → {n - 1}; under Dismissed (1) with its reason and date; kept after a reload")
+
+    def test_c28_restore_puts_it_back(self):
+        """28. Restore on a dismissed problem → it is back in the list, the count on More goes up by one, the Dismissed list goes,
+        and it stays restored after a reload."""
+        self.need_target()
+        b = self.b
+        n = self.more_badge()
+        self.dismiss(self.TARGET)
+        wait_for(lambda: self.more_badge() == n - 1, 15, "the badge to drop by one")
+        b.wait("!!document.querySelector('#healthDismissed')", 10)
+        b.eval("document.querySelector('#healthDismissed').open = true")
+        b.eval(f"document.querySelector('#healthDismissed [data-check={self.TARGET}] .hrestorebtn').click()")
+        wait_for(lambda: self.more_badge() == n, 15, "the badge to come back")
+        self.assertIn(self.TARGET, self.rows())
+        self.assertFalse(b.eval("!!document.querySelector('#healthDismissed')"), "nothing is left under Dismissed")
+        saved = json.loads((self.vault / "system/config/settings.json").read_text(encoding="utf-8"))["health"]["dismissed"]
+        self.assertEqual(saved, [])
+        self.open_health()
+        self.assertIn(self.TARGET, self.rows(), "still listed after a reload")
+        self.assertEqual(self.more_badge(), n)
+        self.note(28, f"badge {n - 1} → {n}; back in the list; Dismissed gone; kept after a reload")
+
+    def test_c29_it_comes_back_when_its_detail_changes(self):
+        """29. A dismissed problem whose detail then changes (a second old zz Archive folder) is a new problem: it comes back in the
+        list and counts again, and the Dismissed list no longer holds it."""
+        self.need_target()
+        n = self.more_badge()
+        self.dismiss(self.TARGET)
+        wait_for(lambda: self.more_badge() == n - 1, 15, "the badge to drop by one")
+        folder = next(d for d in sorted((self.vault / "projects").iterdir()) if d.is_dir() and not d.name.startswith(("_", "zz")))
+        (folder / "zz Archive").mkdir(exist_ok=True)
+        self.open_health()
+        self.assertIn(self.TARGET, self.rows(), "the changed problem is listed again")
+        self.assertEqual(self.more_badge(), n)
+        self.assertFalse(self.b.eval("!!document.querySelector('#healthDismissed')"), "and is not under Dismissed")
+        self.note(29, f"a second zz Archive folder ({folder.name}) changed the detail: back in the list, badge {n}")
+
+    def test_c30_a_safety_problem_is_never_dismissable(self):
+        """30. A problem that is about safety (the vault in a synced folder, ask creaite's permissions, the backup checks, what
+        extraction may read) cannot be dismissed, whether it is a failure or a warning: Health gives it no Dismiss, and even a
+        dismissed entry for it leaves it in the list and counted. EXPECTED FAIL on v251-healthclear b61ab409: its protected list
+        covers only the engine's own integrity (the independent review of #242); it passes once the safety ids are protected."""
+        self.need(self.fix242, "#242 (v251-healthclear)")
+        out = self.py("""
+import health
+res = {"checks": [{"id": i, "name": i, "status": st, "detail": "a detail"} for i in %s for st in ("fail", "warn")]}
+dis = [{"id": i, "detail_key": health.problem_key(i, "a detail"), "reason": "", "date": "2026-10-19"} for i in %s]
+out = health.health(res, dismissed=dis)
+print(json.dumps({"still": sorted({p["id"] + ":" + p["severity"] for p in out["problems"]}),
+                  "gone": sorted({p["id"] + ":" + p["severity"] for p in out["dismissed"]}), "keep": list(getattr(health, "KEEP", ()))}))
+""" % (list(SAFETY), list(SAFETY)))
+        wrong = out["gone"]
+        known_gap = not (set(SAFETY) & set(out["keep"]))          # b61ab409's state: none of the five ids is protected
+        if wrong and known_gap and not FORCE:
+            self.skipTest("EXPECTED FAIL on v251-healthclear b61ab409: these can still be dismissed because its KEEP list holds only the "
+                          f"engine's integrity ids ({len(wrong)} of {2 * len(SAFETY)}: {', '.join(wrong[:4])}…); passes once vault_not_synced, "
+                          "assistant_permissions, backup_check, offsite_backup and extraction_scope are protected (CREAITE_HC_251_FORCE=1 runs it red)")
+        if wrong:
+            self.fail(f"safety-relevant problems that can be dismissed: {', '.join(wrong)}")
+        # and on the page, a safety problem that happens to be listed offers no Dismiss
+        self.open_health()
+        offered = self.b.eval(f"[...document.querySelectorAll('#healthCard .hrow[data-check]')].filter(r=>{json.dumps(list(SAFETY))}.includes(r.dataset.check) && r.querySelector('.hdismiss')).map(r=>r.dataset.check)")
+        self.assertEqual(offered, [], f"Dismiss is offered on: {offered}")
+        self.note(30, "all five safety ids, as a failure and as a warning, stay listed even with a dismissed entry; no Dismiss on the page")
+
+    def test_c31_dismissed_look(self):
+        """31. (judgement) Settings › Health with one problem dismissed: the quiet Dismiss, the reason line, and the folded Dismissed
+        list opened with its Restore, in light and dark, at 1400 and 900 px."""
+        self.need_target()
+        self.dismiss(self.TARGET)
+        self.b.wait("!!document.querySelector('#healthDismissed')", 15)
+
+        def prepare(b):
+            b.wait("!!document.querySelector('#healthCard .hsum')", 180)
+            b.wait("!!document.querySelector('#healthDismissed')", 30)
+            b.eval("document.querySelector('#healthDismissed').open = true; document.querySelector('#healthDismissed').scrollIntoView({block:'center'})")
+        n = self.sheet(31, "settings-health", palettes=["creaite"], widths=(1400, 900), prepare=prepare)
+        self.note(31, f"judgement: {n} screenshots on the sheet" if n else "judgement: no sheet in this run")
+
+
+# ══ #243 ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+class Sweep243(V251Case):
+    """Checks 32 to 35. One vault of their own: the check writes system/staging/last-sweep.txt and rebuilds the dashboard, so the
+    banner is due (the last sweep before today's 07:00, and it is 09:30) the way the real session start finds it."""
+    own_vault = True
+    KEY = "creaite-sweepdue-dismissed"
+    VISIBLE = ("(()=>{const e=document.getElementById('sweepDue'); return !!e && !e.hidden && e.offsetParent!==null "
+               "&& getComputedStyle(e).display!=='none';})()")
+
+    def day(self, back=0):
+        return (date.fromisoformat(self.now[:10]) - timedelta(days=back)).isoformat()
+
+    def last_swept(self, stamp):
+        """The last sweep recorded as `stamp` ("YYYY-MM-DD HH:MM"), and the dashboard rebuilt as the sweep's end does."""
+        (self.vault / "system/staging/last-sweep.txt").write_text(stamp + "\n", encoding="utf-8")
+        code, out = self.run_in_vault("build_dashboard.py")
+        self.assertEqual(code, 0, out[-300:])
+
+    def show_today(self, forget=False):
+        b = self.b
+        if forget:
+            b.eval(f"try {{ localStorage.removeItem('{self.KEY}'); }} catch (e) {{}} true")
+        b.reload("typeof go==='function' && LIVE")
+        self.screen("today")
+        b.pump(0.4)
+
+    def visible(self):
+        return self.b.eval(self.VISIBLE)
+
+    def due_since_yesterday(self):
+        self.last_swept(f"{self.day(1)} 07:30")
+        self.show_today(forget=True)
+
+    def test_c32_the_banner_shows_when_the_sweep_is_overdue(self):
+        """32. When the last sweep was before 07:00 today and it is later than that, Today shows "Sweep due since 07:00" with the last
+        sweep's time, a Run sweep button and a quiet x named "Dismiss until the next sweep is due"; when the sweep is not overdue
+        there is no banner."""
+        self.need(self.fix243, "#243 (v251-sweepdismiss)")
+        b = self.b
+        self.due_since_yesterday()
+        self.assertTrue(self.visible(), "the banner is shown")
+        text = b.eval("document.getElementById('sweepDue').innerText")
+        self.assertIn("Sweep due since 07:00", text)
+        self.assertIn(f"Last swept {self.day(1)} 07:30", text)
+        self.assertEqual(b.eval("document.getElementById('sweepRun').textContent"), "Run sweep")
+        self.assertEqual(b.eval("document.getElementById('sweepX').getAttribute('aria-label')"), "Dismiss until the next sweep is due")
+        self.assertEqual(b.eval("document.getElementById('sweepX').tagName"), "BUTTON")
+        self.assertEqual(b.eval("document.querySelectorAll('#sweepDue').length"), 1, "once only")
+        self.last_swept(f"{self.day()} 08:15")
+        self.show_today(forget=True)
+        self.assertFalse(self.visible(), "no banner when the sweep ran after 07:00 today")
+        self.note(32, f"shown for a sweep at {self.day(1)} 07:30 with Run sweep and the x; gone for one at {self.day()} 08:15")
+
+    def test_c33_dismiss_hides_it_across_reload_and_redraw(self):
+        """33. Press the x → the banner goes and stays gone after a reload, after Today is drawn again, after leaving Today and coming
+        back, and after the page refreshes its data; with the keyboard (Enter on the x) it goes too and focus stays on Today."""
+        self.need(self.fix243, "#243 (v251-sweepdismiss)")
+        b = self.b
+        self.due_since_yesterday()
+        self.assertTrue(self.visible())
+        b.click("#sweepX")
+        b.pump(0.3)
+        self.assertFalse(self.visible(), "the x hides it")
+        self.assertTrue(b.eval(f"!!localStorage.getItem('{self.KEY}')"), "this browser remembers it")
+        b.eval("renderToday(); true")
+        self.assertFalse(self.visible(), "still hidden when Today is drawn again")
+        b.eval("renderSweepDue(); true")
+        self.assertFalse(self.visible())
+        b.eval("go('work')")
+        b.pump(0.3)
+        self.screen("today")
+        self.assertFalse(self.visible(), "still hidden after leaving Today and coming back")
+        b.eval("Promise.resolve(typeof refreshAll === 'function' ? refreshAll() : 0).then(() => true)")
+        b.pump(0.6)
+        self.assertFalse(self.visible(), "still hidden after the page refreshes its data")
+        self.show_today()
+        self.assertFalse(self.visible(), "still hidden after a reload")
+        self.assertEqual(b.eval("document.getElementById('sweepRun')"), None, "the Run sweep button went with it")
+        # the keyboard
+        self.show_today(forget=True)
+        self.assertTrue(self.visible())
+        b.eval("document.getElementById('sweepX').focus()")
+        b.key("Enter")
+        b.pump(0.3)
+        self.assertFalse(self.visible(), "Enter on the x hides it")
+        self.assertFalse(b.eval("document.activeElement === document.body"), "focus is not dropped onto the page")
+        self.assertTrue(b.eval("!!document.activeElement.closest('#v-today')"), "focus stays on Today")
+        self.note(33, "hidden after the click, a redraw, leaving and returning, a data refresh and a reload; Enter on the x works, focus stays on Today")
+
+    def test_c34_it_returns_when_the_last_sweep_changes(self):
+        """34. A dismissed banner comes back when the last sweep's time changes and the sweep is still due (a sweep ran before 07:00
+        and is due again), and on the next day; it does not come back for nothing."""
+        self.need(self.fix243, "#243 (v251-sweepdismiss)")
+        b = self.b
+        self.due_since_yesterday()
+        b.click("#sweepX")
+        b.pump(0.3)
+        self.assertFalse(self.visible())
+        self.last_swept(f"{self.day()} 06:10")                  # a sweep ran, but before today's 07:00: still due, another last time
+        self.show_today()
+        self.assertTrue(self.visible(), "back when the last sweep's time changed while still due")
+        self.assertIn(f"Last swept {self.day()} 06:10", b.eval("document.getElementById('sweepDue').innerText"))
+        b.click("#sweepX")
+        b.pump(0.3)
+        self.show_today()
+        self.assertFalse(self.visible(), "dismissed again for the new time: it stays hidden")
+        b.eval(f"localStorage.setItem('{self.KEY}', JSON.stringify({{day: {json.dumps(self.day(1))}, last: {json.dumps(self.day() + ' 06:10')}}})); true")
+        self.show_today()
+        self.assertTrue(self.visible(), "a dismissal made on an earlier day does not hide today's banner")
+        b.eval(f"localStorage.setItem('{self.KEY}', 'not json'); true")
+        self.show_today()
+        self.assertTrue(self.visible(), "an unreadable remembered dismissal shows the banner")
+        self.note(34, "back for another last-sweep time (06:10) and for a dismissal from yesterday; stayed hidden when nothing changed")
+
+    def test_c35_banner_look(self):
+        """35. (judgement) The Sweep due banner with its x, light and dark, at 1400 and 900 px: the x is quiet and at the right edge,
+        it does not crowd Run sweep, and it is easy to find with the keyboard (its focus ring)."""
+        self.need(self.fix243, "#243 (v251-sweepdismiss)")
+        self.due_since_yesterday()
+
+        def prepare(b):
+            b.wait(self.VISIBLE, 15)
+            b.eval("document.getElementById('sweepX').focus({focusVisible: true}); true")
+        n = self.sheet(35, "today", palettes=["creaite"], widths=(1400, 900), prepare=prepare)
+        self.note(35, f"judgement: {n} screenshots on the sheet" if n else "judgement: no sheet in this run")
 
 
 if __name__ == "__main__":
