@@ -6,6 +6,9 @@ on the real live server (no Claude runs); fictional words and projects only.
   the match is dropped when another project's report opens during the check ... Race.test_a_match_never_lands_in_another_project
   an edit on the same report during the combined check is kept ............... Race.test_an_edit_during_the_check_is_not_lost
   control: no switch, the clean section is copied ............................ Race.test_without_a_switch_the_clean_section_is_copied
+  a text section only the internal report has (in neither client report) never lands in another project's client report:
+    per section, from Side by side (Add to the client report) ................ Race.test_an_internal_only_section_added_from_side_by_side
+    every section (a client-audience text section only internal has) ......... Race.test_every_section_with_a_text_section_only_internal_has
 
 Run: python3 dev/tests/test_match_internal_race.py      (Chrome tier; skipped without Chrome)
 """
@@ -96,6 +99,44 @@ class Race(M.Base):
             blob = json.dumps(self.draft("ABC")["doc"])
         self.assertIn("Yarrowfield", blob)
         self.assertIn("Quincebrook", blob)
+
+    def internal_text_sections(self):
+        """ABC's internal report gains two text sections no client report has: one internal-audience, one client-audience."""
+        doc = self.draft("ABC", "weekly")["doc"]
+        at = next(n for n, x in enumerate(doc["sections"]) if x["id"] == "summary") + 1
+        for sid, aud, words in (("free_int", "internal", f"{WORD} internal notes for the other client."),
+                                ("free_cli", "client", f"{WORD} client notes for the other client.")):
+            doc["sections"].insert(at, {"id": sid, "type": "freetext", "heading": "Notes " + aud, "default_heading": "", "hidden": False,
+                                        "text": words, "audience": aud})
+        doc["layout"]["order"] = [x["id"] for x in doc["sections"]]
+        self.assertTrue(self.api("/api/report/save", {"doc": doc, "base_version": doc.get("version") or 0})["ok"])
+
+    def switch_to_def_and_assert_clean(self):
+        self.q("(()=>{ const p=P.find(p=>p.code==='DEF'); if(p) p.cr=true; go('reporting','DEF'); })()")
+        self.b.wait("location.hash.includes('DEF')", 10)
+        self.b.wait(f"!!document.querySelector({json.dumps(CLI)})", 25)
+        self.b.pump(6)                                           # the delayed check answers, and an autosave would have run
+        self.assertNotIn(WORD, self.q(f"(document.querySelector({json.dumps(CLI)})||{{innerText:''}}).innerText"), "DEF's client pane")
+        self.assertNotIn(WORD, json.dumps(self.draft("DEF").get("doc")), "DEF's saved client draft")
+        self.assertNotIn(WORD, self.staging_files_text(), "the client draft files in staging")
+
+    def test_an_internal_only_section_added_from_side_by_side(self):
+        self.internal_text_sections()
+        self.open_side()
+        left = "document.querySelectorAll('#v-reporting .sheet-pair > .sheet-fit')[0]"
+        self.b.wait(f"!!{left}.querySelector('section[data-id=free_int] [data-addto]')", 15)
+        self.q(DELAY + "(1, 4000)")
+        self.q(f"{left}.querySelector('section[data-id=free_int] [data-addto]').click()")
+        self.b.wait("window.__mc===1", 10)
+        self.switch_to_def_and_assert_clean()
+
+    def test_every_section_with_a_text_section_only_internal_has(self):
+        self.internal_text_sections()
+        self.open_side()
+        self.q(DELAY + "(1, 4000)")
+        self.q("document.querySelector('[data-crmatchall]').click()")
+        self.b.wait("window.__mc===1", 10)
+        self.switch_to_def_and_assert_clean()
 
     def test_without_a_switch_the_clean_section_is_copied(self):
         self.open_side()

@@ -49,8 +49,10 @@ export function crIdentity(d) {
   return x ? `${crAsked}|${JSON.stringify(crArg.value)}|${x.project}|${x.date}|${x.client || ""}` : "";
 }
 
+/** Two versions of the same report: the same project, week and client. @param {SheetDoc|null|undefined} a @param {SheetDoc|null|undefined} b */
+const sameDoc = (a, b) => !!a && !!b && a.project === b.project && a.date === b.date && (a.client || "") === (b.client || "");
 /** The same report (project, week and client) as the one open now, whichever version of it. @param {SheetDoc} d */
-export const sameReport = d => { const c = crDoc.value; return !!c && !!d && c.project === d.project && c.date === d.date && (c.client || "") === (d.client || ""); };
+export const sameReport = d => sameDoc(crDoc.value, d);
 
 /** Open (or reload) the client report: the week's internal report (read only; built from the tracker when none is saved) and the
     client's. `fresh` rebuilds the client's report from the tracker (the approved week's locked facts when there is one),
@@ -125,7 +127,8 @@ let matchChain = Promise.resolve();
     the check cannot run. The client page therefore never holds unsaved internal words after Match internal. One at a time, so
     Match internal for every section never races itself. @param {string[]|null} ids the sections, or null for every one */
 export function matchInternal(ids) {
-  matchChain = matchChain.then(() => matchInternalNow(ids)).catch(() => undefined);
+  const asked = crIdentity();            // a match queued behind another runs only if the report it was asked on is still the one open
+  matchChain = matchChain.then(() => crIdentity() === asked ? matchInternalNow(ids) : undefined).catch(() => undefined);
   return matchChain;
 }
 
@@ -160,7 +163,7 @@ async function matchInternalNow(ids) {
   });
   /** the clean sections copied onto the page as it is now; a section Alan changed while the check ran keeps his edit
       (the sheet replaces only the section it edits, so an untouched one is the same object as before) @param {SheetDoc} on */
-  const kept = (/** @type {SheetDoc} */ on) => clean.filter(id => secOf(on, id) === secOf(d0, id));
+  const kept = (/** @type {SheetDoc} */ on) => sameDoc(on, d0) ? clean.filter(id => secOf(on, id) === secOf(d0, id)) : [];   // never onto another report (a section neither has is "unchanged" only on this one)
   const onto = (/** @type {SheetDoc} */ on) => kept(on).reduce((x, id) => matchClientSection(x, i, id), on);
   if (clean.length) {                   // the clean sections together are checked once more: a finding the parts did not make alone holds all back
     for (let tries = 0; ; tries++) {
