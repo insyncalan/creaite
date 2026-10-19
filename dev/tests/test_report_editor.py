@@ -781,7 +781,14 @@ class SideBySideTests(SheetCase):
         b.wait("SH.partner.doc.sections.find(s=>s.id==='summary').text===SH.doc.sections.find(s=>s.id==='summary').text")
         self.assertIn("partner:Matched internal", self.sh("changes"))
         self.assertEqual(b.eval("[...document.querySelectorAll('#shFix .sheet-diff')].map(e => e.closest('section').dataset.id)"), ["risks"])   # shown here, hidden there
-        b.eval("[...document.querySelectorAll('#shFix .sheet-bar .btn')].find(x=>/Match internal for every section/.test(x.textContent)).click()")
+        # "every section" is the reporting hub's one button now (data-crmatchall; test_sbs_matchgate and test_report_text_section_ui hold its
+        # gate and the internal-only text sections it never copies). The sheet keeps the per-section control: match the rest with it.
+        b.eval("""(() => { const p = SH.partner.doc.sections.find(s => s.id === 'this_week'); p.text = 'Another client wording.'; SH.draw(); })()""")
+        b.wait("document.querySelectorAll('#shFix .sheet-diff').length===2")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#shFix button')].filter(x=>/Match internal for every/.test(x.textContent)).length"), 0)
+        b.eval("document.querySelector('#shFix section[data-id=this_week] .sheet-match .linkbtn').click()")
+        self.assertEqual(b.eval("document.querySelectorAll('#shFix section[data-id=risks] .sheet-match .linkbtn').length"), 0)   # the client's hidden section offers no match
+        b.wait("SH.partner.doc.sections.find(s=>s.id==='this_week').text===SH.doc.sections.find(s=>s.id==='this_week').text")
         b.wait("SH.changes.filter(c=>c==='partner:Matched internal').length===2")
         self.assertTrue(self.sh("partner.doc.sections.find(s=>s.id==='risks').hidden"))               # the client's own hidden section stays hidden
 
