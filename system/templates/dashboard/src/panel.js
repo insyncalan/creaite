@@ -224,13 +224,15 @@ export function updOpen(r){ const rec=r.rec||{}, t=rec.table, id=rec.target, x=P
 export function updModel(){ const u=shared.CUR.upd, x=shared.CUR.draft, now=irNowRow(u.table,u.liveDb,u.changes,toDb(u.table,x));
   const list=irUpdateList(u.liveDb,now,Object.keys(u.changes)); return {u,x,now,list,changed:irChanged(list)}; }
 /* the peek's own parts are read-only or hidden for an update; every draw puts them right for the proposal on show */
-export function pkUpdReset(on){ const t=$("#pkTitle"), ed=t.cxed&&t.cxed.editor; if(ed&&ed.isEditable===on) ed.setEditable(!on,false);   /* the title is the item's own text: read-only here */
+export function pkUpdMount(){ if($("#pkUpd")) return;                                 /* made the first time an update opens, so the peek's own markup is as it was */
+  addHTML($("#pkNote"),"afterend",html`<div id="pkUpd"></div>`); addHTML($(".pk-dlrow"),"beforebegin",html`<div id="pkUpdWas"></div>`); addHTML($("#pkDesc"),"afterend",html`<div id="pkUpdLast"></div>`); }
+export function pkUpdReset(on){ if(on) pkUpdMount(); const t=$("#pkTitle"), ed=t.cxed&&t.cxed.editor; if(ed&&ed.isEditable===on) ed.setEditable(!on,false);   /* the title is the item's own text: read-only here */
   if(on) t.setAttribute("aria-readonly","true"); else t.removeAttribute("aria-readonly");
   const a=on&&shared.CUR.k==="actions"; $(".pk-dlrow").hidden=on&&!a; $("#pkDesc").hidden=on&&!a;
   const det=$("#pkDetT")?.closest("section"); if(det) det.hidden=on;                       /* Details would edit columns this peek leaves read-only */
   $("#pkPSaveA").hidden=on&&isConflict(pkRev());
   $("#pkDesc").classList.toggle("updnew",false);
-  if(!on){ drawUpdateBody($("#pkUpd"),null); drawLatestWas($("#pkUpdWas"),null); drawLast($("#pkUpdLast"),null); } }
+  if(!on&&$("#pkUpd")){ drawUpdateBody($("#pkUpd"),null); drawLatestWas($("#pkUpdWas"),null); drawLast($("#pkUpdLast"),null); } }
 export function updDraw(x,k,r){ const {u,now,list}=updModel(), t=u.table;
   putHTML($("#pkId"),html`<span>Update proposal</span><span aria-hidden="true">·</span><span>${u.id}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)??""}</a>`:html`<span>needs a project</span>`}`);
   putHTML($("#pkPropTop"),html`<div class="pk-propline">Editing a proposal — nothing reaches the tracker until it's approved. Changed fields are highlighted.</div>`); $("#pkPropEnd").textContent="";
@@ -875,9 +877,7 @@ export function bootPanel0173(){
 addHTML($("#pkScroll"),"afterend",html`<div class="pk-foot" id="pkFoot2"><button type="button" class="btn" id="pkReject" aria-haspopup="menu" aria-expanded="false">${raw(ic("x"))}Reject</button><span class="sp"></span><button type="button" class="btn" id="pkCancel">Cancel</button><button type="button" class="btn" id="pkPSave" data-key="${MOD}↵" data-tip="Save">Save</button><button type="button" class="btn primary" id="pkPSaveA">Save and approve</button></div>`);
 addHTML($("#pkWarn"),"afterend",html`<div class="pk-propnotes" id="pkPropTop"></div>`);
 addHTML($("#pkAfter"),"beforeend",html`<div id="pkPropEnd"></div>`);
-addHTML($("#pkNote"),"afterend",html`<div id="pkUpd"></div>`);                         /* #232-B: an update proposal's body, the old latest update and "Last updated" */
-addHTML($(".pk-dlrow"),"beforebegin",html`<div id="pkUpdWas"></div>`);
-addHTML($("#pkDesc"),"afterend",html`<div id="pkUpdLast"></div>`);
+
 PKDRAW.push(pkPropDraw);
 $("#pkScroll").tabIndex=-1;
 $("#pkPSave").onclick=()=>pkPropSave(false);

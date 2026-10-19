@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_dashboard  # noqa: E402
-from test_tracker import ABC, Vault, action  # noqa: E402
+from test_tracker import ABC, Vault  # noqa: E402
 
 IRU = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/core/irUpdate.js"
 SRC = f"{ABC}/minutes/2026-10-05 Steering.docx — Actions"

@@ -6480,6 +6480,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkTitleL: () => pkTitleL,
     pkUndoLast: () => pkUndoLast,
     pkUpdLabel: () => pkUpdLabel,
+    pkUpdMount: () => pkUpdMount,
     pkUpdReset: () => pkUpdReset,
     pkWho: () => pkWho,
     pkWide: () => pkWide,
@@ -59745,7 +59746,7 @@ ${d5.text}`);
     /** @type {Record<string, string>} */
     { due_date: "due", needed_by: "needed by", made_by: "made by", client_visible: "client-visible" }
   );
-  var TEXT = (
+  var PHRASE = (
     /** @type {Record<string, string>} */
     {
       latest_update: "the latest update",
@@ -59790,7 +59791,7 @@ ${d5.text}`);
     return n4(a5) === n4(b5);
   }
   var irLabel = (col) => LABEL[col] || col.charAt(0).toUpperCase() + col.slice(1).replace(/_/g, " ");
-  var irIsText = (col) => col in TEXT;
+  var irIsText = (col) => col in PHRASE;
   function irWord(col, v5) {
     if (col === "client_visible") return v5 === 1 || v5 === true || v5 === "1" ? "on" : "off";
     if (v5 == null || String(v5).trim() === "") return "—";
@@ -59815,7 +59816,7 @@ ${d5.text}`);
     return now;
   }
   function irPhrase(c5, short) {
-    if (irIsText(c5.col)) return { label: TEXT[c5.col], delta: "", text: true };
+    if (irIsText(c5.col)) return { label: PHRASE[c5.col], delta: "", text: true };
     const label = short && SHORT[c5.col] ? SHORT[c5.col] : irLabel(c5.col).toLowerCase();
     return { label, delta: `${irWord(c5.col, c5.was)} → ${irWord(c5.col, c5.now)}`, text: false };
   }
@@ -59836,7 +59837,7 @@ ${d5.text}`);
       const p6 = irPhrase(c5, true);
       return `${p6.label} ${p6.delta}`;
     });
-    const text = chs.filter((c5) => irIsText(c5.col)).map((c5) => TEXT[c5.col]);
+    const text = chs.filter((c5) => irIsText(c5.col)).map((c5) => PHRASE[c5.col]);
     if (!text.length) return scalar;
     const tail = text.join(" and ");
     return scalar.length ? [...scalar.slice(0, -1), `${scalar[scalar.length - 1]} and ${tail}`] : [tail];
@@ -60083,9 +60084,9 @@ ${d5.text}`);
       await q5;
     } while (q5 !== SAVEQ);
   }
-  var TEXT2 = ["t", "upd", "resp", "cm", "cmd", "reason"];
+  var TEXT = ["t", "upd", "resp", "cm", "cmd", "reason"];
   function recNorm(t47, o5) {
-    TEXT2.forEach((k5) => {
+    TEXT.forEach((k5) => {
       if (typeof o5[k5] === "string") o5[k5] = fdText(o5[k5]);
     });
     if (t47 === "raid") o5.pr = prio(o5.imp, o5.lik);
@@ -60598,7 +60599,14 @@ ${d5.text}`);
     const list = irUpdateList(u5.liveDb, now, Object.keys(u5.changes));
     return { u: u5, x: x5, now, list, changed: irChanged(list) };
   }
+  function pkUpdMount() {
+    if ($("#pkUpd")) return;
+    addHTML($("#pkNote"), "afterend", html`<div id="pkUpd"></div>`);
+    addHTML($(".pk-dlrow"), "beforebegin", html`<div id="pkUpdWas"></div>`);
+    addHTML($("#pkDesc"), "afterend", html`<div id="pkUpdLast"></div>`);
+  }
   function pkUpdReset(on2) {
+    if (on2) pkUpdMount();
     const t47 = $("#pkTitle"), ed3 = t47.cxed && t47.cxed.editor;
     if (ed3 && ed3.isEditable === on2) ed3.setEditable(!on2, false);
     if (on2) t47.setAttribute("aria-readonly", "true");
@@ -60610,7 +60618,7 @@ ${d5.text}`);
     if (det) det.hidden = on2;
     $("#pkPSaveA").hidden = on2 && isConflict(pkRev());
     $("#pkDesc").classList.toggle("updnew", false);
-    if (!on2) {
+    if (!on2 && $("#pkUpd")) {
       drawUpdateBody($("#pkUpd"), null);
       drawLatestWas($("#pkUpdWas"), null);
       drawLast($("#pkUpdLast"), null);
@@ -62216,9 +62224,6 @@ ${d5.text}`);
     addHTML($("#pkScroll"), "afterend", html`<div class="pk-foot" id="pkFoot2"><button type="button" class="btn" id="pkReject" aria-haspopup="menu" aria-expanded="false">${raw(ic("x"))}Reject</button><span class="sp"></span><button type="button" class="btn" id="pkCancel">Cancel</button><button type="button" class="btn" id="pkPSave" data-key="${MOD}↵" data-tip="Save">Save</button><button type="button" class="btn primary" id="pkPSaveA">Save and approve</button></div>`);
     addHTML($("#pkWarn"), "afterend", html`<div class="pk-propnotes" id="pkPropTop"></div>`);
     addHTML($("#pkAfter"), "beforeend", html`<div id="pkPropEnd"></div>`);
-    addHTML($("#pkNote"), "afterend", html`<div id="pkUpd"></div>`);
-    addHTML($(".pk-dlrow"), "beforebegin", html`<div id="pkUpdWas"></div>`);
-    addHTML($("#pkDesc"), "afterend", html`<div id="pkUpdLast"></div>`);
     PKDRAW.push(pkPropDraw);
     $("#pkScroll").tabIndex = -1;
     $("#pkPSave").onclick = () => pkPropSave(false);

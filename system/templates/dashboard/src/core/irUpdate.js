@@ -43,7 +43,7 @@ const SHORT = /** @type {Record<string, string>} */ ({ due_date: "due", needed_b
 
 /** Columns that are text, said as a phrase ("the latest update") and never as `was → now`: the words can be long, and for
     client messaging they must not be shown at all. */
-const TEXT = /** @type {Record<string, string>} */ ({ latest_update: "the latest update", description: "the description", decision: "the decision", response_action: "the response",
+const PHRASE = /** @type {Record<string, string>} */ ({ latest_update: "the latest update", description: "the description", decision: "the decision", response_action: "the response",
   reasoning: "the reasoning", options: "the options considered", client_message: "the client messaging", health_reason: "the health reason" });
 
 /** The order chips and phrases come in. */
@@ -61,7 +61,7 @@ export function irSame(a, b) {
 export const irLabel = col => LABEL[col] || (col.charAt(0).toUpperCase() + col.slice(1).replace(/_/g, " "));
 
 /** Whether a column is text, said as a phrase. @param {string} col */
-export const irIsText = col => col in TEXT;
+export const irIsText = col => col in PHRASE;
 
 /** A stored value as it is shown: a date as DD-MM-YYYY, a flag as on or off, nothing as a dash, long text cut short.
     @param {string} col @param {any} v */
@@ -102,7 +102,7 @@ export function irNowRow(table, live, changes, draft) {
 /** The words for one change in a sentence, from the list: a text column as a phrase, any other as `label was → now`.
     @param {{col: string, was: any, now: any}} c @param {boolean} [short] the row's shorter label @returns {{label: string, delta: string, text: boolean}} */
 export function irPhrase(c, short) {
-  if (irIsText(c.col)) return { label: TEXT[c.col], delta: "", text: true };
+  if (irIsText(c.col)) return { label: PHRASE[c.col], delta: "", text: true };
   const label = short && SHORT[c.col] ? SHORT[c.col] : irLabel(c.col).toLowerCase();
   return { label, delta: `${irWord(c.col, c.was)} → ${irWord(c.col, c.now)}`, text: false };
 }
@@ -133,7 +133,7 @@ export function irIfApproved(changed) {
 export function irLineParts(changes) {
   const chs = changes.filter(c => c.col).map(c => ({ col: c.col, was: "was" in c ? c.was : c.from, now: "now" in c ? c.now : c.to }));
   const scalar = chs.filter(c => !irIsText(c.col)).map(c => { const p = irPhrase(c, true); return `${p.label} ${p.delta}`; });
-  const text = chs.filter(c => irIsText(c.col)).map(c => TEXT[c.col]);
+  const text = chs.filter(c => irIsText(c.col)).map(c => PHRASE[c.col]);
   if (!text.length) return scalar;
   const tail = text.join(" and ");
   return scalar.length ? [...scalar.slice(0, -1), `${scalar[scalar.length - 1]} and ${tail}`] : [tail];
