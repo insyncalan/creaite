@@ -113,6 +113,21 @@ def _clean_section(s, keep_text=False):
     return out
 
 
+def _blank_row(r):
+    """True for a shown row with nothing to show: every cell empty, or holding only the row's own reference (#234: a row shown again
+    whose cells couldn't be made)."""
+    return not any(str(v).strip() and v != r.get("ref") for v in (r.get("cells") or {}).values() if v is not None)
+
+
+def without_blank_rows(doc):
+    """A copy with every shown row that has nothing to show left out (kept as its reference): an export never holds an empty row."""
+    out = copy.deepcopy(doc)
+    for s in out.get("sections") or []:
+        if isinstance(s.get("rows"), list):
+            s["rows"] = [_stub_row(r) if r.get("shown", True) and _blank_row(r) else r for r in s["rows"]]
+    return out
+
+
 def _hidden_refs(sections):
     """Every item reference in hidden sections and hidden rows."""
     refs = set()
@@ -864,7 +879,7 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        doc = read(path)
+        doc = without_blank_rows(read(path))
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):

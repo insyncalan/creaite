@@ -614,6 +614,49 @@ def pickable(doc):
     return {sid: [c for c in found if c["ref"] not in have.get(sid, set())] for sid, found in out.items() if sid in have}
 
 
+RESHOW_MAX = 50       # rows asked for in one call
+
+
+def reshow(doc, sid, refs):
+    """A row left out and saved, shown again (#234). A saved report keeps a left-out row as its reference only and drops its item (the
+    leak guard, creaite_doc.clean), so the page can't make its cells; this makes them from the tracker as it stands, the way Add from
+    the tracker would. Read only: nothing is written. Only a row of that table that is left out is filled; a client report only from
+    its client-safe facts (_pick_client: client-visible, complete client wording, no label that keeps it out), never the tracker's own
+    words. {rows: {ref: {row, item}}, missing: {ref: why}}: a row the tracker can't give (closed, archived, gone, or not client-safe)
+    is missing, and stays left out."""
+    import tracker
+    kind, code, left_out = _reshow_table(doc, sid, refs)
+    found = {c["ref"]: c for c in ((_pick_client(code) if kind == "client" else _pick_weekly(code)).get(sid) or [])}
+    why = "it is no longer client-visible and open in the tracker" if kind == "client" else "it is no longer open in the tracker"
+    rows, missing = {}, {}
+    with tracker.connect() as con:
+        for ref in dict.fromkeys(refs):
+            c = found.get(ref) if ref in left_out and not (item(con, ref) or {}).get("archived") else None
+            if c is None:
+                missing[ref] = why if ref in left_out else "it isn't a row left out of this table"
+            else:
+                rows[ref] = {"row": {"ref": ref, "shown": True, "cells": dict(c["row"]["cells"])}, "item": c["item"]}
+    return {"rows": rows, "missing": missing}
+
+
+def _reshow_table(doc, sid, refs):
+    """(kind, code, the refs of the table's left-out rows) for reshow; raises ReportError for a request it can't answer."""
+    kind, code = doc.get("kind"), str(doc.get("project") or "")
+    if kind not in KINDS or not CODE.match(code):
+        raise ReportError("Say which report: weekly or client, and the project's code.")
+    if not _ref_list(refs):
+        raise ReportError("Say which rows to show again.")
+    sec = next((s for s in doc.get("sections") or [] if isinstance(s, dict) and s.get("id") == sid and s.get("type") == "table"), None)
+    if sec is None:
+        raise ReportError("That table isn't in the report.")
+    return kind, code, {r.get("ref") for r in sec.get("rows") or [] if isinstance(r, dict) and r.get("ref") and not r.get("shown", True)}
+
+
+def _ref_list(refs):
+    """Whether `refs` is a list of 1 to RESHOW_MAX item references."""
+    return isinstance(refs, list) and 0 < len(refs) <= RESHOW_MAX and all(isinstance(r, str) and r for r in refs)
+
+
 def baseline(code, on):
     """The approved internal week a client report dated `on` locks to: the latest approved week ending on or before it, as
     {date, path, version}, or None (BL-336: a fortnightly or monthly client uses the latest approved week)."""

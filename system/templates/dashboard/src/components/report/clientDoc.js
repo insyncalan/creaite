@@ -70,7 +70,8 @@ export function matchClientSection(client, internal, id) {
   }
   if (c.type === "table") {
     const on = shownRefs(i);
-    return withClientSection(client, id, { rows: (c.rows || []).map(r => on.includes(String(r.ref)) ? { ...r, shown: true, cells: r.cells || cellsFor(id, (client.items || {})[String(r.ref)]) } : { ref: r.ref, shown: false }) });
+    const held = client.items || {}, bare = (/** @type {any} */ r) => !r.cells && !held[String(r.ref)];   // #234: a row saved left out whose item the draft no longer holds: its eye fills it from the client-safe facts, never this copy
+    return withClientSection(client, id, { rows: (c.rows || []).map(r => on.includes(String(r.ref)) && !bare(r) ? { ...r, shown: true, cells: r.cells || cellsFor(id, held[String(r.ref)]) } : { ref: r.ref, shown: false }) });
   }
   if (c.type === "timeline") {
     const all = (c.data || {}).timeline || [], listed = (((i.data || {}).milestones || (i.data || {}).timeline) || []).filter((/** @type {string} */ m) => all.includes(m));

@@ -25,6 +25,9 @@
                            internal wording into the client page, so internal words never sit on the client draft (v2.5.0)
   POST /api/report/pick    {doc}: Add from the tracker (read only; #217): per table section the open items not in the report yet
                            (a client report: only client-safe facts), each with the row it would add; nothing is written
+  POST /api/report/reshow  {doc, section, refs}: rows left out and saved (kept as their reference only), shown again (read only;
+                           #234): {rows: {ref: {row, item}}, missing: {ref: why}} from the tracker, a client report only from
+                           its client-safe facts; a row it can't give stays left out
   POST /api/report/export  {kind, code, week_ending, client?, fmt, on_clash?, new_name?, page?}: P2's export (the contract's call), from the
                            draft or the filed report, saved first into the project's Reports folder through filechange.py (#220:
                            a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
@@ -284,6 +287,14 @@ def pick_route(handler, req):
     if not isinstance(doc, dict):
         raise report_doc.ReportError("Say which report to add to.")
     return answer(handler, {"ok": True, "sections": report_doc.pickable(doc)})
+
+
+def reshow_route(handler, req):
+    """POST /api/report/reshow: a row left out and saved, shown again from the tracker (see the module's description). Writes nothing."""
+    doc = req.get("doc")
+    if not isinstance(doc, dict) or not isinstance(req.get("section"), str):
+        raise report_doc.ReportError("Say which report and which table.")
+    return answer(handler, {"ok": True, **report_doc.reshow(doc, req["section"], req.get("refs"))})
 
 
 def export_call():
@@ -733,7 +744,7 @@ def routes(lock, run, latest_apply):
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
             "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
             "/api/report/match-check": guarded(match_check_route),
-            "/api/report/pick": guarded(pick_route),
+            "/api/report/pick": guarded(pick_route), "/api/report/reshow": guarded(reshow_route),
             "/api/report/export": guarded(export_route), "/api/report/reveal": guarded(reveal_route),
             "/api/report/logo": guarded(logo_route), "/api/report/logo/save": guarded(logo_save_route),
             "/api/report/logo/remove": guarded(logo_remove_route), "/api/report/image": guarded(image_route),

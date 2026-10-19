@@ -124,15 +124,51 @@ export function HealthBlock({ ctx, flag, trend, change, why, below, flagCls = ""
 /** The sections whose tables take items from the tracker. */
 export const PICKABLE = new Set(["risks", "overdue", "decisions"]);
 
+/** Whether a row was left out and saved, so it holds only its reference and the document no longer has its item: the page can't
+    make its cells (#234). @param {SheetRow} row @param {SheetDoc} doc */
+export const bareRow = (row, doc) => row.shown === false && !row.cells && !!row.ref && !(doc.items || {})[row.ref];
+
+/** Show a bare row again (#234): its cells come from the tracker through the server (/api/report/reshow, read only; a client report
+    gets only its client-safe facts there), never from the page. `live` holds the section's latest ctx, so an edit made while the
+    tracker is read is kept. Answers "" when the row is back in the report, else the reason it stays left out.
+    @param {{current: SectionCtx}} live @param {string} ref @returns {Promise<string>} */
+export async function reshowRow(live, ref) {
+  const sid = live.current.section.id;
+  const r = await api("/api/report/reshow", { doc: live.current.doc, section: sid, refs: [ref] });
+  const got = r && r.ok ? (r.rows || {})[ref] : null;
+  if (!got || !got.row || !got.row.cells) return String((r && r.ok ? (r.missing || {})[ref] : r && r.message) || "the tracker couldn't be read").split("\n")[0];
+  const ctx = live.current, doc = ctx.doc, sec = doc.sections.find(x => x.id === sid);
+  if (!sec || !(sec.rows || []).some(x => x.ref === ref && bareRow(x, doc))) return "";       // changed meanwhile: nothing to fill
+  ctx.setDoc({ ...doc, items: { ...(doc.items || {}), [ref]: got.item },
+    sections: doc.sections.map(x => x.id !== sid ? x : { ...x, rows: (x.rows || []).map(y => y.ref === ref && bareRow(y, doc) ? { ...y, shown: true, cells: got.row.cells } : y) }) }, "Row shown");
+  return "";
+}
+
+/** A bare row's own words while editing: its reference and that it is left out, never an empty cell to write in (#234). `why` says
+    why it can't come back, once that is known. @param {{ctx: SectionCtx, row: SheetRow, why?: string}} props */
+export function LeftOutNote({ ctx, row, why }) {
+  return <><ctx.ItemRef id={String(row.ref)} /> <span class="crlk wr-leftout">Left out</span>
+    <span class="wr-leftwhy">{why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from the tracker."}</span></>;
+}
+
+/** The eye's click on a row: hide it; show it with its cells (made again from the item the document holds), or, for a bare row,
+    from the tracker (reshowRow). @param {{current: SectionCtx}} live @param {(sid: string, item: any, on: string) => Record<string, string>} cellsFor
+    @param {number} i @param {(ref: string, why: string) => void} setWhy */
+export function flipRow(live, cellsFor, i, setWhy) {
+  const ctx = live.current, s = ctx.section, rows = s.rows || [], r = rows[i], on = r.shown === false;
+  if (on && bareRow(r, ctx.doc)) { reshowRow(live, String(r.ref)).then(why => setWhy(String(r.ref), why)); return; }
+  ctx.update({ rows: rows.map((x, j) => j !== i ? x : { ...x, shown: on, cells: x.cells || cellsFor(s.id, (ctx.doc.items || {})[x.ref || ""], ctx.doc.date) }) }, on ? "Row shown" : "Row hidden");
+}
+
 /** A table with the eye column, shared by every table section of both reports. `cellsFor(item)` rebuilds the cells of a row that was
     left out and kept only its reference. @param {{ctx: SectionCtx, cols: Col[], noun: string, empty: string, cellsFor: (sid: string, item: any, on: string) => Record<string, string>,
     extra?: any, leftOut?: string}} props */
 export function EyeTable({ ctx, cols, noun, empty, cellsFor, extra, leftOut = "the filed report and the exports" }) {
   const s = ctx.section, rows = s.rows || [];
-  const flip = (/** @type {number} */ i) => {
-    const r = rows[i], on = r.shown === false;
-    ctx.update({ rows: rows.map((x, j) => j !== i ? x : { ...x, shown: on, cells: x.cells || cellsFor(s.id, (ctx.doc.items || {})[x.ref || ""], ctx.doc.date) }) }, on ? "Row shown" : "Row hidden");
-  };
+  const live = useRef(ctx); live.current = ctx;
+  const [whys, setWhys] = useState(/** @type {Record<string, string>} */ ({}));
+  const setWhy = (/** @type {string} */ ref, /** @type {string} */ why) => setWhys(w => ({ ...w, [ref]: why }));
+  const flip = (/** @type {number} */ i) => flipRow(live, cellsFor, i, setWhy);
   const shown = rows.filter(r => r.shown !== false).length;
   return (
     <div class="wr-tbl">
@@ -142,6 +178,11 @@ export function EyeTable({ ctx, cols, noun, empty, cellsFor, extra, leftOut = "t
           <thead><tr>{ctx.editing ? <th class="eyec"><span class="sr">In the report</span></th> : null}{cols.map(c => <th key={c.key}>{c.label}</th>)}</tr></thead>
           <tbody>{rows.map((row, i) => {
             const off = row.shown === false; if (off && !ctx.editing) return null;
+            if (bareRow(row, ctx.doc)) return (
+              <tr key={row.ref || i} class="hidrow wr-bare" data-ref={row.ref || undefined}>
+                <td class="eyec"><EyeButton on={false} subject={String(row.ref)} onClick={() => flip(i)} /></td>
+                <td colSpan={cols.length}><LeftOutNote ctx={ctx} row={row} why={whys[String(row.ref)]} /></td>
+              </tr>);
             const item = (ctx.doc.items || {})[row.ref || ""] || null, cells = row.cells || cellsFor(s.id, item, ctx.doc.date);
             const isNew = ctx.editing && row.source === "added" && PICKABLE.has(s.id);
             const idLike = (/** @type {string} */ v) => v === row.ref || /^[A-Z][A-Z0-9]{2,6}-[A-Z]-\d+$/.test(v);

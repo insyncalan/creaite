@@ -3726,6 +3726,7 @@ table.wr-r th{background:none;font-family:inherit;position:static;text-align:lef
 table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
 table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;padding-right:0}
 table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
+.wr-leftwhy{margin-left:8px;font-size:11px;color:var(--rp-grey)}
 .wr-st{font-weight:700;font-size:var(--fs-2xs);letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
 .wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
 .sheet-a4 .late{color:var(--rp-red);font-weight:600}   /* on the fixed light sheet only: unscoped it overrode Today's .late (var(--bad)) and failed contrast in dark themes */
@@ -68890,12 +68891,47 @@ ${d5.text}`);
     ] });
   }
   var PICKABLE = /* @__PURE__ */ new Set(["risks", "overdue", "decisions"]);
+  var bareRow = (row2, doc) => row2.shown === false && !row2.cells && !!row2.ref && !(doc.items || {})[row2.ref];
+  async function reshowRow(live, ref) {
+    const sid = live.current.section.id;
+    const r4 = await api("/api/report/reshow", { doc: live.current.doc, section: sid, refs: [ref] });
+    const got = r4 && r4.ok ? (r4.rows || {})[ref] : null;
+    if (!got || !got.row || !got.row.cells) return String((r4 && r4.ok ? (r4.missing || {})[ref] : r4 && r4.message) || "the tracker couldn't be read").split("\n")[0];
+    const ctx = live.current, doc = ctx.doc, sec = doc.sections.find((x5) => x5.id === sid);
+    if (!sec || !(sec.rows || []).some((x5) => x5.ref === ref && bareRow(x5, doc))) return "";
+    ctx.setDoc({
+      ...doc,
+      items: { ...doc.items || {}, [ref]: got.item },
+      sections: doc.sections.map((x5) => x5.id !== sid ? x5 : { ...x5, rows: (x5.rows || []).map((y5) => y5.ref === ref && bareRow(y5, doc) ? { ...y5, shown: true, cells: got.row.cells } : y5) })
+    }, "Row shown");
+    return "";
+  }
+  function LeftOutNote({ ctx, row: row2, why }) {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(ctx.ItemRef, { id: String(row2.ref) }),
+      " ",
+      /* @__PURE__ */ u2("span", { class: "crlk wr-leftout", children: "Left out" }),
+      /* @__PURE__ */ u2("span", { class: "wr-leftwhy", children: why ? `Can't be shown again: ${why}.` : "Click the eye to put it back from the tracker." })
+    ] });
+  }
+  function flipRow(live, cellsFor2, i5, setWhy) {
+    const ctx = live.current, s5 = ctx.section, rows2 = s5.rows || [], r4 = rows2[i5], on2 = r4.shown === false;
+    if (on2 && bareRow(r4, ctx.doc)) {
+      reshowRow(live, String(r4.ref)).then((why) => setWhy(String(r4.ref), why));
+      return;
+    }
+    ctx.update({ rows: rows2.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFor2(s5.id, (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
+  }
   function EyeTable({ ctx, cols, noun, empty, cellsFor: cellsFor2, extra, leftOut: leftOut2 = "the filed report and the exports" }) {
     const s5 = ctx.section, rows2 = s5.rows || [];
-    const flip2 = (i5) => {
-      const r4 = rows2[i5], on2 = r4.shown === false;
-      ctx.update({ rows: rows2.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFor2(s5.id, (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
-    };
+    const live = A2(ctx);
+    live.current = ctx;
+    const [whys, setWhys] = d2(
+      /** @type {Record<string, string>} */
+      {}
+    );
+    const setWhy = (ref, why) => setWhys((w6) => ({ ...w6, [ref]: why }));
+    const flip2 = (i5) => flipRow(live, cellsFor2, i5, setWhy);
     const shown2 = rows2.filter((r4) => r4.shown !== false).length;
     return /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
       rows2.length ? /* @__PURE__ */ u2("table", { class: "wr-r", children: [
@@ -68910,6 +68946,10 @@ ${d5.text}`);
         /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, i5) => {
           const off = row2.shown === false;
           if (off && !ctx.editing) return null;
+          if (bareRow(row2, ctx.doc)) return /* @__PURE__ */ u2("tr", { class: "hidrow wr-bare", "data-ref": row2.ref || void 0, children: [
+            /* @__PURE__ */ u2("td", { class: "eyec", children: /* @__PURE__ */ u2(EyeButton, { on: false, subject: String(row2.ref), onClick: () => flip2(i5) }) }),
+            /* @__PURE__ */ u2("td", { colSpan: cols.length, children: /* @__PURE__ */ u2(LeftOutNote, { ctx, row: row2, why: whys[String(row2.ref)] }) })
+          ] }, row2.ref || i5);
           const item = (ctx.doc.items || {})[row2.ref || ""] || null, cells = row2.cells || cellsFor2(s5.id, item, ctx.doc.date);
           const isNew = ctx.editing && row2.source === "added" && PICKABLE.has(s5.id);
           const idLike = (v5) => v5 === row2.ref || /^[A-Z][A-Z0-9]{2,6}-[A-Z]-\d+$/.test(v5);
@@ -69117,13 +69157,20 @@ ${d5.text}`);
   function Decisions({ ctx }) {
     const all = ctx.section.rows || [];
     const rows2 = all.map((row2, i5) => ({ row: row2, i: i5 })).filter((x5) => x5.row.shown !== false || ctx.editing);
-    const flip2 = (i5) => {
-      const on2 = all[i5].shown === false;
-      ctx.update({ rows: all.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFromItem("decisions", (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
-    };
+    const live = A2(ctx);
+    live.current = ctx;
+    const [whys, setWhys] = d2(
+      /** @type {Record<string, string>} */
+      {}
+    );
+    const flip2 = (i5) => flipRow(live, cellsFromItem, i5, (ref, why) => setWhys((w6) => ({ ...w6, [ref]: why })));
     return /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
       !rows2.length ? /* @__PURE__ */ u2("p", { class: "sub", children: "No decisions were made this week." }) : null,
       /* @__PURE__ */ u2("ul", { class: "wr-decs", children: rows2.map(({ row: row2, i: i5 }) => {
+        if (bareRow(row2, ctx.doc)) return /* @__PURE__ */ u2("li", { class: "hidrow wr-bare", "data-ref": row2.ref || void 0, children: [
+          /* @__PURE__ */ u2(EyeButton, { on: false, subject: String(row2.ref), onClick: () => flip2(i5) }),
+          /* @__PURE__ */ u2("div", { class: "wr-decbody", children: /* @__PURE__ */ u2(LeftOutNote, { ctx, row: row2, why: whys[String(row2.ref)] }) })
+        ] }, row2.ref || i5);
         const c5 = row2.cells || cellsFromItem("decisions", (ctx.doc.items || {})[row2.ref || ""], ctx.doc.date), off = row2.shown === false;
         const bit = (key2, label) => ctx.editing ? /* @__PURE__ */ u2(Rich, { ctx, text: c5[key2], row: i5, col: key2, label, cls: "wr-inl", empty: label }) : /* @__PURE__ */ u2("span", { children: c5[key2] });
         return /* @__PURE__ */ u2("li", { class: off ? "hidrow" : "", "data-ref": row2.ref || void 0, children: [
@@ -69380,7 +69427,8 @@ ${d5.text}`);
     }
     if (c5.type === "table") {
       const on2 = shownRefs(i5);
-      return withClientSection(client, id2, { rows: (c5.rows || []).map((r4) => on2.includes(String(r4.ref)) ? { ...r4, shown: true, cells: r4.cells || cellsFor(id2, (client.items || {})[String(r4.ref)]) } : { ref: r4.ref, shown: false }) });
+      const held = client.items || {}, bare = (r4) => !r4.cells && !held[String(r4.ref)];
+      return withClientSection(client, id2, { rows: (c5.rows || []).map((r4) => on2.includes(String(r4.ref)) && !bare(r4) ? { ...r4, shown: true, cells: r4.cells || cellsFor(id2, held[String(r4.ref)]) } : { ref: r4.ref, shown: false }) });
     }
     if (c5.type === "timeline") {
       const all = (c5.data || {}).timeline || [], listed = ((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => all.includes(m5));
