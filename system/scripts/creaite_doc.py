@@ -959,20 +959,32 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None):
+def _export_doc(path, kind, doc):
+    """The document an export is made from: `doc` as the caller checked it (never the file read again), or the file read now; a
+    client report read as one, and another kind than `kind` refused (v2.5.0)."""
+    if doc is None:
+        return read_report(path, kind)
+    if kind is not None and doc.get("kind") != kind:
+        raise DocError("That file isn't this report (its kind was changed), so nothing was done.")
+    return force_client_audience(copy.deepcopy(doc))
+
+
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
     #226: for "html" and "pdf", `page` (the report page's own exported view; export_page.build checks it against the report) is
     what is written and printed; with none, or one that fails the check, the plain renderer below is, and the answer says
-    `plain: True` (and `plain_why` when a page was refused)."""
+    `plain: True` (and `plain_why` when a page was refused). `doc`: the document the caller already read and checked (the export
+    route's client gate); it is what is exported, and the file is not read again (v2.5.0: no second read between the check and
+    the output, which a file replaced in between would have changed)."""
     def fail(message, **extra):
         """The answer when nothing was exported."""
         return {"ok": False, "format": fmt, "message": message, **extra}
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
-        doc = read_report(path, kind)    # v2.5.0: a client report exported as one however its file was edited; another kind refused
+        doc = _export_doc(path, kind, doc)
         _check_baseline(doc)
         built, why = None, None
         if page is not None and fmt in ("html", "pdf"):

@@ -951,7 +951,7 @@ def _current_ops(doc, folder):
     return [{"op": "write", "path": paths.rel(memory), "content": new, "previous": old}] if new != old else []
 
 
-def _file_ops(kind, code, fri, client, draft):
+def _file_ops(kind, code, fri, client, draft, doc=None):
     """How Approve files the draft: a first filing of a weekly report copies it; a filed report is replaced whole by the approved new
     version (a write whose earlier text tracker.py keeps, so Undo puts the filed report back exactly as it was). A client report is
     always written whole, without meta.health_diff (the health difference and its reason stay in the draft, Alan 15-10-2026). The
@@ -962,7 +962,7 @@ def _file_ops(kind, code, fri, client, draft):
     if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
     old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
-    doc = creaite_doc.clean(creaite_doc.read_report(draft, kind))          # v2.5.0: filed as a client report, header derived
+    doc = creaite_doc.clean(doc if doc is not None else creaite_doc.read_report(draft, kind))     # v2.5.0: the doc already checked
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
     doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
                saved_at=creaite_doc.now(), state="approved", approved_at=on)
@@ -1070,4 +1070,4 @@ def stage_client(draft, force=False, code=None, fri=None):
         "report": {"kind": "client", "format": "creaite", "title": f"{doc.get('project_name') or code} client report, week ending "
                                                                     f"{shown(fri)}" + (f" ({client})" if client else ""),
                    "project": code, "projects": [code], "week_ending": fri, "draft": draft, "report_decision": "approved",
-                   "file_ops": _file_ops("client", code, fri, client, draft)}})
+                   "file_ops": _file_ops("client", code, fri, client, draft, doc)}})      # filed from the doc the gate checked

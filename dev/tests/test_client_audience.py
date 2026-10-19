@@ -201,6 +201,43 @@ class Audience(unittest.TestCase):
                     self.assertEqual(list(self.reports.glob("*Client report*")), [])     # nothing filed or exported
                     self.assertEqual(self.reports_hold(needles), {})
 
+    # ── one read between the gate and the output (time of check, time of use) ──────────────────────────────────────────
+    def swap_after_first_read(self):
+        """Python run in the vault: every read of the client draft after the first finds the payload version on disk (a file
+        replaced whole between the gate's read and any later one)."""
+        f = self.draft_file()
+        clean = f.read_text()
+        m = creaite_doc.BLOCK.search(clean)
+        d = self.add_payload(json.loads(m.group(1)))
+        dirty = clean[:m.start(1)] + creaite_doc.data_json(d) + clean[m.end(1):]
+        (self.v.root / "dirty.txt").write_text(dirty, encoding="utf-8")
+        return ("import pathlib\n_orig = creaite_doc.read\n"
+                "def _read(p):\n    d = _orig(p)\n"
+                f"    if pathlib.Path(str(creaite_doc.real(p))).name == {f.name!r}:\n"
+                f"        pathlib.Path({str(f)!r}).write_text(pathlib.Path('dirty.txt').read_text())\n"
+                "    return d\ncreaite_doc.read = _read\n"
+                "class H:\n    def send(self, code, body):\n        self.out = body\n        return body\n")
+
+    def test_export_builds_from_the_document_it_checked(self):
+        for fmt in self.formats():
+            with self.subTest(fmt=fmt):
+                self.fresh()
+                out = self.py(self.swap_after_first_read() + "import report_server\nh = H()\n"
+                              f"report_server.export_route(h, {{'kind': 'client', 'code': 'ABC', 'week_ending': {WEEK!r}, "
+                              f"'fmt': {fmt!r}, 'on_clash': 'number'}})\nprint(json.dumps(h.out))")
+                self.assertTrue(out["ok"], out)
+                self.assertEqual(self.scan(self.v.root / out["path"], self.needles()), [], fmt)
+
+    def test_approve_files_the_document_it_checked(self):
+        self.fresh()
+        out = self.py(self.swap_after_first_read() +
+                      f"p = report_doc.stage_client({str(self.draft_file())!r}, force=True, code='ABC', fri={WEEK!r})\n"
+                      "prop = json.loads(p.read_text())\np.unlink()\n"
+                      "print(json.dumps([o.get('content') or '' for o in prop['report']['file_ops'] if o.get('op') == 'write']))")
+        self.assertEqual(len(out), 1, out)
+        low = out[0].lower()
+        self.assertEqual([n for n in self.needles() if n.lower() in low], [])
+
     # ── each boundary on its own, with a reader that doesn't normalise ──────────────────────────────────────────────────
     def raw_reader(self):
         return ("import re\n_raw = lambda p: json.loads(creaite_doc.BLOCK.search(creaite_doc.real(p).read_text()).group(1))\n"

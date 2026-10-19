@@ -454,7 +454,7 @@ def export_route(handler, req):
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
     out = fn(path, fmt, file_beside=False, open_after=False,
-             page=req.get("page") if isinstance(req.get("page"), dict) else None, kind=kind)     # made in staging/drafts/, filed below
+             page=req.get("page") if isinstance(req.get("page"), dict) else None, kind=kind, doc=doc)   # the doc checked; filed below
     if not out.get("ok"):
         return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
     saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
