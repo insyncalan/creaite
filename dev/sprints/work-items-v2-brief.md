@@ -4,7 +4,7 @@ Mockup (for Alan): `dev/mockups/work-items-v2-mockup.html`, built on `dev/design
 
 ## Alan's decisions (19-10-2026)
 - **Keep today's peek** (four property chips, Details, tabs All/Activity/Updates/Source). The v2 peek is dropped.
-- **Keep today's filters**: the five filter buttons, the funnel, the view pills, the chips row and its count. The "two rows of chrome" idea is dropped.
+- **Keep today's Filter panel** (the funnel: Find a field, Status, Due, Owner, Project, Priority and More fields, is / is not, counts, Result, Clear all, Done) and the five quick filter buttons. The view-pill row and the applied-chips row are **not** brought back (the list has the tabs and one toolbar row above it); Mine, Due soon and Chase are reached through the panel. Open question: whether the saved views (All open, Mine, Chase...) need a home.
 - **Keep the underlines** on the owner and the ID: the owner opens their page and workload (and the right-click menu offers Draft email and Chase); the ID opens the peek.
 - **Keep the context menu** (right-click, Menu key, Shift+F10).
 - **The peek runs over the page** (never squashes it). A single click opens another row in the peek only while the peek is already open; otherwise a click selects, and double-click, the ID, Enter or Right opens it. Left closes the peek, or opens the context menu when no peek is open. Up and Down move.
