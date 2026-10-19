@@ -74,3 +74,11 @@ the new page. The Intake entry is gone from the sidebar (a saved sidebar that na
 2. `other` proposals (cx-edit, reports, weekly updates) are not in the mockup; the skeleton lists them as Other proposals.
 3. A minutes block filed under two projects is one row with its first project.
 4. `D.intake_review` is rebuilt with the data; the live server's quicker file refresh (`files`/`inbox`) does not rebuild it.
+
+## 232-A (Intake side) as built
+
+- `components/intakeReview/actions.js` (re-exported by `IntakeReviewPage.jsx`): Process (loads the transcript if needed, then `process <file>` through `askLive`; progress on the row via `irBusy`; the ask panel is not opened), Process all ready, Later, Not needed (four reasons, Undo), Restore, Upload files (choose, or drop anywhere on the page). `stores/intakeReview.js` has a `#232-A` section (`irNotes`, `irAside`, `irNote`, `irSetBusy`).
+- Keys Enter, N, H are the page's own, bound in capture so N on a meeting does not also open the note drawer (`core/keys.js` is untouched).
+- Later: shown on ready and waiting rows. A Later entry now carries `seen` (its transcript was already here): it stays in Later until Restore; without it, it returns when a transcript arrives. A file set aside (Not needed or Later) is listed with its reason and leaves the rows (`aside` in `intake_review_model`).
+- `core/server.js refreshAll` redraws an open Intake and Review (one line); 232-C needs nothing more there.
+- Tests: `test_intake_review_intake.py` (browser and model), `_keys_intake.py`, `_rules.py` (meetings part), shared set-up `ir_intake_support.py`. The old pages and their tests are untouched (232-C retires them).
