@@ -25,6 +25,8 @@ Run a check with its fix absent, to see it red:                       CREAITE_HC
                           (test_project_settings, called, plus the portfolio rows and the doors on the hand-check vault; shared)
   AskReports   38 to 40   ask creaite cannot change, draft or file a report and can read one: the real guard hook (reach.py hook) run in the
                           vault, the report files compared before and after (shared vault; the answer's wording is the model's: live only)
+                          38 and 39 each have a second body for the quoted, spliced and `run` forms of the commands (an expected fail on 2.5.1,
+                          FAIL-expected; CREAITE_HC_251_STRICT=1 makes it a failure; the worst outcome of a check's bodies stands)
   ClientExport 41 to 43   the client-export hardening: Team Stark's tests, called (test_report_exports, test_export_page,
                           test_export_rename_name, test_client_audience, test_export_page_subset)
   44                      live only (judgement): a real logo in a client HTML and Word export; logos stay out of git
@@ -1445,6 +1447,65 @@ class AskReports(V251Case):
         code, err = self.hook("Write", {"file_path": f"{drafts}/notes-for-the-meeting.md", "content": "notes"})       # the control
         self.assertEqual(code, 0, f"an ordinary draft is still allowed: {err}")
         self.note(39, f"{n} attempts to draft, stage or file a report refused (also when Alan confirmed the request); an ordinary draft still allowed")
+
+    # ── the quoted, spliced and `run` forms of the same commands (a known hole in 2.5.1's guard) ──
+
+    STRICT = os.environ.get("CREAITE_HC_251_STRICT") == "1"
+    QUOTED_WHY = "quoted words beat the raw-text report rule; fix proposed in dev/proposals/guard-174"
+
+    def quoted_check(self, n, plain, quoted, modes=("ask",)):
+        """The same refusal asked for in the quoted forms. `plain` and `quoted` are (tool, input) lists: the plain ones must be refused
+        (else the guard is not in this vault and the check skips); then each quoted one, in each mode. All refused: pass. One allowed:
+        FAIL-expected (a skip with the reason, the check's number keeps its plain-form result), or a hard failure with
+        CREAITE_HC_251_STRICT=1."""
+        self.need(self.fix_reports, "ask creaite's report guard (v251-askreports)")
+        for tool, inp in plain:
+            code, err = self.hook(tool, inp)
+            self.assertEqual(code, 2, f"the plain form {inp} was let through: {err}")
+        allowed = [f"{mode}: {inp.get('command') or inp.get('file_path')}" for mode in modes for tool, inp in quoted
+                   for code, _ in [self.hook(tool, inp, mode)] if code != 2]
+        if allowed:
+            msg = f"{len(allowed)} of {len(quoted) * len(modes)} quoted forms let through, e.g. {allowed[0]}"
+            if self.STRICT:
+                self.fail(f"{msg} ({self.QUOTED_WHY})")
+            self.note(n, f"quoted forms: FAIL-expected ({self.QUOTED_WHY}); {msg}")
+            self.skipTest(f"FAIL-expected: {self.QUOTED_WHY}; {msg} (CREAITE_HC_251_STRICT=1 makes it a failure)")
+        self.note(n, f"the quoted, spliced and run forms ({len(quoted)} x {len(modes)} modes) refused too")
+
+    def test_c38_ask_creaite_cannot_change_a_report_quoted_forms(self):
+        """38 (quoted forms). The same refusal when the verb of filechange.py is quoted or spliced, or the script is run through
+        system/scripts/run: filechange.py 'edit' …, ed''it, "delete", run filechange.py "create". Expected to fail on 2.5.1."""
+        w, files = self.report_files()
+        before = {k: self.stamp(f) for k, f in files.items()}
+        f = str(files["client"])
+        src = "system/staging/drafts/x.html"
+        plain = [("Bash", {"command": f"python3 system/scripts/filechange.py edit '{f}' --from {src}"})]
+        quoted = [("Bash", {"command": c}) for c in (
+            f"python3 system/scripts/filechange.py 'edit' '{f}' --from {src}",
+            f"python3 system/scripts/filechange.py ed''it '{f}' --from {src}",
+            f'python3 system/scripts/filechange.py "delete" \'{f}\'',
+            f"system/scripts/run filechange.py edit '{f}' --from {src}",
+            f"system/scripts/run filechange.py 'create' '{f}' --from {src}",
+            f'system/scripts/run filechange.py "delete" \'{f}\'')]
+        try:
+            self.quoted_check(38, plain, quoted, ("ask", "confirmed", "sweep"))
+        finally:
+            self.assertEqual({k: self.stamp(x) for k, x in files.items()}, before, "the report files are unchanged")
+
+    def test_c39_ask_creaite_cannot_draft_or_file_a_report_quoted_forms(self):
+        """39 (quoted forms). report.py weekly-stage and client-stage with the verb quoted or spliced ('weekly-stage', weekly''-stage,
+        "client-stage"), also through system/scripts/run, in an ask, a confirmed and a sweep run. Expected to fail on 2.5.1."""
+        w, files = self.report_files()
+        before = self.listing(w)
+        d = w["drafts"]
+        plain = [("Bash", {"command": f"python3 system/scripts/report.py weekly-stage {d}/x.json"})]
+        verbs = ("'weekly-stage'", "weekly''-stage", '"client-stage"', "client-st''age", "'client'-stage")
+        quoted = [("Bash", {"command": f"python3 system/scripts/report.py {v} {d}/x.json"}) for v in verbs]
+        quoted += [("Bash", {"command": f"system/scripts/run report.py {v} {d}/x.json"}) for v in verbs]
+        try:
+            self.quoted_check(39, plain, quoted, ("ask", "confirmed", "sweep"))
+        finally:
+            self.assertEqual(self.listing(w), before, "no report, draft or file appeared")
 
     def test_c40_ask_creaite_can_still_read_a_report(self):
         """40. Ask creaite: "summarise this week's report" → it reads the report and answers. (The guard lets the read through; the

@@ -298,8 +298,17 @@ class Collect(unittest.TextTestResult):
     def _put(self, test, status, note):
         """Record one check's outcome."""
         n = self.check_of(test)
-        if n is not None:
-            self.by_check[n] = (status, note)
+        if n is None:
+            return
+        # More than one test may carry a check's number (a plain-form body and a quoted-form body of check 38): the worst outcome
+        # stands (fail, then pass, then skip), so a skipped extra body never hides a pass and a pass never hides a fail.
+        rank = {"fail": 2, "pass": 1}
+        old = self.by_check.get(n)
+        if old and rank.get(old[0], 0) > rank.get(status, 0):
+            return
+        if old and rank.get(old[0], 0) == rank.get(status, 0) and old[0] != "skip":
+            note = "; ".join(x for x in (old[1], note) if x)
+        self.by_check[n] = (status, note)
 
     def addSuccess(self, test):
         """Passed."""

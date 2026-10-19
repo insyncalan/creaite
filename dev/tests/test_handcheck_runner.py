@@ -80,6 +80,26 @@ class Runner(unittest.TestCase):
         self.assertEqual(sorted(set(sheet) - set(tests)), [])
         self.assertEqual(sorted(n for n, runs in tests.items() if not runs), [], "no check is marked phase2")
 
+    def test_two_bodies_of_one_check_keep_the_worst_outcome(self):
+        """A check may have a second body (test_c38_…_quoted_forms): a skipped extra body never hides a pass, a fail is never hidden."""
+        import handcheck
+
+        class T:
+            def __init__(self, name):
+                self._testMethodName = name
+
+        for order in ((("pass", "a"), ("skip", "b")), (("skip", "b"), ("pass", "a"))):
+            r = handcheck.Collect.__new__(handcheck.Collect)
+            r.by_check = {}
+            for status, note in order:
+                r._put(T("test_c38_x" if note == "a" else "test_c38_y"), status, note)
+            self.assertEqual(r.by_check[38][0], "pass", order)
+        r = handcheck.Collect.__new__(handcheck.Collect)
+        r.by_check = {}
+        for status in ("pass", "fail", "pass"):
+            r._put(T("test_c39_x"), status, status)
+        self.assertEqual(r.by_check[39][0], "fail")
+
 
 if __name__ == "__main__":
     unittest.main()
