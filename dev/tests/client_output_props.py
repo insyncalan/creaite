@@ -1053,8 +1053,8 @@ def p13(ctx, seed, n):
 
 def p13_shared(ctx, seed, n):
     """P13 shared store (known gap C, proposal 4 of dev/proposals/audience-bypass): a picture in the project's `_images/` store that
-    was uploaded for the internal report is drawn into the client report when the client text names it, because the store is one
-    per project. Expected to fail until each report has its own store (step 2 of dev/proposals/client-output-snapshot.md)."""
+    was uploaded for the internal report is never drawn into a client report, even when the client text names it (step 2: a client
+    report reads only `_images/client-<name>` pictures, as its snapshot's picture table records them)."""
     folder = creaite_doc.images_dir({"project": CODE}) / "_images"
     folder.mkdir(parents=True, exist_ok=True)
     pic = folder / "internal-raid.png"
@@ -1545,6 +1545,13 @@ def _pictures_off():
     creaite_doc.text_image = lambda doc, ref: real(doc, ref) or paths.image_file(paths.project_dir((doc or {}).get("project")), ref)
 
 
+def _gap_c_off():
+    """v2.5.1 step 2's gap C rule taken away: any `_images/` picture is a client report's."""
+    import client_snapshot
+    creaite_doc.CLIENT_PICTURE = ""
+    client_snapshot.CLIENT_PICTURE = ""
+
+
 def _metadata_kept():
     """A picture's metadata kept (docx_tools.strip_image_metadata does nothing)."""
     import docx_tools
@@ -1567,7 +1574,7 @@ def _audience_flip():
 MUTANTS = {
     "gate_off": _gate_off, "output_off": _output_off, "reread": _reread, "page_used": _page_used, "decoder_off": _decoder_off,
     "audience_flip": _audience_flip, "other_parser": _other_parser, "pictures_off": _pictures_off,
-    "metadata_kept": _metadata_kept, "match_raw": _match_raw,
+    "metadata_kept": _metadata_kept, "match_raw": _match_raw, "gap_c_off": _gap_c_off,
     "derive_off": lambda: setattr(creaite_doc, "derive_client", lambda doc: doc),
     "allow_off": lambda: setattr(creaite_doc, "client_shape", lambda doc: copy.deepcopy(doc)),
     "signs_off": lambda: setattr(creaite_doc, "report_signs", lambda path, doc: []),

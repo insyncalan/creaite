@@ -350,6 +350,29 @@ class ClientBrowser(LiveBrowserCase):
         for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "The internal summary", "creaite-data", "<script"):
             self.assertNotIn(internal, text)
 
+    def test_c09_show_as_exported_is_the_servers_render_of_a_preview_snapshot(self):
+        """v2.5.1 (#239, step 2): the client view's Show as exported is the server's own render (/api/report/exported-view) of a
+        preview snapshot of the saved report, in a sandboxed frame marked Preview; never a page drawn in the browser."""
+        self.approve_internal()
+        a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        self.open_view()
+        self.b.wait("document.querySelector('.hubstat[data-k=client]') && document.querySelector('.hubstat[data-k=client]').dataset.state==='draft'", 15)
+        self.b.eval("(()=>{ window.__calls=[]; const f=window.fetch; window.fetch=(u,o)=>{ window.__calls.push(String(u)); return f(u,o); }; })()")
+        self.b.click("#hubExp")
+        self.b.wait("document.querySelector('#v-reporting .crx-frame')", 20)
+        self.assertTrue(any(u.endswith("/api/report/exported-view") for u in self.b.eval("window.__calls")))
+        self.assertEqual(self.b.eval("document.querySelector('#v-reporting .crx-badge').textContent"), "Preview")
+        self.assertEqual(self.b.eval("document.querySelector('#v-reporting .crx-frame').getAttribute('sandbox')"), "")
+        html = self.b.eval("document.querySelector('#v-reporting .crx-frame').getAttribute('srcdoc')")
+        self.assertIn('<main class="page">', html)
+        self.assertIn("Test licences are not yet ordered.", html)
+        for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "The internal summary", "creaite-data"):
+            self.assertNotIn(internal, html)
+        self.assertEqual(self.b.eval("document.querySelectorAll('#v-reporting .sheet-handle, #v-reporting .wr-eye').length"), 0)
+        self.b.click("#hubExp")
+        self.b.wait("!document.querySelector('#v-reporting .crx-frame') && document.querySelector('#v-reporting .wr-health')", 10)
+
     @unittest.skipUnless(os.environ.get("CREAITE_SHOTS"), "set CREAITE_SHOTS=<folder> for screenshots")
     def test_zz_screenshots(self):
         out = Path(os.environ["CREAITE_SHOTS"])

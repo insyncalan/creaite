@@ -38,7 +38,7 @@ SIZES = {"P1": (50, 2000), "P2": (50, 2000), "P3": (50, 2000), "P4": (50, 2000),
 # the guard each property must go red without (PROPERTIES.md "Mutation proof"), as a mutant of client_output_props._mutant
 MUTANTS = {"P1": "gate_off", "P2": "reread", "P3": "derive_off", "P4": "derive_off", "P5": "gate_off+allow_off", "P6": "same_report_off",
            "P7": "allow_off", "P8": "signs_off", "P9": "names_off", "P10": "page_used+output_off", "P11": "gate_off",
-           "P13": "pictures_off+output_off", "P14": "logos_off+derive_off+output_off", "P15": "metadata_kept", "P16": "decoder_off", "P17": "audience_flip",
+           "P13": "pictures_off+output_off", "P13shared": "gap_c_off+output_off", "P14": "logos_off+derive_off+output_off", "P15": "metadata_kept", "P16": "decoder_off", "P17": "audience_flip",
            "P18": "stub_off", "P19": "output_off", "P20": "allow_off", "P21": "other_parser+gate_off", "P22": "match_raw", "P23": "gate_off"}
 
 try:
@@ -112,9 +112,9 @@ class Properties(A.Audience):
 
     def test_P13_pictures(self): self.check("P13")
 
-    @unittest.expectedFailure
     def test_P13_shared_images_store_known_gap_C(self):
-        """Known gap C (proposal 4, closed in step 2 with a picture store per report): expected to fail until then."""
+        """Known gap C, closed in step 2: a picture added for the internal report is never drawn into a client report (a client
+        report's own pictures are `_images/client-<name>`, drawn only as its snapshot's picture table records them)."""
         self.check("P13shared")
 
     def test_P14_logos(self): self.check("P14")
