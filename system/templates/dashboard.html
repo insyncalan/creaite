@@ -69454,10 +69454,8 @@ ${d5.text}`);
     const x5 = d5 === void 0 ? crDoc.value : d5;
     return x5 ? `${crAsked}|${JSON.stringify(crArg.value)}|${x5.project}|${x5.date}|${x5.client || ""}` : "";
   }
-  var sameReport = (d5) => {
-    const c5 = crDoc.value;
-    return !!c5 && !!d5 && c5.project === d5.project && c5.date === d5.date && (c5.client || "") === (d5.client || "");
-  };
+  var sameDoc = (a5, b5) => !!a5 && !!b5 && a5.project === b5.project && a5.date === b5.date && (a5.client || "") === (b5.client || "");
+  var sameReport = (d5) => sameDoc(crDoc.value, d5);
   async function loadClientReport(arg, fresh) {
     const mine = ++crAsked;
     crArg.value = arg;
@@ -69525,7 +69523,8 @@ ${d5.text}`);
   }
   var matchChain = Promise.resolve();
   function matchInternal(ids) {
-    matchChain = matchChain.then(() => matchInternalNow(ids)).catch(() => void 0);
+    const asked2 = crIdentity();
+    matchChain = matchChain.then(() => crIdentity() === asked2 ? matchInternalNow(ids) : void 0).catch(() => void 0);
     return matchChain;
   }
   async function matchInternalNow(ids) {
@@ -69590,7 +69589,7 @@ ${d5.text}`);
       if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
       else clean.push(c5.id);
     });
-    const kept = (on2) => clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2));
+    const kept = (on2) => sameDoc(on2, d02) ? clean.filter((id2) => secOf(on2, id2) === secOf(d02, id2)) : [];
     const onto = (on2) => kept(on2).reduce((x5, id2) => matchClientSection(x5, i5, id2), on2);
     if (clean.length) {
       for (let tries = 0; ; tries++) {
@@ -69622,7 +69621,7 @@ ${d5.text}`);
   // components/report/ClientParts.jsx
   var crAskWhy = y3(false);
   function setClientDoc(next) {
-    if (crDoc.value && !sameReport(next)) return;
+    if (!sameReport(next)) return;
     crDoc.value = next;
     crDirty.value = true;
   }

@@ -32,7 +32,7 @@ export const crAskWhy = signal(false);
 
 /** Take a new client document onto the page: only one of the report that is open (a late answer for another project, week or client,
     from a sheet that awaited the server before another report opened, is dropped). @param {SheetDoc} next */
-export function setClientDoc(next) { if (crDoc.value && !sameReport(next)) return; crDoc.value = next; crDirty.value = true; }
+export function setClientDoc(next) { if (!sameReport(next)) return; crDoc.value = next; crDirty.value = true; }
 
 /** Match one section to the internal report. @param {string} id */
 export function matchOne(id) {
