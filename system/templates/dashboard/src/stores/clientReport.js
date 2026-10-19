@@ -106,17 +106,17 @@ export async function approveClientReport(force) {
   return api("/api/report/approve", { kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, doc: d, base_version: crBase.value, force: !!force });
 }
 
-/** Export the client report (the page saved first); the route runs the left-out check again and answers with it. #226: for html and pdf
-    `makePage` draws the saved report as it is exported (components/report/exportPage.jsx), and the server checks it again.
-    @param {"html"|"docx"|"pdf"} fmt @param {(doc: any, version: number) => Promise<any>} [makePage] */
-export async function exportClientReport(fmt, makePage) {
+/** Export the client report (the page saved first); the route runs the left-out check again and answers with it. v2.5.1 (#239): the
+    server makes every client file from the report's checked snapshot (client_snapshot.client_export), so no page is ever posted for
+    one; `makePage` is kept in the signature for the callers and not used.
+    @param {"html"|"docx"|"pdf"} fmt @param {(doc: any, version: number) => Promise<any>} [_makePage] */
+export async function exportClientReport(fmt, _makePage) {
   const a = crArg.value, d = crDoc.value;
   if (!a || !d) return { ok: false, message: "Nothing is open." };
   const opened = crIdentity(d);
   if (crDirty.value || (crInfo.value && crInfo.value.where === "new")) { const s = await saveClientPage({ doc: d, base_version: crBase.value }); if (!s.ok) return s; }
   if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
-  const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
-  return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt, page: page || undefined });
+  return saveExport({ kind: "client", code: a.code, week_ending: d.date, client: d.client || a.client || undefined, fmt });
 }
 
 let matchChain = Promise.resolve();

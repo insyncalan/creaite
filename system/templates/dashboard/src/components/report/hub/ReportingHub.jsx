@@ -11,7 +11,7 @@
 import { useEffect } from "preact/hooks";
 import { LeftOutDialog } from "../LeftOutDialog.jsx";
 import { ExportSave } from "../ExportSave.jsx";
-import { CLIENT_RENDERERS, setClientDoc } from "../ClientParts.jsx";
+import { CLIENT_RENDERERS, ServerExported, setClientDoc } from "../ClientParts.jsx";
 import { doExport, clientHealthApply } from "../ClientView.jsx";
 import { MatchHeldDialog } from "../MatchHeldDialog.jsx";
 import { countRedraft, redrafter } from "../redraft.js";
@@ -123,7 +123,7 @@ function HubSheet({ code, view, on, doc }) {
   if (view === "client" && cd) {
     return <ReportSheet audience="client" key={`c:${cd.date}`} {...common} doc={cd} baseVersion={crBase.value} scrollKey={`client:${cd.project}:${cd.date}:${cd.client || ""}`}
       readOnly={cFiled} renderers={CLIENT_RENDERERS} onChange={setClientDoc} onSave={saveClientPage} ai={clientAi}
-      onRedraft={clientRedraft(cd)}
+      onRedraft={clientRedraft(cd)} exportedView={<ServerExported doc={cd} version={crBase.value} />}
       onEvent={ev => { if (ev.type === "reload") reloadClient(); else countRedraft(ev, "report"); }} />;
   }
   if (side && cd) {

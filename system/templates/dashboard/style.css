@@ -4099,3 +4099,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+/* v2.5.1 (#239): the client report's Show as exported is the server's render of its checked preview snapshot, in a sandboxed frame */
+.crx{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px}
+.crx-badge{align-self:center;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted)}
+.crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:#fff}
+.crx-wait,.crx-err{padding:16px}
