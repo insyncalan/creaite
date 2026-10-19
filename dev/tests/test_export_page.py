@@ -141,7 +141,7 @@ class LeakFix(Base):
 
     def test_leak1_a_client_file_drops_every_attribute_off_the_list_and_still_reads_the_rest(self):
         path = self.client()
-        out, why = self.build(path, page(self.wrap('<p title="Zanzibar" aria-label="Zanzibar" data-row="ABC-005" data-note="q">x</p>'
+        out, why = self.build(path, page(self.wrap('<p title="Zanzibar" aria-label="Zanzibar" data-row="ABC-005" data-note="q"></p>'
                                                    '<img alt="Zanzibar" src="data:image/png;base64,iVBORw0KGgo=">')))
         self.assertIsNone(why)
         for gone in ("title=", "aria-label", "data-row", "data-note", "alt=", "ABC-005", "Zanzibar"):
@@ -157,7 +157,7 @@ class LeakFix(Base):
 
     def test_leak4_item_ids_never_reach_a_client_file_as_attributes(self):
         out, why = self.build(self.client(), page(self.wrap(
-            '<table><tbody><tr data-row="ABC-005" data-ref="ABC-A-003"><td>x</td></tr></tbody></table>')))
+            '<table><tbody><tr data-row="ABC-005" data-ref="ABC-A-003"><td></td></tr></tbody></table>')))
         self.assertIsNone(why)
         self.assertNotRegex(out.split("</style>", 2)[-1], r"[A-Z0-9]{3,7}-(?:[A-Z]-)?\d+")
 
@@ -218,8 +218,8 @@ class ResidualLeaks(Base):
             self.assertIn("leaves out", self.build(self.both()[0][1], page(self.wrap(f'<p title="{word}">x</p>')))[1] or "", f"{mark!r} in an attribute")
 
     def test_ids_joined_to_each_other_are_found_in_a_client_attribute(self):
-        out, why = self.build(self.client(), page(self.wrap('<p class="ABC-A-001ABC-A-002">x</p><p class="a ABC-005,ABC-A-003">y</p>'
-                                                            '<p class="xxABC-A-004yy">z</p>')))
+        out, why = self.build(self.client(), page(self.wrap('<p class="ABC-A-001ABC-A-002"></p><p class="a ABC-005,ABC-A-003"></p>'
+                                                            '<p class="xxABC-A-004yy"></p>')))
         self.assertIsNone(why)
         tail = out.split("</style>", 2)[-1]
         for gone in ("ABC-A-001", "ABC-A-002", "ABC-005", "ABC-A-003", "ABC-A-004"):
