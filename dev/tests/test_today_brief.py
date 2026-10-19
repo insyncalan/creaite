@@ -49,20 +49,20 @@ class PageTests(unittest.TestCase):
 
 
 class IntakeNameTests(PageTests):
-    """BL-70: the screen is called Intake; the folder, ids and keys keep their names; #inbox still opens it."""
+    """BL-70, #232-C: Intake and Review is one screen and one rail entry; the folder, ids and keys keep their names; the old
+    #intake, #inbox and #review addresses (and go("inbox"), go("review")) open it. The page's own structure is test_intake_review_page."""
 
     def test_the_words_alan_reads(self):
         o = self.probe("""
           const rail=document.querySelector('.rail button[data-v=review]');   /* #232: Intake is in the one Intake and Review entry */
-          go("inbox"); const h1=document.querySelector("#v-inbox h1").textContent, hint=document.querySelector("#v-inbox > .wrapmax > .sub").textContent;
+          go("inbox"); const h1=document.querySelector("#v-intake-review h1").textContent;
           const names=ckItems("").map(i=>`${i.g}|${i.l}`), files=ckItems("recording").map(i=>`${i.g}|${i.l}`);
           go("files"); const tree=[...document.querySelectorAll("#tree button")].map(b=>b.textContent), chips=[...document.querySelectorAll("#fquick button")].map(b=>b.textContent);
-          window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, hint, names, files, tree, chips,
+          window.OUT={rail:rail.querySelector(".rl").textContent, title:rail.getAttribute("aria-label").split(",")[0], h1, names, files, tree, chips,
             drop:document.getElementById("inboxDrop").getAttribute("aria-label")};""")
-        self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake and Review", "Intake and Review", "Intake"))
-        self.assertIn("saved to the inbox folder", o["hint"])
-        self.assertIn("Go to|Intake", o["names"])
-        self.assertIn("Actions|Add files to Intake", o["names"])
+        self.assertEqual((o["rail"], o["title"], o["h1"]), ("Intake and Review", "Intake and Review", "Intake and Review"))
+        self.assertEqual([n for n in o["names"] if n.startswith("Go to|") and ("Intake" in n or "Review" in n)], ["Go to|Intake and Review"])   # #232-C: one entry
+        self.assertIn("Actions|Add files to Intake and Review", o["names"])
         self.assertTrue(any(f.startswith("Intake|") for f in o["files"]))
         self.assertFalse(any("Inbox" in n.split("|")[1] for n in o["names"] if not n.startswith(("Files|", "Items|"))))
         self.assertTrue(any(t.startswith("Intake") for t in o["tree"]) and "Intake" not in o["chips"])   # #192: Intake is in the tree once, not a pill)
@@ -73,51 +73,10 @@ class IntakeNameTests(PageTests):
           go("inbox"); const written=location.hash, parsed=[parseHash("#inbox").v, parseHash("#intake").v, parseHash("#intake").arg];
           go("today"); window.location.hash="#inbox"; await new Promise(r=>setTimeout(r,200));
           window.OUT={written, parsed, hashOfInbox:hashOf({v:"inbox"}), view:VIEW};""")
-        self.assertEqual(o["written"], "#intake")                                 # the new address
+        self.assertEqual(o["written"], "#intake-review")                          # #232-C: one address
         self.assertEqual(o["parsed"], ["intake-review", "intake-review", None])   # #232: both open Intake and Review
-        self.assertEqual(o["hashOfInbox"], "#intake")
-
-
-class IntakeSectionsTests(PageTests):
-    """BL-73: Calendar import and Upload files are separate framed sections, in that order (Quick capture became the drawer, BL-301 C)."""
-
-    def test_two_sections_in_order_each_with_its_own_heading_purpose_and_buttons(self):
-        o = self.probe("""
-          go("inbox"); const secs=[...document.querySelectorAll("#v-inbox .isec")];
-          const info=secs.map(s=>({id:s.id,h:s.querySelector("h2").textContent,icon:!!s.querySelector(".ish svg"),purpose:s.querySelector(".ipurpose").textContent,
-            buttons:[...s.querySelectorAll("button[id]")].map(b=>b.id),labelled:s.getAttribute("aria-labelledby")===s.querySelector("h2").id}));
-          const rects=secs.map(s=>s.getBoundingClientRect()), within=(s,sel)=>!!s.querySelector(sel);
-          window.OUT={info,gaps:rects.slice(1).map((r,i)=>Math.round(r.top-rects[i].bottom)),stacked:rects.slice(1).every((r,i)=>r.top>=rects[i].bottom),
-            widths:rects.map(r=>Math.round(r.width)),
-            where:{drop:within(secs[1],"#inboxDrop"),table:within(secs[1],"#inboxTbl"),mtg:within(secs[0],"#mtgSec")},
-            h1s:[...document.querySelectorAll("#v-inbox h1, #v-inbox h2")].map(h=>h.textContent)};""")
-        self.assertEqual([i["h"] for i in o["info"]], ["Calendar import", "Upload files"])   # BL-301 C: Quick capture became the drawer
-        self.assertEqual([i["id"] for i in o["info"]], ["isecCal", "isecUp"])
-        self.assertTrue(all(i["labelled"] and not i["icon"] for i in o["info"]))   # BL-325: a plain sentence-case h2, as Settings, no icon
-        self.assertEqual([i["purpose"] for i in o["info"]], [
-            "Pick meetings from your calendar and load their transcripts.", "Drop transcripts or minutes you already have."])
-        cal, up = (i["buttons"] for i in o["info"])
-        self.assertEqual(cal, ["mtgRefresh", "mtgNew", "mtgTx", "mtgLoad", "mtgGo"])   # Refresh, Select new, Select with transcripts, Load into inbox, Process selected (BL-119: one process button)
-        self.assertIn("inboxNew", up)
-        self.assertIn("inboxGo", up)
-        self.assertEqual(o["where"], {"drop": True, "table": True, "mtg": True})
-        self.assertTrue(o["stacked"])                                                    # nothing side by side
-        self.assertTrue(all(g >= 24 for g in o["gaps"]), o["gaps"])                      # a visible gap between panels
-        self.assertEqual(len(set(o["widths"])), 1)                                       # the same frame, the same width
-        self.assertEqual(o["h1s"][:1], ["Intake"])
-
-    def test_the_sections_use_the_themes_own_card_frame(self):
-        o = self.probe("""
-          go("inbox"); const out={};
-          for(const pal of TEST_PALETTES) for(const mode of ["light","dark"]){ S.palette=pal; S.theme=mode==="dark"?"Dark":"Light"; applyTheme();
-            const cs=getComputedStyle(document.getElementById("isecUp")), card=getComputedStyle(document.querySelector("#v-inbox .tbl")); 
-            out[pal+"|"+mode]=[cs.borderTopWidth!=="0px", cs.backgroundColor!=="rgba(0, 0, 0, 0)", cs.borderTopLeftRadius===card.borderTopLeftRadius]; }
-          window.OUT={out};""".replace("TEST_PALETTES", TEST_PALETTES_JS))
-        for key, (bordered, filled, same_radius) in o["out"].items():
-            self.assertTrue(bordered and filled, key)
-
-
-# BL-301 C: QuickCaptureDateTests went with Quick Capture's form (the capture drawer replaced it; test_capture_drawer).
+        self.assertEqual(o["hashOfInbox"], "#intake-review")
+        self.assertEqual(o["view"], "intake-review")
 
 
 class LiveIndicatorTests(PageTests):
@@ -381,13 +340,14 @@ class TodayBriefTests(PageTests):
         """BL-319 (Alan, 14-10-2026): no per-meeting groups and no Approve n routine in Needs attention; proposals are To decide's."""
         o = self.probe(self.SETUP + """
           const meet={n:1,p:"ABC",kind:"draft",why:"Draft minutes",indiv:true,file:"proposed-2026-10-05-0900.json",ref:"meeting",projects:["ABC"],rec:{t:"Draft minutes: ABC Steering"}};
-          setRev([meet,...grp("proposed-2026-10-05-0900.json",2,[{}]),...grp("proposed-0000-00-01-demo.json",10,[{},{}])]); go("today"); renderToday();
+          setRev([meet,...grp("proposed-2026-10-05-0900.json",2,[{}]),...grp("proposed-0000-00-01-demo.json",10,[{},{}])]);
+           D.intake_review={v:1,meetings:[],mail:{needs:[],routine:REV.map(r=>r.n)},other:{needs:[],routine:[]},later:[],not_needed:[],counts:{}}; go("today"); renderToday();
           window.OUT={attn:document.getElementById("attnList").textContent, qa:document.querySelectorAll("#attnList [data-qa]").length,
             td:(document.getElementById("tdLine")||{textContent:""}).textContent};""")
         self.assertNotIn("Review the", o["attn"])
         self.assertNotIn("routine", o["attn"])
         self.assertEqual(o["qa"], 0)
-        self.assertTrue(o["td"].startswith("4 proposals in Review"))                  # #208: every proposal is counted in Intake and Review's one line
+        self.assertTrue(o["td"].startswith("4 proposals to approve"))                  # #208: every proposal is counted in Intake and Review's one line
 
     def test_reminders_move_in_with_run_and_dismiss_in_a_menu(self):
         o = self.probe(self.SETUP + """
