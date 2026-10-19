@@ -61,3 +61,9 @@ Alan wants the original People register view here: the columns **Name, Email, Or
 **Delete.** On a project the bin means **Remove from this project**, not delete from the register (a person's global record is never removed by accident). Deleting from the register is on the People page.
 
 **Filter.** Everyone on this project, also on other projects, needs attention (no email); plus the search.
+
+## More on the People view (Alan, 19-10-2026)
+- **Richer filter:** today's two-pane panel: WHO (Project, How they're involved, Organisation, Followed) and TIDY UP (In the register, Needs attention), each with options, counts and a live "Showing x of y", Clear all and Done.
+- **Edit a person** opens a form: Full name, Email, Aliases, Organisation and Role (for this project), On projects (tick the projects), and Follow this person (VIP alerts). Buttons: Remove from this project, Cancel, Save. A person with no email can still be saved and still gets a drafted email, with nothing in To.
+- **A star beside the name** in the People list for a followed person, on Alan's screen only. Its accessible name is "Followed" (never "VIP"), and it never appears in a report, export, draft or shared page (BL-288). Caution: it does show on screen, so a screen share would reveal it; if Alan wants, a "Show stars" switch hides it.
+- Workstreams: "Fix spellings: rename or merge" and "Show retired" are removed from the footer.
