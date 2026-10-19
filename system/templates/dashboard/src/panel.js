@@ -1246,7 +1246,7 @@ export async function draftBulk(ids,statusEl){ const why=draftWhyNot("update-bul
   const res=await draftAsk({kind:"update-bulk",ids:open},{label:`Drafting updates for ${plur(open.length,"action")}`,status:st});
   if(res.nothing){ snack(res.nothing); return; } if(!res.ok){ snack(res.message||"No drafts came back"); return; }
   const n=res.staged||0, skip=(res.skipped||[]).length; await reloadData();
-  snack(n?`${plur(n,"drafted update")} in Review, each approved on its own${skip?`; ${skip} had nothing new`:""}. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Review"); }
+  snack(n?`${plur(n,"drafted update")} in Intake, each approved on its own${skip?`; ${skip} had nothing new`:""}. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Intake"); }
 /* ===== end BL-219 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0197(){
@@ -1301,7 +1301,7 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drc
   const st=b.parentElement.querySelector(".drbst"), res=await draftAsk({kind:"client-bulk",code:b.dataset.drcmall},{label:"Drafting client wording",status:h=>{ if(st&&st.isConnected) putHTML(st,raw(h)); }});
   if(res.nothing){ snack(res.nothing); return; } if(!res.ok){ snack(res.message||"No drafts came back"); return; }
   const n=res.staged||0; await reloadData();
-  snack(n?`${plur(n,"client wording")} drafted, in Review: each is approved on its own. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Review"); });
+  snack(n?`${plur(n,"client wording")} drafted, in Intake: each is approved on its own. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Intake"); });
 }
 /* ===== BL-222 (sprint-drafts-fields) ===== Suggest the thinking fields. Suggest beside a decision's Reasoning and Options considered and
    a RAID item's response: drafts.py reads the item's source passage (its meeting, found by its words) and, for a risk, the closed

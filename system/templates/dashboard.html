@@ -62986,7 +62986,7 @@ ${d5.text}`);
     }
     const n4 = res.staged || 0, skip = (res.skipped || []).length;
     await reloadData();
-    snack(n4 ? `${plur(n4, "drafted update")} in Review, each approved on its own${skip ? `; ${skip} had nothing new` : ""}. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Review");
+    snack(n4 ? `${plur(n4, "drafted update")} in Intake, each approved on its own${skip ? `; ${skip} had nothing new` : ""}. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Intake");
   }
   function bootPanel0197() {
     Object.assign(DRAFTKIND, { update: "update", "update-bulk": "update" });
@@ -63104,7 +63104,7 @@ ${d5.text}`);
       }
       const n4 = res.staged || 0;
       await reloadData();
-      snack(n4 ? `${plur(n4, "client wording")} drafted, in Review: each is approved on its own. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Review");
+      snack(n4 ? `${plur(n4, "client wording")} drafted, in Intake: each is approved on its own. Nothing was saved in place` : "No drafts came back", n4 ? () => go2("review") : null, "Open Intake");
     });
   }
   var PKDRTHINK = { resp: "response_action", why: "reasoning", opts: "options" };
