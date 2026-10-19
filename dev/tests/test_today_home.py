@@ -3,8 +3,8 @@
 Run: python3 dev/tests/test_today_home.py   (Chrome tier; skipped without Chrome)
 One class per Done-when point:
   Header      the header is BL-293's day band, exactly, at full width, with its arrows fixed at the top right;
-  ToDecide    Intake and Review (was To decide), just above Week ahead: #208, one line ("4 proposals in Review and 2 transcripts ready
-              in Intake", each count a link, gone at zero); messages keep their cards under it;
+  ToDecide    Messages (was To decide, then Intake and Review), just above Week ahead: #245 took Intake and Review's line to the foot of
+              Your commitments (test_today_intake_line.py); messages keep their cards;
   Sections    every current section present, in order, unboxed; Resolved folded to one line; the Week ahead to next Monday
               with why each row is there, following dashboard.week_ahead_priorities; the Portfolio as it was;
   Icons       row icons named on hover and to screen readers, 55% until pointed at or tabbed into, nothing moves; Mark done
@@ -75,100 +75,28 @@ class Home(LiveBrowserCase):
 
     def today(self):
         self.b.eval("go('today'); renderToday()")
-        self.b.wait("document.getElementById('tdLine')")
+        self.b.wait("document.getElementById('tdQuiet')")   # #245: the sample vault has proposals waiting, so Intake's quiet line shows
 
 
 class ToDecide(Home):
-    """#208 (v2.3.0): Intake and Review is one quiet line, not a list. Messages (BL-334) keep their cards under it."""
+    """#245 (v2.5.2): Intake and Review is gone; the line that counted Review and Intake is a quiet line under Your commitments
+    (test_today_intake_line.py). Messages (BL-334) keep their cards, in a section of their own, just above Week ahead."""
     shared_server = False
 
-    def test_one_line_with_the_rails_counts_and_links_and_no_rows(self):
-        b = self.b
-        self.today()
-        o = b.eval(f"""(()=>{{ const l=document.getElementById('tdLine'); return {{first:document.getElementById('tdSec').nextElementSibling.id,
-          text:l.textContent, rows:document.querySelectorAll('#tdList>li.td-review,#tdList>li.td-transcript').length,
-          pending:REV.filter(r=>!r.done).length, count:document.getElementById('nTd').textContent, tx:MTG().filter(mtgHasTx).length,
-          line:tdLine().map(x=>x.key+':'+x.n), links:[...l.querySelectorAll('a')].map(a=>[a.dataset.tdline,a.textContent]),
-          foot:document.querySelector('#tBrief .tdfoot').textContent}}; }})()""")
-        self.assertEqual(o["first"], "weekSec")                         # #168: still just above Week ahead
-        self.assertEqual(o["rows"], 0)                                  # the per-item rows are off Today
-        self.assertEqual(o["links"][0], ["review", f"{o['pending']} proposal{'' if o['pending'] == 1 else 's'} in Review"])
-        self.assertTrue(o["text"].startswith(f"{o['pending']} proposal"))
-        self.assertIn(f"review:{o['pending']}", o["line"])              # Review's count is the rail badge's (renderBadge)
-        self.assertEqual(o["count"], str(sum(int(x.split(":")[1]) for x in o["line"])))
-        self.assertNotIn("Open Review", o["foot"])
-        self.assertNotIn("VIP", o["text"])
-
-    def test_every_count_is_a_real_link_focusable_and_enter_goes_to_its_page(self):
-        b = self.b
-        self.today()
-        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'}]; D.meetings={rows:[{id:'mx1',title:'Steering',p:'ABC',day:'2026-10-13',start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null}]}; renderToday()")
-        keys = b.eval("[...document.querySelectorAll('#tdLine a')].map(a=>a.dataset.tdline)")
-        self.assertEqual(keys, ["review", "transcripts", "files"])
-        for key, view in (("review", "review"), ("transcripts", "inbox"), ("files", "inbox")):
-            hrefs = b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').getAttribute('href')")
-            self.assertEqual(hrefs, "#" + view)                          # a real target, not "#"
-            b.eval(f"document.querySelector('#tdLine [data-tdline={key}]').focus()")
-            self.assertTrue(b.eval(f"document.activeElement===document.querySelector('#tdLine [data-tdline={key}]')"))
-            b.key("Enter")
-            b.wait(f"VIEW==='{view}'")
-            b.eval("go('today'); renderToday()")
-            b.wait("document.getElementById('tdLine')")
-
-    def test_a_new_file_or_proposal_while_today_is_open_updates_the_line(self):
-        b = self.b
-        self.today()
-        before = b.eval("tdLine().map(x=>x.key+':'+x.n).join()")
-        b.eval("D.inbox=[...(D.inbox||[]),{state:'new',name:'late.docx'}]; inboxBadge(); renderToday()")
-        # the refresh path (files.js refreshFiles) re-renders Today: simulate its last line
-        b.eval("""window.fetch=async()=>({ok:true,json:async()=>({ok:true,files:[],archived:[],inbox:[...(D.inbox||[]),{state:'new',name:'later.docx'}]})}); refreshFiles(true)""")
-        b.wait("/new files? in Intake/.test(document.getElementById('tdLine').textContent)")
-        n = b.eval("tdLine().find(x=>x.key==='files').n")
-        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=files]').textContent"), f"{n} new files in Intake")
-        old = int(b.eval("tdLine().find(x=>x.key==='review').n"))
-        b.eval("REV.push({n:9901,p:'ABC',kind:'actions',why:'Strong match',indiv:false,flags:[],file:'proposed-2026-10-13-1000.json',ref:1,rec:{t:'Late one'},src:''}); renderBadge(); renderToday()")
-        self.assertEqual(b.eval("document.querySelector('#tdLine [data-tdline=review]').textContent"), f"{old + 1} proposals in Review")
-        self.assertNotEqual(before, b.eval("tdLine().map(x=>x.key+':'+x.n).join()"))
-
-    def test_the_intake_part_says_what_the_rail_counts(self):
-        b = self.b
-        self.today()
-        o = b.eval("""(()=>{ const f=(D.inbox||[]).filter(x=>x.state==='new').length; D.inbox=[...(D.inbox||[]),{state:'new',name:'a.docx'},{state:'new',name:'b.docx'}];
-          const n=f+2; renderToday(); const a=document.querySelector('#tdLine [data-tdline=files]');
-          return {text:a&&a.textContent, n}; })()""")
-        self.assertEqual(o["text"], f"{o['n']} new files in Intake")
-
-    def test_it_is_one_line_it_folds_like_before_and_goes_at_zero(self):
-        b = self.b
-        self.today()
-        for w in (1400, 900):
-            b.resize(w, 1000)
-            h = b.eval("document.getElementById('tdLine').getBoundingClientRect().height")
-            self.assertLess(h, 60)                                      # one line (it may wrap at 900px, never a list)
-            self.assertEqual(b.eval("document.documentElement.scrollWidth<=innerWidth"), True)
-        b.eval("document.querySelector('#tdFold > summary').click()")
-        self.assertFalse(b.eval("document.getElementById('tdFold').open"))
-        self.assertEqual(b.eval("document.getElementById('tdLine').checkVisibility()"), False)
-        b.eval("document.querySelector('#tdFold > summary').click()")
-        self.assertEqual(b.eval("document.getElementById('tdLine').checkVisibility()"), True)
-        b.eval("REV.forEach(r=>{r.done='approved'}); D.inbox=[]; MTG().forEach(m=>{m.processed=true}); renderToday()")
-        self.assertTrue(b.eval("document.getElementById('tdSec').hidden"))
-        self.assertTrue(b.eval("!document.getElementById('tdLine')"))
-
-    def test_messages_keep_their_cards_under_the_line_newest_first(self):
+    def test_messages_keep_their_cards_newest_first(self):
         b = self.b
         b.eval("""SA().vip={people:{},alerts:[{id:'m1',who:'Tom Reid',subject:'Signed FDS',kind:'mail',sent:'2099-01-01T09:00',p:'ABC',link:'https://x/1'},
           {id:'m2',who:'Sam Lee',subject:'Shortlist',kind:'teams',sent:'2000-01-01T09:00',p:'ABC'},{id:'m3',who:'Sam Lee',subject:'Budget',kind:'mail',sent:'2000-01-01T08:00',p:''}]}""")
         self.today()
         o = b.eval(f"""(()=>{{ const L={TD}; return {{msgs:L.map(l=>l.dataset.td), tag:L[0].querySelector('.tdtag').textContent,
-          order:document.getElementById('tdLine').compareDocumentPosition(document.getElementById('tdList')),
-          text:document.getElementById('tdSec').textContent, count:document.getElementById('nTd').textContent,
-          n:tdLine().reduce((a,x)=>a+x.n,0)+3}}; }})()""")
+          head:document.getElementById('hTd').firstChild.textContent.trim(), first:document.getElementById('tdSec').nextElementSibling.id,
+          text:document.getElementById('tdSec').textContent, count:document.getElementById('nTd').textContent}}; }})()""")
         self.assertEqual(o["msgs"], ["alm1", "alm2", "alm3"])
         self.assertEqual(o["tag"], "Message")
-        self.assertTrue(o["order"] & 4)                                 # the list follows the line
+        self.assertEqual(o["head"], "Messages")                         # #245: the section's own name; no Intake and Review, no fold
+        self.assertEqual(o["first"], "weekSec")                         # #168: still just above Week ahead
         self.assertNotIn("VIP", o["text"])                              # BL-288
-        self.assertEqual(o["count"], str(o["n"]))
+        self.assertEqual(o["count"], "3")                               # the cards only: Intake's counts are in the quiet line (#245)
 
 
 class Sections(Home):
@@ -427,7 +355,7 @@ class NoFileNames(Home):
         self.today()
         b.eval("EXPAND.add('td'); EXPAND.add('attn'); renderToday(); document.getElementById('resFold').open=true")
         text = b.eval("document.getElementById('v-today').innerText")
-        self.assertIn("proposals in Review", text)                    # #208: a count, never a title or a file name
+        self.assertIn("proposals to approve", text)                    # #245 (was #208, "in Review"): a count, never a title or a file name
         self.assertNotIn("proposed-", text)
         self.assertNotIn(".json", text)
 
