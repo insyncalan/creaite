@@ -39,8 +39,8 @@ Sidebar: **Essentials · Advanced · Health** ("People and projects" retired). A
 
 **The redesign (shown in the mockup):**
 1. **One scrolling page**, with a sticky side list of anchors (it highlights where you are); the tabs go.
-2. **A summary header:** name, code, Active, health, the client and the two people who matter, four numbers (open actions, risks and issues, next milestone, last client report), and Open project and Open reporting.
-3. **Sections in order of use:** Project, People and partners (adds an open-items count per person), **Workstreams** (new here), Milestones, **Client report and logos** (together), then **Archive and close** last, set apart with a red-tinted border so it is clearly the serious one.
+2. ~~A summary header~~ **Dropped by Alan, 19-10-2026.**
+3. **Sections in order of use:** Project, People and partners (the register's own table, below), **Workstreams** (new here), Milestones, **Client report and logos** (together), then **Archive and close** last, set apart with a red-tinted border so it is clearly the serious one.
 4. Each change still saves on its own, with Undo; nothing about saving changes.
 
 **Decisions for Alan**
@@ -50,3 +50,14 @@ Sidebar: **Essentials · Advanced · Health** ("People and projects" retired). A
 
 ## Build notes (once approved)
 Settings: tests for the removed sections' pages and the settings search; a migration that keeps every saved value (Alan's "never reverse saved layout" rule applies to settings too). Project settings: the shared settings stay one setting with the reporting hub's cog (as today). Tests: the existing `test_project_settings*.py` updated, plus anchors and the sticky list.
+
+## People on the project page (Alan, 19-10-2026)
+Alan wants the original People register view here: the columns **Name, Email, Organisation · role, Aliases, Actions, RAID**; edit and delete; search and the filter; a name opens that person's work page; right-click drafts an email to them with their work items. **No merge or rename** (Fix spellings is dropped for people).
+
+**Who is shown.** A person is on a project when they own an item there or are named on it (as today's project memory does). Counts are for this project. A small project code beside a name shows they are also on another project. Email and aliases belong to the person and are the same everywhere; organisation and role are for this project.
+
+**People on no project.** They are shown in a quiet group under the table, "Not on any project yet", on every project's page, each with **Add to this project**, until they are added to one. This keeps Alan's idea (nobody is missed) without mixing them into every project's table. Once a person is on a project they leave that group everywhere.
+
+**Delete.** On a project the bin means **Remove from this project**, not delete from the register (a person's global record is never removed by accident). Deleting from the register is on the People page.
+
+**Filter.** Everyone on this project, also on other projects, needs attention (no email); plus the search.
