@@ -265,7 +265,8 @@ def match_check_route(handler, req):
         return handler.send(400, {"ok": False, "message": f"Send up to {MATCH_MAX_DOCS} client reports to check."})
     sizes = [len(json.dumps(d, default=str)) for d in docs]
     if any(n > MATCH_MAX_DOC for n in sizes) or sum(sizes) > MATCH_MAX_TOTAL:
-        return handler.send(400, {"ok": False, "message": "Those client reports are too large to check together: send fewer, or shorter ones."})
+        return handler.send(400, {"ok": False, "message": "Those client reports are too large to check together: "
+                                                           "send fewer, or shorter ones."})
     con = client_leak.connect()
     out = []
     for d in docs:
