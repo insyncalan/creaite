@@ -1579,7 +1579,7 @@ MUTANTS = {
     "allow_off": lambda: setattr(creaite_doc, "client_shape", lambda doc: copy.deepcopy(doc)),
     "signs_off": lambda: setattr(creaite_doc, "report_signs", lambda path, doc: []),
     "same_report_off": lambda: setattr(report_doc, "same_report", lambda *a, **k: None),
-    "names_off": lambda: setattr(report_server, "_name_problem", lambda name: None),
+    "names_off": lambda: setattr(report_server, "_name_problem", lambda name, own=None: None),
     "logos_off": lambda: setattr(creaite_doc._Word, "logo_files", _logo_files_stored),
     "stub_off": lambda: setattr(creaite_doc, "_stub_row", lambda row: dict(row)),
 }
