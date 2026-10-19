@@ -19,8 +19,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from live_browser import LiveBrowserCase  # noqa: E402
-from test_sweep_alerts import record, run, vip_file, vip_vault  # noqa: E402
-from test_vip_matching import py  # noqa: E402
+from test_dashboard import populate  # noqa: E402
+from test_sweep_alerts import REGISTER, record, run, vip_file, vip_vault  # noqa: E402
+from test_vip_threads import py  # noqa: E402
+from test_vip_screens import says_vip  # noqa: E402
 
 NOW = "2026-10-09 13:00"
 MIA = "Mia Hale <mia@client.example>"
@@ -261,6 +263,216 @@ class Cards(unittest.TestCase):
         py(self.v, f"print(json.dumps(sweep.vip_dismiss({{{pid!r}}})))")
         record(self.v, [{**priv, "last": "2026-10-08 09:30"}])
         self.assertTrue(card(self.v, pid)["seen"])
+
+
+class Dropped(unittest.TestCase):
+    """(c) the recorded-but-missed bug found: an item the sweep read in a conversation Today already summarised was skipped
+    ("summarised on Today") even when the card did not list it, so it reached neither the card nor Review."""
+
+    def setUp(self):
+        self.v = vip_vault()
+        record(self.v, [CHAT])
+        self.link = CHAT["link"]
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def teams(self, text, **more):
+        return item(text, src("Falcon go-live", self.link, kind="Teams", sent="2026-10-08 08:00"), **more)
+
+    def test_an_item_the_card_lists_stays_on_the_card(self):
+        out = stage(self.v, [self.teams("Confirm go-live date")], now="2026-10-08 09:30")
+        self.assertIn("summarised on Today", out)
+        self.assertEqual(rows(self.v), [])
+
+    def test_an_item_the_card_does_not_list_is_staged_and_shown(self):
+        out = stage(self.v, [self.teams("Confirm go-live date"), self.teams("Order the extra test licences")], now="2026-10-08 09:30")
+        self.assertIn("Sweep: 1 item", out)
+        got = rows(self.v, "proposal")
+        self.assertEqual([(r["who"], r["title"], [x["tag"] for x in r["refs"]]) for r in got], [("Mia Hale", "Falcon go-live", ["action"])])
+
+    def test_a_private_conversation_still_keeps_its_whole_thread_out(self):
+        priv = {**CHAT, "conversation": "19:chat-private@thread.v2", "link": "https://x/private2", "sensitivity": "private", "title": "Personal"}
+        record(self.v, [priv])
+        out = stage(self.v, [item("Book the thing", src("Personal", "https://x/private2", kind="Teams", sent="2026-10-08 08:00"))], now="2026-10-08 09:30")
+        self.assertIn("summarised on Today", out)
+        self.assertEqual(rows(self.v), [])
+
+
+class PrivateThreads(unittest.TestCase):
+    """(e) a proposal from a private conversation's thread is its title and times only (no summary, no project, no words)."""
+
+    def test_the_row_takes_the_cards_neutral_title_and_no_project(self):
+        v = vip_vault()
+        try:
+            priv = {**CHAT, "conversation": "19:chat-private@thread.v2", "link": "https://x/private", "sensitivity": "private",
+                    "title": "Personal", "kind": "mail"}
+            record(v, [priv])
+            stage(v, [item("Book the thing", src("A secret subject", "https://x/private", sent="2026-10-09 12:00"))])
+            got = rows(v, "proposal")
+            self.assertEqual(len(got), 1, got)
+            self.assertEqual((got[0]["marker"], got[0]["title"], got[0]["p"]), ("private", "Mia Hale, Omar Ali", None))
+            self.assertNotIn("secret", json.dumps(got))
+        finally:
+            v.cleanup()
+
+
+TODAY = date.today().isoformat()
+YESTERDAY = date.fromordinal(date.today().toordinal() - 1).isoformat()
+STAMP = f"{TODAY} 12:00"
+PRIVATE = {**CHAT, "conversation": "19:chat-private@thread.v2", "title": "Personal", "link": "https://teams.microsoft.com/l/chat/19:p",
+           "sensitivity": "private", "last": f"{TODAY} 08:20", "summary": "SECRET WORDS", "items": [{"type": "action", "text": "SECRET ITEM"}]}
+CONF = {**CHAT, "conversation": "19:chat-conf@thread.v2", "title": "Pay review", "link": "https://teams.microsoft.com/l/chat/19:c",
+        "sensitivity": "confidential", "last": f"{TODAY} 08:25", "summary": "Mia raised the pay review.",
+        "items": [{"type": "action", "text": "Prepare the pay review", "owner": "Omar Ali"}]}
+LIVE = {**CHAT, "last": f"{TODAY} 08:40"}
+HELLO = {"kind": "teams", "conversation": "19:chat-hello@thread.v2", "title": "Quick hello", "from": MIA, "people": [MIA, OMAR],
+         "last": f"{TODAY} 08:15", "link": "https://teams.microsoft.com/l/chat/19:hello", "sensitivity": "normal",
+         "summary": "Greetings only.", "items": []}
+ANSWERED = {**CHAT, "conversation": "19:chat-answered@thread.v2", "title": "Answered chat", "link": "https://teams.microsoft.com/l/chat/19:a",
+            "last": f"{TODAY} 07:30", "replied": f"{TODAY} 07:45", "type": "action", "ask": "Send the plan", "items": []}
+DISMISSED = {**CHAT, "conversation": "19:chat-gone@thread.v2", "title": "Dismissed chat", "link": "https://teams.microsoft.com/l/chat/19:d",
+             "last": f"{TODAY} 08:05"}
+MESSAGE = {"kind": "mail", "from": MIA, "subject": "[ABC] Licence count", "sent": f"{TODAY} 08:30", "link": "https://x/m2",
+           "gist": "Wants the licence count."}
+OLDQUIET = {**HELLO, "conversation": "19:chat-old@thread.v2", "title": "Yesterday's greeting", "link": "https://teams.microsoft.com/l/chat/19:o",
+            "last": f"{YESTERDAY} 08:15"}
+
+
+def rec_at(v, found, when=STAMP):
+    f = v.root / "system/staging/drafts/found.json"
+    f.write_text(json.dumps(found))
+    return run(v, "sweep.py", "vip", "record", str(f), "--found", "sweep", now=when).stdout
+
+
+def fixture(v):
+    """Mia is followed. Every kind of thing the sweep records, plus two proposals and a memory note from her mail."""
+    populate(v)
+    (v.root / "projects/_portfolio/people-register.md").write_text(REGISTER, encoding="utf-8")
+    (v.root / "system/staging/drafts").mkdir(parents=True, exist_ok=True)
+    rec_at(v, [LIVE, HELLO, PRIVATE, CONF, ANSWERED, DISMISSED, MESSAGE])
+    rec_at(v, [OLDQUIET], when=f"{YESTERDAY} 12:00")
+    gone = next(a["id"] for a in vip_file(v)["alerts"] if a.get("title") == "Dismissed chat")
+    py(v, f"print(json.dumps(sweep.vip_dismiss({{{gone!r}}})))", now=STAMP)
+    stage(v, [item("Send the SOW", src("[ABC] SOW", "https://x/1", sent=f"{TODAY} 08:00")),
+              item("Test licences may not arrive", src("[ABC] SOW", "https://x/2", sent=f"{TODAY} 08:10"), table="raid", type="Risk")], now=STAMP)
+    stage_note(v, src("[ABC] SOW", "https://x/9", sent=f"{TODAY} 08:20"))
+    run(v, "build_dashboard.py", now=STAMP)
+
+
+class Page(LiveBrowserCase):
+    """Today's rows in a real browser: (a) and (b) the From rows and where they go, (c) nothing recorded is missed, (e) a private
+    conversation is its title and times, (f) the counts, (g) no label; (d) dismiss, re-mention, change."""
+    shared_server = True
+
+    @classmethod
+    def load(cls, v):
+        fixture(v)
+
+    def setUp(self):
+        super().setUp()
+        self.b.eval("go('today'); EXPAND.add('td'); renderToday()")
+        self.b.wait("document.querySelector('#tdList li')")
+
+    def rows(self):
+        return self.b.eval("""[...document.querySelectorAll('#tdList > li')].map(l=>({key:l.dataset.td, kind:l.className,
+          text:l.textContent.replace(/\s+/g,' ').trim(), btns:[...l.querySelectorAll('button')].map(x=>x.getAttribute('aria-label')||''),
+          title:(l.querySelector('a.t')||l.querySelector('.t')||{}).textContent||''}))""")
+
+    def test_a_the_proposal_and_b_the_note_are_from_rows_that_go_to_review(self):
+        b = self.b
+        got = {r["key"]: r for r in self.rows()}
+        prop = next(r for r in got.values() if r["text"].startswith("ProposalFrom Mia Hale: [ABC] SOW"))
+        note = next(r for r in got.values() if r["text"].startswith("NoteFrom Mia Hale: [ABC] SOW"))
+        self.assertIn("2 proposals in Review", prop["text"])
+        self.assertIn("Send the SOW", prop["text"])
+        self.assertIn("Risk", prop["text"])
+        self.assertIn("A note for", note["text"])
+        self.assertIn("memory", note["text"])
+        for r in (prop, note):
+            self.assertTrue(any(x.startswith("Open in Review") for x in r["btns"]), r["btns"])
+            self.assertTrue(any(x.startswith("Dismiss") for x in r["btns"]), r["btns"])
+        b.click(f'#tdList li[data-td="{prop["key"]}"] a.t')                        # the title goes to the proposal, highlighted
+        b.wait("!document.getElementById('v-review').hidden")
+        self.assertTrue(b.eval("RHL.size>0"))
+        self.assertTrue(b.eval("REV.filter(r=>RHL.has(r.n)).every(r=>!r.done)"))
+
+    def test_c_every_unseen_recorded_message_has_a_row(self):
+        """None is silently dropped: each unseen alert in vip.json shows, as a card, a quiet line or a Replied line."""
+        unseen = [a for a in self.b.eval("D.sweep_alerts.vip.alerts") if not a.get("seen")]                # what the page was given, new rows included
+        self.assertGreaterEqual(len(unseen), 8)
+        unseen = [a for a in unseen if a.get("title") != "Yesterday's greeting"]               # a quiet line is for the day it was updated (BL-334)
+        shown = {r["key"] for r in self.rows()}
+        missing = [(a.get("title") or a.get("subject"), a.get("updated"), a.get("state")) for a in unseen if "al" + a["id"] not in shown]
+        self.assertEqual(missing, [], "recorded but not on Today")
+
+    def test_d_dismissed_stays_out_and_in_the_file(self):
+        shown = {r["title"] for r in self.rows()}
+        self.assertNotIn("Dismissed chat", shown)
+        self.assertTrue(next(a for a in vip_file(self.v)["alerts"] if a.get("title") == "Dismissed chat")["seen"])
+
+    def test_e_a_private_conversation_is_its_title_and_times_only(self):
+        r = next(x for x in self.rows() if x["title"] == "Mia Hale, Omar Ali")
+        self.assertRegex(r["text"], r"^Mia Hale, Omar Aliupdated \d\d:\d\d$")
+        for word in ("private", "Private", "SECRET", "From", "follow", "Message", "Teams", "no project"):
+            self.assertNotIn(word, r["text"])
+        self.assertEqual(r["btns"], ["Dismiss: Mia Hale, Omar Ali"])
+        self.assertNotIn("Mia", " ".join(r["btns"]).replace("Mia Hale, Omar Ali", ""))
+
+    def test_f_the_counts_and_the_badge_include_the_new_rows(self):
+        b = self.b
+        o = b.eval("""({rows:VIPS().length, followed:VIPS().filter(a=>a.kind==='proposal'||a.kind==='note').length,
+          nTd:document.getElementById('nTd').textContent, badge:document.getElementById('vipBadge')?document.getElementById('vipBadge').getAttribute('aria-label'):null,
+          tdNew:!document.getElementById('tdNew').hidden, quiet:document.querySelectorAll('#tdList > li.td-quiet').length,
+          all:document.querySelectorAll('#tdList > li').length})""")
+        self.assertEqual(o["followed"], 2)
+        self.assertEqual(o["nTd"], str(o["all"] - o["quiet"] + 2 * 0 + b.eval("tdLine().reduce((a,x)=>a+x.n,0)")))
+        self.assertTrue(o["tdNew"])
+        self.assertEqual(o["badge"], f"{o['rows']} messages to see first")
+
+    def test_g_no_label_anywhere_in_the_section(self):
+        html = self.b.eval("document.getElementById('tdSec').outerHTML")
+        self.assertIsNone(says_vip(html))
+        self.assertIsNone(WORD.search(self.b.eval("[...document.querySelectorAll('#tdSec [aria-label],#tdSec [data-tip]')].map(e=>(e.getAttribute('aria-label')||'')+' '+(e.dataset.tip||'')).join(' ')")))
+
+
+class Dismiss(LiveBrowserCase):
+    """(d) in the page: Dismiss takes a From row away with Undo; a re-sweep that mentions it again leaves it gone; a new risk in the
+    thread brings it back, as new."""
+
+    @classmethod
+    def load(cls, v):
+        fixture(v)
+
+    def row(self, text):
+        return self.b.eval(f"""(()=>{{ const l=[...document.querySelectorAll('#tdList > li')].find(x=>x.textContent.includes({json.dumps(text)}));
+          return l?l.dataset.td.slice(2):null; }})()""")
+
+    def refresh(self):
+        run(self.v, "build_dashboard.py", now=STAMP)
+        self.b.eval("EXPAND.add('td'); reloadData().then(()=>renderToday())")
+        self.b.pump(1.5)
+
+    def test_dismiss_stay_gone_come_back(self):
+        b = self.b
+        b.eval("go('today'); EXPAND.add('td'); renderToday()")
+        rid = self.row("2 proposals in Review")
+        self.assertTrue(rid)
+        b.click(f'#tdList [data-alertdo="dismiss"][data-id="{rid}"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{rid}\"]')")
+        self.assertTrue(next(a for a in vip_file(self.v)["alerts"] if a["id"] == rid)["seen"])
+        b.click("#snackU")                                                                   # Undo puts it back
+        b.wait(f"document.querySelector('#tdList li[data-td=\"al{rid}\"]')")
+        b.click(f'#tdList [data-alertdo="dismiss"][data-id="{rid}"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{rid}\"]')")
+        stage(self.v, [item("Send the SOW", src("RE: [ABC] SOW", "https://x/4", sent=f"{TODAY} 11:00"))], now=STAMP)   # asked again
+        self.refresh()
+        self.assertIsNone(self.row("2 proposals in Review"))
+        self.assertIsNone(self.row("proposals in Review"))
+        stage(self.v, [item("Book the UAT environment", src("RE: [ABC] SOW", "https://x/5", sent=f"{TODAY} 11:30"))], now=STAMP)   # a new action
+        self.refresh()
+        self.assertTrue(self.row("new since you dismissed it"), self.b.eval("[...document.querySelectorAll('#tdList > li')].map(l=>l.textContent)"))
+        self.assertIn("proposals in Review", self.b.eval("document.querySelector('#tdList li[data-td=\"al" + rid + "\"]').textContent"))
 
 
 if __name__ == "__main__":

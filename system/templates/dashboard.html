@@ -5614,6 +5614,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
     fmSet: () => fmSet,
+    followedRow: () => followedRow,
     formProject: () => formProject,
     fpName: () => fpName,
     freeBackup: () => freeBackup,
@@ -6399,6 +6400,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     prepViewKey: () => prepViewKey,
     previewInbox: () => previewInbox,
     prio: () => prio,
+    privateRow: () => privateRow,
     processInbox: () => processInbox,
     processMeetings: () => processMeetings,
     profileTools: () => profileTools,
@@ -6483,6 +6485,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     redraftRequest: () => redraftRequest,
     redrafter: () => redrafter,
     reduced: () => reduced,
+    refReview: () => refReview,
     refineAsk: () => refineAsk,
     refineHtml: () => refineHtml,
     refineMount: () => refineMount,
@@ -6888,6 +6891,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     tdFocusMark: () => tdFocusMark,
     tdLine: () => tdLine,
     tdToReview: () => tdToReview,
+    tdToReviewRef: () => tdToReviewRef,
     textMsg: () => textMsg,
     themeFade: () => themeFade,
     themeIcon: () => themeIcon,
@@ -42368,7 +42372,15 @@ ${s5}`;
     );
     void live;
     VIPS().forEach((a5) => {
-      if ("summary" in a5 && a5.marker !== "private") {
+      if (a5.kind === "proposal" || a5.kind === "note") {
+        tdl.push(followedRow(a5));
+        return;
+      }
+      if (a5.marker === "private") {
+        tdl.push(privateRow(a5));
+        return;
+      }
+      if ("summary" in a5) {
         tdl.push(convRow(a5));
         return;
       }
@@ -42411,6 +42423,62 @@ ${s5}`;
     a5.found === "start-up" ? "found on start-up" : "",
     a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", staged for Review"}` : ""
   ].filter(Boolean).join(" · ");
+  function privateRow(a5) {
+    const t47 = String(a5.title || a5.subject || "Conversation"), when2 = convWhen(a5) || String(a5.updated || "").replace("T", " ").slice(0, 16);
+    return {
+      key: "al" + a5.id,
+      kind: "message",
+      id: a5.id,
+      at: when2,
+      tag: "",
+      tone: "",
+      t: t47,
+      link: a5.link || "",
+      meta: when2 ? `updated ${whenWords(when2)}` : "",
+      acts: [{ id: "dismiss", icon: "dismiss", label: "Dismiss", name: `Dismiss: ${t47}`, data: { alertdo: "dismiss", id: a5.id } }]
+    };
+  }
+  var refReview = (file, ref) => REV.find((x5) => x5.file === file && String(x5.ref) === String(ref) && !x5.done);
+  function followedRow(a5) {
+    const refs = (
+      /** @type {any[]} */
+      a5.refs || []
+    ), first = refs[0] || {}, to2 = { file: String(first.file || ""), ref: first.ref }, when2 = String(a5.updated || a5.sent || "").replace("T", " ").slice(0, 16);
+    const t47 = String(a5.title || a5.subject || "Conversation"), dismiss2 = { id: "dismiss", icon: "dismiss", label: "Dismiss", name: `Dismiss: ${t47}`, data: { alertdo: "dismiss", id: a5.id } };
+    if (a5.marker === "private") return { key: "al" + a5.id, kind: "message", id: a5.id, at: when2, tag: "", tone: "", t: t47, link: "", to: to2, meta: when2 ? `updated ${whenWords(when2)}` : "", acts: [dismiss2] };
+    const note = a5.kind === "note", inRev = refs.filter((r4) => refReview(r4.file, r4.ref)), n4 = refs.length, proj = a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project";
+    const what = note ? inRev.length ? `A note for ${proj}'s memory, in Review` : `A note for ${proj}'s memory, staged: written at the next apply` : `${n4} proposal${n4 === 1 ? "" : "s"} in Review`;
+    const name = `From ${a5.who ?? ""}, ${t47}`, cands = refs.map((r4, i5) => {
+      const x5 = refReview(r4.file, r4.ref);
+      return x5 ? {
+        key: `r${i5}`,
+        tag: r4.tag ? r4.tag[0].toUpperCase() + r4.tag.slice(1) : "Item",
+        t: String(x5.rec && x5.rec.t || ""),
+        sub: "",
+        acts: [{ id: "review", icon: "external", label: "Open in Review", name: `Open in Review: ${x5.rec && x5.rec.t || t47}`, data: { tdfile: String(r4.file), tdref: String(r4.ref) } }]
+      } : null;
+    }).filter(Boolean);
+    return {
+      key: "al" + a5.id,
+      kind: "message",
+      id: a5.id,
+      at: when2,
+      tag: note ? "Note" : "Proposal",
+      tone: "warn",
+      t: `From ${a5.who ?? ""}: ${t47}`,
+      link: "",
+      to: to2,
+      mark: confMark(a5),
+      meta: [what, note ? "" : proj, a5.sent ? `sent ${whenWords(String(a5.sent).replace("T", " ").slice(0, 16))}` : "", a5.returned ? "new since you dismissed it" : ""].filter(Boolean).join(" · "),
+      cands,
+      acts: [{ id: "review", icon: "external", label: "Open in Review", name: `Open in Review: ${name}`, data: { tdfile: to2.file, tdref: String(to2.ref) } }, { ...dismiss2, name: `Dismiss: ${name}` }]
+    };
+  }
+  function tdToReviewRef(file, ref) {
+    const r4 = refReview(file, ref) || REV.find((x5) => x5.file === file && !x5.done);
+    if (r4) tdToReview(r4.n);
+    else go2("review");
+  }
   var RELCHIP = (
     /** @type {Record<string,string>} */
     { new: "New", update: "Update", chase: "Chase" }
@@ -42614,7 +42682,22 @@ ${s5}`;
       if (nw2) nw2.hidden = !VIPS().length;
     }
     $("#nTd").textContent = n4 ? String(n4) : "";
-    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
+    drawToDecide(body2, {
+      rows: L3,
+      line,
+      total,
+      cap: TDCAP,
+      open: EXPAND.has("td"),
+      onReview: () => go2("review"),
+      onGo: (pg2) => go2(pg2),
+      blocked: (why) => snack(why),
+      onAct: (r4, a5) => {
+        if (a5.id === "review" && a5.data) tdToReviewRef(a5.data.tdfile, a5.data.tdref);
+      },
+      onOpen: (r4) => {
+        if (r4.to) tdToReviewRef(r4.to.file, r4.to.ref);
+      }
+    });
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {

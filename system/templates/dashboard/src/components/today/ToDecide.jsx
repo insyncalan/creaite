@@ -24,7 +24,7 @@ import { LINK_REL, linkUrl } from "../../core/linkUrl.js";
     mark?: string, summary?: string, cands?: TdCand[], acts: TdAct[], ask?: string, due?: string, overdue?: boolean, dueText?: string,
     owners?: string, files?: string, rel?: string, relId?: string, relT?: string, relWhy?: string, count?: string,
     closeWhy?: string, closeStaged?: string, closeCard?: string, proms?: TdProm[], keptWhy?: string, keptStaged?: string,
-    keptCard?: string}} TdRow */
+    keptCard?: string, to?: {file: string, ref: any}}} TdRow */
 /** @typedef {{key: string, n: number, text: string, go: string}} TdPart */
 /** @typedef {{rows: TdRow[], line?: TdPart[], total: number, cap: number, open: boolean, onAct?: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
     onOpen?: (row: TdRow) => void, onReview: () => void, onGo?: (page: string) => void, blocked: (why: string) => void}} ToDecideProps */

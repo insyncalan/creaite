@@ -363,7 +363,7 @@ def stage(spec_file):
             ignored[rule] = ignored.get(rule, 0) + 1
             notes.append(f"skipped (ignore rule “{rule}”): {text}")
             continue
-        if summarised(v["source"], raw.get("conversation")):           # BL-334 C: on Today's card already, nothing newer
+        if summarised(v["source"], raw.get("conversation"), text):     # BL-334 C: on Today's card already, nothing newer
             notes.append(f"skipped (that conversation is summarised on Today; Create work item there): {text}")
             why["summarised on Today"] = why.get("summarised on Today", 0) + 1
             continue
@@ -1454,18 +1454,30 @@ def cand_settled(a):
         mark_seen(a, now().strftime("%Y-%m-%d %H:%M"))
 
 
-def summarised(source, conversation=None):
+def summarised(source, conversation=None, text=None):
     """BL-334 C: the alert that has already summarised the conversation an item comes from, with nothing newer since
     (the item's Sent time is not after the summary's last message), else None. Matched by the conversation ID, else the
-    link, else the kind and the thread's own title."""
+    link, else the kind and the thread's own title.
+    #236: and, given the item's text, only when the card offers it (one of its items, or its ask, says the same): an item the
+    card does not list was being dropped here, shown nowhere; it is staged for Review (and on Today as a row) instead. A private
+    conversation lists nothing and keeps the whole thread out."""
     msg = message_of_source(source)
     title = re.sub(r"^((re|fw|fwd|aw)\s*:\s*|\[ext\]\s*)+", "", msg["subject"] or msg["channel"] or "", flags=re.I)
     ref = {"conv": conversation, "link": link_of(source), "title": title.strip().lower(), "kind": msg["kind"]}
     sent = _when((re.search(r"Sent: ([0-9: T-]+)", source or "") or [None, ""])[1]) or ""
     for a in vip_state()["alerts"]:
-        if "summary" in a and same_conv(a, ref) and (not sent or sent <= (a.get("last") or "")):
+        if "summary" in a and same_conv(a, ref) and (not sent or sent <= (a.get("last") or "")) and \
+                (text is None or a.get("marker") == "private" or card_offers(a, text)):
             return a
     return None
+
+
+def card_offers(a, text):
+    """Whether a conversation's card lists an item that says the same as `text`: one of its candidates (made or dismissed too) or
+    its ask."""
+    mine = "c:" + norm(text)
+    seen = ["c:" + norm(c.get("text")) for c in a.get("candidates") or []] + (["c:" + norm(a["ask"])] if a.get("ask") else [])
+    return any(sig_similar(mine, x) for x in seen)
 
 
 def same_conv(a, ref):

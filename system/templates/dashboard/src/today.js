@@ -473,7 +473,9 @@ const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel
 /** Intake and Review's rows (BL-319 called it To decide), newest first: proposals in Review, transcripts ready in Intake, messages from people Alan follows (never labelled) */
 export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]); void live;
   /* #208 (Alan, 17-10-2026): proposals in Review and transcripts in Intake are no longer listed here: tdLine() says how many, in one line */
-  VIPS().forEach(a=>{ if("summary" in a&&a.marker!=="private"){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
+  VIPS().forEach(a=>{ if(a.kind==="proposal"||a.kind==="note"){ tdl.push(followedRow(a)); return; }   /* #236: what the sweep pulled out of a followed person's message */
+    if(a.marker==="private"){ tdl.push(privateRow(a)); return; }   /* #236 (Alan, 19-10-2026): a private conversation is its title and times only */
+    if("summary" in a){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
     const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
     tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",mark:confMark(a),
       meta:[`${VIPKIND[a.kind]||"Message"}${vipWhen(a)?" "+vipWhen(a):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",confMark(a)?"":a.marker||"",a.found==="start-up"?`found on start-up, received ${vipWhen(a)}`:""].filter(Boolean).join(" · ")+(a.gist?`. ${a.gist}`:""),
@@ -498,6 +500,28 @@ const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
 const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
 const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
   a.found==="start-up"?"found on start-up":"",a.match&&a.match.logged?`Logged on ${a.match.id}${a.match.logged.state==="applied"?"":", staged for Review"}`:""].filter(Boolean).join(" · ");
+/** #236 (Alan, 19-10-2026): a private conversation is its title and times only, with Dismiss: no person, no label, no summary, no project,
+    no way to make an item from it. @param {any} a */
+export function privateRow(a){ const t=String(a.title||a.subject||"Conversation"), when=convWhen(a)||String(a.updated||"").replace("T"," ").slice(0,16);
+  return {key:"al"+a.id,kind:"message",id:a.id,at:when,tag:"",tone:"",t,link:a.link||"",meta:when?`updated ${whenWords(when)}`:"",
+    acts:[{id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${t}`,data:{alertdo:"dismiss",id:a.id}}]}; }
+/** the Review row of a staged item or block (a note's is the file-change row), by file and item number @param {string} file @param {any} ref */
+export const refReview=(file,ref)=>REV.find(x=>x.file===file&&String(x.ref)===String(ref)&&!x.done);
+/** #236 (Alan, 19-10-2026): "From <person>": the proposals the sweep staged from a followed person's mail or chat, or a note about it written
+    into a project's memory. Its title and the Open in Review icon go to the proposal or note; each proposal is a line under it; Dismiss
+    keeps it gone until the thread adds a new item or changes an active one. Never labelled (BL-288). A private thread is its title and times only. @param {any} a */
+export function followedRow(a){ const refs=/** @type {any[]} */(a.refs||[]), first=refs[0]||{}, to={file:String(first.file||""),ref:first.ref}, when=String(a.updated||a.sent||"").replace("T"," ").slice(0,16);
+  const t=String(a.title||a.subject||"Conversation"), dismiss={id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${t}`,data:{alertdo:"dismiss",id:a.id}};
+  if(a.marker==="private") return {key:"al"+a.id,kind:"message",id:a.id,at:when,tag:"",tone:"",t,link:"",to,meta:when?`updated ${whenWords(when)}`:"",acts:[dismiss]};
+  const note=a.kind==="note", inRev=refs.filter(r=>refReview(r.file,r.ref)), n=refs.length, proj=a.p&&a.p!=="_portfolio"?pName(a.p):"no project";
+  const what=note?(inRev.length?`A note for ${proj}'s memory, in Review`:`A note for ${proj}'s memory, staged: written at the next apply`):`${n} proposal${n===1?"":"s"} in Review`;
+  const name=`From ${a.who??""}, ${t}`, cands=refs.map((r,i)=>{ const x=refReview(r.file,r.ref); return x?{key:`r${i}`,tag:r.tag?r.tag[0].toUpperCase()+r.tag.slice(1):"Item",t:String(x.rec&&x.rec.t||""),sub:"",
+    acts:[{id:"review",icon:"external",label:"Open in Review",name:`Open in Review: ${x.rec&&x.rec.t||t}`,data:{tdfile:String(r.file),tdref:String(r.ref)}}]}:null; }).filter(Boolean);
+  return {key:"al"+a.id,kind:"message",id:a.id,at:when,tag:note?"Note":"Proposal",tone:"warn",t:`From ${a.who??""}: ${t}`,link:"",to,mark:confMark(a),
+    meta:[what,note?"":proj,a.sent?`sent ${whenWords(String(a.sent).replace("T"," ").slice(0,16))}`:"",a.returned?"new since you dismissed it":""].filter(Boolean).join(" · "),cands,
+    acts:[{id:"review",icon:"external",label:"Open in Review",name:`Open in Review: ${name}`,data:{tdfile:to.file,tdref:String(to.ref)}},{...dismiss,name:`Dismiss: ${name}`}]}; }
+/** the proposal or note a followed person's row points at, in Review (highlighted); Review itself when it is not pending there @param {string} file @param {any} ref */
+export function tdToReviewRef(file,ref){ const r=refReview(file,ref)||REV.find(x=>x.file===file&&!x.done); if(r) tdToReview(r.n); else go("review"); }
 /** BL-342 Part 2: how a thread relates to open work */
 const RELCHIP=/** @type {Record<string,string>} */({new:"New",update:"Update",chase:"Chase"});
 /** BL-342: a card's due date as the row shows it, and whether it is past @param {any} a */
@@ -577,7 +601,8 @@ export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!
   const L=toDecideRows(), line=tdLine(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length+line.reduce((a,x)=>a+x.n,0); sec.hidden=!L.length&&!line.length;
   { const nw=$("#tdNew"); if(nw) nw.hidden=!VIPS().length; }   /* #168: a folded heading still shows an unseen alert (BL-99); never the word that says who is followed (BL-288) */
   $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
-  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onReview:()=>go("review"),onGo:pg=>go(pg),blocked:why=>snack(why)});
+  drawToDecide(body,{rows:L,line,total,cap:TDCAP,open:EXPAND.has("td"),onReview:()=>go("review"),onGo:pg=>go(pg),blocked:why=>snack(why),
+    onAct:(r,a)=>{ if(a.id==="review"&&a.data) tdToReviewRef(a.data.tdfile,a.data.tdref); },onOpen:r=>{ if(r.to) tdToReviewRef(r.to.file,r.to.ref); }});   /* #236 */
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */
