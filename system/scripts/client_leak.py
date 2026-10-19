@@ -830,6 +830,36 @@ def findings(doc, con=None):
     return found + name_findings(con, code, text, blocking)
 
 
+CODE_RULES = (          # (stable code, a test on the message), first match wins; the messages themselves are never changed
+    ("register", lambda m: m == REGISTER_UNREAD),
+    ("unreadable", lambda m: m in (LONG_ADDRESS, LONG_RUN, OVER_ENCODED)),
+    ("link", lambda m: m.startswith("a link to a work item") or m.startswith("a creaite link")),
+    ("marker", lambda m: "internal-only marker" in m),
+    ("health-reason", lambda m: "the internal health reason" in m),
+    ("chase-log", lambda m: m.startswith("a chase log line")),
+    ("client-safe-no", lambda m: m.startswith("memory line marked Client-safe: no")),
+    ("label", lambda m: " is labelled " in m or m.startswith("Couldn't check the label")),
+    ("owner", lambda m: "is named but owns only items" in m),
+    ("confidential", lambda m: m.startswith("contains \u201c")),
+    ("not-client-visible", lambda m: "isn't client-visible" in m),
+    ("item-ref", lambda m: any(w in m for w in ("isn't an item", "isn't in the tracker", "no client wording",
+                                                "belongs to another project", "never in a client report"))),
+)
+
+
+def code_of(message):
+    """A short stable code for a finding's sentence (marker, owner, confidential, item-ref, not-client-visible, client-safe-no,
+    label, chase-log, health-reason, link, unreadable, register; other for anything else). A code is a kind, not a sentence."""
+    m = str(message)
+    return next((code for code, test in CODE_RULES if test(m)), "other")
+
+
+def coded_findings(doc, con=None):
+    """findings(doc, con) as [{code, message}], always the client gate: the audience is ignored (a client document is checked as
+    one whatever it says)."""
+    return [{"code": code_of(f), "message": f} for f in findings({**doc, "audience": "client"}, con)]
+
+
 def marked(text):
     """Whether a text holds an internal-only marker (drafts.INTERNAL_MARK), read as the ID check reads text (edit_ai.normal: an
     invisible character or a look-alike dash hides none; #127 round 4)."""

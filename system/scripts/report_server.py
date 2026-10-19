@@ -251,19 +251,28 @@ def check_route(handler, req):
     return answer(handler, client_check.check(req.get("doc")))
 
 
+MATCH_MAX_DOCS, MATCH_MAX_DOC, MATCH_MAX_TOTAL = 60, 100_000, 1_000_000       # documents, bytes of one document, bytes of all
+
+
 def match_check_route(handler, req):
-    """POST /api/report/match-check: the leak findings of each client document sent (see the module's description). Writes nothing."""
+    """POST /api/report/match-check: the leak findings of each client document sent, as [{code, message}] (see the module's
+    description). Always the client gate, whatever audience the request names. Capped (60 documents, 100 kB each, 1 MB in all);
+    over the cap it refuses with a sentence (HTTP 400) and checks nothing. Writes nothing."""
+    import json
     import client_leak
     docs = req.get("docs")
-    if not isinstance(docs, list) or len(docs) > 60:
-        raise report_doc.ReportError("Send up to 60 client reports to check.")
+    if not isinstance(docs, list) or len(docs) > MATCH_MAX_DOCS:
+        return handler.send(400, {"ok": False, "message": f"Send up to {MATCH_MAX_DOCS} client reports to check."})
+    sizes = [len(json.dumps(d, default=str)) for d in docs]
+    if any(n > MATCH_MAX_DOC for n in sizes) or sum(sizes) > MATCH_MAX_TOTAL:
+        return handler.send(400, {"ok": False, "message": "Those client reports are too large to check together: send fewer, or shorter ones."})
     con = client_leak.connect()
     out = []
     for d in docs:
         creaite_doc.check(d)
         if d.get("kind") != "client":
             raise creaite_doc.DocError("Only a client report has this check.")
-        out.append(client_leak.findings(d, con))
+        out.append(client_leak.coded_findings(d, con))
     return answer(handler, {"ok": True, "findings": out})
 
 
