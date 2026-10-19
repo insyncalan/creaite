@@ -30,7 +30,8 @@
                            a taken name asks, on_clash "number", "rename" or "overwrite"; opening is separate).
                            #226: HTML and PDF are the report page's own exported view, posted as `page: {html, css, palette, version}`
                            and re-checked against the saved report by export_page.build; with no page, or one that fails, the plain
-                           renderer makes the file and the answer says `plain: true`;
+                           renderer makes the file and the answer says `plain: true`; a client report never uses a posted page
+                           (v2.5.1, #239): it is always rendered from the saved report, under the lock, and its output checked;
   POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
                            A client report is exported only once its internal week is approved and nothing would leak, and its
                            answer then carries `left_out`: the check of what is left out runs before every client export
@@ -422,7 +423,11 @@ def export_route(handler, req):
     Opening is a separate choice (/api/open, /api/report/reveal). The answer: {ok, saved, path, name, folder, folder_label,
     replaced, message}; a taken name answers {ok: false, clash: true, name, numbered, folder, folder_label} and writes nothing
     until the page asks again with on_clash "number", "rename" (and new_name) or "overwrite"; a failed save says why and that
-    nothing was written. Nothing is ever sent."""
+    nothing was written. Nothing is ever sent.
+    v2.5.1 (#239, d): the whole export runs under the save route's lock (the live server's one LOCK): the report is read ONCE,
+    checked, and exactly that document is rendered (passed through, never read again) and filed, so a save can't land between the
+    check and the file. A client report's posted page is never used (f, creaite_doc._posted_page): the server renders it from the
+    report, and the answer says plain: true and why."""
     kind, code, fri, client = target(req)
     fmt = req.get("fmt")
     if fmt not in FORMATS:
@@ -430,6 +435,16 @@ def export_route(handler, req):
     off = refuse_client_off(handler, kind, code)
     if off:
         return off
+    fn = export_call()
+    if fn is None:
+        return refuse(handler, "Exports aren't built yet in this version of creaite.")
+    with handler_lock(handler):
+        return _export_locked(handler, req, (kind, code, fri, client), fmt, fn)
+
+
+def _export_locked(handler, req, which, fmt, fn):
+    """export_route's work, under the lock: read once, check, render that document, file it."""
+    kind, code, fri, client = which
     state, path = report_doc.where(kind, code, fri, client)
     if not state:
         return refuse(handler, "Save the report before exporting it.")
@@ -442,9 +457,6 @@ def export_route(handler, req):
         if not left["ready"] or left["findings"]:
             return refuse(handler, left["not_ready"] or "Not exported: possible internal content in the client report.",
                           findings=left["findings"], left_out=left)
-    fn = export_call()
-    if fn is None:
-        return refuse(handler, "Exports aren't built yet in this version of creaite.")
     filed = paths.resolve(report_doc.filed_path(kind, code, fri, client))
     folder, ext = filed.parent, creaite_doc.EXPORTS[fmt]
     name = filed.stem + ext          # the plain name for all three (Alan, 18-10-2026): HTML meets the filed report's name and asks
@@ -453,10 +465,11 @@ def export_route(handler, req):
     name, overwrite, asked = _settle_name(folder, name, ext, req, label, filed.name)
     if asked:
         return answer(handler, {"ok": False, **asked, **where})
-    out = fn(path, fmt, file_beside=False, open_after=False,
-             page=req.get("page") if isinstance(req.get("page"), dict) else None, kind=kind)       # made in drafts/, filed below
+    page = req.get("page") if isinstance(req.get("page"), dict) else None          # creaite_doc never uses one for a client report
+    out = fn(path, fmt, file_beside=False, open_after=False, page=page, kind=kind, doc=doc)     # made in drafts/, filed below
     if not out.get("ok"):
-        return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where)
+        extra = {"findings": out["findings"]} if out.get("findings") else {}
+        return _not_saved(handler, str(out.get("message") or "the report couldn't be made."), **where, **extra)
     saved = _file_in_reports(handler, paths.resolve(out["path"]), folder, name, overwrite, fmt, label)
     carry_plain(saved, out)
     if left is not None:
