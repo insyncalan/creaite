@@ -14,9 +14,9 @@ import { linkUrl } from "../../core/linkUrl.js";
 import { closePanel } from "../../projects.js";
 import { snack } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { NODRAFT_MSG, openProposal } from "../../panel.js";
+import { NODRAFT_MSG, openProposal, pkEscBusy } from "../../panel.js";
 import { decide, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, rvRejectOK } from "../../review.js";
-import { irDone, irPeek, irRow } from "../../stores/intakeReview.js";
+import { irDone, irHeld, irPeek, irRow } from "../../stores/intakeReview.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
 
 /** Why a proposal is not routine, in words (the row's `hold`, from review.hold_reason). */
@@ -99,7 +99,7 @@ export function irReject(n, anchor) {
 /** Approve routine: the routine group only, in one apply with one Undo (rvDecideMany); never the first group.
     @param {{needs: number[], routine: number[]}} groups */
 export async function irApproveRoutine(groups) {
-  const list = irBulk(groups, irDone).map(irRow).filter(r => rvBulkOK(r));
+  const list = irBulk(groups, irDone, irHeld).map(irRow).filter(r => rvBulkOK(r));
   if (!list.length) { snack("Nothing routine to approve"); return; }
   const res = await rvDecideMany(list, "approved");
   const failed = res.failed && res.failed.length ? ` · not saved: ${res.failed.join(", ")}` : "";
@@ -138,7 +138,7 @@ export function ProposalLine({ n, child }) {
 /** The groups under an open meeting (child rows on its rail) or in the mail and other sections.
     @param {{groups: {needs: number[], routine: number[]}, meet?: string, child?: boolean}} props */
 export function ProposalGroups({ groups, meet, child }) {
-  return <>{irGroupsShown(groups, irDone).map(g => (
+  return <>{irGroupsShown(groups, irDone, irHeld).map(g => (
     <>
       <tr class={`icsubhead ${g.kind}${child ? " child" : ""}`} data-irg={g.kind}><td colSpan={2}>
         <span class="icsh">{meet ? `${meet} · ` : ""}{IR_GROUP_HEAD[g.kind][0]} · {g.ns.length}</span>
@@ -163,7 +163,7 @@ export function bootIrReviewKeys() {
     const t = /** @type {HTMLElement} */ (e.target), panel = document.getElementById("panel");
     if (e.key === "Escape") {
       if (irPeek.value == null) return;
-      if (document.querySelector("dialog:modal")) return;
+      if (pkEscBusy(/** @type {HTMLElement|null} */ (document.activeElement))) return;   /* an open menu, calendar, chat, text field or Draft email keeps its own Esc (panel.js, the same rule) */
       if (panel && panel.classList.contains("on")) { e.stopImmediatePropagation(); closePanel(); }
       irPeek.value = null;
       return;

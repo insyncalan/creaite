@@ -20,6 +20,7 @@ import { linkAnchor, linkUrl, unescHtml } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
 import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
+import { irHold } from "./core/irFold.js";
 import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
@@ -343,6 +344,7 @@ export async function savePanel(approve,closeAfter){ if(shared.CUR.k==="mileston
       it.edited_in="dashboard"; if(approve){ it.decision="approved"; it.decided_in="dashboard"; } }); }catch(e){ snack("Not saved: "+e.message); return; }
     const lc=$("#f_learn"); if(lc&&lc.checked&&f.p) learnSignal(f.p,lc.dataset.kind,lc.dataset.value);
     if(r.kind==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} ${r.rec.field}: ${r.rec.from??"—"} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
+    if("hold" in r) r.hold=irHold(r);   /* #232-B: the server's rule (review.hold_reason) again on what the edit left: an Issue made a Risk is held, a project set clears "need a project" */
     closePanel(); if(approve) decide(r.n,"approved",true); else { refreshAll(); snack(`Proposal updated — still waiting for review`); } return; }
   if(shared.CUR.mode==="health"){ const p=P.find(x=>x.code===shared.CUR.code), before={health:p.health,reason:p.reason}; hsSaved(); closePanel();
     await save(`${p.name} health: ${before.health||"not set"} → ${f.health}`,[{op:"update",table:"projects",id:p.code,changes:{health:f.health,health_reason:f.reason}}],null,()=>Object.assign(p,f),()=>Object.assign(p,before)); return; }
@@ -377,6 +379,11 @@ export function pkWide(on){ PK.wide=on; $("#panel").classList.toggle("pkwide",on
 /* Esc closes the peek (a picker or a text field first, each in its own handler); from inside ask creaite it closes the chat and
    leaves the peek as it was. A menu, a dialog or the date picker keeps Esc for itself. */
 /* ===== end BL-176 (shell) ===== */
+/* Whether Esc belongs to something open over the peek (a dialog, the date picker, a combobox, a menu, a popup, the link form): the one
+   rule for the panel's own Esc below and for Intake and Review's peek (#232-B), so neither closes the peek over an open menu. */
+export function pkEscMenu(a){ return !!(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))); }   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+/* ... and also the chat, a text field being edited and the Draft email pane, each with its own Esc (#232-B). */
+export function pkEscBusy(a){ return pkEscMenu(a)||!!(a&&a.closest&&a.closest("#chat"))||!!(a&&a.isContentEditable)||chaseIsOpen(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0165(){
 Object.assign(ICONS,{arrowright:'<path d="M5 12h14M13 6l6 6-6 6"/>',expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',shrink:'<path d="M21 9h-6V3M3 15h6v6M15 9l6-6M9 15l-6 6"/>',
@@ -391,7 +398,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))) return;   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(pkEscMenu(a)) return;
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft email goes back to the item first */

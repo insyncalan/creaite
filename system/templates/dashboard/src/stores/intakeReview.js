@@ -23,6 +23,8 @@ export const irModel = () => /** @type {any} */ (D).intake_review || { meetings:
 export const irRow = n => REV.find(r => r.n === n) || null;
 /** @param {number} n */
 export const irDone = n => { const r = irRow(n); return !r || !!r.done; };   /* gone from D.review: decided elsewhere */
+/** Whether proposal n now has a hold (a peek edit made it a new risk, say): the groups move it from Routine to Needs. @param {number} n */
+export const irHeld = n => { const r = irRow(n); return !!(r && r.hold); };
 
 /** This browser's view (List, Board or Two panes); never shared, never in settings.json. */
 export const irView = signal(irViewNorm((() => { try { return store.get(IR_VIEW_KEY, "list"); } catch (x) { return "list"; } })()));
