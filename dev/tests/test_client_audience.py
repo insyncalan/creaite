@@ -551,7 +551,7 @@ class Audience(unittest.TestCase):
         self.assertEqual(creaite_doc.force_client_audience({"kind": "client"})["audience"], "client")
         self.assertEqual(creaite_doc.force_client_audience({"kind": "minutes", "audience": "distributed"})["audience"], "distributed")
         self.assertEqual(creaite_doc.force_client_audience({"kind": "weekly", "audience": "client"}),
-                         {"kind": "weekly", "audience": "client"})
+                         {"kind": "weekly", "audience": "internal"})          # a weekly report is always internal (M)
 
     # ── control ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     def test_control_a_normal_client_report_saves_approves_and_exports(self):
