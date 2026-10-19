@@ -29,6 +29,13 @@ Today's saved settings are kept exactly as they are: `creaite-colwidths` (resizi
 - No migration rewrites a saved value; an update adds keys, never resets them.
 - Test: a fixture with every key above set, run through the update and a reload, must come back identical, and a board resize must survive it.
 
+## Resizing and board features must keep working (Alan, 19-10-2026)
+Nothing here may change how these behave today (`work.js`: the column resizer, BL-285; the Board; Display):
+- **List columns:** drag a column edge to resize; the keyboard separator (Left and Right, 16 px steps, 60 to 900 px); double-click puts a column back; widths are remembered (`creaite-colwidths`); drag a heading to reorder; click a heading to sort; show or hide columns in Display.
+- **The new marks (status and priority) and the tags are added beside the existing columns, never in place of them.** Status and Priority stay available as columns in Display and keep their saved width, order and visibility. Compact and Comfortable change row height only, never column widths.
+- **Board:** card drag between columns and the Move to menu; column collapse, hide and "closed all"; swimlane grouping; the sub-group; the layout choice per tab. The compact density must not touch the Board.
+- **Tests that must pass unchanged:** `dev/tests/test_work_board.py` and the Work page tests; add one that resizes a list column, reloads and checks the width, order and visibility survive, and that a board column collapse survives an update.
+
 ## Design-system additions (one `/* NEW */` block)
 `.tg` tag chip; row density classes `.cmp` and `.cmf` (40 px and 57 px rows); the density switch (a `.seg.ico`). Everything else is existing: marks, `.wgh`, `.pk-*`, `.pkpop.cxmenu`, `.pkstage`, `.kbd`, tokens.
 
