@@ -498,6 +498,44 @@ def text_image(doc, ref):
     return f
 
 
+def picture_ref_ok(ref):
+    """Whether a Markdown picture line may stay in a document: the document's own picture (`_images/<name>`) or a plain relative
+    `images/<name>` (paths.safe_image_ref); never an absolute path, `..`, a URL or a drive letter (v2.5.0 leak fix)."""
+    ref = str(ref or "")
+    return bool(TEXT_IMAGE.match(ref)) or (ref.startswith("images/") and paths.safe_image_ref(ref))
+
+
+def drop_outside_pictures(doc):
+    """(a copy of the document, what was dropped): every Markdown picture line in a section's or a pane's text whose target
+    picture_ref_ok refuses is taken out, so a hand-written draft can't carry one to an export (v2.5.0 leak fix)."""
+    import docx_tools
+    gone = []
+
+    def clean(text):
+        """The text without the picture lines it may not carry."""
+        if not isinstance(text, str) or "![" not in text:
+            return text
+        keep = []
+        for line in text.split("\n"):
+            m = docx_tools.IMAGE_LINE.match(line)
+            if m and not picture_ref_ok(m.group(2)):
+                gone.append(m.group(1).strip() or "a picture")
+                continue
+            keep.append(line)
+        return "\n".join(keep)
+    sections = []
+    for s in doc.get("sections") or []:
+        if isinstance(s, dict):
+            s = dict(s, text=clean(s["text"])) if "text" in s else dict(s)
+            if isinstance(s.get("panes"), list):
+                s["panes"] = [dict(p, text=clean(p["text"])) if isinstance(p, dict) and "text" in p else p for p in s["panes"]]
+        sections.append(s)
+    if not gone:
+        return doc, []
+    return dict(doc, sections=sections), [f"a picture line ({g}) naming a file outside the report's own pictures was taken out"
+                                          for g in gone]
+
+
 def _inline(t):
     """Inline Markdown as escaped HTML: bold, italic, strike, `code` and links with their address (http, https and mailto only), nested
     as docx_tools.md_spans reads them (the same reading as Word's); a backslash escape is the character."""
@@ -1101,8 +1139,10 @@ class _Word:
                 chunk.append(line)
                 continue
             flush()
-            f = paths.resolve_image(self.folder, m.group(2))
-            if f.is_file() and f.suffix.lower() in IMG_EXT and _too_big(f):
+            f = self.picture_file(m.group(2))
+            if f is None:                       # v2.5.0 leak fix: a reference it won't follow is never named, only its words
+                out += self.refused(m.group(1).strip(), m.group(2))
+            elif f.is_file() and f.suffix.lower() in IMG_EXT and _too_big(f):
                 out.append({"md": _nobraces(f"*Picture too large to include: {m.group(2)}*")})
             elif f.is_file() and f.suffix.lower() in IMG_EXT and not _picture_ok(f):
                 out.append({"md": _nobraces(f"*Picture not included: {m.group(2)}*")})
@@ -1112,6 +1152,23 @@ class _Word:
                 out.append({"md": _nobraces(f"*Picture not found: {m.group(2)}*")})
         flush()
         return out
+
+    def refused(self, alt, ref):
+        """The words for a picture line md won't draw: "not found" for a safe internal reference, else only its alt text."""
+        if (self.doc.get("audience") or "internal") == "internal" and paths.safe_image_ref(ref):
+            return [{"md": _nobraces(f"*Picture not found: {ref}*")}]
+        return [{"md": _nobraces(f"*Picture not included: {alt}*")}] if alt else []
+
+    def picture_file(self, ref):
+        """The file a Markdown picture line may draw, or None (v2.5.0 leak fix): the document's own picture store
+        (`_images/<name>`, text_image) for every document; an internal one also reads `images/<name>` from the project's own images
+        folder (paths.image_file: relative, no `..`, no symlink). An absolute path, `..`, a URL or a drive letter is never read."""
+        f = text_image(self.doc, ref)
+        if f is not None:
+            return f
+        if (self.doc.get("audience") or "internal") != "internal":
+            return None
+        return paths.image_file(self.folder, ref)
 
     # ── the logos ──
     def logos(self, s):

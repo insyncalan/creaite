@@ -909,7 +909,8 @@ def save_draft(doc, base_version=None, why=None):
         raise ReportError("Only a weekly or client report is saved here.")
     doc, removed = client_leak.make_safe(doc)
     doc, dropped = client_item_links(doc)
-    removed = removed + dropped
+    doc, pictures = creaite_doc.drop_outside_pictures(doc)     # v2.5.0 leak fix: no picture line naming an outside file
+    removed = removed + dropped + pictures
     draft, filed = draft_path(kind, code, fri, client), filed_path(kind, code, fri, client)
     if not paths.resolve(draft).is_file() and paths.resolve(filed).is_file():
         now = int(creaite_doc.read(filed).get("version") or 0)
