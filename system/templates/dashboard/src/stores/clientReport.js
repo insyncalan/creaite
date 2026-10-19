@@ -127,17 +127,19 @@ async function matchInternalNow(ids) {
   if (!viaServer()) { failed(); return; }
   const r = await api("/api/report/match-check", { docs: [d0, ...cands.map(c => c.doc)] });
   if (!r || !r.ok || !Array.isArray(r.findings) || r.findings.length !== cands.length + 1) { failed(); return; }
-  const base = new Set(r.findings[0]);
+  const codes = (/** @type {{code: string}[]} */ fs) => fs.reduce((m, f) => m.set(f.code, (m.get(f.code) || 0) + 1), /** @type {Map<string, number>} */ (new Map()));
+  const base = codes(r.findings[0]);
+  const fresh_of = (/** @type {{code: string, message: string}[]} */ fs) => { const seen = /** @type {Map<string, number>} */ (new Map()); return fs.filter(f => { const n = (seen.get(f.code) || 0) + 1; seen.set(f.code, n); return n > (base.get(f.code) || 0); }); };   // by stable code (and how many), never by sentence
   let d = crDoc.value || d0;
   const done = /** @type {string[]} */ ([]), held = /** @type {{id: string, heading: string, findings: string[]}[]} */ ([]);
   cands.forEach((c, n) => {
-    const fresh = r.findings[n + 1].filter((/** @type {string} */ f) => !base.has(f));
+    const fresh = fresh_of(r.findings[n + 1]).map(f => f.message);
     if (fresh.length) held.push({ id: c.id, heading: heading(c.id), findings: fresh });
     else { d = matchClientSection(d, i, c.id); done.push(heading(c.id)); }
   });
   if (done.length) {                    // the clean sections together are checked once more: a finding the parts did not make alone holds all back
     const last = await api("/api/report/match-check", { docs: [d] });
-    const extra = last && last.ok && last.findings && last.findings[0] ? last.findings[0].filter((/** @type {string} */ f) => !base.has(f)) : null;
+    const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
     if (!extra || extra.length) { failed(); return; }
     crDoc.value = d; crDirty.value = true;
   }

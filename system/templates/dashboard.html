@@ -69533,7 +69533,23 @@ ${d5.text}`);
       failed();
       return;
     }
-    const base = new Set(r4.findings[0]);
+    const codes = (fs2) => fs2.reduce(
+      (m5, f5) => m5.set(f5.code, (m5.get(f5.code) || 0) + 1),
+      /** @type {Map<string, number>} */
+      /* @__PURE__ */ new Map()
+    );
+    const base = codes(r4.findings[0]);
+    const fresh_of = (fs2) => {
+      const seen = (
+        /** @type {Map<string, number>} */
+        /* @__PURE__ */ new Map()
+      );
+      return fs2.filter((f5) => {
+        const n4 = (seen.get(f5.code) || 0) + 1;
+        seen.set(f5.code, n4);
+        return n4 > (base.get(f5.code) || 0);
+      });
+    };
     let d5 = crDoc.value || d02;
     const done = (
       /** @type {string[]} */
@@ -69543,7 +69559,7 @@ ${d5.text}`);
       []
     );
     cands.forEach((c5, n4) => {
-      const fresh = r4.findings[n4 + 1].filter((f5) => !base.has(f5));
+      const fresh = fresh_of(r4.findings[n4 + 1]).map((f5) => f5.message);
       if (fresh.length) held.push({ id: c5.id, heading: heading(c5.id), findings: fresh });
       else {
         d5 = matchClientSection(d5, i5, c5.id);
@@ -69552,7 +69568,7 @@ ${d5.text}`);
     });
     if (done.length) {
       const last = await api("/api/report/match-check", { docs: [d5] });
-      const extra = last && last.ok && last.findings && last.findings[0] ? last.findings[0].filter((f5) => !base.has(f5)) : null;
+      const extra = last && last.ok && last.findings && last.findings[0] ? fresh_of(last.findings[0]) : null;
       if (!extra || extra.length) {
         failed();
         return;
