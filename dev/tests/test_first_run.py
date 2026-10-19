@@ -36,7 +36,7 @@ class FirstRun(LiveBrowserCase):
         b.eval("go('today')")
         b.click('#setupList [data-setup="review"]')
         b.pump(0.3)
-        self.assertEqual(b.eval("VIEW"), "review")
+        self.assertEqual(b.eval("VIEW"), "intake-review")
         b.eval("go('today')")
         b.pump(0.2)
         self.assertTrue({s[0]: s[1] for s in json.loads(b.eval(STEPS))}["Open Intake"])   # ticked as it is done
