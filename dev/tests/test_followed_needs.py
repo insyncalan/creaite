@@ -328,7 +328,7 @@ class Dropped(unittest.TestCase):
         priv = {**CHAT, "conversation": "19:chat-private@thread.v2", "link": "https://x/private2", "sensitivity": "private", "title": "Personal"}
         record(self.v, [priv])
         out = stage(self.v, [item("Book the thing", src("Personal", "https://x/private2", kind="Teams", sent="2026-10-08 08:00"))], now="2026-10-08 09:30")
-        self.assertIn("summarised on Today", out)
+        self.assertIn("private thread", out)                                   # and now by the closed-thread rule, whatever the card lists
         self.assertEqual(rows(self.v), [])
 
 
@@ -340,14 +340,124 @@ class PrivateThreads(unittest.TestCase):
         try:
             priv = {**CHAT, "conversation": "19:chat-private@thread.v2", "link": "https://x/private", "sensitivity": "private",
                     "title": "Personal", "kind": "mail"}
+            v.propose("earlier", [{"n": 1, "op": "new", "table": "actions", "match": "strong", "flags": [], "decision": "pending",   # staged before the thread was marked
+                                   "values": {"project": "ABC", "description": "Book the thing", "owner": "Alan Carter",
+                                              "source": src("A secret subject", "https://x/private", sent="2026-10-09 12:00")}}])
             record(v, [priv])
-            stage(v, [item("Book the thing", src("A secret subject", "https://x/private", sent="2026-10-09 12:00"))])
             got = rows(v, "proposal")
             self.assertEqual(len(got), 1, got)
             self.assertEqual((got[0]["marker"], got[0]["title"], got[0]["p"]), ("private", "Mia Hale, Omar Ali", None))
             self.assertNotIn("secret", json.dumps(got))
         finally:
             v.cleanup()
+
+
+MAILCONF = {**CHAT, "kind": "mail", "conversation": "AAQk-conf-mail", "title": "Pay review", "link": "https://outlook.example/conf1",
+            "sensitivity": "confidential", "last": "2026-10-08 08:25", "summary": "Mia raised the pay review.",
+            "items": [{"type": "action", "text": "Prepare the pay review", "owner": "Omar Ali"}]}
+CONF_SPELLINGS = ["confidential", "Confidential", "CONFIDENTIAL", " confidential ", "Confidential\n"]
+PRIVATE_SPELLINGS = ["private", "Private", "PRIVATE", "personal", "Personal", " private "]
+PREFIXES = ["RE: ", "Re: ", "re:", "FW: ", "Fw: ", "Fwd: ", "FWD:", "AW: ", "RE[2]: ", "Re(3): ", "RE: RE: FW: ", "Re: Fwd: AW: ", "[EXT] RE: ",
+            "RE : "]
+
+
+def pending_files(v):
+    return sorted((v.root / "system/staging").glob("proposed-*-sweep*.json"))
+
+
+class ConfidentialThreads(unittest.TestCase):
+    """HIGH (Stark's review of #236): an item from a confidential (or private) thread of a followed person never reaches Review
+    without its label. Main stages nothing from such a thread (the card was "summarised"); #236 stages what a card does not list,
+    and must not do it for a thread marked confidential or private: the sweep's rule is that a VIP's confidential thread is alerted
+    with its marker and its content is not read into proposals (cx-sweep, VIP section). So nothing is staged, in every spelling
+    of the marker and with any subject prefix, and nothing of the item is echoed in the sweep's output."""
+
+    def setUp(self):
+        self.v = vip_vault()
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def staged(self, subject, link="https://outlook.example/conf1", kind="Email", text="Order the pay review letters", **more):
+        return stage(self.v, [item(text, src(subject, link, kind=kind, sent="2026-10-08 08:00"), **more)], now="2026-10-08 09:30")
+
+    def test_every_spelling_of_the_marker_stages_nothing_for_a_card_that_does_not_list_the_item(self):
+        for n, spelling in enumerate(CONF_SPELLINGS + PRIVATE_SPELLINGS):
+            with self.subTest(spelling=spelling):
+                link = f"https://outlook.example/c{n}"
+                record(self.v, [{**MAILCONF, "conversation": f"AAQk-{n}", "link": link, "sensitivity": spelling}])
+                out = self.staged("Pay review", link=link, text=f"Order the pay review letters {n}")
+                self.assertIn("Sweep: 0 items", out)
+                self.assertNotIn("Order the pay review", out)                        # the sweep's output does not echo it
+                self.assertEqual(pending_files(self.v), [])
+                self.assertEqual(rows(self.v), [])
+
+    def test_the_card_that_lists_the_item_stages_nothing_either(self):
+        record(self.v, [MAILCONF])
+        out = self.staged("Pay review", text="Prepare the pay review")
+        self.assertIn("Sweep: 0 items", out)
+        self.assertEqual(pending_files(self.v), [])
+
+    def test_a_teams_chat_and_a_match_by_the_conversation_id_alone(self):
+        record(self.v, [{**CONF, "last": "2026-10-08 08:25"}])
+        out = stage(self.v, [{**item("Order the pay review letters", src("Another title", "https://x/other", kind="Teams")),
+                              "conversation": CONF["conversation"]}], now="2026-10-08 09:30")
+        self.assertIn("Sweep: 0 items", out)
+        self.assertEqual(pending_files(self.v), [])
+
+    def test_a_reply_prefix_on_the_subject_still_finds_the_thread(self):
+        record(self.v, [MAILCONF])
+        for prefix in PREFIXES:
+            with self.subTest(prefix=prefix):
+                out = self.staged(prefix + "Pay review", link="https://outlook.example/other-" + str(abs(hash(prefix))))
+                self.assertIn("Sweep: 0 items", out)
+                self.assertEqual(pending_files(self.v), [])
+
+    def test_a_normal_thread_with_a_card_still_stages_what_the_card_does_not_list(self):
+        record(self.v, [{**MAILCONF, "sensitivity": "normal"}])
+        out = self.staged("Pay review", text="Book the catering for the offsite")
+        self.assertIn("Sweep: 1 item", out)                                          # #236's own fix is intact
+
+    def test_a_spec_item_that_carries_the_marker_is_not_staged(self):
+        spec = item("Order the pay review letters", src("Anything", "https://outlook.example/none", sent="2026-10-08 08:00"))
+        out = stage(self.v, [{**spec, "sensitivity": "Confidential"}], now="2026-10-08 09:30")
+        self.assertIn("Sweep: 0 items", out)
+        self.assertEqual(pending_files(self.v), [])
+
+    def test_an_update_from_a_confidential_thread_is_not_staged_either(self):
+        record(self.v, [MAILCONF])
+        self.v.propose("seed", [{"n": 1, "op": "new", "table": "decisions", "match": "strong", "flags": [], "decision": "approved",
+                                 "values": {"project": "ABC", "decision": "Pick the vendor", "status": "Pending", "made_by": "Mia Hale",
+                                           "source": "Alan (cx-edit)"}}])
+        self.v.run("apply")
+        f = self.v.root / "system/staging/drafts/u.json"
+        f.write_text(json.dumps({"items": [{"op": "update", "table": "decisions", "id": "ABC-D-001", "why": "Mia confirmed it",
+                       "set": {"status": "Made"}, "source": src("RE: Pay review", "https://outlook.example/conf1", sent="2026-10-08 08:00")}]}))
+        out = run(self.v, "sweep.py", "stage", str(f), now="2026-10-08 09:30").stdout
+        self.assertIn("Sweep: 0 items", out)
+
+    def test_a_proposal_staged_before_the_thread_was_marked_shows_the_mark_and_no_item_words(self):
+        for n, prefix in enumerate(["", "RE: ", "Re: ", "FW: ", "Fwd: ", "AW: ", "RE[2]: ", "RE: RE: "]):
+            stage(self.v, [item(f"Order letters {n}", src(prefix + "Pay review", f"https://outlook.example/p{n}", sent="2026-10-08 08:00"))],
+                  now="2026-10-08 09:00")
+        record(self.v, [MAILCONF])
+        got = rows(self.v, "proposal")
+        self.assertEqual(len(got), 1, got)                                           # one thread, whatever the prefix
+        self.assertEqual((got[0]["marker"], got[0]["title"]), ("confidential", "Pay review"))
+
+    def test_a_row_for_a_prefixed_subject_is_marked_whichever_the_prefix(self):
+        record(self.v, [MAILCONF])
+        for prefix in PREFIXES:
+            with self.subTest(prefix=prefix):
+                # staged directly as a proposal (as an earlier sweep would have), so the stage-time check is not what is tested
+                path = self.v.propose("earlier", [{"n": 1, "op": "new", "table": "actions", "match": "strong", "flags": [], "decision": "pending",
+                                                   "values": {"project": "ABC", "description": "Order letters", "owner": "Alan Carter",
+                                                              "source": src(prefix + "Pay review", "https://outlook.example/z", sent="2026-10-08 08:00")}}])
+                try:
+                    got = rows(self.v, "proposal")
+                    self.assertEqual([(r["marker"], r["title"]) for r in got], [("confidential", "Pay review")])
+                finally:
+                    path.unlink()
 
 
 TODAY = date.today().isoformat()
@@ -390,6 +500,9 @@ def fixture(v):
     stage(v, [item("Send the SOW", src("[ABC] SOW", "https://x/1", sent=f"{TODAY} 08:00")),
               item("Test licences may not arrive", src("[ABC] SOW", "https://x/2", sent=f"{TODAY} 08:10"), table="raid", type="Risk")], now=STAMP)
     stage_note(v, src("[ABC] SOW", "https://x/9", sent=f"{TODAY} 08:20"))
+    v.propose("earlier-conf", [{"n": 1, "op": "new", "table": "actions", "match": "strong", "flags": [], "decision": "pending",    # staged before the thread was marked
+                                "values": {"project": "ABC", "description": "Order the pay letters", "owner": "Alan Carter",
+                                           "source": src("RE: Pay review", CONF["link"], kind="Teams", sent=f"{TODAY} 08:30")}}])
     run(v, "build_dashboard.py", now=STAMP)
 
 
@@ -464,14 +577,28 @@ class Page(LiveBrowserCase):
           tdNew:!document.getElementById('tdNew').hidden, quiet:document.querySelectorAll('#tdList > li.td-quiet').length,
           all:document.querySelectorAll('#tdList > li').length, tdMoved:document.querySelectorAll('#tdList > li[data-td^="alfp"]').length,
           line:tdLine().reduce((a,x)=>a+x.n,0)}; })()""")
-        self.assertEqual(o["moved"], 3)                                          # the proposal row, the note row and the private conversation
-        self.assertEqual(o["alrows"], 3)
+        self.assertEqual(o["moved"], 4)                                          # the proposal row, the note row, the confidential thread's row and the private conversation
+        self.assertEqual(o["alrows"], 4)
         self.assertEqual(o["nAttn"], str(o["attn"]))                             # the heading's count includes them
         self.assertEqual(o["tdMoved"], 0)                                        # and none is also in Intake and Review
         self.assertEqual(o["nTd"], str(o["all"] - o["quiet"] + o["line"]))      # Intake and Review counts only its cards
         self.assertGreaterEqual(o["all"], o["cards"])
         self.assertTrue(o["tdNew"])                                              # its "new" mark is for the cards
-        self.assertEqual(o["badge"], f"{o['vips']} messages to see first")       # the left bar counts everything unseen
+        self.assertEqual(o["badge"], f"{o['vips']} items to see first")          # the left bar counts everything unseen; a From row is not a message
+
+    def test_h_the_from_rows_come_after_the_existing_attention_items(self):
+        """Stark's review: they led the list. The help says decisions, reminders, the gaps line, then the From rows."""
+        order = self.b.eval("[...document.querySelectorAll('#attnList > li')].map(l=>l.classList.contains('alrow'))")
+        self.assertIn(True, order)
+        self.assertIn(False, order, "the fixture has other attention items")
+        self.assertEqual(order, sorted(order), order)                                # every other row, then every From row
+
+    def test_i_a_confidential_threads_row_is_marked_and_shows_no_item_words(self):
+        r = next(x for x in self.rows() if x["where"] == "attn" and "Pay review" in x["text"])
+        self.assertIn("Confidential", r["text"])
+        self.assertIn("From Mia Hale: Pay review", r["text"])                         # the prefix is gone from the title, the mark is kept
+        self.assertNotIn("Order the pay letters", r["text"])
+        self.assertNotIn("RE:", r["text"])
 
     def test_g_no_label_anywhere_in_the_section(self):
         html = self.b.eval("document.getElementById('tdSec').outerHTML+document.getElementById('attnSec').outerHTML")

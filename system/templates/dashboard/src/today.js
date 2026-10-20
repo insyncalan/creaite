@@ -58,7 +58,6 @@ export function revGroupTitle(file,items){ const w=file.match(/^proposed-(\d{4}-
 export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-319 (Alan, 14-10-2026): proposals are To decide's alone, so Needs attention has no per-meeting groups (nor their Approve n routine).
   #236 (Alan, 19-10-2026): the proposals and memory notes the sweep takes from a followed person's messages, and a private conversation, are Needs attention rows
   (From <name>, never labelled: BL-288; Review still holds the proposals). The conversation cards (BL-334, BL-342) stay in To decide. */
-  out.push(...attnAlertItems());
   if(S.remindersOn){ const hide=[...dismissedF(),...dismissedS()];
     REMINDERS.filter(r=>!hide.includes(r.id)).forEach(r=>out.push({reminder:r.id,html:n=>tl(n,
       tLink(r.id.startsWith("client:")?`data-rphub="${r.id.split(":")[1]}||client"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:r.id.startsWith("weekly:")?(r.id.split(":")[2]?`data-rphub="${r.id.split(":")[2]}|${r.id.split(":")[1]}"`:'data-go="reports"'):'data-go="projects"',esc(longText(r.text))),
@@ -79,6 +78,7 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
     if(others) parts.push(`${plur(others,"decision")} waiting on others`); if(mine) parts.push(others?`${mine} for you`:`${plur(mine,"decision")} for you`);
     const show=L.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
     out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),`${andList(show)}${L.length>3?` and ${L.length-3} more`:""}.`)}); } }
+  out.push(...attnAlertItems());   /* #236: after the decisions, the reminders and the gaps line, as the help says (Stark's review: they led the list) */
   return out; }
 export const dueWords=d=>{ const n=days(d); return n<0?`<span class="late">${-n} day${n===-1?"":"s"} late</span>`:n===0?"due today":n===1?"due tomorrow":`due in ${n} days`; };
 /* "Friday 9th October": the Week ahead heading spells its end day out (Alan, 2026-10-09) */
@@ -523,7 +523,7 @@ export function attnAlertHtml(n,a){ const refs=/** @type {any[]} */(a.refs||[]),
     return tl(n,ext||(first.file?tLink(rvAttr(first),esc(t)):`<span class="t">${esc(t)}</span>`),when?`updated ${esc(whenWords(when))}`:"",`<span class="tacts">${dis(`Dismiss: ${t}`)}</span>`,attrs); }
   const note=a.kind==="note", inRev=refs.filter(r=>refReview(r.file,r.ref)), cnt=refs.length, proj=a.p&&a.p!=="_portfolio"?pName(a.p):"no project";
   const what=note?(inRev.length?`A note for ${proj}'s memory, in Review`:`A note for ${proj}'s memory, staged: written at the next apply`):`${cnt} proposal${cnt===1?"":"s"} in Review`;
-  const lines=refs.map(r=>{ const x=refReview(r.file,r.ref); return x?`${esc(r.tag?r.tag[0].toUpperCase()+r.tag.slice(1):"Item")}: ${sLink(rvAttr(r),esc(String(x.rec&&x.rec.t||"")))}`:""; }).filter(Boolean);
+  const lines=a.marker==="confidential"?[]:refs.map(r=>{ const x=refReview(r.file,r.ref);   /* a confidential thread: the title, the mark and the times, no item words */ return x?`${esc(r.tag?r.tag[0].toUpperCase()+r.tag.slice(1):"Item")}: ${sLink(rvAttr(r),esc(String(x.rec&&x.rec.t||"")))}`:""; }).filter(Boolean);
   const meta=[what,note?"":proj,a.sent?`sent ${whenWords(String(a.sent).replace("T"," ").slice(0,16))}`:"",confMark(a),a.returned?"new since you dismissed it":""].filter(Boolean).map(esc).join(" · ");
   const name=`From ${a.who??""}, ${t}`;
   return tl(n,tLink(rvAttr(first),esc(`From ${a.who??""}: ${t}`)),meta+(lines.length?`. ${lines.join("; ")}`:""),

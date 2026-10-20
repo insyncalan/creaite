@@ -33900,8 +33900,8 @@ ${s5}`;
     snack("Drafted from the message: check it, then save");
   }
   function vipBadge() {
-    const n4 = VIPS().length;
-    setRailCount("today", n4, `${n4} message${n4 === 1 ? "" : "s"} to see first`);
+    const n4 = VIPS().length, rows2 = VIPS().filter((a5) => a5.kind === "proposal" || a5.kind === "note").length;
+    setRailCount("today", n4, rows2 ? `${n4} item${n4 === 1 ? "" : "s"} to see first` : `${n4} message${n4 === 1 ? "" : "s"} to see first`);
     document.title = (shared.RBMARKED ? RBMARK : "") + (n4 ? `(${n4}) ` : "") + BASETITLE;
     tabTitle();
   }
@@ -41429,7 +41429,6 @@ ${s5}`;
       /** @type {any[]} */
       []
     );
-    out.push(...attnAlertItems());
     if (S.remindersOn) {
       const hide = [...dismissedF(), ...dismissedS()];
       REMINDERS.filter((r4) => !hide.includes(r4.id)).forEach((r4) => out.push({ reminder: r4.id, html: (n4) => tl2(
@@ -41468,6 +41467,7 @@ ${s5}`;
         out.unshift({ decisions: true, html: (n4) => tl2(n4, tLink('data-decpending="1"', parts.join(", ") + (late ? `, ${late} late` : "")), `${andList(show)}${L3.length > 3 ? ` and ${L3.length - 3} more` : ""}.`) });
       }
     }
+    out.push(...attnAlertItems());
     return out;
   }
   var dueWords = (d5) => {
@@ -42457,7 +42457,7 @@ ${s5}`;
     }
     const note = a5.kind === "note", inRev = refs.filter((r4) => refReview(r4.file, r4.ref)), cnt = refs.length, proj = a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project";
     const what = note ? inRev.length ? `A note for ${proj}'s memory, in Review` : `A note for ${proj}'s memory, staged: written at the next apply` : `${cnt} proposal${cnt === 1 ? "" : "s"} in Review`;
-    const lines2 = refs.map((r4) => {
+    const lines2 = a5.marker === "confidential" ? [] : refs.map((r4) => {
       const x5 = refReview(r4.file, r4.ref);
       return x5 ? `${esc(r4.tag ? r4.tag[0].toUpperCase() + r4.tag.slice(1) : "Item")}: ${sLink(rvAttr(r4), esc(String(x5.rec && x5.rec.t || "")))}` : "";
     }).filter(Boolean);

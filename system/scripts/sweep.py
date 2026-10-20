@@ -346,6 +346,8 @@ def stage(spec_file):
                          + str((raw.get("values") or {}).get("description") or raw.get("id") or "a promise"))
             why["promises off"] = why.get("promises off", 0) + 1
             continue
+        if closed_skip(raw, notes, why):                                # #236: a private or confidential thread is never staged
+            continue
         if raw.get("op") == "update":                                   # BL-113: a message makes or withdraws a pending decision
             decision_update(raw, con, items, notes, why, ignored, updated, rules, vips, named, seen)
             continue
@@ -389,9 +391,7 @@ def stage(spec_file):
             flags.append("vip")                                        # BL-99: sorts first in Review
         new_defaults(table, v, flags)
         items.append({**item, "n": len(items) + 1, "match": match, "flags": flags, "decision": "pending"})
-        import review as _review                          # BL-208: the fields cx-sweep guessed, and why
-        if _review.clean_inferred(raw.get("inferred") if isinstance(raw, dict) else None):
-            items[-1]["inferred"] = _review.clean_inferred(raw.get("inferred"))
+        add_inferred(items[-1], raw)
         tracker.flag_workstream(con, items[-1])           # BL-58: the project's own workstreams only
     possible = sum(i["match"] == "possible" for i in items)
     out = None
@@ -1165,7 +1165,7 @@ def msg_record(st, m, vips, how, have):
 
 def marker_of(m):
     """"private", "confidential" or None, from a message's or conversation's sensitivity."""
-    sens = str(m.get("sensitivity") or "").lower()
+    sens = str(m.get("sensitivity") or "").strip().lower()
     return "private" if sens in ("private", "personal") else "confidential" if sens == "confidential" else None
 
 # ===== BL-334: alerts read the conversation, not the message =====
@@ -1459,16 +1459,58 @@ def cand_settled(a):
         mark_seen(a, now().strftime("%Y-%m-%d %H:%M"))
 
 
+def source_ref(source, conversation=None):
+    """What identifies the thread a structured source is from: its conversation ID, link, the kind and the title with reply
+    prefixes taken off (a card is found on this, never on the raw subject: "RE: x" and "x" are one thread)."""
+    msg = message_of_source(source)
+    return {"conv": conversation, "link": link_of(source), "title": strip_reply(msg["subject"] or msg["channel"] or "").lower(),
+            "kind": msg["kind"]}
+
+
+def closed_thread(source, conversation=None, sensitivity=None):
+    """#236 (Stark's review, HIGH): "private" or "confidential" when a thread must not be read into proposals, else None. The sweep's
+    rule for a followed person's private or confidential thread is that it is alerted with its marker and its content is not read into
+    proposals (cx-sweep, VIP section); an item from it is never staged, whatever the card lists (main staged none: the card was
+    "summarised"). Taken from the item's own sensitivity when the spec carries it, else from any alert for the thread (a card or an
+    older message alert), whatever its age. Spelling and case of the marker do not matter (marker_of)."""
+    own = marker_of({"sensitivity": sensitivity})
+    if own:
+        return own
+    ref = source_ref(source, conversation)
+    for a in vip_state()["alerts"]:
+        marker = a.get("marker") or ("confidential" if a.get("confidential") else None)
+        if marker in ("private", "confidential") and a.get("kind") not in FOLLOWED_KINDS and same_conv(a, ref):
+            return marker
+    return None
+
+
+def closed_skip(raw, notes, why):
+    """True (and noted, counted, without echoing the item) when a spec item, new or an update, is from a private or confidential
+    thread: nothing from it is staged (#236)."""
+    source = str(raw.get("source") or (raw.get("values") or {}).get("source") or "")
+    closed = closed_thread(source, raw.get("conversation"), raw.get("sensitivity")) if source else None
+    if closed:
+        notes.append(f"skipped (a {closed} thread: nothing from it is staged)")
+        why[f"{closed} thread"] = why.get(f"{closed} thread", 0) + 1
+    return bool(closed)
+
+
+def add_inferred(item, raw):
+    """BL-208: the fields cx-sweep guessed, and why, on a staged item."""
+    import review as _review
+    inferred = _review.clean_inferred(raw.get("inferred") if isinstance(raw, dict) else None)
+    if inferred:
+        item["inferred"] = inferred
+
+
 def summarised(source, conversation=None, text=None):
     """BL-334 C: the alert that has already summarised the conversation an item comes from, with nothing newer since
     (the item's Sent time is not after the summary's last message), else None. Matched by the conversation ID, else the
     link, else the kind and the thread's own title.
     #236: and, given the item's text, only when the card offers it (one of its items, or its ask, says the same): an item the
     card does not list was being dropped here, shown nowhere; it is staged for Review (and on Today as a row) instead. A private
-    conversation lists nothing and keeps the whole thread out."""
-    msg = message_of_source(source)
-    title = re.sub(r"^((re|fw|fwd|aw)\s*:\s*|\[ext\]\s*)+", "", msg["subject"] or msg["channel"] or "", flags=re.I)
-    ref = {"conv": conversation, "link": link_of(source), "title": title.strip().lower(), "kind": msg["kind"]}
+    or confidential thread is never staged at all (closed_thread, before this)."""
+    ref = source_ref(source, conversation)
     sent = _when((re.search(r"Sent: ([0-9: T-]+)", source or "") or [None, ""])[1]) or ""
     for a in vip_state()["alerts"]:
         if "summary" in a and same_conv(a, ref) and (not sent or sent <= (a.get("last") or "")) and \
@@ -1491,7 +1533,7 @@ def same_conv(a, ref):
         return True
     if ref["link"] and a.get("link") == ref["link"]:
         return True
-    return bool(ref["title"]) and a.get("kind") == ref["kind"] and str(a.get("title") or "").strip().lower() == ref["title"]
+    return bool(ref["title"]) and a.get("kind") == ref["kind"] and strip_reply(a.get("title")).lower() == ref["title"]
 
 # ===== end BL-334 =====
 
@@ -1544,11 +1586,25 @@ def card_fields(m, cands):
             "owners": card_owners(m.get("owners"))}
 
 
+REPLY_PREFIX = r"(?:re|fw|fwd|aw|wg|sv|vs|tr|rv|enc)\s*(?:[\[(]\d+[\])])?\s*[:\uff1a]"
+
+
+def strip_reply(text):
+    """A subject without reply and forward prefixes (Re:, RE:, Fw:, Fwd:, AW:, RE[2]:, Re(3):, repeated, in any case, and a leading
+    [EXT] tag), keeping any other bracketed tag. #236: the Confidential mark and a thread's card are found on this, not the raw subject."""
+    t = " ".join(str(text or "").split())
+    while True:
+        u = re.sub(r"^(?:" + REPLY_PREFIX + r"|\[ext(?:ernal)?\])\s*", "", t, flags=re.I)
+        if u == t:
+            return t.strip()
+        t = u
+
+
 def norm_subject(text):
     """A mail subject without Re:, Fw:, bracketed tags, case or extra spaces."""
     t = " ".join(str(text or "").split())
     while True:
-        u = re.sub(r"^((re|fw|fwd|aw)\s*:\s*|\[[^\]]*\]\s*)+", "", t, flags=re.I)
+        u = re.sub(r"^(?:" + REPLY_PREFIX + r"\s*|\[[^\]]*\]\s*)+", "", t, flags=re.I)
         if u == t:
             break
         t = u
@@ -2119,7 +2175,7 @@ def followed_tag(item):
 def followed_row(source, typ, who, addr, ref, project, st_alerts):
     """A new row (before it is joined to others of its thread) for one ref."""
     msg = message_of_source(source)
-    subject = _clean(msg["subject"] or msg["channel"], 200) or "(no subject)"
+    subject = _clean(strip_reply(msg["subject"] or msg["channel"]), 200) or "(no subject)"
     return {"typ": typ, "who": who, "address": addr, "medium": msg["kind"], "title": subject, "link": link_of(source),
             "sent": _when((re.search(r"Sent: ([0-9: T-]+)", source) or [None, ""])[1]), "p": project, "ref": ref,
             "thread": msg["kind"] + "|" + norm_subject(subject) + "|" + who.lower()}
@@ -2196,8 +2252,8 @@ def followed_rows(alerts):
     own neutral title, with no project; a confidential one is marked (the page draws it with its mark)."""
     rows = followed_join(followed_refs(*followed_names()))
     for row in rows.values():
-        ref = {"conv": None, "link": row["link"], "title": row["title"].strip().lower(), "kind": row["medium"]}
-        card = next((a for a in alerts if "summary" in a and same_conv(a, ref)), None)
+        ref = {"conv": None, "link": row["link"], "title": strip_reply(row["title"]).lower(), "kind": row["medium"]}
+        card = next((a for a in alerts if a.get("kind") not in FOLLOWED_KINDS and a.get("marker") and same_conv(a, ref)), None)
         if card and card.get("marker") in ("private", "confidential"):
             row["marker"] = card["marker"]
             if card["marker"] == "private":

@@ -952,7 +952,7 @@ export async function alertDraft(){ const al=shared.CUR&&shared.CUR.mode==="new"
   const v=d.prefill.values||{}, x=shared.CUR.draft, t=String(v.description??v.decision??"").trim(), due=v.due_date||v.needed_by||"", f=k==="actions"?"upd":k==="raid"?"resp":"why";
   if(t) x.t=t; if(due) x.due=due; if(d.prefill.detail&&!String(x[f]||"").trim()) x[f]=String(d.prefill.detail);
   pkDraw(); const tt=$("#pkTitle"); if(tt){ tt.textContent=x.t; tt.focus(); } snack("Drafted from the message: check it, then save"); }
-export function vipBadge(){ const n=VIPS().length; setRailCount("today",n,`${n} message${n===1?"":"s"} to see first`);   /* BL-319: through the sidebar's store; BL-288: never labelled */
+export function vipBadge(){ const n=VIPS().length, rows=VIPS().filter(a=>a.kind==="proposal"||a.kind==="note").length; setRailCount("today",n,rows?`${n} item${n===1?"":"s"} to see first`:`${n} message${n===1?"":"s"} to see first`);   /* #236: a From row is a proposal or note, not a message */   /* BL-319: through the sidebar's store; BL-288: never labelled */
   document.title=(shared.RBMARKED?RBMARK:"")+(n?`(${n}) `:"")+BASETITLE; tabTitle(); }
 export let VIPNOTED=new Set(VIPS().map(a=>a.id));                 /* alerts already there when the page opened aren't notified again */
 /* BL-231: what this block did at load, run in today's order by src/main.js */

@@ -78,3 +78,22 @@ None needs a change: every route delegates to `sweep.vip_*`. For Jarvis: one sen
   staging it again is idempotent (the same wording is skipped). The same holds for a dismissed row: "Send the SOW to Mia by
   Friday" reworded lightly ("on Friday") stays gone; a synonym reword ("Share the statement of work with Mia") comes back as new.
 - Two further low findings from the review (6 and 7) are known and left as they are.
+
+## Review fixes (Stark, 20-10-2026)
+
+- **Confidential and private threads (HIGH).** `sweep.closed_thread()` runs in `stage` before the card check, for new items and for
+  decision and done updates: a thread whose alert (a card or an older message alert, any age) is marked private or confidential, or
+  whose spec item carries `sensitivity`, stages nothing. This is the sweep's existing rule (cx-sweep, VIP section: a VIP's private
+  or confidential thread is alerted with its marker and its content is not read into proposals), and it matches main, which staged
+  none because the card was "summarised". The sweep's note does not echo the item. The marker is read in any case and spacing
+  (`marker_of`). A normal thread's card still skips only what it lists.
+- **Reply prefixes (MEDIUM).** `strip_reply()` (Re:, Fw:, Fwd:, AW:, WG:, SV:, VS:, TR:, RV:, ENC:, with a counter such as `RE[2]:` or `Re(3):`,
+  repeated, any case, a leading `[EXT]`) is used to find a thread's card (`source_ref`, `same_conv`, the From rows) and to title a row.
+  A row for a thread whose card is confidential is marked and lists no item words; a private one keeps only its neutral title.
+- **Order (MEDIUM).** The From rows are the last Needs attention rows (after the decisions line, the reminders and the gaps line), as
+  help.md says.
+- **A row with no card** has no way to know a thread is confidential; it shows the (prefix-free) title and the project, as the thread's
+  mail does. A thread known as confidential never reaches it (stage refuses it), so only an item staged before the thread was marked
+  can show a mark, and then the mark comes from the card.
+- **Badge (LOW).** The Today badge reads "n items to see first" while a From row counts in it, else "n messages to see first".
+- **/api/vip (LOW, guarded).** `vip-api.diff` (and `vip-api-README.md`): the poll must not return `sigs`, `seen_sig`, `keys` or `ids`.
