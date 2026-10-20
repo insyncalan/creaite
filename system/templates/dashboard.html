@@ -4575,6 +4575,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     MSORTS: () => MSORTS,
     MTG: () => MTG,
     MTGI: () => MTGI,
+    MTGREF: () => MTGREF,
     MTGSHOW: () => MTGSHOW,
     MTICK: () => MTICK,
     MVCAL: () => MVCAL,
@@ -5168,6 +5169,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bwPut: () => bwPut,
     bwReset: () => bwReset,
     calFoot: () => calFoot,
+    calendarLive: () => calendarLive,
     canHover: () => canHover,
     cancelCurEdit: () => cancelCurEdit,
     cantCard: () => cantCard,
@@ -5990,6 +5992,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mtgShown: () => mtgShown,
     mtgSkip: () => mtgSkip,
     mtgState: () => mtgState,
+    mtgStop: () => mtgStop,
     mtgTx: () => mtgTx,
     mvAct: () => mvAct,
     mvAddCommit: () => mvAddCommit,
@@ -46971,7 +46974,7 @@ ${s5}`;
       const m5 = L3.find((x5) => x5.id === id2);
       if (!m5 || !mtgCanPick(m5)) MSEL.delete(id2);
     });
-    $("#mtgRead").textContent = mt2.fetched ? `Calendar read ${fdText(mt2.fetched)}` : "";
+    $("#mtgRead").textContent = MTGREF ? `Refreshing…${MTGREF.step ? ` ${MTGREF.step}` : ""}` : mt2.fetched ? `Calendar read ${fdText(mt2.fetched)}` : "";
     const busy2 = !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
     $("#mtgGo").disabled = !MSEL.size || busy2 || !viaServer();
     $("#mtgGo").textContent = MSEL.size ? `Process ${MSEL.size} selected` : "Process selected";
@@ -46981,8 +46984,10 @@ ${s5}`;
     $("#mtgLoad").title = why;
     $("#mtgLoad").textContent = ld2 ? `Load ${ld2} into inbox` : "Load into inbox";
     $("#mtgTx").disabled = !L3.some((m5) => mtgHasTx(m5) && mtgCanPick(m5));
-    $("#mtgRefresh").disabled = busy2 || !viaServer();
-    $("#mtgRefresh").title = !viaServer() ? "Needs the live server" : "";
+    const rf2 = $("#mtgRefresh");
+    rf2.textContent = MTGREF ? "Stop" : "Refresh";
+    rf2.disabled = MTGREF ? false : busy2 || !viaServer();
+    rf2.title = MTGREF ? "Stop the refresh" : !viaServer() ? "Needs the live server" : "";
     if (!mt2.fetched) {
       putHTML($("#mtgBody"), html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now. ${raw(howLink("intake"))}</div>`);
       $("#mtgNew").disabled = true;
@@ -47068,7 +47073,59 @@ ${s5}`;
       renderMeetings();
     }
   }
+  var MTGREF = (
+    /** @type {{step: string, id: string}|null} */
+    null
+  );
+  var calendarLive = async function(onEv) {
+    const id2 = `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
+    shared.RUN = { id: id2, ctl };
+    setRunning(true);
+    let got = {};
+    if (onEv) onEv({ type: "run", id: id2 });
+    try {
+      const r4 = await fetch("/api/calendar/refresh", { method: "POST", signal: ctl.signal, headers: { "Content-Type": "application/json", "X-Creaite-Token": D.token || "" }, body: JSON.stringify({ run: id2 }) });
+      if (!r4.ok || !r4.body) {
+        const j5 = await r4.json().catch(() => ({}));
+        return { ok: false, message: j5.message || "Refresh couldn't start: check the live server." };
+      }
+      const rd2 = r4.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (; ; ) {
+        const { value, done } = await rd2.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        for (let i5 = buf.indexOf("\n\n"); i5 >= 0; i5 = buf.indexOf("\n\n")) {
+          const c5 = buf.slice(0, i5);
+          buf = buf.slice(i5 + 2);
+          if (!c5.startsWith("data: ")) continue;
+          let ev;
+          try {
+            ev = JSON.parse(c5.slice(6));
+          } catch (e4) {
+            continue;
+          }
+          if (ev.type === "calendar") got = { ...got, saved: ev.saved, meetings: ev.meetings, days: ev.days, transcripts: ev.transcripts };
+          else if (ev.type === "closure") got.closure = ev;
+          else if (ev.type === "stopped") got.stopped = true;
+          else if (ev.type === "error") got.message = ev.message;
+          if (onEv) onEv(ev);
+        }
+      }
+      return { ok: true, ...got };
+    } catch (e4) {
+      return { ok: false, stopped: e4 && e4.name === "AbortError", message: e4 && e4.name === "AbortError" ? "Stopped" : "The live server stopped." };
+    } finally {
+      shared.RUN = null;
+      setRunning(false);
+      api("/api/ask/ack", { run: id2 });
+    }
+  };
+  function mtgStop() {
+    if (MTGREF && MTGREF.id) api("/api/ask/stop", { run: MTGREF.id });
+  }
   async function refreshCalendar() {
+    if (MTGREF) return;
     const body2 = $("#mtgBody");
     let sk2 = null;
     const t47 = setTimeout(() => {
@@ -47086,15 +47143,25 @@ ${s5}`;
         snack("ask creaite is busy; try again when it's finished");
         return;
       }
-      $("#mtgRead").textContent = "Refreshing…";
-      openChat();
-      addEl("msg u", "Refresh calendar");
+      MTGREF = { step: "", id: "" };
+      renderMeetings();
+      let r4 = null;
       try {
-        await askLive("refresh calendar", null);
+        r4 = await calendarLive((ev) => {
+          if (!MTGREF) return;
+          if (ev.type === "run") MTGREF.id = ev.id;
+          else if (ev.type === "step") {
+            MTGREF.step = ev.label || "";
+            renderMeetings();
+          }
+        });
       } catch (e4) {
+      } finally {
+        MTGREF = null;
       }
       await reloadData();
       renderMeetings();
+      snack(r4 && r4.closure ? oneLine(r4.closure.line) : r4 && r4.stopped ? "Stopped" : oneLine(r4 && r4.message || "The calendar was not saved"));
     } finally {
       clearTimeout(t47);
       if (sk2) {
@@ -47154,7 +47221,10 @@ ${s5}`;
       if (shared.VIEW === "inbox" && !document.activeElement?.matches?.(".mtgp")) renderMeetings();
     }, 6e4);
     $("#mtgGo").onclick = processMeetings;
-    $("#mtgRefresh").onclick = refreshCalendar;
+    $("#mtgRefresh").onclick = () => {
+      if (MTGREF) mtgStop();
+      else refreshCalendar();
+    };
   }
   var jobLive = async function(url, body2) {
     if (!shared.RUNLABEL) shared.RUNLABEL = /load/.test(url) ? "Loading a transcript" : "Checking a transcript";
@@ -47341,13 +47411,20 @@ ${s5}`;
       else if (k5 === "restoreday") mtgRestore({ op: "restore_day", day: b5.dataset.day });
     });
   }
-  var intakeSeams = { jobLive: (v5) => {
-    jobLive = v5;
-  }, nowHM: (v5) => {
-    nowHM = v5;
-  }, processLive: (v5) => {
-    processLive = v5;
-  } };
+  var intakeSeams = {
+    jobLive: (v5) => {
+      jobLive = v5;
+    },
+    nowHM: (v5) => {
+      nowHM = v5;
+    },
+    processLive: (v5) => {
+      processLive = v5;
+    },
+    calendarLive: (v5) => {
+      calendarLive = v5;
+    }
+  };
 
   // files.js
   shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
@@ -65771,6 +65848,7 @@ ${d5.text}`);
     load: "Transcript load",
     vip: "Alert check",
     process: "Intake processing",
+    calendar: "Calendar refresh",
     other: "Other"
   };
   var FILE = {
@@ -76667,6 +76745,7 @@ ${d5.text}`);
         "boardMoveMenu",
         "bprop",
         "calFoot",
+        "calendarLive",
         "canHover",
         "cantGo",
         "capped",

@@ -4,7 +4,7 @@
    boot…() functions that src/main.js calls in today's order. */
 import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
-import { askLive, askStream, mdView, openChat, runAsk, setRunning } from "./ask.js";
+import { askStream, mdView, openChat, runAsk, setRunning } from "./ask.js";
 import { P } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, putHTML, raw } from "./core/dom.js";
 import { addEl } from "./core/fields.js";
@@ -137,7 +137,7 @@ export function mtgTx(m,i){ const r=MRUN[m.id], spin=html`<span class="spin" ari
   const state=m.loaded?html`<span class="tag">Loaded</span> <span class="sub">in the inbox</span>${loadedAct}`:m.transcript==="available"?html`<span class="mtgyes">${label}</span>`:html`<span class="sub">${label}</span>`;
   return html`${state}${chk}<div class="sub mtgwhen">${m.transcript_checked?`checked ${fdText(m.transcript_checked)}`:""}</div>`; }
 export function renderMeetings(){ const mt=D.meetings||{}, L=MTG(); [...MSEL].forEach(id=>{ const m=L.find(x=>x.id===id); if(!m||!mtgCanPick(m)) MSEL.delete(id); });
-  $("#mtgRead").textContent=mt.fetched?`Calendar read ${fdText(mt.fetched)}`:"";
+  $("#mtgRead").textContent=MTGREF?`Refreshing…${MTGREF.step?` ${MTGREF.step}`:""}`:mt.fetched?`Calendar read ${fdText(mt.fetched)}`:"";   /* #265: the refresh's progress */
   const busy=!!shared.RUN||(typeof shared.BUSY!=="undefined"&&shared.BUSY);
   $("#mtgGo").disabled=!MSEL.size||busy||!viaServer(); $("#mtgGo").textContent=MSEL.size?`Process ${MSEL.size} selected`:"Process selected";
   $("#mtgGo").title=!viaServer()?"Needs the live server":busy?"ask creaite is busy; try again when it's finished":MSEL.size?"":"Tick a meeting first";
@@ -145,7 +145,8 @@ export function renderMeetings(){ const mt=D.meetings||{}, L=MTG(); [...MSEL].fo
   $("#mtgLoad").disabled=offTx; $("#mtgLoad").title=why;
   $("#mtgLoad").textContent=ld?`Load ${ld} into inbox`:"Load into inbox";
   $("#mtgTx").disabled=!L.some(m=>mtgHasTx(m)&&mtgCanPick(m));
-  $("#mtgRefresh").disabled=busy||!viaServer(); $("#mtgRefresh").title=!viaServer()?"Needs the live server":"";
+  const rf=$("#mtgRefresh"); rf.textContent=MTGREF?"Stop":"Refresh"; rf.disabled=MTGREF?false:busy||!viaServer();     /* #265: Stop on the button while it runs */
+  rf.title=MTGREF?"Stop the refresh":!viaServer()?"Needs the live server":"";
   if(!mt.fetched){ putHTML($("#mtgBody"),html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now. ${raw(howLink("intake"))}</div>`); $("#mtgNew").disabled=true; return; }
   if(!L.length){ putHTML($("#mtgBody"),html`<div class="empty">${(mt.cleared||[]).length?`Every meeting since ${fd(mt.from)} is cleared.`:`No meetings since ${fd(mt.from)}.`} ${raw(howLink("intake"))}</div>${clrList()}`); $("#mtgNew").disabled=true; return; }
   $("#mtgNew").disabled=!L.some(m=>mtgCanPick(m)&&!m.private);
@@ -186,10 +187,33 @@ export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id))
     let r=null; try{ r=await processLive([mtgProcessFile(m,now.loaded)]); }catch(e){} await reloadData();
     const after=MTG().find(x=>x.id===m.id), o=((r&&r.files)||[])[0], said=(o&&o.question)||(r&&r.stopped?"Stopped":"")||oneLine((r&&r.message)||"");
     MRUN[m.id]=after&&(after.draft||after.processed)?"draft":`failed:${said.slice(0,140)||"no draft came back"}`; renderMeetings(); } }
-export async function refreshCalendar(){ const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
+/* ===== #265: Refresh is its own run kind (POST /api/calendar/refresh), not an ask creaite message =====
+   The click is Alan's go-ahead to read his calendar and save it for Intake and Today: the server runs the sweep's calendar steps under
+   a guard that may do that and nothing else (no mail, no Teams, no proposals). Progress is on the "Calendar read" line and Stop on the
+   Refresh button while it runs; ask creaite doesn't open. At the end the calendar is read again and the closure is said once. */
+export let MTGREF=/** @type {{step: string, id: string}|null} */(null);     /* the refresh in progress: its run and its latest step in plain words */
+/** @typedef {{ok: boolean, saved?: boolean, meetings?: number, days?: number, transcripts?: boolean, closure?: any, stopped?: boolean, message?: string}} CalendarResult */
+/* One calendar refresh: the route's events read here (a seam, so tests can stand in for the server). */
+/** @param {(ev: any) => void} [onEv] @returns {Promise<CalendarResult>} */
+export let calendarLive = async function(onEv){ const id=`c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true); /** @type {any} */ let got={};
+  if(onEv) onEv({type:"run",id});     /* the run's ID first, for Stop */
+  try{ const r=await fetch("/api/calendar/refresh",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify({run:id})});
+    if(!r.ok||!r.body){ const j=await r.json().catch(()=>({})); return {ok:false,message:j.message||"Refresh couldn't start: check the live server."}; }
+    const rd=r.body.getReader(), dec=new TextDecoder(); let buf="";
+    for(;;){ const {value,done}=await rd.read(); if(done) break; buf+=dec.decode(value,{stream:true});
+      for(let i=buf.indexOf("\n\n"); i>=0; i=buf.indexOf("\n\n")){ const c=buf.slice(0,i); buf=buf.slice(i+2); if(!c.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(c.slice(6)); }catch(e){ continue; }
+        if(ev.type==="calendar") got={...got,saved:ev.saved,meetings:ev.meetings,days:ev.days,transcripts:ev.transcripts}; else if(ev.type==="closure") got.closure=ev; else if(ev.type==="stopped") got.stopped=true; else if(ev.type==="error") got.message=ev.message;
+        if(onEv) onEv(ev); } }
+    return {ok:true,...got}; }
+  catch(e){ return {ok:false,stopped:e&&e.name==="AbortError",message:e&&e.name==="AbortError"?"Stopped":"The live server stopped."}; }
+  finally{ shared.RUN=null; setRunning(false); api("/api/ask/ack",{run:id}); } };
+export function mtgStop(){ if(MTGREF&&MTGREF.id) api("/api/ask/stop",{run:MTGREF.id}); }
+export async function refreshCalendar(){ if(MTGREF) return; const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
   try{ if(!viaServer()){ snack("Refreshing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
-  $("#mtgRead").textContent="Refreshing…"; openChat(); addEl("msg u","Refresh calendar");
-  try{ await askLive("refresh calendar",null); }catch(e){} await reloadData(); renderMeetings(); }
+  MTGREF={step:"",id:""}; renderMeetings(); let r=null;
+  try{ r=await calendarLive(ev=>{ if(!MTGREF) return; if(ev.type==="run") MTGREF.id=ev.id; else if(ev.type==="step"){ MTGREF.step=ev.label||""; renderMeetings(); } }); }catch(e){} finally{ MTGREF=null; }
+  await reloadData(); renderMeetings();
+  snack(r&&r.closure?oneLine(r.closure.line):r&&r.stopped?"Stopped":oneLine((r&&r.message)||"The calendar was not saved")); }
   finally{ clearTimeout(t); if(sk){ sk.remove(); anim($("#mtgBody"),[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } } }
 export async function mtgProject(i,code){ const m=MTG()[i]; if(!m) return; const was=m.p; m.p=code||null; m.how=code?"remembered":"unsure";
   if(m.private||!code){ renderMeetings(); return; }             /* a private "Busy" has no series to remember */
@@ -206,7 +230,7 @@ $("#mtgSec").addEventListener("change",e=>{ const el=e.target; if(el.matches(".m
 $("#mtgNew").onclick=()=>{ MTG().filter(m=>mtgCanPick(m)&&!m.private).forEach(m=>MSEL.add(m.id)); renderMeetings(); };
 setInterval(()=>{ if(shared.VIEW==="inbox"&&!document.activeElement?.matches?.(".mtgp")) renderMeetings(); },60000);
 $("#mtgGo").onclick=processMeetings;
-$("#mtgRefresh").onclick=refreshCalendar;
+$("#mtgRefresh").onclick=()=>{ if(MTGREF) mtgStop(); else refreshCalendar(); };     /* #265: Stop while it runs */
 }
 /* ===== Transcripts (BL-42 phase 3): Select with transcripts, Load into inbox, Load and process, Check again ===== */
 /* a transcript job (a check or a load) goes through the run engine like a question, but isn't a chat; the server writes the status and the files */
@@ -266,4 +290,5 @@ $("#mtgSec").addEventListener("click",e=>{ const b=e.target.closest("[data-clr]"
   else if(k==="restore") mtgRestore({op:"restore",keys:[b.dataset.key]});
   else if(k==="restoreday") mtgRestore({op:"restore_day",day:b.dataset.day}); });
 }
-export const intakeSeams = { jobLive: v => { jobLive = v; }, nowHM: v => { nowHM = v; }, processLive: v => { processLive = v; } };
+export const intakeSeams = { jobLive: v => { jobLive = v; }, nowHM: v => { nowHM = v; }, processLive: v => { processLive = v; },
+  calendarLive: v => { calendarLive = v; } };
