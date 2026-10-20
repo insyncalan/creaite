@@ -2652,6 +2652,10 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
 .ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
 #actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+#actUsage .urev .qtab td,#actUsage .urev .qtab th{white-space:normal;overflow-wrap:anywhere} #actUsage .urev .qtab td:first-child{white-space:nowrap;width:7.5em}   /* v2.5.3: Your reviews */
+.urevact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0} .urevact .sub{margin:0}
+.urevform{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 12px;align-items:center;max-width:760px;margin:10px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.urevform label{font-size:var(--fs-sm);color:var(--muted)} .urevform input{width:100%;min-width:0} .urevform .urevdate{width:auto} .urevform .urevact{margin:4px 0 0}
 /* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is

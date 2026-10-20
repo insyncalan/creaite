@@ -3,15 +3,23 @@
    the panel draws figures it is given (D.usage, from usage_report.py --json, refreshed from GET /api/usage where the live server
    has it) and has no button, field or link. Counts only: it never draws a label, a name or a path from the files, only the fixed
    kinds, skill names the server already cleaned and numbers. Text goes through JSX only; the chart is SVG nodes, not markup strings.
-   Tokens loaded at start are what each run reported; the "about tokens" of the always-loaded files are bytes / 4 (said on the page). */
+   Tokens loaded at start are what each run reported; the "about tokens" of the always-loaded files are bytes / 4 (said on the page).
+   v2.5.3 (#238 delta): Your reviews, the tab's one form. Alan's own dated notes (what he saw, what he decided; one line of at most
+   200 characters each, usage_reviews.py) are listed from D.usage.reviews, saved only through POST /api/usage/review (the live
+   server's route; the page never writes the file) and downloaded as CSV with the same cells as usage_reviews.csv_text. Until the
+   server has the route (D.usage.reviews_save) "Add a review note" is held, with the reason as its tooltip. */
 import { render } from "preact";
+import { useState } from "preact/hooks";
+import { readDate, TODAY } from "../../core/page.js";
+import { api, OLDSERVER, snack } from "../../core/server.js";
 
 /** @typedef {{now: number | null, before: number | null, change_pct?: number | null, change?: number | null}} Card */
 /** @typedef {{day: string, runs: number, cost_usd: number, start_median: number | null}} Day */
 /** @typedef {{kind: string, runs: number, avg_tokens: number, start_median: number | null, cost_usd: number, share_pct: number}} Kind */
 /** @typedef {{skill: string, runs: number, cost_usd: number, days_since: number | null, last: string | null}} Skill */
 /** @typedef {{file: string, date: string, bytes: number, tokens: number, since: string | null, change_bytes: number | null, change_tokens: number | null}} Ctx */
-/** @typedef {{as_of?: string, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[]}} Usage */
+/** @typedef {{date: string, saw: string, decided: string}} Review */
+/** @typedef {{as_of?: string, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[], reviews?: Review[], reviews_save?: boolean}} Usage */
 
 const KIND = { ask: "ask creaite", sweep: "Sweep", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
   check: "Transcript check", load: "Transcript load", vip: "Alert check", other: "Other" };
@@ -132,8 +140,82 @@ function ctxChange(r, fd) {
   return `${r.change_bytes > 0 ? "+" : "−"}${Number((k >= 10 ? Math.round(k) : k).toFixed(1))} KB since ${fd(r.since)}`;
 }
 
-/** @param {{usage: Usage | null | undefined, fd: (s: string) => string}} p */
-export function UsagePanel({ usage, fd }) {
+/* ===== v2.5.3 (#238 delta): Your reviews ===== */
+const REVIEW_ROUTE = "/api/usage/review", MAX_NOTE = 200;
+const NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs the live server";
+const FORMULA = /^[=+\-@\t\r]/;          /* a spreadsheet would run a cell starting with one of these (usage_reviews.FORMULA) */
+/** One CSV cell: always quoted, quotes doubled, an apostrophe before a formula. @param {unknown} v */
+export const csvCell = v => { let s = String(v ?? ""); if (FORMULA.test(s)) s = `'${s}`; return `"${s.replace(/"/g, '""')}"`; };
+/** The notes as CSV, newest first, dates DD-MM-YYYY, CRLF (usage_reviews.csv_text, cell for cell).
+    @param {Review[]} list @param {(s: string) => string} fd */
+export const reviewsCsv = (list, fd) => [["Date", "What you saw", "What you decided"], ...list.slice().reverse().map(r => [fd(r.date), r.saw, r.decided])]
+  .map(row => `${row.map(csvCell).join(",")}\r\n`).join("");
+
+/** Hand the viewer a file. @param {string} text @param {string} name */
+function saveFile(text, name) {
+  const url = URL.createObjectURL(new Blob(["\ufeff", text], { type: "text/csv;charset=utf-8" }));     /* the BOM: Excel reads it as UTF-8 */
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** @param {{list: Review[], fd: (s: string) => string, held: string, onSaved: (list: Review[]) => void}} p */
+function Reviews({ list, fd, held, onSaved }) {
+  const [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [msg, setMsg] = useState("");
+  const [day, setDay] = useState(""), [saw, setSaw] = useState(""), [dec, setDec] = useState("");
+  const focusAdd = () => setTimeout(() => /** @type {HTMLElement | null} */ (document.querySelector("#uRevAdd"))?.focus(), 0);
+  const start = () => { if (held) return; setDay(fd(TODAY)); setSaw(""); setDec(""); setMsg(""); setOpen(true);
+    setTimeout(() => /** @type {HTMLElement | null} */ (document.querySelector("#uRevSaw"))?.focus(), 0); };
+  const close = () => { setOpen(false); focusAdd(); };
+  const save = async () => {
+    const date = readDate(day);
+    if (!date) return setMsg("Write the date as DD-MM-YYYY.");
+    if (!saw.trim() && !dec.trim()) return setMsg("Write what you saw or what you decided.");
+    setBusy(true); setMsg("");
+    const r = await api(REVIEW_ROUTE, { date, saw, decided: dec }); setBusy(false);
+    if (!r || !r.ok) return setMsg(r && r.message === OLDSERVER ? `${NEEDS_UPDATE}.` : (r && r.message) || "Not saved.");
+    onSaved(r.reviews || []); setOpen(false); snack("Review note saved"); focusAdd();
+  };
+  const keys = (/** @type {KeyboardEvent} */ e) => {
+    if (e.key === "Enter") { e.preventDefault(); save(); } else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } };
+  const val = (/** @type {Event} */ e) => /** @type {HTMLInputElement} */ (e.currentTarget).value;
+  const rows = list.slice().reverse(), none = !rows.length;
+  return (
+    <section class="urev" aria-labelledby="uRevH">
+      <h2 id="uRevH">Your reviews</h2>
+      <p class="sub">Write down what you decided after looking, so the trend has a story. Your own note and a date only; kept on this laptop.</p>
+      {none ? <p class="sub uempty" role="status">No review notes yet.</p> : (
+        <div class="tbl"><table class="qtab" aria-label="Your reviews">
+          <thead><tr><th scope="col">Date</th><th scope="col">What you saw</th><th scope="col">What you decided</th></tr></thead>
+          <tbody>{rows.map((r, i) => <tr key={`${r.date}-${i}`}><td>{fd(r.date)}</td><td>{r.saw}</td><td>{r.decided}</td></tr>)}</tbody>
+        </table></div>)}
+      {open ? (
+        <div class="urevform" id="uRevForm" role="group" aria-label="New review note" onKeyDown={keys}>
+          <label for="uRevDate">Date</label>
+          <input type="text" id="uRevDate" class="urevdate" size={11} maxLength={20} placeholder="DD-MM-YYYY" value={day} onInput={e => setDay(val(e))} />
+          <label for="uRevSaw">What you saw</label>
+          <input type="text" id="uRevSaw" maxLength={MAX_NOTE} value={saw} onInput={e => setSaw(val(e))} />
+          <label for="uRevDec">What you decided</label>
+          <input type="text" id="uRevDec" maxLength={MAX_NOTE} value={dec} onInput={e => setDec(val(e))} />
+          <span />
+          <div class="urevact">
+            <button type="button" class="btn primary" id="uRevSave" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save note"}</button>
+            <button type="button" class="btn" disabled={busy} onClick={close}>Cancel</button>
+            <span class="sub" id="uRevMsg" role="status">{msg}</span>
+          </div>
+        </div>) : null}
+      <div class="urevact">
+        {open ? null : <button type="button" class="btn" id="uRevAdd" aria-disabled={held ? "true" : undefined} data-tip={held || undefined}
+          aria-label={held ? `Add a review note: ${held.toLowerCase()}` : undefined} onClick={start}>Add a review note</button>}
+        <button type="button" class="btn" id="uRevCsv" aria-disabled={none ? "true" : undefined} data-tip={none ? "No review notes yet" : undefined}
+          onClick={() => { if (!none) saveFile(reviewsCsv(list, fd), `${TODAY} creaite usage reviews.csv`); }}>Download as CSV</button>
+      </div>
+    </section>
+  );
+}
+/* ===== end v2.5.3 ===== */
+
+/** @param {{usage: Usage | null | undefined, fd: (s: string) => string, live?: boolean, onReviews?: (list: Review[]) => void}} p */
+export function UsagePanel({ usage, fd, live = false, onReviews = () => {} }) {
   const u = usage || {};
   const bad = !usage || usage.error;
   return (
@@ -144,9 +226,10 @@ export function UsagePanel({ usage, fd }) {
         : <Runs u={u} fd={fd} />}
       <Loads rows={u.context || []} start={u.cards?.start?.now} fd={fd} />
       {bad || u.empty ? null : <Skills skills={u.skills || []} />}
+      <Reviews list={u.reviews || []} fd={fd} held={!live ? NEEDS_LIVE : u.reviews_save ? "" : NEEDS_UPDATE} onSaved={onReviews} />
     </>
   );
 }
 
-/** @param {Element | null} host @param {{usage: Usage | null | undefined, fd: (s: string) => string}} props */
+/** @param {Element | null} host @param {{usage: Usage | null | undefined, fd: (s: string) => string, live?: boolean, onReviews?: (list: Review[]) => void}} props */
 export function mountUsage(host, props) { if (host) render(<UsagePanel {...props} />, host); }
