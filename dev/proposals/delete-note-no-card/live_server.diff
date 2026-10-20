@@ -1,0 +1,248 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 30bdeb1..3b538a6 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -91,6 +91,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
+ - POST /api/update/install  {source, reinstall} update.py install; POST /api/update/undo {keep_database} update.py undo
+ - GET  /api/files        the Files page's lists, rescanned (BL-87); with the files BL-03 archived, for Files' Archived (BL-331)
+ - POST /api/files/move-back {path}: one archived report or minutes back to its place, on the approval card (BL-331)
++- POST /api/notes/delete/now {path, base}, /api/files/move-back/now {path}: Delete note and a deleted note's Move back, from
++  the page's own button with no card (#255: the click is the approval; page_call, the one-time marker, LOCK then NOTES_LOCK)
+ - POST /api/ask/queue    {op: list|add|remove|resume}: messages typed while a run is going, run in order after it (BL-257)
+ - POST /api/current/sources {src, text}: a saved sentence's source rows and quoted lines, read only; /api/current/evidence
+                          {code, …} keeps a saved Current state's sentence links in system/staging/evidence/ (hashes and IDs only)
+@@ -5112,9 +5114,10 @@ def project_archive_card(code, action, cancel):
+ 
+ # ===== BL-331: Files' Move back, on the same change card =====
+ def move_back_route(handler, req):
+-    """POST /api/files/move-back {path}: the stored path of a file Files shows as archived. archive.back_spec builds the move
+-    (never the page): only a file an archive moved, back to the place it came from, never onto a file that is there. It goes on
+-    the approval card (server_edit_card); tracker.py apply moves it on Approve, and undo puts it back in _Archive."""
++    """POST /api/files/move-back {path}: the stored path of a report or minutes file Files shows as archived. archive.back_spec
++    builds the move (never the page): only a file an archive moved, back to the place it came from, never onto a file that is
++    there. It goes on the approval card (server_edit_card); tracker.py apply moves it on Approve, and undo puts it back in
++    _Archive. #255: a deleted note's Move back is not on the card any more (move_back_now_route)."""
+     import archive
+     path = req.get("path")
+     if not isinstance(path, str) or set(req) - {"path"}:
+@@ -5122,13 +5125,11 @@ def move_back_route(handler, req):
+     spec, why = archive.back_spec(path)
+     if not spec:
+         return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
+-    fc, done = spec["file_changes"], None
+-    if fc["archive"] == "notes_back":                  # #124 L4: the answer names the note, and the name it comes back under
+-        op = fc["file_ops"][0]
+-        a, b = Path(archive.archived_moves(kind="notes").get(op["from"]) or op["to"]).stem, Path(op["to"]).stem
+-        done = f"Moved \u201c{b}\u201d back to its notes folder." if a == b else \
+-            f"Moved \u201c{a}\u201d back to its notes folder as \u201c{b}\u201d (a note has its old name)."
+-    card, why = server_edit_card(fc["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"), done=done)
++    fc = spec["file_changes"]
++    if fc["archive"] != "reports_back":                # #255: a deleted note's Move back is the page's own (/api/files/move-back/now)
++        return handler.send(200, {"ok": False, "message": "Not moved back: a deleted note is moved back with its own Move back "
++                                  "button, at once, never on the approval card."})
++    card, why = server_edit_card(fc["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+     if not card:
+         return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
+     return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
+@@ -7550,50 +7551,162 @@ DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
+                      "/api/notes/rename": notes_rename_route})
+ # ===== end BL-301 B gaps =====
+ 
+-# ===== #124: Delete note (Alan, 15-10-2026: the confirm box AND the one approval card) =====
+-# POST /api/notes/delete {path, base}   after Alan's confirm box in the Notes tab: the note's move into its own engagement's (or
+-#                                        the portfolio's) _Archive goes on the approval card in ask creaite; nothing moves here.
+-# archive.note_delete_spec builds the move (never the page): a `move` of kind "notes", the BL-09 guard exception, so only
+-# tracker.py apply makes it, on Approve (server_edit_card: bound to this snapshot, used once, 30 minutes); Reject moves nothing.
+-# Undo (tracker.py undo) and Files › Archived's Move back ("notes_back") bring it back, never onto a file that is there. As with
+-# the rename, never while ask creaite has read outside content, or for a note that isn't only Alan's: the note must be ordinary
+-# as a change, as filechange.py judges it now. The note must be saved (`base`, the text's fingerprint) with no typing waiting.
+-# A confidential note is deleted the same way: only its title is read, for the card, and nothing is sent anywhere.
+-def notes_delete_route(handler, req):
+-    """Put a note's move into the archive on the approval card, after the confirm box."""
+-    import archive
++# ===== #255: Delete note and a note's Move back, from the page's own button: the click is the approval (Alan, 20-10-2026) =====
++# POST /api/notes/delete/now     {path, base}   after the confirm box in the Notes tab: the note moves into its own engagement's (or
++#                                               the portfolio's) _Archive at once (a name taken there gets -2, -3…). No card.
++# POST /api/files/move-back/now  {path}         Files › Archived's Move back of a deleted note: back at once. No card. (A report's
++#                                               Move back, and archiving or restoring a project, keep their card.)
++# These replace #124's card (and its route, /api/notes/delete) for these two moves only. What still holds:
++# - The caller is the open page: do_POST's Host and token checks and, here (page_call), a loopback peer and the browser's own
++#   same-origin marks (Sec-Fetch-Site same-origin, an Origin naming this server). ask creaite has no HTTP tool (WebFetch and curl
++#   are denied, the hook runs only creaite scripts, none of which posts here), so it can't call these routes; a note it moves
++#   or deletes through filechange.py stays never (_Archive) or a card (a delete), as before.
++# - The move is the same one: archive.py builds it (never the page; archive.page_move_problem checks its shape once more),
++#   propose.py stages it only from this server's snapshot in system/guard/, and tracker.py apply makes it only with the
++#   one-time marker card_moves_allowed writes, bound to that proposal's bytes (reach.CARD_ONLY_MOVES keeps "notes" and
++#   "notes_back"). A proposal written into staging by hand never moves a note.
++# - LOCK, then NOTES_LOCK (the card's order): no save, draft or rename lands while the note is checked and moved. The note must
++#   be the version the page showed (`base`, checked under NOTES_LOCK just before the move); else nothing moves and the page
++#   says so in plain words.
++# - Never while ask creaite has read outside content, or for a note that isn't only Alan's (the rename's rule, as before).
++# - Undo (tracker.py undo, the toast's Undo) and Move back bring it back. The move is in the applies record and has one line
++#   in the files log (system/config/files-log.jsonl, op "note-archive" or "note-back"): a record only, which filechange.py
++#   never lists or undoes, so there is one Undo.
++def page_call(handler):
++    """#255: whether this call is the open page's own, beyond do_POST's Host and token: a loopback peer, and the browser's
++    same-origin marks (Sec-Fetch-Site same-origin, an Origin naming this server's port on a loopback host)."""
++    if not handler.host_ok() or handler.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
++        return False
++    if (handler.headers.get("Sec-Fetch-Site") or "").lower() != "same-origin":
++        return False
++    origin = handler.headers.get("Origin") or ""
++    if not origin.startswith("http://") or "/" in origin[7:] or "@" in origin:
++        return False
++    host, _, port = origin[7:].rpartition(":")
++    return host_name(host) in CSP_LOOPBACK and port == str(handler.server.server_address[1])
++
++
++def page_move(spec):
++    """#255: stage archive.py's `spec` from this server's own snapshot (system/guard/) and apply only it, with its one-time
++    markers (LOCK and NOTES_LOCK held). (apply number, None) or (None, why not)."""
++    spec = dict(spec, applied_on_card=True)            # BL-289: Undo of this apply leaves nothing in Review (set by this server)
++    code, out = edit_run(f"p-{secrets.token_hex(8)}", json.dumps(spec, ensure_ascii=False).encode("utf-8"), "stage")
++    m = re.search(r"Staged and approved: (\S+\.json)", out)
++    if code or not m:
++        return None, out.strip() or "propose.py stage failed"
++    name, code = Path(m.group(1)).name, 1
++    try:
++        with card_moves_allowed(name):                 # the marker binds this proposal's bytes, as on the card
++            code, out = run("tracker.py", "apply", name)
++    except (OSError, ValueError) as e:                 # the marker couldn't be written: nothing applied
++        out = f"the move couldn't be recorded ({type(e).__name__})"
++    finally:
++        if code:                                       # not applied (or raised): nothing of it is left in staging
++            (paths.STAGING / name).unlink(missing_ok=True)
++    return (latest_apply(), None) if not code else (None, out.strip())
++
++
++def page_move_log(op, src, dst, apply_id):
++    """#255: the move's line in the files log (a record only: its op isn't one filechange.py lists or undoes)."""
++    import filechange
++    try:
++        filechange.log({"id": filechange.next_id(), "at": filechange.now(), "op": op, "path": src, "to": dst,
++                        "apply": apply_id, "via": "dashboard"})
++    except OSError as e:                               # the move is made and in the applies record; the log line is extra
++        swallowed("files log", e)
++
++
++def page_move_busy(handler):
++    """The answer when another job is writing (LOCK is held): nothing moved, try again."""
++    return handler.send(200, {"ok": False, "busy": True, "message": "Another job is writing just now: nothing moved. Try again "
++                              "in a moment."})
++
++
++def note_delete_refusal(notes, p, rel, base):
++    """#255: the answer when the note at `p` can't be deleted now (NOTES_LOCK held), or None: a symlink, a version other than the
++    one the page showed (`base`), or the rename's rule (ask creaite has read outside content, or the file isn't only Alan's)."""
+     import filechange
+-    if set(req) - {"path", "base"} or not isinstance(req.get("path"), str):
++    if p.is_symlink():                                 # never followed: not a note that is there (archive.py says the same)
++        return {"ok": False, "message": "Not deleted: that isn't a note that is there."}
++    if not base or base != notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")):
++        return {"ok": False, "stale": True, "message": "Not deleted: the note changed since you opened it. Open it again and try "
++                "once more."}
++    if filechange.verdict("edit", rel)[0] != "ordinary":
++        return {"ok": False, "wait": True, "message": "Not deleted: ask creaite has read outside content just now, or the file "
++                "isn't only yours. Try again when the chat has finished."}
++    return None
++
++
++def notes_delete_now_route(handler, req):
++    """POST /api/notes/delete/now {path, base}: the note moves into its own folder's _Archive now, after the confirm box."""
++    import archive
++    if not page_call(handler):
++        return handler.send(403, {"ok": False, "message": "Not allowed"})
++    if set(req) - {"path", "base"} or not isinstance(req.get("path"), str) or not isinstance(req.get("base"), str):
+         return handler.send(400, {"ok": False, "message": "Bad request"})
+-    t = notes_target(handler, req)
+-    if not t:
+-        return None
+-    notes, _code, p, rel = t
+-    with NOTES_LOCK:
+-        if str(req.get("base") or "") != notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")):
+-            return handler.send(200, {"ok": False, "message": "Not deleted: the note changed since it was saved. Open it again "
+-                                      "and try once more."})
+-        if filechange.verdict("edit", rel)[0] != "ordinary":
+-            return handler.send(200, {"ok": False, "wait": True, "message": "Not deleted: moving this note needs more than the "
+-                                      "card now (ask creaite has read outside content, or the file isn't only yours). Try again "
+-                                      "when the chat has finished."})
+-        spec, why = archive.note_delete_spec(rel)
+-        if not spec:
+-            return handler.send(200, {"ok": False, "message": f"Not deleted: {why}."})
+-        sha = notes.text_sha(p.read_text(encoding="utf-8", errors="ignore"))             # M1: the version Alan confirmed
+-        title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
+-        card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"),
+-                                     note={"path": rel, "sha": sha}, done=f"Moved \u201c{title}\u201d to the archive.")
+-    if not card:
+-        return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
++    if not LOCK.acquire(blocking=False):
++        return page_move_busy(handler)
++    try:
++        with NOTES_LOCK:
++            t = notes_target(handler, req)             # looked up under the lock: the note as it is now
++            if not t:
++                return None
++            notes, _code, p, rel = t
++            refused = note_delete_refusal(notes, p, rel, req["base"])
++            if refused:
++                return handler.send(200, refused)
++            spec, why = archive.note_delete_spec(rel)
++            why = why or archive.page_move_problem(spec, "notes")
++            if why:
++                return handler.send(200, {"ok": False, "message": f"Not deleted: {why}."})
++            title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
++            op = spec["file_changes"]["file_ops"][0]
++            apply_id, why = page_move(spec)
++            if apply_id is None:
++                return handler.send(200, {"ok": False, "message": f"Not deleted, nothing moved: {why}"})
++            page_move_log("note-archive", op["from"], op["to"], apply_id)
++    finally:
++        LOCK.release()
++    notes_reindex()
+     if debuglog:
+-        debuglog.info("notes", f"delete note on card {card['card']}: {len(card['lines'])} line(s), valid {card['valid']}")
+-    return handler.send(200, {"ok": True, "card": card, "message": "On the approval card in ask creaite: the note moves only when "
+-                              "you approve it there."})
++        debuglog.info("notes", f"delete note: moved to the archive by apply {apply_id}")
++    return handler.send(200, {"ok": True, "moved": True, "apply_id": apply_id, "to": op["to"],
++                              "message": f"Moved “{title}” to the archive."})
+ 
+ 
+-DRAFT_ROUTES.update({"/api/notes/delete": notes_delete_route})
+-# ===== end #124 =====
++def move_back_now_route(handler, req):
++    """POST /api/files/move-back/now {path}: a deleted note back to its notes folder now (archive.back_spec, kind notes_back)."""
++    import archive
++    if not page_call(handler):
++        return handler.send(403, {"ok": False, "message": "Not allowed"})
++    path = req.get("path")
++    if not isinstance(path, str) or set(req) - {"path"}:
++        return handler.send(400, {"ok": False, "message": "Bad request"})
++    if not LOCK.acquire(blocking=False):
++        return page_move_busy(handler)
++    try:
++        with NOTES_LOCK:
++            spec, why = archive.back_spec(path)
++            why = why or archive.page_move_problem(spec, "notes_back")
++            if why:
++                return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
++            op = spec["file_changes"]["file_ops"][0]
++            was = Path(archive.archived_moves(kind="notes").get(op["from"]) or op["to"]).stem
++            apply_id, why = page_move(spec)
++            if apply_id is None:
++                return handler.send(200, {"ok": False, "message": f"Not moved back, nothing moved: {why}"})
++            page_move_log("note-back", op["from"], op["to"], apply_id)
++    finally:
++        LOCK.release()
++    notes_reindex()
++    now = Path(op["to"]).stem
++    msg = (f"Moved “{now}” back to its notes folder." if was == now else
++           f"Moved “{was}” back to its notes folder as “{now}” (a note has its old name).")
++    return handler.send(200, {"ok": True, "moved": True, "apply_id": apply_id, "to": op["to"], "message": msg})
++
++
++DRAFT_ROUTES.update({"/api/notes/delete/now": notes_delete_now_route, "/api/files/move-back/now": move_back_now_route})
++# ===== end #255 =====
+ 
+ # ===== Debug log (BL-102 part 2, stage A) =====
+ # What the live server does is recorded through log.py. It is installed by wrapping the code above, so that code is left
