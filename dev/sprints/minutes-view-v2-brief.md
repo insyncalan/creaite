@@ -1,6 +1,6 @@
 # Minutes view v2: build brief
 
-Mockup (locked once Alan signs off): `dev/mockups/minutes-view-v2-mockup.html`. Built on the 2.5.0 stylesheet and the real Minutes classes. Replaces the BL-338 A4 view's row design. Related: #261 (approve with no items), #266 ('needs details' wording), #267 (headings and widths).
+Mockup (LOCKED, Alan signed off 20-10-2026): `dev/mockups/minutes-view-v2-mockup.html`. Built on the 2.5.0 stylesheet and the real Minutes classes. Replaces the BL-338 A4 view's row design. Related: #261 (approve with no items), #266 ('needs details' wording), #267 (headings and widths).
 
 ## What changes
 1. **One version only.** Remove the "One version / Internal + distributed" switch, the Internal / Distributed / Side by side switch, Internal only marking in the view, and the distributed export. (Alan: "I only ever want one version of minutes".) The server's distributed code is left alone until Alan decides to retire it.
