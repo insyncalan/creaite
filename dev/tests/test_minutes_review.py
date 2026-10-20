@@ -141,7 +141,7 @@ class MeetingFlowTests(unittest.TestCase):
         values.write_text(json.dumps(fill_values()))
         self.v.run("fill", "system/templates/minutes-template.docx", str(values), str(self.v.root / self.draft),
                    script="docx_tools.py", cwd=self.v.root)
-        spec = self.v.root / "system/staging/meeting.json"
+        spec = self.v.root / "system/staging/drafts/meeting.json"
         spec.write_text(json.dumps(meeting_spec(self.draft, self.transcript)))
         self.stage_out = self.v.run("stage", str(spec), script="minutes.py").stdout
 
@@ -205,7 +205,8 @@ class MeetingFlowTests(unittest.TestCase):
         self.docx("fill", "system/templates/minutes-template.docx", str(empty), "system/staging/drafts/e.docx")
         self.assertIn("None recorded. |  |", self.docx("text", "system/staging/drafts/e.docx").stdout)
         self.assertIn("1 October 2026, 10:00–11:00 (UAE time)", text)
-        r = self.docx("fill", "system/templates/minutes-template.docx", "system/staging/meeting.json",
+        (self.v.root / "system/staging/half.json").write_text(json.dumps(meeting_spec(self.draft, self.transcript)))   # not a values file
+        r = self.docx("fill", "system/templates/minutes-template.docx", "system/staging/half.json",
                       "system/staging/drafts/x.docx", ok=False)          # BL-271: the command line writes only in drafts/
         self.assertIn("Not filled", r.stdout)             # a half-filled template is never written
         self.assertFalse((self.v.root / "system/staging/drafts/x.docx").exists())
@@ -261,7 +262,7 @@ class MeetingFlowTests(unittest.TestCase):
         self.assertEqual({r["id"] for r in self.v.rows("actions")}, {"ABC-A-001", "ABC-A-002"})
         self.assertEqual(self.v.rows("decisions")[0]["source"], f"{filed} — Decisions")
         # Processing the same meeting again is refused
-        spec = self.v.root / "system/staging/meeting2.json"
+        spec = self.v.root / "system/staging/drafts/meeting2.json"
         (self.v.root / self.transcript).write_text(TRANSCRIPT)
         spec.write_text(json.dumps(meeting_spec(self.draft, self.transcript)))
         r = self.v.run("stage", str(spec), script="minutes.py", ok=False)
@@ -286,7 +287,7 @@ class MeetingFlowTests(unittest.TestCase):
         self.review("approve", "1-3")
         self.v.run("apply")
         (self.v.root / self.transcript).write_text(TRANSCRIPT + "\n")      # a different recording of the same topics
-        make = self.v.root / "system/staging/again.json"
+        make = self.v.root / "system/staging/drafts/again.json"
         again = "system/staging/drafts/2026-10-01 ABC Steering follow-up.docx"   # BL-260: a transcript is staged with its draft
         values = self.v.root / "system/staging/values.json"
         values.write_text(json.dumps(fill_values()))
@@ -310,7 +311,7 @@ class RecordFlowTests(unittest.TestCase):
         spec = meeting_spec(None, self.transcript)
         spec.pop("draft")
         spec["minutes"] = {"start": "10:00", "end": "11:00", "summary": ["The steering committee reviewed the SOW."]}
-        f = self.v.root / "system/staging/meeting.json"
+        f = self.v.root / "system/staging/drafts/meeting.json"
         f.write_text(json.dumps(spec))
         self.stage_out = self.v.run("stage", str(f), script="minutes.py").stdout
 
@@ -391,7 +392,7 @@ class RefreshTests(unittest.TestCase):
         (self.v.root / self.transcript).write_text(TRANSCRIPT)
         self.draft = "system/staging/drafts/2026-10-01 Steering committee.docx"
         self.fill(fill_values())
-        spec = self.v.root / "system/staging/meeting.json"
+        spec = self.v.root / "system/staging/drafts/meeting.json"
         spec.write_text(json.dumps(meeting_spec(self.draft, self.transcript)))
         self.v.run("stage", str(spec), script="minutes.py")
         self.prop = next((self.v.root / "system/staging").glob("proposed-*.json"))

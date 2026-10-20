@@ -236,7 +236,7 @@ print(json.dumps([ls.allowed('read', 'projects/Example Programme/CLAUDE.md'), ls
         values = v.root / "system/staging/values.json"
         values.write_text(json.dumps(fill_values()))
         v.run("fill", "system/templates/minutes-template.docx", str(values), str(v.root / draft), script="docx_tools.py", cwd=v.root)
-        spec = v.root / "system/staging/meeting.json"
+        spec = v.root / "system/staging/drafts/meeting.json"         # #269: a meeting spec is read only from drafts
         spec.write_text(json.dumps(meeting_spec(draft, transcript)))
         v.run("stage", str(spec), script="minutes.py")
         prop = next((v.root / "system/staging").glob("proposed-*.json"))
@@ -416,8 +416,8 @@ class TeamsNamesTests(OneDriveCase):
         v.run("fill", "system/templates/minutes-template.docx", str(values), str(v.root / draft), script="docx_tools.py", cwd=v.root)
         rel = f"projects/Example Programme/02 Meetings/Transcripts/{transcript_name}"
         spec = {**meeting_spec(draft, rel), "date": date, "title": "Weekly sync"}
-        (v.root / "system/staging/meeting.json").write_text(json.dumps(spec))
-        v.run("stage", str(v.root / "system/staging/meeting.json"), script="minutes.py")
+        (v.root / "system/staging/drafts/meeting.json").write_text(json.dumps(spec))
+        v.run("stage", str(v.root / "system/staging/drafts/meeting.json"), script="minutes.py")
         prop = next((v.root / "system/staging").glob("proposed-*.json"))
         data = json.loads(prop.read_text())
         ops = data["meeting"]["file_ops"]
