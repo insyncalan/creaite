@@ -587,6 +587,25 @@ class MinutesViewV2(LiveBrowserCase):
                 self.assertEqual(g["marks"][0], ["1px", "Page 2"], f"thin, and says the page: {g}")
         b.eval("document.querySelectorAll('#v-minutes .t16sp').forEach(x=>x.remove())")
 
+    def test_16b_the_page_marker_never_crosses_a_row_or_a_line(self):
+        """PM follow-up (20-10-2026): the dashed Page n marker moves to the next gap between rows or blocks; a table row stays whole."""
+        b = self.b
+        cross = """(()=>{ const out=[]; for (const m of document.querySelectorAll('#v-minutes .sheet-break')) { const y=m.getBoundingClientRect().top;
+            for (const e of document.querySelectorAll('#v-minutes .page tr, #v-minutes .page p, #v-minutes .page li, #v-minutes .page h2, #v-minutes .page h3')) {
+              const r=e.getBoundingClientRect(); if (r.height && y > r.top+1 && y < r.bottom-1) out.push([m.textContent, e.tagName, Math.round(y-r.top), Math.round(r.height)]); } }
+          return {n: document.querySelectorAll('#v-minutes .sheet-break').length, cross: out}; })()"""
+        hit = 0
+        for h in range(560, 1000, 12):                       # a tall block in the summary moves the page's foot through every row in turn
+            b.eval(f"(()=>{{ document.querySelectorAll('#v-minutes .t16sp').forEach(x=>x.remove()); const d=document.createElement('div'); d.className='t16sp'; d.style.height='{h}px';"
+                   "document.querySelector('#v-minutes .page > section[data-id=summary]').appendChild(d); })()")
+            b.pump(0.25)
+            g = self.ev(cross)
+            hit += g["n"] > 0
+            with self.subTest(spacer=h):
+                self.assertEqual(g["cross"], [], f"the marker sits in a gap, never across a row or a line: {g}")
+        b.eval("document.querySelectorAll('#v-minutes .t16sp').forEach(x=>x.remove())")
+        self.assertGreater(hit, 20, "a marker was there to check")
+
     def test_17_section_headings_with_their_counts_beside_them(self):
         got = self.ev("""Object.fromEntries([...document.querySelectorAll('#v-minutes .page section[data-id] > h2')].filter(h=>h.querySelector('.sheet-hn')).map(h=>{
           const i=h.querySelector('input.sheet-h'), n=h.querySelector('.sheet-hn'), c=document.createElement('canvas').getContext('2d'), cs=getComputedStyle(i);

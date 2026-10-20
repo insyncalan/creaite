@@ -69039,6 +69039,29 @@ ${d5.text}`);
       ] }) }, y5))
     ] }) });
   }
+  var WHOLE = "tr, p, li, h2, h3, h4, .sheet-hn";
+  function snapMarks(pg2, marks, y02) {
+    const a42 = (
+      /** @type {HTMLElement} */
+      pg2.parentElement
+    ), box = a42.getBoundingClientRect(), sc2 = a42.offsetWidth ? box.width / a42.offsetWidth : 1;
+    if (!sc2) return;
+    const spans = [...pg2.querySelectorAll(WHOLE)].map((e4) => {
+      const r4 = e4.getBoundingClientRect();
+      return [(r4.top - box.top) / sc2 - y02, (r4.bottom - box.top) / sc2 - y02];
+    }).filter(([t47, b5]) => b5 - t47 > 0.5);
+    for (let k5 = 0; k5 < marks.length; k5++) {
+      let y5 = Math.max(marks[k5], k5 ? marks[k5 - 1] + 1 : 0), moved = true;
+      while (moved) {
+        moved = false;
+        for (const [t47, b5] of spans) if (y5 > t47 + 0.5 && y5 < b5 - 0.5) {
+          y5 = b5;
+          moved = true;
+        }
+      }
+      marks[k5] = Math.round(y5 * 100) / 100;
+    }
+  }
   function relayout(root2, continuous = false) {
     const pages = (
       /** @type {HTMLElement[]} */
@@ -69120,6 +69143,7 @@ ${d5.text}`);
       if (!continuous) secs.forEach((s5, i5) => {
         if (pushes[i5]) s5.style.marginTop = `${pushes[i5] + 16}px`;
       });
+      else if (marks.length) snapMarks(pg2, marks, y02);
       const fit = (
         /** @type {HTMLElement|null} */
         pg2.closest(".sheet-fit")

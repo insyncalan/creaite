@@ -205,6 +205,22 @@ function SheetFrame({ scale, breaks, children }) {
   </div>;
 }
 
+/** The blocks a page marker never crosses on a continuous sheet (#268): a table row stays whole, and so does a line of text. */
+const WHOLE = "tr, p, li, h2, h3, h4, .sheet-hn";
+/** On a continuous sheet, move each break mark down to the next gap between rows or blocks (never inside a row or a line).
+    @param {HTMLElement} pg @param {number[]} marks content y, changed in place @param {number} y0 the page's top padding */
+function snapMarks(pg, marks, y0) {
+  const a4 = /** @type {HTMLElement} */ (pg.parentElement), box = a4.getBoundingClientRect(), sc = a4.offsetWidth ? box.width / a4.offsetWidth : 1;
+  if (!sc) return;
+  const spans = [...pg.querySelectorAll(WHOLE)].map(e => { const r = e.getBoundingClientRect(); return [(r.top - box.top) / sc - y0, (r.bottom - box.top) / sc - y0]; })
+    .filter(([t, b]) => b - t > 0.5);
+  for (let k = 0; k < marks.length; k++) {
+    let y = Math.max(marks[k], k ? marks[k - 1] + 1 : 0), moved = true;
+    while (moved) { moved = false; for (const [t, b] of spans) if (y > t + 0.5 && y < b - 0.5) { y = b; moved = true; } }
+    marks[k] = Math.round(y * 100) / 100;
+  }
+}
+
 /** Give matching blocks and sections the same height on both pages (the shorter padded at its foot), set the extra top margin a
     section needs to start on the next page, and size each page's box. `continuous` (#268, the minutes): one continuous sheet, no
     section pushed to the next page, the breaks only marked. @param {HTMLElement} root @param {boolean} [continuous] @returns {number[][]} the break marks per page */
@@ -240,7 +256,8 @@ function relayout(root, continuous = false) {
     const kids = /** @type {HTMLElement[]} */ ([...pg.children]);
     const last = kids[kids.length - 1], total = last ? last.offsetTop + last.offsetHeight - y0 : 0;
     const { pushes, marks } = pageBreaks(continuous ? [] : secs.map(s => [s.offsetTop - y0, s.offsetHeight]), per, total);
-    if (!continuous) secs.forEach((s, i) => { if (pushes[i]) s.style.marginTop = `${pushes[i] + 16}px`; });   // the 16px above it collapses into the margin
+    if (!continuous) secs.forEach((s, i) => { if (pushes[i]) s.style.marginTop = `${pushes[i] + 16}px`; });
+    else if (marks.length) snapMarks(pg, marks, y0);   // the 16px above it collapses into the margin
     const fit = /** @type {HTMLElement|null} */ (pg.closest(".sheet-fit")), sc = Number(fit && fit.dataset.scale) || 0;
     if (fit && sc) fit.style.height = `${pg.parentElement ? pg.parentElement.offsetHeight * sc : 0}px`;
     return marks;
