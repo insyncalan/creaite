@@ -114,7 +114,8 @@ class ThePlainProfile(_Base):
                 "current": dict(ai=True, turnInto=False, formatNotes=True, improveOnly=False),
                 "email": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
                 "plain": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
-                "line": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True)}
+                "line": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
+                "client_message": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True)}     # #263
         sheet = {"report", "minutes", "client", "readonly"}      # the A4 sheets stay on as the gate has them
         self.assertEqual({k: v for k, v in b.eval("AI_PLACE_TABLE").items() if k not in sheet}, want)
         groups = {"plain": [("improve", ["rewrite", "shorter", "executive"])], "line": [("improve", ["rewrite", "shorter", "executive"])]}

@@ -6307,6 +6307,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkChipsDraw: () => pkChipsDraw,
     pkCid: () => pkCid,
     pkClient: () => pkClient,
+    pkClientMsg: () => pkClientMsg,
     pkCommit: () => pkCommit,
     pkCommit1: () => pkCommit1,
     pkDepDraw: () => pkDepDraw,
@@ -26650,6 +26651,8 @@ ${s5}`;
       minutes: ["shorter", "executive", "polish", "custom"],
       client: ["shorter", "executive", "polish", "custom"],
       // #123: the client sheet (client-visible facts only; the reply checked)
+      client_message: ["rewrite", "shorter", "executive", "custom"],
+      // #263: the item panel's Client messaging (plain, with the client rules)
       readonly: []
       // a sheet that can't be edited: only Find the source
     }
@@ -26667,6 +26670,8 @@ ${s5}`;
       minutes: [["Improve", ["shorter", "executive", "polish"]]],
       client: [["Improve", ["shorter", "executive", "polish"]]],
       // #123: the client sheet; Shorten, executive, Polish, no Make into
+      client_message: [["Improve", ["rewrite", "shorter", "executive"]]],
+      // #263: as plain
       readonly: []
       // only Find the source, the sheet's own item
     }
@@ -26682,6 +26687,8 @@ ${s5}`;
     minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
     client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
     // #123: the client sheet (edit_ai.py's client place)
+    client_message: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    // #263: Client messaging (edit_ai.py CLIENT_FIELDS)
     readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false }
   };
   var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
@@ -59067,13 +59074,14 @@ ${d5.text}`);
         prop: "textContent",
         links: !!el2.dataset.pkml,
         /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
-        ...el2.dataset.pkml || el2.id === "pkTitle" ? { ai: { place: el2.dataset.pkml ? "plain" : "line", project: () => {
+        ...el2.dataset.pkml || el2.id === "pkTitle" ? { ai: { place: pkClientMsg(el2) ? "client_message" : el2.dataset.pkml ? "plain" : "line", project: () => {
           const x5 = shared.CUR && pkX(shared.CUR.k, pkCid());
           return x5 && x5.p || "";
         } } } : {}
       });
     });
   }
+  var pkClientMsg = (el2) => el2.dataset.pkf === "cm" || el2.dataset.pkf === "cmd";
   var pkDetOpen = (x5, id2) => !!(PK.pc && PK.pc.id === id2 || (id2 in PK.det ? PK.det[id2] : !!x5.client));
   function pkDetails(x5, k5) {
     const id2 = pkCid(), open2 = pkDetOpen(x5, id2), tg2 = $("#pkDetT");
@@ -77090,8 +77098,10 @@ ${d5.text}`);
         "pkApply",
         "pkCid",
         "pkClient",
+        "pkClientMsg",
         "pkCommit",
         "pkDescL",
+        "pkDetOpen",
         "pkDraw",
         "pkEdMount",
         "pkFeed",

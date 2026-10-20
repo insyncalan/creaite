@@ -46,6 +46,7 @@ export const AI_PLACES = /** @type {Record<string, string[]>} */ ({
   report: ["shorter", "executive", "polish", "custom"],     // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
   minutes: ["shorter", "executive", "polish", "custom"],
   client: ["shorter", "executive", "polish", "custom"],      // #123: the client sheet (client-visible facts only; the reply checked)
+  client_message: ["rewrite", "shorter", "executive", "custom"],   // #263: the item panel's Client messaging (plain, with the client rules)
   readonly: [],                                              // a sheet that can't be edited: only Find the source
 });
 /** How the bar groups a place's AI options (the Format notes button and Ask… are not in a group; "Make into" holds the registered
@@ -59,13 +60,15 @@ export const AI_GROUPS = /** @type {Record<string, [string, string[]][]>} */ ({
   report: [["Improve", ["shorter", "executive", "polish"]]],     // v2.1.0 P5: the A4 sheet keeps its shipped options (Shorten, executive, Polish)
   minutes: [["Improve", ["shorter", "executive", "polish"]]],
   client: [["Improve", ["shorter", "executive", "polish"]]],     // #123: the client sheet; Shorten, executive, Polish, no Make into
+  client_message: [["Improve", ["rewrite", "shorter", "executive"]]],   // #263: as plain
   readonly: [],                                                 // only Find the source, the sheet's own item
 });
 /** THE PLACE TABLE (#117; all places on from v2.2.0, #133): every editor place the selection bar is built for, and whether it is switched on.
     `ai`: the sparkle and bar show at all; `turnInto`: Turn into (instant, no AI; rich editors whose storage holds every block kind);
     `formatNotes`: Format notes for several paragraphs (rich editors only); `improveOnly`: the place offers its Improve (and Tone) group and
     Ask… only. Notes and Current state are the rich places. The plain profile (#133) is `plain` (the item panel's longer fields, Prep's notes
-    and questions, the Prep popup's shaped notes), `line` (one-line text that is a sentence: the item's title, a Find updates title, decision
+    and questions, the Prep popup's shaped notes), `client_message` (#263: the item panel's Client messaging, plain like `plain`; its text goes
+    to client reports, so edit_ai.py gives it the client facts and checks the reply, bound from the field's name), `line` (one-line text that is a sentence: the item's title, a Find updates title, decision
     or memory line; a suggestion never breaks the line) and `email` (Draft email's preview, a shared-editor host; Improve and Tone only). Fields
     that are keys or short labels are mounted with no `ai` option and so have no bar: the item panel's Revisit and Source, and Find updates'
     Name, Role and Organisation. The A4 sheets (report, minutes, client, readonly: edit_ai.py SHEET_PLACES and CLIENT_PLACES) are on too. dev/tests/test_ai_117.py and test_editor_plain.py list every
@@ -80,6 +83,7 @@ export const AI_PLACE_TABLE = {
   report: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // v2.1.0 P5: the sheets keep their AI bar and Find the source
   minutes: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
   client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // #123: the client sheet (edit_ai.py's client place)
+  client_message: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },   // #263: Client messaging (edit_ai.py CLIENT_FIELDS)
   readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
 };
 /** True when a place's selection bar is switched on. @param {string} place */

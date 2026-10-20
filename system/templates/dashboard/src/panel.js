@@ -706,7 +706,10 @@ PK.det={};
 export function pkEdMount(root){ if(!root) return; root.querySelectorAll(".pked").forEach(el=>{ if(el.cxed) return;
   creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent",links:!!el.dataset.pkml,      /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
     
-    ...(el.dataset.pkml||el.id==="pkTitle"?{ai:{place:el.dataset.pkml?"plain":"line",project:()=>{ const x=shared.CUR&&pkX(shared.CUR.k,pkCid()); return (x&&x.p)||""; }}}:{})}); }); }   /* BL-301 D: AI on a selection in the longer fields, and the title (one line: place "line", a suggestion never breaks it) */
+    ...(el.dataset.pkml||el.id==="pkTitle"?{ai:{place:pkClientMsg(el)?"client_message":el.dataset.pkml?"plain":"line",project:()=>{ const x=shared.CUR&&pkX(shared.CUR.k,pkCid()); return (x&&x.p)||""; }}}:{})}); }); }   /* BL-301 D: AI on a selection in the longer fields, and the title (one line: place "line", a suggestion never breaks it) */
+/** #263: whether a peek field is Client messaging (its text goes to client reports): its AI place is "client_message", which the server gives
+    the client facts and the client check on the reply. @param {HTMLElement} el */
+export const pkClientMsg=el=>el.dataset.pkf==="cm"||el.dataset.pkf==="cmd";
 export const pkDetOpen=(x,id)=>!!((PK.pc&&PK.pc.id===id)||(id in PK.det?PK.det[id]:!!x.client));
 export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#pkDetT"); tg.setAttribute("aria-expanded",String(open)); $("#pkDet").hidden=!open; if(!open) return;
   const body=$("#pkDet"); if(body.contains(document.activeElement)&&document.activeElement.isContentEditable) return;   /* never under the cursor */

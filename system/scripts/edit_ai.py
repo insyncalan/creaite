@@ -97,10 +97,11 @@ PLACES = {
     "report": ["shorter", "executive", "polish", "custom"],      # v2.1.0 P5: the A4 sheet (reports and minutes)
     "minutes": ["shorter", "executive", "polish", "custom"],
     "client": ["shorter", "executive", "polish", "custom"],      # #123: the client sheet (client-safe facts and reply check)
+    "client_message": ["rewrite", "shorter", "executive", "custom"],   # #263: the item panel's Client messaging (CLIENT_FIELDS)
     "readonly": [],      # a sheet that can't be edited offers only Find the source, which is the page's own and runs no Claude
 }
 FORMATS = {"notes": "markdown", "current": "markdown", "plain": "plain", "email": "plain", "line": "line", "report": "markdown",
-           "minutes": "markdown", "client": "markdown", "readonly": "plain"}
+           "minutes": "markdown", "client": "markdown", "readonly": "plain", "client_message": "plain"}
 # The A4 sheet's places (v2.1.0 P5/P6/P8; the client report's sheet is "report"): their option sets, format rules and prompts stay
 # exactly as v2.1.0 shipped them. #117 adds nothing here: no spelling sentence (Polish already does that), no new option, and the
 # shipped Markdown rule, word for word. A client-safe change to these places is its own item (#123's `client` place), never #117's.
@@ -119,6 +120,11 @@ _LINE = "The text is one line: a title. Reply with one line of plain text only: 
 _SHEET_MARKDOWN = ("The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, \"### \" "
                    "sub-headings, quotes, links. Keep any link, image or HTML comment exactly as it is.")
 CLIENT_PLACES = {"client"}
+# #263: a field whose text goes to a client is its own place, named after the field, so the client rules (client facts, the client
+# check on the reply) are bound here from the field's name, never from a page's word "client". The item panel's Client messaging
+# (actions, RAID and decisions) goes into client reports and client-safe one-pagers. Unlike the client sheet it names no report.
+CLIENT_FIELDS = {"client_message"}
+CLIENT_RULED = CLIENT_PLACES | CLIENT_FIELDS
 CLIENT_RULE = ("This text is for the client. Use only what the text holds and the item IDs listed below; never add an internal "
                "health view or its reason, internal-only wording, or anyone's name the text doesn't already give.")
 FORMAT_RULES = {
@@ -132,6 +138,7 @@ FORMAT_RULES = {
     "minutes": _SHEET_MARKDOWN,
     "client": _SHEET_MARKDOWN,
     "readonly": _PLAIN,
+    "client_message": _PLAIN,
 }
 # how far a place's stored heading levels are shifted from the editor's 1 to 3 (Current state's are written `###` to `#####`)
 HEAD_SHIFT = {"current": 2}
@@ -461,8 +468,8 @@ def context(req):
     """{prompt, option, label, format} for one suggestion: the template filled from the request and the project's facts."""
     option, text, code, place, instruction = request(req)
     fmt = FORMATS[place]
-    client = place in CLIENT_PLACES
-    bad = client_problems(code, text, text) if client else []
+    client = place in CLIENT_RULED                         # the client sheet (#123) and the Client messaging field (#263)
+    bad = client_problems(code, text, text) if client else _minutes_ready(code, place)   # #262: a project to check against
     if bad:
         raise Refused(refusal(bad))
     facts = project_facts(code, client)
@@ -550,12 +557,97 @@ def result(body):
         text = one_line(text)
     if not text.strip():
         return {"text": "", "notes": [], "message": "No suggestion came back."}
-    bad = client_problems(ctx.get("code") or "", text, ctx.get("original") or "") if ctx.get("place") in CLIENT_PLACES else []
+    bad, message = _reply_problems(ctx, body, text)
     if bad:
-        return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"), "message": refusal(bad, True)}
+        return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"), "message": message}
     text = relevel(text, ctx.get("place"))                 # Current state never gets a `# ` or `## ` line (it would end the section)
     return {"text": text, "notes": check(ctx.get("original") or "", text, ctx.get("people") or []), "option": ctx.get("option"),
             "format": ctx.get("format")}
+
+
+# #262: the Internal minutes sheet feeds the Distributed version, which goes to attendees who may be outside. Its AI keeps the full facts
+# (it edits the internal minutes, which hold internal items and owners), but a suggestion that ADDS something a client mustn't see is
+# dropped: an item that isn't client-visible, a name the text and the client-visible items don't give, the internal health reason, an
+# internal-only marker or VIP. What the selected text already held is the minutes' own and passes.
+MINUTES_PLACES = {"minutes"}
+FAIL_CLOSED = (NO_PROJECT, UNCHECKED, REGISTER)
+MINUTES_DROPPED = ("The suggestion was dropped: it added something internal (an item that isn't client-visible, a name or internal "
+                   "wording) that the Distributed version would carry. Try again, or edit the minutes yourself.")
+NO_MINUTES_PROJECT = ("These minutes have no project in the tracker, so a suggestion couldn't be checked before it reaches the "
+                      "Distributed version; nothing was sent to Claude.")
+# an HTML tag or comment inside an ID or a name ("ABC<!-- -->-A-004", "Om<b>ar</b> Ali") is read with it taken out too
+TAGS = re.compile(r"<!--.{0,2000}?-->|</?[A-Za-z][^<>]{0,200}>", re.S)
+
+
+def _minutes_ready(code, place):
+    """[] when a request may go to Claude; for the minutes sheet (#262), Refused before Claude runs when there is no project, or one
+    the tracker doesn't hold: every suggestion would be dropped, so none is asked for."""
+    if place not in MINUTES_PLACES:
+        return []
+    if not code or not _project_known(code):
+        raise Refused(NO_MINUTES_PROJECT)
+    return []
+
+
+def _project_known(code):
+    """Whether the tracker holds the project `code`; False when it can't be read (fails closed)."""
+    import tracker
+    try:
+        con = tracker.connect()
+        try:
+            return con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone() is not None
+        finally:
+            con.close()
+    except (Exception, SystemExit):  # noqa: BLE001  an unreadable tracker: not known
+        return False
+
+
+def _private(text):
+    """Whether the text holds the word VIP however it is written (as client_problems reads it)."""
+    import drafts
+    return bool(drafts.VIP_RE.search(text or "") or VIP_LOOSE.search(normal(text)))
+
+
+def _unprivate(text):
+    """The text with every VIP spelling taken out, so the other checks run on the rest (client_problems stops at VIP)."""
+    import drafts
+    return VIP_LOOSE.sub(" ", normal(drafts.VIP_RE.sub(" ", text or "")))
+
+
+def _untagged(text):
+    """The text, plus (when it holds an HTML tag or comment) the same text with them taken out, read as well."""
+    bare = TAGS.sub("", text or "")
+    return text if bare == text else f"{text}\n{bare}"
+
+
+def minutes_problems(code, text, original):
+    """What a minutes suggestion adds that a client mustn't see (#262): client_problems on the suggestion, less what the selected text
+    already gave the same finding for. The word VIP is checked on its own (a reply adding it is dropped) and taken out of both before
+    the rest, so a selection that holds it can't hide what the reply adds. A check that couldn't run (no project, an unreadable tracker
+    or register) is kept: fails closed."""
+    added_private = _private(text) and not _private(original)
+    text, original = _unprivate(text), _unprivate(original)
+    found = client_problems(code, text, original)
+    if any(f in FAIL_CLOSED for f in found):
+        return found
+    had = set(client_problems(code, original, original))
+    return [f for f in found if f not in had] + (["something private"] if added_private else [])
+
+
+def _reply_problems(ctx, body, text):
+    """(problems, the message shown) for a suggestion: the minutes sheet's (#262), and the client place's and client fields' (#123,
+    #263); ([], "") when it may be shown. The place is the context's or the request's (#263: decided again from the request, never
+    only the context's word). HTML tags or comments inside an ID or a name are read through."""
+    req = body.get("request") if isinstance(body.get("request"), dict) else {}
+    places = {ctx.get("place"), str(req.get("place") or "")}
+    code, original, text = ctx.get("code") or "", _untagged(ctx.get("original") or ""), _untagged(text)
+    if places & CLIENT_RULED:
+        bad = client_problems(code, text, original)
+        return bad, refusal(bad, True)
+    if places & MINUTES_PLACES:
+        bad = minutes_problems(code, text, original)
+        return bad, (refusal(bad, True) if set(bad) & set(FAIL_CLOSED) else MINUTES_DROPPED)
+    return [], ""
 
 
 def main(argv):
