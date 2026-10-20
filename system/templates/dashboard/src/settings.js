@@ -465,9 +465,9 @@ export function askPerson(o){ const pr=new Promise(res=>{ const dlg=$("#personDl
       fin({person:{name,email:f("email"),aliases,org:f("org"),role:f("role")}}); };
     $("#personForm").onsubmit=e=>{ if(e.submitter&&e.submitter.value==="cancel") return; e.preventDefault(); if(!$("#pdSave").hidden) $("#pdSave").click(); };
     dlg.addEventListener("close",onClose); $("#personForm [value=cancel]").onclick=e=>{ e.preventDefault(); fin(null); }; openDialog(dlg); });
-  const keep=!!(o&&(o.edit||o.details)), cur=((o&&o.person&&o.person.extra)||{}).VIP||"";
-    $$(".pdvip").forEach(el=>el.hidden=!keep); const sel=$("#pd_vip"); sel.value=[...sel.options].some(x=>x.value===cur.toLowerCase())?cur.toLowerCase():cur?"yes":"";
-    return pr.then(res=>{ if(res&&res.person&&keep) res.person.extra={...((o.person&&o.person.extra)||{}),VIP:sel.value}; return res; }); }
+  /* #248 M2 (Alan, 20-10-2026): no followed field here; people you follow are set on the project settings page, and a save
+     leaves the register's extra columns (VIP among them) as they are (regEdit assigns only the fields above) */
+  return pr; }
 /* an owner typed or picked: mapped to the full name if known, otherwise ask (matches first). null = cancelled */
 export async function ownerFinal(typed,opt={}){ typed=String(typed||"").trim(); if(!typed||typed==="TBC") return typed||"TBC"; const r=resolvePerson(typed);
   if(r.status==="known"||r.status==="alias"||r.status==="email") return r.name;

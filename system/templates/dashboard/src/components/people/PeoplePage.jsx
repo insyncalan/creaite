@@ -16,7 +16,7 @@ import { pName } from "../../core/data.js";
 import { store } from "../../core/page.js";
 import { navWrite } from "../../core/nav.js";
 import { shared } from "../../core/state.js";
-import { addPerson, inRegister, newFilter, personPasses, registerRows, removeFromRegister, savePerson } from "../../stores/peopleRegister.js";
+import { addPerson, inRegister, newFilter, ownedItems, personPasses, registerRows, removeFromRegister, savePerson } from "../../stores/peopleRegister.js";
 import { Count, Dash, NameCell, PeopleApplied, PeopleTools, openPersonForm, peopleWord, peoplePlural, useFields } from "./PeopleParts.jsx";
 
 /** @typedef {import("../../stores/peopleRegister.js").PersonRow} PersonRow */
@@ -55,6 +55,13 @@ function RemoveButton({ x }) {
   const [ask, setAsk] = useState(false);
   if (!inRegister(x.n)) return <IconButton icon="trash" label="Remove from the register" name={`Remove ${x.n} from the register`} why="Only their items name them: there is no record to remove" />;
   if (!ask) return <IconButton icon="trash" label="Remove from the register" name={`Remove ${x.n} from the register`} cls="no" data={{ "pl-remove": x.n }} onClick={() => setAsk(true)} />;
+  const owned = ownedItems(x.n);   // #248 M3: refused while they own items; nothing is reassigned for Alan
+  if (owned) return (
+    <span class="psask" role="group" aria-label={`${x.n} can't be removed yet`}>
+      <span class="sub" role="alert" data-pl-remove-refused={x.n}>{x.n} owns {peoplePlural(owned, "item")}. Reassign them first, then remove {x.n} from the register.</span>
+      <button type="button" class="btn sm" data-pl-remove-no={x.n} onClick={() => setAsk(false)}>OK</button>
+    </span>
+  );
   return (
     <span class="psask" role="group" aria-label={`Remove ${x.n} from the register?`}>
       <span class="sub" role="alert">Remove {x.n} from the register? Their items keep the name.</span>
