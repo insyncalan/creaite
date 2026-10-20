@@ -19,20 +19,21 @@ import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
-import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
+import { countLink, go, jumpLink, navBlocked, navOf, openWork } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
-import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
+import { api, oneLine, onceFor, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { selDay } from "./stores/today.js";
 import { irLiveCounts, irReveal } from "./stores/intakeReview.js";   /* #232-C */
 import { draftBtn } from "./drafts.js";
-import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
+import { checkMeeting, MTG } from "./core/intakeApi.js";
+import { irProcessById, irRefreshCalendar } from "./components/intakeReview/actions.js";   /* #232-C2: Today's day line and Refresh calendar go through the Intake page's own actions */
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
-import { draftOn, RHL } from "./review.js";
+import { draftOn } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
-import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
+import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, syncView } from "./work.js";
 /* ======================= Today ======================= */
 export const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
 /* ===== Today brief (BL-72) ===== */
@@ -217,14 +218,14 @@ export function onDayWheel(e){ if(SWIPE.seen.has(e)) return; SWIPE.seen.add(e);
 /* what the band's buttons do */
 export const DAYRUN=new Map();   /* a check or a process under way, by calendar ID: "Checking…" */
 /** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
-export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
-  DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
-  try{ await processMeetings(); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
+export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake to process this meeting"); return; }
+  DAYRUN.set(m.id,"Processing…"); renderDay();
+  try{ await irProcessById(m.id); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
 /** Look for an ended meeting's transcript (Alan, 13-10-2026: a meeting not checked yet offers Check). */
 export async function dayCheck(m){ const row=MTG().find(x=>x.id===m.id)||{id:m.id,title:m.title,day:dayShown(),start:m.start};
   DAYRUN.set(m.id,"Checking…"); renderDay();
   try{ await checkMeeting(row); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
-export const DAYACTS={open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
+export const DAYACTS={open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("intake-review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
 /* ===== end BL-293 ===== */
 /* BL-270 (sprint-ui-sweep): the calendar's read time, when it is from an earlier day, is a footnote at the bottom right of Today */
 export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!(cal&&cal.fetched&&cal.fetched.slice(0,10)!==TODAY); f.hidden=!old;
@@ -255,7 +256,7 @@ window.addEventListener("resize",()=>{ if(shared.VIEW==="today") renderDay(); })
   band.addEventListener("pointerup",e=>{ if(sx==null) return; const dx=e.clientX-sx, dy=e.clientY-sy; sx=null;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) stepDay(dx<0?1:-1); });
   band.addEventListener("pointercancel",()=>{ sx=null; }); }
-document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) refreshCalendar(); });
+document.addEventListener("click",e=>{ if(e.target.closest("[data-refcal]")) irRefreshCalendar(); });
 }
 /* ===== BL-149 (sprint-ux) ===== no dead ends into Claude Code. If the dashboard can do it, it does; the command is a footnote,
    shown only when the live server is down. A reminder gets one primary button on its row (Draft weekly report, Draft client
@@ -273,12 +274,6 @@ export function conflictHtml(r){ const ch=(r.rec.changes&&r.rec.changes.length?r
   const v=x=>x==null||x===""?"(empty)":esc(DATE.test(String(x).slice(0,10))&&String(x).length===10?fd(x):String(x));
   return `<div class="cfvs">${ch.map(c=>`<div><span class="cff">${esc(c.field)}</span><span class="cfnow">Now: <b>${v(c.from)}</b></span><span class="cfnew">This one: <b>${v(c.to)}</b></span></div>`).join("")||'<div class="sub">Changed in the tracker after this was proposed.</div>'}</div>`; }
 /* ===== end BL-149 ===== */
-/* BL-231: what this block did at load, run in today's order by src/main.js */
-export function bootToday0027(){
-$("#reviewBody").addEventListener("click",e=>{ const b=e.target.closest('[data-act="ck"],[data-act="co"]'); if(!b) return; e.stopPropagation(); e.preventDefault();
-  const r=REV.find(x=>x.n===+b.closest("tr[data-n]").dataset.n); if(!r||r.done) return; b.disabled=true;
-  reviewViaServer(r,b.dataset.act==="ck"?"keep":"override",[]); },true);
-}
 export const kindLabel=r=>({actions:"Action",raid:r.rec.type||"Risk",decisions:"Decision",update:"Update",draft:"Draft",files:"File change"}[r.kind]);
 export function evidence(p){ const nw=WARNS().filter(w=>w.p===p.code).length, ov=A.filter(x=>x.p===p.code&&overdue(x)).length, urg=R.filter(r=>r.p===p.code&&r.st==="Open"&&r.pr==="Urgent").length;
   /* BL-190 (sprint-links): each figure is its own link (a zero stays plain); a click on one doesn't also open the row's project page */
@@ -398,7 +393,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-setup]");
   if(a==="dismiss"){ const l=dismissedF(); l.push(SETUPID); store.set("creaite-dismiss",l); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...l])]}); renderSetup();
     snack("Checklist dismissed. Settings › Reminders › Restore brings it back",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==SETUPID)); renderSetup(); }); return; }
   if(a==="help") go("help","start"); else if(a==="proj") go("settings","projects"); else if(a==="people") go("settings","people");
-  else if(a==="review") go("review"); else if(a==="sweep"){ if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); } });
+  else if(a==="review") go("intake-review"); else if(a==="sweep"){ if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); } });
 if(shared.VIEW==="today") renderSetup();
 }
 /* ===== BL-166 (sprint-polish-2) ===== set-up in the dashboard where it can be. The live server runs the steps that are scripts

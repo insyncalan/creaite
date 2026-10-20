@@ -2,7 +2,7 @@
 /* ask.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0080-search-bl-07.js, 0085-ad-hoc-documents-and-permission-requests.js, 0086-bl-140-sprint-admin.js, 0087-bl-141-sprint-admin-what-ask-creaite-cha.js, 0088-bl-141-sprint-admin-the-one-card.js, 0089-bl-258-sprint-ask-flow.js, 0090-bl-194-sprint-ask-creaite-access-the-car.js, 0092-ask-creaite.js, 0093-bl-262-sprint-ask-flow.js, 0094-after-bl-262.js, 0095-bl-211-sprint-ui-audit.js, 0096-chat-and-sweep-markdown-in-the-chat-bl-1.js, 0097-bl-196-sprint-chat-text.js, 0098-bl-120-sprint-polish.js, 0100-chat-and-sweep-a-time-under-each-bubble.js, 0101-after-chat-and-sweep-times.js, 0102-bl-257-sprint-ask-flow.js, 0103-bl-262-sprint-ask-flow.js, 0104-after-bl-262.js, 0105-bl-139-sprint-final.js, 0106-after-bl-139.js, 0107-bl-259-sprint-ask-flow.js, 0108-after-bl-259.js, 0109-images-in-ask-creaite-bl-100.js, 0110-bl-201-sprint-chat-text.js, 0111-after-bl-201.js, 0112-bl-199-sprint-chat-text.js, 0113-after-bl-199.js, 0114-bl-145-fix-chat-box.js, 0117-after-bl-145.js, 0118-bl-148-sprint-ux.js, 0119-after-bl-148.js, 0120-command-palette.js, 0207-bl-205-sprint-insight.js, 0208-bl-206-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
-import { irLiveCounts } from "./stores/intakeReview.js";   /* #232-C */
+import { irLiveCounts, irModel } from "./stores/intakeReview.js";   /* #232-C */
 import { closeHelpPanel } from "./helpscreen.js";
 import { openSpace } from "./components/reporting/ReportingSpace.jsx";
 import { needsMe, thisWeek } from "./stores/reporting.js";
@@ -24,14 +24,14 @@ import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
-import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, renderMeetings } from "./intake.js";
+import { previewInbox } from "./core/intakeApi.js";
+import { irCanProcess, irPickFiles, irProcess, irProcessAll } from "./components/intakeReview/actions.js";   /* #232-C2: the palette's Intake actions are the page's own */
 import { prepPage } from "./meetings.js";
 import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { openMilestone, openNewMilestone } from "./milestones.js";
 import { mdHtml, newItemOf, norm, openNew, openProject, openRecord, pkArr, pkCommit, pkPersist, pkStatuses, pkUndoLast, REC, validate } from "./panel.js";
-import { openGen, openPrep, pickImage, prepOf, startCurEdit, vsAskSync } from "./projects.js";
+import { openGen, pickImage, startCurEdit, vsAskSync } from "./projects.js";
 import { railPopOpen } from "./rail.js";
-import { decide } from "./review.js";
 import { ownerFinal, peopleCk, PERS, renderSettings, resolvePerson, row, VIPD } from "./settings.js";
 import { DC, longDay, pkAdd, plur, tl } from "./today.js";
 import { allViews, applyView, items, itemsMove, loadTab, rows, saveTab } from "./work.js";
@@ -995,7 +995,7 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]")
 /* ======================= command palette ======================= */
 shared.CK=[]; shared.CKI=0;
 export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn,kw)=>{ if(!q||(l+" "+h+" "+(kw||"")).toLowerCase().includes(q)) out.push({g,l,h,fn}); };   /* kw: words that find it without showing (a project's code) */
-  const nNew=(D.inbox||[]).filter(f=>f.state==="new").length, nRep=needsMe().length, nIr=irLiveCounts().badge;   /* #232-C: one Go to entry, with the rail's number */   /* BL-337 */
+  const nRep=needsMe().length, nIr=irLiveCounts().badge, nReady=irLiveCounts().ready;   /* #232-C: one Go to entry, with the rail's number */   /* BL-337 */
   [["today","Today",""],["intake-review","Intake",nIr?`${nIr} waiting`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v),v==="intake-review"?"review inbox proposals approve":""));   /* #232-C: the old names still find it */
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
@@ -1004,8 +1004,8 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(q) P.forEach(p=>add("Reporting",`Reporting: ${p.name}`,"this week's reports",()=>openSpace(p.code),`weekly report ${p.code} client report ${p.code} reporting ${p.code}`));   /* BL-337: ⌘K reaches the reporting space */
   if(q) P.filter(p=>clientReportOn(p.code)).forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>openSpace(p.code,thisWeek(),"client"),`client report ${p.code}`));   /* #221: the hub's Client view (only for a project that has a client report); P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });
-  add("Actions","Add files to Intake","",()=>{ go("intake-review"); $("#inboxFile").click(); });
-  if(nNew) add("Actions","Process new files",`${nNew} new`,()=>{ go("intake-review",{stage:"arrived"}); $("#inboxNew").click(); });
+  add("Actions","Add files to Intake","",()=>{ go("intake-review"); irPickFiles(); });
+  if(nReady) add("Actions","Process all ready",`${nReady} ready`,()=>{ go("intake-review",{stage:"arrived"}); irProcessAll(); });
   if(shared.VIEW==="cockpit"&&shared.COCK){ const c=shared.COCK;   /* the project page you're on */
     add("Actions",`Generate current state: ${c}`,"",()=>openGen(c)); add("Actions",`Edit current state: ${c}`,"",()=>startCurEdit(c));
     add("Actions",`Add milestone: ${c}`,"",()=>openNewMilestone(c)); add("Actions",`Add image: ${c}`,"",()=>{ go("cockpit",c); startCurEdit(c); pickImage(); }); add("Actions",`Edit health: ${c}`,"",()=>openProject(c,"health")); }
@@ -1020,8 +1020,8 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   const sc=searchCkItems(), askRow=sc.filter(x=>String(x.l).startsWith("ask creaite:")), restSc=sc.filter(x=>!askRow.includes(x));   /* a question's ask row stays first, ahead of the Help rows */
   return [...askRow,...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...restSc]; })(q);
   if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
-  MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
-    if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("intake-review",{stage:"arrived"}); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
+  /** @type {any[]} */ (irModel().meetings).filter(m=>irCanProcess(m)&&m.src!=="upload").forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
+    if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("intake-review",{stage:"arrived"}); irProcess(m); }}); });   /* BL-42 phase 3; #232-C2: the page's own Process */
   { const c=ckParse(q); if(c){ const pre=[], ql=String(q||"").trim().toLowerCase();
     if(!(c.ask&&(ql.split(/\s+/).length<3||out.some(x=>String(x.l).toLowerCase().startsWith(ql))))){   /* "New action" is the palette's own entry, not a request */
     if(c.pick) c.pick.forEach(x=>{ const isP=c.what==="person"; pre.push({g:"Change · which one?",l:isP?x:`${x.id} · ${x.t}`,h:isP?"person":pName(x.p),change:c,fn:()=>{ if(isP){ shared.CKPICK.owner=x; shared.CKPICK.ofor=c.phrase; } else { shared.CKPICK.target={k:x.k,id:x.id}; shared.CKPICK.for=c.phrase; } ckRefresh(); },keep:true}); });

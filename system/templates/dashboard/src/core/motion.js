@@ -2,13 +2,11 @@
 /* core/motion.js (BL-231 step 2b): the motion hooks (BL-136): small presentation-only additions to the rest of the page.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0156-bl-136-sprint-motion.js */
-import { REV } from "./data.js";
 import { $, $$, html } from "./dom.js";
 import { mPageOf } from "./nav.js";
 import { anim, countUp, D, mK, mScroll, reduced, slideDown, store, TODAY } from "./page.js";
 import { shared } from "./state.js";
 import { REC } from "../panel.js";
-import { mFileAt, MLV, MLVAT, MNEWGONE } from "../review.js";
 import { mKind, row } from "../settings.js";
 import { cell, grpToggle, layoutOf, LCOLL } from "../work.js";
 /* ===== BL-136 (sprint-motion) ===== motion hooks: small additions to the code above, each presentation only (see the helpers) */
@@ -69,21 +67,12 @@ export function mFlipRows(snap,sel,key,ms=320,fadeNew=false){ if(reduced()||!sna
 export const MSORTS=[["#workTbl","#workTbl tr[data-row]",e=>e.dataset.row,"th[data-col]"],["#v-person","#v-person table.ptbl tr[data-row]",e=>e.dataset.row,"table.ptbl th[data-col]"]];
 /* 14. Group collapse (BL-129 groups): the rows below glide to their new places, the opened rows fade in, the chevron turns.
    What is selected is decided by grpToggle exactly as before. Settings' and Prep's disclosures open with their content easing in. */
-/* 12. Approve or reject one row in Review: a tinted copy closes up where it was (200ms tint, then 240ms) and the rows below glide up;
-   the count and the message say what happened. Bulk decisions (the bar, Approve routine, Approve all) do not come through here. */
-export function mRowGone(snap,n,v){ if(!snap) return; const g=snap.g; const still=$(`#reviewBody tr[data-n="${n}"]`);
-  if(still){ [...still.querySelectorAll("td")].forEach(td=>anim(td,[{backgroundColor:v==="approved"?"var(--ok-soft)":"var(--bad-soft)",offset:.3},{}],{duration:700})); return; }   /* Review keeps a decided row, marked, until the data reloads: it tints in place */
-  const gh=document.createElement("div"); gh.className="mrowghost "+(v==="approved"?"ok":"no"); gh.dataset.t=g.t; gh.setAttribute("aria-hidden","true");
-  Object.assign(gh.style,{left:g.r.left+"px",top:g.r.top+"px",width:g.r.width+"px",height:g.r.height+"px"}); document.body.appendChild(gh);
-  anim(gh,[{opacity:.6},{opacity:1,offset:.45},{opacity:0,transform:"scaleY(.2)"}],{duration:440,easing:"in",fill:"forwards"}); setTimeout(()=>gh.remove(),440*mK()+60);
-  mFlipRows(snap.rows,"#reviewBody tr[data-n]",e=>e.dataset.n,240); }
 /* 34. Review cleared: when the last pending item is decided while Review is open, the summary draws one circle and tick, once */
 /* 16. Page change: the new page's content rises 4px and fades in over 200ms (the old one goes at once); addresses and Back as before */
 /* 31. Landing pulse: arriving on a row from Today, a search result, Show them or an Open link scrolls it into view (instantly when
    reduced) and gives it one soft highlight. Only on arrival: never on a render, a sort or a live refresh. A collapsed group opens first. */
 export function landOn(el){ if(!el) return; mScroll(el,{block:"center"}); if(reduced()) return; el.classList.remove("mland"); void el.offsetWidth; el.classList.add("mland"); setTimeout(()=>el.classList.remove("mland"),2800*mK()+100); }
-export function mLandRow(){ if(shared.VIEW==="review"){ landOn($("#reviewBody tr.hl")||$("#reviewBody tr.sel")); return; }
-  if(shared.VIEW!=="work"||shared.SEL==null) return; let tr=$(`#workTbl tr[data-row="${CSS.escape(String(shared.SEL))}"]`);
+export function mLandRow(){ if(shared.VIEW!=="work"||shared.SEL==null) return; let tr=$(`#workTbl tr[data-row="${CSS.escape(String(shared.SEL))}"]`);
   if(!tr&&typeof LCOLL==="object"){ for(const h of $$("#workTbl tr.wgh.coll")){ const k=h.dataset.gk; grpToggle(k); tr=$(`#workTbl tr[data-row="${CSS.escape(String(shared.SEL))}"]`); if(tr) break; grpToggle(k); } }
   landOn(tr); }
 /* 15. Skeleton: shown only if a load takes more than 150ms (ask creaite's History, Calendar import's Refresh), then the content rises in */
@@ -117,6 +106,9 @@ export function mWords(d){ if(!d||reduced()) return d; const walk=document.creat
   nodes.forEach(t=>{ if(t.parentElement&&t.parentElement.closest("pre,code")) { return; } const parts=t.textContent.split(/(\s+)/); if(parts.length<2&&!t.textContent.trim()) return; const f=document.createDocumentFragment();
     parts.forEach(w=>{ if(!w) return; if(/^\s+$/.test(w)){ f.appendChild(document.createTextNode(w)); return; } const s=document.createElement("span"); s.className="mw"; s.style.animationDelay=`${i++*25*mK()}ms`; s.textContent=w; f.appendChild(s); });
     t.replaceWith(f); }); return d; }
+/* #232-C2: the last-viewed memory moved here from review.js (the old Review page is gone; Work and Today use it) */
+export const MLV=store.get("creaite-lastviewed",{}), MLVAT={}, MNEWGONE=new Set();
+shared.MNEWIO=null;
 /* 38. New since your last visit: Work (with All items and a person's tables), Review and Today's Needs attention. Existing timestamps
    (an item's "created" in Activity, else its raised date; a proposal's file stamp) against a last-viewed time this browser keeps
    (localStorage only: nothing in the vault, the database or staging). First visit: none. A dot fades once its row has been on screen
@@ -130,7 +122,6 @@ export function mIsNew(page,at){ const lv=MLVAT[page]; if(!lv||!at) return false
 export function mDots(page){ if(!page) return; if(!(page in MLVAT)) MLVAT[page]=MLV[page]||null; if(!MLVAT[page]) return;
   const add=(row,key,at,cell)=>{ if(!row||MNEWGONE.has(key)||!mIsNew(page,at)||row.querySelector(".mnew")) return; const d=document.createElement("span"); d.className="mnew"; d.dataset.mk=key; d.setAttribute("role","img"); d.setAttribute("aria-label","New since your last visit"); (cell||row.querySelector("td.title")||row.firstElementChild||row).prepend(d); };
   if(page==="work") $$("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]").forEach(tr=>{ const id=tr.dataset.row, k=shared.WT&&shared.WT!=="all"&&shared.VIEW!=="person"?shared.WT:mKind(id); add(tr,k+":"+id,mCreated(k,id),tr.matches(".bcard")?tr.querySelector(".bct"):null); });
-  if(page==="review") $$("#reviewBody tr[data-n]").forEach(tr=>{ const r=REV.find(x=>x.n===+tr.dataset.n); if(r) add(tr,"rev:"+r.file+"|"+r.n,mFileAt(r.file)); });
   if(page==="today") $$("#attnList>li").forEach(li=>{ const o=li.querySelector("[data-open]"); if(!o) return; const [k,id]=o.dataset.open.split(":"); add(li,k+":"+id,mCreated(k,id),li.querySelector(".tb")); });
   if(!shared.MNEWIO&&"IntersectionObserver" in window) shared.MNEWIO=new IntersectionObserver(es=>es.forEach(e=>{ const d=e.target; clearTimeout(d._mt); if(e.isIntersecting) d._mt=setTimeout(()=>mDotGo(d),2000); }),{threshold:1});
   $$(".mnew").forEach(d=>{ if(!d._mo){ d._mo=1; shared.MNEWIO&&shared.MNEWIO.observe(d); } }); }
@@ -157,7 +148,7 @@ document.addEventListener("click",e=>{ for(const [box,sel,key,trig] of MSORTS){ 
     const snap=mSnapRows(sel,key); requestAnimationFrame(()=>mFlipRows(snap,sel,key)); return; } },true);
 document.addEventListener("change",e=>{ if(!(e.target.closest&&e.target.closest("#dispMenu"))||layoutOf(shared.WT)==="board") return; const sel="#workTbl tr[data-row]", key=x=>x.dataset.row, snap=mSnapRows(sel,key); requestAnimationFrame(()=>mFlipRows(snap,sel,key)); },true);
 document.addEventListener("toggle",e=>{ const d=e.target; if(!(d instanceof HTMLDetailsElement)||!d.open||reduced()) return; [...d.children].filter(x=>x.tagName!=="SUMMARY").forEach(x=>slideDown(x)); },true);
-document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest("#tBrief [data-open],#tBrief [data-nav],.vsr,#cmdkList button,#rvShow,[data-nav]")) requestAnimationFrame(()=>requestAnimationFrame(mLandRow)); },true);
+document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest("#tBrief [data-open],#tBrief [data-nav],.vsr,#cmdkList button,[data-nav]")) requestAnimationFrame(()=>requestAnimationFrame(mLandRow)); },true);
 /* 32. Banners: the live-server alert eases in once the page has loaded (never one already showing); a new VIP alert on Today slides in */
 requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.add("mready")));
 document.querySelector(".view:not([hidden])")&&mFirst(shared.VIEW);

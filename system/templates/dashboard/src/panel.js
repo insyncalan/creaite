@@ -19,7 +19,7 @@ import { creaiteEditor } from "./core/editor.js";
 import { linkAnchor, linkUrl, unescHtml } from "./core/linkUrl.js";
 import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
-import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
+import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, projFirst, projPeople, srcHTML, WK, wkAsk } from "./core/fields.js";
 import { irHold } from "./core/irFold.js";
 import { EDITABLE, irChanged, irIfApproved, irLabel, irLineParts, irMergeEdits, irNowRow, irSaveChanges, irUpdateList, irWord, UI } from "./core/irUpdate.js";
 import { drawLast, drawLatestWas, drawUpdateBody, updateChipNodes, updateChips } from "./components/intakeReview/UpdatePeek.jsx";
@@ -37,8 +37,8 @@ import { feedBlock, feedLines, feedListHtml, feedTabItems, mountFeedTabs, msLink
 import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
 import { decide, isMin, llNoteHtml, rejectMinutes, rjMenuFor, rtNoteHtml, rvDup, rvRejectOK } from "./review.js";
 import { alertStage, alertStaged, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
-import { isConflict, pkAdd, plur, renderToday } from "./today.js";
-import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF, rvPaint } from "./work.js";
+import { isConflict, plur, renderToday } from "./today.js";
+import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF } from "./work.js";
 /* ======================= detail panel ======================= */
 shared.CUR=null; shared.EDITING=false;
 export const REC=(k,id)=>(k==="actions"?A:k==="raid"?R:DEC).find(x=>x.id===id);
@@ -897,10 +897,10 @@ export function bl175Clamp(m){ if(!m||m.hidden||!m.offsetParent) return; m.style
 /* ===== end BL-175 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0174(){
-{ const seen=new WeakMap(), check=()=>$$("#v-work .toolbar .ddmenu,#v-review .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ const vis=!!m.offsetParent&&getComputedStyle(m).display!=="none";
+{ const seen=new WeakMap(), check=()=>$$("#v-work .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ const vis=!!m.offsetParent&&getComputedStyle(m).display!=="none";
     if(vis&&!seen.get(m)) bl175Clamp(m); seen.set(m,vis); });
-  ["#v-work .toolbar","#v-review .toolbar","#wviews"].forEach(s=>{ const el=$(s); if(el) new MutationObserver(()=>requestAnimationFrame(check)).observe(el,{subtree:true,childList:true,attributes:true,attributeFilter:["class","hidden"]}); });
-  addEventListener("resize",()=>$$("#v-work .toolbar .ddmenu,#v-review .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ if(m.offsetParent) bl175Clamp(m); })); }
+  ["#v-work .toolbar","#wviews"].forEach(s=>{ const el=$(s); if(el) new MutationObserver(()=>requestAnimationFrame(check)).observe(el,{subtree:true,childList:true,attributes:true,attributeFilter:["class","hidden"]}); });
+  addEventListener("resize",()=>$$("#v-work .toolbar .ddmenu,#wviews .ddmenu").forEach(m=>{ if(m.offsetParent) bl175Clamp(m); })); }
 }
 /* ===== BL-179 (sprint-peek-new) ===== New opens the peek, empty (Alan, 11-10-2026: creating an item looks and works like opening one).
    New action, New RAID item, and the Decisions menu's Record a decision and Ask for a decision open the peek with an empty title (the
@@ -1205,10 +1205,6 @@ export function pkFromVault(){ const L=Array.isArray(D.peek_staged)?D.peek_stage
    and the highlight stay in step (the clicked row is the only one highlighted and the cursor); focus stays where it was. */
 export function pkFollowable(e){ return pkOn()&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey&&e.button===0; }
 export function pkKeepFocus(was,fn){ fn(); setTimeout(()=>{ const a=document.activeElement; if(a&&$("#panel").contains(a)&&!(was&&$("#panel").contains(was))){ if(was&&was!==document.body&&was.isConnected) was.focus({preventScroll:true}); else a.blur(); } },0); }
-export function pkFollowRev(e,n){ if(!pkFollowable(e)||(shared.CUR&&shared.CUR.mode==="proposal"&&shared.CUR.n===n)) return; const r=REV.find(x=>x.n===n);
-  if(!r||r.done||!PKK.includes(r.kind)) return;
-  if(shared.CUR&&shared.CUR.mode==="proposal"&&PK.dirty){ pkNote("Save or cancel this proposal first: its changes aren't saved yet."); return; }
-  const was=document.activeElement; pkKeepFocus(was,()=>{ openProposal(n); rvPaint(); }); }
 /* ===== end BL-198 ===== */
 /* ===== BL-219 (sprint-drafts-fields) ===== Draft the latest update. In the peek, Draft beside an open action's Latest update asks
    for one or two lines from what happened since the last update (drafts.py: its changes, the meetings and sweeps that raised it
@@ -1247,7 +1243,7 @@ export async function draftBulk(ids,statusEl){ const why=draftWhyNot("update-bul
   const res=await draftAsk({kind:"update-bulk",ids:open},{label:`Drafting updates for ${plur(open.length,"action")}`,status:st});
   if(res.nothing){ snack(res.nothing); return; } if(!res.ok){ snack(res.message||"No drafts came back"); return; }
   const n=res.staged||0, skip=(res.skipped||[]).length; await reloadData();
-  snack(n?`${plur(n,"drafted update")} in Intake, each approved on its own${skip?`; ${skip} had nothing new`:""}. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Intake"); }
+  snack(n?`${plur(n,"drafted update")} in Intake, each approved on its own${skip?`; ${skip} had nothing new`:""}. Nothing was saved in place`:"No drafts came back",n?()=>go("intake-review"):null,"Open Intake"); }
 /* ===== end BL-219 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0197(){
@@ -1302,7 +1298,7 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drc
   const st=b.parentElement.querySelector(".drbst"), res=await draftAsk({kind:"client-bulk",code:b.dataset.drcmall},{label:"Drafting client wording",status:h=>{ if(st&&st.isConnected) putHTML(st,raw(h)); }});
   if(res.nothing){ snack(res.nothing); return; } if(!res.ok){ snack(res.message||"No drafts came back"); return; }
   const n=res.staged||0; await reloadData();
-  snack(n?`${plur(n,"client wording")} drafted, in Intake: each is approved on its own. Nothing was saved in place`:"No drafts came back",n?()=>go("review"):null,"Open Intake"); });
+  snack(n?`${plur(n,"client wording")} drafted, in Intake: each is approved on its own. Nothing was saved in place`:"No drafts came back",n?()=>go("intake-review"):null,"Open Intake"); });
 }
 /* ===== BL-222 (sprint-drafts-fields) ===== Suggest the thinking fields. Suggest beside a decision's Reasoning and Options considered and
    a RAID item's response: drafts.py reads the item's source passage (its meeting, found by its words) and, for a risk, the closed
@@ -1331,9 +1327,6 @@ PKDREXTRA.thinking=(d,k)=>{ if(k!=="raid"||!(d.impact||d.likelihood)) return "";
 $("#panel").addEventListener("click",e=>{ const b=e.target.closest(".pkdrhost [data-drset]"); if(!b||!pkOn()) return; e.preventDefault(); e.stopPropagation();
   const [f,v]=b.dataset.drset.split(":"), x=curObj(); if(!x||!["imp","lik"].includes(f)) return; if(x[f]===v){ snack(`${PKFL[f]} is already ${v}`); return; }
   pkImpLik(shared.CUR.k,pkCid(),f,v); b.disabled=true; b.textContent=`${PKFL[f]} set to ${v}`; });
-/* Review: a new risk with no response says so on its row, with Draft a response (it opens the proposal and asks) */
-$("#reviewBody").addEventListener("click",e=>{ const b=e.target.closest("[data-drrisk]"); if(!b) return; e.preventDefault(); e.stopPropagation();
-  draftResponse(+b.dataset.drrisk); },true);
 }
 /* ===== BL-226 (sprint-drafts-fields) ===== Draft the reason for a health or forecast change. Health: in the health form, Draft the
    reason sends the evidence the form already shows (healthEvidence's reasons, then the project's early warnings: no model in that)
