@@ -1,0 +1,43 @@
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index b1b7f66b..ee9cc2dd 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -1758,7 +1758,37 @@ def bash_refusal(command, mode):
+     (BL-267: the record changes only on a request Alan confirmed). BL-268: a script named by this vault's full path is read as
+     the relative form first, so every check applies to it unchanged."""
+     command = vault_relative(command)
+-    return bash_problem(command) or record_gate(command, mode)
++    return bash_problem(command) or record_gate(command, mode) or stage_spec_gate(command)
++
++
++# ===== #269: minutes.py stage's meeting spec, at the hook too =====
++# `minutes.py stage <spec>` checks its spec itself (minutes_spec.validate_spec: a .json directly in system/staging/drafts/, a
++# transcript from Intake or a project's minutes or transcripts folder, a Word draft only from drafts...), in every mode. The hook
++# makes the same check before the command runs, in every mode that lets the command through (a plain chat, a confirmed run, the
++# catch-up sweep, Intake's Process): defence in depth, so a spec naming a file from anywhere never reaches the script. Fails closed.
++def stage_spec_gate(command):
++    """Why `minutes.py stage` is refused for its spec, or None (any other command: None)."""
++    import re
++    if not re.match(r"(?:python3? system/scripts/|system/scripts/run )minutes\.py(?:\s|$)", (command or "").strip()):
++        return None
++    words = bash_args(command)
++    if command_kind("minutes.py", words)[1] != "minutes.py stage":
++        return None
++    if len(words) != 2 or words[0] != "stage":
++        return "minutes.py stage: give one meeting spec: `minutes.py stage <a .json in system/staging/drafts/>`"
++    spec = Path(words[1]) if Path(words[1]).is_absolute() else paths.ROOT / words[1]
++    if not os.path.lexists(spec):
++        return None                          # nothing to read: the command refuses a missing spec itself (and stages nothing)
++    try:
++        import minutes_spec
++        why = minutes_spec.validate_spec(words[1], paths.ROOT)
++    except Exception as e:  # noqa: BLE001  fail closed: a check that can't run refuses
++        why = f"the guard couldn't check the meeting spec ({type(e).__name__})"
++    if why:
++        _debug("warn", "minutes stage refused: the meeting spec (#269)")
++        return f"minutes.py stage: {why}"
++    return None
++# ===== end #269 =====
+ 
+ 
+ # ===== BL-295 (sprint-close-day-server): the catch-up sweep from Close the day =====
