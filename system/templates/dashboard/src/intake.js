@@ -185,7 +185,7 @@ export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id))
 export async function refreshCalendar(){ const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
   try{ if(!viaServer()){ snack("Refreshing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   $("#mtgRead").textContent="Refreshing…"; openChat(); addEl("msg u","Refresh calendar");
-  try{ await askLive("refresh calendar","Refresh the calendar for Intake and Today"); }catch(e){} await reloadData(); renderMeetings(); }
+  try{ await askLive("refresh calendar",null); }catch(e){} await reloadData(); renderMeetings(); }
   finally{ clearTimeout(t); if(sk){ sk.remove(); anim($("#mtgBody"),[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } } }
 export async function mtgProject(i,code){ const m=MTG()[i]; if(!m) return; const was=m.p; m.p=code||null; m.how=code?"remembered":"unsure";
   if(m.private||!code){ renderMeetings(); return; }             /* a private "Busy" has no series to remember */
