@@ -51371,6 +51371,10 @@ ${pre}**Current state title:** ${title}`);
         shared.RBOUT = "stopped";
         return { ok: false, stopped: true, message: "Stopped; nothing changed" };
       }
+      if (out.got && out.nothing) {
+        shared.RBOUT = "done";
+        return { ok: true, nothing: String(out.nothing) };
+      }
       if (!out.got || !out.text && !out.items && !out.prefill && !(out.health && out.reason)) {
         shared.RBOUT = "failed";
         return { ok: false, message: out.message || "No draft came back", length_notes: out.length_notes || [] };
@@ -59976,6 +59980,7 @@ ${d5.text}`);
         return;
       }
       if (res.nothing) {
+        mine.nothing = true;
         mine.html = `<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`;
         pkDrDraw();
         return;
@@ -59991,6 +59996,12 @@ ${d5.text}`);
       pkDrDraw();
       $(`#${mine.host} .drcard`)?.focus?.();
     });
+    const pkDrNoneGo = (e4) => {
+      const c5 = shared.PKDRC;
+      if (c5 && c5.nothing && !(e4.target.closest && e4.target.closest(".drnone"))) pkDrDrop();
+    };
+    $("#panel").addEventListener("input", pkDrNoneGo, true);
+    $("#panel").addEventListener("pointerdown", pkDrNoneGo, true);
     $("#panel").addEventListener("click", (e4) => {
       const a5 = e4.target.closest(".pkdrhost [data-drdo]");
       if (!a5 || !shared.PKDRC || !shared.PKDRC.d) return;
