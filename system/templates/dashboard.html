@@ -3647,6 +3647,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-err{color:var(--bad)}
 .mnap-l{list-style:none;margin:10px 0 0;padding:0} .mnap-l li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .mnap-l li b{color:var(--warn);font-weight:600;flex:none;min-width:140px}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.mnap-filed{margin:0 0 4px} .mnap-ck{margin:12px 0 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);font-size:var(--fs-sm)} .mnap-ck ul{margin:4px 0 0}
 @media (max-width:900px){ .mnpane{width:280px}           /* #268: the transcript stays beside the sheet, narrower, so a row lights a turn you can see */
   #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9;flex-basis:100%}
   #v-minutes .sheet-root.rpt-slim>.sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-status{display:none}
@@ -51036,7 +51037,7 @@ ${pre}**Current state title:** ${title}`);
       dePrevDrop();
       const row2 = (i5) => {
         const w6 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
-        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${i5.noid ? "" : esc(i5.id) + " · "}${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
+        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${i5.noid ? "" : esc(i5.id) + " · "}${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}${i5.kept ? '<span class="tag" data-tip="A line in the minutes only: no work item is made">minutes only</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
       };
       const outsideNote = shared.DE.mode === "followup" ? shared.DE.attendees.length ? "An attendee's address is outside your own domains" : "There are no attendee addresses on record" : shared.DE.email ? "This address is outside your own domains" : "There's no email address on record";
       putHtml($("#deBody"), `${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
@@ -72043,11 +72044,15 @@ ${d5.text}`);
   }
 
   // components/minutes/ApprovePopup.jsx
-  function ApprovePopup({ problems, busy: busy2, onApprove }) {
+  var filedAt = (p6) => {
+    const parts = p6.split("/");
+    return { name: parts.pop() || p6, folder: parts.slice(-2).join(" › ") };
+  };
+  function ApprovePopup({ problems, checks = [], files = [], transcripts = 0, busy: busy2, onApprove }) {
     const close = () => {
       approveOpen.value = false;
     };
-    const one = problems.length === 1;
+    const one = problems.length === 1, filed2 = files.map(filedAt)[0];
     return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value && problems.length > 0, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
       /* @__PURE__ */ u2("h2", { id: "mnApproveH", children: "Approve the minutes" }),
       /* @__PURE__ */ u2("p", { class: "sub", children: [
@@ -72055,10 +72060,27 @@ ${d5.text}`);
         one ? "one ticked item has" : `${problems.length} ticked items have`,
         " something worth a look. Nothing else needs checking."
       ] }),
+      filed2 ? /* @__PURE__ */ u2("p", { class: "sub mnap-filed", children: [
+        "Files the minutes as ",
+        /* @__PURE__ */ u2("b", { children: filed2.name }),
+        " in ",
+        filed2.folder,
+        transcripts ? ", with the transcript in Transcripts" : "",
+        "."
+      ] }) : null,
       /* @__PURE__ */ u2("ul", { class: "mnap-l", children: problems.map((p6, i5) => /* @__PURE__ */ u2("li", { "data-n": p6.n, children: [
         /* @__PURE__ */ u2("b", { children: p6.what }),
         /* @__PURE__ */ u2("span", { children: p6.text })
       ] }, `${p6.n}:${i5}`)) }),
+      checks.length ? /* @__PURE__ */ u2("div", { class: "mnap-ck", role: "note", children: [
+        /* @__PURE__ */ u2("b", { children: [
+          checks.length,
+          " check",
+          checks.length === 1 ? "" : "s",
+          " still open"
+        ] }),
+        /* @__PURE__ */ u2("ul", { children: checks.map((c5) => /* @__PURE__ */ u2("li", { children: c5.note }, c5.id)) })
+      ] }) : null,
       /* @__PURE__ */ u2("div", { class: "mnap-foot", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "mnApproveBack", onClick: close, children: "Go back" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy2, onClick: () => {
@@ -72677,6 +72699,7 @@ ${d5.text}`);
     const owner = isNew ? String(v5[ownerField] || "") : String(cells.owner || cells.by || "");
     const people = shared.REG.filter((p6) => !p6.hidden).map((p6) => String(p6.name)).sort();
     const dash = /* @__PURE__ */ u2("span", { class: "sub", children: "—" });
+    const held = row2.ref ? ((minutesView.value || {}).withheld || {})[String(row2.ref)] || "" : "";
     return /* @__PURE__ */ u2(
       "tr",
       {
@@ -72695,7 +72718,8 @@ ${d5.text}`);
           /* @__PURE__ */ u2("td", { class: "mntc", children: /* @__PURE__ */ u2(TrackButtons, { t: t47, label, onPick: (w6) => ctx.setDoc(setTrack(ctx.doc, n4, nextTrack(t47, w6)), "Track") }) }),
           /* @__PURE__ */ u2("td", { class: "mnic", children: [
             isNew ? /* @__PURE__ */ u2(ItemText, { value: String(v5[ROW_FIELD[sid]] || ""), label: `${ctx.section.heading}: ${label}`, n: n4, onSave: (x5) => edit({ [ROW_FIELD[sid]]: x5 }) }) : /* @__PURE__ */ u2("div", { class: "mnit mnit-ro", children: /* @__PURE__ */ u2(Linked, { text: String(cells[MAIN[sid]] || "") }) }),
-            own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("div", { class: "mnrow2", children: [
+            held || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("div", { class: "mnrow2", children: [
+              held ? /* @__PURE__ */ u2("span", { class: "mck info mnsens", "data-tip": `Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`, children: held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}` }) : null,
               !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("span", { class: "mck info", children: [
                 /* @__PURE__ */ u2(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }),
                 row2.ref ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnstaged", "data-tip": "Open the staged update in Review", onClick: () => m5.openItem(String(row2.ref)), children: "Open" }) : null
@@ -73438,8 +73462,8 @@ ${d5.text}`);
             type: "button",
             class: "ib sm",
             id: "mnReBtn",
-            "aria-label": "Re-extract: draft the minutes again from the transcript",
-            "data-tip": "Re-extract: draft the minutes again from the transcript",
+            "aria-label": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself",
+            "data-tip": "Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself",
             onClick: () => reExtract(doc),
             children: /* @__PURE__ */ u2(Icon, { name: "refresh" })
           }
@@ -73565,7 +73589,17 @@ ${d5.text}`);
         ) }) }),
         /* @__PURE__ */ u2(TranscriptPane, {})
       ] }),
-      /* @__PURE__ */ u2(ApprovePopup, { problems, busy: approving.value, onApprove: () => approveNow(true) })
+      /* @__PURE__ */ u2(
+        ApprovePopup,
+        {
+          problems,
+          checks: checks.filter((c5) => !(c5.kind === "owner" && problems.some((p6) => p6.n === c5.n))),
+          files: v5.plan ? v5.plan.files : [],
+          transcripts: v5.plan ? v5.plan.transcripts.length : 0,
+          busy: approving.value,
+          onApprove: () => approveNow(true)
+        }
+      )
     ] });
   }
   var mnMounted = false;

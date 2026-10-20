@@ -3637,6 +3637,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-err{color:var(--bad)}
 .mnap-l{list-style:none;margin:10px 0 0;padding:0} .mnap-l li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .mnap-l li b{color:var(--warn);font-weight:600;flex:none;min-width:140px}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.mnap-filed{margin:0 0 4px} .mnap-ck{margin:12px 0 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);font-size:var(--fs-sm)} .mnap-ck ul{margin:4px 0 0}
 @media (max-width:900px){ .mnpane{width:280px}           /* #268: the transcript stays beside the sheet, narrower, so a row lights a turn you can see */
   #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9;flex-basis:100%}
   #v-minutes .sheet-root.rpt-slim>.sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-status{display:none}

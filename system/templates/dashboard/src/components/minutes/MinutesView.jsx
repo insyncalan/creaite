@@ -8,8 +8,8 @@
    #268: one version only (no distributed version or Internal only marks in the view; the server's distributed code is left
    as it is). The bar is one row: the title (when slim), zoom, Show as exported, the save line, the Track summary ("n work
    items to register · n kept in the minutes only · n removed"), then Transcript (pressed while shown, remembered per browser),
-   Export (Word, PDF, HTML and Draft the follow-up email), Re-extract (asks creaite, which drafts the minutes again from the
-   transcript) and Approve minutes, the one labelled button.
+   Export (Word, PDF, HTML and Draft the follow-up email), Re-extract (opens ask creaite with the request written, to send;
+   it doesn't re-draft by itself: Cap's #268 review M4) and Approve minutes, the one labelled button.
    Approve minutes is one click: the record is brought in line with the Track column (track.reconcileOps: the existing
    remove, keep-the-line and restore changes), then the minutes and every ticked item are applied in one apply
    (/api/minutes/approve), with Undo on the snack. Only when a ticked item has a real problem does the Before approving box
@@ -85,9 +85,9 @@ async function exportAs(id) {
   snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
 }
 
-/** Re-extract: creaite's chat with the request written, to send when Alan is ready (cx-minutes drafts the minutes again from
-    the transcript). Words Alan has typed there and not sent are never written over (review LOW): the chat opens with them and
-    the toast says so. @param {SheetDoc} doc */
+/** Re-extract: creaite's chat with the request written, to send when Alan is ready; nothing is re-drafted until he sends it,
+    and the outcome is for the planned Re-extract run kind to define (Cap's #268 review M4). Words Alan has typed there and not
+    sent are never written over (review LOW): the chat opens with them and the toast says so. @param {SheetDoc} doc */
 function reExtract(doc) {
   const box = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("chIn"));
   if (box && box.value.trim()) { openChat(); snack("ask creaite has words you haven't sent: send or clear them, then press Re-extract again"); return; }
@@ -155,8 +155,8 @@ function Bar({ doc, zoom, setZoom, exported, setExported, status, bad, scale }) 
           onClick={() => setPane(!paneOpen.value)}><Icon name="chat" /></button>
         <Menu label="" icon="download" btnCls="ib sm" ariaLabel="Export" tip="Export" chevron={false} menuLabel="Export the minutes" data={{ mnexport: "" }}
           items={/** @type {any} */ (MN_EXPORTS)} onPick={exportAs} />
-        {draft ? <button type="button" class="ib sm" id="mnReBtn" aria-label="Re-extract: draft the minutes again from the transcript"
-          data-tip="Re-extract: draft the minutes again from the transcript" onClick={() => reExtract(doc)}><Icon name="refresh" /></button> : null}
+        {draft ? <button type="button" class="ib sm" id="mnReBtn" aria-label="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself"
+          data-tip="Re-extract: opens ask creaite with the request written; it doesn't re-draft the minutes by itself" onClick={() => reExtract(doc)}><Icon name="refresh" /></button> : null}
         {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan) || approving.value}
           data-tip={v && v.plan ? undefined : "Nothing pending to approve"} onClick={() => approveNow(false)}>{approving.value ? "Approving…" : "Approve minutes"}</button> : null}
       </span></span>
@@ -234,7 +234,8 @@ export function MinutesView() {
         </div>
         <TranscriptPane />
       </div>
-      <ApprovePopup problems={problems} busy={approving.value} onApprove={() => approveNow(true)} />
+      <ApprovePopup problems={problems} checks={checks.filter(c => !(c.kind === "owner" && problems.some(p => p.n === c.n)))} files={v.plan ? v.plan.files : []} transcripts={v.plan ? v.plan.transcripts.length : 0}
+        busy={approving.value} onApprove={() => approveNow(true)} />
     </div>
   );
 }

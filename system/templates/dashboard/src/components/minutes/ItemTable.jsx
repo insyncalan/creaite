@@ -14,7 +14,8 @@
      (DeadlinePopover.jsx). Each is one of the record's changes (/api/minutes/save {op}), so the row and its staged item
      change together.
    - Under the words, only what needs a look: "<name> needs details" (#266), Looks like an existing item (Update that one,
-     Keep as new), a deadline or a figure the transcript doesn't say.
+     Keep as new), a deadline or a figure the transcript doesn't say; and a read-only "Sensitive" tag on an item marked
+     Sensitive, partner-only or excluded (the view's `withheld`; Cap's #268 review L2).
    - Hovering a row lights its transcript turn; hovering a turn lights its rows (stores/minutes.js hoverTurn).
    Show as exported, read-only or filed: the record's own table, as it is exported, without the lines crossed out. */
 import { useContext, useRef, useState } from "preact/hooks";
@@ -29,7 +30,7 @@ import { A, DEC, R, wsFor } from "../../core/data.js";
 import { go } from "../../core/nav.js";
 import { shared } from "../../core/state.js";
 import { aiBar } from "../../stores/aiEdit.js";
-import { hoverTurn } from "../../stores/minutes.js";
+import { hoverTurn, minutesView } from "../../stores/minutes.js";
 
 /** @typedef {import("../report/Sheet.jsx").SectionCtx} SectionCtx */
 /** @typedef {import("./track.js").TrackRow} TrackRow */
@@ -162,6 +163,7 @@ function MnRow({ r, ctx, full }) {
   const owner = isNew ? String(v[ownerField] || "") : String(cells.owner || cells.by || "");
   const people = shared.REG.filter((/** @type {any} */ p) => !p.hidden).map((/** @type {any} */ p) => String(p.name)).sort();
   const dash = <span class="sub">—</span>;
+  const held = row.ref ? ((minutesView.value || {}).withheld || {})[String(row.ref)] || "" : "";    // Cap's #268 review L2: read only
   return (
     <tr class={`mi${lit ? " hl" : ""}`} data-n={n} data-trk={t} data-ref={row.ref || undefined} data-turn={turn || undefined}
       onMouseEnter={() => { if (turn) hoverTurn.value = { turn, from: "row" }; }} onMouseLeave={() => { if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null; }}>
@@ -169,8 +171,10 @@ function MnRow({ r, ctx, full }) {
       <td class="mnic">
         {isNew ? <ItemText value={String(v[ROW_FIELD[sid]] || "")} label={`${ctx.section.heading}: ${label}`} n={n} onSave={x => edit({ [ROW_FIELD[sid]]: x })} />
           : <div class="mnit mnit-ro"><Linked text={String(cells[MAIN[sid]] || "")} /></div>}
-        {(own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
+        {(held || own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
           <div class="mnrow2">
+            {held ? <span class="mck info mnsens" data-tip={`Marked ${held}: shown here as it is; the minutes have one version, so nothing is left out for it`}>
+              {held === "Sensitive" ? "Sensitive" : `Sensitive · ${held}`}</span> : null}
             {!isNew && !r.kept && row.does ? <span class="mck info"><Linked text={`${row.does}${/^Closes /.test(row.does) ? " · Looks done" : ""}`} />
               {row.ref ? <button type="button" class="linkbtn mnstaged" data-tip="Open the staged update in Review" onClick={() => m.openItem(String(row.ref))}>Open</button> : null}</span> : null}
             {own ? <span class="mck" data-check={own.id}><span>{own.quote} needs details</span>

@@ -20,10 +20,11 @@ import shutil
 import subprocess
 import sys
 import unittest
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_minutes_approve import ABC, FILED, Base  # noqa: E402
+from test_minutes_approve import ABC, DRAFT, FILED, Base  # noqa: E402
 
 
 class TrackOps(Base):
@@ -111,6 +112,42 @@ class TrackOps(Base):
 
 
 TRACK_JS = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/minutes/track.js").as_uri()
+
+
+class TrackChoicesReachOutputs(Base):
+    """Cap's #268 review M3: before Approve the Track choices live only in the record's layout.track, yet the follow-up email
+    and a draft's export are built from the record: both now apply the choices first (minutes_record.tracked_of), so a crossed
+    line is out and a line kept with neither is a line only, as the filed minutes will be. Nothing is written."""
+    def set_track(self, choices):
+        return self.js("import creaite_doc, minutes_record\n"
+                       f"d = creaite_doc.read({DRAFT!r}); d.setdefault('layout', {{}})['track'] = {choices!r}\n"
+                       f"r = minutes_record.save_page({DRAFT!r}, d); print(json.dumps(r['ok']))")
+
+    def test_the_follow_up_leaves_crossed_lines_out_and_marks_kept_lines(self):
+        self.assertTrue(self.set_track({"1": "n", "3": ""}))
+        before = (self.v.root / "system/staging" / self.name).read_text(encoding="utf-8")
+        f = self.js(f"import minutes_record\nprint(json.dumps(minutes_record.followup_facts({DRAFT!r})))")
+        words = [i["t"] for i in f["items"]]
+        self.assertNotIn("Book the UAT environment", words, "crossed: out of the email")
+        dec = next(i for i in f["items"] if i["t"] == "Go-live stays on 20 November")
+        self.assertTrue(dec.get("kept"), "the decision (neither by default) is a line in the minutes only, not a work item")
+        self.assertEqual(dec["id"], "@4", "still told apart from the other lines")
+        self.assertFalse([w for w in words if w.startswith("ABC-A-001")], "an update kept as a line is still no new action")
+        self.assertEqual((self.v.root / "system/staging" / self.name).read_text(encoding="utf-8"), before, "nothing written")
+
+    def test_a_drafts_export_leaves_crossed_lines_out(self):
+        self.assertTrue(self.set_track({"1": "n"}))
+        for fmt in ("html", "docx"):
+            r = self.js(f"import minutes_record\nprint(json.dumps(minutes_record.export({DRAFT!r}, {fmt!r}, False)))")
+            self.assertTrue(r["ok"], r)
+            made = self.v.root / r["path"]
+            if fmt == "html":
+                text = made.read_text(encoding="utf-8")
+            else:
+                text = zipfile.ZipFile(made).read("word/document.xml").decode("utf-8")
+            self.assertNotIn("Book the UAT environment", text, f"{fmt}: the crossed line is out")
+            self.assertIn("Go-live stays on 20 November", text, f"{fmt}: the kept line stays")
+        self.assertEqual(self.data()["items"][0]["decision"], "pending", "nothing decided by an export")
 
 
 class RunsTrackJs:
