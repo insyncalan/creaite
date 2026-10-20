@@ -202,6 +202,7 @@ class Links(LiveBrowserCase):
         b.key("Enter")
         b.wait("!document.querySelector('.linkpop')", 5)
         self.assertIn("see [the plan](https://example.com/plan) today", self.value())
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)                  # #152f: the editor's focus lands a frame after the dialog goes
         self.assertEqual(b.eval("document.activeElement===document.querySelector('.nbody')"), True, "the cursor is back in the text")
 
     def test_the_shortcut_adds_a_link_with_no_words_selected(self):

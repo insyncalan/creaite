@@ -120,6 +120,7 @@ class Toolbar(LiveBrowserCase):
         self.assertRegex(self.value(), r"(?m)^  [-*] b$")
         self.cmd("m-list", "outdent")
         self.assertRegex(self.value(), r"(?m)^[-*] b$")
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)        # #152f: the menu gives the focus back a frame after the pick
         b.key("Tab")                                           # Tab and Shift+Tab do the same in a list
         b.wait("/^ {2,}[-*] b$/m.test(document.querySelector('.nbody').cxed.value())", 5)
         b.key("Tab", 8)
