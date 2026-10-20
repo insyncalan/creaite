@@ -5,12 +5,12 @@ Run: python3 dev/tests/test_notes_delete_browser.py   (needs Google Chrome; skip
   - "Delete note…" is last in the note's … menu, in red; it opens the confirm box naming the note, Cancel focused;
   - Cancel (and Esc) closes it and nothing is asked for: no card, the note stays;
   - Delete note puts exactly one card up in ask creaite (the move into the archive, the file named); Reject leaves the note;
-  - doing it again and Approve moves it into _Archive: the note closes, the list drops it, a toast says "Moved … to the archive";
+  - doing it again and Approve moves it into 99 Archive: the note closes, the list drops it, a toast says "Moved … to the archive";
   - the toast's Undo brings it back into the list;
   - nothing scrolls sideways at 900 px with the box open;
   - while the card waits the note is read only, with a line saying why, and Reject makes it editable again (M1);
   - the toast after Undo says what happened (back, or back under another name: L3, Jarvis 16-10-2026);
-  - Files › Archived: two deleted notes of one name are two rows keyed by their own place in _Archive (Move back, Open), and Open
+  - Files › Archived: two deleted notes of one name are two rows keyed by their own place in 99 Archive (Move back, Open), and Open
     of a deleted note opens that file, never the Notes tab (M2).
 Each runs at 1400 px and again at 900 px.
 """
@@ -39,7 +39,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
             pass
 
     def archived(self):
-        return next((self.v.root / "projects").glob("ABC */")) / "_Archive" / "notes" / f"{WS}.md"
+        return next((self.v.root / "projects").glob("ABC */")) / "99 Archive" / "notes" / f"{WS}.md"
 
     def open_box(self):
         b = self.b
@@ -87,7 +87,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
         b.click("#ndelGo")                                                                  # 1: Delete note, then the card
         b.wait("document.querySelector('#chLog .edcard [data-ed=\"approve\"]')", 15)
         self.assertEqual(self.card(), [f"Delete note “{WS}” (move it to the archive)"])
-        self.assertIn("_Archive/notes/Working session.md", b.eval("document.querySelector('#chLog .edcard').textContent"))
+        self.assertIn("99 Archive/notes/Working session.md", b.eval("document.querySelector('#chLog .edcard').textContent"))
         self.shot("card")
         b.click("#chLog .edcard [data-ed=\"reject\"]")                                       # Reject: left where it is
         b.wait("document.querySelector('#chLog .edcard .acts').textContent.includes('Rejected')", 15)
@@ -121,7 +121,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
         import subprocess
         names = ["Plan as built", 'Say "as is": a note', "Notes as a as b"]
         code = ("import sys, json, pathlib; sys.path.insert(0, 'system/scripts')\nimport paths, reach, tracker\n"
-                f"notes = pathlib.Path({str(self.notes_dir())!r}); arch = notes.parent / '_Archive' / 'notes'; arch.mkdir(parents=True, exist_ok=True)\n"
+                f"notes = pathlib.Path({str(self.notes_dir())!r}); arch = notes.parent / '99 Archive' / 'notes'; arch.mkdir(parents=True, exist_ok=True)\n"
                 f"out = []\nfor n in {names!r}:\n"
                 "    def run(on):\n        reach.NOTES_BACK_RENAMES = on; rep = []\n"
                 "        tracker._reverse_move({'from': paths.rel(notes / (n + '.md')), 'to': paths.rel(arch / (n + '.md')), 'kind': 'notes'}, rep)\n"

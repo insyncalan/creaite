@@ -48,7 +48,7 @@ class FileChangeTests(OneDriveCase):
 
     def test_refused_places(self):
         # BL-141: reach.py decides; never is refused, and outside the projects folder needs Alan's approval on the card
-        for path, why in ((f"projects/Example Programme/_Archive/old.md", "_Archive"),
+        for path, why in ((f"projects/Example Programme/99 Archive/old.md", "99 Archive"),
                           (f"projects/_Templates/x.md", "_Templates is never read or written"),
                           (f"projects/Example Programme/_Templates/x.md", "_Templates"),
                           (f"projects/Example Programme/../../outside.md", "needs approval: it is outside the vault and the projects folder"),
@@ -140,7 +140,7 @@ class FileChangeTests(OneDriveCase):
     def test_nothing_moves_into_zz_archive(self):
         base = "projects/Example Programme"
         touch(self.eng("ABC", "03 Delivery", "Design", "a.md"), "a")
-        r = self.fc("move", f"{base}/03 Delivery/Design/a.md", f"{base}/_Archive/a.md", "--why", "x", ok=False)
+        r = self.fc("move", f"{base}/03 Delivery/Design/a.md", f"{base}/99 Archive/a.md", "--why", "x", ok=False)
         self.assertNotEqual(r.returncode, 0)
 
 
@@ -159,7 +159,7 @@ class ProjectPermissionTests(OneDriveCase):
     def test_only_a_named_project_folder_is_accepted(self):
         self.assertTrue(self.checked("Write(projects/Example Programme/04 Reporting/Steerco/**)")["ok"])
         for rule, why in (("Write(projects/**)", "name the project folder"), ("Edit(projects/*/04 Reporting/**)", "name the project folder"),
-                          ("Write(projects/Example Programme/_Archive/**)", "_Archive"),
+                          ("Write(projects/Example Programme/99 Archive/**)", "99 Archive"),
                           ("Write(projects/Example Programme/_Templates/**)", "_Templates"),
                           ("Write(~/Documents/**)", "inside the vault"), ("Write(//Users/x/**)", "inside the vault"),
                           ("Write(projects/../system/scripts/x.py)", "inside the vault")):
@@ -225,7 +225,8 @@ class AssistantRunTests(OneDriveCase):
 print(json.dumps({'dirs': L.extra_dirs(), 'deny': L.deny_tools(), 'read': L.READ_TOOLS, 'write': L.WRITE_TOOLS}))""")
         self.assertEqual(o["dirs"], [str(self.root)])
         for tool in ("Read", "Edit", "Write"):
-            self.assertIn(f"{tool}({ROOT_PATTERN}/**/_Archive/**)", o["deny"])
+            self.assertIn(f"{tool}({ROOT_PATTERN}/**/99 Archive/**)", o["deny"])
+            self.assertIn(f"{tool}({ROOT_PATTERN}/**/_Archive/**)", o["deny"])             # #252: the old name, for one release
             self.assertIn(f"{tool}({ROOT_PATTERN}/**/_Templates/**)", o["deny"])
             self.assertIn(f"{tool}({ROOT_PATTERN}/**/99 System/**)", o["deny"])            # BL-112: creaite's own folder (the backups)
         self.assertIn("Bash(python3 system/scripts/filechange.py *)", o["write"])
@@ -238,7 +239,8 @@ print(json.dumps({'dirs': L.extra_dirs(), 'deny': L.deny_tools(), 'read': L.READ
         try:
             src = f"import sys, json; sys.path.insert(0, {str(v.root / 'system/scripts')!r})\nimport live_server as L; print(json.dumps([L.extra_dirs(), [d for d in L.deny_tools() if d.startswith('Write(projects/**/')]]))"
             r = subprocess.run([sys.executable, "-c", src], capture_output=True, text=True, cwd=tempfile.gettempdir())
-            self.assertEqual(json.loads(r.stdout.strip().splitlines()[-1]), [[], ["Write(projects/**/_Archive/**)", "Write(projects/**/_Templates/**)", "Write(projects/**/99 System/**)"]])
+            self.assertEqual(json.loads(r.stdout.strip().splitlines()[-1]), [[], ["Write(projects/**/99 Archive/**)", "Write(projects/**/_Archive/**)",
+                                                                                 "Write(projects/**/_Templates/**)", "Write(projects/**/99 System/**)"]])   # #252
         finally:
             v.cleanup()
 

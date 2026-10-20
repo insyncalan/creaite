@@ -13,7 +13,7 @@ import { inboxBadge, renderInbox } from "./intake.js";
 import { renderToday } from "./today.js";
 /* ======================= Files ======================= */
 shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.get("creaite-files-open",[]));
-/* BL-331: the reports and minutes BL-03 archived (still in their _Archive), listed only under the Archived chip, each with Move back */
+/* BL-331: the reports and minutes BL-03 archived (still in their 99 Archive, or _Archive or zz Archive until those names are dropped), listed only under the Archived chip, each with Move back */
 export const farch=()=>D.files_archived||[];
 export const FNAME=Object.assign({_portfolio:"projects/_portfolio",inbox:"inbox"},D.folders);
 const EMPTY={archived:"Nothing has been archived.",latest:"No reports yet.",week:"No meetings this week."};

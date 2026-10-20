@@ -286,7 +286,9 @@
       "notes": "08 Notes"
     },
     "never_index": [
+      "99 Archive",
       "_Archive",
+      "zz Archive",
       "_Templates",
       "99 System"
     ],

@@ -5,7 +5,7 @@ Usage: system/scripts/run archive.py daily [--force]       the daily slot: archi
        system/scripts/run archive.py reports [--out <name>.json]
                                                            BL-03: print (or save in system/staging/drafts/) the spec that moves
                                                            the reports and minutes older than archive.reports_after_months into
-                                                           each engagement's own _Archive; exit 1 when there is none
+                                                           each engagement's own 99 Archive; exit 1 when there is none
        system/scripts/run archive.py status [--json]       the last runs and what is due (read only; Settings › Health)
 
 BL-10, items, automatic: once a day closed or cancelled actions and RAID items, and done or dropped promises, closed
@@ -18,10 +18,10 @@ in the development repository. The last run is kept in system/staging/archive-st
 Settings › Health.
 
 BL-03, files, on a yes: weekly and client reports, minutes and Steerco one-pagers dated (by their file name) more than
-archive.reports_after_months months ago (12) move into their engagement's own _Archive, keeping their place below it. Health shows
+archive.reports_after_months months ago (12) move into their engagement's own 99 Archive, keeping their place below it. Health shows
 a line once a month while any are due ("Archive 14 reports and minutes older than 12 months"); its Fix it puts this command's spec
 on the approval card, and Approve applies it through tracker.py apply (a `move` of kind "reports", the BL-09 guard exception: only
-the apply moves into _Archive). Stored paths keep resolving (paths.resolve). Transcripts, agendas, documents and applied proposals
+the apply moves into 99 Archive). Stored paths keep resolving (paths.resolve). Transcripts, agendas, documents and applied proposals
 are never moved. BL-331: Files lists the archived ones with Move back, the exact reverse move ("reports_back"), which only the
 live server puts on the approval card (archived_files, back_spec); never onto a file that is there.
 Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
@@ -175,7 +175,7 @@ def report_months(settings=None):
 
 def due_reports(on=None):
     """[{code, kind, from, to}] of the files older than the period, by the date in their name, in each project folder in place
-    and the portfolio's minutes (never an archived project, or a file whose place in _Archive is taken). A folder listing only."""
+    and the portfolio's minutes (never an archived project, or a file whose place in 99 Archive is taken). A folder listing only."""
     import tracker
     months = report_months()
     if months <= 0:
@@ -187,7 +187,7 @@ def due_reports(on=None):
         for kind in kinds:
             sub = paths.folder_name(kind).strip("/")
             for f in due_in(base / sub, kind, cutoff):
-                if f not in seen and paths.rel(f) not in back and not (base / paths.ARCHIVE / sub / f.name).exists():
+                if f not in seen and paths.rel(f) not in back and not any((d / sub / f.name).exists() for d in paths.archive_dirs(base)):
                     seen.add(f)
                     out.append({"code": code, "kind": kind, "from": paths.rel(f),
                                 "to": paths.rel(base / paths.ARCHIVE / sub / f.name)})
@@ -276,10 +276,10 @@ def reports_line(st):
 
 
 # ===== BL-331: move one archived report back (Alan, 14-10-2026) =====
-# Files lists what BL-03's archive moved into an engagement's (or the portfolio's) _Archive, marked Archived, each with Move back.
+# Files lists what BL-03's archive moved into an engagement's (or the portfolio's) 99 Archive, marked Archived, each with Move back.
 # Move back is the exact reverse of that move (a `move` of kind "reports_back": reach.archive_move_problem checks the reversed
 # shape, and tracker.check_move that an archive moved that very file there). Only the live server puts it on the approval card,
-# from the stored path the page names; tracker.py apply moves it and undo puts it back in _Archive. Never onto a file that is
+# from the stored path the page names; tracker.py apply moves it and undo puts it back in 99 Archive. Never onto a file that is
 # there: a taken place is refused. Once back, the apply's search refresh indexes it again.
 BACK = "reports_back"
 
@@ -362,7 +362,7 @@ def _place(original):
 
 def archived_files():
     """Files' archived list (BL-331): [{p, f, sub, n, type, date, kb, path, archived}] for each file BL-03 moved that is still in
-    its _Archive. path is the stored path (it opens, through paths.resolve). Names, sizes and dates only; nothing is read."""
+    its 99 Archive. path is the stored path (it opens, through paths.resolve). Names, sizes and dates only; nothing is read."""
     out = []
     moved = {**archived_moves(), **archived_moves(kind=NOTE)}
     for at, original in moved.items():
@@ -380,7 +380,7 @@ def archived_files():
 
 
 def _archived_hit(path):
-    """(kind, archived path, original path) of the archived file `path` names: by its own place in _Archive first (unique), else by
+    """(kind, archived path, original path) of the archived file `path` names: by its own place in 99 Archive first (unique), else by
     the stored path it came from (the first such, as before #124); (None, None, None) when the archive didn't move it."""
     first = (None, None, None)
     for k in ("reports", NOTE):
@@ -405,7 +405,7 @@ def back_spec(path):
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)
     if src.is_symlink() or not src.is_file():
-        return None, f"{src.name} isn't in {paths.ARCHIVE} any more"
+        return None, f"{src.name} isn't in its archive folder any more"
     name = dst.name
     if os.path.lexists(dst):
         if kind != NOTE or not reach.NOTES_BACK_RENAMES:
@@ -421,8 +421,8 @@ def back_spec(path):
 
 
 # ===== #124: Delete note (Alan, 15-10-2026) =====
-# A note is never deleted for good: Delete note moves its file into its own engagement's (or the portfolio's) _Archive, keeping
-# its place below it (<…>/_Archive/<notes folder>/<note>.md; a name taken there gets -2, -3…). It is a `move` of kind "notes",
+# A note is never deleted for good: Delete note moves its file into its own engagement's (or the portfolio's) 99 Archive, keeping
+# its place below it (<…>/99 Archive/<notes folder>/<note>.md; a name taken there gets -2, -3…). It is a `move` of kind "notes",
 # the BL-09 guard exception: reach.archive_move_problem checks the shape, and only tracker.py apply moves it, from the live
 # server's own approval card (propose.py stages it only from the server's snapshot in system/guard/), after Alan's confirm box in
 # the Notes tab. Files › Archived lists it with Move back (the exact reverse, "notes_back", back_spec above); undo puts it back.
@@ -432,7 +432,7 @@ NOTE, NOTE_BACK = "notes", "notes_back"
 
 
 def note_delete_spec(rel):
-    """(spec, None) that moves the note at stored path `rel` into its own folder's _Archive, or (None, why not)."""
+    """(spec, None) that moves the note at stored path `rel` into its own folder's 99 Archive, or (None, why not)."""
     import notes
     hit = notes.note_of(rel)
     if not hit or hit[1].is_symlink() or not hit[1].is_file():

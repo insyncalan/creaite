@@ -149,7 +149,7 @@ REVIEW_FORMS = [
         ("propose.py new-project --out", "system/scripts/run propose.py new-project --code DEF --name D --out x.json", FORM),
         ("propose.py close-project --out", "system/scripts/run propose.py close-project ABC --out x.json", FORM),
         ("archive.py reports --out", "system/scripts/run archive.py reports --out x.json", FORM),
-        ("--out=NAME", "system/scripts/run propose.py old-archives --out=x.json", FORM),
+        ("--out=NAME", "system/scripts/run propose.py close-project ABC --out=x.json", FORM),
         # #116 A5 F5: after a bare -- the read flag is a plain word
         ("bare -- before --dry-run", "system/scripts/run minutes.py baseline --all -- --dry-run", FORM),
         ("bare --, python3 form", f"{P} -- x.vtt", FORM),
