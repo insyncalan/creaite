@@ -5,7 +5,8 @@
 
    - True A4 (210 × 297 mm, 16 mm padded, so 265 mm of content a page), drawn at 40% to 80% of the sheet area's width (a view may
      give its own limits and starting zoom: zoomMin, zoomMax, zoomDefault; #268's minutes 50% to 250%, opening fitted to the width,
-     and their bar is told the scale drawn, so it can say the real size): − and + in the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
+     and their bar is told the scale drawn, so it can say the real size; `fitMax` caps what fitted means, so the minutes' fit never
+     draws the page past its real size (100%), centred on the grey, while − + and a pinch still go past it): − and + in the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
    - THE SCROLL POSITION IS NEVER RESET BY A REDRAW (P5's first rule): per scrollKey it remembers the top-most visible section and the
      offset into it, and puts that back after a zoom, a move, Show as exported, a doc replaced by a save or reload, and on switching
      views. Nothing else sets scrollTop.
@@ -57,7 +58,7 @@ export { openSheetRef as openRef };
     match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
-    zoomMin?: number, zoomMax?: number, zoomDefault?: number, headings?: (s: SheetSection) => ({name?: string, note?: any}|null), exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
+    zoomMin?: number, zoomMax?: number, zoomDefault?: number, fitMax?: number, headings?: (s: SheetSection) => ({name?: string, note?: any}|null), exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
     checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
       document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
@@ -137,13 +138,15 @@ function removedLine(r) {
 
 /** The scroller of one page (or of both, scrolling together): it measures its width, draws what it is given at the scale that width
     and the zoom make, and remembers and restores the section at the top of the view. Nothing else sets scrollTop.
+    `fitMax` (#268) caps the fitted scale (zoom 1): the minutes' fit stops at the page's real size on a wide screen.
     @param {{pk: string, zoom: number, pages: number, regRestore: (fn: () => void) => () => void, onPinch: (dy: number, y: number, pk: string) => void,
-    head?: any, onScale?: (scale: number) => void, children: (scale: number) => any}} props */
-function Pane({ pk, zoom, pages, regRestore, onPinch, head, onScale, children }) {
+    head?: any, onScale?: (scale: number) => void, fitMax?: number, children: (scale: number) => any}} props */
+function Pane({ pk, zoom, pages, regRestore, onPinch, head, onScale, fitMax, children }) {
   const sc = useRef(/** @type {HTMLDivElement|null} */ (null));
   const [w, setW] = useState(0);
   const avail = Math.max(0, w - 32 - (pages > 1 ? 16 * (pages - 1) : 0)) / pages;
-  const scale = avail > 0 ? (zoom * avail) / (A4_W * MM) : 0;
+  const fit = avail / (A4_W * MM);
+  const scale = avail > 0 ? zoom * (fitMax ? Math.min(fitMax, fit) : fit) : 0;
   const sref = useRef(scale); sref.current = scale;
   const pinch = useRef(onPinch); pinch.current = onPinch;
   const capture = () => {
@@ -472,10 +475,10 @@ export function Sheet(props) {
       <div class={`sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`}>
         {exported && props.exportedView && !partner ? props.exportedView : partner && !together
           ? <>
-            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("left") : null}>{scale => frame(doc, null, scale, 0)}</Pane>
-            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} head={props.paneHead ? props.paneHead("right") : null}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
+            <Pane pk={scrollKey} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} fitMax={props.fitMax} head={props.paneHead ? props.paneHead("left") : null}>{scale => frame(doc, null, scale, 0)}</Pane>
+            <Pane pk={`${scrollKey}|${partner.scrollKey || "partner"}`} zoom={zoom} pages={1} regRestore={reg} onPinch={pinch} fitMax={props.fitMax} head={props.paneHead ? props.paneHead("right") : null}>{scale => frame(partner.doc, partner, scale, 1)}</Pane>
           </>
-          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch} onScale={setDrawn} head={props.paneHead ? props.paneHead(partner ? "both" : "one") : null}>{scale => <>
+          : <Pane pk={scrollKey} zoom={zoom} pages={partner ? 2 : 1} regRestore={reg} onPinch={pinch} fitMax={props.fitMax} onScale={setDrawn} head={props.paneHead ? props.paneHead(partner ? "both" : "one") : null}>{scale => <>
             {frame(doc, null, scale, 0)}
             {partner ? frame(partner.doc, partner, scale, 1) : null}
           </>}</Pane>}

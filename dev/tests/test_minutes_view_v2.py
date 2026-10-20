@@ -39,6 +39,7 @@ from test_tracker import ABC  # noqa: E402
 
 ROW = "#v-minutes tr.mi[data-n='%d']"
 SECOND = "Budget review"
+A4_PX = 210 * 96 / 25.4                                     # an A4 page at its real size (100%), in CSS pixels
 
 
 def stage_second(v):
@@ -304,6 +305,15 @@ class MinutesViewV2(LiveBrowserCase):
     def test_07_the_transcript_choice_rescales_survives_a_reload_and_applies_to_another_meeting(self):
         b = self.b
         second = stage_second(self.v)
+        b.resize(900, 1000)                                     # #268: at 1400 both fit past 100%, so both are capped; at 900 the
+        b.wait("innerWidth===900")                              # transcript leaves less room than the real size
+        b.pump(0.6)
+        try:
+            self._transcript_choice(b, second)
+        finally:
+            b.resize(1400, 1000)
+
+    def _transcript_choice(self, b, second):
         width = lambda: self.ev("document.querySelector('#v-minutes .sheet-fit').getBoundingClientRect().width")   # noqa: E731
         self.assertEqual(self.ev("document.getElementById('mnTrBtn').getAttribute('aria-pressed')"), "true", "shown by default")
         w0 = width()
@@ -349,8 +359,8 @@ class MinutesViewV2(LiveBrowserCase):
         z = lambda: self.ev("+document.querySelector('#v-minutes .sheet-zv').dataset.zoom")   # noqa: E731
         real = lambda: self.ev("Math.round(+document.querySelector('#v-minutes .sheet-fit').dataset.scale*100)+'%'")   # noqa: E731
         self.assertEqual(z(), 1, "opens fitted to the width")
-        fit = self.ev("(()=>{const s=document.querySelector('#v-minutes .sheet-scroll'), f=document.querySelector('#v-minutes .sheet-fit'); return s.clientWidth-32-f.getBoundingClientRect().width})()")
-        self.assertLess(abs(fit), 2, "the page fills the room")
+        fit = self.ev(f"(()=>{{const s=document.querySelector('#v-minutes .sheet-scroll'), f=document.querySelector('#v-minutes .sheet-fit'); return Math.min(s.clientWidth-32,{A4_PX})-f.getBoundingClientRect().width}})()")
+        self.assertLess(abs(fit), 2, "the page fills the room, never past its real size")
         self.assertEqual(self.ev("document.querySelector('#v-minutes .sheet-zv').textContent"), real(), "the label says the real size")
         self.wheel("#v-minutes .sheet-scroll", -60, ctrl=True, times=40)
         self.assertEqual(z(), 2.5, "pinch in to 250%")
@@ -363,6 +373,36 @@ class MinutesViewV2(LiveBrowserCase):
         self.b.click("#v-minutes .sheet-zv")
         self.b.pump(0.2)
         self.assertEqual(z(), 1, "back to fit to width")
+
+    def test_09b_fit_to_width_stops_at_100_and_centres_the_page_and_zoom_still_goes_past(self):
+        b = self.b
+        label = lambda: self.ev("document.querySelector('#v-minutes .sheet-zv').textContent")   # noqa: E731
+        real = lambda: self.ev("Math.round(+document.querySelector('#v-minutes .sheet-fit').dataset.scale*100)+'%'")   # noqa: E731
+        room = lambda: self.ev("""(()=>{ const s=document.querySelector('#v-minutes .sheet-scroll').getBoundingClientRect(), f=document.querySelector('#v-minutes .sheet-fit').getBoundingClientRect();
+          return {w: f.width, left: f.left-s.left, right: s.right-f.right, room: s.width-32}; })()""")   # noqa: E731
+        b.click("#mnTrBtn")                                     # the transcript hidden: room for more than the real size at 1400
+        b.wait("!document.querySelector('.mnpane')")
+        b.pump(0.4)
+        try:
+            r = room()
+            self.assertGreater(r["room"], A4_PX + 50, f"wide enough to test the cap: {r}")
+            self.assertEqual(real(), "100%", "fit to width stops at the real size")
+            self.assertEqual(label(), "100%", "and the label says so")
+            self.assertLess(abs(r["w"] - A4_PX), 2, f"the page is A4 wide: {r}")
+            self.assertLess(abs(r["left"] - r["right"]), 4, f"centred, grey either side: {r}")
+            self.wheel("#v-minutes .sheet-scroll", -60, ctrl=True, times=40)
+            self.assertEqual(real(), "250%", "a pinch still goes past 100%")
+            self.assertEqual(label(), "250%")
+            b.click("#v-minutes .sheet-zv")                    # the label re-fits, still capped
+            b.pump(0.3)
+            self.assertEqual(real(), "100%")
+            self.assertEqual(label(), "100%")
+            b.click("#v-minutes .sheet-zoom button[aria-label='Zoom in']")
+            b.pump(0.2)
+            self.assertEqual(label(), "110%", "the + button goes past 100% too")
+        finally:
+            b.click("#mnTrBtn")
+            b.wait("document.querySelector('.mnpane')")
 
     def test_10_one_version_icon_tools_and_the_export_menu(self):
         bar = "#v-minutes .sheet-bar"

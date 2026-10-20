@@ -68938,14 +68938,15 @@ ${d5.text}`);
     const list = Array.isArray(r4) ? r4 : [r4];
     return `Left out of this version: ${list.map((x5) => (typeof x5 === "string" ? x5 : x5 && (x5.label || x5.ref || x5.id || x5.heading)) || "an item").join(", ")}`;
   }
-  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, onScale, children }) {
+  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, onScale, fitMax, children }) {
     const sc2 = A2(
       /** @type {HTMLDivElement|null} */
       null
     );
     const [w6, setW] = d2(0);
     const avail = Math.max(0, w6 - 32 - (pages > 1 ? 16 * (pages - 1) : 0)) / pages;
-    const scale = avail > 0 ? zoom * avail / (A4_W * MM) : 0;
+    const fit = avail / (A4_W * MM);
+    const scale = avail > 0 ? zoom * (fitMax ? Math.min(fitMax, fit) : fit) : 0;
     const sref = A2(scale);
     sref.current = scale;
     const pinch = A2(onPinch);
@@ -69531,9 +69532,9 @@ ${d5.text}`);
         }, children: "Reload" })
       ] }) : null,
       /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: exported && props.exportedView && !partner ? props.exportedView : partner && !together ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
-        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
-      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, onScale: setDrawn, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, fitMax: props.fitMax, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
+        /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, fitMax: props.fitMax, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
+      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, fitMax: props.fitMax, onScale: setDrawn, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
         frame(doc, null, scale, 0),
         partner ? frame(partner.doc, partner, scale, 1) : null
       ] }) }) }),
@@ -72738,7 +72739,7 @@ ${d5.text}`);
   }
 
   // components/minutes/MinutesView.jsx
-  var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1 };
+  var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
   var MN_EXPORTS = [
     { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
     { id: "pdf", name: "PDF", line: "Printed from the page" },
@@ -73019,6 +73020,7 @@ ${d5.text}`);
             zoomMin: MN_ZOOM.min,
             zoomMax: MN_ZOOM.max,
             zoomDefault: MN_ZOOM.fit,
+            fitMax: MN_ZOOM.fitMax,
             headings: mnHeading,
             renderers: RENDER,
             extras: EXTRAS,

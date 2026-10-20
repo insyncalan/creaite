@@ -43,9 +43,10 @@ import { signal } from "@preact/signals";
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./minutesDoc.js").Check} Check */
 
-/** #268: the minutes' zoom, against the sheet area's width (1 = fit to width, where they open). The bar says the real size
-    (the scale drawn, so hiding the transcript, which widens the area, says the new size). */
-export const MN_ZOOM = { min: 0.5, max: 2.5, fit: 1 };
+/** #268: the minutes' zoom, against the fitted scale (1 = fit to width, where they open). Fit to width is capped at the page's
+    real size (fitMax: 100%), so a wide screen shows the A4 page centred on the grey; − + and a pinch still go past it. The bar
+    says the real size (the scale drawn, so hiding the transcript, which widens the area, says the new size). */
+export const MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
 /** The Export menu (Word is an export only: editing the exported file never flows back). */
 export const MN_EXPORTS = [
   { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
@@ -219,7 +220,7 @@ export function MinutesView() {
       <div class={`mnwrap${paneOpen.value ? " withpane" : ""}`}>
         <div class="mnsheet">
           <MinutesCtx.Provider value={ctx}>
-            <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max} zoomDefault={MN_ZOOM.fit} headings={mnHeading}
+            <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max} zoomDefault={MN_ZOOM.fit} fitMax={MN_ZOOM.fitMax} headings={mnHeading}
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}
               onChange={onDoc} onSave={async req => {
                 const now = minutesView.value;            // a late save of a draft once the minutes are filed is never sent (filed minutes are never saved over)
