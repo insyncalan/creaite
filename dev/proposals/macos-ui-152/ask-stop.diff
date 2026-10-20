@@ -1,0 +1,12 @@
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1513,7 +1513,8 @@
+         run = RUNS.get(req.get("run"))
+         if not run or run.done:
+             return self.send(200, {"ok": False, "message": "Nothing is running."})
+-        return self.send(200, {"ok": True, "deferred": run.request_stop(), "cleared": queue_clear()})   # BL-257: Stop clears the queue
++        cleared = queue_clear()                                                  # BL-257: Stop clears the queue; counted first (#152f): once the child ends,
++        return self.send(200, {"ok": True, "deferred": run.request_stop(), "cleared": cleared})   # the reader's queue_after empties it too, and the count would be 0
+ 
+     def ask_running(self, req):
+         """The run in progress, or the last one if no page has seen its end yet (a confirmation may be waiting)."""
