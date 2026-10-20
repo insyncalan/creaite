@@ -1,0 +1,10 @@
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -67,6 +67,7 @@
+     ("vault", "system/staging/applied", "write", RECORD), ("vault", "system/staging/ask", "write", RECORD),
+     ("vault", "system/staging/*.json", "write", RECORD), ("vault", "system/staging/*.jsonl", "write", RECORD),
+     ("vault", "system/staging/*.txt", "write", RECORD), ("vault", "dashboard.html", "write", RECORD),
++    ("vault", "system/staging/client-snapshots", "write", RECORD),       # v2.5.1 (#239): the checked client snapshots creaite builds
+     ("vault", "tracker-view.xlsx", "write", RECORD), ("vault", ".git", "write", RECORD), ("vault", ".creaite-dev", "write", RECORD),
+     ("home", ".zshrc", "write", RUNS_CODE), ("home", ".zprofile", "write", RUNS_CODE), ("home", ".zshenv", "write", RUNS_CODE),
+     ("home", ".zlogin", "write", RUNS_CODE), ("home", ".bashrc", "write", RUNS_CODE), ("home", ".bash_profile", "write", RUNS_CODE),

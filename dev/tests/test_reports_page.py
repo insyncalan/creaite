@@ -6,7 +6,7 @@ against the live server.
   the week control, Open to that project's reporting space.
 - The Reporting hub (#reporting=ABC&w=…, #221 H1: it replaced the reporting space, the weekly page and the client page; its own tests are
   test_reporting_hub.py): Open on a project's row goes to it, the week Menu lists the weeks, the older addresses open it.
-- The cockpit's Reporting card; Today's Friday reminder opens the project's week in the hub; ⌘K reaches Reports and each project's hub.
+- No Reporting card on the cockpit (#254); its Reports icon and Project settings › Open reporting; Today's Friday reminder opens the project's week in the hub; ⌘K reaches Reports and each project's hub.
 - The week is the reminder's (Friday from 12:00); a draft waiting in Review and the report records (D.reports, the stub for
   P3's) change a state.
 
@@ -184,26 +184,31 @@ class ReportsPage(LiveBrowserCase):
 
     # ----- the other ways in
 
-    def test_the_cockpit_has_a_reporting_card_that_opens_the_hub(self):
+    def test_the_cockpit_has_no_reporting_card(self):        # #254: Alan does not want the card on the project page (was BL-337's card)
         b = self.b
         b.eval("go('cockpit','ABC')")
-        b.wait("!!document.querySelector('#cockRep #repCard')")
-        text = b.eval("document.getElementById('repCard').textContent")
-        for want in ("Reporting", "Weekly report", "Client report", "Example Client Ltd", "Fortnightly"):
-            self.assertIn(want, text)
-        b.eval("document.querySelector('[data-rpcard=space]').click()")
-        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
-        b.eval("go('cockpit','ABC')")
-        b.wait("!!document.querySelector('#cockRep #repCard')")
-        self.assertEqual(b.eval("document.querySelector('[data-rpcard=internal]').getAttribute('href')"), "#reporting=ABC&w=2026-10-16")
-        self.assertEqual(b.eval("document.querySelector('[data-rpcard=client]').getAttribute('href')"),
-                         "#reporting=ABC&w=2026-10-16&v=client")
+        b.wait("VIEW==='cockpit' && !!document.querySelector('#v-cockpit .cockfoot [data-reports=ABC]')")
+        self.assertEqual(b.eval("!!document.querySelector('#cockRep, #repCard, [data-rpcard], .rp-cockcard')"), False)
+        self.assertNotIn("Open reporting", b.eval("document.getElementById('v-cockpit').textContent"))
+        self.assertNotIn("Last filed", b.eval("document.getElementById('v-cockpit').textContent"))
+        self.assertEqual(b.eval("typeof mountReportingCard"), "undefined")      # the component is gone, not only unmounted
 
-    def test_a_filed_report_opens_its_file_from_the_card(self):
+    def test_the_cockpit_reports_icon_opens_the_projects_week_in_the_hub(self):     # #254: the door the card's Open reporting was
         b = self.b
-        b.eval("go('cockpit','DEF')")
-        b.wait("!!document.querySelector('#cockRep #repCard')")
-        self.assertEqual(b.eval("document.querySelectorAll('#repCard a[data-openfile]').length"), 2)
+        b.eval("go('cockpit','ABC')")
+        b.wait("!!document.querySelector('#v-cockpit .cockfoot [data-reports=ABC]')")
+        b.click("#v-cockpit .cockfoot [data-reports=ABC]")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
+        self.assertEqual(b.eval("spaceCode.value"), "ABC")
+        self.assertIn("16-10-2026", b.eval("document.querySelector('#hubWeek').innerText"))
+
+    def test_project_settings_open_reporting_opens_the_hub(self):       # #254: a door kept
+        b = self.b
+        b.eval("go('psettings','ABC'); psCat.value='rep'; navWrite(false)")
+        b.wait("VIEW==='psettings' && !!document.querySelector('#psRepHub')", 20)
+        b.click("#psRepHub")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
+        self.assertEqual(b.eval("spaceCode.value"), "ABC")
 
     def test_the_friday_reminder_opens_the_projects_week_in_the_hub(self):
         b = self.b

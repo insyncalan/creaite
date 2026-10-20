@@ -12,7 +12,10 @@ undoable). Hidden sections, rows and figures never reach the page, an export or 
 Exports (P2, `export`): HTML (the page without the data block), Word (the kind's firm template, filled by docx_tools.py) and PDF
 (Chrome's print to PDF of the HTML export), each made from the data and filed beside the document through filechange.py.
 """
+import contextlib
+import contextvars
 import copy
+import hashlib
 import html
 import json
 import re
@@ -97,12 +100,39 @@ def force_client_audience(doc):
     if isinstance(doc, dict) and doc.get("kind") == "weekly":
         doc["audience"] = "internal"           # a weekly report is the internal report, whatever its file says (v2.5.0)
     if isinstance(doc, dict) and doc.get("kind") == "client":
-        doc["audience"] = "client"
-        code = str(doc.get("project") or "")
-        doc["project_name"] = project_name(code) if code else ""
-        doc["client"] = project_client(code) if code else None
+        derive_client(doc)
         drop_other_projects(doc)
     return doc
+
+
+def derive_client(doc):
+    """v2.5.1 (#239, b): a client report's header, made again from the tracker, the project's memory and its logo files, in place:
+    its audience (always client), its title, `project_name`, `client`, its one source (the tracker), and the header section's
+    label, client and logos
+    (report_doc.client_logos: the project's files the report and the project's setting tick now). Whatever a draft stored there (a
+    picture's path, a logo unticked since, another name) is never kept. Any other document is returned as it is."""
+    if not (isinstance(doc, dict) and doc.get("kind") == "client"):
+        return doc
+    import report_doc
+    code = str(doc.get("project") or "")
+    doc["audience"] = "client"
+    doc["title"] = "Client report"
+    doc["project_name"] = project_name(code) if code else ""
+    doc["client"] = project_client(code) if code else None
+    logos = report_doc.client_logos(code, doc.get("layout")) if report_doc.CODE.match(code) else []
+    doc["sources"] = [_tracker_source(doc.get("meta"))]
+    for s in doc.get("sections") or []:
+        if isinstance(s, dict) and s.get("type") == "header":
+            data = s.get("data") if isinstance(s.get("data"), dict) else {}
+            s["data"] = {**data, "label": "Client report", "client": doc["client"] or "", "logos": [dict(x) for x in logos]}
+    return doc
+
+
+def _tracker_source(meta):
+    """A client report's one source, the tracker, its label made from the facts week (as report_doc.filed_client_data makes it)."""
+    week = meta.get("facts_week") if isinstance(meta, dict) else None
+    week = week if isinstance(week, str) and DATE.match(week) else None
+    return {"ref": "tracker", "label": "creaite tracker" + (f", as approved for week ending {_dmy(week)}" if week else "")}
 
 
 def drop_other_projects(doc):
@@ -226,17 +256,95 @@ def _visible_text(sections):
 
 
 def _internal_text(doc, s):
-    """True for a text section that belongs to the internal report and is in a client or distributed document: it was never matched
-    or written there (H5, #218), so no output shows it."""
-    return (s.get("type") == TEXT_TYPE and is_client(doc)
-            and (s.get("audience") or "internal") == "internal")
+    """True for a section that belongs to the internal report and is in a client or distributed document: it was never matched or
+    written there (H5, #218), so no output shows it. v2.5.1 (#239): a text section shows only when its audience is exactly "client"
+    (any other spelling, "Internal", " internal", "weekly", or none, is the internal report's); a section of any other type that
+    carries an audience at all shows only when it is exactly "client" too (creaite's own client sections carry none)."""
+    if not is_client(doc):
+        return False
+    return (s.get("type") == TEXT_TYPE or "audience" in s) and s.get("audience") != "client"
+
+
+# ── v2.5.1 (#239, a): the keys a client report may hold ──────────────────────
+# A client report holds only these keys, at every level; anything else (a key the gate never reads, a section's `ref` or
+# `milestones`) is dropped by client_shape, which clean (so every render, export, save and the gate's own reading, client_leak.doc_text)
+# and filing (report_doc.filed_client_data) use. Values are kept as they are: the gate reads every one that is left.
+TOP_KEYS = ("format", "schema", "kind", "audience", "project", "project_name", "title", "date", "client", "version", "saved_at",
+            "state", "approved_at", "based_on", "layout", "sections", "items", "sources", "meta")
+SECTION_KEYS = ("id", "type", "heading", "default_heading", "hidden", "text", "audience", "data", "rows", "columns", "figures",
+                "panes", "tags")
+DATA_KEYS = ("label", "client", "period_start", "period_end", "facts_week", "week_ending", "logos", "flag", "timeline", "milestones")
+ROW_KEYS, COLUMN_KEYS, FIGURE_KEYS = ("ref", "cells", "shown", "source"), ("key", "label"), ("key", "label", "value", "note", "shown")
+PANE_KEYS, TAG_KEYS, SOURCE_KEYS, BASED_KEYS = ("title", "text"), ("ref", "text"), ("ref", "label"), ("path", "version")
+META_KEYS = ("period_start", "period_end", "locked", "facts_on", "facts_week", "health_diff")
+LAYOUT_KEYS = ("order", "hidden", "headings", "glance", "logos", "milestones", "rows")
+REF_LISTS = ("timeline", "milestones")
+
+
+def _only(x, keys):
+    """A dict with only `keys` (a non-dict is dropped: None)."""
+    return {k: x[k] for k in keys if k in x} if isinstance(x, dict) else None
+
+
+def _list_of(x, keys):
+    """A list of dicts, each with only `keys` (anything not a dict is dropped)."""
+    return [d for d in (_only(v, keys) for v in x) if d is not None] if isinstance(x, list) else []
+
+
+def _shape_data(d):
+    """A section's data with only DATA_KEYS; its milestone lists hold item references (strings) only."""
+    out = _only(d, DATA_KEYS) or {}
+    for k in REF_LISTS:
+        if k in out:
+            out[k] = [r for r in out[k] if isinstance(r, str)] if isinstance(out[k], list) else []
+    if "logos" in out:
+        out["logos"] = _list_of(out["logos"], ("kind", "path"))
+    return out
+
+
+SECTION_LISTS = {"rows": ROW_KEYS, "columns": COLUMN_KEYS, "figures": FIGURE_KEYS, "panes": PANE_KEYS, "tags": TAG_KEYS}
+
+
+def _shape_section(s):
+    """One section with only SECTION_KEYS, its rows, columns, figures, panes and tags each with only their own keys."""
+    out = _only(s, SECTION_KEYS)
+    if out is None:
+        return None
+    if s.get("internal"):
+        out["audience"] = "internal"        # an `internal` flag is read as the internal report's audience before the flag goes
+    for k, keys in SECTION_LISTS.items():
+        if k in out:
+            out[k] = _list_of(out[k], keys)
+    if "data" in out:
+        out["data"] = _shape_data(out["data"])
+    return out
+
+
+def client_shape(doc):
+    """v2.5.1 (#239, a): a copy of a client report holding only the keys creaite writes (TOP_KEYS, SECTION_KEYS and the rest above):
+    whatever else a draft carries (sent, or edited on disk) is never read by the gate, so it never reaches a file or an export. A
+    document that isn't a client report is returned as it is."""
+    if not (isinstance(doc, dict) and doc.get("kind") == "client"):
+        return doc
+    out = _only(copy.deepcopy(doc), TOP_KEYS)
+    if "sections" in out:
+        out["sections"] = [x for x in (_shape_section(s) for s in out["sections"] or []) if x is not None]
+    for k, keys in (("meta", META_KEYS), ("layout", LAYOUT_KEYS), ("based_on", BASED_KEYS)):
+        if isinstance(out.get(k), dict):
+            out[k] = _only(out[k], keys)
+    if "sources" in out:
+        out["sources"] = _list_of(out["sources"], SOURCE_KEYS)
+    if "items" in out:
+        out["items"] = {k: v for k, v in out["items"].items() if isinstance(v, dict)} if isinstance(out["items"], dict) else {}
+    return out
 
 
 def clean(doc, keep_text=False):
     """A copy with hidden sections, rows and figures emptied, and the items only they named dropped. check()s it first. A text section
-    of the internal report that sits in a client document unmatched is dropped (H5, #218)."""
+    of the internal report that sits in a client document unmatched is dropped (H5, #218). v2.5.1: a client report holds only its
+    known keys (client_shape) and its header is derived again (derive_client), whatever was stored."""
     check(doc)
-    out = copy.deepcopy(doc)
+    out = derive_client(client_shape(doc)) if doc.get("kind") == "client" else copy.deepcopy(doc)
     out["sections"] = [s for s in out.get("sections") or [] if not _internal_text(out, s)]
     hidden = _hidden_refs(out.get("sections") or [])
     out["sections"] = [_clean_section(s, keep_text) for s in out.get("sections") or []]
@@ -576,21 +684,66 @@ def _too_big(f):
         return False
 
 
+# v2.5.1 (#239, step 2): while a client snapshot renders (client_snapshot.client_export), its tables are in force: a picture or a logo
+# is drawn only when its name and its bytes (SHA-256) are the snapshot's. Outside a render there are none (None).
+_TABLES = contextvars.ContextVar("client_tables", default=None)
+CLIENT_PICTURE = "client-"          # known gap C: a client report's own pictures are named so (report_server.image_route, kind client)
+
+
+@contextlib.contextmanager
+def client_tables(tables):
+    """Put a snapshot's tables ({pictures: {name: sha256}, logos: {file name: sha256}, allowed: {hash}}) in force while rendering."""
+    token = _TABLES.set(tables)
+    try:
+        yield
+    finally:
+        _TABLES.reset(token)
+
+
+def tables_in_force():
+    """The client snapshot's tables while one renders, else None."""
+    return _TABLES.get()
+
+
+def _same_bytes(f, want):
+    """Whether a file's bytes have the SHA-256 `want`."""
+    try:
+        return isinstance(want, str) and hashlib.sha256(Path(f).read_bytes()).hexdigest() == want
+    except OSError:
+        return False
+
+
 def text_image(doc, ref):
     """The picture file a text section's `_images/<name>` address names (PNG or JPEG), or None: only that shape of address is read, and
-    only inside the reports folder."""
+    only inside the reports folder. v2.5.1 (#239, gap C): a client report reads only its own pictures (`_images/client-<name>`,
+    added from the client report), and while its snapshot renders only the ones in the snapshot's picture table, with the same
+    bytes. v2.5.1 step 3 (the review's L1): paths.image_file's file checks too: never a hard link (it may name an outside file), never
+    through a symlinked `_images` folder."""
     if not TEXT_IMAGE.match(str(ref or "")):
         return None
     root = images_dir(doc or {})
     if root is None:
         return None
     f = Path(root) / ref
-    try:
-        if f.is_symlink() or not f.is_file() or (Path(root).resolve() / "_images") not in f.resolve().parents:
-            return None
-    except OSError:
+    if not _own_picture(Path(root), f):
         return None
+    if (doc or {}).get("kind") == "client":
+        if not Path(ref).name.lower().startswith(CLIENT_PICTURE):
+            return None
+        tables = tables_in_force()
+        if tables is not None and not _same_bytes(f, (tables.get("pictures") or {}).get(ref)):
+            return None
     return f
+
+
+def _own_picture(root, f):
+    """Whether `f` is a real picture file in `root`'s own `_images/` folder: not a symlink, not reached through a symlinked folder,
+    not a hard link (paths.image_file's rules, v2.5.1 step 3: a hard link may name an outside file)."""
+    try:
+        return not (f.is_symlink() or (root / "_images").is_symlink() or not f.is_file() or f.stat().st_nlink > 1
+                    or (root.resolve() / "_images") not in f.resolve().parents)
+    except OSError:
+        return False
 
 
 def picture_ref_ok(ref):
@@ -987,46 +1140,56 @@ def file_beside_default(kind):
     return default if value is None else bool(value)
 
 
-def _export_doc(path, kind, doc):
-    """The document an export is made from: `doc` as the caller checked it (never the file read again), or the file read now; a
-    client report read as one, and another kind than `kind` refused (v2.5.0)."""
-    if doc is None:
-        return read_report(path, kind)
-    if kind is not None and doc.get("kind") != kind:
-        raise DocError("That file isn't this report (its kind was changed), so nothing was done.")
-    return force_client_audience(copy.deepcopy(doc))
+def client_token_ok(doc, token):
+    """v2.5.1 (#239, step 2): whether a document may be rendered as an export here: any document but a client report, and a client
+    report only from client_snapshot.client_export (its TOKEN), the one way a client file is made."""
+    if not (isinstance(doc, dict) and doc.get("kind") == "client"):
+        return True
+    import client_snapshot
+    return token is client_snapshot.TOKEN
 
 
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None):
+CLIENT_ONLY_THERE = ("A client report is exported only from its checked copy (the Reporting hub's Export, client_snapshot."
+                     "client_export), so nothing was exported.")
+
+
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=None, kind=None, doc=None, token=None):
     """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
     `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
     folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract.
     #226: for "html" and "pdf", `page` (the report page's own exported view; export_page.build checks it against the report) is
     what is written and printed; with none, or one that fails the check, the plain renderer below is, and the answer says
-    `plain: True` (and `plain_why` when a page was refused). `doc`: the document the caller already read and checked (the export
-    route's client gate); it is what is exported, and the file is not read again (v2.5.0: no second read between the check and
-    the output, which a file replaced in between would have changed)."""
+    `plain: True` (and `plain_why` when a page was refused).
+    v2.5.1 (#239): `doc` is the document the caller has already read and checked (the client export route, under its lock): it is
+    the one rendered, the file is not read again. A client report is gated here too (client_leak.findings on the document
+    rendered), a posted page is never used for one (the server renders it from the report), and the made file is checked again
+    (client_output_findings): any finding and nothing is kept.
+    v2.5.1 step 2: a client report is exported only by client_snapshot.client_export (`token`), from its checked snapshot."""
     def fail(message, **extra):
         """The answer when nothing was exported."""
         return {"ok": False, "format": fmt, "message": message, **extra}
     if fmt not in EXPORTS:
         return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
     try:
+        # v2.5.0 audience bypass (`kind`: what the route expects; another kind is refused): a client report exported as one, however
+        # its file was edited; #234: a shown row with nothing to show is left out
         doc = without_blank_rows(_export_doc(path, kind, doc))
+        if not client_token_ok(doc, token):
+            return fail(CLIENT_ONLY_THERE)
         _check_baseline(doc)
-        built, why = None, None
-        if page is not None and fmt in ("html", "pdf"):
-            import export_page
-            try:
-                built = export_page.build(doc, page, page_title(doc))
-            except export_page.PageRefused as e:
-                why = str(e)
-        draft = _make_export(doc, fmt, real(path).stem, built)
+        gate = _client_gate(doc)
+        if gate:
+            return fail("Not exported: possible internal content in the client report: " + "; ".join(gate), findings=gate)
+        built, why = _posted_page(doc, page, fmt)
+        draft, made = _make_export(doc, fmt, real(path).stem, built, token=token)
     except DocError as e:
         return fail(str(e))
+    found = client_output_findings(doc, fmt, draft, made)
+    if found:
+        return fail("Not exported: the file made held possible internal content: " + "; ".join(found), findings=found)
     out = {"ok": True, "format": fmt, "path": paths.rel(draft), "draft": paths.rel(draft), "filed": False,
            "open_after": bool(open_after)}
-    if fmt in ("html", "pdf") and built is None:
+    if fmt in ("html", "pdf") and built is None and doc.get("kind") != "client":     # a client report: always the server's own render
         out["plain"] = True
         if why:
             out["plain_why"] = why
@@ -1034,6 +1197,92 @@ def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True, page=N
     if folder is None or folder.resolve() == paths.DRAFTS.resolve():
         return {**out, "message": f"Exported {paths.rel(draft)}."}
     return _file_export(out, draft, folder / _export_name(doc, path, fmt), fail)
+
+
+def _posted_page(doc, page, fmt):
+    """(the posted page as export_page.build checked it, or None; why it wasn't used, or None). #226: an HTML or PDF export of a
+    weekly report or minutes may be the page posted. v2.5.1 (#239, f; step 3): a client report's never is, and none is looked at: it
+    is made from its checked copy (client_snapshot.client_export, which sends none; the export route says a posted one was ignored)."""
+    if page is None or doc.get("kind") == "client" or doc.get("audience") == "client":    # (distributed minutes: their own gate)
+        return None, None
+    if fmt not in ("html", "pdf"):
+        return None, None
+    import export_page
+    try:
+        return export_page.build(doc, page, page_title(doc)), None
+    except export_page.PageRefused as e:
+        return None, str(e)
+
+
+REPORT_NAME = re.compile(r"\b(?:client|weekly)\s+report\b", re.I)
+REPORT_META = ("period_start", "period_end", "facts_week", "facts_on", "locked", "client_facts", "health_diff")
+REPORT_HEADER = ("logos", "facts_week", "period_start", "period_end", "week_ending")
+
+
+def _in_reports_folder(p):
+    """Whether a file sits in any project's weekly or client reports folder (where only reports are filed)."""
+    import tracker
+    try:
+        with tracker.connect() as con:
+            codes = [r[0] for r in con.execute("SELECT code FROM projects")]
+    except BaseException:  # noqa: BLE001  no tracker: fail closed, every folder named Reports counts
+        return Path(p).parent.name.lower() == "reports"
+    here = Path(p).resolve().parent
+    for code in codes:
+        for kind in ("weekly_reports", "client_reports"):
+            try:
+                if paths.folder(code, kind).resolve() == here:
+                    return True
+            except (LookupError, OSError, KeyError, ValueError):
+                continue        # a project with no folder has no reports folder
+    return False
+
+
+def _report_data(doc):
+    """Whether a document holds a report's data: its period, facts week or lock in meta, or logos or a period in its header."""
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    header = [s.get("data") for s in doc.get("sections") or [] if isinstance(s, dict) and isinstance(s.get("data"), dict)
+              and s.get("type") == "header"]
+    return any(k in meta for k in REPORT_META) or any(k in d for d in header for k in REPORT_HEADER)
+
+
+def report_signs(path, doc):
+    """v2.5.1 (#239, e): why a file opened as minutes is a report (a client report edited to say minutes most of all): [] when none.
+    Any sign counts: a report's kind, a client audience, a report's file name or title, a reports folder, or a report's data (its
+    period, facts week or lock in meta, logos or a period in its header)."""
+    signs = []
+    if doc.get("kind") in ("weekly", "client") or doc.get("audience") == "client":
+        signs.append("its data says it is a report")
+    if REPORT_NAME.search(real(path).name) or REPORT_NAME.search(str(doc.get("title") or "")):
+        signs.append("its name is a report's")
+    if _report_data(doc):
+        signs.append("it holds a report's period, facts or logos")
+    if _in_reports_folder(real(path)):
+        signs.append("it is in a Reports folder")
+    return signs
+
+
+def _export_doc(path, kind, doc=None):
+    """The document an export renders: `doc` as the caller checked it (a client report read again as one), else the file at `path`
+    (read_report). Raises DocError for a kind the route doesn't expect."""
+    if doc is None:
+        doc = read_report(path, kind)
+        if kind == "minutes" and report_signs(path, doc):
+            raise DocError("That file is a report, not minutes (" + "; ".join(report_signs(path, doc)) + "), so it isn't exported "
+                           "here. Export a report from the Reporting hub.")
+        return doc
+    check(doc)
+    if kind is not None and doc.get("kind") != kind:
+        raise DocError("That file isn't this report (its kind was changed), so nothing was done. Open the report again from creaite.")
+    return force_client_audience(copy.deepcopy(doc))
+
+
+def _client_gate(doc):
+    """v2.5.1 (#239): the client gate's findings on the document an export renders ([] for any other kind)."""
+    if doc.get("kind") != "client":
+        return []
+    import client_leak
+    return client_leak.findings(doc)
 
 
 def _export_name(doc, path, fmt):
@@ -1057,10 +1306,10 @@ def _check_baseline(doc):
     """A client view or distributed minutes is exported only once the internal document it is based on is approved."""
     if not is_client(doc):
         return
-    base = doc.get("based_on") or {}
+    base = doc.get("based_on") if isinstance(doc.get("based_on"), dict) else {}
     try:
-        approved = bool(base.get("path")) and read(base["path"]).get("state") == "approved"
-    except DocError:
+        approved = isinstance(base.get("path"), str) and bool(base["path"]) and read(base["path"]).get("state") == "approved"
+    except (DocError, OSError, ValueError):
         approved = False
     if not approved:
         what = "Distributed minutes are" if doc.get("kind") == "minutes" else "A client report is"
@@ -1068,23 +1317,45 @@ def _check_baseline(doc):
                        "approved.")
 
 
-def _make_export(doc, fmt, stem, built=None):
-    """Write the export into system/staging/drafts/ and return its path. Raises DocError."""
+def _make_export(doc, fmt, stem, built=None, token=None):
+    """Write the export into system/staging/drafts/: (its path, {page: the HTML a PDF was printed from, drawn: the hashes of the
+    pictures a Word export drew}). Raises DocError (also for a client report not from client_export: `token`)."""
+    if not client_token_ok(doc, token):
+        raise DocError(CLIENT_ONLY_THERE)
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
     # An HTML export never takes the document's own draft path (drafts/<name>.html): a plain page there would stand in for the draft.
     draft = paths.free_path(paths.DRAFTS, stem + (" (read only)" if fmt == "html" else ""), EXPORTS[fmt])
+    made = {"page": None, "drawn": set()}
     if fmt == "html":
         draft.write_text(built or render(doc, editing=False), encoding="utf-8")
     elif fmt == "docx":
-        word_export(doc, draft)
+        made["drawn"] = word_export(doc, draft, token=token) or set()
     else:
+        made["page"] = built or render(doc, editing=False)
         page = paths.free_path(paths.DRAFTS, f"{stem} print", ".html")
-        page.write_text(built or render(doc, editing=False), encoding="utf-8")
+        page.write_text(made["page"], encoding="utf-8")
         try:
             print_pdf(page, draft)
         finally:
             page.unlink()
-    return draft
+    return draft, made
+
+
+def client_output_findings(doc, fmt, draft, made):
+    """v2.5.1 (#239, c): the check of a client report's made file (client_output.check); any finding (or a check that can't run)
+    deletes the file. [] for a document that isn't a client report."""
+    if doc.get("kind") != "client":
+        return []
+    import client_output
+    tables = tables_in_force()
+    try:
+        found = client_output.check(doc, fmt, draft, page=made.get("page"), drawn=made.get("drawn") or (),
+                                    allowed=tables.get("allowed") if tables else None)
+    except Exception as e:  # noqa: BLE001  fails closed: an output that can't be checked is never kept
+        found = [f"the made file couldn't be checked ({type(e).__name__})"]
+    if found:
+        Path(draft).unlink(missing_ok=True)
+    return found
 
 
 def _file_export(out, draft, target, fail):
@@ -1230,6 +1501,12 @@ def own_logos(doc, header, ticked=True):
         return report_doc.logos(code, kinds)
     except (LookupError, OSError, ValueError):     # an unknown project or an unreadable logos folder: no logo, never a failure
         return []
+def _logo_ok(f, allowed, table):
+    """Whether a logo file may be drawn: a real file (no symlink) that is one of the project's own (`allowed`), and while a client
+    snapshot renders, the snapshot's logo of that name with the same bytes (`table`, v2.5.1 step 2); never a hard link (step 3)."""
+    if f.is_symlink() or not f.is_file() or f.stat().st_nlink > 1 or f.resolve() not in allowed:
+        return False
+    return table is None or _same_bytes(f, table.get(f.name))
 
 
 class _Word:
@@ -1238,6 +1515,7 @@ class _Word:
     def __init__(self, doc, work):
         """The export's state."""
         self.doc, self.items, self.work, self.n = doc, doc.get("items") or {}, Path(work), 0
+        self.drawn = set()          # v2.5.1 (#239, c): the hashes of the pictures this export drew itself (client_output.check)
         try:
             self.folder = paths.project_dir(doc.get("project"))
         except Exception:                      # an unknown project: pictures then need absolute paths
@@ -1252,6 +1530,8 @@ class _Word:
         self.n += 1
         f = self.work / f"pic{self.n}.png"
         f.write_bytes(data)
+        import client_output
+        self.drawn.add(client_output.pic_hash(data))
         return [{"image": str(f), "caption": caption, "width": show_w or width}]
 
     # ── text ──
@@ -1308,14 +1588,26 @@ class _Word:
         return (self.doc.get("audience") or "internal") == "internal" and self.doc.get("kind") != "client"
 
     # ── the logos ──
+    def logo_files(self, s):
+        """v2.5.1 (#239, b): the logo files this export may draw, in order. A client report draws the logos the project ticks now
+        (report_doc.client_logos), never a stored list; any report draws only a file that is one of the project's own logos
+        (report_doc.logos, the logos folder), never another path a draft stored."""
+        import report_doc
+        code = str(self.doc.get("project") or "")
+        if not report_doc.CODE.match(code):
+            return []
+        allowed = {paths.resolve(x["path"]).resolve() for x in report_doc.logos(code)}
+        wanted = report_doc.client_logos(code, self.doc.get("layout")) if self._client() else (s.get("data") or {}).get("logos") or []
+        table = (tables_in_force() or {}).get("logos") if self._client() else None
+        files = [paths.resolve(Path(str(lg.get("path"))).as_posix()) for lg in wanted if isinstance(lg, dict) and lg.get("path")]
+        return [f for f in files if _logo_ok(f, allowed, table)]
+
     def logos(self, s):
-        """The header's chosen logos as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it is."""
+        """The header's chosen logos (logo_files) as one fill entry (side by side); an SVG becomes a PNG, a PNG or JPEG is used as it
+        is."""
         one = []
-        for lg in own_logos(self.doc, s):           # 2.5.1 M1: the project's own files only, never a path the document names
-            f = paths.resolve(lg["path"])
-            try:                                  # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
-                if not f.is_file() or f.is_symlink():
-                    continue
+        for f in self.logo_files(s):
+            try:                                    # p240-leakfix LOGO 1: a bad logo file is skipped, it never fails the export
                 one += self._logo_entry(f)
             except Exception:           # a damaged or unreadable logo is left out of the file; the report is still made
                 continue
@@ -1757,13 +2049,15 @@ def _word_body(doc, els, work):
             blocks, vals = _section_blocks(ctx, n, s, heading, para, table, total)
             out += blocks
             values.update(vals)
-    return out, values
+    return out, values, ctx.drawn
 
 
-def word_export(doc, out):
+def word_export(doc, out, token=None):
     """Write the Word export of `doc` at `out` (inside system/staging/drafts/): the firm's template for its kind, its title block,
-    then each shown section in page order, filled by docx_tools.py fill. Raises DocError."""
-    import contextlib
+    then each shown section in page order, filled by docx_tools.py fill. Returns the hashes of the pictures it drew itself (v2.5.1,
+    client_output.check). Raises DocError (a client report: only from client_snapshot.client_export, `token`)."""
+    if not client_token_ok(doc, token):
+        raise DocError(CLIENT_ONLY_THERE)
     import io
     import shutil
     import docx_tools
@@ -1781,7 +2075,7 @@ def word_export(doc, out):
     tmp_values = paths.free_path(paths.DRAFTS, f"{stamp} values", ".json")
     said = io.StringIO()
     try:
-        body, values = _word_body(doc, WORD_EL.findall(xml[start:xml.rindex(sect)]), work)
+        body, values, drawn = _word_body(doc, WORD_EL.findall(xml[start:xml.rindex(sect)]), work)
         derived = xml[:start] + "".join(body) + sect + "</w:body></w:document>"
         docx_tools.write_parts([(i, derived.encode("utf-8") if i.filename == "word/document.xml" else raw) for i, raw in parts], tmp_tpl)
         tmp_values.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8")
@@ -1793,6 +2087,7 @@ def word_export(doc, out):
         shutil.rmtree(work, ignore_errors=True)
     if code != 0:
         raise DocError(f"The Word export couldn't be filled: {said.getvalue().strip()}")
+    return {h for h in drawn if h}
 
 
 # ── PDF: Chrome's print to PDF of the HTML export ────────────────────────────

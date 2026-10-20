@@ -67,6 +67,7 @@ def make_vault():
               "claims.py",                                         # BL-314
               "settings_catalogue.py", "health.py",                # BL-320
               "archive.py",                                        # BL-10, BL-03
+              "usage_log.py", "usage_report.py",                   # #197, #238: the Usage figures in the page's data
               "notes.py",                                          # BL-301: the note format, read by search
               "capture.py",                                        # BL-301 C: the capture drawer's server side
               "edit_ai.py",                                        # BL-301 D: AI on selected text
@@ -79,6 +80,8 @@ def make_vault():
               "creaite_doc.py",                                    # v2.1.0 P1: creaite's document format
               "minutes_record.py", "date_words.py",                # v2.1.0 P4: the minutes record, dates in words
               "linktext.py",                                       # #121: links in plain text, read by the reports, search and the Excel export
+              "confusables.py", "client_output.py",                # v2.5.1 (#239): the look-alike skeleton, the client output check
+              "client_snapshot.py",                                # v2.5.1 (#239, step 2): the checked snapshot, the one client export
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
     shutil.copytree(REPO / "system" / "scripts" / "vendor", scripts / "vendor", ignore=NO_CACHE)

@@ -1831,16 +1831,14 @@ class ReportingSpace(V210Case):
         """64. The project's cockpit has a Reporting card (this week's weekly report and each client report, with their state and
         an Open on each, and Open reporting); Open reporting goes to the reporting space."""
         b = self.b
+        # #254 (Alan, 20-10-2026): the Reporting card is gone from the cockpit; the check now asserts the door that stays, the project
+        # page's Reports icon (data-reports), which opens the reporting space. The check's wording above is the PM's and is unchanged.
         b.eval("go('cockpit','FAL')")
-        b.wait("!!document.querySelector('#cockRep #repCard')", 15)
-        text = b.eval("document.getElementById('repCard').textContent")
-        for want in ("Reporting", "Weekly report", "Client report", "Northgate Energy"):
-            self.assertIn(want, text)
-        self.assertEqual(b.eval("document.querySelector('[data-rpcard=internal]').getAttribute('href')"), f"#weekly=FAL&week={self.week}")
-        self.assertEqual(b.eval("document.querySelector('[data-rpcard=client]').getAttribute('href')"), f"#client-report=FAL/{self.week}/Northgate%20Energy")
-        b.eval("document.querySelector('[data-rpcard=space]').click()")
-        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .rp-card')", 15)
-        self.note(64, "the card names both reports, links to both views and to the reporting space")
+        b.wait("!!document.querySelector('#v-cockpit .cockfoot [data-reports=FAL]')", 15)
+        self.assertFalse(b.eval("!!document.querySelector('#cockRep, #repCard, [data-rpcard]')"))
+        b.eval("document.querySelector('#v-cockpit .cockfoot [data-reports=FAL]').click()")
+        b.wait("VIEW==='reporting' && !!document.querySelector('#v-reporting .page')", 25)
+        self.note(64, "no Reporting card (#254); the Reports icon opens the reporting space")
 
     def test_c65_friday_reminder_and_command_k(self):
         """65. The Friday reminder on Today ("… weekly report for week ending … is due") points to Reports, and ⌘K reaches

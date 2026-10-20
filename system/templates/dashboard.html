@@ -2651,9 +2651,18 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .ckchips,.qcchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px} .qcchips:empty{display:none} .ckvague{margin-top:4px}
 .acttabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 14px} .acttabs [role=tab]{border:0;background:none;padding:8px 12px;font:500 var(--fs-md)/20px var(--font);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
 .acttabs [role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)} .acttabs [role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
-#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg{display:none!important}
+#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg,#v-activity.u #actTools,#v-activity.u #actBar,#v-activity.u #actTbl,#v-activity.u #achg{display:none!important}
 #actQuality h2{margin:20px 0 6px} .qmoved{font-weight:500;margin:4px 0} .qtab{width:100%;border-collapse:collapse;font-size:var(--fs-sm)} .qtab th,.qtab td{text-align:left;padding:6px 10px;border-top:1px solid var(--line)}
 .qtab thead th{border-top:0;color:var(--muted);font-weight:500} #actQuality .qtab tbody th{font:500 var(--fs-sm)/18px var(--font);text-transform:none;letter-spacing:0;color:var(--ink);background:none} .qnr{display:block;font-weight:400;font-size:var(--fs-xs);color:var(--muted)}
+/* ===== #238 (v2.5.1) Activity › Usage: cards, a cost-and-load chart and the tables (Quality's .qtab); tokens only ===== */
+#actUsage h2{margin:20px 0 6px} .usum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.ucard{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px} .ucard .v{font:700 var(--fs-2xl)/var(--lh-1-25) var(--display,var(--font))}
+.ucard .l{font-size:var(--fs-sm);color:var(--muted)} .ucard .d{font-size:var(--fs-xs);margin-top:4px;color:var(--muted)} .ucard .d.up{color:var(--warn)} .ucard .d.dn{color:var(--ok)}
+.uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0} .uchart h2{margin:0 0 6px!important} .uchart .sub{margin:6px 0 0}
+.uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
+.ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
+#actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+/* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is
    smaller, padding grows the hit area and an equal negative margin gives the space back, so nothing moves and no row grows. */
@@ -3134,14 +3143,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tres>details[open]>summary .th::before{transform:rotate(90deg)}
 .tres>details[open]>summary{margin-bottom:8px}
 .tres>details>summary:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
-/* #168: Intake and Review folds like Week ahead; an unseen message keeps a dot and "new" on the folded heading */
-.tdnew{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--warn,var(--accent))}
-.tdnew[hidden]{display:none}
-.tdnew::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 #hTd{gap:4px}
-/* #208: the one line for Review and Intake: quiet text, each count a link */
-.tdline{margin:2px 0 6px;font-size:var(--fs-sm);color:var(--ink2,var(--muted))}
-.tdline a{font-weight:600}
 @media (max-width:480px){
   #tBrief ol.bl>li>.tb{flex:1 1 calc(100% - 40px)}   /* a row's buttons go under its words, never squeezing them to a word a line */
   #tBrief .tdrow{flex-wrap:wrap} #tBrief .tdrow .tb{flex-basis:calc(100% - 90px)}
@@ -3873,11 +3875,11 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 
 /* ===== BL-337 (v2.1.0 P9) ===== Reports, the reporting space and the cockpit's Reporting card (components/reporting/) */
 
-.rp .chip,.rp-cockcard .chip{border:0;padding:0 8px;background:var(--sunk);color:var(--muted);font-weight:500;white-space:nowrap}   /* #193: neutral report chips keep their grey tint, 26px tall */
-.rp .chip.ok,.rp-cockcard .chip.ok{background:var(--ok-soft);color:var(--ok)} .rp .chip.warn,.rp-cockcard .chip.warn{background:var(--warn-soft);color:var(--warn)}
-.rp .chip.plan,.rp-cockcard .chip.plan{background:var(--accent-soft);color:var(--accent)}
+.rp .chip{border:0;padding:0 8px;background:var(--sunk);color:var(--muted);font-weight:500;white-space:nowrap}   /* #193: neutral report chips keep their grey tint, 26px tall */
+.rp .chip.ok{background:var(--ok-soft);color:var(--ok)} .rp .chip.warn{background:var(--warn-soft);color:var(--warn)}
+.rp .chip.plan{background:var(--accent-soft);color:var(--accent)}
 
-.rp .btn.sm,.rp-cockcard .btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-xs);text-decoration:none;color:inherit} .rp .btn.primary,.rp-cockcard .btn.primary{color:var(--accent-ink)}
+.rp .btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-xs);text-decoration:none;color:inherit} .rp .btn.primary{color:var(--accent-ink)}
 .rp-both{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;border:1px dashed var(--accent);border-radius:var(--r-md);padding:10px 14px;background:var(--accent-soft);margin-bottom:16px}
 .rp-both a.btn{text-decoration:none}
 .rp-both.solid{border-style:solid}
@@ -3892,7 +3894,7 @@ table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
 .rp-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:700px){.rp-pair{grid-template-columns:minmax(0,1fr)}}
 .rp-card{border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:10px;background:var(--surface);align-content:start;min-width:0}
 .rp-card .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .rp-card .top b{font-size:var(--fs-lg)}
-.rp-card .acts,.rp-cockcard .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rp-card .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .rp-thumb{height:150px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:10px 12px;display:grid;gap:6px;align-content:start}
 .rp-thumb i{display:block;height:8px;border-radius:var(--r-xs);background:var(--line-strong)}
 .rp-thumb .rp-flag{height:18px;width:60px} .rp-flag[data-kind="internal"]{background:var(--warn)} .rp-flag[data-kind="client"]{background:var(--ok)}
@@ -3900,8 +3902,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 .rp-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:var(--fs-sm)} .rp-kv span:nth-child(odd){color:var(--muted)}
 .rp-files h2{margin-bottom:8px} .rp-files>div{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .rp-files>div:last-child{border-bottom:0}
 .rp-files .g{flex:1;min-width:0;overflow-wrap:anywhere}
-.rp-cockcard{display:grid;gap:8px} .rp-cockcard h2{margin:0;display:flex;gap:8px;align-items:center}
-.rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)} .rp-row .g{flex:1;min-width:180px}
 /* ===== end BL-337 ===== */
 
 /* ===== #122 (final layout, Alan 16-10-2026) ===== the Notes bar is one line: Heading, List and Insert are hover menus (components/EditorBar.jsx) */
@@ -4112,6 +4112,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
+
+/* #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (locked mockup dev/mockups/today-intake-line-mockup.html). Tokens only. */
+.tdquiet{display:flex;align-items:center;gap:8px;margin:14px 0 0;padding:8px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}
+.tdquiet svg.i{width:16px;height:16px;flex:none} .tdquiet .tdq{flex:1} .tdquiet a{color:inherit;text-decoration:underline dotted;text-underline-offset:3px} .tdquiet a:hover{color:var(--accent);text-decoration:underline}
+.tdquiet[hidden]{display:none}
+.tdquiet .ib svg.i{width:14px;height:14px}
+/* v2.5.1 (#239): the client report's Show as exported is the server's render of its checked preview snapshot, in a sandboxed frame */
+.crx{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px}
+.crx-badge{align-self:center;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted)}
+.crx-frame{width:min(860px,100%);height:calc(100vh - 220px);min-height:480px;border:1px solid var(--line);background:#fff}
+.crx-wait,.crx-err{padding:16px}
 </style>
 </head>
 <body>
@@ -4151,8 +4162,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           <section class="tsec" id="mineSec" aria-labelledby="hMine"><h2 class="th" id="hMine">Your commitments <span class="cnt" id="nMine"></span><a href="#" data-go="mine">All mine</a></h2><ol class="bl" id="mineList"></ol><div class="moreline" id="mineMore"></div>
             <div class="tsub" id="tOwe" hidden><h3 class="th th3" id="hOwe">You owe <span class="cnt" id="nOwe"></span></h3><ol class="bl" id="oweList"></ol><div class="moreline" id="oweMore"></div></div>
             <div class="tsub" id="tWait" hidden><h3 class="th th3" id="hWait">Waiting on <span class="cnt" id="nWait"></span><a href="#" data-nav="all:chase:">Chase view</a></h3><ol class="bl" id="waitList"></ol><div class="moreline" id="waitMore"></div></div>
+            <div id="tdQuietHost"></div><!-- #245: Intake as one quiet, dismissible line (components/today/IntakeLine.jsx) -->
           </section><!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
-          <section class="tsec tdsec tres" id="tdSec" aria-labelledby="hTd" hidden><details id="tdFold" open><summary><h2 class="th" id="hTd">Intake and Review <span class="cnt" id="nTd"></span><span class="tdnew" id="tdNew" hidden>new</span></h2></summary><div id="tdBody"></div></details></section><!-- #168: above Week ahead; folds like it, open unless hidden, remembered in this browser -->
+          <section class="tsec tdsec" id="tdSec" aria-labelledby="hTd" hidden><h2 class="th" id="hTd">Messages <span class="cnt" id="nTd"></span></h2><div id="tdBody"></div></section><!-- #245: the cards of messages from people Alan follows (BL-334); the Intake and Review section, its line and its fold are gone: Intake is one quiet line at the foot of Your commitments -->
           <section class="tsec tres" id="weekSec" aria-labelledby="hWeek"><details id="weekFold" open><summary><h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo"></span></h2></summary><div id="weekList"></div></details></section><!-- #105: folds like Resolved; open unless hidden, and remembered in this browser -->
           <section class="tsec tres" id="resSec" aria-labelledby="hRes"><details id="resFold"><summary><h2 class="th" id="hRes">Resolved <span class="cnt" id="chgTitle"></span></h2></summary><ol class="bl" id="chgList"></ol><div class="moreline" id="chgMore"></div></details></section><!-- BL-319: folded to one line -->
           <section class="tsec" id="pfSec" aria-labelledby="hPort"><h2 class="th" id="hPort">Portfolio</h2><div class="tbl" id="pfTbl"></div></section>
@@ -4235,6 +4247,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
 <h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
 <h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
+<div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden></div><!-- #238: Usage, drawn by components/activity/UsagePanel.jsx -->
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
@@ -4299,6 +4312,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ACTKINDS: () => ACTKINDS,
     ACTPK: () => ACTPK,
     ACTSHOW: () => ACTSHOW,
+    ACTTABS: () => ACTTABS,
     ACT_ASK_AGAIN: () => ACT_ASK_AGAIN,
     AGD: () => AGD,
     AGSTYLES: () => AGSTYLES,
@@ -4847,6 +4861,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     actSel: () => actSel,
     actSetFilters: () => actSetFilters,
     actShowQuality: () => actShowQuality,
+    actShowTab: () => actShowTab,
     actTabsDraw: () => actTabsDraw,
     actTools: () => actTools,
     actTyping: () => actTyping,
@@ -5756,7 +5771,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     inboxBadge: () => inboxBadge,
     initials: () => initials,
     insertImage: () => insertImage,
+    intakeParts: () => intakeParts,
     intakeSeams: () => intakeSeams,
+    intakeTarget: () => intakeTarget,
     internalIn: () => internalIn,
     isConflict: () => isConflict,
     isDark: () => isDark,
@@ -5918,7 +5935,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     mountPrepShape: () => mountPrepShape,
     mountRejectMenu: () => mountRejectMenu,
     mountRejectsList: () => mountRejectsList,
-    mountReportingCard: () => mountReportingCard,
     mountSneak: () => mountSneak,
     mountStatusDots: () => mountStatusDots,
     mounted: () => mounted,
@@ -6542,6 +6558,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderHelp: () => renderHelp,
     renderIgnore: () => renderIgnore,
     renderInbox: () => renderInbox,
+    renderIntakeLine: () => renderIntakeLine,
     renderLayoutBar: () => renderLayoutBar,
     renderMeetings: () => renderMeetings,
     renderMgr: () => renderMgr,
@@ -6893,7 +6910,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     takeNewText: () => takeNewText,
     tdFocusAfter: () => tdFocusAfter,
     tdFocusMark: () => tdFocusMark,
-    tdLine: () => tdLine,
     tdToReview: () => tdToReview,
     textMsg: () => textMsg,
     themeFade: () => themeFade,
@@ -6940,6 +6956,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     updateView: () => updateView,
     uploadClientLogo: () => uploadClientLogo,
     uploadedFiles: () => uploadedFiles,
+    usageDraw: () => usageDraw,
+    usageOpen: () => usageOpen,
     useCount: () => useCount,
     vagueWhy: () => vagueWhy,
     validate: () => validate,
@@ -25803,6 +25821,74 @@ ${s5}`;
     return c5.run();
   }
 
+  // core/caretPlace.js
+  function placeAtCaret(view, pos, el2, o5 = {}) {
+    const gap = o5.gap ?? 4, edge = o5.edge ?? 8, max = o5.max ?? 360;
+    const put2 = () => {
+      if (!el2.isConnected || view.isDestroyed) return;
+      let c5;
+      try {
+        c5 = view.coordsAtPos(Math.min(pos, view.state.doc.content.size));
+      } catch (e4) {
+        return;
+      }
+      let c02 = c5;
+      if (o5.from !== void 0) {
+        try {
+          c02 = view.coordsAtPos(Math.min(o5.from, view.state.doc.content.size));
+        } catch (e4) {
+        }
+      }
+      const vw2 = document.documentElement.clientWidth, vh2 = window.innerHeight;
+      el2.style.position = "fixed";
+      if (o5.level !== void 0) {
+        const w02 = el2.offsetWidth, h02 = el2.offsetHeight;
+        el2.style.left = `${Math.max(4, Math.min(o5.x ? o5.x() : c5.left, vw2 - w02 - 4))}px`;
+        el2.style.top = `${Math.max(edge, Math.min(c5.top + o5.level, vh2 - h02 - edge))}px`;
+        el2.dataset.side = "level";
+        return;
+      }
+      el2.style.maxHeight = "";
+      if (o5.scroll !== false) el2.style.overflowY = "auto";
+      const w6 = el2.offsetWidth, natural = Math.min(el2.scrollHeight, max);
+      const below = vh2 - c5.bottom - gap - edge, above = c02.top - gap - edge;
+      const up2 = Math.max(natural, o5.need || 0) > below && above > below;
+      if (o5.overlap && natural > below && natural > above) {
+        const h22 = Math.min(natural, vh2 - 2 * edge);
+        el2.style.maxHeight = `${h22}px`;
+        el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
+        el2.style.top = `${Math.max(edge, vh2 - edge - h22)}px`;
+        el2.dataset.side = "over";
+        return;
+      }
+      const room = Math.max(60, up2 ? above : below), h5 = Math.min(natural, room);
+      if (o5.scroll !== false) el2.style.maxHeight = `${Math.min(max, room)}px`;
+      el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
+      el2.style.top = `${up2 ? Math.max(edge, c02.top - gap - h5) : c5.bottom + gap}px`;
+      el2.dataset.side = up2 ? "above" : "below";
+    };
+    put2();
+    let raf = 0, tm2 = 0;
+    const on2 = () => {
+      put2();
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
+      raf = requestAnimationFrame(put2);
+      tm2 = window.setTimeout(put2, 120);
+    };
+    window.addEventListener("scroll", on2, true);
+    window.addEventListener("resize", on2);
+    const vv = window.visualViewport;
+    if (vv) vv.addEventListener("resize", on2);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
+      window.removeEventListener("scroll", on2, true);
+      window.removeEventListener("resize", on2);
+      if (vv) vv.removeEventListener("resize", on2);
+    };
+  }
+
   // ../../vendor/preact/signals-core/dist/signals-core.module.js
   var i4 = /* @__PURE__ */ Symbol.for("preact-signals");
   function t46() {
@@ -26492,633 +26578,6 @@ ${s5}`;
       return n4[Symbol.dispose];
     }, [n4]);
     return n4;
-  }
-
-  // stores/rail.js
-  var RAIL_ITEMS = [
-    { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
-    { id: "work", title: "Work", icon: "work", group: "top" },
-    { id: "review", title: "Review", icon: "review", badge: "revBadge", group: "top" },
-    { id: "projects", title: "Projects", icon: "projects", group: "top" },
-    { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },
-    /* BL-337 */
-    { id: "people", title: "People", icon: "people", group: "top" },
-    { id: "inbox", title: "Intake", icon: "inbox", badge: "inboxBadge", group: "more" },
-    { id: "files", title: "Files", icon: "folder", group: "more" },
-    { id: "activity", title: "Activity", icon: "activity", group: "more" },
-    { id: "settings", title: "Settings", icon: "gear", group: "more" }
-  ];
-  var RAIL_DEF = {
-    order: RAIL_ITEMS.filter((i5) => i5.group === "top").map((i5) => i5.id),
-    more: RAIL_ITEMS.filter((i5) => i5.group === "more").map((i5) => i5.id),
-    hidden: [],
-    display: "titles"
-  };
-  var railItem = (id2) => RAIL_ITEMS.find((i5) => i5.id === id2);
-  function railNorm(c5) {
-    c5 = c5 && typeof c5 === "object" ? c5 : {};
-    const known2 = new Set(RAIL_ITEMS.map((i5) => i5.id));
-    const seen = /* @__PURE__ */ new Set(["today"]);
-    const keep2 = (a5) => (Array.isArray(a5) ? a5 : []).filter((id2) => typeof id2 === "string" && known2.has(id2) && !seen.has(id2) && !!seen.add(id2));
-    const hidden = Array.isArray(c5.hidden) ? c5.hidden : [];
-    const more = keep2(Array.isArray(c5.more) ? [...c5.more, ...hidden] : [...RAIL_DEF.more, ...hidden]);
-    const order = ["today", ...keep2(c5.order)];
-    for (const it2 of RAIL_ITEMS) if (!seen.has(it2.id)) {
-      seen.add(it2.id);
-      (it2.group === "more" ? more : order).push(it2.id);
-    }
-    return { order, more, hidden: [], display: c5.display === "icons" ? "icons" : "titles" };
-  }
-  var railCfg = y3(RAIL_DEF);
-  var railView = y3("today");
-  var railCounts = y3(
-    /** @type {Record<string, RailCount>} */
-    {}
-  );
-  var railMoreOpen = y3(false);
-  var railCustOpen = y3(false);
-  var railLabelsOn = y3(true);
-  var railIconSize = y3(
-    /** @type {"small"|"medium"|"large"} */
-    "small"
-  );
-  var railSizeNorm = (v5) => v5 === "medium" || v5 === "large" ? v5 : "small";
-  var railWide = y3(true);
-  var railNarrow = y3(false);
-  var RAIL_KEY = "creaite-rail-collapsed";
-  var railUser = y3(
-    /** @type {boolean | null} */
-    null
-  );
-  function railLoadUser() {
-    try {
-      const v5 = store.get(RAIL_KEY, null);
-      railUser.value = typeof v5 === "boolean" ? v5 : null;
-    } catch (x5) {
-      railUser.value = null;
-    }
-  }
-  function railSetUser(v5) {
-    railUser.value = v5;
-    try {
-      store.set(RAIL_KEY, v5);
-    } catch (x5) {
-    }
-  }
-  var railCollapsed = g3(() => railNarrow.value || (railUser.value !== null ? railUser.value : railCfg.value.display === "icons" || !railWide.value));
-  var railLabelled = g3(() => railCollapsed.value && railLabelsOn.value && railCfg.value.display !== "icons");
-  var railMode = g3(() => !railCollapsed.value ? "expanded" : railLabelled.value ? "labels" : "icons");
-  var railMoreWaiting = g3(() => railCfg.value.more.map((id2) => (
-    /** @type {[string, number]} */
-    [railItem(id2).title, (railCounts.value[id2] || { n: 0 }).n]
-  )).filter((x5) => x5[1] > 0));
-  function setRailView(key2) {
-    railView.value = key2;
-  }
-  function setRailCount(id2, n4, label) {
-    const was = railCounts.value[id2];
-    if (was && was.n === n4 && was.label === label) return;
-    railCounts.value = { ...railCounts.value, [id2]: { n: n4, label } };
-  }
-
-  // stores/exportSave.js
-  var exportClash = y3(
-    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
-    null
-  );
-  var exportSaved = y3(
-    /** @type {ExportAnswer|null} */
-    null
-  );
-  var exportFailed = y3("");
-  async function saveExport(body2) {
-    exportFailed.value = "";
-    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
-    if (r4.ok) {
-      exportClash.value = null;
-      exportSaved.value = r4;
-    } else if (r4.clash) {
-      exportSaved.value = null;
-      exportClash.value = { body: body2, r: r4 };
-    } else {
-      exportClash.value = null;
-      exportSaved.value = null;
-      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
-    }
-    return r4;
-  }
-  async function answerClash(choice, newName) {
-    const c5 = exportClash.value;
-    if (!c5) return null;
-    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
-  }
-  function cancelClash() {
-    exportClash.value = null;
-  }
-  var openFolder = (folder) => api("/api/open", { path: folder });
-  var showInFinder = (path) => api("/api/report/reveal", { path });
-  var openSaved = (path) => api("/api/open", { path });
-
-  // stores/weekly.js
-  var weeklyArg = y3(
-    /** @type {{code: string, week?: string}|null} */
-    null
-  );
-  var weeklyView = y3(
-    /** @type {WeeklyView|null} */
-    null
-  );
-  var weeklyDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var weeklyBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var weeklyBusy = y3("");
-  var weeklyEditing = y3(false);
-  var weeklyLogos = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var wkAsked = 0;
-  function wkIdentity(d5) {
-    const x5 = d5 === void 0 ? weeklyDoc.value : d5;
-    return x5 ? `${wkAsked}|${JSON.stringify(weeklyArg.value)}|${x5.project}|${x5.date}` : "";
-  }
-  async function loadWeekly(arg, fresh = false) {
-    const mine = ++wkAsked;
-    weeklyArg.value = arg;
-    weeklyEditing.value = false;
-    if (!viaServer()) {
-      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
-      return;
-    }
-    weeklyBusy.value = "Opening the weekly report…";
-    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
-    if (mine !== wkAsked) return;
-    weeklyBusy.value = "";
-    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
-    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
-  }
-  function takeWeekly(r4) {
-    weeklyView.value = r4;
-    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function readLogos(code, logos) {
-    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
-    if (!want.length) return;
-    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
-    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
-  }
-  async function saveWeekly(req) {
-    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
-    const ok2 = !!(r4 && r4.ok);
-    if (ok2) {
-      weeklyBase.value = Number(r4.version) || weeklyBase.value;
-      const v5 = weeklyView.value;
-      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
-    }
-    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
-  }
-  async function approveWeekly(doc, force) {
-    const a5 = weeklyArg.value;
-    const r4 = await api("/api/report/approve", {
-      kind: "weekly",
-      code: doc.project || a5 && a5.code,
-      week_ending: doc.date,
-      doc,
-      base_version: weeklyBase.value,
-      force: force || void 0
-    });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportWeekly(doc, fmt, page) {
-    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
-  }
-  var weeklyDirty = false;
-  var setWeeklyDirty = (on2) => {
-    weeklyDirty = on2;
-  };
-  function editDoc(d5, _why) {
-    const c5 = weeklyDoc.value;
-    if (c5 && d5 && (c5.project !== d5.project || c5.date !== d5.date || (c5.kind || "weekly") !== (d5.kind || "weekly"))) return false;
-    weeklyDoc.value = d5;
-    weeklyDirty = true;
-    return true;
-  }
-
-  // stores/reportingSettings.js
-  var LOGO_KINDS = (
-    /** @type {const} */
-    ["firm", "client", "partner"]
-  );
-  var crTick = y3(0);
-  var project = (code) => (
-    /** @type {any} */
-    P4.find((p6) => p6.code === code)
-  );
-  var clientReportOn = (code) => {
-    const p6 = project(code);
-    return !p6 || p6.cr !== false;
-  };
-  var clientReportCogLabel = (code) => `Client report settings: ${clientReportOn(code) ? "on" : "off"}`;
-  var clientReminderOn = (code) => {
-    const p6 = project(code);
-    return !p6 || p6.crrem !== false;
-  };
-  function partnersOf(code) {
-    const p6 = project(code);
-    return p6 && Array.isArray(p6.partners) ? p6.partners : [];
-  }
-  function logoKindsOf(code) {
-    const ps2 = partnersOf(code);
-    return ["firm", "client", ...ps2.length ? ps2.map((x5) => `partner:${x5.slug}`) : ["partner"]];
-  }
-  function logoKindName(code, kind) {
-    if (kind === "firm") return "Firm";
-    if (kind === "client") return "Client";
-    const own = partnersOf(code).find((x5) => `partner:${x5.slug}` === kind);
-    return own ? `Partner: ${own.name}` : "Partner";
-  }
-  var ticksOf = (kinds, chosen) => kinds.filter((k5) => k5 === "firm" || chosen.includes(k5) || chosen.includes("partner") && k5.startsWith("partner"));
-  function clientLogosOn(code) {
-    const p6 = project(code), kinds = logoKindsOf(code);
-    return ticksOf(kinds, p6 && Array.isArray(p6.crlogos) ? p6.crlogos : kinds);
-  }
-  function changed() {
-    crTick.value++;
-    repTick.value++;
-  }
-  async function setClientReport(code, on2) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (!await setMemLine(code, "Client report", on2 ? "on" : "off", "client_report")) return false;
-    p6.cr = on2;
-    if (!on2) {
-      for (let i5 = REMINDERS.length - 1; i5 >= 0; i5--) if (String(REMINDERS[i5].id).startsWith(`client:${code}:`)) REMINDERS.splice(i5, 1);
-    }
-    changed();
-    return true;
-  }
-  async function setClientReminder(code, on2) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (!await setMemLine(code, "Client report reminder", on2 ? "on" : "off", "client_report_reminder")) return false;
-    p6.crrem = on2;
-    changed();
-    return true;
-  }
-  async function setClientLogos(code, kinds) {
-    const p6 = project(code);
-    if (!p6) return false;
-    const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
-    const everyPartner = parts.every((k5) => list.includes(k5));
-    const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
-    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
-    p6.crlogos = list;
-    changed();
-    return true;
-  }
-  var CLIENT_NAME_MAX = 80;
-  async function setClientName(code, name) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (/[\r\n]/.test(String(name || ""))) {
-      snack("Not saved: the client's name is one line.");
-      return false;
-    }
-    const v5 = String(name || "").replace(/\s+/g, " ").trim();
-    if (v5.length > CLIENT_NAME_MAX) {
-      snack(`Not saved: the client's name is over ${CLIENT_NAME_MAX} characters.`);
-      return false;
-    }
-    if (!await setMemLine(code, "Client / partner", v5, "client_name")) return false;
-    p6.client = v5;
-    changed();
-    return true;
-  }
-  async function setClientRhythm(code, val2) {
-    const p6 = project(code);
-    if (!p6) return false;
-    if (!await setRhythm(code, val2)) return false;
-    p6.rhythm = val2;
-    changed();
-    return true;
-  }
-  var crLogoPaths = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var crLogoData = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var crLogoNote = y3("");
-  var crLogoOrphans = y3(
-    /** @type {{kind: string, slug: string, path: string}[]} */
-    []
-  );
-  var crLogoFor = y3("");
-  async function readClientLogos(code) {
-    if (!viaServer()) return;
-    const r4 = await api("/api/report/logo", { code });
-    if (!r4 || !r4.ok) return;
-    crLogoFor.value = code;
-    crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
-    crLogoData.value = r4.logos || {};
-    crLogoOrphans.value = Array.isArray(r4.orphans) ? r4.orphans : [];
-    weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
-    changed();
-  }
-  function toBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const fr2 = new FileReader();
-      fr2.onload = () => resolve(String(fr2.result).replace(/^data:[^,]*,/, ""));
-      fr2.onerror = () => reject(fr2.error);
-      fr2.readAsDataURL(blob);
-    });
-  }
-  var MARGIN_WHITE = 245, MARGIN_ALPHA = 8, DRAWN_MAX = 540;
-  function contentBox(px2, w6, h5) {
-    let x02 = w6, y02 = h5, x12 = -1, y12 = -1;
-    for (let y5 = 0; y5 < h5; y5++) for (let x5 = 0; x5 < w6; x5++) {
-      const i5 = (y5 * w6 + x5) * 4;
-      if (px2[i5 + 3] <= MARGIN_ALPHA || px2[i5] >= MARGIN_WHITE && px2[i5 + 1] >= MARGIN_WHITE && px2[i5 + 2] >= MARGIN_WHITE) continue;
-      if (x5 < x02) x02 = x5;
-      if (x5 > x12) x12 = x5;
-      if (y5 < y02) y02 = y5;
-      if (y5 > y12) y12 = y5;
-    }
-    if (x12 < 0) return null;
-    const box = { x: x02, y: y02, w: x12 - x02 + 1, h: y12 - y02 + 1 };
-    return box.w === w6 && box.h === h5 ? null : box;
-  }
-  async function trimmedCopy(file) {
-    try {
-      const bmp = await createImageBitmap(file), c5 = (
-        /** @type {any} */
-        document.createElement("canvas")
-      );
-      c5.width = bmp.width;
-      c5.height = bmp.height;
-      const g5 = (
-        /** @type {CanvasRenderingContext2D} */
-        c5.getContext("2d", { willReadFrequently: true })
-      );
-      g5.drawImage(bmp, 0, 0);
-      const box = contentBox(g5.getImageData(0, 0, c5.width, c5.height).data, c5.width, c5.height);
-      if (!box) return null;
-      const k5 = Math.min(1, DRAWN_MAX / Math.max(box.w, box.h)), out = document.createElement("canvas");
-      out.width = Math.max(1, Math.round(box.w * k5));
-      out.height = Math.max(1, Math.round(box.h * k5));
-      out.getContext("2d").drawImage(c5, box.x, box.y, box.w, box.h, 0, 0, out.width, out.height);
-      return await new Promise((res) => out.toBlob(res, "image/png"));
-    } catch {
-      return null;
-    }
-  }
-  async function uploadClientLogo(code, kind, file) {
-    crLogoNote.value = "";
-    const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || ["", ""])[1].toLowerCase().replace("jpeg", "jpg");
-    if (!ext) {
-      crLogoNote.value = "Choose a PNG, JPEG or SVG picture.";
-      return false;
-    }
-    if (file.size > 4e5) {
-      crLogoNote.value = "That logo is over 400 kB. Choose a smaller file.";
-      return false;
-    }
-    const trimmed = ext === "svg" ? null : await trimmedCopy(file);
-    const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
-    if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not saved.";
-      return false;
-    }
-    crLogoNote.value = r4.hint || "";
-    await readClientLogos(code);
-    snack(r4.message || "Logo saved");
-    return true;
-  }
-  async function removeClientLogo(code, kind) {
-    crLogoNote.value = "";
-    const r4 = await api("/api/report/logo/remove", { code, kind });
-    if (!r4 || !r4.ok) {
-      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not removed.";
-      return false;
-    }
-    await readClientLogos(code);
-    snack(r4.message || "Logo removed");
-    return true;
-  }
-
-  // stores/reporting.js
-  var repTick = y3(0);
-  var repFilter = y3(
-    /** @type {"need"|"all"} */
-    "need"
-  );
-  var repWeek = y3("");
-  var REP_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  var GAP = (
-    /** @type {Record<string, number>} */
-    { Weekly: 7, Fortnightly: 14, Monthly: 30 }
-  );
-  var MS = 864e5;
-  var repAddDays = (d5, n4) => new Date(Date.parse(d5) + n4 * MS).toISOString().slice(0, 10);
-  var between = (a5, b5) => Math.round((Date.parse(a5) - Date.parse(b5)) / MS);
-  function thisWeek(today = TODAY, hm2 = nowStamp().slice(11, 16)) {
-    const day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
-    const wd2 = (new Date(today).getUTCDay() + 6) % 7;
-    let start = repAddDays(today, -((wd2 - day + 7) % 7));
-    if (start === today && hm2 < String(S.weeklyTime || "12:00")) start = repAddDays(start, -7);
-    return start;
-  }
-  var shownWeek = () => repWeek.value || thisWeek();
-  function reportRecord(code, kind, week, client) {
-    const L3 = (
-      /** @type {any[]} */
-      D.reports || []
-    );
-    return L3.find((r4) => r4.project === code && r4.kind === kind && r4.date === week && (kind === "weekly" || !client || r4.client === client)) || null;
-  }
-  var inReview = (code, kind) => REV.some((r4) => !r4.done && r4.kind === "draft" && r4.ref === "report" && r4.p === code && (kind === "weekly" ? /weekly/i : /client/i).test(r4.rec && r4.rec.t || ""));
-  function filed(code, kind) {
-    const re2 = kind === "weekly" ? /Weekly report/ : /Client report/;
-    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && re2.test(f5.n) && f5.date).sort((a5, b5) => b5.date.localeCompare(a5.date));
-  }
-  function weekFiles(code, week) {
-    const from = repAddDays(week, -6);
-    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date && f5.date >= from && f5.date <= week).sort((a5, b5) => a5.n.localeCompare(b5.n));
-  }
-  function stateOf(code, kind, week, client, rhythm) {
-    const cur = week === thisWeek(), rec = reportRecord(code, kind, week, client);
-    if (rec) {
-      const s5 = String(rec.state || "draft");
-      return { state: { key: s5, label: s5 === "approved" ? "Approved" : "Draft", tone: s5 === "approved" ? "ok" : "warn", path: rec.path, edited: rec.edited }, due: s5 !== "approved" };
-    }
-    const L3 = filed(code, kind), from = repAddDays(week, -6);
-    const found = L3.find((f5) => kind === "weekly" ? f5.n.startsWith(week + " ") : f5.date >= from && f5.date <= week);
-    if (found) return { state: { key: "filed", label: "Filed", tone: "ok", path: found.path }, due: false };
-    if (cur && inReview(code, kind)) return { state: { key: "draft", label: "Draft", tone: "warn" }, due: true };
-    if (kind === "weekly") return { state: cur ? { key: "due", label: "Not drafted", tone: "warn" } : { key: "missing", label: "Not filed", tone: "" }, due: cur };
-    const gap = GAP[rhythm || "Weekly"] || 7, last = L3.find((f5) => f5.date < from);
-    const due = !last || between(week, last.date) >= gap;
-    if (!due) return { state: { key: "notdue", label: `Not due (${(rhythm || "Weekly").toLowerCase()})`, tone: "" }, due: false };
-    return cur ? { state: { key: "due", label: "Due", tone: "warn" }, due: true } : { state: { key: "missing", label: "Not filed", tone: "" }, due: false };
-  }
-  function weekView(code, week = thisWeek()) {
-    const p6 = P4.find((x5) => x5.code === code) || /** @type {any} */
-    {};
-    const w6 = stateOf(code, "weekly", week);
-    const rhythm = p6.rhythm || "Weekly", name = (p6.client || "").trim() || "Client";
-    const c5 = stateOf(code, "client", week, name, rhythm), rec = reportRecord(code, "client", week, name);
-    const clients = clientReportOn(code) ? [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }] : [];
-    return { week, internal: w6.state, clients, files: weekFiles(code, week), needs: !["filed", "approved", "notdue"].includes(w6.state.key) || clients.some((x5) => ["due", "draft"].includes(x5.state.key)) };
-  }
-  function spaceWeeks(code) {
-    const cur = thisWeek(), set = new Set([0, 1, 2, 3].map((i5) => repAddDays(cur, -7 * i5)));
-    FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date).forEach((f5) => {
-      const wd2 = (new Date(f5.date).getUTCDay() + 6) % 7, day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
-      const end = repAddDays(f5.date, (day - wd2 + 7) % 7);
-      if (end <= cur) set.add(end);
-    });
-    return [...set].sort().reverse().slice(0, 12);
-  }
-  var needsMe = () => P4.filter((p6) => weekView(p6.code).needs).map((p6) => p6.code);
-  function reportsBadge() {
-    const n4 = needsMe().length;
-    setRailCount("reports", n4, `${n4} project${n4 === 1 ? "" : "s"} with a report to check or a client report due`);
-  }
-  var spaceCode = y3("");
-  var spaceWeek = y3("");
-  var weeklyHref = (code, week) => reportingHref(code, week);
-  var clientReportHref = (code, week, _client) => reportingHref(code, week, "client");
-  var weekLabel = (week) => week.split("-").reverse().join("-");
-  function reportingHref(code, week, view) {
-    return `#reporting=${code}${week ? `&w=${week}` : ""}${view === "client" || view === "side" ? `&v=${view}` : ""}`;
-  }
-  function parseReporting(hash, known2) {
-    const m5 = /^#?reporting=([A-Z][A-Z0-9]{2,6})((?:&[a-z]=[^&]*)*)$/.exec(String(hash || ""));
-    if (!m5 || !known2(m5[1])) return null;
-    const kv = Object.fromEntries(m5[2].split("&").filter(Boolean).map((x5) => x5.split("=")));
-    return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "", view: kv.v === "client" || kv.v === "side" ? kv.v : "internal" };
-  }
-
-  // components/reporting/ReportingCard.jsx
-  function ReportingCardView({ code }) {
-    const week = thisWeek(), v5 = weekView(code, week), c5 = v5.clients[0];
-    const lastFiled = FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date).map((f5) => f5.date).sort().pop();
-    return /* @__PURE__ */ u2("div", { class: "card rp-cockcard", id: "repCard", "aria-label": "Reporting", children: [
-      /* @__PURE__ */ u2("h2", { children: [
-        "Reporting ",
-        /* @__PURE__ */ u2(Chip, { tone: "plan", children: "this week" })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "rp-row", children: [
-        /* @__PURE__ */ u2("span", { class: "g", children: [
-          /* @__PURE__ */ u2("b", { children: "Weekly report" }),
-          " · internal",
-          /* @__PURE__ */ u2("br", {}),
-          /* @__PURE__ */ u2("span", { class: "sub", children: [
-            "Week ending ",
-            weekLabel(week)
-          ] })
-        ] }),
-        /* @__PURE__ */ u2(StateChip, { s: v5.internal }),
-        v5.internal.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "internal", "data-openfile": v5.internal.path, "aria-label": "Open the weekly report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "internal", "aria-label": "Open the weekly report", href: weeklyHref(code, week), children: "Open" })
-      ] }),
-      c5 ? /* @__PURE__ */ u2("div", { class: "rp-row", children: [
-        /* @__PURE__ */ u2("span", { class: "g", children: [
-          /* @__PURE__ */ u2("b", { children: "Client report" }),
-          " · ",
-          c5.client,
-          /* @__PURE__ */ u2("br", {}),
-          /* @__PURE__ */ u2("span", { class: "sub", children: [
-            c5.rhythm,
-            c5.state.key === "due" ? " · due" : c5.state.key === "notdue" ? " · not due this week" : ""
-          ] })
-        ] }),
-        /* @__PURE__ */ u2(StateChip, { s: c5.state }),
-        c5.state.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "client", "data-openfile": c5.state.path, "aria-label": "Open the client report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "client", "aria-label": "Open the client report", href: clientReportHref(code, week, c5.client), children: "Open" })
-      ] }) : null,
-      /* @__PURE__ */ u2("div", { class: "acts", children: [
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary sm", "data-rpcard": "space", onClick: () => openSpace(code), children: "Open reporting" }),
-        /* @__PURE__ */ u2("span", { class: "sub", children: lastFiled ? `Last filed: ${fd(lastFiled)}` : "Nothing filed yet" })
-      ] })
-    ] });
-  }
-  function mountReportingCard(host2, code) {
-    R(/* @__PURE__ */ u2(ReportingCardView, { code }), host2);
-  }
-
-  // core/caretPlace.js
-  function placeAtCaret(view, pos, el2, o5 = {}) {
-    const gap = o5.gap ?? 4, edge = o5.edge ?? 8, max = o5.max ?? 360;
-    const put2 = () => {
-      if (!el2.isConnected || view.isDestroyed) return;
-      let c5;
-      try {
-        c5 = view.coordsAtPos(Math.min(pos, view.state.doc.content.size));
-      } catch (e4) {
-        return;
-      }
-      let c02 = c5;
-      if (o5.from !== void 0) {
-        try {
-          c02 = view.coordsAtPos(Math.min(o5.from, view.state.doc.content.size));
-        } catch (e4) {
-        }
-      }
-      const vw2 = document.documentElement.clientWidth, vh2 = window.innerHeight;
-      el2.style.position = "fixed";
-      if (o5.level !== void 0) {
-        const w02 = el2.offsetWidth, h02 = el2.offsetHeight;
-        el2.style.left = `${Math.max(4, Math.min(o5.x ? o5.x() : c5.left, vw2 - w02 - 4))}px`;
-        el2.style.top = `${Math.max(edge, Math.min(c5.top + o5.level, vh2 - h02 - edge))}px`;
-        el2.dataset.side = "level";
-        return;
-      }
-      el2.style.maxHeight = "";
-      if (o5.scroll !== false) el2.style.overflowY = "auto";
-      const w6 = el2.offsetWidth, natural = Math.min(el2.scrollHeight, max);
-      const below = vh2 - c5.bottom - gap - edge, above = c02.top - gap - edge;
-      const up2 = Math.max(natural, o5.need || 0) > below && above > below;
-      if (o5.overlap && natural > below && natural > above) {
-        const h22 = Math.min(natural, vh2 - 2 * edge);
-        el2.style.maxHeight = `${h22}px`;
-        el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
-        el2.style.top = `${Math.max(edge, vh2 - edge - h22)}px`;
-        el2.dataset.side = "over";
-        return;
-      }
-      const room = Math.max(60, up2 ? above : below), h5 = Math.min(natural, room);
-      if (o5.scroll !== false) el2.style.maxHeight = `${Math.min(max, room)}px`;
-      el2.style.left = `${Math.max(edge, Math.min(o5.x ? o5.x() : c5.left, vw2 - w6 - edge))}px`;
-      el2.style.top = `${up2 ? Math.max(edge, c02.top - gap - h5) : c5.bottom + gap}px`;
-      el2.dataset.side = up2 ? "above" : "below";
-    };
-    put2();
-    let raf = 0, tm2 = 0;
-    const on2 = () => {
-      put2();
-      cancelAnimationFrame(raf);
-      clearTimeout(tm2);
-      raf = requestAnimationFrame(put2);
-      tm2 = window.setTimeout(put2, 120);
-    };
-    window.addEventListener("scroll", on2, true);
-    window.addEventListener("resize", on2);
-    const vv = window.visualViewport;
-    if (vv) vv.addEventListener("resize", on2);
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(tm2);
-      window.removeEventListener("scroll", on2, true);
-      window.removeEventListener("resize", on2);
-      if (vv) vv.removeEventListener("resize", on2);
-    };
   }
 
   // stores/aiEdit.js
@@ -31248,6 +30707,93 @@ ${s5}`;
     ] });
   }
 
+  // stores/rail.js
+  var RAIL_ITEMS = [
+    { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
+    { id: "work", title: "Work", icon: "work", group: "top" },
+    { id: "review", title: "Review", icon: "review", badge: "revBadge", group: "top" },
+    { id: "projects", title: "Projects", icon: "projects", group: "top" },
+    { id: "reports", title: "Reports", icon: "filetext", badge: "repBadge", group: "top" },
+    /* BL-337 */
+    { id: "people", title: "People", icon: "people", group: "top" },
+    { id: "inbox", title: "Intake", icon: "inbox", badge: "inboxBadge", group: "more" },
+    { id: "files", title: "Files", icon: "folder", group: "more" },
+    { id: "activity", title: "Activity", icon: "activity", group: "more" },
+    { id: "settings", title: "Settings", icon: "gear", group: "more" }
+  ];
+  var RAIL_DEF = {
+    order: RAIL_ITEMS.filter((i5) => i5.group === "top").map((i5) => i5.id),
+    more: RAIL_ITEMS.filter((i5) => i5.group === "more").map((i5) => i5.id),
+    hidden: [],
+    display: "titles"
+  };
+  var railItem = (id2) => RAIL_ITEMS.find((i5) => i5.id === id2);
+  function railNorm(c5) {
+    c5 = c5 && typeof c5 === "object" ? c5 : {};
+    const known2 = new Set(RAIL_ITEMS.map((i5) => i5.id));
+    const seen = /* @__PURE__ */ new Set(["today"]);
+    const keep2 = (a5) => (Array.isArray(a5) ? a5 : []).filter((id2) => typeof id2 === "string" && known2.has(id2) && !seen.has(id2) && !!seen.add(id2));
+    const hidden = Array.isArray(c5.hidden) ? c5.hidden : [];
+    const more = keep2(Array.isArray(c5.more) ? [...c5.more, ...hidden] : [...RAIL_DEF.more, ...hidden]);
+    const order = ["today", ...keep2(c5.order)];
+    for (const it2 of RAIL_ITEMS) if (!seen.has(it2.id)) {
+      seen.add(it2.id);
+      (it2.group === "more" ? more : order).push(it2.id);
+    }
+    return { order, more, hidden: [], display: c5.display === "icons" ? "icons" : "titles" };
+  }
+  var railCfg = y3(RAIL_DEF);
+  var railView = y3("today");
+  var railCounts = y3(
+    /** @type {Record<string, RailCount>} */
+    {}
+  );
+  var railMoreOpen = y3(false);
+  var railCustOpen = y3(false);
+  var railLabelsOn = y3(true);
+  var railIconSize = y3(
+    /** @type {"small"|"medium"|"large"} */
+    "small"
+  );
+  var railSizeNorm = (v5) => v5 === "medium" || v5 === "large" ? v5 : "small";
+  var railWide = y3(true);
+  var railNarrow = y3(false);
+  var RAIL_KEY = "creaite-rail-collapsed";
+  var railUser = y3(
+    /** @type {boolean | null} */
+    null
+  );
+  function railLoadUser() {
+    try {
+      const v5 = store.get(RAIL_KEY, null);
+      railUser.value = typeof v5 === "boolean" ? v5 : null;
+    } catch (x5) {
+      railUser.value = null;
+    }
+  }
+  function railSetUser(v5) {
+    railUser.value = v5;
+    try {
+      store.set(RAIL_KEY, v5);
+    } catch (x5) {
+    }
+  }
+  var railCollapsed = g3(() => railNarrow.value || (railUser.value !== null ? railUser.value : railCfg.value.display === "icons" || !railWide.value));
+  var railLabelled = g3(() => railCollapsed.value && railLabelsOn.value && railCfg.value.display !== "icons");
+  var railMode = g3(() => !railCollapsed.value ? "expanded" : railLabelled.value ? "labels" : "icons");
+  var railMoreWaiting = g3(() => railCfg.value.more.map((id2) => (
+    /** @type {[string, number]} */
+    [railItem(id2).title, (railCounts.value[id2] || { n: 0 }).n]
+  )).filter((x5) => x5[1] > 0));
+  function setRailView(key2) {
+    railView.value = key2;
+  }
+  function setRailCount(id2, n4, label) {
+    const was = railCounts.value[id2];
+    if (was && was.n === n4 && was.label === label) return;
+    railCounts.value = { ...railCounts.value, [id2]: { n: n4, label } };
+  }
+
   // components/settings/MoreSettings.jsx
   var LIMITS = {
     "assistant.run_timeout_minutes": [1, 240],
@@ -31442,6 +30988,432 @@ ${s5}`;
       /* @__PURE__ */ u2("h2", { children: g5 }),
       list.filter((s5) => groupOf2(s5) === g5).map((s5) => /* @__PURE__ */ u2(One, { s: s5 }, s5.key))
     ] })) });
+  }
+
+  // stores/exportSave.js
+  var exportClash = y3(
+    /** @type {{body: Record<string, any>, r: ExportAnswer}|null} */
+    null
+  );
+  var exportSaved = y3(
+    /** @type {ExportAnswer|null} */
+    null
+  );
+  var exportFailed = y3("");
+  async function saveExport(body2) {
+    exportFailed.value = "";
+    const r4 = await api("/api/report/export", body2) || { ok: false, message: "Not saved: creaite didn't answer. Nothing was written." };
+    if (r4.ok) {
+      exportClash.value = null;
+      exportSaved.value = r4;
+    } else if (r4.clash) {
+      exportSaved.value = null;
+      exportClash.value = { body: body2, r: r4 };
+    } else {
+      exportClash.value = null;
+      exportSaved.value = null;
+      exportFailed.value = String(r4.message || "Not saved. Nothing was written.").split("\n")[0];
+    }
+    return r4;
+  }
+  async function answerClash(choice, newName) {
+    const c5 = exportClash.value;
+    if (!c5) return null;
+    return saveExport({ ...c5.body, on_clash: choice, ...choice === "rename" ? { new_name: newName } : {} });
+  }
+  function cancelClash() {
+    exportClash.value = null;
+  }
+  var openFolder = (folder) => api("/api/open", { path: folder });
+  var showInFinder = (path) => api("/api/report/reveal", { path });
+  var openSaved = (path) => api("/api/open", { path });
+
+  // stores/weekly.js
+  var weeklyArg = y3(
+    /** @type {{code: string, week?: string}|null} */
+    null
+  );
+  var weeklyView = y3(
+    /** @type {WeeklyView|null} */
+    null
+  );
+  var weeklyDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var weeklyBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var weeklyBusy = y3("");
+  var weeklyEditing = y3(false);
+  var weeklyLogos = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var wkAsked = 0;
+  function wkIdentity(d5) {
+    const x5 = d5 === void 0 ? weeklyDoc.value : d5;
+    return x5 ? `${wkAsked}|${JSON.stringify(weeklyArg.value)}|${x5.project}|${x5.date}` : "";
+  }
+  async function loadWeekly(arg, fresh = false) {
+    const mine = ++wkAsked;
+    weeklyArg.value = arg;
+    weeklyEditing.value = false;
+    if (!viaServer()) {
+      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
+      return;
+    }
+    weeklyBusy.value = "Opening the weekly report…";
+    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
+    if (mine !== wkAsked) return;
+    weeklyBusy.value = "";
+    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
+    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
+  }
+  function takeWeekly(r4) {
+    weeklyView.value = r4;
+    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function readLogos(code, logos) {
+    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
+    if (!want.length) return;
+    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
+    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
+  }
+  async function saveWeekly(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    const ok2 = !!(r4 && r4.ok);
+    if (ok2) {
+      weeklyBase.value = Number(r4.version) || weeklyBase.value;
+      const v5 = weeklyView.value;
+      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
+    }
+    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
+  }
+  async function approveWeekly(doc, force) {
+    const a5 = weeklyArg.value;
+    const r4 = await api("/api/report/approve", {
+      kind: "weekly",
+      code: doc.project || a5 && a5.code,
+      week_ending: doc.date,
+      doc,
+      base_version: weeklyBase.value,
+      force: force || void 0
+    });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportWeekly(doc, fmt, page) {
+    return saveExport({ kind: "weekly", code: doc.project, week_ending: doc.date, fmt, page: page || void 0 });
+  }
+  var weeklyDirty = false;
+  var setWeeklyDirty = (on2) => {
+    weeklyDirty = on2;
+  };
+  function editDoc(d5, _why) {
+    const c5 = weeklyDoc.value;
+    if (c5 && d5 && (c5.project !== d5.project || c5.date !== d5.date || (c5.kind || "weekly") !== (d5.kind || "weekly"))) return false;
+    weeklyDoc.value = d5;
+    weeklyDirty = true;
+    return true;
+  }
+
+  // stores/reporting.js
+  var repTick = y3(0);
+  var repFilter = y3(
+    /** @type {"need"|"all"} */
+    "need"
+  );
+  var repWeek = y3("");
+  var REP_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var GAP = (
+    /** @type {Record<string, number>} */
+    { Weekly: 7, Fortnightly: 14, Monthly: 30 }
+  );
+  var MS = 864e5;
+  var repAddDays = (d5, n4) => new Date(Date.parse(d5) + n4 * MS).toISOString().slice(0, 10);
+  var between = (a5, b5) => Math.round((Date.parse(a5) - Date.parse(b5)) / MS);
+  function thisWeek(today = TODAY, hm2 = nowStamp().slice(11, 16)) {
+    const day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
+    const wd2 = (new Date(today).getUTCDay() + 6) % 7;
+    let start = repAddDays(today, -((wd2 - day + 7) % 7));
+    if (start === today && hm2 < String(S.weeklyTime || "12:00")) start = repAddDays(start, -7);
+    return start;
+  }
+  var shownWeek = () => repWeek.value || thisWeek();
+  function reportRecord(code, kind, week, client) {
+    const L3 = (
+      /** @type {any[]} */
+      D.reports || []
+    );
+    return L3.find((r4) => r4.project === code && r4.kind === kind && r4.date === week && (kind === "weekly" || !client || r4.client === client)) || null;
+  }
+  var inReview = (code, kind) => REV.some((r4) => !r4.done && r4.kind === "draft" && r4.ref === "report" && r4.p === code && (kind === "weekly" ? /weekly/i : /client/i).test(r4.rec && r4.rec.t || ""));
+  function filed(code, kind) {
+    const re2 = kind === "weekly" ? /Weekly report/ : /Client report/;
+    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && re2.test(f5.n) && f5.date).sort((a5, b5) => b5.date.localeCompare(a5.date));
+  }
+  function weekFiles(code, week) {
+    const from = repAddDays(week, -6);
+    return FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date && f5.date >= from && f5.date <= week).sort((a5, b5) => a5.n.localeCompare(b5.n));
+  }
+  function stateOf(code, kind, week, client, rhythm) {
+    const cur = week === thisWeek(), rec = reportRecord(code, kind, week, client);
+    if (rec) {
+      const s5 = String(rec.state || "draft");
+      return { state: { key: s5, label: s5 === "approved" ? "Approved" : "Draft", tone: s5 === "approved" ? "ok" : "warn", path: rec.path, edited: rec.edited }, due: s5 !== "approved" };
+    }
+    const L3 = filed(code, kind), from = repAddDays(week, -6);
+    const found = L3.find((f5) => kind === "weekly" ? f5.n.startsWith(week + " ") : f5.date >= from && f5.date <= week);
+    if (found) return { state: { key: "filed", label: "Filed", tone: "ok", path: found.path }, due: false };
+    if (cur && inReview(code, kind)) return { state: { key: "draft", label: "Draft", tone: "warn" }, due: true };
+    if (kind === "weekly") return { state: cur ? { key: "due", label: "Not drafted", tone: "warn" } : { key: "missing", label: "Not filed", tone: "" }, due: cur };
+    const gap = GAP[rhythm || "Weekly"] || 7, last = L3.find((f5) => f5.date < from);
+    const due = !last || between(week, last.date) >= gap;
+    if (!due) return { state: { key: "notdue", label: `Not due (${(rhythm || "Weekly").toLowerCase()})`, tone: "" }, due: false };
+    return cur ? { state: { key: "due", label: "Due", tone: "warn" }, due: true } : { state: { key: "missing", label: "Not filed", tone: "" }, due: false };
+  }
+  function weekView(code, week = thisWeek()) {
+    const p6 = P4.find((x5) => x5.code === code) || /** @type {any} */
+    {};
+    const w6 = stateOf(code, "weekly", week);
+    const rhythm = p6.rhythm || "Weekly", name = (p6.client || "").trim() || "Client";
+    const c5 = stateOf(code, "client", week, name, rhythm), rec = reportRecord(code, "client", week, name);
+    const clients = clientReportOn(code) ? [{ client: name, rhythm, state: c5.state, due: c5.due, differs: rec && rec.differs ? String(rec.differs) : "" }] : [];
+    return { week, internal: w6.state, clients, files: weekFiles(code, week), needs: !["filed", "approved", "notdue"].includes(w6.state.key) || clients.some((x5) => ["due", "draft"].includes(x5.state.key)) };
+  }
+  function spaceWeeks(code) {
+    const cur = thisWeek(), set = new Set([0, 1, 2, 3].map((i5) => repAddDays(cur, -7 * i5)));
+    FILES.filter((f5) => f5.p === code && f5.f === "reports" && f5.date).forEach((f5) => {
+      const wd2 = (new Date(f5.date).getUTCDay() + 6) % 7, day = Math.max(0, REP_DAYS.indexOf(String(S.weeklyDay || "Friday")));
+      const end = repAddDays(f5.date, (day - wd2 + 7) % 7);
+      if (end <= cur) set.add(end);
+    });
+    return [...set].sort().reverse().slice(0, 12);
+  }
+  var needsMe = () => P4.filter((p6) => weekView(p6.code).needs).map((p6) => p6.code);
+  function reportsBadge() {
+    const n4 = needsMe().length;
+    setRailCount("reports", n4, `${n4} project${n4 === 1 ? "" : "s"} with a report to check or a client report due`);
+  }
+  var spaceCode = y3("");
+  var spaceWeek = y3("");
+  var weeklyHref = (code, week) => reportingHref(code, week);
+  var clientReportHref = (code, week, _client) => reportingHref(code, week, "client");
+  var weekLabel = (week) => week.split("-").reverse().join("-");
+  function reportingHref(code, week, view) {
+    return `#reporting=${code}${week ? `&w=${week}` : ""}${view === "client" || view === "side" ? `&v=${view}` : ""}`;
+  }
+  function parseReporting(hash, known2) {
+    const m5 = /^#?reporting=([A-Z][A-Z0-9]{2,6})((?:&[a-z]=[^&]*)*)$/.exec(String(hash || ""));
+    if (!m5 || !known2(m5[1])) return null;
+    const kv = Object.fromEntries(m5[2].split("&").filter(Boolean).map((x5) => x5.split("=")));
+    return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "", view: kv.v === "client" || kv.v === "side" ? kv.v : "internal" };
+  }
+
+  // stores/reportingSettings.js
+  var LOGO_KINDS = (
+    /** @type {const} */
+    ["firm", "client", "partner"]
+  );
+  var crTick = y3(0);
+  var project = (code) => (
+    /** @type {any} */
+    P4.find((p6) => p6.code === code)
+  );
+  var clientReportOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.cr !== false;
+  };
+  var clientReportCogLabel = (code) => `Client report settings: ${clientReportOn(code) ? "on" : "off"}`;
+  var clientReminderOn = (code) => {
+    const p6 = project(code);
+    return !p6 || p6.crrem !== false;
+  };
+  function partnersOf(code) {
+    const p6 = project(code);
+    return p6 && Array.isArray(p6.partners) ? p6.partners : [];
+  }
+  function logoKindsOf(code) {
+    const ps2 = partnersOf(code);
+    return ["firm", "client", ...ps2.length ? ps2.map((x5) => `partner:${x5.slug}`) : ["partner"]];
+  }
+  function logoKindName(code, kind) {
+    if (kind === "firm") return "Firm";
+    if (kind === "client") return "Client";
+    const own = partnersOf(code).find((x5) => `partner:${x5.slug}` === kind);
+    return own ? `Partner: ${own.name}` : "Partner";
+  }
+  var ticksOf = (kinds, chosen) => kinds.filter((k5) => k5 === "firm" || chosen.includes(k5) || chosen.includes("partner") && k5.startsWith("partner"));
+  function clientLogosOn(code) {
+    const p6 = project(code), kinds = logoKindsOf(code);
+    return ticksOf(kinds, p6 && Array.isArray(p6.crlogos) ? p6.crlogos : kinds);
+  }
+  function changed() {
+    crTick.value++;
+    repTick.value++;
+  }
+  async function setClientReport(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report", on2 ? "on" : "off", "client_report")) return false;
+    p6.cr = on2;
+    if (!on2) {
+      for (let i5 = REMINDERS.length - 1; i5 >= 0; i5--) if (String(REMINDERS[i5].id).startsWith(`client:${code}:`)) REMINDERS.splice(i5, 1);
+    }
+    changed();
+    return true;
+  }
+  async function setClientReminder(code, on2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setMemLine(code, "Client report reminder", on2 ? "on" : "off", "client_report_reminder")) return false;
+    p6.crrem = on2;
+    changed();
+    return true;
+  }
+  async function setClientLogos(code, kinds) {
+    const p6 = project(code);
+    if (!p6) return false;
+    const all = logoKindsOf(code), list = ticksOf(all, kinds), parts = all.filter((k5) => k5.startsWith("partner"));
+    const everyPartner = parts.every((k5) => list.includes(k5));
+    const line = everyPartner ? [...list.filter((k5) => !k5.startsWith("partner")), "partner"] : list;
+    if (!await setMemLine(code, "Client report logos", line.join(", "), "client_report_logos")) return false;
+    p6.crlogos = list;
+    changed();
+    return true;
+  }
+  var CLIENT_NAME_MAX = 80;
+  async function setClientName(code, name) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (/[\r\n]/.test(String(name || ""))) {
+      snack("Not saved: the client's name is one line.");
+      return false;
+    }
+    const v5 = String(name || "").replace(/\s+/g, " ").trim();
+    if (v5.length > CLIENT_NAME_MAX) {
+      snack(`Not saved: the client's name is over ${CLIENT_NAME_MAX} characters.`);
+      return false;
+    }
+    if (!await setMemLine(code, "Client / partner", v5, "client_name")) return false;
+    p6.client = v5;
+    changed();
+    return true;
+  }
+  async function setClientRhythm(code, val2) {
+    const p6 = project(code);
+    if (!p6) return false;
+    if (!await setRhythm(code, val2)) return false;
+    p6.rhythm = val2;
+    changed();
+    return true;
+  }
+  var crLogoPaths = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoData = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var crLogoNote = y3("");
+  var crLogoOrphans = y3(
+    /** @type {{kind: string, slug: string, path: string}[]} */
+    []
+  );
+  var crLogoFor = y3("");
+  async function readClientLogos(code) {
+    if (!viaServer()) return;
+    const r4 = await api("/api/report/logo", { code });
+    if (!r4 || !r4.ok) return;
+    crLogoFor.value = code;
+    crLogoPaths.value = Object.fromEntries((r4.list || []).map((x5) => [x5.kind, x5.path]));
+    crLogoData.value = r4.logos || {};
+    crLogoOrphans.value = Array.isArray(r4.orphans) ? r4.orphans : [];
+    weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos || {} };
+    changed();
+  }
+  function toBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const fr2 = new FileReader();
+      fr2.onload = () => resolve(String(fr2.result).replace(/^data:[^,]*,/, ""));
+      fr2.onerror = () => reject(fr2.error);
+      fr2.readAsDataURL(blob);
+    });
+  }
+  var MARGIN_WHITE = 245, MARGIN_ALPHA = 8, DRAWN_MAX = 540;
+  function contentBox(px2, w6, h5) {
+    let x02 = w6, y02 = h5, x12 = -1, y12 = -1;
+    for (let y5 = 0; y5 < h5; y5++) for (let x5 = 0; x5 < w6; x5++) {
+      const i5 = (y5 * w6 + x5) * 4;
+      if (px2[i5 + 3] <= MARGIN_ALPHA || px2[i5] >= MARGIN_WHITE && px2[i5 + 1] >= MARGIN_WHITE && px2[i5 + 2] >= MARGIN_WHITE) continue;
+      if (x5 < x02) x02 = x5;
+      if (x5 > x12) x12 = x5;
+      if (y5 < y02) y02 = y5;
+      if (y5 > y12) y12 = y5;
+    }
+    if (x12 < 0) return null;
+    const box = { x: x02, y: y02, w: x12 - x02 + 1, h: y12 - y02 + 1 };
+    return box.w === w6 && box.h === h5 ? null : box;
+  }
+  async function trimmedCopy(file) {
+    try {
+      const bmp = await createImageBitmap(file), c5 = (
+        /** @type {any} */
+        document.createElement("canvas")
+      );
+      c5.width = bmp.width;
+      c5.height = bmp.height;
+      const g5 = (
+        /** @type {CanvasRenderingContext2D} */
+        c5.getContext("2d", { willReadFrequently: true })
+      );
+      g5.drawImage(bmp, 0, 0);
+      const box = contentBox(g5.getImageData(0, 0, c5.width, c5.height).data, c5.width, c5.height);
+      if (!box) return null;
+      const k5 = Math.min(1, DRAWN_MAX / Math.max(box.w, box.h)), out = document.createElement("canvas");
+      out.width = Math.max(1, Math.round(box.w * k5));
+      out.height = Math.max(1, Math.round(box.h * k5));
+      out.getContext("2d").drawImage(c5, box.x, box.y, box.w, box.h, 0, 0, out.width, out.height);
+      return await new Promise((res) => out.toBlob(res, "image/png"));
+    } catch {
+      return null;
+    }
+  }
+  async function uploadClientLogo(code, kind, file) {
+    crLogoNote.value = "";
+    const ext = (/\.(png|jpe?g|svg)$/i.exec(file.name) || ["", ""])[1].toLowerCase().replace("jpeg", "jpg");
+    if (!ext) {
+      crLogoNote.value = "Choose a PNG, JPEG or SVG picture.";
+      return false;
+    }
+    if (file.size > 4e5) {
+      crLogoNote.value = "That logo is over 400 kB. Choose a smaller file.";
+      return false;
+    }
+    const trimmed = ext === "svg" ? null : await trimmedCopy(file);
+    const r4 = await api("/api/report/logo/save", { code, kind, ext, original: await toBase64(file), drawn: trimmed ? await toBase64(trimmed) : void 0 });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not saved.";
+      return false;
+    }
+    crLogoNote.value = r4.hint || "";
+    await readClientLogos(code);
+    snack(r4.message || "Logo saved");
+    return true;
+  }
+  async function removeClientLogo(code, kind) {
+    crLogoNote.value = "";
+    const r4 = await api("/api/report/logo/remove", { code, kind });
+    if (!r4 || !r4.ok) {
+      crLogoNote.value = oneLine(plainPaths(r4 && r4.message)) || "The logo was not removed.";
+      return false;
+    }
+    await readClientLogos(code);
+    snack(r4.message || "Logo removed");
+    return true;
   }
 
   // core/partners.js
@@ -33779,7 +33751,7 @@ ${s5}`;
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Messages");
     });
   }
   async function alertHandled(id2) {
@@ -33815,7 +33787,7 @@ ${s5}`;
       await vipPoll();
       vipBadge();
       renderToday();
-      snack("Back in Intake and Review");
+      snack("Back in Messages");
     });
   }
   function alertChase(id2) {
@@ -34010,7 +33982,7 @@ ${s5}`;
     vipBadge();
     await reloadData();
     renderToday();
-    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Intake and Review` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
+    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in Messages` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
   }
   function alertDraftWhy(al2) {
     return /^(private|confidential)$/i.test(al2.marker || "") ? `Not for a ${al2.marker.toLowerCase()} message` : !draftOn("sharpen") ? "Sharpen a vague action is off in Settings › Advanced › AI drafts" : !viaServer() ? "Drafting needs the live server" : "";
@@ -40185,7 +40157,7 @@ ${s5}`;
       controls: "peopleTbl",
       wrap: true
     });
-    const th2 = (c5, l6, num) => `<th class="${num ? "num" : ""}" data-psort="${c5}" aria-sort="${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? "ascending" : "descending" : "none"}"><button type="button" class="thsort">${l6}${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? " ▲" : " ▼" : ""}</button></th>`;
+    const th2 = (c5, l6, num2) => `<th class="${num2 ? "num" : ""}" data-psort="${c5}" aria-sort="${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? "ascending" : "descending" : "none"}"><button type="button" class="thsort">${l6}${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? " ▲" : " ▼" : ""}</button></th>`;
     const nameCell = (x5) => `<td class="title"><a href="#" class="plink2" data-person="${esc(x5.name)}">${esc(isMe(x5.name) ? `You (${x5.name})` : x5.name)}</a>${x5.p || isMe(x5.name) ? "" : ` <span class="tag warn" title="${none ? "Seen on items but isn’t in the people register" : "Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x5.p && x5.p.org ? esc(x5.p.org) : '<span class="sub">—</span>'}</td><td>${x5.p && x5.p.role ? esc(x5.p.role) : '<span class="sub">—</span>'}</td><td>${x5.codes.map(pLink).join(" ") || '<span class="sub">—</span>'}</td>`;
     $("#peopleTbl").setAttribute("role", "tabpanel");
@@ -41276,6 +41248,35 @@ ${s5}`;
     R(props ? /* @__PURE__ */ u2(DayTabs, { ...props }) : text, host2);
   }
 
+  // components/today/IntakeLine.jsx
+  function IntakeLine({ parts, onGo }) {
+    return /* @__PURE__ */ u2("p", { class: "tdquiet", id: "tdQuiet", children: [
+      /* @__PURE__ */ u2(Icon, { name: "inbox" }),
+      /* @__PURE__ */ u2("span", { class: "tdq", children: [
+        "Intake: ",
+        parts.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
+          i5 ? i5 === parts.length - 1 ? " and " : ", " : "",
+          /* @__PURE__ */ u2("a", { href: `#${x5.go}`, "data-tdq": x5.key, onClick: (e4) => {
+            e4.preventDefault();
+            onGo(x5.go);
+          }, children: x5.text })
+        ] })),
+        "."
+      ] }),
+      /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Dismiss until something new arrives", id: "tdQx" })
+    ] });
+  }
+  function IntakeLive({ text }) {
+    return /* @__PURE__ */ u2("span", { class: "vh", id: "tdQuietLive", role: "status", "aria-live": "polite", "aria-atomic": "true", children: text });
+  }
+  function drawIntakeLine(host2, parts, onGo) {
+    const n4 = parts.reduce((t47, x5) => t47 + x5.n, 0);
+    R(/* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2(IntakeLive, { text: n4 ? `${n4} waiting in Intake` : "" }),
+      parts.length ? /* @__PURE__ */ u2(IntakeLine, { parts, onGo }) : null
+    ] }), host2);
+  }
+
   // components/today/ToDecide.jsx
   function TdLine({ r: r4, hidden, p: p6 }) {
     const open2 = (e4) => {
@@ -41414,26 +41415,10 @@ ${s5}`;
     ] });
   }
   function ToDecide(props) {
-    const { rows: rows2, total, cap, open: open2, onReview } = props, more = rows2.length - cap;
-    const line = props.line || [];
-    const go3 = (page, e4) => {
-      e4.preventDefault();
-      if (props.onGo) props.onGo(page);
-      else onReview();
-    };
+    const { rows: rows2, cap, open: open2 } = props, more = rows2.length - cap;
     return /* @__PURE__ */ u2(S2, { children: [
-      line.length ? /* @__PURE__ */ u2("p", { class: "tdline", id: "tdLine", children: line.map((x5, i5) => /* @__PURE__ */ u2(S2, { children: [
-        i5 ? i5 === line.length - 1 ? " and " : ", " : "",
-        /* @__PURE__ */ u2("a", { href: `#${x5.go}`, class: "s", "data-tdline": x5.key, onClick: (e4) => go3(x5.go, e4), children: x5.text })
-      ] })) }) : null,
       /* @__PURE__ */ u2("ol", { class: "bl tdlist", id: "tdList", "aria-labelledby": "hTd", children: rows2.map((r4, i5) => /* @__PURE__ */ u2(TdLine, { r: r4, hidden: !open2 && i5 >= cap, p: props }, r4.key)) }),
-      /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: [
-        more > 0 ? /* @__PURE__ */ u2(S2, { children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }),
-          " · "
-        ] }) : null,
-        line.length || !rows2.length ? null : /* @__PURE__ */ u2("span", { class: "none", children: "Nothing waits in Review." })
-      ] })
+      /* @__PURE__ */ u2("div", { class: "moreline tdfoot", children: more > 0 ? /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": open2 ? "true" : "false", "data-more": "td", children: open2 ? "Show fewer" : `+${more} more` }) : null })
     ] });
   }
   function drawToDecide(host2, props) {
@@ -41695,6 +41680,7 @@ ${s5}`;
     $("#chgTitle").textContent = `${done.length} since ${longDate(LASTVISIT.slice(0, 10))}`;
     putHTML($("#chgList"), rc2.html ? raw(rc2.html) : html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0, 10))}.</span></div></li>`);
     putHTML($("#chgMore"), html`${raw(rc2.more)}${rc2.more ? " · " : ""}<a class="s" href="#" data-go="activity">See all activity</a>`);
+    renderIntakeLine();
     renderToDecide();
     renderWeek();
     putHTML($("#pfTbl"), raw(portfolioTable("pf", true)));
@@ -42782,37 +42768,116 @@ ${s5}`;
     const tr2 = $(`#reviewBody tr[data-n="${r4.n}"]`);
     if (tr2) tr2.scrollIntoView({ block: "center" });
   }
-  var TDFOLD = "creaite-intake-review-hidden";
-  var tdFoldWired = false;
-  function wireTdFold() {
-    const f5 = (
-      /** @type {HTMLDetailsElement|null} */
-      $("#tdFold")
-    );
-    if (!f5 || tdFoldWired) return;
-    tdFoldWired = true;
-    f5.open = store.get(TDFOLD, false) !== true;
-    f5.addEventListener("toggle", () => store.set(TDFOLD, !f5.open));
-  }
-  function tdLine() {
+  var intakeTarget = (
+    /** @param {string} key */
+    (key2) => key2 === "proposals" ? "review" : "inbox"
+  );
+  function intakeParts() {
     const pr2 = REV.filter((r4) => !r4.done).length, nTr = MTG().filter(mtgHasTx).length, fl2 = (D.inbox || []).filter((f5) => f5.state === "new").length, L3 = [];
-    if (pr2) L3.push({ key: "review", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} in Review`, go: "review" });
-    if (nTr) L3.push({ key: "transcripts", n: nTr, text: `${nTr} transcript${nTr === 1 ? "" : "s"} ready in Intake`, go: "inbox" });
-    if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} in Intake`, go: "inbox" });
+    if (nTr) L3.push({ key: "meetings", n: nTr, text: `${nTr} meeting${nTr === 1 ? "" : "s"} ready to process`, go: intakeTarget("meetings") });
+    if (pr2) L3.push({ key: "proposals", n: pr2, text: `${pr2} proposal${pr2 === 1 ? "" : "s"} to approve`, go: intakeTarget("proposals") });
+    if (fl2) L3.push({ key: "files", n: fl2, text: `${fl2} new file${fl2 === 1 ? "" : "s"} to process`, go: intakeTarget("files") });
     return L3;
   }
+  var TQKEY = "creaite-intakeline-dismissed", TQCAP = 200, TQKINDS = ["meetings", "proposals", "files"];
+  var TQMEM = (
+    /** @type {TqKept|null} */
+    null
+  ), TQSTUCK = false;
+  var tqHash = (
+    /** @param {string} s */
+    (s5) => {
+      let h5 = 2166136261;
+      for (let i5 = 0; i5 < s5.length; i5++) {
+        h5 ^= s5.charCodeAt(i5);
+        h5 = Math.imul(h5, 16777619);
+      }
+      return (h5 >>> 0).toString(16).padStart(8, "0");
+    }
+  );
+  function intakeIds() {
+    return {
+      meetings: MTG().filter(mtgHasTx).map((m5) => tqHash("m|" + (m5.key || m5.id || `${m5.day}|${m5.start}|${m5.title}`))),
+      proposals: REV.filter((r4) => !r4.done).map((r4) => tqHash("p|" + (r4.file != null ? `${r4.file}#${r4.ref}` : `n${r4.n}`))),
+      files: (D.inbox || []).filter((f5) => f5.state === "new").map((f5) => tqHash("f|" + (f5.path || f5.name)))
+    };
+  }
+  function tqRead() {
+    if (TQSTUCK) return TQMEM;
+    try {
+      const v5 = localStorage.getItem(TQKEY);
+      return v5 ? JSON.parse(v5) : null;
+    } catch (e4) {
+      return TQMEM;
+    }
+  }
+  function tqWrite(d5) {
+    TQMEM = d5;
+    try {
+      localStorage.setItem(TQKEY, JSON.stringify(d5));
+      TQSTUCK = false;
+      return true;
+    } catch (e4) {
+      TQSTUCK = true;
+      return false;
+    }
+  }
+  function tqKeep() {
+    const all = intakeIds(), ids = (
+      /** @type {Record<string,string[]>} */
+      {}
+    ), over = (
+      /** @type {Record<string,number>} */
+      {}
+    );
+    TQKINDS.forEach((k5) => {
+      const l6 = [...new Set(all[k5])];
+      ids[k5] = l6.slice(-TQCAP);
+      if (l6.length > TQCAP) over[k5] = l6.length - TQCAP;
+    });
+    return Object.keys(over).length ? { day: TODAY, ids, over } : { day: TODAY, ids };
+  }
+  function intakeDismissed() {
+    const d5 = tqRead();
+    if (!d5 || d5.day !== TODAY || !d5.ids || typeof d5.ids !== "object") return false;
+    const now = intakeIds();
+    return TQKINDS.every((k5) => {
+      const kept = new Set(Array.isArray(d5.ids[k5]) ? d5.ids[k5] : []);
+      return now[k5].filter((h5) => !kept.has(h5)).length <= (d5.over && +d5.over[k5] || 0);
+    });
+  }
+  function renderIntakeLine() {
+    const host2 = $("#tdQuietHost");
+    if (!host2) return;
+    const parts = intakeParts(), hid = parts.length > 0 && intakeDismissed();
+    drawIntakeLine(host2, hid ? [] : parts, (pg2) => go2(pg2));
+  }
+  document.addEventListener("click", (e4) => {
+    const x5 = e4.target.closest && e4.target.closest("#tdQx");
+    if (!x5) return;
+    e4.preventDefault();
+    const host2 = $("#tdQuietHost"), had = host2 && host2.contains(document.activeElement);
+    tqWrite(tqKeep());
+    renderIntakeLine();
+    if (had || document.activeElement === document.body) {
+      const v5 = $("#v-today"), nxt = v5 && host2 && [...v5.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")].find((n4) => !!(host2.compareDocumentPosition(n4) & Node.DOCUMENT_POSITION_FOLLOWING) && n4.offsetParent !== null);
+      if (nxt) nxt.focus();
+      else if (v5) {
+        if (!v5.hasAttribute("tabindex")) v5.setAttribute("tabindex", "-1");
+        v5.focus();
+      }
+    }
+  });
+  window.addEventListener("storage", (e4) => {
+    if (e4.key === TQKEY || e4.key === null) renderIntakeLine();
+  });
   function renderToDecide() {
     const sec = $("#tdSec"), body2 = $("#tdBody");
     if (!sec || !body2) return;
-    wireTdFold();
-    const L3 = toDecideRows(), line = tdLine(), total = REV.filter((r4) => !r4.done).length, n4 = L3.filter((r4) => r4.kind !== "quiet").length + line.reduce((a5, x5) => a5 + x5.n, 0);
-    sec.hidden = !L3.length && !line.length;
-    {
-      const nw2 = $("#tdNew");
-      if (nw2) nw2.hidden = !VIPS().length;
-    }
+    const L3 = toDecideRows(), n4 = L3.filter((r4) => r4.kind !== "quiet").length;
+    sec.hidden = !L3.length;
     $("#nTd").textContent = n4 ? String(n4) : "";
-    drawToDecide(body2, { rows: L3, line, total, cap: TDCAP, open: EXPAND.has("td"), onReview: () => go2("review"), onGo: (pg2) => go2(pg2), blocked: (why) => snack(why) });
+    drawToDecide(body2, { rows: L3, cap: TDCAP, open: EXPAND.has("td"), blocked: (why) => snack(why) });
     requestAnimationFrame(tdFocusAfter);
   }
   function workActs(k5, x5) {
@@ -47905,7 +47970,6 @@ ${s5}`;
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}${raw(legBtn())}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R3.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v5, b5, nav, ex2]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex2))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v5 && v5 !== "None" ? "bad" : ""}">${v5}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p6))}
-     <div id="cockRep"></div><!-- BL-337: the Reporting card (components/reporting/ReportingCard.jsx) -->
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
@@ -47918,10 +47982,6 @@ ${s5}`;
    <div class="cockfoot">${raw(ibtn("filetext", "Reports", `data-reports="${p6.code}"`, "bd"))}${raw(ibtn("folder", "Browse files", `data-files="${p6.code}"`, "bd"))}${raw(ibtn("gear", "Project settings", `data-psettings="${p6.code}"`, "bd"))}</div></div>`);
     })();
     drawCockpitTabs(code);
-    {
-      const rc2 = $("#cockRep");
-      if (rc2) mountReportingCard(rc2, code);
-    }
     csHead(code);
     if (!(shared.CURED && shared.CURED.code === code)) readClaims(code);
     {
@@ -61475,8 +61535,9 @@ ${d5.text}`);
   var railPopOpen = railCustomise;
   function railCustClosed() {
     railCustOpen.value = false;
-    const o5 = RAILOPENER;
+    const was = RAILOPENER;
     RAILOPENER = null;
+    const o5 = was && !was.isConnected && was.id ? document.getElementById(was.id) : was;
     if (o5 && o5.isConnected && o5.getClientRects().length) o5.focus();
     else $("#railMore")?.focus();
   }
@@ -65455,6 +65516,183 @@ ${d5.text}`);
     if (box) R(/* @__PURE__ */ u2(RejectsList, { ...props }), box);
   }
 
+  // components/activity/UsagePanel.jsx
+  var KIND = {
+    ask: "ask creaite",
+    sweep: "Sweep",
+    generate: "Generate current state",
+    prep: "Prep page",
+    draft: "Drafts",
+    check: "Transcript check",
+    load: "Transcript load",
+    vip: "Alert check",
+    other: "Other"
+  };
+  var FILE = {
+    rules: "Rules (creaite-rules.md)",
+    claude_md: "Your CLAUDE.md",
+    memory: "Project memory and registers",
+    skills: "Skill names and descriptions"
+  };
+  var num = (n4) => n4 == null ? "–" : Math.round(n4).toLocaleString("en-GB");
+  var usd = (n4) => `$${(n4 || 0).toFixed(2)}`;
+  var signed = (n4, f5 = num) => (n4 > 0 ? "+" : n4 < 0 ? "−" : "") + f5(Math.abs(n4));
+  var usageKb = (b5) => {
+    const k5 = b5 / 1e3;
+    return `${k5 >= 10 ? Math.round(k5) : Number(k5.toFixed(1))} KB`;
+  };
+  function delta(c5, pct) {
+    const ch2 = pct ? c5.change_pct : c5.change;
+    if (c5.before == null || pct && !c5.before) return ["nothing to compare with last week", ""];
+    if (ch2 == null || ch2 === 0) return ["no change on last week", ""];
+    return [`${pct ? signed(ch2, (n4) => `${n4}%`) : signed(ch2)} on last week`, ch2 > 0 ? "up" : "dn"];
+  }
+  function Chart({ days: days2, fd: fd3 }) {
+    const W3 = 760, H4 = 150, L3 = 34, B4 = 22, n4 = days2.length, bw2 = (W3 - L3) / n4;
+    const top = Math.max(1, Math.ceil(Math.max(...days2.map((d5) => d5.cost_usd)))), step2 = top > 6 ? Math.ceil(top / 5) : 1;
+    const max = Math.ceil(top / step2) * step2 + (top === Math.ceil(top / step2) * step2 ? step2 : 0);
+    const starts = days2.map((d5) => d5.start_median).filter((v5) => v5 != null), lo2 = starts.length ? Math.min(...starts) : 0, hi2 = starts.length ? Math.max(...starts) : 0;
+    const half = Math.max(hi2 - lo2, hi2 * 0.15, 1e3) * 1.5, mid = (lo2 + hi2) / 2;
+    const y5 = (v5) => H4 - B4 - (H4 - B4 - 8) * (v5 - (mid - half)) / (half * 2);
+    const pts = days2.map((d5, i5) => d5.start_median == null ? null : `${L3 + i5 * bw2 + bw2 / 2},${y5(d5.start_median)}`).filter(Boolean).join(" ");
+    const grid = [];
+    for (let g5 = 0; g5 <= max; g5 += step2) grid.push(g5);
+    const label = `Cost per day, last ${n4} days, and the median tokens a run loaded before it started`;
+    return /* @__PURE__ */ u2("svg", { viewBox: `0 0 ${W3} ${H4}`, role: "img", "aria-label": label, children: [
+      grid.map((g5) => {
+        const gy2 = H4 - B4 - (H4 - B4 - 8) * g5 / max;
+        return /* @__PURE__ */ u2("g", { children: [
+          /* @__PURE__ */ u2("line", { class: "ugrid", x1: L3, x2: W3, y1: gy2, y2: gy2 }),
+          /* @__PURE__ */ u2("text", { class: "uax", x: "2", y: gy2 + 4, children: `$${g5}` })
+        ] }, g5);
+      }),
+      days2.map((d5, i5) => {
+        const h5 = (H4 - B4 - 8) * d5.cost_usd / max;
+        return /* @__PURE__ */ u2("g", { children: [
+          /* @__PURE__ */ u2("rect", { class: "ubar", x: L3 + i5 * bw2 + 6, y: H4 - B4 - h5, width: bw2 - 12, height: h5, children: /* @__PURE__ */ u2("title", { children: `${fd3(d5.day)}: ${usd(d5.cost_usd)}, ${d5.runs} ${d5.runs === 1 ? "run" : "runs"}` }) }),
+          /* @__PURE__ */ u2("text", { class: "uax", x: L3 + i5 * bw2 + bw2 / 2, y: H4 - 6, "text-anchor": "middle", children: fd3(d5.day).slice(0, 5) })
+        ] }, d5.day);
+      }),
+      pts ? /* @__PURE__ */ u2("polyline", { class: "uline", points: pts, fill: "none" }) : null,
+      starts.length ? /* @__PURE__ */ u2("text", { class: "uax uaxl", x: W3 - 4, y: "12", "text-anchor": "end", children: `start load ${num(starts[0])} → ${num(starts[starts.length - 1])} tokens` }) : null
+    ] });
+  }
+  function Runs({ u: u5, fd: fd3 }) {
+    const c5 = u5.cards || {}, kinds = u5.by_kind || [];
+    const cards = [
+      ["cost", "Cost this week", usd(c5.cost?.now), c5.cost && delta(c5.cost, true)],
+      ["runs", "Runs this week", num(c5.runs?.now), c5.runs && delta(c5.runs, true)],
+      ["start", "Tokens a run loads before it starts", num(c5.start?.now), c5.start && delta(c5.start, false)],
+      ["avg", "Cost of an average run", usd(c5.avg_cost?.now), c5.avg_cost && delta(c5.avg_cost, true)]
+    ];
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: "usum", children: cards.map(([k5, label, v5, d5]) => /* @__PURE__ */ u2("div", { class: "ucard", children: [
+        /* @__PURE__ */ u2("div", { class: "v", children: v5 }),
+        /* @__PURE__ */ u2("div", { class: "l", children: label }),
+        /* @__PURE__ */ u2("div", { class: `d ${d5 ? d5[1] : ""}`, children: d5 ? d5[0] : "" })
+      ] }, k5)) }),
+      /* @__PURE__ */ u2("div", { class: "uchart", children: [
+        /* @__PURE__ */ u2("h2", { children: "Cost and what each run loads before it starts, by day" }),
+        /* @__PURE__ */ u2(Chart, { days: u5.by_day || [], fd: fd3 }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "Bars: cost in dollars. Line: the median tokens a run loaded before doing anything (the rules file, CLAUDE.md, memory and skill names)." })
+      ] }),
+      /* @__PURE__ */ u2("h2", { children: "By kind of run" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "By kind of run", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Kind" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Runs" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Average tokens" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Loaded at start (median)" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Cost" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Share of cost" })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: kinds.map((k5) => /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("td", { children: KIND[k5.kind] || KIND.other }),
+          /* @__PURE__ */ u2("td", { children: num(k5.runs) }),
+          /* @__PURE__ */ u2("td", { children: num(k5.avg_tokens) }),
+          /* @__PURE__ */ u2("td", { children: num(k5.start_median) }),
+          /* @__PURE__ */ u2("td", { children: usd(k5.cost_usd) }),
+          /* @__PURE__ */ u2("td", { children: `${k5.share_pct}%` })
+        ] }, k5.kind)) })
+      ] }) })
+    ] });
+  }
+  function Skills({ skills }) {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("h2", { children: "Skills" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "Skills", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Skill" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Runs" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Cost" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Last used" })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: skills.map((s5) => /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("td", { children: s5.skill }),
+          /* @__PURE__ */ u2("td", { children: num(s5.runs) }),
+          /* @__PURE__ */ u2("td", { children: usd(s5.cost_usd) }),
+          /* @__PURE__ */ u2("td", { children: lastUsed(s5) })
+        ] }, s5.skill)) })
+      ] }) })
+    ] });
+  }
+  function lastUsed(s5) {
+    const ago = s5.days_since == null ? "" : s5.days_since === 0 ? "today" : s5.days_since === 1 ? "yesterday" : `${s5.days_since} days ago`;
+    if (s5.runs > 0) return ago;
+    return s5.days_since == null ? "never in this period (never run)" : `never in this period (${s5.days_since} ${s5.days_since === 1 ? "day" : "days"})`;
+  }
+  function Loads({ rows: rows2, start, fd: fd3 }) {
+    const total = rows2.reduce((a5, r4) => a5 + r4.tokens, 0), rules = rows2.find((r4) => r4.file === "rules");
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("h2", { children: "What every run loads" }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "The always-loaded files, measured once a day. Tokens are estimates (bytes ÷ 4); the change is over the last 30 days." }),
+      rows2.length ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "What every run loads", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("th", { scope: "col", children: "File" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Now" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "About tokens" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Change in 30 days" })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { children: rows2.map((r4) => /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("td", { children: FILE[r4.file] || r4.file }),
+            /* @__PURE__ */ u2("td", { children: usageKb(r4.bytes) }),
+            /* @__PURE__ */ u2("td", { children: num(r4.tokens) }),
+            /* @__PURE__ */ u2("td", { children: ctxChange(r4, fd3) })
+          ] }, r4.file)) })
+        ] }) }),
+        /* @__PURE__ */ u2("div", { class: "unote", children: [
+          /* @__PURE__ */ u2("b", { children: "Why this matters:" }),
+          " ",
+          `Every run starts by loading about ${num(start || total)} tokens${rules && total ? `, and the rules file is about ${Math.round(rules.tokens / total * 100)}% of the always-loaded files` : ""}. A smaller rules file lowers the cost of every run.`
+        ] })
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Not measured yet. The live server measures these files once a day." })
+    ] });
+  }
+  function ctxChange(r4, fd3) {
+    if (r4.change_bytes == null || !r4.since) return "no earlier measure yet";
+    if (r4.change_bytes === 0) return "no change";
+    const k5 = Math.abs(r4.change_bytes) / 1e3;
+    return `${r4.change_bytes > 0 ? "+" : "−"}${Number((k5 >= 10 ? Math.round(k5) : k5).toFixed(1))} KB since ${fd3(r4.since)}`;
+  }
+  function UsagePanel({ usage, fd: fd3 }) {
+    const u5 = usage || {};
+    const bad = !usage || usage.error;
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("p", { class: "sub", children: [
+        "Last ",
+        u5.days || 14,
+        " days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name. Internal; nothing leaves this laptop. Tokens loaded at start are what each run reported; the others are estimates (bytes ÷ 4)."
+      ] }),
+      bad || u5.empty ? /* @__PURE__ */ u2("p", { class: "sub uempty", role: "status", children: bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here." }) : /* @__PURE__ */ u2(Runs, { u: u5, fd: fd3 }),
+      /* @__PURE__ */ u2(Loads, { rows: u5.context || [], start: u5.cards?.start?.now, fd: fd3 }),
+      bad || u5.empty ? null : /* @__PURE__ */ u2(Skills, { skills: u5.skills || [] })
+    ] });
+  }
+  function mountUsage(host2, props) {
+    if (host2) R(/* @__PURE__ */ u2(UsagePanel, { ...props }), host2);
+  }
+
   // activity.js
   var ID_RE = /^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
   function itemText(id2) {
@@ -65621,6 +65859,7 @@ ${d5.text}`);
   }
   var ACTSHOW = 300;
   function renderActivity() {
+    if (ACTTAB === "u") usageDraw();
     actTools();
     [...HL].forEach(([id2, k5]) => {
       if (k5 !== "act") HL.delete(id2);
@@ -65866,23 +66105,46 @@ ${d5.text}`);
     dr2.replaceChildren();
     (q5.drafts || []).forEach((r4) => qRow(dr2, r4.label, r4.offered ? [String(r4.offered), r4.used.text, r4.edited.text, r4.rejected.text] : ["0", "—", "—", "—"], qNR(r4.rated, r4.offered, "offered")));
   }
-  function actTabsDraw(q5) {
-    drawTabs($("#actTabsHost"), {
-      items: [{ id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" }, { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" }],
-      selected: q5 ? "q" : "ch",
-      onSelect: (id2) => actShowQuality(id2 === "q"),
-      label: "Activity",
-      className: "acttabs",
-      wrap: true
-    });
+  var ACTTABS = [{ id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" }, { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" }, { id: "u", label: "Usage", tabId: "actTabU", controls: "actUsage" }];
+  var ACTTAB = "ch";
+  function actTabsDraw(tab) {
+    drawTabs($("#actTabsHost"), { items: ACTTABS, selected: tab, onSelect: (id2) => actShowTab(id2), label: "Activity", className: "acttabs", wrap: true });
   }
-  function actShowQuality(q5) {
-    $("#v-activity").classList.toggle("q", q5);
-    $("#actQuality").hidden = !q5;
-    actTabsDraw(q5);
-    if (q5) {
+  function actShowTab(tab) {
+    ACTTAB = tab;
+    const v5 = $("#v-activity");
+    v5.classList.toggle("q", tab === "q");
+    v5.classList.toggle("u", tab === "u");
+    $("#actQuality").hidden = tab !== "q";
+    $("#actUsage").hidden = tab !== "u";
+    actTabsDraw(tab);
+    if (tab === "q") {
       renderQuality();
       rjLoadRecent();
+    }
+    if (tab === "u") usageOpen();
+  }
+  var actShowQuality = (q5) => actShowTab(q5 ? "q" : "ch");
+  var USAGE_ROUTE = true;
+  function usageDraw() {
+    mountUsage($("#actUsage"), { usage: D.usage, fd });
+  }
+  async function usageOpen() {
+    usageDraw();
+    if (!USAGE_ROUTE || !viaServer()) return;
+    try {
+      const r4 = await fetch("/api/usage", { headers: { "X-Creaite-Token": D.token || "" } });
+      if (r4.status === 404 || r4.status === 405) {
+        USAGE_ROUTE = false;
+        return;
+      }
+      const j5 = r4.ok ? await r4.json() : null;
+      if (j5 && j5.cards && Array.isArray(j5.by_day)) {
+        D.usage = j5;
+        if (ACTTAB === "u") usageDraw();
+      }
+    } catch (e4) {
+      USAGE_ROUTE = true;
     }
   }
   function bootActivity0205() {
@@ -65893,7 +66155,7 @@ ${d5.text}`);
       name: pName,
       when: (at2) => `${fd(String(at2).slice(0, 10))}${String(at2).length > 15 ? " " + String(at2).slice(11, 16) : ""}`
     });
-    actTabsDraw(false);
+    actTabsDraw("ch");
   }
 
   // components/prep/PrepEditor.jsx
@@ -66834,9 +67096,9 @@ ${d5.text}`);
     sections.splice(at2, 0, s5);
     return syncLayout({ ...doc, sections });
   }
-  function moveBy(doc, id2, delta, lo2 = 0) {
+  function moveBy(doc, id2, delta2, lo2 = 0) {
     const from = doc.sections.findIndex((s5) => s5.id === id2);
-    return from < 0 ? doc : moveSection(doc, id2, from + delta, lo2);
+    return from < 0 ? doc : moveSection(doc, id2, from + delta2, lo2);
   }
   var hideSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: true }));
   var showSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: false }));
@@ -67125,7 +67387,7 @@ ${d5.text}`);
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
   }
-  async function exportClientReport(fmt, makePage) {
+  async function exportClientReport(fmt) {
     const a5 = crArg.value, d5 = crDoc.value;
     if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
     const opened = crIdentity(d5);
@@ -67134,8 +67396,7 @@ ${d5.text}`);
       if (!s5.ok) return s5;
     }
     if (crIdentity() !== opened) return { ok: false, message: "Another report opened while this one was saving, so nothing was exported." };
-    const page = makePage && fmt !== "docx" ? await makePage(crDoc.value, crBase.value) : null;
-    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt, page: page || void 0 });
+    return saveExport({ kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt });
   }
   var matchChain = Promise.resolve();
   var sameWeek = (i5, c5) => !!i5 && !!c5 && i5.project === c5.project && i5.date === c5.date;
@@ -67263,11 +67524,12 @@ ${d5.text}`);
   }
   var textMsg = y3("");
   var PICS = /* @__PURE__ */ new Map();
-  var mapOf = (code) => {
-    let m5 = PICS.get(code);
+  var mapOf = (code, kind = "") => {
+    const key2 = `${code}|${kind === "client" ? "client" : ""}`;
+    let m5 = PICS.get(key2);
     if (!m5) {
       m5 = /* @__PURE__ */ new Map();
-      PICS.set(code, m5);
+      PICS.set(key2, m5);
     }
     return m5;
   };
@@ -67276,17 +67538,17 @@ ${d5.text}`);
     for (const m5 of String(text || "").matchAll(/!\[[^\]\n]*\]\((_images\/[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(?:png|jpe?g))\)/gi)) out.add(m5[1]);
     return [...out];
   }
-  var reportImageSrc = (code, ref) => mapOf(code).get(ref) || null;
-  async function loadReportImages(code, refs) {
-    const m5 = mapOf(code), want = refs.filter((r5) => !m5.has(r5));
+  var reportImageSrc = (code, ref, kind = "") => mapOf(code, kind).get(ref) || null;
+  async function loadReportImages(code, refs, kind = "") {
+    const m5 = mapOf(code, kind), want = refs.filter((r5) => !m5.has(r5));
     if (!want.length || !viaServer()) return;
-    const r4 = await api("/api/report/images", { code, refs: want });
+    const r4 = await api("/api/report/images", { code, refs: want, kind: kind === "client" ? "client" : void 0 });
     if (r4 && r4.ok && r4.images) for (const [k5, v5] of Object.entries(
       /** @type {Record<string, string>} */
       r4.images
     )) m5.set(k5, v5);
   }
-  async function addReportImage(code, file) {
+  async function addReportImage(code, file, kind = "") {
     if (!/^image\/(png|jpeg)$/.test(file.type)) {
       textMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`;
       return null;
@@ -67305,13 +67567,13 @@ ${d5.text}`);
       fr2.onerror = () => res("");
       fr2.readAsDataURL(file);
     });
-    const r4 = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1) }) : null;
+    const r4 = src ? await api("/api/report/image", { code, name: file.name, data: String(src).slice(String(src).indexOf(",") + 1), kind: kind === "client" ? "client" : void 0 }) : null;
     if (!r4 || !r4.ok) {
       textMsg.value = oneLine(r4 && r4.message || `${file.name} couldn't be added.`);
       return null;
     }
     textMsg.value = "";
-    mapOf(code).set(r4.ref, String(src));
+    mapOf(code, kind).set(r4.ref, String(src));
     return (
       /** @type {string} */
       r4.ref
@@ -67553,12 +67815,12 @@ ${d5.text}`);
     on2.current = onText;
     const marks = A2(checks);
     marks.current = checks;
-    const code = text ? text.code : "";
+    const code = text ? text.code : "", kind = text ? text.kind || "" : "";
     const [ready, setReady] = d2(!text || !imageRefsIn(value).length);
     h2(() => {
       if (!text || ready) return void 0;
       let live = true;
-      loadReportImages(code, imageRefsIn(value)).then(() => {
+      loadReportImages(code, imageRefsIn(value), kind).then(() => {
         if (live) setReady(true);
       });
       return () => {
@@ -67574,7 +67836,7 @@ ${d5.text}`);
     });
     const addImages2 = async (files) => {
       for (const f5 of [...files || []]) {
-        const ref = await addReportImage(code, f5), h5 = ed3.current;
+        const ref = await addReportImage(code, f5, kind), h5 = ed3.current;
         if (!ref || !h5) continue;
         const st2 = h5.editor.state, end = st2.doc.content.size, at2 = st2.doc.resolve(Math.min(st2.selection.from, end)), after = at2.depth ? at2.after(1) : end;
         h5.editor.chain().setMeta(OWN_JOIN, true).insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []]).run();
@@ -67592,7 +67854,7 @@ ${d5.text}`);
         box.current
       );
       const editorProps = { handleScrollToSelection: keepCaretInView };
-      const h5 = creaiteEditor(el2, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: (ref) => reportImageSrc(code, ref), ...ai2 ? { ai: ai2 } : {} } : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
+      const h5 = creaiteEditor(el2, text ? { features: "notes", markdown: value, undoDepth: UNDO_DEPTH, extensions: [cxUndoSteps], editorProps, imageSrc: (ref) => reportImageSrc(code, ref, kind), ...ai2 ? { ai: ai2 } : {} } : rich ? { features: "current", headShift: HEAD_SHIFT, markdown: value, editorProps, ...ai2 ? { ai: ai2 } : {} } : { features: "plain", text: value, multiline, editorProps, ...ai2 ? { ai: ai2 } : {} });
       ed3.current = h5;
       h5.editor.setEditable(editable);
       const slashOff = text ? attachSlash(h5, { profile: "textsection", host: hostRows() }) : () => {
@@ -67918,7 +68180,7 @@ ${d5.text}`);
       {
         value: s5.text || "",
         rich: true,
-        text: { code: String(ctx.doc.project || "") },
+        text: { code: String(ctx.doc.project || ""), kind: String(ctx.doc.kind || "") },
         label: s5.heading || "Text section",
         onText: (t47) => h5.update({ text: t47 }, "Text edited"),
         ai: h5.ai,
@@ -68527,10 +68789,10 @@ ${d5.text}`);
   var HEADER_HIDE_OVER = 0;
   var HEADER_SHOW_ON_UP = Infinity;
   var HEADER_SHOW_AT_TOP = 0;
-  function headerPolicy(top, delta, up2) {
+  function headerPolicy(top, delta2, up2) {
     if (top <= HEADER_SHOW_AT_TOP) return "show";
-    if (delta > HEADER_HIDE_OVER) return "hide";
-    if (delta < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
+    if (delta2 > HEADER_HIDE_OVER) return "hide";
+    if (delta2 < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
     return "keep";
   }
 
@@ -69243,7 +69505,7 @@ ${d5.text}`);
           onEvent({ type: "reload", partner: true });
         }, children: "Reload" })
       ] }) : null,
-      /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: partner && !together ? /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: exported && props.exportedView && !partner ? props.exportedView : partner && !together ? /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
         /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
       ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
@@ -69898,6 +70160,47 @@ ${d5.text}`);
   }
 
   // components/report/ClientParts.jsx
+  function ServerExported({ doc, version, save: save2 }) {
+    const [got, setGot] = d2(
+      /** @type {any} */
+      null
+    );
+    const asked2 = `${doc.project}|${doc.date}|${version}`;
+    h2(() => {
+      let live = true;
+      setGot(null);
+      if (!viaServer()) {
+        setGot({ ok: false, message: "Show as exported needs the live server." });
+        return void 0;
+      }
+      (async () => {
+        const s5 = save2 ? await save2() : null;
+        if (!live) return;
+        if (s5 && !s5.ok) {
+          setGot({ ok: false, message: s5.message || "The report wasn't saved." });
+          return;
+        }
+        const r4 = await api("/api/report/exported-view", { kind: "client", code: doc.project, week_ending: doc.date });
+        const id2 = r4 && r4.identity || null;
+        if (live && r4 && (id2 ? id2.code === doc.project && id2.week_ending === doc.date : !r4.ok)) setGot(r4);
+      })();
+      return () => {
+        live = false;
+      };
+    }, [asked2]);
+    if (!got) return /* @__PURE__ */ u2("p", { class: "sub crx-wait", role: "status", children: "Making the page as it is exported…" });
+    if (!got.ok) {
+      const why = (got.findings || []).join("; ") || got.message || "it couldn't be made";
+      return /* @__PURE__ */ u2("p", { class: "mnerr crx-err", role: "alert", children: [
+        "This client report can't be exported as it is: ",
+        why
+      ] });
+    }
+    return /* @__PURE__ */ u2("div", { class: "crx", "data-preview": got.preview ? "1" : void 0, children: [
+      got.preview ? /* @__PURE__ */ u2("span", { class: "crx-badge", children: "Preview" }) : null,
+      /* @__PURE__ */ u2("iframe", { class: "crx-frame", title: "The client report as it is exported", sandbox: "", srcdoc: got.html })
+    ] });
+  }
   var crAskWhy = y3(false);
   function setClientDoc(next) {
     if (!sameReport(next)) return;
@@ -70156,131 +70459,6 @@ ${d5.text}`);
     // #218: a text section, with its Matching internal line when the internal report has it
   };
 
-  // components/report/exportPage.jsx
-  var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
-  var CLIENT_EXPORT = { viewId: "v-clientreport", viewClass: "crview", sheetClass: "crsheet" };
-  var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
-  var NOOP = () => {
-  };
-  function used(d5, selector) {
-    try {
-      return !!d5.querySelector(selector.replace(PSEUDO_ELEMENT, ""));
-    } catch (e4) {
-      return true;
-    }
-  }
-  function usedRules(win, d5, from) {
-    const out = [];
-    const walk = (rules) => {
-      for (const r4 of Array.from(rules)) {
-        if (r4.constructor.name === "CSSStyleRule") {
-          if (used(
-            d5,
-            /** @type {CSSStyleRule} */
-            r4.selectorText
-          )) out.push(r4.cssText);
-        } else if (r4.constructor.name === "CSSMediaRule") {
-          const m5 = (
-            /** @type {CSSMediaRule} */
-            r4
-          ), cond = m5.conditionText || m5.media.mediaText;
-          if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m5.cssRules);
-        } else if (r4.constructor.name === "CSSSupportsRule") {
-          const sr2 = (
-            /** @type {CSSSupportsRule} */
-            r4
-          );
-          if (
-            /** @type {any} */
-            win.CSS.supports(sr2.conditionText)
-          ) walk(sr2.cssRules);
-        }
-      }
-    };
-    for (const sheet of Array.from(from.styleSheets)) {
-      const rules = (() => {
-        try {
-          return sheet.cssRules;
-        } catch (e4) {
-          return null;
-        }
-      })();
-      if (rules) walk(rules);
-    }
-    return out.join("\n");
-  }
-  async function reportExportPage(doc, renderers, view, version) {
-    const frame = document.createElement("iframe");
-    frame.setAttribute("aria-hidden", "true");
-    frame.tabIndex = -1;
-    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;pointer-events:none";
-    document.body.append(frame);
-    try {
-      const w6 = (
-        /** @type {Window} */
-        frame.contentWindow
-      ), d5 = (
-        /** @type {Document} */
-        frame.contentDocument
-      );
-      const palette = document.documentElement.dataset.palette || "";
-      d5.open();
-      d5.write(`<!doctype html><html data-theme="light"${palette ? ` data-palette="${palette.replace(/[^\w -]/g, "")}"` : ""}><head><meta charset="utf-8"></head><body><\/body></html>`);
-      d5.close();
-      for (const st2 of Array.from(document.querySelectorAll("style"))) {
-        const c5 = d5.createElement("style");
-        c5.textContent = st2.textContent;
-        d5.head.append(c5);
-      }
-      const host2 = d5.createElement("div");
-      host2.id = view.viewId;
-      host2.className = "export-view";
-      d5.body.append(host2);
-      const props = {
-        doc,
-        renderers,
-        extras: [],
-        exported: true,
-        readOnly: true,
-        peerDoc: null,
-        peerLabel: "",
-        side: (
-          /** @type {""} */
-          ""
-        ),
-        onChange: NOOP,
-        onOpenItem: void 0,
-        onEvent: NOOP,
-        onRedraft: void 0,
-        aiFor: () => void 0,
-        checks: [],
-        refocus: { current: null },
-        match: null
-      };
-      R(/* @__PURE__ */ u2("div", { class: view.viewClass, children: /* @__PURE__ */ u2("div", { class: view.sheetClass, children: /* @__PURE__ */ u2("div", { class: "sheet-root", children: /* @__PURE__ */ u2("div", { class: "sheet-area sheet-exported", children: /* @__PURE__ */ u2("div", { class: "sheet-scroll", children: /* @__PURE__ */ u2("div", { class: "sheet-one", children: /* @__PURE__ */ u2("div", { class: "sheet-fit", children: /* @__PURE__ */ u2("div", { class: "sheet-a4", children: /* @__PURE__ */ u2(SheetPage, { ...props }) }) }) }) }) }) }) }) }), host2);
-      await new Promise((r4) => setTimeout(r4, 250));
-      await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
-        i5.onload = i5.onerror = () => r4(null);
-      })));
-      const copy = (
-        /** @type {HTMLElement} */
-        host2.cloneNode(true)
-      );
-      copy.querySelectorAll("[data-ref],[data-row]").forEach((e4) => {
-        e4.removeAttribute("data-ref");
-        e4.removeAttribute("data-row");
-      });
-      const html2 = copy.outerHTML, css = usedRules(w6, d5, document);
-      R(null, host2);
-      return html2 && css ? { html: html2, css, palette, version } : null;
-    } catch (e4) {
-      console.error("export page:", e4);
-      return null;
-    } finally {
-      frame.remove();
-    }
-  }
-
   // components/report/ClientView.jsx
   async function openCheck() {
     const d5 = crDoc.value;
@@ -70296,7 +70474,7 @@ ${d5.text}`);
     await runCheck();
   }
   async function doExport(fmt) {
-    const r4 = await exportClientReport(fmt, (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5));
+    const r4 = await exportClientReport(fmt);
     if (r4 && (r4.ok || r4.clash)) crDialog.value = false;
     else await runCheck();
   }
@@ -73502,6 +73680,130 @@ ${d5.text}`);
     ] });
   }
 
+  // components/report/exportPage.jsx
+  var WEEKLY_EXPORT = { viewId: "v-weekly", viewClass: "wrview", sheetClass: "wrsheet" };
+  var PSEUDO_ELEMENT = /::?(?:before|after|first-line|first-letter|marker|selection|placeholder|backdrop|file-selector-button)|::[\w-]+/g;
+  var NOOP = () => {
+  };
+  function used(d5, selector) {
+    try {
+      return !!d5.querySelector(selector.replace(PSEUDO_ELEMENT, ""));
+    } catch (e4) {
+      return true;
+    }
+  }
+  function usedRules(win, d5, from) {
+    const out = [];
+    const walk = (rules) => {
+      for (const r4 of Array.from(rules)) {
+        if (r4.constructor.name === "CSSStyleRule") {
+          if (used(
+            d5,
+            /** @type {CSSStyleRule} */
+            r4.selectorText
+          )) out.push(r4.cssText);
+        } else if (r4.constructor.name === "CSSMediaRule") {
+          const m5 = (
+            /** @type {CSSMediaRule} */
+            r4
+          ), cond = m5.conditionText || m5.media.mediaText;
+          if (!/prefers-color-scheme\s*:\s*dark/i.test(cond) && win.matchMedia(cond).matches) walk(m5.cssRules);
+        } else if (r4.constructor.name === "CSSSupportsRule") {
+          const sr2 = (
+            /** @type {CSSSupportsRule} */
+            r4
+          );
+          if (
+            /** @type {any} */
+            win.CSS.supports(sr2.conditionText)
+          ) walk(sr2.cssRules);
+        }
+      }
+    };
+    for (const sheet of Array.from(from.styleSheets)) {
+      const rules = (() => {
+        try {
+          return sheet.cssRules;
+        } catch (e4) {
+          return null;
+        }
+      })();
+      if (rules) walk(rules);
+    }
+    return out.join("\n");
+  }
+  async function reportExportPage(doc, renderers, view, version) {
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;pointer-events:none";
+    document.body.append(frame);
+    try {
+      const w6 = (
+        /** @type {Window} */
+        frame.contentWindow
+      ), d5 = (
+        /** @type {Document} */
+        frame.contentDocument
+      );
+      const palette = document.documentElement.dataset.palette || "";
+      d5.open();
+      d5.write(`<!doctype html><html data-theme="light"${palette ? ` data-palette="${palette.replace(/[^\w -]/g, "")}"` : ""}><head><meta charset="utf-8"></head><body><\/body></html>`);
+      d5.close();
+      for (const st2 of Array.from(document.querySelectorAll("style"))) {
+        const c5 = d5.createElement("style");
+        c5.textContent = st2.textContent;
+        d5.head.append(c5);
+      }
+      const host2 = d5.createElement("div");
+      host2.id = view.viewId;
+      host2.className = "export-view";
+      d5.body.append(host2);
+      const props = {
+        doc,
+        renderers,
+        extras: [],
+        exported: true,
+        readOnly: true,
+        peerDoc: null,
+        peerLabel: "",
+        side: (
+          /** @type {""} */
+          ""
+        ),
+        onChange: NOOP,
+        onOpenItem: void 0,
+        onEvent: NOOP,
+        onRedraft: void 0,
+        aiFor: () => void 0,
+        checks: [],
+        refocus: { current: null },
+        match: null
+      };
+      R(/* @__PURE__ */ u2("div", { class: view.viewClass, children: /* @__PURE__ */ u2("div", { class: view.sheetClass, children: /* @__PURE__ */ u2("div", { class: "sheet-root", children: /* @__PURE__ */ u2("div", { class: "sheet-area sheet-exported", children: /* @__PURE__ */ u2("div", { class: "sheet-scroll", children: /* @__PURE__ */ u2("div", { class: "sheet-one", children: /* @__PURE__ */ u2("div", { class: "sheet-fit", children: /* @__PURE__ */ u2("div", { class: "sheet-a4", children: /* @__PURE__ */ u2(SheetPage, { ...props }) }) }) }) }) }) }) }) }), host2);
+      await new Promise((r4) => setTimeout(r4, 250));
+      await Promise.all(Array.from(d5.images).map((i5) => i5.complete ? null : new Promise((r4) => {
+        i5.onload = i5.onerror = () => r4(null);
+      })));
+      const copy = (
+        /** @type {HTMLElement} */
+        host2.cloneNode(true)
+      );
+      copy.querySelectorAll("[data-ref],[data-row]").forEach((e4) => {
+        e4.removeAttribute("data-ref");
+        e4.removeAttribute("data-row");
+      });
+      const html2 = copy.outerHTML, css = usedRules(w6, d5, document);
+      R(null, host2);
+      return html2 && css ? { html: html2, css, palette, version } : null;
+    } catch (e4) {
+      console.error("export page:", e4);
+      return null;
+    } finally {
+      frame.remove();
+    }
+  }
+
   // components/report/hub/hubActions.js
   function clashAnswered() {
     return new Promise((resolve) => {
@@ -73532,8 +73834,7 @@ ${d5.text}`);
       crDialog.value = true;
       return;
     }
-    const mk2 = (d5, v5) => reportExportPage(d5, CLIENT_RENDERERS, CLIENT_EXPORT, v5);
-    const c5 = await exportClientReport(fmt, mk2);
+    const c5 = await exportClientReport(fmt);
     if (c5 && !c5.ok && !c5.clash) {
       crDialog.value = true;
       await runCheck();
@@ -73986,6 +74287,11 @@ ${d5.text}`);
   var internalAi = (doc) => ({ place: "report", project: () => doc.project, confidential: () => false });
   var internalRedraft = (doc) => redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report");
   var clientRedraft = (cd2) => redrafter(() => ({ code: cd2.project, document: { kind: "client", code: cd2.project, week_ending: cd2.date, client: cd2.client || "" } }), "report", "client", clientHealthApply);
+  var saveForShow = async () => {
+    const d5 = crDoc.value;
+    if (!d5 || !(crDirty.value || crInfo.value && crInfo.value.where === "new")) return { ok: true };
+    return saveClientPage({ doc: d5, base_version: crBase.value });
+  };
   function HubSheet({ code, view, on: on2, doc }) {
     const cd2 = crDoc.value, ci2 = crInternal.value, cinfo = crInfo.value;
     const iLocked = doc.state === "approved" && !weeklyEditing.value;
@@ -74044,6 +74350,7 @@ ${d5.text}`);
           onSave: saveClientPage,
           ai: clientAi,
           onRedraft: clientRedraft(cd2),
+          exportedView: /* @__PURE__ */ u2(ServerExported, { doc: cd2, version: crBase.value, save: saveForShow }),
           onEvent: (ev) => {
             if (ev.type === "reload") reloadClient();
             else countRedraft(ev, "report");
@@ -75901,6 +76208,7 @@ ${d5.text}`);
         "SourceLink",
         "StatusDot",
         "TEMPLATES",
+        "TEXT_TYPE",
         "THEMES",
         "TICK24",
         "TIP_CLOSE",
@@ -75929,6 +76237,7 @@ ${d5.text}`);
         "acItems",
         "actHref",
         "actPaint",
+        "actTools",
         "addEl",
         "addPartner",
         "addTextSection",
@@ -76139,6 +76448,7 @@ ${d5.text}`);
         "igText",
         "inboxBadge",
         "insertImage",
+        "intakeTarget",
         "invitees",
         "isMe",
         "isMin",
@@ -76470,7 +76780,6 @@ ${d5.text}`);
         "synthDay",
         "tabId",
         "tabTitle",
-        "tdLine",
         "thisWeek",
         "tl",
         "toIso",

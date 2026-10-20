@@ -318,10 +318,9 @@ class Reports(Case):
         spec.parent.mkdir(parents=True, exist_ok=True)
         spec.write_text(json.dumps({"code": "ABC", "period_start": iso(-30), "summary": ["A quiet week."], "force": True}))
         self.v.run("client-stage", str(spec), script="report.py")
-        drafts = list((self.v.root / "system/staging/drafts").glob("*.docx"))
-        self.assertTrue(drafts)
-        for dr in drafts:
-            self.assertNotIn(secret, self.v.run("text", str(dr), script="docx_tools.py").stdout)
+        draft = next((self.v.root / "system/staging/drafts").glob("*Client report*.html"))   # v2.5.1: the hub's own, no Word file
+        self.assertNotIn(secret, draft.read_text(encoding="utf-8"))               # neither its page nor its data block
+        self.assertNotIn(secret, __import__("test_reports").client_draft_text(self, self.v))
         self.assertEqual(self.ms()["internal_note"], secret)                     # kept, for Movement
 
     def test_status_facts_for_a_client_leave_internal_milestones_out(self):

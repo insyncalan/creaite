@@ -5,7 +5,9 @@ Before this fix the server checked that page only for item IDs, markers and the 
 hidden wording, the hidden owner's name or an internal section's text was written to the client's Reports folder. Now every section's
 words must be made of that section's own shown strings (and the client view's fixed labels), the style rules may use only the dashboard
 stylesheet's words, and a comment, a script or a foreign section refuses the page: the route then makes the plain file from the saved
-report (`plain: true` with `plain_why`). Live routes, a throwaway vault, fictional data only.
+report (`plain: true` with `plain_why`). Superseded by #239 step 3 (v2.5.2): a posted page is never used for a client report at all
+(`page_ignored: true`); the file is client_snapshot.client_export's own render. The leak assertions are kept: none of the posted
+words reach the file. Live routes, a throwaway vault, fictional data only.
 
 Run: python3 dev/tests/test_export_page_subset.py        (the PDF cases need Chrome; skipped without it)
 """
@@ -115,7 +117,7 @@ class PageSubset(unittest.TestCase):
     def assert_refused(self, label, page, needles, fmt):
         r = self.export_page(fmt, page)
         self.assertTrue(r.get("ok"), (label, fmt, r))
-        self.assertTrue(r.get("plain") and r.get("plain_why"), (label, fmt, "the page must be refused, the plain file made", r))
+        self.assertTrue(r.get("page_ignored"), (label, fmt, "the posted page must never be used for a client report", r))
         got = file_text(self.v.root / r["path"])
         for n in needles:
             self.assertNotIn(n.lower(), got, (label, fmt, n))
@@ -146,33 +148,24 @@ class PageSubset(unittest.TestCase):
                 with self.subTest(label=label, fmt=fmt):
                     self.assert_refused(label, page, needles, fmt)
 
-    def test_control_the_page_the_dashboard_posts_is_kept_styled(self):
-        """A page made of the saved report's own words and the client view's labels is used: the styled file, not the plain one."""
+    def test_control_even_the_page_the_dashboard_posts_is_not_used_the_server_renders(self):
+        """v2.5.2 (#239 step 3): a page made of the saved report's own words is not used either: the file is the server's render of
+        the checked snapshot (styled, never `plain`), and a class from the posted page never reaches it."""
         doc, shown = self.approved_client()
         self.first = shown[0]["id"]
         sec = next((s for s in shown if s["id"] == "risks"), None) or next(s for s in shown if s.get("type") == "table")
-        cols = sec.get("columns") or []
-
-        def cell(r, c):
-            return f"<td><p><span>{html.escape(str(r['cells'].get(c['key']) or ''))}</span></p></td>"
-        body = "".join("<tr>" + "".join(cell(r, c) for c in cols) + "</tr>" for r in sec.get("rows") or [] if r.get("shown", True))
-        rows = (f'<h2>{html.escape(sec["heading"])}</h2><div class="crsec wr-unknown"><table class="wr-r"><thead><tr>'
-                + "".join(f"<th>{html.escape(c['label'])}</th>" for c in cols) + f"</tr></thead><tbody>{body}</tbody></table></div>")
-        head = ('<div id="v-clientreport" class="export-view"><div class="page"><header class="doc"><div><h1>Client report</h1>'
-                f'<div class="sub">{html.escape(doc["project_name"])} · {html.escape(doc.get("client") or "")}</div></div>'
-                '<div class="sub">Client</div></header>')
-        page = {"html": head + f'<section data-id="{sec["id"]}">{rows}</section></div></div>',
-                "css": ".page{color:#123}.wr-r td{padding:4px}", "palette": "creaite", "version": int(doc.get("version") or 0)}
+        page = {"html": f'<div id="v-clientreport" class="export-view"><div class="page"><section data-id="{sec["id"]}">'
+                        f'<h2 class="wr-unknown">{html.escape(sec["heading"])}</h2></section></div></div>',
+                "css": ".page{color:#123}.wr-posted td{padding:4px}", "palette": "creaite", "version": int(doc.get("version") or 0)}
         for fmt in self.formats():
             r = self.export_page(fmt, page)
             self.assertTrue(r.get("ok"), r)
+            self.assertTrue(r.get("page_ignored"), (fmt, r))
             self.assertFalse(r.get("plain"), (fmt, r))
             if fmt == "html":
                 text = (self.v.root / r["path"]).read_text(encoding="utf-8")
-                self.assertIn('data-theme="light"', text)
-                self.assertIn(".wr-r td{padding:4px}", text)
-                self.assertIn('class="wr-r"', text, "the stylesheet's own classes are kept")
-                self.assertNotIn("wr-unknown", text, "a class no stylesheet rule uses is left out")
+                self.assertNotIn("wr-unknown", text, "nothing from the posted page")
+                self.assertNotIn(".wr-posted", text, "nothing from the posted style rules")
 
 
 if __name__ == "__main__":

@@ -159,8 +159,7 @@ class ConfidentialClientOutputTests(unittest.TestCase):
                                  "progress": ["Plan revised"], "next_steps": ["Sign the statement of work"],
                                  "input_needed": ["Signature by 16-10"]}))
         out = self.v.at("client-stage", str(f), script="report.py").stdout
-        prop = next((self.v.root / "system/staging").glob("proposed-*-client-ABC.json"))
-        text = self.v.run("text", str(self.v.root / json.loads(prop.read_text())["report"]["draft"]), script="docx_tools.py").stdout
+        text = next((self.v.root / "system/staging/drafts").glob("*Client report*.html")).read_text(encoding="utf-8")   # v2.5.1
         for said in (data, out, text):
             for secret in (GIST, ACT, DEC, "Budget holder", "hiring"):
                 self.assertNotIn(secret, said)

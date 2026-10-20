@@ -99,7 +99,7 @@ class StyleTokens(unittest.TestCase):
         """#193: one field rule and one chip rule; a context does not draw its own height, radius or ground again."""
         n = len(re.findall(r"(?m)^\.chip,\.vchip\{", self.css))
         self.assertEqual(n, 1, "one chip definition")
-        for ctx in (".prepmeta .chip{", ".shape .chip{", ".pp .chip{", ".rp .chip{", ".rp-cockcard .chip{"):
+        for ctx in (".prepmeta .chip{", ".shape .chip{", ".pp .chip{", ".rp .chip{"):   # #254: .rp-cockcard went with the card
             for body in re.findall(re.escape(ctx) + r"([^}]*)\}", self.css):
                 self.assertNotRegex(body, r"height|radius", ctx + " draws its own height or radius (a second chip style)")
         self.assertRegex(self.css, r"\.wbulk select[^{]*\{height:var\(--ctl-h\);border:1px solid var\(--line\);border-radius:var\(--ctl-r\)")

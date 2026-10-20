@@ -423,6 +423,7 @@ def stage(spec_file):
     for note in notes:
         print("  Note: " + note)
     tally_ignored(ignored)
+    tally_run(items=len(items), possible=possible, skipped=sum(skipped.values()))     # #253: done logs these, not the summary
     paths.consume_draft(spec_file)                                      # BL-118: staged and checked, so the input has done its job
     return 0
 
@@ -899,14 +900,56 @@ def tally_ignored(counts):
     TALLY.write_text(json.dumps(have, ensure_ascii=False), encoding="utf-8")
 
 
-def take_tally():
-    """The ignore counts gathered during this sweep (BL-97), cleared once read."""
+RUN_KEY = "_run"      # #253: the run's own counts (items, possible, alerts, skipped), kept beside the ignore counts
+
+
+def tally_run(**counts):
+    """Add this step's counts (items, possible, alerts, skipped: numbers only) to the run's tally, read by done (#253)."""
+    counts = {k: int(n) for k, n in counts.items() if n}
+    if not counts:
+        return
+    try:
+        have = json.loads(TALLY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):                                       # no tally yet, or a broken one: start afresh
+        have = {}
+    run = have.get(RUN_KEY) if isinstance(have.get(RUN_KEY), dict) else {}
+    for k, n in counts.items():
+        run[k] = run.get(k, 0) + n
+    have[RUN_KEY] = run
+    TALLY.parent.mkdir(parents=True, exist_ok=True)
+    TALLY.write_text(json.dumps(have, ensure_ascii=False), encoding="utf-8")
+
+
+def take_tally(with_run=False):
+    """The ignore counts gathered during this sweep (BL-97), cleared once read; with_run, also the run's own counts (#253)."""
     try:
         counts = json.loads(TALLY.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         counts = {}
     TALLY.unlink(missing_ok=True)
-    return counts
+    counts = counts if isinstance(counts, dict) else {}
+    run = counts.pop(RUN_KEY, None)
+    run = run if isinstance(run, dict) else {}
+    return (counts, run) if with_run else counts
+
+
+def done_log_line(normal, started, counts, run, fetch=None):
+    """#253: the debug log's done line, counts only (never the summary, a name, a subject or a title): items, possible,
+    alerts, skipped by stage, ignored by the rules, (#250) the transcripts fetched, failed and left when any were tried,
+    and the minutes since the run started."""
+    items = int(run.get("items", 0))
+    line = (f"done{' (normal)' if normal else ''}: {items} item{'s' if items != 1 else ''} "
+            f"({int(run.get('possible', 0))} possible), {int(run.get('alerts', 0))} alerts, "
+            f"{int(run.get('skipped', 0))} skipped, {sum(int(n) for n in counts.values())} ignored")
+    fetch = {k: int((fetch or {}).get(k) or 0) for k in ("fetched", "failed", "left")}
+    if any(fetch.values()):
+        line += f", transcripts {fetch['fetched']} fetched, {fetch['failed']} failed, {fetch['left']} left"
+    try:
+        began = datetime.strptime(str(started)[:16].replace("T", " "), "%Y-%m-%d %H:%M")
+        line += f", {max(0, int((now() - began).total_seconds() // 60))} min"
+    except ValueError:                                                  # a start it can't read: the line has no duration
+        pass
+    return line
 
 
 def ignore_cmd(spec_file):
@@ -1125,6 +1168,8 @@ def vip_record(found, how="sweep", checked=None):
         if not st.get("held"):
             st.pop("held", None)
         vip_save(st)
+    if how == "sweep":
+        tally_run(alerts=len(new))                                      # #253: the done line's alert count
     return new
 
 
@@ -2154,12 +2199,13 @@ def done_cmd(a):
     """Record a successful sweep: last-sweep.txt (normal sweeps only), the run log, and the summary (fetched, ignored)."""
     if a.normal:
         paths.SWEEP_STATE.write_text(a.started[:16] + "\n", encoding="utf-8")
-    counts = take_tally()                                   # BL-97: what the ignore rules dropped, counts only
+    counts, run = take_tally(with_run=True)                 # BL-97: what the ignore rules dropped; #253: the run's counts
     import transcripts
-    fetched = transcripts.fetch_text(transcripts.take_fetch_tally())     # #250: "Fetched n transcripts", counts only
+    fetch_counts = transcripts.take_fetch_tally()           # #250: this sweep's fetch counts, counts only
+    fetched = transcripts.fetch_text(fetch_counts)
     summary = "; ".join(x for x in (a.summary, fetched, ignored_text(counts) if counts else "") if x)
     log_line(f"sweep ok{' (normal)' if a.normal else ''}{' | ' + summary if summary else ''}")
-    debuglog.info("sweep", f"done{' (normal)' if a.normal else ''}: {debuglog.rule(summary, 200) or 'no summary'}")
+    debuglog.info("sweep", done_log_line(a.normal, a.started, counts, run, fetch_counts))   # #253: counts only, never the summary
     print("Recorded." + (f" Last sweep: {tracker.shown(a.started[:16])}." if a.normal else "")
           + (f" {fetched}." if fetched else "") + (f" {ignored_text(counts)}." if counts else ""))
     return 0
