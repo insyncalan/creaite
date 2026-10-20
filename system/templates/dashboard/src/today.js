@@ -20,11 +20,12 @@ import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
-import { countLink, go, jumpLink, navBlocked, navOf, openWork, pLink } from "./core/nav.js";
+import { countLink, go, jumpLink, navBlocked, navOf, navWrite, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { selDay } from "./stores/today.js";
+import { openMilestone } from "./milestones.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
@@ -32,7 +33,7 @@ import { decorateWarnings, prepKey, prepOf, undatedWork, WARNS } from "./project
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { draftOn, RHL } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
-import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
+import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, renderWork, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
 export const dismissedF=()=>store.list("creaite-dismiss"), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
 /* ===== Today brief (BL-72) ===== */
@@ -76,7 +77,44 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
     if(others) parts.push(`${plur(others,"decision")} waiting on others`); if(mine) parts.push(others?`${mine} for you`:`${plur(mine,"decision")} for you`);
     const show=L.slice(0,3).map(d=>`${sLink(`data-open="decisions:${d.id}"`,esc(decShort(d.t,70)))} (${decAsked(d)}${d.due?`, ${decLate(d)?`<span class="late">${decLateWords(d)}</span>`:`by ${fd(d.due).slice(0,5)}`}`:""})`);
     out.unshift({decisions:true,html:n=>tl(n,tLink('data-decpending="1"',parts.join(", ")+(late?`, ${late} late`:"")),`${andList(show)}${L.length>3?` and ${L.length-3} more`:""}.`)}); } }
+  out.unshift(...msAttention().map(r=>({milestone:r.ms,html:n=>msAttnRow(n,r)})));   /* #251: time-critical, so first, soonest first */
   return out; }
+/* #251 (Alan, 19-10 and 20-10-2026): one Needs attention row per milestone not yet achieved (or dropped) that is due within the
+   Due soon window (review.due_soon_days), or already past due, by its forecast date when it has one, else its agreed date, and
+   has open work attached that must close for it to hold: open (or delayed) actions and open issues. Risks are left out (a
+   risk can stay open and the milestone still lands); decisions have no milestone. No date, no row; nothing attached, no row.
+   No dismiss: it goes by itself when the work closes or the milestone is achieved. Built from the page's own data. */
+const msLate=x=>!!x.due&&days(x.due)<0;
+export function msAttention(){ const out=[];
+  for(const p of P) for(const m of p.ms||[]){ const id=m[3], when=m[8]||m[4]; if(!id||!when||m[6]!=="Planned"||days(when)>S.dueSoon) continue;
+    const its=[...A.filter(a=>a.ms===id&&open(a)),...R.filter(r=>r.ms===id&&r.type==="Issue"&&r.st==="Open")];
+    if(!its.length) continue;
+    // @ts-expect-error TS2362: true and false subtract as 1 and 0 (late items first)
+    its.sort((a,b)=>(msLate(b)-msLate(a))||(a.due||"9").localeCompare(b.due||"9")||a.id.localeCompare(b.id));
+    out.push({ms:id,p:p.code,name:m[0],when,its}); }
+  return out.sort((a,b)=>a.when.localeCompare(b.when)||pName(a.p).localeCompare(pName(b.p))||a.name.localeCompare(b.name)); }
+/* one attached item: "DEF-A-003 Confirm licence count, 1 day late" (red), "…, due Thursday", "…, no due date, no owner" */
+export function msItemWords(x){ const n=x.due?days(x.due):null, t=`${esc(x.id)} ${esc(decShort(x.t||"",70))}`, own=!x.o||x.o==="TBC"?", no owner":"";
+  if(n!==null&&n<0) return `<span class="late">${t}, ${-n} day${n===-1?"":"s"} late</span>${own}`;
+  const due=n===null?"no due date":n===0?"due today":n===1?"due tomorrow":n<7?`due ${longDay(x.due).split(" ")[0]}`:`due ${longDay(x.due)}`;
+  return `${t}, ${due}${own}`; }
+/* "Open all n in Work": All items, the project, open actions and issues, searched for the milestone's ID (each attached item
+   carries it), so Work lists exactly the items counted */
+export function msAttnOpenWork(id){ const r=msAttention().find(x=>x.ms===id); if(!r) return;
+  openWork(r.p,"all","open",{st:["Open"],ty:["Action","Issue"]}); shared.WQ=r.ms; renderWork(); navWrite(false); }
+export const msAttnWorkWord=r=>r.its.length===1?"Open in Work":`Open all ${r.its.length} in Work`;
+export function msAttnRow(n,r){ const k=days(r.when), c=r.its.length, items=`${c} open item${c===1?"":"s"} must close`;
+  const when=k<0?`is overdue by ${-k} day${k===-1?"":"s"} (due ${longDay(r.when)}): ${items} before it can be achieved`
+    :`is due ${k===0?"today":k===1?"tomorrow":longDay(r.when)}: ${items} for it to hold`;
+  const shown=r.its.slice(0,3).map(msItemWords), more=c>3?[`and ${c-3} more`]:[];
+  return tl(n,tLink(html`data-ms="${r.ms}"`,html`Milestone <u>${r.name}</u> ${raw(when)}`),
+    [...shown,...more,projLink(r.p),sLink(html`data-msattnwork="${r.ms}"`,msAttnWorkWord(r))].join(" · "),
+    `<span class="rm"><button class="dots" type="button" aria-label="Options: milestone ${esc(r.name)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
+    html`data-msattn="${r.ms}"`); }
+export function msAttnMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=msAttention().find(x=>x.ms===id); if(!r) return;
+  openMenu(b,{label:`Options: milestone ${r.name}`,id:"msAttnMenu",align:"right",onPick:d=>{ closeMenu();
+      if(d==="ms") openMilestone(r.ms); else if(d==="work") msAttnOpenWork(r.ms); else go("cockpit",r.p); },
+    items:[{id:"ms",name:"Open the milestone",data:{d:"ms"}},{id:"work",name:msAttnWorkWord(r).replace(/^Open in Work$/,"Open it in Work"),data:{d:"work"}},{id:"proj",name:`Open ${pName(r.p)}`,data:{d:"proj"}}]}); }
 export const dueWords=d=>{ const n=days(d); return n<0?`<span class="late">${-n} day${n===-1?"":"s"} late</span>`:n===0?"due today":n===1?"due tomorrow":`due in ${n} days`; };
 /* "Friday 9th October": the Week ahead heading spells its end day out (Alan, 2026-10-09) */
 export const ordinal=n=>n+((n%100>=11&&n%100<=13)?"th":["th","st","nd","rd"][n%10]||"th");
@@ -353,7 +391,9 @@ export function remPick(id,d){ if(d==="run"){ runReminder(REMINDERS.find(r=>r.id
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0028(){
 wireSpark();
-$("#attnList").addEventListener("click",e=>{ const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
+$("#attnList").addEventListener("click",e=>{ const mb=e.target.closest("li[data-msattn] .dots"); if(mb){ e.stopPropagation(); msAttnMenu(mb,mb.closest("li").dataset.msattn); return; }   /* #251 */
+  const mw=e.target.closest("[data-msattnwork]"); if(mw){ e.preventDefault(); e.stopPropagation(); msAttnOpenWork(mw.dataset.msattnwork); return; }
+  const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
   if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
   if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
 document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
