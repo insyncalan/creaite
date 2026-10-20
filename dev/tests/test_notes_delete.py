@@ -1,5 +1,5 @@
 """#124: Delete note (Alan, 15-10-2026): the confirm box in the Notes tab moves the note into the archive folder (paths.ARCHIVE:
-_Archive today, 99 Archive after #252); #255 (Alan, 20-10-2026): with no approval card, the click is the approval
+99 Archive today, 99 Archive after #252); #255 (Alan, 20-10-2026): with no approval card, the click is the approval
 (dev/tests/test_delete_note_no_card.py has the route's own guards).
 
 Run: python3 dev/tests/test_notes_delete.py
@@ -36,7 +36,7 @@ import test_notes_tab  # noqa: E402
 from test_onedrive_projects import OneDriveCase  # noqa: E402
 from test_tracker import ABC  # noqa: E402
 
-# The archive folder's name, as paths.py has it (_Archive today, 99 Archive after #252), read without importing paths here.
+# The archive folder's name, as paths.py has it (99 Archive today, 99 Archive after #252), read without importing paths here.
 ARCHIVE = re.search(r'^ARCHIVE = "([^"]+)"', (Path(__file__).resolve().parent.parent.parent / "system/scripts/paths.py")
                     .read_text(encoding="utf-8"), re.M).group(1)
 
@@ -519,7 +519,7 @@ class NotesDelete(test_notes_tab.NotesServer):
             chk, mover, still, archived = got[name]
             self.assertIn("never follows a symlink", chk)
             self.assertIn("is a symlink", mover)
-            self.assertEqual([still, archived], [True, False])                     # the symlink stays; nothing in _Archive
+            self.assertEqual([still, archived], [True, False])                     # the symlink stays; nothing in 99 Archive
         for case in ("swap", "swap_no_flag"):                                      # with and without follow_symlinks=False
             self.assertIn("is a symlink", got[case][0])
             self.assertEqual(got[case][1:], [True, False])
@@ -586,7 +586,7 @@ class NotesDelete(test_notes_tab.NotesServer):
 
 
 class NoteShapes(OneDriveCase):
-    """reach.archive_move_problem's "notes" and "notes_back": one note, into (or back from) its own folder's _Archive."""
+    """reach.archive_move_problem's "notes" and "notes_back": one note, into (or back from) its own folder's 99 Archive."""
 
     def problems(self, cases, kind):
         return self.py("import reach; c = " + json.dumps(cases) + "\n"
@@ -603,38 +603,38 @@ class NoteShapes(OneDriveCase):
         (self.root / "Example Programme" / "02 Meetings" / "Minutes" / "Note.md").write_text("x")
         (self.root / "_Portfolio" / "08 Notes").mkdir(parents=True, exist_ok=True)
         (self.root / "_Portfolio" / "08 Notes" / "Cross.md").write_text("x")
-        ok = {"same name": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note.md"),
-              "numbered": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note-2.md"),
-              "the portfolio": ("projects/_portfolio/08 Notes/Cross.md", "projects/_portfolio/_Archive/08 Notes/Cross.md")}
+        ok = {"same name": (f"{e}/08 Notes/Note.md", f"{e}/99 Archive/08 Notes/Note.md"),
+              "numbered": (f"{e}/08 Notes/Note.md", f"{e}/99 Archive/08 Notes/Note-2.md"),
+              "the portfolio": ("projects/_portfolio/08 Notes/Cross.md", "projects/_portfolio/99 Archive/08 Notes/Cross.md")}
         self.assertEqual(self.problems(ok, "notes"), {k: None for k in ok})
-        bad = {"another engagement": (f"{e}/08 Notes/Note.md", "projects/Digital Enablement/_Archive/08 Notes/Note.md"),
-               "another name": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Other.md"),
-               "a zero number": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note-02.md"),
-               "not a number": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note-x.md"),
-               "another folder": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/02 Meetings/Minutes/Note.md"),
-               "minutes as a note": (f"{e}/02 Meetings/Minutes/Note.md", f"{e}/_Archive/02 Meetings/Minutes/Note.md"),
-               "not Markdown": (f"{e}/08 Notes/Plan.txt", f"{e}/_Archive/08 Notes/Plan.txt"),
-               "hidden": (f"{e}/08 Notes/.hidden.md", f"{e}/_Archive/08 Notes/.hidden.md"),
-               "a picture": (f"{e}/08 Notes/_images/a.png", f"{e}/_Archive/08 Notes/_images/a.png"),
-               "the folder": (f"{e}/08 Notes", f"{e}/_Archive/08 Notes"),
-               "the projects root's _Archive": (f"{e}/08 Notes/Note.md", "projects/_Archive/Example Programme/08 Notes/Note.md"),
-               "dot dot": (f"{e}/08 Notes/../08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note.md")}
+        bad = {"another engagement": (f"{e}/08 Notes/Note.md", "projects/Digital Enablement/99 Archive/08 Notes/Note.md"),
+               "another name": (f"{e}/08 Notes/Note.md", f"{e}/99 Archive/08 Notes/Other.md"),
+               "a zero number": (f"{e}/08 Notes/Note.md", f"{e}/99 Archive/08 Notes/Note-02.md"),
+               "not a number": (f"{e}/08 Notes/Note.md", f"{e}/99 Archive/08 Notes/Note-x.md"),
+               "another folder": (f"{e}/08 Notes/Note.md", f"{e}/99 Archive/02 Meetings/Minutes/Note.md"),
+               "minutes as a note": (f"{e}/02 Meetings/Minutes/Note.md", f"{e}/99 Archive/02 Meetings/Minutes/Note.md"),
+               "not Markdown": (f"{e}/08 Notes/Plan.txt", f"{e}/99 Archive/08 Notes/Plan.txt"),
+               "hidden": (f"{e}/08 Notes/.hidden.md", f"{e}/99 Archive/08 Notes/.hidden.md"),
+               "a picture": (f"{e}/08 Notes/_images/a.png", f"{e}/99 Archive/08 Notes/_images/a.png"),
+               "the folder": (f"{e}/08 Notes", f"{e}/99 Archive/08 Notes"),
+               "the projects root's 99 Archive": (f"{e}/08 Notes/Note.md", "projects/99 Archive/Example Programme/08 Notes/Note.md"),
+               "dot dot": (f"{e}/08 Notes/../08 Notes/Note.md", f"{e}/99 Archive/08 Notes/Note.md")}
         for k, why in self.problems(bad, "notes").items():
             self.assertTrue(why, k)
         self.assertTrue(self.problems({"x": ok["same name"]}, "reports")["x"], "a note is never a report")
-        (self.root / "Example Programme" / "_Archive" / "08 Notes").mkdir(parents=True)
-        (self.root / "Example Programme" / "_Archive" / "08 Notes" / "Gone.md").write_text("x")
-        back = {"back": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone.md")}
+        (self.root / "Example Programme" / "99 Archive" / "08 Notes").mkdir(parents=True)
+        (self.root / "Example Programme" / "99 Archive" / "08 Notes" / "Gone.md").write_text("x")
+        back = {"back": (f"{e}/99 Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone.md")}
         self.assertEqual(self.problems(back, "notes_back"), {"back": None})
-        wrong = {"elsewhere": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/02 Meetings/Minutes/Gone.md"),
-                 "the other way": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note.md"),
-                 "another name": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Other.md"),
-                 "a zero number": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-02.md"),
-                 "unicode digits": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-\u0662.md"),
-                 "not Markdown": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-2.txt")}
+        wrong = {"elsewhere": (f"{e}/99 Archive/08 Notes/Gone.md", f"{e}/02 Meetings/Minutes/Gone.md"),
+                 "the other way": (f"{e}/08 Notes/Note.md", f"{e}/99 Archive/08 Notes/Note.md"),
+                 "another name": (f"{e}/99 Archive/08 Notes/Gone.md", f"{e}/08 Notes/Other.md"),
+                 "a zero number": (f"{e}/99 Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-02.md"),
+                 "unicode digits": (f"{e}/99 Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-\u0662.md"),
+                 "not Markdown": (f"{e}/99 Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-2.txt")}
         for k, why in self.problems(wrong, "notes_back").items():
             self.assertTrue(why, k)
-        renamed = {"a free name": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-2.md")}
+        renamed = {"a free name": (f"{e}/99 Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-2.md")}
         self.assertEqual(self.problems(renamed, "notes_back"), {"a free name": None})       # NOTES_BACK_RENAMES
 
     def test_note_number_is_ascii_digits_only(self):
@@ -650,7 +650,7 @@ class NoteShapes(OneDriveCase):
         spec, why = self.py("import archive; print(json.dumps(archive.note_delete_spec('projects/Example Programme/08 Notes/Stakeholders.md')))")
         self.assertIsNone(why)
         self.assertEqual(spec["file_changes"]["file_ops"], [{"op": "move", "from": "projects/Example Programme/08 Notes/Stakeholders.md",
-                                                             "to": "projects/Example Programme/_Archive/08 Notes/Stakeholders.md"}])
+                                                             "to": "projects/Example Programme/99 Archive/08 Notes/Stakeholders.md"}])
         self.assertEqual(spec["file_changes"]["project"], "ABC")
         self.assertNotIn("secret", json.dumps(spec))                       # only the title is read, for the card
         self.assertEqual(self.py("import archive; print(json.dumps(archive.note_delete_spec('projects/Example Programme/CLAUDE.md')))")[1],

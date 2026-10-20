@@ -157,7 +157,7 @@
     "update_backups_kept": 3
   },
   "archive": {
-    "_about": "Archiving (BL-10, BL-03). after_months: closed or cancelled actions and RAID items, and done or dropped promises, are archived (flagged, still searchable, undoable) this many months after closing, once a day; 0 turns a kind off. Decisions, milestones and open items never are. reports_after_months: weekly and client reports, minutes and Steerco one-pagers older than this (by the date in their name) are offered once a month in Settings › Health, to move into the engagement's own _Archive.",
+    "_about": "Archiving (BL-10, BL-03). after_months: closed or cancelled actions and RAID items, and done or dropped promises, are archived (flagged, still searchable, undoable) this many months after closing, once a day; 0 turns a kind off. Decisions, milestones and open items never are. reports_after_months: weekly and client reports, minutes and Steerco one-pagers older than this (by the date in their name) are offered once a month in Settings › Health, to move into the engagement's own 99 Archive (the old _Archive and zz Archive are still read for one release).",
     "after_months": {
       "actions": 6,
       "raid": 6,
@@ -290,7 +290,9 @@
       "notes": "08 Notes"
     },
     "never_index": [
+      "99 Archive",
       "_Archive",
+      "zz Archive",
       "_Templates",
       "99 System"
     ],

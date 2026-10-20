@@ -1,7 +1,7 @@
 // @ts-check
 /* DeleteNote (#124, Alan 15-10-2026; #255, Alan 20-10-2026: no approval card): "Delete note…", last in the note's … menu.
    1. This confirm box, naming the note (Cancel is the default; Esc and a click outside cancel), is the only question.
-   2. On Delete note the live server moves the note into its own engagement's (or the portfolio's) _Archive at once
+   2. On Delete note the live server moves the note into its own engagement's (or the portfolio's) 99 Archive at once
       (/api/notes/delete/now: the click is the approval; inside the server it is still tracker.py apply with the one-time
       approval, the BL-09 guard exception, never ask creaite). It moves only the version the box was opened on: a note changed
       since is refused with a plain message and left where it is.
