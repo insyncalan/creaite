@@ -126,6 +126,15 @@ class StageSpec(unittest.TestCase):
         old = self.write(f"{ABC}/transcripts/_Archive/{DAY} Old.vtt", VTT)
         self.refused(old, transcript=f"{ABC}/transcripts/_Archive/{DAY} Old.vtt")
 
+    def test_a_file_in_another_projects_meeting_folder_is_refused(self):
+        other = "projects/DEF Digital Enablement"
+        t = self.write(f"{other}/transcripts/{DAY} Design review.vtt", VTT)
+        out = self.refused(t, transcript=f"{other}/transcripts/{DAY} Design review.vtt")      # on approval it would leave DEF
+        self.assertIn("another project's folder (DEF)", out)
+        note = self.write(f"{other}/minutes/{DAY} Quick note - corridor.md", "# Quick note\n")
+        self.refused(note, whole={"title": "Quick note - corridor", "date": DAY, "projects": ["ABC"],
+                                  "note": f"{other}/minutes/{DAY} Quick note - corridor.md", "items": []})
+
     def test_a_transcript_that_isnt_a_meeting_file_is_refused(self):
         tool = self.write(f"{ABC}/transcripts/run me.sh", "echo hi\n")
         self.assertIn("must be a meeting file", self.refused(tool, transcript=f"{ABC}/transcripts/run me.sh"))

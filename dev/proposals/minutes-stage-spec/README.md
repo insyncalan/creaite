@@ -44,20 +44,20 @@ record gate.
 
 ## With #264 (Intake's Process)
 
-Checked in a scratch copy of `origin/v253-release` with this branch and `origin/v253-intake-process` merged and all three diffs
-applied (#264's `reach.diff` and `live_server.diff`, and this one): `test_intake_process.py`, `test_record_commands.py`,
-`test_minutes_stage_spec*.py`, `test_stage_pinned.py`, `test_held_run_bash_writes.py`, `test_panel_sweep.py`,
-`test_ask_shell_shapes.py`, `test_ask_confirmed_apply.py`, `test_minutes_record.py` and `test_minutes_review.py` all pass, with one
-line changed in #264's test (its fixture spec had no date or projects, which stage needs anyway):
+Checked in a scratch copy of `origin/v253-release` with this branch and `origin/v253-intake-process` (a8eba516) merged and all three
+diffs applied (#264's `reach.diff` and `live_server.diff`, and this one): `test_intake_process.py` (25), `test_intake_process_ui.py`,
+`test_record_commands.py`, `test_minutes_stage_spec*.py`, `test_enrich_guard.py`, `test_search.py`, `test_stage_pinned.py`,
+`test_held_run_bash_writes.py`, `test_panel_sweep.py`, `test_ask_shell_shapes.py`, `test_ask_confirmed_apply.py`,
+`test_minutes_record.py`, `test_minutes_review.py`, `test_guard_backslash.py` all pass, and `check.py` is OK, with two fixture lines
+changed in #264's test: its specs `pilot.json` and `newdraft.json` had no date or projects, which stage needs anyway
+(`intake-process-test-fixture.diff`, against `v253-intake-process`):
 
 ```
-dev/tests/test_intake_process.py, setUpClass:
--        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "transcript": cls.files[0]}))
-+        (drafts / "pilot.json").write_text(json.dumps({"title": "Pilot", "date": DAY, "projects": ["ABC"], "transcript": cls.files[0]}))
+git apply dev/proposals/minutes-stage-spec/intake-process-test-fixture.diff     # on v253-intake-process, or at the merge
 ```
 
-Without it, `Fence.test_it_may_read_draft_and_stage_its_own_files [stage]` fails once both reach diffs are in: the hook now refuses
-that half-spec, as the command always would have. The fix belongs on `v253-intake-process` (or at the merge).
+Without it, `Fence.test_it_may_read_draft_and_stage_its_own_files` (`stage`, `stage_own_word_draft`) fails once both reach diffs
+are in: the hook now refuses those half-specs, as the command itself always would have.
 
 ## Search summaries (`search.py enrich set`, the scope addition)
 

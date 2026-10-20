@@ -72,7 +72,7 @@ def _plain_file_problem(key, given, real, must_exist=True):
 
 
 def _meeting_folders(kinds):
-    """The real folders of these kinds (minutes, transcripts) for every project and the portfolio (never _Archive)."""
+    """[(code, real folder)] of these kinds (minutes, transcripts) for every project and the portfolio (never _Archive)."""
     out = []
     for code, _ in paths.project_folders():
         for kind in kinds:
@@ -81,7 +81,7 @@ def _meeting_folders(kinds):
             except (LookupError, OSError):
                 continue                                     # a project with no folder yet: nothing in it to stage
             if f is not None:
-                out.append(f)
+                out.append((code, f))
     return out
 
 
@@ -91,8 +91,17 @@ def _skipped(real, folder):
     return any(part.lower() in never or part.startswith(".") for part in real.relative_to(folder).parts[:-1])
 
 
-def transcript_problem(value):
-    """Why the spec's "transcript" can't be staged, or None: an Intake file, or one in a project's minutes or transcripts folder."""
+def _owner_problem(key, code, projects):
+    """Why a file in project `code`'s folder can't be staged for these projects, or None (the portfolio's serves any)."""
+    if code == "_portfolio" or code in projects:
+        return None
+    return (f"\"{key}\" is in another project's folder ({code}); stage it for that project, or from inbox/ "
+            f"(on approval a transcript is moved into each meeting project's folder)")
+
+
+def transcript_problem(value, projects=()):
+    """Why the spec's "transcript" can't be staged, or None: an Intake file, or one in the minutes or transcripts folder of one of
+    the meeting's projects (or the portfolio's)."""
     why = stored_problem("transcript", value)
     if why:
         return why
@@ -101,10 +110,12 @@ def transcript_problem(value):
     if real is None:
         return "\"transcript\" can't be checked"
     in_inbox = real.parent == _real(paths.INBOX)
-    folder = next((f for f in _meeting_folders(paths.EXTRACT_FROM) if f in real.parents), None)
+    code, folder = next(((c, f) for c, f in _meeting_folders(paths.EXTRACT_FROM) if f in real.parents), (None, None))
     if not in_inbox and (folder is None or _skipped(real, folder)):
         return ("\"transcript\" must be a file in inbox/ or in a project's minutes or transcripts folder; "
                 "creaite doesn't stage a meeting from anywhere else")
+    if not in_inbox and _owner_problem("transcript", code, projects):
+        return _owner_problem("transcript", code, projects)
     if real.suffix.lower() not in MEETING_TYPES:
         return f"\"transcript\" must be a meeting file ({', '.join(MEETING_TYPES)})"
     if not in_inbox and real.suffix.lower() == ".md" and re.match(r"(\d{4}-\d\d-\d\d )?Quick note - ", real.name):
@@ -112,17 +123,19 @@ def transcript_problem(value):
     return _plain_file_problem("transcript", given, real)
 
 
-def note_problem(value):
+def note_problem(value, projects=()):
     """Why the spec's "note" (a quick note, BL-54) can't be staged, or None: a .md directly in a minutes folder."""
     why = stored_problem("note", value)
     if why:
         return why
     given = paths.resolve(value, archived=False)
     real = _real(given)
-    if real is None or real.suffix.lower() != ".md" or real.parent not in _meeting_folders(("minutes",)):
+    owner = next((c for c, f in _meeting_folders(("minutes",)) if real is not None and real.parent == f), None)
+    if real is None or real.suffix.lower() != ".md" or owner is None:
         return ("\"note\" must be a quick note: a .md file directly in a project's minutes folder (a note in a notes folder "
                 "goes through Find updates, not minutes)")
-    return _plain_file_problem("note", given, real, must_exist=False)          # not found: stage says so in its own words
+    # not found: stage says so in its own words
+    return _owner_problem("note", owner, projects) or _plain_file_problem("note", given, real, must_exist=False)
 
 
 def _pending_refs(rel_path):
@@ -226,7 +239,7 @@ def spec_problem(spec):
         return why
     for key, check in (("transcript", transcript_problem), ("note", note_problem)):
         if spec.get(key) not in (None, ""):
-            why = check(spec[key])
+            why = check(spec[key], spec.get("projects") or [])
             if why:
                 return why
     if spec.get("draft") not in (None, ""):
