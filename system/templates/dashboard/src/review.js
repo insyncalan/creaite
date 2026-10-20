@@ -69,8 +69,10 @@ export const rvDraftBtn=r=>{ const m=/ · <button type="button" class="linkbtn" 
 const RV_WK=/<div class="wkrv">.*?<\/div>/, RV_DR=/<span class="tag drrv">.*?<\/span> /, RV_ND=/<span class="h-warn">No Word draft was made for these minutes<\/span> · Reject them and process the meeting again/;
 export const rvDrTag=r=>{ const m=RV_DR.exec(revDetail(r)||""); return m?raw(m[0]):""; };
 export const rvNotes=r=>{ const d=revDetail(r)||"", a=RV_WK.exec(d), n=RV_ND.exec(d); return raw((n?`<div class="rvnote">${n[0]}</div>`:"")+(a?a[0]:"")); };
-export const rvTip=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); if(!d) return ""; const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim();
-  return t?raw(` data-tip="${esc(t)}"`):""; };
+export const rvTip=r=>{ const d=(revDetail(r)||"").replace(RV_WK,"").replace(RV_DR,"").replace(RV_ND,"").replace(/ · <button type="button" class="linkbtn" data-drrisk="[^"]*">[^<]*<\/button>/,""); const t=d.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g," ").trim();
+  /* #271: the line truncates with an ellipsis, so the tip ends with its reason and full source */
+  const tail=[r.why,fdText(srcShort(r.src))].map(x=>String(x??"").trim()).filter(x=>x&&x!=="—").join(" · "), all=[t,tail].filter(Boolean).join(" · ");
+  return all?raw(` data-tip="${esc(all)}"`):""; };
 export const WKRVF={actions:["due","due_date"],raid:["due","due_date"],decisions:["due","needed_by"]};   /* BL-180: declared before revDetail, which runs at load (Review) */
 export const draftOn=f=>!(S.drafting&&S.drafting[f]===false);   /* AI drafts: declared before revDetail, which runs at load (Review) */
 /* BL-290: the row's "Looks like" mark, only while Settings › General › AI drafts › Spot repeats is on (BL-133's reject reason keeps r.dup) */
