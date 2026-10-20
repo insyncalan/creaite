@@ -80,8 +80,9 @@ class Links(LiveBrowserCase):
         b.eval("document.querySelector('#newNoteDlg input[value=\"blank\"]').click()")
         b.click("#nnMake")
         b.wait("!!document.querySelector('.nbody.ProseMirror')", 15)
-        b.eval("document.querySelector('.nbody').cxed.focus('end')")
-        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.wait("!document.getElementById('newNoteDlg').open", 5)       # #152f: the dialog gives the focus back to its opener when it closes, which can land after ours
+        b.frames(3)
+        b.wait("""(()=>{ const e = document.querySelector('.nbody'); if (document.activeElement !== e) e.cxed.focus('end'); return document.activeElement === e; })()""", 10)
         b.frames(3)                                                  # the editor gives itself focus a frame later: let that land first (#152)
 
     def value(self):
