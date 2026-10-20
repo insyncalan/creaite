@@ -3669,7 +3669,8 @@ collect = _collect_with_quality
 # ===== end BL-233 =====
 
 
-# ===== #238 (v2.5.1) ===== Activity › Usage: what each Claude run costs and what every run loads (usage_report.py --json, read only). Counts
+# ===== #238 (v2.5.1) ===== Activity › Usage: what each Claude run costs and what every run loads
+# (usage_report.py --json, read only). Counts
 # only: the figures, never a line's text. Internal; no report or export reads D.usage. The page also refreshes it from GET /api/usage where
 # the live server has that route; this copy is what shows without it (and in the first paint).
 _collect_before_usage = collect
