@@ -408,6 +408,21 @@ class Fetch(unittest.TestCase):
         add_row(self.v, {"id": "ev-late", "start": "23:00", "end": "23:55", "title": "Late call"}, day=today)
         self.assert_not_fetched("ev-late", result_at("23:05", day=today, subject="Late call"))
 
+    def test_the_observer_never_fetches_a_meeting_not_ended(self):
+        self.set_on()                                    # todo and record never offer one; the observer sees every read
+        today = NOW[:10]
+        add_row(self.v, {"id": "ev-late", "start": "23:00", "end": "23:55", "title": "Late call"}, day=today)
+        late_uri = URI.replace(DAY, today) + "&late=1"
+        ev = {**event("ev-late"), "meetingTranscriptUrl": late_uri}
+        steps = [("calendar:///events/ev-late", ev), (late_uri, result_at("23:05", day=today, subject="Late call"))]
+        code = ("import json, sys; sys.path.insert(0,'system/scripts'); import transcripts as T; j = T.SweepFetch(); "
+                f"steps = json.loads({json.dumps(json.dumps(steps))}); "
+                "[j.observe(T.M365 + 'read_resource', {'uri': u}, json.dumps(r)) for u, r in steps]; print(json.dumps(j.outcomes))")
+        r = subprocess.run([sys.executable, "-c", code], cwd=self.v.root, capture_output=True, text=True, env=self.env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), {})
+        self.assertEqual(self.inbox(), [])
+
     def test_meetings_outside_the_window_are_never_fetched(self):
         self.set_on()
         sunday = (__import__("datetime").date.fromisoformat(DAY) - __import__("datetime").timedelta(days=1)).isoformat()
