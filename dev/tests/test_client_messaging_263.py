@@ -51,13 +51,10 @@ MUTATIONS = {   # (file, what it breaks, old text, new text)
     "ctx-only": ("edit_ai.py", "result() believes the context only",
                  "    return ctx.get(\"place\") in CLIENT_PLACES or bool(ctx.get(\"client\")) or \"field\" in req\n",
                  "    return ctx.get(\"place\") in CLIENT_PLACES or bool(ctx.get(\"client\"))\n"),
-    "any-place": ("edit_ai.py", "the field may come with any place",
-                  "if req.get(\"field\") not in CLIENT_FIELDS or CLIENT_FIELDS[req.get(\"field\")] != place:",
-                  "if req.get(\"field\") not in CLIENT_FIELDS:"),
+    "any-place": ("edit_ai.py", "the field may come with any place", " or CLIENT_FIELDS[field] != place:", ":"),
     "any-field": ("edit_ai.py", "an unknown field is let through as a plain request",
-                  "    if req.get(\"field\") not in CLIENT_FIELDS or CLIENT_FIELDS[req.get(\"field\")] != place:\n        raise Refused(NOT_FIELD)\n",
-                  "    if req.get(\"field\") not in CLIENT_FIELDS:\n        return False\n    if CLIENT_FIELDS[req.get(\"field\")] != place:\n"
-                  "        raise Refused(NOT_FIELD)\n"),
+                  "    if not isinstance(field, str) or field not in CLIENT_FIELDS or CLIENT_FIELDS[field] != place:",
+                  "    if not isinstance(field, str) or field not in CLIENT_FIELDS:\n        return False\n    if CLIENT_FIELDS[field] != place:"),
     "server-drops-field": ("live_server.py", "the live server drops the field", "        body[\"field\"] = req[\"field\"]\n", ""),
     "server-no-key": ("live_server.py", "the live server refuses the field key", "\"recipients\", \"field\"}", "\"recipients\"}"),
     "caps-silent": ("live_server.py", "caps doesn't list the field", "\"client_fields\": [\"client_message\"]", "\"client_fields\": []"),
@@ -71,6 +68,8 @@ def prepare(root):
     """#186 is already in the copy (E.patched_vault); add (or take out) this diff, then mutate."""
     scripts = root / "system" / "scripts"
     has = MARKER in (scripts / "edit_ai.py").read_text(encoding="utf-8")
+    if has and UNPATCHED and "MINUTES_PLACES = {" in (scripts / "edit_ai.py").read_text(encoding="utf-8"):   # #262 on top: it first
+        subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(root), "-i", str(AFTER_262)], check=True)
     if has == UNPATCHED:
         r = subprocess.run(["patch", "-p0", "-s", "-d", str(root), *(["-R"] if has else []), "-i", str(DIFF)],
                            capture_output=True, text=True)
@@ -175,15 +174,23 @@ class TheBinding(_Vault):
         """#186, #262's plain diff, then this one: patch fails a hunk, and edit_ai.py refuses to load (never a missing reply check)."""
         if not PLAIN_262.exists():
             self.skipTest("this tree doesn't have #262's diff (the full stack's copy runs it)")
-        if UNPATCHED or MUTATE:
+        if UNPATCHED:
             self.skipTest("about the diffs as written")
         v = E.patched_vault()                                            # #186 only
         self.addCleanup(v.cleanup)
         run = lambda d: subprocess.run(["patch", "-p0", "-s", "-d", str(v.root), "-i", str(d)], capture_output=True, text=True)  # noqa: E731
-        if MARKER in (v.root / "system/scripts/edit_ai.py").read_text(encoding="utf-8"):
-            self.skipTest("the repo already has #263 applied")
+        src = lambda: (v.root / "system/scripts/edit_ai.py").read_text(encoding="utf-8")   # noqa: E731
+        if "MINUTES_PLACES = {" in src():                               # a tree with the stack applied: back to #186 alone first
+            subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(v.root), "-i", str(AFTER_262)], check=True)
+        if MARKER in src():
+            subprocess.run(["patch", "-p0", "-s", "-R", "-d", str(v.root), "-i", str(DIFF)], check=True)
         self.assertEqual(run(PLAIN_262).returncode, 0)
         self.assertNotEqual(run(DIFF).returncode, 0)                     # a hunk fails
+        if MUTATE:                                                       # the mutation, where its text landed
+            f, _why, old, new = MUTATIONS[MUTATE]
+            q = v.root / "system/scripts" / f
+            if q.read_text(encoding="utf-8").count(old) == 1:
+                q.write_text(q.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
         r = subprocess.run([sys.executable, str(v.root / "system/scripts/edit_ai.py"), "context"], input=json.dumps(ask()),
                            cwd=v.root, capture_output=True, text=True)
         self.assertNotEqual(r.returncode, 0)
