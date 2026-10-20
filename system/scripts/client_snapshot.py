@@ -320,13 +320,16 @@ def _filed_current(stored, filed_text):
 
 def read_once(path):
     """(text, document) of the client report file at `path`, read ONCE: the document parsed from exactly those bytes, read as a
-    client report (creaite_doc.force_client_audience); a file of another kind is refused (DocError)."""
-    text = creaite_doc.real(path).read_text(encoding="utf-8", errors="replace")
+    client report (creaite_doc.force_client_audience); a file of another kind is refused (DocError). v2.5.3 (#259, K2): its
+    sections' audience derived as creaite_doc.read_report derives it (derive_sections: a text section is the client's only in a
+    file creaite itself wrote), never taken from the file."""
+    raw = creaite_doc.read_raw(path)
+    text = raw.decode("utf-8", errors="replace")
     doc = creaite_doc.loads(text)
     if doc.get("kind") != "client":
         raise creaite_doc.DocError("That file isn't this report (its kind was changed), so nothing was done. "
                                    "Open the report again from creaite.")
-    return text, creaite_doc.force_client_audience(doc)
+    return text, creaite_doc.force_client_audience(creaite_doc.derive_sections(doc, creaite_doc.creaite_wrote(path, raw)))
 
 
 def _built(code, fri, client, path, state, preview):

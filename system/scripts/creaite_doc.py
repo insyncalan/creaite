@@ -165,11 +165,66 @@ def read_report(path, kind=None):
     """read(path), with a client report read as one (force_client_audience): its audience client and its header fields derived
     again, however the file was edited on disk. Every place that approves, files, exports or checks a stored report reads it so.
     `kind`: the kind the caller's route or path expects; a file whose own kind is anything else (edited on disk) is refused
-    (DocError), never read as another kind (v2.5.0: a client draft edited to say weekly or minutes escaped the client gate)."""
-    doc = read(path)
+    (DocError), never read as another kind (v2.5.0: a client draft edited to say weekly or minutes escaped the client gate).
+    v2.5.3 (#259, K2): the file is read once, as bytes, and a client report's sections get their audience from where they came
+    from (derive_sections: creaite_wrote says whether creaite itself wrote these bytes), never from the file's own flags."""
+    raw = read_raw(path)
+    doc = loads(raw.decode("utf-8", errors="replace"))
     if kind is not None and doc.get("kind") != kind:
         raise DocError("That file isn't this report (its kind was changed), so nothing was done. Open the report again from creaite.")
-    return force_client_audience(doc)
+    return force_client_audience(derive_sections(doc, creaite_wrote(path, raw)))
+
+
+def read_raw(path):
+    """The bytes of the file at `path` (stored or a Path), read once. Raises DocError when it isn't there."""
+    p = real(path)
+    if not p.is_file():
+        raise DocError("That file isn't there.")
+    return p.read_bytes()
+
+
+def creaite_wrote(path, raw):
+    """v2.5.3 (#259, K2): whether `raw`, the bytes just read from `path`, are exactly what creaite itself last wrote there: a draft's
+    SHA-256 is the one filechange.py recorded for creaite's last save of it that isn't undone; a filed client report's is the one its
+    snapshot recorded when Approve filed it (client_snapshot's registry, `source_sha256` of a filed snapshot). False for a file
+    edited outside creaite (ask creaite, an editor, any local process), and when it can't be told (fails closed). A save logged by
+    an ask creaite run (filechange's `run` tag, or `via` ask) is not creaite's own: ask creaite can save a draft through
+    filechange.py, never as Alan's Save."""
+    try:
+        digest = hashlib.sha256(raw).hexdigest()
+        es = _changes(path)
+        last = es[-1] if es else {}
+        if last.get("after") == digest and not last.get("run") and last.get("via") not in ("ask", None):
+            return True
+        import client_snapshot
+        return any(e.get("state") == "filed" and e.get("source_sha256") == digest for e in client_snapshot.registry().values())
+    except Exception:  # noqa: BLE001  a log or registry that can't be read: not known to be creaite's
+        return False
+
+
+def own_sections(kind="client"):
+    """{section id: type} of creaite's own sections of a report kind (report_doc.SECTIONS)."""
+    import report_doc
+    return {sid: typ for sid, typ, _h in report_doc.SECTIONS.get(kind, ())}
+
+
+def derive_sections(doc, trusted):
+    """v2.5.3 (#259, K2 / I20): a client report's sections with their audience DERIVED, in place, never taken from the file: one
+    of creaite's own client sections (its id and type, report_doc.SECTIONS) keeps the rules it has (it carries no audience; one
+    that says anything but "client", or has an `internal` flag, is the internal report's); a text section is the client's own only
+    when it says "client" in a file creaite itself wrote (`trusted`: creaite_wrote), so one written or flipped to "client" in a file
+    edited outside creaite is the internal report's and is never shown; any other section is never the client's. Any other
+    document is returned as it is."""
+    if not (isinstance(doc, dict) and doc.get("kind") == "client" and isinstance(doc.get("sections"), list)):
+        return doc
+    own = own_sections()
+    for s in doc["sections"]:
+        if not isinstance(s, dict) or own.get(s.get("id")) == s.get("type"):
+            continue
+        if s.get("type") == TEXT_TYPE and trusted and s.get("audience") == "client" and not s.get("internal"):
+            continue
+        s["audience"] = "internal"
+    return doc
 
 
 def check(doc):
@@ -262,6 +317,8 @@ def _internal_text(doc, s):
     carries an audience at all shows only when it is exactly "client" too (creaite's own client sections carry none)."""
     if not is_client(doc):
         return False
+    if doc.get("kind") == "client" and s.get("type") != TEXT_TYPE and own_sections().get(s.get("id")) != s.get("type"):
+        return True             # v2.5.3 (#259, K2): a client report's sections are creaite's own and its text sections, none else
     return (s.get("type") == TEXT_TYPE or "audience" in s) and s.get("audience") != "client"
 
 
