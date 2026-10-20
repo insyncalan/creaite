@@ -64,7 +64,7 @@ def needs_255(reason):
 MUTANTS = {
     "any-file": ("archive.py", '    """None when `spec` is one note\'s Delete note or Move back',
                  '    return None\n    """None when `spec` is one note\'s Delete note or Move back'),
-    "no-unchanged-check": ("live_server.py", 'or req["base"] != notes.text_sha(', 'or False and req["base"] != notes.text_sha('),
+    "no-unchanged-check": ("live_server.py", "if not base or base != notes.text_sha(", "if False and base != notes.text_sha("),
     "no-token": ("live_server.py", 'if self.headers.get("X-Creaite-Token") != TOKEN:', "if False:"),
     "ask-calls-route": ("live_server.py", "    same-origin marks (Sec-Fetch-Site same-origin, an Origin naming this server's port on a loopback host).\"\"\"\n",
                         "    same-origin marks (Sec-Fetch-Site same-origin, an Origin naming this server's port on a loopback host).\"\"\"\n"
@@ -222,7 +222,12 @@ class DeleteNoteNoCard(Server):
                  "cross-site": {**h, "Sec-Fetch-Site": "cross-site"},
                  "another site's Origin": {**h, "Origin": "http://elsewhere.example"},
                  "another port": {**h, "Origin": f"http://127.0.0.1:{self.port + 1}"},
-                 "no Origin": {k: v for k, v in h.items() if k != "Origin"}}
+                 "no Origin": {k: v for k, v in h.items() if k != "Origin"},
+                 "a file:// page": {**h, "Origin": "null"},
+                 "user info": {**h, "Origin": f"http://127.0.0.1:{self.port}@elsewhere.example"},
+                 "a lookalike host": {**h, "Origin": f"http://localhost.elsewhere.example:{self.port}"},
+                 "a path": {**h, "Origin": f"{self.base}/x"},
+                 "no port": {**h, "Origin": "http://127.0.0.1"}}
         for why, headers in tries.items():
             got = self.call("/api/notes/delete/now", body, headers)
             self.assertEqual(got.get("status"), 403, (why, got))
@@ -334,6 +339,37 @@ class DeleteNoteNoCard(Server):
         done = self.page("/api/notes/delete/now", {"path": r["note"]["path"], "base": s["base"]})            # the new version
         self.assertTrue(done["ok"], done)
         self.assertIn("Typed in another window.", (self.archive() / "Changed.md").read_text())
+
+    @needs_255("the LOCK rule of the direct route is in the live_server.py diff")
+    def test_c_nothing_lands_while_the_note_is_checked_and_moved(self):
+        """LOCK, then NOTES_LOCK: while a save holds NOTES_LOCK the route waits (LOCK held, nothing staged or applied), then moves;
+        while another job holds LOCK it moves nothing and says so."""
+        r = self.new("Locked")
+        got = self.py_json(
+            "import threading, time, live_server as ls\n"
+            "calls, real = [], ls.run\n"
+            "def run(script, *a):\n    calls.append(script); return real(script, *a)\n"
+            "ls.run = run\n"
+            "class H:\n"
+            "    client_address = ('127.0.0.1', 1)\n"
+            "    class server:\n        server_address = ('127.0.0.1', 8765)\n"
+            "    headers = {'Origin': 'http://127.0.0.1:8765', 'Sec-Fetch-Site': 'same-origin', 'Host': '127.0.0.1:8765'}\n"
+            "    def __init__(self): self.out = {}\n"
+            "    def host_ok(self): return True\n"
+            "    def send(self, code, body): self.out = dict(body, code=code)\n"
+            f"req = {{'path': {r['note']['path']!r}, 'base': {r['base']!r}}}\n"
+            "busy = H(); ls.LOCK.acquire(); ls.notes_delete_now_route(busy, req); ls.LOCK.release()\n"
+            "h = H(); ls.NOTES_LOCK.acquire()\n"
+            "t = threading.Thread(target=lambda: ls.notes_delete_now_route(h, req), daemon=True); t.start(); time.sleep(1.5)\n"
+            "during = [dict(h.out), list(calls), t.is_alive(), ls.LOCK.locked()]\n"
+            "ls.NOTES_LOCK.release(); t.join(60)\n"
+            "print(json.dumps([busy.out, during, h.out]))")
+        busy, (out, calls, alive, locked), done = got
+        self.assertFalse(busy["ok"], busy)
+        self.assertTrue(busy["busy"])
+        self.assertEqual([out, calls, alive, locked], [{}, [], True, True])                   # waiting, LOCK held, nothing run
+        self.assertTrue(done["ok"], done)
+        self.assertTrue((self.archive() / "Locked.md").is_file())
 
     @needs_255("the direct route keeps the rename's rule (live_server.py diff)")
     def test_c_never_while_ask_creaite_has_read_outside_content(self):
@@ -515,7 +551,7 @@ class DeleteNoteNoCard(Server):
             got = self.page("/api/notes/delete/now", body)
             self.assertEqual(got.get("status"), status, (why, got))
         got = self.page("/api/notes/delete/now", {"path": f"{ABC}/notes/Linked.md", "base": base})
-        self.assertFalse(got.get("ok"), got)                                                   # a symlink: never moved
+        self.assertEqual(got.get("status"), 404, got)                                          # a symlink: not a note, never moved
         self.assertTrue(link.is_symlink())
         self.assertTrue((self.v.root / ABC / "CLAUDE.md").is_file())
         self.assertTrue((self.folder() / "Only this.md").is_file())
