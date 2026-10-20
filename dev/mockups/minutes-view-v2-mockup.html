@@ -351,7 +351,7 @@ function sum(){var y=ITEMS.filter(function(x){return x.trk=='y'}).length,n=ITEMS
 function hlTurn(i){$$('#turns li').forEach(function(l,k){l.classList.toggle('hl',k==i)});var e=$$('#turns li')[i];if(e&&i>=0)e.scrollIntoView({block:'nearest'})}
 function wire(){
  $$('tr.mi').forEach(function(r){r.addEventListener('mouseenter',function(){hlTurn(itm(r.dataset.id).turn)});r.addEventListener('mouseleave',function(){hlTurn(-1)})});
- $$('[data-trk]').forEach(function(b){b.onclick=function(){var x=itm(b.dataset.id);x.trk=x.trk==b.dataset.trk?'':b.dataset.trk;draw()}});
+ $$('button[data-trk]').forEach(function(b){b.onclick=function(){var x=itm(b.dataset.id);x.trk=x.trk==b.dataset.trk?'':b.dataset.trk;draw()}});
   $$('[data-t]').forEach(function(e){e.onblur=function(){var t=e.textContent.trim();if(t)itm(e.dataset.t).t=t;else e.textContent=itm(e.dataset.t).t};e.onkeydown=function(k){if(k.key=='Escape'){e.textContent=itm(e.dataset.t).t;e.blur()}if(k.key=='Enter'){k.preventDefault();e.blur()}}});
  var sb=$('[data-sum]');if(sb){sb.onblur=function(){SUMM=sb.textContent.trim()||SUMM};sb.onkeydown=function(k){if(k.key=='Escape'){sb.textContent=SUMM;sb.blur()}}}
  $$('[data-dueb]').forEach(function(b){b.onclick=function(e){e.stopPropagation();dpop(b,itm(b.dataset.dueb))}});
