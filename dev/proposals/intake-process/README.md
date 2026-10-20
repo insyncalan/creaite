@@ -174,6 +174,55 @@ Residual (not fixed, small, for the record):
   Word `"draft"` from anywhere and a `"transcript"` from a project folder (removed from there on approval). Worth the same two checks
   in mode `"ask"`, as a separate guarded change.
 
+## R1 delta (after the diffs above were applied on `origin/v253-release` ba6fe110)
+
+**Status.** `reach.diff` and `live_server.diff` above are applied on `origin/v253-release` (ba6fe110, with `/api/ask` now under
+`START_LOCK`). The delta re-review (READY WITH NOTES) found one more: **R1** (low to medium). The fix is one new guarded diff,
+`r1-reach.diff`, against `system/scripts/reach.py` as it is on `origin/v253-release` now. `live_server.py` needs no change for R1,
+so there is no `r1-live_server.diff`.
+
+```
+git apply --check dev/proposals/intake-process/r1-reach.diff      # clean on origin/v253-release ba6fe110
+git apply dev/proposals/intake-process/r1-reach.diff
+```
+
+It also applies cleanly before or after #265's `dev/proposals/calendar-refresh/reach.diff` (checked both ways): the change to
+`start_run` only adds keys for mode `"process"`.
+
+**R1.** "This run's own file" was judged by its time, so any `.docx` or `.json` another flow wrote into drafts *during* a Process run
+counted as the run's. Repro: start the run, write `drafts/2026-10-20 ABC Client report.docx` and a spec with that `"draft"`, and
+`minutes.py stage` was allowed (the client report export would be filed as these minutes on approval); a minutes record exported
+to Word could be filled over; the export's temporary `<stamp> values.json` could be edited.
+
+**Fix: by the run's record, never by time.**
+- `start_run` writes, for mode `"process"`, `"before"` (the proposals in staging when the run starts) and `"made"` (empty) into
+  `system/guard/run.json`.
+- The hook records each file it lets the run create in `"made"` (`_may_make`: a file that doesn't exist yet, claimed as it is
+  allowed; or one already in `"made"`). That covers a direct Write of a new `.json` in drafts, a `fill` target and a search summary.
+- "The run's own" (`_runs_own`) is only what `"made"` lists. A `fill` reads only a values file the run made; a spec's Word
+  `"draft"` must be one it made, and never a report (`is_report_file`); `people map` maps only its own spec; a Write changes only a
+  file it made.
+- The run's proposals (`_runs_proposals`, for `validate` and `enrich`) are those not in `"before"` and for one of its files: so a
+  proposal Alan changes in Review during the run, or a new one he makes for another file, is never the run's.
+- Fails closed: a record that isn't a Process run's makes nothing the run's (even if it lists files); a record that can't be
+  written means a new file can't be claimed, so it is refused; a record without `"before"` gives no proposals.
+
+**Tests** (`dev/tests/test_intake_process.py`; `needs_r1`: expected failures until `r1-reach.diff` is applied, and on this branch):
+- `Fence.test_r1_a_file_another_flow_writes_during_the_run_is_never_the_runs`: the review's repro (a client report export named as
+  the draft), a minutes export named as the draft or filled over, a fill into a new report-named file, the export's values file
+  filled from, edited or mapped; and its own report-named file as a draft.
+- `Fence.test_r1_what_the_run_creates_becomes_its_own`: a fill's new target is recorded, so its spec stages; a new `.json` too.
+- `Fence.test_r1_nothing_is_the_runs_without_a_process_record_or_when_it_cant_be_told` (N11, N10, and a record without "before").
+- `Fence.test_a_proposal_alan_makes_during_the_run_isnt_the_runs` (N12; it passes on the applied diffs too, so it is `needs_diff`).
+
+**Mutants.** The review's N10, N11 and N12 targeted the time-based helper (`_older_than_run`), which R1 removes; their equivalents in
+the new code, with the rest of the delta's branches, are in `scratchpad/mutate264r1.py` (15 mutants): 14 killed. The survivor, a
+`fill` into a report-named file without the `is_report_file` check, is equivalent: the hook's report rule (v2.5.1) refuses any
+command naming a report file first, so the extra check is belt and braces.
+
+**Residual.** A file the run is allowed to create is claimed when the hook allows the call, before the tool runs; a call that then
+fails leaves a claim for a file that doesn't exist, which only lets the run create that same name later.
+
 ## Audit: other dashboard buttons that send an ask message for a routine job
 
 `askLive(` callers in `system/templates/dashboard/src/`:

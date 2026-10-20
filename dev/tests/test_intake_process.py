@@ -38,6 +38,9 @@ from test_tracker import Vault  # noqa: E402
 APPLIED = "def process_gate" in (REPO / "system/scripts/reach.py").read_text(encoding="utf-8") and \
     "/api/intake/process" in (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
 needs_diff = (lambda f: f) if APPLIED else unittest.expectedFailure      # fail first: passes once the guarded diffs are applied
+# #264 R1 (a delta on the applied diffs: dev/proposals/intake-process/r1-reach.diff): a Process run's own files by its record
+R1 = APPLIED and "def _runs_own" in (REPO / "system/scripts/reach.py").read_text(encoding="utf-8")
+needs_r1 = (lambda f: f) if R1 else unittest.expectedFailure
 
 DAY = "2026-10-20"
 # The three sample files (dev/samples/minutes-test, pm-intake-briefs 43533311; the .vtt files are git-ignored there, so the two
@@ -268,6 +271,24 @@ class Fence(unittest.TestCase):
         (st / "proposed-old.json").write_text(json.dumps({"items": [], "meeting": {"transcript": cls.files[0], "file_ops": [
             {"op": "copy", "from": "draft", "to": cls.theirs}]}}))
         os.utime(st / "proposed-old.json", (time.time() - 3600, time.time() - 3600))
+        # R1: another flow writes into drafts DURING the run (mtime now, not in the run's record): a client report export, a
+        # minutes record exported to Word, the export's own temporary values file
+        (drafts / "2026-10-20 ABC Client report.docx").write_bytes(b"PK")
+        (drafts / "2026-10-19 Steering minutes.docx").write_bytes(b"PK")
+        (drafts / "20261020-1200 values.json").write_text("{}")
+        (drafts / "fresh.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+                                                       "draft": "system/staging/drafts/2026-10-20 ABC Client report.docx"}))
+        (drafts / "fresh2.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+                                                        "draft": "system/staging/drafts/2026-10-19 Steering minutes.docx"}))
+        (drafts / "2026-10-22 ABC weekly report.docx").write_bytes(b"PK")
+        (drafts / "rep.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+                                                     "draft": "system/staging/drafts/2026-10-22 ABC weekly report.docx"}))
+        (drafts / "chain.json").write_text(json.dumps({"title": "P", "transcript": cls.files[0],
+                                                       "draft": "system/staging/drafts/chain.docx"}))
+        # N12: a proposal made during the run that isn't for the run's files (Alan's own edit in Review)
+        cls.alans = "projects/ABC Example/minutes/2026-10-18 Alans edit.docx"
+        (st / "proposed-alan.json").write_text(json.dumps({"items": [], "meeting": {"transcript": "inbox/someone else.vtt",
+                                                           "file_ops": [{"op": "copy", "from": "draft", "to": cls.alans}]}}))
         import hashlib
         side = cls.v.root / "system/search" / (hashlib.sha256(cls.again.encode()).hexdigest() + ".json")
         side.parent.mkdir(parents=True, exist_ok=True)
@@ -278,16 +299,27 @@ class Fence(unittest.TestCase):
     def tearDownClass(cls):
         cls.v.cleanup()
 
-    def decide(self, calls, mode="process", files=None, why=False):
-        """{name: allowed} (or [allowed, why]) for each (tool, input), with the run record the server writes for a Process run,
-        started 10 minutes ago: the files this class wrote are this run's, the ones dated an hour back are another flow's."""
-        code = ("import reach; a = json.loads(sys.stdin.read()); "
+    # The files and proposals the run record names as this run's own (as the hook records them while the run creates them, R1);
+    # everything else in drafts and staging is another flow's.
+    OWN = ["pilot.json", "values.json", "newdraft.json", "new minutes.docx", "pics.json", "list.json", "note.json", "other.json",
+           "far.json", "olddraft.json", "chain.json", "2026-10-22 ABC weekly report.docx", "rep.json"]
+    STAGED = ["proposed-own.json", "proposed-alan.json"]
+
+    def decide(self, calls, mode="process", files=None, why=False, own=None):
+        """{name: allowed} (or [allowed, why]) for each (tool, input), in order, with the run record the server writes for a
+        Process run, started 10 minutes ago, naming OWN and STAGED as the run's (R1); the files dated an hour back are another
+        flow's either way."""
+        code = ("import os, reach; a = json.loads(sys.stdin.read()); "
                 "has = 'files' in reach.start_run.__code__.co_varnames; "        # before the diff, start_run has no files
                 "reach.start_run('i-1', a['mode'], {}, None, **({'files': a['files']} if a['mode'] == 'process' and has else {})); "
-                "d = json.loads(reach.RUN_FILE.read_text()); d['started'] -= 600; reach.RUN_FILE.write_text(json.dumps(d)); "
+                "d = json.loads(reach.RUN_FILE.read_text()); d['started'] -= 600; "
+                "d.update({'made': [os.path.realpath('system/staging/drafts/' + n) for n in a['own']]} if 'made' in d else {}); "
+                "d.update({'before': [n for n in d['before'] if n not in a['staged']]} if 'before' in d else {}); "
+                "reach.RUN_FILE.write_text(json.dumps(d)); "
                 "print(json.dumps({k: reach.decide(t, i, a['mode'], 'i-1', True)[slice(None) if a['why'] else 0] "
                 "for k, (t, i) in a['calls'].items()}))")
-        return in_vault(self.v, code, {"mode": mode, "files": self.files if files is None else files, "calls": calls, "why": why})
+        return in_vault(self.v, code, {"mode": mode, "files": self.files if files is None else files, "calls": calls, "why": why,
+                                       "own": self.OWN if own is None else own, "staged": self.STAGED})
 
     def run_(self, words):
         return ("Bash", {"command": "system/scripts/run " + words})
@@ -352,6 +384,74 @@ class Fence(unittest.TestCase):
         for name, ok in got.items():
             with self.subTest(name):
                 self.assertFalse(ok, name)
+
+    @needs_r1
+    def test_r1_a_file_another_flow_writes_during_the_run_is_never_the_runs(self):
+        """R1: "this run's own" is what the hook let the run create (its record), never a file's time: an export written into
+        drafts during the run can't be filled over, filed as these minutes or edited."""
+        tpl, vals, d = "system/templates/minutes-template.docx", "system/staging/drafts/values.json", self.v.root / "system/staging/drafts"
+        got = self.decide({
+            "stage_client_report_export": self.run_("minutes.py stage system/staging/drafts/fresh.json"),
+            "stage_minutes_export": self.run_("minutes.py stage system/staging/drafts/fresh2.json"),
+            "stage_a_report_even_its_own": self.run_("minutes.py stage system/staging/drafts/rep.json"),
+            "fill_over_minutes_export": self.run_(f"docx_tools.py fill {tpl} {vals} 'system/staging/drafts/2026-10-19 Steering minutes.docx'"),
+            "fill_over_report_export": self.run_(f"docx_tools.py fill {tpl} {vals} 'system/staging/drafts/2026-10-20 ABC Client report.docx'"),
+            "fill_new_report_name": self.run_(f"docx_tools.py fill {tpl} {vals} 'system/staging/drafts/2026-10-21 ABC Client report.docx'"),
+            "fill_from_exports_values": self.run_(f"docx_tools.py fill {tpl} 'system/staging/drafts/20261020-1200 values.json' "
+                                                  "system/staging/drafts/n2.docx"),
+            "edit_exports_values": ("Edit", {"file_path": str(d / "20261020-1200 values.json")}),
+            "map_exports_values": self.run_("propose.py people map 'system/staging/drafts/20261020-1200 values.json'")})
+        for name, ok in got.items():
+            with self.subTest(name):
+                self.assertFalse(ok, name)
+
+    @needs_r1
+    def test_r1_what_the_run_creates_becomes_its_own(self):
+        """R1: a Word draft the run fills is recorded as its own, so its spec stages; a new .json it writes may be written again."""
+        tpl, d = "system/templates/minutes-template.docx", self.v.root / "system/staging/drafts"
+        got = self.decide({"fill_chain": self.run_(f"docx_tools.py fill {tpl} system/staging/drafts/values.json "
+                                                   "system/staging/drafts/chain.docx"),
+                           "stage_chain": self.run_("minutes.py stage system/staging/drafts/chain.json"),
+                           "write_new": ("Write", {"file_path": str(d / "brand new.json")})},
+                          own=[n for n in self.OWN if n != "chain.docx"])
+        self.assertEqual(got, {"fill_chain": True, "stage_chain": True, "write_new": True})
+        got = in_vault(self.v, "import reach, os; print(json.dumps(sorted(os.path.basename(m) for m in "
+                               "json.loads(reach.RUN_FILE.read_text())['made'] if m.endswith(('chain.docx', 'brand new.json')))))")
+        self.assertEqual(got, ["brand new.json", "chain.docx"])
+
+    @needs_r1
+    def test_r1_nothing_is_the_runs_without_a_process_record_or_when_it_cant_be_told(self):
+        """N11: a run record that isn't a Process run's makes nothing the run's (even listing it); N10: when the record can't
+        be written (so a new file can't be claimed), the write is refused."""
+        got = in_vault(self.v, "import reach, os; reach.start_run('i-3', 'ask', {}, None); "
+                               "d = json.loads(reach.RUN_FILE.read_text()); "
+                               "d['made'] = [os.path.realpath('system/staging/drafts/pilot.json')]; reach.RUN_FILE.write_text(json.dumps(d)); "
+                               "from pathlib import Path; print(json.dumps([reach._runs_own(Path(d['made'][0])), "
+                               "reach._may_make(Path(os.path.realpath('system/staging/drafts/zz.json')))]))")
+        self.assertEqual(got, [False, False])
+        got = in_vault(self.v, "import reach; reach.start_run('i-5', 'process', {}, None, files=a); "    # a record with no "before"
+                               "d = json.loads(reach.RUN_FILE.read_text()); d.pop('before'); reach.RUN_FILE.write_text(json.dumps(d)); "
+                               "print(json.dumps(len(reach._runs_proposals())))".replace("files=a", "files=json.loads(sys.stdin.read())"),
+                       self.files)
+        self.assertEqual(got, 0)
+        guard = self.v.root / "system/guard"
+        code = ("import reach, os; reach.start_run('i-4', 'process', {}, None, files=[]); "
+                "os.chmod('system/guard', 0o500); from pathlib import Path\n"
+                "try:\n  r = reach._may_make(Path(os.path.realpath('system/staging/drafts/zz2.json')))\n"
+                "finally:\n  os.chmod('system/guard', 0o700)\nprint(json.dumps(r))")
+        try:
+            self.assertFalse(in_vault(self.v, code))
+        finally:
+            guard.chmod(0o700)
+
+    @needs_diff
+    def test_a_proposal_alan_makes_during_the_run_isnt_the_runs(self):
+        """N12: a proposal written during the run that isn't for one of the run's files (Alan's own edit in Review) is never
+        validated or enriched by it; one that was there when it started isn't the run's either."""
+        got = self.decide({"validate_alans": self.run_("tracker.py validate system/staging/proposed-alan.json"),
+                           "enrich_alans": self.run_(f"search.py enrich set --path '{self.alans}' --summary 'x' --tags 'a, b, c'"),
+                           "validate_own": self.run_("tracker.py validate system/staging/proposed-own.json")})
+        self.assertEqual(got, {"validate_alans": False, "enrich_alans": False, "validate_own": True})
 
     @needs_diff
     def test_only_a_process_runs_record_names_files(self):
