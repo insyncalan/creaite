@@ -67,6 +67,7 @@ def make_vault():
               "claims.py",                                         # BL-314
               "settings_catalogue.py", "health.py",                # BL-320
               "archive.py",                                        # BL-10, BL-03
+              "usage_log.py", "usage_report.py",                   # #197, #238: the Usage figures in the page's data
               "notes.py",                                          # BL-301: the note format, read by search
               "capture.py",                                        # BL-301 C: the capture drawer's server side
               "edit_ai.py",                                        # BL-301 D: AI on selected text

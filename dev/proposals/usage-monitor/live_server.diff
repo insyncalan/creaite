@@ -1,0 +1,58 @@
+--- system/scripts/live_server.py
++++ system/scripts/live_server.py
+@@ -1190,7 +1190,8 @@
+         api_get = {"/api/data": lambda: self.send(200, live_data()),
+                    "/api/records": lambda: records_route(self),            # BL-304: just the changed items
+                    "/api/search": self.search_get,                          # BL-07
+-                   "/api/files": self.files_get}.get(route)                 # BL-87
++                   "/api/files": self.files_get,                            # BL-87
++                   "/api/usage": self.usage_get}.get(route)                 # #238: Activity › Usage, read only
+         if api_get:
+             return api_get() if self.authorised() else None
+         # ===== BL-253 (sprint-live-updates) =====
+@@ -1207,6 +1208,16 @@
+             raise
+         except Exception as e:                                    # the page keeps its old list and says so
+             self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
++
++    def usage_get(self):
++        """GET /api/usage (#238): the Usage tab's figures (usage_report.py --json: counts only, read only), token-checked by do_GET."""
++        try:
++            import usage_report
++            self.send(200, dict(usage_report.json_report(), ok=True))
++        except CLIENT_LEFT:                                       # the page left; not a 500
++            raise
++        except Exception as e:                                    # the tab keeps the figures built into the page
++            self.send(500, {"ok": False, "message": f"{type(e).__name__}"})
+ 
+     def do_POST(self):
+         """POST routes: checks the token, reads the body and dispatches to the route's method or a route table; an
+@@ -7032,6 +7043,18 @@
+ import backup  # noqa: E402
+ BACKUP_ROUTES = ("/api/backup/list", "/api/backup/preview", "/api/backup/restore")
+ BACKUP_EVERY = 3600
++
++
++def usage_context_job():
++    """#238: measure what every run loads and append it, once a day (usage_log.daily: counts only, one writer, never in the
++    development repository). Returns a log line, or None. Never raises."""
++    try:
++        import usage_log
++        rows = usage_log.daily()
++        return f"context sizes recorded: {len(rows)} files" if rows else None
++    except Exception as e:  # noqa: BLE001  the monitor never stops the daily job
++        swallowed("usage", e)
++        return None
+ 
+ 
+ def backup_daily_job():
+@@ -7048,7 +7071,8 @@
+         said = []
+         made = session.backup_today(sweep.now(), said.append)
+         archived = archive_after_backup()                # BL-10: after Tidy up (backup.after_daily_backup), once a day
+-        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else [])
++        context = usage_context_job()                    # #238: what every run loads, once a day (context-size.jsonl)
++        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else []) + ([context] if context else [])
+     finally:
+         LOCK.release()
+ 

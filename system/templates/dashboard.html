@@ -2651,9 +2651,18 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .ckchips,.qcchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px} .qcchips:empty{display:none} .ckvague{margin-top:4px}
 .acttabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 14px} .acttabs [role=tab]{border:0;background:none;padding:8px 12px;font:500 var(--fs-md)/20px var(--font);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
 .acttabs [role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)} .acttabs [role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
-#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg{display:none!important}
+#v-activity.q #actTools,#v-activity.q #actBar,#v-activity.q #actTbl,#v-activity.q #achg,#v-activity.u #actTools,#v-activity.u #actBar,#v-activity.u #actTbl,#v-activity.u #achg{display:none!important}
 #actQuality h2{margin:20px 0 6px} .qmoved{font-weight:500;margin:4px 0} .qtab{width:100%;border-collapse:collapse;font-size:var(--fs-sm)} .qtab th,.qtab td{text-align:left;padding:6px 10px;border-top:1px solid var(--line)}
 .qtab thead th{border-top:0;color:var(--muted);font-weight:500} #actQuality .qtab tbody th{font:500 var(--fs-sm)/18px var(--font);text-transform:none;letter-spacing:0;color:var(--ink);background:none} .qnr{display:block;font-weight:400;font-size:var(--fs-xs);color:var(--muted)}
+/* ===== #238 (v2.5.1) Activity › Usage: cards, a cost-and-load chart and the tables (Quality's .qtab); tokens only ===== */
+#actUsage h2{margin:20px 0 6px} .usum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.ucard{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px} .ucard .v{font:700 var(--fs-2xl)/var(--lh-1-25) var(--display,var(--font))}
+.ucard .l{font-size:var(--fs-sm);color:var(--muted)} .ucard .d{font-size:var(--fs-xs);margin-top:4px;color:var(--muted)} .ucard .d.up{color:var(--warn)} .ucard .d.dn{color:var(--ok)}
+.uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0} .uchart h2{margin:0 0 6px!important} .uchart .sub{margin:6px 0 0}
+.uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
+.ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
+#actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+/* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is
    smaller, padding grows the hit area and an equal negative margin gives the space back, so nothing moves and no row grows. */
@@ -4235,6 +4244,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
 <h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
 <h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
+<div id="actUsage" role="tabpanel" aria-labelledby="actTabU" hidden></div><!-- #238: Usage, drawn by components/activity/UsagePanel.jsx -->
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
@@ -4299,6 +4309,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ACTKINDS: () => ACTKINDS,
     ACTPK: () => ACTPK,
     ACTSHOW: () => ACTSHOW,
+    ACTTABS: () => ACTTABS,
     ACT_ASK_AGAIN: () => ACT_ASK_AGAIN,
     AGD: () => AGD,
     AGSTYLES: () => AGSTYLES,
@@ -4847,6 +4858,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     actSel: () => actSel,
     actSetFilters: () => actSetFilters,
     actShowQuality: () => actShowQuality,
+    actShowTab: () => actShowTab,
     actTabsDraw: () => actTabsDraw,
     actTools: () => actTools,
     actTyping: () => actTyping,
@@ -6940,6 +6952,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     updateView: () => updateView,
     uploadClientLogo: () => uploadClientLogo,
     uploadedFiles: () => uploadedFiles,
+    usageDraw: () => usageDraw,
+    usageOpen: () => usageOpen,
     useCount: () => useCount,
     vagueWhy: () => vagueWhy,
     validate: () => validate,
@@ -40177,7 +40191,7 @@ ${s5}`;
       controls: "peopleTbl",
       wrap: true
     });
-    const th2 = (c5, l6, num) => `<th class="${num ? "num" : ""}" data-psort="${c5}" aria-sort="${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? "ascending" : "descending" : "none"}"><button type="button" class="thsort">${l6}${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? " ▲" : " ▼" : ""}</button></th>`;
+    const th2 = (c5, l6, num2) => `<th class="${num2 ? "num" : ""}" data-psort="${c5}" aria-sort="${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? "ascending" : "descending" : "none"}"><button type="button" class="thsort">${l6}${shared.PSORT.col === c5 ? shared.PSORT.dir === "asc" ? " ▲" : " ▼" : ""}</button></th>`;
     const nameCell = (x5) => `<td class="title"><a href="#" class="plink2" data-person="${esc(x5.name)}">${esc(isMe(x5.name) ? `You (${x5.name})` : x5.name)}</a>${x5.p || isMe(x5.name) ? "" : ` <span class="tag warn" title="${none ? "Seen on items but isn’t in the people register" : "Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x5.p && x5.p.org ? esc(x5.p.org) : '<span class="sub">—</span>'}</td><td>${x5.p && x5.p.role ? esc(x5.p.role) : '<span class="sub">—</span>'}</td><td>${x5.codes.map(pLink).join(" ") || '<span class="sub">—</span>'}</td>`;
     $("#peopleTbl").setAttribute("role", "tabpanel");
@@ -65447,6 +65461,183 @@ ${d5.text}`);
     if (box) R(/* @__PURE__ */ u2(RejectsList, { ...props }), box);
   }
 
+  // components/activity/UsagePanel.jsx
+  var KIND = {
+    ask: "ask creaite",
+    sweep: "Sweep",
+    generate: "Generate current state",
+    prep: "Prep page",
+    draft: "Drafts",
+    check: "Transcript check",
+    load: "Transcript load",
+    vip: "Alert check",
+    other: "Other"
+  };
+  var FILE = {
+    rules: "Rules (creaite-rules.md)",
+    claude_md: "Your CLAUDE.md",
+    memory: "Project memory and registers",
+    skills: "Skill names and descriptions"
+  };
+  var num = (n4) => n4 == null ? "–" : Math.round(n4).toLocaleString("en-GB");
+  var usd = (n4) => `$${(n4 || 0).toFixed(2)}`;
+  var signed = (n4, f5 = num) => (n4 > 0 ? "+" : n4 < 0 ? "−" : "") + f5(Math.abs(n4));
+  var usageKb = (b5) => {
+    const k5 = b5 / 1e3;
+    return `${k5 >= 10 ? Math.round(k5) : Number(k5.toFixed(1))} KB`;
+  };
+  function delta(c5, pct) {
+    const ch2 = pct ? c5.change_pct : c5.change;
+    if (c5.before == null || pct && !c5.before) return ["nothing to compare with last week", ""];
+    if (ch2 == null || ch2 === 0) return ["no change on last week", ""];
+    return [`${pct ? signed(ch2, (n4) => `${n4}%`) : signed(ch2)} on last week`, ch2 > 0 ? "up" : "dn"];
+  }
+  function Chart({ days: days2, fd: fd3 }) {
+    const W3 = 760, H4 = 150, L3 = 34, B4 = 22, n4 = days2.length, bw2 = (W3 - L3) / n4;
+    const top = Math.max(1, Math.ceil(Math.max(...days2.map((d5) => d5.cost_usd)))), step2 = top > 6 ? Math.ceil(top / 5) : 1;
+    const max = Math.ceil(top / step2) * step2 + (top === Math.ceil(top / step2) * step2 ? step2 : 0);
+    const starts = days2.map((d5) => d5.start_median).filter((v5) => v5 != null), lo2 = starts.length ? Math.min(...starts) : 0, hi2 = starts.length ? Math.max(...starts) : 0;
+    const half = Math.max(hi2 - lo2, hi2 * 0.15, 1e3) * 1.5, mid = (lo2 + hi2) / 2;
+    const y5 = (v5) => H4 - B4 - (H4 - B4 - 8) * (v5 - (mid - half)) / (half * 2);
+    const pts = days2.map((d5, i5) => d5.start_median == null ? null : `${L3 + i5 * bw2 + bw2 / 2},${y5(d5.start_median)}`).filter(Boolean).join(" ");
+    const grid = [];
+    for (let g5 = 0; g5 <= max; g5 += step2) grid.push(g5);
+    const label = `Cost per day, last ${n4} days, and the median tokens a run loaded before it started`;
+    return /* @__PURE__ */ u2("svg", { viewBox: `0 0 ${W3} ${H4}`, role: "img", "aria-label": label, children: [
+      grid.map((g5) => {
+        const gy2 = H4 - B4 - (H4 - B4 - 8) * g5 / max;
+        return /* @__PURE__ */ u2("g", { children: [
+          /* @__PURE__ */ u2("line", { class: "ugrid", x1: L3, x2: W3, y1: gy2, y2: gy2 }),
+          /* @__PURE__ */ u2("text", { class: "uax", x: "2", y: gy2 + 4, children: `$${g5}` })
+        ] }, g5);
+      }),
+      days2.map((d5, i5) => {
+        const h5 = (H4 - B4 - 8) * d5.cost_usd / max;
+        return /* @__PURE__ */ u2("g", { children: [
+          /* @__PURE__ */ u2("rect", { class: "ubar", x: L3 + i5 * bw2 + 6, y: H4 - B4 - h5, width: bw2 - 12, height: h5, children: /* @__PURE__ */ u2("title", { children: `${fd3(d5.day)}: ${usd(d5.cost_usd)}, ${d5.runs} ${d5.runs === 1 ? "run" : "runs"}` }) }),
+          /* @__PURE__ */ u2("text", { class: "uax", x: L3 + i5 * bw2 + bw2 / 2, y: H4 - 6, "text-anchor": "middle", children: fd3(d5.day).slice(0, 5) })
+        ] }, d5.day);
+      }),
+      pts ? /* @__PURE__ */ u2("polyline", { class: "uline", points: pts, fill: "none" }) : null,
+      starts.length ? /* @__PURE__ */ u2("text", { class: "uax uaxl", x: W3 - 4, y: "12", "text-anchor": "end", children: `start load ${num(starts[0])} → ${num(starts[starts.length - 1])} tokens` }) : null
+    ] });
+  }
+  function Runs({ u: u5, fd: fd3 }) {
+    const c5 = u5.cards || {}, kinds = u5.by_kind || [];
+    const cards = [
+      ["cost", "Cost this week", usd(c5.cost?.now), c5.cost && delta(c5.cost, true)],
+      ["runs", "Runs this week", num(c5.runs?.now), c5.runs && delta(c5.runs, true)],
+      ["start", "Tokens a run loads before it starts", num(c5.start?.now), c5.start && delta(c5.start, false)],
+      ["avg", "Cost of an average run", usd(c5.avg_cost?.now), c5.avg_cost && delta(c5.avg_cost, true)]
+    ];
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: "usum", children: cards.map(([k5, label, v5, d5]) => /* @__PURE__ */ u2("div", { class: "ucard", children: [
+        /* @__PURE__ */ u2("div", { class: "v", children: v5 }),
+        /* @__PURE__ */ u2("div", { class: "l", children: label }),
+        /* @__PURE__ */ u2("div", { class: `d ${d5 ? d5[1] : ""}`, children: d5 ? d5[0] : "" })
+      ] }, k5)) }),
+      /* @__PURE__ */ u2("div", { class: "uchart", children: [
+        /* @__PURE__ */ u2("h2", { children: "Cost and what each run loads before it starts, by day" }),
+        /* @__PURE__ */ u2(Chart, { days: u5.by_day || [], fd: fd3 }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "Bars: cost in dollars. Line: the median tokens a run loaded before doing anything (the rules file, CLAUDE.md, memory and skill names)." })
+      ] }),
+      /* @__PURE__ */ u2("h2", { children: "By kind of run" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "By kind of run", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Kind" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Runs" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Average tokens" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Loaded at start (median)" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Cost" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Share of cost" })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: kinds.map((k5) => /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("td", { children: KIND[k5.kind] || KIND.other }),
+          /* @__PURE__ */ u2("td", { children: num(k5.runs) }),
+          /* @__PURE__ */ u2("td", { children: num(k5.avg_tokens) }),
+          /* @__PURE__ */ u2("td", { children: num(k5.start_median) }),
+          /* @__PURE__ */ u2("td", { children: usd(k5.cost_usd) }),
+          /* @__PURE__ */ u2("td", { children: `${k5.share_pct}%` })
+        ] }, k5.kind)) })
+      ] }) })
+    ] });
+  }
+  function Skills({ skills }) {
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("h2", { children: "Skills" }),
+      /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "Skills", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Skill" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Runs" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Cost" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Last used" })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: skills.map((s5) => /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("td", { children: s5.skill }),
+          /* @__PURE__ */ u2("td", { children: num(s5.runs) }),
+          /* @__PURE__ */ u2("td", { children: usd(s5.cost_usd) }),
+          /* @__PURE__ */ u2("td", { children: lastUsed(s5) })
+        ] }, s5.skill)) })
+      ] }) })
+    ] });
+  }
+  function lastUsed(s5) {
+    const ago = s5.days_since == null ? "" : s5.days_since === 0 ? "today" : s5.days_since === 1 ? "yesterday" : `${s5.days_since} days ago`;
+    if (s5.runs > 0) return ago;
+    return s5.days_since == null ? "never in this period (never run)" : `never in this period (${s5.days_since} ${s5.days_since === 1 ? "day" : "days"})`;
+  }
+  function Loads({ rows: rows2, start, fd: fd3 }) {
+    const total = rows2.reduce((a5, r4) => a5 + r4.tokens, 0), rules = rows2.find((r4) => r4.file === "rules");
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("h2", { children: "What every run loads" }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "The always-loaded files, measured once a day. Tokens are estimates (bytes ÷ 4); the change is over the last 30 days." }),
+      rows2.length ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "What every run loads", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("th", { scope: "col", children: "File" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Now" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "About tokens" }),
+            /* @__PURE__ */ u2("th", { scope: "col", children: "Change in 30 days" })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { children: rows2.map((r4) => /* @__PURE__ */ u2("tr", { children: [
+            /* @__PURE__ */ u2("td", { children: FILE[r4.file] || r4.file }),
+            /* @__PURE__ */ u2("td", { children: usageKb(r4.bytes) }),
+            /* @__PURE__ */ u2("td", { children: num(r4.tokens) }),
+            /* @__PURE__ */ u2("td", { children: ctxChange(r4, fd3) })
+          ] }, r4.file)) })
+        ] }) }),
+        /* @__PURE__ */ u2("div", { class: "unote", children: [
+          /* @__PURE__ */ u2("b", { children: "Why this matters:" }),
+          " ",
+          `Every run starts by loading about ${num(start || total)} tokens${rules && total ? `, and the rules file is about ${Math.round(rules.tokens / total * 100)}% of the always-loaded files` : ""}. A smaller rules file lowers the cost of every run.`
+        ] })
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: "Not measured yet. The live server measures these files once a day." })
+    ] });
+  }
+  function ctxChange(r4, fd3) {
+    if (r4.change_bytes == null || !r4.since) return "no earlier measure yet";
+    if (r4.change_bytes === 0) return "no change";
+    const k5 = Math.abs(r4.change_bytes) / 1e3;
+    return `${r4.change_bytes > 0 ? "+" : "−"}${Number((k5 >= 10 ? Math.round(k5) : k5).toFixed(1))} KB since ${fd3(r4.since)}`;
+  }
+  function UsagePanel({ usage, fd: fd3 }) {
+    const u5 = usage || {};
+    const bad = !usage || usage.error;
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("p", { class: "sub", children: [
+        "Last ",
+        u5.days || 14,
+        " days, as counted by the live server for each Claude run. Counts only: never the text of a message, a note or a name. Internal; nothing leaves this laptop. Tokens loaded at start are what each run reported; the others are estimates (bytes ÷ 4)."
+      ] }),
+      bad || u5.empty ? /* @__PURE__ */ u2("p", { class: "sub uempty", role: "status", children: bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here." }) : /* @__PURE__ */ u2(Runs, { u: u5, fd: fd3 }),
+      /* @__PURE__ */ u2(Loads, { rows: u5.context || [], start: u5.cards?.start?.now, fd: fd3 }),
+      bad || u5.empty ? null : /* @__PURE__ */ u2(Skills, { skills: u5.skills || [] })
+    ] });
+  }
+  function mountUsage(host2, props) {
+    if (host2) R(/* @__PURE__ */ u2(UsagePanel, { ...props }), host2);
+  }
+
   // activity.js
   var ID_RE = /^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
   function itemText(id2) {
@@ -65613,6 +65804,7 @@ ${d5.text}`);
   }
   var ACTSHOW = 300;
   function renderActivity() {
+    if (ACTTAB === "u") usageDraw();
     actTools();
     [...HL].forEach(([id2, k5]) => {
       if (k5 !== "act") HL.delete(id2);
@@ -65858,23 +66050,46 @@ ${d5.text}`);
     dr2.replaceChildren();
     (q5.drafts || []).forEach((r4) => qRow(dr2, r4.label, r4.offered ? [String(r4.offered), r4.used.text, r4.edited.text, r4.rejected.text] : ["0", "—", "—", "—"], qNR(r4.rated, r4.offered, "offered")));
   }
-  function actTabsDraw(q5) {
-    drawTabs($("#actTabsHost"), {
-      items: [{ id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" }, { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" }],
-      selected: q5 ? "q" : "ch",
-      onSelect: (id2) => actShowQuality(id2 === "q"),
-      label: "Activity",
-      className: "acttabs",
-      wrap: true
-    });
+  var ACTTABS = [{ id: "ch", label: "Changes", tabId: "actTabCh", controls: "actTbl" }, { id: "q", label: "Quality", tabId: "actTabQ", controls: "actQuality" }, { id: "u", label: "Usage", tabId: "actTabU", controls: "actUsage" }];
+  var ACTTAB = "ch";
+  function actTabsDraw(tab) {
+    drawTabs($("#actTabsHost"), { items: ACTTABS, selected: tab, onSelect: (id2) => actShowTab(id2), label: "Activity", className: "acttabs", wrap: true });
   }
-  function actShowQuality(q5) {
-    $("#v-activity").classList.toggle("q", q5);
-    $("#actQuality").hidden = !q5;
-    actTabsDraw(q5);
-    if (q5) {
+  function actShowTab(tab) {
+    ACTTAB = tab;
+    const v5 = $("#v-activity");
+    v5.classList.toggle("q", tab === "q");
+    v5.classList.toggle("u", tab === "u");
+    $("#actQuality").hidden = tab !== "q";
+    $("#actUsage").hidden = tab !== "u";
+    actTabsDraw(tab);
+    if (tab === "q") {
       renderQuality();
       rjLoadRecent();
+    }
+    if (tab === "u") usageOpen();
+  }
+  var actShowQuality = (q5) => actShowTab(q5 ? "q" : "ch");
+  var USAGE_ROUTE = true;
+  function usageDraw() {
+    mountUsage($("#actUsage"), { usage: D.usage, fd });
+  }
+  async function usageOpen() {
+    usageDraw();
+    if (!USAGE_ROUTE || !viaServer()) return;
+    try {
+      const r4 = await fetch("/api/usage", { headers: { "X-Creaite-Token": D.token || "" } });
+      if (r4.status === 404 || r4.status === 405) {
+        USAGE_ROUTE = false;
+        return;
+      }
+      const j5 = r4.ok ? await r4.json() : null;
+      if (j5 && j5.cards && Array.isArray(j5.by_day)) {
+        D.usage = j5;
+        if (ACTTAB === "u") usageDraw();
+      }
+    } catch (e4) {
+      USAGE_ROUTE = true;
     }
   }
   function bootActivity0205() {
@@ -65885,7 +66100,7 @@ ${d5.text}`);
       name: pName,
       when: (at2) => `${fd(String(at2).slice(0, 10))}${String(at2).length > 15 ? " " + String(at2).slice(11, 16) : ""}`
     });
-    actTabsDraw(false);
+    actTabsDraw("ch");
   }
 
   // components/prep/PrepEditor.jsx
@@ -66826,9 +67041,9 @@ ${d5.text}`);
     sections.splice(at2, 0, s5);
     return syncLayout({ ...doc, sections });
   }
-  function moveBy(doc, id2, delta, lo2 = 0) {
+  function moveBy(doc, id2, delta2, lo2 = 0) {
     const from = doc.sections.findIndex((s5) => s5.id === id2);
-    return from < 0 ? doc : moveSection(doc, id2, from + delta, lo2);
+    return from < 0 ? doc : moveSection(doc, id2, from + delta2, lo2);
   }
   var hideSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: true }));
   var showSection = (doc, id2) => mapSection(doc, id2, (s5) => ({ ...s5, hidden: false }));
@@ -68519,10 +68734,10 @@ ${d5.text}`);
   var HEADER_HIDE_OVER = 0;
   var HEADER_SHOW_ON_UP = Infinity;
   var HEADER_SHOW_AT_TOP = 0;
-  function headerPolicy(top, delta, up2) {
+  function headerPolicy(top, delta2, up2) {
     if (top <= HEADER_SHOW_AT_TOP) return "show";
-    if (delta > HEADER_HIDE_OVER) return "hide";
-    if (delta < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
+    if (delta2 > HEADER_HIDE_OVER) return "hide";
+    if (delta2 < 0 && up2 >= HEADER_SHOW_ON_UP) return "show";
     return "keep";
   }
 
@@ -75921,6 +76136,7 @@ ${d5.text}`);
         "acItems",
         "actHref",
         "actPaint",
+        "actTools",
         "addEl",
         "addPartner",
         "addTextSection",
