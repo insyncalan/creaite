@@ -258,7 +258,7 @@ class Reading:
                                         for n in got]}
             return None
         self.problems.append(f"No one called “{typed.strip()}” is in the people register, so nothing changes. "
-                             "Add them in Settings › People first.")
+                             "Add them on the People page first.")
         return None
 
     def change(self, field, label, to, span=None, what=None, confirm=False, to_shown=None, from_shown=None):

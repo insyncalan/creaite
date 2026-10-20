@@ -2494,7 +2494,7 @@ def report_request(con, req):
     bad = edit_ai.client_problems(code, current, current) if client else []
     if bad == [edit_ai.REGISTER]:
         raise Refused("The people register couldn't be read, so the names couldn't be checked and nothing was sent to a draft. "
-                      "Fix it in Settings › People, then try again.")
+                      "Fix it on the People page, then try again.")
     if bad:
         raise Refused("This section already holds wording that isn't client-safe. Fix it first; nothing was sent to a draft.")
     return code, client, fri, action, task, current, panes
