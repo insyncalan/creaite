@@ -160,6 +160,7 @@ export function ProposalLine({ n, child }) {
           {canDraftResponse(r) ? <> · <button type="button" class="linkbtn" data-drrisk={r.n} onClick={() => draftResponse(r.n)}>Draft a response</button></> : null}
           {" · "}<SourceLine r={r} /></div>
         {quote ? <div class="icq">{quote}</div> : null}
+        {r.ws_suggest && !r.done && (r.flags || []).includes("new-workstream") ? <div class="wsq">New workstream “{r.ws_suggest}” for {r.p || "?"}? <button type="button" class="mini" data-wsq="add" data-n={r.n}>Add workstream</button><button type="button" class="mini" data-wsq="skip" data-n={r.n}>Leave blank</button></div> : null}   {/* BL-58: the old Review row's offer (settings.js handles the buttons); #232 C2 put it back on the Intake page's row */}
         <WeekendNote r={r} />
         {r.nodraft ? <div class="rvnote"><span class="h-warn">No Word draft was made for these minutes</span> · Reject them and process the meeting again</div> : null}
       </td>

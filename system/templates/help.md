@@ -950,7 +950,7 @@ Where: Reports › a project · address `#reporting=` (the old `#weekly=` and `#
 - Each project has its own workstreams (FAL's Cut-over and TID's Cut-over are separate), each with a **lead**, **keywords**, **aliases** (e.g. UAT for Testing) and a Teams channel. creaite uses them to put items from minutes and mail in the right workstream, from the item's project only.
 - **Settings › People and projects › Workstreams** lists them by project: **Add…** (creaite suggests keywords, aliases, lead and channel from the items that mention the name; change anything), **Edit**, **Close** or **Reopen**. Renaming one renames its items too; a closed one can't be chosen for new items, but items already on it keep it. Every change is a proposal, with Undo.
 - In an item, the Workstream list (under **Details**) offers that project's workstreams. **Add workstream…** (or a new name typed in the list) opens its details, suggested from the project's items; **Add and use it** stages the new workstream with the item's change, so **Apply** adds both and **Undo last** removes both.
-- Workstreams are managed in Settings (the project page doesn't list them).
+- Workstreams are managed in Settings (the project page doesn't list them). On Intake, an item from minutes or mail that named a workstream its project doesn't have offers **Add workstream** or **Leave blank**.
 - They're in the Excel export too, on the Workstreams sheet, editable like the others.
 
 ## Search

@@ -73375,6 +73375,16 @@ ${d5.text}`);
               /* @__PURE__ */ u4(SourceLine, { r: r4 })
             ] }),
             quote ? /* @__PURE__ */ u4("div", { class: "icq", children: quote }) : null,
+            r4.ws_suggest && !r4.done && (r4.flags || []).includes("new-workstream") ? /* @__PURE__ */ u4("div", { class: "wsq", children: [
+              "New workstream “",
+              r4.ws_suggest,
+              "” for ",
+              r4.p || "?",
+              "? ",
+              /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-wsq": "add", "data-n": r4.n, children: "Add workstream" }),
+              /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-wsq": "skip", "data-n": r4.n, children: "Leave blank" })
+            ] }) : null,
+            "   ",
             /* @__PURE__ */ u4(WeekendNote, { r: r4 }),
             r4.nodraft ? /* @__PURE__ */ u4("div", { class: "rvnote", children: [
               /* @__PURE__ */ u4("span", { class: "h-warn", children: "No Word draft was made for these minutes" }),

@@ -322,8 +322,8 @@ class DashboardTests(unittest.TestCase):
           document.querySelector('#wsMgr .wsedit [data-wf="name"]').value="Data and analytics"; document.querySelector('#wsMgr [data-wsm="save"]').click(); await wait(80); await VQ;
           const testing=WSD().find(w=>w.name==="Testing"); document.querySelector(`#wsMgr [data-wsm="close"][data-wsid="${testing.id}"]`).click(); await wait(80); await VQ;
           const mgr=document.getElementById("wsMgr").innerText, renamedItem=A.find(a=>a.t==="Profile the data extract").ws;
-          // Review: the flagged item offers to add its workstream
-          go("review"); await wait(30); const q=document.querySelector(".wsq")?.innerText||"";
+          // Intake: the flagged item offers to add its workstream
+          go("intake-review"); await wait(150); const q=document.querySelector("#v-intake-review .wsq")?.innerText||"";
           window.OUT={card, cockpit, form, ask, box, offered, mgr, renamedItem, q,
             files:Object.fromEntries(Object.entries(FILES).filter(([k])=>k.startsWith("system/staging/proposed-")))};""")
 
