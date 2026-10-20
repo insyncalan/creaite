@@ -167,7 +167,7 @@ class Sweep(Staged):
         self.assertLogged(r"INFO  sweep\s+calendar saved: \d+ meeting\(s\) over \d+ day\(s\) in \S+ \([+-]\d{4}\), 1 with times that could not")
         self.run_script("sweep.py", "done", "--started", "2026-10-09 08:00", "--normal",
                         "--summary", "searched 41, proposed 3, skipped 'CANARY-QUOTED' from boss@canary.example")
-        self.assertLogged(r"INFO  sweep\s+done \(normal\): searched 41, proposed 3, skipped '…' from …")
+        self.assertLogged(r"(?m)INFO  sweep\s+done \(normal\): 0 items \(0 possible\), 0 alerts, 0 skipped, 0 ignored, 240 min$")   # #253: counts only
         self.run_script("sweep.py", "fail", "--message", "Outlook search for \"CANARY-QUERY\" timed out")
         self.assertLogged(r"ERROR sweep\s+sweep failed: Outlook search for \"…\" timed out")
         self.assertNoCanary()
