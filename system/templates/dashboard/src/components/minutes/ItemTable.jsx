@@ -28,6 +28,7 @@ import { nextTrack, setTrack, trackOf, rowN } from "./track.js";
 import { A, DEC, R, wsFor } from "../../core/data.js";
 import { go } from "../../core/nav.js";
 import { shared } from "../../core/state.js";
+import { aiBar } from "../../stores/aiEdit.js";
 import { hoverTurn } from "../../stores/minutes.js";
 
 /** @typedef {import("../report/Sheet.jsx").SectionCtx} SectionCtx */
@@ -38,6 +39,13 @@ const ROW_FIELD = { actions: "description", decisions: "decision", raid: "descri
 const KINDS = [["Risk", "Risks"], ["Issue", "Issues"], ["Assumption", "Assumptions"], ["Dependency", "Dependencies"], ["", "Updates"]];
 const MN_PRIOS = ["Urgent", "High", "Medium", "Low"];
 const ITEM_ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
+export const PRIO_TIP = "Worked out from impact and likelihood";
+/** A risk's or issue's priority from its impact and likelihood (tracker.priority's rule), or "". @param {any} v */
+export const raidPriority = v => {
+  const i = String((v && v.impact) || ""), l = String((v && v.likelihood) || "");
+  if (!i || !l) return "";
+  return i === "High" && l === "High" ? "Urgent" : i === "High" || l === "High" ? "High" : i === "Low" && l === "Low" ? "Low" : "Medium";
+};
 export const TRACK_TIP = "Tick to register a work item; cross to remove the line from the minutes; neither keeps it in the minutes only";
 
 /** A tracker item by its ITEM_ID, or null. @param {string} id */
@@ -86,6 +94,7 @@ function ItemText({ value, label, n, onSave }) {
   return (
     <div class="mnit" ref={box}
       onKeyDownCapture={e => {
+        if (e.key === "Escape" && aiBar.value) { e.preventDefault(); e.stopPropagation(); aiBar.value = null; return; }   // review LOW: Esc closes AI first, the words stay
         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); back(); const a = /** @type {HTMLElement|null} */ (document.activeElement); if (a && box.current && box.current.contains(a)) a.blur(); }
         else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); const a = /** @type {HTMLElement|null} */ (document.activeElement); if (a) a.blur(); }
       }}
@@ -107,6 +116,13 @@ function RowSelect({ value, label, options, none, cls, onPick }) {
       {opts.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   );
+}
+
+/** A risk's or issue's Priority: a read-only pill (worked out from impact and likelihood, so never picked here); dashed while
+    it can't be worked out yet. @param {{v: any, label: string}} props */
+function RaidPriority({ v, label }) {
+  const pr = String(v.priority || raidPriority(v));
+  return <span class={`msel mnro${pr ? ` pr-${pr[0]}` : " empty"}`} tabIndex={0} data-tip={PRIO_TIP} aria-label={`Priority of ${label}: ${pr || "not worked out yet"}. ${PRIO_TIP}`}>{pr || "Priority"}</span>;
 }
 
 /** Add details: the person's page with its details form open (as Review's menu on a name does). @param {string} name */
@@ -155,7 +171,8 @@ function MnRow({ r, ctx, full }) {
           : <div class="mnit mnit-ro"><Linked text={String(cells[MAIN[sid]] || "")} /></div>}
         {(own || checks.length || (isNew && item.looks_like) || (!isNew && !r.kept && row.does)) ? (
           <div class="mnrow2">
-            {!isNew && !r.kept && row.does ? <span class="mck info"><Linked text={`${row.does}${/^Closes /.test(row.does) ? " · Looks done" : ""}`} /></span> : null}
+            {!isNew && !r.kept && row.does ? <span class="mck info"><Linked text={`${row.does}${/^Closes /.test(row.does) ? " · Looks done" : ""}`} />
+              {row.ref ? <button type="button" class="linkbtn mnstaged" data-tip="Open the staged update in Review" onClick={() => m.openItem(String(row.ref))}>Open</button> : null}</span> : null}
             {own ? <span class="mck" data-check={own.id}><span>{own.quote} needs details</span>
               <button type="button" class="linkbtn" data-ckact="details" onClick={() => addDetails(own.quote)}>Add details</button></span> : null}
             {isNew ? <LooksLike item={item} n={n} /> : null}
@@ -169,7 +186,8 @@ function MnRow({ r, ctx, full }) {
           : cells.due && cells.due !== "Not set" ? <span>{cells.due}</span> : dash}</td>
         <td class="mnpc">{isNew && sid === "actions" ? <RowSelect value={String(v.priority || "")} label={`Priority of ${label}`} options={MN_PRIOS} none="Priority"
           cls={v.priority ? `pr-${String(v.priority)[0]}` : ""} onPick={x => edit({ priority: x || null })} />
-          : v.priority ? <span data-tip={sid === "raid" ? "Worked out from impact and likelihood" : undefined}>{v.priority}</span> : dash}</td>
+          : sid === "raid" && isNew ? <RaidPriority v={v} label={label} />
+          : v.priority ? <span>{v.priority}</span> : dash}</td>
         <td class="mnwc">{isNew && sid !== "decisions" ? <RowSelect value={String(v.workstream || "")} label={`Workstream of ${label}`} options={wsFor(String(v.project || m.project || ""))}
           none="Workstream" onPick={x => edit({ workstream: x || null })} />
           : v.workstream ? <span>{v.workstream}</span> : dash}</td>

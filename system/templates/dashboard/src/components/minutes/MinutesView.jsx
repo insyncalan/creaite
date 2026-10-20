@@ -32,7 +32,7 @@ import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
 import { reloadData, snack, undoApply } from "../../core/server.js";
-import { openChat } from "../../ask.js";
+import { ckAsk, openChat } from "../../ask.js";
 import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
@@ -43,8 +43,9 @@ import { signal } from "@preact/signals";
 /** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./minutesDoc.js").Check} Check */
 
-/** #268: the minutes' zoom, against the sheet area's width (1 = fit to width). */
-export const MN_ZOOM = { min: 0.5, max: 2.5 };
+/** #268: the minutes' zoom, against the sheet area's width (1 = fit to width, where they open). The bar says the real size
+    (the scale drawn, so hiding the transcript, which widens the area, says the new size). */
+export const MN_ZOOM = { min: 0.5, max: 2.5, fit: 1 };
 /** The Export menu (Word is an export only: editing the exported file never flows back). */
 export const MN_EXPORTS = [
   { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
@@ -84,11 +85,12 @@ async function exportAs(id) {
 }
 
 /** Re-extract: creaite's chat with the request written, to send when Alan is ready (cx-minutes drafts the minutes again from
-    the transcript). @param {SheetDoc} doc */
+    the transcript). Words Alan has typed there and not sent are never written over (review LOW): the chat opens with them and
+    the toast says so. @param {SheetDoc} doc */
 function reExtract(doc) {
-  openChat();
   const box = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("chIn"));
-  if (box) { box.value = `re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`; box.focus(); }
+  if (box && box.value.trim()) { openChat(); snack("ask creaite has words you haven't sent: send or clear them, then press Re-extract again"); return; }
+  ckAsk(`re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`);
 }
 
 /** Approve minutes: the Track column first, then one apply. @param {boolean} anyway past the Before approving box */
@@ -101,9 +103,15 @@ async function approveNow(anyway) {
   try {
     if (!(await mnSaveFirst())) return;
     const own = ownTicked(doc, plan);
+    let made = 0;
     for (const op of reconcileOps(doc, plan)) {
       const r = await changeMinutes(op);
-      if (!r.ok) { snack(r.message || "The minutes weren't approved; nothing was applied."); return; }
+      if (!r.ok) {                                          // review M1: say so when some of the Track column's changes were made
+        snack(made ? `${r.message ? `${r.message} ` : ""}Some changes were made to the minutes; press Approve minutes again.`
+          : r.message || "The minutes weren't approved; nothing was applied.");
+        return;
+      }
+      made++;
     }
     const r = await approveMinutes(true, own);
     if (!r.ok) { snack(String(r.message || "The apply didn't run; nothing was changed.").split("\n")[0]); return; }
@@ -115,29 +123,36 @@ async function approveNow(anyway) {
   } finally { approving.value = false; }
 }
 
-/** The bar (the sheet's renderBar): one row. @param {{doc: SheetDoc, zoom: number, setZoom: (z: number) => void, exported: boolean,
-    setExported: (on: boolean) => void, status: string, bad: boolean}} props */
-function Bar({ doc, zoom, setZoom, exported, setExported, status, bad }) {
+/** The Track summary with its counts in bold (the words are trackSummary's). @param {{c: {y: number, k: number, n: number}}} props */
+function TrackSum({ c }) {
+  const parts = trackSummary(c).split(/(\d+)/);
+  return <>{parts.map((p, i) => (i % 2 ? <b key={i}>{p}</b> : p))}</>;
+}
+
+/** The bar (the sheet's renderBar): one row (two at 900 px). @param {{doc: SheetDoc, zoom: number, setZoom: (z: number) => void, exported: boolean,
+    setExported: (on: boolean) => void, status: string, bad: boolean, scale: number}} props */
+function Bar({ doc, zoom, setZoom, exported, setExported, status, bad, scale }) {
   const v = minutesView.value, draft = doc.state === "draft", plan = v && v.plan ? v.plan.items : null;
   const c = draft && plan ? trackCounts(doc, plan) : null;
   const z = (/** @type {1|-1} */ d) => setZoom(Math.round((zoom + d * 0.1) * 10) / 10);
+  const pc = Math.round((scale || zoom) * 100);              // the real size: the scale the page is drawn at
   return (
     <>
       <span class="sheet-mini"><b>{doc.title}</b><span class="sub">{doc.project_name || ""} · {fd(doc.date)}</span></span>
       <span class="sheet-zoom" role="group" aria-label="Zoom">
         <button type="button" class="btn sm" aria-label="Zoom out" data-tip="Zoom out" onClick={() => z(-1)} disabled={zoom <= MN_ZOOM.min}>−</button>
-        <button type="button" class="sheet-zv mnzv" aria-live="polite" data-zoom={zoom} data-tip="Back to 80%" aria-label={`Zoom ${Math.round(zoom * 100)}%. Back to 80%`}
-          onClick={() => setZoom(0.8)}>{Math.round(zoom * 100)}%</button>
+        <button type="button" class="sheet-zv mnzv" aria-live="polite" data-zoom={zoom} data-tip="Fit to width" aria-label={`Zoom ${pc}%. Fit to width`}
+          onClick={() => setZoom(MN_ZOOM.fit)}>{pc}%</button>
         <button type="button" class="btn sm" aria-label="Zoom in" data-tip="Zoom in" onClick={() => z(1)} disabled={zoom >= MN_ZOOM.max}>+</button>
       </span>
       <button type="button" class="ib sm sheet-exp" aria-pressed={exported ? "true" : "false"} aria-label="Show as exported" data-tip="Show as exported"
         onClick={() => setExported(!exported)}><Icon name="filetext" /></button>
-      <span class="sub sheet-status" role="status" data-bad={bad ? "1" : undefined}>{status}</span>
-      {c ? <span class="mnsum" id="mnSum" role="status" data-y={c.y} data-k={c.k} data-n={c.n}>{trackSummary(c)}</span> : null}
+      <span class="sub sheet-status" role="status" data-bad={bad ? "1" : undefined}>{status || (doc.version ? `Saved · version ${doc.version}` : "")}</span>
+      {c ? <span class="mnsum" id="mnSum" role="status" data-y={c.y} data-k={c.k} data-n={c.n} data-w={c.w}><TrackSum c={c} /></span> : null}
       <span class="sheet-barr"><span class="mnbarr">
         <button type="button" class="ib sm" id="mnTrBtn" aria-pressed={paneOpen.value ? "true" : "false"} aria-label="Transcript" data-tip={paneOpen.value ? "Hide the transcript" : "Show the transcript"}
           onClick={() => setPane(!paneOpen.value)}><Icon name="chat" /></button>
-        <Menu label="" icon="upload" btnCls="ib sm" ariaLabel="Export" tip="Export" chevron={false} menuLabel="Export the minutes" data={{ mnexport: "" }}
+        <Menu label="" icon="download" btnCls="ib sm" ariaLabel="Export" tip="Export" chevron={false} menuLabel="Export the minutes" data={{ mnexport: "" }}
           items={/** @type {any} */ (MN_EXPORTS)} onPick={exportAs} />
         {draft ? <button type="button" class="ib sm" id="mnReBtn" aria-label="Re-extract: draft the minutes again from the transcript"
           data-tip="Re-extract: draft the minutes again from the transcript" onClick={() => reExtract(doc)}><Icon name="refresh" /></button> : null}
@@ -172,6 +187,15 @@ function onCheck(c, action) {
 const RENDER = { byId: { summary: (/** @type {any} */ ctx) => <SummaryText ctx={ctx} />, decisions: (/** @type {any} */ ctx) => <ItemTable ctx={ctx} />,
   raid: (/** @type {any} */ ctx) => <ItemTable ctx={ctx} />, actions: (/** @type {any} */ ctx) => <ItemTable ctx={ctx} /> },
   byType: { text: (/** @type {any} */ ctx) => <TextLines ctx={ctx} />, header: (/** @type {any} */ ctx) => <TextLines ctx={ctx} /> } };
+/** #268: the item sections' headings as the signed-off mockup: a count beside Decisions and Actions, and "Actions" for the
+    template's untouched "Action Items" (the view's words only: the record and its exports keep the template's heading).
+    @param {import("../report/Sheet.jsx").SheetSection} s */
+function mnHeading(s) {
+  if (s.id !== "decisions" && s.id !== "actions") return null;
+  const rows = /** @type {any[]} */ ((/** @type {any} */ (s)).rows || []).filter(r => r.shown !== false && (r.ref || r.kept_line));
+  return { name: s.id === "actions" && s.heading === "Action Items" ? "Actions" : undefined, note: rows.length };
+}
+
 const EXTRAS = [{ key: "coverage", after: "open_questions", render: (/** @type {any} */ c) => <Coverage c={c} /> }];
 
 /** The view. */
@@ -195,7 +219,7 @@ export function MinutesView() {
       <div class={`mnwrap${paneOpen.value ? " withpane" : ""}`}>
         <div class="mnsheet">
           <MinutesCtx.Provider value={ctx}>
-            <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max}
+            <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max} zoomDefault={MN_ZOOM.fit} headings={mnHeading}
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}
               onChange={onDoc} onSave={async req => {
                 const now = minutesView.value;            // a late save of a draft once the minutes are filed is never sent (filed minutes are never saved over)

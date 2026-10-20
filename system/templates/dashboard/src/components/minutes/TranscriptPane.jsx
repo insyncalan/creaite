@@ -49,7 +49,7 @@ export function TranscriptPane() {
     <aside class="mnpane" aria-labelledby="mnPaneH">
       <div class="mnpane-h">
         <h2 id="mnPaneH">Transcript</h2>
-        <IconButton icon="x" label="Close the transcript" onClick={() => setPane(false)} data={{ mnpane: "close" }} />
+        <IconButton icon="x" label="Close the transcript" onClick={() => { setPane(false); requestAnimationFrame(() => { const b = document.getElementById("mnTrBtn"); if (b) b.focus(); }); }} data={{ mnpane: "close" }} />
       </div>
       <div class="mnpane-q">
         <input type="search" class="pkdt" id="mnPaneQ" aria-label="Search the transcript" placeholder="Search the transcript" value={paneQuery.value}

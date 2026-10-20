@@ -7,11 +7,11 @@ one deadline said as "by Friday"), a decision and a risk. The view opens from Re
 - #268 (Minutes view v2): one version only, so there is no distributed version, Side by side or Internal only mark to test
   here any more (the server's distributed export keeps its own tests in test_minutes_approve).
 - Popups close on Esc and on a click outside, with focus back on the button that opened them: the deadline popover, a check,
-  Deal with it… and the Before approving box (#268: 480 px, shown only when a ticked item has a real problem).
+  Deal with it… and the Before approving box (#268: as wide as the signed-off mockup's, 784 px, shown only when a ticked item has a real problem).
 - #268: a crossed line is left out of Show as exported; a line with neither ticked stays (the Track column replaces ✕ Remove
   and Keep the line only; test_minutes_view_v2 has the rest).
 - The deadline popover: words worked out from the meeting's date (shown before they are set), the quick picks with their
-  dates, a day from the calendar, Not set; each changes the row and its staged item together.
+  dates, a day from the calendar, Not set (the button then says No date, #268); each changes the row and its staged item together.
 - Time tags scroll the transcript pane to what was said; coverage's Deal with it… carries a point with a line in the minutes.
 
 Run: python3 dev/tests/test_minutes_editor.py      (Chrome tier; skipped without Chrome)
@@ -209,7 +209,7 @@ class MinutesEditor(LiveBrowserCase):
             with self.subTest(popup="approve", close=how):
                 b.click("#mnApproveBtn")
                 b.wait("document.getElementById('mnApprove').open")
-                self.assertEqual(round(self.ev("document.getElementById('mnApprove').getBoundingClientRect().width")), 480)   # #268: the small Before approving box
+                self.assertEqual(round(self.ev("document.getElementById('mnApprove').getBoundingClientRect().width")), min(784, self.ev("innerWidth") - 32))   # #268: as the mockup's
                 if how == "esc":
                     b.key("Escape")
                 else:
@@ -241,7 +241,7 @@ class MinutesEditor(LiveBrowserCase):
     def test_5_the_deadline_popover_works_words_out_from_the_meetings_date(self):
         b = self.b
         sel = "#v-minutes tr.mi[data-n='3'] .mndue"
-        self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), "Not set")
+        self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), "No date")
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
         quick = self.ev("[...document.querySelectorAll('.mndl [data-quick]')].map(x=>[x.dataset.quick, x.getAttribute('aria-label')])")
@@ -255,7 +255,7 @@ class MinutesEditor(LiveBrowserCase):
         self.assertIn(self.ev(f"fd({json.dumps(got)})"), self.ev("document.getElementById('mnDlSaid').textContent"), "the date shown before it is set")
         self.assertIsNone(self.staged(3)["values"].get("due_date"), "nothing set yet")
         b.key("Enter")
-        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent!=='Not set'")
+        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent!=='No date'")
         self.assertEqual(self.staged(3)["values"]["due_date"], got)
         self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), self.ev(f"fd({json.dumps(got)})"))
         self.assertEqual(next(r for r in self.rows() if r.get("n") == 3)["cells"]["due"], self.ev(f"fd({json.dumps(got)})"))
@@ -274,7 +274,7 @@ class MinutesEditor(LiveBrowserCase):
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
         b.click(".mndl [data-quick='not set']")
-        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent==='Not set'")
+        self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent==='No date'")
         self.assertIsNone(self.staged(3)["values"].get("due_date"))
         b.click(sel)
         b.wait("document.querySelector('.mndl')")

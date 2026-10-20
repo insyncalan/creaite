@@ -166,6 +166,25 @@ class MinutesViewV2(LiveBrowserCase):
             self.assertEqual(len(th), cells, f"{sec}: one heading per column")
             self.assertLess(off, 1.5, f"{sec}: each heading over its cells")
         self.assertFalse(self.ev("!!document.querySelector('#v-minutes .msrc, #v-minutes [data-mnremove], #v-minutes .mnopen')"), "no source arrow, no Remove menu, no Open")
+        # the signed-off look (PM, 20-10-2026): fully boxed tables with a grey header row, values as filled pills, dashed only when empty
+        look = self.ev("""(()=>{ const t=document.querySelector('#v-minutes table.mnt'), th=t.querySelector('th'), td=t.querySelector('tbody td'),
+          cs=getComputedStyle(th), ds=getComputedStyle(td), own=getComputedStyle(document.querySelector("%s td.mnoc select")),
+          none=document.querySelector("%s td.mnwc select");
+          return {thL: cs.borderLeftWidth, thBg: cs.backgroundColor, tdL: ds.borderLeftWidth, tdR: ds.borderRightWidth,
+            app: own.appearance, ownBorder: own.borderTopStyle, ownBg: own.backgroundColor, emptyBorder: getComputedStyle(none).borderTopStyle}; })()""" % (ROW % 1, ROW % 1))
+        self.assertEqual((look["thL"], look["tdL"], look["tdR"]), ("1px", "1px", "1px"), f"boxed: {look}")
+        self.assertNotIn(look["thBg"], ("rgba(0, 0, 0, 0)", "transparent"), "a grey header row")
+        self.assertEqual(look["app"], "none", "a pill, not a native select with a chevron")
+        self.assertNotEqual(look["ownBorder"], "dashed", "a value is a filled pill")
+        self.assertEqual(look["emptyBorder"], "dashed", "an empty value is dashed")
+        # a risk's Priority: shown read only, with the tip, never a control or a dash
+        pr = self.ev(f"(()=>{{const c=document.querySelector(\"{ROW % 5} td.mnpc\"); return [c.querySelectorAll('select,button').length, c.textContent.trim(), (c.querySelector('.mnro')||{{dataset:{{}}}}).dataset.tip||'']}})()")
+        self.assertEqual(pr[0], 0, "no control")
+        self.assertNotEqual(pr[1], "—")
+        self.assertEqual(pr[2], "Worked out from impact and likelihood")
+        heads = self.ev("Object.fromEntries([...document.querySelectorAll('#v-minutes .page section[data-id] > h2')].map(h=>[h.parentElement.dataset.id, [(h.querySelector('input')||{}).value||'', (h.querySelector('.sheet-hn')||{}).textContent||'']]))")
+        self.assertEqual(heads["decisions"], ["Decisions", "1"], "the heading with its count")
+        self.assertEqual(heads["actions"], ["Actions", "3"], "Actions with its count, not Action Items")
 
     def test_03_inline_edit_saves_on_enter_and_esc_puts_it_back(self):
         b = self.b
@@ -245,10 +264,12 @@ class MinutesViewV2(LiveBrowserCase):
     def test_05_due_opens_the_deadline_popover_with_words_quick_picks_and_a_calendar(self):
         b = self.b
         sel = ROW % 3 + " .mndue"
-        self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), "Not set")
+        self.assertEqual(self.ev(f"document.querySelector({json.dumps(sel)}).textContent"), "No date", "the mockup's words for an empty due date")
+        self.assertTrue(self.ev(f"document.querySelector({json.dumps(sel)}).classList.contains('empty')"), "dashed while empty")
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
         self.assertEqual(len(self.ev("[...document.querySelectorAll('.mndl [data-quick]')].map(x=>x.dataset.quick)")), 5, "four quick picks and Not set")
+        self.assertIn("Type a due date", self.ev("document.querySelector('.mndl-l').textContent"))
         self.assertGreater(self.ev("document.querySelectorAll('.mndl .pkday').length"), 27, "a month calendar")
         b.eval("document.getElementById('mnDlWords').focus()")
         b.type("in 2 weeks")
@@ -256,7 +277,7 @@ class MinutesViewV2(LiveBrowserCase):
         got = self.ev(f"CREAITE.parseWhen('in 2 weeks', {json.dumps(me.DAY)}, true, 'deadline')")
         self.assertIn(self.ev(f"fd({json.dumps(got)})"), self.ev("document.getElementById('mnDlSaid').textContent"))
         b.key("Enter")
-        b.wait(f"document.querySelector({json.dumps(sel)}).textContent!=='Not set'", 10)
+        b.wait(f"document.querySelector({json.dumps(sel)}).textContent!=='No date'", 10)
         b.pump(0.4)
         self.assertEqual(self.staged(3)["values"]["due_date"], got)
         b.click(sel)
@@ -284,9 +305,15 @@ class MinutesViewV2(LiveBrowserCase):
         width = lambda: self.ev("document.querySelector('#v-minutes .sheet-fit').getBoundingClientRect().width")   # noqa: E731
         self.assertEqual(self.ev("document.getElementById('mnTrBtn').getAttribute('aria-pressed')"), "true", "shown by default")
         w0 = width()
+        label = lambda: self.ev("document.querySelector('#v-minutes .sheet-zv').textContent")   # noqa: E731
+        real = lambda: self.ev("Math.round(+document.querySelector('#v-minutes .sheet-fit').dataset.scale*100)+'%'")   # noqa: E731
+        l0 = label()
+        self.assertEqual(l0, real())
         b.click("#mnTrBtn")
         b.wait("!document.querySelector('.mnpane')")
         b.pump(0.4)
+        self.assertEqual(label(), real(), "re-fitted, and the label says the new real size")
+        self.assertNotEqual(label(), l0)
         self.assertEqual(self.ev("document.getElementById('mnTrBtn').getAttribute('aria-pressed')"), "false")
         self.assertGreater(width(), w0 + 100, "the page rescales into the room")
         b.reload("typeof go==='function' && LIVE && document.querySelector('#v-minutes tr.mi')")
@@ -299,6 +326,7 @@ class MinutesViewV2(LiveBrowserCase):
         b.wait("document.querySelector('.mnpane')")
         b.click(".mnpane [data-mnpane=close]")                 # the close button hides it too
         b.wait("!document.querySelector('.mnpane')")
+        b.wait("document.activeElement && document.activeElement.id==='mnTrBtn'", 5)   # focus back on the Transcript button
         b.click("#mnTrBtn")
         b.wait("document.querySelector('.mnpane')")
         self.b.eval("go('review')")
@@ -317,10 +345,14 @@ class MinutesViewV2(LiveBrowserCase):
 
     def test_09_ctrl_wheel_zooms_from_50_to_250_and_the_buttons_stay(self):
         z = lambda: self.ev("+document.querySelector('#v-minutes .sheet-zv').dataset.zoom")   # noqa: E731
-        self.assertEqual(z(), 0.8)
+        real = lambda: self.ev("Math.round(+document.querySelector('#v-minutes .sheet-fit').dataset.scale*100)+'%'")   # noqa: E731
+        self.assertEqual(z(), 1, "opens fitted to the width")
+        fit = self.ev("(()=>{const s=document.querySelector('#v-minutes .sheet-scroll'), f=document.querySelector('#v-minutes .sheet-fit'); return s.clientWidth-32-f.getBoundingClientRect().width})()")
+        self.assertLess(abs(fit), 2, "the page fills the room")
+        self.assertEqual(self.ev("document.querySelector('#v-minutes .sheet-zv').textContent"), real(), "the label says the real size")
         self.wheel("#v-minutes .sheet-scroll", -60, ctrl=True, times=40)
         self.assertEqual(z(), 2.5, "pinch in to 250%")
-        self.assertEqual(self.ev("document.querySelector('#v-minutes .sheet-zv').textContent"), "250%")
+        self.assertEqual(self.ev("document.querySelector('#v-minutes .sheet-zv').textContent"), real())
         self.wheel("#v-minutes .sheet-scroll", 60, ctrl=True, times=60)
         self.assertEqual(z(), 0.5, "pinch out to 50%")
         self.b.click("#v-minutes .sheet-zoom button[aria-label='Zoom in']")
@@ -328,7 +360,7 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertEqual(z(), 0.6)
         self.b.click("#v-minutes .sheet-zv")
         self.b.pump(0.2)
-        self.assertEqual(z(), 0.8, "back to 80%")
+        self.assertEqual(z(), 1, "back to fit to width")
 
     def test_10_one_version_icon_tools_and_the_export_menu(self):
         bar = "#v-minutes .sheet-bar"
@@ -340,6 +372,9 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertEqual(icons, ["Show as exported", "Transcript", "Export", "Re-extract: draft the minutes again from the transcript"])
         labelled = self.ev(f"[...document.querySelectorAll('{bar} button')].filter(b=>!b.classList.contains('ib') && b.textContent.trim().length>4).map(b=>b.textContent.trim())")
         self.assertEqual(labelled, ["Approve minutes"], "only Approve minutes keeps a label")
+        self.assertIn("M12 4v11", self.ev("document.querySelector('#v-minutes [data-mnexport] svg').innerHTML"), "Export is the download arrow")
+        self.assertRegex(self.ev("document.querySelector('#v-minutes .sheet-status').textContent"), r"^Saved · version \d+$")
+        self.assertEqual(self.ev("[...document.querySelectorAll('#mnSum b')].map(b=>b.textContent)"), ["3", "2"], "bold counts")
         self.b.click("#v-minutes [data-mnexport]")
         self.b.wait("document.querySelector('.ddmenu.on')")
         items = self.ev("[...document.querySelectorAll('.ddmenu.on [role=menuitem]')].map(x=>[x.querySelector('b,strong,.mname')?x.querySelector('b,strong,.mname').textContent:x.textContent, x.textContent])")
@@ -354,6 +389,9 @@ class MinutesViewV2(LiveBrowserCase):
         b = self.b
         b.click("#mnApproveBtn")
         b.wait("document.getElementById('mnApprove').open")
+        self.assertEqual(self.ev("document.getElementById('mnApproveH').textContent"), "Approve the minutes")
+        self.assertIn("Before these minutes are approved, 2 ticked items have", self.ev("document.querySelector('#mnApprove .sub').textContent"))
+        self.assertGreater(self.ev("document.getElementById('mnApprove').getBoundingClientRect().width"), 700, "as wide as the mockup's")
         lis = self.ev("[...document.querySelectorAll('#mnApprove li')].map(l=>l.textContent)")
         self.assertEqual(sorted(lis), ["Pat Unknown needs detailsShare the cut-over plan with the client",
                                        "Possible duplicate of ABC-A-002Book the UAT test environment"], "just the ticked items with a real problem")
@@ -426,7 +464,7 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertIsNotNone(self.filed(), "the minutes are filed")
         b.wait("document.querySelector('#v-minutes .mnmeta') && /Approved and filed/.test(document.querySelector('#v-minutes .mnmeta').textContent)", 15)
 
-    def test_14_at_1400_and_900_the_bar_is_one_row_and_the_headings_sit_over_their_cells(self):
+    def test_14_at_1400_one_row_at_900_two_and_the_transcript_beside_the_sheet(self):
         for w in (1400, 900):
             with self.subTest(width=w):
                 self.b.resize(w, 1000)
@@ -434,12 +472,22 @@ class MinutesViewV2(LiveBrowserCase):
                 bar = self.ev("""(()=>{ const b=document.querySelector('#v-minutes .sheet-bar'), kids=[...b.querySelectorAll('button, .mnsum, .sheet-status')].filter(x=>x.offsetParent);
                   const tops=new Set(kids.map(k=>Math.round(k.getBoundingClientRect().top+k.getBoundingClientRect().height/2)));
                   return {h: b.getBoundingClientRect().height, rows: Math.max(...tops)-Math.min(...tops), right: Math.max(...kids.map(k=>k.getBoundingClientRect().right)), w: b.getBoundingClientRect().right}; })()""")
-                self.assertLess(bar["rows"], 12, f"one row at {w}: {bar}")
+                self.assertLess(bar["rows"], 12 if w > 900 else 50, f"one row at {w} (two at 900, as the mockup): {bar}")
                 self.assertLessEqual(bar["right"], bar["w"] + 0.5, f"nothing cut off at {w}")
                 off = self.ev("""Math.max(...[...document.querySelectorAll('#v-minutes table.mnt')].map(t=>{ const r=t.querySelector('tbody tr');
                   return Math.max(...[...t.querySelectorAll('thead th')].map((h,i)=>Math.abs(h.getBoundingClientRect().left-r.children[i].getBoundingClientRect().left))); }))""")
                 self.assertLess(off, 1.5)
                 self.assertLessEqual(self.ev("document.scrollingElement.scrollWidth - innerWidth"), 0, "no sideways scroll")
+                side = self.ev("""(()=>{ const p=document.querySelector('.mnpane').getBoundingClientRect(), s=document.querySelector('#v-minutes .mnsheet').getBoundingClientRect();
+                  return {beside: p.left >= s.right - 1 && p.top < s.top + 60, w: p.width}; })()""")
+                self.assertTrue(side["beside"], f"the transcript beside the sheet at {w}: {side}")
+                if w == 900:
+                    self.assertLess(abs(side["w"] - 280), 2, "narrower at 900")
+                    turn = self.ev(f"document.querySelector(\"{ROW % 2}\").dataset.turn")
+                    self.move(*self.centre(ROW % 2, True))
+                    lit = self.ev(f"(()=>{{const l=document.querySelector(\".mnturns li[data-turn='{turn}']\"), r=l.getBoundingClientRect(); return l.classList.contains('hl') && r.top>=0 && r.bottom<=innerHeight && r.width>0}})()")
+                    self.assertTrue(lit, "hovering a row lights a turn you can see")
+                    self.move(5, 5)
 
 
 if __name__ == "__main__":

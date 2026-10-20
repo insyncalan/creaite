@@ -3582,10 +3582,10 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 #v-minutes .sheet-status{white-space:nowrap}
 .mnzv{border:0;background:none;color:inherit;cursor:pointer;border-radius:var(--r-sm);padding:2px 4px;min-height:24px;font:inherit;font-size:var(--fs-xs)} .mnzv:hover{background:var(--sunk)}
 .sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
-.sheet-a4 .page table.mnt th,.sheet-a4 .page table.mnt td{border-left:0;border-right:0;padding:5px 6px}
-.sheet-a4 .page table.mnt th{background:none;color:var(--paper-mute);font-size:var(--fs-xs);border-top:0}
+.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:12px}
+.sheet-a4 .page table.mnt td{padding:7px 8px}
 .mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
-.mnh3{font-size:var(--fs-sm);margin:10px 0 2px;font-weight:600} .mnh3 .n{font-weight:400;color:var(--paper-mute)}
+.mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:12px}
 .mntrk{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;vertical-align:top}
 .mntrk button{width:26px;height:26px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
 .mntrk button+button{border-left:1px solid var(--line)} .mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--sunk)}
@@ -3601,10 +3601,12 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mck{max-width:100%;flex-wrap:wrap;column-gap:6px;row-gap:0} .mck>*{white-space:nowrap}
 .mck.info{background:var(--sunk);color:var(--muted)} .mck .linkbtn{font-size:var(--fs-xs);min-height:26px}
 .mnrow2 .mncheck{font-size:var(--fs-xs);min-height:26px}
-.msel{height:28px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:var(--fs-xs);padding:0 6px;cursor:pointer;text-overflow:ellipsis}
+.msel{height:26px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:12px;padding:0 8px;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;appearance:none;-webkit-appearance:none;background-image:none}
+.mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:24px}
+.msel.mnro{cursor:default} .msel.mnro:hover{border-color:transparent;background:var(--sunk)} .msel.mnro.empty:hover{background:none;border-color:var(--line)}
 .msel:hover{border-color:var(--line);background:var(--surface)} .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface)}
 .msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
-.mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:var(--fs-xs)}
+.mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:12px}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -3625,15 +3627,17 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnwho{display:block;font-weight:600;font-size:var(--fs-xs)} .mntime{font-weight:400;color:var(--muted);font-family:var(--mono,monospace)}
 .mnturns mark{background:var(--warn-soft);color:inherit}
 .mnpane-none{padding:12px}
-dialog.mnapprove{width:min(480px,calc(100vw - 32px));max-width:calc(100vw - 32px);border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-pop)}
+dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px);border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-pop)}
 .mnap{padding:18px 22px;max-height:calc(100vh - 64px);overflow:auto}
 .mnap h2{margin:0 0 6px;font-size:var(--fs-xl)}
 .mnap ul{margin:6px 0 0;padding-left:20px;font-size:var(--fs-sm)}
 .mnap-err{color:var(--bad)}
 .mnap-l{list-style:none;margin:10px 0 0;padding:0} .mnap-l li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .mnap-l li b{color:var(--warn);font-weight:600;flex:none;min-width:140px}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto;overflow-anchor:none} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
-  .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} }
+@media (max-width:900px){ .mnpane{width:280px}           /* #268: the transcript stays beside the sheet, narrower, so a row lights a turn you can see */
+  #v-minutes .sheet-bar{flex-wrap:wrap;row-gap:6px} #v-minutes .sheet-bar .mnsum{order:9;flex-basis:100%}
+  #v-minutes .sheet-root.rpt-slim>.sheet-bar{flex-wrap:nowrap} #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-status{display:none}
+  #v-minutes .sheet-root.rpt-slim>.sheet-bar .sheet-mini{flex:0 1 auto;display:block} }     /* scrolled, the slim bar stays one row: the title shortens */
 @media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
 /* ===== end v2.1.0 P7 ===== */
 /* ===== v2.1.0 P6 (BL-335): the weekly report view (#weekly=<code>&week=<Friday>, components/report/weekly/), on P5's sheet
@@ -7513,6 +7517,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     chat: '<path d="M4 5h16v11H9l-5 4z"/>',
     history: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     upload: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+    /* #268: a download arrow (the minutes' Export, as the signed-off mockup) */
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
     video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>',
     /* the legend (dev/mockups/icons-mockup.html §6) */
@@ -68340,7 +68346,9 @@ ${d5.text}`);
       }
     }, [wordsNow, docNow]);
     const staleWhy = (r4) => r4 && r4.from && (r4.from !== liveKey.current ? "doc" : r4.words !== liveWords.current ? "words" : "");
-    const [name, setName] = d2(s5.heading);
+    const hd2 = p6.headings ? p6.headings(s5) : null;
+    const shown2 = hd2 && hd2.name || s5.heading;
+    const [name, setName] = d2(shown2);
     const [over, setOver] = d2(
       /** @type {""|"above"|"below"} */
       ""
@@ -68350,8 +68358,8 @@ ${d5.text}`);
       null
     );
     h2(() => {
-      setName(s5.heading);
-    }, [s5.heading]);
+      setName(shown2);
+    }, [shown2]);
     const sec = (
       /** @type {any} */
       s5
@@ -68431,8 +68439,8 @@ ${d5.text}`);
     const differs = p6.side === "left" && peer ? sectionDiffers(s5, peer) : false;
     const tags = tagsOf(s5);
     const nowName = (v5) => {
-      if (v5.trim() && v5.trim() !== s5.heading) change2(renameHeading(doc, s5.id, v5), "Heading renamed", null);
-      else setName(s5.heading);
+      if (v5.trim() && v5.trim() !== shown2) change2(renameHeading(doc, s5.id, v5), "Heading renamed", null);
+      else setName(shown2);
     };
     const isText = isTextSection(s5);
     const [confirmDel, setConfirmDel] = d2(false);
@@ -68570,10 +68578,11 @@ ${d5.text}`);
                     e4.preventDefault();
                     e4.currentTarget.blur();
                   }
-                  if (e4.key === "Escape") setName(s5.heading);
+                  if (e4.key === "Escape") setName(shown2);
                 }
               }
-            ) : s5.heading,
+            ) : shown2,
+            hd2 && hd2.note != null && !exported ? /* @__PURE__ */ u2("span", { class: "n sheet-hn", children: hd2.note }) : null,
             editing && s5.heading !== defaultHeading(s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-reset", onClick: () => change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id }), children: "Reset" }) : null,
             sparkOn && !ownSpark && spark2 ? /* @__PURE__ */ u2(SparkButton, { on: spark2, heading: s5.heading, health: s5.type === "health" }) : null,
             editing && tags.length ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-untag", onClick: () => {
@@ -68929,7 +68938,7 @@ ${d5.text}`);
     const list = Array.isArray(r4) ? r4 : [r4];
     return `Left out of this version: ${list.map((x5) => (typeof x5 === "string" ? x5 : x5 && (x5.label || x5.ref || x5.id || x5.heading)) || "an item").join(", ")}`;
   }
-  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, children }) {
+  function Pane({ pk: pk2, zoom, pages, regRestore, onPinch, head, onScale, children }) {
     const sc2 = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -68977,6 +68986,9 @@ ${d5.text}`);
       if (el2) setW(el2.clientWidth);
     }, []);
     _2(() => regRestore(restore), [pk2, scale]);
+    h2(() => {
+      if (onScale) onScale(scale);
+    }, [scale]);
     _2(restore);
     h2(() => {
       const el2 = (
@@ -69204,7 +69216,9 @@ ${d5.text}`);
     );
     const activeRight = A2(false);
     const zlo = props.zoomMin, zhi = props.zoomMax;
-    const [zl2, setZl] = d2(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT, zlo, zhi));
+    const zdef = props.zoomDefault ?? SHEET_ZOOM_DEFAULT;
+    const [zl2, setZl] = d2(() => clampZoom(props.zoom ?? ZOOMS.get(scrollKey) ?? zdef, zlo, zhi));
+    const [drawn, setDrawn] = d2(0);
     const [xl2, setXl] = d2(false);
     const [together, setTogether] = d2(true);
     const [breaks, setBreaks] = d2(
@@ -69250,7 +69264,7 @@ ${d5.text}`);
       onEvent({ type: "exported", on: on2 });
     };
     h2(() => {
-      if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? SHEET_ZOOM_DEFAULT, zlo, zhi));
+      if (props.zoom == null) setZl(clampZoom(ZOOMS.get(scrollKey) ?? zdef, zlo, zhi));
     }, [scrollKey]);
     const changeMain = (nd2, why) => {
       if (leftRO || !sameSheetDoc(nd2, P5.current.doc)) return;
@@ -69377,7 +69391,7 @@ ${d5.text}`);
         setZoom(stepZoom(zref.current, -1, zlo, zhi));
       } else if (e4.key === "0") {
         e4.preventDefault();
-        setZoom(SHEET_ZOOM_DEFAULT);
+        setZoom(zdef);
       }
     };
     const onClick = (e4) => {
@@ -69446,6 +69460,7 @@ ${d5.text}`);
         const nid = addText.current(id2, !!p6);
         if (nid) markNewText(nid);
       } } : props.report,
+      headings: p6 ? void 0 : props.headings,
       addTo: !p6 && partner && partnerDoc ? { readOnly: !!partner.readOnly, one: (id2) => {
         if (partner.match) partner.match(id2);
         else changeSide(matchSection(doc, partnerDoc, id2), "Matched internal");
@@ -69462,7 +69477,7 @@ ${d5.text}`);
     const openChecks = checks.length;
     const note = main.conflict;
     return /* @__PURE__ */ u2("div", { class: "sheet-root", ref: root2, onKeyDown: onKey, onClick, onFocusIn: usePane, onPointerDownCapture: usePane, "data-report-sheet": props.report ? props.report.audience : void 0, children: [
-      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some((l6) => !!l6 && !/^Saved/.test(l6)) }) : /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: `sheet-bar${props.renderBar ? " hubline" : ""}`, role: "toolbar", "aria-label": "Report", children: props.renderBar ? props.renderBar({ zoom, setZoom, exported, setExported, status: both, bad: [main.line, partner ? side.line : ""].some((l6) => !!l6 && !/^Saved/.test(l6)), scale: drawn }) : /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2("span", { class: "sheet-mini", children: props.banner ? /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("b", { children: props.banner.title }),
           props.banner.sub ? /* @__PURE__ */ u2("span", { class: "sub", children: props.banner.sub }) : null
@@ -69518,7 +69533,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: `sheet-area${partner && !together ? " sheet-split" : ""}${exported ? " sheet-exported" : ""}`, children: exported && props.exportedView && !partner ? props.exportedView : partner && !together ? /* @__PURE__ */ u2(S2, { children: [
         /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("left") : null, children: (scale) => frame(doc, null, scale, 0) }),
         /* @__PURE__ */ u2(Pane, { pk: `${scrollKey}|${partner.scrollKey || "partner"}`, zoom, pages: 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead("right") : null, children: (scale) => frame(partner.doc, partner, scale, 1) })
-      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
+      ] }) : /* @__PURE__ */ u2(Pane, { pk: scrollKey, zoom, pages: partner ? 2 : 1, regRestore: reg, onPinch: pinch, onScale: setDrawn, head: props.paneHead ? props.paneHead(partner ? "both" : "one") : null, children: (scale) => /* @__PURE__ */ u2(S2, { children: [
         frame(doc, null, scale, 0),
         partner ? frame(partner.doc, partner, scale, 1) : null
       ] }) }) }),
@@ -71519,9 +71534,10 @@ ${d5.text}`);
     };
     const one = problems.length === 1;
     return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value && problems.length > 0, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
-      /* @__PURE__ */ u2("h2", { id: "mnApproveH", children: "Before approving" }),
+      /* @__PURE__ */ u2("h2", { id: "mnApproveH", children: "Approve the minutes" }),
       /* @__PURE__ */ u2("p", { class: "sub", children: [
-        one ? "One ticked item has" : `${problems.length} ticked items have`,
+        "Before these minutes are approved, ",
+        one ? "one ticked item has" : `${problems.length} ticked items have`,
         " something worth a look. Nothing else needs checking."
       ] }),
       /* @__PURE__ */ u2("ul", { class: "mnap-l", children: problems.map((p6, i5) => /* @__PURE__ */ u2("li", { "data-n": p6.n, children: [
@@ -71749,12 +71765,12 @@ ${d5.text}`);
         {
           type: "button",
           ref: btn,
-          class: "mndue btn sm",
+          class: `mndue msel dueb${due ? "" : " empty"}`,
           "aria-haspopup": "dialog",
           "aria-expanded": open2 ? "true" : "false",
           "aria-label": `Deadline: ${due ? deadlineDay(due) : "not set"}. Change the deadline of ${label}`,
           onClick: () => setOpen2(!open2),
-          children: due ? fd(due) : "Not set"
+          children: due ? fd(due) : "No date"
         }
       ),
       /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Deadline for ${label}`, anchor: btn, focus: "input", cls: "pkcal mndl", children: open2 ? /* @__PURE__ */ u2(DeadlineBody, { due, day, onPick: async (w6) => {
@@ -71772,7 +71788,7 @@ ${d5.text}`);
     };
     return /* @__PURE__ */ u2("div", { children: [
       /* @__PURE__ */ u2("label", { class: "mndl-l", for: "mnDlWords", children: [
-        "Type a deadline, worked out from the meeting on ",
+        "Type a due date, worked out from the meeting on ",
         fd(day)
       ] }),
       /* @__PURE__ */ u2(
@@ -71881,10 +71897,11 @@ ${d5.text}`);
     return out;
   }
   var planGroupOf = (plan, n4) => ((plan || []).find((i5) => i5.n === n4) || { group: "" }).group;
-  var defaultTrack = (section, item) => (
+  var defaultTrack = (section, item, group) => (
     /** @type {Track} */
-    section === "decisions" || section === "raid" && !!item && item.op === "new" && ((item.values || {}).type || "Risk") === "Risk" ? "" : "y"
+    group === "own" || section === "decisions" || section === "raid" && !!item && item.op === "new" && ((item.values || {}).type || "Risk") === "Risk" ? "" : "y"
   );
+  var waitsWhenNeither = (r4, plan) => !r4.kept && !!r4.item && r4.item.op === "update" && planGroupOf(plan, r4.n) === "own";
   var trackChoices = (doc) => {
     const t47 = (doc && doc.layout || {}).track;
     return t47 && typeof t47 === "object" && !Array.isArray(t47) ? t47 : {};
@@ -71892,7 +71909,7 @@ ${d5.text}`);
   function trackOf(doc, r4, plan) {
     const c5 = trackChoices(doc)[String(r4.n)];
     if (c5 === "y" || c5 === "n" || c5 === "") return c5;
-    return r4.kept ? "" : defaultTrack(r4.section, r4.item);
+    return r4.kept ? "" : defaultTrack(r4.section, r4.item, planGroupOf(plan, r4.n));
   }
   var nextTrack = (now, pressed) => now === pressed ? "" : pressed;
   function setTrack(doc, n4, t47) {
@@ -71901,22 +71918,25 @@ ${d5.text}`);
     return { ...doc, layout: lay };
   }
   function trackCounts(doc, plan) {
-    const c5 = { y: 0, k: 0, n: 0 };
+    const c5 = { y: 0, k: 0, n: 0, w: 0 };
     for (const r4 of trackRows(doc)) {
-      const t47 = trackOf(doc, r4, plan);
-      if (t47 === "y") c5.y++;
-      else if (t47 === "n") c5.n++;
+      const t47 = trackOf(doc, r4, plan), g5 = planGroupOf(plan, r4.n);
+      if (t47 === "n") c5.n++;
+      else if (t47 === "y") {
+        if (r4.kept || g5 === "group" || g5 === "own") c5.y++;
+        else c5.w++;
+      } else if (waitsWhenNeither(r4, plan)) c5.w++;
       else c5.k++;
     }
     return c5;
   }
   var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
-  var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.n ? ` · ${c5.n} removed` : ""}`;
+  var trackSummary = (c5) => `${trackPlural(c5.y, "work item", "work items")} to register · ${c5.k} kept in the minutes only${c5.w ? ` · ${c5.w} left in Review` : ""}${c5.n ? ` · ${c5.n} removed` : ""}`;
   function reconcileOps(doc, plan) {
     const ops = [];
     for (const r4 of trackRows(doc)) {
       const want = trackOf(doc, r4, plan), now = r4.kept ? "" : "y";
-      if (want === now) continue;
+      if (want === now || want === "" && waitsWhenNeither(r4, plan)) continue;
       if (r4.kept) {
         ops.push({ op: "restore", n: r4.n });
         if (want === "n") ops.push({ op: "remove", n: r4.n, keep_line: false });
@@ -71944,6 +71964,12 @@ ${d5.text}`);
   var KINDS = [["Risk", "Risks"], ["Issue", "Issues"], ["Assumption", "Assumptions"], ["Dependency", "Dependencies"], ["", "Updates"]];
   var MN_PRIOS = ["Urgent", "High", "Medium", "Low"];
   var ITEM_ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
+  var PRIO_TIP = "Worked out from impact and likelihood";
+  var raidPriority = (v5) => {
+    const i5 = String(v5 && v5.impact || ""), l6 = String(v5 && v5.likelihood || "");
+    if (!i5 || !l6) return "";
+    return i5 === "High" && l6 === "High" ? "Urgent" : i5 === "High" || l6 === "High" ? "High" : i5 === "Low" && l6 === "Low" ? "Low" : "Medium";
+  };
   var TRACK_TIP = "Tick to register a work item; cross to remove the line from the minutes; neither keeps it in the minutes only";
   var recOf = (id2) => A4.find((x5) => x5.id === id2) || R3.find((x5) => x5.id === id2) || DEC.find((x5) => x5.id === id2) || null;
   function Linked({ text }) {
@@ -72018,6 +72044,12 @@ ${d5.text}`);
         class: "mnit",
         ref: box,
         onKeyDownCapture: (e4) => {
+          if (e4.key === "Escape" && aiBar.value) {
+            e4.preventDefault();
+            e4.stopPropagation();
+            aiBar.value = null;
+            return;
+          }
           if (e4.key === "Escape") {
             e4.preventDefault();
             e4.stopPropagation();
@@ -72071,6 +72103,10 @@ ${d5.text}`);
         ]
       }
     );
+  }
+  function RaidPriority({ v: v5, label }) {
+    const pr2 = String(v5.priority || raidPriority(v5));
+    return /* @__PURE__ */ u2("span", { class: `msel mnro${pr2 ? ` pr-${pr2[0]}` : " empty"}`, tabIndex: 0, "data-tip": PRIO_TIP, "aria-label": `Priority of ${label}: ${pr2 || "not worked out yet"}. ${PRIO_TIP}`, children: pr2 || "Priority" });
   }
   function addDetails(name) {
     go2("person", name);
@@ -72140,7 +72176,10 @@ ${d5.text}`);
           /* @__PURE__ */ u2("td", { class: "mnic", children: [
             isNew ? /* @__PURE__ */ u2(ItemText, { value: String(v5[ROW_FIELD[sid]] || ""), label: `${ctx.section.heading}: ${label}`, n: n4, onSave: (x5) => edit({ [ROW_FIELD[sid]]: x5 }) }) : /* @__PURE__ */ u2("div", { class: "mnit mnit-ro", children: /* @__PURE__ */ u2(Linked, { text: String(cells[MAIN[sid]] || "") }) }),
             own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("div", { class: "mnrow2", children: [
-              !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("span", { class: "mck info", children: /* @__PURE__ */ u2(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }) }) : null,
+              !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u2("span", { class: "mck info", children: [
+                /* @__PURE__ */ u2(Linked, { text: `${row2.does}${/^Closes /.test(row2.does) ? " · Looks done" : ""}` }),
+                row2.ref ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnstaged", "data-tip": "Open the staged update in Review", onClick: () => m5.openItem(String(row2.ref)), children: "Open" }) : null
+              ] }) : null,
               own ? /* @__PURE__ */ u2("span", { class: "mck", "data-check": own.id, children: [
                 /* @__PURE__ */ u2("span", { children: [
                   own.quote,
@@ -72174,7 +72213,7 @@ ${d5.text}`);
                 cls: v5.priority ? `pr-${String(v5.priority)[0]}` : "",
                 onPick: (x5) => edit({ priority: x5 || null })
               }
-            ) : v5.priority ? /* @__PURE__ */ u2("span", { "data-tip": sid === "raid" ? "Worked out from impact and likelihood" : void 0, children: v5.priority }) : dash }),
+            ) : sid === "raid" && isNew ? /* @__PURE__ */ u2(RaidPriority, { v: v5, label }) : v5.priority ? /* @__PURE__ */ u2("span", { children: v5.priority }) : dash }),
             /* @__PURE__ */ u2("td", { class: "mnwc", children: isNew && sid !== "decisions" ? /* @__PURE__ */ u2(
               RowSelect,
               {
@@ -72520,7 +72559,13 @@ ${d5.text}`);
     return /* @__PURE__ */ u2("aside", { class: "mnpane", "aria-labelledby": "mnPaneH", children: [
       /* @__PURE__ */ u2("div", { class: "mnpane-h", children: [
         /* @__PURE__ */ u2("h2", { id: "mnPaneH", children: "Transcript" }),
-        /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close the transcript", onClick: () => setPane(false), data: { mnpane: "close" } })
+        /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close the transcript", onClick: () => {
+          setPane(false);
+          requestAnimationFrame(() => {
+            const b5 = document.getElementById("mnTrBtn");
+            if (b5) b5.focus();
+          });
+        }, data: { mnpane: "close" } })
       ] }),
       /* @__PURE__ */ u2("div", { class: "mnpane-q", children: [
         /* @__PURE__ */ u2(
@@ -72693,7 +72738,7 @@ ${d5.text}`);
   }
 
   // components/minutes/MinutesView.jsx
-  var MN_ZOOM = { min: 0.5, max: 2.5 };
+  var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1 };
   var MN_EXPORTS = [
     { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
     { id: "pdf", name: "PDF", line: "Printed from the page" },
@@ -72732,15 +72777,16 @@ ${d5.text}`);
     snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
   }
   function reExtract(doc) {
-    openChat();
     const box = (
       /** @type {HTMLTextAreaElement|null} */
       document.getElementById("chIn")
     );
-    if (box) {
-      box.value = `re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`;
-      box.focus();
+    if (box && box.value.trim()) {
+      openChat();
+      snack("ask creaite has words you haven't sent: send or clear them, then press Re-extract again");
+      return;
     }
+    ckAsk(`re-extract the minutes of “${doc.title}” (${fd(doc.date)}) from the transcript`);
   }
   async function approveNow(anyway) {
     const v5 = minutesView.value, doc = minutesDoc.value;
@@ -72754,12 +72800,14 @@ ${d5.text}`);
     try {
       if (!await mnSaveFirst()) return;
       const own = ownTicked(doc, plan);
+      let made = 0;
       for (const op2 of reconcileOps(doc, plan)) {
         const r5 = await changeMinutes(op2);
         if (!r5.ok) {
-          snack(r5.message || "The minutes weren't approved; nothing was applied.");
+          snack(made ? `${r5.message ? `${r5.message} ` : ""}Some changes were made to the minutes; press Approve minutes again.` : r5.message || "The minutes weren't approved; nothing was applied.");
           return;
         }
+        made++;
       }
       const r4 = await approveMinutes(true, own);
       if (!r4.ok) {
@@ -72780,10 +72828,15 @@ ${d5.text}`);
       approving.value = false;
     }
   }
-  function Bar({ doc, zoom, setZoom, exported, setExported, status: status2, bad }) {
+  function TrackSum({ c: c5 }) {
+    const parts = trackSummary(c5).split(/(\d+)/);
+    return /* @__PURE__ */ u2(S2, { children: parts.map((p6, i5) => i5 % 2 ? /* @__PURE__ */ u2("b", { children: p6 }, i5) : p6) });
+  }
+  function Bar({ doc, zoom, setZoom, exported, setExported, status: status2, bad, scale }) {
     const v5 = minutesView.value, draft = doc.state === "draft", plan = v5 && v5.plan ? v5.plan.items : null;
     const c5 = draft && plan ? trackCounts(doc, plan) : null;
     const z4 = (d5) => setZoom(Math.round((zoom + d5 * 0.1) * 10) / 10);
+    const pc2 = Math.round((scale || zoom) * 100);
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2("span", { class: "sheet-mini", children: [
         /* @__PURE__ */ u2("b", { children: doc.title }),
@@ -72802,11 +72855,11 @@ ${d5.text}`);
             class: "sheet-zv mnzv",
             "aria-live": "polite",
             "data-zoom": zoom,
-            "data-tip": "Back to 80%",
-            "aria-label": `Zoom ${Math.round(zoom * 100)}%. Back to 80%`,
-            onClick: () => setZoom(0.8),
+            "data-tip": "Fit to width",
+            "aria-label": `Zoom ${pc2}%. Fit to width`,
+            onClick: () => setZoom(MN_ZOOM.fit),
             children: [
-              Math.round(zoom * 100),
+              pc2,
               "%"
             ]
           }
@@ -72825,8 +72878,8 @@ ${d5.text}`);
           children: /* @__PURE__ */ u2(Icon, { name: "filetext" })
         }
       ),
-      /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": bad ? "1" : void 0, children: status2 }),
-      c5 ? /* @__PURE__ */ u2("span", { class: "mnsum", id: "mnSum", role: "status", "data-y": c5.y, "data-k": c5.k, "data-n": c5.n, children: trackSummary(c5) }) : null,
+      /* @__PURE__ */ u2("span", { class: "sub sheet-status", role: "status", "data-bad": bad ? "1" : void 0, children: status2 || (doc.version ? `Saved · version ${doc.version}` : "") }),
+      c5 ? /* @__PURE__ */ u2("span", { class: "mnsum", id: "mnSum", role: "status", "data-y": c5.y, "data-k": c5.k, "data-n": c5.n, "data-w": c5.w, children: /* @__PURE__ */ u2(TrackSum, { c: c5 }) }) : null,
       /* @__PURE__ */ u2("span", { class: "sheet-barr", children: /* @__PURE__ */ u2("span", { class: "mnbarr", children: [
         /* @__PURE__ */ u2(
           "button",
@@ -72845,7 +72898,7 @@ ${d5.text}`);
           Menu,
           {
             label: "",
-            icon: "upload",
+            icon: "download",
             btnCls: "ib sm",
             ariaLabel: "Export",
             tip: "Export",
@@ -72916,6 +72969,15 @@ ${d5.text}`);
     },
     byType: { text: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }), header: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }) }
   };
+  function mnHeading(s5) {
+    if (s5.id !== "decisions" && s5.id !== "actions") return null;
+    const rows2 = (
+      /** @type {any[]} */
+      /** @type {any} */
+      (s5.rows || []).filter((r4) => r4.shown !== false && (r4.ref || r4.kept_line))
+    );
+    return { name: s5.id === "actions" && s5.heading === "Action Items" ? "Actions" : void 0, note: rows2.length };
+  }
   var EXTRAS = [{ key: "coverage", after: "open_questions", render: (c5) => /* @__PURE__ */ u2(Coverage, { c: c5 }) }];
   function MinutesView() {
     const v5 = minutesView.value, doc = minutesDoc.value;
@@ -72956,6 +73018,8 @@ ${d5.text}`);
             readOnly: !draft,
             zoomMin: MN_ZOOM.min,
             zoomMax: MN_ZOOM.max,
+            zoomDefault: MN_ZOOM.fit,
+            headings: mnHeading,
             renderers: RENDER,
             extras: EXTRAS,
             checks,
@@ -76559,6 +76623,7 @@ ${d5.text}`);
         "deTextRows",
         "decPending",
         "decide",
+        "defaultTrack",
         "defs",
         "designation",
         "diagHook",
@@ -76783,6 +76848,7 @@ ${d5.text}`);
         "openSpace",
         "orderedCols",
         "overdue",
+        "ownTicked",
         "ownerFinal",
         "ownerMatches",
         "ownerOptions",
@@ -76957,6 +77023,7 @@ ${d5.text}`);
         "setRhythm",
         "setRunning",
         "setSearch",
+        "setTrack",
         "shared",
         "sl",
         "slashRows",
@@ -76989,6 +77056,10 @@ ${d5.text}`);
         "thisWeek",
         "tl",
         "toIso",
+        "trackCounts",
+        "trackOf",
+        "trackRows",
+        "trackSummary",
         "tx",
         "typedLinkUrl",
         "typing",
