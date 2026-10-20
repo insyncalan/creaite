@@ -124,6 +124,11 @@ SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
+# #251: Today's milestone rows (Needs attention) have an Options menu. The sample's UAT start (ABC-M-001) has open actions but is
+# forecast outside the Due soon window, so for the keys test alone (Keys.goto; in memory only, again on every visit) it is forecast
+# three days ahead. The Undo check keeps the plain Today: its menu's "Open it in Work" would leave Work filtered for later screens.
+KEYS_GO = {"today": ("(()=>{ const m=P.flatMap(p=>p.ms||[]).find(m=>m[3]==='ABC-M-001'); if(m) m[8]=pkAdd(TODAY,3); go('today'); renderToday(); })()",
+                     "!!document.querySelector('#attnList li[data-msattn] .dots')", "#v-today")}
 SCREENS["today-days"] = ("D.calendar={fetched:TODAY+' 07:00',days:{}}; D.days={first:pkAdd(TODAY,-1),last:TODAY,today:TODAY,fetched:null,days:[{date:pkAdd(TODAY,-1),dow:'Monday',short:'Mon 1',long:'Monday',today:false,past:true,weekend:false,week:0,meetings:[],all_day:[]},"
                          "{date:TODAY,dow:'Tuesday',short:'Tue 2',long:'Tuesday',today:true,past:false,weekend:false,week:0,meetings:[],all_day:[]}]}; go('today'); renderToday()",
                          "!!document.querySelector('#todayDate .dypastbtn')", "#v-today")   # #147: the day line's earlier-days menu needs a calendar with a past day
@@ -152,9 +157,9 @@ VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
 # screens stay together (they share the one note they make) and a dialog script (KEYED) runs with its screen. A new screen goes into
 # a part (test_every_screen_is_in_exactly_one_part says so), then behaviour_witness.py refreshes behaviour_witness.json.
 KEYS_PARTS = {"a": ("review", "activity", "person", "help", "settings-health", "rail-expanded", "rail-icons", "work-board", "work-panel-decision", "review-peek", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "archive-ask", "notes", "notes-ai", "notes-session"),
-              "b": ("today-intake-folded", "work-panel", "cockpit", "people", "settings-essentials", "settings-advanced", "rail-collapsed", "activity-selected", "work-panel-details", "work-panel-raid", "work-panel-new", "work-display", "work-views", "shell", "clientreport"),
+              "b": ("work-panel", "cockpit", "people", "settings-essentials", "settings-advanced", "rail-collapsed", "activity-selected", "work-panel-details", "work-panel-raid", "work-panel-new", "work-display", "work-views", "shell", "clientreport"),
               "c": ("today", "work", "intake", "files", "projects", "milestones", "settings-people", "ask", "work-decisions", "milestone-editor", "minutes-approve", "weekly", "reports", "reporting", "today-days")}
-UNDO_PARTS = {"a": ("today-intake-folded", "review", "activity", "cockpit", "people", "help", "settings-essentials", "settings-advanced", "settings-health", "rail-expanded", "rail-collapsed", "activity-selected", "work-panel-raid", "work-panel-decision", "work-panel-new", "work-decisions", "work-views", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "weekly", "shell"),
+UNDO_PARTS = {"a": ("review", "activity", "cockpit", "people", "help", "settings-essentials", "settings-advanced", "settings-health", "rail-expanded", "rail-collapsed", "activity-selected", "work-panel-raid", "work-panel-decision", "work-panel-new", "work-decisions", "work-views", "prep-popup", "milestones-move", "minutes", "minutes-deadline", "weekly", "shell"),
               "b": ("today", "work", "work-panel", "intake", "files", "projects", "milestones", "person", "settings-people", "ask", "rail-icons", "work-board", "work-panel-details", "review-peek", "work-display", "milestone-editor", "minutes-approve", "reports", "reporting", "archive-ask", "today-days", "notes", "notes-ai", "notes-session", "clientreport")}
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
@@ -501,6 +506,17 @@ class Keys(Driver):
     """BL-316's shared behaviour test: keys, focus and Esc, and every popup in the code reached. The helpers and the script
     for one part of the screens (KEYS_PARTS; #89: three browser files of about 220 s each instead of one of about 650 s). The
     test classes that run them are SharedBehaviour here and test_shared_behaviour_b.py / _c.py."""
+
+    def goto(self, name):
+        """The screen, by its keys-test way where it has one (KEYS_GO)."""
+        if name not in KEYS_GO:
+            return super().goto(name)
+        plain = us.SCREENS[name]
+        us.SCREENS[name] = KEYS_GO[name]
+        try:
+            super().goto(name)
+        finally:
+            us.SCREENS[name] = plain
 
     def opened(self, i):
         """Enter on opener i: (its state, what it got wrong), or (None, why) when nothing opened."""
