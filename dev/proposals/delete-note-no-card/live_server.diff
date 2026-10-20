@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 30bdeb1..3b538a6 100644
+index 752afe73..35edecc4 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -91,6 +91,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
@@ -11,7 +11,16 @@ index 30bdeb1..3b538a6 100644
  - POST /api/ask/queue    {op: list|add|remove|resume}: messages typed while a run is going, run in order after it (BL-257)
  - POST /api/current/sources {src, text}: a saved sentence's source rows and quoted lines, read only; /api/current/evidence
                           {code, …} keeps a saved Current state's sentence links in system/staging/evidence/ (hashes and IDs only)
-@@ -5112,9 +5114,10 @@ def project_archive_card(code, action, cancel):
+@@ -1376,6 +1378,8 @@ class Handler(BaseHTTPRequestHandler):
+             if latest is None:
+                 return self.send(200, {"ok": False, "message": "Nothing to undo."})
+             code, out = run("tracker.py", "undo")
++            if code == 0:
++                page_move_undone(latest)                # #255 L3: the files log says the page's move was undone
+             notes = [ln.strip() for ln in out.splitlines() if re.match(r"\s+(skipped moving|restored) ", ln)]     # #124 L3
+             return self.send(200, {"ok": code == 0, "message": out, "moves": notes})
+ 
+@@ -5115,9 +5119,10 @@ def project_archive_card(code, action, cancel):
  
  # ===== BL-331: Files' Move back, on the same change card =====
  def move_back_route(handler, req):
@@ -25,7 +34,7 @@ index 30bdeb1..3b538a6 100644
      import archive
      path = req.get("path")
      if not isinstance(path, str) or set(req) - {"path"}:
-@@ -5122,13 +5125,11 @@ def move_back_route(handler, req):
+@@ -5125,13 +5130,11 @@ def move_back_route(handler, req):
      spec, why = archive.back_spec(path)
      if not spec:
          return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
@@ -44,7 +53,7 @@ index 30bdeb1..3b538a6 100644
      if not card:
          return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
      return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
-@@ -7550,50 +7551,162 @@ DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
+@@ -7555,50 +7558,190 @@ DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
                       "/api/notes/rename": notes_rename_route})
  # ===== end BL-301 B gaps =====
  
@@ -62,14 +71,14 @@ index 30bdeb1..3b538a6 100644
 -    import archive
 +# ===== #255: Delete note and a note's Move back, from the page's own button: the click is the approval (Alan, 20-10-2026) =====
 +# POST /api/notes/delete/now     {path, base}   after the confirm box in the Notes tab: the note moves into its own engagement's (or
-+#                                               the portfolio's) _Archive at once (a name taken there gets -2, -3…). No card.
++#                                               the portfolio's) archive folder at once (a name taken there gets -2, -3…). No card.
 +# POST /api/files/move-back/now  {path}         Files › Archived's Move back of a deleted note: back at once. No card. (A report's
 +#                                               Move back, and archiving or restoring a project, keep their card.)
 +# These replace #124's card (and its route, /api/notes/delete) for these two moves only. What still holds:
 +# - The caller is the open page: do_POST's Host and token checks and, here (page_call), a loopback peer and the browser's own
 +#   same-origin marks (Sec-Fetch-Site same-origin, an Origin naming this server). ask creaite has no HTTP tool (WebFetch and curl
 +#   are denied, the hook runs only creaite scripts, none of which posts here), so it can't call these routes; a note it moves
-+#   or deletes through filechange.py stays never (_Archive) or a card (a delete), as before.
++#   or deletes through filechange.py stays never (the archive folder) or a card (a delete), as before.
 +# - The move is the same one: archive.py builds it (never the page; archive.page_move_problem checks its shape once more),
 +#   propose.py stages it only from this server's snapshot in system/guard/, and tracker.py apply makes it only with the
 +#   one-time marker card_moves_allowed writes, bound to that proposal's bytes (reach.CARD_ONLY_MOVES keeps "notes" and
@@ -79,8 +88,8 @@ index 30bdeb1..3b538a6 100644
 +#   says so in plain words.
 +# - Never while ask creaite has read outside content, or for a note that isn't only Alan's (the rename's rule, as before).
 +# - Undo (tracker.py undo, the toast's Undo) and Move back bring it back. The move is in the applies record and has one line
-+#   in the files log (system/config/files-log.jsonl, op "note-archive" or "note-back"): a record only, which filechange.py
-+#   never lists or undoes, so there is one Undo.
++#   in the files log (system/config/files-log.jsonl, op "note-archive" or "note-back"; /api/undo of it adds "note-restored" or
++#   "note-rearchived"): a record only, which filechange.py never lists or undoes, so there is one Undo.
 +def page_call(handler):
 +    """#255: whether this call is the open page's own, beyond do_POST's Host and token: a loopback peer, and the browser's
 +    same-origin marks (Sec-Fetch-Site same-origin, an Origin naming this server's port on a loopback host)."""
@@ -112,17 +121,36 @@ index 30bdeb1..3b538a6 100644
 +    finally:
 +        if code:                                       # not applied (or raised): nothing of it is left in staging
 +            (paths.STAGING / name).unlink(missing_ok=True)
-+    return (latest_apply(), None) if not code else (None, out.strip())
++    if code:
++        return None, out.strip()
++    m = re.search(r"^Apply (\d+): ", out, re.M)         # L4: this apply's own number, never another process's later one
++    return (int(m.group(1)), None) if m else (latest_apply(), None)
 +
 +
 +def page_move_log(op, src, dst, apply_id):
 +    """#255: the move's line in the files log (a record only: its op isn't one filechange.py lists or undoes)."""
-+    import filechange
+     import filechange
+-    if set(req) - {"path", "base"} or not isinstance(req.get("path"), str):
 +    try:
 +        filechange.log({"id": filechange.next_id(), "at": filechange.now(), "op": op, "path": src, "to": dst,
 +                        "apply": apply_id, "via": "dashboard"})
 +    except OSError as e:                               # the move is made and in the applies record; the log line is extra
 +        swallowed("files log", e)
++
++
++PAGE_MOVE_UNDONE = {"note-archive": "note-restored", "note-back": "note-rearchived"}
++
++
++def page_move_undone(apply_id):
++    """#255 L3: after /api/undo of apply `apply_id`, a line in the files log for each page move it reverses (note-restored: the
++    deleted note is back in its notes folder; note-rearchived: a Move back is in the archive folder again). A record only."""
++    import filechange
++    try:
++        done = [e for e in filechange.entries() if e.get("apply") == apply_id and e.get("op") in PAGE_MOVE_UNDONE]
++    except OSError as e:
++        return swallowed("files log", e)
++    for e in done:
++        page_move_log(PAGE_MOVE_UNDONE[e["op"]], e.get("to"), e.get("path"), apply_id)
 +
 +
 +def page_move_busy(handler):
@@ -132,12 +160,21 @@ index 30bdeb1..3b538a6 100644
 +
 +
 +def note_delete_refusal(notes, p, rel, base):
-+    """#255: the answer when the note at `p` can't be deleted now (NOTES_LOCK held), or None: a symlink, a version other than the
-+    one the page showed (`base`), or the rename's rule (ask creaite has read outside content, or the file isn't only Alan's)."""
-     import filechange
--    if set(req) - {"path", "base"} or not isinstance(req.get("path"), str):
-+    if p.is_symlink():                                 # never followed: not a note that is there (archive.py says the same)
++    """#255: the answer when the note at `p` can't be deleted now (NOTES_LOCK held), or None: a symlink, a name other than the one
++    the folder lists (another case, NFC or NFD), a name with a control character, a version other than the one the page showed
++    (`base`), or the rename's rule (ask creaite has read outside content, or the file isn't only Alan's)."""
++    import filechange
++    if p.is_symlink():                                 # never followed: notes_target's stored path is the link's target
 +        return {"ok": False, "message": "Not deleted: that isn't a note that is there."}
++    try:                                               # L5: the name exactly as the folder lists it (case, NFC or NFD)
++        listed = p.name in os.listdir(p.parent)
++    except OSError:
++        listed = False
++    if not listed:
++        return {"ok": False, "message": "Not deleted: that isn't a note that is there."}
++    if re.search(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]", p.name):   # L7: a line break or another control character
++        return {"ok": False, "message": "Not deleted: the note's name has a line break or another control character in it. "
++                "Rename the file first."}
 +    if not base or base != notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")):
 +        return {"ok": False, "stale": True, "message": "Not deleted: the note changed since you opened it. Open it again and try "
 +                "once more."}
@@ -148,7 +185,7 @@ index 30bdeb1..3b538a6 100644
 +
 +
 +def notes_delete_now_route(handler, req):
-+    """POST /api/notes/delete/now {path, base}: the note moves into its own folder's _Archive now, after the confirm box."""
++    """POST /api/notes/delete/now {path, base}: the note moves into its own folder's archive folder now, after the confirm box."""
 +    import archive
 +    if not page_call(handler):
 +        return handler.send(403, {"ok": False, "message": "Not allowed"})
