@@ -1,0 +1,56 @@
+--- system/scripts/edit_ai.py
++++ system/scripts/edit_ai.py
+@@ -669,12 +669,9 @@
+         text = one_line(text)
+     if not text.strip():
+         return {"text": "", "notes": [], "message": "No suggestion came back."}
+-    outside = bool(ctx.get("outside")) or (ctx.get("place") in EMAIL_PLACES and email_outside(body.get("request") or {}))   # #186
+-    bad = client_problems(ctx.get("code") or "", text, ctx.get("original") or "") \
+-        if outside or _client_reply(ctx, body) else []
++    bad, message = _reply_problems(ctx, body, text)
+     if bad:
+-        return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"),
+-                "message": refusal(bad, True, outside)}
++        return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"), "message": message}
+     text = relevel(text, ctx.get("place"))                 # Current state never gets a `# ` or `## ` line (it would end the section)
+     return {"text": text, "notes": check(ctx.get("original") or "", text, ctx.get("people") or []), "option": ctx.get("option"),
+             "format": ctx.get("format")}
+@@ -687,6 +684,38 @@
+     return ctx.get("place") in CLIENT_PLACES or bool(ctx.get("client")) or "field" in req
+ 
+ 
++# #262: the Internal minutes sheet feeds the Distributed version, which goes to attendees who may be outside. Its AI keeps the full facts
++# (it edits the internal minutes, which hold internal items and owners), but a suggestion that ADDS something a client mustn't see is
++# dropped: an item that isn't client-visible, a name the text and the client-visible items don't give, the internal health reason, an
++# internal-only marker or VIP. What the selected text already held is the minutes' own and passes.
++MINUTES_PLACES = {"minutes"}
++FAIL_CLOSED = (NO_PROJECT, UNCHECKED, REGISTER)
++MINUTES_DROPPED = ("The suggestion was dropped: it added something internal (an item that isn't client-visible, a name or internal "
++                   "wording) that the Distributed version would carry. Try again, or edit the minutes yourself.")
++
++
++def minutes_problems(code, text, original):
++    """What a minutes suggestion adds that a client mustn't see (#262): client_problems on the suggestion, less what the selected text
++    already gave the same finding for. A check that couldn't run (no project, an unreadable tracker or register) is kept: fails closed."""
++    found = client_problems(code, text, original)
++    if any(f in FAIL_CLOSED for f in found):
++        return found
++    had = set(client_problems(code, original, original))
++    return [f for f in found if f not in had]
++
++
++def _reply_problems(ctx, body, text):
++    """(problems, the message shown) for a suggestion: the minutes sheet's (#262), the client place's (#123) and the outside email's
++    (#186); ([], "") when it may be shown."""
++    code, original = ctx.get("code") or "", ctx.get("original") or ""
++    if ctx.get("place") in MINUTES_PLACES:
++        bad = minutes_problems(code, text, original)
++        return bad, (refusal(bad, True) if set(bad) & set(FAIL_CLOSED) else MINUTES_DROPPED)
++    outside = bool(ctx.get("outside")) or (ctx.get("place") in EMAIL_PLACES and email_outside(body.get("request") or {}))   # #186
++    bad = client_problems(code, text, original) if outside or _client_reply(ctx, body) else []     # #263: client fields too
++    return bad, refusal(bad, True, outside)
++
++
+ def main(argv):
+     """The context, result and options commands (see the module's docstring)."""
+     cmd = argv[0] if argv else ""
