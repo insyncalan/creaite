@@ -16,10 +16,10 @@
 
 export const TRACK_SECTIONS = ["decisions", "raid", "actions"];
 
-/** The item number of a row: its own, or the one a kept line was ("@3"). @param {any} row @returns {number|null} */
-export const rowN = row => {
-  if (row && typeof row.n === "number") return row.n;
-  const m = /^@(\d+)$/.exec(String((row && row.was) || ""));
+/** The item number of a row: its own, or the one a kept line was ("@3"). @param {any} rw @returns {number|null} */
+export const rowN = rw => {
+  if (rw && typeof rw.n === "number") return rw.n;
+  const m = /^@(\d+)$/.exec(String((rw && rw.was) || ""));
   return m ? Number(m[1]) : null;
 };
 
@@ -29,10 +29,11 @@ export function trackRows(doc) {
   const out = [];
   for (const s of (doc && doc.sections) || []) {
     if (!TRACK_SECTIONS.includes(s.id) || s.type !== "table") continue;
-    for (const row of /** @type {any[]} */ (s.rows || [])) {
-      const n = rowN(row);
-      if (n == null || (!row.ref && !row.kept_line)) continue;
-      out.push({ n, section: s.id, row, item: row.ref ? (doc.items || {})[row.ref] || null : null, kept: !!row.kept_line });
+    const srows = /** @type {any[]} */ (s.rows || []);
+    for (const rw of srows) {
+      const n = rowN(rw);
+      if (n == null || (!rw.ref && !rw.kept_line)) continue;
+      out.push({ n, section: s.id, "row": rw, item: rw.ref ? (doc.items || {})[rw.ref] || null : null, kept: !!rw.kept_line });
     }
   }
   return out;

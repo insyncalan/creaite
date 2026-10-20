@@ -186,6 +186,13 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertEqual(self.ev(f"document.querySelector({json.dumps(ed)}).textContent"), "Send the revised SOW to the client today", "Esc put the words back")
         self.assertEqual(self.staged(1)["values"]["description"], "Send the revised SOW to the client today")
         self.assertFalse(self.ev("!!document.querySelector('#v-minutes .edcard, #v-minutes .mnpop')"), "no popup")
+        b.click(ed)                                            # AI on selected text, as in every editor
+        b.eval("""(()=>{ const h=document.querySelector(%s).cxed, doc=h.editor.state.doc; let at=-1;
+          doc.descendants((n,pos)=>{ if(at<0&&n.isText){ const i=n.text.indexOf('revised'); if(i>=0) at=pos+i; } });
+          h.focus(); h.editor.commands.setTextSelection({from:at,to:at+7}); })()""" % json.dumps(ed))
+        b.wait("document.querySelector('#aiLayer .aispark')", 5)
+        b.key("Escape")
+        b.pump(0.3)
         # the summary, where it stands
         summ = "#v-minutes section[data-id=summary] .sheet-ed"
         was = self.ev(f"document.querySelector({json.dumps(summ)}).textContent")

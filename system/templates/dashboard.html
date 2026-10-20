@@ -71853,23 +71853,23 @@ ${d5.text}`);
 
   // components/minutes/track.js
   var TRACK_SECTIONS = ["decisions", "raid", "actions"];
-  var rowN = (row2) => {
-    if (row2 && typeof row2.n === "number") return row2.n;
-    const m5 = /^@(\d+)$/.exec(String(row2 && row2.was || ""));
+  var rowN = (rw2) => {
+    if (rw2 && typeof rw2.n === "number") return rw2.n;
+    const m5 = /^@(\d+)$/.exec(String(rw2 && rw2.was || ""));
     return m5 ? Number(m5[1]) : null;
   };
   function trackRows(doc) {
     const out = [];
     for (const s5 of doc && doc.sections || []) {
       if (!TRACK_SECTIONS.includes(s5.id) || s5.type !== "table") continue;
-      for (
-        const row2 of
+      const srows = (
         /** @type {any[]} */
         s5.rows || []
-      ) {
-        const n4 = rowN(row2);
-        if (n4 == null || !row2.ref && !row2.kept_line) continue;
-        out.push({ n: n4, section: s5.id, row: row2, item: row2.ref ? (doc.items || {})[row2.ref] || null : null, kept: !!row2.kept_line });
+      );
+      for (const rw2 of srows) {
+        const n4 = rowN(rw2);
+        if (n4 == null || !rw2.ref && !rw2.kept_line) continue;
+        out.push({ n: n4, section: s5.id, "row": rw2, item: rw2.ref ? (doc.items || {})[rw2.ref] || null : null, kept: !!rw2.kept_line });
       }
     }
     return out;
