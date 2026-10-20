@@ -4894,6 +4894,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     aiBar: () => aiBar,
     aiBarClose: () => aiBarClose,
     aiChanges: () => aiChanges,
+    aiClientFieldOn: () => aiClientFieldOn,
     aiDiff: () => aiDiff,
     aiDiscard: () => aiDiscard,
     aiHome: () => aiHome,
@@ -6288,6 +6289,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     pkChipsDraw: () => pkChipsDraw,
     pkCid: () => pkCid,
     pkClient: () => pkClient,
+    pkClientMsg: () => pkClientMsg,
     pkCommit: () => pkCommit,
     pkCommit1: () => pkCommit1,
     pkDepDraw: () => pkDepDraw,
@@ -26649,6 +26651,27 @@ ${s5}`;
     // #123: the client sheet (edit_ai.py's client place)
     readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false }
   };
+  var AI_CLIENT_FIELDS = (
+    /** @type {string[]|null} */
+    null
+  ), aiCapsAsking = (
+    /** @type {Promise<any>|null} */
+    null
+  ), aiCapsNoUntil = 0;
+  function aiClientFieldOn(field) {
+    if (AI_CLIENT_FIELDS) return AI_CLIENT_FIELDS.includes(field);
+    if (!aiCapsAsking && viaServer() && Date.now() >= aiCapsNoUntil) {
+      aiCapsAsking = Promise.resolve().then(() => api("/api/edit/ai/caps", {})).then((r4) => {
+        if (r4 && r4.ok && Array.isArray(r4.client_fields)) AI_CLIENT_FIELDS = r4.client_fields.map(String);
+        else aiCapsNoUntil = Date.now() + 6e4;
+      }, () => {
+        aiCapsNoUntil = Date.now() + 6e4;
+      }).then(() => {
+        aiCapsAsking = null;
+      });
+    }
+    return false;
+  }
   var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
   var AI_NAMES = (
     /** @type {Record<string, Record<string, string>>} */
@@ -26847,6 +26870,7 @@ ${s5}`;
     aiSug.value = cur;
     const doc = s5.ai.document ? s5.ai.document() : null;
     const to2 = s5.ai.recipients ? s5.ai.recipients() : null;
+    const field = s5.ai.field ? s5.ai.field() : "";
     const r4 = await draftAsk(
       {
         option: s5.option,
@@ -26855,7 +26879,8 @@ ${s5}`;
         place: s5.ai.place,
         code: s5.ai.project && s5.ai.project() || "",
         ...doc ? { document: doc } : {},
-        ...Array.isArray(to2) ? { recipients: to2 } : {}
+        ...Array.isArray(to2) ? { recipients: to2 } : {},
+        ...field ? { field } : {}
       },
       { url: "/api/edit/ai", label: `${s5.label}, with Claude`, status: () => {
       } }
@@ -58770,13 +58795,18 @@ ${d5.text}`);
         prop: "textContent",
         links: !!el2.dataset.pkml,
         /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
-        ...el2.dataset.pkml || el2.id === "pkTitle" ? { ai: { place: el2.dataset.pkml ? "plain" : "line", project: () => {
-          const x5 = shared.CUR && pkX(shared.CUR.k, pkCid());
-          return x5 && x5.p || "";
-        } } } : {}
+        ...el2.dataset.pkml || el2.id === "pkTitle" ? { ai: {
+          place: el2.dataset.pkml ? "plain" : "line",
+          project: () => {
+            const x5 = shared.CUR && pkX(shared.CUR.k, pkCid());
+            return x5 && x5.p || "";
+          },
+          ...pkClientMsg(el2) ? { field: () => "client_message", enabled: () => aiClientFieldOn("client_message") } : {}
+        } } : {}
       });
     });
   }
+  var pkClientMsg = (el2) => el2.getAttribute("aria-label") === "Client messaging" && (el2.dataset.pkf === "cm" || el2.dataset.pkf === "cmd");
   var pkDetOpen = (x5, id2) => !!(PK.pc && PK.pc.id === id2 || (id2 in PK.det ? PK.det[id2] : !!x5.client));
   function pkDetails(x5, k5) {
     const id2 = pkCid(), open2 = pkDetOpen(x5, id2), tg2 = $("#pkDetT");

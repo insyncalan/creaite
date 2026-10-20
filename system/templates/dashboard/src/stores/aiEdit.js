@@ -14,7 +14,7 @@
      in draft-stats.json (/api/draft/stat). */
 import { effect, signal } from "@preact/signals";
 import { edReplace, edSelection, edRange, edTurnInto, TURN_NAMES } from "../core/editor.js";
-import { snack, viaServer } from "../core/server.js";
+import { api, snack, viaServer } from "../core/server.js";
 import { shared } from "../core/state.js";
 import { draftAsk, draftStat } from "../drafts.js";
 
@@ -82,6 +82,22 @@ export const AI_PLACE_TABLE = {
   client: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },     // #123: the client sheet (edit_ai.py's client place)
   readonly: { ai: true, turnInto: false, formatNotes: false, improveOnly: false },
 };
+/* #263: the item panel's Client messaging field. Its text goes to client reports, so the server gives it the client rules (client facts,
+   the client check on the reply) when the request names `field: "client_message"`. The page only asks whether this server does that
+   (/api/edit/ai/caps lists "client_message" in `client_fields`); until it says yes the field has no bar and its text never goes to
+   Claude with the full facts. A yes is kept; a no (an older server's 404, or an error) is asked again after a minute. */
+let AI_CLIENT_FIELDS = /** @type {string[]|null} */ (null), aiCapsAsking = /** @type {Promise<any>|null} */ (null), aiCapsNoUntil = 0;
+/** Whether the server applies the client rules to a field (`client_message`); asks the server when it doesn't know yet. @param {string} field */
+export function aiClientFieldOn(field) {
+  if (AI_CLIENT_FIELDS) return AI_CLIENT_FIELDS.includes(field);
+  if (!aiCapsAsking && viaServer() && Date.now() >= aiCapsNoUntil) {
+    aiCapsAsking = Promise.resolve().then(() => api("/api/edit/ai/caps", {})).then(r => {
+      if (r && r.ok && Array.isArray(r.client_fields)) AI_CLIENT_FIELDS = r.client_fields.map(String);
+      else aiCapsNoUntil = Date.now() + 60000;
+    }, () => { aiCapsNoUntil = Date.now() + 60000; }).then(() => { aiCapsAsking = null; });
+  }
+  return false;
+}
 /** True when a place's selection bar is switched on. @param {string} place */
 export const aiPlaceOn = place => !!(AI_PLACE_TABLE[place] && AI_PLACE_TABLE[place].ai);
 
@@ -257,8 +273,9 @@ async function ask(s) {
   aiSug.value = cur;
   const doc = s.ai.document ? s.ai.document() : null;                 // #123: the client sheet names its report; the server binds the place
   const to = s.ai.recipients ? s.ai.recipients() : null;              // #186: the Draft email's addresses; the server decides who is outside
+  const field = s.ai.field ? s.ai.field() : "";                       // #263: a field whose text goes to a client; the server applies the client rules
   const r = await draftAsk({ option: s.option, instruction: s.instruction, text: s.range.text, place: s.ai.place,
-    code: (s.ai.project && s.ai.project()) || "", ...(doc ? { document: doc } : {}), ...(Array.isArray(to) ? { recipients: to } : {}) },
+    code: (s.ai.project && s.ai.project()) || "", ...(doc ? { document: doc } : {}), ...(Array.isArray(to) ? { recipients: to } : {}), ...(field ? { field } : {}) },
   { url: "/api/edit/ai", label: `${s.label}, with Claude`, status: () => {} });
   if (aiSug.value !== cur) return;                                     // discarded, or the editor closed, while it ran
   if (r.ok && r.text) { draftStat(AI_FEATURE, "offered"); aiSug.value = { ...cur, status: "ready", text: String(r.text), notes: r.notes || [] }; }

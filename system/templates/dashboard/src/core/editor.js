@@ -147,11 +147,12 @@ export function edEmailHtml(editor){ try{ editor.view.domObserver.flush(); }catc
  * once (per `key()`) before the text goes to Claude.
  * #186: `enabled()` false keeps the sparkle and bar off for now (read at each selection: the Draft email to an outside address
  * until the server says it decides the audience); `recipients()` the Draft email's addresses, sent when it gives a list.
+ * #263: `field()` names a field whose text goes to a client ("client_message"): the server gives it the client facts and checks.
  * #134: `actions: false` leaves out the bar's registered items (Make into: they act on a saved note's lines; the capture drawer's draft has none).
  * @typedef {{place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
  *   actions?: boolean,
  *   document?: () => ({kind: string, code: string, week_ending: string, client: string}|null),
- *   recipients?: () => (string[]|null), enabled?: () => boolean}} EdAi
+ *   recipients?: () => (string[]|null), enabled?: () => boolean, field?: () => string}} EdAi
  * @typedef {{features?: "current"|"plain"|"notes"|"email", markdown?: string, html?: string, text?: string, multiline?: boolean,
  *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value",
  *   ai?: EdAi, headShift?: number, links?: boolean, undoDepth?: number}} EdOptions
