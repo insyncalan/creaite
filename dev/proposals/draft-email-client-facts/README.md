@@ -1,6 +1,6 @@
 # Proposal #186: the Draft email's AI bar, safe for people outside your company
 
-For Alan's approval. Round 2: the fixes from the review of bba13f74 are in (marked "round 2" below). `edit_ai.py` is guarded-adjacent and `live_server.py` is the server, so neither is changed on this branch.
+For Alan's approval. Rounds 2 and 3: the fixes from the reviews of bba13f74 and 447a249f are in (marked "round 2" or "round 3"). `edit_ai.py` is guarded-adjacent and `live_server.py` is the server, so neither is changed on this branch.
 `edit_ai.diff` is the change to both (apply from the repo root with `patch -p0 < dev/proposals/draft-email-client-facts/edit_ai.diff`).
 The dashboard part is already on the branch, and it does nothing new until the diff is applied.
 
@@ -70,6 +70,7 @@ removes.
 | No own domains set, or settings that can't be read | everyone outside |
 | More than 50 recipients, or anything that isn't a list of text | refused by the server with a plain message ("That email has too many recipients for a suggestion (50 at most)…", "The email's addresses couldn't be read…") |
 | Own email domains saved as text instead of a list | everyone outside; the debug log says "identity.own_domains is not a list" and `/api/edit/ai/caps` reports `own_domains: "not a list"` (round 2; never the domains themselves) |
+| Own email domains a list with no domain in it (`[1]`, `[""]`) | everyone outside; `/api/edit/ai/caps` reports `own_domains: "no usable domain"` (round 3) |
 
 ## Which places can reach a client (round 2)
 
@@ -77,7 +78,7 @@ removes.
 |---|---|---|---|
 | `email` | Draft email | yes | client facts unless every address is on an own domain; no addresses at all = outside |
 | `client` | the client report sheet | yes | client facts, bound on the server from the report (#123) |
-| `minutes` | the minutes sheet (Internal version only; the Distributed version is read-only) | indirectly: the Distributed version is made from it, leaving out Internal only lines and withheld items | full facts, as today (not changed here; a follow-up if Alan wants the reply checked there) |
+| `minutes` | the minutes sheet (Internal version only; the Distributed version is read-only) | indirectly: the Distributed version is made from it, leaving out Internal only lines and withheld items | full facts, as today (not changed here; decision 6) |
 | `notes`, `current`, `plain`, `line`, `report`, `readonly` | notes, Current state, item fields and Prep boxes, titles, the weekly sheet | no (internal pages; the client report has its own place) | full facts, as today; refused if addresses are sent with them |
 
 ## What can still go wrong
@@ -112,6 +113,10 @@ removes.
 4. **Internal minutes follow-up** with outside attendees gets client facts (above). Recommended: yes.
 5. **Cc/Bcc**: accept that creaite judges only the To addresses it shows (it has no Cc or Bcc). Recommended: yes, and say so in
    the help.
+6. **Optional: the minutes sheet.** The AI bar on the Internal minutes sheet still gets the full facts and no client check on its
+   reply. The Distributed version, which goes to attendees who may be outside, is made from that sheet (Internal only lines and
+   withheld items are left out). Should the minutes sheet's AI reply also be checked the way a client email's is? Not part of this
+   proposal; a separate item if you say yes.
 
 ## How to apply and undo
 
@@ -135,3 +140,13 @@ removes.
   own-domains setting is usable). The page asks caps once; a no (an older server's 404) is kept for a minute, so redraws don't
   ask again. No change to how runs start, tools or approvals.
 - Needs: an independent review of the diff (client-safe), as #127 had.
+
+## Found while reviewing, a separate item (not fixed here)
+
+The item panel's **Client messaging** field (`system/templates/dashboard/src/panel.js`, around line 728: `row("msg","Client messaging",…)`
+with `data-pkml="1"`) is wired to the AI bar as the `plain` place (`panel.js` around line 709: `ai:{place:el.dataset.pkml?"plain":"line",…}`).
+So Ask on that field gives Claude the **full facts** (every open item ID and owner) and its reply gets **no client check**, yet that text
+is the item's client wording and goes into client reports and client-safe one-pagers. The end gate (`client_leak.findings` at approve
+and export) still catches an internal ID or name later, but the suggestion itself is unchecked. Suggested fix, its own item: give
+that field a client place (client facts, `client_problems` on the reply), bound on the server from the field name, never the page's
+word. Found by the delta review of 447a249f.

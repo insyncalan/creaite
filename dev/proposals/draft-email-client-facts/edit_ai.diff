@@ -57,9 +57,9 @@
 +    """A warning in the debug log (BL-102), never raising: no addresses or text, only what is wrong."""
 +    try:
 +        import log
-+        log.warn("edit", message)
-+    except Exception:  # noqa: BLE001  the log is optional
-+        pass
++    except ImportError:                       # an engine without log.py: the warning is skipped (the email still counts as outside)
++        return
++    log.warn("edit", message)                 # log.warn never raises (BL-102)
 +
 +
 +# #186 review: a display name is plain words only: no @ (a second address), no control character (a line break or tab could hide
@@ -156,7 +156,26 @@
      option = str(req.get("option") or "")
      if place not in PLACES:
          raise Refused("Not a place creaite knows.")
-@@ -457,16 +546,19 @@
+@@ -444,12 +533,17 @@
+     if len(text) > MAX_TEXT:
+         raise Refused(f"That's too much text for one suggestion; select under {MAX_TEXT // 1000}k characters.")
+     _needs_blocks(option, text)
++    return option, text, code, place, _instruction(req, option)
++
++
++def _instruction(req, option):
++    """The request's own instruction ("Or say what you want…"), spaces squeezed, or Refused: needed for Ask…, and capped."""
+     instruction = " ".join(str(req.get("instruction") or "").split())
+     if option == "custom" and not instruction:
+         raise Refused("Say what you want done with the text.")
+     if len(instruction) > MAX_INSTRUCTION:
+         raise Refused(f"Keep the instruction under {MAX_INSTRUCTION} characters.")
+-    return option, text, code, place, instruction
++    return instruction
+ 
+ 
+ def context(req):
+@@ -457,28 +551,38 @@
      option, text, code, place, instruction = request(req)
      fmt = FORMATS[place]
      client = place in CLIENT_PLACES
@@ -168,6 +187,21 @@
 -    facts = project_facts(code, client)
 +        raise Refused(refusal(bad, outside=outside))
 +    facts = project_facts(code, client or outside)
++    task = _task(option, instruction, place, client, outside)
++    template = string.Template((paths.TEMPLATES / "drafts" / "edit-ai.md").read_text(encoding="utf-8"))
++    prompt = template.substitute(
++        task=task, format_rule=FORMAT_RULES[place],
++        project=facts["name"] or "none given",
++        people=", ".join(facts["people"]) or "none listed",
++        ids=", ".join(facts["ids"]) or "none",
++        text=text)
++    return {"prompt": prompt, "option": option, "label": OPTIONS[option][0], "format": fmt, "place": place,
++            "people": facts["people"], "original": text, "code": code, "outside": outside}
++
++
++def _task(option, instruction, place, client, outside):
++    """What Claude is asked to do: the option's instruction (or Alan's own), the client sheet's rule, the spelling sentence where
++    the place has it, the outside-email rule (#186) and, for Make it executive, the style guide."""
      task = OPTIONS[option][2] if option != "custom" else (
          "Do what Alan asks with the text, and only that. His instruction: " + instruction)
      if client:
@@ -179,16 +213,20 @@
      if option == "executive":
          import report
          task += "\n\nThe executive voice:\n" + report.style_guide()
-@@ -478,7 +570,7 @@
-         ids=", ".join(facts["ids"]) or "none",
-         text=text)
-     return {"prompt": prompt, "option": option, "label": OPTIONS[option][0], "format": fmt, "place": place,
+-    template = string.Template((paths.TEMPLATES / "drafts" / "edit-ai.md").read_text(encoding="utf-8"))
+-    prompt = template.substitute(
+-        task=task, format_rule=FORMAT_RULES[place],
+-        project=facts["name"] or "none given",
+-        people=", ".join(facts["people"]) or "none listed",
+-        ids=", ".join(facts["ids"]) or "none",
+-        text=text)
+-    return {"prompt": prompt, "option": option, "label": OPTIONS[option][0], "format": fmt, "place": place,
 -            "people": facts["people"], "original": text, "code": code}
-+            "people": facts["people"], "original": text, "code": code, "outside": outside}
++    return task
  
  
  def parse(reply):
-@@ -545,9 +637,12 @@
+@@ -545,9 +649,12 @@
          text = one_line(text)
      if not text.strip():
          return {"text": "", "notes": [], "message": "No suggestion came back."}
@@ -229,7 +267,7 @@
  EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
  
  
-@@ -6013,14 +6015,54 @@
+@@ -6013,14 +6015,57 @@
          if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
              return None
          body["document"] = {k: x[:120] for k, x in d.items()}
@@ -239,8 +277,8 @@
 +            return None
 +        body["recipients"] = list(rc)
      return body
- 
- 
++
++
 +def edit_ai_recipients_problem(req):
 +    """Why a request's `recipients` can't be taken (#186), as the message the page shows, or "" when they can (or there are none):
 +    only the Draft email sends addresses, at most 50, each text of at most 320 characters. Never cut: a list is taken whole or not."""
@@ -257,15 +295,18 @@
 +
 +
 +def own_domains_state():
-+    """Whether the own-domains setting can decide who is inside (#186 review): "ok", "none" (empty: everyone is outside), "not a list"
-+    or "unreadable". Counts only, never the domains."""
++    """Whether the own-domains setting can decide who is inside (#186 review): "ok", "none" (empty: everyone is outside), "not a list",
++    "no usable domain" (a list with no domain in it, such as [1] or [""]: everyone is outside) or "unreadable". Never the domains."""
 +    try:
 +        given = (paths.load_settings().get("identity") or {}).get("own_domains")
 +    except Exception:  # noqa: BLE001
 +        return "unreadable"
 +    if given is None or given == []:
 +        return "none"
-+    return "ok" if isinstance(given, list) else "not a list"
++    if not isinstance(given, list):
++        return "not a list"
++    usable = [d for d in given if isinstance(d, str) and d.strip().lstrip("@")]      # as edit_ai.own_domains reads them
++    return "ok" if usable else "no usable domain"
 +
 +
 +def edit_ai_caps_route(handler, req):
@@ -273,8 +314,8 @@
 +    for an outside recipient (an older server answers 404 and the page keeps the bar off), and whether the own-domains setting is
 +    usable (a setting that isn't a list makes every recipient outside)."""
 +    return handler.send(200, {"ok": True, "email_audience": "recipients", "own_domains": own_domains_state()})
-+
-+
+ 
+ 
  def edit_ai_route(handler, req):
      """POST /api/edit/ai: one suggestion on the selected text, from a run with no tools (BL-301 D)."""
      body = edit_ai_request(req)
@@ -285,7 +326,7 @@
      busy = current_run()
      if busy and not busy.done:
          return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
-@@ -6046,6 +6088,7 @@
+@@ -6046,6 +6091,7 @@
  
  
  DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route

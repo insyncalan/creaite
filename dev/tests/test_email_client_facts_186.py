@@ -96,8 +96,15 @@ MUTATIONS = {
     "plain-message": ("live_server.py", "a refused list gets the generic message",
                       "        return handler.send(400, {\"ok\": False, \"message\": why or ", "        return handler.send(400, {\"ok\": False, \"message\": None or "),
     "no-domains-log": ("edit_ai.py", "a setting that isn't a list says nothing", "        _log_warn(\"identity.own_domains is not a list", "        (\"identity.own_domains is not a list"),
-    "caps-state": ("live_server.py", "caps doesn't say the setting isn't a list", "return \"ok\" if isinstance(given, list) else \"not a list\"",
-                   "return \"ok\""),
+    "caps-state": ("live_server.py", "caps doesn't say the setting isn't a list",
+                   "    if not isinstance(given, list):\n        return \"not a list\"\n", ""),
+    # round 3 (the delta review of 447a249f)
+    "caps-usable": ("live_server.py", "caps says ok for a list with no usable domain", "return \"ok\" if usable else \"no usable domain\"",
+                    "return \"ok\""),
+    "no-outside-rule": ("edit_ai.py", "the outside-email rule is left out of the task (after the split into _task)",
+                        "    if outside:\n        task += \"\\n\\n\" + OUTSIDE_RULE\n", ""),
+    "no-instruction": ("edit_ai.py", "Ask… without an instruction goes through (after the split into _instruction)",
+                       "    if option == \"custom\" and not instruction:\n        raise Refused(\"Say what you want done with the text.\")\n", ""),
 }
 
 
@@ -347,6 +354,20 @@ class TheAddresses(_Vault):
         self.assertIn("own_domains is not a list", logs)
         self.assertNotIn("brightwater.example", logs)                    # counts and what is wrong only, never the domains
         self.assertEqual(server(self.root, [])["caps"][1]["own_domains"], "not a list")
+
+    def test_a_list_with_no_usable_domain_is_outside_and_said_by_caps(self):
+        s = self.root / "system/config/settings.json"
+        before = s.read_text(encoding="utf-8")
+        self.addCleanup(s.write_text, before, encoding="utf-8")
+        for given in ([1], [""], ["  ", "@"], [None]):
+            d = json.loads(before)
+            d["identity"]["own_domains"] = given
+            s.write_text(json.dumps(d), encoding="utf-8")
+            self.assertClientFacts(self.context(ask([INSIDE])), repr(given))
+            self.assertEqual(server(self.root, [])["caps"][1]["own_domains"], "no usable domain", repr(given))
+
+    def test_ask_without_an_instruction_is_refused(self):
+        self.assertIn("Say what you want", self.context(ask([INSIDE], option="custom")).get("refused", ""))
 
     def test_no_own_domains_means_everyone_is_outside(self):
         s = self.root / "system/config/settings.json"
