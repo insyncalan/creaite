@@ -308,9 +308,11 @@ PAGE_SCRIPT = r"""
   // leaves a draft waiting in Review as cx-minutes would.
   window.LOADED=[]; window.ASKED=[];
   jobLive=async(url,body)=>{ window.LOADED.push([url,body.id]); };
-  askLive=async(q,c)=>{ window.ASKED.push([q,c]);
-    if(/ABC Steering/.test(q)) await api("/api/fs",{op:"write",path:"system/staging/proposed-test-mtg.json",text:JSON.stringify({created:"2026-10-08T09:00:00",source_run:"cx-minutes",files:[],items:[],meeting:{key:"calendar:ev-1",title:"ABC Steering",date:"2026-10-05",projects:["ABC"],draft:null,transcript:null,minutes_decision:"pending",file_ops:[]}})});
-    else addEl("msg a","No transcript was found for this meeting. Download it from Teams and drop it in the inbox."); };
+  /* #264: a loaded transcript is processed through Process's own route (processLive), not an ask message */
+  processLive=async(files)=>{ window.ASKED.push(files);
+    if(files.some(f=>/ABC Steering/.test(f.path))) await api("/api/fs",{op:"write",path:"system/staging/proposed-test-mtg.json",text:JSON.stringify({created:"2026-10-08T09:00:00",source_run:"cx-minutes",files:[],items:[],meeting:{key:"calendar:ev-1",title:"ABC Steering",date:"2026-10-05",projects:["ABC"],draft:null,transcript:null,minutes_decision:"pending",file_ops:[]}})});
+    return {ok:true,files:files.map(f=>({path:f.path,state:"staged"})),staged:files.length,needs:0}; };
+  askLive=async(q,c)=>{ window.ASKED.push([q,c]); };
   try{
     nowHM=()=>"23:59";                                          // late in the day: today's meetings have all ended
     await checkLive(); go("inbox"); await wait(50);
@@ -333,6 +335,9 @@ PAGE_SCRIPT = r"""
     await until(()=>RUN===null&&!Object.values(MRUN).some(v=>v==="processing"||v==="loading")
       &&state("ABC Steering")==="Draft ready in Review"&&state("Weekly sync 12").startsWith("Skipped"));
     out.asked=ASKED.slice(); out.loaded=LOADED.slice(); out.after=rows();
+    /* #264 S6: a project goes with the file only when Alan chose it */
+    out.chosen=[{p:"ABC",how:"remembered"},{p:"ABC",how:"matched"},{p:"_portfolio",how:"portfolio"},{p:"_portfolio",how:"remembered"},{p:null,how:"unsure"}]
+      .map(m=>mtgProcessFile(m,"inbox/x.vtt"));
     window.ASKED=[]; document.getElementById("mtgRefresh").click(); await until(()=>ASKED.length>0,10000); out.refresh=ASKED.slice();
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
   const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre);
@@ -419,15 +424,19 @@ class InboxPageTests(unittest.TestCase):
         self.assertTrue(any(s.startswith(("Loading", "Processing")) for s in r["during"]))  # progress shows on the rows
         self.assertEqual([i for _, i in r["loaded"]], ["ev-2"])                                # ev-1 was loaded already; ev-2 is loaded first (BL-119)
         self.assertTrue(all(u == "/api/transcripts/load" for u, _ in r["loaded"]))
-        asked = [q for q, _ in r["asked"]]
+        asked = r["asked"]
         self.assertEqual(len(asked), 1)                                                        # only a loaded transcript goes to cx-minutes
-        self.assertRegex(asked[0], r"^process inbox/\d{4}-\d{2}-\d{2} ABC Steering\.vtt$")        # the saved file, not a search of Teams
-        self.assertTrue(all("draft minutes and proposed items" in c for _, c in r["asked"]))  # confirmed: cx-minutes may write
+        self.assertEqual(len(asked[0]), 1)
+        self.assertRegex(asked[0][0]["path"], r"^inbox/\d{4}-\d{2}-\d{2} ABC Steering\.vtt$")  # the saved file, not a search of Teams
+        self.assertNotIn("project", asked[0][0])            # #264 S6: ABC was only matched from the title, so the run works it out
+        self.assertEqual(r["chosen"], [{"path": "inbox/x.vtt", "project": "ABC"}, {"path": "inbox/x.vtt"}, {"path": "inbox/x.vtt"},
+                                       {"path": "inbox/x.vtt", "project": "_portfolio"}, {"path": "inbox/x.vtt"}])
+        # #264: through Process's own route (the click is the go-ahead to stage), never a confirmed ask message
         after = {row[0]: row[2] for row in r["after"]}
         self.assertEqual(after["ABC Steering"], "Draft ready in Review")
         self.assertTrue(after["Weekly sync 12"].startswith("Skipped"))                         # nothing to load: the reason is on its row
         self.assertIn("No transcript could be loaded", after["Weekly sync 12"])
-        self.assertEqual(r["refresh"], [["refresh calendar", "Refresh the calendar for Intake and Today"]])
+        self.assertEqual(r["refresh"], [["refresh calendar", None]])
 
 
 if __name__ == "__main__":

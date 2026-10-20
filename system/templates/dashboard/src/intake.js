@@ -27,7 +27,7 @@ export function inboxBadge(){ const n=(D.inbox||[]).filter(f=>f.state==="new").l
 export const uploadedFiles=()=>(D.inbox||[]).filter(f=>f.uploaded!==false&&!f.event);
 export function renderInbox(){ const L=uploadedFiles(); [...INSEL].forEach(p=>{ if(!L.some(f=>f.path===p&&f.state==="new")) INSEL.delete(p); });
   putHTML($("#inboxTbl"),html`<thead><tr><th style="width:32px"></th><th>File</th><th>Type</th><th>Size</th><th>Added</th><th>Likely project</th><th>State</th><th></th></tr></thead><tbody>${L.length?L.map(f=>{ const st=INRUN.includes(f.path)?"processing":f.state;
-    return html`<tr data-inf="${f.path}"><td><input type="checkbox" aria-label="Select ${f.name}" ${raw(INSEL.has(f.path)?"checked":"")} ${raw(st==="new"?"":"disabled")}></td><td class="title">${f.name}</td><td>${f.ext}</td><td>${kb(f.size)}</td><td style="white-space:nowrap">${fd(f.date)}</td><td>${f.p?raw(pLink(f.p)):html`<span class="sub">Not sure</span>`}</td><td><span class="tag ${st==="new"?"":"sub"}">${INSTATE[st]}</span>${st==="draft"&&html` <a href="#" data-go="review" class="sub">Open Review</a>`}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye","Preview",'data-inprev aria-haspopup="dialog"',"sm"))}${raw(ibtn("trash","Remove from Intake",`data-inrm ${st==="processing"?"disabled":""}`,"sm no"))}</td></tr>`; }):html`<tr><td colspan="8"><div class="empty minbox">No uploaded files waiting.</div></td></tr>`}</tbody>`);
+    return html`<tr data-inf="${f.path}"><td><input type="checkbox" aria-label="Select ${f.name}" ${raw(INSEL.has(f.path)?"checked":"")} ${raw(st==="new"?"":"disabled")}></td><td class="title">${f.name}</td><td>${f.ext}</td><td>${kb(f.size)}</td><td style="white-space:nowrap">${fd(f.date)}</td><td>${f.p?raw(pLink(f.p)):html`<span class="sub">Not sure</span>`}</td><td>${inRowState(f,st)}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye","Preview",'data-inprev aria-haspopup="dialog"',"sm"))}${raw(ibtn("trash","Remove from Intake",`data-inrm ${st==="processing"?"disabled":""}`,"sm no"))}</td></tr>`; }):html`<tr><td colspan="8"><div class="empty minbox">No uploaded files waiting.</div></td></tr>`}</tbody>`);
   $("#inboxGo").disabled=!INSEL.size||!!shared.RUN; $("#inboxGo").title=shared.RUN?"ask creaite is busy; try again when it's finished":INSEL.size?"":"Tick a file first"; $("#inboxGo").textContent=INSEL.size?`Process ${INSEL.size} selected`:"Process selected"; inboxBadge(); renderMeetings(); }
 export async function addInboxFiles(files){ if(!viaServer()){ snack("Adding files needs the live server"); return; } let added=0;
   for(const f of files){ const ext=(f.name.match(/\.[^.]+$/)||[""])[0].toLowerCase();
@@ -37,10 +37,41 @@ export async function addInboxFiles(files){ if(!viaServer()){ snack("Adding file
     const r=await api("/api/inbox/upload",{name:f.name,data}); if(!r.ok){ if(r.message===OLDSERVER){ snack(OLDSERVER); return; } snack(`${f.name}: ${oneLine(r.message)}`); continue; }
     added++; (D.inbox=D.inbox||[]).push({name:r.name,path:r.path,ext:ext.slice(1),size:f.size,date:TODAY,p:null,state:"new",uploaded:true}); INSEL.add(r.path); }
   if(added){ snack(`${added} file${added===1?"":"s"} added to Intake`); await reloadData(); renderInbox(); } }
+/* ===== #264: Process is its own run kind (POST /api/intake/process), not an ask creaite message =====
+   The click is Alan's go-ahead to stage: the server checks the files and runs cx-minutes under a guard that may stage those files'
+   meetings for Review and nothing else. Progress and Stop are on the row; a question the run couldn't answer is shown on its row as
+   "Needs you", with "Ask creaite about this", which opens the panel with the question filled in (never sent by itself). */
+export const INOUT={};     /* path → {state: "needs" | "not_staged", question} from the run's "intake" event */
+export let INSTEP="";      /* the run's latest step, in plain words, on the processing rows */
+export function inRowState(f,st){ const o=INOUT[f.path];
+  if(st==="processing") return html`<span class="spin" aria-hidden="true"></span> ${INSTATE.processing}${INSTEP?html` <span class="sub">${INSTEP}</span>`:""} <button type="button" class="linkbtn" data-instop>Stop</button>`;
+  if(st==="new"&&o&&o.state==="needs") return html`<span class="tag warn">Needs you</span> <span class="sub">${o.question}</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
+  if(st==="new"&&o&&o.state==="not_staged") return html`<span class="tag warn">Not staged</span> <span class="sub">Process it again, or ask creaite</span> <button type="button" class="linkbtn" data-inask>Ask creaite about this</button>`;
+  return html`<span class="tag ${st==="new"?"":"sub"}">${INSTATE[st]}</span>${st==="draft"&&html` <a href="#" data-go="review" class="sub">Open Review</a>`}`; }
+/** @typedef {{ok: boolean, files?: {path: string, state: string, question?: string}[], staged?: number, needs?: number, closure?: any, stopped?: boolean, message?: string}} ProcessResult */
+/* One Process run: the route's events read here (a seam, so tests can stand in for the server). */
+/** @param {{path: string, project?: string}[]} files @param {(ev: any) => void} [onEv] @returns {Promise<ProcessResult>} */
+export let processLive = async function(files,onEv){ const id=`i-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true); /** @type {any} */ let got={};
+  try{ const r=await fetch("/api/intake/process",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},body:JSON.stringify({files,run:id})});
+    if(!r.ok||!r.body){ const j=await r.json().catch(()=>({})); return {ok:false,message:j.message||"Process couldn't start: check the live server."}; }
+    const rd=r.body.getReader(), dec=new TextDecoder(); let buf="";
+    for(;;){ const {value,done}=await rd.read(); if(done) break; buf+=dec.decode(value,{stream:true});
+      for(let i=buf.indexOf("\n\n"); i>=0; i=buf.indexOf("\n\n")){ const c=buf.slice(0,i); buf=buf.slice(i+2); if(!c.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(c.slice(6)); }catch(e){ continue; }
+        if(ev.type==="intake") got={...got,files:ev.files,staged:ev.staged,needs:ev.needs}; else if(ev.type==="closure") got.closure=ev; else if(ev.type==="stopped") got.stopped=true; else if(ev.type==="error") got.message=ev.message;
+        if(onEv) onEv(ev); } }
+    return {ok:true,...got}; }
+  catch(e){ return {ok:false,stopped:e&&e.name==="AbortError",message:e&&e.name==="AbortError"?"Stopped":"The live server stopped."}; }
+  finally{ shared.RUN=null; setRunning(false); api("/api/ask/ack",{run:id}); } };
+export function inAsk(path){ const o=INOUT[path]||{}, name=path.replace(/^inbox\//,"");
+  openChat(); const box=$("#chIn"); if(box){ box.value=`About the Intake file “${name}”: ${o.question||"Process didn't stage it. Why not, and what should I do?"}`; box.focus(); } }
 export async function processInbox(){ const paths=[...INSEL]; if(!paths.length||shared.RUN) return; if(!viaServer()){ snack("Processing needs the live server"); return; }
-  INRUN=paths; INSEL.clear(); renderInbox(); openChat(); addEl("msg u",html`${`Process ${paths.length} file${paths.length===1?"":"s"} from Intake`}`);
-  try{ await askLive(`process ${paths.join("; ")}`,`Process ${paths.length===1?paths[0]:paths.length+" Intake files"} into draft minutes and proposed items`); }
-  finally{ INRUN=[]; await reloadData(); renderInbox(); } }
+  const files=paths.map(p=>({path:p}));     /* the likely project is only a guess: the run matches the project itself */
+  INRUN=paths; INSTEP=""; paths.forEach(p=>delete INOUT[p]); INSEL.clear(); renderInbox(); let r;
+  try{ r=await processLive(files,ev=>{ if(ev.type==="step"){ INSTEP=ev.label||""; renderInbox(); } }); }
+  finally{ INRUN=[]; INSTEP=""; }
+  ((r&&r.files)||[]).forEach(o=>{ if(o.state!=="staged") INOUT[o.path]={state:o.state,question:o.question||""}; });
+  await reloadData(); renderInbox();
+  snack(r&&r.closure?oneLine(r.closure.line):r&&r.stopped?"Stopped: nothing more was staged":oneLine((r&&r.message)||"Process couldn't finish")); }
 /* preview before processing; remove moves the file to backups (Undo puts it back) */
 export async function previewInbox(path){ if(!viaServer()){ snack("Previewing needs the live server"); return; } const r=await api("/api/inbox/preview",{path});
   if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
@@ -61,7 +92,9 @@ $("#inboxDrop").addEventListener("dragleave",e=>e.currentTarget.classList.remove
 $("#inboxDrop").addEventListener("drop",e=>{ e.preventDefault(); e.currentTarget.classList.remove("over"); addInboxFiles([...e.dataTransfer.files]); });
 $("#inboxDrop").addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); $("#inboxFile").click(); } });
 $("#inboxTbl").addEventListener("click",e=>{ const tr=e.target.closest("tr[data-inf]"); if(!tr) return;
-  if(e.target.closest("[data-inprev]")) previewInbox(tr.dataset.inf); else if(e.target.closest("[data-inrm]")) removeInbox(tr.dataset.inf); });
+  if(e.target.closest("[data-inprev]")) previewInbox(tr.dataset.inf); else if(e.target.closest("[data-inrm]")) removeInbox(tr.dataset.inf);
+  else if(e.target.closest("[data-instop]")){ if(shared.RUN) api("/api/ask/stop",{run:shared.RUN.id}); }     /* #264: Stop on the row */
+  else if(e.target.closest("[data-inask]")) inAsk(tr.dataset.inf); });
 $("#inPrevOpen").onclick=async()=>{ const o=await api("/api/open",{path:$("#inPrev").dataset.path}); if(!o.ok) snack(oneLine(o.message)); };
 $("#inboxTbl").addEventListener("change",e=>{ const tr=e.target.closest("tr[data-inf]"); if(!tr) return; e.target.checked?INSEL.add(tr.dataset.inf):INSEL.delete(tr.dataset.inf); renderInbox(); });
 $("#inboxNew").onclick=()=>{ uploadedFiles().filter(f=>f.state==="new").forEach(f=>INSEL.add(f.path)); renderInbox(); };
@@ -136,6 +169,10 @@ putHTML($("#isecCalBody"),html`<div class="mtgsec" id="mtgSec"><div class="mtghe
    transcript to load (No transcript, Not transcribed, No access, or not a Teams meeting) is skipped with the reason on its row, and
    the others carry on. A meeting already loaded is processed from its file. Claude never searches Teams for a missing transcript. */
 export const TXWHY={none:"No transcript for this meeting",not_transcribed:"Not transcribed yet",no_access:"No access to the transcript"};
+/* #264 S6: the project goes with the file only when Alan chose it (the picker, or remembered for the series); a match from the
+   title or the portfolio guess is left for the run to work out, never presented as his choice. The portfolio is "_portfolio". */
+/** @param {any} m @param {string} path @returns {{path: string, project?: string}} */
+export const mtgProcessFile=(m,path)=>m&&m.p&&m.how==="remembered"?{path,project:m.p}:{path};
 export const mtgSkip=m=>m.loaded?"":TXWHY[m.transcript]||(!m.transcript&&!m.teams?"Not a Teams meeting, so there is no transcript to load":"");
 export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id)); if(!L.length) return;
   if(!viaServer()){ snack("Processing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
@@ -145,14 +182,14 @@ export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id))
     if(!m.loaded){ MRUN[m.id]="loading"; renderMeetings(); runAsk(addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`));
       shared.RUNLABEL=PL; try{ await jobLive("/api/transcripts/load",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); now=MTG().find(x=>x.id===m.id);
       if(!now||!now.loaded){ MRUN[m.id]="skipped:"+(TXWHY[now&&now.transcript]||"No transcript could be loaded"); renderMeetings(); continue; } }
-    MRUN[m.id]="processing"; renderMeetings(); addEl("msg u",html`${`Process the meeting “${m.title}” (${when})`}`); const before=$$("#chLog .msg.a").length;
-    shared.RUNLABEL=PL; try{ await askLive(`process ${now.loaded}`,`Process “${m.title}” (${when}) into draft minutes and proposed items`); }catch(e){} await reloadData();
-    const after=MTG().find(x=>x.id===m.id), said=[...$$("#chLog .msg.a")].slice(before).map(e=>e.textContent.trim()).filter(Boolean).pop()||"";
-    MRUN[m.id]=after&&(after.draft||after.processed)?"draft":`failed:${oneLine(said).split(/(?<=[.!?])\s/)[0].slice(0,140)||"no draft came back"}`; renderMeetings(); } }
+    MRUN[m.id]="processing"; renderMeetings();     /* #264: through Process's own route, as Upload files does: the click is the go-ahead */
+    let r=null; try{ r=await processLive([mtgProcessFile(m,now.loaded)]); }catch(e){} await reloadData();
+    const after=MTG().find(x=>x.id===m.id), o=((r&&r.files)||[])[0], said=(o&&o.question)||(r&&r.stopped?"Stopped":"")||oneLine((r&&r.message)||"");
+    MRUN[m.id]=after&&(after.draft||after.processed)?"draft":`failed:${said.slice(0,140)||"no draft came back"}`; renderMeetings(); } }
 export async function refreshCalendar(){ const body=$("#mtgBody"); let /** @type {any} */ sk=null; const t=setTimeout(()=>{ if(body){ sk=putHTML(document.createElement("div"),MSKEL).firstChild; body.before(sk); } },150);   /* BL-263 */
   try{ if(!viaServer()){ snack("Refreshing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   $("#mtgRead").textContent="Refreshing…"; openChat(); addEl("msg u","Refresh calendar");
-  try{ await askLive("refresh calendar","Refresh the calendar for Intake and Today"); }catch(e){} await reloadData(); renderMeetings(); }
+  try{ await askLive("refresh calendar",null); }catch(e){} await reloadData(); renderMeetings(); }
   finally{ clearTimeout(t); if(sk){ sk.remove(); anim($("#mtgBody"),[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } } }
 export async function mtgProject(i,code){ const m=MTG()[i]; if(!m) return; const was=m.p; m.p=code||null; m.how=code?"remembered":"unsure";
   if(m.private||!code){ renderMeetings(); return; }             /* a private "Busy" has no series to remember */
@@ -229,4 +266,4 @@ $("#mtgSec").addEventListener("click",e=>{ const b=e.target.closest("[data-clr]"
   else if(k==="restore") mtgRestore({op:"restore",keys:[b.dataset.key]});
   else if(k==="restoreday") mtgRestore({op:"restore_day",day:b.dataset.day}); });
 }
-export const intakeSeams = { jobLive: v => { jobLive = v; }, nowHM: v => { nowHM = v; } };
+export const intakeSeams = { jobLive: v => { jobLive = v; }, nowHM: v => { nowHM = v; }, processLive: v => { processLive = v; } };
