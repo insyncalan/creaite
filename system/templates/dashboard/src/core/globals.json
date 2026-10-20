@@ -440,6 +440,7 @@
    "msItemWords",
    "msOpts",
    "mtgHasTx",
+   "mtgProcessFile",
    "mtgTx",
    "mvAct",
    "mvAddCommit",
