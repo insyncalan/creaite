@@ -314,8 +314,12 @@ def archived_moves(con=None, kind="reports"):
                 out[r.get("to")] = r.get("from")
             elif r.get("kind") == back:
                 out.pop(r.get("from"), None)
-    # #252: the record keeps the archive folder's name as it was; after Alan renames the folder by hand the key is where it is now
-    return {paths.follow_stored(k) if k else k: v for k, v in out.items()}
+    return _followed(out)
+
+
+def _followed(moves):
+    """#252: the record keeps the archive folder's name as it was; after Alan renames the folder by hand a key is where it is now."""
+    return {paths.follow_stored(k): v for k, v in moves.items() if k}
 
 
 def moved_back(con=None):
