@@ -26,6 +26,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_dashboard  # noqa: E402
 from live_browser import LiveBrowserCase  # noqa: E402
 
+QUIET = """(()=>{ if(!window.__quiet){ window.__quiet=1; const of=window.fetch, off=u=>/\\/health|\\/api\\/data|\\/api\\/files/.test(String(u));
+    window.fetch=(u,...a)=>/\\/health/.test(String(u))?Promise.reject(new Error('offline')):off(u)?Promise.resolve(new Response('{}',{status:503})):of(u,...a); }
+  shared.LIVE=false; return true; })()"""   # the fixture stands for the lists: the page's health check (every 30 s) would flip LIVE back and reload the data, and opening Intake reads the data and the file list again, over it
+SETTLED = "PULSE.reloads===0 && !shared.FBUSY"                                        # nothing still reading or reloading from the page's start-up
+
 
 class Wiring(LiveBrowserCase):
     shared_server = True
@@ -42,6 +47,8 @@ class Wiring(LiveBrowserCase):
 
     def model(self, ready=2):
         """A fixed model on the page's own Review rows: one drafted meeting holding two proposals, `ready` meetings to process."""
+        self.b.eval(QUIET)
+        self.b.wait(SETTLED)
         ns = self.b.eval("REV.filter(r=>!r.done).map(r=>r.n)")
         self.assertGreaterEqual(len(ns), 3, "the sample has fewer than three proposals")
         meetings = [{"id": "mA", "src": "calendar", "title": "Sample steering", "day": "2026-10-05", "start": "09:00", "p": None, "stage": "drafted",

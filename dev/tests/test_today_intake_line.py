@@ -26,6 +26,11 @@ SET = """window.setWaiting=(p,m,f,conf,po=0,mo=0,fo=0)=>{ shared.LIVE=false;   /
     :{id:'mx'+(mo+i),key:'mx'+(mo+i),title:'Steering '+i,p:'ABC',day:TODAY,start:'09:00',end:'10:00',transcript:'available',processed:false,draft:null,private:false}; })};
   renderBadge(); renderToday(); return true; }"""
 
+QUIET = """(()=>{ if(!window.__quiet){ window.__quiet=1; const of=window.fetch, off=u=>/\\/health|\\/api\\/data|\\/api\\/files/.test(String(u));
+    window.fetch=(u,...a)=>/\\/health/.test(String(u))?Promise.reject(new Error('offline')):off(u)?Promise.resolve(new Response('{}',{status:503})):of(u,...a); }
+  shared.LIVE=false; return true; })()"""   # the fixture stands for the lists: the page's health check (every 30 s) would flip LIVE back and reload the data, and opening Intake reads the data and the file list again, over it
+SETTLED = "PULSE.reloads===0 && !shared.FBUSY"                                        # nothing still reading or reloading from the page's start-up
+
 
 class Line(LiveBrowserCase):
     """The sample vault (populate). Each test sets exactly what waits."""
@@ -35,6 +40,8 @@ class Line(LiveBrowserCase):
         super().setUp()
         b = self.b
         b.eval(f"try{{localStorage.removeItem('{KEY}')}}catch(e){{}}")
+        b.eval(QUIET)
+        b.wait(SETTLED)
         b.eval("go('today')")
         b.eval(SET)
 
@@ -46,6 +53,8 @@ class Line(LiveBrowserCase):
 
     def reload(self):
         self.b.reload(wait_for="typeof go==='function' && LIVE")
+        self.b.eval(QUIET)
+        self.b.wait(SETTLED)
         self.b.eval("go('today')")
         self.b.eval(SET)
 
@@ -88,6 +97,16 @@ class Shows(Line):
         self.assertEqual(after["badge"], before["badge"])                                # ...and the badge, like the line, does not count it
         b.eval("D.inbox=[{state:'new',name:'Plan.docx',path:'inbox/Plan.docx',ft:''}]; renderBadge(); renderToday()")
         self.assertFalse(b.eval(VISIBLE))                                                # only the unknown one: no line
+
+    def test_the_badge_counts_a_ready_file_the_model_lacks_and_the_line_agrees(self):
+        """A file dropped in since the model was built counts at once, in the badge and in the line, as one number."""
+        b = self.b
+        self.waiting(0, 0, 1)
+        before = b.eval("irLiveCounts()")
+        b.eval("D.inbox.push({state:'new',name:'Extra.vtt',path:'inbox/Extra.vtt',ft:'transcript'}); renderBadge(); renderToday()")
+        after = b.eval("irLiveCounts()")
+        self.assertEqual((after["ready"], after["badge"]), (before["ready"] + 1, before["badge"] + 1))
+        self.assertEqual(self.text(), "Intake: 2 new files to process.")
 
     def test_a_transcript_already_loaded_for_a_meeting_is_not_a_second_item(self):
         """Decision (a): an inbox file with an event is the meeting's own transcript (Calendar import loaded it); the page folds it into
