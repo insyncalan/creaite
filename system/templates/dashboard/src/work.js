@@ -570,7 +570,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&BDRAG&&BDRAG.activ
    columns and the Board card's fields, at most four on a card) and Show (empty groups; on the Board, the Closed column's window). Options
    that don't apply to the layout in use are hidden, not greyed (BL-114). Reset returns the tab's display to its default (the layout
    stays as it is). D opens it; Esc or Done closes it and puts the focus back on the button. Nothing here changes what is filtered. */
-export const WLGRP=store.get("creaite-listgrp",{}), WSUB=store.get("creaite-worksub",{});    /* the List's grouping per tab (none by default); the sub-group per tab and layout */
+export const WLGRP=(v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{})(store.get("creaite-listgrp",{})), WSUB=store.get("creaite-worksub",{});    /* the List's grouping per tab (none by default); the sub-group per tab and layout */
 export const DEFCOLS={actions:["t","o","due","pr","st"],raid:["t","o","due","pr","resp"],decisions:["t","st","by","due","date","src"]};
 export const dispOpen=()=>$("#dispMenu").classList.contains("on");
 export const SORTOPTS=t=>t==="decisions"?[["","Default order"],["due","Needed by"],["date","Date"],["st","Status"],["by","Made by"],["t","Title"],["upd","Last updated"],["id","ID"]]
@@ -975,7 +975,7 @@ export function wkCursor(){ const order=hlOrder(), id=shared.HLC??shared.SEL, o=
 export function wkKey(e){ if(e.metaKey||e.ctrlKey||e.altKey) return false; const k=e.key;
   if(k==="ArrowDown"||k==="ArrowUp") return wkArrowOK(e)&&hlKey({key:k==="ArrowDown"?(e.shiftKey?"J":"j"):(e.shiftKey?"K":"k"),shiftKey:e.shiftKey,altKey:false,preventDefault:()=>e.preventDefault()});
   if(k==="ArrowRight"||k==="ArrowLeft"){ if(e.shiftKey||!wkArrowOK(e)) return false; return k==="ArrowRight"?wkOpen(e):wkLeft(e); }
-  if(e.shiftKey||shared.WT==="all") return false; const c=k.toLowerCase();
+  if(e.shiftKey||shared.WT==="all") return false; const c=k.toLowerCase(); if(e.repeat||document.querySelector("dialog[open]")||contextMenuOpen()) return false;
   if(WKF[c]){ const o=wkCursor(); if(!o) return false; e.preventDefault(); wkPropKey(WKF[c],o); return true; }
   if(c==="c"){ const o=wkCursor(); if(!o) return false; e.preventDefault(); wkClose(o); return true; }
   if(c==="v"){ const o=wkCursor(); if(!o&&!(pkOn()&&shared.CUR&&shared.CUR.mode==="record")) return false; e.preventDefault(); const t=o||{k:shared.CUR.k,id:shared.CUR.id}; wkClientToggle(t.k,t.id); return true; }

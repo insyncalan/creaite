@@ -39035,7 +39035,7 @@ ${s5}`;
       }
     }, true);
   }
-  var WLGRP = store.get("creaite-listgrp", {}), WSUB = store.get("creaite-worksub", {});
+  var WLGRP = ((v5) => v5 && typeof v5 === "object" && !Array.isArray(v5) ? v5 : {})(store.get("creaite-listgrp", {})), WSUB = store.get("creaite-worksub", {});
   var DEFCOLS = { actions: ["t", "o", "due", "pr", "st"], raid: ["t", "o", "due", "pr", "resp"], decisions: ["t", "st", "by", "due", "date", "src"] };
   var dispOpen = () => $("#dispMenu").classList.contains("on");
   var SORTOPTS = (t47) => t47 === "decisions" ? [["", "Default order"], ["due", "Needed by"], ["date", "Date"], ["st", "Status"], ["by", "Made by"], ["t", "Title"], ["upd", "Last updated"], ["id", "ID"]] : [["", "Default order"], ["due", "Due date"], ["pr", "Priority"], ["st", "Status"], ["o", "Owner"], ["t", "Title"], ["upd", "Last updated"], ["raised", "Raised"], ["id", "ID"]];
@@ -40079,6 +40079,7 @@ ${s5}`;
     }
     if (e4.shiftKey || shared.WT === "all") return false;
     const c5 = k5.toLowerCase();
+    if (e4.repeat || document.querySelector("dialog[open]") || contextMenuOpen()) return false;
     if (WKF[c5]) {
       const o5 = wkCursor();
       if (!o5) return false;
