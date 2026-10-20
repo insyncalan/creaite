@@ -237,5 +237,16 @@ class Queue(unittest.TestCase):
         self.assertEqual(got, {"waited": True, "started_after": 1, "beside_process": None, "held": True, "kept": 1})
 
 
+class ProcessSelectedMeetings(unittest.TestCase):
+
+    def test_m1_ask_creaite_opens_only_when_a_transcript_has_to_be_loaded(self):
+        """Process selected on a loaded meeting goes straight to /api/intake/process: openChat() sits inside the not-loaded branch."""
+        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/intake.js").read_text(encoding="utf-8")
+        body = src[src.index("export async function processMeetings"):src.index("/* ===== #265")]
+        self.assertEqual(body.count("openChat()"), 1)
+        self.assertLess(body.index("if(!m.loaded){"), body.index("openChat()"))
+        self.assertLess(body.index("openChat()"), body.index("processLive("))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

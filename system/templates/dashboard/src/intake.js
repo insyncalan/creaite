@@ -179,8 +179,8 @@ export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id))
   if(!viaServer()){ snack("Processing needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   MSEL.clear(); let chat=false; const PL=L.length>1?`Processing ${L.length} meetings`:`Processing “${L[0].title}”`;     /* BL-139: what the badge says */
   for(const m of L){ const why=mtgSkip(m); if(why){ MRUN[m.id]="skipped:"+why; renderMeetings(); continue; }
-    if(!chat){ openChat(); chat=true; } const when=`${fd(m.day)} at ${m.start}`; let now=m;
-    if(!m.loaded){ MRUN[m.id]="loading"; renderMeetings(); runAsk(addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`));
+    const when=`${fd(m.day)} at ${m.start}`; let now=m;
+    if(!m.loaded){ if(!chat){ openChat(); chat=true; } MRUN[m.id]="loading"; renderMeetings(); runAsk(addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`));
       shared.RUNLABEL=PL; try{ await jobLive("/api/transcripts/load",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); now=MTG().find(x=>x.id===m.id);
       if(!now||!now.loaded){ MRUN[m.id]="skipped:"+(TXWHY[now&&now.transcript]||"No transcript could be loaded"); renderMeetings(); continue; } }
     MRUN[m.id]="processing"; renderMeetings();     /* #264: through Process's own route, as Upload files does: the click is the go-ahead */
