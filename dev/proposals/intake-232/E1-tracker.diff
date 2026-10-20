@@ -1,0 +1,70 @@
+diff --git system/scripts/tracker.py system/scripts/tracker.py
+index fb5a714f..1dafaf13 100644
+--- system/scripts/tracker.py
++++ system/scripts/tracker.py
+@@ -1413,7 +1413,9 @@ def check_file_op(fop, blk):
+         src = op_source(fop, blk)
+         if not src or not paths.resolve(src).is_file():
+             raise Invalid(f"copy: source not found ({src})")
+-        safe_path(fop.get("to"), "copy")
++        dst = safe_path(fop.get("to"), "copy")
++        if dst.exists() and file_hash(dst) != file_hash(paths.resolve(src)):      # #232 E1: said now, not halfway through an apply
++            raise Invalid(f"copy: {paths.rel(dst)} already exists; it is never overwritten")
+     elif op == "remove":
+         safe_path(fop.get("path"), "remove")
+     elif op == "mkdir":
+@@ -2273,19 +2275,33 @@ REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
+ 
+ # ── Apply ─────────────────────────────────────────────────────────────────────
+ 
++# ===== #232 E1: someone else's minutes (cx-minutes "as": "minutes", Find work items) are filed with their items =====
++BY_OTHERS = "minutes by others"
++
++
++def by_others_waiting(data, blk):
++    """True for a block of someone else's minutes while no item of its proposal is approved. Its minutes_decision is "approved"
++    from staging (there are no minutes to approve), so without this any apply that reached the proposal copied the file, removed
++    the inbox copy and wrote processed.txt; now the file is filed only with at least one approved item, and never when every
++    item is rejected."""
++    return (blk.get("kind") == BY_OTHERS and not blk.get("applied")
++            and not any(i.get("decision") == "approved" for i in data.get("items", [])))
++
++
+ def decided(data):
+     """(items, blocks) of a proposal decided but not yet applied."""
+     items = [i for i in data.get("items", []) if not i.get("applied")
+              and i.get("decision") in ("approved", "rejected")]
+-    blks = [(b, f) for b, f in blocks(data) if not b.get("applied") and b.get(f) in ("approved", "rejected")]
++    blks = [(b, f) for b, f in blocks(data) if not b.get("applied") and b.get(f) in ("approved", "rejected")
++            and not by_others_waiting(data, b)]
+     return items, blks
+ 
+ 
+ def finished(data):
+-    """Whether every item and block of a proposal has been applied."""
++    """Whether every item and block of a proposal has been applied (a waiting block of someone else's minutes never will be)."""
+     if any(not i.get("applied") for i in data.get("items", [])):
+         return False
+-    return all(b.get("applied") for b, _ in blocks(data))
++    return all(b.get("applied") or by_others_waiting(data, b) for b, _ in blocks(data))
+ 
+ 
+ # ===== BL-323: the OneDrive copy is the day's closed zip (backup.py); its retention is Tidy up's =====
+@@ -2465,7 +2481,7 @@ def _skip_card_leftovers(work):
+ def _file_op_problems(p, data, written):
+     problems = []
+     for blk, field in blocks(data):
+-        if blk.get(field) in ("approved", "rejected") and not blk.get("applied"):
++        if blk.get(field) in ("approved", "rejected") and not blk.get("applied") and not by_others_waiting(data, blk):
+             for fop in selected_ops(blk, field):
+                 try:
+                     check_file_op(fop, blk)
+@@ -2665,7 +2681,7 @@ def _apply_blocks(data, apply_id, summary, file_records, prop=None):
+     proposal file (#124 F3)."""
+     processed = []
+     for blk, field in blocks(data):
+-        if blk.get("applied") or blk.get(field) not in ("approved", "rejected"):
++        if blk.get("applied") or blk.get(field) not in ("approved", "rejected") or by_others_waiting(data, blk):
+             continue
+         ops = selected_ops(blk, field)
+         run_file_ops(apply_id, blk, field, ops, file_records, data, prop)

@@ -102,6 +102,32 @@ A cx-minutes proposal also carries a `meeting` block:
 - **`coverage`** (BL-209, only when the meeting had an agenda or a prep page): `[{"point", "verdict"}]`, each point in the agenda's own words (never transcript text), the verdict `Covered`, `Touched on` or `Not discussed`; with `agenda`, the file the points came from. Stage refuses a point that isn't on the agenda. Points Alan carries to the series' next meeting are kept in `system/staging/carried.json` (`{"points": [{series, point, key, day, title, projects, carried}]}`), which the next prep page lists as "Not covered last time".
 - **Moved in Review (BL-200):** `review.py assign <n> <CODE>` on the minutes entry (or the dashboard's Project button) moves one project's items and filing to another. Each moved `new` item gets the new `values.project`, `match: "strong"`, `moved_from` (the project it came from), `edited_in: "review"`, its `source` path rebased to the new project's folder, and its old project's `milestone` and `workstream` cleared (kept in `moved_cleared`, keyed by that project, and put back if the item moves back there, as Review's Undo does, BL-281); an approved, unapplied item goes back to `pending`. `update` items stay (they name one tracker row). The `meeting` block gets `projects` with the old code replaced (or removed, when the new project is already listed), every `copy` op into the old project's minutes or transcripts folder pointed at the new project's (`paths.folder`; dropped when the new project already has its own), a copy of a transcript that sat in the old project's own folder added for the new one (Alan's file is never moved or removed), `source_map` rebased, and a `moved` list (`{"from", "to", "at", "items"}`). The processed line follows the copies at apply. One item moved on its own (`assign <n> <CODE>` on the item) gets the same item fields but keeps its `source`.
 
+### Someone else's minutes (#232 E1, Find work items)
+
+A file added in Intake that is another person's minutes is staged by `minutes.py stage` from a spec with `"as": "minutes"` and `"file": "inbox/<file>"` (never with `draft`, `minutes`, `transcript` or `note`: stage refuses, so BL-260 holds for every transcript). No Word draft and no minutes record are made. The `meeting` block differs from a minutes proposal:
+
+```json
+"meeting": {
+  "key": "fp:2026-10-12|vendor call|9f3c1a2b4d5e",
+  "title": "Vendor call", "date": "2026-10-12", "projects": ["ABC"],
+  "draft": null, "transcript": null,
+  "kind": "minutes by others", "source_file": "inbox/Vendor call minutes.txt",
+  "note": "projects/ABC Example Programme/minutes/2026-10-12 Vendor call.txt",
+  "minutes_decision": "approved",
+  "file_ops": [
+    {"op": "copy", "from": "inbox/Vendor call minutes.txt", "to": "projects/ABC Example Programme/minutes/2026-10-12 Vendor call.txt"},
+    {"op": "remove", "path": "inbox/Vendor call minutes.txt"}
+  ]
+}
+```
+
+- **Approved like a quick note:** `minutes_decision` is `approved` from the start (there is no minutes record to approve; the items are decided as usual) and `note` is set (the first project's filed copy), which is how `tracker.py` knows there is no draft to file (BL-260 point 4). The apply runs the `file_ops` and records the key in `processed.txt` with the filed path.
+- **When the file moves, today:** staging itself moves and writes nothing, but because `minutes_decision` is `approved` from the start, `tracker.py apply` files the copy, removes the inbox copy and writes the `processed.txt` line (0 items) the next time it reaches the proposal, whatever the items' decisions: also from a full apply for an unrelated proposal, and also when every item is rejected. **Proposed (`dev/proposals/intake-232/E1-tracker.diff`, a guarded change for Jarvis):** a block of `kind: "minutes by others"` is decided only while at least one item of its proposal is approved; with every item rejected nothing is filed and the proposal finishes; `check_file_op` also refuses a copy onto a different existing file at validation. Tests: `dev/tests/test_minutes_by_others_filing.py`.
+- **`file`:** a plain relative path (no `..`, backslash, NUL or leading `/`), in `inbox/` or already in a matched project's minutes folder once symlinks are followed; `.vtt`, `.srt` and a calendar event ID in the header are refused as transcripts. Only relative paths are stored.
+- **Key:** `fp:<day>|<normalised title>|<first 12 hex of the file's SHA-256>` (`minutes_key`, `minutes.py key --minutes <file>`): never an event ID. The same file again is "Already processed" (exit 3); `process new minutes` does not offer the filed copy again (it matches on day and title).
+- **Filing:** one `copy` per matched project to `<minutes folder>/YYYY-MM-DD <Title><ext>` (numbered `(2)` when a different file has the name), then one `remove` of the inbox copy (only for a file in `inbox/`). A file already in a matched project's minutes folder is Alan's own: no operation. Review's `assign` moves the copy to another project like any minutes copy (the `note` is not rebased).
+- **Items:** actions, decisions and RAID items and updates to open ones; a promise is skipped with a note. Each item's `source` is the filed copy plus its section.
+
 ### The minutes record (v2.1.0 P4, BL-338)
 
 When the meeting spec carries `"minutes"` (an object; never with `"draft"`), `minutes.py stage` drafts the minutes itself as a creaite document (`creaite_doc.py`, kind `minutes`; `system/scripts/minutes_record.py` builds it) instead of a Word draft. The proposal is a minutes proposal as above, with these differences:
