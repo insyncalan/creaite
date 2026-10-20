@@ -73,16 +73,16 @@ SCRIPT = r"""
     out.reviewLink=revDetail({kind:"actions",rec:{o:"Omar Ali",due:null,pr:"Medium"}}).includes('data-person="Omar Ali"');
     out.palette=[ckItems("omar").filter(i=>i.g==="People").map(i=>[i.l,i.h]),ckItems("people").some(i=>i.g==="Go to"&&i.l==="People")];
     go("today");
-    // 1. Settings › People shows the register and everyone on items, with what's missing
-    go("settings","people");
-    out.mgr=[...document.querySelectorAll("#peopleMgr tbody tr")].map(tr=>[tr.dataset.pn,tr.cells[0].textContent.replace(/\s+/g," ").trim(),tr.cells[1].textContent.trim(),tr.cells[3].textContent.trim()]);
-    // 2. add a person with the dialog; the name is required
-    el("pmAdd").click(); await wait(20); out.dlgOpen=el("personDlg").open; el("pdSave").click(); out.needName=el("pdErr").textContent;
+    // 1. the People page (#248; Settings › People's old address opens it) shows the register and everyone on items, with what's missing
+    go("settings","people"); out.mgrView=[VIEW,location.hash];
+    out.mgr=[...document.querySelectorAll("#plRows tr[data-pn]")].map(tr=>[tr.dataset.pn,tr.cells[0].textContent.replace(/\s+/g," ").trim(),tr.cells[1].textContent.trim(),((REG.find(p=>p.name===tr.dataset.pn)||{}).aliases||[]).join(", ")]);
+    // 2. add a person with the new-person dialog (the owner prompt's, ownerFinal; Settings › People's Add went with it); the name is required
+    let added=askPerson({}).then(res=>res&&res.person?regAddPerson(res.person):null); await wait(20); out.dlgOpen=el("personDlg").open; el("pdSave").click(); out.needName=el("pdErr").textContent;
     set("pd_name","Sara"); el("pdSave").click(); out.dupName=el("pdErr").textContent;
-    await fillDlg({name:"Priya Nair",email:"priya@northgate.example",aliases:"Priya, PN",org:"Northgate",role:"Architect"}); await settle();
+    await fillDlg({name:"Priya Nair",email:"priya@northgate.example",aliases:"Priya, PN",org:"Northgate",role:"Architect"}); await added; await settle();
     out.afterAdd=REG.map(p=>p.name); out.dlgClosed=!el("personDlg").open;
     // 3. edit them (the name is read-only here; renaming is its own action)
-    document.querySelector('[data-pm=edit][data-n="Priya Nair"]').click(); await wait(20); out.editName=[el("pd_name").value,el("pd_name").readOnly,el("pdTitle").textContent];
+    go("person","Priya Nair"); el("ppEdit").click(); await wait(20);   /* her page's Edit details (Settings › People's Edit has gone) */ out.editName=[el("pd_name").value,el("pd_name").readOnly,el("pdTitle").textContent];
     await fillDlg({role:"Lead architect"}); await settle(); out.afterEdit=REG.find(p=>p.name==="Priya Nair").role;
     // 4. the owner picker (BL-179: a new item is the peek, so it is the owner chip's list): typing filters, a stranger is offered
     //    as typed, and using it asks for the person's details (ownerFinal)
@@ -172,13 +172,16 @@ class PeopleDashboardTests(unittest.TestCase):
     def test_no_script_errors(self):
         self.assertEqual(self.r["errors"], [])
 
-    def test_settings_lists_the_register_and_flags_gaps(self):
+    def test_the_people_page_lists_the_register_and_flags_gaps(self):
+        # the Settings line: Settings › People is gone; its address opens the People page (#248), whose Everyone tab is the register
+        # and everyone on items. "needs details" replaced "not in register" there (#248); aliases are on the record, not a column.
+        self.assertEqual(self.r["mgrView"], ["people", "#people"])
         rows = {n: (label, email, aliases) for n, label, email, aliases in self.r["mgr"]}
         self.assertIn("Sara Example", rows)
         self.assertEqual(rows["Sara Example"][1], "sara.example@client.com")
         self.assertIn("Sara, Sara E", rows["Sara Example"][2])
-        self.assertIn("not in register", rows["S. Example"][0])                     # on items, not registered
-        self.assertIn("(you)", rows["Alan Carter"][0])
+        self.assertIn("needs details", rows["S. Example"][0])                       # on items, with no email, organisation or role
+        self.assertIn("You (Alan Carter)", rows["Alan Carter"][0])
 
     def test_add_and_edit_through_the_dialog(self):
         r = self.r

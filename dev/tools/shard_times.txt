@@ -230,7 +230,6 @@ test_peek_fixes.py 89
 test_peek_follow.py 14
 test_people.py 124
 test_people_dashboard.py 119
-test_people_filters.py 37
 test_permission_file.py 19
 test_permission_panel.py 13
 test_permissions.py 41

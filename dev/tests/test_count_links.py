@@ -297,11 +297,13 @@ class Links(LiveBrowserCase):
         plain = b.eval("[...document.querySelectorAll('#prepBody .prepsec h3')].filter(h=>/^Decisions since|^Recent reports|^Early warnings/.test(h.textContent)).map(h=>!!h.querySelector('a'))")
         self.assertTrue(plain and not any(plain))                    # what Work can't list stays plain
 
-    def test_settings_people_and_workstream_counts(self):
+    def test_the_old_settings_people_address_lands_on_counts_that_open_work(self):
+        """The Settings line: Settings › People (whose any-status counts this checked) is gone; its address opens the People
+        page's Everyone tab (#248), whose every non-zero count is a link that opens Work with that many of that person's items."""
         b = self.b
-        page = lambda: (b.eval("go('settings','people')"), b.wait("document.querySelector('#peopleMgr td.num')"))    # noqa: E731
-        L = self.check_all("#peopleMgr", page, "settings", minimum=2)
-        self.assertTrue(all(":st=&o=" in x["nav"] for x in L))
+        page = lambda: (b.eval("setPTab('all'); go('today'); go('settings','people')"), b.wait("VIEW==='people' && document.querySelector('#peopleTbl td.num')"))    # noqa: E731
+        L = self.check_all("#peopleTbl", page, "people", minimum=2)
+        self.assertTrue(all("o=" in x["nav"] for x in L), [x["nav"] for x in L])        # each opens that person's items
 
 
 if __name__ == "__main__":
