@@ -39,6 +39,14 @@ MUTATIONS = {   # (what it breaks, old text, new text), all in edit_ai.py
     "fail-open": ("a check that couldn't run lets the reply through",
                   "    if any(f in FAIL_CLOSED for f in found):\n        return found\n", ""),
     "plain-message": ("the minutes' own message is not used", "else MINUTES_DROPPED)", "else refusal(bad, True))"),
+    # review of 693f0406
+    "vip-hides": ("a selection holding VIP hides what the reply adds (the old order)",
+                  "    text, original = _unprivate(text), _unprivate(original)\n", ""),
+    "vip-added-ok": ("a reply adding VIP passes", " + ([\"something private\"] if added_private else [])", ""),
+    "no-untag": ("HTML inside an ID or a name isn't read through", "    return text if bare == text else f\"{text}\\n{bare}\"\n",
+                 "    return text\n"),
+    "no-ready": ("minutes with no project or an unknown one go to Claude", "    if not code or not _project_known(code):\n",
+                 "    if False:\n"),
 }
 
 
@@ -92,10 +100,31 @@ class TheMinutesSheet(E._Vault):
         out = self.reply(ask(), ORIGINAL + " ABC-A-002 is with the client.")
         self.assertIn("ABC-A-002", out["text"])
 
-    def test_minutes_with_no_project_are_dropped(self):
-        out = self.reply(ask(code=""), "The statement of work is with the client.")
+    def test_minutes_with_no_project_or_an_unknown_one_are_refused_before_claude(self):
+        for code in ("", "ZZZ"):
+            self.assertIn("no project in the tracker", self.context(ask(code=code)).get("refused", ""), code)
+        # and a reply that gets there anyway (a context made by hand) is still dropped
+        ctx = {"place": "minutes", "code": "", "original": "The statement of work is with the client.", "option": "polish"}
+        out = E.edit_ai(self.root, "result", {"request": ask(code=""), "context": ctx,
+                                              "reply": "<<<SUGGESTION\nThe statement of work is with the client.\nSUGGESTION>>>"})
         self.assertEqual(out["text"], "")
-        self.assertIn("no project", out.get("message", ""))
+
+    def test_a_selection_holding_vip_still_has_the_reply_checked(self):
+        for vip in ("VIP", "v.i.p", "V.I.P."):
+            sel = f"Our {vip} sponsor is happy."
+            for added in (" ABC-A-004 is open.", " Omar Ali chases.", " " + E.REASON + ".", " Internal only.", " ABC-005 waits."):
+                out = self.reply(ask(text=sel), sel + added)
+                self.assertEqual(out["text"], "", (vip, added))
+                self.assertIn(DROPPED, out.get("message", ""), (vip, added))
+                self.assertNotIn("VIP", out.get("message", "").upper().replace(" ", ""), (vip, added))   # BL-288
+            out = self.reply(ask(text=sel), f"Our {vip} sponsor is very happy.")                          # only repeats it: passes
+            self.assertIn("happy", out["text"], vip)
+
+    def test_html_inside_an_id_or_a_name_is_read_through(self):
+        sel = "The statement of work is with the client."
+        for added in (" ABC<!-- -->-A-004 is open.", " <b>ABC</b>-A-004 is open.", " ABC-A-00<b>4</b> is open.", " Om<b>ar</b> Ali chases."):
+            out = self.reply(ask(text=sel), sel + added)
+            self.assertEqual(out["text"], "", added)
 
     def test_the_weekly_sheet_is_unchanged(self):
         out = self.reply(ask(place="report"), ORIGINAL + " ABC-005 is also open.")

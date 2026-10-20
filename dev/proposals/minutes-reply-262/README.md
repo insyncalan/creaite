@@ -1,5 +1,9 @@
 # Proposal #262: AI on the minutes sheet can't add anything internal to the Distributed version
 
+> **Apply order:** #186's diff first. On its own: then this `edit_ai.diff`. With #263 too: #186, then #263's diff, then
+> **`edit_ai-after-263.diff`** (not `edit_ai.diff`). The other order (#262's plain diff before #263) makes #263's diff fail a hunk, and
+> #263's guard then stops `edit_ai.py` from loading, on purpose.
+
 Alan said yes to this on 20-10-2026 (decision 6 of #186). `edit_ai.py` is guarded-adjacent, so it is not changed on this branch:
 `edit_ai.diff` is the change, and it applies **on top of #186's diff** (apply #186 first). No page change is needed: the page already
 shows a dropped suggestion's message. The help (Reference › minutes) has one new line.
@@ -30,11 +34,24 @@ statement of work is with the client; ABC-005 (vendor exit risk) is also open, a
 - The check runs on every line of the sheet, Internal-only lines too: the server can't tell which line the selection is on without
   trusting the page, and Claude shouldn't add facts anywhere (its prompt already says so). That is the strict side.
 
+## Review fixes (693f0406)
+
+- **VIP in the selection no longer hides the reply.** The client check stops at the word VIP, so a selection holding it used to let
+  any reply through. Now the word is checked on its own (a reply that adds it is dropped) and taken out of both texts before the rest
+  of the check, which then runs in full: "Our VIP sponsor is happy." plus an added internal item, owner, health reason or marker is
+  dropped; a reply that only keeps the selection's own word passes. The message never says VIP (BL-288).
+- **HTML inside an ID or a name** (`ABC<!-- -->-A-004`, `<b>ABC</b>-A-004`, `ABC-A-00<b>4</b>`, `Om<b>ar</b> Ali`): every reply check
+  (the minutes sheet, the client sheet, the outside email) now also reads the text with HTML tags and comments taken out. It only
+  adds findings.
+- **Minutes with no project, or an unknown one, are refused before Claude runs** ("These minutes have no project in the tracker, so
+  a suggestion couldn't be checked before it reaches the Distributed version; nothing was sent to Claude."), instead of a run whose
+  every reply is dropped.
+
 ## What you will see
 
 - A suggestion that adds something internal: "The suggestion was dropped: it added something internal (an item that isn't
   client-visible, a name or internal wording) that the Distributed version would carry. Try again, or edit the minutes yourself."
-- Minutes with no project: "The suggestion was dropped: there's no project to check it against."
+- Minutes with no project, or a project the tracker doesn't hold: refused before Claude runs (the message above).
 - Everything else: as today.
 
 ## What can still go wrong
@@ -63,8 +80,18 @@ statement of work is with the client; ABC-005 (vendor exit risk) is also open, a
 
 ## Size and risk
 
-- Size: **S.** About 30 lines in `edit_ai.py`: `MINUTES_PLACES`, `minutes_problems`, and `_reply_problems`, which `result()` now calls
+- Size: **S.** About 90 lines in `edit_ai.py` (after the review fixes): `MINUTES_PLACES`, `minutes_problems`, and `_reply_problems`, which `result()` now calls
   for the minutes sheet, the client place and the outside email (the same checks as before for those two; `result()` itself got
   simpler). No `live_server.py` change, no page change.
 - Risk: low. More suggestions may be dropped on the minutes sheet, only when they add something internal.
 - Needs: an independent review of the diff.
+
+## Found while reviewing, a separate item (not changed here)
+
+The ✦ redraft of one minutes section (`drafts.py`, kind `minutes-section`, `build_minutes_section` and `minutes_version`) is a
+different path from the sheet's AI bar. Today it builds its facts from `minutes_record.distributed_of` (the Distributed version: no
+Internal-only line, no withheld item), refuses an Internal-version section that holds an Internal-only line, gives Claude no tracker
+item IDs or owners (its `code` is empty), and drops a Distributed section that names VIP; but its reply gets no `client_problems`
+check, so a redraft could still bring in an internal item ID or an owner's name from Claude's own words. It is the same risk as
+#262, smaller (Claude isn't given the facts), and more than a few lines to close (the section needs its minutes' project and the
+same "what it adds" check), so it wants its own item: run `minutes_problems` on the section reply against the minutes' project.
