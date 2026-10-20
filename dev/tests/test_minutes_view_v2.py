@@ -617,6 +617,35 @@ class MinutesViewV2(LiveBrowserCase):
         for sec, (_, _, gap) in got.items():
             self.assertLess(gap, 14, f"{sec}: the count sits beside the heading, as the mockup: {got}")
 
+    def test_18_dark_theme_the_white_paper_keeps_light_state_colours(self):
+        """Cap's #268 review M2: in a dark theme the paper stays white, so the hover row, an Urgent or High priority and the
+        "needs details" chip use light values: text 4.5:1 or more, and the hover row clearly differs from the paper."""
+        got = self.ev("""(()=>{
+          const rgb=c=>{const m=c.match(/[\\d.]+/g).map(Number); return m.length>3&&m[3]===0?null:m.slice(0,3)};
+          const lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4}; return .2126*f(r)+.7152*f(g)+.0722*f(b)};
+          const ratio=(a,b)=>{const x=lum(a),y=lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+          const bg=e=>{for(;e;e=e.parentElement){const c=rgb(getComputedStyle(e).backgroundColor); if(c) return c} return [255,255,255]};
+          const out={};
+          for (const mode of ['dark','light']) {
+            document.documentElement.setAttribute('data-theme',mode);
+            const row=document.querySelector("#v-minutes tr.mi[data-n='1']"); row.classList.add('hl');
+            const td=row.querySelector('td:nth-child(2)'), paper=rgb(getComputedStyle(document.querySelector('#v-minutes .sheet-a4 .page')).backgroundColor);
+            const sel=row.querySelector('.msel'), cls=sel.className;
+            const r={hover:ratio(rgb(getComputedStyle(td).color),bg(td)), hoverVsPaper:ratio(bg(td),paper)};
+            row.classList.remove('hl');
+            for (const p of ['U','H']) { sel.className=cls+' pr-'+p; r['pr'+p]=ratio(rgb(getComputedStyle(sel).color),bg(sel)); }
+            sel.className=cls;
+            const chip=document.querySelector('#v-minutes .mck:not(.info)'); r.chip=chip?ratio(rgb(getComputedStyle(chip).color),bg(chip)):0;
+            r.paper=paper.join(','); out[mode]=r;
+          }
+          document.documentElement.removeAttribute('data-theme');
+          return out; })()""")
+        for mode, r in got.items():
+            self.assertEqual(r["paper"], "255,255,255", f"{mode}: the paper stays white")
+            for k in ("hover", "prU", "prH", "chip"):
+                self.assertGreaterEqual(r[k], 4.5, f"{mode}: {k} legible on the paper: {r}")
+            self.assertGreaterEqual(r["hoverVsPaper"], 1.15, f"{mode}: the hover row is clearly visible: {r}")
+
 
 if __name__ == "__main__":
     unittest.main()

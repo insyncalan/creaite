@@ -113,9 +113,8 @@ class TrackOps(Base):
 TRACK_JS = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/minutes/track.js").as_uri()
 
 
-@unittest.skipUnless(shutil.which("node"), "needs Node")
-class TrackJs(Base):
-    """components/minutes/track.js run for real (Node) on the record and plan the view gets, its ops sent to the server."""
+class RunsTrackJs:
+    """components/minutes/track.js run for real (Node) on the record and plan the view gets."""
     def view(self):
         return self.js("import minutes_record\n"
                        f"r = minutes_record.view(file={self.name!r})\nprint(json.dumps({{'doc': r['doc'], 'plan': r['plan']['items']}}))")
@@ -133,6 +132,10 @@ class TrackJs(Base):
     def states(self, choices=None):
         return {str(k): t for k, t in self.track("Object.fromEntries(T.trackRows(doc).map(r => [r.n, T.trackOf(doc, r, plan)]))", choices).items()}
 
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class TrackJs(RunsTrackJs, Base):
+    """track.js on test_minutes_approve's meeting, its ops sent to the server."""
     def test_the_defaults_follow_the_plan(self):
         self.assertEqual(self.states(), {"1": "y", "2": "y", "3": "y", "4": "", "5": "", "6": "", "7": ""},
                          "a new action, a new issue and an update in the group ticked; a new decision, a new risk, a closure and a "
@@ -150,14 +153,14 @@ class TrackJs(Base):
                          "3 work items to register · 2 kept in the minutes only · 2 left in Review", "counts only what will register")
         for op in self.track("T.reconcileOps(doc, plan)"):
             self.assertTrue(self.change(op)["ok"], op)
-        r = self.approve(group=True, own=self.track("T.ownTicked(doc, plan)"))
+        r = self.approve(**self.track("T.approveArgs(doc, plan)"))
         self.assertTrue(r["ok"], r)
         self.assertEqual((r["approved"], sorted(r["waiting"])), (3, [6, 7]))
         items = {i["n"]: i for i in self.data()["items"]}
         self.assertEqual((items[6]["decision"], items[7]["decision"]), ("pending", "pending"), "not rejected: still in Review")
 
     def test_a_ticked_closure_is_approved_with_the_minutes(self):
-        self.assertEqual(self.track("T.ownTicked(doc, plan)", {"6": "y"}), [6])
+        self.assertEqual(sorted(self.track("T.approveArgs(doc, plan)", {"6": "y"})["own"]), [1, 2, 3, 6])
         self.assertEqual(self.track("T.trackCounts(doc, plan)", {"6": "y"})["y"], 4)
 
     def test_a_kept_line_ticked_is_restored_and_crossed_is_restored_then_removed(self):
@@ -169,6 +172,56 @@ class TrackJs(Base):
         for op in ops:
             self.assertTrue(self.change(op)["ok"], op)
         self.assertEqual(self.track("T.reconcileOps(doc, plan)", {"4": "y", "2": "n", "5": "y"}), [], "in line now")
+
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class RowlessPromise(RunsTrackJs, Base):
+    """Cap's #268 review H1: a promise has no row in the minutes, so no Track control; Approve minutes must never register it.
+    The view sends group false with exactly the ticked rows' numbers (track.js approveArgs)."""
+    def setUp(self):
+        super().setUp()
+        f = self.v.root / "system/staging/drafts/promise.json"
+        s = {"title": "[ABC] Promise check-in", "date": "2026-10-14", "projects": ["ABC"],
+             "minutes": {"start": "12:00", "end": "12:30", "summary": ["A short check-in."], "chat": False},
+             "items": [{"table": "actions", "values": {"project": "ABC", "description": "Draft the cutover runbook", "owner": "Jane Doe"}},
+                       {"table": "promises", "section": "Jane Doe, 12:05", "values": {
+                           "project": "ABC", "promised_by": "Jane Doe", "promised_to": "Alan Carter",
+                           "description": "Send the vendor's rate card", "due_date": "2026-10-20"}}]}
+        f.write_text(json.dumps(s), encoding="utf-8")
+        before = {p.name for p in (self.v.root / "system/staging").glob("proposed-*.json")}
+        self.v.run("stage", str(f), script="minutes.py")
+        self.name = next(p.name for p in (self.v.root / "system/staging").glob("proposed-*.json") if p.name not in before)
+        self.draft = json.loads((self.v.root / "system/staging" / self.name).read_text())["meeting"]["draft"]
+
+    def change(self, op):
+        return self.js("import minutes_record\n"
+                       f"r = minutes_record.change({self.draft!r}, {op!r})\nr.pop('doc', None)\nprint(json.dumps(r))")
+
+    def promises(self):
+        return [p["description"] for p in self.v.rows("promises")]
+
+    def test_every_row_crossed_registers_nothing_not_even_the_promise(self):
+        choices = {"1": "n"}
+        self.assertEqual(self.states(choices), {"1": "n"}, "only the action has a Track control")
+        for op in self.track("T.reconcileOps(doc, plan)", choices):
+            self.assertTrue(self.change(op)["ok"], op)
+        args = self.track("T.approveArgs(doc, plan)", choices)
+        self.assertEqual(args, {"group": False, "own": []})
+        r = self.approve(**args)
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["approved"], 0, r)
+        self.assertNotIn("Send the vendor's rate card", self.promises(), "a promise nobody saw is never registered")
+        self.assertNotIn("Draft the cutover runbook", [a["description"] for a in self.v.rows("actions")])
+        self.assertEqual(r["waiting"], [2], "the promise waits in Review")
+
+    def test_a_ticked_row_registers_and_the_rowless_promise_is_counted_as_left_in_review(self):
+        self.assertEqual(self.track("T.trackSummary(T.trackCounts(doc, plan))"),
+                         "1 work item to register · 0 kept in the minutes only · 1 left in Review")
+        r = self.approve(**self.track("T.approveArgs(doc, plan)"))
+        self.assertTrue(r["ok"], r)
+        self.assertEqual((r["approved"], r["waiting"]), (1, [2]))
+        self.assertIn("Draft the cutover runbook", [a["description"] for a in self.v.rows("actions")])
+        self.assertNotIn("Send the vendor's rate card", self.promises())
 
 
 class RaidWorkstream(Base):

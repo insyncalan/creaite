@@ -2080,7 +2080,7 @@ def _minutes_refusal(p, data):
 
 def approve_minutes(name, group=True, own=(), via="dashboard"):
     """Approve a meeting's minutes and the ticked items in one apply: {ok, message, apply_id, approved, waiting}. `group` ticks
-    actions and updates; `own` lists the numbers of the items ticked one by one. On a failed apply nothing changes: every decision
+    actions and updates; `own` lists the numbers of the items ticked one by one (with `group` False, of every ticked item). On a failed apply nothing changes: every decision
     is put back as it was."""
     p = paths.STAGING / Path(str(name)).name
     if not re.fullmatch(r"proposed-[\w.-]+\.json", p.name) or not p.is_file():
@@ -2106,11 +2106,13 @@ def approve_minutes(name, group=True, own=(), via="dashboard"):
 
 
 def _tick(data, group, own):
-    """Approve the ticked items: the group when `group`, and each of `own`. (how many, [the numbers left waiting in Review])."""
+    """Approve the ticked items: the group when `group`, and each of `own`. (how many, [the numbers left waiting in Review]).
+    #268 (Cap's review H1): the minutes view sends group False and every ticked row's number in `own`, a group item's too, so
+    an item the minutes show no row for (a promise) is never approved unseen."""
     approved, waiting = 0, []
     for it in data.get("items") or []:
         g = minutes_group(it)
-        if (g == "group" and group) or (g == "own" and it.get("n") in own):
+        if (g == "group" and group) or (g in ("group", "own") and it.get("n") in own):
             it.update(decision="approved", decided_in="minutes")
             approved += 1
         elif g in ("group", "own", "milestone", "waits"):

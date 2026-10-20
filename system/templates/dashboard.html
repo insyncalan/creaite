@@ -3432,7 +3432,10 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 /* ===== v2.1.0 P5 (BL-335, BL-338): the A4 sheet (components/report/Sheet.jsx). The chrome (bar, handles, pop-ups) uses the page's
    tokens; the page itself is a document, the same in every theme as it exports (creaite_doc.CSS: paper, ink, rules), so it has
    its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
-:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
+:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F
+  /* #268 (Cap's review M2): the state colours on the paper, light in every theme, as the paper is */
+  --paper-ok:#2E6B3A; --paper-ok-soft:#E3F2E5; --paper-bad:#B3261E; --paper-bad-soft:#FBE7E5; --paper-warn:#8A5A00; --paper-warn-soft:#FBF0DA;
+  --paper-accent-soft:#D3EAEE; --paper-focus:#0B6E7F}
 .sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
 /* #202 (mockup report-banner, A): the header is in the layout. On a down scroll the search bar and the title block collapse to nothing
    (still focusable: a Tab into one brings the header back) and the toolbar is the one slim bar. Nothing slides, so reduced motion needs no rule. */
@@ -3554,7 +3557,8 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnwrap{display:flex;flex:1;min-height:0}
 .mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
 /* the minutes' own controls sit on the A4 paper, which stays white in dark mode: they take the paper's tokens there */
-#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--line:var(--paper-rule);--accent:var(--paper-link)}
+#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--faint:var(--paper-mute);--line:var(--paper-rule);--line-strong:var(--paper-rule);--accent:var(--paper-link);--accent-ink:var(--paper);
+  --ok:var(--paper-ok);--ok-soft:var(--paper-ok-soft);--bad:var(--paper-bad);--bad-soft:var(--paper-bad-soft);--warn:var(--paper-warn);--warn-soft:var(--paper-warn-soft);--accent-soft:var(--paper-accent-soft);--focus:var(--paper-focus)}   /* #268 M2: the paper stays white in a dark theme, so its state colours stay light ones */
 #v-minutes .sheet-a4 .page .sheet-h{field-sizing:content;width:auto!important;min-width:2ch}   /* #268: the heading as wide as its words, so its count sits beside it (the mockup) */
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
 .mnlines p,.mnlines li{margin:0 0 4px}
@@ -3591,10 +3595,10 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 #v-minutes .sheet-status{white-space:nowrap}
 .mnzv{border:0;background:none;color:inherit;cursor:pointer;border-radius:var(--r-sm);padding:2px 4px;min-height:24px;font:inherit;font-size:var(--fs-xs)} .mnzv:hover{background:var(--sunk)}
 .sheet-a4 .page table.mnt{table-layout:fixed;width:100%;margin:4px 0 8px}
-.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:12px;position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
+.sheet-a4 .page table.mnt th{padding:5px 8px;font-size:var(--fs-xs);position:static}   /* the app's sticky th would draw the grey header over the rows as the sheet scrolls */
 .sheet-a4 .page table.mnt td{padding:7px 8px}
 .mnt col.c-trk{width:62px} .mnt col.c-own{width:118px} .mnt col.c-by{width:150px} .mnt col.c-due{width:100px} .mnt col.c-pri{width:86px} .mnt col.c-ws{width:108px}
-.mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:12px}
+.mnh3{font-size:15px;margin:12px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px} .mnh3 .n,.sheet-a4 .page section h2 .sheet-hn{font-weight:400;color:var(--paper-mute);font-size:var(--fs-xs)}
 .mntrk{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;vertical-align:top}
 .mntrk button{width:26px;height:26px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
 .mntrk button+button{border-left:1px solid var(--line)} .mntrk button svg{width:14px;height:14px} .mntrk button:hover{background:var(--sunk)}
@@ -3610,12 +3614,12 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mck{max-width:100%;flex-wrap:wrap;column-gap:6px;row-gap:0} .mck>*{white-space:nowrap}
 .mck.info{background:var(--sunk);color:var(--muted)} .mck .linkbtn{font-size:var(--fs-xs);min-height:26px}
 .mnrow2 .mncheck{font-size:var(--fs-xs);min-height:26px}
-.msel{height:26px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:12px;padding:0 8px;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;appearance:none;-webkit-appearance:none;background-image:none}
-.mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:24px}
+.msel{height:26px;width:100%;max-width:100%;border:1px solid transparent;border-radius:var(--r-pill);background:var(--sunk);color:var(--ink);font:inherit;font-size:var(--fs-xs);padding:0 8px;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;appearance:none;-webkit-appearance:none;background-image:none}
+.mnt .msel{display:flex;align-items:center;justify-content:flex-start;text-align:left;line-height:var(--lh-24)}
 .msel.mnro{cursor:default} .msel.mnro:hover{border-color:transparent;background:var(--sunk)} .msel.mnro.empty:hover{background:none;border-color:var(--line)}
 .msel:hover{border-color:var(--line);background:var(--surface)} .msel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--focus);background:var(--surface)}
 .msel.empty{color:var(--muted);background:none;border:1px dashed var(--line)} .msel.pr-U{color:var(--bad)} .msel.pr-H{color:var(--warn)}
-.mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:12px}
+.mnt .mndue{width:100%;text-align:left;justify-content:flex-start;font-size:var(--fs-xs)}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -72428,6 +72432,10 @@ ${d5.text}`);
     lay.track = { ...trackChoices(doc), [String(n4)]: t47 };
     return { ...doc, layout: lay };
   }
+  function rowlessPending(doc, plan) {
+    const shown2 = new Set(trackRows(doc).map((r4) => r4.n));
+    return (plan || []).filter((i5) => ["group", "own", "waits", "milestone"].includes(i5.group) && !shown2.has(i5.n)).map((i5) => i5.n);
+  }
   function trackCounts(doc, plan) {
     const c5 = { y: 0, k: 0, n: 0, w: 0 };
     for (const r4 of trackRows(doc)) {
@@ -72439,6 +72447,7 @@ ${d5.text}`);
       } else if (waitsWhenNeither(r4, plan)) c5.w++;
       else c5.k++;
     }
+    c5.w += rowlessPending(doc, plan).length;
     return c5;
   }
   var trackPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
@@ -72455,7 +72464,7 @@ ${d5.text}`);
     }
     return ops;
   }
-  var ownTicked = (doc, plan) => trackRows(doc).filter((r4) => planGroupOf(plan, r4.n) === "own" && trackOf(doc, r4, plan) === "y").map((r4) => r4.n);
+  var approveArgs = (doc, plan) => ({ group: false, own: trackRows(doc).filter((r4) => ["group", "own"].includes(planGroupOf(plan, r4.n)) && trackOf(doc, r4, plan) === "y").map((r4) => r4.n) });
   function approveProblems(doc, plan, needsDetails) {
     const out = [];
     for (const r4 of trackRows(doc)) {
@@ -73310,7 +73319,7 @@ ${d5.text}`);
     approving.value = true;
     try {
       if (!await mnSaveFirst()) return;
-      const own = ownTicked(doc, plan);
+      const args = approveArgs(doc, plan);
       let made = 0;
       for (const op2 of reconcileOps(doc, plan)) {
         const r5 = await changeMinutes(op2);
@@ -73320,7 +73329,7 @@ ${d5.text}`);
         }
         made++;
       }
-      const r4 = await approveMinutes(true, own);
+      const r4 = await approveMinutes(args.group, args.own);
       if (!r4.ok) {
         snack(String(r4.message || "The apply didn't run; nothing was changed.").split("\n")[0]);
         return;
@@ -77043,6 +77052,7 @@ ${d5.text}`);
         "applyTheme",
         "applyView",
         "applyWords",
+        "approveArgs",
         "askChangesHtml",
         "askDeleteNote",
         "askLive",
@@ -77370,7 +77380,6 @@ ${d5.text}`);
         "orderedCols",
         "ordinal",
         "overdue",
-        "ownTicked",
         "ownerFinal",
         "ownerMatches",
         "ownerOptions",

@@ -25,7 +25,7 @@ import { Coverage } from "./Coverage.jsx";
 import { ItemTable } from "./ItemTable.jsx";
 import { checksOf } from "./minutesDoc.js";
 import { SummaryText, TextLines } from "./TextLines.jsx";
-import { approveProblems, ownTicked, reconcileOps, trackCounts, trackSummary } from "./track.js";
+import { approveArgs, approveProblems, reconcileOps, trackCounts, trackSummary } from "./track.js";
 import { jumpTo, TranscriptPane } from "./TranscriptPane.jsx";
 import { REV } from "../../core/data.js";
 import { $ } from "../../core/dom.js";
@@ -103,7 +103,7 @@ async function approveNow(anyway) {
   approving.value = true;
   try {
     if (!(await mnSaveFirst())) return;
-    const own = ownTicked(doc, plan);
+    const args = approveArgs(doc, plan);                   // review H1: only the ticked rows, never an item with no row
     let made = 0;
     for (const op of reconcileOps(doc, plan)) {
       const r = await changeMinutes(op);
@@ -114,7 +114,7 @@ async function approveNow(anyway) {
       }
       made++;
     }
-    const r = await approveMinutes(true, own);
+    const r = await approveMinutes(args.group, args.own);
     if (!r.ok) { snack(String(r.message || "The apply didn't run; nothing was changed.").split("\n")[0]); return; }
     const n = r.approved || 0, left = (r.waiting || []).length;
     snack(`Minutes approved · ${n ? `${n} work item${n === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} wait in Review` : ""}`,
