@@ -376,7 +376,7 @@ class Inventory(unittest.TestCase):
         for b in ("Dialog", "Menu", "FilterBar", "Picker", "Opener"):
             self.assertIn(b, blocks)
         ids = {v for s in sites for k, v in s["keys"] if k == "id"}
-        for x in ("cmdk", "rvDlg", "railCust", "closeDlg", "pkMoreMenu", "chHistMenu", "wfilters", "dispMenu"):
+        for x in ("cmdk", "llDlg", "railCust", "closeDlg", "pkMoreMenu", "chHistMenu", "wfilters", "dispMenu"):
             self.assertIn(x, ids, "a popup the code makes is missing from the inventory")
         if os.environ.get("SB_REPORT"):
             for s in sorted(sites, key=lambda s: (s["area"], s["file"], s["line"])):
