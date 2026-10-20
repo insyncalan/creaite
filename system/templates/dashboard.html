@@ -2662,6 +2662,10 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
 .ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
 #actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
+#actUsage .urev .qtab td,#actUsage .urev .qtab th{white-space:normal;overflow-wrap:anywhere} #actUsage .urev .qtab td:first-child{white-space:nowrap;width:7.5em}   /* v2.5.3: Your reviews */
+.urevact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0} .urevact .sub{margin:0}
+.urevform{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 12px;align-items:center;max-width:760px;margin:10px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.urevform label{font-size:var(--fs-sm);color:var(--muted)} .urevform input{width:100%;min-width:0} .urevform .urevdate{width:auto} .urevform .urevact{margin:4px 0 0}
 /* ===== end #238 ===== */
 /* ===== end sprint-drafts-extraction (CSS) ===== */
 /* ===== BL-216 (sprint-ui-sweep) ===== every pointer target is at least 24 by 24 (WCAG 2.5.8). Where the drawn control is
@@ -65693,7 +65697,140 @@ ${d5.text}`);
     const k5 = Math.abs(r4.change_bytes) / 1e3;
     return `${r4.change_bytes > 0 ? "+" : "−"}${Number((k5 >= 10 ? Math.round(k5) : k5).toFixed(1))} KB since ${fd3(r4.since)}`;
   }
-  function UsagePanel({ usage, fd: fd3 }) {
+  var REVIEW_ROUTE = "/api/usage/review", MAX_NOTE = 200;
+  var NEEDS_UPDATE = "Saving reviews needs the next server update", NEEDS_LIVE = "Saving a review note needs the live server";
+  var FORMULA = /^[=+\-@\t\r]/;
+  var csvCell = (v5) => {
+    let s5 = String(v5 ?? "");
+    if (FORMULA.test(s5)) s5 = `'${s5}`;
+    return `"${s5.replace(/"/g, '""')}"`;
+  };
+  var reviewsCsv = (list, fd3) => [["Date", "What you saw", "What you decided"], ...list.slice().reverse().map((r4) => [fd3(r4.date), r4.saw, r4.decided])].map((row2) => `${row2.map(csvCell).join(",")}\r
+`).join("");
+  function saveFile(text, name) {
+    const url = URL.createObjectURL(new Blob(["\uFEFF", text], { type: "text/csv;charset=utf-8" }));
+    const a5 = document.createElement("a");
+    a5.href = url;
+    a5.download = name;
+    document.body.append(a5);
+    a5.click();
+    a5.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1e3);
+  }
+  function Reviews({ list, fd: fd3, held, onSaved }) {
+    const [open2, setOpen2] = d2(false), [busy2, setBusy] = d2(false), [msg, setMsg] = d2("");
+    const [day, setDay] = d2(""), [saw, setSaw] = d2(""), [dec, setDec] = d2("");
+    const focusAdd = () => setTimeout(() => (
+      /** @type {HTMLElement | null} */
+      document.querySelector("#uRevAdd")?.focus()
+    ), 0);
+    const start = () => {
+      if (held) return;
+      setDay(fd3(TODAY));
+      setSaw("");
+      setDec("");
+      setMsg("");
+      setOpen2(true);
+      setTimeout(() => (
+        /** @type {HTMLElement | null} */
+        document.querySelector("#uRevSaw")?.focus()
+      ), 0);
+    };
+    const close = () => {
+      setOpen2(false);
+      focusAdd();
+    };
+    const save2 = async () => {
+      const date = readDate(day);
+      if (!date) return setMsg("Write the date as DD-MM-YYYY.");
+      if (!saw.trim() && !dec.trim()) return setMsg("Write what you saw or what you decided.");
+      setBusy(true);
+      setMsg("");
+      const r4 = await api(REVIEW_ROUTE, { date, saw, decided: dec });
+      setBusy(false);
+      if (!r4 || !r4.ok) return setMsg(r4 && r4.message === OLDSERVER ? `${NEEDS_UPDATE}.` : r4 && r4.message || "Not saved.");
+      onSaved(r4.reviews || []);
+      setOpen2(false);
+      snack("Review note saved");
+      focusAdd();
+    };
+    const keys = (e4) => {
+      if (e4.key === "Enter") {
+        e4.preventDefault();
+        save2();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        close();
+      }
+    };
+    const val2 = (e4) => (
+      /** @type {HTMLInputElement} */
+      e4.currentTarget.value
+    );
+    const rows2 = list.slice().reverse(), none = !rows2.length;
+    return /* @__PURE__ */ u2("section", { class: "urev", "aria-labelledby": "uRevH", children: [
+      /* @__PURE__ */ u2("h2", { id: "uRevH", children: "Your reviews" }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "Write down what you decided after looking, so the trend has a story. Your own note and a date only; kept on this laptop." }),
+      none ? /* @__PURE__ */ u2("p", { class: "sub uempty", role: "status", children: "No review notes yet." }) : /* @__PURE__ */ u2("div", { class: "tbl", children: /* @__PURE__ */ u2("table", { class: "qtab", "aria-label": "Your reviews", children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("th", { scope: "col", children: "Date" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "What you saw" }),
+          /* @__PURE__ */ u2("th", { scope: "col", children: "What you decided" })
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: rows2.map((r4, i5) => /* @__PURE__ */ u2("tr", { children: [
+          /* @__PURE__ */ u2("td", { children: fd3(r4.date) }),
+          /* @__PURE__ */ u2("td", { children: r4.saw }),
+          /* @__PURE__ */ u2("td", { children: r4.decided })
+        ] }, `${r4.date}-${i5}`)) })
+      ] }) }),
+      open2 ? /* @__PURE__ */ u2("div", { class: "urevform", id: "uRevForm", role: "group", "aria-label": "New review note", onKeyDown: keys, children: [
+        /* @__PURE__ */ u2("label", { for: "uRevDate", children: "Date" }),
+        /* @__PURE__ */ u2("input", { type: "text", id: "uRevDate", class: "urevdate", size: 11, maxLength: 20, placeholder: "DD-MM-YYYY", value: day, onInput: (e4) => setDay(val2(e4)) }),
+        /* @__PURE__ */ u2("label", { for: "uRevSaw", children: "What you saw" }),
+        /* @__PURE__ */ u2("input", { type: "text", id: "uRevSaw", maxLength: MAX_NOTE, value: saw, onInput: (e4) => setSaw(val2(e4)) }),
+        /* @__PURE__ */ u2("label", { for: "uRevDec", children: "What you decided" }),
+        /* @__PURE__ */ u2("input", { type: "text", id: "uRevDec", maxLength: MAX_NOTE, value: dec, onInput: (e4) => setDec(val2(e4)) }),
+        /* @__PURE__ */ u2("span", {}),
+        /* @__PURE__ */ u2("div", { class: "urevact", children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "uRevSave", disabled: busy2, onClick: save2, children: busy2 ? "Saving…" : "Save note" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: close, children: "Cancel" }),
+          /* @__PURE__ */ u2("span", { class: "sub", id: "uRevMsg", role: "status", children: msg })
+        ] })
+      ] }) : null,
+      /* @__PURE__ */ u2("div", { class: "urevact", children: [
+        open2 ? null : /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn",
+            id: "uRevAdd",
+            "aria-disabled": held ? "true" : void 0,
+            "data-tip": held || void 0,
+            "aria-label": held ? `Add a review note: ${held.toLowerCase()}` : void 0,
+            onClick: start,
+            children: "Add a review note"
+          }
+        ),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn",
+            id: "uRevCsv",
+            "aria-disabled": none ? "true" : void 0,
+            "data-tip": none ? "No review notes yet" : void 0,
+            onClick: () => {
+              if (!none) saveFile(reviewsCsv(list, fd3), `${TODAY} creaite usage reviews.csv`);
+            },
+            children: "Download as CSV"
+          }
+        )
+      ] })
+    ] });
+  }
+  function UsagePanel({ usage, fd: fd3, live = false, onReviews = () => {
+  } }) {
     const u5 = usage || {};
     const bad = !usage || usage.error;
     return /* @__PURE__ */ u2(S2, { children: [
@@ -65704,7 +65841,8 @@ ${d5.text}`);
       ] }),
       bad || u5.empty ? /* @__PURE__ */ u2("p", { class: "sub uempty", role: "status", children: bad ? "The usage figures couldn't be read." : "No runs yet. Each Claude run the live server makes will be counted here." }) : /* @__PURE__ */ u2(Runs, { u: u5, fd: fd3 }),
       /* @__PURE__ */ u2(Loads, { rows: u5.context || [], start: u5.cards?.start?.now, fd: fd3 }),
-      bad || u5.empty ? null : /* @__PURE__ */ u2(Skills, { skills: u5.skills || [] })
+      bad || u5.empty ? null : /* @__PURE__ */ u2(Skills, { skills: u5.skills || [] }),
+      /* @__PURE__ */ u2(Reviews, { list: u5.reviews || [], fd: fd3, held: !live ? NEEDS_LIVE : u5.reviews_save ? "" : NEEDS_UPDATE, onSaved: onReviews })
     ] });
   }
   function mountUsage(host2, props) {
@@ -66145,7 +66283,16 @@ ${d5.text}`);
   var actShowQuality = (q5) => actShowTab(q5 ? "q" : "ch");
   var USAGE_ROUTE = true;
   function usageDraw() {
-    mountUsage($("#actUsage"), { usage: D.usage, fd });
+    mountUsage($("#actUsage"), {
+      usage: D.usage,
+      fd,
+      live: viaServer(),
+      /* v2.5.3: Your reviews, saved through the server's route */
+      onReviews: (list) => {
+        D.usage = { ...D.usage || {}, reviews: list };
+        usageDraw();
+      }
+    });
   }
   async function usageOpen() {
     usageDraw();
