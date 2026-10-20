@@ -3537,6 +3537,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
 /* the minutes' own controls sit on the A4 paper, which stays white in dark mode: they take the paper's tokens there */
 #v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--line:var(--paper-rule);--accent:var(--paper-link)}
+#v-minutes .sheet-a4 .page .sheet-h{field-sizing:content;width:auto!important;min-width:2ch}   /* #268: the heading as wide as its words, so its count sits beside it (the mockup) */
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
 .mnlines p,.mnlines li{margin:0 0 4px}
 .mnlines ul{margin:0 0 6px;padding-left:20px}

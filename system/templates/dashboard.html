@@ -3547,6 +3547,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
 /* the minutes' own controls sit on the A4 paper, which stays white in dark mode: they take the paper's tokens there */
 #v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--line:var(--paper-rule);--accent:var(--paper-link)}
+#v-minutes .sheet-a4 .page .sheet-h{field-sizing:content;width:auto!important;min-width:2ch}   /* #268: the heading as wide as its words, so its count sits beside it (the mockup) */
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
 .mnlines p,.mnlines li{margin:0 0 4px}
 .mnlines ul{margin:0 0 6px;padding-left:20px}
@@ -69038,7 +69039,7 @@ ${d5.text}`);
       ] }) }, y5))
     ] }) });
   }
-  function relayout(root2) {
+  function relayout(root2, continuous = false) {
     const pages = (
       /** @type {HTMLElement[]} */
       [...root2.querySelectorAll(".sheet-a4 > .page")]
@@ -69115,8 +69116,8 @@ ${d5.text}`);
         [...pg2.children]
       );
       const last = kids[kids.length - 1], total = last ? last.offsetTop + last.offsetHeight - y02 : 0;
-      const { pushes, marks } = pageBreaks(secs.map((s5) => [s5.offsetTop - y02, s5.offsetHeight]), per, total);
-      secs.forEach((s5, i5) => {
+      const { pushes, marks } = pageBreaks(continuous ? [] : secs.map((s5) => [s5.offsetTop - y02, s5.offsetHeight]), per, total);
+      if (!continuous) secs.forEach((s5, i5) => {
         if (pushes[i5]) s5.style.marginTop = `${pushes[i5] + 16}px`;
       });
       const fit = (
@@ -69340,7 +69341,7 @@ ${d5.text}`);
     _2(() => {
       const el2 = root2.current;
       if (!el2) return;
-      const marks = relayout(el2);
+      const marks = relayout(el2, !!P5.current.continuous);
       if (JSON.stringify(marks) !== JSON.stringify(breaks)) setBreaks(marks);
       restorers.current.forEach((fn2) => fn2());
     });
@@ -69353,7 +69354,7 @@ ${d5.text}`);
       const ro2 = new ResizeObserver(() => {
         cancelAnimationFrame(raf);
         raf = requestAnimationFrame(() => {
-          const marks = relayout(el2);
+          const marks = relayout(el2, !!P5.current.continuous);
           setBreaks((prev) => JSON.stringify(prev) === JSON.stringify(marks) ? prev : marks);
           restorers.current.forEach((fn2) => fn2());
         });
@@ -73021,6 +73022,7 @@ ${d5.text}`);
             zoomMax: MN_ZOOM.max,
             zoomDefault: MN_ZOOM.fit,
             fitMax: MN_ZOOM.fitMax,
+            continuous: true,
             headings: mnHeading,
             renderers: RENDER,
             extras: EXTRAS,

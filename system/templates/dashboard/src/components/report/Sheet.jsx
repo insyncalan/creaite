@@ -6,7 +6,8 @@
    - True A4 (210 × 297 mm, 16 mm padded, so 265 mm of content a page), drawn at 40% to 80% of the sheet area's width (a view may
      give its own limits and starting zoom: zoomMin, zoomMax, zoomDefault; #268's minutes 50% to 250%, opening fitted to the width,
      and their bar is told the scale drawn, so it can say the real size; `fitMax` caps what fitted means, so the minutes' fit never
-     draws the page past its real size (100%), centred on the grey, while − + and a pinch still go past it): − and + in the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
+     draws the page past its real size (100%), centred on the grey, while − + and a pinch still go past it; `continuous` lays the
+     minutes out as one sheet, a section never pushed to the next page, with only a thin marker where a page breaks): − and + in the bar, a trackpad pinch (a ctrl wheel), ⌘+ ⌘− ⌘0. The point under the pointer (or the top of the view) stays put.
    - THE SCROLL POSITION IS NEVER RESET BY A REDRAW (P5's first rule): per scrollKey it remembers the top-most visible section and the
      offset into it, and puts that back after a zoom, a move, Show as exported, a doc replaced by a save or reload, and on switching
      views. Nothing else sets scrollTop.
@@ -58,7 +59,7 @@ export { openSheetRef as openRef };
     match?: (id: string) => void, dirty?: () => boolean, ai?: SheetProps["ai"], onRedraft?: SheetProps["onRedraft"], onSelectAction?: SheetProps["onSelectAction"],
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */   // p241: ai, onRedraft and onSelectAction are this pane's own
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
-    zoomMin?: number, zoomMax?: number, zoomDefault?: number, fitMax?: number, headings?: (s: SheetSection) => ({name?: string, note?: any}|null), exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
+    zoomMin?: number, zoomMax?: number, zoomDefault?: number, fitMax?: number, continuous?: boolean, headings?: (s: SheetSection) => ({name?: string, note?: any}|null), exported?: boolean, onExported?: (on: boolean) => void, exportedView?: any, readOnly?: boolean, leftReadOnly?: boolean, panesApart?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
     checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
       document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
@@ -205,8 +206,9 @@ function SheetFrame({ scale, breaks, children }) {
 }
 
 /** Give matching blocks and sections the same height on both pages (the shorter padded at its foot), set the extra top margin a
-    section needs to start on the next page, and size each page's box. @param {HTMLElement} root @returns {number[][]} the break marks per page */
-function relayout(root) {
+    section needs to start on the next page, and size each page's box. `continuous` (#268, the minutes): one continuous sheet, no
+    section pushed to the next page, the breaks only marked. @param {HTMLElement} root @param {boolean} [continuous] @returns {number[][]} the break marks per page */
+function relayout(root, continuous = false) {
   const pages = /** @type {HTMLElement[]} */ ([...root.querySelectorAll(".sheet-a4 > .page")]);
   for (const pg of pages) for (const el of /** @type {NodeListOf<HTMLElement>} */ (pg.querySelectorAll("section[data-id], [data-level]"))) { el.style.minHeight = ""; el.style.marginTop = ""; }
   if (pages.length === 2) {
@@ -237,8 +239,8 @@ function relayout(root) {
     const secs = /** @type {HTMLElement[]} */ ([...pg.querySelectorAll(":scope > section[data-id]")]);
     const kids = /** @type {HTMLElement[]} */ ([...pg.children]);
     const last = kids[kids.length - 1], total = last ? last.offsetTop + last.offsetHeight - y0 : 0;
-    const { pushes, marks } = pageBreaks(secs.map(s => [s.offsetTop - y0, s.offsetHeight]), per, total);
-    secs.forEach((s, i) => { if (pushes[i]) s.style.marginTop = `${pushes[i] + 16}px`; });   // the 16px above it collapses into the margin
+    const { pushes, marks } = pageBreaks(continuous ? [] : secs.map(s => [s.offsetTop - y0, s.offsetHeight]), per, total);
+    if (!continuous) secs.forEach((s, i) => { if (pushes[i]) s.style.marginTop = `${pushes[i] + 16}px`; });   // the 16px above it collapses into the margin
     const fit = /** @type {HTMLElement|null} */ (pg.closest(".sheet-fit")), sc = Number(fit && fit.dataset.scale) || 0;
     if (fit && sc) fit.style.height = `${pg.parentElement ? pg.parentElement.offsetHeight * sc : 0}px`;
     return marks;
@@ -380,7 +382,7 @@ export function Sheet(props) {
   useLayoutEffect(() => {                                     // levelled, page-broken and scroll-kept after every redraw
     const el = root.current;
     if (!el) return;
-    const marks = relayout(el);
+    const marks = relayout(el, !!P.current.continuous);
     if (JSON.stringify(marks) !== JSON.stringify(breaks)) setBreaks(marks);
     restorers.current.forEach(fn => fn());
   });
@@ -390,7 +392,7 @@ export function Sheet(props) {
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const marks = relayout(el);
+        const marks = relayout(el, !!P.current.continuous);
         setBreaks(prev => (JSON.stringify(prev) === JSON.stringify(marks) ? prev : marks));
         restorers.current.forEach(fn => fn());
       });

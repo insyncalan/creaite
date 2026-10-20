@@ -563,5 +563,41 @@ class MinutesViewV2(LiveBrowserCase):
         self.assertTrue(got[1], "the request is put in as typing would (input dispatched)")
 
 
+    def test_16_the_full_template_on_one_continuous_sheet_with_a_thin_page_marker(self):
+        """Item 4 (PM, Alan agreed, 20-10-2026): the whole minutes template stays, laid out as one continuous sheet: a section is
+        never pushed to the next page (no blank gap before page 2); a thin marker shows where a page would break."""
+        b = self.b
+        text = self.ev("document.querySelector('#v-minutes .page').innerText+' '+[...document.querySelectorAll('#v-minutes .page input.sheet-h')].map(i=>i.value).join(' ')")
+        for words in ("Internal", "Executive Summary", "Updates", "Decisions", "Risks", "Issues", "Actions", "Open Questions", "Source"):
+            self.assertIn(words, text, f"the template keeps {words}")
+        self.assertTrue(self.ev("!!document.querySelector('#v-minutes .mncov, #v-minutes [data-extra=coverage]') || /Agenda coverage/i.test(document.querySelector('#v-minutes .page').innerText)"),
+                        "and the agenda coverage")
+        gaps = """(()=>{ const secs=[...document.querySelectorAll('#v-minutes .page > section[data-id]')];
+          return {push: secs.map(s=>s.style.marginTop).filter(m=>m && m!=='0px'), gap: (k=>Math.max(0,...k.slice(1).map((s,i)=>s.offsetTop-(k[i].offsetTop+k[i].offsetHeight))))([...document.querySelector('#v-minutes .page').children].filter(x=>x.offsetParent)),
+            marks: [...document.querySelectorAll('#v-minutes .sheet-break')].map(m=>[getComputedStyle(m).borderTopWidth, m.textContent])}; })()"""
+        for h in (640, 700, 760, 820, 880):                   # a tall block in the summary: some section straddles the first page's foot
+            with self.subTest(spacer=h):
+                b.eval(f"(()=>{{ document.querySelectorAll('#v-minutes .t16sp').forEach(x=>x.remove()); const d=document.createElement('div'); d.className='t16sp'; d.style.height='{h}px';"
+                       "document.querySelector('#v-minutes .page > section[data-id=summary], #v-minutes .page > section[data-id]:nth-of-type(2)').appendChild(d); })()")
+                b.pump(0.4)
+                g = self.ev(gaps)
+                self.assertEqual(g["push"], [], f"no section pushed to the next page: {g}")
+                self.assertLess(g["gap"], 48, f"no blank gap before page 2: {g}")
+                self.assertTrue(g["marks"], f"a page marker: {g}")
+                self.assertEqual(g["marks"][0], ["1px", "Page 2"], f"thin, and says the page: {g}")
+        b.eval("document.querySelectorAll('#v-minutes .t16sp').forEach(x=>x.remove())")
+
+    def test_17_section_headings_with_their_counts_beside_them(self):
+        got = self.ev("""Object.fromEntries([...document.querySelectorAll('#v-minutes .page section[data-id] > h2')].filter(h=>h.querySelector('.sheet-hn')).map(h=>{
+          const i=h.querySelector('input.sheet-h'), n=h.querySelector('.sheet-hn'), c=document.createElement('canvas').getContext('2d'), cs=getComputedStyle(i);
+          c.font=`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          const end=i.getBoundingClientRect().left+parseFloat(cs.paddingLeft)+parseFloat(cs.borderLeftWidth)+c.measureText(i.value).width;
+          return [h.parentElement.dataset.id, [i.value, n.textContent, Math.round(n.getBoundingClientRect().left-end)]]; }))""")
+        self.assertEqual(got["decisions"][:2], ["Decisions", "1"])
+        self.assertEqual(got["actions"][:2], ["Actions", "3"], "Actions, as the mockup")
+        for sec, (_, _, gap) in got.items():
+            self.assertLess(gap, 14, f"{sec}: the count sits beside the heading, as the mockup: {got}")
+
+
 if __name__ == "__main__":
     unittest.main()

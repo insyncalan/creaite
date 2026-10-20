@@ -220,7 +220,7 @@ export function MinutesView() {
       <div class={`mnwrap${paneOpen.value ? " withpane" : ""}`}>
         <div class="mnsheet">
           <MinutesCtx.Provider value={ctx}>
-            <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max} zoomDefault={MN_ZOOM.fit} fitMax={MN_ZOOM.fitMax} headings={mnHeading}
+            <Sheet doc={doc} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}`} readOnly={!draft} zoomMin={MN_ZOOM.min} zoomMax={MN_ZOOM.max} zoomDefault={MN_ZOOM.fit} fitMax={MN_ZOOM.fitMax} continuous headings={mnHeading}
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}
               onChange={onDoc} onSave={async req => {
                 const now = minutesView.value;            // a late save of a draft once the minutes are filed is never sent (filed minutes are never saved over)
