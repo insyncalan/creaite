@@ -274,9 +274,22 @@ def is_skipped(name) -> bool:
     return _fold(name) in {_fold(n) for n in skipped_names()}
 
 
+def archive_name(base) -> str:
+    """#252 (Jarvis, 20-10-2026): the name of the archive folder IN USE at `base` (the projects root, an engagement or project folder,
+    or the portfolio), where a new archive goes: 99 Archive, unless 99 Archive isn't there and the old _Archive is (a folder Alan
+    hasn't renamed by hand yet), so one place never gets a second archive folder beside the first. With both there it is 99 Archive.
+    zz Archive is never used for a new move, and a symlinked _Archive is not a folder in use. Nothing is ever put in a new _Archive."""
+    b = Path(base)
+    old = b / OLD_ARCHIVES[0]
+    if not (b / ARCHIVE).is_dir() and old.is_dir() and not old.is_symlink():
+        return OLD_ARCHIVES[0]
+    return ARCHIVE
+
+
 def archive_dir() -> Path:
-    """<projects root>/99 Archive: where a project is archived to (BL-09, #252). Reading looks in archive_dirs as well."""
-    return projects_root() / ARCHIVE
+    """<projects root>/<the archive folder in use there>: where a project is archived to (BL-09, #252). Reading looks in
+    archive_dirs as well."""
+    return projects_root() / archive_name(projects_root())
 
 
 def archive_dirs(base: Path) -> list:
@@ -325,10 +338,11 @@ def canonical_archive(stored):
 
 
 def free_archive_path(base, sub: str, stem: str, ext: str = "") -> Path:
-    """#252: <base>/99 Archive/<sub>/<stem><ext>, or <stem>-2<ext>, -3… until the name is free in 99 Archive and in every old
-    archive folder beside it: a destination in 99 Archive that isn't there must not be followed (follow_stored) to a file of that
-    name in _Archive or zz Archive, which would make a free move look like one onto an existing file."""
-    dirs = [Path(base) / ARCHIVE] + [d for d in archive_dirs(base) if d != Path(base) / ARCHIVE]
+    """#252: <base>/<the archive folder in use>/<sub>/<stem><ext>, or <stem>-2<ext>, -3… until the name is free in that folder and in
+    every other archive folder beside it: a destination that isn't there must not be followed (follow_stored) to a file of that
+    name in another archive folder, which would make a free move look like one onto an existing file."""
+    use = Path(base) / archive_name(base)
+    dirs = [use] + [d for d in archive_dirs(base) if d != use]
     p, n = f"{stem}{ext}", 2
     while any(os.path.lexists(d / sub / p) for d in dirs):
         p, n = f"{stem}-{n}{ext}", n + 1

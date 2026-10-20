@@ -661,7 +661,8 @@ def archive_spec(code, cancel_open=False):
                  + ". Cancel them all and archive (--cancel-open), or stop.")
     folder = paths.project_dir(code)
     src = paths.rel(folder)
-    dst = f"projects/{paths.ARCHIVE}/{free_folder([paths.archive_dir(), *paths.archive_dirs(paths.projects_root())], folder.name)}"
+    root = paths.projects_root()
+    dst = f"projects/{paths.archive_name(root)}/{free_folder([paths.archive_dir(), *paths.archive_dirs(root)], folder.name)}"
     reg, old_row = archive_register(paths.REGISTER.read_text(encoding="utf-8"), code, row["name"])
     items = []
     for o in still:

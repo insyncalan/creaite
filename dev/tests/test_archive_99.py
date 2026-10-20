@@ -8,11 +8,12 @@ ORDINARY (always run): paths.py, archive.py, propose.py, locations.py, update.py
   paths never change; when two archive folders hold things, both are read, 99 Archive first;
 - a folder called 99 Archivement, "99 Archive " (a trailing space) or 99 archive (case: macOS) is judged by its whole name, as
   macOS judges it: the first two are not the archive, the third is;
-- a new archive move (archive project, the monthly reports move, Delete note) goes to 99 Archive only, and a project name taken in
-  an old archive folder is numbered, never shared;
+- a new archive move (archive project, the monthly reports move, Delete note) goes into the archive folder IN USE at that place
+  (paths.archive_name: 99 Archive, or the old _Archive until Alan renames it; both there: 99 Archive; zz Archive never; Jarvis,
+  20-10-2026), and a name taken in any archive folder is numbered, never shared;
 - no migration: nothing is renamed, and Health says nothing about old names.
 GUARDED (run only with dev/proposals/archive-99/guarded.diff applied: reach.ARCHIVE99): the move rules in reach.py and tracker.py
-accept the old names as the source of a restore or a move back, never as the destination of a new move; the rename kind is gone; a
+accept the old names as the source of a restore or a move back, and as a destination only the old `_Archive` that is the folder in use; the rename kind is gone; a
 whole-name comparison; and a project archived by an earlier release (in _Archive) can be restored. With the diff missing these skip
 (ARCHIVE99_UNPATCHED=1 says so on purpose); apply the diff to a scratch copy to run them.
 Everything is fictional and temporary.
@@ -156,6 +157,75 @@ class AfterAHandRename(OneDriveCase):
                 self.assertEqual(got[2], [str(self.root / "_Portfolio" / NEW / "08 Notes" / "p.md")] * 2)
 
 
+class FolderInUse(OneDriveCase):
+    """paths.archive_name and every place that builds a new archive move (Jarvis's rule, 20-10-2026): the folder already in use at that
+    place; a place never gets a second archive folder beside the first; zz Archive is never a destination."""
+
+    def name_at(self, rel_parts):
+        q = "import paths; print(json.dumps(paths.archive_name(paths.projects_root().joinpath(*%r))))" % (list(rel_parts),)
+        return self.py(q)
+
+    def test_the_name_in_use_in_every_state(self):
+        e = ("Example Programme",)
+        shutil.rmtree(self.eng("ABC", NEW))                                   # the template's own, so the place starts empty
+        self.assertEqual(self.name_at(e), NEW)                                # none: 99 Archive
+        touch(self.eng("ABC", "zz Archive", "z.md"))
+        self.assertEqual(self.name_at(e), NEW)                                # only zz Archive: never a destination
+        touch(self.eng("ABC", "_Archive", "o.md"))
+        self.assertEqual(self.name_at(e), "_Archive")                         # only the old _Archive: that one is in use
+        touch(self.eng("ABC", NEW, "n.md"))
+        self.assertEqual(self.name_at(e), NEW)                                # both: 99 Archive
+        shutil.rmtree(self.eng("ABC", NEW))
+        shutil.rmtree(self.eng("ABC", "_Archive"))
+        os.symlink(self.eng("DEF"), self.eng("ABC", "_Archive"))
+        self.assertEqual(self.name_at(e), NEW)                                # a symlinked _Archive is not a folder in use
+        self.eng("ABC", "_Archive").unlink()
+        touch(self.root / "_Archive" / "x" / "y.md")
+        self.assertEqual(self.name_at(()), "_Archive")                        # the projects root and the portfolio the same way
+        self.assertEqual(self.name_at(("_Portfolio",)), NEW)
+
+    def test_each_new_move_goes_into_the_folder_in_use(self):
+        for code in ("ABC", "DEF"):
+            shutil.rmtree(self.eng(code, NEW))
+            touch(self.eng(code, "08 Notes", "Plan.md"), "---\ntitle: Plan\n---\nBody\n")
+            touch(self.eng(code, "02 Meetings", "Minutes", "2024-01-05 Steering.docx"))
+        touch(self.eng("DEF", "_Archive", "o.md"))                             # DEF still has the old folder, ABC has none
+        got = self.py("import archive, datetime; print(json.dumps([[archive.note_delete_spec(p)[0]['file_changes']['file_ops'][0]['to'] "
+                      "for p in ('projects/Example Programme/08 Notes/Plan.md', 'projects/Digital Enablement/08 Notes/Plan.md')], "
+                      "sorted(r['to'] for r in archive.due_reports(on=datetime.date(2026, 10, 20)))]))")
+        self.assertEqual(got[0], ["projects/Example Programme/99 Archive/08 Notes/Plan.md",
+                                  "projects/Digital Enablement/_Archive/08 Notes/Plan.md"])
+        self.assertEqual(got[1], ["projects/Digital Enablement/_Archive/02 Meetings/Minutes/2024-01-05 Steering.docx",
+                                  "projects/Example Programme/99 Archive/02 Meetings/Minutes/2024-01-05 Steering.docx"])
+        touch(self.eng("DEF", NEW, "n.md"))                                    # both there: 99 Archive
+        got = self.py("import archive; print(json.dumps(archive.note_delete_spec('projects/Digital Enablement/08 Notes/Plan.md')[0]['file_changes']['file_ops'][0]['to']))")
+        self.assertEqual(got, "projects/Digital Enablement/99 Archive/08 Notes/Plan.md")
+
+    def test_a_project_archive_goes_into_the_root_folder_in_use(self):
+        spec = lambda: json.loads(self.v.run("archive", "ABC", "--cancel-open", script="propose.py").stdout)["file_changes"]["file_ops"][0]["to"]  # noqa: E731
+        self.assertEqual(spec(), "projects/99 Archive/Example Programme")     # no archive folder at the root yet
+        (self.root / "zz Archive").mkdir()
+        self.assertEqual(spec(), "projects/99 Archive/Example Programme")     # zz Archive is never used
+        (self.root / "_Archive").mkdir()
+        self.assertEqual(spec(), "projects/_Archive/Example Programme")       # the old one that is in use
+        (self.root / "99 Archive").mkdir()
+        self.assertEqual(spec(), "projects/99 Archive/Example Programme")     # both: 99 Archive
+        touch(self.root / "_Archive" / "Example Programme" / "x.md")
+        self.assertEqual(spec(), "projects/99 Archive/Example Programme 2")   # a name taken in the other folder is numbered
+
+    def test_the_delete_note_name_is_numbered_across_folders_with_the_old_one_in_use(self):
+        """N1 with the folder-in-use rule: the note goes to the old _Archive, numbered against every archive folder."""
+        shutil.rmtree(self.eng("ABC", NEW))
+        touch(self.eng("ABC", "08 Notes", "Plan.md"), "---\ntitle: Plan\n---\nBody\n")
+        touch(self.eng("ABC", "_Archive", "08 Notes", "Plan.md"))
+        touch(self.eng("ABC", "zz Archive", "08 Notes", "Plan-2.md"))
+        op = self.py("import archive; print(json.dumps(archive.note_delete_spec('projects/Example Programme/08 Notes/Plan.md')[0]['file_changes']['file_ops'][0]))")
+        self.assertEqual(op["to"], "projects/Example Programme/_Archive/08 Notes/Plan-3.md")
+        why = self.py(f"import reach; print(json.dumps(reach.archive_move_problem({op['from']!r}, {op['to']!r}, 'notes')))")
+        if PATCHED:
+            self.assertIsNone(why)
+
+
 class NewMovesGoToTheNewName(OneDriveCase):
     def test_a_project_archive_goes_to_99_archive_and_a_taken_name_is_numbered_across_all_three(self):
         o = self.py("import propose, paths\n"
@@ -280,17 +350,38 @@ class MoveRules(OneDriveCase):
             self.assertEqual(self.problem(a, b, "notes") is None, name == NEW, name)
             (self.eng("ABC", f)).unlink()
 
-    def test_a_place_that_still_has_an_old_folder_gets_new_items_in_99_archive(self):
-        """The decision in the README: new archives go to 99 Archive always (this proposal); not to the old folder in use."""
+    def test_new_items_go_into_the_folder_in_use_at_the_place(self):
+        """The decision (Jarvis, 20-10-2026): into the folder already in use. A place with only an old _Archive archives into it;
+        a place with none gets 99 Archive; both there: 99 Archive; never a new _Archive, never zz Archive."""
         f = "02 Meetings/Minutes/2024-01-05 Steering.docx"
-        for name in OLDS:
-            touch(self.eng("ABC", f))
-            touch(self.eng("ABC", name, "02 Meetings", "Minutes", "2023-01-05 Older.docx"))       # the place still has the old folder
-            a = f"projects/Example Programme/{f}"
-            self.assertIsNone(self.problem(a, f"projects/Example Programme/99 Archive/{f}", "reports"), name)
-            self.assertIsNotNone(self.problem(a, f"projects/Example Programme/{name}/{f}", "reports"), name)
-            self.eng("ABC", name, "02 Meetings", "Minutes", "2023-01-05 Older.docx").unlink()
-            self.eng("ABC", f).unlink()
+        a = f"projects/Example Programme/{f}"
+        into = lambda name: self.problem(a, f"projects/Example Programme/{name}/{f}", "reports")      # noqa: E731
+        shutil.rmtree(self.eng("ABC", NEW))
+        touch(self.eng("ABC", f))
+        self.assertIsNone(into(NEW))                                       # none: 99 Archive
+        self.assertIsNotNone(into("_Archive"))                             # never a new _Archive
+        self.assertIsNotNone(into("zz Archive"))
+        touch(self.eng("ABC", "_Archive", "02 Meetings", "Minutes", "2023-01-05 Older.docx"))
+        self.assertIsNone(into("_Archive"))                                # only the old one there: it is the folder in use
+        self.assertIsNotNone(into(NEW))                                    # and 99 Archive beside it would be a second folder
+        touch(self.eng("ABC", NEW, "x.md"))
+        self.assertIsNone(into(NEW))                                       # both there: 99 Archive
+        self.assertIsNotNone(into("_Archive"))
+        self.assertIsNotNone(into("zz Archive"))
+        shutil.rmtree(self.eng("ABC", "_Archive"))
+        touch(self.eng("ABC", "zz Archive", "z.md"))
+        shutil.rmtree(self.eng("ABC", NEW))
+        self.assertIsNone(into(NEW))                                       # only zz Archive: still 99 Archive, never zz Archive
+        self.assertIsNotNone(into("zz Archive"))
+
+    def test_a_project_goes_into_the_root_folder_in_use(self):
+        touch(self.root / "_Archive" / "Other" / "o.md")
+        self.assertIsNone(self.problem("projects/Example Programme", "projects/_Archive/Example Programme", "archive"))
+        self.assertIsNotNone(self.problem("projects/Example Programme", "projects/99 Archive/Example Programme", "archive"))
+        touch(self.root / NEW / "Other2" / "o.md")
+        self.assertIsNone(self.problem("projects/Example Programme", "projects/99 Archive/Example Programme", "archive"))
+        self.assertIsNotNone(self.problem("projects/Example Programme", "projects/_Archive/Example Programme", "archive"))
+        self.assertIsNotNone(self.problem("projects/Example Programme", "projects/zz Archive/Example Programme", "archive"))
 
     def test_the_portfolio_has_the_same_shapes(self):
         f = "02 Meetings/Minutes/2024-01-05 Portfolio review.docx"
