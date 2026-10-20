@@ -378,7 +378,7 @@ class ConfidentialThreads(unittest.TestCase):
     def tearDown(self):
         self.v.cleanup()
 
-    def staged(self, subject, link="https://outlook.example/conf1", kind="Email", text="Order the pay review letters", **more):
+    def staged(self, subject, link="https://outlook.example/conf1", kind="Email", text="Book the catering for the offsite", **more):
         return stage(self.v, [item(text, src(subject, link, kind=kind, sent="2026-10-08 08:00"), **more)], now="2026-10-08 09:30")
 
     def test_every_spelling_of_the_marker_stages_nothing_for_a_card_that_does_not_list_the_item(self):
@@ -386,9 +386,9 @@ class ConfidentialThreads(unittest.TestCase):
             with self.subTest(spelling=spelling):
                 link = f"https://outlook.example/c{n}"
                 record(self.v, [{**MAILCONF, "conversation": f"AAQk-{n}", "link": link, "sensitivity": spelling}])
-                out = self.staged("Pay review", link=link, text=f"Order the pay review letters {n}")
+                out = self.staged("Pay review", link=link, text=f"Book the catering for the offsite {n}")
                 self.assertIn("Sweep: 0 items", out)
-                self.assertNotIn("Order the pay review", out)                        # the sweep's output does not echo it
+                self.assertNotIn("catering", out)                        # the sweep's output does not echo it
                 self.assertEqual(pending_files(self.v), [])
                 self.assertEqual(rows(self.v), [])
 
@@ -400,7 +400,7 @@ class ConfidentialThreads(unittest.TestCase):
 
     def test_a_teams_chat_and_a_match_by_the_conversation_id_alone(self):
         record(self.v, [{**CONF, "last": "2026-10-08 08:25"}])
-        out = stage(self.v, [{**item("Order the pay review letters", src("Another title", "https://x/other", kind="Teams")),
+        out = stage(self.v, [{**item("Book the catering for the offsite", src("Another title", "https://x/other", kind="Teams")),
                               "conversation": CONF["conversation"]}], now="2026-10-08 09:30")
         self.assertIn("Sweep: 0 items", out)
         self.assertEqual(pending_files(self.v), [])
@@ -419,7 +419,7 @@ class ConfidentialThreads(unittest.TestCase):
         self.assertIn("Sweep: 1 item", out)                                          # #236's own fix is intact
 
     def test_a_spec_item_that_carries_the_marker_is_not_staged(self):
-        spec = item("Order the pay review letters", src("Anything", "https://outlook.example/none", sent="2026-10-08 08:00"))
+        spec = item("Book the catering for the offsite", src("Anything", "https://outlook.example/none", sent="2026-10-08 08:00"))
         out = stage(self.v, [{**spec, "sensitivity": "Confidential"}], now="2026-10-08 09:30")
         self.assertIn("Sweep: 0 items", out)
         self.assertEqual(pending_files(self.v), [])
