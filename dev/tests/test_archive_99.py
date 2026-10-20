@@ -167,7 +167,7 @@ class NewMovesGoToTheNewName(OneDriveCase):
 
     def test_a_new_project_gets_99_archive_from_a_skeleton_with_either_old_name(self):
         sk = self.root / "_Templates" / "_Skeleton"
-        for old in OLDS:
+        for old in (*OLDS, "_ARCHIVE", "zz archive", "99 archive"):         # exact names and lower or upper case (F3)
             (sk / NEW).rename(sk / old)
             spec = json.loads(self.v.run("new-project", "--code", "GHI", "--name", "Growth Hub", script="propose.py").stdout)
             made = [o.get("path") or o.get("to") for o in spec["file_changes"]["file_ops"]]

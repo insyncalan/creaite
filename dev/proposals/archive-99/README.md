@@ -9,6 +9,14 @@
 3. Stored paths stay `projects/<folder>/…`.
 4. Archived projects (`<projects root>/99 Archive/<engagement folder>`) and each engagement's own archive folder use the same one name.
 
+## What Alan will notice
+
+1. **Nothing is renamed or moved for him.** His existing `_Archive` and `zz Archive` folders stay exactly as they are; no Health problem, no offer, no prompt.
+2. **If he renames them to `99 Archive` himself, everything keeps working**: Restore project, Move back, Undo and Files > Archived follow the renamed folder (the apply records still say the old name; creaite looks for the folder under any of the three names).
+3. **Old names are read for one release**: still skipped by search and extraction, still unreadable to ask creaite, still restorable. New archives, the monthly reports move and Delete note go to `99 Archive` only.
+4. **Settings > Never read gains `99 Archive`** (nothing removed); a new project's folders come from his template with any old archive folder named `99 Archive`.
+5. **For creaite-rules.md (one sentence, already in `rules_edit.py`):** "The archive folder is `99 Archive`; `_Archive` and `zz Archive` are still read and skipped for one release, then dropped, and nothing is renamed or migrated for Alan."
+
 ## What changes, in plain words
 
 - **New archive moves go to `99 Archive`, and nowhere else**: archive a project, the monthly "archive old reports and minutes" move, Delete note.
