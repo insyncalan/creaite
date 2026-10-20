@@ -622,6 +622,27 @@ def _write_json(path, data):
     os.replace(tmp, path)
 
 
+class _RunLock:
+    """#264 round 2 (review L1): one writer of system/guard/run.json at a time. Claude Code may run several hooks at once, and
+    each reads the record, changes it and writes it back, so without this one hook's claim or mark could be lost. An exclusive
+    lock on system/guard/.run.lock (POSIX flock; where there is none, as on Windows, the old behaviour). Raises OSError when the
+    lock file can't be made: the caller then fails closed."""
+
+    def __enter__(self):
+        GUARD.mkdir(parents=True, exist_ok=True)
+        self.fd = os.open(GUARD / ".run.lock", os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            import fcntl
+            fcntl.flock(self.fd, fcntl.LOCK_EX)
+        except ImportError:  # no flock (Windows, untested): as before
+            pass
+        return self
+
+    def __exit__(self, *exc):
+        os.close(self.fd)                                        # closing the file releases the lock
+        return False
+
+
 def guard_run():
     """The run in progress as the server wrote it, or None (no ask creaite run: a Terminal session)."""
     try:
@@ -644,9 +665,11 @@ def start_run(run, mode, outside, session=None, files=None):
     """The server, as an ask creaite run starts: write the run (marked already if its chat was). #264: `files`, for an Intake
     Process run (mode "process"), are the Intake paths the server checked: the only ones that run may stage."""
     marked = ["the chat had read outside content earlier"] if session and session in marked_sessions() else []
-    _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside, "marked": marked,
-                           "session": session, **({"files": [str(f) for f in files]} if files is not None else {}),
-                           **(_process_start() if mode == "process" else {})})
+    with _RunLock():                                             # #264 round 2 (L1): never between a hook's read and its write
+        _write_json(RUN_FILE, {"run": run, "mode": mode, "started": __import__("time").time(), "outside": outside,
+                               "marked": marked, "session": session,
+                               **({"files": [str(f) for f in files]} if files is not None else {}),
+                               **(_process_start() if mode == "process" else {})})
 
 
 def _process_start():
@@ -657,22 +680,32 @@ def _process_start():
 
 def mark(run, reason):
     """Mark the run as having read outside content. Never cleared by the model; only end_run removes the file."""
-    data = guard_run()
-    if not data or data.get("run") != run:
-        return False
-    if reason not in data["marked"]:
-        data["marked"] = (data.get("marked") or []) + [reason]
-        _write_json(RUN_FILE, data)
-    return True
+    with _RunLock():                                             # #264 round 2 (L1): a mark is never lost to another hook's write
+        data = guard_run()
+        if not data or data.get("run") != run:
+            return False
+        if reason not in data["marked"]:
+            data["marked"] = (data.get("marked") or []) + [reason]
+            _write_json(RUN_FILE, data)
+        return True
 
 
 def end_run(run, session=None):
-    """The server, as the run ends: remember a marked chat, then remove the run."""
-    data = guard_run()
-    if data and data.get("run") == run:
-        if data.get("marked") and (session or data.get("session")):
-            _write_json(SESSIONS_FILE, sorted(marked_sessions() | {session or data.get("session")}))
-        RUN_FILE.unlink(missing_ok=True)
+    """The server, as the run ends: remember a marked chat, then remove the run (under the record's lock, so a hook still
+    finishing can't write the record back after it is gone; without the lock file, as before)."""
+    try:
+        lock = _RunLock().__enter__()
+    except OSError:  # the lock file can't be made: remove the run anyway
+        lock = None
+    try:
+        data = guard_run()
+        if data and data.get("run") == run:
+            if data.get("marked") and (session or data.get("session")):
+                _write_json(SESSIONS_FILE, sorted(marked_sessions() | {session or data.get("session")}))
+            RUN_FILE.unlink(missing_ok=True)
+    finally:
+        if lock is not None:
+            lock.__exit__(None, None, None)
 
 
 def is_marked(data=None):
@@ -1488,8 +1521,15 @@ def decide(tool, inp, mode, run, held=False):
     other call by hook_decision, unchanged."""
     if mode in HELD_MODES:
         return prep_decision(tool, inp)
-    why = confidential_reason(tool, inp) if held else None
-    return (False, why) if why else hook_decision(tool, inp, mode, run)
+    _HOOK.update(run=run if mode == "process" else None, claims=set(), seen={}, writes=set())   # #264 round 2 (L4, M2)
+    try:
+        why = confidential_reason(tool, inp) if held else None
+        ok, why = (False, why) if why else hook_decision(tool, inp, mode, run)
+        if ok and mode == "process" and not _commit_claims():
+            ok, why = False, "the guard couldn't record this run's own files, so it can't let it write one (fail closed)"
+        return ok, why
+    finally:
+        _HOOK.update(run=None, claims=set(), seen={}, writes=set())
 # ===== end #60 option (a) =====
 
 
@@ -1712,6 +1752,10 @@ def hook_decision(tool, inp, mode, run):
         kind, why = classify(p, "read")
         if kind == "never":
             return False, f"{p}: {why}"
+    if mode == "process":                                   # #264 round 2 (L3): the vault and the projects folder only
+        why = process_reach_problem(tool, inp)
+        if why:
+            return False, why
     if tool in ("Grep", "Glob", "LS"):                      # a search would go inside a never folder below it
         inside = never_inside((inp or {}).get("path") or str(paths.ROOT))
         if inside:
@@ -1942,13 +1986,42 @@ def sweep_maps_draft(command):
 PROCESS_TEMPLATE = "system/templates/minutes-template.docx"
 
 
+# #264 round 2 (Team Cap's review of R1): the hook's own state for the one call it is deciding (decide() sets and clears it).
+# "run" is the hook's --run, so the record is read only when it is that run's (L4); "claims", "seen" and "writes" are what the
+# call would add to the record, written only once every check has passed (M2: a refused call claims nothing).
+_HOOK = {"run": None, "claims": set(), "seen": {}, "writes": set()}
+
+
+def _process_record():
+    """system/guard/run.json when it is this hook's own Process run (mode "process" and the run ID the hook was started with,
+    review L4), else None: a record for another run, or none, names no files and makes nothing the run's (fail closed)."""
+    data = guard_run()
+    if not data or data.get("mode") != "process" or not _HOOK["run"] or data.get("run") != _HOOK["run"]:
+        return None
+    return data
+
+
 def process_files():
     """The Intake paths this Process run may stage, from system/guard/run.json (only the server writes it); none if the run in
-    progress isn't a Process run (fail closed)."""
-    data = guard_run()
-    if not data or data.get("mode") != "process" or not isinstance(data.get("files"), list):
+    progress isn't this hook's Process run (fail closed)."""
+    data = _process_record()
+    if not data or not isinstance(data.get("files"), list):
         return set()
     return {f for f in data["files"] if isinstance(f, str)}
+
+
+def process_reach_problem(tool, inp):
+    """Why a Process run may not read where this call reads, or None (#264 round 2, review L3): Read, Grep, Glob, LS and a
+    script's path arguments stay in the vault and the projects folder, never the home folder's other files. Fails closed."""
+    try:
+        found = ask_arg_paths(str((inp or {}).get("command") or ""), expand=False) if tool == "Bash" else tool_paths(tool, inp)
+        for p in found:
+            if not {"vault", "projects"} & set(in_reach(real(p))):
+                _debug("warn", f"process run refused a path outside the vault: {tool}")
+                return f"{p}: an Intake Process run reads only the vault and the projects folder"
+    except (OSError, ValueError, RuntimeError, TypeError) as e:
+        return f"the guard couldn't check where this call reads ({type(e).__name__})"
+    return None
 
 
 def _in_drafts(arg, suffix):
@@ -1962,41 +2035,88 @@ def _in_drafts(arg, suffix):
 
 def _made():
     """The files this Process run made (run.json "made", as the hook let it create them), or None when the run in progress isn't
-    a Process run (fail closed: nothing is then the run's own)."""
-    data = guard_run()
-    if not data or data.get("mode") != "process":
+    this hook's Process run (fail closed: nothing is then the run's own)."""
+    data = _process_record()
+    if data is None:
         return None
     made = data.get("made")
     return {m for m in made if isinstance(m, str)} if isinstance(made, list) else set()
 
 
+def _print(rp):
+    """What a file is now, to tell it from another one later (#264 round 2, M2): [inode, size, mtime in ns], or None when there
+    is no such file (a link is never followed)."""
+    try:
+        st = os.lstat(rp)
+    except FileNotFoundError:
+        return None
+    return [st.st_ino, st.st_size, st.st_mtime_ns]
+
+
 def _runs_own(rp):
     """True only for a file the hook let this Process run create (#264 R1: by its record, never by its time, so a file another
-    flow writes into drafts during the run is never the run's)."""
+    flow writes into drafts during the run is never the run's). Round 2 (M2): the record also keeps what the file was when the
+    hook first saw it after the run's own last write ("prints"); a file that has changed since (another flow wrote over it, or
+    put another file in its place) isn't the run's any more."""
     made = _made()
-    return made is not None and str(rp) in made
+    if made is None or str(rp) not in made:
+        return False
+    prints = (_process_record() or {}).get("prints")
+    was = prints.get(str(rp)) if isinstance(prints, dict) else None
+    now = _print(rp)
+    if was is None:                                     # not seen since the run's own last write: what it is now is the run's
+        if now is not None:
+            _HOOK["seen"][str(rp)] = now
+        return True
+    return now == was
 
 
 def _may_make(rp):
-    """True when this Process run may write `rp`: a file that doesn't exist yet (claimed for the run in run.json "made", so a
-    second write to it is its own too) or one it made. False whenever that can't be told (fail closed)."""
+    """True when this Process run may write `rp`: a file that doesn't exist yet or one it made. Round 2 (M2): nothing is written
+    here; the claim (and the write, after which the file is seen afresh) waits in _HOOK until every check of the call has passed
+    (_commit_claims), so a refused call claims nothing. False whenever that can't be told (fail closed)."""
     try:
         if _runs_own(rp):
+            _HOOK["writes"].add(str(rp))
             return True
-        data = guard_run()
         if _made() is None or rp.exists() or rp.is_symlink():
             return False
-        data["made"] = sorted(_made() | {str(rp)})
-        _write_json(RUN_FILE, data)
+        _HOOK["claims"].add(str(rp))
+        _HOOK["writes"].add(str(rp))
         return True
     except (OSError, ValueError, TypeError):     # can't tell: another flow's, so refused (fail closed)
+        return False
+
+
+def _commit_claims():
+    """Once every check of an allowed call has passed: add its claims to the run's record and keep what it saw ("prints"); a file
+    the call writes is seen afresh at its next use. True when there was nothing to record or it was recorded; False when the
+    record can't be written, or isn't this run's any more (the call is then refused: fail closed). Under the record's lock (L1)."""
+    if not (_HOOK["claims"] or _HOOK["seen"] or _HOOK["writes"]):
+        return True
+    try:
+        with _RunLock():
+            data = _process_record()
+            if data is None or not isinstance(data.get("made"), list):
+                return False
+            data["made"] = sorted(set(_made() or ()) | _HOOK["claims"])
+            prints = data.get("prints") if isinstance(data.get("prints"), dict) else {}
+            for f, now in _HOOK["seen"].items():
+                if prints.get(f) is None:
+                    prints[f] = now
+            for f in _HOOK["writes"]:
+                prints[f] = None
+            data["prints"] = prints
+            _write_json(RUN_FILE, data)
+        return True
+    except (OSError, ValueError, TypeError):
         return False
 
 
 def _runs_proposals():
     """The proposals this Process run staged: in system/staging/, not there when it started (run.json "before"), for one of its
     files."""
-    files, out, data = process_files(), [], guard_run() or {}
+    files, out, data = process_files(), [], _process_record() or {}
     before = data.get("before")
     if not isinstance(before, list):
         return []                                  # a record without "before" can't tell the run's proposals: none
@@ -2095,8 +2215,10 @@ def process_step_problem(name, words):
     if name == "propose.py people map":
         if len(words) == 3 and _in_drafts(words[2], ".json") is not None and not _runs_own(_in_drafts(words[2], ".json")):
             return "Process maps names only in a spec this run wrote, never another flow's draft"
-        return None if sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])) else \
-            "Process maps names only in its own spec in system/staging/drafts/"
+        if not sweep_maps_draft(" ".join(["system/scripts/run", "propose.py", *words])):
+            return "Process maps names only in its own spec in system/staging/drafts/"
+        _HOOK["writes"].add(str(_in_drafts(words[2], ".json")))     # round 2 (M2): it rewrites the spec, seen afresh next time
+        return None
     if name == "docx_tools.py fill":
         return _process_fill_problem(words)
     if name == "search.py enrich" and [w for w in words if not w.startswith("-")][:2] == ["enrich", "set"]:
@@ -2111,9 +2233,8 @@ def process_write_problem(rp):
     that this run wrote (never another flow's draft: minutes waiting in Review, a note, a sweep's input)."""
     if _in_drafts(str(rp), ".json") is None:
         return "a Process run writes only its own .json input files directly in system/staging/drafts/"
-    data = guard_run() or {}
     old = not _may_make(rp)
-    if old or data.get("mode") != "process":
+    if old or _process_record() is None:
         return "a Process run doesn't change a draft it didn't write: write a new file in system/staging/drafts/"
     return None
 

@@ -3024,24 +3024,32 @@ def chat_session(chat):
 
 
 def queue_start(q, prev=None):
-    """Start the first queued message as a run (QLOCK held); its summary, or None if Claude Code couldn't start (the queue holds)."""
-    item = q["items"].pop(0)
-    q["held"] = False
-    mine = prev is not None and prev.kind == "ask"
-    chat = q["chat"] or (prev.chat or prev.session if mine else None)
-    session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
-    images = [i for i in item.get("images") or [] if ask_image_files(i)]
-    try:
-        nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
-                  sweep=panel_sweep(item["text"], images))                                 # BL-309: a queued sweep too
-    except OSError:
-        q["items"].insert(0, item)
-        q["held"] = True
+    """Start the first queued message as a run (QLOCK held); its summary, or None if Claude Code couldn't start (the queue holds).
+    #264 round 2 (review L2): the busy check and the start are one step under START_LOCK, like every other start, so a queued
+    message never starts beside a run that began meanwhile (Process, a calendar refresh, a prep page): the queue holds instead,
+    and Run now starts it. `prev`, the run that is ending, doesn't count as busy."""
+    with START_LOCK:
+        if any(not r.done and r is not prev for r in list(RUNS.values())):
+            q["held"] = True
+            queue_save(q)
+            return None
+        item = q["items"].pop(0)
+        q["held"] = False
+        mine = prev is not None and prev.kind == "ask"
+        chat = q["chat"] or (prev.chat or prev.session if mine else None)
+        session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
+        images = [i for i in item.get("images") or [] if ask_image_files(i)]
+        try:
+            nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
+                      sweep=panel_sweep(item["text"], images))                             # BL-309: a queued sweep too
+        except OSError:
+            q["items"].insert(0, item)
+            q["held"] = True
+            queue_save(q)
+            return None
+        q["chat"] = chat
         queue_save(q)
-        return None
-    q["chat"] = chat
-    queue_save(q)
-    return nxt.summary()
+        return nxt.summary()
 
 
 def queue_after(run):
